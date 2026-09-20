@@ -165,6 +165,7 @@ Markdown：
 | 内容 | 位置 |
 |---|---|
 | 产品形态与文件格式定义 | `docs/note.md` |
+| 阶段划分与每阶段的完成判据 | `docs/Roadmap.md` |
 | 值得长期保留的经验、设计记录 | `docs/claude/`（codex 写 `docs/codex/`） |
 | 问题清单、交接、临时分析、参考资料副本 | `.cache/claude/`、`.cache/codex/`（已 gitignore） |
 | 面向用户的说明 | `README.md`、`docs/` |

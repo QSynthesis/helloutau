@@ -24,13 +24,7 @@
 
 ## 接下来
 
-按依赖顺序，不是按重要性：
-
-1. **编码层**（`HelloKitSupport`）。`docs/note.md` 定的那套策略：工程编码存 `_USTH_`，音源编码存每个目录自己的 `hello-config.json`，插件看 `plugin.json`。转义与还原要配一组往返测试。
-2. **工程模型**（`HelloKitCore`）。`.usth` 的读写，以及和 `.ust` 的互转，包括控制音符的一进一出配平。
-3. **音源库模型**（`HelloKitVoiceBank`）。一个音源多份 `oto.ini`，各自编码。
-4. **渲染调度**。`utau::Synth::calc` 出参数，`stdc::Popen` 起进程。线程池的形状参考 QSynthesis-Old 的 `Frontend/Process/`。
-5. **插件**。四类，见 `docs/note.md`。
+阶段划分、每阶段怎么算数、从 QSynthesis 拿什么不拿什么，都在 [`Roadmap.md`](Roadmap.md)。当前处在第一阶段「数据层」的开头，`HelloKitUst` 里只有 `PayloadCodec`。
 
 ## 插件放在哪
 
