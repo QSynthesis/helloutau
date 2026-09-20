@@ -142,13 +142,13 @@ namespace hello::kit {
         // A note has to say something, because a UST note with no lyric is a rest. This is the
         // one place where a value has to be invented rather than translated, so it is the user's
         // to set.
-        InterchangeOption defaultLyric;
-        defaultLyric.key = QLatin1String(OptionDefaultLyric);
-        defaultLyric.name = tr("Lyric for notes that have none");
-        defaultLyric.type = InterchangeOption::Text;
-        defaultLyric.defaultValue = QLatin1String(DefaultLyric);
+        InterchangeOption lyric;
+        lyric.key = QLatin1String(OptionDefaultLyric);
+        lyric.name = tr("Lyric for notes that have none");
+        lyric.type = InterchangeOption::Text;
+        lyric.defaultValue = QLatin1String(defaultLyric);
 
-        return {encoding, defaultLyric};
+        return {encoding, lyric};
     }
 
     QString MidiReader::customStepId() const {
@@ -237,7 +237,7 @@ namespace hello::kit {
         // way round. Scaling each length on its own lets the rounding accumulate, and a long
         // track then drifts away from the bar lines.
         const auto scale = [resolution](int tick) {
-            return int(std::llround(double(tick) * double(TicksPerQuarter) / double(resolution)));
+            return int(std::llround(double(tick) * double(ticksPerQuarter) / double(resolution)));
         };
 
         if (request.entries.size() > 1) {
@@ -259,8 +259,9 @@ namespace hello::kit {
             return decoder.decode(bytes);
         };
 
-        const QString defaultLyric =
-            request.driverOptions.value(QLatin1String(OptionDefaultLyric), QLatin1String(DefaultLyric))
+        const QString lyricForSilentNotes =
+            request.driverOptions
+                .value(QLatin1String(OptionDefaultLyric), QLatin1String(defaultLyric))
                 .toString();
 
         // Tempo is gathered from every track, since a format 1 file keeps it in track 0 while the
@@ -335,7 +336,7 @@ namespace hello::kit {
 
             if (note.start > cursor) {
                 Note rest;
-                rest.lyric = QLatin1String(RestLyric);
+                rest.lyric = QLatin1String(restLyric);
                 rest.length = note.start - cursor;
                 rest.noteNum = track.notes.isEmpty() ? 60 : track.notes.last().noteNum;
                 track.notes.push_back(rest);
@@ -343,13 +344,13 @@ namespace hello::kit {
             }
 
             int noteNum = note.pitch;
-            if (noteNum < LowestNoteNum || noteNum > HighestNoteNum) {
-                noteNum = std::clamp(noteNum, LowestNoteNum, HighestNoteNum);
+            if (noteNum < lowestNoteNum || noteNum > highestNoteNum) {
+                noteNum = std::clamp(noteNum, lowestNoteNum, highestNoteNum);
                 ++clamped;
             }
 
             Note out;
-            out.lyric = defaultLyric;
+            out.lyric = lyricForSilentNotes;
             out.length = note.end - note.start;
             out.noteNum = noteNum;
             track.notes.push_back(out);

@@ -28,22 +28,22 @@ namespace hello::kit {
     /// \note stdutau has a \c DEFAULT_LYRIC of its own, and it is a different thing. That one
     ///       answers what UST does. This one is HelloUTAU's choice, and the two are free to
     ///       disagree.
-    inline constexpr char DefaultLyric[] = "la";
+    inline constexpr char defaultLyric[] = "la";
 
     /// What a rest is written as. UTAU also reads \c r and an empty lyric as rests, which is
     /// what \c Note::isRest() covers, but this is the one to write.
-    inline constexpr char RestLyric[] = "R";
+    inline constexpr char restLyric[] = "R";
 
     /// Ticks to the quarter note.
-    inline constexpr int TicksPerQuarter = utau::TIME_BASE;
+    inline constexpr int ticksPerQuarter = utau::TIME_BASE;
 
     /// \name The keyboard
     ///
     /// C1 to B7, which is as far as UTAU's piano roll goes. A note outside it has nowhere to be
     /// put. Derived from stdutau rather than written out, so that the two cannot drift.
     /// @{
-    inline constexpr int LowestNoteNum = utau::TONE_NUMBER_BASE;
-    inline constexpr int HighestNoteNum =
+    inline constexpr int lowestNoteNum = utau::TONE_NUMBER_BASE;
+    inline constexpr int highestNoteNum =
         utau::TONE_NUMBER_BASE +
         (utau::TONE_OCTAVE_MAX - utau::TONE_OCTAVE_MIN + 1) * utau::TONE_OCTAVE_STEPS - 1;
     /// @}

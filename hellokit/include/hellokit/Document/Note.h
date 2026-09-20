@@ -70,7 +70,7 @@ namespace hello::kit {
         /// A singular value rather than \c std::optional, which is the one place this project
         /// allows it. The curve is dense and long, and the same choice is already made in
         /// stdutau, so a second representation would only mean converting between them.
-        static constexpr int NoValue = -32768;
+        static constexpr int noValue = -32768;
     };
 
     /// One note of a track, or a rest.
@@ -84,7 +84,7 @@ namespace hello::kit {
     /// a field stated to be zero, and the difference has to survive a round trip.
     struct Note {
         QString lyric;   ///< \c R, \c r and an empty string are rests
-        int length = 0;  ///< ticks, \c TicksPerQuarter to the quarter note
+        int length = 0;  ///< ticks, \c ticksPerQuarter to the quarter note
         int noteNum = 0; ///< 24 is C1, as in MIDI
 
         std::optional<double> intensity;
@@ -126,7 +126,7 @@ namespace hello::kit {
 
         /// Whether this note makes no sound, which is what UTAU decides from the lyric alone.
         bool isRest() const {
-            return lyric.isEmpty() || lyric.compare(QLatin1String(RestLyric), Qt::CaseInsensitive) == 0;
+            return lyric.isEmpty() || lyric.compare(QLatin1String(restLyric), Qt::CaseInsensitive) == 0;
         }
     };
 

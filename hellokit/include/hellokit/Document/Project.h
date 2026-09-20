@@ -1,8 +1,16 @@
 #ifndef HELLOKIT_DOCUMENT_PROJECT_H
 #define HELLOKIT_DOCUMENT_PROJECT_H
 
+#include <filesystem>
+#include <optional>
+
+#include <QtCore/QByteArray>
+#include <QtCore/QByteArrayView>
+#include <QtCore/QJsonObject>
 #include <QtCore/QList>
 #include <QtCore/QString>
+
+#include <hellokit/Support/Diagnostic.h>
 
 #include <hellokit/Document/DocumentConstants.h>
 #include <hellokit/Document/HelloKitDocumentGlobal.h>
@@ -49,12 +57,49 @@ namespace hello::kit {
 
     /// A project in memory, which is what \c .usth, \c .ust and every imported format turn into.
     ///
+    /// Reading and writing \c .usth belongs here rather than to a class of its own, because
+    /// \c .usth is not one format among several: it is how a project is written down. Every
+    /// other format goes through \c HelloKitInterchange and turns into one of these.
+    ///
+    /// The file is JSON, UTF-8, without a byte order mark, with newlines. docs/UsthFormat.md
+    /// defines it, and this follows that rather than the other way round. Nothing here has to
+    /// guess at an encoding, which is what separates it from reading a \c .ust.
+    ///
     /// \note \c tracks holds exactly one track for now. The array is here from the start so that
     ///       several tracks become possible without a new format version, and a reader that sees
     ///       any other length has to say so rather than quietly take the first one.
     struct Project {
         ProjectSettings settings;
         QList<Track> tracks;
+
+        /// Top level fields of the \c .usth file that this version has no field for, kept so
+        /// that they are written back.
+        ///
+        /// An older build opening a project a newer one saved would otherwise eat whatever it
+        /// did not recognize, and the user would find it gone after saving. Empty for a project
+        /// that came from anywhere else.
+        QJsonObject unknownFields;
+
+        /// The format version this build writes, and the highest it can read.
+        static constexpr int formatVersion = 1;
+
+        /// \return the project, or nothing where the file could not be understood, with the
+        ///         reason in \a diagnostics
+        HELLOKIT_DOCUMENT_EXPORT static std::optional<Project>
+            read(const std::filesystem::path &path, DiagnosticList &diagnostics);
+
+        /// \overload
+        ///
+        /// Separate from read() so that a caller that already holds the bytes, the tests above
+        /// all, does not have to put them on disk first.
+        HELLOKIT_DOCUMENT_EXPORT static std::optional<Project> parse(QByteArrayView json,
+                                                                     DiagnosticList &diagnostics);
+
+        HELLOKIT_DOCUMENT_EXPORT bool write(const std::filesystem::path &path,
+                                            DiagnosticList &diagnostics) const;
+
+        /// \overload
+        HELLOKIT_DOCUMENT_EXPORT QByteArray serialize() const;
     };
 
 }
