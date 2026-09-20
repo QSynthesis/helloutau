@@ -1,6 +1,6 @@
 #include "MainWindow.h"
 
-#include <QLabel>
+#include <QtWidgets/QLabel>
 
 namespace hello::daw {
 

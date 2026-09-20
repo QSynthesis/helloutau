@@ -1,6 +1,6 @@
 #include "InterchangeReader.h"
 
-#include <QCoreApplication>
+#include <QtCore/QCoreApplication>
 
 #include <hellokit/Interchange/InterchangeSelector.h>
 

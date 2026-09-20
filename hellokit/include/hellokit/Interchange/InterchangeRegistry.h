@@ -3,9 +3,9 @@
 
 #include <memory>
 
-#include <QList>
-#include <QString>
-#include <QStringList>
+#include <QtCore/QList>
+#include <QtCore/QString>
+#include <QtCore/QStringList>
 
 #include <hellokit/Interchange/HelloKitInterchangeGlobal.h>
 #include <hellokit/Interchange/InterchangeReader.h>

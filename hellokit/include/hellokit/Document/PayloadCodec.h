@@ -3,8 +3,8 @@
 
 #include <optional>
 
-#include <QByteArray>
-#include <QByteArrayView>
+#include <QtCore/QByteArray>
+#include <QtCore/QByteArrayView>
 
 #include <hellokit/Document/HelloKitDocumentGlobal.h>
 

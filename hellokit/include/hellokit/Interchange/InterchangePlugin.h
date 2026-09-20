@@ -4,7 +4,7 @@
 #include <memory>
 #include <vector>
 
-#include <QtPlugin>
+#include <QtCore/QtPlugin>
 
 #include <hellokit/Interchange/HelloKitInterchangeGlobal.h>
 #include <hellokit/Interchange/InterchangeReader.h>

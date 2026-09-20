@@ -1,7 +1,7 @@
 #ifndef HELLOUTAU_WIDGETS_MAINWINDOW_H
 #define HELLOUTAU_WIDGETS_MAINWINDOW_H
 
-#include <QMainWindow>
+#include <QtWidgets/QMainWindow>
 
 #include <helloutau/Widgets/HelloUtauWidgetsGlobal.h>
 

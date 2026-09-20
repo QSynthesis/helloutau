@@ -1,8 +1,8 @@
 #ifndef HELLOKIT_DOCUMENT_PROJECT_H
 #define HELLOKIT_DOCUMENT_PROJECT_H
 
-#include <QList>
-#include <QString>
+#include <QtCore/QList>
+#include <QtCore/QString>
 
 #include <hellokit/Document/HelloKitDocumentGlobal.h>
 #include <hellokit/Document/Note.h>

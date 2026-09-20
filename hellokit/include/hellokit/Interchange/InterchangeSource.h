@@ -3,9 +3,9 @@
 
 #include <optional>
 
-#include <QByteArray>
-#include <QList>
-#include <QString>
+#include <QtCore/QByteArray>
+#include <QtCore/QList>
+#include <QtCore/QString>
 
 #include <hellokit/Interchange/HelloKitInterchangeGlobal.h>
 

@@ -3,8 +3,8 @@
 
 #include <optional>
 
-#include <QList>
-#include <QString>
+#include <QtCore/QList>
+#include <QtCore/QString>
 
 #include <hellokit/Support/HelloKitSupportGlobal.h>
 

@@ -1,6 +1,6 @@
 #include "InterchangeRegistry.h"
 
-#include <QHash>
+#include <QtCore/QHash>
 
 namespace hello::kit {
 

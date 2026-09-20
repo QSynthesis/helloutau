@@ -3,9 +3,9 @@
 
 #include <optional>
 
-#include <QList>
-#include <QMap>
-#include <QString>
+#include <QtCore/QList>
+#include <QtCore/QMap>
+#include <QtCore/QString>
 
 #include <hellokit/Document/HelloKitDocumentGlobal.h>
 

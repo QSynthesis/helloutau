@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include <QByteArray>
+#include <QtCore/QByteArray>
 
 #include <hellokit/Document/PayloadCodec.h>
 

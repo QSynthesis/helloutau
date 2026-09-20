@@ -2,7 +2,7 @@
 
 #include <algorithm>
 
-#include <QCoreApplication>
+#include <QtCore/QCoreApplication>
 
 #include <hellokit/Interchange/InterchangeReader.h>
 #include <hellokit/Interchange/InterchangeWriter.h>

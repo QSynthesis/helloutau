@@ -4,8 +4,8 @@
 #include <filesystem>
 #include <optional>
 
-#include <QString>
-#include <QStringList>
+#include <QtCore/QString>
+#include <QtCore/QStringList>
 
 #include <hellokit/Document/Project.h>
 #include <hellokit/Support/Diagnostic.h>

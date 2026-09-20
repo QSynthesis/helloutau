@@ -1,6 +1,6 @@
 #include "InterchangeWriter.h"
 
-#include <QCoreApplication>
+#include <QtCore/QCoreApplication>
 
 #include <hellokit/Interchange/InterchangeSelector.h>
 

@@ -116,6 +116,7 @@ resampler / wavtool 的命令行参数由 `utau::ResamplerArguments::arguments()
 - **大小写三层**：CMake 包名与 `project()` 小写（`hellokit`、`helloutauConfig.cmake.in`），子库目标与 dll 大驼峰（`HelloKitDocument`），include 命名空间小写。
 - 文件名大驼峰，与其中的主要类型同名。入口 `main.cpp` 小写；每个子库一个 `<目标名>Global.h` 放导出宏。
 - 类型大驼峰，函数 / 参数 / 变量 / 命名空间小驼峰，枚举成员大驼峰。私有数据成员 `m_` 前缀，PImpl 的两个指针例外，用 `_impl` 和 `_decl`。getter 是属性名，setter 是 `set` 加属性名。
+- **Qt 的头文件要带模块名**，写 `<QtCore/QByteArray>`、`<QtWidgets/QMainWindow>`，不写 `<QByteArray>`。
 - 头文件里引用项目公开头用尖括号全路径；源文件里同目标的头用双引号。源文件最上方第一个引用块是同名公开头和 `_p.h`，然后依次是系统库、标准库、第三方库、项目内其他目标，当前目标内其余头文件在最底部单独成块。
 - 初始化表达式是指针时写 `auto name = ...`，不写 `auto *name = ...`。析构函数不写 `override`，头文件里被继承的类不写 `final`。
 - 命名空间结束处不加注释。

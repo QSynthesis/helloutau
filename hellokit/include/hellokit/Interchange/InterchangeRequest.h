@@ -3,11 +3,11 @@
 
 #include <optional>
 
-#include <QList>
-#include <QString>
-#include <QStringList>
-#include <QVariant>
-#include <QVariantMap>
+#include <QtCore/QList>
+#include <QtCore/QString>
+#include <QtCore/QStringList>
+#include <QtCore/QVariant>
+#include <QtCore/QVariantMap>
 
 #include <hellokit/Document/Project.h>
 #include <hellokit/Support/Diagnostic.h>
