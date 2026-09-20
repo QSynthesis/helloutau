@@ -6,11 +6,15 @@
 
 | 目标 | 状态 |
 |---|---|
-| `HelloKitDocument` | 只有 `PayloadCodec`，用来验证整条构建链 |
+| `HelloKitSupport` | 只有 `Diagnostic` |
+| `HelloKitDocument` | `PayloadCodec`、`Project` / `Track` / `Note` 模型 |
+| `HelloKitInterchange` | 接口与注册表，没有驱动 |
 | `HelloUtauWidgets` | 一个装着 `QLabel` 的 `MainWindow`，证明 Qt Widgets 和 moc 接上了 |
 | `helloutau` | 薄驱动，只有 `main.cpp` |
 
 构建链已验证：qmsetup 的 `hellokit_add_library` / `helloutau_add_library` / `helloutau_add_application`、Qt 6.11 加 AUTOMOC、stdcorelib、stdutau、Boost.Test 加 `add_auto_test`、ctest。
+
+`HelloKitSupport` 目前只有 `Diagnostic`。`HelloKitDocument` 有 `PayloadCodec` 和 `Project` / `Track` / `Note` 数据模型，还没有 `UsthFile` 的读写。`HelloKitInterchange` 的接口与注册表齐了（`InterchangeReader` / `InterchangeWriter` / `InterchangeSource` / `InterchangeSelector` / `AutomaticSelector` / `InterchangeRegistry` / `InterchangePlugin`），**还没有任何一个真格式的驱动**，下一步是 MIDI 导入。形状与约束见 [`Interchange.md`](Interchange.md)。
 
 `PayloadCodec` 实现了 `_USTH_` 控制音符的载荷编码，base64url 去填充。选这个作为第一块代码不是因为它最重要，是因为它是纯逻辑、不依赖 Qt、而且规则已经被实测钉死了（见 [`claude/utau-ust-preservation.md`](claude/utau-ust-preservation.md)）。
 

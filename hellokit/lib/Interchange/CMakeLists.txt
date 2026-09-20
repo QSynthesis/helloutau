@@ -1,4 +1,4 @@
-project(HelloKitDocument
+project(HelloKitInterchange
     VERSION ${HELLOKIT_VERSION}
     LANGUAGES CXX
 )
@@ -9,9 +9,8 @@ qm_find_qt(Core)
 
 hellokit_add_library(${PROJECT_NAME} SHARED
     SOURCES ${_src}
-    LINKS stdutau::stdutau HelloKitSupport
-    LINKS_PRIVATE stdcorelib::stdcorelib
+    LINKS HelloKitDocument HelloKitSupport
     QT_LINKS Core
     INCLUDE_PRIVATE ../../include/** **
-    MACRO_PREFIX HELLOKIT_DOCUMENT
+    MACRO_PREFIX HELLOKIT_INTERCHANGE
 )

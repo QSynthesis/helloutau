@@ -117,7 +117,7 @@ HelloUTAU 因此在两处都设防，不依赖于猜中那个机制：
 
 ## HelloUTAU 插件
 
-HelloUTAU 支持四种插件：
+HelloUTAU 支持五种插件：
 
 - 原版 UTAU 插件：
   - 接受包含当前选区的 `temp.ust` 作为第一个命令行参数的可执行文件，执行选区修改，执行过程阻塞界面
@@ -128,3 +128,6 @@ HelloUTAU 支持四种插件：
   - 继承自 `EditorExtensionPlugin` 的 C++ 实例，提供额外的编辑界面，执行过程不阻塞界面
 - 音源库插件：
   - 继承自 `VoiceBankPlugin` 的 C++ 实例，执行对音源库的批量操作，执行过程阻塞界面
+- 格式转换插件：
+  - 继承自 `InterchangePlugin` 的 C++ 实例，为 HelloUTAU 增加一种可导入或可导出的外部格式，例如 MIDI、VSQ、`.ustx`
+  - 它提供的是格式驱动，不是界面。需要自带选择步骤界面时再额外提供一页，接口形状见 [`Interchange.md`](Interchange.md)

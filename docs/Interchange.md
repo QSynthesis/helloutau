@@ -103,18 +103,26 @@ public:
     /// 需要自己的选择步骤时返回它的 id，空表示用 optionSchema() 生成的通用表单。
     virtual QString customStepId() const { return {}; }
 
+    /// 探查，不转换。
     virtual std::optional<InterchangeSource> inspect(const std::filesystem::path &path,
-                                                     QList<Diagnostic> &diagnostics) = 0;
+                                                     DiagnosticList &diagnostics) = 0;
 
-    virtual std::optional<Project> read(const std::filesystem::path &path,
-                                        const ImportRequest &request,
-                                        QList<Diagnostic> &diagnostics) = 0;
+    /// 整条流程：探查、问 selector、转换。非虚，驱动不实现这个。
+    ImportResult read(const std::filesystem::path &path, InterchangeSelector *selector,
+                      const ImportLimits &limits = {});
+
+protected:
+    /// 问题都答完之后，按 request 转换。由 read() 调用。
+    virtual std::optional<Project> convert(const std::filesystem::path &path,
+                                           const InterchangeSource &source,
+                                           const ImportRequest &request,
+                                           DiagnosticList &diagnostics) = 0;
 };
 ```
 
 方法名是 `read` / `write` 而不是 `import` / `export`，因为 **`export` 是 C++ 关键字**。
 
-`read()` 内部自己走 `inspect()`、问 selector、再转换。调用方不需要自己编排这三步，**命令行、测试、界面因此共用同一套流程**。
+**`read()` 是非虚的，驱动只实现 `inspect()` 和 `convert()` 两块。** 探查、问 selector、转换这三步的编排写在基类里，因为它一旦让调用方自己拼，就多出一个可以拼错顺序的地方，而命令行、测试和编辑器本该以完全相同的方式导入。
 
 ### 选项分两层
 
@@ -147,12 +155,13 @@ class HELLOKIT_INTERCHANGE_EXPORT InterchangeSelector {
 public:
     virtual ~InterchangeSelector();
 
-    /// std::nullopt 表示用户取消。
     virtual std::optional<ImportRequest> selectImport(const InterchangeReader &reader,
                                                       const InterchangeSource &source,
-                                                      const ImportLimits &limits) = 0;
+                                                      const ImportLimits &limits,
+                                                      DiagnosticList &diagnostics) = 0;
     virtual std::optional<ExportRequest> selectExport(const InterchangeWriter &writer,
-                                                      const Project &project) = 0;
+                                                      const Project &project,
+                                                      DiagnosticList &diagnostics) = 0;
 };
 
 /// 目的地能装下多少，由调用方给。
@@ -171,6 +180,8 @@ struct ImportLimits {
 ### 取消不是失败
 
 用户点叉和文件损坏是两回事，不能都表现成「返回空」——取消了不该弹错误框，出错了该弹。
+
+**`selectImport` 返回空也有两种意思，靠诊断区分**：记了 `Error` 是「这个问题根本问不出来」（比如文件里没有任何可选的条目），是失败；没记 `Error` 就是用户拒绝，不是失败。这条不是可有可无的约定——写第一版实现时这里就错了，`AutomaticSelector` 报「文件里没东西可导」被 `read()` 当成了用户取消，结果一个读不了的文件静悄悄什么都不说。测试抓到的。
 
 ```cpp
 struct ImportResult {
@@ -281,9 +292,9 @@ UTAU 本体带 MIDI 导入，但**它的实现有缺陷，我们不照抄**。�
 | | 哪儿 | 定位 |
 |---|---|---|
 | QSynthesis（2021，停更） | `.cache/QSynthesis-Old/QSynthesis/Frontend/Utils/FilePasers/FilePasers_Midi.cpp` | 转换逻辑的形状参考，但有五处缺陷，见下 |
-| qsynthesis-revenge 的 `iemgr` 插件 | `src/plugins/diffscope/iemgr/`，导入对话框在 `Internal/Utils/private/ImportDialog_p.cpp` | **交互形状的参考，本文档的选择步骤是照它设计的** |
+| qsynthesis-revenge 的 `iemgr` 插件 | `src/plugins/diffscope/iemgr/`，导入对话框在 `Internal/Utils/private/ImportDialog_p.cpp` | **只参考思路，不要照搬代码。** 那个对话框本身设计得不好 |
 
-`iemgr` 那份把编码问题解决对了，本文档里这几条都是从它来的：条目选择和编码选择是两个 tab 而不是一个表单、编码 tab 按需出现、条目带原始字节由界面当场解码、切换编码三块预览一起刷新、解码失败显示成「解码失败」而不是乱码、先试 UTF-8 失败退回系统编码、选满之后再选顶掉最早的那条。
+**要拿的是它对编码问题的处理思路，不是它的实现。** 本文档里这几条出自那里：条目选择和编码选择是两个 tab 而不是一个表单、编码 tab 按需出现、条目带原始字节由界面当场解码、切换编码三块预览一起刷新、解码失败显示成「解码失败」而不是乱码、先试 UTF-8 失败退回系统编码、选满之后再选顶掉最早的那条。
 
 `iemgr` 是 DiffScope 的一个**插件**，不是内置模块。这也是「格式转换适合做成插件」这个判断的出处。
 

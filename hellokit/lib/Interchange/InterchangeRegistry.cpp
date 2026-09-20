@@ -1,0 +1,88 @@
+#include "InterchangeRegistry.h"
+
+#include <QHash>
+
+namespace hello::kit {
+
+    // One list per kind, in the order things registered, plus an index by id. The order is what
+    // decides a contested suffix, so it has to be the order and not a hash table's.
+    template <class T>
+    struct Table {
+        std::vector<std::unique_ptr<T>> owned;
+        QHash<QString, T *> byId;
+
+        bool add(std::unique_ptr<T> item) {
+            if (!item || byId.contains(item->id())) {
+                return false;
+            }
+            byId.insert(item->id(), item.get());
+            owned.push_back(std::move(item));
+            return true;
+        }
+
+        QList<T *> all() const {
+            QList<T *> result;
+            result.reserve(int(owned.size()));
+            for (const auto &item : owned) {
+                result.push_back(item.get());
+            }
+            return result;
+        }
+
+        T *forSuffix(const QString &suffix) const {
+            const QString wanted = suffix.startsWith(QLatin1Char('.')) ? suffix.mid(1) : suffix;
+            for (const auto &item : owned) {
+                for (const auto &candidate : item->suffixes()) {
+                    if (candidate.compare(wanted, Qt::CaseInsensitive) == 0) {
+                        return item.get();
+                    }
+                }
+            }
+            return nullptr;
+        }
+    };
+
+    class InterchangeRegistry::Impl {
+    public:
+        Table<InterchangeReader> readers;
+        Table<InterchangeWriter> writers;
+    };
+
+    InterchangeRegistry::InterchangeRegistry() : _impl(std::make_unique<Impl>()) {
+    }
+
+    InterchangeRegistry::~InterchangeRegistry() = default;
+
+    bool InterchangeRegistry::addReader(std::unique_ptr<InterchangeReader> reader) {
+        return _impl->readers.add(std::move(reader));
+    }
+
+    bool InterchangeRegistry::addWriter(std::unique_ptr<InterchangeWriter> writer) {
+        return _impl->writers.add(std::move(writer));
+    }
+
+    QList<InterchangeReader *> InterchangeRegistry::readers() const {
+        return _impl->readers.all();
+    }
+
+    QList<InterchangeWriter *> InterchangeRegistry::writers() const {
+        return _impl->writers.all();
+    }
+
+    InterchangeReader *InterchangeRegistry::readerForId(const QString &id) const {
+        return _impl->readers.byId.value(id);
+    }
+
+    InterchangeWriter *InterchangeRegistry::writerForId(const QString &id) const {
+        return _impl->writers.byId.value(id);
+    }
+
+    InterchangeReader *InterchangeRegistry::readerForSuffix(const QString &suffix) const {
+        return _impl->readers.forSuffix(suffix);
+    }
+
+    InterchangeWriter *InterchangeRegistry::writerForSuffix(const QString &suffix) const {
+        return _impl->writers.forSuffix(suffix);
+    }
+
+}
