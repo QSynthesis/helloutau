@@ -123,6 +123,7 @@ resampler / wavtool 的命令行参数由 `utau::ResamplerArguments::arguments()
 - 初始化表达式是指针时写 `auto name = ...`，不写 `auto *name = ...`。析构函数不写 `override`，头文件里被继承的类不写 `final`。
 - 命名空间结束处不加注释。
 - 读不到就是没有的地方返回 `std::optional<T>`，不要用「bool 加出参」，也不要拿某个特定值当「没有」。
+- **契约性的常量写在 `hellokit/Document/DocumentConstants.h`**，不要在用到它的那个文件里就地定义。默认歌词、音域、每拍 tick 数这类东西，编辑器新建音符和导入器产出音符必须是同一个值，写两处就是等着它们悄悄不一致。**UTAU 自己定的默认值不往这儿抄**，stdutau 的 `utaconst.h` 已经有了，从那儿取。
 - 前缀：仓库级 CMake 变量 `HELLO_`，模块级 CMake 变量与函数 `HELLOKIT_` / `hellokit_`、`HELLOUTAU_` / `helloutau_`，子库导出宏 `HELLOKIT_DOCUMENT_EXPORT` 这类，头文件保护跟 include 路径走（`HELLOKIT_DOCUMENT_PAYLOADCODEC_H`）。**模块级的前缀必须显式给**，`qm_setup_build_repo_helpers()` 默认取 `PROJECT_NAME`，而子目录里那个已经是 `HelloKitDocument` 了。
 - **带 `Q_OBJECT` 的头文件必须进目标的 `SOURCES`**，AUTOMOC 只扫 `SOURCES`。头在 `include/` 下不会被源文件 glob 捞到，漏了就链接时缺四个 moc 符号。
 

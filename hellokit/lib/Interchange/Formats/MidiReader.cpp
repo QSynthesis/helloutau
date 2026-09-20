@@ -8,23 +8,14 @@
 
 #include <wolf-midi/MidiFile.h>
 
+#include <hellokit/Document/DocumentConstants.h>
+
 namespace hello::kit {
 
     namespace {
 
-        constexpr int TicksPerQuarter = 480;
-
-        // UTAU's keyboard, C1 to B7. A note outside it has nowhere to go.
-        constexpr int LowestNoteNum = 24;
-        constexpr int HighestNoteNum = 107;
-
         constexpr char OptionEncoding[] = "encoding";
         constexpr char OptionDefaultLyric[] = "defaultLyric";
-
-        // A UST note with an empty lyric is a rest, so a note that brought none of its own still
-        // has to say something. Latin rather than kana, because a bank that cannot sing this can
-        // at least be told apart from one that sang the wrong thing.
-        constexpr char DefaultLyric[] = "la";
 
         QString tr(const char *text) {
             return QCoreApplication::translate("hello::kit::MidiReader", text);
@@ -344,7 +335,7 @@ namespace hello::kit {
 
             if (note.start > cursor) {
                 Note rest;
-                rest.lyric = QStringLiteral("R");
+                rest.lyric = QLatin1String(RestLyric);
                 rest.length = note.start - cursor;
                 rest.noteNum = track.notes.isEmpty() ? 60 : track.notes.last().noteNum;
                 track.notes.push_back(rest);

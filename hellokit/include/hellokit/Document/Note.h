@@ -7,6 +7,7 @@
 #include <QtCore/QMap>
 #include <QtCore/QString>
 
+#include <hellokit/Document/DocumentConstants.h>
 #include <hellokit/Document/HelloKitDocumentGlobal.h>
 
 namespace hello::kit {
@@ -83,7 +84,7 @@ namespace hello::kit {
     /// a field stated to be zero, and the difference has to survive a round trip.
     struct Note {
         QString lyric;   ///< \c R, \c r and an empty string are rests
-        int length = 0;  ///< ticks, 480 to the quarter note
+        int length = 0;  ///< ticks, \c TicksPerQuarter to the quarter note
         int noteNum = 0; ///< 24 is C1, as in MIDI
 
         std::optional<double> intensity;
@@ -125,7 +126,7 @@ namespace hello::kit {
 
         /// Whether this note makes no sound, which is what UTAU decides from the lyric alone.
         bool isRest() const {
-            return lyric.isEmpty() || lyric == QStringLiteral("R") || lyric == QStringLiteral("r");
+            return lyric.isEmpty() || lyric.compare(QLatin1String(RestLyric), Qt::CaseInsensitive) == 0;
         }
     };
 

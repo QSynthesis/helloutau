@@ -4,6 +4,7 @@
 #include <QtCore/QList>
 #include <QtCore/QString>
 
+#include <hellokit/Document/DocumentConstants.h>
 #include <hellokit/Document/HelloKitDocumentGlobal.h>
 #include <hellokit/Document/Note.h>
 
@@ -23,7 +24,7 @@ namespace hello::kit {
     /// Everything the whole project shares.
     struct ProjectSettings {
         QString name;
-        double tempo = 120.0;
+        double tempo = utau::DEFAULT_VALUE_TEMPO;
         QString flags;
         QString outputFile;
 
