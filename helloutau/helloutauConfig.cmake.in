@@ -1,0 +1,8 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+
+find_dependency(hellokit CONFIG REQUIRED)
+find_dependency(Qt6 CONFIG REQUIRED COMPONENTS Core Gui Widgets)
+
+include("${CMAKE_CURRENT_LIST_DIR}/helloutauTargets.cmake")

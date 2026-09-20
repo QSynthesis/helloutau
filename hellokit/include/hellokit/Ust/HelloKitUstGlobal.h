@@ -1,0 +1,18 @@
+#ifndef HELLOKIT_UST_HELLOKITUSTGLOBAL_H
+#define HELLOKIT_UST_HELLOKITUSTGLOBAL_H
+
+#include <stdcorelib/stdc_global.h>
+
+#ifndef HELLOKIT_UST_EXPORT
+#  ifdef HELLOKIT_UST_STATIC
+#    define HELLOKIT_UST_EXPORT
+#  else
+#    ifdef HELLOKIT_UST_LIBRARY
+#      define HELLOKIT_UST_EXPORT STDC_DECL_EXPORT
+#    else
+#      define HELLOKIT_UST_EXPORT STDC_DECL_IMPORT
+#    endif
+#  endif
+#endif
+
+#endif // HELLOKIT_UST_HELLOKITUSTGLOBAL_H

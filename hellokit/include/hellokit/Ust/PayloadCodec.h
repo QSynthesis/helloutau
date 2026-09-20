@@ -1,0 +1,40 @@
+#ifndef HELLOKIT_PAYLOADCODEC_H
+#define HELLOKIT_PAYLOADCODEC_H
+
+#include <optional>
+#include <string>
+#include <string_view>
+
+#include <hellokit/Ust/HelloKitUstGlobal.h>
+
+namespace hu {
+
+    /// Encodes and decodes what the control note carries.
+    ///
+    /// A UST entry is far from able to hold arbitrary bytes. UTAU truncates a value at an equals
+    /// sign or a tab, turns every space into a comma, and drops an entry whose value is empty.
+    /// base64url without padding steps around all of that, since its alphabet is letters, digits,
+    /// \c - and \c _ and nothing else.
+    ///
+    /// The result is also plain ASCII, which the reader needs: the encoding of the file as a whole
+    /// is one of the things the control note says, so that entry has to be found and read before
+    /// anything is decoded.
+    ///
+    /// \sa docs/claude/utau-ust-preservation.md, for the measurements behind all of this
+    class HELLOKIT_UST_EXPORT PayloadCodec {
+    public:
+        /// Returns \a data as base64url without padding. An empty input gives an empty string,
+        /// which is not what a caller should write to a note, since UTAU drops an entry that has
+        /// no value.
+        static std::string encode(std::string_view data);
+
+        /// Returns the bytes \a text stands for, or nothing when \a text is not base64url.
+        ///
+        /// Padding is refused rather than tolerated. It cannot survive the trip through UTAU, so
+        /// reading it here would accept what could never be read back.
+        static std::optional<std::string> decode(std::string_view text);
+    };
+
+}
+
+#endif // HELLOKIT_PAYLOADCODEC_H

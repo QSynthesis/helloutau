@@ -1,2 +1,3 @@
-# hello-utau
+# HelloUTAU
+
 Hello UTAU.
