@@ -51,20 +51,38 @@ MIDI 没有歌词以外的任何 UTAU 参数，VSQ 的参数和 UTAU 不是一�
 /// 文件里的一条可导入的东西：MIDI 的一条 track、VSQ 的一个 part、ustx 的一条轨。
 struct InterchangeEntry {
     int index;
-    QString name;
     int noteCount;
     std::optional<int> lowestNote;    // 音域，给界面显示
     std::optional<int> highestNote;
+
+    // 编码还没定，所以这里是未解码的字节。见下。
+    QByteArray rawName;
+    QList<QByteArray> rawLyrics;
 };
 
 /// 探查的结果，在转换任何东西之前就能拿到。
 struct InterchangeSource {
     QString formatId;
     QList<InterchangeEntry> entries;
+    QList<QByteArray> rawLabels;
 };
 ```
 
 `inspect()` 是公开的，因为「只想看看这文件里有什么」是独立需求（文件对话框预览），不该被迫走一遍导入。
+
+### 为什么这里是未解码的字节
+
+`rawName` 和 `rawLyrics` 是 `QByteArray` 不是 `QString`，这是**故意的，而且是这个模块里唯一一处**。
+
+编码是用户在这个界面上选的，选之前没人知道该怎么解。要让用户看着预览选编码，界面就必须拿到原始字节、按当前选中的编码当场解码。先在 `inspect()` 里解好再交出去，等于在用户还没回答之前替他答了。
+
+这是 [`AGENTS.md`](../AGENTS.md) 那条「原始字节不许离开 I/O 边界那一层」的一处**有界例外**，边界划在这儿：
+
+- 只有 `InterchangeSource` 这一个结构能带原始字节。
+- **`read()` 返回的 `Project` 里一个字节都不许有**，那时编码已经定了，全部是 UTF-8。
+- 换句话说，原始字节只存在于「还没选定编码」这个窗口里，窗口一关就没了。
+
+**解码失败要显示出来，不要显示成乱码。** 解不出来的条目在预览里明确写「解码失败」，用户一眼能看见这个编码选错了。
 
 ### 驱动
 
@@ -117,7 +135,9 @@ struct ImportRequest {
 
 **「选哪几条」保持强类型，不进 schema。** 它每个格式都有，而且界面要显示的东西比一个下拉框多得多——轨名、音符数、音域。塞进 `QVariantMap` 会把这些信息碾平。
 
-**其余选项一律由驱动自己声明。** 典型例子是文本编码：MIDI 是古早格式，歌词和轨名都没有编码声明，只能问用户；而后来的 `.ustx`、`.svp`、`.vsqx` 都是 Unicode，根本没有这个问题。把 `encoding` 放进公共结构等于让三个格式背一个只有第四个需要的字段。
+**其余选项一律由驱动自己声明。** 文本编码就是典型：MIDI 是古早格式，歌词和轨名都没有编码声明，只能问用户；而后来的 `.ustx`、`.svp`、`.vsqx` 都是 Unicode，根本没有这个问题。把 `encoding` 放进公共结构等于让三个格式背一个只有第四个需要的字段。
+
+**但编码本身不走这张 schema，它是自定义步骤的第一个客户**，理由见下一节。schema 适合的是「一个控件问一件事」的选项，比如「音符短于多少 tick 就丢弃」。
 
 ### 向用户提问
 
@@ -129,13 +149,22 @@ public:
 
     /// std::nullopt 表示用户取消。
     virtual std::optional<ImportRequest> selectImport(const InterchangeReader &reader,
-                                                      const InterchangeSource &source) = 0;
+                                                      const InterchangeSource &source,
+                                                      const ImportLimits &limits) = 0;
     virtual std::optional<ExportRequest> selectExport(const InterchangeWriter &writer,
                                                       const Project &project) = 0;
+};
+
+/// 目的地能装下多少，由调用方给。
+struct ImportLimits {
+    int minEntries = 1;
+    int maxEntries = 1;    // 工程现在单轨，所以是 1
 };
 ```
 
 一次问完，不拆成「选轨」「选编码」两个回调。拆了界面上就是连弹两个对话框。驱动通过 `reader` 参数被读到 `optionSchema()`。
+
+**能选几条是调用方说的，不是驱动说的。** 驱动只知道文件里有几条，不知道目的地装得下几条——工程现在单轨，所以 `maxEntries` 是 1，将来放开多轨时改的是调用方，驱动一行不动。界面在**选满之后再选**时应当把最早选的那条顶掉，而不是拒绝用户的点击。
 
 **`nullptr` 不能等于卡住或者崩。** kit 里内置一个 `AutomaticSelector`：照 `optionSchema()` 取每一项的默认值，选中全部条目，并且**每替用户做一次决定就记一条 `Note` 级诊断**。命令行工具、测试、将来的批量转换都用它，传 `nullptr` 就是用它。这样测试永远不会挂在一个等不到答案的对话框上。
 
@@ -164,6 +193,8 @@ stdcorelib 的 `StaticRegistry` / `DynamicRegistry` 正好是干这个的，但*
 ## 自定义选择步骤
 
 有些格式的选择步骤没法用 `optionSchema()` 那几种控件拼出来。这时驱动可以自带一页界面。
+
+**第一个客户就是 MIDI 的编码选择**，它不是一个下拉框能解决的：左边是编码列表，右边要同时预览轨名、歌词和标记，切一下编码三块预览全部重解码刷新，用户靠看哪一栏变成乱码来判断选对没有。这正是不能塞进 schema 的那种步骤。
 
 **难点在于驱动住在 kit 里，而 kit 不链 QtWidgets。** 所以一个自定义步骤是两半，用 id 对上：
 
@@ -202,6 +233,12 @@ public:
 - **它是一页，不是整个对话框。** 条目选择、确定取消、诊断展示这些公共部分仍然由导入对话框提供，各驱动之间保持一致。
 - **找不到注册的页就退回通用表单**，并记一条诊断。一个只装了 kit 那半边的插件应当仍然可用，而不是打不开。
 
+### 默认编码可以猜，最终编码不可以
+
+编码页打开时选中哪一项，允许用一个启发式来定：**先试 UTF-8，解码出现非法字符就退回系统编码**。
+
+这和 [`AGENTS.md`](../AGENTS.md) 里「不要猜编码，也不要用检测代替记录」不冲突，因为猜的是**默认选中项**，不是最终结果。用户仍然看着预览确认或改掉，确认之后那个编码就被记下来。禁止的是拿检测结果当答案、不问用户就往下走。
+
 ## 线程
 
 **接口不规定线程，但实现方必须管。** 导入要是挪到后台线程，`InterchangeSelector` 的回调就在工作线程上被调用，而 Qt 的对话框只能在 GUI 线程开。
@@ -236,6 +273,19 @@ public:
 UTAU 本体带 MIDI 导入，但**它的实现有缺陷，我们不照抄**。这条要特别写下来，因为 [`AGENTS.md`](../AGENTS.md) 里有「做功能对齐时要对齐的是 v0.4.18 的行为」，不说清楚的话，以后会有人拿那句话当理由把我们的实现改回去。
 
 **判据是导出的工程本身正确，不是和 UTAU 逐音符一致。**
+
+### 两份前作
+
+同一作者写过两遍这件事，**后一遍比前一遍对得多**：
+
+| | 哪儿 | 定位 |
+|---|---|---|
+| QSynthesis（2021，停更） | `.cache/QSynthesis-Old/QSynthesis/Frontend/Utils/FilePasers/FilePasers_Midi.cpp` | 转换逻辑的形状参考，但有五处缺陷，见下 |
+| qsynthesis-revenge 的 `iemgr` 插件 | `src/plugins/diffscope/iemgr/`，导入对话框在 `Internal/Utils/private/ImportDialog_p.cpp` | **交互形状的参考，本文档的选择步骤是照它设计的** |
+
+`iemgr` 那份把编码问题解决对了，本文档里这几条都是从它来的：条目选择和编码选择是两个 tab 而不是一个表单、编码 tab 按需出现、条目带原始字节由界面当场解码、切换编码三块预览一起刷新、解码失败显示成「解码失败」而不是乱码、先试 UTF-8 失败退回系统编码、选满之后再选顶掉最早的那条。
+
+`iemgr` 是 DiffScope 的一个**插件**，不是内置模块。这也是「格式转换适合做成插件」这个判断的出处。
 
 ### QSynthesis 那份里不能抄的
 

@@ -25,11 +25,13 @@ v0.4.19 修掉的是 JVN#71404925 报告的两个洞：
 
 ## 参考仓库
 
-三个参考物的定位不同，别混着抄。
+四个参考物的定位不同，别混着抄。
 
 **stdutau**（<https://github.com/diffscope/stdutau>，由 `third-party/Dependencies.cmake` 引入）——UTAU 数据层的实现，不是参考物，是依赖。`utau::UstFile`、`OtoIni`、`PrefixMap`、`PluginFileReader/Writer`、`Synth::calc` 已经覆盖了 ust / oto.ini / prefix.map 的读写、插件 tmp 文件协议和合成参数计算。**凡是这几件事，一律走 stdutau，不要在本仓库里重写一份**，发现它不够用就去改它，见「与 stdutau 协作」。
 
 **QSynthesis-Old**（<https://github.com/QSynthesis/QSynthesis-Old>）——同一作者 2021 年停更的 Qt 5 前作，`.cache/QSynthesis-Old` 下有一份。**只当行为参考，不要当代码来源。** 值得看的是它踩过的实际问题：`Frontend/Process/` 的渲染调度（`RealtimeRenderer` + `ResampleWork` + `ConcatenateWork` 的线程池模型）、`Backend/Documents/Import/` 的 MIDI / VSQ / frq / presamp 导入、`Backend/VoiceBank/` 的音源目录模型。不值得搬的是它的整套 `Q` 前缀类型、`MiniSystem` 那套自造基础设施，以及把编码问题拖到 UI 层才处理的做法。`Synth::calc` 里标着「Port from QSynthesis begin」的那段音高曲线代码已经迁到 stdutau 了，不要再从旧仓库里搬一遍。
+
+**qsynthesis-revenge / DiffScope**（<https://github.com/SineStriker/qsynthesis-revenge>）——同一作者在 QSynthesis 之后的重写，**同一个问题的后一版答案，通常比 QSynthesis 那版对**。本地没有克隆，要看就按路径取单个文件。已经用上的一处是 `src/plugins/diffscope/iemgr/`（导入导出管理器），本仓库的格式转换模块照它设计，见 [`docs/Interchange.md`](docs/Interchange.md)。**遇到 QSynthesis 里某段代码明显不对时，先去这个仓库找同一件事的后一版，再决定怎么写。**
 
 **synthrt**（`D:\GitHub\synthrt`）与 **stdcorelib**（`D:\GitHub\stdcorelib`）——本仓库的工程规范来源。目录组织、命名、注释、头文件引用照 synthrt 的 `docs/Development.md`；基础设施优先用 stdcorelib。
 
