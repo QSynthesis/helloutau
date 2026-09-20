@@ -103,7 +103,7 @@ resampler / wavtool 的命令行参数由 `utau::ResamplerArguments::arguments()
 
 本仓库自己的那份是 [`docs/Development.md`](docs/Development.md)，**它才是权威**，下面只是提要。
 
-- 两个模块，每个是**一族库**：`hellokit`（命名空间 `hu`，Qt Core，产出 `HelloKitUst` 等）和 `helloutau`（Qt Widgets，产出 `HelloUtauWidgets` 等加 `helloutau` 可执行文件）。**`hellokit` 不链接 QtWidgets**，核心逻辑不依赖 GUI 才测得动。
+- 两个模块，每个是**一族库**：`hellokit`（命名空间 `hello::kit`，Qt Core，产出 `HelloKitUst` 等）和 `helloutau`（命名空间 `hello::daw`，Qt Widgets，产出 `HelloUtauWidgets` 等加 `helloutau` 可执行文件）。**`hellokit` 不链接 QtWidgets**，核心逻辑不依赖 GUI 才测得动。
 - **应用也是库加薄驱动**，照 lldb 的 `liblldb` + `tools/driver`。`tools/driver/main.cpp` 只放入口，其余在库里——可执行文件没法链进测试二进制，库可以。
 - 模块级一个 `include/` 一个 `lib/`，照 synthrt：`hellokit/include/hellokit/Ust/` 配 `hellokit/lib/Ust/`。**include 的命名空间是模块名不是目标名**，写 `<hellokit/Ust/PayloadCodec.h>`。不用 `sync_include`。私有头同源文件放，加 `_p.h` 后缀，尽量少用。
 - **大小写三层**：CMake 包名与 `project()` 小写（`hellokit`、`helloutauConfig.cmake.in`），子库目标与 dll 大驼峰（`HelloKitUst`），include 命名空间小写。

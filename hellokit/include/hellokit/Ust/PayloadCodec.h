@@ -7,7 +7,7 @@
 
 #include <hellokit/Ust/HelloKitUstGlobal.h>
 
-namespace hu {
+namespace hello::kit {
 
     /// Encodes and decodes what the control note carries.
     ///

@@ -6,7 +6,7 @@
 
 #include <boost/test/unit_test.hpp>
 
-using namespace hu;
+using namespace hello::kit;
 
 BOOST_AUTO_TEST_SUITE(test_PayloadCodec)
 

@@ -5,7 +5,7 @@
 
 #include <helloutau/Widgets/HelloUtauWidgetsGlobal.h>
 
-namespace hu {
+namespace hello::daw {
 
     /// The editor window.
     class HELLOUTAU_WIDGETS_EXPORT MainWindow : public QMainWindow {

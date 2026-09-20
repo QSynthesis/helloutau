@@ -8,10 +8,12 @@
 
 两个模块，每个模块是**一族库**而不是一个库：
 
-| 模块 | 产出 | 依赖 |
-|---|---|---|
-| `hellokit/` | `HelloKitUst`、以后的 `HelloKitCore` 等 | Qt Core、stdcorelib、stdutau |
-| `helloutau/` | `HelloUtauWidgets` 等，加上 `helloutau` 可执行文件 | Qt Widgets、hellokit |
+| 模块 | 命名空间 | 产出 | 依赖 |
+|---|---|---|---|
+| `hellokit/` | `hello::kit` | `HelloKitUst`、以后的 `HelloKitCore` 等 | Qt Core、stdcorelib、stdutau |
+| `helloutau/` | `hello::daw` | `HelloUtauWidgets` 等，加上 `helloutau` 可执行文件 | Qt Widgets、hellokit |
+
+`hello` 只是外层，代码一律写在第二层里。不要往 `hello` 本身放东西，也不要再开第三层。
 
 **`hellokit` 不链接 QtWidgets。** 界面是应用程序的事，核心逻辑不依赖 GUI 工具包才测得动。
 

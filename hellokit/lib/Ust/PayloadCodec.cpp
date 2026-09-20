@@ -2,7 +2,7 @@
 
 #include <array>
 
-namespace hu {
+namespace hello::kit {
 
     static constexpr const char ALPHABET[] =
         "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
