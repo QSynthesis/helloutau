@@ -10,7 +10,7 @@ HelloUTAU 的工程文件。JSON，UTF-8，**不带 BOM**，换行 `\n`。
 {
   "$format": "usth",
   "version": 1,
-  "project": { },
+  "settings": { },
   "tracks": [ { } ]
 }
 ```
@@ -19,14 +19,14 @@ HelloUTAU 的工程文件。JSON，UTF-8，**不带 BOM**，换行 `\n`。
 |---|---|---|
 | `$format` | string | 恒为 `"usth"`。用来在扩展名不可信时辨认文件 |
 | `version` | int | 格式版本，当前为 1 |
-| `project` | object | 整个工程共有的设置 |
+| `settings` | object | 整个工程共有的设置 |
 | `tracks` | array | 轨道。**第 1 版长度必须为 1**，其余情况读取时报错 |
 
 `tracks` 从一开始就是数组，是为了将来放开多轨时不必改 `version`。读取方遇到长度不为 1 的文件应当明确报错，而不是默默只取第一条——静默丢数据比打不开更糟。
 
 未知的顶层字段**原样保留并写回**。这让旧版本的 HelloUTAU 打开新版本的文件时不至于把东西吃掉。
 
-## `project`
+## `settings`
 
 ```json
 {
@@ -34,8 +34,10 @@ HelloUTAU 的工程文件。JSON，UTF-8，**不带 BOM**，换行 `\n`。
   "tempo": 120.0,
   "flags": "",
   "outputFile": "",
-  "mode2": true,
-  "ustCharset": "Shift_JIS"
+  "cacheDir": "",
+  "wavtool": "",
+  "resampler": "",
+  "mode2": true
 }
 ```
 
@@ -45,14 +47,18 @@ HelloUTAU 的工程文件。JSON，UTF-8，**不带 BOM**，换行 `\n`。
 | `tempo` | double | `Tempo` | 起始速度，音符可以改变它 |
 | `flags` | string | `Flags` | 工程级 flags，音符的 flags 追加在其后 |
 | `outputFile` | string | `OutFile` | |
+| `cacheDir` | string | `CacheDir` | 缓存目录。UTAU 存盘时会把它改写成跟随文件名 |
+| `wavtool` | string | `Tool1` | 见下 |
+| `resampler` | string | `Tool2` | 见下 |
 | `mode2` | bool | `Mode2` | 音高用 Mode2 曲线还是 Mode1 采样数组 |
-| `ustCharset` | string | —— | 导出 `.ust` 时用的编码。见下面「编码」 |
 
-**`Tool1`、`Tool2`、`CacheDir` 不进本格式。**
+### 引擎路径是存下来的，但不被信任
 
-前两个是引擎路径。把它们存进工程文件等于让工程决定跑什么程序，这正是 CVE-2024-28886 的形状。导出 `.ust` 时写的是本地配置里的引擎路径，不是源文件里的。`CacheDir` 由 UTAU 自己按保存的文件名改写（已实测），记下来也没用。
+`wavtool` 和 `resampler` 在 UTAU 里是逐工程可配的，不同工程用不同的重采样器是真实的用法。**所以它们原样存、原样写回**，丢掉等于主动删用户的设置。
 
-这意味着 `.ust` → `.usth` → `.ust` 之后这三项会变。这不违反往返承诺：承诺的是「UTAU 能等价打开」，而指向用户本机引擎的路径正是能打开的那一种。
+危险的不是存，是不问就执行。规则在 `AGENTS.md` 的安全底线里，这里复述一遍：**从工程文件读到的引擎路径默认不使用**，渲染时用本地配置里的引擎，除非用户在明确的提示里选择信任这一份工程自带的。空串表示工程没有指定，那就直接用本地配置。
+
+`patch` 和 `userData` 也是同样的道理——文件里来的东西照单存下，执行与否是另一回事。
 
 ## `tracks[]`
 
@@ -190,20 +196,24 @@ UST 的 `VBR` 有第八个值，UTAU 不用它，读写时原样带着但不出�
 
 UST 音符上一切本格式没有表示的条目，键名到值的映射，原样保留并在导出时写回音符段尾。这是 `.ust` → `.usth` → `.ust` 能无损的原因。
 
-键名保留 UST 里的原样，包括 `$` 前缀。**值在这里是 UTF-8 字符串**，从 UST 读入时按 `project.ustCharset` 转过，导出时转回。
+键名保留 UST 里的原样，包括 `$` 前缀。**值在这里是 UTF-8 字符串**，读入 UST 时按那个文件的编码转过来。
 
 ## 编码
 
-`.usth` 自身永远是 UTF-8，不需要记录自己的编码。`project.ustCharset` 记的是**关联的 `.ust` 用什么编码**，用于导出，以及用户第一次打开 `.ust` 时选定后记住。
+**本格式没有编码字段，因为只有一种编码。** `.usth` 是 UTF-8，HelloUTAU 导出的 `.ust` 也是 UTF-8，并在 `[#VERSION]` 里写 `Charset=UTF-8`。UTAU 从 0.4.10 起支持 UTF-8 的 UST，0.4.11 修掉了当时那个会让 `utau.exe` 不定期崩溃的读写缺陷，目标版本 0.4.19 不受影响。
 
-目标编码表示不了的字符用转义串，规则见 `note.md`。
+编码只在**读入别人的 `.ust`** 时才是个问题，那是读取一侧的事，不需要记进工程文件：有 `Charset=` 就按它，没有就要求用户选择。选定的编码用来把整个文件转成 UTF-8，之后内存里不再有第二种编码。
+
+给插件的 `temp.ust` 是另一条路径，按插件自己声明的编码写，见 `note.md` 的插件一节。**不要拿工程的编码去写插件的临时文件。**
+
+目标编码表示不了的字符用转义串，规则见 `note.md`。这只在写非 UTF-8 的输出时用得上，也就是插件临时文件和音源配置。
 
 ## 与 `.ust` 的互转
 
 ### 导出
 
-1. 写 `[#VERSION]`（`UST Version1.2`，需要时加 `Charset=`）。
-2. 写 `[#SETTING]`：`Tempo`、`Tracks=1`、`ProjectName`、`VoiceDir`、`OutFile`、`CacheDir`、`Tool1`、`Tool2`、`Mode2`、`Flags`。**`Tool1`、`Tool2` 和 `CacheDir` 来自本地配置，不来自工程。**
+1. 写 `[#VERSION]`：`UST Version1.2`，以及 `Charset=UTF-8`。
+2. 写 `[#SETTING]`：`Tempo`、`Tracks=1`、`ProjectName`、`VoiceDir`、`OutFile`、`CacheDir`、`Tool1`、`Tool2`、`Mode2`、`Flags`，都取工程里的值。`wavtool` 和 `resampler` 为空时写本地配置里的引擎路径，否则 UTAU 打开这份 UST 会找不到引擎。
 3. 写控制音符 `[#0000]`：见下。
 4. 依次写每个音符。
 5. 写 `[#TRACKEND]`。
@@ -225,22 +235,21 @@ $usth=<base64url>
 ```json
 {
   "version": 1,
-  "ustCharset": "Shift_JIS",
   "plugins": { }
 }
 ```
 
 用一个条目而不是多个，是因为值的长度没有实际上限（实测 65536 字符原样保留），拆开只会多出拼装的麻烦。
 
-**载荷必须是纯 ASCII**，这不是风格问题：读取方要先把文件当 ASCII 扫描、找到 `$usth=`、解出编码，才谈得上解码整个文件。base64url 正好满足。
+**载荷必须是纯 ASCII。** 它在文件里的位置比文件的编码更靠前——扫描的时候还不知道整个文件怎么解码，只能按字节找。base64url 正好满足，而且载荷内部的 JSON 是 UTF-8，与外层文件的编码无关。
 
 条目名用 `$` 前缀是硬性的——**UTAU 只保留音符段里 `$` 开头的未知条目**，不带 `$` 的、以及放在 `[#SETTING]` 或 `[#VERSION]` 里的，一律丢弃。这是实测结论。
 
 ### 导入
 
-1. 按 ASCII 扫描找 `$usth=`。找到就解码载荷，取得 `ustCharset`；找不到就要求用户选择编码。
-2. 按该编码解析整个文件。
-3. 控制音符**不进 `notes`**，它的内容进 `project` 和插件配置。
+1. 定编码：`[#VERSION]` 里有 `Charset=` 就按它，没有就要求用户选择。按该编码把整个文件转成 UTF-8。
+2. 按 ASCII 扫描找 `$usth=`，有就解码载荷，取得插件配置。没有说明这份 UST 不是 HelloUTAU 写的，照常导入即可。
+3. 控制音符**不进 `notes`**，它的内容进插件配置。
 4. 其余音符依次进 `tracks[0].notes`，未知条目进各自的 `userData`。
 
 **导出加一个控制音符，导入恰好吃掉一个。** 不配平的话反复往返会在开头累积出一串 0.5 秒的前导。
