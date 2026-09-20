@@ -8,13 +8,13 @@
 |---|---|
 | `HelloKitSupport` | 只有 `Diagnostic` |
 | `HelloKitDocument` | `PayloadCodec`、`Project` / `Track` / `Note` 模型 |
-| `HelloKitInterchange` | 接口与注册表，没有驱动 |
+| `HelloKitInterchange` | 接口、注册表、`Formats/MidiReader` |
 | `HelloUtauWidgets` | 一个装着 `QLabel` 的 `MainWindow`，证明 Qt Widgets 和 moc 接上了 |
 | `helloutau` | 薄驱动，只有 `main.cpp` |
 
 构建链已验证：qmsetup 的 `hellokit_add_library` / `helloutau_add_library` / `helloutau_add_application`、Qt 6.11 加 AUTOMOC、stdcorelib、stdutau、Boost.Test 加 `add_auto_test`、ctest。
 
-`HelloKitSupport` 目前只有 `Diagnostic`。`HelloKitDocument` 有 `PayloadCodec` 和 `Project` / `Track` / `Note` 数据模型，还没有 `UsthFile` 的读写。`HelloKitInterchange` 的接口与注册表齐了（`InterchangeReader` / `InterchangeWriter` / `InterchangeSource` / `InterchangeSelector` / `AutomaticSelector` / `InterchangeRegistry` / `InterchangePlugin`），**还没有任何一个真格式的驱动**，下一步是 MIDI 导入。形状与约束见 [`Interchange.md`](Interchange.md)。
+`HelloKitSupport` 目前只有 `Diagnostic`。`HelloKitDocument` 有 `PayloadCodec` 和 `Project` / `Track` / `Note` 数据模型，还没有 `UsthFile` 的读写。`HelloKitInterchange` 的接口与注册表齐了（`InterchangeReader` / `InterchangeWriter` / `InterchangeSource` / `InterchangeSelector` / `AutomaticSelector` / `InterchangeRegistry` / `InterchangePlugin`），第一个驱动 `Formats/MidiReader` 也在了，headless 可跑可测。形状与约束见 [`Interchange.md`](Interchange.md)。**还没有界面**：选轨和选编码那两页要等第三阶段。
 
 `PayloadCodec` 实现了 `_USTH_` 控制音符的载荷编码，base64url 去填充。选这个作为第一块代码不是因为它最重要，是因为它是纯逻辑、不依赖 Qt、而且规则已经被实测钉死了（见 [`claude/utau-ust-preservation.md`](claude/utau-ust-preservation.md)）。
 
@@ -22,6 +22,7 @@
 
 - **stdcorelib、stdutau**：**都不从 vcpkg 拿，也都不是子模块**，两个都在和本仓库一起改。各自构建安装一份，配置时传 `-Dstdcorelib_DIR=` 和 `-Dstdutau_DIR=`，指向 `<prefix>/lib/cmake/<名字>`。`third-party/Dependencies.cmake` 统一 `find_package`，由根 `CMakeLists.txt` `include()` 进来。Windows 上那里还会把动态库拷进运行输出目录，vcpkg 的 applocal 不再管这两个了。stdutau 现在是静态库，所以没有可拷的 DLL。
 - **stdcorelib 只做私有依赖**：子库写 `LINKS_PRIVATE`，公开头文件里的导出宏用 `<QtCore/QtGlobal>` 的 `Q_DECL_EXPORT` / `Q_DECL_IMPORT`。
+- **wolf-midi**：MIDI 的解析与写出，`QMidiFile` 去掉 Qt 的版本。来自 `E:/GitHub/ds-editor-lite/vcpkg`，一样传 `-Dwolf-midi_DIR=`。
 - **qmsetup、Boost**：来自 `D:/GitHub/synthrt/vcpkg`。
 - **Qt 6.11.1**：`D:/Qt/6.11.1/msvc2022_64`。
 
