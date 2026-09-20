@@ -2,6 +2,7 @@ qm_find_qt(Core)
 
 find_package(wolf-midi CONFIG REQUIRED)
 
+add_auto_test(test_TextCodec.cpp HelloKitSupport)
 add_auto_test(test_PayloadCodec.cpp HelloKitDocument)
 add_auto_test(test_Project.cpp HelloKitDocument HelloKitSupport)
 add_auto_test(test_Interchange.cpp HelloKitInterchange HelloKitDocument HelloKitSupport)

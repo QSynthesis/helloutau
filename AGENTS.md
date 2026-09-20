@@ -192,6 +192,9 @@ Markdown：
 - **`sed` 的替换表达式必须带行号地址**，否则是全局替换，且后续表达式会匹配前面已改过的文本，层层嵌套。
 - **绝不用 bash heredoc 写脚本**，也不要经 shell 传含反斜杠的 C++ 文本或含日文的字符串。shell 会吃掉一层反斜杠。用写文件的方式落盘再执行。
 - **官方 UTAU 的站点是 Shift_JIS**，`curl` 下来要显式按 `cp932` 解码，别让工具猜。
+- **Qt 6 没有 `QTextCodec`**（挪到 Qt5Compat 了），替代品是 `QStringConverter` / `QStringEncoder` / `QStringDecoder`。**但 `QStringConverter::encodingForName()` 只认内置的 `Encoding` 枚举**，也就是 UTF 系列加 Latin-1 加 System；`Shift_JIS`、`GBK`、`Big5`、`EUC-KR` 这些来自 ICU，只能把名字直接交给 `QStringDecoder(name)` / `QStringEncoder(name)` 构造。先把名字转成枚举会让这些编码全部变成「不支持」，而且不报错。本仓库统一走 `hello::kit::TextCodec`。
+- **判断一个字符目标编码装不装得下，不能只看 `hasError()`。** 装不下时 Qt 写一个问号就过去了，得编码再解码回来比较。`TextCodec::canEncode()` 就是这么做的。
+- **`中` 是常用日文汉字，Shift_JIS 里有。** 要找 Shift_JIS 表示不了的字得用简体专用字，比如 `你`、`简`、`们`。写编码相关的测试时别拿 `中` 当反例。
 - Windows 上包含 `<windows.h>` 要用 `stdcorelib/platform/windows/stdc_windows.h`，它会先定义 `NOMINMAX`。
 - **CMake 里判平台不要判编译器。** clang 目标 `x86_64-pc-windows-msvc` 时，CMake 的 `MSVC` 和 `MINGW` 都是假，`else()` 兜底加的 `-fPIC` 会直接把它编译不过。synthrt 的根 `CMakeLists.txt` 里有这个写法，抄的时候要改成 `elseif(NOT WIN32)`。
 - **被信号杀死的进程不会 flush 缓冲的 stdout。** 输出一个字都没有、看起来像没跑，其实是死了。
