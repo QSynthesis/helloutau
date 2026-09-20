@@ -64,6 +64,13 @@ endif()
 qm_init_directories()
 
 # ----------------------------------
+# Find third-party dependencies
+# ----------------------------------
+# Included rather than added as a subdirectory, so that the imported targets it creates are in
+# scope for every module.
+include(${CMAKE_CURRENT_SOURCE_DIR}/third-party/Dependencies.cmake)
+
+# ----------------------------------
 # Tests
 # ----------------------------------
 if(HELLO_BUILD_TESTS)
@@ -74,8 +81,6 @@ endif()
 # ----------------------------------
 # Add source modules
 # ----------------------------------
-add_subdirectory(third-party)
-
 add_subdirectory(hellokit)
 
 if(HELLO_BUILD_APP)

@@ -27,7 +27,7 @@ v0.4.19 修掉的是 JVN#71404925 报告的两个洞：
 
 三个参考物的定位不同，别混着抄。
 
-**stdutau**（<https://github.com/diffscope/stdutau>，并排检出，由 `third-party/CMakeLists.txt` 引入）——UTAU 数据层的实现，不是参考物，是依赖。`utau::UstFile`、`OtoIni`、`PrefixMap`、`PluginFileReader/Writer`、`Synth::calc` 已经覆盖了 ust / oto.ini / prefix.map 的读写、插件 tmp 文件协议和合成参数计算。**凡是这几件事，一律走 stdutau，不要在本仓库里重写一份**，发现它不够用就去改它，见「与 stdutau 协作」。
+**stdutau**（<https://github.com/diffscope/stdutau>，由 `third-party/Dependencies.cmake` 引入）——UTAU 数据层的实现，不是参考物，是依赖。`utau::UstFile`、`OtoIni`、`PrefixMap`、`PluginFileReader/Writer`、`Synth::calc` 已经覆盖了 ust / oto.ini / prefix.map 的读写、插件 tmp 文件协议和合成参数计算。**凡是这几件事，一律走 stdutau，不要在本仓库里重写一份**，发现它不够用就去改它，见「与 stdutau 协作」。
 
 **QSynthesis-Old**（<https://github.com/QSynthesis/QSynthesis-Old>）——同一作者 2021 年停更的 Qt 5 前作，`.cache/QSynthesis-Old` 下有一份。**只当行为参考，不要当代码来源。** 值得看的是它踩过的实际问题：`Frontend/Process/` 的渲染调度（`RealtimeRenderer` + `ResampleWork` + `ConcatenateWork` 的线程池模型）、`Backend/Documents/Import/` 的 MIDI / VSQ / frq / presamp 导入、`Backend/VoiceBank/` 的音源目录模型。不值得搬的是它的整套 `Q` 前缀类型、`MiniSystem` 那套自造基础设施，以及把编码问题拖到 UI 层才处理的做法。`Synth::calc` 里标着「Port from QSynthesis begin」的那段音高曲线代码已经迁到 stdutau 了，不要再从旧仓库里搬一遍。
 
@@ -37,9 +37,13 @@ v0.4.19 修掉的是 JVN#71404925 报告的两个洞：
 
 Qt 6 + CMake + C++17。构建脚本的组织方式照 synthrt：`find_package(qmsetup)`、`qm_init_directories()`、`conf.cmake` 里放常量和 `_common_configure_target`。
 
-**qmsetup 和 stdcorelib 由外部提供**，不进仓库。
+**qmsetup 由外部提供**，不进仓库，走 vcpkg。
 
-**stdutau 现在不是子模块，是并排的检出**：`third-party/CMakeLists.txt` 直接 `add_subdirectory(../stdutau)`。它正在和本仓库一起改，走子模块指针会让每次改动都得先 push 一轮才能用。等它稳定下来再换成子模块，那时 URL 要写成两级的 `../../diffscope/stdutau.git`——helloutau 在 `QSynthesis` 组而 stdutau 在 `diffscope` 组，一级的 `../stdutau` 会解析成 `QSynthesis/stdutau`。
+**stdcorelib 和 stdutau 都不从 vcpkg 拿，也都不是子模块。** 两个都在和本仓库一起改，走子模块指针会让每次改动都得先 push 一轮才能用。各自构建并安装一份，配置时传 `-Dstdcorelib_DIR=<prefix>/lib/cmake/stdcorelib` 和 `-Dstdutau_DIR=<prefix>/lib/cmake/stdutau`。`third-party/Dependencies.cmake` 统一 `find_package`，由根 `CMakeLists.txt` `include()` 进来——用 `add_subdirectory` 的话导入目标只在那个目录作用域里，其他模块看不见。Windows 上那里还会把 DLL 拷进运行输出目录，vcpkg 的 applocal 不再管这两个了。
+
+**stdcorelib 只做私有依赖，不出现在公开头文件里。** 子库写 `LINKS_PRIVATE stdcorelib::stdcorelib`，导出宏用 `<QtCore/QtGlobal>` 的 `Q_DECL_EXPORT` / `Q_DECL_IMPORT`，不要用 `STDC_DECL_EXPORT`。两个模块本来就都依赖 Qt，拿 Qt 的宏不额外欠一笔，而让下游为了一个宏去装 stdcorelib 是不合理的。
+
+两个都稳定下来之后再考虑换成子模块。stdutau 换的时候 URL 要写成两级的 `../../diffscope/stdutau.git`——helloutau 在 `QSynthesis` 组而 stdutau 在 `diffscope` 组，一级的 `../stdutau` 会解析成 `QSynthesis/stdutau`。
 
 ## 与 stdutau 协作
 
@@ -49,7 +53,7 @@ stdutau 在本项目开发过程中会被大幅修改和补测试，把它当成
 
 - **stdutau 有自己的代码风格**（小写文件名、`utau` 命名空间、公开数据成员不带前缀、`.clang-format` 是它自己那份）。在 stdutau 里写代码照 stdutau 的规矩，不要把本仓库的命名规范推过去。
 - stdutau 里「读不到就是没有」一律是 `std::optional`，不要再引入奇异值。`NODEF_INT` 是仅存的例外，它标的是稠密音高曲线上的空采样，不是字段缺失。
-- **stdutau 的改动单独提交在 stdutau 仓库里**，本仓库只提交子模块指针的移动，并在提交信息里说清为什么需要那个版本。
+- **stdutau 的改动单独提交在 stdutau 仓库里。** 本仓库现在不记录它的版本，所以改完要重新构建并安装一份，否则这边拿到的还是旧的。
 - stdutau 的提交信息规矩和本仓库一样，只写一行。
 - stdutau 不依赖 Qt，也不要让它依赖 Qt。它的接口是 `std::string` 和 `std::filesystem::path`。
 - stdutau 不做任何编码转换，读写的是原始字节。这是对的，不要「顺手修好」。
@@ -184,6 +188,6 @@ Markdown：
 - **CMake 里判平台不要判编译器。** clang 目标 `x86_64-pc-windows-msvc` 时，CMake 的 `MSVC` 和 `MINGW` 都是假，`else()` 兜底加的 `-fPIC` 会直接把它编译不过。synthrt 的根 `CMakeLists.txt` 里有这个写法，抄的时候要改成 `elseif(NOT WIN32)`。
 - **被信号杀死的进程不会 flush 缓冲的 stdout。** 输出一个字都没有、看起来像没跑，其实是死了。
 - **Windows 上执行 `.bat` 是个有 CVE 记录的注入面。** `CreateProcess` 遇到 `.bat` 会转交 `cmd.exe` 二次解析，而 cmd 的规则和 `CommandLineToArgvW` 不同，光按标准 argv 规则加引号不够——这就是 2024 年的 BatBadBut（CVE-2024-24576）。`stdc::Popen::shell(true)` 的 `^` 转义是冲着它去的，但别因此往 `.bat` 的参数里塞工程文件来的字符串。
-- **`stdc::Popen::shell(true)` 在 Windows 上无条件 `SW_HIDE`**，而且那一行在读取 `startupInfo` 之后执行，所以自己传 `startupInfo` 也盖不住。要 UTAU 那种可见的 cmd 窗口只能用 `creationFlags(CREATE_NEW_CONSOLE)`，代价是拿不到管道输出。**这条是读代码得出的，用之前先实测。**
+- **`stdc::Popen::shell(true)` 在 Windows 上默认 `SW_HIDE`。** 要 UTAU 那种可见的 cmd 窗口，`startupInfo` 的 `dwFlags` 带上 `STARTF_USESHOWWINDOW` 即可，带了就由调用方的 `wShowWindow` 说了算。窗口里显示的是子进程写到自己控制台的东西，所以要看见输出就不能把那条流设成 `Pipe`。本进程已有控制台时子进程是共用它而不是新开一个，`wShowWindow` 对一个压根没被创建的窗口不起作用，要独立窗口得配 `creationFlags(CREATE_NEW_CONSOLE)`。**已实测**：子进程里 `IsWindowVisible(GetConsoleWindow())` 默认为 0，带上那个标志为 1。
 - UTAU 音源目录里同一个 `oto.ini` 可能出现在多级子目录，`QVoiceBank` 用 `QMap<QString, QOtoIni>` 是有道理的，不要假设一个音源只有一份 `oto.ini`。
 - **UTAU 把它不认识的段落当成音符**，不是忽略。读 UST 遇到未知段名要当文件已损坏处理，写 UST 绝不能自造段落。完整的保留规则见 [`docs/claude/utau-ust-preservation.md`](docs/claude/utau-ust-preservation.md)。

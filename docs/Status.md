@@ -16,8 +16,9 @@
 
 ## 依赖怎么来的
 
-- **stdutau**：**不是子模块**，是并排的检出。`third-party/CMakeLists.txt` 直接 `add_subdirectory(../stdutau)`。它正在和本仓库一起改，走子模块指针会让每次改动都要先 push 一轮。等它稳定下来再换成子模块。
-- **qmsetup、stdcorelib、Boost**：来自 `D:/GitHub/synthrt/vcpkg`。
+- **stdcorelib、stdutau**：**都不从 vcpkg 拿，也都不是子模块**，两个都在和本仓库一起改。各自构建安装一份，配置时传 `-Dstdcorelib_DIR=` 和 `-Dstdutau_DIR=`，指向 `<prefix>/lib/cmake/<名字>`。`third-party/Dependencies.cmake` 统一 `find_package`，由根 `CMakeLists.txt` `include()` 进来。Windows 上那里还会把动态库拷进运行输出目录，vcpkg 的 applocal 不再管这两个了。stdutau 现在是静态库，所以没有可拷的 DLL。
+- **stdcorelib 只做私有依赖**：子库写 `LINKS_PRIVATE`，公开头文件里的导出宏用 `<QtCore/QtGlobal>` 的 `Q_DECL_EXPORT` / `Q_DECL_IMPORT`。
+- **qmsetup、Boost**：来自 `D:/GitHub/synthrt/vcpkg`。
 - **Qt 6.11.1**：`D:/Qt/6.11.1/msvc2022_64`。
 
 路径都写在 `.vscode/settings.json` 里，那个文件是 gitignore 的。

@@ -10,7 +10,7 @@
 
 | 模块 | 命名空间 | 产出 | 依赖 |
 |---|---|---|---|
-| `hellokit/` | `hello::kit` | `HelloKitDocument`、以后的 `HelloKitCore` 等 | Qt Core、stdcorelib、stdutau |
+| `hellokit/` | `hello::kit` | `HelloKitDocument`、以后的 `HelloKitCore` 等 | Qt Core、stdutau、stdcorelib（私有） |
 | `helloutau/` | `hello::daw` | `HelloUtauWidgets` 等，加上 `helloutau` 可执行文件 | Qt Widgets、hellokit |
 
 `hello` 只是外层，代码一律写在第二层里。不要往 `hello` 本身放东西，也不要再开第三层。
@@ -79,6 +79,8 @@ helloutau/tools/driver/main.cpp                  ← 目标 helloutau
 模块级的函数由 `qm_setup_build_repo_helpers(hellokit)` 生成，**必须显式给前缀**——它默认取 `PROJECT_NAME`，而子目录里 `PROJECT_NAME` 已经是 `HelloKitDocument` 了。变量前缀由 `hellokit_init_buildsystem(HELLOKIT)` 显式给。
 
 子库的导出宏前缀由 `hellokit_add_library(... MACRO_PREFIX HELLOKIT_DOCUMENT)` 显式给，默认值会跟着目标名走成 `HELLOKITDOCUMENT_`。
+
+`<目标名>Global.h` 引 `<QtCore/QtGlobal>`，用 `Q_DECL_EXPORT` / `Q_DECL_IMPORT` 展开。两个模块都依赖 Qt，而 stdcorelib 是私有依赖，不出现在公开头文件里。
 
 ## Qt
 
