@@ -1,5 +1,5 @@
-#ifndef HELLOKIT_PAYLOADCODEC_H
-#define HELLOKIT_PAYLOADCODEC_H
+#ifndef HELLOKIT_UST_PAYLOADCODEC_H
+#define HELLOKIT_UST_PAYLOADCODEC_H
 
 #include <optional>
 #include <string>
@@ -37,4 +37,4 @@ namespace hu {
 
 }
 
-#endif // HELLOKIT_PAYLOADCODEC_H
+#endif // HELLOKIT_UST_PAYLOADCODEC_H

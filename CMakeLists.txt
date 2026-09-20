@@ -30,7 +30,10 @@ if(MSVC)
 elseif(MINGW)
     set(CMAKE_STATIC_LIBRARY_PREFIX "")
     set(CMAKE_SHARED_LIBRARY_PREFIX "")
-else()
+elseif(NOT WIN32)
+    # Windows has no position independent code to ask for, and clang targeting it is neither MSVC
+    # nor MINGW as far as CMake is concerned, so this has to turn on the platform rather than on
+    # the compiler.
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
 endif()
 

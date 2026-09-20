@@ -6,36 +6,52 @@
 
 ## 模块
 
-两个模块，和 LLVM 的分法一致：
+两个模块，每个模块是**一族库**而不是一个库：
 
-| 目录 | 是什么 | 依赖 |
+| 模块 | 产出 | 依赖 |
 |---|---|---|
-| `hellokit/` | 核心库，命名空间 `hu` | Qt Core、stdcorelib、stdutau |
-| `helloutau/` | 编辑器应用程序 | Qt Widgets、hellokit |
+| `hellokit/` | `HelloKitUst`、以后的 `HelloKitCore` 等 | Qt Core、stdcorelib、stdutau |
+| `helloutau/` | `HelloUtauWidgets` 等，加上 `helloutau` 可执行文件 | Qt Widgets、hellokit |
 
 **`hellokit` 不链接 QtWidgets。** 界面是应用程序的事，核心逻辑不依赖 GUI 工具包才测得动。
 
-`hellokit` 内部再按模块分：`Core/`、`Support/`、`Ust/`、`VoiceBank/` 等，形状照 `llvm/Support`、`synthrt/Core`。库名不是模块名，所以不要出现 `hellokit/Kit/`。
+**应用也是库加一个薄驱动**，形状照 lldb 的 `liblldb` 与 `tools/driver`。`tools/driver/main.cpp` 只有入口，其余都在库里，这样应用侧的逻辑同样测得动——可执行文件没法被链进测试二进制，库可以。
 
 ## 目录与文件
 
-两个模块都是头文件与源文件镜像的布局，形状照 lldb 的 `include/lldb` 与 `source`，只是目录叫 `src` 不叫 `source`：
+模块级一个 `include/` 一个 `lib/`，子库在里面各占一格，形状照 synthrt：
 
 ```
-hellokit/include/hellokit/Ust/PayloadCodec.h
-hellokit/lib/Ust/PayloadCodec.cpp
+hellokit/include/hellokit/Ust/PayloadCodec.h     ← #include <hellokit/Ust/PayloadCodec.h>
+hellokit/lib/Ust/PayloadCodec.cpp                ← 目标 HelloKitUst
 
-helloutau/include/helloutau/...
-helloutau/src/...
+helloutau/include/helloutau/Widgets/MainWindow.h
+helloutau/lib/Widgets/MainWindow.cpp             ← 目标 HelloUtauWidgets
+helloutau/plugins/                               ← 编辑界面扩展插件
+helloutau/tools/driver/main.cpp                  ← 目标 helloutau
 ```
 
-`hellokit` 产出库所以源文件目录叫 `lib`，`helloutau` 产出可执行文件所以叫 `src`。头文件与源文件应按模块保持对应关系。
+**include 的命名空间是模块名，不是目标名。** 写 `<hellokit/Ust/PayloadCodec.h>`，不写 `<HelloKitUst/PayloadCodec.h>`。`HelloKitUst` 只是产出的动态库文件名。
+
+不用 qmsetup 的 `sync_include`，`include/` 是实打实的目录。
 
 仅供实现使用的私有头文件放在源文件旁边，并使用 `_p.h` 后缀。私有头文件会增加实现之间的耦合，应尽量少用。
 
 仅供多个实现文件复用且不独立编译的实现片段可以使用 `.cpp.inc` 后缀。普通声明仍应放在头文件中，普通实现仍应放在 `.cpp` 文件中。
 
-文件名采用大驼峰命名并与其中的主要类型一致，例如 `PayloadCodec.h` 与 `PayloadCodec.cpp`。程序入口 `main.cpp` 保持小写。导出宏所在的 `hellokit_global.h` 也是小写，它不对应任何类型。
+文件名采用大驼峰命名并与其中的主要类型一致，例如 `PayloadCodec.h` 与 `PayloadCodec.cpp`。程序入口 `main.cpp` 保持小写。每个子库有一个 `<目标名>Global.h` 放导出宏，例如 `HelloKitUstGlobal.h`，它不对应类型但跟着目标名走。
+
+## 大小写
+
+三层，别混：
+
+| 层 | 写法 | 例 |
+|---|---|---|
+| CMake 包名、`project()`、配置模板 | 小写 | `hellokit`、`helloutauConfig.cmake.in` |
+| 子库目标名、动态库文件名 | 大驼峰 | `HelloKitUst`、`HelloUtauWidgets.dll` |
+| include 命名空间 | 小写模块名 | `<hellokit/Ust/...>` |
+
+子库目录用大驼峰并与目标名去掉族前缀后一致：`lib/Ust/` 对 `HelloKitUst`，`lib/Widgets/` 对 `HelloUtauWidgets`。
 
 ## C++ 命名
 
@@ -55,9 +71,29 @@ helloutau/src/...
 | 仓库级 CMake 选项与变量 | `HELLO_` | `HELLO_BUILD_TESTS` |
 | 模块级 CMake 变量 | `HELLOKIT_` / `HELLOUTAU_` | `HELLOKIT_DEVEL` |
 | 模块级 CMake 函数 | `hellokit_` / `helloutau_` | `hellokit_add_library` |
-| 导出宏与头文件保护 | `HELLOKIT_` | `HELLOKIT_EXPORT`、`HELLOKIT_PAYLOADCODEC_H` |
+| 子库导出宏 | `HELLOKIT_UST_` 等 | `HELLOKIT_UST_EXPORT` |
+| 头文件保护 | 按 include 路径 | `HELLOKIT_UST_PAYLOADCODEC_H` |
 
-模块级的那两套由 qmsetup 的 `qm_setup_build_repo_helpers()` 按 `PROJECT_NAME` 生成，不要手写。
+模块级的函数由 `qm_setup_build_repo_helpers(hellokit)` 生成，**必须显式给前缀**——它默认取 `PROJECT_NAME`，而子目录里 `PROJECT_NAME` 已经是 `HelloKitUst` 了。变量前缀由 `hellokit_init_buildsystem(HELLOKIT)` 显式给。
+
+子库的导出宏前缀由 `hellokit_add_library(... MACRO_PREFIX HELLOKIT_UST)` 显式给，默认值会跟着目标名走成 `HELLOKITUST_`。
+
+## Qt
+
+**带 `Q_OBJECT` 的头文件必须出现在目标的 `SOURCES` 里。** AUTOMOC 只扫 `SOURCES` 列出的文件，而头文件放在 `include/` 下不会被源文件的 glob 捞到，于是 moc 不生成，链接时缺 `metaObject`、`qt_metacast`、`qt_metacall`、`staticMetaObject` 四个符号。所以子库要把头文件也 glob 进去：
+
+```cmake
+file(GLOB_RECURSE _src "*.cpp")
+file(GLOB_RECURSE _hdr "${CMAKE_CURRENT_SOURCE_DIR}/../../include/helloutau/Widgets/*.h")
+
+helloutau_add_library(${PROJECT_NAME} SHARED
+    QT_AUTOGEN
+    SOURCES ${_src} ${_hdr}
+    ...
+)
+```
+
+qwindowkit 没有这个问题是因为它把头文件和源文件放在一起，synthrt 没有是因为它根本不用 Qt。我们两样都不占，所以要自己记着。
 
 ## 格式与内联
 
@@ -93,6 +129,8 @@ helloutau/src/...
 ```cpp
 #include <hellokit/Ust/PayloadCodec.h>
 ```
+
+同一子库内部的头文件也用完整公共路径，不要写成相对路径。子库的 `include/` 那一层在包含路径里，`../../include/hellokit/Ust/PayloadCodec.h` 这种写法一旦目录挪动就断。
 
 如果被引用的头文件与当前头文件位于同一目录，并且具有预引入或自动生成等特殊用途，也可以使用双引号直接引用。
 

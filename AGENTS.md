@@ -103,16 +103,18 @@ resampler / wavtool 的命令行参数由 `utau::ResamplerArguments::arguments()
 
 本仓库自己的那份是 [`docs/Development.md`](docs/Development.md)，**它才是权威**，下面只是提要。
 
-- 两个模块：`hellokit`（核心库，命名空间 `hu`，Qt Core）和 `helloutau`（应用，Qt Widgets）。**`hellokit` 不链接 QtWidgets**，核心逻辑不依赖 GUI 才测得动。
-- 头文件与源文件镜像，形状照 lldb：`hellokit/include/hellokit/<模块>` 配 `hellokit/lib/<模块>`，`helloutau/include/helloutau` 配 `helloutau/src`。目录叫 `src` 不叫 `source`。私有头同目录加 `_p.h` 后缀，尽量少用。
-- `hellokit` 内部按 `Core/`、`Support/`、`Ust/`、`VoiceBank/` 分，照 `llvm/Support`、`synthrt/Core`。**库名不是模块名**，不要出现 `hellokit/Kit/`。
-- 文件名大驼峰，与其中的主要类型同名。入口 `main.cpp` 和导出宏头 `hellokit_global.h` 小写，它们不对应类型。
+- 两个模块，每个是**一族库**：`hellokit`（命名空间 `hu`，Qt Core，产出 `HelloKitUst` 等）和 `helloutau`（Qt Widgets，产出 `HelloUtauWidgets` 等加 `helloutau` 可执行文件）。**`hellokit` 不链接 QtWidgets**，核心逻辑不依赖 GUI 才测得动。
+- **应用也是库加薄驱动**，照 lldb 的 `liblldb` + `tools/driver`。`tools/driver/main.cpp` 只放入口，其余在库里——可执行文件没法链进测试二进制，库可以。
+- 模块级一个 `include/` 一个 `lib/`，照 synthrt：`hellokit/include/hellokit/Ust/` 配 `hellokit/lib/Ust/`。**include 的命名空间是模块名不是目标名**，写 `<hellokit/Ust/PayloadCodec.h>`。不用 `sync_include`。私有头同源文件放，加 `_p.h` 后缀，尽量少用。
+- **大小写三层**：CMake 包名与 `project()` 小写（`hellokit`、`helloutauConfig.cmake.in`），子库目标与 dll 大驼峰（`HelloKitUst`），include 命名空间小写。
+- 文件名大驼峰，与其中的主要类型同名。入口 `main.cpp` 小写；每个子库一个 `<目标名>Global.h` 放导出宏。
 - 类型大驼峰，函数 / 参数 / 变量 / 命名空间小驼峰，枚举成员大驼峰。私有数据成员 `m_` 前缀，PImpl 的两个指针例外，用 `_impl` 和 `_decl`。getter 是属性名，setter 是 `set` 加属性名。
 - 头文件里引用项目公开头用尖括号全路径；源文件里同目标的头用双引号。源文件最上方第一个引用块是同名公开头和 `_p.h`，然后依次是系统库、标准库、第三方库、项目内其他目标，当前目标内其余头文件在最底部单独成块。
 - 初始化表达式是指针时写 `auto name = ...`，不写 `auto *name = ...`。析构函数不写 `override`，头文件里被继承的类不写 `final`。
 - 命名空间结束处不加注释。
 - 读不到就是没有的地方返回 `std::optional<T>`，不要用「bool 加出参」，也不要拿某个特定值当「没有」。
-- 前缀：仓库级 CMake 变量 `HELLO_`，模块级 CMake 变量与函数 `HELLOKIT_` / `hellokit_`、`HELLOUTAU_` / `helloutau_`（由 qmsetup 按 `PROJECT_NAME` 生成，不要手写），导出宏与头文件保护 `HELLOKIT_<NAME>_H`。
+- 前缀：仓库级 CMake 变量 `HELLO_`，模块级 CMake 变量与函数 `HELLOKIT_` / `hellokit_`、`HELLOUTAU_` / `helloutau_`，子库导出宏 `HELLOKIT_UST_EXPORT` 这类，头文件保护跟 include 路径走（`HELLOKIT_UST_PAYLOADCODEC_H`）。**模块级的前缀必须显式给**，`qm_setup_build_repo_helpers()` 默认取 `PROJECT_NAME`，而子目录里那个已经是 `HelloKitUst` 了。
+- **带 `Q_OBJECT` 的头文件必须进目标的 `SOURCES`**，AUTOMOC 只扫 `SOURCES`。头在 `include/` 下不会被源文件 glob 捞到，漏了就链接时缺四个 moc 符号。
 
 注释：
 
@@ -177,6 +179,7 @@ Markdown：
 - **绝不用 bash heredoc 写脚本**，也不要经 shell 传含反斜杠的 C++ 文本或含日文的字符串。shell 会吃掉一层反斜杠。用写文件的方式落盘再执行。
 - **官方 UTAU 的站点是 Shift_JIS**，`curl` 下来要显式按 `cp932` 解码，别让工具猜。
 - Windows 上包含 `<windows.h>` 要用 `stdcorelib/platform/windows/stdc_windows.h`，它会先定义 `NOMINMAX`。
+- **CMake 里判平台不要判编译器。** clang 目标 `x86_64-pc-windows-msvc` 时，CMake 的 `MSVC` 和 `MINGW` 都是假，`else()` 兜底加的 `-fPIC` 会直接把它编译不过。synthrt 的根 `CMakeLists.txt` 里有这个写法，抄的时候要改成 `elseif(NOT WIN32)`。
 - **被信号杀死的进程不会 flush 缓冲的 stdout。** 输出一个字都没有、看起来像没跑，其实是死了。
 - **Windows 上执行 `.bat` 是个有 CVE 记录的注入面。** `CreateProcess` 遇到 `.bat` 会转交 `cmd.exe` 二次解析，而 cmd 的规则和 `CommandLineToArgvW` 不同，光按标准 argv 规则加引号不够——这就是 2024 年的 BatBadBut（CVE-2024-24576）。`stdc::Popen::shell(true)` 的 `^` 转义是冲着它去的，但别因此往 `.bat` 的参数里塞工程文件来的字符串。
 - **`stdc::Popen::shell(true)` 在 Windows 上无条件 `SW_HIDE`**，而且那一行在读取 `startupInfo` 之后执行，所以自己传 `startupInfo` 也盖不住。要 UTAU 那种可见的 cmd 窗口只能用 `creationFlags(CREATE_NEW_CONSOLE)`，代价是拿不到管道输出。**这条是读代码得出的，用之前先实测。**
