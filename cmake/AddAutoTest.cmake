@@ -57,4 +57,13 @@ function(add_auto_test _src)
     endif()
 
     add_test(NAME ${_name} COMMAND $<TARGET_FILE:${_name}>)
+
+    # Windows looks for a DLL beside the executable and then along PATH, and Qt is in neither
+    # place for a build tree. Without this a test that reaches Qt dies at load time with
+    # 0xc0000135 and no message, which reads as a crash rather than as a missing library.
+    if(WIN32 AND TARGET Qt${QT_VERSION_MAJOR}::Core)
+        set_tests_properties(${_name} PROPERTIES ENVIRONMENT_MODIFICATION
+            "PATH=path_list_prepend:$<SHELL_PATH:$<TARGET_FILE_DIR:Qt${QT_VERSION_MAJOR}::Core>>"
+        )
+    endif()
 endfunction()

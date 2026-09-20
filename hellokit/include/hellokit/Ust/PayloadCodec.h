@@ -2,8 +2,9 @@
 #define HELLOKIT_UST_PAYLOADCODEC_H
 
 #include <optional>
-#include <string>
-#include <string_view>
+
+#include <QByteArray>
+#include <QByteArrayView>
 
 #include <hellokit/Ust/HelloKitUstGlobal.h>
 
@@ -23,16 +24,18 @@ namespace hello::kit {
     /// \sa docs/claude/utau-ust-preservation.md, for the measurements behind all of this
     class HELLOKIT_UST_EXPORT PayloadCodec {
     public:
-        /// Returns \a data as base64url without padding. An empty input gives an empty string,
+        /// Returns \a data as base64url without padding. An empty input gives an empty result,
         /// which is not what a caller should write to a note, since UTAU drops an entry that has
         /// no value.
-        static std::string encode(std::string_view data);
+        static QByteArray encode(QByteArrayView data);
 
         /// Returns the bytes \a text stands for, or nothing when \a text is not base64url.
         ///
-        /// Padding is refused rather than tolerated. It cannot survive the trip through UTAU, so
-        /// reading it here would accept what could never be read back.
-        static std::optional<std::string> decode(std::string_view text);
+        /// Stricter than \c QByteArray::fromBase64Encoding() in two places, each of which would
+        /// otherwise take in what could never be written back out. Padding is refused rather than
+        /// tolerated, since an equals sign does not survive UTAU. A length leaving six bits over
+        /// is refused rather than quietly dropped, since six bits came from no byte.
+        static std::optional<QByteArray> decode(QByteArrayView text);
     };
 
 }
