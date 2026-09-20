@@ -25,15 +25,17 @@ QSynthesis 是同一作者停更的前作，`.cache/QSynthesis-Old` 下有一份
 | 按关注点拆分的撤销操作（`Operations/Notes`、`Operations/Tracks`） | **拿形状** | 撤销栈的分法是对的，代码重写 |
 | 自定义配色、快捷键编辑器、多语言 | **拿** | 不影响数据 |
 | MIDI / VSQ / SynthV / presamp / frq 导入 | **拿，但排在后面** | 兼容周边，不影响主干 |
-| **多轨** | **不拿，见下** | UST 是单轨（`Tracks=1`），多轨一旦引入，UST 互转就不成立 |
+| **多轨** | **暂不拿，见下** | UST 是单轨（`Tracks=1`） |
 | `MiniSystem` 那套自造文件监视与路径树 | **不拿** | 用 Qt 或 stdcorelib 现成的 |
 | 把编码问题拖到 UI 层才处理 | **不拿** | 本仓库的编码在 I/O 边界解决，见 `AGENTS.md` |
 
-### 多轨这件事要单独定
+### 多轨已经定了
 
-`docs/note.md` 现在写的是单轨，理由是 UST 单轨、多轨会让 UST 互转不成立。但应用侧的命名空间已经叫 `hello::daw` 了，这个词指向的是多轨。
+**第一版单轨，但 `.usth` 的顶层从一开始就是 `tracks` 数组，长度必须为 1。** 格式规格见 [`UsthFormat.md`](UsthFormat.md)。
 
-两者要对齐。可选的出路是：**`.usth` 支持多轨，导出 `.ust` 时一轨一个文件**。这样既不破坏 UST 互转的承诺，又不把产品钉死在单轨上。**在动工程模型之前定下来**，之后再改代价很大。
+这样放开多轨时不必改 `version`，也不必让老文件失效。读取方遇到长度不为 1 的文件要明确报错，不能默默只取第一条——静默丢数据比打不开更糟。
+
+真放开的时候，导出 `.ust` 的办法是一轨一个文件，UST 互转的承诺不受影响。
 
 ## 阶段
 
@@ -44,7 +46,7 @@ QSynthesis 是同一作者停更的前作，`.cache/QSynthesis-Old` 下有一份
 不碰界面。做完这一阶段，HelloUTAU 还不能用，但它已经能正确地读懂和写出 UTAU 的一切。
 
 - `HelloKitSupport`：编码策略的落地。编码的记录与读取（`_USTH_`、`hello-config.json`、`plugin.json`）、转义与还原、ANSI 代码页在非 Windows 上的替身。
-- `HelloKitUst`：`_USTH_` 控制音符的读写，`.usth` ↔ `.ust` 的双向转换，控制音符的一进一出配平。`PayloadCodec` 已完成。
+- `HelloKitDocument`：`_USTH_` 控制音符的读写，`.usth` ↔ `.ust` 的双向转换，控制音符的一进一出配平。`PayloadCodec` 已完成。
 - `HelloKitVoiceBank`：音源目录模型。一个音源多份 `oto.ini`，各自编码；`prefix.map`、`character.txt`、`readme.txt`。
 
 **算数**：一个命令行工具把 `.ust` 读进来再写回去，用 stdutau 解析两边、规范化后语义相等；任意字节的转义往返测试绿；拿真实音源（含日文与中文文件名）跑通目录扫描。

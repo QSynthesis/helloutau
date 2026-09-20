@@ -10,7 +10,7 @@
 
 | 模块 | 命名空间 | 产出 | 依赖 |
 |---|---|---|---|
-| `hellokit/` | `hello::kit` | `HelloKitUst`、以后的 `HelloKitCore` 等 | Qt Core、stdcorelib、stdutau |
+| `hellokit/` | `hello::kit` | `HelloKitDocument`、以后的 `HelloKitCore` 等 | Qt Core、stdcorelib、stdutau |
 | `helloutau/` | `hello::daw` | `HelloUtauWidgets` 等，加上 `helloutau` 可执行文件 | Qt Widgets、hellokit |
 
 `hello` 只是外层，代码一律写在第二层里。不要往 `hello` 本身放东西，也不要再开第三层。
@@ -24,8 +24,8 @@
 模块级一个 `include/` 一个 `lib/`，子库在里面各占一格，形状照 synthrt：
 
 ```
-hellokit/include/hellokit/Ust/PayloadCodec.h     ← #include <hellokit/Ust/PayloadCodec.h>
-hellokit/lib/Ust/PayloadCodec.cpp                ← 目标 HelloKitUst
+hellokit/include/hellokit/Document/PayloadCodec.h     ← #include <hellokit/Document/PayloadCodec.h>
+hellokit/lib/Document/PayloadCodec.cpp                ← 目标 HelloKitDocument
 
 helloutau/include/helloutau/Widgets/MainWindow.h
 helloutau/lib/Widgets/MainWindow.cpp             ← 目标 HelloUtauWidgets
@@ -33,7 +33,7 @@ helloutau/plugins/                               ← 编辑界面扩展插件
 helloutau/tools/driver/main.cpp                  ← 目标 helloutau
 ```
 
-**include 的命名空间是模块名，不是目标名。** 写 `<hellokit/Ust/PayloadCodec.h>`，不写 `<HelloKitUst/PayloadCodec.h>`。`HelloKitUst` 只是产出的动态库文件名。
+**include 的命名空间是模块名，不是目标名。** 写 `<hellokit/Document/PayloadCodec.h>`，不写 `<HelloKitDocument/PayloadCodec.h>`。`HelloKitDocument` 只是产出的动态库文件名。
 
 不用 qmsetup 的 `sync_include`，`include/` 是实打实的目录。
 
@@ -41,7 +41,7 @@ helloutau/tools/driver/main.cpp                  ← 目标 helloutau
 
 仅供多个实现文件复用且不独立编译的实现片段可以使用 `.cpp.inc` 后缀。普通声明仍应放在头文件中，普通实现仍应放在 `.cpp` 文件中。
 
-文件名采用大驼峰命名并与其中的主要类型一致，例如 `PayloadCodec.h` 与 `PayloadCodec.cpp`。程序入口 `main.cpp` 保持小写。每个子库有一个 `<目标名>Global.h` 放导出宏，例如 `HelloKitUstGlobal.h`，它不对应类型但跟着目标名走。
+文件名采用大驼峰命名并与其中的主要类型一致，例如 `PayloadCodec.h` 与 `PayloadCodec.cpp`。程序入口 `main.cpp` 保持小写。每个子库有一个 `<目标名>Global.h` 放导出宏，例如 `HelloKitDocumentGlobal.h`，它不对应类型但跟着目标名走。
 
 ## 大小写
 
@@ -50,10 +50,10 @@ helloutau/tools/driver/main.cpp                  ← 目标 helloutau
 | 层 | 写法 | 例 |
 |---|---|---|
 | CMake 包名、`project()`、配置模板 | 小写 | `hellokit`、`helloutauConfig.cmake.in` |
-| 子库目标名、动态库文件名 | 大驼峰 | `HelloKitUst`、`HelloUtauWidgets.dll` |
-| include 命名空间 | 小写模块名 | `<hellokit/Ust/...>` |
+| 子库目标名、动态库文件名 | 大驼峰 | `HelloKitDocument`、`HelloUtauWidgets.dll` |
+| include 命名空间 | 小写模块名 | `<hellokit/Document/...>` |
 
-子库目录用大驼峰并与目标名去掉族前缀后一致：`lib/Ust/` 对 `HelloKitUst`，`lib/Widgets/` 对 `HelloUtauWidgets`。
+子库目录用大驼峰并与目标名去掉族前缀后一致：`lib/Document/` 对 `HelloKitDocument`，`lib/Widgets/` 对 `HelloUtauWidgets`。
 
 ## C++ 命名
 
@@ -73,12 +73,12 @@ helloutau/tools/driver/main.cpp                  ← 目标 helloutau
 | 仓库级 CMake 选项与变量 | `HELLO_` | `HELLO_BUILD_TESTS` |
 | 模块级 CMake 变量 | `HELLOKIT_` / `HELLOUTAU_` | `HELLOKIT_DEVEL` |
 | 模块级 CMake 函数 | `hellokit_` / `helloutau_` | `hellokit_add_library` |
-| 子库导出宏 | `HELLOKIT_UST_` 等 | `HELLOKIT_UST_EXPORT` |
-| 头文件保护 | 按 include 路径 | `HELLOKIT_UST_PAYLOADCODEC_H` |
+| 子库导出宏 | `HELLOKIT_DOCUMENT_` 等 | `HELLOKIT_DOCUMENT_EXPORT` |
+| 头文件保护 | 按 include 路径 | `HELLOKIT_DOCUMENT_PAYLOADCODEC_H` |
 
-模块级的函数由 `qm_setup_build_repo_helpers(hellokit)` 生成，**必须显式给前缀**——它默认取 `PROJECT_NAME`，而子目录里 `PROJECT_NAME` 已经是 `HelloKitUst` 了。变量前缀由 `hellokit_init_buildsystem(HELLOKIT)` 显式给。
+模块级的函数由 `qm_setup_build_repo_helpers(hellokit)` 生成，**必须显式给前缀**——它默认取 `PROJECT_NAME`，而子目录里 `PROJECT_NAME` 已经是 `HelloKitDocument` 了。变量前缀由 `hellokit_init_buildsystem(HELLOKIT)` 显式给。
 
-子库的导出宏前缀由 `hellokit_add_library(... MACRO_PREFIX HELLOKIT_UST)` 显式给，默认值会跟着目标名走成 `HELLOKITUST_`。
+子库的导出宏前缀由 `hellokit_add_library(... MACRO_PREFIX HELLOKIT_DOCUMENT)` 显式给，默认值会跟着目标名走成 `HELLOKITDOCUMENT_`。
 
 ## Qt
 
@@ -129,10 +129,10 @@ qwindowkit 没有这个问题是因为它把头文件和源文件放在一起，
 在头文件中引用项目公开头文件时使用完整公共路径：
 
 ```cpp
-#include <hellokit/Ust/PayloadCodec.h>
+#include <hellokit/Document/PayloadCodec.h>
 ```
 
-同一子库内部的头文件也用完整公共路径，不要写成相对路径。子库的 `include/` 那一层在包含路径里，`../../include/hellokit/Ust/PayloadCodec.h` 这种写法一旦目录挪动就断。
+同一子库内部的头文件也用完整公共路径，不要写成相对路径。子库的 `include/` 那一层在包含路径里，`../../include/hellokit/Document/PayloadCodec.h` 这种写法一旦目录挪动就断。
 
 如果被引用的头文件与当前头文件位于同一目录，并且具有预引入或自动生成等特殊用途，也可以使用双引号直接引用。
 

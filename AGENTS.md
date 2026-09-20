@@ -103,17 +103,17 @@ resampler / wavtool 的命令行参数由 `utau::ResamplerArguments::arguments()
 
 本仓库自己的那份是 [`docs/Development.md`](docs/Development.md)，**它才是权威**，下面只是提要。
 
-- 两个模块，每个是**一族库**：`hellokit`（命名空间 `hello::kit`，Qt Core，产出 `HelloKitUst` 等）和 `helloutau`（命名空间 `hello::daw`，Qt Widgets，产出 `HelloUtauWidgets` 等加 `helloutau` 可执行文件）。**`hellokit` 不链接 QtWidgets**，核心逻辑不依赖 GUI 才测得动。
+- 两个模块，每个是**一族库**：`hellokit`（命名空间 `hello::kit`，Qt Core，产出 `HelloKitDocument` 等）和 `helloutau`（命名空间 `hello::daw`，Qt Widgets，产出 `HelloUtauWidgets` 等加 `helloutau` 可执行文件）。**`hellokit` 不链接 QtWidgets**，核心逻辑不依赖 GUI 才测得动。
 - **应用也是库加薄驱动**，照 lldb 的 `liblldb` + `tools/driver`。`tools/driver/main.cpp` 只放入口，其余在库里——可执行文件没法链进测试二进制，库可以。
-- 模块级一个 `include/` 一个 `lib/`，照 synthrt：`hellokit/include/hellokit/Ust/` 配 `hellokit/lib/Ust/`。**include 的命名空间是模块名不是目标名**，写 `<hellokit/Ust/PayloadCodec.h>`。不用 `sync_include`。私有头同源文件放，加 `_p.h` 后缀，尽量少用。
-- **大小写三层**：CMake 包名与 `project()` 小写（`hellokit`、`helloutauConfig.cmake.in`），子库目标与 dll 大驼峰（`HelloKitUst`），include 命名空间小写。
+- 模块级一个 `include/` 一个 `lib/`，照 synthrt：`hellokit/include/hellokit/Document/` 配 `hellokit/lib/Document/`。**include 的命名空间是模块名不是目标名**，写 `<hellokit/Document/PayloadCodec.h>`。不用 `sync_include`。私有头同源文件放，加 `_p.h` 后缀，尽量少用。
+- **大小写三层**：CMake 包名与 `project()` 小写（`hellokit`、`helloutauConfig.cmake.in`），子库目标与 dll 大驼峰（`HelloKitDocument`），include 命名空间小写。
 - 文件名大驼峰，与其中的主要类型同名。入口 `main.cpp` 小写；每个子库一个 `<目标名>Global.h` 放导出宏。
 - 类型大驼峰，函数 / 参数 / 变量 / 命名空间小驼峰，枚举成员大驼峰。私有数据成员 `m_` 前缀，PImpl 的两个指针例外，用 `_impl` 和 `_decl`。getter 是属性名，setter 是 `set` 加属性名。
 - 头文件里引用项目公开头用尖括号全路径；源文件里同目标的头用双引号。源文件最上方第一个引用块是同名公开头和 `_p.h`，然后依次是系统库、标准库、第三方库、项目内其他目标，当前目标内其余头文件在最底部单独成块。
 - 初始化表达式是指针时写 `auto name = ...`，不写 `auto *name = ...`。析构函数不写 `override`，头文件里被继承的类不写 `final`。
 - 命名空间结束处不加注释。
 - 读不到就是没有的地方返回 `std::optional<T>`，不要用「bool 加出参」，也不要拿某个特定值当「没有」。
-- 前缀：仓库级 CMake 变量 `HELLO_`，模块级 CMake 变量与函数 `HELLOKIT_` / `hellokit_`、`HELLOUTAU_` / `helloutau_`，子库导出宏 `HELLOKIT_UST_EXPORT` 这类，头文件保护跟 include 路径走（`HELLOKIT_UST_PAYLOADCODEC_H`）。**模块级的前缀必须显式给**，`qm_setup_build_repo_helpers()` 默认取 `PROJECT_NAME`，而子目录里那个已经是 `HelloKitUst` 了。
+- 前缀：仓库级 CMake 变量 `HELLO_`，模块级 CMake 变量与函数 `HELLOKIT_` / `hellokit_`、`HELLOUTAU_` / `helloutau_`，子库导出宏 `HELLOKIT_DOCUMENT_EXPORT` 这类，头文件保护跟 include 路径走（`HELLOKIT_DOCUMENT_PAYLOADCODEC_H`）。**模块级的前缀必须显式给**，`qm_setup_build_repo_helpers()` 默认取 `PROJECT_NAME`，而子目录里那个已经是 `HelloKitDocument` 了。
 - **带 `Q_OBJECT` 的头文件必须进目标的 `SOURCES`**，AUTOMOC 只扫 `SOURCES`。头在 `include/` 下不会被源文件 glob 捞到，漏了就链接时缺四个 moc 符号。
 
 注释：
@@ -164,7 +164,7 @@ Markdown：
 
 | 内容 | 位置 |
 |---|---|
-| 产品形态与文件格式定义 | `docs/note.md` |
+| 产品形态与文件格式定义 | `docs/note.md`，`.usth` 的规格在 `docs/UsthFormat.md` |
 | 阶段划分与每阶段的完成判据 | `docs/Roadmap.md` |
 | 值得长期保留的经验、设计记录 | `docs/claude/`（codex 写 `docs/codex/`） |
 | 问题清单、交接、临时分析、参考资料副本 | `.cache/claude/`、`.cache/codex/`（已 gitignore） |

@@ -1,12 +1,12 @@
-#ifndef HELLOKIT_UST_PAYLOADCODEC_H
-#define HELLOKIT_UST_PAYLOADCODEC_H
+#ifndef HELLOKIT_DOCUMENT_PAYLOADCODEC_H
+#define HELLOKIT_DOCUMENT_PAYLOADCODEC_H
 
 #include <optional>
 
 #include <QByteArray>
 #include <QByteArrayView>
 
-#include <hellokit/Ust/HelloKitUstGlobal.h>
+#include <hellokit/Document/HelloKitDocumentGlobal.h>
 
 namespace hello::kit {
 
@@ -22,7 +22,7 @@ namespace hello::kit {
     /// anything is decoded.
     ///
     /// \sa docs/claude/utau-ust-preservation.md, for the measurements behind all of this
-    class HELLOKIT_UST_EXPORT PayloadCodec {
+    class HELLOKIT_DOCUMENT_EXPORT PayloadCodec {
     public:
         /// Returns \a data as base64url without padding. An empty input gives an empty result,
         /// which is not what a caller should write to a note, since UTAU drops an entry that has
@@ -40,4 +40,4 @@ namespace hello::kit {
 
 }
 
-#endif // HELLOKIT_UST_PAYLOADCODEC_H
+#endif // HELLOKIT_DOCUMENT_PAYLOADCODEC_H

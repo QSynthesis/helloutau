@@ -4,18 +4,18 @@ HelloUTAU 是一款跨平台的第三方 UTAU 编辑器，在功能上尽可能�
 
 ## HelloUTAU 工程文件
 
-扩展名：`.usth`
+扩展名：`.usth`（完整规格见 [`UsthFormat.md`](UsthFormat.md)）
 格式：`json`
 编码：UTF-8
 格式版本：1
 
-单轨。UST 本身就是单轨格式（`Tracks=1`），多轨会让下面的 UST 互转直接不成立，所以暂不支持。
+第一版单轨，UST 本身就是单轨格式（`Tracks=1`）。但顶层从一开始就是 `tracks` 数组，将来放开多轨不必改格式版本。
 
 可与 `.ust` 文件相互转换。
 
 ### 控制音符
 
-由 `.usth` 生成的 UST 中，第一个音符是 HelloUTAU 保留的音符，歌词固定为 `_USTH_`。它用 UTAU 的用户定义条目存放 HelloUTAU 的配置信息，条目名一律以 `$usth_` 开头。
+由 `.usth` 生成的 UST 中，第一个音符是 HelloUTAU 保留的音符，歌词固定为 `_USTH_`。它用一个名为 `$usth` 的用户定义条目存放 HelloUTAU 的配置信息。
 
 歌词取这个名字是为了醒目：用户在 UTAU 里一眼就能看出这个音符不是自己写的。**要维持与 HelloUTAU 的兼容，就不要删它。**
 

@@ -4,7 +4,7 @@
 
 #include <QByteArray>
 
-#include <hellokit/Ust/PayloadCodec.h>
+#include <hellokit/Document/PayloadCodec.h>
 
 #include <boost/test/unit_test.hpp>
 

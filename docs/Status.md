@@ -6,7 +6,7 @@
 
 | 目标 | 状态 |
 |---|---|
-| `HelloKitUst` | 只有 `PayloadCodec`，用来验证整条构建链 |
+| `HelloKitDocument` | 只有 `PayloadCodec`，用来验证整条构建链 |
 | `HelloUtauWidgets` | 一个装着 `QLabel` 的 `MainWindow`，证明 Qt Widgets 和 moc 接上了 |
 | `helloutau` | 薄驱动，只有 `main.cpp` |
 
@@ -24,7 +24,7 @@
 
 ## 接下来
 
-阶段划分、每阶段怎么算数、从 QSynthesis 拿什么不拿什么，都在 [`Roadmap.md`](Roadmap.md)。当前处在第一阶段「数据层」的开头，`HelloKitUst` 里只有 `PayloadCodec`。
+阶段划分、每阶段怎么算数、从 QSynthesis 拿什么不拿什么，都在 [`Roadmap.md`](Roadmap.md)。当前处在第一阶段「数据层」的开头，`HelloKitDocument` 里只有 `PayloadCodec`。
 
 ## 插件放在哪
 

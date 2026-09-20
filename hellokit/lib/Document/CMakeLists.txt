@@ -1,4 +1,4 @@
-project(HelloKitUst
+project(HelloKitDocument
     VERSION ${HELLOKIT_VERSION}
     LANGUAGES CXX
 )
@@ -14,5 +14,5 @@ hellokit_add_library(${PROJECT_NAME} SHARED
     LINKS stdcorelib::stdcorelib stdutau::stdutau
     QT_LINKS Core
     INCLUDE_PRIVATE ../../include/** **
-    MACRO_PREFIX HELLOKIT_UST
+    MACRO_PREFIX HELLOKIT_DOCUMENT
 )
