@@ -187,7 +187,7 @@ BOOST_AUTO_TEST_CASE(a_note_with_no_lyric_gets_the_default_one) {
     const auto &notes = result.project->tracks.first().notes;
     BOOST_REQUIRE_EQUAL(notes.size(), 1);
     BOOST_CHECK(!notes.at(0).isRest());
-    BOOST_CHECK(!notes.at(0).lyric.isEmpty());
+    BOOST_CHECK_EQUAL(notes.at(0).lyric.toStdString(), "la");
 }
 
 BOOST_AUTO_TEST_CASE(the_first_tempo_becomes_the_project_tempo) {

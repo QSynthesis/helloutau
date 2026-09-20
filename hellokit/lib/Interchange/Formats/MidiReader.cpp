@@ -21,6 +21,11 @@ namespace hello::kit {
         constexpr char OptionEncoding[] = "encoding";
         constexpr char OptionDefaultLyric[] = "defaultLyric";
 
+        // A UST note with an empty lyric is a rest, so a note that brought none of its own still
+        // has to say something. Latin rather than kana, because a bank that cannot sing this can
+        // at least be told apart from one that sang the wrong thing.
+        constexpr char DefaultLyric[] = "la";
+
         QString tr(const char *text) {
             return QCoreApplication::translate("hello::kit::MidiReader", text);
         }
@@ -150,7 +155,7 @@ namespace hello::kit {
         defaultLyric.key = QLatin1String(OptionDefaultLyric);
         defaultLyric.name = tr("Lyric for notes that have none");
         defaultLyric.type = InterchangeOption::Text;
-        defaultLyric.defaultValue = QStringLiteral("あ");
+        defaultLyric.defaultValue = QLatin1String(DefaultLyric);
 
         return {encoding, defaultLyric};
     }
@@ -264,7 +269,7 @@ namespace hello::kit {
         };
 
         const QString defaultLyric =
-            request.driverOptions.value(QLatin1String(OptionDefaultLyric), QStringLiteral("あ"))
+            request.driverOptions.value(QLatin1String(OptionDefaultLyric), QLatin1String(DefaultLyric))
                 .toString();
 
         // Tempo is gathered from every track, since a format 1 file keeps it in track 0 while the
