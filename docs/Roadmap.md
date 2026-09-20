@@ -24,7 +24,8 @@ QSynthesis 是同一作者停更的前作，`.cache/QSynthesis-Old` 下有一份
 | 包络、Mode2 音高、颤音的控制点可视化编辑 | **拿** | 同上，而且这是 UTAU 最难用的地方 |
 | 按关注点拆分的撤销操作（`Operations/Notes`、`Operations/Tracks`） | **拿形状** | 撤销栈的分法是对的，代码重写 |
 | 自定义配色、快捷键编辑器、多语言 | **拿** | 不影响数据 |
-| MIDI / VSQ / SynthV / presamp / frq 导入 | **拿，但排在后面** | 兼容周边，不影响主干 |
+| MIDI 导入 | **拿，但重写** | **优先级最前**，见 [`Interchange.md`](Interchange.md)。那份实现有五处是缺陷不是行为特征，照抄会连缺陷一起继承 |
+| VSQ / SynthV / presamp / frq 导入 | **拿，但排在后面** | 兼容周边，不影响主干 |
 | **多轨** | **暂不拿，见下** | UST 是单轨（`Tracks=1`） |
 | `MiniSystem` 那套自造文件监视与路径树 | **不拿** | 用 Qt 或 stdcorelib 现成的 |
 | 把编码问题拖到 UI 层才处理 | **不拿** | 本仓库的编码在 I/O 边界解决，见 `AGENTS.md` |
@@ -48,8 +49,13 @@ QSynthesis 是同一作者停更的前作，`.cache/QSynthesis-Old` 下有一份
 - `HelloKitSupport`：编码策略的落地。编码的记录与读取（`_USTH_`、`hello-config.json`、`plugin.json`）、转义与还原、ANSI 代码页在非 Windows 上的替身。
 - `HelloKitDocument`：`_USTH_` 控制音符的读写，`.usth` ↔ `.ust` 的双向转换，控制音符的一进一出配平。`PayloadCodec` 已完成。
 - `HelloKitVoiceBank`：音源目录模型。一个音源多份 `oto.ini`，各自编码；`prefix.map`、`character.txt`、`readme.txt`。
+- `HelloKitInterchange`：MIDI 导入。形状与约束见 [`Interchange.md`](Interchange.md)。
 
-**算数**：一个命令行工具把 `.ust` 读进来再写回去，用 stdutau 解析两边、规范化后语义相等；任意字节的转义往返测试绿；拿真实音源（含日文与中文文件名）跑通目录扫描。
+**算数**：一个命令行工具把 `.ust` 读进来再写回去，用 stdutau 解析两边、规范化后语义相等；任意字节的转义往返测试绿；拿真实音源（含日文与中文文件名）跑通目录扫描；一个 MIDI 文件在没有界面的情况下导入成 `.usth`。
+
+### MIDI 导入为什么在这一阶段
+
+它在「兼容周边」那一类里，但优先级被提到了最前面，而且**不需要等界面**：`InterchangeSelector` 把提问抽成了回调，内置的 `AutomaticSelector` 让命令行和测试都能跑完整条导入流程。界面上的选轨对话框和四种插入位置第三阶段再补。
 
 ### 二、合成
 
@@ -87,11 +93,13 @@ QSynthesis 的强项，也是最该超过 UTAU 的地方。
 
 **算数**：几个社区常用的原版插件能正常执行并把结果写回；接口是纯虚类，插件不反向链接应用。
 
+还有一类待定：格式转换插件（`InterchangePlugin`）。它会让 note.md 里的四类变成五类，所以要先跟作者确认，见 [`Interchange.md`](Interchange.md) 文末。
+
 ### 六、兼容周边
 
 - 原音设定编辑器（`oto.ini` 的可视化编辑）。UTAU 自带，用户依赖度高。
 - `frq` 频率表的读取与生成。
-- MIDI / VSQ / SynthV / presamp 导入。
+- VSQ / SynthV / `.ustx` 导入，MIDI 导出。走 `HelloKitInterchange`，见 [`Interchange.md`](Interchange.md)。MIDI 导入已在第一阶段做掉。
 - `.uar` 音源安装，**按安全底线处理条目路径**。
 
 ## 贯穿始终的三件事
