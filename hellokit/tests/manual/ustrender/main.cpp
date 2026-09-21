@@ -206,8 +206,8 @@ namespace {
         const auto outcome = runner->render(*plan, engines, nullptr, diagnostics);
         report(diagnostics);
 
-        std::cout << "resampled " << outcome.resampled << ", silent " << outcome.silent
-                  << ", failed " << outcome.failed << std::endl;
+        std::cout << "resampled " << outcome.resampled << ", reused " << outcome.reused
+                  << ", silent " << outcome.silent << ", failed " << outcome.failed << std::endl;
         if (!outcome.rendered) {
             return 1;
         }
