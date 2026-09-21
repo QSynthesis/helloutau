@@ -15,10 +15,6 @@ namespace hello::kit {
 
         constexpr char FormatName[] = "hello-voicebank";
 
-        QString tr(const char *text) {
-            return QCoreApplication::translate("hello::kit::VoiceBankConfig", text);
-        }
-
         void fail(DiagnosticList &diagnostics, const QString &message) {
             diagnostics.push_back({DiagnosticSeverity::Error, message});
         }
@@ -29,7 +25,7 @@ namespace hello::kit {
                                                          DiagnosticList &diagnostics) {
         std::ifstream in(path, std::ios::binary);
         if (!in) {
-            fail(diagnostics, tr("This file could not be opened."));
+            fail(diagnostics, VoiceBankConfig::tr("This file could not be opened."));
             return std::nullopt;
         }
         const std::string bytes((std::istreambuf_iterator<char>(in)),
@@ -43,12 +39,12 @@ namespace hello::kit {
 
         std::ofstream out(path, std::ios::binary | std::ios::trunc);
         if (!out) {
-            fail(diagnostics, tr("This file could not be written."));
+            fail(diagnostics, VoiceBankConfig::tr("This file could not be written."));
             return false;
         }
         out.write(bytes.constData(), bytes.size());
         if (!out) {
-            fail(diagnostics, tr("This file could not be written."));
+            fail(diagnostics, VoiceBankConfig::tr("This file could not be written."));
             return false;
         }
         return true;
@@ -59,17 +55,17 @@ namespace hello::kit {
         QJsonParseError error{};
         const auto document = QJsonDocument::fromJson(json.toByteArray(), &error);
         if (error.error != QJsonParseError::NoError) {
-            fail(diagnostics, tr("This file is not valid JSON: %1").arg(error.errorString()));
+            fail(diagnostics, VoiceBankConfig::tr("This file is not valid JSON: %1").arg(error.errorString()));
             return std::nullopt;
         }
         if (!document.isObject()) {
-            fail(diagnostics, tr("This file is not a HelloUTAU voice bank record."));
+            fail(diagnostics, VoiceBankConfig::tr("This file is not a HelloUTAU voice bank record."));
             return std::nullopt;
         }
 
         auto root = document.object();
         if (root.value(QLatin1String(KeyFormat)).toString() != QLatin1String(FormatName)) {
-            fail(diagnostics, tr("This file is not a HelloUTAU voice bank record."));
+            fail(diagnostics, VoiceBankConfig::tr("This file is not a HelloUTAU voice bank record."));
             return std::nullopt;
         }
 

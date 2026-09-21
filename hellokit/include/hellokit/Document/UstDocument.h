@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <optional>
 
+#include <QtCore/QCoreApplication>
 #include <QtCore/QByteArrayView>
 #include <QtCore/QList>
 #include <QtCore/QString>
@@ -37,6 +38,7 @@ namespace hello::kit {
     ///
     /// \sa docs/UsthFormat.md
     class HELLOKIT_DOCUMENT_EXPORT UstDocument {
+        Q_DECLARE_TR_FUNCTIONS(hello::kit::UstDocument)
     public:
         /// What to write into a \c .ust beyond the project itself.
         struct ExportOptions {
@@ -103,8 +105,7 @@ namespace hello::kit {
         ///
         /// The control note is taken out. Leaving it in would put a second one in the next file
         /// written, and repeated round trips would grow a run of leaders.
-        std::optional<Project> toProject(const QString &charset,
-                                         DiagnosticList &diagnostics) const;
+        std::optional<Project> toProject(const QString &charset, DiagnosticList &diagnostics) const;
 
         /// The parse underneath, for what \c Project has no field for.
         ///

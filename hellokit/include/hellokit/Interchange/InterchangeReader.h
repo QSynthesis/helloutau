@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <optional>
 
+#include <QtCore/QCoreApplication>
 #include <QtCore/QString>
 #include <QtCore/QStringList>
 
@@ -31,6 +32,7 @@ namespace hello::kit {
     ///
     /// \sa docs/Interchange.md
     class HELLOKIT_INTERCHANGE_EXPORT InterchangeReader {
+        Q_DECLARE_TR_FUNCTIONS(hello::kit::InterchangeReader)
     public:
         virtual ~InterchangeReader();
 

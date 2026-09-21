@@ -14,10 +14,6 @@ namespace hello::kit {
 
     namespace {
 
-        QString tr(const char *text) {
-            return QCoreApplication::translate("hello::kit::SynthPlan", text);
-        }
-
         void fail(DiagnosticList &diagnostics, const QString &message) {
             diagnostics.push_back({DiagnosticSeverity::Error, message});
         }
@@ -113,18 +109,18 @@ namespace hello::kit {
                                              const Options &options,
                                              DiagnosticList &diagnostics) {
         if (project.tracks.size() != 1) {
-            fail(diagnostics, tr("A render takes one track, and this project holds %1.")
+            fail(diagnostics, SynthPlan::tr("A render takes one track, and this project holds %1.")
                                   .arg(project.tracks.size()));
             return std::nullopt;
         }
 
         const auto &notes = project.tracks.first().notes;
         if (notes.isEmpty()) {
-            fail(diagnostics, tr("This track holds no notes."));
+            fail(diagnostics, SynthPlan::tr("This track holds no notes."));
             return std::nullopt;
         }
         if (options.outputFile.empty() || options.cacheDirectory.empty()) {
-            fail(diagnostics, tr("A render needs somewhere to write and somewhere to cache."));
+            fail(diagnostics, SynthPlan::tr("A render needs somewhere to write and somewhere to cache."));
             return std::nullopt;
         }
 
@@ -140,7 +136,7 @@ namespace hello::kit {
         const auto range = options.range.value_or(limits);
         if (range.first < limits.first || range.second > limits.second ||
             range.first > range.second) {
-            fail(diagnostics, tr("There is no note in the range that was asked for."));
+            fail(diagnostics, SynthPlan::tr("There is no note in the range that was asked for."));
             return std::nullopt;
         }
 
@@ -195,7 +191,7 @@ namespace hello::kit {
 
             if (step.silent && !notes.at(noteIndex).isRest()) {
                 complain(diagnostics,
-                         tr("This voice bank has nothing to sing \"%1\" with, so the note is "
+                         SynthPlan::tr("This voice bank has nothing to sing \"%1\" with, so the note is "
                             "silent.")
                              .arg(notes.at(noteIndex).lyric),
                          noteIndex);

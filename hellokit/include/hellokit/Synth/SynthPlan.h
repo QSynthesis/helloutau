@@ -5,6 +5,7 @@
 #include <optional>
 #include <utility>
 
+#include <QtCore/QCoreApplication>
 #include <QtCore/QList>
 #include <QtCore/QString>
 #include <QtCore/QStringList>
@@ -52,6 +53,7 @@ namespace hello::kit {
     ///       here came from a UST: the project is already text, so there is one encoding on this
     ///       side and no conversion in the middle.
     class HELLOKIT_SYNTH_EXPORT SynthPlan {
+        Q_DECLARE_TR_FUNCTIONS(hello::kit::SynthPlan)
     public:
         struct Options {
             /// Where the rendered pieces go. UTAU keeps this beside the project file.
@@ -72,8 +74,7 @@ namespace hello::kit {
         /// \return the plan, or nothing where there is nothing to render, with the reason in
         ///         \a diagnostics
         static std::optional<SynthPlan> make(const Project &project, const VoiceBank &bank,
-                                             const Options &options,
-                                             DiagnosticList &diagnostics);
+                                             const Options &options, DiagnosticList &diagnostics);
 
         /// The steps in track order.
         const QList<SynthStep> &steps() const {

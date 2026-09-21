@@ -3,6 +3,7 @@
 
 #include <filesystem>
 
+#include <QtCore/QCoreApplication>
 #include <QtCore/QString>
 #include <QtCore/QStringList>
 
@@ -20,6 +21,7 @@ namespace hello::kit {
     ///
     /// \sa InterchangeReader, for why the two halves are separate classes
     class HELLOKIT_INTERCHANGE_EXPORT InterchangeWriter {
+        Q_DECLARE_TR_FUNCTIONS(hello::kit::InterchangeWriter)
     public:
         virtual ~InterchangeWriter();
 

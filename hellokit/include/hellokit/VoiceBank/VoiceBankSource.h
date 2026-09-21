@@ -5,6 +5,7 @@
 #include <optional>
 #include <vector>
 
+#include <QtCore/QCoreApplication>
 #include <QtCore/QByteArray>
 #include <QtCore/QByteArrayView>
 #include <QtCore/QList>
@@ -115,6 +116,7 @@ namespace hello::kit {
     ///       folder did not ask for a file to appear in it. The caller writes it with
     ///       \c VoiceBankConfig::save() once the user has answered.
     class HELLOKIT_VOICEBANK_EXPORT VoiceBankSource {
+        Q_DECLARE_TR_FUNCTIONS(hello::kit::VoiceBankSource)
     public:
         /// Walks \a root and reads what it finds.
         static std::optional<VoiceBankSource> open(const std::filesystem::path &root,

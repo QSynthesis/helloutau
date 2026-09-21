@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <optional>
 
+#include <QtCore/QCoreApplication>
 #include <QtCore/QHash>
 #include <QtCore/QList>
 #include <QtCore/QString>
@@ -68,6 +69,7 @@ namespace hello::kit {
     ///
     /// \sa VoiceBankSource for the step before this one, and for why there are two.
     class HELLOKIT_VOICEBANK_EXPORT VoiceBank {
+        Q_DECLARE_TR_FUNCTIONS(hello::kit::VoiceBank)
     public:
         /// Reads \a root and decodes it, asking \a selector about any directory whose encoding
         /// is not recorded.

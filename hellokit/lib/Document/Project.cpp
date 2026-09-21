@@ -22,10 +22,6 @@ namespace hello::kit {
 
         constexpr char FormatName[] = "usth";
 
-        QString tr(const char *text) {
-            return QCoreApplication::translate("hello::kit::Project", text);
-        }
-
         void fail(DiagnosticList &diagnostics, const QString &message) {
             diagnostics.push_back({DiagnosticSeverity::Error, message});
         }
@@ -47,9 +43,10 @@ namespace hello::kit {
                 return std::nullopt;
             }
             if (!value.isDouble()) {
-                complain(diagnostics,
-                         tr("\"%1\" is not a number and was left out.").arg(QLatin1String(key)),
-                         noteIndex);
+                complain(
+                    diagnostics,
+                    Project::tr("\"%1\" is not a number and was left out.").arg(QLatin1String(key)),
+                    noteIndex);
                 return std::nullopt;
             }
             return value.toDouble();
@@ -236,7 +233,7 @@ namespace hello::kit {
             const auto noteNum = object.value(QLatin1String("noteNum"));
             if (!lyric.isString() || !length.isDouble() || !noteNum.isDouble()) {
                 fail(diagnostics,
-                     tr("Note %1 is missing its lyric, length or pitch.").arg(index + 1));
+                     Project::tr("Note %1 is missing its lyric, length or pitch.").arg(index + 1));
                 return std::nullopt;
             }
 
@@ -267,8 +264,9 @@ namespace hello::kit {
                     portamentoTypeFromName(fields.value(QLatin1String("type")).toString());
                 if (!type) {
                     complain(diagnostics,
-                             tr("A portamento point of note %1 has an unknown join and was read "
-                                "as a smooth one.")
+                             Project::tr(
+                                 "A portamento point of note %1 has an unknown join and was read "
+                                 "as a smooth one.")
                                  .arg(index + 1),
                              index);
                 }
@@ -334,7 +332,7 @@ namespace hello::kit {
                                           DiagnosticList &diagnostics) {
         std::ifstream in(path, std::ios::binary);
         if (!in) {
-            fail(diagnostics, tr("This file could not be opened."));
+            fail(diagnostics, Project::tr("This file could not be opened."));
             return std::nullopt;
         }
         const std::string bytes((std::istreambuf_iterator<char>(in)),
@@ -346,7 +344,7 @@ namespace hello::kit {
                         DiagnosticList &diagnostics) const {
         if (tracks.size() != 1) {
             fail(diagnostics,
-                 tr("A project of this version holds one track, and this one holds %1.")
+                 Project::tr("A project of this version holds one track, and this one holds %1.")
                      .arg(tracks.size()));
             return false;
         }
@@ -357,12 +355,12 @@ namespace hello::kit {
         // file is written with newlines, and a project file is something people diff.
         std::ofstream out(path, std::ios::binary | std::ios::trunc);
         if (!out) {
-            fail(diagnostics, tr("This file could not be written."));
+            fail(diagnostics, Project::tr("This file could not be written."));
             return false;
         }
         out.write(bytes.constData(), bytes.size());
         if (!out) {
-            fail(diagnostics, tr("This file could not be written."));
+            fail(diagnostics, Project::tr("This file could not be written."));
             return false;
         }
         return true;
@@ -374,11 +372,12 @@ namespace hello::kit {
         QJsonParseError error{};
         const auto document = QJsonDocument::fromJson(json.toByteArray(), &error);
         if (error.error != QJsonParseError::NoError) {
-            fail(diagnostics, tr("This file is not valid JSON: %1").arg(error.errorString()));
+            fail(diagnostics,
+                 Project::tr("This file is not valid JSON: %1").arg(error.errorString()));
             return std::nullopt;
         }
         if (!document.isObject()) {
-            fail(diagnostics, tr("This file is not a HelloUTAU project."));
+            fail(diagnostics, Project::tr("This file is not a HelloUTAU project."));
             return std::nullopt;
         }
 
@@ -387,25 +386,25 @@ namespace hello::kit {
         // Checked before anything else, since a file that is not one of ours may still parse as
         // JSON and would otherwise be read field by field into a project full of defaults.
         if (root.value(QLatin1String(KeyFormat)).toString() != QLatin1String(FormatName)) {
-            fail(diagnostics, tr("This file is not a HelloUTAU project."));
+            fail(diagnostics, Project::tr("This file is not a HelloUTAU project."));
             return std::nullopt;
         }
 
         const auto version = root.value(QLatin1String(KeyVersion));
         if (!version.isDouble()) {
-            fail(diagnostics, tr("This project does not say which format version it is."));
+            fail(diagnostics, Project::tr("This project does not say which format version it is."));
             return std::nullopt;
         }
         if (int(version.toDouble()) > usthFormatVersion) {
             fail(diagnostics,
-                 tr("This project was saved by a newer version of HelloUTAU and cannot be "
-                    "opened here."));
+                 Project::tr("This project was saved by a newer version of HelloUTAU and cannot be "
+                             "opened here."));
             return std::nullopt;
         }
 
         const auto tracks = root.value(QLatin1String(KeyTracks));
         if (!tracks.isArray()) {
-            fail(diagnostics, tr("This project has no tracks."));
+            fail(diagnostics, Project::tr("This project has no tracks."));
             return std::nullopt;
         }
 
@@ -415,7 +414,8 @@ namespace hello::kit {
         const auto trackArray = tracks.toArray();
         if (trackArray.size() != 1) {
             fail(diagnostics,
-                 tr("This project holds %1 tracks, and this version of HelloUTAU handles one.")
+                 Project::tr(
+                     "This project holds %1 tracks, and this version of HelloUTAU handles one.")
                      .arg(trackArray.size()));
             return std::nullopt;
         }

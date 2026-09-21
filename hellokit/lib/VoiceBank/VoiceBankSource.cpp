@@ -11,10 +11,6 @@ namespace hello::kit {
 
     namespace {
 
-        QString tr(const char *text) {
-            return QCoreApplication::translate("hello::kit::VoiceBankSource", text);
-        }
-
         void fail(DiagnosticList &diagnostics, const QString &message) {
             diagnostics.push_back({DiagnosticSeverity::Error, message});
         }
@@ -92,7 +88,7 @@ namespace hello::kit {
                     directory.config = VoiceBankConfig::open(entry.path(), ignored);
                     if (!directory.config) {
                         complain(diagnostics,
-                                 tr("The HelloUTAU record in \"%1\" could not be read, so its "
+                                 VoiceBankSource::tr("The HelloUTAU record in \"%1\" could not be read, so its "
                                     "encoding has to be chosen again.")
                                      .arg(displayed(absolute)));
                     }
@@ -120,7 +116,7 @@ namespace hello::kit {
 
             if (error) {
                 complain(diagnostics,
-                         tr("\"%1\" could not be listed and was left out.")
+                         VoiceBankSource::tr("\"%1\" could not be listed and was left out.")
                              .arg(displayed(absolute)));
             }
             return directory;
@@ -164,7 +160,7 @@ namespace hello::kit {
                                                          const VoiceBankLimits &limits) {
         std::error_code error;
         if (!fs::is_directory(root, error)) {
-            fail(diagnostics, tr("\"%1\" is not a folder.").arg(displayed(root)));
+            fail(diagnostics, VoiceBankSource::tr("\"%1\" is not a folder.").arg(displayed(root)));
             return std::nullopt;
         }
 
@@ -200,7 +196,7 @@ namespace hello::kit {
 
         if (stopped) {
             complain(diagnostics,
-                     tr("This folder is larger or deeper than a voice bank is expected to be, so "
+                     VoiceBankSource::tr("This folder is larger or deeper than a voice bank is expected to be, so "
                         "only part of it was read."));
         }
         return source;

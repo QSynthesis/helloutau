@@ -15,10 +15,6 @@ namespace hello::kit {
 
     namespace {
 
-        QString tr(const char *text) {
-            return QCoreApplication::translate("hello::kit::UstDocument", text);
-        }
-
         void fail(DiagnosticList &diagnostics, const QString &message) {
             diagnostics.push_back({DiagnosticSeverity::Error, message});
         }
@@ -260,7 +256,7 @@ namespace hello::kit {
                                                  DiagnosticList &diagnostics) {
         UstDocument document;
         if (!document.m_file.load(path)) {
-            fail(diagnostics, tr("This file could not be read."));
+            fail(diagnostics, UstDocument::tr("This file could not be read."));
             return std::nullopt;
         }
 
@@ -321,7 +317,8 @@ namespace hello::kit {
                                                   DiagnosticList &diagnostics) const {
         const TextCodec codec(charset);
         if (!codec.isValid()) {
-            fail(diagnostics, tr("The encoding \"%1\" is not available.").arg(charset));
+            fail(diagnostics,
+                 UstDocument::tr("The encoding \"%1\" is not available.").arg(charset));
             return std::nullopt;
         }
 
@@ -335,7 +332,8 @@ namespace hello::kit {
         bool ok = true;
         project.settings.name = reader.text(file.settings.projectName, &ok);
         if (!ok) {
-            fail(diagnostics, tr("This file is not in the %1 encoding.").arg(codec.name()));
+            fail(diagnostics,
+                 UstDocument::tr("This file is not in the %1 encoding.").arg(codec.name()));
             return std::nullopt;
         }
         project.settings.tempo = file.settings.tempo;
@@ -364,7 +362,7 @@ namespace hello::kit {
     bool UstDocument::save(const std::filesystem::path &path,
                            DiagnosticList &diagnostics) const {
         if (!m_file.save(path)) {
-            fail(diagnostics, tr("This file could not be written."));
+            fail(diagnostics, UstDocument::tr("This file could not be written."));
             return false;
         }
         return true;
@@ -374,14 +372,15 @@ namespace hello::kit {
                                                         const ExportOptions &options,
                                                         DiagnosticList &diagnostics) {
         if (project.tracks.size() != 1) {
-            fail(diagnostics, tr("A UST holds one track, and this project holds %1.")
+            fail(diagnostics, UstDocument::tr("A UST holds one track, and this project holds %1.")
                                   .arg(project.tracks.size()));
             return std::nullopt;
         }
 
         const TextCodec codec(options.charset);
         if (!codec.isValid()) {
-            fail(diagnostics, tr("The encoding \"%1\" is not available.").arg(options.charset));
+            fail(diagnostics,
+                 UstDocument::tr("The encoding \"%1\" is not available.").arg(options.charset));
             return std::nullopt;
         }
         const bool escaping = !codec.isUtf8();
@@ -421,8 +420,9 @@ namespace hello::kit {
         file.settings.resamplerPath = out(resampler);
         if (wavtool.isEmpty() || resampler.isEmpty()) {
             complain(diagnostics,
-                     tr("This UST names no rendering engine, so UTAU will not be able to render "
-                        "it until one is set there."));
+                     UstDocument::tr(
+                         "This UST names no rendering engine, so UTAU will not be able to render "
+                         "it until one is set there."));
         }
 
         QJsonObject payload;

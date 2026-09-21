@@ -12,10 +12,6 @@ namespace hello::kit {
 
     namespace {
 
-        QString tr(const char *text) {
-            return QCoreApplication::translate("hello::kit::VoiceBank", text);
-        }
-
         void complain(DiagnosticList &diagnostics, const QString &message) {
             diagnostics.push_back({DiagnosticSeverity::Warning, message});
         }
@@ -44,7 +40,7 @@ namespace hello::kit {
             if (name.isEmpty()) {
                 if (!selector) {
                     complain(diagnostics,
-                             tr("Nothing says what encoding \"%1\" is written in, so it was left "
+                             VoiceBank::tr("Nothing says what encoding \"%1\" is written in, so it was left "
                                 "out.")
                                  .arg(displayed(directory.path)));
                     return std::nullopt;
@@ -59,7 +55,7 @@ namespace hello::kit {
             TextCodec codec(name);
             if (!codec.isValid()) {
                 complain(diagnostics,
-                         tr("The encoding \"%1\" is not available, so \"%2\" was left out.")
+                         VoiceBank::tr("The encoding \"%1\" is not available, so \"%2\" was left out.")
                              .arg(name, displayed(directory.path)));
                 return std::nullopt;
             }
@@ -193,7 +189,7 @@ namespace hello::kit {
         }
 
         if (bank.m_samples.isEmpty()) {
-            complain(diagnostics, tr("This folder holds nothing that can be sung."));
+            complain(diagnostics, VoiceBank::tr("This folder holds nothing that can be sung."));
         }
         return bank;
     }

@@ -28,8 +28,7 @@ namespace hello::kit {
             if (!hasError(result.diagnostics)) {
                 result.diagnostics.push_back({
                     DiagnosticSeverity::Error,
-                    QCoreApplication::translate("hello::kit::InterchangeReader",
-                                                "The file could not be read."),
+                    InterchangeReader::tr("The file could not be read."),
                 });
             }
             return result;
@@ -51,8 +50,7 @@ namespace hello::kit {
         if (!result.project && !hasError(result.diagnostics)) {
             result.diagnostics.push_back({
                 DiagnosticSeverity::Error,
-                QCoreApplication::translate("hello::kit::InterchangeReader",
-                                            "The file could not be converted."),
+                InterchangeReader::tr("The file could not be converted."),
             });
         }
         return result;

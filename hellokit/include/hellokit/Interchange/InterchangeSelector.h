@@ -3,6 +3,8 @@
 
 #include <optional>
 
+#include <QtCore/QCoreApplication>
+
 #include <hellokit/Document/Project.h>
 #include <hellokit/Support/Diagnostic.h>
 
@@ -61,6 +63,7 @@ namespace hello::kit {
     /// Every decision it makes on the user's behalf is recorded as a \c Note diagnostic, since
     /// the caller has no other way to find out that a choice was made at all.
     class HELLOKIT_INTERCHANGE_EXPORT AutomaticSelector : public InterchangeSelector {
+        Q_DECLARE_TR_FUNCTIONS(hello::kit::AutomaticSelector)
     public:
         AutomaticSelector();
         ~AutomaticSelector();

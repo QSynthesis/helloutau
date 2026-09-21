@@ -24,8 +24,7 @@ namespace hello::kit {
             request.driverOptions.insert(option.key, option.defaultValue);
             diagnostics.push_back({
                 DiagnosticSeverity::Note,
-                QCoreApplication::translate("hello::kit::AutomaticSelector",
-                                            "%1 was left at its default, %2.")
+                AutomaticSelector::tr("%1 was left at its default, %2.")
                     .arg(option.name, option.defaultValue.toString()),
             });
         }
@@ -45,8 +44,7 @@ namespace hello::kit {
         if (request.entries.size() < limits.minEntries) {
             diagnostics.push_back({
                 DiagnosticSeverity::Error,
-                QCoreApplication::translate("hello::kit::AutomaticSelector",
-                                            "The file holds nothing that can be imported."),
+                AutomaticSelector::tr("The file holds nothing that can be imported."),
             });
             return std::nullopt;
         }
@@ -54,8 +52,7 @@ namespace hello::kit {
         if (source.entries.size() > wanted) {
             diagnostics.push_back({
                 DiagnosticSeverity::Warning,
-                QCoreApplication::translate("hello::kit::AutomaticSelector",
-                                            "The file holds %1 parts and the first %2 were taken.")
+                AutomaticSelector::tr("The file holds %1 parts and the first %2 were taken.")
                     .arg(source.entries.size())
                     .arg(wanted),
             });

@@ -1,6 +1,8 @@
 #ifndef HELLOKIT_INTERCHANGE_FORMATS_MIDICONVERT_H
 #define HELLOKIT_INTERCHANGE_FORMATS_MIDICONVERT_H
 
+#include <QtCore/QCoreApplication>
+
 #include <hellokit/Interchange/HelloKitInterchangeGlobal.h>
 #include <hellokit/Interchange/InterchangeReader.h>
 #include <hellokit/Interchange/InterchangeWriter.h>
@@ -26,6 +28,7 @@ namespace hello::kit {
     /// Everything else comes across as it stands, the tempo and the silence before the first
     /// note included, even where the caller is about to discard them.
     class HELLOKIT_INTERCHANGE_EXPORT MidiReader : public InterchangeReader {
+        Q_DECLARE_TR_FUNCTIONS(hello::kit::MidiReader)
     public:
         MidiReader();
         ~MidiReader();
@@ -58,6 +61,7 @@ namespace hello::kit {
     /// not a defect to be fixed, it is what the format is, and it is reported every time rather
     /// than left for the user to discover.
     class HELLOKIT_INTERCHANGE_EXPORT MidiWriter : public InterchangeWriter {
+        Q_DECLARE_TR_FUNCTIONS(hello::kit::MidiWriter)
     public:
         MidiWriter();
         ~MidiWriter();

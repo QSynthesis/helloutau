@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <optional>
 
+#include <QtCore/QCoreApplication>
 #include <QtCore/QByteArray>
 #include <QtCore/QByteArrayView>
 #include <QtCore/QJsonObject>
@@ -26,6 +27,8 @@ namespace hello::kit {
     ///
     /// \sa docs/note.md
     struct HELLOKIT_VOICEBANK_EXPORT VoiceBankConfig {
+        Q_DECLARE_TR_FUNCTIONS(hello::kit::VoiceBankConfig)
+    public:
         /// The encoding of the UTAU files in this directory: \c oto.ini , \c prefix.map ,
         /// \c character.txt and \c readme.txt .
         ///

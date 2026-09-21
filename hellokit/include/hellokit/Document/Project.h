@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <optional>
 
+#include <QtCore/QCoreApplication>
 #include <QtCore/QByteArray>
 #include <QtCore/QByteArrayView>
 #include <QtCore/QJsonObject>
@@ -69,6 +70,8 @@ namespace hello::kit {
     ///       several tracks become possible without a new format version, and a reader that sees
     ///       any other length has to say so rather than quietly take the first one.
     struct HELLOKIT_DOCUMENT_EXPORT Project {
+        Q_DECLARE_TR_FUNCTIONS(hello::kit::Project)
+    public:
         ProjectSettings settings;
         QList<Track> tracks;
 

@@ -35,8 +35,7 @@ namespace hello::kit {
         if (!result.written && !hasError(result.diagnostics)) {
             result.diagnostics.push_back({
                 DiagnosticSeverity::Error,
-                QCoreApplication::translate("hello::kit::InterchangeWriter",
-                                            "The file could not be written."),
+                InterchangeWriter::tr("The file could not be written."),
             });
         }
         return result;
