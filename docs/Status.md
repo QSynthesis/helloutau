@@ -7,14 +7,14 @@
 | 目标 | 状态 |
 |---|---|
 | `HelloKitSupport` | 只有 `Diagnostic` |
-| `HelloKitDocument` | `PayloadCodec`、`Project` / `Track` / `Note` 模型、`.usth` 读写 |
+| `HelloKitDocument` | `PayloadCodec`、`Project` / `Track` / `Note` 模型、`.usth` 读写、`UstDocument` |
 | `HelloKitInterchange` | 接口、注册表、`Formats/MidiReader` |
 | `HelloUtauWidgets` | 一个装着 `QLabel` 的 `MainWindow`，证明 Qt Widgets 和 moc 接上了 |
 | `helloutau` | 薄驱动，只有 `main.cpp` |
 
 构建链已验证：qmsetup 的 `hellokit_add_library` / `helloutau_add_library` / `helloutau_add_application`、Qt 6.11 加 AUTOMOC、stdcorelib、stdutau、Boost.Test 加 `add_auto_test`、ctest。
 
-`HelloKitSupport` 目前只有 `Diagnostic`。`HelloKitDocument` 有 `PayloadCodec`、`Project` / `Track` / `Note` 数据模型，以及 `.usth` 的读写——**读写就挂在 `Project` 上**，因为 `.usth` 不是众多格式里的一种，它就是工程本身的写法，别的格式都走 Interchange 转成 `Project`。`HelloKitInterchange` 的接口与注册表齐了（`InterchangeReader` / `InterchangeWriter` / `InterchangeSource` / `InterchangeSelector` / `AutomaticSelector` / `InterchangeRegistry` / `InterchangePlugin`），第一个驱动 `Formats/MidiReader` 也在了，headless 可跑可测。形状与约束见 [`Interchange.md`](Interchange.md)。**还没有界面**：选轨和选编码那两页要等第三阶段。
+`HelloKitSupport` 目前只有 `Diagnostic`。`HelloKitDocument` 有 `PayloadCodec`、`Project` / `Track` / `Note` 数据模型，以及 `.usth` 的读写——**读写就挂在 `Project` 上**，因为 `.usth` 不是众多格式里的一种，它就是工程本身的写法，别的格式都走 Interchange 转成 `Project`。`.ust` 在 `UstDocument`——它是一份**已经读进来但还没解码**的 UST，`open()` 解析一次，探编码和 `toProject()` 都吃那一次的结果，不重复解析。`HelloKitInterchange` 的接口与注册表齐了（`InterchangeReader` / `InterchangeWriter` / `InterchangeSource` / `InterchangeSelector` / `AutomaticSelector` / `InterchangeRegistry` / `InterchangePlugin`），第一个驱动 `Formats/MidiReader` 也在了，headless 可跑可测。形状与约束见 [`Interchange.md`](Interchange.md)。**还没有界面**：选轨和选编码那两页要等第三阶段。
 
 `PayloadCodec` 实现了 `_USTH_` 控制音符的载荷编码，base64url 去填充。选这个作为第一块代码不是因为它最重要，是因为它是纯逻辑、不依赖 Qt、而且规则已经被实测钉死了（见 [`claude/utau-ust-preservation.md`](claude/utau-ust-preservation.md)）。
 

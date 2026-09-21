@@ -10,7 +10,7 @@
 #include <QtCore/QByteArray>
 
 #include <hellokit/Document/DocumentConstants.h>
-#include <hellokit/Document/Project.h>
+#include <hellokit/Document/UstDocument.h>
 #include <hellokit/Support/TextCodec.h>
 
 using namespace hello::kit;
@@ -78,9 +78,19 @@ namespace {
                lyricBytes + "\r\nNoteNum=60\r\n[#TRACKEND]\r\n";
     }
 
-    std::optional<Project> readAs(const TempUst &file, const QString &charset) {
-        DiagnosticList diagnostics;
-        return Project::fromUst(file.path(), charset, diagnostics);
+    /// Opens and converts in the two steps the real caller takes, with one parse between them.
+    ///
+    /// \param sink where to keep what was said about it, for the cases that ask
+    std::optional<Project> readAs(const TempUst &file, const QString &charset,
+                                  DiagnosticList *sink = nullptr) {
+        DiagnosticList ignored;
+        DiagnosticList &diagnostics = sink ? *sink : ignored;
+
+        auto ust = UstDocument::open(file.path(), diagnostics);
+        if (!ust) {
+            return std::nullopt;
+        }
+        return ust->toProject(charset, diagnostics);
     }
 
 }
@@ -101,7 +111,7 @@ BOOST_AUTO_TEST_CASE(a_ust_written_here_reads_back_the_same) {
     note.userData.insert(QStringLiteral("$mine"), QStringLiteral("kept"));
 
     DiagnosticList diagnostics;
-    BOOST_REQUIRE(project.toUst(file.path(), {}, diagnostics));
+    BOOST_REQUIRE(UstDocument::write(project, file.path(), {}, diagnostics));
 
     auto again = readAs(file, QStringLiteral("UTF-8"));
     BOOST_REQUIRE(again.has_value());
@@ -137,7 +147,7 @@ BOOST_AUTO_TEST_CASE(the_vibrato_value_utau_ignores_still_comes_back) {
     project.tracks[0].notes[0].vibrato = Vibrato{65, 180, 35, 20, 20, 0, 0, 42};
 
     DiagnosticList diagnostics;
-    BOOST_REQUIRE(project.toUst(file.path(), {}, diagnostics));
+    BOOST_REQUIRE(UstDocument::write(project, file.path(), {}, diagnostics));
 
     auto again = readAs(file, QStringLiteral("UTF-8"));
     BOOST_REQUIRE(again.has_value());
@@ -153,7 +163,7 @@ BOOST_AUTO_TEST_CASE(the_control_note_is_added_once_and_eaten_once) {
     auto project = oneNote();
 
     DiagnosticList diagnostics;
-    BOOST_REQUIRE(project.toUst(file.path(), {}, diagnostics));
+    BOOST_REQUIRE(UstDocument::write(project, file.path(), {}, diagnostics));
 
     const QByteArray written = file.readBytes();
     BOOST_CHECK(written.contains(controlNoteLyric));
@@ -166,7 +176,7 @@ BOOST_AUTO_TEST_CASE(the_control_note_is_added_once_and_eaten_once) {
             BOOST_REQUIRE_EQUAL(again->tracks.first().notes.size(), 1);
             BOOST_CHECK(!again->tracks.first().notes.first().isRest());
         }
-        BOOST_REQUIRE(again->toUst(file.path(), {}, diagnostics));
+        BOOST_REQUIRE(UstDocument::write(*again, file.path(), {}, diagnostics));
     }
 }
 
@@ -177,15 +187,15 @@ BOOST_AUTO_TEST_CASE(the_encoding_is_recorded_and_read_back) {
     auto project = oneNote(u("あ"));
 
     DiagnosticList diagnostics;
-    BOOST_REQUIRE(project.toUst(file.path(), {QStringLiteral("Shift_JIS"), {}, {}}, diagnostics));
+    BOOST_REQUIRE(UstDocument::write(project, file.path(), {QStringLiteral("Shift_JIS"), {}, {}}, diagnostics));
 
     // UST can only declare UTF-8, so it says nothing here.
     BOOST_CHECK(!file.readBytes().contains("Charset="));
 
-    auto probe = Project::probeUst(file.path(), diagnostics);
+    auto probe = UstDocument::open(file.path(), diagnostics);
     BOOST_REQUIRE(probe.has_value());
-    BOOST_REQUIRE(probe->recordedCharset.has_value());
-    BOOST_CHECK_EQUAL(probe->recordedCharset->toStdString(), "Shift_JIS");
+    BOOST_REQUIRE(probe->recordedCharset().has_value());
+    BOOST_CHECK_EQUAL(probe->recordedCharset()->toStdString(), "Shift_JIS");
     BOOST_REQUIRE(probe->settledCharset().has_value());
 
     auto again = readAs(file, *probe->settledCharset());
@@ -196,12 +206,12 @@ BOOST_AUTO_TEST_CASE(the_encoding_is_recorded_and_read_back) {
 BOOST_AUTO_TEST_CASE(utf8_is_declared_in_the_version_section) {
     TempUst file("utf8");
     DiagnosticList diagnostics;
-    BOOST_REQUIRE(oneNote().toUst(file.path(), {}, diagnostics));
+    BOOST_REQUIRE(UstDocument::write(oneNote(), file.path(), {}, diagnostics));
     BOOST_CHECK(file.readBytes().contains("Charset=UTF-8"));
 
-    auto probe = Project::probeUst(file.path(), diagnostics);
+    auto probe = UstDocument::open(file.path(), diagnostics);
     BOOST_REQUIRE(probe.has_value());
-    BOOST_CHECK(probe->declaresUtf8);
+    BOOST_CHECK(probe->declaresUtf8());
 }
 
 // A lyric with no Shift_JIS spelling still has to come back, which is what escaping is for.
@@ -210,7 +220,7 @@ BOOST_AUTO_TEST_CASE(a_lyric_the_encoding_cannot_hold_survives_as_an_escape) {
     auto project = oneNote(u("你"));
 
     DiagnosticList diagnostics;
-    BOOST_REQUIRE(project.toUst(file.path(), {QStringLiteral("Shift_JIS"), {}, {}}, diagnostics));
+    BOOST_REQUIRE(UstDocument::write(project, file.path(), {QStringLiteral("Shift_JIS"), {}, {}}, diagnostics));
     BOOST_CHECK(file.readBytes().contains("\\u4f60"));
 
     auto again = readAs(file, QStringLiteral("Shift_JIS"));
@@ -236,12 +246,12 @@ BOOST_AUTO_TEST_CASE(a_file_that_says_nothing_settles_nothing) {
     file.writeBytes(plainUst("a"));
 
     DiagnosticList diagnostics;
-    auto probe = Project::probeUst(file.path(), diagnostics);
+    auto probe = UstDocument::open(file.path(), diagnostics);
     BOOST_REQUIRE(probe.has_value());
-    BOOST_CHECK(!probe->recordedCharset.has_value());
-    BOOST_CHECK(!probe->declaresUtf8);
+    BOOST_CHECK(!probe->recordedCharset().has_value());
+    BOOST_CHECK(!probe->declaresUtf8());
     BOOST_CHECK(!probe->settledCharset().has_value());
-    BOOST_CHECK(!probe->rawLyrics.isEmpty()); // still enough to show a preview
+    BOOST_CHECK(!probe->rawLyrics().isEmpty()); // still enough to show a preview
 }
 
 // Reading with the wrong encoding has to fail rather than produce a page of replacement
@@ -255,7 +265,7 @@ BOOST_AUTO_TEST_CASE(the_wrong_encoding_is_refused) {
                             "NoteNum=60\r\n[#TRACKEND]\r\n");
 
     DiagnosticList diagnostics;
-    BOOST_CHECK(!Project::fromUst(file.path(), QStringLiteral("UTF-8"), diagnostics).has_value());
+    BOOST_CHECK(!readAs(file, QStringLiteral("UTF-8"), &diagnostics).has_value());
     BOOST_CHECK(hasError(diagnostics));
 }
 
@@ -270,7 +280,7 @@ BOOST_AUTO_TEST_CASE(the_engines_come_from_the_project_first) {
     options.resampler = QStringLiteral("local_resampler.exe");
 
     DiagnosticList diagnostics;
-    BOOST_REQUIRE(project.toUst(file.path(), options, diagnostics));
+    BOOST_REQUIRE(UstDocument::write(project, file.path(), options, diagnostics));
 
     auto again = readAs(file, QStringLiteral("UTF-8"));
     BOOST_REQUIRE(again.has_value());
@@ -283,7 +293,7 @@ BOOST_AUTO_TEST_CASE(something_that_is_not_a_ust_is_an_error) {
     file.writeBytes("hello, this is not a UST at all");
 
     DiagnosticList diagnostics;
-    auto project = Project::fromUst(file.path(), QStringLiteral("UTF-8"), diagnostics);
+    auto project = readAs(file, QStringLiteral("UTF-8"));
     // stdutau reads it as a file with no notes rather than refusing, which is a project with
     // nothing in it. What matters is that nothing pretends to have been read.
     if (project) {
