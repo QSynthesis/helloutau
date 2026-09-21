@@ -1,13 +1,7 @@
+# One directory per module, mirroring include/hellokit. Each test file is named for the header it
+# covers, so that what is tested and what is not can be seen from the directory listing.
 qm_find_qt(Core)
 
-find_package(wolf-midi CONFIG REQUIRED)
-
-add_auto_test(test_TextCodec.cpp HelloKitSupport)
-add_auto_test(test_PayloadCodec.cpp HelloKitDocument)
-add_auto_test(test_Project.cpp HelloKitDocument HelloKitSupport)
-add_auto_test(test_UstConversion.cpp HelloKitDocument HelloKitSupport)
-add_auto_test(test_Interchange.cpp HelloKitInterchange HelloKitDocument HelloKitSupport)
-
-# Links wolf-midi directly, which the library keeps private. The cases build the MIDI files they
-# read, so that what each one relies on sits next to what it asserts.
-add_auto_test(test_MidiReader.cpp HelloKitInterchange HelloKitDocument HelloKitSupport wolf-midi::wolf-midi)
+add_subdirectory(Support)
+add_subdirectory(Document)
+add_subdirectory(Interchange)

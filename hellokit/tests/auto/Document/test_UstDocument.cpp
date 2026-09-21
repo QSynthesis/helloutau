@@ -1,5 +1,5 @@
 #define BOOST_TEST_MAIN
-#define BOOST_TEST_MODULE test_UstConversion
+#define BOOST_TEST_MODULE test_UstDocument
 
 #include <filesystem>
 #include <fstream>
@@ -102,7 +102,7 @@ namespace {
 
 }
 
-BOOST_AUTO_TEST_SUITE(test_UstConversion)
+BOOST_AUTO_TEST_SUITE(test_UstDocument)
 
 BOOST_AUTO_TEST_CASE(a_ust_written_here_reads_back_the_same) {
     TempUst file("roundtrip");

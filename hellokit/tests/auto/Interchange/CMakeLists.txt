@@ -1,0 +1,5 @@
+add_auto_test(test_InterchangeReader.cpp HelloKitInterchange)
+add_auto_test(test_InterchangeSelector.cpp HelloKitInterchange)
+add_auto_test(test_InterchangeRegistry.cpp HelloKitInterchange)
+
+add_subdirectory(Formats)

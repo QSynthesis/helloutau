@@ -1,0 +1,3 @@
+add_auto_test(test_PayloadCodec.cpp HelloKitDocument)
+add_auto_test(test_Project.cpp HelloKitDocument)
+add_auto_test(test_UstDocument.cpp HelloKitDocument)

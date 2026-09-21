@@ -148,6 +148,9 @@ Markdown：
 
 ## 构建与验证
 
+- **`tests/auto` 按模块分目录，和 `include/hellokit` 同构**：`tests/auto/Document/` 对 `include/hellokit/Document/`。每个目录自己一个 `CMakeLists.txt`。
+- **一个 `test_XXX.cpp` 对一个 `XXX.h`**，名字一一对应。这样光看目录列表就知道哪些头文件还没有测试。一个文件盖三个头（原来的 `test_Interchange.cpp`）就看不出这件事了。
+- **不要重复链传递依赖。** `HelloKitDocument` 公开链了 `HelloKitSupport`，测试只写 `HelloKitDocument` 就够。
 - **看到测试通过之前，先确认 build 的退出码是 0。** 构建失败时 ctest 跑的是上一轮的旧二进制，会给出虚假的绿色。
 - **批量改动后核对「改了几处」，而不是「能不能编译」。** `grep -o <pattern> | wc -l` 数的是实际次数，`grep -c` 数的是行数。
 - 新增测试后确认断言真的执行了，空 suite 也会「通过」。
