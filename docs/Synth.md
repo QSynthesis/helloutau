@@ -45,6 +45,10 @@ SynthRunner                 纯虚，render(plan, engines, observer, diagnostics
 
 官方 UTAU 在 `%TEMP%\utauX\` 下写批处理再执行。单核时是 `temp.bat` 加 `temp_helper.bat`，多核时是 `temp.bat` 加 `temp1.bat`…`tempN.bat`——**重采样并行跑完，最后才跑 `temp.bat` 做合成**，和第二套策略是同一个形状。
 
+**这一套是跨平台的。** Windows 上写 `temp.bat` 交给命令处理器，其余系统写 `temp.sh` 交给 `/bin/sh`（引擎在那边跑在 Wine 下）。布局一模一样，只有拼法不同：`cat` 代替 `copy /B`，`${var}` 代替 `%var%`，单引号代替 `set "name=value"`。QSynthesis 当年就是这么做的。
+
+选哪一套是 `ScriptShell` 这个**运行时**开关，不是 `#ifdef`——这样两种脚本在任一平台上都能读回来测，写给另一个平台的东西不该等到有人在那边跑才第一次看见。
+
 大致内容（作者自己的[渲染脚本笔记](https://sinestriker.github.io/documents/QPitchEditor/book/Developers/UTAU-Tools/Rendering-Script.html)，**经验总结，不是官方规格**）：
 
 - **页首**：一串 `@set`，把曲速、采样率、音源目录、两个引擎、输出路径、helper 路径、缓存目录、全局 flags、默认包络都存成变量；然后 `@del "%output%"`、`@mkdir "%cachedir%"`
@@ -87,7 +91,9 @@ SynthRunner                 纯虚，render(plan, engines, observer, diagnostics
 N 个线程跑重采样  →  全部完成  →  按轨顺序跑 wavtool  →  拼 whd + dat
 ```
 
-线程数可选，默认取硬件并发数。阻塞的意思是调用方等它跑完——界面那边要在工作线程上调，这个类不管。
+线程数可选（`threadCount`），默认取硬件并发数，用 QtCore 的 `QThreadPool`，不引 QtConcurrent 那个模块。阻塞的意思是调用方等它跑完——界面那边要在工作线程上调，这个类不管。
+
+诊断按**音轨顺序**合并，不按线程完成顺序——后者用户没法读。取消是「不再开新音符，在飞的让它跑完」：中途杀引擎会在缓存里留半个文件，下次渲染就会信它。
 
 缓存复用放在这一套里做：重采样前先看缓存文件在不在。
 
