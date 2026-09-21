@@ -79,6 +79,14 @@ namespace hello::kit {
         /// What the two above settle between them, or nothing where the user has to say.
         std::optional<QString> settledCharset() const;
 
+        /// Whether the control note is there, which is what says HelloUTAU wrote this file.
+        ///
+        /// It decides how the text in it has to be read: escapes mean what they say only in a
+        /// file that was written with them.
+        bool hasControlNote() const {
+            return m_hasControlNote;
+        }
+
         /// \name Text that has not been decoded
         ///
         /// For a chooser to show under each candidate encoding. Decoding it here would answer

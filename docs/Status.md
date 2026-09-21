@@ -6,7 +6,7 @@
 
 | 目标 | 状态 |
 |---|---|
-| `HelloKitSupport` | 只有 `Diagnostic` |
+| `HelloKitSupport` | `Diagnostic`、`TextCodec`（编码解析、转义还原） |
 | `HelloKitDocument` | `PayloadCodec`、`Project` / `Track` / `Note` 模型、`.usth` 读写、`UstDocument` |
 | `HelloKitInterchange` | 接口、注册表、`Formats/MidiConvert`（读写两个方向） |
 | `HelloUtauWidgets` | 一个装着 `QLabel` 的 `MainWindow`，证明 Qt Widgets 和 moc 接上了 |
@@ -14,9 +14,13 @@
 
 构建链已验证：qmsetup 的 `hellokit_add_library` / `helloutau_add_library` / `helloutau_add_application`、Qt 6.11 加 AUTOMOC、stdcorelib、stdutau、wolf-midi、QtTest 加 `add_auto_test`、ctest。
 
-`HelloKitSupport` 目前只有 `Diagnostic`。`HelloKitDocument` 有 `PayloadCodec`、`Project` / `Track` / `Note` 数据模型，以及 `.usth` 的读写——**读写就挂在 `Project` 上**，因为 `.usth` 不是众多格式里的一种，它就是工程本身的写法，别的格式都走 Interchange 转成 `Project`。`.ust` 在 `UstDocument`——它是一份**已经读进来但还没解码**的 UST，`open()` 解析一次，探编码和 `toProject()` 都吃那一次的结果，不重复解析。`HelloKitInterchange` 的接口与注册表齐了（`InterchangeReader` / `InterchangeWriter` / `InterchangeSource` / `InterchangeSelector` / `AutomaticSelector` / `InterchangeRegistry` / `InterchangePlugin`），第一个格式 `Formats/MidiConvert` 读写都有，headless 可跑可测。形状与约束见 [`Interchange.md`](Interchange.md)。**还没有界面**：选轨和选编码那两页要等第三阶段。
+`HelloKitSupport` 有 `Diagnostic` 和 `TextCodec`，后者是编码这件事的全部落地处：名字怎么解析、解不开的字节怎么拒、编码放不下的字符怎么转义。`HelloKitDocument` 有 `PayloadCodec`、`Project` / `Track` / `Note` 数据模型，以及 `.usth` 的读写——**读写就挂在 `Project` 上**，因为 `.usth` 不是众多格式里的一种，它就是工程本身的写法，别的格式都走 Interchange 转成 `Project`。`.ust` 在 `UstDocument`——它是一份**已经读进来但还没解码**的 UST，`open()` 解析一次，探编码和 `toProject()` 都吃那一次的结果，不重复解析。`HelloKitInterchange` 的接口与注册表齐了（`InterchangeReader` / `InterchangeWriter` / `InterchangeSource` / `InterchangeSelector` / `AutomaticSelector` / `InterchangeRegistry` / `InterchangePlugin`），第一个格式 `Formats/MidiConvert` 读写都有，headless 可跑可测。形状与约束见 [`Interchange.md`](Interchange.md)。**还没有界面**：选轨和选编码那两页要等第三阶段。
 
 `hellokit/tests/manual/ustconv/` 是手动跑的命令行工具，把上面这些串起来：`.ust` / `.usth` / `.mid` 三种格式两两互转，参数解析用 `stdc::cli`。它不进 ctest，存在的意义就是验证各块拼起来能用——各自的自动测试做不到这件事。
+
+`ustconv --check <file.ust>` 是 Roadmap 第一阶段「读进来写回去、两边语义相等」那一条的载体：读一份 UST，写回一份临时文件，再读回来，拿 stdutau 的两份解析逐字段比，不一致就报出是哪个音符的哪个字段、两边各是什么，退出码非零。
+
+比的是**值**不是字节：数字怎么拼是写的人的事；文本先按各自该用的规则解码再比，因为两份文件可能编码不同、转义规则也不同（控制音符在的那份才有转义），那都不算工程的差异。控制音符本身两边都跳过，它是设计的一部分，不是丢失。
 
 `PayloadCodec` 实现了 `_USTH_` 控制音符的载荷编码，base64url 去填充。选这个作为第一块代码不是因为它最重要，是因为它是纯逻辑、不依赖 Qt、而且规则已经被实测钉死了（见 [`claude/utau-ust-preservation.md`](claude/utau-ust-preservation.md)）。
 
@@ -32,7 +36,7 @@
 
 ## 接下来
 
-阶段划分、每阶段怎么算数、从 QSynthesis 拿什么不拿什么，都在 [`Roadmap.md`](Roadmap.md)。当前处在第一阶段「数据层」的开头，`HelloKitDocument` 里只有 `PayloadCodec`。
+阶段划分、每阶段怎么算数、从 QSynthesis 拿什么不拿什么，都在 [`Roadmap.md`](Roadmap.md)。当前在第一阶段「数据层」，四条算数过了三条：转义往返、MIDI 无界面导入、UST 读写语义相等。**剩下的是 `HelloKitVoiceBank`**，音源目录模型，第四条「拿真实音源跑通目录扫描」要它。
 
 ## 插件放在哪
 
