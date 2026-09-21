@@ -1,5 +1,5 @@
 /// \file
-/// **Most of what SynthRunner does is not covered here yet.**
+/// **Most of what ThreadedSynthRunner does is not covered here yet.**
 ///
 /// Running a note means starting the resampler and the wavtool, and a test has neither: the
 /// engines are somebody else's programs and are not in this repository. What is left untested is
@@ -13,8 +13,8 @@
 ///
 /// All four were checked by hand against UTAU's own engines. That is not a test.
 ///
-/// **What it needs is a seam.** \c SynthRunner reaches for \c EngineProcess directly, so there
-/// is nowhere for a test to put an engine of its own. The same seam is what spreading the
+/// **What it needs is a seam.** \c ThreadedSynthRunner reaches for \c EngineProcess directly, so
+/// there is nowhere for a test to put an engine of its own. The same seam is what spreading the
 /// resampler calls over threads needs, since a scheduler has to take those calls over, so the
 /// two are one job and are waiting for it together.
 
@@ -27,11 +27,11 @@
 #include <QtCore/QTemporaryDir>
 #include <QtTest/QTest>
 
-#include <hellokit/Synth/SynthRunner.h>
+#include <hellokit/Synth/ThreadedSynthRunner.h>
 
 using namespace hello::kit;
 
-class test_SynthRunner : public QObject {
+class test_ThreadedSynthRunner : public QObject {
     Q_OBJECT
 
 private:
@@ -98,8 +98,8 @@ private Q_SLOTS:
         engines.wavtool = root() / "nowhere" / "wavtool.exe";
 
         DiagnosticList diagnostics;
-        const SynthRunner runner;
-        const auto outcome = runner.render(*p, engines, diagnostics);
+        const ThreadedSynthRunner runner;
+        const auto outcome = runner.render(*p, engines, nullptr, diagnostics);
 
         QVERIFY(!outcome.rendered);
         QCOMPARE(outcome.resampled, 0);
@@ -120,13 +120,13 @@ private Q_SLOTS:
         engines.wavtool = root() / "nowhere" / "wavtool.exe";
 
         DiagnosticList diagnostics;
-        const SynthRunner runner;
-        runner.render(*p, engines, diagnostics);
+        const ThreadedSynthRunner runner;
+        runner.render(*p, engines, nullptr, diagnostics);
 
         QVERIFY(std::filesystem::is_directory(p->cacheDirectory()));
     }
 };
 
-QTEST_APPLESS_MAIN(test_SynthRunner)
+QTEST_APPLESS_MAIN(test_ThreadedSynthRunner)
 
-#include "test_SynthRunner.moc"
+#include "test_ThreadedSynthRunner.moc"

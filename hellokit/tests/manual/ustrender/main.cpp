@@ -14,6 +14,7 @@
 
 #include <filesystem>
 #include <iostream>
+#include <memory>
 #include <string>
 
 #include <QtCore/QString>
@@ -24,7 +25,7 @@
 #include <hellokit/Document/UstDocument.h>
 #include <hellokit/Support/TextCodec.h>
 #include <hellokit/Synth/SynthPlan.h>
-#include <hellokit/Synth/SynthRunner.h>
+#include <hellokit/Synth/ThreadedSynthRunner.h>
 #include <hellokit/VoiceBank/VoiceBank.h>
 
 using namespace hello::kit;
@@ -151,8 +152,8 @@ namespace {
             // What each engine would be handed, one argument per line, so that a wrong argument
             // is visible without running anything.
             for (const auto &step : plan->steps()) {
-                std::cout << "note " << (step.noteIndex + 1)
-                          << (step.silent ? " (silent)" : "") << std::endl;
+                std::cout << "note " << (step.noteIndex + 1) << (step.silent ? " (silent)" : "")
+                          << std::endl;
                 for (const auto &argument : step.resamplerArguments) {
                     std::cout << "    resampler | " << toStd(argument) << std::endl;
                 }
@@ -173,9 +174,10 @@ namespace {
             return 1;
         }
 
-        SynthRunner runner;
+        ThreadedSynthRunner runner;
+
         diagnostics.clear();
-        const auto outcome = runner.render(*plan, engines, diagnostics);
+        const auto outcome = runner.render(*plan, engines, nullptr, diagnostics);
         report(diagnostics);
 
         std::cout << "resampled " << outcome.resampled << ", silent " << outcome.silent
@@ -199,8 +201,8 @@ int main(int argc, char *argv[]) {
         cli::Command("ustrender", "Render a project to a wav")
             .addArgument(cli::Argument("input", "The .ust or .usth to render"))
             .addArgument(cli::Argument("output", "The wav to write"))
-            .addOption(cli::Option({"--voice"}, "The voice bank folder")
-                           .arg(cli::Argument("folder")))
+            .addOption(
+                cli::Option({"--voice"}, "The voice bank folder").arg(cli::Argument("folder")))
             .addOption(cli::Option({"-c", "--charset"},
                                    "The encoding of the UST, where the file does not say")
                            .arg(cli::Argument("name")))
@@ -208,12 +210,11 @@ int main(int argc, char *argv[]) {
                                    "The encoding of the voice bank, where it differs from the "
                                    "project's")
                            .arg(cli::Argument("name")))
-            .addOption(cli::Option({"--resampler"}, "The resampler to run")
-                           .arg(cli::Argument("path")))
-            .addOption(cli::Option({"--wavtool"}, "The wavtool to run")
-                           .arg(cli::Argument("path")))
-            .addOption(cli::Option({"--plan"},
-                                   "Print what each engine would be handed and run nothing"))
+            .addOption(
+                cli::Option({"--resampler"}, "The resampler to run").arg(cli::Argument("path")))
+            .addOption(cli::Option({"--wavtool"}, "The wavtool to run").arg(cli::Argument("path")))
+            .addOption(
+                cli::Option({"--plan"}, "Print what each engine would be handed and run nothing"))
             .setHandler(render)
             .addHelpOption(true)
             .addVersionOption("0.0.1"));
