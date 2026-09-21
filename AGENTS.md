@@ -193,6 +193,8 @@ Markdown：
 - **绝不用 bash heredoc 写脚本**，也不要经 shell 传含反斜杠的 C++ 文本或含日文的字符串。shell 会吃掉一层反斜杠。用写文件的方式落盘再执行。
 - **官方 UTAU 的站点是 Shift_JIS**，`curl` 下来要显式按 `cp932` 解码，别让工具猜。
 - **Qt 6 没有 `QTextCodec`**（挪到 Qt5Compat 了），替代品是 `QStringConverter` / `QStringEncoder` / `QStringDecoder`。**但 `QStringConverter::encodingForName()` 只认内置的 `Encoding` 枚举**，也就是 UTF 系列加 Latin-1 加 System；`Shift_JIS`、`GBK`、`Big5`、`EUC-KR` 这些来自 ICU，只能把名字直接交给 `QStringDecoder(name)` / `QStringEncoder(name)` 构造。先把名字转成枚举会让这些编码全部变成「不支持」，而且不报错。本仓库统一走 `hello::kit::TextCodec`。
+- **`QStringConverter::System` 的 `name()` 返回 `"Locale"`**，是个占位串，记不进控制音符。要具体名字得自己按 `GetACP()` 映射，`TextCodec::systemName()` 干的就是这个。
+- **UST 只可能是两种编码**：写了 `Charset=UTF-8` 的 UTF-8，和什么都不写的「写文件那台机器的 ANSI」。所以要问用户的从来不是「两百种编码里哪一种」，而是「这文件是哪国人写的」——实际上就是日本（Shift_JIS）、中国大陆（GBK）、台湾（Big5）。候选列表见 `TextCodec::ustCandidates()`，**别把 `availableNames()` 那两百多项直接铺给用户**。
 - **判断一个字符目标编码装不装得下，不能只看 `hasError()`。** 装不下时 Qt 写一个问号就过去了，得编码再解码回来比较。`TextCodec::canEncode()` 就是这么做的。
 - **`中` 是常用日文汉字，Shift_JIS 里有。** 要找 Shift_JIS 表示不了的字得用简体专用字，比如 `你`、`简`、`们`。写编码相关的测试时别拿 `中` 当反例。
 - Windows 上包含 `<windows.h>` 要用 `stdcorelib/platform/windows/stdc_windows.h`，它会先定义 `NOMINMAX`。

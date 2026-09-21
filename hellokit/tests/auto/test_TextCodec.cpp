@@ -6,7 +6,6 @@
 #include <QtCore/QString>
 
 #include <hellokit/Support/TextCodec.h>
-#include <hellokit/Support/TextEscape.h>
 
 using namespace hello::kit;
 
@@ -29,10 +28,10 @@ namespace {
     // Escaping and unescaping are one thing written twice, so what matters is that the pair
     // holds, not what either half does on its own.
     void checkRoundTrip(const QString &text, const TextCodec &target) {
-        const QString escaped = escapeText(text, target);
+        const QString escaped = target.escape(text);
         BOOST_TEST_CONTEXT("escaped: " << escaped.toStdString()) {
             BOOST_CHECK(target.canEncode(escaped)); // the escaped form must be writable
-            BOOST_CHECK(unescapeText(escaped) == text);
+            BOOST_CHECK(TextCodec::unescape(escaped) == text);
         }
     }
 
@@ -87,22 +86,22 @@ BOOST_AUTO_TEST_CASE(a_question_mark_is_not_mistaken_for_a_failure) {
 }
 
 BOOST_AUTO_TEST_CASE(a_character_the_target_cannot_hold_becomes_an_escape) {
-    BOOST_CHECK_EQUAL(escapeText(u("你"), shiftJis()).toStdString(), "\\u4f60");
-    BOOST_CHECK(escapeText(u("あ"), shiftJis()) == u("あ")); // it can hold this one
+    BOOST_CHECK_EQUAL(shiftJis().escape(u("你")).toStdString(), "\\u4f60");
+    BOOST_CHECK(shiftJis().escape(u("あ")) == u("あ")); // it can hold this one
 }
 
 // Outside the basic plane a character is two code units, and they mean nothing apart.
 BOOST_AUTO_TEST_CASE(a_character_outside_the_basic_plane_becomes_two_escapes) {
-    const QString escaped = escapeText(u("😀"), shiftJis());
+    const QString escaped = shiftJis().escape(u("😀"));
     BOOST_CHECK_EQUAL(escaped.toStdString(), "\\ud83d\\ude00");
-    BOOST_CHECK(unescapeText(escaped) == u("😀"));
+    BOOST_CHECK(TextCodec::unescape(escaped) == u("😀"));
 }
 
 // Without this there would be no telling an escape the lyric asked for from one the writer put
 // there, and a lyric holding \u0041 would come back as A.
 BOOST_AUTO_TEST_CASE(a_backslash_in_the_text_survives) {
-    BOOST_CHECK_EQUAL(escapeText(QStringLiteral("a\\b"), shiftJis()).toStdString(), "a\\\\b");
-    BOOST_CHECK(unescapeText(QStringLiteral("a\\\\b")) == QStringLiteral("a\\b"));
+    BOOST_CHECK_EQUAL(shiftJis().escape(QStringLiteral("a\\b")).toStdString(), "a\\\\b");
+    BOOST_CHECK(TextCodec::unescape(QStringLiteral("a\\\\b")) == QStringLiteral("a\\b"));
 
     checkRoundTrip(QStringLiteral("\\u0041"), shiftJis());
     checkRoundTrip(QStringLiteral("\\\\"), shiftJis());
@@ -129,12 +128,37 @@ BOOST_AUTO_TEST_CASE(the_pair_holds_on_everything_worth_trying) {
     }
 }
 
+// UTAU writes two things and only two: UTF-8 with a Charset line, or the writer's own code page
+// with nothing at all. So the list put to the user is short on purpose.
+BOOST_AUTO_TEST_CASE(the_candidates_are_the_ones_utau_users_are_actually_on) {
+    const auto candidates = TextCodec::ustCandidates();
+    for (const auto &name : {"UTF-8", "Shift_JIS", "GBK", "Big5"}) {
+        BOOST_TEST_CONTEXT(name) {
+            BOOST_CHECK(candidates.contains(QLatin1String(name)));
+            BOOST_CHECK(TextCodec(QLatin1String(name)).isValid());
+        }
+    }
+    BOOST_CHECK(candidates.contains(TextCodec::systemName()));
+    BOOST_CHECK_LE(candidates.size(), 5);
+}
+
+// The system encoding has to answer with a name that can be written into a control note. Qt
+// calls its own "Locale", which tells a later reader nothing.
+BOOST_AUTO_TEST_CASE(the_system_encoding_has_a_real_name) {
+    const QString name = TextCodec::systemName();
+    BOOST_CHECK(!name.isEmpty());
+    BOOST_CHECK(name != QLatin1String("Locale"));
+    BOOST_CHECK(TextCodec(name).isValid());
+    BOOST_CHECK_EQUAL(TextCodec().name().toStdString(), TextCodec(name).name().toStdString());
+}
+
 // Something that is not one of the two forms came from somewhere, and guessing at it loses it.
 BOOST_AUTO_TEST_CASE(an_escape_that_is_not_one_is_left_alone) {
-    BOOST_CHECK(unescapeText(QStringLiteral("\\q")) == QStringLiteral("\\q"));
-    BOOST_CHECK(unescapeText(QStringLiteral("\\u12")) == QStringLiteral("\\u12"));
-    BOOST_CHECK(unescapeText(QStringLiteral("\\")) == QStringLiteral("\\"));
+    BOOST_CHECK(TextCodec::unescape(QStringLiteral("\\q")) == QStringLiteral("\\q"));
+    BOOST_CHECK(TextCodec::unescape(QStringLiteral("\\u12")) == QStringLiteral("\\u12"));
+    BOOST_CHECK(TextCodec::unescape(QStringLiteral("\\")) == QStringLiteral("\\"));
 }
 
 BOOST_AUTO_TEST_SUITE_END()
+
 
