@@ -1,1 +1,2 @@
 add_auto_test(test_EngineProcess.cpp HelloKitSynth)
+add_auto_test(test_SynthPlan.cpp HelloKitSynth)
