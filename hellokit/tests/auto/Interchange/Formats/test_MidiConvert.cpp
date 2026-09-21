@@ -6,7 +6,8 @@
 
 #include <wolf-midi/MidiFile.h>
 
-#include <hellokit/Interchange/Formats/MidiReader.h>
+#include <hellokit/Interchange/Formats/MidiConvert.h>
+#include <hellokit/Interchange/InterchangeSelector.h>
 
 using namespace hello::kit;
 namespace fs = std::filesystem;
@@ -61,6 +62,30 @@ namespace {
         return reader.read(path, nullptr);
     }
 
+    // Stands in for the chooser, so that a case can say which encoding to write in without
+    // reaching past the public interface.
+    class FixedEncodingSelector : public InterchangeSelector {
+    public:
+        explicit FixedEncodingSelector(QString encoding) : _encoding(std::move(encoding)) {
+        }
+
+        std::optional<ImportRequest> selectImport(const InterchangeReader &,
+                                                  const InterchangeSource &, const ImportLimits &,
+                                                  DiagnosticList &) override {
+            return std::nullopt;
+        }
+
+        std::optional<ExportRequest> selectExport(const InterchangeWriter &, const Project &,
+                                                  DiagnosticList &) override {
+            ExportRequest request;
+            request.driverOptions.insert(QStringLiteral("encoding"), _encoding);
+            return request;
+        }
+
+    private:
+        QString _encoding;
+    };
+
     bool warned(const DiagnosticList &diagnostics) {
         return std::any_of(diagnostics.begin(), diagnostics.end(), [](const Diagnostic &d) {
             return d.severity == DiagnosticSeverity::Warning;
@@ -69,7 +94,7 @@ namespace {
 
 }
 
-class test_MidiReader : public QObject {
+class test_MidiConvert : public QObject {
     Q_OBJECT
 
 private Q_SLOTS:
@@ -238,6 +263,86 @@ private Q_SLOTS:
         QCOMPARE(*entry.highestNote, 72);
     }
 
+    // What goes out has to come back, which is the only claim worth making about a format that
+    // holds so little.
+    void what_midi_can_hold_survives_a_round_trip() {
+        const fs::path path = fs::temp_directory_path() / "hellokit_written.mid";
+
+        Project project;
+        project.settings.tempo = 132.0;
+        Track track;
+        track.notes.push_back(Note{QStringLiteral("ka"), 480, 60});
+        track.notes.push_back(Note{QStringLiteral("R"), 240, 60});
+        track.notes.push_back(Note{QStringLiteral("sa"), 480, 64});
+        project.tracks.push_back(track);
+
+        MidiWriter writer;
+        const auto written = writer.write(project, path, nullptr);
+        QVERIFY(written.written);
+
+        const auto result = importOf(path);
+        QVERIFY(result.project.has_value());
+
+        const auto &notes = result.project->tracks.first().notes;
+        QCOMPARE(notes.size(), 3);
+        QCOMPARE(notes.at(0).lyric, QStringLiteral("ka"));
+        QCOMPARE(notes.at(0).length, 480);
+        QCOMPARE(notes.at(0).noteNum, 60);
+        QVERIFY(notes.at(1).isRest());
+        QCOMPARE(notes.at(1).length, 240);
+        QCOMPARE(notes.at(2).lyric, QStringLiteral("sa"));
+        QCOMPARE(notes.at(2).noteNum, 64);
+        QVERIFY(qAbs(result.project->settings.tempo - 132.0) < 0.001);
+
+        std::error_code ignored;
+        fs::remove(path, ignored);
+    }
+
+    // MIDI holds notes and lyrics and nothing else this project works with, so every export
+    // loses the rest. Saying so every time is the point, not a nuisance.
+    void writing_says_what_midi_cannot_hold() {
+        const fs::path path = fs::temp_directory_path() / "hellokit_lossy.mid";
+
+        Project project;
+        Track track;
+        Note note{QStringLiteral("a"), 480, 60};
+        note.vibrato = Vibrato{65, 180, 35, 20, 20, 0, 0, 0};
+        track.notes.push_back(note);
+        project.tracks.push_back(track);
+
+        MidiWriter writer;
+        const auto result = writer.write(project, path, nullptr);
+        QVERIFY(result.written);
+        QVERIFY(warned(result.diagnostics));
+
+        std::error_code ignored;
+        fs::remove(path, ignored);
+    }
+
+    // A lyric the chosen encoding cannot spell is not escaped, because MIDI has nowhere to say
+    // that the file was written here, so an escape would read back as its own literal text.
+    void a_lyric_the_encoding_cannot_hold_is_reported_not_escaped() {
+        const fs::path path = fs::temp_directory_path() / "hellokit_lossyname.mid";
+
+        Project project;
+        Track track;
+        track.notes.push_back(Note{QString::fromUtf8("你"), 480, 60});
+        project.tracks.push_back(track);
+
+        MidiWriter writer;
+        FixedEncodingSelector selector{QStringLiteral("Shift_JIS")};
+        const auto result = writer.write(project, path, &selector);
+
+        QVERIFY(result.written);
+        QVERIFY(std::any_of(result.diagnostics.begin(), result.diagnostics.end(),
+                            [](const Diagnostic &d) {
+                                return d.message.contains(QStringLiteral("no spelling"));
+                            }));
+
+        std::error_code ignored;
+        fs::remove(path, ignored);
+    }
+
     void something_that_is_not_a_midi_file_is_an_error() {
         const auto path = fs::temp_directory_path() / "hellokit_notmidi.mid";
         {
@@ -255,6 +360,6 @@ private Q_SLOTS:
     }
 };
 
-QTEST_APPLESS_MAIN(test_MidiReader)
+QTEST_APPLESS_MAIN(test_MidiConvert)
 
-#include "test_MidiReader.moc"
+#include "test_MidiConvert.moc"

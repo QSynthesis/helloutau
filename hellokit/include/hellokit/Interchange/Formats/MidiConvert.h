@@ -1,8 +1,9 @@
-#ifndef HELLOKIT_INTERCHANGE_FORMATS_MIDIREADER_H
-#define HELLOKIT_INTERCHANGE_FORMATS_MIDIREADER_H
+#ifndef HELLOKIT_INTERCHANGE_FORMATS_MIDICONVERT_H
+#define HELLOKIT_INTERCHANGE_FORMATS_MIDICONVERT_H
 
 #include <hellokit/Interchange/HelloKitInterchangeGlobal.h>
 #include <hellokit/Interchange/InterchangeReader.h>
+#include <hellokit/Interchange/InterchangeWriter.h>
 
 namespace hello::kit {
 
@@ -20,7 +21,7 @@ namespace hello::kit {
     ///   shortening the one already sounding, and notes that begin together lose all but the
     ///   highest. Both are reported.
     /// - **Text with no encoding.** MIDI says nothing about what its bytes mean, so the encoding
-    ///   is asked for rather than guessed. See \c customStepId().
+    ///   is asked for rather than guessed.
     ///
     /// Everything else comes across as it stands, the tempo and the silence before the first
     /// note included, even where the caller is about to discard them.
@@ -49,6 +50,30 @@ namespace hello::kit {
                                        DiagnosticList &diagnostics) override;
     };
 
+    /// Writes a standard MIDI file.
+    ///
+    /// **MIDI holds notes and lyrics and nothing else this project cares about.** The envelope,
+    /// the vibrato, the pitch curve, the flags and every per note value UTAU renders with have
+    /// nowhere to go, so a project written out this way and read back is a bare melody. That is
+    /// not a defect to be fixed, it is what the format is, and it is reported every time rather
+    /// than left for the user to discover.
+    class HELLOKIT_INTERCHANGE_EXPORT MidiWriter : public InterchangeWriter {
+    public:
+        MidiWriter();
+        ~MidiWriter();
+
+        QString id() const override;
+        QString name() const override;
+        QStringList suffixes() const override;
+
+        QList<InterchangeOption> optionSchema() const override;
+        QString customStepId() const override;
+
+    protected:
+        bool convert(const Project &project, const std::filesystem::path &path,
+                     const ExportRequest &request, DiagnosticList &diagnostics) override;
+    };
+
 }
 
-#endif // HELLOKIT_INTERCHANGE_FORMATS_MIDIREADER_H
+#endif // HELLOKIT_INTERCHANGE_FORMATS_MIDICONVERT_H

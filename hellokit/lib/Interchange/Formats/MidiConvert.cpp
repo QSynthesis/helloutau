@@ -1,12 +1,13 @@
-#include "MidiReader.h"
+#include "MidiConvert.h"
 
 #include <algorithm>
 #include <map>
 
 #include <QtCore/QCoreApplication>
-#include <QtCore/QStringDecoder>
 
 #include <wolf-midi/MidiFile.h>
+
+#include <hellokit/Support/TextCodec.h>
 
 #include <hellokit/Document/DocumentConstants.h>
 
@@ -28,6 +29,10 @@ namespace hello::kit {
 
         QByteArray toByteArray(const std::vector<char> &data) {
             return QByteArray(data.data(), qsizetype(data.size()));
+        }
+
+        std::vector<char> toVector(const QByteArray &data) {
+            return std::vector<char>(data.constData(), data.constData() + data.size());
         }
 
         /// One note as MIDI had it, before anything is made to fit a single voice.
@@ -246,17 +251,24 @@ namespace hello::kit {
         }
         const int wantedTrack = request.entries.first();
 
-        auto decoder = QStringDecoder(
+        const TextCodec codec(
             request.driverOptions.value(QLatin1String(OptionEncoding), QStringLiteral("UTF-8"))
-                .toString()
-                .toUtf8()
-                .constData());
-        if (!decoder.isValid()) {
+                .toString());
+        if (!codec.isValid()) {
             say(diagnostics, DiagnosticSeverity::Error, tr("That encoding is not available."));
             return std::nullopt;
         }
-        const auto decode = [&decoder](const QByteArray &bytes) {
-            return decoder.decode(bytes);
+
+        // Undecodable bytes mean the wrong encoding was chosen, and the lyric is better left
+        // empty and reported than filled with replacement characters.
+        int undecodable = 0;
+        const auto decode = [&codec, &undecodable](const QByteArray &bytes) {
+            const auto text = codec.decode(bytes);
+            if (!text) {
+                ++undecodable;
+                return QString();
+            }
+            return *text;
         };
 
         const QString lyricForSilentNotes =
@@ -437,8 +449,137 @@ namespace hello::kit {
                     .arg(moved));
         }
 
+        if (undecodable > 0) {
+            say(diagnostics, DiagnosticSeverity::Warning,
+                tr("%1 pieces of text are not valid %2 and were left out, which usually means "
+                   "the encoding is not the one this file is in.")
+                    .arg(undecodable)
+                    .arg(codec.name()));
+        }
+
         project.tracks.push_back(track);
         return project;
+    }
+
+    MidiWriter::MidiWriter() = default;
+
+    MidiWriter::~MidiWriter() = default;
+
+    QString MidiWriter::id() const {
+        return QStringLiteral("midi");
+    }
+
+    QString MidiWriter::name() const {
+        return tr("Standard MIDI File");
+    }
+
+    QStringList MidiWriter::suffixes() const {
+        return {QStringLiteral("mid"), QStringLiteral("midi")};
+    }
+
+    QList<InterchangeOption> MidiWriter::optionSchema() const {
+        InterchangeOption encoding;
+        encoding.key = QLatin1String(OptionEncoding);
+        encoding.name = tr("Encoding");
+        encoding.type = InterchangeOption::Choice;
+        encoding.defaultValue = QStringLiteral("UTF-8");
+        encoding.choices = {
+            QStringLiteral("UTF-8"),  QStringLiteral("Shift_JIS"), QStringLiteral("GBK"),
+            QStringLiteral("Big5"),   QStringLiteral("EUC-KR"),
+        };
+        return {encoding};
+    }
+
+    QString MidiWriter::customStepId() const {
+        return QStringLiteral("midi.encoding");
+    }
+
+    bool MidiWriter::convert(const Project &project, const std::filesystem::path &path,
+                             const ExportRequest &request, DiagnosticList &diagnostics) {
+        if (project.tracks.size() != 1) {
+            say(diagnostics, DiagnosticSeverity::Error,
+                tr("A MIDI file is written from one track, and this project holds %1.")
+                    .arg(project.tracks.size()));
+            return false;
+        }
+
+        const TextCodec codec(
+            request.driverOptions.value(QLatin1String(OptionEncoding), QStringLiteral("UTF-8"))
+                .toString());
+        if (!codec.isValid()) {
+            say(diagnostics, DiagnosticSeverity::Error, tr("That encoding is not available."));
+            return false;
+        }
+
+        // Said every time, because it is what the format is rather than something gone wrong.
+        // Everything UTAU renders with lives in entries MIDI has no room for.
+        say(diagnostics, DiagnosticSeverity::Warning,
+            tr("A MIDI file holds notes and lyrics. The envelope, the vibrato, the pitch curve, "
+               "the flags and the per note values were left out."));
+
+        Midi::MidiFile midi;
+        midi.setFileFormat(1);
+        midi.setDivisionType(Midi::MidiFile::PPQ);
+
+        // The same resolution the project counts in, so nothing has to be scaled and nothing can
+        // drift.
+        midi.setResolution(ticksPerQuarter);
+        const int track = midi.createTrack();
+
+        const auto &source = project.tracks.first();
+        int unrepresentable = 0;
+        const auto out = [&codec, &unrepresentable](const QString &text) {
+            // No escaping here, unlike a UST. Escaping is only ever read back where a control
+            // note says the file is ours, and MIDI has nowhere to put one, so an escape written
+            // into a lyric would come back as its own literal text.
+            if (!text.isEmpty() && !codec.canEncode(text)) {
+                ++unrepresentable;
+            }
+            return toVector(codec.encode(text));
+        };
+
+        if (!source.name.isEmpty()) {
+            midi.createMetaEvent(track, 0, Midi::MidiEvent::TrackName, out(source.name));
+        }
+        midi.createTempoEvent(track, 0, float(project.settings.tempo));
+
+        int position = 0;
+        int unwritable = 0;
+        for (const auto &note : source.notes) {
+            if (note.tempo && position > 0) {
+                midi.createTempoEvent(track, position, float(*note.tempo));
+            }
+            if (note.isRest()) {
+                position += note.length;
+                continue;
+            }
+
+            const int pitch = std::clamp(note.noteNum, 0, 127);
+            if (pitch != note.noteNum) {
+                ++unwritable;
+            }
+            midi.createNote(track, position, position + note.length, 0, pitch, 100, 64);
+            midi.createLyricEvent(track, position, out(note.lyric));
+            position += note.length;
+        }
+
+        if (unrepresentable > 0) {
+            say(diagnostics, DiagnosticSeverity::Warning,
+                tr("%1 lyrics have no spelling in %2 and were written as question marks.")
+                    .arg(unrepresentable)
+                    .arg(codec.name()));
+        }
+        if (unwritable > 0) {
+            say(diagnostics, DiagnosticSeverity::Warning,
+                tr("%1 notes lay outside what MIDI can name and were moved to its nearest end.")
+                    .arg(unwritable));
+        }
+
+        if (!midi.save(path)) {
+            say(diagnostics, DiagnosticSeverity::Error, tr("This file could not be written."));
+            return false;
+        }
+        return true;
     }
 
 }
