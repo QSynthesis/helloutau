@@ -25,6 +25,7 @@
 #include <hellokit/Document/UstDocument.h>
 #include <hellokit/Support/TextCodec.h>
 #include <hellokit/Synth/SynthPlan.h>
+#include <hellokit/Synth/ClassicSynthRunner.h>
 #include <hellokit/Synth/ThreadedSynthRunner.h>
 #include <hellokit/VoiceBank/VoiceBank.h>
 
@@ -174,10 +175,26 @@ namespace {
             return 1;
         }
 
-        ThreadedSynthRunner runner;
+        // Which runner is a compatibility choice, not an implementation detail. See
+        // docs/Synth.md.
+        std::unique_ptr<SynthRunner> runner;
+        if (result.option("--classic")) {
+            auto classic = std::make_unique<ClassicSynthRunner>();
+            classic->keepScripts = result.option("--keep-scripts").has_value();
+            if (result.option("--verbatim")) {
+                std::cerr << "warning: --verbatim writes the project's own text into a shell "
+                             "script, which lets the file run commands. It is here for an "
+                             "engine that needs the script to look exactly as UTAU writes it."
+                          << std::endl;
+                classic->quoting = ClassicSynthRunner::Quoting::Verbatim;
+            }
+            runner = std::move(classic);
+        } else {
+            runner = std::make_unique<ThreadedSynthRunner>();
+        }
 
         diagnostics.clear();
-        const auto outcome = runner.render(*plan, engines, nullptr, diagnostics);
+        const auto outcome = runner->render(*plan, engines, nullptr, diagnostics);
         report(diagnostics);
 
         std::cout << "resampled " << outcome.resampled << ", silent " << outcome.silent
@@ -215,6 +232,11 @@ int main(int argc, char *argv[]) {
             .addOption(cli::Option({"--wavtool"}, "The wavtool to run").arg(cli::Argument("path")))
             .addOption(
                 cli::Option({"--plan"}, "Print what each engine would be handed and run nothing"))
+            .addOption(
+                cli::Option({"--classic"}, "Render the old way, through temp.bat with a console"))
+            .addOption(cli::Option({"--keep-scripts"}, "Keep temp.bat after rendering, to look at"))
+            .addOption(cli::Option({"--verbatim"},
+                                   "Write the script without escaping, as UTAU does. Unsafe"))
             .setHandler(render)
             .addHelpOption(true)
             .addVersionOption("0.0.1"));

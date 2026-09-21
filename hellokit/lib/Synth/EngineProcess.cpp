@@ -7,15 +7,15 @@
 
 #include <stdcorelib/support/popen.h>
 
+#ifdef _WIN32
+#  include <QtCore/qt_windows.h>
+#endif
+
 #include <hellokit/Support/TextCodec.h>
 
 namespace hello::kit {
 
     namespace {
-
-        QString tr(const char *text) {
-            return QCoreApplication::translate("hello::kit::EngineProcess", text);
-        }
 
         void fail(DiagnosticList &diagnostics, const QString &message) {
             diagnostics.push_back({DiagnosticSeverity::Error, message});
@@ -49,8 +49,7 @@ namespace hello::kit {
 
     EngineProcess::~EngineProcess() = default;
 
-    EngineRun EngineProcess::run(const std::filesystem::path &program,
-                                 const QStringList &arguments,
+    EngineRun EngineProcess::run(const std::filesystem::path &program, const QStringList &arguments,
                                  DiagnosticList &diagnostics) const {
         EngineRun result;
 
@@ -74,8 +73,8 @@ namespace hello::kit {
         }
 
         if (!process.start()) {
-            fail(diagnostics,
-                 tr("The engine \"%1\" could not be started.").arg(displayed(program)));
+            fail(diagnostics, EngineProcess::tr("The engine \"%1\" could not be started.")
+                                  .arg(displayed(program)));
             return result;
         }
         result.started = true;
@@ -90,10 +89,11 @@ namespace hello::kit {
         // than finished.
         if (process.errorCode() == std::errc::timed_out) {
             result.timedOut = true;
-            fail(diagnostics, tr("The engine \"%1\" did not finish within %2 seconds and was "
-                                 "stopped.")
-                                  .arg(displayed(program))
-                                  .arg(timeout / 1000));
+            fail(diagnostics,
+                 EngineProcess::tr("The engine \"%1\" did not finish within %2 seconds and was "
+                                   "stopped.")
+                     .arg(displayed(program))
+                     .arg(timeout / 1000));
             return result;
         }
 
@@ -101,4 +101,48 @@ namespace hello::kit {
         return result;
     }
 
+    EngineRun EngineProcess::runScript(const std::filesystem::path &script,
+                                       DiagnosticList &diagnostics) const {
+        EngineRun result;
+
+        stdc::Popen process;
+        // The argument vector still holds, even here. shell() quotes each element for the
+        // platform shell rather than taking a command line, so the path of the script is one
+        // argument whatever is in it.
+        process.shell(true);
+        process.args({script.u8string()});
+        if (!workingDirectory.empty()) {
+            process.cwd(workingDirectory);
+        }
+
+#ifdef _WIN32
+        // Left on screen on purpose. UTAU shows it, a batch plugin's output is meant to be read,
+        // and shell() hides it unless this says otherwise.
+        stdc::Popen::StartupInfo info{};
+        info.dwFlags = STARTF_USESHOWWINDOW;
+        info.wShowWindow = SW_SHOWNORMAL;
+        process.startupInfo(info);
+#endif
+
+        if (!process.start()) {
+            fail(diagnostics, EngineProcess::tr("The rendering script \"%1\" could not be started.")
+                                  .arg(displayed(script)));
+            return result;
+        }
+        result.started = true;
+
+        if (!process.wait(timeout)) {
+            process.kill();
+            process.wait();
+            result.timedOut = true;
+            fail(diagnostics,
+                 EngineProcess::tr("The rendering script did not finish within %1 seconds and was "
+                                   "stopped.")
+                     .arg(timeout / 1000));
+            return result;
+        }
+
+        result.exitCode = process.returnCode().value_or(-1);
+        return result;
+    }
 }

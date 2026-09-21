@@ -3,6 +3,7 @@
 
 #include <filesystem>
 
+#include <QtCore/QCoreApplication>
 #include <QtCore/QString>
 #include <QtCore/QStringList>
 
@@ -54,6 +55,7 @@ namespace hello::kit {
     ///
     /// \sa AGENTS.md, for both rules and why they are two rules rather than one
     class HELLOKIT_SYNTH_EXPORT EngineProcess {
+        Q_DECLARE_TR_FUNCTIONS(hello::kit::EngineProcess)
     public:
         EngineProcess();
         ~EngineProcess();
@@ -73,6 +75,22 @@ namespace hello::kit {
         /// is the engine that was chosen and not whatever an earlier directory happens to hold.
         EngineRun run(const std::filesystem::path &program, const QStringList &arguments,
                       DiagnosticList &diagnostics) const;
+
+        /// Hands \a script to the command processor, with its console left visible.
+        ///
+        /// The one place in this library that runs a command line, because a batch file is one.
+        /// It is here rather than somewhere of its own so that timeouts and killing stay in one
+        /// place, and it takes a path rather than any text so that nothing can call it with a
+        /// command assembled on the spot.
+        ///
+        /// \note The console is UTAU's behaviour and the point: the script's output belongs on
+        ///       screen where the user can read it. Nothing is piped back, so \c EngineRun::output
+        ///       comes back empty.
+        ///
+        /// \warning **What goes into the script is the script writer's problem.** A batch file
+        ///          is a shell script, so a lyric or a flags string written into it unescaped
+        ///          appends commands. See \c ClassicSynthRunner, which is the only caller.
+        EngineRun runScript(const std::filesystem::path &script, DiagnosticList &diagnostics) const;
     };
 
 }
