@@ -88,8 +88,9 @@ namespace hello::kit {
                     directory.config = VoiceBankConfig::open(entry.path(), ignored);
                     if (!directory.config) {
                         complain(diagnostics,
-                                 VoiceBankSource::tr("The HelloUTAU record in \"%1\" could not be read, so its "
-                                    "encoding has to be chosen again.")
+                                 VoiceBankSource::tr(
+                                     "The HelloUTAU record in \"%1\" could not be read, so its "
+                                     "encoding has to be chosen again.")
                                      .arg(displayed(absolute)));
                     }
                 } else if (name == "oto.ini") {
@@ -196,8 +197,9 @@ namespace hello::kit {
 
         if (stopped) {
             complain(diagnostics,
-                     VoiceBankSource::tr("This folder is larger or deeper than a voice bank is expected to be, so "
-                        "only part of it was read."));
+                     VoiceBankSource::tr(
+                         "This folder is larger or deeper than a voice bank is expected to be, so "
+                         "only part of it was read."));
         }
         return source;
     }

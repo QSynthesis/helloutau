@@ -107,9 +107,14 @@ private Q_SLOTS:
         note.intensity = 80;
         note.velocity = 0; // zero, which has to stay a value rather than become absent
         note.flags = QStringLiteral("g-5");
-        note.envelope = Envelope{{{0, 0}, {5, 100}, {35, 100}, {0, 0}}};
+        note.envelope = Envelope{
+            {{0, 0}, {5, 100}, {35, 100}, {0, 0}}
+        };
         note.vibrato = Vibrato{65, 180, 35, 20, 20, 0, 0, 7};
-        note.portamento = {{-40, 0, PortamentoType::S}, {50, 10, PortamentoType::Linear}};
+        note.portamento = {
+            {-40, 0,  PortamentoType::S     },
+            {50,  10, PortamentoType::Linear}
+        };
         note.label = QStringLiteral("verse");
         note.userData.insert(QStringLiteral("$mine"), QStringLiteral("kept"));
 
@@ -237,8 +242,7 @@ private Q_SLOTS:
 
         const auto project = readAs(file, QStringLiteral("Shift_JIS"));
         QVERIFY(project.has_value());
-        QCOMPARE(project->tracks.first().notes.first().lyric,
-                 QStringLiteral("C:\\utau\\voice"));
+        QCOMPARE(project->tracks.first().notes.first().lyric, QStringLiteral("C:\\utau\\voice"));
     }
 
     // Nothing in the file says what encoding it is, so the caller has to ask.

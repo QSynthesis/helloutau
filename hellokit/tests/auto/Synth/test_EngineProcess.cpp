@@ -52,8 +52,8 @@ private:
 private Q_SLOTS:
     void it_runs_a_program_and_reports_what_it_printed() {
         DiagnosticList diagnostics;
-        const auto result = run({QLatin1String(echoArguments), QStringLiteral("hello")},
-                                diagnostics);
+        const auto result =
+            run({QLatin1String(echoArguments), QStringLiteral("hello")}, diagnostics);
 
         QVERIFY(result.started);
         QVERIFY(result.succeeded());

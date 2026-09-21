@@ -82,10 +82,10 @@ private Q_SLOTS:
         QVERIFY(voices.has_value());
 
         DiagnosticList diagnostics;
-        const auto plan = SynthPlan::make(
-            projectOf({note(QStringLiteral("a")), note(QStringLiteral("ka")),
-                       note(QStringLiteral("ki"))}),
-            *voices, options(), diagnostics);
+        const auto plan =
+            SynthPlan::make(projectOf({note(QStringLiteral("a")), note(QStringLiteral("ka")),
+                                       note(QStringLiteral("ki"))}),
+                            *voices, options(), diagnostics);
 
         QVERIFY(plan.has_value());
         QCOMPARE(plan->steps().size(), 3);
@@ -110,8 +110,7 @@ private Q_SLOTS:
         QCOMPARE(step.sample, root() / "bank" / "ka.wav");
 
         // The path that reaches the engine is that sample, spelled the way the bank settled it.
-        QCOMPARE(step.resamplerArguments.at(0),
-                 QString::fromStdU16String(step.sample.u16string()));
+        QCOMPARE(step.resamplerArguments.at(0), QString::fromStdU16String(step.sample.u16string()));
     }
 
     // The cut belongs to the sample, and it has to arrive at the engine in the order the engine
@@ -126,10 +125,10 @@ private Q_SLOTS:
         QVERIFY(plan.has_value());
 
         const auto &arguments = plan->steps().at(0).resamplerArguments;
-        QCOMPARE(arguments.at(2), QStringLiteral("C4"));   // tone name for note 60
-        QCOMPARE(arguments.at(5), QStringLiteral("11"));   // offset
-        QCOMPARE(arguments.at(7), QStringLiteral("21"));   // consonant
-        QCOMPARE(arguments.at(8), QStringLiteral("31"));   // cutoff
+        QCOMPARE(arguments.at(2), QStringLiteral("C4")); // tone name for note 60
+        QCOMPARE(arguments.at(5), QStringLiteral("11")); // offset
+        QCOMPARE(arguments.at(7), QStringLiteral("21")); // consonant
+        QCOMPARE(arguments.at(8), QStringLiteral("31")); // cutoff
     }
 
     void the_cache_file_goes_where_it_was_asked_to() {
@@ -160,10 +159,10 @@ private Q_SLOTS:
         QVERIFY(voices.has_value());
 
         DiagnosticList diagnostics;
-        const auto plan = SynthPlan::make(
-            projectOf({note(QStringLiteral("a")), note(QStringLiteral("R")),
-                       note(QStringLiteral("ka"))}),
-            *voices, options(), diagnostics);
+        const auto plan =
+            SynthPlan::make(projectOf({note(QStringLiteral("a")), note(QStringLiteral("R")),
+                                       note(QStringLiteral("ka"))}),
+                            *voices, options(), diagnostics);
         QVERIFY(plan.has_value());
 
         const auto &rest = plan->steps().at(1);
@@ -219,10 +218,10 @@ private Q_SLOTS:
         o.range = std::make_pair(1, 2);
 
         DiagnosticList diagnostics;
-        const auto plan = SynthPlan::make(
-            projectOf({note(QStringLiteral("a")), note(QStringLiteral("ka")),
-                       note(QStringLiteral("ki")), note(QStringLiteral("a"))}),
-            *voices, o, diagnostics);
+        const auto plan =
+            SynthPlan::make(projectOf({note(QStringLiteral("a")), note(QStringLiteral("ka")),
+                                       note(QStringLiteral("ki")), note(QStringLiteral("a"))}),
+                            *voices, o, diagnostics);
         QVERIFY(plan.has_value());
 
         QCOMPARE(plan->steps().size(), 2);

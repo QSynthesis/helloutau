@@ -24,13 +24,13 @@ namespace hello::kit {
         };
 
         constexpr CodePage codePages[] = {
-            {932, "Shift_JIS", "shift_jis shift-jis sjis ms_kanji cp932 windows-932"},
+            {932,   "Shift_JIS", "shift_jis shift-jis sjis ms_kanji cp932 windows-932"},
             // GB2312 is its own code page, and everything maps it to 936 because GBK holds all
             // of it and more, so reading one as the other cannot lose anything.
-            {936, "GBK", "gbk gb2312 euc-cn cp936 windows-936"},
-            {950, "Big5", "big5 big-5 cp950 windows-950"},
-            {949, "EUC-KR", "euc-kr ks_c_5601-1987 cp949 windows-949"},
-            {54936, "GB18030", "gb18030"},
+            {936,   "GBK",       "gbk gb2312 euc-cn cp936 windows-936"                },
+            {950,   "Big5",      "big5 big-5 cp950 windows-950"                       },
+            {949,   "EUC-KR",    "euc-kr ks_c_5601-1987 cp949 windows-949"            },
+            {54936, "GB18030",   "gb18030"                                            },
         };
 
         const CodePage *findCodePage(const QString &name) {
@@ -149,16 +149,15 @@ namespace hello::kit {
         if (_impl->codePage != 0) {
             // MB_ERR_INVALID_CHARS is what makes this refuse rather than substitute, which is
             // the whole point: bytes that do not decode mean the wrong encoding was chosen.
-            const int length =
-                ::MultiByteToWideChar(UINT(_impl->codePage), MB_ERR_INVALID_CHARS, bytes.data(),
-                                      int(bytes.size()), nullptr, 0);
+            const int length = ::MultiByteToWideChar(UINT(_impl->codePage), MB_ERR_INVALID_CHARS,
+                                                     bytes.data(), int(bytes.size()), nullptr, 0);
             if (length <= 0) {
                 return std::nullopt;
             }
             QString text(length, Qt::Uninitialized);
             ::MultiByteToWideChar(UINT(_impl->codePage), MB_ERR_INVALID_CHARS, bytes.data(),
-                                  int(bytes.size()),
-                                  reinterpret_cast<wchar_t *>(text.data()), length);
+                                  int(bytes.size()), reinterpret_cast<wchar_t *>(text.data()),
+                                  length);
             return text;
         }
 #endif
@@ -181,8 +180,8 @@ namespace hello::kit {
 #ifdef _WIN32
         if (_impl->codePage != 0) {
             const auto *wide = reinterpret_cast<const wchar_t *>(text.utf16());
-            const int size = ::WideCharToMultiByte(UINT(_impl->codePage), 0, wide,
-                                                   int(text.size()), nullptr, 0, nullptr, nullptr);
+            const int size = ::WideCharToMultiByte(UINT(_impl->codePage), 0, wide, int(text.size()),
+                                                   nullptr, 0, nullptr, nullptr);
             if (size <= 0) {
                 return {};
             }
@@ -294,9 +293,8 @@ namespace hello::kit {
             // A character outside the basic plane is two code units that mean nothing apart, so
             // the pair is tested and written together.
             const qsizetype width =
-                (c.isHighSurrogate() && i + 1 < text.size() && text.at(i + 1).isLowSurrogate())
-                    ? 2
-                    : 1;
+                (c.isHighSurrogate() && i + 1 < text.size() && text.at(i + 1).isLowSurrogate()) ? 2
+                                                                                                : 1;
             const QStringView unit(text.constData() + i, width);
 
             if (canEncode(unit)) {

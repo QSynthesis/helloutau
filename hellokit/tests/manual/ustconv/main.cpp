@@ -138,8 +138,8 @@ namespace {
             case Format::Unknown:
                 break;
         }
-        std::cerr << "error: " << path.filename().string()
-                  << " is not a .usth, a .ust or a .mid" << std::endl;
+        std::cerr << "error: " << path.filename().string() << " is not a .usth, a .ust or a .mid"
+                  << std::endl;
         return std::nullopt;
     }
 
@@ -172,8 +172,8 @@ namespace {
             case Format::Unknown:
                 break;
         }
-        std::cerr << "error: " << path.filename().string()
-                  << " is not a .usth, a .ust or a .mid" << std::endl;
+        std::cerr << "error: " << path.filename().string() << " is not a .usth, a .ust or a .mid"
+                  << std::endl;
         return false;
     }
 

@@ -40,8 +40,9 @@ namespace hello::kit {
             if (name.isEmpty()) {
                 if (!selector) {
                     complain(diagnostics,
-                             VoiceBank::tr("Nothing says what encoding \"%1\" is written in, so it was left "
-                                "out.")
+                             VoiceBank::tr(
+                                 "Nothing says what encoding \"%1\" is written in, so it was left "
+                                 "out.")
                                  .arg(displayed(directory.path)));
                     return std::nullopt;
                 }
@@ -54,9 +55,10 @@ namespace hello::kit {
 
             TextCodec codec(name);
             if (!codec.isValid()) {
-                complain(diagnostics,
-                         VoiceBank::tr("The encoding \"%1\" is not available, so \"%2\" was left out.")
-                             .arg(name, displayed(directory.path)));
+                complain(
+                    diagnostics,
+                    VoiceBank::tr("The encoding \"%1\" is not available, so \"%2\" was left out.")
+                        .arg(name, displayed(directory.path)));
                 return std::nullopt;
             }
             return codec;
@@ -124,8 +126,8 @@ namespace hello::kit {
                 }
                 if (directory.prefixMap) {
                     for (const auto &[noteNum, item] : directory.prefixMap->map) {
-                        bank.m_prefixMap.insert(noteNum, Affix{text(*codec, item.prefix),
-                                                               text(*codec, item.suffix)});
+                        bank.m_prefixMap.insert(
+                            noteNum, Affix{text(*codec, item.prefix), text(*codec, item.suffix)});
                     }
                 }
             }

@@ -47,8 +47,7 @@ namespace hello::kit {
         }
 
         bool isControlNote(const utau::Note &note) {
-            return note.lyric == controlNoteLyric &&
-                   note.userData.count(controlNoteKey()) != 0;
+            return note.lyric == controlNoteLyric && note.userData.count(controlNoteKey()) != 0;
         }
 
         /// Encodes \a text for \a codec, escaping first where the encoding cannot hold it all.
@@ -187,9 +186,7 @@ namespace hello::kit {
         }
 
         utau::Note noteTo(const Note &from, const TextCodec &codec, bool escaping) {
-            const auto out = [&](const QString &text) {
-                return encodeFor(codec, escaping, text);
-            };
+            const auto out = [&](const QString &text) { return encodeFor(codec, escaping, text); };
 
             utau::Note note;
             note.lyric = out(from.lyric);
@@ -359,8 +356,7 @@ namespace hello::kit {
         return project;
     }
 
-    bool UstDocument::save(const std::filesystem::path &path,
-                           DiagnosticList &diagnostics) const {
+    bool UstDocument::save(const std::filesystem::path &path, DiagnosticList &diagnostics) const {
         if (!m_file.save(path)) {
             fail(diagnostics, UstDocument::tr("This file could not be written."));
             return false;
@@ -384,9 +380,7 @@ namespace hello::kit {
             return std::nullopt;
         }
         const bool escaping = !codec.isUtf8();
-        const auto out = [&](const QString &text) {
-            return encodeFor(codec, escaping, text);
-        };
+        const auto out = [&](const QString &text) { return encodeFor(codec, escaping, text); };
 
         UstDocument document;
         auto &file = document.m_file;

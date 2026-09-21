@@ -105,7 +105,7 @@ namespace hello::kit {
 
         std::optional<Envelope> envelope;
         std::optional<Vibrato> vibrato;
-        QList<PortamentoPoint> portamento; ///< Mode2
+        QList<PortamentoPoint> portamento;  ///< Mode2
         std::optional<PitchBend> pitchBend; ///< Mode1
 
         QString label;
@@ -130,7 +130,8 @@ namespace hello::kit {
 
         /// Whether this note makes no sound, which is what UTAU decides from the lyric alone.
         bool isRest() const {
-            return lyric.isEmpty() || lyric.compare(QLatin1String(restLyric), Qt::CaseInsensitive) == 0;
+            return lyric.isEmpty() ||
+                   lyric.compare(QLatin1String(restLyric), Qt::CaseInsensitive) == 0;
         }
     };
 

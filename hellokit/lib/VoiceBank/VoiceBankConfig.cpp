@@ -55,17 +55,20 @@ namespace hello::kit {
         QJsonParseError error{};
         const auto document = QJsonDocument::fromJson(json.toByteArray(), &error);
         if (error.error != QJsonParseError::NoError) {
-            fail(diagnostics, VoiceBankConfig::tr("This file is not valid JSON: %1").arg(error.errorString()));
+            fail(diagnostics,
+                 VoiceBankConfig::tr("This file is not valid JSON: %1").arg(error.errorString()));
             return std::nullopt;
         }
         if (!document.isObject()) {
-            fail(diagnostics, VoiceBankConfig::tr("This file is not a HelloUTAU voice bank record."));
+            fail(diagnostics,
+                 VoiceBankConfig::tr("This file is not a HelloUTAU voice bank record."));
             return std::nullopt;
         }
 
         auto root = document.object();
         if (root.value(QLatin1String(KeyFormat)).toString() != QLatin1String(FormatName)) {
-            fail(diagnostics, VoiceBankConfig::tr("This file is not a HelloUTAU voice bank record."));
+            fail(diagnostics,
+                 VoiceBankConfig::tr("This file is not a HelloUTAU voice bank record."));
             return std::nullopt;
         }
 

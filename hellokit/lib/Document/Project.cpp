@@ -98,10 +98,14 @@ namespace hello::kit {
         QJsonObject envelopeToJson(const Envelope &envelope) {
             QJsonArray anchors;
             for (const auto &anchor : envelope.anchors) {
-                anchors.append(QJsonObject{{QLatin1String("x"), anchor.x},
-                                           {QLatin1String("y"), anchor.y}});
+                anchors.append(QJsonObject{
+                    {QLatin1String("x"), anchor.x},
+                    {QLatin1String("y"), anchor.y}
+                });
             }
-            return QJsonObject{{QLatin1String("anchors"), anchors}};
+            return QJsonObject{
+                {QLatin1String("anchors"), anchors}
+            };
         }
 
         Envelope envelopeFromJson(const QJsonObject &object) {
@@ -116,13 +120,13 @@ namespace hello::kit {
 
         QJsonObject vibratoToJson(const Vibrato &vibrato) {
             return QJsonObject{
-                {QLatin1String("length"), vibrato.length},
-                {QLatin1String("period"), vibrato.period},
+                {QLatin1String("length"),    vibrato.length   },
+                {QLatin1String("period"),    vibrato.period   },
                 {QLatin1String("amplitude"), vibrato.amplitude},
-                {QLatin1String("attack"), vibrato.attack},
-                {QLatin1String("release"), vibrato.release},
-                {QLatin1String("phase"), vibrato.phase},
-                {QLatin1String("offset"), vibrato.offset},
+                {QLatin1String("attack"),    vibrato.attack   },
+                {QLatin1String("release"),   vibrato.release  },
+                {QLatin1String("phase"),     vibrato.phase    },
+                {QLatin1String("offset"),    vibrato.offset   },
                 {QLatin1String("intensity"), vibrato.intensity},
             };
         }
@@ -145,7 +149,9 @@ namespace hello::kit {
             for (const double value : bend.values) {
                 values.append(value);
             }
-            QJsonObject object{{QLatin1String("values"), values}};
+            QJsonObject object{
+                {QLatin1String("values"), values}
+            };
             if (bend.start) {
                 object.insert(QLatin1String("start"), *bend.start);
             }
@@ -166,8 +172,8 @@ namespace hello::kit {
 
         QJsonObject noteToJson(const Note &note) {
             QJsonObject object{
-                {QLatin1String("lyric"), note.lyric},
-                {QLatin1String("length"), note.length},
+                {QLatin1String("lyric"),   note.lyric  },
+                {QLatin1String("length"),  note.length },
                 {QLatin1String("noteNum"), note.noteNum},
             };
 
@@ -192,8 +198,8 @@ namespace hello::kit {
                 QJsonArray points;
                 for (const auto &point : note.portamento) {
                     points.append(QJsonObject{
-                        {QLatin1String("x"), point.x},
-                        {QLatin1String("y"), point.y},
+                        {QLatin1String("x"),    point.x                                      },
+                        {QLatin1String("y"),    point.y                                      },
                         {QLatin1String("type"), QLatin1String(portamentoTypeName(point.type))},
                     });
                 }
@@ -206,8 +212,11 @@ namespace hello::kit {
             // By reference. Pairing each of these with its name by value would copy five
             // strings per note for nothing.
             const std::pair<const char *, const QString &> texts[] = {
-                {"label", note.label},   {"direct", note.direct},         {"patch", note.patch},
-                {"region", note.region}, {"regionEnd", note.regionEnd},
+                {"label",     note.label    },
+                {"direct",    note.direct   },
+                {"patch",     note.patch    },
+                {"region",    note.region   },
+                {"regionEnd", note.regionEnd},
             };
             for (const auto &[key, value] : texts) {
                 if (!value.isEmpty()) {
@@ -252,7 +261,8 @@ namespace hello::kit {
 
             note.flags = readString(object, "flags");
 
-            if (const auto envelope = object.value(QLatin1String("envelope")); envelope.isObject()) {
+            if (const auto envelope = object.value(QLatin1String("envelope"));
+                envelope.isObject()) {
                 note.envelope = envelopeFromJson(envelope.toObject());
             }
             if (const auto vibrato = object.value(QLatin1String("vibrato")); vibrato.isObject()) {
@@ -294,23 +304,22 @@ namespace hello::kit {
 
         QJsonObject settingsToJson(const ProjectSettings &settings) {
             return QJsonObject{
-                {QLatin1String("name"), settings.name},
-                {QLatin1String("tempo"), settings.tempo},
-                {QLatin1String("flags"), settings.flags},
+                {QLatin1String("name"),       settings.name      },
+                {QLatin1String("tempo"),      settings.tempo     },
+                {QLatin1String("flags"),      settings.flags     },
                 {QLatin1String("outputFile"), settings.outputFile},
-                {QLatin1String("cacheDir"), settings.cacheDir},
-                {QLatin1String("wavtool"), settings.wavtool},
-                {QLatin1String("resampler"), settings.resampler},
-                {QLatin1String("mode2"), settings.mode2},
+                {QLatin1String("cacheDir"),   settings.cacheDir  },
+                {QLatin1String("wavtool"),    settings.wavtool   },
+                {QLatin1String("resampler"),  settings.resampler },
+                {QLatin1String("mode2"),      settings.mode2     },
             };
         }
 
         ProjectSettings settingsFromJson(const QJsonObject &object, DiagnosticList &diagnostics) {
             ProjectSettings settings;
             settings.name = readString(object, "name");
-            settings.tempo =
-                readOptionalDouble(object, "tempo", diagnostics, std::nullopt)
-                    .value_or(utau::DEFAULT_VALUE_TEMPO);
+            settings.tempo = readOptionalDouble(object, "tempo", diagnostics, std::nullopt)
+                                 .value_or(utau::DEFAULT_VALUE_TEMPO);
             settings.flags = readString(object, "flags");
             settings.outputFile = readString(object, "outputFile");
             settings.cacheDir = readString(object, "cacheDir");
@@ -329,7 +338,7 @@ namespace hello::kit {
     }
 
     std::optional<Project> Project::open(const std::filesystem::path &path,
-                                          DiagnosticList &diagnostics) {
+                                         DiagnosticList &diagnostics) {
         std::ifstream in(path, std::ios::binary);
         if (!in) {
             fail(diagnostics, Project::tr("This file could not be opened."));
@@ -340,8 +349,7 @@ namespace hello::kit {
         return fromJson(QByteArrayView(bytes.data(), qsizetype(bytes.size())), diagnostics);
     }
 
-    bool Project::save(const std::filesystem::path &path,
-                        DiagnosticList &diagnostics) const {
+    bool Project::save(const std::filesystem::path &path, DiagnosticList &diagnostics) const {
         if (tracks.size() != 1) {
             fail(diagnostics,
                  Project::tr("A project of this version holds one track, and this one holds %1.")
@@ -367,8 +375,7 @@ namespace hello::kit {
     }
 
 
-    std::optional<Project> Project::fromJson(QByteArrayView json,
-                                             DiagnosticList &diagnostics) {
+    std::optional<Project> Project::fromJson(QByteArrayView json, DiagnosticList &diagnostics) {
         QJsonParseError error{};
         const auto document = QJsonDocument::fromJson(json.toByteArray(), &error);
         if (error.error != QJsonParseError::NoError) {
@@ -466,9 +473,9 @@ namespace hello::kit {
                 notes.append(noteToJson(note));
             }
             trackArray.append(QJsonObject{
-                {QLatin1String("name"), track.name},
+                {QLatin1String("name"),     track.name    },
                 {QLatin1String("voiceDir"), track.voiceDir},
-                {QLatin1String("notes"), notes},
+                {QLatin1String("notes"),    notes         },
             });
         }
         root.insert(QLatin1String(KeyTracks), trackArray);

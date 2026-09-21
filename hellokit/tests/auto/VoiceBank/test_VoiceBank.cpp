@@ -76,9 +76,8 @@ private Q_SLOTS:
     }
 
     void it_decodes_what_character_txt_says() {
-        write(QStringLiteral("character.txt"),
-              "name=" + kGbkGePing + "\nauthor=" + kGbkGePing +
-                  "\nweb=http://example.com/\nVersion:1.0\n");
+        write(QStringLiteral("character.txt"), "name=" + kGbkGePing + "\nauthor=" + kGbkGePing +
+                                                   "\nweb=http://example.com/\nVersion:1.0\n");
         write(QStringLiteral("a.wav"), "RIFF");
 
         FixedCharsetSelector selector(QStringLiteral("GBK"));
@@ -101,8 +100,7 @@ private Q_SLOTS:
         DiagnosticList diagnostics;
         const auto bank = VoiceBank::open(root(), nullptr, diagnostics);
         QVERIFY(bank.has_value());
-        QCOMPARE(bank->character().name,
-                 QString::fromStdU16String(root().filename().u16string()));
+        QCOMPARE(bank->character().name, QString::fromStdU16String(root().filename().u16string()));
     }
 
     void it_finds_a_sample_by_its_alias() {

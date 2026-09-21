@@ -86,11 +86,11 @@ private Q_SLOTS:
     // Absent and null are the same thing and neither is zero, which is the whole point of
     // holding these in an optional.
     void absent_and_null_both_mean_the_file_did_not_say() {
-        const auto json = QByteArray(
-            R"({"$format":"usth","version":1,"settings":{},"tracks":[{"notes":[)"
-            R"({"lyric":"a","length":480,"noteNum":60,"intensity":null},)"
-            R"({"lyric":"a","length":480,"noteNum":60},)"
-            R"({"lyric":"a","length":480,"noteNum":60,"intensity":0}]}]})");
+        const auto json =
+            QByteArray(R"({"$format":"usth","version":1,"settings":{},"tracks":[{"notes":[)"
+                       R"({"lyric":"a","length":480,"noteNum":60,"intensity":null},)"
+                       R"({"lyric":"a","length":480,"noteNum":60},)"
+                       R"({"lyric":"a","length":480,"noteNum":60,"intensity":0}]}]})");
 
         const auto project = parsed(json);
         QVERIFY(project.has_value());
@@ -133,9 +133,14 @@ private Q_SLOTS:
         note.velocity = 0; // zero, which has to stay a value rather than become absent
         note.tempo = 128.5;
         note.flags = QStringLiteral("g-5");
-        note.envelope = Envelope{{{0, 0}, {5, 100}, {35, 100}, {0, 0}}};
+        note.envelope = Envelope{
+            {{0, 0}, {5, 100}, {35, 100}, {0, 0}}
+        };
         note.vibrato = Vibrato{65, 180, 35, 20, 20, 0, 0, 0};
-        note.portamento = {{-40, 0, PortamentoType::S}, {50, 10, PortamentoType::Linear}};
+        note.portamento = {
+            {-40, 0,  PortamentoType::S     },
+            {50,  10, PortamentoType::Linear}
+        };
         note.label = QStringLiteral("verse");
         note.patch = QStringLiteral("resampler.exe");
         note.userData.insert(QStringLiteral("$whatever"), QStringLiteral("kept"));
@@ -180,7 +185,9 @@ private Q_SLOTS:
 
     void the_mode1_pitch_curve_survives_a_round_trip() {
         auto project = oneNote();
-        project.tracks[0].notes[0].pitchBend = PitchBend{-20.0, {0, 10.5, -20}};
+        project.tracks[0].notes[0].pitchBend = PitchBend{
+            -20.0, {0, 10.5, -20}
+        };
 
         const auto again = parsed(project.toJson());
         QVERIFY(again.has_value());

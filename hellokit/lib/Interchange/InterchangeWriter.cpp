@@ -16,8 +16,7 @@ namespace hello::kit {
         return {};
     }
 
-    ExportResult InterchangeWriter::write(const Project &project,
-                                          const std::filesystem::path &path,
+    ExportResult InterchangeWriter::write(const Project &project, const std::filesystem::path &path,
                                           InterchangeSelector *selector) {
         ExportResult result;
 

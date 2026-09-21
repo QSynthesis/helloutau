@@ -334,10 +334,9 @@ private Q_SLOTS:
         const auto result = writer.write(project, path, &selector);
 
         QVERIFY(result.written);
-        QVERIFY(std::any_of(result.diagnostics.begin(), result.diagnostics.end(),
-                            [](const Diagnostic &d) {
-                                return d.message.contains(QStringLiteral("no spelling"));
-                            }));
+        QVERIFY(std::any_of(
+            result.diagnostics.begin(), result.diagnostics.end(),
+            [](const Diagnostic &d) { return d.message.contains(QStringLiteral("no spelling")); }));
 
         std::error_code ignored;
         fs::remove(path, ignored);

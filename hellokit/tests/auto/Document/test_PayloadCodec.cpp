@@ -36,8 +36,8 @@ private Q_SLOTS:
         for (char c : text) {
             const bool allowed = (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') ||
                                  (c >= '0' && c <= '9') || c == '-' || c == '_';
-            QVERIFY2(allowed, qPrintable(QStringLiteral("unexpected character in payload: %1")
-                                             .arg(int(c))));
+            QVERIFY2(allowed,
+                     qPrintable(QStringLiteral("unexpected character in payload: %1").arg(int(c))));
         }
     }
 

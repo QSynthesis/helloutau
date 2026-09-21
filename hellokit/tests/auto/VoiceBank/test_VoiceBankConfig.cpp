@@ -64,8 +64,8 @@ private Q_SLOTS:
     void it_survives_a_trip_through_a_file() {
         QTemporaryDir dir;
         QVERIFY(dir.isValid());
-        const auto path = std::filesystem::path(dir.path().toStdU16String()) /
-                          voiceBankConfigFileName;
+        const auto path =
+            std::filesystem::path(dir.path().toStdU16String()) / voiceBankConfigFileName;
 
         VoiceBankConfig config;
         config.charset = QStringLiteral("Shift_JIS");

@@ -61,9 +61,9 @@ namespace hello::kit {
 
                 // A note on with no velocity is a note off. Written both ways in the wild, and a
                 // file using this form would otherwise look like nothing but beginnings.
-                const bool isOff = event->type() == Midi::MidiEvent::NoteOff ||
-                                   (event->type() == Midi::MidiEvent::NoteOn &&
-                                    event->velocity() == 0);
+                const bool isOff =
+                    event->type() == Midi::MidiEvent::NoteOff ||
+                    (event->type() == Midi::MidiEvent::NoteOn && event->velocity() == 0);
 
                 if (!isOff) {
                     open[key].push_back(event->tick());
@@ -135,8 +135,8 @@ namespace hello::kit {
         encoding.type = InterchangeOption::Choice;
         encoding.defaultValue = QStringLiteral("UTF-8");
         encoding.choices = {
-            QStringLiteral("UTF-8"),     QStringLiteral("Shift_JIS"), QStringLiteral("GBK"),
-            QStringLiteral("Big5"),      QStringLiteral("EUC-KR"),    QStringLiteral("UTF-16"),
+            QStringLiteral("UTF-8"),      QStringLiteral("Shift_JIS"), QStringLiteral("GBK"),
+            QStringLiteral("Big5"),       QStringLiteral("EUC-KR"),    QStringLiteral("UTF-16"),
             QStringLiteral("ISO 8859-1"),
         };
 
@@ -489,8 +489,8 @@ namespace hello::kit {
         encoding.type = InterchangeOption::Choice;
         encoding.defaultValue = QStringLiteral("UTF-8");
         encoding.choices = {
-            QStringLiteral("UTF-8"),  QStringLiteral("Shift_JIS"), QStringLiteral("GBK"),
-            QStringLiteral("Big5"),   QStringLiteral("EUC-KR"),
+            QStringLiteral("UTF-8"), QStringLiteral("Shift_JIS"), QStringLiteral("GBK"),
+            QStringLiteral("Big5"),  QStringLiteral("EUC-KR"),
         };
         return {encoding};
     }

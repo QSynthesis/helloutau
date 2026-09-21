@@ -106,8 +106,7 @@ namespace hello::kit {
     }
 
     std::optional<SynthPlan> SynthPlan::make(const Project &project, const VoiceBank &bank,
-                                             const Options &options,
-                                             DiagnosticList &diagnostics) {
+                                             const Options &options, DiagnosticList &diagnostics) {
         if (project.tracks.size() != 1) {
             fail(diagnostics, SynthPlan::tr("A render takes one track, and this project holds %1.")
                                   .arg(project.tracks.size()));
@@ -120,7 +119,8 @@ namespace hello::kit {
             return std::nullopt;
         }
         if (options.outputFile.empty() || options.cacheDirectory.empty()) {
-            fail(diagnostics, SynthPlan::tr("A render needs somewhere to write and somewhere to cache."));
+            fail(diagnostics,
+                 SynthPlan::tr("A render needs somewhere to write and somewhere to cache."));
             return std::nullopt;
         }
 
@@ -171,9 +171,9 @@ namespace hello::kit {
             return entry;
         };
 
-        const auto params = utau::Synth::calc(limits, range, project.settings.tempo,
-                                              utf8(project.settings.flags), noteGetter,
-                                              otoEntryGetter);
+        const auto params =
+            utau::Synth::calc(limits, range, project.settings.tempo, utf8(project.settings.flags),
+                              noteGetter, otoEntryGetter);
 
         SynthPlan plan;
         plan.m_outputFile = options.outputFile;
@@ -190,11 +190,12 @@ namespace hello::kit {
             step.silent = resampler.inFile.empty();
 
             if (step.silent && !notes.at(noteIndex).isRest()) {
-                complain(diagnostics,
-                         SynthPlan::tr("This voice bank has nothing to sing \"%1\" with, so the note is "
-                            "silent.")
-                             .arg(notes.at(noteIndex).lyric),
-                         noteIndex);
+                complain(
+                    diagnostics,
+                    SynthPlan::tr("This voice bank has nothing to sing \"%1\" with, so the note is "
+                                  "silent.")
+                        .arg(notes.at(noteIndex).lyric),
+                    noteIndex);
             }
 
             // calc() names the cache file but not where it goes, and leaves the track file to

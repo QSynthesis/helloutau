@@ -49,12 +49,19 @@ private Q_SLOTS:
     // same canonical name, because that name is what gets written into a control note.
     void the_names_that_matter_resolve_to_one_canonical_spelling() {
         const std::pair<const char *, const char *> aliases[] = {
-            {"Shift_JIS", "Shift_JIS"}, {"shift-jis", "Shift_JIS"}, {"sjis", "Shift_JIS"},
-            {"cp932", "Shift_JIS"},     {"windows-932", "Shift_JIS"},
-            {"GBK", "GBK"},             {"gb2312", "GBK"},          {"cp936", "GBK"},
-            {"Big5", "Big5"},           {"cp950", "Big5"},
-            {"EUC-KR", "EUC-KR"},       {"cp949", "EUC-KR"},
-            {"GB18030", "GB18030"},
+            {"Shift_JIS",   "Shift_JIS"},
+            {"shift-jis",   "Shift_JIS"},
+            {"sjis",        "Shift_JIS"},
+            {"cp932",       "Shift_JIS"},
+            {"windows-932", "Shift_JIS"},
+            {"GBK",         "GBK"      },
+            {"gb2312",      "GBK"      },
+            {"cp936",       "GBK"      },
+            {"Big5",        "Big5"     },
+            {"cp950",       "Big5"     },
+            {"EUC-KR",      "EUC-KR"   },
+            {"cp949",       "EUC-KR"   },
+            {"GB18030",     "GB18030"  },
         };
         for (const auto &[requested, canonical] : aliases) {
             TextCodec codec{QLatin1String(requested)};
@@ -159,7 +166,7 @@ private Q_SLOTS:
                  QString::fromUtf8("你好世界"),
                  QString::fromUtf8("mixed 你 あ ascii"),
                  QString::fromUtf8("😀🎵"),
-                 QStringLiteral("\\u4f60"),       // an escape written by hand
+                 QStringLiteral("\\u4f60"),         // an escape written by hand
                  QStringLiteral("C:\\utau\\voice"), // a Windows path
                  QStringLiteral("?"),
                  QStringLiteral("trailing\\"),
