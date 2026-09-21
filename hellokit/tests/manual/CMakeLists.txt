@@ -3,3 +3,4 @@
 add_subdirectory(ustconv)
 add_subdirectory(ustrender)
 add_subdirectory(utaucompare)
+add_subdirectory(utauprobe)
