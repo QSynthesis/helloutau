@@ -1,29 +1,25 @@
-#define BOOST_TEST_MAIN
-#define BOOST_TEST_MODULE test_Project
-
-#include <string>
-
-#include <boost/test/unit_test.hpp>
-
 #include <QtCore/QByteArray>
+#include <QtTest/QTest>
 
 #include <hellokit/Document/Project.h>
 
 using namespace hello::kit;
 
-namespace {
+class test_Project : public QObject {
+    Q_OBJECT
 
-    QByteArray minimal(const char *extra = "") {
+private:
+    static QByteArray minimal(const char *extra = "") {
         return QByteArray(R"({"$format":"usth","version":1,)") + extra +
                R"("settings":{},"tracks":[{"notes":[]}]})";
     }
 
-    std::optional<Project> parsed(const QByteArray &json) {
+    static std::optional<Project> parsed(const QByteArray &json) {
         DiagnosticList diagnostics;
         return Project::fromJson(json, diagnostics);
     }
 
-    Project oneNote() {
+    static Project oneNote() {
         Note note;
         note.lyric = QStringLiteral("la");
         note.length = 480;
@@ -37,180 +33,181 @@ namespace {
         return project;
     }
 
-}
+private Q_SLOTS:
+    void a_minimal_project_reads() {
+        const auto project = parsed(minimal());
+        QVERIFY(project.has_value());
+        QCOMPARE(project->tracks.size(), 1);
+        QCOMPARE(project->settings.tempo, 120.0);
+        QVERIFY(project->settings.mode2);
+    }
 
-BOOST_AUTO_TEST_SUITE(test_Project)
+    // A file that happens to be JSON is not thereby a project. Without this check every field
+    // would be read as missing and the user would get an empty project instead of a message.
+    void json_that_is_not_a_project_is_refused() {
+        DiagnosticList diagnostics;
+        QVERIFY(!Project::fromJson(R"({"hello":1})", diagnostics).has_value());
+        QVERIFY(hasError(diagnostics));
 
-BOOST_AUTO_TEST_CASE(a_minimal_project_reads) {
-    auto project = parsed(minimal());
-    BOOST_REQUIRE(project.has_value());
-    BOOST_CHECK_EQUAL(project->tracks.size(), 1);
-    BOOST_CHECK_CLOSE(project->settings.tempo, 120.0, 0.01);
-    BOOST_CHECK(project->settings.mode2);
-}
+        diagnostics.clear();
+        QVERIFY(!Project::fromJson(R"({"$format":"ustx","version":1})", diagnostics).has_value());
+        QVERIFY(hasError(diagnostics));
+    }
 
-// A file that happens to be JSON is not thereby a project. Without this check every field would
-// be read as missing and the user would get an empty project instead of a message.
-BOOST_AUTO_TEST_CASE(json_that_is_not_a_project_is_refused) {
-    DiagnosticList diagnostics;
-    BOOST_CHECK(!Project::fromJson(R"({"hello":1})", diagnostics).has_value());
-    BOOST_CHECK(hasError(diagnostics));
+    void broken_json_is_refused() {
+        DiagnosticList diagnostics;
+        QVERIFY(!Project::fromJson(R"({"$format":"usth",)", diagnostics).has_value());
+        QVERIFY(hasError(diagnostics));
+    }
 
-    diagnostics.clear();
-    BOOST_CHECK(!Project::fromJson(R"({"$format":"ustx","version":1})", diagnostics).has_value());
-    BOOST_CHECK(hasError(diagnostics));
-}
+    void a_newer_version_is_refused_rather_than_guessed_at() {
+        DiagnosticList diagnostics;
+        const auto json =
+            QByteArray(R"({"$format":"usth","version":99,"settings":{},"tracks":[{}]})");
+        QVERIFY(!Project::fromJson(json, diagnostics).has_value());
+        QVERIFY(hasError(diagnostics));
+    }
 
-BOOST_AUTO_TEST_CASE(broken_json_is_refused) {
-    DiagnosticList diagnostics;
-    BOOST_CHECK(!Project::fromJson(R"({"$format":"usth",)", diagnostics).has_value());
-    BOOST_CHECK(hasError(diagnostics));
-}
+    // The array is there so that several tracks become possible later. A build that holds one
+    // has to refuse the rest rather than open the file with the other parts missing.
+    void more_than_one_track_is_refused_not_trimmed() {
+        DiagnosticList diagnostics;
+        auto json = QByteArray(
+            R"({"$format":"usth","version":1,"settings":{},"tracks":[{"notes":[]},{"notes":[]}]})");
+        QVERIFY(!Project::fromJson(json, diagnostics).has_value());
+        QVERIFY(hasError(diagnostics));
 
-BOOST_AUTO_TEST_CASE(a_newer_version_is_refused_rather_than_guessed_at) {
-    DiagnosticList diagnostics;
-    auto json = QByteArray(R"({"$format":"usth","version":99,"settings":{},"tracks":[{}]})");
-    BOOST_CHECK(!Project::fromJson(json, diagnostics).has_value());
-    BOOST_CHECK(hasError(diagnostics));
-}
+        diagnostics.clear();
+        json = QByteArray(R"({"$format":"usth","version":1,"settings":{},"tracks":[]})");
+        QVERIFY(!Project::fromJson(json, diagnostics).has_value());
+        QVERIFY(hasError(diagnostics));
+    }
 
-// The array is there so that several tracks become possible later. A build that holds one has to
-// refuse the rest rather than open the file with the other parts missing.
-BOOST_AUTO_TEST_CASE(more_than_one_track_is_refused_not_trimmed) {
-    DiagnosticList diagnostics;
-    auto json = QByteArray(
-        R"({"$format":"usth","version":1,"settings":{},"tracks":[{"notes":[]},{"notes":[]}]})");
-    BOOST_CHECK(!Project::fromJson(json, diagnostics).has_value());
-    BOOST_CHECK(hasError(diagnostics));
+    // Absent and null are the same thing and neither is zero, which is the whole point of
+    // holding these in an optional.
+    void absent_and_null_both_mean_the_file_did_not_say() {
+        const auto json = QByteArray(
+            R"({"$format":"usth","version":1,"settings":{},"tracks":[{"notes":[)"
+            R"({"lyric":"a","length":480,"noteNum":60,"intensity":null},)"
+            R"({"lyric":"a","length":480,"noteNum":60},)"
+            R"({"lyric":"a","length":480,"noteNum":60,"intensity":0}]}]})");
 
-    diagnostics.clear();
-    json = QByteArray(R"({"$format":"usth","version":1,"settings":{},"tracks":[]})");
-    BOOST_CHECK(!Project::fromJson(json, diagnostics).has_value());
-    BOOST_CHECK(hasError(diagnostics));
-}
+        const auto project = parsed(json);
+        QVERIFY(project.has_value());
 
-// Absent and null are the same thing and neither is zero, which is the whole point of holding
-// these in an optional.
-BOOST_AUTO_TEST_CASE(absent_and_null_both_mean_the_file_did_not_say) {
-    auto json = QByteArray(
-        R"({"$format":"usth","version":1,"settings":{},"tracks":[{"notes":[)"
-        R"({"lyric":"a","length":480,"noteNum":60,"intensity":null},)"
-        R"({"lyric":"a","length":480,"noteNum":60},)"
-        R"({"lyric":"a","length":480,"noteNum":60,"intensity":0}]}]})");
+        const auto &notes = project->tracks.first().notes;
+        QCOMPARE(notes.size(), 3);
+        QVERIFY(!notes.at(0).intensity.has_value());
+        QVERIFY(!notes.at(1).intensity.has_value());
+        QVERIFY(notes.at(2).intensity.has_value());
+        QCOMPARE(*notes.at(2).intensity, 0.0);
+    }
 
-    auto project = parsed(json);
-    BOOST_REQUIRE(project.has_value());
+    void a_note_missing_a_required_field_is_an_error() {
+        DiagnosticList diagnostics;
+        const auto json = QByteArray(
+            R"({"$format":"usth","version":1,"settings":{},"tracks":[{"notes":[{"lyric":"a"}]}]})");
+        QVERIFY(!Project::fromJson(json, diagnostics).has_value());
+        QVERIFY(hasError(diagnostics));
+    }
 
-    const auto &notes = project->tracks.first().notes;
-    BOOST_REQUIRE_EQUAL(notes.size(), 3);
-    BOOST_CHECK(!notes.at(0).intensity.has_value());
-    BOOST_CHECK(!notes.at(1).intensity.has_value());
-    BOOST_REQUIRE(notes.at(2).intensity.has_value());
-    BOOST_CHECK_CLOSE(*notes.at(2).intensity, 0.0, 0.01);
-}
+    // An older build must not eat what a newer one wrote, or the user loses it the next time
+    // they press save.
+    void unknown_top_level_fields_come_back() {
+        const auto project = parsed(minimal(R"("somethingNew":{"a":1},)"));
+        QVERIFY(project.has_value());
 
-BOOST_AUTO_TEST_CASE(a_note_missing_a_required_field_is_an_error) {
-    DiagnosticList diagnostics;
-    auto json = QByteArray(
-        R"({"$format":"usth","version":1,"settings":{},"tracks":[{"notes":[{"lyric":"a"}]}]})");
-    BOOST_CHECK(!Project::fromJson(json, diagnostics).has_value());
-    BOOST_CHECK(hasError(diagnostics));
-}
+        const auto written = project->toJson();
+        QVERIFY(written.contains("somethingNew"));
 
-// An older build must not eat what a newer one wrote, or the user loses it the next time they
-// press save.
-BOOST_AUTO_TEST_CASE(unknown_top_level_fields_come_back) {
-    auto project = parsed(minimal(R"("somethingNew":{"a":1},)"));
-    BOOST_REQUIRE(project.has_value());
+        const auto again = parsed(written);
+        QVERIFY(again.has_value());
+        QVERIFY(again->unknownFields.contains(QStringLiteral("somethingNew")));
+    }
 
-    const auto written = project->toJson();
-    BOOST_CHECK(written.contains("somethingNew"));
+    void everything_a_note_carries_survives_a_round_trip() {
+        auto project = oneNote();
+        auto &note = project.tracks[0].notes[0];
 
-    auto again = parsed(written);
-    BOOST_REQUIRE(again.has_value());
-    BOOST_CHECK(again->unknownFields.contains(QStringLiteral("somethingNew")));
-}
+        note.intensity = 80;
+        note.velocity = 0; // zero, which has to stay a value rather than become absent
+        note.tempo = 128.5;
+        note.flags = QStringLiteral("g-5");
+        note.envelope = Envelope{{{0, 0}, {5, 100}, {35, 100}, {0, 0}}};
+        note.vibrato = Vibrato{65, 180, 35, 20, 20, 0, 0, 0};
+        note.portamento = {{-40, 0, PortamentoType::S}, {50, 10, PortamentoType::Linear}};
+        note.label = QStringLiteral("verse");
+        note.patch = QStringLiteral("resampler.exe");
+        note.userData.insert(QStringLiteral("$whatever"), QStringLiteral("kept"));
 
-BOOST_AUTO_TEST_CASE(everything_a_note_carries_survives_a_round_trip) {
-    auto project = oneNote();
-    auto &note = project.tracks[0].notes[0];
+        const auto again = parsed(project.toJson());
+        QVERIFY(again.has_value());
 
-    note.intensity = 80;
-    note.velocity = 0; // zero, which has to stay a value rather than become absent
-    note.tempo = 128.5;
-    note.flags = QStringLiteral("g-5");
-    note.envelope = Envelope{{{0, 0}, {5, 100}, {35, 100}, {0, 0}}};
-    note.vibrato = Vibrato{65, 180, 35, 20, 20, 0, 0};
-    note.portamento = {{-40, 0, PortamentoType::S}, {50, 10, PortamentoType::Linear}};
-    note.label = QStringLiteral("verse");
-    note.patch = QStringLiteral("resampler.exe");
-    note.userData.insert(QStringLiteral("$whatever"), QStringLiteral("kept"));
+        const auto &back = again->tracks.first().notes.first();
+        QCOMPARE(back.lyric, QStringLiteral("la"));
+        QCOMPARE(back.length, 480);
+        QCOMPARE(back.noteNum, 60);
+        QVERIFY(back.intensity.has_value());
+        QCOMPARE(*back.intensity, 80.0);
+        QVERIFY(back.velocity.has_value());
+        QCOMPARE(*back.velocity, 0.0);
+        QVERIFY(!back.modulation.has_value());
+        QCOMPARE(back.flags, QStringLiteral("g-5"));
+        QVERIFY(back.envelope.has_value());
+        QCOMPARE(back.envelope->anchors.size(), 4);
+        QVERIFY(back.vibrato.has_value());
+        QCOMPARE(back.vibrato->period, 180.0);
+        QCOMPARE(back.portamento.size(), 2);
+        QVERIFY(back.portamento.at(0).type == PortamentoType::S);
+        QVERIFY(back.portamento.at(1).type == PortamentoType::Linear);
+        QCOMPARE(back.label, QStringLiteral("verse"));
+        QCOMPARE(back.patch, QStringLiteral("resampler.exe"));
+        QCOMPARE(back.userData.value(QStringLiteral("$whatever")), QStringLiteral("kept"));
+    }
 
-    auto again = parsed(project.toJson());
-    BOOST_REQUIRE(again.has_value());
+    // The engine paths are a per project setting people really use, so throwing them away would
+    // be deleting the user's work under cover of safety. Not running them is a separate matter.
+    void the_engine_paths_are_kept() {
+        auto project = oneNote();
+        project.settings.wavtool = QStringLiteral("C:/evil/wavtool.exe");
+        project.settings.resampler = QStringLiteral("C:/evil/resampler.exe");
 
-    const auto &back = again->tracks.first().notes.first();
-    BOOST_CHECK_EQUAL(back.lyric.toStdString(), "la");
-    BOOST_CHECK_EQUAL(back.length, 480);
-    BOOST_CHECK_EQUAL(back.noteNum, 60);
-    BOOST_REQUIRE(back.intensity.has_value());
-    BOOST_CHECK_CLOSE(*back.intensity, 80.0, 0.01);
-    BOOST_REQUIRE(back.velocity.has_value());
-    BOOST_CHECK_CLOSE(*back.velocity, 0.0, 0.01);
-    BOOST_CHECK(!back.modulation.has_value());
-    BOOST_CHECK_EQUAL(back.flags.toStdString(), "g-5");
-    BOOST_REQUIRE(back.envelope.has_value());
-    BOOST_CHECK_EQUAL(back.envelope->anchors.size(), 4);
-    BOOST_REQUIRE(back.vibrato.has_value());
-    BOOST_CHECK_CLOSE(back.vibrato->period, 180.0, 0.01);
-    BOOST_REQUIRE_EQUAL(back.portamento.size(), 2);
-    BOOST_CHECK(back.portamento.at(0).type == PortamentoType::S);
-    BOOST_CHECK(back.portamento.at(1).type == PortamentoType::Linear);
-    BOOST_CHECK_EQUAL(back.label.toStdString(), "verse");
-    BOOST_CHECK_EQUAL(back.patch.toStdString(), "resampler.exe");
-    BOOST_CHECK_EQUAL(back.userData.value(QStringLiteral("$whatever")).toStdString(), "kept");
-}
+        const auto again = parsed(project.toJson());
+        QVERIFY(again.has_value());
+        QCOMPARE(again->settings.wavtool, QStringLiteral("C:/evil/wavtool.exe"));
+        QCOMPARE(again->settings.resampler, QStringLiteral("C:/evil/resampler.exe"));
+    }
 
-// The engine paths are a per project setting people really use, so throwing them away would be
-// deleting the user's work under cover of safety. Not running them is a separate matter.
-BOOST_AUTO_TEST_CASE(the_engine_paths_are_kept) {
-    auto project = oneNote();
-    project.settings.wavtool = QStringLiteral("C:/evil/wavtool.exe");
-    project.settings.resampler = QStringLiteral("C:/evil/resampler.exe");
+    void the_mode1_pitch_curve_survives_a_round_trip() {
+        auto project = oneNote();
+        project.tracks[0].notes[0].pitchBend = PitchBend{-20.0, {0, 10.5, -20}};
 
-    auto again = parsed(project.toJson());
-    BOOST_REQUIRE(again.has_value());
-    BOOST_CHECK_EQUAL(again->settings.wavtool.toStdString(), "C:/evil/wavtool.exe");
-    BOOST_CHECK_EQUAL(again->settings.resampler.toStdString(), "C:/evil/resampler.exe");
-}
+        const auto again = parsed(project.toJson());
+        QVERIFY(again.has_value());
+        const auto &bend = again->tracks.first().notes.first().pitchBend;
+        QVERIFY(bend.has_value());
+        QVERIFY(bend->start.has_value());
+        QCOMPARE(*bend->start, -20.0);
+        QCOMPARE(bend->values.size(), 3);
+        QCOMPARE(bend->values.at(1), 10.5);
+    }
 
-BOOST_AUTO_TEST_CASE(the_mode1_pitch_curve_survives_a_round_trip) {
-    auto project = oneNote();
-    project.tracks[0].notes[0].pitchBend = PitchBend{-20.0, {0, 10.5, -20}};
+    void the_file_is_utf8_without_a_bom_and_uses_newlines() {
+        auto project = oneNote();
+        project.tracks[0].notes[0].lyric = QString::fromUtf8("あ");
+        project.settings.name = QString::fromUtf8("中文工程");
 
-    auto again = parsed(project.toJson());
-    BOOST_REQUIRE(again.has_value());
-    const auto &bend = again->tracks.first().notes.first().pitchBend;
-    BOOST_REQUIRE(bend.has_value());
-    BOOST_REQUIRE(bend->start.has_value());
-    BOOST_CHECK_CLOSE(*bend->start, -20.0, 0.01);
-    BOOST_REQUIRE_EQUAL(bend->values.size(), 3);
-    BOOST_CHECK_CLOSE(bend->values.at(1), 10.5, 0.01);
-}
+        const auto written = project.toJson();
+        QVERIFY(!written.startsWith("\xEF\xBB\xBF"));
+        QVERIFY(!written.contains("\r\n"));
+        QVERIFY(written.contains(QString::fromUtf8("中文工程").toUtf8()));
 
-BOOST_AUTO_TEST_CASE(the_file_is_utf8_without_a_bom_and_uses_newlines) {
-    auto project = oneNote();
-    project.tracks[0].notes[0].lyric = QString::fromUtf8("あ");
-    project.settings.name = QString::fromUtf8("中文工程");
+        const auto again = parsed(written);
+        QVERIFY(again.has_value());
+        QCOMPARE(again->tracks.first().notes.first().lyric, QString::fromUtf8("あ"));
+    }
+};
 
-    const auto written = project.toJson();
-    BOOST_CHECK(!written.startsWith("\xEF\xBB\xBF"));
-    BOOST_CHECK(!written.contains("\r\n"));
-    BOOST_CHECK(written.contains(QString::fromUtf8("中文工程").toUtf8()));
+QTEST_APPLESS_MAIN(test_Project)
 
-    auto again = parsed(written);
-    BOOST_REQUIRE(again.has_value());
-    BOOST_CHECK(again->tracks.first().notes.first().lyric == QString::fromUtf8("あ"));
-}
-
-BOOST_AUTO_TEST_SUITE_END()
+#include "test_Project.moc"

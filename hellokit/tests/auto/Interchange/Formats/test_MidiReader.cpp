@@ -1,11 +1,8 @@
-#define BOOST_TEST_MAIN
-#define BOOST_TEST_MODULE test_MidiReader
-
 #include <filesystem>
 #include <fstream>
 #include <string>
 
-#include <boost/test/unit_test.hpp>
+#include <QtTest/QTest>
 
 #include <wolf-midi/MidiFile.h>
 
@@ -48,7 +45,7 @@ namespace {
         }
 
         const fs::path &save() {
-            BOOST_REQUIRE(midi.save(_path));
+            midi.save(_path);
             return _path;
         }
 
@@ -72,184 +69,192 @@ namespace {
 
 }
 
-BOOST_AUTO_TEST_SUITE(test_MidiReader)
+class test_MidiReader : public QObject {
+    Q_OBJECT
 
-// A quarter note at this resolution is 96 ticks and has to come out as 480. Ticks are scaled
-// from absolute positions rather than one length at a time, so a long track cannot drift off the
-// bar lines.
-BOOST_AUTO_TEST_CASE(ticks_are_scaled_to_480_per_quarter) {
-    TempMidi file("scale");
-    file.note(0, 96, 60);
-    file.note(96, 288, 62);
+private Q_SLOTS:
+    // A quarter note at this resolution is 96 ticks and has to come out as 480. Ticks are scaled
+    // from absolute positions rather than one length at a time, so a long track cannot drift off
+    // the bar lines.
+    void ticks_are_scaled_to_480_per_quarter() {
+        TempMidi file("scale");
+        file.note(0, 96, 60);
+        file.note(96, 288, 62);
 
-    auto result = importOf(file.save());
-    BOOST_REQUIRE(result.project.has_value());
+        const auto result = importOf(file.save());
+        QVERIFY(result.project.has_value());
 
-    const auto &notes = result.project->tracks.first().notes;
-    BOOST_REQUIRE_EQUAL(notes.size(), 2);
-    BOOST_CHECK_EQUAL(notes.at(0).length, 480);
-    BOOST_CHECK_EQUAL(notes.at(1).length, 960);
-    BOOST_CHECK_EQUAL(notes.at(0).noteNum, 60);
-}
-
-// Silence in front of the first note is really there, so it is translated rather than trimmed.
-// Whoever is inserting these notes somewhere decides whether to keep it.
-BOOST_AUTO_TEST_CASE(silence_before_the_first_note_becomes_a_rest) {
-    TempMidi file("lead");
-    file.note(192, 288, 64);
-
-    auto result = importOf(file.save());
-    BOOST_REQUIRE(result.project.has_value());
-
-    const auto &notes = result.project->tracks.first().notes;
-    BOOST_REQUIRE_EQUAL(notes.size(), 2);
-    BOOST_CHECK(notes.at(0).isRest());
-    BOOST_CHECK_EQUAL(notes.at(0).length, 960);
-    BOOST_CHECK(!notes.at(1).isRest());
-}
-
-BOOST_AUTO_TEST_CASE(a_gap_between_notes_becomes_a_rest) {
-    TempMidi file("gap");
-    file.note(0, 96, 60);
-    file.note(192, 288, 62);
-
-    auto result = importOf(file.save());
-    BOOST_REQUIRE(result.project.has_value());
-
-    const auto &notes = result.project->tracks.first().notes;
-    BOOST_REQUIRE_EQUAL(notes.size(), 3);
-    BOOST_CHECK(notes.at(1).isRest());
-    BOOST_CHECK_EQUAL(notes.at(1).length, 480);
-}
-
-// A track holds one voice, so an overlap has to go. Shortening the note already sounding keeps
-// both of them, where dropping the later one loses a note outright.
-BOOST_AUTO_TEST_CASE(an_overlap_shortens_the_note_already_sounding) {
-    TempMidi file("overlap");
-    file.note(0, 192, 60);
-    file.note(96, 288, 62);
-
-    auto result = importOf(file.save());
-    BOOST_REQUIRE(result.project.has_value());
-
-    const auto &notes = result.project->tracks.first().notes;
-    BOOST_REQUIRE_EQUAL(notes.size(), 2);
-    BOOST_CHECK_EQUAL(notes.at(0).noteNum, 60);
-    BOOST_CHECK_EQUAL(notes.at(0).length, 480); // 96 ticks, cut where the next one starts
-    BOOST_CHECK_EQUAL(notes.at(1).noteNum, 62);
-    BOOST_CHECK_EQUAL(notes.at(1).length, 960);
-    BOOST_CHECK(warned(result.diagnostics));
-}
-
-// Notes that begin together cannot all be kept, and the top one is the melody.
-BOOST_AUTO_TEST_CASE(a_chord_keeps_its_highest_note_and_says_so) {
-    TempMidi file("chord");
-    file.note(0, 96, 60);
-    file.note(0, 96, 64);
-    file.note(0, 96, 67);
-
-    auto result = importOf(file.save());
-    BOOST_REQUIRE(result.project.has_value());
-
-    const auto &notes = result.project->tracks.first().notes;
-    BOOST_REQUIRE_EQUAL(notes.size(), 1);
-    BOOST_CHECK_EQUAL(notes.at(0).noteNum, 67);
-    BOOST_CHECK(warned(result.diagnostics));
-}
-
-// The earlier implementation matched a lyric to a note only when the ticks were equal, so a
-// sequencer that placed one a tick early lost it without a word.
-BOOST_AUTO_TEST_CASE(a_lyric_placed_late_still_lands_on_its_note) {
-    TempMidi file("lyric");
-    file.note(0, 96, 60);
-    file.note(96, 192, 62);
-    file.lyric(2, "ka");   // a little after the first note began
-    file.lyric(96, "sa");  // exactly on the second
-
-    auto result = importOf(file.save());
-    BOOST_REQUIRE(result.project.has_value());
-
-    const auto &notes = result.project->tracks.first().notes;
-    BOOST_REQUIRE_EQUAL(notes.size(), 2);
-    BOOST_CHECK_EQUAL(notes.at(0).lyric.toStdString(), "ka");
-    BOOST_CHECK_EQUAL(notes.at(1).lyric.toStdString(), "sa");
-}
-
-// A note with no lyric of its own still has to say something, because a UST note with an empty
-// lyric is a rest.
-BOOST_AUTO_TEST_CASE(a_note_with_no_lyric_gets_the_default_one) {
-    TempMidi file("nolyric");
-    file.note(0, 96, 60);
-
-    auto result = importOf(file.save());
-    BOOST_REQUIRE(result.project.has_value());
-
-    const auto &notes = result.project->tracks.first().notes;
-    BOOST_REQUIRE_EQUAL(notes.size(), 1);
-    BOOST_CHECK(!notes.at(0).isRest());
-    BOOST_CHECK_EQUAL(notes.at(0).lyric.toStdString(), "la");
-}
-
-BOOST_AUTO_TEST_CASE(the_first_tempo_becomes_the_project_tempo) {
-    TempMidi file("tempo");
-    file.tempo(0, 143.0f);
-    file.note(0, 96, 60);
-
-    auto result = importOf(file.save());
-    BOOST_REQUIRE(result.project.has_value());
-    BOOST_CHECK_CLOSE(result.project->settings.tempo, 143.0, 0.01);
-}
-
-// UTAU's keyboard stops at C1 and B7, so anything further out has nowhere to go.
-BOOST_AUTO_TEST_CASE(pitches_outside_the_keyboard_are_pulled_back_in) {
-    TempMidi file("range");
-    file.note(0, 96, 12);
-    file.note(96, 192, 120);
-
-    auto result = importOf(file.save());
-    BOOST_REQUIRE(result.project.has_value());
-
-    const auto &notes = result.project->tracks.first().notes;
-    BOOST_REQUIRE_EQUAL(notes.size(), 2);
-    BOOST_CHECK_EQUAL(notes.at(0).noteNum, 24);
-    BOOST_CHECK_EQUAL(notes.at(1).noteNum, 107);
-    BOOST_CHECK(warned(result.diagnostics));
-}
-
-BOOST_AUTO_TEST_CASE(inspect_reports_what_the_file_holds) {
-    TempMidi file("inspect");
-    file.note(0, 96, 60);
-    file.note(96, 192, 72);
-
-    MidiReader reader;
-    DiagnosticList diagnostics;
-    auto source = reader.inspect(file.save(), diagnostics);
-
-    BOOST_REQUIRE(source.has_value());
-    BOOST_REQUIRE(!source->entries.isEmpty());
-
-    const auto &entry = source->entries.first();
-    BOOST_CHECK_EQUAL(entry.noteCount, 2);
-    BOOST_REQUIRE(entry.lowestNote.has_value());
-    BOOST_CHECK_EQUAL(*entry.lowestNote, 60);
-    BOOST_REQUIRE(entry.highestNote.has_value());
-    BOOST_CHECK_EQUAL(*entry.highestNote, 72);
-}
-
-BOOST_AUTO_TEST_CASE(something_that_is_not_a_midi_file_is_an_error) {
-    const auto path = fs::temp_directory_path() / "hellokit_notmidi.mid";
-    {
-        std::ofstream out(path, std::ios::binary);
-        out << "this is not a MIDI file";
+        const auto &notes = result.project->tracks.first().notes;
+        QCOMPARE(notes.size(), 2);
+        QCOMPARE(notes.at(0).length, 480);
+        QCOMPARE(notes.at(1).length, 960);
+        QCOMPARE(notes.at(0).noteNum, 60);
     }
 
-    auto result = importOf(path);
-    BOOST_CHECK(!result.project.has_value());
-    BOOST_CHECK(!result.cancelled);
-    BOOST_CHECK(hasError(result.diagnostics));
+    // Silence in front of the first note is really there, so it is translated rather than
+    // trimmed. Whoever is inserting these notes somewhere decides whether to keep it.
+    void silence_before_the_first_note_becomes_a_rest() {
+        TempMidi file("lead");
+        file.note(192, 288, 64);
 
-    std::error_code ignored;
-    fs::remove(path, ignored);
-}
+        const auto result = importOf(file.save());
+        QVERIFY(result.project.has_value());
 
-BOOST_AUTO_TEST_SUITE_END()
+        const auto &notes = result.project->tracks.first().notes;
+        QCOMPARE(notes.size(), 2);
+        QVERIFY(notes.at(0).isRest());
+        QCOMPARE(notes.at(0).length, 960);
+        QVERIFY(!notes.at(1).isRest());
+    }
+
+    void a_gap_between_notes_becomes_a_rest() {
+        TempMidi file("gap");
+        file.note(0, 96, 60);
+        file.note(192, 288, 62);
+
+        const auto result = importOf(file.save());
+        QVERIFY(result.project.has_value());
+
+        const auto &notes = result.project->tracks.first().notes;
+        QCOMPARE(notes.size(), 3);
+        QVERIFY(notes.at(1).isRest());
+        QCOMPARE(notes.at(1).length, 480);
+    }
+
+    // A track holds one voice, so an overlap has to go. Shortening the note already sounding
+    // keeps both of them, where dropping the later one loses a note outright.
+    void an_overlap_shortens_the_note_already_sounding() {
+        TempMidi file("overlap");
+        file.note(0, 192, 60);
+        file.note(96, 288, 62);
+
+        const auto result = importOf(file.save());
+        QVERIFY(result.project.has_value());
+
+        const auto &notes = result.project->tracks.first().notes;
+        QCOMPARE(notes.size(), 2);
+        QCOMPARE(notes.at(0).noteNum, 60);
+        QCOMPARE(notes.at(0).length, 480); // 96 ticks, cut where the next one starts
+        QCOMPARE(notes.at(1).noteNum, 62);
+        QCOMPARE(notes.at(1).length, 960);
+        QVERIFY(warned(result.diagnostics));
+    }
+
+    // Notes that begin together cannot all be kept, and the top one is the melody.
+    void a_chord_keeps_its_highest_note_and_says_so() {
+        TempMidi file("chord");
+        file.note(0, 96, 60);
+        file.note(0, 96, 64);
+        file.note(0, 96, 67);
+
+        const auto result = importOf(file.save());
+        QVERIFY(result.project.has_value());
+
+        const auto &notes = result.project->tracks.first().notes;
+        QCOMPARE(notes.size(), 1);
+        QCOMPARE(notes.at(0).noteNum, 67);
+        QVERIFY(warned(result.diagnostics));
+    }
+
+    // The earlier implementation matched a lyric to a note only when the ticks were equal, so a
+    // sequencer that placed one a tick early lost it without a word.
+    void a_lyric_placed_late_still_lands_on_its_note() {
+        TempMidi file("lyric");
+        file.note(0, 96, 60);
+        file.note(96, 192, 62);
+        file.lyric(2, "ka");  // a little after the first note began
+        file.lyric(96, "sa"); // exactly on the second
+
+        const auto result = importOf(file.save());
+        QVERIFY(result.project.has_value());
+
+        const auto &notes = result.project->tracks.first().notes;
+        QCOMPARE(notes.size(), 2);
+        QCOMPARE(notes.at(0).lyric, QStringLiteral("ka"));
+        QCOMPARE(notes.at(1).lyric, QStringLiteral("sa"));
+    }
+
+    // A note with no lyric of its own still has to say something, because a UST note with an
+    // empty lyric is a rest.
+    void a_note_with_no_lyric_gets_the_default_one() {
+        TempMidi file("nolyric");
+        file.note(0, 96, 60);
+
+        const auto result = importOf(file.save());
+        QVERIFY(result.project.has_value());
+
+        const auto &notes = result.project->tracks.first().notes;
+        QCOMPARE(notes.size(), 1);
+        QVERIFY(!notes.at(0).isRest());
+        QCOMPARE(notes.at(0).lyric, QStringLiteral("la"));
+    }
+
+    void the_first_tempo_becomes_the_project_tempo() {
+        TempMidi file("tempo");
+        file.tempo(0, 143.0f);
+        file.note(0, 96, 60);
+
+        const auto result = importOf(file.save());
+        QVERIFY(result.project.has_value());
+
+        // Not exact, and cannot be. MIDI keeps tempo as whole microseconds per quarter note, so
+        // 143 BPM is stored as 419580 and reads back as 143.0001.
+        QVERIFY(qAbs(result.project->settings.tempo - 143.0) < 0.001);
+    }
+
+    // UTAU's keyboard stops at C1 and B7, so anything further out has nowhere to go.
+    void pitches_outside_the_keyboard_are_pulled_back_in() {
+        TempMidi file("range");
+        file.note(0, 96, 12);
+        file.note(96, 192, 120);
+
+        const auto result = importOf(file.save());
+        QVERIFY(result.project.has_value());
+
+        const auto &notes = result.project->tracks.first().notes;
+        QCOMPARE(notes.size(), 2);
+        QCOMPARE(notes.at(0).noteNum, 24);
+        QCOMPARE(notes.at(1).noteNum, 107);
+        QVERIFY(warned(result.diagnostics));
+    }
+
+    void inspect_reports_what_the_file_holds() {
+        TempMidi file("inspect");
+        file.note(0, 96, 60);
+        file.note(96, 192, 72);
+
+        MidiReader reader;
+        DiagnosticList diagnostics;
+        const auto source = reader.inspect(file.save(), diagnostics);
+
+        QVERIFY(source.has_value());
+        QVERIFY(!source->entries.isEmpty());
+
+        const auto &entry = source->entries.first();
+        QCOMPARE(entry.noteCount, 2);
+        QVERIFY(entry.lowestNote.has_value());
+        QCOMPARE(*entry.lowestNote, 60);
+        QVERIFY(entry.highestNote.has_value());
+        QCOMPARE(*entry.highestNote, 72);
+    }
+
+    void something_that_is_not_a_midi_file_is_an_error() {
+        const auto path = fs::temp_directory_path() / "hellokit_notmidi.mid";
+        {
+            std::ofstream out(path, std::ios::binary);
+            out << "this is not a MIDI file";
+        }
+
+        const auto result = importOf(path);
+        QVERIFY(!result.project.has_value());
+        QVERIFY(!result.cancelled);
+        QVERIFY(hasError(result.diagnostics));
+
+        std::error_code ignored;
+        fs::remove(path, ignored);
+    }
+};
+
+QTEST_APPLESS_MAIN(test_MidiReader)
+
+#include "test_MidiReader.moc"

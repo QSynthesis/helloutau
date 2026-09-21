@@ -148,6 +148,7 @@ Markdown：
 
 ## 构建与验证
 
+- **测试用 QtTest，不用 Boost.Test。** 本仓库处处依赖 Qt，`QCOMPARE` 能直接打印 `QString` 和 `QByteArray`，而 Boost 要先逐个转成 `std::string`；将来 widgets 的测试还要 `QSignalSpy` 和 `QTEST_MAIN`。stdcorelib 和 stdutau 用 Boost 是因为它们不依赖 Qt，那条惯例不适用于这里。
 - **`tests/auto` 按模块分目录，和 `include/hellokit` 同构**：`tests/auto/Document/` 对 `include/hellokit/Document/`。每个目录自己一个 `CMakeLists.txt`。
 - **一个 `test_XXX.cpp` 对一个 `XXX.h`**，名字一一对应。这样光看目录列表就知道哪些头文件还没有测试。一个文件盖三个头（原来的 `test_Interchange.cpp`）就看不出这件事了。
 - **不要重复链传递依赖。** `HelloKitDocument` 公开链了 `HelloKitSupport`，测试只写 `HelloKitDocument` 就够。

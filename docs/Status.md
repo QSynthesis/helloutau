@@ -12,7 +12,7 @@
 | `HelloUtauWidgets` | 一个装着 `QLabel` 的 `MainWindow`，证明 Qt Widgets 和 moc 接上了 |
 | `helloutau` | 薄驱动，只有 `main.cpp` |
 
-构建链已验证：qmsetup 的 `hellokit_add_library` / `helloutau_add_library` / `helloutau_add_application`、Qt 6.11 加 AUTOMOC、stdcorelib、stdutau、Boost.Test 加 `add_auto_test`、ctest。
+构建链已验证：qmsetup 的 `hellokit_add_library` / `helloutau_add_library` / `helloutau_add_application`、Qt 6.11 加 AUTOMOC、stdcorelib、stdutau、wolf-midi、QtTest 加 `add_auto_test`、ctest。
 
 `HelloKitSupport` 目前只有 `Diagnostic`。`HelloKitDocument` 有 `PayloadCodec`、`Project` / `Track` / `Note` 数据模型，以及 `.usth` 的读写——**读写就挂在 `Project` 上**，因为 `.usth` 不是众多格式里的一种，它就是工程本身的写法，别的格式都走 Interchange 转成 `Project`。`.ust` 在 `UstDocument`——它是一份**已经读进来但还没解码**的 UST，`open()` 解析一次，探编码和 `toProject()` 都吃那一次的结果，不重复解析。`HelloKitInterchange` 的接口与注册表齐了（`InterchangeReader` / `InterchangeWriter` / `InterchangeSource` / `InterchangeSelector` / `AutomaticSelector` / `InterchangeRegistry` / `InterchangePlugin`），第一个驱动 `Formats/MidiReader` 也在了，headless 可跑可测。形状与约束见 [`Interchange.md`](Interchange.md)。**还没有界面**：选轨和选编码那两页要等第三阶段。
 
@@ -23,7 +23,7 @@
 - **stdcorelib、stdutau**：**都不从 vcpkg 拿，也都不是子模块**，两个都在和本仓库一起改。各自构建安装一份，配置时传 `-Dstdcorelib_DIR=` 和 `-Dstdutau_DIR=`，指向 `<prefix>/lib/cmake/<名字>`。`third-party/Dependencies.cmake` 统一 `find_package`，由根 `CMakeLists.txt` `include()` 进来。Windows 上那里还会把动态库拷进运行输出目录，vcpkg 的 applocal 不再管这两个了。stdutau 现在是静态库，所以没有可拷的 DLL。
 - **stdcorelib 只做私有依赖**：子库写 `LINKS_PRIVATE`，公开头文件里的导出宏用 `<QtCore/QtGlobal>` 的 `Q_DECL_EXPORT` / `Q_DECL_IMPORT`。
 - **wolf-midi**：MIDI 的解析与写出，`QMidiFile` 去掉 Qt 的版本。来自 `E:/GitHub/ds-editor-lite/vcpkg`，一样传 `-Dwolf-midi_DIR=`。
-- **qmsetup、Boost**：来自 `D:/GitHub/synthrt/vcpkg`。
+- **qmsetup**：来自 `D:/GitHub/synthrt/vcpkg`。
 - **Qt 6.11.1**：`D:/Qt/6.11.1/msvc2022_64`。
 
 路径都写在 `.vscode/settings.json` 里，那个文件是 gitignore 的。

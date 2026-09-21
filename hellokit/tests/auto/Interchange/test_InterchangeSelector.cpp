@@ -1,9 +1,6 @@
-#define BOOST_TEST_MAIN
-#define BOOST_TEST_MODULE test_InterchangeSelector
-
 #include <algorithm>
 
-#include <boost/test/unit_test.hpp>
+#include <QtTest/QTest>
 
 #include <hellokit/Interchange/InterchangeReader.h>
 #include <hellokit/Interchange/InterchangeSelector.h>
@@ -67,55 +64,60 @@ namespace {
 
 }
 
-BOOST_AUTO_TEST_SUITE(test_InterchangeSelector)
+class test_InterchangeSelector : public QObject {
+    Q_OBJECT
 
-// The command line and the tests have nobody to ask, so there has to be an answer available
-// without a user. It comes from what the driver declared.
-BOOST_AUTO_TEST_CASE(it_takes_the_declared_defaults) {
-    SchemaOnlyReader reader;
-    AutomaticSelector selector;
-    DiagnosticList diagnostics;
+private Q_SLOTS:
+    // The command line and the tests have nobody to ask, so there has to be an answer available
+    // without a user. It comes from what the driver declared.
+    void it_takes_the_declared_defaults() {
+        SchemaOnlyReader reader;
+        AutomaticSelector selector;
+        DiagnosticList diagnostics;
 
-    auto request = selector.selectImport(reader, sourceWith(1), {}, diagnostics);
-    BOOST_REQUIRE(request.has_value());
-    BOOST_CHECK_EQUAL(request->driverOptions.value("encoding").toString().toStdString(), "UTF-8");
-}
+        const auto request = selector.selectImport(reader, sourceWith(1), {}, diagnostics);
+        QVERIFY(request.has_value());
+        QCOMPARE(request->driverOptions.value("encoding").toString(), QStringLiteral("UTF-8"));
+    }
 
-// A project holds one track, so three entries cannot all come in. Which ones were left is
-// something the caller can only learn from the diagnostics.
-BOOST_AUTO_TEST_CASE(it_obeys_the_limit_and_says_so) {
-    SchemaOnlyReader reader;
-    AutomaticSelector selector;
-    DiagnosticList diagnostics;
+    // A project holds one track, so three entries cannot all come in. Which ones were left is
+    // something the caller can only learn from the diagnostics.
+    void it_obeys_the_limit_and_says_so() {
+        SchemaOnlyReader reader;
+        AutomaticSelector selector;
+        DiagnosticList diagnostics;
 
-    auto request = selector.selectImport(reader, sourceWith(3), {}, diagnostics);
-    BOOST_REQUIRE(request.has_value());
-    BOOST_CHECK_EQUAL(request->entries.size(), 1);
-    BOOST_CHECK(warned(diagnostics));
-}
+        const auto request = selector.selectImport(reader, sourceWith(3), {}, diagnostics);
+        QVERIFY(request.has_value());
+        QCOMPARE(request->entries.size(), 1);
+        QVERIFY(warned(diagnostics));
+    }
 
-BOOST_AUTO_TEST_CASE(a_raised_limit_takes_more) {
-    SchemaOnlyReader reader;
-    AutomaticSelector selector;
-    DiagnosticList diagnostics;
+    void a_raised_limit_takes_more() {
+        SchemaOnlyReader reader;
+        AutomaticSelector selector;
+        DiagnosticList diagnostics;
 
-    ImportLimits limits;
-    limits.maxEntries = 3;
-    auto request = selector.selectImport(reader, sourceWith(3), limits, diagnostics);
-    BOOST_REQUIRE(request.has_value());
-    BOOST_CHECK_EQUAL(request->entries.size(), 3);
-}
+        ImportLimits limits;
+        limits.maxEntries = 3;
+        const auto request = selector.selectImport(reader, sourceWith(3), limits, diagnostics);
+        QVERIFY(request.has_value());
+        QCOMPARE(request->entries.size(), 3);
+    }
 
-// Returning nothing means two different things, and only the diagnostics tell them apart. Giving
-// up without saying so arrives at the caller looking like a cancellation.
-BOOST_AUTO_TEST_CASE(nothing_to_choose_from_is_an_error_not_a_cancellation) {
-    SchemaOnlyReader reader;
-    AutomaticSelector selector;
-    DiagnosticList diagnostics;
+    // Returning nothing means two different things, and only the diagnostics tell them apart.
+    // Giving up without saying so arrives at the caller looking like a cancellation.
+    void nothing_to_choose_from_is_an_error_not_a_cancellation() {
+        SchemaOnlyReader reader;
+        AutomaticSelector selector;
+        DiagnosticList diagnostics;
 
-    auto request = selector.selectImport(reader, sourceWith(0), {}, diagnostics);
-    BOOST_CHECK(!request.has_value());
-    BOOST_CHECK(hasError(diagnostics));
-}
+        const auto request = selector.selectImport(reader, sourceWith(0), {}, diagnostics);
+        QVERIFY(!request.has_value());
+        QVERIFY(hasError(diagnostics));
+    }
+};
 
-BOOST_AUTO_TEST_SUITE_END()
+QTEST_APPLESS_MAIN(test_InterchangeSelector)
+
+#include "test_InterchangeSelector.moc"
