@@ -184,21 +184,18 @@ BOOST_AUTO_TEST_CASE(the_engine_paths_are_kept) {
     BOOST_CHECK_EQUAL(again->settings.resampler.toStdString(), "C:/evil/resampler.exe");
 }
 
-// The sentinel stands for a reading the curve does not have. Writing it out as a number would
-// put a real pitch of -32768 in the file.
-BOOST_AUTO_TEST_CASE(an_empty_pitch_sample_is_written_as_null) {
+BOOST_AUTO_TEST_CASE(the_mode1_pitch_curve_survives_a_round_trip) {
     auto project = oneNote();
-    project.tracks[0].notes[0].pitchBend = PitchBend{-20.0, {0, PitchBend::noValue, 20}};
+    project.tracks[0].notes[0].pitchBend = PitchBend{-20.0, {0, 10.5, -20}};
 
-    const auto written = project.serialize();
-    BOOST_CHECK(!written.contains("-32768"));
-
-    auto again = parsed(written);
+    auto again = parsed(project.serialize());
     BOOST_REQUIRE(again.has_value());
     const auto &bend = again->tracks.first().notes.first().pitchBend;
     BOOST_REQUIRE(bend.has_value());
+    BOOST_REQUIRE(bend->start.has_value());
+    BOOST_CHECK_CLOSE(*bend->start, -20.0, 0.01);
     BOOST_REQUIRE_EQUAL(bend->values.size(), 3);
-    BOOST_CHECK_EQUAL(bend->values.at(1), PitchBend::noValue);
+    BOOST_CHECK_CLOSE(bend->values.at(1), 10.5, 0.01);
 }
 
 BOOST_AUTO_TEST_CASE(the_file_is_utf8_without_a_bom_and_uses_newlines) {

@@ -37,6 +37,32 @@ namespace hello::kit {
     /// Ticks to the quarter note.
     inline constexpr int ticksPerQuarter = utau::TIME_BASE;
 
+    /// The \c .usth format version this build writes, and the highest it can read.
+    inline constexpr int usthFormatVersion = 1;
+
+    /// \name The control note
+    ///
+    /// The first note of a \c .ust HelloUTAU wrote, which carries what UST has nowhere to put.
+    /// No voice bank has a sample under this lyric, so UTAU finds nothing, makes no sound and
+    /// spends no time rendering it, while the note still takes up its length. The lyric is
+    /// deliberately conspicuous, so that a user opening the file in UTAU can see at a glance
+    /// that they did not write it.
+    ///
+    /// The entry name has to begin with a \c $ . UTAU keeps an entry it does not recognize only
+    /// on a note section and only with that prefix, which is measured rather than assumed.
+    ///
+    /// \sa docs/UsthFormat.md
+    /// @{
+    inline constexpr char controlNoteLyric[] = "_USTH_";
+    inline constexpr char controlNoteEntry[] = "$usth";
+    inline constexpr int controlNoteLength = 480;
+    inline constexpr int controlNoteNoteNum = 60;
+
+    /// The version of what the entry carries, which moves on its own rather than with
+    /// \c usthFormatVersion.
+    inline constexpr int controlNotePayloadVersion = 1;
+    /// @}
+
     /// \name The keyboard
     ///
     /// C1 to B7, which is as far as UTAU's piano roll goes. A note outside it has nowhere to be

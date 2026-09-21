@@ -33,6 +33,13 @@ namespace hello::kit {
         double release = 0;   ///< percent
         double phase = 0;     ///< percent
         double offset = 0;    ///< percent
+
+        /// The eighth value UST writes in \c VBR, which UTAU does not act on.
+        ///
+        /// Carried so that a round trip through \c .ust keeps it. It has no field of its own in
+        /// UTAU's own interface, and it cannot go in \c Note::userData either, since everything
+        /// there is written back out as an entry of its own and this one is part of \c VBR.
+        double intensity = 0;
     };
 
     /// How a portamento point joins the one before it.
@@ -61,16 +68,13 @@ namespace hello::kit {
     };
 
     /// The Mode1 pitch curve, one reading every five ticks.
+    ///
+    /// \note A reading the file left empty reads as zero, which is what stdutau does with it and
+    ///       therefore all a round trip through \c .ust can promise. There is no separate
+    ///       "nothing here", because the value would have nowhere to survive.
     struct PitchBend {
         std::optional<double> start;
-        QList<int> values;
-
-        /// What a reading holds where the curve has nothing there.
-        ///
-        /// A singular value rather than \c std::optional, which is the one place this project
-        /// allows it. The curve is dense and long, and the same choice is already made in
-        /// stdutau, so a second representation would only mean converting between them.
-        static constexpr int noValue = -32768;
+        QList<double> values;
     };
 
     /// One note of a track, or a rest.

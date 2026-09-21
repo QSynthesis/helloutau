@@ -203,4 +203,4 @@ Markdown：
 - **Windows 上执行 `.bat` 是个有 CVE 记录的注入面。** `CreateProcess` 遇到 `.bat` 会转交 `cmd.exe` 二次解析，而 cmd 的规则和 `CommandLineToArgvW` 不同，光按标准 argv 规则加引号不够——这就是 2024 年的 BatBadBut（CVE-2024-24576）。`stdc::Popen::shell(true)` 的 `^` 转义是冲着它去的，但别因此往 `.bat` 的参数里塞工程文件来的字符串。
 - **`stdc::Popen::shell(true)` 在 Windows 上默认 `SW_HIDE`。** 要 UTAU 那种可见的 cmd 窗口，`startupInfo` 的 `dwFlags` 带上 `STARTF_USESHOWWINDOW` 即可，带了就由调用方的 `wShowWindow` 说了算。窗口里显示的是子进程写到自己控制台的东西，所以要看见输出就不能把那条流设成 `Pipe`。本进程已有控制台时子进程是共用它而不是新开一个，`wShowWindow` 对一个压根没被创建的窗口不起作用，要独立窗口得配 `creationFlags(CREATE_NEW_CONSOLE)`。**已实测**：子进程里 `IsWindowVisible(GetConsoleWindow())` 默认为 0，带上那个标志为 1。
 - UTAU 音源目录里同一个 `oto.ini` 可能出现在多级子目录，`QVoiceBank` 用 `QMap<QString, QOtoIni>` 是有道理的，不要假设一个音源只有一份 `oto.ini`。
-- **UTAU 把它不认识的段落当成音符**，不是忽略。读 UST 遇到未知段名要当文件已损坏处理，写 UST 绝不能自造段落。完整的保留规则见 [`docs/claude/utau-ust-preservation.md`](docs/claude/utau-ust-preservation.md)。
+- **UTAU 把它不认识的段落当成音符**，不是忽略。读 UST 遇到未知段名**静默跳过**（交给 stdutau），写 UST 绝不能自造段落。完整的保留规则见 [`docs/claude/utau-ust-preservation.md`](docs/claude/utau-ust-preservation.md)。
