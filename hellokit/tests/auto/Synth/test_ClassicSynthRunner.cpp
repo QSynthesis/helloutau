@@ -65,6 +65,11 @@ private:
         return SynthPlan::make(project, *bank, options, diagnostics);
     }
 
+    /// Two paths that do not exist and are never run.
+    ///
+    /// Nothing here calls render(): scripts() only builds the text of the two files, so an
+    /// engine path is a string that ends up in one of the script's variables and is asserted
+    /// on there. A real one would say no more and would tie the test to a machine.
     static SynthEngines engines() {
         SynthEngines e;
         e.resampler = "C:/UTAU/resampler.exe";
