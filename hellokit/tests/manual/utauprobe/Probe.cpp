@@ -331,6 +331,30 @@ namespace utauprobe {
                       {entry("Tempo", tempo), entry("VBR", vbr(share))});
             }
         }
+        // A tempo set on one note runs on into every note after it, so it has to be set back or
+        // every block below this one asks its question at 240 bpm instead of 120. The first run
+        // of this probe did exactly that, and two of its blocks answered nothing.
+        alone(QStringLiteral("tempo"), QStringLiteral("back to 120 bpm"),
+              {entry("Tempo", 120), entry("VBR", vbr(100))});
+
+        // -------------------------------------------------------------- where exactly it stops
+        // The first run put the boundary between 50 and 60 ms. These pin it to the millisecond,
+        // twice over: a share of a short note and a share of a longer one, arranged so that one
+        // step of the note's length is one millisecond of vibrato. If the two sweeps break in
+        // the same place, the vibrato's own length is what decides and nothing else is.
+        //
+        // At 120 bpm a tick is 25/24 ms, so 24% of a note moves by a millisecond every four
+        // ticks, and 12% of one every eight.
+        for (int ticks = 180; ticks <= 260; ticks += 4) {
+            alone(QStringLiteral("boundary"),
+                  QStringLiteral("24% of %1 ticks = %2 ms").arg(ticks).arg(ticks / 4),
+                  {entry("VBR", vbr(24))}, ticks);
+        }
+        for (int ticks = 360; ticks <= 520; ticks += 8) {
+            alone(QStringLiteral("boundary"),
+                  QStringLiteral("12% of %1 ticks = %2 ms").arg(ticks).arg(ticks / 8),
+                  {entry("VBR", vbr(12))}, ticks);
+        }
 
         // -------------------------------------------------------------- the fade, on both sides
         for (const int share : {20, 30, 40, 50, 65, 100}) {
