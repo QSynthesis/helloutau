@@ -315,6 +315,86 @@ private Q_SLOTS:
         QCOMPARE(checked, 2);
     }
 
+    // UTAU's engines run under Wine on the other systems, and the script that starts them is a
+    // shell script there. Same layout, different spelling, and it is written and read here so
+    // that what goes out to those systems is not first seen when somebody runs it.
+    void the_shell_script_has_the_same_shape() {
+        const auto plan = planFor(QStringLiteral("a"), QString());
+        QVERIFY(plan.has_value());
+
+        ClassicSynthRunner runner;
+        runner.shell = ClassicSynthRunner::ScriptShell::Posix;
+
+        DiagnosticList diagnostics;
+        const auto written = runner.scripts(*plan, engines(), diagnostics);
+        QVERIFY(written.has_value());
+
+        const auto &script = written->first;
+        QVERIFY(script.startsWith(QLatin1String("#!/bin/sh\n")));
+        QVERIFY(script.contains(QLatin1String("export tool='")));
+        QVERIFY(script.contains(QLatin1String("export cachedir='")));
+        QVERIFY(script.contains(QLatin1String("mkdir -p \"${cachedir}\"")));
+        QVERIFY(script.contains(QLatin1String("\"${helper}\"")));
+
+        // cat where the batch says copy, which is the one thing the footer does.
+        QVERIFY(script.contains(
+            QLatin1String("cat \"${output}.whd\" \"${output}.dat\" > \"${output}\"")));
+        QVERIFY(!script.contains(QLatin1String("copy /Y")));
+
+        // A shell script is not CRLF, and a batch file is.
+        QVERIFY(!script.contains(QLatin1Char('\r')));
+
+        const auto &helper = written->second;
+        QVERIFY(helper.contains(QLatin1String("if [ ! -f \"${temp}\" ]; then")));
+        QVERIFY(helper.contains(QLatin1String("\"${resamp}\"")));
+        QVERIFY(helper.contains(QLatin1String("\"${tool}\"")));
+    }
+
+    // Single quotes make a POSIX shell take everything literally, and the one character they
+    // cannot hold is the single quote itself.
+    void the_shell_script_cannot_be_made_to_run_a_command_data() {
+        QTest::addColumn<QString>("flags");
+
+        QTest::newRow("semicolon") << QStringLiteral("g-5;whoami");
+        QTest::newRow("ampersand") << QStringLiteral("g-5&whoami");
+        QTest::newRow("substitution") << QStringLiteral("g-5$(whoami)");
+        QTest::newRow("backtick") << QStringLiteral("g-5`whoami`");
+        QTest::newRow("variable") << QStringLiteral("$PATH");
+        QTest::newRow("quote") << QStringLiteral("g-5'; whoami; '");
+    }
+
+    void the_shell_script_cannot_be_made_to_run_a_command() {
+        QFETCH(QString, flags);
+
+        const auto plan = planFor(QStringLiteral("a"), flags);
+        QVERIFY(plan.has_value());
+
+        ClassicSynthRunner runner;
+        runner.shell = ClassicSynthRunner::ScriptShell::Posix;
+
+        DiagnosticList diagnostics;
+        const auto written = runner.scripts(*plan, engines(), diagnostics);
+        QVERIFY(written.has_value());
+
+        QString line;
+        for (const auto &l : written->first.split(QLatin1Char('\n'))) {
+            if (l.startsWith(QLatin1String("export flag="))) {
+                line = l;
+            }
+        }
+        QVERIFY2(!line.isEmpty(), qPrintable(written->first));
+
+        const auto value = line.mid(QLatin1String("export flag=").size());
+        QVERIFY(value.startsWith(QLatin1Char('\'')));
+        QVERIFY(value.endsWith(QLatin1Char('\'')));
+
+        // Every quote inside left and came back, which is the only way a single quoted string
+        // can carry one. Anything else would have ended the quoting early and let the rest of
+        // the line be read as shell.
+        const auto inner = value.mid(1, value.size() - 2);
+        QCOMPARE(inner.count(QLatin1Char('\'')), inner.count(QLatin1String("'\\''")) * 3);
+    }
+
     void a_plan_with_nothing_in_it_is_refused() {
         write(QStringLiteral("bank/a.wav"), "RIFF");
 

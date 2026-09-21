@@ -56,6 +56,26 @@ namespace hello::kit {
 
         Quoting quoting = Quoting::Escaped;
 
+        /// Which shell the script is written for.
+        enum class ScriptShell {
+            /// \c temp.bat , read by the Windows command processor.
+            Batch,
+
+            /// \c temp.sh , read by \c /bin/sh . Same layout, \c cat in place of \c copy , and
+            /// single quotes in place of the \c set \c "name=value" form.
+            Posix,
+        };
+
+        /// The shell of the system this is running on, unless something says otherwise.
+        ///
+        /// \note Settable so that either script can be read back on either system. What a
+        ///       renderer writes for the other platform is not something to find out only when
+        ///       somebody runs it there.
+        ScriptShell shell = nativeShell();
+
+        /// \c Batch on Windows and \c Posix everywhere else.
+        static ScriptShell nativeShell();
+
         /// Where \c temp.bat and \c temp_helper.bat are written, empty for a folder of this
         /// program's own under the system temporary directory.
         ///
