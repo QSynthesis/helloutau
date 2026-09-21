@@ -1,3 +1,4 @@
+#include <functional>
 #include <memory>
 
 #include <QtCore/QByteArray>
@@ -129,6 +130,73 @@ private Q_SLOTS:
         QCOMPARE(arguments.at(5), QStringLiteral("11")); // offset
         QCOMPARE(arguments.at(7), QStringLiteral("21")); // consonant
         QCOMPARE(arguments.at(8), QStringLiteral("31")); // cutoff
+    }
+
+    // A piece already on disk is taken as done and the resampler is not run again, so anything
+    // that changes what the resampler would produce has to change where it would put it.
+    // Otherwise the second render hands back the first one's sound.
+    void a_note_rendered_differently_caches_somewhere_else() {
+        const auto voices = bank();
+        QVERIFY(voices.has_value());
+
+        const auto nameFor = [&](const std::function<void(Note &)> &change) {
+            auto n = note(QStringLiteral("a"));
+            change(n);
+            DiagnosticList diagnostics;
+            const auto plan = SynthPlan::make(projectOf({n}), *voices, options(), diagnostics);
+            return plan ? QString::fromStdU16String(plan->steps().at(0).cacheFile.u16string())
+                        : QString();
+        };
+
+        const QString plain = nameFor([](Note &) {});
+        QVERIFY(!plain.isEmpty());
+        QCOMPARE(nameFor([](Note &) {}), plain); // the same note twice is the same piece
+
+        // Everything the resampler is handed.
+        QVERIFY(nameFor([](Note &n) { n.flags = QStringLiteral("g5"); }) != plain);
+        QVERIFY(nameFor([](Note &n) { n.intensity = 80; }) != plain);
+        QVERIFY(nameFor([](Note &n) { n.modulation = 50; }) != plain);
+        QVERIFY(nameFor([](Note &n) { n.velocity = 150; }) != plain);
+        QVERIFY(nameFor([](Note &n) { n.noteNum = 62; }) != plain);
+        QVERIFY(nameFor([](Note &n) { n.length = 240; }) != plain);
+        QVERIFY(nameFor([](Note &n) {
+                    Vibrato vibrato;
+                    vibrato.length = 80;
+                    vibrato.period = 180;
+                    vibrato.amplitude = 100;
+                    n.vibrato = vibrato;
+                }) != plain);
+    }
+
+    // And the other way: the envelope is applied while the piece is appended to the track, not
+    // while it is rendered, so two notes differing only there are the same piece and share it.
+    void what_the_wavtool_does_is_not_part_of_the_piece() {
+        const auto voices = bank();
+        QVERIFY(voices.has_value());
+
+        DiagnosticList diagnostics;
+        const auto plain = SynthPlan::make(projectOf({note(QStringLiteral("a"))}), *voices,
+                                           options(), diagnostics);
+        QVERIFY(plain.has_value());
+
+        auto other = note(QStringLiteral("a"));
+        Envelope envelope;
+        envelope.anchors = {
+            {0,  0  },
+            {12, 100},
+            {42, 100},
+            {0,  0  }
+        };
+        other.envelope = envelope;
+        const auto changed = SynthPlan::make(projectOf({other}), *voices, options(), diagnostics);
+        QVERIFY(changed.has_value());
+
+        // If this one ever fails, the envelope has started reaching the resampler and the cache
+        // name has to follow it after all.
+        QCOMPARE(changed->steps().at(0).resamplerArguments,
+                 plain->steps().at(0).resamplerArguments);
+        QVERIFY(changed->steps().at(0).wavtoolArguments != plain->steps().at(0).wavtoolArguments);
+        QCOMPARE(changed->steps().at(0).cacheFile, plain->steps().at(0).cacheFile);
     }
 
     void the_cache_file_goes_where_it_was_asked_to() {

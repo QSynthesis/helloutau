@@ -4,6 +4,7 @@
 #include <vector>
 
 #include <QtCore/QCoreApplication>
+#include <QtCore/QCryptographicHash>
 
 #include <stdutau/synth.h>
 #include <stdutau/utautils.h>
@@ -30,6 +31,73 @@ namespace hello::kit {
         /// A path as the engines are handed it, which is UTF-8 like every other argument.
         std::string utf8(const fs::path &path) {
             return path.u8string();
+        }
+
+        /// Six characters standing for a digest, in the alphabet UTAU uses for the same field.
+        QString shortened(const QByteArray &digest) {
+            static const char ALPHABET[] =
+                "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+            quint64 value = 0;
+            for (int i = 0; i < 8 && i < digest.size(); ++i) {
+                value = (value << 8) | quint8(digest.at(i));
+            }
+            QString out;
+            for (int i = 0; i < 6; ++i) {
+                out.prepend(QLatin1Char(ALPHABET[value % 62]));
+                value /= 62;
+            }
+            return out;
+        }
+
+        /// What the sample is right now, as far as anything here can tell.
+        QString sampleState(const fs::path &sample) {
+            std::error_code error;
+            const auto size = fs::file_size(sample, error);
+            if (error) {
+                return QStringLiteral("gone");
+            }
+            const auto when = fs::last_write_time(sample, error).time_since_epoch().count();
+            return QStringLiteral("%1/%2").arg(qulonglong(size)).arg(qlonglong(when));
+        }
+
+        /// Where one note's rendered piece goes.
+        ///
+        /// A piece already on disk is taken as done and the resampler is not run for it again,
+        /// so the name has to change whenever anything that changes the sound changes. UTAU's
+        /// own name does not manage that. On the 455-note probe its six characters follow the
+        /// note's timing and nothing else: 358 notes carrying 163 different sets of flags all
+        /// came out with the same six, and changing the pitch line, the vibrato, the envelope,
+        /// the intensity or the modulation left them alone too. Reusing on that name renders
+        /// the note again with its old flags.
+        ///
+        /// So the last field is a digest of everything the resampler is handed, and of the
+        /// sample as it sits on disk. What the *wavtool* is handed is left out on purpose: the
+        /// envelope and the start point are applied while the piece is appended, not while it
+        /// is rendered, so two notes differing only there share a piece and rightly do.
+        ///
+        /// The rest of the name is UTAU's, because it is the part a person reads: the note's
+        /// place in the track, its lyric and its tone. stdutau builds that and takes the
+        /// characters a file name cannot hold out of the lyric, which is why it is kept rather
+        /// than assembled again here.
+        fs::path cacheFileFor(const std::string &utauName, const utau::ResamplerArguments &wanted,
+                              const fs::path &sample, const fs::path &directory) {
+            auto forDigest = wanted;
+            forDigest.outFile.clear(); // or the name would stand for itself
+            QByteArray subject;
+            for (const auto &argument : forDigest.arguments()) {
+                subject += QByteArray(argument.data(), qsizetype(argument.size()));
+                subject += '\n';
+            }
+            subject += sampleState(sample).toUtf8();
+
+            const QString name = QString::fromUtf8(utauName.data(), qsizetype(utauName.size()));
+            const QString stem = name.left(name.lastIndexOf(QLatin1Char('.')));
+            const int lastField = stem.lastIndexOf(QLatin1Char('_'));
+            const QString kept = lastField < 0 ? stem : stem.left(lastField);
+            const QString digest =
+                shortened(QCryptographicHash::hash(subject, QCryptographicHash::Sha1));
+            return directory /
+                   fs::u8path((kept + QLatin1Char('_') + digest).toStdString() + ".wav");
         }
 
         QStringList listOf(const std::vector<std::string> &arguments) {
@@ -119,8 +187,7 @@ namespace hello::kit {
             return std::nullopt;
         }
         if (options.outputFile.empty() || options.cacheDirectory.empty()) {
-            fail(diagnostics,
-                 tr("A render needs somewhere to write and somewhere to cache."));
+            fail(diagnostics, tr("A render needs somewhere to write and somewhere to cache."));
             return std::nullopt;
         }
 
@@ -190,17 +257,18 @@ namespace hello::kit {
             step.silent = resampler.inFile.empty();
 
             if (step.silent && !notes.at(noteIndex).isRest()) {
-                complain(
-                    diagnostics,
-                    tr("This voice bank has nothing to sing \"%1\" with, so the note is "
-                                  "silent.")
-                        .arg(notes.at(noteIndex).lyric),
-                    noteIndex);
+                complain(diagnostics,
+                         tr("This voice bank has nothing to sing \"%1\" with, so the note is "
+                            "silent.")
+                             .arg(notes.at(noteIndex).lyric),
+                         noteIndex);
             }
 
             // calc() names the cache file but not where it goes, and leaves the track file to
-            // the caller entirely.
-            step.cacheFile = options.cacheDirectory / fs::u8path(resampler.outFile);
+            // the caller entirely. The last field of the name is ours, not calc()'s: see
+            // cacheFileFor().
+            step.cacheFile =
+                cacheFileFor(resampler.outFile, resampler, step.sample, options.cacheDirectory);
 
             resampler.outFile = utf8(step.cacheFile);
             wavtool.inFile = utf8(step.cacheFile);
