@@ -197,27 +197,38 @@ namespace hello::kit {
                 };
             }
 
-            /// The helper, which is the same two calls on either shell with the cache checked
-            /// first: a piece that is already there is the cache, and skipping the resampler for
-            /// it is how UTAU reuses one.
-            QStringList helper() const {
+            /// The helper, which is the same two calls on either shell.
+            ///
+            /// \param reuse guards the resampler with a check for the piece already being
+            ///        there, which is how UTAU reuses one and is what its own helper does.
+            ///        Without it every note is rendered again.
+            QStringList helper(bool reuse) const {
                 if (_batch) {
-                    return {
-                        QLatin1String("@if exist \"%temp%\" goto A"),
-                        QLatin1String("@\"%resamp%\" %1 \"%temp%\" %2 %vel% \"%flag%\" %4 %5 %6 "
-                                      "%7 %params%"),
-                        QLatin1String(":A"),
-                        QLatin1String("@\"%tool%\" \"%output%\" \"%temp%\" %stp% %3 %env%"),
-                    };
+                    QStringList lines;
+                    if (reuse) {
+                        lines += QLatin1String("@if exist \"%temp%\" goto A");
+                    }
+                    lines += QLatin1String("@\"%resamp%\" %1 \"%temp%\" %2 %vel% \"%flag%\" %4 "
+                                           "%5 %6 %7 %params%");
+                    if (reuse) {
+                        lines += QLatin1String(":A");
+                    }
+                    lines += QLatin1String("@\"%tool%\" \"%output%\" \"%temp%\" %stp% %3 %env%");
+                    return lines;
                 }
-                return {
-                    QLatin1String("#!/bin/sh"),
-                    QLatin1String("if [ ! -f \"${temp}\" ]; then"),
-                    QLatin1String("\t\"${resamp}\" \"$1\" \"${temp}\" $2 ${vel} \"${flag}\" $4 "
-                                  "$5 $6 $7 ${params}"),
-                    QLatin1String("fi"),
-                    QLatin1String("\"${tool}\" \"${output}\" \"${temp}\" ${stp} $3 ${env}"),
-                };
+                QStringList lines = {QLatin1String("#!/bin/sh")};
+                const QString call =
+                    QLatin1String("\"${resamp}\" \"$1\" \"${temp}\" $2 ${vel} \"${flag}\" $4 "
+                                  "$5 $6 $7 ${params}");
+                if (reuse) {
+                    lines += QLatin1String("if [ ! -f \"${temp}\" ]; then");
+                    lines += QLatin1Char('\t') + call;
+                    lines += QLatin1String("fi");
+                } else {
+                    lines += call;
+                }
+                lines += QLatin1String("\"${tool}\" \"${output}\" \"${temp}\" ${stp} $3 ${env}");
+                return lines;
             }
 
             /// The line terminator. A batch file wants CRLF, a shell script does not care and
@@ -389,7 +400,7 @@ namespace hello::kit {
         // The footer. Nothing has written the track wav yet: the wavtool keeps the header and
         // the samples apart, and joining them is the last thing that happens.
         script.lines(syntax.epilogue());
-        helperScript.lines(syntax.helper());
+        helperScript.lines(syntax.helper(reuseCache));
 
         if (!script.ok() || !helperScript.ok()) {
             return std::nullopt;
@@ -421,6 +432,17 @@ namespace hello::kit {
         std::error_code error;
         fs::create_directories(directory, error);
         fs::create_directories(plan.cacheDirectory(), error);
+        forgetSuperseded(plan, diagnostics);
+
+        // Which pieces the script is going to find already there. The script itself says
+        // nothing about what it skipped, so this is the only place it can be seen.
+        QList<bool> alreadyThere(int(plan.steps().size()), false);
+        if (reuseCache) {
+            for (int i = 0; i < int(plan.steps().size()); ++i) {
+                const auto &step = plan.steps().at(i);
+                alreadyThere[i] = !step.silent && fs::exists(step.cacheFile);
+            }
+        }
         if (error) {
             fail(diagnostics,
                  tr("The folder \"%1\" could not be created.").arg(displayed(directory)));
@@ -471,11 +493,14 @@ namespace hello::kit {
             observer->progressed(int(plan.steps().size()), int(plan.steps().size()));
         }
 
-        for (const auto &step : plan.steps()) {
+        for (int i = 0; i < int(plan.steps().size()); ++i) {
+            const auto &step = plan.steps().at(i);
             if (step.silent) {
                 continue;
             }
-            if (fs::exists(step.cacheFile)) {
+            if (alreadyThere.at(i)) {
+                ++outcome.reused;
+            } else if (fs::exists(step.cacheFile)) {
                 ++outcome.resampled;
             } else {
                 ++outcome.failed;

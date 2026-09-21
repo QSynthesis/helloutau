@@ -90,6 +90,17 @@ namespace hello::kit {
             return outcome;
         }
 
+        forgetSuperseded(plan, diagnostics);
+
+        // Settled before anything runs, because the resampler is about to start creating these.
+        QList<bool> alreadyThere(int(plan.steps().size()), false);
+        if (reuseCache) {
+            for (int i = 0; i < int(plan.steps().size()); ++i) {
+                alreadyThere[i] =
+                    !plan.steps().at(i).silent && fs::exists(plan.steps().at(i).cacheFile);
+            }
+        }
+
         // The track is built up by appending, so whatever was there before has to go first, or a
         // second render lands on the end of the first.
         const auto &output = plan.outputFile();
@@ -127,7 +138,7 @@ namespace hello::kit {
                                                    : std::max(1, QThread::idealThreadCount()));
 
             for (int i = 0; i < total; ++i) {
-                if (steps.at(i).silent) {
+                if (steps.at(i).silent || alreadyThere.at(i)) {
                     continue;
                 }
                 pool.start([&, i] {
@@ -176,6 +187,10 @@ namespace hello::kit {
             const auto &step = steps.at(i);
             if (step.silent) {
                 ++outcome.silent;
+                continue;
+            }
+            if (alreadyThere.at(i)) {
+                ++outcome.reused;
                 continue;
             }
             if (fs::exists(step.cacheFile)) {

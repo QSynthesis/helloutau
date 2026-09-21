@@ -31,6 +31,9 @@ namespace hello::kit {
 
         /// How many notes each thing happened to.
         int resampled = 0;
+
+        /// How many were already rendered and were not rendered again.
+        int reused = 0;
         int silent = 0;
         int failed = 0;
     };
@@ -77,6 +80,17 @@ namespace hello::kit {
         /// How long one engine call may take, in milliseconds.
         int timeout = 30000;
 
+        /// Whether a note whose piece is already in the cache folder is left alone.
+        ///
+        /// On, because the resampler is where a render's time goes and most of a track does not
+        /// change between two renders of it. It is safe to have on because the piece's name
+        /// stands for everything that decides what is in it: change the note and it is a
+        /// different name, so there is nothing there to reuse. See \c SynthPlan.
+        ///
+        /// Turn it off to render everything again, which is what to do when the engine itself
+        /// has been changed or is suspected.
+        bool reuseCache = true;
+
         /// Whether a note the engines could not render stops the whole track.
         ///
         /// Off, because a voice bank with one bad sample should still let the rest be heard, and
@@ -86,6 +100,22 @@ namespace hello::kit {
         /// \param observer may be null, which is what the command line tools and the tests pass
         virtual SynthOutcome render(const SynthPlan &plan, const SynthEngines &engines,
                                     SynthObserver *observer, DiagnosticList &diagnostics) const = 0;
+
+    protected:
+        /// Removes the pieces in the cache folder that these notes rendered to before something
+        /// about them changed.
+        ///
+        /// Without this the folder keeps every piece every edit ever produced. A note is
+        /// identified by the number its name starts with, which is its place in the track, so
+        /// what goes is the pieces sharing a number with a note in the plan and not being the
+        /// one that note wants now.
+        ///
+        /// \note A note that moved in the track leaves its old piece behind under the number it
+        ///       used to have. UTAU has the same hole and it is not worth a file of its own to
+        ///       plug: the folder is the project's, and emptying it costs one render.
+        ///
+        /// \return how many were removed
+        int forgetSuperseded(const SynthPlan &plan, DiagnosticList &diagnostics) const;
     };
 
 }
