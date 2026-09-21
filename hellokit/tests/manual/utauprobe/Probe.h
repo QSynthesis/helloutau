@@ -63,8 +63,11 @@ namespace utauprobe {
     /// the tempo and the rests. 455 notes.
     Probe argumentProbe();
 
-    /// When UTAU stops drawing a vibrato at all, and how far a note's tail is bent by the note
-    /// after it. Every note stands between rests. 246 notes.
+    /// Everything about the pitch curve that the argument probe could not settle, because there
+    /// every note sat next to another note carrying a curve of its own. Here every note stands
+    /// between rests: when UTAU stops drawing a vibrato, what the rule drops and what it leaves,
+    /// what reaches the next note, how far a note's tail is bent by the note after it, and when
+    /// UTAU sends no curve at all.
     Probe vibratoProbe();
 
 }

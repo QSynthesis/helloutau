@@ -490,6 +490,44 @@ namespace utauprobe {
             probe.note(after);
         }
 
+        // -------------------------------------------------------------- when the curve is not sent
+        // For a handful of notes UTAU writes three values where it usually writes four: no
+        // "!tempo" and no curve at all, just "0Q" and the tempo run together. Two patterns fit
+        // what has been seen, and they have nothing to do with each other, so both are asked.
+        //
+        // One: the note's pitch line ends before the curve starts. Fifteen handover pairs agree
+        // on that one already, and these repeat it either side of the edge.
+        for (const auto &line : QList<QPair<int, int>>{
+                 {40,  20},
+                 {80,  20},
+                 {80,  30},
+                 {80,  40},
+                 {160, 60},
+                 {160, 80},
+        }) {
+            alone(QStringLiteral("nocurve"),
+                  QStringLiteral("line from -%1 by %2, ends at %3")
+                      .arg(line.first)
+                      .arg(line.second)
+                      .arg(2 * line.second - line.first),
+                  {entry("PBS", QStringLiteral("-%1").arg(line.first)),
+                   entry("PBW", QStringLiteral("%1,%1").arg(line.second)),
+                   entry("PBY", QStringLiteral("100"))});
+        }
+
+        // Two: the curve starts less than one reading before the note. A reading is five ticks,
+        // and the three notes that did this on the 455-note probe all came out under that:
+        // velocity 200 and tempo 60 both put it at 4.29 ticks, and a pre-utterance of zero puts
+        // it at none. Velocity 150 and a pre-utterance of 10 are over it and behaved.
+        for (const int velocity : {150, 175, 190, 200, 250}) {
+            alone(QStringLiteral("nocurve"), QStringLiteral("velocity %1").arg(velocity),
+                  {entry("Velocity", velocity)});
+        }
+        for (const int pre : {0, 2, 4, 5, 6, 8, 10}) {
+            alone(QStringLiteral("nocurve"), QStringLiteral("pre-utterance %1 ms").arg(pre),
+                  {entry("PreUtterance", pre)});
+        }
+
         probe.rest();
         return probe;
     }
