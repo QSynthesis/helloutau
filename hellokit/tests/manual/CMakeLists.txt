@@ -2,3 +2,4 @@
 # automatic tests cannot do: each of those covers one class with inputs written for it.
 add_subdirectory(ustconv)
 add_subdirectory(ustrender)
+add_subdirectory(utaucompare)
