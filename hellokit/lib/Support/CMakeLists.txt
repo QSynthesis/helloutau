@@ -3,13 +3,13 @@ project(HelloKitSupport
     LANGUAGES CXX
 )
 
-file(GLOB_RECURSE _src "*.cpp")
+file(GLOB_RECURSE _src *.cpp *.h ../../include/hellokit/Support/*.h)
 
 qm_find_qt(Core)
 
 hellokit_add_library(${PROJECT_NAME} SHARED
     SOURCES ${_src}
     QT_LINKS Core
-    INCLUDE_PRIVATE ../../include/** **
+    INCLUDE_PRIVATE ../../include/hellokit/Support/** **
     MACRO_PREFIX HELLOKIT_SUPPORT
 )
