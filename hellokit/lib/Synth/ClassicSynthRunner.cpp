@@ -480,13 +480,12 @@ namespace hello::kit {
             return outcome;
         }
 
-        EngineProcess engine;
-        engine.timeout = timeout;
+        const auto engine = makeEngineProcess();
         // The script names everything by absolute path, so nothing depends on this. It is set
         // so that an engine writing beside its working directory writes beside the script.
-        engine.workingDirectory = directory;
+        engine->workingDirectory = directory;
 
-        const auto run = engine.runScript(scriptPath, diagnostics);
+        const auto run = engine->runScript(scriptPath, diagnostics);
 
         // One script, so there is one step to report rather than one per note.
         if (observer) {

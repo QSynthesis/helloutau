@@ -1,5 +1,6 @@
 #include "SynthRunner.h"
 
+#include <memory>
 #include <optional>
 #include <set>
 #include <system_error>
@@ -39,6 +40,12 @@ namespace hello::kit {
     SynthRunner::SynthRunner() = default;
 
     SynthRunner::~SynthRunner() = default;
+
+    std::unique_ptr<EngineProcess> SynthRunner::makeEngineProcess() const {
+        auto engine = std::make_unique<EngineProcess>();
+        engine->timeout = timeout;
+        return engine;
+    }
 
     int SynthRunner::forgetSuperseded(const SynthPlan &plan, DiagnosticList &diagnostics) const {
         Q_UNUSED(diagnostics)

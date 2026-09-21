@@ -2,9 +2,11 @@
 #define HELLOKIT_SYNTH_SYNTHRUNNER_H
 
 #include <filesystem>
+#include <memory>
 
 #include <hellokit/Support/Diagnostic.h>
 
+#include <hellokit/Synth/EngineProcess.h>
 #include <hellokit/Synth/HelloKitSynthGlobal.h>
 #include <hellokit/Synth/SynthPlan.h>
 
@@ -102,6 +104,18 @@ namespace hello::kit {
                                     SynthObserver *observer, DiagnosticList &diagnostics) const = 0;
 
     protected:
+        /// Makes the thing that starts one engine.
+        ///
+        /// The seam. A test puts its own engine in by overriding this, which is the only way to
+        /// cover what a runner does after it has handed the arguments over: joining the two
+        /// pieces the wavtool writes, clearing what a previous render left, counting a note
+        /// whose piece never appeared, stopping when one fails.
+        ///
+        /// \note One of these is shared by every thread a runner uses, so whatever comes back
+        ///       has to be safe to call from several at once. The real one is: it keeps nothing
+        ///       between calls.
+        virtual std::unique_ptr<EngineProcess> makeEngineProcess() const;
+
         /// Removes the pieces in the cache folder that these notes rendered to before something
         /// about them changed.
         ///

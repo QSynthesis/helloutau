@@ -58,7 +58,12 @@ namespace hello::kit {
         Q_DECLARE_TR_FUNCTIONS(hello::kit::EngineProcess)
     public:
         EngineProcess();
-        ~EngineProcess();
+
+        /// Virtual, and so are the two calls below, so that a runner can be handed something
+        /// else that starts engines. The engines are somebody else's programs and are not in
+        /// this repository; without standing in for them, nothing a runner does after it has
+        /// handed over the arguments can be covered. See \c SynthRunner::makeEngineProcess().
+        virtual ~EngineProcess();
 
         /// How long one call may take, in milliseconds, before the engine is killed.
         ///
@@ -73,8 +78,9 @@ namespace hello::kit {
         ///
         /// \a program is named outright rather than looked up along \c PATH, so that what runs
         /// is the engine that was chosen and not whatever an earlier directory happens to hold.
-        EngineRun run(const std::filesystem::path &program, const QStringList &arguments,
-                      DiagnosticList &diagnostics) const;
+        virtual EngineRun run(const std::filesystem::path &program,
+                              const QStringList &arguments,
+                              DiagnosticList &diagnostics) const;
 
         /// Hands \a script to the command processor, with its console left visible.
         ///
@@ -90,7 +96,8 @@ namespace hello::kit {
         /// \warning **What goes into the script is the script writer's problem.** A batch file
         ///          is a shell script, so a lyric or a flags string written into it unescaped
         ///          appends commands. See \c ClassicSynthRunner, which is the only caller.
-        EngineRun runScript(const std::filesystem::path &script, DiagnosticList &diagnostics) const;
+        virtual EngineRun runScript(const std::filesystem::path &script,
+                                    DiagnosticList &diagnostics) const;
     };
 
 }

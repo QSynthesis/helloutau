@@ -129,6 +129,10 @@ namespace hello::kit {
             return observer && observer->cancelled();
         };
 
+        // One for every thread and for the wavtool afterwards, which is why it has to be
+        // safe to call from several at once.
+        const auto engine = makeEngineProcess();
+
         // The resampler calls do not depend on one another and are where the time goes. The
         // wavtool calls below append to one file and stay in track order whatever happens here.
         QList<ResampleOutcome> outcomes(total);
@@ -145,12 +149,10 @@ namespace hello::kit {
                     if (stopped.load()) {
                         return;
                     }
-                    EngineProcess engine;
-                    engine.timeout = timeout;
-
                     auto &result = outcomes[i];
-                    const auto run = engine.run(engines.resampler, steps.at(i).resamplerArguments,
-                                                result.diagnostics);
+                    const auto run = engine->run(engines.resampler,
+                                                 steps.at(i).resamplerArguments,
+                                                 result.diagnostics);
                     result.started = run.started;
                     result.engineOutput = run.output.trimmed();
 
@@ -210,13 +212,11 @@ namespace hello::kit {
         }
 
         // One file, appended to, so these stay in order and on one thread.
-        EngineProcess engine;
-        engine.timeout = timeout;
         for (const auto &step : steps) {
             if (!step.silent && !fs::exists(step.cacheFile)) {
                 continue;
             }
-            const auto run = engine.run(engines.wavtool, step.wavtoolArguments, diagnostics);
+            const auto run = engine->run(engines.wavtool, step.wavtoolArguments, diagnostics);
             if (!run.started) {
                 return outcome;
             }
