@@ -161,7 +161,7 @@ namespace hello::kit {
                                                          const VoiceBankLimits &limits) {
         std::error_code error;
         if (!fs::is_directory(root, error)) {
-            fail(diagnostics, VoiceBankSource::tr("\"%1\" is not a folder.").arg(displayed(root)));
+            fail(diagnostics, tr("\"%1\" is not a folder.").arg(displayed(root)));
             return std::nullopt;
         }
 
@@ -197,7 +197,7 @@ namespace hello::kit {
 
         if (stopped) {
             complain(diagnostics,
-                     VoiceBankSource::tr(
+                     tr(
                          "This folder is larger or deeper than a voice bank is expected to be, so "
                          "only part of it was read."));
         }

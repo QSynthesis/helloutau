@@ -73,7 +73,7 @@ namespace hello::kit {
         }
 
         if (!process.start()) {
-            fail(diagnostics, EngineProcess::tr("The engine \"%1\" could not be started.")
+            fail(diagnostics, tr("The engine \"%1\" could not be started.")
                                   .arg(displayed(program)));
             return result;
         }
@@ -90,7 +90,7 @@ namespace hello::kit {
         if (process.errorCode() == std::errc::timed_out) {
             result.timedOut = true;
             fail(diagnostics,
-                 EngineProcess::tr("The engine \"%1\" did not finish within %2 seconds and was "
+                 tr("The engine \"%1\" did not finish within %2 seconds and was "
                                    "stopped.")
                      .arg(displayed(program))
                      .arg(timeout / 1000));
@@ -125,7 +125,7 @@ namespace hello::kit {
 #endif
 
         if (!process.start()) {
-            fail(diagnostics, EngineProcess::tr("The rendering script \"%1\" could not be started.")
+            fail(diagnostics, tr("The rendering script \"%1\" could not be started.")
                                   .arg(displayed(script)));
             return result;
         }
@@ -136,7 +136,7 @@ namespace hello::kit {
             process.wait();
             result.timedOut = true;
             fail(diagnostics,
-                 EngineProcess::tr("The rendering script did not finish within %1 seconds and was "
+                 tr("The rendering script did not finish within %1 seconds and was "
                                    "stopped.")
                      .arg(timeout / 1000));
             return result;

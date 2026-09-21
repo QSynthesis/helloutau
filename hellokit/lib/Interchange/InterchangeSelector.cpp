@@ -44,7 +44,7 @@ namespace hello::kit {
         if (request.entries.size() < limits.minEntries) {
             diagnostics.push_back({
                 DiagnosticSeverity::Error,
-                AutomaticSelector::tr("The file holds nothing that can be imported."),
+                tr("The file holds nothing that can be imported."),
             });
             return std::nullopt;
         }
@@ -52,7 +52,7 @@ namespace hello::kit {
         if (source.entries.size() > wanted) {
             diagnostics.push_back({
                 DiagnosticSeverity::Warning,
-                AutomaticSelector::tr("The file holds %1 parts and the first %2 were taken.")
+                tr("The file holds %1 parts and the first %2 were taken.")
                     .arg(source.entries.size())
                     .arg(wanted),
             });

@@ -143,7 +143,7 @@ namespace hello::kit {
         ClassicSynthRunner::scripts(const SynthPlan &plan, const SynthEngines &engines,
                                     DiagnosticList &diagnostics) const {
         if (plan.steps().isEmpty()) {
-            fail(diagnostics, ClassicSynthRunner::tr("There is nothing to render."));
+            fail(diagnostics, tr("There is nothing to render."));
             return std::nullopt;
         }
 
@@ -192,7 +192,7 @@ namespace hello::kit {
             const auto &w = step.wavtoolArguments;
             if (r.size() < 9 || w.size() < 4) {
                 fail(diagnostics,
-                     ClassicSynthRunner::tr("This note came out with arguments a rendering script "
+                     tr("This note came out with arguments a rendering script "
                                             "cannot be written from."),
                      step.noteIndex);
                 return std::nullopt;
@@ -260,7 +260,7 @@ namespace hello::kit {
         fs::create_directories(directory, error);
         fs::create_directories(plan.cacheDirectory(), error);
         if (error) {
-            fail(diagnostics, ClassicSynthRunner::tr("The folder \"%1\" could not be created.")
+            fail(diagnostics, tr("The folder \"%1\" could not be created.")
                                   .arg(displayed(directory)));
             return outcome;
         }
@@ -282,7 +282,7 @@ namespace hello::kit {
 
         if (!put(batPath, written->first) || !put(helperPath, written->second)) {
             fail(diagnostics,
-                 ClassicSynthRunner::tr("The rendering script could not be written to \"%1\".")
+                 tr("The rendering script could not be written to \"%1\".")
                      .arg(displayed(directory)));
             return outcome;
         }
@@ -322,10 +322,10 @@ namespace hello::kit {
 
         if (!fs::exists(plan.outputFile())) {
             fail(diagnostics, run.started
-                                  ? ClassicSynthRunner::tr(
+                                  ? tr(
                                         "The rendering script ran but wrote nothing to \"%1\".")
                                         .arg(displayed(plan.outputFile()))
-                                  : ClassicSynthRunner::tr("The rendering script did not run."));
+                                  : tr("The rendering script did not run."));
             return outcome;
         }
 

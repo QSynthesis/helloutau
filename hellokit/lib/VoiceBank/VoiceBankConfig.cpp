@@ -25,7 +25,7 @@ namespace hello::kit {
                                                          DiagnosticList &diagnostics) {
         std::ifstream in(path, std::ios::binary);
         if (!in) {
-            fail(diagnostics, VoiceBankConfig::tr("This file could not be opened."));
+            fail(diagnostics, tr("This file could not be opened."));
             return std::nullopt;
         }
         const std::string bytes((std::istreambuf_iterator<char>(in)),
@@ -39,12 +39,12 @@ namespace hello::kit {
 
         std::ofstream out(path, std::ios::binary | std::ios::trunc);
         if (!out) {
-            fail(diagnostics, VoiceBankConfig::tr("This file could not be written."));
+            fail(diagnostics, tr("This file could not be written."));
             return false;
         }
         out.write(bytes.constData(), bytes.size());
         if (!out) {
-            fail(diagnostics, VoiceBankConfig::tr("This file could not be written."));
+            fail(diagnostics, tr("This file could not be written."));
             return false;
         }
         return true;
@@ -56,19 +56,19 @@ namespace hello::kit {
         const auto document = QJsonDocument::fromJson(json.toByteArray(), &error);
         if (error.error != QJsonParseError::NoError) {
             fail(diagnostics,
-                 VoiceBankConfig::tr("This file is not valid JSON: %1").arg(error.errorString()));
+                 tr("This file is not valid JSON: %1").arg(error.errorString()));
             return std::nullopt;
         }
         if (!document.isObject()) {
             fail(diagnostics,
-                 VoiceBankConfig::tr("This file is not a HelloUTAU voice bank record."));
+                 tr("This file is not a HelloUTAU voice bank record."));
             return std::nullopt;
         }
 
         auto root = document.object();
         if (root.value(QLatin1String(KeyFormat)).toString() != QLatin1String(FormatName)) {
             fail(diagnostics,
-                 VoiceBankConfig::tr("This file is not a HelloUTAU voice bank record."));
+                 tr("This file is not a HelloUTAU voice bank record."));
             return std::nullopt;
         }
 

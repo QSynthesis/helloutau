@@ -60,7 +60,7 @@ namespace hello::kit {
                                              DiagnosticList &diagnostics) const {
         SynthOutcome outcome;
         if (plan.steps().isEmpty()) {
-            fail(diagnostics, ThreadedSynthRunner::tr("There is nothing to render."));
+            fail(diagnostics, tr("There is nothing to render."));
             return outcome;
         }
 
@@ -68,7 +68,7 @@ namespace hello::kit {
         fs::create_directories(plan.cacheDirectory(), error);
         if (error) {
             fail(diagnostics,
-                 ThreadedSynthRunner::tr("The cache folder \"%1\" could not be created.")
+                 tr("The cache folder \"%1\" could not be created.")
                      .arg(displayed(plan.cacheDirectory())));
             return outcome;
         }
@@ -104,9 +104,9 @@ namespace hello::kit {
                 if (!fs::exists(step.cacheFile)) {
                     ++outcome.failed;
                     complain(diagnostics,
-                             ThreadedSynthRunner::tr("This note could not be rendered: %1")
+                             tr("This note could not be rendered: %1")
                                  .arg(run.output.trimmed().isEmpty()
-                                          ? ThreadedSynthRunner::tr("the resampler wrote nothing.")
+                                          ? tr("the resampler wrote nothing.")
                                           : run.output.trimmed()),
                              step.noteIndex);
                     if (stopOnFirstFailure) {
@@ -128,7 +128,7 @@ namespace hello::kit {
         }
 
         if (!fs::exists(header) || !fs::exists(data)) {
-            fail(diagnostics, ThreadedSynthRunner::tr(
+            fail(diagnostics, tr(
                                   "The wavtool wrote nothing for \"%1\". It may be a different "
                                   "wavtool from the one these arguments are for.")
                                   .arg(displayed(output)));
@@ -140,7 +140,7 @@ namespace hello::kit {
             if (!out || !append(out, header) || !append(out, data)) {
                 fail(
                     diagnostics,
-                    ThreadedSynthRunner::tr("\"%1\" could not be written.").arg(displayed(output)));
+                    tr("\"%1\" could not be written.").arg(displayed(output)));
                 return outcome;
             }
         }

@@ -191,7 +191,7 @@ namespace hello::kit {
         }
 
         if (bank.m_samples.isEmpty()) {
-            complain(diagnostics, VoiceBank::tr("This folder holds nothing that can be sung."));
+            complain(diagnostics, tr("This folder holds nothing that can be sung."));
         }
         return bank;
     }

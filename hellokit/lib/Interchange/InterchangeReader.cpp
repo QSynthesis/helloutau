@@ -28,7 +28,7 @@ namespace hello::kit {
             if (!hasError(result.diagnostics)) {
                 result.diagnostics.push_back({
                     DiagnosticSeverity::Error,
-                    InterchangeReader::tr("The file could not be read."),
+                    tr("The file could not be read."),
                 });
             }
             return result;
@@ -50,7 +50,7 @@ namespace hello::kit {
         if (!result.project && !hasError(result.diagnostics)) {
             result.diagnostics.push_back({
                 DiagnosticSeverity::Error,
-                InterchangeReader::tr("The file could not be converted."),
+                tr("The file could not be converted."),
             });
         }
         return result;
