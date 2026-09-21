@@ -8,6 +8,7 @@
 |---|---|
 | `HelloKitSupport` | `Diagnostic`、`TextCodec`（编码解析、转义还原） |
 | `HelloKitDocument` | `PayloadCodec`、`Project` / `Track` / `Note` 模型、`.usth` 读写、`UstDocument` |
+| `HelloKitVoiceBank` | `VoiceBankConfig`、`VoiceBankSource`（原始扫描）、`VoiceBank`（解码后的模型与查询） |
 | `HelloKitInterchange` | 接口、注册表、`Formats/MidiConvert`（读写两个方向） |
 | `HelloUtauWidgets` | 一个装着 `QLabel` 的 `MainWindow`，证明 Qt Widgets 和 moc 接上了 |
 | `helloutau` | 薄驱动，只有 `main.cpp` |
@@ -15,6 +16,10 @@
 构建链已验证：qmsetup 的 `hellokit_add_library` / `helloutau_add_library` / `helloutau_add_application`、Qt 6.11 加 AUTOMOC、stdcorelib、stdutau、wolf-midi、QtTest 加 `add_auto_test`、ctest。
 
 `HelloKitSupport` 有 `Diagnostic` 和 `TextCodec`，后者是编码这件事的全部落地处：名字怎么解析、解不开的字节怎么拒、编码放不下的字符怎么转义。`HelloKitDocument` 有 `PayloadCodec`、`Project` / `Track` / `Note` 数据模型，以及 `.usth` 的读写——**读写就挂在 `Project` 上**，因为 `.usth` 不是众多格式里的一种，它就是工程本身的写法，别的格式都走 Interchange 转成 `Project`。`.ust` 在 `UstDocument`——它是一份**已经读进来但还没解码**的 UST，`open()` 解析一次，探编码和 `toProject()` 都吃那一次的结果，不重复解析。`HelloKitInterchange` 的接口与注册表齐了（`InterchangeReader` / `InterchangeWriter` / `InterchangeSource` / `InterchangeSelector` / `AutomaticSelector` / `InterchangeRegistry` / `InterchangePlugin`），第一个格式 `Formats/MidiConvert` 读写都有，headless 可跑可测。形状与约束见 [`Interchange.md`](Interchange.md)。**还没有界面**：选轨和选编码那两页要等第三阶段。
+
+`HelloKitVoiceBank` 是音源目录模型。读和解码分成两步，理由和 `.ust` 一样：选编码的那个界面得先把字节拿给用户看，而读这件事本身不能已经需要编码。`VoiceBankSource` 走一遍目录树，把每一级的 `oto.ini` / `prefix.map` / `character.txt` / `readme.txt` / `hello-config.json` 和音频文件名收上来，**什么都不解码、什么都不写**——记住一个编码意味着往用户的音源目录里写文件，扫描不是做这个决定的地方。`VoiceBank` 拿一个 `VoiceBankCharsetSelector`（headless 用 `FixedCharsetSelector`）逐目录问编码，解码，然后 `find(noteNum, lyric)` 按「prefix.map → 别名 → 文件名」给出样本和切割参数。
+
+几条实测钉下来的行为：**没人能说出编码的目录只丢掉需要解码的部分**，它的样本仍然能按文件名唱——文件名不需要编码，而没有 `oto.ini` 的音源本来就是这么唱的；**文件名本身也是别名**，[官方那页](https://w.atwiki.jp/utaou/pages/106.html)写了 UTAU 会把 wav 名当别名读，音源作者靠加 `_` 前缀来避开；扫描有深度和目录数上限，符号链接一律不跟——音源是用户挑的文件夹，形状不归我们信任。
 
 `hellokit/tests/manual/ustconv/` 是手动跑的命令行工具，把上面这些串起来：`.ust` / `.usth` / `.mid` 三种格式两两互转，参数解析用 `stdc::cli`。它不进 ctest，存在的意义就是验证各块拼起来能用——各自的自动测试做不到这件事。
 
@@ -36,7 +41,9 @@
 
 ## 接下来
 
-阶段划分、每阶段怎么算数、从 QSynthesis 拿什么不拿什么，都在 [`Roadmap.md`](Roadmap.md)。当前在第一阶段「数据层」，四条算数过了三条：转义往返、MIDI 无界面导入、UST 读写语义相等。**剩下的是 `HelloKitVoiceBank`**，音源目录模型，第四条「拿真实音源跑通目录扫描」要它。
+阶段划分、每阶段怎么算数、从 QSynthesis 拿什么不拿什么，都在 [`Roadmap.md`](Roadmap.md)。**第一阶段「数据层」四条算数都过了**：转义往返、MIDI 无界面导入、UST 读写语义相等（`ustconv --check`）、真实音源跑通目录扫描（一份 GBK 的中文音源，903 条 oto 条目，`character.txt` 的作者名和 `Version:1.0` 那种非条目行都没丢）。
+
+下一步进第二阶段「合成」。
 
 ## 插件放在哪
 
