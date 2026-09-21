@@ -330,7 +330,47 @@ namespace hello::kit {
 
     }
 
-    std::optional<Project> Project::parse(QByteArrayView json, DiagnosticList &diagnostics) {
+    std::optional<Project> Project::open(const std::filesystem::path &path,
+                                          DiagnosticList &diagnostics) {
+        std::ifstream in(path, std::ios::binary);
+        if (!in) {
+            fail(diagnostics, tr("This file could not be opened."));
+            return std::nullopt;
+        }
+        const std::string bytes((std::istreambuf_iterator<char>(in)),
+                                std::istreambuf_iterator<char>());
+        return fromJson(QByteArrayView(bytes.data(), qsizetype(bytes.size())), diagnostics);
+    }
+
+    bool Project::save(const std::filesystem::path &path,
+                        DiagnosticList &diagnostics) const {
+        if (tracks.size() != 1) {
+            fail(diagnostics,
+                 tr("A project of this version holds one track, and this one holds %1.")
+                     .arg(tracks.size()));
+            return false;
+        }
+
+        const auto bytes = toJson();
+
+        // Binary, so that nothing turns the newlines into CRLF on Windows. The format says the
+        // file is written with newlines, and a project file is something people diff.
+        std::ofstream out(path, std::ios::binary | std::ios::trunc);
+        if (!out) {
+            fail(diagnostics, tr("This file could not be written."));
+            return false;
+        }
+        out.write(bytes.constData(), bytes.size());
+        if (!out) {
+            fail(diagnostics, tr("This file could not be written."));
+            return false;
+        }
+        return true;
+    }
+
+
+    std::optional<Project> Project::fromJson(QByteArrayView json,
+                                             DiagnosticList &diagnostics) {
         QJsonParseError error{};
         const auto document = QJsonDocument::fromJson(json.toByteArray(), &error);
         if (error.error != QJsonParseError::NoError) {
@@ -411,19 +451,7 @@ namespace hello::kit {
         return project;
     }
 
-    std::optional<Project> Project::read(const std::filesystem::path &path,
-                                          DiagnosticList &diagnostics) {
-        std::ifstream in(path, std::ios::binary);
-        if (!in) {
-            fail(diagnostics, tr("This file could not be opened."));
-            return std::nullopt;
-        }
-        const std::string bytes((std::istreambuf_iterator<char>(in)),
-                                std::istreambuf_iterator<char>());
-        return parse(QByteArrayView(bytes.data(), qsizetype(bytes.size())), diagnostics);
-    }
-
-    QByteArray Project::serialize() const {
+    QByteArray Project::toJson() const {
         // Starts from what was not understood when the file was read, so that those fields come
         // back. Ours are inserted over the top, so a stale copy of one cannot win.
         QJsonObject root = unknownFields;
@@ -446,32 +474,6 @@ namespace hello::kit {
         root.insert(QLatin1String(KeyTracks), trackArray);
 
         return QJsonDocument(root).toJson(QJsonDocument::Indented);
-    }
-
-    bool Project::write(const std::filesystem::path &path,
-                        DiagnosticList &diagnostics) const {
-        if (tracks.size() != 1) {
-            fail(diagnostics,
-                 tr("A project of this version holds one track, and this one holds %1.")
-                     .arg(tracks.size()));
-            return false;
-        }
-
-        const auto bytes = serialize();
-
-        // Binary, so that nothing turns the newlines into CRLF on Windows. The format says the
-        // file is written with newlines, and a project file is something people diff.
-        std::ofstream out(path, std::ios::binary | std::ios::trunc);
-        if (!out) {
-            fail(diagnostics, tr("This file could not be written."));
-            return false;
-        }
-        out.write(bytes.constData(), bytes.size());
-        if (!out) {
-            fail(diagnostics, tr("This file could not be written."));
-            return false;
-        }
-        return true;
     }
 
 }

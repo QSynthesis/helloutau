@@ -78,6 +78,13 @@ namespace {
                lyricBytes + "\r\nNoteNum=60\r\n[#TRACKEND]\r\n";
     }
 
+    /// Builds and writes in the two steps the real caller takes.
+    bool writeTo(const Project &project, const TempUst &file,
+                 const UstDocument::ExportOptions &options, DiagnosticList &diagnostics) {
+        auto ust = UstDocument::fromProject(project, options, diagnostics);
+        return ust && ust->save(file.path(), diagnostics);
+    }
+
     /// Opens and converts in the two steps the real caller takes, with one parse between them.
     ///
     /// \param sink where to keep what was said about it, for the cases that ask
@@ -111,7 +118,7 @@ BOOST_AUTO_TEST_CASE(a_ust_written_here_reads_back_the_same) {
     note.userData.insert(QStringLiteral("$mine"), QStringLiteral("kept"));
 
     DiagnosticList diagnostics;
-    BOOST_REQUIRE(UstDocument::write(project, file.path(), {}, diagnostics));
+    BOOST_REQUIRE(writeTo(project, file, {}, diagnostics));
 
     auto again = readAs(file, QStringLiteral("UTF-8"));
     BOOST_REQUIRE(again.has_value());
@@ -147,7 +154,7 @@ BOOST_AUTO_TEST_CASE(the_vibrato_value_utau_ignores_still_comes_back) {
     project.tracks[0].notes[0].vibrato = Vibrato{65, 180, 35, 20, 20, 0, 0, 42};
 
     DiagnosticList diagnostics;
-    BOOST_REQUIRE(UstDocument::write(project, file.path(), {}, diagnostics));
+    BOOST_REQUIRE(writeTo(project, file, {}, diagnostics));
 
     auto again = readAs(file, QStringLiteral("UTF-8"));
     BOOST_REQUIRE(again.has_value());
@@ -163,7 +170,7 @@ BOOST_AUTO_TEST_CASE(the_control_note_is_added_once_and_eaten_once) {
     auto project = oneNote();
 
     DiagnosticList diagnostics;
-    BOOST_REQUIRE(UstDocument::write(project, file.path(), {}, diagnostics));
+    BOOST_REQUIRE(writeTo(project, file, {}, diagnostics));
 
     const QByteArray written = file.readBytes();
     BOOST_CHECK(written.contains(controlNoteLyric));
@@ -176,7 +183,7 @@ BOOST_AUTO_TEST_CASE(the_control_note_is_added_once_and_eaten_once) {
             BOOST_REQUIRE_EQUAL(again->tracks.first().notes.size(), 1);
             BOOST_CHECK(!again->tracks.first().notes.first().isRest());
         }
-        BOOST_REQUIRE(UstDocument::write(*again, file.path(), {}, diagnostics));
+        BOOST_REQUIRE(writeTo(*again, file, {}, diagnostics));
     }
 }
 
@@ -187,7 +194,7 @@ BOOST_AUTO_TEST_CASE(the_encoding_is_recorded_and_read_back) {
     auto project = oneNote(u("あ"));
 
     DiagnosticList diagnostics;
-    BOOST_REQUIRE(UstDocument::write(project, file.path(), {QStringLiteral("Shift_JIS"), {}, {}}, diagnostics));
+    BOOST_REQUIRE(writeTo(project, file, {QStringLiteral("Shift_JIS"), {}, {}}, diagnostics));
 
     // UST can only declare UTF-8, so it says nothing here.
     BOOST_CHECK(!file.readBytes().contains("Charset="));
@@ -206,7 +213,7 @@ BOOST_AUTO_TEST_CASE(the_encoding_is_recorded_and_read_back) {
 BOOST_AUTO_TEST_CASE(utf8_is_declared_in_the_version_section) {
     TempUst file("utf8");
     DiagnosticList diagnostics;
-    BOOST_REQUIRE(UstDocument::write(oneNote(), file.path(), {}, diagnostics));
+    BOOST_REQUIRE(writeTo(oneNote(), file, {}, diagnostics));
     BOOST_CHECK(file.readBytes().contains("Charset=UTF-8"));
 
     auto probe = UstDocument::open(file.path(), diagnostics);
@@ -220,7 +227,7 @@ BOOST_AUTO_TEST_CASE(a_lyric_the_encoding_cannot_hold_survives_as_an_escape) {
     auto project = oneNote(u("你"));
 
     DiagnosticList diagnostics;
-    BOOST_REQUIRE(UstDocument::write(project, file.path(), {QStringLiteral("Shift_JIS"), {}, {}}, diagnostics));
+    BOOST_REQUIRE(writeTo(project, file, {QStringLiteral("Shift_JIS"), {}, {}}, diagnostics));
     BOOST_CHECK(file.readBytes().contains("\\u4f60"));
 
     auto again = readAs(file, QStringLiteral("Shift_JIS"));
@@ -275,17 +282,39 @@ BOOST_AUTO_TEST_CASE(the_engines_come_from_the_project_first) {
     auto project = oneNote();
     project.settings.resampler = QStringLiteral("own_resampler.exe");
 
-    UstExportOptions options;
+    UstDocument::ExportOptions options;
     options.wavtool = QStringLiteral("local_wavtool.exe");
     options.resampler = QStringLiteral("local_resampler.exe");
 
     DiagnosticList diagnostics;
-    BOOST_REQUIRE(UstDocument::write(project, file.path(), options, diagnostics));
+    BOOST_REQUIRE(writeTo(project, file, options, diagnostics));
 
     auto again = readAs(file, QStringLiteral("UTF-8"));
     BOOST_REQUIRE(again.has_value());
     BOOST_CHECK_EQUAL(again->settings.resampler.toStdString(), "own_resampler.exe");
     BOOST_CHECK_EQUAL(again->settings.wavtool.toStdString(), "local_wavtool.exe");
+}
+
+// Project does not carry everything a UST holds, so the parse stays reachable. What comes out of
+// it is bytes in the file's own encoding, which is the point: it has not been decoded and the
+// caller has to do that itself.
+BOOST_AUTO_TEST_CASE(the_parse_underneath_is_reachable_and_undecoded) {
+    TempUst file("raw");
+    const TextCodec sjis(QStringLiteral("Shift_JIS"));
+    file.writeBytes(plainUst(sjis.encode(u("あ"))));
+
+    DiagnosticList diagnostics;
+    auto ust = UstDocument::open(file.path(), diagnostics);
+    BOOST_REQUIRE(ust.has_value());
+
+    BOOST_REQUIRE_EQUAL(ust->file().notes.size(), 1);
+    const std::string &raw = ust->file().notes.front().lyric;
+    BOOST_CHECK_EQUAL(raw.size(), 2); // Shift_JIS bytes, not UTF-8 and not decoded
+    BOOST_CHECK(raw != u("あ").toStdString());
+
+    auto project = ust->toProject(QStringLiteral("Shift_JIS"), diagnostics);
+    BOOST_REQUIRE(project.has_value());
+    BOOST_CHECK(project->tracks.first().notes.first().lyric == u("あ"));
 }
 
 BOOST_AUTO_TEST_CASE(something_that_is_not_a_ust_is_an_error) {

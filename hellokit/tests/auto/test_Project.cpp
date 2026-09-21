@@ -20,7 +20,7 @@ namespace {
 
     std::optional<Project> parsed(const QByteArray &json) {
         DiagnosticList diagnostics;
-        return Project::parse(json, diagnostics);
+        return Project::fromJson(json, diagnostics);
     }
 
     Project oneNote() {
@@ -53,24 +53,24 @@ BOOST_AUTO_TEST_CASE(a_minimal_project_reads) {
 // be read as missing and the user would get an empty project instead of a message.
 BOOST_AUTO_TEST_CASE(json_that_is_not_a_project_is_refused) {
     DiagnosticList diagnostics;
-    BOOST_CHECK(!Project::parse(R"({"hello":1})", diagnostics).has_value());
+    BOOST_CHECK(!Project::fromJson(R"({"hello":1})", diagnostics).has_value());
     BOOST_CHECK(hasError(diagnostics));
 
     diagnostics.clear();
-    BOOST_CHECK(!Project::parse(R"({"$format":"ustx","version":1})", diagnostics).has_value());
+    BOOST_CHECK(!Project::fromJson(R"({"$format":"ustx","version":1})", diagnostics).has_value());
     BOOST_CHECK(hasError(diagnostics));
 }
 
 BOOST_AUTO_TEST_CASE(broken_json_is_refused) {
     DiagnosticList diagnostics;
-    BOOST_CHECK(!Project::parse(R"({"$format":"usth",)", diagnostics).has_value());
+    BOOST_CHECK(!Project::fromJson(R"({"$format":"usth",)", diagnostics).has_value());
     BOOST_CHECK(hasError(diagnostics));
 }
 
 BOOST_AUTO_TEST_CASE(a_newer_version_is_refused_rather_than_guessed_at) {
     DiagnosticList diagnostics;
     auto json = QByteArray(R"({"$format":"usth","version":99,"settings":{},"tracks":[{}]})");
-    BOOST_CHECK(!Project::parse(json, diagnostics).has_value());
+    BOOST_CHECK(!Project::fromJson(json, diagnostics).has_value());
     BOOST_CHECK(hasError(diagnostics));
 }
 
@@ -80,12 +80,12 @@ BOOST_AUTO_TEST_CASE(more_than_one_track_is_refused_not_trimmed) {
     DiagnosticList diagnostics;
     auto json = QByteArray(
         R"({"$format":"usth","version":1,"settings":{},"tracks":[{"notes":[]},{"notes":[]}]})");
-    BOOST_CHECK(!Project::parse(json, diagnostics).has_value());
+    BOOST_CHECK(!Project::fromJson(json, diagnostics).has_value());
     BOOST_CHECK(hasError(diagnostics));
 
     diagnostics.clear();
     json = QByteArray(R"({"$format":"usth","version":1,"settings":{},"tracks":[]})");
-    BOOST_CHECK(!Project::parse(json, diagnostics).has_value());
+    BOOST_CHECK(!Project::fromJson(json, diagnostics).has_value());
     BOOST_CHECK(hasError(diagnostics));
 }
 
@@ -113,7 +113,7 @@ BOOST_AUTO_TEST_CASE(a_note_missing_a_required_field_is_an_error) {
     DiagnosticList diagnostics;
     auto json = QByteArray(
         R"({"$format":"usth","version":1,"settings":{},"tracks":[{"notes":[{"lyric":"a"}]}]})");
-    BOOST_CHECK(!Project::parse(json, diagnostics).has_value());
+    BOOST_CHECK(!Project::fromJson(json, diagnostics).has_value());
     BOOST_CHECK(hasError(diagnostics));
 }
 
@@ -123,7 +123,7 @@ BOOST_AUTO_TEST_CASE(unknown_top_level_fields_come_back) {
     auto project = parsed(minimal(R"("somethingNew":{"a":1},)"));
     BOOST_REQUIRE(project.has_value());
 
-    const auto written = project->serialize();
+    const auto written = project->toJson();
     BOOST_CHECK(written.contains("somethingNew"));
 
     auto again = parsed(written);
@@ -146,7 +146,7 @@ BOOST_AUTO_TEST_CASE(everything_a_note_carries_survives_a_round_trip) {
     note.patch = QStringLiteral("resampler.exe");
     note.userData.insert(QStringLiteral("$whatever"), QStringLiteral("kept"));
 
-    auto again = parsed(project.serialize());
+    auto again = parsed(project.toJson());
     BOOST_REQUIRE(again.has_value());
 
     const auto &back = again->tracks.first().notes.first();
@@ -178,7 +178,7 @@ BOOST_AUTO_TEST_CASE(the_engine_paths_are_kept) {
     project.settings.wavtool = QStringLiteral("C:/evil/wavtool.exe");
     project.settings.resampler = QStringLiteral("C:/evil/resampler.exe");
 
-    auto again = parsed(project.serialize());
+    auto again = parsed(project.toJson());
     BOOST_REQUIRE(again.has_value());
     BOOST_CHECK_EQUAL(again->settings.wavtool.toStdString(), "C:/evil/wavtool.exe");
     BOOST_CHECK_EQUAL(again->settings.resampler.toStdString(), "C:/evil/resampler.exe");
@@ -188,7 +188,7 @@ BOOST_AUTO_TEST_CASE(the_mode1_pitch_curve_survives_a_round_trip) {
     auto project = oneNote();
     project.tracks[0].notes[0].pitchBend = PitchBend{-20.0, {0, 10.5, -20}};
 
-    auto again = parsed(project.serialize());
+    auto again = parsed(project.toJson());
     BOOST_REQUIRE(again.has_value());
     const auto &bend = again->tracks.first().notes.first().pitchBend;
     BOOST_REQUIRE(bend.has_value());
@@ -203,7 +203,7 @@ BOOST_AUTO_TEST_CASE(the_file_is_utf8_without_a_bom_and_uses_newlines) {
     project.tracks[0].notes[0].lyric = QString::fromUtf8("あ");
     project.settings.name = QString::fromUtf8("中文工程");
 
-    const auto written = project.serialize();
+    const auto written = project.toJson();
     BOOST_CHECK(!written.startsWith("\xEF\xBB\xBF"));
     BOOST_CHECK(!written.contains("\r\n"));
     BOOST_CHECK(written.contains(QString::fromUtf8("中文工程").toUtf8()));

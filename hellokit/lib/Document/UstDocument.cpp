@@ -256,47 +256,25 @@ namespace hello::kit {
 
     }
 
-    // The parsed file, held so that settling on an encoding does not mean reading it again.
-    class UstDocument::Impl {
-    public:
-        utau::UstFile file;
-
-        // Worked out while the file is read. Both are asked before anything is decoded, and
-        // neither depends on the encoding.
-        std::optional<QString> recorded;
-        bool utf8 = false;
-        bool hasControlNote = false;
-    };
-
-    UstDocument::UstDocument() : _impl(std::make_unique<Impl>()) {
-    }
-
-    UstDocument::~UstDocument() = default;
-
-    UstDocument::UstDocument(UstDocument &&RHS) noexcept = default;
-
-    UstDocument &UstDocument::operator=(UstDocument &&RHS) noexcept = default;
-
     std::optional<UstDocument> UstDocument::open(const std::filesystem::path &path,
                                                  DiagnosticList &diagnostics) {
         UstDocument document;
-        auto &impl = *document._impl;
-
-        if (!impl.file.load(path)) {
+        if (!document.m_file.load(path)) {
             fail(diagnostics, tr("This file could not be read."));
             return std::nullopt;
         }
 
-        impl.utf8 = viewOf(impl.file.version.charset).compare("UTF-8", Qt::CaseInsensitive) == 0;
+        document.m_utf8 =
+            viewOf(document.m_file.version.charset).compare("UTF-8", Qt::CaseInsensitive) == 0;
 
-        for (const auto &note : impl.file.notes) {
+        for (const auto &note : document.m_file.notes) {
             if (!isControlNote(note)) {
                 continue;
             }
-            impl.hasControlNote = true;
+            document.m_hasControlNote = true;
             const auto charset = payloadOf(note).value(QLatin1String("ustCharset")).toString();
             if (!charset.isEmpty()) {
-                impl.recorded = charset;
+                document.m_recorded = charset;
             }
             break;
         }
@@ -304,34 +282,34 @@ namespace hello::kit {
     }
 
     std::optional<QString> UstDocument::recordedCharset() const {
-        return _impl->recorded;
+        return m_recorded;
     }
 
     bool UstDocument::declaresUtf8() const {
-        return _impl->utf8;
+        return m_utf8;
     }
 
     std::optional<QString> UstDocument::settledCharset() const {
-        if (_impl->recorded) {
-            return _impl->recorded;
+        if (m_recorded) {
+            return m_recorded;
         }
-        if (_impl->utf8) {
+        if (m_utf8) {
             return QStringLiteral("UTF-8");
         }
         return std::nullopt;
     }
 
     QByteArrayView UstDocument::rawProjectName() const {
-        return viewOf(_impl->file.settings.projectName);
+        return viewOf(m_file.settings.projectName);
     }
 
     QByteArrayView UstDocument::rawVoiceDir() const {
-        return viewOf(_impl->file.settings.voiceDir);
+        return viewOf(m_file.settings.voiceDir);
     }
 
     QList<QByteArrayView> UstDocument::rawLyrics() const {
         QList<QByteArrayView> lyrics;
-        for (const auto &note : _impl->file.notes) {
+        for (const auto &note : m_file.notes) {
             if (!isControlNote(note) && !note.lyric.empty()) {
                 lyrics.push_back(viewOf(note.lyric));
             }
@@ -350,8 +328,8 @@ namespace hello::kit {
         // Escaping is only ever applied to files this program wrote, and only where the encoding
         // could not hold everything. A UST from UTAU knows nothing about it, and unescaping one
         // would eat its backslashes. The control note is what says which kind of file this is.
-        const Reader reader(codec, _impl->hasControlNote && !codec.isUtf8());
-        const auto &file = _impl->file;
+        const Reader reader(codec, m_hasControlNote && !codec.isUtf8());
+        const auto &file = m_file;
 
         Project project;
         bool ok = true;
@@ -383,25 +361,39 @@ namespace hello::kit {
         return project;
     }
 
-    bool UstDocument::write(const Project &project, const std::filesystem::path &path,
-                            const UstExportOptions &options, DiagnosticList &diagnostics) {
+    bool UstDocument::save(const std::filesystem::path &path,
+                           DiagnosticList &diagnostics) const {
+        if (!m_file.save(path)) {
+            fail(diagnostics, tr("This file could not be written."));
+            return false;
+        }
+        return true;
+    }
+
+    std::optional<UstDocument> UstDocument::fromProject(const Project &project,
+                                                        const ExportOptions &options,
+                                                        DiagnosticList &diagnostics) {
         if (project.tracks.size() != 1) {
             fail(diagnostics, tr("A UST holds one track, and this project holds %1.")
                                   .arg(project.tracks.size()));
-            return false;
+            return std::nullopt;
         }
 
         const TextCodec codec(options.charset);
         if (!codec.isValid()) {
             fail(diagnostics, tr("The encoding \"%1\" is not available.").arg(options.charset));
-            return false;
+            return std::nullopt;
         }
         const bool escaping = !codec.isUtf8();
         const auto out = [&](const QString &text) {
             return encodeFor(codec, escaping, text);
         };
 
-        utau::UstFile file;
+        UstDocument document;
+        auto &file = document.m_file;
+        document.m_utf8 = codec.isUtf8();
+        document.m_recorded = codec.name();
+        document.m_hasControlNote = true;
 
         // UST can say "this is UTF-8" and nothing else, so anything else goes unsaid here and is
         // carried by the control note instead.
@@ -448,12 +440,7 @@ namespace hello::kit {
         for (const auto &note : project.tracks.first().notes) {
             file.notes.push_back(noteTo(note, codec, escaping));
         }
-
-        if (!file.save(path)) {
-            fail(diagnostics, tr("This file could not be written."));
-            return false;
-        }
-        return true;
+        return document;
     }
 
 }

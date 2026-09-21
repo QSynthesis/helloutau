@@ -82,19 +82,16 @@ namespace hello::kit {
 
         /// \return the project, or nothing where the file could not be understood, with the
         ///         reason in \a diagnostics
-        static std::optional<Project> read(const std::filesystem::path &path,
+        static std::optional<Project> open(const std::filesystem::path &path,
                                            DiagnosticList &diagnostics);
 
-        /// \overload
-        ///
-        /// Separate from read() so that a caller that already holds the bytes, the tests above
-        /// all, does not have to put them on disk first.
-        static std::optional<Project> parse(QByteArrayView json, DiagnosticList &diagnostics);
-
-        bool write(const std::filesystem::path &path, DiagnosticList &diagnostics) const;
+        bool save(const std::filesystem::path &path, DiagnosticList &diagnostics) const;
 
         /// \overload
-        QByteArray serialize() const;
+        static std::optional<Project> fromJson(QByteArrayView json, DiagnosticList &diagnostics);
+
+        /// \overload
+        QByteArray toJson() const;
     };
 
 }
