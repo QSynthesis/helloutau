@@ -402,6 +402,94 @@ namespace utauprobe {
             }
         }
 
+        // -------------------------------------------------------------- what the rule drops
+        // A vibrato too short to draw is not drawn. The question is whether the note loses its
+        // vibrato or loses its whole pitch curve: if the line is still there, the rule is about
+        // the vibrato, and if it is gone too, it is about the note.
+        for (const int ticks : {180, 400}) {
+            const QString how =
+                ticks == 180 ? QStringLiteral("too short") : QStringLiteral("long enough");
+            alone(QStringLiteral("dropped"), QStringLiteral("%1, vibrato alone").arg(how),
+                  {entry("VBR", vbr(24))}, ticks);
+            alone(QStringLiteral("dropped"), QStringLiteral("%1, line alone").arg(how),
+                  {entry("PBS", QStringLiteral("-40")), entry("PBW", QStringLiteral("40,40")),
+                   entry("PBY", QStringLiteral("100"))},
+                  ticks);
+            alone(QStringLiteral("dropped"), QStringLiteral("%1, both").arg(how),
+                  {entry("PBS", QStringLiteral("-40")), entry("PBW", QStringLiteral("40,40")),
+                   entry("PBY", QStringLiteral("100")), entry("VBR", vbr(24))},
+                  ticks);
+        }
+
+        // -------------------------------------------------------------- what leaks into the next
+        // note On the 455-note probe a vibrato too short to be drawn still turned up in the first
+        // two readings of the *next* note, unfaded. Every note there had a vibrato of its own, so
+        // this puts a plain note after each one instead: whatever is in its head came from its
+        // neighbour and from nothing else.
+        for (const auto &shape : QList<QPair<QString, QString>>{
+                 {QStringLiteral("too short"), vbr(24, 180, 100)},
+                 {QStringLiteral("too short, faded"), vbr(24, 180, 100, 50, 50, 50, 50)},
+                 {QStringLiteral("long enough"), vbr(100, 180, 100)},
+                 {QStringLiteral("long enough, faded"), vbr(100, 180, 100, 50, 50, 50, 50)},
+        }) {
+            probe.rest();
+            ProbeNote before;
+            before.length = 180;
+            before.lyric = QLatin1String(LYRIC);
+            before.entries = {entry("VBR", shape.second)};
+            before.asks = QStringLiteral("leak");
+            before.detail = shape.first + QStringLiteral(", the note with the vibrato");
+            probe.note(before);
+
+            ProbeNote after;
+            after.length = 480;
+            after.lyric = QLatin1String(LYRIC);
+            after.asks = QStringLiteral("leak");
+            after.detail = shape.first + QStringLiteral(", the plain note after it");
+            probe.note(after);
+        }
+
+        // -------------------------------------------------------------- what the offset follows
+        // The handover lands a third of a millisecond late, the same third at 120 bpm and at
+        // 240. These vary the one thing left that it could be following: how long the note doing
+        // the handing over is, and the tempo it is at.
+        for (const int length : {180, 240, 360, 480, 960}) {
+            probe.rest();
+            ProbeNote before;
+            before.length = length;
+            before.lyric = QLatin1String(LYRIC);
+            before.asks = QStringLiteral("offset");
+            before.detail = QStringLiteral("%1 ticks at 120 bpm, the note before").arg(length);
+            probe.note(before);
+
+            ProbeNote after;
+            after.lyric = QLatin1String(LYRIC);
+            after.entries = {entry("PBS", QStringLiteral("-20")),
+                             entry("PBW", QStringLiteral("20,20")),
+                             entry("PBY", QStringLiteral("100"))};
+            after.asks = QStringLiteral("offset");
+            after.detail = QStringLiteral("%1 ticks at 120 bpm, the note after").arg(length);
+            probe.note(after);
+        }
+        for (const int tempo : {60, 240, 120}) {
+            probe.rest();
+            ProbeNote before;
+            before.lyric = QLatin1String(LYRIC);
+            before.entries = {entry("Tempo", tempo)};
+            before.asks = QStringLiteral("offset");
+            before.detail = QStringLiteral("480 ticks at %1 bpm, the note before").arg(tempo);
+            probe.note(before);
+
+            ProbeNote after;
+            after.lyric = QLatin1String(LYRIC);
+            after.entries = {entry("PBS", QStringLiteral("-20")),
+                             entry("PBW", QStringLiteral("20,20")),
+                             entry("PBY", QStringLiteral("100"))};
+            after.asks = QStringLiteral("offset");
+            after.detail = QStringLiteral("480 ticks at %1 bpm, the note after").arg(tempo);
+            probe.note(after);
+        }
+
         probe.rest();
         return probe;
     }
