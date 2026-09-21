@@ -19,8 +19,14 @@ namespace utaucompare {
     /// How far apart two curves are, reading by reading, in cents.
     ///
     /// The two sides rarely hold the same number of readings, and that on its own is not a
-    /// difference anybody can hear: an engine that runs off the end of the curve holds the last
-    /// reading, so the short side is compared as though it did.
+    /// difference anybody can hear: past the end of a curve there is no bend, so the short side
+    /// is compared as though the readings it does not have were zero.
+    ///
+    /// \note That is not a guess. UTAU leaves the trailing zeros off, and on a real tuned
+    ///       project it does so on half the notes: one of them sends fifteen readings of -500
+    ///       and stops, where the note runs on for another twenty-four. An engine holding the
+    ///       last reading would sing that note five semitones flat to the end, so no engine
+    ///       holds it, and the readings UTAU left off were the zeros it trimmed.
     struct CurveDeviation {
         int readings = 0; ///< how many were compared, which is the longer of the two
         int peak = 0;     ///< the worst single reading, in cents

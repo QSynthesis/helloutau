@@ -67,10 +67,7 @@ namespace utaucompare {
         }
 
         const auto at = [](const QList<int> &curve, int i) {
-            if (curve.isEmpty()) {
-                return 0;
-            }
-            return curve.at(std::min(i, int(curve.size()) - 1));
+            return i < curve.size() ? curve.at(i) : 0;
         };
 
         double total = 0;
