@@ -160,7 +160,7 @@ Markdown：
 - **只写一行**，英文，首字母大写的祈使句，美式拼写，不写正文。「为什么」留给代码注释和 `docs/`，不要写成提交信息里的小作文。
 - **一个提交一件事。** 同一个文件承载两批改动时，用 `git show HEAD:<path>` 取出旧内容、只叠加其中一批、提交、再放回完整版本，不要图省事整文件暂存。
 - 每个提交自身必须能构建、能通过测试，拆分出来的中间状态也一样。
-- **未经授权不要 push。**
+- **未经授权不要 commit，更不要 push。** 改完把工作区留着，等作者说了再提交。
 
 ## 判断与沟通
 
@@ -197,7 +197,7 @@ Markdown：
 - **UST 只可能是两种编码**：写了 `Charset=UTF-8` 的 UTF-8，和什么都不写的「写文件那台机器的 ANSI」。所以要问用户的从来不是「两百种编码里哪一种」，而是「这文件是哪国人写的」——实际上就是日本（Shift_JIS）、中国大陆（GBK）、台湾（Big5）。候选列表见 `TextCodec::ustCandidates()`，**别把 `availableNames()` 那两百多项直接铺给用户**。
 - **判断一个字符目标编码装不装得下，不能只看 `hasError()`。** 装不下时 Qt 写一个问号就过去了，得编码再解码回来比较。`TextCodec::canEncode()` 就是这么做的。
 - **`中` 是常用日文汉字，Shift_JIS 里有。** 要找 Shift_JIS 表示不了的字得用简体专用字，比如 `你`、`简`、`们`。写编码相关的测试时别拿 `中` 当反例。
-- Windows 上包含 `<windows.h>` 要用 `stdcorelib/platform/windows/stdc_windows.h`，它会先定义 `NOMINMAX`。
+- Windows 上包含 `<windows.h>`：链了 Qt 的目标用 `<QtCore/qt_windows.h>`，没链 Qt 的用 `stdcorelib/platform/windows/stdc_windows.h`。两者都会先定义 `NOMINMAX`。**别为了一个 `GetACP()` 去多链一个库。**
 - **CMake 里判平台不要判编译器。** clang 目标 `x86_64-pc-windows-msvc` 时，CMake 的 `MSVC` 和 `MINGW` 都是假，`else()` 兜底加的 `-fPIC` 会直接把它编译不过。synthrt 的根 `CMakeLists.txt` 里有这个写法，抄的时候要改成 `elseif(NOT WIN32)`。
 - **被信号杀死的进程不会 flush 缓冲的 stdout。** 输出一个字都没有、看起来像没跑，其实是死了。
 - **Windows 上执行 `.bat` 是个有 CVE 记录的注入面。** `CreateProcess` 遇到 `.bat` 会转交 `cmd.exe` 二次解析，而 cmd 的规则和 `CommandLineToArgvW` 不同，光按标准 argv 规则加引号不够——这就是 2024 年的 BatBadBut（CVE-2024-24576）。`stdc::Popen::shell(true)` 的 `^` 转义是冲着它去的，但别因此往 `.bat` 的参数里塞工程文件来的字符串。

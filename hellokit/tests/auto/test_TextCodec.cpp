@@ -142,6 +142,43 @@ BOOST_AUTO_TEST_CASE(the_candidates_are_the_ones_utau_users_are_actually_on) {
     BOOST_CHECK_LE(candidates.size(), 5);
 }
 
+// The code page path exists so that these four never depend on ICU being present, which on
+// Windows means depending on the operating system's version. Aliases have to land on the same
+// canonical name, because that name is what gets written into a control note.
+BOOST_AUTO_TEST_CASE(the_names_that_matter_resolve_to_one_canonical_spelling) {
+    const std::pair<const char *, const char *> aliases[] = {
+        {"Shift_JIS", "Shift_JIS"}, {"shift-jis", "Shift_JIS"}, {"sjis", "Shift_JIS"},
+        {"cp932", "Shift_JIS"},     {"windows-932", "Shift_JIS"},
+        {"GBK", "GBK"},             {"gb2312", "GBK"},          {"cp936", "GBK"},
+        {"Big5", "Big5"},           {"cp950", "Big5"},
+        {"EUC-KR", "EUC-KR"},       {"cp949", "EUC-KR"},
+        {"GB18030", "GB18030"},
+    };
+    for (const auto &[requested, canonical] : aliases) {
+        BOOST_TEST_CONTEXT(requested) {
+            TextCodec codec{QLatin1String(requested)};
+            BOOST_REQUIRE(codec.isValid());
+            BOOST_CHECK_EQUAL(codec.name().toStdString(), canonical);
+        }
+    }
+}
+
+// Bytes that are not valid in a legacy code page have to be refused there too, not only on the
+// paths Qt handles itself.
+BOOST_AUTO_TEST_CASE(the_code_page_path_refuses_bytes_that_do_not_decode) {
+    // A lead byte with nothing after it, a lead byte with a trail byte that is not one,
+    // and a pair that is simply not assigned.
+    BOOST_CHECK(!shiftJis().decode(QByteArray("\x82", 1)).has_value());
+    BOOST_CHECK(!shiftJis().decode(QByteArray("\x82\x20", 2)).has_value());
+    BOOST_CHECK(!shiftJis().decode(QByteArray("\x85\x40", 2)).has_value());
+
+    const QByteArray good = shiftJis().encode(u("あい"));
+    BOOST_REQUIRE_EQUAL(good.size(), 4);
+    auto back = shiftJis().decode(good);
+    BOOST_REQUIRE(back.has_value());
+    BOOST_CHECK(*back == u("あい"));
+}
+
 // The system encoding has to answer with a name that can be written into a control note. Qt
 // calls its own "Locale", which tells a later reader nothing.
 BOOST_AUTO_TEST_CASE(the_system_encoding_has_a_real_name) {
@@ -160,5 +197,6 @@ BOOST_AUTO_TEST_CASE(an_escape_that_is_not_one_is_left_alone) {
 }
 
 BOOST_AUTO_TEST_SUITE_END()
+
 
 

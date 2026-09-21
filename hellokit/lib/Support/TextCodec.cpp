@@ -1,7 +1,7 @@
 #include "TextCodec.h"
 
 #ifdef _WIN32
-#  include <stdcorelib/platform/windows/stdc_windows.h>
+#  include <QtCore/qt_windows.h>
 #endif
 
 #include <QtCore/QStringConverter>
@@ -10,31 +10,98 @@
 
 namespace hello::kit {
 
-    // Held as a name, and the converters are built from that name every time.
+    namespace {
+
+        // The encodings this project promises, by the Windows code page that holds each one.
+        //
+        // The canonical name is what gets recorded in a control note, so it is written out here
+        // rather than taken from whichever library happened to answer. Reading a project back
+        // must not depend on which of the paths below wrote it.
+        struct CodePage {
+            int number;
+            const char *canonical;
+            const char *aliases; // lower case, separated by spaces
+        };
+
+        constexpr CodePage codePages[] = {
+            {932, "Shift_JIS", "shift_jis shift-jis sjis ms_kanji cp932 windows-932"},
+            // GB2312 is its own code page, and everything maps it to 936 because GBK holds all
+            // of it and more, so reading one as the other cannot lose anything.
+            {936, "GBK", "gbk gb2312 euc-cn cp936 windows-936"},
+            {950, "Big5", "big5 big-5 cp950 windows-950"},
+            {949, "EUC-KR", "euc-kr ks_c_5601-1987 cp949 windows-949"},
+            {54936, "GB18030", "gb18030"},
+        };
+
+        const CodePage *findCodePage(const QString &name) {
+            const QString wanted = name.toLower();
+            for (const auto &page : codePages) {
+                for (const auto &alias : QString::fromLatin1(page.aliases)
+                                             .split(QLatin1Char(' '), Qt::SkipEmptyParts)) {
+                    if (wanted == alias) {
+                        return &page;
+                    }
+                }
+            }
+            return nullptr;
+        }
+
+    }
+
+    // Three ways of doing the same job, tried in this order.
     //
-    // Not as a QStringConverter::Encoding, which was the first attempt and was wrong.
-    // QStringConverter::encodingForName() only answers for the handful of encodings the enum
-    // lists, which is the Unicode family plus Latin-1. Everything else this project needs comes
-    // from ICU, is listed by availableCodecs(), and is reachable only by handing the name to
-    // QStringDecoder or QStringEncoder. Going through the enum silently turned Shift_JIS, GBK
-    // and the rest into an invalid codec.
+    // 1. Qt's own converters, for the Unicode family and Latin-1. Built into QtCore.
+    // 2. The Windows code page functions, for Shift_JIS, GBK, Big5 and the rest.
+    // 3. Qt by name, which reaches ICU, for anything else.
+    //
+    // The order is the point, because of something Qt does not say out loud: QtCore does not
+    // link ICU, it loads it at run time, and on Windows what it finds is the operating system's
+    // own copy, which has only been there since Windows 10 1703. None of that is visible while
+    // building. A binary built on a machine that has ICU compiles, links, and then quietly
+    // cannot open a single Shift_JIS file on a machine that does not. Going through the code
+    // page functions for exactly the encodings this project promises takes that off the table.
     class TextCodec::Impl {
     public:
-        explicit Impl(const QString &requested)
-            : requested(requested.isEmpty() ? TextCodec::systemName() : requested) {
-            valid = makeDecoder().isValid();
+        explicit Impl(const QString &requested) {
+            const QString name = requested.isEmpty() ? TextCodec::systemName() : requested;
+
+            if (const auto found = QStringConverter::encodingForName(name)) {
+                builtin = *found;
+                canonical = QString::fromLatin1(QStringConverter::nameForEncoding(*found));
+                valid = true;
+                return;
+            }
+
+            if (const auto *page = findCodePage(name)) {
+                canonical = QLatin1String(page->canonical);
+#ifdef _WIN32
+                if (::IsValidCodePage(UINT(page->number))) {
+                    codePage = page->number;
+                    valid = true;
+                    return;
+                }
+#endif
+            }
+
+            // Whatever is left, if ICU happens to be there.
+            QStringDecoder byName(name);
+            if (byName.isValid()) {
+                fallbackName = name;
+                if (canonical.isEmpty()) {
+                    canonical = QString::fromLatin1(byName.name());
+                }
+                valid = true;
+            }
         }
 
-        QStringDecoder makeDecoder() const {
-            return QStringDecoder(requested);
-        }
-
-        QStringEncoder makeEncoder() const {
-            return QStringEncoder(requested);
-        }
-
-        QString requested;
+        QString canonical;
         bool valid = false;
+
+        std::optional<QStringConverter::Encoding> builtin;
+        QString fallbackName;
+#ifdef _WIN32
+        int codePage = 0;
+#endif
     };
 
     TextCodec::TextCodec(const QString &name) : _impl(std::make_unique<Impl>(name)) {
@@ -57,36 +124,76 @@ namespace hello::kit {
     }
 
     QString TextCodec::name() const {
-        if (!_impl->valid) {
-            return {};
-        }
-        return QString::fromLatin1(_impl->makeDecoder().name());
+        return _impl->valid ? _impl->canonical : QString();
     }
 
     bool TextCodec::isUtf8() const {
-        if (!_impl->valid) {
-            return false;
-        }
-        return name().compare(QLatin1String("UTF-8"), Qt::CaseInsensitive) == 0;
+        return _impl->valid && _impl->builtin == QStringConverter::Utf8;
     }
 
     std::optional<QString> TextCodec::decode(QByteArrayView bytes) const {
         if (!_impl->valid) {
             return std::nullopt;
         }
-        auto decoder = _impl->makeDecoder();
-        QString text = decoder.decode(bytes);
-        if (decoder.hasError()) {
-            return std::nullopt;
+        if (bytes.isEmpty()) {
+            return QString();
         }
-        return text;
+
+        if (_impl->builtin) {
+            QStringDecoder decoder(*_impl->builtin);
+            QString text = decoder.decode(bytes);
+            return decoder.hasError() ? std::nullopt : std::optional<QString>(text);
+        }
+
+#ifdef _WIN32
+        if (_impl->codePage != 0) {
+            // MB_ERR_INVALID_CHARS is what makes this refuse rather than substitute, which is
+            // the whole point: bytes that do not decode mean the wrong encoding was chosen.
+            const int length =
+                ::MultiByteToWideChar(UINT(_impl->codePage), MB_ERR_INVALID_CHARS, bytes.data(),
+                                      int(bytes.size()), nullptr, 0);
+            if (length <= 0) {
+                return std::nullopt;
+            }
+            QString text(length, Qt::Uninitialized);
+            ::MultiByteToWideChar(UINT(_impl->codePage), MB_ERR_INVALID_CHARS, bytes.data(),
+                                  int(bytes.size()),
+                                  reinterpret_cast<wchar_t *>(text.data()), length);
+            return text;
+        }
+#endif
+
+        QStringDecoder decoder(_impl->fallbackName);
+        QString text = decoder.decode(bytes);
+        return decoder.hasError() ? std::nullopt : std::optional<QString>(text);
     }
 
     QByteArray TextCodec::encode(QStringView text) const {
-        if (!_impl->valid) {
+        if (!_impl->valid || text.isEmpty()) {
             return {};
         }
-        auto encoder = _impl->makeEncoder();
+
+        if (_impl->builtin) {
+            QStringEncoder encoder(*_impl->builtin);
+            return encoder.encode(text);
+        }
+
+#ifdef _WIN32
+        if (_impl->codePage != 0) {
+            const auto *wide = reinterpret_cast<const wchar_t *>(text.utf16());
+            const int size = ::WideCharToMultiByte(UINT(_impl->codePage), 0, wide,
+                                                   int(text.size()), nullptr, 0, nullptr, nullptr);
+            if (size <= 0) {
+                return {};
+            }
+            QByteArray bytes(size, Qt::Uninitialized);
+            ::WideCharToMultiByte(UINT(_impl->codePage), 0, wide, int(text.size()), bytes.data(),
+                                  size, nullptr, nullptr);
+            return bytes;
+        }
+#endif
+
+        QStringEncoder encoder(_impl->fallbackName);
         return encoder.encode(text);
     }
 
@@ -94,44 +201,36 @@ namespace hello::kit {
         if (!_impl->valid) {
             return false;
         }
-
-        // Encoded and then read back, rather than trusting the encoder to report a failure. An
-        // encoding that cannot hold a character substitutes a question mark for it and says
-        // nothing, so only comparing the result catches that. Comparing also keeps a text that
-        // was already a question mark from looking like a failure.
-        auto encoder = _impl->makeEncoder();
-        const QByteArray bytes = encoder.encode(text);
-        if (encoder.hasError()) {
-            return false;
+        if (text.isEmpty()) {
+            return true;
         }
 
-        auto decoder = _impl->makeDecoder();
-        const QString back = decoder.decode(bytes);
-        return !decoder.hasError() && back == text;
+        // Written out, read back and compared, on every path. An encoding that cannot hold a
+        // character writes a question mark for it and says nothing, so only the comparison
+        // catches that, and the comparison is also what keeps a text that was already a question
+        // mark from looking like a failure.
+        const QByteArray bytes = encode(text);
+        if (bytes.isEmpty()) {
+            return false;
+        }
+        const auto back = decode(bytes);
+        return back && *back == text;
     }
 
     QString TextCodec::systemName() {
 #ifdef _WIN32
         // What UTAU writes when it writes nothing about the encoding. Named rather than left as
         // QStringConverter::System, whose own name is the word "Locale" and cannot be recorded.
-        //
-        // Only the code pages a UTAU user is actually on are spelled out. Anything else is
-        // handed to ICU by number, and an encoding ICU does not know leaves the codec invalid,
-        // which is the honest outcome.
-        switch (::GetACP()) {
-            case 932:
-                return QStringLiteral("Shift_JIS");
-            case 936:
-                return QStringLiteral("GBK");
-            case 950:
-                return QStringLiteral("Big5");
-            case 949:
-                return QStringLiteral("EUC-KR");
-            case 65001:
-                return QStringLiteral("UTF-8");
-            default:
-                return QStringLiteral("windows-%1").arg(::GetACP());
+        const UINT acp = ::GetACP();
+        if (acp == 65001) {
+            return QStringLiteral("UTF-8");
         }
+        for (const auto &page : codePages) {
+            if (UINT(page.number) == acp) {
+                return QLatin1String(page.canonical);
+            }
+        }
+        return QStringLiteral("windows-%1").arg(acp);
 #else
         // No such thing outside Windows. A file written there and carrying no declaration is
         // UTF-8 in every setting anyone still runs.
@@ -154,9 +253,17 @@ namespace hello::kit {
     }
 
     QStringList TextCodec::availableNames() {
-        return QStringConverter::availableCodecs();
+        QStringList names;
+        for (const auto &page : codePages) {
+            names.append(QLatin1String(page.canonical));
+        }
+        for (const auto &name : QStringConverter::availableCodecs()) {
+            if (!names.contains(name, Qt::CaseInsensitive)) {
+                names.append(name);
+            }
+        }
+        return names;
     }
-
 
     namespace {
 
