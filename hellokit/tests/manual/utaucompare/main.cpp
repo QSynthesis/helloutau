@@ -66,6 +66,15 @@ namespace {
         }
     }
 
+    /// A path as it came off the command line.
+    ///
+    /// The arguments arrive as UTF-8, and on Windows a \c fs::path built from a narrow string
+    /// reads it in the machine's code page instead. Anything outside ASCII then names a file
+    /// that is not there, which is most of the voice banks and half the projects.
+    fs::path pathOf(const std::string &text) {
+        return fs::u8path(text);
+    }
+
     bool isUst(const fs::path &path) {
         auto suffix = path.extension().string();
         for (auto &c : suffix) {
@@ -224,7 +233,7 @@ namespace {
     }
 
     int run(const stdc::cli::ParseResult &result) {
-        const fs::path input = *result.value(0);
+        const fs::path input = pathOf(*result.value(0));
         const QString charset = fromStd(option(result, "--charset"));
 
         const auto voice = option(result, "--voice");
@@ -250,7 +259,7 @@ namespace {
         FixedCharsetSelector selector(bankCharset);
 
         diagnostics.clear();
-        const auto bank = VoiceBank::open(fs::path(voice), &selector, diagnostics);
+        const auto bank = VoiceBank::open(pathOf(voice), &selector, diagnostics);
         report(diagnostics);
         if (!bank) {
             return 1;
@@ -260,11 +269,11 @@ namespace {
 
         SynthPlan::Options options;
         const auto output = option(result, "--output");
-        options.outputFile = output.empty() ? input.parent_path() / "temp.wav" : fs::path(output);
+        options.outputFile = output.empty() ? input.parent_path() / "temp.wav" : pathOf(output);
         const auto cache = option(result, "--cache");
         options.cacheDirectory = cache.empty()
                                      ? input.parent_path() / (input.stem().string() + ".cache")
-                                     : fs::path(cache);
+                                     : pathOf(cache);
 
         diagnostics.clear();
         const auto plan = SynthPlan::make(*project, *bank, options, diagnostics);
@@ -276,7 +285,7 @@ namespace {
 
         QString error;
         const auto calls =
-            readScript(fs::path(script), fromStd(option(result, "--script-charset")), &error);
+            readScript(pathOf(script), fromStd(option(result, "--script-charset")), &error);
         if (!calls) {
             std::cerr << "error: " << toStd(error) << std::endl;
             return 1;

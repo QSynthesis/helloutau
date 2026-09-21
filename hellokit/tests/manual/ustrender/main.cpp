@@ -63,6 +63,15 @@ namespace {
         }
     }
 
+    /// A path as it came off the command line.
+    ///
+    /// The arguments arrive as UTF-8, and on Windows a \c fs::path built from a narrow string
+    /// reads it in the machine's code page instead. Anything outside ASCII then names a file
+    /// that is not there, which is most of the voice banks and half the projects.
+    fs::path pathOf(const std::string &text) {
+        return fs::u8path(text);
+    }
+
     bool isUst(const fs::path &path) {
         auto suffix = path.extension().string();
         for (auto &c : suffix) {
@@ -103,8 +112,8 @@ namespace {
     }
 
     int render(const stdc::cli::ParseResult &result) {
-        const fs::path input = *result.value(0);
-        const fs::path output = *result.value(1);
+        const fs::path input = pathOf(*result.value(0));
+        const fs::path output = pathOf(*result.value(1));
         const QString charset = fromStd(option(result, "--charset"));
 
         const auto voice = option(result, "--voice");
@@ -129,7 +138,7 @@ namespace {
         FixedCharsetSelector selector(bankCharset);
 
         diagnostics.clear();
-        const auto bank = VoiceBank::open(fs::path(voice), &selector, diagnostics);
+        const auto bank = VoiceBank::open(pathOf(voice), &selector, diagnostics);
         report(diagnostics);
         if (!bank) {
             return 1;

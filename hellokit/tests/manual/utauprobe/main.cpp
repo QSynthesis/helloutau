@@ -47,6 +47,15 @@ namespace {
         return result.valueForOption<std::string>(token).value_or(std::string());
     }
 
+    /// A path as it came off the command line.
+    ///
+    /// The arguments arrive as UTF-8, and on Windows a \c fs::path built from a narrow string
+    /// reads it in the machine's code page instead. Anything outside ASCII then names a file
+    /// that is not there, which is most of the voice banks and half the projects.
+    fs::path pathOf(const std::string &text) {
+        return fs::u8path(text);
+    }
+
     bool write(const fs::path &path, const QByteArray &bytes) {
         std::ofstream file(path, std::ios::binary);
         if (!file) {
@@ -59,7 +68,7 @@ namespace {
 
     int run(const stdc::cli::ParseResult &result) {
         const QString kind = fromStd(*result.value(0));
-        const fs::path output = *result.value(1);
+        const fs::path output = pathOf(*result.value(1));
 
         Probe probe;
         if (kind == QStringLiteral("arguments")) {
