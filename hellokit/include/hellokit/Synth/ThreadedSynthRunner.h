@@ -15,18 +15,18 @@ namespace hello::kit {
     /// stay in track order whatever else happens. That is also how UTAU's own multi-core mode
     /// works: it runs the resamplers from several scripts and leaves the appending to a last one.
     ///
-    /// \note **It does not spread anything over threads yet.** Today it runs one note at a time,
-    ///       which is that design with one worker. What the threading needs first is somewhere
-    ///       to put an engine other than \c EngineProcess: a pool has to own the calls, and a
-    ///       test has nowhere to stand until the same seam exists. See
-    ///       tests/auto/Synth/test_ThreadedSynthRunner.cpp.
-    ///
     /// \sa docs/Synth.md
     class HELLOKIT_SYNTH_EXPORT ThreadedSynthRunner : public SynthRunner {
         Q_DECLARE_TR_FUNCTIONS(hello::kit::ThreadedSynthRunner)
     public:
         ThreadedSynthRunner();
         ~ThreadedSynthRunner() override;
+
+        /// How many resampler calls run at once, or zero for one per hardware thread.
+        ///
+        /// \note Only the resampling is spread. The wavtool appends to one file, so those calls
+        ///       run one after another however many threads this allows.
+        int threadCount = 0;
 
         SynthOutcome render(const SynthPlan &plan, const SynthEngines &engines,
                             SynthObserver *observer, DiagnosticList &diagnostics) const override;

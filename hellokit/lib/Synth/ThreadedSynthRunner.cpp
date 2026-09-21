@@ -1,9 +1,15 @@
 #include "ThreadedSynthRunner.h"
 
+#include <algorithm>
+#include <atomic>
 #include <fstream>
 #include <system_error>
 
 #include <QtCore/QCoreApplication>
+#include <QtCore/QMutex>
+#include <QtCore/QMutexLocker>
+#include <QtCore/QThread>
+#include <QtCore/QThreadPool>
 
 #include <hellokit/Synth/EngineProcess.h>
 
@@ -49,6 +55,18 @@ namespace hello::kit {
             return out.good();
         }
 
+        /// What one resampler call came to, kept until the whole pass is over.
+        ///
+        /// Each job writes only its own entry of a list sized up front, so the jobs need no lock
+        /// between them. The diagnostics are merged afterwards in track order rather than as
+        /// they arrive, since a list that reads in whatever order the threads happened to finish
+        /// is not something a user can follow.
+        struct ResampleOutcome {
+            DiagnosticList diagnostics;
+            QString engineOutput;
+            bool started = false;
+        };
+
     }
 
     ThreadedSynthRunner::ThreadedSynthRunner() = default;
@@ -67,9 +85,8 @@ namespace hello::kit {
         std::error_code error;
         fs::create_directories(plan.cacheDirectory(), error);
         if (error) {
-            fail(diagnostics,
-                 tr("The cache folder \"%1\" could not be created.")
-                     .arg(displayed(plan.cacheDirectory())));
+            fail(diagnostics, tr("The cache folder \"%1\" could not be created.")
+                                  .arg(displayed(plan.cacheDirectory())));
             return outcome;
         }
 
@@ -81,56 +98,118 @@ namespace hello::kit {
         fs::remove(header, error);
         fs::remove(data, error);
 
-        EngineProcess engine;
-        engine.timeout = timeout;
+        const auto &steps = plan.steps();
+        const int total = int(steps.size());
 
+        // Everything the observer is told goes through here, so that it sees one call at a time
+        // whichever thread the work was on.
+        QMutex lock;
+        std::atomic_bool stopped{false};
         int done = 0;
-        for (const auto &step : plan.steps()) {
-            // Between notes rather than inside one. An engine already running is left to finish,
-            // since killing it would leave a half written piece in the cache.
-            if (observer && observer->cancelled()) {
-                outcome.cancelled = true;
-                return outcome;
+
+        const auto report = [&] {
+            const QMutexLocker locked(&lock);
+            if (observer) {
+                observer->progressed(++done, total);
             }
+        };
+        const auto cancelled = [&] {
+            const QMutexLocker locked(&lock);
+            return observer && observer->cancelled();
+        };
 
-            if (step.silent) {
-                ++outcome.silent;
-            } else {
-                const auto run =
-                    engine.run(engines.resampler, step.resamplerArguments, diagnostics);
+        // The resampler calls do not depend on one another and are where the time goes. The
+        // wavtool calls below append to one file and stay in track order whatever happens here.
+        QList<ResampleOutcome> outcomes(total);
+        {
+            QThreadPool pool;
+            pool.setMaxThreadCount(threadCount > 0 ? threadCount
+                                                   : std::max(1, QThread::idealThreadCount()));
 
-                // Not the exit code. Engines disagree about what they report, and some say
-                // nothing at all, so what settles it is whether the piece appeared.
-                if (!fs::exists(step.cacheFile)) {
-                    ++outcome.failed;
-                    complain(diagnostics,
-                             tr("This note could not be rendered: %1")
-                                 .arg(run.output.trimmed().isEmpty()
-                                          ? tr("the resampler wrote nothing.")
-                                          : run.output.trimmed()),
-                             step.noteIndex);
-                    if (stopOnFirstFailure) {
-                        return outcome;
-                    }
+            for (int i = 0; i < total; ++i) {
+                if (steps.at(i).silent) {
                     continue;
                 }
-                ++outcome.resampled;
+                pool.start([&, i] {
+                    if (stopped.load()) {
+                        return;
+                    }
+                    EngineProcess engine;
+                    engine.timeout = timeout;
+
+                    auto &result = outcomes[i];
+                    const auto run = engine.run(engines.resampler, steps.at(i).resamplerArguments,
+                                                result.diagnostics);
+                    result.started = run.started;
+                    result.engineOutput = run.output.trimmed();
+
+                    // Not the exit code. Engines disagree about what they report, and some say
+                    // nothing at all, so what settles it is whether the piece appeared.
+                    if (stopOnFirstFailure && !fs::exists(steps.at(i).cacheFile)) {
+                        stopped.store(true);
+                    }
+                    report();
+                });
             }
 
+            // Asked while the pool works, so that a render the user gave up on stops starting
+            // new notes. What is already running is left to finish: killing an engine part way
+            // would leave a half written piece in the cache for the next render to trust.
+            while (!pool.waitForDone(50)) {
+                if (cancelled()) {
+                    stopped.store(true);
+                }
+            }
+        }
+
+        // In track order, not in the order the threads finished.
+        for (int i = 0; i < total; ++i) {
+            diagnostics.append(outcomes.at(i).diagnostics);
+        }
+
+        if (stopped.load() && !stopOnFirstFailure) {
+            outcome.cancelled = true;
+            return outcome;
+        }
+
+        for (int i = 0; i < total; ++i) {
+            const auto &step = steps.at(i);
+            if (step.silent) {
+                ++outcome.silent;
+                continue;
+            }
+            if (fs::exists(step.cacheFile)) {
+                ++outcome.resampled;
+                continue;
+            }
+            ++outcome.failed;
+            complain(diagnostics,
+                     tr("This note could not be rendered: %1")
+                         .arg(outcomes.at(i).engineOutput.isEmpty()
+                                  ? tr("the resampler wrote nothing.")
+                                  : outcomes.at(i).engineOutput),
+                     step.noteIndex);
+            if (stopOnFirstFailure) {
+                return outcome;
+            }
+        }
+
+        // One file, appended to, so these stay in order and on one thread.
+        EngineProcess engine;
+        engine.timeout = timeout;
+        for (const auto &step : steps) {
+            if (!step.silent && !fs::exists(step.cacheFile)) {
+                continue;
+            }
             const auto run = engine.run(engines.wavtool, step.wavtoolArguments, diagnostics);
             if (!run.started) {
                 return outcome;
             }
-
-            if (observer) {
-                observer->progressed(++done, int(plan.steps().size()));
-            }
         }
 
         if (!fs::exists(header) || !fs::exists(data)) {
-            fail(diagnostics, tr(
-                                  "The wavtool wrote nothing for \"%1\". It may be a different "
-                                  "wavtool from the one these arguments are for.")
+            fail(diagnostics, tr("The wavtool wrote nothing for \"%1\". It may be a different "
+                                 "wavtool from the one these arguments are for.")
                                   .arg(displayed(output)));
             return outcome;
         }
@@ -138,9 +217,7 @@ namespace hello::kit {
         {
             std::ofstream out(output, std::ios::binary | std::ios::trunc);
             if (!out || !append(out, header) || !append(out, data)) {
-                fail(
-                    diagnostics,
-                    tr("\"%1\" could not be written.").arg(displayed(output)));
+                fail(diagnostics, tr("\"%1\" could not be written.").arg(displayed(output)));
                 return outcome;
             }
         }
