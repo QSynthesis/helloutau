@@ -9,6 +9,7 @@
 | `HelloKitSupport` | `Diagnostic`、`TextCodec`（编码解析、转义还原） |
 | `HelloKitDocument` | `PayloadCodec`、`Project` / `Track` / `Note` 模型、`.usth` 读写、`UstDocument` |
 | `HelloKitVoiceBank` | `VoiceBankConfig`、`VoiceBankSource`（原始扫描）、`VoiceBank`（解码后的模型与查询） |
+| `HelloKitSynth` | `EngineProcess`、`SynthPlan`（只算）、`SynthRunner`（跑） |
 | `HelloKitInterchange` | 接口、注册表、`Formats/MidiConvert`（读写两个方向） |
 | `HelloUtauWidgets` | 一个装着 `QLabel` 的 `MainWindow`，证明 Qt Widgets 和 moc 接上了 |
 | `helloutau` | 薄驱动，只有 `main.cpp` |
@@ -20,6 +21,14 @@
 `HelloKitVoiceBank` 是音源目录模型。读和解码分成两步，理由和 `.ust` 一样：选编码的那个界面得先把字节拿给用户看，而读这件事本身不能已经需要编码。`VoiceBankSource` 走一遍目录树，把每一级的 `oto.ini` / `prefix.map` / `character.txt` / `readme.txt` / `hello-config.json` 和音频文件名收上来，**什么都不解码、什么都不写**——记住一个编码意味着往用户的音源目录里写文件，扫描不是做这个决定的地方。`VoiceBank` 拿一个 `VoiceBankCharsetSelector`（headless 用 `FixedCharsetSelector`）逐目录问编码，解码，然后 `find(noteNum, lyric)` 按「prefix.map → 别名 → 文件名」给出样本和切割参数。
 
 几条实测钉下来的行为：**没人能说出编码的目录只丢掉需要解码的部分**，它的样本仍然能按文件名唱——文件名不需要编码，而没有 `oto.ini` 的音源本来就是这么唱的；**文件名本身也是别名**，[官方那页](https://w.atwiki.jp/utaou/pages/106.html)写了 UTAU 会把 wav 名当别名读，音源作者靠加 `_` 前缀来避开；扫描有深度和目录数上限，符号链接一律不跟——音源是用户挑的文件夹，形状不归我们信任。
+
+`HelloKitSynth` 能出声了。分三层：`EngineProcess` 起引擎，**参数向量进，没有接受整条命令行的重载**，这是 CVE-2024-28886 那条底线在代码里的形状；`SynthPlan` 只算不跑，把 `VoiceBank::find` 接到 `utau::Synth::calc` 上，产出每个音符两条解析好的参数向量；`SynthRunner` 按轨顺序跑。这一层里「裸字节」就是 UTF-8——`EngineProcess` 收 UTF-8，工程本来就是文本，中间一次转码都没有。
+
+**`wavtool.exe` 不直接写 wav。** 它往 `<out>.whd`（44 字节头）和 `<out>.dat`（PCM）里追加，最后两者拼起来才是 wav；官方 UTAU 的批处理末尾那句 `copy /B` 就是干这个。开跑前两个残留分片也要清，否则第二次渲染接在第一次后面。
+
+**`SynthRunner` 欠着测试**，原因和要补的东西写在 [`test_SynthRunner.cpp`](../hellokit/tests/auto/Synth/test_SynthRunner.cpp) 的文件头注释里：它直接用 `EngineProcess`，测试没地方塞自己的引擎。要开的那个接缝和多线程调度是同一个需求，一起做。
+
+`hellokit/tests/manual/ustrender/` 拿真音源真引擎渲染，`--plan` 只打印参数不跑任何东西。引擎路径必须显式给，工程里的 `Tool1`/`Tool2` 一律不用。
 
 `hellokit/tests/manual/ustconv/` 是手动跑的命令行工具，把上面这些串起来：`.ust` / `.usth` / `.mid` 三种格式两两互转，参数解析用 `stdc::cli`。它不进 ctest，存在的意义就是验证各块拼起来能用——各自的自动测试做不到这件事。
 
@@ -43,7 +52,7 @@
 
 阶段划分、每阶段怎么算数、从 QSynthesis 拿什么不拿什么，都在 [`Roadmap.md`](Roadmap.md)。**第一阶段「数据层」四条算数都过了**：转义往返、MIDI 无界面导入、UST 读写语义相等（`ustconv --check`）、真实音源跑通目录扫描（一份 GBK 的中文音源，903 条 oto 条目，`character.txt` 的作者名和 `Version:1.0` 那种非条目行都没丢）。
 
-下一步进第二阶段「合成」。
+第二阶段「合成」起了头，算数的前半条「命令行能把 `.ust` 渲染成 wav」**过了**——真引擎、真音源（GBK 的中文音源），出来是合法的 44.1kHz 单声道 16 位 wav。后半条「和 UTAU 渲染同一工程做比对」还没做，那是这个项目里最硬的一次检验，要单独建一套可重放的装置。
 
 ## 插件放在哪
 
