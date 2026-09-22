@@ -1,6 +1,7 @@
 #ifndef HELLOKIT_VOICEBANK_VOICEBANKSOURCE_H
 #define HELLOKIT_VOICEBANK_VOICEBANKSOURCE_H
 
+#include <cstdint>
 #include <filesystem>
 #include <map>
 #include <optional>
@@ -52,6 +53,57 @@ namespace hello::kit {
         QByteArray digest;
     };
 
+    /// What a directory held when it was read, cheap enough to take again on every check.
+    ///
+    /// Every name in it that matters to a bank: its subdirectories, its audio files, and the
+    /// files of VoiceBankFile with their size and time. Audio files by name alone, since what is
+    /// in one is not the bank's business but the render cache's. Anything else is left out, a
+    /// resampler's \c .frq beside its sample for one, so that rendering does not look like an
+    /// edit.
+    struct HELLOKIT_VOICEBANK_EXPORT VoiceBankDirectoryStamp {
+        struct Entry {
+            std::filesystem::path name;
+            bool directory = false;
+            std::uintmax_t size = 0;
+            std::filesystem::file_time_type time{};
+
+            bool operator==(const Entry &RHS) const {
+                return name == RHS.name && directory == RHS.directory && size == RHS.size &&
+                       time == RHS.time;
+            }
+            bool operator!=(const Entry &RHS) const {
+                return !(*this == RHS);
+            }
+        };
+
+        /// By name.
+        std::vector<Entry> entries;
+
+        /// When it was taken, which is what tells whether a file's time can be trusted. See
+        /// isRacy() .
+        std::filesystem::file_time_type takenAt{};
+
+        /// Equal where every entry is. When they were taken does not count.
+        bool operator==(const VoiceBankDirectoryStamp &RHS) const {
+            return entries == RHS.entries;
+        }
+        bool operator!=(const VoiceBankDirectoryStamp &RHS) const {
+            return !(*this == RHS);
+        }
+
+        /// Whether \a entry was written so shortly before the stamp was taken that another write
+        /// could follow it with the same size and the same time, and a stamp would not tell
+        /// them apart.
+        ///
+        /// A file system keeps times to a grain, two seconds on FAT, and two writes inside one
+        /// grain look like one. What is racy has to be compared by what it holds. Git does the
+        /// same, and calls it racy as well.
+        bool isRacy(const Entry &entry) const;
+
+        /// \return the stamp, or nothing where \a directory is not a directory
+        static std::optional<VoiceBankDirectoryStamp> take(const std::filesystem::path &directory);
+    };
+
     /// One directory of a voice bank as it was found, with nothing decoded.
     struct HELLOKIT_VOICEBANK_EXPORT VoiceBankDirectorySource {
         /// Where it is, relative to the bank root, and empty for the root itself.
@@ -80,6 +132,11 @@ namespace hello::kit {
         /// Every file above that was there and could be read. One that is missing here was not
         /// there, or could not be read, and a save must not replace it in either case.
         std::map<VoiceBankFile, VoiceBankFileRecord> files;
+
+        /// What the directory held, taken before anything in it was read. A change made while
+        /// it was being read then shows as a change the next time it is looked at, rather than
+        /// being taken for what was read.
+        VoiceBankDirectoryStamp stamp;
 
         /// Whether anything here has to be decoded before it can be read.
         bool needsCharset() const;
@@ -176,6 +233,17 @@ namespace hello::kit {
         static std::optional<VoiceBankDirectorySource>
             readDirectory(const std::filesystem::path &root, const std::filesystem::path &relative,
                           DiagnosticList &diagnostics);
+
+        /// Reads directory \a relative of the bank at \a root and everything under it, within
+        /// \a limits counted from \a root .
+        ///
+        /// For a directory that appeared in a bank already open.
+        ///
+        /// \param alreadyRead how many directories of the bank are read already, which counts
+        ///        against VoiceBankLimits::maxDirectories
+        static QList<VoiceBankDirectorySource>
+            readTree(const std::filesystem::path &root, const std::filesystem::path &relative,
+                     const VoiceBankLimits &limits, int alreadyRead, DiagnosticList &diagnostics);
 
         /// The directories that have something to decode and no encoding recorded.
         ///

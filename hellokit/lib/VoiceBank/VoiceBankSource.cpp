@@ -1,5 +1,7 @@
 #include "VoiceBankSource.h"
 
+#include <algorithm>
+#include <chrono>
 #include <fstream>
 #include <system_error>
 
@@ -81,6 +83,8 @@ namespace hello::kit {
             directory.path = relative;
 
             const auto absolute = relative.empty() ? root : root / relative;
+            directory.stamp =
+                VoiceBankDirectoryStamp::take(absolute).value_or(VoiceBankDirectoryStamp());
 
             std::error_code error;
             for (const auto &entry : fs::directory_iterator(
@@ -184,6 +188,54 @@ namespace hello::kit {
         return std::nullopt;
     }
 
+    bool VoiceBankDirectoryStamp::isRacy(const Entry &entry) const {
+        // Two seconds is the grain of FAT, the coarsest a bank is likely to sit on.
+        return entry.time + std::chrono::seconds(2) >= takenAt;
+    }
+
+    std::optional<VoiceBankDirectoryStamp>
+        VoiceBankDirectoryStamp::take(const fs::path &directory) {
+        std::error_code error;
+        if (!fs::is_directory(directory, error)) {
+            return std::nullopt;
+        }
+
+        VoiceBankDirectoryStamp stamp;
+        // Before the listing, so that whatever is written while it is taken counts as racy.
+        stamp.takenAt = fs::file_time_type::clock::now();
+
+        for (const auto &item : fs::directory_iterator(
+                 directory, fs::directory_options::skip_permission_denied, error)) {
+            // The same as a read: a link is followed nowhere, so it is no part of the bank.
+            if (item.is_symlink(error)) {
+                continue;
+            }
+            Entry entry;
+            entry.name = item.path().filename();
+            if (item.is_directory(error)) {
+                entry.directory = true;
+            } else if (item.is_regular_file(error)) {
+                const auto name = folded(entry.name);
+                if (voiceBankFileNamed(name)) {
+                    entry.size = item.file_size(error);
+                    entry.time = item.last_write_time(error);
+                } else if (!isAudioName(name)) {
+                    continue;
+                }
+            } else {
+                continue;
+            }
+            stamp.entries.push_back(entry);
+        }
+        if (error) {
+            return std::nullopt;
+        }
+
+        std::sort(stamp.entries.begin(), stamp.entries.end(),
+                  [](const Entry &a, const Entry &b) { return a.name < b.name; });
+        return stamp;
+    }
+
     bool VoiceBankDirectorySource::needsCharset() const {
         return oto || prefixMap || character || !readme.isEmpty();
     }
@@ -229,19 +281,30 @@ namespace hello::kit {
         if (error) {
             source.m_root = root;
         }
+        source.m_directories = readTree(source.m_root, fs::path(), limits, 0, diagnostics);
+        return source;
+    }
+
+    QList<VoiceBankDirectorySource> VoiceBankSource::readTree(const fs::path &root,
+                                                              const fs::path &relative,
+                                                              const VoiceBankLimits &limits,
+                                                              int alreadyRead,
+                                                              DiagnosticList &diagnostics) {
+        QList<VoiceBankDirectorySource> out;
+        const int start = int(std::distance(relative.begin(), relative.end()));
 
         // Breadth first, one level at a time, so that the depth limit is a count of rounds and
         // the directory limit stops the scan where it is rather than part way down one branch.
-        std::vector<fs::path> level{fs::path()};
+        std::vector<fs::path> level{relative};
         bool stopped = false;
-        for (int depth = 0; depth <= limits.maxDepth && !level.empty(); ++depth) {
+        for (int depth = start; depth <= limits.maxDepth && !level.empty(); ++depth) {
             std::vector<fs::path> next;
-            for (const auto &relative : level) {
-                if (source.m_directories.size() >= limits.maxDirectories) {
+            for (const auto &at : level) {
+                if (alreadyRead + out.size() >= limits.maxDirectories) {
                     stopped = true;
                     break;
                 }
-                source.m_directories.push_back(readOne(source.m_root, relative, next, diagnostics));
+                out.push_back(readOne(root, at, next, diagnostics));
             }
             if (stopped) {
                 break;
@@ -258,7 +321,7 @@ namespace hello::kit {
                      tr("This folder is larger or deeper than a voice bank is expected to be, so "
                         "only part of it was read."));
         }
-        return source;
+        return out;
     }
 
     std::optional<VoiceBankDirectorySource>

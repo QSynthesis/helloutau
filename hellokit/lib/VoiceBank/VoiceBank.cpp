@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <fstream>
 #include <iterator>
+#include <set>
 #include <system_error>
 
 #include <QtCore/QCoreApplication>
@@ -106,6 +107,49 @@ namespace hello::kit {
             const TextCodec &m_codec;
             bool m_lossy = false;
         };
+
+        int depthOf(const fs::path &relative) {
+            return int(std::distance(relative.begin(), relative.end()));
+        }
+
+        /// Whether \a path is \a base or under it, both relative to one root. Empty is the root.
+        bool isWithin(const fs::path &path, const fs::path &base) {
+            auto p = path.begin();
+            for (const auto &part : base) {
+                if (p == path.end() || *p != part) {
+                    return false;
+                }
+                ++p;
+            }
+            return true;
+        }
+
+        /// The encoding to read a directory again in, where it was read before. What its record
+        /// says now, then what it was read in, and only then the question: a directory that was
+        /// read or left out before was asked about then, and asking again on every change to
+        /// it would ask about something already answered.
+        std::optional<TextCodec> codecAgain(const VoiceBankDirectorySource &source,
+                                            const VoiceBankDirectory &before,
+                                            VoiceBankCharsetSelector *selector,
+                                            DiagnosticList &diagnostics) {
+            if (!source.needsCharset()) {
+                return std::nullopt;
+            }
+            if (source.config && !source.config->charset.isEmpty()) {
+                return codecFor(source, nullptr, diagnostics);
+            }
+            if (!before.charset.isEmpty()) {
+                const TextCodec codec(before.charset);
+                if (codec.isValid()) {
+                    return codec;
+                }
+            }
+            if (before.leftOut) {
+                return std::nullopt;
+            }
+            // Nothing needed an encoding before, and now something does.
+            return codecFor(source, selector, diagnostics);
+        }
 
         QString stemOf(const QString &fileName) {
             return QString::fromStdU16String(
@@ -422,6 +466,7 @@ namespace hello::kit {
 
             Book book;
             book.files = directory.files;
+            book.stamp = directory.stamp;
             bank.m_books.push_back(book);
         }
 
@@ -471,10 +516,324 @@ namespace hello::kit {
             return false;
         }
 
-        DiagnosticList decoding;
-        auto decoded = decodeDirectory(*source, m_root, index, codec, decoding);
-        const bool lossy = decoded.directory.lossy;
-        diagnostics += decoding;
+        replaceDirectory(index, *source, codec, diagnostics);
+
+        // An encoding that does not read the files is not one to write down. The user can see
+        // what it made of them, and choose again.
+        m_books[index].remember = !m_directories.at(index).lossy;
+
+        reindex();
+        takeBaseline(index);
+        return true;
+    }
+
+    bool VoiceBank::isModified(int index) const {
+        const auto &directory = m_directories.at(index);
+        const auto &book = m_books.at(index);
+        if (book.remember) {
+            return true;
+        }
+        DiagnosticList ignored;
+        const auto encoded = encodeDirectory(directory, index, m_samples, book.files, ignored);
+        if (!encoded) {
+            // Something that cannot be written is something that was changed.
+            return true;
+        }
+        if (encoded->size() != book.baseline.size()) {
+            return true;
+        }
+        for (const auto &[file, bytes] : *encoded) {
+            const auto base = book.baseline.find(file);
+            if (base == book.baseline.end() || base->second != digestOf(bytes)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    VoiceBankChanges VoiceBank::checkDisk() {
+        return checkDisk(QList<fs::path>{m_root});
+    }
+
+    VoiceBankChanges VoiceBank::checkDisk(const QList<fs::path> &places) {
+        VoiceBankChanges changes;
+        std::error_code error;
+        if (!fs::is_directory(m_root, error)) {
+            changes.rootGone = true;
+            return changes;
+        }
+
+        // The places, relative to the root. One outside it says nothing about this bank.
+        const auto root = m_root.lexically_normal();
+        std::vector<fs::path> scope;
+        for (const auto &place : places) {
+            auto relative = fs::path(place).lexically_normal().lexically_relative(root);
+            if (relative.empty() || *relative.begin() == "..") {
+                continue;
+            }
+            if (relative == ".") {
+                relative.clear();
+            }
+            scope.push_back(relative);
+        }
+
+        // What to look at: every known directory under a place, and the nearest one holding
+        // it, since a directory that is new shows in the listing of the one above it.
+        std::set<int> look;
+        for (const auto &place : scope) {
+            // A place the bank knows shows what is new in its own listing, and only one it does
+            // not know needs the one above.
+            int nearest = -1;
+            bool placeKnown = false;
+            for (int i = 0; i < m_directories.size(); ++i) {
+                const auto &path = m_directories.at(i).path;
+                if (isWithin(path, place)) {
+                    look.insert(i);
+                    placeKnown = placeKnown || path == place;
+                } else if (isWithin(place, path) &&
+                           (nearest < 0 ||
+                            depthOf(path) > depthOf(m_directories.at(nearest).path))) {
+                    nearest = i;
+                }
+            }
+            if (!placeKnown && nearest >= 0) {
+                look.insert(nearest);
+            }
+        }
+
+        std::vector<int> order(look.begin(), look.end());
+        std::sort(order.begin(), order.end(), [this](int a, int b) {
+            return depthOf(m_directories.at(a).path) < depthOf(m_directories.at(b).path);
+        });
+
+        std::set<int> removals;
+        std::vector<int> rereads;
+        std::vector<fs::path> arrivals;
+
+        const auto known = [this](const fs::path &path) {
+            return std::any_of(m_directories.begin(), m_directories.end(),
+                               [&](const VoiceBankDirectory &d) { return d.path == path; });
+        };
+        const auto removeUnder = [&](const fs::path &path) {
+            for (int i = 0; i < m_directories.size(); ++i) {
+                if (isWithin(m_directories.at(i).path, path)) {
+                    removals.insert(i);
+                }
+            }
+        };
+
+        for (const int i : order) {
+            if (removals.count(i) != 0) {
+                continue;
+            }
+            const auto &path = m_directories.at(i).path;
+            auto &book = m_books[i];
+            const auto now = VoiceBankDirectoryStamp::take(path.empty() ? m_root : m_root / path);
+            if (!now) {
+                removeUnder(path);
+                continue;
+            }
+
+            // Subdirectories that came or went. Those that went take everything under them.
+            const auto directoriesOf = [](const VoiceBankDirectoryStamp &stamp) {
+                std::set<fs::path> out;
+                for (const auto &entry : stamp.entries) {
+                    if (entry.directory) {
+                        out.insert(entry.name);
+                    }
+                }
+                return out;
+            };
+            const auto before = directoriesOf(book.stamp);
+            const auto after = directoriesOf(*now);
+            bool listed = false;
+            for (const auto &name : after) {
+                if (before.count(name) == 0 && !known(path / name)) {
+                    arrivals.push_back(path / name);
+                    listed = true;
+                }
+            }
+            for (const auto &name : before) {
+                if (after.count(name) == 0 && known(path / name)) {
+                    removeUnder(path / name);
+                    listed = true;
+                }
+            }
+
+            // The files. A stamp that matches is trusted except for what was written too close
+            // to when it was taken, which is compared by what it holds.
+            const auto filesOf = [](const VoiceBankDirectoryStamp &stamp) {
+                std::vector<VoiceBankDirectoryStamp::Entry> out;
+                for (const auto &entry : stamp.entries) {
+                    if (!entry.directory) {
+                        out.push_back(entry);
+                    }
+                }
+                return out;
+            };
+            bool changed = filesOf(book.stamp) != filesOf(*now);
+            if (!changed) {
+                for (const auto &entry : book.stamp.entries) {
+                    if (entry.directory || !book.stamp.isRacy(entry)) {
+                        continue;
+                    }
+                    const auto name = entry.name.u8string();
+                    std::string folded(name.begin(), name.end());
+                    for (auto &c : folded) {
+                        if (c >= 'A' && c <= 'Z') {
+                            c = char(c - 'A' + 'a');
+                        }
+                    }
+                    const auto kind = voiceBankFileNamed(folded);
+                    if (!kind) {
+                        continue;
+                    }
+                    const auto record = book.files.find(*kind);
+                    const auto bytes =
+                        readWhole((path.empty() ? m_root : m_root / path) / entry.name);
+                    if (record == book.files.end() || !bytes ||
+                        digestOf(*bytes) != record->second.digest) {
+                        changed = true;
+                        break;
+                    }
+                }
+            }
+
+            if (changed) {
+                rereads.push_back(i);
+            } else if (!listed) {
+                // Checked, and nothing found. The fresh stamp is taken later, so what was racy
+                // in the old one need not be read again next time. Where anything was found
+                // the old one stays, so that the next check finds it again until it is
+                // reloaded: a change named once and missed would otherwise be gone.
+                book.stamp = *now;
+            }
+        }
+
+        for (const int i : rereads) {
+            if (removals.count(i) == 0) {
+                changes.changed.push_back(m_directories.at(i).path);
+            }
+        }
+        for (const int i : removals) {
+            changes.removed.push_back(m_directories.at(i).path);
+        }
+        for (const auto &path : arrivals) {
+            if (!changes.added.contains(path)) {
+                changes.added.push_back(path);
+            }
+        }
+        return changes;
+    }
+
+
+    VoiceBankChanges VoiceBank::reloadFromDisk(const VoiceBankChanges &changes,
+                                               VoiceBankCharsetSelector *selector,
+                                               DiagnosticList &diagnostics) {
+        VoiceBankChanges done;
+        const auto indexOf = [this](const fs::path &path) {
+            for (int i = 0; i < m_directories.size(); ++i) {
+                if (m_directories.at(i).path == path) {
+                    return i;
+                }
+            }
+            return -1;
+        };
+        const auto on = [this](const fs::path &path) {
+            std::error_code error;
+            return fs::is_directory(path.empty() ? m_root : m_root / path, error);
+        };
+
+        // What was found may be out of date by now, so each is looked at again on the way:
+        // what is gone is not read, and what is back is not removed.
+        std::set<int> removals;
+        for (const auto &path : changes.removed) {
+            const int i = indexOf(path);
+            if (i >= 0 && !on(path)) {
+                for (int j = 0; j < m_directories.size(); ++j) {
+                    if (isWithin(m_directories.at(j).path, path)) {
+                        removals.insert(j);
+                    }
+                }
+            }
+        }
+
+        // Read again first, while the indices still hold, whatever was changed here and not
+        // saved: reloading is the user choosing the disk's.
+        for (const auto &path : changes.changed) {
+            const int i = indexOf(path);
+            if (i < 0 || removals.count(i) != 0) {
+                continue;
+            }
+            const auto source = VoiceBankSource::readDirectory(m_root, path, diagnostics);
+            if (!source) {
+                removals.insert(i);
+                continue;
+            }
+            const auto codec = codecAgain(*source, m_directories.at(i), selector, diagnostics);
+            replaceDirectory(i, *source, codec, diagnostics);
+            done.changed.push_back(path);
+        }
+
+        // Then what went, from the back, so that each index still means what it did.
+        for (auto it = removals.rbegin(); it != removals.rend(); ++it) {
+            done.removed.push_back(m_directories.at(*it).path);
+            removeDirectory(*it);
+        }
+
+        // Then what came, with everything under it, at the end.
+        for (const auto &path : changes.added) {
+            if (indexOf(path) >= 0 || !on(path)) {
+                continue;
+            }
+            const auto sources = VoiceBankSource::readTree(m_root, path, VoiceBankLimits(),
+                                                           int(m_directories.size()), diagnostics);
+            for (const auto &source : sources) {
+                if (indexOf(source.path) >= 0) {
+                    continue;
+                }
+                std::optional<TextCodec> codec;
+                if (source.needsCharset()) {
+                    codec = codecFor(source, selector, diagnostics);
+                }
+                appendDirectory(source, codec, diagnostics);
+                done.added.push_back(source.path);
+            }
+        }
+
+        if (!done.changed.isEmpty() || !done.removed.isEmpty() || !done.added.isEmpty()) {
+            reindex();
+            for (int i = 0; i < m_directories.size(); ++i) {
+                const auto &path = m_directories.at(i).path;
+                if (done.changed.contains(path) || done.added.contains(path)) {
+                    takeBaseline(i);
+                }
+            }
+        }
+        return done;
+    }
+
+    VoiceBankChanges VoiceBank::reloadAllFromDisk(VoiceBankCharsetSelector *selector,
+                                                  DiagnosticList &diagnostics) {
+        // What came and went is still found by the listings, which compare names and not
+        // times. Everything else is read whatever its stamp says.
+        auto changes = checkDisk();
+        if (changes.rootGone) {
+            return changes;
+        }
+        for (const auto &directory : std::as_const(m_directories)) {
+            if (!changes.removed.contains(directory.path) &&
+                !changes.changed.contains(directory.path)) {
+                changes.changed.push_back(directory.path);
+            }
+        }
+        return reloadFromDisk(changes, selector, diagnostics);
+    }
+
+    void VoiceBank::replaceDirectory(int index, const VoiceBankDirectorySource &source,
+                                     const std::optional<TextCodec> &codec,
+                                     DiagnosticList &diagnostics) {
+        auto decoded = decodeDirectory(source, m_root, index, codec, diagnostics);
 
         // In the place the directory's samples had, so that the order of the bank, and with it
         // which of two equal aliases wins, stays what it was.
@@ -491,20 +850,43 @@ namespace hello::kit {
         if (!placed) {
             samples += decoded.samples;
         }
-
         m_samples = std::move(samples);
         m_directories[index] = decoded.directory;
+
         Book book;
-        book.files = source->files;
-
-        // An encoding that does not read the files is not one to write down. The user can see
-        // what it made of them, and choose again.
-        book.remember = !lossy;
+        book.files = source.files;
+        book.stamp = source.stamp;
         m_books[index] = book;
+    }
 
-        reindex();
-        takeBaseline(index);
-        return true;
+    void VoiceBank::appendDirectory(const VoiceBankDirectorySource &source,
+                                    const std::optional<TextCodec> &codec,
+                                    DiagnosticList &diagnostics) {
+        const int index = int(m_directories.size());
+        auto decoded = decodeDirectory(source, m_root, index, codec, diagnostics);
+        m_samples += decoded.samples;
+        m_directories.push_back(decoded.directory);
+
+        Book book;
+        book.files = source.files;
+        book.stamp = source.stamp;
+        m_books.push_back(book);
+    }
+
+    void VoiceBank::removeDirectory(int index) {
+        QList<VoiceSample> samples;
+        for (auto sample : std::as_const(m_samples)) {
+            if (sample.directory == index) {
+                continue;
+            }
+            if (sample.directory > index) {
+                --sample.directory;
+            }
+            samples.push_back(sample);
+        }
+        m_samples = std::move(samples);
+        m_directories.removeAt(index);
+        m_books.removeAt(index);
     }
 
     void VoiceBank::rememberCharset(int index) {

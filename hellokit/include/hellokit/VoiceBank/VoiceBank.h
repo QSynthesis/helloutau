@@ -15,6 +15,7 @@
 #include <QtCore/QStringList>
 
 #include <hellokit/Support/Diagnostic.h>
+#include <hellokit/Support/TextCodec.h>
 
 #include <hellokit/VoiceBank/HelloKitVoiceBankGlobal.h>
 #include <hellokit/VoiceBank/VoiceBankSource.h>
@@ -140,6 +141,28 @@ namespace hello::kit {
         std::array<std::string, 5> spellings;
     };
 
+    /// Where the disk no longer holds what a VoiceBank was read from. Every path is a directory,
+    /// relative to the root.
+    ///
+    /// What VoiceBank::checkDisk() finds, and what VoiceBank::reloadFromDisk() then does.
+    struct VoiceBankChanges {
+        /// What is in them changed.
+        QList<std::filesystem::path> changed;
+
+        /// New. Each with everything under it, which is not named separately.
+        QList<std::filesystem::path> added;
+
+        /// Gone, each with everything that was under it.
+        QList<std::filesystem::path> removed;
+
+        /// The root is not there. Nothing else was looked at.
+        bool rootGone = false;
+
+        bool isEmpty() const {
+            return changed.isEmpty() && added.isEmpty() && removed.isEmpty() && !rootGone;
+        }
+    };
+
     /// A voice bank, decoded and ready to be asked what sings what.
     ///
     /// \sa VoiceBankSource for the step before this one, and for why there are two.
@@ -242,6 +265,58 @@ namespace hello::kit {
         /// read in it, see VoiceBankDirectory::lossy : that one is not worth remembering.
         bool reread(int index, const QString &charset, DiagnosticList &diagnostics);
 
+        /// Where the disk no longer holds what the bank was read from, at and under \a places ,
+        /// absolute paths that may have changed. **The bank itself is left as it is.**
+        ///
+        /// Each directory there is compared with how it was read, by a VoiceBankDirectoryStamp ,
+        /// which costs a listing and no reading. The nearest known directory above a place is
+        /// looked at as well where the place is not one the bank knows, since a new directory
+        /// shows in the listing above it.
+        ///
+        /// **What is found is found again**, by every check until reloadFromDisk() takes it in,
+        /// so that a check whose answer was missed loses nothing. Whether to take it in is the
+        /// user's to say: a directory that changed on disk and isModified() here is two
+        /// versions of it, and only they know which one they want.
+        ///
+        /// A place is a hint and not the only way to learn of a change: the overload without
+        /// one looks at the whole bank. A caller that only ever passed what a watcher said
+        /// would miss what the watcher missed. See VoiceBankCheckScheduler .
+        VoiceBankChanges checkDisk(const QList<std::filesystem::path> &places);
+
+        /// \overload for the whole bank.
+        VoiceBankChanges checkDisk();
+
+        /// Takes in what checkDisk() found: reads what \a changes names as changed again, drops
+        /// what is gone and reads what is new.
+        ///
+        /// **Whatever was changed here and not saved, in a directory read again, is gone**,
+        /// since the user asked for the disk's. Each is looked at again on the way, since the
+        /// disk may have moved on since the check: what is gone by now is not read, and what is
+        /// back is not dropped.
+        ///
+        /// A directory read before keeps the encoding it was read in, or the one its record
+        /// names now, rather than being asked about again.
+        ///
+        /// \param selector asked only about a directory that is new, or that needed no encoding
+        ///        before and does now
+        /// \return what was done
+        VoiceBankChanges reloadFromDisk(const VoiceBankChanges &changes,
+                                        VoiceBankCharsetSelector *selector,
+                                        DiagnosticList &diagnostics);
+
+        /// Reads every directory again, whatever checkDisk() would say, and takes in what came
+        /// and went.
+        ///
+        /// For a user who asks for it: the button UTAU has, for when something looks wrong. It
+        /// trusts no stamp, so it is right where a stamp is not, on a network share whose times
+        /// cannot be relied on for one, at the cost of reading everything. Unsaved changes go
+        /// the way they go in reloadFromDisk() .
+        VoiceBankChanges reloadAllFromDisk(VoiceBankCharsetSelector *selector,
+                                           DiagnosticList &diagnostics);
+
+        /// Whether directory \a index holds changes that save() would write.
+        bool isModified(int index) const;
+
         /// Has the next save() write down the encoding of directory \a index , even where
         /// nothing else there changed.
         ///
@@ -280,6 +355,18 @@ namespace hello::kit {
         /// Takes what directory \a index would be written as now as what save() compares with.
         void takeBaseline(int index);
 
+        /// \name Changing which directories there are
+        ///
+        /// None of these reindex or take a baseline, so that a reload that changes several
+        /// directories does both once.
+        /// @{
+        void replaceDirectory(int index, const VoiceBankDirectorySource &source,
+                              const std::optional<TextCodec> &codec, DiagnosticList &diagnostics);
+        void appendDirectory(const VoiceBankDirectorySource &source,
+                             const std::optional<TextCodec> &codec, DiagnosticList &diagnostics);
+        void removeDirectory(int index);
+        /// @}
+
         /// What save() needs to know about one directory's files and nobody else does.
         struct Book {
             /// What each file held on disk when it was read, or last written.
@@ -289,6 +376,8 @@ namespace hello::kit {
             std::map<VoiceBankFile, QByteArray> baseline;
             /// Whether the encoding is to be written down whatever else is saved.
             bool remember = false;
+            /// What the directory held when last read, or last checked and found the same.
+            VoiceBankDirectoryStamp stamp;
         };
         QList<Book> m_books; // one per directory
 
