@@ -11,24 +11,23 @@
 
 namespace hello::kit {
 
-    /// One importable thing inside a file: a MIDI track, a VSQ part, a ustx track.
+    /// One importable unit within a file, such as a MIDI track, a VSQ part or a ustx track.
     struct InterchangeEntry {
         int index = 0;
         int noteCount = 0;
 
-        /// The range of pitches, for the chooser to show. Empty where the entry has no notes.
+        /// The pitch range, for display in the selector. Empty if the entry has no notes.
         std::optional<int> lowestNote;
         std::optional<int> highestNote;
 
-        /// \name Text that has not been decoded
+        /// \name Undecoded text
         ///
-        /// Bytes rather than strings, on purpose, and the only place in this module where that
-        /// is so. Which encoding these are in is one of the things the user is about to be
-        /// asked, and the chooser shows them decoded with whatever is selected at the moment so
-        /// that the user can see which selection is right. Decoding them in inspect() would
-        /// answer the question before it was put.
+        /// Deliberately bytes rather than strings, the only such case in this module. The
+        /// encoding of this text is one of the settings the user is about to choose, and the
+        /// selector displays the text decoded with the current selection so that the user can
+        /// identify the correct one. Decoding in inspect() would presuppose the answer.
         ///
-        /// \warning Nothing downstream of the chooser may hold these. What read() returns is
+        /// \warning No component after the selector may retain these. The result of read() is
         ///          UTF-8 throughout. See docs/Interchange.md.
         /// @{
         QByteArray rawName;
@@ -36,16 +35,15 @@ namespace hello::kit {
         /// @}
     };
 
-    /// What a file turns out to hold, worked out before anything is converted.
+    /// The contents of a file, determined before any conversion.
     ///
-    /// Public in its own right, since looking at a file without importing it is a thing a file
-    /// dialog wants to do.
+    /// Public in its own right, because a file dialog may inspect a file without importing it.
     struct InterchangeSource {
         QString formatId;
         QList<InterchangeEntry> entries;
 
         /// Markers and other text belonging to the file rather than to one entry. Undecoded, for
-        /// the reason given above.
+        /// the reason stated above.
         QList<QByteArray> rawLabels;
     };
 

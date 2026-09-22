@@ -16,11 +16,11 @@
 
 namespace hello::kit {
 
-    /// One setting a driver understands, described well enough for a form to be built from it.
+    /// One setting supported by a driver, described in sufficient detail to generate a form.
     ///
-    /// For settings where one control asks one question. Anything that needs a view of its own,
-    /// such as picking a text encoding against a live preview, is a step of the driver's own
-    /// instead. See \c InterchangeReader::customStepId().
+    /// Intended for settings that map to a single control. A setting that requires a custom
+    /// view, such as selecting a text encoding with a live preview, is implemented as a custom
+    /// step of the driver instead. See \c InterchangeReader::customStepId().
     struct InterchangeOption {
         enum Type {
             Boolean,
@@ -36,23 +36,24 @@ namespace hello::kit {
         QStringList choices;
     };
 
-    /// How much the destination can take, which the caller knows and the driver does not.
+    /// The capacity of the import destination, which is known to the caller but not to the
+    /// driver.
     ///
-    /// The driver knows how many entries the file holds. Whether the project can hold them is a
-    /// different question, and the answer moves when several tracks become possible without any
-    /// driver changing.
+    /// The driver knows the number of entries in the file. Whether the project can accommodate
+    /// them is a separate matter, and the answer changes once multiple tracks are supported,
+    /// without any change to the drivers.
     struct ImportLimits {
         int minEntries = 1;
-        int maxEntries = 1; ///< a project holds one track for now
+        int maxEntries = 1; ///< a project currently holds one track
     };
 
-    /// What the user settled on, which is what the conversion then follows.
+    /// The settings chosen by the user, which the conversion follows.
     struct ImportRequest {
-        /// Which entries to bring in, by \c InterchangeEntry::index.
+        /// The entries to import, by \c InterchangeEntry::index.
         QList<int> entries;
 
-        /// The settings the driver declared, by \c InterchangeOption::key. A driver ignores what
-        /// it does not recognize.
+        /// The values of the settings declared by the driver, by \c InterchangeOption::key. A
+        /// driver ignores unrecognized keys.
         QVariantMap driverOptions;
     };
 
@@ -60,11 +61,11 @@ namespace hello::kit {
         QVariantMap driverOptions;
     };
 
-    /// The outcome of an import, where nothing came back for one of two different reasons.
+    /// The result of an import, which distinguishes the two reasons for an empty result.
     ///
-    /// A user who closed the chooser and a file that could not be read both leave \c project
-    /// empty, and the two want opposite things from the caller: one is not an error and must not
-    /// raise a message box, the other is and must.
+    /// Both a user who closed the selector and a file that could not be read leave \c project
+    /// empty, and the two require opposite handling by the caller. A cancellation is not an
+    /// error and must not produce a message box. A read failure is an error and must.
     struct ImportResult {
         std::optional<Project> project;
         bool cancelled = false;

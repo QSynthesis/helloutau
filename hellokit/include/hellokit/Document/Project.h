@@ -19,71 +19,72 @@
 
 namespace hello::kit {
 
-    /// One voice part. UST holds exactly one.
+    /// One voice part. A UST contains exactly one.
     struct Track {
-        /// UST has no name for a track, so this is dropped on the way out to \c .ust.
+        /// Not representable in UST, and therefore dropped on export to \c .ust.
         QString name;
 
-        /// The voice bank directory. A \c %VOICE% prefix stands for the shared voice location.
+        /// The voice bank directory. A \c %VOICE% prefix denotes the shared voice directory.
         QString voiceDir;
 
         QList<Note> notes;
     };
 
-    /// Everything the whole project shares.
+    /// Project-wide settings.
     struct ProjectSettings {
         QString name;
         double tempo = utau::DEFAULT_VALUE_TEMPO;
         QString flags;
         QString outputFile;
 
-        /// Where the rendered pieces are cached. UTAU rewrites this to follow the file name when
-        /// it saves, and so do we.
+        /// The directory for cached render fragments. UTAU updates this to match the file name
+        /// on save, and HelloUTAU does the same.
         QString cacheDir;
 
-        /// The engines named by the project file itself, \c Tool1 and \c Tool2 in UST.
+        /// The engines specified by the project file, \c Tool1 and \c Tool2 in UST.
         ///
-        /// \warning Untrusted, in the same way as \c Note::patch. Kept as they were found,
-        ///          because configuring an engine per project is ordinary UTAU practice and
-        ///          dropping it would delete the user's settings. What is forbidden is running
-        ///          them without asking, not holding them. See the security section of AGENTS.md.
+        /// \warning Untrusted, like \c Note::patch. Stored verbatim, because per-project engine
+        ///          configuration is common UTAU practice and discarding it would delete user
+        ///          settings. What is forbidden is executing them without confirmation, not
+        ///          storing them. See the security section of AGENTS.md.
         QString wavtool;
         QString resampler;
 
-        /// Whether the pitch is the Mode2 curve rather than the Mode1 sample array. A project is
-        /// in one mode or the other, so \c Note::portamento and \c Note::pitchBend never both
-        /// carry anything.
+        /// Whether pitch uses the Mode2 curve rather than the Mode1 value array. A project uses
+        /// exactly one mode, so \c Note::portamento and \c Note::pitchBend are never both set.
         bool mode2 = true;
     };
 
-    /// A project in memory, which is what \c .usth, \c .ust and every imported format turn into.
+    /// An in-memory project, the common representation of \c .usth, \c .ust and every imported
+    /// format.
     ///
-    /// Reading and writing \c .usth belongs here rather than to a class of its own, because
-    /// \c .usth is not one format among several: it is how a project is written down. Every
-    /// other format goes through \c HelloKitInterchange and turns into one of these.
+    /// Reading and writing \c .usth belongs to this class rather than to a separate one,
+    /// because \c .usth is not one format among several but the native serialization of a
+    /// project. Every other format is converted through \c HelloKitInterchange into this class.
     ///
-    /// The file is JSON, UTF-8, without a byte order mark, with newlines. docs/UsthFormat.md
-    /// defines it, and this follows that rather than the other way round. Nothing here has to
-    /// guess at an encoding, which is what separates it from reading a \c .ust.
+    /// The file is UTF-8 JSON without a byte order mark, with line breaks. docs/UsthFormat.md
+    /// defines the format, and this implementation follows that definition. No encoding
+    /// detection is required, which distinguishes it from reading a \c .ust.
     ///
-    /// \note \c tracks holds exactly one track for now. The array is here from the start so that
-    ///       several tracks become possible without a new format version, and a reader that sees
-    ///       any other length has to say so rather than quietly take the first one.
+    /// \note \c tracks currently holds exactly one track. The array exists from the start so
+    ///       that multiple tracks can be added without a new format version. A reader that
+    ///       encounters any other length must report it rather than silently use the first
+    ///       track.
     struct HELLOKIT_DOCUMENT_EXPORT Project {
         Q_DECLARE_TR_FUNCTIONS(hello::kit::Project)
     public:
         ProjectSettings settings;
         QList<Track> tracks;
 
-        /// Top level fields of the \c .usth file that this version has no field for, kept so
-        /// that they are written back.
+        /// Top-level fields of the \c .usth file not recognized by this version, preserved so
+        /// that saving writes them back.
         ///
-        /// An older build opening a project a newer one saved would otherwise eat whatever it
-        /// did not recognize, and the user would find it gone after saving. Empty for a project
-        /// that came from anywhere else.
+        /// Otherwise an older build opening a project saved by a newer one would discard
+        /// unrecognized data, and the user would find it missing after saving. Empty for a
+        /// project from any other source.
         QJsonObject unknownFields;
 
-        /// \return the project, or nothing where the file could not be understood, with the
+        /// \return the project, or \c std::nullopt if the file could not be parsed, with the
         ///         reason in \a diagnostics
         static std::optional<Project> open(const std::filesystem::path &path,
                                            DiagnosticList &diagnostics);

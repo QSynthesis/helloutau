@@ -25,7 +25,7 @@
 
 namespace hello::kit {
 
-    /// The files of a voice bank directory that this library reads and writes back.
+    /// The files of a voice bank directory that this library reads and saves.
     enum class VoiceBankFile {
         Oto,
         PrefixMap,
@@ -34,32 +34,34 @@ namespace hello::kit {
         Config,
     };
 
-    /// The name a file is created under, in lower case. One that is already there keeps its
-    /// own, see VoiceBankFileRecord::name .
+    /// The lowercase name under which \a file is created. An existing file keeps its name. See
+    /// VoiceBankFileRecord::name .
     HELLOKIT_VOICEBANK_EXPORT const char *voiceBankFileName(VoiceBankFile file);
 
-    /// Which file \a foldedName is, given in lower case, or nothing for any other name.
+    /// Returns the file identified by the lowercase name \a foldedName , or \c std::nullopt for
+    /// any other name.
     HELLOKIT_VOICEBANK_EXPORT std::optional<VoiceBankFile>
         voiceBankFileNamed(std::string_view foldedName);
 
-    /// One of those files as it was when it was read.
+    /// The state of one such file when it was read.
     struct VoiceBankFileRecord {
-        /// Its name as it was found, which is the name it is written back under. A bank from
-        /// Windows may spell it \c OTO.INI , and where case matters that is another file.
+        /// The name as found on disk, under which the file is saved. A voice bank created on
+        /// Windows may use \c OTO.INI , which is a different file on a case-sensitive file
+        /// system.
         std::filesystem::path name;
 
-        /// SHA-1 of the bytes that were read, which is how a save tells whether something else
+        /// The SHA-1 digest of the bytes read, used by save() to detect whether another program
         /// has written the file since.
         QByteArray digest;
     };
 
-    /// What a directory held when it was read, cheap enough to take again on every check.
+    /// A snapshot of a directory, inexpensive enough to take on every check.
     ///
-    /// Every name in it that matters to a bank: its subdirectories, its audio files, and the
-    /// files of VoiceBankFile with their size and time. Audio files by name alone, since what is
-    /// in one is not the bank's business but the render cache's. Anything else is left out, a
-    /// resampler's \c .frq beside its sample for one, so that rendering does not look like an
-    /// edit.
+    /// Contains every name relevant to a voice bank: subdirectories, audio files, and the files
+    /// of VoiceBankFile with their size and modification time. Audio files are recorded by name
+    /// only, because their contents concern the render cache, not the voice bank. All other
+    /// files are excluded, such as the \c .frq files a resampler writes beside a sample, so that
+    /// rendering is not mistaken for an edit.
     struct HELLOKIT_VOICEBANK_EXPORT VoiceBankDirectoryStamp {
         struct Entry {
             std::filesystem::path name;
@@ -76,14 +78,14 @@ namespace hello::kit {
             }
         };
 
-        /// By name.
+        /// Sorted by name.
         std::vector<Entry> entries;
 
-        /// When it was taken, which is what tells whether a file's time can be trusted. See
-        /// isRacy() .
+        /// The time at which the snapshot was taken, which determines whether a modification
+        /// time can be trusted. See isRacy() .
         std::filesystem::file_time_type takenAt{};
 
-        /// Equal where every entry is. When they were taken does not count.
+        /// Stamps are equal if all entries are equal. \c takenAt is not compared.
         bool operator==(const VoiceBankDirectoryStamp &RHS) const {
             return entries == RHS.entries;
         }
@@ -91,34 +93,33 @@ namespace hello::kit {
             return !(*this == RHS);
         }
 
-        /// Whether \a entry was written so shortly before the stamp was taken that another write
-        /// could follow it with the same size and the same time, and a stamp would not tell
-        /// them apart.
+        /// Returns whether \a entry was modified so shortly before the snapshot that a later
+        /// write could leave the same size and modification time, which a stamp cannot
+        /// distinguish.
         ///
-        /// A file system keeps times to a grain, two seconds on FAT, and two writes inside one
-        /// grain look like one. What is racy has to be compared by what it holds. Git does the
-        /// same, and calls it racy as well.
+        /// A file system stores times at a fixed granularity, two seconds on FAT, and two writes
+        /// within one interval are indistinguishable. A racy entry must therefore be compared by
+        /// content. Git applies the same rule under the same name.
         bool isRacy(const Entry &entry) const;
 
-        /// \return the stamp, or nothing where \a directory is not a directory
+        /// \return the stamp, or \c std::nullopt if \a directory is not a directory
         static std::optional<VoiceBankDirectoryStamp> take(const std::filesystem::path &directory);
     };
 
-    /// One directory of a voice bank as it was found, with nothing decoded.
+    /// One directory of a voice bank as found on disk, not decoded.
     struct HELLOKIT_VOICEBANK_EXPORT VoiceBankDirectorySource {
-        /// Where it is, relative to the bank root, and empty for the root itself.
+        /// The location relative to the voice bank root. Empty for the root itself.
         std::filesystem::path path;
 
-        /// What \c hello-config.json in this directory says, absent where there is none.
+        /// The contents of \c hello-config.json in this directory, if present.
         std::optional<VoiceBankConfig> config;
 
-        /// \name The UTAU files found here
+        /// \name UTAU files in this directory
         ///
-        /// Absent where the directory has none.
+        /// Absent if the directory does not contain the file.
         ///
-        /// \warning Every string in them is raw bytes in whatever encoding the author's machine
-        ///          was using. Put anything taken from here through \c TextCodec before treating
-        ///          it as text.
+        /// \warning Every string is raw bytes in the encoding of the author's machine. Decode
+        ///          these through \c TextCodec before treating them as text.
         /// @{
         std::optional<utau::OtoIni> oto;
         std::optional<utau::PrefixMap> prefixMap;
@@ -126,53 +127,55 @@ namespace hello::kit {
         QByteArray readme;
         /// @}
 
-        /// The audio files here, by name, in the order the directory listed them.
+        /// The audio files in this directory by name, in directory listing order.
         std::vector<std::filesystem::path> audioFiles;
 
-        /// Every file above that was there and could be read. One that is missing here was not
-        /// there, or could not be read, and a save must not replace it in either case.
+        /// Every file above that exists and was readable. A file absent from this map either
+        /// did not exist or could not be read, and save() must not replace it in either case.
         std::map<VoiceBankFile, VoiceBankFileRecord> files;
 
-        /// What the directory held, taken before anything in it was read. A change made while
-        /// it was being read then shows as a change the next time it is looked at, rather than
-        /// being taken for what was read.
+        /// A snapshot of the directory, taken before any file in it was read. A change made
+        /// during reading is thereby detected as a change at the next check rather than
+        /// accepted as the state read.
         VoiceBankDirectoryStamp stamp;
 
-        /// Whether anything here has to be decoded before it can be read.
+        /// Returns whether any content requires an encoding to be read.
         bool needsCharset() const;
 
-        /// Text out of this directory for a chooser to show under each candidate encoding.
+        /// Sample text from this directory, for an encoding selector to display under each
+        /// candidate encoding.
         ///
-        /// Aliases, because a wrong encoding shows up in them at a glance. Decoding them here
-        /// would answer the question before it was put.
+        /// Aliases are used because a wrong encoding is immediately visible in them. The text is
+        /// not decoded here, because decoding would presuppose the answer.
         ///
-        /// \warning These look into this object and do not outlive it.
+        /// \warning The views refer into this object and must not outlive it.
         QList<QByteArrayView> rawAliases() const;
     };
 
-    /// Asked which encoding a directory's UTAU files are in, where nothing on disk says.
+    /// Selects the encoding of the UTAU files of a directory when nothing on disk records it.
     ///
-    /// Implemented wherever there is a user interface, which is not here. Nothing guesses: a UST
-    /// and a voice bank are the same problem, and the rule is the same. See docs/note.md.
+    /// Implemented by the user interface layer, not by this library. No encoding detection is
+    /// performed. A UST and a voice bank pose the same problem and follow the same rule. See
+    /// docs/note.md.
     ///
-    /// \warning Nothing here says which thread it runs on, and the implementor has to settle
-    ///          that.
+    /// \warning The calling thread is unspecified, and the implementation is responsible for
+    ///          thread safety.
     class HELLOKIT_VOICEBANK_EXPORT VoiceBankCharsetSelector {
     public:
         virtual ~VoiceBankCharsetSelector();
 
-        /// \return the encoding, or nothing to leave this directory out of the bank
-        /// \note Returning nothing with an \c Error recorded means the question could not be
-        ///       put. Returning nothing without one means the user declined. A caller cannot
-        ///       tell them apart any other way.
+        /// \return the encoding, or \c std::nullopt to leave the directory out of the voice bank
+        /// \note \c std::nullopt with an \c Error in \a diagnostics indicates that the user
+        ///       could not be asked. \c std::nullopt without one indicates that the user
+        ///       declined. The caller has no other means of distinguishing the two.
         virtual std::optional<QString> selectCharset(const VoiceBankDirectorySource &directory,
                                                      DiagnosticList &diagnostics) = 0;
     };
 
-    /// Answers every directory with the same encoding.
+    /// Selects the same encoding for every directory.
     ///
-    /// What the command line tools and the tests use. A test that reached a dialog would hang
-    /// rather than fail, so there has to be an answer available without a user.
+    /// Used by the command-line tools and the tests. A test that opened a dialog would hang
+    /// instead of failing, so a selector that requires no user is necessary.
     class HELLOKIT_VOICEBANK_EXPORT FixedCharsetSelector : public VoiceBankCharsetSelector {
     public:
         explicit FixedCharsetSelector(QString charset);
@@ -185,32 +188,32 @@ namespace hello::kit {
         QString m_charset;
     };
 
-    /// How far a scan goes before it stops and says so.
+    /// Limits at which a scan stops and reports the condition.
     ///
-    /// A voice bank is a folder a user picked, so its shape is not this program's to trust.
-    /// Without a limit a deep or a looping tree turns opening a folder into an operation that
-    /// does not end.
+    /// A voice bank is a folder selected by the user, so its structure cannot be trusted.
+    /// Without limits, a deep or cyclic tree would make opening a folder a nonterminating
+    /// operation.
     struct VoiceBankLimits {
         int maxDepth = 8;
         int maxDirectories = 4096;
     };
 
-    /// A voice bank's directories, read but not decoded.
+    /// The directories of a voice bank, read but not decoded.
     ///
-    /// Reading and decoding are two steps for the same reason they are for a \c .ust : a chooser
-    /// has to show the user what each candidate encoding makes of the file, and that cannot
-    /// happen if the encoding was already needed to read it.
+    /// Reading and decoding are separate steps for the same reason as for a \c .ust : an
+    /// encoding selector must show the user the result of each candidate encoding, which is
+    /// impossible if an encoding is required to read the file in the first place.
     ///
-    /// \note open() writes nothing. Remembering an encoding means writing a
-    ///       \c hello-config.json into the user's voice bank, and a scan is not the place to
-    ///       decide that: a bank may sit on a read-only disk, and a user who only looked at a
-    ///       folder did not ask for a file to appear in it. VoiceBank::save() writes it along
-    ///       with the first file it writes into a directory, and on its own once
-    ///       VoiceBank::rememberCharset() has been called for the directory.
+    /// \note open() writes nothing. Recording an encoding requires writing a
+    ///       \c hello-config.json into the user's voice bank, and a scan is not the place for
+    ///       that decision: the voice bank may reside on a read-only disk, and a user who
+    ///       merely inspected a folder did not request a new file in it. VoiceBank::save()
+    ///       writes the configuration together with the first file it writes into a directory,
+    ///       or by itself once VoiceBank::rememberCharset() has been called for the directory.
     class HELLOKIT_VOICEBANK_EXPORT VoiceBankSource {
         Q_DECLARE_TR_FUNCTIONS(hello::kit::VoiceBankSource)
     public:
-        /// Walks \a root and reads what it finds.
+        /// Traverses \a root and reads its contents.
         static std::optional<VoiceBankSource> open(const std::filesystem::path &root,
                                                    DiagnosticList &diagnostics,
                                                    const VoiceBankLimits &limits = {});
@@ -219,35 +222,35 @@ namespace hello::kit {
             return m_root;
         }
 
-        /// The directories that hold anything, the root first.
+        /// The non-empty directories, the root first.
         const QList<VoiceBankDirectorySource> &directories() const {
             return m_directories;
         }
 
-        /// Reads one directory of the bank at \a root again, and nothing under it.
+        /// Rereads one directory of the voice bank at \a root , excluding its subdirectories.
         ///
-        /// For a directory whose files are to be read afresh, in another encoding or because
-        /// they changed on disk, without walking the whole bank to get at it.
+        /// Intended for a directory whose files must be read anew, in another encoding or after
+        /// a change on disk, without traversing the entire voice bank.
         ///
-        /// \param relative the directory, relative to \a root , and empty for the root itself
+        /// \param relative the directory relative to \a root . Empty for the root itself.
         static std::optional<VoiceBankDirectorySource>
             readDirectory(const std::filesystem::path &root, const std::filesystem::path &relative,
                           DiagnosticList &diagnostics);
 
-        /// Reads directory \a relative of the bank at \a root and everything under it, within
-        /// \a limits counted from \a root .
+        /// Reads directory \a relative of the voice bank at \a root with its entire subtree,
+        /// within \a limits measured from \a root .
         ///
-        /// For a directory that appeared in a bank already open.
+        /// Intended for a directory that appeared in a voice bank that is already open.
         ///
-        /// \param alreadyRead how many directories of the bank are read already, which counts
-        ///        against VoiceBankLimits::maxDirectories
+        /// \param alreadyRead the number of directories of the voice bank already read, which
+        ///        counts toward VoiceBankLimits::maxDirectories
         static QList<VoiceBankDirectorySource>
             readTree(const std::filesystem::path &root, const std::filesystem::path &relative,
                      const VoiceBankLimits &limits, int alreadyRead, DiagnosticList &diagnostics);
 
-        /// The directories that have something to decode and no encoding recorded.
+        /// The directories that contain text to decode and have no recorded encoding.
         ///
-        /// \warning These point into this object and do not outlive it.
+        /// \warning The pointers refer into this object and must not outlive it.
         QList<const VoiceBankDirectorySource *> unsettled() const;
 
     private:

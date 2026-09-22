@@ -12,15 +12,15 @@
 
 namespace hello::kit {
 
-    /// One point of the envelope, in milliseconds from the previous point and in percent.
+    /// One envelope point: \c x in milliseconds from the previous point, \c y in percent.
     struct EnvelopeAnchor {
         double x = 0;
         double y = 0;
     };
 
-    /// The volume envelope, four anchors or five.
+    /// The volume envelope, with four or five anchors.
     ///
-    /// A fifth anchor is the optional one in the middle, and it sits at index 2 when it is there.
+    /// The optional fifth anchor lies in the middle, at index 2 when present.
     struct Envelope {
         QList<EnvelopeAnchor> anchors;
     };
@@ -34,19 +34,20 @@ namespace hello::kit {
         double phase = 0;     ///< percent
         double offset = 0;    ///< percent
 
-        /// The eighth value UST writes in \c VBR, which UTAU does not act on.
+        /// The eighth value of \c VBR in UST, which UTAU ignores.
         ///
-        /// Carried so that a round trip through \c .ust keeps it. It has no field of its own in
-        /// UTAU's own interface, and it cannot go in \c Note::userData either, since everything
-        /// there is written back out as an entry of its own and this one is part of \c VBR.
+        /// Retained so that a round trip through \c .ust preserves it. The UTAU interface
+        /// exposes no field for it, and it cannot be stored in \c Note::userData , because each
+        /// value there is written as a separate entry, whereas this one is part of \c VBR.
         double intensity = 0;
     };
 
-    /// How a portamento point joins the one before it.
+    /// The curve shape connecting a portamento point to the preceding point.
     ///
-    /// \warning The letters UST writes in \c PBM do not match these names. An empty letter is
-    ///          \c S, the letter \c s is \c Linear, \c r is \c R and \c j is \c J. Written out
-    ///          here on purpose, so that nothing but the UST reader and writer has to know that.
+    /// \warning The letters in the \c PBM entry of UST do not match these names. An empty
+    ///          letter denotes \c S, \c s denotes \c Linear, \c r denotes \c R and \c j denotes
+    ///          \c J. The mapping is stated here deliberately, so that only the UST reader and
+    ///          writer depend on it.
     enum class PortamentoType {
         S,
         Linear,
@@ -56,22 +57,22 @@ namespace hello::kit {
 
     /// One control point of the Mode2 pitch curve.
     struct PortamentoPoint {
-        /// Milliseconds. The first point is measured from the start of the note and may be
-        /// negative, which reaches back into the note before it. Every other point is measured
-        /// from the point before it.
+        /// In milliseconds. The first point is relative to the start of the note and may be
+        /// negative, extending into the preceding note. Each subsequent point is relative to the
+        /// preceding point.
         double x = 0;
 
-        /// Tenths of a semitone.
+        /// In tenths of a semitone.
         double y = 0;
 
         PortamentoType type = PortamentoType::S;
     };
 
-    /// The Mode1 pitch curve, one reading every five ticks.
+    /// The Mode1 pitch curve, with one value every five ticks.
     ///
-    /// \note A reading the file left empty reads as zero, which is what stdutau does with it and
-    ///       therefore all a round trip through \c .ust can promise. There is no separate
-    ///       "nothing here", because the value would have nowhere to survive.
+    /// \note An empty value in the file is read as zero, as stdutau does, which is the most a
+    ///       round trip through \c .ust can guarantee. No separate empty state exists, because
+    ///       it could not be preserved.
     struct PitchBend {
         std::optional<double> start;
         QList<double> values;
@@ -79,16 +80,16 @@ namespace hello::kit {
 
     /// One note of a track, or a rest.
     ///
-    /// Notes are stored in order and carry no absolute position. Where a note begins is the sum
-    /// of the lengths before it, rests included, which is how UST itself is laid out. A rest is
-    /// a real note there and can carry entries of its own, so giving notes absolute positions
-    /// would mean inventing rests on the way out and dropping whatever those rests carried.
+    /// Notes are stored in sequence without absolute positions. The start of a note is the sum
+    /// of the preceding lengths, including rests, which matches the layout of UST. In UST a rest
+    /// is a regular note that may carry its own entries, so absolute positions would require
+    /// synthesizing rests on export and discarding the entries of existing rests.
     ///
-    /// Everything in \c std::optional is a field the file did not state. That is not the same as
-    /// a field stated to be zero, and the difference has to survive a round trip.
+    /// An empty \c std::optional field was not specified in the file. This differs from a field
+    /// specified as zero, and the distinction must survive a round trip.
     struct Note {
-        QString lyric;   ///< \c R, \c r and an empty string are rests
-        int length = 0;  ///< ticks, \c ticksPerQuarter to the quarter note
+        QString lyric;   ///< \c R, \c r and an empty string denote rests
+        int length = 0;  ///< in ticks, \c ticksPerQuarter per quarter note
         int noteNum = 0; ///< 24 is C1, as in MIDI
 
         std::optional<double> intensity;
@@ -98,7 +99,7 @@ namespace hello::kit {
         std::optional<double> voiceOverlap;
         std::optional<double> startPoint;
 
-        /// The tempo from this note on. Empty means the note before it decides.
+        /// The tempo from this note onward. Empty if inherited from the preceding note.
         std::optional<double> tempo;
 
         QString flags;
@@ -111,24 +112,25 @@ namespace hello::kit {
         QString label;
         QString direct;
 
-        /// A resampler named by the project file itself.
+        /// A resampler specified by the project file.
         ///
-        /// \warning Untrusted. Stored as it was found, since configuring an engine per project is
-        ///          ordinary UTAU practice and dropping it would delete the user's settings, but
-        ///          never run without the user saying so. See the security section of AGENTS.md.
+        /// \warning Untrusted. Stored verbatim, because per-project engine configuration is
+        ///          common UTAU practice and discarding it would delete user settings, but never
+        ///          executed without explicit user consent. See the security section of
+        ///          AGENTS.md.
         QString patch;
 
         QString region;
         QString regionEnd;
 
-        /// Every entry of the UST note that this structure has no field for, by the name UST
-        /// gave it, \c $ prefix included.
+        /// Every entry of the UST note without a corresponding field, keyed by its UST name
+        /// including any \c $ prefix.
         ///
-        /// This is what makes \c .ust to \c .usth and back lossless. Values are UTF-8 here,
-        /// converted from whatever encoding that file was in.
+        /// This makes the conversion from \c .ust to \c .usth and back lossless. Values are
+        /// stored as UTF-8, converted from the encoding of the source file.
         QMap<QString, QString> userData;
 
-        /// Whether this note makes no sound, which is what UTAU decides from the lyric alone.
+        /// Returns whether the note is a rest. UTAU determines this from the lyric alone.
         bool isRest() const {
             return lyric.isEmpty() ||
                    lyric.compare(QLatin1String(restLyric), Qt::CaseInsensitive) == 0;

@@ -13,26 +13,26 @@
 
 namespace hello::kit {
 
-    /// What one run of an engine produced.
+    /// The result of one engine invocation.
     struct EngineRun {
-        /// Whether the program was started at all.
+        /// Whether the program was started.
         ///
-        /// Not the same as whether it worked, and the two want different things said to the
-        /// user: one means the engine is not where it was said to be, the other means the
-        /// engine did not like what it was given.
+        /// Distinct from success, and the two require different messages to the user: a start
+        /// failure indicates that the engine is not at the configured location, whereas a
+        /// nonzero result indicates that the engine rejected its input.
         bool started = false;
 
-        /// What the engine exited with, meaningful only where it started.
+        /// The exit code of the engine, meaningful only if it started.
         ///
-        /// \note Engines are not consistent about this. Some report nothing and some report
-        ///       success either way, so a caller that needs to know whether a render happened
-        ///       looks at whether the file appeared.
+        /// \note Engines are inconsistent in this respect. Some report nothing and some report
+        ///       success regardless, so a caller that must know whether a render occurred checks
+        ///       whether the output file appeared.
         int exitCode = 0;
 
-        /// Whether the engine was still running when the time ran out and was killed.
+        /// Whether the engine was killed because it exceeded the time limit.
         bool timedOut = false;
 
-        /// Everything the engine printed, on both streams, for the diagnostic when it failed.
+        /// All output of the engine on both streams, for the diagnostic on failure.
         QString output;
 
         bool succeeded() const {
@@ -40,62 +40,61 @@ namespace hello::kit {
         }
     };
 
-    /// Runs one of the engines a render is made of.
+    /// Runs one of the engines that a render consists of.
     ///
-    /// **Arguments go over as a vector and are never joined into a command line.** UTAU renders
-    /// by writing a batch file and running it, and a batch file is a shell script: a sample
-    /// path, an alias or a flags string holding \c & or a newline appends commands to it. That
-    /// is the shape of CVE-2024-28886, and it is why there is deliberately no overload here
-    /// that takes a whole command line.
+    /// **Arguments are passed as a vector and are never joined into a command line.** UTAU
+    /// renders by writing and executing a batch file, which is a shell script: a sample path, an
+    /// alias or a flags string containing \c & or a newline appends commands to it. This is the
+    /// mechanism of CVE-2024-28886, and the reason there is deliberately no overload that takes
+    /// a complete command line.
     ///
-    /// \warning \a program is whatever the host settled on, never what the project named. A UST
-    ///          carries engine paths in \c Tool1 and \c Tool2 , and running those without asking
-    ///          lets the file choose which program runs. Holding them is fine, running them is
-    ///          not.
+    /// \warning \a program is always the engine configured by the host, never one specified by
+    ///          the project. A UST stores engine paths in \c Tool1 and \c Tool2 , and executing
+    ///          them without confirmation lets the file choose which program runs. Storing them
+    ///          is permitted. Executing them is not.
     ///
-    /// \sa AGENTS.md, for both rules and why they are two rules rather than one
+    /// \sa AGENTS.md for both rules and the reason they are separate rules
     class HELLOKIT_SYNTH_EXPORT EngineProcess {
         Q_DECLARE_TR_FUNCTIONS(hello::kit::EngineProcess)
     public:
         EngineProcess();
 
-        /// Virtual, and so are the two calls below, so that a runner can be handed something
-        /// else that starts engines. The engines are somebody else's programs and are not in
-        /// this repository; without standing in for them, nothing a runner does after it has
-        /// handed over the arguments can be covered. See \c SynthRunner::makeEngineProcess().
+        /// Virtual, as are the two functions below, so that a runner can be given a substitute
+        /// that starts engines. The engines are third-party programs outside this repository,
+        /// and without a substitute, no behavior of a runner after the arguments are passed can
+        /// be tested. See \c SynthRunner::makeEngineProcess().
         virtual ~EngineProcess();
 
-        /// How long one call may take, in milliseconds, before the engine is killed.
+        /// The time limit of one call, in milliseconds, after which the engine is killed.
         ///
-        /// An engine that never returns would otherwise stop the render for good, which is what
-        /// UTAU does.
+        /// Otherwise an engine that never returns would halt the render indefinitely, as it
+        /// does in UTAU.
         int timeout = 30000;
 
-        /// The directory to run in, empty for this process's own.
+        /// The working directory, or empty for that of the current process.
         std::filesystem::path workingDirectory;
 
-        /// Runs \a program with \a arguments and waits for it.
+        /// Runs \a program with \a arguments and waits for it to finish.
         ///
-        /// \a program is named outright rather than looked up along \c PATH, so that what runs
-        /// is the engine that was chosen and not whatever an earlier directory happens to hold.
-        virtual EngineRun run(const std::filesystem::path &program,
-                              const QStringList &arguments,
+        /// \a program is used as given rather than searched for along \c PATH, so that the
+        /// selected engine runs and not a program of the same name in an earlier directory.
+        virtual EngineRun run(const std::filesystem::path &program, const QStringList &arguments,
                               DiagnosticList &diagnostics) const;
 
-        /// Hands \a script to the command processor, with its console left visible.
+        /// Executes \a script with the command processor, in a visible console.
         ///
-        /// The one place in this library that runs a command line, because a batch file is one.
-        /// It is here rather than somewhere of its own so that timeouts and killing stay in one
-        /// place, and it takes a path rather than any text so that nothing can call it with a
-        /// command assembled on the spot.
+        /// The only function in this library that executes a command line, because a batch file
+        /// is one. It resides here rather than in a separate class so that time limits and
+        /// termination are handled in one place, and it takes a path rather than text so that
+        /// no caller can pass an ad hoc command.
         ///
-        /// \note The console is UTAU's behaviour and the point: the script's output belongs on
-        ///       screen where the user can read it. Nothing is piped back, so \c EngineRun::output
-        ///       comes back empty.
+        /// \note The visible console matches UTAU behavior and is intentional: the output of
+        ///       the script is meant to be read by the user. Nothing is captured, so
+        ///       \c EngineRun::output is empty.
         ///
-        /// \warning **What goes into the script is the script writer's problem.** A batch file
-        ///          is a shell script, so a lyric or a flags string written into it unescaped
-        ///          appends commands. See \c ClassicSynthRunner, which is the only caller.
+        /// \warning **The script writer is responsible for its content.** A batch file is a
+        ///          shell script, so a lyric or a flags string written into it unescaped appends
+        ///          commands. See \c ClassicSynthRunner, the only caller.
         virtual EngineRun runScript(const std::filesystem::path &script,
                                     DiagnosticList &diagnostics) const;
     };

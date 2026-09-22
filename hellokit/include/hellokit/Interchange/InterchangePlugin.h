@@ -12,16 +12,15 @@
 
 namespace hello::kit {
 
-    /// Adds formats to the application.
+    /// Provides additional formats to the application.
     ///
-    /// What it supplies is drivers, not user interface. A plugin whose driver needs a view of
-    /// its own supplies that separately on the widgets side, registered under the id its driver
-    /// returns from \c customStepId(), and a plugin that only ships this half still works with
-    /// a generated form.
+    /// A plugin provides drivers, not user interface. A plugin whose driver requires a custom
+    /// view provides it separately on the widgets side, registered under the ID returned by
+    /// \c customStepId() of the driver. A plugin that provides only the drivers still works
+    /// with a generated form.
     ///
-    /// \note The drivers are handed over, not lent. A plugin does not keep a pointer to what it
-    ///       returned here, since the registry it goes into may outlive nothing in particular
-    ///       and is free to destroy them.
+    /// \note Ownership of the drivers is transferred. A plugin must not retain pointers to the
+    ///       returned drivers, because the registry may destroy them at any time.
     class HELLOKIT_INTERCHANGE_EXPORT InterchangePlugin {
     public:
         virtual ~InterchangePlugin();

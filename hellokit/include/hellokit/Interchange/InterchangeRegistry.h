@@ -13,24 +13,22 @@
 
 namespace hello::kit {
 
-    /// Every format this build can read or write.
+    /// All formats that this build can import or export.
     ///
-    /// A driver that ships with the application and a driver that arrived in a plugin are added
-    /// the same way and are told apart nowhere. The file dialog's filters, the lookup by
-    /// suffix and the import menu are all generated from here, so a format that registers gets
-    /// all of them at once.
+    /// Built-in drivers and plugin drivers are registered identically and are not
+    /// distinguished anywhere. The file dialog filters, the lookup by suffix and the import menu
+    /// are all generated from the registry, so a registered format appears in all of them.
     ///
-    /// \note Not a singleton, and there is deliberately no global instance. The application
-    ///       holds one and passes it along. A global would be shared state that tests have to
-    ///       put back the way they found it, and a test that forgot would fail some other test
-    ///       instead of itself.
+    /// \note Deliberately not a singleton, and there is no global instance. The application
+    ///       owns one and passes it on. A global instance would be shared state that each test
+    ///       must restore, and a test that failed to do so would cause another test to fail.
     class HELLOKIT_INTERCHANGE_EXPORT InterchangeRegistry {
     public:
         InterchangeRegistry();
         ~InterchangeRegistry();
 
-        /// Takes ownership. A driver whose id is already registered is refused, and the returned
-        /// value says which way it went.
+        /// Takes ownership. A driver whose ID is already registered is rejected. Returns whether
+        /// the driver was added.
         bool addReader(std::unique_ptr<InterchangeReader> reader);
         bool addWriter(std::unique_ptr<InterchangeWriter> writer);
 
@@ -40,11 +38,12 @@ namespace hello::kit {
         InterchangeReader *readerForId(const QString &id) const;
         InterchangeWriter *writerForId(const QString &id) const;
 
-        /// The driver claiming \a suffix, which is compared without its dot and without case.
+        /// Returns the driver registered for \a suffix , compared without the leading dot and
+        /// case-insensitively.
         ///
-        /// \return the first driver that claims it, or null. Where two drivers claim the same
-        ///         suffix the one registered first wins, so a plugin cannot take a format away
-        ///         from the application by claiming it too.
+        /// \return the first matching driver, or null. If two drivers register the same suffix,
+        ///         the one registered first takes precedence, so a plugin cannot take over a
+        ///         built-in format by registering it again.
         InterchangeReader *readerForSuffix(const QString &suffix) const;
         InterchangeWriter *writerForSuffix(const QString &suffix) const;
 

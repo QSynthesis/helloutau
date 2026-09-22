@@ -16,14 +16,15 @@
 
 namespace hello::kit {
 
-    /// What HelloUTAU's own file in a voice bank directory is called.
+    /// The file name of the HelloUTAU configuration file in a voice bank directory.
     inline constexpr char voiceBankConfigFileName[] = "hello-config.json";
 
-    /// HelloUTAU's record for one directory of a voice bank.
+    /// The HelloUTAU configuration of one voice bank directory.
     ///
-    /// **One per directory, not one per bank.** A bank may spread several \c oto.ini over its
-    /// subdirectories and they need not be in the same encoding, so the record sits beside the
-    /// files it describes and goes with them when a subdirectory is copied out on its own.
+    /// **One per directory, not one per voice bank.** A voice bank may contain several
+    /// \c oto.ini files in different subdirectories, possibly in different encodings. The
+    /// configuration is therefore stored beside the files it describes, and is carried along
+    /// when a subdirectory is copied separately.
     ///
     /// \sa docs/note.md
     struct HELLOKIT_VOICEBANK_EXPORT VoiceBankConfig {
@@ -32,15 +33,16 @@ namespace hello::kit {
         /// The encoding of the UTAU files in this directory: \c oto.ini , \c prefix.map ,
         /// \c character.txt and \c readme.txt .
         ///
-        /// Nothing guesses it. It is here because a user was asked once and the answer was
-        /// written down.
+        /// Never detected automatically. The value is the encoding specified by the user,
+        /// recorded for later sessions.
         QString charset;
 
-        /// Top level fields this version has no field for, kept so that they are written back.
+        /// Top-level fields not recognized by this version, preserved so that saving writes them
+        /// back.
         QJsonObject unknownFields;
 
-        /// \return the record, or nothing where the file is missing or unreadable, with the
-        ///         reason in \a diagnostics
+        /// \return the configuration, or \c std::nullopt if the file is missing or unreadable,
+        ///         with the reason in \a diagnostics
         static std::optional<VoiceBankConfig> open(const std::filesystem::path &path,
                                                    DiagnosticList &diagnostics);
 

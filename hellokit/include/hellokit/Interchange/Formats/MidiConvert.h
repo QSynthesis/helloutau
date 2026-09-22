@@ -11,22 +11,22 @@ namespace hello::kit {
 
     /// Reads a standard MIDI file.
     ///
-    /// UTAU imports MIDI too, and this does not follow it. That implementation gets several
-    /// things wrong, and matching it would mean inheriting them, so the measure here is whether
-    /// the project that comes out is right rather than whether it matches note for note. What
-    /// that means in each case is written out in docs/Interchange.md.
+    /// UTAU also imports MIDI, and this implementation deliberately deviates from it. The UTAU
+    /// importer has several defects, and matching it would reproduce them. The criterion here
+    /// is therefore the correctness of the resulting project, not note-for-note agreement with
+    /// UTAU. docs/Interchange.md specifies the behavior in each case.
     ///
-    /// Two things MIDI holds cannot be written into a UST at all, and neither is a matter of
+    /// Two properties of MIDI cannot be represented in a UST, and neither is a matter of
     /// preference:
     ///
-    /// - **Several notes at once.** A UST is one voice. Notes that overlap are made to fit by
-    ///   shortening the one already sounding, and notes that begin together lose all but the
-    ///   highest. Both are reported.
-    /// - **Text with no encoding.** MIDI says nothing about what its bytes mean, so the encoding
-    ///   is asked for rather than guessed.
+    /// - **Simultaneous notes.** A UST is monophonic. Overlapping notes are resolved by
+    ///   shortening the note already sounding, and of notes that start together only the
+    ///   highest is kept. Both cases are reported.
+    /// - **Text without a declared encoding.** MIDI does not specify the encoding of its text,
+    ///   so the encoding is requested from the user rather than guessed.
     ///
-    /// Everything else comes across as it stands, the tempo and the silence before the first
-    /// note included, even where the caller is about to discard them.
+    /// All other content is converted unchanged, including the tempo and the silence before the
+    /// first note, even if the caller discards them afterward.
     class HELLOKIT_INTERCHANGE_EXPORT MidiReader : public InterchangeReader {
         Q_DECLARE_TR_FUNCTIONS(hello::kit::MidiReader)
     public:
@@ -39,8 +39,8 @@ namespace hello::kit {
 
         QList<InterchangeOption> optionSchema() const override;
 
-        /// Picking an encoding needs a view of its own, since the way to pick one is to look at
-        /// the lyrics under each candidate and see which one is not gibberish.
+        /// Encoding selection requires a custom view, because the correct encoding is identified
+        /// by comparing the lyrics as decoded under each candidate.
         QString customStepId() const override;
 
         std::optional<InterchangeSource> inspect(const std::filesystem::path &path,
@@ -55,11 +55,11 @@ namespace hello::kit {
 
     /// Writes a standard MIDI file.
     ///
-    /// **MIDI holds notes and lyrics and nothing else this project cares about.** The envelope,
-    /// the vibrato, the pitch curve, the flags and every per note value UTAU renders with have
-    /// nowhere to go, so a project written out this way and read back is a bare melody. That is
-    /// not a defect to be fixed, it is what the format is, and it is reported every time rather
-    /// than left for the user to discover.
+    /// **MIDI represents notes and lyrics and no other data relevant to this project.** The
+    /// envelope, the vibrato, the pitch curve, the flags and every per-note rendering parameter
+    /// of UTAU cannot be represented, so a project exported this way and imported again is a
+    /// bare melody. This is a limitation of the format, not a defect, and it is reported on
+    /// every export rather than left for the user to discover.
     class HELLOKIT_INTERCHANGE_EXPORT MidiWriter : public InterchangeWriter {
         Q_DECLARE_TR_FUNCTIONS(hello::kit::MidiWriter)
     public:

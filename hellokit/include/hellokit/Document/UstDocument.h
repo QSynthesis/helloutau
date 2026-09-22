@@ -18,13 +18,14 @@
 
 namespace hello::kit {
 
-    /// A \c .ust, either one that was read or one built from a project.
+    /// A \c .ust, either read from disk or built from a project.
     ///
-    /// UST cannot say what encoding it is in beyond whether it is UTF-8, so a user often has to,
-    /// and this library cannot ask one. Hence two steps with **one parse between them**: open()
-    /// reads and holds the file, toProject() decodes what is already in hand.
+    /// UST can declare its encoding only as UTF-8 or not UTF-8, so the user must often specify
+    /// it, and this library cannot ask the user. Reading therefore takes two steps with **a
+    /// single parse**: open() reads and retains the file, and toProject() decodes the retained
+    /// data.
     ///
-    /// Writing is the same pair backwards, fromProject() then save().
+    /// Writing is the same pair in reverse: fromProject(), then save().
     ///
     /// \code
     ///   auto ust = UstDocument::open(path, diagnostics);
@@ -40,77 +41,81 @@ namespace hello::kit {
     class HELLOKIT_DOCUMENT_EXPORT UstDocument {
         Q_DECLARE_TR_FUNCTIONS(hello::kit::UstDocument)
     public:
-        /// What to write into a \c .ust beyond the project itself.
+        /// Export settings beyond the project data.
         struct ExportOptions {
-            /// The encoding to write in. UTF-8 is also declared in \c [#VERSION] , and
-            /// anything else cannot be, which is why the control note carries it either way.
+            /// The output encoding. UTF-8 is additionally declared in \c [#VERSION] , and no
+            /// other encoding can be declared there, so the control note records the encoding
+            /// in every case.
             QString charset = QStringLiteral("UTF-8");
 
-            /// Engines to name where the project names none.
+            /// Engines to write if the project specifies none.
             ///
-            /// UTAU opening a UST with no engine in it has nothing to render with, so the
-            /// ones from the local settings are written instead. The project's own are left
-            /// exactly as they were found where it has them.
+            /// A UST without engines cannot be rendered when opened in UTAU, so the engines from
+            /// the local settings are written instead. Engines specified by the project are
+            /// written unchanged.
             QString wavtool;
             QString resampler;
         };
 
-        /// Reads \a path once. Nothing in it is decoded.
+        /// Reads \a path once. No content is decoded.
         static std::optional<UstDocument> open(const std::filesystem::path &path,
                                                DiagnosticList &diagnostics);
 
-        /// Writes it to \a path.
+        /// Writes the document to \a path.
         bool save(const std::filesystem::path &path, DiagnosticList &diagnostics) const;
 
-        /// Turns \a project into a UST, control note and all, without writing anything yet.
+        /// Converts \a project into a UST, including the control note, without writing it.
         ///
-        /// All the encoding happens here, which is why \a options belongs here and not on
-        /// save().
+        /// All encoding takes place here, which is why \a options is a parameter of this
+        /// function and not of save().
         static std::optional<UstDocument> fromProject(const Project &project,
                                                       const ExportOptions &options,
                                                       DiagnosticList &diagnostics);
 
-        /// The encoding recorded in the control note, which is the one authority there is.
+        /// The encoding recorded in the control note, which is the sole authoritative source.
         ///
-        /// Readable before the encoding is known, because the payload is plain ASCII.
+        /// Available before the encoding is known, because the payload is plain ASCII.
         std::optional<QString> recordedCharset() const;
 
-        /// Whether \c [#VERSION] carries \c Charset=UTF-8 , which is all UST itself can say.
+        /// Returns whether \c [#VERSION] contains \c Charset=UTF-8 , the only encoding
+        /// declaration UST supports.
         bool declaresUtf8() const;
 
-        /// What the two above settle between them, or nothing where the user has to say.
+        /// The encoding determined by the two functions above, or \c std::nullopt if the user
+        /// must specify it.
         std::optional<QString> settledCharset() const;
 
-        /// Whether the control note is there, which is what says HelloUTAU wrote this file.
+        /// Returns whether the control note is present, which identifies a file written by
+        /// HelloUTAU.
         ///
-        /// It decides how the text in it has to be read: escapes mean what they say only in a
-        /// file that was written with them.
+        /// Determines how the text must be read: escape sequences are meaningful only in a file
+        /// written with them.
         bool hasControlNote() const {
             return m_hasControlNote;
         }
 
-        /// \name Text that has not been decoded
+        /// \name Undecoded text
         ///
-        /// For a chooser to show under each candidate encoding. Decoding it here would answer
-        /// the question before it was put.
+        /// For an encoding selector to display under each candidate encoding. The text is not
+        /// decoded here, because decoding would presuppose the answer.
         ///
-        /// \warning These look into this object and do not outlive it.
+        /// \warning The views refer into this object and must not outlive it.
         /// @{
         QByteArrayView rawProjectName() const;
         QByteArrayView rawVoiceDir() const;
         QList<QByteArrayView> rawLyrics() const;
         /// @}
 
-        /// Decodes what open() read, in \a charset.
+        /// Decodes the data read by open() in \a charset.
         ///
-        /// The control note is taken out. Leaving it in would put a second one in the next file
-        /// written, and repeated round trips would grow a run of leaders.
+        /// The control note is removed. Otherwise the next file written would contain a second
+        /// one, and repeated round trips would accumulate leading control notes.
         std::optional<Project> toProject(const QString &charset, DiagnosticList &diagnostics) const;
 
-        /// The parse underneath, for what \c Project has no field for.
+        /// The underlying parse, for data that \c Project cannot represent.
         ///
-        /// \warning Every string in it is raw bytes in the file's own encoding. Put anything
-        ///          taken from here through \c TextCodec before treating it as text.
+        /// \warning Every string is raw bytes in the encoding of the file. Decode these through
+        ///          \c TextCodec before treating them as text.
         const utau::UstFile &file() const {
             return m_file;
         }
@@ -120,8 +125,8 @@ namespace hello::kit {
 
         utau::UstFile m_file;
 
-        // Worked out while the file is read, or set while it is built. Both are asked before
-        // anything is decoded, and neither depends on the encoding.
+        // Determined while the file is read, or set while it is built. Both are queried before
+        // decoding, and neither depends on the encoding.
         std::optional<QString> m_recorded;
         bool m_utf8 = false;
         bool m_hasControlNote = false;

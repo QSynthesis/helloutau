@@ -17,33 +17,33 @@ namespace hello::kit {
     class InterchangeReader;
     class InterchangeWriter;
 
-    /// Answers the things a file did not say, so that a driver can go on.
+    /// Supplies the settings that a file does not specify, so that a driver can proceed.
     ///
-    /// Implemented wherever there is a user interface, which is not here: this library does not
-    /// link QtWidgets, so a dialog cannot appear anywhere in this module. A driver calls out
-    /// through this instead.
+    /// Implemented by the user interface layer, not by this library, which does not link
+    /// QtWidgets and therefore cannot display a dialog. A driver obtains user decisions through
+    /// this interface instead.
     ///
-    /// Asked once per operation rather than once per question. Splitting it up would put a
-    /// separate dialog on screen for picking a track and another for picking an encoding.
+    /// Called once per operation rather than once per setting. Otherwise track selection and
+    /// encoding selection would each require a separate dialog.
     ///
-    /// \warning Nothing here says which thread it runs on, and the implementor has to settle
-    ///          that. A Qt dialog only opens on the GUI thread, so an import moved onto a worker
-    ///          thread has to marshal these calls back, for instance with a blocking queued
-    ///          connection.
+    /// \warning The calling thread is unspecified, and the implementation is responsible for
+    ///          thread safety. A Qt dialog can be opened only on the GUI thread, so an import
+    ///          running on a worker thread must marshal these calls to the GUI thread, for
+    ///          example with a blocking queued connection.
     class HELLOKIT_INTERCHANGE_EXPORT InterchangeSelector {
     public:
         virtual ~InterchangeSelector();
 
-        /// \return what to import, or nothing where the user cancelled. Cancelling is not an
-        ///         error and must not be reported as one.
-        /// \note Returning nothing means two different things, and \a diagnostics is what tells
-        ///       them apart. Nothing with an \c Error recorded means the question could not be
-        ///       put at all, for instance because the file holds no part that could be chosen.
-        ///       Nothing with no error recorded means the user declined. An implementation that
-        ///       gives up has to say so here, or a failure arrives at the caller looking like a
-        ///       cancellation and is passed over in silence.
-        /// \param reader the driver asking, whose \c optionSchema() says which settings to offer
-        /// \param limits how much the destination can take
+        /// \return the import request, or \c std::nullopt if the user cancelled. Cancellation
+        ///         is not an error and must not be reported as one.
+        /// \note \c std::nullopt has two meanings, distinguished by \a diagnostics . With an
+        ///       \c Error recorded, the user could not be asked at all, for example because the
+        ///       file contains no selectable entry. Without an error, the user declined. An
+        ///       implementation that fails must record an error, otherwise the failure reaches
+        ///       the caller as a cancellation and is silently ignored.
+        /// \param reader the calling driver, whose \c optionSchema() specifies the settings to
+        ///        offer
+        /// \param limits the capacity of the import destination
         virtual std::optional<ImportRequest> selectImport(const InterchangeReader &reader,
                                                           const InterchangeSource &source,
                                                           const ImportLimits &limits,
@@ -54,22 +54,22 @@ namespace hello::kit {
                                                           DiagnosticList &diagnostics) = 0;
     };
 
-    /// Answers every question with its default and says so.
+    /// Selects the default for every setting and reports each selection.
     ///
-    /// What a driver uses when it was handed no selector, which is the case for the command line
-    /// tools, for batch conversion and for the tests. A test that reached a dialog would hang
-    /// rather than fail, so there has to be an answer available without a user.
+    /// Used by a driver that received no selector, as in the command-line tools, batch
+    /// conversion and the tests. A test that opened a dialog would hang instead of failing, so
+    /// a selector that requires no user is necessary.
     ///
-    /// Every decision it makes on the user's behalf is recorded as a \c Note diagnostic, since
-    /// the caller has no other way to find out that a choice was made at all.
+    /// Every decision made on behalf of the user is recorded as a \c Note diagnostic, because
+    /// the caller has no other means of learning that a choice was made.
     class HELLOKIT_INTERCHANGE_EXPORT AutomaticSelector : public InterchangeSelector {
         Q_DECLARE_TR_FUNCTIONS(hello::kit::AutomaticSelector)
     public:
         AutomaticSelector();
         ~AutomaticSelector();
 
-        /// Takes the entries in order, up to \c ImportLimits::maxEntries, and every option's
-        /// declared default.
+        /// Selects the entries in order, up to \c ImportLimits::maxEntries , and the declared
+        /// default of every option.
         std::optional<ImportRequest> selectImport(const InterchangeReader &reader,
                                                   const InterchangeSource &source,
                                                   const ImportLimits &limits,

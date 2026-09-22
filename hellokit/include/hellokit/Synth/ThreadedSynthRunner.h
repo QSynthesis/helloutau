@@ -8,12 +8,12 @@
 
 namespace hello::kit {
 
-    /// Renders a whole track and returns when it is done.
+    /// Renders an entire track and returns on completion.
     ///
-    /// The everyday one. The resampler calls do not depend on one another and are where the time
-    /// goes, so they are what gets spread over threads; the wavtool calls append to one file and
-    /// stay in track order whatever else happens. That is also how UTAU's own multi-core mode
-    /// works: it runs the resamplers from several scripts and leaves the appending to a last one.
+    /// The default runner. The resampler calls are mutually independent and dominate render
+    /// time, so they are distributed over threads. The wavtool calls append to a single file and
+    /// always run in track order. The multi-core mode of UTAU works the same way: it runs the
+    /// resamplers from several scripts and leaves appending to a final one.
     ///
     /// \sa docs/Synth.md
     class HELLOKIT_SYNTH_EXPORT ThreadedSynthRunner : public SynthRunner {
@@ -22,10 +22,10 @@ namespace hello::kit {
         ThreadedSynthRunner();
         ~ThreadedSynthRunner() override;
 
-        /// How many resampler calls run at once, or zero for one per hardware thread.
+        /// The number of concurrent resampler calls, or zero for one per hardware thread.
         ///
-        /// \note Only the resampling is spread. The wavtool appends to one file, so those calls
-        ///       run one after another however many threads this allows.
+        /// \note Only resampling is parallelized. The wavtool appends to a single file, so its
+        ///       calls run sequentially regardless of this setting.
         int threadCount = 0;
 
         SynthOutcome render(const SynthPlan &plan, const SynthEngines &engines,

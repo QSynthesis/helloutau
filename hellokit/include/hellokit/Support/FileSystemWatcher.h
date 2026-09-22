@@ -11,81 +11,82 @@
 
 namespace hello::kit {
 
-    /// Says which directories under a set of roots may have changed on disk.
+    /// Reports directories under a set of roots that may have changed on disk.
     ///
-    /// **Not QFileSystemWatcher, and not like it.** That one registers every path on its own,
-    /// follows nothing below them, and on Windows holds each directory it follows open, which
-    /// keeps a user from renaming or removing any of them while this program runs. A voice bank
-    /// is a tree its author reorganizes, so this follows whole trees and holds none of them.
+    /// **Unlike QFileSystemWatcher.** QFileSystemWatcher registers each path individually, does
+    /// not monitor subdirectories, and on Windows keeps every monitored directory open, which
+    /// prevents the user from renaming or deleting it while the application runs. A voice bank
+    /// is a directory tree that its author reorganizes, so this class monitors entire trees and
+    /// keeps no directory open.
     ///
-    /// **What it says is a hint, not a fact.** A directory named here may not have changed at
-    /// all, and a change can be missed where the system loses events. So what it names is to be
-    /// looked at and compared with what was there, never taken as the change itself. Where it
-    /// knows it lost track, it says so by naming the whole root.
+    /// **Reports are hints, not facts.** A reported directory may be unchanged, and a change may
+    /// go unreported when the system drops events. A reported directory must therefore be
+    /// rescanned and compared with its previous state, never treated as the change itself. When
+    /// event loss is detected, the entire root is reported.
     ///
-    /// The following is done by \c hello-fswatcher , a process of its own that ships beside the
-    /// libraries, so that whatever the system's notifications do, a crash, a hang or a limit run
-    /// into, stays out of the editor. It is restarted when it dies, and every root is named once
-    /// it is back, since what happened in between is not known. After a few deaths in a row it
-    /// is given up on, and every root is reported as unwatchable().
+    /// Monitoring is performed by \c hello-fswatcher , a separate process shipped with the
+    /// libraries. This isolates the editor from failures of the system notification facilities,
+    /// such as crashes, hangs and resource limits. The process is restarted after an unexpected
+    /// exit, and every root is then reported once, because changes during the interruption are
+    /// unknown. After several consecutive failures, monitoring is abandoned and every root is
+    /// reported through unwatchable().
     ///
-    /// \note Paths come out with \c / as the separator, each starting with one of roots()
-    ///       exactly as it reads there.
+    /// \note Reported paths use \c / as the separator and begin with one of roots() verbatim.
     ///
-    /// \note On Windows, macOS and Linux, which are the systems this project builds for.
+    /// \note Supported on Windows, macOS and Linux, the platforms this project targets.
     class HELLOKIT_SUPPORT_EXPORT FileSystemWatcher : public QObject {
         Q_OBJECT
     public:
         explicit FileSystemWatcher(QObject *parent = nullptr);
         ~FileSystemWatcher() override;
 
-        /// Where the program is looked for unless setProgram() says otherwise: \c hello-fswatcher
-        /// beside the application.
+        /// The monitor program used unless setProgram() specifies another: \c hello-fswatcher in
+        /// the application directory.
         static QString defaultProgram();
 
-        /// The program that follows the disk, which is started and spoken to over its standard
-        /// input and output.
+        /// The monitor program, which communicates over its standard input and output.
         ///
-        /// **Set before setRoots()** , which is what starts it. One already running goes
-        /// on running, and this one is started only the next time one is: after a death, or
-        /// after the roots were emptied and set again.
+        /// **Must be set before setRoots()**, which starts the program. A running instance is
+        /// not replaced. The new program takes effect at the next start, which occurs after an
+        /// unexpected exit or after the roots are cleared and set again.
         ///
-        /// \warning Never a path that came from a project, a voice bank or anything else a user
-        ///          was handed. It is started without asking.
+        /// \warning Never pass a path obtained from a project, a voice bank or any other
+        ///          user-supplied data. The program is started without confirmation.
         void setProgram(const QString &program);
         QString program() const;
 
-        /// Replaces what is followed, and **starts the program** where none is running yet, so
-        /// setProgram() comes first. Empty stops it.
+        /// Replaces the monitored roots and **starts the program** if it is not running, so
+        /// setProgram() must be called first. An empty list stops the program.
         ///
-        /// ready() says when the new roots are followed. A change made before it may go
+        /// ready() is emitted once the new roots are monitored. Changes made before that may go
         /// unreported.
         void setRoots(const QStringList &roots);
         QStringList roots() const;
 
-        /// How long to gather what the program says before changed() is emitted, in
-        /// milliseconds. One copy of five hundred files is then one signal rather than five
-        /// hundred. 300 unless set.
+        /// The interval in milliseconds over which reports are coalesced before changed() is
+        /// emitted, so that copying five hundred files produces one signal instead of five
+        /// hundred. Defaults to 300.
         void setDelay(int milliseconds);
         int delay() const;
 
-        /// The program's process, or 0 where none runs. For tests and for diagnostics.
+        /// The process ID of the program, or 0 if it is not running. Intended for tests and
+        /// diagnostics.
         qint64 processId() const;
 
     Q_SIGNALS:
-        /// \param directories what is directly in each may have changed: its listing, or a file
-        ///        in it
-        /// \param trees each, and everything under it, may have changed. A directory under one
-        ///        of these is not named again in \a directories .
+        /// \param directories directories whose direct contents may have changed, either the
+        ///        listing or a file in it
+        /// \param trees directories whose entire subtree may have changed. Directories within
+        ///        these trees are not repeated in \a directories .
         void changed(const QStringList &directories, const QStringList &trees);
 
-        /// \a root is not there any more, or never was.
+        /// \a root does not exist, either because it was removed or because it never existed.
         void rootGone(const QString &root);
 
-        /// Nothing will be said about \a root , and it has to be looked at some other way.
+        /// \a root is no longer monitored, and changes to it must be detected by other means.
         void unwatchable(const QString &root);
 
-        /// The roots last set are followed, and a change made from now on is reported.
+        /// The most recently set roots are monitored, and subsequent changes are reported.
         void ready();
 
     private:

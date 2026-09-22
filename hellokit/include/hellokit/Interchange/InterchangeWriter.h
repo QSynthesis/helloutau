@@ -17,9 +17,9 @@ namespace hello::kit {
 
     class InterchangeSelector;
 
-    /// Writes a project out in one foreign format.
+    /// Exports a project to one foreign format.
     ///
-    /// \sa InterchangeReader, for why the two halves are separate classes
+    /// \sa InterchangeReader for the reason the two directions are separate classes
     class HELLOKIT_INTERCHANGE_EXPORT InterchangeWriter {
         Q_DECLARE_TR_FUNCTIONS(hello::kit::InterchangeWriter)
     public:
@@ -32,15 +32,16 @@ namespace hello::kit {
         virtual QList<InterchangeOption> optionSchema() const;
         virtual QString customStepId() const;
 
-        /// Asks \a selector what to do and writes.
+        /// Obtains the export settings from \a selector and writes the file.
         ///
-        /// \param selector where the user's answers come from, or null to take every default
+        /// \param selector the source of user decisions, or null to accept every default
         ///        through \c AutomaticSelector
         ExportResult write(const Project &project, const std::filesystem::path &path,
                            InterchangeSelector *selector);
 
     protected:
-        /// Writes what \a request asked for. Called by write() once the questions are answered.
+        /// Writes the file as specified by \a request . Called by write() once all settings are
+        /// determined.
         virtual bool convert(const Project &project, const std::filesystem::path &path,
                              const ExportRequest &request, DiagnosticList &diagnostics) = 0;
     };
