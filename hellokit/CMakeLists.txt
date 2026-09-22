@@ -17,6 +17,9 @@ hellokit_init_buildsystem(HELLOKIT)
 
 add_subdirectory(lib)
 
+# Programs the libraries start, which ship with them.
+add_subdirectory(tools)
+
 if(HELLO_BUILD_TESTS)
     add_subdirectory(tests)
 endif()
