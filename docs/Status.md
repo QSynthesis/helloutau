@@ -46,6 +46,7 @@
 
 - **stdcorelib、stdutau**：**都不从 vcpkg 拿，也都不是子模块**，两个都在和本仓库一起改。各自构建安装一份，配置时传 `-Dstdcorelib_DIR=` 和 `-Dstdutau_DIR=`，指向 `<prefix>/lib/cmake/<名字>`。`third-party/Dependencies.cmake` 统一 `find_package`，由根 `CMakeLists.txt` `include()` 进来。Windows 上那里还会把动态库拷进运行输出目录，vcpkg 的 applocal 不再管这两个了。stdutau 现在是静态库，所以没有可拷的 DLL。
 - **stdcorelib 只做私有依赖**：子库写 `LINKS_PRIVATE`，公开头文件里的导出宏用 `<QtCore/QtGlobal>` 的 `Q_DECL_EXPORT` / `Q_DECL_IMPORT`。
+- **winacp**：Windows 全部 ANSI 代码页的转换表，从 Windows 的 `MultiByteToWideChar` / `WideCharToMultiByte` 生成，三个平台逐字节一致。`TextCodec` 的 Shift_JIS、GBK、Big5、EUC-KR 和 `windows-874`、`windows-1250`–`1258` 都走它。自己构建安装，传 `-Dwinacp_DIR=`。换它是因为 macOS 版 Qt 不带 ICU，原来的写法在 mac 上连一个 Shift_JIS 文件都打不开。
 - **wolf-midi**：MIDI 的解析与写出，`QMidiFile` 去掉 Qt 的版本。来自 `E:/GitHub/ds-editor-lite/vcpkg`，一样传 `-Dwolf-midi_DIR=`。
 - **qmsetup**：来自 `D:/GitHub/synthrt/vcpkg`。
 - **Qt 6.11.1**：`D:/Qt/6.11.1/msvc2022_64`。

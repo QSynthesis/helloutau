@@ -43,6 +43,8 @@ Qt 6 + CMake + C++17。构建脚本的组织方式照 synthrt：`find_package(qm
 
 **stdcorelib 和 stdutau 都不从 vcpkg 拿，也都不是子模块。** 两个都在和本仓库一起改，走子模块指针会让每次改动都得先 push 一轮才能用。各自构建并安装一份，配置时传 `-Dstdcorelib_DIR=<prefix>/lib/cmake/stdcorelib` 和 `-Dstdutau_DIR=<prefix>/lib/cmake/stdutau`。`third-party/Dependencies.cmake` 统一 `find_package`，由根 `CMakeLists.txt` `include()` 进来——用 `add_subdirectory` 的话导入目标只在那个目录作用域里，其他模块看不见。Windows 上那里还会把 DLL 拷进运行输出目录，vcpkg 的 applocal 不再管这两个了。
 
+**Windows 的 ANSI 代码页用 `winacp` 转换**（`QSynthesis/winacp`，同样自己构建安装，传 `-Dwinacp_DIR=`，**私有依赖**）。UTAU 按写文件那台机器的代码页读写，所以 Shift_JIS、GBK 这些必须和 Windows 的转换逐字节一致，才能原样往返。Qt 只在带 ICU 时认得它们，而 macOS 版的 Qt 不带；macOS 自己的 CoreFoundation 和 iconv 丢掉了 Windows 映射进私用区的几千个字，还会把一些字写成和 Windows 不同的字节。`winacp` 是从 Windows 抄出来的表，三个平台一样。**不要让这些代码页走 Qt 或系统的转换。**
+
 **MIDI 的解析用 `wolf-midi`**（`QMidiFile` 去掉 Qt 的版本，vcpkg 端口），一样传 `-Dwolf-midi_DIR=`，**私有依赖**，不出现在公开头文件里。不要自己写 MIDI 解析。
 
 **stdcorelib 只做私有依赖，不出现在公开头文件里。** 子库写 `LINKS_PRIVATE stdcorelib::stdcorelib`，导出宏用 `<QtCore/QtGlobal>` 的 `Q_DECL_EXPORT` / `Q_DECL_IMPORT`，不要用 `STDC_DECL_EXPORT`。两个模块本来就都依赖 Qt，拿 Qt 的宏不额外欠一笔，而让下游为了一个宏去装 stdcorelib 是不合理的。
