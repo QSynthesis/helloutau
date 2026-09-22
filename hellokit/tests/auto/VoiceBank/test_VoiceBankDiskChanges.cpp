@@ -19,7 +19,7 @@ namespace fs = std::filesystem;
 
 namespace {
 
-    /// Answers every question with one encoding, and counts them.
+    /// Selects one fixed encoding for every query and counts the queries.
     class CountingSelector : public VoiceBankCharsetSelector {
     public:
         explicit CountingSelector(QString charset) : m_charset(std::move(charset)) {
@@ -37,7 +37,7 @@ namespace {
         QString m_charset;
     };
 
-    /// What a user who always says yes to reloading would get.
+    /// The result for a user who accepts every reload.
     VoiceBankChanges takeIn(VoiceBank &bank, VoiceBankCharsetSelector *selector,
                             const QList<fs::path> &places = {}) {
         DiagnosticList diagnostics;
@@ -90,7 +90,7 @@ private Q_SLOTS:
         m_dir.reset();
     }
 
-    // Whether to take in what changed is the user's to say, so a check only says.
+    // Applying changes is the user's decision, so a check only reports them.
     void a_check_changes_nothing_in_the_bank() {
         write(QStringLiteral("oto.ini"), "a.wav=old,1,2,3,4,5\r\n");
         write(QStringLiteral("a.wav"), "RIFF");
@@ -137,8 +137,8 @@ private Q_SLOTS:
         QVERIFY(bank->find(60, QStringLiteral("a")));
     }
 
-    // A resampler writes its analysis beside the sample while rendering. That is not an edit,
-    // and a render must not make the bank look changed.
+    // A resampler writes its analysis file beside the sample during rendering. This is not an
+    // edit, and rendering must not make the voice bank appear modified.
     void what_a_render_leaves_beside_a_sample_changes_nothing() {
         write(QStringLiteral("oto.ini"), "a.wav=a,1,2,3,4,5\r\n");
         write(QStringLiteral("a.wav"), "RIFF");
@@ -151,8 +151,9 @@ private Q_SLOTS:
         QVERIFY(bank->checkDisk().isEmpty());
     }
 
-    // Two writes inside one tick of the file system's clock look the same by size and time.
-    // Such a file is compared by what it holds, or the second write would never be seen.
+    // Two writes within one timestamp interval of the file system are indistinguishable by size
+    // and time. Such a file is compared by content, because otherwise the second write would
+    // never be detected.
     void a_change_inside_one_tick_of_the_clock_is_still_seen() {
         write(QStringLiteral("oto.ini"), "a.wav=aaa,1,2,3,4,5\r\n");
         write(QStringLiteral("a.wav"), "RIFF");
@@ -169,9 +170,9 @@ private Q_SLOTS:
         QVERIFY(bank->find(60, QStringLiteral("bbb")));
     }
 
-    // What was found and not taken in is found again, so a check whose answer was missed loses
-    // nothing. The root's own files stay as they were here, so that nothing but its listing
-    // tells of what came and went, and it is the root's stamp that must not move on.
+    // A detected but unapplied change is reported again, so that a check whose result was
+    // missed loses nothing. The files of the root remain unchanged here, so that only its
+    // listing reveals the added and removed entries, and the stamp of the root must not advance.
     void what_is_not_taken_in_is_found_again() {
         write(QStringLiteral("a.wav"), "RIFF");
         write(QStringLiteral("kept/oto.ini"), "k.wav=k,1,2,3,4,5\r\n");
@@ -194,8 +195,9 @@ private Q_SLOTS:
         QVERIFY(bank->find(60, QStringLiteral("k")));
     }
 
-    // Changed on disk and changed here: two versions, and the user's to choose. Nothing here
-    // decides for them, and a reload is them choosing the disk's.
+    // Changed on disk and modified in memory: two versions, between which the user must
+    // choose. Nothing here decides on the user's behalf, and a reload represents choosing the
+    // version on disk.
     void a_change_on_disk_leaves_one_not_saved_alone_until_the_user_chooses() {
         write(QStringLiteral("oto.ini"), "a.wav=a,1,2,3,4,5\r\n");
         write(QStringLiteral("a.wav"), "RIFF");
@@ -237,7 +239,8 @@ private Q_SLOTS:
         QVERIFY(bank->checkDisk().isEmpty());
     }
 
-    // What is left keeps pointing at the right directory, though the indices moved.
+    // The remaining samples still refer to the correct directories, although the indices
+    // changed.
     void a_directory_removed_on_disk_goes_and_the_rest_stays_right() {
         write(QStringLiteral("one/oto.ini"), "a.wav=one,1,0,0,0,0\r\n");
         write(QStringLiteral("one/a.wav"), "RIFF");
@@ -258,7 +261,7 @@ private Q_SLOTS:
         QVERIFY(bank->checkDisk().isEmpty());
     }
 
-    // Only the directory above is looked at, and what went shows in its listing.
+    // Only the parent directory is examined, and the removal appears in its listing.
     void a_directory_gone_shows_in_the_listing_above() {
         write(QStringLiteral("one/a.wav"), "RIFF");
         write(QStringLiteral("two/b.wav"), "RIFF");
@@ -270,8 +273,8 @@ private Q_SLOTS:
         QCOMPARE(bank->checkDisk({root() / "elsewhere"}).removed, QList<fs::path>{fs::path("one")});
     }
 
-    // A watcher names the new directory itself, which the bank does not know. The directory
-    // above it is looked at, which is where the new one shows.
+    // A watcher reports the new directory itself, which the voice bank does not know. Its
+    // parent is examined, where the new directory appears.
     void a_place_the_bank_does_not_know_is_found_from_above() {
         write(QStringLiteral("a.wav"), "RIFF");
         CountingSelector selector(QStringLiteral("UTF-8"));
@@ -284,8 +287,9 @@ private Q_SLOTS:
         QVERIFY(bank->find(60, QStringLiteral("ka")));
     }
 
-    // A place is only where to look. A change elsewhere is not seen until something looks
-    // there, which is why the whole bank has to be looked at now and then as well.
+    // A place only limits the examination. A change elsewhere is not detected until that
+    // location is examined, which is why the entire voice bank must also be checked
+    // periodically.
     void a_place_says_where_to_look_and_nothing_more() {
         write(QStringLiteral("sub/a.wav"), "RIFF");
         write(QStringLiteral("b.wav"), "RIFF");
@@ -293,7 +297,7 @@ private Q_SLOTS:
         auto bank = open(&selector);
         QVERIFY(bank.has_value());
 
-        // In the root, which the one place is under and the other beside.
+        // In the root, which contains one place and is a sibling of the other.
         write(QStringLiteral("ka.wav"), "RIFF");
         QVERIFY(bank->checkDisk({root() / "sub"}).isEmpty());
         QVERIFY(bank->checkDisk({m_dir->path().toStdU16String()}).isEmpty());
@@ -311,7 +315,8 @@ private Q_SLOTS:
         QVERIFY(bank->find(60, QStringLiteral("a")));
     }
 
-    // Asked once when opened. Asking again on every change would ask what was answered.
+    // The user is asked once on open. Asking again on every change would repeat an answered
+    // question.
     void a_directory_read_before_is_not_asked_about_again() {
         write(QStringLiteral("oto.ini"), "a.wav=a,1,2,3,4,5\r\n");
         write(QStringLiteral("a.wav"), "RIFF");
@@ -326,7 +331,8 @@ private Q_SLOTS:
         QVERIFY(bank->find(60, QStringLiteral("b")));
     }
 
-    // Nothing needed an encoding there before, so nothing was asked. Now something does.
+    // The directory previously required no encoding, so the user was not asked. Now it
+    // requires one.
     void a_directory_that_now_needs_an_encoding_is_asked_about() {
         write(QStringLiteral("a.wav"), "RIFF");
         CountingSelector selector(QStringLiteral("UTF-8"));
@@ -340,8 +346,8 @@ private Q_SLOTS:
         QVERIFY(bank->find(60, QStringLiteral("first")));
     }
 
-    // Another program, or another copy of this one, may write the record. What it says wins
-    // over what the directory was read in.
+    // Another program, or another instance of this one, may write the configuration. Its
+    // encoding takes precedence over the encoding in which the directory was read.
     void an_encoding_recorded_on_disk_is_the_one_read_in() {
         write(QStringLiteral("oto.ini"), "a.wav=" + kShiftJisA + ",1,2,3,4,5\r\n");
         write(QStringLiteral("a.wav"), "RIFF");
@@ -356,8 +362,8 @@ private Q_SLOTS:
         QVERIFY(bank->find(60, kA));
     }
 
-    // The disk moved on between the check and the reload. What went since is not read, and
-    // what came back is not dropped.
+    // The disk changed between the check and the reload. A directory removed since is not read,
+    // and a directory restored since is not dropped.
     void a_reload_looks_again_at_what_the_check_found() {
         write(QStringLiteral("one/a.wav"), "RIFF");
         write(QStringLiteral("two/b.wav"), "RIFF");
@@ -382,9 +388,9 @@ private Q_SLOTS:
         QVERIFY(!bank->find(60, QStringLiteral("c")));
     }
 
-    // The button for when something looks wrong: everything read again, whatever a stamp
-    // says. Here the stamp is fooled on purpose, an old time put back after a write of the
-    // same size, which a check trusts once the time is old enough.
+    // The full refresh for cases where something appears wrong: everything is reread regardless
+    // of the stamps. Here the stamp is deliberately defeated by restoring an old modification
+    // time after a write of the same size, which a check trusts once the time is old enough.
     void reloading_everything_reads_what_a_stamp_would_miss() {
         write(QStringLiteral("oto.ini"), "a.wav=aaa,1,2,3,4,5\r\n");
         write(QStringLiteral("a.wav"), "RIFF");

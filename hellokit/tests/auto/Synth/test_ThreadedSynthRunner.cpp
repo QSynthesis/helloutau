@@ -1,14 +1,14 @@
 /// \file
-/// Covers what a render does once it has handed the arguments over.
+/// Covers the behavior of a render after the arguments are passed to the engines.
 ///
-/// The engines are somebody else's programs and are not in this repository, so all of that used
-/// to be out of reach. \c SynthRunner::makeEngineProcess() is the seam that puts it back:
-/// \c StandIn below is an engine that does what the test says instead of what a real one would,
-/// and writes down what it was asked for.
+/// The engines are third-party programs outside this repository.
+/// \c SynthRunner::makeEngineProcess() is the test seam that makes this behavior testable:
+/// \c StandIn below is a substitute engine that behaves as the test specifies and records its
+/// invocations.
 ///
-/// What a stand-in cannot say is whether the arguments were *right*, which is what the real
-/// engines are for. That is \c tests/manual/utaucompare , against UTAU's own render of the same
-/// project.
+/// A substitute cannot verify whether the arguments are *correct*, which requires the real
+/// engines. That is covered by \c tests/manual/utaucompare , which compares against the UTAU
+/// render of the same project.
 
 #include <fstream>
 #include <functional>
@@ -28,7 +28,7 @@ using namespace hello::kit;
 
 namespace {
 
-    /// What the stand-in engine was asked to do, kept where it outlives the engine itself.
+    /// The invocations of the substitute engine, stored so that they outlive the engine.
     struct EngineLog {
         mutable QMutex lock;
         int resamplerCalls = 0;
@@ -45,14 +45,14 @@ namespace {
         }
     };
 
-    /// An engine that does what the test says instead of what a real one would.
+    /// A substitute engine that behaves as the test specifies.
     ///
-    /// \note One of these is shared by every thread the runner uses, so what it keeps is kept
-    ///       behind the log's lock.
+    /// \note One instance is shared by all threads of the runner, so its state is protected by
+    ///       the lock of the log.
     class StandIn : public EngineProcess {
     public:
-        /// Called with the arguments the engine was handed. Returning false is an engine that
-        /// would not start at all.
+        /// Called with the engine arguments. Returning false simulates an engine that fails to
+        /// start.
         using Behaviour = std::function<bool(const QStringList &)>;
 
         StandIn(EngineLog *log, const SynthEngines &which, Behaviour resampler, Behaviour wavtool)
@@ -74,8 +74,8 @@ namespace {
                     what = &m_wavtool;
                 }
             }
-            // Outside the lock, because what a resampler does is write a file and the threads
-            // are meant to do that at the same time.
+            // Outside the lock, because a resampler writes a file, and the threads are intended
+            // to do so concurrently.
             out.started = what && *what ? (*what)(arguments) : bool(what);
             return out;
         }
@@ -87,7 +87,7 @@ namespace {
         Behaviour m_wavtool;
     };
 
-    /// A runner that starts the engine the test gave it rather than a real one.
+    /// A runner that starts the substitute engine supplied by the test.
     class StubbedRunner : public ThreadedSynthRunner {
     public:
         StubbedRunner(EngineLog *log, SynthEngines which, StandIn::Behaviour resampler,
@@ -138,7 +138,7 @@ private:
         return error ? -1 : qint64(size);
     }
 
-    /// Engine paths that are nowhere, since the stand-in is what answers to them.
+    /// Nonexistent engine paths, because the substitute handles the calls.
     SynthEngines somewhere() const {
         SynthEngines engines;
         engines.resampler = root() / "nowhere" / "resampler";
@@ -146,7 +146,7 @@ private:
         return engines;
     }
 
-    /// A resampler that writes the piece it was asked for.
+    /// A resampler that writes the requested fragment.
     static StandIn::Behaviour rendersTo(const std::filesystem::path &piece) {
         return [piece](const QStringList &) {
             std::ofstream out(piece, std::ios::binary | std::ios::trunc);
@@ -155,12 +155,13 @@ private:
         };
     }
 
-    /// A resampler that starts, says nothing and leaves nothing behind.
+    /// A resampler that starts, reports nothing and writes nothing.
     static StandIn::Behaviour writesNothing() {
         return [](const QStringList &) { return true; };
     }
 
-    /// A wavtool that keeps the header and the samples apart the way UTAU's does, and appends.
+    /// A wavtool that writes the header and the sample data separately, as the UTAU wavtool
+    /// does, and appends.
     static StandIn::Behaviour appends(const std::filesystem::path &track) {
         return [track](const QStringList &) {
             std::ofstream header(withSuffix(track, ".whd"), std::ios::binary | std::ios::app);
@@ -171,7 +172,7 @@ private:
         };
     }
 
-    /// A plan for \a notes notes, which is as much as anything here needs.
+    /// A plan for \a notes notes, sufficient for every test here.
     std::optional<SynthPlan> plan(int notes = 1) {
         write(QStringLiteral("bank/oto.ini"), "a.wav=a,10,20,30,40,5\n");
         write(QStringLiteral("bank/a.wav"), "RIFF");
@@ -188,7 +189,7 @@ private:
         for (int i = 0; i < notes; ++i) {
             Note note;
             note.lyric = QStringLiteral("a");
-            note.noteNum = 60 + i; // so that each one is its own piece
+            note.noteNum = 60 + i; // so that each note has its own fragment
             note.length = 480;
             track.notes.push_back(note);
         }
@@ -210,9 +211,9 @@ private Q_SLOTS:
         m_dir.reset();
     }
 
-    // The wavtool does not write a wav. It keeps the header and the samples in two files
-    // beside the track, <out>.whd and <out>.dat , and joining them is the last thing a render
-    // does. A render that stopped before that leaves two files nobody can play.
+    // The wavtool does not write a WAV file. It writes the header and the sample data to two
+    // files beside the track, <out>.whd and <out>.dat , and joining them is the final step of a
+    // render. A render that stops earlier leaves two unplayable files.
     void the_two_pieces_the_wavtool_writes_are_joined_and_cleared() {
         const auto p = plan();
         QVERIFY(p.has_value());
@@ -234,13 +235,13 @@ private Q_SLOTS:
         QCOMPARE(sizeOf(p->outputFile()), 44 + 100);
     }
 
-    // The wavtool appends, so a render has to clear the two pieces before it starts or it
-    // lands on the end of whatever is there. A render that finished cleared them itself; what
-    // leaves them behind is one that did not finish, which is what this puts back.
+    // The wavtool appends, so a render must remove both files before it starts. Otherwise its
+    // output is appended to existing content. A completed render removes the files itself, so
+    // leftover files originate only from an interrupted render, which this test recreates.
     //
-    // Written this way after the first attempt turned out to prove nothing: it rendered twice
-    // and the first render's own cleanup meant the second had nothing to clear, so taking the
-    // clearing out did not make it fail.
+    // The test creates the leftover files directly rather than rendering twice, because the
+    // cleanup of the first render would leave nothing to remove, and the test would then pass
+    // even without the removal step.
     void a_render_clears_what_an_earlier_one_left_behind() {
         const auto p = plan();
         QVERIFY(p.has_value());
@@ -258,8 +259,8 @@ private Q_SLOTS:
         QCOMPARE(sizeOf(p->outputFile()), 44 + 100);
     }
 
-    // And the whole cycle: rendering the same project again, which reuses every piece, comes
-    // out as the same track rather than a longer one.
+    // The complete cycle: rendering the same project again, with every fragment reused,
+    // produces the same track rather than a longer one.
     void a_second_render_comes_out_the_same_length() {
         const auto p = plan();
         QVERIFY(p.has_value());
@@ -276,14 +277,14 @@ private Q_SLOTS:
         QVERIFY(runner.render(*p, engines, nullptr, diagnostics).rendered);
         QCOMPARE(sizeOf(p->outputFile()), first);
 
-        // And the second one did not render it again, since nothing about the note changed.
+        // The second render did not render the note again, because the note is unchanged.
         QCOMPARE(log.resampled(), 1);
         QCOMPARE(log.appended(), 2);
     }
 
-    // An engine that starts, says nothing and writes nothing is the common way for a render to
-    // go wrong: a sample the resampler cannot read, a flag it does not know. Exit codes do not
-    // settle it, so what settles it is whether the piece appeared.
+    // An engine that starts, reports nothing and writes nothing is the most common render
+    // failure, caused for example by an unreadable sample or an unknown flag. Exit codes are
+    // unreliable, so success is determined by the existence of the fragment.
     void a_note_whose_piece_never_appeared_is_reported() {
         const auto p = plan();
         QVERIFY(p.has_value());
@@ -301,8 +302,9 @@ private Q_SLOTS:
         QVERIFY(hasError(diagnostics));
     }
 
-    // Off by default, because one bad sample should not cost the whole track. On, it has to
-    // actually stop: no wavtool calls, no track file, and the report names the first one only.
+    // Disabled by default, because one defective sample should not prevent the entire track.
+    // When enabled, the render must stop: no wavtool calls, no track file, and only the first
+    // failure is reported.
     void stop_on_first_failure_stops() {
         const auto p = plan(3);
         QVERIFY(p.has_value());
@@ -322,9 +324,9 @@ private Q_SLOTS:
         QVERIFY(!std::filesystem::exists(p->outputFile()));
     }
 
-    // Reuse is the one part of rendering a test can see without an engine, because reusing is
-    // exactly not starting one: the engines here point at nothing, so a note that comes back
-    // reused can only have come back that way by being left alone.
+    // Reuse is the only part of rendering observable without an engine, because reuse means
+    // not starting one. The engine paths here are nonexistent, so a note reported as reused
+    // cannot have been rendered.
     void a_piece_already_there_is_not_rendered_again() {
         const auto p = plan();
         QVERIFY(p.has_value());
@@ -348,7 +350,7 @@ private Q_SLOTS:
         QCOMPARE(outcome.failed, 0);
     }
 
-    // And the way out, for when the engine itself is what changed.
+    // The override for the case in which the engine itself has changed.
     void turning_reuse_off_renders_it_again() {
         const auto p = plan();
         QVERIFY(p.has_value());
@@ -370,8 +372,8 @@ private Q_SLOTS:
         QCOMPARE(outcome.reused, 0);
     }
 
-    // The folder is the project's and lives as long as it does, so the pieces a note rendered to
-    // before it was edited have to go. What belongs to notes this render is not touching stays.
+    // The cache directory belongs to the project and persists with it, so fragments rendered
+    // for a note before an edit must be removed. Fragments of notes outside this render remain.
     void the_pieces_a_note_no_longer_wants_are_cleared() {
         const auto p = plan();
         QVERIFY(p.has_value());
@@ -402,8 +404,8 @@ private Q_SLOTS:
         QVERIFY(there(wanted));
     }
 
-    // An engine that is not where it was said to be has to be said out loud. Rendering nothing
-    // and reporting nothing is the failure that would waste a user's afternoon.
+    // An engine missing from its configured location must be reported. Rendering nothing
+    // without a report is a failure that is costly for the user to diagnose.
     void engines_that_are_not_there_are_reported() {
         const auto p = plan();
         QVERIFY(p.has_value());
@@ -423,8 +425,8 @@ private Q_SLOTS:
         QVERIFY(!std::filesystem::exists(p->outputFile()));
     }
 
-    // The engines write into it, so it has to be there before they run. They are not going to
-    // create it, and the diagnostic they give for a path that does not exist is their own.
+    // The engines write into the directory, so it must exist before they run. They do not
+    // create it, and their diagnostic for a nonexistent path is engine-specific.
     void the_cache_folder_is_created() {
         const auto p = plan();
         QVERIFY(p.has_value());

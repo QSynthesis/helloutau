@@ -10,37 +10,36 @@
 
 namespace utaucompare {
 
-    /// One note, as UTAU's own render script renders it.
+    /// One note as rendered by the UTAU render script.
     struct ScriptCall {
-        /// The note UTAU says this is, which is the last argument it hands its helper. Absent
-        /// for a note rendered without the helper, which is what a rest looks like.
+        /// The note number assigned by UTAU, which is the last argument passed to its helper.
+        /// Absent for a note rendered without the helper, which is the case for a rest.
         std::optional<int> noteIndex;
 
-        /// What UTAU hands the resampler. Empty where it runs none, which is a rest.
+        /// The resampler arguments passed by UTAU. Empty if no resampler runs, as for a rest.
         QStringList resamplerArguments;
 
-        /// What UTAU hands the wavtool, which runs for every note.
+        /// The wavtool arguments passed by UTAU. The wavtool runs for every note.
         QStringList wavtoolArguments;
     };
 
     /// Reads the script UTAU wrote for a render.
     ///
-    /// This is the one thing in the comparison that is not ours, so it is read rather than
-    /// assumed: the variables are expanded and the line is split into arguments the way a
-    /// command processor would, and the two engine command lines come out of UTAU's helper
-    /// script rather than being written down here. What UTAU hands its engines is then whatever
-    /// UTAU wrote, in whatever order it wrote it, and a change on UTAU's side shows up as a
-    /// different argument rather than as a reader that silently reads the wrong field.
+    /// This script is the only external input of the comparison, so it is parsed rather than
+    /// assumed: variables are expanded and lines are split into arguments as a command
+    /// processor does, and the two engine command lines are taken from the UTAU helper script
+    /// rather than defined here. The arguments therefore reflect exactly what UTAU wrote, in
+    /// the order it wrote them, and a change in UTAU appears as a different argument rather than
+    /// as a parser that silently reads the wrong field.
     ///
-    /// The helper is skipped over as a program: its \c "if exist" guard is ignored, because the
-    /// question is what UTAU would hand the resampler, not whether a cache file happened to be
-    /// there when it ran.
+    /// The helper is not executed: its \c "if exist" guard is ignored, because the question is
+    /// which arguments UTAU would pass to the resampler, not whether a cache file existed at
+    /// the time.
     ///
-    /// \param charset what the script is written in. UTAU writes it in the code page it is
-    ///        running under, which is not the project's encoding and is not UTF-8.
+    /// \param charset the encoding of the script. UTAU writes it in the ANSI code page of the
+    ///        host, which is neither the project encoding nor UTF-8.
     ///
-    /// \return the calls in the order the script makes them, or nothing with the reason in
-    ///         \a error
+    /// \return the calls in script order, or \c std::nullopt with the reason in \a error
     std::optional<QList<ScriptCall>> readScript(const std::filesystem::path &script,
                                                 const QString &charset, QString *error);
 

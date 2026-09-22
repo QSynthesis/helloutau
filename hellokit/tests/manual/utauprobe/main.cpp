@@ -1,19 +1,19 @@
 /// \file
-/// Writes a project built to ask UTAU questions.
+/// Writes a project designed to determine UTAU behavior.
 ///
-/// A probe is a project where every note varies one thing and holds the rest still. Render it in
-/// UTAU, keep the \c temp.bat it wrote, and the script becomes a table of "given this entry, it
-/// passed that argument". Nearly everything settled about UTAU's arguments was settled this way.
+/// In a probe, each note varies one property and keeps all others fixed. Rendering it in UTAU
+/// and keeping the resulting \c temp.bat yields a table that maps each entry to the argument
+/// UTAU passed. Nearly all known facts about the UTAU arguments were determined this way.
 ///
-/// The manifest that goes out beside the project says which note asks what, so that reading the
-/// answers back is something a program can do rather than something done by eye.
+/// The manifest written beside the project records the question of each note, so that the
+/// answers can be evaluated by a program rather than by inspection.
 ///
 /// \code
 ///   utauprobe arguments probe.ust --voice "New Geping UTAU Database" --charset GBK \
 ///       --out E:/compare/probe-utau.wav --cache probe.cache --flags B0
 /// \endcode
 ///
-/// \sa utaucompare, which is what reads the answers once UTAU has rendered it
+/// \sa utaucompare, which evaluates the answers after UTAU has rendered the probe
 
 #include <filesystem>
 #include <fstream>
@@ -47,11 +47,11 @@ namespace {
         return result.valueForOption<std::string>(token).value_or(std::string());
     }
 
-    /// A path as it came off the command line.
+    /// A path from the command line.
     ///
-    /// The arguments arrive as UTF-8, and on Windows a \c fs::path built from a narrow string
-    /// reads it in the machine's code page instead. Anything outside ASCII then names a file
-    /// that is not there, which is most of the voice banks and half the projects.
+    /// The arguments are UTF-8, whereas on Windows a \c fs::path constructed from a narrow
+    /// string interprets it in the ANSI code page. Any non-ASCII path would then refer to a
+    /// nonexistent file, which affects most voice banks and many projects.
     fs::path pathOf(const std::string &text) {
         return fs::u8path(text);
     }
@@ -83,7 +83,7 @@ namespace {
 
         Probe::Settings settings;
         settings.name = fromStd(output.stem().string());
-        // UTAU's own placeholder for wherever it keeps its voice banks.
+        // The UTAU placeholder for its voice bank directory.
         settings.voiceDir = QStringLiteral("%VOICE%") + fromStd(option(result, "--voice"));
         settings.outFile = fromStd(option(result, "--out"));
         settings.cacheDir = fromStd(option(result, "--cache"));
@@ -93,8 +93,8 @@ namespace {
             settings.tempo = fromStd(tempo);
         }
 
-        // UTAU reads a UST in the code page it is running under, so the probe is written in the
-        // one it will be opened with and not in UTF-8.
+        // UTAU reads a UST in the ANSI code page of the host, so the probe is written in the
+        // encoding in which it will be opened, not in UTF-8.
         const TextCodec codec(fromStd(option(result, "--charset")));
         if (!codec.isValid()) {
             std::cerr << "error: there is no encoding called " << option(result, "--charset")

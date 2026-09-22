@@ -1,14 +1,14 @@
-"""What hello-fswatcher says when a voice bank's author does what authors do.
+"""Protocol test of hello-fswatcher under typical voice bank editing operations.
 
     python3 test_fswatcher.py <path to hello-fswatcher>
 
-The program on its own, spoken to over its pipes, the way hello::kit::FileSystemWatcher speaks to
-it. This is the layer where the messages still say which kind of change it was, a directory or a
-whole tree, a root gone or one that cannot be followed, and where nothing at all is said when
-nothing is to be: the layers above fold those together. See Protocol.h for the messages.
+Tests the program in isolation over its pipes, as hello::kit::FileSystemWatcher communicates with
+it. At this layer the messages still distinguish the kind of change, a directory or an entire
+tree, a removed root or an unwatchable one, and no message is sent when nothing changed. The
+layers above merge these distinctions. See Protocol.h for the messages.
 
-Two banks are followed side by side, and everything happens in the first, so that anything said
-about the second, or about neither, is a failure.
+Two voice banks are monitored side by side, and every change occurs in the first, so that any
+message about the second, or about neither, is a failure.
 """
 import os
 import queue
@@ -19,12 +19,12 @@ import tempfile
 import threading
 import time
 
-# How long to wait for what has to come. It comes within a fraction of a second, and the rest is
-# for a machine that is busy.
+# The time limit for an expected message. Messages normally arrive within a fraction of a second,
+# and the remainder accommodates a heavily loaded machine.
 PATIENCE = 10.0
 
-# How long to listen for what must not come. A wrong message comes as soon as a right one would,
-# so this is long enough to hear one and no longer.
+# The listening period for unexpected messages. An incorrect message arrives as soon as a correct
+# one would, so this period suffices to detect one.
 QUIET = 1.0
 
 
@@ -58,7 +58,7 @@ class Program:
             return None
 
     def gather(self, wanted=(), quiet=QUIET):
-        """What it says until everything in \\a wanted has come, and then for \\a quiet more."""
+        """Collects output until every line in wanted has arrived, then for quiet more seconds."""
         got = []
         deadline = time.monotonic() + PATIENCE
         while not all(w in got for w in wanted) and time.monotonic() < deadline:
@@ -110,8 +110,8 @@ def main():
     program = None
     try:
         parent = os.path.join(base, "voice")
-        # A percent sign, and one followed by what reads as an escape, since that is what the
-        # protocol escapes and what goes wrong when it is not.
+        # A percent sign, and one followed by text resembling an escape sequence, because the
+        # protocol escapes percent signs and missing escaping would corrupt such names.
         root = os.path.join(parent, "bank %25 100%")
         other = os.path.join(base, "other bank")
         for directory in ("a/b", "gone-soon", "renamed-soon", "leaving"):
@@ -136,23 +136,24 @@ def main():
         if not answer or answer[0] != "ok":
             print("FAIL answer:", answer)
             return 1
-        # FSEvents reports what happened just before it started as well: a hint too many, not a
-        # failure. What the checks look at starts after it.
+        # FSEvents also reports events from shortly before the stream started, which is a
+        # superfluous hint rather than a failure. The checks consider only later messages.
         program.gather(quiet=1.5)
 
         failures = 0
 
         def expect(name, action, must=(), quiet=False):
-            """With quiet, nothing at all may be said. Otherwise everything said is about the
-            first bank, and all of must is among it."""
+            """With quiet, no message may arrive. Otherwise every message must concern the first
+            voice bank, and all lines listed in must are required."""
             nonlocal failures
             try:
                 action()
                 acted = None
             except Exception as error:
                 acted = repr(error)
-            # Where something has to come, what comes wrong comes with it, and a moment after is
-            # enough to hear it. Where nothing may come, the whole of QUIET is listened to.
+            # If a message is expected, an incorrect message arrives with it, and a short period
+            # afterward suffices to detect it. If no message may arrive, the full QUIET period is
+            # observed.
             got = program.gather(must, quiet=QUIET if quiet else 0.3)
             missing = [m for m in must if m not in got]
             unwanted = got if quiet else [g for g in got if not about_first_bank(g)]
@@ -216,7 +217,7 @@ def main():
         expect("the root renamed back",
                lambda: os.rename(root + " old", root),
                must=["recdirty " + R])
-        expect("followed again once back",
+        expect("monitoring resumed after the rename back",
                lambda: write(os.path.join(root, "a", "again.wav")),
                must=["dirty " + R + S + "a"])
         expect("the directory holding the root renamed",

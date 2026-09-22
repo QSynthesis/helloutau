@@ -17,12 +17,12 @@ static const QByteArray kGbkGePing = QByteArray("\xb8\xf0\xc6\xbd", 4);
 static const QByteArray kUtf8GePing = QByteArray("\xe8\x91\x9b\xe5\xb9\xb3");
 static const QString kGePing = QString::fromUtf8(kUtf8GePing);
 
-// 们 and 这 in GBK. Simplified Chinese has them and Shift_JIS has neither.
+// 们 and 这 in GBK. Both are simplified Chinese characters absent from Shift_JIS.
 static const QByteArray kGbkMen = QByteArray("\xc3\xc7", 2);
 static const QByteArray kGbkZhe = QByteArray("\xd5\xe2", 2);
 
-// あ in Shift_JIS. The same two bytes are valid GBK as well and read as something else there,
-// which is what a bank read in the wrong one of the two looks like.
+// あ in Shift_JIS. The same two bytes are also valid GBK and decode to a different character
+// there, which is how a voice bank decoded in the wrong one of the two appears.
 static const QByteArray kShiftJisA = QByteArray("\x82\xa0", 2);
 static const QString kA = QString::fromUtf8("\xe3\x81\x82");
 
@@ -97,8 +97,8 @@ private Q_SLOTS:
         m_dir.reset();
     }
 
-    // Converting: the text stays, the bytes change, and the record says so, which is what the
-    // next open goes by.
+    // Conversion: the text is retained, the bytes change, and the configuration records the new
+    // encoding, which the next open uses.
     void converting_keeps_the_text_and_writes_every_file_anew() {
         write(QStringLiteral("oto.ini"), "a.wav=" + kGbkGePing + ",1,2,3,4,5\r\n");
         write(QStringLiteral("character.txt"), "name=" + kGbkGePing + "\r\n");
@@ -116,7 +116,7 @@ private Q_SLOTS:
         QCOMPARE(read(QStringLiteral("readme.txt")), kUtf8GePing);
         QCOMPARE(recorded(), name("UTF-8"));
 
-        // Opened again, and asked nothing.
+        // Reopened without querying the user.
         DiagnosticList again;
         const auto reopened = VoiceBank::open(root(), nullptr, again);
         QVERIFY(reopened.has_value());
@@ -124,8 +124,8 @@ private Q_SLOTS:
         QCOMPARE(reopened->character().name, kGePing);
     }
 
-    // Every piece of text that does not fit is named, not only the first, so that one attempt
-    // tells the user all there is to change.
+    // Every unrepresentable text is reported, not only the first, so that a single attempt
+    // informs the user of every required change.
     void converting_to_an_encoding_that_cannot_hold_the_text_names_all_of_it() {
         const QByteArray oto = "a.wav=" + kGbkMen +
                                ",1,2,3,4,5\r\n"
@@ -146,8 +146,9 @@ private Q_SLOTS:
         QVERIFY(!exists(QStringLiteral("hello-config.json")));
     }
 
-    // Plain ASCII reads the same in either, so there is nothing to rewrite. Only the record
-    // changes, and it has to, or the next open would read the directory in the old one.
+    // Plain ASCII is identical in both encodings, so no file needs rewriting. Only the
+    // configuration changes, which is necessary because the next open would otherwise decode
+    // the directory in the previous encoding.
     void converting_a_file_that_reads_the_same_rewrites_only_the_record() {
         const QByteArray oto = "a.wav=a,1,2,3,4,5\n";
         write(QStringLiteral("oto.ini"), oto);
@@ -163,7 +164,8 @@ private Q_SLOTS:
         QCOMPARE(recorded(), name("UTF-8"));
     }
 
-    // The other way to set an encoding: the files stay, and are read differently.
+    // The alternative way of setting an encoding: the files are unchanged and decoded
+    // differently.
     void rereading_in_the_right_encoding_mends_mojibake() {
         const QByteArray oto = "a.wav=" + kShiftJisA + ",1,2,3,4,5\r\n";
         write(QStringLiteral("oto.ini"), oto);
@@ -179,8 +181,8 @@ private Q_SLOTS:
         QVERIFY(bank->find(60, kA));
         QCOMPARE(bank->directories().at(0).charset, name("Shift_JIS"));
 
-        // Nothing was changed but the encoding it is read in, so the files stay, and the
-        // encoding is written down.
+        // Only the decoding encoding changed, so the files are unchanged and the encoding is
+        // recorded.
         QVERIFY(bank->save(diagnostics));
         QCOMPARE(read(QStringLiteral("oto.ini")), oto);
         QCOMPARE(recorded(), name("Shift_JIS"));
@@ -218,8 +220,8 @@ private Q_SLOTS:
         QCOMPARE(bank->samples().at(0).offset, 1.0);
     }
 
-    // An encoding that does not read the files is a wrong guess, and writing it down would
-    // make it the answer every time the bank is opened.
+    // An encoding in which the files are invalid is incorrect, and recording it would apply it
+    // every time the voice bank is opened.
     void an_encoding_that_does_not_read_is_not_remembered() {
         write(QStringLiteral("oto.ini"), "a.wav=" + kGbkGePing + ",1,2,3,4,5\r\n");
         write(QStringLiteral("a.wav"), "RIFF");
@@ -234,8 +236,8 @@ private Q_SLOTS:
         QVERIFY(!exists(QStringLiteral("hello-config.json")));
     }
 
-    // What a user answered when the bank was opened, written down so the question does not
-    // come back, and nothing else touched.
+    // The encoding the user selected when the voice bank was opened is recorded, so that the
+    // question is not repeated, and no other file is modified.
     void remembering_writes_the_record_and_nothing_else() {
         const QByteArray oto = "a.wav=" + kGbkGePing + ",1,2,3,4,5\n";
         write(QStringLiteral("oto.ini"), oto);
@@ -250,15 +252,16 @@ private Q_SLOTS:
         QCOMPARE(read(QStringLiteral("oto.ini")), oto);
         QCOMPARE(recorded(), name("GBK"));
 
-        // And the record it wrote is its own, so a second save finds nothing changed under it.
+        // The configuration written by the save becomes the baseline, so a second save detects
+        // no external change.
         auto samples = bank->samples();
         samples[0].offset = 7;
         bank->setSamples(samples);
         QVERIFY(bank->save(diagnostics));
     }
 
-    // Which of two equal aliases wins goes by the order the samples are in, and rereading one
-    // directory must not move it behind the others.
+    // The precedence between duplicate aliases follows the sample order, and rereading one
+    // directory must not move its samples behind those of the others.
     void rereading_keeps_the_directory_in_its_place() {
         write(QStringLiteral("a/oto.ini"), "one.wav=same,1,0,0,0,0\r\n");
         write(QStringLiteral("a/one.wav"), "RIFF");

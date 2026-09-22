@@ -21,7 +21,7 @@ namespace ustconv {
             return std::to_string(value);
         }
 
-        /// Enough digits to tell two doubles apart, which is the whole point of printing them.
+        /// Sufficient digits to distinguish any two doubles, which is the purpose of printing them.
         std::string show(double value) {
             char buffer[32];
             std::snprintf(buffer, sizeof(buffer), "%.10g", value);
@@ -41,7 +41,7 @@ namespace ustconv {
             return written.empty() ? std::string("\"\" (S curve)") : show(written);
         }
 
-        /// Collects what differs, under a prefix naming where in the file it sits.
+        /// Collects differences, each under a prefix identifying its location in the file.
         class Recorder {
         public:
             explicit Recorder(std::vector<Difference> &out) : _out(out) {
@@ -72,7 +72,8 @@ namespace ustconv {
             return name + ('[' + std::to_string(i) + ']');
         }
 
-        /// \return whether both have one, having recorded it where only one does
+        /// \return whether both sides have the value. A value present on only one side is
+        ///         recorded as a difference.
         bool bothHave(Recorder &r, const char *field, bool before, bool after) {
             if (before == after) {
                 return before;
@@ -139,9 +140,9 @@ namespace ustconv {
 
         void compareUserData(Recorder &r, const UserData &before, const UserData &after,
                              const Normalizer &beforeText, const Normalizer &afterText) {
-            // Keyed by the name as it reads, since the two files may spell it in different
-            // encodings. UTAU only keeps an entry whose name begins with $, but this library
-            // keeps every one it found, so anything may be in here.
+            // Keyed by the decoded name, because the two files may use different encodings.
+            // UTAU preserves only entries whose names begin with $, but this library preserves
+            // every entry it reads, so any name may occur here.
             UserData first, second;
             for (const auto &[key, value] : before) {
                 first[beforeText(key)] = beforeText(value);
@@ -207,11 +208,11 @@ namespace ustconv {
                    note.userData.count(hello::kit::controlNoteEntry) != 0;
         }
 
-        /// The notes of the project, without the one the control note takes up.
+        /// The notes of the project, excluding the control note.
         ///
-        /// Only the first is dropped, the same way reading a UST into a project drops only the
-        /// first. A second one is a note the user somehow has, and losing it silently would be
-        /// the kind of thing this program exists to catch.
+        /// Only the first control note is excluded, as when a UST is read into a project. A
+        /// second one is a note of the user, and silently losing it would be exactly the kind of
+        /// defect this program is meant to detect.
         std::vector<const utau::Note *> notesOf(const utau::UstFile &file) {
             std::vector<const utau::Note *> notes;
             bool eaten = false;
@@ -232,9 +233,9 @@ namespace ustconv {
         std::vector<Difference> out;
         Recorder r(out);
 
-        // version.charset is not compared. UST can declare UTF-8 and nothing else, so the line
-        // is not where the encoding of a file this program wrote is recorded, and what each side
-        // is in was settled before either was read.
+        // version.charset is not compared. UST can declare only UTF-8, so that line does not
+        // record the encoding of a file written by this program, and the encoding of each side
+        // was determined before reading.
         r.enter({});
         r.check("format version", before.version.version, after.version.version);
 

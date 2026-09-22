@@ -1,2 +1,2 @@
-# One directory per program in hellokit/tools, the way the rest mirror include/hellokit.
+# One directory per program in hellokit/tools, as the other directories mirror include/hellokit.
 add_subdirectory(fswatcher)

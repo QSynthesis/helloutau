@@ -19,11 +19,11 @@ private:
         return codec;
     }
 
-    // Escaping and unescaping are one thing written twice, so what matters is that the pair
-    // holds, not what either half does on its own.
+    // Escaping and unescaping are inverse operations, so the requirement under test is the
+    // round-trip property rather than the behavior of either half in isolation.
     static void checkRoundTrip(const QString &text, const TextCodec &target) {
         const QString escaped = target.escape(text);
-        QVERIFY2(target.canEncode(escaped), qPrintable(escaped)); // it must be writable
+        QVERIFY2(target.canEncode(escaped), qPrintable(escaped)); // must be representable
         QCOMPARE(TextCodec::unescape(escaped), text);
     }
 
@@ -34,9 +34,9 @@ private Q_SLOTS:
         QVERIFY(TextCodec().isValid()); // the system encoding
     }
 
-    // The ones this project exists for are not in QStringConverter::Encoding. They come from ICU
-    // and are reachable only by name, so resolving a name through the enum leaves every one of
-    // them looking unavailable.
+    // The legacy encodings required by this project are absent from QStringConverter::Encoding
+    // and are reachable only by name, so resolving a name through the enumeration would make
+    // all of them appear unavailable.
     void the_legacy_encodings_are_reachable_by_name() {
         for (const auto &name : {"Shift_JIS", "GBK", "Big5", "EUC-KR", "GB18030"}) {
             QVERIFY2(TextCodec(QLatin1String(name)).isValid(), name);
@@ -44,9 +44,9 @@ private Q_SLOTS:
         QCOMPARE(shiftJis().name(), QStringLiteral("Shift_JIS"));
     }
 
-    // The code page path exists so that these four never depend on ICU being present, which on
-    // Windows means depending on the operating system's version. Aliases have to land on the
-    // same canonical name, because that name is what gets written into a control note.
+    // These encodings are converted without ICU, which is unavailable in some Qt builds and
+    // depends on the operating system version on Windows. Every alias must resolve to the same
+    // canonical name, because that name is recorded in the control note.
     void the_names_that_matter_resolve_to_one_canonical_spelling() {
         const std::pair<const char *, const char *> aliases[] = {
             {"Shift_JIS",   "Shift_JIS"},
@@ -70,8 +70,8 @@ private Q_SLOTS:
         }
     }
 
-    // Bytes that are not valid in the chosen encoding mean the wrong encoding was chosen, and
-    // the user has to be told rather than shown a page of replacement characters.
+    // Invalid bytes indicate an incorrect encoding choice, which must be reported to the user
+    // instead of displaying replacement characters.
     void bytes_that_do_not_decode_are_refused_not_patched_up() {
         QVERIFY(!utf8().decode(QByteArray("\xff\xfe\xfd", 3)).has_value());
 
@@ -82,11 +82,10 @@ private Q_SLOTS:
         QCOMPARE(*back, QString::fromUtf8("あいうえお"));
     }
 
-    // Bytes that are not valid in a legacy code page have to be refused there too, not only on
-    // the paths Qt handles itself.
+    // Invalid bytes must also be rejected on the code page path, not only on the Qt paths.
     void the_code_page_path_refuses_bytes_that_do_not_decode() {
-        // A lead byte with nothing after it, a lead byte with a trail byte that is not one,
-        // and a pair that is simply not assigned.
+        // A truncated sequence, a lead byte followed by an invalid trail byte, and an
+        // unassigned pair.
         QVERIFY(!shiftJis().decode(QByteArray("\x82", 1)).has_value());
         QVERIFY(!shiftJis().decode(QByteArray("\x82\x20", 2)).has_value());
         QVERIFY(!shiftJis().decode(QByteArray("\x85\x40", 2)).has_value());
@@ -98,8 +97,8 @@ private Q_SLOTS:
         QCOMPARE(*back, QString::fromUtf8("あい"));
     }
 
-    // Every ANSI code page, so that a machine set to any of them has its system encoding here,
-    // and on every system, not only the one that has code pages.
+    // Every ANSI code page must be available, so that the system encoding of any Windows
+    // machine is supported, on every system rather than only on Windows.
     void every_ansi_code_page_is_reachable_by_name() {
         for (const auto *name :
              {"windows-874", "windows-1250", "windows-1251", "windows-1252", "windows-1253",
@@ -108,14 +107,14 @@ private Q_SLOTS:
             QVERIFY2(codec.isValid(), name);
             QCOMPARE(codec.name(), QLatin1String(name));
         }
-        // Not Latin-1, which has no euro sign.
+        // Windows-1252, not Latin-1, which lacks the euro sign.
         QCOMPARE(TextCodec(QStringLiteral("windows-1252")).decode(QByteArray("\x80", 1)),
                  QString(QChar(0x20AC)));
     }
 
-    // UTAU writes a character with both an NEC and an IBM spelling the way Windows writes it.
-    // So does this, whichever it was read from, so that an oto.ini saved here reads back in
-    // UTAU with the bytes UTAU would have written.
+    // UTAU encodes a character with both an NEC and an IBM encoding as Windows does. This
+    // implementation does the same, regardless of the sequence it was decoded from, so that an
+    // oto.ini saved here contains the bytes UTAU would have written.
     void a_character_with_two_spellings_is_written_as_utau_writes_it() {
         const QString kanji(QChar(0x7E8A));
         QCOMPARE(shiftJis().decode(QByteArray("\xed\x40", 2)), kanji);
@@ -123,8 +122,8 @@ private Q_SLOTS:
         QCOMPARE(shiftJis().encode(kanji), QByteArray("\xfa\x5c", 2));
     }
 
-    // Windows maps the user defined rows into the private use area, and a bank that uses one
-    // has to read everywhere.
+    // Windows maps the user-defined rows into the Private Use Area, and a voice bank that uses
+    // them must be readable on every system.
     void the_user_defined_rows_are_read() {
         const QString first(QChar(0xE000));
         QCOMPARE(TextCodec(QStringLiteral("Big5")).decode(QByteArray("\xfa\x40", 2)), first);
@@ -135,20 +134,21 @@ private Q_SLOTS:
     void what_an_encoding_can_hold_is_asked_of_the_encoding() {
         QVERIFY(shiftJis().canEncode(QString::fromUtf8("あ")));
         QVERIFY(shiftJis().canEncode(QStringLiteral("la")));
-        QVERIFY(!shiftJis().canEncode(QString::fromUtf8("你"))); // simplified only
-        QVERIFY(!shiftJis().canEncode(QString::fromUtf8("😀"))); // nor outside the basic plane
+        QVERIFY(!shiftJis().canEncode(QString::fromUtf8("你"))); // simplified Chinese only
+        QVERIFY(!shiftJis().canEncode(QString::fromUtf8("😀"))); // outside the BMP
         QVERIFY(utf8().canEncode(QString::fromUtf8("你好 あ 😀")));
     }
 
-    // A question mark is what Qt writes for a character it cannot hold, so a text that was
-    // already a question mark must not be mistaken for one that failed.
+    // Qt substitutes a question mark for an unrepresentable character, so a literal question
+    // mark must not be mistaken for a failed conversion.
     void a_question_mark_is_not_mistaken_for_a_failure() {
         QVERIFY(shiftJis().canEncode(QStringLiteral("?")));
         QVERIFY(shiftJis().canEncode(QStringLiteral("what?")));
     }
 
-    // UTAU writes two things and only two: UTF-8 with a Charset line, or the writer's own code
-    // page with nothing at all. So the list put to the user is short on purpose.
+    // UTAU writes exactly two kinds of file: UTF-8 with a Charset line, or the ANSI code page of
+    // the writing machine without a declaration. The list offered to the user is therefore
+    // deliberately short.
     void the_candidates_are_the_ones_utau_users_are_actually_on() {
         const auto candidates = TextCodec::ustCandidates();
         for (const auto &name : {"UTF-8", "Shift_JIS", "GBK", "Big5"}) {
@@ -159,8 +159,8 @@ private Q_SLOTS:
         QVERIFY(candidates.size() <= 5);
     }
 
-    // The system encoding has to answer with a name that can be written into a control note. Qt
-    // calls its own "Locale", which tells a later reader nothing.
+    // The system encoding must resolve to a name that can be recorded in a control note. Qt
+    // names it "Locale", which is meaningless to a later reader.
     void the_system_encoding_has_a_real_name() {
         const QString name = TextCodec::systemName();
         QVERIFY(!name.isEmpty());
@@ -174,15 +174,16 @@ private Q_SLOTS:
         QCOMPARE(shiftJis().escape(QString::fromUtf8("あ")), QString::fromUtf8("あ"));
     }
 
-    // Outside the basic plane a character is two code units, and they mean nothing apart.
+    // A character outside the Basic Multilingual Plane is a surrogate pair, whose units are
+    // meaningless in isolation.
     void a_character_outside_the_basic_plane_becomes_two_escapes() {
         const QString escaped = shiftJis().escape(QString::fromUtf8("😀"));
         QCOMPARE(escaped, QStringLiteral("\\ud83d\\ude00"));
         QCOMPARE(TextCodec::unescape(escaped), QString::fromUtf8("😀"));
     }
 
-    // Without this there would be no telling an escape the lyric asked for from one the writer
-    // put there, and a lyric holding \u0041 would come back as A.
+    // Otherwise an escape sequence in the lyric could not be distinguished from one inserted by
+    // the writer, and a lyric containing \u0041 would be read back as A.
     void a_backslash_in_the_text_survives() {
         QCOMPARE(shiftJis().escape(QStringLiteral("a\\b")), QStringLiteral("a\\\\b"));
         QCOMPARE(TextCodec::unescape(QStringLiteral("a\\\\b")), QStringLiteral("a\\b"));
@@ -200,7 +201,7 @@ private Q_SLOTS:
                  QString::fromUtf8("你好世界"),
                  QString::fromUtf8("mixed 你 あ ascii"),
                  QString::fromUtf8("😀🎵"),
-                 QStringLiteral("\\u4f60"),         // an escape written by hand
+                 QStringLiteral("\\u4f60"),         // an escape sequence typed by the user
                  QStringLiteral("C:\\utau\\voice"), // a Windows path
                  QStringLiteral("?"),
                  QStringLiteral("trailing\\"),
@@ -212,8 +213,8 @@ private Q_SLOTS:
         }
     }
 
-    // Something that is not one of the two forms came from somewhere, and guessing at it loses
-    // it.
+    // A backslash sequence matching neither form is part of the original text, and
+    // reinterpreting it would lose data.
     void an_escape_that_is_not_one_is_left_alone() {
         QCOMPARE(TextCodec::unescape(QStringLiteral("\\q")), QStringLiteral("\\q"));
         QCOMPARE(TextCodec::unescape(QStringLiteral("\\u12")), QStringLiteral("\\u12"));

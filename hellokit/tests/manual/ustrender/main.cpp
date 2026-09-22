@@ -1,10 +1,10 @@
 /// \file
-/// Renders a project to a wav from a terminal, which is what the roadmap's second stage is
-/// measured by.
+/// Renders a project to a WAV file from the command line. The second roadmap stage is measured
+/// by this program.
 ///
-/// It needs things a test cannot have: a real voice bank, and the two engines. Those are named
-/// on the command line rather than taken from the project, which is the rule the whole synth
-/// layer is built around.
+/// It requires resources unavailable to automated tests: a real voice bank and the two engines.
+/// These are specified on the command line rather than taken from the project, which is the
+/// fundamental rule of the synthesis layer.
 ///
 /// \code
 ///   ustrender song.ust out.wav --voice "C:/UTAU/voice/uta" --charset Shift_JIS \
@@ -63,11 +63,11 @@ namespace {
         }
     }
 
-    /// A path as it came off the command line.
+    /// A path from the command line.
     ///
-    /// The arguments arrive as UTF-8, and on Windows a \c fs::path built from a narrow string
-    /// reads it in the machine's code page instead. Anything outside ASCII then names a file
-    /// that is not there, which is most of the voice banks and half the projects.
+    /// The arguments are UTF-8, whereas on Windows a \c fs::path constructed from a narrow
+    /// string interprets it in the ANSI code page. Any non-ASCII path would then refer to a
+    /// nonexistent file, which affects most voice banks and many projects.
     fs::path pathOf(const std::string &text) {
         return fs::u8path(text);
     }
@@ -129,8 +129,8 @@ namespace {
             return 1;
         }
 
-        // The bank's own encoding, which is not the project's. A Shift_JIS UST is routinely sung
-        // by a bank in another code page.
+        // The encoding of the voice bank, which is independent of the project encoding. A
+        // Shift_JIS UST is commonly rendered with a voice bank in another code page.
         auto bankCharset = fromStd(option(result, "--voice-charset"));
         if (bankCharset.isEmpty()) {
             bankCharset = charset;
@@ -159,8 +159,8 @@ namespace {
         std::cout << "plan: " << plan->steps().size() << " notes" << std::endl;
 
         if (result.option("--plan")) {
-            // What each engine would be handed, one argument per line, so that a wrong argument
-            // is visible without running anything.
+            // The arguments of each engine call, one per line, so that an incorrect argument is
+            // visible without executing anything.
             for (const auto &step : plan->steps()) {
                 std::cout << "note " << (step.noteIndex + 1) << (step.silent ? " (silent)" : "")
                           << std::endl;
@@ -184,7 +184,7 @@ namespace {
             return 1;
         }
 
-        // Which runner is a compatibility choice, not an implementation detail. See
+        // The runner is a compatibility setting, not an implementation detail. See
         // docs/Synth.md.
         std::unique_ptr<SynthRunner> runner;
         if (result.option("--classic")) {

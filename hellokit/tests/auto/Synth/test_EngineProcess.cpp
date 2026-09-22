@@ -18,13 +18,13 @@ using namespace hello::kit;
 
 namespace {
 
-    /// The argument that turns this binary into the engine under test.
+    /// The argument that makes this binary act as the engine under test.
     constexpr char echoArguments[] = "--echo-arguments";
 
-    /// The one that makes it hang, for the timeout case.
+    /// The argument that makes it hang, for the time limit case.
     constexpr char sleepForever[] = "--sleep-forever";
 
-    /// The one that makes it fail, for the exit code case.
+    /// The argument that makes it fail, for the exit code case.
     constexpr char failWith[] = "--fail-with";
 
 }
@@ -33,11 +33,10 @@ class test_EngineProcess : public QObject {
     Q_OBJECT
 
 private:
-    /// This binary, standing in for an engine.
+    /// This binary, acting as a substitute engine.
     ///
-    /// An engine is a program that reports what it was handed, and the one program a test can be
-    /// sure exists is the test. Building a helper for it would only add a second thing to keep
-    /// working.
+    /// The substitute only needs to report its arguments, and the one program certain to exist
+    /// during a test is the test itself. A separate helper program would only add maintenance.
     static std::filesystem::path self() {
         return std::filesystem::path(QCoreApplication::applicationFilePath().toStdU16String());
     }
@@ -61,9 +60,9 @@ private Q_SLOTS:
         QCOMPARE(result.output.trimmed(), QStringLiteral("hello"));
     }
 
-    // The whole reason this class exists. UTAU renders by writing a batch file, so a sample
-    // path or a flags string holding & or a newline appends commands to it. Here each of them
-    // has to arrive as one argument and nothing else may happen.
+    // The reason this class exists. UTAU renders by writing a batch file, so a sample path or
+    // a flags string containing & or a newline appends commands to it. Here each value must
+    // arrive as a single argument with no other effect.
     void a_shell_metacharacter_stays_inside_its_argument_data() {
         QTest::addColumn<QString>("argument");
 
@@ -89,8 +88,8 @@ private Q_SLOTS:
         QVERIFY(result.started);
         QVERIFY(diagnostics.isEmpty());
 
-        // One argument in, one line out, byte for byte. A shell would have split it, expanded
-        // it, or run the second half.
+        // One argument in, one identical line out. A shell would have split it, expanded it,
+        // or executed its second half.
         QCOMPARE(result.output, argument + QLatin1Char('\n'));
     }
 
@@ -101,7 +100,7 @@ private Q_SLOTS:
                                 diagnostics);
 
         QVERIFY(result.started);
-        // The empty one counts, since an engine reads its arguments by position.
+        // The empty argument counts, because an engine reads its arguments by position.
         QCOMPARE(result.output, QStringLiteral("one\ntwo three\n\nfour\n"));
     }
 
@@ -124,8 +123,7 @@ private Q_SLOTS:
         QVERIFY(!result.succeeded());
     }
 
-    // An engine that never returns would otherwise stop the render for good, which is what UTAU
-    // does.
+    // Otherwise an engine that never returns would halt the render indefinitely, as in UTAU.
     void an_engine_that_hangs_is_stopped() {
         DiagnosticList diagnostics;
         const auto result = run({QLatin1String(sleepForever)}, diagnostics, 500);
@@ -138,14 +136,14 @@ private Q_SLOTS:
 };
 
 int main(int argc, char *argv[]) {
-    // Re-entered as the engine under test. Nothing here uses Qt, so it stays out of the way of
-    // whatever the test needs to measure.
+    // Entry point when acting as the engine under test. This code does not use Qt, so it does
+    // not interfere with the measured behavior.
     if (argc >= 2) {
         const std::string mode = argv[1];
         if (mode == echoArguments) {
 #ifdef _WIN32
-            // Text mode would turn every newline into CRLF, and an argument that carries one is
-            // exactly what these cases are about. What arrived has to come back unchanged.
+            // Text mode would convert every line feed to CRLF, and arguments containing line
+            // feeds are the subject of these cases. The received bytes must be echoed unchanged.
             _setmode(_fileno(stdout), _O_BINARY);
 #endif
             for (int i = 2; i < argc; ++i) {

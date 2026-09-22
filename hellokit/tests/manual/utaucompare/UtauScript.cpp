@@ -40,9 +40,9 @@ namespace utaucompare {
             return text;
         }
 
-        /// Expands the variables in a line the way a command processor does, before anything is
-        /// split off it. \c %params% holding four arguments is why the order matters: it is one
-        /// variable and four arguments, and it is four only once it has been expanded.
+        /// Expands the variables in a line as a command processor does, before splitting. The
+        /// order matters because \c %params% is one variable containing four arguments, which
+        /// become four only after expansion.
         QString expand(const QString &line, const QHash<QString, QString> &variables,
                        const QStringList &positional) {
             QString out;
@@ -73,9 +73,9 @@ namespace utaucompare {
 
         /// Splits a command line into arguments.
         ///
-        /// \param keepQuotes leaves the quotes on, which is what a positional parameter needs:
-        ///        \c %1 puts back the token exactly as it was written, quotes and all, and a
-        ///        path with a space in it stays one argument only because of them.
+        /// \param keepQuotes retains the quotes, as required for a positional parameter:
+        ///        \c %1 reproduces the token exactly as written, including quotes, and a path
+        ///        containing a space remains one argument only because of them.
         QStringList split(const QString &line, bool keepQuotes = false) {
             QStringList out;
             QString current;
@@ -113,7 +113,7 @@ namespace utaucompare {
             return out;
         }
 
-        /// The body of a line, with the leading \c @ and any leading whitespace gone.
+        /// The body of a line, without the leading \c @ and leading whitespace.
         QString body(const QString &line) {
             QString out = line.trimmed();
             while (out.startsWith(QLatin1Char('@'))) {
@@ -142,8 +142,8 @@ namespace utaucompare {
             return std::nullopt;
         }
 
-        // The helper holds the two engine command lines. It is read as the templates they are,
-        // so that the order of the arguments is UTAU's and not a copy of it kept here.
+        // The helper contains the two engine command lines. They are read as templates, so that
+        // the argument order is taken from UTAU rather than duplicated here.
         const auto helper = script.parent_path() / "temp_helper.bat";
         if (!std::filesystem::exists(helper)) {
             *error = QStringLiteral("temp_helper.bat is not beside %1. It is where UTAU keeps "
@@ -214,9 +214,9 @@ namespace utaucompare {
 
             const auto match = assignment.match(statement);
             if (match.hasMatch()) {
-                // Expanded here and not where it is used, because that is when a command
-                // processor expands it: UTAU builds the cache path out of %cachedir% at the
-                // moment it sets it. The quotes are kept, because those it does put back.
+                // Expanded here rather than at the point of use, because a command processor
+                // expands it at assignment: UTAU builds the cache path from %cachedir% when it
+                // sets the variable. The quotes are retained, because expansion reproduces them.
                 variables.insert(match.captured(1),
                                  expand(match.captured(2).trimmed(), variables, QStringList()));
                 continue;
@@ -231,8 +231,8 @@ namespace utaucompare {
                 continue;
             }
 
-            // A note rendered without the helper, which is what a rest looks like: no resampler,
-            // one wavtool call to give the silence its length.
+            // A note rendered without the helper, as for a rest: no resampler, and one wavtool
+            // call that supplies the duration of the silence.
             const QStringList arguments = split(expand(statement, variables, QStringList()));
             if (engineOf(arguments) == Engine::Wavtool) {
                 ScriptCall call;

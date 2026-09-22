@@ -57,8 +57,8 @@ namespace utauprobe {
             lines += entry("Length", note.length);
             lines += entry("Lyric", note.lyric);
             lines += entry("NoteNum", TONE);
-            // Every note carries one, because a note UTAU made itself does. A note asking what
-            // a value of its own does carries that instead, in the same place.
+            // Every note carries this entry, as notes created by UTAU do. A note testing a
+            // specific value carries that value instead, in the same position.
             const bool carriesItsOwn =
                 !note.entries.isEmpty() &&
                 note.entries.first().startsWith(QStringLiteral("PreUtterance="));
@@ -103,8 +103,8 @@ namespace utauprobe {
         };
 
         // ------------------------------------------------------------------ flags
-        // Which of the project's flags and the note's own comes first, and what happens to a key
-        // that both of them set. The project carries B0 throughout.
+        // The order of project flags and note flags, and the result for a key set by both. The
+        // project uses B0 throughout.
         probe.rest();
         QStringList flags = {QString()};
         for (const char *letter : {"g", "B", "b", "t", "Y", "H", "P", "N", "A", "O", "S", "u",
@@ -128,8 +128,7 @@ namespace utauprobe {
         }
 
         // ------------------------------------------------------------------ levels
-        // What UTAU passes where the entry is absent, which is what a note it made itself looks
-        // like.
+        // The values UTAU passes if the entry is absent, as in a note created by UTAU.
         probe.rest();
         const auto sweep = [&ask](const char *key, const QString &asks, const QList<int> &values,
                                   bool withAbsent) {
@@ -162,7 +161,7 @@ namespace utauprobe {
         sweep("StartPoint", QStringLiteral("startPoint"), {0, 10, 50, 100, 300}, true);
 
         // ------------------------------------------------------------------ length
-        // Which is what decides realLength.
+        // The length determines realLength.
         probe.rest();
         QList<int> lengths;
         for (int ticks = 15; ticks <= 480; ticks += 15) {
@@ -234,14 +233,15 @@ namespace utauprobe {
         }
 
         // ------------------------------------------------------------------ the cache name
-        // Notes alike in everything, in alike surroundings. If the six characters at the end of
-        // the cache name stand for the arguments, these have to come out the same.
+        // Identical notes in identical context. If the six characters at the end of the cache
+        // name encode the arguments, these notes must yield the same characters.
         probe.rest();
         for (int i = 0; i < 6; ++i) {
             ask(QStringLiteral("cacheIdentical"), QStringLiteral("alike"));
         }
         probe.rest();
-        // The same note with one thing changed at a time, to see what the name follows.
+        // The same note with one property changed at a time, to determine what the name depends
+        // on.
         ask(QStringLiteral("cacheVaried"), QStringLiteral("nothing"));
         ask(QStringLiteral("cacheVaried"), QStringLiteral("intensity"), {entry("Intensity", 90)});
         ask(QStringLiteral("cacheVaried"), QStringLiteral("modulation"), {entry("Modulation", 10)});
@@ -291,9 +291,9 @@ namespace utauprobe {
                 .arg(offset);
         };
 
-        // Every note stands between rests, so that a note's curve is its own. On the first probe
-        // the readings before a note starts carry the note before it, which is what made the
-        // short vibratos so hard to read.
+        // Every note is surrounded by rests, so that its curve is unaffected by neighbors. In the
+        // argument probe the values before the start of a note were influenced by the preceding
+        // note, which made short vibratos difficult to evaluate.
         const auto alone = [&probe](const QString &asks, const QString &detail,
                                     const QStringList &entries, int length = 480) {
             probe.rest();
@@ -306,45 +306,44 @@ namespace utauprobe {
             probe.note(note);
         };
 
-        // -------------------------------------------------------------- how much it covers
-        // 480 ticks is 500 ms at 120 bpm, so a share is also its length in milliseconds times
-        // five.
+        // -------------------------------------------------------------- coverage
+        // 480 ticks are 500 ms at 120 bpm, so a percentage of the note corresponds to five times
+        // that many milliseconds.
         for (int share = 2; share <= 100; share += 2) {
             alone(QStringLiteral("share"), QStringLiteral("%1% = %2 ms").arg(share).arg(5 * share),
                   {entry("VBR", vbr(share))});
         }
 
-        // -------------------------------------------------------------- the same share, longer
-        // notes
+        // -------------------------------------------------------------- same share, longer notes
         for (const int length : {120, 180, 240, 360, 480, 720, 960, 1440, 1920, 2880}) {
             alone(QStringLiteral("ticks"),
                   QStringLiteral("%1 ticks, vibrato over %2").arg(length).arg(length / 5),
                   {entry("VBR", vbr(20))}, length);
         }
 
-        // -------------------------------------------------------------- the same note, three
-        // tempos The ticks the vibrato covers do not move; the milliseconds do, by a factor of
-        // four. If the boundary is in ticks these agree, and if it is in milliseconds they do not.
+        // -------------------------------------------------------------- same note, three tempos
+        // The vibrato covers the same ticks at every tempo, while the milliseconds vary by a
+        // factor of four. If the threshold is defined in ticks these notes agree, and if it is
+        // defined in milliseconds they do not.
         for (const int tempo : {60, 120, 240}) {
             for (const int share : {20, 40, 65}) {
                 alone(QStringLiteral("tempo"), QStringLiteral("%1 bpm, %2%").arg(tempo).arg(share),
                       {entry("Tempo", tempo), entry("VBR", vbr(share))});
             }
         }
-        // A tempo set on one note runs on into every note after it, so it has to be set back or
-        // every block below this one asks its question at 240 bpm instead of 120. The first run
-        // of this probe did exactly that, and two of its blocks answered nothing.
+        // A tempo set on one note applies to every following note, so it must be reset.
+        // Otherwise every subsequent block would test its question at 240 bpm instead of 120.
         alone(QStringLiteral("tempo"), QStringLiteral("back to 120 bpm"),
               {entry("Tempo", 120), entry("VBR", vbr(100))});
 
-        // -------------------------------------------------------------- where exactly it stops
-        // The first run put the boundary between 50 and 60 ms. These pin it to the millisecond,
-        // twice over: a share of a short note and a share of a longer one, arranged so that one
-        // step of the note's length is one millisecond of vibrato. If the two sweeps break in
-        // the same place, the vibrato's own length is what decides and nothing else is.
+        // -------------------------------------------------------------- exact threshold
+        // The threshold lies between 50 and 60 ms. These notes determine it to the millisecond
+        // with two sweeps: a share of a short note and a share of a longer one, arranged so
+        // that one step of note length equals one millisecond of vibrato. If both sweeps change
+        // at the same point, the threshold depends only on the vibrato length.
         //
-        // At 120 bpm a tick is 25/24 ms, so 24% of a note moves by a millisecond every four
-        // ticks, and 12% of one every eight.
+        // At 120 bpm a tick is 25/24 ms, so 24% of a note changes by one millisecond every four
+        // ticks, and 12% of a note every eight ticks.
         for (int ticks = 180; ticks <= 260; ticks += 4) {
             alone(QStringLiteral("boundary"),
                   QStringLiteral("24% of %1 ticks = %2 ms").arg(ticks).arg(ticks / 4),
@@ -356,7 +355,7 @@ namespace utauprobe {
                   {entry("VBR", vbr(12))}, ticks);
         }
 
-        // -------------------------------------------------------------- the fade, on both sides
+        // -------------------------------------------------------------- fade in and fade out
         for (const int share : {20, 30, 40, 50, 65, 100}) {
             for (const auto &fade : QList<QPair<int, int>>{
                      {0,  0 },
@@ -370,17 +369,16 @@ namespace utauprobe {
             }
         }
 
-        // -------------------------------------------------------------- the period, at a short
-        // share
+        // -------------------------------------------------------------- period at a short share
         for (const int period : {20, 60, 120, 180, 300, 500, 1000}) {
             alone(QStringLiteral("period"), QStringLiteral("20%, period %1 ms").arg(period),
                   {entry("VBR", vbr(20, period))});
         }
 
-        // -------------------------------------------------------------- the handover
-        // A note's tail is bent by the pitch line the next note starts with. The first note of
-        // each pair carries no pitch line of its own, so its tail is nothing but the handover,
-        // and the second starts far enough away to make the difference legible.
+        // -------------------------------------------------------------- transition
+        // The tail of a note is bent by the initial pitch line of the next note. The first note
+        // of each pair has no pitch line, so its tail consists only of the transition, and the
+        // second note starts far enough away to make the difference measurable.
         for (const int start : {10, 20, 40, 80, 160}) {
             for (const int width : {20, 40, 80}) {
                 const QString detail = QStringLiteral("PBS=-%1 PBW=%2").arg(start).arg(width);
@@ -402,10 +400,10 @@ namespace utauprobe {
             }
         }
 
-        // -------------------------------------------------------------- what the rule drops
-        // A vibrato too short to draw is not drawn. The question is whether the note loses its
-        // vibrato or loses its whole pitch curve: if the line is still there, the rule is about
-        // the vibrato, and if it is gone too, it is about the note.
+        // -------------------------------------------------------------- scope of the omission
+        // A vibrato below the threshold is not drawn. The question is whether the note loses
+        // only its vibrato or its entire pitch curve: if the pitch line remains, the rule
+        // applies to the vibrato, and if it disappears as well, the rule applies to the note.
         for (const int ticks : {180, 400}) {
             const QString how =
                 ticks == 180 ? QStringLiteral("too short") : QStringLiteral("long enough");
@@ -421,11 +419,11 @@ namespace utauprobe {
                   ticks);
         }
 
-        // -------------------------------------------------------------- what leaks into the next
-        // note On the 455-note probe a vibrato too short to be drawn still turned up in the first
-        // two readings of the *next* note, unfaded. Every note there had a vibrato of its own, so
-        // this puts a plain note after each one instead: whatever is in its head came from its
-        // neighbour and from nothing else.
+        // -------------------------------------------------------------- carry-over
+        // In the 455-note probe, a vibrato below the threshold still appeared, without fade, in
+        // the first two values of the *next* note. Every note there had its own vibrato, so here
+        // a plain note follows each one: any deviation at its start originates from the
+        // preceding note alone.
         for (const auto &shape : QList<QPair<QString, QString>>{
                  {QStringLiteral("too short"), vbr(24, 180, 100)},
                  {QStringLiteral("too short, faded"), vbr(24, 180, 100, 50, 50, 50, 50)},
@@ -449,10 +447,10 @@ namespace utauprobe {
             probe.note(after);
         }
 
-        // -------------------------------------------------------------- what the offset follows
-        // The handover lands a third of a millisecond late, the same third at 120 bpm and at
-        // 240. These vary the one thing left that it could be following: how long the note doing
-        // the handing over is, and the tempo it is at.
+        // -------------------------------------------------------------- offset dependency
+        // The transition is delayed by a third of a millisecond, identically at 120 and 240 bpm.
+        // These notes vary the remaining candidate causes: the length of the preceding note and
+        // its tempo.
         for (const int length : {180, 240, 360, 480, 960}) {
             probe.rest();
             ProbeNote before;
@@ -490,13 +488,13 @@ namespace utauprobe {
             probe.note(after);
         }
 
-        // -------------------------------------------------------------- when the curve is not sent
-        // For a handful of notes UTAU writes three values where it usually writes four: no
-        // "!tempo" and no curve at all, just "0Q" and the tempo run together. Two patterns fit
-        // what has been seen, and they have nothing to do with each other, so both are asked.
+        // -------------------------------------------------------------- omitted curve
+        // For a few notes UTAU writes three values instead of the usual four: no "!tempo" and no
+        // curve, only "0Q" concatenated with the tempo. Two unrelated hypotheses fit the
+        // observations, so both are tested.
         //
-        // One: the note's pitch line ends before the curve starts. Fifteen handover pairs agree
-        // on that one already, and these repeat it either side of the edge.
+        // First hypothesis: the pitch line of the note ends before the curve starts. Fifteen
+        // transition pairs already support it, and these notes test both sides of the boundary.
         for (const auto &line : QList<QPair<int, int>>{
                  {40,  20},
                  {80,  20},
@@ -515,10 +513,10 @@ namespace utauprobe {
                    entry("PBY", QStringLiteral("100"))});
         }
 
-        // Two: the curve starts less than one reading before the note. A reading is five ticks,
-        // and the three notes that did this on the 455-note probe all came out under that:
-        // velocity 200 and tempo 60 both put it at 4.29 ticks, and a pre-utterance of zero puts
-        // it at none. Velocity 150 and a pre-utterance of 10 are over it and behaved.
+        // Second hypothesis: the curve starts less than one value interval before the note. An
+        // interval is five ticks, and the three affected notes of the 455-note probe were all
+        // below it: velocity 200 and tempo 60 both yield 4.29 ticks, and a pre-utterance of zero
+        // yields none. Velocity 150 and a pre-utterance of 10 exceed it and behaved normally.
         for (const int velocity : {150, 175, 190, 200, 250}) {
             alone(QStringLiteral("nocurve"), QStringLiteral("velocity %1").arg(velocity),
                   {entry("Velocity", velocity)});

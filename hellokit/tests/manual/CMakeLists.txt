@@ -1,5 +1,6 @@
-# Programs to be run by hand, not by ctest. They exist to put the libraries together, which the
-# automatic tests cannot do: each of those covers one class with inputs written for it.
+# Programs for manual execution, not run by ctest. They provide integration testing of the
+# libraries, which the automatic tests cannot provide, because each of those covers one class
+# with synthetic inputs.
 add_subdirectory(ustconv)
 add_subdirectory(ustrender)
 add_subdirectory(utaucompare)

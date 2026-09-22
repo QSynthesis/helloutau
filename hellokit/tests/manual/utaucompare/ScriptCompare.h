@@ -14,15 +14,15 @@
 
 namespace utaucompare {
 
-    /// One argument our plan and UTAU's script do not agree on.
+    /// One argument that differs between the plan of HelloUTAU and the script of UTAU.
     struct ArgumentDifference {
         int noteIndex = 0;
-        QString what; ///< \c flags , \c realLength , ... See \c compare() on the names.
+        QString what; ///< \c flags , \c realLength , ... See \c compare() for the names.
         QString ours;
         QString theirs;
     };
 
-    /// How far one note's pitch curve is from UTAU's.
+    /// The deviation of the pitch curve of one note from that of UTAU.
     struct CurveDifference {
         int noteIndex = 0;
         CurveDeviation deviation;
@@ -30,36 +30,35 @@ namespace utaucompare {
         int theirReadings = 0;
     };
 
-    /// What the two sides do and do not agree on.
+    /// The comparison result of the two sides.
     struct Comparison {
         int notesCompared = 0;
-        /// Every pitch reading compared, counted by how many cents it was off. The worst note
-        /// says how bad it can get; this says how typical that is.
+        /// Every compared pitch value, counted by its deviation in cents. The worst note shows
+        /// the maximum deviation, and this histogram shows how typical it is.
         std::vector<std::int64_t> readings;
-        /// Arguments that read differently and mean the same, which is a measurement UTAU
-        /// rounded where it printed it. Counted rather than listed: it is not a difference in
-        /// the render, but a report that never mentions it hides how it was reached.
+        /// Arguments that differ in text but not in value, where UTAU rounded a measurement on
+        /// output. Counted rather than listed, because they do not affect the render, but a
+        /// report that omitted them would conceal how its result was obtained.
         int spelling = 0;
-        int onlyOurs = 0;   ///< notes we render that UTAU's script has no call for
-        int onlyTheirs = 0; ///< calls in the script we have no note for
+        int onlyOurs = 0;   ///< notes rendered by HelloUTAU without a call in the UTAU script
+        int onlyTheirs = 0; ///< calls in the UTAU script without a note in HelloUTAU
         QList<ArgumentDifference> arguments;
-        QList<CurveDifference> curves; ///< every note that has a curve on either side
+        QList<CurveDifference> curves; ///< every note with a curve on either side
     };
 
-    /// Compares what we would hand the engines against what UTAU handed them.
+    /// Compares the engine arguments of HelloUTAU with those UTAU passed.
     ///
-    /// Arguments are named rather than numbered, so that a report says \c flags rather than
-    /// "resampler argument 5". The pitch curve is left out of the argument comparison and
-    /// compared as a curve instead: how many readings it holds and how the numbers are spelled
-    /// are not differences anybody can hear, and a VB6 program and a C++ one will not agree on
-    /// the last digit of either.
+    /// Arguments are identified by name rather than by position, so that a report states
+    /// \c flags rather than "resampler argument 5". The pitch curve is excluded from the
+    /// argument comparison and compared as a curve instead: the number of values and their
+    /// textual form are not audible differences, and a VB6 program and a C++ program do not
+    /// agree on the last digit of either.
     ///
-    /// \note Two of the names, \c cacheFile and \c outputFile, are chosen by whoever runs the
-    ///       render rather than by the synth, so they differ whenever the two runs were not told
-    ///       to write to the same place. They are still compared and still reported: UTAU's
-    ///       cache name carries six characters that stand for the arguments the note was
-    ///       rendered with, and until we work out how those are made, cache reuse cannot be
-    ///       turned on. Reporting it keeps that in sight.
+    /// \note Two of the arguments, \c cacheFile and \c outputFile , are chosen by the caller of
+    ///       the render rather than by the synthesis layer, so they differ unless both runs
+    ///       write to the same location. They are nevertheless compared and reported, because
+    ///       the two sides name cache files by different schemes. See \c cacheFileFor() in
+    ///       SynthPlan.cpp.
     Comparison compare(const QList<hello::kit::SynthStep> &ours, const QList<ScriptCall> &theirs);
 
 }

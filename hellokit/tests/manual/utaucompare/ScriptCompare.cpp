@@ -10,15 +10,15 @@ namespace utaucompare {
 
         using hello::kit::SynthStep;
 
-        // The order stdutau's ResamplerArguments::arguments() builds, which is the order every
-        // resampler reads. Everything from PITCH_AT on is the curve.
+        // The order produced by ResamplerArguments::arguments() of stdutau, which is the order
+        // every resampler reads. All arguments from PITCH_AT onward form the curve.
         constexpr const char *RESAMPLER_NAMES[] = {
             "sample",     "cacheFile", "tone",  "velocity",  "flags",      "offset",
             "realLength", "consonant", "blank", "intensity", "modulation", "tempo",
         };
         constexpr int PITCH_AT = 12;
 
-        // WavtoolArguments::arguments(). Everything from ENVELOPE_AT on is the envelope.
+        // WavtoolArguments::arguments(). All arguments from ENVELOPE_AT onward form the envelope.
         constexpr const char *WAVTOOL_NAMES[] = {
             "outputFile",
             "cacheFile",
@@ -27,14 +27,14 @@ namespace utaucompare {
         };
         constexpr int ENVELOPE_AT = 4;
 
-        /// Below this, two numbers are the same number written differently. It is a thousandth
-        /// of a millisecond, a twentieth of a sample at 44.1 kHz: UTAU rounds where it prints
-        /// and we do not, and \c 11.539 against \c 11.5389 is that and nothing else.
+        /// Below this tolerance, two numbers are considered equal. It is one thousandth of a
+        /// millisecond, a twentieth of a sample at 44.1 kHz. UTAU rounds on output and HelloUTAU
+        /// does not, and \c 11.539 versus \c 11.5389 reflects only that.
         constexpr double SAME_NUMBER = 1e-3;
 
-        /// Whether an argument is a measurement, and so whether the two sides differing in the
-        /// last digit is a difference at all. Everything else is compared as the text it is: a
-        /// flag, a tone name and a path mean what they spell.
+        /// Returns whether an argument is a measurement, for which a difference in the last
+        /// digit is not a difference. All other arguments are compared as text, because a flag,
+        /// a tone name and a path are defined by their exact text.
         bool isMeasurement(const QString &what) {
             static const QStringList names = {
                 QStringLiteral("velocity"),    QStringLiteral("offset"),
@@ -53,8 +53,8 @@ namespace utaucompare {
                    (text.at(after).isDigit() || text.at(after) == QLatin1Char('.'));
         }
 
-        /// Splits into runs of number and runs of anything else, so that \c 240@120-0.024 can be
-        /// held against \c 240@120-.024 a piece at a time.
+        /// Splits text into numeric and non-numeric runs, so that \c 240@120-0.024 and
+        /// \c 240@120-.024 can be compared run by run.
         QStringList pieces(const QString &text) {
             QStringList out;
             int i = 0;
@@ -76,8 +76,8 @@ namespace utaucompare {
             return out;
         }
 
-        /// \return whether the two say the same thing, which for a measurement means the same
-        ///         number however it is spelled
+        /// \return whether the two are equivalent, which for a measurement means numerically
+        ///         equal regardless of formatting
         bool same(const QString &what, const QString &ours, const QString &theirs) {
             if (ours == theirs) {
                 return true;
@@ -112,9 +112,9 @@ namespace utaucompare {
             return QStringLiteral("%1 argument %2").arg(QLatin1String(engine)).arg(position + 1);
         }
 
-        /// The arguments from \a from on, as one string. The envelope and the pitch are each
-        /// several arguments that only mean anything together, and how many there are is part of
-        /// what is being compared.
+        /// The arguments from \a from onward, as one string. The envelope and the pitch each
+        /// consist of several arguments that are meaningful only together, and their count is
+        /// part of the comparison.
         QString rest(const QStringList &arguments, int from) {
             if (arguments.size() <= from) {
                 return QString();
@@ -146,9 +146,9 @@ namespace utaucompare {
     Comparison compare(const QList<SynthStep> &ours, const QList<ScriptCall> &theirs) {
         Comparison out;
 
-        // UTAU numbers the notes it hands its helper; a rest goes to the wavtool directly and
-        // carries no number. Both sides are in track order, so a call with no number of its own
-        // belongs to the note at the same place in the sequence.
+        // UTAU numbers the notes passed to its helper. A rest is passed directly to the wavtool
+        // without a number. Both sides are in track order, so a call without a number belongs to
+        // the note at the same position in the sequence.
         QHash<int, const ScriptCall *> byIndex;
         int running = 0;
         for (const ScriptCall &call : theirs) {

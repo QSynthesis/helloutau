@@ -7,8 +7,8 @@ namespace utaucompare {
 
     namespace {
 
-        // UTAU's own alphabet, which is the usual base64 one. Two characters carry one reading as
-        // a twelve bit two's complement number, and #n# after a reading repeats it n more times.
+        // The UTAU alphabet, which is the standard base64 alphabet. Two characters encode one
+        // value as a 12-bit two's complement number, and #n# after a value repeats it n times.
         constexpr const char ALPHABET[] =
             "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 

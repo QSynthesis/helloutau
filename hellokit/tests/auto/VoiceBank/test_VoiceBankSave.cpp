@@ -60,7 +60,7 @@ private:
         return VoiceBank::open(root, &selector, diagnostics);
     }
 
-    /// The bank with the entry aliased \a alias changed by \a change .
+    /// The voice bank with the entry of alias \a alias modified by \a change .
     template <class F>
     static void edit(VoiceBank &bank, const QString &alias, F change) {
         auto samples = bank.samples();
@@ -85,8 +85,8 @@ private Q_SLOTS:
         m_dir.reset();
     }
 
-    // Opening and saving a bank nobody changed is not an edit, and must not look like one to
-    // the author's version control or to UTAU.
+    // Opening and saving an unmodified voice bank is not an edit, and must not appear as one to
+    // the version control of the author or to UTAU.
     void a_bank_nobody_changed_is_left_as_it_was() {
         const QByteArray oto = "a.wav=" + kGbkGePing +
                                ",41.0,87.688,97.316,8.938,4.457\r\n"
@@ -107,12 +107,12 @@ private Q_SLOTS:
         QCOMPARE(read(QStringLiteral("character.txt")), character);
         QCOMPARE(read(QStringLiteral("readme.txt")), kGbkGePing);
 
-        // Nothing was written, so there was nothing to record an encoding for.
+        // No file was written, so no encoding was recorded.
         QVERIFY(!exists(QStringLiteral("hello-config.json")));
     }
 
-    // Line ends and order are how this file happens to be written, not something the user
-    // changed, so an edit elsewhere in the directory must not rewrite it.
+    // The line endings and the order are properties of the existing file, not user changes, so
+    // an edit elsewhere in the directory must not rewrite it.
     void a_file_spelled_differently_is_not_rewritten_by_an_edit_elsewhere() {
         const QByteArray oto = "b.wav=b,1,2,3,4,5\n"
                                "a.wav=a,1,2,3,4,5\n";
@@ -135,8 +135,8 @@ private Q_SLOTS:
         QCOMPARE(bank->character().name, QStringLiteral("new"));
     }
 
-    // The whole point of keeping the encoding: a GBK bank stays GBK, and every entry nobody
-    // touched comes out as it went in.
+    // The purpose of retaining the encoding: a GBK voice bank remains GBK, and every unmodified
+    // entry is saved unchanged.
     void a_changed_entry_is_written_in_the_encoding_it_was_read_in() {
         write(QStringLiteral("oto.ini"), "a.wav=" + kGbkGePing +
                                              ",41.0,2,3,4,5\r\n"
@@ -158,7 +158,7 @@ private Q_SLOTS:
                                                       "b.wav=" +
                                                       kGbkGePing + ",12345.678,2,3,4,5\r\n");
 
-        // Written down, so that the next open reads it in GBK without asking.
+        // Recorded, so that the next open decodes it as GBK without querying the user.
         DiagnosticList ignored;
         const auto config = VoiceBankConfig::open(root() / "hello-config.json", ignored);
         QVERIFY(config.has_value());
@@ -182,7 +182,8 @@ private Q_SLOTS:
         QVERIFY(!exists(QStringLiteral("hello-config.json")));
     }
 
-    // Somebody else's work, UTAU's setParam for one. Replacing it would lose it without a word.
+    // Changes made by another program, such as the setParam tool of UTAU. Overwriting them
+    // would lose them silently.
     void a_file_changed_on_disk_since_it_was_read_is_not_replaced() {
         write(QStringLiteral("oto.ini"), "a.wav=a,1,2,3,4,5\r\n");
         write(QStringLiteral("a.wav"), "RIFF");
@@ -199,7 +200,7 @@ private Q_SLOTS:
         QCOMPARE(read(QStringLiteral("oto.ini")), theirs);
     }
 
-    // The same, for a file that was not there when the bank was read.
+    // The same for a file that did not exist when the voice bank was read.
     void a_file_that_appeared_since_is_not_replaced() {
         write(QStringLiteral("a.wav"), "RIFF");
 
@@ -221,7 +222,7 @@ private Q_SLOTS:
         QCOMPARE(read(QStringLiteral("oto.ini")), theirs);
     }
 
-    // A directory that was never read has nothing to write its files from.
+    // A directory that was never read has no data from which to write its files.
     void a_directory_never_read_is_never_written() {
         const QByteArray oto = "a.wav=" + kShiftJisA + ",1,2,3,4,5\r\n";
         write(QStringLiteral("oto.ini"), oto);
@@ -232,7 +233,7 @@ private Q_SLOTS:
         QVERIFY(bank.has_value());
         QVERIFY(bank->directories().at(0).leftOut);
 
-        // Untouched, it saves, and writes nothing.
+        // If unmodified, the save succeeds and writes nothing.
         QVERIFY(bank->save(diagnostics));
         QCOMPARE(read(QStringLiteral("oto.ini")), oto);
 
@@ -244,8 +245,8 @@ private Q_SLOTS:
         QCOMPARE(read(QStringLiteral("oto.ini")), oto);
     }
 
-    // What did not decode reads as empty, and writing the file would put the empty text where
-    // the original was.
+    // Invalid text was read as empty, and writing the file would replace the original with
+    // empty text.
     void text_that_did_not_decode_is_not_written_back() {
         const QByteArray oto = "a.wav=" + kGbkGePing +
                                ",1,2,3,4,5\r\n"
@@ -266,8 +267,8 @@ private Q_SLOTS:
         QCOMPARE(read(QStringLiteral("oto.ini")), oto);
     }
 
-    // What a save wrote is what the next one compares against, or the second save would find
-    // its own work and call it somebody else's.
+    // The output of a save becomes the baseline for the next one. Otherwise the second save
+    // would mistake its own output for an external change.
     void a_bank_can_be_saved_again() {
         write(QStringLiteral("oto.ini"), "a.wav=a,1,2,3,4,5\r\n");
         write(QStringLiteral("a.wav"), "RIFF");
@@ -283,7 +284,8 @@ private Q_SLOTS:
         QCOMPARE(read(QStringLiteral("oto.ini")), QByteArray("a.wav=a,20,2,3,4,5\r\n"));
     }
 
-    // Where case matters, oto.ini would be a second file beside the one UTAU reads.
+    // On a case-sensitive file system, oto.ini would be a second file beside the one UTAU
+    // reads.
     void a_file_is_written_back_under_the_name_it_was_found_by() {
         write(QStringLiteral("OTO.INI"), "a.wav=a,1,2,3,4,5\r\n");
         write(QStringLiteral("a.wav"), "RIFF");
@@ -300,8 +302,8 @@ private Q_SLOTS:
         QCOMPARE(read(QStringLiteral("OTO.INI")), QByteArray("a.wav=a,10,2,3,4,5\r\n"));
     }
 
-    // A directory of bare files has no encoding, and a first oto.ini there needs one. It is
-    // asked for rather than guessed, the same as when reading.
+    // A directory of bare files has no encoding, and its first oto.ini requires one. The user
+    // is asked rather than the encoding guessed, as when reading.
     void a_first_oto_ini_needs_an_encoding() {
         write(QStringLiteral("ka.wav"), "RIFF");
 
@@ -327,8 +329,8 @@ private Q_SLOTS:
         QVERIFY(exists(QStringLiteral("hello-config.json")));
     }
 
-    // One directory edited is one directory written. The others are not touched, and get no
-    // record either.
+    // Editing one directory writes only that directory. The others remain untouched and
+    // receive no configuration file.
     void only_the_directory_that_changed_is_written() {
         const QByteArray jp = "a.wav=" + kShiftJisA + ",1,2,3,4,5\r\n";
         write(QStringLiteral("jp/oto.ini"), jp);

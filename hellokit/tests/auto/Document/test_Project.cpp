@@ -42,8 +42,8 @@ private Q_SLOTS:
         QVERIFY(project->settings.mode2);
     }
 
-    // A file that happens to be JSON is not thereby a project. Without this check every field
-    // would be read as missing and the user would get an empty project instead of a message.
+    // Valid JSON is not necessarily a project. Without this check every field would be read as
+    // missing, and the user would receive an empty project instead of an error message.
     void json_that_is_not_a_project_is_refused() {
         DiagnosticList diagnostics;
         QVERIFY(!Project::fromJson(R"({"hello":1})", diagnostics).has_value());
@@ -68,8 +68,8 @@ private Q_SLOTS:
         QVERIFY(hasError(diagnostics));
     }
 
-    // The array is there so that several tracks become possible later. A build that holds one
-    // has to refuse the rest rather than open the file with the other parts missing.
+    // The array exists to allow multiple tracks later. A build that supports one track must
+    // reject additional tracks rather than open the file with parts missing.
     void more_than_one_track_is_refused_not_trimmed() {
         DiagnosticList diagnostics;
         auto json = QByteArray(
@@ -83,8 +83,8 @@ private Q_SLOTS:
         QVERIFY(hasError(diagnostics));
     }
 
-    // Absent and null are the same thing and neither is zero, which is the whole point of
-    // holding these in an optional.
+    // An absent field and a null field are equivalent and differ from zero, which is the
+    // reason these fields are optional.
     void absent_and_null_both_mean_the_file_did_not_say() {
         const auto json =
             QByteArray(R"({"$format":"usth","version":1,"settings":{},"tracks":[{"notes":[)"
@@ -111,8 +111,8 @@ private Q_SLOTS:
         QVERIFY(hasError(diagnostics));
     }
 
-    // An older build must not eat what a newer one wrote, or the user loses it the next time
-    // they press save.
+    // An older build must not discard data written by a newer one. Otherwise the user loses it
+    // on the next save.
     void unknown_top_level_fields_come_back() {
         const auto project = parsed(minimal(R"("somethingNew":{"a":1},)"));
         QVERIFY(project.has_value());
@@ -130,7 +130,7 @@ private Q_SLOTS:
         auto &note = project.tracks[0].notes[0];
 
         note.intensity = 80;
-        note.velocity = 0; // zero, which has to stay a value rather than become absent
+        note.velocity = 0; // zero, which must remain a value rather than become absent
         note.tempo = 128.5;
         note.flags = QStringLiteral("g-5");
         note.envelope = Envelope{
@@ -170,8 +170,8 @@ private Q_SLOTS:
         QCOMPARE(back.userData.value(QStringLiteral("$whatever")), QStringLiteral("kept"));
     }
 
-    // The engine paths are a per project setting people really use, so throwing them away would
-    // be deleting the user's work under cover of safety. Not running them is a separate matter.
+    // Per-project engine paths are a commonly used setting, so discarding them would delete
+    // user data in the name of safety. Not executing them is a separate matter.
     void the_engine_paths_are_kept() {
         auto project = oneNote();
         project.settings.wavtool = QStringLiteral("C:/evil/wavtool.exe");

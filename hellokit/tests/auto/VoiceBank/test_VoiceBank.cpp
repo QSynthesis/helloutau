@@ -12,17 +12,18 @@
 
 using namespace hello::kit;
 
-// あ in Shift_JIS, and 葛平 in GBK. Neither is valid UTF-8, and neither reads as the other, so a
-// directory decoded with the wrong one says so rather than looking plausible.
+// あ in Shift_JIS, and 葛平 in GBK. Neither is valid UTF-8, and neither decodes validly in the
+// other encoding, so decoding a directory with the wrong one fails visibly rather than
+// producing plausible text.
 static const QByteArray kShiftJisA = QByteArray("\x82\xa0", 2);
 static const QByteArray kGbkGePing = QByteArray("\xb8\xf0\xc6\xbd", 4);
 
 namespace {
 
-    /// Answers each directory with whatever was registered for it, and refuses the rest.
+    /// Selects the encoding registered for each directory, and declines all others.
     ///
-    /// The point of the design is that two directories of one bank may be in different
-    /// encodings, and only a selector asked per directory can say so.
+    /// The design allows two directories of one voice bank to use different encodings, which
+    /// only a per-directory selector can express.
     class PerDirectorySelector : public VoiceBankCharsetSelector {
     public:
         void set(const std::filesystem::path &relative, const QString &charset) {
@@ -90,8 +91,8 @@ private Q_SLOTS:
         QCOMPARE(bank->character().author, QString::fromUtf8("\xe8\x91\x9b\xe5\xb9\xb3"));
         QCOMPARE(bank->character().web, QStringLiteral("http://example.com/"));
 
-        // UTAU shows a line holding a colon as part of the character's profile, so it is content
-        // and has to arrive decoded rather than be dropped.
+        // UTAU displays a line containing a colon as part of the character profile, so it is
+        // content and must be decoded rather than dropped.
         QCOMPARE(bank->character().extraLines, QStringList{QStringLiteral("Version:1.0")});
     }
 
@@ -124,15 +125,15 @@ private Q_SLOTS:
         QCOMPARE(sample->voiceOverlap, 5.0);
     }
 
-    // What makes one lyric sing differently at different keys, and the reason find() takes a
-    // note number at all.
+    // The prefix map selects different samples for one lyric at different keys, which is why
+    // find() takes a note number.
     void the_prefix_map_decides_which_sample_a_key_uses() {
         write(QStringLiteral("oto.ini"), "a.wav=a,0,0,0,0,0\n"
                                          "a_high.wav=a\x81\x99,0,0,0,0,0\n");
         write(QStringLiteral("a.wav"), "RIFF");
         write(QStringLiteral("a_high.wav"), "RIFF");
 
-        // C5 is 72. UTAU's tone names count C1 as 24.
+        // C5 is 72. In UTAU tone names, C1 is 24.
         write(QStringLiteral("prefix.map"), "C5\t\t\x81\x99\n");
 
         FixedCharsetSelector selector(QStringLiteral("Shift_JIS"));
@@ -149,8 +150,8 @@ private Q_SLOTS:
         QCOMPARE(high->path, root() / "a_high.wav");
     }
 
-    // A bank may ship without an oto.ini at all, and UTAU then sings the file whose name is the
-    // lyric. Such a sample has no timing, which is not timing that is zero by choice.
+    // A voice bank may be distributed without an oto.ini, and UTAU then sings the file whose
+    // name matches the lyric. Such a sample has no timing, which differs from zero timing.
     void a_bank_without_an_oto_is_reached_by_file_name() {
         write(QStringLiteral("ka.wav"), "RIFF");
 
@@ -164,9 +165,9 @@ private Q_SLOTS:
         QVERIFY(!sample->hasEntry);
     }
 
-    // UTAU reads a sample's file name as an alias as well, which is why bank authors put a _ in
-    // front of a name they do not want sung by it. The entry is what carries the timing, so the
-    // file name has to lead to it rather than to a sample with none.
+    // UTAU also treats the file name of a sample as an alias, which is why voice bank authors
+    // prefix a name with _ to exclude it. The entry supplies the timing, so the file name must
+    // resolve to the entry rather than to a sample without timing.
     void a_sample_is_also_reached_by_its_file_name() {
         write(QStringLiteral("oto.ini"), "ka.wav=" + kShiftJisA + ",1,2,3,4,5\n");
         write(QStringLiteral("ka.wav"), "RIFF");
@@ -183,7 +184,7 @@ private Q_SLOTS:
         QCOMPARE(sample->offset, 1.0);
     }
 
-    // An alias wins over a file name, since it is what the bank's author wrote down.
+    // An alias takes precedence over a file name, because the author specified it explicitly.
     void an_alias_is_preferred_to_a_file_name() {
         write(QStringLiteral("oto.ini"), "one.wav=ka,1,0,0,0,0\n"
                                          "ka.wav=other,2,0,0,0,0\n");
@@ -209,7 +210,7 @@ private Q_SLOTS:
         QVERIFY(!bank->find(60, QStringLiteral("nothing here")));
     }
 
-    // The reason hello-config.json sits in each directory rather than once per bank.
+    // The reason hello-config.json is stored per directory rather than once per voice bank.
     void two_directories_may_be_in_different_encodings() {
         write(QStringLiteral("jp/oto.ini"), "a.wav=" + kShiftJisA + ",0,0,0,0,0\n");
         write(QStringLiteral("jp/a.wav"), "RIFF");
@@ -228,7 +229,8 @@ private Q_SLOTS:
         QVERIFY(bank->find(60, QString::fromUtf8("\xe8\x91\x9b\xe5\xb9\xb3")));
     }
 
-    // Read from the record rather than asked, which is what writing it down was for.
+    // Taken from the configuration without querying the user, which is the purpose of
+    // recording it.
     void a_recorded_encoding_is_not_asked_about_again() {
         write(QStringLiteral("oto.ini"), "a.wav=" + kShiftJisA + ",0,0,0,0,0\n");
         write(QStringLiteral("a.wav"), "RIFF");
@@ -243,8 +245,8 @@ private Q_SLOTS:
         QVERIFY(bank->find(60, QString::fromUtf8("\xe3\x81\x82")));
     }
 
-    // Guessing is the one thing the encoding rules forbid, so a directory nobody can speak for
-    // is left out and said so, not read in whatever happens to be handy.
+    // The encoding rules forbid guessing, so a directory without a known encoding is left out
+    // and reported, not decoded in an arbitrary encoding.
     void a_directory_nobody_names_an_encoding_for_is_left_out() {
         write(QStringLiteral("oto.ini"), "a.wav=" + kShiftJisA + ",0,0,0,0,0\n");
         write(QStringLiteral("a.wav"), "RIFF");
@@ -255,7 +257,7 @@ private Q_SLOTS:
         QVERIFY(!bank->find(60, QString::fromUtf8("\xe3\x81\x82")));
         QVERIFY(!diagnostics.isEmpty());
 
-        // The sample is still there to be reached by name, since a file name needed no encoding.
+        // The sample remains reachable by name, because a file name requires no encoding.
         const auto *sample = bank->find(60, QStringLiteral("a"));
         QVERIFY(sample);
         QVERIFY(!sample->hasEntry);
@@ -276,8 +278,8 @@ private Q_SLOTS:
         QVERIFY(!sample->hasEntry);
     }
 
-    // A subdirectory with a character.txt of its own is a bank in its own right. Reading it here
-    // would let it rename the one that was actually opened.
+    // A subdirectory with its own character.txt is a separate voice bank. Applying it here would
+    // rename the voice bank that was opened.
     void a_subdirectory_does_not_rename_the_bank() {
         write(QStringLiteral("character.txt"), "name=outer\n");
         write(QStringLiteral("inner/character.txt"), "name=inner\n");
@@ -289,15 +291,15 @@ private Q_SLOTS:
         QVERIFY(bank.has_value());
         QCOMPARE(bank->character().name, QStringLiteral("outer"));
 
-        // Still read, since the subdirectory's own file is edited as what it is.
+        // Still read, because the file of the subdirectory is edited with that directory.
         const auto *inner = directoryAt(*bank, "inner");
         QVERIFY(inner);
         QVERIFY(inner->character.has_value());
         QCOMPARE(inner->character->name, QStringLiteral("inner"));
     }
 
-    // What a directory has to be written back in. Without it a save would have to guess, and a
-    // wrong guess ruins every alias in the file.
+    // The encoding in which a directory is saved. Without it a save would have to guess, and a
+    // wrong guess corrupts every alias in the file.
     void each_directory_keeps_its_encoding() {
         write(QStringLiteral("jp/oto.ini"), "a.wav=" + kShiftJisA + ",0,0,0,0,0\n");
         write(QStringLiteral("jp/a.wav"), "RIFF");
@@ -320,8 +322,8 @@ private Q_SLOTS:
         QVERIFY(!jp->leftOut && !cn->leftOut);
     }
 
-    // A directory that could not be read must say so, since writing it back would replace
-    // files that were never read with nothing.
+    // A directory that could not be read must be marked as such, because saving it would
+    // overwrite unread files with empty content.
     void a_directory_left_out_is_marked() {
         write(QStringLiteral("oto.ini"), "a.wav=" + kShiftJisA + ",0,0,0,0,0\n");
         write(QStringLiteral("a.wav"), "RIFF");
@@ -336,8 +338,8 @@ private Q_SLOTS:
         QVERIFY(top->charset.isEmpty());
     }
 
-    // Everything an entry is written back from: where it lives, the file name as the oto.ini
-    // gives it, and how its numbers were spelled.
+    // All data from which an entry is saved: its directory, the file name as written in the
+    // oto.ini, and the original text of its numbers.
     void a_sample_knows_where_it_came_from() {
         write(QStringLiteral("sub/oto.ini"), "ka.wav=" + kShiftJisA + ",41.0,2,3,4,5\n");
         write(QStringLiteral("sub/ka.wav"), "RIFF");
@@ -361,8 +363,8 @@ private Q_SLOTS:
         QCOMPARE(bare->fileName, QStringLiteral("ki.wav"));
     }
 
-    // UTAU reads an empty alias as the file name, and that is how it is found. Filling it in
-    // would write the file name back where the author left nothing.
+    // UTAU treats an empty alias as the file name, and the sample is found that way. Filling it
+    // in would write the file name where the author left the field empty.
     void an_empty_alias_stays_empty() {
         write(QStringLiteral("oto.ini"), "ka.wav=,1,2,3,4,5\n");
         write(QStringLiteral("ka.wav"), "RIFF");
@@ -378,8 +380,9 @@ private Q_SLOTS:
         QVERIFY(sample->alias.isEmpty());
     }
 
-    // A name no code page spells. On Windows the narrow form of a path is the system code page,
-    // and asking for it throws on a name like this, which took the whole bank down with it.
+    // A name that no code page can represent. On Windows the narrow form of a path uses the
+    // system code page, and requesting it throws for such a name, which previously caused the
+    // entire voice bank to fail to open.
     void a_file_name_the_code_page_cannot_spell_is_read() {
         write(QString::fromUtf8("\xf0\x9f\x98\x80.wav"), "RIFF");
 
@@ -389,9 +392,10 @@ private Q_SLOTS:
         QVERIFY(bank->find(60, QString::fromUtf8("\xf0\x9f\x98\x80")));
     }
 
-    // The name an oto.ini gives is in the bank's encoding, not the system's. Read as the
-    // system's it names another file, which fails on every Windows whose code page is not the
-    // bank's: here UTF-8, which no Windows code page is by default.
+    // A file name in an oto.ini is in the encoding of the voice bank, not of the system.
+    // Interpreted in the system encoding, it refers to a different file, which fails on every
+    // Windows system whose code page differs from the voice bank encoding. Here the encoding is
+    // UTF-8, which is not the default code page of any Windows system.
     void an_entry_names_its_file_in_the_bank_encoding() {
         write(QStringLiteral("oto.ini"), "\xe3\x81\x82.wav=a,1,2,3,4,5\n");
         write(QString::fromUtf8("\xe3\x81\x82.wav"), "RIFF");
@@ -405,8 +409,8 @@ private Q_SLOTS:
         QVERIFY(sample);
         QCOMPARE(sample->path, root() / std::filesystem::path(u"\u3042.wav"));
 
-        // One file, one entry. The file is claimed by the entry and not added again as a bare
-        // sample beside it.
+        // One file yields one entry. The file belongs to the entry and is not added again as a
+        // bare sample.
         QCOMPARE(bank->samples().size(), 1);
     }
 

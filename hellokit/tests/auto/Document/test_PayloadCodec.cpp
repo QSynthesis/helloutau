@@ -23,8 +23,8 @@ private Q_SLOTS:
         QCOMPARE(PayloadCodec::encode("foobar"), QByteArray("Zm9vYmFy"));
     }
 
-    // The whole point of the alphabet. An equals sign would be truncated by UTAU, a plus and a
-    // slash are what base64url replaces to begin with.
+    // The purpose of the alphabet. UTAU truncates at an equals sign, and base64url replaces the
+    // plus sign and the slash of base64.
     void test_output_holds_nothing_utau_would_touch() {
         QByteArray data;
         for (int i = 0; i < 256; ++i) {
@@ -48,10 +48,10 @@ private Q_SLOTS:
         QCOMPARE(roundTrip("abc"), QByteArray("abc"));
         QCOMPARE(roundTrip("abcd"), QByteArray("abcd"));
 
-        // Shift_JIS bytes, since what goes through here is raw bytes rather than text.
+        // Shift_JIS bytes, because the codec operates on raw bytes rather than text.
         QCOMPARE(roundTrip("\x82\xA0\x82\xA2"), QByteArray("\x82\xA0\x82\xA2"));
 
-        // Every byte value, at every offset within a group.
+        // Every byte value at every offset within a group.
         for (int offset = 0; offset < 3; ++offset) {
             QByteArray data(offset, 'x');
             for (int i = 0; i < 256; ++i) {
@@ -62,18 +62,19 @@ private Q_SLOTS:
     }
 
     void test_decode_refuses_what_cannot_be_read_back() {
-        // Padding cannot survive the trip through UTAU, so accepting it here would take in what
-        // could never be written out. Qt would decode all three of these without complaint.
+        // Padding does not survive UTAU, so accepting it would admit input that could never be
+        // written back. Qt decodes all three of these without error.
         QVERIFY(!PayloadCodec::decode("Zg==").has_value());
         QVERIFY(!PayloadCodec::decode("Zm8=").has_value());
         QVERIFY(!PayloadCodec::decode("=").has_value());
 
-        // Not in the alphabet. These two are base64's own characters, which base64url replaces.
+        // Not in the alphabet. These two characters belong to base64 and are replaced in
+        // base64url.
         QVERIFY(!PayloadCodec::decode("Zm+v").has_value());
         QVERIFY(!PayloadCodec::decode("Zm/v").has_value());
         QVERIFY(!PayloadCodec::decode("hello world").has_value());
 
-        // Six bits on their own did not come from a byte. Qt drops them silently.
+        // Six leftover bits cannot originate from a byte. Qt discards them silently.
         QVERIFY(!PayloadCodec::decode("Z").has_value());
         QVERIFY(!PayloadCodec::decode("Zm9vZ").has_value());
     }

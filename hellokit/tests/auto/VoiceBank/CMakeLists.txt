@@ -5,6 +5,6 @@ add_auto_test(test_VoiceBankSave.cpp HelloKitVoiceBank)
 add_auto_test(test_VoiceBankCharset.cpp HelloKitVoiceBank)
 add_auto_test(test_VoiceBankDiskChanges.cpp HelloKitVoiceBank)
 
-# Starts the watcher, whose program has to be built and beside it.
+# Starts the watcher, whose monitor program must be built into the same directory.
 add_auto_test(test_VoiceBankCheckScheduler.cpp HelloKitVoiceBank)
 add_dependencies(test_VoiceBankCheckScheduler hello-fswatcher)

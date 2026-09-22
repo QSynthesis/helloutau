@@ -27,8 +27,8 @@ private Q_SLOTS:
         QCOMPARE(config->charset, QStringLiteral("GBK"));
     }
 
-    // A file that is not ours may still be valid JSON, and reading it field by field would give
-    // a record full of defaults rather than a refusal.
+    // A foreign file may still be valid JSON, and reading it field by field would yield a
+    // configuration of defaults instead of a rejection.
     void a_file_that_is_not_ours_is_refused() {
         DiagnosticList diagnostics;
         QVERIFY(!parse(R"({"charset":"GBK"})", &diagnostics).has_value());
@@ -41,8 +41,8 @@ private Q_SLOTS:
         QVERIFY(hasError(diagnostics));
     }
 
-    // A build older than the file that wrote it would otherwise eat whatever it did not know,
-    // and the user would find it gone after saving.
+    // Otherwise a build older than the file would discard unrecognized data, and the user would
+    // find it missing after saving.
     void a_field_this_version_does_not_know_is_written_back() {
         const auto config =
             parse(R"({"$format":"hello-voicebank","charset":"GBK","somethingNew":42})");

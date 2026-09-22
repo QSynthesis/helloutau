@@ -1,3 +1,3 @@
-# Links wolf-midi directly, which the library keeps private. The cases build the MIDI files they
-# read, so that what each one relies on sits next to what it asserts.
+# Links wolf-midi directly, which the library links privately. The test cases generate the MIDI
+# files they read, so that the input of each case is defined next to its assertions.
 add_auto_test(test_MidiConvert.cpp HelloKitInterchange wolf-midi::wolf-midi)

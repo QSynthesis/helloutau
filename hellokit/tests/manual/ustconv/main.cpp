@@ -1,10 +1,10 @@
 /// \file
-/// Converts between the formats HelloUTAU reads and writes, from a terminal.
+/// Converts between the formats supported by HelloUTAU, from the command line.
 ///
-/// It exists to put the pieces together, which their own tests cannot do. Each of \c UstDocument,
-/// \c Project and \c MidiReader is covered on its own with inputs written for it, and none of
-/// that says whether a real UTAU project survives a trip through all of them. This is what the
-/// roadmap's first stage is measured by, and \c --check is the measurement.
+/// Its purpose is integration testing, which the unit tests cannot provide. \c UstDocument,
+/// \c Project and \c MidiReader are each tested separately with synthetic inputs, which does
+/// not show whether a real UTAU project survives a round trip through all of them. The first
+/// roadmap stage is measured by this program, and \c --check performs the measurement.
 ///
 /// \code
 ///   ustconv song.ust song.usth
@@ -42,8 +42,8 @@ namespace {
         return QString::fromStdString(text);
     }
 
-    /// Prints everything an operation had to say. Nothing here is decoration: a conversion that
-    /// lost something says so, and a run that prints nothing lost nothing.
+    /// Prints all diagnostics of an operation. None of the output is decorative: a conversion
+    /// that loses data reports it, and a run without output lost nothing.
     void report(const DiagnosticList &diagnostics) {
         for (const auto &diagnostic : diagnostics) {
             const char *level = "note";
@@ -89,10 +89,11 @@ namespace {
         return Format::Unknown;
     }
 
-    /// The encoding to read \a ust with, or nothing where nobody can say.
+    /// The encoding for reading \a ust , or \c std::nullopt if it cannot be determined.
     ///
-    /// Where the file itself does not settle it this stops rather than guessing, since guessing
-    /// is the one thing the encoding rules forbid. The caller says which with \c --charset .
+    /// If the file does not determine its encoding, the program stops rather than guessing,
+    /// because the encoding rules forbid guessing. The user specifies the encoding with
+    /// \c --charset .
     std::optional<QString> settleCharset(const UstDocument &ust, const QString &given) {
         if (!given.isEmpty()) {
             return given;
@@ -109,7 +110,7 @@ namespace {
         return std::nullopt;
     }
 
-    /// Reads whatever \a path is, asking for nothing.
+    /// Reads \a path in any supported format, without querying the user.
     std::optional<Project> readAny(const fs::path &path, const QString &charset,
                                    DiagnosticList &diagnostics) {
         switch (formatOf(path)) {
@@ -191,27 +192,27 @@ namespace {
         return written ? 0 : 1;
     }
 
-    /// Reads the raw bytes of one file as the text they stand for.
+    /// Decodes the raw bytes of one file into text.
     ustconv::Normalizer normalizerFor(const UstDocument &ust, const TextCodec &codec) {
-        // An escape means what it says only in a file written with escapes, and the control note
-        // is what says so. Unescaping anything else would eat its backslashes.
+        // Escape sequences are meaningful only in a file written with escaping, which the
+        // control note identifies. Unescaping any other file would remove its backslashes.
         const bool unescaping = ust.hasControlNote() && !codec.isUtf8();
         return [codec, unescaping](const std::string &bytes) {
             const auto decoded =
                 codec.decode(QByteArrayView(bytes.data(), qsizetype(bytes.size())));
             if (!decoded) {
-                // Shown as it stands, so that a field the encoding cannot read is visible in the
-                // difference rather than silently empty on one side.
+                // Shown verbatim, so that a field invalid in the encoding appears as a
+                // difference rather than as a silently empty value on one side.
                 return bytes;
             }
             return toStd(unescaping ? TextCodec::unescape(*decoded) : *decoded);
         };
     }
 
-    /// Reads a UST, writes it back out, reads that, and says what the trip changed.
+    /// Reads a UST, writes it, reads the result, and reports the differences.
     ///
-    /// The file is written and read again rather than compared against what fromProject() built,
-    /// so that writing and parsing are both measured and not only the conversion between them.
+    /// The file is written and read again rather than compared with the result of
+    /// fromProject(), so that writing and parsing are tested in addition to the conversion.
     int check(const fs::path &input, const QString &given) {
         if (formatOf(input) != Format::Ust) {
             std::cerr << "error: --check reads a .ust. UST is the format that has to keep "
@@ -239,8 +240,9 @@ namespace {
             return 1;
         }
 
-        // The engines are left unset. Naming a local one is for a user saving a project, and
-        // here it would read as the round trip inventing settings that were never in the file.
+        // The engines are left unset. Substituting local engines applies when a user saves a
+        // project, and here it would appear as the round trip introducing settings absent from
+        // the file.
         UstDocument::ExportOptions options;
         options.charset = *charset;
 
@@ -266,8 +268,8 @@ namespace {
 
         int failures = 0;
 
-        // The encoding has to survive as well as the notes. A file that comes back saying
-        // nothing about what it is in would have to be guessed at next time.
+        // The encoding must survive as well as the notes. A file without a recorded encoding
+        // would require guessing on the next read.
         const auto recorded = after->settledCharset();
         if (recorded != charset) {
             std::cout << "  encoding: " << toStd(*charset) << " -> "
@@ -339,7 +341,7 @@ int main(int argc, char *argv[]) {
             .addHelpOption(true)
             .addVersionOption("0.0.1"));
 
-    // Not argv, which on Windows is whatever the ANSI code page could hold and has already lost
-    // anything it could not. This reads the wide command line again.
+    // Not argv, which on Windows is limited to the ANSI code page and has already lost every
+    // unrepresentable character. The wide command line is read instead.
     return parser.invoke(system::command_line_arguments());
 }

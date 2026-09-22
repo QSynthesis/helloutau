@@ -35,7 +35,7 @@ private:
         write(path, "RIFF");
     }
 
-    /// Whether the whole bank was named in \a spy .
+    /// Returns whether \a spy recorded a report of the entire voice bank.
     bool namedWhole(const QSignalSpy &spy) const {
         for (const auto &arguments : spy) {
             if (arguments.at(0).toStringList().contains(root())) {
@@ -53,10 +53,11 @@ private:
         return out;
     }
 
-    /// A bank kept in step with its disk the way its editor would, with a user who says yes to
-    /// every reload.
+    /// A voice bank kept synchronized with the disk as its editor would keep it, with a user
+    /// who accepts every reload.
     ///
-    /// The sweep is off, so that whatever reaches the bank came by the watcher.
+    /// The sweep is disabled, so that every change reaching the voice bank arrives through the
+    /// watcher.
     struct Followed {
         FixedCharsetSelector selector{QStringLiteral("UTF-8")};
         DiagnosticList diagnostics;
@@ -98,8 +99,8 @@ private Q_SLOTS:
         m_dir.reset();
     }
 
-    // Put together the way an editor of a bank would, and the bank is what is looked at: what
-    // happened on disk has to end up in it, whatever came in between.
+    // Assembled as a voice bank editor would assemble it, and the voice bank is what is
+    // verified: every change on disk must reach it, regardless of the intermediate steps.
     void a_sample_added_on_disk_reaches_the_bank() {
         const auto followed = followBank();
         QVERIFY(followed->bank.has_value());
@@ -118,7 +119,7 @@ private Q_SLOTS:
         QTRY_VERIFY_WITH_TIMEOUT(followed->bank->find(60, QStringLiteral("named")), 5000);
     }
 
-    // What was in it is found where it is now, and not where it was.
+    // The contents of a renamed directory are found at the new location, not the old one.
     void a_directory_renamed_on_disk_reaches_the_bank() {
         write(root() + QStringLiteral("/old/oto.ini"), "ka.wav=ka,1,2,3,4,5\r\n");
         touch(root() + QStringLiteral("/old/ka.wav"));
@@ -135,7 +136,7 @@ private Q_SLOTS:
             5000);
     }
 
-    // With everything in it, however deep, and with what is written into it afterwards.
+    // Including its entire subtree at any depth, and files written into it afterward.
     void a_tree_moved_in_on_disk_reaches_the_bank() {
         const QString outside = m_dir->path() + QStringLiteral("/elsewhere");
         write(outside + QStringLiteral("/deep/oto.ini"), "ka.wav=ka,1,2,3,4,5\r\n");
@@ -163,8 +164,8 @@ private Q_SLOTS:
         QVERIFY(followed->bank->find(60, QStringLiteral("a")));
     }
 
-    // What no watcher can know of, a notification the system dropped, is found by the sweep.
-    // So the sweep runs whatever the watcher does.
+    // A notification dropped by the system, which no watcher can detect, is found by the sweep.
+    // The sweep therefore runs regardless of the watcher state.
     void the_whole_bank_is_named_now_and_then_while_the_watcher_follows() {
         const auto schedule = scheduler(200);
         QSignalSpy spy(schedule.get(), &VoiceBankCheckScheduler::checkNeeded);
@@ -175,7 +176,7 @@ private Q_SLOTS:
         QVERIFY(schedule->isFollowing());
     }
 
-    // Without a watcher, the bank is looked at on a timer instead, and at once.
+    // Without a watcher, the voice bank is polled instead, starting immediately.
     void without_a_watcher_the_bank_is_polled() {
         const auto schedule = scheduler();
         schedule->setWatcherProgram(m_dir->path() + QStringLiteral("/no such program.exe"));
@@ -186,7 +187,7 @@ private Q_SLOTS:
         QVERIFY(!schedule->isFollowing());
     }
 
-    // A root that went, and may come back, is looked at on a timer as well.
+    // A removed root, which may be restored, is also polled.
     void a_root_that_goes_is_polled() {
         const auto schedule = scheduler();
         schedule->setRoot(root());

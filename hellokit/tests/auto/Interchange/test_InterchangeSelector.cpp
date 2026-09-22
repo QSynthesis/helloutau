@@ -9,7 +9,7 @@ using namespace hello::kit;
 
 namespace {
 
-    // Only what AutomaticSelector asks of a driver, which is the list of options it declared.
+    // Only the property AutomaticSelector uses, which is the list of declared options.
     class SchemaOnlyReader : public InterchangeReader {
     public:
         QString id() const override {
@@ -68,8 +68,8 @@ class test_InterchangeSelector : public QObject {
     Q_OBJECT
 
 private Q_SLOTS:
-    // The command line and the tests have nobody to ask, so there has to be an answer available
-    // without a user. It comes from what the driver declared.
+    // The command line and the tests have no user to ask, so the selector must decide without
+    // one. The decision follows the defaults declared by the driver.
     void it_takes_the_declared_defaults() {
         SchemaOnlyReader reader;
         AutomaticSelector selector;
@@ -80,8 +80,8 @@ private Q_SLOTS:
         QCOMPARE(request->driverOptions.value("encoding").toString(), QStringLiteral("UTF-8"));
     }
 
-    // A project holds one track, so three entries cannot all come in. Which ones were left is
-    // something the caller can only learn from the diagnostics.
+    // A project holds one track, so three entries cannot all be imported. The caller can learn
+    // which entries were omitted only from the diagnostics.
     void it_obeys_the_limit_and_says_so() {
         SchemaOnlyReader reader;
         AutomaticSelector selector;
@@ -105,8 +105,8 @@ private Q_SLOTS:
         QCOMPARE(request->entries.size(), 3);
     }
 
-    // Returning nothing means two different things, and only the diagnostics tell them apart.
-    // Giving up without saying so arrives at the caller looking like a cancellation.
+    // An empty result has two meanings, distinguished only by the diagnostics. A failure
+    // without a recorded error reaches the caller as a cancellation.
     void nothing_to_choose_from_is_an_error_not_a_cancellation() {
         SchemaOnlyReader reader;
         AutomaticSelector selector;

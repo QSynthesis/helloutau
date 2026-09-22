@@ -19,7 +19,7 @@ using namespace hello::kit;
 
 namespace {
 
-    /// Everything changed() named since the spy was made, one list for each kind.
+    /// All paths reported by changed() since the spy was created, one list per kind.
     struct Changes {
         QStringList directories;
         QStringList trees;
@@ -42,8 +42,8 @@ class test_FileSystemWatcher : public QObject {
 private:
     std::unique_ptr<QTemporaryDir> m_dir;
 
-    // A percent sign in the name, since that is what the protocol escapes, and one followed by
-    // what reads as an escape, which is what goes wrong if it is not escaped.
+    // A percent sign in the name, because the protocol escapes it, and one followed by text
+    // that resembles an escape sequence, which is misread if escaping is missing.
     QString root() const {
         return m_dir->path() + QStringLiteral("/voice/bank %25 100%");
     }
@@ -59,7 +59,7 @@ private:
         file.write("RIFF");
     }
 
-    /// A watcher following root() , and ready.
+    /// A watcher that monitors root() and has emitted ready().
     std::unique_ptr<FileSystemWatcher> follow() {
         auto watcher = std::make_unique<FileSystemWatcher>();
         watcher->setDelay(50);
@@ -89,8 +89,8 @@ private Q_SLOTS:
                                  5000);
     }
 
-    // The reason this is not QFileSystemWatcher: that one holds every directory it follows
-    // open on Windows, and a bank's author could not rename or remove any of them.
+    // The reason for not using QFileSystemWatcher: on Windows it keeps every monitored
+    // directory open, which prevents the author of a voice bank from renaming or deleting it.
     void what_is_followed_can_be_renamed_and_removed() {
         QVERIFY(QDir().mkpath(at(QStringLiteral("gone"))));
         QVERIFY(QDir().mkpath(at(QStringLiteral("old"))));
@@ -103,13 +103,14 @@ private Q_SLOTS:
         QTRY_COMPARE_WITH_TIMEOUT(gone.size(), 1, 5000);
         QCOMPARE(gone.at(0).at(0).toString(), root());
 
-        // And the directory holding the root, back where it was.
+        // The parent directory of the root is restored as well.
         QVERIFY(QDir().rename(root() + QStringLiteral(" renamed"), root()));
         QVERIFY(QDir().rename(m_dir->path() + QStringLiteral("/voice"),
                               m_dir->path() + QStringLiteral("/voice2")));
     }
 
-    // A directory that arrives whole has everything in it to look at, not only its name.
+    // A directory created with content requires examination of its entire subtree, not only of
+    // its name.
     void a_directory_moved_in_is_named_as_a_tree() {
         const QString outside = m_dir->path() + QStringLiteral("/elsewhere");
         touch(outside + QStringLiteral("/deep/ka.wav"));
@@ -142,7 +143,7 @@ private Q_SLOTS:
         QCOMPARE(gone.at(0).at(0).toString(), missing);
     }
 
-    // What happened while it was gone is not known, so every root is named once it is back.
+    // Changes during the interruption are unknown, so every root is reported after the restart.
     void a_program_that_dies_is_started_again_and_every_root_named() {
         const auto watcher = follow();
         QSignalSpy spy(watcher.get(), &FileSystemWatcher::changed);
@@ -164,13 +165,13 @@ private Q_SLOTS:
         QVERIFY(watcher->processId() != 0);
         QVERIFY(watcher->processId() != first);
 
-        // And it follows again.
+        // Monitoring resumes.
         touch(at(QStringLiteral("a/after.wav")));
         QTRY_VERIFY_WITH_TIMEOUT(collect(spy).directories.contains(at(QStringLiteral("a"))), 5000);
     }
 
-    // Without the program nothing is reported, and every root is said to be unwatchable, so that
-    // the caller knows to look at the disk itself.
+    // Without the program no changes are reported, and every root is reported as unwatchable,
+    // so that the caller falls back to examining the disk itself.
     void without_the_program_every_root_is_unwatchable() {
         FileSystemWatcher watcher;
         watcher.setProgram(m_dir->path() + QStringLiteral("/no such program.exe"));
@@ -181,9 +182,9 @@ private Q_SLOTS:
     }
 
 #ifdef Q_OS_WIN
-    // A program that does not greet as the watcher program does is not trusted to be one, and not
-    // started again either. Giving up only after it died a few times would take restarts, a
-    // second and a half of them, which is what the bound tells apart.
+    // A program that does not send the expected greeting is not accepted as the monitor
+    // program and is not restarted. Abandoning it only after several failures would require
+    // restarts taking about one and a half seconds, which the time bound detects.
     void a_program_that_does_not_greet_is_not_used() {
         FileSystemWatcher watcher;
         watcher.setProgram(QStringLiteral("C:/Windows/System32/whoami.exe"));

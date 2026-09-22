@@ -18,8 +18,8 @@ namespace {
         return QString::fromUtf8(utf8Text);
     }
 
-    // A file of its own per case, removed afterwards, since what is being tested is what lands
-    // on disk and what comes back off it.
+    // A separate file per test case, removed afterward, because the tests verify the data
+    // written to disk and read back from it.
     class TempUst {
     public:
         explicit TempUst(const std::string &name) {
@@ -67,21 +67,21 @@ namespace {
         return project;
     }
 
-    // A UST as UTAU writes one, with no control note and nothing said about the encoding.
+    // A UST as written by UTAU, without a control note or an encoding declaration.
     QByteArray plainUst(const QByteArray &lyricBytes) {
         return QByteArray("[#VERSION]\r\nUST Version1.2\r\n[#SETTING]\r\nTempo=120.00\r\n"
                           "Tracks=1\r\nMode2=True\r\n[#0000]\r\nLength=480\r\nLyric=") +
                lyricBytes + "\r\nNoteNum=60\r\n[#TRACKEND]\r\n";
     }
 
-    // Builds and writes in the two steps the real caller takes.
+    // Builds and writes in the same two steps as a real caller.
     bool writeTo(const Project &project, const TempUst &file,
                  const UstDocument::ExportOptions &options, DiagnosticList &diagnostics) {
         const auto ust = UstDocument::fromProject(project, options, diagnostics);
         return ust && ust->save(file.path(), diagnostics);
     }
 
-    // Opens and converts in the two steps the real caller takes, with one parse between them.
+    // Opens and converts in the same two steps as a real caller, with a single parse.
     std::optional<Project> readAs(const TempUst &file, const QString &charset,
                                   DiagnosticList *sink = nullptr) {
         DiagnosticList ignored;
@@ -105,7 +105,7 @@ private Q_SLOTS:
         auto project = oneNote(u("あ"));
         auto &note = project.tracks[0].notes[0];
         note.intensity = 80;
-        note.velocity = 0; // zero, which has to stay a value rather than become absent
+        note.velocity = 0; // zero, which must remain a value rather than become absent
         note.flags = QStringLiteral("g-5");
         note.envelope = Envelope{
             {{0, 0}, {5, 100}, {35, 100}, {0, 0}}
@@ -147,8 +147,8 @@ private Q_SLOTS:
         QCOMPARE(again->tracks.first().voiceDir, QStringLiteral("%VOICE%uta"));
     }
 
-    // The eighth value of VBR is one UTAU never uses and has no field for, and it still has to
-    // come back, or a file loses something every time it passes through.
+    // UTAU ignores the eighth value of VBR and exposes no field for it, but it must still be
+    // preserved. Otherwise a file would lose data on every round trip.
     void the_vibrato_value_utau_ignores_still_comes_back() {
         TempUst file("vbr8");
         auto project = oneNote();
@@ -164,8 +164,9 @@ private Q_SLOTS:
         QCOMPARE(vibrato->intensity, 42.0);
     }
 
-    // One goes out, exactly one comes in. Getting this wrong grows a run of half second leaders
-    // across repeated round trips, which is the kind of thing nobody notices until it is bad.
+    // One control note is written and exactly one is read. An error here would accumulate
+    // leading half-second notes over repeated round trips, which would go unnoticed until
+    // severe.
     void the_control_note_is_added_once_and_eaten_once() {
         TempUst file("control");
         const auto project = oneNote();
@@ -186,8 +187,8 @@ private Q_SLOTS:
         }
     }
 
-    // The payload is what the Charset line cannot say, so it has to survive being written in an
-    // encoding that is not UTF-8 and be findable again.
+    // The payload records what the Charset line cannot declare, so it must survive being
+    // written in an encoding other than UTF-8 and remain locatable.
     void the_encoding_is_recorded_and_read_back() {
         TempUst file("charset");
         const auto project = oneNote(u("あ"));
@@ -195,7 +196,7 @@ private Q_SLOTS:
         DiagnosticList diagnostics;
         QVERIFY(writeTo(project, file, {QStringLiteral("Shift_JIS"), {}, {}}, diagnostics));
 
-        // UST can only declare UTF-8, so it says nothing here.
+        // UST can declare only UTF-8, so no declaration is written here.
         QVERIFY(!file.readBytes().contains("Charset="));
 
         const auto ust = UstDocument::open(file.path(), diagnostics);
@@ -220,7 +221,8 @@ private Q_SLOTS:
         QVERIFY(ust->declaresUtf8());
     }
 
-    // A lyric with no Shift_JIS spelling still has to come back, which is what escaping is for.
+    // A lyric without a Shift_JIS representation must still round-trip, which is the purpose
+    // of escaping.
     void a_lyric_the_encoding_cannot_hold_survives_as_an_escape() {
         TempUst file("escape");
         const auto project = oneNote(u("你"));
@@ -234,8 +236,8 @@ private Q_SLOTS:
         QCOMPARE(again->tracks.first().notes.first().lyric, u("你"));
     }
 
-    // A UST from UTAU knows nothing of the escaping, so its backslashes are its own. Unescaping
-    // one would turn a Windows path into something else.
+    // A UST from UTAU does not use escaping, so its backslashes are literal. Unescaping it would
+    // corrupt a Windows path.
     void a_foreign_ust_is_not_unescaped() {
         TempUst file("foreign");
         file.writeBytes(plainUst("C:\\utau\\voice"));
@@ -245,7 +247,7 @@ private Q_SLOTS:
         QCOMPARE(project->tracks.first().notes.first().lyric, QStringLiteral("C:\\utau\\voice"));
     }
 
-    // Nothing in the file says what encoding it is, so the caller has to ask.
+    // The file does not declare its encoding, so the caller must ask the user.
     void a_file_that_says_nothing_settles_nothing() {
         TempUst file("unknown");
         file.writeBytes(plainUst("a"));
@@ -256,11 +258,11 @@ private Q_SLOTS:
         QVERIFY(!ust->recordedCharset().has_value());
         QVERIFY(!ust->declaresUtf8());
         QVERIFY(!ust->settledCharset().has_value());
-        QVERIFY(!ust->rawLyrics().isEmpty()); // still enough to show a preview
+        QVERIFY(!ust->rawLyrics().isEmpty()); // sufficient for a preview
     }
 
-    // Reading with the wrong encoding has to fail rather than produce a page of replacement
-    // characters that the user then saves over their project.
+    // Decoding with the wrong encoding must fail rather than produce replacement characters
+    // that the user might then save over the project.
     void the_wrong_encoding_is_refused() {
         TempUst file("wrong");
         const TextCodec sjis(QStringLiteral("Shift_JIS"));
@@ -275,8 +277,8 @@ private Q_SLOTS:
         QVERIFY(hasError(diagnostics));
     }
 
-    // The engine paths are the project's own where it has them, and the local ones only fill a
-    // gap.
+    // The engine paths of the project take precedence, and the local ones are used only if the
+    // project specifies none.
     void the_engines_come_from_the_project_first() {
         TempUst file("engines");
         auto project = oneNote();
@@ -295,8 +297,8 @@ private Q_SLOTS:
         QCOMPARE(again->settings.wavtool, QStringLiteral("local_wavtool.exe"));
     }
 
-    // Project does not carry everything a UST holds, so the parse stays reachable. What comes
-    // out of it is bytes in the file's own encoding, which is the point.
+    // Project cannot represent all data of a UST, so the parse remains accessible. It yields
+    // bytes in the encoding of the file, as intended.
     void the_parse_underneath_is_reachable_and_undecoded() {
         TempUst file("raw");
         const TextCodec sjis(QStringLiteral("Shift_JIS"));
@@ -320,8 +322,8 @@ private Q_SLOTS:
         TempUst file("notaust");
         file.writeBytes("hello, this is not a UST at all");
 
-        // stdutau reads it as a file with no notes rather than refusing, which is a project with
-        // nothing in it. What matters is that nothing pretends to have been read.
+        // stdutau reads it as a file without notes rather than rejecting it, which yields an
+        // empty project. The requirement is that no content is fabricated.
         const auto project = readAs(file, QStringLiteral("UTF-8"));
         if (project) {
             QVERIFY(project->tracks.first().notes.isEmpty());

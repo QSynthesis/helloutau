@@ -9,33 +9,33 @@
 
 namespace utaucompare {
 
-    /// The pitch curve an engine is handed: one reading every five ticks, in cents.
+    /// The pitch curve passed to an engine: one value every five ticks, in cents.
     ///
-    /// \note The decoding here is written out again rather than taken from stdutau. stdutau is
-    ///       what is being compared, and a comparison that encodes and decodes with the code
-    ///       under test agrees with itself no matter what it does.
+    /// \note The decoding is reimplemented here rather than taken from stdutau. stdutau is under
+    ///       test, and a comparison that encodes and decodes with the code under test always
+    ///       agrees with itself.
     QList<int> decodePitch(const QString &encoded);
 
-    /// How far apart two curves are, reading by reading, in cents.
+    /// The per-value distance between two curves, in cents.
     ///
-    /// The two sides rarely hold the same number of readings, and that on its own is not a
-    /// difference anybody can hear: past the end of a curve there is no bend, so the short side
-    /// is compared as though the readings it does not have were zero.
+    /// The two sides rarely contain the same number of values, which alone is not an audible
+    /// difference: beyond the end of a curve there is no bend, so the missing values of the
+    /// shorter side are treated as zero.
     ///
-    /// \note That is not a guess. UTAU leaves the trailing zeros off, and on a real tuned
-    ///       project it does so on half the notes: one of them sends fifteen readings of -500
-    ///       and stops, where the note runs on for another twenty-four. An engine holding the
-    ///       last reading would sing that note five semitones flat to the end, so no engine
-    ///       holds it, and the readings UTAU left off were the zeros it trimmed.
+    /// \note This is established, not assumed. UTAU omits trailing zeros, and in a real tuned
+    ///       project it does so for half of the notes: one note sends fifteen values of -500
+    ///       and ends, while the note continues for another twenty-four. An engine that held
+    ///       the last value would sing that note five semitones flat until its end, so no
+    ///       engine holds it, and the omitted values are the trimmed zeros.
     struct CurveDeviation {
-        int readings = 0; ///< how many were compared, which is the longer of the two
-        int peak = 0;     ///< the worst single reading, in cents
-        double mean = 0;  ///< over all the readings, in cents
-        int peakAt = -1;  ///< which reading the peak is at
+        int readings = 0; ///< the number of compared values, the length of the longer curve
+        int peak = 0;     ///< the largest single deviation, in cents
+        double mean = 0;  ///< the mean over all values, in cents
+        int peakAt = -1;  ///< the index of the largest deviation
     };
 
-    /// \param histogram counts every reading by how far off it was, grown as needed, so that a
-    ///        caller can say what the middle reading looks like and not only the worst one
+    /// \param histogram counts every value by its deviation, extended as needed, so that a
+    ///        caller can report the median and not only the maximum
     CurveDeviation compareCurves(const QList<int> &ours, const QList<int> &theirs,
                                  std::vector<std::int64_t> *histogram = nullptr);
 

@@ -11,7 +11,8 @@
 
 using namespace hello::kit;
 
-// Shift_JIS あ, which is not valid UTF-8 and so shows at once whether anything decoded it.
+// あ in Shift_JIS, which is not valid UTF-8 and therefore reveals immediately whether it was
+// decoded.
 static const QByteArray kA = QByteArray("\x82\xa0", 2);
 
 class test_VoiceBankSource : public QObject {
@@ -43,7 +44,7 @@ private:
     }
 
 private Q_SLOTS:
-    // A fresh directory per case, since each builds its own tree.
+    // A new directory per test case, because each builds its own tree.
     void init() {
         m_dir = std::make_unique<QTemporaryDir>();
         QVERIFY(m_dir->isValid());
@@ -75,8 +76,8 @@ private Q_SLOTS:
         QCOMPARE(directory->audioFiles.at(0), std::filesystem::path("a.wav"));
     }
 
-    // The whole point of reading before decoding: a chooser has to show the bytes under each
-    // candidate encoding, which it cannot do if reading them already needed one.
+    // The purpose of reading before decoding: a selector must display the bytes under each
+    // candidate encoding, which is impossible if reading already required an encoding.
     void nothing_is_decoded() {
         write(QStringLiteral("oto.ini"), "a.wav=" + kA + ",0,0,0,0,0\n");
 
@@ -103,7 +104,7 @@ private Q_SLOTS:
         QVERIFY(at(*source, std::filesystem::path("A4") / "deeper")->oto.has_value());
     }
 
-    // A voice bank is a folder a user picked, so its shape is not this program's to trust.
+    // A voice bank is a folder selected by the user, so its structure cannot be trusted.
     void a_tree_deeper_than_the_limit_stops_and_says_so() {
         write(QStringLiteral("a/b/c/oto.ini"), "x.wav=x,0,0,0,0,0\n");
 
@@ -136,8 +137,8 @@ private Q_SLOTS:
         QCOMPARE(at(*source, "A4")->config->charset, QStringLiteral("Shift_JIS"));
     }
 
-    // A directory holding only samples has no text in it, so there is nothing to choose an
-    // encoding for and asking would be a question with no subject.
+    // A directory containing only samples has no text, so no encoding is required and asking
+    // the user would be pointless.
     void a_directory_with_nothing_to_decode_is_not_asked_about() {
         write(QStringLiteral("a.wav"), "RIFF");
 

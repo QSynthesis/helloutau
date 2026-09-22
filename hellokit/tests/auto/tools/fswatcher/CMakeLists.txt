@@ -1,10 +1,10 @@
-# hello-fswatcher on its own, spoken to over its pipes. In Python, since what it checks is the
-# text going back and forth, and a script says that more plainly than a test that has to start
-# a process and parse its output by hand. See test_fswatcher.py for why this layer is tested
-# apart from FileSystemWatcher.
+# Protocol test of hello-fswatcher in isolation, over its pipes. Written in Python, because it
+# verifies the exchanged text, which a script expresses more directly than a test that starts a
+# process and parses its output manually. See test_fswatcher.py for the reason this layer is
+# tested separately from FileSystemWatcher.
 #
-# Set Python3_EXECUTABLE where the Python found first is the wrong one, which on Windows can be
-# the placeholder the Store puts on PATH.
+# Set Python3_EXECUTABLE if the first Python found is unsuitable, which on Windows may be the
+# Microsoft Store placeholder on PATH.
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 
 add_test(NAME test_fswatcher

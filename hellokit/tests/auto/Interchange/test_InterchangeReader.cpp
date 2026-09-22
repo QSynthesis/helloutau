@@ -7,8 +7,8 @@ using namespace hello::kit;
 
 namespace {
 
-    // A driver with no format behind it, so that the flow read() runs can be watched without a
-    // file format in the way. It records whether it was asked to convert.
+    // A driver without an underlying format, so that the flow of read() can be observed in
+    // isolation. It records whether convert() was called.
     class FakeReader : public InterchangeReader {
     public:
         QString id() const override {
@@ -69,8 +69,8 @@ class test_InterchangeReader : public QObject {
     Q_OBJECT
 
 private Q_SLOTS:
-    // Handed no selector, a driver still has to finish. The command line and the tests have
-    // nobody to ask, and a test that reached a dialog would hang rather than fail.
+    // Without a selector a driver must still complete. The command line and the tests have no
+    // user to ask, and a test that opened a dialog would hang instead of failing.
     void no_selector_still_finishes() {
         FakeReader reader;
         const auto result = reader.read("whatever.fake", nullptr);
@@ -80,8 +80,8 @@ private Q_SLOTS:
         QVERIFY(reader.converted);
     }
 
-    // Closing the chooser is not an error and must not be reported as one, or the editor puts a
-    // message box in front of a user who just said no.
+    // Closing the selector is not an error and must not be reported as one. Otherwise the
+    // editor would show a message box to a user who had just declined.
     void cancelling_is_not_an_error() {
         FakeReader reader;
         CancellingSelector selector;
@@ -93,7 +93,7 @@ private Q_SLOTS:
         QVERIFY(!reader.converted);
     }
 
-    // A driver that fails in inspect() and forgets to say why would otherwise be
+    // A driver that fails in inspect() without reporting the reason would otherwise be
     // indistinguishable from a cancellation.
     void a_failed_inspect_reports_an_error() {
         FakeReader reader;

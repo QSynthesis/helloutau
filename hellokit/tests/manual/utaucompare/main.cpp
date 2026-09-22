@@ -1,18 +1,19 @@
 /// \file
-/// Compares what we would hand the engines against what UTAU handed them for the same project.
+/// Compares the engine arguments of HelloUTAU with those UTAU passed for the same project.
 ///
-/// This is the hardest check in the project. Everything else asks whether the code does what it
-/// was written to do; this asks whether what it was written to do is what UTAU does, and the
-/// only thing that can answer is UTAU.
+/// This is the most demanding check of the project. All other tests verify that the code
+/// implements its specification. This one verifies that the specification matches UTAU, which
+/// only UTAU itself can confirm.
 ///
-/// **It does not compare wavs**, and that is deliberate. The same resampler reading the same
-/// sample one cent apart produces completely different numbers a few cycles in and sounds
-/// identical, so a sample by sample comparison reports a disaster where there is none. What has
-/// to agree is the argument each engine is handed, and the shape of the pitch curve in cents.
+/// **WAV files are deliberately not compared.** The same resampler processing the same sample
+/// with a pitch difference of one cent produces entirely different sample values after a few
+/// cycles while sounding identical, so a sample-by-sample comparison would report a severe
+/// difference where none is audible. The comparison requires agreement of the arguments passed
+/// to each engine and of the pitch curve shape in cents.
 ///
-/// Getting UTAU's side: render the project in UTAU, and **before closing it**, copy \c temp.bat
-/// and \c temp_helper.bat out of \c %%TEMP%%\\utauN . UTAU empties that folder when it exits.
-/// The wav it renders is not needed.
+/// Obtaining the UTAU side: render the project in UTAU and, **before closing UTAU**, copy
+/// \c temp.bat and \c temp_helper.bat from \c %%TEMP%%\\utauN . UTAU clears that folder on
+/// exit. The rendered WAV file is not needed.
 ///
 /// \code
 ///   utaucompare probe.ust --voice "E:/UTAU/voice/uta" --charset GBK \
@@ -66,11 +67,11 @@ namespace {
         }
     }
 
-    /// A path as it came off the command line.
+    /// A path from the command line.
     ///
-    /// The arguments arrive as UTF-8, and on Windows a \c fs::path built from a narrow string
-    /// reads it in the machine's code page instead. Anything outside ASCII then names a file
-    /// that is not there, which is most of the voice banks and half the projects.
+    /// The arguments are UTF-8, whereas on Windows a \c fs::path constructed from a narrow
+    /// string interprets it in the ANSI code page. Any non-ASCII path would then refer to a
+    /// nonexistent file, which affects most voice banks and many projects.
     fs::path pathOf(const std::string &text) {
         return fs::u8path(text);
     }
@@ -113,7 +114,7 @@ namespace {
         return result.valueForOption<std::string>(token).value_or(std::string());
     }
 
-    /// The reading at \a fraction of the way through, counted from the histogram.
+    /// The value at quantile \a fraction , computed from the histogram.
     int quantile(const std::vector<std::int64_t> &histogram, double fraction) {
         std::int64_t total = 0;
         for (const auto count : histogram) {
@@ -131,8 +132,8 @@ namespace {
     }
 
     void printArguments(const Comparison &comparison, int examples) {
-        // Grouped by what the argument is, because one wrong field is one fault however many
-        // notes carry it, and a list of notes is not a list of faults.
+        // Grouped by argument, because one incorrect field is one defect regardless of how many
+        // notes it affects, and a list of notes is not a list of defects.
         QStringList order;
         QHash<QString, QList<ArgumentDifference>> byName;
         for (const auto &difference : comparison.arguments) {

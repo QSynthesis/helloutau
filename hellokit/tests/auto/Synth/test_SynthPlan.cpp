@@ -30,7 +30,7 @@ private:
         QCOMPARE(file.write(bytes), bytes.size());
     }
 
-    /// A bank that sings \c a , \c ka and \c ki .
+    /// A voice bank with samples for \c a , \c ka and \c ki .
     std::optional<VoiceBank> bank() {
         write(QStringLiteral("bank/oto.ini"), "a.wav=a,10,20,30,40,5\n"
                                               "ka.wav=ka,11,21,31,41,6\n"
@@ -95,8 +95,8 @@ private Q_SLOTS:
         }
     }
 
-    // The seam this class exists for: a lyric becomes a sample through the voice bank, and the
-    // path that reaches the engine is the whole path, not the name the oto.ini carried.
+    // The purpose of this class: a lyric resolves to a sample through the voice bank, and the
+    // engine receives the full path, not the name in the oto.ini.
     void a_lyric_becomes_the_sample_the_bank_resolves_it_to() {
         const auto voices = bank();
         QVERIFY(voices.has_value());
@@ -110,12 +110,12 @@ private Q_SLOTS:
         QVERIFY(!step.silent);
         QCOMPARE(step.sample, root() / "bank" / "ka.wav");
 
-        // The path that reaches the engine is that sample, spelled the way the bank settled it.
+        // The engine receives the path of that sample as resolved by the voice bank.
         QCOMPARE(step.resamplerArguments.at(0), QString::fromStdU16String(step.sample.u16string()));
     }
 
-    // The cut belongs to the sample, and it has to arrive at the engine in the order the engine
-    // reads its arguments in. Getting one of these wrong renders, and renders wrongly.
+    // The timing parameters belong to the sample and must reach the engine in the order in
+    // which it reads its arguments. An error here still renders, but incorrectly.
     void the_oto_entry_reaches_the_resampler() {
         const auto voices = bank();
         QVERIFY(voices.has_value());
@@ -132,9 +132,9 @@ private Q_SLOTS:
         QCOMPARE(arguments.at(8), QStringLiteral("31")); // cutoff
     }
 
-    // A piece already on disk is taken as done and the resampler is not run again, so anything
-    // that changes what the resampler would produce has to change where it would put it.
-    // Otherwise the second render hands back the first one's sound.
+    // An existing fragment is treated as complete and the resampler is not run again, so every
+    // input that affects the resampler output must change the fragment name. Otherwise the
+    // second render would return the sound of the first.
     void a_note_rendered_differently_caches_somewhere_else() {
         const auto voices = bank();
         QVERIFY(voices.has_value());
@@ -150,9 +150,9 @@ private Q_SLOTS:
 
         const QString plain = nameFor([](Note &) {});
         QVERIFY(!plain.isEmpty());
-        QCOMPARE(nameFor([](Note &) {}), plain); // the same note twice is the same piece
+        QCOMPARE(nameFor([](Note &) {}), plain); // identical notes share a fragment
 
-        // Everything the resampler is handed.
+        // Every resampler argument.
         QVERIFY(nameFor([](Note &n) { n.flags = QStringLiteral("g5"); }) != plain);
         QVERIFY(nameFor([](Note &n) { n.intensity = 80; }) != plain);
         QVERIFY(nameFor([](Note &n) { n.modulation = 50; }) != plain);
@@ -168,8 +168,8 @@ private Q_SLOTS:
                 }) != plain);
     }
 
-    // And the other way: the envelope is applied while the piece is appended to the track, not
-    // while it is rendered, so two notes differing only there are the same piece and share it.
+    // Conversely, the envelope is applied when the fragment is appended to the track, not when
+    // it is rendered, so two notes that differ only in the envelope share a fragment.
     void what_the_wavtool_does_is_not_part_of_the_piece() {
         const auto voices = bank();
         QVERIFY(voices.has_value());
@@ -191,8 +191,8 @@ private Q_SLOTS:
         const auto changed = SynthPlan::make(projectOf({other}), *voices, options(), diagnostics);
         QVERIFY(changed.has_value());
 
-        // If this one ever fails, the envelope has started reaching the resampler and the cache
-        // name has to follow it after all.
+        // A failure here means that the envelope now reaches the resampler, and the cache name
+        // must then include it.
         QCOMPARE(changed->steps().at(0).resamplerArguments,
                  plain->steps().at(0).resamplerArguments);
         QVERIFY(changed->steps().at(0).wavtoolArguments != plain->steps().at(0).wavtoolArguments);
@@ -213,15 +213,15 @@ private Q_SLOTS:
         QCOMPARE(step.resamplerArguments.at(1),
                  QString::fromStdU16String(step.cacheFile.u16string()));
 
-        // The wavtool appends that same piece to the track, and the track comes first: the
+        // The wavtool appends the same fragment to the track, with the track first, because the
         // engine reads its arguments as <outfile> <infile>.
         const auto &wavtool = step.wavtoolArguments;
         QCOMPARE(wavtool.at(0), QString::fromStdU16String((root() / "out.wav").u16string()));
         QCOMPARE(wavtool.at(1), QString::fromStdU16String(step.cacheFile.u16string()));
     }
 
-    // A rest has no sample, so there is nothing to resample. The wavtool still runs, because a
-    // rest is how silence gets its length in the track.
+    // A rest has no sample and requires no resampling. The wavtool still runs, because a rest
+    // supplies the duration of silence in the track.
     void a_rest_gets_no_resampler_call() {
         const auto voices = bank();
         QVERIFY(voices.has_value());
@@ -238,11 +238,12 @@ private Q_SLOTS:
         QVERIFY(rest.resamplerArguments.isEmpty());
         QVERIFY(!rest.wavtoolArguments.isEmpty());
 
-        // Nothing is wrong with a rest, so nothing is said about it.
+        // A rest is not an error, so no diagnostic is produced.
         QVERIFY(diagnostics.isEmpty());
     }
 
-    // A lyric the bank cannot sing is silent too, but that one the user wants to hear about.
+    // A lyric without a sample in the voice bank is also silent, but it must be reported to the
+    // user.
     void a_lyric_the_bank_cannot_sing_is_reported() {
         const auto voices = bank();
         QVERIFY(voices.has_value());
@@ -258,8 +259,9 @@ private Q_SLOTS:
         QCOMPARE(diagnostics.at(0).noteIndex, 0);
     }
 
-    // The note's own flags come first and the project's are appended. UTAU's own temp.bat for a
-    // 455-note probe says so on 141 of the 164 notes that carried flags of their own.
+    // The flags of the note come first and the flags of the project are appended. The temp.bat
+    // UTAU wrote for a 455-note probe confirms this for 141 of the 164 notes with their own
+    // flags.
     void the_flags_of_the_project_and_of_the_note_both_arrive() {
         const auto voices = bank();
         QVERIFY(voices.has_value());
@@ -276,9 +278,8 @@ private Q_SLOTS:
         QCOMPARE(plan->steps().at(0).resamplerArguments.at(4), QStringLiteral("g-5B50"));
     }
 
-    // Rendering a selection is not the same as rendering it as though nothing else were there:
-    // pre-utterance and overlap are settled between neighbours, so the notes outside the range
-    // still have to be read.
+    // Rendering a selection differs from rendering it in isolation: pre-utterance and overlap
+    // are determined between neighbors, so notes outside the range must still be read.
     void a_range_renders_only_its_own_notes() {
         const auto voices = bank();
         QVERIFY(voices.has_value());
@@ -333,9 +334,9 @@ private Q_SLOTS:
         QVERIFY(hasError(diagnostics));
     }
 
-    // Every argument is one argument, whatever is in it. The engines are started from a vector
-    // and never from a command line, and a lyric or a flags string is not this program's to
-    // vouch for.
+    // Every argument remains a single argument regardless of its content. The engines are
+    // started from a vector, never from a command line, because the content of a lyric or a
+    // flags string cannot be trusted.
     void nothing_in_a_note_can_split_an_argument() {
         const auto voices = bank();
         QVERIFY(voices.has_value());

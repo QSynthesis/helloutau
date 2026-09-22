@@ -8,7 +8,7 @@ using namespace hello::kit;
 
 namespace {
 
-    // Only what the registry looks at: the name it is filed under and the suffixes it claims.
+    // Only the properties the registry uses: the ID and the registered suffixes.
     class NamedReader : public InterchangeReader {
     public:
         explicit NamedReader(QString id, QStringList suffixes)
@@ -58,13 +58,13 @@ private Q_SLOTS:
 
         QVERIFY(registry.readerForSuffix("fake") != nullptr);
         QVERIFY(registry.readerForSuffix(".fake") != nullptr); // with the dot
-        QVERIFY(registry.readerForSuffix("FAKE") != nullptr);  // and without case
+        QVERIFY(registry.readerForSuffix("FAKE") != nullptr);  // and case-insensitively
         QVERIFY(registry.readerForSuffix("fk") != nullptr);
         QVERIFY(registry.readerForSuffix("mid") == nullptr);
         QVERIFY(registry.readerForId("fake") != nullptr);
     }
 
-    // A plugin claiming an id the application already registered must not replace it.
+    // A plugin registering an ID that the application already registered must not replace it.
     void a_duplicate_id_is_refused() {
         InterchangeRegistry registry;
         QVERIFY(registry.addReader(fake()));
@@ -72,8 +72,8 @@ private Q_SLOTS:
         QCOMPARE(registry.readers().size(), 1);
     }
 
-    // Two drivers may claim one suffix, and the one registered first keeps it, so that a plugin
-    // cannot take a format away from the application by claiming it too.
+    // Two drivers may register the same suffix, and the first registration takes precedence,
+    // so that a plugin cannot take over a built-in format.
     void the_first_to_claim_a_suffix_keeps_it() {
         InterchangeRegistry registry;
         QVERIFY(registry.addReader(std::make_unique<NamedReader>(
