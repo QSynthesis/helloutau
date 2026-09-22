@@ -1,135 +1,135 @@
 # 与本仓库协作的约定
 
-## 这是什么
+## 项目概述
 
-HelloUTAU 是跨平台的第三方 UTAU 编辑器。目标是在功能上尽可能对齐官方 UTAU 0.4.19，同时重做交互、编码处理和扩展机制。
+HelloUTAU 是跨平台的第三方 UTAU 编辑器。目标是在功能上尽可能与官方 UTAU 0.4.19 保持一致，同时重新设计交互、编码处理和扩展机制。
 
-产品形态、工程文件格式（`.usth`）、`_USTH_` 控制音符、`hello-config.json`、编码兼容策略和五类插件的定义，**以 [`docs/note.md`](docs/note.md) 为唯一权威**。那份文档和代码冲突时改代码，不要改文档来迁就实现；确实要改设计，先跟作者确认。
+产品形态、工程文件格式（`.usth`）、`_USTH_` 控制音符、`hello-config.json`、编码兼容策略和五类插件的定义，**以 [`docs/note.md`](docs/note.md) 为唯一权威**。该文档与代码冲突时修改代码，不要为迁就实现而修改文档；确需修改设计时，先与作者确认。
 
 ## 关于官方 UTAU 的既有事实
 
-不要凭印象描述官方 UTAU 的行为，以下是核对过的事实。
+不要凭印象描述官方 UTAU 的行为，以下是经过核对的事实。
 
-**最后一个功能版本是 2013/8/31 的 v0.4.18**，v0.4.18e（2013/9/5）只补了上下文菜单缺失的英文资源。**v0.4.19（2024/5/23）不含任何功能改动，是一次纯安全更新**，官方原文：「セキュリティー脆弱性に対する更新です」，并注明「この問題はエンジンには影響しません」，即引擎（resampler / wavtool）不受影响。v0.4.19(c)（2024/5/24）只是换了安装包，为绕开 Windows 11 上「このWindowsインストーラパッケージには問題があります」的报错，安装内容与 v0.4.19 一致。
+**最后一个功能版本是 2013/8/31 发布的 v0.4.18**，v0.4.18e（2013/9/5）仅补充了上下文菜单缺失的英文资源。**v0.4.19（2024/5/23）不含任何功能改动，是一次纯安全更新**，官方原文为「セキュリティー脆弱性に対する更新です」，并注明「この問題はエンジンには影響しません」，即引擎（resampler / wavtool）不受影响。v0.4.19(c)（2024/5/24）只更换了安装包，以避免 Windows 11 上「このWindowsインストーラパッケージには問題があります」的报错，安装内容与 v0.4.19 相同。
 
-v0.4.19 修掉的是 JVN#71404925 报告的两个洞：
+v0.4.19 修复的是 JVN#71404925 报告的两个漏洞：
 
 | CVE | 类型 | 触发方式 |
 |---|---|---|
-| CVE-2024-28886 | OS 命令注入（CWE-78） | 打开被构造过的 `.ust` 工程文件即可执行任意 OS 命令 |
-| CVE-2024-32944 | 路径穿越（CWE-22） | 安装被构造过的音源安装包（`.uar`、`.zip`）可向任意位置释放文件 |
+| CVE-2024-28886 | 操作系统命令注入（CWE-78） | 打开经过构造的 `.ust` 工程文件即可执行任意操作系统命令 |
+| CVE-2024-32944 | 路径穿越（CWE-22） | 安装经过构造的音源安装包（`.uar`、`.zip`）可向任意位置释放文件 |
 
-**这两个洞的形状决定了本仓库的安全底线**，见下面「安全底线」一节。做功能对齐时要对齐的是 v0.4.18 的行为，做安全设计时要对齐的是 v0.4.19 的结论。
+**这两个漏洞的机制决定了本仓库的安全底线**，见下文「安全底线」一节。功能对齐以 v0.4.18 的行为为准，安全设计以 v0.4.19 的结论为准。
 
-结论的来源：官方下载页 <https://utau2008.xrea.jp/>（Shift_JIS）、官方博客 <http://utau2008.blog47.fc2.com/>、<https://jvn.jp/jp/JVN71404925/>。
+结论来源：官方下载页 <https://utau2008.xrea.jp/>（Shift_JIS）、官方博客 <http://utau2008.blog47.fc2.com/>、<https://jvn.jp/jp/JVN71404925/>。
 
 ## 参考仓库
 
-四个参考物的定位不同，别混着抄。
+四个参考仓库的定位各不相同，不可混用。
 
-**stdutau**（<https://github.com/diffscope/stdutau>，由 `third-party/Dependencies.cmake` 引入）——UTAU 数据层的实现，不是参考物，是依赖。`utau::UstFile`、`OtoIni`、`PrefixMap`、`PluginFileReader/Writer`、`Synth::calc` 已经覆盖了 ust / oto.ini / prefix.map 的读写、插件 tmp 文件协议和合成参数计算。**凡是这几件事，一律走 stdutau，不要在本仓库里重写一份**，发现它不够用就去改它，见「与 stdutau 协作」。
+**stdutau**（<https://github.com/diffscope/stdutau>，由 `third-party/Dependencies.cmake` 引入）：UTAU 数据层的实现，是依赖而非参考。`utau::UstFile`、`OtoIni`、`PrefixMap`、`PluginFileReader/Writer`、`Synth::calc` 已覆盖 ust / oto.ini / prefix.map 的读写、插件临时文件协议和合成参数计算。**凡属这几项功能，一律使用 stdutau，不要在本仓库中重新实现**；发现其功能不足时修改 stdutau，见「与 stdutau 协作」。
 
-**QSynthesis-Old**（<https://github.com/QSynthesis/QSynthesis-Old>）——同一作者 2021 年停更的 Qt 5 前作，`.cache/QSynthesis-Old` 下有一份。**只当行为参考，不要当代码来源。** 值得看的是它踩过的实际问题：`Frontend/Process/` 的渲染调度（`RealtimeRenderer` + `ResampleWork` + `ConcatenateWork` 的线程池模型）、`Backend/Documents/Import/` 的 MIDI / VSQ / frq / presamp 导入、`Backend/VoiceBank/` 的音源目录模型。不值得搬的是它的整套 `Q` 前缀类型、`MiniSystem` 那套自造基础设施，以及把编码问题拖到 UI 层才处理的做法。`Synth::calc` 里标着「Port from QSynthesis begin」的那段音高曲线代码已经迁到 stdutau 了，不要再从旧仓库里搬一遍。
+**QSynthesis-Old**（<https://github.com/QSynthesis/QSynthesis-Old>）：同一作者 2021 年停止维护的 Qt 5 前作，副本位于 `.cache/QSynthesis-Old`。**只作为行为参考，不作为代码来源。** 值得参考的是它遇到过的实际问题：`Frontend/Process/` 的渲染调度（`RealtimeRenderer` + `ResampleWork` + `ConcatenateWork` 的线程池模型）、`Backend/Documents/Import/` 的 MIDI / VSQ / frq / presamp 导入、`Backend/VoiceBank/` 的音源目录模型。不应迁移的是它的整套 `Q` 前缀类型、自行实现的 `MiniSystem` 基础设施，以及将编码问题推迟到界面层处理的做法。`Synth::calc` 中标有「Port from QSynthesis begin」的音高曲线代码已迁移至 stdutau，不要再从旧仓库迁移一次。
 
-**qsynthesis-revenge / DiffScope**（<https://github.com/SineStriker/qsynthesis-revenge>）——同一作者在 QSynthesis 之后的重写，**同一个问题的后一版答案，通常比 QSynthesis 那版对**。本地没有克隆，要看就按路径取单个文件。已经用上的一处是 `src/plugins/diffscope/iemgr/`（导入导出管理器），本仓库的格式转换模块照它设计，见 [`docs/Interchange.md`](docs/Interchange.md)。**遇到 QSynthesis 里某段代码明显不对时，先去这个仓库找同一件事的后一版，再决定怎么写。**
+**qsynthesis-revenge / DiffScope**（<https://github.com/SineStriker/qsynthesis-revenge>）：同一作者在 QSynthesis 之后的重写版本，**是同一问题的后续解答，通常比 QSynthesis 的版本正确**。本地没有克隆，需要时按路径获取单个文件。已采用的一处是 `src/plugins/diffscope/iemgr/`（导入导出管理器），本仓库的格式转换模块参照其设计，见 [`docs/Interchange.md`](docs/Interchange.md)。**发现 QSynthesis 中某段代码明显有误时，先在该仓库中查找同一功能的后续版本，再决定实现方式。**
 
-**synthrt**（`D:\GitHub\synthrt`）与 **stdcorelib**（`D:\GitHub\stdcorelib`）——本仓库的工程规范来源。目录组织、命名、注释、头文件引用照 synthrt 的 `docs/Development.md`；基础设施优先用 stdcorelib。
+**synthrt**（`D:\GitHub\synthrt`）与 **stdcorelib**（`D:\GitHub\stdcorelib`）：本仓库工程规范的来源。目录组织、命名、注释、头文件引用参照 synthrt 的 `docs/Development.md`；基础设施优先使用 stdcorelib。
 
 ## 技术栈
 
-Qt 6 + CMake + C++17。构建脚本的组织方式照 synthrt：`find_package(qmsetup)`、`qm_init_directories()`、`conf.cmake` 里放常量和 `_common_configure_target`。
+Qt 6 + CMake + C++17。构建脚本的组织方式参照 synthrt：`find_package(qmsetup)`、`qm_init_directories()`，常量和 `_common_configure_target` 位于 `conf.cmake`。
 
-**qmsetup 由外部提供**，不进仓库，走 vcpkg。
+**qmsetup 由外部提供**，不纳入仓库，通过 vcpkg 获取。
 
-**stdcorelib 和 stdutau 都不从 vcpkg 拿，也都不是子模块。** 两个都在和本仓库一起改，走子模块指针会让每次改动都得先 push 一轮才能用。各自构建并安装一份，配置时传 `-Dstdcorelib_DIR=<prefix>/lib/cmake/stdcorelib` 和 `-Dstdutau_DIR=<prefix>/lib/cmake/stdutau`。`third-party/Dependencies.cmake` 统一 `find_package`，由根 `CMakeLists.txt` `include()` 进来——用 `add_subdirectory` 的话导入目标只在那个目录作用域里，其他模块看不见。Windows 上那里还会把 DLL 拷进运行输出目录，vcpkg 的 applocal 不再管这两个了。
+**stdcorelib 和 stdutau 均不取自 vcpkg，也均不作为子模块。** 二者都与本仓库同步开发，使用子模块指针会导致每次改动都必须先推送才能使用。分别构建并安装，配置时传入 `-Dstdcorelib_DIR=<prefix>/lib/cmake/stdcorelib` 和 `-Dstdutau_DIR=<prefix>/lib/cmake/stdutau`。`third-party/Dependencies.cmake` 统一执行 `find_package`，由根目录的 `CMakeLists.txt` 通过 `include()` 引入；若使用 `add_subdirectory`，导入目标只在该目录作用域内可见，其他模块无法使用。在 Windows 上，该文件还会将 DLL 复制到运行输出目录，vcpkg 的 applocal 不再负责这两个库。
 
-**Windows 的 ANSI 代码页用 `winacp` 转换**（`QSynthesis/winacp`，同样自己构建安装，传 `-Dwinacp_DIR=`，**私有依赖**）。UTAU 按写文件那台机器的代码页读写，所以 Shift_JIS、GBK 这些必须和 Windows 的转换逐字节一致，才能原样往返。Qt 只在带 ICU 时认得它们，而 macOS 版的 Qt 不带；macOS 自己的 CoreFoundation 和 iconv 丢掉了 Windows 映射进私用区的几千个字，还会把一些字写成和 Windows 不同的字节。`winacp` 是从 Windows 抄出来的表，三个平台一样。**不要让这些代码页走 Qt 或系统的转换。**
+**Windows 的 ANSI 代码页由 `winacp` 转换**（`QSynthesis/winacp`，同样需自行构建安装，传入 `-Dwinacp_DIR=`，**私有依赖**）。UTAU 按写出文件的机器的代码页读写，因此 Shift_JIS、GBK 等编码的转换必须与 Windows 逐字节一致，才能原样往返。Qt 只有在包含 ICU 时才支持这些编码，而 macOS 版 Qt 不包含 ICU；macOS 自带的 Core Foundation 和 iconv 缺少 Windows 映射到私用区的数千个字符，并且会将部分字符编码为与 Windows 不同的字节。`winacp` 是从 Windows 导出的转换表，在三个平台上结果相同。**不要让这些代码页经由 Qt 或系统的转换。**
 
-**MIDI 的解析用 `wolf-midi`**（`QMidiFile` 去掉 Qt 的版本，vcpkg 端口），一样传 `-Dwolf-midi_DIR=`，**私有依赖**，不出现在公开头文件里。不要自己写 MIDI 解析。
+**MIDI 的解析使用 `wolf-midi`**（去除 Qt 依赖的 `QMidiFile`，vcpkg 端口），同样传入 `-Dwolf-midi_DIR=`，**私有依赖**，不出现在公开头文件中。不要自行实现 MIDI 解析。
 
-**stdcorelib 只做私有依赖，不出现在公开头文件里。** 子库写 `LINKS_PRIVATE stdcorelib::stdcorelib`，导出宏用 `<QtCore/QtGlobal>` 的 `Q_DECL_EXPORT` / `Q_DECL_IMPORT`，不要用 `STDC_DECL_EXPORT`。两个模块本来就都依赖 Qt，拿 Qt 的宏不额外欠一笔，而让下游为了一个宏去装 stdcorelib 是不合理的。
+**stdcorelib 仅作为私有依赖，不出现在公开头文件中。** 子库使用 `LINKS_PRIVATE stdcorelib::stdcorelib`，导出宏使用 `<QtCore/QtGlobal>` 的 `Q_DECL_EXPORT` / `Q_DECL_IMPORT`，不要使用 `STDC_DECL_EXPORT`。两个模块本就依赖 Qt，使用 Qt 的宏不增加额外依赖，而要求下游为一个宏安装 stdcorelib 是不合理的。
 
-两个都稳定下来之后再考虑换成子模块。stdutau 换的时候 URL 要写成两级的 `../../diffscope/stdutau.git`——helloutau 在 `QSynthesis` 组而 stdutau 在 `diffscope` 组，一级的 `../stdutau` 会解析成 `QSynthesis/stdutau`。
+二者稳定之后再考虑改为子模块。stdutau 改为子模块时，URL 须写为两级的 `../../diffscope/stdutau.git`：helloutau 位于 `QSynthesis` 组织而 stdutau 位于 `diffscope` 组织，一级的 `../stdutau` 会被解析为 `QSynthesis/stdutau`。
 
 ## 与 stdutau 协作
 
-stdutau 在本项目开发过程中会被大幅修改和补测试，把它当成本仓库的一部分来改，不是当成冻结的第三方库来绕。缺接口就加接口，行为不对就改行为，同时在 stdutau 的 `tests/` 里补上覆盖。
+stdutau 在本项目开发过程中会被大幅修改并补充测试，应将其视为本仓库的一部分进行修改，而非作为冻结的第三方库绕开。缺少接口就添加接口，行为有误就修正行为，并在 stdutau 的 `tests/` 中补充相应测试。
 
-但是：
+但须注意：
 
-- **stdutau 有自己的代码风格**（小写文件名、`utau` 命名空间、公开数据成员不带前缀、`.clang-format` 是它自己那份）。在 stdutau 里写代码照 stdutau 的规矩，不要把本仓库的命名规范推过去。
-- stdutau 里「读不到就是没有」一律是 `std::optional`，不要再引入奇异值。`NODEF_INT` 是仅存的例外，它标的是稠密音高曲线上的空采样，不是字段缺失。
-- **stdutau 的改动单独提交在 stdutau 仓库里。** 本仓库现在不记录它的版本，所以改完要重新构建并安装一份，否则这边拿到的还是旧的。
-- stdutau 的提交信息规矩和本仓库一样，只写一行。
-- stdutau 不依赖 Qt，也不要让它依赖 Qt。它的接口是 `std::string` 和 `std::filesystem::path`。
-- stdutau 不做任何编码转换，读写的是原始字节。这是对的，不要「顺手修好」。
+- **stdutau 有自己的代码风格**（小写文件名、`utau` 命名空间、公有数据成员不带前缀、使用其自己的 `.clang-format`）。在 stdutau 中编写代码时遵循 stdutau 的规范，不要将本仓库的命名规范推广过去。
+- stdutau 中「可能不存在的值」一律使用 `std::optional`，不要再引入特殊值。`NODEF_INT` 是唯一的例外，它标记的是稠密音高曲线上的空采样，而非字段缺失。
+- **stdutau 的改动单独提交到 stdutau 仓库。** 本仓库目前不记录其版本，因此修改后必须重新构建并安装，否则本仓库使用的仍是旧版本。
+- stdutau 的提交信息规范与本仓库相同，只写一行。
+- stdutau 不依赖 Qt，也不得使其依赖 Qt。其接口使用 `std::string` 和 `std::filesystem::path`。
+- stdutau 不做任何编码转换，读写的是原始字节。这是正确的设计，不要「顺便修正」。
 
 ## 编码
 
-这是本项目最容易出错的地方，规则只有一条：**`std::string` 一律是 UTF-8，唯一的例外是即将写入磁盘或刚从磁盘读出的原始字节，这种值不许离开 I/O 边界那一层。**
+这是本项目最容易出错的部分，规则只有一条：**`std::string` 一律为 UTF-8，唯一的例外是即将写入磁盘或刚从磁盘读出的原始字节，这种值不得离开 I/O 边界层。**
 
-- 编码策略由 `docs/note.md` 定义。`.usth` 恒为 UTF-8；`.ust` 的编码记在控制音符的载荷里，**UST 的 `Charset` 只能表达「是不是 UTF-8」，表达不了是哪种编码**；导出编码是可配置的应用设置；音源看 `hello-config.json`，插件看 `plugin.json`。**不要猜编码，也不要用「检测」代替「记录」。**
-- `hello-config.json` **一个文件夹一个**，和它描述的 `oto.ini` 放在同一层，不是整个音源一份。
-- 转换发生在文件读写层，进了内存模型就只有 UTF-8。UI 层不该知道磁盘上是 Shift_JIS 还是 GBK。
-- 目标编码表示不了的字符用转义串，见 `docs/note.md`。转义和还原必须是同一处代码的两个方向，写成一对函数，配一组往返测试。
-- 路径用 `std::filesystem::path`，不要用 `std::string` 转手。Windows 上它是 `wchar_t`，转成窄串就丢信息。
+- 编码策略由 `docs/note.md` 定义。`.usth` 恒为 UTF-8；`.ust` 的编码记录在控制音符的载荷中，**UST 的 `Charset` 只能表达「是否为 UTF-8」，无法表达具体编码**；导出编码是可配置的应用设置；音源以 `hello-config.json` 为准，插件以 `plugin.json` 为准。**不要猜测编码，也不要以「检测」代替「记录」。**
+- `hello-config.json` **每个文件夹一份**，与其描述的 `oto.ini` 位于同一层，而非整个音源一份。
+- 转换发生在文件读写层，进入内存模型后只有 UTF-8。界面层不应知道磁盘上是 Shift_JIS 还是 GBK。
+- 目标编码无法表示的字符以转义序列表示，见 `docs/note.md`。转义与还原必须是同一段代码的两个方向，实现为一对函数，并配有一组往返测试。
+- 路径使用 `std::filesystem::path`，不要经由 `std::string` 中转。在 Windows 上它使用 `wchar_t`，转换为窄字符串会丢失信息。
 
 ## 调用外部程序
 
-**用 `stdc::Popen`，不要用 `QProcess`。** 管道是 `std::iostream`，参数在 Windows 上会转成 UTF-16 再交给 `CreateProcess`，所以任何脚本写的参数都能原样到达，这正是 `QProcess` 在本项目里最会出问题的地方。
+**使用 `stdc::Popen`，不要使用 `QProcess`。** 其管道是 `std::iostream`，参数在 Windows 上会转换为 UTF-16 再交给 `CreateProcess`，因此任何文字的参数都能原样传递，而这正是 `QProcess` 在本项目中最容易出问题之处。
 
-- 开了两个管道就必须用 `communicate()`。手工轮流读两个管道，一个写满就死锁，这不是偶发。
-- 返回码是 `returnCode()`，类型是 `std::optional<int>`，没退出就是 `std::nullopt`，不要 `value_or(0)` 糊过去。
-- 加载 resampler.dll 这类动态库用 `stdc::SharedLibrary`。
+- 同时打开两个管道时必须使用 `communicate()`。手动交替读取两个管道时，任一管道写满即会死锁，这并非偶发问题。
+- 返回码通过 `returnCode()` 获取，类型为 `std::optional<int>`，进程未退出时为 `std::nullopt`，不要用 `value_or(0)` 掩盖。
+- 加载 resampler.dll 等动态库使用 `stdc::SharedLibrary`。
 
-resampler / wavtool 的命令行参数由 `utau::ResamplerArguments::arguments()` 和 `utau::WavtoolArguments::arguments()` 生成，不要手拼。
+resampler / wavtool 的命令行参数由 `utau::ResamplerArguments::arguments()` 和 `utau::WavtoolArguments::arguments()` 生成，不要手动拼接。
 
 ## 安全底线
 
-两条，都来自官方 v0.4.19 修的那两个洞。写到任何一条相关的代码时，先把这里读完。
+共两条，均来自官方 v0.4.19 修复的两个漏洞。编写任何相关代码之前，先完整阅读本节。
 
-**一、工程文件里的字符串是不可信输入。**
+**一、工程文件中的字符串是不可信输入。**
 
-打开一个构造过的 `.ust`，在官方 UTAU 上可以执行任意 OS 命令（CVE-2024-28886，CWE-78）。**具体字段和路径官方与 JVN 都没有公布，不要在文档或注释里编一个出来。** 下面第一条给出的是有据可依的推断，不是查到的结论。
+在官方 UTAU 中打开一份经过构造的 `.ust` 可执行任意操作系统命令（CVE-2024-28886，CWE-78）。**官方和 JVN 均未公布具体字段和路径，不要在文档或注释中编造。** 下面第一条给出的是有依据的推断，而非查证的结论。
 
-- **永远不要把参数拼成一条命令行字符串。** 官方 UTAU 渲染时默认写批处理再执行（v0.4.12 的更新日志里有「wav生成時にバッチを使用しない」这个开关，说明默认是用），而批处理里插进去的文件名、别名、flags 只要含 `&` 或换行就能追加命令。这是 CWE-78 最可能的形状。
-- **「走 shell」和「拼命令行」是两回事，不要混。** 非 exe 插件是必须支持的功能，走 `stdc::Popen::shell(true)`——它保持参数向量的语义，逐个元素做 `^` 转义再加引号，包成 `cmd /d /v:off /s /c`，比 Python 的 `shell=True` 严格得多。禁止的是自己拼串，不是这个开关。
-- **`plugin.txt` 的 `shell=use` 是 `ShellExecuteEx`，不是命令处理器。** [官方规格](https://w.atwiki.jp/utaou/pages/64.html)的原话是「通常はCreateProcessでプラグインが起動されますが、shell=useを指定した場合はShellExecuteExで起動されます。これにより、exeファイル以外を実行することができます(jar、html、htaなど)」。也就是说真正跑起来的是系统给那个扩展名注册的处理程序，`plugin.txt` 里并没有写它是谁——`.bat` 恰好落到 `cmd.exe` 上，别把这个巧合当成定义。**HelloUTAU 这一侧照搬 `ShellExecuteEx` 还是按扩展名自己分派，还没定**，定之前别在代码里假设任何一种。
-- **从工程文件读到的引擎路径，默认不使用。** `Tool1`、`Tool2` 和音符上的 `$patch` 是工程里写死的路径，照单执行等于让工程决定跑什么程序。用本地配置里的引擎，除非用户在明确的提示里选择信任。这是「执行任意程序」，和上一条的「注入任意命令」是两回事，两条都要防。
-- **但要原样存下来。** 逐工程配置引擎是 UTAU 的正常用法，不存等于删用户的设置，那是拿安全当借口破坏数据。**要防的是不问就执行，不是持有。** 这条对 `$patch` 和 `userData` 一样成立。
-- `.ust` 里所有路径在使用前解析为绝对路径并检查，相对路径不许逃出工程目录。
+- **绝不将参数拼接为一条命令行字符串。** 官方 UTAU 渲染时默认写出并执行批处理文件（v0.4.12 的更新日志中有「wav生成時にバッチを使用しない」这一开关，说明默认使用批处理），而写入批处理的文件名、别名、flags 只要包含 `&` 或换行符即可追加命令。这是 CWE-78 最可能的机制。
+- **「经由 shell 执行」与「拼接命令行」是两回事，不可混淆。** 非 exe 插件是必须支持的功能，通过 `stdc::Popen::shell(true)` 执行：它保持参数向量的语义，对每个元素进行 `^` 转义并加引号，再包装为 `cmd /d /v:off /s /c`，比 Python 的 `shell=True` 严格得多。禁止的是自行拼接字符串，而非这个开关。
+- **`plugin.txt` 的 `shell=use` 对应 `ShellExecuteEx`，而非命令处理器。** [官方规格](https://w.atwiki.jp/utaou/pages/64.html)原文为「通常はCreateProcessでプラグインが起動されますが、shell=useを指定した場合はShellExecuteExで起動されます。これにより、exeファイル以外を実行することができます(jar、html、htaなど)」。即实际运行的是系统为该扩展名注册的处理程序，`plugin.txt` 中并未指定该程序；`.bat` 恰好由 `cmd.exe` 处理，不要将这一巧合当作定义。**HelloUTAU 是沿用 `ShellExecuteEx` 还是按扩展名自行分派，尚未确定**，确定之前不要在代码中假设任何一种方式。
+- **默认不使用从工程文件读取的引擎路径。** `Tool1`、`Tool2` 和音符上的 `$patch` 是写在工程中的路径，直接执行等于让工程决定运行哪个程序。应使用本地配置的引擎，除非用户在明确的提示中选择信任。这是「执行任意程序」，与上一条的「注入任意命令」不同，两者都必须防范。
+- **但必须原样保存。** 逐工程配置引擎是 UTAU 的正常用法，不保存等于删除用户的设置，那是以安全为借口破坏数据。**需要防范的是未经询问即执行，而非保存。** 这一规则同样适用于 `$patch` 和 `userData`。
+- `.ust` 中的所有路径在使用前解析为绝对路径并进行检查，相对路径不得超出工程目录。
 
-**二、解包音源和插件时，压缩包里的每个条目路径都是不可信输入。**
+**二、解包音源和插件时，压缩包中每个条目的路径都是不可信输入。**
 
-`.uar` / `.zip` 里的条目名可以是 `../../..`，也可以是绝对路径或带盘符，官方 UTAU 照着写文件，于是可以往任意位置释放文件（CVE-2024-32944）。
+`.uar` / `.zip` 中的条目名可以是 `../../..`，也可以是绝对路径或带盘符的路径，官方 UTAU 按此写入文件，因此可以向任意位置释放文件（CVE-2024-32944）。
 
-- 解包前规范化条目路径，**拒绝绝对路径、盘符、`..` 分量和符号链接条目**，不是过滤掉它们，是拒绝整个包并告诉用户。
-- 规范化之后再确认目标路径确实位于目标目录之内，用 `std::filesystem::weakly_canonical` 比较，不要用字符串前缀比较。
-- 解压要有大小和条目数上限。
+- 解包前规范化条目路径，**拒绝绝对路径、盘符、`..` 路径分量和符号链接条目**：不是过滤这些条目，而是拒绝整个压缩包并告知用户。
+- 规范化之后再确认目标路径确实位于目标目录之内，使用 `std::filesystem::weakly_canonical` 比较，不要使用字符串前缀比较。
+- 解压须设置大小和条目数上限。
 
-这两条要有专门的测试，输入就是构造出来的恶意 `.ust` 和恶意 `.zip`。**测试没有覆盖畸形输入，这一节就等于没写。**
+这两条须有专门的测试，输入为构造的恶意 `.ust` 和恶意 `.zip`。**若测试未覆盖畸形输入，本节即形同虚设。**
 
 ## 代码编写
 
-目录、命名、格式、注释和头文件引用照 synthrt 的 [`docs/Development.md`](D:/GitHub/synthrt/docs/Development.md)。要点复述如下，冲突时以那份文档为准。
+目录、命名、格式、注释和头文件引用参照 synthrt 的 [`docs/Development.md`](D:/GitHub/synthrt/docs/Development.md)。要点复述如下，冲突时以该文档为准。
 
-本仓库自己的那份是 [`docs/Development.md`](docs/Development.md)，**它才是权威**，下面只是提要。
+本仓库自己的规范是 [`docs/Development.md`](docs/Development.md)，**它才是权威**，以下仅为摘要。
 
-- 两个模块，每个是**一族库**：`hellokit`（命名空间 `hello::kit`，Qt Core，产出 `HelloKitDocument` 等）和 `helloutau`（命名空间 `hello::daw`，Qt Widgets，产出 `HelloUtauWidgets` 等加 `helloutau` 可执行文件）。**`hellokit` 不链接 QtWidgets**，核心逻辑不依赖 GUI 才测得动。
-- **应用也是库加薄驱动**，照 lldb 的 `liblldb` + `tools/driver`。`tools/driver/main.cpp` 只放入口，其余在库里——可执行文件没法链进测试二进制，库可以。
-- 模块级一个 `include/` 一个 `lib/`，照 synthrt：`hellokit/include/hellokit/Document/` 配 `hellokit/lib/Document/`。**include 的命名空间是模块名不是目标名**，写 `<hellokit/Document/PayloadCodec.h>`。不用 `sync_include`。私有头同源文件放，加 `_p.h` 后缀，尽量少用。
-- **大小写三层**：CMake 包名与 `project()` 小写（`hellokit`、`helloutauConfig.cmake.in`），子库目标与 dll 大驼峰（`HelloKitDocument`），include 命名空间小写。
-- 文件名大驼峰，与其中的主要类型同名。入口 `main.cpp` 小写；每个子库一个 `<目标名>Global.h` 放导出宏。
-- 类型大驼峰，函数 / 参数 / 变量 / 命名空间小驼峰，枚举成员大驼峰。私有数据成员 `m_` 前缀，PImpl 的两个指针例外，用 `_impl` 和 `_decl`。getter 是属性名，setter 是 `set` 加属性名。
-- **Qt 的头文件要带模块名**，写 `<QtCore/QByteArray>`、`<QtWidgets/QMainWindow>`，不写 `<QByteArray>`。
-- 头文件里引用项目公开头用尖括号全路径；源文件里同目标的头用双引号。源文件最上方第一个引用块是同名公开头和 `_p.h`，然后依次是系统库、标准库、第三方库、项目内其他目标，当前目标内其余头文件在最底部单独成块。
-- 初始化表达式是指针时写 `auto name = ...`，不写 `auto *name = ...`。析构函数不写 `override`，头文件里被继承的类不写 `final`。
-- 命名空间结束处不加注释。
-- 读不到就是没有的地方返回 `std::optional<T>`，不要用「bool 加出参」，也不要拿某个特定值当「没有」。
-- **常量用小驼峰**，和变量一样，不要写成 `DefaultLyric` 这种。大驼峰只给类型和枚举成员。
-- **契约性的常量写在 `hellokit/Document/DocumentConstants.h`**，不要在用到它的那个文件里就地定义。默认歌词、音域、每拍 tick 数这类东西，编辑器新建音符和导入器产出音符必须是同一个值，写两处就是等着它们悄悄不一致。**UTAU 自己定的默认值不往这儿抄**，stdutau 的 `utaconst.h` 已经有了，从那儿取。
-- 前缀：仓库级 CMake 变量 `HELLO_`，模块级 CMake 变量与函数 `HELLOKIT_` / `hellokit_`、`HELLOUTAU_` / `helloutau_`，子库导出宏 `HELLOKIT_DOCUMENT_EXPORT` 这类，头文件保护跟 include 路径走（`HELLOKIT_DOCUMENT_PAYLOADCODEC_H`）。**模块级的前缀必须显式给**，`qm_setup_build_repo_helpers()` 默认取 `PROJECT_NAME`，而子目录里那个已经是 `HelloKitDocument` 了。
-- **带 `Q_OBJECT` 的头文件必须进目标的 `SOURCES`**，AUTOMOC 只扫 `SOURCES`。头在 `include/` 下不会被源文件 glob 捞到，漏了就链接时缺四个 moc 符号。
+- 共两个模块，每个模块是**一组库**：`hellokit`（命名空间 `hello::kit`，Qt Core，产出 `HelloKitDocument` 等）和 `helloutau`（命名空间 `hello::daw`，Qt Widgets，产出 `HelloUtauWidgets` 等以及 `helloutau` 可执行文件）。**`hellokit` 不链接 QtWidgets**，核心逻辑不依赖 GUI 才便于测试。
+- **应用同样由库和薄驱动组成**，参照 lldb 的 `liblldb` + `tools/driver`。`tools/driver/main.cpp` 只包含入口，其余逻辑位于库中，因为可执行文件无法链接进测试程序，而库可以。
+- 每个模块包含一个 `include/` 和一个 `lib/`，参照 synthrt：`hellokit/include/hellokit/Document/` 对应 `hellokit/lib/Document/`。**include 的命名空间是模块名而非目标名**，写 `<hellokit/Document/PayloadCodec.h>`。不使用 `sync_include`。私有头文件与源文件放在一起，加 `_p.h` 后缀，尽量少用。
+- **大小写分三个层次**：CMake 包名与 `project()` 小写（`hellokit`、`helloutauConfig.cmake.in`），子库目标与 dll 大驼峰（`HelloKitDocument`），include 命名空间小写。
+- 文件名采用大驼峰，与其中的主要类型同名。入口 `main.cpp` 小写；每个子库有一个 `<目标名>Global.h` 存放导出宏。
+- 类型采用大驼峰，函数 / 参数 / 变量 / 命名空间采用小驼峰，枚举成员采用大驼峰。私有数据成员使用 `m_` 前缀，PImpl 的两个指针例外，使用 `_impl` 和 `_decl`。getter 使用属性名，setter 使用 `set` 加属性名。
+- **Qt 的头文件须带模块名**，写 `<QtCore/QByteArray>`、`<QtWidgets/QMainWindow>`，不写 `<QByteArray>`。
+- 头文件中引用项目公开头文件时使用尖括号和完整路径；源文件中引用同一目标的头文件时使用双引号。源文件最上方的第一个引用块是同名公开头文件和 `_p.h`，其后依次为系统库、标准库、第三方库、项目内其他目标，当前目标内的其余头文件在最底部单独成块。
+- 初始化表达式为指针时写 `auto name = ...`，不写 `auto *name = ...`。析构函数不写 `override`，头文件中被继承的类不写 `final`。
+- 命名空间结束处不添加注释。
+- 可能不存在结果的函数返回 `std::optional<T>`，不要使用「bool 加输出参数」，也不要用某个特定值表示「不存在」。
+- **常量使用小驼峰**，与变量相同，不要写成 `DefaultLyric` 这种形式。大驼峰仅用于类型和枚举成员。
+- **契约性常量定义在 `hellokit/Document/DocumentConstants.h`**，不要在使用处就地定义。默认歌词、音域、每拍 tick 数等值，编辑器新建的音符与导入器产出的音符必须一致，定义在两处必然导致二者在不知不觉中产生差异。**UTAU 规定的默认值不在此处重复定义**，stdutau 的 `utaconst.h` 已有定义，应从那里获取。
+- 前缀：仓库级 CMake 变量使用 `HELLO_`，模块级 CMake 变量与函数使用 `HELLOKIT_` / `hellokit_`、`HELLOUTAU_` / `helloutau_`，子库导出宏形如 `HELLOKIT_DOCUMENT_EXPORT`，头文件保护按 include 路径命名（`HELLOKIT_DOCUMENT_PAYLOADCODEC_H`）。**模块级前缀必须显式指定**，因为 `qm_setup_build_repo_helpers()` 默认取 `PROJECT_NAME`，而子目录中的 `PROJECT_NAME` 已是 `HelloKitDocument`。
+- **带 `Q_OBJECT` 的头文件必须加入目标的 `SOURCES`**，因为 AUTOMOC 只处理 `SOURCES`。位于 `include/` 下的头文件不会被源文件的 glob 匹配，遗漏时链接会缺少四个 moc 符号。
 
 文体（注释、文档、README、帮助文本、诊断消息通用）：
 
@@ -145,84 +145,84 @@ resampler / wavtool 的命令行参数由 `utau::ResamplerArguments::arguments()
 
 注释：
 
-- LLVM 风格，`///` 写在声明上方。**从不用 `\brief`。**
-- 类的 private 成员、`.cpp` 里的实现细节用普通 `//`。私有头文件里的类型和非 private 声明仍用 `///`。
-- Doxygen 命令用 `\c` `\a` `\note` `\warning` `<tt>`，不要用反引号或引号。注释里要写字面量 `@` 开头的词必须转义成 `\@`。
-- **注释里不要破折号，也不要用分号连接从句。** 该断句就断句。美式拼写。
-- **能几个词说完就别写一段。** 注释写约束、所有权、生命周期、以及「为什么只能这么写」。不复述签名已经说清的事，不解释一个一眼就懂的重载为什么存在，也不把一句话拆成三句来讲。
-- **不写考古式注释。** 「为什么现在必须这么写」留下，「以前是什么样、后来修了」删掉。
-- 头文件写调用方要据此行动的东西，cpp 写为什么这么做，或者干脆不写。设计理由属于提交信息。
-- 全项目通用的约定写在这份文档里，不要在每个使用点重复解释。
+- LLVM 风格，`///` 写在声明上方。**从不使用 `\brief`。**
+- 类的 private 成员和 `.cpp` 中的实现细节使用普通的 `//`。私有头文件中的类型和非 private 声明仍使用 `///`。
+- Doxygen 命令使用 `\c` `\a` `\note` `\warning` `<tt>`，不要使用反引号或引号。注释中书写以 `@` 开头的字面词时，必须转义为 `\@`。
+- **注释中不要使用破折号，也不要用分号连接从句。** 应断句处即断句。使用美式拼写。
+- **几个词能说清的内容不写成一段。** 注释说明约束、所有权、生命周期，以及「为何只能如此实现」。不复述签名已经表明的内容，不解释一目了然的重载为何存在，也不将一句话拆成三句。
+- **不写考古式注释。** 保留「为何现在必须如此实现」，删除「以前如何、后来修正」。
+- 头文件说明调用方据以行动的内容，cpp 说明实现理由，或不写注释。设计理由属于提交信息。
+- 全项目通用的约定写在本文档中，不要在每个使用处重复解释。
 
 Markdown：
 
-- **一段就是一行**，不要按 80 或 100 列手动折行。代码块、表格、列表项照旧。这条只管 `.md`，C++ 注释仍是 100 列。
-- 文件结尾不留多余换行。
+- **一段即一行**，不要按 80 或 100 列手动折行。代码块、表格、列表项照常处理。此规则仅适用于 `.md`，C++ 注释仍为 100 列。
+- 文件末尾不留多余的空行。
 
-改完跑 `clang-format`，只对自己动过的文件跑。**不要 `sed -i` 扫全目录。**
+修改后运行 `clang-format`，只对自己改动过的文件运行。**不要用 `sed -i` 处理整个目录。**
 
 ## 构建与验证
 
-- **测试用 QtTest，不用 Boost.Test。** 本仓库处处依赖 Qt，`QCOMPARE` 能直接打印 `QString` 和 `QByteArray`，而 Boost 要先逐个转成 `std::string`；将来 widgets 的测试还要 `QSignalSpy` 和 `QTEST_MAIN`。stdcorelib 和 stdutau 用 Boost 是因为它们不依赖 Qt，那条惯例不适用于这里。
-- **`tests/auto` 按模块分目录，和 `include/hellokit` 同构**：`tests/auto/Document/` 对 `include/hellokit/Document/`。每个目录自己一个 `CMakeLists.txt`。
-- **程序的测试放在 `tests/auto/tools/`，和 `tools/` 同构**：`hellokit/tests/auto/tools/fswatcher/` 对 `hellokit/tools/fswatcher/`，一个程序一个目录。helloutau 以后有了自己的测试也照这个分。
-- **单独一个进程、靠管道说话的程序，它的协议测试可以用 Python**，经 ctest 调（开了测试就要 `Python3`，Windows 上用 `Python3_EXECUTABLE` 绕开应用商店那个占位的 `python`）。测的是进出管道的文本，脚本写这个比 QtTest 起进程再手工拆输出直白。这是 QtTest 那条的例外，不是替代：库和调用它的那层照样用 QtTest。
-- **一个 `test_XXX.cpp` 对一个 `XXX.h`**，名字一一对应。这样光看目录列表就知道哪些头文件还没有测试。一个文件盖三个头（原来的 `test_Interchange.cpp`）就看不出这件事了。
-- **不要重复链传递依赖。** `HelloKitDocument` 公开链了 `HelloKitSupport`，测试只写 `HelloKitDocument` 就够。
-- **看到测试通过之前，先确认 build 的退出码是 0。** 构建失败时 ctest 跑的是上一轮的旧二进制，会给出虚假的绿色。
-- **批量改动后核对「改了几处」，而不是「能不能编译」。** `grep -o <pattern> | wc -l` 数的是实际次数，`grep -c` 数的是行数。
-- 新增测试后确认断言真的执行了，空 suite 也会「通过」。
-- 分清断言的是当前行为还是设计意图。测试可能只是把缺陷固化了下来。
-- **写完行为要把缺陷放回去，确认测试会变红。** 改一行、重建、跑、还原。
-- Qt 的东西能不进测试就不进测试。核心逻辑放在不依赖 QtWidgets 的层里，才测得动。
+- **测试使用 QtTest，不使用 Boost.Test。** 本仓库处处依赖 Qt，`QCOMPARE` 能直接打印 `QString` 和 `QByteArray`，而 Boost 需要先逐个转换为 `std::string`；将来 widgets 的测试还需要 `QSignalSpy` 和 `QTEST_MAIN`。stdcorelib 和 stdutau 使用 Boost 是因为它们不依赖 Qt，该惯例不适用于本仓库。
+- **`tests/auto` 按模块分目录，与 `include/hellokit` 结构相同**：`tests/auto/Document/` 对应 `include/hellokit/Document/`。每个目录有自己的 `CMakeLists.txt`。
+- **程序的测试位于 `tests/auto/tools/`，与 `tools/` 结构相同**：`hellokit/tests/auto/tools/fswatcher/` 对应 `hellokit/tools/fswatcher/`，每个程序一个目录。helloutau 将来有自己的测试时也按此划分。
+- **以独立进程运行、通过管道通信的程序，其协议测试可以使用 Python**，由 ctest 调用（启用测试时需要 `Python3`，在 Windows 上使用 `Python3_EXECUTABLE` 避开应用商店的占位 `python`）。测试对象是管道中传递的文本，用脚本编写比用 QtTest 启动进程并手动解析输出更直接。这是 QtTest 规则的例外而非替代：库及其调用层仍使用 QtTest。
+- **一个 `test_XXX.cpp` 对应一个 `XXX.h`**，名称一一对应。这样只看目录列表即可知道哪些头文件尚无测试。一个测试文件覆盖三个头文件（如原来的 `test_Interchange.cpp`）时，就无法从目录列表看出这一点。
+- **不要重复链接传递依赖。** `HelloKitDocument` 公开链接了 `HelloKitSupport`，测试只需链接 `HelloKitDocument`。
+- **确认测试通过之前，先确认构建的退出码为 0。** 构建失败时 ctest 运行的是上一次构建的旧程序，会给出虚假的通过结果。
+- **批量修改后核对「修改了几处」，而不只是「能否编译」。** `grep -o <pattern> | wc -l` 统计的是实际出现次数，`grep -c` 统计的是行数。
+- 新增测试后确认断言确实被执行，空的测试集同样会「通过」。
+- 区分断言的是当前行为还是设计意图。测试可能只是将缺陷固化了下来。
+- **完成一项行为的测试后，将缺陷放回，确认测试会失败。** 修改一行、重新构建、运行、还原。
+- 能不在测试中引入 Qt 就不引入。核心逻辑位于不依赖 QtWidgets 的层中，才便于测试。
 
 ## 提交
 
 - **提交信息不带任何 AI 署名**，不写 `Co-Authored-By`，不写 `Generated with`。
-- **只写一行**，英文，首字母大写的祈使句，美式拼写，不写正文。「为什么」留给代码注释和 `docs/`，不要写成提交信息里的小作文。
-- **一个提交一件事。** 同一个文件承载两批改动时，用 `git show HEAD:<path>` 取出旧内容、只叠加其中一批、提交、再放回完整版本，不要图省事整文件暂存。
-- 每个提交自身必须能构建、能通过测试，拆分出来的中间状态也一样。
-- **未经授权不要 commit，更不要 push。** 改完把工作区留着，等作者说了再提交。
+- **只写一行**，使用英文、首字母大写的祈使句和美式拼写，不写正文。设计理由写在代码注释和 `docs/` 中，不要在提交信息中长篇叙述。
+- **一个提交只做一件事。** 同一个文件包含两批改动时，用 `git show HEAD:<path>` 取出旧内容，只叠加其中一批改动后提交，再恢复完整版本，不要为图省事暂存整个文件。
+- 每个提交自身必须能够构建并通过测试，拆分出的中间状态同样如此。
+- **未经授权不要 commit，更不要 push。** 修改完成后保留工作区，待作者同意后再提交。
 
 ## 判断与沟通
 
-- **断言之前先验证。** 「公开 API 长这样」不等于「它真的能这么用」。
-- **先量再说。** 结论要么来自编译器、要么来自运行时探针、要么来自参考实现，不要凭记忆断言。
-- **探针本身也会骗人。** 结果反常时先怀疑探针。
-- 用户的质疑基本都是对的，**先重新验证，不要辩护**。
-- 发现自己错了就直接更正，把结论写回问题清单的对应条目，注明原判断错在哪。
-- 不确定就说不确定，不要用推测填补。
-- 涉及官方 UTAU 行为的断言，要么有实测，要么标明出处，**不要转述社区传言**。
+- **断言之前先验证。** 「公开 API 是这样」不等于「它确实能这样使用」。
+- **先测量，再下结论。** 结论必须来自编译器、运行时探针或参考实现，不要凭记忆断言。
+- **探针本身也可能出错。** 结果异常时先怀疑探针。
+- 用户的质疑通常是正确的，**应先重新验证，而不是辩护**。
+- 发现自己有误时直接更正，将结论写回问题清单的对应条目，并注明原判断的错误所在。
+- 不确定时明确说明不确定，不要以推测填补。
+- 关于官方 UTAU 行为的断言，必须有实测依据或注明出处，**不要转述社区传言**。
 
-## 文档去处
+## 文档位置
 
 | 内容 | 位置 |
 |---|---|
-| 产品形态与文件格式定义 | `docs/note.md`，`.usth` 的规格在 `docs/UsthFormat.md` |
-| 阶段划分与每阶段的完成判据 | `docs/Roadmap.md` |
-| 单个模块的职责边界与接口形状 | `docs/<模块名>.md`，如 `docs/Interchange.md` |
-| 值得长期保留的经验、设计记录 | `docs/claude/`（codex 写 `docs/codex/`） |
+| 产品形态与文件格式定义 | `docs/note.md`，`.usth` 的规格见 `docs/UsthFormat.md` |
+| 阶段划分与各阶段的验收标准 | `docs/Roadmap.md` |
+| 单个模块的职责边界与接口结构 | `docs/<模块名>.md`，如 `docs/Interchange.md` |
+| 值得长期保留的经验与设计记录 | `docs/claude/`（codex 写入 `docs/codex/`） |
 | 问题清单、交接、临时分析、参考资料副本 | `.cache/claude/`、`.cache/codex/`（已 gitignore） |
 | 面向用户的说明 | `README.md`、`docs/` |
-| 项目状态与 TODO | `docs/Status.md` |
+| 项目状态与待办事项 | `docs/Status.md` |
 
-`.cache/` 整个是 gitignore 的，参考仓库的克隆、下载下来的官方资料都放那儿，不要进版本库。
+`.cache/` 整体被 gitignore，参考仓库的克隆和下载的官方资料都放在那里，不纳入版本库。
 
-## 已知的坑
+## 已知问题
 
-- **`sed -i` 会把 CRLF 拍平成 LF**，而仓库里行尾是混的。动手前 `grep -qU $'\r'` 判断，CRLF 文件改用编辑工具。
-- **`sed` 的替换表达式必须带行号地址**，否则是全局替换，且后续表达式会匹配前面已改过的文本，层层嵌套。
-- **绝不用 bash heredoc 写脚本**，也不要经 shell 传含反斜杠的 C++ 文本或含日文的字符串。shell 会吃掉一层反斜杠。用写文件的方式落盘再执行。
-- **官方 UTAU 的站点是 Shift_JIS**，`curl` 下来要显式按 `cp932` 解码，别让工具猜。
-- **Qt 6 没有 `QTextCodec`**（挪到 Qt5Compat 了），替代品是 `QStringConverter` / `QStringEncoder` / `QStringDecoder`。**但 `QStringConverter::encodingForName()` 只认内置的 `Encoding` 枚举**，也就是 UTF 系列加 Latin-1 加 System；`Shift_JIS`、`GBK`、`Big5`、`EUC-KR` 这些来自 ICU，只能把名字直接交给 `QStringDecoder(name)` / `QStringEncoder(name)` 构造。先把名字转成枚举会让这些编码全部变成「不支持」，而且不报错。本仓库统一走 `hello::kit::TextCodec`。
-- **`QStringConverter::System` 的 `name()` 返回 `"Locale"`**，是个占位串，记不进控制音符。要具体名字得自己按 `GetACP()` 映射，`TextCodec::systemName()` 干的就是这个。
-- **UST 只可能是两种编码**：写了 `Charset=UTF-8` 的 UTF-8，和什么都不写的「写文件那台机器的 ANSI」。所以要问用户的从来不是「两百种编码里哪一种」，而是「这文件是哪国人写的」——实际上就是日本（Shift_JIS）、中国大陆（GBK）、台湾（Big5）。候选列表见 `TextCodec::ustCandidates()`，**别把 `availableNames()` 那两百多项直接铺给用户**。
-- **判断一个字符目标编码装不装得下，不能只看 `hasError()`。** 装不下时 Qt 写一个问号就过去了，得编码再解码回来比较。`TextCodec::canEncode()` 就是这么做的。
-- **`中` 是常用日文汉字，Shift_JIS 里有。** 要找 Shift_JIS 表示不了的字得用简体专用字，比如 `你`、`简`、`们`。写编码相关的测试时别拿 `中` 当反例。
-- Windows 上包含 `<windows.h>`：链了 Qt 的目标用 `<QtCore/qt_windows.h>`，没链 Qt 的用 `stdcorelib/platform/windows/stdc_windows.h`。两者都会先定义 `NOMINMAX`。**别为了一个 `GetACP()` 去多链一个库。**
-- **CMake 里判平台不要判编译器。** clang 目标 `x86_64-pc-windows-msvc` 时，CMake 的 `MSVC` 和 `MINGW` 都是假，`else()` 兜底加的 `-fPIC` 会直接把它编译不过。synthrt 的根 `CMakeLists.txt` 里有这个写法，抄的时候要改成 `elseif(NOT WIN32)`。
-- **被信号杀死的进程不会 flush 缓冲的 stdout。** 输出一个字都没有、看起来像没跑，其实是死了。
-- **Windows 上执行 `.bat` 是个有 CVE 记录的注入面。** `CreateProcess` 遇到 `.bat` 会转交 `cmd.exe` 二次解析，而 cmd 的规则和 `CommandLineToArgvW` 不同，光按标准 argv 规则加引号不够——这就是 2024 年的 BatBadBut（CVE-2024-24576）。`stdc::Popen::shell(true)` 的 `^` 转义是冲着它去的，但别因此往 `.bat` 的参数里塞工程文件来的字符串。
-- **`stdc::Popen::shell(true)` 在 Windows 上默认 `SW_HIDE`。** 要 UTAU 那种可见的 cmd 窗口，`startupInfo` 的 `dwFlags` 带上 `STARTF_USESHOWWINDOW` 即可，带了就由调用方的 `wShowWindow` 说了算。窗口里显示的是子进程写到自己控制台的东西，所以要看见输出就不能把那条流设成 `Pipe`。本进程已有控制台时子进程是共用它而不是新开一个，`wShowWindow` 对一个压根没被创建的窗口不起作用，要独立窗口得配 `creationFlags(CREATE_NEW_CONSOLE)`。**已实测**：子进程里 `IsWindowVisible(GetConsoleWindow())` 默认为 0，带上那个标志为 1。
-- UTAU 音源目录里同一个 `oto.ini` 可能出现在多级子目录，`QVoiceBank` 用 `QMap<QString, QOtoIni>` 是有道理的，不要假设一个音源只有一份 `oto.ini`。
-- **UTAU 把它不认识的段落当成音符**，不是忽略。读 UST 遇到未知段名**静默跳过**（交给 stdutau），写 UST 绝不能自造段落。完整的保留规则见 [`docs/claude/utau-ust-preservation.md`](docs/claude/utau-ust-preservation.md)。
+- **`sed -i` 会将 CRLF 转换为 LF**，而仓库中的行尾是混合的。修改前用 `grep -qU $'\r'` 判断，CRLF 文件改用编辑工具修改。
+- **`sed` 的替换表达式必须带行号地址**，否则会进行全局替换，且后续表达式会匹配前面已修改的文本，导致层层嵌套。
+- **绝不使用 bash heredoc 编写脚本**，也不要经由 shell 传递含反斜杠的 C++ 文本或含日文的字符串，因为 shell 会去掉一层反斜杠。应先写入文件再执行。
+- **官方 UTAU 的站点使用 Shift_JIS**，用 `curl` 下载后须显式按 `cp932` 解码，不要让工具猜测。
+- **Qt 6 没有 `QTextCodec`**（已移至 Qt5Compat），替代品是 `QStringConverter` / `QStringEncoder` / `QStringDecoder`。**但 `QStringConverter::encodingForName()` 只识别内置的 `Encoding` 枚举**，即 UTF 系列、Latin-1 和 System；`Shift_JIS`、`GBK`、`Big5`、`EUC-KR` 等编码来自 ICU，只能将名称直接传给 `QStringDecoder(name)` / `QStringEncoder(name)` 构造。先将名称转换为枚举会使这些编码全部显示为「不支持」，且不报错。本仓库统一使用 `hello::kit::TextCodec`。
+- **`QStringConverter::System` 的 `name()` 返回 `"Locale"`**，这是占位字符串，无法记录到控制音符中。获取具体名称须自行按 `GetACP()` 映射，`TextCodec::systemName()` 即实现此功能。
+- **UST 只可能使用两种编码**：写有 `Charset=UTF-8` 的 UTF-8，以及未写任何声明的「写出文件的机器的 ANSI 代码页」。因此需要用户回答的从来不是「两百种编码中的哪一种」，而是「文件在哪个地区写出」，实际上即日本（Shift_JIS）、中国大陆（GBK）、台湾（Big5）。候选列表见 `TextCodec::ustCandidates()`，**不要将 `availableNames()` 的两百多项直接展示给用户**。
+- **判断一个字符能否被目标编码表示，不能只看 `hasError()`。** 无法表示时 Qt 写入一个问号且不报错，必须编码后再解码并比较。`TextCodec::canEncode()` 即采用这种方法。
+- **`中` 是常用的日文汉字，Shift_JIS 中包含该字。** 需要 Shift_JIS 无法表示的字时，须使用简体专用字，例如 `你`、`简`、`们`。编写编码相关的测试时不要以 `中` 作为反例。
+- 在 Windows 上包含 `<windows.h>`：链接了 Qt 的目标使用 `<QtCore/qt_windows.h>`，未链接 Qt 的目标使用 `stdcorelib/platform/windows/stdc_windows.h`。二者都会先定义 `NOMINMAX`。**不要为了一个 `GetACP()` 而额外链接一个库。**
+- **CMake 中判断平台而非编译器。** clang 以 `x86_64-pc-windows-msvc` 为目标时，CMake 的 `MSVC` 和 `MINGW` 均为假，`else()` 分支中添加的 `-fPIC` 会导致编译失败。synthrt 根目录的 `CMakeLists.txt` 中有这种写法，参照时须改为 `elseif(NOT WIN32)`。
+- **被信号终止的进程不会刷新缓冲的 stdout。** 没有任何输出、看似未运行时，实际上可能是进程已终止。
+- **在 Windows 上执行 `.bat` 是有 CVE 记录的注入途径。** `CreateProcess` 遇到 `.bat` 时会交给 `cmd.exe` 再次解析，而 cmd 的规则与 `CommandLineToArgvW` 不同，仅按标准 argv 规则加引号并不足够，这就是 2024 年的 BatBadBut（CVE-2024-24576）。`stdc::Popen::shell(true)` 的 `^` 转义正是针对这一问题，但不能因此将来自工程文件的字符串写入 `.bat` 的参数。
+- **`stdc::Popen::shell(true)` 在 Windows 上默认使用 `SW_HIDE`。** 需要 UTAU 那样可见的 cmd 窗口时，在 `startupInfo` 的 `dwFlags` 中加入 `STARTF_USESHOWWINDOW`，此后窗口状态由调用方的 `wShowWindow` 决定。窗口中显示的是子进程写入其控制台的内容，因此要看到输出，就不能将对应的流设为 `Pipe`。本进程已有控制台时，子进程共用该控制台而不新建，`wShowWindow` 对未被创建的窗口不起作用，需要独立窗口时须配合 `creationFlags(CREATE_NEW_CONSOLE)`。**已经实测**：子进程中 `IsWindowVisible(GetConsoleWindow())` 默认为 0，加上该标志后为 1。
+- UTAU 音源目录中，同一份 `oto.ini` 可能出现在多级子目录中，`QVoiceBank` 使用 `QMap<QString, QOtoIni>` 是合理的，不要假设一个音源只有一份 `oto.ini`。
+- **UTAU 将无法识别的段落当作音符**，而非忽略。读取 UST 遇到未知段名时**静默跳过**（交由 stdutau 处理），写出 UST 时绝不能创建自定义段落。完整的保留规则见 [`docs/claude/utau-ust-preservation.md`](docs/claude/utau-ust-preservation.md)。

@@ -2,26 +2,26 @@
 
 本文档规定 helloutau 仓库通用的代码组织与 C++ 编写原则。具体格式以仓库根目录的 `.clang-format` 为准。
 
-与 synthrt 的 `docs/Development.md` 保持一致，两边冲突时以这里为准，但不要为了本仓库的方便去分叉一条规则，先想清楚是不是那边也该改。
+本文档与 synthrt 的 `docs/Development.md` 保持一致。两者冲突时以本文档为准，但不应为了本仓库的便利而分叉规则，应先确认 synthrt 的规则是否也需要修改。
 
 ## 模块
 
-两个模块，每个模块是**一族库**而不是一个库：
+共两个模块，每个模块是**一组库**而非单个库：
 
 | 模块 | 命名空间 | 产出 | 依赖 |
 |---|---|---|---|
-| `hellokit/` | `hello::kit` | `HelloKitDocument`、以后的 `HelloKitCore` 等 | Qt Core、stdutau、stdcorelib（私有） |
-| `helloutau/` | `hello::daw` | `HelloUtauWidgets` 等，加上 `helloutau` 可执行文件 | Qt Widgets、hellokit |
+| `hellokit/` | `hello::kit` | `HelloKitDocument`、今后的 `HelloKitCore` 等 | Qt Core、stdutau、stdcorelib（私有） |
+| `helloutau/` | `hello::daw` | `HelloUtauWidgets` 等，以及 `helloutau` 可执行文件 | Qt Widgets、hellokit |
 
-`hello` 只是外层，代码一律写在第二层里。不要往 `hello` 本身放东西，也不要再开第三层。
+`hello` 仅作为外层命名空间，代码一律位于第二层。不要在 `hello` 中直接声明内容，也不要再增加第三层。
 
-**`hellokit` 不链接 QtWidgets。** 界面是应用程序的事，核心逻辑不依赖 GUI 工具包才测得动。
+**`hellokit` 不链接 QtWidgets。** 界面属于应用程序，核心逻辑不依赖 GUI 工具包才便于测试。
 
-**应用也是库加一个薄驱动**，形状照 lldb 的 `liblldb` 与 `tools/driver`。`tools/driver/main.cpp` 只有入口，其余都在库里，这样应用侧的逻辑同样测得动——可执行文件没法被链进测试二进制，库可以。
+**应用同样由库和一个薄驱动组成**，结构参照 lldb 的 `liblldb` 与 `tools/driver`。`tools/driver/main.cpp` 只包含入口，其余逻辑均位于库中，因此应用侧的逻辑同样可以测试：可执行文件无法链接进测试程序，而库可以。
 
 ## 目录与文件
 
-模块级一个 `include/` 一个 `lib/`，子库在里面各占一格，形状照 synthrt：
+每个模块包含一个 `include/` 和一个 `lib/`，各子库在其中各占一个目录，结构参照 synthrt：
 
 ```
 hellokit/include/hellokit/Document/PayloadCodec.h     ← #include <hellokit/Document/PayloadCodec.h>
@@ -33,27 +33,27 @@ helloutau/plugins/                               ← 编辑界面扩展插件
 helloutau/tools/driver/main.cpp                  ← 目标 helloutau
 ```
 
-**include 的命名空间是模块名，不是目标名。** 写 `<hellokit/Document/PayloadCodec.h>`，不写 `<HelloKitDocument/PayloadCodec.h>`。`HelloKitDocument` 只是产出的动态库文件名。
+**include 的命名空间是模块名，而非目标名。** 写 `<hellokit/Document/PayloadCodec.h>`，不写 `<HelloKitDocument/PayloadCodec.h>`。`HelloKitDocument` 仅是产出的动态库文件名。
 
-不用 qmsetup 的 `sync_include`，`include/` 是实打实的目录。
+不使用 qmsetup 的 `sync_include`，`include/` 是实际存在的目录。
 
 仅供实现使用的私有头文件放在源文件旁边，并使用 `_p.h` 后缀。私有头文件会增加实现之间的耦合，应尽量少用。
 
 仅供多个实现文件复用且不独立编译的实现片段可以使用 `.cpp.inc` 后缀。普通声明仍应放在头文件中，普通实现仍应放在 `.cpp` 文件中。
 
-文件名采用大驼峰命名并与其中的主要类型一致，例如 `PayloadCodec.h` 与 `PayloadCodec.cpp`。程序入口 `main.cpp` 保持小写。每个子库有一个 `<目标名>Global.h` 放导出宏，例如 `HelloKitDocumentGlobal.h`，它不对应类型但跟着目标名走。
+文件名采用大驼峰命名并与其中的主要类型一致，例如 `PayloadCodec.h` 与 `PayloadCodec.cpp`。程序入口 `main.cpp` 保持小写。每个子库有一个 `<目标名>Global.h` 存放导出宏，例如 `HelloKitDocumentGlobal.h`，该文件不对应任何类型，但按目标名命名。
 
 ## 大小写
 
-三层，别混：
+分为三个层次，不可混用：
 
-| 层 | 写法 | 例 |
+| 层次 | 写法 | 示例 |
 |---|---|---|
 | CMake 包名、`project()`、配置模板 | 小写 | `hellokit`、`helloutauConfig.cmake.in` |
 | 子库目标名、动态库文件名 | 大驼峰 | `HelloKitDocument`、`HelloUtauWidgets.dll` |
 | include 命名空间 | 小写模块名 | `<hellokit/Document/...>` |
 
-子库目录用大驼峰并与目标名去掉族前缀后一致：`lib/Document/` 对 `HelloKitDocument`，`lib/Widgets/` 对 `HelloUtauWidgets`。
+子库目录采用大驼峰命名，与去掉族前缀后的目标名一致：`lib/Document/` 对应 `HelloKitDocument`，`lib/Widgets/` 对应 `HelloUtauWidgets`。
 
 ## C++ 命名
 
@@ -68,7 +68,7 @@ helloutau/tools/driver/main.cpp                  ← 目标 helloutau
 
 ## 前缀
 
-| 用途 | 前缀 | 例 |
+| 用途 | 前缀 | 示例 |
 |---|---|---|
 | 仓库级 CMake 选项与变量 | `HELLO_` | `HELLO_BUILD_TESTS` |
 | 模块级 CMake 变量 | `HELLOKIT_` / `HELLOUTAU_` | `HELLOKIT_DEVEL` |
@@ -76,15 +76,15 @@ helloutau/tools/driver/main.cpp                  ← 目标 helloutau
 | 子库导出宏 | `HELLOKIT_DOCUMENT_` 等 | `HELLOKIT_DOCUMENT_EXPORT` |
 | 头文件保护 | 按 include 路径 | `HELLOKIT_DOCUMENT_PAYLOADCODEC_H` |
 
-模块级的函数由 `qm_setup_build_repo_helpers(hellokit)` 生成，**必须显式给前缀**——它默认取 `PROJECT_NAME`，而子目录里 `PROJECT_NAME` 已经是 `HelloKitDocument` 了。变量前缀由 `hellokit_init_buildsystem(HELLOKIT)` 显式给。
+模块级函数由 `qm_setup_build_repo_helpers(hellokit)` 生成，**必须显式指定前缀**，因为其默认值为 `PROJECT_NAME`，而子目录中的 `PROJECT_NAME` 已是 `HelloKitDocument`。变量前缀由 `hellokit_init_buildsystem(HELLOKIT)` 显式指定。
 
-子库的导出宏前缀由 `hellokit_add_library(... MACRO_PREFIX HELLOKIT_DOCUMENT)` 显式给，默认值会跟着目标名走成 `HELLOKITDOCUMENT_`。
+子库的导出宏前缀由 `hellokit_add_library(... MACRO_PREFIX HELLOKIT_DOCUMENT)` 显式指定，否则默认值将根据目标名生成为 `HELLOKITDOCUMENT_`。
 
-`<目标名>Global.h` 引 `<QtCore/QtGlobal>`，用 `Q_DECL_EXPORT` / `Q_DECL_IMPORT` 展开。两个模块都依赖 Qt，而 stdcorelib 是私有依赖，不出现在公开头文件里。
+`<目标名>Global.h` 引用 `<QtCore/QtGlobal>`，导出宏展开为 `Q_DECL_EXPORT` / `Q_DECL_IMPORT`。两个模块都依赖 Qt，而 stdcorelib 是私有依赖，不出现在公开头文件中。
 
 ## Qt
 
-**带 `Q_OBJECT` 的头文件必须出现在目标的 `SOURCES` 里。** AUTOMOC 只扫 `SOURCES` 列出的文件，而头文件放在 `include/` 下不会被源文件的 glob 捞到，于是 moc 不生成，链接时缺 `metaObject`、`qt_metacast`、`qt_metacall`、`staticMetaObject` 四个符号。所以子库要把头文件也 glob 进去：
+**带 `Q_OBJECT` 的头文件必须出现在目标的 `SOURCES` 中。** AUTOMOC 只处理 `SOURCES` 中列出的文件，而位于 `include/` 下的头文件不会被源文件的 glob 匹配，moc 因此不会生成代码，链接时将缺少 `metaObject`、`qt_metacast`、`qt_metacall`、`staticMetaObject` 四个符号。因此子库必须将头文件一并加入 glob：
 
 ```cmake
 file(GLOB_RECURSE _src "*.cpp")
@@ -97,7 +97,7 @@ helloutau_add_library(${PROJECT_NAME} SHARED
 )
 ```
 
-qwindowkit 没有这个问题是因为它把头文件和源文件放在一起，synthrt 没有是因为它根本不用 Qt。我们两样都不占，所以要自己记着。
+qwindowkit 没有这个问题，因为它的头文件与源文件位于同一目录。synthrt 也没有，因为它不使用 Qt。本仓库两个条件都不满足，因此必须显式处理。
 
 ## 格式与内联
 
@@ -115,6 +115,20 @@ qwindowkit 没有这个问题是因为它把头文件和源文件放在一起，
 
 注释使用美式英语。不要用破折号连接从句，也不要用分号代替应有的断句。
 
+## 文体
+
+本节适用于注释、文档、README、帮助文本和诊断消息。
+
+- **采用正式的技术写作文体。** 注释与文档是规范性文本而非叙述。每句陈述一项事实、约束或理由，不写铺垫、感想和修辞。
+- **不拟人。** 代码、文件、格式、程序和测试不作为有意志的主语：不写 says、tells、knows、asks、wants、means、cares、decides、promises、is told，也不写「它说」「它知道」「它不认」「它想要」。改用 returns、indicates、records、specifies、reports、detects、requires、rejects，或「返回」「表示」「记录」「规定」「报告」「拒绝」。用户、作者、调用方等真实行为主体可以作主语。
+- **使用术语，不用描述性转述。** 写 invalid byte sequence，不写 bytes that do not decode。写 Basic Multilingual Plane、unpaired surrogate、reverse mapping、unrepresentable character，不写 the basic plane、half of one、the way back、what cannot be spelled。没有通用术语时，首次出现给出定义，之后始终沿用同一名称。
+- **标题、分组名和列表标签使用名词或名词短语。** 写 Motivation、Behavior、Supported code pages、Rationale，不写 Why、What it does、What it holds、How it works。能用名词表达时，不用 what 引导的名词从句作主语或宾语：写 the requested encoding，不写 what the user asked for。
+- **条件用 if，where 只表示处所。** 不写 empty where there is none，写 empty if absent。不写 nothing where the file is missing，写 \c std::nullopt if the file is missing。不用 one 回指前文名词（such a one、the one it wants），直接重复该名词。
+- **不使用口语短语。** 不写 whatever else、for good、as it stands、on its own、on the way out、at a glance、there and back、is given up on、the rest of why、and all 等说法，改为准确的书面表达。
+- **句子完整。** 不写片段句、逗号粘连句（两个独立分句仅以逗号连接）和反问句。不以 So、And so、Which is why、That is why、Hence 开头叙述因果，改为在同一句中用 because、therefore 表明。不对读者使用第二人称。
+- **函数说明以动词开头**（Returns、Decodes、Reads、Rejects）。`\return` 写明每种情况的返回值。布尔查询写 Returns whether …。
+- 中文文本同样适用：使用书面语，不用「别」「搞」「就行」「得（表必须）」「啥」「拿来」「反正」「其实」「说白了」「这玩意儿」等口语词。标题不用「为什么」「怎么做」，改用「动机」「设计理由」「实现方式」。「不要」「必须」等规范性祈使句不属于口语，照常使用。
+
 ## 其他风格
 
 析构函数不要使用 override 关键字。
@@ -122,13 +136,13 @@ qwindowkit 没有这个问题是因为它把头文件和源文件放在一起，
 
 ## 返回值
 
-读不到就是没有的地方一律返回 `std::optional<T>`，不要用「bool 加出参」，也不要拿某个特定值当作「没有」。stdutau 已经按这条改过一轮，本仓库从一开始就这样写。
+可能不存在结果的函数一律返回 `std::optional<T>`，不要使用「bool 加输出参数」，也不要用某个特定值表示「不存在」。stdutau 已按此规则修改过一轮，本仓库从一开始即遵循此规则。
 
 ## 头文件引用
 
 引用块从上到下依次为系统库、标准库、第三方库、项目内被依赖的其他目标和当前目标内的头文件。不同来源的引用块之间留一个空行，同一引用块中的头文件应来自同一个库。不要依赖其他头文件偶然提供的传递引用。
 
-**引用 Qt 的头文件要带模块名**，写 `<QtCore/QByteArray>`、`<QtWidgets/QMainWindow>`，不写 `<QByteArray>`、`<QMainWindow>`。不带模块名的写法依赖构建系统把每个模块的 include 目录都加进搜索路径，而目标只链 QtCore 时那个路径未必在；带上模块名，读的人也能立刻看出这一行欠的是哪个模块。
+**引用 Qt 的头文件要带模块名**，写 `<QtCore/QByteArray>`、`<QtWidgets/QMainWindow>`，不写 `<QByteArray>`、`<QMainWindow>`。不带模块名的写法依赖构建系统将每个模块的 include 目录加入搜索路径，而目标只链接 QtCore 时该路径未必存在。带上模块名，读者也能立即看出该行依赖哪个模块。
 
 在头文件中引用项目公开头文件时使用完整公共路径：
 
@@ -136,7 +150,7 @@ qwindowkit 没有这个问题是因为它把头文件和源文件放在一起，
 #include <hellokit/Document/PayloadCodec.h>
 ```
 
-同一子库内部的头文件也用完整公共路径，不要写成相对路径。子库的 `include/` 那一层在包含路径里，`../../include/hellokit/Document/PayloadCodec.h` 这种写法一旦目录挪动就断。
+同一子库内部的头文件也使用完整公共路径，不要写成相对路径。子库的 `include/` 目录位于包含路径中，`../../include/hellokit/Document/PayloadCodec.h` 这种写法在目录移动后即会失效。
 
 如果被引用的头文件与当前头文件位于同一目录，并且具有预引入或自动生成等特殊用途，也可以使用双引号直接引用。
 

@@ -1,85 +1,85 @@
 # 项目状态
 
-## 现在有什么
+## 现有内容
 
-仓库骨架按 synthrt 的形状搭好了，两个模块都能构建。
+仓库骨架按 synthrt 的结构搭建，两个模块均可构建。
 
 | 目标 | 状态 |
 |---|---|
-| `HelloKitSupport` | `Diagnostic`、`TextCodec`（编码解析、转义还原）、`FileSystemWatcher`（磁盘变化的提示，由 `hello-fswatcher` 进程完成） |
+| `HelloKitSupport` | `Diagnostic`、`TextCodec`（编码名解析、转义与还原）、`FileSystemWatcher`（磁盘变化提示，由 `hello-fswatcher` 进程实现） |
 | `HelloKitDocument` | `PayloadCodec`、`Project` / `Track` / `Note` 模型、`.usth` 读写、`UstDocument` |
-| `HelloKitVoiceBank` | `VoiceBankConfig`、`VoiceBankSource`（原始扫描）、`VoiceBank`（解码后的模型、查询、写回、和磁盘核对）、`VoiceBankCheckScheduler` |
-| `HelloKitSynth` | `EngineProcess`、`SynthPlan`（只算）、`SynthRunner`（跑） |
-| `HelloKitInterchange` | 接口、注册表、`Formats/MidiConvert`（读写两个方向） |
-| `HelloUtauWidgets` | 一个装着 `QLabel` 的 `MainWindow`，证明 Qt Widgets 和 moc 接上了 |
-| `helloutau` | 薄驱动，只有 `main.cpp` |
+| `HelloKitVoiceBank` | `VoiceBankConfig`、`VoiceBankSource`（原始扫描）、`VoiceBank`（解码后的模型、查询、写回、与磁盘核对）、`VoiceBankCheckScheduler` |
+| `HelloKitSynth` | `EngineProcess`、`SynthPlan`（仅计算）、`SynthRunner` 及其实现 `ClassicSynthRunner`、`ThreadedSynthRunner` |
+| `HelloKitInterchange` | 接口、注册表、`Formats/MidiConvert`（导入与导出） |
+| `HelloUtauWidgets` | 仅含一个 `QLabel` 的 `MainWindow`，用于验证 Qt Widgets 与 moc 的集成 |
+| `helloutau` | 薄驱动，仅含 `main.cpp` |
 
-构建链已验证：qmsetup 的 `hellokit_add_library` / `helloutau_add_library` / `helloutau_add_application`、Qt 6.11 加 AUTOMOC、stdcorelib、stdutau、wolf-midi、QtTest 加 `add_auto_test`、ctest。
+已验证的构建链：qmsetup 的 `hellokit_add_library` / `helloutau_add_library` / `helloutau_add_application`、Qt 6.11 与 AUTOMOC、stdcorelib、stdutau、wolf-midi、QtTest 与 `add_auto_test`、ctest。
 
-`HelloKitSupport` 有 `Diagnostic` 和 `TextCodec`，后者是编码这件事的全部落地处：名字怎么解析、解不开的字节怎么拒、编码放不下的字符怎么转义。`HelloKitDocument` 有 `PayloadCodec`、`Project` / `Track` / `Note` 数据模型，以及 `.usth` 的读写——**读写就挂在 `Project` 上**，因为 `.usth` 不是众多格式里的一种，它就是工程本身的写法，别的格式都走 Interchange 转成 `Project`。`.ust` 在 `UstDocument`——它是一份**已经读进来但还没解码**的 UST，`open()` 解析一次，探编码和 `toProject()` 都吃那一次的结果，不重复解析。`HelloKitInterchange` 的接口与注册表齐了（`InterchangeReader` / `InterchangeWriter` / `InterchangeSource` / `InterchangeSelector` / `AutomaticSelector` / `InterchangeRegistry` / `InterchangePlugin`），第一个格式 `Formats/MidiConvert` 读写都有，headless 可跑可测。形状与约束见 [`Interchange.md`](Interchange.md)。**还没有界面**：选轨和选编码那两页要等第三阶段。
+`HelloKitSupport` 包含 `Diagnostic` 和 `TextCodec`。编码相关的全部逻辑集中在 `TextCodec`：编码名的解析、无效字节的拒绝、不可表示字符的转义。`HelloKitDocument` 包含 `PayloadCodec`、`Project` / `Track` / `Note` 数据模型和 `.usth` 读写。**`.usth` 的读写属于 `Project`**，因为 `.usth` 不是众多格式之一，而是工程本身的序列化形式；其他格式均经由 Interchange 转换为 `Project`。`.ust` 由 `UstDocument` 表示，即一份**已读入但尚未解码**的 UST：`open()` 只解析一次，编码探测与 `toProject()` 均使用该次解析结果。`HelloKitInterchange` 的接口与注册表已完成（`InterchangeReader` / `InterchangeWriter` / `InterchangeSource` / `InterchangeSelector` / `AutomaticSelector` / `InterchangeRegistry` / `InterchangePlugin`），第一个格式 `Formats/MidiConvert` 支持导入与导出，可在无界面环境下运行和测试。结构与约束见 [`Interchange.md`](Interchange.md)。**界面尚未实现**：轨道选择页和编码选择页属于第三阶段。
 
-`HelloKitVoiceBank` 是音源目录模型。读和解码分成两步，理由和 `.ust` 一样：选编码的那个界面得先把字节拿给用户看，而读这件事本身不能已经需要编码。`VoiceBankSource` 走一遍目录树，把每一级的 `oto.ini` / `prefix.map` / `character.txt` / `readme.txt` / `hello-config.json` 和音频文件名收上来，**什么都不解码、什么都不写**——记住一个编码意味着往用户的音源目录里写文件，扫描不是做这个决定的地方。`VoiceBank` 拿一个 `VoiceBankCharsetSelector`（headless 用 `FixedCharsetSelector`）逐目录问编码，解码，然后 `find(noteNum, lyric)` 按「prefix.map → 别名 → 文件名」给出样本和切割参数。
+`HelloKitVoiceBank` 是音源的目录模型。读取与解码分为两步，理由与 `.ust` 相同：编码选择界面必须先向用户展示原始字节，而读取本身不能依赖编码。`VoiceBankSource` 遍历目录树，收集每一级目录的 `oto.ini` / `prefix.map` / `character.txt` / `readme.txt` / `hello-config.json` 和音频文件名，**不做任何解码，也不写入任何文件**：记录编码意味着向用户的音源目录写入文件，扫描阶段不应做此决定。`VoiceBank` 通过 `VoiceBankCharsetSelector`（无界面环境使用 `FixedCharsetSelector`）逐目录获取编码并解码，`find(noteNum, lyric)` 按「prefix.map → 别名 → 文件名」的顺序返回样本及其时间参数。
 
-几条实测钉下来的行为：**没人能说出编码的目录只丢掉需要解码的部分**，它的样本仍然能按文件名唱——文件名不需要编码，而没有 `oto.ini` 的音源本来就是这么唱的；**文件名本身也是别名**，[官方那页](https://w.atwiki.jp/utaou/pages/106.html)写了 UTAU 会把 wav 名当别名读，音源作者靠加 `_` 前缀来避开；扫描有深度和目录数上限，符号链接一律不跟——音源是用户挑的文件夹，形状不归我们信任。
+以下行为已经实测确认：**编码无法确定的目录只丢弃需要解码的部分**，其样本仍可按文件名演唱，因为文件名无需编码，而没有 `oto.ini` 的音源本来就以这种方式演唱；**文件名本身也是别名**，[官方页面](https://w.atwiki.jp/utaou/pages/106.html)说明 UTAU 将 wav 文件名作为别名读取，音源作者以 `_` 前缀排除不希望被演唱的文件；扫描设有深度和目录数上限，并且不跟随任何符号链接，因为音源是用户选择的文件夹，其结构不可信任。
 
-**音源能写回了。** `VoiceBank` 按目录保存，每个目录留着读它用的编码；`save()` 只写变了的文件、按原编码写、编码装不下的字符拒绝、磁盘上被别人改过的拒绝，先全部检查再动手。**一份 903 条的 GBK 真实音源原样打开原样存，`oto.ini` 逐字节相同；改一个 offset 只有一行变。** 设置编码分两种：转换（`setDirectory()` 改编码再存，字节变文字不变）和重新解读（`reread()`，字节不变文字变），转换前 `VoiceBank::isCharsetReadableByUtau()` 说原版 UTAU 在这台机器上读不读得回来。文件名一律按音源自己的编码解开再拼路径，不经过系统代码页——之前那样做，编码和系统代码页不一致的音源路径全错，emoji 文件名直接让打开抛异常。细节见 [`Editing.md`](Editing.md) 的「音源是第二种文档」。
+**音源写回已经实现。** `VoiceBank` 按目录保存，每个目录保留读取时使用的编码。`save()` 只写入有变化的文件，以原编码写入，拒绝编码无法表示的字符，拒绝磁盘上已被其他程序修改的文件，并在全部检查通过后才开始写入。**一份含 903 个条目的 GBK 真实音源原样打开并保存后，`oto.ini` 逐字节相同；修改一个 offset 只改变一行。** 编码设置分为两种：转换（`setDirectory()` 更改编码后保存，字节改变而文字不变）和重新解读（`reread()`，字节不变而文字改变）。转换前，`VoiceBank::isCharsetReadableByUtau()` 判断原版 UTAU 在本机能否正确读取。文件名一律按音源自身的编码解码后再拼接路径，不经过系统代码页；否则，编码与系统代码页不一致的音源会得到错误的路径，含 emoji 的文件名会使打开操作抛出异常。详见 [`Editing.md`](Editing.md) 的「音源是第二种文档」一节。
 
-**音源编辑界面开着时，磁盘上的变化一个都不漏。** 监视在 `hello-fswatcher` 这个单独的进程里：Windows 上照 JetBrains 的做法只占**盘根**的一个句柄，音源里任何目录都可以删、可以改名，包括它的根目录；进程崩溃了会重启，重启后全量核对；在 Debug 版里也不会弹出对话框卡住。它发的只是提示：`VoiceBank::checkDisk()` 用目录指纹核对（只列目录不读文件，修改时间离取指纹太近的再比内容），**只检测不改动**，检测到的在 `reloadFromDisk()` 之前每次都会再报。`VoiceBankCheckScheduler` 把监视提示、定时全量核对、监视失效后的轮询、手动触发合在一起；`reloadAllFromDisk()` 是不看指纹的全部重读。三个平台的后端都有：Windows 用 `ReadDirectoryChangesW`，macOS 用 FSEvents（逐文件事件，不持有任何句柄），Linux 用 inotify（每个目录单独注册，新目录先补上监视再报整棵树，根目录往上每一级也监视，这样上级目录改名时能知道根目录没了）。`hello-fswatcher` 自己有一份 Python 写的协议测试 `test_fswatcher`（ctest，要 `Python3`，Windows 上用 `Python3_EXECUTABLE` 绕开应用商店那个占位的 `python`）：两个音源并排，15 种操作，三个平台都跑过。**Linux 和 macOS 上还没用 CMake 整个构建过**，那里验证的是单独编译的 helper 加这份协议测试；Qt 客户端和调度器的测试只在 Windows 上跑过。
+**音源编辑界面打开期间，磁盘上的任何变化都会被检测到。** 监视由独立进程 `hello-fswatcher` 执行。在 Windows 上，它按 JetBrains 的做法只持有**驱动器根目录**的一个句柄，因此音源中的任何目录（包括音源根目录）都可以删除或重命名；进程崩溃后会重启，并在重启后进行全量核对；Debug 构建中也不会弹出阻塞的对话框。监视结果仅作为提示：`VoiceBank::checkDisk()` 使用目录指纹进行核对（只列目录、不读文件，对修改时间过于接近取指纹时刻的文件比较内容），**只检测、不修改**，检测到的变化在 `reloadFromDisk()` 之前每次都会重复报告。`VoiceBankCheckScheduler` 整合了监视提示、定时全量核对、监视失效后的轮询和手动触发；`reloadAllFromDisk()` 忽略指纹，重新读取全部内容。三个平台均有后端实现：Windows 使用 `ReadDirectoryChangesW`，macOS 使用 FSEvents（逐文件事件，不持有任何句柄），Linux 使用 inotify（每个目录单独注册；新目录先注册监视再报告整棵子树；根目录的每一级上级目录也受监视，以便在上级目录重命名时检测到根目录消失）。`hello-fswatcher` 另有 Python 编写的协议测试 `test_fswatcher`（通过 ctest 运行，需要 `Python3`；在 Windows 上用 `Python3_EXECUTABLE` 避开应用商店的占位 `python`）：两个音源并列，覆盖 15 种操作，已在三个平台上运行。**Linux 和 macOS 上尚未用 CMake 完整构建过**，在这两个平台上验证的是单独编译的监视程序及该协议测试；Qt 客户端和调度器的测试只在 Windows 上运行过。
 
-`HelloKitSynth` 能出声了。分三层：`EngineProcess` 起引擎，**参数向量进，没有接受整条命令行的重载**，这是 CVE-2024-28886 那条底线在代码里的形状；`SynthPlan` 只算不跑，把 `VoiceBank::find` 接到 `utau::Synth::calc` 上，产出每个音符两条解析好的参数向量；`SynthRunner` 按轨顺序跑。这一层里「裸字节」就是 UTF-8——`EngineProcess` 收 UTF-8，工程本来就是文本，中间一次转码都没有。
+`HelloKitSynth` 已能输出音频，分为三层。`EngineProcess` 启动引擎，**参数以向量传递，不提供接受完整命令行的重载**，这是 CVE-2024-28886 相关安全底线在代码中的体现。`SynthPlan` 只计算不执行，将 `VoiceBank::find` 与 `utau::Synth::calc` 衔接，为每个音符生成两条已解析的参数向量。`SynthRunner` 执行计划，现有两种实现：`ClassicSynthRunner` 写出并执行 UTAU 式的渲染脚本，`ThreadedSynthRunner` 以多线程执行重采样器调用。在这一层中，「原始字节」即 UTF-8：`EngineProcess` 接收 UTF-8，工程本身已是文本，整个过程不涉及转码。
 
-**`wavtool.exe` 不直接写 wav。** 它往 `<out>.whd`（44 字节头）和 `<out>.dat`（PCM）里追加，最后两者拼起来才是 wav；官方 UTAU 的批处理末尾那句 `copy /B` 就是干这个。开跑前两个残留分片也要清，否则第二次渲染接在第一次后面。
+**`wavtool.exe` 不直接写出 wav 文件。** 它向 `<out>.whd`（44 字节文件头）和 `<out>.dat`（PCM 数据）追加内容，二者拼接后才是 wav 文件；官方 UTAU 批处理文件末尾的 `copy /B` 即执行此拼接。渲染开始前必须清除这两个残留文件，否则第二次渲染的输出会追加在第一次之后。
 
-**`SynthRunner` 欠着测试**，原因和要补的东西写在 [`test_SynthRunner.cpp`](../hellokit/tests/auto/Synth/test_SynthRunner.cpp) 的文件头注释里：它直接用 `EngineProcess`，测试没地方塞自己的引擎。要开的那个接缝和多线程调度是同一个需求，一起做。
+运行器的测试通过 `SynthRunner::makeEngineProcess()` 这一测试接缝注入替身引擎，覆盖参数交付之后的行为，见 [`test_ThreadedSynthRunner.cpp`](../hellokit/tests/auto/Synth/test_ThreadedSynthRunner.cpp) 的文件头注释。
 
-`hellokit/tests/manual/ustrender/` 拿真音源真引擎渲染，`--plan` 只打印参数不跑任何东西。引擎路径必须显式给，工程里的 `Tool1`/`Tool2` 一律不用。
+`hellokit/tests/manual/ustrender/` 使用真实音源和真实引擎进行渲染，`--plan` 只打印参数而不执行任何程序。引擎路径必须显式指定，工程中的 `Tool1` / `Tool2` 一律不使用。
 
-`hellokit/tests/manual/ustconv/` 是手动跑的命令行工具，把上面这些串起来：`.ust` / `.usth` / `.mid` 三种格式两两互转，参数解析用 `stdc::cli`。它不进 ctest，存在的意义就是验证各块拼起来能用——各自的自动测试做不到这件事。
+`hellokit/tests/manual/ustconv/` 是手动运行的命令行工具，用于集成上述各部分：`.ust` / `.usth` / `.mid` 三种格式两两互转，参数解析使用 `stdc::cli`。它不纳入 ctest，其作用是验证各部分组合后能否正常工作，这是各自的自动测试无法覆盖的。
 
-`ustconv --check <file.ust>` 是 Roadmap 第一阶段「读进来写回去、两边语义相等」那一条的载体：读一份 UST，写回一份临时文件，再读回来，拿 stdutau 的两份解析逐字段比，不一致就报出是哪个音符的哪个字段、两边各是什么，退出码非零。
+`ustconv --check <file.ust>` 对应路线图第一阶段「读入后写回，两侧语义相同」这一标准：读取一份 UST，写回临时文件，再读取该文件，用 stdutau 的两次解析结果逐字段比较；如有不一致，报告具体音符、字段及两侧的值，并以非零退出码结束。
 
-比的是**值**不是字节：数字怎么拼是写的人的事；文本先按各自该用的规则解码再比，因为两份文件可能编码不同、转义规则也不同（控制音符在的那份才有转义），那都不算工程的差异。控制音符本身两边都跳过，它是设计的一部分，不是丢失。
+比较的对象是**值**而非字节：数字的书写形式由写出方决定；文本先按各自的规则解码再比较，因为两份文件可能编码不同、转义规则也不同（只有含控制音符的文件使用转义），这些都不构成工程上的差异。控制音符在两侧均被跳过，因为它属于设计的一部分，而非数据丢失。
 
-`PayloadCodec` 实现了 `_USTH_` 控制音符的载荷编码，base64url 去填充。选这个作为第一块代码不是因为它最重要，是因为它是纯逻辑、不依赖 Qt、而且规则已经被实测钉死了（见 [`claude/utau-ust-preservation.md`](claude/utau-ust-preservation.md)）。
+`PayloadCodec` 实现 `_USTH_` 控制音符的载荷编码，即去除填充的 base64url。将其作为第一块代码，并非因为它最重要，而是因为它是纯逻辑、不依赖 Qt，且规则已经实测确定（见 [`claude/utau-ust-preservation.md`](claude/utau-ust-preservation.md)）。
 
-## 依赖怎么来的
+## 依赖来源
 
-- **stdcorelib、stdutau**：**都不从 vcpkg 拿，也都不是子模块**，两个都在和本仓库一起改。各自构建安装一份，配置时传 `-Dstdcorelib_DIR=` 和 `-Dstdutau_DIR=`，指向 `<prefix>/lib/cmake/<名字>`。`third-party/Dependencies.cmake` 统一 `find_package`，由根 `CMakeLists.txt` `include()` 进来。Windows 上那里还会把动态库拷进运行输出目录，vcpkg 的 applocal 不再管这两个了。stdutau 现在是静态库，所以没有可拷的 DLL。
-- **stdcorelib 只做私有依赖**：子库写 `LINKS_PRIVATE`，公开头文件里的导出宏用 `<QtCore/QtGlobal>` 的 `Q_DECL_EXPORT` / `Q_DECL_IMPORT`。
-- **winacp**：Windows 全部 ANSI 代码页的转换表，从 Windows 的 `MultiByteToWideChar` / `WideCharToMultiByte` 生成，三个平台逐字节一致。`TextCodec` 的 Shift_JIS、GBK、Big5、EUC-KR 和 `windows-874`、`windows-1250`–`1258` 都走它。自己构建安装，传 `-Dwinacp_DIR=`。换它是因为 macOS 版 Qt 不带 ICU，原来的写法在 mac 上连一个 Shift_JIS 文件都打不开。
-- **wolf-midi**：MIDI 的解析与写出，`QMidiFile` 去掉 Qt 的版本。来自 `E:/GitHub/ds-editor-lite/vcpkg`，一样传 `-Dwolf-midi_DIR=`。
+- **stdcorelib、stdutau**：**均不取自 vcpkg，也均不作为子模块**，二者都与本仓库同步开发。分别构建并安装，配置时传入 `-Dstdcorelib_DIR=` 和 `-Dstdutau_DIR=`，指向 `<prefix>/lib/cmake/<名称>`。`third-party/Dependencies.cmake` 统一执行 `find_package`，由根目录的 `CMakeLists.txt` 通过 `include()` 引入。在 Windows 上，该文件还会将动态库复制到运行输出目录，vcpkg 的 applocal 不再负责这两个库。stdutau 目前是静态库，因此没有需要复制的 DLL。
+- **stdcorelib 仅作为私有依赖**：子库使用 `LINKS_PRIVATE`，公开头文件中的导出宏使用 `<QtCore/QtGlobal>` 的 `Q_DECL_EXPORT` / `Q_DECL_IMPORT`。
+- **winacp**：Windows 全部 ANSI 代码页的转换表，由 Windows 的 `MultiByteToWideChar` / `WideCharToMultiByte` 生成，在三个平台上逐字节一致。`TextCodec` 的 Shift_JIS、GBK、Big5、EUC-KR 以及 `windows-874`、`windows-1250`–`1258` 均由其转换。需自行构建安装，配置时传入 `-Dwinacp_DIR=`。采用它的原因是 macOS 版 Qt 不包含 ICU，原有实现在 macOS 上无法打开任何 Shift_JIS 文件。
+- **wolf-midi**：MIDI 的解析与写出，是去除 Qt 依赖的 `QMidiFile`。来自 `E:/GitHub/ds-editor-lite/vcpkg`，同样通过 `-Dwolf-midi_DIR=` 指定。
 - **qmsetup**：来自 `D:/GitHub/synthrt/vcpkg`。
 - **Qt 6.11.1**：`D:/Qt/6.11.1/msvc2022_64`。
 
-路径都写在 `.vscode/settings.json` 里，那个文件是 gitignore 的。
+上述路径均记录在 `.vscode/settings.json` 中，该文件已被 gitignore。
 
-## 接下来
+## 后续工作
 
-阶段划分、每阶段怎么算数、从 QSynthesis 拿什么不拿什么，都在 [`Roadmap.md`](Roadmap.md)。**第一阶段「数据层」四条算数都过了**：转义往返、MIDI 无界面导入、UST 读写语义相等（`ustconv --check`）、真实音源跑通目录扫描（一份 GBK 的中文音源，903 条 oto 条目，`character.txt` 的作者名和 `Version:1.0` 那种非条目行都没丢）。
+阶段划分、各阶段的验收标准以及从 QSynthesis 沿用的内容，均见 [`Roadmap.md`](Roadmap.md)。**第一阶段「数据层」的四项验收标准均已达成**：转义往返、MIDI 无界面导入、UST 读写语义一致（`ustconv --check`）、真实音源的目录扫描（一份 GBK 编码的中文音源，903 个 oto 条目，`character.txt` 中的作者名和 `Version:1.0` 等非条目行均未丢失）。
 
-**第二阶段「合成」的两条算数也过了**。前半条「命令行能把 `.ust` 渲染成 wav」——真引擎、真音源（GBK 的中文音源），出来是合法的 44.1kHz 单声道 16 位 wav。后半条「和 UTAU 渲染同一工程做比对」——装置是 `tests/manual/utauprobe` 加 `tests/manual/utaucompare`，在作者自己调的一首歌上，引擎参数逐项一致，音高曲线 8673 个读数中位数 0、最差 15 音分。数字和判据在 [`Synth.md`](Synth.md)。
+**第二阶段「合成」的两项验收标准也已达成。** 第一项「命令行能将 `.ust` 渲染为 wav」：使用真实引擎和真实音源（GBK 编码的中文音源），输出为合法的 44.1 kHz 单声道 16 位 wav 文件。第二项「与 UTAU 渲染同一工程并比较」：所用装置为 `tests/manual/utauprobe` 和 `tests/manual/utaucompare`，在作者亲自调校的一首歌曲上，引擎参数逐项一致，音高曲线 8673 个值的中位偏差为 0，最大偏差为 15 音分。具体数据与判据见 [`Synth.md`](Synth.md)。
 
-缓存管理也做完了：一块已经渲好的音频不会再渲一次，缓存名是它内容的摘要，所以改过的音符自然换名字、自然重渲。见 [`Synth.md`](Synth.md) 的「缓存」。
+缓存管理也已完成：已渲染的音频片段不会重复渲染；缓存文件名是其内容的摘要，因此修改过的音符会自动得到新文件名并重新渲染。见 [`Synth.md`](Synth.md) 的「缓存」一节。
 
-## 插件放在哪
+## 插件位置
 
-按归属分，不按类型分：
+按归属划分，而非按类型划分：
 
 | 插件 | 归属 | 理由 |
 |---|---|---|
-| `RangeEditPlugin`、`VoiceBankPlugin` | `hellokit` | 只动数据，不出界面 |
-| `EditorExtensionPlugin` | `helloutau/plugins/` | 要出界面，归应用这一侧 |
+| `RangeEditPlugin`、`VoiceBankPlugin` | `hellokit` | 只处理数据，不涉及界面 |
+| `EditorExtensionPlugin` | `helloutau/plugins/` | 涉及界面，归属应用一侧 |
 
-**这样 `hellokit` 就彻底不用链接 QtWidgets 了**，「核心不依赖 GUI」和「插件能扩展界面」不再冲突。
+**由此 `hellokit` 完全不需要链接 QtWidgets**，「核心不依赖 GUI」与「插件可扩展界面」两项要求不再冲突。
 
-插件是运行时加载的 MODULE 库，只需要接口头文件，不反过来链接应用，所以应用不必拆成「共享库加薄驱动」。这一条成立的前提是**接口必须是纯虚类、没有非内联符号**，写接口的时候要守住。
+插件是运行时加载的 MODULE 库，只依赖接口头文件，不反向链接应用，因此应用无需拆分为「共享库加薄驱动」。此结论成立的前提是**接口必须是纯虚类，且不含非内联符号**，编写接口时必须遵守。
 
-## 还没定的
+## 待定事项
 
-- stdutau 何时转成子模块。
-- `hellokit` 装不装、给不给插件作者用。现在 `HELLOKIT_DEVEL` 是 ON，头文件和 CMake 包都会装出去。
-- `EditorExtensionPlugin` 的接口头装不装出去给第三方。装的话 `HELLOUTAU_DEVEL` 要从 OFF 改成 ON。
+- stdutau 转为子模块的时机。
+- 是否安装 `hellokit` 并提供给插件作者。目前 `HELLOKIT_DEVEL` 为 ON，头文件和 CMake 包均会安装。
+- 是否将 `EditorExtensionPlugin` 的接口头文件安装并提供给第三方。若提供，需将 `HELLOUTAU_DEVEL` 由 OFF 改为 ON。
 
-## 已知的坑
+## 已知问题
 
-都记在 [`../AGENTS.md`](../AGENTS.md) 的「已知的坑」一节，动手前读一遍。
+均记录在 [`../AGENTS.md`](../AGENTS.md) 的「已知问题」一节，开始工作前应先阅读。
