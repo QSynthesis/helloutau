@@ -296,9 +296,8 @@ namespace hello::kit {
                 const auto written = _syntax.assign(name, value);
                 if (!written) {
                     fail(_diagnostics,
-                         ClassicSynthRunner::tr(
-                             "\"%1\" holds a quotation mark or a line break, which a rendering "
-                             "script cannot carry.")
+                         ClassicSynthRunner::tr("\"%1\" contains a quotation mark or a line break, "
+                                                "which cannot be written into a rendering script.")
                              .arg(QLatin1String(name)),
                          noteIndex);
                     _ok = false;
@@ -382,8 +381,7 @@ namespace hello::kit {
             const auto &w = step.wavtoolArguments;
             if (r.size() < 9 || w.size() < 4) {
                 fail(diagnostics,
-                     tr("This note came out with arguments a rendering script cannot be written "
-                        "from."),
+                     tr("The arguments of this note cannot be written into a rendering script."),
                      step.noteIndex);
                 return std::nullopt;
             }
@@ -512,9 +510,9 @@ namespace hello::kit {
 
         if (!fs::exists(plan.outputFile())) {
             fail(diagnostics, run.started
-                                  ? tr("The rendering script ran but wrote nothing to \"%1\".")
+                                  ? tr("The rendering script ran but produced no output at \"%1\".")
                                         .arg(displayed(plan.outputFile()))
-                                  : tr("The rendering script did not run."));
+                                  : tr("The rendering script could not be run."));
             return outcome;
         }
 

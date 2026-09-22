@@ -92,7 +92,8 @@ namespace hello::kit {
             }
             if (unfinished > 0) {
                 say(diagnostics, DiagnosticSeverity::Warning,
-                    MidiReader::tr("%1 notes were never ended and now run to the end of the track.")
+                    MidiReader::tr(
+                        "%1 notes had no note-off event and were extended to the end of the track.")
                         .arg(unfinished));
             }
 
@@ -144,7 +145,7 @@ namespace hello::kit {
         // value that must be supplied rather than translated, so it is set by the user.
         InterchangeOption lyric;
         lyric.key = QLatin1String(OptionDefaultLyric);
-        lyric.name = tr("Lyric for notes that have none");
+        lyric.name = tr("Lyric for notes without a lyric");
         lyric.type = InterchangeOption::Text;
         lyric.defaultValue = QLatin1String(defaultLyric);
 
@@ -164,7 +165,7 @@ namespace hello::kit {
         }
         if (midi.divisionType() != Midi::MidiFile::PPQ) {
             say(diagnostics, DiagnosticSeverity::Error,
-                tr("This MIDI file is timed in SMPTE frames, which cannot be turned into bars "
+                tr("This MIDI file uses SMPTE time division, which cannot be converted into bars "
                    "and beats."));
             return std::nullopt;
         }
@@ -214,7 +215,7 @@ namespace hello::kit {
         Q_UNUSED(source)
 
         if (request.entries.isEmpty()) {
-            say(diagnostics, DiagnosticSeverity::Error, tr("No track was chosen."));
+            say(diagnostics, DiagnosticSeverity::Error, tr("No track was selected."));
             return std::nullopt;
         }
 
@@ -229,7 +230,7 @@ namespace hello::kit {
         const int resolution = midi.resolution();
         if (resolution <= 0) {
             say(diagnostics, DiagnosticSeverity::Error,
-                tr("This MIDI file does not say how long a beat is."));
+                tr("This MIDI file does not specify a time division."));
             return std::nullopt;
         }
 
@@ -242,7 +243,7 @@ namespace hello::kit {
 
         if (request.entries.size() > 1) {
             say(diagnostics, DiagnosticSeverity::Warning,
-                tr("A project holds one track, so only the first of the chosen tracks was used."));
+                tr("A project contains one track, so only the first selected track was imported."));
         }
         const int wantedTrack = request.entries.first();
 
@@ -250,7 +251,8 @@ namespace hello::kit {
             request.driverOptions.value(QLatin1String(OptionEncoding), QStringLiteral("UTF-8"))
                 .toString());
         if (!codec.isValid()) {
-            say(diagnostics, DiagnosticSeverity::Error, tr("That encoding is not available."));
+            say(diagnostics, DiagnosticSeverity::Error,
+                tr("The selected encoding is not available."));
             return std::nullopt;
         }
 
@@ -367,22 +369,23 @@ namespace hello::kit {
 
         if (chordNotes > 0) {
             say(diagnostics, DiagnosticSeverity::Warning,
-                tr("%1 notes began at the same moment as another and were left out, since a "
-                   "track holds one voice.")
+                tr("%1 notes started at the same time as another note and were omitted, because a "
+                   "track is monophonic.")
                     .arg(chordNotes));
         }
         if (shortened > 0) {
             say(diagnostics, DiagnosticSeverity::Warning,
-                tr("%1 notes were shortened where the next one began before they ended.")
+                tr("%1 notes were shortened because the next note started before they ended.")
                     .arg(shortened));
         }
         if (dropped > 0) {
             say(diagnostics, DiagnosticSeverity::Warning,
-                tr("%1 notes were too short to keep and were left out.").arg(dropped));
+                tr("%1 notes were too short and were omitted.").arg(dropped));
         }
         if (clamped > 0) {
             say(diagnostics, DiagnosticSeverity::Warning,
-                tr("%1 notes lay outside the keyboard and were moved to its nearest end.")
+                tr("%1 notes were outside the keyboard range and were moved to the nearest end of "
+                   "the range.")
                     .arg(clamped));
         }
 
@@ -414,7 +417,7 @@ namespace hello::kit {
         }
         if (unplaced > 0) {
             say(diagnostics, DiagnosticSeverity::Warning,
-                tr("%1 lyrics did not fall on any note and were left out.").arg(unplaced));
+                tr("%1 lyrics did not coincide with any note and were omitted.").arg(unplaced));
         }
 
         Project project;
@@ -440,14 +443,14 @@ namespace hello::kit {
         }
         if (moved > 0) {
             say(diagnostics, DiagnosticSeverity::Warning,
-                tr("%1 tempo changes did not fall on a note and were moved to the next one.")
+                tr("%1 tempo changes did not coincide with a note and were moved to the next note.")
                     .arg(moved));
         }
 
         if (undecodable > 0) {
             say(diagnostics, DiagnosticSeverity::Warning,
-                tr("%1 pieces of text are not valid %2 and were left out, which usually means "
-                   "the encoding is not the one this file is in.")
+                tr("%1 text items are not valid %2 and were omitted. This usually indicates that "
+                   "the selected encoding does not match the file.")
                     .arg(undecodable)
                     .arg(codec.name()));
         }
@@ -493,7 +496,7 @@ namespace hello::kit {
                              const ExportRequest &request, DiagnosticList &diagnostics) {
         if (project.tracks.size() != 1) {
             say(diagnostics, DiagnosticSeverity::Error,
-                tr("A MIDI file is written from one track, and this project holds %1.")
+                tr("A MIDI file is exported from exactly one track, but this project contains %1.")
                     .arg(project.tracks.size()));
             return false;
         }
@@ -502,7 +505,8 @@ namespace hello::kit {
             request.driverOptions.value(QLatin1String(OptionEncoding), QStringLiteral("UTF-8"))
                 .toString());
         if (!codec.isValid()) {
-            say(diagnostics, DiagnosticSeverity::Error, tr("That encoding is not available."));
+            say(diagnostics, DiagnosticSeverity::Error,
+                tr("The selected encoding is not available."));
             return false;
         }
 
@@ -510,8 +514,8 @@ namespace hello::kit {
         // error. Every rendering parameter of UTAU resides in entries that MIDI cannot
         // represent.
         say(diagnostics, DiagnosticSeverity::Warning,
-            tr("A MIDI file holds notes and lyrics. The envelope, the vibrato, the pitch curve, "
-               "the flags and the per note values were left out."));
+            tr("A MIDI file contains only notes and lyrics. The envelope, vibrato, pitch curve, "
+               "flags and per-note parameters were omitted."));
 
         Midi::MidiFile midi;
         midi.setFileFormat(1);
@@ -561,13 +565,14 @@ namespace hello::kit {
 
         if (unrepresentable > 0) {
             say(diagnostics, DiagnosticSeverity::Warning,
-                tr("%1 lyrics have no spelling in %2 and were written as question marks.")
+                tr("%1 lyrics cannot be represented in %2 and were written as question marks.")
                     .arg(unrepresentable)
                     .arg(codec.name()));
         }
         if (unwritable > 0) {
             say(diagnostics, DiagnosticSeverity::Warning,
-                tr("%1 notes lay outside what MIDI can name and were moved to its nearest end.")
+                tr("%1 notes were outside the MIDI note range and were moved to the nearest end of "
+                   "the range.")
                     .arg(unwritable));
         }
 

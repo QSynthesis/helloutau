@@ -201,7 +201,7 @@ namespace hello::kit {
             complain(diagnostics,
                      tr("This note could not be rendered: %1")
                          .arg(outcomes.at(i).engineOutput.isEmpty()
-                                  ? tr("the resampler wrote nothing.")
+                                  ? tr("the resampler produced no output.")
                                   : outcomes.at(i).engineOutput),
                      step.noteIndex);
             if (stopOnFirstFailure) {
@@ -221,8 +221,8 @@ namespace hello::kit {
         }
 
         if (!fs::exists(header) || !fs::exists(data)) {
-            fail(diagnostics, tr("The wavtool wrote nothing for \"%1\". It may be a different "
-                                 "wavtool from the one these arguments are for.")
+            fail(diagnostics, tr("The wavtool produced no output for \"%1\". The configured "
+                                 "wavtool may not accept these arguments.")
                                   .arg(displayed(output)));
             return outcome;
         }

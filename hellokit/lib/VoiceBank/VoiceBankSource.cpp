@@ -131,11 +131,11 @@ namespace hello::kit {
                     DiagnosticList ignored;
                     directory.config = VoiceBankConfig::fromJson(*bytes, ignored);
                     if (!directory.config) {
-                        complain(diagnostics,
-                                 VoiceBankSource::tr(
-                                     "The HelloUTAU record in \"%1\" could not be read, so its "
-                                     "encoding has to be chosen again.")
-                                     .arg(displayed(absolute)));
+                        complain(
+                            diagnostics,
+                            VoiceBankSource::tr("The HelloUTAU configuration in \"%1\" could not "
+                                                "be read, so its encoding must be selected again.")
+                                .arg(displayed(absolute)));
                     }
                 } else if (*kind == VoiceBankFile::Oto) {
                     utau::OtoIni oto;
@@ -155,9 +155,9 @@ namespace hello::kit {
             }
 
             if (error) {
-                complain(diagnostics,
-                         VoiceBankSource::tr("\"%1\" could not be listed and was left out.")
-                             .arg(displayed(absolute)));
+                complain(diagnostics, VoiceBankSource::tr("The contents of \"%1\" could not be "
+                                                          "listed, so the directory was left out.")
+                                          .arg(displayed(absolute)));
             }
             return directory;
         }
@@ -322,9 +322,8 @@ namespace hello::kit {
         }
 
         if (stopped) {
-            complain(diagnostics,
-                     tr("This folder is larger or deeper than a voice bank is expected to be, so "
-                        "only part of it was read."));
+            complain(diagnostics, tr("This folder exceeds the size or depth limit of a voice bank, "
+                                     "so only part of it was read."));
         }
         return out;
     }

@@ -44,7 +44,7 @@ namespace hello::kit {
             if (!value.isDouble()) {
                 complain(
                     diagnostics,
-                    Project::tr("\"%1\" is not a number and was left out.").arg(QLatin1String(key)),
+                    Project::tr("\"%1\" is not a number and was omitted.").arg(QLatin1String(key)),
                     noteIndex);
                 return std::nullopt;
             }
@@ -273,9 +273,8 @@ namespace hello::kit {
                     portamentoTypeFromName(fields.value(QLatin1String("type")).toString());
                 if (!type) {
                     complain(diagnostics,
-                             Project::tr(
-                                 "A portamento point of note %1 has an unknown join and was read "
-                                 "as a smooth one.")
+                             Project::tr("A portamento point of note %1 has an unknown curve type "
+                                         "and was read as the default type.")
                                  .arg(index + 1),
                              index);
                 }
@@ -350,9 +349,9 @@ namespace hello::kit {
 
     bool Project::save(const std::filesystem::path &path, DiagnosticList &diagnostics) const {
         if (tracks.size() != 1) {
-            fail(diagnostics,
-                 tr("A project of this version holds one track, and this one holds %1.")
-                     .arg(tracks.size()));
+            fail(diagnostics, tr("This version of HelloUTAU supports one track per project, but "
+                                 "this project contains %1.")
+                                  .arg(tracks.size()));
             return false;
         }
 
@@ -397,19 +396,18 @@ namespace hello::kit {
 
         const auto version = root.value(QLatin1String(KeyVersion));
         if (!version.isDouble()) {
-            fail(diagnostics, tr("This project does not say which format version it is."));
+            fail(diagnostics, tr("This project does not specify its format version."));
             return std::nullopt;
         }
         if (int(version.toDouble()) > usthFormatVersion) {
-            fail(diagnostics,
-                 tr("This project was saved by a newer version of HelloUTAU and cannot be "
-                    "opened here."));
+            fail(diagnostics, tr("This project was saved by a newer version of HelloUTAU and "
+                                 "cannot be opened by this version."));
             return std::nullopt;
         }
 
         const auto tracks = root.value(QLatin1String(KeyTracks));
         if (!tracks.isArray()) {
-            fail(diagnostics, tr("This project has no tracks."));
+            fail(diagnostics, tr("This project contains no tracks."));
             return std::nullopt;
         }
 
@@ -418,9 +416,9 @@ namespace hello::kit {
         // this instead of opening the file with part of the music missing.
         const auto trackArray = tracks.toArray();
         if (trackArray.size() != 1) {
-            fail(diagnostics,
-                 tr("This project holds %1 tracks, and this version of HelloUTAU handles one.")
-                     .arg(trackArray.size()));
+            fail(diagnostics, tr("This project contains %1 tracks, but this version of HelloUTAU "
+                                 "supports only one.")
+                                  .arg(trackArray.size()));
             return std::nullopt;
         }
 

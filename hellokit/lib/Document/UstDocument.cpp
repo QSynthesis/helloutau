@@ -330,7 +330,7 @@ namespace hello::kit {
         bool ok = true;
         project.settings.name = reader.text(file.settings.projectName, &ok);
         if (!ok) {
-            fail(diagnostics, tr("This file is not in the %1 encoding.").arg(codec.name()));
+            fail(diagnostics, tr("This file is not valid in the %1 encoding.").arg(codec.name()));
             return std::nullopt;
         }
         project.settings.tempo = file.settings.tempo;
@@ -368,9 +368,8 @@ namespace hello::kit {
                                                         const ExportOptions &options,
                                                         DiagnosticList &diagnostics) {
         if (project.tracks.size() != 1) {
-            fail(
-                diagnostics,
-                tr("A UST holds one track, and this project holds %1.").arg(project.tracks.size()));
+            fail(diagnostics, tr("A UST contains exactly one track, but this project contains %1.")
+                                  .arg(project.tracks.size()));
             return std::nullopt;
         }
 
@@ -413,9 +412,8 @@ namespace hello::kit {
         file.settings.wavtoolPath = out(wavtool);
         file.settings.resamplerPath = out(resampler);
         if (wavtool.isEmpty() || resampler.isEmpty()) {
-            complain(diagnostics,
-                     tr("This UST names no rendering engine, so UTAU will not be able to render "
-                        "it until one is set there."));
+            complain(diagnostics, tr("This UST specifies no rendering engine, so UTAU cannot "
+                                     "render it until an engine is configured."));
         }
 
         QJsonObject payload;

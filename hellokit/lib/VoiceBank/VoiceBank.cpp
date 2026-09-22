@@ -55,11 +55,9 @@ namespace hello::kit {
 
             if (name.isEmpty()) {
                 if (!selector) {
-                    complain(diagnostics,
-                             VoiceBank::tr(
-                                 "Nothing says what encoding \"%1\" is written in, so it was left "
-                                 "out.")
-                                 .arg(displayed(directory.path)));
+                    complain(diagnostics, VoiceBank::tr("The encoding of \"%1\" is not specified, "
+                                                        "so the directory was left out.")
+                                              .arg(displayed(directory.path)));
                     return std::nullopt;
                 }
                 const auto chosen = selector->selectCharset(directory, diagnostics);
@@ -283,12 +281,12 @@ namespace hello::kit {
 
                 if (text.lossy()) {
                     decoded.lossy = true;
-                    complain(diagnostics,
-                             VoiceBank::tr(
-                                 "Some of the text in \"%1\" is not valid %2 and reads as empty. "
-                                 "Nothing there will be saved, since saving would write the empty "
-                                 "text back.")
-                                 .arg(displayed(directory.path), codec->name()));
+                    complain(
+                        diagnostics,
+                        VoiceBank::tr("Some of the text in \"%1\" is not valid %2 and was read as "
+                                      "empty. No file in this directory will be saved, because "
+                                      "saving would overwrite the original text with empty text.")
+                            .arg(displayed(directory.path), codec->name()));
                 }
             }
 
@@ -335,7 +333,7 @@ namespace hello::kit {
             }
 
             if (directory.charset.isEmpty()) {
-                fail(diagnostics, VoiceBank::tr("Nothing says what encoding to write \"%1\" in.")
+                fail(diagnostics, VoiceBank::tr("The encoding for writing \"%1\" is not specified.")
                                       .arg(displayed(directory.path)));
                 return std::nullopt;
             }
@@ -416,7 +414,7 @@ namespace hello::kit {
             // The failing text is not quoted, because a readme is too long for a message.
             if (!directory.readme.isEmpty() || had(VoiceBankFile::Readme)) {
                 if (!codec.canEncode(directory.readme)) {
-                    fail(diagnostics, VoiceBank::tr("Some of \"%1\" cannot be written in %2.")
+                    fail(diagnostics, VoiceBank::tr("Part of \"%1\" cannot be represented in %2.")
                                           .arg(where(VoiceBankFile::Readme), codec.name()));
                     ok = false;
                 } else {
@@ -480,7 +478,7 @@ namespace hello::kit {
         }
 
         if (bank.m_samples.isEmpty()) {
-            complain(diagnostics, tr("This folder holds nothing that can be sung."));
+            complain(diagnostics, tr("This folder contains no samples."));
         }
         return bank;
     }
@@ -506,7 +504,7 @@ namespace hello::kit {
 
     bool VoiceBank::reread(int index, const QString &charset, DiagnosticList &diagnostics) {
         if (index < 0 || index >= m_directories.size()) {
-            fail(diagnostics, tr("This bank has no directory %1.").arg(index));
+            fail(diagnostics, tr("This voice bank has no directory %1.").arg(index));
             return false;
         }
         const TextCodec codec(charset);
@@ -913,8 +911,8 @@ namespace hello::kit {
 
         for (const auto &sample : std::as_const(m_samples)) {
             if (sample.directory < 0 || sample.directory >= m_directories.size()) {
-                fail(diagnostics,
-                     tr("\"%1\" belongs to no directory of this bank.").arg(sample.fileName));
+                fail(diagnostics, tr("\"%1\" does not belong to any directory of this voice bank.")
+                                      .arg(sample.fileName));
                 ok = false;
             }
         }
@@ -938,7 +936,7 @@ namespace hello::kit {
                         return sample.directory == i && sample.hasEntry;
                     });
                 if (touched) {
-                    fail(diagnostics, tr("\"%1\" was never read, so nothing can be saved into it.")
+                    fail(diagnostics, tr("\"%1\" was not read, so nothing can be saved into it.")
                                           .arg(displayed(directory.path)));
                     ok = false;
                 }
@@ -961,8 +959,7 @@ namespace hello::kit {
                 // with empty text.
                 if (directory.lossy) {
                     fail(diagnostics,
-                         tr("Some of the text in \"%1\" did not read in %2, so it cannot be "
-                            "saved without losing it.")
+                         tr("Some of the text in \"%1\" is not valid %2, so saving would lose it.")
                              .arg(displayed(directory.path / voiceBankFileName(file)),
                                   directory.charset));
                     ok = false;
@@ -983,8 +980,8 @@ namespace hello::kit {
                 const auto recorded = book.files.find(VoiceBankFile::Config);
                 if (recorded != book.files.end() && !directory.config) {
                     fail(diagnostics,
-                         tr("The HelloUTAU record in \"%1\" could not be read, so it is not "
-                            "replaced, and nothing there is saved.")
+                         tr("The HelloUTAU configuration in \"%1\" could not be read, so it is not "
+                            "replaced and no file in this directory is saved.")
                              .arg(displayed(directory.path)));
                     ok = false;
                     continue;
@@ -1019,9 +1016,10 @@ namespace hello::kit {
                 same = bytes && digestOf(*bytes) == record->second.digest;
             }
             if (!same) {
-                fail(diagnostics, tr("\"%1\" has changed since it was read, so it is not "
-                                     "replaced. Open the bank again to see what it holds now.")
-                                      .arg(displayed(directory.path / write.path.filename())));
+                fail(diagnostics,
+                     tr("\"%1\" has been modified since it was read, so it is not replaced. Reopen "
+                        "the voice bank to load its current contents.")
+                         .arg(displayed(directory.path / write.path.filename())));
                 ok = false;
             }
         }

@@ -176,18 +176,19 @@ namespace hello::kit {
     std::optional<SynthPlan> SynthPlan::make(const Project &project, const VoiceBank &bank,
                                              const Options &options, DiagnosticList &diagnostics) {
         if (project.tracks.size() != 1) {
-            fail(diagnostics, tr("A render takes one track, and this project holds %1.")
-                                  .arg(project.tracks.size()));
+            fail(diagnostics,
+                 tr("Rendering requires exactly one track, but this project contains %1.")
+                     .arg(project.tracks.size()));
             return std::nullopt;
         }
 
         const auto &notes = project.tracks.first().notes;
         if (notes.isEmpty()) {
-            fail(diagnostics, tr("This track holds no notes."));
+            fail(diagnostics, tr("This track contains no notes."));
             return std::nullopt;
         }
         if (options.outputFile.empty() || options.cacheDirectory.empty()) {
-            fail(diagnostics, tr("A render needs somewhere to write and somewhere to cache."));
+            fail(diagnostics, tr("Rendering requires an output file and a cache directory."));
             return std::nullopt;
         }
 
@@ -203,7 +204,7 @@ namespace hello::kit {
         const auto range = options.range.value_or(limits);
         if (range.first < limits.first || range.second > limits.second ||
             range.first > range.second) {
-            fail(diagnostics, tr("There is no note in the range that was asked for."));
+            fail(diagnostics, tr("The requested range contains no notes."));
             return std::nullopt;
         }
 
@@ -258,8 +259,7 @@ namespace hello::kit {
 
             if (step.silent && !notes.at(noteIndex).isRest()) {
                 complain(diagnostics,
-                         tr("This voice bank has nothing to sing \"%1\" with, so the note is "
-                            "silent.")
+                         tr("This voice bank has no sample for \"%1\", so the note is silent.")
                              .arg(notes.at(noteIndex).lyric),
                          noteIndex);
             }
