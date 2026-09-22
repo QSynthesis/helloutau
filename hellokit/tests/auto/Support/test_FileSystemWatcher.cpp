@@ -11,6 +11,8 @@
 
 #ifdef Q_OS_WIN
 #  include <windows.h>
+#else
+#  include <signal.h>
 #endif
 
 using namespace hello::kit;
@@ -69,8 +71,8 @@ private:
 
 private Q_SLOTS:
     void init() {
-#ifndef Q_OS_WIN
-        QSKIP("The watcher program follows nothing yet on this system.");
+#if !defined(Q_OS_WIN) && !defined(Q_OS_MACOS) && !defined(Q_OS_LINUX)
+        QSKIP("The watcher program follows nothing on this system.");
 #endif
         m_dir = std::make_unique<QTemporaryDir>();
         QVERIFY(m_dir->isValid());
@@ -156,6 +158,8 @@ private Q_SLOTS:
         QVERIFY(process);
         QVERIFY(TerminateProcess(process, 1));
         CloseHandle(process);
+#else
+        QCOMPARE(::kill(pid_t(first), SIGKILL), 0);
 #endif
 
         QTRY_VERIFY_WITH_TIMEOUT(!ready.isEmpty(), 10000);

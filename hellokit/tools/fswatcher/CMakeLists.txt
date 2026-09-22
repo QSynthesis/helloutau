@@ -7,8 +7,8 @@ project(hello-fswatcher LANGUAGES CXX)
 # No Qt: it is started once per watcher and has to be small and quick to start. Exported, so
 # that a consumer can find where it was installed.
 #
-# One backend per system, chosen here. Backend_unix.cpp follows nothing yet and answers every
-# root as unwatchable, until FSEvents and inotify are in.
+# One backend per system, chosen here: ReadDirectoryChangesW, FSEvents, inotify. Any other
+# system gets Backend_unix.cpp, which follows nothing and answers every root as unwatchable.
 set(_src
     Backend.h
     Protocol.h
@@ -18,6 +18,10 @@ set(_src
 
 if(WIN32)
     list(APPEND _src Backend_win.cpp)
+elseif(APPLE)
+    list(APPEND _src Backend_mac.cpp)
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    list(APPEND _src Backend_linux.cpp)
 else()
     list(APPEND _src Backend_unix.cpp)
 endif()
@@ -29,3 +33,10 @@ hellokit_add_executable(${PROJECT_NAME}
 
 # The libraries get C++17 by way of Qt, and nothing links Qt here.
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
+
+if(APPLE)
+    target_link_libraries(${PROJECT_NAME} PRIVATE "-framework CoreServices")
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    find_package(Threads REQUIRED)
+    target_link_libraries(${PROJECT_NAME} PRIVATE Threads::Threads)
+endif()
