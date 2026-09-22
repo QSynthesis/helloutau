@@ -14,9 +14,9 @@ namespace fs = std::filesystem;
 
 namespace {
 
-    // The files are built here rather than checked in, so that what each case relies on is
-    // written next to what it asserts instead of hidden in a blob.
-    constexpr int Resolution = 96; // not 480, so that the scaling is exercised
+    // The files are generated here rather than checked in, so that the input of each case is
+    // defined next to its assertions instead of in a binary file.
+    constexpr int Resolution = 96; // not 480, so that scaling is tested
 
     class TempMidi {
     public:
@@ -62,8 +62,8 @@ namespace {
         return reader.read(path, nullptr);
     }
 
-    // Stands in for the chooser, so that a case can say which encoding to write in without
-    // reaching past the public interface.
+    // A substitute for the selector, so that a test case can specify the output encoding
+    // through the public interface only.
     class FixedEncodingSelector : public InterchangeSelector {
     public:
         explicit FixedEncodingSelector(QString encoding) : _encoding(std::move(encoding)) {
@@ -98,8 +98,8 @@ class test_MidiConvert : public QObject {
     Q_OBJECT
 
 private Q_SLOTS:
-    // A quarter note at this resolution is 96 ticks and has to come out as 480. Ticks are scaled
-    // from absolute positions rather than one length at a time, so a long track cannot drift off
+    // A quarter note at this resolution is 96 ticks and must become 480. Ticks are scaled from
+    // absolute positions rather than per length, so that a long track cannot drift away from
     // the bar lines.
     void ticks_are_scaled_to_480_per_quarter() {
         TempMidi file("scale");
@@ -116,8 +116,8 @@ private Q_SLOTS:
         QCOMPARE(notes.at(0).noteNum, 60);
     }
 
-    // Silence in front of the first note is really there, so it is translated rather than
-    // trimmed. Whoever is inserting these notes somewhere decides whether to keep it.
+    // The silence before the first note exists in the file, so it is translated rather than
+    // trimmed. The caller that inserts the notes decides whether to keep it.
     void silence_before_the_first_note_becomes_a_rest() {
         TempMidi file("lead");
         file.note(192, 288, 64);
@@ -146,8 +146,8 @@ private Q_SLOTS:
         QCOMPARE(notes.at(1).length, 480);
     }
 
-    // A track holds one voice, so an overlap has to go. Shortening the note already sounding
-    // keeps both of them, where dropping the later one loses a note outright.
+    // A track is monophonic, so an overlap must be resolved. Shortening the note already
+    // sounding preserves both notes, whereas dropping the later note loses it entirely.
     void an_overlap_shortens_the_note_already_sounding() {
         TempMidi file("overlap");
         file.note(0, 192, 60);
@@ -159,13 +159,13 @@ private Q_SLOTS:
         const auto &notes = result.project->tracks.first().notes;
         QCOMPARE(notes.size(), 2);
         QCOMPARE(notes.at(0).noteNum, 60);
-        QCOMPARE(notes.at(0).length, 480); // 96 ticks, cut where the next one starts
+        QCOMPARE(notes.at(0).length, 480); // 96 ticks, cut at the start of the next note
         QCOMPARE(notes.at(1).noteNum, 62);
         QCOMPARE(notes.at(1).length, 960);
         QVERIFY(warned(result.diagnostics));
     }
 
-    // Notes that begin together cannot all be kept, and the top one is the melody.
+    // Notes that start together cannot all be kept, and the highest note carries the melody.
     void a_chord_keeps_its_highest_note_and_says_so() {
         TempMidi file("chord");
         file.note(0, 96, 60);
@@ -181,14 +181,14 @@ private Q_SLOTS:
         QVERIFY(warned(result.diagnostics));
     }
 
-    // The earlier implementation matched a lyric to a note only when the ticks were equal, so a
-    // sequencer that placed one a tick early lost it without a word.
+    // A lyric is assigned to the note sounding at its time. Matching only equal ticks would
+    // silently lose a lyric that a sequencer placed one tick early.
     void a_lyric_placed_late_still_lands_on_its_note() {
         TempMidi file("lyric");
         file.note(0, 96, 60);
         file.note(96, 192, 62);
-        file.lyric(2, "ka");  // a little after the first note began
-        file.lyric(96, "sa"); // exactly on the second
+        file.lyric(2, "ka");  // shortly after the start of the first note
+        file.lyric(96, "sa"); // exactly at the start of the second note
 
         const auto result = importOf(file.save());
         QVERIFY(result.project.has_value());
@@ -199,8 +199,8 @@ private Q_SLOTS:
         QCOMPARE(notes.at(1).lyric, QStringLiteral("sa"));
     }
 
-    // A note with no lyric of its own still has to say something, because a UST note with an
-    // empty lyric is a rest.
+    // A note without a lyric still requires one, because a UST note with an empty lyric is a
+    // rest.
     void a_note_with_no_lyric_gets_the_default_one() {
         TempMidi file("nolyric");
         file.note(0, 96, 60);
@@ -222,12 +222,12 @@ private Q_SLOTS:
         const auto result = importOf(file.save());
         QVERIFY(result.project.has_value());
 
-        // Not exact, and cannot be. MIDI keeps tempo as whole microseconds per quarter note, so
-        // 143 BPM is stored as 419580 and reads back as 143.0001.
+        // Inexact by necessity. MIDI stores tempo as whole microseconds per quarter note, so
+        // 143 BPM is stored as 419580 and read back as 143.0001.
         QVERIFY(qAbs(result.project->settings.tempo - 143.0) < 0.001);
     }
 
-    // UTAU's keyboard stops at C1 and B7, so anything further out has nowhere to go.
+    // The UTAU keyboard ranges from C1 to B7, so notes outside that range cannot be placed.
     void pitches_outside_the_keyboard_are_pulled_back_in() {
         TempMidi file("range");
         file.note(0, 96, 12);
@@ -263,8 +263,8 @@ private Q_SLOTS:
         QCOMPARE(*entry.highestNote, 72);
     }
 
-    // What goes out has to come back, which is the only claim worth making about a format that
-    // holds so little.
+    // Exported data must be imported unchanged, which is the only meaningful guarantee for a
+    // format with such limited content.
     void what_midi_can_hold_survives_a_round_trip() {
         const fs::path path = fs::temp_directory_path() / "hellokit_written.mid";
 
@@ -298,8 +298,8 @@ private Q_SLOTS:
         fs::remove(path, ignored);
     }
 
-    // MIDI holds notes and lyrics and nothing else this project works with, so every export
-    // loses the rest. Saying so every time is the point, not a nuisance.
+    // MIDI represents only notes and lyrics among the data of this project, so every export
+    // loses the remainder. Reporting this on every export is intentional.
     void writing_says_what_midi_cannot_hold() {
         const fs::path path = fs::temp_directory_path() / "hellokit_lossy.mid";
 
@@ -319,8 +319,9 @@ private Q_SLOTS:
         fs::remove(path, ignored);
     }
 
-    // A lyric the chosen encoding cannot spell is not escaped, because MIDI has nowhere to say
-    // that the file was written here, so an escape would read back as its own literal text.
+    // A lyric that the selected encoding cannot represent is not escaped. MIDI cannot record
+    // that the file was written by HelloUTAU, so an escape sequence would be read back as
+    // literal text.
     void a_lyric_the_encoding_cannot_hold_is_reported_not_escaped() {
         const fs::path path = fs::temp_directory_path() / "hellokit_lossyname.mid";
 
