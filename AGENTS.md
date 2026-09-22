@@ -151,6 +151,8 @@ Markdown：
 
 - **测试用 QtTest，不用 Boost.Test。** 本仓库处处依赖 Qt，`QCOMPARE` 能直接打印 `QString` 和 `QByteArray`，而 Boost 要先逐个转成 `std::string`；将来 widgets 的测试还要 `QSignalSpy` 和 `QTEST_MAIN`。stdcorelib 和 stdutau 用 Boost 是因为它们不依赖 Qt，那条惯例不适用于这里。
 - **`tests/auto` 按模块分目录，和 `include/hellokit` 同构**：`tests/auto/Document/` 对 `include/hellokit/Document/`。每个目录自己一个 `CMakeLists.txt`。
+- **程序的测试放在 `tests/auto/tools/`，和 `tools/` 同构**：`hellokit/tests/auto/tools/fswatcher/` 对 `hellokit/tools/fswatcher/`，一个程序一个目录。helloutau 以后有了自己的测试也照这个分。
+- **单独一个进程、靠管道说话的程序，它的协议测试可以用 Python**，经 ctest 调（开了测试就要 `Python3`，Windows 上用 `Python3_EXECUTABLE` 绕开应用商店那个占位的 `python`）。测的是进出管道的文本，脚本写这个比 QtTest 起进程再手工拆输出直白。这是 QtTest 那条的例外，不是替代：库和调用它的那层照样用 QtTest。
 - **一个 `test_XXX.cpp` 对一个 `XXX.h`**，名字一一对应。这样光看目录列表就知道哪些头文件还没有测试。一个文件盖三个头（原来的 `test_Interchange.cpp`）就看不出这件事了。
 - **不要重复链传递依赖。** `HelloKitDocument` 公开链了 `HelloKitSupport`，测试只写 `HelloKitDocument` 就够。
 - **看到测试通过之前，先确认 build 的退出码是 0。** 构建失败时 ctest 跑的是上一轮的旧二进制，会给出虚假的绿色。
