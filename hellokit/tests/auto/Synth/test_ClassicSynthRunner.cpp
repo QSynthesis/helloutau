@@ -93,6 +93,7 @@ private Q_SLOTS:
         QVERIFY(plan.has_value());
 
         ClassicSynthRunner runner;
+        runner.shell = ClassicSynthRunner::ScriptShell::Batch;
         DiagnosticList diagnostics;
         const auto written = runner.scripts(*plan, engines(), diagnostics);
         QVERIFY(written.has_value());
@@ -137,6 +138,7 @@ private Q_SLOTS:
         QVERIFY(plan.has_value());
 
         ClassicSynthRunner runner;
+        runner.shell = ClassicSynthRunner::ScriptShell::Batch;
         DiagnosticList diagnostics;
         const auto written = runner.scripts(*plan, engines(), diagnostics);
         QVERIFY(written.has_value());
@@ -185,6 +187,7 @@ private Q_SLOTS:
         QVERIFY(plan.has_value());
 
         ClassicSynthRunner runner;
+        runner.shell = ClassicSynthRunner::ScriptShell::Batch;
         runner.quoting = ClassicSynthRunner::Quoting::Verbatim;
 
         DiagnosticList diagnostics;
@@ -201,6 +204,7 @@ private Q_SLOTS:
         QVERIFY(plan.has_value());
 
         ClassicSynthRunner runner;
+        runner.shell = ClassicSynthRunner::ScriptShell::Batch;
         DiagnosticList diagnostics;
         QVERIFY(!runner.scripts(*plan, engines(), diagnostics).has_value());
         QVERIFY(hasError(diagnostics));
@@ -233,6 +237,7 @@ private Q_SLOTS:
         QVERIFY(plan.has_value());
 
         ClassicSynthRunner runner;
+        runner.shell = ClassicSynthRunner::ScriptShell::Batch;
         const auto written = runner.scripts(*plan, engines(), diagnostics);
         QVERIFY(written.has_value());
 
@@ -274,6 +279,7 @@ private Q_SLOTS:
         QVERIFY(plan.has_value());
 
         ClassicSynthRunner runner;
+        runner.shell = ClassicSynthRunner::ScriptShell::Batch;
         const auto written = runner.scripts(*plan, engines(), diagnostics);
         QVERIFY(written.has_value());
 
@@ -426,6 +432,7 @@ private Q_SLOTS:
         // Nonexistent engines still produce a script, because writing a script executes
         // nothing.
         ClassicSynthRunner runner;
+        runner.shell = ClassicSynthRunner::ScriptShell::Batch;
         diagnostics.clear();
         QVERIFY(runner.scripts(*plan, engines(), diagnostics).has_value());
         QVERIFY(diagnostics.isEmpty());
