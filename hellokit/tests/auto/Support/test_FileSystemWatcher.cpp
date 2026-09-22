@@ -70,7 +70,7 @@ private:
 private Q_SLOTS:
     void init() {
 #ifndef Q_OS_WIN
-        QSKIP("The helper follows nothing yet on this system.");
+        QSKIP("The watcher program follows nothing yet on this system.");
 #endif
         m_dir = std::make_unique<QTemporaryDir>();
         QVERIFY(m_dir->isValid());
@@ -144,7 +144,7 @@ private Q_SLOTS:
     }
 
     // What happened while it was gone is not known, so every root is named once it is back.
-    void a_helper_that_dies_is_started_again_and_every_root_named() {
+    void a_program_that_dies_is_started_again_and_every_root_named() {
         const auto watcher = follow();
         QSignalSpy spy(watcher.get(), &FileSystemWatcher::changed);
         QSignalSpy ready(watcher.get(), &FileSystemWatcher::ready);
@@ -168,9 +168,9 @@ private Q_SLOTS:
         QTRY_VERIFY_WITH_TIMEOUT(collect(spy).directories.contains(at(QStringLiteral("a"))), 5000);
     }
 
-    // Without a helper nothing is reported, and every root is said to be unwatchable, so that
+    // Without the program nothing is reported, and every root is said to be unwatchable, so that
     // the caller knows to look at the disk itself.
-    void without_the_helper_every_root_is_unwatchable() {
+    void without_the_program_every_root_is_unwatchable() {
         FileSystemWatcher watcher;
         watcher.setProgram(m_dir->path() + QStringLiteral("/no such program.exe"));
         QSignalSpy unwatchable(&watcher, &FileSystemWatcher::unwatchable);
@@ -180,10 +180,10 @@ private Q_SLOTS:
     }
 
 #ifdef Q_OS_WIN
-    // A program that does not greet as the helper does is not trusted to be one, and not
+    // A program that does not greet as the watcher program does is not trusted to be one, and not
     // started again either. Giving up only after it died a few times would take restarts, a
     // second and a half of them, which is what the bound tells apart.
-    void a_program_that_is_not_the_helper_is_not_used() {
+    void a_program_that_does_not_greet_is_not_used() {
         FileSystemWatcher watcher;
         watcher.setProgram(QStringLiteral("C:/Windows/System32/whoami.exe"));
         QSignalSpy unwatchable(&watcher, &FileSystemWatcher::unwatchable);
