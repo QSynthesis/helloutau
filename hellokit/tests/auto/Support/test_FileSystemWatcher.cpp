@@ -149,7 +149,7 @@ private Q_SLOTS:
         QSignalSpy spy(watcher.get(), &FileSystemWatcher::changed);
         QSignalSpy ready(watcher.get(), &FileSystemWatcher::ready);
 
-        const qint64 first = watcher->helperProcessId();
+        const qint64 first = watcher->processId();
         QVERIFY(first != 0);
 #ifdef Q_OS_WIN
         const HANDLE process = OpenProcess(PROCESS_TERMINATE, FALSE, DWORD(first));
@@ -160,8 +160,8 @@ private Q_SLOTS:
 
         QTRY_VERIFY_WITH_TIMEOUT(!ready.isEmpty(), 10000);
         QTRY_VERIFY_WITH_TIMEOUT(collect(spy).trees.contains(root()), 5000);
-        QVERIFY(watcher->helperProcessId() != 0);
-        QVERIFY(watcher->helperProcessId() != first);
+        QVERIFY(watcher->processId() != 0);
+        QVERIFY(watcher->processId() != first);
 
         // And it follows again.
         touch(at(QStringLiteral("a/after.wav")));
@@ -172,7 +172,7 @@ private Q_SLOTS:
     // the caller knows to look at the disk itself.
     void without_the_helper_every_root_is_unwatchable() {
         FileSystemWatcher watcher;
-        watcher.setHelper(m_dir->path() + QStringLiteral("/no such program.exe"));
+        watcher.setProgram(m_dir->path() + QStringLiteral("/no such program.exe"));
         QSignalSpy unwatchable(&watcher, &FileSystemWatcher::unwatchable);
         watcher.setRoots({root()});
         QTRY_COMPARE_WITH_TIMEOUT(unwatchable.size(), 1, 5000);
@@ -185,13 +185,13 @@ private Q_SLOTS:
     // second and a half of them, which is what the bound tells apart.
     void a_program_that_is_not_the_helper_is_not_used() {
         FileSystemWatcher watcher;
-        watcher.setHelper(QStringLiteral("C:/Windows/System32/whoami.exe"));
+        watcher.setProgram(QStringLiteral("C:/Windows/System32/whoami.exe"));
         QSignalSpy unwatchable(&watcher, &FileSystemWatcher::unwatchable);
         watcher.setRoots({root()});
         QTRY_COMPARE_WITH_TIMEOUT(unwatchable.size(), 1, 1000);
         QTest::qWait(1000);
         QCOMPARE(unwatchable.size(), 1);
-        QCOMPARE(watcher.helperProcessId(), 0);
+        QCOMPARE(watcher.processId(), 0);
     }
 #endif
 };

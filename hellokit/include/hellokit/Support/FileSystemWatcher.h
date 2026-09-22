@@ -32,7 +32,7 @@ namespace hello::kit {
     /// \note Paths come out with \c / as the separator, each starting with one of roots()
     ///       exactly as it reads there.
     ///
-    /// \note Windows only for now. Elsewhere the helper answers every root as unwatchable() ,
+    /// \note Windows only for now. Elsewhere the program answers every root as unwatchable() ,
     ///       which is true, and a caller that looks at the disk when asked to stays right.
     class HELLOKIT_SUPPORT_EXPORT FileSystemWatcher : public QObject {
         Q_OBJECT
@@ -40,37 +40,38 @@ namespace hello::kit {
         explicit FileSystemWatcher(QObject *parent = nullptr);
         ~FileSystemWatcher() override;
 
-        /// Where the helper is looked for unless setHelper() says otherwise: beside the
-        /// application.
-        static QString defaultHelper();
+        /// Where the program is looked for unless setProgram() says otherwise: \c hello-fswatcher
+        /// beside the application.
+        static QString defaultProgram();
 
-        /// The helper to start.
+        /// The program that follows the disk, which is started and spoken to over its standard
+        /// input and output.
         ///
-        /// **Set before setRoots()** , which is what starts it. A helper already running goes
+        /// **Set before setRoots()** , which is what starts it. One already running goes
         /// on running, and this one is started only the next time one is: after a death, or
         /// after the roots were emptied and set again.
         ///
         /// \warning Never a path that came from a project, a voice bank or anything else a user
         ///          was handed. It is started without asking.
-        void setHelper(const QString &program);
-        QString helper() const;
+        void setProgram(const QString &program);
+        QString program() const;
 
-        /// Replaces what is followed, and **starts the helper** where none is running yet, so
-        /// setHelper() comes first. Empty stops the helper.
+        /// Replaces what is followed, and **starts the program** where none is running yet, so
+        /// setProgram() comes first. Empty stops it.
         ///
         /// ready() says when the new roots are followed. A change made before it may go
         /// unreported.
         void setRoots(const QStringList &roots);
         QStringList roots() const;
 
-        /// How long to gather what the helper says before changed() is emitted, in
+        /// How long to gather what the program says before changed() is emitted, in
         /// milliseconds. One copy of five hundred files is then one signal rather than five
         /// hundred. 300 unless set.
         void setDelay(int milliseconds);
         int delay() const;
 
-        /// The helper's process, or 0 where none runs. For tests and for diagnostics.
-        qint64 helperProcessId() const;
+        /// The program's process, or 0 where none runs. For tests and for diagnostics.
+        qint64 processId() const;
 
     Q_SIGNALS:
         /// \param directories what is directly in each may have changed: its listing, or a file

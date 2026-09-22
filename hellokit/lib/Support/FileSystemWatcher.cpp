@@ -16,7 +16,7 @@ namespace hello::kit {
         // Must match hellokit/tools/fswatcher/Protocol.h .
         constexpr char greeting[] = "hello-fswatcher 1";
 
-        /// How many times in a row the helper may die before it is given up on. A row ends
+        /// How many times in a row the program may die before it is given up on. A row ends
         /// when it confirms its roots.
         constexpr int maxDeaths = 3;
 
@@ -80,7 +80,7 @@ namespace hello::kit {
         }
 
         FileSystemWatcher *q;
-        QString helper = FileSystemWatcher::defaultHelper();
+        QString program = FileSystemWatcher::defaultProgram();
         QStringList roots;
         QTimer timer;
         int delay = 300;
@@ -111,7 +111,7 @@ namespace hello::kit {
             QObject::connect(process, &QProcess::finished, q, [this] { died(); });
 
             // No arguments, and nothing it reads but what is written to it.
-            process->start(helper, QStringList());
+            process->start(program, QStringList());
         }
 
         void stop() {
@@ -193,7 +193,7 @@ namespace hello::kit {
 
         void take(const QByteArray &line) {
             if (!greeted) {
-                // Anything else is not the helper, or not one that speaks this protocol.
+                // Anything else is not the program, or not one that speaks this protocol.
                 if (line != greeting) {
                     giveUp();
                     return;
@@ -268,7 +268,7 @@ namespace hello::kit {
         m_impl->stop();
     }
 
-    QString FileSystemWatcher::defaultHelper() {
+    QString FileSystemWatcher::defaultProgram() {
 #ifdef Q_OS_WIN
         const QString name = QStringLiteral("hello-fswatcher.exe");
 #else
@@ -277,12 +277,12 @@ namespace hello::kit {
         return QCoreApplication::applicationDirPath() + QLatin1Char('/') + name;
     }
 
-    void FileSystemWatcher::setHelper(const QString &program) {
-        m_impl->helper = program;
+    void FileSystemWatcher::setProgram(const QString &program) {
+        m_impl->program = program;
     }
 
-    QString FileSystemWatcher::helper() const {
-        return m_impl->helper;
+    QString FileSystemWatcher::program() const {
+        return m_impl->program;
     }
 
     void FileSystemWatcher::setRoots(const QStringList &roots) {
@@ -298,7 +298,7 @@ namespace hello::kit {
             impl.stop();
             return;
         }
-        // Asked again after giving up: the helper may be there now.
+        // Asked again after giving up: the program may be there now.
         impl.deaths = 0;
         if (impl.process) {
             impl.sendRoots();
@@ -319,7 +319,7 @@ namespace hello::kit {
         return m_impl->delay;
     }
 
-    qint64 FileSystemWatcher::helperProcessId() const {
+    qint64 FileSystemWatcher::processId() const {
         return m_impl->process ? m_impl->process->processId() : 0;
     }
 
