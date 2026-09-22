@@ -14,6 +14,14 @@ using namespace hello::kit;
 
 namespace fs = std::filesystem;
 
+// Where hello-fswatcher has a way to follow the disk. Anywhere else it answers every root as
+// unwatchable, and what depends on it being followed cannot be seen.
+#if defined(Q_OS_WIN) || defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
+static constexpr bool followsHere = true;
+#else
+static constexpr bool followsHere = false;
+#endif
+
 class test_VoiceBankCheckScheduler : public QObject {
     Q_OBJECT
 
@@ -24,11 +32,15 @@ private:
         return m_dir->path() + QStringLiteral("/bank");
     }
 
-    static void touch(const QString &path) {
+    static void write(const QString &path, const QByteArray &bytes) {
         QVERIFY(QDir().mkpath(QFileInfo(path).path()));
         QFile file(path);
         QVERIFY(file.open(QIODevice::WriteOnly));
-        file.write("RIFF");
+        file.write(bytes);
+    }
+
+    static void touch(const QString &path) {
+        write(path, "RIFF");
     }
 
     /// Whether the whole bank was named in \a spy .
@@ -49,6 +61,40 @@ private:
         return out;
     }
 
+    /// A bank kept in step with its disk the way its editor would, with a user who says yes to
+    /// every reload.
+    ///
+    /// The sweep is off, so that whatever reaches the bank came by the watcher.
+    struct Followed {
+        FixedCharsetSelector selector{QStringLiteral("UTF-8")};
+        DiagnosticList diagnostics;
+        std::optional<VoiceBank> bank;
+        std::unique_ptr<VoiceBankCheckScheduler> schedule;
+    };
+
+    std::unique_ptr<Followed> followBank() {
+        auto out = std::make_unique<Followed>();
+        out->bank = VoiceBank::open(root().toStdU16String(), &out->selector, out->diagnostics);
+        out->schedule = scheduler();
+        auto *followed = out.get();
+        connect(out->schedule.get(), &VoiceBankCheckScheduler::checkNeeded, this,
+                [followed](const QStringList &places) {
+                    QList<fs::path> paths;
+                    for (const auto &place : places) {
+                        paths += fs::path(place.toStdU16String());
+                    }
+                    auto &bank = *followed->bank;
+                    bank.reloadFromDisk(bank.checkDisk(paths), &followed->selector,
+                                        followed->diagnostics);
+                });
+        out->schedule->setRoot(root());
+        return out;
+    }
+
+    static QString directoryOf(const VoiceBank &bank, const VoiceSample &sample) {
+        return QString::fromStdU16String(bank.directories().at(sample.directory).path.u16string());
+    }
+
 private Q_SLOTS:
     void init() {
         m_dir = std::make_unique<QTemporaryDir>();
@@ -60,39 +106,92 @@ private Q_SLOTS:
         m_dir.reset();
     }
 
-    // Put together the way a holder of a bank would: a new sample on disk is in the bank soon
-    // after, and nobody called anything by hand.
+    // Put together the way an editor of a bank would, and the bank is what is looked at: what
+    // happened on disk has to end up in it, whatever came in between.
     void a_sample_added_on_disk_reaches_the_bank() {
-#ifndef Q_OS_WIN
-        QSKIP("The watcher program follows nothing yet on this system.");
-#endif
-        FixedCharsetSelector selector(QStringLiteral("UTF-8"));
-        DiagnosticList diagnostics;
-        auto bank = VoiceBank::open(root().toStdU16String(), &selector, diagnostics);
-        QVERIFY(bank.has_value());
-
-        const auto schedule = scheduler();
-        connect(schedule.get(), &VoiceBankCheckScheduler::checkNeeded, this,
-                [&](const QStringList &places) {
-                    QList<fs::path> paths;
-                    for (const auto &place : places) {
-                        paths += fs::path(place.toStdU16String());
-                    }
-                    bank->reloadFromDisk(bank->checkDisk(paths), &selector, diagnostics);
-                });
-        schedule->setRoot(root());
-        QTRY_VERIFY_WITH_TIMEOUT(schedule->isFollowing(), 5000);
+        if (!followsHere) {
+            QSKIP("The watcher program follows nothing on this system.");
+        }
+        const auto followed = followBank();
+        QVERIFY(followed->bank.has_value());
+        QTRY_VERIFY_WITH_TIMEOUT(followed->schedule->isFollowing(), 5000);
 
         touch(root() + QStringLiteral("/deep/down/ka.wav"));
-        QTRY_VERIFY_WITH_TIMEOUT(bank->find(60, QStringLiteral("ka")), 5000);
+        QTRY_VERIFY_WITH_TIMEOUT(followed->bank->find(60, QStringLiteral("ka")), 5000);
+    }
+
+    void an_oto_ini_written_on_disk_reaches_the_bank() {
+        if (!followsHere) {
+            QSKIP("The watcher program follows nothing on this system.");
+        }
+        const auto followed = followBank();
+        QVERIFY(followed->bank.has_value());
+        QTRY_VERIFY_WITH_TIMEOUT(followed->schedule->isFollowing(), 5000);
+
+        write(root() + QStringLiteral("/oto.ini"), "a.wav=named,1,2,3,4,5\r\n");
+        QTRY_VERIFY_WITH_TIMEOUT(followed->bank->find(60, QStringLiteral("named")), 5000);
+    }
+
+    // What was in it is found where it is now, and not where it was.
+    void a_directory_renamed_on_disk_reaches_the_bank() {
+        if (!followsHere) {
+            QSKIP("The watcher program follows nothing on this system.");
+        }
+        write(root() + QStringLiteral("/old/oto.ini"), "ka.wav=ka,1,2,3,4,5\r\n");
+        touch(root() + QStringLiteral("/old/ka.wav"));
+        const auto followed = followBank();
+        QVERIFY(followed->bank.has_value());
+        QTRY_VERIFY_WITH_TIMEOUT(followed->schedule->isFollowing(), 5000);
+
+        QVERIFY(QDir().rename(root() + QStringLiteral("/old"), root() + QStringLiteral("/new")));
+        QTRY_VERIFY_WITH_TIMEOUT(
+            [&] {
+                const auto *sample = followed->bank->find(60, QStringLiteral("ka"));
+                return sample && directoryOf(*followed->bank, *sample) == QStringLiteral("new");
+            }(),
+            5000);
+    }
+
+    // With everything in it, however deep, and with what is written into it afterwards.
+    void a_tree_moved_in_on_disk_reaches_the_bank() {
+        if (!followsHere) {
+            QSKIP("The watcher program follows nothing on this system.");
+        }
+        const QString outside = m_dir->path() + QStringLiteral("/elsewhere");
+        write(outside + QStringLiteral("/deep/oto.ini"), "ka.wav=ka,1,2,3,4,5\r\n");
+        touch(outside + QStringLiteral("/deep/ka.wav"));
+        const auto followed = followBank();
+        QVERIFY(followed->bank.has_value());
+        QTRY_VERIFY_WITH_TIMEOUT(followed->schedule->isFollowing(), 5000);
+
+        QVERIFY(QDir().rename(outside, root() + QStringLiteral("/moved")));
+        QTRY_VERIFY_WITH_TIMEOUT(followed->bank->find(60, QStringLiteral("ka")), 5000);
+
+        touch(root() + QStringLiteral("/moved/deep/ki.wav"));
+        QTRY_VERIFY_WITH_TIMEOUT(followed->bank->find(60, QStringLiteral("ki")), 5000);
+    }
+
+    void a_directory_removed_on_disk_reaches_the_bank() {
+        if (!followsHere) {
+            QSKIP("The watcher program follows nothing on this system.");
+        }
+        touch(root() + QStringLiteral("/sub/ka.wav"));
+        const auto followed = followBank();
+        QVERIFY(followed->bank.has_value());
+        QVERIFY(followed->bank->find(60, QStringLiteral("ka")));
+        QTRY_VERIFY_WITH_TIMEOUT(followed->schedule->isFollowing(), 5000);
+
+        QVERIFY(QDir(root() + QStringLiteral("/sub")).removeRecursively());
+        QTRY_VERIFY_WITH_TIMEOUT(!followed->bank->find(60, QStringLiteral("ka")), 5000);
+        QVERIFY(followed->bank->find(60, QStringLiteral("a")));
     }
 
     // What no watcher can know of, a notification the system dropped, is found by the sweep.
     // So the sweep runs whatever the watcher does.
     void the_whole_bank_is_named_now_and_then_while_the_watcher_follows() {
-#ifndef Q_OS_WIN
-        QSKIP("The watcher program follows nothing yet on this system.");
-#endif
+        if (!followsHere) {
+            QSKIP("The watcher program follows nothing on this system.");
+        }
         const auto schedule = scheduler(200);
         QSignalSpy spy(schedule.get(), &VoiceBankCheckScheduler::checkNeeded);
         schedule->setRoot(root());
@@ -115,9 +214,9 @@ private Q_SLOTS:
 
     // A root that went, and may come back, is looked at on a timer as well.
     void a_root_that_goes_is_polled() {
-#ifndef Q_OS_WIN
-        QSKIP("The watcher program follows nothing yet on this system.");
-#endif
+        if (!followsHere) {
+            QSKIP("The watcher program follows nothing on this system.");
+        }
         const auto schedule = scheduler();
         schedule->setRoot(root());
         QTRY_VERIFY_WITH_TIMEOUT(schedule->isFollowing(), 5000);
