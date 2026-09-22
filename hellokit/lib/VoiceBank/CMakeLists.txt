@@ -11,6 +11,7 @@ hellokit_add_library(${PROJECT_NAME} SHARED
     SOURCES ${_src}
     LINKS stdutau::stdutau HelloKitSupport
     QT_LINKS Core
+    QT_AUTOGEN
     INCLUDE_PRIVATE ../../include/hellokit/VoiceBank/** **
     MACRO_PREFIX HELLOKIT_VOICEBANK
 )
