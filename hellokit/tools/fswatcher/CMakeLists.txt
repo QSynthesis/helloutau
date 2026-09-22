@@ -7,8 +7,8 @@ project(hello-fswatcher LANGUAGES CXX)
 # No Qt: it is started once per watcher and has to be small and quick to start. Exported, so
 # that a consumer can find where it was installed.
 #
-# One backend per system, chosen here: ReadDirectoryChangesW, FSEvents, inotify. Any other
-# system gets Backend_unix.cpp, which follows nothing and answers every root as unwatchable.
+# One backend per system, chosen here: ReadDirectoryChangesW, FSEvents, inotify. These three are
+# the systems this project runs on, and anything else is refused here rather than built half.
 set(_src
     Backend.h
     Protocol.h
@@ -23,7 +23,8 @@ elseif(APPLE)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     list(APPEND _src Backend_linux.cpp)
 else()
-    list(APPEND _src Backend_unix.cpp)
+    message(FATAL_ERROR "${CMAKE_SYSTEM_NAME} is not a system this project runs on. "
+        "hello-fswatcher follows the disk on Windows, macOS and Linux.")
 endif()
 
 hellokit_add_executable(${PROJECT_NAME}

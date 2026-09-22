@@ -71,9 +71,6 @@ private:
 
 private Q_SLOTS:
     void init() {
-#if !defined(Q_OS_WIN) && !defined(Q_OS_MACOS) && !defined(Q_OS_LINUX)
-        QSKIP("The watcher program follows nothing on this system.");
-#endif
         m_dir = std::make_unique<QTemporaryDir>();
         QVERIFY(m_dir->isValid());
         QVERIFY(QDir().mkpath(at(QStringLiteral("a/b"))));

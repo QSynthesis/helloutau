@@ -32,8 +32,7 @@ namespace hello::kit {
     /// \note Paths come out with \c / as the separator, each starting with one of roots()
     ///       exactly as it reads there.
     ///
-    /// \note Windows only for now. Elsewhere the program answers every root as unwatchable() ,
-    ///       which is true, and a caller that looks at the disk when asked to stays right.
+    /// \note On Windows, macOS and Linux, which are the systems this project builds for.
     class HELLOKIT_SUPPORT_EXPORT FileSystemWatcher : public QObject {
         Q_OBJECT
     public:
