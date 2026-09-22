@@ -134,24 +134,23 @@ int main(int argc, char *argv[]) {
     using namespace stdc;
 
     cli::Parser parser(
-        cli::Command("utauprobe", "Write a project built to ask UTAU questions")
+        cli::Command("utauprobe", "Write a project designed to determine UTAU behavior")
             .addArgument(cli::Argument("kind", "arguments, or vibrato"))
             .addArgument(cli::Argument("output", "The .ust to write"))
             .addOption(cli::Option({"--voice"},
-                                   "The voice bank folder, named the way UTAU names it: the "
-                                   "folder alone, under its own voice directory")
+                                   "The voice bank folder in UTAU notation: the folder name "
+                                   "only, relative to the voice directory of UTAU")
                            .arg(cli::Argument("name")))
             .addOption(
-                cli::Option({"--out"}, "The wav UTAU should render to").arg(cli::Argument("path")))
-            .addOption(cli::Option({"--cache"}, "The folder UTAU should cache into")
-                           .arg(cli::Argument("path")))
-            .addOption(cli::Option({"--flags"}, "The flags to put on the project itself")
-                           .arg(cli::Argument("flags")))
-            .addOption(cli::Option({"--tempo"}, "The project's tempo, as UTAU spells it")
+                cli::Option({"--out"}, "The WAV file UTAU renders to").arg(cli::Argument("path")))
+            .addOption(
+                cli::Option({"--cache"}, "The cache directory for UTAU").arg(cli::Argument("path")))
+            .addOption(cli::Option({"--flags"}, "The project flags").arg(cli::Argument("flags")))
+            .addOption(cli::Option({"--tempo"}, "The project tempo, in UTAU notation")
                            .arg(cli::Argument("bpm")))
             .addOption(cli::Option({"-c", "--charset"},
-                                   "What to write the UST in, which is the code page UTAU will "
-                                   "open it under. Defaults to this machine's")
+                                   "The encoding of the UST, which must be the ANSI code page of "
+                                   "the machine running UTAU. Defaults to that of this machine")
                            .arg(cli::Argument("name")))
             .setHandler(run)
             .addHelpOption(true)

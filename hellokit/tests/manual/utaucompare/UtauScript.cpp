@@ -133,7 +133,7 @@ namespace utaucompare {
 
         const TextCodec codec(charset);
         if (!codec.isValid()) {
-            *error = QStringLiteral("there is no encoding called %1").arg(charset);
+            *error = QStringLiteral("the encoding %1 is not available").arg(charset);
             return std::nullopt;
         }
 
@@ -146,8 +146,8 @@ namespace utaucompare {
         // the argument order is taken from UTAU rather than duplicated here.
         const auto helper = script.parent_path() / "temp_helper.bat";
         if (!std::filesystem::exists(helper)) {
-            *error = QStringLiteral("temp_helper.bat is not beside %1. It is where UTAU keeps "
-                                    "the engine command lines, so copy it out as well")
+            *error = QStringLiteral("temp_helper.bat is not in the directory of %1. It contains "
+                                    "the engine command lines and must be copied as well")
                          .arg(QString::fromStdString(script.string()));
             return std::nullopt;
         }
@@ -242,7 +242,8 @@ namespace utaucompare {
         }
 
         if (calls.isEmpty()) {
-            *error = QStringLiteral("%1 makes no engine calls. Is it the script UTAU wrote?")
+            *error = QStringLiteral(
+                         "%1 contains no engine calls and is probably not a script written by UTAU")
                          .arg(QString::fromStdString(script.string()));
             return std::nullopt;
         }

@@ -94,8 +94,8 @@ namespace {
         if (settled.isEmpty()) {
             const auto found = ust->settledCharset();
             if (!found) {
-                std::cerr << "error: this UST does not say what encoding it is in. "
-                             "Pass --charset with one of:"
+                std::cerr << "error: this UST does not declare its encoding. "
+                             "Specify --charset with one of:"
                           << std::endl;
                 for (const auto &name : TextCodec::ustCandidates()) {
                     std::cerr << "  " << toStd(name) << std::endl;
@@ -118,7 +118,7 @@ namespace {
 
         const auto voice = option(result, "--voice");
         if (voice.empty()) {
-            std::cerr << "error: --voice says which voice bank to sing with" << std::endl;
+            std::cerr << "error: --voice is required and specifies the voice bank" << std::endl;
             return 1;
         }
 
@@ -178,8 +178,8 @@ namespace {
         engines.resampler = option(result, "--resampler");
         engines.wavtool = option(result, "--wavtool");
         if (engines.resampler.empty() || engines.wavtool.empty()) {
-            std::cerr << "error: --resampler and --wavtool say which engines to run. They are "
-                         "never taken from the project."
+            std::cerr << "error: --resampler and --wavtool are required and specify the engines. "
+                         "Engines are never taken from the project."
                       << std::endl;
             return 1;
         }
@@ -191,10 +191,11 @@ namespace {
             auto classic = std::make_unique<ClassicSynthRunner>();
             classic->keepScripts = result.option("--keep-scripts").has_value();
             if (result.option("--verbatim")) {
-                std::cerr << "warning: --verbatim writes the project's own text into a shell "
-                             "script, which lets the file run commands. It is here for an "
-                             "engine that needs the script to look exactly as UTAU writes it."
-                          << std::endl;
+                std::cerr
+                    << "warning: --verbatim writes project text into a shell script unescaped, "
+                       "which allows the project file to execute commands. It exists "
+                       "only for engines that require the exact script text of UTAU."
+                    << std::endl;
                 classic->quoting = ClassicSynthRunner::Quoting::Verbatim;
             }
             runner = std::move(classic);
@@ -224,26 +225,27 @@ int main(int argc, char *argv[]) {
     using namespace stdc;
 
     cli::Parser parser(
-        cli::Command("ustrender", "Render a project to a wav")
+        cli::Command("ustrender", "Render a project to a WAV file")
             .addArgument(cli::Argument("input", "The .ust or .usth to render"))
-            .addArgument(cli::Argument("output", "The wav to write"))
+            .addArgument(cli::Argument("output", "The WAV file to write"))
             .addOption(
                 cli::Option({"--voice"}, "The voice bank folder").arg(cli::Argument("folder")))
             .addOption(cli::Option({"-c", "--charset"},
-                                   "The encoding of the UST, where the file does not say")
+                                   "The encoding of the UST, if the file does not declare one")
                            .arg(cli::Argument("name")))
             .addOption(cli::Option({"--voice-charset"},
-                                   "The encoding of the voice bank, where it differs from the "
-                                   "project's")
+                                   "The encoding of the voice bank, if it differs from that of the "
+                                   "project")
                            .arg(cli::Argument("name")))
             .addOption(
                 cli::Option({"--resampler"}, "The resampler to run").arg(cli::Argument("path")))
             .addOption(cli::Option({"--wavtool"}, "The wavtool to run").arg(cli::Argument("path")))
+            .addOption(cli::Option(
+                {"--plan"}, "Print the arguments of each engine call without executing anything"))
+            .addOption(cli::Option({"--classic"},
+                                   "Render through temp.bat in a console window, as UTAU does"))
             .addOption(
-                cli::Option({"--plan"}, "Print what each engine would be handed and run nothing"))
-            .addOption(
-                cli::Option({"--classic"}, "Render the old way, through temp.bat with a console"))
-            .addOption(cli::Option({"--keep-scripts"}, "Keep temp.bat after rendering, to look at"))
+                cli::Option({"--keep-scripts"}, "Keep temp.bat after rendering, for inspection"))
             .addOption(cli::Option({"--verbatim"},
                                    "Write the script without escaping, as UTAU does. Unsafe"))
             .setHandler(render)

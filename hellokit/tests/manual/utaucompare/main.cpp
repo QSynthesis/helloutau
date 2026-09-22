@@ -97,8 +97,8 @@ namespace {
         if (settled.isEmpty()) {
             const auto found = ust->settledCharset();
             if (!found) {
-                std::cerr << "error: this UST does not say what encoding it is in. "
-                             "Pass --charset with one of:"
+                std::cerr << "error: this UST does not declare its encoding. "
+                             "Specify --charset with one of:"
                           << std::endl;
                 for (const auto &name : TextCodec::ustCandidates()) {
                     std::cerr << "  " << toStd(name) << std::endl;
@@ -148,12 +148,10 @@ namespace {
                   << " notes compared:" << std::endl;
         if (comparison.spelling) {
             std::cout << "  " << comparison.spelling
-                      << " read differently and mean the same, which is UTAU rounding where it "
-                         "prints"
-                      << std::endl;
+                      << " differ in text only, because UTAU rounds on output" << std::endl;
         }
         if (order.isEmpty()) {
-            std::cout << "  everything else agrees" << std::endl;
+            std::cout << "  all other arguments are identical" << std::endl;
             return;
         }
         std::sort(order.begin(), order.end(), [&byName](const QString &a, const QString &b) {
@@ -240,8 +238,8 @@ namespace {
         const auto voice = option(result, "--voice");
         const auto script = option(result, "--script");
         if (voice.empty() || script.empty()) {
-            std::cerr << "error: --voice says which voice bank to sing with, and --script which "
-                         "temp.bat UTAU wrote"
+            std::cerr << "error: --voice and --script are required and specify the voice bank and "
+                         "the temp.bat written by UTAU"
                       << std::endl;
             return 1;
         }
@@ -300,8 +298,8 @@ namespace {
 
         const auto comparison = compare(plan->steps(), *calls);
         if (comparison.onlyOurs || comparison.onlyTheirs) {
-            std::cout << "  " << comparison.onlyOurs << " notes UTAU has no call for, "
-                      << comparison.onlyTheirs << " calls we have no note for" << std::endl;
+            std::cout << "  " << comparison.onlyOurs << " notes without a call in the UTAU script, "
+                      << comparison.onlyTheirs << " calls without a note in HelloUTAU" << std::endl;
         }
 
         const int examples = result.valueForOption<int>("--examples").value_or(4);
@@ -319,31 +317,34 @@ int main(int argc, char *argv[]) {
     using namespace stdc;
 
     cli::Parser parser(
-        cli::Command("utaucompare", "Compare a render against the one UTAU would do")
-            .addArgument(cli::Argument("input", "The .ust or .usth both sides render"))
+        cli::Command("utaucompare", "Compare the engine calls of HelloUTAU with those of UTAU")
+            .addArgument(cli::Argument("input", "The .ust or .usth rendered by both sides"))
             .addOption(
                 cli::Option({"--voice"}, "The voice bank folder").arg(cli::Argument("folder")))
-            .addOption(cli::Option({"--script"}, "The temp.bat UTAU wrote, with temp_helper.bat "
-                                                 "beside it")
+            .addOption(cli::Option({"--script"},
+                                   "The temp.bat written by UTAU, with temp_helper.bat "
+                                   "in the same directory")
                            .arg(cli::Argument("path")))
             .addOption(cli::Option({"-c", "--charset"},
-                                   "The encoding of the UST, where the file does not say")
+                                   "The encoding of the UST, if the file does not declare one")
                            .arg(cli::Argument("name")))
             .addOption(cli::Option({"--voice-charset"},
-                                   "The encoding of the voice bank, where it differs from the "
-                                   "project's")
+                                   "The encoding of the voice bank, if it differs from that of the "
+                                   "project")
                            .arg(cli::Argument("name")))
             .addOption(cli::Option({"--script-charset"},
-                                   "The encoding of the script, which is the code page UTAU ran "
-                                   "under. Defaults to this machine's")
+                                   "The encoding of the script, which is the ANSI code page of the "
+                                   "machine UTAU ran on. Defaults to that of this machine")
                            .arg(cli::Argument("name")))
-            .addOption(cli::Option({"--cache"},
-                                   "Where UTAU put its cache, so that the cache names line up")
-                           .arg(cli::Argument("folder")))
-            .addOption(cli::Option({"--output"}, "The wav UTAU was rendering to")
+            .addOption(
+                cli::Option({"--cache"},
+                            "The cache directory of UTAU, so that the cache file names match")
+                    .arg(cli::Argument("folder")))
+            .addOption(cli::Option({"--output"}, "The WAV file UTAU rendered to")
                            .arg(cli::Argument("path")))
-            .addOption(cli::Option({"--examples"}, "How many notes to name per difference")
-                           .arg(cli::Argument("count")))
+            .addOption(
+                cli::Option({"--examples"}, "The number of example notes listed per difference")
+                    .arg(cli::Argument("count")))
             .setHandler(run)
             .addHelpOption(true)
             .addVersionOption("0.0.1"));

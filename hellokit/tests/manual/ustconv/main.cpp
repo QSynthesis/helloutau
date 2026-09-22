@@ -101,8 +101,8 @@ namespace {
         if (const auto found = ust.settledCharset()) {
             return found;
         }
-        std::cerr << "error: this UST does not say what encoding it is in. "
-                     "Pass --charset with one of:"
+        std::cerr << "error: this UST does not declare its encoding. "
+                     "Specify --charset with one of:"
                   << std::endl;
         for (const auto &name : TextCodec::ustCandidates()) {
             std::cerr << "  " << toStd(name) << std::endl;
@@ -215,8 +215,8 @@ namespace {
     /// fromProject(), so that writing and parsing are tested in addition to the conversion.
     int check(const fs::path &input, const QString &given) {
         if (formatOf(input) != Format::Ust) {
-            std::cerr << "error: --check reads a .ust. UST is the format that has to keep "
-                         "everything, so it is the one worth measuring."
+            std::cerr << "error: --check requires a .ust input, because UST is the format whose "
+                         "round trip must be lossless."
                       << std::endl;
             return 1;
         }
@@ -303,18 +303,19 @@ namespace {
 
         if (result.option("--check")) {
             if (output) {
-                std::cerr << "error: --check writes nothing anyone keeps, so it takes no output "
-                             "file"
-                          << std::endl;
+                std::cerr
+                    << "error: --check writes no persistent file and therefore takes no output file"
+                    << std::endl;
                 return 1;
             }
             return check(input, charset);
         }
 
         if (!output) {
-            std::cerr << "error: no output file. Pass one, or --check to read back what writing "
-                         "this file would produce."
-                      << std::endl;
+            std::cerr
+                << "error: no output file. Specify one, or use --check to verify the round trip "
+                   "of this file."
+                << std::endl;
             return 1;
         }
         return convert(input, fs::path(*output), charset);
@@ -333,10 +334,11 @@ int main(int argc, char *argv[]) {
             .addArgument(cli::Argument("input", "The file to read"))
             .addArgument(cli::Argument("output", "The file to write, unless --check").optional())
             .addOption(cli::Option({"-c", "--charset"},
-                                   "The encoding of the UST, where the file does not say")
+                                   "The encoding of the UST, if the file does not declare one")
                            .arg(cli::Argument("name")))
-            .addOption(cli::Option({"--check"},
-                                   "Write the input back out and report what the trip changed"))
+            .addOption(cli::Option(
+                {"--check"},
+                "Write the input back and report the differences introduced by the round trip"))
             .setHandler(run)
             .addHelpOption(true)
             .addVersionOption("0.0.1"));
