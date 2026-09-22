@@ -23,7 +23,7 @@ namespace hello::kit {
             return QString::fromStdU16String(path.u16string());
         }
 
-        /// The two files the wavtool appends to, which the footer joins into the track wav.
+        /// The two files to which the wavtool appends, joined by the footer into the track file.
         std::pair<fs::path, fs::path> partsOf(const fs::path &output) {
             auto header = output;
             auto data = output;
@@ -32,15 +32,16 @@ namespace hello::kit {
             return {header, data};
         }
 
-        /// Whether a value can be written into a script at all.
+        /// Returns whether a value can be written into a script at all.
         ///
-        /// A quotation mark ends the \c set \c "name=value" form early and a line break ends the
-        /// line, and neither has an escape that works inside it. A POSIX shell could carry both,
-        /// but the answer is the same on either: a project that renders on one system has to
-        /// render on the other, and a limit that moves with the platform is worse than a limit.
+        /// A quotation mark terminates the \c set \c "name=value" form prematurely and a line
+        /// break terminates the line, and no escape for either works inside that form. A POSIX
+        /// shell could represent both, but the result is the same on both shells: a project
+        /// that renders on one system must render on the other, and a platform-dependent limit
+        /// is worse than a uniform one.
         ///
-        /// Refusing is the honest answer either way. Writing it mangled would be worse than
-        /// saying it cannot be done.
+        /// Rejection is the correct result in either case. Writing a corrupted value would be
+        /// worse than reporting that it cannot be written.
         bool isWritable(const QString &value) {
             for (const QChar c : value) {
                 if (c == QLatin1Char('"') || c == QLatin1Char('\n') || c == QLatin1Char('\r')) {
@@ -50,12 +51,12 @@ namespace hello::kit {
             return true;
         }
 
-        /// How one shell spells the few things a rendering script is made of.
+        /// The syntax of one shell for the constructs a rendering script consists of.
         ///
-        /// The layout is UTAU's on both: a header of assignments, a block per note that sets the
-        /// note's own values and calls the helper, and a footer that joins the wavtool's two
-        /// pieces. Only the spelling differs, which is why this is a table rather than two
-        /// copies of the generator.
+        /// Both shells use the UTAU layout: a header of assignments, one block per note that
+        /// sets the values of the note and calls the helper, and a footer that joins the two
+        /// fragments written by the wavtool. Only the syntax differs, which is why this is a
+        /// table rather than two copies of the generator.
         class ShellSyntax {
         public:
             using Quoting = ClassicSynthRunner::Quoting;
@@ -76,20 +77,20 @@ namespace hello::kit {
                 return _batch ? "temp_helper.bat" : "temp_helper.sh";
             }
 
-            /// What every line begins with, which is how a batch file keeps itself quiet.
+            /// The prefix of every line, which suppresses command echo in a batch file.
             const char *quiet() const {
                 return _batch ? "@" : "";
             }
 
-            /// Naming a variable that was set earlier.
+            /// A reference to a previously assigned variable.
             QString expand(const char *name) const {
                 return _batch ? QLatin1Char('%') + QLatin1String(name) + QLatin1Char('%')
                               : QLatin1String("${") + QLatin1String(name) + QLatin1Char('}');
             }
 
-            /// One assignment, with the value made literal.
+            /// One assignment, with the value quoted as a literal.
             ///
-            /// \return nothing where the value cannot be written
+            /// \return the assignment, or \c std::nullopt if the value cannot be written
             std::optional<QString> assign(const char *name, const QString &value) const {
                 const auto key = QLatin1String(name);
                 if (_quoting == Quoting::Verbatim) {
@@ -100,27 +101,29 @@ namespace hello::kit {
                     return std::nullopt;
                 }
                 if (_batch) {
-                    // set "name=value" rather than escaping character by character: inside the
-                    // quotes cmd stops looking for operators, so &, |, > and ( are all literal.
-                    // The per cent sign still has to be doubled, since it is expanded first.
+                    // The set "name=value" form is used instead of escaping each character,
+                    // because cmd does not parse operators inside the quotes, so &, |, > and (
+                    // are literal. The percent sign must still be doubled, because variable
+                    // expansion precedes parsing.
                     QString escaped = value;
                     escaped.replace(QLatin1Char('%'), QLatin1String("%%"));
                     return QLatin1String("@set \"") + key + QLatin1Char('=') + escaped +
                            QLatin1Char('"');
                 }
-                // Single quotes make a POSIX shell take everything literally, and the one
-                // character they cannot hold is the single quote, which leaves and comes back.
+                // Within single quotes a POSIX shell treats every character literally. The only
+                // character that cannot appear inside them is the single quote itself, which is
+                // written by closing the quotes, escaping it and reopening them.
                 QString escaped = value;
                 escaped.replace(QLatin1Char('\''), QLatin1String("'\\''"));
                 return QLatin1String("export ") + key + QLatin1String("='") + escaped +
                        QLatin1Char('\'');
             }
 
-            /// One argument as it goes onto a command line in the script.
+            /// One argument as written onto a command line in the script.
             ///
-            /// Quoted only where it has to be. UTAU quotes its paths and leaves its numbers
-            /// bare, and several of these engines read the command line themselves rather than
-            /// through a C runtime, so a quoted number is not certain to arrive as a number.
+            /// Quoted only if necessary. UTAU quotes paths and leaves numbers unquoted, and
+            /// several engines parse the command line themselves rather than through a C
+            /// runtime, so a quoted number is not guaranteed to be parsed as a number.
             QString argument(const QString &value) const {
                 const QLatin1String quote(_batch ? "\"" : "'");
                 if (value.isEmpty()) {
@@ -135,7 +138,7 @@ namespace hello::kit {
                 return value;
             }
 
-            /// Removing a file that may not be there.
+            /// Deletion of a file that may not exist.
             QString remove(const QString &path) const {
                 return _batch ? QLatin1String("@del \"") + path + QLatin1String("\" 2>nul")
                               : QLatin1String("rm -f \"") + path + QLatin1Char('"');
@@ -151,20 +154,20 @@ namespace hello::kit {
                               : QLatin1String("echo '") + text + QLatin1Char('\'');
             }
 
-            /// Running the helper with the note's nine arguments.
+            /// Invocation of the helper with the nine arguments of a note.
             QString callHelper(const QString &arguments) const {
                 const auto helper = QLatin1Char('"') + expand("helper") + QLatin1Char('"');
                 return _batch ? QLatin1String("@call ") + helper + QLatin1Char(' ') + arguments
                               : helper + QLatin1Char(' ') + arguments;
             }
 
-            /// Running one engine outright, which is what a rest needs.
+            /// Direct invocation of one engine, as required for a rest.
             QString run(const char *tool, const QString &arguments) const {
                 return QLatin1String(quiet()) + QLatin1Char('"') + expand(tool) +
                        QLatin1String("\" ") + arguments;
             }
 
-            /// The lines that start the script, before anything is assigned.
+            /// The opening lines of the script, before any assignment.
             QStringList prologue() const {
                 if (_batch) {
                     return {QLatin1String("@rem hellokit")};
@@ -172,7 +175,8 @@ namespace hello::kit {
                 return {QLatin1String("#!/bin/sh"), QLatin1String("# hellokit")};
             }
 
-            /// Joining the wavtool's header and samples into the track wav, and clearing up.
+            /// Joining the header and sample data written by the wavtool into the track file,
+            /// followed by cleanup.
             QStringList epilogue() const {
                 const auto out = expand("output");
                 if (_batch) {
@@ -197,11 +201,11 @@ namespace hello::kit {
                 };
             }
 
-            /// The helper, which is the same two calls on either shell.
+            /// The helper script, which consists of the same two calls on both shells.
             ///
-            /// \param reuse guards the resampler with a check for the piece already being
-            ///        there, which is how UTAU reuses one and is what its own helper does.
-            ///        Without it every note is rendered again.
+            /// \param reuse guards the resampler call with a check for an existing fragment,
+            ///        which is how the UTAU helper reuses fragments. Without it every note is
+            ///        rendered again.
             QStringList helper(bool reuse) const {
                 if (_batch) {
                     QStringList lines;
@@ -231,8 +235,8 @@ namespace hello::kit {
                 return lines;
             }
 
-            /// The line terminator. A batch file wants CRLF, a shell script does not care and
-            /// gets the newline it is usually written with.
+            /// The line terminator: CRLF for a batch file, and LF for a shell script, which
+            /// accepts either.
             const char *lineEnd() const {
                 return _batch ? "\r\n" : "\n";
             }
@@ -262,7 +266,7 @@ namespace hello::kit {
             return out;
         }
 
-        /// Writes the lines a script is made of, and remembers whether a value had to be refused.
+        /// Writes the lines of a script and records whether any value was rejected.
         class Writer {
         public:
             Writer(const ShellSyntax &syntax, DiagnosticList &diagnostics)
@@ -339,8 +343,8 @@ namespace hello::kit {
         Writer script(syntax, diagnostics);
         Writer helperScript(syntax, diagnostics);
 
-        // The header. UTAU keeps the paths and the values that do not change in variables, and
-        // the body then names them; a resampler reading the script finds them where it expects.
+        // The header. UTAU stores the paths and the constant values in variables, which the
+        // body then references. A resampler that reads the script finds them where it expects.
         script.lines(syntax.prologue());
         script.set("loadmodule", QString());
         script.set("tool", displayed(engines.wavtool));
@@ -361,8 +365,7 @@ namespace hello::kit {
         for (const auto &step : plan.steps()) {
             ++done;
 
-            // A rest has nothing to resample, so it goes straight to the wavtool, as it does
-            // under UTAU.
+            // A rest requires no resampling and is passed directly to the wavtool, as in UTAU.
             if (step.silent) {
                 script.line(syntax.run("tool", joined(quotedAll(syntax, step.wavtoolArguments))));
                 continue;
@@ -373,8 +376,8 @@ namespace hello::kit {
             //     <blank> <intensity> <modulation> <tempo> <pitch>
             // and the wavtool reads
             //     <track> <cache> <stp> <length> <envelope...>
-            // which is what SynthPlan already laid out, so the variables below only name the
-            // pieces rather than rearranging them.
+            // which is the order SynthPlan already produces, so the variables below only name
+            // the arguments rather than rearranging them.
             const auto &r = step.resamplerArguments;
             const auto &w = step.wavtoolArguments;
             if (r.size() < 9 || w.size() < 4) {
@@ -397,8 +400,8 @@ namespace hello::kit {
                                           r.at(8), QString::number(step.noteIndex)}))));
         }
 
-        // The footer. Nothing has written the track wav yet: the wavtool keeps the header and
-        // the samples apart, and joining them is the last thing that happens.
+        // The footer. The track file does not exist yet, because the wavtool writes the header
+        // and the sample data separately, and joining them is the final step.
         script.lines(syntax.epilogue());
         helperScript.lines(syntax.helper(reuseCache));
 
@@ -421,7 +424,7 @@ namespace hello::kit {
                 ("hellokit-" + QString::number(QDateTime::currentMSecsSinceEpoch()).toStdString());
         }
 
-        // Written with the real directory in it, which the caller may have left to us.
+        // Written with the actual directory, which the caller may have left unspecified.
         auto self = *this;
         self.scriptDirectory = directory;
         const auto written = self.scripts(plan, engines, diagnostics);
@@ -434,8 +437,8 @@ namespace hello::kit {
         fs::create_directories(plan.cacheDirectory(), error);
         forgetSuperseded(plan, diagnostics);
 
-        // Which pieces the script is going to find already there. The script itself says
-        // nothing about what it skipped, so this is the only place it can be seen.
+        // The fragments the script will find already present. The script does not report what
+        // it skips, so this is the only place where reuse can be counted.
         QList<bool> alreadyThere(int(plan.steps().size()), false);
         if (reuseCache) {
             for (int i = 0; i < int(plan.steps().size()); ++i) {
@@ -454,8 +457,9 @@ namespace hello::kit {
         const auto helperPath = directory / syntax.helperName();
 
         const auto put = [&](const fs::path &path, const QString &text) {
-            // The code page, not UTF-8. The command processor reads a batch file in the system
-            // encoding, and a path this cannot hold is a path the script could not name anyway.
+            // The ANSI code page, not UTF-8. The command processor reads a batch file in the
+            // system encoding, and a path unrepresentable in it could not be referenced by the
+            // script in any case.
             const auto bytes = text.toLocal8Bit();
             std::ofstream out(path, std::ios::binary | std::ios::trunc);
             if (!out) {
@@ -481,13 +485,13 @@ namespace hello::kit {
         }
 
         const auto engine = makeEngineProcess();
-        // The script names everything by absolute path, so nothing depends on this. It is set
-        // so that an engine writing beside its working directory writes beside the script.
+        // The script references everything by absolute path, so nothing depends on this. It is
+        // set so that an engine writing to its working directory writes beside the script.
         engine->workingDirectory = directory;
 
         const auto run = engine->runScript(scriptPath, diagnostics);
 
-        // One script, so there is one step to report rather than one per note.
+        // A single script, so progress is reported as one step rather than one per note.
         if (observer) {
             observer->progressed(int(plan.steps().size()), int(plan.steps().size()));
         }

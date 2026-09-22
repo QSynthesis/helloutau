@@ -31,10 +31,9 @@ namespace hello::kit {
             diagnostics.push_back({DiagnosticSeverity::Warning, message, noteIndex});
         }
 
-        // Absent and null both mean the file did not say, which is what the format states and is
-        // not the same as a value of zero. A field that is present but of the wrong type is a
-        // different matter: it says something that cannot be read, so it is reported rather than
-        // passed over as if it had been left out.
+        // An absent field and a null field both mean unspecified, as the format defines, which
+        // differs from a value of zero. A present field of the wrong type is different: it holds
+        // an unreadable value, so it is reported rather than treated as absent.
         std::optional<double> readOptionalDouble(const QJsonObject &object, const char *key,
                                                  DiagnosticList &diagnostics,
                                                  std::optional<int> noteIndex) {
@@ -58,8 +57,8 @@ namespace hello::kit {
 
         void writeOptionalDouble(QJsonObject &object, const char *key,
                                  const std::optional<double> &value) {
-            // Left out rather than written as null. The format says the two are the same thing,
-            // and leaving it out is the one that cannot be mistaken for a value.
+            // Omitted rather than written as null. The format defines both as equivalent, and
+            // omission cannot be mistaken for a value.
             if (value) {
                 object.insert(QLatin1String(key), *value);
             }
@@ -209,8 +208,8 @@ namespace hello::kit {
                 object.insert(QLatin1String("pitchBend"), pitchBendToJson(*note.pitchBend));
             }
 
-            // By reference. Pairing each of these with its name by value would copy five
-            // strings per note for nothing.
+            // By reference. Pairing each field with its name by value would copy five strings
+            // per note unnecessarily.
             const std::pair<const char *, const QString &> texts[] = {
                 {"label",     note.label    },
                 {"direct",    note.direct   },
@@ -324,9 +323,9 @@ namespace hello::kit {
             settings.outputFile = readString(object, "outputFile");
             settings.cacheDir = readString(object, "cacheDir");
 
-            // Kept as they were found. Running them is a separate decision and a guarded one,
-            // but dropping them here would delete a setting the user made on purpose. See the
-            // security section of AGENTS.md.
+            // Stored verbatim. Executing them is a separate, guarded decision, whereas discarding
+            // them here would delete a deliberate user setting. See the security section of
+            // AGENTS.md.
             settings.wavtool = readString(object, "wavtool");
             settings.resampler = readString(object, "resampler");
 
@@ -359,8 +358,8 @@ namespace hello::kit {
 
         const auto bytes = toJson();
 
-        // Binary, so that nothing turns the newlines into CRLF on Windows. The format says the
-        // file is written with newlines, and a project file is something people diff.
+        // Written in binary mode, so that line feeds are not converted to CRLF on Windows. The
+        // format specifies LF line endings, and project files are compared with diff tools.
         std::ofstream out(path, std::ios::binary | std::ios::trunc);
         if (!out) {
             fail(diagnostics, tr("This file could not be written."));
@@ -379,8 +378,7 @@ namespace hello::kit {
         QJsonParseError error{};
         const auto document = QJsonDocument::fromJson(json.toByteArray(), &error);
         if (error.error != QJsonParseError::NoError) {
-            fail(diagnostics,
-                 tr("This file is not valid JSON: %1").arg(error.errorString()));
+            fail(diagnostics, tr("This file is not valid JSON: %1").arg(error.errorString()));
             return std::nullopt;
         }
         if (!document.isObject()) {
@@ -390,8 +388,8 @@ namespace hello::kit {
 
         const auto root = document.object();
 
-        // Checked before anything else, since a file that is not one of ours may still parse as
-        // JSON and would otherwise be read field by field into a project full of defaults.
+        // Checked first, because a foreign file may still be valid JSON and would otherwise be
+        // read field by field into a project consisting of defaults.
         if (root.value(QLatin1String(KeyFormat)).toString() != QLatin1String(FormatName)) {
             fail(diagnostics, tr("This file is not a HelloUTAU project."));
             return std::nullopt;
@@ -405,7 +403,7 @@ namespace hello::kit {
         if (int(version.toDouble()) > usthFormatVersion) {
             fail(diagnostics,
                  tr("This project was saved by a newer version of HelloUTAU and cannot be "
-                             "opened here."));
+                    "opened here."));
             return std::nullopt;
         }
 
@@ -415,14 +413,13 @@ namespace hello::kit {
             return std::nullopt;
         }
 
-        // One track, and anything else is refused rather than trimmed. The array is here so that
-        // several become possible later, and a build that cannot hold them has to say so instead
-        // of opening the file with the rest of the music missing.
+        // Exactly one track. Any other count is rejected rather than truncated. The array exists
+        // to allow multiple tracks later, and a build that cannot represent them must report
+        // this instead of opening the file with part of the music missing.
         const auto trackArray = tracks.toArray();
         if (trackArray.size() != 1) {
             fail(diagnostics,
-                 tr(
-                     "This project holds %1 tracks, and this version of HelloUTAU handles one.")
+                 tr("This project holds %1 tracks, and this version of HelloUTAU handles one.")
                      .arg(trackArray.size()));
             return std::nullopt;
         }
@@ -459,8 +456,9 @@ namespace hello::kit {
     }
 
     QByteArray Project::toJson() const {
-        // Starts from what was not understood when the file was read, so that those fields come
-        // back. Ours are inserted over the top, so a stale copy of one cannot win.
+        // Starts from the fields not recognized when the file was read, so that they are
+        // preserved. The known fields are inserted afterward, so that a stale copy of a known
+        // field cannot take precedence.
         QJsonObject root = unknownFields;
         root.insert(QLatin1String(KeyFormat), QLatin1String(FormatName));
         root.insert(QLatin1String(KeyVersion), usthFormatVersion);

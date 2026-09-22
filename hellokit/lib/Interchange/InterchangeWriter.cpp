@@ -25,7 +25,7 @@ namespace hello::kit {
         auto request = (selector ? *selector : static_cast<InterchangeSelector &>(fallback))
                            .selectExport(*this, project, result.diagnostics);
         if (!request) {
-            // See InterchangeReader::read() for why the diagnostics decide this.
+            // See InterchangeReader::read() for the reason the diagnostics determine this.
             result.cancelled = !hasError(result.diagnostics.mid(mark));
             return result;
         }

@@ -4,8 +4,9 @@
 
 namespace hello::kit {
 
-    // One list per kind, in the order things registered, plus an index by id. The order is what
-    // decides a contested suffix, so it has to be the order and not a hash table's.
+    // One list per driver kind, in registration order, plus an index by ID. Registration order
+    // resolves a suffix registered by several drivers, so it must be preserved rather than
+    // replaced by the order of a hash table.
     template <class T>
     struct Table {
         std::vector<std::unique_ptr<T>> owned;

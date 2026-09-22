@@ -23,8 +23,8 @@ namespace hello::kit {
 
         auto source = inspect(path, result.diagnostics);
         if (!source) {
-            // inspect() is expected to have said why. Saying nothing at all would leave the
-            // caller with an empty result and no way to tell it from a cancellation.
+            // inspect() is expected to have reported the reason. Otherwise the caller would
+            // receive an empty result indistinguishable from a cancellation.
             if (!hasError(result.diagnostics)) {
                 result.diagnostics.push_back({
                     DiagnosticSeverity::Error,
@@ -39,9 +39,10 @@ namespace hello::kit {
         auto request = (selector ? *selector : static_cast<InterchangeSelector &>(fallback))
                            .selectImport(*this, *source, limits, result.diagnostics);
         if (!request) {
-            // Nothing came back, for one of two reasons the return type cannot tell apart. An
-            // error the selector recorded means the question could not be put, which is a
-            // failure. Nothing recorded means the user said no, which is not.
+            // No request was returned, for one of two reasons that the return type cannot
+            // distinguish. An error recorded by the selector means that the user could not be
+            // asked, which is a failure. No recorded error means that the user declined, which is
+            // not.
             result.cancelled = !hasError(result.diagnostics.mid(mark));
             return result;
         }

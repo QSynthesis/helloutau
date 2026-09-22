@@ -14,7 +14,7 @@ namespace hello::kit {
 
     namespace {
 
-        /// The number a piece's name starts with, which is the note it belongs to.
+        /// The number at the start of a fragment name, which identifies the note.
         std::optional<int> noteOf(const fs::path &file) {
             const auto name = QString::fromStdU16String(file.filename().u16string());
             const int end = name.indexOf(QLatin1Char('_'));

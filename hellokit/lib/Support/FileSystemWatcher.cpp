@@ -16,8 +16,8 @@ namespace hello::kit {
         // Must match hellokit/tools/fswatcher/Protocol.h .
         constexpr char greeting[] = "hello-fswatcher 1";
 
-        /// How many times in a row the program may die before it is given up on. A row ends
-        /// when it confirms its roots.
+        /// The maximum number of consecutive unexpected exits before monitoring is abandoned.
+        /// The count resets when the program confirms its roots.
         constexpr int maxDeaths = 3;
 
         constexpr int restartDelay = 500;
@@ -63,7 +63,7 @@ namespace hello::kit {
             return QDir::cleanPath(QDir::fromNativeSeparators(path));
         }
 
-        /// Whether \a path is \a tree or under it.
+        /// Returns whether \a path equals \a tree or lies under it.
         bool within(const QString &path, const QString &tree) {
             return path == tree ||
                    (path.startsWith(tree) &&
@@ -110,7 +110,7 @@ namespace hello::kit {
                              });
             QObject::connect(process, &QProcess::finished, q, [this] { died(); });
 
-            // No arguments, and nothing it reads but what is written to it.
+            // No arguments. The program reads only its standard input.
             process->start(program, QStringList());
         }
 
@@ -155,7 +155,7 @@ namespace hello::kit {
                 giveUp();
                 return;
             }
-            // What happened while it was gone is not known.
+            // Changes during the interruption are unknown.
             lostTrack = true;
             QTimer::singleShot(restartDelay, q, [this] {
                 if (!process && !roots.isEmpty()) {
@@ -193,7 +193,7 @@ namespace hello::kit {
 
         void take(const QByteArray &line) {
             if (!greeted) {
-                // Anything else is not the program, or not one that speaks this protocol.
+                // Any other greeting indicates a different program or an incompatible protocol.
                 if (line != greeting) {
                     giveUp();
                     return;
@@ -230,8 +230,8 @@ namespace hello::kit {
 
         void gather(QSet<QString> &into, const QString &path) {
             into.insert(path);
-            // A fixed window from the first message, not one that restarts with each: under a
-            // steady stream of them a restarting one would never go off.
+            // A fixed interval from the first message rather than one restarted by each message,
+            // because under a continuous stream of messages a restarting timer would never fire.
             if (!timer.isActive()) {
                 timer.start(delay);
             }
@@ -298,7 +298,7 @@ namespace hello::kit {
             impl.stop();
             return;
         }
-        // Asked again after giving up: the program may be there now.
+        // Retried after monitoring was abandoned, because the program may be available now.
         impl.deaths = 0;
         if (impl.process) {
             impl.sendRoots();

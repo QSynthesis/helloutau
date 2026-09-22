@@ -31,25 +31,25 @@ namespace hello::kit {
             return std::vector<char>(data.constData(), data.constData() + data.size());
         }
 
-        /// One note as MIDI had it, before anything is made to fit a single voice.
+        /// One note as stored in the MIDI file, before reduction to a single voice.
         struct RawNote {
             int start = 0;
             int end = 0;
             int pitch = 0;
         };
 
-        /// Pairs note on with note off by voice and pitch rather than by position.
+        /// Pairs note-on with note-off events by voice and pitch rather than by position.
         ///
-        /// Pairing them by position is what the earlier implementation did, and it comes apart on
-        /// any file whose notes overlap, since the off events do not then arrive in the order the
-        /// on events did.
+        /// The earlier implementation paired them by position, which fails for any file with
+        /// overlapping notes, because the note-off events then arrive in a different order than
+        /// the note-on events.
         std::vector<RawNote> collectNotes(const std::vector<Midi::MidiEvent *> &events,
                                           int trackEnd, DiagnosticList &diagnostics) {
             std::vector<RawNote> notes;
 
-            // Several of the same pitch may be sounding at once on different voices, and even on
-            // one voice a file may start the same pitch twice. The last one started is the one an
-            // off event ends.
+            // Several notes of the same pitch may sound simultaneously on different voices, and a
+            // file may start the same pitch twice even on one voice. A note-off event ends the
+            // most recently started note.
             std::map<std::pair<int, int>, std::vector<int>> open;
 
             for (const auto event : events) {
@@ -59,8 +59,8 @@ namespace hello::kit {
 
                 const auto key = std::make_pair(event->voice(), event->note());
 
-                // A note on with no velocity is a note off. Written both ways in the wild, and a
-                // file using this form would otherwise look like nothing but beginnings.
+                // A note-on event with zero velocity is a note-off event. Both forms occur in
+                // practice, and a file using this form would otherwise contain only note starts.
                 const bool isOff =
                     event->type() == Midi::MidiEvent::NoteOff ||
                     (event->type() == Midi::MidiEvent::NoteOn && event->velocity() == 0);
@@ -140,9 +140,8 @@ namespace hello::kit {
             QStringLiteral("ISO 8859-1"),
         };
 
-        // A note has to say something, because a UST note with no lyric is a rest. This is the
-        // one place where a value has to be invented rather than translated, so it is the user's
-        // to set.
+        // A note requires a lyric, because a UST note without one is a rest. This is the only
+        // value that must be supplied rather than translated, so it is set by the user.
         InterchangeOption lyric;
         lyric.key = QLatin1String(OptionDefaultLyric);
         lyric.name = tr("Lyric for notes that have none");
@@ -165,9 +164,8 @@ namespace hello::kit {
         }
         if (midi.divisionType() != Midi::MidiFile::PPQ) {
             say(diagnostics, DiagnosticSeverity::Error,
-                tr(
-                    "This MIDI file is timed in SMPTE frames, which cannot be turned into bars "
-                    "and beats."));
+                tr("This MIDI file is timed in SMPTE frames, which cannot be turned into bars "
+                   "and beats."));
             return std::nullopt;
         }
 
@@ -220,9 +218,9 @@ namespace hello::kit {
             return std::nullopt;
         }
 
-        // Loaded again rather than kept from inspect(). One reader serves every import in the
-        // application, so holding a parsed file on it would be state shared between unrelated
-        // calls.
+        // Loaded again rather than retained from inspect(). A single reader serves every import
+        // in the application, so retaining a parsed file would introduce state shared between
+        // unrelated calls.
         Midi::MidiFile midi;
         if (!midi.load(path)) {
             say(diagnostics, DiagnosticSeverity::Error, tr("This is not a MIDI file."));
@@ -235,8 +233,8 @@ namespace hello::kit {
             return std::nullopt;
         }
 
-        // Absolute ticks are scaled and lengths are taken from the scaled values, not the other
-        // way round. Scaling each length on its own lets the rounding accumulate, and a long
+        // Absolute ticks are scaled first and lengths are derived from the scaled values, not
+        // the reverse. Scaling each length separately accumulates rounding errors, and a long
         // track then drifts away from the bar lines.
         const auto scale = [resolution](int tick) {
             return int(std::llround(double(tick) * double(ticksPerQuarter) / double(resolution)));
@@ -244,8 +242,7 @@ namespace hello::kit {
 
         if (request.entries.size() > 1) {
             say(diagnostics, DiagnosticSeverity::Warning,
-                tr(
-                    "A project holds one track, so only the first of the chosen tracks was used."));
+                tr("A project holds one track, so only the first of the chosen tracks was used."));
         }
         const int wantedTrack = request.entries.first();
 
@@ -253,13 +250,12 @@ namespace hello::kit {
             request.driverOptions.value(QLatin1String(OptionEncoding), QStringLiteral("UTF-8"))
                 .toString());
         if (!codec.isValid()) {
-            say(diagnostics, DiagnosticSeverity::Error,
-                tr("That encoding is not available."));
+            say(diagnostics, DiagnosticSeverity::Error, tr("That encoding is not available."));
             return std::nullopt;
         }
 
-        // Undecodable bytes mean the wrong encoding was chosen, and the lyric is better left
-        // empty and reported than filled with replacement characters.
+        // Invalid bytes indicate an incorrect encoding choice. Leaving the lyric empty and
+        // reporting it is preferable to filling it with replacement characters.
         int undecodable = 0;
         const auto decode = [&codec, &undecodable](const QByteArray &bytes) {
             const auto text = codec.decode(bytes);
@@ -275,8 +271,8 @@ namespace hello::kit {
                 .value(QLatin1String(OptionDefaultLyric), QLatin1String(defaultLyric))
                 .toString();
 
-        // Tempo is gathered from every track, since a format 1 file keeps it in track 0 while the
-        // notes are somewhere else.
+        // Tempo events are collected from every track, because a format 1 file stores them in
+        // track 0 and the notes in other tracks.
         std::map<int, double> tempos;
         for (const int track : midi.tracks()) {
             for (const auto event : midi.eventsForTrack(track)) {
@@ -323,8 +319,8 @@ namespace hello::kit {
                 continue;
             }
 
-            // Notes that begin together are a chord, and only the top one can be kept. They are
-            // sorted so that it comes first.
+            // Notes that start together form a chord, of which only the highest note can be
+            // kept. They are sorted so that it comes first.
             if (!track.notes.isEmpty() && note.start == cursor - track.notes.last().length &&
                 !track.notes.last().isRest()) {
                 ++chordNotes;
@@ -332,8 +328,9 @@ namespace hello::kit {
             }
 
             if (note.start < cursor) {
-                // Still sounding when this one begins. Shortening what is already there keeps
-                // both, where the earlier implementation threw this one away.
+                // The previous note is still sounding when this one starts. Shortening the
+                // previous note preserves both, whereas the earlier implementation discarded this
+                // one.
                 auto &previous = track.notes.last();
                 const int overlap = cursor - note.start;
                 if (previous.length - overlap <= 0) {
@@ -370,15 +367,13 @@ namespace hello::kit {
 
         if (chordNotes > 0) {
             say(diagnostics, DiagnosticSeverity::Warning,
-                tr(
-                    "%1 notes began at the same moment as another and were left out, since a "
-                    "track holds one voice.")
+                tr("%1 notes began at the same moment as another and were left out, since a "
+                   "track holds one voice.")
                     .arg(chordNotes));
         }
         if (shortened > 0) {
             say(diagnostics, DiagnosticSeverity::Warning,
-                tr(
-                    "%1 notes were shortened where the next one began before they ended.")
+                tr("%1 notes were shortened where the next one began before they ended.")
                     .arg(shortened));
         }
         if (dropped > 0) {
@@ -387,14 +382,12 @@ namespace hello::kit {
         }
         if (clamped > 0) {
             say(diagnostics, DiagnosticSeverity::Warning,
-                tr(
-                    "%1 notes lay outside the keyboard and were moved to its nearest end.")
+                tr("%1 notes lay outside the keyboard and were moved to its nearest end.")
                     .arg(clamped));
         }
 
-        // Lyrics belong to the note that is sounding when they arrive. Matching them by an exact
-        // tick, which is what the earlier implementation did, loses every lyric a sequencer
-        // placed a tick early.
+        // A lyric event belongs to the note sounding at its time. Matching by exact tick, as
+        // the earlier implementation did, loses every lyric a sequencer placed one tick early.
         int position = 0;
         std::map<int, int> noteAtTick; // start tick to index, sounding notes only
         for (int i = 0; i < track.notes.size(); ++i) {
@@ -421,16 +414,15 @@ namespace hello::kit {
         }
         if (unplaced > 0) {
             say(diagnostics, DiagnosticSeverity::Warning,
-                tr("%1 lyrics did not fall on any note and were left out.")
-                    .arg(unplaced));
+                tr("%1 lyrics did not fall on any note and were left out.").arg(unplaced));
         }
 
         Project project;
         project.settings.tempo = tempos.empty() ? 120.0 : tempos.begin()->second;
 
-        // A tempo change can only sit on a note, so one arriving in the middle of a note moves
-        // to the next one. Saying nothing would make the track come out at the wrong speed with
-        // no sign of why.
+        // A tempo change can be attached only to a note, so a change in the middle of a note is
+        // moved to the next note. This is reported, because otherwise the track would play at
+        // the wrong speed without explanation.
         int moved = 0;
         for (auto it = tempos.begin(); it != tempos.end(); ++it) {
             if (it == tempos.begin()) {
@@ -448,16 +440,14 @@ namespace hello::kit {
         }
         if (moved > 0) {
             say(diagnostics, DiagnosticSeverity::Warning,
-                tr(
-                    "%1 tempo changes did not fall on a note and were moved to the next one.")
+                tr("%1 tempo changes did not fall on a note and were moved to the next one.")
                     .arg(moved));
         }
 
         if (undecodable > 0) {
             say(diagnostics, DiagnosticSeverity::Warning,
-                tr(
-                    "%1 pieces of text are not valid %2 and were left out, which usually means "
-                    "the encoding is not the one this file is in.")
+                tr("%1 pieces of text are not valid %2 and were left out, which usually means "
+                   "the encoding is not the one this file is in.")
                     .arg(undecodable)
                     .arg(codec.name()));
         }
@@ -512,33 +502,32 @@ namespace hello::kit {
             request.driverOptions.value(QLatin1String(OptionEncoding), QStringLiteral("UTF-8"))
                 .toString());
         if (!codec.isValid()) {
-            say(diagnostics, DiagnosticSeverity::Error,
-                tr("That encoding is not available."));
+            say(diagnostics, DiagnosticSeverity::Error, tr("That encoding is not available."));
             return false;
         }
 
-        // Said every time, because it is what the format is rather than something gone wrong.
-        // Everything UTAU renders with lives in entries MIDI has no room for.
+        // Reported on every export, because it is a property of the format rather than an
+        // error. Every rendering parameter of UTAU resides in entries that MIDI cannot
+        // represent.
         say(diagnostics, DiagnosticSeverity::Warning,
-            tr(
-                "A MIDI file holds notes and lyrics. The envelope, the vibrato, the pitch curve, "
-                "the flags and the per note values were left out."));
+            tr("A MIDI file holds notes and lyrics. The envelope, the vibrato, the pitch curve, "
+               "the flags and the per note values were left out."));
 
         Midi::MidiFile midi;
         midi.setFileFormat(1);
         midi.setDivisionType(Midi::MidiFile::PPQ);
 
-        // The same resolution the project counts in, so nothing has to be scaled and nothing can
-        // drift.
+        // The same resolution as the project, so that no scaling is required and no drift can
+        // occur.
         midi.setResolution(ticksPerQuarter);
         const int track = midi.createTrack();
 
         const auto &source = project.tracks.first();
         int unrepresentable = 0;
         const auto out = [&codec, &unrepresentable](const QString &text) {
-            // No escaping here, unlike a UST. Escaping is only ever read back where a control
-            // note says the file is ours, and MIDI has nowhere to put one, so an escape written
-            // into a lyric would come back as its own literal text.
+            // No escaping, unlike in a UST. Escape sequences are decoded only in files that a
+            // control note identifies as written by this program, and MIDI cannot contain a
+            // control note, so an escape sequence would be read back as literal text.
             if (!text.isEmpty() && !codec.canEncode(text)) {
                 ++unrepresentable;
             }
@@ -572,21 +561,18 @@ namespace hello::kit {
 
         if (unrepresentable > 0) {
             say(diagnostics, DiagnosticSeverity::Warning,
-                tr(
-                    "%1 lyrics have no spelling in %2 and were written as question marks.")
+                tr("%1 lyrics have no spelling in %2 and were written as question marks.")
                     .arg(unrepresentable)
                     .arg(codec.name()));
         }
         if (unwritable > 0) {
             say(diagnostics, DiagnosticSeverity::Warning,
-                tr(
-                    "%1 notes lay outside what MIDI can name and were moved to its nearest end.")
+                tr("%1 notes lay outside what MIDI can name and were moved to its nearest end.")
                     .arg(unwritable));
         }
 
         if (!midi.save(path)) {
-            say(diagnostics, DiagnosticSeverity::Error,
-                tr("This file could not be written."));
+            say(diagnostics, DiagnosticSeverity::Error, tr("This file could not be written."));
             return false;
         }
         return true;

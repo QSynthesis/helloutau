@@ -28,12 +28,12 @@ namespace hello::kit {
             return std::string(bytes.constData(), size_t(bytes.size()));
         }
 
-        /// A path as the engines are handed it, which is UTF-8 like every other argument.
+        /// A path in the form passed to the engines, which is UTF-8 like every other argument.
         std::string utf8(const fs::path &path) {
             return path.u8string();
         }
 
-        /// Six characters standing for a digest, in the alphabet UTAU uses for the same field.
+        /// A six-character representation of a digest, in the alphabet UTAU uses for this field.
         QString shortened(const QByteArray &digest) {
             static const char ALPHABET[] =
                 "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
@@ -49,7 +49,7 @@ namespace hello::kit {
             return out;
         }
 
-        /// What the sample is right now, as far as anything here can tell.
+        /// An identifier of the current state of the sample, as far as it can be determined.
         QString sampleState(const fs::path &sample) {
             std::error_code error;
             const auto size = fs::file_size(sample, error);
@@ -60,25 +60,25 @@ namespace hello::kit {
             return QStringLiteral("%1/%2").arg(qulonglong(size)).arg(qlonglong(when));
         }
 
-        /// Where one note's rendered piece goes.
+        /// The path of the rendered fragment of one note.
         ///
-        /// A piece already on disk is taken as done and the resampler is not run for it again,
-        /// so the name has to change whenever anything that changes the sound changes. UTAU's
-        /// own name does not manage that. On the 455-note probe its six characters follow the
-        /// note's timing and nothing else: 358 notes carrying 163 different sets of flags all
-        /// came out with the same six, and changing the pitch line, the vibrato, the envelope,
-        /// the intensity or the modulation left them alone too. Reusing on that name renders
-        /// the note again with its old flags.
+        /// A fragment already on disk is treated as complete and the resampler is not run for
+        /// it again, so the name must change whenever any input that affects the sound changes.
+        /// The UTAU naming scheme does not satisfy this. In the 455-note probe, its six
+        /// characters depend only on the timing of the note: 358 notes with 163 distinct flag
+        /// sets all received the same six characters, and changes to the pitch curve, vibrato,
+        /// envelope, intensity or modulation left them unchanged as well. Reuse based on that
+        /// name renders the note with its previous flags.
         ///
-        /// So the last field is a digest of everything the resampler is handed, and of the
-        /// sample as it sits on disk. What the *wavtool* is handed is left out on purpose: the
-        /// envelope and the start point are applied while the piece is appended, not while it
-        /// is rendered, so two notes differing only there share a piece and rightly do.
+        /// The last field is therefore a digest of all resampler arguments and of the current
+        /// state of the sample on disk. The wavtool arguments are deliberately excluded: the
+        /// envelope and the start point are applied when the fragment is appended, not when it
+        /// is rendered, so two notes that differ only in these share a fragment correctly.
         ///
-        /// The rest of the name is UTAU's, because it is the part a person reads: the note's
-        /// place in the track, its lyric and its tone. stdutau builds that and takes the
-        /// characters a file name cannot hold out of the lyric, which is why it is kept rather
-        /// than assembled again here.
+        /// The remainder of the name follows UTAU, because it is the human-readable part: the
+        /// position of the note in the track, its lyric and its tone. stdutau builds this part
+        /// and removes characters that are invalid in file names from the lyric, which is why
+        /// it is reused rather than reimplemented here.
         fs::path cacheFileFor(const std::string &utauName, const utau::ResamplerArguments &wanted,
                               const fs::path &sample, const fs::path &directory) {
             auto forDigest = wanted;
@@ -109,11 +109,11 @@ namespace hello::kit {
             return list;
         }
 
-        /// The note as the synth reads it.
+        /// The note in the form read by the synthesis calculation.
         ///
-        /// Only what \c Synth::calc actually looks at. The rest of a note, its label and its
-        /// patch and whatever a host stored on it, has no bearing on what the engines are asked
-        /// to do, and copying it here would only suggest otherwise.
+        /// Contains only the fields that \c Synth::calc reads. The other fields of a note, such
+        /// as its label, its patch and any data stored by a host, do not affect the engine
+        /// calls, and copying them would falsely suggest otherwise.
         utau::Note synthNote(const Note &from) {
             utau::Note note;
             note.lyric = utf8(from.lyric);
@@ -191,8 +191,8 @@ namespace hello::kit {
             return std::nullopt;
         }
 
-        // Converted once. calc() asks for a note several times over, once for itself and again
-        // as its neighbours' context.
+        // Converted once, because calc() requests each note several times, once for itself and
+        // again as context for its neighbors.
         std::vector<utau::Note> converted;
         converted.reserve(size_t(notes.size()));
         for (const auto &note : notes) {
@@ -207,8 +207,8 @@ namespace hello::kit {
             return std::nullopt;
         }
 
-        // calc() reaches past the ends on purpose, and asks for the note after the last one
-        // without checking. A default note is what it expects to find there.
+        // calc() deliberately accesses beyond both ends and requests the note after the last
+        // one without a bounds check. It expects a default note there.
         const auto noteGetter = [&converted](int index) -> utau::Note {
             if (index < 0 || index >= int(converted.size())) {
                 return {};
@@ -216,7 +216,7 @@ namespace hello::kit {
             return converted[size_t(index)];
         };
 
-        // Which sample sings a note, which is the one thing here the voice bank decides.
+        // The sample for a note, the only input here determined by the voice bank.
         const auto otoEntryGetter = [&bank](const utau::Note &note) -> utau::OtoEntry {
             const auto lyric = QString::fromUtf8(note.lyric.data(), qsizetype(note.lyric.size()));
             const auto *sample = bank.find(note.noteNum, lyric);
@@ -225,9 +225,9 @@ namespace hello::kit {
             }
 
             utau::OtoEntry entry;
-            // The whole path, not the name the oto.ini carried. A bank spreads its samples over
-            // subdirectories, so the name alone does not say which file it is by the time it
-            // reaches an engine.
+            // The full path, not the name in the oto.ini. A voice bank distributes its samples
+            // over subdirectories, so the name alone does not identify the file once it reaches
+            // an engine.
             entry.fileName = utf8(sample->path);
             entry.alias = utf8(sample->alias);
             entry.offset = sample->offset;
@@ -264,9 +264,9 @@ namespace hello::kit {
                          noteIndex);
             }
 
-            // calc() names the cache file but not where it goes, and leaves the track file to
-            // the caller entirely. The last field of the name is ours, not calc()'s: see
-            // cacheFileFor().
+            // calc() determines the cache file name but not its directory, and leaves the track
+            // file entirely to the caller. The last field of the name is computed here, not by
+            // calc(). See cacheFileFor().
             step.cacheFile =
                 cacheFileFor(resampler.outFile, resampler, step.sample, options.cacheDirectory);
 

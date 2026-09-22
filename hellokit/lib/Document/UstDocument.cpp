@@ -23,12 +23,12 @@ namespace hello::kit {
             diagnostics.push_back({DiagnosticSeverity::Warning, message});
         }
 
-        /// Looks at \a s without copying it, for everything downstream that only reads.
+        /// A non-owning view of \a s , for all read-only consumers.
         QByteArrayView viewOf(const std::string &s) {
             return QByteArrayView(s.data(), qsizetype(s.size()));
         }
 
-        /// Takes a copy, for the few places that have to own one.
+        /// An owning copy of \a s , for the few consumers that require ownership.
         QByteArray bytesOf(const std::string &s) {
             return QByteArray(s.data(), qsizetype(s.size()));
         }
@@ -37,10 +37,10 @@ namespace hello::kit {
             return std::string(b.data(), size_t(b.size()));
         }
 
-        /// The control note's entry name as the map is keyed, built once.
+        /// The entry name of the control note as a map key, constructed once.
         ///
-        /// Looking a std::map up with a string literal builds a std::string for the comparison
-        /// and throws it away, and this is asked once per note.
+        /// A std::map lookup with a string literal constructs and discards a temporary
+        /// std::string, and this lookup occurs once per note.
         const std::string &controlNoteKey() {
             static const std::string key(controlNoteEntry);
             return key;
@@ -50,15 +50,16 @@ namespace hello::kit {
             return note.lyric == controlNoteLyric && note.userData.count(controlNoteKey()) != 0;
         }
 
-        /// Encodes \a text for \a codec, escaping first where the encoding cannot hold it all.
+        /// Encodes \a text with \a codec , escaping it first if the encoding cannot represent
+        /// every character.
         std::string encodeFor(const TextCodec &codec, bool escaping, const QString &text) {
             return escaping ? stdOf(codec.encode(codec.escape(text))) : stdOf(codec.encode(text));
         }
 
-        /// What the control note carries, as it was found.
+        /// The payload of the control note as read.
         ///
-        /// Unknown fields are kept so that a file a newer build wrote keeps them on the way back
-        /// out, which is the same promise the \c .usth top level makes.
+        /// Unrecognized fields are preserved, so that a file written by a newer build retains
+        /// them when saved again. The top level of \c .usth provides the same guarantee.
         QJsonObject payloadOf(const utau::Note &note) {
             const auto it = note.userData.find(controlNoteKey());
             if (it == note.userData.end()) {
@@ -71,8 +72,8 @@ namespace hello::kit {
             return QJsonDocument::fromJson(*decoded).object();
         }
 
-        // Reading a note back. Every string arrives as bytes and leaves as UTF-8, and nothing
-        // else in this file touches a std::string.
+        // Decoding of a note. Every string enters as bytes and leaves as UTF-8, and no other
+        // code in this file handles a std::string.
         class Reader {
         public:
             Reader(const TextCodec &codec, bool unescaping)
@@ -314,14 +315,14 @@ namespace hello::kit {
                                                   DiagnosticList &diagnostics) const {
         const TextCodec codec(charset);
         if (!codec.isValid()) {
-            fail(diagnostics,
-                 tr("The encoding \"%1\" is not available.").arg(charset));
+            fail(diagnostics, tr("The encoding \"%1\" is not available.").arg(charset));
             return std::nullopt;
         }
 
-        // Escaping is only ever applied to files this program wrote, and only where the encoding
-        // could not hold everything. A UST from UTAU knows nothing about it, and unescaping one
-        // would eat its backslashes. The control note is what says which kind of file this is.
+        // Escaping applies only to files written by this program, and only where the encoding
+        // could not represent every character. A UST from UTAU does not use escaping, and
+        // unescaping it would remove its backslashes. The control note identifies which kind of
+        // file this is.
         const Reader reader(codec, m_hasControlNote && !codec.isUtf8());
         const auto &file = m_file;
 
@@ -329,8 +330,7 @@ namespace hello::kit {
         bool ok = true;
         project.settings.name = reader.text(file.settings.projectName, &ok);
         if (!ok) {
-            fail(diagnostics,
-                 tr("This file is not in the %1 encoding.").arg(codec.name()));
+            fail(diagnostics, tr("This file is not in the %1 encoding.").arg(codec.name()));
             return std::nullopt;
         }
         project.settings.tempo = file.settings.tempo;
@@ -368,15 +368,15 @@ namespace hello::kit {
                                                         const ExportOptions &options,
                                                         DiagnosticList &diagnostics) {
         if (project.tracks.size() != 1) {
-            fail(diagnostics, tr("A UST holds one track, and this project holds %1.")
-                                  .arg(project.tracks.size()));
+            fail(
+                diagnostics,
+                tr("A UST holds one track, and this project holds %1.").arg(project.tracks.size()));
             return std::nullopt;
         }
 
         const TextCodec codec(options.charset);
         if (!codec.isValid()) {
-            fail(diagnostics,
-                 tr("The encoding \"%1\" is not available.").arg(options.charset));
+            fail(diagnostics, tr("The encoding \"%1\" is not available.").arg(options.charset));
             return std::nullopt;
         }
         const bool escaping = !codec.isUtf8();
@@ -388,8 +388,8 @@ namespace hello::kit {
         document.m_recorded = codec.name();
         document.m_hasControlNote = true;
 
-        // UST can say "this is UTF-8" and nothing else, so anything else goes unsaid here and is
-        // carried by the control note instead.
+        // UST can declare only UTF-8, so any other encoding is not declared here and is recorded
+        // by the control note instead.
         file.version.version = "1.2";
         if (codec.isUtf8()) {
             file.version.charset = "UTF-8";
@@ -404,9 +404,9 @@ namespace hello::kit {
         file.settings.voiceDir = out(project.tracks.first().voiceDir);
         file.settings.isMode2 = settings.mode2;
 
-        // The project's own engines are written as they were found. Where it names none, the
-        // local ones go in instead, because UTAU opening a UST with no engine has nothing to
-        // render with.
+        // The engines specified by the project are written unchanged. If it specifies none, the
+        // locally configured engines are written instead, because UTAU cannot render a UST
+        // without engines.
         const QString wavtool = settings.wavtool.isEmpty() ? options.wavtool : settings.wavtool;
         const QString resampler =
             settings.resampler.isEmpty() ? options.resampler : settings.resampler;
@@ -414,9 +414,8 @@ namespace hello::kit {
         file.settings.resamplerPath = out(resampler);
         if (wavtool.isEmpty() || resampler.isEmpty()) {
             complain(diagnostics,
-                     tr(
-                         "This UST names no rendering engine, so UTAU will not be able to render "
-                         "it until one is set there."));
+                     tr("This UST names no rendering engine, so UTAU will not be able to render "
+                        "it until one is set there."));
         }
 
         QJsonObject payload;

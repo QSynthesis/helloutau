@@ -30,10 +30,10 @@ namespace hello::kit {
             return std::string(bytes.constData(), size_t(bytes.size()));
         }
 
-        /// What an engine printed, which on Windows is in the code page rather than UTF-8.
+        /// The output of an engine, which on Windows is in the ANSI code page rather than UTF-8.
         ///
-        /// Undecodable bytes are kept as Latin-1 rather than dropped. This is a message for a
-        /// human to read when something went wrong, so showing it badly beats showing nothing.
+        /// Invalid bytes are interpreted as Latin-1 rather than dropped. The output is a message
+        /// for a person diagnosing a failure, so an imperfect rendering is preferable to none.
         QString printed(const std::string &bytes) {
             const QByteArrayView view(bytes.data(), qsizetype(bytes.size()));
             const TextCodec codec;
@@ -53,9 +53,9 @@ namespace hello::kit {
                                  DiagnosticList &diagnostics) const {
         EngineRun result;
 
-        // args[0] is the name the program is given, and executable() is the file that runs. They
-        // are set apart here on purpose: leaving args[0] to name the file as well would send it
-        // through a PATH lookup.
+        // args[0] is the name passed to the program, and executable() is the file executed. They
+        // are set separately on purpose, because using args[0] as the file name as well would
+        // subject it to a PATH lookup.
         std::vector<std::string> args;
         args.reserve(size_t(arguments.size()) + 1);
         args.push_back(program.filename().u8string());
@@ -73,27 +73,26 @@ namespace hello::kit {
         }
 
         if (!process.start()) {
-            fail(diagnostics, tr("The engine \"%1\" could not be started.")
-                                  .arg(displayed(program)));
+            fail(diagnostics,
+                 tr("The engine \"%1\" could not be started.").arg(displayed(program)));
             return result;
         }
         result.started = true;
 
-        // Both streams are read here rather than by hand. One pipe blocks its writer once full,
-        // so draining them one after the other deadlocks on an engine that talks a lot.
+        // Both streams are read by communicate() rather than manually. A full pipe blocks its
+        // writer, so draining the streams sequentially deadlocks with a verbose engine.
         const auto [out, err] = process.communicate({}, timeout);
         result.output = printed(out) + printed(err);
 
-        // Not the return code: communicate() kills a child that outlasted the timeout, so it is
-        // reaped and has one either way. The error is what says the engine was stopped rather
-        // than finished.
+        // Not the exit code: communicate() kills a child that exceeds the time limit, so the
+        // child is reaped and has an exit code in either case. The error indicates that the
+        // engine was stopped rather than finished.
         if (process.errorCode() == std::errc::timed_out) {
             result.timedOut = true;
-            fail(diagnostics,
-                 tr("The engine \"%1\" did not finish within %2 seconds and was "
-                                   "stopped.")
-                     .arg(displayed(program))
-                     .arg(timeout / 1000));
+            fail(diagnostics, tr("The engine \"%1\" did not finish within %2 seconds and was "
+                                 "stopped.")
+                                  .arg(displayed(program))
+                                  .arg(timeout / 1000));
             return result;
         }
 
@@ -106,9 +105,9 @@ namespace hello::kit {
         EngineRun result;
 
         stdc::Popen process;
-        // The argument vector still holds, even here. shell() quotes each element for the
-        // platform shell rather than taking a command line, so the path of the script is one
-        // argument whatever is in it.
+        // The argument vector applies here as well. shell() quotes each element for the
+        // platform shell rather than accepting a command line, so the script path remains a
+        // single argument regardless of its content.
         process.shell(true);
         process.args({script.u8string()});
         if (!workingDirectory.empty()) {
@@ -116,8 +115,8 @@ namespace hello::kit {
         }
 
 #ifdef _WIN32
-        // Left on screen on purpose. UTAU shows it, a batch plugin's output is meant to be read,
-        // and shell() hides it unless this says otherwise.
+        // Deliberately visible. UTAU shows the console, the output of a batch plugin is meant
+        // to be read, and shell() hides the console unless instructed otherwise.
         stdc::Popen::StartupInfo info{};
         info.dwFlags = STARTF_USESHOWWINDOW;
         info.wShowWindow = SW_SHOWNORMAL;
@@ -125,8 +124,8 @@ namespace hello::kit {
 #endif
 
         if (!process.start()) {
-            fail(diagnostics, tr("The rendering script \"%1\" could not be started.")
-                                  .arg(displayed(script)));
+            fail(diagnostics,
+                 tr("The rendering script \"%1\" could not be started.").arg(displayed(script)));
             return result;
         }
         result.started = true;
@@ -135,10 +134,9 @@ namespace hello::kit {
             process.kill();
             process.wait();
             result.timedOut = true;
-            fail(diagnostics,
-                 tr("The rendering script did not finish within %1 seconds and was "
-                                   "stopped.")
-                     .arg(timeout / 1000));
+            fail(diagnostics, tr("The rendering script did not finish within %1 seconds and was "
+                                 "stopped.")
+                                  .arg(timeout / 1000));
             return result;
         }
 

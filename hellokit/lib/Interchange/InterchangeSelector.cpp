@@ -15,9 +15,9 @@ namespace hello::kit {
 
     AutomaticSelector::~AutomaticSelector() = default;
 
-    // Every default taken here is a question the user never saw, so each one is reported. A
-    // conversion that silently picked the first of five tracks would look like the file only
-    // ever had one.
+    // Every default selected here is a decision the user did not make, so each one is reported.
+    // A conversion that silently selected the first of five tracks would suggest that the file
+    // contains only one.
     static void fillDefaults(const QList<InterchangeOption> &schema, ImportRequest &request,
                              DiagnosticList &diagnostics) {
         for (const auto &option : schema) {

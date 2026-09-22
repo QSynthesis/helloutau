@@ -14,11 +14,11 @@ namespace hello::kit {
 
     namespace {
 
-        // The encodings this project promises, by the Windows code page that holds each one.
+        // The encodings supported by this project, keyed by the corresponding Windows code page.
         //
-        // The canonical name is what gets recorded in a control note, so it is written out here
-        // rather than taken from whichever library happened to answer. Reading a project back
-        // must not depend on which of the paths below wrote it.
+        // The canonical name is recorded in the control note, so it is defined here rather than
+        // taken from whichever library performs the conversion. Reading a project must not
+        // depend on the conversion path used to write it.
         struct CodePage {
             int number;
             const char *canonical;
@@ -27,14 +27,14 @@ namespace hello::kit {
 
         constexpr CodePage codePages[] = {
             {932,   "Shift_JIS",    "shift_jis shift-jis sjis ms_kanji cp932 windows-932"},
-            // GB2312 is its own code page, and everything maps it to 936 because GBK holds all
-            // of it and more, so reading one as the other cannot lose anything.
+            // GB2312 is a separate code page, but it is universally mapped to 936, because GBK is
+            // a superset of GB2312 and reading one as the other loses nothing.
             {936,   "GBK",          "gbk gb2312 euc-cn cp936 windows-936"                },
             {950,   "Big5",         "big5 big-5 cp950 windows-950"                       },
             {949,   "EUC-KR",       "euc-kr ks_c_5601-1987 cp949 windows-949"            },
             {54936, "GB18030",      "gb18030"                                            },
-            // The rest of the ANSI code pages, so that a machine set to any of them has its
-            // system encoding here as well. What a UST from there is in, when it says nothing.
+            // The remaining ANSI code pages, so that the system encoding of any Windows machine
+            // is available. A UST from such a machine without an encoding declaration uses it.
             {874,   "windows-874",  "windows-874 cp874"                                  },
             {1250,  "windows-1250", "windows-1250 cp1250"                                },
             {1251,  "windows-1251", "windows-1251 cp1251"                                },
@@ -62,22 +62,23 @@ namespace hello::kit {
 
     }
 
-    // Four ways of doing the same job, tried in this order.
+    // Four conversion paths, tried in this order:
     //
-    // 1. Qt's own converters, for the Unicode family and Latin-1. Built into QtCore.
-    // 2. winacp, for the Windows ANSI code pages: Shift_JIS, GBK, Big5, EUC-KR and the rest, on
+    // 1. The built-in converters of Qt, for the Unicode encodings and Latin-1.
+    // 2. winacp, for the Windows ANSI code pages, including Shift_JIS, GBK, Big5 and EUC-KR, on
     //    every system.
-    // 3. The Windows code page functions, for GB18030, on Windows.
-    // 4. Qt by name, which reaches ICU where Qt has it, for anything else.
+    // 3. The Windows code page functions, for GB18030, on Windows only.
+    // 4. Qt by name, which uses ICU if Qt was built with it, for all other encodings.
     //
-    // UTAU reads and writes by the Windows code page, so that is the mapping a UST or an oto.ini
-    // has to go through to come out as it went in, and winacp is that mapping, taken from
-    // Windows and carried to the other systems. Nothing else is. Qt reaches ICU only where it
-    // was built with it, and the Qt for macOS is not: there it could not open a single Shift_JIS
-    // file. What macOS has of its own, CoreFoundation and iconv, leaves out the thousands of
-    // characters Windows puts in the private use area, and writes some characters back as other
-    // bytes than Windows does. The same way on every system also takes Windows' own ICU out of
-    // it, which Qt loads at run time and which older Windows does not have.
+    // UTAU reads and writes files in the Windows code page, so a UST or an oto.ini must be
+    // converted with exactly that mapping to round-trip unchanged. winacp provides that mapping,
+    // captured from Windows, on every system, and no other library does. Qt uses ICU only if
+    // built with it, and the Qt distribution for macOS is not, so it could not open any
+    // Shift_JIS file there. The native macOS converters, Core Foundation and iconv, omit the
+    // several thousand characters that Windows maps into the Private Use Area, and encode some
+    // characters to byte sequences other than those Windows produces. A uniform path on every
+    // system also removes the dependency on the ICU of Windows, which Qt loads at run time and
+    // which older Windows versions lack.
     class TextCodec::Impl {
     public:
         explicit Impl(const QString &requested) {
@@ -106,7 +107,7 @@ namespace hello::kit {
 #endif
             }
 
-            // Whatever is left, if ICU happens to be there.
+            // All other encodings, if ICU is available.
             QStringDecoder byName(name);
             if (byName.isValid()) {
                 fallbackName = name;
@@ -170,7 +171,7 @@ namespace hello::kit {
         }
 
         if (_impl->ansiCodePage != 0) {
-            // All or nothing: bytes that do not decode mean the wrong encoding was chosen.
+            // All or nothing, because invalid bytes indicate an incorrect encoding choice.
             const auto text = winacp::decode(_impl->ansiCodePage,
                                              std::string_view(bytes.data(), size_t(bytes.size())));
             if (!text) {
@@ -181,8 +182,8 @@ namespace hello::kit {
 
 #ifdef _WIN32
         if (_impl->codePage != 0) {
-            // MB_ERR_INVALID_CHARS is what makes this refuse rather than substitute, which is
-            // the whole point: bytes that do not decode mean the wrong encoding was chosen.
+            // MB_ERR_INVALID_CHARS makes the conversion fail instead of substituting, which is
+            // required because invalid bytes indicate an incorrect encoding choice.
             const int length = ::MultiByteToWideChar(UINT(_impl->codePage), MB_ERR_INVALID_CHARS,
                                                      bytes.data(), int(bytes.size()), nullptr, 0);
             if (length <= 0) {
@@ -212,8 +213,8 @@ namespace hello::kit {
         }
 
         if (_impl->ansiCodePage != 0) {
-            // A question mark for what the page cannot hold, as Windows writes, which is what
-            // canEncode() compares against.
+            // A question mark for each unrepresentable code unit, as Windows writes. canEncode()
+            // detects the substitution by comparison.
             const std::string written =
                 winacp::encode(_impl->ansiCodePage,
                                std::u16string_view(reinterpret_cast<const char16_t *>(text.utf16()),
@@ -249,10 +250,10 @@ namespace hello::kit {
             return true;
         }
 
-        // Written out, read back and compared, on every path. An encoding that cannot hold a
-        // character writes a question mark for it and says nothing, so only the comparison
-        // catches that, and the comparison is also what keeps a text that was already a question
-        // mark from looking like a failure.
+        // Encoded, decoded and compared, on every path. An encoder substitutes a question mark
+        // for an unrepresentable character without reporting an error, so only the comparison
+        // detects it. The comparison also prevents a literal question mark from being mistaken
+        // for a failure.
         const QByteArray bytes = encode(text);
         if (bytes.isEmpty()) {
             return false;
@@ -263,8 +264,9 @@ namespace hello::kit {
 
     QString TextCodec::systemName() {
 #ifdef _WIN32
-        // What UTAU writes when it writes nothing about the encoding. Named rather than left as
-        // QStringConverter::System, whose own name is the word "Locale" and cannot be recorded.
+        // The encoding UTAU uses for a file without an encoding declaration. Resolved to a name
+        // rather than left as QStringConverter::System, whose name is "Locale" and cannot be
+        // recorded.
         const UINT acp = ::GetACP();
         if (acp == 65001) {
             return QStringLiteral("UTF-8");
@@ -276,8 +278,8 @@ namespace hello::kit {
         }
         return QStringLiteral("windows-%1").arg(acp);
 #else
-        // No such thing outside Windows. A file written there and carrying no declaration is
-        // UTF-8 in every setting anyone still runs.
+        // Systems other than Windows have no ANSI code page. A file written there without a
+        // declaration is UTF-8 in every configuration still in use.
         return QStringLiteral("UTF-8");
 #endif
     }
@@ -335,8 +337,8 @@ namespace hello::kit {
                 continue;
             }
 
-            // A character outside the basic plane is two code units that mean nothing apart, so
-            // the pair is tested and written together.
+            // A character outside the Basic Multilingual Plane is a surrogate pair, whose units
+            // are meaningless in isolation, so the pair is tested and written together.
             const qsizetype width =
                 (c.isHighSurrogate() && i + 1 < text.size() && text.at(i + 1).isLowSurrogate()) ? 2
                                                                                                 : 1;
@@ -385,8 +387,8 @@ namespace hello::kit {
                 }
             }
 
-            // Not an escape this understands. Kept as it stands, because it came from somewhere
-            // and dropping it would lose whatever it was.
+            // Not a recognized escape sequence. Preserved verbatim, because it is part of the
+            // original text and dropping it would lose data.
             out += c;
         }
 

@@ -32,12 +32,12 @@ namespace hello::kit {
             return QString::fromStdU16String(path.u16string());
         }
 
-        /// The two files the wavtool actually appends to.
+        /// The two files to which the wavtool actually appends.
         ///
-        /// It does not write the track wav as it goes. It keeps the header in one file and the
-        /// samples in another, both named after the track, and the wav is the two joined once
-        /// every note has been appended. UTAU's own batch ends with a \c copy \c /B that does
-        /// exactly this.
+        /// The wavtool does not write the track file incrementally. It writes the header to one
+        /// file and the sample data to another, both named after the track, and the track file
+        /// is the concatenation of the two after every note has been appended. The UTAU batch
+        /// file ends with a \c copy \c /B that performs exactly this concatenation.
         std::pair<fs::path, fs::path> partsOf(const fs::path &output) {
             auto header = output;
             auto data = output;
@@ -55,12 +55,11 @@ namespace hello::kit {
             return out.good();
         }
 
-        /// What one resampler call came to, kept until the whole pass is over.
+        /// The result of one resampler call, retained until the entire pass completes.
         ///
-        /// Each job writes only its own entry of a list sized up front, so the jobs need no lock
-        /// between them. The diagnostics are merged afterwards in track order rather than as
-        /// they arrive, since a list that reads in whatever order the threads happened to finish
-        /// is not something a user can follow.
+        /// Each job writes only its own element of a preallocated list, so the jobs require no
+        /// locking. The diagnostics are merged afterward in track order rather than in arrival
+        /// order, because a list ordered by thread completion is not comprehensible to a user.
         struct ResampleOutcome {
             DiagnosticList diagnostics;
             QString engineOutput;
@@ -92,7 +91,7 @@ namespace hello::kit {
 
         forgetSuperseded(plan, diagnostics);
 
-        // Settled before anything runs, because the resampler is about to start creating these.
+        // Determined before any engine runs, because the resampler creates these files.
         QList<bool> alreadyThere(int(plan.steps().size()), false);
         if (reuseCache) {
             for (int i = 0; i < int(plan.steps().size()); ++i) {
@@ -101,8 +100,8 @@ namespace hello::kit {
             }
         }
 
-        // The track is built up by appending, so whatever was there before has to go first, or a
-        // second render lands on the end of the first.
+        // The track is built by appending, so existing files must be removed first. Otherwise a
+        // second render would be appended to the first.
         const auto &output = plan.outputFile();
         const auto [header, data] = partsOf(output);
         fs::remove(output, error);
@@ -112,8 +111,8 @@ namespace hello::kit {
         const auto &steps = plan.steps();
         const int total = int(steps.size());
 
-        // Everything the observer is told goes through here, so that it sees one call at a time
-        // whichever thread the work was on.
+        // All observer notifications pass through here, so that the observer receives one call
+        // at a time regardless of the worker thread.
         QMutex lock;
         std::atomic_bool stopped{false};
         int done = 0;
@@ -129,12 +128,12 @@ namespace hello::kit {
             return observer && observer->cancelled();
         };
 
-        // One for every thread and for the wavtool afterwards, which is why it has to be
-        // safe to call from several at once.
+        // Shared by all threads and by the subsequent wavtool calls, which is why it must be
+        // safe for concurrent use.
         const auto engine = makeEngineProcess();
 
-        // The resampler calls do not depend on one another and are where the time goes. The
-        // wavtool calls below append to one file and stay in track order whatever happens here.
+        // The resampler calls are mutually independent and dominate render time. The wavtool
+        // calls below append to a single file and always run in track order.
         QList<ResampleOutcome> outcomes(total);
         {
             QThreadPool pool;
@@ -150,14 +149,13 @@ namespace hello::kit {
                         return;
                     }
                     auto &result = outcomes[i];
-                    const auto run = engine->run(engines.resampler,
-                                                 steps.at(i).resamplerArguments,
+                    const auto run = engine->run(engines.resampler, steps.at(i).resamplerArguments,
                                                  result.diagnostics);
                     result.started = run.started;
                     result.engineOutput = run.output.trimmed();
 
-                    // Not the exit code. Engines disagree about what they report, and some say
-                    // nothing at all, so what settles it is whether the piece appeared.
+                    // Success is determined by the existence of the fragment, not by the exit
+                    // code, because engines report inconsistently and some report nothing.
                     if (stopOnFirstFailure && !fs::exists(steps.at(i).cacheFile)) {
                         stopped.store(true);
                     }
@@ -165,9 +163,9 @@ namespace hello::kit {
                 });
             }
 
-            // Asked while the pool works, so that a render the user gave up on stops starting
-            // new notes. What is already running is left to finish: killing an engine part way
-            // would leave a half written piece in the cache for the next render to trust.
+            // Queried while the pool runs, so that a cancelled render starts no further notes.
+            // Running calls are allowed to finish, because killing an engine midway would leave
+            // a partially written fragment in the cache that the next render would reuse.
             while (!pool.waitForDone(50)) {
                 if (cancelled()) {
                     stopped.store(true);
@@ -175,7 +173,7 @@ namespace hello::kit {
             }
         }
 
-        // In track order, not in the order the threads finished.
+        // In track order, not in thread completion order.
         for (int i = 0; i < total; ++i) {
             diagnostics.append(outcomes.at(i).diagnostics);
         }
@@ -211,7 +209,7 @@ namespace hello::kit {
             }
         }
 
-        // One file, appended to, so these stay in order and on one thread.
+        // These calls append to a single file and therefore run sequentially on one thread.
         for (const auto &step : steps) {
             if (!step.silent && !fs::exists(step.cacheFile)) {
                 continue;

@@ -16,9 +16,9 @@ namespace hello::kit {
                                  Q_EMIT this->q->checkNeeded(directories + trees);
                              });
 
-            // Either way the watcher has nothing more to say about the bank, and the timer
-            // takes over. The whole bank is named at once, since what happened up to now is
-            // not known either.
+            // In both cases the watcher no longer reports on the voice bank, and polling takes
+            // over. The entire voice bank is reported immediately, because changes up to this
+            // point are unknown as well.
             const auto fallBack = [this](const QString &) {
                 following = false;
                 if (root.isEmpty()) {
@@ -32,7 +32,7 @@ namespace hello::kit {
             QObject::connect(&watcher, &FileSystemWatcher::unwatchable, q, fallBack);
             QObject::connect(&watcher, &FileSystemWatcher::rootGone, q, fallBack);
 
-            // Confirmed by the watcher, unless it already said it cannot.
+            // Confirmed by the watcher, unless it has already reported a failure.
             QObject::connect(&watcher, &FileSystemWatcher::ready, q,
                              [this] { following = !root.isEmpty() && !poll.isActive(); });
 

@@ -30,11 +30,13 @@ namespace hello::kit {
             return QString::fromStdU16String(path.u16string());
         }
 
-        /// Lower case, for comparing a name against one this program knows, which are all ASCII.
+        /// The lowercase form of a file name, for comparison with the known names, which are
+        /// all ASCII.
         ///
-        /// UTF-8 and not path::string() , which on Windows is the system code page and throws on
-        /// a name that the code page cannot spell. Only ASCII is folded, so that no byte of a
-        /// longer character is touched whatever the locale says.
+        /// Converted through UTF-8 rather than path::string() , which on Windows uses the system
+        /// code page and throws for a name that the code page cannot represent. Only ASCII
+        /// letters are folded, so that no byte of a multibyte character is altered regardless
+        /// of the locale.
         std::string folded(const fs::path &name) {
             const auto u8 = name.u8string();
             std::string s(u8.begin(), u8.end());
@@ -55,7 +57,8 @@ namespace hello::kit {
             return suffix == ".wav" || suffix == ".flac" || suffix == ".ogg";
         }
 
-        /// The whole file, or nothing where it cannot be read, which is not the same as empty.
+        /// The entire file, or \c std::nullopt if it cannot be read, which differs from an empty
+        /// file.
         std::optional<QByteArray> readWhole(const fs::path &path) {
             std::ifstream in(path, std::ios::binary);
             if (!in) {
@@ -74,8 +77,8 @@ namespace hello::kit {
         }
 
         /// Reads one directory. Subdirectories are collected into \a children rather than
-        /// followed here, so that the walk stays iterative and the limits are checked in one
-        /// place.
+        /// traversed here, so that the traversal remains iterative and the limits are checked
+        /// in one place.
         VoiceBankDirectorySource readOne(const fs::path &root, const fs::path &relative,
                                          std::vector<fs::path> &children,
                                          DiagnosticList &diagnostics) {
@@ -89,8 +92,8 @@ namespace hello::kit {
             std::error_code error;
             for (const auto &entry : fs::directory_iterator(
                      absolute, fs::directory_options::skip_permission_denied, error)) {
-                // A symbolic link is followed nowhere. A voice bank is a folder a user picked,
-                // and one link is enough to walk the whole disk or to loop.
+                // Symbolic links are never followed. A voice bank is a folder selected by the
+                // user, and a single link suffices to traverse the entire disk or to loop.
                 if (entry.is_symlink()) {
                     continue;
                 }
@@ -111,8 +114,8 @@ namespace hello::kit {
                     continue;
                 }
 
-                // Read once, and parsed from what was read, so that the digest is of the very
-                // bytes the directory was built from.
+                // Read once and parsed from the same buffer, so that the digest covers exactly
+                // the bytes from which the directory was built.
                 const auto bytes = readWhole(entry.path());
                 if (!bytes) {
                     complain(diagnostics, VoiceBankSource::tr("\"%1\" could not be read.")
@@ -189,7 +192,8 @@ namespace hello::kit {
     }
 
     bool VoiceBankDirectoryStamp::isRacy(const Entry &entry) const {
-        // Two seconds is the grain of FAT, the coarsest a bank is likely to sit on.
+        // Two seconds is the timestamp granularity of FAT, the coarsest file system a voice
+        // bank is likely to reside on.
         return entry.time + std::chrono::seconds(2) >= takenAt;
     }
 
@@ -201,12 +205,12 @@ namespace hello::kit {
         }
 
         VoiceBankDirectoryStamp stamp;
-        // Before the listing, so that whatever is written while it is taken counts as racy.
+        // Taken before the listing, so that any write during the listing counts as racy.
         stamp.takenAt = fs::file_time_type::clock::now();
 
         for (const auto &item : fs::directory_iterator(
                  directory, fs::directory_options::skip_permission_denied, error)) {
-            // The same as a read: a link is followed nowhere, so it is no part of the bank.
+            // As when reading, links are never followed and are not part of the voice bank.
             if (item.is_symlink(error)) {
                 continue;
             }
@@ -293,8 +297,9 @@ namespace hello::kit {
         QList<VoiceBankDirectorySource> out;
         const int start = int(std::distance(relative.begin(), relative.end()));
 
-        // Breadth first, one level at a time, so that the depth limit is a count of rounds and
-        // the directory limit stops the scan where it is rather than part way down one branch.
+        // Breadth-first, one level at a time, so that the depth limit equals the number of
+        // rounds and the directory limit stops the scan at a level boundary rather than partway
+        // down one branch.
         std::vector<fs::path> level{relative};
         bool stopped = false;
         for (int depth = start; depth <= limits.maxDepth && !level.empty(); ++depth) {

@@ -8,14 +8,14 @@ namespace hello::kit {
     }
 
     std::optional<QByteArray> PayloadCodec::decode(QByteArrayView text) {
-        // Qt takes padding when it is well formed, and this is where it stops being welcome. An
-        // equals sign is truncated by UTAU, so text carrying one was never written by us and could
-        // never be written back.
+        // Qt accepts well-formed padding, which is rejected here. UTAU truncates values at an
+        // equals sign, so text containing one was not written by this program and could not be
+        // written back.
         if (text.contains('=')) {
             return std::nullopt;
         }
 
-        // Qt drops the bits left over without a word. Six of them came from no byte.
+        // Qt silently discards leftover bits. Six leftover bits cannot originate from a byte.
         if (text.size() % 4 == 1) {
             return std::nullopt;
         }

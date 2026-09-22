@@ -39,11 +39,12 @@ namespace hello::kit {
             return QCryptographicHash::hash(bytes, QCryptographicHash::Sha1);
         }
 
-        /// The encoding one directory is to be read in, or nothing where nobody said.
+        /// The codec for reading one directory, or \c std::nullopt if no encoding is
+        /// specified.
         ///
-        /// \note No escapes are undone, and none are written: what an encoding cannot hold is
-        ///       refused when saving rather than escaped. Undoing escapes in a bank from UTAU
-        ///       would eat its backslashes.
+        /// \note Escape sequences are neither decoded nor written. Unrepresentable characters
+        ///       are rejected on save instead of escaped. Decoding escape sequences in a voice
+        ///       bank from UTAU would remove its backslashes.
         std::optional<TextCodec> codecFor(const VoiceBankDirectorySource &directory,
                                           VoiceBankCharsetSelector *selector,
                                           DiagnosticList &diagnostics) {
@@ -79,13 +80,13 @@ namespace hello::kit {
             return codec;
         }
 
-        /// Decodes one directory's text, and remembers whether anything did not decode.
+        /// Decodes the text of one directory and records whether any of it was invalid.
         class Decoder {
         public:
             explicit Decoder(const TextCodec &codec) : m_codec(codec) {
             }
 
-            /// The text, or empty where the bytes are not valid in this encoding.
+            /// The decoded text, or empty if the bytes are invalid in this encoding.
             QString operator()(const std::string &bytes) {
                 return (*this)(viewOf(bytes));
             }
@@ -112,7 +113,8 @@ namespace hello::kit {
             return int(std::distance(relative.begin(), relative.end()));
         }
 
-        /// Whether \a path is \a base or under it, both relative to one root. Empty is the root.
+        /// Returns whether \a path equals \a base or lies under it. Both are relative to the
+        /// same root, and an empty path denotes the root.
         bool isWithin(const fs::path &path, const fs::path &base) {
             auto p = path.begin();
             for (const auto &part : base) {
@@ -124,10 +126,11 @@ namespace hello::kit {
             return true;
         }
 
-        /// The encoding to read a directory again in, where it was read before. What its record
-        /// says now, then what it was read in, and only then the question: a directory that was
-        /// read or left out before was asked about then, and asking again on every change to
-        /// it would ask about something already answered.
+        /// The encoding for rereading a previously read directory. The order of precedence is
+        /// the encoding in its current configuration, then the encoding it was read in, and
+        /// only then the selector. The user was already asked about a directory that was read
+        /// or left out before, and asking again on every change would repeat an answered
+        /// question.
         std::optional<TextCodec> codecAgain(const VoiceBankDirectorySource &source,
                                             const VoiceBankDirectory &before,
                                             VoiceBankCharsetSelector *selector,
@@ -147,7 +150,7 @@ namespace hello::kit {
             if (before.leftOut) {
                 return std::nullopt;
             }
-            // Nothing needed an encoding before, and now something does.
+            // The directory previously required no encoding and now requires one.
             return codecFor(source, selector, diagnostics);
         }
 
@@ -169,7 +172,7 @@ namespace hello::kit {
             return QByteArray(bytes.data(), qsizetype(bytes.size()));
         }
 
-        /// The file in \a directory whose name is \a lowerCase in any case, if there is one.
+        /// The file in \a directory whose name matches \a lowerCase case-insensitively, if any.
         std::optional<fs::path> findFolded(const fs::path &directory, const char *lowerCase) {
             std::error_code error;
             for (const auto &entry : fs::directory_iterator(directory, error)) {
@@ -187,14 +190,14 @@ namespace hello::kit {
             return std::nullopt;
         }
 
-        /// One directory decoded, and the samples it holds.
+        /// One decoded directory and its samples.
         struct DecodedDirectory {
             VoiceBankDirectory directory;
             QList<VoiceSample> samples;
         };
 
-        /// Decodes \a directory of the bank at \a root in \a given , or leaves out what had to
-        /// be decoded where \a given is nothing.
+        /// Decodes \a directory of the voice bank at \a root with \a given , or leaves out
+        /// all text that requires decoding if \a given is \c std::nullopt .
         DecodedDirectory decodeDirectory(const VoiceBankDirectorySource &directory,
                                          const fs::path &root, int directoryIndex,
                                          const std::optional<TextCodec> &given,
@@ -206,9 +209,9 @@ namespace hello::kit {
             decoded.path = directory.path;
             decoded.config = directory.config;
 
-            // A directory nobody can name an encoding for loses only what had to be decoded.
-            // Its samples are still reachable by file name, which needed no encoding, and that
-            // is how a bank without an oto.ini is sung anyway.
+            // A directory without an encoding loses only the text that requires decoding. Its
+            // samples remain reachable by file name, which requires no encoding, and a voice
+            // bank without an oto.ini is sung in exactly this way.
             std::optional<TextCodec> codec;
             if (directory.needsCharset()) {
                 codec = given;
@@ -219,8 +222,8 @@ namespace hello::kit {
                 }
             }
 
-            // Which audio files an entry already speaks for, so that the rest are added as
-            // samples of their own afterwards.
+            // The audio files already covered by an entry. The remaining files are added
+            // afterward as separate samples.
             QSet<QString> claimed;
 
             if (codec) {
@@ -252,9 +255,10 @@ namespace hello::kit {
 
                 if (directory.oto) {
                     for (const auto &[file, entries] : directory.oto->contents) {
-                        // The name is in the bank's encoding, so it names a file only once
-                        // decoded. Taken as it stands it would be read in the system's code page,
-                        // and name another file wherever the two differ.
+                        // The name is in the encoding of the voice bank and identifies a file
+                        // only after decoding. Used undecoded, it would be interpreted in the
+                        // system code page and identify a different file wherever the two
+                        // encodings differ.
                         const auto fileName = text(file);
                         const auto path = absolute / fs::path(fileName.toStdU16String());
                         claimed.insert(fileName);
@@ -302,11 +306,11 @@ namespace hello::kit {
             return out;
         }
 
-        /// Encodes one directory's UTAU files, which is what saving writes and what opening
-        /// takes as the baseline to compare against.
+        /// Encodes the UTAU files of one directory. The result is what save() writes and what
+        /// open() records as the baseline for comparison.
         ///
-        /// \return the bytes of every file this directory is to hold, or nothing where some of
-        ///         it cannot be written, with the reason in \a diagnostics
+        /// \return the content of every file of the directory, or \c std::nullopt if any part
+        ///         cannot be written, with the reason in \a diagnostics
         std::optional<std::map<VoiceBankFile, QByteArray>>
             encodeDirectory(const VoiceBankDirectory &directory, int index,
                             const QList<VoiceSample> &samples,
@@ -409,7 +413,7 @@ namespace hello::kit {
                 removed(VoiceBankFile::PrefixMap);
             }
 
-            // Not quoted where it fails, since a readme is too long to put in a message.
+            // The failing text is not quoted, because a readme is too long for a message.
             if (!directory.readme.isEmpty() || had(VoiceBankFile::Readme)) {
                 if (!codec.canEncode(directory.readme)) {
                     fail(diagnostics, VoiceBank::tr("Some of \"%1\" cannot be written in %2.")
@@ -490,9 +494,9 @@ namespace hello::kit {
         auto &slot = m_directories[index];
         directory.path = slot.path;
 
-        // A new encoding is written down even where no file comes out different in it, as
-        // with plain ASCII. Otherwise the choice would be lost, and the first text that does
-        // differ would be written in the old one.
+        // A new encoding is recorded even if no file changes under it, as with plain ASCII.
+        // Otherwise the choice would be lost, and the first text that does differ would be
+        // written in the previous encoding.
         if (TextCodec(directory.charset).name() != TextCodec(slot.charset).name()) {
             m_books[index].remember = true;
         }
@@ -518,8 +522,8 @@ namespace hello::kit {
 
         replaceDirectory(index, *source, codec, diagnostics);
 
-        // An encoding that does not read the files is not one to write down. The user can see
-        // what it made of them, and choose again.
+        // An encoding in which the files are invalid is not recorded. The user can inspect the
+        // decoded result and choose again.
         m_books[index].remember = !m_directories.at(index).lossy;
 
         reindex();
@@ -536,7 +540,7 @@ namespace hello::kit {
         DiagnosticList ignored;
         const auto encoded = encodeDirectory(directory, index, m_samples, book.files, ignored);
         if (!encoded) {
-            // Something that cannot be written is something that was changed.
+            // Content that cannot be written counts as changed.
             return true;
         }
         if (encoded->size() != book.baseline.size()) {
@@ -563,7 +567,8 @@ namespace hello::kit {
             return changes;
         }
 
-        // The places, relative to the root. One outside it says nothing about this bank.
+        // The places relative to the root. A place outside the root is irrelevant to this voice
+        // bank.
         const auto root = m_root.lexically_normal();
         std::vector<fs::path> scope;
         for (const auto &place : places) {
@@ -577,12 +582,12 @@ namespace hello::kit {
             scope.push_back(relative);
         }
 
-        // What to look at: every known directory under a place, and the nearest one holding
-        // it, since a directory that is new shows in the listing of the one above it.
+        // The directories to examine: every known directory under a place, and the nearest
+        // known ancestor, because a new directory appears in the listing of its parent.
         std::set<int> look;
         for (const auto &place : scope) {
-            // A place the bank knows shows what is new in its own listing, and only one it does
-            // not know needs the one above.
+            // A known place reveals new entries in its own listing. Only an unknown place
+            // requires examining its parent.
             int nearest = -1;
             bool placeKnown = false;
             for (int i = 0; i < m_directories.size(); ++i) {
@@ -634,7 +639,7 @@ namespace hello::kit {
                 continue;
             }
 
-            // Subdirectories that came or went. Those that went take everything under them.
+            // Added and removed subdirectories. A removed subdirectory includes its subtree.
             const auto directoriesOf = [](const VoiceBankDirectoryStamp &stamp) {
                 std::set<fs::path> out;
                 for (const auto &entry : stamp.entries) {
@@ -660,8 +665,8 @@ namespace hello::kit {
                 }
             }
 
-            // The files. A stamp that matches is trusted except for what was written too close
-            // to when it was taken, which is compared by what it holds.
+            // The files. A matching stamp is trusted except for racy entries, which were
+            // written too close to the snapshot and are compared by content.
             const auto filesOf = [](const VoiceBankDirectoryStamp &stamp) {
                 std::vector<VoiceBankDirectoryStamp::Entry> out;
                 for (const auto &entry : stamp.entries) {
@@ -702,10 +707,11 @@ namespace hello::kit {
             if (changed) {
                 rereads.push_back(i);
             } else if (!listed) {
-                // Checked, and nothing found. The fresh stamp is taken later, so what was racy
-                // in the old one need not be read again next time. Where anything was found
-                // the old one stays, so that the next check finds it again until it is
-                // reloaded: a change named once and missed would otherwise be gone.
+                // No difference was found. The new stamp is taken later, so that entries racy
+                // in the old stamp need not be read again at the next check. If a difference
+                // was found, the old stamp is retained, so that every subsequent check reports
+                // it again until it is reloaded. Otherwise a change reported once and missed
+                // would be lost.
                 book.stamp = *now;
             }
         }
@@ -744,8 +750,8 @@ namespace hello::kit {
             return fs::is_directory(path.empty() ? m_root : m_root / path, error);
         };
 
-        // What was found may be out of date by now, so each is looked at again on the way:
-        // what is gone is not read, and what is back is not removed.
+        // The detected changes may be outdated, so each is examined again: a directory
+        // removed since is not read, and a directory restored since is not removed.
         std::set<int> removals;
         for (const auto &path : changes.removed) {
             const int i = indexOf(path);
@@ -758,8 +764,8 @@ namespace hello::kit {
             }
         }
 
-        // Read again first, while the indices still hold, whatever was changed here and not
-        // saved: reloading is the user choosing the disk's.
+        // Changed directories are reread first, while the indices are still valid, discarding
+        // unsaved changes, because a reload is the user choosing the version on disk.
         for (const auto &path : changes.changed) {
             const int i = indexOf(path);
             if (i < 0 || removals.count(i) != 0) {
@@ -775,13 +781,13 @@ namespace hello::kit {
             done.changed.push_back(path);
         }
 
-        // Then what went, from the back, so that each index still means what it did.
+        // Removed directories next, in reverse order, so that the remaining indices stay valid.
         for (auto it = removals.rbegin(); it != removals.rend(); ++it) {
             done.removed.push_back(m_directories.at(*it).path);
             removeDirectory(*it);
         }
 
-        // Then what came, with everything under it, at the end.
+        // Added directories last, with their subtrees, appended at the end.
         for (const auto &path : changes.added) {
             if (indexOf(path) >= 0 || !on(path)) {
                 continue;
@@ -815,8 +821,8 @@ namespace hello::kit {
 
     VoiceBankChanges VoiceBank::reloadAllFromDisk(VoiceBankCharsetSelector *selector,
                                                   DiagnosticList &diagnostics) {
-        // What came and went is still found by the listings, which compare names and not
-        // times. Everything else is read whatever its stamp says.
+        // Added and removed directories are still detected by the listings, which compare
+        // names rather than times. All other content is read regardless of its stamp.
         auto changes = checkDisk();
         if (changes.rootGone) {
             return changes;
@@ -835,8 +841,8 @@ namespace hello::kit {
                                      DiagnosticList &diagnostics) {
         auto decoded = decodeDirectory(source, m_root, index, codec, diagnostics);
 
-        // In the place the directory's samples had, so that the order of the bank, and with it
-        // which of two equal aliases wins, stays what it was.
+        // Inserted at the former position of the directory's samples, so that the sample
+        // order, and with it the precedence between duplicate aliases, is preserved.
         QList<VoiceSample> samples;
         bool placed = false;
         for (const auto &sample : std::as_const(m_samples)) {
@@ -916,15 +922,16 @@ namespace hello::kit {
             return false;
         }
 
-        // Everything is worked out and checked before anything is written, so that a bank
-        // that cannot be saved is left as it was rather than half saved.
+        // All content is computed and validated before the first write, so that a voice bank
+        // that cannot be saved remains unchanged rather than partially saved.
         for (int i = 0; i < m_directories.size(); ++i) {
             const auto &directory = m_directories.at(i);
             const auto &book = m_books.at(i);
             const auto absolute = directory.path.empty() ? m_root : m_root / directory.path;
 
-            // Nothing of a directory that was never read may be written, since its files would
-            // be replaced with nothing. Its samples are the bare files and are not written.
+            // No file of a directory that was never read may be written, because its files
+            // would be replaced with empty content. Its samples are bare files and are not
+            // written.
             if (directory.leftOut) {
                 const bool touched =
                     std::any_of(m_samples.begin(), m_samples.end(), [i](const VoiceSample &sample) {
@@ -950,8 +957,8 @@ namespace hello::kit {
                 if (base != book.baseline.end() && base->second == digestOf(bytes)) {
                     continue;
                 }
-                // Text that did not decode reads as empty, and writing it would put the empty
-                // text where the original was.
+                // Invalid text was read as empty, and writing it would replace the original
+                // with empty text.
                 if (directory.lossy) {
                     fail(diagnostics,
                          tr("Some of the text in \"%1\" did not read in %2, so it cannot be "
@@ -969,8 +976,9 @@ namespace hello::kit {
                 changed = true;
             }
 
-            // The encoding goes with the files. Without it written down, the next open would
-            // have to ask again, and a record naming another one would read them wrong.
+            // The encoding is recorded together with the files. Otherwise the next open would
+            // query the user again, and a configuration naming another encoding would decode
+            // them incorrectly.
             if (changed || (book.remember && !directory.charset.isEmpty())) {
                 const auto recorded = book.files.find(VoiceBankFile::Config);
                 if (recorded != book.files.end() && !directory.config) {
@@ -994,8 +1002,9 @@ namespace hello::kit {
             }
         }
 
-        // Whatever is about to be replaced has to be what was read. Something else writing
-        // the bank meanwhile, UTAU's setParam for one, would otherwise lose its work to ours.
+        // Each file about to be replaced must still match the state that was read. Otherwise
+        // changes made concurrently by another program, such as the setParam tool of UTAU,
+        // would be overwritten.
         for (const auto &write : writes) {
             const auto &book = m_books.at(write.directory);
             const auto record = book.files.find(write.file);
@@ -1022,8 +1031,8 @@ namespace hello::kit {
         }
 
         for (const auto &write : writes) {
-            // Written beside the file and moved over it, so that nothing reading the bank ever
-            // finds half of one.
+            // Written to a temporary file beside the target and renamed over it, so that no
+            // reader observes a partially written file.
             QSaveFile file(QString::fromStdU16String(write.path.u16string()));
             if (!file.open(QIODevice::WriteOnly) || file.write(write.bytes) != write.bytes.size() ||
                 !file.commit()) {
@@ -1048,10 +1057,10 @@ namespace hello::kit {
     }
 
     void VoiceBank::takeBaseline(int index) {
-        // What the directory would be written as right now, which is what a save compares
-        // against to leave alone the files nobody changed. Taken from the encoder and not from
-        // the bytes on disk, so that a file only this program would spell differently, with LF
-        // line ends or out of order, is not rewritten by a save that did not touch it.
+        // The current serialization of the directory, against which save() compares to skip
+        // unchanged files. Taken from the encoder rather than from the bytes on disk, so that a
+        // file this program would serialize differently, for example with LF line endings or in
+        // a different order, is not rewritten by a save that did not modify it.
         auto &book = m_books[index];
         book.baseline.clear();
         const auto &directory = m_directories.at(index);
@@ -1075,9 +1084,9 @@ namespace hello::kit {
         m_character = VoiceCharacter();
         m_character.name = QString::fromStdU16String(m_root.filename().u16string());
 
-        // Only the root's character.txt, readme.txt and prefix.map describe the bank. A
-        // subdirectory carrying its own is a bank in its own right, and reading it here would
-        // let it rename the one that was opened.
+        // Only the character.txt, readme.txt and prefix.map of the root describe the voice
+        // bank. A subdirectory with its own files is a separate voice bank, and applying them
+        // here would rename the voice bank that was opened.
         for (const auto &directory : std::as_const(m_directories)) {
             if (!directory.path.empty()) {
                 continue;
@@ -1099,9 +1108,9 @@ namespace hello::kit {
             const auto &sample = m_samples.at(index);
             const auto stem = stemOf(sample.fileName);
 
-            // An entry with no alias of its own is reached by its file name, which is how UTAU
-            // writes the first entry of a sample. The alias stays empty in the sample, because
-            // empty is what the file says and what is written back.
+            // An entry without an alias is found by its file name, which is how UTAU writes the
+            // first entry of a sample. The alias of the sample remains empty, because the file
+            // specifies it as empty and it is saved as empty.
             if (sample.hasEntry) {
                 const auto alias = sample.alias.isEmpty() ? stem : sample.alias;
                 if (!m_byAlias.contains(alias)) {
@@ -1109,9 +1118,9 @@ namespace hello::kit {
                 }
             }
 
-            // UTAU reads a sample's file name as an alias as well, which is why bank authors
-            // put a _ in front of a file name they do not want sung by it. Where an entry and a
-            // bare file share a name, the entry comes first and carries the timing.
+            // UTAU also treats the file name of a sample as an alias, which is why voice bank
+            // authors prefix a file name with _ to exclude it. If an entry and a bare file share
+            // a name, the entry takes precedence and supplies the timing.
             if (!m_byStem.contains(stem)) {
                 m_byStem.insert(stem, index);
             }
