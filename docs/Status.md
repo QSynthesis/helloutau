@@ -6,9 +6,9 @@
 
 | 目标 | 状态 |
 |---|---|
-| `HelloKitSupport` | `Diagnostic`、`TextCodec`（编码解析、转义还原） |
+| `HelloKitSupport` | `Diagnostic`、`TextCodec`（编码解析、转义还原）、`FileSystemWatcher`（磁盘变化的提示，由 `hello-fswatcher` 进程完成） |
 | `HelloKitDocument` | `PayloadCodec`、`Project` / `Track` / `Note` 模型、`.usth` 读写、`UstDocument` |
-| `HelloKitVoiceBank` | `VoiceBankConfig`、`VoiceBankSource`（原始扫描）、`VoiceBank`（解码后的模型与查询） |
+| `HelloKitVoiceBank` | `VoiceBankConfig`、`VoiceBankSource`（原始扫描）、`VoiceBank`（解码后的模型、查询、写回、和磁盘核对）、`VoiceBankCheckScheduler` |
 | `HelloKitSynth` | `EngineProcess`、`SynthPlan`（只算）、`SynthRunner`（跑） |
 | `HelloKitInterchange` | 接口、注册表、`Formats/MidiConvert`（读写两个方向） |
 | `HelloUtauWidgets` | 一个装着 `QLabel` 的 `MainWindow`，证明 Qt Widgets 和 moc 接上了 |
@@ -23,6 +23,8 @@
 几条实测钉下来的行为：**没人能说出编码的目录只丢掉需要解码的部分**，它的样本仍然能按文件名唱——文件名不需要编码，而没有 `oto.ini` 的音源本来就是这么唱的；**文件名本身也是别名**，[官方那页](https://w.atwiki.jp/utaou/pages/106.html)写了 UTAU 会把 wav 名当别名读，音源作者靠加 `_` 前缀来避开；扫描有深度和目录数上限，符号链接一律不跟——音源是用户挑的文件夹，形状不归我们信任。
 
 **音源能写回了。** `VoiceBank` 按目录保存，每个目录留着读它用的编码；`save()` 只写变了的文件、按原编码写、编码装不下的字符拒绝、磁盘上被别人改过的拒绝，先全部检查再动手。**一份 903 条的 GBK 真实音源原样打开原样存，`oto.ini` 逐字节相同；改一个 offset 只有一行变。** 设置编码分两种：转换（`setDirectory()` 改编码再存，字节变文字不变）和重新解读（`reread()`，字节不变文字变），转换前 `VoiceBank::isCharsetReadableByUtau()` 说原版 UTAU 在这台机器上读不读得回来。文件名一律按音源自己的编码解开再拼路径，不经过系统代码页——之前那样做，编码和系统代码页不一致的音源路径全错，emoji 文件名直接让打开抛异常。细节见 [`Editing.md`](Editing.md) 的「音源是第二种文档」。
+
+**音源编辑界面开着时，磁盘上的变化一个都不漏。** 监视在 `hello-fswatcher` 这个单独的进程里：Windows 上照 JetBrains 的做法只占**盘根**的一个句柄，音源里任何目录都可以删、可以改名，包括它的根目录；进程崩溃了会重启，重启后全量核对；在 Debug 版里也不会弹出对话框卡住。它发的只是提示：`VoiceBank::checkDisk()` 用目录指纹核对（只列目录不读文件，修改时间离取指纹太近的再比内容），**只检测不改动**，检测到的在 `reloadFromDisk()` 之前每次都会再报。`VoiceBankCheckScheduler` 把监视提示、定时全量核对、监视失效后的轮询、手动触发合在一起；`reloadAllFromDisk()` 是不看指纹的全部重读。macOS 和 Linux 的监视后端还没写，那里现在一律回答「监视不了」，由轮询兜底。
 
 `HelloKitSynth` 能出声了。分三层：`EngineProcess` 起引擎，**参数向量进，没有接受整条命令行的重载**，这是 CVE-2024-28886 那条底线在代码里的形状；`SynthPlan` 只算不跑，把 `VoiceBank::find` 接到 `utau::Synth::calc` 上，产出每个音符两条解析好的参数向量；`SynthRunner` 按轨顺序跑。这一层里「裸字节」就是 UTF-8——`EngineProcess` 收 UTF-8，工程本来就是文本，中间一次转码都没有。
 

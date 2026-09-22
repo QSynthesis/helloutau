@@ -46,7 +46,7 @@ QSynthesis 是同一作者停更的前作，`.cache/QSynthesis-Old` 下有一份
 
 不碰界面。做完这一阶段，HelloUTAU 还不能用，但它已经能正确地读懂和写出 UTAU 的一切。
 
-- `HelloKitSupport`：编码策略的落地。编码的记录与读取（`_USTH_`、`hello-config.json`、`plugin.json`）、转义与还原、ANSI 代码页在非 Windows 上的替身。
+- `HelloKitSupport`：各模块都要用、但不属于任何业务的基础设施。编码策略的落地：编码的记录与读取（`_USTH_`、`hello-config.json`、`plugin.json`）、转义与还原、ANSI 代码页在非 Windows 上的替身。磁盘变化的提示：`FileSystemWatcher` 和它启动的 `hello-fswatcher`。
 - `HelloKitDocument`：`_USTH_` 控制音符的读写，`.usth` ↔ `.ust` 的双向转换，控制音符的一进一出配平。`PayloadCodec` 已完成。
 - `HelloKitVoiceBank`：音源目录模型。一个音源多份 `oto.ini`，各自编码；`prefix.map`、`character.txt`、`readme.txt`。
 - `HelloKitInterchange`：MIDI 导入。形状与约束见 [`Interchange.md`](Interchange.md)。
