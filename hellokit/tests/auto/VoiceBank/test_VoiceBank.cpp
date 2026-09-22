@@ -7,6 +7,7 @@
 #include <QtCore/QTemporaryDir>
 #include <QtTest/QTest>
 
+#include <hellokit/Support/TextCodec.h>
 #include <hellokit/VoiceBank/VoiceBank.h>
 
 using namespace hello::kit;
@@ -287,6 +288,104 @@ private Q_SLOTS:
         const auto bank = VoiceBank::open(root(), &selector, diagnostics);
         QVERIFY(bank.has_value());
         QCOMPARE(bank->character().name, QStringLiteral("outer"));
+
+        // Still read, since the subdirectory's own file is edited as what it is.
+        const auto *inner = directoryAt(*bank, "inner");
+        QVERIFY(inner);
+        QVERIFY(inner->character.has_value());
+        QCOMPARE(inner->character->name, QStringLiteral("inner"));
+    }
+
+    // What a directory has to be written back in. Without it a save would have to guess, and a
+    // wrong guess ruins every alias in the file.
+    void each_directory_keeps_its_encoding() {
+        write(QStringLiteral("jp/oto.ini"), "a.wav=" + kShiftJisA + ",0,0,0,0,0\n");
+        write(QStringLiteral("jp/a.wav"), "RIFF");
+        write(QStringLiteral("cn/oto.ini"), "b.wav=" + kGbkGePing + ",0,0,0,0,0\n");
+        write(QStringLiteral("cn/b.wav"), "RIFF");
+
+        PerDirectorySelector selector;
+        selector.set("jp", QStringLiteral("Shift_JIS"));
+        selector.set("cn", QStringLiteral("GBK"));
+
+        DiagnosticList diagnostics;
+        const auto bank = VoiceBank::open(root(), &selector, diagnostics);
+        QVERIFY(bank.has_value());
+
+        const auto *jp = directoryAt(*bank, "jp");
+        const auto *cn = directoryAt(*bank, "cn");
+        QVERIFY(jp && cn);
+        QCOMPARE(jp->charset, TextCodec(QStringLiteral("Shift_JIS")).name());
+        QCOMPARE(cn->charset, TextCodec(QStringLiteral("GBK")).name());
+        QVERIFY(!jp->leftOut && !cn->leftOut);
+    }
+
+    // A directory that could not be read must say so, since writing it back would replace
+    // files that were never read with nothing.
+    void a_directory_left_out_is_marked() {
+        write(QStringLiteral("oto.ini"), "a.wav=" + kShiftJisA + ",0,0,0,0,0\n");
+        write(QStringLiteral("a.wav"), "RIFF");
+
+        DiagnosticList diagnostics;
+        const auto bank = VoiceBank::open(root(), nullptr, diagnostics);
+        QVERIFY(bank.has_value());
+
+        const auto *top = directoryAt(*bank, "");
+        QVERIFY(top);
+        QVERIFY(top->leftOut);
+        QVERIFY(top->charset.isEmpty());
+    }
+
+    // Everything an entry is written back from: where it lives, the file name as the oto.ini
+    // gives it, and how its numbers were spelled.
+    void a_sample_knows_where_it_came_from() {
+        write(QStringLiteral("sub/oto.ini"), "ka.wav=" + kShiftJisA + ",41.0,2,3,4,5\n");
+        write(QStringLiteral("sub/ka.wav"), "RIFF");
+        write(QStringLiteral("sub/ki.wav"), "RIFF");
+
+        FixedCharsetSelector selector(QStringLiteral("Shift_JIS"));
+        DiagnosticList diagnostics;
+        const auto bank = VoiceBank::open(root(), &selector, diagnostics);
+        QVERIFY(bank.has_value());
+
+        const auto *entry = bank->find(60, QString::fromUtf8("\xe3\x81\x82"));
+        QVERIFY(entry);
+        QCOMPARE(bank->directories().at(entry->directory).path, std::filesystem::path("sub"));
+        QCOMPARE(entry->fileName, QStringLiteral("ka.wav"));
+        QCOMPARE(entry->spellings.at(0), std::string("41.0"));
+
+        const auto *bare = bank->find(60, QStringLiteral("ki"));
+        QVERIFY(bare);
+        QVERIFY(!bare->hasEntry);
+        QCOMPARE(bank->directories().at(bare->directory).path, std::filesystem::path("sub"));
+        QCOMPARE(bare->fileName, QStringLiteral("ki.wav"));
+    }
+
+    // UTAU reads an empty alias as the file name, and that is how it is found. Filling it in
+    // would write the file name back where the author left nothing.
+    void an_empty_alias_stays_empty() {
+        write(QStringLiteral("oto.ini"), "ka.wav=,1,2,3,4,5\n");
+        write(QStringLiteral("ka.wav"), "RIFF");
+
+        FixedCharsetSelector selector(QStringLiteral("UTF-8"));
+        DiagnosticList diagnostics;
+        const auto bank = VoiceBank::open(root(), &selector, diagnostics);
+        QVERIFY(bank.has_value());
+
+        const auto *sample = bank->find(60, QStringLiteral("ka"));
+        QVERIFY(sample);
+        QVERIFY(sample->hasEntry);
+        QVERIFY(sample->alias.isEmpty());
+    }
+
+private:
+    static const VoiceBankDirectory *directoryAt(const VoiceBank &bank, const char *relative) {
+        for (const auto &directory : bank.directories()) {
+            if (directory.path == std::filesystem::path(relative)) {
+                return &directory;
+            }
+        }
+        return nullptr;
     }
 };
 

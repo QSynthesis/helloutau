@@ -1,5 +1,7 @@
 #include "VoiceBank.h"
 
+#include <algorithm>
+#include <iterator>
 #include <set>
 
 #include <QtCore/QCoreApplication>
@@ -95,6 +97,11 @@ namespace hello::kit {
         for (const auto &directory : source.directories()) {
             const auto absolute =
                 directory.path.empty() ? source.root() : source.root() / directory.path;
+            const int directoryIndex = int(bank.m_directories.size());
+
+            VoiceBankDirectory decoded;
+            decoded.path = directory.path;
+            decoded.config = directory.config;
 
             // A directory nobody can name an encoding for loses only what had to be decoded.
             // Its samples are still reachable by file name, which needed no encoding, and that
@@ -102,33 +109,54 @@ namespace hello::kit {
             std::optional<TextCodec> codec;
             if (directory.needsCharset()) {
                 codec = codecFor(directory, selector, diagnostics);
+                if (codec) {
+                    decoded.charset = codec->name();
+                } else {
+                    decoded.leftOut = true;
+                }
             }
 
-            // Only the root's character.txt and readme.txt describe the bank. A subdirectory
-            // carrying its own is a bank in its own right, and reading it here would let it
-            // rename the one that was opened.
-            if (directory.path.empty() && codec) {
+            if (codec) {
                 if (directory.character) {
                     const auto &from = *directory.character;
-                    if (!from.name.empty()) {
-                        bank.m_character.name = text(*codec, from.name);
-                    }
-                    bank.m_character.image = text(*codec, from.image);
-                    bank.m_character.sample = text(*codec, from.sample);
-                    bank.m_character.author = text(*codec, from.author);
-                    bank.m_character.web = text(*codec, from.web);
+                    VoiceCharacter character;
+                    character.name = text(*codec, from.name);
+                    character.image = text(*codec, from.image);
+                    character.sample = text(*codec, from.sample);
+                    character.author = text(*codec, from.author);
+                    character.web = text(*codec, from.web);
                     for (const auto &line : from.extraLines) {
-                        bank.m_character.extraLines.push_back(text(*codec, line));
+                        character.extraLines.push_back(text(*codec, line));
                     }
+                    decoded.character = character;
                 }
                 if (!directory.readme.isEmpty()) {
-                    bank.m_readme = codec->decode(directory.readme).value_or(QString());
+                    decoded.readme = codec->decode(directory.readme).value_or(QString());
                 }
                 if (directory.prefixMap) {
+                    QMap<int, VoicePrefix> map;
                     for (const auto &[noteNum, item] : directory.prefixMap->map) {
-                        bank.m_prefixMap.insert(
-                            noteNum, Affix{text(*codec, item.prefix), text(*codec, item.suffix)});
+                        map.insert(noteNum, VoicePrefix{text(*codec, item.prefix),
+                                                        text(*codec, item.suffix)});
                     }
+                    decoded.prefixMap = map;
+                }
+            }
+
+            // Only the root's character.txt, readme.txt and prefix.map describe the bank. A
+            // subdirectory carrying its own is a bank in its own right, and reading it here would
+            // let it rename the one that was opened.
+            if (directory.path.empty()) {
+                if (decoded.character) {
+                    const auto name = bank.m_character.name;
+                    bank.m_character = *decoded.character;
+                    if (bank.m_character.name.isEmpty()) {
+                        bank.m_character.name = name;
+                    }
+                }
+                bank.m_readme = decoded.readme;
+                if (decoded.prefixMap) {
+                    bank.m_prefixMap = *decoded.prefixMap;
                 }
             }
 
@@ -142,6 +170,8 @@ namespace hello::kit {
                     for (const auto &entry : entries) {
                         VoiceSample sample;
                         sample.path = absolute / fs::path(file);
+                        sample.directory = directoryIndex;
+                        sample.fileName = text(*codec, file);
                         sample.alias = text(*codec, entry.alias);
                         sample.offset = entry.offset;
                         sample.consonant = entry.consonant;
@@ -149,24 +179,25 @@ namespace hello::kit {
                         sample.preUtterance = entry.preUtterance;
                         sample.voiceOverlap = entry.voiceOverlap;
                         sample.hasEntry = true;
-
-                        // An entry with no alias of its own is reached by its file name, which
-                        // is how UTAU writes the first entry of a sample.
-                        if (sample.alias.isEmpty()) {
-                            sample.alias = stemOf(fs::path(file));
-                        }
+                        std::copy(std::begin(entry.spellings), std::end(entry.spellings),
+                                  sample.spellings.begin());
 
                         const int index = int(bank.m_samples.size());
                         bank.m_samples.push_back(sample);
-                        if (!bank.m_byAlias.contains(sample.alias)) {
-                            bank.m_byAlias.insert(sample.alias, index);
+
+                        // An entry with no alias of its own is reached by its file name, which
+                        // is how UTAU writes the first entry of a sample. The alias stays empty
+                        // here, because empty is what the file says and what is written back.
+                        const auto stem = stemOf(fs::path(file));
+                        const auto alias = sample.alias.isEmpty() ? stem : sample.alias;
+                        if (!bank.m_byAlias.contains(alias)) {
+                            bank.m_byAlias.insert(alias, index);
                         }
 
                         // UTAU reads a sample's file name as an alias as well, which is why
                         // bank authors put a _ in front of a file name they do not want sung by
                         // it. The entry is what carries the timing, so the file name leads here
                         // rather than to a sample with none.
-                        const auto stem = stemOf(fs::path(file));
                         if (!bank.m_byStem.contains(stem)) {
                             bank.m_byStem.insert(stem, index);
                         }
@@ -180,14 +211,18 @@ namespace hello::kit {
                 }
                 VoiceSample sample;
                 sample.path = absolute / name;
-                sample.alias = stemOf(name);
+                sample.directory = directoryIndex;
+                sample.fileName = QString::fromStdU16String(name.u16string());
 
                 const int index = int(bank.m_samples.size());
                 bank.m_samples.push_back(sample);
-                if (!bank.m_byStem.contains(sample.alias)) {
-                    bank.m_byStem.insert(sample.alias, index);
+                const auto stem = stemOf(name);
+                if (!bank.m_byStem.contains(stem)) {
+                    bank.m_byStem.insert(stem, index);
                 }
             }
+
+            bank.m_directories.push_back(decoded);
         }
 
         if (bank.m_samples.isEmpty()) {
