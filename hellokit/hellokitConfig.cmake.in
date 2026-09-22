@@ -3,6 +3,7 @@
 include(CMakeFindDependencyMacro)
 
 find_dependency(stdcorelib CONFIG REQUIRED)
+find_dependency(stdutau CONFIG REQUIRED)
 find_dependency(Qt6 CONFIG REQUIRED COMPONENTS Core)
 
 include("${CMAKE_CURRENT_LIST_DIR}/hellokitTargets.cmake")
