@@ -148,8 +148,8 @@ namespace hello::kit {
     ///       \c hello-config.json into the user's voice bank, and a scan is not the place to
     ///       decide that: a bank may sit on a read-only disk, and a user who only looked at a
     ///       folder did not ask for a file to appear in it. VoiceBank::save() writes it along
-    ///       with the first file it writes into a directory, and a caller that wants it sooner
-    ///       writes it with \c VoiceBankConfig::save() once the user has answered.
+    ///       with the first file it writes into a directory, and on its own once
+    ///       VoiceBank::rememberCharset() has been called for the directory.
     class HELLOKIT_VOICEBANK_EXPORT VoiceBankSource {
         Q_DECLARE_TR_FUNCTIONS(hello::kit::VoiceBankSource)
     public:
@@ -166,6 +166,16 @@ namespace hello::kit {
         const QList<VoiceBankDirectorySource> &directories() const {
             return m_directories;
         }
+
+        /// Reads one directory of the bank at \a root again, and nothing under it.
+        ///
+        /// For a directory whose files are to be read afresh, in another encoding or because
+        /// they changed on disk, without walking the whole bank to get at it.
+        ///
+        /// \param relative the directory, relative to \a root , and empty for the root itself
+        static std::optional<VoiceBankDirectorySource>
+            readDirectory(const std::filesystem::path &root, const std::filesystem::path &relative,
+                          DiagnosticList &diagnostics);
 
         /// The directories that have something to decode and no encoding recorded.
         ///

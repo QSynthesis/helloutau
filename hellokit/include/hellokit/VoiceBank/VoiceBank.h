@@ -140,6 +140,20 @@ namespace hello::kit {
         std::array<std::string, 5> spellings;
     };
 
+    /// Whether UTAU on this machine reads the files of a directory in \a charset as they are.
+    ///
+    /// UTAU reads \c oto.ini , \c prefix.map and \c character.txt in the code page of the
+    /// machine it runs on, and nothing in a bank says otherwise. So a bank in any other
+    /// encoding, UTF-8 included, is mojibake to UTAU there, and so are the file names in its
+    /// \c oto.ini , which then name files UTAU cannot find.
+    ///
+    /// This is what a warning before changing an encoding asks. It answers for this machine
+    /// only: a Shift_JIS bank reads in UTAU on a Japanese machine and not on a Chinese one.
+    ///
+    /// \return always false off Windows, where there is no code page UTAU would use
+    /// \note UTF-8 with a byte order mark has not been tried in UTAU.
+    HELLOKIT_VOICEBANK_EXPORT bool utauReadsHere(const QString &charset);
+
     /// A voice bank, decoded and ready to be asked what sings what.
     ///
     /// \sa VoiceBankSource for the step before this one, and for why there are two.
@@ -214,6 +228,27 @@ namespace hello::kit {
         /// \c readme.txt or encoding is changed. Its path stays what it was.
         void setDirectory(int index, VoiceBankDirectory directory);
 
+        /// Reads directory \a index again from disk, in \a charset .
+        ///
+        /// Where the encoding a directory was read in was the wrong one, or where nobody named
+        /// one and it was left out. The files stay as they are and are read differently, which
+        /// is the other way to set an encoding from setDirectory() : that one keeps the text
+        /// and writes the files in another encoding.
+        ///
+        /// \warning Whatever was changed in the directory and not saved is gone, since the
+        ///          point is to read it afresh.
+        ///
+        /// The encoding is written down by the next save() , unless some of the text did not
+        /// read in it, see VoiceBankDirectory::lossy : that one is not worth remembering.
+        bool reread(int index, const QString &charset, DiagnosticList &diagnostics);
+
+        /// Has the next save() write down the encoding of directory \a index , even where
+        /// nothing else there changed.
+        ///
+        /// For an encoding a user chose when the bank was opened, which open() does not write
+        /// down by itself. Without it the question comes back every time the bank is opened.
+        void rememberCharset(int index);
+
         /// Writes back every file that is no longer what was read, each in its directory's
         /// encoding, and nothing else.
         ///
@@ -242,6 +277,9 @@ namespace hello::kit {
         /// directories.
         void reindex();
 
+        /// Takes what directory \a index would be written as now as what save() compares with.
+        void takeBaseline(int index);
+
         /// What save() needs to know about one directory's files and nobody else does.
         struct Book {
             /// What each file held on disk when it was read, or last written.
@@ -249,6 +287,8 @@ namespace hello::kit {
             /// What each file would be written as with nothing changed. A file whose bytes
             /// still come out as this is left alone.
             std::map<VoiceBankFile, QByteArray> baseline;
+            /// Whether the encoding is to be written down whatever else is saved.
+            bool remember = false;
         };
         QList<Book> m_books; // one per directory
 

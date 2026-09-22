@@ -74,9 +74,9 @@ namespace hello::kit {
         /// Reads one directory. Subdirectories are collected into \a children rather than
         /// followed here, so that the walk stays iterative and the limits are checked in one
         /// place.
-        VoiceBankDirectorySource readDirectory(const fs::path &root, const fs::path &relative,
-                                               std::vector<fs::path> &children,
-                                               DiagnosticList &diagnostics) {
+        VoiceBankDirectorySource readOne(const fs::path &root, const fs::path &relative,
+                                         std::vector<fs::path> &children,
+                                         DiagnosticList &diagnostics) {
             VoiceBankDirectorySource directory;
             directory.path = relative;
 
@@ -241,8 +241,7 @@ namespace hello::kit {
                     stopped = true;
                     break;
                 }
-                source.m_directories.push_back(
-                    readDirectory(source.m_root, relative, next, diagnostics));
+                source.m_directories.push_back(readOne(source.m_root, relative, next, diagnostics));
             }
             if (stopped) {
                 break;
@@ -260,6 +259,19 @@ namespace hello::kit {
                         "only part of it was read."));
         }
         return source;
+    }
+
+    std::optional<VoiceBankDirectorySource>
+        VoiceBankSource::readDirectory(const fs::path &root, const fs::path &relative,
+                                       DiagnosticList &diagnostics) {
+        const auto absolute = relative.empty() ? root : root / relative;
+        std::error_code error;
+        if (!fs::is_directory(absolute, error)) {
+            fail(diagnostics, tr("\"%1\" is not a folder.").arg(displayed(absolute)));
+            return std::nullopt;
+        }
+        std::vector<fs::path> children;
+        return readOne(root, relative, children, diagnostics);
     }
 
     QList<const VoiceBankDirectorySource *> VoiceBankSource::unsettled() const {

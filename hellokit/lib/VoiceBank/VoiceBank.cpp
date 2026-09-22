@@ -143,6 +143,121 @@ namespace hello::kit {
             return std::nullopt;
         }
 
+        /// One directory decoded, and the samples it holds.
+        struct DecodedDirectory {
+            VoiceBankDirectory directory;
+            QList<VoiceSample> samples;
+        };
+
+        /// Decodes \a directory of the bank at \a root in \a given , or leaves out what had to
+        /// be decoded where \a given is nothing.
+        DecodedDirectory decodeDirectory(const VoiceBankDirectorySource &directory,
+                                         const fs::path &root, int directoryIndex,
+                                         const std::optional<TextCodec> &given,
+                                         DiagnosticList &diagnostics) {
+            DecodedDirectory out;
+            auto &decoded = out.directory;
+            const auto absolute = directory.path.empty() ? root : root / directory.path;
+
+            decoded.path = directory.path;
+            decoded.config = directory.config;
+
+            // A directory nobody can name an encoding for loses only what had to be decoded.
+            // Its samples are still reachable by file name, which needed no encoding, and that
+            // is how a bank without an oto.ini is sung anyway.
+            std::optional<TextCodec> codec;
+            if (directory.needsCharset()) {
+                codec = given;
+                if (codec) {
+                    decoded.charset = codec->name();
+                } else {
+                    decoded.leftOut = true;
+                }
+            }
+
+            // Which audio files an entry already speaks for, so that the rest are added as
+            // samples of their own afterwards.
+            QSet<QString> claimed;
+
+            if (codec) {
+                Decoder text(*codec);
+
+                if (directory.character) {
+                    const auto &from = *directory.character;
+                    VoiceCharacter character;
+                    character.name = text(from.name);
+                    character.image = text(from.image);
+                    character.sample = text(from.sample);
+                    character.author = text(from.author);
+                    character.web = text(from.web);
+                    for (const auto &line : from.extraLines) {
+                        character.extraLines.push_back(text(line));
+                    }
+                    decoded.character = character;
+                }
+                if (!directory.readme.isEmpty()) {
+                    decoded.readme = text(directory.readme);
+                }
+                if (directory.prefixMap) {
+                    QMap<int, VoicePrefix> map;
+                    for (const auto &[noteNum, item] : directory.prefixMap->map) {
+                        map.insert(noteNum, VoicePrefix{text(item.prefix), text(item.suffix)});
+                    }
+                    decoded.prefixMap = map;
+                }
+
+                if (directory.oto) {
+                    for (const auto &[file, entries] : directory.oto->contents) {
+                        // The name is in the bank's encoding, so it names a file only once
+                        // decoded. Taken as it stands it would be read in the system's code page,
+                        // and name another file wherever the two differ.
+                        const auto fileName = text(file);
+                        const auto path = absolute / fs::path(fileName.toStdU16String());
+                        claimed.insert(fileName);
+                        for (const auto &entry : entries) {
+                            VoiceSample sample;
+                            sample.path = path;
+                            sample.directory = directoryIndex;
+                            sample.fileName = fileName;
+                            sample.alias = text(entry.alias);
+                            sample.offset = entry.offset;
+                            sample.consonant = entry.consonant;
+                            sample.cutoff = entry.cutoff;
+                            sample.preUtterance = entry.preUtterance;
+                            sample.voiceOverlap = entry.voiceOverlap;
+                            sample.hasEntry = true;
+                            std::copy(std::begin(entry.spellings), std::end(entry.spellings),
+                                      sample.spellings.begin());
+                            out.samples.push_back(sample);
+                        }
+                    }
+                }
+
+                if (text.lossy()) {
+                    decoded.lossy = true;
+                    complain(diagnostics,
+                             VoiceBank::tr(
+                                 "Some of the text in \"%1\" is not valid %2 and reads as empty. "
+                                 "Nothing there will be saved, since saving would write the empty "
+                                 "text back.")
+                                 .arg(displayed(directory.path), codec->name()));
+                }
+            }
+
+            for (const auto &name : directory.audioFiles) {
+                if (claimed.contains(QString::fromStdU16String(name.u16string()))) {
+                    continue;
+                }
+                VoiceSample sample;
+                sample.path = absolute / name;
+                sample.directory = directoryIndex;
+                sample.fileName = QString::fromStdU16String(name.u16string());
+                out.samples.push_back(sample);
+            }
+
+            return out;
+        }
+
         /// Encodes one directory's UTAU files, which is what saving writes and what opening
         /// takes as the baseline to compare against.
         ///
@@ -269,6 +384,16 @@ namespace hello::kit {
 
     }
 
+    bool utauReadsHere(const QString &charset) {
+#ifdef Q_OS_WIN
+        const TextCodec codec(charset);
+        return codec.isValid() && codec.name() == TextCodec(TextCodec::systemName()).name();
+#else
+        Q_UNUSED(charset)
+        return false;
+#endif
+    }
+
     std::optional<VoiceBank> VoiceBank::open(const fs::path &root,
                                              VoiceBankCharsetSelector *selector,
                                              DiagnosticList &diagnostics) {
@@ -286,107 +411,14 @@ namespace hello::kit {
         bank.m_root = source.root();
 
         for (const auto &directory : source.directories()) {
-            const auto absolute =
-                directory.path.empty() ? source.root() : source.root() / directory.path;
-            const int directoryIndex = int(bank.m_directories.size());
-
-            VoiceBankDirectory decoded;
-            decoded.path = directory.path;
-            decoded.config = directory.config;
-
-            // A directory nobody can name an encoding for loses only what had to be decoded.
-            // Its samples are still reachable by file name, which needed no encoding, and that
-            // is how a bank without an oto.ini is sung anyway.
             std::optional<TextCodec> codec;
             if (directory.needsCharset()) {
                 codec = codecFor(directory, selector, diagnostics);
-                if (codec) {
-                    decoded.charset = codec->name();
-                } else {
-                    decoded.leftOut = true;
-                }
             }
-
-            // Which audio files an entry already speaks for, so that the rest are added as
-            // samples of their own afterwards.
-            QSet<QString> claimed;
-
-            if (codec) {
-                Decoder text(*codec);
-
-                if (directory.character) {
-                    const auto &from = *directory.character;
-                    VoiceCharacter character;
-                    character.name = text(from.name);
-                    character.image = text(from.image);
-                    character.sample = text(from.sample);
-                    character.author = text(from.author);
-                    character.web = text(from.web);
-                    for (const auto &line : from.extraLines) {
-                        character.extraLines.push_back(text(line));
-                    }
-                    decoded.character = character;
-                }
-                if (!directory.readme.isEmpty()) {
-                    decoded.readme = text(directory.readme);
-                }
-                if (directory.prefixMap) {
-                    QMap<int, VoicePrefix> map;
-                    for (const auto &[noteNum, item] : directory.prefixMap->map) {
-                        map.insert(noteNum, VoicePrefix{text(item.prefix), text(item.suffix)});
-                    }
-                    decoded.prefixMap = map;
-                }
-
-                if (directory.oto) {
-                    for (const auto &[file, entries] : directory.oto->contents) {
-                        // The name is in the bank's encoding, so it names a file only once
-                        // decoded. Taken as it stands it would be read in the system's code page,
-                        // and name another file wherever the two differ.
-                        const auto fileName = text(file);
-                        const auto path = absolute / fs::path(fileName.toStdU16String());
-                        claimed.insert(fileName);
-                        for (const auto &entry : entries) {
-                            VoiceSample sample;
-                            sample.path = path;
-                            sample.directory = directoryIndex;
-                            sample.fileName = fileName;
-                            sample.alias = text(entry.alias);
-                            sample.offset = entry.offset;
-                            sample.consonant = entry.consonant;
-                            sample.cutoff = entry.cutoff;
-                            sample.preUtterance = entry.preUtterance;
-                            sample.voiceOverlap = entry.voiceOverlap;
-                            sample.hasEntry = true;
-                            std::copy(std::begin(entry.spellings), std::end(entry.spellings),
-                                      sample.spellings.begin());
-                            bank.m_samples.push_back(sample);
-                        }
-                    }
-                }
-
-                if (text.lossy()) {
-                    decoded.lossy = true;
-                    complain(diagnostics,
-                             tr("Some of the text in \"%1\" is not valid %2 and reads as empty. "
-                                "Nothing there will be saved, since saving would write the empty "
-                                "text back.")
-                                 .arg(displayed(directory.path), codec->name()));
-                }
-            }
-
-            for (const auto &name : directory.audioFiles) {
-                if (claimed.contains(QString::fromStdU16String(name.u16string()))) {
-                    continue;
-                }
-                VoiceSample sample;
-                sample.path = absolute / name;
-                sample.directory = directoryIndex;
-                sample.fileName = QString::fromStdU16String(name.u16string());
-                bank.m_samples.push_back(sample);
-            }
-
-            bank.m_directories.push_back(decoded);
+            auto decoded = decodeDirectory(directory, source.root(), int(bank.m_directories.size()),
+                                           codec, diagnostics);
+            bank.m_samples += decoded.samples;
+            bank.m_directories.push_back(decoded.directory);
 
             Book book;
             book.files = directory.files;
@@ -394,24 +426,8 @@ namespace hello::kit {
         }
 
         bank.reindex();
-
-        // What each directory would be written as right now, which is what a save compares
-        // against to leave alone the files nobody changed. Taken from the encoder and not from
-        // the bytes on disk, so that a file only this program would spell differently, with LF
-        // line ends or out of order, is not rewritten by a save that did not touch it.
         for (int i = 0; i < bank.m_directories.size(); ++i) {
-            const auto &directory = bank.m_directories.at(i);
-            if (directory.leftOut) {
-                continue;
-            }
-            DiagnosticList ignored;
-            const auto encoded =
-                encodeDirectory(directory, i, bank.m_samples, bank.m_books.at(i).files, ignored);
-            if (encoded) {
-                for (const auto &[file, bytes] : *encoded) {
-                    bank.m_books[i].baseline[file] = digestOf(bytes);
-                }
-            }
+            bank.takeBaseline(i);
         }
 
         if (bank.m_samples.isEmpty()) {
@@ -428,8 +444,73 @@ namespace hello::kit {
     void VoiceBank::setDirectory(int index, VoiceBankDirectory directory) {
         auto &slot = m_directories[index];
         directory.path = slot.path;
+
+        // A new encoding is written down even where no file comes out different in it, as
+        // with plain ASCII. Otherwise the choice would be lost, and the first text that does
+        // differ would be written in the old one.
+        if (TextCodec(directory.charset).name() != TextCodec(slot.charset).name()) {
+            m_books[index].remember = true;
+        }
         slot = std::move(directory);
         reindex();
+    }
+
+    bool VoiceBank::reread(int index, const QString &charset, DiagnosticList &diagnostics) {
+        if (index < 0 || index >= m_directories.size()) {
+            fail(diagnostics, tr("This bank has no directory %1.").arg(index));
+            return false;
+        }
+        const TextCodec codec(charset);
+        if (!codec.isValid()) {
+            fail(diagnostics, tr("The encoding \"%1\" is not available.").arg(charset));
+            return false;
+        }
+        const auto source =
+            VoiceBankSource::readDirectory(m_root, m_directories.at(index).path, diagnostics);
+        if (!source) {
+            return false;
+        }
+
+        DiagnosticList decoding;
+        auto decoded = decodeDirectory(*source, m_root, index, codec, decoding);
+        const bool lossy = decoded.directory.lossy;
+        diagnostics += decoding;
+
+        // In the place the directory's samples had, so that the order of the bank, and with it
+        // which of two equal aliases wins, stays what it was.
+        QList<VoiceSample> samples;
+        bool placed = false;
+        for (const auto &sample : std::as_const(m_samples)) {
+            if (sample.directory != index) {
+                samples.push_back(sample);
+            } else if (!placed) {
+                samples += decoded.samples;
+                placed = true;
+            }
+        }
+        if (!placed) {
+            samples += decoded.samples;
+        }
+
+        m_samples = std::move(samples);
+        m_directories[index] = decoded.directory;
+        Book book;
+        book.files = source->files;
+
+        // An encoding that does not read the files is not one to write down. The user can see
+        // what it made of them, and choose again.
+        book.remember = !lossy;
+        m_books[index] = book;
+
+        reindex();
+        takeBaseline(index);
+        return true;
+    }
+
+    void VoiceBank::rememberCharset(int index) {
+        if (index >= 0 && index < m_books.size()) {
+            m_books[index].remember = true;
+        }
     }
 
     bool VoiceBank::save(DiagnosticList &diagnostics) {
@@ -508,7 +589,7 @@ namespace hello::kit {
 
             // The encoding goes with the files. Without it written down, the next open would
             // have to ask again, and a record naming another one would read them wrong.
-            if (changed) {
+            if (changed || (book.remember && !directory.charset.isEmpty())) {
                 const auto recorded = book.files.find(VoiceBankFile::Config);
                 if (recorded != book.files.end() && !directory.config) {
                     fail(diagnostics,
@@ -572,6 +653,7 @@ namespace hello::kit {
             book.files[write.file] =
                 VoiceBankFileRecord{write.path.filename(), digestOf(write.bytes)};
             if (write.file == VoiceBankFile::Config) {
+                book.remember = false;
                 auto &directory = m_directories[write.directory];
                 VoiceBankConfig config = directory.config.value_or(VoiceBankConfig());
                 config.charset = TextCodec(directory.charset).name();
@@ -581,6 +663,26 @@ namespace hello::kit {
             }
         }
         return true;
+    }
+
+    void VoiceBank::takeBaseline(int index) {
+        // What the directory would be written as right now, which is what a save compares
+        // against to leave alone the files nobody changed. Taken from the encoder and not from
+        // the bytes on disk, so that a file only this program would spell differently, with LF
+        // line ends or out of order, is not rewritten by a save that did not touch it.
+        auto &book = m_books[index];
+        book.baseline.clear();
+        const auto &directory = m_directories.at(index);
+        if (directory.leftOut) {
+            return;
+        }
+        DiagnosticList ignored;
+        const auto encoded = encodeDirectory(directory, index, m_samples, book.files, ignored);
+        if (encoded) {
+            for (const auto &[file, bytes] : *encoded) {
+                book.baseline[file] = digestOf(bytes);
+            }
+        }
     }
 
     void VoiceBank::reindex() {
