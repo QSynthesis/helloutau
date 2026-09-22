@@ -131,6 +131,18 @@ resampler / wavtool 的命令行参数由 `utau::ResamplerArguments::arguments()
 - 前缀：仓库级 CMake 变量 `HELLO_`，模块级 CMake 变量与函数 `HELLOKIT_` / `hellokit_`、`HELLOUTAU_` / `helloutau_`，子库导出宏 `HELLOKIT_DOCUMENT_EXPORT` 这类，头文件保护跟 include 路径走（`HELLOKIT_DOCUMENT_PAYLOADCODEC_H`）。**模块级的前缀必须显式给**，`qm_setup_build_repo_helpers()` 默认取 `PROJECT_NAME`，而子目录里那个已经是 `HelloKitDocument` 了。
 - **带 `Q_OBJECT` 的头文件必须进目标的 `SOURCES`**，AUTOMOC 只扫 `SOURCES`。头在 `include/` 下不会被源文件 glob 捞到，漏了就链接时缺四个 moc 符号。
 
+文体（注释、文档、README、帮助文本、诊断消息通用）：
+
+- **采用正式的技术写作文体。** 注释与文档是规范性文本而非叙述。每句陈述一项事实、约束或理由，不写铺垫、感想和修辞。
+- **不拟人。** 代码、文件、格式、程序和测试不作为有意志的主语：不写 says、tells、knows、asks、wants、means、cares、decides、promises、is told，也不写「它说」「它知道」「它不认」「它想要」。改用 returns、indicates、records、specifies、reports、detects、requires、rejects，或「返回」「表示」「记录」「规定」「报告」「拒绝」。用户、作者、调用方等真实行为主体可以作主语。
+- **用术语，不用描述性转述。** 写 invalid byte sequence，不写 bytes that do not decode。写 Basic Multilingual Plane、unpaired surrogate、reverse mapping、unrepresentable character，不写 the basic plane、half of one、the way back、what cannot be spelled。没有通用术语时，首次出现给出定义，之后始终沿用同一名称。
+- **标题、分组名和列表标签用名词或名词短语。** 写 Motivation、Behavior、Supported code pages、Rationale，不写 Why、What it does、What it holds、How it works。能用名词表达时，不用 what 引导的名词从句作主语或宾语：写 the requested encoding，不写 what the user asked for。
+- **条件用 if，where 只表示处所。** 不写 empty where there is none，写 empty if absent。不写 nothing where the file is missing，写 \c std::nullopt if the file is missing。不用 one 回指前文名词（such a one、the one it wants），直接重复该名词。
+- **不用口语短语。** 不写 whatever else、for good、as it stands、on its own、on the way out、at a glance、there and back、is given up on、the rest of why、and all 这类说法，改为准确的书面表达。
+- **句子完整。** 不写片段句、逗号粘连句（两个独立分句只用逗号连接）和反问句。不以 So、And so、Which is why、That is why、Hence 开头叙述因果，改为在同一句中用 because、therefore 表明。不对读者使用第二人称。
+- **函数说明以动词开头**（Returns、Decodes、Reads、Rejects）。`\return` 写明每种情况的返回值。布尔查询写 Returns whether …。
+- 中文文本同样适用：用书面语，不用「别」「搞」「就行」「得（表必须）」「啥」「拿来」「反正」「其实」「说白了」「这玩意儿」等口语词。标题不用「为什么」「怎么做」，改用「动机」「设计理由」「实现方式」。「不要」「必须」等规范性祈使句不属于口语，照常使用。
+
 注释：
 
 - LLVM 风格，`///` 写在声明上方。**从不用 `\brief`。**
