@@ -5,31 +5,37 @@
 #include <string>
 #include <string_view>
 
-/// What goes over the two pipes between this program and hello::kit::FileSystemWatcher .
+/// The protocol between this program and hello::kit::FileSystemWatcher over standard input and
+/// output. The usage text in main.cpp repeats it and must be kept in sync.
 ///
-/// Lines of UTF-8, one message each. A path is written with \c % , line feed and carriage
-/// return as \c %25 , \c %0A and \c %0D , since a file name may hold a line break where the
-/// system allows one, and a line protocol would otherwise take it for the end of the message.
+/// Each message is one line of UTF-8 text. In paths, \c % , line feed and carriage return are
+/// encoded as \c %25 , \c %0A and \c %0D , because a file name may contain a line break where
+/// the system permits one, which a line-based protocol would otherwise read as the end of the
+/// message.
 ///
-/// **In**, from the watcher:
+/// **Input**, from the client:
 ///
-/// - \c roots , then one root per line, then \c # . Replaces everything followed so far.
-/// - \c exit . End of input does the same, which is what the watcher's process ending looks like.
+/// - \c roots , followed by one root per line and a line containing only \c # . Replaces the set
+///   of monitored roots.
+/// - \c exit . End of input has the same effect, and occurs when the client process exits.
 ///
-/// **Out**, to the watcher:
+/// **Output**, to the client:
 ///
-/// - \c greeting , first and once, so that the other side knows it started the right program.
-/// - <tt>dirty \<path\></tt> : what is directly in this directory may have changed, its
-///   listing or the contents of a file in it.
-/// - <tt>recdirty \<path\></tt> : this directory and everything under it may have changed.
-///   Sent for a directory that appeared, and for a whole root when events were lost.
-/// - <tt>gone \<root\></tt> : the root is not there any more, or never was.
-/// - <tt>unwatchable \<root\></tt> : nothing will be reported for this root, and it has to be
-///   looked at some other way.
-/// - \c ok : the roots last sent are followed, and a change made from now on is reported.
+/// - \c greeting , sent once at startup, which lets the client verify that it started the
+///   correct program.
+/// - \c ok : the most recently received roots are monitored, and subsequent changes are
+///   reported.
+/// - <tt>dirty \<path\></tt> : the direct contents of the directory may have changed, either
+///   its listing or the contents of a file in it.
+/// - <tt>recdirty \<path\></tt> : the directory and its entire subtree may have changed. Sent
+///   for a newly created directory, and for a root after events were lost.
+/// - <tt>gone \<root\></tt> : the root does not exist.
+/// - <tt>unwatchable \<root\></tt> : the root cannot be monitored, and changes to it must be
+///   detected by other means.
+/// - <tt>unknown \<line\></tt> : the input line was not recognized. Encoded as a path.
 ///
-/// Every path out starts with a root exactly as it came in, so that the other side can tell
-/// which of its roots a message is about by comparing text.
+/// Every reported path begins with a root exactly as received, so that the client can identify
+/// the root by string comparison. The remainder of the path uses the native separator.
 namespace fswatcher {
 
     inline constexpr char greeting[] = "hello-fswatcher 1";
@@ -37,7 +43,7 @@ namespace fswatcher {
     std::string escape(std::string_view path);
     std::string unescape(std::string_view text);
 
-    /// Writes whole lines to standard output, from any thread.
+    /// Writes complete lines to standard output. Safe to call from any thread.
     class Output {
     public:
         void line(std::string_view word);

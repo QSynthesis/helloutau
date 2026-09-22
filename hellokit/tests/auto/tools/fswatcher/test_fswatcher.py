@@ -81,8 +81,31 @@ class Program:
         return self.process.returncode
 
 
+def check_arguments(exe):
+    """--help prints the protocol and exits. Any other argument is rejected on standard error,
+    leaving standard output, which the client parses as the protocol, empty."""
+    failures = 0
+    shown = subprocess.run([exe, "--help"], stdin=subprocess.DEVNULL, capture_output=True,
+                           timeout=PATIENCE)
+    text = shown.stdout.decode("utf-8")
+    words = ("Usage: hello-fswatcher", "hello-fswatcher 1", "roots", "exit", "ok", "dirty",
+             "recdirty", "gone", "unwatchable", "unknown", "%25", "%0A", "%0D")
+    if shown.returncode != 0 or not all(word in text for word in words):
+        print("FAIL --help:", shown.returncode, [w for w in words if w not in text])
+        failures += 1
+
+    refused = subprocess.run([exe, "--bogus"], stdin=subprocess.DEVNULL, capture_output=True,
+                             timeout=PATIENCE)
+    if refused.returncode != 2 or refused.stdout or b"--bogus" not in refused.stderr:
+        print("FAIL unknown argument:", refused.returncode, refused.stdout, refused.stderr)
+        failures += 1
+    return failures
+
+
 def main():
     exe = sys.argv[1]
+    if check_arguments(exe):
+        return 1
     base = os.path.realpath(tempfile.mkdtemp(prefix="fsw-"))
     program = None
     try:
