@@ -3,12 +3,12 @@
 #include <algorithm>
 #include <fstream>
 #include <iterator>
-#include <set>
 #include <system_error>
 
 #include <QtCore/QCoreApplication>
 #include <QtCore/QCryptographicHash>
 #include <QtCore/QSaveFile>
+#include <QtCore/QSet>
 
 #include <hellokit/Support/TextCodec.h>
 
@@ -132,7 +132,9 @@ namespace hello::kit {
                 const auto u8 = entry.path().filename().u8string();
                 std::string name(u8.begin(), u8.end());
                 for (auto &c : name) {
-                    c = char(std::tolower(static_cast<unsigned char>(c)));
+                    if (c >= 'A' && c <= 'Z') {
+                        c = char(c - 'A' + 'a');
+                    }
                 }
                 if (name == lowerCase) {
                     return entry.path();
@@ -307,7 +309,7 @@ namespace hello::kit {
 
             // Which audio files an entry already speaks for, so that the rest are added as
             // samples of their own afterwards.
-            std::set<std::string> claimed;
+            QSet<QString> claimed;
 
             if (codec) {
                 Decoder text(*codec);
@@ -338,12 +340,17 @@ namespace hello::kit {
 
                 if (directory.oto) {
                     for (const auto &[file, entries] : directory.oto->contents) {
-                        claimed.insert(file);
+                        // The name is in the bank's encoding, so it names a file only once
+                        // decoded. Taken as it stands it would be read in the system's code page,
+                        // and name another file wherever the two differ.
+                        const auto fileName = text(file);
+                        const auto path = absolute / fs::path(fileName.toStdU16String());
+                        claimed.insert(fileName);
                         for (const auto &entry : entries) {
                             VoiceSample sample;
-                            sample.path = absolute / fs::path(file);
+                            sample.path = path;
                             sample.directory = directoryIndex;
-                            sample.fileName = text(file);
+                            sample.fileName = fileName;
                             sample.alias = text(entry.alias);
                             sample.offset = entry.offset;
                             sample.consonant = entry.consonant;
@@ -369,7 +376,7 @@ namespace hello::kit {
             }
 
             for (const auto &name : directory.audioFiles) {
-                if (claimed.count(name.string()) != 0) {
+                if (claimed.contains(QString::fromStdU16String(name.u16string()))) {
                     continue;
                 }
                 VoiceSample sample;

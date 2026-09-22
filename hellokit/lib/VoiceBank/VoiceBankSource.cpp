@@ -28,11 +28,18 @@ namespace hello::kit {
             return QString::fromStdU16String(path.u16string());
         }
 
-        /// Lower case, for comparing a name against one this program knows.
+        /// Lower case, for comparing a name against one this program knows, which are all ASCII.
+        ///
+        /// UTF-8 and not path::string() , which on Windows is the system code page and throws on
+        /// a name that the code page cannot spell. Only ASCII is folded, so that no byte of a
+        /// longer character is touched whatever the locale says.
         std::string folded(const fs::path &name) {
-            auto s = name.string();
+            const auto u8 = name.u8string();
+            std::string s(u8.begin(), u8.end());
             for (auto &c : s) {
-                c = char(std::tolower(static_cast<unsigned char>(c)));
+                if (c >= 'A' && c <= 'Z') {
+                    c = char(c - 'A' + 'a');
+                }
             }
             return s;
         }

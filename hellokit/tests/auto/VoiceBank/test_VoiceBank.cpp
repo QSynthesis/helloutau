@@ -378,6 +378,38 @@ private Q_SLOTS:
         QVERIFY(sample->alias.isEmpty());
     }
 
+    // A name no code page spells. On Windows the narrow form of a path is the system code page,
+    // and asking for it throws on a name like this, which took the whole bank down with it.
+    void a_file_name_the_code_page_cannot_spell_is_read() {
+        write(QString::fromUtf8("\xf0\x9f\x98\x80.wav"), "RIFF");
+
+        DiagnosticList diagnostics;
+        const auto bank = VoiceBank::open(root(), nullptr, diagnostics);
+        QVERIFY(bank.has_value());
+        QVERIFY(bank->find(60, QString::fromUtf8("\xf0\x9f\x98\x80")));
+    }
+
+    // The name an oto.ini gives is in the bank's encoding, not the system's. Read as the
+    // system's it names another file, which fails on every Windows whose code page is not the
+    // bank's: here UTF-8, which no Windows code page is by default.
+    void an_entry_names_its_file_in_the_bank_encoding() {
+        write(QStringLiteral("oto.ini"), "\xe3\x81\x82.wav=a,1,2,3,4,5\n");
+        write(QString::fromUtf8("\xe3\x81\x82.wav"), "RIFF");
+
+        FixedCharsetSelector selector(QStringLiteral("UTF-8"));
+        DiagnosticList diagnostics;
+        const auto bank = VoiceBank::open(root(), &selector, diagnostics);
+        QVERIFY(bank.has_value());
+
+        const auto *sample = bank->find(60, QStringLiteral("a"));
+        QVERIFY(sample);
+        QCOMPARE(sample->path, root() / std::filesystem::path(u"あ.wav"));
+
+        // One file, one entry. The file is claimed by the entry and not added again as a bare
+        // sample beside it.
+        QCOMPARE(bank->samples().size(), 1);
+    }
+
 private:
     static const VoiceBankDirectory *directoryAt(const VoiceBank &bank, const char *relative) {
         for (const auto &directory : bank.directories()) {
