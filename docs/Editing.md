@@ -261,7 +261,7 @@ set /tracks/0/notes/12/intensity null
 | **转换**：`setDirectory()` 改 `charset`，再 `save()` | 变 | 不变 | 想改成 UTF-8 之类 |
 | **重新解读**：`reread()` | 不变 | 变 | 当初选错了编码、读出乱码，或者没选、目录被跳过了 |
 
-转换之前问 `utauReadsHere()`：答否就警告**原版 UTAU 在这台机器上读不回来**，`oto.ini` 里的非 ASCII 文件名也会找不到 wav。重新解读丢掉该目录没存的改动，这是它的意思所在，不是副作用。打开时用户答过的编码用 `rememberCharset()` 让下次存盘记下来，否则每次打开都要再问一遍。
+转换之前问 `VoiceBank::isCharsetReadableByUtau()`：答否就警告**原版 UTAU 在这台机器上读不回来**，`oto.ini` 里的非 ASCII 文件名也会找不到 wav。重新解读丢掉该目录没存的改动，这是它的意思所在，不是副作用。打开时用户答过的编码用 `rememberCharset()` 让下次存盘记下来，否则每次打开都要再问一遍。
 
 ## 日志接缝
 

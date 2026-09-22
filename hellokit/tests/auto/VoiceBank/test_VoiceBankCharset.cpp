@@ -287,13 +287,13 @@ private Q_SLOTS:
 
     void whether_utau_reads_an_encoding_here() {
 #ifdef Q_OS_WIN
-        QVERIFY(utauReadsHere(TextCodec::systemName()));
-        QCOMPARE(utauReadsHere(QStringLiteral("UTF-8")),
+        QVERIFY(VoiceBank::isCharsetReadableByUtau(TextCodec::systemName()));
+        QCOMPARE(VoiceBank::isCharsetReadableByUtau(QStringLiteral("UTF-8")),
                  TextCodec(TextCodec::systemName()).isUtf8());
 #else
-        QVERIFY(!utauReadsHere(TextCodec::systemName()));
+        QVERIFY(!VoiceBank::isCharsetReadableByUtau(TextCodec::systemName()));
 #endif
-        QVERIFY(!utauReadsHere(QStringLiteral("Klingon-1")));
+        QVERIFY(!VoiceBank::isCharsetReadableByUtau(QStringLiteral("Klingon-1")));
     }
 };
 

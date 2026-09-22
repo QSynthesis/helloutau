@@ -140,20 +140,6 @@ namespace hello::kit {
         std::array<std::string, 5> spellings;
     };
 
-    /// Whether UTAU on this machine reads the files of a directory in \a charset as they are.
-    ///
-    /// UTAU reads \c oto.ini , \c prefix.map and \c character.txt in the code page of the
-    /// machine it runs on, and nothing in a bank says otherwise. So a bank in any other
-    /// encoding, UTF-8 included, is mojibake to UTAU there, and so are the file names in its
-    /// \c oto.ini , which then name files UTAU cannot find.
-    ///
-    /// This is what a warning before changing an encoding asks. It answers for this machine
-    /// only: a Shift_JIS bank reads in UTAU on a Japanese machine and not on a Chinese one.
-    ///
-    /// \return always false off Windows, where there is no code page UTAU would use
-    /// \note UTF-8 with a byte order mark has not been tried in UTAU.
-    HELLOKIT_VOICEBANK_EXPORT bool utauReadsHere(const QString &charset);
-
     /// A voice bank, decoded and ready to be asked what sings what.
     ///
     /// \sa VoiceBankSource for the step before this one, and for why there are two.
@@ -173,6 +159,20 @@ namespace hello::kit {
         static std::optional<VoiceBank> fromSource(const VoiceBankSource &source,
                                                    VoiceBankCharsetSelector *selector,
                                                    DiagnosticList &diagnostics);
+
+        /// Whether UTAU on this machine reads the files of a directory in \a charset as they are.
+        ///
+        /// UTAU reads \c oto.ini , \c prefix.map and \c character.txt in the code page of the
+        /// machine it runs on, and nothing in a bank says otherwise. So a bank in any other
+        /// encoding, UTF-8 included, is mojibake to UTAU there, and so are the file names in its
+        /// \c oto.ini , which then name files UTAU cannot find.
+        ///
+        /// This is what a warning before changing an encoding asks. It answers for this machine
+        /// only: a Shift_JIS bank reads in UTAU on a Japanese machine and not on a Chinese one.
+        ///
+        /// \return always false off Windows, where there is no code page UTAU would use
+        /// \note UTF-8 with a byte order mark has not been tried in UTAU.
+        static bool isCharsetReadableByUtau(const QString &charset);
 
         const std::filesystem::path &root() const {
             return m_root;

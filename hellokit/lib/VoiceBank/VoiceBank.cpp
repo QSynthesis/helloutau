@@ -384,7 +384,7 @@ namespace hello::kit {
 
     }
 
-    bool utauReadsHere(const QString &charset) {
+    bool VoiceBank::isCharsetReadableByUtau(const QString &charset) {
 #ifdef Q_OS_WIN
         const TextCodec codec(charset);
         return codec.isValid() && codec.name() == TextCodec(TextCodec::systemName()).name();
