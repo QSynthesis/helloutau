@@ -403,7 +403,7 @@ private Q_SLOTS:
 
         const auto *sample = bank->find(60, QStringLiteral("a"));
         QVERIFY(sample);
-        QCOMPARE(sample->path, root() / std::filesystem::path(u"あ.wav"));
+        QCOMPARE(sample->path, root() / std::filesystem::path(u"\u3042.wav"));
 
         // One file, one entry. The file is claimed by the entry and not added again as a bare
         // sample beside it.
