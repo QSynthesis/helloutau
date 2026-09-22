@@ -1,8 +1,8 @@
 # QtTest based automatic tests.
 #
-# One executable per test source, rather than a single binary linking every case. A crash, a hang
-# or a static initialization failure then isolates to the class under test instead of taking the
-# whole suite down with it, and \c ctest can run the cases in parallel.
+# One executable per test source rather than a single binary containing every case. A crash, a
+# hang or a static initialization failure is then confined to the class under test instead of
+# aborting the entire suite, and \c ctest can run the cases in parallel.
 
 qm_find_qt(Test)
 
@@ -27,7 +27,7 @@ function(add_auto_test _src)
     get_filename_component(_name ${_src} NAME_WE)
     add_executable(${_name} ${_src})
 
-    # The test class lives in the source file, so moc has to run over it.
+    # The test class is declared in the source file, so moc must process it.
     set_target_properties(${_name} PROPERTIES AUTOMOC ON)
 
     target_link_libraries(${_name} PRIVATE Qt${QT_VERSION_MAJOR}::Test
@@ -52,9 +52,9 @@ function(add_auto_test _src)
 
     add_test(NAME ${_name} COMMAND $<TARGET_FILE:${_name}>)
 
-    # Windows looks for a DLL beside the executable and then along PATH, and Qt is in neither
-    # place for a build tree. Without this a test that reaches Qt dies at load time with
-    # 0xc0000135 and no message, which reads as a crash rather than as a missing library.
+    # Windows searches for a DLL beside the executable and then along PATH, and in a build tree
+    # Qt is in neither location. Without this, a test that uses Qt terminates at load time with
+    # 0xc0000135 and no message, which appears as a crash rather than as a missing library.
     if(WIN32 AND TARGET Qt${QT_VERSION_MAJOR}::Core)
         set_tests_properties(${_name} PROPERTIES ENVIRONMENT_MODIFICATION
             "PATH=path_list_prepend:$<SHELL_PATH:$<TARGET_FILE_DIR:Qt${QT_VERSION_MAJOR}::Core>>"

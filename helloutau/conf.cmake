@@ -5,7 +5,7 @@ include(GNUInstallDirs)
 # ----------------------------------
 set(HELLOUTAU_INCLUDE_DIR "include")
 
-# The editor's own libraries ship their headers, so that a plugin can be built against them.
+# The editor libraries install their headers, so that plugins can be built against them.
 set(HELLOUTAU_DEVEL ON)
 
 set(HELLOUTAU_INSTALL_CONFIG_TEMPLATE

@@ -5,14 +5,14 @@
 #     -Dwolf-midi_DIR=<vcpkg>/installed/<triplet>/share/wolf-midi
 #     -Dwinacp_DIR=<prefix>/lib/cmake/winacp
 #
-# stdcorelib and stdutau are moving alongside this repository, so neither is taken from a vcpkg
-# release. Build and install each one yourself.
+# stdcorelib and stdutau are developed alongside this repository, so neither is taken from a vcpkg
+# release. Each must be built and installed separately.
 #
 # Included from the root rather than added as a subdirectory, so that the imported targets are in
 # scope for every module.
 
-# The DLL is copied into the runtime output directory because vcpkg's applocal deployment does not
-# cover a package found this way, and both the application and the test executables land there.
+# The DLL is copied into the runtime output directory, because the applocal deployment of vcpkg
+# does not cover packages found this way, and both the application and the tests run from there.
 function(_hello_find_external _package _target _hint)
     if(NOT ${_package}_DIR)
         message(FATAL_ERROR "${_package}_DIR is not set. ${_hint}")
@@ -39,12 +39,13 @@ _hello_find_external(stdcorelib stdcorelib::stdcorelib
 _hello_find_external(stdutau stdutau::stdutau
     "Build https://github.com/diffscope/stdutau and pass -Dstdutau_DIR=<prefix>/lib/cmake/stdutau.")
 
-# The MIDI file reader and writer. It is QMidiFile with Qt taken out of it, so it speaks
-# std::filesystem and std::vector and needs nothing from this side.
+# The MIDI file reader and writer, a version of QMidiFile without Qt. Its interface uses
+# std::filesystem and std::vector and has no dependencies on this repository.
 _hello_find_external(wolf-midi wolf-midi::wolf-midi
     "Install the wolf-midi vcpkg port and pass -Dwolf-midi_DIR=<vcpkg>/installed/<triplet>/share/wolf-midi.")
 
-# The Windows ANSI code pages as Windows converts them, on every system, which is how a UST or an
-# oto.ini written by UTAU comes out as it went in. See TextCodec.cpp for why not Qt or ICU.
+# Conversion of the Windows ANSI code pages, identical to that of Windows on every system, which a
+# UST or an oto.ini written by UTAU requires to round-trip unchanged. See TextCodec.cpp for the
+# reason Qt and ICU are not used.
 _hello_find_external(winacp winacp::winacp
     "Build https://github.com/QSynthesis/winacp and pass -Dwinacp_DIR=<prefix>/lib/cmake/winacp.")

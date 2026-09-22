@@ -31,8 +31,8 @@ elseif(MINGW)
     set(CMAKE_STATIC_LIBRARY_PREFIX "")
     set(CMAKE_SHARED_LIBRARY_PREFIX "")
 elseif(NOT WIN32)
-    # Windows has no position independent code to ask for, and clang targeting it is neither MSVC
-    # nor MINGW as far as CMake is concerned, so this has to turn on the platform rather than on
+    # Windows has no position-independent code option, and CMake considers clang targeting
+    # Windows to be neither MSVC nor MINGW, so this condition must test the platform rather than
     # the compiler.
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
 endif()
@@ -66,8 +66,8 @@ qm_init_directories()
 # ----------------------------------
 # Find third-party dependencies
 # ----------------------------------
-# Included rather than added as a subdirectory, so that the imported targets it creates are in
-# scope for every module.
+# Included rather than added as a subdirectory, so that its imported targets are visible to every
+# module.
 include(${CMAKE_CURRENT_SOURCE_DIR}/third-party/Dependencies.cmake)
 
 # ----------------------------------
