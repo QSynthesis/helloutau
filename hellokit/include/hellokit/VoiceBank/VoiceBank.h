@@ -3,6 +3,7 @@
 
 #include <array>
 #include <filesystem>
+#include <map>
 #include <optional>
 #include <string>
 
@@ -69,6 +70,13 @@ namespace hello::kit {
         /// \c oto.ini , but none of its text is. \warning Nothing of such a directory may be
         /// written back: its files were never read, and writing would replace them with nothing.
         bool leftOut = false;
+
+        /// Whether some of its text was not valid in \a charset .
+        ///
+        /// What did not decode reads as empty. The rest is here and usable, but a save refuses
+        /// to write any file of it that changed, since the empty text would be written back in
+        /// place of the original.
+        bool lossy = false;
 
         /// What \c hello-config.json here says, absent where there is none.
         std::optional<VoiceBankConfig> config;
@@ -196,8 +204,53 @@ namespace hello::kit {
         /// \warning The result points into this object and does not outlive it.
         const VoiceSample *find(int noteNum, const QString &lyric) const;
 
+        /// Replaces every sample, which is how an entry is changed, added or removed.
+        ///
+        /// A sample with no entry is the bare file and is not written. One naming a directory
+        /// this bank does not have makes save() refuse.
+        void setSamples(QList<VoiceSample> samples);
+
+        /// Replaces directory \a index , which is how its \c character.txt , \c prefix.map ,
+        /// \c readme.txt or encoding is changed. Its path stays what it was.
+        void setDirectory(int index, VoiceBankDirectory directory);
+
+        /// Writes back every file that is no longer what was read, each in its directory's
+        /// encoding, and nothing else.
+        ///
+        /// Everything is checked before anything is written, and one failure leaves every file
+        /// as it was. It refuses:
+        ///
+        /// - **text the encoding cannot hold.** It is never written as a question mark.
+        /// - **a file that changed on disk since it was read**, since that is somebody else's
+        ///   work. Opening the bank again is the way on.
+        /// - **a directory that was never read**, or text that did not decode, see
+        ///   VoiceBankDirectory::leftOut and VoiceBankDirectory::lossy .
+        ///
+        /// A directory that has anything written gets its encoding written down beside it in
+        /// \c hello-config.json , since a save is the user asking for files to be written there.
+        /// Each file is written beside itself and moved over, so nothing reading the bank ever
+        /// finds half of one.
+        ///
+        /// \warning All or nothing holds up to the first write. A disk that fails half way
+        ///          through leaves the files written so far written, and says which one failed.
+        bool save(DiagnosticList &diagnostics);
+
     private:
         VoiceBank() = default;
+
+        /// Brings the lookups and what the root describes up to date with the samples and
+        /// directories.
+        void reindex();
+
+        /// What save() needs to know about one directory's files and nobody else does.
+        struct Book {
+            /// What each file held on disk when it was read, or last written.
+            std::map<VoiceBankFile, VoiceBankFileRecord> files;
+            /// What each file would be written as with nothing changed. A file whose bytes
+            /// still come out as this is left alone.
+            std::map<VoiceBankFile, QByteArray> baseline;
+        };
+        QList<Book> m_books; // one per directory
 
         std::filesystem::path m_root;
         QList<VoiceBankDirectory> m_directories;

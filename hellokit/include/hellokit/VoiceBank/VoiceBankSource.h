@@ -2,7 +2,9 @@
 #define HELLOKIT_VOICEBANK_VOICEBANKSOURCE_H
 
 #include <filesystem>
+#include <map>
 #include <optional>
+#include <string_view>
 #include <vector>
 
 #include <QtCore/QCoreApplication>
@@ -21,6 +23,34 @@
 #include <hellokit/VoiceBank/VoiceBankConfig.h>
 
 namespace hello::kit {
+
+    /// The files of a voice bank directory that this library reads and writes back.
+    enum class VoiceBankFile {
+        Oto,
+        PrefixMap,
+        Character,
+        Readme,
+        Config,
+    };
+
+    /// The name a file is created under, in lower case. One that is already there keeps its
+    /// own, see VoiceBankFileRecord::name .
+    HELLOKIT_VOICEBANK_EXPORT const char *voiceBankFileName(VoiceBankFile file);
+
+    /// Which file \a foldedName is, given in lower case, or nothing for any other name.
+    HELLOKIT_VOICEBANK_EXPORT std::optional<VoiceBankFile>
+        voiceBankFileNamed(std::string_view foldedName);
+
+    /// One of those files as it was when it was read.
+    struct VoiceBankFileRecord {
+        /// Its name as it was found, which is the name it is written back under. A bank from
+        /// Windows may spell it \c OTO.INI , and where case matters that is another file.
+        std::filesystem::path name;
+
+        /// SHA-1 of the bytes that were read, which is how a save tells whether something else
+        /// has written the file since.
+        QByteArray digest;
+    };
 
     /// One directory of a voice bank as it was found, with nothing decoded.
     struct HELLOKIT_VOICEBANK_EXPORT VoiceBankDirectorySource {
@@ -46,6 +76,10 @@ namespace hello::kit {
 
         /// The audio files here, by name, in the order the directory listed them.
         std::vector<std::filesystem::path> audioFiles;
+
+        /// Every file above that was there and could be read. One that is missing here was not
+        /// there, or could not be read, and a save must not replace it in either case.
+        std::map<VoiceBankFile, VoiceBankFileRecord> files;
 
         /// Whether anything here has to be decoded before it can be read.
         bool needsCharset() const;
@@ -113,8 +147,9 @@ namespace hello::kit {
     /// \note open() writes nothing. Remembering an encoding means writing a
     ///       \c hello-config.json into the user's voice bank, and a scan is not the place to
     ///       decide that: a bank may sit on a read-only disk, and a user who only looked at a
-    ///       folder did not ask for a file to appear in it. The caller writes it with
-    ///       \c VoiceBankConfig::save() once the user has answered.
+    ///       folder did not ask for a file to appear in it. VoiceBank::save() writes it along
+    ///       with the first file it writes into a directory, and a caller that wants it sooner
+    ///       writes it with \c VoiceBankConfig::save() once the user has answered.
     class HELLOKIT_VOICEBANK_EXPORT VoiceBankSource {
         Q_DECLARE_TR_FUNCTIONS(hello::kit::VoiceBankSource)
     public:

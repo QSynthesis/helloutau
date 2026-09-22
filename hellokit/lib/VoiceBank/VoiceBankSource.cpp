@@ -4,6 +4,7 @@
 #include <system_error>
 
 #include <QtCore/QCoreApplication>
+#include <QtCore/QCryptographicHash>
 
 namespace hello::kit {
 
@@ -45,14 +46,22 @@ namespace hello::kit {
             return suffix == ".wav" || suffix == ".flac" || suffix == ".ogg";
         }
 
-        QByteArray readWhole(const fs::path &path) {
+        /// The whole file, or nothing where it cannot be read, which is not the same as empty.
+        std::optional<QByteArray> readWhole(const fs::path &path) {
             std::ifstream in(path, std::ios::binary);
             if (!in) {
-                return {};
+                return std::nullopt;
             }
             const std::string bytes((std::istreambuf_iterator<char>(in)),
                                     std::istreambuf_iterator<char>());
+            if (in.bad()) {
+                return std::nullopt;
+            }
             return QByteArray(bytes.data(), qsizetype(bytes.size()));
+        }
+
+        std::string_view textOf(const QByteArray &bytes) {
+            return std::string_view(bytes.constData(), size_t(bytes.size()));
         }
 
         /// Reads one directory. Subdirectories are collected into \a children rather than
@@ -83,9 +92,30 @@ namespace hello::kit {
                 }
 
                 const auto name = folded(entry.path().filename());
-                if (name == voiceBankConfigFileName) {
+                const auto kind = voiceBankFileNamed(name);
+                if (!kind) {
+                    if (isAudioName(name)) {
+                        directory.audioFiles.push_back(entry.path().filename());
+                    }
+                    continue;
+                }
+
+                // Read once, and parsed from what was read, so that the digest is of the very
+                // bytes the directory was built from.
+                const auto bytes = readWhole(entry.path());
+                if (!bytes) {
+                    complain(diagnostics, VoiceBankSource::tr("\"%1\" could not be read.")
+                                              .arg(displayed(entry.path())));
+                    continue;
+                }
+                directory.files[*kind] = VoiceBankFileRecord{
+                    entry.path().filename(),
+                    QCryptographicHash::hash(*bytes, QCryptographicHash::Sha1),
+                };
+
+                if (*kind == VoiceBankFile::Config) {
                     DiagnosticList ignored;
-                    directory.config = VoiceBankConfig::open(entry.path(), ignored);
+                    directory.config = VoiceBankConfig::fromJson(*bytes, ignored);
                     if (!directory.config) {
                         complain(diagnostics,
                                  VoiceBankSource::tr(
@@ -93,25 +123,20 @@ namespace hello::kit {
                                      "encoding has to be chosen again.")
                                      .arg(displayed(absolute)));
                     }
-                } else if (name == "oto.ini") {
+                } else if (*kind == VoiceBankFile::Oto) {
                     utau::OtoIni oto;
-                    if (oto.load(entry.path())) {
-                        directory.oto = std::move(oto);
-                    }
-                } else if (name == "prefix.map") {
+                    oto.read(textOf(*bytes));
+                    directory.oto = std::move(oto);
+                } else if (*kind == VoiceBankFile::PrefixMap) {
                     utau::PrefixMap map;
-                    if (map.load(entry.path())) {
-                        directory.prefixMap = std::move(map);
-                    }
-                } else if (name == "character.txt") {
+                    map.read(textOf(*bytes));
+                    directory.prefixMap = std::move(map);
+                } else if (*kind == VoiceBankFile::Character) {
                     utau::CharacterTxt character;
-                    if (character.load(entry.path())) {
-                        directory.character = std::move(character);
-                    }
-                } else if (name == "readme.txt") {
-                    directory.readme = readWhole(entry.path());
-                } else if (isAudioName(name)) {
-                    directory.audioFiles.push_back(entry.path().filename());
+                    character.read(textOf(*bytes));
+                    directory.character = std::move(character);
+                } else if (*kind == VoiceBankFile::Readme) {
+                    directory.readme = *bytes;
                 }
             }
 
@@ -123,6 +148,33 @@ namespace hello::kit {
             return directory;
         }
 
+    }
+
+    const char *voiceBankFileName(VoiceBankFile file) {
+        switch (file) {
+            case VoiceBankFile::Oto:
+                return "oto.ini";
+            case VoiceBankFile::PrefixMap:
+                return "prefix.map";
+            case VoiceBankFile::Character:
+                return "character.txt";
+            case VoiceBankFile::Readme:
+                return "readme.txt";
+            case VoiceBankFile::Config:
+                return voiceBankConfigFileName;
+        }
+        return "";
+    }
+
+    std::optional<VoiceBankFile> voiceBankFileNamed(std::string_view foldedName) {
+        for (const auto file :
+             {VoiceBankFile::Oto, VoiceBankFile::PrefixMap, VoiceBankFile::Character,
+              VoiceBankFile::Readme, VoiceBankFile::Config}) {
+            if (foldedName == voiceBankFileName(file)) {
+                return file;
+            }
+        }
+        return std::nullopt;
     }
 
     bool VoiceBankDirectorySource::needsCharset() const {
@@ -197,9 +249,8 @@ namespace hello::kit {
 
         if (stopped) {
             complain(diagnostics,
-                     tr(
-                         "This folder is larger or deeper than a voice bank is expected to be, so "
-                         "only part of it was read."));
+                     tr("This folder is larger or deeper than a voice bank is expected to be, so "
+                        "only part of it was read."));
         }
         return source;
     }
