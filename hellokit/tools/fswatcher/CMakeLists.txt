@@ -1,14 +1,16 @@
 project(hello-fswatcher LANGUAGES CXX)
 
-# What tells hello::kit::FileSystemWatcher which directories on disk may have changed. A process
-# of its own, so that whatever the system's notifications do to it, a crash, a hang or a limit
-# run into, stays out of the editor. See FileSystemWatcher.h for the rest of why.
+# The program that reports possibly changed directories to hello::kit::FileSystemWatcher. It runs
+# as a separate process, so that failures of the system notification facilities, such as
+# crashes, hangs and resource limits, do not affect the editor. See FileSystemWatcher.h for the
+# full rationale.
 #
-# No Qt: it is started once per watcher and has to be small and quick to start. Exported, so
-# that a consumer can find where it was installed.
+# Without Qt, because one instance is started per watcher and it must be small and start
+# quickly. Exported, so that a consumer can locate the installed program.
 #
-# One backend per system, chosen here: ReadDirectoryChangesW, FSEvents, inotify. These three are
-# the systems this project runs on, and anything else is refused here rather than built half.
+# One backend per system, selected here: ReadDirectoryChangesW, FSEvents or inotify. These are
+# the systems this project supports, and configuration fails on any other system rather than
+# producing a partial build.
 set(_src
     Backend.h
     Protocol.h
@@ -32,7 +34,7 @@ hellokit_add_executable(${PROJECT_NAME}
     CONSOLE
 )
 
-# The libraries get C++17 by way of Qt, and nothing links Qt here.
+# The libraries obtain C++17 through Qt, which this target does not link.
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
 
 if(APPLE)

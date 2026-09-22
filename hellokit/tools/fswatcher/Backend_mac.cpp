@@ -8,18 +8,18 @@
 #include <sys/mount.h>
 #include <sys/stat.h>
 
-// How this follows a tree with FSEvents, which follows trees by itself.
+// Monitoring a tree with FSEvents, which monitors entire trees natively.
 //
-// One stream for all the roots, reporting file by file. FSEvents keeps no descriptor of what it
-// follows, so nothing here stands in the way of renaming or removing anything. The root is
-// watched as well, which is how a root renamed or removed, itself or by a directory it is in,
-// becomes known.
+// One stream covers all roots and reports individual files. FSEvents holds no descriptor of the
+// monitored directories, so nothing prevents renaming or deletion. The stream also watches the
+// roots themselves, which reports a root renamed or removed, directly or through an ancestor.
 //
-// FSEvents names paths as the file system has them: /private/var for /var, links followed.
-// Every root is resolved to that form first and put back the way it was given on the way out.
+// FSEvents reports canonical paths: /private/var for /var, with links resolved. Every root is
+// resolved to that form first, and reported paths are converted back to the form in which the
+// root was given.
 //
-// A root on a volume that is not local is unwatchable. FSEvents reports what this machine did
-// to it, and not what another did.
+// A root on a non-local volume is unwatchable, because FSEvents reports only changes made by
+// this machine, not by others.
 
 namespace fswatcher {
 
@@ -43,7 +43,7 @@ namespace fswatcher {
             return path.substr(0, slash);
         }
 
-        /// Whether \a path is \a base or somewhere under it.
+        /// Returns whether \a path equals \a base or lies under it.
         bool within(const std::string &path, const std::string &base) {
             if (path.compare(0, base.size(), base) != 0) {
                 return false;
@@ -84,7 +84,7 @@ namespace fswatcher {
             FSEventStreamInvalidate(stream);
             FSEventStreamRelease(stream);
             stream = nullptr;
-            // Whatever the queue still holds for the old stream runs before this returns.
+            // All pending callbacks of the old stream complete before this returns.
             dispatch_sync_f(queue, nullptr, [](void *) {});
         }
 
@@ -95,7 +95,7 @@ namespace fswatcher {
         void handle(const std::string &path, FSEventStreamEventFlags flags) {
             std::lock_guard<std::mutex> lock(mutex);
 
-            // Events were lost, by the kernel or by this process falling behind.
+            // Events were lost, either by the kernel or because this process fell behind.
             if (flags &
                 (kFSEventStreamEventFlagKernelDropped | kFSEventStreamEventFlagUserDropped)) {
                 for (const auto &root : roots) {
@@ -105,7 +105,7 @@ namespace fswatcher {
             }
 
             for (const auto &root : roots) {
-                // The root itself, or a directory it is in, was renamed or removed or came back.
+                // The root or one of its ancestors was renamed, removed or restored.
                 if (flags & kFSEventStreamEventFlagRootChanged) {
                     if (path != root.resolved) {
                         continue;
@@ -122,7 +122,7 @@ namespace fswatcher {
                     continue;
                 }
 
-                // FSEvents gave up on the detail and names a directory to look at whole.
+                // FSEvents coalesced the details and requests a full scan of the directory.
                 if (flags & kFSEventStreamEventFlagMustScanSubDirs) {
                     out.line("recdirty", given(root, path));
                     continue;
@@ -151,7 +151,7 @@ namespace fswatcher {
             }
         }
 
-        /// Starts one stream for \a paths , or returns false where FSEvents will not.
+        /// Starts one stream for \a paths , or returns false if FSEvents refuses.
         bool start(const std::vector<std::string> &paths) {
             if (paths.empty()) {
                 return true;
@@ -187,7 +187,7 @@ namespace fswatcher {
     };
 
     void prepareProcess() {
-        // Nothing puts up a dialog here, and streams have no text mode.
+        // No dialogs are shown on this system, and streams have no text mode.
     }
 
     Backend::Backend(Output &out) : m_impl(std::make_unique<Impl>(out)) {

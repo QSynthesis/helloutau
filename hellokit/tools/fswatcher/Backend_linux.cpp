@@ -16,20 +16,20 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-// How this follows a tree with inotify, which follows one directory and nothing under it.
+// Monitoring a tree with inotify, which monitors a single directory without its subdirectories.
 //
-// Every directory under a root is watched on its own, and a directory that appears is watched
-// before it is reported, so that whatever landed in it before the watch is found by the look the
-// other side takes. Watching holds nothing open in the way a handle does on Windows: a watched
-// directory can be renamed and removed as ever.
+// Every directory under a root receives its own watch, and a new directory is watched before it
+// is reported, so that any entry created before the watch is found when the client examines the
+// directory. A watch does not hold the directory open as a handle does on Windows, so a watched
+// directory can still be renamed and deleted.
 //
-// A root is also looked for from above. Every directory on the way down to it is watched for the
-// one name that leads to the root, so that renaming a directory the root is in says the root is
-// gone, which the root's own watch would never hear of.
+// Each root is also monitored from above. Every ancestor directory is watched for the one name
+// that leads to the root, so that renaming an ancestor is reported as removal of the root, which
+// the watch on the root itself would not detect.
 //
-// The number of watches a user may hold is limited, see /proc/sys/fs/inotify/max_user_watches .
-// A root that runs into the limit is given up on and reported unwatchable, rather than followed
-// in part.
+// The number of watches per user is limited, see /proc/sys/fs/inotify/max_user_watches . A root
+// that reaches the limit is abandoned and reported as unwatchable rather than monitored
+// partially.
 
 namespace fswatcher {
 
@@ -55,7 +55,7 @@ namespace fswatcher {
             return path.substr(0, slash);
         }
 
-        /// Whether \a path is \a base or somewhere under it.
+        /// Returns whether \a path equals \a base or lies under it.
         bool within(const std::string &path, const std::string &base) {
             if (path.compare(0, base.size(), base) != 0) {
                 return false;
@@ -73,11 +73,11 @@ namespace fswatcher {
             bool alive = true;
         };
 
-        /// What one watch stands for.
+        /// The meaning of one watch.
         struct Watch {
             std::string path;
-            /// Watched for the way down to a root rather than as part of one. Only the name
-            /// that leads on counts there.
+            /// Whether the watch is on an ancestor of a root rather than within a root. Only the
+            /// name leading toward the root is relevant for such a watch.
             bool above = false;
         };
 
@@ -92,7 +92,7 @@ namespace fswatcher {
         ~Impl() {
             if (thread.joinable()) {
                 const uint64_t one = 1;
-                // Nothing to do if it fails: the thread is then left to end with the process.
+                // A failure requires no handling, because the thread then ends with the process.
                 if (write(wake, &one, sizeof(one)) < 0) {
                     thread.detach();
                 } else {
@@ -112,12 +112,13 @@ namespace fswatcher {
         int wake = -1;
         std::thread thread;
 
-        // All below, read by the thread and changed by follow() .
+        // All members below are read by the thread and modified by follow() .
         std::mutex mutex;
         std::vector<Root> roots;
         std::map<int, Watch> watches;
-        // The last line said in the batch being read, so that a burst of the same says it once.
-        // Only within one batch: the same news later is news again.
+        // The last line written for the current batch, so that repeated identical events are
+        // reported once. The deduplication applies only within one batch, because a later
+        // identical event is a new change.
         std::string last;
 
         void say(const char *word, const std::string &path) {
@@ -133,16 +134,16 @@ namespace fswatcher {
             return root.given + resolved.substr(root.resolved.size());
         }
 
-        /// Watches \a path for \a root , and nothing under it. False where the limit is reached,
-        /// which is what gives the root up. Anything else that fails leaves out one directory,
-        /// which a listing still shows.
+        /// Watches \a path for \a root , without its subdirectories. Returns false if the watch
+        /// limit is reached, which causes the root to be abandoned. Any other failure omits one
+        /// directory, which remains visible in the listing of its parent.
         bool watchOne(const std::string &path, bool above) {
             const int wd = inotify_add_watch(fd, path.c_str(), above ? aboveMask : treeMask);
             if (wd < 0) {
                 return errno != ENOSPC;
             }
-            // The same directory under two roots is one watch, and the tree watch is the one
-            // that says more.
+            // A directory under two roots shares one watch, and the tree watch takes precedence
+            // because it reports more events.
             auto it = watches.find(wd);
             if (it == watches.end() || !above) {
                 watches[wd] = Watch{path, above};
@@ -151,7 +152,7 @@ namespace fswatcher {
         }
 
         /// Watches \a path and every directory under it, without following links and without
-        /// crossing onto another file system.
+        /// crossing file system boundaries.
         bool watchTree(const std::string &path) {
             struct stat top{};
             if (lstat(path.c_str(), &top) != 0 || !S_ISDIR(top.st_mode)) {
@@ -185,7 +186,7 @@ namespace fswatcher {
             return true;
         }
 
-        /// Drops every watch at or under \a path .
+        /// Removes every watch at or under \a path .
         void unwatchTree(const std::string &path) {
             for (auto it = watches.begin(); it != watches.end();) {
                 if (!it->second.above && within(it->second.path, path)) {
@@ -197,7 +198,7 @@ namespace fswatcher {
             }
         }
 
-        /// Watches the directories on the way down to \a root .
+        /// Watches the ancestor directories of \a root .
         void watchAbove(const Root &root) {
             std::string at = root.resolved;
             while (at != "/") {
@@ -206,7 +207,7 @@ namespace fswatcher {
             }
         }
 
-        /// Starts following \a root afresh, and says so where that fails.
+        /// Starts monitoring \a root anew, and reports a failure.
         void take(Root &root) {
             unwatchTree(root.resolved);
             if (!watchTree(root.resolved)) {
@@ -220,7 +221,7 @@ namespace fswatcher {
             std::lock_guard<std::mutex> lock(mutex);
 
             if (event.mask & IN_Q_OVERFLOW) {
-                // What was lost may include directories that appeared and are not watched.
+                // The lost events may include new directories that are not yet watched.
                 for (auto &root : roots) {
                     if (root.alive && isDirectory(root.resolved)) {
                         take(root);
@@ -249,9 +250,10 @@ namespace fswatcher {
             const bool left = (event.mask & (IN_DELETE | IN_MOVED_FROM)) != 0;
 
             for (auto &root : roots) {
-                // The way down to a root, where only the root itself or what leads to it counts.
-                // A watch from above names the root as a child of its parent, which reads as the
-                // root itself, and has to be taken as news of it rather than from within it.
+                // An ancestor watch, for which only the root or the path leading to it is
+                // relevant. Such a watch reports the root as a child of its parent, which
+                // resolves to the root path and must be treated as a change of the root itself
+                // rather than of its contents.
                 if (watch.above || !within(path, root.resolved)) {
                     if (name.empty() || !within(root.resolved, path)) {
                         continue;
@@ -275,7 +277,7 @@ namespace fswatcher {
                     continue;
                 }
 
-                // The root itself, gone without a word from above, as a root at / would be.
+                // The root itself was removed without an ancestor event, as for a root at /.
                 if (path == root.resolved && (event.mask & (IN_DELETE_SELF | IN_MOVE_SELF))) {
                     unwatchTree(root.resolved);
                     root.alive = false;
@@ -283,7 +285,7 @@ namespace fswatcher {
                     continue;
                 }
                 if (event.mask & (IN_DELETE_SELF | IN_MOVE_SELF)) {
-                    // Its parent says so as well, and with the name.
+                    // Its parent reports the removal as well, including the name.
                     continue;
                 }
 
@@ -294,8 +296,8 @@ namespace fswatcher {
                 say("dirty", given(root, watch.path));
 
                 if (isDir && left) {
-                    // A directory moved away keeps its watches, which would go on naming it
-                    // where it no longer is.
+                    // A moved directory keeps its watches, which would continue to report it
+                    // under its former path.
                     unwatchTree(path);
                 } else if (isDir && appeared) {
                     if (!watchTree(path)) {
@@ -304,8 +306,8 @@ namespace fswatcher {
                         say("unwatchable", root.given);
                         continue;
                     }
-                    // Watched first and named after, so that what landed in it before the
-                    // watch is found by the look this asks for.
+                    // Watched first and reported afterward, so that entries created before the
+                    // watch are found when the client examines the directory.
                     say("recdirty", given(root, path));
                 }
             }
@@ -345,7 +347,7 @@ namespace fswatcher {
     };
 
     void prepareProcess() {
-        // Nothing puts up a dialog here, and streams have no text mode.
+        // No dialogs are shown on this system, and streams have no text mode.
     }
 
     Backend::Backend(Output &out) : m_impl(std::make_unique<Impl>(out)) {

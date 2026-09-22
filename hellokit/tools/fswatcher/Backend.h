@@ -9,14 +9,13 @@
 
 namespace fswatcher {
 
-    /// Sets the process up to run with nobody watching: standard input and output pass bytes
-    /// as they are, and a failure ends the process rather than waiting on a dialog.
+    /// Configures the process for unattended operation: standard input and output pass bytes
+    /// unchanged, and a failure terminates the process instead of waiting on a dialog.
     void prepareProcess();
 
-    /// Where the system's own change notifications are turned into the messages of Protocol.h .
+    /// Translates the change notifications of the system into the messages of Protocol.h .
     ///
-    /// One per system. A system without one answers every root as \c unwatchable , which is
-    /// true, and leaves the other side to look at the disk itself.
+    /// One implementation per supported system, selected by CMake.
     class Backend {
     public:
         explicit Backend(Output &out);
@@ -25,10 +24,10 @@ namespace fswatcher {
         Backend(const Backend &) = delete;
         Backend &operator=(const Backend &) = delete;
 
-        /// Replaces what is followed with \a roots , each a path in UTF-8, and answers \c ok .
+        /// Replaces the monitored roots with \a roots , each a UTF-8 path, and replies \c ok .
         ///
-        /// Returns once every root that can be followed is, so that a change made after the
-        /// answer is reported.
+        /// Returns once every monitorable root is monitored, so that every change made after
+        /// the reply is reported.
         void follow(const std::vector<std::string> &roots);
 
     private:

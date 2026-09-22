@@ -17,21 +17,20 @@
 #include <fcntl.h>
 #include <io.h>
 
-// How this follows a directory without holding it.
+// Monitoring a directory without holding it open.
 //
-// ReadDirectoryChangesW wants a handle to the directory it reports on, and a handle to a
-// directory keeps it from being renamed or removed. Held on a voice bank, that would stop its
-// author from renaming a folder of it while this program is open, which is the one thing a
-// watcher must never cost anybody.
+// ReadDirectoryChangesW requires a handle to the monitored directory, and an open handle
+// prevents the directory from being renamed or deleted. On a voice bank, this would prevent
+// its author from renaming a folder while this program runs, which a watcher must never do.
 //
-// So what is held is the root of the drive, and nothing else: one handle per drive, whatever is
-// followed on it, reporting on the whole drive, with what is not under a root dropped here. A
-// drive root cannot be renamed or removed anyway. This is how JetBrains' fsnotifier does it,
-// see native/WinFsNotifier in intellij-community.
+// Only the root directory of each drive is therefore held: one handle per drive, regardless of
+// the number of monitored roots on it, reporting changes on the entire drive, with events
+// outside the roots discarded here. A drive root cannot be renamed or deleted in any case. The
+// JetBrains fsnotifier uses the same approach, see native/WinFsNotifier in intellij-community.
 //
-// A root is resolved to the path the file system has for it, with a handle opened for nothing
-// and closed at once, because the events name paths that way: long names, the case on disk,
-// links followed.
+// Each root is resolved to its canonical file system path through a handle that is opened
+// without access rights and closed immediately, because events report paths in that form:
+// long names, the case stored on disk, and links resolved.
 
 namespace fswatcher {
 
@@ -66,13 +65,14 @@ namespace fswatcher {
             return out;
         }
 
-        /// Equal as the file system compares names, which ignores case.
+        /// Returns whether two names are equal under the case-insensitive comparison of the
+        /// file system.
         bool sameName(std::wstring_view a, std::wstring_view b) {
             return a.size() == b.size() && CompareStringOrdinal(a.data(), int(a.size()), b.data(),
                                                                 int(b.size()), TRUE) == CSTR_EQUAL;
         }
 
-        /// Whether \a path is \a base or somewhere under it.
+        /// Returns whether \a path equals \a base or lies under it.
         bool within(std::wstring_view path, std::wstring_view base) {
             if (path.size() < base.size() || !sameName(path.substr(0, base.size()), base)) {
                 return false;
@@ -85,7 +85,8 @@ namespace fswatcher {
             if (slash == std::wstring_view::npos) {
                 return path;
             }
-            // The parent of E:\a is E:\ , not E: , which names the drive's current directory.
+            // The parent of E:\a is E:\ , not E: , which denotes the current directory of the
+            // drive.
             if (slash == 2 && path[1] == L':') {
                 return path.substr(0, 3);
             }
@@ -98,7 +99,7 @@ namespace fswatcher {
                    (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
         }
 
-        /// The path the file system has for \a path , or nothing where there is nothing there.
+        /// The canonical file system path of \a path , or \c std::nullopt if it does not exist.
         std::optional<std::wstring> resolve(const std::wstring &path) {
             const HANDLE handle = CreateFileW(path.c_str(), 0, shareAll, nullptr, OPEN_EXISTING,
                                               FILE_FLAG_BACKUP_SEMANTICS, nullptr);
@@ -131,9 +132,9 @@ namespace fswatcher {
             return out;
         }
 
-        /// Whether a drive reports changes at all, which is decided the way JetBrains decides
-        /// it: a local disk with one of the file systems known to. A network share is left
-        /// out, since what it reports depends on the server.
+        /// Returns whether a drive supports change notifications, determined as in the
+        /// JetBrains implementation: a local disk with a file system known to support them. A
+        /// network share is excluded, because its notifications depend on the server.
         bool reports(const std::wstring &drive) {
             const UINT type = GetDriveTypeW(drive.c_str());
             if (type != DRIVE_FIXED && type != DRIVE_REMOVABLE && type != DRIVE_RAMDISK) {
@@ -159,7 +160,7 @@ namespace fswatcher {
         struct Root {
             std::string given;
             std::wstring resolved;
-            std::wstring drive; ///< \c E:\ , upper case
+            std::wstring drive; ///< \c E:\ , uppercase
         };
 
         struct Drive {
@@ -178,11 +179,11 @@ namespace fswatcher {
 
         Output &out;
 
-        // The roots, which the drive threads read and follow() replaces.
+        // The roots, read by the drive threads and replaced by follow().
         std::mutex mutex;
         std::vector<Root> roots;
 
-        // Only follow() and the destructor touch these, both on the main thread.
+        // Accessed only by follow() and the destructor, both on the main thread.
         std::map<std::wstring, std::unique_ptr<Drive>> drives;
 
         static void halt(Drive &drive) {
@@ -191,7 +192,7 @@ namespace fswatcher {
             CloseHandle(drive.stop);
         }
 
-        /// \a resolved with the root it is under put back the way it was given.
+        /// \a resolved with its root prefix restored to the form in which the root was given.
         static std::string given(const Root &root, std::wstring_view resolved) {
             auto rest = resolved.substr(root.resolved.size());
             std::string out = root.given;
@@ -218,8 +219,8 @@ namespace fswatcher {
                 }
 
                 if (within(path, root.resolved) && path.size() > root.resolved.size()) {
-                    // A directory reports a change of its own whenever something in it changes,
-                    // and that something reports as well.
+                    // A directory reports its own change whenever an entry in it changes, and the
+                    // entry is reported as well.
                     if (info.Action == FILE_ACTION_MODIFIED && isDirectory(path)) {
                         continue;
                     }
@@ -228,7 +229,7 @@ namespace fswatcher {
                         out.line("recdirty", given(root, path));
                     }
                 } else if (within(root.resolved, path)) {
-                    // The root, or a directory it is in.
+                    // The root itself, or one of its ancestors.
                     if (left) {
                         out.line("gone", root.given);
                     } else if (appeared && isDirectory(root.resolved)) {
@@ -260,7 +261,7 @@ namespace fswatcher {
             OVERLAPPED overlapped = {};
             overlapped.hEvent = CreateEventW(nullptr, FALSE, FALSE, nullptr);
 
-            // DWORD aligned, as ReadDirectoryChangesW wants.
+            // DWORD-aligned, as ReadDirectoryChangesW requires.
             std::vector<DWORD> buffer(16 * 1024);
             bool first = true;
 
@@ -280,7 +281,7 @@ namespace fswatcher {
                 const DWORD woken = WaitForMultipleObjects(2, handles, FALSE, INFINITE);
                 DWORD size = 0;
                 if (woken != WAIT_OBJECT_0 + 1) {
-                    // The buffer is the system's until the request is over.
+                    // The buffer is owned by the system until the request completes.
                     CancelIoEx(directory, &overlapped);
                     GetOverlappedResult(directory, &overlapped, &size, TRUE);
                     break;
@@ -290,9 +291,9 @@ namespace fswatcher {
                     break;
                 }
 
-                // More happened than the buffer holds, and what did not fit is lost. Everything
-                // on the drive may have changed. Waiting a moment first lets a burst finish
-                // rather than overflow again straight away.
+                // The events exceeded the buffer, and the excess is lost, so any part of the
+                // drive may have changed. A short delay lets a burst complete instead of
+                // overflowing the buffer again immediately.
                 if (size == 0) {
                     if (WaitForSingleObject(stop, 500) == WAIT_OBJECT_0) {
                         break;
@@ -321,12 +322,12 @@ namespace fswatcher {
     };
 
     void prepareProcess() {
-        // Bytes in and out as they are. Text mode would add a carriage return to every line.
+        // Binary mode for both streams. Text mode would add a carriage return to every line.
         _setmode(_fileno(stdin), _O_BINARY);
         _setmode(_fileno(stdout), _O_BINARY);
 
-        // Nobody is there to answer a dialog. One would hold the process up rather than let it
-        // end, and the watcher only starts it again once it has ended.
+        // No user can respond to a dialog. A dialog would block the process instead of letting
+        // it terminate, and the watcher restarts the process only after it has terminated.
         SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX | SEM_NOOPENFILEERRORBOX);
         _set_abort_behavior(0, _WRITE_ABORT_MSG | _CALL_REPORTFAULT);
         _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_DEBUG);
