@@ -8,6 +8,8 @@
 #include <QtCore/QStringDecoder>
 #include <QtCore/QStringEncoder>
 
+#include <winacp/winacp.h>
+
 namespace hello::kit {
 
     namespace {
@@ -24,13 +26,25 @@ namespace hello::kit {
         };
 
         constexpr CodePage codePages[] = {
-            {932,   "Shift_JIS", "shift_jis shift-jis sjis ms_kanji cp932 windows-932"},
+            {932,   "Shift_JIS",    "shift_jis shift-jis sjis ms_kanji cp932 windows-932"},
             // GB2312 is its own code page, and everything maps it to 936 because GBK holds all
             // of it and more, so reading one as the other cannot lose anything.
-            {936,   "GBK",       "gbk gb2312 euc-cn cp936 windows-936"                },
-            {950,   "Big5",      "big5 big-5 cp950 windows-950"                       },
-            {949,   "EUC-KR",    "euc-kr ks_c_5601-1987 cp949 windows-949"            },
-            {54936, "GB18030",   "gb18030"                                            },
+            {936,   "GBK",          "gbk gb2312 euc-cn cp936 windows-936"                },
+            {950,   "Big5",         "big5 big-5 cp950 windows-950"                       },
+            {949,   "EUC-KR",       "euc-kr ks_c_5601-1987 cp949 windows-949"            },
+            {54936, "GB18030",      "gb18030"                                            },
+            // The rest of the ANSI code pages, so that a machine set to any of them has its
+            // system encoding here as well. What a UST from there is in, when it says nothing.
+            {874,   "windows-874",  "windows-874 cp874"                                  },
+            {1250,  "windows-1250", "windows-1250 cp1250"                                },
+            {1251,  "windows-1251", "windows-1251 cp1251"                                },
+            {1252,  "windows-1252", "windows-1252 cp1252"                                },
+            {1253,  "windows-1253", "windows-1253 cp1253"                                },
+            {1254,  "windows-1254", "windows-1254 cp1254"                                },
+            {1255,  "windows-1255", "windows-1255 cp1255"                                },
+            {1256,  "windows-1256", "windows-1256 cp1256"                                },
+            {1257,  "windows-1257", "windows-1257 cp1257"                                },
+            {1258,  "windows-1258", "windows-1258 cp1258"                                },
         };
 
         const CodePage *findCodePage(const QString &name) {
@@ -48,18 +62,22 @@ namespace hello::kit {
 
     }
 
-    // Three ways of doing the same job, tried in this order.
+    // Four ways of doing the same job, tried in this order.
     //
     // 1. Qt's own converters, for the Unicode family and Latin-1. Built into QtCore.
-    // 2. The Windows code page functions, for Shift_JIS, GBK, Big5 and the rest.
-    // 3. Qt by name, which reaches ICU, for anything else.
+    // 2. winacp, for the Windows ANSI code pages: Shift_JIS, GBK, Big5, EUC-KR and the rest, on
+    //    every system.
+    // 3. The Windows code page functions, for GB18030, on Windows.
+    // 4. Qt by name, which reaches ICU where Qt has it, for anything else.
     //
-    // The order is the point, because of something Qt does not say out loud: QtCore does not
-    // link ICU, it loads it at run time, and on Windows what it finds is the operating system's
-    // own copy, which has only been there since Windows 10 1703. None of that is visible while
-    // building. A binary built on a machine that has ICU compiles, links, and then quietly
-    // cannot open a single Shift_JIS file on a machine that does not. Going through the code
-    // page functions for exactly the encodings this project promises takes that off the table.
+    // UTAU reads and writes by the Windows code page, so that is the mapping a UST or an oto.ini
+    // has to go through to come out as it went in, and winacp is that mapping, taken from
+    // Windows and carried to the other systems. Nothing else is. Qt reaches ICU only where it
+    // was built with it, and the Qt for macOS is not: there it could not open a single Shift_JIS
+    // file. What macOS has of its own, CoreFoundation and iconv, leaves out the thousands of
+    // characters Windows puts in the private use area, and writes some characters back as other
+    // bytes than Windows does. The same way on every system also takes Windows' own ICU out of
+    // it, which Qt loads at run time and which older Windows does not have.
     class TextCodec::Impl {
     public:
         explicit Impl(const QString &requested) {
@@ -74,6 +92,11 @@ namespace hello::kit {
 
             if (const auto *page = findCodePage(name)) {
                 canonical = QLatin1String(page->canonical);
+                if (winacp::isAvailable(page->number)) {
+                    ansiCodePage = page->number;
+                    valid = true;
+                    return;
+                }
 #ifdef _WIN32
                 if (::IsValidCodePage(UINT(page->number))) {
                     codePage = page->number;
@@ -98,6 +121,7 @@ namespace hello::kit {
         bool valid = false;
 
         std::optional<QStringConverter::Encoding> builtin;
+        int ansiCodePage = 0; // held by winacp
         QString fallbackName;
 #ifdef _WIN32
         int codePage = 0;
@@ -145,6 +169,16 @@ namespace hello::kit {
             return decoder.hasError() ? std::nullopt : std::optional<QString>(text);
         }
 
+        if (_impl->ansiCodePage != 0) {
+            // All or nothing: bytes that do not decode mean the wrong encoding was chosen.
+            const auto text = winacp::decode(_impl->ansiCodePage,
+                                             std::string_view(bytes.data(), size_t(bytes.size())));
+            if (!text) {
+                return std::nullopt;
+            }
+            return QString::fromUtf16(text->data(), qsizetype(text->size()));
+        }
+
 #ifdef _WIN32
         if (_impl->codePage != 0) {
             // MB_ERR_INVALID_CHARS is what makes this refuse rather than substitute, which is
@@ -175,6 +209,17 @@ namespace hello::kit {
         if (_impl->builtin) {
             QStringEncoder encoder(*_impl->builtin);
             return encoder.encode(text);
+        }
+
+        if (_impl->ansiCodePage != 0) {
+            // A question mark for what the page cannot hold, as Windows writes, which is what
+            // canEncode() compares against.
+            const std::string written =
+                winacp::encode(_impl->ansiCodePage,
+                               std::u16string_view(reinterpret_cast<const char16_t *>(text.utf16()),
+                                                   size_t(text.size())),
+                               '?');
+            return QByteArray(written.data(), qsizetype(written.size()));
         }
 
 #ifdef _WIN32

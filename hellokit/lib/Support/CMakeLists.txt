@@ -9,6 +9,7 @@ qm_find_qt(Core)
 
 hellokit_add_library(${PROJECT_NAME} SHARED
     SOURCES ${_src}
+    LINKS_PRIVATE winacp::winacp
     QT_LINKS Core
     QT_AUTOGEN
     INCLUDE_PRIVATE ../../include/hellokit/Support/** **

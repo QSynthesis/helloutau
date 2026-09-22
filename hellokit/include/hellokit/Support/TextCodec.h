@@ -56,8 +56,9 @@ namespace hello::kit {
         /// \return the text, or nothing where \a bytes are not valid in this encoding
         std::optional<QString> decode(QByteArrayView bytes) const;
 
-        /// Encodes as it stands. Whatever this encoding cannot hold is replaced by Qt, so call
-        /// escape() first where that matters.
+        /// Encodes as it stands. Whatever this encoding cannot hold is replaced, by a question
+        /// mark on the ANSI code pages as Windows writes it, so call escape() first where that
+        /// matters.
         QByteArray encode(QStringView text) const;
 
         /// Whether every character of \a text survives this encoding unchanged.

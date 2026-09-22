@@ -98,6 +98,40 @@ private Q_SLOTS:
         QCOMPARE(*back, QString::fromUtf8("あい"));
     }
 
+    // Every ANSI code page, so that a machine set to any of them has its system encoding here,
+    // and on every system, not only the one that has code pages.
+    void every_ansi_code_page_is_reachable_by_name() {
+        for (const auto *name :
+             {"windows-874", "windows-1250", "windows-1251", "windows-1252", "windows-1253",
+              "windows-1254", "windows-1255", "windows-1256", "windows-1257", "windows-1258"}) {
+            const TextCodec codec{QLatin1String(name)};
+            QVERIFY2(codec.isValid(), name);
+            QCOMPARE(codec.name(), QLatin1String(name));
+        }
+        // Not Latin-1, which has no euro sign.
+        QCOMPARE(TextCodec(QStringLiteral("windows-1252")).decode(QByteArray("\x80", 1)),
+                 QString(QChar(0x20AC)));
+    }
+
+    // UTAU writes a character with both an NEC and an IBM spelling the way Windows writes it.
+    // So does this, whichever it was read from, so that an oto.ini saved here reads back in
+    // UTAU with the bytes UTAU would have written.
+    void a_character_with_two_spellings_is_written_as_utau_writes_it() {
+        const QString kanji(QChar(0x7E8A));
+        QCOMPARE(shiftJis().decode(QByteArray("\xed\x40", 2)), kanji);
+        QCOMPARE(shiftJis().decode(QByteArray("\xfa\x5c", 2)), kanji);
+        QCOMPARE(shiftJis().encode(kanji), QByteArray("\xfa\x5c", 2));
+    }
+
+    // Windows maps the user defined rows into the private use area, and a bank that uses one
+    // has to read everywhere.
+    void the_user_defined_rows_are_read() {
+        const QString first(QChar(0xE000));
+        QCOMPARE(TextCodec(QStringLiteral("Big5")).decode(QByteArray("\xfa\x40", 2)), first);
+        QCOMPARE(TextCodec(QStringLiteral("GBK")).decode(QByteArray("\xaa\xa1", 2)), first);
+        QCOMPARE(shiftJis().decode(QByteArray("\xf0\x40", 2)), first);
+    }
+
     void what_an_encoding_can_hold_is_asked_of_the_encoding() {
         QVERIFY(shiftJis().canEncode(QString::fromUtf8("あ")));
         QVERIFY(shiftJis().canEncode(QStringLiteral("la")));

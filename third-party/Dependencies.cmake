@@ -3,6 +3,7 @@
 #     -Dstdcorelib_DIR=<prefix>/lib/cmake/stdcorelib
 #     -Dstdutau_DIR=<prefix>/lib/cmake/stdutau
 #     -Dwolf-midi_DIR=<vcpkg>/installed/<triplet>/share/wolf-midi
+#     -Dwinacp_DIR=<prefix>/lib/cmake/winacp
 #
 # stdcorelib and stdutau are moving alongside this repository, so neither is taken from a vcpkg
 # release. Build and install each one yourself.
@@ -42,3 +43,8 @@ _hello_find_external(stdutau stdutau::stdutau
 # std::filesystem and std::vector and needs nothing from this side.
 _hello_find_external(wolf-midi wolf-midi::wolf-midi
     "Install the wolf-midi vcpkg port and pass -Dwolf-midi_DIR=<vcpkg>/installed/<triplet>/share/wolf-midi.")
+
+# The Windows ANSI code pages as Windows converts them, on every system, which is how a UST or an
+# oto.ini written by UTAU comes out as it went in. See TextCodec.cpp for why not Qt or ICU.
+_hello_find_external(winacp winacp::winacp
+    "Build https://github.com/QSynthesis/winacp and pass -Dwinacp_DIR=<prefix>/lib/cmake/winacp.")
