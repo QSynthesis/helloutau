@@ -107,9 +107,14 @@ private Q_SLOTS:
         note.intensity = 80;
         note.velocity = 0; // zero, which must remain a value rather than become absent
         note.flags = QStringLiteral("g-5");
-        note.envelope = Envelope{
-            {{0, 0}, {5, 100}, {35, 100}, {0, 0}}
-        };
+        // Five anchors, so that the middle anchor survives the round trip in its position.
+        note.envelope = Envelope::fromTimeOrder({
+            {0,  0  },
+            {5,  100},
+            {20, 80 },
+            {35, 100},
+            {0,  0  }
+        });
         note.vibrato = Vibrato{65, 180, 35, 20, 20, 0, 0, 7};
         note.portamento = {
             {-40, 0,  PortamentoType::S     },
@@ -137,7 +142,8 @@ private Q_SLOTS:
         QVERIFY(!back.first().modulation.has_value());
         QCOMPARE(back.first().flags, QStringLiteral("g-5"));
         QVERIFY(back.first().envelope.has_value());
-        QCOMPARE(back.first().envelope->anchors.size(), 4);
+        QVERIFY(back.first().envelope->hasMiddle);
+        QVERIFY(*back.first().envelope == *note.envelope);
         QVERIFY(back.first().vibrato.has_value());
         QCOMPARE(back.first().vibrato->period, 180.0);
         QCOMPARE(back.first().portamento.size(), 2);

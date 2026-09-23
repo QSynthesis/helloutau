@@ -130,10 +130,12 @@ namespace hello::kit {
             note.tempo = from.tempo;
 
             if (from.envelope) {
+                // stdutau takes the anchors in time order. Without a middle anchor, index four
+                // keeps its default, from which stdutau infers four anchors.
                 utau::Envelope envelope;
-                for (qsizetype i = 0; i < from.envelope->anchors.size() && i < 5; ++i) {
-                    const auto &anchor = from.envelope->anchors.at(i);
-                    envelope.anchors[size_t(i)] = utau::Point(anchor.x, anchor.y);
+                const auto anchors = from.envelope->anchorsInTimeOrder();
+                for (qsizetype i = 0; i < anchors.size(); ++i) {
+                    envelope.anchors[size_t(i)] = utau::Point(anchors[i].x, anchors[i].y);
                 }
                 note.envelope = envelope;
             }

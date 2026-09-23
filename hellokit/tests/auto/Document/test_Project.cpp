@@ -103,6 +103,21 @@ private Q_SLOTS:
         QCOMPARE(*notes.at(2).intensity, 0.0);
     }
 
+    // An envelope has four or five anchors. Any other number is reported, and the note is read
+    // without the envelope rather than rejected.
+    void an_envelope_with_another_number_of_anchors_is_reported() {
+        DiagnosticList diagnostics;
+        const auto json = QByteArray(
+            R"({"$format":"usth","version":1,"settings":{},"tracks":[{"notes":[)"
+            R"({"lyric":"a","length":480,"noteNum":60,)"
+            R"("envelope":{"anchors":[{"x":0,"y":0},{"x":5,"y":100},{"x":0,"y":0}]}}]}]})");
+        const auto project = Project::fromJson(json, diagnostics);
+        QVERIFY(project.has_value());
+        QVERIFY(!project->tracks.first().notes.first().envelope.has_value());
+        QVERIFY(!hasError(diagnostics));
+        QCOMPARE(diagnostics.size(), 1);
+    }
+
     void a_note_missing_a_required_field_is_an_error() {
         DiagnosticList diagnostics;
         const auto json = QByteArray(
@@ -133,9 +148,12 @@ private Q_SLOTS:
         note.velocity = 0; // zero, which must remain a value rather than become absent
         note.tempo = 128.5;
         note.flags = QStringLiteral("g-5");
-        note.envelope = Envelope{
-            {{0, 0}, {5, 100}, {35, 100}, {0, 0}}
-        };
+        note.envelope = Envelope::fromTimeOrder({
+            {0,  0  },
+            {5,  100},
+            {35, 100},
+            {0,  0  }
+        });
         note.vibrato = Vibrato{65, 180, 35, 20, 20, 0, 0, 0};
         note.portamento = {
             {-40, 0,  PortamentoType::S     },
@@ -159,7 +177,8 @@ private Q_SLOTS:
         QVERIFY(!back.modulation.has_value());
         QCOMPARE(back.flags, QStringLiteral("g-5"));
         QVERIFY(back.envelope.has_value());
-        QCOMPARE(back.envelope->anchors.size(), 4);
+        QVERIFY(!back.envelope->hasMiddle);
+        QVERIFY(*back.envelope == *note.envelope);
         QVERIFY(back.vibrato.has_value());
         QCOMPARE(back.vibrato->period, 180.0);
         QCOMPARE(back.portamento.size(), 2);

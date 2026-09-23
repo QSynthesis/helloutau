@@ -96,7 +96,7 @@ namespace hello::kit {
 
         QJsonObject envelopeToJson(const Envelope &envelope) {
             QJsonArray anchors;
-            for (const auto &anchor : envelope.anchors) {
+            for (const auto &anchor : envelope.anchorsInTimeOrder()) {
                 anchors.append(QJsonObject{
                     {QLatin1String("x"), anchor.x},
                     {QLatin1String("y"), anchor.y}
@@ -107,14 +107,15 @@ namespace hello::kit {
             };
         }
 
-        Envelope envelopeFromJson(const QJsonObject &object) {
-            Envelope envelope;
+        // Returns std::nullopt unless the object lists four or five anchors.
+        std::optional<Envelope> envelopeFromJson(const QJsonObject &object) {
+            QList<EnvelopeAnchor> anchors;
             for (const auto anchor : object.value(QLatin1String("anchors")).toArray()) {
                 const auto fields = anchor.toObject();
-                envelope.anchors.push_back({fields.value(QLatin1String("x")).toDouble(),
-                                            fields.value(QLatin1String("y")).toDouble()});
+                anchors.push_back({fields.value(QLatin1String("x")).toDouble(),
+                                   fields.value(QLatin1String("y")).toDouble()});
             }
-            return envelope;
+            return Envelope::fromTimeOrder(anchors);
         }
 
         QJsonObject vibratoToJson(const Vibrato &vibrato) {
@@ -263,6 +264,13 @@ namespace hello::kit {
             if (const auto envelope = object.value(QLatin1String("envelope"));
                 envelope.isObject()) {
                 note.envelope = envelopeFromJson(envelope.toObject());
+                if (!note.envelope) {
+                    complain(diagnostics,
+                             Project::tr("The envelope of note %1 does not have four or five "
+                                         "anchors and was ignored.")
+                                 .arg(index + 1),
+                             index);
+                }
             }
             if (const auto vibrato = object.value(QLatin1String("vibrato")); vibrato.isObject()) {
                 note.vibrato = vibratoFromJson(vibrato.toObject());

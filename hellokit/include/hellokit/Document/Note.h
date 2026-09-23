@@ -1,6 +1,7 @@
 #ifndef HELLOKIT_DOCUMENT_NOTE_H
 #define HELLOKIT_DOCUMENT_NOTE_H
 
+#include <array>
 #include <optional>
 
 #include <QtCore/QList>
@@ -16,13 +17,69 @@ namespace hello::kit {
     struct EnvelopeAnchor {
         double x = 0;
         double y = 0;
+
+        inline bool operator==(const EnvelopeAnchor &RHS) const {
+            return x == RHS.x && y == RHS.y;
+        }
+
+        inline bool operator!=(const EnvelopeAnchor &RHS) const {
+            return !(*this == RHS);
+        }
     };
 
-    /// The volume envelope, with four or five anchors.
+    /// The volume envelope, with four anchors or with five including the middle anchor.
     ///
-    /// The optional fifth anchor lies in the middle, at index 2 when present.
+    /// Each index has a fixed role: 0 is the start, 1 the end of the attack, 2 the middle anchor,
+    /// 3 the start of the release, and 4 the end. The index of an anchor therefore does not
+    /// depend on whether the middle anchor exists. UST and \c .usth list the anchors in time
+    /// order instead, see anchorsInTimeOrder().
     struct Envelope {
-        QList<EnvelopeAnchor> anchors;
+        /// The anchors by role. Index 2 is part of the envelope only if \c hasMiddle is true.
+        std::array<EnvelopeAnchor, 5> anchors;
+
+        bool hasMiddle = false;
+
+        /// Returns the four or five anchors of the envelope in time order.
+        inline QList<EnvelopeAnchor> anchorsInTimeOrder() const {
+            QList<EnvelopeAnchor> result{anchors[0], anchors[1]};
+            if (hasMiddle) {
+                result.append(anchors[2]);
+            }
+            result.append(anchors[3]);
+            result.append(anchors[4]);
+            return result;
+        }
+
+        /// Returns the envelope with \a anchors in time order, or \c std::nullopt unless it has
+        /// four or five of them.
+        static inline std::optional<Envelope> fromTimeOrder(const QList<EnvelopeAnchor> &anchors) {
+            if (anchors.size() != 4 && anchors.size() != 5) {
+                return std::nullopt;
+            }
+            Envelope envelope;
+            envelope.hasMiddle = anchors.size() == 5;
+            const int shift = envelope.hasMiddle ? 1 : 0;
+            envelope.anchors[0] = anchors[0];
+            envelope.anchors[1] = anchors[1];
+            if (envelope.hasMiddle) {
+                envelope.anchors[2] = anchors[2];
+            }
+            envelope.anchors[3] = anchors[2 + shift];
+            envelope.anchors[4] = anchors[3 + shift];
+            return envelope;
+        }
+
+        /// Returns whether both envelopes have the same anchors. An unused middle anchor is not
+        /// compared.
+        inline bool operator==(const Envelope &RHS) const {
+            return hasMiddle == RHS.hasMiddle && anchors[0] == RHS.anchors[0] &&
+                   anchors[1] == RHS.anchors[1] && (!hasMiddle || anchors[2] == RHS.anchors[2]) &&
+                   anchors[3] == RHS.anchors[3] && anchors[4] == RHS.anchors[4];
+        }
+
+        inline bool operator!=(const Envelope &RHS) const {
+            return !(*this == RHS);
+        }
     };
 
     struct Vibrato {

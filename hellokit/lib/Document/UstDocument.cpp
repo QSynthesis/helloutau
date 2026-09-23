@@ -146,12 +146,13 @@ namespace hello::kit {
             note.regionEnd = reader.text(from.regionEnd);
 
             if (from.envelope) {
-                Envelope envelope;
+                // stdutau lists the four or five anchors in time order.
+                QList<EnvelopeAnchor> anchors;
                 for (int i = 0; i < from.envelope->count(); ++i) {
                     const auto &anchor = from.envelope->anchors.at(size_t(i));
-                    envelope.anchors.push_back({anchor.x, anchor.y});
+                    anchors.push_back({anchor.x, anchor.y});
                 }
-                note.envelope = envelope;
+                note.envelope = Envelope::fromTimeOrder(anchors);
             }
 
             if (from.vibrato) {
@@ -210,10 +211,12 @@ namespace hello::kit {
             note.regionEnd = out(from.regionEnd);
 
             if (from.envelope) {
+                // stdutau takes the anchors in time order. Without a middle anchor, index four
+                // keeps its default, from which stdutau infers four anchors.
                 utau::Envelope envelope;
-                for (qsizetype i = 0; i < from.envelope->anchors.size() && i < 5; ++i) {
-                    const auto &anchor = from.envelope->anchors.at(i);
-                    envelope.anchors[size_t(i)] = utau::Point(anchor.x, anchor.y);
+                const auto anchors = from.envelope->anchorsInTimeOrder();
+                for (qsizetype i = 0; i < anchors.size(); ++i) {
+                    envelope.anchors[size_t(i)] = utau::Point(anchors[i].x, anchors[i].y);
                 }
                 note.envelope = envelope;
             }

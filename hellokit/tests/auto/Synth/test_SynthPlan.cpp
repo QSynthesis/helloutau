@@ -180,14 +180,12 @@ private Q_SLOTS:
         QVERIFY(plain.has_value());
 
         auto other = note(QStringLiteral("a"));
-        Envelope envelope;
-        envelope.anchors = {
+        other.envelope = Envelope::fromTimeOrder({
             {0,  0  },
             {12, 100},
             {42, 100},
             {0,  0  }
-        };
-        other.envelope = envelope;
+        });
         const auto changed = SynthPlan::make(projectOf({other}), *voices, options(), diagnostics);
         QVERIFY(changed.has_value());
 
