@@ -2,7 +2,7 @@
 #
 #     -Dstdcorelib_DIR=<prefix>/lib/cmake/stdcorelib
 #     -Dstdutau_DIR=<prefix>/lib/cmake/stdutau
-#     -Dwolf-midi_DIR=<vcpkg>/installed/<triplet>/share/wolf-midi
+#     -Dwolf-midi_DIR=<prefix>/lib/cmake/wolf-midi
 #     -Dwinacp_DIR=<prefix>/lib/cmake/winacp
 #
 # stdcorelib and stdutau are developed alongside this repository, so neither is taken from a vcpkg
@@ -42,7 +42,7 @@ _hello_find_external(stdutau stdutau::stdutau
 # The MIDI file reader and writer, a version of QMidiFile without Qt. Its interface uses
 # std::filesystem and std::vector and has no dependencies on this repository.
 _hello_find_external(wolf-midi wolf-midi::wolf-midi
-    "Install the wolf-midi vcpkg port and pass -Dwolf-midi_DIR=<vcpkg>/installed/<triplet>/share/wolf-midi.")
+    "Build https://github.com/wolfgitpr/wolf-midi and pass -Dwolf-midi_DIR=<prefix>/lib/cmake/wolf-midi.")
 
 # Conversion of the Windows ANSI code pages, identical to that of Windows on every system, which a
 # UST or an oto.ini written by UTAU requires to round-trip unchanged. See TextCodec.cpp for the
