@@ -11,7 +11,7 @@
 #include <hellokit/Support/FileSystemWatcher.h>
 
 #ifdef Q_OS_WIN
-#  include <windows.h>
+#  include <QtCore/qt_windows.h>
 #else
 #  include <signal.h>
 #endif

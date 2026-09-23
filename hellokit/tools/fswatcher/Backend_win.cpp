@@ -7,17 +7,13 @@
 #include <string_view>
 #include <thread>
 
-#ifndef NOMINMAX
-#  define NOMINMAX
-#endif
-#include <windows.h>
-
 #include <crtdbg.h>
 #include <cstdlib>
 #include <fcntl.h>
 #include <io.h>
 
 #include <stdcorelib/pimpl.h>
+#include <stdcorelib/platform/windows/stdc_windows.h>
 
 // Monitoring a directory without holding it open.
 //
