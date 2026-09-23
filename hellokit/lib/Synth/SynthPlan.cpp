@@ -209,7 +209,7 @@ namespace hello::kit {
         }
 
         // calc() deliberately accesses beyond both ends and requests the note after the last
-        // one without a bounds check. It expects a default note there.
+        // one without a bounds check. It requires a default note there.
         const auto noteGetter = [&converted](int index) -> utau::Note {
             if (index < 0 || index >= int(converted.size())) {
                 return {};

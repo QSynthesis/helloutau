@@ -324,8 +324,8 @@ private Q_SLOTS:
         QVERIFY(!std::filesystem::exists(p->outputFile()));
     }
 
-    // Reuse is the only part of rendering observable without an engine, because reuse means
-    // not starting one. The engine paths here are nonexistent, so a note reported as reused
+    // Reuse is the only part of rendering observable without an engine, because a reused note
+    // starts no engine. The engine paths here are nonexistent, so a note reported as reused
     // cannot have been rendered.
     void a_piece_already_there_is_not_rendered_again() {
         const auto p = plan();
@@ -374,7 +374,7 @@ private Q_SLOTS:
 
     // The cache directory belongs to the project and persists with it, so fragments rendered
     // for a note before an edit must be removed. Fragments of notes outside this render remain.
-    void the_pieces_a_note_no_longer_wants_are_cleared() {
+    void fragments_no_longer_used_by_a_note_are_removed() {
         const auto p = plan();
         QVERIFY(p.has_value());
 

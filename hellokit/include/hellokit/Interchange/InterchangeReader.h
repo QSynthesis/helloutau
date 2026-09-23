@@ -28,7 +28,7 @@ namespace hello::kit {
     /// A driver translates and makes no decisions. All content of the file is converted,
     /// including the tempo and the silence before the first note, even if the caller discards
     /// it afterward. Decisions on behalf of the user belong to the import flow of the
-    /// application, the only component that knows the destination of the notes.
+    /// application, the only component that has access to the destination of the notes.
     ///
     /// \sa docs/Interchange.md
     class HELLOKIT_INTERCHANGE_EXPORT InterchangeReader {

@@ -82,7 +82,7 @@ private Q_SLOTS:
 
     // A project holds one track, so three entries cannot all be imported. The caller can learn
     // which entries were omitted only from the diagnostics.
-    void it_obeys_the_limit_and_says_so() {
+    void the_track_limit_is_applied_with_a_warning() {
         SchemaOnlyReader reader;
         AutomaticSelector selector;
         DiagnosticList diagnostics;

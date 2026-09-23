@@ -151,7 +151,7 @@ namespace fswatcher {
             }
         }
 
-        /// Starts one stream for \a paths , or returns false if FSEvents refuses.
+        /// Starts one stream for \a paths , or returns false if FSEvents cannot create it.
         bool start(const std::vector<std::string> &paths) {
             if (paths.empty()) {
                 return true;

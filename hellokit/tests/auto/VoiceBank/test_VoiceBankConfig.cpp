@@ -43,7 +43,7 @@ private Q_SLOTS:
 
     // Otherwise a build older than the file would discard unrecognized data, and the user would
     // find it missing after saving.
-    void a_field_this_version_does_not_know_is_written_back() {
+    void an_unrecognized_field_is_written_back() {
         const auto config =
             parse(R"({"$format":"hello-voicebank","charset":"GBK","somethingNew":42})");
         QVERIFY(config.has_value());

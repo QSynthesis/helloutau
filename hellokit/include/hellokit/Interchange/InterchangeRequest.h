@@ -39,7 +39,7 @@ namespace hello::kit {
     /// The capacity of the import destination, which is known to the caller but not to the
     /// driver.
     ///
-    /// The driver knows the number of entries in the file. Whether the project can accommodate
+    /// The driver determines the number of entries in the file. Whether the project can accommodate
     /// them is a separate matter, and the answer changes once multiple tracks are supported,
     /// without any change to the drivers.
     struct ImportLimits {

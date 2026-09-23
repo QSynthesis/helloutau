@@ -77,7 +77,7 @@ private Q_SLOTS:
         m_dir.reset();
     }
 
-    void it_decodes_what_character_txt_says() {
+    void character_txt_is_decoded() {
         write(QStringLiteral("character.txt"), "name=" + kGbkGePing + "\nauthor=" + kGbkGePing +
                                                    "\nweb=http://example.com/\nVersion:1.0\n");
         write(QStringLiteral("a.wav"), "RIFF");
@@ -127,7 +127,7 @@ private Q_SLOTS:
 
     // The prefix map selects different samples for one lyric at different keys, which is why
     // find() takes a note number.
-    void the_prefix_map_decides_which_sample_a_key_uses() {
+    void the_prefix_map_selects_the_sample_for_each_key() {
         write(QStringLiteral("oto.ini"), "a.wav=a,0,0,0,0,0\n"
                                          "a_high.wav=a\x81\x99,0,0,0,0,0\n");
         write(QStringLiteral("a.wav"), "RIFF");
@@ -340,7 +340,7 @@ private Q_SLOTS:
 
     // All data from which an entry is saved: its directory, the file name as written in the
     // oto.ini, and the original text of its numbers.
-    void a_sample_knows_where_it_came_from() {
+    void a_sample_records_its_origin() {
         write(QStringLiteral("sub/oto.ini"), "ka.wav=" + kShiftJisA + ",41.0,2,3,4,5\n");
         write(QStringLiteral("sub/ka.wav"), "RIFF");
         write(QStringLiteral("sub/ki.wav"), "RIFF");

@@ -115,8 +115,8 @@ namespace hello::kit {
         }
 
 #ifdef _WIN32
-        // Deliberately visible. UTAU shows the console, the output of a batch plugin is meant
-        // to be read, and shell() hides the console unless instructed otherwise.
+        // Deliberately visible. UTAU shows the console, the output of a batch plugin is
+        // intended to be read, and shell() hides the console unless instructed otherwise.
         stdc::Popen::StartupInfo info{};
         info.dwFlags = STARTF_USESHOWWINDOW;
         info.wShowWindow = SW_SHOWNORMAL;

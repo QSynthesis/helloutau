@@ -166,7 +166,7 @@ private Q_SLOTS:
     }
 
     // Notes that start together cannot all be kept, and the highest note carries the melody.
-    void a_chord_keeps_its_highest_note_and_says_so() {
+    void a_chord_keeps_its_highest_note_with_a_warning() {
         TempMidi file("chord");
         file.note(0, 96, 60);
         file.note(0, 96, 64);
@@ -300,7 +300,7 @@ private Q_SLOTS:
 
     // MIDI represents only notes and lyrics among the data of this project, so every export
     // loses the remainder. Reporting this on every export is intentional.
-    void writing_says_what_midi_cannot_hold() {
+    void writing_reports_the_data_midi_cannot_represent() {
         const fs::path path = fs::temp_directory_path() / "hellokit_lossy.mid";
 
         Project project;

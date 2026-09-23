@@ -85,7 +85,7 @@ private Q_SLOTS:
 
     // An absent field and a null field are equivalent and differ from zero, which is the
     // reason these fields are optional.
-    void absent_and_null_both_mean_the_file_did_not_say() {
+    void an_absent_field_and_a_null_field_are_equivalent() {
         const auto json =
             QByteArray(R"({"$format":"usth","version":1,"settings":{},"tracks":[{"notes":[)"
                        R"({"lyric":"a","length":480,"noteNum":60,"intensity":null},)"

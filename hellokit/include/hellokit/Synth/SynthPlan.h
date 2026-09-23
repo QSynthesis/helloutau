@@ -48,7 +48,7 @@ namespace hello::kit {
     /// on disk: which sample a lyric resolves to, the timing between adjacent notes, and the
     /// exact arguments passed to each engine.
     ///
-    /// \note Every string passed to an engine is UTF-8, as \c EngineProcess expects. stdutau
+    /// \note Every string passed to an engine is UTF-8, as \c EngineProcess requires. stdutau
     ///       treats these strings as raw bytes because a UST may use any encoding, but no data
     ///       here comes from a UST: the project is already decoded text, so a single encoding
     ///       applies and no conversion is involved.

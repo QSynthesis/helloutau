@@ -76,8 +76,8 @@ namespace utaucompare {
             return out;
         }
 
-        /// \return whether the two are equivalent, which for a measurement means numerically
-        ///         equal regardless of formatting
+        /// \return whether the two are equivalent. Two measurements are equivalent if they are
+        ///         numerically equal, regardless of formatting.
         bool same(const QString &what, const QString &ours, const QString &theirs) {
             if (ours == theirs) {
                 return true;

@@ -105,7 +105,7 @@ private Q_SLOTS:
     }
 
     // A voice bank is a folder selected by the user, so its structure cannot be trusted.
-    void a_tree_deeper_than_the_limit_stops_and_says_so() {
+    void a_tree_deeper_than_the_limit_is_truncated_with_a_warning() {
         write(QStringLiteral("a/b/c/oto.ini"), "x.wav=x,0,0,0,0,0\n");
 
         VoiceBankLimits limits;

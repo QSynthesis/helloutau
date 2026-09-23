@@ -273,9 +273,9 @@ private Q_SLOTS:
         QCOMPARE(bank->checkDisk({root() / "elsewhere"}).removed, QList<fs::path>{fs::path("one")});
     }
 
-    // A watcher reports the new directory itself, which the voice bank does not know. Its
+    // A watcher reports the new directory itself, which is not yet part of the voice bank. Its
     // parent is examined, where the new directory appears.
-    void a_place_the_bank_does_not_know_is_found_from_above() {
+    void a_new_place_is_found_through_its_parent() {
         write(QStringLiteral("a.wav"), "RIFF");
         CountingSelector selector(QStringLiteral("UTF-8"));
         auto bank = open(&selector);
@@ -290,7 +290,7 @@ private Q_SLOTS:
     // A place only limits the examination. A change elsewhere is not detected until that
     // location is examined, which is why the entire voice bank must also be checked
     // periodically.
-    void a_place_says_where_to_look_and_nothing_more() {
+    void a_place_limits_the_examination() {
         write(QStringLiteral("sub/a.wav"), "RIFF");
         write(QStringLiteral("b.wav"), "RIFF");
         CountingSelector selector(QStringLiteral("UTF-8"));

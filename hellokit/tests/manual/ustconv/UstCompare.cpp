@@ -212,7 +212,7 @@ namespace ustconv {
         ///
         /// Only the first control note is excluded, as when a UST is read into a project. A
         /// second one is a note of the user, and silently losing it would be exactly the kind of
-        /// defect this program is meant to detect.
+        /// defect this program is intended to detect.
         std::vector<const utau::Note *> notesOf(const utau::UstFile &file) {
             std::vector<const utau::Note *> notes;
             bool eaten = false;

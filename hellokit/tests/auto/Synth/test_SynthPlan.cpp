@@ -191,7 +191,7 @@ private Q_SLOTS:
         const auto changed = SynthPlan::make(projectOf({other}), *voices, options(), diagnostics);
         QVERIFY(changed.has_value());
 
-        // A failure here means that the envelope now reaches the resampler, and the cache name
+        // A failure here indicates that the envelope now reaches the resampler, and the cache name
         // must then include it.
         QCOMPARE(changed->steps().at(0).resamplerArguments,
                  plain->steps().at(0).resamplerArguments);

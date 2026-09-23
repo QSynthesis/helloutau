@@ -41,7 +41,7 @@ namespace hello::kit {
         /// @}
     };
 
-    /// Receives render progress and decides whether to continue.
+    /// Receives render progress and indicates whether the render continues.
     ///
     /// An interface rather than a callback because the realtime runner has several queries.
     /// Implemented by the user interface layer, not by this library, which does not link

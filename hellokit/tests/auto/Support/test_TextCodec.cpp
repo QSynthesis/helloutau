@@ -41,7 +41,7 @@ private:
     }
 
 private Q_SLOTS:
-    void a_name_qt_does_not_know_gives_an_invalid_codec() {
+    void an_unknown_name_gives_an_invalid_codec() {
         QVERIFY(!TextCodec(QStringLiteral("Klingon-1")).isValid());
         QVERIFY(utf8().isValid());
         QVERIFY(TextCodec().isValid()); // the system encoding
@@ -99,7 +99,7 @@ private Q_SLOTS:
     }
 
     // Invalid bytes must also be rejected on the code page path, not only on the Qt paths.
-    void the_code_page_path_refuses_bytes_that_do_not_decode() {
+    void the_code_page_path_rejects_invalid_byte_sequences() {
         // A truncated sequence, a lead byte followed by an invalid trail byte, and an
         // unassigned pair.
         QVERIFY(!shiftJis().decode(QByteArray("\x82", 1)).has_value());

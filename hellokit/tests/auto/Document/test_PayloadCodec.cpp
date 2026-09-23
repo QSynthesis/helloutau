@@ -61,7 +61,7 @@ private Q_SLOTS:
         }
     }
 
-    void test_decode_refuses_what_cannot_be_read_back() {
+    void decoding_rejects_input_that_cannot_be_written_back() {
         // Padding does not survive UTAU, so accepting it would admit input that could never be
         // written back. Qt decodes all three of these without error.
         QVERIFY(!PayloadCodec::decode("Zg==").has_value());

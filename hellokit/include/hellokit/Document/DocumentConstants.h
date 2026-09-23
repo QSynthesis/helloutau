@@ -14,7 +14,7 @@
 /// leads to silent divergence.
 ///
 /// **UTAU defaults are not repeated here.** stdutau already defines the defaults of the UST
-/// format, and they are used from there rather than copied. Only values decided by HelloUTAU
+/// format, and they are used from there rather than copied. Only values specific to HelloUTAU
 /// are defined below.
 
 namespace hello::kit {

@@ -72,7 +72,7 @@ namespace hello::kit {
 
                 auto it = open.find(key);
                 if (it == open.end() || it->second.empty()) {
-                    continue; // an off with no on, which says nothing about any note
+                    continue; // a note off without a note on, which describes no note
                 }
                 const int start = it->second.back();
                 it->second.pop_back();

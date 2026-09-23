@@ -343,7 +343,7 @@ namespace hello::kit {
         Writer helperScript(syntax, diagnostics);
 
         // The header. UTAU stores the paths and the constant values in variables, which the
-        // body then references. A resampler that reads the script finds them where it expects.
+        // body then references. A resampler that reads the script finds them at the usual location.
         script.lines(syntax.prologue());
         script.set("loadmodule", QString());
         script.set("tool", displayed(engines.wavtool));

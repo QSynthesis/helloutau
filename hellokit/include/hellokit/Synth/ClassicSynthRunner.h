@@ -20,8 +20,8 @@ namespace hello::kit {
     /// call is the last one. For such resamplers the script is an input rather than merely a
     /// means of starting a program, so no runner that omits it can substitute.
     ///
-    /// The console remains visible, as in UTAU. The output of a batch plugin is meant to be
-    /// read.
+    /// The console remains visible, as in UTAU. The output of a batch plugin is intended to
+    /// be read.
     ///
     /// The layout follows UTAU: a header of \c @set assignments, one block per note that sets
     /// the values of the note and calls \c temp_helper.bat , and a footer that joins the two

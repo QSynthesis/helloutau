@@ -248,7 +248,7 @@ private Q_SLOTS:
     }
 
     // The file does not declare its encoding, so the caller must ask the user.
-    void a_file_that_says_nothing_settles_nothing() {
+    void a_file_without_an_encoding_declaration_settles_no_encoding() {
         TempUst file("unknown");
         file.writeBytes(plainUst("a"));
 

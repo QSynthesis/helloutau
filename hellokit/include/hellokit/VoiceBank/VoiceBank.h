@@ -27,7 +27,7 @@ namespace hello::kit {
         /// The display name. Defaults to the folder name if the file specifies none, as in UTAU.
         QString name;
 
-        /// The icon file, relative to the voice bank. UTAU expects a 100 by 100 bitmap.
+        /// The icon file, relative to the voice bank. UTAU requires a 100 by 100 bitmap.
         QString image;
 
         /// The audio file played as a preview of the voice bank.
@@ -76,8 +76,8 @@ namespace hello::kit {
 
         /// Whether part of the text was invalid in \a charset .
         ///
-        /// Invalid text is read as empty. The remainder is loaded and usable, but save() refuses
-        /// to write a changed file of this directory, because the empty text would replace the
+        /// Invalid text is read as empty. The remainder is loaded and usable, but save() does not
+        /// write a changed file of this directory, because the empty text would replace the
         /// original.
         bool lossy = false;
 
