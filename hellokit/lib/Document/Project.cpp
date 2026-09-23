@@ -8,7 +8,7 @@
 #include <QtCore/QJsonObject>
 #include <QtCore/QJsonParseError>
 
-#include <hellokit/Document/DocumentConstants.h>
+#include "DocumentConstants.h"
 #include "PayloadCodec.h"
 
 namespace hello::kit {

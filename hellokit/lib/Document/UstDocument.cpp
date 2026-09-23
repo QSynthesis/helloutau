@@ -8,7 +8,7 @@
 
 #include <hellokit/Support/TextCodec.h>
 
-#include <hellokit/Document/DocumentConstants.h>
+#include "DocumentConstants.h"
 #include "PayloadCodec.h"
 
 namespace hello::kit {

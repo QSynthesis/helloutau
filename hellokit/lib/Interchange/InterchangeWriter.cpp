@@ -2,7 +2,7 @@
 
 #include <QtCore/QCoreApplication>
 
-#include <hellokit/Interchange/InterchangeSelector.h>
+#include "InterchangeSelector.h"
 
 namespace hello::kit {
 

@@ -4,8 +4,8 @@
 
 #include <QtCore/QCoreApplication>
 
-#include <hellokit/Interchange/InterchangeReader.h>
-#include <hellokit/Interchange/InterchangeWriter.h>
+#include "InterchangeReader.h"
+#include "InterchangeWriter.h"
 
 namespace hello::kit {
 

@@ -11,7 +11,7 @@
 #include <QtCore/QThread>
 #include <QtCore/QThreadPool>
 
-#include <hellokit/Synth/EngineProcess.h>
+#include "EngineProcess.h"
 
 namespace hello::kit {
 

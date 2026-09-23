@@ -6,7 +6,7 @@
 #include <QtCore/QCoreApplication>
 #include <QtCore/QDateTime>
 
-#include <hellokit/Synth/EngineProcess.h>
+#include "EngineProcess.h"
 
 namespace hello::kit {
 
