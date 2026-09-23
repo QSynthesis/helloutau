@@ -10,6 +10,8 @@
 #include <QtCore/QSet>
 #include <QtCore/QTimer>
 
+#include <stdcorelib/pimpl.h>
+
 namespace hello::kit {
 
     namespace {
@@ -75,12 +77,14 @@ namespace hello::kit {
 
     class FileSystemWatcher::Impl {
     public:
-        explicit Impl(FileSystemWatcher *q) : q(q), timer(q) {
+        using Decl = FileSystemWatcher;
+
+        explicit Impl(Decl *decl) : _decl(decl), timer(decl) {
             timer.setSingleShot(true);
-            QObject::connect(&timer, &QTimer::timeout, q, [this] { flush(); });
+            QObject::connect(&timer, &QTimer::timeout, decl, [this] { flush(); });
         }
 
-        FileSystemWatcher *q;
+        Decl *_decl;
         QString program = FileSystemWatcher::defaultProgram();
         QStringList roots;
         QTimer timer;
@@ -100,20 +104,22 @@ namespace hello::kit {
         QList<FileSystemWatcher::FileEvent> events;
 
         void start() {
+            stdc_decl_t;
             greeted = false;
             pending.clear();
-            process = new QProcess(q);
+            process = new QProcess(&decl);
             process->setProcessChannelMode(QProcess::SeparateChannels);
             process->setStandardErrorFile(QProcess::nullDevice());
 
-            QObject::connect(process, &QProcess::readyReadStandardOutput, q, [this] { read(); });
-            QObject::connect(process, &QProcess::errorOccurred, q,
+            QObject::connect(process, &QProcess::readyReadStandardOutput, &decl,
+                             [this] { read(); });
+            QObject::connect(process, &QProcess::errorOccurred, &decl,
                              [this](QProcess::ProcessError error) {
                                  if (error == QProcess::FailedToStart) {
                                      giveUp();
                                  }
                              });
-            QObject::connect(process, &QProcess::finished, q, [this] { died(); });
+            QObject::connect(process, &QProcess::finished, &decl, [this] { died(); });
 
             // The roots are sent over standard input, never as arguments.
             QStringList arguments;
@@ -124,12 +130,13 @@ namespace hello::kit {
         }
 
         void stop() {
+            stdc_decl_t;
             if (!process) {
                 return;
             }
             auto *dying = process;
             process = nullptr;
-            QObject::disconnect(dying, nullptr, q, nullptr);
+            QObject::disconnect(dying, nullptr, &decl, nullptr);
             if (dying->state() != QProcess::NotRunning) {
                 dying->write("exit\n");
                 dying->closeWriteChannel();
@@ -155,6 +162,7 @@ namespace hello::kit {
         }
 
         void died() {
+            stdc_decl_t;
             auto *dead = process;
             process = nullptr;
             if (dead) {
@@ -166,7 +174,7 @@ namespace hello::kit {
             }
             // Changes during the interruption are unknown.
             lostTrack = true;
-            QTimer::singleShot(restartDelay, q, [this] {
+            QTimer::singleShot(restartDelay, &decl, [this] {
                 if (!process && !roots.isEmpty()) {
                     start();
                 }
@@ -174,16 +182,17 @@ namespace hello::kit {
         }
 
         void giveUp() {
+            stdc_decl_t;
             if (process) {
                 auto *dead = process;
                 process = nullptr;
-                QObject::disconnect(dead, nullptr, q, nullptr);
+                QObject::disconnect(dead, nullptr, &decl, nullptr);
                 dead->kill();
                 dead->deleteLater();
             }
             deaths = maxDeaths + 1;
             for (const auto &root : std::as_const(roots)) {
-                Q_EMIT q->unwatchable(root);
+                Q_EMIT decl.unwatchable(root);
             }
         }
 
@@ -201,6 +210,7 @@ namespace hello::kit {
         }
 
         void take(const QByteArray &line) {
+            stdc_decl_t;
             if (!greeted) {
                 // Any other greeting indicates a different program or an incompatible protocol.
                 if (line != greeting) {
@@ -229,9 +239,9 @@ namespace hello::kit {
             } else if (word == "recdirty") {
                 gather(trees, path);
             } else if (word == "notfound") {
-                Q_EMIT q->rootNotFound(path);
+                Q_EMIT decl.rootNotFound(path);
             } else if (word == "unwatchable") {
-                Q_EMIT q->unwatchable(path);
+                Q_EMIT decl.unwatchable(path);
             } else if (word == "ok") {
                 deaths = 0;
                 if (lostTrack) {
@@ -240,7 +250,7 @@ namespace hello::kit {
                         gather(trees, root);
                     }
                 }
-                Q_EMIT q->ready();
+                Q_EMIT decl.ready();
             }
         }
 
@@ -258,6 +268,7 @@ namespace hello::kit {
         }
 
         void flush() {
+            stdc_decl_t;
             QStringList treeList(trees.begin(), trees.end());
             std::sort(treeList.begin(), treeList.end());
 
@@ -276,20 +287,21 @@ namespace hello::kit {
             trees.clear();
             if (!events.isEmpty()) {
                 const auto reported = std::exchange(events, {});
-                Q_EMIT q->fileEvents(reported);
+                Q_EMIT decl.fileEvents(reported);
             }
             if (!directoryList.isEmpty() || !treeList.isEmpty()) {
-                Q_EMIT q->changed(directoryList, treeList);
+                Q_EMIT decl.changed(directoryList, treeList);
             }
         }
     };
 
     FileSystemWatcher::FileSystemWatcher(QObject *parent)
-        : QObject(parent), m_impl(std::make_unique<Impl>(this)) {
+        : QObject(parent), _impl(std::make_unique<Impl>(this)) {
     }
 
     FileSystemWatcher::~FileSystemWatcher() {
-        m_impl->stop();
+        stdc_impl_t;
+        impl.stop();
     }
 
     bool FileSystemWatcher::fileEventsAvailable() {
@@ -310,15 +322,17 @@ namespace hello::kit {
     }
 
     void FileSystemWatcher::setProgram(const QString &program) {
-        m_impl->program = program;
+        stdc_impl_t;
+        impl.program = program;
     }
 
     QString FileSystemWatcher::program() const {
-        return m_impl->program;
+        stdc_impl_t;
+        return impl.program;
     }
 
     void FileSystemWatcher::setRoots(const QStringList &roots) {
-        auto &impl = *m_impl;
+        stdc_impl_t;
         QStringList tidied;
         for (const auto &root : roots) {
             tidied += tidy(QFileInfo(root).absoluteFilePath());
@@ -340,27 +354,33 @@ namespace hello::kit {
     }
 
     QStringList FileSystemWatcher::roots() const {
-        return m_impl->roots;
+        stdc_impl_t;
+        return impl.roots;
     }
 
     void FileSystemWatcher::setFileEventsEnabled(bool enabled) {
-        m_impl->fileEvents = enabled && fileEventsAvailable();
+        stdc_impl_t;
+        impl.fileEvents = enabled && fileEventsAvailable();
     }
 
     bool FileSystemWatcher::fileEventsEnabled() const {
-        return m_impl->fileEvents;
+        stdc_impl_t;
+        return impl.fileEvents;
     }
 
     void FileSystemWatcher::setDelay(int milliseconds) {
-        m_impl->delay = milliseconds;
+        stdc_impl_t;
+        impl.delay = milliseconds;
     }
 
     int FileSystemWatcher::delay() const {
-        return m_impl->delay;
+        stdc_impl_t;
+        return impl.delay;
     }
 
     qint64 FileSystemWatcher::processId() const {
-        return m_impl->process ? m_impl->process->processId() : 0;
+        stdc_impl_t;
+        return impl.process ? impl.process->processId() : 0;
     }
 
 }
