@@ -37,6 +37,9 @@ hellokit_add_executable(${PROJECT_NAME}
 # The libraries obtain C++17 through Qt, which this target does not link.
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
 
+# For the PImpl macros of stdcorelib/pimpl.h.
+target_link_libraries(${PROJECT_NAME} PRIVATE stdcorelib::stdcorelib)
+
 if(APPLE)
     target_link_libraries(${PROJECT_NAME} PRIVATE "-framework CoreServices")
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")

@@ -17,6 +17,8 @@
 #include <fcntl.h>
 #include <io.h>
 
+#include <stdcorelib/pimpl.h>
+
 // Monitoring a directory without holding it open.
 //
 // ReadDirectoryChangesW requires a handle to the monitored directory, and an open handle
@@ -347,13 +349,13 @@ namespace fswatcher {
     }
 
     Backend::Backend(Output &out, bool fileEvents)
-        : m_impl(std::make_unique<Impl>(out, fileEvents)) {
+        : _impl(std::make_unique<Impl>(out, fileEvents)) {
     }
 
     Backend::~Backend() = default;
 
     void Backend::follow(const std::vector<std::string> &roots) {
-        auto &impl = *m_impl;
+        stdc_impl_t;
 
         std::vector<Impl::Root> next;
         std::vector<std::string> notFound;

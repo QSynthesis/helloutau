@@ -8,6 +8,8 @@
 #include <sys/mount.h>
 #include <sys/stat.h>
 
+#include <stdcorelib/pimpl.h>
+
 // Monitoring a tree with FSEvents, which monitors entire trees natively.
 //
 // One stream covers all roots and reports individual files. FSEvents holds no descriptor of the
@@ -195,14 +197,14 @@ namespace fswatcher {
     }
 
     // fileEvents is always false, because main() rejects --file-events on this system.
-    Backend::Backend(Output &out, bool fileEvents) : m_impl(std::make_unique<Impl>(out)) {
+    Backend::Backend(Output &out, bool fileEvents) : _impl(std::make_unique<Impl>(out)) {
         (void) fileEvents;
     }
 
     Backend::~Backend() = default;
 
     void Backend::follow(const std::vector<std::string> &roots) {
-        auto &impl = *m_impl;
+        stdc_impl_t;
         impl.stop();
 
         std::vector<Impl::Root> next;

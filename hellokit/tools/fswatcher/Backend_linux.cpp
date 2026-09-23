@@ -16,6 +16,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <stdcorelib/pimpl.h>
+
 // Monitoring a tree with inotify, which monitors a single directory without its subdirectories.
 //
 // Every directory under a root receives its own watch, and a new directory is watched before it
@@ -365,13 +367,13 @@ namespace fswatcher {
     }
 
     Backend::Backend(Output &out, bool fileEvents)
-        : m_impl(std::make_unique<Impl>(out, fileEvents)) {
+        : _impl(std::make_unique<Impl>(out, fileEvents)) {
     }
 
     Backend::~Backend() = default;
 
     void Backend::follow(const std::vector<std::string> &roots) {
-        auto &impl = *m_impl;
+        stdc_impl_t;
         std::vector<std::string> notFound;
         std::vector<std::string> unwatchable;
         {
