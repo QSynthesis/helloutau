@@ -2,6 +2,8 @@
 
 #include <QtCore/QHash>
 
+#include <stdcorelib/pimpl.h>
+
 namespace hello::kit {
 
     // One list per driver kind, in registration order, plus an index by ID. Registration order
@@ -55,35 +57,43 @@ namespace hello::kit {
     InterchangeRegistry::~InterchangeRegistry() = default;
 
     bool InterchangeRegistry::addReader(std::unique_ptr<InterchangeReader> reader) {
-        return _impl->readers.add(std::move(reader));
+        stdc_impl_t;
+        return impl.readers.add(std::move(reader));
     }
 
     bool InterchangeRegistry::addWriter(std::unique_ptr<InterchangeWriter> writer) {
-        return _impl->writers.add(std::move(writer));
+        stdc_impl_t;
+        return impl.writers.add(std::move(writer));
     }
 
     QList<InterchangeReader *> InterchangeRegistry::readers() const {
-        return _impl->readers.all();
+        stdc_impl_t;
+        return impl.readers.all();
     }
 
     QList<InterchangeWriter *> InterchangeRegistry::writers() const {
-        return _impl->writers.all();
+        stdc_impl_t;
+        return impl.writers.all();
     }
 
     InterchangeReader *InterchangeRegistry::readerForId(const QString &id) const {
-        return _impl->readers.byId.value(id);
+        stdc_impl_t;
+        return impl.readers.byId.value(id);
     }
 
     InterchangeWriter *InterchangeRegistry::writerForId(const QString &id) const {
-        return _impl->writers.byId.value(id);
+        stdc_impl_t;
+        return impl.writers.byId.value(id);
     }
 
     InterchangeReader *InterchangeRegistry::readerForSuffix(const QString &suffix) const {
-        return _impl->readers.forSuffix(suffix);
+        stdc_impl_t;
+        return impl.readers.forSuffix(suffix);
     }
 
     InterchangeWriter *InterchangeRegistry::writerForSuffix(const QString &suffix) const {
-        return _impl->writers.forSuffix(suffix);
+        stdc_impl_t;
+        return impl.writers.forSuffix(suffix);
     }
 
 }
