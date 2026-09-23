@@ -1,15 +1,15 @@
 #include "EngineProcess.h"
 
+#ifdef _WIN32
+#  include <QtCore/qt_windows.h>
+#endif
+
 #include <string>
 #include <vector>
 
 #include <QtCore/QCoreApplication>
 
 #include <stdcorelib/support/popen.h>
-
-#ifdef _WIN32
-#  include <QtCore/qt_windows.h>
-#endif
 
 #include <hellokit/Support/TextCodec.h>
 

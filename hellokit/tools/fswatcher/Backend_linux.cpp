@@ -1,5 +1,12 @@
 #include "Backend.h"
 
+#include <dirent.h>
+#include <poll.h>
+#include <sys/eventfd.h>
+#include <sys/inotify.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
 #include <algorithm>
 #include <cerrno>
 #include <climits>
@@ -8,13 +15,6 @@
 #include <mutex>
 #include <set>
 #include <thread>
-
-#include <dirent.h>
-#include <poll.h>
-#include <sys/eventfd.h>
-#include <sys/inotify.h>
-#include <sys/stat.h>
-#include <unistd.h>
 
 #include <stdcorelib/pimpl.h>
 

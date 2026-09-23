@@ -1,16 +1,16 @@
 #include "Backend.h"
 
+#include <crtdbg.h>
+#include <fcntl.h>
+#include <io.h>
+
+#include <cstdlib>
 #include <cwctype>
 #include <map>
 #include <mutex>
 #include <optional>
 #include <string_view>
 #include <thread>
-
-#include <crtdbg.h>
-#include <cstdlib>
-#include <fcntl.h>
-#include <io.h>
 
 #include <stdcorelib/pimpl.h>
 #include <stdcorelib/platform/windows/stdc_windows.h>

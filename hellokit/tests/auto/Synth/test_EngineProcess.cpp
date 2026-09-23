@@ -1,11 +1,11 @@
-#include <cstdio>
-#include <cstring>
-#include <string>
-
 #ifdef _WIN32
 #  include <fcntl.h>
 #  include <io.h>
 #endif
+
+#include <cstdio>
+#include <cstring>
+#include <string>
 
 #include <QtCore/QCoreApplication>
 #include <QtCore/QFile>

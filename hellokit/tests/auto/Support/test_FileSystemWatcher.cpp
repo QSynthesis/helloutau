@@ -1,3 +1,9 @@
+#ifdef _WIN32
+#  include <QtCore/qt_windows.h>
+#else
+#  include <signal.h>
+#endif
+
 #include <algorithm>
 #include <memory>
 
@@ -9,12 +15,6 @@
 #include <QtTest/QTest>
 
 #include <hellokit/Support/FileSystemWatcher.h>
-
-#ifdef Q_OS_WIN
-#  include <QtCore/qt_windows.h>
-#else
-#  include <signal.h>
-#endif
 
 using namespace hello::kit;
 
