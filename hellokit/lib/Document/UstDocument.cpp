@@ -96,29 +96,29 @@ namespace hello::kit {
             bool _unescaping;
         };
 
-        PortamentoType joinOf(utau::Point::Type type) {
+        PortamentoPoint::Type joinOf(utau::Point::Type type) {
             switch (type) {
                 case utau::Point::LinearJoin:
-                    return PortamentoType::Linear;
+                    return PortamentoPoint::Linear;
                 case utau::Point::RJoin:
-                    return PortamentoType::R;
+                    return PortamentoPoint::R;
                 case utau::Point::JJoin:
-                    return PortamentoType::J;
+                    return PortamentoPoint::J;
                 case utau::Point::SJoin:
                     break;
             }
-            return PortamentoType::S;
+            return PortamentoPoint::S;
         }
 
-        utau::Point::Type joinOf(PortamentoType type) {
+        utau::Point::Type joinOf(PortamentoPoint::Type type) {
             switch (type) {
-                case PortamentoType::Linear:
+                case PortamentoPoint::Linear:
                     return utau::Point::LinearJoin;
-                case PortamentoType::R:
+                case PortamentoPoint::R:
                     return utau::Point::RJoin;
-                case PortamentoType::J:
+                case PortamentoPoint::J:
                     return utau::Point::JJoin;
-                case PortamentoType::S:
+                case PortamentoPoint::S:
                     break;
             }
             return utau::Point::SJoin;

@@ -99,21 +99,21 @@ namespace hello::kit {
         double intensity = 0;
     };
 
-    /// The curve shape connecting a portamento point to the preceding point.
-    ///
-    /// \warning The letters in the \c PBM entry of UST do not match these names. An empty
-    ///          letter denotes \c S, \c s denotes \c Linear, \c r denotes \c R and \c j denotes
-    ///          \c J. The mapping is stated here deliberately, so that only the UST reader and
-    ///          writer depend on it.
-    enum class PortamentoType {
-        S,
-        Linear,
-        R,
-        J,
-    };
-
     /// One control point of the Mode2 pitch curve.
     struct PortamentoPoint {
+        /// The curve shape connecting a point to the preceding point.
+        ///
+        /// \warning The letters in the \c PBM entry of UST do not match these names. An empty
+        ///          letter denotes \c S, \c s denotes \c Linear, \c r denotes \c R and \c j
+        ///          denotes \c J. The mapping is stated here deliberately, so that only the UST
+        ///          reader and writer depend on it.
+        enum Type {
+            S,
+            Linear,
+            R,
+            J,
+        };
+
         /// In milliseconds. The first point is relative to the start of the note and may be
         /// negative, extending into the preceding note. Each subsequent point is relative to the
         /// preceding point.
@@ -122,7 +122,7 @@ namespace hello::kit {
         /// In tenths of a semitone.
         double y = 0;
 
-        PortamentoType type = PortamentoType::S;
+        Type type = S;
     };
 
     /// The Mode1 pitch curve, with one value every five ticks.

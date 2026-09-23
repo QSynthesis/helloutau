@@ -64,32 +64,32 @@ namespace hello::kit {
             }
         }
 
-        const char *portamentoTypeName(PortamentoType type) {
+        const char *portamentoTypeName(PortamentoPoint::Type type) {
             switch (type) {
-                case PortamentoType::Linear:
+                case PortamentoPoint::Linear:
                     return "Linear";
-                case PortamentoType::R:
+                case PortamentoPoint::R:
                     return "R";
-                case PortamentoType::J:
+                case PortamentoPoint::J:
                     return "J";
-                case PortamentoType::S:
+                case PortamentoPoint::S:
                     break;
             }
             return "S";
         }
 
-        std::optional<PortamentoType> portamentoTypeFromName(const QString &name) {
+        std::optional<PortamentoPoint::Type> portamentoTypeFromName(const QString &name) {
             if (name == QLatin1String("S")) {
-                return PortamentoType::S;
+                return PortamentoPoint::S;
             }
             if (name == QLatin1String("Linear")) {
-                return PortamentoType::Linear;
+                return PortamentoPoint::Linear;
             }
             if (name == QLatin1String("R")) {
-                return PortamentoType::R;
+                return PortamentoPoint::R;
             }
             if (name == QLatin1String("J")) {
-                return PortamentoType::J;
+                return PortamentoPoint::J;
             }
             return std::nullopt;
         }
@@ -288,7 +288,7 @@ namespace hello::kit {
                 }
                 note.portamento.push_back({fields.value(QLatin1String("x")).toDouble(),
                                            fields.value(QLatin1String("y")).toDouble(),
-                                           type.value_or(PortamentoType::S)});
+                                           type.value_or(PortamentoPoint::S)});
             }
             if (const auto bend = object.value(QLatin1String("pitchBend")); bend.isObject()) {
                 note.pitchBend = pitchBendFromJson(bend.toObject());

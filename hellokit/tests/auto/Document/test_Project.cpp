@@ -156,8 +156,8 @@ private Q_SLOTS:
         });
         note.vibrato = Vibrato{65, 180, 35, 20, 20, 0, 0, 0};
         note.portamento = {
-            {-40, 0,  PortamentoType::S     },
-            {50,  10, PortamentoType::Linear}
+            {-40, 0,  PortamentoPoint::S     },
+            {50,  10, PortamentoPoint::Linear}
         };
         note.label = QStringLiteral("verse");
         note.patch = QStringLiteral("resampler.exe");
@@ -182,8 +182,8 @@ private Q_SLOTS:
         QVERIFY(back.vibrato.has_value());
         QCOMPARE(back.vibrato->period, 180.0);
         QCOMPARE(back.portamento.size(), 2);
-        QVERIFY(back.portamento.at(0).type == PortamentoType::S);
-        QVERIFY(back.portamento.at(1).type == PortamentoType::Linear);
+        QVERIFY(back.portamento.at(0).type == PortamentoPoint::S);
+        QVERIFY(back.portamento.at(1).type == PortamentoPoint::Linear);
         QCOMPARE(back.label, QStringLiteral("verse"));
         QCOMPARE(back.patch, QStringLiteral("resampler.exe"));
         QCOMPARE(back.userData.value(QStringLiteral("$whatever")), QStringLiteral("kept"));

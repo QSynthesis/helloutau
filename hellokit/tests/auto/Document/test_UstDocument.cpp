@@ -117,8 +117,8 @@ private Q_SLOTS:
         });
         note.vibrato = Vibrato{65, 180, 35, 20, 20, 0, 0, 7};
         note.portamento = {
-            {-40, 0,  PortamentoType::S     },
-            {50,  10, PortamentoType::Linear}
+            {-40, 0,  PortamentoPoint::S     },
+            {50,  10, PortamentoPoint::Linear}
         };
         note.label = QStringLiteral("verse");
         note.userData.insert(QStringLiteral("$mine"), QStringLiteral("kept"));
@@ -147,7 +147,7 @@ private Q_SLOTS:
         QVERIFY(back.first().vibrato.has_value());
         QCOMPARE(back.first().vibrato->period, 180.0);
         QCOMPARE(back.first().portamento.size(), 2);
-        QVERIFY(back.first().portamento.at(1).type == PortamentoType::Linear);
+        QVERIFY(back.first().portamento.at(1).type == PortamentoPoint::Linear);
         QCOMPARE(back.first().label, QStringLiteral("verse"));
         QCOMPARE(back.first().userData.value(QStringLiteral("$mine")), QStringLiteral("kept"));
         QCOMPARE(again->tracks.first().voiceDir, QStringLiteral("%VOICE%uta"));

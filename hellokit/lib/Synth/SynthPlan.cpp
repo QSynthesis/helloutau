@@ -156,16 +156,16 @@ namespace hello::kit {
             for (const auto &point : from.portamento) {
                 auto type = utau::Point::SJoin;
                 switch (point.type) {
-                    case PortamentoType::Linear:
+                    case PortamentoPoint::Linear:
                         type = utau::Point::LinearJoin;
                         break;
-                    case PortamentoType::R:
+                    case PortamentoPoint::R:
                         type = utau::Point::RJoin;
                         break;
-                    case PortamentoType::J:
+                    case PortamentoPoint::J:
                         type = utau::Point::JJoin;
                         break;
-                    case PortamentoType::S:
+                    case PortamentoPoint::S:
                         break;
                 }
                 note.portamento.emplace_back(point.x, point.y, type);
