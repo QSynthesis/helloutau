@@ -11,16 +11,21 @@
 //
 // Started by hello::kit::FileSystemWatcher, which communicates with it over standard input and
 // output as specified in Protocol.h. The roots are received only on standard input, never from
-// the command line, the environment or a file.
+// the command line, the environment or a file. The only arguments are options.
 
 namespace {
 
     // Keep in sync with Protocol.h.
-    constexpr char usage[] = R"(Usage: hello-fswatcher [--help]
+    constexpr char usage[] = R"(Usage: hello-fswatcher [--help] [--file-events]
 
 Reports directories under a set of root directories that may have changed on disk. The program
-is started by hello::kit::FileSystemWatcher and communicates over standard input and output. It
-accepts no command-line arguments other than --help.
+is started by hello::kit::FileSystemWatcher and communicates over standard input and output.
+
+Options
+  --help              Prints this text and exits.
+  --file-events       Also reports individual entries with the messages create, delete and
+                      change. Available on Windows and Linux only. On macOS the program exits
+                      with status 2. hello::kit::FileSystemWatcher does not use this option.
 
 Encoding
   Each message is one line of UTF-8 text. In paths, '%', line feed and carriage return are
@@ -43,6 +48,14 @@ Output (standard output)
   unwatchable <root>  <root> cannot be monitored, and changes to it must be detected by
                       other means.
   unknown <line>      <line> was not a recognized input message. Encoded as a path.
+
+Entry messages (only with --file-events)
+  create <path>       An entry appeared, by creation or by a rename or move into place.
+  delete <path>       An entry disappeared, by deletion or by a rename or move away.
+  change <path>       The contents or metadata of an entry may have changed.
+
+  The parent directory of every such entry is reported by dirty as well. Entry messages are
+  not sent for a root, and not for changes covered by recdirty after events were lost.
 
 Every reported path begins with one of the roots exactly as received, so that the client can
 identify the root by string comparison. The remainder of the path uses the native separator of
@@ -75,11 +88,21 @@ Example (Linux; lines marked > are input, lines marked < are output)
 
 int main(int argc, char **argv) {
     // Checked before anything is written to standard output, which is reserved for the protocol.
+    bool fileEvents = false;
     for (int i = 1; i < argc; ++i) {
         const std::string_view argument = argv[i];
         if (argument == "--help") {
             std::fputs(usage, stdout);
             return 0;
+        }
+        if (argument == "--file-events") {
+            if (!fswatcher::fileEventsAvailable()) {
+                std::fputs("hello-fswatcher: --file-events is not available on this system.\n",
+                           stderr);
+                return 2;
+            }
+            fileEvents = true;
+            continue;
         }
         std::fprintf(stderr, "hello-fswatcher: unknown argument '%s'. See --help.\n", argv[i]);
         return 2;
@@ -90,7 +113,7 @@ int main(int argc, char **argv) {
     fswatcher::Output out;
     out.line(fswatcher::greeting);
 
-    fswatcher::Backend backend(out);
+    fswatcher::Backend backend(out, fileEvents);
 
     std::string line;
     while (readLine(line)) {

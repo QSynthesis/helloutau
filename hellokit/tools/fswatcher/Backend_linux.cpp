@@ -81,7 +81,7 @@ namespace fswatcher {
             bool above = false;
         };
 
-        explicit Impl(Output &out) : out(out) {
+        Impl(Output &out, bool fileEvents) : out(out), fileEvents(fileEvents) {
             fd = inotify_init1(IN_NONBLOCK | IN_CLOEXEC);
             wake = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
             if (fd >= 0 && wake >= 0) {
@@ -108,6 +108,7 @@ namespace fswatcher {
         }
 
         Output &out;
+        const bool fileEvents;
         int fd = -1;
         int wake = -1;
         std::thread thread;
@@ -294,6 +295,15 @@ namespace fswatcher {
                     continue;
                 }
                 say("dirty", given(root, watch.path));
+                if (fileEvents) {
+                    if (appeared) {
+                        say("create", given(root, path));
+                    } else if (left) {
+                        say("delete", given(root, path));
+                    } else if (event.mask & (IN_MODIFY | IN_CLOSE_WRITE | IN_ATTRIB)) {
+                        say("change", given(root, path));
+                    }
+                }
 
                 if (isDir && left) {
                     // A moved directory keeps its watches, which would continue to report it
@@ -350,7 +360,12 @@ namespace fswatcher {
         // No dialogs are shown on this system, and streams have no text mode.
     }
 
-    Backend::Backend(Output &out) : m_impl(std::make_unique<Impl>(out)) {
+    bool fileEventsAvailable() {
+        return true;
+    }
+
+    Backend::Backend(Output &out, bool fileEvents)
+        : m_impl(std::make_unique<Impl>(out, fileEvents)) {
     }
 
     Backend::~Backend() = default;

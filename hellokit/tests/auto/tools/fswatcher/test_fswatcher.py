@@ -8,7 +8,9 @@ tree, a removed root or an unwatchable one, and no message is sent when nothing 
 layers above merge these distinctions. See Protocol.h for the messages.
 
 Two voice banks are monitored side by side, and every change occurs in the first, so that any
-message about the second, or about neither, is a failure.
+message about the second, or about neither, is a failure. Without --file-events no entry message
+(create, delete, change) may appear. With it, each kind of entry change must be reported on
+Windows and Linux, and the option must be refused on macOS.
 """
 import os
 import queue
@@ -27,6 +29,9 @@ PATIENCE = 10.0
 # one would, so this period suffices to detect one.
 QUIET = 1.0
 
+# The messages sent only with --file-events.
+ENTRY_WORDS = ("create", "delete", "change")
+
 
 def esc(path):
     return path.replace("%", "%25").replace("\n", "%0A").replace("\r", "%0D")
@@ -38,8 +43,9 @@ def write(path, data=b"RIFF"):
 
 
 class Program:
-    def __init__(self, exe):
-        self.process = subprocess.Popen([exe], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+    def __init__(self, exe, arguments=()):
+        self.process = subprocess.Popen([exe, *arguments], stdin=subprocess.PIPE,
+                                        stdout=subprocess.PIPE)
         self.lines = queue.Queue()
         threading.Thread(target=self._pump, daemon=True).start()
 
@@ -89,7 +95,8 @@ def check_arguments(exe):
                            timeout=PATIENCE)
     text = shown.stdout.decode("utf-8")
     words = ("Usage: hello-fswatcher", "hello-fswatcher 1", "roots", "exit", "ok", "dirty",
-             "recdirty", "gone", "unwatchable", "unknown", "%25", "%0A", "%0D")
+             "recdirty", "gone", "unwatchable", "unknown", "%25", "%0A", "%0D", "--file-events",
+             "create", "delete", "change")
     if shown.returncode != 0 or not all(word in text for word in words):
         print("FAIL --help:", shown.returncode, [w for w in words if w not in text])
         failures += 1
@@ -99,13 +106,21 @@ def check_arguments(exe):
     if refused.returncode != 2 or refused.stdout or b"--bogus" not in refused.stderr:
         print("FAIL unknown argument:", refused.returncode, refused.stdout, refused.stderr)
         failures += 1
+
+    # FSEvents reports directories only, so the option is refused rather than accepted without
+    # effect. Standard input is closed, so a program that accepted it would exit with 0.
+    if sys.platform == "darwin":
+        entries = subprocess.run([exe, "--file-events"], stdin=subprocess.DEVNULL,
+                                 capture_output=True, timeout=PATIENCE)
+        if entries.returncode != 2 or entries.stdout or b"--file-events" not in entries.stderr:
+            print("FAIL --file-events on macOS:", entries.returncode, entries.stdout,
+                  entries.stderr)
+            failures += 1
     return failures
 
 
-def main():
-    exe = sys.argv[1]
-    if check_arguments(exe):
-        return 1
+def check_directories(exe):
+    """The default mode, as used by hello::kit::FileSystemWatcher."""
     base = os.path.realpath(tempfile.mkdtemp(prefix="fsw-"))
     program = None
     try:
@@ -156,7 +171,9 @@ def main():
             # observed.
             got = program.gather(must, quiet=QUIET if quiet else 0.3)
             missing = [m for m in must if m not in got]
-            unwanted = got if quiet else [g for g in got if not about_first_bank(g)]
+            unwanted = got if quiet else [
+                g for g in got if not about_first_bank(g) or g.split(" ", 1)[0] in ENTRY_WORDS
+            ]
             ok = acted is None and not missing and not unwanted
             failures += 0 if ok else 1
             print(("PASS " if ok else "FAIL ") + name)
@@ -236,6 +253,82 @@ def main():
         if program is not None:
             program.close()
         shutil.rmtree(base, ignore_errors=True)
+
+
+def check_file_events(exe):
+    """With --file-events, each kind of entry change is reported by its entry message, in addition
+    to the dirty message of the parent directory. Additional messages about the root are
+    permitted, because a single operation may produce several system events."""
+    base = os.path.realpath(tempfile.mkdtemp(prefix="fsw-entries-"))
+    program = None
+    failures = 0
+    try:
+        root = os.path.join(base, "bank")
+        os.makedirs(root)
+        R = esc(root)
+        S = os.sep
+
+        program = Program(exe, ["--file-events"])
+        if program.next(PATIENCE) != "hello-fswatcher 1":
+            print("FAIL greeting with --file-events")
+            return 1
+        program.send("roots\n" + esc(root) + "\n#\n")
+        if program.gather(["ok"])[:1] != ["ok"]:
+            print("FAIL answer with --file-events")
+            return 1
+        program.gather(quiet=1.5)
+
+        def expect(name, action, must):
+            nonlocal failures
+            action()
+            got = program.gather(must, quiet=0.3)
+            missing = [m for m in must if m not in got]
+            unwanted = [g for g in got
+                        if not (" " in g and (g.split(" ", 1)[1] == R or
+                                              g.split(" ", 1)[1].startswith(R + S)))]
+            ok = not missing and not unwanted
+            failures += 0 if ok else 1
+            print(("PASS " if ok else "FAIL ") + "entries: " + name)
+            if not ok:
+                for m in missing:
+                    print("   missing:", m)
+                for g in got:
+                    print("   got:", g)
+
+        f, g = os.path.join(root, "f.wav"), os.path.join(root, "g.wav")
+        expect("a file created", lambda: write(f),
+               ["create " + R + S + "f.wav", "dirty " + R])
+        expect("a file rewritten", lambda: write(f, b"RIFF...."),
+               ["change " + R + S + "f.wav", "dirty " + R])
+        expect("a file renamed", lambda: os.rename(f, g),
+               ["delete " + R + S + "f.wav", "create " + R + S + "g.wav", "dirty " + R])
+        expect("a file deleted", lambda: os.remove(g),
+               ["delete " + R + S + "g.wav", "dirty " + R])
+        expect("a directory created", lambda: os.makedirs(os.path.join(root, "d")),
+               ["create " + R + S + "d", "recdirty " + R + S + "d", "dirty " + R])
+        expect("a file in the new directory", lambda: write(os.path.join(root, "d", "h.wav")),
+               ["create " + R + S + "d" + S + "h.wav", "dirty " + R + S + "d"])
+
+        if program.close() != 0:
+            print("FAIL exit code with --file-events")
+            failures += 1
+        program = None
+        return failures
+    finally:
+        if program is not None:
+            program.close()
+        shutil.rmtree(base, ignore_errors=True)
+
+
+def main():
+    exe = sys.argv[1]
+    if check_arguments(exe):
+        return 1
+    failures = check_directories(exe)
+    if sys.platform != "darwin":
+        failures += check_file_events(exe)
+    print("TOTAL FAILURES", failures)
+    return 1 if failures else 0
 
 
 if __name__ == "__main__":

@@ -34,6 +34,19 @@
 ///   detected by other means.
 /// - <tt>unknown \<line\></tt> : the input line was not recognized. Encoded as a path.
 ///
+/// **Entry messages**, sent only if the program was started with \c --file-events , which is
+/// available on Windows and Linux only:
+///
+/// - <tt>create \<path\></tt> : an entry appeared, by creation or by a rename or move into place.
+/// - <tt>delete \<path\></tt> : an entry disappeared, by deletion or by a rename or move away.
+/// - <tt>change \<path\></tt> : the contents or metadata of an entry may have changed.
+///
+/// The parent directory of every such entry is reported by \c dirty as well, so a client that
+/// ignores these messages receives the same information as without the option. They are not
+/// sent for a root, and not for changes covered by \c recdirty after events were lost. Like all
+/// messages they are hints: an entry may be reported more than once, or after it has changed
+/// again.
+///
 /// Every reported path begins with a root exactly as received, so that the client can identify
 /// the root by string comparison. The remainder of the path uses the native separator.
 namespace fswatcher {

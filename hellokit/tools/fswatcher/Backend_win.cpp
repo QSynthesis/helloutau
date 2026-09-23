@@ -168,7 +168,7 @@ namespace fswatcher {
             std::thread thread;
         };
 
-        explicit Impl(Output &out) : out(out) {
+        Impl(Output &out, bool fileEvents) : out(out), fileEvents(fileEvents) {
         }
 
         ~Impl() {
@@ -178,6 +178,7 @@ namespace fswatcher {
         }
 
         Output &out;
+        const bool fileEvents;
 
         // The roots, read by the drive threads and replaced by follow().
         std::mutex mutex;
@@ -225,6 +226,12 @@ namespace fswatcher {
                         continue;
                     }
                     out.line("dirty", given(root, parentOf(path)));
+                    if (fileEvents) {
+                        out.line(appeared ? "create"
+                                 : left   ? "delete"
+                                          : "change",
+                                 given(root, path));
+                    }
                     if (appeared && isDirectory(path)) {
                         out.line("recdirty", given(root, path));
                     }
@@ -335,7 +342,12 @@ namespace fswatcher {
         _CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_DEBUG);
     }
 
-    Backend::Backend(Output &out) : m_impl(std::make_unique<Impl>(out)) {
+    bool fileEventsAvailable() {
+        return true;
+    }
+
+    Backend::Backend(Output &out, bool fileEvents)
+        : m_impl(std::make_unique<Impl>(out, fileEvents)) {
     }
 
     Backend::~Backend() = default;

@@ -13,12 +13,18 @@ namespace fswatcher {
     /// unchanged, and a failure terminates the process instead of waiting on a dialog.
     void prepareProcess();
 
+    /// Returns whether this system reports changes per entry, which the messages \c create ,
+    /// \c delete and \c change require. False on macOS, where FSEvents reports directories.
+    bool fileEventsAvailable();
+
     /// Translates the change notifications of the system into the messages of Protocol.h .
     ///
     /// One implementation per supported system, selected by CMake.
     class Backend {
     public:
-        explicit Backend(Output &out);
+        /// \param fileEvents whether to send \c create , \c delete and \c change in addition to
+        ///        \c dirty . Requires fileEventsAvailable() .
+        Backend(Output &out, bool fileEvents);
         ~Backend();
 
         Backend(const Backend &) = delete;

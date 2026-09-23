@@ -190,7 +190,13 @@ namespace fswatcher {
         // No dialogs are shown on this system, and streams have no text mode.
     }
 
-    Backend::Backend(Output &out) : m_impl(std::make_unique<Impl>(out)) {
+    bool fileEventsAvailable() {
+        return false;
+    }
+
+    // fileEvents is always false, because main() rejects --file-events on this system.
+    Backend::Backend(Output &out, bool fileEvents) : m_impl(std::make_unique<Impl>(out)) {
+        (void) fileEvents;
     }
 
     Backend::~Backend() = default;

@@ -110,7 +110,9 @@ namespace hello::kit {
                              });
             QObject::connect(process, &QProcess::finished, q, [this] { died(); });
 
-            // No arguments. The program reads only its standard input.
+            // No arguments. The program reads only its standard input. --file-events is not
+            // passed, because a directory is the unit that VoiceBank::checkDisk() examines and
+            // the option is unavailable on macOS.
             process->start(program, QStringList());
         }
 
