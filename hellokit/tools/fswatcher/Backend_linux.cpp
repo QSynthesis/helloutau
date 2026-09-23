@@ -262,7 +262,7 @@ namespace fswatcher {
                     if (left) {
                         unwatchTree(root.resolved);
                         root.alive = false;
-                        say("gone", root.given);
+                        say("notfound", root.given);
                     } else if (appeared && isDirectory(root.resolved)) {
                         root.alive = true;
                         take(root);
@@ -282,7 +282,7 @@ namespace fswatcher {
                 if (path == root.resolved && (event.mask & (IN_DELETE_SELF | IN_MOVE_SELF))) {
                     unwatchTree(root.resolved);
                     root.alive = false;
-                    say("gone", root.given);
+                    say("notfound", root.given);
                     continue;
                 }
                 if (event.mask & (IN_DELETE_SELF | IN_MOVE_SELF)) {
@@ -372,7 +372,7 @@ namespace fswatcher {
 
     void Backend::follow(const std::vector<std::string> &roots) {
         auto &impl = *m_impl;
-        std::vector<std::string> gone;
+        std::vector<std::string> notFound;
         std::vector<std::string> unwatchable;
         {
             std::lock_guard<std::mutex> lock(impl.mutex);
@@ -390,7 +390,7 @@ namespace fswatcher {
                 }
                 char resolved[PATH_MAX];
                 if (!realpath(given.c_str(), resolved) || !isDirectory(resolved)) {
-                    gone.push_back(given);
+                    notFound.push_back(given);
                     continue;
                 }
                 Impl::Root root{given, resolved, true};
@@ -404,8 +404,8 @@ namespace fswatcher {
             }
         }
 
-        for (const auto &root : gone) {
-            impl.out.line("gone", root);
+        for (const auto &root : notFound) {
+            impl.out.line("notfound", root);
         }
         for (const auto &root : unwatchable) {
             impl.out.line("unwatchable", root);

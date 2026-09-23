@@ -228,8 +228,8 @@ namespace hello::kit {
                 arm();
             } else if (word == "recdirty") {
                 gather(trees, path);
-            } else if (word == "gone") {
-                Q_EMIT q->rootGone(path);
+            } else if (word == "notfound") {
+                Q_EMIT q->rootNotFound(path);
             } else if (word == "unwatchable") {
                 Q_EMIT q->unwatchable(path);
             } else if (word == "ok") {

@@ -95,7 +95,7 @@ def check_arguments(exe):
                            timeout=PATIENCE)
     text = shown.stdout.decode("utf-8")
     words = ("Usage: hello-fswatcher", "hello-fswatcher 1", "roots", "exit", "ok", "dirty",
-             "recdirty", "gone", "unwatchable", "unknown", "%25", "%0A", "%0D", "--file-events",
+             "recdirty", "notfound", "unwatchable", "unknown", "%25", "%0A", "%0D", "--file-events",
              "create", "delete", "change")
     if shown.returncode != 0 or not all(word in text for word in words):
         print("FAIL --help:", shown.returncode, [w for w in words if w not in text])
@@ -129,7 +129,7 @@ def check_directories(exe):
         # protocol escapes percent signs and missing escaping would corrupt such names.
         root = os.path.join(parent, "bank %25 100%")
         other = os.path.join(base, "other bank")
-        for directory in ("a/b", "gone-soon", "renamed-soon", "leaving"):
+        for directory in ("a/b", "removed-soon", "renamed-soon", "leaving"):
             os.makedirs(os.path.join(root, directory))
         os.makedirs(other)
 
@@ -192,7 +192,7 @@ def check_directories(exe):
                lambda: write(os.path.join(root, "oto.ini"), b"a.wav=a\r\n"),
                must=["dirty " + R])
         expect("a subdirectory removed",
-               lambda: shutil.rmtree(os.path.join(root, "gone-soon")),
+               lambda: shutil.rmtree(os.path.join(root, "removed-soon")),
                must=["dirty " + R])
         expect("a subdirectory renamed",
                lambda: os.rename(os.path.join(root, "renamed-soon"), os.path.join(root, "renamed")),
@@ -230,7 +230,7 @@ def check_directories(exe):
 
         expect("the root renamed",
                lambda: os.rename(root, root + " old"),
-               must=["gone " + R])
+               must=["notfound " + R])
         expect("the root renamed back",
                lambda: os.rename(root + " old", root),
                must=["recdirty " + R])
@@ -239,7 +239,7 @@ def check_directories(exe):
                must=["dirty " + R + S + "a"])
         expect("the directory holding the root renamed",
                lambda: os.rename(parent, parent + "2"),
-               must=["gone " + R])
+               must=["notfound " + R])
 
         code = program.close()
         program = None

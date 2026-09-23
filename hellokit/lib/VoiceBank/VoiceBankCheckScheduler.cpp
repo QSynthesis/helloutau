@@ -30,7 +30,7 @@ namespace hello::kit {
                 full();
             };
             QObject::connect(&watcher, &FileSystemWatcher::unwatchable, q, fallBack);
-            QObject::connect(&watcher, &FileSystemWatcher::rootGone, q, fallBack);
+            QObject::connect(&watcher, &FileSystemWatcher::rootNotFound, q, fallBack);
 
             // Confirmed by the watcher, unless it has already reported a failure.
             QObject::connect(&watcher, &FileSystemWatcher::ready, q,

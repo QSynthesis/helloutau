@@ -262,7 +262,7 @@ private Q_SLOTS:
     }
 
     // Only the parent directory is examined, and the removal appears in its listing.
-    void a_directory_gone_shows_in_the_listing_above() {
+    void a_removed_directory_appears_in_the_listing_of_its_parent() {
         write(QStringLiteral("one/a.wav"), "RIFF");
         write(QStringLiteral("two/b.wav"), "RIFF");
         CountingSelector selector(QStringLiteral("UTF-8"));
@@ -304,14 +304,14 @@ private Q_SLOTS:
         QCOMPARE(bank->checkDisk().changed, QList<fs::path>{fs::path()});
     }
 
-    void a_root_that_is_gone_is_said_and_nothing_else_happens() {
+    void a_root_that_is_not_found_is_reported_without_other_changes() {
         write(QStringLiteral("a.wav"), "RIFF");
         CountingSelector selector(QStringLiteral("UTF-8"));
         auto bank = open(&selector);
         QVERIFY(bank.has_value());
 
         QVERIFY(QDir().rename(pathOf(QString()), m_dir->path() + QStringLiteral("/moved")));
-        QVERIFY(bank->checkDisk().rootGone);
+        QVERIFY(bank->checkDisk().rootNotFound);
         QVERIFY(bank->find(60, QStringLiteral("a")));
     }
 

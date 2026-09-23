@@ -108,16 +108,16 @@ private Q_SLOTS:
     // The reason for not using QFileSystemWatcher: on Windows it keeps every monitored
     // directory open, which prevents the author of a voice bank from renaming or deleting it.
     void what_is_followed_can_be_renamed_and_removed() {
-        QVERIFY(QDir().mkpath(at(QStringLiteral("gone"))));
+        QVERIFY(QDir().mkpath(at(QStringLiteral("removed"))));
         QVERIFY(QDir().mkpath(at(QStringLiteral("old"))));
         const auto watcher = follow();
-        QSignalSpy gone(watcher.get(), &FileSystemWatcher::rootGone);
+        QSignalSpy notFound(watcher.get(), &FileSystemWatcher::rootNotFound);
 
-        QVERIFY(QDir(at(QStringLiteral("gone"))).removeRecursively());
+        QVERIFY(QDir(at(QStringLiteral("removed"))).removeRecursively());
         QVERIFY(QDir().rename(at(QStringLiteral("old")), at(QStringLiteral("new"))));
         QVERIFY(QDir().rename(root(), root() + QStringLiteral(" renamed")));
-        QTRY_COMPARE_WITH_TIMEOUT(gone.size(), 1, 5000);
-        QCOMPARE(gone.at(0).at(0).toString(), root());
+        QTRY_COMPARE_WITH_TIMEOUT(notFound.size(), 1, 5000);
+        QCOMPARE(notFound.at(0).at(0).toString(), root());
 
         // The parent directory of the root is restored as well.
         QVERIFY(QDir().rename(root() + QStringLiteral(" renamed"), root()));
@@ -150,13 +150,13 @@ private Q_SLOTS:
         }
     }
 
-    void a_root_that_is_not_there_is_gone() {
+    void a_root_that_does_not_exist_is_not_found() {
         FileSystemWatcher watcher;
-        QSignalSpy gone(&watcher, &FileSystemWatcher::rootGone);
+        QSignalSpy notFound(&watcher, &FileSystemWatcher::rootNotFound);
         const QString missing = m_dir->path() + QStringLiteral("/nothing here");
         watcher.setRoots({missing});
-        QTRY_COMPARE_WITH_TIMEOUT(gone.size(), 1, 10000);
-        QCOMPARE(gone.at(0).at(0).toString(), missing);
+        QTRY_COMPARE_WITH_TIMEOUT(notFound.size(), 1, 10000);
+        QCOMPARE(notFound.at(0).at(0).toString(), missing);
     }
 
     // Changes during the interruption are unknown, so every root is reported after the restart.

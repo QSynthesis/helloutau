@@ -157,10 +157,10 @@ namespace hello::kit {
         QList<std::filesystem::path> removed;
 
         /// The root does not exist. No other directory was examined.
-        bool rootGone = false;
+        bool rootNotFound = false;
 
         bool isEmpty() const {
-            return changed.isEmpty() && added.isEmpty() && removed.isEmpty() && !rootGone;
+            return changed.isEmpty() && added.isEmpty() && removed.isEmpty() && !rootNotFound;
         }
     };
 

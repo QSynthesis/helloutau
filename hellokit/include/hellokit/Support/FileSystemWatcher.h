@@ -125,7 +125,7 @@ namespace hello::kit {
         void fileEvents(const QList<hello::kit::FileSystemWatcher::FileEvent> &events);
 
         /// \a root does not exist, either because it was removed or because it never existed.
-        void rootGone(const QString &root);
+        void rootNotFound(const QString &root);
 
         /// \a root is no longer monitored, and changes to it must be detected by other means.
         void unwatchable(const QString &root);

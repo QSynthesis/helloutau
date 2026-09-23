@@ -54,7 +54,7 @@ namespace hello::kit {
             std::error_code error;
             const auto size = fs::file_size(sample, error);
             if (error) {
-                return QStringLiteral("gone");
+                return QStringLiteral("notfound");
             }
             const auto when = fs::last_write_time(sample, error).time_since_epoch().count();
             return QStringLiteral("%1/%2").arg(qulonglong(size)).arg(qlonglong(when));

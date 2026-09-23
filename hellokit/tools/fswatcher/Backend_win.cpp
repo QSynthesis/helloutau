@@ -238,7 +238,7 @@ namespace fswatcher {
                 } else if (within(root.resolved, path)) {
                     // The root itself, or one of its ancestors.
                     if (left) {
-                        out.line("gone", root.given);
+                        out.line("notfound", root.given);
                     } else if (appeared && isDirectory(root.resolved)) {
                         out.line("recdirty", root.given);
                     }
@@ -356,13 +356,13 @@ namespace fswatcher {
         auto &impl = *m_impl;
 
         std::vector<Impl::Root> next;
-        std::vector<std::string> gone;
+        std::vector<std::string> notFound;
         std::vector<std::string> unwatchable;
 
         for (const auto &given : roots) {
             const auto resolved = resolve(widen(given));
             if (!resolved) {
-                gone.push_back(given);
+                notFound.push_back(given);
                 continue;
             }
             if (resolved->size() < 3 || (*resolved)[1] != L':') {
@@ -412,8 +412,8 @@ namespace fswatcher {
             impl.drives[name] = std::move(drive);
         }
 
-        for (const auto &root : gone) {
-            impl.out.line("gone", root);
+        for (const auto &root : notFound) {
+            impl.out.line("notfound", root);
         }
         for (const auto &root : unwatchable) {
             impl.out.line("unwatchable", root);

@@ -29,7 +29,7 @@
 ///   its listing or the contents of a file in it.
 /// - <tt>recdirty \<path\></tt> : the directory and its entire subtree may have changed. Sent
 ///   for a newly created directory, and for a root after events were lost.
-/// - <tt>gone \<root\></tt> : the root does not exist.
+/// - <tt>notfound \<root\></tt> : the root does not exist.
 /// - <tt>unwatchable \<root\></tt> : the root cannot be monitored, and changes to it must be
 ///   detected by other means.
 /// - <tt>unknown \<line\></tt> : the input line was not recognized. Encoded as a path.

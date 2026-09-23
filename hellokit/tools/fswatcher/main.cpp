@@ -45,7 +45,7 @@ Output (standard output)
                       contents of a file in it.
   recdirty <path>     <path> and its entire subtree may have changed. Sent for a newly
                       created directory, and for a root after events were lost.
-  gone <root>         <root> does not exist.
+  notfound <root>     <root> does not exist.
   unwatchable <root>  <root> cannot be monitored, and changes to it must be detected by
                       other means.
   unknown <line>      <line> was not a recognized input message. Encoded as a path.

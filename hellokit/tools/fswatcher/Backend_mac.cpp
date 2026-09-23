@@ -113,7 +113,7 @@ namespace fswatcher {
                     if (isDirectory(root.resolved)) {
                         out.line("recdirty", root.given);
                     } else {
-                        out.line("gone", root.given);
+                        out.line("notfound", root.given);
                     }
                     continue;
                 }
@@ -206,12 +206,12 @@ namespace fswatcher {
         impl.stop();
 
         std::vector<Impl::Root> next;
-        std::vector<std::string> gone;
+        std::vector<std::string> notFound;
         std::vector<std::string> unwatchable;
         for (const auto &given : roots) {
             char resolved[PATH_MAX];
             if (!realpath(given.c_str(), resolved) || !isDirectory(resolved)) {
-                gone.push_back(given);
+                notFound.push_back(given);
                 continue;
             }
             if (!isLocal(resolved)) {
@@ -238,8 +238,8 @@ namespace fswatcher {
             impl.roots.clear();
         }
 
-        for (const auto &root : gone) {
-            impl.out.line("gone", root);
+        for (const auto &root : notFound) {
+            impl.out.line("notfound", root);
         }
         for (const auto &root : unwatchable) {
             impl.out.line("unwatchable", root);

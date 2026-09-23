@@ -561,7 +561,7 @@ namespace hello::kit {
         VoiceBankChanges changes;
         std::error_code error;
         if (!fs::is_directory(m_root, error)) {
-            changes.rootGone = true;
+            changes.rootNotFound = true;
             return changes;
         }
 
@@ -822,7 +822,7 @@ namespace hello::kit {
         // Added and removed directories are still detected by the listings, which compare
         // names rather than times. All other content is read regardless of its stamp.
         auto changes = checkDisk();
-        if (changes.rootGone) {
+        if (changes.rootNotFound) {
             return changes;
         }
         for (const auto &directory : std::as_const(m_directories)) {

@@ -381,7 +381,7 @@ private Q_SLOTS:
         const QString cache = QStringLiteral("cache/");
         const QString wanted =
             QString::fromStdU16String(p->steps().at(0).cacheFile.filename().u16string());
-        write(cache + QStringLiteral("0_a_C4_gone00.wav"), "an older take of this note");
+        write(cache + QStringLiteral("0_a_C4_stale0.wav"), "an older take of this note");
         write(cache + QStringLiteral("7_a_C4_stays0.wav"), "a note this render is not touching");
         write(cache + QStringLiteral("notes.txt"), "not a piece at all");
         write(cache + wanted, "RIFF already rendered");
@@ -398,7 +398,7 @@ private Q_SLOTS:
             return std::filesystem::exists(p->cacheDirectory() /
                                            std::filesystem::u8path(name.toStdString()));
         };
-        QVERIFY(!there(QStringLiteral("0_a_C4_gone00.wav")));
+        QVERIFY(!there(QStringLiteral("0_a_C4_stale0.wav")));
         QVERIFY(there(QStringLiteral("7_a_C4_stays0.wav")));
         QVERIFY(there(QStringLiteral("notes.txt")));
         QVERIFY(there(wanted));
