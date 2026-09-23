@@ -115,7 +115,7 @@ resampler / wavtool 的命令行参数由 `utau::ResamplerArguments::arguments()
 
 本仓库自己的规范是 [`docs/Development.md`](docs/Development.md)，**它才是权威**，以下仅为摘要。
 
-- 共两个模块，每个模块是**一组库**：`hellokit`（命名空间 `hello::kit`，Qt Core，产出 `HelloKitDocument` 等）和 `helloutau`（命名空间 `hello::daw`，Qt Widgets，产出 `HelloUtauWidgets` 等以及 `helloutau` 可执行文件）。**`hellokit` 不链接 QtWidgets**，核心逻辑不依赖 GUI 才便于测试。
+- 共两个模块，每个模块是**一组库**：`hellokit`（命名空间 `hello::kit`，Qt Core，产出 `HelloKitDocument` 等）和 `helloutau`（命名空间 `hello::daw`，Qt Widgets，产出 `HelloUtauWidgets` 等以及 `HelloUTAU` 可执行文件）。**`hellokit` 不链接 QtWidgets**，核心逻辑不依赖 GUI 才便于测试。
 - **应用同样由库和薄驱动组成**，参照 lldb 的 `liblldb` + `tools/driver`。`tools/driver/main.cpp` 只包含入口，其余逻辑位于库中，因为可执行文件无法链接进测试程序，而库可以。
 - 每个模块包含一个 `include/` 和一个 `lib/`，参照 synthrt：`hellokit/include/hellokit/Document/` 对应 `hellokit/lib/Document/`。**include 的命名空间是模块名而非目标名**，写 `<hellokit/Document/PayloadCodec.h>`。不使用 `sync_include`。私有头文件与源文件放在一起，加 `_p.h` 后缀，尽量少用。
 - **大小写分三个层次**：CMake 包名与 `project()` 小写（`hellokit`、`helloutauConfig.cmake.in`），子库目标与 dll 大驼峰（`HelloKitDocument`），include 命名空间小写。
