@@ -1,4 +1,5 @@
 #include <QtCore/QString>
+#include <QtCore/QStringDecoder>
 #include <QtTest/QTest>
 
 #include <hellokit/Support/TextCodec.h>
@@ -17,6 +18,18 @@ private:
     static const TextCodec &utf8() {
         static const TextCodec codec(QStringLiteral("UTF-8"));
         return codec;
+    }
+
+    // Returns whether GB18030 is available on this system. GB18030 is not an ANSI code page, so
+    // winacp does not provide it. It is converted by the Windows code page functions on Windows,
+    // and elsewhere only by ICU. The Qt distribution for macOS is built without ICU, so GB18030
+    // is unavailable there and must be reported as such rather than converted incorrectly.
+    static bool gb18030Available() {
+#ifdef _WIN32
+        return true;
+#else
+        return QStringDecoder("GB18030").isValid();
+#endif
     }
 
     // Escaping and unescaping are inverse operations, so the requirement under test is the
@@ -38,9 +51,10 @@ private Q_SLOTS:
     // and are reachable only by name, so resolving a name through the enumeration would make
     // all of them appear unavailable.
     void the_legacy_encodings_are_reachable_by_name() {
-        for (const auto &name : {"Shift_JIS", "GBK", "Big5", "EUC-KR", "GB18030"}) {
+        for (const auto &name : {"Shift_JIS", "GBK", "Big5", "EUC-KR"}) {
             QVERIFY2(TextCodec(QLatin1String(name)).isValid(), name);
         }
+        QCOMPARE(TextCodec(QStringLiteral("GB18030")).isValid(), gb18030Available());
         QCOMPARE(shiftJis().name(), QStringLiteral("Shift_JIS"));
     }
 
@@ -61,12 +75,14 @@ private Q_SLOTS:
             {"cp950",       "Big5"     },
             {"EUC-KR",      "EUC-KR"   },
             {"cp949",       "EUC-KR"   },
-            {"GB18030",     "GB18030"  },
         };
         for (const auto &[requested, canonical] : aliases) {
             TextCodec codec{QLatin1String(requested)};
             QVERIFY2(codec.isValid(), requested);
             QCOMPARE(codec.name(), QLatin1String(canonical));
+        }
+        if (gb18030Available()) {
+            QCOMPARE(TextCodec(QStringLiteral("GB18030")).name(), QStringLiteral("GB18030"));
         }
     }
 
