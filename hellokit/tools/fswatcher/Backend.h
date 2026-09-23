@@ -27,9 +27,6 @@ namespace fswatcher {
         Backend(Output &out, bool fileEvents);
         ~Backend();
 
-        Backend(const Backend &) = delete;
-        Backend &operator=(const Backend &) = delete;
-
         /// Replaces the monitored roots with \a roots , each a UTF-8 path, and replies \c ok .
         ///
         /// Returns once every monitorable root is monitored, so that every change made after
