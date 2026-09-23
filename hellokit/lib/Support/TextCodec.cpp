@@ -93,8 +93,8 @@ namespace hello::kit {
 
             if (const auto *page = findCodePage(name)) {
                 canonical = QLatin1String(page->canonical);
-                if (winacp::isAvailable(page->number)) {
-                    ansiCodePage = page->number;
+                if (const auto supported = winacp::codePageFromNumber(page->number)) {
+                    ansiCodePage = *supported;
                     valid = true;
                     return;
                 }
@@ -122,7 +122,7 @@ namespace hello::kit {
         bool valid = false;
 
         std::optional<QStringConverter::Encoding> builtin;
-        int ansiCodePage = 0; // held by winacp
+        std::optional<winacp::CodePage> ansiCodePage; // held by winacp
         QString fallbackName;
 #ifdef _WIN32
         int codePage = 0;
@@ -170,9 +170,9 @@ namespace hello::kit {
             return decoder.hasError() ? std::nullopt : std::optional<QString>(text);
         }
 
-        if (_impl->ansiCodePage != 0) {
+        if (_impl->ansiCodePage) {
             // All or nothing, because invalid bytes indicate an incorrect encoding choice.
-            const auto text = winacp::decode(_impl->ansiCodePage,
+            const auto text = winacp::decode(*_impl->ansiCodePage,
                                              std::string_view(bytes.data(), size_t(bytes.size())));
             if (!text) {
                 return std::nullopt;
@@ -212,11 +212,11 @@ namespace hello::kit {
             return encoder.encode(text);
         }
 
-        if (_impl->ansiCodePage != 0) {
+        if (_impl->ansiCodePage) {
             // A question mark for each unrepresentable code unit, as Windows writes. canEncode()
             // detects the substitution by comparison.
             const std::string written =
-                winacp::encode(_impl->ansiCodePage,
+                winacp::encode(*_impl->ansiCodePage,
                                std::u16string_view(reinterpret_cast<const char16_t *>(text.utf16()),
                                                    size_t(text.size())),
                                '?');
