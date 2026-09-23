@@ -77,17 +77,17 @@ namespace hello::kit {
                                              const Options &options, DiagnosticList &diagnostics);
 
         /// The steps in track order.
-        const QList<SynthStep> &steps() const {
+        inline const QList<SynthStep> &steps() const {
             return m_steps;
         }
 
         /// The track file assembled by this plan.
-        const std::filesystem::path &outputFile() const {
+        inline const std::filesystem::path &outputFile() const {
             return m_outputFile;
         }
 
         /// The directory for rendered fragments. Must exist before a step writes into it.
-        const std::filesystem::path &cacheDirectory() const {
+        inline const std::filesystem::path &cacheDirectory() const {
             return m_cacheDirectory;
         }
 

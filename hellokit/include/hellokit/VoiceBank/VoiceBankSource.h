@@ -69,11 +69,11 @@ namespace hello::kit {
             std::uintmax_t size = 0;
             std::filesystem::file_time_type time{};
 
-            bool operator==(const Entry &RHS) const {
+            inline bool operator==(const Entry &RHS) const {
                 return name == RHS.name && directory == RHS.directory && size == RHS.size &&
                        time == RHS.time;
             }
-            bool operator!=(const Entry &RHS) const {
+            inline bool operator!=(const Entry &RHS) const {
                 return !(*this == RHS);
             }
         };
@@ -86,10 +86,10 @@ namespace hello::kit {
         std::filesystem::file_time_type takenAt{};
 
         /// Stamps are equal if all entries are equal. \c takenAt is not compared.
-        bool operator==(const VoiceBankDirectoryStamp &RHS) const {
+        inline bool operator==(const VoiceBankDirectoryStamp &RHS) const {
             return entries == RHS.entries;
         }
-        bool operator!=(const VoiceBankDirectoryStamp &RHS) const {
+        inline bool operator!=(const VoiceBankDirectoryStamp &RHS) const {
             return !(*this == RHS);
         }
 
@@ -218,12 +218,12 @@ namespace hello::kit {
                                                    DiagnosticList &diagnostics,
                                                    const VoiceBankLimits &limits = {});
 
-        const std::filesystem::path &root() const {
+        inline const std::filesystem::path &root() const {
             return m_root;
         }
 
         /// The non-empty directories, the root first.
-        const QList<VoiceBankDirectorySource> &directories() const {
+        inline const QList<VoiceBankDirectorySource> &directories() const {
             return m_directories;
         }
 

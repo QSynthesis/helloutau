@@ -53,7 +53,7 @@ namespace hello::kit {
             Type type = Changed;
             QString path;
 
-            bool operator==(const FileEvent &other) const {
+            inline bool operator==(const FileEvent &other) const {
                 return type == other.type && path == other.path;
             }
         };

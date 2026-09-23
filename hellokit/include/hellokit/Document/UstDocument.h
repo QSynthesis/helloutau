@@ -90,7 +90,7 @@ namespace hello::kit {
         ///
         /// Determines how the text must be read: escape sequences are meaningful only in a file
         /// written with them.
-        bool hasControlNote() const {
+        inline bool hasControlNote() const {
             return m_hasControlNote;
         }
 
@@ -116,7 +116,7 @@ namespace hello::kit {
         ///
         /// \warning Every string is raw bytes in the encoding of the file. Decode these through
         ///          \c TextCodec before treating them as text.
-        const utau::UstFile &file() const {
+        inline const utau::UstFile &file() const {
             return m_file;
         }
 

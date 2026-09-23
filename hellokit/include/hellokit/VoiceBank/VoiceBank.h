@@ -159,7 +159,7 @@ namespace hello::kit {
         /// The root does not exist. No other directory was examined.
         bool rootNotFound = false;
 
-        bool isEmpty() const {
+        inline bool isEmpty() const {
             return changed.isEmpty() && added.isEmpty() && removed.isEmpty() && !rootNotFound;
         }
     };
@@ -200,28 +200,28 @@ namespace hello::kit {
         /// \note UTF-8 with a byte order mark has not been tested in UTAU.
         static bool isCharsetReadableByUtau(const QString &charset);
 
-        const std::filesystem::path &root() const {
+        inline const std::filesystem::path &root() const {
             return m_root;
         }
 
         /// Every non-empty directory, the root first, in the order in which they were read.
-        const QList<VoiceBankDirectory> &directories() const {
+        inline const QList<VoiceBankDirectory> &directories() const {
             return m_directories;
         }
 
         /// The name and display information of the voice bank: the root's \c character.txt ,
         /// with the folder name as the default name.
-        const VoiceCharacter &character() const {
+        inline const VoiceCharacter &character() const {
             return m_character;
         }
 
         /// \c readme.txt , or empty if the voice bank has none.
-        const QString &readme() const {
+        inline const QString &readme() const {
             return m_readme;
         }
 
         /// All samples of the voice bank, in the order in which the directories were read.
-        const QList<VoiceSample> &samples() const {
+        inline const QList<VoiceSample> &samples() const {
             return m_samples;
         }
 

@@ -35,7 +35,7 @@ namespace hello::kit {
         /// All output of the engine on both streams, for the diagnostic on failure.
         QString output;
 
-        bool succeeded() const {
+        inline bool succeeded() const {
             return started && !timedOut && exitCode == 0;
         }
     };

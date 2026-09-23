@@ -43,7 +43,7 @@ namespace utauprobe {
         /// pitch curve of a note are influenced by the preceding note.
         void rest(int length = 480);
 
-        const QList<ProbeNote> &notes() const {
+        inline const QList<ProbeNote> &notes() const {
             return m_notes;
         }
 

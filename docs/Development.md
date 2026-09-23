@@ -105,7 +105,28 @@ qwindowkit 没有这个问题，因为它的头文件与源文件位于同一目
 
 初始化表达式的类型为指针时，使用 `auto name = ...`，不要写 `auto *name = ...`。`auto` 会自动推导出指针类型，额外的 `*` 不提供信息。
 
-短小且需要暴露定义的函数可以在类内实现，或在头文件的类定义之后使用 `inline` 实现。不要仅仅为了减少一个 `.cpp` 文件而把较长实现放进公开头文件。
+短小且需要暴露定义的函数可以在类内实现，或在头文件的类定义之后实现。不要仅仅为了减少一个 `.cpp` 文件而把较长实现放进公开头文件。
+
+**头文件中实现的函数一律显式写出 `inline` 关键字**，包括类成员函数。语言已隐含 `inline` 的情形同样照写，例如类内定义的成员函数，目的是使头文件中所有实现的写法一致。成员函数在类定义之外实现时，类内的声明与类外的定义都写 `inline`：
+
+```cpp
+class Range {
+public:
+    inline int length() const {
+        return m_end - m_begin;
+    }
+
+    inline bool contains(int value) const;
+
+private:
+    int m_begin = 0;
+    int m_end = 0;
+};
+
+inline bool Range::contains(int value) const {
+    return value >= m_begin && value < m_end;
+}
+```
 
 ## 注释
 

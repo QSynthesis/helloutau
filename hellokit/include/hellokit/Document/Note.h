@@ -131,7 +131,7 @@ namespace hello::kit {
         QMap<QString, QString> userData;
 
         /// Returns whether the note is a rest. UTAU determines this from the lyric alone.
-        bool isRest() const {
+        inline bool isRest() const {
             return lyric.isEmpty() ||
                    lyric.compare(QLatin1String(restLyric), Qt::CaseInsensitive) == 0;
         }
