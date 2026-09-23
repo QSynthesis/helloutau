@@ -4,16 +4,21 @@
 #include <QtCore/QFileInfo>
 #include <QtCore/QTimer>
 
+#include <stdcorelib/pimpl.h>
+
 #include <hellokit/Support/FileSystemWatcher.h>
 
 namespace hello::kit {
 
     class VoiceBankCheckScheduler::Impl {
     public:
-        explicit Impl(VoiceBankCheckScheduler *q) : q(q), watcher(q), poll(q), sweep(q) {
-            QObject::connect(&watcher, &FileSystemWatcher::changed, q,
+        using Decl = VoiceBankCheckScheduler;
+
+        explicit Impl(Decl *decl) : _decl(decl), watcher(decl), poll(decl), sweep(decl) {
+            QObject::connect(&watcher, &FileSystemWatcher::changed, decl,
                              [this](const QStringList &directories, const QStringList &trees) {
-                                 Q_EMIT this->q->checkNeeded(directories + trees);
+                                 stdc_decl_t;
+                                 Q_EMIT decl.checkNeeded(directories + trees);
                              });
 
             // In both cases the watcher no longer reports on the voice bank, and polling takes
@@ -29,18 +34,18 @@ namespace hello::kit {
                 }
                 full();
             };
-            QObject::connect(&watcher, &FileSystemWatcher::unwatchable, q, fallBack);
-            QObject::connect(&watcher, &FileSystemWatcher::rootNotFound, q, fallBack);
+            QObject::connect(&watcher, &FileSystemWatcher::unwatchable, decl, fallBack);
+            QObject::connect(&watcher, &FileSystemWatcher::rootNotFound, decl, fallBack);
 
             // Confirmed by the watcher, unless it has already reported a failure.
-            QObject::connect(&watcher, &FileSystemWatcher::ready, q,
+            QObject::connect(&watcher, &FileSystemWatcher::ready, decl,
                              [this] { following = !root.isEmpty() && !poll.isActive(); });
 
-            QObject::connect(&poll, &QTimer::timeout, q, [this] { full(); });
-            QObject::connect(&sweep, &QTimer::timeout, q, [this] { full(); });
+            QObject::connect(&poll, &QTimer::timeout, decl, [this] { full(); });
+            QObject::connect(&sweep, &QTimer::timeout, decl, [this] { full(); });
         }
 
-        VoiceBankCheckScheduler *q;
+        Decl *_decl;
 
         // File events are not enabled. VoiceBank::checkDisk() examines directories, and a
         // directory report is available on every system, including macOS.
@@ -53,8 +58,9 @@ namespace hello::kit {
         bool following = false;
 
         void full() {
+            stdc_decl_t;
             if (!root.isEmpty()) {
-                Q_EMIT q->checkNeeded({root});
+                Q_EMIT decl.checkNeeded({root});
             }
         }
 
@@ -67,17 +73,18 @@ namespace hello::kit {
     };
 
     VoiceBankCheckScheduler::VoiceBankCheckScheduler(QObject *parent)
-        : QObject(parent), m_impl(std::make_unique<Impl>(this)) {
+        : QObject(parent), _impl(std::make_unique<Impl>(this)) {
     }
 
     VoiceBankCheckScheduler::~VoiceBankCheckScheduler() = default;
 
     void VoiceBankCheckScheduler::setWatcherProgram(const QString &program) {
-        m_impl->watcher.setProgram(program);
+        stdc_impl_t;
+        impl.watcher.setProgram(program);
     }
 
     void VoiceBankCheckScheduler::setRoot(const QString &root) {
-        auto &impl = *m_impl;
+        stdc_impl_t;
         impl.poll.stop();
         impl.following = false;
         impl.root =
@@ -89,39 +96,47 @@ namespace hello::kit {
     }
 
     QString VoiceBankCheckScheduler::root() const {
-        return m_impl->root;
+        stdc_impl_t;
+        return impl.root;
     }
 
     void VoiceBankCheckScheduler::setPollInterval(int milliseconds) {
-        m_impl->pollInterval = milliseconds;
-        if (m_impl->poll.isActive()) {
-            m_impl->poll.start(milliseconds);
+        stdc_impl_t;
+        impl.pollInterval = milliseconds;
+        if (impl.poll.isActive()) {
+            impl.poll.start(milliseconds);
         }
     }
 
     int VoiceBankCheckScheduler::pollInterval() const {
-        return m_impl->pollInterval;
+        stdc_impl_t;
+        return impl.pollInterval;
     }
 
     void VoiceBankCheckScheduler::setSweepInterval(int milliseconds) {
-        m_impl->sweepInterval = milliseconds;
-        m_impl->restartSweep();
+        stdc_impl_t;
+        impl.sweepInterval = milliseconds;
+        impl.restartSweep();
     }
 
     int VoiceBankCheckScheduler::sweepInterval() const {
-        return m_impl->sweepInterval;
+        stdc_impl_t;
+        return impl.sweepInterval;
     }
 
     void VoiceBankCheckScheduler::setDelay(int milliseconds) {
-        m_impl->watcher.setDelay(milliseconds);
+        stdc_impl_t;
+        impl.watcher.setDelay(milliseconds);
     }
 
     bool VoiceBankCheckScheduler::isFollowing() const {
-        return m_impl->following;
+        stdc_impl_t;
+        return impl.following;
     }
 
     void VoiceBankCheckScheduler::requestFull() {
-        m_impl->full();
+        stdc_impl_t;
+        impl.full();
     }
 
 }

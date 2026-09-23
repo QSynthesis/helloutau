@@ -10,6 +10,7 @@ qm_find_qt(Core)
 hellokit_add_library(${PROJECT_NAME} SHARED
     SOURCES ${_src}
     LINKS stdutau::stdutau HelloKitSupport
+    LINKS_PRIVATE stdcorelib::stdcorelib
     QT_LINKS Core
     QT_AUTOGEN
     INCLUDE_PRIVATE ../../include/hellokit/VoiceBank/** **
