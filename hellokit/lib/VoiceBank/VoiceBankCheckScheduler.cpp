@@ -41,6 +41,9 @@ namespace hello::kit {
         }
 
         VoiceBankCheckScheduler *q;
+
+        // File events are not enabled. VoiceBank::checkDisk() examines directories, and a
+        // directory report is available on every system, including macOS.
         FileSystemWatcher watcher;
         QTimer poll;
         QTimer sweep;

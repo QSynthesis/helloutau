@@ -3,6 +3,7 @@
 
 #include <memory>
 
+#include <QtCore/QList>
 #include <QtCore/QObject>
 #include <QtCore/QString>
 #include <QtCore/QStringList>
@@ -31,14 +32,38 @@ namespace hello::kit {
     /// unknown. After several consecutive failures, monitoring is abandoned and every root is
     /// reported through unwatchable().
     ///
+    /// **File events** report individual entries in addition to directories. They are disabled
+    /// by default and unavailable on macOS, where FSEvents reports directories only. See
+    /// setFileEventsEnabled().
+    ///
     /// \note Reported paths use \c / as the separator and begin with one of roots() verbatim.
     ///
     /// \note Supported on Windows, macOS and Linux, the platforms this project targets.
     class HELLOKIT_SUPPORT_EXPORT FileSystemWatcher : public QObject {
         Q_OBJECT
     public:
+        /// A change of one entry, reported by fileEvents().
+        struct FileEvent {
+            enum Type {
+                Created, ///< appeared, by creation or by a rename or move into place
+                Deleted, ///< disappeared, by deletion or by a rename or move away
+                Changed, ///< the contents or metadata may have changed
+            };
+
+            Type type = Changed;
+            QString path;
+
+            bool operator==(const FileEvent &other) const {
+                return type == other.type && path == other.path;
+            }
+        };
+
         explicit FileSystemWatcher(QObject *parent = nullptr);
         ~FileSystemWatcher() override;
+
+        /// Returns whether this system reports changes per entry, which file events require.
+        /// True on Windows and Linux, false on macOS.
+        static bool fileEventsAvailable();
 
         /// The monitor program used unless setProgram() specifies another: \c hello-fswatcher in
         /// the application directory.
@@ -69,6 +94,14 @@ namespace hello::kit {
         void setDelay(int milliseconds);
         int delay() const;
 
+        /// Whether fileEvents() is emitted in addition to changed(). Disabled by default.
+        ///
+        /// **Must be set before setRoots()**, like setProgram(). The setting takes effect at the
+        /// next start of the program. Ignored if fileEventsAvailable() returns false, because
+        /// the program rejects the request on such a system.
+        void setFileEventsEnabled(bool enabled);
+        bool fileEventsEnabled() const;
+
         /// The process ID of the program, or 0 if it is not running. Intended for tests and
         /// diagnostics.
         qint64 processId() const;
@@ -79,6 +112,17 @@ namespace hello::kit {
         /// \param trees directories whose entire subtree may have changed. Directories within
         ///        these trees are not repeated in \a directories .
         void changed(const QStringList &directories, const QStringList &trees);
+
+        /// Emitted only if file events are enabled, immediately before changed() for the same
+        /// interval. The directory of every entry is also reported by changed().
+        ///
+        /// \param events the entry changes of the interval in the order reported, neither merged
+        ///        nor deduplicated, because a creation followed by a deletion differs from a
+        ///        deletion followed by a creation
+        ///
+        /// Like changed(), these are hints. After events were lost or the program was restarted,
+        /// the affected trees are reported by changed() only.
+        void fileEvents(const QList<hello::kit::FileSystemWatcher::FileEvent> &events);
 
         /// \a root does not exist, either because it was removed or because it never existed.
         void rootGone(const QString &root);

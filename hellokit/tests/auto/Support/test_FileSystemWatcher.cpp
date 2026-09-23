@@ -72,10 +72,14 @@ private:
         file.write("RIFF");
     }
 
-    /// A watcher that monitors root() and has emitted ready().
-    std::unique_ptr<FileSystemWatcher> follow() {
+    /// A watcher that monitors root() and has emitted ready(). File events keep their default
+    /// unless requested, so that the tests of the default observe it.
+    std::unique_ptr<FileSystemWatcher> follow(bool fileEvents = false) {
         auto watcher = std::make_unique<FileSystemWatcher>();
         watcher->setDelay(50);
+        if (fileEvents) {
+            watcher->setFileEventsEnabled(true);
+        }
         QSignalSpy ready(watcher.get(), &FileSystemWatcher::ready);
         watcher->setRoots({root()});
         [&] { QVERIFY(ready.wait(10000)); }();
@@ -180,6 +184,70 @@ private Q_SLOTS:
         // Monitoring resumes.
         touch(at(QStringLiteral("a/after.wav")));
         QTRY_VERIFY_WITH_TIMEOUT(reported(collect(spy), at(QStringLiteral("a"))), 5000);
+    }
+
+    // File events are an addition requested explicitly. The voice bank monitoring relies on
+    // changed() alone, so without the request no file event may be emitted.
+    void file_events_are_not_reported_unless_enabled() {
+        const auto watcher = follow();
+        QVERIFY(!watcher->fileEventsEnabled());
+        QSignalSpy events(watcher.get(), &FileSystemWatcher::fileEvents);
+        QSignalSpy spy(watcher.get(), &FileSystemWatcher::changed);
+
+        touch(at(QStringLiteral("a/b/ka.wav")));
+        QTRY_VERIFY_WITH_TIMEOUT(reported(collect(spy), at(QStringLiteral("a/b"))), 5000);
+        QTest::qWait(300);
+        QCOMPARE(events.size(), 0);
+    }
+
+    // Each kind of entry change is reported, and the directory is still reported by changed().
+    void file_events_are_reported_if_enabled() {
+        if (!FileSystemWatcher::fileEventsAvailable()) {
+            QSKIP("File events are unavailable on this system.");
+        }
+        const auto watcher = follow(true);
+        QVERIFY(watcher->fileEventsEnabled());
+        QSignalSpy events(watcher.get(), &FileSystemWatcher::fileEvents);
+        QSignalSpy spy(watcher.get(), &FileSystemWatcher::changed);
+
+        const auto entries = [&] {
+            QList<FileSystemWatcher::FileEvent> out;
+            for (const auto &arguments : std::as_const(events)) {
+                out += arguments.at(0).value<QList<FileSystemWatcher::FileEvent>>();
+            }
+            return out;
+        };
+        using Event = FileSystemWatcher::FileEvent;
+        const QString ka = at(QStringLiteral("a/b/ka.wav"));
+        const QString ki = at(QStringLiteral("a/b/ki.wav"));
+
+        touch(ka);
+        QTRY_VERIFY_WITH_TIMEOUT(entries().contains(Event{Event::Created, ka}), 5000);
+        QVERIFY(QFile::rename(ka, ki));
+        QTRY_VERIFY_WITH_TIMEOUT(entries().contains(Event{Event::Deleted, ka}), 5000);
+        QTRY_VERIFY_WITH_TIMEOUT(entries().contains(Event{Event::Created, ki}), 5000);
+        QVERIFY(QFile::remove(ki));
+        QTRY_VERIFY_WITH_TIMEOUT(entries().contains(Event{Event::Deleted, ki}), 5000);
+
+        // The order of the reports follows the order of the changes.
+        const auto all = entries();
+        QVERIFY(all.indexOf(Event{Event::Created, ka}) < all.indexOf(Event{Event::Deleted, ka}));
+        QVERIFY(all.indexOf(Event{Event::Created, ki}) < all.indexOf(Event{Event::Deleted, ki}));
+        QVERIFY(reported(collect(spy), at(QStringLiteral("a/b"))));
+    }
+
+    // Where file events are unavailable, the request is ignored, so that the program is not
+    // started with an option it rejects and monitoring continues.
+    void file_events_are_ignored_where_unavailable() {
+        if (FileSystemWatcher::fileEventsAvailable()) {
+            QSKIP("File events are available on this system.");
+        }
+        const auto watcher = follow(true);
+        QVERIFY(!watcher->fileEventsEnabled());
+        QSignalSpy spy(watcher.get(), &FileSystemWatcher::changed);
+
+        touch(at(QStringLiteral("a/b/ka.wav")));
+        QTRY_VERIFY_WITH_TIMEOUT(reported(collect(spy), at(QStringLiteral("a/b"))), 5000);
     }
 
     // Without the program no changes are reported, and every root is reported as unwatchable,

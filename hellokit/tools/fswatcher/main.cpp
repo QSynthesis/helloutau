@@ -25,7 +25,8 @@ Options
   --help              Prints this text and exits.
   --file-events       Also reports individual entries with the messages create, delete and
                       change. Available on Windows and Linux only. On macOS the program exits
-                      with status 2. hello::kit::FileSystemWatcher does not use this option.
+                      with status 2. hello::kit::FileSystemWatcher passes this option only if
+                      file events are enabled, which the monitoring of voice banks does not do.
 
 Encoding
   Each message is one line of UTF-8 text. In paths, '%', line feed and carriage return are

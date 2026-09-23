@@ -1,6 +1,7 @@
 #include "FileSystemWatcher.h"
 
 #include <algorithm>
+#include <utility>
 
 #include <QtCore/QCoreApplication>
 #include <QtCore/QDir>
@@ -94,6 +95,10 @@ namespace hello::kit {
         QSet<QString> directories;
         QSet<QString> trees;
 
+        // Requested by setFileEventsEnabled(), and only if available.
+        bool fileEvents = false;
+        QList<FileSystemWatcher::FileEvent> events;
+
         void start() {
             greeted = false;
             pending.clear();
@@ -110,10 +115,12 @@ namespace hello::kit {
                              });
             QObject::connect(process, &QProcess::finished, q, [this] { died(); });
 
-            // No arguments. The program reads only its standard input. --file-events is not
-            // passed, because a directory is the unit that VoiceBank::checkDisk() examines and
-            // the option is unavailable on macOS.
-            process->start(program, QStringList());
+            // The roots are sent over standard input, never as arguments.
+            QStringList arguments;
+            if (fileEvents) {
+                arguments += QStringLiteral("--file-events");
+            }
+            process->start(program, arguments);
         }
 
         void stop() {
@@ -212,6 +219,13 @@ namespace hello::kit {
 
             if (word == "dirty") {
                 gather(directories, path);
+            } else if (fileEvents && (word == "create" || word == "delete" || word == "change")) {
+                events += FileSystemWatcher::FileEvent{
+                    word == "create"   ? FileSystemWatcher::FileEvent::Created
+                    : word == "delete" ? FileSystemWatcher::FileEvent::Deleted
+                                       : FileSystemWatcher::FileEvent::Changed,
+                    path};
+                arm();
             } else if (word == "recdirty") {
                 gather(trees, path);
             } else if (word == "gone") {
@@ -232,6 +246,10 @@ namespace hello::kit {
 
         void gather(QSet<QString> &into, const QString &path) {
             into.insert(path);
+            arm();
+        }
+
+        void arm() {
             // A fixed interval from the first message rather than one restarted by each message,
             // because under a continuous stream of messages a restarting timer would never fire.
             if (!timer.isActive()) {
@@ -256,6 +274,10 @@ namespace hello::kit {
 
             directories.clear();
             trees.clear();
+            if (!events.isEmpty()) {
+                const auto reported = std::exchange(events, {});
+                Q_EMIT q->fileEvents(reported);
+            }
             if (!directoryList.isEmpty() || !treeList.isEmpty()) {
                 Q_EMIT q->changed(directoryList, treeList);
             }
@@ -268,6 +290,14 @@ namespace hello::kit {
 
     FileSystemWatcher::~FileSystemWatcher() {
         m_impl->stop();
+    }
+
+    bool FileSystemWatcher::fileEventsAvailable() {
+#ifdef Q_OS_MACOS
+        return false;
+#else
+        return true;
+#endif
     }
 
     QString FileSystemWatcher::defaultProgram() {
@@ -311,6 +341,14 @@ namespace hello::kit {
 
     QStringList FileSystemWatcher::roots() const {
         return m_impl->roots;
+    }
+
+    void FileSystemWatcher::setFileEventsEnabled(bool enabled) {
+        m_impl->fileEvents = enabled && fileEventsAvailable();
+    }
+
+    bool FileSystemWatcher::fileEventsEnabled() const {
+        return m_impl->fileEvents;
     }
 
     void FileSystemWatcher::setDelay(int milliseconds) {
