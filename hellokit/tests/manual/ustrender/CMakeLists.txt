@@ -5,7 +5,7 @@ file(GLOB _src *.h *.cpp)
 qm_find_qt(Core)
 
 # Links stdcorelib directly for the command-line parser.
-hellokit_add_application(${PROJECT_NAME}
+hellokit_add_application(${PROJECT_NAME} NO_INSTALL
     SOURCES ${_src}
     LINKS HelloKitSynth HelloKitDocument stdcorelib::stdcorelib
     QT_LINKS Core
