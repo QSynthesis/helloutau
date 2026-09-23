@@ -1,12 +1,12 @@
 #ifndef HELLOKIT_SUPPORT_TEXTCODEC_H
 #define HELLOKIT_SUPPORT_TEXTCODEC_H
 
-#include <memory>
 #include <optional>
 
 #include <QtCore/QByteArray>
 #include <QtCore/QByteArrayView>
 #include <QtCore/QString>
+#include <QtCore/QStringConverter>
 #include <QtCore/QStringList>
 
 #include <hellokit/Support/HelloKitSupportGlobal.h>
@@ -40,10 +40,6 @@ namespace hello::kit {
         ///       a value that can be recorded. Qt names the system encoding \c Locale, which is
         ///       meaningless to a later reader of the file.
         explicit TextCodec(const QString &name = {});
-        ~TextCodec();
-
-        TextCodec(const TextCodec &RHS);
-        TextCodec &operator=(const TextCodec &RHS);
 
         bool isValid() const;
 
@@ -126,8 +122,22 @@ namespace hello::kit {
         static QStringList availableNames();
 
     private:
-        class Impl;
-        std::unique_ptr<Impl> _impl;
+        // The conversion paths, in the order described in the implementation file.
+        enum class Path {
+            Invalid,
+            Builtin,
+            AnsiCodePage,
+            WindowsCodePage,
+            ByName,
+        };
+
+        Path m_path = Path::Invalid;
+        QString m_name;
+        QStringConverter::Encoding m_builtin = QStringConverter::Utf8; // Path::Builtin
+        // The code page number for Path::AnsiCodePage and Path::WindowsCodePage. For
+        // Path::AnsiCodePage it is the value of a winacp::CodePage, which is a private dependency.
+        int m_codePage = 0;
+        QString m_converterName; // Path::ByName
     };
 
 }

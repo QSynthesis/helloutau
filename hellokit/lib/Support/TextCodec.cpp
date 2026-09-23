@@ -8,7 +8,6 @@
 #include <QtCore/QStringDecoder>
 #include <QtCore/QStringEncoder>
 
-#include <stdcorelib/pimpl.h>
 #include <winacp/winacp.h>
 
 namespace hello::kit {
@@ -80,178 +79,162 @@ namespace hello::kit {
     // characters to byte sequences other than those Windows produces. A uniform path on every
     // system also removes the dependency on the ICU of Windows, which Qt loads at run time and
     // which older Windows versions lack.
-    class TextCodec::Impl {
-    public:
-        explicit Impl(const QString &requested) {
-            const QString name = requested.isEmpty() ? TextCodec::systemName() : requested;
+    TextCodec::TextCodec(const QString &name) {
+        const QString requested = name.isEmpty() ? systemName() : name;
 
-            if (const auto found = QStringConverter::encodingForName(name)) {
-                builtin = *found;
-                canonical = QString::fromLatin1(QStringConverter::nameForEncoding(*found));
-                valid = true;
-                return;
-            }
-
-            if (const auto *page = findCodePage(name)) {
-                canonical = QLatin1String(page->canonical);
-                if (const auto supported = winacp::codePageFromNumber(page->number)) {
-                    ansiCodePage = *supported;
-                    valid = true;
-                    return;
-                }
-#ifdef _WIN32
-                if (::IsValidCodePage(UINT(page->number))) {
-                    codePage = page->number;
-                    valid = true;
-                    return;
-                }
-#endif
-            }
-
-            // All other encodings, if ICU is available.
-            QStringDecoder byName(name);
-            if (byName.isValid()) {
-                fallbackName = name;
-                if (canonical.isEmpty()) {
-                    canonical = QString::fromLatin1(byName.name());
-                }
-                valid = true;
-            }
+        if (const auto found = QStringConverter::encodingForName(requested)) {
+            m_path = Path::Builtin;
+            m_builtin = *found;
+            m_name = QString::fromLatin1(QStringConverter::nameForEncoding(*found));
+            return;
         }
 
         QString canonical;
-        bool valid = false;
-
-        std::optional<QStringConverter::Encoding> builtin;
-        std::optional<winacp::CodePage> ansiCodePage; // held by winacp
-        QString fallbackName;
+        if (const auto *page = findCodePage(requested)) {
+            canonical = QLatin1String(page->canonical);
+            if (winacp::codePageFromNumber(page->number)) {
+                m_path = Path::AnsiCodePage;
+                m_codePage = page->number;
+                m_name = canonical;
+                return;
+            }
 #ifdef _WIN32
-        int codePage = 0;
+            if (::IsValidCodePage(UINT(page->number))) {
+                m_path = Path::WindowsCodePage;
+                m_codePage = page->number;
+                m_name = canonical;
+                return;
+            }
 #endif
-    };
-
-    TextCodec::TextCodec(const QString &name) : _impl(std::make_unique<Impl>(name)) {
-    }
-
-    TextCodec::~TextCodec() = default;
-
-    TextCodec::TextCodec(const TextCodec &RHS) : _impl(std::make_unique<Impl>(*RHS._impl)) {
-    }
-
-    TextCodec &TextCodec::operator=(const TextCodec &RHS) {
-        if (this != &RHS) {
-            stdc_impl_t;
-            impl = *RHS._impl;
         }
-        return *this;
+
+        // All other encodings, if ICU is available.
+        QStringDecoder byName(requested);
+        if (byName.isValid()) {
+            m_path = Path::ByName;
+            m_converterName = requested;
+            m_name = canonical.isEmpty() ? QString::fromLatin1(byName.name()) : canonical;
+        }
     }
 
     bool TextCodec::isValid() const {
-        stdc_impl_t;
-        return impl.valid;
+        return m_path != Path::Invalid;
     }
 
     QString TextCodec::name() const {
-        stdc_impl_t;
-        return impl.valid ? impl.canonical : QString();
+        return m_name;
     }
 
     bool TextCodec::isUtf8() const {
-        stdc_impl_t;
-        return impl.valid && impl.builtin == QStringConverter::Utf8;
+        return m_path == Path::Builtin && m_builtin == QStringConverter::Utf8;
     }
 
     std::optional<QString> TextCodec::decode(QByteArrayView bytes) const {
-        stdc_impl_t;
-        if (!impl.valid) {
+        if (m_path == Path::Invalid) {
             return std::nullopt;
         }
         if (bytes.isEmpty()) {
             return QString();
         }
 
-        if (impl.builtin) {
-            QStringDecoder decoder(*impl.builtin);
-            QString text = decoder.decode(bytes);
-            return decoder.hasError() ? std::nullopt : std::optional<QString>(text);
-        }
-
-        if (impl.ansiCodePage) {
-            // All or nothing, because invalid bytes indicate an incorrect encoding choice.
-            const auto text = winacp::decode(*impl.ansiCodePage,
-                                             std::string_view(bytes.data(), size_t(bytes.size())));
-            if (!text) {
-                return std::nullopt;
+        switch (m_path) {
+            case Path::Builtin: {
+                QStringDecoder decoder(m_builtin);
+                QString text = decoder.decode(bytes);
+                return decoder.hasError() ? std::nullopt : std::optional<QString>(text);
             }
-            return QString::fromUtf16(text->data(), qsizetype(text->size()));
-        }
+
+            case Path::AnsiCodePage: {
+                // All or nothing, because invalid bytes indicate an incorrect encoding choice.
+                const auto text =
+                    winacp::decode(winacp::CodePage(m_codePage),
+                                   std::string_view(bytes.data(), size_t(bytes.size())));
+                if (!text) {
+                    return std::nullopt;
+                }
+                return QString::fromUtf16(text->data(), qsizetype(text->size()));
+            }
 
 #ifdef _WIN32
-        if (impl.codePage != 0) {
-            // MB_ERR_INVALID_CHARS makes the conversion fail instead of substituting, which is
-            // required because invalid bytes indicate an incorrect encoding choice.
-            const int length = ::MultiByteToWideChar(UINT(impl.codePage), MB_ERR_INVALID_CHARS,
-                                                     bytes.data(), int(bytes.size()), nullptr, 0);
-            if (length <= 0) {
-                return std::nullopt;
+            case Path::WindowsCodePage: {
+                // MB_ERR_INVALID_CHARS makes the conversion fail instead of substituting, which is
+                // required because invalid bytes indicate an incorrect encoding choice.
+                const int length =
+                    ::MultiByteToWideChar(UINT(m_codePage), MB_ERR_INVALID_CHARS, bytes.data(),
+                                          int(bytes.size()), nullptr, 0);
+                if (length <= 0) {
+                    return std::nullopt;
+                }
+                QString text(length, Qt::Uninitialized);
+                ::MultiByteToWideChar(UINT(m_codePage), MB_ERR_INVALID_CHARS, bytes.data(),
+                                      int(bytes.size()), reinterpret_cast<wchar_t *>(text.data()),
+                                      length);
+                return text;
             }
-            QString text(length, Qt::Uninitialized);
-            ::MultiByteToWideChar(UINT(impl.codePage), MB_ERR_INVALID_CHARS, bytes.data(),
-                                  int(bytes.size()), reinterpret_cast<wchar_t *>(text.data()),
-                                  length);
-            return text;
-        }
 #endif
 
-        QStringDecoder decoder(impl.fallbackName);
-        QString text = decoder.decode(bytes);
-        return decoder.hasError() ? std::nullopt : std::optional<QString>(text);
+            case Path::ByName: {
+                QStringDecoder decoder(m_converterName);
+                QString text = decoder.decode(bytes);
+                return decoder.hasError() ? std::nullopt : std::optional<QString>(text);
+            }
+
+            default:
+                break;
+        }
+        return std::nullopt;
     }
 
     QByteArray TextCodec::encode(QStringView text) const {
-        stdc_impl_t;
-        if (!impl.valid || text.isEmpty()) {
+        if (text.isEmpty()) {
             return {};
         }
 
-        if (impl.builtin) {
-            QStringEncoder encoder(*impl.builtin);
-            return encoder.encode(text);
-        }
+        switch (m_path) {
+            case Path::Builtin: {
+                QStringEncoder encoder(m_builtin);
+                return encoder.encode(text);
+            }
 
-        if (impl.ansiCodePage) {
-            // A question mark for each unrepresentable code unit, as Windows writes. canEncode()
-            // detects the substitution by comparison.
-            const std::string written =
-                winacp::encode(*impl.ansiCodePage,
-                               std::u16string_view(reinterpret_cast<const char16_t *>(text.utf16()),
-                                                   size_t(text.size())),
-                               '?');
-            return QByteArray(written.data(), qsizetype(written.size()));
-        }
+            case Path::AnsiCodePage: {
+                // A question mark for each unrepresentable code unit, as Windows writes.
+                // canEncode() detects the substitution by comparison.
+                const std::string written = winacp::encode(
+                    winacp::CodePage(m_codePage),
+                    std::u16string_view(reinterpret_cast<const char16_t *>(text.utf16()),
+                                        size_t(text.size())),
+                    '?');
+                return QByteArray(written.data(), qsizetype(written.size()));
+            }
 
 #ifdef _WIN32
-        if (impl.codePage != 0) {
-            const auto *wide = reinterpret_cast<const wchar_t *>(text.utf16());
-            const int size = ::WideCharToMultiByte(UINT(impl.codePage), 0, wide, int(text.size()),
-                                                   nullptr, 0, nullptr, nullptr);
-            if (size <= 0) {
-                return {};
+            case Path::WindowsCodePage: {
+                const auto wide = reinterpret_cast<const wchar_t *>(text.utf16());
+                const int size = ::WideCharToMultiByte(UINT(m_codePage), 0, wide, int(text.size()),
+                                                       nullptr, 0, nullptr, nullptr);
+                if (size <= 0) {
+                    return {};
+                }
+                QByteArray bytes(size, Qt::Uninitialized);
+                ::WideCharToMultiByte(UINT(m_codePage), 0, wide, int(text.size()), bytes.data(),
+                                      size, nullptr, nullptr);
+                return bytes;
             }
-            QByteArray bytes(size, Qt::Uninitialized);
-            ::WideCharToMultiByte(UINT(impl.codePage), 0, wide, int(text.size()), bytes.data(),
-                                  size, nullptr, nullptr);
-            return bytes;
-        }
 #endif
 
-        QStringEncoder encoder(impl.fallbackName);
-        return encoder.encode(text);
+            case Path::ByName: {
+                QStringEncoder encoder(m_converterName);
+                return encoder.encode(text);
+            }
+
+            default:
+                break;
+        }
+        return {};
     }
 
     bool TextCodec::canEncode(QStringView text) const {
-        stdc_impl_t;
-        if (!impl.valid) {
+        if (m_path == Path::Invalid) {
             return false;
         }
         if (text.isEmpty()) {
