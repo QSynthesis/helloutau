@@ -1,6 +1,6 @@
 # 编辑层 `HelloKitEdit`
 
-本文档规定 `hellokit/lib/Edit/` 的职责边界与接口结构。产出目标为 `HelloKitEdit`，include 路径为 `<hellokit/Edit/...>`，命名空间为 `hello::kit`。依赖 `HelloKitDocument` 与 `HelloKitVoiceBank`。
+本文档规定 `hellokit/lib/Edit/` 的职责边界与接口结构。产出目标为 `HelloKitEdit`，include 路径为 `<hellokit/Edit/...>`，命名空间为 `hello::kit`。依赖 `HelloKitDocument` 与 `HelloKitVoiceBank`，节点树由 [substate](https://github.com/stdware/substate) 实现，作为私有依赖，见「节点树的实现」。
 
 在 [`Roadmap.md`](Roadmap.md) 中，这是第三阶段「编辑器骨架」的**第一步**，先于窗口和钢琴卷帘。
 
@@ -43,13 +43,13 @@
 
 代价是**两份表示**，二者之间的转换是新的偏差来源。防范手段是往返测试，而这种结构已有成熟的先例：`.usth` 与 `Project` 之间的转换即以此方式保证，`ustconv --check` 的判据可以直接复用。
 
-换来的是节点模型的全部优势：身份、属性与子节点的统一、自然的嵌套寻址，以及将来接入 [substate](https://github.com/stdware/substate) 时的直接映射而非翻译。**即使不采用树，这些功能也必须自行实现一遍**，那才是代价最高的方案。
+换来的是节点模型的全部优势：身份、属性与子节点的统一，以及自然的嵌套寻址。**即使不采用树，这些功能也必须自行实现一遍**，那才是代价最高的方案。
 
 现有代码**无需任何改动**：222 处 `Note` 字段访问、两个读写器、`SynthPlan::make(const Project &)`、MIDI 转换、所有手动工具和测试均保持不变。新增的只有树的定义和一层双向转换。
 
 ## 节点模型
 
-三种节点，外加「槽位内容」的概念。命名有意与 substate 保持一致，以便将来更换后端时对应关系一目了然。
+使用 substate 的三种节点，外加「槽位内容」的概念：
 
 | 节点 | 语义 |
 |---|---|
@@ -57,18 +57,11 @@
 | `VectorNode` | **有序**的子节点列表，按下标执行 `insert` / `remove` / `move` |
 | `MappingNode` | 键到值的映射 |
 
-```cpp
-/// 一个槽位的内容：一个标量、一个子节点，或为空。
-class Value {
-public:
-    enum Kind { Empty, Scalar, Child };
-    // …
-};
-```
+槽位内容即 qsubstate 的 `Property`：为空、一个 `QVariant` 标量，或一个子节点。
 
-**`Value` 将「属性」和「子节点」统一为同一种槽位机制。** 因此「修改一个标量」和「替换一个子节点」是同一种操作，变更记录只有一种形式。`vibrato` 是否为 `null`，即对应槽位中是子节点还是 `Empty`。
+**`Property` 将「属性」和「子节点」统一为同一种槽位机制。** 因此「修改一个标量」和「替换一个子节点」是同一种操作，变更记录只有一种形式。`vibrato` 是否为 `null`，即对应槽位中是子节点还是为空。
 
-substate 另有 `SheetNode`（自增 ID 的表）和 `BytesNode`，目前用不到，需要时再添加。**不要提前实现用不到的节点类型。**
+substate 另有 `SheetNode`（键由节点分配的表）、`BytesNode` 与 `ArrayNode<T>`（按元素下标访问的数值数组）。元素需要身份时使用节点，数量大且只作为数值序列整体编辑时使用 `ArrayNode<T>`，选择标准见 substate 的 `docs/Design.md`「节点与数组的选择」。
 
 ### 身份
 
@@ -157,9 +150,9 @@ session.remove(userData, "$Custom");
 
 领域函数不自行记录变更，其调用的节点操作已经记录。
 
-## 五种变更形状
+## 六种变更形状
 
-变更记录是通用的，按形状各实现一次，而非每个函数各实现一次：
+变更记录是通用的，按形状各实现一次，而非每个函数各实现一次。每种形状对应 substate 的一种动作：
 
 | 形状 | 记录内容 | 逆操作 |
 |---|---|---|
@@ -168,8 +161,11 @@ session.remove(userData, "$Custom");
 | 序列删除 | 被删除的子树 | 重新插入 |
 | 序列移动 | 区间与目标位置 | 反向移动 |
 | 映射项增删改 | 键、修改前后的值 | 写回修改前的值 |
+| 转移 | 源父节点与位置、目标父节点与位置 | 转回源位置 |
 
-**若某个操作无法归入这五种形状，不应急于添加第六种，更可能的是该操作应当拆分。**
+**转移**把节点移到另一个父节点下，节点的身份与 ID 不变，例如将来的多轨工程中把音符移到另一轨。以删除后插入副本代替转移，会使界面中以 ID 记录的选区与拖动状态失效。
+
+**若某个操作无法归入这六种形状，不应急于添加第七种，更可能的是该操作应当拆分。**
 
 ## 事务
 
@@ -296,35 +292,17 @@ set /tracks/0/notes/12/intensity null
 
 **重建映射不修改工程文件，也不改变工程的保存状态。** 这是编辑器内部状态的变化，而非对工程的编辑，因此**不经过本文档所述的事务**：不进入撤销栈，不写入日志，不会使工程变为「未保存」状态。修改内容属于音源，音源有其自身的保存状态。
 
-## 日志接缝
+## 节点树的实现
 
-```cpp
-class EditJournal {
-public:
-    virtual ~EditJournal();
-    virtual bool append(const Transaction &) = 0;
-    virtual std::optional<Transaction> undo() = 0;
-    virtual std::optional<Transaction> redo() = 0;
-    /// 上次保存之后尚未持久化的事务，按顺序排列。
-    virtual std::vector<Transaction> recover() = 0;
-};
-```
+节点树、事务与撤销历史由 substate 实现。节点的所有权、动作、事务与存储引擎的设计见 substate 仓库的 `docs/Design.md`。
 
-**编辑层不引用任何 `ss::` 类型。**
+**substate 是 `HelloKitEdit` 的私有依赖，`ss::` 类型不出现在任何公开头文件中。** 编辑层以 `NodeId` 引用节点，以本文档所述的类型化槽位和领域函数修改树，并将 substate 的变更通知转换为自己的信号，不使用 qsubstate 的 Qt 信号适配器。substate 的接口变动因此只影响编辑层的实现，「音符是什么、函数的含义是什么」这些困难且有价值的内容不随之变动。这与 `SynthRunner::makeEngineProcess()` 采用的是同一种隔离手法。
 
-第一版采用内存实现。这并非权宜之计：内存中的撤销栈是每个编辑器都具备的功能，substate 提供的是**持久化**部分。
-
-### 暂不接入 substate 的理由
-
-substate 方面：`FilesystemStorageEngine` 的 public 区目前只有一行 `// TODO`，`tests/` 下只有一个 CMakeLists 而没有测试。崩溃一致性尚未实现，而且其作者表示将重新调整其结构。
-
-本仓库方面：日志是最可能变动、语义含量最低的部分；而「音符是什么、函数的含义是什么」这些困难且有价值的内容，不应随日志一同变动。这与 `SynthRunner::makeEngineProcess()` 采用的是同一种隔离手法。
-
-由于节点模型按 substate 的结构设计，将来更换后端只需将本仓库的 `StructNode` / `VectorNode` / `MappingNode` 映射到 substate 的同名节点，**而无需重新设计**。
+撤销历史由 substate 的存储引擎保存。第一阶段使用 `MemoryStorageEngine`，即内存中的撤销栈。substate 在第二阶段实现预写式日志引擎后，更换存储引擎即可获得崩溃恢复，编辑层的接口不变。
 
 ### 恢复
 
-恢复 = **上次保存的文件 + 重放尚未持久化的事务**。日志只存储事务，底层无需理解树的语义。
+恢复由 substate 的日志引擎发起：读取检查点与日志，重建树与撤销历史，再交给模型，见 substate `docs/Design.md` 的「持久化接口」。日志引擎尚未实现，恢复的界面流程在其完成后另行规定。
 
 ## 无界面工具
 
@@ -353,5 +331,4 @@ ustedit song.usth --dump-changes   # 将命令展开为变更并输出，不执�
 - **多轨。** UST 为单轨，`.usth` 的 `tracks` 数组长度恒为 1，见 [`UsthFormat.md`](UsthFormat.md)。树中保留 `/tracks/0/` 这一层，将来开放多轨时语法不变。
 - **协同编辑。** 不在规划范围内，不为其做设计。
 - **将命令扩展为脚本语言。**
-- **提前实现用不到的节点类型。** `SheetNode`、`BytesNode` 等在需要时再添加。
-- **让变更记录层理解业务逻辑。** 「量化」「移调」是领域函数，而非变更形状。变更形状只涉及槽位、序列和映射。
+- **让变更记录层理解业务逻辑。** 「量化」「移调」是领域函数，而非变更形状。变更形状只涉及槽位、序列、映射和节点的父子关系。

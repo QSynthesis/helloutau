@@ -10,7 +10,7 @@
 
 | 模块 | 命名空间 | 产出 | 依赖 |
 |---|---|---|---|
-| `hellokit/` | `hello::kit` | `HelloKitDocument`、今后的 `HelloKitCore` 等 | Qt Core、stdutau、stdcorelib（私有） |
+| `hellokit/` | `hello::kit` | `HelloKitDocument`、今后的 `HelloKitCore` 等 | Qt Core、stdutau、stdcorelib（私有）、substate（私有，仅 `HelloKitEdit`） |
 | `helloutau/` | `hello::daw` | `HelloUtauWidgets` 等，以及 `HelloUTAU` 可执行文件 | Qt Widgets、hellokit |
 
 `hello` 仅作为外层命名空间，代码一律位于第二层。不要在 `hello` 中直接声明内容，也不要再增加第三层。
