@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <memory>
 
 #include <QtCore/QDir>
@@ -32,6 +33,18 @@ namespace {
             out.trees += arguments.at(1).toStringList();
         }
         return out;
+    }
+
+    /// Returns whether \a path was reported, either as a directory or within a reported tree.
+    ///
+    /// A directory within a reported tree is not repeated among the directories. FSEvents also
+    /// reports the creation of directories made shortly before monitoring started, as trees, so
+    /// the directories created by init() may cover a later report within the same interval.
+    bool reported(const Changes &changes, const QString &path) {
+        return changes.directories.contains(path) ||
+               std::any_of(changes.trees.begin(), changes.trees.end(), [&](const QString &tree) {
+                   return path == tree || path.startsWith(tree + QLatin1Char('/'));
+               });
     }
 
 }
@@ -85,8 +98,7 @@ private Q_SLOTS:
         QSignalSpy spy(watcher.get(), &FileSystemWatcher::changed);
 
         touch(at(QStringLiteral("a/b/ka.wav")));
-        QTRY_VERIFY_WITH_TIMEOUT(collect(spy).directories.contains(at(QStringLiteral("a/b"))),
-                                 5000);
+        QTRY_VERIFY_WITH_TIMEOUT(reported(collect(spy), at(QStringLiteral("a/b"))), 5000);
     }
 
     // The reason for not using QFileSystemWatcher: on Windows it keeps every monitored
@@ -127,7 +139,7 @@ private Q_SLOTS:
 
         touch(m_dir->path() + QStringLiteral("/voice/other/ka.wav"));
         touch(at(QStringLiteral("a/marker.wav")));
-        QTRY_VERIFY_WITH_TIMEOUT(collect(spy).directories.contains(at(QStringLiteral("a"))), 5000);
+        QTRY_VERIFY_WITH_TIMEOUT(reported(collect(spy), at(QStringLiteral("a"))), 5000);
 
         for (const auto &directory : collect(spy).directories) {
             QVERIFY2(directory.startsWith(root()), qPrintable(directory));
@@ -167,7 +179,7 @@ private Q_SLOTS:
 
         // Monitoring resumes.
         touch(at(QStringLiteral("a/after.wav")));
-        QTRY_VERIFY_WITH_TIMEOUT(collect(spy).directories.contains(at(QStringLiteral("a"))), 5000);
+        QTRY_VERIFY_WITH_TIMEOUT(reported(collect(spy), at(QStringLiteral("a"))), 5000);
     }
 
     // Without the program no changes are reported, and every root is reported as unwatchable,
