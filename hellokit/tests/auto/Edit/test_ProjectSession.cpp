@@ -97,23 +97,6 @@ private Q_SLOTS:
         QCOMPARE(session.snapshot().toJson(), project.toJson());
     }
 
-    // A value equal to the current one creates no change, which relies on the equality of the
-    // value types stored in the slots.
-    void an_unchanged_value_creates_no_undo_step() {
-        const auto project = richProject();
-        ProjectSession session(project);
-        const auto note = ProjectRef(&session).tracks().at(0).notes().at(0);
-
-        auto transaction = session.transaction(QStringLiteral("Nothing"));
-        note.setLyric(note.lyric());
-        note.setIntensity(note.intensity());
-        note.setEnvelope(note.envelope());
-        note.setVibrato(note.vibrato());
-        note.userData().setValue(QStringLiteral("$custom"), QStringLiteral("kept"));
-        transaction.commit();
-        QVERIFY(!session.canUndo());
-    }
-
     // Acceptance criteria 3 and 5 of docs/Editing.md: undoing every step restores the original
     // project, redoing every step restores the edited one, and every position in between
     // matches the snapshot taken when it was first reached.

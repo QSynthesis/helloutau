@@ -66,6 +66,27 @@ private Q_SLOTS:
         QVERIFY(first != second);
     }
 
+    // The editing layer replaces a pitch curve only if the new curve differs from the current
+    // one, so both the start and every value take part in the comparison.
+    void pitch_curves_differing_in_the_start_or_a_value_are_unequal() {
+        PitchBend base;
+        base.start = -20.0;
+        base.values = {0, 10.5, -20};
+        QVERIFY(base == PitchBend(base));
+
+        auto withoutStart = base;
+        withoutStart.start = std::nullopt;
+        QVERIFY(base != withoutStart);
+
+        auto otherValue = base;
+        otherValue.values[2] = -21;
+        QVERIFY(base != otherValue);
+
+        auto shorter = base;
+        shorter.values.removeLast();
+        QVERIFY(base != shorter);
+    }
+
     // The editing layer stores a vibrato as one value and creates no action if the new value is
     // equal to the old one, so every parameter must take part in the comparison.
     void vibratos_differing_in_any_parameter_are_unequal() {

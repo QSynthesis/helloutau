@@ -1,3 +1,4 @@
+#include <QtTest/QSignalSpy>
 #include <QtTest/QTest>
 
 #include <hellokit/Edit/ProjectSession.h>
@@ -79,6 +80,86 @@ private Q_SLOTS:
         QCOMPARE(unknownFields.keys(), project.unknownFields.keys());
         QVERIFY(unknownFields.contains(QStringLiteral("array")));
         QCOMPARE(unknownFields.value(QStringLiteral("number")), QJsonValue(2.5));
+    }
+
+    // Writing the current value of every field, entry and element changes nothing: no change is
+    // reported and no undo step is created. This relies on the equality of every value type,
+    // including the envelope, the vibrato and the pitch curve.
+    void writing_the_current_values_changes_nothing() {
+        const auto project = richProject();
+        ProjectSession session(project);
+        const auto projectRef = ProjectRef(&session);
+        QSignalSpy changed(&session, &EditSession::changed);
+
+        auto transaction = session.transaction(QStringLiteral("Nothing"));
+        const auto settings = projectRef.settings();
+        settings.setName(settings.name());
+        settings.setTempo(settings.tempo());
+        settings.setFlags(settings.flags());
+        settings.setOutputFile(settings.outputFile());
+        settings.setCacheDir(settings.cacheDir());
+        settings.setWavtool(settings.wavtool());
+        settings.setResampler(settings.resampler());
+        settings.setMode2(settings.mode2());
+
+        const auto unknownFields = projectRef.unknownFields();
+        for (const auto &key : unknownFields.keys()) {
+            unknownFields.setValue(key, unknownFields.value(key));
+        }
+
+        const auto track = projectRef.tracks().at(0);
+        track.setName(track.name());
+        track.setVoiceDir(track.voiceDir());
+
+        const auto notes = track.notes();
+        for (int i = 0; i < notes.size(); ++i) {
+            const auto note = notes.at(i);
+            note.setLyric(note.lyric());
+            note.setLength(note.length());
+            note.setNoteNum(note.noteNum());
+            note.setIntensity(note.intensity());
+            note.setModulation(note.modulation());
+            note.setVelocity(note.velocity());
+            note.setPreUtterance(note.preUtterance());
+            note.setVoiceOverlap(note.voiceOverlap());
+            note.setStartPoint(note.startPoint());
+            note.setTempo(note.tempo());
+            note.setFlags(note.flags());
+            note.setEnvelope(note.envelope());
+            note.setVibrato(note.vibrato());
+            note.setLabel(note.label());
+            note.setDirect(note.direct());
+            note.setPatch(note.patch());
+            note.setRegion(note.region());
+            note.setRegionEnd(note.regionEnd());
+
+            const auto portamento = note.portamento();
+            for (int j = 0; j < portamento.size(); ++j) {
+                const auto point = portamento.at(j);
+                point.setX(point.x());
+                point.setY(point.y());
+                point.setType(point.type());
+            }
+
+            const auto pitchBend = note.pitchBend();
+            if (pitchBend.isValid()) {
+                pitchBend.setStart(pitchBend.start());
+                pitchBend.replaceValues(0, pitchBend.values());
+                note.setPitchBend(pitchBend.toPitchBend());
+            } else {
+                note.setPitchBend(std::nullopt);
+            }
+
+            const auto userData = note.userData();
+            for (const auto &key : userData.keys()) {
+                userData.setValue(key, userData.value(key));
+            }
+        }
+        transaction.commit();
+
+        QCOMPARE(changed.count(), 0);
+        QVERIFY(!session.canUndo());
+        QCOMPARE(session.snapshot().toJson(), project.toJson());
     }
 
     // Each record handle returns a copy of its record, which the serialization compares field

@@ -173,6 +173,14 @@ namespace hello::kit {
     struct PitchBend {
         std::optional<double> start;
         QList<double> values;
+
+        inline bool operator==(const PitchBend &RHS) const {
+            return start == RHS.start && values == RHS.values;
+        }
+
+        inline bool operator!=(const PitchBend &RHS) const {
+            return !(*this == RHS);
+        }
     };
 
     /// One note of a track, or a rest.

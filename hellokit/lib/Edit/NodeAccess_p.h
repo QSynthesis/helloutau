@@ -91,13 +91,20 @@ namespace hello::kit {
         }
 
         /// Replaces the child in \a slot with the tree of \a value, or removes it if \a value is
-        /// empty.
+        /// empty. A value equal to the value of the current child creates no change, as for a
+        /// value field, although a new tree is never equal to the current child.
         template <class Ref, class T>
         static inline void setChild(const Ref &record, ChildSlot slot,
                                     const std::optional<T> &value) {
-            if (const auto node = edit(record)) {
-                node->setAt(slot.index, value ? ss::Property(treeOf(*value)) : ss::Property());
+            const auto node = edit(record);
+            if (!node) {
+                return;
             }
+            const auto current = node->child(slot.index);
+            if (value ? current && fromTree<T>(current) == *value : !current) {
+                return;
+            }
+            node->setAt(slot.index, value ? ss::Property(treeOf(*value)) : ss::Property());
         }
 
         // Lists
