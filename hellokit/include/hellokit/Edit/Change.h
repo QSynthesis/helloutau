@@ -21,11 +21,11 @@ namespace hello::kit {
         /// The kinds of the changes of this library. The changes of a node type added later use
         /// kinds from \c User.
         enum BuiltInKind {
-            ValueKind = 1,
-            EntryKind,
-            ArrayKind,
-            ListKind,
-            MoveKind,
+            Value = 1,
+            Entry,
+            Array,
+            List,
+            Move,
             User = 1024,
         };
 
@@ -61,7 +61,7 @@ namespace hello::kit {
     /// a child.
     class ValueChange : public Change {
     public:
-        static constexpr int Kind = ValueKind;
+        static constexpr int Kind = Value;
 
         inline ValueChange(NodeId node, int slot) : Change(Kind, node), m_slot(slot) {
         }
@@ -77,7 +77,7 @@ namespace hello::kit {
     /// The entry key() of a mapping was added, changed or removed.
     class EntryChange : public Change {
     public:
-        static constexpr int Kind = EntryKind;
+        static constexpr int Kind = Entry;
 
         inline EntryChange(NodeId node, QString key) : Change(Kind, node), m_key(std::move(key)) {
         }
@@ -93,7 +93,7 @@ namespace hello::kit {
     /// The elements of an array changed.
     class ArrayChange : public Change {
     public:
-        static constexpr int Kind = ArrayKind;
+        static constexpr int Kind = Array;
 
         inline explicit ArrayChange(NodeId node) : Change(Kind, node) {
         }
@@ -103,7 +103,7 @@ namespace hello::kit {
     /// were removed.
     class ListChange : public Change {
     public:
-        static constexpr int Kind = ListKind;
+        static constexpr int Kind = List;
 
         enum Type {
             Inserted,
@@ -140,7 +140,7 @@ namespace hello::kit {
     /// destination().
     class MoveChange : public Change {
     public:
-        static constexpr int Kind = MoveKind;
+        static constexpr int Kind = Move;
 
         inline MoveChange(NodeId node, int index, int count, int destination)
             : Change(Kind, node), m_index(index), m_count(count), m_destination(destination) {
