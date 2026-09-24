@@ -7,10 +7,12 @@
 #include <substate/Node.h>
 #include <substate/VectorNode.h>
 #include <qsubstate/MappingNode.h>
+#include <qsubstate/QCodec.h>
 #include <qsubstate/StructNode.h>
 
 #include <hellokit/Document/Project.h>
 
+#include <hellokit/Edit/HelloKitEditGlobal.h>
 #include <hellokit/Edit/ProjectSchema.h>
 
 namespace hello::kit {
@@ -39,11 +41,17 @@ namespace hello::kit {
     using PitchBendNode = ss::StructNode<PitchBendSlots::count>;
     using PitchValuesNode = ss::ArrayNode<double>;
 
+    // Exported for the tests, which exercise the conversion and the codec without a session.
+
     /// Returns the tree of \a project as a free node.
-    std::unique_ptr<ss::Node> treeOf(const Project &project);
+    HELLOKIT_EDIT_EXPORT std::unique_ptr<ss::Node> treeOf(const Project &project);
 
     /// Returns the project of \a root, a tree with the structure produced by treeOf().
-    Project projectOf(const ss::Node *root);
+    HELLOKIT_EDIT_EXPORT Project projectOf(const ss::Node *root);
+
+    /// Registers the node types of a project tree with \a codec, and the value types stored in
+    /// its slots with the Qt meta-type system, which a decoder requires to find a type by name.
+    HELLOKIT_EDIT_EXPORT void registerProjectTypes(ss::QCodec &codec);
 
 }
 

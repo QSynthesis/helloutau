@@ -4,6 +4,7 @@
 #include <array>
 #include <optional>
 
+#include <QtCore/QDataStream>
 #include <QtCore/QList>
 #include <QtCore/QMap>
 #include <QtCore/QString>
@@ -108,6 +109,35 @@ namespace hello::kit {
             return !(*this == RHS);
         }
     };
+
+    // The stream operators of the values stored as a whole in the edit history. They are
+    // declared with the types, because Qt records the stream operators of a type where its
+    // meta-type is first instantiated. The format is part of the history format and must not
+    // change.
+
+    inline QDataStream &operator<<(QDataStream &out, const Envelope &envelope) {
+        for (const auto &anchor : envelope.anchors) {
+            out << anchor.x << anchor.y;
+        }
+        return out << envelope.hasMiddle;
+    }
+
+    inline QDataStream &operator>>(QDataStream &in, Envelope &envelope) {
+        for (auto &anchor : envelope.anchors) {
+            in >> anchor.x >> anchor.y;
+        }
+        return in >> envelope.hasMiddle;
+    }
+
+    inline QDataStream &operator<<(QDataStream &out, const Vibrato &vibrato) {
+        return out << vibrato.length << vibrato.period << vibrato.amplitude << vibrato.attack
+                   << vibrato.release << vibrato.phase << vibrato.offset << vibrato.intensity;
+    }
+
+    inline QDataStream &operator>>(QDataStream &in, Vibrato &vibrato) {
+        return in >> vibrato.length >> vibrato.period >> vibrato.amplitude >> vibrato.attack >>
+               vibrato.release >> vibrato.phase >> vibrato.offset >> vibrato.intensity;
+    }
 
     /// One control point of the Mode2 pitch curve.
     struct PortamentoPoint {

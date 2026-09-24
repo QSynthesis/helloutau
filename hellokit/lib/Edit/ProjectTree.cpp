@@ -254,4 +254,23 @@ namespace hello::kit {
         return project;
     }
 
+    void registerProjectTypes(ss::QCodec &codec) {
+        codec.registerNodeType(ProjectType,
+                               [] { return std::make_unique<ProjectNode>(ProjectType); });
+        codec.registerNodeType(SettingsType,
+                               [] { return std::make_unique<SettingsNode>(SettingsType); });
+        codec.registerNodeType(TrackType, [] { return std::make_unique<TrackNode>(TrackType); });
+        codec.registerNodeType(NoteType, [] { return std::make_unique<NoteNode>(NoteType); });
+        codec.registerNodeType(PortamentoPointType, [] {
+            return std::make_unique<PortamentoPointNode>(PortamentoPointType);
+        });
+        codec.registerNodeType(PitchBendType,
+                               [] { return std::make_unique<PitchBendNode>(PitchBendType); });
+        codec.registerNodeType(PitchValuesType,
+                               [] { return std::make_unique<PitchValuesNode>(PitchValuesType); });
+
+        qRegisterMetaType<Envelope>();
+        qRegisterMetaType<Vibrato>();
+    }
+
 }
