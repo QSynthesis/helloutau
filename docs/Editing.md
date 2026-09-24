@@ -368,6 +368,7 @@ set /tracks/0/notes/12/intensity null
 
 - **槽位表**（`ProjectSchema.h`）：每个记录一个命名空间，每个字段一个 `Slot<T>` 或 `ChildSlot`，名称即 `.usth` 的字段名。枚举类型的字段以 `int` 存储，由 `SlotValue` 的特化转换。
 - **转换**（`ProjectTree.cpp`）：每个记录类型一对 `treeOf(const T &)` 与 `fromTree<T>(node)`，逐字段对应。无法逐字段对应的字段由手写的转换函数提供，声明中指明，目前只有 `unknownFields`（文档中为 `QJsonObject`，树中为值为 `QJsonValue` 的映射）。
+- **字段表**（`ProjectFields.cpp`）：每个记录类型一个 `RecordInfo`，按槽位顺序列出字段的名称、下标、种类（值、记录、列表、映射、数组）、值的 JSON 格式、是否可空与范围，供命令按名称寻址、日志按下标取得名称。值类型的 JSON 格式即 `.usth` 的写法，由 `formatOf<T>()` 的特化提供。列表中的记录与可空的子记录另有一个由 JSON 创建子树的函数。
 - **句柄**（`ProjectRefs.h` / `.cpp`）：每个记录、列表、映射各一个句柄类，每个成员函数是对通用层 `NodeAccess` 的一次调用。按字段的种类有固定的形式：值字段 `f()` / `setF()`；记录字段 `r()`，可选时另有 `setR(std::optional)`；列表字段返回列表句柄（`size`、`at`、`insert`、`remove`、`move`）；映射字段返回映射句柄（`keys`、`contains`、`value`、`setValue`、`remove`）；数组字段 `a()`、`aSize()`、`replaceA()`、`insertA()`、`removeA()`。每个记录句柄提供 `to<类型名>()` 返回副本。句柄与节点的对应（`NodeOf` 的特化）同样生成。
 - **节点类型**：每个记录与数组一个用户类型编号，及编解码器的注册。
 

@@ -10,6 +10,9 @@ target_include_directories(test_EditSession PRIVATE ${_private_include})
 add_auto_test(test_NodeRef.cpp HelloKitEdit ${_private})
 target_include_directories(test_NodeRef PRIVATE ${_private_include})
 
+add_auto_test(test_ProjectFields.cpp HelloKitEdit ${_private})
+target_include_directories(test_ProjectFields PRIVATE ${_private_include})
+
 add_auto_test(test_ProjectTree.cpp HelloKitEdit ${_private})
 target_include_directories(test_ProjectTree PRIVATE ${_private_include})
 
