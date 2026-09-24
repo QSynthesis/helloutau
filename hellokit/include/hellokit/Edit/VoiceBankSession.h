@@ -84,7 +84,9 @@ namespace hello::kit {
         /// See VoiceBankDiskState::rememberCharset().
         void rememberCharset(const std::filesystem::path &directory);
 
-        /// See VoiceBankDiskState::checkDisk().
+        /// See VoiceBankDiskState::checkDisk(). A directory on disk that the tree does not hold,
+        /// because an undo took out a directory that a reload had added, is reported as added
+        /// by every check, so that it can be taken in again.
         VoiceBankChanges checkDisk(const QList<std::filesystem::path> &places);
 
         /// \overload for the entire voice bank.
@@ -123,6 +125,10 @@ namespace hello::kit {
         /// Returns the snapshot together with the excluded directories, which the disk state
         /// works on.
         VoiceBank fullBank() const;
+
+        /// Returns \a changes with each directory of the disk state that the session holds
+        /// neither in the tree nor as excluded added to the new directories.
+        VoiceBankChanges withUntaken(VoiceBankChanges changes) const;
 
         /// Makes the tree hold the editable directories of \a bank in one transaction with
         /// \a message : the directories at \a replaced are replaced, the directories missing

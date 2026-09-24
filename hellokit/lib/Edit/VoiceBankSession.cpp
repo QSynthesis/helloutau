@@ -1,5 +1,7 @@
 #include "VoiceBankSession.h"
 
+#include <algorithm>
+
 #include <hellokit/EditBase/private/ChangeLog_p.h>
 #include <hellokit/EditBase/private/EditSession_p.h>
 
@@ -114,11 +116,30 @@ namespace hello::kit {
     }
 
     VoiceBankChanges VoiceBankSession::checkDisk(const QList<std::filesystem::path> &places) {
-        return m_disk.checkDisk(places);
+        return withUntaken(m_disk.checkDisk(places));
     }
 
     VoiceBankChanges VoiceBankSession::checkDisk() {
-        return m_disk.checkDisk();
+        return withUntaken(m_disk.checkDisk());
+    }
+
+    VoiceBankChanges VoiceBankSession::withUntaken(VoiceBankChanges changes) const {
+        if (changes.rootNotFound) {
+            return changes;
+        }
+        const auto &directories = directoriesOf(*this);
+        const auto excluded = excludedDirectories();
+        for (const auto &path : m_disk.directories()) {
+            const bool known = indexIn(directories, path) >= 0 ||
+                               std::any_of(excluded.begin(), excluded.end(),
+                                           [&path](const VoiceBankDirectory &directory) {
+                                               return directory.path == path;
+                                           });
+            if (!known && !changes.removed.contains(path)) {
+                changes.added.push_back(path);
+            }
+        }
+        return changes;
     }
 
     VoiceBankChanges VoiceBankSession::reloadFromDisk(const VoiceBankChanges &changes,

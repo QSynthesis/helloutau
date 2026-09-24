@@ -162,6 +162,22 @@ private Q_SLOTS:
         QCOMPARE(indexOf("new"), -1);
         QVERIFY(m_session->save(diagnostics));
         QCOMPARE(read(QStringLiteral("new/oto.ini")), QByteArray("n.wav=n,1,2,3,4,5\r\n"));
+
+        // Every later check reports it as new, so that it can be taken in again.
+        const auto again = m_session->checkDisk();
+        QCOMPARE(again.added, QList<fs::path>{fs::path("new")});
+        QCOMPARE(m_session->checkDisk({fs::path(m_dir->path().toStdU16String())}).added,
+                 QList<fs::path>{fs::path("new")});
+        m_session->reloadFromDisk(again, &selector, diagnostics);
+        QVERIFY(indexOf("new") > 0);
+        QVERIFY(m_session->checkDisk().isEmpty());
+
+        // Removed on disk after another undo, it is reported as removed and not as new.
+        m_session->undo();
+        QVERIFY(QDir(pathOf(QStringLiteral("new"))).removeRecursively());
+        const auto gone = m_session->checkDisk();
+        QCOMPARE(gone.removed, QList<fs::path>{fs::path("new")});
+        QVERIFY(gone.added.isEmpty());
     }
 
     // A change of the audio files alone updates the samples without an entry, and is not an

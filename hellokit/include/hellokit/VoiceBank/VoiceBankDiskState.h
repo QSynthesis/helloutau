@@ -51,6 +51,10 @@ namespace hello::kit {
             return m_root;
         }
 
+        /// Returns the directories whose state is kept, the root first, in the order of their
+        /// paths.
+        QList<std::filesystem::path> directories() const;
+
         /// Returns whether the directory at \a directory of \a bank has changes that save()
         /// would write.
         bool isModified(const VoiceBank &bank, const std::filesystem::path &directory) const;

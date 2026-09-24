@@ -620,6 +620,15 @@ namespace hello::kit {
         return false;
     }
 
+    QList<fs::path> VoiceBankDiskState::directories() const {
+        QList<fs::path> paths;
+        for (const auto &[path, book] : m_books) {
+            Q_UNUSED(book)
+            paths.push_back(path);
+        }
+        return paths;
+    }
+
     QStringList VoiceBankDiskState::audioFiles(const fs::path &directory) const {
         const auto it = m_books.find(directory);
         return it == m_books.end() ? QStringList() : it->second.audioFiles;
