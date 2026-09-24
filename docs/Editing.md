@@ -265,7 +265,7 @@ note insert /tracks/0/notes 12 {"lyric": "a", "length": 480, "noteNum": 60}
 | `move <路径> <下标> <数量> <目标位置>` | 列表 | 目标位置是移动后第一项的下标 |
 | `insert` / `replace <路径> <下标> <数值>…` | 数组 | 插入或覆盖，覆盖可越过末尾 |
 
-**领域命令**（`ProjectCommands.h`）每个领域函数一条，形式为 `<名词> <动词> [参数…]`：`note transpose <半音数> <音符路径>…`、`note split <音符列表路径> <下标> <tick>`、`note insert <音符列表路径> <下标> <音符>`、`note tempo <音符路径> <速度>`。
+**领域命令**（`ProjectCommands.h`）每个领域函数一条，形式为 `<名词> <动词> [参数…]`：`note transpose <半音数> <音符路径>…`、`note split <音符列表路径> <下标> <tick>`、`note insert <音符列表路径> <下标> <音符>`、`note tempo <音符路径> <速度>`。音源的领域命令（`VoiceBankCommands.h`）：`entry set <条目路径> <条目>`、`entry insert <目录路径> <条目>…`、`entry include <目录路径> <文件名>…`、`entry remove <目录路径> <下标>…`、`prefix set <音高> <前缀>`、`prefix remove <音高>`、`directory charset <目录路径> <编码名>`。插入的条目按文件名排入，不由命令指定位置。
 
 **命令只写入它所写明的值。** 读取文件时宽容的地方，命令一律拒绝：记录与整体值中的未知字段、类型不符的字段，以及读取时会被修正为默认值的写法，都报告错误而不写入。音高只接受数字，不接受音名。
 
