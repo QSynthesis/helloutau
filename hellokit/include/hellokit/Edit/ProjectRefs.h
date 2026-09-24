@@ -3,11 +3,12 @@
 
 #include <optional>
 
+#include <QtCore/QJsonValue>
 #include <QtCore/QList>
 #include <QtCore/QString>
 #include <QtCore/QStringList>
 
-#include <hellokit/Document/Note.h>
+#include <hellokit/Document/Project.h>
 
 #include <hellokit/Edit/HelloKitEditGlobal.h>
 #include <hellokit/Edit/NodeRef.h>
@@ -16,8 +17,18 @@
 
 namespace hello::kit {
 
-    // The handles of the nodes of a project tree. Each getter and setter reads or writes the
-    // slot of ProjectSchema.h with the same name. See NodeRef.
+    // The handles of the nodes of a project tree, see NodeRef. The member functions follow one
+    // convention per kind of field of ProjectSchema.h:
+    //
+    // - value field f: f() and setF()
+    // - record field r: r(), and setR() with a std::optional value if the record is optional
+    // - list field l: l(), a list handle with size(), at(), insert(), remove() and move()
+    // - mapping field m: m(), a mapping handle with keys(), contains(), value(), setValue() and
+    //   remove()
+    // - array field a: a(), aSize(), replaceA(), insertA() and removeA()
+    //
+    // Each record handle also provides a copy of its record as toT(), where T is the name of the
+    // record type.
 
     /// The base of the handles of a project tree, which refer to a ProjectSession.
     class HELLOKIT_EDIT_EXPORT ProjectNodeRef : public NodeRef {
@@ -61,6 +72,8 @@ namespace hello::kit {
 
         bool mode2() const;
         void setMode2(bool mode2) const;
+
+        ProjectSettings toProjectSettings() const;
     };
 
     class HELLOKIT_EDIT_EXPORT PortamentoPointRef : public ProjectNodeRef {
@@ -76,8 +89,7 @@ namespace hello::kit {
         PortamentoPoint::Type type() const;
         void setType(PortamentoPoint::Type type) const;
 
-        /// Returns a copy of the point.
-        PortamentoPoint toPoint() const;
+        PortamentoPoint toPortamentoPoint() const;
     };
 
     class HELLOKIT_EDIT_EXPORT PortamentoListRef : public ProjectNodeRef {
@@ -86,14 +98,8 @@ namespace hello::kit {
 
         int size() const;
         PortamentoPointRef at(int index) const;
-
-        /// Inserts copies of \a points before \a index.
         void insert(int index, const QList<PortamentoPoint> &points) const;
-
         void remove(int index, int count) const;
-
-        /// Moves \a count points starting at \a index so that the first of them is at
-        /// \a destination afterwards.
         void move(int index, int count, int destination) const;
     };
 
@@ -104,15 +110,13 @@ namespace hello::kit {
         std::optional<double> start() const;
         void setStart(std::optional<double> start) const;
 
-        int size() const;
         QList<double> values() const;
-
-        /// Overwrites the values starting at \a index, extending the curve if \a values reaches
-        /// beyond its end.
+        int valuesSize() const;
         void replaceValues(int index, const QList<double> &values) const;
-
         void insertValues(int index, const QList<double> &values) const;
         void removeValues(int index, int count) const;
+
+        PitchBend toPitchBend() const;
     };
 
     /// See \c Note::userData.
@@ -120,9 +124,7 @@ namespace hello::kit {
     public:
         using ProjectNodeRef::ProjectNodeRef;
 
-        /// Returns the keys in ascending order.
         QStringList keys() const;
-
         bool contains(const QString &key) const;
         QString value(const QString &key) const;
         void setValue(const QString &key, const QString &value) const;
@@ -167,21 +169,15 @@ namespace hello::kit {
         void setFlags(const QString &flags) const;
 
         std::optional<Envelope> envelope() const;
-
-        /// Replaces the envelope as a whole.
         void setEnvelope(const std::optional<Envelope> &envelope) const;
 
         std::optional<Vibrato> vibrato() const;
-
-        /// Replaces the vibrato as a whole.
         void setVibrato(const std::optional<Vibrato> &vibrato) const;
 
         PortamentoListRef portamento() const;
 
-        /// Returns the Mode1 pitch curve, or an invalid handle if the note has none.
+        /// Returns an invalid handle if the note has no Mode1 pitch curve.
         PitchBendRef pitchBend() const;
-
-        /// Replaces the Mode1 pitch curve, or removes it if \a pitchBend is empty.
         void setPitchBend(const std::optional<PitchBend> &pitchBend) const;
 
         QString label() const;
@@ -202,7 +198,6 @@ namespace hello::kit {
 
         UserDataRef userData() const;
 
-        /// Returns a copy of the note, or a default note if the handle is invalid.
         Note toNote() const;
     };
 
@@ -212,14 +207,8 @@ namespace hello::kit {
 
         int size() const;
         NoteRef at(int index) const;
-
-        /// Inserts copies of \a notes before \a index.
         void insert(int index, const QList<Note> &notes) const;
-
         void remove(int index, int count) const;
-
-        /// Moves \a count notes starting at \a index so that the first of them is at
-        /// \a destination afterwards. The notes keep their identifiers.
         void move(int index, int count, int destination) const;
     };
 
@@ -234,6 +223,31 @@ namespace hello::kit {
         void setVoiceDir(const QString &voiceDir) const;
 
         NoteListRef notes() const;
+
+        Track toTrack() const;
+    };
+
+    class HELLOKIT_EDIT_EXPORT TrackListRef : public ProjectNodeRef {
+    public:
+        using ProjectNodeRef::ProjectNodeRef;
+
+        int size() const;
+        TrackRef at(int index) const;
+        void insert(int index, const QList<Track> &tracks) const;
+        void remove(int index, int count) const;
+        void move(int index, int count, int destination) const;
+    };
+
+    /// See \c Project::unknownFields.
+    class HELLOKIT_EDIT_EXPORT UnknownFieldsRef : public ProjectNodeRef {
+    public:
+        using ProjectNodeRef::ProjectNodeRef;
+
+        QStringList keys() const;
+        bool contains(const QString &key) const;
+        QJsonValue value(const QString &key) const;
+        void setValue(const QString &key, const QJsonValue &value) const;
+        void remove(const QString &key) const;
     };
 
     /// The handle of the root of a session, from which the other handles are obtained.
@@ -244,9 +258,10 @@ namespace hello::kit {
         explicit ProjectRef(ProjectSession *session);
 
         SettingsRef settings() const;
+        TrackListRef tracks() const;
+        UnknownFieldsRef unknownFields() const;
 
-        int trackCount() const;
-        TrackRef track(int index) const;
+        Project toProject() const;
     };
 
 }

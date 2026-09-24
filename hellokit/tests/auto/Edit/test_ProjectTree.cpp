@@ -39,7 +39,7 @@ private:
 
         const auto back = decoded(codec, bytes);
         QVERIFY(back);
-        QCOMPARE(projectOf(back.get()).toJson(), project.toJson());
+        QCOMPARE(fromTree<Project>(back.get()).toJson(), project.toJson());
     }
 
 private Q_SLOTS:

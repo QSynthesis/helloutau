@@ -12,7 +12,7 @@ namespace hello::kit {
     ProjectSession::~ProjectSession() = default;
 
     Project ProjectSession::snapshot() const {
-        return projectOf(EditSessionPrivate::find(this, root()));
+        return fromTree<Project>(EditSessionPrivate::find(this, root()));
     }
 
 }

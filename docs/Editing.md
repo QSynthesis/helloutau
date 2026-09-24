@@ -133,7 +133,7 @@ namespace NoteSlots {
 
 ```cpp
 ProjectSession session(project);
-const auto notes = ProjectRef(&session).track(0).notes();
+const auto notes = ProjectRef(&session).tracks().at(0).notes();
 const auto note = notes.at(12);
 note.setLyric(QStringLiteral("a"));             // 写入 NoteSlots::Lyric
 note.setIntensity(std::nullopt);
@@ -329,7 +329,23 @@ set /tracks/0/notes/12/intensity null
 - **通用层**：`EditSession`、`NodeRef`、`Change` 与 `Slot.h`。不依赖 `HelloKitDocument`，不涉及任何文档的结构和节点种类，只提供树的安装、按 ID 查找、事务、撤销与变更通知。私有头文件 `EditSession_p.h` 是它的扩展接口：派生类经由它安装根节点，句柄经由它按 ID 取得节点，新节点种类经由它注册变更的翻译。取得节点时的类型比对只在断言中进行，因为句柄总是对应其自身类型的节点。测试以一棵与 UTAU 无关的树检验通用层。
 - **工程层**：`ProjectSession`（派生自 `EditSession`）、槽位表 `ProjectSchema.h`、句柄 `ProjectRefs.h`，以及私有的 `ProjectTree`（`Project` 与树的双向转换、节点类型编号与编解码器注册）。句柄的实现直接操作 substate 的节点。
 
-工程层的代码都可以由字段表机械地推出。音源作为第二种文档时，以同样的方式在通用层之上实现。
+音源作为第二种文档时，以同样的方式在通用层之上实现。
+
+### 文档层的生成
+
+文档层的代码都由字段表机械地推出，今后由声明文件生成，目前手写，但严格遵守生成的约定，使生成器只需复现它：
+
+- **槽位表**（`ProjectSchema.h`）：每个记录一个命名空间，每个字段一个 `Slot<T>` 或 `ChildSlot`，名称即 `.usth` 的字段名。枚举类型的字段以 `int` 存储，由 `SlotValue` 的特化转换。
+- **转换**（`ProjectTree.cpp`）：每个记录类型一对 `treeOf(const T &)` 与 `fromTree<T>(node)`，逐字段对应。无法逐字段对应的字段由手写的转换函数提供，声明中指明，目前只有 `unknownFields`（文档中为 `QJsonObject`，树中为值为 `QJsonValue` 的映射）。
+- **句柄**（`ProjectRefs.h` / `.cpp`）：每个记录、列表、映射各一个句柄类，每个成员函数是对通用层 `NodeAccess` 的一次调用。按字段的种类有固定的形式：值字段 `f()` / `setF()`；记录字段 `r()`，可选时另有 `setR(std::optional)`；列表字段返回列表句柄（`size`、`at`、`insert`、`remove`、`move`）；映射字段返回映射句柄（`keys`、`contains`、`value`、`setValue`、`remove`）；数组字段 `a()`、`aSize()`、`replaceA()`、`insertA()`、`removeA()`。每个记录句柄提供 `to<类型名>()` 返回副本。句柄与节点的对应（`NodeOf` 的特化）同样生成。
+- **节点类型**：每个记录与数组一个用户类型编号，及编解码器的注册。
+
+**生成器必须支持记录的继承**，即使 UTAU 的工程目前没有这种结构。声明中一个记录可以派生自另一个，例如多种轨道都派生自基本的轨道。生成结果须保留这一关系：
+
+- 派生记录沿用基类的槽位下标，自身的槽位接在其后，因此基类句柄的函数原样适用于派生记录的节点。
+- 每个派生记录有自己的节点类型编号。基类句柄按 `StructNodeBase` 访问节点，其类型断言接受基类及全部派生类型的编号。
+- 句柄保持相同的继承关系（`XTrackRef : TrackRef`）。元素类型为基类的列表，`at()` 返回基类句柄，另提供按节点类型编号判断的向下转换，方式与 `Change::as()` 相同，不使用 `dynamic_cast`。
+- 文档的值类型具有对应的继承关系，插入与 `fromTree` 按实际类型分派。
 
 撤销历史由 substate 的存储引擎保存。第一阶段使用 `MemoryStorageEngine`，即内存中的撤销栈。substate 在第二阶段实现预写式日志引擎后，更换存储引擎即可获得崩溃恢复，编辑层的接口不变。
 

@@ -15,6 +15,8 @@
 #include <hellokit/Edit/HelloKitEditGlobal.h>
 #include <hellokit/Edit/ProjectSchema.h>
 
+#include "NodeAccess_p.h"
+
 namespace hello::kit {
 
     /// The node types of a project tree.
@@ -41,27 +43,32 @@ namespace hello::kit {
     using PitchBendNode = ss::StructNode<PitchBendSlots::count>;
     using PitchValuesNode = ss::ArrayNode<double>;
 
-    // Exported for the tests, which exercise the conversion and the codec without a session.
+    // The conversions between each record type and its tree, see fromTree(). The conversions of
+    // a project are exported for the tests, which exercise them and the codec without a session.
 
-    /// Returns the tree of \a project as a free node.
     HELLOKIT_EDIT_EXPORT std::unique_ptr<ss::Node> treeOf(const Project &project);
+    std::unique_ptr<ss::Node> treeOf(const ProjectSettings &settings);
+    std::unique_ptr<ss::Node> treeOf(const Track &track);
+    std::unique_ptr<ss::Node> treeOf(const Note &note);
+    std::unique_ptr<ss::Node> treeOf(const PortamentoPoint &point);
+    std::unique_ptr<ss::Node> treeOf(const PitchBend &pitchBend);
 
-    /// Returns the project of \a root, a tree with the structure produced by treeOf().
-    HELLOKIT_EDIT_EXPORT Project projectOf(const ss::Node *root);
+    template <>
+    HELLOKIT_EDIT_EXPORT Project fromTree<Project>(const ss::Node *node);
+    template <>
+    ProjectSettings fromTree<ProjectSettings>(const ss::Node *node);
+    template <>
+    Track fromTree<Track>(const ss::Node *node);
+    template <>
+    Note fromTree<Note>(const ss::Node *node);
+    template <>
+    PortamentoPoint fromTree<PortamentoPoint>(const ss::Node *node);
+    template <>
+    PitchBend fromTree<PitchBend>(const ss::Node *node);
 
     /// Registers the node types of a project tree with \a codec, and the value types stored in
     /// its slots with the Qt meta-type system, which a decoder requires to find a type by name.
     HELLOKIT_EDIT_EXPORT void registerProjectTypes(ss::QCodec &codec);
-
-    // The conversions of single records, for the insertion of values into a session and for the
-    // copies returned by the handles.
-
-    std::unique_ptr<ss::Node> treeOfNote(const Note &note);
-    std::unique_ptr<ss::Node> treeOfPortamentoPoint(const PortamentoPoint &point);
-    std::unique_ptr<ss::Node> treeOfPitchBend(const PitchBend &pitchBend);
-
-    Note noteOfTree(const ss::Node *node);
-    PortamentoPoint portamentoPointOfTree(const ss::Node *node);
 
 }
 

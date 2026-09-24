@@ -27,8 +27,8 @@ private Q_SLOTS:
         QCOMPARE(settingsRef.mode2(), settings.mode2);
 
         const auto &track = project.tracks.first();
-        QCOMPARE(ProjectRef(&session).trackCount(), 1);
-        const auto trackRef = ProjectRef(&session).track(0);
+        QCOMPARE(ProjectRef(&session).tracks().size(), 1);
+        const auto trackRef = ProjectRef(&session).tracks().at(0);
         QCOMPARE(trackRef.name(), track.name);
         QCOMPARE(trackRef.voiceDir(), track.voiceDir);
         QCOMPARE(trackRef.notes().size(), int(track.notes.size()));
@@ -66,7 +66,7 @@ private Q_SLOTS:
         const auto pitchBend = noteRef.pitchBend();
         QVERIFY(pitchBend.isValid());
         QCOMPARE(pitchBend.start(), note.pitchBend->start);
-        QCOMPARE(pitchBend.size(), int(note.pitchBend->values.size()));
+        QCOMPARE(pitchBend.valuesSize(), int(note.pitchBend->values.size()));
         QCOMPARE(pitchBend.values(), note.pitchBend->values);
 
         const auto userData = noteRef.userData();
@@ -75,7 +75,38 @@ private Q_SLOTS:
             QCOMPARE(userData.value(key), note.userData.value(key));
         }
 
+        const auto unknownFields = ProjectRef(&session).unknownFields();
+        QCOMPARE(unknownFields.keys(), project.unknownFields.keys());
+        QVERIFY(unknownFields.contains(QStringLiteral("array")));
+        QCOMPARE(unknownFields.value(QStringLiteral("number")), QJsonValue(2.5));
+    }
+
+    // Each record handle returns a copy of its record, which the serialization compares field
+    // by field.
+    void every_record_handle_returns_a_copy_of_its_record() {
+        const auto project = richProject();
+        ProjectSession session(project);
+        const auto projectRef = ProjectRef(&session);
+        const auto trackRef = projectRef.tracks().at(0);
+        const auto noteRef = trackRef.notes().at(0);
+
+        QCOMPARE(projectRef.toProject().toJson(), project.toJson());
+
+        Project copy;
+        copy.settings = projectRef.settings().toProjectSettings();
+        copy.tracks = {trackRef.toTrack()};
+        copy.unknownFields = project.unknownFields;
+        QCOMPARE(copy.toJson(), project.toJson());
+
+        auto note = project.tracks[0].notes[0];
         QCOMPARE(noteRef.toNote().lyric, note.lyric);
+        QCOMPARE(noteRef.pitchBend().toPitchBend().values, note.pitchBend->values);
+        QCOMPARE(noteRef.pitchBend().toPitchBend().start, note.pitchBend->start);
+        const auto point = noteRef.portamento().at(2).toPortamentoPoint();
+        QCOMPARE(point.x, note.portamento[2].x);
+        QCOMPARE(point.type, note.portamento[2].type);
+
+        QCOMPARE(NoteRef().toNote().lyric, QString());
     }
 
     // Each setter is applied to the session and the same change to a copy of the project. The
@@ -84,7 +115,7 @@ private Q_SLOTS:
         auto project = richProject();
         ProjectSession session(project);
         auto settingsRef = ProjectRef(&session).settings();
-        auto trackRef = ProjectRef(&session).track(0);
+        auto trackRef = ProjectRef(&session).tracks().at(0);
         auto noteRef = trackRef.notes().at(0);
         auto pointRef = noteRef.portamento().at(1);
         auto pitchBendRef = noteRef.pitchBend();
@@ -138,6 +169,9 @@ private Q_SLOTS:
         userDataRef.setValue(QStringLiteral("$custom"), QStringLiteral("changed"));
         userDataRef.setValue(QStringLiteral("$added"), QStringLiteral("new"));
         userDataRef.remove(QStringLiteral("Unknown"));
+        const auto unknownFieldsRef = ProjectRef(&session).unknownFields();
+        unknownFieldsRef.setValue(QStringLiteral("number"), QJsonValue(3));
+        unknownFieldsRef.remove(QStringLiteral("null"));
         transaction.commit();
 
         auto &settings = project.settings;
@@ -177,6 +211,8 @@ private Q_SLOTS:
         note.userData[QStringLiteral("$custom")] = QStringLiteral("changed");
         note.userData[QStringLiteral("$added")] = QStringLiteral("new");
         note.userData.remove(QStringLiteral("Unknown"));
+        project.unknownFields.insert(QStringLiteral("number"), 3);
+        project.unknownFields.remove(QStringLiteral("null"));
 
         QCOMPARE(session.snapshot().toJson(), project.toJson());
     }
@@ -184,8 +220,8 @@ private Q_SLOTS:
     void a_pitch_curve_is_added_and_removed_as_a_whole() {
         auto project = richProject();
         ProjectSession session(project);
-        auto first = ProjectRef(&session).track(0).notes().at(0);
-        auto second = ProjectRef(&session).track(0).notes().at(1);
+        auto first = ProjectRef(&session).tracks().at(0).notes().at(0);
+        auto second = ProjectRef(&session).tracks().at(0).notes().at(1);
 
         auto transaction = session.transaction(QStringLiteral("Pitch"));
         first.setPitchBend(std::nullopt);
@@ -207,7 +243,7 @@ private Q_SLOTS:
     void lists_insert_remove_and_move_items() {
         auto project = richProject();
         ProjectSession session(project);
-        auto notes = ProjectRef(&session).track(0).notes();
+        auto notes = ProjectRef(&session).tracks().at(0).notes();
         auto portamento = notes.at(0).portamento();
 
         Note added;
@@ -235,6 +271,29 @@ private Q_SLOTS:
         track.notes.move(0, 2);
         track.notes.remove(3);
 
+        QCOMPARE(session.snapshot().toJson(), project.toJson());
+    }
+
+    // The list of tracks follows the convention of every list. A project with more than one
+    // track is not valid, which the validation at commit reports, not the list.
+    void the_track_list_has_the_operations_of_every_list() {
+        const auto project = richProject();
+        ProjectSession session(project);
+        const auto tracks = ProjectRef(&session).tracks();
+
+        Track added;
+        added.name = QStringLiteral("added");
+
+        auto transaction = session.transaction(QStringLiteral("Tracks"));
+        tracks.insert(1, {added});
+        QCOMPARE(tracks.size(), 2);
+        QCOMPARE(tracks.at(1).name(), QStringLiteral("added"));
+        tracks.move(1, 1, 0);
+        QCOMPARE(tracks.at(0).name(), QStringLiteral("added"));
+        tracks.remove(0, 1);
+        transaction.commit();
+
+        QCOMPARE(tracks.size(), 1);
         QCOMPARE(session.snapshot().toJson(), project.toJson());
     }
 };

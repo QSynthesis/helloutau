@@ -14,7 +14,7 @@ class test_ProjectSession : public QObject {
 private:
     // Applies one random transaction of one to three modifications through the handles.
     static void editAtRandom(ProjectSession &session, QRandomGenerator &random, int step) {
-        const auto notes = ProjectRef(&session).track(0).notes();
+        const auto notes = ProjectRef(&session).tracks().at(0).notes();
         auto transaction = session.transaction(QStringLiteral("Step %1").arg(step));
         for (int i = 1 + random.bounded(3); i > 0; --i) {
             const int size = notes.size();
@@ -102,7 +102,7 @@ private Q_SLOTS:
     void an_unchanged_value_creates_no_undo_step() {
         const auto project = richProject();
         ProjectSession session(project);
-        const auto note = ProjectRef(&session).track(0).notes().at(0);
+        const auto note = ProjectRef(&session).tracks().at(0).notes().at(0);
 
         auto transaction = session.transaction(QStringLiteral("Nothing"));
         note.setLyric(note.lyric());
