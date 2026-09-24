@@ -25,8 +25,19 @@ namespace hello::kit {
         EditSession *q;
         ss::Model model;
 
-        /// The message of the transaction in progress.
+        /// The message of the outermost transaction in progress.
         QString message;
+
+        /// The number of nested transactions in progress, 0 if none.
+        int depth = 0;
+
+        /// Whether a nested transaction ended without commit, which discards the outermost one.
+        bool discarded = false;
+
+        /// Ends the innermost transaction in progress. The outermost transaction is committed if
+        /// \a commit is true and no nested transaction was discarded, and rolled back otherwise.
+        /// See EditSession::Transaction::commit().
+        bool endTransaction(bool commit, DiagnosticList &diagnostics);
 
         /// The translators by action type, for the moments before and after an action is
         /// applied.

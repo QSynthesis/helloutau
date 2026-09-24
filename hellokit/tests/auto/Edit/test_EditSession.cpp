@@ -96,6 +96,61 @@ private Q_SLOTS:
         QCOMPARE(session.title(), QStringLiteral("x"));
     }
 
+    // A function that begins a transaction can be called within another transaction, and its
+    // modifications then belong to the undo step of the outermost transaction.
+    void a_nested_transaction_joins_the_outermost_one() {
+        TestSession session;
+        auto outer = session.transaction(QStringLiteral("Outer"));
+        session.setTitle(QStringLiteral("outer"));
+        {
+            auto inner = session.transaction(QStringLiteral("Inner"));
+            session.moveItems(0, 1, 1);
+            QVERIFY(inner.commit());
+        }
+        QVERIFY(session.inTransaction());
+        DiagnosticList diagnostics;
+        QVERIFY(outer.commit(diagnostics));
+        QVERIFY(diagnostics.isEmpty());
+
+        QVERIFY(!session.inTransaction());
+        QCOMPARE(session.currentStep(), 1);
+        QCOMPARE(session.undoMessage(), QStringLiteral("Outer"));
+        session.undo();
+        QCOMPARE(session.title(), QStringLiteral("title"));
+        QCOMPARE(session.names(), initialNames());
+    }
+
+    // A nested transaction that ends without commit discards the outermost one, whose commit
+    // then rolls back and reports the reason.
+    void a_discarded_nested_transaction_discards_the_outermost_one() {
+        TestSession session;
+        auto outer = session.transaction(QStringLiteral("Outer"));
+        session.setTitle(QStringLiteral("outer"));
+        {
+            auto inner = session.transaction(QStringLiteral("Inner"));
+            session.moveItems(0, 1, 1);
+        }
+        QVERIFY(session.inTransaction());
+        session.setTag(QStringLiteral("after"), 1);
+
+        DiagnosticList diagnostics;
+        QVERIFY(!outer.commit(diagnostics));
+        QCOMPARE(diagnostics.size(), 1);
+        QVERIFY(hasError(diagnostics));
+
+        QVERIFY(!session.inTransaction());
+        QVERIFY(!session.canUndo());
+        QCOMPARE(session.title(), QStringLiteral("title"));
+        QCOMPARE(session.names(), initialNames());
+        QCOMPARE(session.tagKeys(), QStringList({QStringLiteral("a")}));
+
+        // The session accepts the next transaction as usual.
+        auto next = session.transaction(QStringLiteral("Next"));
+        session.setTitle(QStringLiteral("next"));
+        QVERIFY(next.commit());
+        QCOMPARE(session.undoMessage(), QStringLiteral("Next"));
+    }
+
     void the_step_numbers_follow_commits_undo_and_redo() {
         TestSession session;
         QCOMPARE(session.currentStep(), 0);

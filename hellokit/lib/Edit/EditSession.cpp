@@ -1,10 +1,12 @@
 #include "EditSession.h"
 #include "EditSession_p.h"
 
-#include <substate/BytesNode.h>
-#include <substate/VectorNode.h>
+#include <utility>
+
 #include <qsubstate/MappingNode.h>
 #include <qsubstate/StructNode.h>
+#include <substate/BytesNode.h>
+#include <substate/VectorNode.h>
 
 namespace hello::kit {
 
@@ -17,14 +19,21 @@ namespace hello::kit {
             return it == message.end() ? QString() : QString::fromStdString(it->second);
         }
 
+        Diagnostic errorOf(const QString &message) {
+            Diagnostic diagnostic;
+            diagnostic.severity = DiagnosticSeverity::Error;
+            diagnostic.message = message;
+            return diagnostic;
+        }
+
         ChangePtr listChange(const ss::Action &action, ListChange::Type type) {
             const auto &insDel = static_cast<const ss::VectorInsDelAction &>(action);
             return std::make_shared<ListChange>(type, insDel.parent()->id(), insDel.index(),
                                                 int(insDel.children().size()));
         }
 
-        // The translations of the actions of the node types of substate, registered through the
-        // same interface as those of node types added later.
+        // The translations of the actions of the node types of substate, registered
+        // through the same interface as those of node types added later.
         void registerBuiltInChanges(EditSession &session) {
             using Operation = ss::Action::Operation;
 
@@ -52,7 +61,8 @@ namespace hello::kit {
                         static_cast<const ss::BytesReplaceAction &>(action).parent()->id());
                 });
 
-            // A removal is also reported before it is applied, while the items are in the list.
+            // A removal is also reported before it is applied, while the items are in the
+            // list.
             const auto vectorAfter = [](const ss::Action &action, Operation operation) {
                 const auto &insDel = static_cast<const ss::VectorInsDelAction &>(action);
                 return listChange(action, insDel.isInsertion(operation) ? ListChange::Inserted
@@ -78,14 +88,14 @@ namespace hello::kit {
                 });
         }
 
-    }
+    } // namespace
 
     EditSession::Impl::Impl(EditSession *q) : q(q) {
         model.addObserver(this);
     }
 
-    // The observer is removed first, because destroying the model notifies its observers, and
-    // the session emitting the signals is being destroyed.
+    // The observer is removed first, because destroying the model notifies its
+    // observers, and the session emitting the signals is being destroyed.
     EditSession::Impl::~Impl() {
         model.removeObserver(this);
     }
@@ -104,8 +114,8 @@ namespace hello::kit {
     void EditSession::Impl::actionApplied(const ss::Action &action,
                                           ss::Action::Operation operation) {
         const auto it = afterTranslators.find(action.type());
-        // Every action applied to the tree must be reported, otherwise a view of the tree
-        // diverges from it without notice.
+        // Every action applied to the tree must be reported, otherwise a view of the
+        // tree diverges from it without notice.
         Q_ASSERT_X(it != afterTranslators.end(), "EditSession",
                    "no change is registered for the action type");
         if (it == afterTranslators.end()) {
@@ -127,24 +137,50 @@ namespace hello::kit {
         RHS.m_session = nullptr;
     }
 
+    bool EditSession::Impl::endTransaction(bool commit, DiagnosticList &diagnostics) {
+        Q_ASSERT(depth > 0);
+        discarded = discarded || !commit;
+        if (--depth > 0) {
+            return true;
+        }
+
+        const bool committed = !discarded;
+        if (committed) {
+            model.commitTransaction({
+                {messageKey, message.toStdString()}
+            });
+        } else {
+            model.abortTransaction();
+            if (commit) {
+                diagnostics.push_back(
+                    errorOf(EditSession::tr("The modification was not applied because "
+                                            "one of its steps was cancelled.")));
+            }
+        }
+        message.clear();
+        discarded = false;
+        return committed;
+    }
+
     EditSession::Transaction::~Transaction() {
         if (m_session) {
-            m_session->_impl->model.abortTransaction();
-            m_session->_impl->message.clear();
+            DiagnosticList ignored;
+            m_session->_impl->endTransaction(false, ignored);
         }
     }
 
-    void EditSession::Transaction::commit() {
+    bool EditSession::Transaction::commit(DiagnosticList &diagnostics) {
         Q_ASSERT_X(m_session, "EditSession::Transaction", "the transaction has ended");
         if (!m_session) {
-            return;
+            return false;
         }
-        auto &d = *m_session->_impl;
-        d.model.commitTransaction({
-            {messageKey, d.message.toStdString()}
-        });
-        d.message.clear();
-        m_session = nullptr;
+        const auto session = std::exchange(m_session, nullptr);
+        return session->_impl->endTransaction(true, diagnostics);
+    }
+
+    bool EditSession::Transaction::commit() {
+        DiagnosticList ignored;
+        return commit(ignored);
     }
 
     EditSession::EditSession(QObject *parent)
@@ -164,9 +200,12 @@ namespace hello::kit {
     }
 
     EditSession::Transaction EditSession::transaction(const QString &message) {
-        Q_ASSERT_X(!inTransaction(), "EditSession", "transactions cannot be nested");
-        _impl->model.beginTransaction();
-        _impl->message = message;
+        // substate supports no nesting, therefore only the outermost transaction
+        // begins one.
+        if (_impl->depth++ == 0) {
+            _impl->model.beginTransaction();
+            _impl->message = message;
+        }
         return Transaction(this);
     }
 
@@ -220,4 +259,4 @@ namespace hello::kit {
         return canRedo() ? stepMessage(currentStep() + 1) : QString();
     }
 
-}
+} // namespace hello::kit

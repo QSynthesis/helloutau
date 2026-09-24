@@ -6,6 +6,8 @@
 #include <QtCore/QObject>
 #include <QtCore/QString>
 
+#include <hellokit/Support/Diagnostic.h>
+
 #include <hellokit/Edit/Change.h>
 #include <hellokit/Edit/HelloKitEditGlobal.h>
 #include <hellokit/Edit/Slot.h>
@@ -38,6 +40,12 @@ namespace hello::kit {
         /// the message of the transaction. A transaction destroyed without commit() is rolled
         /// back, which restores the state before the transaction, therefore an early return or
         /// an exception discards the modifications.
+        ///
+        /// A transaction begun while another is in progress is nested in it, for example in a
+        /// function called by another function that has begun a transaction. The outermost
+        /// transaction forms the undo step, with its message. A nested transaction that ends
+        /// without commit() discards the outermost one: its modifications remain applied until
+        /// the outermost transaction ends, which then rolls back.
         class HELLOKIT_EDIT_EXPORT Transaction {
         public:
             Transaction(Transaction &&RHS) noexcept;
@@ -47,7 +55,15 @@ namespace hello::kit {
 
             /// Commits the transaction. A transaction without modifications creates no undo
             /// step.
-            void commit();
+            ///
+            /// \return whether the transaction is committed. The outermost transaction is rolled
+            ///         back instead if a nested transaction was discarded, with the reason in
+            ///         \a diagnostics. A nested transaction returns \c true, because the
+            ///         outermost transaction determines the result.
+            bool commit(DiagnosticList &diagnostics);
+
+            /// \overload
+            bool commit();
 
         private:
             Transaction(EditSession *session);
@@ -68,7 +84,7 @@ namespace hello::kit {
         bool contains(NodeId node) const;
 
         /// Begins a transaction with \a message, the description of the modification shown in
-        /// the undo history. Transactions cannot be nested.
+        /// the undo history. The message of a nested transaction is not used.
         Transaction transaction(const QString &message);
 
         /// Returns whether a transaction is in progress.
