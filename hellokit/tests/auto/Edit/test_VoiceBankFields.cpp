@@ -86,7 +86,7 @@ private Q_SLOTS:
         QVERIFY(directories->readOnly);
 
         const auto &directory = recordOf(VoiceDirectoryType);
-        for (const auto name : {u"path", u"charset", u"otoCharset", u"leftOut", u"lossy"}) {
+        for (const auto name : {u"path", u"charset", u"otoCharset"}) {
             QVERIFY2(directory.field(name)->readOnly, qPrintable(QString::fromUtf16(name)));
         }
         QVERIFY(!directory.field(u"otoEntries")->readOnly);
@@ -116,8 +116,8 @@ private Q_SLOTS:
 
         QCOMPARE(QLatin1String(recordOf(OtoEntryType).field(u"offset")->format->typeName),
                  QLatin1String(edit::ValueFormats::number.typeName));
-        QCOMPARE(QLatin1String(recordOf(VoiceDirectoryType).field(u"lossy")->format->typeName),
-                 QLatin1String(edit::ValueFormats::boolean.typeName));
+        QCOMPARE(QLatin1String(recordOf(VoiceDirectoryType).field(u"path")->format->typeName),
+                 QLatin1String(edit::ValueFormats::string.typeName));
         QCOMPARE(QLatin1String(stringListFormat().typeName), QLatin1String("string list"));
     }
 

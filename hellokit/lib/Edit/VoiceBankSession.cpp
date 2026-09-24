@@ -9,8 +9,32 @@
 
 namespace hello::kit {
 
+    std::unique_ptr<VoiceBankSession> VoiceBankSession::create(VoiceBankDiskState::Opened opened,
+                                                               DiagnosticList &diagnostics,
+                                                               QObject *parent) {
+        const auto root = opened.bank.indexOf({});
+        if (root < 0 || !isEditable(opened.bank.directories().at(root))) {
+            Diagnostic diagnostic;
+            diagnostic.severity = DiagnosticSeverity::Error;
+            diagnostic.message =
+                root < 0 || opened.bank.directories().at(root).leftOut
+                    ? tr("The voice bank cannot be edited, because no encoding was specified for "
+                         "its folder.")
+                    : tr("The voice bank cannot be edited, because part of the text in its folder "
+                         "is not valid in its encoding. Open it in another encoding.");
+            diagnostics.push_back(diagnostic);
+            return nullptr;
+        }
+        return std::unique_ptr<VoiceBankSession>(new VoiceBankSession(std::move(opened), parent));
+    }
+
     VoiceBankSession::VoiceBankSession(VoiceBankDiskState::Opened opened, QObject *parent)
         : edit::EditSession(parent), m_disk(std::move(opened.disk)) {
+        for (const auto &directory : opened.bank.directories()) {
+            if (!isEditable(directory)) {
+                m_excluded.push_back(directory);
+            }
+        }
         edit::EditSessionPrivate::setRoot(*this, treeOf(opened.bank));
         registerVoiceBankValidators(*this);
     }

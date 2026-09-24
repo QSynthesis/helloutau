@@ -38,6 +38,13 @@ namespace hello::kit {
     // the audio files that the disk state lists. The conversions of a voice bank are exported for
     // the tests, which exercise them and the codec without a session.
 
+    /// Returns whether \a directory is in the tree: whether it was read, and its text decoded.
+    /// Any other directory cannot be saved, and the tree takes it as absent.
+    inline bool isEditable(const VoiceBankDirectory &directory) {
+        return !directory.leftOut && !directory.lossy;
+    }
+
+    /// Returns the tree of \a bank without the directories that are not editable.
     HELLOKIT_EDIT_EXPORT std::unique_ptr<ss::Node> treeOf(const VoiceBank &bank);
     std::unique_ptr<ss::Node> treeOf(const VoiceCharacter &character);
     std::unique_ptr<ss::Node> treeOf(const VoiceOtoEntry &entry);

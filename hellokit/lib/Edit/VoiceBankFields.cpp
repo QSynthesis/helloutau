@@ -198,8 +198,6 @@ namespace hello::kit {
             edit::readOnlyField(edit::valueField(VoiceDirectorySlots::Path)),
             edit::readOnlyField(edit::valueField(VoiceDirectorySlots::Charset)),
             edit::readOnlyField(edit::valueField(VoiceDirectorySlots::OtoCharset)),
-            edit::readOnlyField(edit::valueField(VoiceDirectorySlots::LeftOut)),
-            edit::readOnlyField(edit::valueField(VoiceDirectorySlots::Lossy)),
             edit::listField(VoiceDirectorySlots::OtoEntries, otoEntryRecord),
         };
 

@@ -55,20 +55,23 @@ namespace hello::kit {
     }
 
     /// The slots of one directory, see \c VoiceBankDirectory . Every slot except the entries is
-    /// read-only: the path and the flags are facts of the disk, and the encodings change together
-    /// through a domain function.
+    /// read-only: the path is a fact of the disk, and the encodings change together through a
+    /// domain function.
+    ///
+    /// A directory that was not read, or whose text did not decode, is not in the tree, see
+    /// VoiceBankSession::excludedDirectories().
     namespace VoiceDirectorySlots {
         /// The location relative to the root, with slashes as separators. Empty for the root.
         inline constexpr edit::Slot<QString> Path{0, "path"};
         inline constexpr edit::Slot<QString> Charset{1, "charset"};
         inline constexpr edit::Slot<QString> OtoCharset{2, "otoCharset"};
-        inline constexpr edit::Slot<bool> LeftOut{3, "leftOut"};
-        inline constexpr edit::Slot<bool> Lossy{4, "lossy"};
 
-        /// A list of records with the slots of \c OtoEntrySlots, in the order of reading.
-        inline constexpr edit::ChildSlot OtoEntries{5, "otoEntries"};
+        /// A list of records with the slots of \c OtoEntrySlots, in the order of reading. Empty
+        /// both if the directory has no \c oto.ini and if its \c oto.ini has no entries. The disk
+        /// state distinguishes the two, and a missing file is created only for an entry.
+        inline constexpr edit::ChildSlot OtoEntries{3, "otoEntries"};
 
-        inline constexpr int count = 6;
+        inline constexpr int count = 4;
     }
 
     /// The original text of the five numbers of an entry, see \c VoiceSample::spellings .

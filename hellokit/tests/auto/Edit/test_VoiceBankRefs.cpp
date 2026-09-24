@@ -44,8 +44,10 @@ private Q_SLOTS:
         QVERIFY(m_dir->isValid());
         auto opened = openRichBank(m_dir->path());
         QVERIFY(opened.has_value());
-        m_bank = opened->bank;
-        m_session = std::make_unique<VoiceBankSession>(std::move(*opened));
+        m_bank = editablePart(opened->bank);
+        DiagnosticList diagnostics;
+        m_session = VoiceBankSession::create(std::move(*opened), diagnostics);
+        QVERIFY(m_session);
     }
 
     void cleanup() {
@@ -85,8 +87,6 @@ private Q_SLOTS:
             QCOMPARE(directory.path().native(), expected.path.native());
             QCOMPARE(directory.charset(), expected.charset);
             QCOMPARE(directory.otoCharset(), expected.otoCharset);
-            QCOMPARE(directory.leftOut(), expected.leftOut);
-            QCOMPARE(directory.lossy(), expected.lossy);
         }
 
         const auto entries = rootEntries();
@@ -267,11 +267,10 @@ private Q_SLOTS:
 
     // The path of a directory reads with the separators of the system, as reading produces it.
     void a_directory_path_reads_as_read_from_disk() {
-        const auto deep = m_bank->indexOf(fs::path("sub") / "deep");
-        QVERIFY(deep > 0);
-        const auto directory = root().directories().at(deep);
-        QCOMPARE(directory.path().native(), (fs::path("sub") / "deep").native());
-        QVERIFY(directory.lossy());
+        const auto inner = m_bank->indexOf(fs::path("sub") / "inner");
+        QVERIFY(inner > 0);
+        const auto directory = root().directories().at(inner);
+        QCOMPARE(directory.path().native(), (fs::path("sub") / "inner").native());
     }
 };
 

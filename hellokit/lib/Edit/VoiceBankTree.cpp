@@ -93,8 +93,6 @@ namespace hello::kit {
             put(*node, VoiceDirectorySlots::Path, pathText(directory.path));
             put(*node, VoiceDirectorySlots::Charset, directory.charset);
             put(*node, VoiceDirectorySlots::OtoCharset, directory.otoCharset);
-            put(*node, VoiceDirectorySlots::LeftOut, directory.leftOut);
-            put(*node, VoiceDirectorySlots::Lossy, directory.lossy);
             put(*node, VoiceDirectorySlots::OtoEntries, std::move(entries));
             return node;
         }
@@ -105,7 +103,12 @@ namespace hello::kit {
         auto node = std::make_unique<VoiceBankNode>(VoiceBankType);
         auto directories = std::make_unique<ss::VectorNode>();
         for (int i = 0; i < bank.directories().size(); ++i) {
+            // A directory that was not read or did not decode is taken as absent, see
+            // VoiceDirectorySlots.
             const auto &directory = bank.directories().at(i);
+            if (!isEditable(directory)) {
+                continue;
+            }
             directories->append(directoryTree(directory, bank.samples(), i));
 
             // Only the root has these files, see VoiceBankDirectorySource::fileNamed().
@@ -136,8 +139,6 @@ namespace hello::kit {
             directory.path = directoryPathOf(get(node, VoiceDirectorySlots::Path));
             directory.charset = get(node, VoiceDirectorySlots::Charset);
             directory.otoCharset = get(node, VoiceDirectorySlots::OtoCharset);
-            directory.leftOut = get(node, VoiceDirectorySlots::LeftOut);
-            directory.lossy = get(node, VoiceDirectorySlots::Lossy);
             if (directory.path.empty()) {
                 if (const auto character = record.child(VoiceBankSlots::Character.index)) {
                     directory.character = edit::fromTree<VoiceCharacter>(character);

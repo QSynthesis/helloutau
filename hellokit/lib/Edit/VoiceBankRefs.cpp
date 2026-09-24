@@ -169,14 +169,6 @@ namespace hello::kit {
         return edit::NodeAccess::value(*this, VoiceDirectorySlots::OtoCharset);
     }
 
-    bool VoiceDirectoryRef::leftOut() const {
-        return edit::NodeAccess::value(*this, VoiceDirectorySlots::LeftOut);
-    }
-
-    bool VoiceDirectoryRef::lossy() const {
-        return edit::NodeAccess::value(*this, VoiceDirectorySlots::Lossy);
-    }
-
     OtoEntryListRef VoiceDirectoryRef::otoEntries() const {
         return edit::NodeAccess::child<OtoEntryListRef>(*this, VoiceDirectorySlots::OtoEntries);
     }

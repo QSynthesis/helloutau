@@ -2,9 +2,13 @@
 #define HELLOKIT_EDIT_VOICEBANKSESSION_H
 
 #include <filesystem>
+#include <memory>
 #include <optional>
 
 #include <QtCore/QJsonObject>
+#include <QtCore/QList>
+
+#include <hellokit/Support/Diagnostic.h>
 
 #include <hellokit/VoiceBank/VoiceBank.h>
 #include <hellokit/VoiceBank/VoiceBankDiskState.h>
@@ -27,11 +31,29 @@ namespace hello::kit {
         Q_OBJECT
     public:
         /// Creates a session that edits the voice bank of \a opened and keeps its disk state.
-        explicit VoiceBankSession(VoiceBankDiskState::Opened opened, QObject *parent = nullptr);
+        ///
+        /// A subdirectory that was not read, or whose text did not decode, cannot be saved and is
+        /// left out of the tree, see excludedDirectories(). The root directory cannot be left out,
+        /// as a file that does not decode cannot be edited either.
+        ///
+        /// \return the session, or null if the root directory was not read or did not decode,
+        ///         with the reason in \a diagnostics
+        static std::unique_ptr<VoiceBankSession> create(VoiceBankDiskState::Opened opened,
+                                                        DiagnosticList &diagnostics,
+                                                        QObject *parent = nullptr);
+
         ~VoiceBankSession();
 
         /// Returns the root directory of the voice bank.
         const std::filesystem::path &rootPath() const;
+
+        /// Returns the subdirectories that were not read, or whose text did not decode, as read.
+        /// They are not in the tree and not in snapshot(), as if they did not exist, and are read
+        /// again in another encoding to be edited. See VoiceBankDirectory::leftOut and
+        /// VoiceBankDirectory::lossy .
+        inline const QList<VoiceBankDirectory> &excludedDirectories() const {
+            return m_excluded;
+        }
 
         /// Returns the voice bank in its current state.
         VoiceBank snapshot() const;
@@ -42,7 +64,10 @@ namespace hello::kit {
         std::optional<QJsonObject> logEntry(const edit::Change &change) const;
 
     private:
+        VoiceBankSession(VoiceBankDiskState::Opened opened, QObject *parent);
+
         VoiceBankDiskState m_disk;
+        QList<VoiceBankDirectory> m_excluded;
     };
 
 }

@@ -59,12 +59,13 @@ private Q_SLOTS:
         m_dir.reset();
     }
 
-    // The voice bank that a session assembles from its tree for each save equals the one read.
+    // The voice bank that a session assembles from its tree for each save equals the one read,
+    // without the directories that cannot be saved.
     void a_voice_bank_survives_its_tree() {
         auto opened = openRichBank();
         QVERIFY(opened.has_value());
         const auto &bank = opened->bank;
-        QCOMPARE(bank.directories().size(), 4);
+        QCOMPARE(bank.directories().size(), 5);
         QVERIFY(bank.directories().at(0).character);
         QVERIFY(bank.directories().at(0).prefixMap);
         const auto sub = bank.indexOf("sub");
@@ -76,7 +77,11 @@ private Q_SLOTS:
         QVERIFY(bank.directories().at(deep).lossy);
 
         const auto tree = treeOf(bank);
-        verifyEqual(voiceBankOf(tree.get(), opened->disk), bank);
+        const auto back = voiceBankOf(tree.get(), opened->disk);
+        QCOMPARE(back.directories().size(), 3);
+        QCOMPARE(back.indexOf("left"), -1);
+        QCOMPARE(back.indexOf(fs::path("sub") / "deep"), -1);
+        verifyEqual(back, editablePart(bank));
     }
 
     // The files of the root belong to the voice bank as a whole, and the directories hold the
@@ -100,11 +105,11 @@ private Q_SLOTS:
         QCOMPARE(first.variant(VoiceDirectorySlots::Path.index).toString(), QString());
 
         // Written with slashes on every system, as a command addresses it.
-        const auto deep = opened->bank.indexOf(fs::path("sub") / "deep");
-        QVERIFY(deep > 0);
-        const auto &nested = static_cast<const VoiceDirectoryNode &>(*directories->at(deep));
+        const auto inner = editablePart(opened->bank).indexOf(fs::path("sub") / "inner");
+        QVERIFY(inner > 0);
+        const auto &nested = static_cast<const VoiceDirectoryNode &>(*directories->at(inner));
         QCOMPARE(nested.variant(VoiceDirectorySlots::Path.index).toString(),
-                 QStringLiteral("sub/deep"));
+                 QStringLiteral("sub/inner"));
 
         // Four entries in the root, and none for the audio file without one.
         const auto entries =

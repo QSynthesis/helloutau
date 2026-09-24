@@ -84,8 +84,6 @@ namespace hello::kit {
         std::filesystem::path path() const;
         QString charset() const;
         QString otoCharset() const;
-        bool leftOut() const;
-        bool lossy() const;
 
         OtoEntryListRef otoEntries() const;
     };

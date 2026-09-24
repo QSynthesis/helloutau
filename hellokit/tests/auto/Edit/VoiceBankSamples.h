@@ -9,6 +9,7 @@
 #include <QtCore/QDir>
 #include <QtCore/QFile>
 #include <QtCore/QFileInfo>
+#include <QtCore/QMap>
 #include <QtCore/QString>
 #include <QtTest/QTest>
 
@@ -49,13 +50,14 @@ namespace hello::kit {
     /// Writes into \a root a voice bank with every kind of content that the tree holds, and
     /// opens it: the files of the root, an \c oto.ini that declares its encoding, spellings of
     /// numbers including empty ones, an entry whose audio file is missing, audio files without
-    /// an entry, and directories that were left out or did not decode.
+    /// an entry, a nested directory \c sub/inner , and the directories \c left , which is left out,
+    /// and \c sub/deep , whose text does not decode.
     ///
     /// The root holds four entries in this order: \c a.wav twice, \c b.wav with empty numbers
     /// and \c missing.wav , and \c c.wav without an entry.
     inline std::optional<VoiceBankDiskState::Opened> openRichBank(const QString &root) {
         const std::pair<const char *, QByteArray> files[] = {
-            {"oto.ini",          "a.wav=" + kGbkGePing +
+            {"oto.ini",           "a.wav=" + kGbkGePing +
                             ",41.0,87.688,97.316,8.938,4.457\r\n"
                             "a.wav=- " +
                             kGbkGePing +
@@ -65,17 +67,19 @@ namespace hello::kit {
             {"character.txt",
              "name=" + kGbkGePing +
                  "\r\nimage=icon.bmp\r\nauthor=a\r\nweb=w\r\nsample=s.wav\r\nVersion:1.0\r\n"},
-            {"prefix.map",       "C4\tp\ts\r\nD4\t\t" + kGbkGePing + "\r\n"                  },
-            {"readme.txt",       kGbkGePing                                                  },
-            {"a.wav",            "RIFF"                                                      },
-            {"b.wav",            "RIFF"                                                      },
-            {"c.wav",            "RIFF"                                                      },
-            {"sub/oto.ini",      "#Charset:UTF-8\r\nx.wav=\xe8\x91\x9b,1,2,3,4,5\r\n"        },
-            {"sub/x.wav",        "RIFF"                                                      },
-            {"sub/deep/oto.ini", "y.wav=\xff,1,2,3,4,5\r\n"                                  },
-            {"sub/deep/y.wav",   "RIFF"                                                      },
-            {"left/oto.ini",     "z.wav=" + kGbkGePing + ",1,2,3,4,5\r\n"                    },
-            {"left/z.wav",       "RIFF"                                                      },
+            {"prefix.map",        "C4\tp\ts\r\nD4\t\t" + kGbkGePing + "\r\n"                 },
+            {"readme.txt",        kGbkGePing                                                 },
+            {"a.wav",             "RIFF"                                                     },
+            {"b.wav",             "RIFF"                                                     },
+            {"c.wav",             "RIFF"                                                     },
+            {"sub/oto.ini",       "#Charset:UTF-8\r\nx.wav=\xe8\x91\x9b,1,2,3,4,5\r\n"       },
+            {"sub/x.wav",         "RIFF"                                                     },
+            {"sub/deep/oto.ini",  "y.wav=\xff,1,2,3,4,5\r\n"                                 },
+            {"sub/deep/y.wav",    "RIFF"                                                     },
+            {"sub/inner/oto.ini", "w.wav=w,1,2,3,4,5\r\n"                                    },
+            {"sub/inner/w.wav",   "RIFF"                                                     },
+            {"left/oto.ini",      "z.wav=" + kGbkGePing + ",1,2,3,4,5\r\n"                   },
+            {"left/z.wav",        "RIFF"                                                     },
         };
         for (const auto &[name, bytes] : files) {
             if (!writeSampleFile(root, QString::fromLatin1(name), bytes)) {
@@ -84,12 +88,35 @@ namespace hello::kit {
         }
 
         DirectorySelector selector({
-            {std::filesystem::path(),               QStringLiteral("GBK")  },
-            {std::filesystem::path("sub") / "deep", QStringLiteral("UTF-8")},
+            {std::filesystem::path(),                QStringLiteral("GBK")  },
+            {std::filesystem::path("sub") / "deep",  QStringLiteral("UTF-8")},
+            {std::filesystem::path("sub") / "inner", QStringLiteral("GBK")  },
         });
         DiagnosticList diagnostics;
         return VoiceBankDiskState::open(std::filesystem::path(root.toStdU16String()), &selector,
                                         diagnostics);
+    }
+
+    /// Returns \a bank without the directories that were not read or did not decode, which a
+    /// session takes as absent.
+    inline VoiceBank editablePart(const VoiceBank &bank) {
+        QList<VoiceBankDirectory> directories;
+        QMap<int, int> indices;
+        for (int i = 0; i < bank.directories().size(); ++i) {
+            const auto &directory = bank.directories().at(i);
+            if (!directory.leftOut && !directory.lossy) {
+                indices.insert(i, int(directories.size()));
+                directories.push_back(directory);
+            }
+        }
+        QList<VoiceSample> samples;
+        for (auto sample : bank.samples()) {
+            if (indices.contains(sample.directory)) {
+                sample.directory = indices.value(sample.directory);
+                samples.push_back(sample);
+            }
+        }
+        return VoiceBank(bank.root(), directories, samples);
     }
 
     /// Compares every field of two voice banks, including the order of the samples, which
