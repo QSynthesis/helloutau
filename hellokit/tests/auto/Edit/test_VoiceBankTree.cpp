@@ -1,44 +1,17 @@
-#include <map>
 #include <memory>
 #include <sstream>
 
-#include <QtCore/QDir>
-#include <QtCore/QFile>
-#include <QtCore/QFileInfo>
 #include <QtCore/QTemporaryDir>
 #include <QtTest/QTest>
 
 #include <substate/Codec.h>
 
+#include "VoiceBankSamples.h"
 #include "VoiceBankTree_p.h"
 
 using namespace hello::kit;
 
 namespace fs = std::filesystem;
-
-// 葛平 in GBK.
-static const QByteArray kGbkGePing = QByteArray("\xb8\xf0\xc6\xbd", 4);
-
-namespace {
-
-    /// Selects an encoding per directory, and declines a directory that has none.
-    class DirectorySelector : public VoiceBankCharsetSelector {
-    public:
-        explicit DirectorySelector(std::map<fs::path, QString> charsets)
-            : m_charsets(std::move(charsets)) {
-        }
-
-        std::optional<QString> selectCharset(const VoiceBankDirectorySource &directory,
-                                             DiagnosticList &) override {
-            const auto it = m_charsets.find(directory.path);
-            return it == m_charsets.end() ? std::nullopt : std::optional<QString>(it->second);
-        }
-
-    private:
-        std::map<fs::path, QString> m_charsets;
-    };
-
-}
 
 class test_VoiceBankTree : public QObject {
     Q_OBJECT
@@ -46,104 +19,10 @@ class test_VoiceBankTree : public QObject {
 private:
     std::unique_ptr<QTemporaryDir> m_dir;
 
-    fs::path root() const {
-        return fs::path(m_dir->path().toStdU16String());
+    std::optional<VoiceBankDiskState::Opened> openRichBank() const {
+        return hello::kit::openRichBank(m_dir->path());
     }
 
-    void write(const QString &relative, const QByteArray &bytes) {
-        const QString path = m_dir->path() + QLatin1Char('/') + relative;
-        QVERIFY(QDir().mkpath(QFileInfo(path).path()));
-        QFile file(path);
-        QVERIFY(file.open(QIODevice::WriteOnly));
-        QCOMPARE(file.write(bytes), bytes.size());
-    }
-
-    // A voice bank with every kind of content that the tree holds: the files of the root, an
-    // oto.ini that declares its encoding, spellings of numbers including empty ones, an entry
-    // whose audio file is missing, audio files without an entry, and directories that were left
-    // out or did not decode.
-    std::optional<VoiceBankDiskState::Opened> openRichBank() {
-        write(QStringLiteral("oto.ini"), "a.wav=" + kGbkGePing +
-                                             ",41.0,87.688,97.316,8.938,4.457\r\n"
-                                             "a.wav=- " +
-                                             kGbkGePing +
-                                             ",41,87.6880,-143.414,8.938,04.457\r\n"
-                                             "b.wav=,,,,,\r\n"
-                                             "missing.wav=m,1,2,3,4,5\r\n");
-        write(QStringLiteral("character.txt"), "name=" + kGbkGePing +
-                                                   "\r\nimage=icon.bmp\r\nauthor=a\r\n"
-                                                   "web=w\r\nsample=s.wav\r\nVersion:1.0\r\n");
-        write(QStringLiteral("prefix.map"), "C4\tp\ts\r\nD4\t\t" + kGbkGePing + "\r\n");
-        write(QStringLiteral("readme.txt"), kGbkGePing);
-        write(QStringLiteral("a.wav"), "RIFF");
-        write(QStringLiteral("b.wav"), "RIFF");
-        write(QStringLiteral("c.wav"), "RIFF");
-        write(QStringLiteral("sub/oto.ini"), "#Charset:UTF-8\r\nx.wav=\xe8\x91\x9b,1,2,3,4,5\r\n");
-        write(QStringLiteral("sub/x.wav"), "RIFF");
-        write(QStringLiteral("sub/deep/oto.ini"), "y.wav=\xff,1,2,3,4,5\r\n");
-        write(QStringLiteral("sub/deep/y.wav"), "RIFF");
-        write(QStringLiteral("left/oto.ini"), "z.wav=" + kGbkGePing + ",1,2,3,4,5\r\n");
-        write(QStringLiteral("left/z.wav"), "RIFF");
-
-        DirectorySelector selector({
-            {fs::path(),               QStringLiteral("GBK")  },
-            {fs::path("sub") / "deep", QStringLiteral("UTF-8")},
-        });
-        DiagnosticList diagnostics;
-        return VoiceBankDiskState::open(root(), &selector, diagnostics);
-    }
-
-    static void verifyCharacter(const std::optional<VoiceCharacter> &actual,
-                                const std::optional<VoiceCharacter> &expected) {
-        QCOMPARE(actual.has_value(), expected.has_value());
-        if (!expected) {
-            return;
-        }
-        QCOMPARE(actual->name, expected->name);
-        QCOMPARE(actual->image, expected->image);
-        QCOMPARE(actual->sample, expected->sample);
-        QCOMPARE(actual->author, expected->author);
-        QCOMPARE(actual->web, expected->web);
-        QCOMPARE(actual->extraLines, expected->extraLines);
-    }
-
-    // Compares every field of two voice banks, including the order of the samples, which
-    // determines the precedence between duplicate aliases.
-    static void verifyEqual(const VoiceBank &actual, const VoiceBank &expected) {
-        QCOMPARE(actual.root(), expected.root());
-        QCOMPARE(actual.directories().size(), expected.directories().size());
-        for (int i = 0; i < expected.directories().size(); ++i) {
-            const auto &a = actual.directories().at(i);
-            const auto &e = expected.directories().at(i);
-            QCOMPARE(a.path, e.path);
-            QCOMPARE(a.path.native(), e.path.native());
-            QCOMPARE(a.charset, e.charset);
-            QCOMPARE(a.otoCharset, e.otoCharset);
-            QCOMPARE(a.leftOut, e.leftOut);
-            QCOMPARE(a.lossy, e.lossy);
-            verifyCharacter(a.character, e.character);
-            QCOMPARE(a.prefixMap, e.prefixMap);
-            QCOMPARE(a.readme, e.readme);
-        }
-        QCOMPARE(actual.samples().size(), expected.samples().size());
-        for (int i = 0; i < expected.samples().size(); ++i) {
-            const auto &a = actual.samples().at(i);
-            const auto &e = expected.samples().at(i);
-            QCOMPARE(a.path, e.path);
-            QCOMPARE(a.path.native(), e.path.native());
-            QCOMPARE(a.directory, e.directory);
-            QCOMPARE(a.fileName, e.fileName);
-            QCOMPARE(a.alias, e.alias);
-            QCOMPARE(a.offset, e.offset);
-            QCOMPARE(a.consonant, e.consonant);
-            QCOMPARE(a.cutoff, e.cutoff);
-            QCOMPARE(a.preUtterance, e.preUtterance);
-            QCOMPARE(a.voiceOverlap, e.voiceOverlap);
-            QCOMPARE(a.hasEntry, e.hasEntry);
-            QVERIFY(a.spellings == e.spellings);
-        }
-        QCOMPARE(actual.character().name, expected.character().name);
-    }
 
     static std::string encoded(const ss::Node *node) {
         std::stringstream buffer;

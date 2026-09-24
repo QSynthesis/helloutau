@@ -443,7 +443,7 @@ oto 的五个时间参数不设范围：`cutoff` 为负表示从偏移量起算�
 
 通用层稳定后将移入 substate（依赖 Qt 的部分进入 qsubstate）。第三层命名空间 `edit` 是为此设的过渡：`Slot`、`Range`、`Change`、`NodeRef` 这类通用的名字在移走之前不占用 `hello::kit`，移走时只需更换命名空间，类名不变。扩展接口放在 `private/` 下，文档层以外的代码不应使用。
 
-音源作为第二种文档时，以同样的方式在通用层之上实现。
+音源作为第二种文档，以同样的方式在通用层之上实现，同属 `HelloKitEdit`：`VoiceBankSession`（持有树与磁盘状态，`snapshot()` 由树与磁盘状态记录的音频文件组装出 `VoiceBank`）、槽位表 `VoiceBankSchema.h`、句柄 `VoiceBankRefs.h`，以及私有的 `VoiceBankTree`（`VoiceBank` 与树的双向转换）与字段表 `VoiceBankFields`。音源根目录的路径不可编辑，不在树中，由 `rootPath()` 取得。
 
 ### 文档层的生成
 

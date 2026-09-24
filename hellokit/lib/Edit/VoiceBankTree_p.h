@@ -42,6 +42,9 @@ namespace hello::kit {
     std::unique_ptr<ss::Node> treeOf(const VoiceCharacter &character);
     std::unique_ptr<ss::Node> treeOf(const VoiceOtoEntry &entry);
 
+    /// Returns the mapping of a prefix map, keyed by the note number in decimal.
+    std::unique_ptr<ss::Node> treeOf(const QMap<int, VoicePrefix> &map);
+
     /// Returns the voice bank in \a tree, at the root of \a disk and with its audio files.
     HELLOKIT_EDIT_EXPORT VoiceBank voiceBankOf(const ss::Node *tree,
                                                const VoiceBankDiskState &disk);
@@ -50,6 +53,8 @@ namespace hello::kit {
     HELLOKIT_EDIT_EXPORT VoiceCharacter edit::fromTree<VoiceCharacter>(const ss::Node *node);
     template <>
     HELLOKIT_EDIT_EXPORT VoiceOtoEntry edit::fromTree<VoiceOtoEntry>(const ss::Node *node);
+    template <>
+    QMap<int, VoicePrefix> edit::fromTree<QMap<int, VoicePrefix>>(const ss::Node *node);
 
     /// Registers the node types of a voice bank tree with \a codec, and the value types stored in
     /// its slots with the Qt meta-type system, which a decoder requires to find a type by name.

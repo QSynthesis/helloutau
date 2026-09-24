@@ -51,27 +51,6 @@ namespace hello::kit {
             return fs::path(fileName.toStdU16String());
         }
 
-        // The mapping of a prefix map, keyed by the note number in decimal.
-        std::unique_ptr<ss::Node> prefixMapTree(const QMap<int, VoicePrefix> &map) {
-            auto node = std::make_unique<ss::MappingNode>();
-            for (auto it = map.cbegin(); it != map.cend(); ++it) {
-                node->setProperty(QString::number(it.key()),
-                                  edit::SlotValue<VoicePrefix>::toVariant(it.value()));
-            }
-            return node;
-        }
-
-        QMap<int, VoicePrefix> prefixMapOf(const ss::Node *node) {
-            Q_ASSERT(node && node->type() == ss::Node::Mapping);
-            const auto &mapping = static_cast<const ss::MappingNode &>(*node);
-            QMap<int, VoicePrefix> map;
-            for (const auto &key : mapping.keys()) {
-                map.insert(key.toInt(),
-                           edit::SlotValue<VoicePrefix>::fromVariant(mapping.variant(key)));
-            }
-            return map;
-        }
-
         VoiceOtoEntry entryOf(const VoiceSample &sample) {
             VoiceOtoEntry entry;
             entry.fileName = sample.fileName;
@@ -137,7 +116,7 @@ namespace hello::kit {
                 put(*node, VoiceBankSlots::Character, treeOf(*directory.character));
             }
             if (directory.prefixMap) {
-                put(*node, VoiceBankSlots::PrefixMap, prefixMapTree(*directory.prefixMap));
+                put(*node, VoiceBankSlots::PrefixMap, treeOf(*directory.prefixMap));
             }
             put(*node, VoiceBankSlots::Readme, directory.readme);
         }
@@ -164,7 +143,7 @@ namespace hello::kit {
                     directory.character = edit::fromTree<VoiceCharacter>(character);
                 }
                 if (const auto map = record.child(VoiceBankSlots::PrefixMap.index)) {
-                    directory.prefixMap = prefixMapOf(map);
+                    directory.prefixMap = edit::fromTree<QMap<int, VoicePrefix>>(map);
                 }
                 directory.readme = get(record, VoiceBankSlots::Readme);
             }
@@ -217,6 +196,27 @@ namespace hello::kit {
         character.web = get(record, VoiceCharacterSlots::Web);
         character.extraLines = get(record, VoiceCharacterSlots::ExtraLines);
         return character;
+    }
+
+    std::unique_ptr<ss::Node> treeOf(const QMap<int, VoicePrefix> &map) {
+        auto node = std::make_unique<ss::MappingNode>();
+        for (auto it = map.cbegin(); it != map.cend(); ++it) {
+            node->setProperty(QString::number(it.key()),
+                              edit::SlotValue<VoicePrefix>::toVariant(it.value()));
+        }
+        return node;
+    }
+
+    template <>
+    QMap<int, VoicePrefix> edit::fromTree<QMap<int, VoicePrefix>>(const ss::Node *node) {
+        Q_ASSERT(node && node->type() == ss::Node::Mapping);
+        const auto &mapping = static_cast<const ss::MappingNode &>(*node);
+        QMap<int, VoicePrefix> map;
+        for (const auto &key : mapping.keys()) {
+            map.insert(key.toInt(),
+                       edit::SlotValue<VoicePrefix>::fromVariant(mapping.variant(key)));
+        }
+        return map;
     }
 
     std::unique_ptr<ss::Node> treeOf(const VoiceOtoEntry &entry) {

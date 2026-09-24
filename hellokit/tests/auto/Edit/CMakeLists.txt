@@ -17,3 +17,6 @@ target_include_directories(test_VoiceBankTree PRIVATE ${_private_include})
 
 add_auto_test(test_VoiceBankFields.cpp HelloKitEdit ${_private})
 target_include_directories(test_VoiceBankFields PRIVATE ${_private_include})
+
+add_auto_test(test_VoiceBankSession.cpp HelloKitEdit)
+add_auto_test(test_VoiceBankRefs.cpp HelloKitEdit)
