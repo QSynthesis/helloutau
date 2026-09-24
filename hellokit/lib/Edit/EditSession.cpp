@@ -1,19 +1,15 @@
 #include "EditSession.h"
+#include "EditSession_p.h"
 
-#include <vector>
-
+#include <substate/ArrayNode.h>
 #include <substate/BytesNode.h>
-#include <substate/Model.h>
-#include <substate/ModelObserver.h>
-#include <substate/VectorNode.h>
 #include <qsubstate/MappingNode.h>
-#include <qsubstate/StructNode.h>
-
-#include "ProjectTree_p.h"
 
 namespace hello::kit {
 
     namespace {
+
+        using DoubleArrayNode = ss::ArrayNode<double>;
 
         const char messageKey[] = "message";
 
@@ -28,137 +24,85 @@ namespace hello::kit {
 
     }
 
-    class EditSession::Impl : public ss::ModelObserver {
-    public:
-        explicit Impl(EditSession *q) : q(q) {
-            model.addObserver(this);
-        }
+    EditSession::Impl::Impl(EditSession *q) : q(q) {
+        model.addObserver(this);
+    }
 
-        // The observer is removed first, because destroying the model notifies its observers,
-        // and the session emitting the signals is being destroyed.
-        ~Impl() {
-            model.removeObserver(this);
-        }
+    // The observer is removed first, because destroying the model notifies its observers, and
+    // the session emitting the signals is being destroyed.
+    EditSession::Impl::~Impl() {
+        model.removeObserver(this);
+    }
 
-        EditSession *q;
-        ss::Model model;
-
-        // The message of the transaction in progress.
-        QString message;
-
-        // Returns the node of id if it is in the tree and of type NodeType, or nullptr.
-        template <class NodeType>
-        NodeType *find(NodeId id) const {
-            const auto node = id ? model.nodeById(id) : nullptr;
-            return node && node->isAttached() ? dynamic_cast<NodeType *>(node) : nullptr;
-        }
-
-        // Returns the node of id for a modification, or nullptr after a failed assertion if no
-        // transaction is in progress, or if the node is not in the tree or not of type NodeType.
-        template <class NodeType>
-        NodeType *findEditable(NodeId id) const {
-            const auto node = model.inTransaction() ? find<NodeType>(id) : nullptr;
-            Q_ASSERT_X(node, "EditSession",
-                       "a modification requires a transaction and a node of the expected kind "
-                       "in the tree");
-            return node;
-        }
-
-        // Returns the list of id for an insertion of items whose parent record has the type
-        // owner, or nullptr after a failed assertion.
-        ss::VectorNode *findEditableList(NodeId id, int owner) const {
-            const auto list = findEditable<ss::VectorNode>(id);
-            if (list && list->parent()->type() != owner) {
-                Q_ASSERT_X(false, "EditSession", "an insertion of items of another kind");
-                return nullptr;
-            }
-            return list;
-        }
-
-        template <class Value, class Convert>
-        void insert(NodeId id, int owner, int index, const QList<Value> &values, Convert convert) {
-            const auto list = findEditableList(id, owner);
-            if (!list || values.isEmpty()) {
-                return;
-            }
-            std::vector<std::unique_ptr<ss::Node>> items;
-            items.reserve(size_t(values.size()));
-            for (const auto &value : values) {
-                items.push_back(convert(value));
-            }
-            list->insert(index, std::move(items));
-        }
-
-    protected:
-        void actionAboutToApply(const ss::Action &action,
-                                ss::Action::Operation operation) override {
-            switch (action.type()) {
-                case ss::Action::VectorInsert:
-                case ss::Action::VectorRemove: {
-                    const auto &change = static_cast<const ss::VectorInsDelAction &>(action);
-                    if (!change.isInsertion(operation)) {
-                        Q_EMIT q->itemsAboutToBeRemoved(change.parent()->id(), change.index(),
-                                                        int(change.children().size()));
-                    }
-                    break;
+    void EditSession::Impl::actionAboutToApply(const ss::Action &action,
+                                               ss::Action::Operation operation) {
+        switch (action.type()) {
+            case ss::Action::VectorInsert:
+            case ss::Action::VectorRemove: {
+                const auto &change = static_cast<const ss::VectorInsDelAction &>(action);
+                if (!change.isInsertion(operation)) {
+                    Q_EMIT q->itemsAboutToBeRemoved(change.parent()->id(), change.index(),
+                                                    int(change.children().size()));
                 }
-                default:
-                    break;
+                break;
             }
+            default:
+                break;
         }
+    }
 
-        void actionApplied(const ss::Action &action, ss::Action::Operation operation) override {
-            switch (action.type()) {
-                case ss::Action::StructAssign: {
-                    const auto &change = static_cast<const ss::StructAssignAction &>(action);
-                    Q_EMIT q->valueChanged(change.parent()->id(), change.index());
-                    break;
-                }
-                case ss::Action::MappingAssign: {
-                    const auto &change = static_cast<const ss::MappingAssignAction &>(action);
-                    Q_EMIT q->entryChanged(change.parent()->id(), change.key());
-                    break;
-                }
-                case ss::Action::BytesInsert:
-                case ss::Action::BytesRemove:
-                    Q_EMIT q->arrayChanged(
-                        static_cast<const ss::BytesInsDelAction &>(action).parent()->id());
-                    break;
-                case ss::Action::BytesReplace:
-                    Q_EMIT q->arrayChanged(
-                        static_cast<const ss::BytesReplaceAction &>(action).parent()->id());
-                    break;
-                case ss::Action::VectorInsert:
-                case ss::Action::VectorRemove: {
-                    const auto &change = static_cast<const ss::VectorInsDelAction &>(action);
-                    const auto list = change.parent()->id();
-                    const int count = int(change.children().size());
-                    if (change.isInsertion(operation)) {
-                        Q_EMIT q->itemsInserted(list, change.index(), count);
-                    } else {
-                        Q_EMIT q->itemsRemoved(list, change.index(), count);
-                    }
-                    break;
-                }
-                case ss::Action::VectorMove: {
-                    const auto &change = static_cast<const ss::VectorMoveAction &>(action);
-                    Q_EMIT q->itemsMoved(change.parent()->id(), change.index(operation),
-                                         change.count(), change.destination(operation));
-                    break;
-                }
-                default:
-                    // The session creates no other action. The root is set before the observer
-                    // is notified of any action.
-                    Q_ASSERT(false);
-                    break;
+    void EditSession::Impl::actionApplied(const ss::Action &action,
+                                          ss::Action::Operation operation) {
+        switch (action.type()) {
+            case ss::Action::StructAssign: {
+                const auto &change = static_cast<const ss::StructAssignAction &>(action);
+                Q_EMIT q->valueChanged(change.parent()->id(), change.index());
+                break;
             }
+            case ss::Action::MappingAssign: {
+                const auto &change = static_cast<const ss::MappingAssignAction &>(action);
+                Q_EMIT q->entryChanged(change.parent()->id(), change.key());
+                break;
+            }
+            case ss::Action::BytesInsert:
+            case ss::Action::BytesRemove:
+                Q_EMIT q->arrayChanged(
+                    static_cast<const ss::BytesInsDelAction &>(action).parent()->id());
+                break;
+            case ss::Action::BytesReplace:
+                Q_EMIT q->arrayChanged(
+                    static_cast<const ss::BytesReplaceAction &>(action).parent()->id());
+                break;
+            case ss::Action::VectorInsert:
+            case ss::Action::VectorRemove: {
+                const auto &change = static_cast<const ss::VectorInsDelAction &>(action);
+                const auto list = change.parent()->id();
+                const int count = int(change.children().size());
+                if (change.isInsertion(operation)) {
+                    Q_EMIT q->itemsInserted(list, change.index(), count);
+                } else {
+                    Q_EMIT q->itemsRemoved(list, change.index(), count);
+                }
+                break;
+            }
+            case ss::Action::VectorMove: {
+                const auto &change = static_cast<const ss::VectorMoveAction &>(action);
+                Q_EMIT q->itemsMoved(change.parent()->id(), change.index(operation), change.count(),
+                                     change.destination(operation));
+                break;
+            }
+            default:
+                // The session creates no other action. The root is installed before the
+                // observer is notified of any action.
+                Q_ASSERT(false);
+                break;
         }
+    }
 
-        void stepChanged(int step) override {
-            Q_UNUSED(step)
-            Q_EMIT q->stepChanged();
-        }
-    };
+    void EditSession::Impl::stepChanged(int step) {
+        Q_UNUSED(step)
+        Q_EMIT q->stepChanged();
+    }
 
     EditSession::Transaction::Transaction(EditSession *session) : m_session(session) {
     }
@@ -187,19 +131,15 @@ namespace hello::kit {
         m_session = nullptr;
     }
 
-    EditSession::EditSession(const Project &project, QObject *parent)
+    EditSession::EditSession(QObject *parent)
         : QObject(parent), _impl(std::make_unique<Impl>(this)) {
-        _impl->model.reset(treeOf(project));
     }
 
     EditSession::~EditSession() = default;
 
-    Project EditSession::snapshot() const {
-        return projectOf(_impl->model.root());
-    }
-
     NodeId EditSession::root() const {
-        return _impl->model.root()->id();
+        const auto root = _impl->model.root();
+        return root ? root->id() : 0;
     }
 
     bool EditSession::contains(NodeId node) const {
@@ -211,7 +151,7 @@ namespace hello::kit {
         if (const auto list = dynamic_cast<const ss::VectorNode *>(found)) {
             return list->size();
         }
-        if (const auto array = dynamic_cast<const PitchValuesNode *>(found)) {
+        if (const auto array = dynamic_cast<const DoubleArrayNode *>(found)) {
             return array->size();
         }
         if (const auto mapping = dynamic_cast<const ss::MappingNode *>(found)) {
@@ -242,19 +182,12 @@ namespace hello::kit {
         return child ? child->id() : 0;
     }
 
-    void EditSession::setPitchBend(NodeId note, const std::optional<PitchBend> &pitchBend) {
-        const auto node = _impl->findEditable<ss::StructNodeBase>(note);
-        if (!node) {
-            return;
+    void EditSession::removeChild(NodeId record, ChildSlot slot) {
+        if (const auto node = _impl->findEditable<ss::StructNodeBase>(record)) {
+            Q_ASSERT(slot.index >= 0 && slot.index < node->size() &&
+                     !node->at(slot.index).isVariant());
+            node->setAt(slot.index, ss::Property());
         }
-        Q_ASSERT(node->type() == NoteType);
-        node->setAt(NoteSlots::PitchBend.index,
-                    pitchBend ? ss::Property(treeOfPitchBend(*pitchBend)) : ss::Property());
-    }
-
-    Note EditSession::note(NodeId note) const {
-        const auto node = _impl->find<ss::Node>(note);
-        return node && node->type() == NoteType ? noteOfTree(node) : Note();
     }
 
     NodeId EditSession::at(NodeId list, int index) const {
@@ -264,14 +197,6 @@ namespace hello::kit {
         }
         Q_ASSERT(index >= 0 && index < node->size());
         return node->at(index)->id();
-    }
-
-    void EditSession::insert(NodeId list, int index, const QList<Note> &notes) {
-        _impl->insert(list, TrackType, index, notes, treeOfNote);
-    }
-
-    void EditSession::insert(NodeId list, int index, const QList<PortamentoPoint> &points) {
-        _impl->insert(list, NoteType, index, points, treeOfPortamentoPoint);
     }
 
     void EditSession::remove(NodeId list, int index, int count) {
@@ -303,7 +228,7 @@ namespace hello::kit {
     }
 
     QList<double> EditSession::values(NodeId array) const {
-        const auto node = _impl->find<PitchValuesNode>(array);
+        const auto node = _impl->find<DoubleArrayNode>(array);
         if (!node) {
             return {};
         }
@@ -312,19 +237,19 @@ namespace hello::kit {
     }
 
     void EditSession::replaceValues(NodeId array, int index, const QList<double> &values) {
-        if (const auto node = _impl->findEditable<PitchValuesNode>(array)) {
+        if (const auto node = _impl->findEditable<DoubleArrayNode>(array)) {
             node->replace(index, viewOf(values));
         }
     }
 
     void EditSession::insertValues(NodeId array, int index, const QList<double> &values) {
-        if (const auto node = _impl->findEditable<PitchValuesNode>(array)) {
+        if (const auto node = _impl->findEditable<DoubleArrayNode>(array)) {
             node->insert(index, viewOf(values));
         }
     }
 
     void EditSession::removeValues(NodeId array, int index, int count) {
-        if (const auto node = _impl->findEditable<PitchValuesNode>(array)) {
+        if (const auto node = _impl->findEditable<DoubleArrayNode>(array)) {
             node->remove(index, count);
         }
     }

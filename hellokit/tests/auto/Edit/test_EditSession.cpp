@@ -1,190 +1,128 @@
-#include <QtCore/QJsonValue>
-#include <QtCore/QRandomGenerator>
 #include <QtTest/QSignalSpy>
 #include <QtTest/QTest>
 
 #include <hellokit/Edit/EditSession.h>
-#include <hellokit/Edit/ProjectRefs.h>
 
-#include "ProjectSamples.h"
+#include "TestSession.h"
 
 using namespace hello::kit;
 
+// The tests use a tree unrelated to UTAU, see TestSession.h.
 class test_EditSession : public QObject {
     Q_OBJECT
 
-private:
-    // Applies one random transaction of one to three modifications through the handles.
-    static void editAtRandom(EditSession &session, QRandomGenerator &random, int step) {
-        const auto notes = ProjectRef(&session).track(0).notes();
-        auto transaction = session.transaction(QStringLiteral("Step %1").arg(step));
-        for (int i = 1 + random.bounded(3); i > 0; --i) {
-            const int size = notes.size();
-            const auto note = size ? notes.at(random.bounded(size)) : NoteRef();
-            switch (size ? random.bounded(9) : 0) {
-                case 0: {
-                    Note added;
-                    added.lyric = QStringLiteral("n%1").arg(step);
-                    added.length = 480;
-                    added.noteNum = 60;
-                    added.pitchBend = PitchBend{
-                        std::nullopt, {1, 2, 3}
-                    };
-                    notes.insert(random.bounded(size + 1), {added});
-                    break;
-                }
-                case 1:
-                    notes.remove(random.bounded(size), 1);
-                    break;
-                case 2:
-                    if (size > 1) {
-                        const int index = random.bounded(size);
-                        int destination = random.bounded(size - 1);
-                        destination += destination >= index ? 1 : 0;
-                        notes.move(index, 1, destination);
-                    }
-                    break;
-                case 3:
-                    note.setLyric(QStringLiteral("l%1").arg(step));
-                    break;
-                case 4:
-                    note.setIntensity(random.bounded(2) ? std::optional<double>(step)
-                                                        : std::nullopt);
-                    break;
-                case 5:
-                    note.setVibrato(Vibrato{double(step), 180, 35, 20, 20, 0, 0, 0});
-                    break;
-                case 6:
-                    note.userData().setValue(QStringLiteral("$k"), QString::number(step));
-                    break;
-                case 7:
-                    if (const auto pitchBend = note.pitchBend(); pitchBend.isValid()) {
-                        pitchBend.replaceValues(0, {double(step)});
-                    } else {
-                        note.setPitchBend(PitchBend{double(step), {0}});
-                    }
-                    break;
-                case 8:
-                    note.portamento().insert(0, {
-                                                    {double(step), 0, PortamentoPoint::R}
-                    });
-                    break;
-            }
-        }
-        transaction.commit();
-    }
-
 private Q_SLOTS:
-    // Acceptance criterion 1 of docs/Editing.md. The comparison uses the .usth serialization,
-    // which covers every field and distinguishes an absent optional field from zero.
-    void every_field_survives_the_round_trip_through_the_tree() {
-        const auto project = richProject();
-        const EditSession session(project);
-        QCOMPARE(session.snapshot().toJson(), project.toJson());
-    }
-
-    void a_random_project_survives_the_round_trip_through_the_tree() {
-        for (quint32 seed = 1; seed <= 20; ++seed) {
-            const auto project = randomProject(seed);
-            const EditSession session(project);
-            QVERIFY2(session.snapshot().toJson() == project.toJson(),
-                     qPrintable(QStringLiteral("seed %1").arg(seed)));
-        }
-    }
-
-    void an_empty_track_survives_the_round_trip_through_the_tree() {
-        Project project;
-        project.tracks.push_back(Track());
-        const EditSession session(project);
-        QCOMPARE(session.snapshot().toJson(), project.toJson());
-    }
-
-    // The functions by identifier and slot, on which the handles and the commands are built.
     void nodes_are_addressed_by_identifier_and_slot() {
-        EditSession session(richProject());
-        const auto unknownFields = session.child(session.root(), ProjectSlots::UnknownFields);
-        QCOMPARE(session.size(unknownFields), 6);
-        QCOMPARE(session.entry(unknownFields, QStringLiteral("number")).value<QJsonValue>(),
-                 QJsonValue(2.5));
+        TestSession session;
+        QCOMPARE(session.value(session.root(), TestRootSlots::Title), QStringLiteral("title"));
+        QCOMPARE(session.size(session.items()), 2);
+        QCOMPARE(session.names(), QStringList({QStringLiteral("first"), QStringLiteral("second")}));
 
-        const auto tracks = session.child(session.root(), ProjectSlots::Tracks);
-        const auto notes = session.child(session.at(tracks, 0), TrackSlots::Notes);
-        const auto note = session.at(notes, 0);
-        QCOMPARE(session.value(note, NoteSlots::Lyric), QString::fromUtf8("あ"));
-        QCOMPARE(session.value(note, NoteSlots::Lyric.index).toString(), QString::fromUtf8("あ"));
+        const auto first = session.at(session.items(), 0);
+        const auto values = session.child(first, TestItemSlots::Values);
+        QCOMPARE(session.size(values), 3);
+        QCOMPARE(session.values(values), QList<double>({1, 2, 3}));
 
-        const auto values =
-            session.child(session.child(note, NoteSlots::PitchBend), PitchBendSlots::Values);
-        QCOMPARE(session.size(values), 4);
+        QCOMPARE(session.size(session.tags()), 1);
+        QCOMPARE(session.keys(session.tags()), QStringList({QStringLiteral("a")}));
+        QCOMPARE(session.entry(session.tags(), QStringLiteral("a")).toInt(), 1);
+    }
 
-        // A node of another kind reads as default values.
-        QVERIFY(!session.value(notes, 0).isValid());
-        QVERIFY(session.keys(note).isEmpty());
-        QCOMPARE(session.note(notes).lyric, QString());
+    // A node of another kind, and an identifier of no node, read as default values.
+    void a_node_of_another_kind_reads_as_defaults() {
+        TestSession session;
+        QVERIFY(!session.value(session.items(), 0).isValid());
+        QCOMPARE(session.child(session.items(), TestItemSlots::Values), NodeId(0));
+        QVERIFY(session.keys(session.items()).isEmpty());
+        QVERIFY(session.values(session.tags()).isEmpty());
+        QCOMPARE(session.size(session.root()), 0);
+        QVERIFY(!session.contains(0));
+        QVERIFY(!session.contains(1000000));
+    }
+
+    void every_kind_of_modification_is_applied() {
+        TestSession session;
+        const auto second = session.at(session.items(), 1);
+        const auto values = session.child(session.at(session.items(), 0), TestItemSlots::Values);
+
+        auto transaction = session.transaction(QStringLiteral("Edit"));
+        session.setValue(session.root(), TestRootSlots::Title, QStringLiteral("renamed"));
+        session.insertItems(1, {QStringLiteral("inserted")});
+        session.move(session.items(), 0, 1, 2);
+        session.setEntry(session.tags(), QStringLiteral("b"), 2);
+        session.setEntry(session.tags(), QStringLiteral("a"), QVariant());
+        session.replaceValues(values, 2, {30, 40});
+        session.insertValues(values, 0, {0});
+        session.removeValues(values, 1, 1);
+        session.removeChild(second, TestItemSlots::Values);
+        transaction.commit();
+
+        QCOMPARE(session.value(session.root(), TestRootSlots::Title), QStringLiteral("renamed"));
+        QCOMPARE(session.names(), QStringList({QStringLiteral("inserted"), QStringLiteral("second"),
+                                               QStringLiteral("first")}));
+        QCOMPARE(session.keys(session.tags()), QStringList({QStringLiteral("b")}));
+        QCOMPARE(session.values(values), QList<double>({0, 2, 30, 40}));
+        QCOMPARE(session.child(second, TestItemSlots::Values), NodeId(0));
+
+        session.undo();
+        QCOMPARE(session.value(session.root(), TestRootSlots::Title), QStringLiteral("title"));
+        QCOMPARE(session.names(), QStringList({QStringLiteral("first"), QStringLiteral("second")}));
+        QCOMPARE(session.keys(session.tags()), QStringList({QStringLiteral("a")}));
+        QCOMPARE(session.values(values), QList<double>({1, 2, 3}));
+        QVERIFY(session.child(second, TestItemSlots::Values) != 0);
     }
 
     void a_transaction_without_commit_is_rolled_back() {
-        const auto project = richProject();
-        EditSession session(project);
-        const auto notes = ProjectRef(&session).track(0).notes();
+        TestSession session;
         {
             auto transaction = session.transaction(QStringLiteral("Discarded"));
-            notes.at(0).setLyric(QStringLiteral("x"));
-            notes.remove(1, 1);
-            notes.at(0).userData().remove(QStringLiteral("$custom"));
+            session.setValue(session.root(), TestRootSlots::Title, QStringLiteral("x"));
+            session.remove(session.items(), 0, 1);
+            session.setEntry(session.tags(), QStringLiteral("a"), QVariant());
             QVERIFY(session.inTransaction());
         }
         QVERIFY(!session.inTransaction());
         QVERIFY(!session.canUndo());
-        QCOMPARE(session.snapshot().toJson(), project.toJson());
+        QCOMPARE(session.value(session.root(), TestRootSlots::Title), QStringLiteral("title"));
+        QCOMPARE(session.names(), QStringList({QStringLiteral("first"), QStringLiteral("second")}));
+        QCOMPARE(session.size(session.tags()), 1);
     }
 
     void a_committed_transaction_is_one_undo_step_with_its_message() {
-        const auto project = richProject();
-        EditSession session(project);
-        const auto notes = ProjectRef(&session).track(0).notes();
-
-        auto transaction = session.transaction(QString::fromUtf8("移动 1 个音符"));
-        notes.at(0).setLyric(QStringLiteral("x"));
-        notes.move(0, 1, 1);
+        TestSession session;
+        auto transaction = session.transaction(QString::fromUtf8("移动 1 个项目"));
+        session.setValue(session.root(), TestRootSlots::Title, QStringLiteral("x"));
+        session.move(session.items(), 0, 1, 1);
         transaction.commit();
-        const auto edited = session.snapshot().toJson();
-        QVERIFY(edited != project.toJson());
 
         QVERIFY(session.canUndo());
-        QCOMPARE(session.undoMessage(), QString::fromUtf8("移动 1 个音符"));
+        QCOMPARE(session.undoMessage(), QString::fromUtf8("移动 1 个项目"));
         QVERIFY(session.redoMessage().isEmpty());
 
         session.undo();
-        QCOMPARE(session.snapshot().toJson(), project.toJson());
+        QCOMPARE(session.names(), QStringList({QStringLiteral("first"), QStringLiteral("second")}));
+        QCOMPARE(session.value(session.root(), TestRootSlots::Title), QStringLiteral("title"));
         QVERIFY(!session.canUndo());
-        QCOMPARE(session.redoMessage(), QString::fromUtf8("移动 1 个音符"));
+        QCOMPARE(session.redoMessage(), QString::fromUtf8("移动 1 个项目"));
 
         session.redo();
-        QCOMPARE(session.snapshot().toJson(), edited);
+        QCOMPARE(session.names(), QStringList({QStringLiteral("second"), QStringLiteral("first")}));
+        QCOMPARE(session.value(session.root(), TestRootSlots::Title), QStringLiteral("x"));
     }
 
-    // A value equal to the current one creates no change, which relies on the equality of the
-    // value types stored in the slots.
     void an_unchanged_value_creates_no_undo_step() {
-        const auto project = richProject();
-        EditSession session(project);
-        const auto note = ProjectRef(&session).track(0).notes().at(0);
-
+        TestSession session;
         auto transaction = session.transaction(QStringLiteral("Nothing"));
-        note.setLyric(note.lyric());
-        note.setIntensity(note.intensity());
-        note.setEnvelope(note.envelope());
-        note.setVibrato(note.vibrato());
-        note.userData().setValue(QStringLiteral("$custom"), QStringLiteral("kept"));
+        session.setValue(session.root(), TestRootSlots::Title, QStringLiteral("title"));
+        session.setEntry(session.tags(), QStringLiteral("a"), 1);
         transaction.commit();
         QVERIFY(!session.canUndo());
     }
 
     void the_signals_report_the_changes_in_the_applied_direction() {
-        EditSession session(richProject());
-        const auto notes = ProjectRef(&session).track(0).notes();
-        const auto note = notes.at(0);
+        TestSession session;
+        const auto items = session.items();
+        const auto values = session.child(session.at(items, 0), TestItemSlots::Values);
 
         QSignalSpy valueChanged(&session, &EditSession::valueChanged);
         QSignalSpy entryChanged(&session, &EditSession::entryChanged);
@@ -196,35 +134,36 @@ private Q_SLOTS:
         QSignalSpy stepChanged(&session, &EditSession::stepChanged);
 
         auto transaction = session.transaction(QStringLiteral("Signals"));
-        note.setLyric(QStringLiteral("x"));
-        note.userData().setValue(QStringLiteral("$new"), QStringLiteral("v"));
-        note.pitchBend().removeValues(0, 1);
-        notes.insert(2, {Note(), Note()});
-        notes.move(0, 1, 3);
+        session.setValue(session.root(), TestRootSlots::Title, QStringLiteral("x"));
+        session.setEntry(session.tags(), QStringLiteral("new"), 2);
+        session.removeValues(values, 0, 1);
+        session.insertItems(2, {QStringLiteral("third"), QStringLiteral("fourth")});
+        session.move(items, 0, 1, 3);
         QCOMPARE(stepChanged.count(), 0);
         transaction.commit();
 
         QCOMPARE(valueChanged.count(), 1);
-        QCOMPARE(valueChanged.at(0).at(0).value<NodeId>(), note.id());
-        QCOMPARE(valueChanged.at(0).at(1).toInt(), NoteSlots::Lyric.index);
+        QCOMPARE(valueChanged.at(0).at(0).value<NodeId>(), session.root());
+        QCOMPARE(valueChanged.at(0).at(1).toInt(), TestRootSlots::Title.index);
         QCOMPARE(entryChanged.count(), 1);
-        QCOMPARE(entryChanged.at(0).at(1).toString(), QStringLiteral("$new"));
+        QCOMPARE(entryChanged.at(0).at(1).toString(), QStringLiteral("new"));
         QCOMPARE(arrayChanged.count(), 1);
+        QCOMPARE(arrayChanged.at(0).at(0).value<NodeId>(), values);
         QCOMPARE(inserted.count(), 1);
-        QCOMPARE(inserted.at(0), QVariantList({QVariant::fromValue(notes.id()), 2, 2}));
+        QCOMPARE(inserted.at(0), QVariantList({QVariant::fromValue(items), 2, 2}));
         QCOMPARE(moved.count(), 1);
-        QCOMPARE(moved.at(0), QVariantList({QVariant::fromValue(notes.id()), 0, 1, 3}));
+        QCOMPARE(moved.at(0), QVariantList({QVariant::fromValue(items), 0, 1, 3}));
         QCOMPARE(stepChanged.count(), 1);
 
         // Undo applies the inverse changes in reverse order: the move back, then the removal of
-        // the inserted notes, which is announced while they are still in the list.
+        // the inserted items, which is announced while they are still in the list.
         session.undo();
         QCOMPARE(moved.count(), 2);
-        QCOMPARE(moved.at(1), QVariantList({QVariant::fromValue(notes.id()), 3, 1, 0}));
+        QCOMPARE(moved.at(1), QVariantList({QVariant::fromValue(items), 3, 1, 0}));
         QCOMPARE(aboutToBeRemoved.count(), 1);
-        QCOMPARE(aboutToBeRemoved.at(0), QVariantList({QVariant::fromValue(notes.id()), 2, 2}));
+        QCOMPARE(aboutToBeRemoved.at(0), QVariantList({QVariant::fromValue(items), 2, 2}));
         QCOMPARE(removed.count(), 1);
-        QCOMPARE(removed.at(0), QVariantList({QVariant::fromValue(notes.id()), 2, 2}));
+        QCOMPARE(removed.at(0), QVariantList({QVariant::fromValue(items), 2, 2}));
         QCOMPARE(valueChanged.count(), 2);
         QCOMPARE(entryChanged.count(), 2);
         QCOMPARE(arrayChanged.count(), 2);
@@ -232,54 +171,17 @@ private Q_SLOTS:
     }
 
     void a_rollback_reports_the_inverse_changes() {
-        EditSession session(richProject());
-        const auto notes = ProjectRef(&session).track(0).notes();
+        TestSession session;
         QSignalSpy inserted(&session, &EditSession::itemsInserted);
         QSignalSpy removed(&session, &EditSession::itemsRemoved);
         QSignalSpy stepChanged(&session, &EditSession::stepChanged);
         {
             auto transaction = session.transaction(QStringLiteral("Discarded"));
-            notes.insert(0, {Note()});
+            session.insertItems(0, {QStringLiteral("discarded")});
         }
         QCOMPARE(inserted.count(), 1);
         QCOMPARE(removed.count(), 1);
         QCOMPARE(stepChanged.count(), 0);
-    }
-
-    // Acceptance criteria 3 and 5 of docs/Editing.md: undoing every step restores the original
-    // project, redoing every step restores the edited one, and every position in between
-    // matches the snapshot taken when it was first reached.
-    void random_edits_undo_and_redo_to_every_recorded_state() {
-        for (quint32 seed = 1; seed <= 10; ++seed) {
-            QRandomGenerator random(seed);
-            EditSession session(richProject());
-
-            QList<QByteArray> states{session.snapshot().toJson()};
-            for (int step = 1; step <= 40; ++step) {
-                editAtRandom(session, random, step);
-                if (session.canUndo() &&
-                    session.undoMessage() == QStringLiteral("Step %1").arg(step)) {
-                    states.push_back(session.snapshot().toJson());
-                }
-            }
-
-            QVERIFY(states.size() > 30);
-
-            for (qsizetype i = states.size() - 1; i > 0; --i) {
-                QVERIFY2(session.snapshot().toJson() == states[i],
-                         qPrintable(QStringLiteral("seed %1, undo to %2").arg(seed).arg(i)));
-                session.undo();
-            }
-            QVERIFY(!session.canUndo());
-            QCOMPARE(session.snapshot().toJson(), states.first());
-
-            for (qsizetype i = 1; i < states.size(); ++i) {
-                session.redo();
-                QVERIFY2(session.snapshot().toJson() == states[i],
-                         qPrintable(QStringLiteral("seed %1, redo to %2").arg(seed).arg(i)));
-            }
-            QVERIFY(!session.canRedo());
-        }
     }
 };
 

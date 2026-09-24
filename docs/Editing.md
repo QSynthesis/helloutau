@@ -138,7 +138,7 @@ session.setValue(point, PortamentoSlots::Y, 5.0);                   // 嵌套同
 序列、映射与数组：
 
 ```cpp
-session.insert(notes, 12, newNotes);          // 插入 Note 值的副本
+session.insert(notes, 12, newNotes);          // 插入 Note 值的副本，属于 ProjectSession
 session.remove(notes, 12, 3);
 session.move(notes, 12, 3, 20);
 session.setEntry(userData, "$Custom", value);
@@ -151,6 +151,7 @@ session.replaceValues(pitchValues, 0, values);
 界面代码不直接传递 `NodeId` 与槽位，而是使用句柄（`ProjectRefs.h`）。句柄是值类型，内含会话指针与 `NodeId`，每个成员函数只是对一个节点操作的内联调用，全部实现在头文件中：
 
 ```cpp
+ProjectSession session(project);
 const auto notes = ProjectRef(&session).track(0).notes();
 const auto note = notes.at(12);
 note.setLyric(QStringLiteral("a"));      // 即 session.setValue(note.id(), NoteSlots::Lyric, …)
@@ -319,6 +320,15 @@ set /tracks/0/notes/12/intensity null
 节点树、事务与撤销历史由 substate 实现。节点的所有权、动作、事务与存储引擎的设计见 substate 仓库的 `docs/Design.md`。
 
 **substate 是 `HelloKitEdit` 的私有依赖，`ss::` 类型不出现在任何公开头文件中。** 编辑层以 `NodeId` 引用节点，以本文档所述的类型化槽位和领域函数修改树，并将 substate 的变更通知转换为自己的信号，不使用 qsubstate 的 Qt 信号适配器。substate 的接口变动因此只影响编辑层的实现，「音符是什么、函数的含义是什么」这些困难且有价值的内容不随之变动。这与 `SynthRunner::makeEngineProcess()` 采用的是同一种隔离手法。
+
+### 通用层与文档层
+
+`HelloKitEdit` 分为两部分：
+
+- **通用层**：`EditSession`、`NodeRef` 与 `Slot.h`。不依赖 `HelloKitDocument`，不涉及任何文档的结构，只按 `NodeId` 与槽位读写记录、列表、映射和数组，并提供事务、撤销与信号。私有头文件 `EditSession_p.h` 是它的扩展接口：派生类经由它安装根节点、插入由值转换得到的子树、替换子节点。测试以一棵与 UTAU 无关的树检验通用层。
+- **工程层**：`ProjectSession`（派生自 `EditSession`）、槽位表 `ProjectSchema.h`、句柄 `ProjectRefs.h`，以及私有的 `ProjectTree`（`Project` 与树的双向转换、节点类型编号与编解码器注册）。需要文档结构的操作属于这一层，例如从 `Note` 值插入音符、`snapshot()`。
+
+工程层的代码都可以由字段表机械地推出。音源作为第二种文档时，以同样的方式在通用层之上实现。
 
 撤销历史由 substate 的存储引擎保存。第一阶段使用 `MemoryStorageEngine`，即内存中的撤销栈。substate 在第二阶段实现预写式日志引擎后，更换存储引擎即可获得崩溃恢复，编辑层的接口不变。
 

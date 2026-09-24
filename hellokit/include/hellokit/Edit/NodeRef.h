@@ -55,14 +55,12 @@ namespace hello::kit {
             m_session->setValue(m_id, slot, value);
         }
 
-        template <class Ref>
-        inline Ref child(ChildSlot slot) const {
-            return Ref(m_session, m_session ? m_session->child(m_id, slot) : 0);
+        inline NodeId childId(ChildSlot slot) const {
+            return m_session ? m_session->child(m_id, slot) : 0;
         }
 
-        template <class Ref>
-        inline Ref item(int index) const {
-            return Ref(m_session, m_session ? m_session->at(m_id, index) : 0);
+        inline NodeId itemId(int index) const {
+            return m_session ? m_session->at(m_id, index) : 0;
         }
 
         inline int count() const {

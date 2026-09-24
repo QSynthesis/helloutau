@@ -9,18 +9,42 @@
 
 #include <hellokit/Document/Note.h>
 
-#include <hellokit/Edit/EditSession.h>
 #include <hellokit/Edit/NodeRef.h>
 #include <hellokit/Edit/ProjectSchema.h>
+#include <hellokit/Edit/ProjectSession.h>
 
 namespace hello::kit {
 
     // The handles of the nodes of a project tree. Each member function calls one function of
     // EditSession with the slot of ProjectSchema.h. See NodeRef.
 
-    class SettingsRef : public NodeRef {
+    /// The base of the handles of a project tree, which refer to a ProjectSession.
+    class ProjectNodeRef : public NodeRef {
     public:
-        using NodeRef::NodeRef;
+        inline ProjectNodeRef() = default;
+
+        inline ProjectNodeRef(ProjectSession *session, NodeId id) : NodeRef(session, id) {
+        }
+
+        inline ProjectSession *session() const {
+            return static_cast<ProjectSession *>(m_session);
+        }
+
+    protected:
+        template <class Ref>
+        inline Ref child(ChildSlot slot) const {
+            return Ref(session(), childId(slot));
+        }
+
+        template <class Ref>
+        inline Ref item(int index) const {
+            return Ref(session(), itemId(index));
+        }
+    };
+
+    class SettingsRef : public ProjectNodeRef {
+    public:
+        using ProjectNodeRef::ProjectNodeRef;
 
         inline QString name() const {
             return get(SettingsSlots::Name);
@@ -89,9 +113,9 @@ namespace hello::kit {
         }
     };
 
-    class PortamentoPointRef : public NodeRef {
+    class PortamentoPointRef : public ProjectNodeRef {
     public:
-        using NodeRef::NodeRef;
+        using ProjectNodeRef::ProjectNodeRef;
 
         inline double x() const {
             return get(PortamentoSlots::X);
@@ -123,9 +147,9 @@ namespace hello::kit {
         }
     };
 
-    class PortamentoListRef : public NodeRef {
+    class PortamentoListRef : public ProjectNodeRef {
     public:
-        using NodeRef::NodeRef;
+        using ProjectNodeRef::ProjectNodeRef;
 
         inline int size() const {
             return count();
@@ -137,7 +161,7 @@ namespace hello::kit {
 
         /// Inserts copies of \a points before \a index.
         inline void insert(int index, const QList<PortamentoPoint> &points) const {
-            m_session->insert(m_id, index, points);
+            session()->insert(m_id, index, points);
         }
 
         inline void remove(int index, int count) const {
@@ -149,9 +173,9 @@ namespace hello::kit {
         }
     };
 
-    class PitchBendRef : public NodeRef {
+    class PitchBendRef : public ProjectNodeRef {
     public:
-        using NodeRef::NodeRef;
+        using ProjectNodeRef::ProjectNodeRef;
 
         inline std::optional<double> start() const {
             return get(PitchBendSlots::Start);
@@ -190,9 +214,9 @@ namespace hello::kit {
     };
 
     /// See \c Note::userData.
-    class UserDataRef : public NodeRef {
+    class UserDataRef : public ProjectNodeRef {
     public:
-        using NodeRef::NodeRef;
+        using ProjectNodeRef::ProjectNodeRef;
 
         /// Returns the keys in ascending order.
         inline QStringList keys() const {
@@ -216,9 +240,9 @@ namespace hello::kit {
         }
     };
 
-    class NoteRef : public NodeRef {
+    class NoteRef : public ProjectNodeRef {
     public:
-        using NodeRef::NodeRef;
+        using ProjectNodeRef::ProjectNodeRef;
 
         inline QString lyric() const {
             return get(NoteSlots::Lyric);
@@ -337,7 +361,7 @@ namespace hello::kit {
 
         /// Replaces the Mode1 pitch curve, or removes it if \a pitchBend is empty.
         inline void setPitchBend(const std::optional<PitchBend> &pitchBend) const {
-            m_session->setPitchBend(m_id, pitchBend);
+            session()->setPitchBend(m_id, pitchBend);
         }
 
         inline QString label() const {
@@ -387,13 +411,13 @@ namespace hello::kit {
 
         /// Returns a copy of the note, or a default note if the handle is invalid.
         inline Note toNote() const {
-            return m_session ? m_session->note(m_id) : Note();
+            return m_session ? session()->note(m_id) : Note();
         }
     };
 
-    class NoteListRef : public NodeRef {
+    class NoteListRef : public ProjectNodeRef {
     public:
-        using NodeRef::NodeRef;
+        using ProjectNodeRef::ProjectNodeRef;
 
         inline int size() const {
             return count();
@@ -405,7 +429,7 @@ namespace hello::kit {
 
         /// Inserts copies of \a notes before \a index.
         inline void insert(int index, const QList<Note> &notes) const {
-            m_session->insert(m_id, index, notes);
+            session()->insert(m_id, index, notes);
         }
 
         inline void remove(int index, int count) const {
@@ -419,9 +443,9 @@ namespace hello::kit {
         }
     };
 
-    class TrackRef : public NodeRef {
+    class TrackRef : public ProjectNodeRef {
     public:
-        using NodeRef::NodeRef;
+        using ProjectNodeRef::ProjectNodeRef;
 
         inline QString name() const {
             return get(TrackSlots::Name);
@@ -445,11 +469,12 @@ namespace hello::kit {
     };
 
     /// The handle of the root of a session, from which the other handles are obtained.
-    class ProjectRef : public NodeRef {
+    class ProjectRef : public ProjectNodeRef {
     public:
-        using NodeRef::NodeRef;
+        using ProjectNodeRef::ProjectNodeRef;
 
-        inline explicit ProjectRef(EditSession *session) : NodeRef(session, session->root()) {
+        inline explicit ProjectRef(ProjectSession *session)
+            : ProjectNodeRef(session, session->root()) {
         }
 
         inline SettingsRef settings() const {
@@ -461,7 +486,7 @@ namespace hello::kit {
         }
 
         inline TrackRef track(int index) const {
-            return TrackRef(m_session, m_session->at(tracksId(), index));
+            return TrackRef(session(), m_session->at(tracksId(), index));
         }
 
     private:

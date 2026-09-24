@@ -1,6 +1,6 @@
 #include <QtTest/QTest>
 
-#include <hellokit/Edit/EditSession.h>
+#include <hellokit/Edit/ProjectSession.h>
 #include <hellokit/Edit/ProjectRefs.h>
 
 #include "ProjectSamples.h"
@@ -13,7 +13,7 @@ class test_ProjectRefs : public QObject {
 private Q_SLOTS:
     void every_getter_reads_its_field() {
         const auto project = richProject();
-        EditSession session(project);
+        ProjectSession session(project);
 
         const auto &settings = project.settings;
         const auto settingsRef = ProjectRef(&session).settings();
@@ -82,7 +82,7 @@ private Q_SLOTS:
     // serializations are then equal only if every setter writes its own field.
     void every_setter_writes_its_field() {
         auto project = richProject();
-        EditSession session(project);
+        ProjectSession session(project);
         auto settingsRef = ProjectRef(&session).settings();
         auto trackRef = ProjectRef(&session).track(0);
         auto noteRef = trackRef.notes().at(0);
@@ -183,7 +183,7 @@ private Q_SLOTS:
 
     void a_pitch_curve_is_added_and_removed_as_a_whole() {
         auto project = richProject();
-        EditSession session(project);
+        ProjectSession session(project);
         auto first = ProjectRef(&session).track(0).notes().at(0);
         auto second = ProjectRef(&session).track(0).notes().at(1);
 
@@ -206,7 +206,7 @@ private Q_SLOTS:
 
     void lists_insert_remove_and_move_items() {
         auto project = richProject();
-        EditSession session(project);
+        ProjectSession session(project);
         auto notes = ProjectRef(&session).track(0).notes();
         auto portamento = notes.at(0).portamento();
 

@@ -2,7 +2,6 @@
 #define HELLOKIT_EDIT_EDITSESSION_H
 
 #include <memory>
-#include <optional>
 
 #include <QtCore/QList>
 #include <QtCore/QObject>
@@ -10,22 +9,19 @@
 #include <QtCore/QStringList>
 #include <QtCore/QVariant>
 
-#include <hellokit/Document/Project.h>
-
 #include <hellokit/Edit/HelloKitEditGlobal.h>
 #include <hellokit/Edit/Slot.h>
 
 namespace hello::kit {
 
-    /// The editing of one project.
+    /// The editing of a document stored as a tree of nodes, with transactions, undo history and
+    /// change notification. See docs/Editing.md.
     ///
-    /// The session owns the project as a tree of nodes, see docs/Editing.md. The tree is the
-    /// document while the session exists. A \c Project is a snapshot of the tree, for saving and
-    /// rendering.
-    ///
-    /// The functions of this class read and modify the nodes by \c NodeId. The slots of the
-    /// records are declared in ProjectSchema.h. The handles in ProjectRefs.h provide the same
-    /// operations as typed member functions.
+    /// This class does not depend on the structure of a particular document. It reads and
+    /// modifies the nodes by \c NodeId: the slots of records, the items of lists, the entries of
+    /// mappings and the elements of arrays. A subclass supplies the tree and the operations that
+    /// require the structure of the document, such as the insertion of a record from a value,
+    /// for example ProjectSession.
     ///
     /// Every modification takes place in a transaction, and each committed transaction is one
     /// undo step. A modification outside a transaction, of a node that is not in the tree or of
@@ -33,8 +29,8 @@ namespace hello::kit {
     /// effect. Reading such a node returns default values.
     ///
     /// The signals report every change as it is applied, including the changes applied by undo,
-    /// by redo and by the rollback of a transaction. A record slot is identified by its index,
-    /// for example \c NoteSlots::Lyric.index.
+    /// by redo and by the rollback of a transaction. A record slot is identified by its index in
+    /// the slot table of the record.
     ///
     /// \warning The session emits the signals while applying a change. A slot connected to them
     ///          may read the session but must not modify it. A modification in response to a
@@ -69,14 +65,9 @@ namespace hello::kit {
             friend class EditSession;
         };
 
-        /// Creates a session that edits a copy of \a project.
-        explicit EditSession(const Project &project, QObject *parent = nullptr);
         ~EditSession();
 
-        /// Returns the project in its current state.
-        Project snapshot() const;
-
-        /// Returns the root record, with the slots of \c ProjectSlots.
+        /// Returns the root of the tree.
         NodeId root() const;
 
         /// Returns whether \a node exists and is in the tree.
@@ -106,13 +97,8 @@ namespace hello::kit {
         /// empty.
         NodeId child(NodeId record, ChildSlot slot) const;
 
-        /// Replaces the Mode1 pitch curve of the note \a note, or removes it if \a pitchBend is
-        /// empty.
-        void setPitchBend(NodeId note, const std::optional<PitchBend> &pitchBend);
-
-        /// Returns a copy of the note \a note, or a default note if \a note is not a note in
-        /// the tree.
-        Note note(NodeId note) const;
+        /// Removes the child in the slot \a slot of the record \a record.
+        void removeChild(NodeId record, ChildSlot slot);
 
         /// \}
 
@@ -121,13 +107,6 @@ namespace hello::kit {
 
         /// Returns the item at \a index of the list \a list.
         NodeId at(NodeId list, int index) const;
-
-        /// Inserts copies of \a notes into the list of notes \a list before \a index.
-        void insert(NodeId list, int index, const QList<Note> &notes);
-
-        /// Inserts copies of \a points into the list of portamento points \a list before
-        /// \a index.
-        void insert(NodeId list, int index, const QList<PortamentoPoint> &points);
 
         void remove(NodeId list, int index, int count);
 
@@ -151,7 +130,7 @@ namespace hello::kit {
 
         /// \}
 
-        /// \name Arrays
+        /// \name Arrays of double
         /// \{
 
         QList<double> values(NodeId array) const;
@@ -217,9 +196,16 @@ namespace hello::kit {
         /// The position in the undo history changed by a commit, an undo or a redo.
         void stepChanged();
 
+    protected:
+        /// Creates a session without a tree. The constructor of the subclass installs the tree
+        /// through the extension interface in EditSession_p.h.
+        explicit EditSession(QObject *parent = nullptr);
+
     private:
         class Impl;
         std::unique_ptr<Impl> _impl;
+
+        friend struct EditSessionPrivate;
     };
 
     template <class T>
