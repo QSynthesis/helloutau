@@ -9,6 +9,7 @@
 #include <QtCore/QCoreApplication>
 #include <QtCore/QList>
 #include <QtCore/QString>
+#include <QtCore/QStringList>
 
 #include <hellokit/Support/Diagnostic.h>
 
@@ -53,6 +54,15 @@ namespace hello::kit {
         /// Returns whether the directory at \a directory of \a bank has changes that save()
         /// would write.
         bool isModified(const VoiceBank &bank, const std::filesystem::path &directory) const;
+
+        /// Returns the names of the audio files of the directory at \a directory as last read,
+        /// with and without an entry, in the order in which they were listed, or an empty list
+        /// if the directory has not been read. A reload that applies a change of the audio files
+        /// updates them.
+        ///
+        /// Intended for a holder of the contents that keeps the entries only, such as the tree of
+        /// an editing session: the samples without an entry are the files that no entry names.
+        QStringList audioFiles(const std::filesystem::path &directory) const;
 
         /// Makes the next save() record the encoding of the directory at \a directory , even if
         /// nothing else in it changed.
@@ -172,6 +182,8 @@ namespace hello::kit {
             bool remember = false;
             /// The directory state when last read, or when last checked without differences.
             VoiceBankDirectoryStamp stamp;
+            /// The names of the audio files when last read or refreshed. See audioFiles().
+            QStringList audioFiles;
         };
 
         /// Returns the state of a directory as read from \a source and decoded into \a decoded .

@@ -203,6 +203,37 @@ private Q_SLOTS:
         QVERIFY(bank.find(60, QStringLiteral("ku")));
     }
 
+    // The audio files as last read, with and without an entry, from which a holder of the entries
+    // alone derives the samples without an entry. Both kinds of reload update them.
+    void the_audio_files_are_those_last_read() {
+        write(QStringLiteral("oto.ini"), "a.wav=a,1,2,3,4,5\r\n");
+        write(QStringLiteral("a.wav"), "RIFF");
+        write(QStringLiteral("ka.wav"), "RIFF");
+        CountingSelector selector(QStringLiteral("UTF-8"));
+        auto opened = open(&selector);
+        QVERIFY(opened.has_value());
+        auto &bank = opened->bank;
+        auto &disk = opened->disk;
+        const auto sorted = [&disk](const fs::path &directory) {
+            auto names = disk.audioFiles(directory);
+            names.sort();
+            return names;
+        };
+        QCOMPARE(sorted({}), QStringList({QStringLiteral("a.wav"), QStringLiteral("ka.wav")}));
+        QVERIFY(disk.audioFiles(QStringLiteral("missing").toStdU16String()).isEmpty());
+
+        QVERIFY(QFile::remove(pathOf(QStringLiteral("ka.wav"))));
+        write(QStringLiteral("ki.wav"), "RIFF");
+        QCOMPARE(takeIn(bank, disk, &selector).audio, QList<fs::path>{fs::path()});
+        QCOMPARE(sorted({}), QStringList({QStringLiteral("a.wav"), QStringLiteral("ki.wav")}));
+
+        write(QStringLiteral("oto.ini"), "a.wav=b,1,2,3,4,5\r\n");
+        write(QStringLiteral("ku.wav"), "RIFF");
+        QCOMPARE(takeIn(bank, disk, &selector).changed, QList<fs::path>{fs::path()});
+        QCOMPARE(sorted({}), QStringList({QStringLiteral("a.wav"), QStringLiteral("ki.wav"),
+                                          QStringLiteral("ku.wav")}));
+    }
+
     // A text file changed after the check that found only new audio files is not taken as read
     // by applying that check, and the next check reports it.
     void a_text_change_after_an_audio_check_is_still_reported() {

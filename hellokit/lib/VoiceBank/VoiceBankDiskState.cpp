@@ -167,6 +167,16 @@ namespace hello::kit {
             return QByteArray(bytes.data(), qsizetype(bytes.size()));
         }
 
+        /// The file names \a names as VoiceSample::fileName holds them.
+        QStringList namesOf(const std::vector<fs::path> &names) {
+            QStringList out;
+            out.reserve(qsizetype(names.size()));
+            for (const auto &name : names) {
+                out.push_back(QString::fromStdU16String(name.u16string()));
+            }
+            return out;
+        }
+
         /// The name \a name in UTF-8 with its ASCII letters in lowercase, for comparison with the
         /// names of VoiceBankDirectorySource::File .
         std::string foldedName(const fs::path &name) {
@@ -610,6 +620,11 @@ namespace hello::kit {
         return false;
     }
 
+    QStringList VoiceBankDiskState::audioFiles(const fs::path &directory) const {
+        const auto it = m_books.find(directory);
+        return it == m_books.end() ? QStringList() : it->second.audioFiles;
+    }
+
     VoiceBankChanges VoiceBankDiskState::checkDisk() {
         return checkDisk(QList<fs::path>{m_root});
     }
@@ -991,9 +1006,11 @@ namespace hello::kit {
         }
         bank.m_samples = std::move(samples);
 
+        auto &book = m_books[source.path];
+        book.audioFiles = namesOf(source.audioFiles);
+
         // The new stamp is taken only if every text file is still as it was read. Otherwise a
         // text file changed since the check would be taken as read and never reported.
-        auto &book = m_books[source.path];
         bool same = source.files.size() == book.files.size();
         for (const auto &[file, record] : source.files) {
             const auto it = book.files.find(file);
@@ -1208,6 +1225,7 @@ namespace hello::kit {
         book.config = source.config;
         book.charset = VoiceBank::canonicalCharset(decoded.charset);
         book.stamp = source.stamp;
+        book.audioFiles = namesOf(source.audioFiles);
         return book;
     }
 
