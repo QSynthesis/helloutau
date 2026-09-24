@@ -31,6 +31,6 @@ namespace hello::kit {
 
 }
 
-Q_DECLARE_INTERFACE(hello::kit::InterchangePlugin, "org.qsynthesis.HelloUTAU.InterchangePlugin/1.0")
+Q_DECLARE_INTERFACE(hello::kit::InterchangePlugin, "org.qsynthesis.HelloUtau.InterchangePlugin/1.0")
 
 #endif // HELLOKIT_INTERCHANGE_INTERCHANGEPLUGIN_H

@@ -1,5 +1,5 @@
 /// \file
-/// Compares the engine arguments of HelloUTAU with those UTAU passed for the same project.
+/// Compares the engine arguments of HelloUtau with those UTAU passed for the same project.
 ///
 /// This is the most demanding check of the project. All other tests verify that the code
 /// implements its specification. This one verifies that the specification matches UTAU, which
@@ -299,7 +299,7 @@ namespace {
         const auto comparison = compare(plan->steps(), *calls);
         if (comparison.onlyOurs || comparison.onlyTheirs) {
             std::cout << "  " << comparison.onlyOurs << " notes without a call in the UTAU script, "
-                      << comparison.onlyTheirs << " calls without a note in HelloUTAU" << std::endl;
+                      << comparison.onlyTheirs << " calls without a note in HelloUtau" << std::endl;
         }
 
         const int examples = result.valueForOption<int>("--examples").value_or(4);
@@ -317,7 +317,7 @@ int main(int argc, char *argv[]) {
     using namespace stdc;
 
     cli::Parser parser(
-        cli::Command("utaucompare", "Compare the engine calls of HelloUTAU with those of UTAU")
+        cli::Command("utaucompare", "Compare the engine calls of HelloUtau with those of UTAU")
             .addArgument(cli::Argument("input", "The .ust or .usth rendered by both sides"))
             .addOption(
                 cli::Option({"--voice"}, "The voice bank folder").arg(cli::Argument("folder")))

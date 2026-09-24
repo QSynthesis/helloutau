@@ -16,10 +16,10 @@
 
 namespace hello::kit {
 
-    /// The file name of the HelloUTAU configuration file in a voice bank directory.
+    /// The file name of the HelloUtau configuration file in a voice bank directory.
     inline constexpr char voiceBankConfigFileName[] = "hello-config.json";
 
-    /// The HelloUTAU configuration of one voice bank directory.
+    /// The HelloUtau configuration of one voice bank directory.
     ///
     /// **One per directory, not one per voice bank.** A voice bank may contain several
     /// \c oto.ini files in different subdirectories, possibly in different encodings. The

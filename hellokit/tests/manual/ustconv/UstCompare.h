@@ -29,7 +29,7 @@ namespace ustconv {
     /// different encodings and different escaping, neither of which is a difference in the
     /// project.
     ///
-    /// The control note is excluded on both sides. It marks a file as written by HelloUTAU and
+    /// The control note is excluded on both sides. It marks a file as written by HelloUtau and
     /// is expected to appear, so counting it would report intended behavior as a defect.
     std::vector<Difference> compare(const utau::UstFile &before, const utau::UstFile &after,
                                     const Normalizer &beforeText, const Normalizer &afterText);

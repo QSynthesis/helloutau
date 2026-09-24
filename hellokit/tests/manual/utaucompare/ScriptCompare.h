@@ -14,7 +14,7 @@
 
 namespace utaucompare {
 
-    /// One argument that differs between the plan of HelloUTAU and the script of UTAU.
+    /// One argument that differs between the plan of HelloUtau and the script of UTAU.
     struct ArgumentDifference {
         int noteIndex = 0;
         QString what; ///< \c flags , \c realLength , ... See \c compare() for the names.
@@ -40,13 +40,13 @@ namespace utaucompare {
         /// output. Counted rather than listed, because they do not affect the render, but a
         /// report that omitted them would conceal how its result was obtained.
         int spelling = 0;
-        int onlyOurs = 0;   ///< notes rendered by HelloUTAU without a call in the UTAU script
-        int onlyTheirs = 0; ///< calls in the UTAU script without a note in HelloUTAU
+        int onlyOurs = 0;   ///< notes rendered by HelloUtau without a call in the UTAU script
+        int onlyTheirs = 0; ///< calls in the UTAU script without a note in HelloUtau
         QList<ArgumentDifference> arguments;
         QList<CurveDifference> curves; ///< every note with a curve on either side
     };
 
-    /// Compares the engine arguments of HelloUTAU with those UTAU passed.
+    /// Compares the engine arguments of HelloUtau with those UTAU passed.
     ///
     /// Arguments are identified by name rather than by position, so that a report states
     /// \c flags rather than "resampler argument 5". The pitch curve is excluded from the

@@ -2,7 +2,7 @@
 
 ## 项目概述
 
-HelloUTAU 是跨平台的第三方 UTAU 编辑器。目标是在功能上尽可能与官方 UTAU 0.4.19 保持一致，同时重新设计交互、编码处理和扩展机制。
+HelloUtau 是跨平台的第三方 UTAU 编辑器。目标是在功能上尽可能与官方 UTAU 0.4.19 保持一致，同时重新设计交互、编码处理和扩展机制。
 
 产品形态、工程文件格式（`.usth`）、`_USTH_` 控制音符、`hello-config.json`、编码兼容策略和五类插件的定义，**以 [`docs/note.md`](docs/note.md) 为唯一权威**。该文档与代码冲突时修改代码，不要为迁就实现而修改文档；确需修改设计时，先与作者确认。
 
@@ -96,7 +96,7 @@ resampler / wavtool 的命令行参数由 `utau::ResamplerArguments::arguments()
 
 - **绝不将参数拼接为一条命令行字符串。** 官方 UTAU 渲染时默认写出并执行批处理文件（v0.4.12 的更新日志中有「wav生成時にバッチを使用しない」这一开关，说明默认使用批处理），而写入批处理的文件名、别名、flags 只要包含 `&` 或换行符即可追加命令。这是 CWE-78 最可能的机制。
 - **「经由 shell 执行」与「拼接命令行」是两回事，不可混淆。** 非 exe 插件是必须支持的功能，通过 `stdc::Popen::shell(true)` 执行：它保持参数向量的语义，对每个元素进行 `^` 转义并加引号，再包装为 `cmd /d /v:off /s /c`，比 Python 的 `shell=True` 严格得多。禁止的是自行拼接字符串，而非这个开关。
-- **`plugin.txt` 的 `shell=use` 对应 `ShellExecuteEx`，而非命令处理器。** [官方规格](https://w.atwiki.jp/utaou/pages/64.html)原文为「通常はCreateProcessでプラグインが起動されますが、shell=useを指定した場合はShellExecuteExで起動されます。これにより、exeファイル以外を実行することができます(jar、html、htaなど)」。即实际运行的是系统为该扩展名注册的处理程序，`plugin.txt` 中并未指定该程序；`.bat` 恰好由 `cmd.exe` 处理，不要将这一巧合当作定义。**HelloUTAU 是沿用 `ShellExecuteEx` 还是按扩展名自行分派，尚未确定**，确定之前不要在代码中假设任何一种方式。
+- **`plugin.txt` 的 `shell=use` 对应 `ShellExecuteEx`，而非命令处理器。** [官方规格](https://w.atwiki.jp/utaou/pages/64.html)原文为「通常はCreateProcessでプラグインが起動されますが、shell=useを指定した場合はShellExecuteExで起動されます。これにより、exeファイル以外を実行することができます(jar、html、htaなど)」。即实际运行的是系统为该扩展名注册的处理程序，`plugin.txt` 中并未指定该程序；`.bat` 恰好由 `cmd.exe` 处理，不要将这一巧合当作定义。**HelloUtau 是沿用 `ShellExecuteEx` 还是按扩展名自行分派，尚未确定**，确定之前不要在代码中假设任何一种方式。
 - **默认不使用从工程文件读取的引擎路径。** `Tool1`、`Tool2` 和音符上的 `$patch` 是写在工程中的路径，直接执行等于让工程决定运行哪个程序。应使用本地配置的引擎，除非用户在明确的提示中选择信任。这是「执行任意程序」，与上一条的「注入任意命令」不同，两者都必须防范。
 - **但必须原样保存。** 逐工程配置引擎是 UTAU 的正常用法，不保存等于删除用户的设置，那是以安全为借口破坏数据。**需要防范的是未经询问即执行，而非保存。** 这一规则同样适用于 `$patch` 和 `userData`。
 - `.ust` 中的所有路径在使用前解析为绝对路径并进行检查，相对路径不得超出工程目录。
@@ -117,7 +117,7 @@ resampler / wavtool 的命令行参数由 `utau::ResamplerArguments::arguments()
 
 本仓库自己的规范是 [`docs/Development.md`](docs/Development.md)，**它才是权威**，以下仅为摘要。
 
-- 共两个模块，每个模块是**一组库**：`hellokit`（命名空间 `hello::kit`，Qt Core，产出 `HelloKitDocument` 等）和 `helloutau`（命名空间 `hello::daw`，Qt Widgets，产出 `HelloUtauWidgets` 等以及 `HelloUTAU` 可执行文件）。**`hellokit` 不链接 QtWidgets**，核心逻辑不依赖 GUI 才便于测试。
+- 共两个模块，每个模块是**一组库**：`hellokit`（命名空间 `hello::kit`，Qt Core，产出 `HelloKitDocument` 等）和 `helloutau`（命名空间 `hello::daw`，Qt Widgets，产出 `HelloUtauWidgets` 等以及 `HelloUtau` 可执行文件）。**`hellokit` 不链接 QtWidgets**，核心逻辑不依赖 GUI 才便于测试。
 - **应用同样由库和薄驱动组成**，参照 lldb 的 `liblldb` + `tools/driver`。`tools/driver/main.cpp` 只包含入口，其余逻辑位于库中，因为可执行文件无法链接进测试程序，而库可以。
 - 每个模块包含一个 `include/` 和一个 `lib/`，参照 synthrt：`hellokit/include/hellokit/Document/` 对应 `hellokit/lib/Document/`。**include 的命名空间是模块名而非目标名**，写 `<hellokit/Document/PayloadCodec.h>`。不使用 `sync_include`。私有头文件与源文件放在一起，加 `_p.h` 后缀，尽量少用。
 - **大小写分三个层次**：CMake 包名与 `project()` 小写（`hellokit`、`helloutauConfig.cmake.in`），子库目标与 dll 大驼峰（`HelloKitDocument`），include 命名空间小写。

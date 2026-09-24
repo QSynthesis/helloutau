@@ -133,7 +133,7 @@ namespace hello::kit {
                     if (!directory.config) {
                         complain(
                             diagnostics,
-                            VoiceBankSource::tr("The HelloUTAU configuration in \"%1\" could not "
+                            VoiceBankSource::tr("The HelloUtau configuration in \"%1\" could not "
                                                 "be read, so its encoding must be selected again.")
                                 .arg(displayed(absolute)));
                     }

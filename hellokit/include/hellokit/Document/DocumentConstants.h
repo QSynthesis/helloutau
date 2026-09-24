@@ -14,7 +14,7 @@
 /// leads to silent divergence.
 ///
 /// **UTAU defaults are not repeated here.** stdutau already defines the defaults of the UST
-/// format, and they are used from there rather than copied. Only values specific to HelloUTAU
+/// format, and they are used from there rather than copied. Only values specific to HelloUtau
 /// are defined below.
 
 namespace hello::kit {
@@ -26,7 +26,7 @@ namespace hello::kit {
     /// produced by importers.
     ///
     /// \note stdutau defines its own \c DEFAULT_LYRIC , which serves a different purpose. That
-    ///       constant describes UST behavior. This one is a HelloUTAU decision, and the two may
+    ///       constant describes UST behavior. This one is a HelloUtau decision, and the two may
     ///       differ.
     inline constexpr char defaultLyric[] = "la";
 
@@ -42,7 +42,7 @@ namespace hello::kit {
 
     /// \name Control note
     ///
-    /// The first note of a \c .ust written by HelloUTAU, which stores data that UST cannot
+    /// The first note of a \c .ust written by HelloUtau, which stores data that UST cannot
     /// represent. No voice bank has a sample for this lyric, so UTAU finds none, produces no
     /// sound and spends no rendering time on it, while the note still occupies its length. The
     /// lyric is deliberately conspicuous, so that a user opening the file in UTAU can recognize

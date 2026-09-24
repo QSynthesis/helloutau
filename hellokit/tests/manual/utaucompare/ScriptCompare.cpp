@@ -28,7 +28,7 @@ namespace utaucompare {
         constexpr int ENVELOPE_AT = 4;
 
         /// Below this tolerance, two numbers are considered equal. It is one thousandth of a
-        /// millisecond, a twentieth of a sample at 44.1 kHz. UTAU rounds on output and HelloUTAU
+        /// millisecond, a twentieth of a sample at 44.1 kHz. UTAU rounds on output and HelloUtau
         /// does not, and \c 11.539 versus \c 11.5389 reflects only that.
         constexpr double SAME_NUMBER = 1e-3;
 

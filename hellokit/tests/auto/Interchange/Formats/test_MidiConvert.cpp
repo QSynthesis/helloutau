@@ -320,7 +320,7 @@ private Q_SLOTS:
     }
 
     // A lyric that the selected encoding cannot represent is not escaped. MIDI cannot record
-    // that the file was written by HelloUTAU, so an escape sequence would be read back as
+    // that the file was written by HelloUtau, so an escape sequence would be read back as
     // literal text.
     void a_lyric_the_encoding_cannot_hold_is_reported_not_escaped() {
         const fs::path path = fs::temp_directory_path() / "hellokit_lossyname.mid";

@@ -14,7 +14,7 @@ set(HELLOKIT_INSTALL_CONFIG_TEMPLATE
 )
 
 # Windows resource metadata.
-set(HELLOKIT_RC_DESCRIPTION "HelloUTAU core libraries")
+set(HELLOKIT_RC_DESCRIPTION "HelloUtau core libraries")
 set(HELLOKIT_RC_COPYRIGHT "Copyright (c) 2026-present SineStriker")
 
 function(_hellokit_common_configure_target _target)

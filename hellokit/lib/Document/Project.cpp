@@ -73,7 +73,7 @@ namespace hello::kit {
     bool Project::save(const std::filesystem::path &path, DiagnosticList &diagnostics) const {
         if (tracks.size() != 1) {
             JsonFields::fail(diagnostics,
-                             tr("This version of HelloUTAU supports one track per project, but "
+                             tr("This version of HelloUtau supports one track per project, but "
                                 "this project contains %1.")
                                  .arg(tracks.size()));
             return false;
@@ -106,7 +106,7 @@ namespace hello::kit {
             return std::nullopt;
         }
         if (!document.isObject()) {
-            JsonFields::fail(diagnostics, tr("This file is not a HelloUTAU project."));
+            JsonFields::fail(diagnostics, tr("This file is not a HelloUtau project."));
             return std::nullopt;
         }
 
@@ -115,7 +115,7 @@ namespace hello::kit {
         // Checked first, because a foreign file may still be valid JSON and would otherwise be
         // read field by field into a project consisting of defaults.
         if (root.value(QLatin1String(KeyFormat)).toString() != QLatin1String(FormatName)) {
-            JsonFields::fail(diagnostics, tr("This file is not a HelloUTAU project."));
+            JsonFields::fail(diagnostics, tr("This file is not a HelloUtau project."));
             return std::nullopt;
         }
 
@@ -126,7 +126,7 @@ namespace hello::kit {
         }
         if (int(version.toDouble()) > usthFormatVersion) {
             JsonFields::fail(diagnostics,
-                             tr("This project was saved by a newer version of HelloUTAU and "
+                             tr("This project was saved by a newer version of HelloUtau and "
                                 "cannot be opened by this version."));
             return std::nullopt;
         }
@@ -143,7 +143,7 @@ namespace hello::kit {
         const auto trackArray = tracks.toArray();
         if (trackArray.size() != 1) {
             JsonFields::fail(diagnostics,
-                             tr("This project contains %1 tracks, but this version of HelloUTAU "
+                             tr("This project contains %1 tracks, but this version of HelloUtau "
                                 "supports only one.")
                                  .arg(trackArray.size()));
             return std::nullopt;

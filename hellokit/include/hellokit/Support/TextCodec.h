@@ -82,7 +82,7 @@ namespace hello::kit {
         ///          distinguished from one inserted by escaping, and a lyric containing
         ///          <tt>\\u0041</tt> would be read back as \c A.
         ///
-        /// \warning **Applies only to files written by HelloUTAU in an encoding other than
+        /// \warning **Applies only to files written by HelloUtau in an encoding other than
         ///          UTF-8.** A UST from UTAU or another editor does not use this scheme, and
         ///          unescaping it would remove its backslashes. Files written this way are
         ///          identified by the control note, which records the encoding.

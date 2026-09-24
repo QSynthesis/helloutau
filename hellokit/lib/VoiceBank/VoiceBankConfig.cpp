@@ -59,13 +59,13 @@ namespace hello::kit {
             return std::nullopt;
         }
         if (!document.isObject()) {
-            fail(diagnostics, tr("This file is not a HelloUTAU voice bank configuration."));
+            fail(diagnostics, tr("This file is not a HelloUtau voice bank configuration."));
             return std::nullopt;
         }
 
         auto root = document.object();
         if (root.value(QLatin1String(KeyFormat)).toString() != QLatin1String(FormatName)) {
-            fail(diagnostics, tr("This file is not a HelloUTAU voice bank configuration."));
+            fail(diagnostics, tr("This file is not a HelloUtau voice bank configuration."));
             return std::nullopt;
         }
 

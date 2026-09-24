@@ -10,7 +10,7 @@
 
 **无需一致的是软件本身。** 包括界面、交互、快捷键、性能、内部结构和并发能力。UTAU 在这些方面的表现是一个 2013 年的 VB6 程序的水平，没有沿用的理由。
 
-**判据必须可机械执行。** 「与 UTAU 一致」最严格的检验是：同一工程分别用 UTAU 和 HelloUTAU 渲染，比较输出的 wav。两者使用相同的引擎（`resampler.exe` / `wavtool.exe`），因此差异只可能来自参数计算。该比较应实现为可重复执行的测试，而非依赖人工判断。
+**判据必须可机械执行。** 「与 UTAU 一致」最严格的检验是：同一工程分别用 UTAU 和 HelloUtau 渲染，比较输出的 wav。两者使用相同的引擎（`resampler.exe` / `wavtool.exe`），因此差异只可能来自参数计算。该比较应实现为可重复执行的测试，而非依赖人工判断。
 
 ## 从 QSynthesis 沿用的内容
 
@@ -44,7 +44,7 @@ QSynthesis 是同一作者已停止维护的前作，副本位于 `.cache/QSynth
 
 ### 一、数据层
 
-不涉及界面。本阶段完成后 HelloUTAU 尚不可用，但已能正确读取和写出 UTAU 的全部数据。
+不涉及界面。本阶段完成后 HelloUtau 尚不可用，但已能正确读取和写出 UTAU 的全部数据。
 
 - `HelloKitSupport`：各模块共用、不属于具体业务的基础设施。编码策略的实现：编码的记录与读取（`_USTH_`、`hello-config.json`、`plugin.json`）、转义与还原、非 Windows 平台上的 ANSI 代码页转换（winacp）。磁盘变化提示：`FileSystemWatcher` 及其启动的 `hello-fswatcher`。
 - `HelloKitDocument`：`_USTH_` 控制音符的读写，`.usth` 与 `.ust` 的双向转换，控制音符写入与读取的一一对应。`PayloadCodec` 已完成。
@@ -59,7 +59,7 @@ MIDI 导入属于「兼容周边」类别，但优先级被提至最高，并且
 
 ### 二、合成
 
-仍不涉及界面。本阶段完成后 HelloUTAU 能够输出音频。
+仍不涉及界面。本阶段完成后 HelloUtau 能够输出音频。
 
 - `HelloKitSynth`：用 `utau::Synth::calc` 计算参数，用 `stdc::Popen` 启动引擎，**以参数数组传递，不拼接命令行**，见 `AGENTS.md` 的安全底线。
 - 多线程调度，结构参考 QSynthesis 的 `Frontend/Process/`。

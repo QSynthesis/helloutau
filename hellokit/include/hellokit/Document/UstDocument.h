@@ -86,7 +86,7 @@ namespace hello::kit {
         std::optional<QString> settledCharset() const;
 
         /// Returns whether the control note is present, which identifies a file written by
-        /// HelloUTAU.
+        /// HelloUtau.
         ///
         /// Determines how the text must be read: escape sequences are meaningful only in a file
         /// written with them.

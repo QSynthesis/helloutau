@@ -1,5 +1,5 @@
 /// \file
-/// Converts between the formats supported by HelloUTAU, from the command line.
+/// Converts between the formats supported by HelloUtau, from the command line.
 ///
 /// Its purpose is integration testing, which the unit tests cannot provide. \c UstDocument,
 /// \c Project and \c MidiReader are each tested separately with synthetic inputs, which does

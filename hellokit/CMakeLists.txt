@@ -1,7 +1,7 @@
 project(hellokit
     VERSION ${HELLO_VERSION}
     LANGUAGES CXX
-    DESCRIPTION "HelloUTAU core libraries"
+    DESCRIPTION "HelloUtau core libraries"
 )
 
 # ----------------------------------

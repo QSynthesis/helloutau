@@ -38,7 +38,7 @@ namespace hello::kit {
         QString outputFile;
 
         /// The directory for cached render fragments. UTAU updates this to match the file name
-        /// on save, and HelloUTAU does the same.
+        /// on save, and HelloUtau does the same.
         QString cacheDir;
 
         /// The engines specified by the project file, \c Tool1 and \c Tool2 in UST.

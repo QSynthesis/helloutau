@@ -980,7 +980,7 @@ namespace hello::kit {
                 const auto recorded = book.files.find(VoiceBankFile::Config);
                 if (recorded != book.files.end() && !directory.config) {
                     fail(diagnostics,
-                         tr("The HelloUTAU configuration in \"%1\" could not be read, so it is not "
+                         tr("The HelloUtau configuration in \"%1\" could not be read, so it is not "
                             "replaced and no file in this directory is saved.")
                              .arg(displayed(directory.path)));
                     ok = false;

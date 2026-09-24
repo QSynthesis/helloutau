@@ -6,7 +6,7 @@
 
 ## 职责边界
 
-**`HelloKitDocument` 负责 HelloUTAU 自身的格式，`HelloKitInterchange` 负责外部格式。**
+**`HelloKitDocument` 负责 HelloUtau 自身的格式，`HelloKitInterchange` 负责外部格式。**
 
 | | 归属 |
 |---|---|
@@ -282,7 +282,7 @@ public:
 
 **MIDI 导入的优先级高于所有其他格式。**
 
-UTAU 本体带有 MIDI 导入功能，但**其实现有缺陷，HelloUTAU 不予照搬**。这一点须特别记录，因为 [`AGENTS.md`](../AGENTS.md) 中规定「功能对齐时以 v0.4.18 的行为为准」，若不说明，日后可能有人以该规定为由将 HelloUTAU 的实现改回 UTAU 的行为。
+UTAU 本体带有 MIDI 导入功能，但**其实现有缺陷，HelloUtau 不予照搬**。这一点须特别记录，因为 [`AGENTS.md`](../AGENTS.md) 中规定「功能对齐时以 v0.4.18 的行为为准」，若不说明，日后可能有人以该规定为由将 HelloUtau 的实现改回 UTAU 的行为。
 
 **判据是导出的工程本身正确，而非与 UTAU 逐音符一致。**
 

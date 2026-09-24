@@ -26,8 +26,8 @@
 
 由此得出两条推论：
 
-- HelloUTAU 写出 UST 时绝不能创建自定义段落。
-- HelloUTAU 读取 UST 时遇到无法识别的段名，**静默跳过**，见 [`note.md`](../note.md)。
+- HelloUtau 写出 UST 时绝不能创建自定义段落。
+- HelloUtau 读取 UST 时遇到无法识别的段名，**静默跳过**，见 [`note.md`](../note.md)。
 
 ## 载荷：值中允许的内容
 
