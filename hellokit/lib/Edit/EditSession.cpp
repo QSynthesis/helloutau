@@ -38,15 +38,21 @@ namespace hello::kit {
             using Operation = ss::Action::Operation;
 
             EditSessionPrivate::registerChange(
-                session, ss::Action::StructAssign, [](const ss::Action &action, Operation) {
+                session, ss::Action::StructAssign,
+                [](const ss::Action &action, Operation operation) {
                     const auto &assign = static_cast<const ss::StructAssignAction &>(action);
-                    return std::make_shared<ValueChange>(assign.parent()->id(), assign.index());
+                    return std::make_shared<ValueChange>(assign.parent()->id(), assign.index(),
+                                                         assign.oldVariant(operation),
+                                                         assign.newVariant(operation));
                 });
 
             EditSessionPrivate::registerChange(
-                session, ss::Action::MappingAssign, [](const ss::Action &action, Operation) {
+                session, ss::Action::MappingAssign,
+                [](const ss::Action &action, Operation operation) {
                     const auto &assign = static_cast<const ss::MappingAssignAction &>(action);
-                    return std::make_shared<EntryChange>(assign.parent()->id(), assign.key());
+                    return std::make_shared<EntryChange>(assign.parent()->id(), assign.key(),
+                                                         assign.oldVariant(operation),
+                                                         assign.newVariant(operation));
                 });
 
             const auto bytesInsDel = [](const ss::Action &action, Operation) -> ChangePtr {

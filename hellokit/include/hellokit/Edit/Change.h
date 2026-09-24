@@ -5,6 +5,7 @@
 #include <utility>
 
 #include <QtCore/QString>
+#include <QtCore/QVariant>
 
 #include <hellokit/Edit/Slot.h>
 
@@ -59,35 +60,65 @@ namespace hello::kit {
 
     /// The value in the slot slot() of a record changed, including the replacement or removal of
     /// a child.
+    ///
+    /// oldValue() and newValue() hold the value before and after the change as stored in the
+    /// slot, or an invalid QVariant if the slot was empty or held a child.
     class ValueChange : public Change {
     public:
         static constexpr int Kind = Value;
 
-        inline ValueChange(NodeId node, int slot) : Change(Kind, node), m_slot(slot) {
+        inline ValueChange(NodeId node, int slot, QVariant oldValue, QVariant newValue)
+            : Change(Kind, node), m_slot(slot), m_oldValue(std::move(oldValue)),
+              m_newValue(std::move(newValue)) {
         }
 
         inline int slot() const {
             return m_slot;
         }
 
+        inline const QVariant &oldValue() const {
+            return m_oldValue;
+        }
+
+        inline const QVariant &newValue() const {
+            return m_newValue;
+        }
+
     private:
         int m_slot;
+        QVariant m_oldValue;
+        QVariant m_newValue;
     };
 
     /// The entry key() of a mapping was added, changed or removed.
+    ///
+    /// oldValue() and newValue() hold the value of the entry before and after the change, or an
+    /// invalid QVariant if the entry did not exist or held a child.
     class EntryChange : public Change {
     public:
         static constexpr int Kind = Entry;
 
-        inline EntryChange(NodeId node, QString key) : Change(Kind, node), m_key(std::move(key)) {
+        inline EntryChange(NodeId node, QString key, QVariant oldValue, QVariant newValue)
+            : Change(Kind, node), m_key(std::move(key)), m_oldValue(std::move(oldValue)),
+              m_newValue(std::move(newValue)) {
         }
 
         inline const QString &key() const {
             return m_key;
         }
 
+        inline const QVariant &oldValue() const {
+            return m_oldValue;
+        }
+
+        inline const QVariant &newValue() const {
+            return m_newValue;
+        }
+
     private:
         QString m_key;
+        QVariant m_oldValue;
+        QVariant m_newValue;
     };
 
     /// The elements of an array changed.

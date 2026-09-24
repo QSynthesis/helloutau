@@ -304,10 +304,14 @@ private Q_SLOTS:
         QVERIFY(title);
         QCOMPARE(title->node(), session.root());
         QCOMPARE(title->slot(), 0);
+        QCOMPARE(title->oldValue(), QVariant(QStringLiteral("title")));
+        QCOMPARE(title->newValue(), QVariant(QStringLiteral("x")));
         const auto tag = changeAt(changed, 1)->as<EntryChange>();
         QVERIFY(tag);
         QCOMPARE(tag->node(), session.tags());
         QCOMPARE(tag->key(), QStringLiteral("new"));
+        QVERIFY(!tag->oldValue().isValid());
+        QCOMPARE(tag->newValue(), QVariant(2));
         for (int i = 2; i < 5; ++i) {
             const auto array = changeAt(changed, i)->as<ArrayChange>();
             QVERIFY(array);
@@ -330,7 +334,14 @@ private Q_SLOTS:
         verifyList(changeAt(changed, 1), ListChange::AboutToBeRemoved, items, 2, 2);
         verifyList(changeAt(changed, 2), ListChange::Removed, items, 2, 2);
         QVERIFY(changeAt(changed, 3)->as<ValueChange>());
-        QVERIFY(changeAt(changed, 8)->as<ValueChange>());
+        const auto titleBack = changeAt(changed, 8)->as<ValueChange>();
+        QVERIFY(titleBack);
+        QCOMPARE(titleBack->oldValue(), QVariant(QStringLiteral("x")));
+        QCOMPARE(titleBack->newValue(), QVariant(QStringLiteral("title")));
+        const auto tagBack = changeAt(changed, 7)->as<EntryChange>();
+        QVERIFY(tagBack);
+        QCOMPARE(tagBack->oldValue(), QVariant(2));
+        QVERIFY(!tagBack->newValue().isValid());
     }
 
     void a_rollback_reports_the_inverse_changes() {
