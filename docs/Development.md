@@ -10,10 +10,12 @@
 
 | 模块 | 命名空间 | 产出 | 依赖 |
 |---|---|---|---|
-| `hellokit/` | `hello::kit` | `HelloKitDocument`、今后的 `HelloKitCore` 等 | Qt Core、stdutau、stdcorelib（私有）、substate（私有，仅 `HelloKitEdit`） |
+| `hellokit/` | `hello::kit` | `HelloKitDocument`、今后的 `HelloKitCore` 等 | Qt Core、stdutau、stdcorelib（私有）、substate（私有，仅 `HelloKitEditBase` 与 `HelloKitEdit`） |
 | `helloutau/` | `hello::daw` | `HelloUtauWidgets` 等，以及 `HelloUtau` 可执行文件 | Qt Widgets、hellokit |
 
 `hello` 仅作为外层命名空间，代码一律位于第二层。不要在 `hello` 中直接声明内容，也不要再增加第三层。
+
+**例外：`HelloKitEditBase` 位于第三层命名空间 `hello::kit::edit`。** 它是编辑层与文档无关的通用部分，稳定后将移入 substate，第三层命名空间使 `Slot`、`Range`、`Change`、`NodeRef` 等通用的名字在此之前不占用 `hello::kit`。移走后此例外取消。见 [`Editing.md`](Editing.md) 的「通用层与文档层」。
 
 **`hellokit` 不链接 QtWidgets。** 界面属于应用程序，核心逻辑不依赖 GUI 工具包才便于测试。
 
@@ -38,6 +40,8 @@ helloutau/tools/driver/main.cpp                  ← 目标 helloutau
 不使用 qmsetup 的 `sync_include`，`include/` 是实际存在的目录。
 
 仅供实现使用的私有头文件放在源文件旁边，并使用 `_p.h` 后缀。私有头文件会增加实现之间的耦合，应尽量少用。
+
+**例外：供其他目标实现时使用的私有头文件放在 `include/<模块>/<子库>/private/` 下**，参照 Qt 的做法，目前只有 `HelloKitEditBase` 的扩展接口。其中可以出现私有依赖的类型（如 `ss::`），因此使用它的目标须自行链接该依赖。它们不属于公开接口，文档层以外的代码不应使用。
 
 仅供多个实现文件复用且不独立编译的实现片段可以使用 `.cpp.inc` 后缀。普通声明仍应放在头文件中，普通实现仍应放在 `.cpp` 文件中。
 

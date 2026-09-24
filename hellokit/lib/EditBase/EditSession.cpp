@@ -10,7 +10,7 @@
 
 #include "ChangeLog_p.h"
 
-namespace hello::kit {
+namespace hello::kit::edit {
 
     namespace {
 

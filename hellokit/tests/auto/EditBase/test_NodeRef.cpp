@@ -1,10 +1,11 @@
 #include <QtTest/QTest>
 
-#include <hellokit/Edit/NodeRef.h>
+#include <hellokit/EditBase/NodeRef.h>
 
 #include "TestSession.h"
 
 using namespace hello::kit;
+using namespace hello::kit::edit;
 
 // The tests use a tree unrelated to UTAU, see TestSession.h.
 class test_NodeRef : public QObject {

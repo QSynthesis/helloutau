@@ -1,11 +1,11 @@
-#ifndef HELLOKIT_EDIT_NODEREF_H
-#define HELLOKIT_EDIT_NODEREF_H
+#ifndef HELLOKIT_EDITBASE_NODEREF_H
+#define HELLOKIT_EDITBASE_NODEREF_H
 
-#include <hellokit/Edit/EditSession.h>
-#include <hellokit/Edit/HelloKitEditGlobal.h>
-#include <hellokit/Edit/Slot.h>
+#include <hellokit/EditBase/EditSession.h>
+#include <hellokit/EditBase/HelloKitEditBaseGlobal.h>
+#include <hellokit/EditBase/Slot.h>
 
-namespace hello::kit {
+namespace hello::kit::edit {
 
     /// A handle of a node of an edit session, the base of the handles of a document such as
     /// NoteRef.
@@ -18,7 +18,7 @@ namespace hello::kit {
     /// handles.
     ///
     /// A handle refers to a node as a pointer does, therefore a const handle can modify the node.
-    class HELLOKIT_EDIT_EXPORT NodeRef {
+    class HELLOKIT_EDITBASE_EXPORT NodeRef {
     public:
         inline NodeRef() = default;
 
@@ -34,9 +34,7 @@ namespace hello::kit {
         }
 
         /// Returns whether the node exists and is in the tree of the session.
-        inline bool isValid() const {
-            return m_session && m_session->contains(m_id);
-        }
+        bool isValid() const;
 
         inline bool operator==(const NodeRef &RHS) const {
             return m_session == RHS.m_session && m_id == RHS.m_id;
@@ -53,4 +51,4 @@ namespace hello::kit {
 
 }
 
-#endif // HELLOKIT_EDIT_NODEREF_H
+#endif // HELLOKIT_EDITBASE_NODEREF_H

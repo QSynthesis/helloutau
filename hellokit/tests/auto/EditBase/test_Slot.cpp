@@ -5,10 +5,23 @@
 #include <QtCore/QString>
 #include <QtTest/QTest>
 
-#include <hellokit/Document/Note.h>
-#include <hellokit/Edit/Slot.h>
+#include <hellokit/EditBase/Slot.h>
 
-using namespace hello::kit;
+using namespace hello::kit::edit;
+
+namespace {
+
+    // A value type of a document, stored as one value, and an enumeration.
+    struct WholeValue {
+        int part = 0;
+    };
+
+    enum Kind {
+        First,
+        Second,
+    };
+
+}
 
 // The range of a slot has the type of its values, and a slot of a type that no range bounds
 // accepts no range. Both are properties of the types, therefore they are checked when this file
@@ -17,8 +30,8 @@ static_assert(std::is_same_v<RangeOf<int>, Range<int>>);
 static_assert(std::is_same_v<RangeOf<std::optional<double>>, Range<double>>);
 static_assert(std::is_same_v<RangeOf<QString>, NoRange>);
 static_assert(std::is_same_v<RangeOf<bool>, NoRange>);
-static_assert(std::is_same_v<RangeOf<PortamentoPoint::Type>, NoRange>);
-static_assert(std::is_same_v<RangeOf<std::optional<Envelope>>, NoRange>);
+static_assert(std::is_same_v<RangeOf<Kind>, NoRange>);
+static_assert(std::is_same_v<RangeOf<std::optional<WholeValue>>, NoRange>);
 static_assert(!std::is_constructible_v<decltype(Slot<QString>::range), Range<int>>);
 static_assert(std::is_constructible_v<decltype(Slot<int>::range), Range<int>>);
 

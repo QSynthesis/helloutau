@@ -3,9 +3,9 @@
 
 #include <hellokit/Document/Note.h>
 
-#include <hellokit/Edit/HelloKitEditGlobal.h>
+#include <hellokit/EditBase/private/FieldTable_p.h>
 
-#include "FieldTable_p.h"
+#include <hellokit/Edit/HelloKitEditGlobal.h>
 
 namespace hello::kit {
 
@@ -15,11 +15,11 @@ namespace hello::kit {
 
     /// Returns the record of the root of a project tree. The records of all other nodes are
     /// reachable from it through the fields.
-    HELLOKIT_EDIT_EXPORT const RecordInfo &projectRecord();
+    HELLOKIT_EDIT_EXPORT const edit::RecordInfo &projectRecord();
 
     /// Returns the record of the nodes of type \a nodeType, or \c nullptr if no record of a
     /// project tree has this type.
-    HELLOKIT_EDIT_EXPORT const RecordInfo *projectRecordOf(int nodeType);
+    HELLOKIT_EDIT_EXPORT const edit::RecordInfo *projectRecordOf(int nodeType);
 
 }
 

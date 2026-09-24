@@ -43,7 +43,7 @@ Qt 6 + CMake + C++17。构建脚本的组织方式参照 synthrt：`find_package
 
 **stdcorelib、stdutau 和 substate 均不取自 vcpkg，也均不作为子模块。** 三者都与本仓库同步开发，使用子模块指针会导致每次改动都必须先推送才能使用。分别构建并安装，配置时传入 `-Dstdcorelib_DIR=<prefix>/lib/cmake/stdcorelib`、`-Dstdutau_DIR=<prefix>/lib/cmake/stdutau` 和 `-Dsubstate_DIR=<prefix>/lib/cmake/substate`。`third-party/Dependencies.cmake` 统一执行 `find_package`，由根目录的 `CMakeLists.txt` 通过 `include()` 引入；若使用 `add_subdirectory`，导入目标只在该目录作用域内可见，其他模块无法使用。在 Windows 上，该文件还会将 DLL 复制到运行输出目录，vcpkg 的 applocal 不再负责这些库。
 
-**编辑层的文档模型使用 substate**（`stdware/substate`，包含不依赖 Qt 的 `substate` 与存放 `QVariant` 属性节点的 `qsubstate` 两个库），**仅作为 `HelloKitEdit` 的私有依赖**：`ss::` 类型不出现在任何公开头文件中，节点以 `NodeId` 引用，变更通知由编辑层转换为自己的信号。所有权、事务与撤销的设计见 substate 仓库的 `docs/Design.md`，编辑层的结构见 [`docs/Editing.md`](docs/Editing.md)。
+**编辑层的文档模型使用 substate**（`stdware/substate`，包含不依赖 Qt 的 `substate` 与存放 `QVariant` 属性节点的 `qsubstate` 两个库），**仅作为 `HelloKitEditBase` 与 `HelloKitEdit` 的私有依赖**：`ss::` 类型不出现在任何公开头文件中（`HelloKitEditBase` 的扩展接口在 `private/` 下，不属于公开接口），节点以 `NodeId` 引用，变更通知由编辑层转换为自己的信号。所有权、事务与撤销的设计见 substate 仓库的 `docs/Design.md`，编辑层的结构见 [`docs/Editing.md`](docs/Editing.md)。
 
 **Windows 的 ANSI 代码页由 `winacp` 转换**（`QSynthesis/winacp`，同样需自行构建安装，传入 `-Dwinacp_DIR=`，**私有依赖**）。UTAU 按写出文件的机器的代码页读写，因此 Shift_JIS、GBK 等编码的转换必须与 Windows 逐字节一致，才能原样往返。Qt 只有在包含 ICU 时才支持这些编码，而 macOS 版 Qt 不包含 ICU；macOS 自带的 Core Foundation 和 iconv 缺少 Windows 映射到私用区的数千个字符，并且会将部分字符编码为与 Windows 不同的字节。`winacp` 是从 Windows 导出的转换表，在三个平台上结果相同。**不要让这些代码页经由 Qt 或系统的转换。**
 

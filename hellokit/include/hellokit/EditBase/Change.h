@@ -1,5 +1,5 @@
-#ifndef HELLOKIT_EDIT_CHANGE_H
-#define HELLOKIT_EDIT_CHANGE_H
+#ifndef HELLOKIT_EDITBASE_CHANGE_H
+#define HELLOKIT_EDITBASE_CHANGE_H
 
 #include <memory>
 #include <utility>
@@ -7,9 +7,9 @@
 #include <QtCore/QString>
 #include <QtCore/QVariant>
 
-#include <hellokit/Edit/Slot.h>
+#include <hellokit/EditBase/Slot.h>
 
-namespace hello::kit {
+namespace hello::kit::edit {
 
     /// A change of a node of an edit session, reported by EditSession::changed().
     ///
@@ -197,4 +197,4 @@ namespace hello::kit {
 
 }
 
-#endif // HELLOKIT_EDIT_CHANGE_H
+#endif // HELLOKIT_EDITBASE_CHANGE_H

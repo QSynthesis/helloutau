@@ -1,12 +1,13 @@
 #include <QtTest/QSignalSpy>
 #include <QtTest/QTest>
 
-#include <hellokit/Edit/Change.h>
-#include <hellokit/Edit/EditSession.h>
+#include <hellokit/EditBase/Change.h>
+#include <hellokit/EditBase/EditSession.h>
 
 #include "TestSession.h"
 
 using namespace hello::kit;
+using namespace hello::kit::edit;
 
 // The tests use a tree unrelated to UTAU, see TestSession.h.
 class test_EditSession : public QObject {

@@ -7,17 +7,18 @@ namespace hello::kit {
     namespace {
 
         template <class T>
-        void put(ss::StructNodeBase &node, Slot<T> slot, const typename Slot<T>::ValueType &value) {
-            node.setAt(slot.index, SlotValue<T>::toVariant(value));
+        void put(ss::StructNodeBase &node, edit::Slot<T> slot,
+                 const typename edit::Slot<T>::ValueType &value) {
+            node.setAt(slot.index, edit::SlotValue<T>::toVariant(value));
         }
 
-        void put(ss::StructNodeBase &node, ChildSlot slot, std::unique_ptr<ss::Node> child) {
+        void put(ss::StructNodeBase &node, edit::ChildSlot slot, std::unique_ptr<ss::Node> child) {
             node.setAt(slot.index, std::move(child));
         }
 
         template <class T>
-        T get(const ss::StructNodeBase &node, Slot<T> slot) {
-            return SlotValue<T>::fromVariant(node.variant(slot.index));
+        T get(const ss::StructNodeBase &node, edit::Slot<T> slot) {
+            return edit::SlotValue<T>::fromVariant(node.variant(slot.index));
         }
 
         // Returns the record of type type in node, which the structure of the tree guarantees.
@@ -44,7 +45,7 @@ namespace hello::kit {
             QList<T> values;
             values.reserve(list.size());
             for (int i = 0; i < list.size(); ++i) {
-                values.push_back(fromTree<T>(list.at(i)));
+                values.push_back(edit::fromTree<T>(list.at(i)));
             }
             return values;
         }
@@ -102,10 +103,11 @@ namespace hello::kit {
     }
 
     template <>
-    Project fromTree<Project>(const ss::Node *node) {
+    Project edit::fromTree<Project>(const ss::Node *node) {
         const auto &record = recordOf<ProjectNode>(node, ProjectType);
         Project project;
-        project.settings = fromTree<ProjectSettings>(record.child(ProjectSlots::Settings.index));
+        project.settings =
+            edit::fromTree<ProjectSettings>(record.child(ProjectSlots::Settings.index));
         project.tracks = listOf<Track>(record.child(ProjectSlots::Tracks.index));
         project.unknownFields = unknownFieldsOf(record.child(ProjectSlots::UnknownFields.index));
         return project;
@@ -125,7 +127,7 @@ namespace hello::kit {
     }
 
     template <>
-    ProjectSettings fromTree<ProjectSettings>(const ss::Node *node) {
+    ProjectSettings edit::fromTree<ProjectSettings>(const ss::Node *node) {
         const auto &record = recordOf<SettingsNode>(node, SettingsType);
         ProjectSettings settings;
         settings.name = get(record, SettingsSlots::Name);
@@ -148,7 +150,7 @@ namespace hello::kit {
     }
 
     template <>
-    Track fromTree<Track>(const ss::Node *node) {
+    Track edit::fromTree<Track>(const ss::Node *node) {
         const auto &record = recordOf<TrackNode>(node, TrackType);
         Track track;
         track.name = get(record, TrackSlots::Name);
@@ -186,7 +188,7 @@ namespace hello::kit {
     }
 
     template <>
-    Note fromTree<Note>(const ss::Node *node) {
+    Note edit::fromTree<Note>(const ss::Node *node) {
         const auto &record = recordOf<NoteNode>(node, NoteType);
         Note note;
         note.lyric = get(record, NoteSlots::Lyric);
@@ -204,7 +206,7 @@ namespace hello::kit {
         note.vibrato = get(record, NoteSlots::Vibrato);
         note.portamento = listOf<PortamentoPoint>(record.child(NoteSlots::Portamento.index));
         if (const auto pitchBend = record.child(NoteSlots::PitchBend.index)) {
-            note.pitchBend = fromTree<PitchBend>(pitchBend);
+            note.pitchBend = edit::fromTree<PitchBend>(pitchBend);
         }
         note.label = get(record, NoteSlots::Label);
         note.direct = get(record, NoteSlots::Direct);
@@ -224,7 +226,7 @@ namespace hello::kit {
     }
 
     template <>
-    PortamentoPoint fromTree<PortamentoPoint>(const ss::Node *node) {
+    PortamentoPoint edit::fromTree<PortamentoPoint>(const ss::Node *node) {
         const auto &record = recordOf<PortamentoPointNode>(node, PortamentoPointType);
         PortamentoPoint point;
         point.x = get(record, PortamentoSlots::X);
@@ -245,7 +247,7 @@ namespace hello::kit {
     }
 
     template <>
-    PitchBend fromTree<PitchBend>(const ss::Node *node) {
+    PitchBend edit::fromTree<PitchBend>(const ss::Node *node) {
         const auto &record = recordOf<PitchBendNode>(node, PitchBendType);
         PitchBend pitchBend;
         pitchBend.start = get(record, PitchBendSlots::Start);

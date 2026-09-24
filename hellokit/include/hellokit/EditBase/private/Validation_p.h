@@ -1,5 +1,5 @@
-#ifndef HELLOKIT_EDIT_VALIDATION_P_H
-#define HELLOKIT_EDIT_VALIDATION_P_H
+#ifndef HELLOKIT_EDITBASE_PRIVATE_VALIDATION_P_H
+#define HELLOKIT_EDITBASE_PRIVATE_VALIDATION_P_H
 
 #include <optional>
 
@@ -8,11 +8,11 @@
 
 #include <qsubstate/StructNode.h>
 
-#include <hellokit/Edit/Slot.h>
+#include <hellokit/EditBase/Slot.h>
 
 #include "EditSession_p.h"
 
-namespace hello::kit {
+namespace hello::kit::edit {
 
     /// The checks that the validators of a document compose.
     struct Validation {
@@ -59,4 +59,4 @@ namespace hello::kit {
 
 }
 
-#endif // HELLOKIT_EDIT_VALIDATION_P_H
+#endif // HELLOKIT_EDITBASE_PRIVATE_VALIDATION_P_H

@@ -17,7 +17,7 @@ class test_ProjectFields : public QObject {
     Q_OBJECT
 
 private:
-    static const RecordInfo &recordOf(int nodeType) {
+    static const edit::RecordInfo &recordOf(int nodeType) {
         const auto record = projectRecordOf(nodeType);
         Q_ASSERT(record);
         return *record;
@@ -25,19 +25,19 @@ private:
 
     // The formats of the value types of a project, which the field table holds.
 
-    static const ValueFormat &envelopeFormat() {
+    static const edit::ValueFormat &envelopeFormat() {
         return *recordOf(NoteType).field(u"envelope")->format;
     }
 
-    static const ValueFormat &vibratoFormat() {
+    static const edit::ValueFormat &vibratoFormat() {
         return *recordOf(NoteType).field(u"vibrato")->format;
     }
 
-    static const ValueFormat &portamentoTypeFormat() {
+    static const edit::ValueFormat &portamentoTypeFormat() {
         return *recordOf(PortamentoPointType).field(u"type")->format;
     }
 
-    static QStringList fieldNames(const RecordInfo &record) {
+    static QStringList fieldNames(const edit::RecordInfo &record) {
         QStringList names;
         for (const auto &field : record.fields) {
             names.push_back(QString::fromLatin1(field.name));
@@ -53,7 +53,7 @@ private:
     }
 
     // Appends record and every record reachable from it through its fields.
-    static void collect(const RecordInfo &record, QList<const RecordInfo *> &records) {
+    static void collect(const edit::RecordInfo &record, QList<const edit::RecordInfo *> &records) {
         if (records.contains(&record)) {
             return;
         }
@@ -65,7 +65,7 @@ private:
         }
     }
 
-    static void verifyRoundTrip(const ValueFormat &format, const QJsonValue &json) {
+    static void verifyRoundTrip(const edit::ValueFormat &format, const QJsonValue &json) {
         const auto value = format.fromJson(json);
         QVERIFY2(value.has_value(), format.typeName);
         QCOMPARE(format.toJson(*value), json);
@@ -83,7 +83,7 @@ private Q_SLOTS:
             {PitchBendType,       PitchBendSlots::count },
         };
 
-        QList<const RecordInfo *> records;
+        QList<const edit::RecordInfo *> records;
         collect(projectRecord(), records);
         QCOMPARE(int(records.size()), int(slotCounts.size()));
         for (const auto record : records) {
@@ -118,13 +118,15 @@ private Q_SLOTS:
         QVERIFY(!note.field(u"missing"));
 
         const auto length = note.field(u"length");
-        QCOMPARE(length->kind, FieldInfo::Value);
-        QCOMPARE(length->format, &ValueFormats::integer);
+        QCOMPARE(length->kind, edit::FieldInfo::Value);
+        QCOMPARE(QLatin1String(length->format->typeName),
+                 QLatin1String(edit::ValueFormats::integer.typeName));
         QVERIFY(!length->optional);
         QVERIFY(length->range.has_value());
 
         const auto intensity = note.field(u"intensity");
-        QCOMPARE(intensity->format, &ValueFormats::number);
+        QCOMPARE(QLatin1String(intensity->format->typeName),
+                 QLatin1String(edit::ValueFormats::number.typeName));
         QVERIFY(intensity->optional);
 
         QCOMPARE(QLatin1String(note.field(u"envelope")->format->typeName),
@@ -132,52 +134,40 @@ private Q_SLOTS:
         QVERIFY(note.field(u"envelope")->optional);
 
         const auto portamento = note.field(u"portamento");
-        QCOMPARE(portamento->kind, FieldInfo::List);
+        QCOMPARE(portamento->kind, edit::FieldInfo::List);
         QCOMPARE(portamento->record, &recordOf(PortamentoPointType));
 
         const auto pitchBend = note.field(u"pitchBend");
-        QCOMPARE(pitchBend->kind, FieldInfo::Record);
+        QCOMPARE(pitchBend->kind, edit::FieldInfo::Record);
         QVERIFY(pitchBend->optional);
 
         const auto values = recordOf(PitchBendType).field(u"values");
-        QCOMPARE(values->kind, FieldInfo::Array);
+        QCOMPARE(values->kind, edit::FieldInfo::Array);
         QCOMPARE(values->arrayType, int(PitchValuesType));
 
-        QCOMPARE(note.field(u"userData")->kind, FieldInfo::Mapping);
-        QCOMPARE(note.field(u"userData")->format, &ValueFormats::string);
+        QCOMPARE(note.field(u"userData")->kind, edit::FieldInfo::Mapping);
+        QCOMPARE(QLatin1String(note.field(u"userData")->format->typeName),
+                 QLatin1String(edit::ValueFormats::string.typeName));
 
         const auto settings = projectRecord().field(u"settings");
-        QCOMPARE(settings->kind, FieldInfo::Record);
+        QCOMPARE(settings->kind, edit::FieldInfo::Record);
         QVERIFY(!settings->optional);
-        QCOMPARE(projectRecord().field(u"unknownFields")->format, &ValueFormats::json);
+        QCOMPARE(QLatin1String(projectRecord().field(u"unknownFields")->format->typeName),
+                 QLatin1String(edit::ValueFormats::json.typeName));
     }
 
+    // The formats of the value types of a project. The formats of the generic layer are tested
+    // in test_FieldTable.
     void each_format_reads_back_the_json_it_writes() {
         const auto project = richProject();
         const auto note = project.tracks.first().notes.first().toJson();
 
-        verifyRoundTrip(ValueFormats::string, QStringLiteral("a"));
-        verifyRoundTrip(ValueFormats::integer, -3);
-        verifyRoundTrip(ValueFormats::number, 1.5);
-        verifyRoundTrip(ValueFormats::boolean, false);
-        verifyRoundTrip(ValueFormats::json, QJsonArray{1, QStringLiteral("b")});
         verifyRoundTrip(envelopeFormat(), note.value(QStringLiteral("envelope")));
         verifyRoundTrip(vibratoFormat(), note.value(QStringLiteral("vibrato")));
         verifyRoundTrip(portamentoTypeFormat(), QStringLiteral("Linear"));
     }
 
-    void an_integer_has_no_fractional_part_and_fits_an_int() {
-        QCOMPARE(ValueFormats::integer.fromJson(3)->toInt(), 3);
-        QVERIFY(!ValueFormats::integer.fromJson(1.5));
-        QVERIFY(!ValueFormats::integer.fromJson(1e10));
-        QVERIFY(!ValueFormats::integer.fromJson(-1e10));
-        QVERIFY(!ValueFormats::integer.fromJson(QStringLiteral("3")));
-    }
-
     void a_value_of_another_type_is_refused() {
-        QVERIFY(!ValueFormats::string.fromJson(1));
-        QVERIFY(!ValueFormats::number.fromJson(QStringLiteral("1")));
-        QVERIFY(!ValueFormats::boolean.fromJson(1));
         QVERIFY(!envelopeFormat().fromJson(QStringLiteral("envelope")));
         QVERIFY(!vibratoFormat().fromJson(180));
         QVERIFY(!portamentoTypeFormat().fromJson(1));

@@ -1,6 +1,8 @@
-#ifndef HELLOKIT_EDIT_FIELDTABLE_P_H
-#define HELLOKIT_EDIT_FIELDTABLE_P_H
+#ifndef HELLOKIT_EDITBASE_PRIVATE_FIELDTABLE_P_H
+#define HELLOKIT_EDITBASE_PRIVATE_FIELDTABLE_P_H
 
+#include <cmath>
+#include <limits>
 #include <memory>
 #include <optional>
 
@@ -14,10 +16,10 @@
 
 #include <hellokit/Support/Diagnostic.h>
 
-#include <hellokit/Edit/HelloKitEditGlobal.h>
-#include <hellokit/Edit/Slot.h>
+#include <hellokit/EditBase/HelloKitEditBaseGlobal.h>
+#include <hellokit/EditBase/Slot.h>
 
-namespace hello::kit {
+namespace hello::kit::edit {
 
     /// The conversion of the values of a field between JSON, the notation of commands and logs,
     /// and the QVariant stored in a node.
@@ -32,18 +34,87 @@ namespace hello::kit {
         std::optional<QVariant> (*fromJson)(const QJsonValue &json);
     };
 
+    /// The conversions of the formats in ValueFormats.
+    struct ValueConversions {
+        static inline QJsonValue stringToJson(const QVariant &value) {
+            return SlotValue<QString>::fromVariant(value);
+        }
+
+        static inline std::optional<QVariant> stringFromJson(const QJsonValue &json) {
+            if (!json.isString()) {
+                return std::nullopt;
+            }
+            return SlotValue<QString>::toVariant(json.toString());
+        }
+
+        static inline QJsonValue integerToJson(const QVariant &value) {
+            return SlotValue<int>::fromVariant(value);
+        }
+
+        static inline std::optional<QVariant> integerFromJson(const QJsonValue &json) {
+            const auto number = json.toDouble();
+            if (!json.isDouble() || std::trunc(number) != number ||
+                number < std::numeric_limits<int>::min() ||
+                number > std::numeric_limits<int>::max()) {
+                return std::nullopt;
+            }
+            return SlotValue<int>::toVariant(int(number));
+        }
+
+        static inline QJsonValue numberToJson(const QVariant &value) {
+            return SlotValue<double>::fromVariant(value);
+        }
+
+        static inline std::optional<QVariant> numberFromJson(const QJsonValue &json) {
+            if (!json.isDouble()) {
+                return std::nullopt;
+            }
+            return SlotValue<double>::toVariant(json.toDouble());
+        }
+
+        static inline QJsonValue booleanToJson(const QVariant &value) {
+            return SlotValue<bool>::fromVariant(value);
+        }
+
+        static inline std::optional<QVariant> booleanFromJson(const QJsonValue &json) {
+            if (!json.isBool()) {
+                return std::nullopt;
+            }
+            return SlotValue<bool>::toVariant(json.toBool());
+        }
+
+        static inline QJsonValue jsonToJson(const QVariant &value) {
+            return value.value<QJsonValue>();
+        }
+
+        static inline std::optional<QVariant> jsonFromJson(const QJsonValue &json) {
+            return QVariant::fromValue(json);
+        }
+    };
+
     /// The formats of the value types that the generic layer supports.
-    struct HELLOKIT_EDIT_EXPORT ValueFormats {
-        static const ValueFormat string;
+    ///
+    /// They are defined in this header rather than exported, because the address of an object
+    /// imported from another library is not a constant expression, and a field table refers to
+    /// them. Each library therefore holds its own copy, and the address of a format identifies it
+    /// only within one library.
+    struct ValueFormats {
+        static constexpr ValueFormat string{"string", ValueConversions::stringToJson,
+                                            ValueConversions::stringFromJson};
 
         /// A number without a fractional part within the range of \c int.
-        static const ValueFormat integer;
+        static constexpr ValueFormat integer{"integer", ValueConversions::integerToJson,
+                                             ValueConversions::integerFromJson};
 
-        static const ValueFormat number;
-        static const ValueFormat boolean;
+        static constexpr ValueFormat number{"number", ValueConversions::numberToJson,
+                                            ValueConversions::numberFromJson};
+
+        static constexpr ValueFormat boolean{"boolean", ValueConversions::booleanToJson,
+                                             ValueConversions::booleanFromJson};
 
         /// Any JSON value, stored as a \c QJsonValue.
-        static const ValueFormat json;
+        static constexpr ValueFormat json{"JSON value", ValueConversions::jsonToJson,
+                                          ValueConversions::jsonFromJson};
     };
 
     /// Returns the format of the values of type \a T. A document declares an explicit
@@ -244,4 +315,4 @@ namespace hello::kit {
 
 }
 
-#endif // HELLOKIT_EDIT_FIELDTABLE_P_H
+#endif // HELLOKIT_EDITBASE_PRIVATE_FIELDTABLE_P_H

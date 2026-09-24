@@ -1,5 +1,5 @@
-#ifndef HELLOKIT_EDIT_EDITSESSION_H
-#define HELLOKIT_EDIT_EDITSESSION_H
+#ifndef HELLOKIT_EDITBASE_EDITSESSION_H
+#define HELLOKIT_EDITBASE_EDITSESSION_H
 
 #include <memory>
 
@@ -8,11 +8,11 @@
 
 #include <hellokit/Support/Diagnostic.h>
 
-#include <hellokit/Edit/Change.h>
-#include <hellokit/Edit/HelloKitEditGlobal.h>
-#include <hellokit/Edit/Slot.h>
+#include <hellokit/EditBase/Change.h>
+#include <hellokit/EditBase/HelloKitEditBaseGlobal.h>
+#include <hellokit/EditBase/Slot.h>
 
-namespace hello::kit {
+namespace hello::kit::edit {
 
     /// The editing of a document stored as a tree of nodes, with transactions, undo history and
     /// change notification. See docs/Editing.md.
@@ -31,7 +31,7 @@ namespace hello::kit {
     /// \warning The session emits the signals while applying a change. A slot connected to them
     ///          may read the session but must not modify it. A modification in response to a
     ///          signal requires a queued connection.
-    class HELLOKIT_EDIT_EXPORT EditSession : public QObject {
+    class HELLOKIT_EDITBASE_EXPORT EditSession : public QObject {
         Q_OBJECT
     public:
         /// A transaction of a session, which collects modifications into one undo step.
@@ -46,7 +46,7 @@ namespace hello::kit {
         /// transaction forms the undo step, with its message. A nested transaction that ends
         /// without commit() discards the outermost one: its modifications remain applied until
         /// the outermost transaction ends, which then rolls back.
-        class HELLOKIT_EDIT_EXPORT Transaction {
+        class HELLOKIT_EDITBASE_EXPORT Transaction {
         public:
             Transaction(Transaction &&RHS) noexcept;
             ~Transaction();
@@ -138,7 +138,7 @@ namespace hello::kit {
     Q_SIGNALS:
         /// Reports \a change after it is applied, or before it is applied for
         /// ListChange::AboutToBeRemoved. The subclass of \a change describes the change.
-        void changed(const hello::kit::ChangePtr &change);
+        void changed(const hello::kit::edit::ChangePtr &change);
 
         /// The current position in the undo history changed to \a step by a commit, an undo or a
         /// redo. See currentStep().
@@ -158,4 +158,4 @@ namespace hello::kit {
 
 }
 
-#endif // HELLOKIT_EDIT_EDITSESSION_H
+#endif // HELLOKIT_EDITBASE_EDITSESSION_H

@@ -19,7 +19,7 @@ private:
     static QList<QJsonObject> logOf(ProjectSession &session, Edit edit, bool inTransaction = true) {
         QList<QJsonObject> entries;
         const auto connection = QObject::connect(
-            &session, &EditSession::changed, &session, [&](const ChangePtr &change) {
+            &session, &edit::EditSession::changed, &session, [&](const edit::ChangePtr &change) {
                 if (const auto entry = session.logEntry(*change)) {
                     entries.push_back(*entry);
                 }

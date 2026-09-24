@@ -2,10 +2,11 @@
 
 #include <substate/VectorNode.h>
 
-#include "EditSession_p.h"
+#include <hellokit/EditBase/private/EditSession_p.h>
+#include <hellokit/EditBase/private/Validation_p.h>
+
 #include "ProjectSession.h"
 #include "ProjectTree_p.h"
-#include "Validation_p.h"
 
 namespace hello::kit {
 
@@ -18,20 +19,20 @@ namespace hello::kit {
 
         // The ranges of the slots, one check per slot with a range in ProjectSchema.h.
 
-        void checkSettingsRanges(const SettingsNode &record, QList<Violation> &violations) {
-            Validation::checkRange(record, SettingsSlots::Tempo, violations);
+        void checkSettingsRanges(const SettingsNode &record, QList<edit::Violation> &violations) {
+            edit::Validation::checkRange(record, SettingsSlots::Tempo, violations);
         }
 
-        void checkNoteRanges(const NoteNode &record, QList<Violation> &violations) {
-            Validation::checkRange(record, NoteSlots::Length, violations);
-            Validation::checkRange(record, NoteSlots::NoteNum, violations);
-            Validation::checkRange(record, NoteSlots::Tempo, violations);
+        void checkNoteRanges(const NoteNode &record, QList<edit::Violation> &violations) {
+            edit::Validation::checkRange(record, NoteSlots::Length, violations);
+            edit::Validation::checkRange(record, NoteSlots::NoteNum, violations);
+            edit::Validation::checkRange(record, NoteSlots::Tempo, violations);
         }
 
         // The constraints between fields.
 
         // UST and .usth hold exactly one track, see docs/UsthFormat.md.
-        void checkTrackCount(const ProjectNode &record, QList<Violation> &violations) {
+        void checkTrackCount(const ProjectNode &record, QList<edit::Violation> &violations) {
             const auto tracks =
                 static_cast<const ss::VectorNode *>(record.child(ProjectSlots::Tracks.index));
             if (tracks->size() != 1) {
@@ -43,8 +44,8 @@ namespace hello::kit {
         }
 
         // The x of each anchor is its distance from the preceding anchor.
-        void checkEnvelope(const NoteNode &record, QList<Violation> &violations) {
-            const auto envelope = SlotValue<std::optional<Envelope>>::fromVariant(
+        void checkEnvelope(const NoteNode &record, QList<edit::Violation> &violations) {
+            const auto envelope = edit::SlotValue<std::optional<Envelope>>::fromVariant(
                 record.variant(NoteSlots::Envelope.index));
             if (!envelope) {
                 return;
@@ -64,13 +65,13 @@ namespace hello::kit {
 
         // The x of each point after the first is its distance from the preceding point. The first
         // point is relative to the start of the note and may precede it.
-        void checkPortamento(const NoteNode &record, QList<Violation> &violations) {
+        void checkPortamento(const NoteNode &record, QList<edit::Violation> &violations) {
             const auto points =
                 static_cast<const ss::VectorNode *>(record.child(NoteSlots::Portamento.index));
             for (int i = 1; i < points->size(); ++i) {
                 const auto &point = static_cast<const PortamentoPointNode &>(*points->at(i));
                 const auto x =
-                    SlotValue<double>::fromVariant(point.variant(PortamentoSlots::X.index));
+                    edit::SlotValue<double>::fromVariant(point.variant(PortamentoSlots::X.index));
                 if (x < 0) {
                     violations.push_back(
                         {NoteSlots::Portamento.index,
@@ -84,17 +85,17 @@ namespace hello::kit {
 
     }
 
-    void registerProjectValidators(EditSession &session) {
-        EditSessionPrivate::registerValidator(
-            session, ProjectType, [](const ss::Node *node, QList<Violation> &violations) {
+    void registerProjectValidators(edit::EditSession &session) {
+        edit::EditSessionPrivate::registerValidator(
+            session, ProjectType, [](const ss::Node *node, QList<edit::Violation> &violations) {
                 checkTrackCount(recordOf<ProjectNode>(node), violations);
             });
-        EditSessionPrivate::registerValidator(
-            session, SettingsType, [](const ss::Node *node, QList<Violation> &violations) {
+        edit::EditSessionPrivate::registerValidator(
+            session, SettingsType, [](const ss::Node *node, QList<edit::Violation> &violations) {
                 checkSettingsRanges(recordOf<SettingsNode>(node), violations);
             });
-        EditSessionPrivate::registerValidator(
-            session, NoteType, [](const ss::Node *node, QList<Violation> &violations) {
+        edit::EditSessionPrivate::registerValidator(
+            session, NoteType, [](const ss::Node *node, QList<edit::Violation> &violations) {
                 const auto &note = recordOf<NoteNode>(node);
                 checkNoteRanges(note, violations);
                 checkEnvelope(note, violations);

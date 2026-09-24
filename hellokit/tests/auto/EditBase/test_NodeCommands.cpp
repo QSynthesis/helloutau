@@ -3,10 +3,12 @@
 #include <QtCore/QJsonObject>
 #include <QtTest/QTest>
 
-#include "NodeCommands_p.h"
+#include <hellokit/EditBase/private/NodeCommands_p.h>
+
 #include "TestSession.h"
 
 using namespace hello::kit;
+using namespace hello::kit::edit;
 
 // The command lines are ordinary string literals rather than raw string literals, because moc
 // does not recognize the class of a file whose raw strings contain unpaired quotes.

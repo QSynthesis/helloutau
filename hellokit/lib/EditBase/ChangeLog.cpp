@@ -6,7 +6,7 @@
 
 #include "FieldTable_p.h"
 
-namespace hello::kit {
+namespace hello::kit::edit {
 
     namespace {
 

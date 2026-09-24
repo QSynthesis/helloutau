@@ -1,6 +1,6 @@
 # 编辑层 `HelloKitEdit`
 
-本文档规定 `hellokit/lib/Edit/` 的职责边界与接口结构。产出目标为 `HelloKitEdit`，include 路径为 `<hellokit/Edit/...>`，命名空间为 `hello::kit`。依赖 `HelloKitDocument` 与 `HelloKitVoiceBank`，节点树由 [substate](https://github.com/stdware/substate) 实现，作为私有依赖，见「节点树的实现」。
+本文档规定编辑层的职责边界与接口结构。编辑层由两个目标组成：通用部分 `HelloKitEditBase`（`hellokit/lib/EditBase/`，include 路径 `<hellokit/EditBase/...>`，命名空间 `hello::kit::edit`）与文档部分 `HelloKitEdit`（`hellokit/lib/Edit/`，include 路径 `<hellokit/Edit/...>`，命名空间 `hello::kit`），见「通用层与文档层」。依赖 `HelloKitDocument` 与 `HelloKitVoiceBank`，节点树由 [substate](https://github.com/stdware/substate) 实现，作为私有依赖，见「节点树的实现」。
 
 在 [`Roadmap.md`](Roadmap.md) 中，这是第三阶段「编辑器骨架」的**第一步**，先于窗口和钢琴卷帘。
 
@@ -373,14 +373,16 @@ set /tracks/0/notes/12/intensity null
 
 节点树、事务与撤销历史由 substate 实现。节点的所有权、动作、事务与存储引擎的设计见 substate 仓库的 `docs/Design.md`。
 
-**substate 是 `HelloKitEdit` 的私有依赖，`ss::` 类型不出现在任何公开头文件中。** 编辑层以 `NodeId` 引用节点，以本文档所述的类型化槽位和领域函数修改树，并将 substate 的变更通知转换为自己的信号，不使用 qsubstate 的 Qt 信号适配器。substate 的接口变动因此只影响编辑层的实现，「音符是什么、函数的含义是什么」这些困难且有价值的内容不随之变动。这与 `SynthRunner::makeEngineProcess()` 采用的是同一种隔离手法。
+**substate 是 `HelloKitEditBase` 与 `HelloKitEdit` 的私有依赖，`ss::` 类型不出现在任何公开头文件中**，只出现在 `HelloKitEditBase` 的扩展接口（`private/` 下的头文件）中。 编辑层以 `NodeId` 引用节点，以本文档所述的类型化槽位和领域函数修改树，并将 substate 的变更通知转换为自己的信号，不使用 qsubstate 的 Qt 信号适配器。substate 的接口变动因此只影响编辑层的实现，「音符是什么、函数的含义是什么」这些困难且有价值的内容不随之变动。这与 `SynthRunner::makeEngineProcess()` 采用的是同一种隔离手法。
 
 ### 通用层与文档层
 
-`HelloKitEdit` 分为两部分：
+编辑层分为两个目标：
 
-- **通用层**：`EditSession`、`NodeRef`、`Change` 与 `Slot.h`。不依赖 `HelloKitDocument`，不涉及任何文档的结构和节点种类，只提供树的安装、按 ID 查找、事务、撤销与变更通知。私有头文件 `EditSession_p.h` 是它的扩展接口：派生类经由它安装根节点，句柄经由它按 ID 取得节点，新节点种类经由它注册变更的翻译。取得节点时的类型比对只在断言中进行，因为句柄总是对应其自身类型的节点。测试以一棵与 UTAU 无关的树检验通用层。
-- **工程层**：`ProjectSession`（派生自 `EditSession`）、槽位表 `ProjectSchema.h`、句柄 `ProjectRefs.h`，以及私有的 `ProjectTree`（`Project` 与树的双向转换、节点类型编号与编解码器注册）。句柄的实现直接操作 substate 的节点。
+- **通用层 `HelloKitEditBase`**，命名空间 `hello::kit::edit`：`EditSession`、`NodeRef`、`Change`、`Slot.h` 与 `CommandSyntax`，以及扩展接口 `include/hellokit/EditBase/private/`：`EditSession_p.h`（派生类经由它安装根节点，句柄经由它按 ID 取得节点，新节点种类经由它注册变更的翻译、日志的写法和校验）、`NodeAccess_p.h`、字段表 `FieldTable_p.h`、按路径的命令 `NodeCommands_p.h`、变更日志 `ChangeLog_p.h` 与 `Validation_p.h`。它不链接 `HelloKitDocument`，因此不可能引用任何文档的结构；这一点由构建保证，而非约定。取得节点时的类型比对只在断言中进行，因为句柄总是对应其自身类型的节点。测试以一棵与 UTAU 无关的树检验通用层。
+- **工程层 `HelloKitEdit`**，命名空间 `hello::kit`：`ProjectSession`（派生自 `edit::EditSession`）、槽位表 `ProjectSchema.h`、句柄 `ProjectRefs.h`、领域函数 `ProjectEdits.h`、命令 `ProjectCommands.h`，以及私有的 `ProjectTree`（`Project` 与树的双向转换、节点类型编号与编解码器注册）、字段表 `ProjectFields` 与校验 `ProjectValidation`。句柄的实现直接操作 substate 的节点。
+
+通用层稳定后将移入 substate（依赖 Qt 的部分进入 qsubstate）。第三层命名空间 `edit` 是为此设的过渡：`Slot`、`Range`、`Change`、`NodeRef` 这类通用的名字在移走之前不占用 `hello::kit`，移走时只需更换命名空间，类名不变。扩展接口放在 `private/` 下，文档层以外的代码不应使用。
 
 音源作为第二种文档时，以同样的方式在通用层之上实现。
 

@@ -10,8 +10,9 @@
 
 #include <hellokit/Document/Project.h>
 
+#include <hellokit/EditBase/NodeRef.h>
+
 #include <hellokit/Edit/HelloKitEditGlobal.h>
-#include <hellokit/Edit/NodeRef.h>
 #include <hellokit/Edit/ProjectSchema.h>
 #include <hellokit/Edit/ProjectSession.h>
 
@@ -31,11 +32,12 @@ namespace hello::kit {
     // record type.
 
     /// The base of the handles of a project tree, which refer to a ProjectSession.
-    class HELLOKIT_EDIT_EXPORT ProjectNodeRef : public NodeRef {
+    class HELLOKIT_EDIT_EXPORT ProjectNodeRef : public edit::NodeRef {
     public:
         inline ProjectNodeRef() = default;
 
-        inline ProjectNodeRef(ProjectSession *session, NodeId id) : NodeRef(session, id) {
+        inline ProjectNodeRef(ProjectSession *session, edit::NodeId id)
+            : edit::NodeRef(session, id) {
         }
 
         inline ProjectSession *session() const {

@@ -284,12 +284,13 @@ private Q_SLOTS:
         };
         const auto run = [&script](ProjectSession &session) {
             QList<QJsonObject> entries;
-            const auto connection = QObject::connect(
-                &session, &EditSession::changed, &session, [&](const ChangePtr &change) {
-                    if (const auto entry = session.logEntry(*change)) {
-                        entries.push_back(*entry);
-                    }
-                });
+            const auto connection =
+                QObject::connect(&session, &edit::EditSession::changed, &session,
+                                 [&](const edit::ChangePtr &change) {
+                                     if (const auto entry = session.logEntry(*change)) {
+                                         entries.push_back(*entry);
+                                     }
+                                 });
             for (const auto &line : script) {
                 DiagnosticList diagnostics;
                 if (!ProjectCommands::execute(session, line, diagnostics)) {

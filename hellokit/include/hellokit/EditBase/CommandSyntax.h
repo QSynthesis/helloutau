@@ -1,5 +1,5 @@
-#ifndef HELLOKIT_EDIT_COMMANDSYNTAX_H
-#define HELLOKIT_EDIT_COMMANDSYNTAX_H
+#ifndef HELLOKIT_EDITBASE_COMMANDSYNTAX_H
+#define HELLOKIT_EDITBASE_COMMANDSYNTAX_H
 
 #include <optional>
 
@@ -11,9 +11,9 @@
 
 #include <hellokit/Support/Diagnostic.h>
 
-#include <hellokit/Edit/HelloKitEditGlobal.h>
+#include <hellokit/EditBase/HelloKitEditBaseGlobal.h>
 
-namespace hello::kit {
+namespace hello::kit::edit {
 
     /// An argument of a command, see CommandSyntax.
     struct CommandArgument {
@@ -55,8 +55,8 @@ namespace hello::kit {
     /// The quoting and escaping of strings and structures are those of JSON, therefore a value of
     /// a \c .usth file is written in a command as in the file. A line that is empty or begins
     /// with \c # after optional whitespace contains no command.
-    struct HELLOKIT_EDIT_EXPORT CommandSyntax {
-        Q_DECLARE_TR_FUNCTIONS(hello::kit::CommandSyntax)
+    struct HELLOKIT_EDITBASE_EXPORT CommandSyntax {
+        Q_DECLARE_TR_FUNCTIONS(hello::kit::edit::CommandSyntax)
     public:
         /// Returns the arguments of \a line, which are none for an empty line or a comment, or
         /// \c std::nullopt if \a line is malformed, with the reason in \a diagnostics.
@@ -74,4 +74,4 @@ namespace hello::kit {
 
 }
 
-#endif // HELLOKIT_EDIT_COMMANDSYNTAX_H
+#endif // HELLOKIT_EDITBASE_COMMANDSYNTAX_H

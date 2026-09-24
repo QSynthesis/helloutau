@@ -89,7 +89,7 @@ private Q_SLOTS:
         const auto project = richProject();
         ProjectSession session(project);
         const auto projectRef = ProjectRef(&session);
-        QSignalSpy changed(&session, &EditSession::changed);
+        QSignalSpy changed(&session, &edit::EditSession::changed);
 
         auto transaction = session.transaction(QStringLiteral("Nothing"));
         const auto settings = projectRef.settings();

@@ -1,5 +1,5 @@
-#ifndef HELLOKIT_EDIT_EDITSESSION_P_H
-#define HELLOKIT_EDIT_EDITSESSION_P_H
+#ifndef HELLOKIT_EDITBASE_PRIVATE_EDITSESSION_P_H
+#define HELLOKIT_EDITBASE_PRIVATE_EDITSESSION_P_H
 
 #include <functional>
 #include <map>
@@ -11,9 +11,9 @@
 #include <substate/Model.h>
 #include <substate/ModelObserver.h>
 
-#include <hellokit/Edit/EditSession.h>
+#include <hellokit/EditBase/EditSession.h>
 
-namespace hello::kit {
+namespace hello::kit::edit {
 
     /// Returns the change reported for \a action applied for \a operation, or \c nullptr if none
     /// is reported at that moment.
@@ -191,4 +191,4 @@ namespace hello::kit {
 
 }
 
-#endif // HELLOKIT_EDIT_EDITSESSION_P_H
+#endif // HELLOKIT_EDITBASE_PRIVATE_EDITSESSION_P_H

@@ -1,17 +1,17 @@
-#ifndef HELLOKIT_EDIT_CHANGELOG_P_H
-#define HELLOKIT_EDIT_CHANGELOG_P_H
+#ifndef HELLOKIT_EDITBASE_PRIVATE_CHANGELOG_P_H
+#define HELLOKIT_EDITBASE_PRIVATE_CHANGELOG_P_H
 
 #include <optional>
 
 #include <QtCore/QJsonObject>
 
-#include <hellokit/Edit/Change.h>
-#include <hellokit/Edit/EditSession.h>
-#include <hellokit/Edit/HelloKitEditGlobal.h>
+#include <hellokit/EditBase/Change.h>
+#include <hellokit/EditBase/EditSession.h>
+#include <hellokit/EditBase/HelloKitEditBaseGlobal.h>
 
 #include "EditSession_p.h"
 
-namespace hello::kit {
+namespace hello::kit::edit {
 
     /// The entries of the change log, one JSON object per change. See the section on the change
     /// log in docs/Editing.md.
@@ -19,7 +19,7 @@ namespace hello::kit {
     /// The entry of each kind of change is written by the LogWriter registered for the kind with
     /// EditSessionPrivate::registerLogWriter(). The kinds of this library are registered through
     /// the same interface as the kinds of node types added later.
-    struct HELLOKIT_EDIT_EXPORT ChangeLog {
+    struct HELLOKIT_EDITBASE_EXPORT ChangeLog {
         /// Returns the entry of \a change in \a session, or \c std::nullopt if the writer of its
         /// kind omits it. The entry of a kind without a writer records the kind and the node.
         ///
@@ -40,4 +40,4 @@ namespace hello::kit {
 
 }
 
-#endif // HELLOKIT_EDIT_CHANGELOG_P_H
+#endif // HELLOKIT_EDITBASE_PRIVATE_CHANGELOG_P_H

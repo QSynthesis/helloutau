@@ -7,7 +7,8 @@
 
 #include <hellokit/Document/Project.h>
 
-#include <hellokit/Edit/EditSession.h>
+#include <hellokit/EditBase/EditSession.h>
+
 #include <hellokit/Edit/HelloKitEditGlobal.h>
 
 namespace hello::kit {
@@ -18,7 +19,7 @@ namespace hello::kit {
     /// tree is the document while the session exists. A \c Project is a snapshot of the tree, for
     /// saving and rendering. The handles in ProjectRefs.h, obtained from a ProjectRef of the
     /// session, read and modify the tree.
-    class HELLOKIT_EDIT_EXPORT ProjectSession : public EditSession {
+    class HELLOKIT_EDIT_EXPORT ProjectSession : public edit::EditSession {
         Q_OBJECT
     public:
         /// Creates a session that edits a copy of \a project.
@@ -35,7 +36,7 @@ namespace hello::kit {
         /// The entry names the slot of \a change by its field in \c .usth, and writes values as
         /// in \c .usth. It requires the changed node, therefore it is called while \a change is
         /// reported by changed().
-        std::optional<QJsonObject> logEntry(const Change &change) const;
+        std::optional<QJsonObject> logEntry(const edit::Change &change) const;
     };
 
 }

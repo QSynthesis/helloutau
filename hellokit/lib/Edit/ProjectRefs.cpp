@@ -1,32 +1,34 @@
 #include "ProjectRefs.h"
 
-#include "NodeAccess_p.h"
+#include <hellokit/EditBase/private/NodeAccess_p.h>
+
 #include "ProjectTree_p.h"
 
 namespace hello::kit {
 
     template <>
-    struct NodeOf<ProjectRef> : NodeTraits<ProjectNode, ProjectType> {};
+    struct edit::NodeOf<ProjectRef> : edit::NodeTraits<ProjectNode, ProjectType> {};
     template <>
-    struct NodeOf<SettingsRef> : NodeTraits<SettingsNode, SettingsType> {};
+    struct edit::NodeOf<SettingsRef> : edit::NodeTraits<SettingsNode, SettingsType> {};
     template <>
-    struct NodeOf<TrackListRef> : ListTraits<TrackType> {};
+    struct edit::NodeOf<TrackListRef> : edit::ListTraits<TrackType> {};
     template <>
-    struct NodeOf<TrackRef> : NodeTraits<TrackNode, TrackType> {};
+    struct edit::NodeOf<TrackRef> : edit::NodeTraits<TrackNode, TrackType> {};
     template <>
-    struct NodeOf<NoteListRef> : ListTraits<NoteType> {};
+    struct edit::NodeOf<NoteListRef> : edit::ListTraits<NoteType> {};
     template <>
-    struct NodeOf<NoteRef> : NodeTraits<NoteNode, NoteType> {};
+    struct edit::NodeOf<NoteRef> : edit::NodeTraits<NoteNode, NoteType> {};
     template <>
-    struct NodeOf<PortamentoListRef> : ListTraits<PortamentoPointType> {};
+    struct edit::NodeOf<PortamentoListRef> : edit::ListTraits<PortamentoPointType> {};
     template <>
-    struct NodeOf<PortamentoPointRef> : NodeTraits<PortamentoPointNode, PortamentoPointType> {};
+    struct edit::NodeOf<PortamentoPointRef>
+        : edit::NodeTraits<PortamentoPointNode, PortamentoPointType> {};
     template <>
-    struct NodeOf<PitchBendRef> : NodeTraits<PitchBendNode, PitchBendType> {};
+    struct edit::NodeOf<PitchBendRef> : edit::NodeTraits<PitchBendNode, PitchBendType> {};
     template <>
-    struct NodeOf<UserDataRef> : MappingTraits {};
+    struct edit::NodeOf<UserDataRef> : edit::MappingTraits {};
     template <>
-    struct NodeOf<UnknownFieldsRef> : MappingTraits {};
+    struct edit::NodeOf<UnknownFieldsRef> : edit::MappingTraits {};
 
     // ProjectRef
 
@@ -34,456 +36,459 @@ namespace hello::kit {
     }
 
     SettingsRef ProjectRef::settings() const {
-        return NodeAccess::child<SettingsRef>(*this, ProjectSlots::Settings);
+        return edit::NodeAccess::child<SettingsRef>(*this, ProjectSlots::Settings);
     }
 
     TrackListRef ProjectRef::tracks() const {
-        return NodeAccess::child<TrackListRef>(*this, ProjectSlots::Tracks);
+        return edit::NodeAccess::child<TrackListRef>(*this, ProjectSlots::Tracks);
     }
 
     UnknownFieldsRef ProjectRef::unknownFields() const {
-        return NodeAccess::child<UnknownFieldsRef>(*this, ProjectSlots::UnknownFields);
+        return edit::NodeAccess::child<UnknownFieldsRef>(*this, ProjectSlots::UnknownFields);
     }
 
     Project ProjectRef::toProject() const {
-        return NodeAccess::toValue<Project>(*this);
+        return edit::NodeAccess::toValue<Project>(*this);
     }
 
     // SettingsRef
 
     QString SettingsRef::name() const {
-        return NodeAccess::value(*this, SettingsSlots::Name);
+        return edit::NodeAccess::value(*this, SettingsSlots::Name);
     }
 
     void SettingsRef::setName(const QString &name) const {
-        NodeAccess::setValue(*this, SettingsSlots::Name, name);
+        edit::NodeAccess::setValue(*this, SettingsSlots::Name, name);
     }
 
     double SettingsRef::tempo() const {
-        return NodeAccess::value(*this, SettingsSlots::Tempo);
+        return edit::NodeAccess::value(*this, SettingsSlots::Tempo);
     }
 
     void SettingsRef::setTempo(double tempo) const {
-        NodeAccess::setValue(*this, SettingsSlots::Tempo, tempo);
+        edit::NodeAccess::setValue(*this, SettingsSlots::Tempo, tempo);
     }
 
     QString SettingsRef::flags() const {
-        return NodeAccess::value(*this, SettingsSlots::Flags);
+        return edit::NodeAccess::value(*this, SettingsSlots::Flags);
     }
 
     void SettingsRef::setFlags(const QString &flags) const {
-        NodeAccess::setValue(*this, SettingsSlots::Flags, flags);
+        edit::NodeAccess::setValue(*this, SettingsSlots::Flags, flags);
     }
 
     QString SettingsRef::outputFile() const {
-        return NodeAccess::value(*this, SettingsSlots::OutputFile);
+        return edit::NodeAccess::value(*this, SettingsSlots::OutputFile);
     }
 
     void SettingsRef::setOutputFile(const QString &outputFile) const {
-        NodeAccess::setValue(*this, SettingsSlots::OutputFile, outputFile);
+        edit::NodeAccess::setValue(*this, SettingsSlots::OutputFile, outputFile);
     }
 
     QString SettingsRef::cacheDir() const {
-        return NodeAccess::value(*this, SettingsSlots::CacheDir);
+        return edit::NodeAccess::value(*this, SettingsSlots::CacheDir);
     }
 
     void SettingsRef::setCacheDir(const QString &cacheDir) const {
-        NodeAccess::setValue(*this, SettingsSlots::CacheDir, cacheDir);
+        edit::NodeAccess::setValue(*this, SettingsSlots::CacheDir, cacheDir);
     }
 
     QString SettingsRef::wavtool() const {
-        return NodeAccess::value(*this, SettingsSlots::Wavtool);
+        return edit::NodeAccess::value(*this, SettingsSlots::Wavtool);
     }
 
     void SettingsRef::setWavtool(const QString &wavtool) const {
-        NodeAccess::setValue(*this, SettingsSlots::Wavtool, wavtool);
+        edit::NodeAccess::setValue(*this, SettingsSlots::Wavtool, wavtool);
     }
 
     QString SettingsRef::resampler() const {
-        return NodeAccess::value(*this, SettingsSlots::Resampler);
+        return edit::NodeAccess::value(*this, SettingsSlots::Resampler);
     }
 
     void SettingsRef::setResampler(const QString &resampler) const {
-        NodeAccess::setValue(*this, SettingsSlots::Resampler, resampler);
+        edit::NodeAccess::setValue(*this, SettingsSlots::Resampler, resampler);
     }
 
     bool SettingsRef::mode2() const {
-        return NodeAccess::value(*this, SettingsSlots::Mode2);
+        return edit::NodeAccess::value(*this, SettingsSlots::Mode2);
     }
 
     void SettingsRef::setMode2(bool mode2) const {
-        NodeAccess::setValue(*this, SettingsSlots::Mode2, mode2);
+        edit::NodeAccess::setValue(*this, SettingsSlots::Mode2, mode2);
     }
 
     ProjectSettings SettingsRef::toProjectSettings() const {
-        return NodeAccess::toValue<ProjectSettings>(*this);
+        return edit::NodeAccess::toValue<ProjectSettings>(*this);
     }
 
     // TrackListRef
 
     int TrackListRef::size() const {
-        return NodeAccess::size(*this);
+        return edit::NodeAccess::size(*this);
     }
 
     TrackRef TrackListRef::at(int index) const {
-        return NodeAccess::at<TrackRef>(*this, index);
+        return edit::NodeAccess::at<TrackRef>(*this, index);
     }
 
     void TrackListRef::insert(int index, const QList<Track> &tracks) const {
-        NodeAccess::insert(*this, index, tracks);
+        edit::NodeAccess::insert(*this, index, tracks);
     }
 
     void TrackListRef::remove(int index, int count) const {
-        NodeAccess::remove(*this, index, count);
+        edit::NodeAccess::remove(*this, index, count);
     }
 
     void TrackListRef::move(int index, int count, int destination) const {
-        NodeAccess::move(*this, index, count, destination);
+        edit::NodeAccess::move(*this, index, count, destination);
     }
 
     // TrackRef
 
     QString TrackRef::name() const {
-        return NodeAccess::value(*this, TrackSlots::Name);
+        return edit::NodeAccess::value(*this, TrackSlots::Name);
     }
 
     void TrackRef::setName(const QString &name) const {
-        NodeAccess::setValue(*this, TrackSlots::Name, name);
+        edit::NodeAccess::setValue(*this, TrackSlots::Name, name);
     }
 
     QString TrackRef::voiceDir() const {
-        return NodeAccess::value(*this, TrackSlots::VoiceDir);
+        return edit::NodeAccess::value(*this, TrackSlots::VoiceDir);
     }
 
     void TrackRef::setVoiceDir(const QString &voiceDir) const {
-        NodeAccess::setValue(*this, TrackSlots::VoiceDir, voiceDir);
+        edit::NodeAccess::setValue(*this, TrackSlots::VoiceDir, voiceDir);
     }
 
     NoteListRef TrackRef::notes() const {
-        return NodeAccess::child<NoteListRef>(*this, TrackSlots::Notes);
+        return edit::NodeAccess::child<NoteListRef>(*this, TrackSlots::Notes);
     }
 
     Track TrackRef::toTrack() const {
-        return NodeAccess::toValue<Track>(*this);
+        return edit::NodeAccess::toValue<Track>(*this);
     }
 
     // NoteListRef
 
     int NoteListRef::size() const {
-        return NodeAccess::size(*this);
+        return edit::NodeAccess::size(*this);
     }
 
     NoteRef NoteListRef::at(int index) const {
-        return NodeAccess::at<NoteRef>(*this, index);
+        return edit::NodeAccess::at<NoteRef>(*this, index);
     }
 
     void NoteListRef::insert(int index, const QList<Note> &notes) const {
-        NodeAccess::insert(*this, index, notes);
+        edit::NodeAccess::insert(*this, index, notes);
     }
 
     void NoteListRef::remove(int index, int count) const {
-        NodeAccess::remove(*this, index, count);
+        edit::NodeAccess::remove(*this, index, count);
     }
 
     void NoteListRef::move(int index, int count, int destination) const {
-        NodeAccess::move(*this, index, count, destination);
+        edit::NodeAccess::move(*this, index, count, destination);
     }
 
     // NoteRef
 
     QString NoteRef::lyric() const {
-        return NodeAccess::value(*this, NoteSlots::Lyric);
+        return edit::NodeAccess::value(*this, NoteSlots::Lyric);
     }
 
     void NoteRef::setLyric(const QString &lyric) const {
-        NodeAccess::setValue(*this, NoteSlots::Lyric, lyric);
+        edit::NodeAccess::setValue(*this, NoteSlots::Lyric, lyric);
     }
 
     int NoteRef::length() const {
-        return NodeAccess::value(*this, NoteSlots::Length);
+        return edit::NodeAccess::value(*this, NoteSlots::Length);
     }
 
     void NoteRef::setLength(int length) const {
-        NodeAccess::setValue(*this, NoteSlots::Length, length);
+        edit::NodeAccess::setValue(*this, NoteSlots::Length, length);
     }
 
     int NoteRef::noteNum() const {
-        return NodeAccess::value(*this, NoteSlots::NoteNum);
+        return edit::NodeAccess::value(*this, NoteSlots::NoteNum);
     }
 
     void NoteRef::setNoteNum(int noteNum) const {
-        NodeAccess::setValue(*this, NoteSlots::NoteNum, noteNum);
+        edit::NodeAccess::setValue(*this, NoteSlots::NoteNum, noteNum);
     }
 
     std::optional<double> NoteRef::intensity() const {
-        return NodeAccess::value(*this, NoteSlots::Intensity);
+        return edit::NodeAccess::value(*this, NoteSlots::Intensity);
     }
 
     void NoteRef::setIntensity(std::optional<double> intensity) const {
-        NodeAccess::setValue(*this, NoteSlots::Intensity, intensity);
+        edit::NodeAccess::setValue(*this, NoteSlots::Intensity, intensity);
     }
 
     std::optional<double> NoteRef::modulation() const {
-        return NodeAccess::value(*this, NoteSlots::Modulation);
+        return edit::NodeAccess::value(*this, NoteSlots::Modulation);
     }
 
     void NoteRef::setModulation(std::optional<double> modulation) const {
-        NodeAccess::setValue(*this, NoteSlots::Modulation, modulation);
+        edit::NodeAccess::setValue(*this, NoteSlots::Modulation, modulation);
     }
 
     std::optional<double> NoteRef::velocity() const {
-        return NodeAccess::value(*this, NoteSlots::Velocity);
+        return edit::NodeAccess::value(*this, NoteSlots::Velocity);
     }
 
     void NoteRef::setVelocity(std::optional<double> velocity) const {
-        NodeAccess::setValue(*this, NoteSlots::Velocity, velocity);
+        edit::NodeAccess::setValue(*this, NoteSlots::Velocity, velocity);
     }
 
     std::optional<double> NoteRef::preUtterance() const {
-        return NodeAccess::value(*this, NoteSlots::PreUtterance);
+        return edit::NodeAccess::value(*this, NoteSlots::PreUtterance);
     }
 
     void NoteRef::setPreUtterance(std::optional<double> preUtterance) const {
-        NodeAccess::setValue(*this, NoteSlots::PreUtterance, preUtterance);
+        edit::NodeAccess::setValue(*this, NoteSlots::PreUtterance, preUtterance);
     }
 
     std::optional<double> NoteRef::voiceOverlap() const {
-        return NodeAccess::value(*this, NoteSlots::VoiceOverlap);
+        return edit::NodeAccess::value(*this, NoteSlots::VoiceOverlap);
     }
 
     void NoteRef::setVoiceOverlap(std::optional<double> voiceOverlap) const {
-        NodeAccess::setValue(*this, NoteSlots::VoiceOverlap, voiceOverlap);
+        edit::NodeAccess::setValue(*this, NoteSlots::VoiceOverlap, voiceOverlap);
     }
 
     std::optional<double> NoteRef::startPoint() const {
-        return NodeAccess::value(*this, NoteSlots::StartPoint);
+        return edit::NodeAccess::value(*this, NoteSlots::StartPoint);
     }
 
     void NoteRef::setStartPoint(std::optional<double> startPoint) const {
-        NodeAccess::setValue(*this, NoteSlots::StartPoint, startPoint);
+        edit::NodeAccess::setValue(*this, NoteSlots::StartPoint, startPoint);
     }
 
     std::optional<double> NoteRef::tempo() const {
-        return NodeAccess::value(*this, NoteSlots::Tempo);
+        return edit::NodeAccess::value(*this, NoteSlots::Tempo);
     }
 
     void NoteRef::setTempo(std::optional<double> tempo) const {
-        NodeAccess::setValue(*this, NoteSlots::Tempo, tempo);
+        edit::NodeAccess::setValue(*this, NoteSlots::Tempo, tempo);
     }
 
     QString NoteRef::flags() const {
-        return NodeAccess::value(*this, NoteSlots::Flags);
+        return edit::NodeAccess::value(*this, NoteSlots::Flags);
     }
 
     void NoteRef::setFlags(const QString &flags) const {
-        NodeAccess::setValue(*this, NoteSlots::Flags, flags);
+        edit::NodeAccess::setValue(*this, NoteSlots::Flags, flags);
     }
 
     std::optional<Envelope> NoteRef::envelope() const {
-        return NodeAccess::value(*this, NoteSlots::Envelope);
+        return edit::NodeAccess::value(*this, NoteSlots::Envelope);
     }
 
     void NoteRef::setEnvelope(const std::optional<Envelope> &envelope) const {
-        NodeAccess::setValue(*this, NoteSlots::Envelope, envelope);
+        edit::NodeAccess::setValue(*this, NoteSlots::Envelope, envelope);
     }
 
     std::optional<Vibrato> NoteRef::vibrato() const {
-        return NodeAccess::value(*this, NoteSlots::Vibrato);
+        return edit::NodeAccess::value(*this, NoteSlots::Vibrato);
     }
 
     void NoteRef::setVibrato(const std::optional<Vibrato> &vibrato) const {
-        NodeAccess::setValue(*this, NoteSlots::Vibrato, vibrato);
+        edit::NodeAccess::setValue(*this, NoteSlots::Vibrato, vibrato);
     }
 
     PortamentoListRef NoteRef::portamento() const {
-        return NodeAccess::child<PortamentoListRef>(*this, NoteSlots::Portamento);
+        return edit::NodeAccess::child<PortamentoListRef>(*this, NoteSlots::Portamento);
     }
 
     PitchBendRef NoteRef::pitchBend() const {
-        return NodeAccess::child<PitchBendRef>(*this, NoteSlots::PitchBend);
+        return edit::NodeAccess::child<PitchBendRef>(*this, NoteSlots::PitchBend);
     }
 
     void NoteRef::setPitchBend(const std::optional<PitchBend> &pitchBend) const {
-        NodeAccess::setChild(*this, NoteSlots::PitchBend, pitchBend);
+        edit::NodeAccess::setChild(*this, NoteSlots::PitchBend, pitchBend);
     }
 
     QString NoteRef::label() const {
-        return NodeAccess::value(*this, NoteSlots::Label);
+        return edit::NodeAccess::value(*this, NoteSlots::Label);
     }
 
     void NoteRef::setLabel(const QString &label) const {
-        NodeAccess::setValue(*this, NoteSlots::Label, label);
+        edit::NodeAccess::setValue(*this, NoteSlots::Label, label);
     }
 
     QString NoteRef::direct() const {
-        return NodeAccess::value(*this, NoteSlots::Direct);
+        return edit::NodeAccess::value(*this, NoteSlots::Direct);
     }
 
     void NoteRef::setDirect(const QString &direct) const {
-        NodeAccess::setValue(*this, NoteSlots::Direct, direct);
+        edit::NodeAccess::setValue(*this, NoteSlots::Direct, direct);
     }
 
     QString NoteRef::patch() const {
-        return NodeAccess::value(*this, NoteSlots::Patch);
+        return edit::NodeAccess::value(*this, NoteSlots::Patch);
     }
 
     void NoteRef::setPatch(const QString &patch) const {
-        NodeAccess::setValue(*this, NoteSlots::Patch, patch);
+        edit::NodeAccess::setValue(*this, NoteSlots::Patch, patch);
     }
 
     QString NoteRef::region() const {
-        return NodeAccess::value(*this, NoteSlots::Region);
+        return edit::NodeAccess::value(*this, NoteSlots::Region);
     }
 
     void NoteRef::setRegion(const QString &region) const {
-        NodeAccess::setValue(*this, NoteSlots::Region, region);
+        edit::NodeAccess::setValue(*this, NoteSlots::Region, region);
     }
 
     QString NoteRef::regionEnd() const {
-        return NodeAccess::value(*this, NoteSlots::RegionEnd);
+        return edit::NodeAccess::value(*this, NoteSlots::RegionEnd);
     }
 
     void NoteRef::setRegionEnd(const QString &regionEnd) const {
-        NodeAccess::setValue(*this, NoteSlots::RegionEnd, regionEnd);
+        edit::NodeAccess::setValue(*this, NoteSlots::RegionEnd, regionEnd);
     }
 
     UserDataRef NoteRef::userData() const {
-        return NodeAccess::child<UserDataRef>(*this, NoteSlots::UserData);
+        return edit::NodeAccess::child<UserDataRef>(*this, NoteSlots::UserData);
     }
 
     Note NoteRef::toNote() const {
-        return NodeAccess::toValue<Note>(*this);
+        return edit::NodeAccess::toValue<Note>(*this);
     }
 
     // PortamentoListRef
 
     int PortamentoListRef::size() const {
-        return NodeAccess::size(*this);
+        return edit::NodeAccess::size(*this);
     }
 
     PortamentoPointRef PortamentoListRef::at(int index) const {
-        return NodeAccess::at<PortamentoPointRef>(*this, index);
+        return edit::NodeAccess::at<PortamentoPointRef>(*this, index);
     }
 
     void PortamentoListRef::insert(int index, const QList<PortamentoPoint> &points) const {
-        NodeAccess::insert(*this, index, points);
+        edit::NodeAccess::insert(*this, index, points);
     }
 
     void PortamentoListRef::remove(int index, int count) const {
-        NodeAccess::remove(*this, index, count);
+        edit::NodeAccess::remove(*this, index, count);
     }
 
     void PortamentoListRef::move(int index, int count, int destination) const {
-        NodeAccess::move(*this, index, count, destination);
+        edit::NodeAccess::move(*this, index, count, destination);
     }
 
     // PortamentoPointRef
 
     double PortamentoPointRef::x() const {
-        return NodeAccess::value(*this, PortamentoSlots::X);
+        return edit::NodeAccess::value(*this, PortamentoSlots::X);
     }
 
     void PortamentoPointRef::setX(double x) const {
-        NodeAccess::setValue(*this, PortamentoSlots::X, x);
+        edit::NodeAccess::setValue(*this, PortamentoSlots::X, x);
     }
 
     double PortamentoPointRef::y() const {
-        return NodeAccess::value(*this, PortamentoSlots::Y);
+        return edit::NodeAccess::value(*this, PortamentoSlots::Y);
     }
 
     void PortamentoPointRef::setY(double y) const {
-        NodeAccess::setValue(*this, PortamentoSlots::Y, y);
+        edit::NodeAccess::setValue(*this, PortamentoSlots::Y, y);
     }
 
     PortamentoPoint::Type PortamentoPointRef::type() const {
-        return NodeAccess::value(*this, PortamentoSlots::Type);
+        return edit::NodeAccess::value(*this, PortamentoSlots::Type);
     }
 
     void PortamentoPointRef::setType(PortamentoPoint::Type type) const {
-        NodeAccess::setValue(*this, PortamentoSlots::Type, type);
+        edit::NodeAccess::setValue(*this, PortamentoSlots::Type, type);
     }
 
     PortamentoPoint PortamentoPointRef::toPortamentoPoint() const {
-        return NodeAccess::toValue<PortamentoPoint>(*this);
+        return edit::NodeAccess::toValue<PortamentoPoint>(*this);
     }
 
     // PitchBendRef
 
     std::optional<double> PitchBendRef::start() const {
-        return NodeAccess::value(*this, PitchBendSlots::Start);
+        return edit::NodeAccess::value(*this, PitchBendSlots::Start);
     }
 
     void PitchBendRef::setStart(std::optional<double> start) const {
-        NodeAccess::setValue(*this, PitchBendSlots::Start, start);
+        edit::NodeAccess::setValue(*this, PitchBendSlots::Start, start);
     }
 
     QList<double> PitchBendRef::values() const {
-        return NodeAccess::arrayValues<double>(*this, PitchBendSlots::Values, PitchValuesType);
+        return edit::NodeAccess::arrayValues<double>(*this, PitchBendSlots::Values,
+                                                     PitchValuesType);
     }
 
     int PitchBendRef::valuesSize() const {
-        return NodeAccess::arraySize<double>(*this, PitchBendSlots::Values, PitchValuesType);
+        return edit::NodeAccess::arraySize<double>(*this, PitchBendSlots::Values, PitchValuesType);
     }
 
     void PitchBendRef::replaceValues(int index, const QList<double> &values) const {
-        NodeAccess::replaceArray(*this, PitchBendSlots::Values, PitchValuesType, index, values);
+        edit::NodeAccess::replaceArray(*this, PitchBendSlots::Values, PitchValuesType, index,
+                                       values);
     }
 
     void PitchBendRef::insertValues(int index, const QList<double> &values) const {
-        NodeAccess::insertArray(*this, PitchBendSlots::Values, PitchValuesType, index, values);
+        edit::NodeAccess::insertArray(*this, PitchBendSlots::Values, PitchValuesType, index,
+                                      values);
     }
 
     void PitchBendRef::removeValues(int index, int count) const {
-        NodeAccess::removeArray<double>(*this, PitchBendSlots::Values, PitchValuesType, index,
-                                        count);
+        edit::NodeAccess::removeArray<double>(*this, PitchBendSlots::Values, PitchValuesType, index,
+                                              count);
     }
 
     PitchBend PitchBendRef::toPitchBend() const {
-        return NodeAccess::toValue<PitchBend>(*this);
+        return edit::NodeAccess::toValue<PitchBend>(*this);
     }
 
     // UserDataRef
 
     QStringList UserDataRef::keys() const {
-        return NodeAccess::keys(*this);
+        return edit::NodeAccess::keys(*this);
     }
 
     bool UserDataRef::contains(const QString &key) const {
-        return NodeAccess::contains(*this, key);
+        return edit::NodeAccess::contains(*this, key);
     }
 
     QString UserDataRef::value(const QString &key) const {
-        return NodeAccess::entry<QString>(*this, key);
+        return edit::NodeAccess::entry<QString>(*this, key);
     }
 
     void UserDataRef::setValue(const QString &key, const QString &value) const {
-        NodeAccess::setEntry(*this, key, value);
+        edit::NodeAccess::setEntry(*this, key, value);
     }
 
     void UserDataRef::remove(const QString &key) const {
-        NodeAccess::removeEntry(*this, key);
+        edit::NodeAccess::removeEntry(*this, key);
     }
 
     // UnknownFieldsRef
 
     QStringList UnknownFieldsRef::keys() const {
-        return NodeAccess::keys(*this);
+        return edit::NodeAccess::keys(*this);
     }
 
     bool UnknownFieldsRef::contains(const QString &key) const {
-        return NodeAccess::contains(*this, key);
+        return edit::NodeAccess::contains(*this, key);
     }
 
     QJsonValue UnknownFieldsRef::value(const QString &key) const {
-        return NodeAccess::entry<QJsonValue>(*this, key);
+        return edit::NodeAccess::entry<QJsonValue>(*this, key);
     }
 
     void UnknownFieldsRef::setValue(const QString &key, const QJsonValue &value) const {
-        NodeAccess::setEntry(*this, key, value);
+        edit::NodeAccess::setEntry(*this, key, value);
     }
 
     void UnknownFieldsRef::remove(const QString &key) const {
-        NodeAccess::removeEntry(*this, key);
+        edit::NodeAccess::removeEntry(*this, key);
     }
 
 }

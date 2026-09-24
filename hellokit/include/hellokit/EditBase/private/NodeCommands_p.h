@@ -1,5 +1,5 @@
-#ifndef HELLOKIT_EDIT_NODECOMMANDS_P_H
-#define HELLOKIT_EDIT_NODECOMMANDS_P_H
+#ifndef HELLOKIT_EDITBASE_PRIVATE_NODECOMMANDS_P_H
+#define HELLOKIT_EDITBASE_PRIVATE_NODECOMMANDS_P_H
 
 #include <optional>
 
@@ -13,13 +13,13 @@
 
 #include <hellokit/Support/Diagnostic.h>
 
-#include <hellokit/Edit/CommandSyntax.h>
-#include <hellokit/Edit/EditSession.h>
-#include <hellokit/Edit/HelloKitEditGlobal.h>
+#include <hellokit/EditBase/CommandSyntax.h>
+#include <hellokit/EditBase/EditSession.h>
+#include <hellokit/EditBase/HelloKitEditBaseGlobal.h>
 
 #include "FieldTable_p.h"
 
-namespace hello::kit {
+namespace hello::kit::edit {
 
     /// The commands that modify the nodes of a tree addressed by path: \c set, \c insert,
     /// \c remove, \c move and \c replace. See the section on commands in docs/Editing.md.
@@ -31,8 +31,8 @@ namespace hello::kit {
     ///
     /// A command applies exactly the values that it states. A value that reading a file would
     /// correct or omit, such as a member of another type or an unknown field, is refused.
-    struct HELLOKIT_EDIT_EXPORT NodeCommands {
-        Q_DECLARE_TR_FUNCTIONS(hello::kit::NodeCommands)
+    struct HELLOKIT_EDITBASE_EXPORT NodeCommands {
+        Q_DECLARE_TR_FUNCTIONS(hello::kit::edit::NodeCommands)
     public:
         /// The end of a path.
         struct Target {
@@ -97,4 +97,4 @@ namespace hello::kit {
 
 }
 
-#endif // HELLOKIT_EDIT_NODECOMMANDS_P_H
+#endif // HELLOKIT_EDITBASE_PRIVATE_NODECOMMANDS_P_H

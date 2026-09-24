@@ -12,9 +12,9 @@
 #include <qsubstate/MappingNode.h>
 #include <qsubstate/StructNode.h>
 
-#include <hellokit/Edit/EditSession.h>
+#include <hellokit/EditBase/EditSession.h>
 
-#include "EditSession_p.h"
+#include <hellokit/EditBase/private/EditSession_p.h>
 
 // A session of a document unrelated to UTAU, which shows that EditSession depends on no
 // particular structure. It is its own document layer: its functions read and modify the nodes
@@ -23,7 +23,7 @@
 // The root holds a title in slot 0, a list of items in slot 1 and a mapping of tags in slot 2.
 // Each item holds a name in slot 0 and an array of values in slot 1.
 
-namespace hello::kit {
+namespace hello::kit::edit {
 
     class TestSession : public EditSession {
     public:

@@ -7,7 +7,7 @@
 #include <QtCore/QJsonObject>
 #include <QtCore/QRegularExpression>
 
-namespace hello::kit {
+namespace hello::kit::edit {
 
     namespace {
 

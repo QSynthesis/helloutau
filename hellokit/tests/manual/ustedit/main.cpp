@@ -35,7 +35,7 @@
 #include <stdcorelib/system.h>
 
 #include <hellokit/Document/UstDocument.h>
-#include <hellokit/Edit/CommandSyntax.h>
+#include <hellokit/EditBase/CommandSyntax.h>
 #include <hellokit/Edit/ProjectCommands.h>
 #include <hellokit/Edit/ProjectSession.h>
 #include <hellokit/Support/TextCodec.h>
@@ -142,13 +142,13 @@ namespace {
     /// Executes \c undo or \c redo with \a arguments, the arguments after the name, and returns
     /// whether the arguments are valid. Undoing more steps than the history holds stops at its
     /// start, as \c all does.
-    bool travel(ProjectSession &session, bool undo, const QList<CommandArgument> &arguments,
+    bool travel(ProjectSession &session, bool undo, const QList<edit::CommandArgument> &arguments,
                 DiagnosticList &diagnostics) {
         int count = 1;
         if (arguments.size() == 1 && arguments[0].text() == QLatin1String("all")) {
             count = -1;
         } else if (arguments.size() == 1) {
-            const auto value = CommandSyntax::valueOf(arguments[0]);
+            const auto value = edit::CommandSyntax::valueOf(arguments[0]);
             count = value.isDouble() ? value.toInt(-1) : -1;
             if (count < 1 || double(count) != value.toDouble()) {
                 diagnostics.push_back(
@@ -173,11 +173,11 @@ namespace {
 
     /// Executes \a line, and returns whether it succeeded.
     bool execute(ProjectSession &session, const QString &line, DiagnosticList &diagnostics) {
-        const auto arguments = CommandSyntax::split(line, diagnostics);
+        const auto arguments = edit::CommandSyntax::split(line, diagnostics);
         if (!arguments) {
             return false;
         }
-        if (!arguments->isEmpty() && arguments->first().kind == CommandArgument::Word) {
+        if (!arguments->isEmpty() && arguments->first().kind == edit::CommandArgument::Word) {
             const auto name = arguments->first().text();
             if (name == QLatin1String("undo") || name == QLatin1String("redo")) {
                 return travel(session, name == QLatin1String("undo"), arguments->mid(1),
@@ -218,14 +218,15 @@ namespace {
 
         ProjectSession session(*project);
         if (result.option("--dump-changes")) {
-            QObject::connect(
-                &session, &EditSession::changed, &session, [&session](const ChangePtr &change) {
-                    if (const auto entry = session.logEntry(*change)) {
-                        const auto line = QJsonDocument(*entry).toJson(QJsonDocument::Compact);
-                        std::cout.write(line.constData(), line.size());
-                        std::cout << '\n';
-                    }
-                });
+            QObject::connect(&session, &edit::EditSession::changed, &session,
+                             [&session](const edit::ChangePtr &change) {
+                                 if (const auto entry = session.logEntry(*change)) {
+                                     const auto line =
+                                         QJsonDocument(*entry).toJson(QJsonDocument::Compact);
+                                     std::cout.write(line.constData(), line.size());
+                                     std::cout << '\n';
+                                 }
+                             });
         }
 
         bool succeeded = false;

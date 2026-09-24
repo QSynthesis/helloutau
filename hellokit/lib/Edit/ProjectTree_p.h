@@ -12,10 +12,10 @@
 
 #include <hellokit/Document/Project.h>
 
+#include <hellokit/EditBase/private/NodeAccess_p.h>
+
 #include <hellokit/Edit/HelloKitEditGlobal.h>
 #include <hellokit/Edit/ProjectSchema.h>
-
-#include "NodeAccess_p.h"
 
 namespace hello::kit {
 
@@ -54,17 +54,17 @@ namespace hello::kit {
     std::unique_ptr<ss::Node> treeOf(const PitchBend &pitchBend);
 
     template <>
-    HELLOKIT_EDIT_EXPORT Project fromTree<Project>(const ss::Node *node);
+    HELLOKIT_EDIT_EXPORT Project edit::fromTree<Project>(const ss::Node *node);
     template <>
-    ProjectSettings fromTree<ProjectSettings>(const ss::Node *node);
+    ProjectSettings edit::fromTree<ProjectSettings>(const ss::Node *node);
     template <>
-    Track fromTree<Track>(const ss::Node *node);
+    Track edit::fromTree<Track>(const ss::Node *node);
     template <>
-    Note fromTree<Note>(const ss::Node *node);
+    Note edit::fromTree<Note>(const ss::Node *node);
     template <>
-    PortamentoPoint fromTree<PortamentoPoint>(const ss::Node *node);
+    PortamentoPoint edit::fromTree<PortamentoPoint>(const ss::Node *node);
     template <>
-    PitchBend fromTree<PitchBend>(const ss::Node *node);
+    PitchBend edit::fromTree<PitchBend>(const ss::Node *node);
 
     /// Registers the node types of a project tree with \a codec, and the value types stored in
     /// its slots with the Qt meta-type system, which a decoder requires to find a type by name.

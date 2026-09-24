@@ -1,5 +1,5 @@
-#ifndef HELLOKIT_EDIT_SLOT_H
-#define HELLOKIT_EDIT_SLOT_H
+#ifndef HELLOKIT_EDITBASE_SLOT_H
+#define HELLOKIT_EDITBASE_SLOT_H
 
 #include <cstdint>
 #include <optional>
@@ -7,7 +7,7 @@
 
 #include <QtCore/QVariant>
 
-namespace hello::kit {
+namespace hello::kit::edit {
 
     /// The identifier of a node of an edit session.
     ///
@@ -124,4 +124,4 @@ namespace hello::kit {
 
 }
 
-#endif // HELLOKIT_EDIT_SLOT_H
+#endif // HELLOKIT_EDITBASE_SLOT_H

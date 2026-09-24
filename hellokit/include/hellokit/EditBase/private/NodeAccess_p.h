@@ -1,5 +1,5 @@
-#ifndef HELLOKIT_EDIT_NODEACCESS_P_H
-#define HELLOKIT_EDIT_NODEACCESS_P_H
+#ifndef HELLOKIT_EDITBASE_PRIVATE_NODEACCESS_P_H
+#define HELLOKIT_EDITBASE_PRIVATE_NODEACCESS_P_H
 
 #include <memory>
 #include <optional>
@@ -14,11 +14,11 @@
 #include <qsubstate/MappingNode.h>
 #include <qsubstate/StructNode.h>
 
-#include <hellokit/Edit/Slot.h>
+#include <hellokit/EditBase/Slot.h>
 
 #include "EditSession_p.h"
 
-namespace hello::kit {
+namespace hello::kit::edit {
 
     /// The node of the handles of type \a Ref: \c Type is the class of the node and \c type its
     /// node type. A list handle also specifies \c itemType, the node type of its items. A
@@ -254,4 +254,4 @@ namespace hello::kit {
 
 }
 
-#endif // HELLOKIT_EDIT_NODEACCESS_P_H
+#endif // HELLOKIT_EDITBASE_PRIVATE_NODEACCESS_P_H

@@ -2,8 +2,9 @@
 
 #include <QtCore/QJsonObject>
 
-#include "CommandSyntax.h"
-#include "NodeCommands_p.h"
+#include <hellokit/EditBase/CommandSyntax.h>
+#include <hellokit/EditBase/private/NodeCommands_p.h>
+
 #include "ProjectEdits.h"
 #include "ProjectFields_p.h"
 #include "ProjectRefs.h"
@@ -13,28 +14,29 @@ namespace hello::kit {
 
     namespace {
 
-        using Arguments = QList<CommandArgument>;
+        using Arguments = QList<edit::CommandArgument>;
 
         bool fail(DiagnosticList &diagnostics, const QString &message) {
-            return NodeCommands::fail(diagnostics, message);
+            return edit::NodeCommands::fail(diagnostics, message);
         }
 
         bool usage(DiagnosticList &diagnostics, const char *form) {
             return fail(diagnostics, ProjectCommands::tr("Usage: %1").arg(QLatin1String(form)));
         }
 
-        std::optional<NodeCommands::Target> targetOf(ProjectSession &session,
-                                                     const CommandArgument &argument,
-                                                     DiagnosticList &diagnostics) {
+        std::optional<edit::NodeCommands::Target> targetOf(ProjectSession &session,
+                                                           const edit::CommandArgument &argument,
+                                                           DiagnosticList &diagnostics) {
             const auto path =
-                NodeCommands::stringOf(argument, ProjectCommands::tr("path"), diagnostics);
+                edit::NodeCommands::stringOf(argument, ProjectCommands::tr("path"), diagnostics);
             if (!path) {
                 return std::nullopt;
             }
-            return NodeCommands::resolve(session, projectRecord(), *path, diagnostics);
+            return edit::NodeCommands::resolve(session, projectRecord(), *path, diagnostics);
         }
 
-        std::optional<NoteRef> noteAt(ProjectSession &session, const CommandArgument &argument,
+        std::optional<NoteRef> noteAt(ProjectSession &session,
+                                      const edit::CommandArgument &argument,
                                       DiagnosticList &diagnostics) {
             const auto target = targetOf(session, argument, diagnostics);
             if (!target) {
@@ -48,14 +50,15 @@ namespace hello::kit {
             return NoteRef(&session, target->record->id());
         }
 
-        std::optional<NoteListRef> notesAt(ProjectSession &session, const CommandArgument &argument,
+        std::optional<NoteListRef> notesAt(ProjectSession &session,
+                                           const edit::CommandArgument &argument,
                                            DiagnosticList &diagnostics) {
             const auto target = targetOf(session, argument, diagnostics);
             if (!target) {
                 return std::nullopt;
             }
             if (!target->field || !target->members.isEmpty() ||
-                target->field->kind != FieldInfo::List ||
+                target->field->kind != edit::FieldInfo::List ||
                 target->field->record->nodeType != NoteType) {
                 fail(diagnostics,
                      ProjectCommands::tr("The path %1 does not denote a list of notes.")
@@ -70,7 +73,7 @@ namespace hello::kit {
             if (arguments.size() < 2) {
                 return usage(diagnostics, "note transpose <semitones> <note>...");
             }
-            const auto semitones = NodeCommands::integerOf(
+            const auto semitones = edit::NodeCommands::integerOf(
                 arguments[0], ProjectCommands::tr("number of semitones"), diagnostics);
             if (!semitones) {
                 return false;
@@ -92,10 +95,10 @@ namespace hello::kit {
                 return usage(diagnostics, "note split <notes> <index> <ticks>");
             }
             const auto notes = notesAt(session, arguments[0], diagnostics);
-            const auto index =
-                NodeCommands::integerOf(arguments[1], ProjectCommands::tr("index"), diagnostics);
-            const auto ticks =
-                NodeCommands::integerOf(arguments[2], ProjectCommands::tr("ticks"), diagnostics);
+            const auto index = edit::NodeCommands::integerOf(
+                arguments[1], ProjectCommands::tr("index"), diagnostics);
+            const auto ticks = edit::NodeCommands::integerOf(
+                arguments[2], ProjectCommands::tr("ticks"), diagnostics);
             if (!notes || !index || !ticks) {
                 return false;
             }
@@ -114,22 +117,22 @@ namespace hello::kit {
                 return usage(diagnostics, "note insert <notes> <index> <note>");
             }
             const auto notes = notesAt(session, arguments[0], diagnostics);
-            const auto index =
-                NodeCommands::integerOf(arguments[1], ProjectCommands::tr("index"), diagnostics);
+            const auto index = edit::NodeCommands::integerOf(
+                arguments[1], ProjectCommands::tr("index"), diagnostics);
             if (!notes || !index) {
                 return false;
             }
-            const auto json = CommandSyntax::valueOf(arguments[2]);
+            const auto json = edit::CommandSyntax::valueOf(arguments[2]);
             if (!json.isObject()) {
                 return fail(diagnostics, ProjectCommands::tr("The note must be an object."));
             }
             // Converted through a tree, which checks each field against the field table.
-            const auto tree =
-                NodeCommands::treeOf(*projectRecordOf(NoteType), json.toObject(), diagnostics);
+            const auto tree = edit::NodeCommands::treeOf(*projectRecordOf(NoteType),
+                                                         json.toObject(), diagnostics);
             if (!tree) {
                 return false;
             }
-            return ProjectEdits::insertNote(*notes, *index, fromTree<Note>(tree.get()),
+            return ProjectEdits::insertNote(*notes, *index, edit::fromTree<Note>(tree.get()),
                                             diagnostics);
         }
 
@@ -139,8 +142,8 @@ namespace hello::kit {
                 return usage(diagnostics, "note tempo <note> <tempo>");
             }
             const auto note = noteAt(session, arguments[0], diagnostics);
-            const auto tempo =
-                NodeCommands::numberOf(arguments[1], ProjectCommands::tr("tempo"), diagnostics);
+            const auto tempo = edit::NodeCommands::numberOf(
+                arguments[1], ProjectCommands::tr("tempo"), diagnostics);
             if (!note || !tempo) {
                 return false;
             }
@@ -158,14 +161,14 @@ namespace hello::kit {
 
         bool run(ProjectSession &session, const Arguments &arguments, DiagnosticList &diagnostics) {
             const auto &name = arguments[0];
-            if (name.kind != CommandArgument::Word) {
+            if (name.kind != edit::CommandArgument::Word) {
                 return fail(diagnostics, ProjectCommands::tr("A command begins with its name."));
             }
             if (name.text() != QLatin1String("note")) {
-                return NodeCommands::execute(session, projectRecord(), name.text(),
-                                             arguments.mid(1), diagnostics);
+                return edit::NodeCommands::execute(session, projectRecord(), name.text(),
+                                                   arguments.mid(1), diagnostics);
             }
-            if (arguments.size() < 2 || arguments[1].kind != CommandArgument::Word) {
+            if (arguments.size() < 2 || arguments[1].kind != edit::CommandArgument::Word) {
                 return fail(diagnostics,
                             ProjectCommands::tr("The command note requires a verb: transpose, "
                                                 "split, insert or tempo."));
@@ -183,7 +186,7 @@ namespace hello::kit {
 
     bool ProjectCommands::execute(ProjectSession &session, QStringView line,
                                   DiagnosticList &diagnostics) {
-        const auto arguments = CommandSyntax::split(line, diagnostics);
+        const auto arguments = edit::CommandSyntax::split(line, diagnostics);
         if (!arguments) {
             return false;
         }
@@ -200,7 +203,7 @@ namespace hello::kit {
     }
 
     QStringList ProjectCommands::names() {
-        auto names = NodeCommands::names();
+        auto names = edit::NodeCommands::names();
         for (const auto &[verb, command] : noteCommands) {
             Q_UNUSED(command)
             names.push_back(QStringLiteral("note ") + QLatin1String(verb));

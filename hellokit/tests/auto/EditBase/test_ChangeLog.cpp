@@ -1,10 +1,12 @@
 #include <QtCore/QJsonObject>
 #include <QtTest/QTest>
 
-#include "ChangeLog_p.h"
+#include <hellokit/EditBase/private/ChangeLog_p.h>
+
 #include "TestSession.h"
 
 using namespace hello::kit;
+using namespace hello::kit::edit;
 
 namespace {
 
