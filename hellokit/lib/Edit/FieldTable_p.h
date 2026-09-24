@@ -105,8 +105,9 @@ namespace hello::kit {
         /// may be absent.
         bool optional = false;
 
-        /// The permitted values of a numeric \c Value field.
-        std::optional<Range> range;
+        /// The permitted values of a numeric \c Value field. The bounds are converted to
+        /// \c double, because the table holds the fields of every value type.
+        std::optional<Range<double>> range;
 
         /// The record of a \c Record field, or of the items of a \c List.
         const RecordInfo *record = nullptr;
@@ -174,6 +175,18 @@ namespace hello::kit {
         }
     };
 
+    /// Returns \a range with bounds of type \c double, as FieldInfo holds it.
+    template <class T>
+    inline constexpr std::optional<Range<double>>
+        doubleRange(const std::optional<Range<T>> &range) {
+        return range ? std::optional<Range<double>>(range->template to<double>()) : std::nullopt;
+    }
+
+    /// \overload
+    inline constexpr std::optional<Range<double>> doubleRange(const std::optional<NoRange> &) {
+        return std::nullopt;
+    }
+
     // The fields of each kind, created from the slots of a schema.
 
     template <class T>
@@ -182,7 +195,7 @@ namespace hello::kit {
         field.index = slot.index;
         field.name = slot.name;
         field.format = &formatOf<T>();
-        field.range = slot.range;
+        field.range = doubleRange(slot.range);
         return field;
     }
 

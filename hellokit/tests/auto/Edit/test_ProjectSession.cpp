@@ -174,6 +174,41 @@ private Q_SLOTS:
         QCOMPARE(session.snapshot().toJson(), project.toJson());
     }
 
+    // The message of a range violation states the value and the range, with integer bounds for
+    // an integer slot.
+    void a_range_violation_states_the_value_and_the_range_data() {
+        QTest::addColumn<int>("constraint");
+        QTest::addColumn<QString>("message");
+        QTest::newRow("between") << 0
+                                 << QStringLiteral("The noteNum 128 is outside the range from 0 "
+                                                   "to 127.");
+        QTest::newRow("at least") << 1 << QStringLiteral("The length 0 is less than 1.");
+        QTest::newRow("greater than") << 2 << QStringLiteral("The tempo 0 is not greater than 0.");
+    }
+
+    void a_range_violation_states_the_value_and_the_range() {
+        QFETCH(int, constraint);
+        QFETCH(QString, message);
+        ProjectSession session(richProject());
+        const auto note = ProjectRef(&session).tracks().at(0).notes().at(0);
+        auto transaction = session.transaction(QStringLiteral("Violation"));
+        switch (constraint) {
+            case 0:
+                note.setNoteNum(128);
+                break;
+            case 1:
+                note.setLength(0);
+                break;
+            case 2:
+                note.setTempo(0.0);
+                break;
+        }
+        DiagnosticList diagnostics;
+        QVERIFY(!transaction.commit(diagnostics));
+        QCOMPARE(diagnostics.size(), 1);
+        QCOMPARE(diagnostics.first().message, message);
+    }
+
     // The first portamento point is relative to the start of the note and may precede it.
     void the_first_portamento_point_may_precede_the_note() {
         ProjectSession session(richProject());

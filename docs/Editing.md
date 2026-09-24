@@ -117,15 +117,15 @@ ID **不保存到文件**。打开文件时重新生成，因为它是会话内�
 
 ```cpp
 namespace NoteSlots {
-    inline constexpr Slot<QString>              Lyric     {0, "lyric"};
-    inline constexpr Slot<int>                  Length    {1, "length"};
-    inline constexpr Slot<int>                  NoteNum   {2, "noteNum", Range{0, 127}};
-    inline constexpr Slot<std::optional<double>> Intensity{3, "intensity", Range{0, 200}};
+    inline constexpr Slot<QString>               Lyric{0, "lyric"};
+    inline constexpr Slot<int>                   Length{1, "length", Range<int>::atLeast(1)};
+    inline constexpr Slot<int>                   NoteNum{2, "noteNum", Range<int>::between(0, 127)};
+    inline constexpr Slot<std::optional<double>> Intensity{3, "intensity"};
     // …
 }
 ```
 
-槽位表同时承担类型、名称（供日志和命令层使用）和约束（见下文）三项职责。
+槽位表同时承担类型、名称（供日志和命令层使用）和约束（见下文）三项职责。范围的类型即槽位值的类型（可空的槽位去掉 `std::optional`），整数槽位的边界是整数；字符串、布尔、枚举与整体值的槽位不接受范围，写了即编译失败。
 
 ### 句柄：节点操作的公开接口
 
@@ -216,7 +216,7 @@ note.userData().remove(QStringLiteral("$Custom"));
 
 ## 校验的两个位置
 
-**属性级约束（范围、格式、枚举）声明在槽位表中**，例如 `Slot<int> NoteNum{2, "noteNum", Range::between(0, 127)}`。一处定义，提交时的校验和命令层共用；命令层还据此生成帮助文本并校验参数。约束随字段声明，添加字段时不会遗漏。setter 不检查属性级约束，它们与跨字段的约束一同在提交时检查。
+**属性级约束（范围、格式、枚举）声明在槽位表中**，例如 `Slot<int> NoteNum{2, "noteNum", Range<int>::between(0, 127)}`。一处定义，提交时的校验和命令层共用；命令层还据此生成帮助文本并校验参数。约束随字段声明，添加字段时不会遗漏。setter 不检查属性级约束，它们与跨字段的约束一同在提交时检查。
 
 **跨字段、跨节点的不变量在事务边界处检查**，而非在函数内检查。包络锚点的顺序、portamento 的 x 值递增、同一 wav 下 oto 别名不重复，这类约束**在中间状态下可以合理地不满足**：一次「将三个音符后移」由先删除后插入组成，删除完成时的状态无法通过检查，逐函数校验会产生误报。
 

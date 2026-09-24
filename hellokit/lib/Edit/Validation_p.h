@@ -1,7 +1,6 @@
 #ifndef HELLOKIT_EDIT_VALIDATION_P_H
 #define HELLOKIT_EDIT_VALIDATION_P_H
 
-#include <cmath>
 #include <optional>
 
 #include <QtCore/QList>
@@ -36,24 +35,25 @@ namespace hello::kit {
 
     private:
         template <class T>
-        static inline std::optional<double> numberOf(const T &value) {
-            return double(value);
+        static inline std::optional<T> numberOf(T value) {
+            return value;
         }
 
         template <class T>
-        static inline std::optional<double> numberOf(const std::optional<T> &value) {
-            return value ? std::optional<double>(double(*value)) : std::nullopt;
+        static inline std::optional<T> numberOf(const std::optional<T> &value) {
+            return value;
         }
 
-        static inline QString describe(const Range &range) {
-            if (std::isinf(range.maximum)) {
+        template <class T>
+        static inline QString describe(const Range<T> &range) {
+            if (!range.maximum) {
                 return range.minimumExclusive
                            ? EditSession::tr("not greater than %1").arg(range.minimum)
                            : EditSession::tr("less than %1").arg(range.minimum);
             }
             return EditSession::tr("outside the range from %1 to %2")
                 .arg(range.minimum)
-                .arg(range.maximum);
+                .arg(*range.maximum);
         }
     };
 

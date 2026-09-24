@@ -2,8 +2,8 @@
 #define HELLOKIT_EDIT_SLOT_H
 
 #include <cstdint>
-#include <limits>
 #include <optional>
+#include <type_traits>
 
 #include <QtCore/QVariant>
 
@@ -16,42 +16,77 @@ namespace hello::kit {
     /// to a node of the session rather than to the content of the document.
     using NodeId = std::uint64_t;
 
-    /// The permitted values of a numeric slot. The bounds are inclusive, except the minimum if
-    /// \c minimumExclusive is true.
+    /// The permitted values of type \a T, a number. The bounds are inclusive, except the minimum
+    /// if \c minimumExclusive is true. A range without \c maximum has no upper bound.
+    template <class T>
     struct Range {
-        double minimum;
-        double maximum;
+        static_assert(std::is_arithmetic_v<T> && !std::is_same_v<T, bool>,
+                      "a range bounds a number");
+
+        T minimum;
+        std::optional<T> maximum;
         bool minimumExclusive = false;
 
-        static inline constexpr Range between(double minimum, double maximum) {
+        static inline constexpr Range between(T minimum, T maximum) {
             return {minimum, maximum, false};
         }
 
-        static inline constexpr Range atLeast(double minimum) {
-            return {minimum, std::numeric_limits<double>::infinity(), false};
+        static inline constexpr Range atLeast(T minimum) {
+            return {minimum, std::nullopt, false};
         }
 
-        static inline constexpr Range greaterThan(double minimum) {
-            return {minimum, std::numeric_limits<double>::infinity(), true};
+        static inline constexpr Range greaterThan(T minimum) {
+            return {minimum, std::nullopt, true};
         }
 
-        inline constexpr bool contains(double value) const {
-            return (minimumExclusive ? value > minimum : value >= minimum) && value <= maximum;
+        inline constexpr bool contains(T value) const {
+            return (minimumExclusive ? value > minimum : value >= minimum) &&
+                   (!maximum || value <= *maximum);
+        }
+
+        /// Returns this range with bounds of type \a U.
+        template <class U>
+        inline constexpr Range<U> to() const {
+            return {U(minimum), maximum ? std::optional<U>(U(*maximum)) : std::nullopt,
+                    minimumExclusive};
         }
     };
+
+    /// The type of the range of a slot of a type that no range bounds. No Range converts to it,
+    /// therefore a range of such a slot does not compile.
+    struct NoRange {};
+
+    /// The type of the values of a slot of type \a T: \a T without \c std::optional.
+    template <class T>
+    struct SlotNumber {
+        using Type = T;
+    };
+
+    template <class T>
+    struct SlotNumber<std::optional<T>> {
+        using Type = T;
+    };
+
+    /// The type of the range of a slot of type \a T: the Range of its values if they are numbers,
+    /// and NoRange otherwise.
+    template <class T, class Number = typename SlotNumber<T>::Type>
+    using RangeOf =
+        std::conditional_t<std::is_arithmetic_v<Number> && !std::is_same_v<Number, bool>,
+                           Range<Number>, NoRange>;
 
     /// A slot of a record that holds a value of type \a T, addressed by \c index.
     ///
     /// \c name is the name of the corresponding field of \c .usth, which commands and logs use.
-    /// \c range constrains a numeric value. A violation does not prevent the modification, but
-    /// the commit of a transaction that introduces it, see EditSession::Transaction::commit().
+    /// \c range constrains a numeric value and has the type of the value. A violation does not
+    /// prevent the modification, but the commit of a transaction that introduces it, see
+    /// EditSession::Transaction::commit().
     template <class T>
     struct Slot {
         using ValueType = T;
 
         int index;
         const char *name;
-        std::optional<Range> range = std::nullopt;
+        std::optional<RangeOf<T>> range = std::nullopt;
     };
 
     /// A slot of a record that holds a child node, addressed by \c index.
