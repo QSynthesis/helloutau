@@ -220,6 +220,124 @@ private Q_SLOTS:
         QCOMPARE(m_session->currentStep(), step + 1);
     }
 
+    // Without its root, the voice bank on disk is incomplete, and the tree is the only copy.
+    // Saving writes every text file of it again, which makes the voice bank complete.
+    void a_removed_root_is_written_again_by_saving() {
+        QVERIFY(!m_session->isIncomplete());
+        QVERIFY(QDir(m_dir->path()).removeRecursively());
+        QVERIFY(m_session->checkDisk().rootNotFound);
+        QVERIFY(m_session->isIncomplete());
+        QCOMPARE(directories().size(), 2);
+
+        DiagnosticList diagnostics;
+        QVERIFY(m_session->save(diagnostics));
+        QVERIFY(!m_session->isIncomplete());
+        QCOMPARE(read(QStringLiteral("oto.ini")),
+                 QByteArray("a.wav=a,41.0,2,3,4,5\r\nb.wav=b,1,2,3,4,5\r\n"));
+        QCOMPARE(read(QStringLiteral("sub/oto.ini")),
+                 QByteArray("#Charset:UTF-8\r\nx.wav=x,1,2,3,4,5\r\n"));
+        QVERIFY(!QFileInfo::exists(pathOf(QStringLiteral("left"))));
+        QVERIFY(m_session->checkDisk().isEmpty());
+    }
+
+    // A root restored on disk by another program makes the voice bank complete again.
+    void a_restored_root_makes_the_voice_bank_complete() {
+        const auto moved = m_dir->path() + QStringLiteral("-moved");
+        QVERIFY(QDir().rename(m_dir->path(), moved));
+        QVERIFY(m_session->checkDisk().rootNotFound);
+        QVERIFY(m_session->isIncomplete());
+        QVERIFY(QDir().rename(moved, m_dir->path()));
+        QVERIFY(!m_session->checkDisk().rootNotFound);
+        QVERIFY(!m_session->isIncomplete());
+    }
+
+    // A root that no longer reads when read again keeps its former contents in the tree, and
+    // saving writes them over the files.
+    void a_root_that_no_longer_reads_is_written_back() {
+        write(QStringLiteral("oto.ini"), "a.wav=\xff,41.0,2,3,4,5\r\n");
+        DiagnosticList diagnostics;
+        const auto done = m_session->reloadFromDisk(m_session->checkDisk(), nullptr, diagnostics);
+        QCOMPARE(done.changed, QList<fs::path>{fs::path()});
+        QVERIFY(m_session->isIncomplete());
+        QCOMPARE(diagnostics.first().severity, DiagnosticSeverity::Warning);
+        QCOMPARE(directories().at(0).otoEntries().size(), 2);
+        QCOMPARE(directories().at(0).otoEntries().at(0).alias(), QStringLiteral("a"));
+        QVERIFY(m_session->isModified());
+
+        QVERIFY(m_session->save(diagnostics));
+        QVERIFY(!m_session->isIncomplete());
+        QCOMPARE(read(QStringLiteral("oto.ini")),
+                 QByteArray("a.wav=a,41.0,2,3,4,5\r\nb.wav=b,1,2,3,4,5\r\n"));
+    }
+
+    // A root that reads again once its files are repaired makes the voice bank complete.
+    void a_root_read_again_makes_the_voice_bank_complete() {
+        write(QStringLiteral("oto.ini"), "a.wav=\xff,41.0,2,3,4,5\r\n");
+        reload();
+        QVERIFY(m_session->isIncomplete());
+        write(QStringLiteral("oto.ini"), "a.wav=c,41.0,2,3,4,5\r\n");
+        QFile file(pathOf(QStringLiteral("oto.ini")));
+        QVERIFY(file.open(QIODevice::ReadWrite));
+        QVERIFY(file.setFileTime(QDateTime::currentDateTime().addSecs(-7200),
+                                 QFileDevice::FileModificationTime));
+        file.close();
+        QCOMPARE(reload().changed, QList<fs::path>{fs::path()});
+        QVERIFY(!m_session->isIncomplete());
+        QCOMPARE(directories().at(0).otoEntries().at(0).alias(), QStringLiteral("c"));
+    }
+
+    // Where the root cannot be written again, the voice bank is saved elsewhere and edited there
+    // from now on. Every other file is copied by default, including the directories that are not
+    // in the tree, which remain excluded.
+    void saving_as_moves_the_session_to_the_new_folder() {
+        write(QStringLiteral("readme.pdf"), "%PDF");
+        QTemporaryDir target;
+        const auto folder = fs::path(target.path().toStdU16String()) / "copy";
+        const auto original = read(QStringLiteral("oto.ini"));
+
+        DiagnosticList diagnostics;
+        QVERIFY(m_session->saveAs(folder, VoiceBankSession::AllFiles, diagnostics));
+        QCOMPARE(m_session->rootPath(), folder);
+        QVERIFY(!m_session->isModified());
+        const auto copied = [&folder](const char *relative) {
+            QFile file(QString::fromStdU16String((folder / relative).u16string()));
+            return file.open(QIODevice::ReadOnly) ? file.readAll() : QByteArray("<missing>");
+        };
+        QCOMPARE(copied("a.wav"), QByteArray("RIFF"));
+        QCOMPARE(copied("readme.pdf"), QByteArray("%PDF"));
+        QCOMPARE(copied("left/oto.ini"), "z.wav=" + kGbkGePing + ",1,2,3,4,5\r\n");
+        QCOMPARE(m_session->excludedDirectories().size(), 1);
+        QVERIFY(m_session->snapshot().find(60, QStringLiteral("a")));
+
+        // An edit is saved into the new folder, and the original stays as it was.
+        {
+            auto transaction = m_session->transaction(QStringLiteral("Edit"));
+            directories().at(0).otoEntries().at(1).setOffset(7);
+            QVERIFY(transaction.commit());
+        }
+        QVERIFY(m_session->save(diagnostics));
+        QVERIFY(copied("oto.ini").contains("b.wav=b,7,"));
+        QCOMPARE(read(QStringLiteral("oto.ini")), original);
+    }
+
+    // Saving only the text files leaves the audio files behind, and a folder that is not empty
+    // is refused.
+    void saving_as_text_files_leaves_the_rest_behind() {
+        QTemporaryDir target;
+        const auto folder = fs::path(target.path().toStdU16String());
+        DiagnosticList diagnostics;
+        QVERIFY(m_session->saveAs(folder, VoiceBankSession::TextFiles, diagnostics));
+        QVERIFY(QFileInfo::exists(target.filePath(QStringLiteral("oto.ini"))));
+        QVERIFY(!QFileInfo::exists(target.filePath(QStringLiteral("a.wav"))));
+        QVERIFY(!QFileInfo::exists(target.filePath(QStringLiteral("left"))));
+        QVERIFY(m_session->excludedDirectories().isEmpty());
+
+        diagnostics.clear();
+        QVERIFY(!m_session->saveAs(folder, VoiceBankSession::TextFiles, diagnostics));
+        QVERIFY(hasError(diagnostics));
+        QCOMPARE(m_session->rootPath(), folder);
+    }
+
     // The files of the root read again replace the character, the prefix map and the readme.
     void the_files_of_the_root_are_read_again() {
         write(QStringLiteral("character.txt"), "name=n\r\n");

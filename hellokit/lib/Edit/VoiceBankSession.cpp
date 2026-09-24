@@ -107,8 +107,36 @@ namespace hello::kit {
         return false;
     }
 
+    bool VoiceBankSession::isIncomplete() const {
+        return m_rootMissing || m_rootUnreadable;
+    }
+
     bool VoiceBankSession::save(DiagnosticList &diagnostics) {
-        return m_disk.save(snapshot(), diagnostics);
+        if (!m_disk.save(snapshot(), diagnostics)) {
+            return false;
+        }
+        // The files on disk are those of the tree again.
+        m_rootMissing = false;
+        m_rootUnreadable = false;
+        return true;
+    }
+
+    bool VoiceBankSession::saveAs(const std::filesystem::path &folder, SaveAsFiles files,
+                                  DiagnosticList &diagnostics) {
+        auto saved = VoiceBankDiskState::saveAs(snapshot(), folder, files == AllFiles, diagnostics);
+        if (!saved) {
+            return false;
+        }
+        m_disk = std::move(saved->disk);
+        m_excluded.clear();
+        for (const auto &directory : saved->bank.directories()) {
+            if (!isEditable(directory) && !directory.path.empty()) {
+                m_excluded.push_back(directory);
+            }
+        }
+        m_rootMissing = false;
+        m_rootUnreadable = false;
+        return true;
     }
 
     void VoiceBankSession::rememberCharset(const std::filesystem::path &directory) {
@@ -123,7 +151,10 @@ namespace hello::kit {
         return withUntaken(m_disk.checkDisk());
     }
 
-    VoiceBankChanges VoiceBankSession::withUntaken(VoiceBankChanges changes) const {
+    VoiceBankChanges VoiceBankSession::withUntaken(VoiceBankChanges changes) {
+        // A root restored on disk makes the voice bank complete again, unless it no longer
+        // reads, which only reading it again or writing it resolves.
+        m_rootMissing = changes.rootNotFound;
         if (changes.rootNotFound) {
             return changes;
         }
@@ -191,8 +222,11 @@ namespace hello::kit {
                 Diagnostic diagnostic;
                 diagnostic.severity = DiagnosticSeverity::Warning;
                 diagnostic.message = tr("The folder of the voice bank no longer reads in its "
-                                        "encoding, so the contents read before are kept.");
+                                        "encoding, so the voice bank on disk is incomplete. The "
+                                        "contents read before are kept, and saving writes them "
+                                        "back.");
                 diagnostics.push_back(diagnostic);
+                m_rootUnreadable = true;
                 continue;
             }
             directories->remove(i, 1);
@@ -218,6 +252,7 @@ namespace hello::kit {
             }
             if (directory.path.empty() && replaced.contains(directory.path)) {
                 setRootFiles(*root, directory);
+                m_rootUnreadable = false;
             }
         }
 

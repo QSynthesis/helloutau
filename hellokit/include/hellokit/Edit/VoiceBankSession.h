@@ -77,9 +77,33 @@ namespace hello::kit {
         /// Returns whether saving would write a file, see VoiceBankDiskState::isModified().
         bool isModified() const;
 
+        /// Returns whether the voice bank on disk is incomplete: its root was found missing by
+        /// checkDisk(), or no longer read when read again, see reloadFromDisk(). The tree is then
+        /// the only intact copy, and an editor tells the user prominently. Saving writes it back,
+        /// and saveAs() writes it elsewhere, either of which makes the voice bank complete again.
+        /// See the section on an incomplete voice bank in docs/Editing.md.
+        bool isIncomplete() const;
+
         /// Saves the voice bank, see VoiceBankDiskState::save(). The directories that are not in
-        /// the tree are neither written nor removed.
+        /// the tree are neither written nor removed. Without the root, every text file of the
+        /// tree is written again.
         bool save(DiagnosticList &diagnostics);
+
+        /// The files that saveAs() writes.
+        enum SaveAsFiles {
+            /// The text files of the tree, and a copy of every other file of the voice bank.
+            AllFiles,
+            /// The text files of the tree only.
+            TextFiles,
+        };
+
+        /// Saves the voice bank into \a folder , which must not exist or be empty, and edits it
+        /// there from now on. See VoiceBankDiskState::saveAs().
+        ///
+        /// The tree and the undo history are kept, the disk state becomes that of \a folder , in
+        /// which the voice bank is unmodified, and the original folder is no longer written.
+        bool saveAs(const std::filesystem::path &folder, SaveAsFiles files,
+                    DiagnosticList &diagnostics);
 
         /// See VoiceBankDiskState::rememberCharset().
         void rememberCharset(const std::filesystem::path &directory);
@@ -127,8 +151,9 @@ namespace hello::kit {
         VoiceBank fullBank() const;
 
         /// Returns \a changes with each directory of the disk state that the session holds
-        /// neither in the tree nor as excluded added to the new directories.
-        VoiceBankChanges withUntaken(VoiceBankChanges changes) const;
+        /// neither in the tree nor as excluded added to the new directories, and records whether
+        /// the root was found, see isIncomplete().
+        VoiceBankChanges withUntaken(VoiceBankChanges changes);
 
         /// Makes the tree hold the editable directories of \a bank in one transaction with
         /// \a message : the directories at \a replaced are replaced, the directories missing
@@ -139,6 +164,10 @@ namespace hello::kit {
 
         VoiceBankDiskState m_disk;
         QList<VoiceBankDirectory> m_excluded;
+
+        /// See isIncomplete().
+        bool m_rootMissing = false;
+        bool m_rootUnreadable = false;
     };
 
 }
