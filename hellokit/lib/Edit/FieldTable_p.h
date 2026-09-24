@@ -90,7 +90,7 @@ namespace hello::kit {
             /// A mapping from strings to values in the slot.
             Mapping,
 
-            /// An array of numbers in the slot.
+            /// An array of numbers in the slot, an \c ss::ArrayNode<double>.
             Array,
         };
 
@@ -129,6 +129,9 @@ namespace hello::kit {
         /// \a diagnostics. Null if no record of this type is created from JSON.
         std::unique_ptr<ss::Node> (*treeFromJson)(const QJsonObject &json,
                                                   DiagnosticList &diagnostics) = nullptr;
+
+        /// Returns the JSON of the record in \a tree. Null if \c treeFromJson is null.
+        QJsonObject (*treeToJson)(const ss::Node *tree) = nullptr;
 
         /// Returns the field named \a name, or \c nullptr if the record has no such field.
         inline const FieldInfo *field(QStringView name) const {

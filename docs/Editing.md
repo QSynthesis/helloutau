@@ -238,15 +238,31 @@ note.userData().remove(QStringLiteral("$Custom"));
 
 ## 命令
 
-格式为 `<名词> <动词> [参数…]`，每行一条，每条对应**一个事务**。
+每行一条，每条对应**一个事务**，事务消息即命令原文，因此一条命令是一个撤销步骤。命令被拒绝时事务回滚，文档不变。命令分两类：
 
 ```
-note insert 0 12 --lyric a --length 480 --note C4
-note remove 0 12 3
-note set    0 12 lyric "a i"
-tempo set   134.0
-oto set     a.wav 0 preUtterance 8.938
+set     /tracks/0/notes/12/lyric "a i"
+insert  /tracks/0/notes/12/portamento 2 {"x": 20, "y": 0, "type": "R"}
+remove  /tracks/0/notes 12 3
+note transpose 2 /tracks/0/notes/12 /tracks/0/notes/13
+note insert /tracks/0/notes 12 {"lyric": "a", "length": 480, "noteNum": 60}
 ```
+
+**节点操作**（`NodeCommands_p.h`，通用层）按路径寻址，覆盖句柄的全部操作。路径所指的字段种类决定可用的命令：
+
+| 命令 | 字段种类 | 作用 |
+|---|---|---|
+| `set <路径> <值>` | 值 | 写入。可空的字段写 `null` |
+| `set <路径> <对象\|null>` | 可空的记录 | 整体设置或移除 |
+| `set <路径> <键> <值>` / `remove <路径> <键>` | 映射 | 写入或移除一项，键是参数而非路径的一段 |
+| `insert <路径> <下标> <对象>…` | 列表 | 由 JSON 创建记录并插入 |
+| `remove <路径> <下标> [<数量>]` | 列表、数组 | 删除，数量默认为 1 |
+| `move <路径> <下标> <数量> <目标位置>` | 列表 | 目标位置是移动后第一项的下标 |
+| `insert` / `replace <路径> <下标> <数值>…` | 数组 | 插入或覆盖，覆盖可越过末尾 |
+
+**领域命令**（`ProjectCommands.h`）每个领域函数一条，形式为 `<名词> <动词> [参数…]`：`note transpose <半音数> <音符路径>…`、`note split <音符列表路径> <下标> <tick>`、`note insert <音符列表路径> <下标> <音符>`、`note tempo <音符路径> <速度>`。
+
+**命令只写入它所写明的值。** 读取文件时宽容的地方，命令一律拒绝：记录与整体值中的未知字段、类型不符的字段，以及读取时会被修正为默认值的写法，都报告错误而不写入。音高只接受数字，不接受音名。
 
 参数以空白分隔，**转义只有一套，即 JSON 的规则**（`CommandSyntax.h`）。参数有四种形式：
 
@@ -270,7 +286,7 @@ set /tracks/0/notes/12/vibrato/period 180
 set /tracks/0/notes/12/intensity null
 ```
 
-以 `/` 分隔，每段为槽位名或十进制下标。**路径中永远不出现数据**：歌词、flags、文件名只作为*值*出现。因此路径无需转义，也不会因歌词中含有空格或斜杠而解析错误。
+以 `/` 分隔，每段为槽位名或十进制下标，`/` 本身表示根。路径到达值字段后可以继续，各段为该值 JSON 写法中的成员，如上例的 `vibrato/period`、`envelope/anchors/1/y`：修改一个成员即整体替换该值，成员必须已存在，新值的 JSON 类型须与原值相同。**路径中永远不出现数据**：歌词、flags、文件名只作为*值*出现。因此路径无需转义，也不会因歌词中含有空格或斜杠而解析错误。
 
 `std::optional` 类型的字段以 `null` 表示「文件未指定」。`set …/intensity null` 与 `set …/intensity 100` 含义不同，在 UST 中同样不同。
 

@@ -77,6 +77,7 @@ namespace hello::kit {
                 [](const QJsonObject &json, DiagnosticList &) {
                     return treeOf(PitchBend::fromJson(json));
                   },
+                [](const ss::Node *tree) { return fromTree<PitchBend>(tree).toJson(); },
             };
             return record;
         }
@@ -93,6 +94,7 @@ namespace hello::kit {
                 [](const QJsonObject &json, DiagnosticList &diagnostics) {
                     return treeOf(PortamentoPoint::fromJson(json, diagnostics));
                   },
+                [](const ss::Node *tree) { return fromTree<PortamentoPoint>(tree).toJson(); },
             };
             return record;
         }
@@ -132,6 +134,7 @@ namespace hello::kit {
                     }
                     return treeOf(*note);
                   },
+                [](const ss::Node *tree) { return fromTree<Note>(tree).toJson(); },
             };
             return record;
         }
