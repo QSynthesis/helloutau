@@ -16,9 +16,6 @@
 
 namespace hello::kit {
 
-    /// The file name of the HelloUtau configuration file in a voice bank directory.
-    inline constexpr char voiceBankConfigFileName[] = "hello-config.json";
-
     /// The HelloUtau configuration of one voice bank directory.
     ///
     /// **One per directory, not one per voice bank.** A voice bank may contain several
@@ -30,6 +27,9 @@ namespace hello::kit {
     struct HELLOKIT_VOICEBANK_EXPORT VoiceBankConfig {
         Q_DECLARE_TR_FUNCTIONS(hello::kit::VoiceBankConfig)
     public:
+        /// The name of the file in a voice bank directory.
+        static constexpr char fileName[] = "hello-config.json";
+
         /// The encoding of the UTAU files in this directory: \c oto.ini , \c prefix.map ,
         /// \c character.txt and \c readme.txt .
         ///

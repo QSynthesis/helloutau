@@ -177,7 +177,7 @@ namespace hello::kit {
             case VoiceBankDirectorySource::Readme:
                 return "readme.txt";
             case VoiceBankDirectorySource::Config:
-                return voiceBankConfigFileName;
+                return VoiceBankConfig::fileName;
         }
         return "";
     }
