@@ -705,7 +705,8 @@ namespace hello::kit {
             }
             const auto &path = m_directories.at(i).path;
             auto &book = m_books[i];
-            const auto now = VoiceBankDirectoryStamp::take(path.empty() ? m_root : m_root / path);
+            const auto now =
+                VoiceBankDirectoryStamp::take(path.empty() ? m_root : m_root / path, path.empty());
             if (!now) {
                 removeUnder(path);
                 continue;
@@ -761,7 +762,7 @@ namespace hello::kit {
                             c = char(c - 'A' + 'a');
                         }
                     }
-                    const auto kind = voiceBankFileNamed(folded);
+                    const auto kind = voiceBankFileNamed(folded, path.empty());
                     if (!kind) {
                         continue;
                     }
@@ -1156,9 +1157,7 @@ namespace hello::kit {
         m_character = VoiceCharacter();
         m_character.name = QString::fromStdU16String(m_root.filename().u16string());
 
-        // Only the character.txt, readme.txt and prefix.map of the root describe the voice
-        // bank. A subdirectory with its own files is a separate voice bank, and applying them
-        // here would rename the voice bank that was opened.
+        // Only the root has a character.txt, readme.txt and prefix.map. See voiceBankFileNamed().
         for (const auto &directory : std::as_const(m_directories)) {
             if (!directory.path.empty()) {
                 continue;

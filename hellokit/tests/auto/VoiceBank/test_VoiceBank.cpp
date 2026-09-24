@@ -67,6 +67,14 @@ private:
         QCOMPARE(file.write(bytes), bytes.size());
     }
 
+    QByteArray read(const QString &relative) const {
+        QFile file(m_dir->path() + QLatin1Char('/') + relative);
+        if (!file.open(QIODevice::ReadOnly)) {
+            return "<missing>";
+        }
+        return file.readAll();
+    }
+
 private Q_SLOTS:
     void init() {
         m_dir = std::make_unique<QTemporaryDir>();
@@ -278,24 +286,49 @@ private Q_SLOTS:
         QVERIFY(!sample->hasEntry);
     }
 
-    // A subdirectory with its own character.txt is a separate voice bank. Applying it here would
-    // rename the voice bank that was opened.
-    void a_subdirectory_does_not_rename_the_bank() {
+    // The character.txt, prefix.map and readme.txt of a subdirectory belong to the voice bank the
+    // subdirectory forms if selected by itself. They are neither read nor written, so they neither
+    // rename the voice bank that was opened nor require an encoding.
+    void the_files_of_a_subdirectory_other_than_oto_are_ignored() {
         write(QStringLiteral("character.txt"), "name=outer\n");
-        write(QStringLiteral("inner/character.txt"), "name=inner\n");
         write(QStringLiteral("a.wav"), "RIFF");
+        const QByteArray character = "name=" + kGbkGePing + "\n";
+        write(QStringLiteral("inner/oto.ini"), "b.wav=b,1,2,3,4,5\r\n");
+        write(QStringLiteral("inner/character.txt"), character);
+        write(QStringLiteral("inner/prefix.map"), "C4\t\t_B\n");
+        write(QStringLiteral("inner/readme.txt"), kGbkGePing);
+        write(QStringLiteral("inner/b.wav"), "RIFF");
+        write(QStringLiteral("text/character.txt"), character);
 
         FixedCharsetSelector selector(QStringLiteral("UTF-8"));
         DiagnosticList diagnostics;
-        const auto bank = VoiceBank::open(root(), &selector, diagnostics);
+        auto bank = VoiceBank::open(root(), &selector, diagnostics);
         QVERIFY(bank.has_value());
         QCOMPARE(bank->character().name, QStringLiteral("outer"));
+        const auto *text = directoryAt(*bank, "text");
+        QVERIFY(text);
+        QVERIFY(text->charset.isEmpty());
+        QVERIFY(!text->leftOut);
+        QVERIFY(!text->character.has_value());
 
-        // Still read, because the file of the subdirectory is edited with that directory.
         const auto *inner = directoryAt(*bank, "inner");
         QVERIFY(inner);
-        QVERIFY(inner->character.has_value());
-        QCOMPARE(inner->character->name, QStringLiteral("inner"));
+        QVERIFY(!inner->character.has_value());
+        QVERIFY(!inner->prefixMap.has_value());
+        QVERIFY(inner->readme.isEmpty());
+        QVERIFY(!inner->lossy);
+
+        auto samples = bank->samples();
+        for (auto &sample : samples) {
+            if (sample.alias == QStringLiteral("b")) {
+                sample.offset = 7;
+            }
+        }
+        bank->setSamples(samples);
+        QVERIFY(bank->save(diagnostics));
+        QCOMPARE(read(QStringLiteral("inner/character.txt")), character);
+        QCOMPARE(read(QStringLiteral("inner/prefix.map")), QByteArray("C4\t\t_B\n"));
+        QCOMPARE(read(QStringLiteral("inner/readme.txt")), kGbkGePing);
     }
 
     // The encoding in which a directory is saved. Without it a save would have to guess, and a

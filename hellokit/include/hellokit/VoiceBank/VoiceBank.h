@@ -52,10 +52,10 @@ namespace hello::kit {
     /// One decoded directory of a voice bank, holding the data from which its files are saved.
     ///
     /// A voice bank is a tree of such directories rather than a single file, and each directory
-    /// is edited as a unit: its own \c oto.ini , \c character.txt and \c prefix.map , in its own
-    /// encoding. Samples are not stored here but in VoiceBank::samples() , for all directories
-    /// together, each referring to its directory. A combined list and a per-directory view are
-    /// therefore two views of the same data.
+    /// is edited as a unit: its own \c oto.ini in its own encoding, and in the root also
+    /// \c character.txt , \c prefix.map and \c readme.txt . Samples are not stored here but in
+    /// VoiceBank::samples() , for all directories together, each referring to its directory. A
+    /// combined list and a per-directory view are therefore two views of the same data.
     struct VoiceBankDirectory {
         /// The location relative to the voice bank root. Empty for the root itself.
         std::filesystem::path path;
@@ -97,10 +97,13 @@ namespace hello::kit {
         /// The contents of \c hello-config.json in this directory, if present.
         std::optional<VoiceBankConfig> config;
 
-        /// \c character.txt as written in the file, without defaults, if present.
+        /// \name Files of the root only
         ///
-        /// Kept for every directory, not only the root, because a subdirectory is edited as a
-        /// unit. Only the root's file describes the voice bank. See VoiceBank::character() .
+        /// Absent or empty in a subdirectory, whose files of these names are neither read nor
+        /// written. See voiceBankFileNamed() and VoiceBank::character() .
+        /// @{
+
+        /// \c character.txt as written in the file, without defaults, if present.
         std::optional<VoiceCharacter> character;
 
         /// \c prefix.map by note number, where 24 is C1, if present.
@@ -108,6 +111,8 @@ namespace hello::kit {
 
         /// \c readme.txt , or empty if absent.
         QString readme;
+
+        /// @}
     };
 
     /// One way to sing one lyric, corresponding to one line of an \c oto.ini .

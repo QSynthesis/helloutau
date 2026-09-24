@@ -88,8 +88,8 @@ namespace hello::kit {
             directory.path = relative;
 
             const auto absolute = relative.empty() ? root : root / relative;
-            directory.stamp =
-                VoiceBankDirectoryStamp::take(absolute).value_or(VoiceBankDirectoryStamp());
+            directory.stamp = VoiceBankDirectoryStamp::take(absolute, relative.empty())
+                                  .value_or(VoiceBankDirectoryStamp());
 
             std::error_code error;
             for (const auto &entry : fs::directory_iterator(
@@ -108,7 +108,7 @@ namespace hello::kit {
                 }
 
                 const auto name = folded(entry.path().filename());
-                const auto kind = voiceBankFileNamed(name);
+                const auto kind = voiceBankFileNamed(name, relative.empty());
                 if (!kind) {
                     if (isAudioName(name)) {
                         directory.audioFiles.push_back(entry.path().filename());
@@ -182,13 +182,17 @@ namespace hello::kit {
         return "";
     }
 
-    std::optional<VoiceBankFile> voiceBankFileNamed(std::string_view foldedName) {
+    std::optional<VoiceBankFile> voiceBankFileNamed(std::string_view foldedName, bool root) {
         for (const auto file :
              {VoiceBankFile::Oto, VoiceBankFile::PrefixMap, VoiceBankFile::Character,
               VoiceBankFile::Readme, VoiceBankFile::Config}) {
-            if (foldedName == voiceBankFileName(file)) {
-                return file;
+            if (foldedName != voiceBankFileName(file)) {
+                continue;
             }
+            if (!root && file != VoiceBankFile::Oto && file != VoiceBankFile::Config) {
+                return std::nullopt;
+            }
+            return file;
         }
         return std::nullopt;
     }
@@ -199,8 +203,8 @@ namespace hello::kit {
         return entry.time + std::chrono::seconds(2) >= takenAt;
     }
 
-    std::optional<VoiceBankDirectoryStamp>
-        VoiceBankDirectoryStamp::take(const fs::path &directory) {
+    std::optional<VoiceBankDirectoryStamp> VoiceBankDirectoryStamp::take(const fs::path &directory,
+                                                                         bool root) {
         std::error_code error;
         if (!fs::is_directory(directory, error)) {
             return std::nullopt;
@@ -222,7 +226,7 @@ namespace hello::kit {
                 entry.directory = true;
             } else if (item.is_regular_file(error)) {
                 const auto name = folded(entry.name);
-                if (voiceBankFileNamed(name)) {
+                if (voiceBankFileNamed(name, root)) {
                     entry.size = item.file_size(error);
                     entry.time = item.last_write_time(error);
                 } else if (!isAudioName(name)) {

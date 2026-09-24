@@ -151,6 +151,25 @@ private Q_SLOTS:
         QVERIFY(bank->checkDisk().isEmpty());
     }
 
+    // The character.txt, prefix.map and readme.txt of a subdirectory are not part of this voice
+    // bank, so changing them is not a change of it. The same files in the root are.
+    void the_text_files_of_a_subdirectory_are_not_watched() {
+        write(QStringLiteral("inner/oto.ini"), "a.wav=a,1,2,3,4,5\r\n");
+        write(QStringLiteral("inner/a.wav"), "RIFF");
+        write(QStringLiteral("inner/character.txt"), "name=inner\n");
+        CountingSelector selector(QStringLiteral("UTF-8"));
+        auto bank = open(&selector);
+        QVERIFY(bank.has_value());
+
+        write(QStringLiteral("inner/character.txt"), "name=changed inner\n");
+        write(QStringLiteral("inner/prefix.map"), "C4\t\t_B\n");
+        write(QStringLiteral("inner/readme.txt"), "readme");
+        QVERIFY(bank->checkDisk().isEmpty());
+
+        write(QStringLiteral("character.txt"), "name=root\n");
+        QCOMPARE(bank->checkDisk().changed, QList<fs::path>{fs::path()});
+    }
+
     // Two writes within one timestamp interval of the file system are indistinguishable by size
     // and time. Such a file is compared by content, because otherwise the second write would
     // never be detected.

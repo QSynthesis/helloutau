@@ -38,10 +38,15 @@ namespace hello::kit {
     /// VoiceBankFileRecord::name .
     HELLOKIT_VOICEBANK_EXPORT const char *voiceBankFileName(VoiceBankFile file);
 
-    /// Returns the file identified by the lowercase name \a foldedName , or \c std::nullopt for
-    /// any other name.
+    /// Returns the file identified by the lowercase name \a foldedName in the root directory if
+    /// \a root is \c true or in a subdirectory otherwise, or \c std::nullopt for any other name.
+    ///
+    /// \c character.txt , \c prefix.map and \c readme.txt belong to the root only, because UTAU
+    /// reads them from the voice bank directory alone. In a subdirectory they belong to the
+    /// voice bank that the subdirectory forms if selected by itself, and are neither read nor
+    /// written.
     HELLOKIT_VOICEBANK_EXPORT std::optional<VoiceBankFile>
-        voiceBankFileNamed(std::string_view foldedName);
+        voiceBankFileNamed(std::string_view foldedName, bool root);
 
     /// The state of one such file when it was read.
     struct VoiceBankFileRecord {
@@ -102,8 +107,12 @@ namespace hello::kit {
         /// content. Git applies the same rule under the same name.
         bool isRacy(const Entry &entry) const;
 
+        /// Takes the stamp of \a directory , which is the root of the voice bank if \a root is
+        /// \c true . See voiceBankFileNamed() for the files recorded.
+        ///
         /// \return the stamp, or \c std::nullopt if \a directory is not a directory
-        static std::optional<VoiceBankDirectoryStamp> take(const std::filesystem::path &directory);
+        static std::optional<VoiceBankDirectoryStamp> take(const std::filesystem::path &directory,
+                                                           bool root);
     };
 
     /// One directory of a voice bank as found on disk, not decoded.
