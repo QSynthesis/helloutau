@@ -10,14 +10,8 @@
 namespace hello::kit {
 
     // The field table of a project tree, one RecordInfo per record type of ProjectSchema.h. The
-    // functions are exported for the tests.
-
-    template <>
-    HELLOKIT_EDIT_EXPORT const ValueFormat &formatOf<Envelope>();
-    template <>
-    HELLOKIT_EDIT_EXPORT const ValueFormat &formatOf<Vibrato>();
-    template <>
-    HELLOKIT_EDIT_EXPORT const ValueFormat &formatOf<PortamentoPoint::Type>();
+    // table is a set of constants in the source file, and the functions are exported for the
+    // tests. The formats of the value types of a project are reached through the fields.
 
     /// Returns the record of the root of a project tree. The records of all other nodes are
     /// reachable from it through the fields.

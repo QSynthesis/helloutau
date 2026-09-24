@@ -621,23 +621,33 @@ namespace hello::kit {
         return target;
     }
 
-    QStringList NodeCommands::names() {
-        return {QStringLiteral("set"), QStringLiteral("insert"), QStringLiteral("remove"),
-                QStringLiteral("move"), QStringLiteral("replace")};
-    }
+    namespace {
 
-    bool NodeCommands::execute(EditSession &session, const RecordInfo &root, QStringView name,
-                               const QList<CommandArgument> &arguments,
-                               DiagnosticList &diagnostics) {
-        Q_ASSERT(session.inTransaction());
         using Command = bool (*)(const Target &, const QList<CommandArgument> &, DiagnosticList &);
-        const std::pair<const char *, Command> commands[] = {
+
+        constexpr std::pair<const char *, Command> commands[] = {
             {"set",     setCommand    },
             {"insert",  insertCommand },
             {"remove",  removeCommand },
             {"move",    moveCommand   },
             {"replace", replaceCommand},
         };
+
+    }
+
+    QStringList NodeCommands::names() {
+        QStringList names;
+        for (const auto &[name, command] : commands) {
+            Q_UNUSED(command)
+            names.push_back(QLatin1String(name));
+        }
+        return names;
+    }
+
+    bool NodeCommands::execute(EditSession &session, const RecordInfo &root, QStringView name,
+                               const QList<CommandArgument> &arguments,
+                               DiagnosticList &diagnostics) {
+        Q_ASSERT(session.inTransaction());
         for (const auto &[commandName, command] : commands) {
             if (name != QLatin1String(commandName)) {
                 continue;

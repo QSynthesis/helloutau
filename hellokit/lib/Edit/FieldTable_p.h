@@ -6,7 +6,6 @@
 
 #include <QtCore/QJsonObject>
 #include <QtCore/QJsonValue>
-#include <QtCore/QList>
 #include <QtCore/QString>
 #include <QtCore/QStringView>
 #include <QtCore/QVariant>
@@ -48,34 +47,34 @@ namespace hello::kit {
     };
 
     /// Returns the format of the values of type \a T. A document declares an explicit
-    /// specialization for each value type of its own.
+    /// specialization for each value type of its own, before its field table.
     template <class T>
-    const ValueFormat &formatOf();
+    constexpr const ValueFormat &formatOf();
 
     template <>
-    inline const ValueFormat &formatOf<QString>() {
+    inline constexpr const ValueFormat &formatOf<QString>() {
         return ValueFormats::string;
     }
 
     template <>
-    inline const ValueFormat &formatOf<int>() {
+    inline constexpr const ValueFormat &formatOf<int>() {
         return ValueFormats::integer;
     }
 
     template <>
-    inline const ValueFormat &formatOf<double>() {
+    inline constexpr const ValueFormat &formatOf<double>() {
         return ValueFormats::number;
     }
 
     template <>
-    inline const ValueFormat &formatOf<bool>() {
+    inline constexpr const ValueFormat &formatOf<bool>() {
         return ValueFormats::boolean;
     }
 
     struct RecordInfo;
 
-    /// A field of a record at run time: its slot, its name and the kind of its content. Commands
-    /// address the fields by name, and logs name the slots of changes.
+    /// A field of a record: its slot, its name and the kind of its content. Commands address the
+    /// fields by name, and logs name the slots of changes.
     struct FieldInfo {
         enum Kind {
             /// A value in the slot.
@@ -116,14 +115,45 @@ namespace hello::kit {
         int arrayType = 0;
     };
 
-    /// The fields of a record type at run time, in the order of its slots.
+    /// The fields of a record type, an array with static storage in the order of the slots.
+    ///
+    /// The array is not a QList, so that a field table is a constant expression, created by the
+    /// compiler rather than when the program runs.
+    class FieldList {
+    public:
+        template <int N>
+        inline constexpr FieldList(const FieldInfo (&fields)[N]) : m_fields(fields), m_size(N) {
+        }
+
+        inline constexpr int size() const {
+            return m_size;
+        }
+
+        inline constexpr const FieldInfo &at(int index) const {
+            return m_fields[index];
+        }
+
+        inline constexpr const FieldInfo *begin() const {
+            return m_fields;
+        }
+
+        inline constexpr const FieldInfo *end() const {
+            return m_fields + m_size;
+        }
+
+    private:
+        const FieldInfo *m_fields;
+        int m_size;
+    };
+
+    /// The fields of a record type.
     struct RecordInfo {
         /// The name of the record type in messages and commands, such as \c note.
         const char *name;
 
         int nodeType;
 
-        QList<FieldInfo> fields;
+        FieldList fields;
 
         /// Returns the tree of the record written as \a json, or \c nullptr with the reason in
         /// \a diagnostics. Null if no record of this type is created from JSON.
@@ -147,7 +177,7 @@ namespace hello::kit {
     // The fields of each kind, created from the slots of a schema.
 
     template <class T>
-    inline FieldInfo valueField(Slot<T> slot) {
+    inline constexpr FieldInfo valueField(Slot<T> slot) {
         FieldInfo field;
         field.index = slot.index;
         field.name = slot.name;
@@ -157,13 +187,13 @@ namespace hello::kit {
     }
 
     template <class T>
-    inline FieldInfo valueField(Slot<std::optional<T>> slot) {
+    inline constexpr FieldInfo valueField(Slot<std::optional<T>> slot) {
         auto field = valueField(Slot<T>{slot.index, slot.name, slot.range});
         field.optional = true;
         return field;
     }
 
-    inline FieldInfo childField(FieldInfo::Kind kind, ChildSlot slot) {
+    inline constexpr FieldInfo childField(FieldInfo::Kind kind, ChildSlot slot) {
         FieldInfo field;
         field.kind = kind;
         field.index = slot.index;
@@ -171,26 +201,28 @@ namespace hello::kit {
         return field;
     }
 
-    inline FieldInfo recordField(ChildSlot slot, const RecordInfo &record, bool optional) {
+    inline constexpr FieldInfo recordField(ChildSlot slot, const RecordInfo &record,
+                                           bool optional) {
         auto field = childField(FieldInfo::Record, slot);
         field.record = &record;
         field.optional = optional;
         return field;
     }
 
-    inline FieldInfo listField(ChildSlot slot, const RecordInfo &item) {
+    inline constexpr FieldInfo listField(ChildSlot slot, const RecordInfo &item) {
         auto field = childField(FieldInfo::List, slot);
         field.record = &item;
         return field;
     }
 
-    inline FieldInfo mappingField(ChildSlot slot, const ValueFormat &format) {
+    inline constexpr FieldInfo mappingField(ChildSlot slot, const ValueFormat &format) {
         auto field = childField(FieldInfo::Mapping, slot);
         field.format = &format;
         return field;
     }
 
-    inline FieldInfo arrayField(ChildSlot slot, int arrayType, const ValueFormat &format) {
+    inline constexpr FieldInfo arrayField(ChildSlot slot, int arrayType,
+                                          const ValueFormat &format) {
         auto field = childField(FieldInfo::Array, slot);
         field.arrayType = arrayType;
         field.format = &format;

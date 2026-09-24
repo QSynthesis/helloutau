@@ -35,7 +35,7 @@ namespace hello::kit {
             return {minimum, std::numeric_limits<double>::infinity(), true};
         }
 
-        inline bool contains(double value) const {
+        inline constexpr bool contains(double value) const {
             return (minimumExclusive ? value > minimum : value >= minimum) && value <= maximum;
         }
     };

@@ -23,6 +23,20 @@ private:
         return *record;
     }
 
+    // The formats of the value types of a project, which the field table holds.
+
+    static const ValueFormat &envelopeFormat() {
+        return *recordOf(NoteType).field(u"envelope")->format;
+    }
+
+    static const ValueFormat &vibratoFormat() {
+        return *recordOf(NoteType).field(u"vibrato")->format;
+    }
+
+    static const ValueFormat &portamentoTypeFormat() {
+        return *recordOf(PortamentoPointType).field(u"type")->format;
+    }
+
     static QStringList fieldNames(const RecordInfo &record) {
         QStringList names;
         for (const auto &field : record.fields) {
@@ -113,7 +127,8 @@ private Q_SLOTS:
         QCOMPARE(intensity->format, &ValueFormats::number);
         QVERIFY(intensity->optional);
 
-        QCOMPARE(note.field(u"envelope")->format, &formatOf<Envelope>());
+        QCOMPARE(QLatin1String(note.field(u"envelope")->format->typeName),
+                 QLatin1String("envelope"));
         QVERIFY(note.field(u"envelope")->optional);
 
         const auto portamento = note.field(u"portamento");
@@ -146,9 +161,9 @@ private Q_SLOTS:
         verifyRoundTrip(ValueFormats::number, 1.5);
         verifyRoundTrip(ValueFormats::boolean, false);
         verifyRoundTrip(ValueFormats::json, QJsonArray{1, QStringLiteral("b")});
-        verifyRoundTrip(formatOf<Envelope>(), note.value(QStringLiteral("envelope")));
-        verifyRoundTrip(formatOf<Vibrato>(), note.value(QStringLiteral("vibrato")));
-        verifyRoundTrip(formatOf<PortamentoPoint::Type>(), QStringLiteral("Linear"));
+        verifyRoundTrip(envelopeFormat(), note.value(QStringLiteral("envelope")));
+        verifyRoundTrip(vibratoFormat(), note.value(QStringLiteral("vibrato")));
+        verifyRoundTrip(portamentoTypeFormat(), QStringLiteral("Linear"));
     }
 
     void an_integer_has_no_fractional_part_and_fits_an_int() {
@@ -163,9 +178,9 @@ private Q_SLOTS:
         QVERIFY(!ValueFormats::string.fromJson(1));
         QVERIFY(!ValueFormats::number.fromJson(QStringLiteral("1")));
         QVERIFY(!ValueFormats::boolean.fromJson(1));
-        QVERIFY(!formatOf<Envelope>().fromJson(QStringLiteral("envelope")));
-        QVERIFY(!formatOf<Vibrato>().fromJson(180));
-        QVERIFY(!formatOf<PortamentoPoint::Type>().fromJson(1));
+        QVERIFY(!envelopeFormat().fromJson(QStringLiteral("envelope")));
+        QVERIFY(!vibratoFormat().fromJson(180));
+        QVERIFY(!portamentoTypeFormat().fromJson(1));
     }
 
     // An envelope has four or five anchors. The UST letter of a curve type is not its name.
@@ -176,8 +191,8 @@ private Q_SLOTS:
                         QJsonObject{{QStringLiteral("x"), 5}, {QStringLiteral("y"), 100}},
                         QJsonObject{{QStringLiteral("x"), 0}, {QStringLiteral("y"), 0}}}},
         };
-        QVERIFY(!formatOf<Envelope>().fromJson(threeAnchors));
-        QVERIFY(!formatOf<PortamentoPoint::Type>().fromJson(QStringLiteral("s")));
+        QVERIFY(!envelopeFormat().fromJson(threeAnchors));
+        QVERIFY(!portamentoTypeFormat().fromJson(QStringLiteral("s")));
     }
 
     void a_note_is_created_from_its_json() {

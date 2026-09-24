@@ -149,7 +149,7 @@ namespace hello::kit {
 
         using DomainCommand = bool (*)(ProjectSession &, const Arguments &, DiagnosticList &);
 
-        const std::pair<const char *, DomainCommand> noteCommands[] = {
+        constexpr std::pair<const char *, DomainCommand> noteCommands[] = {
             {"transpose", transposeCommand},
             {"split",     splitCommand    },
             {"insert",    insertCommand   },

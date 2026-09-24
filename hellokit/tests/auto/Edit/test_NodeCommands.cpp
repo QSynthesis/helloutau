@@ -14,41 +14,41 @@ class test_NodeCommands : public QObject {
     Q_OBJECT
 
 private:
-    // The field table of the tree of TestSession.
+    // The field table of the tree of TestSession. It is not a constant expression, unlike the
+    // table of a project, because the address of a format imported from the library is not a
+    // constant in this program.
     static const RecordInfo &itemRecord() {
+        static const FieldInfo fields[] = {
+            valueField(Slot<QString>{0, "name"}),
+            arrayField(ChildSlot{1, "values"}, TestSession::ValuesType, ValueFormats::number),
+        };
         static const RecordInfo record{
             "item",
             TestSession::ItemType,
-            {
-                        valueField(Slot<QString>{0, "name"}),
-                        arrayField(ChildSlot{1, "values"}, TestSession::ValuesType, ValueFormats::number),
-                        },
+            fields,
             [](const QJsonObject &json, DiagnosticList &) -> std::unique_ptr<ss::Node> {
                 auto node = std::make_unique<TestSession::Item>(TestSession::ItemType);
                 node->setAt(0, QVariant(json.value(QStringLiteral("name")).toString()));
                 node->setAt(1, std::make_unique<TestSession::Values>(TestSession::ValuesType));
                 return node;
-                        },
+            },
             [](const ss::Node *tree) {
                 return QJsonObject{
                     {QStringLiteral("name"),
-                        static_cast<const TestSession::Item &>(*tree).variant(0).toString()},
+                     static_cast<const TestSession::Item &>(*tree).variant(0).toString()},
                 };
-                        },
+            },
         };
         return record;
     }
 
     static const RecordInfo &rootRecord() {
-        static const RecordInfo record{
-            "root",
-            TestSession::RootType,
-            {
-                        valueField(Slot<QString>{0, "title"}),
-                        listField(ChildSlot{1, "items"}, itemRecord()),
-                        mappingField(ChildSlot{2, "tags"}, ValueFormats::integer),
-                        },
+        static const FieldInfo fields[] = {
+            valueField(Slot<QString>{0, "title"}),
+            listField(ChildSlot{1, "items"}, itemRecord()),
+            mappingField(ChildSlot{2, "tags"}, ValueFormats::integer),
         };
+        static const RecordInfo record{"root", TestSession::RootType, fields};
         return record;
     }
 
