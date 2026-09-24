@@ -125,25 +125,41 @@ namespace NoteSlots {
 }
 ```
 
-因此一个 `set` 模板即可满足需要，调用处仍在编译期具有类型：
+节点操作是 `EditSession` 的成员函数，以 `NodeId` 与槽位寻址。一个 `setValue` 模板即可满足需要，调用处仍在编译期具有类型：
 
 ```cpp
-session.set(note, NoteSlots::Lyric, QStringLiteral("a"));      // 正确
-session.set(note, NoteSlots::NoteNum, QStringLiteral("abc"));  // 编译失败
-session.set(point, PortamentoSlots::Y, 5.0);                   // 嵌套同样自然
+session.setValue(note, NoteSlots::Lyric, QStringLiteral("a"));      // 正确
+session.setValue(note, NoteSlots::NoteNum, QStringLiteral("abc"));  // 编译失败
+session.setValue(point, PortamentoSlots::Y, 5.0);                   // 嵌套同样自然
 ```
 
-**不编写 `setNoteLyric` / `setNoteLength` 之类的大量包装函数。** 槽位表同时承担类型、名称（供日志和命令层使用）和约束（见下文）三项职责。添加一个字段只需修改一处。
+槽位表同时承担类型、名称（供日志和命令层使用）和约束（见下文）三项职责。命令层按槽位名找到槽位，再调用同一组函数。
 
-序列与映射：
+序列、映射与数组：
 
 ```cpp
-session.insert(notes, 12, std::move(newNotes));
+session.insert(notes, 12, newNotes);          // 插入 Note 值的副本
 session.remove(notes, 12, 3);
 session.move(notes, 12, 3, 20);
-session.set(userData, "$Custom", value);
-session.remove(userData, "$Custom");
+session.setEntry(userData, "$Custom", value);
+session.setEntry(userData, "$Custom", {});    // 无效值即删除该项
+session.replaceValues(pitchValues, 0, values);
 ```
+
+### 句柄：节点操作的类型化封装
+
+界面代码不直接传递 `NodeId` 与槽位，而是使用句柄（`ProjectRefs.h`）。句柄是值类型，内含会话指针与 `NodeId`，每个成员函数只是对一个节点操作的内联调用，全部实现在头文件中：
+
+```cpp
+const auto notes = ProjectRef(&session).track(0).notes();
+const auto note = notes.at(12);
+note.setLyric(QStringLiteral("a"));      // 即 session.setValue(note.id(), NoteSlots::Lyric, …)
+note.setIntensity(std::nullopt);
+```
+
+句柄可以复制和保存。节点被删除后句柄无效（`isValid()` 为假），撤销删除后重新有效，因为 ID 不变。句柄不带信号，变更通知统一由会话发出，以 `NodeId` 与槽位下标标识变化的位置。
+
+**句柄不引入新的能力，也不记录变更。** 添加一个字段时修改槽位表，再在句柄中添加一对一行的函数。
 
 ### 领域函数：数量多，组合节点操作
 
@@ -173,10 +189,15 @@ session.remove(userData, "$Custom");
 ```cpp
 {
     auto tx = session.transaction(tr("移动 3 个音符"));
-    session.remove(notes, 12, 3);
-    session.insert(notes, 20, std::move(moved));
-}   // 析构时提交；中途返回或抛出异常则回滚
+    notes.move(12, 3, 20);
+    if (!ok) {
+        return;         // 未提交，析构时回滚
+    }
+    tx.commit();
+}
 ```
+
+**提交必须显式调用 `commit()`，未提交的事务在析构时回滚。** 析构函数无法区分正常到达作用域末尾与中途返回，若析构即提交，提前返回也会留下修改。回滚发出的通知与撤销相同，界面据此还原。
 
 事务消息即界面上「撤销：移动 3 个音符」中的文字，也是无界面模式日志中输出的内容。
 

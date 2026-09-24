@@ -1,4 +1,6 @@
 add_auto_test(test_EditSession.cpp HelloKitEdit)
+add_auto_test(test_NodeRef.cpp HelloKitEdit)
+add_auto_test(test_ProjectRefs.cpp HelloKitEdit)
 
 # Tests the private conversion between a project and its tree, which the library exports for this
 # purpose, and therefore uses substate directly.

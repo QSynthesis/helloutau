@@ -53,6 +53,16 @@ namespace hello::kit {
     /// its slots with the Qt meta-type system, which a decoder requires to find a type by name.
     HELLOKIT_EDIT_EXPORT void registerProjectTypes(ss::QCodec &codec);
 
+    // The conversions of single records, for the insertion of values into a session and for the
+    // copies returned by the handles.
+
+    std::unique_ptr<ss::Node> treeOfNote(const Note &note);
+    std::unique_ptr<ss::Node> treeOfPortamentoPoint(const PortamentoPoint &point);
+    std::unique_ptr<ss::Node> treeOfPitchBend(const PitchBend &pitchBend);
+
+    Note noteOfTree(const ss::Node *node);
+    PortamentoPoint portamentoPointOfTree(const ss::Node *node);
+
 }
 
 #endif // HELLOKIT_EDIT_PROJECTTREE_P_H

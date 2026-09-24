@@ -41,14 +41,18 @@ namespace hello::kit {
             return node;
         }
 
+        std::unique_ptr<ss::Node> pointTree(const PortamentoPoint &point) {
+            auto node = std::make_unique<PortamentoPointNode>(PortamentoPointType);
+            put(*node, PortamentoSlots::X, point.x);
+            put(*node, PortamentoSlots::Y, point.y);
+            put(*node, PortamentoSlots::Type, point.type);
+            return node;
+        }
+
         std::unique_ptr<ss::Node> portamentoTree(const QList<PortamentoPoint> &portamento) {
             auto node = std::make_unique<ss::VectorNode>();
             for (const auto &point : portamento) {
-                auto pointNode = std::make_unique<PortamentoPointNode>(PortamentoPointType);
-                put(*pointNode, PortamentoSlots::X, point.x);
-                put(*pointNode, PortamentoSlots::Y, point.y);
-                put(*pointNode, PortamentoSlots::Type, point.type);
-                node->append(std::move(pointNode));
+                node->append(pointTree(point));
             }
             return node;
         }
@@ -135,17 +139,21 @@ namespace hello::kit {
             return settings;
         }
 
+        PortamentoPoint pointOf(const PortamentoPointNode &node) {
+            PortamentoPoint point;
+            point.x = get(node, PortamentoSlots::X);
+            point.y = get(node, PortamentoSlots::Y);
+            point.type = get(node, PortamentoSlots::Type);
+            return point;
+        }
+
         QList<PortamentoPoint> portamentoOf(const ss::VectorNode &node) {
             QList<PortamentoPoint> portamento;
             portamento.reserve(node.size());
             for (int i = 0; i < node.size(); ++i) {
                 Q_ASSERT(node.at(i)->type() == PortamentoPointType);
-                const auto &pointNode = static_cast<const PortamentoPointNode &>(*node.at(i));
-                PortamentoPoint point;
-                point.x = get(pointNode, PortamentoSlots::X);
-                point.y = get(pointNode, PortamentoSlots::Y);
-                point.type = get(pointNode, PortamentoSlots::Type);
-                portamento.push_back(point);
+                portamento.push_back(
+                    pointOf(static_cast<const PortamentoPointNode &>(*node.at(i))));
             }
             return portamento;
         }
@@ -271,6 +279,28 @@ namespace hello::kit {
 
         qRegisterMetaType<Envelope>();
         qRegisterMetaType<Vibrato>();
+    }
+
+    std::unique_ptr<ss::Node> treeOfNote(const Note &note) {
+        return noteTree(note);
+    }
+
+    std::unique_ptr<ss::Node> treeOfPortamentoPoint(const PortamentoPoint &point) {
+        return pointTree(point);
+    }
+
+    std::unique_ptr<ss::Node> treeOfPitchBend(const PitchBend &pitchBend) {
+        return pitchBendTree(pitchBend);
+    }
+
+    Note noteOfTree(const ss::Node *node) {
+        Q_ASSERT(node && node->type() == NoteType);
+        return noteOf(static_cast<const NoteNode &>(*node));
+    }
+
+    PortamentoPoint portamentoPointOfTree(const ss::Node *node) {
+        Q_ASSERT(node && node->type() == PortamentoPointType);
+        return pointOf(static_cast<const PortamentoPointNode &>(*node));
     }
 
 }
