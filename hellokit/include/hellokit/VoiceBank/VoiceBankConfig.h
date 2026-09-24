@@ -30,8 +30,10 @@ namespace hello::kit {
         /// The name of the file in a voice bank directory.
         static constexpr char fileName[] = "hello-config.json";
 
-        /// The encoding of the UTAU files in this directory: \c oto.ini , \c prefix.map ,
-        /// \c character.txt and \c readme.txt .
+        /// The encoding of the UTAU files in this directory: the \c oto.ini , unless it declares
+        /// its own encoding, and in the root also \c prefix.map , \c character.txt and
+        /// \c readme.txt . See VoiceBankDirectory::otoCharset and
+        /// VoiceBankDirectorySource::fileNamed() .
         ///
         /// Never detected automatically. The value is the encoding specified by the user,
         /// recorded for later sessions.
