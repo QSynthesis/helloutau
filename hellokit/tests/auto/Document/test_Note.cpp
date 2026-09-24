@@ -65,6 +65,22 @@ private Q_SLOTS:
         second.hasMiddle = true;
         QVERIFY(first != second);
     }
+
+    // The editing layer stores a vibrato as one value and creates no action if the new value is
+    // equal to the old one, so every parameter must take part in the comparison.
+    void vibratos_differing_in_any_parameter_are_unequal() {
+        const Vibrato base{65, 180, 35, 20, 20, 0, 0, 0};
+        QVERIFY(base == Vibrato(base));
+
+        for (int i = 0; i < 8; ++i) {
+            auto other = base;
+            double *parameters[] = {&other.length, &other.period,   &other.amplitude,
+                                    &other.attack, &other.release,  &other.phase,
+                                    &other.offset, &other.intensity};
+            *parameters[i] += 1;
+            QVERIFY2(base != other, qPrintable(QString::number(i)));
+        }
+    }
 };
 
 QTEST_APPLESS_MAIN(test_Note)

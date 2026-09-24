@@ -97,6 +97,16 @@ namespace hello::kit {
         /// exposes no field for it, and it cannot be stored in \c Note::userData , because each
         /// value there is written as a separate entry, whereas this one is part of \c VBR.
         double intensity = 0;
+
+        inline bool operator==(const Vibrato &RHS) const {
+            return length == RHS.length && period == RHS.period && amplitude == RHS.amplitude &&
+                   attack == RHS.attack && release == RHS.release && phase == RHS.phase &&
+                   offset == RHS.offset && intensity == RHS.intensity;
+        }
+
+        inline bool operator!=(const Vibrato &RHS) const {
+            return !(*this == RHS);
+        }
     };
 
     /// One control point of the Mode2 pitch curve.
