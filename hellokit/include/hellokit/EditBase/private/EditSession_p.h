@@ -67,6 +67,10 @@ namespace hello::kit::edit {
         /// Whether a nested transaction ended without commit, which discards the outermost one.
         bool discarded = false;
 
+        /// Whether the transaction in progress brings in content read from a file, which is not
+        /// validated. See EditSessionPrivate::markAsRead().
+        bool read = false;
+
         /// Ends the innermost transaction in progress. The outermost transaction is committed if
         /// \a commit is true and no nested transaction was discarded, and rolled back otherwise.
         /// See EditSession::Transaction::commit().
@@ -186,6 +190,15 @@ namespace hello::kit::edit {
         static inline void registerValidator(EditSession &session, int nodeType,
                                              Validator validator) {
             impl(session).validators[nodeType] = std::move(validator);
+        }
+
+        /// Marks the transaction in progress as bringing in content read from a file, such as a
+        /// part of the document read again from disk. Its commit does not validate, because the
+        /// content is what the file holds, as when the document was opened. Requires a
+        /// transaction in progress, and applies to the outermost one.
+        static inline void markAsRead(EditSession &session) {
+            Q_ASSERT(impl(session).depth > 0);
+            impl(session).read = true;
         }
     };
 

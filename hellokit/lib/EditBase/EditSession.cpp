@@ -221,7 +221,7 @@ namespace hello::kit::edit {
                     "The modification was not applied because one of its steps was cancelled.")));
             }
         } else {
-            committed = !introducedViolations(diagnostics);
+            committed = read || !introducedViolations(diagnostics);
         }
 
         if (committed) {
@@ -233,6 +233,7 @@ namespace hello::kit::edit {
         }
         message.clear();
         discarded = false;
+        read = false;
         violationsBefore.clear();
         return committed;
     }

@@ -229,6 +229,23 @@ private Q_SLOTS:
         QCOMPARE(session.names(), initialNames());
     }
 
+    // Content read from a file is taken as it is, as when the document was opened. The mark
+    // applies to one transaction.
+    void a_transaction_of_content_read_from_a_file_is_not_validated() {
+        TestSession session;
+        {
+            auto transaction = session.transaction(QStringLiteral("Read"));
+            session.insertItems(0, {QString()});
+            EditSessionPrivate::markAsRead(session);
+            QVERIFY(transaction.commit());
+        }
+        QCOMPARE(session.names().first(), QString());
+
+        auto next = session.transaction(QStringLiteral("Edit"));
+        session.setName(session.itemAt(1), QString());
+        QVERIFY(!next.commit());
+    }
+
     void the_step_numbers_follow_commits_undo_and_redo() {
         TestSession session;
         QCOMPARE(session.currentStep(), 0);
