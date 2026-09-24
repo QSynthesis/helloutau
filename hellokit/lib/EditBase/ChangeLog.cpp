@@ -63,14 +63,44 @@ namespace hello::kit::edit {
             return entry;
         }
 
-        std::optional<QJsonObject> entryEntry(const EditSession &, const Change &change,
-                                              RecordLookup) {
+        // Returns the field of the record that holds mapping, or nullptr if the record type is
+        // unknown.
+        const FieldInfo *mappingFieldOf(const ss::Node *mapping, RecordLookup lookup) {
+            const auto parent = mapping ? mapping->parent() : nullptr;
+            const auto info = parent ? lookup(parent->type()) : nullptr;
+            if (!info) {
+                return nullptr;
+            }
+            const auto &record = static_cast<const ss::StructNodeBase &>(*parent);
+            for (const auto &field : info->fields) {
+                if (field.kind == FieldInfo::Mapping && record.child(field.index) == mapping) {
+                    return &field;
+                }
+            }
+            return nullptr;
+        }
+
+        std::optional<QJsonObject> entryEntry(const EditSession &session, const Change &change,
+                                              RecordLookup lookup) {
             const auto &mapping = static_cast<const EntryChange &>(change);
             QJsonObject entry{
                 {QStringLiteral("shape"), QStringLiteral("entry")},
                 {QStringLiteral("key"),   mapping.key()          },
             };
-            insertValues(entry, mapping.oldValue(), mapping.newValue());
+            const auto field =
+                mappingFieldOf(EditSessionPrivate::find(&session, change.node()), lookup);
+            if (!field) {
+                insertValues(entry, mapping.oldValue(), mapping.newValue());
+                return entry;
+            }
+            // Written in the format of the values of the mapping, as in a command. An absent
+            // value is omitted.
+            if (mapping.oldValue().isValid()) {
+                entry.insert(QStringLiteral("before"), field->format->toJson(mapping.oldValue()));
+            }
+            if (mapping.newValue().isValid()) {
+                entry.insert(QStringLiteral("after"), field->format->toJson(mapping.newValue()));
+            }
             return entry;
         }
 

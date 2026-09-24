@@ -2,6 +2,7 @@
 #include <QtTest/QTest>
 
 #include <hellokit/EditBase/private/ChangeLog_p.h>
+#include <hellokit/EditBase/private/FieldTable_p.h>
 
 #include "TestSession.h"
 
@@ -28,14 +29,39 @@ namespace {
 
 }
 
-// The entries of the generic change log on a tree without a field table. The entries with a
-// field table are tested with a project in test_ProjectSession.
+// The entries of the generic change log on a tree without a field table, and of a mapping with
+// one. The other entries with a field table are tested with a project in test_ProjectSession.
 class test_ChangeLog : public QObject {
     Q_OBJECT
 
 private:
     static const RecordInfo *noRecord(int) {
         return nullptr;
+    }
+
+    // A format of the tags whose JSON differs from the conversion of QVariant.
+    static QJsonValue tagToJson(const QVariant &value) {
+        return QStringLiteral("#%1").arg(value.toInt());
+    }
+
+    static std::optional<QVariant> tagFromJson(const QJsonValue &) {
+        return std::nullopt;
+    }
+
+    // The field table of the root only, with the tags in the format above.
+    static const RecordInfo *rootWithTags(int nodeType) {
+        static const ValueFormat tagFormat{"tag", tagToJson, tagFromJson};
+        static const FieldInfo itemFields[] = {
+            valueField(Slot<QString>{0, "name"}),
+        };
+        static const RecordInfo item{"item", TestSession::ItemType, itemFields};
+        static const FieldInfo fields[] = {
+            valueField(Slot<QString>{0, "title"}),
+            listField(ChildSlot{1, "items"}, item),
+            mappingField(ChildSlot{2, "tags"}, tagFormat),
+        };
+        static const RecordInfo root{"root", TestSession::RootType, fields};
+        return nodeType == TestSession::RootType ? &root : nullptr;
     }
 
     template <class Edit>
@@ -86,6 +112,44 @@ private Q_SLOTS:
                                           {QStringLiteral("shape"), QStringLiteral("entry")},
                                           {QStringLiteral("key"), QStringLiteral("a")},
                                           {QStringLiteral("before"), 2}},
+        }));
+    }
+
+    // With a field table, the values of a mapping are written in the format of its field, as a
+    // command writes them.
+    void a_mapping_entry_is_logged_in_the_format_of_its_field() {
+        TestSession session;
+        QList<QJsonObject> entries;
+        const auto connection = QObject::connect(
+            &session, &EditSession::changed, &session, [&](const ChangePtr &change) {
+                if (const auto entry = ChangeLog::entryOf(session, *change, rootWithTags)) {
+                    entries.push_back(*entry);
+                }
+            });
+        {
+            auto transaction = session.transaction(QStringLiteral("Edit"));
+            session.setTag(QStringLiteral("a"), QVariant(2));
+            session.setTag(QStringLiteral("b"), QVariant(3));
+            session.setTag(QStringLiteral("a"), QVariant());
+            QVERIFY(transaction.commit());
+        }
+        QObject::disconnect(connection);
+
+        const auto id = qint64(session.tags());
+        QCOMPARE(entries, QList<QJsonObject>({
+                              QJsonObject{{QStringLiteral("node"), id},
+                                          {QStringLiteral("shape"), QStringLiteral("entry")},
+                                          {QStringLiteral("key"), QStringLiteral("a")},
+                                          {QStringLiteral("before"), QStringLiteral("#1")},
+                                          {QStringLiteral("after"), QStringLiteral("#2")}},
+                              QJsonObject{{QStringLiteral("node"), id},
+                                          {QStringLiteral("shape"), QStringLiteral("entry")},
+                                          {QStringLiteral("key"), QStringLiteral("b")},
+                                          {QStringLiteral("after"), QStringLiteral("#3")}},
+                              QJsonObject{{QStringLiteral("node"), id},
+                                          {QStringLiteral("shape"), QStringLiteral("entry")},
+                                          {QStringLiteral("key"), QStringLiteral("a")},
+                                          {QStringLiteral("before"), QStringLiteral("#2")}},
         }));
     }
 
