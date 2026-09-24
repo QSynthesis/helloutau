@@ -44,7 +44,7 @@
 
 编辑层由通用部分 `HelloKitEditBase`（命名空间 `hello::kit::edit`，稳定后移入 substate）与工程部分 `HelloKitEdit` 组成，设计见 [`Editing.md`](Editing.md)。编辑期间工程是一棵 substate 节点树，`Project` 是从树物化出的快照。修改树的途径只有三层：句柄（`ProjectRefs.h`，按字段种类的类型化函数）、领域函数（`ProjectEdits.h`：`transpose`、`splitNote`、`insertNote`、`setTempo`）和命令（`ProjectCommands.h`，前两层的文本接口）。每个事务是一个撤销步骤，事务可以嵌套，提交时只拒绝本事务新引入的约束违例。变更以 `changed(ChangePtr)` 一个信号报告，也可写成 JSON Lines 的变更日志。通用层不依赖工程的结构，新节点种类经扩展接口注册变更翻译、日志写法和校验。字段表与槽位表是编译期常量。`hellokit/tests/manual/ustedit/` 在无界面环境下以命令编辑 `.usth` 或 `.ust`，可输出变更日志。
 
-音源是编辑层的第二种文档，以同样的方式建在通用层之上。树只含 oto 条目与根目录的三个文件；没有条目的 wav 由磁盘状态记录的音频文件减去条目引用的文件得到。未能读取或无法解码的子目录不进入树，由会话另行列出；根目录读不了时会话建立失败。约束：条目的文件名非空、同一 wav 的别名不重复、`prefix.map` 的键为 24 到 107。领域函数（`VoiceBankEdits.h`）：`setEntry`、`insertEntries`、`includeAudio`、`removeEntries`、`setPrefix`、`removePrefix`、`convertCharset`。从磁盘重新读取是一个撤销步骤，内容读自文件，不校验约束；撤销后树与磁盘不再一一对应，保存时创建树中有而磁盘上没有的目录，磁盘上有而树中没有的目录此后报告为新目录。`hellokit/tests/manual/voicedit/` 在无界面环境下以命令编辑音源并保存。
+音源是编辑层的第二种文档，以同样的方式建在通用层之上。树只含 oto 条目与根目录的三个文件；没有条目的 wav 由磁盘状态记录的音频文件减去条目引用的文件得到。未能读取或无法解码的子目录不进入树，由会话另行列出；根目录读不了时会话建立失败。约束：条目的文件名非空、同一 wav 的别名不重复、`prefix.map` 的键为 24 到 107。领域函数（`VoiceBankEdits.h`）：`setEntry`、`insertEntries`、`includeAudio`、`removeEntries`、`setPrefix`、`removePrefix`、`convertCharset`。从磁盘重新读取是一个撤销步骤，内容读自文件，不校验约束；撤销后树与磁盘不再一一对应，保存时创建树中有而磁盘上没有的目录，磁盘上有而树中没有的目录此后报告为新目录。根目录被删除，或重新读取时已读不了，音源在磁盘上即不完整（`isIncomplete()`），树是唯一完好的副本，保存时整个写回。另存为把音源写到一个不存在或为空的文件夹，默认同时复制原文件夹中的其他文件，也可只写文本文件，此后会话改为编辑新文件夹。`hellokit/tests/manual/voicedit/` 在无界面环境下以命令编辑音源，保存或另存为。
 
 `PayloadCodec` 实现 `_USTH_` 控制音符的载荷编码，即去除填充的 base64url。将其作为第一块代码，并非因为它最重要，而是因为它是纯逻辑、不依赖 Qt，且规则已经实测确定（见 [`claude/utau-ust-preservation.md`](claude/utau-ust-preservation.md)）。
 
