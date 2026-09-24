@@ -26,8 +26,8 @@ namespace hello::kit {
     /// Kept apart from VoiceBank , which holds the contents only, so that the contents can be
     /// held elsewhere, such as in the tree of an editing session, and materialized into a
     /// VoiceBank for each save. The two are paired by directory path, not by position: a
-    /// directory of the VoiceBank without state here has never been read, and state here without
-    /// a directory of the VoiceBank is skipped.
+    /// directory of the VoiceBank without state here was not read and is saved as a new one, and
+    /// state here without a directory of the VoiceBank is skipped.
     class HELLOKIT_VOICEBANK_EXPORT VoiceBankDiskState {
         Q_DECLARE_TR_FUNCTIONS(hello::kit::VoiceBankDiskState)
     public:
@@ -81,8 +81,13 @@ namespace hello::kit {
         /// - **Text that the encoding cannot represent.** It is never written as question marks.
         /// - **A file that changed on disk since it was read**, because it contains changes made
         ///   elsewhere. The voice bank must be reopened.
-        /// - **A directory that was never read**, or text that was invalid. See
+        /// - **A directory whose files were not read**, or text that was invalid. See
         ///   VoiceBankDirectory::leftOut and VoiceBankDirectory::lossy .
+        ///
+        /// A directory of \a bank without state here, for example one that a reload removed
+        /// and an undo in an editing session restored, is saved as a new directory: it is
+        /// created if missing, unless its path is a file, and every file of it is written. A file
+        /// already there was not read and is refused as a file that changed on disk.
         ///
         /// For each directory in which a file is written, and for each directory whose encoding
         /// differs from the one it was read in, the encoding is recorded beside it in

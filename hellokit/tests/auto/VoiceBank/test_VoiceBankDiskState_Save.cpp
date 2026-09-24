@@ -333,9 +333,10 @@ private Q_SLOTS:
     }
 
     // The contents and the disk state are paired by directory path. A directory of the contents
-    // that the disk state has never read has no record of its files on disk, so saving it could
-    // overwrite changes made elsewhere, and nothing is saved.
-    void a_directory_the_disk_state_has_not_read_is_not_saved() {
+    // that the disk state has not read is saved as a new one, but a file already in it has no
+    // record of its state, so replacing it could overwrite changes made elsewhere, and nothing is
+    // saved.
+    void a_file_in_a_directory_the_disk_state_has_not_read_is_not_replaced() {
         write(QStringLiteral("oto.ini"), "a.wav=a,1,2,3,4,5\r\n");
         write(QStringLiteral("a.wav"), "RIFF");
         auto opened = open(root(), QStringLiteral("UTF-8"));
@@ -350,7 +351,56 @@ private Q_SLOTS:
         DiagnosticList diagnostics;
         QVERIFY(!opened->disk.save(later->bank, diagnostics));
         QCOMPARE(diagnostics.size(), 1);
+        QVERIFY(diagnostics.first().message.contains(QStringLiteral("sub")));
         QCOMPARE(read(QStringLiteral("oto.ini")), QByteArray("a.wav=a,1,2,3,4,5\r\n"));
+        QVERIFY(!exists(QStringLiteral("sub/hello-config.json")));
+    }
+
+    // A directory that a reload removed and that the contents still hold, as after an undo in
+    // an editing session, is created again with its files. Saving it again finds it read.
+    void a_directory_the_disk_state_has_not_read_is_created() {
+        write(QStringLiteral("oto.ini"), "a.wav=a,1,2,3,4,5\r\n");
+        write(QStringLiteral("sub/oto.ini"), "b.wav=b,1,2,3,4,5\r\n");
+        write(QStringLiteral("sub/b.wav"), "RIFF");
+        auto opened = open(root(), QStringLiteral("UTF-8"));
+        QVERIFY(opened.has_value());
+        auto &disk = opened->disk;
+        const auto before = opened->bank;
+
+        QVERIFY(QDir(pathOf(QStringLiteral("sub"))).removeRecursively());
+        DiagnosticList diagnostics;
+        auto reloaded = opened->bank;
+        disk.reloadFromDisk(reloaded, disk.checkDisk(), nullptr, diagnostics);
+        QCOMPARE(reloaded.indexOf("sub"), -1);
+
+        QVERIFY(disk.save(before, diagnostics));
+        QCOMPARE(read(QStringLiteral("sub/oto.ini")),
+                 QByteArray("#Charset:UTF-8\r\nb.wav=b,1,2,3,4,5\r\n"));
+        QVERIFY(exists(QStringLiteral("sub/hello-config.json")));
+        QCOMPARE(read(QStringLiteral("oto.ini")), QByteArray("a.wav=a,1,2,3,4,5\r\n"));
+        QVERIFY(disk.checkDisk().isEmpty());
+        QVERIFY(!disk.isModified(before, "sub"));
+        QVERIFY(disk.save(before, diagnostics));
+    }
+
+    // A directory is not created where a file of its name is.
+    void a_directory_is_not_created_over_a_file() {
+        write(QStringLiteral("sub/oto.ini"), "b.wav=b,1,2,3,4,5\r\n");
+        auto opened = open(root(), QStringLiteral("UTF-8"));
+        QVERIFY(opened.has_value());
+        auto &disk = opened->disk;
+        const auto before = opened->bank;
+
+        QVERIFY(QDir(pathOf(QStringLiteral("sub"))).removeRecursively());
+        DiagnosticList diagnostics;
+        auto reloaded = opened->bank;
+        disk.reloadFromDisk(reloaded, disk.checkDisk(), nullptr, diagnostics);
+        write(QStringLiteral("sub"), "a file");
+
+        diagnostics.clear();
+        QVERIFY(!disk.save(before, diagnostics));
+        QVERIFY(diagnostics.first().message.contains(QStringLiteral("is a file")));
+        QCOMPARE(read(QStringLiteral("sub")), QByteArray("a file"));
     }
 
     // The output of a save becomes the baseline for the next one. Otherwise the second save

@@ -1070,19 +1070,33 @@ namespace hello::kit {
             return false;
         }
 
+        // A directory without state was not read from disk, for example one that a reload
+        // removed and an undo restored. It is saved as a new directory, created if missing, with
+        // an empty state: every file is written, and a file already there is not replaced,
+        // because it was not read.
+        const Book none;
+        std::set<fs::path> created;
+        const auto bookOf = [this, &none](const fs::path &path) -> const Book & {
+            const auto found = m_books.find(path);
+            return found == m_books.end() ? none : found->second;
+        };
+
         // All content is computed and validated before the first write, so that a voice bank
         // that cannot be saved remains unchanged rather than partially saved.
         for (int i = 0; i < directories.size(); ++i) {
             const auto &directory = directories.at(i);
             const auto absolute = directory.path.empty() ? m_root : m_root / directory.path;
-            const auto found = m_books.find(directory.path);
-            if (found == m_books.end()) {
-                fail(diagnostics, tr("\"%1\" was not read from disk, so it cannot be saved.")
-                                      .arg(displayed(directory.path)));
-                ok = false;
-                continue;
+            if (m_books.count(directory.path) == 0) {
+                std::error_code error;
+                if (fs::exists(absolute, error) && !fs::is_directory(absolute, error)) {
+                    fail(diagnostics, tr("\"%1\" is a file, so the folder cannot be created.")
+                                          .arg(displayed(directory.path)));
+                    ok = false;
+                    continue;
+                }
+                created.insert(directory.path);
             }
-            const auto &book = found->second;
+            const auto &book = bookOf(directory.path);
 
             // No file of a directory that was never read may be written, because its files
             // would be replaced with empty content. Its samples are bare files and are not
@@ -1164,7 +1178,7 @@ namespace hello::kit {
         // changes made concurrently by another program, such as the setParam tool of UTAU,
         // would be overwritten.
         for (const auto &write : writes) {
-            const auto &book = m_books.at(write.directory);
+            const auto &book = bookOf(write.directory);
             const auto record = book.files.find(write.file);
             const auto absolute = write.directory.empty() ? m_root : m_root / write.directory;
 
@@ -1189,6 +1203,15 @@ namespace hello::kit {
         }
 
         for (const auto &write : writes) {
+            if (created.count(write.directory) != 0) {
+                std::error_code error;
+                fs::create_directories(write.path.parent_path(), error);
+                if (error) {
+                    fail(diagnostics, tr("The folder \"%1\" could not be created.")
+                                          .arg(displayed(write.directory)));
+                    return false;
+                }
+            }
             // Written to a temporary file beside the target and renamed over it, so that no
             // reader observes a partially written file.
             QSaveFile file(QString::fromStdU16String(write.path.u16string()));
@@ -1214,6 +1237,20 @@ namespace hello::kit {
             auto &book = m_books[path];
             book.charset = name;
             book.remember = false;
+        }
+
+        // A directory saved without state now has files on disk, whose listing and audio files
+        // are taken as the state, as if it had been read.
+        for (const auto &path : created) {
+            const auto found = m_books.find(path);
+            if (found == m_books.end()) {
+                continue;
+            }
+            DiagnosticList ignored;
+            if (const auto source = VoiceBankSource::readDirectory(m_root, path, ignored)) {
+                found->second.stamp = source->stamp;
+                found->second.audioFiles = namesOf(source->audioFiles);
+            }
         }
         return true;
     }
