@@ -13,15 +13,22 @@ set(HELLOKIT_INSTALL_CONFIG_TEMPLATE
     "${CMAKE_CURRENT_LIST_DIR}/${HELLOKIT_INSTALL_NAME}Config.cmake.in"
 )
 
-# Windows resource metadata.
-set(HELLOKIT_RC_DESCRIPTION "HelloUtau core libraries")
+# Windows resource metadata. The libraries share the description of the module. A program is
+# described by the DESCRIPTION of the project() of its own directory, which the function reads in
+# the scope of that directory. project() without DESCRIPTION leaves PROJECT_DESCRIPTION empty.
+set(HELLOKIT_RC_DESCRIPTION "${PROJECT_DESCRIPTION}")
 set(HELLOKIT_RC_COPYRIGHT "Copyright (c) 2026-present SineStriker")
 
 function(_hellokit_common_configure_target _target)
+    set(_description "${HELLOKIT_RC_DESCRIPTION}")
+    if(PROJECT_DESCRIPTION)
+        set(_description "${PROJECT_DESCRIPTION}")
+    endif()
+
     if(WIN32)
         qm_add_win_rc(${_target}
             NAME ${_target}
-            DESCRIPTION "${HELLOKIT_RC_DESCRIPTION}"
+            DESCRIPTION "${_description}"
             COPYRIGHT "${HELLOKIT_RC_COPYRIGHT}"
         )
     endif()

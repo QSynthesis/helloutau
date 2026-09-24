@@ -1,4 +1,7 @@
-project(hello-fswatcher LANGUAGES CXX)
+project(hello-fswatcher
+    DESCRIPTION "HelloUtau File System Watcher"
+    LANGUAGES CXX
+)
 
 # The program that reports possibly changed directories to hello::kit::FileSystemWatcher. It runs
 # as a separate process, so that failures of the system notification facilities, such as
@@ -37,7 +40,6 @@ hellokit_add_executable(${PROJECT_NAME}
 # The libraries obtain C++17 through Qt, which this target does not link.
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
 
-# For the PImpl macros of stdcorelib/pimpl.h.
 target_link_libraries(${PROJECT_NAME} PRIVATE stdcorelib::stdcorelib)
 
 if(APPLE)

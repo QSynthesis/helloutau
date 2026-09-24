@@ -1,6 +1,3 @@
-# The tests of the generic session use a tree built through the extension interface of the
-# library, and the tests of the conversion use the private conversion functions, which the library
-# exports for this purpose. Both therefore use substate directly.
 set(_private substate::substate substate::qsubstate)
 set(_private_include ${CMAKE_CURRENT_SOURCE_DIR}/../../../lib/Edit)
 

@@ -27,7 +27,6 @@ function(add_auto_test _src)
     get_filename_component(_name ${_src} NAME_WE)
     add_executable(${_name} ${_src})
 
-    # The test class is declared in the source file, so moc must process it.
     set_target_properties(${_name} PROPERTIES AUTOMOC ON)
 
     target_link_libraries(${_name} PRIVATE Qt${QT_VERSION_MAJOR}::Test

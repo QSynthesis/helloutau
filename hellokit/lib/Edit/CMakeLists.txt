@@ -7,7 +7,6 @@ file(GLOB_RECURSE _src *.cpp *.h ../../include/hellokit/Edit/*.h)
 
 qm_find_qt(Core)
 
-# substate is private: no public header of this library refers to an ss:: type.
 hellokit_add_library(${PROJECT_NAME} SHARED
     QT_AUTOGEN
     SOURCES ${_src}
