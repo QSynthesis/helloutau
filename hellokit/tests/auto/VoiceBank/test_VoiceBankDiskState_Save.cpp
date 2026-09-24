@@ -20,7 +20,7 @@ static const QByteArray kShiftJisA = QByteArray("\x82\xa0", 2);
 // 们, which simplified Chinese has and Shift_JIS does not.
 static const QString kNotInShiftJis = QString::fromUtf8("\xe4\xbb\xac");
 
-class test_VoiceBankSave : public QObject {
+class test_VoiceBankDiskState_Save : public QObject {
     Q_OBJECT
 
 private:
@@ -450,6 +450,6 @@ private Q_SLOTS:
     }
 };
 
-QTEST_APPLESS_MAIN(test_VoiceBankSave)
+QTEST_APPLESS_MAIN(test_VoiceBankDiskState_Save)
 
-#include "test_VoiceBankSave.moc"
+#include "test_VoiceBankDiskState_Save.moc"

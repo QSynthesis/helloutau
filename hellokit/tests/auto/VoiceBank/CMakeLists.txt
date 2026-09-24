@@ -1,9 +1,9 @@
 add_auto_test(test_VoiceBankConfig.cpp HelloKitVoiceBank)
 add_auto_test(test_VoiceBankSource.cpp HelloKitVoiceBank)
 add_auto_test(test_VoiceBank.cpp HelloKitVoiceBank)
-add_auto_test(test_VoiceBankSave.cpp HelloKitVoiceBank)
-add_auto_test(test_VoiceBankCharset.cpp HelloKitVoiceBank)
-add_auto_test(test_VoiceBankDiskChanges.cpp HelloKitVoiceBank)
+add_auto_test(test_VoiceBankDiskState_Save.cpp HelloKitVoiceBank)
+add_auto_test(test_VoiceBankDiskState_Charset.cpp HelloKitVoiceBank)
+add_auto_test(test_VoiceBankDiskState_Changes.cpp HelloKitVoiceBank)
 
 # Starts the watcher, whose monitor program must be built into the same directory.
 add_auto_test(test_VoiceBankCheckScheduler.cpp HelloKitVoiceBank)

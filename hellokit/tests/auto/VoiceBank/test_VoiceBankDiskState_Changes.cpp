@@ -52,7 +52,7 @@ namespace {
 
 }
 
-class test_VoiceBankDiskChanges : public QObject {
+class test_VoiceBankDiskState_Changes : public QObject {
     Q_OBJECT
 
 private:
@@ -556,6 +556,6 @@ private Q_SLOTS:
     }
 };
 
-QTEST_APPLESS_MAIN(test_VoiceBankDiskChanges)
+QTEST_APPLESS_MAIN(test_VoiceBankDiskState_Changes)
 
-#include "test_VoiceBankDiskChanges.moc"
+#include "test_VoiceBankDiskState_Changes.moc"

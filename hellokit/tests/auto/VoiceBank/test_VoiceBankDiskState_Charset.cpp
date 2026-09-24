@@ -27,7 +27,7 @@ static const QByteArray kGbkZhe = QByteArray("\xd5\xe2", 2);
 static const QByteArray kShiftJisA = QByteArray("\x82\xa0", 2);
 static const QString kA = QString::fromUtf8("\xe3\x81\x82");
 
-class test_VoiceBankCharset : public QObject {
+class test_VoiceBankDiskState_Charset : public QObject {
     Q_OBJECT
 
 private:
@@ -470,6 +470,6 @@ private Q_SLOTS:
     }
 };
 
-QTEST_APPLESS_MAIN(test_VoiceBankCharset)
+QTEST_APPLESS_MAIN(test_VoiceBankDiskState_Charset)
 
-#include "test_VoiceBankCharset.moc"
+#include "test_VoiceBankDiskState_Charset.moc"
