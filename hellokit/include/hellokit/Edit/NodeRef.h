@@ -2,21 +2,23 @@
 #define HELLOKIT_EDIT_NODEREF_H
 
 #include <hellokit/Edit/EditSession.h>
+#include <hellokit/Edit/HelloKitEditGlobal.h>
 #include <hellokit/Edit/Slot.h>
 
 namespace hello::kit {
 
-    /// A handle of a node of an edit session, the base of the typed handles such as NoteRef.
+    /// A handle of a node of an edit session, the base of the handles of a document such as
+    /// NoteRef.
     ///
     /// A handle holds the session and the identifier of the node, and can be copied and stored.
-    /// Its member functions call the functions of EditSession with the identifier, therefore the
-    /// rules of EditSession apply: reading a node that is not in the tree returns default
-    /// values, and modifying it is a programming error. isValid() returns whether the node is in
-    /// the tree. A handle of a removed node becomes valid again if the removal is undone, because
-    /// the identifier of a node does not change. The session must outlive its handles.
+    /// Reading through a handle of a node that is not in the tree returns default values, and
+    /// modifying through it is a programming error, see EditSession. isValid() returns whether
+    /// the node is in the tree. A handle of a removed node becomes valid again if the removal is
+    /// undone, because the identifier of a node does not change. The session must outlive its
+    /// handles.
     ///
     /// A handle refers to a node as a pointer does, therefore a const handle can modify the node.
-    class NodeRef {
+    class HELLOKIT_EDIT_EXPORT NodeRef {
     public:
         inline NodeRef() = default;
 
@@ -45,28 +47,6 @@ namespace hello::kit {
         }
 
     protected:
-        template <class T>
-        inline T get(Slot<T> slot) const {
-            return m_session ? m_session->value(m_id, slot) : T();
-        }
-
-        template <class T>
-        inline void set(Slot<T> slot, const typename Slot<T>::ValueType &value) const {
-            m_session->setValue(m_id, slot, value);
-        }
-
-        inline NodeId childId(ChildSlot slot) const {
-            return m_session ? m_session->child(m_id, slot) : 0;
-        }
-
-        inline NodeId itemId(int index) const {
-            return m_session ? m_session->at(m_id, index) : 0;
-        }
-
-        inline int count() const {
-            return m_session ? m_session->size(m_id) : 0;
-        }
-
         EditSession *m_session = nullptr;
         NodeId m_id = 0;
     };

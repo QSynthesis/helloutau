@@ -9,17 +9,18 @@
 
 #include <hellokit/Document/Note.h>
 
+#include <hellokit/Edit/HelloKitEditGlobal.h>
 #include <hellokit/Edit/NodeRef.h>
 #include <hellokit/Edit/ProjectSchema.h>
 #include <hellokit/Edit/ProjectSession.h>
 
 namespace hello::kit {
 
-    // The handles of the nodes of a project tree. Each member function calls one function of
-    // EditSession with the slot of ProjectSchema.h. See NodeRef.
+    // The handles of the nodes of a project tree. Each getter and setter reads or writes the
+    // slot of ProjectSchema.h with the same name. See NodeRef.
 
     /// The base of the handles of a project tree, which refer to a ProjectSession.
-    class ProjectNodeRef : public NodeRef {
+    class HELLOKIT_EDIT_EXPORT ProjectNodeRef : public NodeRef {
     public:
         inline ProjectNodeRef() = default;
 
@@ -29,470 +30,223 @@ namespace hello::kit {
         inline ProjectSession *session() const {
             return static_cast<ProjectSession *>(m_session);
         }
-
-    protected:
-        template <class Ref>
-        inline Ref child(ChildSlot slot) const {
-            return Ref(session(), childId(slot));
-        }
-
-        template <class Ref>
-        inline Ref item(int index) const {
-            return Ref(session(), itemId(index));
-        }
     };
 
-    class SettingsRef : public ProjectNodeRef {
+    class HELLOKIT_EDIT_EXPORT SettingsRef : public ProjectNodeRef {
     public:
         using ProjectNodeRef::ProjectNodeRef;
 
-        inline QString name() const {
-            return get(SettingsSlots::Name);
-        }
+        QString name() const;
+        void setName(const QString &name) const;
 
-        inline void setName(const QString &name) const {
-            set(SettingsSlots::Name, name);
-        }
+        double tempo() const;
+        void setTempo(double tempo) const;
 
-        inline double tempo() const {
-            return get(SettingsSlots::Tempo);
-        }
+        QString flags() const;
+        void setFlags(const QString &flags) const;
 
-        inline void setTempo(double tempo) const {
-            set(SettingsSlots::Tempo, tempo);
-        }
+        QString outputFile() const;
+        void setOutputFile(const QString &outputFile) const;
 
-        inline QString flags() const {
-            return get(SettingsSlots::Flags);
-        }
-
-        inline void setFlags(const QString &flags) const {
-            set(SettingsSlots::Flags, flags);
-        }
-
-        inline QString outputFile() const {
-            return get(SettingsSlots::OutputFile);
-        }
-
-        inline void setOutputFile(const QString &outputFile) const {
-            set(SettingsSlots::OutputFile, outputFile);
-        }
-
-        inline QString cacheDir() const {
-            return get(SettingsSlots::CacheDir);
-        }
-
-        inline void setCacheDir(const QString &cacheDir) const {
-            set(SettingsSlots::CacheDir, cacheDir);
-        }
+        QString cacheDir() const;
+        void setCacheDir(const QString &cacheDir) const;
 
         /// \warning Untrusted, see \c ProjectSettings::wavtool.
-        inline QString wavtool() const {
-            return get(SettingsSlots::Wavtool);
-        }
-
-        inline void setWavtool(const QString &wavtool) const {
-            set(SettingsSlots::Wavtool, wavtool);
-        }
+        QString wavtool() const;
+        void setWavtool(const QString &wavtool) const;
 
         /// \warning Untrusted, see \c ProjectSettings::resampler.
-        inline QString resampler() const {
-            return get(SettingsSlots::Resampler);
-        }
+        QString resampler() const;
+        void setResampler(const QString &resampler) const;
 
-        inline void setResampler(const QString &resampler) const {
-            set(SettingsSlots::Resampler, resampler);
-        }
-
-        inline bool mode2() const {
-            return get(SettingsSlots::Mode2);
-        }
-
-        inline void setMode2(bool mode2) const {
-            set(SettingsSlots::Mode2, mode2);
-        }
+        bool mode2() const;
+        void setMode2(bool mode2) const;
     };
 
-    class PortamentoPointRef : public ProjectNodeRef {
+    class HELLOKIT_EDIT_EXPORT PortamentoPointRef : public ProjectNodeRef {
     public:
         using ProjectNodeRef::ProjectNodeRef;
 
-        inline double x() const {
-            return get(PortamentoSlots::X);
-        }
+        double x() const;
+        void setX(double x) const;
 
-        inline void setX(double x) const {
-            set(PortamentoSlots::X, x);
-        }
+        double y() const;
+        void setY(double y) const;
 
-        inline double y() const {
-            return get(PortamentoSlots::Y);
-        }
-
-        inline void setY(double y) const {
-            set(PortamentoSlots::Y, y);
-        }
-
-        inline PortamentoPoint::Type type() const {
-            return get(PortamentoSlots::Type);
-        }
-
-        inline void setType(PortamentoPoint::Type type) const {
-            set(PortamentoSlots::Type, type);
-        }
+        PortamentoPoint::Type type() const;
+        void setType(PortamentoPoint::Type type) const;
 
         /// Returns a copy of the point.
-        inline PortamentoPoint toPoint() const {
-            return {x(), y(), type()};
-        }
+        PortamentoPoint toPoint() const;
     };
 
-    class PortamentoListRef : public ProjectNodeRef {
+    class HELLOKIT_EDIT_EXPORT PortamentoListRef : public ProjectNodeRef {
     public:
         using ProjectNodeRef::ProjectNodeRef;
 
-        inline int size() const {
-            return count();
-        }
-
-        inline PortamentoPointRef at(int index) const {
-            return item<PortamentoPointRef>(index);
-        }
+        int size() const;
+        PortamentoPointRef at(int index) const;
 
         /// Inserts copies of \a points before \a index.
-        inline void insert(int index, const QList<PortamentoPoint> &points) const {
-            session()->insert(m_id, index, points);
-        }
+        void insert(int index, const QList<PortamentoPoint> &points) const;
 
-        inline void remove(int index, int count) const {
-            m_session->remove(m_id, index, count);
-        }
+        void remove(int index, int count) const;
 
-        inline void move(int index, int count, int destination) const {
-            m_session->move(m_id, index, count, destination);
-        }
+        /// Moves \a count points starting at \a index so that the first of them is at
+        /// \a destination afterwards.
+        void move(int index, int count, int destination) const;
     };
 
-    class PitchBendRef : public ProjectNodeRef {
+    class HELLOKIT_EDIT_EXPORT PitchBendRef : public ProjectNodeRef {
     public:
         using ProjectNodeRef::ProjectNodeRef;
 
-        inline std::optional<double> start() const {
-            return get(PitchBendSlots::Start);
-        }
+        std::optional<double> start() const;
+        void setStart(std::optional<double> start) const;
 
-        inline void setStart(std::optional<double> start) const {
-            set(PitchBendSlots::Start, start);
-        }
-
-        inline int size() const {
-            return m_session ? m_session->size(valuesId()) : 0;
-        }
-
-        inline QList<double> values() const {
-            return m_session ? m_session->values(valuesId()) : QList<double>();
-        }
+        int size() const;
+        QList<double> values() const;
 
         /// Overwrites the values starting at \a index, extending the curve if \a values reaches
         /// beyond its end.
-        inline void replaceValues(int index, const QList<double> &values) const {
-            m_session->replaceValues(valuesId(), index, values);
-        }
+        void replaceValues(int index, const QList<double> &values) const;
 
-        inline void insertValues(int index, const QList<double> &values) const {
-            m_session->insertValues(valuesId(), index, values);
-        }
-
-        inline void removeValues(int index, int count) const {
-            m_session->removeValues(valuesId(), index, count);
-        }
-
-    private:
-        inline NodeId valuesId() const {
-            return m_session->child(m_id, PitchBendSlots::Values);
-        }
+        void insertValues(int index, const QList<double> &values) const;
+        void removeValues(int index, int count) const;
     };
 
     /// See \c Note::userData.
-    class UserDataRef : public ProjectNodeRef {
+    class HELLOKIT_EDIT_EXPORT UserDataRef : public ProjectNodeRef {
     public:
         using ProjectNodeRef::ProjectNodeRef;
 
         /// Returns the keys in ascending order.
-        inline QStringList keys() const {
-            return m_session ? m_session->keys(m_id) : QStringList();
-        }
+        QStringList keys() const;
 
-        inline bool contains(const QString &key) const {
-            return m_session && m_session->entry(m_id, key).isValid();
-        }
-
-        inline QString value(const QString &key) const {
-            return m_session ? m_session->entry(m_id, key).toString() : QString();
-        }
-
-        inline void setValue(const QString &key, const QString &value) const {
-            m_session->setEntry(m_id, key, value);
-        }
-
-        inline void remove(const QString &key) const {
-            m_session->setEntry(m_id, key, QVariant());
-        }
+        bool contains(const QString &key) const;
+        QString value(const QString &key) const;
+        void setValue(const QString &key, const QString &value) const;
+        void remove(const QString &key) const;
     };
 
-    class NoteRef : public ProjectNodeRef {
+    class HELLOKIT_EDIT_EXPORT NoteRef : public ProjectNodeRef {
     public:
         using ProjectNodeRef::ProjectNodeRef;
 
-        inline QString lyric() const {
-            return get(NoteSlots::Lyric);
-        }
+        QString lyric() const;
+        void setLyric(const QString &lyric) const;
 
-        inline void setLyric(const QString &lyric) const {
-            set(NoteSlots::Lyric, lyric);
-        }
+        int length() const;
+        void setLength(int length) const;
 
-        inline int length() const {
-            return get(NoteSlots::Length);
-        }
+        int noteNum() const;
+        void setNoteNum(int noteNum) const;
 
-        inline void setLength(int length) const {
-            set(NoteSlots::Length, length);
-        }
+        std::optional<double> intensity() const;
+        void setIntensity(std::optional<double> intensity) const;
 
-        inline int noteNum() const {
-            return get(NoteSlots::NoteNum);
-        }
+        std::optional<double> modulation() const;
+        void setModulation(std::optional<double> modulation) const;
 
-        inline void setNoteNum(int noteNum) const {
-            set(NoteSlots::NoteNum, noteNum);
-        }
+        std::optional<double> velocity() const;
+        void setVelocity(std::optional<double> velocity) const;
 
-        inline std::optional<double> intensity() const {
-            return get(NoteSlots::Intensity);
-        }
+        std::optional<double> preUtterance() const;
+        void setPreUtterance(std::optional<double> preUtterance) const;
 
-        inline void setIntensity(std::optional<double> intensity) const {
-            set(NoteSlots::Intensity, intensity);
-        }
+        std::optional<double> voiceOverlap() const;
+        void setVoiceOverlap(std::optional<double> voiceOverlap) const;
 
-        inline std::optional<double> modulation() const {
-            return get(NoteSlots::Modulation);
-        }
+        std::optional<double> startPoint() const;
+        void setStartPoint(std::optional<double> startPoint) const;
 
-        inline void setModulation(std::optional<double> modulation) const {
-            set(NoteSlots::Modulation, modulation);
-        }
+        std::optional<double> tempo() const;
+        void setTempo(std::optional<double> tempo) const;
 
-        inline std::optional<double> velocity() const {
-            return get(NoteSlots::Velocity);
-        }
+        QString flags() const;
+        void setFlags(const QString &flags) const;
 
-        inline void setVelocity(std::optional<double> velocity) const {
-            set(NoteSlots::Velocity, velocity);
-        }
-
-        inline std::optional<double> preUtterance() const {
-            return get(NoteSlots::PreUtterance);
-        }
-
-        inline void setPreUtterance(std::optional<double> preUtterance) const {
-            set(NoteSlots::PreUtterance, preUtterance);
-        }
-
-        inline std::optional<double> voiceOverlap() const {
-            return get(NoteSlots::VoiceOverlap);
-        }
-
-        inline void setVoiceOverlap(std::optional<double> voiceOverlap) const {
-            set(NoteSlots::VoiceOverlap, voiceOverlap);
-        }
-
-        inline std::optional<double> startPoint() const {
-            return get(NoteSlots::StartPoint);
-        }
-
-        inline void setStartPoint(std::optional<double> startPoint) const {
-            set(NoteSlots::StartPoint, startPoint);
-        }
-
-        inline std::optional<double> tempo() const {
-            return get(NoteSlots::Tempo);
-        }
-
-        inline void setTempo(std::optional<double> tempo) const {
-            set(NoteSlots::Tempo, tempo);
-        }
-
-        inline QString flags() const {
-            return get(NoteSlots::Flags);
-        }
-
-        inline void setFlags(const QString &flags) const {
-            set(NoteSlots::Flags, flags);
-        }
-
-        inline std::optional<Envelope> envelope() const {
-            return get(NoteSlots::Envelope);
-        }
+        std::optional<Envelope> envelope() const;
 
         /// Replaces the envelope as a whole.
-        inline void setEnvelope(const std::optional<Envelope> &envelope) const {
-            set(NoteSlots::Envelope, envelope);
-        }
+        void setEnvelope(const std::optional<Envelope> &envelope) const;
 
-        inline std::optional<Vibrato> vibrato() const {
-            return get(NoteSlots::Vibrato);
-        }
+        std::optional<Vibrato> vibrato() const;
 
         /// Replaces the vibrato as a whole.
-        inline void setVibrato(const std::optional<Vibrato> &vibrato) const {
-            set(NoteSlots::Vibrato, vibrato);
-        }
+        void setVibrato(const std::optional<Vibrato> &vibrato) const;
 
-        inline PortamentoListRef portamento() const {
-            return child<PortamentoListRef>(NoteSlots::Portamento);
-        }
+        PortamentoListRef portamento() const;
 
         /// Returns the Mode1 pitch curve, or an invalid handle if the note has none.
-        inline PitchBendRef pitchBend() const {
-            return child<PitchBendRef>(NoteSlots::PitchBend);
-        }
+        PitchBendRef pitchBend() const;
 
         /// Replaces the Mode1 pitch curve, or removes it if \a pitchBend is empty.
-        inline void setPitchBend(const std::optional<PitchBend> &pitchBend) const {
-            session()->setPitchBend(m_id, pitchBend);
-        }
+        void setPitchBend(const std::optional<PitchBend> &pitchBend) const;
 
-        inline QString label() const {
-            return get(NoteSlots::Label);
-        }
+        QString label() const;
+        void setLabel(const QString &label) const;
 
-        inline void setLabel(const QString &label) const {
-            set(NoteSlots::Label, label);
-        }
-
-        inline QString direct() const {
-            return get(NoteSlots::Direct);
-        }
-
-        inline void setDirect(const QString &direct) const {
-            set(NoteSlots::Direct, direct);
-        }
+        QString direct() const;
+        void setDirect(const QString &direct) const;
 
         /// \warning Untrusted, see \c Note::patch.
-        inline QString patch() const {
-            return get(NoteSlots::Patch);
-        }
+        QString patch() const;
+        void setPatch(const QString &patch) const;
 
-        inline void setPatch(const QString &patch) const {
-            set(NoteSlots::Patch, patch);
-        }
+        QString region() const;
+        void setRegion(const QString &region) const;
 
-        inline QString region() const {
-            return get(NoteSlots::Region);
-        }
+        QString regionEnd() const;
+        void setRegionEnd(const QString &regionEnd) const;
 
-        inline void setRegion(const QString &region) const {
-            set(NoteSlots::Region, region);
-        }
-
-        inline QString regionEnd() const {
-            return get(NoteSlots::RegionEnd);
-        }
-
-        inline void setRegionEnd(const QString &regionEnd) const {
-            set(NoteSlots::RegionEnd, regionEnd);
-        }
-
-        inline UserDataRef userData() const {
-            return child<UserDataRef>(NoteSlots::UserData);
-        }
+        UserDataRef userData() const;
 
         /// Returns a copy of the note, or a default note if the handle is invalid.
-        inline Note toNote() const {
-            return m_session ? session()->note(m_id) : Note();
-        }
+        Note toNote() const;
     };
 
-    class NoteListRef : public ProjectNodeRef {
+    class HELLOKIT_EDIT_EXPORT NoteListRef : public ProjectNodeRef {
     public:
         using ProjectNodeRef::ProjectNodeRef;
 
-        inline int size() const {
-            return count();
-        }
-
-        inline NoteRef at(int index) const {
-            return item<NoteRef>(index);
-        }
+        int size() const;
+        NoteRef at(int index) const;
 
         /// Inserts copies of \a notes before \a index.
-        inline void insert(int index, const QList<Note> &notes) const {
-            session()->insert(m_id, index, notes);
-        }
+        void insert(int index, const QList<Note> &notes) const;
 
-        inline void remove(int index, int count) const {
-            m_session->remove(m_id, index, count);
-        }
+        void remove(int index, int count) const;
 
         /// Moves \a count notes starting at \a index so that the first of them is at
         /// \a destination afterwards. The notes keep their identifiers.
-        inline void move(int index, int count, int destination) const {
-            m_session->move(m_id, index, count, destination);
-        }
+        void move(int index, int count, int destination) const;
     };
 
-    class TrackRef : public ProjectNodeRef {
+    class HELLOKIT_EDIT_EXPORT TrackRef : public ProjectNodeRef {
     public:
         using ProjectNodeRef::ProjectNodeRef;
 
-        inline QString name() const {
-            return get(TrackSlots::Name);
-        }
+        QString name() const;
+        void setName(const QString &name) const;
 
-        inline void setName(const QString &name) const {
-            set(TrackSlots::Name, name);
-        }
+        QString voiceDir() const;
+        void setVoiceDir(const QString &voiceDir) const;
 
-        inline QString voiceDir() const {
-            return get(TrackSlots::VoiceDir);
-        }
-
-        inline void setVoiceDir(const QString &voiceDir) const {
-            set(TrackSlots::VoiceDir, voiceDir);
-        }
-
-        inline NoteListRef notes() const {
-            return child<NoteListRef>(TrackSlots::Notes);
-        }
+        NoteListRef notes() const;
     };
 
     /// The handle of the root of a session, from which the other handles are obtained.
-    class ProjectRef : public ProjectNodeRef {
+    class HELLOKIT_EDIT_EXPORT ProjectRef : public ProjectNodeRef {
     public:
         using ProjectNodeRef::ProjectNodeRef;
 
-        inline explicit ProjectRef(ProjectSession *session)
-            : ProjectNodeRef(session, session->root()) {
-        }
+        explicit ProjectRef(ProjectSession *session);
 
-        inline SettingsRef settings() const {
-            return child<SettingsRef>(ProjectSlots::Settings);
-        }
+        SettingsRef settings() const;
 
-        inline int trackCount() const {
-            return m_session->size(tracksId());
-        }
-
-        inline TrackRef track(int index) const {
-            return TrackRef(session(), m_session->at(tracksId(), index));
-        }
-
-    private:
-        inline NodeId tracksId() const {
-            return m_session->child(m_id, ProjectSlots::Tracks);
-        }
+        int trackCount() const;
+        TrackRef track(int index) const;
     };
 
 }

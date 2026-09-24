@@ -125,42 +125,43 @@ namespace NoteSlots {
 }
 ```
 
-节点操作是 `EditSession` 的成员函数，以 `NodeId` 与槽位寻址。一个 `setValue` 模板即可满足需要，调用处仍在编译期具有类型：
+槽位表同时承担类型、名称（供日志和命令层使用）和约束（见下文）三项职责。
 
-```cpp
-session.setValue(note, NoteSlots::Lyric, QStringLiteral("a"));      // 正确
-session.setValue(note, NoteSlots::NoteNum, QStringLiteral("abc"));  // 编译失败
-session.setValue(point, PortamentoSlots::Y, 5.0);                   // 嵌套同样自然
-```
+### 句柄：节点操作的公开接口
 
-槽位表同时承担类型、名称（供日志和命令层使用）和约束（见下文）三项职责。命令层按槽位名找到槽位，再调用同一组函数。
-
-序列、映射与数组：
-
-```cpp
-session.insert(notes, 12, newNotes);          // 插入 Note 值的副本，属于 ProjectSession
-session.remove(notes, 12, 3);
-session.move(notes, 12, 3, 20);
-session.setEntry(userData, "$Custom", value);
-session.setEntry(userData, "$Custom", {});    // 无效值即删除该项
-session.replaceValues(pitchValues, 0, values);
-```
-
-### 句柄：节点操作的类型化封装
-
-界面代码不直接传递 `NodeId` 与槽位，而是使用句柄（`ProjectRefs.h`）。句柄是值类型，内含会话指针与 `NodeId`，每个成员函数只是对一个节点操作的内联调用，全部实现在头文件中：
+界面代码通过句柄（`ProjectRefs.h`）读写树。句柄是值类型，内含会话指针与 `NodeId`，按文档的概念命名：音符、控制点、音高曲线，而非记录、列表、映射。每个成员函数在库内直接对一个 substate 节点执行一种变更形状，公开头文件只有声明，因此不出现 `ss::` 类型：
 
 ```cpp
 ProjectSession session(project);
 const auto notes = ProjectRef(&session).track(0).notes();
 const auto note = notes.at(12);
-note.setLyric(QStringLiteral("a"));      // 即 session.setValue(note.id(), NoteSlots::Lyric, …)
+note.setLyric(QStringLiteral("a"));             // 写入 NoteSlots::Lyric
 note.setIntensity(std::nullopt);
+notes.insert(13, {newNote});                    // 插入 Note 值的副本
+note.userData().remove(QStringLiteral("$Custom"));
 ```
 
-句柄可以复制和保存。节点被删除后句柄无效（`isValid()` 为假），撤销删除后重新有效，因为 ID 不变。句柄不带信号，变更通知统一由会话发出，以 `NodeId` 与槽位下标标识变化的位置。
+类型由句柄的函数签名保证，`note.setNoteNum(QStringLiteral("abc"))` 无法编译。
 
-**句柄不引入新的能力，也不记录变更。** 添加一个字段时修改槽位表，再在句柄中添加一对一行的函数。
+句柄可以复制和保存。节点被删除后句柄无效（`isValid()` 为假），撤销删除后重新有效，因为 ID 不变。句柄不带信号，也不记录变更：变更由 substate 的动作记录，通知由会话统一发出，见「变更通知」。
+
+**不设公开的「按节点种类」访问层。** 界面不需要以「记录的第几个槽位」「列表的第几项」的方式访问树，按种类逐一包装 substate 的节点接口只会重复它，substate 每增加一种节点就要再包装一次。命令层需要的按槽位名寻址在库内部实现。
+
+### 变更通知
+
+会话只有两个信号：`changed(ChangePtr)` 与 `stepChanged(int)`。后者给出撤销历史中的绝对步数 `currentStep()`，界面据此判断文档是否与保存时相同：当前步数等于保存时的步数，即未修改。`Change` 是多态的值：基类只含种类编号与节点 ID，数据由子类携带，接收方以 `as<T>()` 区分：
+
+| 子类 | 数据 | 对应的动作 |
+|---|---|---|
+| `ValueChange` | 槽位下标 | 槽位赋值，包括替换或移除子节点 |
+| `EntryChange` | 键 | 映射项增删改 |
+| `ArrayChange` | 无 | 数组的插入、删除、覆盖 |
+| `ListChange` | 类型（插入、即将删除、已删除）、下标、数量 | 序列插入与删除 |
+| `MoveChange` | 下标、数量、目标位置 | 序列移动 |
+
+所有变更按发生顺序出现在同一条流中，撤销、重做与回滚同样按实际方向报告。变更不含指向树的指针，可以排队传递和保存，因此也是变更日志的来源。
+
+**新增节点种类时，会话核心不需要修改。** substate 动作到变更的翻译按动作类型注册在扩展接口中，内置的几种节点也经由同一机制注册。新节点种类提供自己的句柄、自己的 `Change` 子类（种类编号从 `Change::User` 起）和翻译函数。
 
 ### 领域函数：数量多，组合节点操作
 
@@ -325,8 +326,8 @@ set /tracks/0/notes/12/intensity null
 
 `HelloKitEdit` 分为两部分：
 
-- **通用层**：`EditSession`、`NodeRef` 与 `Slot.h`。不依赖 `HelloKitDocument`，不涉及任何文档的结构，只按 `NodeId` 与槽位读写记录、列表、映射和数组，并提供事务、撤销与信号。私有头文件 `EditSession_p.h` 是它的扩展接口：派生类经由它安装根节点、插入由值转换得到的子树、替换子节点。测试以一棵与 UTAU 无关的树检验通用层。
-- **工程层**：`ProjectSession`（派生自 `EditSession`）、槽位表 `ProjectSchema.h`、句柄 `ProjectRefs.h`，以及私有的 `ProjectTree`（`Project` 与树的双向转换、节点类型编号与编解码器注册）。需要文档结构的操作属于这一层，例如从 `Note` 值插入音符、`snapshot()`。
+- **通用层**：`EditSession`、`NodeRef`、`Change` 与 `Slot.h`。不依赖 `HelloKitDocument`，不涉及任何文档的结构和节点种类，只提供树的安装、按 ID 查找、事务、撤销与变更通知。私有头文件 `EditSession_p.h` 是它的扩展接口：派生类经由它安装根节点，句柄经由它按 ID 取得节点，新节点种类经由它注册变更的翻译。取得节点时的类型比对只在断言中进行，因为句柄总是对应其自身类型的节点。测试以一棵与 UTAU 无关的树检验通用层。
+- **工程层**：`ProjectSession`（派生自 `EditSession`）、槽位表 `ProjectSchema.h`、句柄 `ProjectRefs.h`，以及私有的 `ProjectTree`（`Project` 与树的双向转换、节点类型编号与编解码器注册）。句柄的实现直接操作 substate 的节点。
 
 工程层的代码都可以由字段表机械地推出。音源作为第二种文档时，以同样的方式在通用层之上实现。
 

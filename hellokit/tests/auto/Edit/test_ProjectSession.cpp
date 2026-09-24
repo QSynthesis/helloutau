@@ -1,4 +1,3 @@
-#include <QtCore/QJsonValue>
 #include <QtCore/QRandomGenerator>
 #include <QtTest/QTest>
 
@@ -96,31 +95,6 @@ private Q_SLOTS:
         project.tracks.push_back(Track());
         const ProjectSession session(project);
         QCOMPARE(session.snapshot().toJson(), project.toJson());
-    }
-
-    // The functions of EditSession applied to a project tree, whose structure ProjectSchema.h
-    // declares.
-    void the_project_tree_is_addressed_by_identifier_and_slot() {
-        ProjectSession session(richProject());
-        const auto unknownFields = session.child(session.root(), ProjectSlots::UnknownFields);
-        QCOMPARE(session.size(unknownFields), 6);
-        QCOMPARE(session.entry(unknownFields, QStringLiteral("number")).value<QJsonValue>(),
-                 QJsonValue(2.5));
-
-        const auto tracks = session.child(session.root(), ProjectSlots::Tracks);
-        const auto notes = session.child(session.at(tracks, 0), TrackSlots::Notes);
-        const auto note = session.at(notes, 0);
-        QCOMPARE(session.value(note, NoteSlots::Lyric), QString::fromUtf8("あ"));
-        QCOMPARE(session.value(note, NoteSlots::Lyric.index).toString(), QString::fromUtf8("あ"));
-
-        const auto values =
-            session.child(session.child(note, NoteSlots::PitchBend), PitchBendSlots::Values);
-        QCOMPARE(session.size(values), 4);
-
-        // A node of another kind reads as default values.
-        QVERIFY(!session.value(notes, 0).isValid());
-        QVERIFY(session.keys(note).isEmpty());
-        QCOMPARE(session.note(notes).lyric, QString());
     }
 
     // A value equal to the current one creates no change, which relies on the equality of the

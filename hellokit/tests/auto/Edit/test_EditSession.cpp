@@ -1,6 +1,7 @@
 #include <QtTest/QSignalSpy>
 #include <QtTest/QTest>
 
+#include <hellokit/Edit/Change.h>
 #include <hellokit/Edit/EditSession.h>
 
 #include "TestSession.h"
@@ -11,88 +12,73 @@ using namespace hello::kit;
 class test_EditSession : public QObject {
     Q_OBJECT
 
+private:
+    static QStringList initialNames() {
+        return {QStringLiteral("first"), QStringLiteral("second")};
+    }
+
+    static ChangePtr changeAt(const QSignalSpy &spy, qsizetype index) {
+        return spy.at(index).at(0).value<ChangePtr>();
+    }
+
+    static void verifyList(const ChangePtr &change, ListChange::Type type, NodeId node, int index,
+                           int count) {
+        const auto list = change->as<ListChange>();
+        QVERIFY(list);
+        QCOMPARE(list->type(), type);
+        QCOMPARE(list->node(), node);
+        QCOMPARE(list->index(), index);
+        QCOMPARE(list->count(), count);
+    }
+
+    static void verifyMove(const ChangePtr &change, NodeId node, int index, int count,
+                           int destination) {
+        const auto move = change->as<MoveChange>();
+        QVERIFY(move);
+        QCOMPARE(move->node(), node);
+        QCOMPARE(move->index(), index);
+        QCOMPARE(move->count(), count);
+        QCOMPARE(move->destination(), destination);
+    }
+
 private Q_SLOTS:
-    void nodes_are_addressed_by_identifier_and_slot() {
+    void a_node_is_in_the_tree_until_it_is_removed() {
         TestSession session;
-        QCOMPARE(session.value(session.root(), TestRootSlots::Title), QStringLiteral("title"));
-        QCOMPARE(session.size(session.items()), 2);
-        QCOMPARE(session.names(), QStringList({QStringLiteral("first"), QStringLiteral("second")}));
-
-        const auto first = session.at(session.items(), 0);
-        const auto values = session.child(first, TestItemSlots::Values);
-        QCOMPARE(session.size(values), 3);
-        QCOMPARE(session.values(values), QList<double>({1, 2, 3}));
-
-        QCOMPARE(session.size(session.tags()), 1);
-        QCOMPARE(session.keys(session.tags()), QStringList({QStringLiteral("a")}));
-        QCOMPARE(session.entry(session.tags(), QStringLiteral("a")).toInt(), 1);
-    }
-
-    // A node of another kind, and an identifier of no node, read as default values.
-    void a_node_of_another_kind_reads_as_defaults() {
-        TestSession session;
-        QVERIFY(!session.value(session.items(), 0).isValid());
-        QCOMPARE(session.child(session.items(), TestItemSlots::Values), NodeId(0));
-        QVERIFY(session.keys(session.items()).isEmpty());
-        QVERIFY(session.values(session.tags()).isEmpty());
-        QCOMPARE(session.size(session.root()), 0);
+        const auto second = session.itemAt(1);
+        QVERIFY(session.contains(session.root()));
+        QVERIFY(session.contains(second));
         QVERIFY(!session.contains(0));
-        QVERIFY(!session.contains(1000000));
-    }
 
-    void every_kind_of_modification_is_applied() {
-        TestSession session;
-        const auto second = session.at(session.items(), 1);
-        const auto values = session.child(session.at(session.items(), 0), TestItemSlots::Values);
-
-        auto transaction = session.transaction(QStringLiteral("Edit"));
-        session.setValue(session.root(), TestRootSlots::Title, QStringLiteral("renamed"));
-        session.insertItems(1, {QStringLiteral("inserted")});
-        session.move(session.items(), 0, 1, 2);
-        session.setEntry(session.tags(), QStringLiteral("b"), 2);
-        session.setEntry(session.tags(), QStringLiteral("a"), QVariant());
-        session.replaceValues(values, 2, {30, 40});
-        session.insertValues(values, 0, {0});
-        session.removeValues(values, 1, 1);
-        session.removeChild(second, TestItemSlots::Values);
+        auto transaction = session.transaction(QStringLiteral("Remove"));
+        session.removeItems(1, 1);
         transaction.commit();
-
-        QCOMPARE(session.value(session.root(), TestRootSlots::Title), QStringLiteral("renamed"));
-        QCOMPARE(session.names(), QStringList({QStringLiteral("inserted"), QStringLiteral("second"),
-                                               QStringLiteral("first")}));
-        QCOMPARE(session.keys(session.tags()), QStringList({QStringLiteral("b")}));
-        QCOMPARE(session.values(values), QList<double>({0, 2, 30, 40}));
-        QCOMPARE(session.child(second, TestItemSlots::Values), NodeId(0));
+        QVERIFY(!session.contains(second));
 
         session.undo();
-        QCOMPARE(session.value(session.root(), TestRootSlots::Title), QStringLiteral("title"));
-        QCOMPARE(session.names(), QStringList({QStringLiteral("first"), QStringLiteral("second")}));
-        QCOMPARE(session.keys(session.tags()), QStringList({QStringLiteral("a")}));
-        QCOMPARE(session.values(values), QList<double>({1, 2, 3}));
-        QVERIFY(session.child(second, TestItemSlots::Values) != 0);
+        QVERIFY(session.contains(second));
     }
 
     void a_transaction_without_commit_is_rolled_back() {
         TestSession session;
         {
             auto transaction = session.transaction(QStringLiteral("Discarded"));
-            session.setValue(session.root(), TestRootSlots::Title, QStringLiteral("x"));
-            session.remove(session.items(), 0, 1);
-            session.setEntry(session.tags(), QStringLiteral("a"), QVariant());
+            session.setTitle(QStringLiteral("x"));
+            session.removeItems(0, 1);
+            session.setTag(QStringLiteral("a"), QVariant());
             QVERIFY(session.inTransaction());
         }
         QVERIFY(!session.inTransaction());
         QVERIFY(!session.canUndo());
-        QCOMPARE(session.value(session.root(), TestRootSlots::Title), QStringLiteral("title"));
-        QCOMPARE(session.names(), QStringList({QStringLiteral("first"), QStringLiteral("second")}));
-        QCOMPARE(session.size(session.tags()), 1);
+        QCOMPARE(session.title(), QStringLiteral("title"));
+        QCOMPARE(session.names(), initialNames());
+        QCOMPARE(session.tagKeys(), QStringList({QStringLiteral("a")}));
     }
 
     void a_committed_transaction_is_one_undo_step_with_its_message() {
         TestSession session;
         auto transaction = session.transaction(QString::fromUtf8("移动 1 个项目"));
-        session.setValue(session.root(), TestRootSlots::Title, QStringLiteral("x"));
-        session.move(session.items(), 0, 1, 1);
+        session.setTitle(QStringLiteral("x"));
+        session.moveItems(0, 1, 1);
         transaction.commit();
 
         QVERIFY(session.canUndo());
@@ -100,88 +86,149 @@ private Q_SLOTS:
         QVERIFY(session.redoMessage().isEmpty());
 
         session.undo();
-        QCOMPARE(session.names(), QStringList({QStringLiteral("first"), QStringLiteral("second")}));
-        QCOMPARE(session.value(session.root(), TestRootSlots::Title), QStringLiteral("title"));
+        QCOMPARE(session.names(), initialNames());
+        QCOMPARE(session.title(), QStringLiteral("title"));
         QVERIFY(!session.canUndo());
         QCOMPARE(session.redoMessage(), QString::fromUtf8("移动 1 个项目"));
 
         session.redo();
         QCOMPARE(session.names(), QStringList({QStringLiteral("second"), QStringLiteral("first")}));
-        QCOMPARE(session.value(session.root(), TestRootSlots::Title), QStringLiteral("x"));
+        QCOMPARE(session.title(), QStringLiteral("x"));
     }
 
-    void an_unchanged_value_creates_no_undo_step() {
+    void the_step_numbers_follow_commits_undo_and_redo() {
+        TestSession session;
+        QCOMPARE(session.currentStep(), 0);
+        QCOMPARE(session.minimumStep(), 0);
+        QCOMPARE(session.maximumStep(), 0);
+
+        QSignalSpy stepChanged(&session, &EditSession::stepChanged);
+        for (int i = 1; i <= 3; ++i) {
+            auto transaction = session.transaction(QStringLiteral("Step %1").arg(i));
+            session.setTitle(QString::number(i));
+            transaction.commit();
+        }
+        QCOMPARE(session.currentStep(), 3);
+        QCOMPARE(session.maximumStep(), 3);
+        QCOMPARE(session.stepMessage(1), QStringLiteral("Step 1"));
+        QCOMPARE(session.stepMessage(3), QStringLiteral("Step 3"));
+        QVERIFY(session.stepMessage(4).isEmpty());
+
+        session.undo();
+        session.undo();
+        QCOMPARE(session.currentStep(), 1);
+        QCOMPARE(session.maximumStep(), 3);
+        QCOMPARE(session.title(), QStringLiteral("1"));
+
+        // A commit discards the undone steps, and the new step follows the current position.
+        auto transaction = session.transaction(QStringLiteral("Branch"));
+        session.setTitle(QStringLiteral("branch"));
+        transaction.commit();
+        QCOMPARE(session.currentStep(), 2);
+        QCOMPARE(session.maximumStep(), 2);
+        QCOMPARE(session.stepMessage(2), QStringLiteral("Branch"));
+
+        QList<int> steps;
+        for (const auto &arguments : std::as_const(stepChanged)) {
+            steps.push_back(arguments.at(0).toInt());
+        }
+        QCOMPARE(steps, QList<int>({1, 2, 3, 2, 1, 2}));
+    }
+
+    void a_transaction_without_changes_creates_no_undo_step() {
         TestSession session;
         auto transaction = session.transaction(QStringLiteral("Nothing"));
-        session.setValue(session.root(), TestRootSlots::Title, QStringLiteral("title"));
-        session.setEntry(session.tags(), QStringLiteral("a"), 1);
+        session.setTitle(QStringLiteral("title"));
+        session.setTag(QStringLiteral("a"), 1);
         transaction.commit();
         QVERIFY(!session.canUndo());
     }
 
-    void the_signals_report_the_changes_in_the_applied_direction() {
+    void every_built_in_change_is_reported_in_the_applied_direction() {
         TestSession session;
         const auto items = session.items();
-        const auto values = session.child(session.at(items, 0), TestItemSlots::Values);
+        const auto first = session.itemAt(0);
+        const auto second = session.itemAt(1);
+        const auto values = session.valuesOf(first);
 
-        QSignalSpy valueChanged(&session, &EditSession::valueChanged);
-        QSignalSpy entryChanged(&session, &EditSession::entryChanged);
-        QSignalSpy arrayChanged(&session, &EditSession::arrayChanged);
-        QSignalSpy inserted(&session, &EditSession::itemsInserted);
-        QSignalSpy aboutToBeRemoved(&session, &EditSession::itemsAboutToBeRemoved);
-        QSignalSpy removed(&session, &EditSession::itemsRemoved);
-        QSignalSpy moved(&session, &EditSession::itemsMoved);
+        QSignalSpy changed(&session, &EditSession::changed);
         QSignalSpy stepChanged(&session, &EditSession::stepChanged);
 
-        auto transaction = session.transaction(QStringLiteral("Signals"));
-        session.setValue(session.root(), TestRootSlots::Title, QStringLiteral("x"));
-        session.setEntry(session.tags(), QStringLiteral("new"), 2);
-        session.removeValues(values, 0, 1);
+        auto transaction = session.transaction(QStringLiteral("Changes"));
+        session.setTitle(QStringLiteral("x"));
+        session.setTag(QStringLiteral("new"), 2);
+        session.editValues(values)->remove(0, 1);
+        session.editValues(values)->insert(0, {5});
+        session.editValues(values)->replace(0, {6});
+        session.removeValuesOf(second);
         session.insertItems(2, {QStringLiteral("third"), QStringLiteral("fourth")});
-        session.move(items, 0, 1, 3);
+        session.moveItems(0, 1, 3);
         QCOMPARE(stepChanged.count(), 0);
         transaction.commit();
-
-        QCOMPARE(valueChanged.count(), 1);
-        QCOMPARE(valueChanged.at(0).at(0).value<NodeId>(), session.root());
-        QCOMPARE(valueChanged.at(0).at(1).toInt(), TestRootSlots::Title.index);
-        QCOMPARE(entryChanged.count(), 1);
-        QCOMPARE(entryChanged.at(0).at(1).toString(), QStringLiteral("new"));
-        QCOMPARE(arrayChanged.count(), 1);
-        QCOMPARE(arrayChanged.at(0).at(0).value<NodeId>(), values);
-        QCOMPARE(inserted.count(), 1);
-        QCOMPARE(inserted.at(0), QVariantList({QVariant::fromValue(items), 2, 2}));
-        QCOMPARE(moved.count(), 1);
-        QCOMPARE(moved.at(0), QVariantList({QVariant::fromValue(items), 0, 1, 3}));
         QCOMPARE(stepChanged.count(), 1);
+
+        QCOMPARE(changed.count(), 8);
+        const auto title = changeAt(changed, 0)->as<ValueChange>();
+        QVERIFY(title);
+        QCOMPARE(title->node(), session.root());
+        QCOMPARE(title->slot(), 0);
+        const auto tag = changeAt(changed, 1)->as<EntryChange>();
+        QVERIFY(tag);
+        QCOMPARE(tag->node(), session.tags());
+        QCOMPARE(tag->key(), QStringLiteral("new"));
+        for (int i = 2; i < 5; ++i) {
+            const auto array = changeAt(changed, i)->as<ArrayChange>();
+            QVERIFY(array);
+            QCOMPARE(array->node(), values);
+        }
+        const auto child = changeAt(changed, 5)->as<ValueChange>();
+        QVERIFY(child);
+        QCOMPARE(child->node(), second);
+        QCOMPARE(child->slot(), 1);
+        verifyList(changeAt(changed, 6), ListChange::Inserted, items, 2, 2);
+        verifyMove(changeAt(changed, 7), items, 0, 1, 3);
 
         // Undo applies the inverse changes in reverse order: the move back, then the removal of
         // the inserted items, which is announced while they are still in the list.
+        changed.clear();
         session.undo();
-        QCOMPARE(moved.count(), 2);
-        QCOMPARE(moved.at(1), QVariantList({QVariant::fromValue(items), 3, 1, 0}));
-        QCOMPARE(aboutToBeRemoved.count(), 1);
-        QCOMPARE(aboutToBeRemoved.at(0), QVariantList({QVariant::fromValue(items), 2, 2}));
-        QCOMPARE(removed.count(), 1);
-        QCOMPARE(removed.at(0), QVariantList({QVariant::fromValue(items), 2, 2}));
-        QCOMPARE(valueChanged.count(), 2);
-        QCOMPARE(entryChanged.count(), 2);
-        QCOMPARE(arrayChanged.count(), 2);
         QCOMPARE(stepChanged.count(), 2);
+        QCOMPARE(changed.count(), 9);
+        verifyMove(changeAt(changed, 0), items, 3, 1, 0);
+        verifyList(changeAt(changed, 1), ListChange::AboutToBeRemoved, items, 2, 2);
+        verifyList(changeAt(changed, 2), ListChange::Removed, items, 2, 2);
+        QVERIFY(changeAt(changed, 3)->as<ValueChange>());
+        QVERIFY(changeAt(changed, 8)->as<ValueChange>());
     }
 
     void a_rollback_reports_the_inverse_changes() {
         TestSession session;
-        QSignalSpy inserted(&session, &EditSession::itemsInserted);
-        QSignalSpy removed(&session, &EditSession::itemsRemoved);
+        QSignalSpy changed(&session, &EditSession::changed);
         QSignalSpy stepChanged(&session, &EditSession::stepChanged);
         {
             auto transaction = session.transaction(QStringLiteral("Discarded"));
             session.insertItems(0, {QStringLiteral("discarded")});
         }
-        QCOMPARE(inserted.count(), 1);
-        QCOMPARE(removed.count(), 1);
+        QCOMPARE(changed.count(), 3);
+        verifyList(changeAt(changed, 0), ListChange::Inserted, session.items(), 0, 1);
+        verifyList(changeAt(changed, 1), ListChange::AboutToBeRemoved, session.items(), 0, 1);
+        verifyList(changeAt(changed, 2), ListChange::Removed, session.items(), 0, 1);
         QCOMPARE(stepChanged.count(), 0);
+    }
+
+    // A change holds no pointer into the tree, therefore it can be kept after the signal.
+    void a_change_remains_valid_after_the_node_is_destroyed() {
+        TestSession session;
+        ChangePtr kept;
+        QObject::connect(&session, &EditSession::changed, &session,
+                         [&kept](const ChangePtr &change) { kept = change; });
+        {
+            auto transaction = session.transaction(QStringLiteral("Discarded"));
+            session.insertItems(0, {QStringLiteral("discarded")});
+        }
+        QVERIFY(kept);
+        QVERIFY(kept->as<ListChange>());
+        QVERIFY(!kept->as<MoveChange>());
     }
 };
 

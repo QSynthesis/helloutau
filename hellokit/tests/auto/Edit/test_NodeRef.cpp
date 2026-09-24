@@ -22,19 +22,19 @@ private Q_SLOTS:
     // undo and redo leave unchanged.
     void a_handle_of_a_removed_node_is_valid_again_after_undo() {
         TestSession session;
-        const NodeRef second(&session, session.at(session.items(), 1));
+        const NodeRef second(&session, session.itemAt(1));
         QVERIFY(second.isValid());
 
         auto transaction = session.transaction(QStringLiteral("Remove"));
-        session.remove(session.items(), 1, 1);
+        session.removeItems(1, 1);
         transaction.commit();
         QVERIFY(!second.isValid());
-        QVERIFY(session.value(second.id(), TestItemSlots::Name).isEmpty());
+        QVERIFY(session.nameOf(second.id()).isEmpty());
 
         session.undo();
         QVERIFY(second.isValid());
-        QCOMPARE(session.at(session.items(), 1), second.id());
-        QCOMPARE(session.value(second.id(), TestItemSlots::Name), QStringLiteral("second"));
+        QCOMPARE(session.itemAt(1), second.id());
+        QCOMPARE(session.nameOf(second.id()), QStringLiteral("second"));
 
         session.redo();
         QVERIFY(!second.isValid());
@@ -42,13 +42,13 @@ private Q_SLOTS:
 
     void a_moved_node_keeps_its_handle() {
         TestSession session;
-        const NodeRef first(&session, session.at(session.items(), 0));
+        const NodeRef first(&session, session.itemAt(0));
 
         auto transaction = session.transaction(QStringLiteral("Move"));
-        session.move(session.items(), 0, 1, 1);
+        session.moveItems(0, 1, 1);
         transaction.commit();
         QVERIFY(first.isValid());
-        QCOMPARE(session.at(session.items(), 1), first.id());
+        QCOMPARE(session.itemAt(1), first.id());
     }
 
     // The identifier of a node is not reused, so a handle of a destroyed node does not refer to
@@ -59,7 +59,7 @@ private Q_SLOTS:
         auto insert = session.transaction(QStringLiteral("Insert"));
         session.insertItems(1, {QStringLiteral("inserted")});
         insert.commit();
-        const NodeRef inserted(&session, session.at(session.items(), 1));
+        const NodeRef inserted(&session, session.itemAt(1));
         QVERIFY(inserted.isValid());
 
         // After the undo, the insertion owns the node. The next commit discards the insertion
@@ -70,15 +70,15 @@ private Q_SLOTS:
         other.commit();
 
         QVERIFY(!inserted.isValid());
-        QVERIFY(session.at(session.items(), 1) != inserted.id());
+        QVERIFY(session.itemAt(1) != inserted.id());
         QVERIFY(!session.canRedo());
     }
 
     void handles_are_equal_if_they_refer_to_the_same_node() {
         TestSession session;
-        const NodeRef first(&session, session.at(session.items(), 0));
-        QVERIFY(first == NodeRef(&session, session.at(session.items(), 0)));
-        QVERIFY(first != NodeRef(&session, session.at(session.items(), 1)));
+        const NodeRef first(&session, session.itemAt(0));
+        QVERIFY(first == NodeRef(&session, session.itemAt(0)));
+        QVERIFY(first != NodeRef(&session, session.itemAt(1)));
         QVERIFY(first != NodeRef());
     }
 };
