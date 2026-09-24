@@ -96,20 +96,29 @@ private Q_SLOTS:
     // Acceptance criterion 6 of docs/Editing.md at the level of a session: after one entry is
     // edited and saved, the encoding is unchanged and every other entry is written as it was.
     void saving_writes_the_edit_and_nothing_else() {
-        QVERIFY(!m_session->isModified());
         const auto entry = directories().at(0).otoEntries().at(1);
         {
             auto transaction = m_session->transaction(QStringLiteral("Edit"));
             entry.setOffset(7);
             QVERIFY(transaction.commit());
         }
-        QVERIFY(m_session->isModified());
         DiagnosticList diagnostics;
         QVERIFY(m_session->save(diagnostics));
         QCOMPARE(read(QStringLiteral("oto.ini")),
                  QByteArray("a.wav=a,41.0,2,3,4,5\r\nb.wav=b,7,2,3,4,5\r\n"));
         QCOMPARE(read(QStringLiteral("sub/oto.ini")), QByteArray("x.wav=x,1,2,3,4,5\r\n"));
-        QVERIFY(!m_session->isModified());
+    }
+
+    // An encoding selected by reading a directory again is recorded by the next save, although
+    // no content changed, so the voice bank is unsaved until then.
+    void an_encoding_read_again_is_unrecorded_until_saved() {
+        QVERIFY(!m_session->hasUnrecordedCharsets());
+        DiagnosticList diagnostics;
+        QVERIFY(m_session->reread(fs::path("sub"), QStringLiteral("GBK"), diagnostics));
+        QVERIFY(m_session->hasUnrecordedCharsets());
+        QVERIFY(m_session->save(diagnostics));
+        QVERIFY(!m_session->hasUnrecordedCharsets());
+        QVERIFY(read(QStringLiteral("sub/hello-config.json")).contains("GBK"));
     }
 
     // A file changed on disk is read again into the tree as one undo step. Undoing it restores
@@ -122,11 +131,9 @@ private Q_SLOTS:
         QCOMPARE(sub.otoEntries().at(0).alias(), QStringLiteral("y"));
         QCOMPARE(m_session->currentStep(), 1);
         QCOMPARE(m_session->undoMessage(), QStringLiteral("Reload from Disk"));
-        QVERIFY(!m_session->isModified());
 
         m_session->undo();
         QCOMPARE(directories().at(indexOf("sub")).otoEntries().at(0).alias(), QStringLiteral("x"));
-        QVERIFY(m_session->isModified());
         DiagnosticList diagnostics;
         QVERIFY(m_session->save(diagnostics));
         QVERIFY(read(QStringLiteral("sub/oto.ini")).contains("x.wav=x,"));
@@ -262,7 +269,6 @@ private Q_SLOTS:
         QCOMPARE(diagnostics.first().severity, DiagnosticSeverity::Warning);
         QCOMPARE(directories().at(0).otoEntries().size(), 2);
         QCOMPARE(directories().at(0).otoEntries().at(0).alias(), QStringLiteral("a"));
-        QVERIFY(m_session->isModified());
 
         QVERIFY(m_session->save(diagnostics));
         QVERIFY(!m_session->isIncomplete());
@@ -298,7 +304,6 @@ private Q_SLOTS:
         DiagnosticList diagnostics;
         QVERIFY(m_session->saveAs(folder, VoiceBankSession::AllFiles, diagnostics));
         QCOMPARE(m_session->rootPath(), folder);
-        QVERIFY(!m_session->isModified());
         const auto copied = [&folder](const char *relative) {
             QFile file(QString::fromStdU16String((folder / relative).u16string()));
             return file.open(QIODevice::ReadOnly) ? file.readAll() : QByteArray("<missing>");

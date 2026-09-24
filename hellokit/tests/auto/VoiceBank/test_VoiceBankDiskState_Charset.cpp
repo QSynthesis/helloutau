@@ -395,6 +395,7 @@ private Q_SLOTS:
         QVERIFY(
             disk.reread(bank, bank.directories().at(0).path, QStringLiteral("UTF-8"), diagnostics));
         QVERIFY(bank.directories().at(0).lossy);
+        QVERIFY(!disk.hasUnrecordedCharsets());
         QVERIFY(disk.save(bank, diagnostics));
         QVERIFY(!exists(QStringLiteral("hello-config.json")));
     }
@@ -410,14 +411,17 @@ private Q_SLOTS:
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
         auto &disk = opened->disk;
+        QVERIFY(!disk.hasUnrecordedCharsets());
         disk.rememberCharset(bank.directories().at(0).path);
         QVERIFY(disk.isModified(bank, std::filesystem::path()));
+        QVERIFY(disk.hasUnrecordedCharsets());
 
         DiagnosticList diagnostics;
         QVERIFY(disk.save(bank, diagnostics));
         QCOMPARE(read(QStringLiteral("oto.ini")), oto);
         QCOMPARE(recorded(), name("GBK"));
         QVERIFY(!disk.isModified(bank, std::filesystem::path()));
+        QVERIFY(!disk.hasUnrecordedCharsets());
 
         // The configuration written by the save becomes the baseline, so a second save detects
         // no external change.

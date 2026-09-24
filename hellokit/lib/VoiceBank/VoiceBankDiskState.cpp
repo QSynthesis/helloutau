@@ -1053,6 +1053,11 @@ namespace hello::kit {
         }
     }
 
+    bool VoiceBankDiskState::hasUnrecordedCharsets() const {
+        return std::any_of(m_books.begin(), m_books.end(),
+                           [](const auto &item) { return item.second.remember; });
+    }
+
     bool VoiceBankDiskState::save(const VoiceBank &bank, DiagnosticList &diagnostics) {
         struct Write {
             fs::path directory;

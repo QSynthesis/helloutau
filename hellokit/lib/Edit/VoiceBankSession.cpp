@@ -97,16 +97,6 @@ namespace hello::kit {
         return VoiceBank(bank.root(), directories, bank.samples());
     }
 
-    bool VoiceBankSession::isModified() const {
-        const auto bank = snapshot();
-        for (const auto &directory : bank.directories()) {
-            if (m_disk.isModified(bank, directory.path)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     bool VoiceBankSession::isIncomplete() const {
         return m_rootMissing || m_rootUnreadable;
     }
@@ -141,6 +131,10 @@ namespace hello::kit {
 
     void VoiceBankSession::rememberCharset(const std::filesystem::path &directory) {
         m_disk.rememberCharset(directory);
+    }
+
+    bool VoiceBankSession::hasUnrecordedCharsets() const {
+        return m_disk.hasUnrecordedCharsets();
     }
 
     VoiceBankChanges VoiceBankSession::checkDisk(const QList<std::filesystem::path> &places) {

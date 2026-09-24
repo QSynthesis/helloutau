@@ -74,9 +74,6 @@ namespace hello::kit {
         /// read again, as one undo step, see the section on changes on disk in docs/Editing.md.
         /// @{
 
-        /// Returns whether saving would write a file, see VoiceBankDiskState::isModified().
-        bool isModified() const;
-
         /// Returns whether the voice bank on disk is incomplete: its root was found missing by
         /// checkDisk(), or no longer read when read again, see reloadFromDisk(). The tree is then
         /// the only intact copy, and an editor tells the user prominently. Saving writes it back,
@@ -107,6 +104,9 @@ namespace hello::kit {
 
         /// See VoiceBankDiskState::rememberCharset().
         void rememberCharset(const std::filesystem::path &directory);
+
+        /// See VoiceBankDiskState::hasUnrecordedCharsets().
+        bool hasUnrecordedCharsets() const;
 
         /// See VoiceBankDiskState::checkDisk(). A directory on disk that the tree does not hold,
         /// because an undo took out a directory that a reload had added, is reported as added

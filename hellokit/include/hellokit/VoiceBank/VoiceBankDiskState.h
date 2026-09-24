@@ -76,6 +76,15 @@ namespace hello::kit {
         /// time the voice bank is opened.
         void rememberCharset(const std::filesystem::path &directory);
 
+        /// Returns whether the next save() records the encoding of a directory whose contents
+        /// are unchanged: one marked by rememberCharset(), or read again by reread() in an
+        /// encoding in which its files are valid.
+        ///
+        /// Such a voice bank is unsaved even though nothing in it was edited. An editor that
+        /// holds the saved state asks after opening and after reading from disk. See the section
+        /// on the saved state in docs/Editing.md.
+        bool hasUnrecordedCharsets() const;
+
         /// Saves every file of \a bank that differs from the state in which it was read, each in
         /// the encoding of its directory, and nothing else.
         ///
