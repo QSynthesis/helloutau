@@ -1083,11 +1083,15 @@ namespace hello::kit {
         // removed and an undo restored. It is saved as a new directory, created if missing, with
         // an empty state: every file is written, and a file already there is not replaced,
         // because it was not read.
+        //
+        // Without the root, no file that was read exists any longer, and every directory is new.
+        std::error_code rootError;
+        const bool rootGone = !fs::is_directory(m_root, rootError);
         const Book none;
         std::set<fs::path> created;
-        const auto bookOf = [this, &none](const fs::path &path) -> const Book & {
+        const auto bookOf = [this, rootGone, &none](const fs::path &path) -> const Book & {
             const auto found = m_books.find(path);
-            return found == m_books.end() ? none : found->second;
+            return rootGone || found == m_books.end() ? none : found->second;
         };
 
         // All content is computed and validated before the first write, so that a voice bank
@@ -1095,7 +1099,7 @@ namespace hello::kit {
         for (int i = 0; i < directories.size(); ++i) {
             const auto &directory = directories.at(i);
             const auto absolute = directory.path.empty() ? m_root : m_root / directory.path;
-            if (m_books.count(directory.path) == 0) {
+            if (rootGone || m_books.count(directory.path) == 0) {
                 std::error_code error;
                 if (fs::exists(absolute, error) && !fs::is_directory(absolute, error)) {
                     fail(diagnostics, tr("\"%1\" is a file, so the folder cannot be created.")
@@ -1211,6 +1215,11 @@ namespace hello::kit {
             return false;
         }
 
+        // The state of the files that were read describes nothing on disk any longer.
+        if (rootGone) {
+            m_books.clear();
+        }
+
         for (const auto &write : writes) {
             if (created.count(write.directory) != 0) {
                 std::error_code error;
@@ -1262,6 +1271,72 @@ namespace hello::kit {
             }
         }
         return true;
+    }
+
+    std::optional<VoiceBankDiskState::Opened>
+        VoiceBankDiskState::saveAs(const VoiceBank &bank, const fs::path &folder,
+                                   bool copyOtherFiles, DiagnosticList &diagnostics) {
+        std::error_code error;
+        if (fs::exists(folder, error) &&
+            (!fs::is_directory(folder, error) || !fs::is_empty(folder, error))) {
+            fail(diagnostics, tr("\"%1\" is not an empty folder, so the voice bank is not saved "
+                                 "into it.")
+                                  .arg(displayed(folder)));
+            return std::nullopt;
+        }
+        fs::create_directories(folder, error);
+        if (error) {
+            fail(diagnostics, tr("The folder \"%1\" could not be created.").arg(displayed(folder)));
+            return std::nullopt;
+        }
+
+        // The text files first, into a state without any directory, which checks everything
+        // before the first write.
+        VoiceBankDiskState state;
+        state.m_root = folder;
+        if (!state.save(bank, diagnostics)) {
+            return std::nullopt;
+        }
+
+        if (copyOtherFiles && !fs::is_directory(bank.m_root, error)) {
+            complain(diagnostics, tr("The original folder no longer exists, so only the text "
+                                     "files are saved."));
+        } else if (copyOtherFiles) {
+            // Each file that saving writes for a directory of the bank is skipped, whether or not
+            // it was written, so that nothing written is replaced by its original.
+            const auto options = fs::directory_options::skip_permission_denied;
+            for (auto it = fs::recursive_directory_iterator(bank.m_root, options, error);
+                 !error && it != fs::recursive_directory_iterator(); it.increment(error)) {
+                const auto &entry = *it;
+                std::error_code status;
+                if (entry.is_symlink(status) || !entry.is_regular_file(status)) {
+                    continue;
+                }
+                const auto relative = entry.path().lexically_relative(bank.m_root);
+                const auto directory = relative.parent_path();
+                if (bank.indexOf(directory) >= 0 &&
+                    VoiceBankDirectorySource::fileNamed(foldedName(relative.filename()),
+                                                        directory.empty())) {
+                    continue;
+                }
+                const auto target = folder / relative;
+                std::error_code copying;
+                fs::create_directories(target.parent_path(), copying);
+                if (!copying) {
+                    fs::copy_file(entry.path(), target, copying);
+                }
+                if (copying) {
+                    fail(diagnostics, tr("\"%1\" could not be copied.").arg(displayed(relative)));
+                    return std::nullopt;
+                }
+            }
+            if (error) {
+                fail(diagnostics,
+                     tr("The original folder could not be read, so not every file is copied."));
+                return std::nullopt;
+            }
+        }
+        return open(folder, nullptr, diagnostics);
     }
 
     VoiceBankDiskState::Book VoiceBankDiskState::bookOf(const VoiceBankDirectorySource &source,

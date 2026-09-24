@@ -104,6 +104,21 @@ namespace hello::kit {
         ///          reported.
         bool save(const VoiceBank &bank, DiagnosticList &diagnostics);
 
+        /// Writes \a bank into \a folder as a new voice bank, and returns it as read from there.
+        ///
+        /// \a folder must not exist or be empty. The text files of every directory of \a bank
+        /// are written as by save() into a directory without state, each in the encoding of its
+        /// directory. If \a copyOtherFiles is true, every other file under the root of \a bank is
+        /// then copied, audio files, images and documents alike, and the files of the directories
+        /// that \a bank does not hold as they are. No symbolic link is followed or copied. If the
+        /// root no longer exists, only the text files are written, with a warning.
+        ///
+        /// \return the voice bank read from \a folder , or \c std::nullopt with the reason in
+        ///         \a diagnostics
+        static std::optional<Opened> saveAs(const VoiceBank &bank,
+                                            const std::filesystem::path &folder,
+                                            bool copyOtherFiles, DiagnosticList &diagnostics);
+
         /// Rereads the directory at \a directory of \a bank from disk in \a charset .
         ///
         /// Intended for a directory that was read in the wrong encoding, or that was left out

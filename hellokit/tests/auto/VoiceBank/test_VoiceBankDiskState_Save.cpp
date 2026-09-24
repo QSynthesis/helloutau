@@ -13,6 +13,8 @@
 
 using namespace hello::kit;
 
+namespace fs = std::filesystem;
+
 // 葛平 in GBK, and あ in Shift_JIS.
 static const QByteArray kGbkGePing = QByteArray("\xb8\xf0\xc6\xbd", 4);
 static const QByteArray kShiftJisA = QByteArray("\x82\xa0", 2);
@@ -381,6 +383,170 @@ private Q_SLOTS:
         QVERIFY(disk.checkDisk().isEmpty());
         QVERIFY(!disk.isModified(before, "sub"));
         QVERIFY(disk.save(before, diagnostics));
+    }
+
+    // Without its root, the voice bank on disk is gone, and saving writes every text file of the
+    // contents again, as a new voice bank.
+    void a_removed_root_is_written_again_as_a_whole() {
+        write(QStringLiteral("oto.ini"), "a.wav=a,41.0,2,3,4,5\r\n");
+        write(QStringLiteral("character.txt"), "name=n\r\n");
+        write(QStringLiteral("sub/oto.ini"), "b.wav=b,1,2,3,4,5\r\n");
+        auto opened = open(root(), QStringLiteral("GBK"));
+        QVERIFY(opened.has_value());
+        auto &disk = opened->disk;
+
+        QVERIFY(QDir(m_dir->path()).removeRecursively());
+        QVERIFY(disk.checkDisk().rootNotFound);
+        DiagnosticList diagnostics;
+        QVERIFY(disk.save(opened->bank, diagnostics));
+        QCOMPARE(read(QStringLiteral("oto.ini")), QByteArray("a.wav=a,41.0,2,3,4,5\r\n"));
+        QCOMPARE(read(QStringLiteral("character.txt")), QByteArray("name=n\r\n"));
+        QCOMPARE(read(QStringLiteral("sub/oto.ini")), QByteArray("b.wav=b,1,2,3,4,5\r\n"));
+        QVERIFY(exists(QStringLiteral("sub/hello-config.json")));
+        QVERIFY(disk.checkDisk().isEmpty());
+        QVERIFY(!disk.isModified(opened->bank, {}));
+    }
+
+    // The state of the files read before the root was removed describes nothing on disk, so a
+    // directory that the saved contents do not hold is not reported as removed afterward.
+    void the_state_before_the_root_was_removed_is_dropped() {
+        write(QStringLiteral("oto.ini"), "a.wav=a,41.0,2,3,4,5\r\n");
+        write(QStringLiteral("sub/oto.ini"), "b.wav=b,1,2,3,4,5\r\n");
+        auto opened = open(root(), QStringLiteral("GBK"));
+        QVERIFY(opened.has_value());
+        auto &disk = opened->disk;
+        const auto &bank = opened->bank;
+        const auto index = bank.indexOf({});
+        QList<VoiceSample> samples;
+        for (auto sample : bank.samples()) {
+            if (sample.directory == index) {
+                sample.directory = 0;
+                samples.push_back(sample);
+            }
+        }
+        const VoiceBank rootOnly(bank.root(), {bank.directories().at(index)}, samples);
+
+        QVERIFY(QDir(m_dir->path()).removeRecursively());
+        DiagnosticList diagnostics;
+        QVERIFY(disk.save(rootOnly, diagnostics));
+        QVERIFY(!exists(QStringLiteral("sub")));
+        QVERIFY(disk.checkDisk().isEmpty());
+    }
+
+    // Saving as writes the text files of the contents into a new folder and copies every other
+    // file, including the directories that the contents do not hold, as they are. The original
+    // folder is unchanged.
+    void saving_as_copies_the_other_files() {
+        write(QStringLiteral("oto.ini"), "a.wav=a,41.0,2,3,4,5\r\n");
+        write(QStringLiteral("a.wav"), "RIFF");
+        write(QStringLiteral("Xia.bmp"), "BM");
+        write(QStringLiteral("sub/oto.ini"), "b.wav=b,1,2,3,4,5\r\n");
+        write(QStringLiteral("sub/b.wav"), "RIFF");
+        write(QStringLiteral("left/oto.ini"), "z.wav=" + kGbkGePing + ",1,2,3,4,5\r\n");
+        auto opened = open(root(), QStringLiteral("UTF-8"));
+        QVERIFY(opened.has_value());
+        auto bank = opened->bank;
+        edit(bank, QStringLiteral("a"), [](VoiceSample &sample) { sample.offset = 7; });
+        QVERIFY(bank.directories().at(bank.indexOf("left")).lossy);
+
+        // The contents without the directory that did not decode, as a session holds them.
+        DiagnosticList diagnostics;
+        QList<VoiceBankDirectory> directories;
+        QList<VoiceSample> samples;
+        for (const auto &path : {fs::path(), fs::path("sub")}) {
+            const auto index = bank.indexOf(path);
+            for (auto sample : bank.samples()) {
+                if (sample.directory == index) {
+                    sample.directory = int(directories.size());
+                    samples.push_back(sample);
+                }
+            }
+            directories.push_back(bank.directories().at(index));
+        }
+        const VoiceBank contents(bank.root(), directories, samples);
+
+        QTemporaryDir target;
+        const auto folder = fs::path(target.path().toStdU16String()) / "copy";
+        diagnostics.clear();
+        const auto saved = VoiceBankDiskState::saveAs(contents, folder, true, diagnostics);
+        QVERIFY(saved.has_value());
+        const auto copy = [&folder](const char *relative) {
+            QFile file(QString::fromStdU16String((folder / relative).u16string()));
+            return file.open(QIODevice::ReadOnly) ? file.readAll() : QByteArray("<missing>");
+        };
+        QCOMPARE(copy("oto.ini"), QByteArray("#Charset:UTF-8\r\na.wav=a,7,2,3,4,5\r\n"));
+        QCOMPARE(copy("a.wav"), QByteArray("RIFF"));
+        QCOMPARE(copy("Xia.bmp"), QByteArray("BM"));
+        QCOMPARE(copy("sub/b.wav"), QByteArray("RIFF"));
+        QCOMPARE(copy("left/oto.ini"), "z.wav=" + kGbkGePing + ",1,2,3,4,5\r\n");
+        QVERIFY(copy("hello-config.json").contains("UTF-8"));
+
+        // Read from the new folder, which is unmodified, and without the directory left out.
+        QCOMPARE(saved->disk.root(), folder);
+        QVERIFY(!saved->disk.isModified(saved->bank, {}));
+        QVERIFY(saved->bank.directories().at(saved->bank.indexOf("left")).leftOut);
+        QVERIFY(saved->bank.find(60, QStringLiteral("a")));
+        QCOMPARE(saved->bank.find(60, QStringLiteral("a"))->offset, 7.0);
+
+        QCOMPARE(read(QStringLiteral("oto.ini")), QByteArray("a.wav=a,41.0,2,3,4,5\r\n"));
+        QVERIFY(!exists(QStringLiteral("hello-config.json")));
+    }
+
+    // Saving only the text files leaves every other file behind.
+    void saving_as_text_writes_the_text_files_only() {
+        write(QStringLiteral("oto.ini"), "a.wav=a,41.0,2,3,4,5\r\n");
+        write(QStringLiteral("a.wav"), "RIFF");
+        auto opened = open(root(), QStringLiteral("GBK"));
+        QVERIFY(opened.has_value());
+
+        QTemporaryDir target;
+        const auto folder = fs::path(target.path().toStdU16String());
+        DiagnosticList diagnostics;
+        const auto saved = VoiceBankDiskState::saveAs(opened->bank, folder, false, diagnostics);
+        QVERIFY(saved.has_value());
+        QVERIFY(QFileInfo::exists(target.filePath(QStringLiteral("oto.ini"))));
+        QVERIFY(!QFileInfo::exists(target.filePath(QStringLiteral("a.wav"))));
+        QVERIFY(saved->bank.find(60, QStringLiteral("a"))->hasEntry);
+    }
+
+    // A voice bank is not saved into a folder that holds something, nor over a file.
+    void saving_as_refuses_a_folder_that_is_not_empty() {
+        write(QStringLiteral("oto.ini"), "a.wav=a,41.0,2,3,4,5\r\n");
+        auto opened = open(root(), QStringLiteral("GBK"));
+        QVERIFY(opened.has_value());
+
+        QTemporaryDir target;
+        QFile other(target.filePath(QStringLiteral("other.txt")));
+        QVERIFY(other.open(QIODevice::WriteOnly));
+        other.close();
+        DiagnosticList diagnostics;
+        QVERIFY(!VoiceBankDiskState::saveAs(opened->bank, fs::path(target.path().toStdU16String()),
+                                            true, diagnostics));
+        QVERIFY(diagnostics.first().message.contains(QStringLiteral("not an empty folder")));
+        QVERIFY(!QFileInfo::exists(target.filePath(QStringLiteral("oto.ini"))));
+
+        diagnostics.clear();
+        QVERIFY(!VoiceBankDiskState::saveAs(
+            opened->bank, fs::path(target.filePath(QStringLiteral("other.txt")).toStdU16String()),
+            true, diagnostics));
+        QVERIFY(diagnostics.first().message.contains(QStringLiteral("not an empty folder")));
+    }
+
+    // Without the original folder, the other files are gone, and only the text files are saved.
+    void saving_as_without_the_original_folder_saves_the_text_files() {
+        write(QStringLiteral("oto.ini"), "a.wav=a,41.0,2,3,4,5\r\n");
+        auto opened = open(root(), QStringLiteral("GBK"));
+        QVERIFY(opened.has_value());
+        QVERIFY(QDir(m_dir->path()).removeRecursively());
+
+        QTemporaryDir target;
+        DiagnosticList diagnostics;
+        const auto saved = VoiceBankDiskState::saveAs(
+            opened->bank, fs::path(target.path().toStdU16String()), true, diagnostics);
+        QVERIFY(saved.has_value());
+        QVERIFY(QFileInfo::exists(target.filePath(QStringLiteral("oto.ini"))));
+        QCOMPARE(diagnostics.size(), 1);
+        QCOMPARE(diagnostics.first().severity, DiagnosticSeverity::Warning);
     }
 
     // A directory is not created where a file of its name is.
