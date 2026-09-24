@@ -97,6 +97,91 @@ private Q_SLOTS:
         QCOMPARE(session.snapshot().toJson(), project.toJson());
     }
 
+    // Each constraint of a project rejects a transaction that violates it, and reports one
+    // diagnostic.
+    void each_constraint_rejects_a_violating_transaction_data() {
+        QTest::addColumn<int>("constraint");
+        QTest::newRow("note length") << 0;
+        QTest::newRow("note number") << 1;
+        QTest::newRow("note tempo") << 2;
+        QTest::newRow("project tempo") << 3;
+        QTest::newRow("envelope anchor") << 4;
+        QTest::newRow("portamento point") << 5;
+        QTest::newRow("track count") << 6;
+    }
+
+    void each_constraint_rejects_a_violating_transaction() {
+        QFETCH(int, constraint);
+        const auto project = richProject();
+        ProjectSession session(project);
+        const auto projectRef = ProjectRef(&session);
+        const auto note = projectRef.tracks().at(0).notes().at(0);
+
+        auto transaction = session.transaction(QStringLiteral("Violation"));
+        switch (constraint) {
+            case 0:
+                note.setLength(0);
+                break;
+            case 1:
+                note.setNoteNum(128);
+                break;
+            case 2:
+                note.setTempo(0.0);
+                break;
+            case 3:
+                projectRef.settings().setTempo(-1);
+                break;
+            case 4: {
+                auto envelope = *note.envelope();
+                envelope.anchors[1].x = -5;
+                note.setEnvelope(envelope);
+                break;
+            }
+            case 5:
+                note.portamento().at(2).setX(-1);
+                break;
+            case 6:
+                projectRef.tracks().insert(1, {Track()});
+                break;
+        }
+        DiagnosticList diagnostics;
+        QVERIFY(!transaction.commit(diagnostics));
+        QCOMPARE(diagnostics.size(), 1);
+        QVERIFY(hasError(diagnostics));
+        QCOMPARE(session.snapshot().toJson(), project.toJson());
+    }
+
+    // The first portamento point is relative to the start of the note and may precede it.
+    void the_first_portamento_point_may_precede_the_note() {
+        ProjectSession session(richProject());
+        const auto note = ProjectRef(&session).tracks().at(0).notes().at(0);
+        auto transaction = session.transaction(QStringLiteral("Portamento"));
+        note.portamento().at(0).setX(-100);
+        QVERIFY(transaction.commit());
+    }
+
+    // A project read from a file may contain values that the constraints reject. Editing it
+    // succeeds unless the edit introduces a violation.
+    void a_violation_read_from_a_file_does_not_prevent_editing() {
+        auto project = richProject();
+        project.tracks[0].notes[0].noteNum = 200;
+        project.tracks[0].notes[0].portamento[1].x = -3;
+        ProjectSession session(project);
+        const auto note = ProjectRef(&session).tracks().at(0).notes().at(0);
+
+        auto lyric = session.transaction(QStringLiteral("Lyric"));
+        note.setLyric(QStringLiteral("i"));
+        note.portamento().at(3).setY(1);
+        QVERIFY(lyric.commit());
+
+        auto pitch = session.transaction(QStringLiteral("Pitch"));
+        note.setNoteNum(300);
+        DiagnosticList diagnostics;
+        QVERIFY(!pitch.commit(diagnostics));
+        QCOMPARE(diagnostics.size(), 1);
+        QCOMPARE(note.noteNum(), 200);
+    }
+
     // Acceptance criteria 3 and 5 of docs/Editing.md: undoing every step restores the original
     // project, redoing every step restores the edited one, and every position in between
     // matches the snapshot taken when it was first reached.

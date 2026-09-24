@@ -151,6 +151,83 @@ private Q_SLOTS:
         QCOMPARE(session.undoMessage(), QStringLiteral("Next"));
     }
 
+    void a_transaction_that_introduces_a_violation_is_rolled_back() {
+        TestSession session;
+        const auto first = session.itemAt(0);
+        QSignalSpy stepChanged(&session, &EditSession::stepChanged);
+
+        auto transaction = session.transaction(QStringLiteral("Rename"));
+        session.setTitle(QStringLiteral("renamed"));
+        session.setName(first, QString());
+        DiagnosticList diagnostics;
+        QVERIFY(!transaction.commit(diagnostics));
+
+        QCOMPARE(diagnostics.size(), 1);
+        QVERIFY(hasError(diagnostics));
+        QCOMPARE(diagnostics.first().message, QStringLiteral("empty name"));
+        QVERIFY(!session.canUndo());
+        QCOMPARE(stepChanged.count(), 0);
+        QCOMPARE(session.title(), QStringLiteral("title"));
+        QCOMPARE(session.names(), initialNames());
+    }
+
+    // A document read from a file may violate its constraints. A modification that does not
+    // introduce a violation is committed, including a modification of the violating record.
+    void a_violation_from_before_the_transaction_does_not_prevent_the_commit() {
+        TestSession session({QStringLiteral("first"), QString()});
+        const auto second = session.itemAt(1);
+
+        auto transaction = session.transaction(QStringLiteral("Unrelated"));
+        session.setTitle(QStringLiteral("renamed"));
+        session.removeValuesOf(second);
+        QVERIFY(transaction.commit());
+
+        auto repair = session.transaction(QStringLiteral("Repair"));
+        session.setName(second, QStringLiteral("second"));
+        QVERIFY(repair.commit());
+
+        auto breaking = session.transaction(QStringLiteral("Break"));
+        session.setName(session.itemAt(0), QString());
+        QVERIFY(!breaking.commit());
+    }
+
+    // An inserted record has no state before the transaction, therefore each of its violations is
+    // introduced by the transaction. The record that holds the list is validated as well.
+    void inserted_records_and_their_list_are_validated() {
+        TestSession session;
+        auto insertEmpty = session.transaction(QStringLiteral("Insert"));
+        session.insertItems(1, {QString()});
+        DiagnosticList diagnostics;
+        QVERIFY(!insertEmpty.commit(diagnostics));
+        QCOMPARE(diagnostics.first().message, QStringLiteral("empty name"));
+
+        auto insertMany = session.transaction(QStringLiteral("Insert"));
+        session.insertItems(0, {QStringLiteral("a"), QStringLiteral("b"), QStringLiteral("c")});
+        diagnostics.clear();
+        QVERIFY(!insertMany.commit(diagnostics));
+        QCOMPARE(diagnostics.first().message, QStringLiteral("5 items"));
+        QCOMPARE(session.names(), initialNames());
+
+        // A violating record removed by the transaction no longer counts.
+        auto insertAndRemove = session.transaction(QStringLiteral("Insert"));
+        session.insertItems(0, {QString()});
+        session.removeItems(0, 1);
+        QVERIFY(insertAndRemove.commit());
+    }
+
+    // The validation belongs to the outermost transaction, which a nested one joins.
+    void a_nested_transaction_is_validated_with_the_outermost_one() {
+        TestSession session;
+        auto outer = session.transaction(QStringLiteral("Outer"));
+        {
+            auto inner = session.transaction(QStringLiteral("Inner"));
+            session.setName(session.itemAt(0), QString());
+            QVERIFY(inner.commit());
+        }
+        QVERIFY(!outer.commit());
+        QCOMPARE(session.names(), initialNames());
+    }
+
     void the_step_numbers_follow_commits_undo_and_redo() {
         TestSession session;
         QCOMPARE(session.currentStep(), 0);

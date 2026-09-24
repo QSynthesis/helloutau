@@ -17,6 +17,24 @@ namespace hello::kit {
     using ChangeTranslator =
         std::function<ChangePtr(const ss::Action &action, ss::Action::Operation operation)>;
 
+    /// A violation of a constraint of a record, found by a Validator.
+    struct Violation {
+        /// The slot of the record that violates the constraint, or -1 for the record as a whole.
+        int slot = -1;
+
+        /// The message reported to the user if a transaction introduces the violation.
+        QString message;
+
+        inline bool operator==(const Violation &RHS) const {
+            return slot == RHS.slot && message == RHS.message;
+        }
+    };
+
+    /// Appends the violations of the constraints of \a record to \a violations. A validator is
+    /// registered for a record type and covers the lists, mappings, arrays and records in the
+    /// slots of the record that have no validator of their own.
+    using Validator = std::function<void(const ss::Node *record, QList<Violation> &violations)>;
+
     class EditSession::Impl : public ss::ModelObserver {
     public:
         explicit Impl(EditSession *q);
@@ -44,6 +62,27 @@ namespace hello::kit {
         std::map<int, ChangeTranslator> beforeTranslators;
         std::map<int, ChangeTranslator> afterTranslators;
 
+        /// The validators by node type.
+        std::map<int, Validator> validators;
+
+        /// The violations of each record modified by the transaction in progress, in the state
+        /// before its first modification. A record inserted by the transaction has none.
+        std::map<NodeId, QList<Violation>> violationsBefore;
+
+        /// Returns \a node or its nearest ancestor with a validator, or \c nullptr if none.
+        const ss::Node *validatedRecordOf(const ss::Node *node) const;
+
+        /// Returns the violations of \a record found by its validator.
+        QList<Violation> violationsOf(const ss::Node *record) const;
+
+        /// Records the violations of the record of \a node before its first modification in the
+        /// transaction in progress, or none if \a inserted is true.
+        void recordViolations(const ss::Node *node, bool inserted);
+
+        /// Appends the violations that the transaction in progress introduced to \a diagnostics,
+        /// and returns whether there are any.
+        bool introducedViolations(DiagnosticList &diagnostics) const;
+
         /// Returns the node of \a id if it is in the tree, or \c nullptr.
         inline ss::Node *find(NodeId id) const {
             const auto node = id ? model.nodeById(id) : nullptr;
@@ -61,7 +100,8 @@ namespace hello::kit {
     ///
     /// A handle reads a node through find() and modifies it through findEditable(), which
     /// enforces the rules of EditSession. A node type added outside this library registers the
-    /// translation of its actions into changes with registerChange().
+    /// translation of its actions into changes with registerChange(). A document registers the
+    /// constraints of its records with registerValidator().
     struct EditSessionPrivate {
         static inline EditSession::Impl &impl(const EditSession &session) {
             return *session._impl;
@@ -114,6 +154,13 @@ namespace hello::kit {
             if (before) {
                 d.beforeTranslators[actionType] = std::move(before);
             }
+        }
+
+        /// Registers the validator of the records of type \a nodeType. A transaction is committed
+        /// only if it introduces no violation, see docs/Editing.md.
+        static inline void registerValidator(EditSession &session, int nodeType,
+                                             Validator validator) {
+            impl(session).validators[nodeType] = std::move(validator);
         }
     };
 

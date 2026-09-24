@@ -37,17 +37,46 @@ namespace hello::kit {
             ValuesType,
         };
 
-        inline TestSession() {
+        /// The limit of the constraint on the number of items.
+        static constexpr int maximumItems = 4;
+
+        /// Creates the tree with an item for each of \a names. The first item has the values 1,
+        /// 2 and 3, the others none. The tree is not validated, as a document read from a file.
+        ///
+        /// The validators require at most maximumItems items and a name that is not empty.
+        inline explicit TestSession(const QStringList &names = {QStringLiteral("first"),
+                                                                QStringLiteral("second")}) {
             auto root = std::make_unique<Root>(RootType);
             root->setAt(0, QVariant(QStringLiteral("title")));
             auto items = std::make_unique<ss::VectorNode>();
-            items->append(item(QStringLiteral("first"), {1, 2, 3}));
-            items->append(item(QStringLiteral("second"), {}));
+            for (qsizetype i = 0; i < names.size(); ++i) {
+                items->append(
+                    item(names[i], i == 0 ? std::vector<double>{1, 2, 3} : std::vector<double>()));
+            }
             root->setAt(1, std::move(items));
             auto tags = std::make_unique<ss::MappingNode>();
             tags->setProperty(QStringLiteral("a"), QVariant(1));
             root->setAt(2, std::move(tags));
             EditSessionPrivate::setRoot(*this, std::move(root));
+
+            EditSessionPrivate::registerValidator(
+                *this, RootType, [](const ss::Node *node, QList<Violation> &violations) {
+                    const auto &root = static_cast<const Root &>(*node);
+                    const auto count = static_cast<const ss::VectorNode *>(root.child(1))->size();
+                    if (count > maximumItems) {
+                        violations.push_back({1, QStringLiteral("%1 items").arg(count)});
+                    }
+                });
+            EditSessionPrivate::registerValidator(
+                *this, ItemType, [](const ss::Node *node, QList<Violation> &violations) {
+                    if (static_cast<const Item &>(*node).variant(0).toString().isEmpty()) {
+                        violations.push_back({0, QStringLiteral("empty name")});
+                    }
+                });
+        }
+
+        inline void setName(NodeId item, const QString &name) {
+            edit<Item>(item, ItemType)->setAt(0, QVariant(name));
         }
 
         inline QString title() const {

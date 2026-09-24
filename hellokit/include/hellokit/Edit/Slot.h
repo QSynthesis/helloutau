@@ -2,6 +2,7 @@
 #define HELLOKIT_EDIT_SLOT_H
 
 #include <cstdint>
+#include <limits>
 #include <optional>
 
 #include <QtCore/QVariant>
@@ -15,15 +16,42 @@ namespace hello::kit {
     /// to a node of the session rather than to the content of the document.
     using NodeId = std::uint64_t;
 
+    /// The permitted values of a numeric slot. The bounds are inclusive, except the minimum if
+    /// \c minimumExclusive is true.
+    struct Range {
+        double minimum;
+        double maximum;
+        bool minimumExclusive = false;
+
+        static inline constexpr Range between(double minimum, double maximum) {
+            return {minimum, maximum, false};
+        }
+
+        static inline constexpr Range atLeast(double minimum) {
+            return {minimum, std::numeric_limits<double>::infinity(), false};
+        }
+
+        static inline constexpr Range greaterThan(double minimum) {
+            return {minimum, std::numeric_limits<double>::infinity(), true};
+        }
+
+        inline bool contains(double value) const {
+            return (minimumExclusive ? value > minimum : value >= minimum) && value <= maximum;
+        }
+    };
+
     /// A slot of a record that holds a value of type \a T, addressed by \c index.
     ///
     /// \c name is the name of the corresponding field of \c .usth, which commands and logs use.
+    /// \c range constrains a numeric value. A violation does not prevent the modification, but
+    /// the commit of a transaction that introduces it, see EditSession::Transaction::commit().
     template <class T>
     struct Slot {
         using ValueType = T;
 
         int index;
         const char *name;
+        std::optional<Range> range = std::nullopt;
     };
 
     /// A slot of a record that holds a child node, addressed by \c index.

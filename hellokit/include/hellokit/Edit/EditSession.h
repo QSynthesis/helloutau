@@ -56,10 +56,16 @@ namespace hello::kit {
             /// Commits the transaction. A transaction without modifications creates no undo
             /// step.
             ///
+            /// The outermost transaction is committed only if the modifications introduce no
+            /// violation of the constraints of the document. A violation that existed before the
+            /// transaction does not prevent the commit, because a document read from a file may
+            /// contain it.
+            ///
             /// \return whether the transaction is committed. The outermost transaction is rolled
-            ///         back instead if a nested transaction was discarded, with the reason in
-            ///         \a diagnostics. A nested transaction returns \c true, because the
-            ///         outermost transaction determines the result.
+            ///         back instead if a nested transaction was discarded or if the modifications
+            ///         introduce a violation, with the reasons in \a diagnostics. A nested
+            ///         transaction returns \c true, because the outermost transaction determines
+            ///         the result.
             bool commit(DiagnosticList &diagnostics);
 
             /// \overload

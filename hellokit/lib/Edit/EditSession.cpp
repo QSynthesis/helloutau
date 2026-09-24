@@ -3,10 +3,10 @@
 
 #include <utility>
 
-#include <qsubstate/MappingNode.h>
-#include <qsubstate/StructNode.h>
 #include <substate/BytesNode.h>
 #include <substate/VectorNode.h>
+#include <qsubstate/MappingNode.h>
+#include <qsubstate/StructNode.h>
 
 namespace hello::kit {
 
@@ -32,8 +32,8 @@ namespace hello::kit {
                                                 int(insDel.children().size()));
         }
 
-        // The translations of the actions of the node types of substate, registered
-        // through the same interface as those of node types added later.
+        // The translations of the actions of the node types of substate, registered through the
+        // same interface as those of node types added later.
         void registerBuiltInChanges(EditSession &session) {
             using Operation = ss::Action::Operation;
 
@@ -61,8 +61,7 @@ namespace hello::kit {
                         static_cast<const ss::BytesReplaceAction &>(action).parent()->id());
                 });
 
-            // A removal is also reported before it is applied, while the items are in the
-            // list.
+            // A removal is also reported before it is applied, while the items are in the list.
             const auto vectorAfter = [](const ss::Action &action, Operation operation) {
                 const auto &insDel = static_cast<const ss::VectorInsDelAction &>(action);
                 return listChange(action, insDel.isInsertion(operation) ? ListChange::Inserted
@@ -88,20 +87,31 @@ namespace hello::kit {
                 });
         }
 
-    } // namespace
+    }
 
     EditSession::Impl::Impl(EditSession *q) : q(q) {
         model.addObserver(this);
     }
 
-    // The observer is removed first, because destroying the model notifies its
-    // observers, and the session emitting the signals is being destroyed.
+    // The observer is removed first, because destroying the model notifies its observers, and
+    // the session emitting the signals is being destroyed.
     EditSession::Impl::~Impl() {
         model.removeObserver(this);
     }
 
     void EditSession::Impl::actionAboutToApply(const ss::Action &action,
                                                ss::Action::Operation operation) {
+        // The first execution is the modification by the caller. Undo, redo and rollback restore
+        // states that the validation has already accepted or that it does not concern.
+        if (operation == ss::Action::Execute && !validators.empty()) {
+            const auto it = afterTranslators.find(action.type());
+            if (it != afterTranslators.end()) {
+                if (const auto change = it->second(action, operation)) {
+                    recordViolations(model.nodeById(change->node()), false);
+                }
+            }
+        }
+
         const auto it = beforeTranslators.find(action.type());
         if (it == beforeTranslators.end()) {
             return;
@@ -113,9 +123,16 @@ namespace hello::kit {
 
     void EditSession::Impl::actionApplied(const ss::Action &action,
                                           ss::Action::Operation operation) {
+        if (operation == ss::Action::Execute && action.type() == ss::Action::VectorInsert) {
+            for (const auto child :
+                 static_cast<const ss::VectorInsDelAction &>(action).children()) {
+                recordViolations(child, true);
+            }
+        }
+
         const auto it = afterTranslators.find(action.type());
-        // Every action applied to the tree must be reported, otherwise a view of the
-        // tree diverges from it without notice.
+        // Every action applied to the tree must be reported, otherwise a view of the tree
+        // diverges from it without notice.
         Q_ASSERT_X(it != afterTranslators.end(), "EditSession",
                    "no change is registered for the action type");
         if (it == afterTranslators.end()) {
@@ -124,6 +141,51 @@ namespace hello::kit {
         if (const auto change = it->second(action, operation)) {
             Q_EMIT q->changed(change);
         }
+    }
+
+    const ss::Node *EditSession::Impl::validatedRecordOf(const ss::Node *node) const {
+        for (; node; node = node->parent()) {
+            if (validators.count(node->type())) {
+                return node;
+            }
+        }
+        return nullptr;
+    }
+
+    QList<Violation> EditSession::Impl::violationsOf(const ss::Node *record) const {
+        QList<Violation> violations;
+        validators.at(record->type())(record, violations);
+        return violations;
+    }
+
+    void EditSession::Impl::recordViolations(const ss::Node *node, bool inserted) {
+        const auto record = validatedRecordOf(node);
+        // An inserted node without a validator belongs to the record that holds the list, which
+        // the insertion has recorded before it was applied.
+        if (!record || (inserted && record != node)) {
+            return;
+        }
+        if (!violationsBefore.count(record->id())) {
+            violationsBefore[record->id()] = inserted ? QList<Violation>() : violationsOf(record);
+        }
+    }
+
+    bool EditSession::Impl::introducedViolations(DiagnosticList &diagnostics) const {
+        bool found = false;
+        for (const auto &[id, before] : violationsBefore) {
+            // A record removed by the transaction has no constraints left to violate.
+            const auto record = find(id);
+            if (!record) {
+                continue;
+            }
+            for (const auto &violation : violationsOf(record)) {
+                if (!before.contains(violation)) {
+                    diagnostics.push_back(errorOf(violation.message));
+                    found = true;
+                }
+            }
+        }
+        return found;
     }
 
     void EditSession::Impl::stepChanged(int step) {
@@ -144,21 +206,26 @@ namespace hello::kit {
             return true;
         }
 
-        const bool committed = !discarded;
+        bool committed = false;
+        if (discarded) {
+            if (commit) {
+                diagnostics.push_back(errorOf(EditSession::tr(
+                    "The modification was not applied because one of its steps was cancelled.")));
+            }
+        } else {
+            committed = !introducedViolations(diagnostics);
+        }
+
         if (committed) {
             model.commitTransaction({
                 {messageKey, message.toStdString()}
             });
         } else {
             model.abortTransaction();
-            if (commit) {
-                diagnostics.push_back(
-                    errorOf(EditSession::tr("The modification was not applied because "
-                                            "one of its steps was cancelled.")));
-            }
         }
         message.clear();
         discarded = false;
+        violationsBefore.clear();
         return committed;
     }
 
@@ -200,8 +267,7 @@ namespace hello::kit {
     }
 
     EditSession::Transaction EditSession::transaction(const QString &message) {
-        // substate supports no nesting, therefore only the outermost transaction
-        // begins one.
+        // substate supports no nesting, therefore only the outermost transaction begins one.
         if (_impl->depth++ == 0) {
             _impl->model.beginTransaction();
             _impl->message = message;
@@ -259,4 +325,4 @@ namespace hello::kit {
         return canRedo() ? stepMessage(currentStep() + 1) : QString();
     }
 
-} // namespace hello::kit
+}

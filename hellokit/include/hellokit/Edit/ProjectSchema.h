@@ -31,7 +31,7 @@ namespace hello::kit {
 
     namespace SettingsSlots {
         inline constexpr Slot<QString> Name{0, "name"};
-        inline constexpr Slot<double> Tempo{1, "tempo"};
+        inline constexpr Slot<double> Tempo{1, "tempo", Range::greaterThan(0)};
         inline constexpr Slot<QString> Flags{2, "flags"};
         inline constexpr Slot<QString> OutputFile{3, "outputFile"};
         inline constexpr Slot<QString> CacheDir{4, "cacheDir"};
@@ -54,15 +54,15 @@ namespace hello::kit {
 
     namespace NoteSlots {
         inline constexpr Slot<QString> Lyric{0, "lyric"};
-        inline constexpr Slot<int> Length{1, "length"};
-        inline constexpr Slot<int> NoteNum{2, "noteNum"};
+        inline constexpr Slot<int> Length{1, "length", Range::atLeast(1)};
+        inline constexpr Slot<int> NoteNum{2, "noteNum", Range::between(0, 127)};
         inline constexpr Slot<std::optional<double>> Intensity{3, "intensity"};
         inline constexpr Slot<std::optional<double>> Modulation{4, "modulation"};
         inline constexpr Slot<std::optional<double>> Velocity{5, "velocity"};
         inline constexpr Slot<std::optional<double>> PreUtterance{6, "preUtterance"};
         inline constexpr Slot<std::optional<double>> VoiceOverlap{7, "voiceOverlap"};
         inline constexpr Slot<std::optional<double>> StartPoint{8, "startPoint"};
-        inline constexpr Slot<std::optional<double>> Tempo{9, "tempo"};
+        inline constexpr Slot<std::optional<double>> Tempo{9, "tempo", Range::greaterThan(0)};
         inline constexpr Slot<QString> Flags{10, "flags"};
 
         /// The envelope as one value. Changing an anchor replaces the value.
