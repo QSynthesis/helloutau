@@ -394,6 +394,30 @@ private Q_SLOTS:
                  QByteArray("#Charset:UTF-8\r\na.wav=a,10,2,3,4,5\r\n"));
     }
 
+    // A missing oto.ini and an empty one both mean no entries, as in UTAU, and each stays as it
+    // is when another file of the directory is saved. A missing one is created only for an entry.
+    void a_missing_oto_ini_differs_from_an_empty_one_on_disk_only() {
+        write(QStringLiteral("character.txt"), "name=a\r\n");
+        write(QStringLiteral("sub/oto.ini"), "");
+        write(QStringLiteral("sub/x.wav"), "RIFF");
+
+        auto opened = open(root(), QStringLiteral("UTF-8"));
+        QVERIFY(opened.has_value());
+        auto &bank = opened->bank;
+        auto &disk = opened->disk;
+        for (const auto &sample : bank.samples()) {
+            QVERIFY(!sample.hasEntry);
+        }
+
+        auto directory = bank.directories().at(0);
+        directory.character->name = QStringLiteral("b");
+        bank.setDirectory(0, directory);
+        DiagnosticList diagnostics;
+        QVERIFY(disk.save(bank, diagnostics));
+        QVERIFY(!exists(QStringLiteral("oto.ini")));
+        QCOMPARE(read(QStringLiteral("sub/oto.ini")), QByteArray());
+    }
+
     // A directory of bare files has no encoding, and its first oto.ini requires one. The user
     // is asked rather than the encoding guessed, as when reading.
     void a_first_oto_ini_needs_an_encoding() {
