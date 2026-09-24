@@ -8,6 +8,7 @@
 /// \code
 ///   voicedit path/to/bank --charset GBK --script edits.txt --save
 ///   voicedit path/to/bank --charset Shift_JIS --dump-changes < edits.txt
+///   voicedit path/to/bank --charset GBK --script edits.txt --save-as path/to/copy [--text-only]
 /// \endcode
 ///
 /// Each line of the script is a command of VoiceBankCommands, or one of the following, which
@@ -21,7 +22,8 @@
 /// The script is read as UTF-8, with or without a byte order mark. The first command that fails
 /// stops the program, and no file is written.
 ///
-/// \warning Saving writes into the voice bank itself. Edit a copy.
+/// \warning Saving writes into the voice bank itself. Edit a copy, or save it as a new folder,
+///          which leaves the original unchanged.
 
 #include <filesystem>
 #include <fstream>
@@ -150,6 +152,15 @@ namespace {
         const QString charset =
             fromStd(result.valueForOption<std::string>("--charset").value_or(std::string()));
         const auto script = result.valueForOption<std::string>("--script");
+        const auto saveAs = result.valueForOption<std::string>("--save-as");
+        if (saveAs && result.option("--save")) {
+            std::cerr << "error: --save and --save-as exclude each other" << std::endl;
+            return 1;
+        }
+        if (result.option("--text-only") && !saveAs) {
+            std::cerr << "error: --text-only requires --save-as" << std::endl;
+            return 1;
+        }
 
         // Every directory whose encoding is not recorded is read in the given encoding, or left
         // out without one, rather than decoded by guesswork.
@@ -201,6 +212,16 @@ namespace {
             return 1;
         }
 
+        if (saveAs) {
+            DiagnosticList saving;
+            const bool saved =
+                session->saveAs(fs::u8path(*saveAs),
+                                result.option("--text-only") ? VoiceBankSession::TextFiles
+                                                             : VoiceBankSession::AllFiles,
+                                saving);
+            report(saving);
+            return saved ? 0 : 1;
+        }
         if (result.option("--save")) {
             DiagnosticList saving;
             const bool saved = session->save(saving);
@@ -230,6 +251,12 @@ int main(int argc, char *argv[]) {
             .addOption(cli::Option({"--save"},
                                    "Save the result into the voice bank. Nothing is written if "
                                    "absent"))
+            .addOption(cli::Option({"--save-as"},
+                                   "Save the result into a new folder, which must not exist or "
+                                   "be empty, copying every other file of the voice bank")
+                           .arg(cli::Argument("folder")))
+            .addOption(cli::Option({"--text-only"},
+                                   "With --save-as, write the text files only and copy nothing"))
             .addOption(cli::Option({"--dump-changes"},
                                    "Print each change as a line of JSON to standard output"))
             .setHandler(run)
