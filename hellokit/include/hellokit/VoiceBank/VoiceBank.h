@@ -153,8 +153,9 @@ namespace hello::kit {
         bool hasEntry = false;
 
         /// The original text of the five numbers above in the \c oto.ini , used to save an
-        /// unchanged entry verbatim. See utau::OtoEntry::spellings .
-        std::array<std::string, 5> spellings;
+        /// unchanged entry verbatim, or \c std::nullopt for an entry not read from a file. See
+        /// utau::OtoEntry::spellings .
+        std::array<std::optional<std::string>, 5> spellings;
     };
 
     /// The differences between the disk and the state from which a VoiceBank was read. Every

@@ -140,6 +140,33 @@ private Q_SLOTS:
         QCOMPARE(bank.character().name, QStringLiteral("new"));
     }
 
+    // Entries whose numbers are all empty, as in the breath samples of a real voice bank. Editing
+    // one of them must not write the others as zeros.
+    void empty_numbers_of_other_entries_stay_empty() {
+        write(QStringLiteral("oto.ini"), "01.wav=,,,,,\r\n"
+                                         "02.wav=,,,,,\r\n");
+        write(QStringLiteral("01.wav"), "RIFF");
+        write(QStringLiteral("02.wav"), "RIFF");
+
+        auto opened = open(root(), QStringLiteral("GBK"));
+        QVERIFY(opened.has_value());
+        auto &bank = opened->bank;
+        auto &disk = opened->disk;
+
+        auto samples = bank.samples();
+        for (auto &sample : samples) {
+            if (sample.fileName == QStringLiteral("02.wav")) {
+                sample.cutoff = -300;
+            }
+        }
+        bank.setSamples(samples);
+
+        DiagnosticList diagnostics;
+        QVERIFY(disk.save(bank, diagnostics));
+        QCOMPARE(read(QStringLiteral("oto.ini")), QByteArray("01.wav=,,,,,\r\n"
+                                                             "02.wav=,,,-300,,\r\n"));
+    }
+
     // The purpose of retaining the encoding: a GBK voice bank remains GBK, and every unmodified
     // entry is saved unchanged.
     void a_changed_entry_is_written_in_the_encoding_it_was_read_in() {

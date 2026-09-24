@@ -405,7 +405,7 @@ private Q_SLOTS:
         QVERIFY(entry);
         QCOMPARE(bank.directories().at(entry->directory).path, std::filesystem::path("sub"));
         QCOMPARE(entry->fileName, QStringLiteral("ka.wav"));
-        QCOMPARE(entry->spellings.at(0), std::string("41.0"));
+        QCOMPARE(entry->spellings.at(0), std::optional<std::string>("41.0"));
 
         const auto *bare = bank.find(60, QStringLiteral("ki"));
         QVERIFY(bare);
