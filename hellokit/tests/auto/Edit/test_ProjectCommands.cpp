@@ -3,6 +3,7 @@
 #include <QtTest/QTest>
 
 #include <hellokit/Edit/ProjectCommands.h>
+#include <hellokit/Edit/ProjectEdits.h>
 #include <hellokit/Edit/ProjectRefs.h>
 
 #include "ProjectSamples.h"
@@ -39,6 +40,16 @@ private:
                  qPrintable(diagnostics.first().message));
         QCOMPARE(session.snapshot().toJson(), before);
         QCOMPARE(session.currentStep(), step);
+    }
+
+    // The names of the invokable functions declared in the class of meta, sorted.
+    static QStringList invokableNames(const QMetaObject &meta) {
+        QStringList names;
+        for (int i = meta.methodOffset(); i < meta.methodCount(); ++i) {
+            names.push_back(QString::fromLatin1(meta.method(i).name()));
+        }
+        names.sort();
+        return names;
     }
 
     static Note noteAt(const ProjectSession &session, int index) {
@@ -321,6 +332,22 @@ private Q_SLOTS:
             first.redo();
         }
         QCOMPARE(first.snapshot().toJson(), edited);
+    }
+
+    // Acceptance criterion 7 of docs/Editing.md: every domain function has a command, and every
+    // domain command calls a domain function. The functions are those that the meta-object of
+    // ProjectEdits lists.
+    void every_domain_function_has_a_command() {
+        const auto functions = ProjectCommands::domainFunctions();
+        QCOMPARE(invokableNames(ProjectEdits::staticMetaObject), functions.keys());
+        const auto names = ProjectCommands::names();
+        for (const auto &command : functions) {
+            QVERIFY2(names.contains(command), qPrintable(command));
+        }
+        for (const auto &name : names) {
+            QVERIFY2(!name.contains(QLatin1Char(' ')) || functions.values().contains(name),
+                     qPrintable(name));
+        }
     }
 
     void names_lists_every_command() {

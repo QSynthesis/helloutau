@@ -19,31 +19,36 @@ namespace hello::kit {
     /// as its message. Called within another transaction, the function joins it, see
     /// EditSession::Transaction. Each function returns whether its transaction is committed, and
     /// reports the reason otherwise in \a diagnostics.
+    ///
+    /// Each function is Q_INVOKABLE, which lists it in the meta-object of the class, and has a
+    /// command, see ProjectCommands::domainFunctions().
     class HELLOKIT_EDIT_EXPORT ProjectEdits {
+        Q_GADGET
         Q_DECLARE_TR_FUNCTIONS(hello::kit::ProjectEdits)
     public:
         /// Adds \a semitones to the note number of each of \a notes, rests included. The notes
         /// must belong to one session.
-        static bool transpose(const QList<NoteRef> &notes, int semitones,
-                              DiagnosticList &diagnostics);
+        Q_INVOKABLE static bool transpose(const QList<NoteRef> &notes, int semitones,
+                                          DiagnosticList &diagnostics);
 
         /// Splits the note at \a index of \a notes after \a ticks, which must be inside the note.
         ///
         /// The note keeps its fields and is shortened to \a ticks. The note inserted after it
         /// has the remaining length, the note number of the note and the default lyric, and no
         /// other field.
-        static bool splitNote(const NoteListRef &notes, int index, int ticks,
-                              DiagnosticList &diagnostics);
+        Q_INVOKABLE static bool splitNote(const NoteListRef &notes, int index, int ticks,
+                                          DiagnosticList &diagnostics);
 
         /// Inserts \a note before the note at \a index of \a notes, or after the last note if
         /// \a index is the number of notes. The following notes start later by the length of
         /// \a note. No note is divided.
-        static bool insertNote(const NoteListRef &notes, int index, const Note &note,
-                               DiagnosticList &diagnostics);
+        Q_INVOKABLE static bool insertNote(const NoteListRef &notes, int index, const Note &note,
+                                           DiagnosticList &diagnostics);
 
         /// Sets the tempo of \a note, which applies from the note until the next note with a
         /// tempo. The tempo is written even if it equals the tempo already in effect.
-        static bool setTempo(const NoteRef &note, double tempo, DiagnosticList &diagnostics);
+        Q_INVOKABLE static bool setTempo(const NoteRef &note, double tempo,
+                                         DiagnosticList &diagnostics);
     };
 
 }

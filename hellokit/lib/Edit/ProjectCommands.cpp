@@ -152,11 +152,18 @@ namespace hello::kit {
 
         using DomainCommand = bool (*)(ProjectSession &, const Arguments &, DiagnosticList &);
 
-        constexpr std::pair<const char *, DomainCommand> noteCommands[] = {
-            {"transpose", transposeCommand},
-            {"split",     splitCommand    },
-            {"insert",    insertCommand   },
-            {"tempo",     tempoCommand    },
+        // The domain commands, each with the function of ProjectEdits that it calls.
+        struct NoteCommand {
+            const char *verb;
+            DomainCommand command;
+            const char *function;
+        };
+
+        constexpr NoteCommand noteCommands[] = {
+            {"transpose", transposeCommand, "transpose" },
+            {"split",     splitCommand,     "splitNote" },
+            {"insert",    insertCommand,    "insertNote"},
+            {"tempo",     tempoCommand,     "setTempo"  },
         };
 
         bool run(ProjectSession &session, const Arguments &arguments, DiagnosticList &diagnostics) {
@@ -174,9 +181,9 @@ namespace hello::kit {
                                                 "split, insert or tempo."));
             }
             const auto verb = arguments[1].text();
-            for (const auto &[commandVerb, command] : noteCommands) {
-                if (verb == QLatin1String(commandVerb)) {
-                    return command(session, arguments.mid(2), diagnostics);
+            for (const auto &command : noteCommands) {
+                if (verb == QLatin1String(command.verb)) {
+                    return command.command(session, arguments.mid(2), diagnostics);
                 }
             }
             return fail(diagnostics, ProjectCommands::tr("note %1 is not a command.").arg(verb));
@@ -204,11 +211,19 @@ namespace hello::kit {
 
     QStringList ProjectCommands::names() {
         auto names = edit::NodeCommands::names();
-        for (const auto &[verb, command] : noteCommands) {
-            Q_UNUSED(command)
-            names.push_back(QStringLiteral("note ") + QLatin1String(verb));
+        for (const auto &command : noteCommands) {
+            names.push_back(QStringLiteral("note ") + QLatin1String(command.verb));
         }
         return names;
+    }
+
+    QMap<QString, QString> ProjectCommands::domainFunctions() {
+        QMap<QString, QString> functions;
+        for (const auto &command : noteCommands) {
+            functions.insert(QLatin1String(command.function),
+                             QStringLiteral("note ") + QLatin1String(command.verb));
+        }
+        return functions;
     }
 
 }

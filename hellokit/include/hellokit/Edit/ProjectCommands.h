@@ -2,6 +2,7 @@
 #define HELLOKIT_EDIT_PROJECTCOMMANDS_H
 
 #include <QtCore/QCoreApplication>
+#include <QtCore/QMap>
 #include <QtCore/QStringList>
 #include <QtCore/QStringView>
 
@@ -37,6 +38,15 @@ namespace hello::kit {
         /// Returns the names of the commands. The name of a domain command consists of its noun
         /// and its verb separated by a space, such as <tt>note split</tt>.
         static QStringList names();
+
+        /// Returns the domain function registry of a project: each function of ProjectEdits by
+        /// name, with the name of the command that calls it.
+        ///
+        /// Each domain function is Q_INVOKABLE, so that the meta-object of ProjectEdits lists
+        /// them, and a test compares that list with this one. A domain function without a
+        /// command, or a command of a function that no longer exists, fails the test. See the
+        /// section on commands in docs/Editing.md.
+        static QMap<QString, QString> domainFunctions();
     };
 
 }
