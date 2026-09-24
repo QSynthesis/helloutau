@@ -229,65 +229,6 @@ private Q_SLOTS:
         QCOMPARE(session.names(), initialNames());
     }
 
-    // A locked record refuses every modification of itself and of what is below it, whatever the
-    // state the transaction leaves, and a transaction elsewhere is committed.
-    void a_modification_under_a_lock_is_refused() {
-        TestSession session({QStringLiteral("frozen"), QStringLiteral("free")});
-        EditSessionPrivate::registerLock(session, TestSession::ItemType, [](const ss::Node *node) {
-            return static_cast<const TestSession::Item &>(*node).variant(0).toString() ==
-                           QStringLiteral("frozen")
-                       ? QStringLiteral("locked")
-                       : QString();
-        });
-        const auto frozen = session.itemAt(0);
-
-        auto rename = session.transaction(QStringLiteral("Rename"));
-        session.setName(frozen, QStringLiteral("other"));
-        session.setName(frozen, QStringLiteral("frozen"));
-        DiagnosticList diagnostics;
-        QVERIFY(!rename.commit(diagnostics));
-        QCOMPARE(diagnostics.size(), 1);
-        QVERIFY(hasError(diagnostics));
-        QCOMPARE(diagnostics.first().message, QStringLiteral("locked"));
-
-        // Each reason is reported once, however many modifications it refuses.
-        auto values = session.transaction(QStringLiteral("Values"));
-        session.editValues(session.valuesOf(frozen))->append({4});
-        session.editValues(session.valuesOf(frozen))->append({5});
-        diagnostics.clear();
-        QVERIFY(!values.commit(diagnostics));
-        QCOMPARE(diagnostics.size(), 1);
-        QCOMPARE(session.values(session.valuesOf(frozen)), QList<double>({1, 2, 3}));
-
-        auto elsewhere = session.transaction(QStringLiteral("Elsewhere"));
-        session.setName(session.itemAt(1), QStringLiteral("renamed"));
-        session.editValues(session.valuesOf(session.itemAt(1)))->append({4});
-        QVERIFY(elsewhere.commit());
-    }
-
-    // Replacing or removing a locked record modifies the list that holds it, so that the document
-    // layer can replace the content. The lock is checked again for the next transaction.
-    void a_locked_record_itself_may_be_removed() {
-        TestSession session({QStringLiteral("frozen"), QStringLiteral("free")});
-        EditSessionPrivate::registerLock(session, TestSession::ItemType, [](const ss::Node *node) {
-            return static_cast<const TestSession::Item &>(*node).variant(0).toString() ==
-                           QStringLiteral("frozen")
-                       ? QStringLiteral("locked")
-                       : QString();
-        });
-        auto remove = session.transaction(QStringLiteral("Remove"));
-        session.removeItems(0, 1);
-        QVERIFY(remove.commit());
-        QCOMPARE(session.names(), QStringList({QStringLiteral("free")}));
-
-        // Undo restores the locked record without checking the lock.
-        session.undo();
-        QCOMPARE(session.names(), QStringList({QStringLiteral("frozen"), QStringLiteral("free")}));
-        auto rename = session.transaction(QStringLiteral("Rename"));
-        session.setName(session.itemAt(0), QStringLiteral("other"));
-        QVERIFY(!rename.commit());
-    }
-
     void the_step_numbers_follow_commits_undo_and_redo() {
         TestSession session;
         QCOMPARE(session.currentStep(), 0);

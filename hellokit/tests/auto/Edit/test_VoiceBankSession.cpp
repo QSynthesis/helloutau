@@ -193,30 +193,6 @@ private Q_SLOTS:
         m_session.reset();
     }
 
-    // A directory that was not read, or whose text did not decode, cannot be saved and is not
-    // edited. The other directories are.
-    void a_directory_that_cannot_be_saved_is_not_edited() {
-        const auto root = VoiceBankRef(m_session.get());
-        const auto left = root.directories().at(m_bank->indexOf("left"));
-        const auto deep = root.directories().at(m_bank->indexOf(fs::path("sub") / "deep"));
-        VoiceOtoEntry entry;
-        entry.fileName = QStringLiteral("z.wav");
-
-        DiagnosticList diagnostics;
-        QVERIFY(!commit([&] { left.otoEntries().insert(0, {entry}); }, diagnostics));
-        QVERIFY(diagnostics.first().message.contains(QStringLiteral("\"left\" was not read")));
-
-        diagnostics.clear();
-        QVERIFY(
-            !commit([&] { deep.otoEntries().at(0).setAlias(QStringLiteral("y")); }, diagnostics));
-        QVERIFY(diagnostics.first().message.contains(QStringLiteral("\"sub/deep\"")));
-        QVERIFY(diagnostics.first().message.contains(QStringLiteral("not valid")));
-
-        QVERIFY(commit(
-            [&] { root.directories().at(m_bank->indexOf("sub")).otoEntries().at(0).setOffset(7); },
-            diagnostics));
-    }
-
     // A replaced character is logged as its JSON after the change.
     void a_replaced_character_is_logged_as_its_json() {
         const auto root = VoiceBankRef(m_session.get());

@@ -7,7 +7,6 @@
 #include <optional>
 
 #include <QtCore/QJsonObject>
-#include <QtCore/QStringList>
 
 #include <substate/Model.h>
 #include <substate/ModelObserver.h>
@@ -51,10 +50,6 @@ namespace hello::kit::edit {
     /// slots of the record that have no validator of their own.
     using Validator = std::function<void(const ss::Node *record, QList<Violation> &violations)>;
 
-    /// Returns the reason why nothing in \a record and below it may be modified, or an empty
-    /// string if it may be. See EditSessionPrivate::registerLock().
-    using Lock = std::function<QString(const ss::Node *record)>;
-
     class EditSession::Impl : public ss::ModelObserver {
     public:
         explicit Impl(EditSession *q);
@@ -91,15 +86,6 @@ namespace hello::kit::edit {
         /// The violations of each record modified by the transaction in progress, in the state
         /// before its first modification. A record inserted by the transaction has none.
         std::map<NodeId, QList<Violation>> violationsBefore;
-
-        /// The locks by node type.
-        std::map<int, Lock> locks;
-
-        /// The reasons of the locks that the transaction in progress modified under, each once.
-        QStringList lockedReasons;
-
-        /// Appends to lockedReasons the reason of each locked record at or above \a node.
-        void recordLocks(const ss::Node *node);
 
         /// Returns \a node or its nearest ancestor with a validator, or \c nullptr if none.
         const ss::Node *validatedRecordOf(const ss::Node *node) const;
@@ -200,15 +186,6 @@ namespace hello::kit::edit {
         static inline void registerValidator(EditSession &session, int nodeType,
                                              Validator validator) {
             impl(session).validators[nodeType] = std::move(validator);
-        }
-
-        /// Registers the lock of the records of type \a nodeType. A transaction that modifies a
-        /// locked record or anything below it is not committed, whatever the state it leaves,
-        /// because the lock protects content that cannot be saved correctly. Replacing or
-        /// removing the locked record itself modifies its parent and is not refused, so that the
-        /// document layer can replace the content, for example by reading it again.
-        static inline void registerLock(EditSession &session, int nodeType, Lock lock) {
-            impl(session).locks[nodeType] = std::move(lock);
         }
     };
 

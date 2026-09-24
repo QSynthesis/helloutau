@@ -111,15 +111,11 @@ namespace hello::kit::edit {
                                                ss::Action::Operation operation) {
         // The first execution is the modification by the caller. Undo, redo and rollback restore
         // states that the validation has already accepted or that it does not concern.
-        if (operation == ss::Action::Execute && (!validators.empty() || !locks.empty())) {
+        if (operation == ss::Action::Execute && !validators.empty()) {
             const auto it = afterTranslators.find(action.type());
             if (it != afterTranslators.end()) {
                 if (const auto change = it->second(action, operation)) {
-                    const auto node = model.nodeById(change->node());
-                    recordLocks(node);
-                    if (!validators.empty()) {
-                        recordViolations(node, false);
-                    }
+                    recordViolations(model.nodeById(change->node()), false);
                 }
             }
         }
@@ -155,19 +151,6 @@ namespace hello::kit::edit {
         }
     }
 
-    void EditSession::Impl::recordLocks(const ss::Node *node) {
-        for (; node; node = node->parent()) {
-            const auto it = locks.find(node->type());
-            if (it == locks.end()) {
-                continue;
-            }
-            const auto reason = it->second(node);
-            if (!reason.isEmpty() && !lockedReasons.contains(reason)) {
-                lockedReasons.push_back(reason);
-            }
-        }
-    }
-
     const ss::Node *EditSession::Impl::validatedRecordOf(const ss::Node *node) const {
         for (; node; node = node->parent()) {
             if (validators.count(node->type())) {
@@ -197,10 +180,6 @@ namespace hello::kit::edit {
 
     bool EditSession::Impl::introducedViolations(DiagnosticList &diagnostics) const {
         bool found = false;
-        for (const auto &reason : lockedReasons) {
-            diagnostics.push_back(errorOf(reason));
-            found = true;
-        }
         for (const auto &[id, before] : violationsBefore) {
             // A record removed by the transaction has no constraints left to violate.
             const auto record = find(id);
@@ -255,7 +234,6 @@ namespace hello::kit::edit {
         message.clear();
         discarded = false;
         violationsBefore.clear();
-        lockedReasons.clear();
         return committed;
     }
 

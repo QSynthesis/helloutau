@@ -103,28 +103,6 @@ namespace hello::kit {
             }
         }
 
-        // A directory that was not read, or whose text did not decode, cannot be saved, see
-        // VoiceBankDirectory::leftOut and VoiceBankDirectory::lossy. It is read again rather than
-        // edited.
-        QString lockOf(const VoiceDirectoryNode &record) {
-            const auto path = get(record, VoiceDirectorySlots::Path);
-            const auto folder = path.isEmpty() ? VoiceBankSession::tr("the root folder")
-                                               : QStringLiteral("\"%1\"").arg(path);
-            if (get(record, VoiceDirectorySlots::LeftOut)) {
-                return VoiceBankSession::tr("The folder %1 was not read, because no encoding was "
-                                            "specified for it. Read it again in an encoding "
-                                            "before editing it.")
-                    .arg(folder);
-            }
-            if (get(record, VoiceDirectorySlots::Lossy)) {
-                return VoiceBankSession::tr("Part of the text in the folder %1 is not valid in its "
-                                            "encoding. Read it again in another encoding before "
-                                            "editing it.")
-                    .arg(folder);
-            }
-            return {};
-        }
-
     }
 
     void registerVoiceBankValidators(edit::EditSession &session) {
@@ -137,9 +115,6 @@ namespace hello::kit {
             [](const ss::Node *node, QList<edit::Violation> &violations) {
                 checkEntries(recordOf<VoiceDirectoryNode>(node), violations);
             });
-        edit::EditSessionPrivate::registerLock(
-            session, VoiceDirectoryType,
-            [](const ss::Node *node) { return lockOf(recordOf<VoiceDirectoryNode>(node)); });
     }
 
 }
