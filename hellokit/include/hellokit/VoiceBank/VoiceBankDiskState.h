@@ -157,8 +157,8 @@ namespace hello::kit {
         ///
         /// **A detected difference is reported again** by every check until reloadFromDisk()
         /// applies it, so that a check whose result was missed loses nothing. Applying it is the
-        /// user's decision: a directory that changed on disk while isModified() holds exists in
-        /// two versions, and only the user can choose between them.
+        /// user's decision: a directory that changed on disk while isModified() holds for it
+        /// exists in two versions, and only the user can choose between them.
         ///
         /// A place is a hint and not the only means of detecting a change. The overload without
         /// places examines the entire voice bank. A caller that passes only the reports of a

@@ -35,7 +35,7 @@ namespace hello::kit {
     ///   up-to-date state at a specific moment, such as when the window is reactivated.
     ///
     /// All of these checks compare stamps. A user request to reread everything regardless of
-    /// the stamps corresponds to VoiceBank::reloadAllFromDisk().
+    /// the stamps corresponds to VoiceBankDiskState::reloadAllFromDisk().
     ///
     /// Checking the entire voice bank costs one listing per directory and no file reads, which
     /// makes periodic checks affordable.
