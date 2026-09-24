@@ -52,6 +52,17 @@ namespace hello::kit {
     /// Returns the mapping of a prefix map, keyed by the note number in decimal.
     std::unique_ptr<ss::Node> treeOf(const QMap<int, VoicePrefix> &map);
 
+    /// Returns the tree of the directory at \a index of \a bank, with its entries.
+    std::unique_ptr<ss::Node> directoryTreeOf(const VoiceBank &bank, int index);
+
+    /// Replaces the character, the prefix map and the readme in \a root with those of
+    /// \a directory, the root directory of a voice bank.
+    void setRootFiles(VoiceBankNode &root, const VoiceBankDirectory &directory);
+
+    /// Returns the path of the directory in \a node, a directory of a voice bank tree, with the
+    /// separators of the system.
+    std::filesystem::path directoryPathOf(const ss::Node *node);
+
     /// Returns the voice bank in \a tree, at the root of \a disk and with its audio files.
     HELLOKIT_EDIT_EXPORT VoiceBank voiceBankOf(const ss::Node *tree,
                                                const VoiceBankDiskState &disk);

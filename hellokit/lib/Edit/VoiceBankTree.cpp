@@ -42,7 +42,7 @@ namespace hello::kit {
         }
 
         // The path of a directory with the separators of the system, as reading produces it.
-        fs::path directoryPathOf(const QString &text) {
+        fs::path pathFromText(const QString &text) {
             return fs::path(text.toStdU16String()).make_preferred();
         }
 
@@ -81,22 +81,37 @@ namespace hello::kit {
             return sample;
         }
 
-        std::unique_ptr<ss::Node> directoryTree(const VoiceBankDirectory &directory,
-                                                const QList<VoiceSample> &samples, int index) {
-            auto entries = std::make_unique<ss::VectorNode>();
-            for (const auto &sample : samples) {
-                if (sample.directory == index && sample.hasEntry) {
-                    entries->append(treeOf(entryOf(sample)));
-                }
-            }
-            auto node = std::make_unique<VoiceDirectoryNode>(VoiceDirectoryType);
-            put(*node, VoiceDirectorySlots::Path, pathText(directory.path));
-            put(*node, VoiceDirectorySlots::Charset, directory.charset);
-            put(*node, VoiceDirectorySlots::OtoCharset, directory.otoCharset);
-            put(*node, VoiceDirectorySlots::OtoEntries, std::move(entries));
-            return node;
-        }
+    }
 
+    std::unique_ptr<ss::Node> directoryTreeOf(const VoiceBank &bank, int index) {
+        const auto &directory = bank.directories().at(index);
+        auto entries = std::make_unique<ss::VectorNode>();
+        for (const auto &sample : bank.samples()) {
+            if (sample.directory == index && sample.hasEntry) {
+                entries->append(treeOf(entryOf(sample)));
+            }
+        }
+        auto node = std::make_unique<VoiceDirectoryNode>(VoiceDirectoryType);
+        put(*node, VoiceDirectorySlots::Path, pathText(directory.path));
+        put(*node, VoiceDirectorySlots::Charset, directory.charset);
+        put(*node, VoiceDirectorySlots::OtoCharset, directory.otoCharset);
+        put(*node, VoiceDirectorySlots::OtoEntries, std::move(entries));
+        return node;
+    }
+
+    void setRootFiles(VoiceBankNode &root, const VoiceBankDirectory &directory) {
+        root.setAt(VoiceBankSlots::Character.index, directory.character
+                                                        ? ss::Property(treeOf(*directory.character))
+                                                        : ss::Property());
+        root.setAt(VoiceBankSlots::PrefixMap.index, directory.prefixMap
+                                                        ? ss::Property(treeOf(*directory.prefixMap))
+                                                        : ss::Property());
+        put(root, VoiceBankSlots::Readme, directory.readme);
+    }
+
+    fs::path directoryPathOf(const ss::Node *node) {
+        return pathFromText(
+            get(recordOf<VoiceDirectoryNode>(node, VoiceDirectoryType), VoiceDirectorySlots::Path));
     }
 
     std::unique_ptr<ss::Node> treeOf(const VoiceBank &bank) {
@@ -109,19 +124,12 @@ namespace hello::kit {
             if (!isEditable(directory)) {
                 continue;
             }
-            directories->append(directoryTree(directory, bank.samples(), i));
+            directories->append(directoryTreeOf(bank, i));
 
             // Only the root has these files, see VoiceBankDirectorySource::fileNamed().
-            if (!directory.path.empty()) {
-                continue;
+            if (directory.path.empty()) {
+                setRootFiles(*node, directory);
             }
-            if (directory.character) {
-                put(*node, VoiceBankSlots::Character, treeOf(*directory.character));
-            }
-            if (directory.prefixMap) {
-                put(*node, VoiceBankSlots::PrefixMap, treeOf(*directory.prefixMap));
-            }
-            put(*node, VoiceBankSlots::Readme, directory.readme);
         }
         put(*node, VoiceBankSlots::Directories, std::move(directories));
         return node;
@@ -136,7 +144,7 @@ namespace hello::kit {
         for (int i = 0; i < list.size(); ++i) {
             const auto &node = recordOf<VoiceDirectoryNode>(list.at(i), VoiceDirectoryType);
             VoiceBankDirectory directory;
-            directory.path = directoryPathOf(get(node, VoiceDirectorySlots::Path));
+            directory.path = pathFromText(get(node, VoiceDirectorySlots::Path));
             directory.charset = get(node, VoiceDirectorySlots::Charset);
             directory.otoCharset = get(node, VoiceDirectorySlots::OtoCharset);
             if (directory.path.empty()) {

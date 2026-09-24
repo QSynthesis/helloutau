@@ -25,3 +25,4 @@ add_auto_test(test_VoiceBankRefs.cpp HelloKitEdit)
 
 add_auto_test(test_VoiceBankEdits.cpp HelloKitEdit)
 add_auto_test(test_VoiceBankCommands.cpp HelloKitEdit)
+add_auto_test(test_VoiceBankSession_Disk.cpp HelloKitEdit)
