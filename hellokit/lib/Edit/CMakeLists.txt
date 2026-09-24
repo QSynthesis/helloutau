@@ -10,7 +10,7 @@ qm_find_qt(Core)
 hellokit_add_library(${PROJECT_NAME} SHARED
     QT_AUTOGEN
     SOURCES ${_src}
-    LINKS HelloKitDocument HelloKitEditBase
+    LINKS HelloKitDocument HelloKitVoiceBank HelloKitEditBase
     LINKS_PRIVATE substate::substate substate::qsubstate
     QT_LINKS Core
     INCLUDE_PRIVATE ../../include/hellokit/Edit/** **

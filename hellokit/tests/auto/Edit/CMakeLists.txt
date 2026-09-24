@@ -11,3 +11,6 @@ add_auto_test(test_ProjectCommands.cpp HelloKitEdit)
 add_auto_test(test_ProjectEdits.cpp HelloKitEdit)
 add_auto_test(test_ProjectRefs.cpp HelloKitEdit)
 add_auto_test(test_ProjectSession.cpp HelloKitEdit)
+
+add_auto_test(test_VoiceBankTree.cpp HelloKitEdit ${_private})
+target_include_directories(test_VoiceBankTree PRIVATE ${_private_include})

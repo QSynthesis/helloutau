@@ -8,6 +8,7 @@
 #include <string>
 
 #include <QtCore/QCoreApplication>
+#include <QtCore/QDataStream>
 #include <QtCore/QHash>
 #include <QtCore/QList>
 #include <QtCore/QMap>
@@ -47,7 +48,27 @@ namespace hello::kit {
     struct VoicePrefix {
         QString prefix;
         QString suffix;
+
+        inline bool operator==(const VoicePrefix &RHS) const {
+            return prefix == RHS.prefix && suffix == RHS.suffix;
+        }
+
+        inline bool operator!=(const VoicePrefix &RHS) const {
+            return !(*this == RHS);
+        }
     };
+
+    // The stream operators of the value stored as a whole in the edit history. They are declared
+    // with the type, because Qt records the stream operators of a type where its meta-type is
+    // first instantiated. The format is part of the history format and must not change.
+
+    inline QDataStream &operator<<(QDataStream &out, const VoicePrefix &prefix) {
+        return out << prefix.prefix << prefix.suffix;
+    }
+
+    inline QDataStream &operator>>(QDataStream &in, VoicePrefix &prefix) {
+        return in >> prefix.prefix >> prefix.suffix;
+    }
 
     /// One decoded directory of a voice bank, holding the data from which its files are saved.
     ///
@@ -158,6 +179,32 @@ namespace hello::kit {
         std::array<std::optional<std::string>, 5> spellings;
     };
 
+    /// One entry of an \c oto.ini as an editor inserts it: the fields of a VoiceSample that the
+    /// file specifies, without the location that the containing directory determines.
+    struct VoiceOtoEntry {
+        QString fileName;
+        QString alias;
+        double offset = 0;
+        double consonant = 0;
+        double cutoff = 0;
+        double preUtterance = 0;
+        double voiceOverlap = 0;
+
+        /// See VoiceSample::spellings . Left empty for a new entry.
+        std::array<std::optional<std::string>, 5> spellings;
+
+        inline bool operator==(const VoiceOtoEntry &RHS) const {
+            return fileName == RHS.fileName && alias == RHS.alias && offset == RHS.offset &&
+                   consonant == RHS.consonant && cutoff == RHS.cutoff &&
+                   preUtterance == RHS.preUtterance && voiceOverlap == RHS.voiceOverlap &&
+                   spellings == RHS.spellings;
+        }
+
+        inline bool operator!=(const VoiceOtoEntry &RHS) const {
+            return !(*this == RHS);
+        }
+    };
+
     /// The differences between the disk and the state from which a VoiceBank was read. Every
     /// path is a directory relative to the root.
     ///
@@ -203,6 +250,16 @@ namespace hello::kit {
     /// \sa VoiceBankSource for the preceding step, and for the reason the two are separate.
     class HELLOKIT_VOICEBANK_EXPORT VoiceBank {
     public:
+        /// Creates the voice bank at \a root from its directories and samples, each sample
+        /// referring to a directory by index.
+        ///
+        /// Intended for a holder of the contents other than a VoiceBank, such as the tree of an
+        /// editing session, which assembles a VoiceBank for each save and for synthesis. The
+        /// contents are taken as given: nothing is read, and the path of each sample is not
+        /// derived from its file name.
+        VoiceBank(std::filesystem::path root, QList<VoiceBankDirectory> directories,
+                  QList<VoiceSample> samples);
+
         /// Reads and decodes \a root , querying \a selector for each directory whose encoding
         /// is not recorded.
         ///

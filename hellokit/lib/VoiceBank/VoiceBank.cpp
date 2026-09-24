@@ -17,6 +17,13 @@ namespace hello::kit {
 
     }
 
+    VoiceBank::VoiceBank(fs::path root, QList<VoiceBankDirectory> directories,
+                         QList<VoiceSample> samples)
+        : m_root(std::move(root)), m_directories(std::move(directories)),
+          m_samples(std::move(samples)) {
+        reindex();
+    }
+
     bool VoiceBank::isCharsetReadableByUtau(const QString &charset) {
 #ifdef Q_OS_WIN
         const TextCodec codec(charset);
