@@ -20,7 +20,9 @@ namespace hello::kit {
     /// returns whether its transaction is committed.
     ///
     /// Each function is Q_INVOKABLE, which lists it in the meta-object of the class, and has a
-    /// command, see VoiceBankCommands::domainFunctions().
+    /// command.
+    ///
+    /// \sa VoiceBankCommands::domainFunctions()
     class HELLOKIT_EDIT_EXPORT VoiceBankEdits {
         Q_GADGET
         Q_DECLARE_TR_FUNCTIONS(hello::kit::VoiceBankEdits)
@@ -53,17 +55,19 @@ namespace hello::kit {
         Q_INVOKABLE static bool setPrefix(const VoiceBankRef &bank, int noteNum,
                                           const VoicePrefix &prefix, DiagnosticList &diagnostics);
 
-        /// Removes the item of \c prefix.map at \a noteNum . The file remains, see
-        /// VoiceBankDiskState::save().
+        /// Removes the item of \c prefix.map at \a noteNum . The file remains.
+        ///
+        /// \sa VoiceBankDiskState::save()
         Q_INVOKABLE static bool removePrefix(const VoiceBankRef &bank, int noteNum,
                                              DiagnosticList &diagnostics);
 
         /// Makes \a charset the encoding in which the files of \a directory are saved. The text
-        /// is unchanged and the bytes change, see the section on encodings in docs/Editing.md.
+        /// is unchanged and the bytes change. See the section on encodings in docs/Editing.md.
         ///
         /// The encoding that the \c oto.ini declares for itself is removed as well, because the
-        /// file is then written in \a charset , and declared again if that is UTF-8. See
-        /// VoiceBankDirectory::otoCharset .
+        /// file is then written in \a charset , and declared again if that is UTF-8.
+        ///
+        /// \sa VoiceBankDirectory::otoCharset
         Q_INVOKABLE static bool convertCharset(const VoiceDirectoryRef &directory,
                                                const QString &charset, DiagnosticList &diagnostics);
     };

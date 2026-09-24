@@ -64,7 +64,9 @@ namespace hello::kit {
         std::vector<Entry> entries;
 
         /// The time at which the snapshot was taken, which determines whether a modification
-        /// time can be trusted. See isRacy() .
+        /// time can be trusted.
+        ///
+        /// \sa isRacy()
         std::filesystem::file_time_type takenAt{};
 
         /// Stamps are equal if all entries are equal. \c takenAt is not compared.
@@ -104,7 +106,8 @@ namespace hello::kit {
         };
 
         /// The lowercase name under which \a file is created. An existing file keeps its name.
-        /// See VoiceBankFileRecord::name .
+        ///
+        /// \sa VoiceBankFileRecord::name
         static const char *fileName(File file);
 
         /// Returns the file identified by the lowercase name \a foldedName in the root directory
@@ -149,7 +152,9 @@ namespace hello::kit {
         VoiceBankDirectoryStamp stamp;
 
         /// Returns whether any content requires an encoding to be read. An \c oto.ini that
-        /// declares an available encoding for itself does not. See utau::OtoIni::charset .
+        /// declares an available encoding for itself does not.
+        ///
+        /// \sa utau::OtoIni::charset
         bool needsCharset() const;
 
         /// Sample text from this directory, for an encoding selector to display under each
@@ -165,11 +170,11 @@ namespace hello::kit {
     /// Selects the encoding of the UTAU files of a directory when nothing on disk records it.
     ///
     /// Implemented by the user interface layer, not by this library. No encoding detection is
-    /// performed. A UST and a voice bank pose the same problem and follow the same rule. See
-    /// docs/note.md.
+    /// performed. A UST and a voice bank pose the same problem and follow the same rule.
     ///
     /// \warning The calling thread is unspecified, and the implementation is responsible for
     ///          thread safety.
+    /// \sa docs/note.md
     class HELLOKIT_VOICEBANK_EXPORT VoiceBankCharsetSelector {
     public:
         virtual ~VoiceBankCharsetSelector();

@@ -53,7 +53,7 @@ namespace hello::kit {
     ///          them without confirmation lets the file choose which program runs. Storing them
     ///          is permitted. Executing them is not.
     ///
-    /// \sa AGENTS.md for both rules and the reason they are separate rules
+    /// See AGENTS.md for both rules and the reason they are separate rules.
     class HELLOKIT_SYNTH_EXPORT EngineProcess {
         Q_DECLARE_TR_FUNCTIONS(hello::kit::EngineProcess)
     public:
@@ -62,7 +62,9 @@ namespace hello::kit {
         /// Virtual, as are the two functions below, so that a runner can be given a substitute
         /// that starts engines. The engines are third-party programs outside this repository,
         /// and without a substitute, no behavior of a runner after the arguments are passed can
-        /// be tested. See \c SynthRunner::makeEngineProcess().
+        /// be tested.
+        ///
+        /// \sa SynthRunner::makeEngineProcess()
         virtual ~EngineProcess();
 
         /// The time limit of one call, in milliseconds, after which the engine is killed.

@@ -94,8 +94,7 @@ namespace hello::kit {
         /// - **Text that the encoding cannot represent.** It is never written as question marks.
         /// - **A file that changed on disk since it was read**, because it contains changes made
         ///   elsewhere. The voice bank must be reopened.
-        /// - **A directory whose files were not read**, or text that was invalid. See
-        ///   VoiceBankDirectory::leftOut and VoiceBankDirectory::lossy .
+        /// - **A directory whose files were not read**, or text that was invalid.
         ///
         /// A directory of \a bank without state here, for example one that a reload removed
         /// and an undo in an editing session restored, is saved as a new directory: it is
@@ -111,6 +110,8 @@ namespace hello::kit {
         /// \warning Atomicity holds only until the first write. If the disk fails partway
         ///          through, files written so far remain written, and the failing file is
         ///          reported.
+        ///
+        /// \sa VoiceBankDirectory::leftOut, VoiceBankDirectory::lossy
         bool save(const VoiceBank &bank, DiagnosticList &diagnostics);
 
         /// Writes \a bank into \a folder as a new voice bank, and returns it as read from there.
@@ -139,7 +140,9 @@ namespace hello::kit {
         ///          read anew.
         ///
         /// The encoding is recorded by the next save() , unless part of the text was invalid in
-        /// it (see VoiceBankDirectory::lossy), in which case it is not worth recording.
+        /// it, in which case it is not worth recording.
+        ///
+        /// \sa VoiceBankDirectory::lossy
         bool reread(VoiceBank &bank, const std::filesystem::path &directory, const QString &charset,
                     DiagnosticList &diagnostics);
 
@@ -159,7 +162,9 @@ namespace hello::kit {
         ///
         /// A place is a hint and not the only means of detecting a change. The overload without
         /// places examines the entire voice bank. A caller that passes only the reports of a
-        /// watcher misses every change the watcher misses. See VoiceBankCheckScheduler .
+        /// watcher misses every change the watcher misses.
+        ///
+        /// \sa VoiceBankCheckScheduler
         VoiceBankChanges checkDisk(const QList<std::filesystem::path> &places);
 
         /// \overload for the entire voice bank.
@@ -215,7 +220,8 @@ namespace hello::kit {
             bool remember = false;
             /// The directory state when last read, or when last checked without differences.
             VoiceBankDirectoryStamp stamp;
-            /// The names of the audio files when last read or refreshed. See audioFiles().
+            /// The names of the audio files when last read or refreshed.
+            /// \sa audioFiles()
             QStringList audioFiles;
         };
 

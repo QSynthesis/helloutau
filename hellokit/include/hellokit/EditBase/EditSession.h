@@ -15,7 +15,7 @@
 namespace hello::kit::edit {
 
     /// The editing of a document stored as a tree of nodes, with transactions, undo history and
-    /// change notification. See docs/Editing.md.
+    /// change notification.
     ///
     /// This class does not depend on the structure of a particular document or on the kinds of
     /// its nodes. A subclass, such as ProjectSession, supplies the tree, and the handles of the
@@ -31,6 +31,8 @@ namespace hello::kit::edit {
     /// \warning The session emits the signals while applying a change. A slot connected to them
     ///          may read the session but must not modify it. A modification in response to a
     ///          signal requires a queued connection.
+    ///
+    /// \sa docs/Editing.md
     class HELLOKIT_EDITBASE_EXPORT EditSession : public QObject {
         Q_OBJECT
     public:
@@ -141,7 +143,9 @@ namespace hello::kit::edit {
         void changed(const hello::kit::edit::ChangePtr &change);
 
         /// The current position in the undo history changed to \a step by a commit, an undo or a
-        /// redo. See currentStep().
+        /// redo.
+        ///
+        /// \sa currentStep()
         void stepChanged(int step);
 
     protected:

@@ -19,8 +19,10 @@
 
 namespace hello::kit {
 
-    /// The node types of a voice bank tree, see ProjectNodeType. They follow the types of a
-    /// project at a distance, so that a node type identifies its document.
+    /// The node types of a voice bank tree. They follow the types of a project at a distance, so
+    /// that a node type identifies its document.
+    ///
+    /// \sa ProjectNodeType
     enum VoiceBankNodeType {
         VoiceBankType = ss::Node::User + 32,
         VoiceCharacterType,

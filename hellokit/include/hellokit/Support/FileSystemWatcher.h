@@ -33,12 +33,13 @@ namespace hello::kit {
     /// reported through unwatchable().
     ///
     /// **File events** report individual entries in addition to directories. They are disabled
-    /// by default and unavailable on macOS, where FSEvents reports directories only. See
-    /// setFileEventsEnabled().
+    /// by default and unavailable on macOS, where FSEvents reports directories only.
     ///
     /// \note Reported paths use \c / as the separator and begin with one of roots() verbatim.
     ///
     /// \note Supported on Windows, macOS and Linux, the platforms this project targets.
+    ///
+    /// \sa setFileEventsEnabled()
     class HELLOKIT_SUPPORT_EXPORT FileSystemWatcher : public QObject {
         Q_OBJECT
     public:

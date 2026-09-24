@@ -13,8 +13,7 @@
 
 namespace hello::kit {
 
-    /// The commands of a project, the text interface of the handles and of ProjectEdits. See the
-    /// section on commands in docs/Editing.md.
+    /// The commands of a project, the text interface of the handles and of ProjectEdits.
     ///
     /// A command is one line, split into arguments by CommandSyntax. The commands are:
     ///
@@ -24,6 +23,8 @@ namespace hello::kit {
     ///   \<ticks\></tt>, <tt>note insert \<notes\> \<index\> \<note\></tt> and
     ///   <tt>note tempo \<note\> \<tempo\></tt>, the domain functions. A note is given by its
     ///   path, the notes of a track by the path of their list, and a new note by its JSON.
+    ///
+    /// See the section on commands in docs/Editing.md.
     class HELLOKIT_EDIT_EXPORT ProjectCommands {
         Q_DECLARE_TR_FUNCTIONS(hello::kit::ProjectCommands)
     public:
@@ -44,8 +45,9 @@ namespace hello::kit {
         ///
         /// Each domain function is Q_INVOKABLE, so that the meta-object of ProjectEdits lists
         /// them, and a test compares that list with this one. A domain function without a
-        /// command, or a command of a function that no longer exists, fails the test. See the
-        /// section on commands in docs/Editing.md.
+        /// command, or a command of a function that no longer exists, fails the test.
+        ///
+        /// See the section on commands in docs/Editing.md.
         static QMap<QString, QString> domainFunctions();
     };
 

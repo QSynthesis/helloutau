@@ -136,6 +136,16 @@ inline bool Range::contains(int value) const {
 
 公开声明使用 LLVM 风格的 `///` 文档注释，不使用 `\brief`。使用 Doxygen 的 `\c` 标识符、`\a` 参数、`\note`、`\warning` 等命令表达结构化含义。
 
+文档注释中指向其他声明或文件的引用写成 `\sa`，放在注释的最后，不写成正文中的「See X.」或「…, see X」。`\sa` 之后只列引用对象，多个以逗号分隔，不写句子；正文须在去掉引用后仍然完整。引用须附带说明，或者引用的是文档中的一节而非一个对象时，写成句子，如「See the section on commands in docs/Editing.md.」「See test_ThreadedSynthRunner.cpp for the remaining coverage gap.」。
+
+```cpp
+/// Saves the voice bank. The directories that are not in the tree are neither written nor
+/// removed.
+///
+/// \sa VoiceBankDiskState::save(), saveAs()
+bool save(DiagnosticList &diagnostics);
+```
+
 注释应解释约束、所有权、生命周期以及当前实现必须如此设计的原因。不要用注释记录代码以前的样子或修改历史，这些信息由版本控制保存。
 
 注释使用美式英语。不要用破折号连接从句，也不要用分号代替应有的断句。

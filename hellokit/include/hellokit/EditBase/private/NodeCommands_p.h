@@ -33,7 +33,9 @@ namespace hello::kit::edit {
     /// correct or omit, such as a member of another type or an unknown field, is refused.
     ///
     /// A path that ends at a read-only field is refused by every command, and an internal field is
-    /// treated as absent. See FieldInfo::readOnly and FieldInfo::internal.
+    /// treated as absent.
+    ///
+    /// \sa FieldInfo::readOnly, FieldInfo::internal
     struct HELLOKIT_EDITBASE_EXPORT NodeCommands {
         Q_DECLARE_TR_FUNCTIONS(hello::kit::edit::NodeCommands)
     public:

@@ -19,7 +19,7 @@ namespace hello::kit {
 
     /// Exports a project to one foreign format.
     ///
-    /// \sa InterchangeReader for the reason the two directions are separate classes
+    /// See InterchangeReader for the reason the two directions are separate classes.
     class HELLOKIT_INTERCHANGE_EXPORT InterchangeWriter {
         Q_DECLARE_TR_FUNCTIONS(hello::kit::InterchangeWriter)
     public:

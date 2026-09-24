@@ -13,7 +13,7 @@
 ///       --out E:/compare/probe-utau.wav --cache probe.cache --flags B0
 /// \endcode
 ///
-/// \sa utaucompare, which evaluates the answers after UTAU has rendered the probe
+/// The answers are evaluated by utaucompare after UTAU has rendered the probe.
 
 #include <filesystem>
 #include <fstream>

@@ -16,7 +16,8 @@ namespace hello::kit {
     ///
     /// \warning Always the engines configured by the host, never those specified by the
     ///          project. \c Tool1 and \c Tool2 are paths chosen by a file, and executing them
-    ///          without confirmation lets the file choose which program runs. See AGENTS.md.
+    ///          without confirmation lets the file choose which program runs.
+    /// \sa AGENTS.md
     struct SynthEngines {
         std::filesystem::path resampler;
         std::filesystem::path wavtool;
@@ -89,10 +90,12 @@ namespace hello::kit {
         /// Enabled by default, because the resampler dominates render time and most of a track
         /// is unchanged between two renders. This is safe because the fragment name encodes
         /// every input that determines its content: a changed note has a different name, so no
-        /// stale fragment can be reused. See \c SynthPlan.
+        /// stale fragment can be reused.
         ///
         /// Disable to render everything again, for example after the engine has changed or is
         /// suspected of faulty output.
+        ///
+        /// \sa SynthPlan
         bool reuseCache = true;
 
         /// Whether a note that the engines fail to render stops the entire track.

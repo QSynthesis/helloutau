@@ -28,7 +28,8 @@ namespace hello::kit {
         /// identify the correct one. Decoding in inspect() would presuppose the answer.
         ///
         /// \warning No component after the selector may retain these. The result of read() is
-        ///          UTF-8 throughout. See docs/Interchange.md.
+        ///          UTF-8 throughout.
+        /// \sa docs/Interchange.md
         /// @{
         QByteArray rawName;
         QList<QByteArray> rawLyrics;

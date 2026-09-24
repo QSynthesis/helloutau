@@ -21,7 +21,7 @@ namespace hello::kit {
     /// encoding of the entire file, so that entry must be located and read before anything is
     /// decoded.
     ///
-    /// \sa docs/claude/utau-ust-preservation.md for the underlying measurements
+    /// See docs/claude/utau-ust-preservation.md for the underlying measurements.
     class HELLOKIT_DOCUMENT_EXPORT PayloadCodec {
     public:
         /// Returns \a data as unpadded base64url. An empty input yields an empty result, which a

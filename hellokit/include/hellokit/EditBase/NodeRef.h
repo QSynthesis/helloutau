@@ -12,12 +12,13 @@ namespace hello::kit::edit {
     ///
     /// A handle holds the session and the identifier of the node, and can be copied and stored.
     /// Reading through a handle of a node that is not in the tree returns default values, and
-    /// modifying through it is a programming error, see EditSession. isValid() returns whether
-    /// the node is in the tree. A handle of a removed node becomes valid again if the removal is
-    /// undone, because the identifier of a node does not change. The session must outlive its
-    /// handles.
+    /// modifying through it is a programming error. isValid() returns whether the node is in the
+    /// tree. A handle of a removed node becomes valid again if the removal is undone, because the
+    /// identifier of a node does not change. The session must outlive its handles.
     ///
     /// A handle refers to a node as a pointer does, therefore a const handle can modify the node.
+    ///
+    /// \sa EditSession
     class HELLOKIT_EDITBASE_EXPORT NodeRef {
     public:
         inline NodeRef() = default;

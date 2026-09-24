@@ -27,10 +27,12 @@ namespace hello::kit {
     /// - **Invalid byte sequences are rejected** rather than replaced, because they indicate an
     ///   incorrect encoding choice that must be reported.
     /// - **Representability is determined by a round trip**, not by querying the encoder for
-    ///   errors. See canEncode().
+    ///   errors.
     ///
     /// \note No encoding detection is performed. The encoding of a file is taken from its
-    ///       recorded metadata or specified by the user. See docs/note.md.
+    ///       recorded metadata or specified by the user.
+    ///
+    /// \sa canEncode(), docs/note.md
     class HELLOKIT_SUPPORT_EXPORT TextCodec {
     public:
         /// \param name an encoding name, or empty for the system encoding, which is the ANSI code

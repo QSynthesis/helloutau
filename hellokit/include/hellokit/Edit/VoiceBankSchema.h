@@ -40,7 +40,9 @@ namespace hello::kit {
         inline constexpr int count = 4;
     }
 
-    /// The slots of \c character.txt , see \c VoiceCharacter .
+    /// The slots of \c character.txt .
+    ///
+    /// \sa VoiceCharacter
     namespace VoiceCharacterSlots {
         inline constexpr edit::Slot<QString> Name{0, "name"};
         inline constexpr edit::Slot<QString> Image{1, "image"};
@@ -54,12 +56,12 @@ namespace hello::kit {
         inline constexpr int count = 6;
     }
 
-    /// The slots of one directory, see \c VoiceBankDirectory . Every slot except the entries is
-    /// read-only: the path is a fact of the disk, and the encodings change together through a
-    /// domain function.
+    /// The slots of one directory. Every slot except the entries is read-only: the path is a fact
+    /// of the disk, and the encodings change together through a domain function.
     ///
-    /// A directory that was not read, or whose text did not decode, is not in the tree, see
-    /// VoiceBankSession::excludedDirectories().
+    /// A directory that was not read, or whose text did not decode, is not in the tree.
+    ///
+    /// \sa VoiceBankDirectory, VoiceBankSession::excludedDirectories()
     namespace VoiceDirectorySlots {
         /// The location relative to the root, with slashes as separators. Empty for the root.
         inline constexpr edit::Slot<QString> Path{0, "path"};
@@ -74,10 +76,14 @@ namespace hello::kit {
         inline constexpr int count = 4;
     }
 
-    /// The original text of the five numbers of an entry, see \c VoiceSample::spellings .
+    /// The original text of the five numbers of an entry.
+    ///
+    /// \sa VoiceSample::spellings
     using OtoSpellings = decltype(VoiceOtoEntry::spellings);
 
-    /// The slots of one entry of an \c oto.ini , see \c VoiceOtoEntry .
+    /// The slots of one entry of an \c oto.ini .
+    ///
+    /// \sa VoiceOtoEntry
     namespace OtoEntrySlots {
         inline constexpr edit::Slot<QString> FileName{0, "fileName"};
         inline constexpr edit::Slot<QString> Alias{1, "alias"};

@@ -78,8 +78,9 @@ namespace hello::kit::edit {
     ///
     /// \c name is the name of the corresponding field of \c .usth, which commands and logs use.
     /// \c range constrains a numeric value and has the type of the value. A violation does not
-    /// prevent the modification, but the commit of a transaction that introduces it, see
-    /// EditSession::Transaction::commit().
+    /// prevent the modification, but the commit of a transaction that introduces it.
+    ///
+    /// \sa EditSession::Transaction::commit()
     template <class T>
     struct Slot {
         using ValueType = T;

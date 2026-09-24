@@ -76,7 +76,9 @@ namespace hello::kit {
         void move(int index, int count, int destination) const;
     };
 
-    /// See \c VoiceBankDirectory . Every field but the entries is read-only.
+    /// A directory of the voice bank. Every field but the entries is read-only.
+    ///
+    /// \sa VoiceBankDirectory
     class HELLOKIT_EDIT_EXPORT VoiceDirectoryRef : public VoiceBankNodeRef {
     public:
         using VoiceBankNodeRef::VoiceBankNodeRef;
@@ -88,7 +90,9 @@ namespace hello::kit {
         OtoEntryListRef otoEntries() const;
 
     private:
-        /// Writes both encodings, which change together, see VoiceBankEdits::convertCharset().
+        /// Writes both encodings, which change together.
+        ///
+        /// \sa VoiceBankEdits::convertCharset()
         void setCharsets(const QString &charset, const QString &otoCharset) const;
 
         friend class VoiceBankEdits;
@@ -103,7 +107,9 @@ namespace hello::kit {
         VoiceDirectoryRef at(int index) const;
     };
 
-    /// See \c VoiceBankDirectory::prefixMap . The keys are note numbers.
+    /// The \c prefix.map of the voice bank. The keys are note numbers.
+    ///
+    /// \sa VoiceBankDirectory::prefixMap
     class HELLOKIT_EDIT_EXPORT PrefixMapRef : public VoiceBankNodeRef {
     public:
         using VoiceBankNodeRef::VoiceBankNodeRef;
@@ -160,7 +166,9 @@ namespace hello::kit {
 
         VoiceDirectoryListRef directories() const;
 
-        /// Returns the voice bank, see VoiceBankSession::snapshot().
+        /// Returns the voice bank.
+        ///
+        /// \sa VoiceBankSession::snapshot()
         VoiceBank toVoiceBank() const;
     };
 

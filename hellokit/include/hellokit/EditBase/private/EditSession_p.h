@@ -28,7 +28,9 @@ namespace hello::kit::edit {
 
     /// Returns the entry of the change log for \a change, without the node, which the log adds,
     /// or \c std::nullopt if the log omits the change. \a change is of the kind for which the
-    /// writer is registered. \a lookup provides the field table of the document. See ChangeLog.
+    /// writer is registered. \a lookup provides the field table of the document.
+    ///
+    /// \sa ChangeLog
     using LogWriter = std::function<std::optional<QJsonObject>(
         const EditSession &session, const Change &change, RecordLookup lookup)>;
 
@@ -68,12 +70,15 @@ namespace hello::kit::edit {
         bool discarded = false;
 
         /// Whether the transaction in progress brings in content read from a file, which is not
-        /// validated. See EditSessionPrivate::markAsRead().
+        /// validated.
+        ///
+        /// \sa EditSessionPrivate::markAsRead()
         bool read = false;
 
         /// Ends the innermost transaction in progress. The outermost transaction is committed if
         /// \a commit is true and no nested transaction was discarded, and rolled back otherwise.
-        /// See EditSession::Transaction::commit().
+        ///
+        /// \sa EditSession::Transaction::commit()
         bool endTransaction(bool commit, DiagnosticList &diagnostics);
 
         /// The translators by action type, for the moments before and after an action is
@@ -186,7 +191,9 @@ namespace hello::kit::edit {
         }
 
         /// Registers the validator of the records of type \a nodeType. A transaction is committed
-        /// only if it introduces no violation, see docs/Editing.md.
+        /// only if it introduces no violation.
+        ///
+        /// \sa docs/Editing.md
         static inline void registerValidator(EditSession &session, int nodeType,
                                              Validator validator) {
             impl(session).validators[nodeType] = std::move(validator);

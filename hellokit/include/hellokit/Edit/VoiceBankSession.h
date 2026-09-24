@@ -33,11 +33,12 @@ namespace hello::kit {
         /// Creates a session that edits the voice bank of \a opened and keeps its disk state.
         ///
         /// A subdirectory that was not read, or whose text did not decode, cannot be saved and is
-        /// left out of the tree, see excludedDirectories(). The root directory cannot be left out,
-        /// as a file that does not decode cannot be edited either.
+        /// left out of the tree. The root directory cannot be left out, as a file that does not
+        /// decode cannot be edited either.
         ///
         /// \return the session, or null if the root directory was not read or did not decode,
         ///         with the reason in \a diagnostics
+        /// \sa excludedDirectories()
         static std::unique_ptr<VoiceBankSession> create(VoiceBankDiskState::Opened opened,
                                                         DiagnosticList &diagnostics,
                                                         QObject *parent = nullptr);
@@ -49,12 +50,15 @@ namespace hello::kit {
 
         /// Returns the subdirectories that were not read, or whose text did not decode, as last
         /// read. They are not in the tree and not in snapshot(), as if they did not exist, and are
-        /// read again in another encoding to be edited, see reread(). See
-        /// VoiceBankDirectory::leftOut and VoiceBankDirectory::lossy .
+        /// read again in another encoding to be edited.
+        ///
+        /// \sa reread(), VoiceBankDirectory::leftOut, VoiceBankDirectory::lossy
         QList<VoiceBankDirectory> excludedDirectories() const;
 
         /// Returns the names of the audio files of the directory at \a directory, with and without
-        /// an entry. See VoiceBankDiskState::audioFiles().
+        /// an entry.
+        ///
+        /// \sa VoiceBankDiskState::audioFiles()
         inline QStringList audioFiles(const std::filesystem::path &directory) const {
             return m_disk.audioFiles(directory);
         }
@@ -63,27 +67,32 @@ namespace hello::kit {
         VoiceBank snapshot() const;
 
         /// Returns the entry of the change log for \a change, or \c std::nullopt for a change
-        /// that the log omits. See ProjectSession::logEntry(). The entry names the slot of
-        /// \a change by its field name in VoiceBankSchema.h.
+        /// that the log omits. The entry names the slot of \a change by its field name in
+        /// VoiceBankSchema.h.
+        ///
+        /// \sa ProjectSession::logEntry()
         std::optional<QJsonObject> logEntry(const edit::Change &change) const;
 
         /// \name The files on disk
         ///
         /// The session keeps the disk state of the voice bank, and forwards to it with the
-        /// snapshot of the tree, see VoiceBankDiskState. Reading from disk replaces the directories
-        /// read again, as one undo step, see the section on changes on disk in docs/Editing.md.
+        /// snapshot of the tree. Reading from disk replaces the directories read again, as one
+        /// undo step. See the section on changes on disk in docs/Editing.md.
+        ///
+        /// \sa VoiceBankDiskState
         /// @{
 
         /// Returns whether the voice bank on disk is incomplete: its root was found missing by
-        /// checkDisk(), or no longer read when read again, see reloadFromDisk(). The tree is then
+        /// checkDisk(), or no longer read when read again by reloadFromDisk(). The tree is then
         /// the only intact copy, and an editor tells the user prominently. Saving writes it back,
         /// and saveAs() writes it elsewhere, either of which makes the voice bank complete again.
         /// See the section on an incomplete voice bank in docs/Editing.md.
         bool isIncomplete() const;
 
-        /// Saves the voice bank, see VoiceBankDiskState::save(). The directories that are not in
-        /// the tree are neither written nor removed. Without the root, every text file of the
-        /// tree is written again.
+        /// Saves the voice bank. The directories that are not in the tree are neither written nor
+        /// removed. Without the root, every text file of the tree is written again.
+        ///
+        /// \sa VoiceBankDiskState::save()
         bool save(DiagnosticList &diagnostics);
 
         /// The files that saveAs() writes.
@@ -95,28 +104,32 @@ namespace hello::kit {
         };
 
         /// Saves the voice bank into \a folder , which must not exist or be empty, and edits it
-        /// there from now on. See VoiceBankDiskState::saveAs().
+        /// there from now on.
         ///
         /// The tree and the undo history are kept, the disk state becomes that of \a folder , in
         /// which the voice bank is unmodified, and the original folder is no longer written.
+        ///
+        /// \sa VoiceBankDiskState::saveAs()
         bool saveAs(const std::filesystem::path &folder, SaveAsFiles files,
                     DiagnosticList &diagnostics);
 
-        /// See VoiceBankDiskState::rememberCharset().
+        /// \sa VoiceBankDiskState::rememberCharset()
         void rememberCharset(const std::filesystem::path &directory);
 
-        /// See VoiceBankDiskState::hasUnrecordedCharsets().
+        /// \sa VoiceBankDiskState::hasUnrecordedCharsets()
         bool hasUnrecordedCharsets() const;
 
-        /// See VoiceBankDiskState::checkDisk(). A directory on disk that the tree does not hold,
-        /// because an undo took out a directory that a reload had added, is reported as added
-        /// by every check, so that it can be taken in again.
+        /// Checks the disk for changes. A directory on disk that the tree does not hold, because
+        /// an undo took out a directory that a reload had added, is reported as added by every
+        /// check, so that it can be taken in again.
+        ///
+        /// \sa VoiceBankDiskState::checkDisk()
         VoiceBankChanges checkDisk(const QList<std::filesystem::path> &places);
 
         /// \overload for the entire voice bank.
         VoiceBankChanges checkDisk();
 
-        /// Applies \a changes , see VoiceBankDiskState::reloadFromDisk().
+        /// Applies \a changes .
         ///
         /// The directories read again, added or removed are replaced in the tree in one undo
         /// step, which takes the files as read without checking the constraints. Undoing it
@@ -126,18 +139,21 @@ namespace hello::kit {
         /// A change of the audio files alone creates no undo step.
         ///
         /// \return the changes applied
+        /// \sa VoiceBankDiskState::reloadFromDisk()
         VoiceBankChanges reloadFromDisk(const VoiceBankChanges &changes,
                                         VoiceBankCharsetSelector *selector,
                                         DiagnosticList &diagnostics);
 
-        /// Reads every directory again, see VoiceBankDiskState::reloadAllFromDisk() and
-        /// reloadFromDisk().
+        /// Reads every directory again.
+        ///
+        /// \sa VoiceBankDiskState::reloadAllFromDisk(), reloadFromDisk()
         VoiceBankChanges reloadAllFromDisk(VoiceBankCharsetSelector *selector,
                                            DiagnosticList &diagnostics);
 
         /// Reads the directory at \a directory again in \a charset , one in the tree or one of
-        /// excludedDirectories(), as one undo step. See VoiceBankDiskState::reread() and
-        /// reloadFromDisk().
+        /// excludedDirectories(), as one undo step.
+        ///
+        /// \sa VoiceBankDiskState::reread(), reloadFromDisk()
         bool reread(const std::filesystem::path &directory, const QString &charset,
                     DiagnosticList &diagnostics);
 
@@ -152,7 +168,9 @@ namespace hello::kit {
 
         /// Returns \a changes with each directory of the disk state that the session holds
         /// neither in the tree nor as excluded added to the new directories, and records whether
-        /// the root was found, see isIncomplete().
+        /// the root was found.
+        ///
+        /// \sa isIncomplete()
         VoiceBankChanges withUntaken(VoiceBankChanges changes);
 
         /// Makes the tree hold the editable directories of \a bank in one transaction with
@@ -165,7 +183,7 @@ namespace hello::kit {
         VoiceBankDiskState m_disk;
         QList<VoiceBankDirectory> m_excluded;
 
-        /// See isIncomplete().
+        /// \sa isIncomplete()
         bool m_rootMissing = false;
         bool m_rootUnreadable = false;
     };

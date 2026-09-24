@@ -64,11 +64,13 @@ namespace hello::kit {
         QString cacheDir() const;
         void setCacheDir(const QString &cacheDir) const;
 
-        /// \warning Untrusted, see \c ProjectSettings::wavtool.
+        /// \warning Untrusted.
+        /// \sa ProjectSettings::wavtool
         QString wavtool() const;
         void setWavtool(const QString &wavtool) const;
 
-        /// \warning Untrusted, see \c ProjectSettings::resampler.
+        /// \warning Untrusted.
+        /// \sa ProjectSettings::resampler
         QString resampler() const;
         void setResampler(const QString &resampler) const;
 
@@ -121,7 +123,7 @@ namespace hello::kit {
         PitchBend toPitchBend() const;
     };
 
-    /// See \c Note::userData.
+    /// \sa Note::userData
     class HELLOKIT_EDIT_EXPORT UserDataRef : public ProjectNodeRef {
     public:
         using ProjectNodeRef::ProjectNodeRef;
@@ -188,7 +190,8 @@ namespace hello::kit {
         QString direct() const;
         void setDirect(const QString &direct) const;
 
-        /// \warning Untrusted, see \c Note::patch.
+        /// \warning Untrusted.
+        /// \sa Note::patch
         QString patch() const;
         void setPatch(const QString &patch) const;
 
@@ -240,7 +243,7 @@ namespace hello::kit {
         void move(int index, int count, int destination) const;
     };
 
-    /// See \c Project::unknownFields.
+    /// \sa Project::unknownFields
     class HELLOKIT_EDIT_EXPORT UnknownFieldsRef : public ProjectNodeRef {
     public:
         using ProjectNodeRef::ProjectNodeRef;

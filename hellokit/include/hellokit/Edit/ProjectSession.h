@@ -30,12 +30,13 @@ namespace hello::kit {
         Project snapshot() const;
 
         /// Returns the entry of the change log for \a change, or \c std::nullopt for a change
-        /// that the log omits, which is ListChange::AboutToBeRemoved. See the section on the
-        /// change log in docs/Editing.md.
+        /// that the log omits, which is ListChange::AboutToBeRemoved.
         ///
         /// The entry names the slot of \a change by its field in \c .usth, and writes values as
         /// in \c .usth. It requires the changed node, therefore it is called while \a change is
         /// reported by changed().
+        ///
+        /// See the section on the change log in docs/Editing.md.
         std::optional<QJsonObject> logEntry(const edit::Change &change) const;
     };
 

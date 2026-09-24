@@ -16,12 +16,14 @@ namespace hello::kit {
     /// operation, each one undo step.
     ///
     /// Each function performs its modifications in a transaction with the name of the operation
-    /// as its message. Called within another transaction, the function joins it, see
-    /// EditSession::Transaction. Each function returns whether its transaction is committed, and
-    /// reports the reason otherwise in \a diagnostics.
+    /// as its message. Called within another transaction, the function joins it. Each function
+    /// returns whether its transaction is committed, and reports the reason otherwise in
+    /// \a diagnostics.
     ///
     /// Each function is Q_INVOKABLE, which lists it in the meta-object of the class, and has a
-    /// command, see ProjectCommands::domainFunctions().
+    /// command.
+    ///
+    /// \sa EditSession::Transaction, ProjectCommands::domainFunctions()
     class HELLOKIT_EDIT_EXPORT ProjectEdits {
         Q_GADGET
         Q_DECLARE_TR_FUNCTIONS(hello::kit::ProjectEdits)

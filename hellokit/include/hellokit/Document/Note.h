@@ -38,7 +38,9 @@ namespace hello::kit {
     /// Each index has a fixed role: 0 is the start, 1 the end of the attack, 2 the middle anchor,
     /// 3 the start of the release, and 4 the end. The index of an anchor therefore does not
     /// depend on whether the middle anchor exists. UST and \c .usth list the anchors in time
-    /// order instead, see anchorsInTimeOrder().
+    /// order instead.
+    ///
+    /// \sa anchorsInTimeOrder()
     struct HELLOKIT_DOCUMENT_EXPORT Envelope {
         /// The anchors by role. Index 2 is part of the envelope only if \c hasMiddle is true.
         std::array<EnvelopeAnchor, 5> anchors;

@@ -32,11 +32,12 @@ namespace hello::kit {
 
         /// The encoding of the UTAU files in this directory: the \c oto.ini , unless it declares
         /// its own encoding, and in the root also \c prefix.map , \c character.txt and
-        /// \c readme.txt . See VoiceBankDirectory::otoCharset and
-        /// VoiceBankDirectorySource::fileNamed() .
+        /// \c readme.txt .
         ///
         /// Never detected automatically. The value is the encoding specified by the user,
         /// recorded for later sessions.
+        ///
+        /// \sa VoiceBankDirectory::otoCharset, VoiceBankDirectorySource::fileNamed()
         QString charset;
 
         /// Top-level fields not recognized by this version, preserved so that saving writes them

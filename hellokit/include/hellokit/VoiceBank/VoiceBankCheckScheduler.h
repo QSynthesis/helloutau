@@ -27,9 +27,9 @@ namespace hello::kit {
     /// - Reports from FileSystemWatcher are forwarded as they arrive.
     /// - If the watcher cannot monitor the voice bank, for example on a network share, when
     ///   the monitor program is unavailable or after the root has been removed, the entire voice
-    ///   bank is reported periodically instead. See setPollInterval().
+    ///   bank is reported periodically instead.
     /// - **Regardless of the watcher state, the entire voice bank is also reported at a longer
-    ///   interval.** See setSweepInterval(). A notification that the system dropped silently,
+    ///   interval.** A notification that the system dropped silently,
     ///   which no watcher can detect, is found by this sweep at the latest.
     /// - requestFull() reports the entire voice bank immediately, for callers that require an
     ///   up-to-date state at a specific moment, such as when the window is reactivated.
@@ -37,16 +37,19 @@ namespace hello::kit {
     /// All of these checks compare stamps. A user request to reread everything regardless of
     /// the stamps corresponds to VoiceBank::reloadAllFromDisk().
     ///
-    /// Checking the entire voice bank costs one listing per directory and no file reads (see
-    /// VoiceBankDirectoryStamp), which makes periodic checks affordable.
+    /// Checking the entire voice bank costs one listing per directory and no file reads, which
+    /// makes periodic checks affordable.
+    ///
+    /// \sa setPollInterval(), setSweepInterval(), VoiceBankDirectoryStamp
     class HELLOKIT_VOICEBANK_EXPORT VoiceBankCheckScheduler : public QObject {
         Q_OBJECT
     public:
         explicit VoiceBankCheckScheduler(QObject *parent = nullptr);
         ~VoiceBankCheckScheduler() override;
 
-        /// The monitor program. See FileSystemWatcher::setProgram(). Must be set before
-        /// setRoot().
+        /// The monitor program. Must be set before setRoot().
+        ///
+        /// \sa FileSystemWatcher::setProgram()
         void setWatcherProgram(const QString &program);
 
         /// Sets the root of the voice bank and starts monitoring it. An empty path stops
@@ -65,7 +68,9 @@ namespace hello::kit {
         void setSweepInterval(int milliseconds);
         int sweepInterval() const;
 
-        /// The coalescing interval of the watcher. See FileSystemWatcher::setDelay().
+        /// The coalescing interval of the watcher.
+        ///
+        /// \sa FileSystemWatcher::setDelay()
         void setDelay(int milliseconds);
 
         /// Returns whether the watcher monitors the voice bank, that is, whether it has

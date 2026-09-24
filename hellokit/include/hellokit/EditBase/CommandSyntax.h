@@ -15,7 +15,9 @@
 
 namespace hello::kit::edit {
 
-    /// An argument of a command, see CommandSyntax.
+    /// An argument of a command.
+    ///
+    /// \sa CommandSyntax
     struct CommandArgument {
         enum Kind {
             /// Text without whitespace. value holds it as a JSON string.

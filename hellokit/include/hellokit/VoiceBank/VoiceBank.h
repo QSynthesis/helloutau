@@ -102,7 +102,7 @@ namespace hello::kit {
         QString charset;
 
         /// The encoding that the \c oto.ini declares for itself, as written, or empty if it
-        /// declares none. See utau::OtoIni::charset .
+        /// declares none.
         ///
         /// If available, the \c oto.ini is read and written in it instead of \a charset , which
         /// then applies to the other files only. The declaration takes precedence because a
@@ -112,6 +112,8 @@ namespace hello::kit {
         /// An \c oto.ini written in UTF-8 without a declaration receives one, so that such a
         /// program does not read it in the code page of the machine. An unmodified file is not
         /// rewritten for this alone.
+        ///
+        /// \sa utau::OtoIni::charset
         QString otoCharset;
 
         /// Whether the directory contained text to decode but no encoding was available.
@@ -133,7 +135,9 @@ namespace hello::kit {
         /// \name Files of the root only
         ///
         /// Absent or empty in a subdirectory, whose files of these names are neither read nor
-        /// written. See VoiceBankDirectorySource::fileNamed() and VoiceBank::character() .
+        /// written.
+        ///
+        /// \sa VoiceBankDirectorySource::fileNamed(), VoiceBank::character()
         /// @{
 
         /// \c character.txt as written in the file, without defaults, if present.
@@ -172,7 +176,9 @@ namespace hello::kit {
 
         /// \name Timing parameters in milliseconds, as specified in the \c oto.ini
         ///
-        /// All zero for a sample without an entry. See \c hasEntry .
+        /// All zero for a sample without an entry.
+        ///
+        /// \sa hasEntry
         /// @{
         double offset = 0;
         double consonant = 0;
@@ -189,8 +195,9 @@ namespace hello::kit {
         bool hasEntry = false;
 
         /// The original text of the five numbers above in the \c oto.ini , used to save an
-        /// unchanged entry verbatim, or \c std::nullopt for an entry not read from a file. See
-        /// utau::OtoEntry::spellings .
+        /// unchanged entry verbatim, or \c std::nullopt for an entry not read from a file.
+        ///
+        /// \sa utau::OtoEntry::spellings
         std::array<std::optional<std::string>, 5> spellings;
     };
 
@@ -205,7 +212,9 @@ namespace hello::kit {
         double preUtterance = 0;
         double voiceOverlap = 0;
 
-        /// See VoiceSample::spellings . Left empty for a new entry.
+        /// The original text of the five numbers. Left empty for a new entry.
+        ///
+        /// \sa VoiceSample::spellings
         std::array<std::optional<std::string>, 5> spellings;
 
         inline bool operator==(const VoiceOtoEntry &RHS) const {
@@ -230,7 +239,9 @@ namespace hello::kit {
     /// and a removed directory concern the edited contents and require the user's decision, so
     /// \a changed and \a removed call for a prominent prompt. A changed set of audio files and a
     /// new directory add or remove only what the user has not edited, so \a audio and \a added
-    /// call for an unobtrusive notice. See docs/Editing.md.
+    /// call for an unobtrusive notice.
+    ///
+    /// \sa docs/Editing.md
     struct VoiceBankChanges {
         /// Directories in which a text file changed: \c oto.ini , \c hello-config.json , or a
         /// text file of the root. Applying the change rereads the directory and discards its
@@ -262,7 +273,7 @@ namespace hello::kit {
     /// A value: the contents of the voice bank only, copyable like Project . The state of the
     /// files on disk, which saving and checking the disk require, is kept by VoiceBankDiskState .
     ///
-    /// \sa VoiceBankSource for the preceding step, and for the reason the two are separate.
+    /// See VoiceBankSource for the preceding step, and for the reason the two are separate.
     class HELLOKIT_VOICEBANK_EXPORT VoiceBank {
     public:
         /// Creates the voice bank at \a root from its directories and samples, each sample
@@ -366,7 +377,9 @@ namespace hello::kit {
         /// and encoding are changed through this function. The path is retained.
         ///
         /// A change of encoding also removes the declaration of the \c oto.ini , because the file
-        /// is then written in the new encoding. See VoiceBankDirectory::otoCharset .
+        /// is then written in the new encoding.
+        ///
+        /// \sa VoiceBankDirectory::otoCharset
         void setDirectory(int index, VoiceBankDirectory directory);
 
     private:

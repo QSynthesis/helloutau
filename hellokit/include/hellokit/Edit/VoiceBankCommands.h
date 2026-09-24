@@ -27,17 +27,21 @@ namespace hello::kit {
     class HELLOKIT_EDIT_EXPORT VoiceBankCommands {
         Q_DECLARE_TR_FUNCTIONS(hello::kit::VoiceBankCommands)
     public:
-        /// Executes the command of \a line on \a session in one transaction, see
-        /// ProjectCommands::execute().
+        /// Executes the command of \a line on \a session in one transaction.
+        ///
+        /// \sa ProjectCommands::execute()
         static bool execute(VoiceBankSession &session, QStringView line,
                             DiagnosticList &diagnostics);
 
-        /// Returns the names of the commands, see ProjectCommands::names().
+        /// Returns the names of the commands.
+        ///
+        /// \sa ProjectCommands::names()
         static QStringList names();
 
         /// Returns the domain function registry of a voice bank: each function of
-        /// VoiceBankEdits by name, with the name of the command that calls it. See
-        /// ProjectCommands::domainFunctions().
+        /// VoiceBankEdits by name, with the name of the command that calls it.
+        ///
+        /// \sa ProjectCommands::domainFunctions()
         static QMap<QString, QString> domainFunctions();
     };
 

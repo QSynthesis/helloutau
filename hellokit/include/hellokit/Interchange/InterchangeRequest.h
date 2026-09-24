@@ -20,7 +20,9 @@ namespace hello::kit {
     ///
     /// Intended for settings that map to a single control. A setting that requires a custom
     /// view, such as selecting a text encoding with a live preview, is implemented as a custom
-    /// step of the driver instead. See \c InterchangeReader::customStepId().
+    /// step of the driver instead.
+    ///
+    /// \sa InterchangeReader::customStepId()
     struct InterchangeOption {
         enum Type {
             Boolean,

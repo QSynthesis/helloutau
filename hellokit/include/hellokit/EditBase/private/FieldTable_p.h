@@ -324,13 +324,17 @@ namespace hello::kit::edit {
         return field;
     }
 
-    /// Returns \a field as a read-only field, see FieldInfo::readOnly.
+    /// Returns \a field as a read-only field.
+    ///
+    /// \sa FieldInfo::readOnly
     inline constexpr FieldInfo readOnlyField(FieldInfo field) {
         field.readOnly = true;
         return field;
     }
 
-    /// Returns \a field as an internal field, see FieldInfo::internal.
+    /// Returns \a field as an internal field.
+    ///
+    /// \sa FieldInfo::internal
     inline constexpr FieldInfo internalField(FieldInfo field) {
         field.internal = true;
         return field;
