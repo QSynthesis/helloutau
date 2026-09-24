@@ -167,18 +167,24 @@ namespace hello::kit {
             return QByteArray(bytes.data(), qsizetype(bytes.size()));
         }
 
+        /// The name \a name in UTF-8 with its ASCII letters in lowercase, for comparison with the
+        /// names of VoiceBankDirectorySource::File .
+        std::string foldedName(const fs::path &name) {
+            const auto u8 = name.u8string();
+            std::string folded(u8.begin(), u8.end());
+            for (auto &c : folded) {
+                if (c >= 'A' && c <= 'Z') {
+                    c = char(c - 'A' + 'a');
+                }
+            }
+            return folded;
+        }
+
         /// The file in \a directory whose name matches \a lowerCase case-insensitively, if any.
         std::optional<fs::path> findFolded(const fs::path &directory, const char *lowerCase) {
             std::error_code error;
             for (const auto &entry : fs::directory_iterator(directory, error)) {
-                const auto u8 = entry.path().filename().u8string();
-                std::string name(u8.begin(), u8.end());
-                for (auto &c : name) {
-                    if (c >= 'A' && c <= 'Z') {
-                        c = char(c - 'A' + 'a');
-                    }
-                }
-                if (name == lowerCase) {
+                if (foldedName(entry.path().filename()) == lowerCase) {
                     return entry.path();
                 }
             }
@@ -660,6 +666,7 @@ namespace hello::kit {
 
         std::set<fs::path> removals;
         std::vector<fs::path> rereads;
+        std::vector<fs::path> audios;
         std::vector<fs::path> arrivals;
 
         const auto known = [this](const fs::path &path) { return m_books.count(path) != 0; };
@@ -709,31 +716,29 @@ namespace hello::kit {
                 }
             }
 
-            // The files. A matching stamp is trusted except for racy entries, which were
-            // written too close to the snapshot and are compared by content.
-            const auto filesOf = [](const VoiceBankDirectoryStamp &stamp) {
+            // The files, text and audio apart: a changed text file requires rereading the
+            // directory, while a changed set of audio files only changes its bare samples. A
+            // matching stamp is trusted except for racy text entries, which were written too
+            // close to the snapshot and are compared by content.
+            const auto kindOf = [&path](const VoiceBankDirectoryStamp::Entry &entry) {
+                return VoiceBankDirectorySource::fileNamed(foldedName(entry.name), path.empty());
+            };
+            const auto entriesOf = [&kindOf](const VoiceBankDirectoryStamp &stamp, bool text) {
                 std::vector<VoiceBankDirectoryStamp::Entry> out;
                 for (const auto &entry : stamp.entries) {
-                    if (!entry.directory) {
+                    if (!entry.directory && kindOf(entry).has_value() == text) {
                         out.push_back(entry);
                     }
                 }
                 return out;
             };
-            bool changed = filesOf(book.stamp) != filesOf(*now);
+            bool changed = entriesOf(book.stamp, true) != entriesOf(*now, true);
             if (!changed) {
                 for (const auto &entry : book.stamp.entries) {
                     if (entry.directory || !book.stamp.isRacy(entry)) {
                         continue;
                     }
-                    const auto name = entry.name.u8string();
-                    std::string folded(name.begin(), name.end());
-                    for (auto &c : folded) {
-                        if (c >= 'A' && c <= 'Z') {
-                            c = char(c - 'A' + 'a');
-                        }
-                    }
-                    const auto kind = VoiceBankDirectorySource::fileNamed(folded, path.empty());
+                    const auto kind = kindOf(entry);
                     if (!kind) {
                         continue;
                     }
@@ -747,9 +752,12 @@ namespace hello::kit {
                     }
                 }
             }
+            const bool audio = entriesOf(book.stamp, false) != entriesOf(*now, false);
 
             if (changed) {
                 rereads.push_back(path);
+            } else if (audio) {
+                audios.push_back(path);
             } else if (!listed) {
                 // No difference was found. The new stamp is taken later, so that entries racy
                 // in the old stamp need not be read again at the next check. If a difference
@@ -760,6 +768,11 @@ namespace hello::kit {
             }
         }
 
+        for (const auto &path : audios) {
+            if (removals.count(path) == 0) {
+                changes.audio.push_back(path);
+            }
+        }
         for (const auto &path : rereads) {
             if (removals.count(path) == 0) {
                 changes.changed.push_back(path);
@@ -817,6 +830,22 @@ namespace hello::kit {
             done.changed.push_back(path);
         }
 
+        // Directories in which only audio files changed, while the indices are still valid.
+        // Nothing is discarded, so these are applied regardless of unsaved changes. A directory
+        // that is gone by now is left alone, and the next check reports its removal.
+        for (const auto &path : changes.audio) {
+            const int i = bank.indexOf(path);
+            if (i < 0 || removals.count(i) != 0 || done.changed.contains(path)) {
+                continue;
+            }
+            const auto source = VoiceBankSource::readDirectory(m_root, path, diagnostics);
+            if (!source) {
+                continue;
+            }
+            refreshAudio(bank, i, *source);
+            done.audio.push_back(path);
+        }
+
         // Removed directories next, in reverse order, so that the remaining indices stay valid.
         for (auto it = removals.rbegin(); it != removals.rend(); ++it) {
             done.removed.push_back(bank.m_directories.at(*it).path);
@@ -843,7 +872,8 @@ namespace hello::kit {
             }
         }
 
-        if (!done.changed.isEmpty() || !done.removed.isEmpty() || !done.added.isEmpty()) {
+        if (!done.changed.isEmpty() || !done.audio.isEmpty() || !done.removed.isEmpty() ||
+            !done.added.isEmpty()) {
             bank.reindex();
             for (int i = 0; i < bank.m_directories.size(); ++i) {
                 const auto &path = bank.m_directories.at(i).path;
@@ -908,6 +938,70 @@ namespace hello::kit {
         bank.m_samples += decoded.samples;
         bank.m_directories.push_back(decoded.directory);
         m_books[source.path] = bookOf(source, decoded.directory);
+    }
+
+    void VoiceBankDiskState::refreshAudio(VoiceBank &bank, int index,
+                                          const VoiceBankDirectorySource &source) {
+        const auto absolute = source.path.empty() ? m_root : m_root / source.path;
+
+        // The audio files covered by an entry, as when decoding. The rest become samples
+        // without an entry.
+        QSet<QString> claimed;
+        for (const auto &sample : std::as_const(bank.m_samples)) {
+            if (sample.directory == index && sample.hasEntry) {
+                claimed.insert(sample.fileName);
+            }
+        }
+        QList<VoiceSample> bare;
+        for (const auto &name : source.audioFiles) {
+            const auto fileName = QString::fromStdU16String(name.u16string());
+            if (claimed.contains(fileName)) {
+                continue;
+            }
+            VoiceSample sample;
+            sample.path = absolute / name;
+            sample.directory = index;
+            sample.fileName = fileName;
+            bare.push_back(sample);
+        }
+
+        // Placed after the entries of the directory, where decoding places them.
+        QList<VoiceSample> samples;
+        int at = -1;
+        for (const auto &sample : std::as_const(bank.m_samples)) {
+            if (sample.directory == index && !sample.hasEntry) {
+                continue;
+            }
+            samples.push_back(sample);
+            if (sample.directory == index) {
+                at = int(samples.size());
+            }
+        }
+        if (at < 0) {
+            at = int(samples.size());
+            for (int i = 0; i < samples.size(); ++i) {
+                if (samples.at(i).directory > index) {
+                    at = i;
+                    break;
+                }
+            }
+        }
+        for (int i = 0; i < bare.size(); ++i) {
+            samples.insert(at + i, bare.at(i));
+        }
+        bank.m_samples = std::move(samples);
+
+        // The new stamp is taken only if every text file is still as it was read. Otherwise a
+        // text file changed since the check would be taken as read and never reported.
+        auto &book = m_books[source.path];
+        bool same = source.files.size() == book.files.size();
+        for (const auto &[file, record] : source.files) {
+            const auto it = book.files.find(file);
+            same = same && it != book.files.end() && it->second.digest == record.digest;
+        }
+        if (same) {
+            book.stamp = source.stamp;
+        }
     }
 
     void VoiceBankDiskState::removeDirectory(VoiceBank &bank, int index) {

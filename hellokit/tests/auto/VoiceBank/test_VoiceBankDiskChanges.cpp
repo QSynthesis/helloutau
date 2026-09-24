@@ -1,6 +1,8 @@
+#include <algorithm>
 #include <memory>
 
 #include <QtCore/QByteArray>
+#include <QtCore/QDateTime>
 #include <QtCore/QDir>
 #include <QtCore/QFile>
 #include <QtCore/QFileInfo>
@@ -126,7 +128,7 @@ private Q_SLOTS:
         auto &disk = opened->disk;
 
         write(QStringLiteral("ka.wav"), "RIFF");
-        QCOMPARE(takeIn(bank, disk, &selector).changed, QList<fs::path>{fs::path()});
+        QCOMPARE(takeIn(bank, disk, &selector).audio, QList<fs::path>{fs::path()});
         QVERIFY(bank.find(60, QStringLiteral("ka")));
     }
 
@@ -143,6 +145,92 @@ private Q_SLOTS:
         takeIn(bank, disk, &selector);
         QVERIFY(!bank.find(60, QStringLiteral("ka")));
         QVERIFY(bank.find(60, QStringLiteral("a")));
+    }
+
+    // A new audio file adds a sample without an entry and is applied without a decision of the
+    // user, so it must not discard the unsaved changes of the directory as a reread would.
+    void an_added_audio_file_keeps_what_was_not_saved() {
+        write(QStringLiteral("oto.ini"), "a.wav=a,1,2,3,4,5\r\n");
+        write(QStringLiteral("a.wav"), "RIFF");
+        CountingSelector selector(QStringLiteral("UTF-8"));
+        auto opened = open(&selector);
+        QVERIFY(opened.has_value());
+        auto &bank = opened->bank;
+        auto &disk = opened->disk;
+        auto samples = bank.samples();
+        samples[0].offset = 7;
+        bank.setSamples(samples);
+
+        write(QStringLiteral("ka.wav"), "RIFF");
+        const auto found = takeIn(bank, disk, &selector);
+        QVERIFY(found.changed.isEmpty());
+        QCOMPARE(found.audio, QList<fs::path>{fs::path()});
+        const auto *edited = bank.find(60, QStringLiteral("a"));
+        QVERIFY(edited);
+        QCOMPARE(edited->offset, 7.0);
+        QVERIFY(bank.find(60, QStringLiteral("ka")));
+        QVERIFY(disk.checkDisk().isEmpty());
+
+        // The file of the entry is not added again as a sample without an entry.
+        const auto &all = bank.samples();
+        QCOMPARE(int(std::count_if(all.begin(), all.end(),
+                                   [](const VoiceSample &sample) {
+                                       return sample.fileName == QStringLiteral("a.wav");
+                                   })),
+                 1);
+    }
+
+    // The entry of a removed audio file is kept for the user to decide on, while a removed file
+    // without an entry leaves no sample behind.
+    void a_removed_audio_file_keeps_its_entry() {
+        write(QStringLiteral("oto.ini"), "a.wav=a,1,2,3,4,5\r\n");
+        write(QStringLiteral("a.wav"), "RIFF");
+        write(QStringLiteral("ki.wav"), "RIFF");
+        write(QStringLiteral("ku.wav"), "RIFF");
+        CountingSelector selector(QStringLiteral("UTF-8"));
+        auto opened = open(&selector);
+        QVERIFY(opened.has_value());
+        auto &bank = opened->bank;
+        auto &disk = opened->disk;
+
+        QVERIFY(QFile::remove(pathOf(QStringLiteral("a.wav"))));
+        QVERIFY(QFile::remove(pathOf(QStringLiteral("ki.wav"))));
+        QCOMPARE(takeIn(bank, disk, &selector).audio, QList<fs::path>{fs::path()});
+        const auto *entry = bank.find(60, QStringLiteral("a"));
+        QVERIFY(entry);
+        QVERIFY(entry->hasEntry);
+        QVERIFY(!bank.find(60, QStringLiteral("ki")));
+        QVERIFY(bank.find(60, QStringLiteral("ku")));
+    }
+
+    // A text file changed after the check that found only new audio files is not taken as read
+    // by applying that check, and the next check reports it.
+    void a_text_change_after_an_audio_check_is_still_reported() {
+        write(QStringLiteral("oto.ini"), "a.wav=a,1,2,3,4,5\r\n");
+        write(QStringLiteral("a.wav"), "RIFF");
+        CountingSelector selector(QStringLiteral("UTF-8"));
+        auto opened = open(&selector);
+        QVERIFY(opened.has_value());
+        auto &bank = opened->bank;
+        auto &disk = opened->disk;
+
+        write(QStringLiteral("ka.wav"), "RIFF");
+        const auto found = disk.checkDisk();
+        QCOMPARE(found.audio, QList<fs::path>{fs::path()});
+        write(QStringLiteral("oto.ini"), "a.wav=changed,1,2,3,4,5\r\n");
+
+        // Dated back, so that the stamp alone decides and no comparison by content hides a
+        // stamp taken wrongly.
+        QFile oto(pathOf(QStringLiteral("oto.ini")));
+        QVERIFY(oto.open(QIODevice::ReadWrite));
+        QVERIFY(oto.setFileTime(QDateTime::currentDateTime().addSecs(-3600),
+                                QFileDevice::FileModificationTime));
+        oto.close();
+
+        DiagnosticList diagnostics;
+        disk.reloadFromDisk(bank, found, &selector, diagnostics);
+        QVERIFY(bank.find(60, QStringLiteral("ka")));
+        QCOMPARE(disk.checkDisk().changed, QList<fs::path>{fs::path()});
     }
 
     // A resampler writes its analysis file beside the sample during rendering. This is not an
@@ -344,7 +432,7 @@ private Q_SLOTS:
         write(QStringLiteral("ka.wav"), "RIFF");
         QVERIFY(disk.checkDisk({root() / "sub"}).isEmpty());
         QVERIFY(disk.checkDisk({m_dir->path().toStdU16String()}).isEmpty());
-        QCOMPARE(disk.checkDisk().changed, QList<fs::path>{fs::path()});
+        QCOMPARE(disk.checkDisk().audio, QList<fs::path>{fs::path()});
     }
 
     void a_root_that_is_not_found_is_reported_without_other_changes() {

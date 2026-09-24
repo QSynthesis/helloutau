@@ -123,12 +123,14 @@ namespace hello::kit {
         VoiceBankChanges checkDisk();
 
         /// Applies the result of checkDisk() to \a bank : rereads the directories in \a changes
-        /// marked as changed, drops removed directories and reads new ones.
+        /// marked as changed, updates the samples without an entry of those in which only audio
+        /// files changed, drops removed directories and reads new ones.
         ///
         /// **Unsaved changes in a reread directory are discarded**, because the user requested
-        /// the version on disk. Each directory is examined again during the reload, because the
-        /// disk may have changed since the check. A directory removed in the meantime is not
-        /// read, and one restored in the meantime is not dropped.
+        /// the version on disk. A change of the audio files alone discards nothing. Each directory
+        /// is examined again during the reload, because the disk may have changed since the check.
+        /// A directory removed in the meantime is not read, and one restored in the meantime is not
+        /// dropped.
         ///
         /// A previously read directory keeps its encoding, or takes the one its configuration
         /// now records, without querying the selector again.
@@ -190,6 +192,10 @@ namespace hello::kit {
         void appendDirectory(VoiceBank &bank, const VoiceBankDirectorySource &source,
                              const std::optional<TextCodec> &codec, DiagnosticList &diagnostics);
         void removeDirectory(VoiceBank &bank, int index);
+
+        /// Replaces the samples without an entry of the directory at \a index of \a bank with
+        /// the audio files of \a source , keeping every entry and every unsaved change.
+        void refreshAudio(VoiceBank &bank, int index, const VoiceBankDirectorySource &source);
         /// @}
 
         std::filesystem::path m_root;

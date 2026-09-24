@@ -162,9 +162,22 @@ namespace hello::kit {
     ///
     /// Returned by VoiceBankDiskState::checkDisk() and applied by
     /// VoiceBankDiskState::reloadFromDisk() .
+    ///
+    /// The lists fall into two kinds, which an editor presents differently. A changed text file
+    /// and a removed directory concern the edited contents and require the user's decision, so
+    /// \a changed and \a removed call for a prominent prompt. A changed set of audio files and a
+    /// new directory add or remove only what the user has not edited, so \a audio and \a added
+    /// call for an unobtrusive notice. See docs/Editing.md.
     struct VoiceBankChanges {
-        /// Directories whose contents changed.
+        /// Directories in which a text file changed: \c oto.ini , \c hello-config.json , or a
+        /// text file of the root. Applying the change rereads the directory and discards its
+        /// unsaved changes.
         QList<std::filesystem::path> changed;
+
+        /// Directories in which only audio files were added or removed. Applying the change
+        /// updates the samples without an entry and nothing else: an entry whose audio file was
+        /// removed is kept, and no unsaved change is discarded.
+        QList<std::filesystem::path> audio;
 
         /// New directories. Each includes its subtree, which is not listed separately.
         QList<std::filesystem::path> added;
@@ -176,7 +189,8 @@ namespace hello::kit {
         bool rootNotFound = false;
 
         inline bool isEmpty() const {
-            return changed.isEmpty() && added.isEmpty() && removed.isEmpty() && !rootNotFound;
+            return changed.isEmpty() && audio.isEmpty() && added.isEmpty() && removed.isEmpty() &&
+                   !rootNotFound;
         }
     };
 
