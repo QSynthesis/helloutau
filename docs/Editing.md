@@ -413,9 +413,11 @@ set /tracks/0/notes/12/intensity null
 
 ```sh
 ustedit song.usth --script edits.txt -o out.usth
-ustedit song.usth                  # 从 stdin 读取命令
-ustedit song.usth --dump-changes   # 将命令展开为变更并输出，不执行
+ustedit song.ust --charset Shift_JIS -o out.ust < edits.txt   # 从 stdin 读取命令
+ustedit song.usth --script edits.txt --dump-changes            # 输出变更日志，不写文件
 ```
+
+输入为 `.usth` 或 `.ust`，脚本按 UTF-8 读取，每行一条命令。除命令外，脚本还可以写 `undo [<次数>|all]` 与 `redo [<次数>|all]`，它们操作撤销历史而非文档，因此不是命令。`--dump-changes` 将每个变更按 JSON Lines 写到标准输出；只有给出 `-o` 时才写文件。任一行失败即停止，不写文件。验收标准第 3、4 项另有自动测试（`test_ProjectCommands`），`ustedit` 用于真实工程。
 
 ## 验收标准
 

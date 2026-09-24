@@ -3,6 +3,7 @@
 # with synthetic inputs. They are development tools rather than part of the product, and
 # therefore not installed.
 add_subdirectory(ustconv)
+add_subdirectory(ustedit)
 add_subdirectory(ustrender)
 add_subdirectory(utaucompare)
 add_subdirectory(utauprobe)

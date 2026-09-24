@@ -1,4 +1,5 @@
 #include <QtCore/QDebug>
+#include <QtCore/QJsonObject>
 #include <QtTest/QTest>
 
 #include <hellokit/Edit/ProjectCommands.h>
@@ -256,6 +257,69 @@ private Q_SLOTS:
         verifyRefused(session, QStringLiteral("note tempo /tracks/0/notes 150"));
         verifyRefused(session, QStringLiteral("note tempo /tracks/0 150"));
         verifyRefused(session, QStringLiteral("note tempo /tracks/0/notes/1 fast"));
+    }
+
+    // Acceptance criteria 3 and 4 of docs/Editing.md: undoing every command restores the
+    // project, redoing every command restores the edited project, and the same commands produce
+    // the same changes in another session.
+    void a_script_is_undone_redone_and_repeated_exactly() {
+        const QStringList script{
+            QStringLiteral("set /tracks/0/notes/0/lyric ka"),
+            QStringLiteral("set /tracks/0/notes/0/flags @\"g-3\\B40\""),
+            QStringLiteral("note transpose 2 /tracks/0/notes/0 /tracks/0/notes/1"),
+            QStringLiteral("note split /tracks/0/notes 0 120"),
+            QStringLiteral("set /tracks/0/notes/1/vibrato {\"period\": 180, \"length\": 65}"),
+            QStringLiteral("set /tracks/0/notes/0/vibrato/period 200"),
+            QStringLiteral("set /tracks/0/notes/0/pitchBend null"),
+            QStringLiteral("note insert /tracks/0/notes 2 {\"lyric\": \"sa\", \"length\": 240, "
+                           "\"noteNum\": 64}"),
+            QStringLiteral("note tempo /tracks/0/notes/2 140"),
+            QStringLiteral("insert /tracks/0/notes/0/portamento 4 {\"x\": 5, \"y\": 1, \"type\": "
+                           "\"R\"}"),
+            QStringLiteral("set /tracks/0/notes/0/userData $Custom \"x y\""),
+            QStringLiteral("remove /tracks/0/notes/0/userData $custom"),
+            QStringLiteral("set /unknownFields extra [1, 2]"),
+            QStringLiteral("move /tracks/0/notes 0 1 2"),
+            QStringLiteral("remove /tracks/0/notes 3"),
+        };
+        const auto run = [&script](ProjectSession &session) {
+            QList<QJsonObject> entries;
+            const auto connection = QObject::connect(
+                &session, &EditSession::changed, &session, [&](const ChangePtr &change) {
+                    if (const auto entry = session.logEntry(*change)) {
+                        entries.push_back(*entry);
+                    }
+                });
+            for (const auto &line : script) {
+                DiagnosticList diagnostics;
+                if (!ProjectCommands::execute(session, line, diagnostics)) {
+                    qDebug().noquote() << line << diagnostics.first().message;
+                    entries.clear();
+                    break;
+                }
+            }
+            QObject::disconnect(connection);
+            return entries;
+        };
+
+        const auto project = richProject();
+        ProjectSession first(project);
+        const auto entries = run(first);
+        QCOMPARE(first.currentStep(), int(script.size()));
+        const auto edited = first.snapshot().toJson();
+        QVERIFY(edited != project.toJson());
+
+        ProjectSession second(project);
+        QCOMPARE(run(second), entries);
+
+        while (first.canUndo()) {
+            first.undo();
+        }
+        QCOMPARE(first.snapshot().toJson(), project.toJson());
+        while (first.canRedo()) {
+            first.redo();
+        }
+        QCOMPARE(first.snapshot().toJson(), edited);
     }
 
     void names_lists_every_command() {
