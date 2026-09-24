@@ -8,11 +8,11 @@
 |---|---|
 | `HelloKitSupport` | `Diagnostic`、`TextCodec`（编码名解析、转义与还原）、`FileSystemWatcher`（磁盘变化提示，由 `hello-fswatcher` 进程实现） |
 | `HelloKitDocument` | `PayloadCodec`、`Project` / `Track` / `Note` 模型、`.usth` 读写、`UstDocument` |
-| `HelloKitVoiceBank` | `VoiceBankConfig`、`VoiceBankSource`（原始扫描）、`VoiceBank`（解码后的模型、查询、写回、与磁盘核对）、`VoiceBankCheckScheduler` |
+| `HelloKitVoiceBank` | `VoiceBankConfig`、`VoiceBankSource`（原始扫描）、`VoiceBank`（解码后的内容与查询，纯值）、`VoiceBankDiskState`（磁盘状态：写回、与磁盘核对、重新读取）、`VoiceBankCheckScheduler` |
 | `HelloKitSynth` | `EngineProcess`、`SynthPlan`（仅计算）、`SynthRunner` 及其实现 `ClassicSynthRunner`、`ThreadedSynthRunner` |
 | `HelloKitInterchange` | 接口、注册表、`Formats/MidiConvert`（导入与导出） |
 | `HelloKitEditBase` | 编辑层的通用部分，命名空间 `hello::kit::edit`：`EditSession`（事务、撤销、变更通知、提交时校验）、`NodeRef`、`Change`、槽位、命令语法，以及扩展接口（字段表、按路径的命令、变更日志） |
-| `HelloKitEdit` | 编辑层的工程部分：`ProjectSession`、句柄 `ProjectRefs`、领域函数 `ProjectEdits`、命令 `ProjectCommands` |
+| `HelloKitEdit` | 编辑层的文档部分。工程：`ProjectSession`、句柄 `ProjectRefs`、领域函数 `ProjectEdits`、命令 `ProjectCommands`。音源：`VoiceBankSession`（含保存与从磁盘重新读取）、句柄 `VoiceBankRefs`、领域函数 `VoiceBankEdits`、命令 `VoiceBankCommands` |
 | `HelloUtauWidgets` | 仅含一个 `QLabel` 的 `MainWindow`，用于验证 Qt Widgets 与 moc 的集成 |
 | `helloutau` | 薄驱动，仅含 `main.cpp` |
 
@@ -24,9 +24,9 @@
 
 以下行为已经实测确认：**编码无法确定的目录只丢弃需要解码的部分**，其样本仍可按文件名演唱，因为文件名无需编码，而没有 `oto.ini` 的音源本来就以这种方式演唱；**文件名本身也是别名**，[官方页面](https://w.atwiki.jp/utaou/pages/106.html)说明 UTAU 将 wav 文件名作为别名读取，音源作者以 `_` 前缀排除不希望被演唱的文件；扫描设有深度和目录数上限，并且不跟随任何符号链接，因为音源是用户选择的文件夹，其结构不可信任。
 
-**音源写回已经实现。** `VoiceBank` 按目录保存，每个目录保留读取时使用的编码。`save()` 只写入有变化的文件，以原编码写入，拒绝编码无法表示的字符，拒绝磁盘上已被其他程序修改的文件，并在全部检查通过后才开始写入。**一份含 903 个条目的 GBK 真实音源原样打开并保存后，`oto.ini` 逐字节相同；修改一个 offset 只改变一行。** 编码设置分为两种：转换（`setDirectory()` 更改编码后保存，字节改变而文字不变）和重新解读（`reread()`，字节不变而文字改变）。转换前，`VoiceBank::isCharsetReadableByUtau()` 判断原版 UTAU 在本机能否正确读取。文件名一律按音源自身的编码解码后再拼接路径，不经过系统代码页；否则，编码与系统代码页不一致的音源会得到错误的路径，含 emoji 的文件名会使打开操作抛出异常。详见 [`Editing.md`](Editing.md) 的「音源是第二种文档」一节。
+**音源写回已经实现。** 内容（`VoiceBank`）与磁盘状态（`VoiceBankDiskState`）分开，二者按目录路径配对；音源按目录保存，每个目录保留读取时使用的编码，`oto.ini` 以 `#Charset:` 声明的编码为准。`VoiceBankDiskState::save()` 只写入有变化的文件，以原编码写入，拒绝编码无法表示的字符，拒绝磁盘上已被其他程序修改的文件，并在全部检查通过后才开始写入；未读取过的目录作为新目录创建。**一份含 903 个条目的 GBK 真实音源原样打开并保存后，`oto.ini` 逐字节相同；修改一个 offset 只改变一行。** 编码设置分为两种：转换（更改编码后保存，字节改变而文字不变）和重新解读（`reread()`，字节不变而文字改变）。转换前，`VoiceBank::isCharsetReadableByUtau()` 判断原版 UTAU 在本机能否正确读取。文件名一律按音源自身的编码解码后再拼接路径，不经过系统代码页；否则，编码与系统代码页不一致的音源会得到错误的路径，含 emoji 的文件名会使打开操作抛出异常。详见 [`Editing.md`](Editing.md) 的「音源是第二种文档」一节。
 
-**音源编辑界面打开期间，磁盘上的任何变化都会被检测到。** 监视由独立进程 `hello-fswatcher` 执行。在 Windows 上，它按 JetBrains 的做法只持有**驱动器根目录**的一个句柄，因此音源中的任何目录（包括音源根目录）都可以删除或重命名；进程崩溃后会重启，并在重启后进行全量核对；Debug 构建中也不会弹出阻塞的对话框。监视结果仅作为提示：`VoiceBank::checkDisk()` 使用目录指纹进行核对（只列目录、不读文件，对修改时间过于接近取指纹时刻的文件比较内容），**只检测、不修改**，检测到的变化在 `reloadFromDisk()` 之前每次都会重复报告。`VoiceBankCheckScheduler` 整合了监视提示、定时全量核对、监视失效后的轮询和手动触发；`reloadAllFromDisk()` 忽略指纹，重新读取全部内容。三个平台均有后端实现：Windows 使用 `ReadDirectoryChangesW`，macOS 使用 FSEvents（逐文件事件，不持有任何句柄），Linux 使用 inotify（每个目录单独注册；新目录先注册监视再报告整棵子树；根目录的每一级上级目录也受监视，以便在上级目录重命名时检测到根目录消失）。`hello-fswatcher` 另有 Python 编写的协议测试 `test_fswatcher`（通过 ctest 运行，需要 `Python3`；在 Windows 上用 `Python3_EXECUTABLE` 避开应用商店的占位 `python`）：两个音源并列，覆盖 15 种操作，已在三个平台上运行。在 Linux（Ubuntu 22.04、GCC 11.4、Qt 6.11.2）与 macOS（macOS 26.6.2、arm64、Apple Clang、Qt 6.10.1）上均已完成完整构建，21 项测试全部通过。GB18030 不是 ANSI 代码页，winacp 不提供，在 Windows 上由代码页函数转换，在其他系统上只有 Qt 带 ICU 时可用。macOS 版 Qt 不带 ICU，因此 GB18030 在 macOS 上不可用，`TextCodec` 将其报告为无效编码。
+**音源编辑界面打开期间，磁盘上的任何变化都会被检测到。** 监视由独立进程 `hello-fswatcher` 执行。在 Windows 上，它按 JetBrains 的做法只持有**驱动器根目录**的一个句柄，因此音源中的任何目录（包括音源根目录）都可以删除或重命名；进程崩溃后会重启，并在重启后进行全量核对；Debug 构建中也不会弹出阻塞的对话框。监视结果仅作为提示：`VoiceBankDiskState::checkDisk()` 使用目录指纹进行核对（只列目录、不读文件，对修改时间过于接近取指纹时刻的文件比较内容），**只检测、不修改**，检测到的变化在 `reloadFromDisk()` 之前每次都会重复报告。`VoiceBankCheckScheduler` 整合了监视提示、定时全量核对、监视失效后的轮询和手动触发；`reloadAllFromDisk()` 忽略指纹，重新读取全部内容。三个平台均有后端实现：Windows 使用 `ReadDirectoryChangesW`，macOS 使用 FSEvents（逐文件事件，不持有任何句柄），Linux 使用 inotify（每个目录单独注册；新目录先注册监视再报告整棵子树；根目录的每一级上级目录也受监视，以便在上级目录重命名时检测到根目录消失）。`hello-fswatcher` 另有 Python 编写的协议测试 `test_fswatcher`（通过 ctest 运行，需要 `Python3`；在 Windows 上用 `Python3_EXECUTABLE` 避开应用商店的占位 `python`）：两个音源并列，覆盖 15 种操作，已在三个平台上运行。在 Linux（Ubuntu 22.04、GCC 11.4、Qt 6.11.2）与 macOS（macOS 26.6.2、arm64、Apple Clang、Qt 6.10.1）上均已完成完整构建，21 项测试全部通过。GB18030 不是 ANSI 代码页，winacp 不提供，在 Windows 上由代码页函数转换，在其他系统上只有 Qt 带 ICU 时可用。macOS 版 Qt 不带 ICU，因此 GB18030 在 macOS 上不可用，`TextCodec` 将其报告为无效编码。
 
 `HelloKitSynth` 已能输出音频，分为三层。`EngineProcess` 启动引擎，**参数以向量传递，不提供接受完整命令行的重载**，这是 CVE-2024-28886 相关安全底线在代码中的体现。`SynthPlan` 只计算不执行，将 `VoiceBank::find` 与 `utau::Synth::calc` 衔接，为每个音符生成两条已解析的参数向量。`SynthRunner` 执行计划，现有两种实现：`ClassicSynthRunner` 写出并执行 UTAU 式的渲染脚本，`ThreadedSynthRunner` 以多线程执行重采样器调用。在这一层中，「原始字节」即 UTF-8：`EngineProcess` 接收 UTF-8，工程本身已是文本，整个过程不涉及转码。
 
@@ -43,6 +43,8 @@
 比较的对象是**值**而非字节：数字的书写形式由写出方决定；文本先按各自的规则解码再比较，因为两份文件可能编码不同、转义规则也不同（只有含控制音符的文件使用转义），这些都不构成工程上的差异。控制音符在两侧均被跳过，因为它属于设计的一部分，而非数据丢失。
 
 编辑层由通用部分 `HelloKitEditBase`（命名空间 `hello::kit::edit`，稳定后移入 substate）与工程部分 `HelloKitEdit` 组成，设计见 [`Editing.md`](Editing.md)。编辑期间工程是一棵 substate 节点树，`Project` 是从树物化出的快照。修改树的途径只有三层：句柄（`ProjectRefs.h`，按字段种类的类型化函数）、领域函数（`ProjectEdits.h`：`transpose`、`splitNote`、`insertNote`、`setTempo`）和命令（`ProjectCommands.h`，前两层的文本接口）。每个事务是一个撤销步骤，事务可以嵌套，提交时只拒绝本事务新引入的约束违例。变更以 `changed(ChangePtr)` 一个信号报告，也可写成 JSON Lines 的变更日志。通用层不依赖工程的结构，新节点种类经扩展接口注册变更翻译、日志写法和校验。字段表与槽位表是编译期常量。`hellokit/tests/manual/ustedit/` 在无界面环境下以命令编辑 `.usth` 或 `.ust`，可输出变更日志。
+
+音源是编辑层的第二种文档，以同样的方式建在通用层之上。树只含 oto 条目与根目录的三个文件；没有条目的 wav 由磁盘状态记录的音频文件减去条目引用的文件得到。未能读取或无法解码的子目录不进入树，由会话另行列出；根目录读不了时会话建立失败。约束：条目的文件名非空、同一 wav 的别名不重复、`prefix.map` 的键为 24 到 107。领域函数（`VoiceBankEdits.h`）：`setEntry`、`insertEntries`、`includeAudio`、`removeEntries`、`setPrefix`、`removePrefix`、`convertCharset`。从磁盘重新读取是一个撤销步骤，内容读自文件，不校验约束；撤销后树与磁盘不再一一对应，保存时创建树中有而磁盘上没有的目录，磁盘上有而树中没有的目录此后报告为新目录。`hellokit/tests/manual/voicedit/` 在无界面环境下以命令编辑音源并保存。
 
 `PayloadCodec` 实现 `_USTH_` 控制音符的载荷编码，即去除填充的 base64url。将其作为第一块代码，并非因为它最重要，而是因为它是纯逻辑、不依赖 Qt，且规则已经实测确定（见 [`claude/utau-ust-preservation.md`](claude/utau-ust-preservation.md)）。
 
@@ -75,8 +77,8 @@
 | 3. 撤销到底后保存的文件与未执行命令时保存的文件语义相同 | 达成，`test_ProjectCommands` 自动检验；`ustedit` 在真实文件上逐字节相同 |
 | 4. 同一串命令执行两次，变更序列逐条相同 | 达成，`test_ProjectCommands` 比较两次的变更日志 |
 | 5. 节点 ID 在插入、删除、撤销、重做之后仍指向同一节点 | 达成，`test_NodeRef` |
-| 6. 音源：修改一条 oto 条目并保存后编码不变，未修改的条目逐字节不变 | 未开始，属于音源作为第二种文档的部分 |
-| 7. 每个节点操作和领域函数都有对应的命令，由对照两侧列表的测试保证 | 部分达成。命令覆盖全部节点操作和领域函数，但测试只与手写的命令清单对照，新增领域函数而未添加命令时测试不会失败 |
+| 6. 音源：修改一条 oto 条目并保存后编码不变，未修改的条目逐字节不变 | 达成。`test_VoiceBankSession_Disk` 自动检验；`voicedit` 在夏语遥音源（Shift_JIS，五个目录，`mid` 等三个目录各 2518 条）的副本上修改 `mid` 的一个 offset 与 `breath sound` 中一条数字全空条目的 cutoff 并保存：两个 `oto.ini` 各只有该行改变，行尾仍为 CRLF，其余数字全空的条目仍为空，其他文件均未重写 |
+| 7. 每个节点操作和领域函数都有对应的命令，由对照两侧列表的测试保证 | 达成。领域函数的类为 `Q_GADGET`，函数标记为 `Q_INVOKABLE`，由 moc 生成的元对象列出；测试将其与命令表中登记的函数对照（`ProjectCommands::domainFunctions()`、`VoiceBankCommands::domainFunctions()`），新增领域函数而未添加命令时测试失败 |
 
 ## 插件位置
 
