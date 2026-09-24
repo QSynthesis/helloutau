@@ -11,6 +11,7 @@
 | `HelloKitVoiceBank` | `VoiceBankConfig`、`VoiceBankSource`（原始扫描）、`VoiceBank`（解码后的模型、查询、写回、与磁盘核对）、`VoiceBankCheckScheduler` |
 | `HelloKitSynth` | `EngineProcess`、`SynthPlan`（仅计算）、`SynthRunner` 及其实现 `ClassicSynthRunner`、`ThreadedSynthRunner` |
 | `HelloKitInterchange` | 接口、注册表、`Formats/MidiConvert`（导入与导出） |
+| `HelloKitEdit` | 通用层 `EditSession`（事务、撤销、变更通知、提交时校验、字段表、按路径的命令、变更日志）；工程层 `ProjectSession`、句柄 `ProjectRefs`、领域函数 `ProjectEdits`、命令 `ProjectCommands` |
 | `HelloUtauWidgets` | 仅含一个 `QLabel` 的 `MainWindow`，用于验证 Qt Widgets 与 moc 的集成 |
 | `helloutau` | 薄驱动，仅含 `main.cpp` |
 
@@ -40,6 +41,8 @@
 
 比较的对象是**值**而非字节：数字的书写形式由写出方决定；文本先按各自的规则解码再比较，因为两份文件可能编码不同、转义规则也不同（只有含控制音符的文件使用转义），这些都不构成工程上的差异。控制音符在两侧均被跳过，因为它属于设计的一部分，而非数据丢失。
 
+`HelloKitEdit` 是编辑层，设计见 [`Editing.md`](Editing.md)。编辑期间工程是一棵 substate 节点树，`Project` 是从树物化出的快照。修改树的途径只有三层：句柄（`ProjectRefs.h`，按字段种类的类型化函数）、领域函数（`ProjectEdits.h`：`transpose`、`splitNote`、`insertNote`、`setTempo`）和命令（`ProjectCommands.h`，前两层的文本接口）。每个事务是一个撤销步骤，事务可以嵌套，提交时只拒绝本事务新引入的约束违例。变更以 `changed(ChangePtr)` 一个信号报告，也可写成 JSON Lines 的变更日志。通用层不依赖工程的结构，新节点种类经扩展接口注册变更翻译、日志写法和校验。字段表与槽位表是编译期常量。`hellokit/tests/manual/ustedit/` 在无界面环境下以命令编辑 `.usth` 或 `.ust`，可输出变更日志。
+
 `PayloadCodec` 实现 `_USTH_` 控制音符的载荷编码，即去除填充的 base64url。将其作为第一块代码，并非因为它最重要，而是因为它是纯逻辑、不依赖 Qt，且规则已经实测确定（见 [`claude/utau-ust-preservation.md`](claude/utau-ust-preservation.md)）。
 
 ## 依赖来源
@@ -48,6 +51,7 @@
 - **stdcorelib 仅作为私有依赖**：子库使用 `LINKS_PRIVATE`，公开头文件中的导出宏使用 `<QtCore/QtGlobal>` 的 `Q_DECL_EXPORT` / `Q_DECL_IMPORT`。
 - **winacp**：Windows 全部 ANSI 代码页的转换表，由 Windows 的 `MultiByteToWideChar` / `WideCharToMultiByte` 生成，在三个平台上逐字节一致。`TextCodec` 的 Shift_JIS、GBK、Big5、EUC-KR 以及 `windows-874`、`windows-1250`–`1258` 均由其转换。需自行构建安装，配置时传入 `-Dwinacp_DIR=`。采用它的原因是 macOS 版 Qt 不包含 ICU，原有实现在 macOS 上无法打开任何 Shift_JIS 文件。
 - **wolf-midi**：MIDI 的解析与写出，是去除 Qt 依赖的 `QMidiFile`。来自 `E:/GitHub/ds-editor-lite/vcpkg`，同样通过 `-Dwolf-midi_DIR=` 指定。其 `MidiFile.cpp` 使用 `std::log2` 却未包含 `<cmath>`，GCC 下须以 `-DCMAKE_CXX_FLAGS="-include cmath"` 构建。
+- **substate**：`HelloKitEdit` 的节点树、事务与撤销历史（`stdware/substate`，含 `substate` 与 `qsubstate` 两个库），**仅作为私有依赖**，`ss::` 类型不出现在公开头文件中。与 stdutau 相同，不取自 vcpkg，也不作为子模块，自行构建安装后通过 `-Dsubstate_DIR=` 指定。默认构建为动态库。
 - **qmsetup**：来自 `D:/GitHub/synthrt/vcpkg`。
 - **Qt 6.11.1**：`D:/Qt/6.11.1/msvc2022_64`。
 
@@ -60,6 +64,18 @@
 **第二阶段「合成」的两项验收标准也已达成。** 第一项「命令行能将 `.ust` 渲染为 wav」：使用真实引擎和真实音源（GBK 编码的中文音源），输出为合法的 44.1 kHz 单声道 16 位 wav 文件。第二项「与 UTAU 渲染同一工程并比较」：所用装置为 `tests/manual/utauprobe` 和 `tests/manual/utaucompare`，在作者亲自调校的一首歌曲上，引擎参数逐项一致，音高曲线 8673 个值的中位偏差为 0，最大偏差为 15 音分。具体数据与判据见 [`Synth.md`](Synth.md)。
 
 缓存管理也已完成：已渲染的音频片段不会重复渲染；缓存文件名是其内容的摘要，因此修改过的音符会自动得到新文件名并重新渲染。见 [`Synth.md`](Synth.md) 的「缓存」一节。
+
+**第三阶段「编辑器骨架」的第一步 `HelloKitEdit` 已基本完成，界面部分尚未开始。** 编辑层自身的验收标准见 [`Editing.md`](Editing.md) 末尾，逐项状态如下：
+
+| 验收标准 | 状态 |
+|---|---|
+| 1. `Project` → 树 → `Project` 往返，两侧逐字段相等 | 达成，`test_ProjectSession` 以完整字段的工程和随机工程检验 |
+| 2. 无界面模式打开真实工程，执行命令，撤销到底再重做到底，保存后 UTAU 能正常打开且内容符合预期 | 待作者在 UTAU 中核对。`ustedit` 已编辑作者调校的歌曲 `cuowei.ust`，未修改的音符与设置和原工程完全相同 |
+| 3. 撤销到底后保存的文件与未执行命令时保存的文件语义相同 | 达成，`test_ProjectCommands` 自动检验；`ustedit` 在真实文件上逐字节相同 |
+| 4. 同一串命令执行两次，变更序列逐条相同 | 达成，`test_ProjectCommands` 比较两次的变更日志 |
+| 5. 节点 ID 在插入、删除、撤销、重做之后仍指向同一节点 | 达成，`test_NodeRef` |
+| 6. 音源：修改一条 oto 条目并保存后编码不变，未修改的条目逐字节不变 | 未开始，属于音源作为第二种文档的部分 |
+| 7. 每个节点操作和领域函数都有对应的命令，由对照两侧列表的测试保证 | 部分达成。命令覆盖全部节点操作和领域函数，但测试只与手写的命令清单对照，新增领域函数而未添加命令时测试不会失败 |
 
 ## 插件位置
 
