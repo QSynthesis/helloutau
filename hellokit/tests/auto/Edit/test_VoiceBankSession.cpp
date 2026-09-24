@@ -7,9 +7,14 @@
 #include <hellokit/Edit/VoiceBankRefs.h>
 #include <hellokit/Edit/VoiceBankSession.h>
 
+#include <hellokit/EditBase/private/NodeCommands_p.h>
+
+#include "VoiceBankFields_p.h"
 #include "VoiceBankSamples.h"
 
 using namespace hello::kit;
+
+namespace fs = std::filesystem;
 
 class test_VoiceBankSession : public QObject {
     Q_OBJECT
@@ -34,6 +39,14 @@ private:
         transaction.commit();
         QObject::disconnect(connection);
         return entries;
+    }
+
+    // Applies edit in one transaction and returns whether it was committed.
+    template <class Edit>
+    bool commit(Edit edit, DiagnosticList &diagnostics) {
+        auto transaction = m_session->transaction(QStringLiteral("Edit"));
+        edit();
+        return transaction.commit(diagnostics);
     }
 
 private Q_SLOTS:
@@ -90,6 +103,118 @@ private Q_SLOTS:
                                   QJsonObject{{QStringLiteral("prefix"), QStringLiteral("q")},
                                               {QStringLiteral("suffix"), QStringLiteral("s")}}}},
         }));
+    }
+
+    // Every entry names its audio file.
+    void an_entry_without_a_file_name_is_refused() {
+        const auto entry = VoiceBankRef(m_session.get()).directories().at(0).otoEntries().at(3);
+        DiagnosticList diagnostics;
+        QVERIFY(!commit([&] { entry.setFileName(QString()); }, diagnostics));
+        QCOMPARE(diagnostics.first().message,
+                 QStringLiteral("The oto entry with the alias \"m\" has no file name."));
+        QCOMPARE(entry.fileName(), QStringLiteral("missing.wav"));
+    }
+
+    // The entries of one audio file have distinct aliases, and an empty alias counts as the stem
+    // of the file name. Other audio files may use the same alias.
+    void an_alias_repeated_for_one_audio_file_is_refused() {
+        const auto entries = VoiceBankRef(m_session.get()).directories().at(0).otoEntries();
+        const auto first = entries.at(0).alias();
+        DiagnosticList diagnostics;
+        QVERIFY(!commit([&] { entries.at(1).setAlias(first); }, diagnostics));
+        QCOMPARE(
+            diagnostics.first().message,
+            QStringLiteral("The alias \"%1\" occurs more than once for \"a.wav\".").arg(first));
+
+        VoiceOtoEntry stem;
+        stem.fileName = QStringLiteral("b.wav");
+        stem.alias = QStringLiteral("b");
+        diagnostics.clear();
+        QVERIFY(!commit([&] { entries.insert(0, {stem, stem}); }, diagnostics));
+        QCOMPARE(diagnostics.size(), 1);
+
+        QVERIFY(commit([&] { entries.at(3).setAlias(first); }, diagnostics));
+    }
+
+    // A key of prefix.map is a note number from C1 to B7.
+    void a_prefix_outside_the_keys_is_refused() {
+        const auto prefixMap = VoiceBankRef(m_session.get()).prefixMap();
+        DiagnosticList diagnostics;
+        QVERIFY(!commit([&] { prefixMap.setValue(23, VoicePrefix()); }, diagnostics));
+        QCOMPARE(diagnostics.first().message,
+                 QStringLiteral("The prefix map has the key \"23\", which is not a note number "
+                                "from 24 to 107."));
+        QVERIFY(!commit([&] { prefixMap.setValue(108, VoicePrefix()); }, diagnostics));
+        QVERIFY(commit(
+            [&] {
+                prefixMap.setValue(24, VoicePrefix());
+                prefixMap.setValue(107, VoicePrefix());
+            },
+            diagnostics));
+    }
+
+    // A command writes a key as text, and another spelling of a note number would be a second
+    // key for the same note.
+    void a_prefix_key_in_another_spelling_is_refused() {
+        DiagnosticList diagnostics;
+        for (const auto &key :
+             {QStringLiteral("\"060\""), QStringLiteral("\"+60\""), QStringLiteral("\"60 \""),
+              QStringLiteral("x"), QStringLiteral("\"\"")}) {
+            const auto line = QStringLiteral("set /prefixMap %1 {}").arg(key);
+            const auto arguments = edit::CommandSyntax::split(line, diagnostics);
+            QVERIFY(arguments && arguments->size() == 4);
+            QVERIFY2(!commit(
+                         [&] {
+                             QVERIFY(edit::NodeCommands::execute(*m_session, voiceBankRecord(),
+                                                                 u"set", arguments->mid(1),
+                                                                 diagnostics));
+                         },
+                         diagnostics),
+                     qPrintable(line));
+        }
+        QVERIFY(VoiceBankRef(m_session.get()).prefixMap().keys() == QList<int>({60, 62}));
+    }
+
+    // A voice bank read from disk may violate its constraints, which does not prevent editing
+    // the violating directory otherwise.
+    void a_violation_read_from_disk_does_not_prevent_editing() {
+        QTemporaryDir dir;
+        QVERIFY(writeSampleFile(dir.path(), QStringLiteral("oto.ini"),
+                                "a.wav=x,1,2,3,4,5\r\na.wav=x,1,2,3,4,5\r\n"));
+        FixedCharsetSelector selector(QStringLiteral("UTF-8"));
+        DiagnosticList diagnostics;
+        auto opened =
+            VoiceBankDiskState::open(fs::path(dir.path().toStdU16String()), &selector, diagnostics);
+        QVERIFY(opened);
+        m_session = std::make_unique<VoiceBankSession>(std::move(*opened));
+        const auto entries = VoiceBankRef(m_session.get()).directories().at(0).otoEntries();
+        QVERIFY(commit([&] { entries.at(1).setOffset(10); }, diagnostics));
+        QVERIFY(!commit([&] { entries.at(1).setFileName(QString()); }, diagnostics));
+        m_session.reset();
+    }
+
+    // A directory that was not read, or whose text did not decode, cannot be saved and is not
+    // edited. The other directories are.
+    void a_directory_that_cannot_be_saved_is_not_edited() {
+        const auto root = VoiceBankRef(m_session.get());
+        const auto left = root.directories().at(m_bank->indexOf("left"));
+        const auto deep = root.directories().at(m_bank->indexOf(fs::path("sub") / "deep"));
+        VoiceOtoEntry entry;
+        entry.fileName = QStringLiteral("z.wav");
+
+        DiagnosticList diagnostics;
+        QVERIFY(!commit([&] { left.otoEntries().insert(0, {entry}); }, diagnostics));
+        QVERIFY(diagnostics.first().message.contains(QStringLiteral("\"left\" was not read")));
+
+        diagnostics.clear();
+        QVERIFY(
+            !commit([&] { deep.otoEntries().at(0).setAlias(QStringLiteral("y")); }, diagnostics));
+        QVERIFY(diagnostics.first().message.contains(QStringLiteral("\"sub/deep\"")));
+        QVERIFY(diagnostics.first().message.contains(QStringLiteral("not valid")));
+
+        QVERIFY(commit(
+            [&] { root.directories().at(m_bank->indexOf("sub")).otoEntries().at(0).setOffset(7); },
+            diagnostics));
     }
 
     // A replaced character is logged as its JSON after the change.

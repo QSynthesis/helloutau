@@ -5,12 +5,14 @@
 
 #include "VoiceBankFields_p.h"
 #include "VoiceBankTree_p.h"
+#include "VoiceBankValidation_p.h"
 
 namespace hello::kit {
 
     VoiceBankSession::VoiceBankSession(VoiceBankDiskState::Opened opened, QObject *parent)
         : edit::EditSession(parent), m_disk(std::move(opened.disk)) {
         edit::EditSessionPrivate::setRoot(*this, treeOf(opened.bank));
+        registerVoiceBankValidators(*this);
     }
 
     VoiceBankSession::~VoiceBankSession() = default;

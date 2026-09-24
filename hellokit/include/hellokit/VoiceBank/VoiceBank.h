@@ -55,6 +55,12 @@ namespace hello::kit {
 
     /// The prefix and suffix that \c prefix.map adds to a lyric at one key.
     struct VoicePrefix {
+        /// \name The keys of \c prefix.map , the note numbers from C1 to B7
+        /// @{
+        static constexpr int minimumKey = 24;
+        static constexpr int maximumKey = 107;
+        /// @}
+
         QString prefix;
         QString suffix;
 
