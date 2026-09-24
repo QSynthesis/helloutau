@@ -125,12 +125,19 @@ namespace hello::kit::edit {
             edit<ss::VectorNode>(items(), ss::Node::Vector)->move(index, count, destination);
         }
 
+        /// Returns the mapping of tags, or 0 if the root has none.
         inline NodeId tags() const {
-            return find<Root>(root(), RootType)->child(2)->id();
+            const auto child = find<Root>(root(), RootType)->child(2);
+            return child ? child->id() : 0;
         }
 
         inline QStringList tagKeys() const {
-            return find<ss::MappingNode>(tags(), ss::Node::Mapping)->keys();
+            const auto id = tags();
+            return id ? find<ss::MappingNode>(id, ss::Node::Mapping)->keys() : QStringList();
+        }
+
+        inline void removeTags() {
+            edit<Root>(root(), RootType)->setAt(2, ss::Property());
         }
 
         /// Stores \a value under \a key, or removes the entry if \a value is invalid.

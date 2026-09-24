@@ -222,6 +222,20 @@ private Q_SLOTS:
         QCOMPARE(session.tagKeys(), QStringList({QStringLiteral("b")}));
     }
 
+    // An absent mapping differs from an empty one, as a missing file differs from an empty file,
+    // so a command does not create it by setting a key.
+    void an_absent_mapping_is_not_edited_by_key() {
+        TestSession session;
+        {
+            auto transaction = session.transaction(QStringLiteral("remove the tags"));
+            session.removeTags();
+            QVERIFY(transaction.commit());
+        }
+        verifyRefused(session, QStringLiteral("set /tags b 2"));
+        verifyRefused(session, QStringLiteral("remove /tags a"));
+        QVERIFY(!session.tags());
+    }
+
     void insert_creates_items_from_their_json() {
         TestSession session;
         QVERIFY(

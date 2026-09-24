@@ -25,6 +25,13 @@ namespace hello::kit::edit {
             return QString::fromLatin1(field.name);
         }
 
+        // Refuses a command on a mapping that is absent from its slot. Only the document layer
+        // creates it, because an absent mapping differs from an empty one, as a missing file
+        // differs from an empty file.
+        bool absent(const FieldInfo &field, DiagnosticList &diagnostics) {
+            return fail(diagnostics, NodeCommands::tr("The %1 is absent.").arg(nameOf(field)));
+        }
+
         bool usage(DiagnosticList &diagnostics, const char *form) {
             return fail(diagnostics, NodeCommands::tr("Usage: %1").arg(QLatin1String(form)));
         }
@@ -348,6 +355,9 @@ namespace hello::kit::edit {
                     if (arguments.size() != 2) {
                         return usage(diagnostics, "set <path> <key> <value>");
                     }
+                    if (!target.child()) {
+                        return absent(field, diagnostics);
+                    }
                     const auto key =
                         NodeCommands::stringOf(arguments[0], NodeCommands::tr("key"), diagnostics);
                     if (!key) {
@@ -429,6 +439,9 @@ namespace hello::kit::edit {
             if (field && target.members.isEmpty() && field->kind == FieldInfo::Mapping) {
                 if (arguments.size() != 1) {
                     return usage(diagnostics, "remove <path> <key>");
+                }
+                if (!target.child()) {
+                    return absent(*field, diagnostics);
                 }
                 const auto key =
                     NodeCommands::stringOf(arguments[0], NodeCommands::tr("key"), diagnostics);
