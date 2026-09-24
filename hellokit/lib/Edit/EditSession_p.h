@@ -4,6 +4,9 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <optional>
+
+#include <QtCore/QJsonObject>
 
 #include <substate/Model.h>
 #include <substate/ModelObserver.h>
@@ -16,6 +19,18 @@ namespace hello::kit {
     /// is reported at that moment.
     using ChangeTranslator =
         std::function<ChangePtr(const ss::Action &action, ss::Action::Operation operation)>;
+
+    struct RecordInfo;
+
+    /// Returns the record of the nodes of type \a nodeType, or \c nullptr if the type is not a
+    /// record of the document.
+    using RecordLookup = const RecordInfo *(*) (int nodeType);
+
+    /// Returns the entry of the change log for \a change, without the node, which the log adds,
+    /// or \c std::nullopt if the log omits the change. \a change is of the kind for which the
+    /// writer is registered. \a lookup provides the field table of the document. See ChangeLog.
+    using LogWriter = std::function<std::optional<QJsonObject>(
+        const EditSession &session, const Change &change, RecordLookup lookup)>;
 
     /// A violation of a constraint of a record, found by a Validator.
     struct Violation {
@@ -62,6 +77,9 @@ namespace hello::kit {
         std::map<int, ChangeTranslator> beforeTranslators;
         std::map<int, ChangeTranslator> afterTranslators;
 
+        /// The writers of the change log by change kind.
+        std::map<int, LogWriter> logWriters;
+
         /// The validators by node type.
         std::map<int, Validator> validators;
 
@@ -100,8 +118,9 @@ namespace hello::kit {
     ///
     /// A handle reads a node through find() and modifies it through findEditable(), which
     /// enforces the rules of EditSession. A node type added outside this library registers the
-    /// translation of its actions into changes with registerChange(). A document registers the
-    /// constraints of its records with registerValidator().
+    /// translation of its actions into changes with registerChange(), and the change log entries
+    /// of its changes with registerLogWriter(). A document registers the constraints of its
+    /// records with registerValidator().
     struct EditSessionPrivate {
         static inline EditSession::Impl &impl(const EditSession &session) {
             return *session._impl;
@@ -154,6 +173,12 @@ namespace hello::kit {
             if (before) {
                 d.beforeTranslators[actionType] = std::move(before);
             }
+        }
+
+        /// Registers the writer of the change log entries of the changes of kind \a changeKind.
+        static inline void registerLogWriter(EditSession &session, int changeKind,
+                                             LogWriter writer) {
+            impl(session).logWriters[changeKind] = std::move(writer);
         }
 
         /// Registers the validator of the records of type \a nodeType. A transaction is committed

@@ -1,3 +1,4 @@
+#include <QtCore/QJsonObject>
 #include <QtCore/QRandomGenerator>
 #include <QtTest/QTest>
 
@@ -12,6 +13,28 @@ class test_ProjectSession : public QObject {
     Q_OBJECT
 
 private:
+    // Returns the log entries of the changes that edit applies, in a transaction if
+    // inTransaction is true.
+    template <class Edit>
+    static QList<QJsonObject> logOf(ProjectSession &session, Edit edit, bool inTransaction = true) {
+        QList<QJsonObject> entries;
+        const auto connection = QObject::connect(
+            &session, &EditSession::changed, &session, [&](const ChangePtr &change) {
+                if (const auto entry = session.logEntry(*change)) {
+                    entries.push_back(*entry);
+                }
+            });
+        if (inTransaction) {
+            auto transaction = session.transaction(QStringLiteral("Edit"));
+            edit();
+            transaction.commit();
+        } else {
+            edit();
+        }
+        QObject::disconnect(connection);
+        return entries;
+    }
+
     // Applies one random transaction of one to three modifications through the handles.
     static void editAtRandom(ProjectSession &session, QRandomGenerator &random, int step) {
         const auto notes = ProjectRef(&session).tracks().at(0).notes();
@@ -216,6 +239,143 @@ private Q_SLOTS:
             }
             QVERIFY(!session.canRedo());
         }
+    }
+
+    // A value is logged with the name of its field and its values as in .usth. An empty
+    // optional value is null, as in a command.
+    void a_value_is_logged_with_its_field_name_and_values() {
+        ProjectSession session(richProject());
+        const auto note = ProjectRef(&session).tracks().at(0).notes().at(0);
+        const auto id = qint64(note.id());
+        const auto entries = logOf(session, [&] {
+            note.setLyric(QStringLiteral("i"));
+            note.setIntensity(std::nullopt);
+            note.portamento().at(0).setType(PortamentoPoint::J);
+        });
+        const auto point = qint64(note.portamento().at(0).id());
+        QCOMPARE(entries, QList<QJsonObject>({
+                              QJsonObject{{QStringLiteral("node"), id},
+                                          {QStringLiteral("shape"), QStringLiteral("set")},
+                                          {QStringLiteral("slot"), QStringLiteral("lyric")},
+                                          {QStringLiteral("before"), QString::fromUtf8("あ")},
+                                          {QStringLiteral("after"), QStringLiteral("i")}},
+                              QJsonObject{{QStringLiteral("node"), id},
+                                          {QStringLiteral("shape"), QStringLiteral("set")},
+                                          {QStringLiteral("slot"), QStringLiteral("intensity")},
+                                          {QStringLiteral("before"), 0},
+                                          {QStringLiteral("after"), QJsonValue::Null}   },
+                              QJsonObject{{QStringLiteral("node"), point},
+                                          {QStringLiteral("shape"), QStringLiteral("set")},
+                                          {QStringLiteral("slot"), QStringLiteral("type")},
+                                          {QStringLiteral("before"), QStringLiteral("S")},
+                                          {QStringLiteral("after"), QStringLiteral("J")}},
+        }));
+    }
+
+    // Undo reports the changes in the reverse direction.
+    void an_undone_value_is_logged_in_reverse() {
+        ProjectSession session(richProject());
+        const auto note = ProjectRef(&session).tracks().at(0).notes().at(0);
+        logOf(session, [&] { note.setLyric(QStringLiteral("i")); });
+        const auto entries = logOf(session, [&] { session.undo(); }, false);
+        QCOMPARE(entries.size(), 1);
+        QCOMPARE(entries.first().value(QStringLiteral("before")), QJsonValue(QStringLiteral("i")));
+        QCOMPARE(entries.first().value(QStringLiteral("after")),
+                 QJsonValue(QString::fromUtf8("あ")));
+    }
+
+    // A whole value is logged as its JSON in .usth.
+    void a_whole_value_is_logged_as_its_json() {
+        const auto project = richProject();
+        ProjectSession session(project);
+        const auto note = ProjectRef(&session).tracks().at(0).notes().at(0);
+        auto vibrato = *project.tracks.first().notes.first().vibrato;
+        vibrato.period = 200;
+        const auto entries = logOf(session, [&] { note.setVibrato(vibrato); });
+        QCOMPARE(entries.size(), 1);
+        QCOMPARE(entries.first().value(QStringLiteral("before")),
+                 QJsonValue(project.tracks.first().notes.first().vibrato->toJson()));
+        QCOMPARE(entries.first().value(QStringLiteral("after")), QJsonValue(vibrato.toJson()));
+    }
+
+    // The previous record is no longer in the tree, therefore only the record after the change is
+    // logged.
+    void a_replaced_record_is_logged_as_the_record_after_the_change() {
+        ProjectSession session(richProject());
+        const auto note = ProjectRef(&session).tracks().at(0).notes().at(0);
+        const PitchBend bend{
+            std::nullopt, {1, 2}
+        };
+        auto entries = logOf(session, [&] { note.setPitchBend(bend); });
+        QCOMPARE(entries.size(), 1);
+        QCOMPARE(entries.first().value(QStringLiteral("slot")),
+                 QJsonValue(QStringLiteral("pitchBend")));
+        QVERIFY(!entries.first().contains(QStringLiteral("before")));
+        QCOMPARE(entries.first().value(QStringLiteral("after")), QJsonValue(bend.toJson()));
+
+        entries = logOf(session, [&] { note.setPitchBend(std::nullopt); });
+        QCOMPARE(entries.first().value(QStringLiteral("after")), QJsonValue(QJsonValue::Null));
+    }
+
+    // An absent entry is omitted rather than written as null, because null is a value of an
+    // unknown field.
+    void an_entry_is_logged_with_its_key() {
+        ProjectSession session(richProject());
+        const auto userData = ProjectRef(&session).tracks().at(0).notes().at(0).userData();
+        auto entries = logOf(session, [&] {
+            userData.setValue(QStringLiteral("$new"), QStringLiteral("v"));
+            userData.remove(QStringLiteral("$custom"));
+        });
+        const auto id = qint64(userData.id());
+        QCOMPARE(entries, QList<QJsonObject>({
+                              QJsonObject{{QStringLiteral("node"), id},
+                                          {QStringLiteral("shape"), QStringLiteral("entry")},
+                                          {QStringLiteral("key"), QStringLiteral("$new")},
+                                          {QStringLiteral("after"), QStringLiteral("v")}    },
+                              QJsonObject{{QStringLiteral("node"), id},
+                                          {QStringLiteral("shape"), QStringLiteral("entry")},
+                                          {QStringLiteral("key"), QStringLiteral("$custom")},
+                                          {QStringLiteral("before"), QStringLiteral("kept")}},
+        }));
+
+        const auto unknownFields = ProjectRef(&session).unknownFields();
+        entries = logOf(
+            session, [&] { unknownFields.setValue(QStringLiteral("number"), QJsonValue::Null); });
+        QCOMPARE(entries.first().value(QStringLiteral("before")), QJsonValue(2.5));
+        QCOMPARE(entries.first().value(QStringLiteral("after")), QJsonValue(QJsonValue::Null));
+    }
+
+    // A removal is logged once, after it is applied.
+    void list_and_array_changes_are_logged_by_position() {
+        ProjectSession session(richProject());
+        const auto notes = ProjectRef(&session).tracks().at(0).notes();
+        const auto id = qint64(notes.id());
+        const auto bend = notes.at(0).pitchBend();
+        auto entries = logOf(session, [&] {
+            notes.move(0, 1, 1);
+            notes.remove(0, 1);
+            notes.insert(1, {session.snapshot().tracks.first().notes.first()});
+            bend.replaceValues(0, {5});
+        });
+        // The array node has no handle, therefore its entry is compared without the node.
+        QCOMPARE(entries.size(), 4);
+        QCOMPARE(entries.takeLast().value(QStringLiteral("shape")),
+                 QJsonValue(QStringLiteral("array")));
+        QCOMPARE(entries, QList<QJsonObject>({
+                              QJsonObject{{QStringLiteral("node"), id},
+                                          {QStringLiteral("shape"), QStringLiteral("move")},
+                                          {QStringLiteral("index"), 0},
+                                          {QStringLiteral("count"), 1},
+                                          {QStringLiteral("destination"), 1}},
+                              QJsonObject{{QStringLiteral("node"), id},
+                                          {QStringLiteral("shape"), QStringLiteral("remove")},
+                                          {QStringLiteral("index"), 0},
+                                          {QStringLiteral("count"), 1}},
+                              QJsonObject{{QStringLiteral("node"), id},
+                                          {QStringLiteral("shape"), QStringLiteral("insert")},
+                                          {QStringLiteral("index"), 1},
+                                          {QStringLiteral("count"), 1}},
+        }));
     }
 };
 

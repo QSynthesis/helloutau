@@ -4,6 +4,9 @@
 set(_private substate::substate substate::qsubstate)
 set(_private_include ${CMAKE_CURRENT_SOURCE_DIR}/../../../lib/Edit)
 
+add_auto_test(test_ChangeLog.cpp HelloKitEdit ${_private})
+target_include_directories(test_ChangeLog PRIVATE ${_private_include})
+
 add_auto_test(test_EditSession.cpp HelloKitEdit ${_private})
 target_include_directories(test_EditSession PRIVATE ${_private_include})
 

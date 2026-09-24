@@ -161,7 +161,7 @@ note.userData().remove(QStringLiteral("$Custom"));
 
 所有变更按发生顺序出现在同一条流中，撤销、重做与回滚同样按实际方向报告。变更不含指向树的指针，可以排队传递和保存，因此也是变更日志的来源。
 
-**新增节点种类时，会话核心不需要修改。** substate 动作到变更的翻译按动作类型注册在扩展接口中，内置的几种节点也经由同一机制注册。新节点种类提供自己的句柄、自己的 `Change` 子类（种类编号从 `Change::User` 起）和翻译函数。
+**新增节点种类时，会话核心不需要修改。** substate 动作到变更的翻译按动作类型注册在扩展接口中，内置的几种节点也经由同一机制注册。新节点种类提供自己的句柄、自己的 `Change` 子类（种类编号从 `Change::User` 起）、翻译函数和变更日志的写法（`registerLogWriter`），内置的五种变更的日志写法同样经由这一接口注册。
 
 ### 领域函数：数量多，组合节点操作
 
@@ -295,9 +295,12 @@ set /tracks/0/notes/12/intensity null
 供程序读取的日志采用 JSON Lines，其转义规则现成，可容纳任意字符，插件和外部工具也易于生成：
 
 ```json
-{"shape":"set","node":41,"slot":"lyric","before":"a","after":"i"}
-{"shape":"insert","node":17,"index":12,"count":1}
+{"after":"i","before":"a","node":41,"shape":"set","slot":"lyric"}
+{"after":"v","key":"$Custom","node":52,"shape":"entry"}
+{"count":1,"index":12,"node":17,"shape":"insert"}
 ```
+
+每个 `Change` 一行（`ProjectSession::logEntry()`），`shape` 为 `set`、`entry`、`array`、`insert`、`remove`、`move` 之一，对应「变更通知」中的五种子类。`node` 是节点 ID，槽位以 `.usth` 的字段名表示，值按 `.usth` 的 JSON 写法。可空字段的空值写作 `null`，与命令相同；映射项不存在时省略 `before` 或 `after`，因为 `null` 是未知字段的合法值。整体替换的子记录只写出替换后的值，替换前的子记录已不在树中。删除只在执行后记录一次。撤销与重做按实际方向记录。
 
 ### 命令不是脚本语言
 

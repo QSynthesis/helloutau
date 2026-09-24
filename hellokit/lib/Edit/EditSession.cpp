@@ -8,6 +8,8 @@
 #include <qsubstate/MappingNode.h>
 #include <qsubstate/StructNode.h>
 
+#include "ChangeLog_p.h"
+
 namespace hello::kit {
 
     namespace {
@@ -259,6 +261,7 @@ namespace hello::kit {
     EditSession::EditSession(QObject *parent)
         : QObject(parent), _impl(std::make_unique<Impl>(this)) {
         registerBuiltInChanges(*this);
+        ChangeLog::registerBuiltInWriters(*this);
     }
 
     EditSession::~EditSession() = default;

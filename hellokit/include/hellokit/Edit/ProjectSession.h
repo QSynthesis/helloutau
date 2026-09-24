@@ -1,6 +1,10 @@
 #ifndef HELLOKIT_EDIT_PROJECTSESSION_H
 #define HELLOKIT_EDIT_PROJECTSESSION_H
 
+#include <optional>
+
+#include <QtCore/QJsonObject>
+
 #include <hellokit/Document/Project.h>
 
 #include <hellokit/Edit/EditSession.h>
@@ -23,6 +27,15 @@ namespace hello::kit {
 
         /// Returns the project in its current state.
         Project snapshot() const;
+
+        /// Returns the entry of the change log for \a change, or \c std::nullopt for a change
+        /// that the log omits, which is ListChange::AboutToBeRemoved. See the section on the
+        /// change log in docs/Editing.md.
+        ///
+        /// The entry names the slot of \a change by its field in \c .usth, and writes values as
+        /// in \c .usth. It requires the changed node, therefore it is called while \a change is
+        /// reported by changed().
+        std::optional<QJsonObject> logEntry(const Change &change) const;
     };
 
 }

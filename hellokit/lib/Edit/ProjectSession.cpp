@@ -1,6 +1,8 @@
 #include "ProjectSession.h"
 
+#include "ChangeLog_p.h"
 #include "EditSession_p.h"
+#include "ProjectFields_p.h"
 #include "ProjectTree_p.h"
 #include "ProjectValidation_p.h"
 
@@ -15,6 +17,10 @@ namespace hello::kit {
 
     Project ProjectSession::snapshot() const {
         return fromTree<Project>(EditSessionPrivate::find(this, root()));
+    }
+
+    std::optional<QJsonObject> ProjectSession::logEntry(const Change &change) const {
+        return ChangeLog::entryOf(*this, change, projectRecordOf);
     }
 
 }
