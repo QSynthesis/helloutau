@@ -59,7 +59,7 @@
 
 槽位内容即 qsubstate 的 `Property`：为空、一个 `QVariant` 标量，或一个子节点。
 
-**`Property` 将「属性」和「子节点」统一为同一种槽位机制。** 因此「修改一个标量」和「替换一个子节点」是同一种操作，变更记录只有一种形式。`vibrato` 是否为 `null`，即对应槽位中是子节点还是为空。
+**`Property` 将「属性」和「子节点」统一为同一种槽位机制。** 因此「修改一个标量」和「替换一个子节点」是同一种操作，变更记录只有一种形式。`pitchBend` 是否为 `null`，即对应槽位中是子节点还是为空。
 
 substate 另有 `SheetNode`（键由节点分配的表）、`BytesNode` 与 `ArrayNode<T>`（按元素下标访问的数值数组）。元素需要身份时使用节点，数量大且只作为数值序列整体编辑时使用 `ArrayNode<T>`，选择标准见 substate 的 `docs/Design.md`「节点与数组的选择」。
 
@@ -75,12 +75,13 @@ ID **不保存到文件**。打开文件时重新生成，因为它是会话内�
 
 | 模型类型 | 节点 | |
 |---|---|---|
-| `Project` | Struct | settings / tracks |
+| `Project` | Struct | settings / tracks / unknownFields |
 | `ProjectSettings` | Struct | 全部为标量槽位 |
 | `tracks` | Vector | 长度恒为 1 |
 | `Track` | Struct | name / voiceDir / notes |
 | `notes` | **Vector** | 见下文 |
-| `Note` | Struct | 标量槽位与子节点槽位（envelope / vibrato / pitchBend）|
+| `Note` | Struct | 标量槽位与子节点槽位（portamento / pitchBend / userData）。envelope 与 vibrato 各为一个整体值，修改其中一项即替换整个值 |
+| `pitchBend` | Struct | start / values，values 为 `ArrayNode<double>` |
 | `portamento` | Vector | 控制点有序 |
 | `PortamentoPoint` | Struct | x / y / type |
 | `userData` / `unknownFields` | Mapping | 键为 UST 中的名称 |
@@ -129,7 +130,7 @@ namespace NoteSlots {
 ```cpp
 session.set(note, NoteSlots::Lyric, QStringLiteral("a"));      // 正确
 session.set(note, NoteSlots::NoteNum, QStringLiteral("abc"));  // 编译失败
-session.set(vibrato, VibratoSlots::Period, 180.0);             // 嵌套同样自然
+session.set(point, PortamentoSlots::Y, 5.0);                   // 嵌套同样自然
 ```
 
 **不编写 `setNoteLyric` / `setNoteLength` 之类的大量包装函数。** 槽位表同时承担类型、名称（供日志和命令层使用）和约束（见下文）三项职责。添加一个字段只需修改一处。
