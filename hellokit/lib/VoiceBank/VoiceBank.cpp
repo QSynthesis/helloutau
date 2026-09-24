@@ -220,9 +220,86 @@ namespace hello::kit {
                 }
             }
 
+            // The oto.ini may declare its own encoding, which takes precedence over the encoding
+            // recorded or selected for the directory.
+            std::optional<TextCodec> declared;
+            if (directory.oto && !directory.oto->charset.empty()) {
+                const auto &raw = directory.oto->charset;
+                decoded.otoCharset = QString::fromLatin1(raw.data(), qsizetype(raw.size()));
+                const TextCodec candidate(decoded.otoCharset);
+                if (candidate.isValid()) {
+                    declared = candidate;
+                } else {
+                    complain(diagnostics,
+                             VoiceBank::tr("The oto.ini in \"%1\" declares the encoding \"%2\", "
+                                           "which is not available, so it is read in the encoding "
+                                           "of the directory.")
+                                 .arg(displayed(directory.path), decoded.otoCharset));
+                }
+            }
+            if (declared) {
+                QString other;
+                if (codec) {
+                    other = codec->name();
+                } else if (directory.config && !directory.config->charset.isEmpty()) {
+                    other = TextCodec(directory.config->charset).name();
+                }
+                if (!other.isEmpty() && other != declared->name()) {
+                    complain(diagnostics,
+                             VoiceBank::tr("The oto.ini in \"%1\" declares the encoding %2, so it "
+                                           "is read in %2 rather than in %3.")
+                                 .arg(displayed(directory.path), declared->name(), other));
+                }
+                if (!codec && !decoded.leftOut) {
+                    decoded.charset = declared->name();
+                }
+            }
+
+            const auto reportLossy = [&](const TextCodec &used) {
+                decoded.lossy = true;
+                complain(diagnostics,
+                         VoiceBank::tr("Some of the text in \"%1\" is not valid %2 and was read as "
+                                       "empty. No file in this directory will be saved, because "
+                                       "saving would overwrite the original text with empty text.")
+                             .arg(displayed(directory.path), used.name()));
+            };
+
             // The audio files already covered by an entry. The remaining files are added
             // afterward as separate samples.
             QSet<QString> claimed;
+
+            const auto otoCodec = declared ? declared : codec;
+            if (otoCodec && directory.oto && !decoded.leftOut) {
+                Decoder text(*otoCodec);
+                for (const auto &[file, entries] : directory.oto->contents) {
+                    // The name is in the encoding of the voice bank and identifies a file only
+                    // after decoding. Used undecoded, it would be interpreted in the system
+                    // code page and identify a different file wherever the two encodings
+                    // differ.
+                    const auto fileName = text(file);
+                    const auto path = absolute / fs::path(fileName.toStdU16String());
+                    claimed.insert(fileName);
+                    for (const auto &entry : entries) {
+                        VoiceSample sample;
+                        sample.path = path;
+                        sample.directory = directoryIndex;
+                        sample.fileName = fileName;
+                        sample.alias = text(entry.alias);
+                        sample.offset = entry.offset;
+                        sample.consonant = entry.consonant;
+                        sample.cutoff = entry.cutoff;
+                        sample.preUtterance = entry.preUtterance;
+                        sample.voiceOverlap = entry.voiceOverlap;
+                        sample.hasEntry = true;
+                        std::copy(std::begin(entry.spellings), std::end(entry.spellings),
+                                  sample.spellings.begin());
+                        out.samples.push_back(sample);
+                    }
+                }
+                if (text.lossy()) {
+                    reportLossy(*otoCodec);
+                }
+            }
 
             if (codec) {
                 Decoder text(*codec);
@@ -251,42 +328,8 @@ namespace hello::kit {
                     decoded.prefixMap = map;
                 }
 
-                if (directory.oto) {
-                    for (const auto &[file, entries] : directory.oto->contents) {
-                        // The name is in the encoding of the voice bank and identifies a file
-                        // only after decoding. Used undecoded, it would be interpreted in the
-                        // system code page and identify a different file wherever the two
-                        // encodings differ.
-                        const auto fileName = text(file);
-                        const auto path = absolute / fs::path(fileName.toStdU16String());
-                        claimed.insert(fileName);
-                        for (const auto &entry : entries) {
-                            VoiceSample sample;
-                            sample.path = path;
-                            sample.directory = directoryIndex;
-                            sample.fileName = fileName;
-                            sample.alias = text(entry.alias);
-                            sample.offset = entry.offset;
-                            sample.consonant = entry.consonant;
-                            sample.cutoff = entry.cutoff;
-                            sample.preUtterance = entry.preUtterance;
-                            sample.voiceOverlap = entry.voiceOverlap;
-                            sample.hasEntry = true;
-                            std::copy(std::begin(entry.spellings), std::end(entry.spellings),
-                                      sample.spellings.begin());
-                            out.samples.push_back(sample);
-                        }
-                    }
-                }
-
                 if (text.lossy()) {
-                    decoded.lossy = true;
-                    complain(
-                        diagnostics,
-                        VoiceBank::tr("Some of the text in \"%1\" is not valid %2 and was read as "
-                                      "empty. No file in this directory will be saved, because "
-                                      "saving would overwrite the original text with empty text.")
-                            .arg(displayed(directory.path), codec->name()));
+                    reportLossy(*codec);
                 }
             }
 
@@ -332,15 +375,33 @@ namespace hello::kit {
                 return out;
             }
 
-            if (directory.charset.isEmpty()) {
+            // The oto.ini is written in the encoding it declares, if available, and the other
+            // files in the encoding of the directory.
+            std::optional<TextCodec> otherCodec;
+            if (!directory.charset.isEmpty()) {
+                const TextCodec codec(directory.charset);
+                if (!codec.isValid()) {
+                    fail(diagnostics, VoiceBank::tr("The encoding \"%1\" is not available.")
+                                          .arg(directory.charset));
+                    return std::nullopt;
+                }
+                otherCodec = codec;
+            }
+            auto otoCodec = otherCodec;
+            if (!directory.otoCharset.isEmpty()) {
+                const TextCodec codec(directory.otoCharset);
+                if (codec.isValid()) {
+                    otoCodec = codec;
+                }
+            }
+
+            const bool writesOto = !entries.isEmpty() || had(VoiceBankFile::Oto);
+            const bool writesOther = directory.character || directory.prefixMap ||
+                                     !directory.readme.isEmpty() || had(VoiceBankFile::PrefixMap) ||
+                                     had(VoiceBankFile::Character) || had(VoiceBankFile::Readme);
+            if ((writesOto && !otoCodec) || (writesOther && !otherCodec)) {
                 fail(diagnostics, VoiceBank::tr("The encoding for writing \"%1\" is not specified.")
                                       .arg(displayed(directory.path)));
-                return std::nullopt;
-            }
-            const TextCodec codec(directory.charset);
-            if (!codec.isValid()) {
-                fail(diagnostics,
-                     VoiceBank::tr("The encoding \"%1\" is not available.").arg(directory.charset));
                 return std::nullopt;
             }
 
@@ -350,6 +411,7 @@ namespace hello::kit {
                 return displayed(found);
             };
             const auto encode = [&](const QString &text, VoiceBankFile file) {
+                const auto &codec = file == VoiceBankFile::Oto ? *otoCodec : *otherCodec;
                 if (!codec.canEncode(text)) {
                     fail(diagnostics, VoiceBank::tr("\"%1\" in \"%2\" cannot be written in %3.")
                                           .arg(text, where(file), codec.name()));
@@ -363,8 +425,13 @@ namespace hello::kit {
                 ok = false;
             };
 
-            if (!entries.isEmpty() || had(VoiceBankFile::Oto)) {
+            if (writesOto) {
                 utau::OtoIni oto;
+                if (!directory.otoCharset.isEmpty()) {
+                    oto.charset = directory.otoCharset.toLatin1().toStdString();
+                } else if (otoCodec->isUtf8()) {
+                    oto.charset = "UTF-8";
+                }
                 for (const auto *sample : entries) {
                     utau::OtoEntry entry;
                     entry.fileName = encode(sample->fileName, VoiceBankFile::Oto);
@@ -413,12 +480,12 @@ namespace hello::kit {
 
             // The failing text is not quoted, because a readme is too long for a message.
             if (!directory.readme.isEmpty() || had(VoiceBankFile::Readme)) {
-                if (!codec.canEncode(directory.readme)) {
+                if (!otherCodec->canEncode(directory.readme)) {
                     fail(diagnostics, VoiceBank::tr("Part of \"%1\" cannot be represented in %2.")
-                                          .arg(where(VoiceBankFile::Readme), codec.name()));
+                                          .arg(where(VoiceBankFile::Readme), otherCodec->name()));
                     ok = false;
                 } else {
-                    out[VoiceBankFile::Readme] = codec.encode(directory.readme);
+                    out[VoiceBankFile::Readme] = otherCodec->encode(directory.readme);
                 }
             }
 
@@ -495,8 +562,15 @@ namespace hello::kit {
         // A new encoding is recorded even if no file changes under it, as with plain ASCII.
         // Otherwise the choice would be lost, and the first text that does differ would be
         // written in the previous encoding.
-        if (TextCodec(directory.charset).name() != TextCodec(slot.charset).name()) {
+        // An empty encoding is compared as such. TextCodec would take it as the system encoding,
+        // which is UTF-8 on most systems other than Windows and would equal a new UTF-8.
+        const auto canonical = [](const QString &charset) {
+            return charset.isEmpty() ? QString() : TextCodec(charset).name();
+        };
+        const QString name = canonical(directory.charset);
+        if (name != canonical(slot.charset)) {
             m_books[index].remember = true;
+            directory.otoCharset.clear();
         }
         slot = std::move(directory);
         reindex();

@@ -8,6 +8,8 @@
 #include <QtCore/QCoreApplication>
 #include <QtCore/QCryptographicHash>
 
+#include <hellokit/Support/TextCodec.h>
+
 namespace hello::kit {
 
     namespace fs = std::filesystem;
@@ -241,7 +243,11 @@ namespace hello::kit {
     }
 
     bool VoiceBankDirectorySource::needsCharset() const {
-        return oto || prefixMap || character || !readme.isEmpty();
+        const bool otoDeclares =
+            oto && !oto->charset.empty() &&
+            TextCodec(QString::fromLatin1(oto->charset.data(), qsizetype(oto->charset.size())))
+                .isValid();
+        return (oto && !otoDeclares) || prefixMap || character || !readme.isEmpty();
     }
 
     QList<QByteArrayView> VoiceBankDirectorySource::rawAliases() const {

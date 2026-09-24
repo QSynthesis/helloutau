@@ -65,6 +65,19 @@ namespace hello::kit {
         /// Empty if the directory contained nothing to decode.
         QString charset;
 
+        /// The encoding that the \c oto.ini declares for itself, as written, or empty if it
+        /// declares none. See utau::OtoIni::charset .
+        ///
+        /// If available, the \c oto.ini is read and written in it instead of \a charset , which
+        /// then applies to the other files only. The declaration takes precedence because a
+        /// program that honors it reads the file in the declared encoding regardless of any
+        /// record of this library. It is written back as the first line.
+        ///
+        /// An \c oto.ini written in UTF-8 without a declaration receives one, so that such a
+        /// program does not read it in the code page of the machine. An unmodified file is not
+        /// rewritten for this alone.
+        QString otoCharset;
+
         /// Whether the directory contained text to decode but no encoding was available.
         ///
         /// Its samples remain in the voice bank and are found by file name, as if there were no
@@ -252,6 +265,9 @@ namespace hello::kit {
 
         /// Replaces directory \a index . Its \c character.txt , \c prefix.map , \c readme.txt
         /// and encoding are changed through this function. The path is retained.
+        ///
+        /// A change of encoding also removes the declaration of the \c oto.ini , because the file
+        /// is then written in the new encoding. See VoiceBankDirectory::otoCharset .
         void setDirectory(int index, VoiceBankDirectory directory);
 
         /// Rereads directory \a index from disk in \a charset .

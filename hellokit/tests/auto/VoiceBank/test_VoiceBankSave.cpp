@@ -281,7 +281,8 @@ private Q_SLOTS:
         QVERIFY(bank->save(diagnostics));
         edit(*bank, QStringLiteral("a"), [](VoiceSample &sample) { sample.offset = 20; });
         QVERIFY(bank->save(diagnostics));
-        QCOMPARE(read(QStringLiteral("oto.ini")), QByteArray("a.wav=a,20,2,3,4,5\r\n"));
+        QCOMPARE(read(QStringLiteral("oto.ini")),
+                 QByteArray("#Charset:UTF-8\r\na.wav=a,20,2,3,4,5\r\n"));
     }
 
     // On a case-sensitive file system, oto.ini would be a second file beside the one UTAU
@@ -299,7 +300,8 @@ private Q_SLOTS:
 
         const auto names = QDir(m_dir->path()).entryList({QStringLiteral("*.ini")}, QDir::Files);
         QCOMPARE(names, QStringList{QStringLiteral("OTO.INI")});
-        QCOMPARE(read(QStringLiteral("OTO.INI")), QByteArray("a.wav=a,10,2,3,4,5\r\n"));
+        QCOMPARE(read(QStringLiteral("OTO.INI")),
+                 QByteArray("#Charset:UTF-8\r\na.wav=a,10,2,3,4,5\r\n"));
     }
 
     // A directory of bare files has no encoding, and its first oto.ini requires one. The user
@@ -325,7 +327,9 @@ private Q_SLOTS:
         directory.charset = QStringLiteral("UTF-8");
         bank->setDirectory(0, directory);
         QVERIFY(bank->save(diagnostics));
-        QCOMPARE(read(QStringLiteral("oto.ini")), QByteArray("ka.wav=ka,5,0,0,0,0\r\n"));
+        // Setting UTF-8 declares it in the oto.ini, as converting to it does.
+        QCOMPARE(read(QStringLiteral("oto.ini")),
+                 QByteArray("#Charset:UTF-8\r\nka.wav=ka,5,0,0,0,0\r\n"));
         QVERIFY(exists(QStringLiteral("hello-config.json")));
     }
 

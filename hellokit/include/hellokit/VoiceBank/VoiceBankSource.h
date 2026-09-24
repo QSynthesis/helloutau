@@ -139,7 +139,8 @@ namespace hello::kit {
         /// accepted as the state read.
         VoiceBankDirectoryStamp stamp;
 
-        /// Returns whether any content requires an encoding to be read.
+        /// Returns whether any content requires an encoding to be read. An \c oto.ini that
+        /// declares an available encoding for itself does not. See utau::OtoIni::charset .
         bool needsCharset() const;
 
         /// Sample text from this directory, for an encoding selector to display under each

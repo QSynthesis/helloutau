@@ -111,7 +111,8 @@ private Q_SLOTS:
 
         DiagnosticList diagnostics;
         QVERIFY(bank->save(diagnostics));
-        QCOMPARE(read(QStringLiteral("oto.ini")), "a.wav=" + kUtf8GePing + ",1,2,3,4,5\r\n");
+        QCOMPARE(read(QStringLiteral("oto.ini")),
+                 "#Charset:UTF-8\r\na.wav=" + kUtf8GePing + ",1,2,3,4,5\r\n");
         QCOMPARE(read(QStringLiteral("character.txt")), "name=" + kUtf8GePing + "\r\n");
         QCOMPARE(read(QStringLiteral("readme.txt")), kUtf8GePing);
         QCOMPARE(recorded(), name("UTF-8"));
@@ -148,7 +149,8 @@ private Q_SLOTS:
 
     // Plain ASCII is identical in both encodings, so no file needs rewriting. Only the
     // configuration changes, which is necessary because the next open would otherwise decode
-    // the directory in the previous encoding.
+    // the directory in the previous encoding. UTF-8 is not the target here, because converting to
+    // it adds a declaration to the oto.ini.
     void converting_a_file_that_reads_the_same_rewrites_only_the_record() {
         const QByteArray oto = "a.wav=a,1,2,3,4,5\n";
         write(QStringLiteral("oto.ini"), oto);
@@ -156,12 +158,139 @@ private Q_SLOTS:
 
         auto bank = open(root(), QStringLiteral("GBK"));
         QVERIFY(bank.has_value());
-        recode(*bank, 0, "UTF-8");
+        recode(*bank, 0, "Shift_JIS");
 
         DiagnosticList diagnostics;
         QVERIFY(bank->save(diagnostics));
         QCOMPARE(read(QStringLiteral("oto.ini")), oto);
-        QCOMPARE(recorded(), name("UTF-8"));
+        QCOMPARE(recorded(), name("Shift_JIS"));
+    }
+
+    // An oto.ini that declares its encoding is read in it without querying the user, and the
+    // directory takes that encoding.
+    void a_declared_oto_needs_no_selected_encoding() {
+        write(QStringLiteral("oto.ini"),
+              "#Charset:UTF-8\r\na.wav=" + kUtf8GePing + ",1,2,3,4,5\r\n");
+        write(QStringLiteral("a.wav"), "RIFF");
+
+        DiagnosticList diagnostics;
+        const auto bank = VoiceBank::open(root(), nullptr, diagnostics);
+        QVERIFY(bank.has_value());
+        QVERIFY(!bank->directories().at(0).leftOut);
+        QCOMPARE(bank->directories().at(0).otoCharset, QStringLiteral("UTF-8"));
+        QCOMPARE(bank->directories().at(0).charset, name("UTF-8"));
+        QVERIFY(bank->find(60, kGePing));
+        QVERIFY(diagnostics.isEmpty());
+    }
+
+    // The declaration takes precedence for the oto.ini, the other files keep the encoding of the
+    // directory, and the disagreement is reported.
+    void the_declaration_takes_precedence_for_the_oto_only() {
+        write(QStringLiteral("oto.ini"),
+              "#Charset:UTF-8\r\na.wav=" + kUtf8GePing + ",1,2,3,4,5\r\n");
+        write(QStringLiteral("character.txt"), "name=" + kGbkGePing + "\r\n");
+        write(QStringLiteral("a.wav"), "RIFF");
+
+        FixedCharsetSelector selector(QStringLiteral("GBK"));
+        DiagnosticList diagnostics;
+        auto bank = VoiceBank::open(root(), &selector, diagnostics);
+        QVERIFY(bank.has_value());
+        QVERIFY(bank->find(60, kGePing));
+        QCOMPARE(bank->character().name, kGePing);
+        QCOMPARE(bank->directories().at(0).charset, name("GBK"));
+        QCOMPARE(diagnostics.size(), 1);
+        QCOMPARE(diagnostics.at(0).severity, DiagnosticSeverity::Warning);
+
+        // A modified entry is written in the declared encoding, and the declaration is kept.
+        auto samples = bank->samples();
+        samples[0].offset = 7;
+        bank->setSamples(samples);
+        QVERIFY(bank->save(diagnostics));
+        QCOMPARE(read(QStringLiteral("oto.ini")),
+                 "#Charset:UTF-8\r\na.wav=" + kUtf8GePing + ",7,2,3,4,5\r\n");
+        QCOMPARE(read(QStringLiteral("character.txt")), "name=" + kGbkGePing + "\r\n");
+    }
+
+    // The declaration is written in one form, but an unmodified file is not rewritten.
+    void an_unmodified_declaration_is_not_rewritten() {
+        const QByteArray oto = "#charset:utf-8\r\na.wav=a,1,2,3,4,5\r\n";
+        write(QStringLiteral("oto.ini"), oto);
+        write(QStringLiteral("a.wav"), "RIFF");
+
+        DiagnosticList diagnostics;
+        auto bank = VoiceBank::open(root(), nullptr, diagnostics);
+        QVERIFY(bank.has_value());
+        QVERIFY(bank->save(diagnostics));
+        QCOMPARE(read(QStringLiteral("oto.ini")), oto);
+
+        auto samples = bank->samples();
+        samples[0].offset = 7;
+        bank->setSamples(samples);
+        QVERIFY(bank->save(diagnostics));
+        QCOMPARE(read(QStringLiteral("oto.ini")), "#Charset:utf-8\r\na.wav=a,7,2,3,4,5\r\n");
+    }
+
+    // A declaration of an unavailable encoding is reported and kept as written, and the file is
+    // read and written in the encoding of the directory.
+    void an_unavailable_declaration_falls_back_to_the_directory() {
+        write(QStringLiteral("oto.ini"),
+              "#Charset:Klingon-1\r\na.wav=" + kGbkGePing + ",1,2,3,4,5\r\n");
+        write(QStringLiteral("a.wav"), "RIFF");
+
+        FixedCharsetSelector selector(QStringLiteral("GBK"));
+        DiagnosticList diagnostics;
+        auto bank = VoiceBank::open(root(), &selector, diagnostics);
+        QVERIFY(bank.has_value());
+        QVERIFY(bank->find(60, kGePing));
+        QCOMPARE(bank->directories().at(0).otoCharset, QStringLiteral("Klingon-1"));
+        QCOMPARE(diagnostics.size(), 1);
+
+        auto samples = bank->samples();
+        samples[0].offset = 7;
+        bank->setSamples(samples);
+        QVERIFY(bank->save(diagnostics));
+        QCOMPARE(read(QStringLiteral("oto.ini")),
+                 "#Charset:Klingon-1\r\na.wav=" + kGbkGePing + ",7,2,3,4,5\r\n");
+    }
+
+    // An oto.ini written in UTF-8 declares it, but an unmodified file is not rewritten for the
+    // declaration alone.
+    void a_utf8_oto_receives_the_declaration_when_written() {
+        const QByteArray oto = "a.wav=" + kUtf8GePing + ",1,2,3,4,5\r\n";
+        write(QStringLiteral("oto.ini"), oto);
+        write(QStringLiteral("a.wav"), "RIFF");
+
+        auto bank = open(root(), QStringLiteral("UTF-8"));
+        QVERIFY(bank.has_value());
+        QVERIFY(bank->directories().at(0).otoCharset.isEmpty());
+
+        DiagnosticList diagnostics;
+        bank->rememberCharset(0);
+        QVERIFY(bank->save(diagnostics));
+        QCOMPARE(read(QStringLiteral("oto.ini")), oto);
+
+        auto samples = bank->samples();
+        samples[0].offset = 7;
+        bank->setSamples(samples);
+        QVERIFY(bank->save(diagnostics));
+        QCOMPARE(read(QStringLiteral("oto.ini")),
+                 "#Charset:UTF-8\r\na.wav=" + kUtf8GePing + ",7,2,3,4,5\r\n");
+    }
+
+    // A declaration would contradict the encoding in which the file is written after conversion.
+    void converting_away_from_utf8_removes_the_declaration() {
+        write(QStringLiteral("oto.ini"), "#Charset:UTF-8\r\na.wav=a,1,2,3,4,5\r\n");
+        write(QStringLiteral("a.wav"), "RIFF");
+
+        DiagnosticList diagnostics;
+        auto bank = VoiceBank::open(root(), nullptr, diagnostics);
+        QVERIFY(bank.has_value());
+        recode(*bank, 0, "Shift_JIS");
+        QVERIFY(bank->directories().at(0).otoCharset.isEmpty());
+
+        QVERIFY(bank->save(diagnostics));
+        QCOMPARE(read(QStringLiteral("oto.ini")), "a.wav=a,1,2,3,4,5\r\n");
+        QCOMPARE(recorded(), name("Shift_JIS"));
     }
 
     // The alternative way of setting an encoding: the files are unchanged and decoded
