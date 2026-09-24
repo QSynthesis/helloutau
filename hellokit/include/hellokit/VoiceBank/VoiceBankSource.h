@@ -25,30 +25,7 @@
 
 namespace hello::kit {
 
-    /// The files of a voice bank directory that this library reads and saves.
-    enum class VoiceBankFile {
-        Oto,
-        PrefixMap,
-        Character,
-        Readme,
-        Config,
-    };
-
-    /// The lowercase name under which \a file is created. An existing file keeps its name. See
-    /// VoiceBankFileRecord::name .
-    HELLOKIT_VOICEBANK_EXPORT const char *voiceBankFileName(VoiceBankFile file);
-
-    /// Returns the file identified by the lowercase name \a foldedName in the root directory if
-    /// \a root is \c true or in a subdirectory otherwise, or \c std::nullopt for any other name.
-    ///
-    /// \c character.txt , \c prefix.map and \c readme.txt belong to the root only, because UTAU
-    /// reads them from the voice bank directory alone. In a subdirectory they belong to the
-    /// voice bank that the subdirectory forms if selected by itself, and are neither read nor
-    /// written.
-    HELLOKIT_VOICEBANK_EXPORT std::optional<VoiceBankFile>
-        voiceBankFileNamed(std::string_view foldedName, bool root);
-
-    /// The state of one such file when it was read.
+    /// The state of one file of VoiceBankDirectorySource::File when it was read.
     struct VoiceBankFileRecord {
         /// The name as found on disk, under which the file is saved. A voice bank created on
         /// Windows may use \c OTO.INI , which is a different file on a case-sensitive file
@@ -63,10 +40,10 @@ namespace hello::kit {
     /// A snapshot of a directory, inexpensive enough to take on every check.
     ///
     /// Contains every name relevant to a voice bank: subdirectories, audio files, and the files
-    /// of VoiceBankFile with their size and modification time. Audio files are recorded by name
-    /// only, because their contents concern the render cache, not the voice bank. All other
-    /// files are excluded, such as the \c .frq files a resampler writes beside a sample, so that
-    /// rendering is not mistaken for an edit.
+    /// of VoiceBankDirectorySource::File with their size and modification time. Audio files are
+    /// recorded by name only, because their contents concern the render cache, not the voice bank.
+    /// All other files are excluded, such as the \c .frq files a resampler writes beside a sample,
+    /// so that rendering is not mistaken for an edit.
     struct HELLOKIT_VOICEBANK_EXPORT VoiceBankDirectoryStamp {
         struct Entry {
             std::filesystem::path name;
@@ -108,7 +85,7 @@ namespace hello::kit {
         bool isRacy(const Entry &entry) const;
 
         /// Takes the stamp of \a directory , which is the root of the voice bank if \a root is
-        /// \c true . See voiceBankFileNamed() for the files recorded.
+        /// \c true . See VoiceBankDirectorySource::fileNamed() for the files recorded.
         ///
         /// \return the stamp, or \c std::nullopt if \a directory is not a directory
         static std::optional<VoiceBankDirectoryStamp> take(const std::filesystem::path &directory,
@@ -117,6 +94,29 @@ namespace hello::kit {
 
     /// One directory of a voice bank as found on disk, not decoded.
     struct HELLOKIT_VOICEBANK_EXPORT VoiceBankDirectorySource {
+        /// The files of a voice bank directory that this library reads and saves.
+        enum File {
+            Oto,
+            PrefixMap,
+            Character,
+            Readme,
+            Config,
+        };
+
+        /// The lowercase name under which \a file is created. An existing file keeps its name.
+        /// See VoiceBankFileRecord::name .
+        static const char *fileName(File file);
+
+        /// Returns the file identified by the lowercase name \a foldedName in the root directory
+        /// if \a root is \c true or in a subdirectory otherwise, or \c std::nullopt for any other
+        /// name.
+        ///
+        /// \c character.txt , \c prefix.map and \c readme.txt belong to the root only, because
+        /// UTAU reads them from the voice bank directory alone. In a subdirectory they belong to
+        /// the voice bank that the subdirectory forms if selected by itself, and are neither read
+        /// nor written.
+        static std::optional<File> fileNamed(std::string_view foldedName, bool root);
+
         /// The location relative to the voice bank root. Empty for the root itself.
         std::filesystem::path path;
 
@@ -141,7 +141,7 @@ namespace hello::kit {
 
         /// Every file above that exists and was readable. A file absent from this map either
         /// did not exist or could not be read, and save() must not replace it in either case.
-        std::map<VoiceBankFile, VoiceBankFileRecord> files;
+        std::map<File, VoiceBankFileRecord> files;
 
         /// A snapshot of the directory, taken before any file in it was read. A change made
         /// during reading is thereby detected as a change at the next check rather than

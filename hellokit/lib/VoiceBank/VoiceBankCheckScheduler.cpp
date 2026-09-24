@@ -47,7 +47,7 @@ namespace hello::kit {
 
         Decl *_decl;
 
-        // File events are not enabled. VoiceBank::checkDisk() examines directories, and a
+        // File events are not enabled. VoiceBankDiskState::checkDisk() examines directories, and a
         // directory report is available on every system, including macOS.
         FileSystemWatcher watcher;
         QTimer poll;

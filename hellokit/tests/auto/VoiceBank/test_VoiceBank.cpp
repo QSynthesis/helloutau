@@ -9,6 +9,7 @@
 
 #include <hellokit/Support/TextCodec.h>
 #include <hellokit/VoiceBank/VoiceBank.h>
+#include <hellokit/VoiceBank/VoiceBankDiskState.h>
 
 using namespace hello::kit;
 
@@ -92,25 +93,27 @@ private Q_SLOTS:
 
         FixedCharsetSelector selector(QStringLiteral("GBK"));
         DiagnosticList diagnostics;
-        const auto bank = VoiceBank::open(root(), &selector, diagnostics);
-        QVERIFY(bank.has_value());
+        auto opened = VoiceBankDiskState::open(root(), &selector, diagnostics);
+        QVERIFY(opened.has_value());
+        auto &bank = opened->bank;
 
-        QCOMPARE(bank->character().name, QString::fromUtf8("\xe8\x91\x9b\xe5\xb9\xb3"));
-        QCOMPARE(bank->character().author, QString::fromUtf8("\xe8\x91\x9b\xe5\xb9\xb3"));
-        QCOMPARE(bank->character().web, QStringLiteral("http://example.com/"));
+        QCOMPARE(bank.character().name, QString::fromUtf8("\xe8\x91\x9b\xe5\xb9\xb3"));
+        QCOMPARE(bank.character().author, QString::fromUtf8("\xe8\x91\x9b\xe5\xb9\xb3"));
+        QCOMPARE(bank.character().web, QStringLiteral("http://example.com/"));
 
         // UTAU displays a line containing a colon as part of the character profile, so it is
         // content and must be decoded rather than dropped.
-        QCOMPARE(bank->character().extraLines, QStringList{QStringLiteral("Version:1.0")});
+        QCOMPARE(bank.character().extraLines, QStringList{QStringLiteral("Version:1.0")});
     }
 
     void a_bank_without_character_txt_is_called_after_its_folder() {
         write(QStringLiteral("a.wav"), "RIFF");
 
         DiagnosticList diagnostics;
-        const auto bank = VoiceBank::open(root(), nullptr, diagnostics);
-        QVERIFY(bank.has_value());
-        QCOMPARE(bank->character().name, QString::fromStdU16String(root().filename().u16string()));
+        auto opened = VoiceBankDiskState::open(root(), nullptr, diagnostics);
+        QVERIFY(opened.has_value());
+        auto &bank = opened->bank;
+        QCOMPARE(bank.character().name, QString::fromStdU16String(root().filename().u16string()));
     }
 
     void it_finds_a_sample_by_its_alias() {
@@ -119,10 +122,11 @@ private Q_SLOTS:
 
         FixedCharsetSelector selector(QStringLiteral("Shift_JIS"));
         DiagnosticList diagnostics;
-        const auto bank = VoiceBank::open(root(), &selector, diagnostics);
-        QVERIFY(bank.has_value());
+        auto opened = VoiceBankDiskState::open(root(), &selector, diagnostics);
+        QVERIFY(opened.has_value());
+        auto &bank = opened->bank;
 
-        const auto *sample = bank->find(60, QString::fromUtf8("\xe3\x81\x82"));
+        const auto *sample = bank.find(60, QString::fromUtf8("\xe3\x81\x82"));
         QVERIFY(sample);
         QCOMPARE(sample->path, root() / "a.wav");
         QVERIFY(sample->hasEntry);
@@ -146,14 +150,15 @@ private Q_SLOTS:
 
         FixedCharsetSelector selector(QStringLiteral("Shift_JIS"));
         DiagnosticList diagnostics;
-        const auto bank = VoiceBank::open(root(), &selector, diagnostics);
-        QVERIFY(bank.has_value());
+        auto opened = VoiceBankDiskState::open(root(), &selector, diagnostics);
+        QVERIFY(opened.has_value());
+        auto &bank = opened->bank;
 
-        const auto *plain = bank->find(60, QStringLiteral("a"));
+        const auto *plain = bank.find(60, QStringLiteral("a"));
         QVERIFY(plain);
         QCOMPARE(plain->path, root() / "a.wav");
 
-        const auto *high = bank->find(72, QStringLiteral("a"));
+        const auto *high = bank.find(72, QStringLiteral("a"));
         QVERIFY(high);
         QCOMPARE(high->path, root() / "a_high.wav");
     }
@@ -164,10 +169,11 @@ private Q_SLOTS:
         write(QStringLiteral("ka.wav"), "RIFF");
 
         DiagnosticList diagnostics;
-        const auto bank = VoiceBank::open(root(), nullptr, diagnostics);
-        QVERIFY(bank.has_value());
+        auto opened = VoiceBankDiskState::open(root(), nullptr, diagnostics);
+        QVERIFY(opened.has_value());
+        auto &bank = opened->bank;
 
-        const auto *sample = bank->find(60, QStringLiteral("ka"));
+        const auto *sample = bank.find(60, QStringLiteral("ka"));
         QVERIFY(sample);
         QCOMPARE(sample->path, root() / "ka.wav");
         QVERIFY(!sample->hasEntry);
@@ -182,10 +188,11 @@ private Q_SLOTS:
 
         FixedCharsetSelector selector(QStringLiteral("Shift_JIS"));
         DiagnosticList diagnostics;
-        const auto bank = VoiceBank::open(root(), &selector, diagnostics);
-        QVERIFY(bank.has_value());
+        auto opened = VoiceBankDiskState::open(root(), &selector, diagnostics);
+        QVERIFY(opened.has_value());
+        auto &bank = opened->bank;
 
-        const auto *sample = bank->find(60, QStringLiteral("ka"));
+        const auto *sample = bank.find(60, QStringLiteral("ka"));
         QVERIFY(sample);
         QCOMPARE(sample->path, root() / "ka.wav");
         QVERIFY(sample->hasEntry);
@@ -201,10 +208,11 @@ private Q_SLOTS:
 
         FixedCharsetSelector selector(QStringLiteral("UTF-8"));
         DiagnosticList diagnostics;
-        const auto bank = VoiceBank::open(root(), &selector, diagnostics);
-        QVERIFY(bank.has_value());
+        auto opened = VoiceBankDiskState::open(root(), &selector, diagnostics);
+        QVERIFY(opened.has_value());
+        auto &bank = opened->bank;
 
-        const auto *sample = bank->find(60, QStringLiteral("ka"));
+        const auto *sample = bank.find(60, QStringLiteral("ka"));
         QVERIFY(sample);
         QCOMPARE(sample->path, root() / "one.wav");
     }
@@ -213,9 +221,10 @@ private Q_SLOTS:
         write(QStringLiteral("a.wav"), "RIFF");
 
         DiagnosticList diagnostics;
-        const auto bank = VoiceBank::open(root(), nullptr, diagnostics);
-        QVERIFY(bank.has_value());
-        QVERIFY(!bank->find(60, QStringLiteral("nothing here")));
+        auto opened = VoiceBankDiskState::open(root(), nullptr, diagnostics);
+        QVERIFY(opened.has_value());
+        auto &bank = opened->bank;
+        QVERIFY(!bank.find(60, QStringLiteral("nothing here")));
     }
 
     // The reason hello-config.json is stored per directory rather than once per voice bank.
@@ -230,11 +239,12 @@ private Q_SLOTS:
         selector.set("cn", QStringLiteral("GBK"));
 
         DiagnosticList diagnostics;
-        const auto bank = VoiceBank::open(root(), &selector, diagnostics);
-        QVERIFY(bank.has_value());
+        auto opened = VoiceBankDiskState::open(root(), &selector, diagnostics);
+        QVERIFY(opened.has_value());
+        auto &bank = opened->bank;
 
-        QVERIFY(bank->find(60, QString::fromUtf8("\xe3\x81\x82")));
-        QVERIFY(bank->find(60, QString::fromUtf8("\xe8\x91\x9b\xe5\xb9\xb3")));
+        QVERIFY(bank.find(60, QString::fromUtf8("\xe3\x81\x82")));
+        QVERIFY(bank.find(60, QString::fromUtf8("\xe8\x91\x9b\xe5\xb9\xb3")));
     }
 
     // Taken from the configuration without querying the user, which is the purpose of
@@ -247,10 +257,11 @@ private Q_SLOTS:
 
         PerDirectorySelector selector;
         DiagnosticList diagnostics;
-        const auto bank = VoiceBank::open(root(), &selector, diagnostics);
-        QVERIFY(bank.has_value());
+        auto opened = VoiceBankDiskState::open(root(), &selector, diagnostics);
+        QVERIFY(opened.has_value());
+        auto &bank = opened->bank;
         QCOMPARE(selector.asked, 0);
-        QVERIFY(bank->find(60, QString::fromUtf8("\xe3\x81\x82")));
+        QVERIFY(bank.find(60, QString::fromUtf8("\xe3\x81\x82")));
     }
 
     // The encoding rules forbid guessing, so a directory without a known encoding is left out
@@ -260,13 +271,14 @@ private Q_SLOTS:
         write(QStringLiteral("a.wav"), "RIFF");
 
         DiagnosticList diagnostics;
-        const auto bank = VoiceBank::open(root(), nullptr, diagnostics);
-        QVERIFY(bank.has_value());
-        QVERIFY(!bank->find(60, QString::fromUtf8("\xe3\x81\x82")));
+        auto opened = VoiceBankDiskState::open(root(), nullptr, diagnostics);
+        QVERIFY(opened.has_value());
+        auto &bank = opened->bank;
+        QVERIFY(!bank.find(60, QString::fromUtf8("\xe3\x81\x82")));
         QVERIFY(!diagnostics.isEmpty());
 
         // The sample remains reachable by name, because a file name requires no encoding.
-        const auto *sample = bank->find(60, QStringLiteral("a"));
+        const auto *sample = bank.find(60, QStringLiteral("a"));
         QVERIFY(sample);
         QVERIFY(!sample->hasEntry);
     }
@@ -277,11 +289,12 @@ private Q_SLOTS:
 
         FixedCharsetSelector selector(QStringLiteral("Klingon-1"));
         DiagnosticList diagnostics;
-        const auto bank = VoiceBank::open(root(), &selector, diagnostics);
-        QVERIFY(bank.has_value());
+        auto opened = VoiceBankDiskState::open(root(), &selector, diagnostics);
+        QVERIFY(opened.has_value());
+        auto &bank = opened->bank;
         QVERIFY(!diagnostics.isEmpty());
 
-        const auto *sample = bank->find(60, QStringLiteral("a"));
+        const auto *sample = bank.find(60, QStringLiteral("a"));
         QVERIFY(sample);
         QVERIFY(!sample->hasEntry);
     }
@@ -302,30 +315,32 @@ private Q_SLOTS:
 
         FixedCharsetSelector selector(QStringLiteral("UTF-8"));
         DiagnosticList diagnostics;
-        auto bank = VoiceBank::open(root(), &selector, diagnostics);
-        QVERIFY(bank.has_value());
-        QCOMPARE(bank->character().name, QStringLiteral("outer"));
-        const auto *text = directoryAt(*bank, "text");
+        auto opened = VoiceBankDiskState::open(root(), &selector, diagnostics);
+        QVERIFY(opened.has_value());
+        auto &bank = opened->bank;
+        auto &disk = opened->disk;
+        QCOMPARE(bank.character().name, QStringLiteral("outer"));
+        const auto *text = directoryAt(bank, "text");
         QVERIFY(text);
         QVERIFY(text->charset.isEmpty());
         QVERIFY(!text->leftOut);
         QVERIFY(!text->character.has_value());
 
-        const auto *inner = directoryAt(*bank, "inner");
+        const auto *inner = directoryAt(bank, "inner");
         QVERIFY(inner);
         QVERIFY(!inner->character.has_value());
         QVERIFY(!inner->prefixMap.has_value());
         QVERIFY(inner->readme.isEmpty());
         QVERIFY(!inner->lossy);
 
-        auto samples = bank->samples();
+        auto samples = bank.samples();
         for (auto &sample : samples) {
             if (sample.alias == QStringLiteral("b")) {
                 sample.offset = 7;
             }
         }
-        bank->setSamples(samples);
-        QVERIFY(bank->save(diagnostics));
+        bank.setSamples(samples);
+        QVERIFY(disk.save(bank, diagnostics));
         QCOMPARE(read(QStringLiteral("inner/character.txt")), character);
         QCOMPARE(read(QStringLiteral("inner/prefix.map")), QByteArray("C4\t\t_B\n"));
         QCOMPARE(read(QStringLiteral("inner/readme.txt")), kGbkGePing);
@@ -344,11 +359,12 @@ private Q_SLOTS:
         selector.set("cn", QStringLiteral("GBK"));
 
         DiagnosticList diagnostics;
-        const auto bank = VoiceBank::open(root(), &selector, diagnostics);
-        QVERIFY(bank.has_value());
+        auto opened = VoiceBankDiskState::open(root(), &selector, diagnostics);
+        QVERIFY(opened.has_value());
+        auto &bank = opened->bank;
 
-        const auto *jp = directoryAt(*bank, "jp");
-        const auto *cn = directoryAt(*bank, "cn");
+        const auto *jp = directoryAt(bank, "jp");
+        const auto *cn = directoryAt(bank, "cn");
         QVERIFY(jp && cn);
         QCOMPARE(jp->charset, TextCodec(QStringLiteral("Shift_JIS")).name());
         QCOMPARE(cn->charset, TextCodec(QStringLiteral("GBK")).name());
@@ -362,10 +378,11 @@ private Q_SLOTS:
         write(QStringLiteral("a.wav"), "RIFF");
 
         DiagnosticList diagnostics;
-        const auto bank = VoiceBank::open(root(), nullptr, diagnostics);
-        QVERIFY(bank.has_value());
+        auto opened = VoiceBankDiskState::open(root(), nullptr, diagnostics);
+        QVERIFY(opened.has_value());
+        auto &bank = opened->bank;
 
-        const auto *top = directoryAt(*bank, "");
+        const auto *top = directoryAt(bank, "");
         QVERIFY(top);
         QVERIFY(top->leftOut);
         QVERIFY(top->charset.isEmpty());
@@ -380,19 +397,20 @@ private Q_SLOTS:
 
         FixedCharsetSelector selector(QStringLiteral("Shift_JIS"));
         DiagnosticList diagnostics;
-        const auto bank = VoiceBank::open(root(), &selector, diagnostics);
-        QVERIFY(bank.has_value());
+        auto opened = VoiceBankDiskState::open(root(), &selector, diagnostics);
+        QVERIFY(opened.has_value());
+        auto &bank = opened->bank;
 
-        const auto *entry = bank->find(60, QString::fromUtf8("\xe3\x81\x82"));
+        const auto *entry = bank.find(60, QString::fromUtf8("\xe3\x81\x82"));
         QVERIFY(entry);
-        QCOMPARE(bank->directories().at(entry->directory).path, std::filesystem::path("sub"));
+        QCOMPARE(bank.directories().at(entry->directory).path, std::filesystem::path("sub"));
         QCOMPARE(entry->fileName, QStringLiteral("ka.wav"));
         QCOMPARE(entry->spellings.at(0), std::string("41.0"));
 
-        const auto *bare = bank->find(60, QStringLiteral("ki"));
+        const auto *bare = bank.find(60, QStringLiteral("ki"));
         QVERIFY(bare);
         QVERIFY(!bare->hasEntry);
-        QCOMPARE(bank->directories().at(bare->directory).path, std::filesystem::path("sub"));
+        QCOMPARE(bank.directories().at(bare->directory).path, std::filesystem::path("sub"));
         QCOMPARE(bare->fileName, QStringLiteral("ki.wav"));
     }
 
@@ -404,10 +422,11 @@ private Q_SLOTS:
 
         FixedCharsetSelector selector(QStringLiteral("UTF-8"));
         DiagnosticList diagnostics;
-        const auto bank = VoiceBank::open(root(), &selector, diagnostics);
-        QVERIFY(bank.has_value());
+        auto opened = VoiceBankDiskState::open(root(), &selector, diagnostics);
+        QVERIFY(opened.has_value());
+        auto &bank = opened->bank;
 
-        const auto *sample = bank->find(60, QStringLiteral("ka"));
+        const auto *sample = bank.find(60, QStringLiteral("ka"));
         QVERIFY(sample);
         QVERIFY(sample->hasEntry);
         QVERIFY(sample->alias.isEmpty());
@@ -420,9 +439,10 @@ private Q_SLOTS:
         write(QString::fromUtf8("\xf0\x9f\x98\x80.wav"), "RIFF");
 
         DiagnosticList diagnostics;
-        const auto bank = VoiceBank::open(root(), nullptr, diagnostics);
-        QVERIFY(bank.has_value());
-        QVERIFY(bank->find(60, QString::fromUtf8("\xf0\x9f\x98\x80")));
+        auto opened = VoiceBankDiskState::open(root(), nullptr, diagnostics);
+        QVERIFY(opened.has_value());
+        auto &bank = opened->bank;
+        QVERIFY(bank.find(60, QString::fromUtf8("\xf0\x9f\x98\x80")));
     }
 
     // A file name in an oto.ini is in the encoding of the voice bank, not of the system.
@@ -435,16 +455,17 @@ private Q_SLOTS:
 
         FixedCharsetSelector selector(QStringLiteral("UTF-8"));
         DiagnosticList diagnostics;
-        const auto bank = VoiceBank::open(root(), &selector, diagnostics);
-        QVERIFY(bank.has_value());
+        auto opened = VoiceBankDiskState::open(root(), &selector, diagnostics);
+        QVERIFY(opened.has_value());
+        auto &bank = opened->bank;
 
-        const auto *sample = bank->find(60, QStringLiteral("a"));
+        const auto *sample = bank.find(60, QStringLiteral("a"));
         QVERIFY(sample);
         QCOMPARE(sample->path, root() / std::filesystem::path(u"\u3042.wav"));
 
         // One file yields one entry. The file belongs to the entry and is not added again as a
         // bare sample.
-        QCOMPARE(bank->samples().size(), 1);
+        QCOMPARE(bank.samples().size(), 1);
     }
 
 private:

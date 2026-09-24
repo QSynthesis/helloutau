@@ -108,7 +108,7 @@ namespace hello::kit {
                 }
 
                 const auto name = folded(entry.path().filename());
-                const auto kind = voiceBankFileNamed(name, relative.empty());
+                const auto kind = VoiceBankDirectorySource::fileNamed(name, relative.empty());
                 if (!kind) {
                     if (isAudioName(name)) {
                         directory.audioFiles.push_back(entry.path().filename());
@@ -129,7 +129,7 @@ namespace hello::kit {
                     QCryptographicHash::hash(*bytes, QCryptographicHash::Sha1),
                 };
 
-                if (*kind == VoiceBankFile::Config) {
+                if (*kind == VoiceBankDirectorySource::Config) {
                     DiagnosticList ignored;
                     directory.config = VoiceBankConfig::fromJson(*bytes, ignored);
                     if (!directory.config) {
@@ -139,19 +139,19 @@ namespace hello::kit {
                                                 "be read, so its encoding must be selected again.")
                                 .arg(displayed(absolute)));
                     }
-                } else if (*kind == VoiceBankFile::Oto) {
+                } else if (*kind == VoiceBankDirectorySource::Oto) {
                     utau::OtoIni oto;
                     oto.read(textOf(*bytes));
                     directory.oto = std::move(oto);
-                } else if (*kind == VoiceBankFile::PrefixMap) {
+                } else if (*kind == VoiceBankDirectorySource::PrefixMap) {
                     utau::PrefixMap map;
                     map.read(textOf(*bytes));
                     directory.prefixMap = std::move(map);
-                } else if (*kind == VoiceBankFile::Character) {
+                } else if (*kind == VoiceBankDirectorySource::Character) {
                     utau::CharacterTxt character;
                     character.read(textOf(*bytes));
                     directory.character = std::move(character);
-                } else if (*kind == VoiceBankFile::Readme) {
+                } else if (*kind == VoiceBankDirectorySource::Readme) {
                     directory.readme = *bytes;
                 }
             }
@@ -166,30 +166,33 @@ namespace hello::kit {
 
     }
 
-    const char *voiceBankFileName(VoiceBankFile file) {
+    const char *VoiceBankDirectorySource::fileName(VoiceBankDirectorySource::File file) {
         switch (file) {
-            case VoiceBankFile::Oto:
+            case VoiceBankDirectorySource::Oto:
                 return "oto.ini";
-            case VoiceBankFile::PrefixMap:
+            case VoiceBankDirectorySource::PrefixMap:
                 return "prefix.map";
-            case VoiceBankFile::Character:
+            case VoiceBankDirectorySource::Character:
                 return "character.txt";
-            case VoiceBankFile::Readme:
+            case VoiceBankDirectorySource::Readme:
                 return "readme.txt";
-            case VoiceBankFile::Config:
+            case VoiceBankDirectorySource::Config:
                 return voiceBankConfigFileName;
         }
         return "";
     }
 
-    std::optional<VoiceBankFile> voiceBankFileNamed(std::string_view foldedName, bool root) {
+    std::optional<VoiceBankDirectorySource::File>
+        VoiceBankDirectorySource::fileNamed(std::string_view foldedName, bool root) {
         for (const auto file :
-             {VoiceBankFile::Oto, VoiceBankFile::PrefixMap, VoiceBankFile::Character,
-              VoiceBankFile::Readme, VoiceBankFile::Config}) {
-            if (foldedName != voiceBankFileName(file)) {
+             {VoiceBankDirectorySource::Oto, VoiceBankDirectorySource::PrefixMap,
+              VoiceBankDirectorySource::Character, VoiceBankDirectorySource::Readme,
+              VoiceBankDirectorySource::Config}) {
+            if (foldedName != VoiceBankDirectorySource::fileName(file)) {
                 continue;
             }
-            if (!root && file != VoiceBankFile::Oto && file != VoiceBankFile::Config) {
+            if (!root && file != VoiceBankDirectorySource::Oto &&
+                file != VoiceBankDirectorySource::Config) {
                 return std::nullopt;
             }
             return file;
@@ -226,7 +229,7 @@ namespace hello::kit {
                 entry.directory = true;
             } else if (item.is_regular_file(error)) {
                 const auto name = folded(entry.name);
-                if (voiceBankFileNamed(name, root)) {
+                if (VoiceBankDirectorySource::fileNamed(name, root)) {
                     entry.size = item.file_size(error);
                     entry.time = item.last_write_time(error);
                 } else if (!isAudioName(name)) {

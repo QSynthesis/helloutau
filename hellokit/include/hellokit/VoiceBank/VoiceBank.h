@@ -89,18 +89,15 @@ namespace hello::kit {
 
         /// Whether part of the text was invalid in \a charset .
         ///
-        /// Invalid text is read as empty. The remainder is loaded and usable, but save() does not
-        /// write a changed file of this directory, because the empty text would replace the
-        /// original.
+        /// Invalid text is read as empty. The remainder is loaded and usable, but
+        /// VoiceBankDiskState::save() does not write a changed file of this directory, because the
+        /// empty text would replace the original.
         bool lossy = false;
-
-        /// The contents of \c hello-config.json in this directory, if present.
-        std::optional<VoiceBankConfig> config;
 
         /// \name Files of the root only
         ///
         /// Absent or empty in a subdirectory, whose files of these names are neither read nor
-        /// written. See voiceBankFileNamed() and VoiceBank::character() .
+        /// written. See VoiceBankDirectorySource::fileNamed() and VoiceBank::character() .
         /// @{
 
         /// \c character.txt as written in the file, without defaults, if present.
@@ -163,7 +160,8 @@ namespace hello::kit {
     /// The differences between the disk and the state from which a VoiceBank was read. Every
     /// path is a directory relative to the root.
     ///
-    /// Returned by VoiceBank::checkDisk() and applied by VoiceBank::reloadFromDisk() .
+    /// Returned by VoiceBankDiskState::checkDisk() and applied by
+    /// VoiceBankDiskState::reloadFromDisk() .
     struct VoiceBankChanges {
         /// Directories whose contents changed.
         QList<std::filesystem::path> changed;
@@ -184,12 +182,17 @@ namespace hello::kit {
 
     /// A decoded voice bank that resolves lyrics to samples.
     ///
+    /// A value: the contents of the voice bank only, copyable like Project . The state of the
+    /// files on disk, which saving and checking the disk require, is kept by VoiceBankDiskState .
+    ///
     /// \sa VoiceBankSource for the preceding step, and for the reason the two are separate.
     class HELLOKIT_VOICEBANK_EXPORT VoiceBank {
-        Q_DECLARE_TR_FUNCTIONS(hello::kit::VoiceBank)
     public:
         /// Reads and decodes \a root , querying \a selector for each directory whose encoding
         /// is not recorded.
+        ///
+        /// For a voice bank that is only read, as for synthesis. To save it or to check the disk,
+        /// open it through VoiceBankDiskState::open() instead.
         ///
         /// \param selector may be null, in which case every directory without a recorded
         ///        encoding is left out with a warning rather than decoded by guesswork
@@ -226,6 +229,10 @@ namespace hello::kit {
         inline const QList<VoiceBankDirectory> &directories() const {
             return m_directories;
         }
+
+        /// Returns the index into directories() of the directory at \a directory relative to the
+        /// root, or -1 if there is none.
+        int indexOf(const std::filesystem::path &directory) const;
 
         /// The name and display information of the voice bank: the root's \c character.txt ,
         /// with the folder name as the default name.
@@ -265,7 +272,7 @@ namespace hello::kit {
         /// Replaces all samples. Entries are changed, added and removed through this function.
         ///
         /// A sample without an entry denotes the bare file and is not saved. A sample that
-        /// refers to a nonexistent directory causes save() to fail.
+        /// refers to a nonexistent directory causes VoiceBankDiskState::save() to fail.
         void setSamples(QList<VoiceSample> samples);
 
         /// Replaces directory \a index . Its \c character.txt , \c prefix.map , \c readme.txt
@@ -275,139 +282,20 @@ namespace hello::kit {
         /// is then written in the new encoding. See VoiceBankDirectory::otoCharset .
         void setDirectory(int index, VoiceBankDirectory directory);
 
-        /// Rereads directory \a index from disk in \a charset .
-        ///
-        /// Intended for a directory that was read in the wrong encoding, or that was left out
-        /// because no encoding was specified. The files are unchanged and are decoded
-        /// differently. This is the alternative to setDirectory() , which keeps the text and
-        /// saves the files in another encoding.
-        ///
-        /// \warning Unsaved changes to the directory are discarded, because the directory is
-        ///          read anew.
-        ///
-        /// The encoding is recorded by the next save() , unless part of the text was invalid in
-        /// it (see VoiceBankDirectory::lossy), in which case it is not worth recording.
-        bool reread(int index, const QString &charset, DiagnosticList &diagnostics);
-
-        /// Returns the differences between the disk and the state from which the voice bank was
-        /// read, at and under \a places , which are absolute paths that may have changed. **The
-        /// voice bank itself is not modified.**
-        ///
-        /// Each directory is compared with its VoiceBankDirectoryStamp , which costs a directory
-        /// listing and no file reads. If a place is not a known directory, the nearest known
-        /// ancestor is examined as well, because a new directory appears in the listing of its
-        /// parent.
-        ///
-        /// **A detected difference is reported again** by every check until reloadFromDisk()
-        /// applies it, so that a check whose result was missed loses nothing. Applying it is the
-        /// user's decision: a directory that changed on disk while isModified() holds exists in
-        /// two versions, and only the user can choose between them.
-        ///
-        /// A place is a hint and not the only means of detecting a change. The overload without
-        /// places examines the entire voice bank. A caller that passes only the reports of a
-        /// watcher misses every change the watcher misses. See VoiceBankCheckScheduler .
-        VoiceBankChanges checkDisk(const QList<std::filesystem::path> &places);
-
-        /// \overload for the entire voice bank.
-        VoiceBankChanges checkDisk();
-
-        /// Applies the result of checkDisk(): rereads the directories in \a changes marked as
-        /// changed, drops removed directories and reads new ones.
-        ///
-        /// **Unsaved changes in a reread directory are discarded**, because the user requested
-        /// the version on disk. Each directory is examined again during the reload, because the
-        /// disk may have changed since the check. A directory removed in the meantime is not
-        /// read, and one restored in the meantime is not dropped.
-        ///
-        /// A previously read directory keeps its encoding, or takes the one its configuration
-        /// now records, without querying the selector again.
-        ///
-        /// \param selector queried only for a new directory, or for one that previously needed
-        ///        no encoding and now does
-        /// \return the changes applied
-        VoiceBankChanges reloadFromDisk(const VoiceBankChanges &changes,
-                                        VoiceBankCharsetSelector *selector,
-                                        DiagnosticList &diagnostics);
-
-        /// Rereads every directory regardless of the result of checkDisk(), and applies added
-        /// and removed directories.
-        ///
-        /// Intended for an explicit user request, the equivalent of the refresh button in UTAU
-        /// for cases where something appears wrong. No stamp is trusted, so the result is
-        /// correct even if stamps are unreliable, for example on a network share with
-        /// unreliable timestamps, at the cost of reading every file. Unsaved changes are handled
-        /// as in reloadFromDisk() .
-        VoiceBankChanges reloadAllFromDisk(VoiceBankCharsetSelector *selector,
-                                           DiagnosticList &diagnostics);
-
-        /// Returns whether directory \a index has changes that save() would write.
-        bool isModified(int index) const;
-
-        /// Makes the next save() record the encoding of directory \a index , even if nothing
-        /// else in the directory changed.
-        ///
-        /// Intended for an encoding the user selected when the voice bank was opened, which
-        /// open() does not record by itself. Without this call, the user is asked again every
-        /// time the voice bank is opened.
-        void rememberCharset(int index);
-
-        /// Saves every file that differs from the state in which it was read, each in the
-        /// encoding of its directory, and nothing else.
-        ///
-        /// All checks precede the first write, and a single failure leaves every file
-        /// unchanged. The following are refused:
-        ///
-        /// - **Text that the encoding cannot represent.** It is never written as question marks.
-        /// - **A file that changed on disk since it was read**, because it contains changes made
-        ///   elsewhere. The voice bank must be reopened.
-        /// - **A directory that was never read**, or text that was invalid. See
-        ///   VoiceBankDirectory::leftOut and VoiceBankDirectory::lossy .
-        ///
-        /// For each directory in which a file is written, the encoding is recorded beside it in
-        /// \c hello-config.json , because saving is an explicit request to write files there.
-        /// Each file is written to a temporary file beside it and then renamed, so that a reader
-        /// never observes a partially written file.
-        ///
-        /// \warning Atomicity holds only until the first write. If the disk fails partway
-        ///          through, files written so far remain written, and the failing file is
-        ///          reported.
-        bool save(DiagnosticList &diagnostics);
-
     private:
+        friend class VoiceBankDiskState;
+
         VoiceBank() = default;
+
+        /// Returns the canonical name of \a charset , or empty if \a charset is empty.
+        ///
+        /// TextCodec takes an empty name as the system encoding, which is UTF-8 on most systems
+        /// other than Windows and would equal a new UTF-8.
+        static QString canonicalCharset(const QString &charset);
 
         /// Updates the lookup tables and the root-derived data from the samples and
         /// directories.
         void reindex();
-
-        /// Records the current serialization of directory \a index as the baseline for save().
-        void takeBaseline(int index);
-
-        /// \name Changing the set of directories
-        ///
-        /// None of these functions reindexes or takes a baseline, so that a reload affecting
-        /// several directories performs each once.
-        /// @{
-        void replaceDirectory(int index, const VoiceBankDirectorySource &source,
-                              const std::optional<TextCodec> &codec, DiagnosticList &diagnostics);
-        void appendDirectory(const VoiceBankDirectorySource &source,
-                             const std::optional<TextCodec> &codec, DiagnosticList &diagnostics);
-        void removeDirectory(int index);
-        /// @}
-
-        /// Per-directory file state required only by save().
-        struct Book {
-            /// The state of each file on disk when it was read or last written.
-            std::map<VoiceBankFile, VoiceBankFileRecord> files;
-            /// The serialization of each file without changes. A file whose serialization still
-            /// equals this is not written.
-            std::map<VoiceBankFile, QByteArray> baseline;
-            /// Whether the encoding is to be recorded regardless of other changes.
-            bool remember = false;
-            /// The directory state when last read, or when last checked without differences.
-            VoiceBankDirectoryStamp stamp;
-        };
-        QList<Book> m_books; // one per directory
 
         std::filesystem::path m_root;
         QList<VoiceBankDirectory> m_directories;

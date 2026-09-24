@@ -14,10 +14,10 @@ namespace hello::kit {
     /// Determines when and where a voice bank must be compared with the disk.
     ///
     /// The scheduler holds no voice bank. It emits checkNeeded(), and the owner of the voice
-    /// bank passes the reported locations to VoiceBank::checkDisk() and handles the result. Its
-    /// purpose is that **a lost notification never causes a change to be missed permanently**.
-    /// File system notifications are one of several triggers, and the other triggers do not
-    /// depend on them.
+    /// bank passes the reported locations to VoiceBankDiskState::checkDisk() and handles the
+    /// result. Its purpose is that **a lost notification never causes a change to be missed
+    /// permanently**. File system notifications are one of several triggers, and the other triggers
+    /// do not depend on them.
     ///
     /// **Intended for use only while a voice bank is being edited.** A project maps its notes to
     /// a voice bank once, as UTAU does, and later changes on disk do not concern a project that
@@ -78,9 +78,9 @@ namespace hello::kit {
         void requestFull();
 
     Q_SIGNALS:
-        /// \a places may have changed and are to be passed to VoiceBank::checkDisk(). The paths
-        /// are absolute and use \c / as the separator. The root, if present, denotes the entire
-        /// voice bank.
+        /// \a places may have changed and are to be passed to VoiceBankDiskState::checkDisk(). The
+        /// paths are absolute and use \c / as the separator. The root, if present, denotes the
+        /// entire voice bank.
         void checkNeeded(const QStringList &places);
 
     private:
