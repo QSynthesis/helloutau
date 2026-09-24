@@ -662,7 +662,14 @@ namespace hello::kit::edit {
                 return false;
             }
             const auto target = resolve(session, root, *path, diagnostics);
-            return target && command(*target, arguments.mid(1), diagnostics);
+            if (!target) {
+                return false;
+            }
+            if (target->field && target->field->readOnly) {
+                return fail(diagnostics,
+                            NodeCommands::tr("The %1 is read-only.").arg(nameOf(*target->field)));
+            }
+            return command(*target, arguments.mid(1), diagnostics);
         }
         return fail(diagnostics, NodeCommands::tr("%1 is not a command.").arg(name.toString()));
     }

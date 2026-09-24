@@ -54,23 +54,48 @@ private:
         return record;
     }
 
+    // The same tree with restricted fields: the title and the list of items are read-only, the
+    // tags and the values of an item are internal.
+    static const RecordInfo &restrictedItemRecord() {
+        static const FieldInfo fields[] = {
+            valueField(Slot<QString>{0, "name"}),
+            internalField(
+                arrayField(ChildSlot{1, "values"}, TestSession::ValuesType, ValueFormats::number)),
+        };
+        static const RecordInfo record{"item", TestSession::ItemType, fields,
+                                       itemRecord().treeFromJson, itemRecord().treeToJson};
+        return record;
+    }
+
+    static const RecordInfo &restrictedRootRecord() {
+        static const FieldInfo fields[] = {
+            readOnlyField(valueField(Slot<QString>{0, "title"})),
+            readOnlyField(listField(ChildSlot{1, "items"}, restrictedItemRecord())),
+            internalField(mappingField(ChildSlot{2, "tags"}, ValueFormats::integer)),
+        };
+        static const RecordInfo record{"root", TestSession::RootType, fields};
+        return record;
+    }
+
     // Executes line as ProjectCommands does: one transaction, committed if the command succeeds.
-    static bool run(TestSession &session, const QString &line, DiagnosticList &diagnostics) {
+    static bool run(TestSession &session, const QString &line, DiagnosticList &diagnostics,
+                    const RecordInfo &root = rootRecord()) {
         const auto arguments = CommandSyntax::split(line, diagnostics);
         if (!arguments || arguments->isEmpty()) {
             return false;
         }
         auto transaction = session.transaction(line);
-        if (!NodeCommands::execute(session, rootRecord(), arguments->first().text(),
-                                   arguments->mid(1), diagnostics)) {
+        if (!NodeCommands::execute(session, root, arguments->first().text(), arguments->mid(1),
+                                   diagnostics)) {
             return false;
         }
         return transaction.commit(diagnostics);
     }
 
-    static bool run(TestSession &session, const QString &line) {
+    static bool run(TestSession &session, const QString &line,
+                    const RecordInfo &root = rootRecord()) {
         DiagnosticList diagnostics;
-        const auto executed = run(session, line, diagnostics);
+        const auto executed = run(session, line, diagnostics, root);
         if (!executed) {
             qDebug().noquote() << line
                                << (diagnostics.isEmpty() ? QString() : diagnostics.first().message);
@@ -79,15 +104,18 @@ private:
     }
 
     // Verifies that line is refused with an error and leaves the tree and the history unchanged.
-    static void verifyRefused(TestSession &session, const QString &line) {
+    static void verifyRefused(TestSession &session, const QString &line,
+                              const RecordInfo &root = rootRecord()) {
         const auto names = session.names();
         const auto title = session.title();
+        const auto tags = session.tagKeys();
         const auto step = session.currentStep();
         DiagnosticList diagnostics;
-        QVERIFY2(!run(session, line, diagnostics), qPrintable(line));
+        QVERIFY2(!run(session, line, diagnostics, root), qPrintable(line));
         QVERIFY2(hasError(diagnostics), qPrintable(line));
         QCOMPARE(session.names(), names);
         QCOMPARE(session.title(), title);
+        QCOMPARE(session.tagKeys(), tags);
         QCOMPARE(session.currentStep(), step);
     }
 
@@ -291,6 +319,44 @@ private Q_SLOTS:
         verifyRefused(session, QStringLiteral("set /items/0/name \"\""));
         verifyRefused(session, QStringLiteral("insert /items 0 {\"name\": \"a\"} {\"name\": \"b\"} "
                                               "{\"name\": \"c\"}"));
+    }
+
+    // A read-only field is modified by the document layer alone, and no command reaches it, not
+    // even through a member of its value.
+    void a_read_only_field_refuses_every_command() {
+        const auto &root = restrictedRootRecord();
+        TestSession session;
+        verifyRefused(session, QStringLiteral("set /title x"), root);
+        verifyRefused(session, QStringLiteral("set /title/a x"), root);
+        verifyRefused(session, QStringLiteral("insert /items 0 {\"name\": \"x\"}"), root);
+        verifyRefused(session, QStringLiteral("remove /items 0"), root);
+        verifyRefused(session, QStringLiteral("move /items 0 1 1"), root);
+    }
+
+    // The restriction of a list applies to its items as a whole, not to their fields.
+    void the_items_of_a_read_only_list_remain_editable() {
+        TestSession session;
+        QVERIFY(run(session, QStringLiteral("set /items/1/name renamed"), restrictedRootRecord()));
+        QCOMPARE(session.names(),
+                 QStringList({QStringLiteral("first"), QStringLiteral("renamed")}));
+    }
+
+    // An internal field is absent for commands, both in a path and in the JSON of a record.
+    void an_internal_field_is_absent_for_commands() {
+        const auto &root = restrictedRootRecord();
+        TestSession session;
+        verifyRefused(session, QStringLiteral("set /tags b 2"), root);
+        verifyRefused(session, QStringLiteral("remove /tags a"), root);
+        verifyRefused(session, QStringLiteral("insert /items/0/values 0 1"), root);
+
+        DiagnosticList diagnostics;
+        QVERIFY(!NodeCommands::resolve(session, root, QStringLiteral("/tags"), diagnostics));
+
+        QJsonObject item;
+        item.insert(QStringLiteral("name"), QStringLiteral("x"));
+        QVERIFY(NodeCommands::treeOf(restrictedItemRecord(), item, diagnostics));
+        item.insert(QStringLiteral("values"), QJsonArray{1});
+        QVERIFY(!NodeCommands::treeOf(restrictedItemRecord(), item, diagnostics));
     }
 
     void names_lists_every_command() {

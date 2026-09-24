@@ -185,6 +185,16 @@ namespace hello::kit::edit {
 
         /// The node type of the array of an \c Array field.
         int arrayType = 0;
+
+        /// Whether no command modifies the slot, which only the document layer does: a fact read
+        /// from a file, or a value that a domain function keeps consistent with another. Applies
+        /// to the slot itself, not to the fields of a record in it or of the items of a list.
+        bool readOnly = false;
+
+        /// Whether the field belongs to the document layer alone: commands neither address it nor
+        /// accept it in the JSON of a record, and the JSON of a record omits it. It remains in the
+        /// table because the table lists every slot in order.
+        bool internal = false;
     };
 
     /// The fields of a record type, an array with static storage in the order of the slots.
@@ -235,10 +245,11 @@ namespace hello::kit::edit {
         /// Returns the JSON of the record in \a tree. Null if \c treeFromJson is null.
         QJsonObject (*treeToJson)(const ss::Node *tree) = nullptr;
 
-        /// Returns the field named \a name, or \c nullptr if the record has no such field.
+        /// Returns the field named \a name, or \c nullptr if the record has no such field or the
+        /// field is internal.
         inline const FieldInfo *field(QStringView name) const {
             for (const auto &field : fields) {
-                if (name == QLatin1String(field.name)) {
+                if (!field.internal && name == QLatin1String(field.name)) {
                     return &field;
                 }
             }
@@ -310,6 +321,18 @@ namespace hello::kit::edit {
         auto field = childField(FieldInfo::Array, slot);
         field.arrayType = arrayType;
         field.format = &format;
+        return field;
+    }
+
+    /// Returns \a field as a read-only field, see FieldInfo::readOnly.
+    inline constexpr FieldInfo readOnlyField(FieldInfo field) {
+        field.readOnly = true;
+        return field;
+    }
+
+    /// Returns \a field as an internal field, see FieldInfo::internal.
+    inline constexpr FieldInfo internalField(FieldInfo field) {
+        field.internal = true;
         return field;
     }
 
