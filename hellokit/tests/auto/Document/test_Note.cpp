@@ -1,3 +1,5 @@
+#include <QtCore/QJsonArray>
+#include <QtCore/QJsonObject>
 #include <QtCore/QList>
 #include <QtTest/QTest>
 
@@ -101,6 +103,183 @@ private Q_SLOTS:
             *parameters[i] += 1;
             QVERIFY2(base != other, qPrintable(QString::number(i)));
         }
+    }
+
+    void every_field_of_a_note_survives_a_json_round_trip() {
+        Note note;
+        note.lyric = QStringLiteral("la");
+        note.length = 480;
+        note.noteNum = 60;
+        note.intensity = 80;
+        note.modulation = 0;
+        note.velocity = 120;
+        note.preUtterance = 30;
+        note.voiceOverlap = 10;
+        note.startPoint = 5;
+        note.tempo = 128.5;
+        note.flags = QStringLiteral("g-5");
+        note.envelope = Envelope::fromTimeOrder({
+            {0,  0  },
+            {5,  100},
+            {20, 80 },
+            {35, 100},
+            {0,  0  }
+        });
+        note.vibrato = Vibrato{65, 180, 35, 20, 20, 0, 0, 1};
+        note.portamento = {
+            {-40, 0,  PortamentoPoint::S     },
+            {50,  10, PortamentoPoint::R     },
+            {20,  0,  PortamentoPoint::J     },
+            {10,  -5, PortamentoPoint::Linear}
+        };
+        note.pitchBend = PitchBend{
+            -20.0, {0, 10.5, -20}
+        };
+        note.label = QStringLiteral("verse");
+        note.direct = QStringLiteral("direct.wav");
+        note.patch = QStringLiteral("resampler.exe");
+        note.region = QStringLiteral("A");
+        note.regionEnd = QStringLiteral("B");
+        note.userData.insert(QStringLiteral("$whatever"), QStringLiteral("kept"));
+
+        DiagnosticList diagnostics;
+        const auto back = Note::fromJson(note.toJson(), diagnostics);
+        QVERIFY(back.has_value());
+        QVERIFY(diagnostics.isEmpty());
+        QCOMPARE(back->lyric, note.lyric);
+        QCOMPARE(back->length, note.length);
+        QCOMPARE(back->noteNum, note.noteNum);
+        QCOMPARE(back->intensity, note.intensity);
+        QCOMPARE(back->modulation, note.modulation);
+        QCOMPARE(back->velocity, note.velocity);
+        QCOMPARE(back->preUtterance, note.preUtterance);
+        QCOMPARE(back->voiceOverlap, note.voiceOverlap);
+        QCOMPARE(back->startPoint, note.startPoint);
+        QCOMPARE(back->tempo, note.tempo);
+        QCOMPARE(back->flags, note.flags);
+        QVERIFY(back->envelope == note.envelope);
+        QVERIFY(back->vibrato == note.vibrato);
+        QCOMPARE(back->portamento.size(), note.portamento.size());
+        for (int i = 0; i < note.portamento.size(); ++i) {
+            QCOMPARE(back->portamento.at(i).x, note.portamento.at(i).x);
+            QCOMPARE(back->portamento.at(i).y, note.portamento.at(i).y);
+            QCOMPARE(back->portamento.at(i).type, note.portamento.at(i).type);
+        }
+        QVERIFY(back->pitchBend == note.pitchBend);
+        QCOMPARE(back->label, note.label);
+        QCOMPARE(back->direct, note.direct);
+        QCOMPARE(back->patch, note.patch);
+        QCOMPARE(back->region, note.region);
+        QCOMPARE(back->regionEnd, note.regionEnd);
+        QCOMPARE(back->userData, note.userData);
+    }
+
+    // An empty optional field is omitted rather than written as null or zero.
+    void empty_fields_of_a_note_are_omitted() {
+        Note note;
+        note.lyric = QStringLiteral("la");
+        note.length = 480;
+        note.noteNum = 60;
+        QCOMPARE(note.toJson().keys(),
+                 QStringList({QStringLiteral("length"), QStringLiteral("lyric"),
+                              QStringLiteral("noteNum")}));
+    }
+
+    void a_note_without_its_lyric_length_or_pitch_is_refused() {
+        const QJsonObject complete{
+            {QStringLiteral("lyric"),   QStringLiteral("a")},
+            {QStringLiteral("length"),  480                },
+            {QStringLiteral("noteNum"), 60                 },
+        };
+        DiagnosticList diagnostics;
+        QVERIFY(Note::fromJson(complete, diagnostics).has_value());
+        QVERIFY(diagnostics.isEmpty());
+
+        for (const auto &key : complete.keys()) {
+            auto incomplete = complete;
+            incomplete.remove(key);
+            diagnostics.clear();
+            QVERIFY2(!Note::fromJson(incomplete, diagnostics).has_value(), qPrintable(key));
+            QVERIFY(hasError(diagnostics));
+        }
+    }
+
+    // A malformed optional field is reported and read as absent, so that the rest of the note is
+    // still read.
+    void a_malformed_optional_field_is_reported_and_read_as_absent() {
+        const QJsonObject object{
+            {QStringLiteral("lyric"),     QStringLiteral("a")   },
+            {QStringLiteral("length"),    480                   },
+            {QStringLiteral("noteNum"),   60                    },
+            {QStringLiteral("intensity"), QStringLiteral("loud")},
+        };
+        DiagnosticList diagnostics;
+        const auto note = Note::fromJson(object, diagnostics);
+        QVERIFY(note.has_value());
+        QVERIFY(!note->intensity.has_value());
+        QCOMPARE(diagnostics.size(), 1);
+        QCOMPARE(diagnostics.at(0).severity, DiagnosticSeverity::Warning);
+    }
+
+    void each_curve_type_has_a_name_that_reads_back() {
+        for (const auto type : {PortamentoPoint::S, PortamentoPoint::Linear, PortamentoPoint::R,
+                                PortamentoPoint::J}) {
+            QCOMPARE(PortamentoPoint::typeFromName(PortamentoPoint::typeName(type)), type);
+        }
+        QCOMPARE(PortamentoPoint::typeName(PortamentoPoint::Linear), QStringLiteral("Linear"));
+    }
+
+    // The letters of the PBM entry of UST are not names of .usth.
+    void a_letter_of_ust_is_not_a_curve_type_name() {
+        QVERIFY(!PortamentoPoint::typeFromName(u"s").has_value());
+        QVERIFY(!PortamentoPoint::typeFromName(u"").has_value());
+    }
+
+    void an_unknown_curve_type_is_reported_and_read_as_s() {
+        const QJsonObject object{
+            {QStringLiteral("x"),    10                   },
+            {QStringLiteral("y"),    5                    },
+            {QStringLiteral("type"), QStringLiteral("zig")},
+        };
+        DiagnosticList diagnostics;
+        const auto point = PortamentoPoint::fromJson(object, diagnostics);
+        QCOMPARE(point.x, 10.0);
+        QCOMPARE(point.y, 5.0);
+        QCOMPARE(point.type, PortamentoPoint::S);
+        QCOMPARE(diagnostics.size(), 1);
+        QCOMPARE(diagnostics.at(0).severity, DiagnosticSeverity::Warning);
+    }
+
+    void an_envelope_is_written_in_time_order() {
+        const auto envelope = Envelope::fromTimeOrder({
+            {0,  0  },
+            {5,  100},
+            {35, 90 },
+            {10, 0  }
+        });
+        const auto anchors = envelope->toJson().value(QStringLiteral("anchors")).toArray();
+        QCOMPARE(anchors.size(), 4);
+        QCOMPARE(anchors.at(2).toObject().value(QStringLiteral("x")).toDouble(), 35.0);
+        QVERIFY(Envelope::fromJson(envelope->toJson()) == envelope);
+    }
+
+    void an_envelope_of_another_number_of_anchors_is_refused() {
+        const QJsonObject object{
+            {QStringLiteral("anchors"),
+             QJsonArray{QJsonObject{{QStringLiteral("x"), 0}, {QStringLiteral("y"), 0}},
+                        QJsonObject{{QStringLiteral("x"), 5}, {QStringLiteral("y"), 100}},
+                        QJsonObject{{QStringLiteral("x"), 0}, {QStringLiteral("y"), 0}}}},
+        };
+        QVERIFY(!Envelope::fromJson(object).has_value());
+    }
+
+    // An absent start differs from a start of zero.
+    void a_pitch_curve_without_a_start_reads_back_without_one() {
+        const PitchBend bend{
+            std::nullopt, {1, 2}
+        };
+        QVERIFY(!bend.toJson().contains(QStringLiteral("start")));
+        QVERIFY(PitchBend::fromJson(bend.toJson()) == bend);
     }
 };
 

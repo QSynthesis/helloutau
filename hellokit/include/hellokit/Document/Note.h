@@ -4,10 +4,15 @@
 #include <array>
 #include <optional>
 
+#include <QtCore/QCoreApplication>
 #include <QtCore/QDataStream>
+#include <QtCore/QJsonObject>
 #include <QtCore/QList>
 #include <QtCore/QMap>
 #include <QtCore/QString>
+#include <QtCore/QStringView>
+
+#include <hellokit/Support/Diagnostic.h>
 
 #include <hellokit/Document/DocumentConstants.h>
 #include <hellokit/Document/HelloKitDocumentGlobal.h>
@@ -34,7 +39,7 @@ namespace hello::kit {
     /// 3 the start of the release, and 4 the end. The index of an anchor therefore does not
     /// depend on whether the middle anchor exists. UST and \c .usth list the anchors in time
     /// order instead, see anchorsInTimeOrder().
-    struct Envelope {
+    struct HELLOKIT_DOCUMENT_EXPORT Envelope {
         /// The anchors by role. Index 2 is part of the envelope only if \c hasMiddle is true.
         std::array<EnvelopeAnchor, 5> anchors;
 
@@ -81,9 +86,16 @@ namespace hello::kit {
         inline bool operator!=(const Envelope &RHS) const {
             return !(*this == RHS);
         }
+
+        /// Returns the envelope as written in \c .usth, with the anchors in time order.
+        QJsonObject toJson() const;
+
+        /// Returns the envelope written as in \c .usth, or \c std::nullopt unless \a object lists
+        /// four or five anchors.
+        static std::optional<Envelope> fromJson(const QJsonObject &object);
     };
 
-    struct Vibrato {
+    struct HELLOKIT_DOCUMENT_EXPORT Vibrato {
         double length = 0;    ///< percent of the note
         double period = 0;    ///< milliseconds
         double amplitude = 0; ///< cents
@@ -108,6 +120,11 @@ namespace hello::kit {
         inline bool operator!=(const Vibrato &RHS) const {
             return !(*this == RHS);
         }
+
+        QJsonObject toJson() const;
+
+        /// Returns the vibrato written as in \c .usth. An absent parameter is read as zero.
+        static Vibrato fromJson(const QJsonObject &object);
     };
 
     // The stream operators of the values stored as a whole in the edit history. They are
@@ -140,7 +157,9 @@ namespace hello::kit {
     }
 
     /// One control point of the Mode2 pitch curve.
-    struct PortamentoPoint {
+    struct HELLOKIT_DOCUMENT_EXPORT PortamentoPoint {
+        Q_DECLARE_TR_FUNCTIONS(hello::kit::PortamentoPoint)
+    public:
         /// The curve shape connecting a point to the preceding point.
         ///
         /// \warning The letters in the \c PBM entry of UST do not match these names. An empty
@@ -163,6 +182,19 @@ namespace hello::kit {
         double y = 0;
 
         Type type = S;
+
+        /// Returns the name of \a type in \c .usth, which is the name of the enumerator.
+        static QString typeName(Type type);
+
+        /// Returns the type named \a name in \c .usth, or \c std::nullopt if no type has this
+        /// name.
+        static std::optional<Type> typeFromName(QStringView name);
+
+        QJsonObject toJson() const;
+
+        /// Returns the point written as in \c .usth. An unknown curve type is reported in
+        /// \a diagnostics and read as \c S.
+        static PortamentoPoint fromJson(const QJsonObject &object, DiagnosticList &diagnostics);
     };
 
     /// The Mode1 pitch curve, with one value every five ticks.
@@ -170,7 +202,7 @@ namespace hello::kit {
     /// \note An empty value in the file is read as zero, as stdutau does, which is the most a
     ///       round trip through \c .ust can guarantee. No separate empty state exists, because
     ///       it could not be preserved.
-    struct PitchBend {
+    struct HELLOKIT_DOCUMENT_EXPORT PitchBend {
         std::optional<double> start;
         QList<double> values;
 
@@ -181,6 +213,12 @@ namespace hello::kit {
         inline bool operator!=(const PitchBend &RHS) const {
             return !(*this == RHS);
         }
+
+        QJsonObject toJson() const;
+
+        /// Returns the pitch curve written as in \c .usth. A start that is not a number is read
+        /// as absent.
+        static PitchBend fromJson(const QJsonObject &object);
     };
 
     /// One note of a track, or a rest.
@@ -192,7 +230,9 @@ namespace hello::kit {
     ///
     /// An empty \c std::optional field was not specified in the file. This differs from a field
     /// specified as zero, and the distinction must survive a round trip.
-    struct Note {
+    struct HELLOKIT_DOCUMENT_EXPORT Note {
+        Q_DECLARE_TR_FUNCTIONS(hello::kit::Note)
+    public:
         QString lyric;   ///< \c R, \c r and an empty string denote rests
         int length = 0;  ///< in ticks, \c ticksPerQuarter per quarter note
         int noteNum = 0; ///< 24 is C1, as in MIDI
@@ -240,6 +280,14 @@ namespace hello::kit {
             return lyric.isEmpty() ||
                    lyric.compare(QLatin1String(restLyric), Qt::CaseInsensitive) == 0;
         }
+
+        /// Returns the note as written in \c .usth. Empty fields are omitted.
+        QJsonObject toJson() const;
+
+        /// Returns the note written as in \c .usth, or \c std::nullopt if the lyric, the length
+        /// or the pitch is missing, with the reason in \a diagnostics. A malformed optional field
+        /// is reported in \a diagnostics and read as absent.
+        static std::optional<Note> fromJson(const QJsonObject &object, DiagnosticList &diagnostics);
     };
 
 }

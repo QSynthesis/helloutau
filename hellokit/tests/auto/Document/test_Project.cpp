@@ -118,6 +118,25 @@ private Q_SLOTS:
         QCOMPARE(diagnostics.size(), 1);
     }
 
+    void a_diagnostic_of_a_note_records_the_index_of_the_note() {
+        DiagnosticList diagnostics;
+        const auto json =
+            QByteArray(R"({"$format":"usth","version":1,"settings":{},"tracks":[{"notes":[)"
+                       R"({"lyric":"a","length":480,"noteNum":60},)"
+                       R"({"lyric":"a","length":480,"noteNum":60,"intensity":"loud"}]}]})");
+        QVERIFY(Project::fromJson(json, diagnostics).has_value());
+        QCOMPARE(diagnostics.size(), 1);
+        QCOMPARE(diagnostics.at(0).noteIndex, std::optional<int>(1));
+
+        diagnostics.clear();
+        const auto missing =
+            QByteArray(R"({"$format":"usth","version":1,"settings":{},"tracks":[{"notes":[)"
+                       R"({"lyric":"a","length":480,"noteNum":60},{"lyric":"a"}]}]})");
+        QVERIFY(!Project::fromJson(missing, diagnostics).has_value());
+        QCOMPARE(diagnostics.size(), 1);
+        QCOMPARE(diagnostics.at(0).noteIndex, std::optional<int>(1));
+    }
+
     void a_note_missing_a_required_field_is_an_error() {
         DiagnosticList diagnostics;
         const auto json = QByteArray(
