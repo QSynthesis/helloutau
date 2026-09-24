@@ -59,6 +59,56 @@ private Q_SLOTS:
         QCOMPARE(split(QStringLiteral("\"\"")), QList<CommandArgument>({string(QString())}));
     }
 
+    // A verbatim string has no escapes, so that a Windows path is written as it is. Two double
+    // quotes denote one.
+    void a_verbatim_string_is_taken_as_written() {
+        const auto arguments = split(QStringLiteral(
+            "set @\"C:\\tools\\resampler.exe\" @\"say \"\"hi\"\"\" @\"\" @\"a b\" @\"\"\"\""));
+        QCOMPARE(arguments.size(), 6);
+        QCOMPARE(arguments[1], string(QStringLiteral("C:\\tools\\resampler.exe")));
+        QCOMPARE(arguments[2], string(QStringLiteral("say \"hi\"")));
+        QCOMPARE(arguments[3], string(QString()));
+        QCOMPARE(arguments[4], string(QStringLiteral("a b")));
+        QCOMPARE(arguments[5], string(QStringLiteral("\"")));
+    }
+
+    // Only an at sign followed by a double quote begins a verbatim string.
+    void an_at_sign_alone_begins_a_word() {
+        QCOMPARE(split(QStringLiteral("@ @a a@")),
+                 QList<CommandArgument>({word(QStringLiteral("@")), word(QStringLiteral("@a")),
+                                         word(QStringLiteral("a@"))}));
+    }
+
+    // A word reads as a JSON literal if it is one, whatever field receives it.
+    void a_word_is_a_json_literal_or_text() {
+        const QList<std::pair<QString, QJsonValue>> words{
+            {QStringLiteral("12"),       12                        },
+            {QStringLiteral("-1.5e2"),   -150                      },
+            {QStringLiteral("true"),     true                      },
+            {QStringLiteral("false"),    false                     },
+            {QStringLiteral("null"),     QJsonValue::Null          },
+            {QStringLiteral("a"),        QStringLiteral("a")       },
+            {QStringLiteral("012"),      QStringLiteral("012")     },
+            {QStringLiteral(".5"),       QStringLiteral(".5")      },
+            {QStringLiteral("1,2"),      QStringLiteral("1,2")     },
+            {QStringLiteral("NaN"),      QStringLiteral("NaN")     },
+            {QStringLiteral("Infinity"), QStringLiteral("Infinity")},
+            {QStringLiteral("/a/0"),     QStringLiteral("/a/0")    },
+        };
+        for (const auto &[text, value] : words) {
+            QVERIFY2(CommandSyntax::valueOf(word(text)) == value, qPrintable(text));
+        }
+    }
+
+    // Quoting makes text of a word that reads as a literal.
+    void a_string_and_a_structure_are_their_values() {
+        QCOMPARE(CommandSyntax::valueOf(string(QStringLiteral("12"))),
+                 QJsonValue(QStringLiteral("12")));
+        QCOMPARE(CommandSyntax::valueOf(string(QStringLiteral("null"))),
+                 QJsonValue(QStringLiteral("null")));
+        QCOMPARE(CommandSyntax::valueOf(structure(QJsonArray{1})), QJsonValue(QJsonArray{1}));
+    }
+
     // A structure is written as in a .usth file, with whitespace, quotes and brackets inside,
     // including brackets within its strings.
     void a_structure_is_read_to_its_matching_bracket() {
@@ -102,6 +152,9 @@ private Q_SLOTS:
             QStringLiteral("set a\"b\""),
             QStringLiteral("set \"\\") + QStringLiteral("u12G4\""),
             QStringLiteral("set {\"a\": \"\\x\"}"),
+            QStringLiteral("set @\"unterminated"),
+            QStringLiteral("set @\"a\"\""),
+            QStringLiteral("set @\"a\"b"),
         };
         for (const auto &line : lines) {
             DiagnosticList diagnostics;

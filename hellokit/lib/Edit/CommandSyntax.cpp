@@ -1,8 +1,11 @@
 #include "CommandSyntax.h"
 
+#include <utility>
+
 #include <QtCore/QJsonArray>
 #include <QtCore/QJsonDocument>
 #include <QtCore/QJsonObject>
+#include <QtCore/QRegularExpression>
 
 namespace hello::kit {
 
@@ -79,6 +82,24 @@ namespace hello::kit {
             return parsed.isObject() ? QJsonValue(parsed.object()) : QJsonValue(parsed.array());
         }
 
+        // Returns the text of the verbatim string that begins at start with @", and the end after
+        // its closing quote, or std::nullopt if the string is not closed.
+        std::optional<std::pair<QString, qsizetype>> verbatimString(QStringView line,
+                                                                    qsizetype start) {
+            QString text;
+            for (qsizetype i = start + 2; i < line.size(); ++i) {
+                if (line[i] != QLatin1Char('"')) {
+                    text.append(line[i]);
+                } else if (i + 1 < line.size() && line[i + 1] == QLatin1Char('"')) {
+                    text.append(line[i]);
+                    ++i;
+                } else {
+                    return std::make_pair(text, i + 1);
+                }
+            }
+            return std::nullopt;
+        }
+
     }
 
     std::optional<QList<CommandArgument>> CommandSyntax::split(QStringView line,
@@ -99,7 +120,17 @@ namespace hello::kit {
             const auto c = line[i];
             const auto start = i;
             CommandArgument argument;
-            if (c == QLatin1Char('"')) {
+            if (c == QLatin1Char('@') && i + 1 < line.size() && line[i + 1] == QLatin1Char('"')) {
+                const auto verbatim = verbatimString(line, start);
+                if (!verbatim) {
+                    fail(diagnostics,
+                         tr("The verbatim string at position %1 is not closed.").arg(start + 1));
+                    return std::nullopt;
+                }
+                argument.kind = CommandArgument::String;
+                argument.value = verbatim->first;
+                i = verbatim->second;
+            } else if (c == QLatin1Char('"')) {
                 const auto end = endOfString(line, start);
                 const auto value =
                     end < 0 ? std::nullopt : parseJson(line.mid(start, end - start), true);
@@ -147,6 +178,27 @@ namespace hello::kit {
             }
             arguments.push_back(argument);
         }
+    }
+
+    QJsonValue CommandSyntax::valueOf(const CommandArgument &argument) {
+        if (argument.kind != CommandArgument::Word) {
+            return argument.value;
+        }
+        const auto text = argument.text();
+        if (text == QLatin1String("true") || text == QLatin1String("false")) {
+            return text == QLatin1String("true");
+        }
+        if (text == QLatin1String("null")) {
+            return QJsonValue::Null;
+        }
+        // The grammar of a JSON number, which the JSON parser of Qt does not enforce: it accepts
+        // .5, for example.
+        static const QRegularExpression number(
+            QStringLiteral("^-?(0|[1-9][0-9]*)(\\.[0-9]+)?([eE][+-]?[0-9]+)?$"));
+        if (number.match(text).hasMatch()) {
+            return text.toDouble();
+        }
+        return argument.value;
     }
 
 }

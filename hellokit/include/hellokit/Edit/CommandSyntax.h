@@ -21,7 +21,7 @@ namespace hello::kit {
             /// Text without whitespace. value holds it as a JSON string.
             Word,
 
-            /// A JSON string. value holds the decoded string.
+            /// A JSON string or a verbatim string. value holds the decoded string.
             String,
 
             /// A JSON object or array.
@@ -43,16 +43,18 @@ namespace hello::kit {
 
     /// The syntax of the arguments of a command.
     ///
-    /// Arguments are separated by whitespace and take one of three forms:
+    /// Arguments are separated by whitespace and take one of four forms:
     ///
     /// - A word, which does not begin with a double quote, a brace or a bracket, extends to the
     ///   next whitespace and contains no double quote.
     /// - A string, which is a JSON string, with the escapes of JSON.
+    /// - A verbatim string, which begins with <tt>\@"</tt> and ends at the next double quote
+    ///   that is not doubled. It contains no escapes, and two double quotes denote one.
     /// - A structure, which is a JSON object or array and may contain whitespace.
     ///
-    /// The quoting and escaping are those of JSON, therefore a value of a \c .usth file is written
-    /// in a command as in the file. A line that is empty or begins with \c # after optional
-    /// whitespace contains no command.
+    /// The quoting and escaping of strings and structures are those of JSON, therefore a value of
+    /// a \c .usth file is written in a command as in the file. A line that is empty or begins
+    /// with \c # after optional whitespace contains no command.
     struct HELLOKIT_EDIT_EXPORT CommandSyntax {
         Q_DECLARE_TR_FUNCTIONS(hello::kit::CommandSyntax)
     public:
@@ -60,6 +62,14 @@ namespace hello::kit {
         /// \c std::nullopt if \a line is malformed, with the reason in \a diagnostics.
         static std::optional<QList<CommandArgument>> split(QStringView line,
                                                            DiagnosticList &diagnostics);
+
+        /// Returns the value of \a argument. A word written as a JSON number, \c true, \c false
+        /// or \c null is that value, and any other word is its text. A string and a structure
+        /// are their values.
+        ///
+        /// The value does not depend on the field that receives it. Text that reads as a JSON
+        /// literal, such as a lyric \c 12, is therefore written as a string.
+        static QJsonValue valueOf(const CommandArgument &argument);
     };
 
 }
