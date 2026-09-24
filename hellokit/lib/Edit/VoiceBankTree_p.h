@@ -47,7 +47,7 @@ namespace hello::kit {
                                                const VoiceBankDiskState &disk);
 
     template <>
-    VoiceCharacter edit::fromTree<VoiceCharacter>(const ss::Node *node);
+    HELLOKIT_EDIT_EXPORT VoiceCharacter edit::fromTree<VoiceCharacter>(const ss::Node *node);
     template <>
     HELLOKIT_EDIT_EXPORT VoiceOtoEntry edit::fromTree<VoiceOtoEntry>(const ss::Node *node);
 

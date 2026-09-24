@@ -42,6 +42,15 @@ namespace hello::kit {
         /// UTAU displays a line containing a colon as part of the character profile, so these
         /// lines are content rather than residue.
         QStringList extraLines;
+
+        inline bool operator==(const VoiceCharacter &RHS) const {
+            return name == RHS.name && image == RHS.image && sample == RHS.sample &&
+                   author == RHS.author && web == RHS.web && extraLines == RHS.extraLines;
+        }
+
+        inline bool operator!=(const VoiceCharacter &RHS) const {
+            return !(*this == RHS);
+        }
     };
 
     /// The prefix and suffix that \c prefix.map adds to a lyric at one key.
