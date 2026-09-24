@@ -86,6 +86,12 @@ namespace hello::kit {
         QString otoCharset() const;
 
         OtoEntryListRef otoEntries() const;
+
+    private:
+        /// Writes both encodings, which change together, see VoiceBankEdits::convertCharset().
+        void setCharsets(const QString &charset, const QString &otoCharset) const;
+
+        friend class VoiceBankEdits;
     };
 
     /// The directories, which only reading from disk adds and removes.

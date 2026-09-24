@@ -55,6 +55,12 @@ namespace hello::kit {
             return m_excluded;
         }
 
+        /// Returns the names of the audio files of the directory at \a directory, with and without
+        /// an entry. See VoiceBankDiskState::audioFiles().
+        inline QStringList audioFiles(const std::filesystem::path &directory) const {
+            return m_disk.audioFiles(directory);
+        }
+
         /// Returns the voice bank in its current state.
         VoiceBank snapshot() const;
 

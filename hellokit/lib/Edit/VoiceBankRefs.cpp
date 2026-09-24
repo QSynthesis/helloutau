@@ -169,6 +169,11 @@ namespace hello::kit {
         return edit::NodeAccess::value(*this, VoiceDirectorySlots::OtoCharset);
     }
 
+    void VoiceDirectoryRef::setCharsets(const QString &charset, const QString &otoCharset) const {
+        edit::NodeAccess::setValue(*this, VoiceDirectorySlots::Charset, charset);
+        edit::NodeAccess::setValue(*this, VoiceDirectorySlots::OtoCharset, otoCharset);
+    }
+
     OtoEntryListRef VoiceDirectoryRef::otoEntries() const {
         return edit::NodeAccess::child<OtoEntryListRef>(*this, VoiceDirectorySlots::OtoEntries);
     }

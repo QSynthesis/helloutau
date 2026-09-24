@@ -22,3 +22,5 @@ add_auto_test(test_VoiceBankSession.cpp HelloKitEdit ${_private})
 target_include_directories(test_VoiceBankSession PRIVATE ${_private_include})
 
 add_auto_test(test_VoiceBankRefs.cpp HelloKitEdit)
+
+add_auto_test(test_VoiceBankEdits.cpp HelloKitEdit)
