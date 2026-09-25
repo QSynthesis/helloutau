@@ -346,8 +346,9 @@ namespace hello::kit {
         /// treats a sample name as an alias, which is why voice bank authors prefix names with
         /// \c _ to exclude them.
         ///
-        /// \note If a voice bank registers the same alias twice, the first one read is used.
-        ///       The choice UTAU makes in this case has not been measured.
+        /// \note Which sample is used for an alias that several audio files register is
+        ///       undefined. This implementation returns the first one read, but no caller may
+        ///       rely on it, and no constraint forbids such an alias.
         ///
         /// \warning The result points into this object and must not outlive it.
         const VoiceSample *find(int noteNum, const QString &lyric) const;
