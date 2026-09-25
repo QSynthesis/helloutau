@@ -24,16 +24,6 @@ namespace hello::kit {
         reindex();
     }
 
-    bool VoiceBank::isCharsetReadableByUtau(const QString &charset) {
-#ifdef Q_OS_WIN
-        const TextCodec codec(charset);
-        return codec.isValid() && codec.name() == TextCodec(TextCodec::systemName()).name();
-#else
-        Q_UNUSED(charset)
-        return false;
-#endif
-    }
-
     std::optional<VoiceBank> VoiceBank::open(const fs::path &root,
                                              VoiceBankCharsetSelector *selector,
                                              DiagnosticList &diagnostics) {

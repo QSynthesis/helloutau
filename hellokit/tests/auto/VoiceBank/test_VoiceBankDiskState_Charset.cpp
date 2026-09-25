@@ -487,17 +487,6 @@ private Q_SLOTS:
         QVERIFY(after);
         QCOMPARE(after->fileName, winner);
     }
-
-    void whether_utau_reads_an_encoding_here() {
-#ifdef Q_OS_WIN
-        QVERIFY(VoiceBank::isCharsetReadableByUtau(TextCodec::systemName()));
-        QCOMPARE(VoiceBank::isCharsetReadableByUtau(QStringLiteral("UTF-8")),
-                 TextCodec(TextCodec::systemName()).isUtf8());
-#else
-        QVERIFY(!VoiceBank::isCharsetReadableByUtau(TextCodec::systemName()));
-#endif
-        QVERIFY(!VoiceBank::isCharsetReadableByUtau(QStringLiteral("Klingon-1")));
-    }
 };
 
 QTEST_APPLESS_MAIN(test_VoiceBankDiskState_Charset)

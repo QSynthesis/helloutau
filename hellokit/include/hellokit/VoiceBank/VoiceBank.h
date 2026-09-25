@@ -304,22 +304,6 @@ namespace hello::kit {
                                                    VoiceBankCharsetSelector *selector,
                                                    DiagnosticList &diagnostics);
 
-        /// Returns whether UTAU on this machine reads files encoded in \a charset correctly.
-        ///
-        /// UTAU reads \c oto.ini , \c prefix.map and \c character.txt in the ANSI code page of
-        /// the host machine, and a voice bank has no means of specifying otherwise. A voice bank
-        /// in any other encoding, including UTF-8, is therefore garbled in UTAU on that machine,
-        /// and so are the file names in its \c oto.ini , which then refer to files UTAU cannot
-        /// find.
-        ///
-        /// Intended for the warning shown before an encoding is changed. The result applies to
-        /// this machine only: a Shift_JIS voice bank is readable by UTAU on a Japanese system
-        /// but not on a Chinese one.
-        ///
-        /// \return always false on systems other than Windows, which have no ANSI code page
-        /// \note UTF-8 with a byte order mark has not been tested in UTAU.
-        static bool isCharsetReadableByUtau(const QString &charset);
-
         inline const std::filesystem::path &root() const {
             return m_root;
         }
