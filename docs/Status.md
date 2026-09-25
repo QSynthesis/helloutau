@@ -24,7 +24,7 @@
 
 以下行为已经实测确认：**编码无法确定的目录只丢弃需要解码的部分**，其样本仍可按文件名演唱，因为文件名无需编码，而没有 `oto.ini` 的音源本来就以这种方式演唱；**文件名本身也是别名**，[官方页面](https://w.atwiki.jp/utaou/pages/106.html)说明 UTAU 将 wav 文件名作为别名读取，音源作者以 `_` 前缀排除不希望被演唱的文件；扫描设有深度和目录数上限，并且不跟随任何符号链接，因为音源是用户选择的文件夹，其结构不可信任。
 
-**音源写回已经实现。** 内容（`VoiceBank`）与磁盘状态（`VoiceBankDiskState`）分开，二者按目录路径配对；音源按目录保存，每个目录保留读取时使用的编码，`oto.ini` 以 `#Charset:` 声明的编码为准。`VoiceBankDiskState::save()` 只写入有变化的文件，以原编码写入，拒绝编码无法表示的字符，拒绝磁盘上已被其他程序修改的文件，并在全部检查通过后才开始写入；未读取过的目录作为新目录创建。**一份含 903 个条目的 GBK 真实音源原样打开并保存后，`oto.ini` 逐字节相同；修改一个 offset 只改变一行。** 编码设置分为两种：转换（更改编码后保存，字节改变而文字不变）和重新解读（`reread()`，字节不变而文字改变）。转换前，`VoiceBank::isCharsetReadableByUtau()` 判断原版 UTAU 在本机能否正确读取。文件名一律按音源自身的编码解码后再拼接路径，不经过系统代码页；否则，编码与系统代码页不一致的音源会得到错误的路径，含 emoji 的文件名会使打开操作抛出异常。详见 [`Editing.md`](Editing.md) 的「音源是第二种文档」一节。
+**音源写回已经实现。** 内容（`VoiceBank`）与磁盘状态（`VoiceBankDiskState`）分开，二者按目录路径配对；音源按目录保存，每个目录保留读取时使用的编码，`oto.ini` 以 `#Charset:` 声明的编码为准。`VoiceBankDiskState::save()` 只写入有变化的文件，以原编码写入，拒绝编码无法表示的字符，拒绝磁盘上已被其他程序修改的文件，并在全部检查通过后才开始写入；未读取过的目录作为新目录创建。**一份含 903 个条目的 GBK 真实音源原样打开并保存后，`oto.ini` 逐字节相同；修改一个 offset 只改变一行。** `oto.ini` 按文件名的顺序写出，原本未按此顺序排列的文件在第一次修改时整体重排一次。 编码设置分为两种：转换（更改编码后保存，字节改变而文字不变）和重新解读（`reread()`，字节不变而文字改变）。转换前，`VoiceBank::isCharsetReadableByUtau()` 判断原版 UTAU 在本机能否正确读取。文件名一律按音源自身的编码解码后再拼接路径，不经过系统代码页；否则，编码与系统代码页不一致的音源会得到错误的路径，含 emoji 的文件名会使打开操作抛出异常。详见 [`Editing.md`](Editing.md) 的「音源是第二种文档」一节。
 
 **音源编辑界面打开期间，磁盘上的任何变化都会被检测到。** 监视由独立进程 `hello-fswatcher` 执行。在 Windows 上，它按 JetBrains 的做法只持有**驱动器根目录**的一个句柄，因此音源中的任何目录（包括音源根目录）都可以删除或重命名；进程崩溃后会重启，并在重启后进行全量核对；Debug 构建中也不会弹出阻塞的对话框。监视结果仅作为提示：`VoiceBankDiskState::checkDisk()` 使用目录指纹进行核对（只列目录、不读文件，对修改时间过于接近取指纹时刻的文件比较内容），**只检测、不修改**，检测到的变化在 `reloadFromDisk()` 之前每次都会重复报告。`VoiceBankCheckScheduler` 整合了监视提示、定时全量核对、监视失效后的轮询和手动触发；`reloadAllFromDisk()` 忽略指纹，重新读取全部内容。三个平台均有后端实现：Windows 使用 `ReadDirectoryChangesW`，macOS 使用 FSEvents（逐文件事件，不持有任何句柄），Linux 使用 inotify（每个目录单独注册；新目录先注册监视再报告整棵子树；根目录的每一级上级目录也受监视，以便在上级目录重命名时检测到根目录消失）。`hello-fswatcher` 另有 Python 编写的协议测试 `test_fswatcher`（通过 ctest 运行，需要 `Python3`；在 Windows 上用 `Python3_EXECUTABLE` 避开应用商店的占位 `python`）：两个音源并列，覆盖 15 种操作，已在三个平台上运行。在 Linux（Ubuntu 22.04、GCC 11.4、Qt 6.11.2）与 macOS（macOS 26.6.2、arm64、Apple Clang、Qt 6.10.1）上均已完成完整构建，21 项测试全部通过。GB18030 不是 ANSI 代码页，winacp 不提供，在 Windows 上由代码页函数转换，在其他系统上只有 Qt 带 ICU 时可用。macOS 版 Qt 不带 ICU，因此 GB18030 在 macOS 上不可用，`TextCodec` 将其报告为无效编码。
 
@@ -77,7 +77,7 @@
 | 3. 撤销到底后保存的文件与未执行命令时保存的文件语义相同 | 达成，`test_ProjectCommands` 自动检验；`ustedit` 在真实文件上逐字节相同 |
 | 4. 同一串命令执行两次，变更序列逐条相同 | 达成，`test_ProjectCommands` 比较两次的变更日志 |
 | 5. 节点 ID 在插入、删除、撤销、重做之后仍指向同一节点 | 达成，`test_NodeRef` |
-| 6. 音源：修改一条 oto 条目并保存后编码不变，未修改的条目逐字节不变 | 达成。`test_VoiceBankSession_Disk` 自动检验；`voicedit` 在夏语遥音源（Shift_JIS，五个目录，`mid` 等三个目录各 2518 条）的副本上修改 `mid` 的一个 offset 与 `breath sound` 中一条数字全空条目的 cutoff 并保存：两个 `oto.ini` 各只有该行改变，行尾仍为 CRLF，其余数字全空的条目仍为空，其他文件均未重写 |
+| 6. 音源：修改一条 oto 条目并保存后编码不变，未修改的条目逐字节不变 | 达成。`test_VoiceBankSession_Disk` 自动检验；`voicedit` 在夏语遥音源（Shift_JIS，五个目录，`mid` 等三个目录各 2518 条）的副本上修改 `mid` 的一个 offset 与 `breath sound` 中一条数字全空条目的 cutoff 并保存：两个 `oto.ini` 各只有该行改变，行尾仍为 CRLF，其余数字全空的条目仍为空，其他文件均未重写。这两个文件原本按文件名排列；未按此顺序排列的 `oto.ini` 在第一次修改时整体重排一次，见 Editing.md「读写的保证」 |
 | 7. 每个节点操作和领域函数都有对应的命令，由对照两侧列表的测试保证 | 达成。领域函数的类为 `Q_GADGET`，函数标记为 `Q_INVOKABLE`，由 moc 生成的元对象列出；测试将其与命令表中登记的函数对照（`ProjectCommands::domainFunctions()`、`VoiceBankCommands::domainFunctions()`），新增领域函数而未添加命令时测试失败 |
 
 ## 插件位置
