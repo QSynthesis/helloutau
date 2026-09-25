@@ -152,10 +152,18 @@ namespace hello::kit {
         VoiceBankDirectoryStamp stamp;
 
         /// Returns whether any content requires an encoding to be read. An \c oto.ini that
-        /// declares an available encoding for itself does not.
+        /// declares UTF-8 for itself does not.
+        ///
+        /// \sa otoDeclaresUtf8()
+        bool needsCharset() const;
+
+        /// Returns whether the \c oto.ini declares UTF-8 for itself, as \c UTF-8 or \c UTF8 in
+        /// any case. UTF-8 is the only encoding a declaration can state: a declaration of any
+        /// other encoding is treated as absent, and the file is read in the encoding of the
+        /// directory.
         ///
         /// \sa utau::OtoIni::charset
-        bool needsCharset() const;
+        bool otoDeclaresUtf8() const;
 
         /// Sample text from this directory, for an encoding selector to display under each
         /// candidate encoding.

@@ -210,8 +210,8 @@ private Q_SLOTS:
         QCOMPARE(bank().prefixMap().value(70).prefix, QStringLiteral("p"));
     }
 
-    // Converting changes the encoding in which the files are saved, and removes the encoding that
-    // the oto.ini declares, because the file is then written in the new one.
+    // Converting changes the encoding in which the files are saved, and removes the UTF-8
+    // declaration of the oto.ini, because the file is then written in the new one.
     void an_encoding_is_converted() {
         const auto sub = directory("sub");
         QCOMPARE(sub.otoCharset(), QStringLiteral("UTF-8"));
@@ -227,10 +227,30 @@ private Q_SLOTS:
         QVERIFY(VoiceBankEdits::convertCharset(root, QStringLiteral("gbk"), diagnostics));
         QCOMPARE(m_session->currentStep(), 0);
 
-        // A declaration of the same encoding is removed, and saving declares it again.
-        QVERIFY(VoiceBankEdits::convertCharset(sub, sub.charset(), diagnostics));
-        QCOMPARE(sub.otoCharset(), QString());
-        m_session->undo();
+        // Neither is UTF-8 for a directory whose oto.ini declares it.
+        QCOMPARE(sub.charset(), QStringLiteral("UTF-8"));
+        QVERIFY(VoiceBankEdits::convertCharset(sub, QStringLiteral("utf-8"), diagnostics));
+        QCOMPARE(sub.otoCharset(), QStringLiteral("UTF-8"));
+        QCOMPARE(m_session->currentStep(), 0);
+
+        // In a directory whose other files are in GBK and whose oto.ini declares UTF-8,
+        // converting to GBK converts the oto.ini.
+        QTemporaryDir mixed;
+        QVERIFY(writeSampleFile(mixed.path(), QStringLiteral("oto.ini"),
+                                "#Charset:UTF-8\r\na.wav=a,1,2,3,4,5\r\n"));
+        QVERIFY(writeSampleFile(mixed.path(), QStringLiteral("character.txt"), "name=x\r\n"));
+        FixedCharsetSelector selector(QStringLiteral("GBK"));
+        auto opened = VoiceBankDiskState::open(fs::path(mixed.path().toStdU16String()), &selector,
+                                               diagnostics);
+        QVERIFY(opened);
+        const auto session = VoiceBankSession::create(std::move(*opened), diagnostics);
+        QVERIFY(session);
+        const auto both = VoiceBankRef(session.get()).directories().at(0);
+        QCOMPARE(both.charset(), QStringLiteral("GBK"));
+        QCOMPARE(both.otoCharset(), QStringLiteral("UTF-8"));
+        QVERIFY(VoiceBankEdits::convertCharset(both, QStringLiteral("GBK"), diagnostics));
+        QCOMPARE(both.otoCharset(), QString());
+        QCOMPARE(session->currentStep(), 1);
 
         verifyRefused(
             [&](DiagnosticList &diagnostics) {

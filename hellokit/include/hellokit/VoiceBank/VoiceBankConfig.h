@@ -31,7 +31,7 @@ namespace hello::kit {
         static constexpr char fileName[] = "hello-config.json";
 
         /// The encoding of the UTAU files in this directory: the \c oto.ini , unless it declares
-        /// its own encoding, and in the root also \c prefix.map , \c character.txt and
+        /// UTF-8 for itself, and in the root also \c prefix.map , \c character.txt and
         /// \c readme.txt .
         ///
         /// Never detected automatically. The value is the encoding specified by the user,

@@ -243,32 +243,58 @@ private Q_SLOTS:
         samples[0].offset = 7;
         bank.setSamples(samples);
         QVERIFY(disk.save(bank, diagnostics));
-        QCOMPARE(read(QStringLiteral("oto.ini")), "#Charset:utf-8\r\na.wav=a,7,2,3,4,5\r\n");
+        QCOMPARE(read(QStringLiteral("oto.ini")), "#Charset:UTF-8\r\na.wav=a,7,2,3,4,5\r\n");
     }
 
-    // A declaration of an unavailable encoding is reported and kept as written, and the file is
-    // read and written in the encoding of the directory.
-    void an_unavailable_declaration_falls_back_to_the_directory() {
+    // UTF8 without the hyphen declares UTF-8 as well, and is written with it.
+    void utf8_without_the_hyphen_is_a_declaration() {
         write(QStringLiteral("oto.ini"),
-              "#Charset:Klingon-1\r\na.wav=" + kGbkGePing + ",1,2,3,4,5\r\n");
+              "#Charset:Utf8\r\na.wav=" + kUtf8GePing + ",1,2,3,4,5\r\n");
         write(QStringLiteral("a.wav"), "RIFF");
 
-        FixedCharsetSelector selector(QStringLiteral("GBK"));
         DiagnosticList diagnostics;
+        auto opened = VoiceBankDiskState::open(root(), nullptr, diagnostics);
+        QVERIFY(opened.has_value());
+        auto &bank = opened->bank;
+        QVERIFY(bank.find(60, kGePing));
+        QCOMPARE(bank.directories().at(0).otoCharset, QStringLiteral("UTF-8"));
+
+        auto samples = bank.samples();
+        samples[0].offset = 7;
+        bank.setSamples(samples);
+        QVERIFY(opened->disk.save(bank, diagnostics));
+        QCOMPARE(read(QStringLiteral("oto.ini")),
+                 "#Charset:UTF-8\r\na.wav=" + kUtf8GePing + ",7,2,3,4,5\r\n");
+    }
+
+    // A declaration can state UTF-8 only. Any other is treated as absent, without a warning: the
+    // file is read in the encoding of the directory, which is therefore asked for, and written
+    // without the line.
+    void a_declaration_of_another_encoding_is_absent() {
+        write(QStringLiteral("oto.ini"),
+              "#Charset:Shift_JIS\r\na.wav=" + kGbkGePing + ",1,2,3,4,5\r\n");
+        write(QStringLiteral("a.wav"), "RIFF");
+
+        DiagnosticList diagnostics;
+        const auto unselected = VoiceBankDiskState::open(root(), nullptr, diagnostics);
+        QVERIFY(unselected.has_value());
+        QVERIFY(unselected->bank.directories().at(0).leftOut);
+
+        FixedCharsetSelector selector(QStringLiteral("GBK"));
+        diagnostics.clear();
         auto opened = VoiceBankDiskState::open(root(), &selector, diagnostics);
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
         auto &disk = opened->disk;
         QVERIFY(bank.find(60, kGePing));
-        QCOMPARE(bank.directories().at(0).otoCharset, QStringLiteral("Klingon-1"));
-        QCOMPARE(diagnostics.size(), 1);
+        QCOMPARE(bank.directories().at(0).otoCharset, QString());
+        QVERIFY(diagnostics.isEmpty());
 
         auto samples = bank.samples();
         samples[0].offset = 7;
         bank.setSamples(samples);
         QVERIFY(disk.save(bank, diagnostics));
-        QCOMPARE(read(QStringLiteral("oto.ini")),
-                 "#Charset:Klingon-1\r\na.wav=" + kGbkGePing + ",7,2,3,4,5\r\n");
+        QCOMPARE(read(QStringLiteral("oto.ini")), "a.wav=" + kGbkGePing + ",7,2,3,4,5\r\n");
     }
 
     // An oto.ini written in UTF-8 declares it, but an unmodified file is not rewritten for the

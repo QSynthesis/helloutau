@@ -250,11 +250,19 @@ namespace hello::kit {
     }
 
     bool VoiceBankDirectorySource::needsCharset() const {
-        const bool otoDeclares =
-            oto && !oto->charset.empty() &&
-            TextCodec(QString::fromLatin1(oto->charset.data(), qsizetype(oto->charset.size())))
-                .isValid();
-        return (oto && !otoDeclares) || prefixMap || character || !readme.isEmpty();
+        return (oto && !otoDeclaresUtf8()) || prefixMap || character || !readme.isEmpty();
+    }
+
+    bool VoiceBankDirectorySource::otoDeclaresUtf8() const {
+        if (!oto) {
+            return false;
+        }
+        // ASCII only, as the declaration is compared byte by byte before anything is decoded.
+        std::string folded;
+        for (const char c : oto->charset) {
+            folded.push_back(c >= 'a' && c <= 'z' ? char(c - 'a' + 'A') : c);
+        }
+        return folded == "UTF-8" || folded == "UTF8";
     }
 
     QList<QByteArrayView> VoiceBankDirectorySource::rawAliases() const {

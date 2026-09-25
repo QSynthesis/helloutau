@@ -232,23 +232,12 @@ namespace hello::kit {
                 }
             }
 
-            // The oto.ini may declare its own encoding, which takes precedence over the encoding
-            // recorded or selected for the directory.
+            // The oto.ini may declare UTF-8 for itself, which takes precedence over the encoding
+            // recorded or selected for the directory. Any other declaration is treated as absent.
             std::optional<TextCodec> declared;
-            if (directory.oto && !directory.oto->charset.empty()) {
-                const auto &raw = directory.oto->charset;
-                decoded.otoCharset = QString::fromLatin1(raw.data(), qsizetype(raw.size()));
-                const TextCodec candidate(decoded.otoCharset);
-                if (candidate.isValid()) {
-                    declared = candidate;
-                } else {
-                    complain(diagnostics,
-                             VoiceBankDiskState::tr(
-                                 "The oto.ini in \"%1\" declares the encoding \"%2\", "
-                                 "which is not available, so it is read in the encoding "
-                                 "of the directory.")
-                                 .arg(displayed(directory.path), decoded.otoCharset));
-                }
+            if (directory.otoDeclaresUtf8()) {
+                decoded.otoCharset = QStringLiteral("UTF-8");
+                declared = TextCodec(decoded.otoCharset);
             }
             if (declared) {
                 QString other;
@@ -405,12 +394,10 @@ namespace hello::kit {
                 }
                 otherCodec = codec;
             }
+            // A declaration states UTF-8, the only encoding it can state.
             auto otoCodec = otherCodec;
             if (!directory.otoCharset.isEmpty()) {
-                const TextCodec codec(directory.otoCharset);
-                if (codec.isValid()) {
-                    otoCodec = codec;
-                }
+                otoCodec = TextCodec(QStringLiteral("UTF-8"));
             }
 
             const bool writesOto = !entries.isEmpty() || had(VoiceBankDirectorySource::Oto);
@@ -449,9 +436,7 @@ namespace hello::kit {
 
             if (writesOto) {
                 utau::OtoIni oto;
-                if (!directory.otoCharset.isEmpty()) {
-                    oto.charset = directory.otoCharset.toLatin1().toStdString();
-                } else if (otoCodec->isUtf8()) {
+                if (otoCodec->isUtf8()) {
                     oto.charset = "UTF-8";
                 }
                 for (const auto *sample : entries) {

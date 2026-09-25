@@ -151,7 +151,13 @@ namespace hello::kit {
         if (charset.isEmpty() || !codec.isValid()) {
             return fail(diagnostics, tr("The encoding \"%1\" is not available.").arg(charset));
         }
-        // The canonical name, so that another spelling of the encoding in effect is no change.
+        // The canonical name, so that another spelling of the encoding in effect is no change. The
+        // oto.ini is written in the encoding as well if it declares nothing, or if it declares
+        // UTF-8, the only declaration, and the encoding is UTF-8.
+        if (codec.name() == directory.charset() &&
+            (directory.otoCharset().isEmpty() || codec.isUtf8())) {
+            return true;
+        }
         auto transaction = directory.session()->transaction(tr("Convert Encoding"));
         directory.setCharsets(codec.name(), QString());
         return transaction.commit(diagnostics);
