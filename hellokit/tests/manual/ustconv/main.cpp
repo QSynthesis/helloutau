@@ -13,13 +13,15 @@
 ///   ustconv --check song.ust
 /// \endcode
 
+#include <cstdio>
 #include <filesystem>
-#include <iostream>
 #include <string>
 
 #include <QtCore/QByteArrayView>
 #include <QtCore/QString>
 
+#include <stdcorelib/console.h>
+#include <stdcorelib/path.h>
 #include <stdcorelib/support/commandline.h>
 #include <stdcorelib/system.h>
 
@@ -57,11 +59,11 @@ namespace {
                 case DiagnosticSeverity::Note:
                     break;
             }
-            std::cerr << level << ": " << toStd(diagnostic.message);
-            if (diagnostic.noteIndex) {
-                std::cerr << " (note " << (*diagnostic.noteIndex + 1) << ")";
-            }
-            std::cerr << std::endl;
+            const auto note = diagnostic.noteIndex
+                                  ? " (note " + std::to_string(*diagnostic.noteIndex + 1) + ")"
+                                  : std::string();
+            stdc::console::u8fprintf(stderr, "%s: %s%s\n", level, toStd(diagnostic.message).c_str(),
+                                     note.c_str());
         }
     }
 
@@ -106,11 +108,11 @@ namespace {
         if (const auto found = ust.settledCharset()) {
             return found;
         }
-        std::cerr << "error: this UST does not declare its encoding. "
-                     "Specify --charset with one of:"
-                  << std::endl;
+        stdc::console::u8fputs("error: this UST does not declare its encoding. "
+                               "Specify --charset with one of:\n",
+                               stderr);
         for (const auto &name : TextCodec::ustCandidates()) {
-            std::cerr << "  " << toStd(name) << std::endl;
+            stdc::console::u8fprintf(stderr, "  %s\n", toStd(name).c_str());
         }
         return std::nullopt;
     }
@@ -144,8 +146,8 @@ namespace {
             case Format::Unknown:
                 break;
         }
-        std::cerr << "error: " << path.filename().string() << " is not a .usth, a .ust or a .mid"
-                  << std::endl;
+        stdc::console::u8fprintf(stderr, "error: %s is not a .usth, a .ust or a .mid\n",
+                                 stdc::path::to_utf8(path.filename()).c_str());
         return std::nullopt;
     }
 
@@ -154,8 +156,9 @@ namespace {
         switch (formatOf(path)) {
             case Format::Usth:
                 if (!charset.isEmpty()) {
-                    std::cerr << "note: a .usth is always UTF-8, so --charset is ignored"
-                              << std::endl;
+                    stdc::console::u8fputs("note: a .usth is always UTF-8, so --charset is "
+                                           "ignored\n",
+                                           stderr);
                 }
                 return project.save(path, diagnostics);
 
@@ -178,8 +181,8 @@ namespace {
             case Format::Unknown:
                 break;
         }
-        std::cerr << "error: " << path.filename().string() << " is not a .usth, a .ust or a .mid"
-                  << std::endl;
+        stdc::console::u8fprintf(stderr, "error: %s is not a .usth, a .ust or a .mid\n",
+                                 stdc::path::to_utf8(path.filename()).c_str());
         return false;
     }
 
@@ -220,9 +223,9 @@ namespace {
     /// fromProject(), so that writing and parsing are tested in addition to the conversion.
     int check(const fs::path &input, const QString &given) {
         if (formatOf(input) != Format::Ust) {
-            std::cerr << "error: --check requires a .ust input, because UST is the format whose "
-                         "round trip must be lossless."
-                      << std::endl;
+            stdc::console::u8fputs("error: --check requires a .ust input, because UST is the "
+                                   "format whose round trip must be lossless.\n",
+                                   stderr);
             return 1;
         }
 
@@ -269,7 +272,7 @@ namespace {
         if (!after) {
             return 1;
         }
-        std::cout << "wrote " << written.string() << std::endl;
+        stdc::u8printf("wrote %s\n", stdc::path::to_utf8(written).c_str());
 
         int failures = 0;
 
@@ -277,8 +280,8 @@ namespace {
         // would require guessing on the next read.
         const auto recorded = after->settledCharset();
         if (recorded != charset) {
-            std::cout << "  encoding: " << toStd(*charset) << " -> "
-                      << toStd(recorded.value_or(QStringLiteral("nothing"))) << std::endl;
+            stdc::u8printf("  encoding: %s -> %s\n", toStd(*charset).c_str(),
+                           toStd(recorded.value_or(QStringLiteral("nothing"))).c_str());
             ++failures;
         }
 
@@ -287,43 +290,44 @@ namespace {
             ustconv::compare(before->file(), after->file(), normalizerFor(*before, codec),
                              normalizerFor(*after, codec));
         for (const auto &difference : differences) {
-            std::cout << "  " << difference.where << ": " << difference.before << " -> "
-                      << difference.after << std::endl;
+            stdc::u8printf("  %s: %s -> %s\n", difference.where.c_str(), difference.before.c_str(),
+                           difference.after.c_str());
         }
         failures += int(differences.size());
 
         if (failures == 0) {
-            std::cout << "identical" << std::endl;
+            stdc::u8printf("identical\n");
             return 0;
         }
-        std::cout << failures << (failures == 1 ? " difference" : " differences") << std::endl;
+        stdc::u8printf("%d %s\n", failures, failures == 1 ? "difference" : "differences");
         return 1;
     }
 
     int run(const stdc::cli::ParseResult &result) {
         const QString charset =
             fromStd(result.valueForOption<std::string>("--charset").value_or(std::string()));
-        const fs::path input = *result.value(0);
+        // The arguments are UTF-8, whereas a path constructed from a narrow string on Windows
+        // interprets it in the ANSI code page.
+        const auto input = stdc::path::from_utf8(*result.value(0));
         const auto output = result.value(1);
 
         if (result.option("--check")) {
             if (output) {
-                std::cerr
-                    << "error: --check writes no persistent file and therefore takes no output file"
-                    << std::endl;
+                stdc::console::u8fputs("error: --check writes no persistent file and therefore "
+                                       "takes no output file\n",
+                                       stderr);
                 return 1;
             }
             return check(input, charset);
         }
 
         if (!output) {
-            std::cerr
-                << "error: no output file. Specify one, or use --check to verify the round trip "
-                   "of this file."
-                << std::endl;
+            stdc::console::u8fputs("error: no output file. Specify one, or use --check to verify "
+                                   "the round trip of this file.\n",
+                                   stderr);
             return 1;
         }
-        return convert(input, fs::path(*output), charset);
+        return convert(input, stdc::path::from_utf8(*output), charset);
     }
 
 }

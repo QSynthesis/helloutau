@@ -25,6 +25,7 @@
 /// The script is read as UTF-8, with or without a byte order mark. The first command that fails
 /// stops the program, and no file is written.
 
+#include <cstdio>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
@@ -36,6 +37,8 @@
 #include <QtCore/QJsonDocument>
 #include <QtCore/QString>
 
+#include <stdcorelib/console.h>
+#include <stdcorelib/path.h>
 #include <stdcorelib/support/commandline.h>
 #include <stdcorelib/system.h>
 
@@ -73,15 +76,12 @@ namespace {
                 case DiagnosticSeverity::Note:
                     break;
             }
-            std::cerr << level << ": ";
-            if (line > 0) {
-                std::cerr << "line " << line << ": ";
-            }
-            std::cerr << toStd(diagnostic.message);
-            if (diagnostic.noteIndex) {
-                std::cerr << " (note " << (*diagnostic.noteIndex + 1) << ")";
-            }
-            std::cerr << std::endl;
+            const auto where = line > 0 ? "line " + std::to_string(line) + ": " : std::string();
+            const auto note = diagnostic.noteIndex
+                                  ? " (note " + std::to_string(*diagnostic.noteIndex + 1) + ")"
+                                  : std::string();
+            stdc::console::u8fprintf(stderr, "%s: %s%s%s\n", level, where.c_str(),
+                                     toStd(diagnostic.message).c_str(), note.c_str());
         }
     }
 
@@ -113,19 +113,19 @@ namespace {
                                  : charset.isEmpty() ? ust->settledCharset()
                                                      : std::optional<QString>(charset);
             if (ust && !settled) {
-                std::cerr << "error: this UST does not declare its encoding. Specify --charset "
-                             "with one of:"
-                          << std::endl;
+                stdc::console::u8fputs("error: this UST does not declare its encoding. Specify "
+                                       "--charset with one of:\n",
+                                       stderr);
                 for (const auto &name : TextCodec::ustCandidates()) {
-                    std::cerr << "  " << toStd(name) << std::endl;
+                    stdc::console::u8fprintf(stderr, "  %s\n", toStd(name).c_str());
                 }
             }
             if (settled) {
                 project = ust->toProject(*settled, diagnostics);
             }
         } else {
-            std::cerr << "error: " << path.filename().string() << " is not a .usth or a .ust"
-                      << std::endl;
+            stdc::console::u8fprintf(stderr, "error: %s is not a .usth or a .ust\n",
+                                     stdc::path::to_utf8(path.filename()).c_str());
         }
         report(diagnostics);
         return project;
@@ -144,8 +144,8 @@ namespace {
             const auto ust = UstDocument::fromProject(project, options, diagnostics);
             written = ust && ust->save(path, diagnostics);
         } else {
-            std::cerr << "error: " << path.filename().string() << " is not a .usth or a .ust"
-                      << std::endl;
+            stdc::console::u8fprintf(stderr, "error: %s is not a .usth or a .ust\n",
+                                     stdc::path::to_utf8(path.filename()).c_str());
         }
         report(diagnostics);
         return written;
@@ -156,8 +156,7 @@ namespace {
         // QJsonDocument holds an object or an array only, so a value is written as the one
         // element of an array, whose brackets are then removed.
         const auto line = QJsonDocument(QJsonArray{value}).toJson(QJsonDocument::Compact);
-        std::cout.write(line.constData() + 1, line.size() - 2);
-        std::cout << '\n';
+        stdc::u8printf("%.*s\n", int(line.size() - 2), line.constData() + 1);
     }
 
     /// Executes \c undo or \c redo with \a arguments, the arguments after the name, and returns
@@ -233,7 +232,7 @@ namespace {
     }
 
     int run(const stdc::cli::ParseResult &result) {
-        const fs::path input = *result.value(0);
+        const auto input = fs::u8path(*result.value(0));
         const QString charset =
             fromStd(result.valueForOption<std::string>("--charset").value_or(std::string()));
         const auto script = result.valueForOption<std::string>("--script");
@@ -251,8 +250,7 @@ namespace {
                                  if (const auto entry = session.logEntry(*change)) {
                                      const auto line =
                                          QJsonDocument(*entry).toJson(QJsonDocument::Compact);
-                                     std::cout.write(line.constData(), line.size());
-                                     std::cout << '\n';
+                                     stdc::u8printf("%.*s\n", int(line.size()), line.constData());
                                  }
                              });
         }
@@ -261,14 +259,14 @@ namespace {
         if (script) {
             std::ifstream in(fs::u8path(*script), std::ios::binary);
             if (!in) {
-                std::cerr << "error: the script could not be opened" << std::endl;
+                stdc::console::u8fputs("error: the script could not be opened\n", stderr);
                 return 1;
             }
             succeeded = runScript(session, in);
         } else {
             succeeded = runScript(session, std::cin);
         }
-        std::cout.flush();
+        std::fflush(stdout);
         if (!succeeded) {
             return 1;
         }

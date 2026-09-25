@@ -25,8 +25,8 @@ namespace utaucompare {
                                         QString *error) {
             std::ifstream file(path, std::ios::binary);
             if (!file) {
-                *error =
-                    QStringLiteral("cannot open %1").arg(QString::fromStdString(path.string()));
+                *error = QStringLiteral("cannot open %1")
+                             .arg(QString::fromStdU16String(path.u16string()));
                 return std::nullopt;
             }
             const std::string bytes((std::istreambuf_iterator<char>(file)),
@@ -34,7 +34,7 @@ namespace utaucompare {
             const auto text = codec.decode(QByteArrayView(bytes.data(), qsizetype(bytes.size())));
             if (!text) {
                 *error = QStringLiteral("%1 is not valid %2")
-                             .arg(QString::fromStdString(path.string()), codec.name());
+                             .arg(QString::fromStdU16String(path.u16string()), codec.name());
                 return std::nullopt;
             }
             return text;
@@ -148,7 +148,7 @@ namespace utaucompare {
         if (!std::filesystem::exists(helper)) {
             *error = QStringLiteral("temp_helper.bat is not in the directory of %1. It contains "
                                     "the engine command lines and must be copied as well")
-                         .arg(QString::fromStdString(script.string()));
+                         .arg(QString::fromStdU16String(script.u16string()));
             return std::nullopt;
         }
         const auto helperText = readText(helper, codec, error);
@@ -244,7 +244,7 @@ namespace utaucompare {
         if (calls.isEmpty()) {
             *error = QStringLiteral(
                          "%1 contains no engine calls and is probably not a script written by UTAU")
-                         .arg(QString::fromStdString(script.string()));
+                         .arg(QString::fromStdU16String(script.u16string()));
             return std::nullopt;
         }
         return calls;

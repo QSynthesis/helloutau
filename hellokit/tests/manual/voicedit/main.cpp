@@ -28,6 +28,7 @@
 /// \warning Saving writes into the voice bank itself. Edit a copy, or save it as a new folder,
 ///          which leaves the original unchanged.
 
+#include <cstdio>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -38,6 +39,7 @@
 #include <QtCore/QJsonDocument>
 #include <QtCore/QString>
 
+#include <stdcorelib/console.h>
 #include <stdcorelib/support/commandline.h>
 #include <stdcorelib/system.h>
 
@@ -74,11 +76,9 @@ namespace {
                 case DiagnosticSeverity::Note:
                     break;
             }
-            std::cerr << level << ": ";
-            if (line > 0) {
-                std::cerr << "line " << line << ": ";
-            }
-            std::cerr << toStd(diagnostic.message) << std::endl;
+            const auto where = line > 0 ? "line " + std::to_string(line) + ": " : std::string();
+            stdc::console::u8fprintf(stderr, "%s: %s%s\n", level, where.c_str(),
+                                     toStd(diagnostic.message).c_str());
         }
     }
 
@@ -87,8 +87,7 @@ namespace {
         // QJsonDocument holds an object or an array only, so a value is written as the one
         // element of an array, whose brackets are then removed.
         const auto line = QJsonDocument(QJsonArray{value}).toJson(QJsonDocument::Compact);
-        std::cout.write(line.constData() + 1, line.size() - 2);
-        std::cout << '\n';
+        stdc::u8printf("%.*s\n", int(line.size() - 2), line.constData() + 1);
     }
 
     /// Executes \c undo or \c redo with \a arguments, the arguments after the name, and returns
@@ -174,11 +173,11 @@ namespace {
         const auto script = result.valueForOption<std::string>("--script");
         const auto saveAs = result.valueForOption<std::string>("--save-as");
         if (saveAs && result.option("--save")) {
-            std::cerr << "error: --save and --save-as exclude each other" << std::endl;
+            stdc::console::u8fputs("error: --save and --save-as exclude each other\n", stderr);
             return 1;
         }
         if (result.option("--text-only") && !saveAs) {
-            std::cerr << "error: --text-only requires --save-as" << std::endl;
+            stdc::console::u8fputs("error: --text-only requires --save-as\n", stderr);
             return 1;
         }
 
@@ -198,10 +197,10 @@ namespace {
             return 1;
         }
         for (const auto &directory : session->excludedDirectories()) {
-            std::cerr << "note: \""
-                      << toStd(QString::fromStdU16String(directory.path.generic_u16string()))
-                      << "\" is not edited, because it "
-                      << (directory.leftOut ? "was not read" : "did not decode") << std::endl;
+            stdc::console::u8fprintf(
+                stderr, "note: \"%s\" is not edited, because it %s\n",
+                toStd(QString::fromStdU16String(directory.path.generic_u16string())).c_str(),
+                directory.leftOut ? "was not read" : "did not decode");
         }
 
         if (result.option("--dump-changes")) {
@@ -210,8 +209,7 @@ namespace {
                                  if (const auto entry = session->logEntry(*change)) {
                                      const auto line =
                                          QJsonDocument(*entry).toJson(QJsonDocument::Compact);
-                                     std::cout.write(line.constData(), line.size());
-                                     std::cout << '\n';
+                                     stdc::u8printf("%.*s\n", int(line.size()), line.constData());
                                  }
                              });
         }
@@ -220,14 +218,14 @@ namespace {
         if (script) {
             std::ifstream in(fs::u8path(*script), std::ios::binary);
             if (!in) {
-                std::cerr << "error: the script could not be opened" << std::endl;
+                stdc::console::u8fputs("error: the script could not be opened\n", stderr);
                 return 1;
             }
             succeeded = runScript(*session, in);
         } else {
             succeeded = runScript(*session, std::cin);
         }
-        std::cout.flush();
+        std::fflush(stdout);
         if (!succeeded) {
             return 1;
         }

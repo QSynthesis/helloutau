@@ -21,12 +21,13 @@
 /// \endcode
 
 #include <algorithm>
+#include <cstdio>
 #include <filesystem>
-#include <iostream>
 #include <string>
 
 #include <QtCore/QString>
 
+#include <stdcorelib/console.h>
 #include <stdcorelib/support/commandline.h>
 #include <stdcorelib/system.h>
 
@@ -57,13 +58,13 @@ namespace {
             if (diagnostic.severity == DiagnosticSeverity::Note) {
                 continue;
             }
-            std::cerr << (diagnostic.severity == DiagnosticSeverity::Error ? "error: "
-                                                                           : "warning: ")
-                      << toStd(diagnostic.message);
-            if (diagnostic.noteIndex) {
-                std::cerr << " (note " << (*diagnostic.noteIndex + 1) << ")";
-            }
-            std::cerr << std::endl;
+            const auto note = diagnostic.noteIndex
+                                  ? " (note " + std::to_string(*diagnostic.noteIndex + 1) + ")"
+                                  : std::string();
+            stdc::console::u8fprintf(stderr, "%s: %s%s\n",
+                                     diagnostic.severity == DiagnosticSeverity::Error ? "error"
+                                                                                      : "warning",
+                                     toStd(diagnostic.message).c_str(), note.c_str());
         }
     }
 
@@ -102,11 +103,11 @@ namespace {
         if (settled.isEmpty()) {
             const auto found = ust->settledCharset();
             if (!found) {
-                std::cerr << "error: this UST does not declare its encoding. "
-                             "Specify --charset with one of:"
-                          << std::endl;
+                stdc::console::u8fputs("error: this UST does not declare its encoding. "
+                                       "Specify --charset with one of:\n",
+                                       stderr);
                 for (const auto &name : TextCodec::ustCandidates()) {
-                    std::cerr << "  " << toStd(name) << std::endl;
+                    stdc::console::u8fprintf(stderr, "  %s\n", toStd(name).c_str());
                 }
                 return std::nullopt;
             }
@@ -148,15 +149,13 @@ namespace {
             byName[difference.what] += difference;
         }
 
-        std::cout << std::endl
-                  << "arguments, out of " << comparison.notesCompared
-                  << " notes compared:" << std::endl;
+        stdc::u8printf("\narguments, out of %d notes compared:\n", comparison.notesCompared);
         if (comparison.spelling) {
-            std::cout << "  " << comparison.spelling
-                      << " differ in text only, because UTAU rounds on output" << std::endl;
+            stdc::u8printf("  %d differ in text only, because UTAU rounds on output\n",
+                           comparison.spelling);
         }
         if (order.isEmpty()) {
-            std::cout << "  all other arguments are identical" << std::endl;
+            stdc::u8printf("  all other arguments are identical\n");
             return;
         }
         std::sort(order.begin(), order.end(), [&byName](const QString &a, const QString &b) {
@@ -164,11 +163,10 @@ namespace {
         });
         for (const QString &what : std::as_const(order)) {
             const auto &list = byName.value(what);
-            std::cout << "  " << toStd(what.leftJustified(12)) << list.size() << std::endl;
+            stdc::u8printf("  %s%d\n", toStd(what.leftJustified(12)).c_str(), int(list.size()));
             for (int i = 0; i < std::min(int(list.size()), examples); ++i) {
-                std::cout << "      note " << (list.at(i).noteIndex + 1) << "  ours "
-                          << toStd(list.at(i).ours) << "  utau " << toStd(list.at(i).theirs)
-                          << std::endl;
+                stdc::u8printf("      note %d  ours %s  utau %s\n", list.at(i).noteIndex + 1,
+                               toStd(list.at(i).ours).c_str(), toStd(list.at(i).theirs).c_str());
             }
         }
     }
@@ -178,9 +176,8 @@ namespace {
         for (const auto count : comparison.readings) {
             readings += count;
         }
-        std::cout << std::endl
-                  << "pitch curves: " << comparison.curves.size() << " notes, " << readings
-                  << " readings" << std::endl;
+        stdc::u8printf("\npitch curves: %d notes, %lld readings\n", int(comparison.curves.size()),
+                       static_cast<long long>(readings));
         if (readings == 0) {
             return;
         }
@@ -189,11 +186,10 @@ namespace {
         for (std::size_t cents = 0; cents < comparison.readings.size(); ++cents) {
             total += double(cents) * double(comparison.readings[cents]);
         }
-        std::cout << "  readings: median " << quantile(comparison.readings, 0.5) << "  mean "
-                  << (total / double(readings)) << "  98% within "
-                  << quantile(comparison.readings, 0.98) << "  worst "
-                  << (comparison.readings.empty() ? 0 : int(comparison.readings.size()) - 1)
-                  << " cents" << std::endl;
+        stdc::u8printf("  readings: median %d  mean %g  98%% within %d  worst %d cents\n",
+                       quantile(comparison.readings, 0.5), total / double(readings),
+                       quantile(comparison.readings, 0.98),
+                       comparison.readings.empty() ? 0 : int(comparison.readings.size()) - 1);
 
         const int thresholds[] = {0, 2, 5, 10, 50};
         const char *labels[] = {"the same", "within 2", "within 5", "within 10", "within 50"};
@@ -208,16 +204,16 @@ namespace {
             }
             counted[which]++;
         }
-        std::cout << "  notes:";
+        std::string notes = "  notes:";
         for (std::size_t i = 0; i < std::size(thresholds); ++i) {
             if (counted[i]) {
-                std::cout << "  " << labels[i] << " " << counted[i];
+                notes += std::string("  ") + labels[i] + " " + std::to_string(counted[i]);
             }
         }
         if (counted[std::size(thresholds)]) {
-            std::cout << "  further off " << counted[std::size(thresholds)];
+            notes += "  further off " + std::to_string(counted[std::size(thresholds)]);
         }
-        std::cout << std::endl;
+        stdc::u8printf("%s\n", notes.c_str());
 
         auto worst = comparison.curves;
         std::sort(worst.begin(), worst.end(),
@@ -229,10 +225,10 @@ namespace {
             if (curve.deviation.peak == 0) {
                 break;
             }
-            std::cout << "      note " << (curve.noteIndex + 1) << "  peak " << curve.deviation.peak
-                      << " cents at reading " << curve.deviation.peakAt << "  mean "
-                      << curve.deviation.mean << "  readings " << curve.ourReadings << " against "
-                      << curve.theirReadings << std::endl;
+            stdc::u8printf(
+                "      note %d  peak %d cents at reading %d  mean %g  readings %d against %d\n",
+                curve.noteIndex + 1, curve.deviation.peak, curve.deviation.peakAt,
+                curve.deviation.mean, curve.ourReadings, curve.theirReadings);
         }
     }
 
@@ -243,9 +239,9 @@ namespace {
         const auto voice = option(result, "--voice");
         const auto script = option(result, "--script");
         if (voice.empty() || script.empty()) {
-            std::cerr << "error: --voice and --script are required and specify the voice bank and "
-                         "the temp.bat written by UTAU"
-                      << std::endl;
+            stdc::console::u8fputs("error: --voice and --script are required and specify the "
+                                   "voice bank and the temp.bat written by UTAU\n",
+                                   stderr);
             return 1;
         }
 
@@ -268,16 +264,19 @@ namespace {
         if (!bank) {
             return 1;
         }
-        std::cout << "voice bank: " << toStd(bank->character().name) << ", "
-                  << bank->samples().size() << " samples" << std::endl;
+        stdc::u8printf("voice bank: %s, %d samples\n", toStd(bank->character().name).c_str(),
+                       int(bank->samples().size()));
 
         SynthPlan::Options options;
         const auto output = option(result, "--output");
         options.outputFile = output.empty() ? input.parent_path() / "temp.wav" : pathOf(output);
         const auto cache = option(result, "--cache");
-        options.cacheDirectory = cache.empty()
-                                     ? input.parent_path() / (input.stem().string() + ".cache")
-                                     : pathOf(cache);
+        if (cache.empty()) {
+            options.cacheDirectory = input.parent_path() / input.stem();
+            options.cacheDirectory += ".cache";
+        } else {
+            options.cacheDirectory = pathOf(cache);
+        }
 
         diagnostics.clear();
         const auto plan = SynthPlan::make(*project, *bank, options, diagnostics);
@@ -285,26 +284,27 @@ namespace {
         if (!plan) {
             return 1;
         }
-        std::cout << "plan: " << plan->steps().size() << " notes" << std::endl;
+        stdc::u8printf("plan: %d notes\n", int(plan->steps().size()));
 
         QString error;
         const auto calls =
             readScript(pathOf(script), fromStd(option(result, "--script-charset")), &error);
         if (!calls) {
-            std::cerr << "error: " << toStd(error) << std::endl;
+            stdc::console::u8fprintf(stderr, "error: %s\n", toStd(error).c_str());
             return 1;
         }
         int withResampler = 0;
         for (const auto &call : *calls) {
             withResampler += call.resamplerArguments.isEmpty() ? 0 : 1;
         }
-        std::cout << "script: " << calls->size() << " calls, " << withResampler
-                  << " with a resampler" << std::endl;
+        stdc::u8printf("script: %d calls, %d with a resampler\n", int(calls->size()),
+                       withResampler);
 
         const auto comparison = compare(plan->steps(), *calls);
         if (comparison.onlyOurs || comparison.onlyTheirs) {
-            std::cout << "  " << comparison.onlyOurs << " notes without a call in the UTAU script, "
-                      << comparison.onlyTheirs << " calls without a note in HelloUtau" << std::endl;
+            stdc::u8printf("  %d notes without a call in the UTAU script, %d calls without a note "
+                           "in HelloUtau\n",
+                           comparison.onlyOurs, comparison.onlyTheirs);
         }
 
         const int examples = result.valueForOption<int>("--examples").value_or(4);

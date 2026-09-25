@@ -12,13 +12,15 @@
 ///   ustrender song.usth out.wav --voice ... --plan
 /// \endcode
 
+#include <cstdio>
 #include <filesystem>
-#include <iostream>
 #include <memory>
 #include <string>
 
 #include <QtCore/QString>
 
+#include <stdcorelib/console.h>
+#include <stdcorelib/path.h>
 #include <stdcorelib/support/commandline.h>
 #include <stdcorelib/system.h>
 
@@ -55,11 +57,11 @@ namespace {
                 case DiagnosticSeverity::Note:
                     break;
             }
-            std::cerr << level << ": " << toStd(diagnostic.message);
-            if (diagnostic.noteIndex) {
-                std::cerr << " (note " << (*diagnostic.noteIndex + 1) << ")";
-            }
-            std::cerr << std::endl;
+            const auto note = diagnostic.noteIndex
+                                  ? " (note " + std::to_string(*diagnostic.noteIndex + 1) + ")"
+                                  : std::string();
+            stdc::console::u8fprintf(stderr, "%s: %s%s\n", level, toStd(diagnostic.message).c_str(),
+                                     note.c_str());
         }
     }
 
@@ -99,11 +101,11 @@ namespace {
         if (settled.isEmpty()) {
             const auto found = ust->settledCharset();
             if (!found) {
-                std::cerr << "error: this UST does not declare its encoding. "
-                             "Specify --charset with one of:"
-                          << std::endl;
+                stdc::console::u8fputs("error: this UST does not declare its encoding. "
+                                       "Specify --charset with one of:\n",
+                                       stderr);
                 for (const auto &name : TextCodec::ustCandidates()) {
-                    std::cerr << "  " << toStd(name) << std::endl;
+                    stdc::console::u8fprintf(stderr, "  %s\n", toStd(name).c_str());
                 }
                 return std::nullopt;
             }
@@ -123,7 +125,8 @@ namespace {
 
         const auto voice = option(result, "--voice");
         if (voice.empty()) {
-            std::cerr << "error: --voice is required and specifies the voice bank" << std::endl;
+            stdc::console::u8fputs("error: --voice is required and specifies the voice bank\n",
+                                   stderr);
             return 1;
         }
 
@@ -148,12 +151,13 @@ namespace {
         if (!bank) {
             return 1;
         }
-        std::cout << "voice bank: " << toStd(bank->character().name) << ", "
-                  << bank->samples().size() << " samples" << std::endl;
+        stdc::u8printf("voice bank: %s, %d samples\n", toStd(bank->character().name).c_str(),
+                       int(bank->samples().size()));
 
         SynthPlan::Options options;
         options.outputFile = output;
-        options.cacheDirectory = output.parent_path() / (output.stem().string() + ".cache");
+        options.cacheDirectory = output.parent_path() / output.stem();
+        options.cacheDirectory += ".cache";
 
         diagnostics.clear();
         const auto plan = SynthPlan::make(*project, *bank, options, diagnostics);
@@ -161,31 +165,30 @@ namespace {
         if (!plan) {
             return 1;
         }
-        std::cout << "plan: " << plan->steps().size() << " notes" << std::endl;
+        stdc::u8printf("plan: %d notes\n", int(plan->steps().size()));
 
         if (result.option("--plan")) {
             // The arguments of each engine call, one per line, so that an incorrect argument is
             // visible without executing anything.
             for (const auto &step : plan->steps()) {
-                std::cout << "note " << (step.noteIndex + 1) << (step.silent ? " (silent)" : "")
-                          << std::endl;
+                stdc::u8printf("note %d%s\n", step.noteIndex + 1, step.silent ? " (silent)" : "");
                 for (const auto &argument : step.resamplerArguments) {
-                    std::cout << "    resampler | " << toStd(argument) << std::endl;
+                    stdc::u8printf("    resampler | %s\n", toStd(argument).c_str());
                 }
                 for (const auto &argument : step.wavtoolArguments) {
-                    std::cout << "    wavtool   | " << toStd(argument) << std::endl;
+                    stdc::u8printf("    wavtool   | %s\n", toStd(argument).c_str());
                 }
             }
             return 0;
         }
 
         SynthEngines engines;
-        engines.resampler = option(result, "--resampler");
-        engines.wavtool = option(result, "--wavtool");
+        engines.resampler = pathOf(option(result, "--resampler"));
+        engines.wavtool = pathOf(option(result, "--wavtool"));
         if (engines.resampler.empty() || engines.wavtool.empty()) {
-            std::cerr << "error: --resampler and --wavtool are required and specify the engines. "
-                         "Engines are never taken from the project."
-                      << std::endl;
+            stdc::console::u8fputs("error: --resampler and --wavtool are required and specify the "
+                                   "engines. Engines are never taken from the project.\n",
+                                   stderr);
             return 1;
         }
 
@@ -196,11 +199,11 @@ namespace {
             auto classic = std::make_unique<ClassicSynthRunner>();
             classic->keepScripts = result.option("--keep-scripts").has_value();
             if (result.option("--verbatim")) {
-                std::cerr
-                    << "warning: --verbatim writes project text into a shell script unescaped, "
-                       "which allows the project file to execute commands. It exists "
-                       "only for engines that require the exact script text of UTAU."
-                    << std::endl;
+                stdc::console::u8fputs(
+                    "warning: --verbatim writes project text into a shell script unescaped, "
+                    "which allows the project file to execute commands. It exists only for "
+                    "engines that require the exact script text of UTAU.\n",
+                    stderr);
                 classic->quoting = ClassicSynthRunner::Quoting::Verbatim;
             }
             runner = std::move(classic);
@@ -212,12 +215,12 @@ namespace {
         const auto outcome = runner->render(*plan, engines, nullptr, diagnostics);
         report(diagnostics);
 
-        std::cout << "resampled " << outcome.resampled << ", reused " << outcome.reused
-                  << ", silent " << outcome.silent << ", failed " << outcome.failed << std::endl;
+        stdc::u8printf("resampled %d, reused %d, silent %d, failed %d\n", outcome.resampled,
+                       outcome.reused, outcome.silent, outcome.failed);
         if (!outcome.rendered) {
             return 1;
         }
-        std::cout << "wrote " << output.string() << std::endl;
+        stdc::u8printf("wrote %s\n", stdc::path::to_utf8(output).c_str());
         return 0;
     }
 

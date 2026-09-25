@@ -15,13 +15,15 @@
 ///
 /// The answers are evaluated by utaucompare after UTAU has rendered the probe.
 
+#include <cstdio>
 #include <filesystem>
 #include <fstream>
-#include <iostream>
 #include <string>
 
 #include <QtCore/QString>
 
+#include <stdcorelib/console.h>
+#include <stdcorelib/path.h>
 #include <stdcorelib/support/commandline.h>
 #include <stdcorelib/system.h>
 
@@ -59,7 +61,8 @@ namespace {
     bool write(const fs::path &path, const QByteArray &bytes) {
         std::ofstream file(path, std::ios::binary);
         if (!file) {
-            std::cerr << "error: cannot write " << path.string() << std::endl;
+            stdc::console::u8fprintf(stderr, "error: cannot write %s\n",
+                                     stdc::path::to_utf8(path).c_str());
             return false;
         }
         file.write(bytes.constData(), bytes.size());
@@ -76,13 +79,16 @@ namespace {
         } else if (kind == QStringLiteral("vibrato")) {
             probe = vibratoProbe();
         } else {
-            std::cerr << "error: there is no probe called " << toStd(kind)
-                      << ". There is arguments and there is vibrato" << std::endl;
+            stdc::console::u8fprintf(
+                stderr,
+                "error: there is no probe called %s. There is arguments and there is "
+                "vibrato\n",
+                toStd(kind).c_str());
             return 1;
         }
 
         Probe::Settings settings;
-        settings.name = fromStd(output.stem().string());
+        settings.name = QString::fromStdU16String(output.stem().u16string());
         // The UTAU placeholder for its voice bank directory.
         settings.voiceDir = QStringLiteral("%VOICE%") + fromStd(option(result, "--voice"));
         settings.outFile = fromStd(option(result, "--out"));
@@ -97,8 +103,8 @@ namespace {
         // encoding in which it will be opened, not in UTF-8.
         const TextCodec codec(fromStd(option(result, "--charset")));
         if (!codec.isValid()) {
-            std::cerr << "error: there is no encoding called " << option(result, "--charset")
-                      << std::endl;
+            stdc::console::u8fprintf(stderr, "error: there is no encoding called %s\n",
+                                     option(result, "--charset").c_str());
             return 1;
         }
 
@@ -116,12 +122,12 @@ namespace {
             sung += note.lyric == QStringLiteral("R") ? 0 : 1;
             ticks += note.length;
         }
-        std::cout << "wrote " << output.string() << ": " << probe.notes().size() << " notes, "
-                  << sung << " of them sung" << std::endl;
-        std::cout << "      " << manifest.string() << std::endl;
-        std::cout << "total " << ticks << " ticks, "
-                  << (double(ticks) / 480.0 * 60.0 / settings.tempo.toDouble()) << " seconds at "
-                  << toStd(settings.tempo) << " bpm" << std::endl;
+        stdc::u8printf("wrote %s: %d notes, %d of them sung\n", stdc::path::to_utf8(output).c_str(),
+                       int(probe.notes().size()), sung);
+        stdc::u8printf("      %s\n", stdc::path::to_utf8(manifest).c_str());
+        stdc::u8printf("total %d ticks, %g seconds at %s bpm\n", ticks,
+                       double(ticks) / 480.0 * 60.0 / settings.tempo.toDouble(),
+                       toStd(settings.tempo).c_str());
         return 0;
     }
 
