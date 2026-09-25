@@ -4,6 +4,7 @@
 #include <optional>
 
 #include <QtCore/QCoreApplication>
+#include <QtCore/QJsonValue>
 #include <QtCore/QList>
 #include <QtCore/QString>
 #include <QtCore/QStringList>
@@ -22,7 +23,8 @@
 namespace hello::kit::edit {
 
     /// The commands that modify the nodes of a tree addressed by path: \c set, \c insert,
-    /// \c remove, \c move and \c replace. See the section on commands in docs/Editing.md.
+    /// \c remove, \c move and \c replace, and the query \c get, which reads them. See the section
+    /// on commands in docs/Editing.md.
     ///
     /// A path consists of field names and list indices, each preceded by a slash, such as
     /// <tt>/tracks/0/notes/12/lyric</tt>. The path \c / denotes the root. A path that ends at a
@@ -73,6 +75,24 @@ namespace hello::kit::edit {
         ///         reports the reason in \a diagnostics.
         static bool execute(EditSession &session, const RecordInfo &root, QStringView name,
                             const QList<CommandArgument> &arguments, DiagnosticList &diagnostics);
+
+        /// Returns the names of the queries, the commands that read the tree and modify nothing.
+        static QStringList queryNames();
+
+        /// Executes the query \a name with \a arguments, the arguments that follow the name, on
+        /// the tree of \a session. A query requires no transaction.
+        ///
+        /// <tt>get \<path\></tt> returns the content at the path in the notation of the values
+        /// of the other commands: a record as the JSON of its document, or else as an object of
+        /// its fields without the internal ones, a list as an array of records, a mapping as an
+        /// object, an array as an array of numbers, and an empty value or an absent record or
+        /// mapping as null. The position of an item in an array is its index in the list.
+        ///
+        /// \return the result, or \c std::nullopt with the reason in \a diagnostics
+        static std::optional<QJsonValue> query(const EditSession &session, const RecordInfo &root,
+                                               QStringView name,
+                                               const QList<CommandArgument> &arguments,
+                                               DiagnosticList &diagnostics);
 
         /// Returns the value of \a argument as an integer, or \c std::nullopt with the reason in
         /// \a diagnostics. \a what names the argument in the message.

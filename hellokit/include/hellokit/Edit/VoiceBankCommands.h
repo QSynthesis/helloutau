@@ -1,7 +1,10 @@
 #ifndef HELLOKIT_EDIT_VOICEBANKCOMMANDS_H
 #define HELLOKIT_EDIT_VOICEBANKCOMMANDS_H
 
+#include <optional>
+
 #include <QtCore/QCoreApplication>
+#include <QtCore/QJsonValue>
 #include <QtCore/QMap>
 #include <QtCore/QStringList>
 #include <QtCore/QStringView>
@@ -37,6 +40,17 @@ namespace hello::kit {
         ///
         /// \sa ProjectCommands::names()
         static QStringList names();
+
+        /// Executes the query of \a line on \a session, which reads the voice bank and modifies
+        /// nothing, such as <tt>get /directories/1/otoEntries</tt>, which returns the entries of
+        /// a directory with their indices as positions.
+        ///
+        /// \sa ProjectCommands::query()
+        static std::optional<QJsonValue> query(const VoiceBankSession &session, QStringView line,
+                                               DiagnosticList &diagnostics);
+
+        /// \sa ProjectCommands::queryNames()
+        static QStringList queryNames();
 
         /// Returns the domain function registry of a voice bank: each function of
         /// VoiceBankEdits by name, with the name of the command that calls it.

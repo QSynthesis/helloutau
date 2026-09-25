@@ -1,6 +1,8 @@
 #include <memory>
 
 #include <QtCore/QDebug>
+#include <QtCore/QJsonArray>
+#include <QtCore/QJsonObject>
 #include <QtCore/QMetaMethod>
 #include <QtCore/QTemporaryDir>
 #include <QtTest/QTest>
@@ -221,6 +223,34 @@ private Q_SLOTS:
             QVERIFY2(!name.contains(QLatin1Char(' ')) || functions.values().contains(name),
                      qPrintable(name));
         }
+    }
+
+    // The entries of a directory are read with their positions, which are the indices that the
+    // commands take. The spellings are internal, and are neither returned nor addressed.
+    void get_returns_the_entries_of_a_directory() {
+        const auto get = [this](const char *line) {
+            DiagnosticList diagnostics;
+            return VoiceBankCommands::query(*m_session, QString::fromUtf8(line), diagnostics);
+        };
+        const auto entries = get("get /directories/0/otoEntries");
+        QVERIFY(entries);
+        const auto array = entries->toArray();
+        QCOMPARE(array.size(), rootEntries().size());
+        for (int i = 0; i < array.size(); ++i) {
+            const auto entry = array.at(i).toObject();
+            QCOMPARE(entry.value("fileName").toString(), rootEntries().at(i).fileName());
+            QCOMPARE(entry.value("alias").toString(), rootEntries().at(i).alias());
+            QVERIFY(!entry.contains("spellings"));
+        }
+
+        const auto directory = get("get /directories/0");
+        QVERIFY(directory);
+        const auto root = VoiceBankRef(m_session.get()).directories().at(0);
+        QCOMPARE(directory->toObject().value("charset").toString(), root.charset());
+        QCOMPARE(directory->toObject().value("otoEntries"), QJsonValue(array));
+        QVERIFY(get("get /prefixMap")->toObject().contains("60"));
+        QVERIFY(!get("get /directories/0/otoEntries/0/spellings"));
+        QCOMPARE(m_session->currentStep(), 0);
     }
 
     void names_lists_every_command() {

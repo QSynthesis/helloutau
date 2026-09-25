@@ -285,6 +285,25 @@ namespace hello::kit {
         return names;
     }
 
+    std::optional<QJsonValue> VoiceBankCommands::query(const VoiceBankSession &session,
+                                                       QStringView line,
+                                                       DiagnosticList &diagnostics) {
+        const auto arguments = edit::CommandSyntax::split(line, diagnostics);
+        if (!arguments) {
+            return std::nullopt;
+        }
+        if (arguments->isEmpty() || arguments->first().kind != edit::CommandArgument::Word) {
+            fail(diagnostics, VoiceBankCommands::tr("A query begins with its name."));
+            return std::nullopt;
+        }
+        return edit::NodeCommands::query(session, voiceBankRecord(), arguments->first().text(),
+                                         arguments->mid(1), diagnostics);
+    }
+
+    QStringList VoiceBankCommands::queryNames() {
+        return edit::NodeCommands::queryNames();
+    }
+
     QMap<QString, QString> VoiceBankCommands::domainFunctions() {
         QMap<QString, QString> functions;
         for (const auto &command : domainCommands) {

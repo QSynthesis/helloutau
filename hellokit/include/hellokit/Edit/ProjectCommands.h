@@ -1,7 +1,10 @@
 #ifndef HELLOKIT_EDIT_PROJECTCOMMANDS_H
 #define HELLOKIT_EDIT_PROJECTCOMMANDS_H
 
+#include <optional>
+
 #include <QtCore/QCoreApplication>
+#include <QtCore/QJsonValue>
 #include <QtCore/QMap>
 #include <QtCore/QStringList>
 #include <QtCore/QStringView>
@@ -39,6 +42,19 @@ namespace hello::kit {
         /// Returns the names of the commands. The name of a domain command consists of its noun
         /// and its verb separated by a space, such as <tt>note split</tt>.
         static QStringList names();
+
+        /// Executes the query of \a line on \a session, which reads the project and modifies
+        /// nothing: <tt>get \<path\></tt> returns the content at the path, such as the notes of
+        /// a track at <tt>/tracks/0/notes</tt>, whose positions are the indices that the commands
+        /// take.
+        ///
+        /// \return the result, or \c std::nullopt with the reason in \a diagnostics
+        /// \sa edit::NodeCommands::query()
+        static std::optional<QJsonValue> query(const ProjectSession &session, QStringView line,
+                                               DiagnosticList &diagnostics);
+
+        /// Returns the names of the queries.
+        static QStringList queryNames();
 
         /// Returns the domain function registry of a project: each function of ProjectEdits by
         /// name, with the name of the command that calls it.

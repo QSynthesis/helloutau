@@ -269,6 +269,8 @@ note insert /tracks/0/notes 12 {"lyric": "a", "length": 480, "noteNum": 60}
 
 **领域命令**（`ProjectCommands.h`）每个领域函数一条，形式为 `<名词> <动词> [参数…]`：`note transpose <半音数> <音符路径>…`、`note split <音符列表路径> <下标> <tick>`、`note insert <音符列表路径> <下标> <音符>`、`note tempo <音符路径> <速度>`。音源的领域命令（`VoiceBankCommands.h`）：`entry set <条目路径> <条目>`、`entry insert <目录路径> <条目>…`、`entry include <目录路径> <文件名>…`、`entry remove <目录路径> <下标>…`、`prefix set <音高> <前缀>`、`prefix remove <音高>`、`directory charset <目录路径> <编码名>`。插入的条目按文件名排入，不由命令指定位置。
 
+**查询只读取文档，不修改文档。** 目前只有一个：`get <路径>`，返回路径所指内容的 JSON，写法与命令的参数、变更日志相同：记录按其文档的写法（如音符、oto 条目），文档未定义写法的记录（如工程的根、音源的目录）写成各字段组成的对象；列表是数组，项在数组中的位置就是命令所用的下标；映射是对象，数组是数字的数组；空的值、缺席的记录或映射写作 `null`。不公开的字段既不能寻址，也不输出。查询不开事务，不产生撤销步骤，由 `ProjectCommands::query()` 与 `VoiceBankCommands::query()` 执行；交给 `execute()` 时被拒绝。例如 `entry remove` 所需的下标由 `get /directories/1/otoEntries` 查得。
+
 **命令只写入它所写明的值。** 读取文件时宽容的地方，命令一律拒绝：记录与整体值中的未知字段、类型不符的字段，以及读取时会被修正为默认值的写法，都报告错误而不写入。音高只接受数字，不接受音名。
 
 参数以空白分隔，**转义只有一套，即 JSON 的规则**（`CommandSyntax.h`）。参数有四种形式：

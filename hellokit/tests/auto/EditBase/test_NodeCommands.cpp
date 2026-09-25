@@ -373,6 +373,74 @@ private Q_SLOTS:
         QVERIFY(!NodeCommands::treeOf(restrictedItemRecord(), item, diagnostics));
     }
 
+    // A record without JSON of its document is an object of its fields, a record with it is that
+    // JSON, and an absent mapping is null.
+    void get_returns_the_content_at_a_path() {
+        TestSession session;
+        const auto get = [&session](const char *path, const RecordInfo &root = rootRecord()) {
+            DiagnosticList diagnostics;
+            return NodeCommands::query(
+                session, root, QStringLiteral("get"),
+                {
+                    CommandArgument{CommandArgument::Word, QJsonValue(QString::fromUtf8(path))}
+            },
+                diagnostics);
+        };
+        const QJsonObject first{
+            {QStringLiteral("name"), QStringLiteral("first")}
+        };
+        const QJsonObject second{
+            {QStringLiteral("name"), QStringLiteral("second")}
+        };
+        const QJsonObject tags{
+            {QStringLiteral("a"), 1}
+        };
+        const QJsonObject root{
+            {QStringLiteral("title"), QStringLiteral("title")  },
+            {QStringLiteral("items"), QJsonArray{first, second}},
+            {QStringLiteral("tags"),  tags                     },
+        };
+        QCOMPARE(get("/"), std::optional<QJsonValue>(root));
+        QCOMPARE(get("/title"), std::optional<QJsonValue>(QStringLiteral("title")));
+        QCOMPARE(get("/items/1"), std::optional<QJsonValue>(second));
+        QCOMPARE(get("/items/0/values"), std::optional<QJsonValue>(QJsonArray{1, 2, 3}));
+        QCOMPARE(get("/tags"), std::optional<QJsonValue>(tags));
+
+        // The internal fields are omitted, and cannot be addressed.
+        auto restricted = root;
+        restricted.remove(QStringLiteral("tags"));
+        QCOMPARE(get("/", restrictedRootRecord()), std::optional<QJsonValue>(restricted));
+        QVERIFY(!get("/tags", restrictedRootRecord()));
+
+        {
+            auto transaction = session.transaction(QStringLiteral("remove the tags"));
+            session.removeTags();
+            QVERIFY(transaction.commit());
+        }
+        QCOMPARE(get("/tags"), std::optional<QJsonValue>(QJsonValue::Null));
+
+        QVERIFY(!get("/items/2"));
+        QVERIFY(!get("/title/x"));
+        QVERIFY(!get("title"));
+        DiagnosticList diagnostics;
+        QVERIFY(!NodeCommands::query(
+            session, rootRecord(), QStringLiteral("find"),
+            {
+                CommandArgument{CommandArgument::Word, QJsonValue(QStringLiteral("/"))}
+        },
+            diagnostics));
+        QVERIFY(
+            !NodeCommands::query(session, rootRecord(), QStringLiteral("get"), {}, diagnostics));
+        QCOMPARE(NodeCommands::queryNames(), QStringList{QStringLiteral("get")});
+    }
+
+    void a_query_is_not_executed_as_a_command() {
+        TestSession session;
+        DiagnosticList diagnostics;
+        QVERIFY(!run(session, QStringLiteral("get /title"), diagnostics));
+        QVERIFY(diagnostics.first().message.contains(QStringLiteral("query")));
+    }
+
     void names_lists_every_command() {
         QCOMPARE(
             NodeCommands::names(),

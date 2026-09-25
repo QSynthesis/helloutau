@@ -554,6 +554,94 @@ namespace hello::kit::edit {
             return true;
         }
 
+        QJsonValue recordJson(const ss::Node *node, const RecordInfo &info);
+
+        // Returns the JSON of the content of field in record, or null if it is empty or absent.
+        QJsonValue fieldJson(const ss::StructNodeBase *record, const FieldInfo &field) {
+            switch (field.kind) {
+                case FieldInfo::Value: {
+                    const auto variant = record->variant(field.index);
+                    if (!variant.isValid() && field.optional) {
+                        return QJsonValue();
+                    }
+                    return field.format->toJson(variant);
+                }
+                case FieldInfo::Record: {
+                    const auto child = record->child(field.index);
+                    return child ? recordJson(child, *field.record) : QJsonValue();
+                }
+                case FieldInfo::List: {
+                    const auto list =
+                        static_cast<const ss::VectorNode *>(record->child(field.index));
+                    QJsonArray items;
+                    for (int i = 0; i < list->size(); ++i) {
+                        items.push_back(recordJson(list->at(i), *field.record));
+                    }
+                    return items;
+                }
+                case FieldInfo::Mapping: {
+                    const auto mapping =
+                        static_cast<const ss::MappingNode *>(record->child(field.index));
+                    if (!mapping) {
+                        return QJsonValue();
+                    }
+                    QJsonObject entries;
+                    for (const auto &key : mapping->keys()) {
+                        entries.insert(key, field.format->toJson(mapping->variant(key)));
+                    }
+                    return entries;
+                }
+                case FieldInfo::Array: {
+                    const auto array =
+                        static_cast<const ss::ArrayNode<double> *>(record->child(field.index));
+                    QJsonArray elements;
+                    for (const auto element : array->values()) {
+                        elements.push_back(element);
+                    }
+                    return elements;
+                }
+            }
+            return QJsonValue();
+        }
+
+        // Returns the JSON of the record in node: the JSON of its document, which the commands
+        // accept as a value, or else an object of its fields other than the internal ones.
+        QJsonValue recordJson(const ss::Node *node, const RecordInfo &info) {
+            if (info.treeToJson) {
+                return info.treeToJson(node);
+            }
+            const auto record = static_cast<const ss::StructNodeBase *>(node);
+            QJsonObject fields;
+            for (const auto &field : info.fields) {
+                if (!field.internal) {
+                    fields.insert(QLatin1String(field.name), fieldJson(record, field));
+                }
+            }
+            return fields;
+        }
+
+        // Returns the member of json at members, or std::nullopt with the reason in diagnostics.
+        std::optional<QJsonValue> memberOf(QJsonValue json, const QStringList &members,
+                                           const FieldInfo &field, DiagnosticList &diagnostics) {
+            for (qsizetype depth = 0; depth < members.size(); ++depth) {
+                const auto &member = members.at(depth);
+                if (json.isObject() && json.toObject().contains(member)) {
+                    json = json.toObject().value(member);
+                    continue;
+                }
+                const auto index = indexOf(member);
+                if (json.isArray() && index && *index < json.toArray().size()) {
+                    json = json.toArray().at(*index);
+                    continue;
+                }
+                fail(diagnostics,
+                     NodeCommands::tr("The %1 has no member %2.")
+                         .arg(nameOf(field), members.mid(0, depth + 1).join(QLatin1Char('/'))));
+                return std::nullopt;
+            }
+            return json;
+        }
+
     }
 
     std::optional<Target> NodeCommands::resolve(const EditSession &session, const RecordInfo &root,
@@ -684,7 +772,44 @@ namespace hello::kit::edit {
             }
             return command(*target, arguments.mid(1), diagnostics);
         }
+        if (queryNames().contains(name)) {
+            return fail(diagnostics,
+                        NodeCommands::tr("%1 is a query, which reads the document and is not "
+                                         "executed as a command.")
+                            .arg(name.toString()));
+        }
         return fail(diagnostics, NodeCommands::tr("%1 is not a command.").arg(name.toString()));
+    }
+
+    QStringList NodeCommands::queryNames() {
+        return {QStringLiteral("get")};
+    }
+
+    std::optional<QJsonValue> NodeCommands::query(const EditSession &session,
+                                                  const RecordInfo &root, QStringView name,
+                                                  const QList<CommandArgument> &arguments,
+                                                  DiagnosticList &diagnostics) {
+        if (name != QLatin1String("get")) {
+            fail(diagnostics, NodeCommands::tr("%1 is not a query.").arg(name.toString()));
+            return std::nullopt;
+        }
+        if (arguments.size() != 1) {
+            usage(diagnostics, "get <path>");
+            return std::nullopt;
+        }
+        const auto path = stringOf(arguments[0], NodeCommands::tr("path"), diagnostics);
+        if (!path) {
+            return std::nullopt;
+        }
+        const auto target = resolve(session, root, *path, diagnostics);
+        if (!target) {
+            return std::nullopt;
+        }
+        if (!target->field) {
+            return recordJson(target->record, *target->info);
+        }
+        return memberOf(fieldJson(target->record, *target->field), target->members, *target->field,
+                        diagnostics);
     }
 
     std::optional<int> NodeCommands::integerOf(const CommandArgument &argument, const QString &what,

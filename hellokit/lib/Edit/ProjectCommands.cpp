@@ -217,6 +217,25 @@ namespace hello::kit {
         return names;
     }
 
+    std::optional<QJsonValue> ProjectCommands::query(const ProjectSession &session,
+                                                     QStringView line,
+                                                     DiagnosticList &diagnostics) {
+        const auto arguments = edit::CommandSyntax::split(line, diagnostics);
+        if (!arguments) {
+            return std::nullopt;
+        }
+        if (arguments->isEmpty() || arguments->first().kind != edit::CommandArgument::Word) {
+            fail(diagnostics, ProjectCommands::tr("A query begins with its name."));
+            return std::nullopt;
+        }
+        return edit::NodeCommands::query(session, projectRecord(), arguments->first().text(),
+                                         arguments->mid(1), diagnostics);
+    }
+
+    QStringList ProjectCommands::queryNames() {
+        return edit::NodeCommands::queryNames();
+    }
+
     QMap<QString, QString> ProjectCommands::domainFunctions() {
         QMap<QString, QString> functions;
         for (const auto &command : noteCommands) {

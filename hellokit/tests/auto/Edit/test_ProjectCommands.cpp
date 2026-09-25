@@ -1,4 +1,5 @@
 #include <QtCore/QDebug>
+#include <QtCore/QJsonArray>
 #include <QtCore/QJsonObject>
 #include <QtTest/QTest>
 
@@ -348,6 +349,83 @@ private Q_SLOTS:
             QVERIFY2(!name.contains(QLatin1Char(' ')) || functions.values().contains(name),
                      qPrintable(name));
         }
+    }
+
+    // A query returns the content at a path in the notation of the values of the commands, so
+    // that its result can be given to a command again.
+    void get_returns_the_content_at_a_path() {
+        ProjectSession session(richProject());
+        const auto get = [&session](const char *line) {
+            DiagnosticList diagnostics;
+            const auto result =
+                ProjectCommands::query(session, QString::fromUtf8(line), diagnostics);
+            if (!result) {
+                qDebug().noquote() << line << diagnostics.first().message;
+            }
+            return result.value_or(QJsonValue(QJsonValue::Undefined));
+        };
+        const auto note = noteAt(session, 0);
+        QCOMPARE(get("get /tracks/0/notes/0/lyric"), QJsonValue(QString::fromUtf8("あ")));
+        QCOMPARE(get("get /tracks/0/notes/0/vibrato/period"), QJsonValue(note.vibrato->period));
+        QCOMPARE(get("get /tracks/0/notes/0/envelope/anchors/1"),
+                 get("get /tracks/0/notes/0/envelope").toObject().value("anchors").toArray().at(1));
+        QCOMPARE(get("get /tracks/0/notes/0"), QJsonValue(note.toJson()));
+        QCOMPARE(get("get /tracks/0/notes").toArray().size(), 2);
+        QCOMPARE(get("get /tracks/0/notes").toArray().at(1),
+                 QJsonValue(noteAt(session, 1).toJson()));
+        QCOMPARE(get("get /tracks/0/notes/1/intensity"), QJsonValue(QJsonValue::Null));
+        QCOMPARE(get("get /tracks/0/notes/0/pitchBend/values"),
+                 QJsonValue(QJsonArray{0, 10.5, -20, 0}));
+        QCOMPARE(get("get /tracks/0/notes/0/userData"),
+                 QJsonValue(QJsonObject{
+                     {QStringLiteral("$custom"), QStringLiteral("kept")},
+                     {QStringLiteral("Unknown"), QString()             }
+        }));
+        QCOMPARE(get("get /unknownFields").toObject().value("object"),
+                 QJsonValue(QJsonObject{
+                     {QStringLiteral("a"), 1}
+        }));
+
+        // A record that its document does not write as JSON is an object of its fields.
+        const auto settings = get("get /settings").toObject();
+        QCOMPARE(settings.value("tempo"), QJsonValue(134.5));
+        QCOMPARE(settings.value("mode2"), QJsonValue(false));
+        QCOMPARE(get("get /").toObject().value("settings"), QJsonValue(settings));
+        QCOMPARE(get("get /").toObject().value("tracks").toArray().at(0).toObject().value("name"),
+                 QJsonValue(QStringLiteral("vocal")));
+
+        QVERIFY(run(session, QStringLiteral("set /tracks/0/notes/0/pitchBend null")));
+        QCOMPARE(get("get /tracks/0/notes/0/pitchBend"), QJsonValue(QJsonValue::Null));
+    }
+
+    void get_modifies_nothing() {
+        ProjectSession session(richProject());
+        const auto before = session.snapshot().toJson();
+        DiagnosticList diagnostics;
+        QVERIFY(
+            ProjectCommands::query(session, QStringLiteral("get /tracks/0/notes"), diagnostics));
+        QCOMPARE(session.currentStep(), 0);
+        QVERIFY(!session.canUndo());
+        QCOMPARE(session.snapshot().toJson(), before);
+    }
+
+    void a_malformed_query_is_refused() {
+        ProjectSession session(richProject());
+        for (const auto line : {"get", "get /tracks/0/notes/2", "get /tracks/0/lyric",
+                                "get /tracks/0/notes/0/vibrato/depth/x",
+                                "get /tracks/0/notes/0/lyric more", "find /", "", "\"get\" /"}) {
+            DiagnosticList diagnostics;
+            QVERIFY2(!ProjectCommands::query(session, QString::fromUtf8(line), diagnostics), line);
+            QVERIFY2(hasError(diagnostics), line);
+        }
+        // A query is not a command, and a command is not a query.
+        verifyRefused(session, QStringLiteral("get /tracks/0/notes/0/lyric"),
+                      QStringLiteral("query"));
+        DiagnosticList diagnostics;
+        QVERIFY(!ProjectCommands::query(session, QStringLiteral("set /tracks/0/notes/0/lyric a"),
+                                        diagnostics));
+        QCOMPARE(noteAt(session, 0).lyric, QString::fromUtf8("あ"));
+        QCOMPARE(ProjectCommands::queryNames(), QStringList{QStringLiteral("get")});
     }
 
     void names_lists_every_command() {

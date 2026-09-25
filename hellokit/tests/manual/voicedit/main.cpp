@@ -11,13 +11,16 @@
 ///   voicedit path/to/bank --charset GBK --script edits.txt --save-as path/to/copy [--text-only]
 /// \endcode
 ///
-/// Each line of the script is a command of VoiceBankCommands, or one of the following, which
-/// operate on the undo history rather than on the voice bank:
+/// Each line of the script is a command or a query of VoiceBankCommands, or one of the following,
+/// which operate on the undo history rather than on the voice bank:
 ///
 /// \code
 ///   undo [<count>|all]
 ///   redo [<count>|all]
 /// \endcode
+///
+/// A query, such as <tt>get /directories/1/otoEntries</tt>, prints its result as one line of JSON
+/// to standard output.
 ///
 /// The script is read as UTF-8, with or without a byte order mark. The first command that fails
 /// stops the program, and no file is written.
@@ -31,6 +34,7 @@
 #include <string>
 
 #include <QtCore/QByteArray>
+#include <QtCore/QJsonArray>
 #include <QtCore/QJsonDocument>
 #include <QtCore/QString>
 
@@ -78,6 +82,15 @@ namespace {
         }
     }
 
+    /// Prints \a value as one line of JSON to standard output.
+    void print(const QJsonValue &value) {
+        // QJsonDocument holds an object or an array only, so a value is written as the one
+        // element of an array, whose brackets are then removed.
+        const auto line = QJsonDocument(QJsonArray{value}).toJson(QJsonDocument::Compact);
+        std::cout.write(line.constData() + 1, line.size() - 2);
+        std::cout << '\n';
+    }
+
     /// Executes \c undo or \c redo with \a arguments, the arguments after the name, and returns
     /// whether the arguments are valid. Undoing more steps than the history holds stops at its
     /// start, as \c all does.
@@ -121,6 +134,13 @@ namespace {
             if (name == QLatin1String("undo") || name == QLatin1String("redo")) {
                 return travel(session, name == QLatin1String("undo"), arguments->mid(1),
                               diagnostics);
+            }
+            if (VoiceBankCommands::queryNames().contains(name)) {
+                const auto result = VoiceBankCommands::query(session, line, diagnostics);
+                if (result) {
+                    print(*result);
+                }
+                return result.has_value();
             }
         }
         return VoiceBankCommands::execute(session, line, diagnostics);
