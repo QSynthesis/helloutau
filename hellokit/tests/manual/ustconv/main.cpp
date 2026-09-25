@@ -72,18 +72,23 @@ namespace {
         Midi,
     };
 
+    /// The extension is taken as UTF-16, because path::string() converts to the code page of the
+    /// system on Windows and fails for a character outside it. Only ASCII letters are folded,
+    /// because std::tolower depends on the C locale.
     Format formatOf(const fs::path &path) {
-        auto suffix = path.extension().string();
+        auto suffix = path.extension().u16string();
         for (auto &c : suffix) {
-            c = char(std::tolower(static_cast<unsigned char>(c)));
+            if (c >= u'A' && c <= u'Z') {
+                c = char16_t(c - u'A' + u'a');
+            }
         }
-        if (suffix == ".usth") {
+        if (suffix == u".usth") {
             return Format::Usth;
         }
-        if (suffix == ".ust") {
+        if (suffix == u".ust") {
             return Format::Ust;
         }
-        if (suffix == ".mid" || suffix == ".midi") {
+        if (suffix == u".mid" || suffix == u".midi") {
             return Format::Midi;
         }
         return Format::Unknown;

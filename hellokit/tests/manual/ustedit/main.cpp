@@ -25,6 +25,7 @@
 /// The script is read as UTF-8, with or without a byte order mark. The first command that fails
 /// stops the program, and no file is written.
 
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -84,12 +85,19 @@ namespace {
         }
     }
 
+    /// Returns whether \a path ends in \a extension , an ASCII extension in lowercase, in any case.
+    ///
+    /// The extension is taken as UTF-16, because path::string() converts to the code page of the
+    /// system on Windows and fails for a character outside it. Only ASCII letters are folded,
+    /// because std::tolower depends on the C locale.
     bool hasExtension(const fs::path &path, const char *extension) {
-        auto suffix = path.extension().string();
+        auto suffix = path.extension().u16string();
         for (auto &c : suffix) {
-            c = char(std::tolower(static_cast<unsigned char>(c)));
+            if (c >= u'A' && c <= u'Z') {
+                c = char16_t(c - u'A' + u'a');
+            }
         }
-        return suffix == extension;
+        return suffix == std::u16string(extension, extension + std::strlen(extension));
     }
 
     /// Reads \a path as a \c .usth or a \c .ust, without querying the user. A UST that does not
