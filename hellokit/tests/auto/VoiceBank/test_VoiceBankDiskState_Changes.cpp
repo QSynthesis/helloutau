@@ -514,9 +514,11 @@ private Q_SLOTS:
         QVERIFY(bank.find(60, QStringLiteral("first")));
     }
 
-    // Another program, or another instance of this one, may write the configuration. Its
-    // encoding takes precedence over the encoding in which the directory was read.
-    void an_encoding_recorded_on_disk_is_the_one_read_in() {
+    // The configuration belongs to HelloUtau. One written by another program is reported apart
+    // from the other files, until a save writes it again, and never read: the directory keeps
+    // the encoding it was read in, also when another file changes and the directory is read
+    // again.
+    void a_configuration_written_elsewhere_is_reported_and_never_read() {
         write(QStringLiteral("oto.ini"), "a.wav=" + kShiftJisA + ",1,2,3,4,5\r\n");
         write(QStringLiteral("a.wav"), "RIFF");
         CountingSelector selector(QStringLiteral("GBK"));
@@ -528,11 +530,52 @@ private Q_SLOTS:
 
         write(QStringLiteral("hello-config.json"),
               R"({"$format":"hello-voicebank","charset":"Shift_JIS"})");
-        takeIn(bank, disk, &selector);
-        QVERIFY(bank.find(60, kA));
+        const auto found = takeIn(bank, disk, &selector);
+        QVERIFY(found.changed.isEmpty());
+        QCOMPARE(found.config, QList<fs::path>{fs::path()});
+        QVERIFY(!bank.find(60, kA));
+
+        // Reported by every check, also once another file changed and was read again.
+        write(QStringLiteral("oto.ini"), "a.wav=" + kShiftJisA + ",7,2,3,4,5\r\n");
+        const auto again = takeIn(bank, disk, &selector);
+        QCOMPARE(again.changed, QList<fs::path>{fs::path()});
+        QCOMPARE(again.config, QList<fs::path>{fs::path()});
+        QCOMPARE(bank.samples().at(0).offset, 7.0);
+        QVERIFY(!bank.find(60, kA));
+        QCOMPARE(selector.asked, 1);
+
+        // Until a save writes the configuration again, although the directory had none when it
+        // was read and nothing in it was edited.
+        DiagnosticList diagnostics;
+        QVERIFY(disk.save(bank, diagnostics));
+        DiagnosticList ignored;
+        QCOMPARE(VoiceBankConfig::open(root() / "hello-config.json", ignored)->charset,
+                 QStringLiteral("GBK"));
+        QVERIFY(disk.checkDisk().isEmpty());
+
+        QVERIFY(QFile::remove(pathOf(QStringLiteral("hello-config.json"))));
+        QCOMPARE(disk.checkDisk().config, QList<fs::path>{fs::path()});
+        QCOMPARE(disk.checkDisk().config, QList<fs::path>{fs::path()});
     }
 
-    // The files a save writes are not changes made elsewhere.
+    // A configuration rewritten too soon after it was read for its time to tell is compared by
+    // content, as the other files are.
+    void a_configuration_rewritten_at_once_is_compared_by_content() {
+        write(QStringLiteral("hello-config.json"), R"({"charset":"UTF-8"})");
+        write(QStringLiteral("a.wav"), "RIFF");
+        auto opened = open(nullptr);
+        QVERIFY(opened.has_value());
+        // The exact time, which QFileInfo would round to milliseconds.
+        const auto config = root() / "hello-config.json";
+        const auto time = fs::last_write_time(config);
+        QVERIFY(opened->disk.checkDisk().isEmpty());
+
+        write(QStringLiteral("hello-config.json"), R"({"charset":"UTF-7"})");
+        fs::last_write_time(config, time);
+        QCOMPARE(opened->disk.checkDisk().config, QList<fs::path>{fs::path()});
+    }
+
+    // The files a save writes, the configuration included, are not changes made elsewhere.
     void a_save_is_not_a_change_on_disk() {
         write(QStringLiteral("oto.ini"), "a.wav=a,1,2,3,4,5\r\n");
         write(QStringLiteral("a.wav"), "RIFF");
@@ -550,6 +593,7 @@ private Q_SLOTS:
         QVERIFY(QFileInfo::exists(pathOf(QStringLiteral("hello-config.json"))));
         const auto found = disk.checkDisk();
         QVERIFY(found.changed.isEmpty());
+        QVERIFY(found.config.isEmpty());
     }
 
     // The disk changed between the check and the reload. A directory removed since is not read,

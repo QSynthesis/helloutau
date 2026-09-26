@@ -104,6 +104,13 @@ namespace hello::kit {
         /// For each directory in which a file is written, and for each directory whose encoding
         /// differs from the one it was read in, the encoding is recorded beside it in
         /// \c hello-config.json , because saving is an explicit request to write files there.
+        /// The configuration belongs to HelloUtau and is exempt from the second refusal above:
+        /// in a directory that had one when read or has one now, it is written whenever the file
+        /// on disk does not hold the encoding and the fields read with it, whether another program
+        /// modified, removed or created it, or it could not be read. Only a configuration that
+        /// cannot be written at all, for a folder of its name or a file that does not open for
+        /// writing, is refused.
+        ///
         /// Each file is written to a temporary file beside it and then renamed, so that a reader
         /// never observes a partially written file.
         ///
@@ -160,6 +167,9 @@ namespace hello::kit {
         /// user's decision: a directory that changed on disk while isModified() holds for it
         /// exists in two versions, and only the user can choose between them.
         ///
+        /// A change of \c hello-config.json is reported in VoiceBankChanges::config instead, by
+        /// every check until the next save() writes the configuration again. It is never read.
+        ///
         /// A place is a hint and not the only means of detecting a change. The overload without
         /// places examines the entire voice bank. A caller that passes only the reports of a
         /// watcher misses every change the watcher misses.
@@ -180,8 +190,9 @@ namespace hello::kit {
         /// A directory removed in the meantime is not read, and one restored in the meantime is not
         /// dropped.
         ///
-        /// A previously read directory keeps its encoding, or takes the one its configuration
-        /// now records, without querying the selector again.
+        /// A previously read directory keeps its encoding without querying the selector again,
+        /// whatever its configuration now records. Only a directory whose encoding is not known
+        /// takes the one its configuration records.
         ///
         /// \param selector queried only for a new directory, or for one that previously needed
         ///        no encoding and now does

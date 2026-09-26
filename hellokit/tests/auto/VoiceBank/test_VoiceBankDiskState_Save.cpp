@@ -329,9 +329,119 @@ private Q_SLOTS:
         edit(opened->bank, QString::fromUtf8("\xe8\x91\x9b\xe5\xb9\xb3"),
              [](VoiceSample &sample) { sample.offset = 7; });
 
-        QVERIFY(opened->disk.save(opened->bank, diagnostics));
+        // Read-only, so that a save that wrote it would fail.
+        QVERIFY(QFile::setPermissions(pathOf(QStringLiteral("hello-config.json")),
+                                      QFileDevice::ReadOwner | QFileDevice::ReadUser));
+        const bool saved = opened->disk.save(opened->bank, diagnostics);
+        QVERIFY(QFile::setPermissions(pathOf(QStringLiteral("hello-config.json")),
+                                      QFileDevice::ReadOwner | QFileDevice::WriteOwner));
+        QVERIFY(saved);
         QCOMPARE(read(QStringLiteral("oto.ini")), "a.wav=" + kGbkGePing + ",7,2,3,4,5\r\n");
         QCOMPARE(read(QStringLiteral("hello-config.json")), recorded);
+    }
+
+    // The configuration belongs to HelloUtau. One that another program modified or removed, or
+    // that could not be read, is written again by the next save, although nothing else changed,
+    // and without the refusal that protects the other files.
+    void a_configuration_changed_elsewhere_is_written_again() {
+        VoiceBankConfig config;
+        config.charset = TextCodec(QStringLiteral("GBK")).name();
+        config.unknownFields.insert(QStringLiteral("kept"), 1);
+        const QByteArray recorded = config.toJson();
+        write(QStringLiteral("hello-config.json"), recorded);
+        write(QStringLiteral("oto.ini"), "a.wav=" + kGbkGePing + ",1,2,3,4,5\r\n");
+        write(QStringLiteral("a.wav"), "RIFF");
+
+        DiagnosticList diagnostics;
+        auto opened = VoiceBankDiskState::open(root(), nullptr, diagnostics);
+        QVERIFY(opened.has_value());
+        auto &bank = opened->bank;
+        auto &disk = opened->disk;
+
+        write(QStringLiteral("hello-config.json"),
+              R"({"$format":"hello-voicebank","charset":"Shift_JIS","kept":1})");
+        QVERIFY(disk.save(bank, diagnostics));
+        QCOMPARE(read(QStringLiteral("hello-config.json")), recorded);
+
+        // A field added elsewhere is dropped as well.
+        write(QStringLiteral("hello-config.json"),
+              R"({"$format":"hello-voicebank","charset":"GBK","kept":1,"added":2})");
+        QVERIFY(disk.save(bank, diagnostics));
+        QCOMPARE(read(QStringLiteral("hello-config.json")), recorded);
+
+        QVERIFY(QFile::remove(pathOf(QStringLiteral("hello-config.json"))));
+        QVERIFY(disk.save(bank, diagnostics));
+        QCOMPARE(read(QStringLiteral("hello-config.json")), recorded);
+        QCOMPARE(read(QStringLiteral("oto.ini")), "a.wav=" + kGbkGePing + ",1,2,3,4,5\r\n");
+    }
+
+    // A configuration that another program created after the voice bank was read would decode
+    // the directory in its encoding at the next open, so a save replaces it as well.
+    void a_configuration_created_elsewhere_is_replaced() {
+        write(QStringLiteral("oto.ini"), "a.wav=" + kGbkGePing + ",1,2,3,4,5\r\n");
+        write(QStringLiteral("a.wav"), "RIFF");
+        auto opened = open(root(), QStringLiteral("GBK"));
+        QVERIFY(opened.has_value());
+
+        write(QStringLiteral("Hello-Config.json"),
+              R"({"$format":"hello-voicebank","charset":"Shift_JIS"})");
+        DiagnosticList diagnostics;
+        QVERIFY(opened->disk.save(opened->bank, diagnostics));
+        DiagnosticList ignored;
+        const auto config = VoiceBankConfig::open(root() / "Hello-Config.json", ignored);
+        QVERIFY(config.has_value());
+        QCOMPARE(config->charset, TextCodec(QStringLiteral("GBK")).name());
+        QCOMPARE(read(QStringLiteral("oto.ini")), "a.wav=" + kGbkGePing + ",1,2,3,4,5\r\n");
+    }
+
+    // A configuration that could not be read is taken as none, so the encoding is selected
+    // again, and replaced by the next save.
+    void a_configuration_that_did_not_read_is_replaced() {
+        write(QStringLiteral("hello-config.json"), "not json");
+        write(QStringLiteral("oto.ini"), "a.wav=" + kGbkGePing + ",1,2,3,4,5\r\n");
+        write(QStringLiteral("a.wav"), "RIFF");
+
+        auto opened = open(root(), QStringLiteral("GBK"));
+        QVERIFY(opened.has_value());
+        DiagnosticList diagnostics;
+        QVERIFY(opened->disk.save(opened->bank, diagnostics));
+        DiagnosticList ignored;
+        const auto config = VoiceBankConfig::open(root() / "hello-config.json", ignored);
+        QVERIFY(config.has_value());
+        QCOMPARE(config->charset, TextCodec(QStringLiteral("GBK")).name());
+    }
+
+    // Only a configuration that cannot be written at all fails the save, before anything is
+    // written: a folder of its name, or a file that does not open for writing.
+    void a_configuration_that_cannot_be_written_fails_the_save() {
+        write(QStringLiteral("oto.ini"), "a.wav=" + kGbkGePing + ",1,2,3,4,5\r\n");
+        write(QStringLiteral("a.wav"), "RIFF");
+        QVERIFY(QDir().mkpath(pathOf(QStringLiteral("hello-config.json"))));
+
+        auto opened = open(root(), QStringLiteral("GBK"));
+        QVERIFY(opened.has_value());
+        edit(opened->bank, QString::fromUtf8("\xe8\x91\x9b\xe5\xb9\xb3"),
+             [](VoiceSample &sample) { sample.offset = 7; });
+        DiagnosticList diagnostics;
+        QVERIFY(!opened->disk.save(opened->bank, diagnostics));
+        QVERIFY(diagnostics.last().message.contains(QStringLiteral("hello-config.json")));
+        QCOMPARE(read(QStringLiteral("oto.ini")), "a.wav=" + kGbkGePing + ",1,2,3,4,5\r\n");
+
+        QVERIFY(QDir(pathOf(QStringLiteral("hello-config.json"))).removeRecursively());
+        write(QStringLiteral("hello-config.json"), R"({"charset":"GBK"})");
+        opened = open(root(), QStringLiteral("GBK"));
+        QVERIFY(opened.has_value());
+        edit(opened->bank, QString::fromUtf8("\xe8\x91\x9b\xe5\xb9\xb3"),
+             [](VoiceSample &sample) { sample.offset = 7; });
+        write(QStringLiteral("hello-config.json"), R"({"charset":"Shift_JIS"})");
+        QVERIFY(QFile::setPermissions(pathOf(QStringLiteral("hello-config.json")),
+                                      QFileDevice::ReadOwner | QFileDevice::ReadUser));
+        diagnostics.clear();
+        const bool saved = opened->disk.save(opened->bank, diagnostics);
+        QVERIFY(QFile::setPermissions(pathOf(QStringLiteral("hello-config.json")),
+                                      QFileDevice::ReadOwner | QFileDevice::WriteOwner));
+        QVERIFY(!saved);
+        QCOMPARE(read(QStringLiteral("oto.ini")), "a.wav=" + kGbkGePing + ",1,2,3,4,5\r\n");
     }
 
     // The contents and the disk state are paired by directory path. A directory of the contents

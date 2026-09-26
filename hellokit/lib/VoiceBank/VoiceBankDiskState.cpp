@@ -126,8 +126,10 @@ namespace hello::kit {
         }
 
         /// The encoding for rereading a previously read directory. The order of precedence is
-        /// the encoding in its current configuration, then the encoding it was read in, and
-        /// only then the selector. The user was already asked about a directory that was read
+        /// the encoding it was read in, then the encoding in its configuration, and only then
+        /// the selector. The configuration on disk is not read again for a directory whose
+        /// encoding is known, because it belongs to HelloUtau and a change made to it by another
+        /// program is not taken in. The user was already asked about a directory that was read
         /// or left out before, and asking again on every change would repeat an answered
         /// question.
         std::optional<TextCodec> codecAgain(const VoiceBankDirectorySource &source,
@@ -137,14 +139,14 @@ namespace hello::kit {
             if (!source.needsCharset()) {
                 return std::nullopt;
             }
-            if (source.config && !source.config->charset.isEmpty()) {
-                return codecFor(source, nullptr, diagnostics);
-            }
             if (!before.charset.isEmpty()) {
                 const TextCodec codec(before.charset);
                 if (codec.isValid()) {
                     return codec;
                 }
+            }
+            if (source.config && !source.config->charset.isEmpty()) {
+                return codecFor(source, nullptr, diagnostics);
             }
             if (before.leftOut) {
                 return std::nullopt;
@@ -155,6 +157,11 @@ namespace hello::kit {
 
 
         std::optional<QByteArray> readWhole(const fs::path &path) {
+            // A directory opens as a stream on some systems, and reading it then throws.
+            std::error_code error;
+            if (!fs::is_regular_file(path, error)) {
+                return std::nullopt;
+            }
             std::ifstream in(path, std::ios::binary);
             if (!in) {
                 return std::nullopt;
@@ -696,6 +703,7 @@ namespace hello::kit {
         std::vector<fs::path> rereads;
         std::vector<fs::path> audios;
         std::vector<fs::path> arrivals;
+        std::vector<fs::path> configs;
 
         const auto known = [this](const fs::path &path) { return m_books.count(path) != 0; };
         const auto removeUnder = [&](const fs::path &path) {
@@ -748,50 +756,56 @@ namespace hello::kit {
             // directory, while a changed set of audio files only changes its bare samples. A
             // matching stamp is trusted except for racy text entries, which were written too
             // close to the snapshot and are compared by content.
+            //
+            // The configuration is compared apart from the other text files. It belongs to
+            // HelloUtau, so a change to it is reported but never read.
+            enum Kind { Text, Config, Audio };
             const auto kindOf = [&path](const VoiceBankDirectoryStamp::Entry &entry) {
-                return VoiceBankDirectorySource::fileNamed(foldedName(entry.name), path.empty());
+                const auto file =
+                    VoiceBankDirectorySource::fileNamed(foldedName(entry.name), path.empty());
+                return !file ? Audio : *file == VoiceBankDirectorySource::Config ? Config : Text;
             };
-            const auto entriesOf = [&kindOf](const VoiceBankDirectoryStamp &stamp, bool text) {
+            const auto entriesOf = [&kindOf](const VoiceBankDirectoryStamp &stamp, Kind kind) {
                 std::vector<VoiceBankDirectoryStamp::Entry> out;
                 for (const auto &entry : stamp.entries) {
-                    if (!entry.directory && kindOf(entry).has_value() == text) {
+                    if (!entry.directory && kindOf(entry) == kind) {
                         out.push_back(entry);
                     }
                 }
                 return out;
             };
-            bool changed = entriesOf(book.stamp, true) != entriesOf(*now, true);
-            if (!changed) {
-                for (const auto &entry : book.stamp.entries) {
-                    if (entry.directory || !book.stamp.isRacy(entry)) {
-                        continue;
-                    }
-                    const auto kind = kindOf(entry);
-                    if (!kind) {
-                        continue;
-                    }
-                    const auto record = book.files.find(*kind);
-                    const auto bytes =
-                        readWhole((path.empty() ? m_root : m_root / path) / entry.name);
-                    if (record == book.files.end() || !bytes ||
-                        digestOf(*bytes) != record->second.digest) {
-                        changed = true;
-                        break;
-                    }
+            bool changed = entriesOf(book.stamp, Text) != entriesOf(*now, Text);
+            bool configChanged = entriesOf(book.stamp, Config) != entriesOf(*now, Config);
+            for (const auto &entry : book.stamp.entries) {
+                if (entry.directory || !book.stamp.isRacy(entry) || kindOf(entry) == Audio) {
+                    continue;
                 }
+                auto &differs = kindOf(entry) == Config ? configChanged : changed;
+                if (differs) {
+                    continue;
+                }
+                const auto file =
+                    VoiceBankDirectorySource::fileNamed(foldedName(entry.name), path.empty());
+                const auto record = book.files.find(*file);
+                const auto bytes = readWhole((path.empty() ? m_root : m_root / path) / entry.name);
+                differs = record == book.files.end() || !bytes ||
+                          digestOf(*bytes) != record->second.digest;
             }
-            const bool audio = entriesOf(book.stamp, false) != entriesOf(*now, false);
+            const bool audio = entriesOf(book.stamp, Audio) != entriesOf(*now, Audio);
 
+            if (configChanged) {
+                configs.push_back(path);
+            }
             if (changed) {
                 rereads.push_back(path);
             } else if (audio) {
                 audios.push_back(path);
-            } else if (!listed) {
+            } else if (!listed && !configChanged) {
                 // No difference was found. The new stamp is taken later, so that entries racy
                 // in the old stamp need not be read again at the next check. If a difference
                 // was found, the old stamp is retained, so that every subsequent check reports
-                // it again until it is reloaded. Otherwise a change reported once and missed
-                // would be lost.
+                // it again until it is reloaded, or for the configuration until a save writes
+                // it again. Otherwise a change reported once and missed would be lost.
                 book.stamp = *now;
             }
         }
@@ -812,6 +826,11 @@ namespace hello::kit {
         for (const auto &path : arrivals) {
             if (!changes.added.contains(path)) {
                 changes.added.push_back(path);
+            }
+        }
+        for (const auto &path : configs) {
+            if (removals.count(path) == 0) {
+                changes.config.push_back(path);
             }
         }
         return changes;
@@ -1171,25 +1190,35 @@ namespace hello::kit {
             // The encoding is recorded together with the files, and when it changed. Otherwise
             // the next open would query the user again, and a configuration naming another
             // encoding would decode the files incorrectly.
+            //
+            // The configuration belongs to HelloUtau. Once a directory has one, it is written
+            // whenever the file on disk does not hold what it should, whether another program
+            // modified or removed it or it could not be read when the directory was, and it is
+            // replaced without regard to such changes.
             const QString name = VoiceBank::canonicalCharset(directory.charset);
-            if (changed || (!name.isEmpty() && (book.remember || name != book.charset))) {
-                const auto configRecord = book.files.find(VoiceBankDirectorySource::Config);
-                if (configRecord != book.files.end() && !book.config) {
-                    fail(diagnostics,
-                         tr("The HelloUtau configuration in \"%1\" could not be read, so it is not "
-                            "replaced and no file in this directory is saved.")
-                             .arg(displayed(directory.path)));
-                    ok = false;
-                    continue;
+            const bool recording =
+                changed || (!name.isEmpty() && (book.remember || name != book.charset));
+            //
+            // A configuration that another program created since is replaced as well, because
+            // the next open would otherwise decode the directory in the encoding it names.
+            const auto configRecord = book.files.find(VoiceBankDirectorySource::Config);
+            const auto configFound =
+                configRecord != book.files.end()
+                    ? std::optional<fs::path>(absolute / configRecord->second.name)
+                    : findFolded(absolute, VoiceBankConfig::fileName);
+            if (!name.isEmpty() && (recording || configFound)) {
+                if (recording) {
+                    recorded.emplace_back(directory.path, name);
                 }
-                recorded.emplace_back(directory.path, name);
-                if (!book.config || book.config->charset != name) {
-                    VoiceBankConfig config = book.config.value_or(VoiceBankConfig());
-                    config.charset = name;
-                    const auto path = absolute / (configRecord != book.files.end()
-                                                      ? configRecord->second.name
-                                                      : fs::path(VoiceBankDirectorySource::fileName(
-                                                            VoiceBankDirectorySource::Config)));
+                VoiceBankConfig config = book.config.value_or(VoiceBankConfig());
+                config.charset = name;
+                const auto path = configFound.value_or(absolute / VoiceBankConfig::fileName);
+                DiagnosticList ignored;
+                const auto bytes = readWhole(path);
+                const auto current =
+                    bytes ? VoiceBankConfig::fromJson(*bytes, ignored) : std::nullopt;
+                if (!current || current->charset != config.charset ||
+                    current->unknownFields != config.unknownFields) {
                     writes.push_back(
                         {directory.path, VoiceBankDirectorySource::Config, path, config.toJson()});
                 }
@@ -1203,6 +1232,24 @@ namespace hello::kit {
             const auto &book = bookOf(write.directory);
             const auto record = book.files.find(write.file);
             const auto absolute = write.directory.empty() ? m_root : m_root / write.directory;
+
+            // The configuration is replaced regardless of changes made elsewhere. It fails only
+            // where it cannot be written at all: a folder of its name, or a file that does not
+            // open for writing. Opening for appending changes nothing.
+            if (write.file == VoiceBankDirectorySource::Config) {
+                std::error_code error;
+                bool writable = true;
+                if (fs::exists(write.path, error)) {
+                    std::ofstream probe(write.path, std::ios::binary | std::ios::app);
+                    writable = probe.is_open();
+                }
+                if (!writable) {
+                    fail(diagnostics, tr("The HelloUtau configuration \"%1\" cannot be written.")
+                                          .arg(displayed(write.directory / write.path.filename())));
+                    ok = false;
+                }
+                continue;
+            }
 
             bool same;
             if (record == book.files.end()) {
@@ -1260,6 +1307,7 @@ namespace hello::kit {
                 config.charset = VoiceBank::canonicalCharset(
                     directories.at(bank.indexOf(write.directory)).charset);
                 book.config = config;
+
             } else {
                 book.baseline[write.file] = digestOf(write.bytes);
             }
@@ -1357,6 +1405,7 @@ namespace hello::kit {
         Book book;
         book.files = source.files;
         book.config = source.config;
+
         book.charset = VoiceBank::canonicalCharset(decoded.charset);
         book.stamp = source.stamp;
         book.audioFiles = namesOf(source.audioFiles);

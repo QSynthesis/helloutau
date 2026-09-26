@@ -240,13 +240,13 @@ namespace hello::kit {
     /// and a removed directory concern the edited contents and require the user's decision, so
     /// \a changed and \a removed call for a prominent prompt. A changed set of audio files and a
     /// new directory add or remove only what the user has not edited, so \a audio and \a added
-    /// call for an unobtrusive notice.
+    /// call for an unobtrusive notice. A changed \c hello-config.json is neither: it is reported
+    /// in \a config , and only makes the voice bank unsaved.
     ///
     /// \sa docs/Editing.md
     struct VoiceBankChanges {
-        /// Directories in which a text file changed: \c oto.ini , \c hello-config.json , or a
-        /// text file of the root. Applying the change rereads the directory and discards its
-        /// unsaved changes.
+        /// Directories in which a text file changed: \c oto.ini , or a text file of the root.
+        /// Applying the change rereads the directory and discards its unsaved changes.
         QList<std::filesystem::path> changed;
 
         /// Directories in which only audio files were added or removed. Applying the change
@@ -260,12 +260,17 @@ namespace hello::kit {
         /// Removed directories, each including its former subtree.
         QList<std::filesystem::path> removed;
 
+        /// Directories whose \c hello-config.json was modified, removed or created by another
+        /// program. Nothing is applied: the configuration belongs to HelloUtau, and the next
+        /// save writes it again. An editor only marks the voice bank unsaved.
+        QList<std::filesystem::path> config;
+
         /// The root does not exist. No other directory was examined.
         bool rootNotFound = false;
 
         inline bool isEmpty() const {
             return changed.isEmpty() && audio.isEmpty() && added.isEmpty() && removed.isEmpty() &&
-                   !rootNotFound;
+                   config.isEmpty() && !rootNotFound;
         }
     };
 
