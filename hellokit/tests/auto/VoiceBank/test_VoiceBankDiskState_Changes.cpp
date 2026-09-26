@@ -532,6 +532,26 @@ private Q_SLOTS:
         QVERIFY(bank.find(60, kA));
     }
 
+    // The files a save writes are not changes made elsewhere.
+    void a_save_is_not_a_change_on_disk() {
+        write(QStringLiteral("oto.ini"), "a.wav=a,1,2,3,4,5\r\n");
+        write(QStringLiteral("a.wav"), "RIFF");
+        CountingSelector selector(QStringLiteral("UTF-8"));
+        auto opened = open(&selector);
+        QVERIFY(opened.has_value());
+        auto &bank = opened->bank;
+        auto &disk = opened->disk;
+
+        auto samples = bank.samples();
+        samples[0].offset = 7;
+        bank.setSamples(samples);
+        DiagnosticList diagnostics;
+        QVERIFY(disk.save(bank, diagnostics));
+        QVERIFY(QFileInfo::exists(pathOf(QStringLiteral("hello-config.json"))));
+        const auto found = disk.checkDisk();
+        QVERIFY(found.changed.isEmpty());
+    }
+
     // The disk changed between the check and the reload. A directory removed since is not read,
     // and a directory restored since is not dropped.
     void a_reload_looks_again_at_what_the_check_found() {

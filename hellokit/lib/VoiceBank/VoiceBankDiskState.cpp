@@ -201,6 +201,25 @@ namespace hello::kit {
             return std::nullopt;
         }
 
+        /// Replaces or adds the entry of the file at \a path in \a stamp with the file as it is
+        /// now, and leaves every other entry as it was.
+        void restamp(VoiceBankDirectoryStamp &stamp, const fs::path &path) {
+            std::error_code error;
+            VoiceBankDirectoryStamp::Entry entry;
+            entry.name = path.filename();
+            entry.size = fs::file_size(path, error);
+            entry.time = fs::last_write_time(path, error);
+            auto &entries = stamp.entries;
+            const auto at =
+                std::lower_bound(entries.begin(), entries.end(), entry,
+                                 [](const auto &a, const auto &b) { return a.name < b.name; });
+            if (at != entries.end() && at->name == entry.name) {
+                *at = entry;
+            } else {
+                entries.insert(at, entry);
+            }
+        }
+
         /// One decoded directory and its samples.
         struct DecodedDirectory {
             VoiceBankDirectory directory;
@@ -1229,9 +1248,13 @@ namespace hello::kit {
                 return false;
             }
 
+            // The file as written is the state on disk, so that a check does not take the save
+            // for a change made elsewhere. The other entries of the stamp are kept, so that a
+            // change made elsewhere to another file is still reported.
             auto &book = m_books[write.directory];
             book.files[write.file] =
                 VoiceBankFileRecord{write.path.filename(), digestOf(write.bytes)};
+            restamp(book.stamp, write.path);
             if (write.file == VoiceBankDirectorySource::Config) {
                 VoiceBankConfig config = book.config.value_or(VoiceBankConfig());
                 config.charset = VoiceBank::canonicalCharset(
