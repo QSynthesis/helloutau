@@ -113,6 +113,35 @@ private Q_SLOTS:
         QCOMPARE(*back, QString::fromUtf8("あい"));
     }
 
+    // A sequence cut off at the end of the bytes is invalid, not left pending for more bytes.
+    void a_truncated_sequence_is_invalid() {
+        QVERIFY(!utf8().decode(QByteArray("\xe3\x81", 2)).has_value());
+        QVERIFY(!utf8().decode(QByteArray("a\xc3", 2)).has_value());
+    }
+
+    // Each invalid sequence becomes one replacement character, and decoding resumes after it,
+    // so that the valid text around it survives.
+    void replacing_keeps_the_valid_text_and_counts_the_invalid_sequences() {
+        qsizetype invalid = -1;
+        const QByteArray japanese = shiftJis().encode(QString::fromUtf8("あ")) +
+                                    QByteArray("\x82\x20", 2) +
+                                    shiftJis().encode(QString::fromUtf8("い"));
+        QCOMPARE(shiftJis().decodeReplacing(japanese, &invalid),
+                 QString::fromUtf8("あ\xef\xbf\xbd い"));
+        QCOMPARE(invalid, 1);
+
+        // A stray byte, a valid two-byte character, and a three-byte character cut off after
+        // its second byte, whose two bytes are each invalid.
+        QCOMPARE(utf8().decodeReplacing(QByteArray("a\xff\xc3\xa9\xe3\x81", 6), &invalid),
+                 QString::fromUtf8("a\xef\xbf\xbd\xc3\xa9\xef\xbf\xbd\xef\xbf\xbd"));
+        QCOMPARE(invalid, 3);
+
+        // Valid bytes decode as by decode(), with nothing counted.
+        QCOMPARE(shiftJis().decodeReplacing(japanese.left(2), &invalid), QString::fromUtf8("あ"));
+        QCOMPARE(invalid, 0);
+        QVERIFY(TextCodec(QStringLiteral("Klingon-1")).decodeReplacing("abc").isEmpty());
+    }
+
     // Every ANSI code page must be available, so that the system encoding of any Windows
     // machine is supported, on every system rather than only on Windows.
     void every_ansi_code_page_is_reachable_by_name() {

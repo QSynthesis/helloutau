@@ -138,8 +138,10 @@ namespace hello::kit {
         }
 
         switch (m_path) {
+            // Stateless, so that a sequence cut off at the end is an error rather than state kept
+            // for a next call that never comes.
             case Path::Builtin: {
-                QStringDecoder decoder(m_builtin);
+                QStringDecoder decoder(m_builtin, QStringConverter::Flag::Stateless);
                 QString text = decoder.decode(bytes);
                 return decoder.hasError() ? std::nullopt : std::optional<QString>(text);
             }
@@ -174,7 +176,7 @@ namespace hello::kit {
 #endif
 
             case Path::ByName: {
-                QStringDecoder decoder(m_converterName);
+                QStringDecoder decoder(m_converterName, QStringConverter::Flag::Stateless);
                 QString text = decoder.decode(bytes);
                 return decoder.hasError() ? std::nullopt : std::optional<QString>(text);
             }
@@ -183,6 +185,41 @@ namespace hello::kit {
                 break;
         }
         return std::nullopt;
+    }
+
+    QString TextCodec::decodeReplacing(QByteArrayView bytes, qsizetype *invalid) const {
+        qsizetype count = 0;
+        QString text;
+        if (const auto whole = decode(bytes)) {
+            text = *whole;
+        } else if (m_path != Path::Invalid) {
+            // Each position is decoded as the shortest sequence that is valid by itself. Four
+            // bytes is the longest character of every supported encoding, reached by UTF-8 and
+            // GB18030.
+            qsizetype at = 0;
+            while (at < bytes.size()) {
+                qsizetype length = 1;
+                std::optional<QString> piece;
+                for (; length <= 4 && at + length <= bytes.size(); ++length) {
+                    piece = decode(bytes.sliced(at, length));
+                    if (piece) {
+                        break;
+                    }
+                }
+                if (piece) {
+                    text += *piece;
+                    at += length;
+                } else {
+                    text += QChar::ReplacementCharacter;
+                    ++count;
+                    ++at;
+                }
+            }
+        }
+        if (invalid) {
+            *invalid = count;
+        }
+        return text;
     }
 
     QByteArray TextCodec::encode(QStringView text) const {

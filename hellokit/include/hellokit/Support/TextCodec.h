@@ -53,6 +53,20 @@ namespace hello::kit {
         /// \return the decoded text, or \c std::nullopt if \a bytes is not valid in this encoding
         std::optional<QString> decode(QByteArrayView bytes) const;
 
+        /// Decodes \a bytes , replacing each invalid byte sequence with U+FFFD.
+        ///
+        /// For a file that remains usable despite a few invalid bytes, such as a \c readme.txt
+        /// with one mistyped character. The caller reports the count, and must not write the
+        /// replaced text back, because the original bytes are lost in it.
+        ///
+        /// Decoding resumes at the byte after the start of an invalid sequence, at the shortest
+        /// sequence of up to four bytes that decodes. A stateful encoding, such as ISO-2022-JP,
+        /// is therefore not resumed correctly after an invalid sequence.
+        ///
+        /// \param invalid receives the number of invalid sequences, zero if decode() succeeds
+        /// \return the decoded text, or empty for an invalid codec
+        QString decodeReplacing(QByteArrayView bytes, qsizetype *invalid = nullptr) const;
+
         /// Encodes \a text without escaping. Unrepresentable characters are replaced, on the ANSI
         /// code pages with a question mark as Windows does. Call escape() first if
         /// replacement is unacceptable.
