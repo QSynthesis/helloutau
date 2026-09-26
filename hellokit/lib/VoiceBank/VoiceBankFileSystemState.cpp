@@ -1,4 +1,4 @@
-#include "VoiceBankDiskState.h"
+#include "VoiceBankFileSystemState.h"
 
 #include <algorithm>
 #include <fstream>
@@ -53,7 +53,7 @@ namespace hello::kit {
             const TextCodec codec(name);
             if (!codec.isValid()) {
                 complain(diagnostics,
-                         VoiceBankDiskState::tr(
+                         VoiceBankFileSystemState::tr(
                              "The encoding \"%1\" is not available, so \"%2\" was left out.")
                              .arg(name, displayed(directory.path)));
                 return std::nullopt;
@@ -80,10 +80,10 @@ namespace hello::kit {
             auto name = directory.settledCharset();
             if (!name) {
                 if (!selector) {
-                    complain(diagnostics,
-                             VoiceBankDiskState::tr("The encoding of \"%1\" is not specified, "
-                                                    "so the directory was left out.")
-                                 .arg(displayed(directory.path)));
+                    complain(diagnostics, VoiceBankFileSystemState::tr(
+                                              "The encoding of \"%1\" is not specified, "
+                                              "so the directory was left out.")
+                                              .arg(displayed(directory.path)));
                     return std::nullopt;
                 }
                 name = selector->selectCharset(directory, diagnostics);
@@ -278,7 +278,7 @@ namespace hello::kit {
                 const auto &recorded = directory.config->charset;
                 if (!recorded.isEmpty() && !TextCodec(recorded).isUtf8()) {
                     complain(diagnostics,
-                             VoiceBankDiskState::tr(
+                             VoiceBankFileSystemState::tr(
                                  "The oto.ini in \"%1\" declares the encoding UTF-8, so the "
                                  "directory is read in UTF-8 rather than in %2.")
                                  .arg(displayed(directory.path), recorded));
@@ -293,7 +293,7 @@ namespace hello::kit {
                 }
                 complain(
                     diagnostics,
-                    VoiceBankDiskState::tr(
+                    VoiceBankFileSystemState::tr(
                         "%n byte sequence(s) in \"%1\" are not valid %2 and were read as "
                         "U+FFFD. The file cannot be saved with changes while its text "
                         "contains U+FFFD.",
@@ -429,14 +429,15 @@ namespace hello::kit {
             const auto codecOf = [&](File file, EncodedFile &encoded) -> std::optional<TextCodec> {
                 if (directory.charset.isEmpty()) {
                     encoded.problems.push_back(
-                        VoiceBankDiskState::tr("The encoding for writing \"%1\" is not specified.")
+                        VoiceBankFileSystemState::tr(
+                            "The encoding for writing \"%1\" is not specified.")
                             .arg(where(file)));
                     return std::nullopt;
                 }
                 const TextCodec codec(directory.charset);
                 if (!codec.isValid()) {
                     encoded.problems.push_back(
-                        VoiceBankDiskState::tr("The encoding \"%1\" is not available.")
+                        VoiceBankFileSystemState::tr("The encoding \"%1\" is not available.")
                             .arg(directory.charset));
                     return std::nullopt;
                 }
@@ -450,20 +451,22 @@ namespace hello::kit {
                                     EncodedFile &encoded) {
                 if (text.contains(QChar::ReplacementCharacter)) {
                     encoded.problems.push_back(
-                        VoiceBankDiskState::tr("\"%1\" in \"%2\" contains U+FFFD, which stands "
-                                               "for bytes that could not be read, and writing it "
-                                               "would lose them.")
+                        VoiceBankFileSystemState::tr(
+                            "\"%1\" in \"%2\" contains U+FFFD, which stands "
+                            "for bytes that could not be read, and writing it "
+                            "would lose them.")
                             .arg(text, where(file)));
                 } else if (!codec.canEncode(text)) {
                     encoded.problems.push_back(
-                        VoiceBankDiskState::tr("\"%1\" in \"%2\" cannot be written in %3.")
+                        VoiceBankFileSystemState::tr("\"%1\" in \"%2\" cannot be written in %3.")
                             .arg(text, where(file), codec.name()));
                 }
                 return codec.encode(text).toStdString();
             };
             const auto removed = [&](File file) {
                 out[file].problems.push_back(
-                    VoiceBankDiskState::tr("Saving does not remove \"%1\".").arg(where(file)));
+                    VoiceBankFileSystemState::tr("Saving does not remove \"%1\".")
+                        .arg(where(file)));
             };
 
             if (!entries.isEmpty() || had(VoiceBankDirectorySource::Oto)) {
@@ -540,13 +543,15 @@ namespace hello::kit {
                 if (const auto codec = codecOf(VoiceBankDirectorySource::Readme, encoded)) {
                     if (directory.readme.contains(QChar::ReplacementCharacter)) {
                         encoded.problems.push_back(
-                            VoiceBankDiskState::tr("Part of \"%1\" is U+FFFD, which stands for "
-                                                   "bytes that could not be read, and writing it "
-                                                   "would lose them.")
+                            VoiceBankFileSystemState::tr(
+                                "Part of \"%1\" is U+FFFD, which stands for "
+                                "bytes that could not be read, and writing it "
+                                "would lose them.")
                                 .arg(where(VoiceBankDirectorySource::Readme)));
                     } else if (!codec->canEncode(directory.readme)) {
                         encoded.problems.push_back(
-                            VoiceBankDiskState::tr("Part of \"%1\" cannot be represented in %2.")
+                            VoiceBankFileSystemState::tr(
+                                "Part of \"%1\" cannot be represented in %2.")
                                 .arg(where(VoiceBankDirectorySource::Readme), codec->name()));
                     }
                     encoded.bytes = codec->encode(directory.readme);
@@ -558,9 +563,9 @@ namespace hello::kit {
 
     }
 
-    std::optional<VoiceBankDiskState::Opened>
-        VoiceBankDiskState::open(const fs::path &root, VoiceBankCharsetSelector *selector,
-                                 DiagnosticList &diagnostics) {
+    std::optional<VoiceBankFileSystemState::Opened>
+        VoiceBankFileSystemState::open(const fs::path &root, VoiceBankCharsetSelector *selector,
+                                       DiagnosticList &diagnostics) {
         const auto source = VoiceBankSource::open(root, diagnostics);
         if (!source) {
             return std::nullopt;
@@ -568,24 +573,24 @@ namespace hello::kit {
         return fromSource(*source, selector, diagnostics);
     }
 
-    std::optional<VoiceBankDiskState::Opened>
-        VoiceBankDiskState::fromSource(const VoiceBankSource &source,
-                                       VoiceBankCharsetSelector *selector,
-                                       DiagnosticList &diagnostics) {
-        Opened opened{VoiceBank(), VoiceBankDiskState()};
+    std::optional<VoiceBankFileSystemState::Opened>
+        VoiceBankFileSystemState::fromSource(const VoiceBankSource &source,
+                                             VoiceBankCharsetSelector *selector,
+                                             DiagnosticList &diagnostics) {
+        Opened opened{VoiceBank(), VoiceBankFileSystemState()};
         auto &bank = opened.bank;
-        auto &disk = opened.disk;
+        auto &files = opened.files;
         bank.m_root = source.root();
-        disk.m_root = source.root();
+        files.m_root = source.root();
 
         for (const auto &directory : source.directories()) {
-            disk.appendDirectory(bank, directory, charsetFor(directory, selector, diagnostics),
-                                 diagnostics);
+            files.appendDirectory(bank, directory, charsetFor(directory, selector, diagnostics),
+                                  diagnostics);
         }
 
         bank.reindex();
         for (int i = 0; i < bank.m_directories.size(); ++i) {
-            takeBaseline(bank, i, disk.m_books[bank.m_directories.at(i).path]);
+            takeBaseline(bank, i, files.m_books[bank.m_directories.at(i).path]);
         }
 
         if (bank.m_samples.isEmpty()) {
@@ -594,8 +599,8 @@ namespace hello::kit {
         return opened;
     }
 
-    bool VoiceBankDiskState::reread(VoiceBank &bank, const fs::path &directory,
-                                    const QString &charset, DiagnosticList &diagnostics) {
+    bool VoiceBankFileSystemState::reread(VoiceBank &bank, const fs::path &directory,
+                                          const QString &charset, DiagnosticList &diagnostics) {
         const int index = bank.indexOf(directory);
         if (index < 0 || m_books.count(directory) == 0) {
             fail(diagnostics,
@@ -629,7 +634,8 @@ namespace hello::kit {
         return true;
     }
 
-    bool VoiceBankDiskState::isModified(const VoiceBank &bank, const fs::path &directory) const {
+    bool VoiceBankFileSystemState::isModified(const VoiceBank &bank,
+                                              const fs::path &directory) const {
         const int index = bank.indexOf(directory);
         const auto it = m_books.find(directory);
         if (index < 0 || it == m_books.end()) {
@@ -654,7 +660,7 @@ namespace hello::kit {
         return false;
     }
 
-    QList<fs::path> VoiceBankDiskState::directories() const {
+    QList<fs::path> VoiceBankFileSystemState::directories() const {
         QList<fs::path> paths;
         for (const auto &[path, book] : m_books) {
             Q_UNUSED(book)
@@ -663,16 +669,16 @@ namespace hello::kit {
         return paths;
     }
 
-    QStringList VoiceBankDiskState::audioFiles(const fs::path &directory) const {
+    QStringList VoiceBankFileSystemState::audioFiles(const fs::path &directory) const {
         const auto it = m_books.find(directory);
         return it == m_books.end() ? QStringList() : it->second.audioFiles;
     }
 
-    VoiceBankChanges VoiceBankDiskState::checkDisk() {
+    VoiceBankChanges VoiceBankFileSystemState::checkDisk() {
         return checkDisk(QList<fs::path>{m_root});
     }
 
-    VoiceBankChanges VoiceBankDiskState::checkDisk(const QList<fs::path> &places) {
+    VoiceBankChanges VoiceBankFileSystemState::checkDisk(const QList<fs::path> &places) {
         VoiceBankChanges changes;
         std::error_code error;
         if (!fs::is_directory(m_root, error)) {
@@ -859,10 +865,10 @@ namespace hello::kit {
         return changes;
     }
 
-    VoiceBankChanges VoiceBankDiskState::reloadFromDisk(VoiceBank &bank,
-                                                        const VoiceBankChanges &changes,
-                                                        VoiceBankCharsetSelector *selector,
-                                                        DiagnosticList &diagnostics) {
+    VoiceBankChanges VoiceBankFileSystemState::reloadFromDisk(VoiceBank &bank,
+                                                              const VoiceBankChanges &changes,
+                                                              VoiceBankCharsetSelector *selector,
+                                                              DiagnosticList &diagnostics) {
         VoiceBankChanges done;
         const auto on = [this](const fs::path &path) {
             std::error_code error;
@@ -953,9 +959,9 @@ namespace hello::kit {
         return done;
     }
 
-    VoiceBankChanges VoiceBankDiskState::reloadAllFromDisk(VoiceBank &bank,
-                                                           VoiceBankCharsetSelector *selector,
-                                                           DiagnosticList &diagnostics) {
+    VoiceBankChanges VoiceBankFileSystemState::reloadAllFromDisk(VoiceBank &bank,
+                                                                 VoiceBankCharsetSelector *selector,
+                                                                 DiagnosticList &diagnostics) {
         // Added and removed directories are still detected by the listings, which compare
         // names rather than times. All other content is read regardless of its stamp.
         auto changes = checkDisk();
@@ -971,10 +977,10 @@ namespace hello::kit {
         return reloadFromDisk(bank, changes, selector, diagnostics);
     }
 
-    void VoiceBankDiskState::replaceDirectory(VoiceBank &bank, int index,
-                                              const VoiceBankDirectorySource &source,
-                                              const std::optional<QString> &charset,
-                                              DiagnosticList &diagnostics) {
+    void VoiceBankFileSystemState::replaceDirectory(VoiceBank &bank, int index,
+                                                    const VoiceBankDirectorySource &source,
+                                                    const std::optional<QString> &charset,
+                                                    DiagnosticList &diagnostics) {
         auto decoded = decodeDirectory(source, m_root, index, charset, diagnostics);
 
         // Inserted at the former position of the directory's samples, so that the sample
@@ -997,10 +1003,10 @@ namespace hello::kit {
         m_books[source.path] = bookOf(source, decoded.directory);
     }
 
-    void VoiceBankDiskState::appendDirectory(VoiceBank &bank,
-                                             const VoiceBankDirectorySource &source,
-                                             const std::optional<QString> &charset,
-                                             DiagnosticList &diagnostics) {
+    void VoiceBankFileSystemState::appendDirectory(VoiceBank &bank,
+                                                   const VoiceBankDirectorySource &source,
+                                                   const std::optional<QString> &charset,
+                                                   DiagnosticList &diagnostics) {
         const int index = int(bank.m_directories.size());
         auto decoded = decodeDirectory(source, m_root, index, charset, diagnostics);
         bank.m_samples += decoded.samples;
@@ -1008,8 +1014,8 @@ namespace hello::kit {
         m_books[source.path] = bookOf(source, decoded.directory);
     }
 
-    void VoiceBankDiskState::refreshAudio(VoiceBank &bank, int index,
-                                          const VoiceBankDirectorySource &source) {
+    void VoiceBankFileSystemState::refreshAudio(VoiceBank &bank, int index,
+                                                const VoiceBankDirectorySource &source) {
         const auto absolute = source.path.empty() ? m_root : m_root / source.path;
 
         // The audio files covered by an entry, as when decoding. The rest become samples
@@ -1074,7 +1080,7 @@ namespace hello::kit {
         }
     }
 
-    void VoiceBankDiskState::removeDirectory(VoiceBank &bank, int index) {
+    void VoiceBankFileSystemState::removeDirectory(VoiceBank &bank, int index) {
         QList<VoiceSample> samples;
         for (auto sample : std::as_const(bank.m_samples)) {
             if (sample.directory == index) {
@@ -1090,19 +1096,19 @@ namespace hello::kit {
         bank.m_directories.removeAt(index);
     }
 
-    void VoiceBankDiskState::rememberCharset(const fs::path &directory) {
+    void VoiceBankFileSystemState::rememberCharset(const fs::path &directory) {
         const auto it = m_books.find(directory);
         if (it != m_books.end()) {
             it->second.remember = true;
         }
     }
 
-    bool VoiceBankDiskState::hasUnrecordedCharsets() const {
+    bool VoiceBankFileSystemState::hasUnrecordedCharsets() const {
         return std::any_of(m_books.begin(), m_books.end(),
                            [](const auto &item) { return item.second.remember; });
     }
 
-    bool VoiceBankDiskState::save(const VoiceBank &bank, DiagnosticList &diagnostics) {
+    bool VoiceBankFileSystemState::save(const VoiceBank &bank, DiagnosticList &diagnostics) {
         struct Write {
             fs::path directory;
             VoiceBankDirectorySource::File file;
@@ -1342,9 +1348,9 @@ namespace hello::kit {
         return true;
     }
 
-    std::optional<VoiceBankDiskState::Opened>
-        VoiceBankDiskState::saveAs(const VoiceBank &bank, const fs::path &folder,
-                                   bool copyOtherFiles, DiagnosticList &diagnostics) {
+    std::optional<VoiceBankFileSystemState::Opened>
+        VoiceBankFileSystemState::saveAs(const VoiceBank &bank, const fs::path &folder,
+                                         bool copyOtherFiles, DiagnosticList &diagnostics) {
         std::error_code error;
         if (fs::exists(folder, error) &&
             (!fs::is_directory(folder, error) || !fs::is_empty(folder, error))) {
@@ -1361,7 +1367,7 @@ namespace hello::kit {
 
         // The text files first, into a state without any directory, which checks everything
         // before the first write.
-        VoiceBankDiskState state;
+        VoiceBankFileSystemState state;
         state.m_root = folder;
         if (!state.save(bank, diagnostics)) {
             return std::nullopt;
@@ -1408,8 +1414,9 @@ namespace hello::kit {
         return open(folder, nullptr, diagnostics);
     }
 
-    VoiceBankDiskState::Book VoiceBankDiskState::bookOf(const VoiceBankDirectorySource &source,
-                                                        const VoiceBankDirectory &decoded) {
+    VoiceBankFileSystemState::Book
+        VoiceBankFileSystemState::bookOf(const VoiceBankDirectorySource &source,
+                                         const VoiceBankDirectory &decoded) {
         Book book;
         book.files = source.files;
         book.config = source.config;
@@ -1420,7 +1427,7 @@ namespace hello::kit {
         return book;
     }
 
-    void VoiceBankDiskState::takeBaseline(const VoiceBank &bank, int index, Book &book) {
+    void VoiceBankFileSystemState::takeBaseline(const VoiceBank &bank, int index, Book &book) {
         // The current serialization of the directory, against which save() compares to skip
         // unchanged files. Taken from the encoder rather than from the bytes on disk, so that a
         // file this program would serialize differently, for example with LF line endings or in

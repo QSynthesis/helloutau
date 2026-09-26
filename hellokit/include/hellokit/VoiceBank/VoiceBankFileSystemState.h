@@ -1,5 +1,5 @@
-#ifndef HELLOKIT_VOICEBANK_VOICEBANKDISKSTATE_H
-#define HELLOKIT_VOICEBANK_VOICEBANKDISKSTATE_H
+#ifndef HELLOKIT_VOICEBANK_VOICEBANKFILESYSTEMSTATE_H
+#define HELLOKIT_VOICEBANK_VOICEBANKFILESYSTEMSTATE_H
 
 #include <filesystem>
 #include <map>
@@ -28,8 +28,8 @@ namespace hello::kit {
     /// VoiceBank for each save. The two are paired by directory path, not by position: a
     /// directory of the VoiceBank without state here was not read and is saved as a new one, and
     /// state here without a directory of the VoiceBank is skipped.
-    class HELLOKIT_VOICEBANK_EXPORT VoiceBankDiskState {
-        Q_DECLARE_TR_FUNCTIONS(hello::kit::VoiceBankDiskState)
+    class HELLOKIT_VOICEBANK_EXPORT VoiceBankFileSystemState {
+        Q_DECLARE_TR_FUNCTIONS(hello::kit::VoiceBankFileSystemState)
     public:
         struct Opened;
 
@@ -218,7 +218,7 @@ namespace hello::kit {
                                            DiagnosticList &diagnostics);
 
     private:
-        VoiceBankDiskState() = default;
+        VoiceBankFileSystemState() = default;
 
         /// The state of one directory.
         struct Book {
@@ -271,12 +271,12 @@ namespace hello::kit {
         std::map<std::filesystem::path, Book> m_books;
     };
 
-    /// The result of VoiceBankDiskState::open() : the contents and the state of their files.
-    struct VoiceBankDiskState::Opened {
+    /// The result of VoiceBankFileSystemState::open() : the contents and the state of their files.
+    struct VoiceBankFileSystemState::Opened {
         VoiceBank bank;
-        VoiceBankDiskState disk;
+        VoiceBankFileSystemState files;
     };
 
 }
 
-#endif // HELLOKIT_VOICEBANK_VOICEBANKDISKSTATE_H
+#endif // HELLOKIT_VOICEBANK_VOICEBANKFILESYSTEMSTATE_H

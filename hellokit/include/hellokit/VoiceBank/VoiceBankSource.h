@@ -254,9 +254,9 @@ namespace hello::kit {
     ///       \c hello-config.json into the user's voice bank, and a scan is not the place for
     ///       that decision: the voice bank may reside on a read-only disk, and a user who
     ///       merely inspected a folder did not request a new file in it.
-    ///       VoiceBankDiskState::save() writes the configuration together with the first file
-    ///       it writes into a directory, or by itself once VoiceBankDiskState::rememberCharset()
-    ///       has been called for the directory.
+    ///       VoiceBankFileSystemState::save() writes the configuration together with the first file
+    ///       it writes into a directory, or by itself once
+    ///       VoiceBankFileSystemState::rememberCharset() has been called for the directory.
     class HELLOKIT_VOICEBANK_EXPORT VoiceBankSource {
         Q_DECLARE_TR_FUNCTIONS(hello::kit::VoiceBankSource)
     public:

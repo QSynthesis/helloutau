@@ -14,7 +14,7 @@ namespace hello::kit {
     /// Determines when and where a voice bank must be compared with the disk.
     ///
     /// The scheduler holds no voice bank. It emits checkNeeded(), and the owner of the voice
-    /// bank passes the reported locations to VoiceBankDiskState::checkDisk() and handles the
+    /// bank passes the reported locations to VoiceBankFileSystemState::checkDisk() and handles the
     /// result. Its purpose is that **a lost notification never causes a change to be missed
     /// permanently**. File system notifications are one of several triggers, and the other triggers
     /// do not depend on them.
@@ -35,7 +35,7 @@ namespace hello::kit {
     ///   up-to-date state at a specific moment, such as when the window is reactivated.
     ///
     /// All of these checks compare stamps. A user request to reread everything regardless of
-    /// the stamps corresponds to VoiceBankDiskState::reloadAllFromDisk().
+    /// the stamps corresponds to VoiceBankFileSystemState::reloadAllFromDisk().
     ///
     /// Checking the entire voice bank costs one listing per directory and no file reads, which
     /// makes periodic checks affordable.
@@ -83,9 +83,9 @@ namespace hello::kit {
         void requestFull();
 
     Q_SIGNALS:
-        /// \a places may have changed and are to be passed to VoiceBankDiskState::checkDisk(). The
-        /// paths are absolute and use \c / as the separator. The root, if present, denotes the
-        /// entire voice bank.
+        /// \a places may have changed and are to be passed to
+        /// VoiceBankFileSystemState::checkDisk(). The paths are absolute and use \c / as the
+        /// separator. The root, if present, denotes the entire voice bank.
         void checkNeeded(const QStringList &places);
 
     private:

@@ -10,7 +10,7 @@
 #include <QtTest/QTest>
 
 #include <hellokit/VoiceBank/VoiceBank.h>
-#include <hellokit/VoiceBank/VoiceBankDiskState.h>
+#include <hellokit/VoiceBank/VoiceBankFileSystemState.h>
 
 using namespace hello::kit;
 
@@ -41,18 +41,18 @@ namespace {
     };
 
     /// The result for a user who accepts every reload.
-    VoiceBankChanges takeIn(VoiceBank &bank, VoiceBankDiskState &disk,
+    VoiceBankChanges takeIn(VoiceBank &bank, VoiceBankFileSystemState &files,
                             VoiceBankCharsetSelector *selector,
                             const QList<fs::path> &places = {}) {
         DiagnosticList diagnostics;
-        const auto found = places.isEmpty() ? disk.checkDisk() : disk.checkDisk(places);
-        disk.reloadFromDisk(bank, found, selector, diagnostics);
+        const auto found = places.isEmpty() ? files.checkDisk() : files.checkDisk(places);
+        files.reloadFromDisk(bank, found, selector, diagnostics);
         return found;
     }
 
 }
 
-class test_VoiceBankDiskState_Changes : public QObject {
+class test_VoiceBankFileSystemState_Changes : public QObject {
     Q_OBJECT
 
 private:
@@ -74,9 +74,9 @@ private:
         QCOMPARE(file.write(bytes), bytes.size());
     }
 
-    std::optional<VoiceBankDiskState::Opened> open(VoiceBankCharsetSelector *selector) const {
+    std::optional<VoiceBankFileSystemState::Opened> open(VoiceBankCharsetSelector *selector) const {
         DiagnosticList diagnostics;
-        return VoiceBankDiskState::open(root(), selector, diagnostics);
+        return VoiceBankFileSystemState::open(root(), selector, diagnostics);
     }
 
     static const VoiceBankDirectory &directoryOf(const VoiceBank &bank, const VoiceSample &sample) {
@@ -102,21 +102,21 @@ private Q_SLOTS:
         auto opened = open(&selector);
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
-        auto &disk = opened->disk;
+        auto &files = opened->files;
 
         write(QStringLiteral("oto.ini"), "a.wav=newer,10,2,3,4,5\r\n");
-        const auto found = disk.checkDisk();
+        const auto found = files.checkDisk();
         QCOMPARE(found.changed, QList<fs::path>{fs::path()});
         QVERIFY(bank.find(60, QStringLiteral("old")));
         QVERIFY(!bank.find(60, QStringLiteral("newer")));
 
         DiagnosticList diagnostics;
-        disk.reloadFromDisk(bank, found, &selector, diagnostics);
+        files.reloadFromDisk(bank, found, &selector, diagnostics);
         QVERIFY(!bank.find(60, QStringLiteral("old")));
         const auto *sample = bank.find(60, QStringLiteral("newer"));
         QVERIFY(sample);
         QCOMPARE(sample->offset, 10.0);
-        QVERIFY(disk.checkDisk().isEmpty());
+        QVERIFY(files.checkDisk().isEmpty());
     }
 
     void a_sample_added_on_disk_is_found() {
@@ -125,10 +125,10 @@ private Q_SLOTS:
         auto opened = open(&selector);
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
-        auto &disk = opened->disk;
+        auto &files = opened->files;
 
         write(QStringLiteral("ka.wav"), "RIFF");
-        QCOMPARE(takeIn(bank, disk, &selector).audio, QList<fs::path>{fs::path()});
+        QCOMPARE(takeIn(bank, files, &selector).audio, QList<fs::path>{fs::path()});
         QVERIFY(bank.find(60, QStringLiteral("ka")));
     }
 
@@ -139,10 +139,10 @@ private Q_SLOTS:
         auto opened = open(&selector);
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
-        auto &disk = opened->disk;
+        auto &files = opened->files;
 
         QVERIFY(QFile::remove(pathOf(QStringLiteral("ka.wav"))));
-        takeIn(bank, disk, &selector);
+        takeIn(bank, files, &selector);
         QVERIFY(!bank.find(60, QStringLiteral("ka")));
         QVERIFY(bank.find(60, QStringLiteral("a")));
     }
@@ -156,20 +156,20 @@ private Q_SLOTS:
         auto opened = open(&selector);
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
-        auto &disk = opened->disk;
+        auto &files = opened->files;
         auto samples = bank.samples();
         samples[0].offset = 7;
         bank.setSamples(samples);
 
         write(QStringLiteral("ka.wav"), "RIFF");
-        const auto found = takeIn(bank, disk, &selector);
+        const auto found = takeIn(bank, files, &selector);
         QVERIFY(found.changed.isEmpty());
         QCOMPARE(found.audio, QList<fs::path>{fs::path()});
         const auto *edited = bank.find(60, QStringLiteral("a"));
         QVERIFY(edited);
         QCOMPARE(edited->offset, 7.0);
         QVERIFY(bank.find(60, QStringLiteral("ka")));
-        QVERIFY(disk.checkDisk().isEmpty());
+        QVERIFY(files.checkDisk().isEmpty());
 
         // The file of the entry is not added again as a sample without an entry.
         const auto &all = bank.samples();
@@ -191,11 +191,11 @@ private Q_SLOTS:
         auto opened = open(&selector);
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
-        auto &disk = opened->disk;
+        auto &files = opened->files;
 
         QVERIFY(QFile::remove(pathOf(QStringLiteral("a.wav"))));
         QVERIFY(QFile::remove(pathOf(QStringLiteral("ki.wav"))));
-        QCOMPARE(takeIn(bank, disk, &selector).audio, QList<fs::path>{fs::path()});
+        QCOMPARE(takeIn(bank, files, &selector).audio, QList<fs::path>{fs::path()});
         const auto *entry = bank.find(60, QStringLiteral("a"));
         QVERIFY(entry);
         QVERIFY(entry->hasEntry);
@@ -213,23 +213,23 @@ private Q_SLOTS:
         auto opened = open(&selector);
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
-        auto &disk = opened->disk;
-        const auto sorted = [&disk](const fs::path &directory) {
-            auto names = disk.audioFiles(directory);
+        auto &files = opened->files;
+        const auto sorted = [&files](const fs::path &directory) {
+            auto names = files.audioFiles(directory);
             names.sort();
             return names;
         };
         QCOMPARE(sorted({}), QStringList({QStringLiteral("a.wav"), QStringLiteral("ka.wav")}));
-        QVERIFY(disk.audioFiles(QStringLiteral("missing").toStdU16String()).isEmpty());
+        QVERIFY(files.audioFiles(QStringLiteral("missing").toStdU16String()).isEmpty());
 
         QVERIFY(QFile::remove(pathOf(QStringLiteral("ka.wav"))));
         write(QStringLiteral("ki.wav"), "RIFF");
-        QCOMPARE(takeIn(bank, disk, &selector).audio, QList<fs::path>{fs::path()});
+        QCOMPARE(takeIn(bank, files, &selector).audio, QList<fs::path>{fs::path()});
         QCOMPARE(sorted({}), QStringList({QStringLiteral("a.wav"), QStringLiteral("ki.wav")}));
 
         write(QStringLiteral("oto.ini"), "a.wav=b,1,2,3,4,5\r\n");
         write(QStringLiteral("ku.wav"), "RIFF");
-        QCOMPARE(takeIn(bank, disk, &selector).changed, QList<fs::path>{fs::path()});
+        QCOMPARE(takeIn(bank, files, &selector).changed, QList<fs::path>{fs::path()});
         QCOMPARE(sorted({}), QStringList({QStringLiteral("a.wav"), QStringLiteral("ki.wav"),
                                           QStringLiteral("ku.wav")}));
     }
@@ -243,10 +243,10 @@ private Q_SLOTS:
         auto opened = open(&selector);
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
-        auto &disk = opened->disk;
+        auto &files = opened->files;
 
         write(QStringLiteral("ka.wav"), "RIFF");
-        const auto found = disk.checkDisk();
+        const auto found = files.checkDisk();
         QCOMPARE(found.audio, QList<fs::path>{fs::path()});
         write(QStringLiteral("oto.ini"), "a.wav=changed,1,2,3,4,5\r\n");
 
@@ -259,9 +259,9 @@ private Q_SLOTS:
         oto.close();
 
         DiagnosticList diagnostics;
-        disk.reloadFromDisk(bank, found, &selector, diagnostics);
+        files.reloadFromDisk(bank, found, &selector, diagnostics);
         QVERIFY(bank.find(60, QStringLiteral("ka")));
-        QCOMPARE(disk.checkDisk().changed, QList<fs::path>{fs::path()});
+        QCOMPARE(files.checkDisk().changed, QList<fs::path>{fs::path()});
     }
 
     // A resampler writes its analysis file beside the sample during rendering. This is not an
@@ -272,11 +272,11 @@ private Q_SLOTS:
         CountingSelector selector(QStringLiteral("UTF-8"));
         auto opened = open(&selector);
         QVERIFY(opened.has_value());
-        auto &disk = opened->disk;
+        auto &files = opened->files;
 
         write(QStringLiteral("a_wav.frq"), "FREQ");
         write(QStringLiteral("a.llsm"), "LLSM");
-        QVERIFY(disk.checkDisk().isEmpty());
+        QVERIFY(files.checkDisk().isEmpty());
     }
 
     // The character.txt, prefix.map and readme.txt of a subdirectory are not part of this voice
@@ -288,15 +288,15 @@ private Q_SLOTS:
         CountingSelector selector(QStringLiteral("UTF-8"));
         auto opened = open(&selector);
         QVERIFY(opened.has_value());
-        auto &disk = opened->disk;
+        auto &files = opened->files;
 
         write(QStringLiteral("inner/character.txt"), "name=changed inner\n");
         write(QStringLiteral("inner/prefix.map"), "C4\t\t_B\n");
         write(QStringLiteral("inner/readme.txt"), "readme");
-        QVERIFY(disk.checkDisk().isEmpty());
+        QVERIFY(files.checkDisk().isEmpty());
 
         write(QStringLiteral("character.txt"), "name=root\n");
-        QCOMPARE(disk.checkDisk().changed, QList<fs::path>{fs::path()});
+        QCOMPARE(files.checkDisk().changed, QList<fs::path>{fs::path()});
     }
 
     // Two writes within one timestamp interval of the file system are indistinguishable by size
@@ -309,14 +309,14 @@ private Q_SLOTS:
         auto opened = open(&selector);
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
-        auto &disk = opened->disk;
+        auto &files = opened->files;
 
         const auto oto = root() / "oto.ini";
         const auto time = fs::last_write_time(oto);
         write(QStringLiteral("oto.ini"), "a.wav=bbb,1,2,3,4,5\r\n");
         fs::last_write_time(oto, time);
 
-        QCOMPARE(takeIn(bank, disk, &selector).changed, QList<fs::path>{fs::path()});
+        QCOMPARE(takeIn(bank, files, &selector).changed, QList<fs::path>{fs::path()});
         QVERIFY(bank.find(60, QStringLiteral("bbb")));
     }
 
@@ -332,14 +332,14 @@ private Q_SLOTS:
         auto opened = open(&selector);
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
-        auto &disk = opened->disk;
+        auto &files = opened->files;
 
         write(QStringLiteral("kept/oto.ini"), "k.wav=changed,1,2,3,4,5\r\n");
         write(QStringLiteral("coming/c.wav"), "RIFF");
         QVERIFY(QDir(pathOf(QStringLiteral("going"))).removeRecursively());
 
         for (int i = 0; i < 3; ++i) {
-            const auto found = disk.checkDisk();
+            const auto found = files.checkDisk();
             QCOMPARE(found.changed, QList<fs::path>{fs::path("kept")});
             QCOMPARE(found.added, QList<fs::path>{fs::path("coming")});
             QCOMPARE(found.removed, QList<fs::path>{fs::path("going")});
@@ -357,21 +357,21 @@ private Q_SLOTS:
         auto opened = open(&selector);
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
-        auto &disk = opened->disk;
+        auto &files = opened->files;
 
         auto samples = bank.samples();
         samples[0].offset = 99;
         bank.setSamples(samples);
 
         write(QStringLiteral("oto.ini"), "a.wav=theirs,7,2,3,4,5\r\n");
-        const auto found = disk.checkDisk();
+        const auto found = files.checkDisk();
         QCOMPARE(found.changed, QList<fs::path>{fs::path()});
-        QVERIFY(disk.isModified(bank, bank.directories().at(0).path));
+        QVERIFY(files.isModified(bank, bank.directories().at(0).path));
         QCOMPARE(bank.samples().at(0).offset, 99.0);
 
         DiagnosticList diagnostics;
-        disk.reloadFromDisk(bank, found, &selector, diagnostics);
-        QVERIFY(!disk.isModified(bank, bank.directories().at(0).path));
+        files.reloadFromDisk(bank, found, &selector, diagnostics);
+        QVERIFY(!files.isModified(bank, bank.directories().at(0).path));
         QVERIFY(bank.find(60, QStringLiteral("theirs")));
     }
 
@@ -381,18 +381,18 @@ private Q_SLOTS:
         auto opened = open(&selector);
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
-        auto &disk = opened->disk;
+        auto &files = opened->files;
 
         write(QStringLiteral("new/deeper/oto.ini"), "ka.wav=" + kShiftJisA + ",1,2,3,4,5\r\n");
         write(QStringLiteral("new/deeper/ka.wav"), "RIFF");
         DiagnosticList diagnostics;
-        const auto done = disk.reloadFromDisk(bank, disk.checkDisk(), &selector, diagnostics);
+        const auto done = files.reloadFromDisk(bank, files.checkDisk(), &selector, diagnostics);
         QCOMPARE(done.added, (QList<fs::path>{fs::path("new"), fs::path("new/deeper")}));
 
         const auto *sample = bank.find(60, kA);
         QVERIFY(sample);
         QCOMPARE(directoryOf(bank, *sample).path, fs::path("new/deeper"));
-        QVERIFY(disk.checkDisk().isEmpty());
+        QVERIFY(files.checkDisk().isEmpty());
     }
 
     // The remaining samples still refer to the correct directories, although the indices
@@ -406,17 +406,17 @@ private Q_SLOTS:
         auto opened = open(&selector);
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
-        auto &disk = opened->disk;
+        auto &files = opened->files;
 
         QVERIFY(QDir(pathOf(QStringLiteral("one"))).removeRecursively());
-        QCOMPARE(takeIn(bank, disk, &selector).removed, QList<fs::path>{fs::path("one")});
+        QCOMPARE(takeIn(bank, files, &selector).removed, QList<fs::path>{fs::path("one")});
         QVERIFY(!bank.find(60, QStringLiteral("one")));
 
         const auto *sample = bank.find(60, QStringLiteral("two"));
         QVERIFY(sample);
         QCOMPARE(directoryOf(bank, *sample).path, fs::path("two"));
         QCOMPARE(sample->offset, 2.0);
-        QVERIFY(disk.checkDisk().isEmpty());
+        QVERIFY(files.checkDisk().isEmpty());
     }
 
     // Only the parent directory is examined, and the removal appears in its listing.
@@ -426,10 +426,10 @@ private Q_SLOTS:
         CountingSelector selector(QStringLiteral("UTF-8"));
         auto opened = open(&selector);
         QVERIFY(opened.has_value());
-        auto &disk = opened->disk;
+        auto &files = opened->files;
 
         QVERIFY(QDir(pathOf(QStringLiteral("one"))).removeRecursively());
-        QCOMPARE(disk.checkDisk({root() / "elsewhere"}).removed, QList<fs::path>{fs::path("one")});
+        QCOMPARE(files.checkDisk({root() / "elsewhere"}).removed, QList<fs::path>{fs::path("one")});
     }
 
     // A watcher reports the new directory itself, which is not yet part of the voice bank. Its
@@ -440,10 +440,10 @@ private Q_SLOTS:
         auto opened = open(&selector);
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
-        auto &disk = opened->disk;
+        auto &files = opened->files;
 
         write(QStringLiteral("x/y/ka.wav"), "RIFF");
-        const auto found = takeIn(bank, disk, &selector, {root() / "x" / "y"});
+        const auto found = takeIn(bank, files, &selector, {root() / "x" / "y"});
         QCOMPARE(found.added, QList<fs::path>{fs::path("x")});
         QVERIFY(bank.find(60, QStringLiteral("ka")));
     }
@@ -457,13 +457,13 @@ private Q_SLOTS:
         CountingSelector selector(QStringLiteral("UTF-8"));
         auto opened = open(&selector);
         QVERIFY(opened.has_value());
-        auto &disk = opened->disk;
+        auto &files = opened->files;
 
         // In the root, which contains one place and is a sibling of the other.
         write(QStringLiteral("ka.wav"), "RIFF");
-        QVERIFY(disk.checkDisk({root() / "sub"}).isEmpty());
-        QVERIFY(disk.checkDisk({m_dir->path().toStdU16String()}).isEmpty());
-        QCOMPARE(disk.checkDisk().audio, QList<fs::path>{fs::path()});
+        QVERIFY(files.checkDisk({root() / "sub"}).isEmpty());
+        QVERIFY(files.checkDisk({m_dir->path().toStdU16String()}).isEmpty());
+        QCOMPARE(files.checkDisk().audio, QList<fs::path>{fs::path()});
     }
 
     void a_root_that_is_not_found_is_reported_without_other_changes() {
@@ -472,10 +472,10 @@ private Q_SLOTS:
         auto opened = open(&selector);
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
-        auto &disk = opened->disk;
+        auto &files = opened->files;
 
         QVERIFY(QDir().rename(pathOf(QString()), m_dir->path() + QStringLiteral("/moved")));
-        QVERIFY(disk.checkDisk().rootNotFound);
+        QVERIFY(files.checkDisk().rootNotFound);
         QVERIFY(bank.find(60, QStringLiteral("a")));
     }
 
@@ -488,11 +488,11 @@ private Q_SLOTS:
         auto opened = open(&selector);
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
-        auto &disk = opened->disk;
+        auto &files = opened->files;
         QCOMPARE(selector.asked, 1);
 
         write(QStringLiteral("oto.ini"), "a.wav=b,1,2,3,4,5,changed\r\n");
-        takeIn(bank, disk, &selector);
+        takeIn(bank, files, &selector);
         QCOMPARE(selector.asked, 1);
         QVERIFY(bank.find(60, QStringLiteral("b")));
     }
@@ -505,11 +505,11 @@ private Q_SLOTS:
         auto opened = open(&selector);
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
-        auto &disk = opened->disk;
+        auto &files = opened->files;
         QCOMPARE(selector.asked, 0);
 
         write(QStringLiteral("oto.ini"), "a.wav=first,1,2,3,4,5\r\n");
-        takeIn(bank, disk, &selector);
+        takeIn(bank, files, &selector);
         QCOMPARE(selector.asked, 1);
         QVERIFY(bank.find(60, QStringLiteral("first")));
     }
@@ -525,19 +525,19 @@ private Q_SLOTS:
         auto opened = open(&selector);
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
-        auto &disk = opened->disk;
+        auto &files = opened->files;
         QVERIFY(!bank.find(60, kA));
 
         write(QStringLiteral("hello-config.json"),
               R"({"$format":"hello-voicebank","charset":"Shift_JIS"})");
-        const auto found = takeIn(bank, disk, &selector);
+        const auto found = takeIn(bank, files, &selector);
         QVERIFY(found.changed.isEmpty());
         QCOMPARE(found.config, QList<fs::path>{fs::path()});
         QVERIFY(!bank.find(60, kA));
 
         // Reported by every check, also once another file changed and was read again.
         write(QStringLiteral("oto.ini"), "a.wav=" + kShiftJisA + ",7,2,3,4,5\r\n");
-        const auto again = takeIn(bank, disk, &selector);
+        const auto again = takeIn(bank, files, &selector);
         QCOMPARE(again.changed, QList<fs::path>{fs::path()});
         QCOMPARE(again.config, QList<fs::path>{fs::path()});
         QCOMPARE(bank.samples().at(0).offset, 7.0);
@@ -547,15 +547,15 @@ private Q_SLOTS:
         // Until a save writes the configuration again, although the directory had none when it
         // was read and nothing in it was edited.
         DiagnosticList diagnostics;
-        QVERIFY(disk.save(bank, diagnostics));
+        QVERIFY(files.save(bank, diagnostics));
         DiagnosticList ignored;
         QCOMPARE(VoiceBankConfig::open(root() / "hello-config.json", ignored)->charset,
                  QStringLiteral("GBK"));
-        QVERIFY(disk.checkDisk().isEmpty());
+        QVERIFY(files.checkDisk().isEmpty());
 
         QVERIFY(QFile::remove(pathOf(QStringLiteral("hello-config.json"))));
-        QCOMPARE(disk.checkDisk().config, QList<fs::path>{fs::path()});
-        QCOMPARE(disk.checkDisk().config, QList<fs::path>{fs::path()});
+        QCOMPARE(files.checkDisk().config, QList<fs::path>{fs::path()});
+        QCOMPARE(files.checkDisk().config, QList<fs::path>{fs::path()});
     }
 
     // A configuration rewritten too soon after it was read for its time to tell is compared by
@@ -568,11 +568,11 @@ private Q_SLOTS:
         // The exact time, which QFileInfo would round to milliseconds.
         const auto config = root() / "hello-config.json";
         const auto time = fs::last_write_time(config);
-        QVERIFY(opened->disk.checkDisk().isEmpty());
+        QVERIFY(opened->files.checkDisk().isEmpty());
 
         write(QStringLiteral("hello-config.json"), R"({"charset":"UTF-7"})");
         fs::last_write_time(config, time);
-        QCOMPARE(opened->disk.checkDisk().config, QList<fs::path>{fs::path()});
+        QCOMPARE(opened->files.checkDisk().config, QList<fs::path>{fs::path()});
     }
 
     // The files a save writes, the configuration included, are not changes made elsewhere.
@@ -583,15 +583,15 @@ private Q_SLOTS:
         auto opened = open(&selector);
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
-        auto &disk = opened->disk;
+        auto &files = opened->files;
 
         auto samples = bank.samples();
         samples[0].offset = 7;
         bank.setSamples(samples);
         DiagnosticList diagnostics;
-        QVERIFY(disk.save(bank, diagnostics));
+        QVERIFY(files.save(bank, diagnostics));
         QVERIFY(QFileInfo::exists(pathOf(QStringLiteral("hello-config.json"))));
-        const auto found = disk.checkDisk();
+        const auto found = files.checkDisk();
         QVERIFY(found.changed.isEmpty());
         QVERIFY(found.config.isEmpty());
     }
@@ -605,11 +605,11 @@ private Q_SLOTS:
         auto opened = open(&selector);
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
-        auto &disk = opened->disk;
+        auto &files = opened->files;
 
         QVERIFY(QDir().rename(pathOf(QStringLiteral("one")), pathOf(QStringLiteral("away"))));
         write(QStringLiteral("new/c.wav"), "RIFF");
-        const auto found = disk.checkDisk();
+        const auto found = files.checkDisk();
         QVERIFY(found.removed.contains(fs::path("one")));
         QVERIFY(found.added.contains(fs::path("new")));
 
@@ -617,7 +617,7 @@ private Q_SLOTS:
         QVERIFY(QDir(pathOf(QStringLiteral("new"))).removeRecursively());
 
         DiagnosticList diagnostics;
-        const auto done = disk.reloadFromDisk(bank, found, &selector, diagnostics);
+        const auto done = files.reloadFromDisk(bank, found, &selector, diagnostics);
         QVERIFY(!done.removed.contains(fs::path("one")));
         QVERIFY(!done.added.contains(fs::path("new")));
         QVERIFY(bank.find(60, QStringLiteral("a")));
@@ -638,19 +638,19 @@ private Q_SLOTS:
         auto opened = open(&selector);
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
-        auto &disk = opened->disk;
+        auto &files = opened->files;
 
         write(QStringLiteral("oto.ini"), "a.wav=bbb,1,2,3,4,5\r\n");
         fs::last_write_time(oto, old);
-        QVERIFY(disk.checkDisk().isEmpty());
+        QVERIFY(files.checkDisk().isEmpty());
 
         DiagnosticList diagnostics;
-        const auto done = disk.reloadAllFromDisk(bank, &selector, diagnostics);
+        const auto done = files.reloadAllFromDisk(bank, &selector, diagnostics);
         QVERIFY(done.changed.contains(fs::path()));
         QVERIFY(bank.find(60, QStringLiteral("bbb")));
     }
 };
 
-QTEST_APPLESS_MAIN(test_VoiceBankDiskState_Changes)
+QTEST_APPLESS_MAIN(test_VoiceBankFileSystemState_Changes)
 
-#include "test_VoiceBankDiskState_Changes.moc"
+#include "test_VoiceBankFileSystemState_Changes.moc"

@@ -46,7 +46,7 @@
 #include <hellokit/EditBase/CommandSyntax.h>
 #include <hellokit/Edit/VoiceBankCommands.h>
 #include <hellokit/Edit/VoiceBankSession.h>
-#include <hellokit/VoiceBank/VoiceBankDiskState.h>
+#include <hellokit/VoiceBank/VoiceBankFileSystemState.h>
 
 using namespace hello::kit;
 namespace fs = std::filesystem;
@@ -185,8 +185,8 @@ namespace {
         // out without one, rather than decoded by guesswork.
         FixedCharsetSelector selector(charset);
         DiagnosticList diagnostics;
-        auto opened =
-            VoiceBankDiskState::open(root, charset.isEmpty() ? nullptr : &selector, diagnostics);
+        auto opened = VoiceBankFileSystemState::open(root, charset.isEmpty() ? nullptr : &selector,
+                                                     diagnostics);
         if (!opened) {
             report(diagnostics);
             return 1;

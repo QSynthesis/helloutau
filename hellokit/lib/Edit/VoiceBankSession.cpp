@@ -11,9 +11,9 @@
 
 namespace hello::kit {
 
-    std::unique_ptr<VoiceBankSession> VoiceBankSession::create(VoiceBankDiskState::Opened opened,
-                                                               DiagnosticList &diagnostics,
-                                                               QObject *parent) {
+    std::unique_ptr<VoiceBankSession>
+        VoiceBankSession::create(VoiceBankFileSystemState::Opened opened,
+                                 DiagnosticList &diagnostics, QObject *parent) {
         const auto root = opened.bank.indexOf({});
         if (root < 0 || !isEditable(opened.bank.directories().at(root))) {
             Diagnostic diagnostic;
@@ -26,8 +26,8 @@ namespace hello::kit {
         return std::unique_ptr<VoiceBankSession>(new VoiceBankSession(std::move(opened), parent));
     }
 
-    VoiceBankSession::VoiceBankSession(VoiceBankDiskState::Opened opened, QObject *parent)
-        : edit::EditSession(parent), m_disk(std::move(opened.disk)) {
+    VoiceBankSession::VoiceBankSession(VoiceBankFileSystemState::Opened opened, QObject *parent)
+        : edit::EditSession(parent), m_files(std::move(opened.files)) {
         for (const auto &directory : opened.bank.directories()) {
             if (!isEditable(directory)) {
                 m_excluded.push_back(directory);
@@ -40,11 +40,11 @@ namespace hello::kit {
     VoiceBankSession::~VoiceBankSession() = default;
 
     const std::filesystem::path &VoiceBankSession::rootPath() const {
-        return m_disk.root();
+        return m_files.root();
     }
 
     VoiceBank VoiceBankSession::snapshot() const {
-        return voiceBankOf(edit::EditSessionPrivate::find(this, root()), m_disk);
+        return voiceBankOf(edit::EditSessionPrivate::find(this, root()), m_files);
     }
 
     std::optional<QJsonObject> VoiceBankSession::logEntry(const edit::Change &change) const {
@@ -98,7 +98,7 @@ namespace hello::kit {
     }
 
     bool VoiceBankSession::save(DiagnosticList &diagnostics) {
-        if (!m_disk.save(snapshot(), diagnostics)) {
+        if (!m_files.save(snapshot(), diagnostics)) {
             return false;
         }
         // The files on disk are those of the tree again.
@@ -109,11 +109,12 @@ namespace hello::kit {
 
     bool VoiceBankSession::saveAs(const std::filesystem::path &folder, SaveAsFiles files,
                                   DiagnosticList &diagnostics) {
-        auto saved = VoiceBankDiskState::saveAs(snapshot(), folder, files == AllFiles, diagnostics);
+        auto saved =
+            VoiceBankFileSystemState::saveAs(snapshot(), folder, files == AllFiles, diagnostics);
         if (!saved) {
             return false;
         }
-        m_disk = std::move(saved->disk);
+        m_files = std::move(saved->files);
         m_excluded.clear();
         for (const auto &directory : saved->bank.directories()) {
             if (!isEditable(directory) && !directory.path.empty()) {
@@ -126,19 +127,19 @@ namespace hello::kit {
     }
 
     void VoiceBankSession::rememberCharset(const std::filesystem::path &directory) {
-        m_disk.rememberCharset(directory);
+        m_files.rememberCharset(directory);
     }
 
     bool VoiceBankSession::hasUnrecordedCharsets() const {
-        return m_disk.hasUnrecordedCharsets();
+        return m_files.hasUnrecordedCharsets();
     }
 
     VoiceBankChanges VoiceBankSession::checkDisk(const QList<std::filesystem::path> &places) {
-        return withUntaken(m_disk.checkDisk(places));
+        return withUntaken(m_files.checkDisk(places));
     }
 
     VoiceBankChanges VoiceBankSession::checkDisk() {
-        return withUntaken(m_disk.checkDisk());
+        return withUntaken(m_files.checkDisk());
     }
 
     VoiceBankChanges VoiceBankSession::withUntaken(VoiceBankChanges changes) {
@@ -150,7 +151,7 @@ namespace hello::kit {
         }
         const auto &directories = directoriesOf(*this);
         const auto excluded = excludedDirectories();
-        for (const auto &path : m_disk.directories()) {
+        for (const auto &path : m_files.directories()) {
             const bool known = indexIn(directories, path) >= 0 ||
                                std::any_of(excluded.begin(), excluded.end(),
                                            [&path](const VoiceBankDirectory &directory) {
@@ -167,7 +168,7 @@ namespace hello::kit {
                                                       VoiceBankCharsetSelector *selector,
                                                       DiagnosticList &diagnostics) {
         auto bank = fullBank();
-        const auto done = m_disk.reloadFromDisk(bank, changes, selector, diagnostics);
+        const auto done = m_files.reloadFromDisk(bank, changes, selector, diagnostics);
         takeFrom(bank, done.changed, tr("Reload from Disk"), diagnostics);
         return done;
     }
@@ -175,7 +176,7 @@ namespace hello::kit {
     VoiceBankChanges VoiceBankSession::reloadAllFromDisk(VoiceBankCharsetSelector *selector,
                                                          DiagnosticList &diagnostics) {
         auto bank = fullBank();
-        const auto done = m_disk.reloadAllFromDisk(bank, selector, diagnostics);
+        const auto done = m_files.reloadAllFromDisk(bank, selector, diagnostics);
         takeFrom(bank, done.changed, tr("Reload from Disk"), diagnostics);
         return done;
     }
@@ -183,7 +184,7 @@ namespace hello::kit {
     bool VoiceBankSession::reread(const std::filesystem::path &directory, const QString &charset,
                                   DiagnosticList &diagnostics) {
         auto bank = fullBank();
-        if (!m_disk.reread(bank, directory, charset, diagnostics)) {
+        if (!m_files.reread(bank, directory, charset, diagnostics)) {
             return false;
         }
         return takeFrom(bank, {directory}, tr("Read Again in %1").arg(charset), diagnostics);

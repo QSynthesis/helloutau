@@ -1,6 +1,6 @@
 #include "VoiceBank.h"
 
-#include "VoiceBankDiskState.h"
+#include "VoiceBankFileSystemState.h"
 
 namespace hello::kit {
 
@@ -25,7 +25,7 @@ namespace hello::kit {
     std::optional<VoiceBank> VoiceBank::open(const fs::path &root,
                                              VoiceBankCharsetSelector *selector,
                                              DiagnosticList &diagnostics) {
-        auto opened = VoiceBankDiskState::open(root, selector, diagnostics);
+        auto opened = VoiceBankFileSystemState::open(root, selector, diagnostics);
         if (!opened) {
             return std::nullopt;
         }
@@ -35,7 +35,7 @@ namespace hello::kit {
     std::optional<VoiceBank> VoiceBank::fromSource(const VoiceBankSource &source,
                                                    VoiceBankCharsetSelector *selector,
                                                    DiagnosticList &diagnostics) {
-        auto opened = VoiceBankDiskState::fromSource(source, selector, diagnostics);
+        auto opened = VoiceBankFileSystemState::fromSource(source, selector, diagnostics);
         if (!opened) {
             return std::nullopt;
         }

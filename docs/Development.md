@@ -142,7 +142,7 @@ inline bool Range::contains(int value) const {
 /// Saves the voice bank. The directories that are not in the tree are neither written nor
 /// removed.
 ///
-/// \sa VoiceBankDiskState::save(), saveAs()
+/// \sa VoiceBankFileSystemState::save(), saveAs()
 bool save(DiagnosticList &diagnostics);
 ```
 

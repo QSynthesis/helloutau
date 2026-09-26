@@ -55,8 +55,8 @@ private:
             {fs::path("sub"), QStringLiteral("UTF-8")},
         });
         DiagnosticList diagnostics;
-        auto opened = VoiceBankDiskState::open(fs::path(m_dir->path().toStdU16String()), &selector,
-                                               diagnostics);
+        auto opened = VoiceBankFileSystemState::open(fs::path(m_dir->path().toStdU16String()),
+                                                     &selector, diagnostics);
         QVERIFY(opened);
         m_session = VoiceBankSession::create(std::move(*opened), diagnostics);
         QVERIFY(m_session);
@@ -279,8 +279,8 @@ private Q_SLOTS:
         QTemporaryDir dir;
         QVERIFY(writeSampleFile(dir.path(), QStringLiteral("a.wav"), "RIFF"));
         DiagnosticList diagnostics;
-        auto opened =
-            VoiceBankDiskState::open(fs::path(dir.path().toStdU16String()), nullptr, diagnostics);
+        auto opened = VoiceBankFileSystemState::open(fs::path(dir.path().toStdU16String()), nullptr,
+                                                     diagnostics);
         QVERIFY(opened);
         const auto session = VoiceBankSession::create(std::move(*opened), diagnostics);
         QVERIFY(session);

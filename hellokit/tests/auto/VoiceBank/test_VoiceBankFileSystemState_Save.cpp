@@ -9,7 +9,7 @@
 
 #include <hellokit/Support/TextCodec.h>
 #include <hellokit/VoiceBank/VoiceBank.h>
-#include <hellokit/VoiceBank/VoiceBankDiskState.h>
+#include <hellokit/VoiceBank/VoiceBankFileSystemState.h>
 
 using namespace hello::kit;
 
@@ -22,7 +22,7 @@ static const QByteArray kShiftJisA = QByteArray("\x82\xa0", 2);
 // 们, which simplified Chinese has and Shift_JIS does not.
 static const QString kNotInShiftJis = QString::fromUtf8("\xe4\xbb\xac");
 
-class test_VoiceBankDiskState_Save : public QObject {
+class test_VoiceBankFileSystemState_Save : public QObject {
     Q_OBJECT
 
 private:
@@ -56,11 +56,11 @@ private:
         return QFileInfo::exists(pathOf(relative));
     }
 
-    static std::optional<VoiceBankDiskState::Opened> open(const std::filesystem::path &root,
-                                                          const QString &charset) {
+    static std::optional<VoiceBankFileSystemState::Opened> open(const std::filesystem::path &root,
+                                                                const QString &charset) {
         FixedCharsetSelector selector(charset);
         DiagnosticList diagnostics;
-        return VoiceBankDiskState::open(root, &selector, diagnostics);
+        return VoiceBankFileSystemState::open(root, &selector, diagnostics);
     }
 
     /// The voice bank with the entry of alias \a alias modified by \a change .
@@ -104,10 +104,10 @@ private Q_SLOTS:
         auto opened = open(root(), QStringLiteral("GBK"));
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
-        auto &disk = opened->disk;
+        auto &files = opened->files;
 
         DiagnosticList diagnostics;
-        QVERIFY(disk.save(bank, diagnostics));
+        QVERIFY(files.save(bank, diagnostics));
         QCOMPARE(read(QStringLiteral("oto.ini")), oto);
         QCOMPARE(read(QStringLiteral("character.txt")), character);
         QCOMPARE(read(QStringLiteral("readme.txt")), kGbkGePing);
@@ -129,14 +129,14 @@ private Q_SLOTS:
         auto opened = open(root(), QStringLiteral("UTF-8"));
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
-        auto &disk = opened->disk;
+        auto &files = opened->files;
 
         auto directory = bank.directories().at(0);
         directory.character->name = QStringLiteral("new");
         bank.setDirectory(0, directory);
 
         DiagnosticList diagnostics;
-        QVERIFY(disk.save(bank, diagnostics));
+        QVERIFY(files.save(bank, diagnostics));
         QCOMPARE(read(QStringLiteral("oto.ini")), oto);
         QCOMPARE(read(QStringLiteral("character.txt")), QByteArray("name=new\r\n"));
         QCOMPARE(bank.character().name, QStringLiteral("new"));
@@ -153,7 +153,7 @@ private Q_SLOTS:
         auto opened = open(root(), QStringLiteral("GBK"));
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
-        auto &disk = opened->disk;
+        auto &files = opened->files;
 
         auto samples = bank.samples();
         for (auto &sample : samples) {
@@ -164,7 +164,7 @@ private Q_SLOTS:
         bank.setSamples(samples);
 
         DiagnosticList diagnostics;
-        QVERIFY(disk.save(bank, diagnostics));
+        QVERIFY(files.save(bank, diagnostics));
         QCOMPARE(read(QStringLiteral("oto.ini")), QByteArray("01.wav=,,,,,\r\n"
                                                              "02.wav=,,,-300,,\r\n"));
     }
@@ -181,14 +181,14 @@ private Q_SLOTS:
         auto opened = open(root(), QStringLiteral("GBK"));
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
-        auto &disk = opened->disk;
+        auto &files = opened->files;
         edit(bank, QStringLiteral("b"), [](VoiceSample &sample) {
             sample.alias = QString::fromUtf8("\xe8\x91\x9b\xe5\xb9\xb3");
             sample.offset = 12345.678;
         });
 
         DiagnosticList diagnostics;
-        QVERIFY(disk.save(bank, diagnostics));
+        QVERIFY(files.save(bank, diagnostics));
         QCOMPARE(read(QStringLiteral("oto.ini")), "a.wav=" + kGbkGePing +
                                                       ",41.0,2,3,4,5\r\n"
                                                       "b.wav=" +
@@ -209,12 +209,12 @@ private Q_SLOTS:
         auto opened = open(root(), QStringLiteral("Shift_JIS"));
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
-        auto &disk = opened->disk;
+        auto &files = opened->files;
         edit(bank, QString::fromUtf8("\xe3\x81\x82"),
              [](VoiceSample &sample) { sample.alias = kNotInShiftJis; });
 
         DiagnosticList diagnostics;
-        QVERIFY(!disk.save(bank, diagnostics));
+        QVERIFY(!files.save(bank, diagnostics));
         QVERIFY(!diagnostics.isEmpty());
         QCOMPARE(read(QStringLiteral("oto.ini")), oto);
         QVERIFY(!exists(QStringLiteral("hello-config.json")));
@@ -229,14 +229,14 @@ private Q_SLOTS:
         auto opened = open(root(), QStringLiteral("UTF-8"));
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
-        auto &disk = opened->disk;
+        auto &files = opened->files;
         edit(bank, QStringLiteral("a"), [](VoiceSample &sample) { sample.offset = 100; });
 
         const QByteArray theirs = "a.wav=a,9,9,9,9,9\r\n";
         write(QStringLiteral("oto.ini"), theirs);
 
         DiagnosticList diagnostics;
-        QVERIFY(!disk.save(bank, diagnostics));
+        QVERIFY(!files.save(bank, diagnostics));
         QCOMPARE(read(QStringLiteral("oto.ini")), theirs);
     }
 
@@ -247,7 +247,7 @@ private Q_SLOTS:
         auto opened = open(root(), QStringLiteral("UTF-8"));
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
-        auto &disk = opened->disk;
+        auto &files = opened->files;
         auto samples = bank.samples();
         samples[0].hasEntry = true;
         samples[0].alias = QStringLiteral("a");
@@ -260,7 +260,7 @@ private Q_SLOTS:
         write(QStringLiteral("oto.ini"), theirs);
 
         DiagnosticList diagnostics;
-        QVERIFY(!disk.save(bank, diagnostics));
+        QVERIFY(!files.save(bank, diagnostics));
         QCOMPARE(read(QStringLiteral("oto.ini")), theirs);
     }
 
@@ -271,21 +271,21 @@ private Q_SLOTS:
         write(QStringLiteral("a.wav"), "RIFF");
 
         DiagnosticList diagnostics;
-        auto opened = VoiceBankDiskState::open(root(), nullptr, diagnostics);
+        auto opened = VoiceBankFileSystemState::open(root(), nullptr, diagnostics);
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
-        auto &disk = opened->disk;
+        auto &files = opened->files;
         QVERIFY(bank.directories().at(0).leftOut);
 
         // If unmodified, the save succeeds and writes nothing.
-        QVERIFY(disk.save(bank, diagnostics));
+        QVERIFY(files.save(bank, diagnostics));
         QCOMPARE(read(QStringLiteral("oto.ini")), oto);
 
         auto samples = bank.samples();
         samples[0].hasEntry = true;
         bank.setSamples(samples);
         diagnostics.clear();
-        QVERIFY(!disk.save(bank, diagnostics));
+        QVERIFY(!files.save(bank, diagnostics));
         QCOMPARE(read(QStringLiteral("oto.ini")), oto);
     }
 
@@ -301,14 +301,14 @@ private Q_SLOTS:
         auto opened = open(root(), QStringLiteral("UTF-8"));
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
-        auto &disk = opened->disk;
+        auto &files = opened->files;
         QVERIFY(!bank.directories().at(0).leftOut);
 
         DiagnosticList diagnostics;
-        QVERIFY(disk.save(bank, diagnostics));
+        QVERIFY(files.save(bank, diagnostics));
 
         edit(bank, QStringLiteral("b"), [](VoiceSample &sample) { sample.offset = 100; });
-        QVERIFY(!disk.save(bank, diagnostics));
+        QVERIFY(!files.save(bank, diagnostics));
         QCOMPARE(read(QStringLiteral("oto.ini")), oto);
     }
 
@@ -323,7 +323,7 @@ private Q_SLOTS:
         write(QStringLiteral("a.wav"), "RIFF");
 
         DiagnosticList diagnostics;
-        auto opened = VoiceBankDiskState::open(root(), nullptr, diagnostics);
+        auto opened = VoiceBankFileSystemState::open(root(), nullptr, diagnostics);
         QVERIFY(opened.has_value());
         edit(opened->bank, QString::fromUtf8("\xe8\x91\x9b\xe5\xb9\xb3"),
              [](VoiceSample &sample) { sample.offset = 7; });
@@ -331,7 +331,7 @@ private Q_SLOTS:
         // Read-only, so that a save that wrote it would fail.
         QVERIFY(QFile::setPermissions(pathOf(QStringLiteral("hello-config.json")),
                                       QFileDevice::ReadOwner | QFileDevice::ReadUser));
-        const bool saved = opened->disk.save(opened->bank, diagnostics);
+        const bool saved = opened->files.save(opened->bank, diagnostics);
         QVERIFY(QFile::setPermissions(pathOf(QStringLiteral("hello-config.json")),
                                       QFileDevice::ReadOwner | QFileDevice::WriteOwner));
         QVERIFY(saved);
@@ -352,24 +352,24 @@ private Q_SLOTS:
         write(QStringLiteral("a.wav"), "RIFF");
 
         DiagnosticList diagnostics;
-        auto opened = VoiceBankDiskState::open(root(), nullptr, diagnostics);
+        auto opened = VoiceBankFileSystemState::open(root(), nullptr, diagnostics);
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
-        auto &disk = opened->disk;
+        auto &files = opened->files;
 
         write(QStringLiteral("hello-config.json"),
               R"({"$format":"hello-voicebank","charset":"Shift_JIS","kept":1})");
-        QVERIFY(disk.save(bank, diagnostics));
+        QVERIFY(files.save(bank, diagnostics));
         QCOMPARE(read(QStringLiteral("hello-config.json")), recorded);
 
         // A field added elsewhere is dropped as well.
         write(QStringLiteral("hello-config.json"),
               R"({"$format":"hello-voicebank","charset":"GBK","kept":1,"added":2})");
-        QVERIFY(disk.save(bank, diagnostics));
+        QVERIFY(files.save(bank, diagnostics));
         QCOMPARE(read(QStringLiteral("hello-config.json")), recorded);
 
         QVERIFY(QFile::remove(pathOf(QStringLiteral("hello-config.json"))));
-        QVERIFY(disk.save(bank, diagnostics));
+        QVERIFY(files.save(bank, diagnostics));
         QCOMPARE(read(QStringLiteral("hello-config.json")), recorded);
         QCOMPARE(read(QStringLiteral("oto.ini")), "a.wav=" + kGbkGePing + ",1,2,3,4,5\r\n");
     }
@@ -385,7 +385,7 @@ private Q_SLOTS:
         write(QStringLiteral("Hello-Config.json"),
               R"({"$format":"hello-voicebank","charset":"Shift_JIS"})");
         DiagnosticList diagnostics;
-        QVERIFY(opened->disk.save(opened->bank, diagnostics));
+        QVERIFY(opened->files.save(opened->bank, diagnostics));
         DiagnosticList ignored;
         const auto config = VoiceBankConfig::open(root() / "Hello-Config.json", ignored);
         QVERIFY(config.has_value());
@@ -403,7 +403,7 @@ private Q_SLOTS:
         auto opened = open(root(), QStringLiteral("GBK"));
         QVERIFY(opened.has_value());
         DiagnosticList diagnostics;
-        QVERIFY(opened->disk.save(opened->bank, diagnostics));
+        QVERIFY(opened->files.save(opened->bank, diagnostics));
         DiagnosticList ignored;
         const auto config = VoiceBankConfig::open(root() / "hello-config.json", ignored);
         QVERIFY(config.has_value());
@@ -422,7 +422,7 @@ private Q_SLOTS:
         edit(opened->bank, QString::fromUtf8("\xe8\x91\x9b\xe5\xb9\xb3"),
              [](VoiceSample &sample) { sample.offset = 7; });
         DiagnosticList diagnostics;
-        QVERIFY(!opened->disk.save(opened->bank, diagnostics));
+        QVERIFY(!opened->files.save(opened->bank, diagnostics));
         QVERIFY(diagnostics.last().message.contains(QStringLiteral("hello-config.json")));
         QCOMPARE(read(QStringLiteral("oto.ini")), "a.wav=" + kGbkGePing + ",1,2,3,4,5\r\n");
 
@@ -436,17 +436,17 @@ private Q_SLOTS:
         QVERIFY(QFile::setPermissions(pathOf(QStringLiteral("hello-config.json")),
                                       QFileDevice::ReadOwner | QFileDevice::ReadUser));
         diagnostics.clear();
-        const bool saved = opened->disk.save(opened->bank, diagnostics);
+        const bool saved = opened->files.save(opened->bank, diagnostics);
         QVERIFY(QFile::setPermissions(pathOf(QStringLiteral("hello-config.json")),
                                       QFileDevice::ReadOwner | QFileDevice::WriteOwner));
         QVERIFY(!saved);
         QCOMPARE(read(QStringLiteral("oto.ini")), "a.wav=" + kGbkGePing + ",1,2,3,4,5\r\n");
     }
 
-    // The contents and the disk state are paired by directory path. A directory of the contents
-    // that the disk state has not read is saved as a new one, but a file already in it has no
-    // record of its state, so replacing it could overwrite changes made elsewhere, and nothing is
-    // saved.
+    // The contents and the file system state are paired by directory path. A directory of the
+    // contents that the file system state has not read is saved as a new one, but a file already in
+    // it has no record of its state, so replacing it could overwrite changes made elsewhere, and
+    // nothing is saved.
     void a_file_in_a_directory_the_disk_state_has_not_read_is_not_replaced() {
         write(QStringLiteral("oto.ini"), "a.wav=a,1,2,3,4,5\r\n");
         write(QStringLiteral("a.wav"), "RIFF");
@@ -460,7 +460,7 @@ private Q_SLOTS:
         edit(later->bank, QStringLiteral("a"), [](VoiceSample &sample) { sample.offset = 7; });
 
         DiagnosticList diagnostics;
-        QVERIFY(!opened->disk.save(later->bank, diagnostics));
+        QVERIFY(!opened->files.save(later->bank, diagnostics));
         QCOMPARE(diagnostics.size(), 1);
         QVERIFY(diagnostics.first().message.contains(QStringLiteral("sub")));
         QCOMPARE(read(QStringLiteral("oto.ini")), QByteArray("a.wav=a,1,2,3,4,5\r\n"));
@@ -475,23 +475,23 @@ private Q_SLOTS:
         write(QStringLiteral("sub/b.wav"), "RIFF");
         auto opened = open(root(), QStringLiteral("UTF-8"));
         QVERIFY(opened.has_value());
-        auto &disk = opened->disk;
+        auto &files = opened->files;
         const auto before = opened->bank;
 
         QVERIFY(QDir(pathOf(QStringLiteral("sub"))).removeRecursively());
         DiagnosticList diagnostics;
         auto reloaded = opened->bank;
-        disk.reloadFromDisk(reloaded, disk.checkDisk(), nullptr, diagnostics);
+        files.reloadFromDisk(reloaded, files.checkDisk(), nullptr, diagnostics);
         QCOMPARE(reloaded.indexOf("sub"), -1);
 
-        QVERIFY(disk.save(before, diagnostics));
+        QVERIFY(files.save(before, diagnostics));
         QCOMPARE(read(QStringLiteral("sub/oto.ini")),
                  QByteArray("#Charset:UTF-8\r\nb.wav=b,1,2,3,4,5\r\n"));
         QVERIFY(exists(QStringLiteral("sub/hello-config.json")));
         QCOMPARE(read(QStringLiteral("oto.ini")), QByteArray("a.wav=a,1,2,3,4,5\r\n"));
-        QVERIFY(disk.checkDisk().isEmpty());
-        QVERIFY(!disk.isModified(before, "sub"));
-        QVERIFY(disk.save(before, diagnostics));
+        QVERIFY(files.checkDisk().isEmpty());
+        QVERIFY(!files.isModified(before, "sub"));
+        QVERIFY(files.save(before, diagnostics));
     }
 
     // Without its root, the voice bank on disk is gone, and saving writes every text file of the
@@ -502,18 +502,18 @@ private Q_SLOTS:
         write(QStringLiteral("sub/oto.ini"), "b.wav=b,1,2,3,4,5\r\n");
         auto opened = open(root(), QStringLiteral("GBK"));
         QVERIFY(opened.has_value());
-        auto &disk = opened->disk;
+        auto &files = opened->files;
 
         QVERIFY(QDir(m_dir->path()).removeRecursively());
-        QVERIFY(disk.checkDisk().rootNotFound);
+        QVERIFY(files.checkDisk().rootNotFound);
         DiagnosticList diagnostics;
-        QVERIFY(disk.save(opened->bank, diagnostics));
+        QVERIFY(files.save(opened->bank, diagnostics));
         QCOMPARE(read(QStringLiteral("oto.ini")), QByteArray("a.wav=a,41.0,2,3,4,5\r\n"));
         QCOMPARE(read(QStringLiteral("character.txt")), QByteArray("name=n\r\n"));
         QCOMPARE(read(QStringLiteral("sub/oto.ini")), QByteArray("b.wav=b,1,2,3,4,5\r\n"));
         QVERIFY(exists(QStringLiteral("sub/hello-config.json")));
-        QVERIFY(disk.checkDisk().isEmpty());
-        QVERIFY(!disk.isModified(opened->bank, {}));
+        QVERIFY(files.checkDisk().isEmpty());
+        QVERIFY(!files.isModified(opened->bank, {}));
     }
 
     // The state of the files read before the root was removed describes nothing on disk, so a
@@ -523,7 +523,7 @@ private Q_SLOTS:
         write(QStringLiteral("sub/oto.ini"), "b.wav=b,1,2,3,4,5\r\n");
         auto opened = open(root(), QStringLiteral("GBK"));
         QVERIFY(opened.has_value());
-        auto &disk = opened->disk;
+        auto &files = opened->files;
         const auto &bank = opened->bank;
         const auto index = bank.indexOf({});
         QList<VoiceSample> samples;
@@ -537,9 +537,9 @@ private Q_SLOTS:
 
         QVERIFY(QDir(m_dir->path()).removeRecursively());
         DiagnosticList diagnostics;
-        QVERIFY(disk.save(rootOnly, diagnostics));
+        QVERIFY(files.save(rootOnly, diagnostics));
         QVERIFY(!exists(QStringLiteral("sub")));
-        QVERIFY(disk.checkDisk().isEmpty());
+        QVERIFY(files.checkDisk().isEmpty());
     }
 
     // Saving as writes the text files of the contents into a new folder and copies every other
@@ -577,7 +577,7 @@ private Q_SLOTS:
         QTemporaryDir target;
         const auto folder = fs::path(target.path().toStdU16String()) / "copy";
         diagnostics.clear();
-        const auto saved = VoiceBankDiskState::saveAs(contents, folder, true, diagnostics);
+        const auto saved = VoiceBankFileSystemState::saveAs(contents, folder, true, diagnostics);
         QVERIFY(saved.has_value());
         const auto copy = [&folder](const char *relative) {
             QFile file(QString::fromStdU16String((folder / relative).u16string()));
@@ -591,8 +591,8 @@ private Q_SLOTS:
         QVERIFY(copy("hello-config.json").contains("UTF-8"));
 
         // Read from the new folder, which is unmodified, and without the directory left out.
-        QCOMPARE(saved->disk.root(), folder);
-        QVERIFY(!saved->disk.isModified(saved->bank, {}));
+        QCOMPARE(saved->files.root(), folder);
+        QVERIFY(!saved->files.isModified(saved->bank, {}));
         QVERIFY(saved->bank.directories().at(saved->bank.indexOf("left")).leftOut);
         QVERIFY(saved->bank.find(60, QStringLiteral("a")));
         QCOMPARE(saved->bank.find(60, QStringLiteral("a"))->offset, 7.0);
@@ -611,7 +611,8 @@ private Q_SLOTS:
         QTemporaryDir target;
         const auto folder = fs::path(target.path().toStdU16String());
         DiagnosticList diagnostics;
-        const auto saved = VoiceBankDiskState::saveAs(opened->bank, folder, false, diagnostics);
+        const auto saved =
+            VoiceBankFileSystemState::saveAs(opened->bank, folder, false, diagnostics);
         QVERIFY(saved.has_value());
         QVERIFY(QFileInfo::exists(target.filePath(QStringLiteral("oto.ini"))));
         QVERIFY(!QFileInfo::exists(target.filePath(QStringLiteral("a.wav"))));
@@ -629,13 +630,13 @@ private Q_SLOTS:
         QVERIFY(other.open(QIODevice::WriteOnly));
         other.close();
         DiagnosticList diagnostics;
-        QVERIFY(!VoiceBankDiskState::saveAs(opened->bank, fs::path(target.path().toStdU16String()),
-                                            true, diagnostics));
+        QVERIFY(!VoiceBankFileSystemState::saveAs(
+            opened->bank, fs::path(target.path().toStdU16String()), true, diagnostics));
         QVERIFY(diagnostics.first().message.contains(QStringLiteral("not an empty folder")));
         QVERIFY(!QFileInfo::exists(target.filePath(QStringLiteral("oto.ini"))));
 
         diagnostics.clear();
-        QVERIFY(!VoiceBankDiskState::saveAs(
+        QVERIFY(!VoiceBankFileSystemState::saveAs(
             opened->bank, fs::path(target.filePath(QStringLiteral("other.txt")).toStdU16String()),
             true, diagnostics));
         QVERIFY(diagnostics.first().message.contains(QStringLiteral("not an empty folder")));
@@ -650,7 +651,7 @@ private Q_SLOTS:
 
         QTemporaryDir target;
         DiagnosticList diagnostics;
-        const auto saved = VoiceBankDiskState::saveAs(
+        const auto saved = VoiceBankFileSystemState::saveAs(
             opened->bank, fs::path(target.path().toStdU16String()), true, diagnostics);
         QVERIFY(saved.has_value());
         QVERIFY(QFileInfo::exists(target.filePath(QStringLiteral("oto.ini"))));
@@ -663,17 +664,17 @@ private Q_SLOTS:
         write(QStringLiteral("sub/oto.ini"), "b.wav=b,1,2,3,4,5\r\n");
         auto opened = open(root(), QStringLiteral("UTF-8"));
         QVERIFY(opened.has_value());
-        auto &disk = opened->disk;
+        auto &files = opened->files;
         const auto before = opened->bank;
 
         QVERIFY(QDir(pathOf(QStringLiteral("sub"))).removeRecursively());
         DiagnosticList diagnostics;
         auto reloaded = opened->bank;
-        disk.reloadFromDisk(reloaded, disk.checkDisk(), nullptr, diagnostics);
+        files.reloadFromDisk(reloaded, files.checkDisk(), nullptr, diagnostics);
         write(QStringLiteral("sub"), "a file");
 
         diagnostics.clear();
-        QVERIFY(!disk.save(before, diagnostics));
+        QVERIFY(!files.save(before, diagnostics));
         QVERIFY(diagnostics.first().message.contains(QStringLiteral("is a file")));
         QCOMPARE(read(QStringLiteral("sub")), QByteArray("a file"));
     }
@@ -687,13 +688,13 @@ private Q_SLOTS:
         auto opened = open(root(), QStringLiteral("UTF-8"));
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
-        auto &disk = opened->disk;
+        auto &files = opened->files;
 
         DiagnosticList diagnostics;
         edit(bank, QStringLiteral("a"), [](VoiceSample &sample) { sample.offset = 10; });
-        QVERIFY(disk.save(bank, diagnostics));
+        QVERIFY(files.save(bank, diagnostics));
         edit(bank, QStringLiteral("a"), [](VoiceSample &sample) { sample.offset = 20; });
-        QVERIFY(disk.save(bank, diagnostics));
+        QVERIFY(files.save(bank, diagnostics));
         QCOMPARE(read(QStringLiteral("oto.ini")),
                  QByteArray("#Charset:UTF-8\r\na.wav=a,20,2,3,4,5\r\n"));
     }
@@ -707,11 +708,11 @@ private Q_SLOTS:
         auto opened = open(root(), QStringLiteral("UTF-8"));
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
-        auto &disk = opened->disk;
+        auto &files = opened->files;
         edit(bank, QStringLiteral("a"), [](VoiceSample &sample) { sample.offset = 10; });
 
         DiagnosticList diagnostics;
-        QVERIFY(disk.save(bank, diagnostics));
+        QVERIFY(files.save(bank, diagnostics));
 
         const auto names = QDir(m_dir->path()).entryList({QStringLiteral("*.ini")}, QDir::Files);
         QCOMPARE(names, QStringList{QStringLiteral("OTO.INI")});
@@ -729,7 +730,7 @@ private Q_SLOTS:
         auto opened = open(root(), QStringLiteral("UTF-8"));
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
-        auto &disk = opened->disk;
+        auto &files = opened->files;
         for (const auto &sample : bank.samples()) {
             QVERIFY(!sample.hasEntry);
         }
@@ -738,7 +739,7 @@ private Q_SLOTS:
         directory.character->name = QStringLiteral("b");
         bank.setDirectory(0, directory);
         DiagnosticList diagnostics;
-        QVERIFY(disk.save(bank, diagnostics));
+        QVERIFY(files.save(bank, diagnostics));
         QVERIFY(!exists(QStringLiteral("oto.ini")));
         QCOMPARE(read(QStringLiteral("sub/oto.ini")), QByteArray());
     }
@@ -751,7 +752,7 @@ private Q_SLOTS:
         auto opened = open(root(), QStringLiteral("UTF-8"));
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
-        auto &disk = opened->disk;
+        auto &files = opened->files;
         QVERIFY(bank.directories().at(0).charset.isEmpty());
 
         auto samples = bank.samples();
@@ -761,13 +762,13 @@ private Q_SLOTS:
         bank.setSamples(samples);
 
         DiagnosticList diagnostics;
-        QVERIFY(!disk.save(bank, diagnostics));
+        QVERIFY(!files.save(bank, diagnostics));
         QVERIFY(!exists(QStringLiteral("oto.ini")));
 
         auto directory = bank.directories().at(0);
         directory.charset = QStringLiteral("UTF-8");
         bank.setDirectory(0, directory);
-        QVERIFY(disk.save(bank, diagnostics));
+        QVERIFY(files.save(bank, diagnostics));
         // Setting UTF-8 declares it in the oto.ini, as converting to it does.
         QCOMPARE(read(QStringLiteral("oto.ini")),
                  QByteArray("#Charset:UTF-8\r\nka.wav=ka,5,0,0,0,0\r\n"));
@@ -785,13 +786,13 @@ private Q_SLOTS:
 
         FixedCharsetSelector selector(QStringLiteral("Shift_JIS"));
         DiagnosticList diagnostics;
-        auto opened = VoiceBankDiskState::open(root(), &selector, diagnostics);
+        auto opened = VoiceBankFileSystemState::open(root(), &selector, diagnostics);
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
-        auto &disk = opened->disk;
+        auto &files = opened->files;
         edit(bank, QStringLiteral("b"), [](VoiceSample &sample) { sample.offset = 9; });
 
-        QVERIFY(disk.save(bank, diagnostics));
+        QVERIFY(files.save(bank, diagnostics));
         QCOMPARE(read(QStringLiteral("jp/oto.ini")), jp);
         QVERIFY(!exists(QStringLiteral("jp/hello-config.json")));
         QCOMPARE(read(QStringLiteral("en/oto.ini")), QByteArray("b.wav=b,9,2,3,4,5\r\n"));
@@ -799,6 +800,6 @@ private Q_SLOTS:
     }
 };
 
-QTEST_APPLESS_MAIN(test_VoiceBankDiskState_Save)
+QTEST_APPLESS_MAIN(test_VoiceBankFileSystemState_Save)
 
-#include "test_VoiceBankDiskState_Save.moc"
+#include "test_VoiceBankFileSystemState_Save.moc"

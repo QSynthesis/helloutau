@@ -57,7 +57,7 @@ namespace hello::kit {
 
         /// Removes the item of \c prefix.map at \a noteNum . The file remains.
         ///
-        /// \sa VoiceBankDiskState::save()
+        /// \sa VoiceBankFileSystemState::save()
         Q_INVOKABLE static bool removePrefix(const VoiceBankRef &bank, int noteNum,
                                              DiagnosticList &diagnostics);
 

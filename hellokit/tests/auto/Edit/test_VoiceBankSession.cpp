@@ -105,8 +105,8 @@ private Q_SLOTS:
         QVERIFY(writeSampleFile(dir.path(), QStringLiteral("oto.ini"),
                                 "a.wav=" + kGbkGePing + ",1,2,3,4,5\r\n"));
         DiagnosticList diagnostics;
-        auto opened =
-            VoiceBankDiskState::open(fs::path(dir.path().toStdU16String()), nullptr, diagnostics);
+        auto opened = VoiceBankFileSystemState::open(fs::path(dir.path().toStdU16String()), nullptr,
+                                                     diagnostics);
         QVERIFY(opened);
         QVERIFY(opened->bank.directories().at(0).leftOut);
         diagnostics.clear();
@@ -123,8 +123,8 @@ private Q_SLOTS:
                                 "a.wav=" + kGbkGePing + ",1,2,3,4,5\r\n"));
         FixedCharsetSelector selector(QStringLiteral("UTF-8"));
         DiagnosticList diagnostics;
-        auto opened =
-            VoiceBankDiskState::open(fs::path(dir.path().toStdU16String()), &selector, diagnostics);
+        auto opened = VoiceBankFileSystemState::open(fs::path(dir.path().toStdU16String()),
+                                                     &selector, diagnostics);
         QVERIFY(opened);
         auto session = VoiceBankSession::create(std::move(*opened), diagnostics);
         QVERIFY(session);
@@ -251,8 +251,8 @@ private Q_SLOTS:
                                 "a.wav=x,1,2,3,4,5\r\na.wav=x,1,2,3,4,5\r\n"));
         FixedCharsetSelector selector(QStringLiteral("UTF-8"));
         DiagnosticList diagnostics;
-        auto opened =
-            VoiceBankDiskState::open(fs::path(dir.path().toStdU16String()), &selector, diagnostics);
+        auto opened = VoiceBankFileSystemState::open(fs::path(dir.path().toStdU16String()),
+                                                     &selector, diagnostics);
         QVERIFY(opened);
         m_session = VoiceBankSession::create(std::move(*opened), diagnostics);
         QVERIFY(m_session);

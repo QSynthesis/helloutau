@@ -18,7 +18,7 @@ namespace hello::kit {
     // The slots of the nodes of a voice bank tree, see the section on the voice bank in
     // docs/Editing.md. Each record node has the slots of one namespace below. The tree holds the
     // entries of the oto.ini files only: the samples without an entry are the audio files that no
-    // entry names, which VoiceBankDiskState::audioFiles() lists.
+    // entry names, which VoiceBankFileSystemState::audioFiles() lists.
 
     /// The slots of the root node. The character, the prefix map and the readme belong to the
     /// voice bank as a whole and are read from its root directory only.

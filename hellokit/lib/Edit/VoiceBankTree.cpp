@@ -133,7 +133,7 @@ namespace hello::kit {
         return node;
     }
 
-    VoiceBank voiceBankOf(const ss::Node *tree, const VoiceBankDiskState &disk) {
+    VoiceBank voiceBankOf(const ss::Node *tree, const VoiceBankFileSystemState &files) {
         const auto &record = recordOf<VoiceBankNode>(tree, VoiceBankType);
         const auto &list = listOf(record.child(VoiceBankSlots::Directories.index));
 
@@ -157,7 +157,7 @@ namespace hello::kit {
             // The entries in the order of the tree, then the audio files that no entry names,
             // in the order of the listing, as reading places them.
             const auto absolute =
-                directory.path.empty() ? disk.root() : disk.root() / directory.path;
+                directory.path.empty() ? files.root() : files.root() / directory.path;
             const auto &entries = listOf(node.child(VoiceDirectorySlots::OtoEntries.index));
             QSet<QString> named;
             for (int j = 0; j < entries.size(); ++j) {
@@ -165,7 +165,7 @@ namespace hello::kit {
                 named.insert(entry.fileName);
                 samples.push_back(sampleOf(entry, i, absolute));
             }
-            for (const auto &name : disk.audioFiles(directory.path)) {
+            for (const auto &name : files.audioFiles(directory.path)) {
                 if (named.contains(name)) {
                     continue;
                 }
@@ -177,7 +177,7 @@ namespace hello::kit {
             }
             directories.push_back(directory);
         }
-        return VoiceBank(disk.root(), directories, samples);
+        return VoiceBank(files.root(), directories, samples);
     }
 
     std::unique_ptr<ss::Node> treeOf(const VoiceCharacter &character) {

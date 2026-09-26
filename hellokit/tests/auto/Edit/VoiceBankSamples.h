@@ -13,7 +13,7 @@
 #include <QtCore/QString>
 #include <QtTest/QTest>
 
-#include <hellokit/VoiceBank/VoiceBankDiskState.h>
+#include <hellokit/VoiceBank/VoiceBankFileSystemState.h>
 
 namespace hello::kit {
 
@@ -55,7 +55,7 @@ namespace hello::kit {
     ///
     /// The root holds four entries in this order: \c a.wav twice, \c b.wav with empty numbers
     /// and \c missing.wav , and \c c.wav without an entry.
-    inline std::optional<VoiceBankDiskState::Opened> openRichBank(const QString &root) {
+    inline std::optional<VoiceBankFileSystemState::Opened> openRichBank(const QString &root) {
         const std::pair<const char *, QByteArray> files[] = {
             {"oto.ini",           "a.wav=" + kGbkGePing +
                             ",41.0,87.688,97.316,8.938,4.457\r\n"
@@ -92,8 +92,8 @@ namespace hello::kit {
             {std::filesystem::path("sub") / "inner", QStringLiteral("GBK")},
         });
         DiagnosticList diagnostics;
-        return VoiceBankDiskState::open(std::filesystem::path(root.toStdU16String()), &selector,
-                                        diagnostics);
+        return VoiceBankFileSystemState::open(std::filesystem::path(root.toStdU16String()),
+                                              &selector, diagnostics);
     }
 
     /// Returns \a bank without the directories that were not read, which a session takes as

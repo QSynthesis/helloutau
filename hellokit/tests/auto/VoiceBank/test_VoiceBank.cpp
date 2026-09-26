@@ -9,7 +9,7 @@
 
 #include <hellokit/Support/TextCodec.h>
 #include <hellokit/VoiceBank/VoiceBank.h>
-#include <hellokit/VoiceBank/VoiceBankDiskState.h>
+#include <hellokit/VoiceBank/VoiceBankFileSystemState.h>
 
 using namespace hello::kit;
 
@@ -93,7 +93,7 @@ private Q_SLOTS:
 
         FixedCharsetSelector selector(QStringLiteral("GBK"));
         DiagnosticList diagnostics;
-        auto opened = VoiceBankDiskState::open(root(), &selector, diagnostics);
+        auto opened = VoiceBankFileSystemState::open(root(), &selector, diagnostics);
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
 
@@ -110,7 +110,7 @@ private Q_SLOTS:
         write(QStringLiteral("a.wav"), "RIFF");
 
         DiagnosticList diagnostics;
-        auto opened = VoiceBankDiskState::open(root(), nullptr, diagnostics);
+        auto opened = VoiceBankFileSystemState::open(root(), nullptr, diagnostics);
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
         QCOMPARE(bank.character().name, QString::fromStdU16String(root().filename().u16string()));
@@ -122,7 +122,7 @@ private Q_SLOTS:
 
         FixedCharsetSelector selector(QStringLiteral("Shift_JIS"));
         DiagnosticList diagnostics;
-        auto opened = VoiceBankDiskState::open(root(), &selector, diagnostics);
+        auto opened = VoiceBankFileSystemState::open(root(), &selector, diagnostics);
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
 
@@ -150,7 +150,7 @@ private Q_SLOTS:
 
         FixedCharsetSelector selector(QStringLiteral("Shift_JIS"));
         DiagnosticList diagnostics;
-        auto opened = VoiceBankDiskState::open(root(), &selector, diagnostics);
+        auto opened = VoiceBankFileSystemState::open(root(), &selector, diagnostics);
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
 
@@ -169,7 +169,7 @@ private Q_SLOTS:
         write(QStringLiteral("ka.wav"), "RIFF");
 
         DiagnosticList diagnostics;
-        auto opened = VoiceBankDiskState::open(root(), nullptr, diagnostics);
+        auto opened = VoiceBankFileSystemState::open(root(), nullptr, diagnostics);
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
 
@@ -188,7 +188,7 @@ private Q_SLOTS:
 
         FixedCharsetSelector selector(QStringLiteral("Shift_JIS"));
         DiagnosticList diagnostics;
-        auto opened = VoiceBankDiskState::open(root(), &selector, diagnostics);
+        auto opened = VoiceBankFileSystemState::open(root(), &selector, diagnostics);
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
 
@@ -208,7 +208,7 @@ private Q_SLOTS:
 
         FixedCharsetSelector selector(QStringLiteral("UTF-8"));
         DiagnosticList diagnostics;
-        auto opened = VoiceBankDiskState::open(root(), &selector, diagnostics);
+        auto opened = VoiceBankFileSystemState::open(root(), &selector, diagnostics);
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
 
@@ -221,7 +221,7 @@ private Q_SLOTS:
         write(QStringLiteral("a.wav"), "RIFF");
 
         DiagnosticList diagnostics;
-        auto opened = VoiceBankDiskState::open(root(), nullptr, diagnostics);
+        auto opened = VoiceBankFileSystemState::open(root(), nullptr, diagnostics);
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
         QVERIFY(!bank.find(60, QStringLiteral("nothing here")));
@@ -239,7 +239,7 @@ private Q_SLOTS:
         selector.set("cn", QStringLiteral("GBK"));
 
         DiagnosticList diagnostics;
-        auto opened = VoiceBankDiskState::open(root(), &selector, diagnostics);
+        auto opened = VoiceBankFileSystemState::open(root(), &selector, diagnostics);
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
 
@@ -257,7 +257,7 @@ private Q_SLOTS:
 
         PerDirectorySelector selector;
         DiagnosticList diagnostics;
-        auto opened = VoiceBankDiskState::open(root(), &selector, diagnostics);
+        auto opened = VoiceBankFileSystemState::open(root(), &selector, diagnostics);
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
         QCOMPARE(selector.asked, 0);
@@ -271,7 +271,7 @@ private Q_SLOTS:
         write(QStringLiteral("a.wav"), "RIFF");
 
         DiagnosticList diagnostics;
-        auto opened = VoiceBankDiskState::open(root(), nullptr, diagnostics);
+        auto opened = VoiceBankFileSystemState::open(root(), nullptr, diagnostics);
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
         QVERIFY(!bank.find(60, QString::fromUtf8("\xe3\x81\x82")));
@@ -289,7 +289,7 @@ private Q_SLOTS:
 
         FixedCharsetSelector selector(QStringLiteral("Klingon-1"));
         DiagnosticList diagnostics;
-        auto opened = VoiceBankDiskState::open(root(), &selector, diagnostics);
+        auto opened = VoiceBankFileSystemState::open(root(), &selector, diagnostics);
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
         QVERIFY(!diagnostics.isEmpty());
@@ -315,10 +315,10 @@ private Q_SLOTS:
 
         FixedCharsetSelector selector(QStringLiteral("UTF-8"));
         DiagnosticList diagnostics;
-        auto opened = VoiceBankDiskState::open(root(), &selector, diagnostics);
+        auto opened = VoiceBankFileSystemState::open(root(), &selector, diagnostics);
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
-        auto &disk = opened->disk;
+        auto &files = opened->files;
         QCOMPARE(bank.character().name, QStringLiteral("outer"));
         const auto *text = directoryAt(bank, "text");
         QVERIFY(text);
@@ -339,7 +339,7 @@ private Q_SLOTS:
             }
         }
         bank.setSamples(samples);
-        QVERIFY(disk.save(bank, diagnostics));
+        QVERIFY(files.save(bank, diagnostics));
         QCOMPARE(read(QStringLiteral("inner/character.txt")), character);
         QCOMPARE(read(QStringLiteral("inner/prefix.map")), QByteArray("C4\t\t_B\n"));
         QCOMPARE(read(QStringLiteral("inner/readme.txt")), kGbkGePing);
@@ -358,7 +358,7 @@ private Q_SLOTS:
         selector.set("cn", QStringLiteral("GBK"));
 
         DiagnosticList diagnostics;
-        auto opened = VoiceBankDiskState::open(root(), &selector, diagnostics);
+        auto opened = VoiceBankFileSystemState::open(root(), &selector, diagnostics);
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
 
@@ -377,7 +377,7 @@ private Q_SLOTS:
         write(QStringLiteral("a.wav"), "RIFF");
 
         DiagnosticList diagnostics;
-        auto opened = VoiceBankDiskState::open(root(), nullptr, diagnostics);
+        auto opened = VoiceBankFileSystemState::open(root(), nullptr, diagnostics);
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
 
@@ -396,7 +396,7 @@ private Q_SLOTS:
 
         FixedCharsetSelector selector(QStringLiteral("Shift_JIS"));
         DiagnosticList diagnostics;
-        auto opened = VoiceBankDiskState::open(root(), &selector, diagnostics);
+        auto opened = VoiceBankFileSystemState::open(root(), &selector, diagnostics);
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
 
@@ -421,7 +421,7 @@ private Q_SLOTS:
 
         FixedCharsetSelector selector(QStringLiteral("UTF-8"));
         DiagnosticList diagnostics;
-        auto opened = VoiceBankDiskState::open(root(), &selector, diagnostics);
+        auto opened = VoiceBankFileSystemState::open(root(), &selector, diagnostics);
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
 
@@ -438,7 +438,7 @@ private Q_SLOTS:
         write(QString::fromUtf8("\xf0\x9f\x98\x80.wav"), "RIFF");
 
         DiagnosticList diagnostics;
-        auto opened = VoiceBankDiskState::open(root(), nullptr, diagnostics);
+        auto opened = VoiceBankFileSystemState::open(root(), nullptr, diagnostics);
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
         QVERIFY(bank.find(60, QString::fromUtf8("\xf0\x9f\x98\x80")));
@@ -454,7 +454,7 @@ private Q_SLOTS:
 
         FixedCharsetSelector selector(QStringLiteral("UTF-8"));
         DiagnosticList diagnostics;
-        auto opened = VoiceBankDiskState::open(root(), &selector, diagnostics);
+        auto opened = VoiceBankFileSystemState::open(root(), &selector, diagnostics);
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
 

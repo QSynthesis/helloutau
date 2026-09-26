@@ -19,7 +19,7 @@ class test_VoiceBankTree : public QObject {
 private:
     std::unique_ptr<QTemporaryDir> m_dir;
 
-    std::optional<VoiceBankDiskState::Opened> openRichBank() const {
+    std::optional<VoiceBankFileSystemState::Opened> openRichBank() const {
         return hello::kit::openRichBank(m_dir->path());
     }
 
@@ -77,7 +77,7 @@ private Q_SLOTS:
         QVERIFY(bank.directories().at(deep).leftOut);
 
         const auto tree = treeOf(bank);
-        const auto back = voiceBankOf(tree.get(), opened->disk);
+        const auto back = voiceBankOf(tree.get(), opened->files);
         QCOMPARE(back.directories().size(), 3);
         QCOMPARE(back.indexOf("left"), -1);
         QCOMPARE(back.indexOf(fs::path("sub") / "deep"), -1);
@@ -143,7 +143,7 @@ private Q_SLOTS:
                       samples.end());
         bank.setSamples(samples);
 
-        const auto back = voiceBankOf(treeOf(bank).get(), opened->disk);
+        const auto back = voiceBankOf(treeOf(bank).get(), opened->files);
         const auto count = [&back](const QString &fileName, bool hasEntry) {
             int n = 0;
             for (const auto &sample : back.samples()) {
@@ -180,8 +180,8 @@ private Q_SLOTS:
         QVERIFY(!bytes.empty());
         const auto back = decoded(codec, bytes);
         QVERIFY(back);
-        const auto decodedBank = voiceBankOf(back.get(), opened->disk);
-        verifyEqual(decodedBank, voiceBankOf(treeOf(bank).get(), opened->disk));
+        const auto decodedBank = voiceBankOf(back.get(), opened->files);
+        verifyEqual(decodedBank, voiceBankOf(treeOf(bank).get(), opened->files));
 
         // An absent spelling differs from an empty one, which reads as zero.
         int found = 0;

@@ -10,7 +10,7 @@
 #include <qsubstate/StructNode.h>
 
 #include <hellokit/VoiceBank/VoiceBank.h>
-#include <hellokit/VoiceBank/VoiceBankDiskState.h>
+#include <hellokit/VoiceBank/VoiceBankFileSystemState.h>
 
 #include <hellokit/EditBase/private/NodeAccess_p.h>
 
@@ -37,8 +37,8 @@ namespace hello::kit {
 
     // The conversions between a voice bank and its tree. The tree holds the entries and not the
     // samples without an entry, therefore a VoiceBank is assembled from the tree together with
-    // the audio files that the disk state lists. The conversions of a voice bank are exported for
-    // the tests, which exercise them and the codec without a session.
+    // the audio files that the file system state lists. The conversions of a voice bank are
+    // exported for the tests, which exercise them and the codec without a session.
 
     /// Returns whether \a directory is in the tree: whether it was read. Any other directory
     /// cannot be saved, and the tree takes it as absent.
@@ -67,7 +67,7 @@ namespace hello::kit {
 
     /// Returns the voice bank in \a tree, at the root of \a disk and with its audio files.
     HELLOKIT_EDIT_EXPORT VoiceBank voiceBankOf(const ss::Node *tree,
-                                               const VoiceBankDiskState &disk);
+                                               const VoiceBankFileSystemState &files);
 
     template <>
     HELLOKIT_EDIT_EXPORT VoiceCharacter edit::fromTree<VoiceCharacter>(const ss::Node *node);

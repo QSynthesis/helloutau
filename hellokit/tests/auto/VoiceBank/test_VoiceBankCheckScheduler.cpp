@@ -9,7 +9,7 @@
 
 #include <hellokit/VoiceBank/VoiceBank.h>
 #include <hellokit/VoiceBank/VoiceBankCheckScheduler.h>
-#include <hellokit/VoiceBank/VoiceBankDiskState.h>
+#include <hellokit/VoiceBank/VoiceBankFileSystemState.h>
 
 using namespace hello::kit;
 
@@ -63,17 +63,17 @@ private:
         FixedCharsetSelector selector{QStringLiteral("UTF-8")};
         DiagnosticList diagnostics;
         std::optional<VoiceBank> bank;
-        std::optional<VoiceBankDiskState> disk;
+        std::optional<VoiceBankFileSystemState> files;
         std::unique_ptr<VoiceBankCheckScheduler> schedule;
     };
 
     std::unique_ptr<Followed> followBank() {
         auto out = std::make_unique<Followed>();
-        auto opened =
-            VoiceBankDiskState::open(root().toStdU16String(), &out->selector, out->diagnostics);
+        auto opened = VoiceBankFileSystemState::open(root().toStdU16String(), &out->selector,
+                                                     out->diagnostics);
         if (opened) {
             out->bank = std::move(opened->bank);
-            out->disk = std::move(opened->disk);
+            out->files = std::move(opened->files);
         }
         out->schedule = scheduler();
         auto *followed = out.get();
@@ -83,9 +83,9 @@ private:
                     for (const auto &place : places) {
                         paths += fs::path(place.toStdU16String());
                     }
-                    auto &disk = *followed->disk;
-                    disk.reloadFromDisk(*followed->bank, disk.checkDisk(paths), &followed->selector,
-                                        followed->diagnostics);
+                    auto &files = *followed->files;
+                    files.reloadFromDisk(*followed->bank, files.checkDisk(paths),
+                                         &followed->selector, followed->diagnostics);
                 });
         out->schedule->setRoot(root());
         return out;

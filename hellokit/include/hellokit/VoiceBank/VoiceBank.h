@@ -95,7 +95,7 @@ namespace hello::kit {
     /// same data.
     ///
     /// Bytes that are invalid in the encoding are read as U+FFFD, and the rest of the file is
-    /// loaded as usual. VoiceBankDiskState::save() refuses to write a changed file whose text
+    /// loaded as usual. VoiceBankFileSystemState::save() refuses to write a changed file whose text
     /// contains U+FFFD, because the original bytes would be lost.
     struct VoiceBankDirectory {
         /// The location relative to the voice bank root. Empty for the root itself.
@@ -222,8 +222,8 @@ namespace hello::kit {
     /// The differences between the disk and the state from which a VoiceBank was read. Every
     /// path is a directory relative to the root.
     ///
-    /// Returned by VoiceBankDiskState::checkDisk() and applied by
-    /// VoiceBankDiskState::reloadFromDisk() .
+    /// Returned by VoiceBankFileSystemState::checkDisk() and applied by
+    /// VoiceBankFileSystemState::reloadFromDisk() .
     ///
     /// The lists fall into two kinds, which an editor presents differently. A changed text file
     /// and a removed directory concern the edited contents and require the user's decision, so
@@ -266,7 +266,8 @@ namespace hello::kit {
     /// A decoded voice bank that resolves lyrics to samples.
     ///
     /// A value: the contents of the voice bank only, copyable like Project . The state of the
-    /// files on disk, which saving and checking the disk require, is kept by VoiceBankDiskState .
+    /// files on disk, which saving and checking the disk require, is kept by
+    /// VoiceBankFileSystemState .
     ///
     /// See VoiceBankSource for the preceding step, and for the reason the two are separate.
     class HELLOKIT_VOICEBANK_EXPORT VoiceBank {
@@ -285,7 +286,7 @@ namespace hello::kit {
         /// is not recorded.
         ///
         /// For a voice bank that is only read, as for synthesis. To save it or to check the disk,
-        /// open it through VoiceBankDiskState::open() instead.
+        /// open it through VoiceBankFileSystemState::open() instead.
         ///
         /// \param selector may be null, in which case every directory without a recorded
         ///        encoding is left out with a warning rather than decoded by guesswork
@@ -350,7 +351,7 @@ namespace hello::kit {
         /// Replaces all samples. Entries are changed, added and removed through this function.
         ///
         /// A sample without an entry denotes the bare file and is not saved. A sample that
-        /// refers to a nonexistent directory causes VoiceBankDiskState::save() to fail.
+        /// refers to a nonexistent directory causes VoiceBankFileSystemState::save() to fail.
         void setSamples(QList<VoiceSample> samples);
 
         /// Replaces directory \a index . Its \c character.txt , \c prefix.map , \c readme.txt
@@ -358,7 +359,7 @@ namespace hello::kit {
         void setDirectory(int index, VoiceBankDirectory directory);
 
     private:
-        friend class VoiceBankDiskState;
+        friend class VoiceBankFileSystemState;
 
         VoiceBank() = default;
 
