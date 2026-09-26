@@ -88,36 +88,32 @@ namespace hello::kit {
     /// One decoded directory of a voice bank, holding the data from which its files are saved.
     ///
     /// A voice bank is a tree of such directories rather than a single file, and each directory
-    /// is edited as a unit: its own \c oto.ini in its own encoding, and in the root also
-    /// \c character.txt , \c prefix.map and \c readme.txt . Samples are not stored here but in
-    /// VoiceBank::samples() , for all directories together, each referring to its directory. A
-    /// combined list and a per-directory view are therefore two views of the same data.
+    /// is edited as a unit: its own \c oto.ini , and in the root also \c character.txt ,
+    /// \c prefix.map and \c readme.txt , all in the encoding of the directory. Samples are not
+    /// stored here but in VoiceBank::samples() , for all directories together, each referring to
+    /// its directory. A combined list and a per-directory view are therefore two views of the
+    /// same data.
+    ///
+    /// Bytes that are invalid in the encoding are read as U+FFFD, and the rest of the file is
+    /// loaded as usual. VoiceBankDiskState::save() refuses to write a changed file whose text
+    /// contains U+FFFD, because the original bytes would be lost.
     struct VoiceBankDirectory {
         /// The location relative to the voice bank root. Empty for the root itself.
         std::filesystem::path path;
 
-        /// The encoding in which the files were read and in which they are saved.
+        /// The encoding in which the files were read and in which they are saved, every text
+        /// file of the directory alike. Empty if the directory contained nothing to decode.
         ///
-        /// Empty if the directory contained nothing to decode.
-        QString charset;
-
-        /// \c UTF-8 if the \c oto.ini declares UTF-8 for itself, or empty. UTF-8 is the only
-        /// encoding a declaration can state, and a declaration of any other encoding is read as
-        /// none.
-        ///
-        /// If not empty, the \c oto.ini is read and written in UTF-8 instead of \a charset ,
-        /// which then applies to the other files only. The declaration takes precedence because
-        /// a program that honors it reads the file in UTF-8 regardless of any record of this
-        /// library. It is written back as the first line, always as \c UTF-8 .
-        ///
-        /// An \c oto.ini written in UTF-8 without a declaration receives one, so that such a
-        /// program does not read it in the code page of the machine. An unmodified file is not
+        /// UTF-8 if the \c oto.ini declares it, whatever the configuration records, because a
+        /// program that honors the declaration reads the file in UTF-8 regardless of any record
+        /// of this library. An \c oto.ini written in UTF-8 carries the declaration on its first
+        /// line, and one written in any other encoding carries none. An unmodified file is not
         /// rewritten for this alone.
         ///
-        /// \sa utau::OtoIni::charset, VoiceBankDirectorySource::otoDeclaresUtf8()
-        QString otoCharset;
+        /// \sa VoiceBankDirectorySource::otoDeclaresUtf8()
+        QString charset;
 
-        /// Whether the directory contained text to decode but no encoding was available.
+        /// Whether the directory contained text to decode but the user selected no encoding.
         ///
         /// Its samples remain in the voice bank and are found by file name, as if there were no
         /// \c oto.ini , but none of its text is loaded.
@@ -125,13 +121,6 @@ namespace hello::kit {
         /// \warning Nothing in such a directory may be saved. Its files were never read, and
         ///          saving would overwrite them with empty content.
         bool leftOut = false;
-
-        /// Whether part of the text was invalid in \a charset .
-        ///
-        /// Invalid text is read as empty. The remainder is loaded and usable, but
-        /// VoiceBankDiskState::save() does not write a changed file of this directory, because the
-        /// empty text would replace the original.
-        bool lossy = false;
 
         /// \name Files of the root only
         ///
@@ -366,23 +355,12 @@ namespace hello::kit {
 
         /// Replaces directory \a index . Its \c character.txt , \c prefix.map , \c readme.txt
         /// and encoding are changed through this function. The path is retained.
-        ///
-        /// A change of encoding also removes the declaration of the \c oto.ini , because the file
-        /// is then written in the new encoding.
-        ///
-        /// \sa VoiceBankDirectory::otoCharset
         void setDirectory(int index, VoiceBankDirectory directory);
 
     private:
         friend class VoiceBankDiskState;
 
         VoiceBank() = default;
-
-        /// Returns the canonical name of \a charset , or empty if \a charset is empty.
-        ///
-        /// TextCodec takes an empty name as the system encoding, which is UTF-8 on most systems
-        /// other than Windows and would equal a new UTF-8.
-        static QString canonicalCharset(const QString &charset);
 
         /// Updates the lookup tables and the root-derived data from the samples and
         /// directories.

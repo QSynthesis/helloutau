@@ -18,12 +18,8 @@ namespace hello::kit {
         if (root < 0 || !isEditable(opened.bank.directories().at(root))) {
             Diagnostic diagnostic;
             diagnostic.severity = DiagnosticSeverity::Error;
-            diagnostic.message =
-                root < 0 || opened.bank.directories().at(root).leftOut
-                    ? tr("The voice bank cannot be edited, because no encoding was specified for "
-                         "its folder.")
-                    : tr("The voice bank cannot be edited, because part of the text in its folder "
-                         "is not valid in its encoding. Open it in another encoding.");
+            diagnostic.message = tr("The voice bank cannot be edited, because no encoding was "
+                                    "specified for its folder.");
             diagnostics.push_back(diagnostic);
             return nullptr;
         }
@@ -215,10 +211,10 @@ namespace hello::kit {
             if (path.empty()) {
                 Diagnostic diagnostic;
                 diagnostic.severity = DiagnosticSeverity::Warning;
-                diagnostic.message = tr("The folder of the voice bank no longer reads in its "
-                                        "encoding, so the voice bank on disk is incomplete. The "
-                                        "contents read before are kept, and saving writes them "
-                                        "back.");
+                diagnostic.message = tr("The folder of the voice bank was not read again, because "
+                                        "no encoding was selected for a text file in it, so the "
+                                        "voice bank on disk is incomplete. The contents read "
+                                        "before are kept, and saving writes them back.");
                 diagnostics.push_back(diagnostic);
                 m_rootUnreadable = true;
                 continue;

@@ -272,38 +272,38 @@ private Q_SLOTS:
         QVERIFY(!m_session->isIncomplete());
     }
 
-    // A root that no longer reads when read again keeps its former contents in the tree, and
-    // saving writes them over the files.
-    void a_root_that_no_longer_reads_is_written_back() {
-        write(QStringLiteral("oto.ini"), "a.wav=\xff,41.0,2,3,4,5\r\n");
+    // A root without text that gains a text file whose encoding nobody selects is not read
+    // again. The tree keeps what was read before, and the voice bank on disk is incomplete until
+    // the root is read in an encoding.
+    void a_root_not_read_again_makes_the_voice_bank_incomplete() {
+        QTemporaryDir dir;
+        QVERIFY(writeSampleFile(dir.path(), QStringLiteral("a.wav"), "RIFF"));
         DiagnosticList diagnostics;
-        const auto done = m_session->reloadFromDisk(m_session->checkDisk(), nullptr, diagnostics);
-        QCOMPARE(done.changed, QList<fs::path>{fs::path()});
-        QVERIFY(m_session->isIncomplete());
-        QCOMPARE(diagnostics.first().severity, DiagnosticSeverity::Warning);
-        QCOMPARE(directories().at(0).otoEntries().size(), 2);
-        QCOMPARE(directories().at(0).otoEntries().at(0).alias(), QStringLiteral("a"));
+        auto opened =
+            VoiceBankDiskState::open(fs::path(dir.path().toStdU16String()), nullptr, diagnostics);
+        QVERIFY(opened);
+        const auto session = VoiceBankSession::create(std::move(*opened), diagnostics);
+        QVERIFY(session);
 
-        QVERIFY(m_session->save(diagnostics));
-        QVERIFY(!m_session->isIncomplete());
-        QCOMPARE(read(QStringLiteral("oto.ini")),
-                 QByteArray("a.wav=a,41.0,2,3,4,5\r\nb.wav=b,1,2,3,4,5\r\n"));
+        QVERIFY(writeSampleFile(dir.path(), QStringLiteral("readme.txt"), "new"));
+        const auto done = session->reloadFromDisk(session->checkDisk(), nullptr, diagnostics);
+        QCOMPARE(done.changed, QList<fs::path>{fs::path()});
+        QVERIFY(session->isIncomplete());
+        QVERIFY(VoiceBankRef(session.get()).readme().isEmpty());
+
+        QVERIFY(session->reread({}, QStringLiteral("GBK"), diagnostics));
+        QVERIFY(!session->isIncomplete());
+        QCOMPARE(VoiceBankRef(session.get()).readme(), QStringLiteral("new"));
     }
 
-    // A root that reads again once its files are repaired makes the voice bank complete.
-    void a_root_read_again_makes_the_voice_bank_complete() {
-        write(QStringLiteral("oto.ini"), "a.wav=\xff,41.0,2,3,4,5\r\n");
-        reload();
-        QVERIFY(m_session->isIncomplete());
-        write(QStringLiteral("oto.ini"), "a.wav=c,41.0,2,3,4,5\r\n");
-        QFile file(pathOf(QStringLiteral("oto.ini")));
-        QVERIFY(file.open(QIODevice::ReadWrite));
-        QVERIFY(file.setFileTime(QDateTime::currentDateTime().addSecs(-7200),
-                                 QFileDevice::FileModificationTime));
-        file.close();
+    // A text file that appears in a directory already read is read in its encoding, without
+    // asking again.
+    void a_text_file_that_appears_is_read_in_the_encoding_of_its_directory() {
+        write(QStringLiteral("readme.txt"), kGbkGePing);
         QCOMPARE(reload().changed, QList<fs::path>{fs::path()});
         QVERIFY(!m_session->isIncomplete());
-        QCOMPARE(directories().at(0).otoEntries().at(0).alias(), QStringLiteral("c"));
+        QCOMPARE(VoiceBankRef(m_session.get()).readme(),
+                 QString::fromUtf8("\xe8\x91\x9b\xe5\xb9\xb3"));
     }
 
     // Where the root cannot be written again, the voice bank is saved elsewhere and edited there
@@ -383,19 +383,22 @@ private Q_SLOTS:
         QCOMPARE(indexOf("left"), -1);
     }
 
-    // A directory read again in an encoding in which it does not decode leaves the tree for the
-    // excluded directories. Undoing it returns it to the tree.
-    void a_directory_read_in_a_wrong_encoding_leaves_the_tree() {
+    // A directory read again in an encoding in which some bytes are invalid stays in the tree,
+    // with U+FFFD in their place. Undoing it restores the text read before.
+    void a_directory_read_in_a_wrong_encoding_stays_in_the_tree() {
         write(QStringLiteral("sub/oto.ini"), "x.wav=\xe8\x91\x9b,1,2,3,4,5\r\n");
         QCOMPARE(reload().changed, QList<fs::path>{fs::path("sub")});
         DiagnosticList diagnostics;
         QVERIFY(m_session->reread("sub", QStringLiteral("Shift_JIS"), diagnostics));
-        QCOMPARE(indexOf("sub"), -1);
-        QCOMPARE(m_session->excludedDirectories().size(), 2);
-
-        m_session->undo();
         QVERIFY(indexOf("sub") > 0);
         QCOMPARE(m_session->excludedDirectories().size(), 1);
+        const auto alias = [this] {
+            return directories().at(indexOf("sub")).otoEntries().at(0).alias();
+        };
+        QVERIFY(alias().contains(QChar::ReplacementCharacter));
+
+        m_session->undo();
+        QCOMPARE(alias(), QString::fromUtf8("\xe8\x91\x9b"));
     }
 };
 

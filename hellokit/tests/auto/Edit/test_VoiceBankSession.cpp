@@ -75,15 +75,15 @@ private Q_SLOTS:
         verifyEqual(VoiceBankRef(m_session.get()).toVoiceBank(), *m_bank);
     }
 
-    // A subdirectory that was not read, or whose text did not decode, is taken as absent: it is in
-    // neither the tree nor the snapshot, and the session lists it to be read again.
+    // A subdirectory that was not read is taken as absent: it is in neither the tree nor the
+    // snapshot, and the session lists it to be read again.
     void a_directory_that_cannot_be_saved_is_absent() {
         const auto &excluded = m_session->excludedDirectories();
         QCOMPARE(excluded.size(), 2);
         for (const auto &directory : excluded) {
-            QVERIFY(directory.path == fs::path("left")
-                        ? directory.leftOut
-                        : directory.path == fs::path("sub") / "deep" && directory.lossy);
+            QVERIFY(directory.path == fs::path("left") ||
+                    directory.path == fs::path("sub") / "deep");
+            QVERIFY(directory.leftOut);
         }
         const auto directories = VoiceBankRef(m_session.get()).directories();
         QCOMPARE(directories.size(), 3);
@@ -99,26 +99,46 @@ private Q_SLOTS:
         }
     }
 
-    // A voice bank whose own folder does not read is not edited, as a file that does not decode.
-    void a_voice_bank_whose_root_does_not_read_is_not_edited() {
-        for (const auto &charset : {QString(), QStringLiteral("UTF-8")}) {
-            QTemporaryDir dir;
-            QVERIFY(writeSampleFile(dir.path(), QStringLiteral("oto.ini"),
-                                    "a.wav=" + kGbkGePing + ",1,2,3,4,5\r\n"));
-            FixedCharsetSelector selector(charset);
-            DiagnosticList diagnostics;
-            auto opened =
-                VoiceBankDiskState::open(fs::path(dir.path().toStdU16String()),
-                                         charset.isEmpty() ? nullptr : &selector, diagnostics);
-            QVERIFY(opened);
-            QVERIFY(opened->bank.directories().at(0).leftOut ||
-                    opened->bank.directories().at(0).lossy);
-            diagnostics.clear();
-            QVERIFY(!VoiceBankSession::create(std::move(*opened), diagnostics));
-            QVERIFY(hasError(diagnostics));
-            QVERIFY(diagnostics.first().message.contains(
-                charset.isEmpty() ? QStringLiteral("no encoding") : QStringLiteral("not valid")));
+    // A voice bank whose own folder was not read is not edited, as a file that was not read.
+    void a_voice_bank_whose_root_was_not_read_is_not_edited() {
+        QTemporaryDir dir;
+        QVERIFY(writeSampleFile(dir.path(), QStringLiteral("oto.ini"),
+                                "a.wav=" + kGbkGePing + ",1,2,3,4,5\r\n"));
+        DiagnosticList diagnostics;
+        auto opened =
+            VoiceBankDiskState::open(fs::path(dir.path().toStdU16String()), nullptr, diagnostics);
+        QVERIFY(opened);
+        QVERIFY(opened->bank.directories().at(0).leftOut);
+        diagnostics.clear();
+        QVERIFY(!VoiceBankSession::create(std::move(*opened), diagnostics));
+        QVERIFY(hasError(diagnostics));
+        QVERIFY(diagnostics.first().message.contains(QStringLiteral("no encoding")));
+    }
+
+    // Bytes invalid in the encoding the user selected are read as U+FFFD, and the directory is
+    // edited as any other. Only saving a changed file that contains U+FFFD is refused.
+    void a_voice_bank_with_invalid_bytes_is_edited() {
+        QTemporaryDir dir;
+        QVERIFY(writeSampleFile(dir.path(), QStringLiteral("oto.ini"),
+                                "a.wav=" + kGbkGePing + ",1,2,3,4,5\r\n"));
+        FixedCharsetSelector selector(QStringLiteral("UTF-8"));
+        DiagnosticList diagnostics;
+        auto opened =
+            VoiceBankDiskState::open(fs::path(dir.path().toStdU16String()), &selector, diagnostics);
+        QVERIFY(opened);
+        auto session = VoiceBankSession::create(std::move(*opened), diagnostics);
+        QVERIFY(session);
+        const auto entry = VoiceBankRef(session.get()).directories().at(0).otoEntries().at(0);
+        QVERIFY(entry.alias().contains(QChar::ReplacementCharacter));
+
+        {
+            auto transaction = session->transaction(QStringLiteral("Edit"));
+            entry.setOffset(7);
+            QVERIFY(transaction.commit(diagnostics));
         }
+        diagnostics.clear();
+        QVERIFY(!session->save(diagnostics));
+        QVERIFY(hasError(diagnostics));
     }
 
     // A value is logged with the name of its field in VoiceBankSchema.h and its values.

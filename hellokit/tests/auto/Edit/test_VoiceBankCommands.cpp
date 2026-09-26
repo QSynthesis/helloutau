@@ -189,7 +189,6 @@ private Q_SLOTS:
         QVERIFY(run(QStringLiteral("directory charset /directories/%1 gbk").arg(sub)));
         const auto directory = VoiceBankRef(m_session.get()).directories().at(sub);
         QCOMPARE(directory.charset(), QStringLiteral("GBK"));
-        QCOMPARE(directory.otoCharset(), QString());
 
         verifyRefused(QStringLiteral("directory charset /directories/0 no-such-encoding"),
                       QStringLiteral("is not available"));

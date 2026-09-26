@@ -50,8 +50,8 @@ namespace hello::kit {
     /// Writes into \a root a voice bank with every kind of content that the tree holds, and
     /// opens it: the files of the root, an \c oto.ini that declares its encoding, spellings of
     /// numbers including empty ones, an entry whose audio file is missing, audio files without
-    /// an entry, a nested directory \c sub/inner , and the directories \c left , which is left out,
-    /// and \c sub/deep , whose text does not decode.
+    /// an entry, a nested directory \c sub/inner , and the directories \c left and \c sub/deep ,
+    /// which are left out because no encoding is selected for them.
     ///
     /// The root holds four entries in this order: \c a.wav twice, \c b.wav with empty numbers
     /// and \c missing.wav , and \c c.wav without an entry.
@@ -88,23 +88,22 @@ namespace hello::kit {
         }
 
         DirectorySelector selector({
-            {std::filesystem::path(),                QStringLiteral("GBK")  },
-            {std::filesystem::path("sub") / "deep",  QStringLiteral("UTF-8")},
-            {std::filesystem::path("sub") / "inner", QStringLiteral("GBK")  },
+            {std::filesystem::path(),                QStringLiteral("GBK")},
+            {std::filesystem::path("sub") / "inner", QStringLiteral("GBK")},
         });
         DiagnosticList diagnostics;
         return VoiceBankDiskState::open(std::filesystem::path(root.toStdU16String()), &selector,
                                         diagnostics);
     }
 
-    /// Returns \a bank without the directories that were not read or did not decode, which a
-    /// session takes as absent.
+    /// Returns \a bank without the directories that were not read, which a session takes as
+    /// absent.
     inline VoiceBank editablePart(const VoiceBank &bank) {
         QList<VoiceBankDirectory> directories;
         QMap<int, int> indices;
         for (int i = 0; i < bank.directories().size(); ++i) {
             const auto &directory = bank.directories().at(i);
-            if (!directory.leftOut && !directory.lossy) {
+            if (!directory.leftOut) {
                 indices.insert(i, int(directories.size()));
                 directories.push_back(directory);
             }
@@ -130,9 +129,7 @@ namespace hello::kit {
             QCOMPARE(a.path, e.path);
             QCOMPARE(a.path.native(), e.path.native());
             QCOMPARE(a.charset, e.charset);
-            QCOMPARE(a.otoCharset, e.otoCharset);
             QCOMPARE(a.leftOut, e.leftOut);
-            QCOMPARE(a.lossy, e.lossy);
             QVERIFY(a.character == e.character);
             QCOMPARE(a.prefixMap, e.prefixMap);
             QCOMPARE(a.readme, e.readme);

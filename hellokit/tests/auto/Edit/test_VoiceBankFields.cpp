@@ -86,7 +86,7 @@ private Q_SLOTS:
         QVERIFY(directories->readOnly);
 
         const auto &directory = recordOf(VoiceDirectoryType);
-        for (const auto name : {u"path", u"charset", u"otoCharset"}) {
+        for (const auto name : {u"path", u"charset"}) {
             QVERIFY2(directory.field(name)->readOnly, qPrintable(QString::fromUtf16(name)));
         }
         QVERIFY(!directory.field(u"otoEntries")->readOnly);

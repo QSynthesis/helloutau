@@ -72,9 +72,9 @@ private Q_SLOTS:
         const auto left = bank.indexOf("left");
         const auto deep = bank.indexOf(fs::path("sub") / "deep");
         QVERIFY(sub > 0 && left > 0 && deep > 0);
-        QCOMPARE(bank.directories().at(sub).otoCharset, QStringLiteral("UTF-8"));
+        QCOMPARE(bank.directories().at(sub).charset, QStringLiteral("UTF-8"));
         QVERIFY(bank.directories().at(left).leftOut);
-        QVERIFY(bank.directories().at(deep).lossy);
+        QVERIFY(bank.directories().at(deep).leftOut);
 
         const auto tree = treeOf(bank);
         const auto back = voiceBankOf(tree.get(), opened->disk);

@@ -19,16 +19,14 @@ namespace hello::kit {
             return false;
         }
 
-        // The file name as saving compares it: the bytes in the encoding of the oto.ini, which
-        // is the declared encoding if available and the encoding of the directory otherwise. A
+        // The file name as saving compares it: the bytes in the encoding of the directory. A
         // directory without an encoding has no text yet, and UTF-8 stands in for it.
         QByteArray orderOf(const QString &fileName, const VoiceDirectoryRef &directory) {
-            for (const auto &name : {directory.otoCharset(), directory.charset()}) {
-                if (!name.isEmpty()) {
-                    const TextCodec codec(name);
-                    if (codec.isValid()) {
-                        return codec.encode(fileName);
-                    }
+            const auto name = directory.charset();
+            if (!name.isEmpty()) {
+                const TextCodec codec(name);
+                if (codec.isValid()) {
+                    return codec.encode(fileName);
                 }
             }
             return fileName.toUtf8();
@@ -151,15 +149,10 @@ namespace hello::kit {
         if (charset.isEmpty() || !codec.isValid()) {
             return fail(diagnostics, tr("The encoding \"%1\" is not available.").arg(charset));
         }
-        // The canonical name, so that another spelling of the encoding in effect is no change. The
-        // oto.ini is written in the encoding as well if it declares nothing, or if it declares
-        // UTF-8, the only declaration, and the encoding is UTF-8.
-        if (codec.name() == directory.charset() &&
-            (directory.otoCharset().isEmpty() || codec.isUtf8())) {
-            return true;
-        }
+        // The canonical name, so that another spelling of the encoding in effect is no change,
+        // and a transaction that changes nothing creates no undo step.
         auto transaction = directory.session()->transaction(tr("Convert Encoding"));
-        directory.setCharsets(codec.name(), QString());
+        directory.setCharset(codec.name());
         return transaction.commit(diagnostics);
     }
 

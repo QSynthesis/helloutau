@@ -77,8 +77,7 @@ namespace hello::kit {
         void rememberCharset(const std::filesystem::path &directory);
 
         /// Returns whether the next save() records the encoding of a directory whose contents
-        /// are unchanged: one marked by rememberCharset(), or read again by reread() in an
-        /// encoding in which its files are valid.
+        /// are unchanged: one marked by rememberCharset(), or read again by reread().
         ///
         /// Such a voice bank is unsaved even though nothing in it was edited. An editor that
         /// holds the saved state asks after opening. See the section on the saved state in
@@ -89,12 +88,15 @@ namespace hello::kit {
         /// the encoding of its directory, and nothing else.
         ///
         /// All checks precede the first write, and a single failure leaves every file
-        /// unchanged. The following are refused:
+        /// unchanged. The following are refused, each listed in \a diagnostics :
         ///
         /// - **Text that the encoding cannot represent.** It is never written as question marks.
+        /// - **Text containing U+FFFD**, which stands for bytes that were invalid in the encoding
+        ///   when read. Writing it would lose them. An unchanged file is not written and is not
+        ///   refused.
         /// - **A file that changed on disk since it was read**, because it contains changes made
         ///   elsewhere. The voice bank must be reopened.
-        /// - **A directory whose files were not read**, or text that was invalid.
+        /// - **A directory whose files were not read.**
         ///
         /// A directory of \a bank without state here, for example one that a reload removed
         /// and an undo in an editing session restored, is saved as a new directory: it is
@@ -118,7 +120,7 @@ namespace hello::kit {
         ///          through, files written so far remain written, and the failing file is
         ///          reported.
         ///
-        /// \sa VoiceBankDirectory::leftOut, VoiceBankDirectory::lossy
+        /// \sa VoiceBankDirectory::leftOut
         bool save(const VoiceBank &bank, DiagnosticList &diagnostics);
 
         /// Writes \a bank into \a folder as a new voice bank, and returns it as read from there.
@@ -143,13 +145,16 @@ namespace hello::kit {
         /// differently. This is the alternative to VoiceBank::setDirectory() , which keeps the
         /// text and saves the files in another encoding.
         ///
+        /// A directory whose \c oto.ini declares UTF-8 is read in UTF-8 only, and another
+        /// encoding is refused.
+        ///
+        /// \sa VoiceBankDirectorySource::otoDeclaresUtf8()
+        ///
         /// \warning Unsaved changes to the directory are discarded, because the directory is
         ///          read anew.
         ///
-        /// The encoding is recorded by the next save() , unless part of the text was invalid in
-        /// it, in which case it is not worth recording.
-        ///
-        /// \sa VoiceBankDirectory::lossy
+        /// The encoding is recorded by the next save() , even if some bytes are invalid in it,
+        /// because the user chose it.
         bool reread(VoiceBank &bank, const std::filesystem::path &directory, const QString &charset,
                     DiagnosticList &diagnostics);
 
@@ -222,7 +227,9 @@ namespace hello::kit {
             /// The serialization of each file without changes. A file whose serialization still
             /// equals this is not written.
             std::map<VoiceBankDirectorySource::File, QByteArray> baseline;
-            /// The contents of \c hello-config.json when read or last written, if present.
+            /// The contents of \c hello-config.json when read, if present, whose fields not
+            /// recognized by this version every save writes back. The encodings are those of the
+            /// VoiceBank at each save instead.
             std::optional<VoiceBankConfig> config;
             /// The canonical encoding the directory was read or last saved in. A different
             /// encoding in the VoiceBank is recorded by the next save.
@@ -250,9 +257,9 @@ namespace hello::kit {
         /// affecting several directories performs each once.
         /// @{
         void replaceDirectory(VoiceBank &bank, int index, const VoiceBankDirectorySource &source,
-                              const std::optional<TextCodec> &codec, DiagnosticList &diagnostics);
+                              const std::optional<QString> &charset, DiagnosticList &diagnostics);
         void appendDirectory(VoiceBank &bank, const VoiceBankDirectorySource &source,
-                             const std::optional<TextCodec> &codec, DiagnosticList &diagnostics);
+                             const std::optional<QString> &charset, DiagnosticList &diagnostics);
         void removeDirectory(VoiceBank &bank, int index);
 
         /// Replaces the samples without an entry of the directory at \a index of \a bank with

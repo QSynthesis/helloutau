@@ -85,15 +85,12 @@ namespace hello::kit {
 
         std::filesystem::path path() const;
         QString charset() const;
-        QString otoCharset() const;
 
         OtoEntryListRef otoEntries() const;
 
     private:
-        /// Writes both encodings, which change together.
-        ///
         /// \sa VoiceBankEdits::convertCharset()
-        void setCharsets(const QString &charset, const QString &otoCharset) const;
+        void setCharset(const QString &charset) const;
 
         friend class VoiceBankEdits;
     };

@@ -71,7 +71,12 @@ private Q_SLOTS:
         QVERIFY(directory->oto.has_value());
         QVERIFY(directory->prefixMap.has_value());
         QVERIFY(directory->character.has_value());
-        QCOMPARE(directory->readme, kA);
+        QCOMPARE(directory->contents.at(VoiceBankDirectorySource::Readme), kA);
+        QCOMPARE(directory->contents.at(VoiceBankDirectorySource::Character), "name=" + kA + "\n");
+        QCOMPARE(directory->textFiles(),
+                 (std::vector<VoiceBankDirectorySource::File>{
+                     VoiceBankDirectorySource::Oto, VoiceBankDirectorySource::PrefixMap,
+                     VoiceBankDirectorySource::Character, VoiceBankDirectorySource::Readme}));
         QCOMPARE(directory->audioFiles.size(), size_t(1));
         QCOMPARE(directory->audioFiles.at(0), std::filesystem::path("a.wav"));
     }
@@ -134,7 +139,22 @@ private Q_SLOTS:
         QCOMPARE(unsettled.at(0)->path, std::filesystem::path());
 
         QVERIFY(at(*source, "A4")->config.has_value());
-        QCOMPARE(at(*source, "A4")->config->charset, QStringLiteral("Shift_JIS"));
+        QCOMPARE(at(*source, "A4")->settledCharset(), QStringLiteral("Shift_JIS"));
+    }
+
+    // A declaration of UTF-8 settles the entire directory, the other files of the root with it,
+    // and takes precedence over the configuration.
+    void a_declaration_settles_the_directory() {
+        write(QStringLiteral("oto.ini"), "#Charset:utf8\na.wav=a,0,0,0,0,0\n");
+        write(QStringLiteral("character.txt"), "name=a\n");
+        write(QStringLiteral("hello-config.json"),
+              R"({"$format":"hello-voicebank","charset":"GBK"})");
+
+        DiagnosticList diagnostics;
+        const auto source = VoiceBankSource::open(root(), diagnostics);
+        QVERIFY(source.has_value());
+        QCOMPARE(at(*source, {})->settledCharset(), QStringLiteral("UTF-8"));
+        QVERIFY(source->unsettled().isEmpty());
     }
 
     // A directory containing only samples has no text, so no encoding is required and asking
@@ -145,7 +165,8 @@ private Q_SLOTS:
         DiagnosticList diagnostics;
         const auto source = VoiceBankSource::open(root(), diagnostics);
         QVERIFY(source.has_value());
-        QVERIFY(!at(*source, {})->needsCharset());
+        QVERIFY(at(*source, {})->textFiles().empty());
+        QVERIFY(at(*source, {})->isSettled());
         QVERIFY(source->unsettled().isEmpty());
     }
 

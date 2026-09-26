@@ -331,7 +331,6 @@ private Q_SLOTS:
         QVERIFY(!inner->character.has_value());
         QVERIFY(!inner->prefixMap.has_value());
         QVERIFY(inner->readme.isEmpty());
-        QVERIFY(!inner->lossy);
 
         auto samples = bank.samples();
         for (auto &sample : samples) {

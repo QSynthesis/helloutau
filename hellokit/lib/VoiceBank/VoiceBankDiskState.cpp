@@ -39,36 +39,18 @@ namespace hello::kit {
             return QCryptographicHash::hash(bytes, QCryptographicHash::Sha1);
         }
 
-        /// The codec for reading one directory, or \c std::nullopt if no encoding is
-        /// specified.
-        ///
-        /// \note Escape sequences are neither decoded nor written. Unrepresentable characters
-        ///       are rejected on save instead of escaped. Decoding escape sequences in a voice
-        ///       bank from UTAU would remove its backslashes.
-        std::optional<TextCodec> codecFor(const VoiceBankDirectorySource &directory,
-                                          VoiceBankCharsetSelector *selector,
-                                          DiagnosticList &diagnostics) {
-            QString name;
-            if (directory.config) {
-                name = directory.config->charset;
-            }
+        /// The canonical name of \a charset , or empty if it is empty or unavailable. An empty
+        /// name is not resolved, because TextCodec would take it as the system encoding, which is
+        /// UTF-8 on most systems other than Windows and would equal a new UTF-8.
+        QString canonicalOf(const QString &charset) {
+            return charset.isEmpty() ? QString() : TextCodec(charset).name();
+        }
 
-            if (name.isEmpty()) {
-                if (!selector) {
-                    complain(diagnostics,
-                             VoiceBankDiskState::tr("The encoding of \"%1\" is not specified, "
-                                                    "so the directory was left out.")
-                                 .arg(displayed(directory.path)));
-                    return std::nullopt;
-                }
-                const auto chosen = selector->selectCharset(directory, diagnostics);
-                if (!chosen) {
-                    return std::nullopt;
-                }
-                name = *chosen;
-            }
-
-            TextCodec codec(name);
+        /// The canonical name of \a name for reading \a directory , or \c std::nullopt with a
+        /// warning if the encoding is not available.
+        std::optional<QString> availableCharset(const VoiceBankDirectorySource &directory,
+                                                const QString &name, DiagnosticList &diagnostics) {
+            const TextCodec codec(name);
             if (!codec.isValid()) {
                 complain(diagnostics,
                          VoiceBankDiskState::tr(
@@ -76,36 +58,70 @@ namespace hello::kit {
                              .arg(name, displayed(directory.path)));
                 return std::nullopt;
             }
-            return codec;
+            return codec.name();
         }
 
-        /// Decodes the text of one directory and records whether any of it was invalid.
+        /// The canonical encoding for reading one directory, or \c std::nullopt if it has no
+        /// text files or is left out.
+        ///
+        /// The encoding that a declaration or the configuration determines is taken, and
+        /// \a selector is queried only without one. Without a selector, the directory is left out
+        /// with a warning.
+        ///
+        /// \note Escape sequences are neither decoded nor written. Unrepresentable characters
+        ///       are rejected on save instead of escaped. Decoding escape sequences in a voice
+        ///       bank from UTAU would remove its backslashes.
+        std::optional<QString> charsetFor(const VoiceBankDirectorySource &directory,
+                                          VoiceBankCharsetSelector *selector,
+                                          DiagnosticList &diagnostics) {
+            if (directory.textFiles().empty()) {
+                return std::nullopt;
+            }
+            auto name = directory.settledCharset();
+            if (!name) {
+                if (!selector) {
+                    complain(diagnostics,
+                             VoiceBankDiskState::tr("The encoding of \"%1\" is not specified, "
+                                                    "so the directory was left out.")
+                                 .arg(displayed(directory.path)));
+                    return std::nullopt;
+                }
+                name = selector->selectCharset(directory, diagnostics);
+                if (!name) {
+                    return std::nullopt;
+                }
+            }
+            return availableCharset(directory, *name, diagnostics);
+        }
+
+        /// Decodes the text of one file, replacing invalid bytes with U+FFFD, and counts them.
         class Decoder {
         public:
-            explicit Decoder(const TextCodec &codec) : m_codec(codec) {
+            explicit Decoder(const QString &charset) : m_codec(charset) {
             }
 
-            /// The decoded text, or empty if the bytes are invalid in this encoding.
             QString operator()(const std::string &bytes) {
                 return (*this)(viewOf(bytes));
             }
 
             QString operator()(QByteArrayView bytes) {
-                auto text = m_codec.decode(bytes);
-                if (!text) {
-                    m_lossy = true;
-                    return {};
-                }
-                return *text;
+                qsizetype invalid = 0;
+                auto text = m_codec.decodeReplacing(bytes, &invalid);
+                m_invalid += invalid;
+                return text;
             }
 
-            bool lossy() const {
-                return m_lossy;
+            const TextCodec &codec() const {
+                return m_codec;
+            }
+
+            qsizetype invalid() const {
+                return m_invalid;
             }
 
         private:
-            const TextCodec &m_codec;
-            bool m_lossy = false;
+            TextCodec m_codec;
+            qsizetype m_invalid = 0;
         };
 
         int depthOf(const fs::path &relative) {
@@ -125,34 +141,34 @@ namespace hello::kit {
             return true;
         }
 
-        /// The encoding for rereading a previously read directory. The order of precedence is
-        /// the encoding it was read in, then the encoding in its configuration, and only then
-        /// the selector. The configuration on disk is not read again for a directory whose
-        /// encoding is known, because it belongs to HelloUtau and a change made to it by another
-        /// program is not taken in. The user was already asked about a directory that was read
-        /// or left out before, and asking again on every change would repeat an answered
-        /// question.
-        std::optional<TextCodec> codecAgain(const VoiceBankDirectorySource &source,
+        /// The encoding for rereading a previously read directory. The order of precedence is the
+        /// declaration of the \c oto.ini , then the encoding the directory was read in, then the
+        /// encoding in its configuration, and only then the selector.
+        ///
+        /// The configuration on disk is not read again for a directory whose encoding is known,
+        /// because it belongs to HelloUtau and a change made to it by another program is not
+        /// taken in. A text file that appeared since is read in the same encoding. The user was
+        /// already asked about a directory that was read or left out before, and asking again on
+        /// every change would repeat an answered question.
+        std::optional<QString> charsetAgain(const VoiceBankDirectorySource &source,
                                             const VoiceBankDirectory &before,
                                             VoiceBankCharsetSelector *selector,
                                             DiagnosticList &diagnostics) {
-            if (!source.needsCharset()) {
+            if (source.textFiles().empty()) {
                 return std::nullopt;
+            }
+            if (source.otoDeclaresUtf8()) {
+                return QStringLiteral("UTF-8");
             }
             if (!before.charset.isEmpty()) {
-                const TextCodec codec(before.charset);
-                if (codec.isValid()) {
-                    return codec;
-                }
-            }
-            if (source.config && !source.config->charset.isEmpty()) {
-                return codecFor(source, nullptr, diagnostics);
+                return before.charset;
             }
             if (before.leftOut) {
-                return std::nullopt;
+                const auto recorded = source.settledCharset();
+                return recorded ? availableCharset(source, *recorded, diagnostics) : std::nullopt;
             }
-            // The directory previously required no encoding and now requires one.
-            return codecFor(source, selector, diagnostics);
+            // The directory previously had nothing to decode, and now has.
+            return charsetFor(source, selector, diagnostics);
         }
 
 
@@ -233,11 +249,11 @@ namespace hello::kit {
             QList<VoiceSample> samples;
         };
 
-        /// Decodes \a directory of the voice bank at \a root with \a given , or leaves out
-        /// all text that requires decoding if \a given is \c std::nullopt .
+        /// Decodes \a directory of the voice bank at \a root in \a given , or leaves out all
+        /// text that requires decoding if \a given is \c std::nullopt .
         DecodedDirectory decodeDirectory(const VoiceBankDirectorySource &directory,
                                          const fs::path &root, int directoryIndex,
-                                         const std::optional<TextCodec> &given,
+                                         const std::optional<QString> &given,
                                          DiagnosticList &diagnostics) {
             DecodedDirectory out;
             auto &decoded = out.directory;
@@ -248,59 +264,50 @@ namespace hello::kit {
             // A directory without an encoding loses only the text that requires decoding. Its
             // samples remain reachable by file name, which requires no encoding, and a voice
             // bank without an oto.ini is sung in exactly this way.
-            std::optional<TextCodec> codec;
-            if (directory.needsCharset()) {
-                codec = given;
-                if (codec) {
-                    decoded.charset = codec->name();
+            if (!directory.textFiles().empty()) {
+                if (given) {
+                    decoded.charset = *given;
                 } else {
                     decoded.leftOut = true;
                 }
             }
 
-            // The oto.ini may declare UTF-8 for itself, which takes precedence over the encoding
-            // recorded or selected for the directory. Any other declaration is treated as absent.
-            std::optional<TextCodec> declared;
-            if (directory.otoDeclaresUtf8()) {
-                decoded.otoCharset = QStringLiteral("UTF-8");
-                declared = TextCodec(decoded.otoCharset);
-            }
-            if (declared) {
-                QString other;
-                if (codec) {
-                    other = codec->name();
-                } else if (directory.config && !directory.config->charset.isEmpty()) {
-                    other = TextCodec(directory.config->charset).name();
-                }
-                if (!other.isEmpty() && other != declared->name()) {
+            // The oto.ini may declare UTF-8, which determines the encoding of the directory and
+            // takes precedence over the one that the configuration records.
+            if (directory.otoDeclaresUtf8() && directory.config) {
+                const auto &recorded = directory.config->charset;
+                if (!recorded.isEmpty() && !TextCodec(recorded).isUtf8()) {
                     complain(diagnostics,
                              VoiceBankDiskState::tr(
-                                 "The oto.ini in \"%1\" declares the encoding %2, so it "
-                                 "is read in %2 rather than in %3.")
-                                 .arg(displayed(directory.path), declared->name(), other));
-                }
-                if (!codec && !decoded.leftOut) {
-                    decoded.charset = declared->name();
+                                 "The oto.ini in \"%1\" declares the encoding UTF-8, so the "
+                                 "directory is read in UTF-8 rather than in %2.")
+                                 .arg(displayed(directory.path), recorded));
                 }
             }
 
-            const auto reportLossy = [&](const TextCodec &used) {
-                decoded.lossy = true;
-                complain(diagnostics,
-                         VoiceBankDiskState::tr(
-                             "Some of the text in \"%1\" is not valid %2 and was read as "
-                             "empty. No file in this directory will be saved, because "
-                             "saving would overwrite the original text with empty text.")
-                             .arg(displayed(directory.path), used.name()));
+            // Invalid bytes are read as U+FFFD, and the rest of the file remains usable. A
+            // changed file whose text contains U+FFFD is not written, see encodeDirectory().
+            const auto report = [&](const Decoder &text, VoiceBankDirectorySource::File file) {
+                if (text.invalid() == 0) {
+                    return;
+                }
+                complain(
+                    diagnostics,
+                    VoiceBankDiskState::tr(
+                        "%n byte sequence(s) in \"%1\" are not valid %2 and were read as "
+                        "U+FFFD. The file cannot be saved with changes while its text "
+                        "contains U+FFFD.",
+                        nullptr, int(text.invalid()))
+                        .arg(displayed(directory.path / VoiceBankDirectorySource::fileName(file)),
+                             text.codec().name()));
             };
 
             // The audio files already covered by an entry. The remaining files are added
             // afterward as separate samples.
             QSet<QString> claimed;
 
-            const auto otoCodec = declared ? declared : codec;
-            if (otoCodec && directory.oto && !decoded.leftOut) {
-                Decoder text(*otoCodec);
+            if (!decoded.leftOut && directory.oto) {
+                Decoder text(decoded.charset);
                 for (const auto &[file, entries] : directory.oto->contents) {
                     // The name is in the encoding of the voice bank and identifies a file only
                     // after decoding. Used undecoded, it would be interpreted in the system
@@ -326,41 +333,40 @@ namespace hello::kit {
                         out.samples.push_back(sample);
                     }
                 }
-                if (text.lossy()) {
-                    reportLossy(*otoCodec);
-                }
+                report(text, VoiceBankDirectorySource::Oto);
             }
 
-            if (codec) {
-                Decoder text(*codec);
+            if (!decoded.leftOut && directory.character) {
+                Decoder text(decoded.charset);
+                const auto &from = *directory.character;
+                VoiceCharacter character;
+                character.name = text(from.name);
+                character.image = text(from.image);
+                character.sample = text(from.sample);
+                character.author = text(from.author);
+                character.web = text(from.web);
+                for (const auto &line : from.extraLines) {
+                    character.extraLines.push_back(text(line));
+                }
+                decoded.character = character;
+                report(text, VoiceBankDirectorySource::Character);
+            }
 
-                if (directory.character) {
-                    const auto &from = *directory.character;
-                    VoiceCharacter character;
-                    character.name = text(from.name);
-                    character.image = text(from.image);
-                    character.sample = text(from.sample);
-                    character.author = text(from.author);
-                    character.web = text(from.web);
-                    for (const auto &line : from.extraLines) {
-                        character.extraLines.push_back(text(line));
-                    }
-                    decoded.character = character;
+            if (!decoded.leftOut && directory.prefixMap) {
+                Decoder text(decoded.charset);
+                QMap<int, VoicePrefix> map;
+                for (const auto &[noteNum, item] : directory.prefixMap->map) {
+                    map.insert(noteNum, VoicePrefix{text(item.prefix), text(item.suffix)});
                 }
-                if (!directory.readme.isEmpty()) {
-                    decoded.readme = text(directory.readme);
-                }
-                if (directory.prefixMap) {
-                    QMap<int, VoicePrefix> map;
-                    for (const auto &[noteNum, item] : directory.prefixMap->map) {
-                        map.insert(noteNum, VoicePrefix{text(item.prefix), text(item.suffix)});
-                    }
-                    decoded.prefixMap = map;
-                }
+                decoded.prefixMap = map;
+                report(text, VoiceBankDirectorySource::PrefixMap);
+            }
 
-                if (text.lossy()) {
-                    reportLossy(*codec);
-                }
+            const auto readme = directory.contents.find(VoiceBankDirectorySource::Readme);
+            if (!decoded.leftOut && readme != directory.contents.end()) {
+                Decoder text(decoded.charset);
+                decoded.readme = text(readme->second);
+                report(text, VoiceBankDirectorySource::Readme);
             }
 
             for (const auto &name : directory.audioFiles) {
@@ -377,16 +383,34 @@ namespace hello::kit {
             return out;
         }
 
+        /// One text file as encodeDirectory() produces it.
+        struct EncodedFile {
+            QByteArray bytes;
+            /// The reasons the file cannot be written, empty if it can. \a bytes then holds
+            /// the text with each unrepresentable character replaced.
+            QStringList problems;
+        };
+
+        /// The digest by which an encoded file is compared with its baseline. The problems are
+        /// part of it, so that a change that only removes or adds a problem is a change.
+        QByteArray digestOf(const EncodedFile &file) {
+            if (file.problems.isEmpty()) {
+                return digestOf(file.bytes);
+            }
+            return digestOf(file.bytes + '\0' + file.problems.join(QLatin1Char('\n')).toUtf8());
+        }
+
         /// Encodes the UTAU files of one directory. The result is what save() writes and what
         /// open() records as the baseline for comparison.
         ///
-        /// \return the content of every file of the directory, or \c std::nullopt if any part
-        ///         cannot be written, with the reason in \a diagnostics
-        std::optional<std::map<VoiceBankDirectorySource::File, QByteArray>> encodeDirectory(
+        /// A file that cannot be written is included with its problems, rather than failing the
+        /// directory, because a file that is not written is not a failure: an unchanged file
+        /// containing U+FFFD is not written, and its problems are those of the baseline.
+        std::map<VoiceBankDirectorySource::File, EncodedFile> encodeDirectory(
             const VoiceBankDirectory &directory, int index, const QList<VoiceSample> &samples,
-            const std::map<VoiceBankDirectorySource::File, VoiceBankFileRecord> &files,
-            DiagnosticList &diagnostics) {
-            std::map<VoiceBankDirectorySource::File, QByteArray> out;
+            const std::map<VoiceBankDirectorySource::File, VoiceBankFileRecord> &files) {
+            using File = VoiceBankDirectorySource::File;
+            std::map<File, EncodedFile> out;
 
             QList<const VoiceSample *> entries;
             for (const auto &sample : samples) {
@@ -395,139 +419,140 @@ namespace hello::kit {
                 }
             }
 
-            const auto had = [&files](VoiceBankDirectorySource::File file) {
-                return files.count(file) != 0;
+            const auto had = [&files](File file) { return files.count(file) != 0; };
+            const auto where = [&directory](File file) {
+                return displayed(directory.path / VoiceBankDirectorySource::fileName(file));
             };
-            const bool hasText =
-                !entries.isEmpty() || directory.character || directory.prefixMap ||
-                !directory.readme.isEmpty() || had(VoiceBankDirectorySource::Oto) ||
-                had(VoiceBankDirectorySource::PrefixMap) ||
-                had(VoiceBankDirectorySource::Character) || had(VoiceBankDirectorySource::Readme);
-            if (!hasText) {
-                return out;
-            }
 
-            // The oto.ini is written in the encoding it declares, if available, and the other
-            // files in the encoding of the directory.
-            std::optional<TextCodec> otherCodec;
-            if (!directory.charset.isEmpty()) {
-                const TextCodec codec(directory.charset);
-                if (!codec.isValid()) {
-                    fail(diagnostics,
-                         VoiceBankDiskState::tr("The encoding \"%1\" is not available.")
-                             .arg(directory.charset));
+            // The codec of the directory, or std::nullopt with the reason among the problems of
+            // the file.
+            const auto codecOf = [&](File file, EncodedFile &encoded) -> std::optional<TextCodec> {
+                if (directory.charset.isEmpty()) {
+                    encoded.problems.push_back(
+                        VoiceBankDiskState::tr("The encoding for writing \"%1\" is not specified.")
+                            .arg(where(file)));
                     return std::nullopt;
                 }
-                otherCodec = codec;
-            }
-            // A declaration states UTF-8, the only encoding it can state.
-            auto otoCodec = otherCodec;
-            if (!directory.otoCharset.isEmpty()) {
-                otoCodec = TextCodec(QStringLiteral("UTF-8"));
-            }
-
-            const bool writesOto = !entries.isEmpty() || had(VoiceBankDirectorySource::Oto);
-            const bool writesOther =
-                directory.character || directory.prefixMap || !directory.readme.isEmpty() ||
-                had(VoiceBankDirectorySource::PrefixMap) ||
-                had(VoiceBankDirectorySource::Character) || had(VoiceBankDirectorySource::Readme);
-            if ((writesOto && !otoCodec) || (writesOther && !otherCodec)) {
-                fail(diagnostics,
-                     VoiceBankDiskState::tr("The encoding for writing \"%1\" is not specified.")
-                         .arg(displayed(directory.path)));
-                return std::nullopt;
-            }
-
-            bool ok = true;
-            const auto where = [&directory](VoiceBankDirectorySource::File file) {
-                const auto found = directory.path / VoiceBankDirectorySource::fileName(file);
-                return displayed(found);
+                const TextCodec codec(directory.charset);
+                if (!codec.isValid()) {
+                    encoded.problems.push_back(
+                        VoiceBankDiskState::tr("The encoding \"%1\" is not available.")
+                            .arg(directory.charset));
+                    return std::nullopt;
+                }
+                return codec;
             };
-            const auto encode = [&](const QString &text, VoiceBankDirectorySource::File file) {
-                const auto &codec = file == VoiceBankDirectorySource::Oto ? *otoCodec : *otherCodec;
-                if (!codec.canEncode(text)) {
-                    fail(diagnostics,
-                         VoiceBankDiskState::tr("\"%1\" in \"%2\" cannot be written in %3.")
-                             .arg(text, where(file), codec.name()));
-                    ok = false;
-                    return std::string();
+
+            // Text containing U+FFFD stands for bytes that were invalid when read, and writing it
+            // would lose them. Text that the encoding cannot represent is never written as
+            // question marks.
+            const auto encode = [&](const QString &text, File file, const TextCodec &codec,
+                                    EncodedFile &encoded) {
+                if (text.contains(QChar::ReplacementCharacter)) {
+                    encoded.problems.push_back(
+                        VoiceBankDiskState::tr("\"%1\" in \"%2\" contains U+FFFD, which stands "
+                                               "for bytes that could not be read, and writing it "
+                                               "would lose them.")
+                            .arg(text, where(file)));
+                } else if (!codec.canEncode(text)) {
+                    encoded.problems.push_back(
+                        VoiceBankDiskState::tr("\"%1\" in \"%2\" cannot be written in %3.")
+                            .arg(text, where(file), codec.name()));
                 }
                 return codec.encode(text).toStdString();
             };
-            const auto removed = [&](VoiceBankDirectorySource::File file) {
-                fail(diagnostics,
-                     VoiceBankDiskState::tr("Saving does not remove \"%1\".").arg(where(file)));
-                ok = false;
+            const auto removed = [&](File file) {
+                out[file].problems.push_back(
+                    VoiceBankDiskState::tr("Saving does not remove \"%1\".").arg(where(file)));
             };
 
-            if (writesOto) {
-                utau::OtoIni oto;
-                if (otoCodec->isUtf8()) {
-                    oto.charset = "UTF-8";
+            if (!entries.isEmpty() || had(VoiceBankDirectorySource::Oto)) {
+                auto &encoded = out[VoiceBankDirectorySource::Oto];
+                if (const auto codec = codecOf(VoiceBankDirectorySource::Oto, encoded)) {
+                    utau::OtoIni oto;
+                    // UTF-8 is declared, the only encoding a declaration can state.
+                    if (codec->isUtf8()) {
+                        oto.charset = "UTF-8";
+                    }
+                    for (const auto *sample : entries) {
+                        utau::OtoEntry entry;
+                        entry.fileName = encode(sample->fileName, VoiceBankDirectorySource::Oto,
+                                                *codec, encoded);
+                        entry.alias =
+                            encode(sample->alias, VoiceBankDirectorySource::Oto, *codec, encoded);
+                        entry.offset = sample->offset;
+                        entry.consonant = sample->consonant;
+                        entry.cutoff = sample->cutoff;
+                        entry.preUtterance = sample->preUtterance;
+                        entry.voiceOverlap = sample->voiceOverlap;
+                        std::copy(sample->spellings.begin(), sample->spellings.end(),
+                                  std::begin(entry.spellings));
+                        oto.contents[entry.fileName].push_back(entry);
+                    }
+                    encoded.bytes = QByteArray::fromStdString(oto.write());
                 }
-                for (const auto *sample : entries) {
-                    utau::OtoEntry entry;
-                    entry.fileName = encode(sample->fileName, VoiceBankDirectorySource::Oto);
-                    entry.alias = encode(sample->alias, VoiceBankDirectorySource::Oto);
-                    entry.offset = sample->offset;
-                    entry.consonant = sample->consonant;
-                    entry.cutoff = sample->cutoff;
-                    entry.preUtterance = sample->preUtterance;
-                    entry.voiceOverlap = sample->voiceOverlap;
-                    std::copy(sample->spellings.begin(), sample->spellings.end(),
-                              std::begin(entry.spellings));
-                    oto.contents[entry.fileName].push_back(entry);
-                }
-                out[VoiceBankDirectorySource::Oto] = QByteArray::fromStdString(oto.write());
             }
 
             if (directory.character) {
-                const auto &from = *directory.character;
-                utau::CharacterTxt character;
-                character.name = encode(from.name, VoiceBankDirectorySource::Character);
-                character.image = encode(from.image, VoiceBankDirectorySource::Character);
-                character.sample = encode(from.sample, VoiceBankDirectorySource::Character);
-                character.author = encode(from.author, VoiceBankDirectorySource::Character);
-                character.web = encode(from.web, VoiceBankDirectorySource::Character);
-                for (const auto &line : from.extraLines) {
-                    character.extraLines.push_back(
-                        encode(line, VoiceBankDirectorySource::Character));
+                auto &encoded = out[VoiceBankDirectorySource::Character];
+                if (const auto codec = codecOf(VoiceBankDirectorySource::Character, encoded)) {
+                    const auto &from = *directory.character;
+                    const auto text = [&](const QString &s) {
+                        return encode(s, VoiceBankDirectorySource::Character, *codec, encoded);
+                    };
+                    utau::CharacterTxt character;
+                    character.name = text(from.name);
+                    character.image = text(from.image);
+                    character.sample = text(from.sample);
+                    character.author = text(from.author);
+                    character.web = text(from.web);
+                    for (const auto &line : from.extraLines) {
+                        character.extraLines.push_back(text(line));
+                    }
+                    encoded.bytes = QByteArray::fromStdString(character.write());
                 }
-                out[VoiceBankDirectorySource::Character] =
-                    QByteArray::fromStdString(character.write());
             } else if (had(VoiceBankDirectorySource::Character)) {
                 removed(VoiceBankDirectorySource::Character);
             }
 
             if (directory.prefixMap) {
-                utau::PrefixMap map;
-                for (auto it = directory.prefixMap->begin(); it != directory.prefixMap->end();
-                     ++it) {
-                    map.map[it.key()] = utau::PrefixMap::Item{
-                        encode(it->prefix, VoiceBankDirectorySource::PrefixMap),
-                        encode(it->suffix, VoiceBankDirectorySource::PrefixMap),
-                    };
+                auto &encoded = out[VoiceBankDirectorySource::PrefixMap];
+                if (const auto codec = codecOf(VoiceBankDirectorySource::PrefixMap, encoded)) {
+                    utau::PrefixMap map;
+                    for (auto it = directory.prefixMap->begin(); it != directory.prefixMap->end();
+                         ++it) {
+                        map.map[it.key()] = utau::PrefixMap::Item{
+                            encode(it->prefix, VoiceBankDirectorySource::PrefixMap, *codec,
+                                   encoded),
+                            encode(it->suffix, VoiceBankDirectorySource::PrefixMap, *codec,
+                                   encoded),
+                        };
+                    }
+                    encoded.bytes = QByteArray::fromStdString(map.write());
                 }
-                out[VoiceBankDirectorySource::PrefixMap] = QByteArray::fromStdString(map.write());
             } else if (had(VoiceBankDirectorySource::PrefixMap)) {
                 removed(VoiceBankDirectorySource::PrefixMap);
             }
 
             // The failing text is not quoted, because a readme is too long for a message.
             if (!directory.readme.isEmpty() || had(VoiceBankDirectorySource::Readme)) {
-                if (!otherCodec->canEncode(directory.readme)) {
-                    fail(diagnostics,
-                         VoiceBankDiskState::tr("Part of \"%1\" cannot be represented in %2.")
-                             .arg(where(VoiceBankDirectorySource::Readme), otherCodec->name()));
-                    ok = false;
-                } else {
-                    out[VoiceBankDirectorySource::Readme] = otherCodec->encode(directory.readme);
+                auto &encoded = out[VoiceBankDirectorySource::Readme];
+                if (const auto codec = codecOf(VoiceBankDirectorySource::Readme, encoded)) {
+                    if (directory.readme.contains(QChar::ReplacementCharacter)) {
+                        encoded.problems.push_back(
+                            VoiceBankDiskState::tr("Part of \"%1\" is U+FFFD, which stands for "
+                                                   "bytes that could not be read, and writing it "
+                                                   "would lose them.")
+                                .arg(where(VoiceBankDirectorySource::Readme)));
+                    } else if (!codec->canEncode(directory.readme)) {
+                        encoded.problems.push_back(
+                            VoiceBankDiskState::tr("Part of \"%1\" cannot be represented in %2.")
+                                .arg(where(VoiceBankDirectorySource::Readme), codec->name()));
+                    }
+                    encoded.bytes = codec->encode(directory.readme);
                 }
             }
 
-            if (!ok) {
-                return std::nullopt;
-            }
             return out;
         }
 
@@ -554,11 +579,8 @@ namespace hello::kit {
         disk.m_root = source.root();
 
         for (const auto &directory : source.directories()) {
-            std::optional<TextCodec> codec;
-            if (directory.needsCharset()) {
-                codec = codecFor(directory, selector, diagnostics);
-            }
-            disk.appendDirectory(bank, directory, codec, diagnostics);
+            disk.appendDirectory(bank, directory, charsetFor(directory, selector, diagnostics),
+                                 diagnostics);
         }
 
         bank.reindex();
@@ -590,11 +612,17 @@ namespace hello::kit {
             return false;
         }
 
-        replaceDirectory(bank, index, *source, codec, diagnostics);
+        // A declaration of UTF-8 determines the encoding of the directory, and no other is read.
+        if (source->otoDeclaresUtf8() && !codec.isUtf8()) {
+            fail(diagnostics, tr("The oto.ini in \"%1\" declares the encoding UTF-8, so the "
+                                 "directory is read in UTF-8 only.")
+                                  .arg(displayed(directory)));
+            return false;
+        }
+        replaceDirectory(bank, index, *source, codec.name(), diagnostics);
 
-        // An encoding in which the files are invalid is not recorded. The user can inspect the
-        // decoded result and choose again.
-        m_books[directory].remember = !bank.m_directories.at(index).lossy;
+        // Recorded even if some bytes are invalid in it, because the user chose it.
+        m_books[directory].remember = true;
 
         bank.reindex();
         takeBaseline(bank, index, m_books[directory]);
@@ -609,22 +637,17 @@ namespace hello::kit {
         }
         const auto &decoded = bank.m_directories.at(index);
         const auto &book = it->second;
-        if (book.remember || (!decoded.charset.isEmpty() &&
-                              VoiceBank::canonicalCharset(decoded.charset) != book.charset)) {
+        if (book.remember ||
+            (!decoded.charset.isEmpty() && canonicalOf(decoded.charset) != book.charset)) {
             return true;
         }
-        DiagnosticList ignored;
-        const auto encoded = encodeDirectory(decoded, index, bank.m_samples, book.files, ignored);
-        if (!encoded) {
-            // Content that cannot be written counts as changed.
+        const auto encoded = encodeDirectory(decoded, index, bank.m_samples, book.files);
+        if (encoded.size() != book.baseline.size()) {
             return true;
         }
-        if (encoded->size() != book.baseline.size()) {
-            return true;
-        }
-        for (const auto &[file, bytes] : *encoded) {
+        for (const auto &[file, result] : encoded) {
             const auto base = book.baseline.find(file);
-            if (base == book.baseline.end() || base->second != digestOf(bytes)) {
+            if (base == book.baseline.end() || base->second != digestOf(result)) {
                 return true;
             }
         }
@@ -872,8 +895,9 @@ namespace hello::kit {
                 removals.insert(i);
                 continue;
             }
-            const auto codec = codecAgain(*source, bank.m_directories.at(i), selector, diagnostics);
-            replaceDirectory(bank, i, *source, codec, diagnostics);
+            const auto charset =
+                charsetAgain(*source, bank.m_directories.at(i), selector, diagnostics);
+            replaceDirectory(bank, i, *source, charset, diagnostics);
             done.changed.push_back(path);
         }
 
@@ -910,11 +934,8 @@ namespace hello::kit {
                 if (bank.indexOf(source.path) >= 0) {
                     continue;
                 }
-                std::optional<TextCodec> codec;
-                if (source.needsCharset()) {
-                    codec = codecFor(source, selector, diagnostics);
-                }
-                appendDirectory(bank, source, codec, diagnostics);
+                appendDirectory(bank, source, charsetFor(source, selector, diagnostics),
+                                diagnostics);
                 done.added.push_back(source.path);
             }
         }
@@ -952,9 +973,9 @@ namespace hello::kit {
 
     void VoiceBankDiskState::replaceDirectory(VoiceBank &bank, int index,
                                               const VoiceBankDirectorySource &source,
-                                              const std::optional<TextCodec> &codec,
+                                              const std::optional<QString> &charset,
                                               DiagnosticList &diagnostics) {
-        auto decoded = decodeDirectory(source, m_root, index, codec, diagnostics);
+        auto decoded = decodeDirectory(source, m_root, index, charset, diagnostics);
 
         // Inserted at the former position of the directory's samples, so that the sample
         // order, and with it the precedence between duplicate aliases, is preserved.
@@ -978,10 +999,10 @@ namespace hello::kit {
 
     void VoiceBankDiskState::appendDirectory(VoiceBank &bank,
                                              const VoiceBankDirectorySource &source,
-                                             const std::optional<TextCodec> &codec,
+                                             const std::optional<QString> &charset,
                                              DiagnosticList &diagnostics) {
         const int index = int(bank.m_directories.size());
-        auto decoded = decodeDirectory(source, m_root, index, codec, diagnostics);
+        auto decoded = decodeDirectory(source, m_root, index, charset, diagnostics);
         bank.m_samples += decoded.samples;
         bank.m_directories.push_back(decoded.directory);
         m_books[source.path] = bookOf(source, decoded.directory);
@@ -1155,26 +1176,19 @@ namespace hello::kit {
                 continue;
             }
 
-            const auto encoded = encodeDirectory(directory, i, samples, book.files, diagnostics);
-            if (!encoded) {
-                ok = false;
-                continue;
-            }
-
+            // A file that did not change is not written, even if it could not be: an unchanged
+            // file containing U+FFFD keeps its original bytes on disk.
+            const auto encoded = encodeDirectory(directory, i, samples, book.files);
             bool changed = false;
-            for (const auto &[file, bytes] : *encoded) {
+            for (const auto &[file, result] : encoded) {
                 const auto base = book.baseline.find(file);
-                if (base != book.baseline.end() && base->second == digestOf(bytes)) {
+                if (base != book.baseline.end() && base->second == digestOf(result)) {
                     continue;
                 }
-                // Invalid text was read as empty, and writing it would replace the original
-                // with empty text.
-                if (directory.lossy) {
-                    fail(diagnostics,
-                         tr("Some of the text in \"%1\" is not valid %2, so saving would lose it.")
-                             .arg(displayed(directory.path /
-                                            VoiceBankDirectorySource::fileName(file)),
-                                  directory.charset));
+                if (!result.problems.isEmpty()) {
+                    for (const auto &problem : result.problems) {
+                        fail(diagnostics, problem);
+                    }
                     ok = false;
                     continue;
                 }
@@ -1183,7 +1197,7 @@ namespace hello::kit {
                     absolute / (record != book.files.end()
                                     ? record->second.name
                                     : fs::path(VoiceBankDirectorySource::fileName(file)));
-                writes.push_back({directory.path, file, path, bytes});
+                writes.push_back({directory.path, file, path, result.bytes});
                 changed = true;
             }
 
@@ -1195,7 +1209,7 @@ namespace hello::kit {
             // whenever the file on disk does not hold what it should, whether another program
             // modified or removed it or it could not be read when the directory was, and it is
             // replaced without regard to such changes.
-            const QString name = VoiceBank::canonicalCharset(directory.charset);
+            const QString name = canonicalOf(directory.charset);
             const bool recording =
                 changed || (!name.isEmpty() && (book.remember || name != book.charset));
             //
@@ -1302,13 +1316,7 @@ namespace hello::kit {
             book.files[write.file] =
                 VoiceBankFileRecord{write.path.filename(), digestOf(write.bytes)};
             restamp(book.stamp, write.path);
-            if (write.file == VoiceBankDirectorySource::Config) {
-                VoiceBankConfig config = book.config.value_or(VoiceBankConfig());
-                config.charset = VoiceBank::canonicalCharset(
-                    directories.at(bank.indexOf(write.directory)).charset);
-                book.config = config;
-
-            } else {
+            if (write.file != VoiceBankDirectorySource::Config) {
                 book.baseline[write.file] = digestOf(write.bytes);
             }
         }
@@ -1406,7 +1414,7 @@ namespace hello::kit {
         book.files = source.files;
         book.config = source.config;
 
-        book.charset = VoiceBank::canonicalCharset(decoded.charset);
+        book.charset = canonicalOf(decoded.charset);
         book.stamp = source.stamp;
         book.audioFiles = namesOf(source.audioFiles);
         return book;
@@ -1422,12 +1430,9 @@ namespace hello::kit {
         if (directory.leftOut) {
             return;
         }
-        DiagnosticList ignored;
-        const auto encoded = encodeDirectory(directory, index, bank.m_samples, book.files, ignored);
-        if (encoded) {
-            for (const auto &[file, bytes] : *encoded) {
-                book.baseline[file] = digestOf(bytes);
-            }
+        for (const auto &[file, result] :
+             encodeDirectory(directory, index, bank.m_samples, book.files)) {
+            book.baseline[file] = digestOf(result);
         }
     }
 

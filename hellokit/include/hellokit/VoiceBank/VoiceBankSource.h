@@ -128,7 +128,8 @@ namespace hello::kit {
 
         /// \name UTAU files in this directory
         ///
-        /// Absent if the directory does not contain the file.
+        /// Absent if the directory does not contain the file. \c readme.txt is not parsed, and
+        /// is found in \a contents only.
         ///
         /// \warning Every string is raw bytes in the encoding of the author's machine. Decode
         ///          these through \c TextCodec before treating them as text.
@@ -136,8 +137,11 @@ namespace hello::kit {
         std::optional<utau::OtoIni> oto;
         std::optional<utau::PrefixMap> prefixMap;
         std::optional<utau::CharacterTxt> character;
-        QByteArray readme;
         /// @}
+
+        /// The bytes of each text file read, which are the files of textFiles(), for an encoding
+        /// selector to preview under each candidate encoding.
+        std::map<File, QByteArray> contents;
 
         /// The audio files in this directory by name, in directory listing order.
         std::vector<std::filesystem::path> audioFiles;
@@ -151,16 +155,28 @@ namespace hello::kit {
         /// accepted as the state read.
         VoiceBankDirectoryStamp stamp;
 
-        /// Returns whether any content requires an encoding to be read. An \c oto.ini that
-        /// declares UTF-8 for itself does not.
+        /// Returns the text files of this directory that were read, each of which requires an
+        /// encoding, in the order of File .
+        std::vector<File> textFiles() const;
+
+        /// Returns the encoding of the directory as determined without the user: UTF-8 if the
+        /// \c oto.ini declares it, otherwise the encoding that the configuration records, or
+        /// \c std::nullopt if neither determines it.
         ///
         /// \sa otoDeclaresUtf8()
-        bool needsCharset() const;
+        std::optional<QString> settledCharset() const;
+
+        /// Returns whether the directory has no text files or an encoding determined without
+        /// the user.
+        bool isSettled() const;
 
         /// Returns whether the \c oto.ini declares UTF-8 for itself, as \c UTF-8 or \c UTF8 in
         /// any case. UTF-8 is the only encoding a declaration can state: a declaration of any
-        /// other encoding is treated as absent, and the file is read in the encoding of the
-        /// directory.
+        /// other encoding is treated as absent.
+        ///
+        /// The declaration determines the encoding of the entire directory, and takes precedence
+        /// over the configuration, because a program that honors it reads the file in UTF-8
+        /// regardless of any record of this library.
         ///
         /// \sa utau::OtoIni::charset
         bool otoDeclaresUtf8() const;
@@ -175,7 +191,7 @@ namespace hello::kit {
         QList<QByteArrayView> rawAliases() const;
     };
 
-    /// Selects the encoding of the UTAU files of a directory when nothing on disk records it.
+    /// Selects the encoding of the text files of a directory when nothing on disk determines it.
     ///
     /// Implemented by the user interface layer, not by this library. No encoding detection is
     /// performed. A UST and a voice bank pose the same problem and follow the same rule.
@@ -187,6 +203,13 @@ namespace hello::kit {
     public:
         virtual ~VoiceBankCharsetSelector();
 
+        /// Selects the encoding of every text file of \a directory .
+        ///
+        /// Queried once per directory with text files whose encoding neither a declaration nor
+        /// the configuration determines. The files are VoiceBankDirectorySource::textFiles() ,
+        /// and the bytes of each are in VoiceBankDirectorySource::contents , so that each can be
+        /// previewed under each candidate encoding.
+        ///
         /// \return the encoding, or \c std::nullopt to leave the directory out of the voice bank
         /// \note \c std::nullopt with an \c Error in \a diagnostics indicates that the user
         ///       could not be asked. \c std::nullopt without one indicates that the user
@@ -272,7 +295,10 @@ namespace hello::kit {
             readTree(const std::filesystem::path &root, const std::filesystem::path &relative,
                      const VoiceBankLimits &limits, int alreadyRead, DiagnosticList &diagnostics);
 
-        /// The directories that contain text to decode and have no recorded encoding.
+        /// The directories with text files whose encoding is determined neither by a
+        /// declaration nor by the configuration.
+        ///
+        /// \sa VoiceBankDirectorySource::isSettled()
         ///
         /// \warning The pointers refer into this object and must not outlive it.
         QList<const VoiceBankDirectorySource *> unsettled() const;

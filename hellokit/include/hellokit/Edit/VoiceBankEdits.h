@@ -64,12 +64,11 @@ namespace hello::kit {
         /// Makes \a charset the encoding in which the files of \a directory are saved. The text
         /// is unchanged and the bytes change. See the section on encodings in docs/Editing.md.
         ///
-        /// The UTF-8 declaration of the \c oto.ini is removed as well, because the file is then
-        /// written in \a charset , and declared again if that is UTF-8. If the files are already
-        /// written in \a charset , the \c oto.ini included, nothing changes and no undo step is
-        /// created.
+        /// The \c oto.ini is written with a declaration of UTF-8 if \a charset is UTF-8, and
+        /// without one otherwise. If the files are already written in \a charset , nothing
+        /// changes and no undo step is created.
         ///
-        /// \sa VoiceBankDirectory::otoCharset
+        /// \sa VoiceBankDirectory::charset
         Q_INVOKABLE static bool convertCharset(const VoiceDirectoryRef &directory,
                                                const QString &charset, DiagnosticList &diagnostics);
     };

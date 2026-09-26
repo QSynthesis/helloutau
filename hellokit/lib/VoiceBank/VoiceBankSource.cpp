@@ -151,8 +151,9 @@ namespace hello::kit {
                     utau::CharacterTxt character;
                     character.read(textOf(*bytes));
                     directory.character = std::move(character);
-                } else if (*kind == VoiceBankDirectorySource::Readme) {
-                    directory.readme = *bytes;
+                }
+                if (*kind != VoiceBankDirectorySource::Config) {
+                    directory.contents[*kind] = *bytes;
                 }
             }
 
@@ -249,8 +250,27 @@ namespace hello::kit {
         return stamp;
     }
 
-    bool VoiceBankDirectorySource::needsCharset() const {
-        return (oto && !otoDeclaresUtf8()) || prefixMap || character || !readme.isEmpty();
+    std::vector<VoiceBankDirectorySource::File> VoiceBankDirectorySource::textFiles() const {
+        std::vector<File> out;
+        for (const auto &[file, bytes] : contents) {
+            Q_UNUSED(bytes)
+            out.push_back(file);
+        }
+        return out;
+    }
+
+    std::optional<QString> VoiceBankDirectorySource::settledCharset() const {
+        if (otoDeclaresUtf8()) {
+            return QStringLiteral("UTF-8");
+        }
+        if (config && !config->charset.isEmpty()) {
+            return config->charset;
+        }
+        return std::nullopt;
+    }
+
+    bool VoiceBankDirectorySource::isSettled() const {
+        return contents.empty() || settledCharset();
     }
 
     bool VoiceBankDirectorySource::otoDeclaresUtf8() const {
@@ -365,8 +385,7 @@ namespace hello::kit {
     QList<const VoiceBankDirectorySource *> VoiceBankSource::unsettled() const {
         QList<const VoiceBankDirectorySource *> directories;
         for (const auto &directory : m_directories) {
-            if (directory.needsCharset() &&
-                (!directory.config || directory.config->charset.isEmpty())) {
+            if (!directory.isSettled()) {
                 directories.push_back(&directory);
             }
         }

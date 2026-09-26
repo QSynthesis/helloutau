@@ -1,7 +1,5 @@
 #include "VoiceBank.h"
 
-#include <hellokit/Support/TextCodec.h>
-
 #include "VoiceBankDiskState.h"
 
 namespace hello::kit {
@@ -61,17 +59,8 @@ namespace hello::kit {
     void VoiceBank::setDirectory(int index, VoiceBankDirectory directory) {
         auto &slot = m_directories[index];
         directory.path = slot.path;
-        if (canonicalCharset(directory.charset) != canonicalCharset(slot.charset)) {
-            directory.otoCharset.clear();
-        }
         slot = std::move(directory);
         reindex();
-    }
-
-    QString VoiceBank::canonicalCharset(const QString &charset) {
-        // An empty encoding is kept empty. TextCodec would take it as the system encoding, which
-        // is UTF-8 on most systems other than Windows and would equal a new UTF-8.
-        return charset.isEmpty() ? QString() : TextCodec(charset).name();
     }
 
     void VoiceBank::reindex() {

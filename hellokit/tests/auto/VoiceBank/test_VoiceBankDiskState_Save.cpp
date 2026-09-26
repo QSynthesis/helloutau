@@ -289,8 +289,7 @@ private Q_SLOTS:
         QCOMPARE(read(QStringLiteral("oto.ini")), oto);
     }
 
-    // Invalid text was read as empty, and writing the file would replace the original with
-    // empty text.
+    // Invalid bytes were read as U+FFFD, and writing the file would replace the original bytes.
     void text_that_did_not_decode_is_not_written_back() {
         const QByteArray oto = "a.wav=" + kGbkGePing +
                                ",1,2,3,4,5\r\n"
@@ -303,7 +302,7 @@ private Q_SLOTS:
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
         auto &disk = opened->disk;
-        QVERIFY(bank.directories().at(0).lossy);
+        QVERIFY(!bank.directories().at(0).leftOut);
 
         DiagnosticList diagnostics;
         QVERIFY(disk.save(bank, diagnostics));
@@ -557,9 +556,9 @@ private Q_SLOTS:
         QVERIFY(opened.has_value());
         auto bank = opened->bank;
         edit(bank, QStringLiteral("a"), [](VoiceSample &sample) { sample.offset = 7; });
-        QVERIFY(bank.directories().at(bank.indexOf("left")).lossy);
 
-        // The contents without the directory that did not decode, as a session holds them.
+        // The contents without one directory, as a session holds them when the user selected no
+        // encoding for it.
         DiagnosticList diagnostics;
         QList<VoiceBankDirectory> directories;
         QList<VoiceSample> samples;

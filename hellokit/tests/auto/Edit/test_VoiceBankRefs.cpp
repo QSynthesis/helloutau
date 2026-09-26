@@ -86,7 +86,6 @@ private Q_SLOTS:
             QCOMPARE(directory.path(), expected.path);
             QCOMPARE(directory.path().native(), expected.path.native());
             QCOMPARE(directory.charset(), expected.charset);
-            QCOMPARE(directory.otoCharset(), expected.otoCharset);
         }
 
         const auto entries = rootEntries();

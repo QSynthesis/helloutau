@@ -32,12 +32,12 @@ namespace hello::kit {
     public:
         /// Creates a session that edits the voice bank of \a opened and keeps its disk state.
         ///
-        /// A subdirectory that was not read, or whose text did not decode, cannot be saved and is
-        /// left out of the tree. The root directory cannot be left out, as a file that does not
-        /// decode cannot be edited either.
+        /// A subdirectory that was not read, because the user selected no encoding for it,
+        /// cannot be saved and is left out of the tree. The root directory cannot be left out, as
+        /// a file that was not read cannot be edited either.
         ///
-        /// \return the session, or null if the root directory was not read or did not decode,
-        ///         with the reason in \a diagnostics
+        /// \return the session, or null if the root directory was not read, with the reason in
+        ///         \a diagnostics
         /// \sa excludedDirectories()
         static std::unique_ptr<VoiceBankSession> create(VoiceBankDiskState::Opened opened,
                                                         DiagnosticList &diagnostics,
@@ -48,11 +48,11 @@ namespace hello::kit {
         /// Returns the root directory of the voice bank.
         const std::filesystem::path &rootPath() const;
 
-        /// Returns the subdirectories that were not read, or whose text did not decode, as last
-        /// read. They are not in the tree and not in snapshot(), as if they did not exist, and are
-        /// read again in another encoding to be edited.
+        /// Returns the subdirectories that were not read, as last read. They are not in the tree
+        /// and not in snapshot(), as if they did not exist, and are read again in an encoding to
+        /// be edited.
         ///
-        /// \sa reread(), VoiceBankDirectory::leftOut, VoiceBankDirectory::lossy
+        /// \sa reread(), VoiceBankDirectory::leftOut
         QList<VoiceBankDirectory> excludedDirectories() const;
 
         /// Returns the names of the audio files of the directory at \a directory, with and without

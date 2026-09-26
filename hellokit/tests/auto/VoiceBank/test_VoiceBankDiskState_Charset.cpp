@@ -88,6 +88,12 @@ private:
         bank.setDirectory(index, directory);
     }
 
+    static int count(const DiagnosticList &diagnostics, DiagnosticSeverity severity) {
+        return int(
+            std::count_if(diagnostics.begin(), diagnostics.end(),
+                          [severity](const Diagnostic &d) { return d.severity == severity; }));
+    }
+
 private Q_SLOTS:
     void init() {
         m_dir = std::make_unique<QTemporaryDir>();
@@ -189,40 +195,45 @@ private Q_SLOTS:
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
         QVERIFY(!bank.directories().at(0).leftOut);
-        QCOMPARE(bank.directories().at(0).otoCharset, QStringLiteral("UTF-8"));
         QCOMPARE(bank.directories().at(0).charset, name("UTF-8"));
         QVERIFY(bank.find(60, kGePing));
         QVERIFY(diagnostics.isEmpty());
     }
 
-    // The declaration takes precedence for the oto.ini, the other files keep the encoding of the
-    // directory, and the disagreement is reported.
-    void the_declaration_takes_precedence_for_the_oto_only() {
+    // The declaration determines the encoding of the entire directory, over the one that the
+    // configuration records, and the disagreement is reported. A file in another encoding reads
+    // with U+FFFD in place of its invalid bytes.
+    void the_declaration_determines_the_encoding_of_the_directory() {
         write(QStringLiteral("oto.ini"),
               "#Charset:UTF-8\r\na.wav=" + kUtf8GePing + ",1,2,3,4,5\r\n");
-        write(QStringLiteral("character.txt"), "name=" + kGbkGePing + "\r\n");
+        write(QStringLiteral("character.txt"), "name=" + kUtf8GePing + "\r\n");
+        write(QStringLiteral("readme.txt"), kGbkGePing);
+        write(QStringLiteral("hello-config.json"),
+              R"({"$format":"hello-voicebank","charset":"GBK"})");
         write(QStringLiteral("a.wav"), "RIFF");
 
-        FixedCharsetSelector selector(QStringLiteral("GBK"));
         DiagnosticList diagnostics;
-        auto opened = VoiceBankDiskState::open(root(), &selector, diagnostics);
+        auto opened = VoiceBankDiskState::open(root(), nullptr, diagnostics);
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
         auto &disk = opened->disk;
         QVERIFY(bank.find(60, kGePing));
         QCOMPARE(bank.character().name, kGePing);
-        QCOMPARE(bank.directories().at(0).charset, name("GBK"));
-        QCOMPARE(diagnostics.size(), 1);
-        QCOMPARE(diagnostics.at(0).severity, DiagnosticSeverity::Warning);
+        QVERIFY(bank.readme().contains(QChar::ReplacementCharacter));
+        QCOMPARE(bank.directories().at(0).charset, name("UTF-8"));
+        QCOMPARE(count(diagnostics, DiagnosticSeverity::Warning), 2);
+        QCOMPARE(diagnostics.size(), 2);
 
-        // A modified entry is written in the declared encoding, and the declaration is kept.
+        // A modified entry is written with the declaration, the readme is left as it is, and the
+        // encoding in effect is recorded.
         auto samples = bank.samples();
         samples[0].offset = 7;
         bank.setSamples(samples);
         QVERIFY(disk.save(bank, diagnostics));
         QCOMPARE(read(QStringLiteral("oto.ini")),
                  "#Charset:UTF-8\r\na.wav=" + kUtf8GePing + ",7,2,3,4,5\r\n");
-        QCOMPARE(read(QStringLiteral("character.txt")), "name=" + kGbkGePing + "\r\n");
+        QCOMPARE(read(QStringLiteral("readme.txt")), kGbkGePing);
+        QCOMPARE(recorded(), name("UTF-8"));
     }
 
     // The declaration is written in one form, but an unmodified file is not rewritten.
@@ -257,7 +268,7 @@ private Q_SLOTS:
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
         QVERIFY(bank.find(60, kGePing));
-        QCOMPARE(bank.directories().at(0).otoCharset, QStringLiteral("UTF-8"));
+        QCOMPARE(bank.directories().at(0).charset, name("UTF-8"));
 
         auto samples = bank.samples();
         samples[0].offset = 7;
@@ -287,7 +298,7 @@ private Q_SLOTS:
         auto &bank = opened->bank;
         auto &disk = opened->disk;
         QVERIFY(bank.find(60, kGePing));
-        QCOMPARE(bank.directories().at(0).otoCharset, QString());
+        QCOMPARE(bank.directories().at(0).charset, name("GBK"));
         QVERIFY(diagnostics.isEmpty());
 
         auto samples = bank.samples();
@@ -308,7 +319,6 @@ private Q_SLOTS:
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
         auto &disk = opened->disk;
-        QVERIFY(bank.directories().at(0).otoCharset.isEmpty());
 
         DiagnosticList diagnostics;
         disk.rememberCharset(bank.directories().at(0).path);
@@ -334,7 +344,6 @@ private Q_SLOTS:
         auto &bank = opened->bank;
         auto &disk = opened->disk;
         recode(bank, 0, "Shift_JIS");
-        QVERIFY(bank.directories().at(0).otoCharset.isEmpty());
 
         QVERIFY(disk.save(bank, diagnostics));
         QCOMPARE(read(QStringLiteral("oto.ini")), "a.wav=a,1,2,3,4,5\r\n");
@@ -352,7 +361,6 @@ private Q_SLOTS:
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
         auto &disk = opened->disk;
-        QVERIFY(!bank.directories().at(0).lossy);
         QVERIFY(!bank.find(60, kA));
 
         DiagnosticList diagnostics;
@@ -406,10 +414,11 @@ private Q_SLOTS:
         QCOMPARE(bank.samples().at(0).offset, 1.0);
     }
 
-    // An encoding in which the files are invalid is incorrect, and recording it would apply it
-    // every time the voice bank is opened.
-    void an_encoding_that_does_not_read_is_not_remembered() {
-        write(QStringLiteral("oto.ini"), "a.wav=" + kGbkGePing + ",1,2,3,4,5\r\n");
+    // The user chose the encoding, so it is recorded even if some bytes are invalid in it. The
+    // file is not rewritten, because it did not change, and keeps its bytes.
+    void an_encoding_with_invalid_bytes_is_remembered_and_the_file_kept() {
+        const QByteArray oto = "a.wav=" + kGbkGePing + ",1,2,3,4,5\r\n";
+        write(QStringLiteral("oto.ini"), oto);
         write(QStringLiteral("a.wav"), "RIFF");
 
         auto opened = open(root(), QStringLiteral("GBK"));
@@ -420,10 +429,197 @@ private Q_SLOTS:
         DiagnosticList diagnostics;
         QVERIFY(
             disk.reread(bank, bank.directories().at(0).path, QStringLiteral("UTF-8"), diagnostics));
-        QVERIFY(bank.directories().at(0).lossy);
-        QVERIFY(!disk.hasUnrecordedCharsets());
+        QCOMPARE(count(diagnostics, DiagnosticSeverity::Warning), 1);
+        QVERIFY(bank.samples().at(0).alias.contains(QChar::ReplacementCharacter));
+        QVERIFY(disk.hasUnrecordedCharsets());
         QVERIFY(disk.save(bank, diagnostics));
-        QVERIFY(!exists(QStringLiteral("hello-config.json")));
+        QCOMPARE(read(QStringLiteral("oto.ini")), oto);
+        QCOMPARE(recorded(), name("UTF-8"));
+    }
+
+    // Invalid bytes are read as U+FFFD and the rest of the file is usable, as a readme with a
+    // mistyped character leaves the voice bank usable. Each file with invalid bytes is reported.
+    void invalid_bytes_are_read_as_replacement_characters() {
+        write(QStringLiteral("oto.ini"),
+              "a.wav=" + kShiftJisA + "\x82" + ",1,2,3,4,5\r\nb.wav=b,1,2,3,4,5\r\n");
+        write(QStringLiteral("readme.txt"), kShiftJisA + "\x82\x20" + kShiftJisA);
+        write(QStringLiteral("a.wav"), "RIFF");
+
+        FixedCharsetSelector selector(QStringLiteral("Shift_JIS"));
+        DiagnosticList diagnostics;
+        auto opened = VoiceBankDiskState::open(root(), &selector, diagnostics);
+        QVERIFY(opened.has_value());
+        auto &bank = opened->bank;
+        QVERIFY(!bank.directories().at(0).leftOut);
+        QCOMPARE(count(diagnostics, DiagnosticSeverity::Warning), 2);
+        QVERIFY(bank.find(60, QStringLiteral("b")));
+        QVERIFY(bank.find(60, kA + QChar(QChar::ReplacementCharacter)));
+        QCOMPARE(bank.readme(), kA + QChar(QChar::ReplacementCharacter) + QLatin1Char(' ') + kA);
+    }
+
+    // Writing U+FFFD would replace the original bytes, so a changed file containing it is
+    // refused, and every such text is named at once. An unchanged file is not written and not
+    // refused, so the rest of the voice bank can still be saved.
+    void a_changed_file_containing_replacement_characters_is_refused() {
+        const QByteArray oto = "a.wav=" + kShiftJisA + "\x82" +
+                               ",1,2,3,4,5\r\n"
+                               "b.wav=b\x82,1,2,3,4,5\r\n"
+                               "c.wav=c,1,2,3,4,5\r\n";
+        const QByteArray readme = kShiftJisA + "\x82\x20";
+        write(QStringLiteral("oto.ini"), oto);
+        write(QStringLiteral("readme.txt"), readme);
+        write(QStringLiteral("character.txt"), "name=a\r\n");
+
+        auto opened = open(root(), QStringLiteral("Shift_JIS"));
+        QVERIFY(opened.has_value());
+        auto &bank = opened->bank;
+        auto &disk = opened->disk;
+
+        // The character.txt changes, and the files containing U+FFFD do not.
+        auto directory = bank.directories().at(0);
+        directory.character->name = QStringLiteral("b");
+        bank.setDirectory(0, directory);
+        DiagnosticList diagnostics;
+        QVERIFY(disk.save(bank, diagnostics));
+        QCOMPARE(read(QStringLiteral("oto.ini")), oto);
+        QCOMPARE(read(QStringLiteral("readme.txt")), readme);
+        QCOMPARE(read(QStringLiteral("character.txt")), QByteArray("name=b\r\n"));
+
+        // An entry without U+FFFD changes, which rewrites the oto.ini with the two that contain
+        // it. The readme changes as well. Nothing is written.
+        auto samples = bank.samples();
+        for (auto &sample : samples) {
+            if (sample.fileName == QStringLiteral("c.wav")) {
+                sample.offset = 7;
+            }
+        }
+        bank.setSamples(samples);
+        directory = bank.directories().at(0);
+        directory.readme += QStringLiteral("x");
+        directory.character->name = QStringLiteral("c");
+        bank.setDirectory(0, directory);
+        diagnostics.clear();
+        QVERIFY(!disk.save(bank, diagnostics));
+        QCOMPARE(count(diagnostics, DiagnosticSeverity::Error), 3);
+        QCOMPARE(read(QStringLiteral("oto.ini")), oto);
+        QCOMPARE(read(QStringLiteral("readme.txt")), readme);
+        QCOMPARE(read(QStringLiteral("character.txt")), QByteArray("name=b\r\n"));
+    }
+
+    // In UTF-8, U+FFFD is representable, and only the rule against it keeps the original bytes.
+    void replacement_characters_are_refused_in_utf8_as_well() {
+        const QByteArray readme = "a\xff";
+        write(QStringLiteral("readme.txt"), readme);
+
+        auto opened = open(root(), QStringLiteral("UTF-8"));
+        QVERIFY(opened.has_value());
+        auto &bank = opened->bank;
+        auto directory = bank.directories().at(0);
+        directory.readme += QStringLiteral("b");
+        bank.setDirectory(0, directory);
+        DiagnosticList diagnostics;
+        QVERIFY(!opened->disk.save(bank, diagnostics));
+        QCOMPARE(count(diagnostics, DiagnosticSeverity::Error), 1);
+        QCOMPARE(read(QStringLiteral("readme.txt")), readme);
+    }
+
+    // Replacing U+FFFD with a question mark is a change and is written, although Shift_JIS writes
+    // both as a question mark.
+    void replacing_a_replacement_character_is_a_change() {
+        write(QStringLiteral("readme.txt"), kShiftJisA + "\x82\x20");
+
+        auto opened = open(root(), QStringLiteral("Shift_JIS"));
+        QVERIFY(opened.has_value());
+        auto &bank = opened->bank;
+        auto directory = bank.directories().at(0);
+        directory.readme = kA + QStringLiteral("? ");
+        bank.setDirectory(0, directory);
+        QVERIFY(opened->disk.isModified(bank, {}));
+        DiagnosticList diagnostics;
+        QVERIFY(opened->disk.save(bank, diagnostics));
+        QCOMPARE(read(QStringLiteral("readme.txt")), kShiftJisA + "? ");
+        QCOMPARE(recorded(), name("Shift_JIS"));
+    }
+
+    // A declaration of UTF-8 that another program adds takes precedence over the encoding the
+    // directory was read in when it is read again.
+    void a_declaration_written_elsewhere_takes_precedence_on_reload() {
+        write(QStringLiteral("oto.ini"), "a.wav=" + kGbkGePing + ",1,2,3,4,5\r\n");
+
+        auto opened = open(root(), QStringLiteral("GBK"));
+        QVERIFY(opened.has_value());
+        auto &bank = opened->bank;
+        auto &disk = opened->disk;
+
+        write(QStringLiteral("oto.ini"),
+              "#Charset:UTF-8\r\na.wav=" + kUtf8GePing + ",1,2,3,4,5\r\n");
+        const auto changes = disk.checkDisk();
+        QCOMPARE(changes.changed.size(), 1);
+        DiagnosticList diagnostics;
+        disk.reloadFromDisk(bank, changes, nullptr, diagnostics);
+        QVERIFY(bank.find(60, kGePing));
+        QCOMPARE(bank.directories().at(0).charset, name("UTF-8"));
+    }
+
+    // A text file that appears in a directory already read is read in its encoding, without a
+    // selector.
+    void a_text_file_that_appears_is_read_in_the_encoding_of_its_directory() {
+        write(QStringLiteral("oto.ini"), "a.wav=" + kShiftJisA + ",1,2,3,4,5\r\n");
+
+        auto opened = open(root(), QStringLiteral("Shift_JIS"));
+        QVERIFY(opened.has_value());
+        auto &bank = opened->bank;
+        auto &disk = opened->disk;
+
+        write(QStringLiteral("readme.txt"), kShiftJisA);
+        const auto changes = disk.checkDisk();
+        QCOMPARE(changes.changed.size(), 1);
+        DiagnosticList diagnostics;
+        disk.reloadFromDisk(bank, changes, nullptr, diagnostics);
+        QCOMPARE(bank.readme(), kA);
+        QVERIFY(diagnostics.isEmpty());
+    }
+
+    // A directory left out has no known encoding, so when it is read again it takes the one that
+    // its configuration records by then, without a selector.
+    void a_directory_left_out_takes_a_recorded_encoding_when_read_again() {
+        write(QStringLiteral("oto.ini"), "a.wav=" + kShiftJisA + ",1,2,3,4,5\r\n");
+
+        DiagnosticList diagnostics;
+        auto opened = VoiceBankDiskState::open(root(), nullptr, diagnostics);
+        QVERIFY(opened.has_value());
+        auto &bank = opened->bank;
+        auto &disk = opened->disk;
+        QVERIFY(bank.directories().at(0).leftOut);
+
+        write(QStringLiteral("hello-config.json"),
+              R"({"$format":"hello-voicebank","charset":"Shift_JIS"})");
+        write(QStringLiteral("oto.ini"), "a.wav=" + kShiftJisA + ",7,2,3,4,5\r\n");
+        const auto changes = disk.checkDisk();
+        QCOMPARE(changes.changed.size(), 1);
+        disk.reloadFromDisk(bank, changes, nullptr, diagnostics);
+        QVERIFY(!bank.directories().at(0).leftOut);
+        QCOMPARE(bank.find(60, kA)->offset, 7.0);
+    }
+
+    // A directory whose oto.ini declares UTF-8 is in UTF-8, and reading it in another encoding is
+    // refused rather than contradicting the declaration.
+    void rereading_a_declared_directory_in_another_encoding_is_refused() {
+        write(QStringLiteral("oto.ini"),
+              "#Charset:UTF-8\r\na.wav=" + kUtf8GePing + ",1,2,3,4,5\r\n");
+
+        DiagnosticList diagnostics;
+        auto opened = VoiceBankDiskState::open(root(), nullptr, diagnostics);
+        QVERIFY(opened.has_value());
+        auto &bank = opened->bank;
+        QVERIFY(!opened->disk.reread(bank, {}, QStringLiteral("GBK"), diagnostics));
+        QVERIFY(hasError(diagnostics));
+        QVERIFY(bank.find(60, kGePing));
+        QVERIFY(!opened->disk.hasUnrecordedCharsets());
+
+        diagnostics.clear();
+        QVERIFY(opened->disk.reread(bank, {}, QStringLiteral("utf-8"), diagnostics));
+        QVERIFY(bank.find(60, kGePing));
     }
 
     // The encoding the user selected when the voice bank was opened is recorded, so that the

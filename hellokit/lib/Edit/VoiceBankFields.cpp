@@ -197,7 +197,6 @@ namespace hello::kit {
         constexpr edit::FieldInfo directoryFields[] = {
             edit::readOnlyField(edit::valueField(VoiceDirectorySlots::Path)),
             edit::readOnlyField(edit::valueField(VoiceDirectorySlots::Charset)),
-            edit::readOnlyField(edit::valueField(VoiceDirectorySlots::OtoCharset)),
             edit::listField(VoiceDirectorySlots::OtoEntries, otoEntryRecord),
         };
 
