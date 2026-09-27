@@ -20,14 +20,39 @@
 namespace hello::kit {
 
     /// One voice part. A UST contains exactly one.
-    struct Track {
+    struct HELLOKIT_DOCUMENT_EXPORT Track {
         /// Not representable in UST, and therefore dropped on export to \c .ust.
         QString name;
 
-        /// The voice bank directory. A \c %VOICE% prefix denotes the shared voice directory.
+        /// The voice bank directory as the file writes it. See voiceDirectory() for its meaning.
         QString voiceDir;
 
         QList<Note> notes;
+
+        /// The prefix of \c voiceDir that denotes the \c voice directory of the UTAU
+        /// installation.
+        static constexpr QStringView voicePrefix = u"%VOICE%";
+
+        /// Returns the voice bank directory that \c voiceDir denotes, resolved as UTAU resolves
+        /// it: a \c %VOICE% prefix denotes the \c voice directory in \a utauDirectory, and a
+        /// relative path is relative to \a utauDirectory, not to the project file. See
+        /// docs/claude/utau-voicedir-cachedir.md.
+        ///
+        /// \param utauDirectory the directory that contains \c utau.exe, or an empty path if
+        ///                      unknown
+        /// \return an empty path if \c voiceDir is empty, or if it requires \a utauDirectory and
+        ///         that is empty
+        std::filesystem::path voiceDirectory(const std::filesystem::path &utauDirectory) const;
+
+        /// Returns the value of \c voiceDir for the voice bank in \a directory, as UTAU writes it
+        /// on save: with the \c %VOICE% prefix if \a directory is inside the \c voice directory
+        /// of \a utauDirectory, otherwise the absolute path.
+        ///
+        /// \param directory an absolute path
+        /// \param utauDirectory the directory that contains \c utau.exe, or an empty path if
+        ///                      unknown
+        static QString voiceDirOf(const std::filesystem::path &directory,
+                                  const std::filesystem::path &utauDirectory);
     };
 
     /// Project-wide settings.

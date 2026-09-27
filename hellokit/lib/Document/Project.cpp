@@ -3,6 +3,7 @@
 #include <fstream>
 
 #include <QtCore/QCoreApplication>
+#include <QtCore/QDir>
 #include <QtCore/QJsonArray>
 #include <QtCore/QJsonDocument>
 #include <QtCore/QJsonObject>
@@ -56,6 +57,57 @@ namespace hello::kit {
             return settings;
         }
 
+        // A path in a project file uses the Windows separator, which std::filesystem recognizes
+        // only on Windows.
+        std::filesystem::path pathOf(QString text) {
+            text.replace(u'\\', u'/');
+            return std::filesystem::path(text.toStdU16String());
+        }
+
+        // Without a trailing separator, which would otherwise count as an empty last element
+        std::filesystem::path directoryOf(const std::filesystem::path &path) {
+            const auto normal = path.lexically_normal();
+            return normal.has_filename() ? normal : normal.parent_path();
+        }
+
+    }
+
+    std::filesystem::path Track::voiceDirectory(const std::filesystem::path &utauDirectory) const {
+        if (voiceDir.isEmpty()) {
+            return {};
+        }
+        if (voiceDir.startsWith(voicePrefix)) {
+            if (utauDirectory.empty()) {
+                return {};
+            }
+            // A separator after the prefix would otherwise make the rest an absolute path.
+            auto rest = voiceDir.mid(voicePrefix.size());
+            while (rest.startsWith(u'\\') || rest.startsWith(u'/')) {
+                rest.remove(0, 1);
+            }
+            return utauDirectory / u"voice" / pathOf(rest);
+        }
+        const auto path = pathOf(voiceDir);
+        if (path.is_absolute()) {
+            return path;
+        }
+        if (utauDirectory.empty()) {
+            return {};
+        }
+        return utauDirectory / path;
+    }
+
+    QString Track::voiceDirOf(const std::filesystem::path &directory,
+                              const std::filesystem::path &utauDirectory) {
+        const auto bank = directoryOf(directory);
+        if (!utauDirectory.empty()) {
+            const auto relative = bank.lexically_relative(directoryOf(utauDirectory / u"voice"));
+            if (!relative.empty() && relative != u"." && *relative.begin() != u"..") {
+                return voicePrefix.toString() +
+                       QDir::toNativeSeparators(QString::fromStdU16String(relative.u16string()));
+            }
+        }
+        return QDir::toNativeSeparators(QString::fromStdU16String(bank.u16string()));
     }
 
     std::optional<Project> Project::open(const std::filesystem::path &path,

@@ -1,9 +1,13 @@
+#include <filesystem>
+
 #include <QtCore/QByteArray>
+#include <QtCore/QDir>
 #include <QtTest/QTest>
 
 #include <hellokit/Document/Project.h>
 
 using namespace hello::kit;
+namespace fs = std::filesystem;
 
 class test_Project : public QObject {
     Q_OBJECT
@@ -31,6 +35,21 @@ private:
         Project project;
         project.tracks.push_back(track);
         return project;
+    }
+
+    static QString textOf(const fs::path &path) {
+        return QString::fromStdU16String(path.lexically_normal().generic_u16string());
+    }
+
+    static QString nativeOf(const fs::path &path) {
+        return QDir::toNativeSeparators(QString::fromStdU16String(path.u16string()));
+    }
+
+    static QString resolved(QStringView voiceDir, const fs::path &utauDirectory) {
+        Track track;
+        track.voiceDir = voiceDir.toString();
+        const auto path = track.voiceDirectory(utauDirectory);
+        return path.empty() ? QString() : textOf(path);
     }
 
 private Q_SLOTS:
@@ -250,6 +269,43 @@ private Q_SLOTS:
         const auto again = parsed(written);
         QVERIFY(again.has_value());
         QCOMPARE(again->tracks.first().notes.first().lyric, QString::fromUtf8("あ"));
+    }
+
+    // Measured in UTAU: a relative path is relative to the directory of utau.exe, not to the
+    // project file or the voice directory. See docs/claude/utau-voicedir-cachedir.md.
+    void a_voice_dir_resolves_as_utau_resolves_it() {
+        const auto utau = fs::temp_directory_path() / u"utau";
+        const auto bank = fs::temp_directory_path() / u"bank";
+
+        QCOMPARE(resolved(u"%VOICE%uta", utau), textOf(utau / u"voice" / u"uta"));
+        QCOMPARE(resolved(u"%VOICE%\\uta", utau), textOf(utau / u"voice" / u"uta"));
+        QCOMPARE(resolved(u"%VOICE%sub\\uta", utau), textOf(utau / u"voice" / u"sub" / u"uta"));
+        QCOMPARE(resolved(u"hp_rel", utau), textOf(utau / u"hp_rel"));
+        QCOMPARE(resolved(nativeOf(bank), utau), textOf(bank));
+        QCOMPARE(resolved(u"", utau), QString());
+
+        // Without the UTAU directory, only an absolute path can be resolved.
+        QCOMPARE(resolved(u"%VOICE%uta", {}), QString());
+        QCOMPARE(resolved(u"hp_rel", {}), QString());
+        QCOMPARE(resolved(nativeOf(bank), {}), textOf(bank));
+    }
+
+    // Measured in UTAU: an absolute path inside the voice directory is saved with the prefix.
+    void a_voice_dir_is_written_as_utau_writes_it() {
+        const auto utau = fs::temp_directory_path() / u"utau";
+        const auto voice = utau / u"voice";
+        const auto bank = fs::temp_directory_path() / u"bank";
+        const QString separator = QDir::separator();
+
+        QCOMPARE(Track::voiceDirOf(voice / u"hp_abs", utau), QStringLiteral("%VOICE%hp_abs"));
+        QCOMPARE(Track::voiceDirOf(voice / u"hp_abs" / u"", utau), QStringLiteral("%VOICE%hp_abs"));
+        QCOMPARE(Track::voiceDirOf(voice / u"sub" / u"uta", utau),
+                 QStringLiteral("%VOICE%sub") + separator + QStringLiteral("uta"));
+        QCOMPARE(Track::voiceDirOf(bank, utau), nativeOf(bank));
+        QCOMPARE(Track::voiceDirOf(voice, utau), nativeOf(voice));
+        QCOMPARE(Track::voiceDirOf(utau / u"voices" / u"uta", utau),
+                 nativeOf(utau / u"voices" / u"uta"));
+        QCOMPARE(Track::voiceDirOf(voice / u"hp_abs", {}), nativeOf(voice / u"hp_abs"));
     }
 };
 
