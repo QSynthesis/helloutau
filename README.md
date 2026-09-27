@@ -29,6 +29,7 @@ Requirements:
 
 | Package | Source | Variable |
 |---|---|---|
+| QActionKit | [stdware/qactionkit](https://github.com/stdware/qactionkit), branch `next` | `QActionKit_DIR=<prefix>/lib/cmake/QActionKit` |
 | qmsetup | [stdware/qmsetup](https://github.com/stdware/qmsetup) | `qmsetup_DIR=<prefix>/lib/cmake/qmsetup` |
 | stdcorelib | [stdware/stdcorelib](https://github.com/stdware/stdcorelib) | `stdcorelib_DIR=<prefix>/lib/cmake/stdcorelib` |
 | stdutau | [diffscope/stdutau](https://github.com/diffscope/stdutau) | `stdutau_DIR=<prefix>/lib/cmake/stdutau` |
@@ -39,7 +40,7 @@ Requirements:
 ```sh
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug \
     -DCMAKE_PREFIX_PATH=<Qt> \
-    -Dqmsetup_DIR=... -Dstdcorelib_DIR=... -Dstdutau_DIR=... \
+    -DQActionKit_DIR=... -Dqmsetup_DIR=... -Dstdcorelib_DIR=... -Dstdutau_DIR=... \
     -Dsubstate_DIR=... -Dwinacp_DIR=... -Dwolf-midi_DIR=...
 cmake --build build
 ctest --test-dir build

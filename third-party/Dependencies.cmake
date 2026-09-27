@@ -5,25 +5,28 @@
 #     -Dwolf-midi_DIR=<prefix>/lib/cmake/wolf-midi
 #     -Dwinacp_DIR=<prefix>/lib/cmake/winacp
 #     -Dsubstate_DIR=<prefix>/lib/cmake/substate
+#     -DQActionKit_DIR=<prefix>/lib/cmake/QActionKit
 #
-# stdcorelib, stdutau and substate are developed alongside this repository, so none is taken from
-# a vcpkg release. Each must be built and installed separately.
+# stdcorelib, stdutau, substate and QActionKit are developed alongside this repository, so none is
+# taken from a vcpkg release. Each must be built and installed separately.
 #
 # Included from the root rather than added as a subdirectory, so that the imported targets are in
 # scope for every module.
 
-# Finds _package and deploys its shared libraries, the targets given after _hint. The DLLs are
-# copied into the runtime output directory, because the applocal deployment of vcpkg does not cover
-# packages found this way, and both the application and the tests run from there.
+# Finds _package with the components given after COMPONENTS, last, and deploys its shared
+# libraries, the targets given after _hint. The DLLs are copied into the runtime output directory,
+# because the applocal deployment of vcpkg does not cover packages found this way, and both the
+# application and the tests run from there.
 function(_hello_find_external _package _hint)
+    cmake_parse_arguments(FUNC "" "" "COMPONENTS" ${ARGN})
     if(NOT ${_package}_DIR)
         message(FATAL_ERROR "${_package}_DIR is not set. ${_hint}")
     endif()
 
-    find_package(${_package} CONFIG REQUIRED)
+    find_package(${_package} CONFIG REQUIRED COMPONENTS ${FUNC_COMPONENTS})
 
     set(_files)
-    foreach(_target IN LISTS ARGN)
+    foreach(_target IN LISTS FUNC_UNPARSED_ARGUMENTS)
         get_target_property(_type ${_target} TYPE)
         if(_type STREQUAL "SHARED_LIBRARY")
             list(APPEND _files $<TARGET_FILE:${_target}>)
@@ -68,3 +71,11 @@ _hello_find_external(winacp
 _hello_find_external(substate
     "Build https://github.com/stdware/substate and pass -Dsubstate_DIR=<prefix>/lib/cmake/substate."
     substate::substate substate::qsubstate)
+
+# The menus, tool bars and shortcuts of the application, declared in action extension manifests
+# that AEC compiles at build time. Only the Core and Widgets modules are used, and the component
+# makes the package find Qt Widgets, which its Widgets module links.
+_hello_find_external(QActionKit
+    "Build https://github.com/stdware/qactionkit and pass -DQActionKit_DIR=<prefix>/lib/cmake/QActionKit."
+    QActionKit::Core QActionKit::Widgets
+    COMPONENTS Widgets)
