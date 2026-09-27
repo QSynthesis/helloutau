@@ -170,6 +170,36 @@ private Q_SLOTS:
         QCOMPARE(vibrato->intensity, 42.0);
     }
 
+    // UST writes the intervals between the points and the heights in tenths of a semitone,
+    // whereas a project keeps times from the start of the note and cents. A decimal height
+    // converts in both directions without changing its text.
+    void a_pitch_curve_is_read_as_times_and_cents_and_written_back_as_ust() {
+        TempUst file("pitchcurve");
+        file.writeBytes("[#VERSION]\r\nUST Version1.2\r\n[#SETTING]\r\nTempo=120.00\r\n"
+                        "Tracks=1\r\nMode2=True\r\n[#0000]\r\nLength=480\r\nLyric=a\r\n"
+                        "NoteNum=60\r\nPBS=-40;2.88\r\nPBW=50,30\r\nPBY=2.3,-0.7\r\nPBM=s,r\r\n"
+                        "[#TRACKEND]\r\n");
+
+        const auto project = readAs(file, QStringLiteral("UTF-8"));
+        QVERIFY(project.has_value());
+        const auto &points = project->tracks.first().notes.first().portamento;
+        QCOMPARE(points.size(), 3);
+        // Multiplied by ten without rounding, 2.88 gives 28.799999999999997
+        QVERIFY(points[0].x == -40 && points[0].y == 28.8);
+        QVERIFY(points[1].x == 10 && points[1].y == 23);
+        QVERIFY(points[2].x == 40 && points[2].y == -7);
+        QCOMPARE(points[1].type, PortamentoPoint::Linear);
+        QCOMPARE(points[2].type, PortamentoPoint::R);
+
+        DiagnosticList diagnostics;
+        QVERIFY(writeTo(*project, file, {}, diagnostics));
+        const auto bytes = file.readBytes();
+        for (const char *line :
+             {"PBS=-40;2.88\r\n", "PBW=50,30\r\n", "PBY=2.3,-0.7\r\n", "PBM=s,r\r\n"}) {
+            QVERIFY2(bytes.contains(line), line);
+        }
+    }
+
     // One control note is written and exactly one is read. An error here would accumulate
     // leading half-second notes over repeated round trips, which would go unnoticed until
     // severe.

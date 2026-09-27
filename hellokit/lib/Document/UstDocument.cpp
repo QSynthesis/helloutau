@@ -168,8 +168,11 @@ namespace hello::kit {
                 note.vibrato = vibrato;
             }
 
+            // stdutau has already added up the intervals of PBW into times from the start of the
+            // note, and keeps the heights in tenths of a semitone.
             for (const auto &point : from.portamento) {
-                note.portamento.push_back({point.x, point.y, joinOf(point.type)});
+                note.portamento.push_back(
+                    {point.x, PortamentoPoint::centsFromTenths(point.y), joinOf(point.type)});
             }
 
             if (from.pbstart || !from.pitches.empty()) {
@@ -235,7 +238,8 @@ namespace hello::kit {
             }
 
             for (const auto &point : from.portamento) {
-                note.portamento.emplace_back(point.x, point.y, joinOf(point.type));
+                note.portamento.emplace_back(point.x, PortamentoPoint::tenthsFromCents(point.y),
+                                             joinOf(point.type));
             }
 
             if (from.pitchBend) {

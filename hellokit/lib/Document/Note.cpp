@@ -1,5 +1,6 @@
 #include "Note.h"
 
+#include <cmath>
 #include <utility>
 
 #include <QtCore/QJsonArray>
@@ -78,6 +79,15 @@ namespace hello::kit {
             }
         }
         return std::nullopt;
+    }
+
+    double PortamentoPoint::centsFromTenths(double tenths) {
+        // A tenth of a semitone is ten cents, and the product is counted in millionths of a cent
+        return std::round(tenths * 1e7) / 1e6;
+    }
+
+    double PortamentoPoint::tenthsFromCents(double cents) {
+        return cents / 10;
     }
 
     QJsonObject PortamentoPoint::toJson() const {

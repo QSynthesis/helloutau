@@ -175,15 +175,28 @@ namespace hello::kit {
             J,
         };
 
-        /// In milliseconds. The first point is relative to the start of the note and may be
-        /// negative, extending into the preceding note. Each subsequent point is relative to the
-        /// preceding point.
+        /// In milliseconds from the start of the note, for every point. Negative if the curve
+        /// extends into the preceding note.
+        ///
+        /// \note UST writes the first point in \c PBS relative to the start of the note, and each
+        ///       subsequent point in \c PBW as the interval from the preceding point.
         double x = 0;
 
-        /// In tenths of a semitone.
+        /// In cents.
+        ///
+        /// \note UST writes the height in tenths of a semitone, see centsFromTenths().
         double y = 0;
 
         Type type = S;
+
+        /// Converts a height in tenths of a semitone, as \c PBS and \c PBY write it, to cents.
+        /// The result is rounded to a millionth of a cent, so that a decimal read from a file
+        /// gives the same decimal in cents rather than a value that differs in the last binary
+        /// digit.
+        static double centsFromTenths(double tenths);
+
+        /// Converts a height in cents to tenths of a semitone, as \c PBS and \c PBY write it.
+        static double tenthsFromCents(double cents);
 
         /// Returns the name of \a type in \c .usth, which is the name of the enumerator.
         static QString typeName(Type type);

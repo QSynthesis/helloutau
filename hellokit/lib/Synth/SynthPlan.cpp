@@ -168,7 +168,8 @@ namespace hello::kit {
                     case PortamentoPoint::S:
                         break;
                 }
-                note.portamento.emplace_back(point.x, point.y, type);
+                note.portamento.emplace_back(point.x, PortamentoPoint::tenthsFromCents(point.y),
+                                             type);
             }
             return note;
         }
