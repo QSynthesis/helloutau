@@ -23,8 +23,8 @@
 | 缺口 | 现状 | 所需 | 用于 |
 |---|---|---|---|
 | tick 与毫秒的换算 | 没有公开的速度表。速度逐音符继承，只在合成内部计算 | 由音符序列得到速度表：tick 与毫秒互换、音符的起始 tick 与起始时间 | 第 3 步起 |
-| `VoiceDir` 的解析 | 没有任何代码把 `VoiceDir` 与 `%VOICE%` 解析为路径，`ustrender` 由命令行给出音源目录 | 以应用设置中的共享音源目录解析 `%VOICE%`，相对路径的基准按 UTAU 的行为确定 | 第 1 步 |
-| 保存时改写 `CacheDir` | [`note.md`](note.md) 规定随文件名改写，代码只原样复制 | 按规定实现 | 第 1 步 |
+| `VoiceDir` 的解析 | 没有任何代码把 `VoiceDir` 与 `%VOICE%` 解析为路径，`ustrender` 由命令行给出音源目录 | 按 UTAU 的规则解析：`%VOICE%` 为 `<UTAU 安装目录>\voice\`，相对路径以 UTAU 安装目录为基准，见 [`claude/utau-voicedir-cachedir.md`](claude/utau-voicedir-cachedir.md)。安装目录取自应用设置 | 第 1 步 |
+| 保存时改写 `CacheDir` | [`note.md`](note.md) 规定随文件名改写，代码只原样复制 | 保存与另存为时一律写为 `<文件名去掉扩展名>.cache`；缓存目录不取自文件，而是 UST 旁边的这一目录 | 第 1 步 |
 | 编辑所需的领域函数 | 只有 `transpose`、`splitNote`、`insertNote`、`setTempo` | 删除、改变长度、重排等，重排的语义见第 4 步 | 第 4 步 |
 
 另有一处与本计划无关、但在调查中发现的不一致，须单独处理：`Note.h` 与 [`UsthFormat.md`](UsthFormat.md) 规定音高控制点的 `x` 除第一个点外相对于前一个点，而 stdutau 读取 UST 时已累加为相对于音符起点的值，hellokit 原样复制，`.usth` 因此写出的是累加后的值。第四阶段编辑音高之前，须确定采用哪种约定并使代码与文档一致。
@@ -102,7 +102,7 @@
 
 - `HelloUtauWidgets` 接入 QActionKit：动作清单、AEC、菜单栏。菜单项为新建、打开、保存、另存为、导出 UST、退出、撤销、重做。
 - 工程文档对象；打开 `.ust` 与 `.usth`；UST 的编码选择对话框（候选取自 `TextCodec::ustCandidates()`，按候选即时预览原始字节）。
-- 应用设置：共享音源目录、重采样器与 wavtool 的路径。引擎只取自设置，不取工程中的 `Tool1`、`Tool2`。
+- 应用设置：UTAU 的安装目录（用于解析 `VoiceDir`，可以不设置，此时由用户为工程选择音源）、重采样器与 wavtool 的路径。引擎只取自设置，不取工程中的 `Tool1`、`Tool2`。
 - 标题栏显示文件名与未保存标记；关闭未保存的工程时询问。
 - 中央暂以只读的音符列表显示工程内容，第 3 步替换为卷帘。
 

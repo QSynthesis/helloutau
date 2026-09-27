@@ -126,7 +126,7 @@ UST 自身的 `Charset` 只有两种取值：空，或 `UTF-8`。它表示的是
 
 ## 缓存
 
-与 UTAU 保持一致，缓存目录位于工程文件旁边。UTAU 保存时会将 `CacheDir` 改写为随文件名变化，HelloUtau 采取相同做法。
+与 UTAU 保持一致，缓存目录位于工程文件旁边。UTAU 不使用文件中的 `CacheDir`，缓存目录总是 UST 旁边的 `<文件名去掉扩展名>.cache`，保存与另存为时也将 `CacheDir` 写为这一名称，HelloUtau 采取相同做法。实测见 [`claude/utau-voicedir-cachedir.md`](claude/utau-voicedir-cachedir.md)。
 
 ## HelloUtau 插件
 
