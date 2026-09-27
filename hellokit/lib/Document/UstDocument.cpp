@@ -406,7 +406,8 @@ namespace hello::kit {
         file.settings.projectName = out(settings.name);
         file.settings.flags = out(settings.flags);
         file.settings.outputFileName = out(settings.outputFile);
-        file.settings.cacheDir = out(settings.cacheDir);
+        file.settings.cacheDir =
+            out(options.file.empty() ? settings.cacheDir : Project::cacheDirOf(options.file));
         file.settings.voiceDir = out(project.tracks.first().voiceDir);
         file.settings.isMode2 = settings.mode2;
 

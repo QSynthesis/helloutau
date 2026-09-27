@@ -290,6 +290,27 @@ private Q_SLOTS:
         QCOMPARE(resolved(nativeOf(bank), {}), textOf(bank));
     }
 
+    // Measured in UTAU: the cache is named after the project file, and saving writes that name
+    // whatever the file said before.
+    void the_cache_dir_follows_the_file_name() {
+        const auto dir = fs::temp_directory_path();
+        QCOMPARE(Project::cacheDirOf(dir / u"song.ust"), QStringLiteral("song.cache"));
+        QCOMPARE(Project::cacheDirOf(dir / u"a.b.usth"), QStringLiteral("a.b.cache"));
+        QCOMPARE(Project::cacheDirOf(dir / u"歌.ust"), QString::fromUtf8("歌.cache"));
+        QCOMPARE(textOf(Project::cacheDirectoryOf(dir / u"song.ust")), textOf(dir / u"song.cache"));
+
+        auto project = oneNote();
+        project.settings.cacheDir = QStringLiteral("old.cache");
+        const auto path = dir / u"hellokit_cachedir.usth";
+        DiagnosticList diagnostics;
+        QVERIFY(project.save(path, diagnostics));
+        const auto again = Project::open(path, diagnostics);
+        fs::remove(path);
+        QVERIFY(again.has_value());
+        QCOMPARE(again->settings.cacheDir, QStringLiteral("hellokit_cachedir.cache"));
+        QCOMPARE(project.settings.cacheDir, QStringLiteral("old.cache"));
+    }
+
     // Measured in UTAU: an absolute path inside the voice directory is saved with the prefix.
     void a_voice_dir_is_written_as_utau_writes_it() {
         const auto utau = fs::temp_directory_path() / u"utau";

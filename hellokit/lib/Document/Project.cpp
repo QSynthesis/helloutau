@@ -64,6 +64,34 @@ namespace hello::kit {
             return std::filesystem::path(text.toStdU16String());
         }
 
+        // The settings are a parameter, so that save() can write its own value of the cache
+        // directory without copying the notes.
+        QByteArray jsonOf(const Project &project, const ProjectSettings &settings) {
+            // Starts from the fields not recognized when the file was read, so that they are
+            // preserved. The known fields are inserted afterward, so that a stale copy of a known
+            // field cannot take precedence.
+            QJsonObject root = project.unknownFields;
+            root.insert(QLatin1String(KeyFormat), QLatin1String(FormatName));
+            root.insert(QLatin1String(KeyVersion), usthFormatVersion);
+            root.insert(QLatin1String(KeySettings), settingsToJson(settings));
+
+            QJsonArray trackArray;
+            for (const auto &track : project.tracks) {
+                QJsonArray notes;
+                for (const auto &note : track.notes) {
+                    notes.append(note.toJson());
+                }
+                trackArray.append(QJsonObject{
+                    {QLatin1String("name"),     track.name    },
+                    {QLatin1String("voiceDir"), track.voiceDir},
+                    {QLatin1String("notes"),    notes         },
+                });
+            }
+            root.insert(QLatin1String(KeyTracks), trackArray);
+
+            return QJsonDocument(root).toJson(QJsonDocument::Indented);
+        }
+
         // Without a trailing separator, which would otherwise count as an empty last element
         std::filesystem::path directoryOf(const std::filesystem::path &path) {
             const auto normal = path.lexically_normal();
@@ -131,7 +159,9 @@ namespace hello::kit {
             return false;
         }
 
-        const auto bytes = toJson();
+        auto written = settings;
+        written.cacheDir = cacheDirOf(path);
+        const auto bytes = jsonOf(*this, written);
 
         // Written in binary mode, so that line feeds are not converted to CRLF on Windows. The
         // format specifies LF line endings, and project files are compared with diff tools.
@@ -237,29 +267,15 @@ namespace hello::kit {
     }
 
     QByteArray Project::toJson() const {
-        // Starts from the fields not recognized when the file was read, so that they are
-        // preserved. The known fields are inserted afterward, so that a stale copy of a known
-        // field cannot take precedence.
-        QJsonObject root = unknownFields;
-        root.insert(QLatin1String(KeyFormat), QLatin1String(FormatName));
-        root.insert(QLatin1String(KeyVersion), usthFormatVersion);
-        root.insert(QLatin1String(KeySettings), settingsToJson(settings));
+        return jsonOf(*this, settings);
+    }
 
-        QJsonArray trackArray;
-        for (const auto &track : tracks) {
-            QJsonArray notes;
-            for (const auto &note : track.notes) {
-                notes.append(note.toJson());
-            }
-            trackArray.append(QJsonObject{
-                {QLatin1String("name"),     track.name    },
-                {QLatin1String("voiceDir"), track.voiceDir},
-                {QLatin1String("notes"),    notes         },
-            });
-        }
-        root.insert(QLatin1String(KeyTracks), trackArray);
+    QString Project::cacheDirOf(const std::filesystem::path &file) {
+        return QString::fromStdU16String(file.stem().u16string()) + QStringLiteral(".cache");
+    }
 
-        return QJsonDocument(root).toJson(QJsonDocument::Indented);
+    std::filesystem::path Project::cacheDirectoryOf(const std::filesystem::path &file) {
+        return file.parent_path() / cacheDirOf(file).toStdU16String();
     }
 
 }

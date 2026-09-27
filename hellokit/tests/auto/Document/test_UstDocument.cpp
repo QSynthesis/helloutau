@@ -170,6 +170,24 @@ private Q_SLOTS:
         QCOMPARE(vibrato->intensity, 42.0);
     }
 
+    // Measured in UTAU: saving writes CacheDir from the file name, whatever the project says.
+    // See docs/claude/utau-voicedir-cachedir.md.
+    void the_cache_dir_is_written_from_the_file_name_when_the_file_is_given() {
+        TempUst file("cachedir");
+        auto project = oneNote();
+        project.settings.cacheDir = QStringLiteral("old.cache");
+
+        DiagnosticList diagnostics;
+        UstDocument::ExportOptions options;
+        options.file = file.path();
+        QVERIFY(writeTo(project, file, options, diagnostics));
+        QVERIFY(file.readBytes().contains("CacheDir=hellokit_cachedir.cache\r\n"));
+
+        // Without the file, as for a round trip that must not change the settings
+        QVERIFY(writeTo(project, file, {}, diagnostics));
+        QVERIFY(file.readBytes().contains("CacheDir=old.cache\r\n"));
+    }
+
     // UST writes the intervals between the points and the heights in tenths of a semitone,
     // whereas a project keeps times from the start of the note and cents. A decimal height
     // converts in both directions without changing its text.

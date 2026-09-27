@@ -55,6 +55,11 @@ namespace hello::kit {
             /// written unchanged.
             QString wavtool;
             QString resampler;
+
+            /// The file the UST will be saved as. If not empty, \c CacheDir is written as UTAU
+            /// writes it on save, Project::cacheDirOf() this file, instead of the value in the
+            /// project.
+            std::filesystem::path file;
         };
 
         /// Reads \a path once. No content is decoded.

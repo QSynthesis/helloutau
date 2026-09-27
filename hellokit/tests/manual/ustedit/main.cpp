@@ -141,6 +141,7 @@ namespace {
             if (!charset.isEmpty()) {
                 options.charset = charset;
             }
+            options.file = path;
             const auto ust = UstDocument::fromProject(project, options, diagnostics);
             written = ust && ust->save(path, diagnostics);
         } else {

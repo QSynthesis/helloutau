@@ -167,6 +167,7 @@ namespace {
                 if (!charset.isEmpty()) {
                     options.charset = charset;
                 }
+                options.file = path;
                 const auto ust = UstDocument::fromProject(project, options, diagnostics);
                 return ust && ust->save(path, diagnostics);
             }
@@ -248,9 +249,9 @@ namespace {
             return 1;
         }
 
-        // The engines are left unset. Substituting local engines applies when a user saves a
-        // project, and here it would appear as the round trip introducing settings absent from
-        // the file.
+        // The engines and the file are left unset. Substituting local engines and renaming the
+        // cache directory apply when a user saves a project, and here they would appear as the
+        // round trip changing settings of the file.
         UstDocument::ExportOptions options;
         options.charset = *charset;
 
