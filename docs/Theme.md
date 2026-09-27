@@ -1,6 +1,6 @@
 # 主题系统
 
-本文档记录编辑器主题系统的设计来源与设计方向。主题系统尚未实现，将属于 `helloutau` 模块（Qt Widgets）。
+本文档记录编辑器主题系统的设计来源与设计方向。主题系统尚未实现，将是 `helloutau` 模块的子库 `HelloUtauTheme`，见「已确定的事项」。
 
 设计沿用同一作者此前在 [qtmediate](https://github.com/stdware/qtmediate) 中的做法，其原理说明见 [qsynthesis-docs「3. 元类型」](https://github.com/SineStriker/qsynthesis-docs/tree/main/3.%20%E5%85%83%E7%B1%BB%E5%9E%8B)。两者的副本位于 `.cache/qtmediate` 与 `.cache/qsynthesis-docs`。
 
@@ -100,8 +100,17 @@ qtmediate 在样式表交给 Qt 之前做一次文本转换：
 - 图标以 SVG 编写，颜色由主题与按钮状态决定，可跟随文字颜色。
 - 主题由描述文件、变量、继承链与命名空间组成，控件按标识登记。
 
-实现前须与作者确定的事项：
+## 已确定的事项
 
-- 是否接受对 Qt 私有头文件的依赖，以及依赖的范围。
-- 值语法与扩展语法的解析方式。候选做法是以分词器代替正则替换。
-- 主题系统所在的子库与命名空间。
+**接受 qtmediate 所用范围内的 Qt 私有头文件**，即 QtCore、QtGui、QtWidgets 三个模块的私有部分，包括 `qicon_p.h`、`qpaintengine_raster_p.h`、`qcssparser_p.h` 等。超出这一范围时须先与作者确定。同样的效果能以公开接口实现时优先使用公开接口，以减少 Qt 升级时须核对的内容。已知的一处：
+
+- **按钮状态必须经由私有接口传给图标引擎。** 以 `QIcon::Mode` 与 `QIcon::State` 的八种组合传递状态不可行：Qt 自带的样式在按钮获得焦点时给出 `Active`，工具按钮只在自动浮起且悬停时给出 `Active`，按下的状态从不传递（Qt 6.11.1 `qtbase/src/widgets/styles/qcommonstyle.cpp`）。因此须以 `qicon_p.h` 取得图标引擎，再经 `virtual_hook` 设置状态。
+
+**值语法与扩展语法由一个分词器解析，不使用正则替换。** 分词器识别字符串、注释与括号的嵌套，供两处共用：
+
+- 预处理样式表时，据此找到扩展写法，`svg(...)` 的参数中含括号、引号内含 `12px` 均不致出错。
+- 解析值时，得到统一的结构：函数名、位置参数、关键字参数、按钮状态组。各类型登记的转换函数接收这一结构，不再各自从 `QStringList` 解析；按钮状态的回落规则在通用层实现一次。
+
+无法解析的值以 `qCWarning` 报告，写明所在位置，不静默采用默认值。
+
+**主题系统是独立的子库 `HelloUtauTheme`**，位于 `helloutau/lib/Theme/`，头文件以 `<helloutau/Theme/...>` 引用，`HelloUtauWidgets` 依赖它。只有该子库链接 Qt 的私有模块，私有依赖因此集中在一处，也可以单独测试。命名空间为 `hello::daw`，不增加第三层：主题系统不会移出本仓库，不属于 `docs/Development.md` 所述的例外。类名以 `Theme`、`Svgx` 等为前缀，避免与其他子库的类重名。
