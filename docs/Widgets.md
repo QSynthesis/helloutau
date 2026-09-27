@@ -27,7 +27,9 @@
 | 保存时改写 `CacheDir` | [`note.md`](note.md) 规定随文件名改写，代码只原样复制 | 保存与另存为时一律写为 `<文件名去掉扩展名>.cache`；缓存目录不取自文件，而是 UST 旁边的这一目录 | 第 1 步 |
 | 编辑所需的领域函数 | 只有 `transpose`、`splitNote`、`insertNote`、`setTempo` | 删除、改变长度、重排等，重排的语义见第 4 步 | 第 4 步 |
 
-另有一处与本计划无关、但在调查中发现的不一致，须单独处理：`Note.h` 与 [`UsthFormat.md`](UsthFormat.md) 规定音高控制点的 `x` 除第一个点外相对于前一个点，而 stdutau 读取 UST 时已累加为相对于音符起点的值，hellokit 原样复制，`.usth` 因此写出的是累加后的值。第四阶段编辑音高之前，须确定采用哪种约定并使代码与文档一致。
+**前三项已经实现**：速度表为 `TempoMap`（`TempoMap.h`）；`VoiceDir` 的解析与写法为 `Track::voiceDirectory()` 与 `Track::voiceDirOf()`；缓存目录为 `Project::cacheDirOf()` 与 `Project::cacheDirectoryOf()`，`Project::save()` 与指定了 `ExportOptions::file` 的 UST 导出按此写入 `CacheDir`。
+
+调查中另发现音高控制点的约定与文档不一致，已经处理：`x` 统一为距音符起点的毫秒数，`y` 改为音分，读写 UST 时换算，见 [`UsthFormat.md`](UsthFormat.md)。
 
 ## 结构
 
