@@ -5,12 +5,10 @@
 #include <QtTest/QSignalSpy>
 #include <QtTest/QTest>
 
+#include <hellokit/Edit/ProjectDocument.h>
 #include <hellokit/Edit/ProjectRefs.h>
 
-#include <helloutau/Widgets/ProjectDocument.h>
-
-using namespace hello;
-using namespace hello::daw;
+using namespace hello::kit;
 namespace fs = std::filesystem;
 
 namespace {
@@ -21,7 +19,7 @@ namespace {
         explicit FixedSelector(std::optional<QString> answer) : answer(std::move(answer)) {
         }
 
-        std::optional<QString> selectCharset(const kit::UstDocument &ust,
+        std::optional<QString> selectCharset(const UstDocument &ust,
                                              const fs::path &path) override {
             Q_UNUSED(ust);
             asked.push_back(path);
@@ -56,21 +54,21 @@ namespace {
                           "NoteNum=60\r\n[#TRACKEND]\r\n");
     }
 
-    kit::Project oneNote() {
-        kit::Note note;
+    Project oneNote() {
+        Note note;
         note.lyric = QStringLiteral("la");
         note.length = 480;
         note.noteNum = 60;
-        kit::Track track;
+        Track track;
         track.notes.push_back(note);
-        kit::Project project;
+        Project project;
         project.tracks.push_back(track);
         return project;
     }
 
     void rename(ProjectDocument &document, const QString &voiceDir) {
         auto tx = document.session()->transaction(QStringLiteral("rename"));
-        kit::ProjectRef(document.session()).tracks().at(0).setVoiceDir(voiceDir);
+        ProjectRef(document.session()).tracks().at(0).setVoiceDir(voiceDir);
         QVERIFY(tx.commit());
     }
 
@@ -86,7 +84,7 @@ private Q_SLOTS:
         QVERIFY(document.sourcePath().empty());
         QVERIFY(document.displayName().isEmpty());
         QVERIFY(!document.isModified());
-        QCOMPARE(kit::ProjectRef(document.session()).tracks().size(), 1);
+        QCOMPARE(ProjectRef(document.session()).tracks().size(), 1);
     }
 
     // Modified means a step other than the saved one, so undoing back to it clears the state.
@@ -110,7 +108,7 @@ private Q_SLOTS:
     void a_usth_opens_with_its_file_and_saves_to_it() {
         QTemporaryDir dir;
         const auto path = pathIn(dir, "song.usth");
-        kit::DiagnosticList diagnostics;
+        DiagnosticList diagnostics;
         QVERIFY(oneNote().save(path, diagnostics));
 
         const auto document = ProjectDocument::open(path, nullptr, diagnostics);
@@ -136,7 +134,7 @@ private Q_SLOTS:
         writeBytes(path, unstatedUst());
 
         FixedSelector selector(QStringLiteral("Shift_JIS"));
-        kit::DiagnosticList diagnostics;
+        DiagnosticList diagnostics;
         const auto document = ProjectDocument::open(path, &selector, diagnostics);
         QVERIFY(document);
         QCOMPARE(selector.asked, QList<fs::path>{path});
@@ -153,13 +151,13 @@ private Q_SLOTS:
         writeBytes(path, unstatedUst());
 
         FixedSelector selector(std::nullopt);
-        kit::DiagnosticList diagnostics;
+        DiagnosticList diagnostics;
         QVERIFY(!ProjectDocument::open(path, &selector, diagnostics));
-        QVERIFY(!kit::hasError(diagnostics));
+        QVERIFY(!hasError(diagnostics));
 
         // Without anyone to ask, the file cannot be read, which is an error.
         QVERIFY(!ProjectDocument::open(path, nullptr, diagnostics));
-        QVERIFY(kit::hasError(diagnostics));
+        QVERIFY(hasError(diagnostics));
     }
 
     void saving_as_gives_the_document_its_file() {
@@ -167,7 +165,7 @@ private Q_SLOTS:
         const auto source = pathIn(dir, "song.ust");
         writeBytes(source, unstatedUst());
         FixedSelector selector(QStringLiteral("Shift_JIS"));
-        kit::DiagnosticList diagnostics;
+        DiagnosticList diagnostics;
         const auto document = ProjectDocument::open(source, &selector, diagnostics);
         QVERIFY(document);
         rename(*document, QStringLiteral("changed"));
@@ -180,7 +178,7 @@ private Q_SLOTS:
         QCOMPARE(document->displayName(), QStringLiteral("saved.usth"));
         QVERIFY(!document->isModified());
 
-        const auto again = kit::Project::open(target, diagnostics);
+        const auto again = Project::open(target, diagnostics);
         QVERIFY(again);
         QCOMPARE(again->settings.cacheDir, QStringLiteral("saved.cache"));
     }
@@ -192,8 +190,8 @@ private Q_SLOTS:
         rename(document, QStringLiteral("changed"));
 
         const auto target = pathIn(dir, "export.ust");
-        kit::DiagnosticList diagnostics;
-        kit::UstDocument::ExportOptions options;
+        DiagnosticList diagnostics;
+        UstDocument::ExportOptions options;
         options.charset = QStringLiteral("Shift_JIS");
         QVERIFY(document.exportUst(target, options, diagnostics));
         QVERIFY(document.filePath().empty());
@@ -208,9 +206,9 @@ private Q_SLOTS:
         QTemporaryDir dir;
         const auto path = pathIn(dir, "song.txt");
         writeBytes(path, "text");
-        kit::DiagnosticList diagnostics;
+        DiagnosticList diagnostics;
         QVERIFY(!ProjectDocument::open(path, nullptr, diagnostics));
-        QVERIFY(kit::hasError(diagnostics));
+        QVERIFY(hasError(diagnostics));
     }
 };
 

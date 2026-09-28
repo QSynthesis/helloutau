@@ -1,1 +1,0 @@
-add_auto_test(test_ProjectDocument.cpp HelloUtauWidgets)

@@ -1,5 +1,5 @@
-#ifndef HELLOUTAU_WIDGETS_PROJECTDOCUMENT_H
-#define HELLOUTAU_WIDGETS_PROJECTDOCUMENT_H
+#ifndef HELLOKIT_EDIT_PROJECTDOCUMENT_H
+#define HELLOKIT_EDIT_PROJECTDOCUMENT_H
 
 #include <filesystem>
 #include <memory>
@@ -8,22 +8,24 @@
 #include <QtCore/QObject>
 #include <QtCore/QString>
 
-#include <hellokit/Document/UstDocument.h>
-#include <hellokit/Edit/ProjectSession.h>
 #include <hellokit/Support/Diagnostic.h>
 
-#include <helloutau/Widgets/HelloUtauWidgetsGlobal.h>
+#include <hellokit/Document/UstDocument.h>
 
-namespace hello::daw {
+#include <hellokit/Edit/HelloKitEditGlobal.h>
+#include <hellokit/Edit/ProjectSession.h>
 
-    /// Chooses the encoding of a UST that does not state it, by asking the user.
-    class HELLOUTAU_WIDGETS_EXPORT UstCharsetSelector {
+namespace hello::kit {
+
+    /// Chooses the encoding of a UST that does not state it, by asking the user. Implemented by
+    /// the side that links QtWidgets, as \c VoiceBankCharsetSelector is.
+    class HELLOKIT_EDIT_EXPORT UstCharsetSelector {
     public:
         virtual ~UstCharsetSelector();
 
         /// Returns the encoding in which to read \a ust, the file at \a path, or
         /// \c std::nullopt if the user declined to open it.
-        virtual std::optional<QString> selectCharset(const kit::UstDocument &ust,
+        virtual std::optional<QString> selectCharset(const UstDocument &ust,
                                                      const std::filesystem::path &path) = 0;
     };
 
@@ -36,7 +38,7 @@ namespace hello::daw {
     ///
     /// A document is modified when the step of its session differs from the step at which it was
     /// last saved or opened, see the section on change notification in docs/Editing.md.
-    class HELLOUTAU_WIDGETS_EXPORT ProjectDocument : public QObject {
+    class HELLOKIT_EDIT_EXPORT ProjectDocument : public QObject {
         Q_OBJECT
     public:
         /// A new project with one empty track and no file.
@@ -50,10 +52,10 @@ namespace hello::daw {
         ///         or if the user declined to choose an encoding, without an error
         static std::unique_ptr<ProjectDocument> open(const std::filesystem::path &path,
                                                      UstCharsetSelector *selector,
-                                                     kit::DiagnosticList &diagnostics,
+                                                     DiagnosticList &diagnostics,
                                                      QObject *parent = nullptr);
 
-        kit::ProjectSession *session() const;
+        ProjectSession *session() const;
 
         /// The \c .usth the document is saved to, or an empty path if it has none: a new
         /// document, or one imported from a UST.
@@ -70,15 +72,15 @@ namespace hello::daw {
         bool isModified() const;
 
         /// Writes the project to filePath(), which must not be empty.
-        bool save(kit::DiagnosticList &diagnostics);
+        bool save(DiagnosticList &diagnostics);
 
         /// Writes the project to \a path as \c .usth, which then becomes filePath().
-        bool saveAs(const std::filesystem::path &path, kit::DiagnosticList &diagnostics);
+        bool saveAs(const std::filesystem::path &path, DiagnosticList &diagnostics);
 
         /// Writes the project to \a path as a UST, with \c CacheDir named after \a path.
         /// \a options.file is replaced by \a path.
-        bool exportUst(const std::filesystem::path &path, kit::UstDocument::ExportOptions options,
-                       kit::DiagnosticList &diagnostics) const;
+        bool exportUst(const std::filesystem::path &path, UstDocument::ExportOptions options,
+                       DiagnosticList &diagnostics) const;
 
     Q_SIGNALS:
         void modifiedChanged(bool modified);
@@ -87,7 +89,7 @@ namespace hello::daw {
         void filePathChanged();
 
     private:
-        ProjectDocument(const kit::Project &project, const std::filesystem::path &sourcePath,
+        ProjectDocument(const Project &project, const std::filesystem::path &sourcePath,
                         bool native, QObject *parent);
 
         class Impl;
@@ -96,4 +98,4 @@ namespace hello::daw {
 
 }
 
-#endif // HELLOUTAU_WIDGETS_PROJECTDOCUMENT_H
+#endif // HELLOKIT_EDIT_PROJECTDOCUMENT_H

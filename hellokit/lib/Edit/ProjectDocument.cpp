@@ -1,12 +1,12 @@
 #include "ProjectDocument.h"
 
-namespace hello::daw {
+namespace hello::kit {
 
     namespace {
 
-        kit::Project emptyProject() {
-            kit::Project project;
-            project.tracks.push_back(kit::Track{});
+        Project emptyProject() {
+            Project project;
+            project.tracks.push_back(Track{});
             return project;
         }
 
@@ -16,8 +16,8 @@ namespace hello::daw {
                        .compare(extension, Qt::CaseInsensitive) == 0;
         }
 
-        void fail(kit::DiagnosticList &diagnostics, const QString &message) {
-            diagnostics.push_back({kit::DiagnosticSeverity::Error, message, std::nullopt});
+        void fail(DiagnosticList &diagnostics, const QString &message) {
+            diagnostics.push_back({DiagnosticSeverity::Error, message, std::nullopt});
         }
 
     }
@@ -26,15 +26,15 @@ namespace hello::daw {
 
     class ProjectDocument::Impl {
     public:
-        Impl(ProjectDocument *decl, const kit::Project &project,
-             const std::filesystem::path &sourcePath, bool native)
+        Impl(ProjectDocument *decl, const Project &project, const std::filesystem::path &sourcePath,
+             bool native)
             : _decl(decl), session(project), sourcePath(sourcePath),
               filePath(native ? sourcePath : std::filesystem::path()),
               savedStep(session.currentStep()) {
         }
 
         ProjectDocument *_decl;
-        kit::ProjectSession session;
+        ProjectSession session;
         std::filesystem::path sourcePath;
         std::filesystem::path filePath;
         int savedStep;
@@ -48,7 +48,7 @@ namespace hello::daw {
             }
         }
 
-        bool write(const std::filesystem::path &path, kit::DiagnosticList &diagnostics) const {
+        bool write(const std::filesystem::path &path, DiagnosticList &diagnostics) const {
             return session.snapshot().save(path, diagnostics);
         }
     };
@@ -57,11 +57,11 @@ namespace hello::daw {
         : ProjectDocument(emptyProject(), {}, false, parent) {
     }
 
-    ProjectDocument::ProjectDocument(const kit::Project &project,
+    ProjectDocument::ProjectDocument(const Project &project,
                                      const std::filesystem::path &sourcePath, bool native,
                                      QObject *parent)
         : QObject(parent), _impl(std::make_unique<Impl>(this, project, sourcePath, native)) {
-        connect(&_impl->session, &kit::ProjectSession::stepChanged, this,
+        connect(&_impl->session, &ProjectSession::stepChanged, this,
                 [this] { _impl->updateModified(); });
     }
 
@@ -69,10 +69,10 @@ namespace hello::daw {
 
     std::unique_ptr<ProjectDocument> ProjectDocument::open(const std::filesystem::path &path,
                                                            UstCharsetSelector *selector,
-                                                           kit::DiagnosticList &diagnostics,
+                                                           DiagnosticList &diagnostics,
                                                            QObject *parent) {
         if (hasExtension(path, u".usth")) {
-            const auto project = kit::Project::open(path, diagnostics);
+            const auto project = Project::open(path, diagnostics);
             if (!project) {
                 return nullptr;
             }
@@ -81,7 +81,7 @@ namespace hello::daw {
         }
 
         if (hasExtension(path, u".ust")) {
-            const auto ust = kit::UstDocument::open(path, diagnostics);
+            const auto ust = UstDocument::open(path, diagnostics);
             if (!ust) {
                 return nullptr;
             }
@@ -108,7 +108,7 @@ namespace hello::daw {
         return nullptr;
     }
 
-    kit::ProjectSession *ProjectDocument::session() const {
+    ProjectSession *ProjectDocument::session() const {
         return &_impl->session;
     }
 
@@ -128,7 +128,7 @@ namespace hello::daw {
         return _impl->modified;
     }
 
-    bool ProjectDocument::save(kit::DiagnosticList &diagnostics) {
+    bool ProjectDocument::save(DiagnosticList &diagnostics) {
         Q_ASSERT(!_impl->filePath.empty());
         if (!_impl->write(_impl->filePath, diagnostics)) {
             return false;
@@ -138,8 +138,7 @@ namespace hello::daw {
         return true;
     }
 
-    bool ProjectDocument::saveAs(const std::filesystem::path &path,
-                                 kit::DiagnosticList &diagnostics) {
+    bool ProjectDocument::saveAs(const std::filesystem::path &path, DiagnosticList &diagnostics) {
         if (!_impl->write(path, diagnostics)) {
             return false;
         }
@@ -152,11 +151,10 @@ namespace hello::daw {
     }
 
     bool ProjectDocument::exportUst(const std::filesystem::path &path,
-                                    kit::UstDocument::ExportOptions options,
-                                    kit::DiagnosticList &diagnostics) const {
+                                    UstDocument::ExportOptions options,
+                                    DiagnosticList &diagnostics) const {
         options.file = path;
-        const auto ust =
-            kit::UstDocument::fromProject(_impl->session.snapshot(), options, diagnostics);
+        const auto ust = UstDocument::fromProject(_impl->session.snapshot(), options, diagnostics);
         return ust && ust->save(path, diagnostics);
     }
 
