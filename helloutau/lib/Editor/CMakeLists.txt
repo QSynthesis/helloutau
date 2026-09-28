@@ -14,11 +14,14 @@ qak_add_action_extension(_actions_src EditorActions.xml
     NAMESPACE hello::daw
 )
 
+# The built-in theme, under :/helloutau/themes
+set(_themes_qrc themes/Themes.qrc)
+
 helloutau_add_library(${PROJECT_NAME} SHARED
     QT_AUTOGEN
-    SOURCES ${_src} ${_hdr} ${_actions_src}
-    LINKS HelloUtauWidgets HelloUtauAudio HelloKitEdit HelloKitDocument HelloKitVoiceBank
-          HelloKitSynth
+    SOURCES ${_src} ${_hdr} ${_actions_src} ${_themes_qrc}
+    LINKS HelloUtauWidgets HelloUtauTheme HelloUtauAudio HelloKitEdit HelloKitDocument
+          HelloKitVoiceBank HelloKitSynth
     LINKS_PRIVATE QActionKit::Widgets
     QT_LINKS Core Gui Widgets
     INCLUDE_PRIVATE ../../include/** **

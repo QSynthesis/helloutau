@@ -1,0 +1,6 @@
+{
+    "widgets": { "MainWindow": ["palette"] },
+    "stylesheets": {
+        "_common": { "palette": { "file": "common/palette.qss" } }
+    }
+}

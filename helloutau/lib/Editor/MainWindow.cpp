@@ -25,6 +25,7 @@
 #include <hellokit/Edit/ProjectRefs.h>
 #include <hellokit/Edit/TrackTimeline.h>
 
+#include <helloutau/Theme/ThemeManager.h>
 #include <helloutau/Widgets/CommandPalette.h>
 
 #include "AppSettings.h"
@@ -483,6 +484,7 @@ namespace hello::daw {
         _impl->initActions();
         _impl->document = std::move(document);
         _impl->bindDocument();
+        editor->themeManager()->install(this, {QStringLiteral("MainWindow")});
         resize(960, 640);
     }
 

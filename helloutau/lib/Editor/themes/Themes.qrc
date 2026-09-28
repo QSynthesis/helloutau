@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/helloutau/themes">
+        <file>editor.res.json</file>
+        <file>common/palette.qss</file>
+    </qresource>
+</RCC>

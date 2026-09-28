@@ -1,0 +1,4 @@
+/* The command palette floats over the window, set apart by its shadow. */
+hello--daw--CommandPalette {
+    qproperty-shadow: qshadow(#40000000, 16px, 0 4px);
+}

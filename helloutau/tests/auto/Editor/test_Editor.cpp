@@ -6,6 +6,7 @@
 #include <QtGui/QAction>
 #include <QtTest/QTest>
 #include <QtWidgets/QApplication>
+#include <QtWidgets/QGraphicsDropShadowEffect>
 #include <QtWidgets/QInputDialog>
 #include <QtWidgets/QLineEdit>
 #include <QtWidgets/QMenu>
@@ -191,6 +192,20 @@ private Q_SLOTS:
         // The command runs once the key press is over, and is remembered as recently used.
         QTRY_VERIFY(!window->document()->isModified());
         QCOMPARE(e->settings().recentCommands().first(), QStringLiteral("helloutau.edit.undo"));
+    }
+
+    // The shadow of the palette comes from the built-in theme, which applies to every window.
+    void the_built_in_theme_gives_the_palette_its_shadow() {
+        const auto e = editor();
+        const auto window = e->newWindow();
+        const auto palette = window->findChild<CommandPalette *>();
+        QVERIFY(palette);
+        palette->ensurePolished();
+        const auto effect = qobject_cast<QGraphicsDropShadowEffect *>(palette->graphicsEffect());
+        QVERIFY(effect);
+        QCOMPARE(effect->color(), QColor(0, 0, 0, 0x40));
+        QCOMPARE(effect->blurRadius(), 16.0);
+        QCOMPARE(effect->offset(), QPointF(0, 4));
     }
 
     void closing_a_modified_project_asks_to_save() {

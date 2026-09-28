@@ -172,4 +172,6 @@ qtmediate 在样式表交给 Qt 之前做一次文本转换：
 - **比例**：每个样式表的 `ratio` 乘以管理器的界面缩放比例与字号比例，交给 `ThemeStyleSheet` 换算。
 - **刷新**：主题、比例改变或重新读取文件后，已登记的控件在事件循环中统一重新设置一次样式表；控件销毁后自动移除。
 
+**编辑器的内置主题**位于 `helloutau/lib/Editor/themes/`，编入资源 `:/helloutau/themes`。`Editor` 持有一个 `ThemeManager`，以该资源为搜索路径；每个主窗口以标识 `MainWindow` 登记，其样式表对子控件同样生效。内置主题目前只有 `_common` 的命令面板阴影；浅色与深色主题的视觉设计须经作者确认后再加入。
+
 **主题系统是独立的子库 `HelloUtauTheme`**，位于 `helloutau/lib/Theme/`，头文件以 `<helloutau/Theme/...>` 引用，`HelloUtauWidgets` 与 `HelloUtauEditor` 依赖它。只有该子库链接 Qt 的私有模块，私有依赖因此集中在一处，也可以单独测试。命名空间为 `hello::daw`，不增加第三层：主题系统不会移出本仓库，不属于 `docs/Development.md` 所述的例外。类名以 `Theme`、`Svgx` 等为前缀，避免与其他子库的类重名。

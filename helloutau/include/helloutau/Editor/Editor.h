@@ -17,9 +17,10 @@ namespace hello::daw {
 
     class AppSettings;
     class MainWindow;
+    class ThemeManager;
 
-    /// The editor as a whole: the settings, the actions shared by every window, and the
-    /// windows, each of which edits one project.
+    /// The editor as a whole: the settings, the actions shared by every window, the themes, and
+    /// the windows, each of which edits one project.
     class HELLOUTAU_EDITOR_EXPORT Editor : public QObject {
         Q_OBJECT
     public:
@@ -35,6 +36,9 @@ namespace hello::daw {
 
         /// The registry of the actions of all windows, each window being one context of it.
         QAK::ActionRegistry *actionRegistry() const;
+
+        /// The themes of all windows, with the built-in one under \c :/helloutau/themes.
+        ThemeManager *themeManager() const;
 
         /// The open windows, in the order in which they were opened.
         QList<MainWindow *> windows() const;

@@ -6,6 +6,8 @@
 
 #include <hellokit/Edit/ProjectDocument.h>
 
+#include <helloutau/Theme/ThemeManager.h>
+
 #include "AppSettings.h"
 #include "DiagnosticBox_p.h"
 #include "MainWindow.h"
@@ -35,6 +37,7 @@ namespace hello::daw {
 
         std::unique_ptr<AppSettings> settings;
         QAK::ActionRegistry *registry = nullptr;
+        ThemeManager *themes = nullptr;
         QList<QPointer<MainWindow>> windows;
 
         MainWindow *createWindow(Editor *editor, std::unique_ptr<kit::ProjectDocument> document) {
@@ -54,6 +57,8 @@ namespace hello::daw {
         : QObject(parent), _impl(std::make_unique<Impl>(std::move(settings))) {
         _impl->registry = new QAK::ActionRegistry(this);
         _impl->registry->setExtensions({editorActions()});
+        _impl->themes = new ThemeManager(this);
+        _impl->themes->addSearchPath(QStringLiteral(":/helloutau/themes"));
     }
 
     Editor::~Editor() {
@@ -69,6 +74,10 @@ namespace hello::daw {
 
     QAK::ActionRegistry *Editor::actionRegistry() const {
         return _impl->registry;
+    }
+
+    ThemeManager *Editor::themeManager() const {
+        return _impl->themes;
     }
 
     QList<MainWindow *> Editor::windows() const {
