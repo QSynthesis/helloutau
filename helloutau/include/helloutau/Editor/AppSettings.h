@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <memory>
 
+#include <QtCore/QList>
 #include <QtCore/QSettings>
 #include <QtCore/QString>
 #include <QtCore/QStringList>
@@ -48,6 +49,16 @@ namespace hello::daw {
         void addRecentCommand(const QString &id);
 
         static constexpr int recentCommandCount = 20;
+
+        /// The files last opened or saved as, the latest first, shared by all windows.
+        QList<std::filesystem::path> recentFiles() const;
+
+        /// Puts \a path first among the recent files. At most \c recentFileCount are kept.
+        void addRecentFile(const std::filesystem::path &path);
+        void removeRecentFile(const std::filesystem::path &path);
+        void clearRecentFiles();
+
+        static constexpr int recentFileCount = 10;
 
     private:
         Q_DISABLE_COPY(AppSettings)

@@ -112,6 +112,7 @@ namespace hello::daw {
             DiagnosticBox::show(from, title, diagnostics);
             return nullptr;
         }
+        _impl->settings->addRecentFile(path);
 
         MainWindow *window = from;
         if (window && window->isUnused()) {

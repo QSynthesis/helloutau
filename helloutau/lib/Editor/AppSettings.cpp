@@ -11,7 +11,12 @@ namespace hello::daw {
         constexpr char KeyWavtool[] = "engines/wavtool";
         constexpr char KeyUstExportCharset[] = "files/ustExportCharset";
         constexpr char KeyRecentCommands[] = "commandPalette/recent";
+        constexpr char KeyRecentFiles[] = "files/recent";
 
+        // A path as the settings keep it, whole and in UTF-16
+        QString textOf(const std::filesystem::path &path) {
+            return QString::fromStdU16String(path.u16string());
+        }
     }
 
     AppSettings::AppSettings()
@@ -72,4 +77,29 @@ namespace hello::daw {
         m_settings->setValue(QLatin1String(KeyRecentCommands), ids.mid(0, recentCommandCount));
     }
 
+    QList<std::filesystem::path> AppSettings::recentFiles() const {
+        QList<std::filesystem::path> paths;
+        for (const auto &text : m_settings->value(QLatin1String(KeyRecentFiles)).toStringList()) {
+            paths.push_back(std::filesystem::path(text.toStdU16String()));
+        }
+        return paths;
+    }
+
+    void AppSettings::addRecentFile(const std::filesystem::path &path) {
+        auto texts = m_settings->value(QLatin1String(KeyRecentFiles)).toStringList();
+        const auto text = textOf(path);
+        texts.removeAll(text);
+        texts.prepend(text);
+        m_settings->setValue(QLatin1String(KeyRecentFiles), texts.mid(0, recentFileCount));
+    }
+
+    void AppSettings::removeRecentFile(const std::filesystem::path &path) {
+        auto texts = m_settings->value(QLatin1String(KeyRecentFiles)).toStringList();
+        texts.removeAll(textOf(path));
+        m_settings->setValue(QLatin1String(KeyRecentFiles), texts);
+    }
+
+    void AppSettings::clearRecentFiles() {
+        m_settings->remove(QLatin1String(KeyRecentFiles));
+    }
 }

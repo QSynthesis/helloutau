@@ -12,6 +12,7 @@
 #include <QtWidgets/QFileDialog>
 #include <QtWidgets/QInputDialog>
 #include <QtWidgets/QLabel>
+#include <QtWidgets/QMenu>
 #include <QtWidgets/QMenuBar>
 #include <QtWidgets/QMessageBox>
 #include <QtWidgets/QProgressBar>
@@ -86,6 +87,7 @@ namespace hello::daw {
         QHash<QString, QAction *> actions;
         QActionGroup *tools = nullptr;
         CommandPalette *palette = nullptr;
+        QMenu *recentMenu = nullptr;
         // What Paste Parameters pasted last
         PianoRoll::Parameters pastedParameters = PianoRoll::AllParameters;
 
@@ -230,6 +232,11 @@ namespace hello::daw {
 
             addCommand(QStringLiteral("helloutau.file.new"), [this] { editor->newWindow(); });
             addCommand(QStringLiteral("helloutau.file.open"), [this] { open(); });
+            // An external action: its menu is ours to fill, each time it opens.
+            recentMenu = new QMenu(_decl);
+            QObject::connect(recentMenu, &QMenu::aboutToShow, _decl, [this] { fillRecentMenu(); });
+            context->addAction(QStringLiteral("helloutau.file.openRecent"),
+                               recentMenu->menuAction());
             addCommand(QStringLiteral("helloutau.file.save"), [this] { _decl->save(); });
             addCommand(QStringLiteral("helloutau.file.saveAs"), [this] { _decl->saveAs(); });
             addCommand(QStringLiteral("helloutau.file.exportUst"), [this] { _decl->exportUst(); });
@@ -572,6 +579,40 @@ namespace hello::daw {
             }
         }
 
+        // The files last opened, numbered, the latest first, and a command that forgets them.
+        // A file that is gone is reported and forgotten when chosen.
+        void fillRecentMenu() {
+            recentMenu->clear();
+            const auto files = editor->settings().recentFiles();
+            if (files.isEmpty()) {
+                recentMenu->addAction(tr("No Recent Files"))->setEnabled(false);
+                return;
+            }
+            for (qsizetype i = 0; i < files.size(); ++i) {
+                const auto path = files[i];
+                const auto text = QDir::toNativeSeparators(textOf(path));
+                // Numbered 1 to 9 and then 0, as the keys of the first ten
+                const auto action = recentMenu->addAction(
+                    QStringLiteral("&%1 %2")
+                        .arg((i + 1) % 10)
+                        .arg(QString(text).replace(QLatin1Char('&'), QStringLiteral("&&"))));
+                QObject::connect(action, &QAction::triggered, _decl, [this, path] {
+                    std::error_code error;
+                    if (!std::filesystem::is_regular_file(path, error)) {
+                        QMessageBox::warning(
+                            _decl, tr("Open Recent"),
+                            tr("%1 no longer exists.").arg(QDir::toNativeSeparators(textOf(path))));
+                        editor->settings().removeRecentFile(path);
+                        return;
+                    }
+                    editor->openFile(path, _decl);
+                });
+            }
+            recentMenu->addSeparator();
+            QObject::connect(recentMenu->addAction(tr("&Clear Recent Files")), &QAction::triggered,
+                             _decl, [this] { editor->settings().clearRecentFiles(); });
+        }
+
         // Asks whether to save a modified project before it is closed. Returns whether closing
         // may proceed.
         bool maybeSave() {
@@ -660,6 +701,9 @@ namespace hello::daw {
         kit::DiagnosticList diagnostics;
         const bool saved = _impl->document->saveAs(path, diagnostics);
         DiagnosticBox::show(this, tr("Save As"), diagnostics);
+        if (saved) {
+            _impl->editor->settings().addRecentFile(path);
+        }
         return saved;
     }
 

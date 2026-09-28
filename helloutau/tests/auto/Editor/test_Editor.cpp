@@ -310,6 +310,36 @@ private Q_SLOTS:
         QVERIFY(!ok->isEnabled());
     }
 
+    // An opened file heads Open Recent, from which it opens again; a file gone is reported and
+    // forgotten.
+    void recent_files_open_from_their_menu() {
+        const auto e = editor();
+        e->settings().clearRecentFiles();
+        const auto first = savedProject(m_dir, "r1.usth");
+        const auto second = savedProject(m_dir, "r2.usth");
+        e->openFile(first);
+        const auto window = e->openFile(second);
+        QVERIFY(window);
+        QCOMPARE(e->settings().recentFiles(), (QList<std::filesystem::path>{second, first}));
+
+        // The menu of the external action, filled when it opens
+        const auto recent = actionNamed(window, QStringLiteral("Open &Recent"));
+        QVERIFY(recent && recent->menu());
+        Q_EMIT recent->menu()->aboutToShow();
+        const auto items = recent->menu()->actions();
+        QVERIFY(items.first()->text().startsWith(QStringLiteral("&1 ")));
+        QVERIFY(items.first()->text().endsWith(QStringLiteral("r2.usth")));
+
+        // Opening one already open activates its window.
+        items.at(1)->trigger();
+        QCOMPARE(e->windows().size(), 2);
+
+        std::filesystem::remove(first);
+        answerMessageBox(QMessageBox::Ok);
+        items.at(1)->trigger();
+        QCOMPARE(e->settings().recentFiles(), (QList<std::filesystem::path>{second}));
+    }
+
     // Why an edit in the piano roll was refused appears in the status bar.
     void a_refused_edit_is_reported_in_the_status_bar() {
         const auto e = editor();

@@ -15,6 +15,9 @@
     <items>
         <action id="helloutau.file.new" text="&amp;New" category="File" shortcut="Ctrl+N" />
         <action id="helloutau.file.open" text="&amp;Open..." category="File" shortcut="Ctrl+O" />
+        <!-- Filled by the window with the files last opened -->
+        <action id="helloutau.file.openRecent" text="Open &amp;Recent" category="File"
+                external="true" />
         <action id="helloutau.file.save" text="&amp;Save" category="File" shortcut="Ctrl+S" />
         <action id="helloutau.file.saveAs" text="Save &amp;As..." category="File"
                 shortcut="Ctrl+Shift+S" />
@@ -88,6 +91,7 @@
             <menu id="helloutau.file">
                 <action id="helloutau.file.new" />
                 <action id="helloutau.file.open" />
+                <action id="helloutau.file.openRecent" />
                 <separator />
                 <action id="helloutau.file.save" />
                 <action id="helloutau.file.saveAs" />

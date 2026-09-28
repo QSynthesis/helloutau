@@ -18,6 +18,33 @@ private Q_SLOTS:
         QCOMPARE(settings.ustExportCharset(), QStringLiteral("UTF-8"));
     }
 
+    // The latest first, each once, at most ten, whole paths in any script
+    void recent_files_are_kept_latest_first() {
+        QTemporaryDir dir;
+        const auto file = dir.filePath(QStringLiteral("settings.ini"));
+        {
+            AppSettings settings(file);
+            QVERIFY(settings.recentFiles().isEmpty());
+            for (int i = 0; i < 12; ++i) {
+                settings.addRecentFile(std::filesystem::path(u"C:/songs/歌") /
+                                       (std::to_string(i) + ".usth"));
+            }
+            settings.addRecentFile(std::filesystem::path(u"C:/songs/歌") / "5.usth");
+        }
+        AppSettings settings(file);
+        auto files = settings.recentFiles();
+        QCOMPARE(files.size(), AppSettings::recentFileCount);
+        QCOMPARE(files.first(), std::filesystem::path(u"C:/songs/歌") / "5.usth");
+        QCOMPARE(files.at(1), std::filesystem::path(u"C:/songs/歌") / "11.usth");
+        QCOMPARE(files.count(files.first()), 1);
+
+        settings.removeRecentFile(files.at(1));
+        QCOMPARE(settings.recentFiles().size(), AppSettings::recentFileCount - 1);
+        QVERIFY(!settings.recentFiles().contains(files.at(1)));
+        settings.clearRecentFiles();
+        QVERIFY(settings.recentFiles().isEmpty());
+    }
+
     void values_persist_in_the_file() {
         QTemporaryDir dir;
         const auto file = dir.filePath(QStringLiteral("settings.ini"));
