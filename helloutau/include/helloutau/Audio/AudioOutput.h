@@ -1,6 +1,7 @@
 #ifndef HELLOUTAU_AUDIO_AUDIOOUTPUT_H
 #define HELLOUTAU_AUDIO_AUDIOOUTPUT_H
 
+#include <functional>
 #include <memory>
 #include <vector>
 
@@ -41,6 +42,39 @@ namespace hello::daw {
 
         /// The frames read so far, which any thread may query.
         qsizetype position() const;
+
+    private:
+        class Impl;
+        std::unique_ptr<Impl> _impl;
+    };
+
+    /// Audio produced while it plays: mono samples pulled from a generator on a thread of the
+    /// source, converted to the rate of the device there, and passed to the audio thread through
+    /// a ring buffer that neither locks nor allocates.
+    ///
+    /// When the generator cannot keep up, as when a note is not yet rendered, the device plays
+    /// silence and position() stands still until samples arrive again: playback waits rather than
+    /// skips. See the section on realtime rendering in docs/Synth.md.
+    class HELLOUTAU_AUDIO_EXPORT StreamSource : public AudioSource {
+    public:
+        /// Writes up to \a frames samples to \a out and returns how many: a positive number, 0
+        /// if none are available yet, or a negative number at the end. May block briefly.
+        using Generator = std::function<qsizetype(float *out, qsizetype frames)>;
+
+        /// \param buffer the seconds of audio produced ahead of the device
+        StreamSource(Generator generator, int sourceRate, int deviceRate, double buffer = 0.5);
+        ~StreamSource() override;
+
+        /// Starts the thread that produces the audio.
+        void start();
+
+        qsizetype read(float *out, qsizetype frames, int channels) noexcept override;
+
+        /// The samples of the generator played so far, at its rate.
+        qint64 position() const;
+
+        /// Whether the device last found no samples before the end, and plays silence meanwhile.
+        bool isStarved() const;
 
     private:
         class Impl;
