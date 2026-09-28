@@ -64,6 +64,63 @@ namespace hello::daw {
         return _impl->position.load(std::memory_order_relaxed);
     }
 
+    namespace {
+
+        // Writes the samples of \a source into \a out, \a channels interleaved, silence after its
+        // end, which \a ended then reports. Called on the thread that the device pulls on.
+        void fill(AudioSource &source, float *out, qsizetype frames, int channels,
+                  std::atomic<bool> &ended) {
+            const auto written = source.read(out, frames, channels);
+            if (written < frames) {
+                std::fill(out + written * channels, out + frames * channels, 0.0f);
+                ended.store(true);
+            }
+        }
+
+#if QT_VERSION < QT_VERSION_CHECK(6, 11, 0) || defined(HELLOUTAU_AUDIO_PULL)
+#  define HELLOUTAU_AUDIO_PULL_DEVICE
+        // The device that QAudioSink pulls from before Qt 6.11, which added the callback
+        // interface; macOS builds use Qt 6.10. The device reads the source in whole frames of
+        // 32-bit floating-point samples.
+        class SourceDevice : public QIODevice {
+        public:
+            SourceDevice(std::shared_ptr<AudioSource> source, int channels,
+                         std::shared_ptr<std::atomic<bool>> ended)
+                : m_source(std::move(source)), m_channels(channels), m_ended(std::move(ended)) {
+            }
+
+            bool isSequential() const override {
+                return true;
+            }
+
+            // Always ready: after its end the source reads as silence.
+            qint64 bytesAvailable() const override {
+                return QIODevice::bytesAvailable() + std::numeric_limits<qint32>::max();
+            }
+
+        protected:
+            qint64 readData(char *data, qint64 maxSize) override {
+                const qint64 frameBytes = qint64(sizeof(float)) * m_channels;
+                const qint64 frames = maxSize / frameBytes;
+                fill(*m_source, reinterpret_cast<float *>(data), frames, m_channels, *m_ended);
+                return frames * frameBytes;
+            }
+
+            qint64 writeData(const char *data, qint64 size) override {
+                Q_UNUSED(data);
+                Q_UNUSED(size);
+                return -1;
+            }
+
+        private:
+            std::shared_ptr<AudioSource> m_source;
+            int m_channels;
+            std::shared_ptr<std::atomic<bool>> m_ended;
+        };
+#endif
+
+    }
+
     class AudioOutput::Impl {
     public:
         explicit Impl(AudioOutput *decl) : _decl(decl) {
@@ -71,6 +128,9 @@ namespace hello::daw {
 
         AudioOutput *_decl;
         std::unique_ptr<QAudioSink> sink;
+#ifdef HELLOUTAU_AUDIO_PULL_DEVICE
+        std::unique_ptr<QIODevice> device;
+#endif
         // Set on the audio thread once the source has ended
         std::shared_ptr<std::atomic<bool>> ended;
         QTimer poll;
@@ -133,14 +193,15 @@ namespace hello::daw {
         _impl->ended = ended;
         _impl->draining = false;
         const int channels = format.channelCount();
+#ifdef HELLOUTAU_AUDIO_PULL_DEVICE
+        _impl->device = std::make_unique<SourceDevice>(std::move(source), channels, ended);
+        _impl->device->open(QIODevice::ReadOnly);
+        _impl->sink->start(_impl->device.get());
+#else
         _impl->sink->start([source = std::move(source), ended, channels](QSpan<float> buffer) {
-            const qsizetype frames = buffer.size() / channels;
-            const auto written = source->read(buffer.data(), frames, channels);
-            if (written < frames) {
-                std::fill(buffer.begin() + written * channels, buffer.end(), 0.0f);
-                ended->store(true);
-            }
+            fill(*source, buffer.data(), buffer.size() / channels, channels, *ended);
         });
+#endif
         if (_impl->sink->error() != QtAudio::NoError) {
             _impl->sink.reset();
             return fail(tr("The audio output device \"%1\" could not be started.")
@@ -158,6 +219,9 @@ namespace hello::daw {
         _impl->draining = false;
         _impl->sink->stop();
         _impl->sink.reset();
+#ifdef HELLOUTAU_AUDIO_PULL_DEVICE
+        _impl->device.reset();
+#endif
         _impl->ended.reset();
         Q_EMIT finished();
     }

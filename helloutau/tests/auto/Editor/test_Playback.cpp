@@ -227,8 +227,9 @@ private Q_SLOTS:
         QCOMPARE(playback.state(), Playback::Playing);
         const auto first = playback.position();
         QVERIFY(first);
-        // From the second note on: 500 ms into the track at 120, less its pre-utterance of 0
-        QCOMPARE(*first, 500.0);
+        // From the second note on: 500 ms into the track at 120, less its pre-utterance of 0,
+        // and no more ahead than a device that pulls a buffer as it starts has read
+        QVERIFY2(*first >= 500 && *first < 800, qPrintable(QString::number(*first)));
 
         QTRY_COMPARE_WITH_TIMEOUT(playback.state(), Playback::Stopped, 5000);
         QCOMPARE(states.size(), 2);

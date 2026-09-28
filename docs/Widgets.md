@@ -92,6 +92,7 @@
 
 - **设备输出**使用 Qt Multimedia 的 `QAudioSink` 回调接口（Qt 6.11 起提供）：回调在音频线程上执行，每次要求填充一段样本，即实时播放所需的拉取方式。Qt 文档注明该接口支持 Windows、macOS、Linux（PulseAudio 或 PipeWire）与 Android，并要求回调中不得阻塞、加锁或分配内存。
 - **采样率转换**使用 [r8brain-free-src](https://github.com/avaneev/r8brain-free-src)（标签 `version-6.5`，MIT 许可）。UTAU 的引擎输出 44100 Hz，设备常为 48000 Hz。ds-editor-lite 所用的 talcs 同样以它转换采样率。
+- Qt 6.11 之前没有回调接口（macOS 上构建用 Qt 6.10），`AudioOutput` 此时改用拉取模式：`QAudioSink` 从一个 `QIODevice` 读取，该设备同样调用 `AudioSource::read()`。拉取模式开始时设备先读满缓冲（Windows 上约 250 毫秒），试听的播放线因此在开头领先这一段。定义 `HELLOUTAU_AUDIO_PULL` 可在新版 Qt 上强制使用拉取模式以便检验。
 - 设备输出包装在 `HelloUtauAudio` 自己的接口之后。`QAudioSink` 的回调接口是新近加入的，若实测不能满足要求，可以更换为 SDL 而不影响上层。
 - 目前只须解码 wav，不引入 FFmpeg。将来导入伴奏等其他格式时再作决定。
 
