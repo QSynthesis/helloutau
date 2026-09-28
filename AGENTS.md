@@ -219,7 +219,7 @@ Markdown：
 ## 已知问题
 
 - **`sed -i` 会将 CRLF 转换为 LF**，而仓库中的行尾是混合的。修改前用 `grep -qU $'\r'` 判断，CRLF 文件改用编辑工具修改。
-- **增量构建时，带 `Q_OBJECT` 的头文件移到另一个目标后，AUTOMOC 可能不再为它生成代码**：CMake 已重新配置、`AutogenInfo.json` 已列出该头文件，但 autogen 的缓存认为无须重新扫描，链接时缺少 `staticMetaObject` 等符号。删除该目标的 `<目标名>_autogen` 目录与 `CMakeFiles/<目标名>_autogen.dir/ParseCache.txt` 后重新构建即可，从空目录构建不受影响。
+- **增量构建时，往已有目标中新增或移入带 `Q_OBJECT` 的头文件后，AUTOMOC 可能不为它生成代码**：CMake 已重新配置、`AutogenInfo.json` 已列出该头文件，但 autogen 的缓存认为无须重新扫描，链接时缺少 `staticMetaObject` 等符号。删除该目标的 `<目标名>_autogen` 目录与 `CMakeFiles/<目标名>_autogen.dir/ParseCache.txt` 后重新构建即可，从空目录构建不受影响。
 - **`sed` 的替换表达式必须带行号地址**，否则会进行全局替换，且后续表达式会匹配前面已修改的文本，导致层层嵌套。
 - **绝不使用 bash heredoc 编写脚本**，也不要经由 shell 传递含反斜杠的 C++ 文本或含日文的字符串，因为 shell 会去掉一层反斜杠。应先写入文件再执行。
 - **官方 UTAU 的站点使用 Shift_JIS**，用 `curl` 下载后须显式按 `cp932` 解码，不要让工具猜测。
