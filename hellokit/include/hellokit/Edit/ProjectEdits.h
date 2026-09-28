@@ -71,6 +71,14 @@ namespace hello::kit {
         /// with the note that sets it. See step 4 in docs/Widgets.md.
         Q_INVOKABLE static bool moveNotes(const NoteListRef &notes, int index, int count,
                                           int destination, DiagnosticList &diagnostics);
+
+        /// Replaces the Mode2 points of \a note with \a points. Only the points that differ are
+        /// written, so that the others keep their identity; points beyond the new ones are
+        /// removed, and new ones appended. The points must keep their order: from the second
+        /// on, none precedes the one before it.
+        Q_INVOKABLE static bool setPortamento(const NoteRef &note,
+                                              const QList<PortamentoPoint> &points,
+                                              DiagnosticList &diagnostics);
     };
 
 }

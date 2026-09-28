@@ -304,6 +304,22 @@ private Q_SLOTS:
         verifyRefused(session, QStringLiteral("note move /tracks/0/notes 0 1"));
     }
 
+    void note_portamento_replaces_the_points() {
+        ProjectSession session(richProject());
+        QVERIFY(run(session, QStringLiteral("note portamento /tracks/0/notes/1 "
+                                            "[{\"x\": -20, \"y\": 0}, "
+                                            "{\"x\": 20, \"y\": -50, \"type\": \"R\"}]")));
+        const auto points = noteAt(session, 1).portamento;
+        QCOMPARE(points.size(), 2);
+        QCOMPARE(points[1].x, 20.0);
+        QCOMPARE(points[1].y, -50.0);
+        QCOMPARE(points[1].type, PortamentoPoint::R);
+        verifyRefused(session, QStringLiteral("note portamento /tracks/0/notes/1 {}"));
+        verifyRefused(session, QStringLiteral("note portamento /tracks/0/notes/1 [1]"));
+        verifyRefused(session, QStringLiteral("note portamento /tracks/0/notes/1 "
+                                              "[{\"x\": 0}, {\"x\": -10}]"));
+    }
+
     // Acceptance criteria 3 and 4 of docs/Editing.md: undoing every command restores the
     // project, redoing every command restores the edited project, and the same commands produce
     // the same changes in another session.
@@ -462,13 +478,14 @@ private Q_SLOTS:
     }
 
     void names_lists_every_command() {
-        QCOMPARE(ProjectCommands::names(),
-                 QStringList({QStringLiteral("set"), QStringLiteral("insert"),
-                              QStringLiteral("remove"), QStringLiteral("move"),
-                              QStringLiteral("replace"), QStringLiteral("note transpose"),
-                              QStringLiteral("note split"), QStringLiteral("note insert"),
-                              QStringLiteral("note tempo"), QStringLiteral("note remove"),
-                              QStringLiteral("note length"), QStringLiteral("note move")}));
+        QCOMPARE(
+            ProjectCommands::names(),
+            QStringList({QStringLiteral("set"), QStringLiteral("insert"), QStringLiteral("remove"),
+                         QStringLiteral("move"), QStringLiteral("replace"),
+                         QStringLiteral("note transpose"), QStringLiteral("note split"),
+                         QStringLiteral("note insert"), QStringLiteral("note tempo"),
+                         QStringLiteral("note remove"), QStringLiteral("note length"),
+                         QStringLiteral("note move"), QStringLiteral("note portamento")}));
     }
 };
 

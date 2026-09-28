@@ -189,6 +189,10 @@ namespace hello::kit {
 
         Type type = S;
 
+        inline bool operator==(const PortamentoPoint &RHS) const {
+            return x == RHS.x && y == RHS.y && type == RHS.type;
+        }
+
         /// Converts a height in tenths of a semitone, as \c PBS and \c PBY write it, to cents.
         /// The result is rounded to a millionth of a cent, so that a decimal read from a file
         /// gives the same decimal in cents rather than a value that differs in the last binary

@@ -122,4 +122,30 @@ namespace hello::kit {
         notes.move(index, count, destination);
         return transaction.commit(diagnostics);
     }
+
+    bool ProjectEdits::setPortamento(const NoteRef &note, const QList<PortamentoPoint> &points,
+                                     DiagnosticList &diagnostics) {
+        auto transaction = note.session()->transaction(tr("Change Pitch"));
+        const auto list = note.portamento();
+        const int kept = std::min(list.size(), int(points.size()));
+        for (int i = 0; i < kept; ++i) {
+            const auto point = list.at(i);
+            const auto &wanted = points[i];
+            if (point.x() != wanted.x) {
+                point.setX(wanted.x);
+            }
+            if (point.y() != wanted.y) {
+                point.setY(wanted.y);
+            }
+            if (point.type() != wanted.type) {
+                point.setType(wanted.type);
+            }
+        }
+        if (list.size() > kept) {
+            list.remove(kept, list.size() - kept);
+        } else if (points.size() > kept) {
+            list.insert(kept, points.mid(kept));
+        }
+        return transaction.commit(diagnostics);
+    }
 }

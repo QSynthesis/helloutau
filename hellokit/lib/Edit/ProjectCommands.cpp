@@ -1,5 +1,6 @@
 #include "ProjectCommands.h"
 
+#include <QtCore/QJsonArray>
 #include <QtCore/QJsonObject>
 
 #include <hellokit/EditBase/CommandSyntax.h>
@@ -203,6 +204,35 @@ namespace hello::kit {
             return ProjectEdits::moveNotes(*notes, *index, *count, *destination, diagnostics);
         }
 
+        bool portamentoCommand(ProjectSession &session, const Arguments &arguments,
+                               DiagnosticList &diagnostics) {
+            if (arguments.size() != 2) {
+                return usage(diagnostics, "note portamento <note> <points>");
+            }
+            const auto note = noteAt(session, arguments[0], diagnostics);
+            if (!note) {
+                return false;
+            }
+            const auto json = edit::CommandSyntax::valueOf(arguments[1]);
+            if (!json.isArray()) {
+                return fail(diagnostics, ProjectCommands::tr("The points must be an array."));
+            }
+            QList<PortamentoPoint> points;
+            for (const auto &item : json.toArray()) {
+                if (!item.isObject()) {
+                    return fail(diagnostics, ProjectCommands::tr("Each point must be an object."));
+                }
+                // Converted through a tree, which checks each field against the field table.
+                const auto tree = edit::NodeCommands::treeOf(*projectRecordOf(PortamentoPointType),
+                                                             item.toObject(), diagnostics);
+                if (!tree) {
+                    return false;
+                }
+                points.push_back(edit::fromTree<PortamentoPoint>(tree.get()));
+            }
+            return ProjectEdits::setPortamento(*note, points, diagnostics);
+        }
+
         using DomainCommand = bool (*)(ProjectSession &, const Arguments &, DiagnosticList &);
 
         // The domain commands, each with the function of ProjectEdits that it calls.
@@ -213,13 +243,14 @@ namespace hello::kit {
         };
 
         constexpr NoteCommand noteCommands[] = {
-            {"transpose", transposeCommand, "transpose"  },
-            {"split",     splitCommand,     "splitNote"  },
-            {"insert",    insertCommand,    "insertNote" },
-            {"tempo",     tempoCommand,     "setTempo"   },
-            {"remove",    removeCommand,    "removeNotes"},
-            {"length",    lengthCommand,    "setLength"  },
-            {"move",      moveCommand,      "moveNotes"  },
+            {"transpose",  transposeCommand,  "transpose"    },
+            {"split",      splitCommand,      "splitNote"    },
+            {"insert",     insertCommand,     "insertNote"   },
+            {"tempo",      tempoCommand,      "setTempo"     },
+            {"remove",     removeCommand,     "removeNotes"  },
+            {"length",     lengthCommand,     "setLength"    },
+            {"move",       moveCommand,       "moveNotes"    },
+            {"portamento", portamentoCommand, "setPortamento"},
         };
 
         bool run(ProjectSession &session, const Arguments &arguments, DiagnosticList &diagnostics) {
@@ -233,8 +264,9 @@ namespace hello::kit {
             }
             if (arguments.size() < 2 || arguments[1].kind != edit::CommandArgument::Word) {
                 return fail(diagnostics,
-                            ProjectCommands::tr("The command note requires a verb: transpose, "
-                                                "split, insert, tempo, remove, length or move."));
+                            ProjectCommands::tr(
+                                "The command note requires a verb: transpose, "
+                                "split, insert, tempo, remove, length, move or portamento."));
             }
             const auto verb = arguments[1].text();
             for (const auto &command : noteCommands) {
