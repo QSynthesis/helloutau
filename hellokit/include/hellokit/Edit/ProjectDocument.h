@@ -17,6 +17,9 @@
 
 namespace hello::kit {
 
+    class VoiceBank;
+    class VoiceBankCharsetSelector;
+
     /// Chooses the encoding of a UST that does not state it, by asking the user. Implemented by
     /// the side that links QtWidgets, as \c VoiceBankCharsetSelector is.
     class HELLOKIT_EDIT_EXPORT UstCharsetSelector {
@@ -82,11 +85,38 @@ namespace hello::kit {
         bool exportUst(const std::filesystem::path &path, UstDocument::ExportOptions options,
                        DiagnosticList &diagnostics) const;
 
+        /// The voice bank of the track as last read by loadVoiceBank(), or \c nullptr if none
+        /// was read.
+        ///
+        /// A snapshot: later changes of the voice bank on disk do not affect it, as a project
+        /// open in UTAU is not affected either. See the section on changes on disk in
+        /// docs/Editing.md.
+        std::shared_ptr<const VoiceBank> voiceBank() const;
+
+        /// Reads the voice bank that the \c voiceDir of the track denotes, resolved against
+        /// \a utauDirectory as by Track::voiceDirectory(), and makes it voiceBank().
+        ///
+        /// A directory whose encoding nothing on disk determines is read in the encoding that
+        /// \a selector returns, and that encoding is recorded in the directory at once, so that
+        /// the user is asked only once. The files of the voice bank are otherwise left as they
+        /// are. Failing to record it is reported as a warning, since the voice bank is read
+        /// nonetheless.
+        ///
+        /// \param selector may be null, in which case such a directory is left out, see
+        ///        VoiceBank::open()
+        /// \return whether a voice bank was read. voiceBank() is \c nullptr otherwise, and
+        ///         \a diagnostics holds the reason unless the track names no voice bank.
+        bool loadVoiceBank(const std::filesystem::path &utauDirectory,
+                           VoiceBankCharsetSelector *selector, DiagnosticList &diagnostics);
+
     Q_SIGNALS:
         void modifiedChanged(bool modified);
 
         /// Emitted when filePath() changes, on saveAs().
         void filePathChanged();
+
+        /// Emitted when voiceBank() changes, on loadVoiceBank().
+        void voiceBankChanged();
 
     private:
         ProjectDocument(const Project &project, const std::filesystem::path &sourcePath,

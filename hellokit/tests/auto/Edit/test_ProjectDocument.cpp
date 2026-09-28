@@ -7,6 +7,7 @@
 
 #include <hellokit/Edit/ProjectDocument.h>
 #include <hellokit/Edit/ProjectRefs.h>
+#include <hellokit/VoiceBank/VoiceBank.h>
 
 using namespace hello::kit;
 namespace fs = std::filesystem;
@@ -23,6 +24,24 @@ namespace {
                                              const fs::path &path) override {
             Q_UNUSED(ust);
             asked.push_back(path);
+            return answer;
+        }
+
+        std::optional<QString> answer;
+        QList<fs::path> asked;
+    };
+
+    // Answers every directory with a fixed encoding, or declines when it has none, and records
+    // each directory asked about.
+    class FixedVoiceBankSelector : public VoiceBankCharsetSelector {
+    public:
+        explicit FixedVoiceBankSelector(std::optional<QString> answer) : answer(std::move(answer)) {
+        }
+
+        std::optional<QString> selectCharset(const VoiceBankDirectorySource &directory,
+                                             DiagnosticList &diagnostics) override {
+            Q_UNUSED(diagnostics);
+            asked.push_back(directory.path);
             return answer;
         }
 
@@ -64,6 +83,34 @@ namespace {
         Project project;
         project.tracks.push_back(track);
         return project;
+    }
+
+    // The oto.ini of a voice bank as UTAU users write it, which states no encoding; the alias is
+    // あ in Shift_JIS
+    const QByteArray unstatedOto("a.wav=\x82\xa0,0,0,0,0,0\r\n");
+
+    // A UTAU folder under \a dir with a voice bank "bank" in its voice folder, holding
+    // unstatedOto; returns the UTAU folder.
+    fs::path utauWithVoiceBank(const QTemporaryDir &dir) {
+        const auto utau = pathIn(dir, "utau");
+        const auto bank = utau / "voice" / "bank";
+        fs::create_directories(bank);
+        writeBytes(bank / "oto.ini", unstatedOto);
+        writeBytes(bank / "a.wav", {});
+        return utau;
+    }
+
+    // A document whose track sings with \a voiceDir
+    std::unique_ptr<ProjectDocument> singingWith(const QTemporaryDir &dir,
+                                                 const QString &voiceDir) {
+        auto project = oneNote();
+        project.tracks[0].voiceDir = voiceDir;
+        const auto path = pathIn(dir, "song.usth");
+        DiagnosticList diagnostics;
+        if (!project.save(path, diagnostics)) {
+            return nullptr;
+        }
+        return ProjectDocument::open(path, nullptr, diagnostics);
     }
 
     void rename(ProjectDocument &document, const QString &voiceDir) {
@@ -200,6 +247,96 @@ private Q_SLOTS:
         const auto bytes = readBytes(target);
         QVERIFY(bytes.contains("CacheDir=export.cache\r\n"));
         QVERIFY(bytes.contains("VoiceDir=changed\r\n"));
+    }
+
+    // The encoding chosen for a directory is recorded at once, so the next load asks nothing,
+    // and no other file of the voice bank is written.
+    void the_voice_bank_is_read_and_the_chosen_encoding_recorded() {
+        QTemporaryDir dir;
+        const auto utau = utauWithVoiceBank(dir);
+        const auto document = singingWith(dir, QStringLiteral("%VOICE%bank"));
+        QVERIFY(document);
+        QVERIFY(!document->voiceBank());
+
+        QSignalSpy spy(document.get(), &ProjectDocument::voiceBankChanged);
+        FixedVoiceBankSelector selector(QStringLiteral("Shift_JIS"));
+        DiagnosticList diagnostics;
+        QVERIFY(document->loadVoiceBank(utau, &selector, diagnostics));
+        QVERIFY(diagnostics.empty());
+        QCOMPARE(selector.asked, QList<fs::path>{fs::path()});
+        QCOMPARE(spy.count(), 1);
+        const auto bank = document->voiceBank();
+        QVERIFY(bank);
+        QVERIFY(bank->find(60, QString::fromUtf8("あ")));
+
+        const auto folder = utau / "voice" / "bank";
+        QVERIFY(fs::is_regular_file(folder / "hello-config.json"));
+        QCOMPARE(readBytes(folder / "oto.ini"), unstatedOto);
+
+        FixedVoiceBankSelector again(QStringLiteral("GBK"));
+        QVERIFY(document->loadVoiceBank(utau, &again, diagnostics));
+        QVERIFY(again.asked.isEmpty());
+        QVERIFY(document->voiceBank()->find(60, QString::fromUtf8("あ")));
+        QCOMPARE(spy.count(), 2);
+    }
+
+    // A directory the user declined is left out, and nothing is recorded for it.
+    void a_declined_directory_is_not_recorded() {
+        QTemporaryDir dir;
+        const auto utau = utauWithVoiceBank(dir);
+        const auto document = singingWith(dir, QStringLiteral("%VOICE%bank"));
+        QVERIFY(document);
+
+        FixedVoiceBankSelector selector(std::nullopt);
+        DiagnosticList diagnostics;
+        QVERIFY(document->loadVoiceBank(utau, &selector, diagnostics));
+        QVERIFY(!document->voiceBank()->find(60, QString::fromUtf8("あ")));
+        QVERIFY(!fs::exists(utau / "voice" / "bank" / "hello-config.json"));
+    }
+
+    // The voice bank is read even if the encoding cannot be recorded, which is only a warning.
+    void failing_to_record_the_encoding_is_a_warning() {
+        QTemporaryDir dir;
+        const auto utau = utauWithVoiceBank(dir);
+        fs::create_directory(utau / "voice" / "bank" / "hello-config.json");
+        const auto document = singingWith(dir, QStringLiteral("%VOICE%bank"));
+        QVERIFY(document);
+
+        FixedVoiceBankSelector selector(QStringLiteral("Shift_JIS"));
+        DiagnosticList diagnostics;
+        QVERIFY(document->loadVoiceBank(utau, &selector, diagnostics));
+        QVERIFY(document->voiceBank()->find(60, QString::fromUtf8("あ")));
+        QVERIFY(!diagnostics.empty());
+        QVERIFY(!hasError(diagnostics));
+    }
+
+    void a_voice_bank_that_cannot_be_found_is_not_read() {
+        QTemporaryDir dir;
+        const auto utau = utauWithVoiceBank(dir);
+        FixedVoiceBankSelector selector(QStringLiteral("Shift_JIS"));
+
+        // Without a UTAU folder, a voice bank inside it cannot be located.
+        auto document = singingWith(dir, QStringLiteral("%VOICE%bank"));
+        QVERIFY(document);
+        DiagnosticList diagnostics;
+        QVERIFY(!document->loadVoiceBank({}, &selector, diagnostics));
+        QVERIFY(!document->voiceBank());
+        QVERIFY(!diagnostics.empty());
+
+        diagnostics.clear();
+        document = singingWith(dir, QStringLiteral("%VOICE%missing"));
+        QVERIFY(document);
+        QVERIFY(!document->loadVoiceBank(utau, &selector, diagnostics));
+        QVERIFY(!document->voiceBank());
+        QVERIFY(hasError(diagnostics));
+
+        // A track that names no voice bank is not an error.
+        diagnostics.clear();
+        document = singingWith(dir, QString());
+        QVERIFY(document);
+        QVERIFY(!document->loadVoiceBank(utau, &selector, diagnostics));
+        QVERIFY(diagnostics.empty());
+        QVERIFY(selector.asked.isEmpty());
     }
 
     void a_file_of_another_kind_is_refused() {

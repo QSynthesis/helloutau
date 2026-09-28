@@ -1,5 +1,9 @@
 #include "ProjectDocument.h"
 
+#include <QtCore/QDir>
+
+#include <hellokit/VoiceBank/VoiceBankFileSystemState.h>
+
 namespace hello::kit {
 
     namespace {
@@ -20,6 +24,35 @@ namespace hello::kit {
             diagnostics.push_back({DiagnosticSeverity::Error, message, std::nullopt});
         }
 
+        void warn(DiagnosticList &diagnostics, const QString &message) {
+            diagnostics.push_back({DiagnosticSeverity::Warning, message, std::nullopt});
+        }
+
+        QString displayed(const std::filesystem::path &path) {
+            return QDir::toNativeSeparators(QString::fromStdU16String(path.u16string()));
+        }
+
+        // Passes each question on, and records the directories for which the user chose an
+        // encoding.
+        class RecordingSelector : public VoiceBankCharsetSelector {
+        public:
+            explicit RecordingSelector(VoiceBankCharsetSelector *selector) : m_selector(selector) {
+            }
+
+            std::optional<QString> selectCharset(const VoiceBankDirectorySource &directory,
+                                                 DiagnosticList &diagnostics) override {
+                auto charset = m_selector->selectCharset(directory, diagnostics);
+                if (charset) {
+                    chosen.push_back(directory.path);
+                }
+                return charset;
+            }
+
+            QList<std::filesystem::path> chosen;
+
+        private:
+            VoiceBankCharsetSelector *m_selector;
+        };
     }
 
     UstCharsetSelector::~UstCharsetSelector() = default;
@@ -39,6 +72,7 @@ namespace hello::kit {
         std::filesystem::path filePath;
         int savedStep;
         bool modified = false;
+        std::shared_ptr<const VoiceBank> voiceBank;
 
         void updateModified() {
             const bool now = session.currentStep() != savedStep;
@@ -158,4 +192,62 @@ namespace hello::kit {
         return ust && ust->save(path, diagnostics);
     }
 
+    std::shared_ptr<const VoiceBank> ProjectDocument::voiceBank() const {
+        return _impl->voiceBank;
+    }
+
+    bool ProjectDocument::loadVoiceBank(const std::filesystem::path &utauDirectory,
+                                        VoiceBankCharsetSelector *selector,
+                                        DiagnosticList &diagnostics) {
+        const auto set = [this](std::shared_ptr<const VoiceBank> bank) {
+            if (bank != _impl->voiceBank) {
+                _impl->voiceBank = std::move(bank);
+                Q_EMIT voiceBankChanged();
+            }
+        };
+
+        const auto track = _impl->session.snapshot().tracks.value(0);
+        if (track.voiceDir.isEmpty()) {
+            set(nullptr);
+            return false;
+        }
+        const auto root = track.voiceDirectory(utauDirectory);
+        if (root.empty()) {
+            warn(diagnostics, tr("The voice bank \"%1\" is in the UTAU folder, which is not set.")
+                                  .arg(track.voiceDir));
+            set(nullptr);
+            return false;
+        }
+
+        RecordingSelector recording(selector);
+        auto opened =
+            VoiceBankFileSystemState::open(root, selector ? &recording : nullptr, diagnostics);
+        if (!opened) {
+            set(nullptr);
+            return false;
+        }
+
+        // Saving writes only the configuration of each remembered directory, since nothing else
+        // changed since it was read.
+        if (!recording.chosen.isEmpty()) {
+            for (const auto &directory : std::as_const(recording.chosen)) {
+                opened->files.rememberCharset(directory);
+            }
+            DiagnosticList saving;
+            if (!opened->files.save(opened->bank, saving)) {
+                warn(diagnostics, tr("The chosen encoding could not be recorded in \"%1\", so it "
+                                     "will be asked again next time.")
+                                      .arg(displayed(root)));
+                for (auto &diagnostic : saving) {
+                    if (diagnostic.severity == DiagnosticSeverity::Error) {
+                        diagnostic.severity = DiagnosticSeverity::Warning;
+                    }
+                    diagnostics.push_back(std::move(diagnostic));
+                }
+            }
+        }
+
+        set(std::make_shared<const VoiceBank>(std::move(opened->bank)));
+        return true;
+    }
 }
