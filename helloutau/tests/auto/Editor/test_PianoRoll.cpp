@@ -522,8 +522,8 @@ private Q_SLOTS:
     }
 
     // A point moves in time and height in one step; the first point after a sung note and the
-    // last one move only in time, and no point passes a neighbour.
-    void a_point_is_dragged_within_its_neighbours() {
+    // last one move only in time, and a point passes its neighbours into its place in time.
+    void a_point_is_dragged_past_its_neighbours() {
         kit::ProjectSession session(bentNotes());
         PianoRoll roll(&session);
         showExactly(roll);
@@ -545,11 +545,54 @@ private Q_SLOTS:
         QCOMPARE(points[0].x, -30.0);
         QCOMPARE(points[0].y, 0.0);
 
-        // The last point does not pass the second, which stays at 50 ms.
+        // The last point passes the second, at 50 ms, keeping its height, and stays selected.
         dragPoint(roll, pointOfLi(roll, 60, 0), pointOfLi(roll, 0, 100));
         points = pointsOfLi(session);
+        QCOMPARE(points[1].x, 0.0);
+        QCOMPARE(points[1].y, 0.0);
         QCOMPARE(points[2].x, 50.0);
-        QCOMPARE(points[2].y, 0.0);
+        QCOMPARE(points[2].y, 200.0);
+        QCOMPARE(roll.selectedPoints(), (QList<std::pair<int, int>>{
+                                            {1, 1}
+        }));
+    }
+
+    // The points of the note under the pointer are drawn plainly, those of the others faintly:
+    // a plain point is filled, a faint one is only a thin ring through which the portamento
+    // shows.
+    void the_points_of_the_note_under_the_pointer_stand_out() {
+        kit::ProjectSession session(bentNotes());
+        PianoRoll roll(&session);
+        roll.setPitchColor(QColor(255, 0, 255));
+        roll.setWhiteRowColor(QColor(0, 255, 0));
+        showExactly(roll);
+        const auto viewport = roll.view()->viewport();
+        // Sent directly, since a synthesized move does not always reach the viewport
+        const auto hoverAt = [viewport](QPoint position) {
+            QMouseEvent move(QEvent::MouseMove, position, viewport->mapToGlobal(position),
+                             Qt::NoButton, Qt::NoButton, Qt::NoModifier);
+            QApplication::sendEvent(viewport, &move);
+        };
+        const auto centerIs = [&](QColor color) {
+            const auto pixel = viewport->grab().toImage().pixelColor(pointOfLi(roll, 0, 100));
+            return qAbs(pixel.red() - color.red()) < 80 &&
+                   qAbs(pixel.green() - color.green()) < 80 &&
+                   qAbs(pixel.blue() - color.blue()) < 80;
+        };
+
+        // Nothing is hovered or selected: every point is plain.
+        QVERIFY(centerIs(QColor(0, 255, 0)));
+
+        hoverAt(pointOfLi(roll, -300, -200));
+        QVERIFY(centerIs(QColor(255, 0, 255)));
+
+        hoverAt(pointOfLi(roll, 250, 0));
+        QVERIFY(centerIs(QColor(0, 255, 0)));
+
+        // A selected note keeps its points plain while the pointer is elsewhere.
+        roll.setSelectedIndices({1});
+        hoverAt(pointOfLi(roll, -300, -200));
+        QVERIFY(centerIs(QColor(0, 255, 0)));
     }
 
     // Any point may lie before the start of its note, not only the first.
@@ -563,8 +606,7 @@ private Q_SLOTS:
         QCOMPARE(session.undoMessage(), PianoRoll::tr("Move Pitch Points"));
     }
 
-    // Selected points move together, by as much as the one nearest to a neighbour that stays
-    // allows.
+    // Selected points move together by the same time, passing the others, and stay selected.
     void selected_points_move_together() {
         kit::ProjectSession session(bentNotes());
         PianoRoll roll(&session);
@@ -576,9 +618,14 @@ private Q_SLOTS:
         });
         dragPoint(roll, pointOfLi(roll, 0, 100), pointOfLi(roll, 100, 100));
         const auto points = pointsOfLi(session);
-        QCOMPARE(points[0].x, 0.0);
+        QCOMPARE(points[0].x, 40.0);
         QCOMPARE(points[1].x, 60.0);
-        QCOMPARE(points[2].x, 60.0);
+        QCOMPARE(points[2].x, 100.0);
+        QCOMPARE(points[2].y, 100.0);
+        QCOMPARE(roll.selectedPoints(), (QList<std::pair<int, int>>{
+                                            {1, 0},
+                                            {1, 2}
+        }));
     }
 
     // Shift snaps the time to another point of the note, Ctrl the height to 50 cents; Escape

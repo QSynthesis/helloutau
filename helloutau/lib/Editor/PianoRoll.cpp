@@ -9,6 +9,7 @@
 #include <QtCore/QSet>
 #include <QtCore/QTimer>
 #include <QtGui/QKeyEvent>
+#include <QtGui/QMouseEvent>
 #include <QtGui/QPainter>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QComboBox>
@@ -68,6 +69,10 @@ namespace hello::daw {
         // pixels; by default a double click inserts one within this distance of the portamento.
         // See PianoRoll::pointGrip() and PianoRoll::curveGrip().
         constexpr double PointRadius = 3.5;
+
+        // The points of the notes not stressed are drawn with this radius and opacity.
+        constexpr double FaintPointRadius = 2.5;
+        constexpr float FaintPointAlpha = 0.4f;
         constexpr double DefaultPointGrip = 6;
         constexpr double DefaultCurveGrip = 5;
 
@@ -96,6 +101,28 @@ namespace hello::daw {
             qint64 start = 0;
             int length = 0;
             int key = 0;
+        };
+
+        // Reports where the pointer is over a widget, and none once it leaves
+        class PointerTracker : public QObject {
+        public:
+            PointerTracker(QWidget *widget, std::function<void(std::optional<QPointF>)> moved)
+                : QObject(widget), m_moved(std::move(moved)) {
+                widget->installEventFilter(this);
+            }
+
+        protected:
+            bool eventFilter(QObject *watched, QEvent *event) override {
+                if (event->type() == QEvent::MouseMove) {
+                    m_moved(static_cast<QMouseEvent *>(event)->position());
+                } else if (event->type() == QEvent::Leave) {
+                    m_moved(std::nullopt);
+                }
+                return QObject::eventFilter(watched, event);
+            }
+
+        private:
+            std::function<void(std::optional<QPointF>)> m_moved;
         };
 
         // The editor of a lyric, which reports the keys that end the editing.
@@ -242,6 +269,48 @@ namespace hello::daw {
             }
             view->viewport()->update();
             Q_EMIT _decl->selectionChanged();
+        }
+
+        // The note under the pointer, whose points are stressed with those of the selection
+        int hovered = -1;
+
+        // The notes whose points are drawn plainly, the others' faintly: the one under the
+        // pointer, the selected ones and those of the selected points. None if there are none,
+        // and then every point is drawn plainly.
+        QSet<int> stressedNotes() const {
+            QSet<int> result;
+            if (hovered >= 0) {
+                result.insert(hovered);
+            }
+            for (int i = 0; i < timeline->noteCount(); ++i) {
+                if (selection.contains(timeline->note(i).id)) {
+                    result.insert(i);
+                }
+            }
+            const auto points = selectedPointIndices();
+            for (auto it = points.begin(); it != points.end(); ++it) {
+                result.insert(it.key());
+            }
+            return result;
+        }
+
+        // Follows the pointer: the note of the point under it, or else the note at its time
+        void hover(std::optional<QPointF> position) {
+            int note = -1;
+            if (position && pitchVisible) {
+                if (const auto hit = view->hitAt(*position); hit && hit->part == PitchPoint) {
+                    note = indexOf(hit->node);
+                } else {
+                    note = timeline->noteAt(view->timeAxis().toTick(position->x()));
+                    if (note >= timeline->noteCount() || (note >= 0 && timeline->note(note).rest)) {
+                        note = -1;
+                    }
+                }
+            }
+            if (note != hovered) {
+                hovered = note;
+                view->viewport()->update();
+            }
         }
 
         // Selects the points ids; selecting a point clears the selected notes.
@@ -854,14 +923,26 @@ namespace hello::daw {
             }
 
             // The points, also those of the next note, which may lie before it: filled where
-            // they only move in time, and in the selection color where selected
+            // they only move in time, and in the selection color where selected. Those of the
+            // notes not stressed are smaller and faint, so that the points of a note stand out.
+            const auto stressed = m_roll->stressedNotes();
+            auto faintColor = decl->pitchColor();
+            faintColor.setAlphaF(faintColor.alphaF() * FaintPointAlpha);
             for (int i = begin; i < last; ++i) {
                 if (timeline->note(i).rest) {
                     continue;
                 }
+                const bool faint = !stressed.isEmpty() && !stressed.contains(i);
                 const auto &points = notes.at(i - first).portamento;
                 const auto list = refs.at(i).portamento();
                 for (int j = 0; j < points.size(); ++j) {
+                    const auto center = m_roll->positionOf(i, j, points[j]);
+                    if (faint) {
+                        painter.setPen(QPen(faintColor, 1));
+                        painter.setBrush(Qt::NoBrush);
+                        painter.drawEllipse(center, FaintPointRadius, FaintPointRadius);
+                        continue;
+                    }
                     const bool selected =
                         j < list.size() && m_roll->selectedPoints.contains(list.at(j).id());
                     const bool fixed = m_roll->heightFixed(i, j, int(points.size()));
@@ -870,8 +951,7 @@ namespace hello::daw {
                     painter.setBrush(selected
                                          ? decl->selectionColor()
                                          : (fixed ? decl->pitchColor() : decl->whiteRowColor()));
-                    painter.drawEllipse(m_roll->positionOf(i, j, points[j]), PointRadius,
-                                        PointRadius);
+                    painter.drawEllipse(center, PointRadius, PointRadius);
                 }
             }
 
@@ -1382,8 +1462,9 @@ namespace hello::daw {
         }
     };
 
-    // A drag of the selected points, all by the same time and height. No point passes a
-    // neighbour that stays, and the heights that are fixed stay (heightFixed()). Shift snaps the
+    // A drag of the selected points, all by the same time and height. The points of a note are
+    // kept in time order, a moving point passing the others, and the heights that are fixed stay
+    // (heightFixed(), by the place of a point before the drag). Shift snaps the
     // pressed point to the time of another point of its note, Ctrl its height to PitchSnap.
     class PianoRoll::Impl::PointGesture : public SceneGesture {
     public:
@@ -1423,42 +1504,40 @@ namespace hello::daw {
             if (modifiers & Qt::ControlModifier) {
                 cents = std::round((pressed.y + cents) / PitchSnap) * PitchSnap - pressed.y;
             }
-            for (auto it = m_moving.begin(); it != m_moving.end(); ++it) {
-                const int index = it.key();
-                const auto &points = m_original[index];
-                for (const int j : it.value()) {
-                    if (j > 0 && !it.value().contains(j - 1)) {
-                        ticks =
-                            std::max(ticks, m_roll->ticksOf(points[j - 1].x - points[j].x, index));
-                    }
-                    if (j + 1 < points.size() && !it.value().contains(j + 1)) {
-                        ticks =
-                            std::min(ticks, m_roll->ticksOf(points[j + 1].x - points[j].x, index));
-                    }
-                }
-            }
 
+            // The points of each note in time order again, the moving ones passing the others;
+            // where a moving point ends up is kept for selecting it afterwards.
             m_roll->pointPreview.clear();
+            m_moved.clear();
             for (auto it = m_moving.begin(); it != m_moving.end(); ++it) {
                 const int index = it.key();
-                auto points = m_original[index];
-                const int count = int(points.size());
-                for (const int j : it.value()) {
-                    // To a tenth of a millisecond and a cent, within the neighbours that stay
-                    auto x =
-                        std::round((points[j].x + m_roll->millisecondsOf(ticks, index)) * 10) / 10;
-                    if (j > 0 && !it.value().contains(j - 1)) {
-                        x = std::max(x, points[j - 1].x);
+                const auto &original = m_original[index];
+                const int count = int(original.size());
+                QList<std::pair<kit::PortamentoPoint, bool>> points;
+                for (int j = 0; j < count; ++j) {
+                    auto point = original[j];
+                    const bool moving = it.value().contains(j);
+                    if (moving) {
+                        // To a tenth of a millisecond and a cent
+                        point.x =
+                            std::round((point.x + m_roll->millisecondsOf(ticks, index)) * 10) / 10;
+                        if (!m_roll->heightFixed(index, j, count)) {
+                            point.y = std::round(point.y + cents);
+                        }
                     }
-                    if (j + 1 < count && !it.value().contains(j + 1)) {
-                        x = std::min(x, points[j + 1].x);
-                    }
-                    points[j].x = x;
-                    if (!m_roll->heightFixed(index, j, count)) {
-                        points[j].y = std::round(points[j].y + cents);
+                    points.push_back({point, moving});
+                }
+                std::stable_sort(points.begin(), points.end(), [](const auto &a, const auto &b) {
+                    return a.first.x < b.first.x;
+                });
+                QList<kit::PortamentoPoint> sorted;
+                for (int j = 0; j < count; ++j) {
+                    sorted.push_back(points[j].first);
+                    if (points[j].second) {
+                        m_moved[index].insert(j);
                     }
                 }
-                m_roll->pointPreview.insert(index, points);
+                m_roll->pointPreview.insert(index, sorted);
             }
             m_roll->view->viewport()->update();
         }
@@ -1476,10 +1555,23 @@ namespace hello::daw {
             }
             m_roll->pointPreview.clear();
             m_roll->view->viewport()->update();
-            if (!changed.isEmpty()) {
-                kit::DiagnosticList diagnostics;
-                m_roll->writePoints(PianoRoll::tr("Move Pitch Points"), changed, diagnostics);
+            if (changed.isEmpty()) {
+                return;
             }
+            kit::DiagnosticList diagnostics;
+            if (!m_roll->writePoints(PianoRoll::tr("Move Pitch Points"), changed, diagnostics)) {
+                return;
+            }
+            // The same points stay selected where the order put them.
+            QSet<kit::edit::NodeId> ids;
+            const auto refs = m_roll->notes();
+            for (auto it = m_moved.begin(); it != m_moved.end(); ++it) {
+                const auto list = refs.at(it.key()).portamento();
+                for (const int j : it.value()) {
+                    ids.insert(list.at(j).id());
+                }
+            }
+            m_roll->selectPoints(ids);
         }
 
         void cancel() override {
@@ -1496,6 +1588,8 @@ namespace hello::daw {
         // The points that move, by note index, and the points of those notes before the drag
         QHash<int, QSet<int>> m_moving;
         QHash<int, QList<kit::PortamentoPoint>> m_original;
+        // Where the moving points are in the points shown, by note index
+        QHash<int, QSet<int>> m_moved;
 
         void start() {
             m_dragging = true;
@@ -1770,6 +1864,8 @@ namespace hello::daw {
         _impl->view->addLayer(std::make_unique<Impl::NoteLayer>(_impl.get()));
         _impl->view->addLayer(std::make_unique<Impl::PitchLayer>(_impl.get()));
         _impl->view->addLayer(std::make_unique<Impl::OverlayLayer>(_impl.get()));
+        new PointerTracker(_impl->view->viewport(),
+                           [this](std::optional<QPointF> position) { _impl->hover(position); });
 
         _impl->quantizer = new QComboBox();
         _impl->quantizer->setToolTip(tr("Quantization"));
