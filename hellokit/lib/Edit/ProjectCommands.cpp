@@ -233,6 +233,30 @@ namespace hello::kit {
             return ProjectEdits::setPortamento(*note, points, diagnostics);
         }
 
+        bool vibratoCommand(ProjectSession &session, const Arguments &arguments,
+                            DiagnosticList &diagnostics) {
+            if (arguments.size() < 2) {
+                return usage(diagnostics, "note vibrato <vibrato or null> <note>...");
+            }
+            const auto json = edit::CommandSyntax::valueOf(arguments[0]);
+            std::optional<Vibrato> vibrato;
+            if (json.isObject()) {
+                vibrato = Vibrato::fromJson(json.toObject());
+            } else if (!json.isNull()) {
+                return fail(diagnostics,
+                            ProjectCommands::tr("The vibrato must be an object or null."));
+            }
+            QList<NoteRef> notes;
+            for (const auto &argument : arguments.mid(1)) {
+                const auto note = noteAt(session, argument, diagnostics);
+                if (!note) {
+                    return false;
+                }
+                notes.push_back(*note);
+            }
+            return ProjectEdits::setVibrato(notes, vibrato, diagnostics);
+        }
+
         using DomainCommand = bool (*)(ProjectSession &, const Arguments &, DiagnosticList &);
 
         // The domain commands, each with the function of ProjectEdits that it calls.
@@ -251,6 +275,7 @@ namespace hello::kit {
             {"length",     lengthCommand,     "setLength"    },
             {"move",       moveCommand,       "moveNotes"    },
             {"portamento", portamentoCommand, "setPortamento"},
+            {"vibrato",    vibratoCommand,    "setVibrato"   },
         };
 
         bool run(ProjectSession &session, const Arguments &arguments, DiagnosticList &diagnostics) {
@@ -263,10 +288,11 @@ namespace hello::kit {
                                                    arguments.mid(1), diagnostics);
             }
             if (arguments.size() < 2 || arguments[1].kind != edit::CommandArgument::Word) {
-                return fail(diagnostics,
-                            ProjectCommands::tr(
-                                "The command note requires a verb: transpose, "
-                                "split, insert, tempo, remove, length, move or portamento."));
+                return fail(
+                    diagnostics,
+                    ProjectCommands::tr(
+                        "The command note requires a verb: transpose, "
+                        "split, insert, tempo, remove, length, move, portamento or vibrato."));
             }
             const auto verb = arguments[1].text();
             for (const auto &command : noteCommands) {

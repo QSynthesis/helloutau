@@ -79,6 +79,12 @@ namespace hello::kit {
         Q_INVOKABLE static bool setPortamento(const NoteRef &note,
                                               const QList<PortamentoPoint> &points,
                                               DiagnosticList &diagnostics);
+
+        /// Sets the vibrato of each of \a notes to \a vibrato, or removes it where \a vibrato is
+        /// empty. The notes must belong to one session.
+        Q_INVOKABLE static bool setVibrato(const QList<NoteRef> &notes,
+                                           const std::optional<Vibrato> &vibrato,
+                                           DiagnosticList &diagnostics);
     };
 
 }

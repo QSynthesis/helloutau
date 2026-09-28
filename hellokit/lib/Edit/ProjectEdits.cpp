@@ -148,4 +148,19 @@ namespace hello::kit {
         }
         return transaction.commit(diagnostics);
     }
+
+    bool ProjectEdits::setVibrato(const QList<NoteRef> &notes,
+                                  const std::optional<Vibrato> &vibrato,
+                                  DiagnosticList &diagnostics) {
+        if (notes.isEmpty()) {
+            return true;
+        }
+        auto transaction = notes.first().session()->transaction(tr("Change Vibrato"));
+        for (const auto &note : notes) {
+            if (note.vibrato() != vibrato) {
+                note.setVibrato(vibrato);
+            }
+        }
+        return transaction.commit(diagnostics);
+    }
 }

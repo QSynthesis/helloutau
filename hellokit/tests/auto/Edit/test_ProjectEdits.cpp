@@ -314,6 +314,30 @@ private Q_SLOTS:
         session.undo();
         QCOMPARE(session.snapshot().toJson(), project.toJson());
     }
+
+    void a_vibrato_is_set_on_several_notes_and_removed() {
+        const auto project = fiveNotes();
+        ProjectSession session(project);
+        const auto notes = notesOf(session);
+
+        Vibrato vibrato;
+        vibrato.length = 65;
+        vibrato.period = 180;
+        vibrato.amplitude = 35;
+        DiagnosticList diagnostics;
+        QVERIFY(ProjectEdits::setVibrato({notes.at(1), notes.at(3)}, vibrato, diagnostics));
+        QCOMPARE(notes.at(1).vibrato(), std::optional<Vibrato>(vibrato));
+        QCOMPARE(notes.at(3).vibrato(), std::optional<Vibrato>(vibrato));
+        QVERIFY(!notes.at(2).vibrato());
+        QCOMPARE(session.undoMessage(), ProjectEdits::tr("Change Vibrato"));
+        QCOMPARE(session.currentStep(), 1);
+
+        QVERIFY(ProjectEdits::setVibrato({notes.at(1)}, std::nullopt, diagnostics));
+        QVERIFY(!notes.at(1).vibrato());
+        session.undo();
+        session.undo();
+        QCOMPARE(session.snapshot().toJson(), project.toJson());
+    }
 };
 
 QTEST_APPLESS_MAIN(test_ProjectEdits)
