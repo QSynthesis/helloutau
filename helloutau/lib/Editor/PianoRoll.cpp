@@ -78,6 +78,13 @@ namespace hello::daw {
         // its start, when a point is inserted.
         constexpr double DefaultPortamento = 15;
 
+        // The trapezoid of a vibrato stands on a line this many rows below the pitch of its note,
+        // this many cents to a row high, and its period box hangs this many rows below that line
+        // (the form of OpenUtau).
+        constexpr double VibratoBaseline = 3;
+        constexpr double VibratoCentsPerRow = 50;
+        constexpr double VibratoBoxHeight = 0.5;
+
         QString tempoText(double tempo) {
             return QString::number(tempo, 'g', 6);
         }
@@ -149,6 +156,7 @@ namespace hello::daw {
         class BandGesture;
         class DrawGesture;
         class PointGesture;
+        class VibratoGesture;
 
         explicit Impl(PianoRoll *decl) : _decl(decl) {
         }
@@ -171,6 +179,8 @@ namespace hello::daw {
         QSet<kit::edit::NodeId> selectedPoints;
         // What a gesture shows instead of the points of some notes, by note index
         QHash<int, QList<kit::PortamentoPoint>> pointPreview;
+        // What a gesture shows instead of the vibrato of a note, by note index
+        QHash<int, kit::Vibrato> vibratoPreview;
         // The note from which Shift extends the selection
         kit::edit::NodeId anchor = 0;
 
@@ -295,6 +305,54 @@ namespace hello::daw {
                                      : point.y;
             return {view->timeAxis().toX(double(note.start) + ticksOf(point.x, index)),
                     view->keyAxis().toY(note.key + 0.5 + cents / 100)};
+        }
+
+        // The vibrato of note index, as a gesture shows it if it does
+        std::optional<kit::Vibrato> vibratoOf(int index) const {
+            if (const auto it = vibratoPreview.find(index); it != vibratoPreview.end()) {
+                return *it;
+            }
+            return notes().at(index).vibrato();
+        }
+
+        // Where the handles of a vibrato are drawn: its trapezoid, from the start of the
+        // vibrato up to the end of its fade-in, along its top to the start of its fade-out, and
+        // down to the end of the note; and the box of one period from its phase on
+        struct VibratoShape {
+            QPointF start;
+            QPointF fadeIn;
+            QPointF fadeOut;
+            QPointF end;
+            QRectF period;
+        };
+
+        std::optional<VibratoShape> vibratoShapeOf(int index) const {
+            const auto &note = timeline->note(index);
+            const auto vibrato = vibratoOf(index);
+            if (note.rest || !vibrato || vibrato->length <= 0) {
+                return std::nullopt;
+            }
+            const auto &time = view->timeAxis();
+            const auto &keys = view->keyAxis();
+            const double span = vibrato->length / 100 * note.length;
+            const double end = double(note.start + note.length);
+            const double start = end - span;
+            const double base = keys.toY(note.key + 0.5 - VibratoBaseline);
+            const double top = keys.toY(note.key + 0.5 - VibratoBaseline +
+                                        vibrato->amplitude / VibratoCentsPerRow);
+            const double period = ticksOf(vibrato->period, index);
+            const double from = start + vibrato->phase / 100 * period;
+
+            VibratoShape shape;
+            shape.start = {time.toX(start), base};
+            shape.fadeIn = {time.toX(start + vibrato->attack / 100 * span), top};
+            shape.fadeOut = {time.toX(end - vibrato->release / 100 * span), top};
+            shape.end = {time.toX(end), base};
+            shape.period =
+                QRectF(QPointF(time.toX(from), base),
+                       QPointF(time.toX(from + period),
+                               keys.toY(note.key + 0.5 - VibratoBaseline - VibratoBoxHeight)));
+            return shape;
         }
 
         // Writes the points of several notes, by index, in one step
@@ -731,6 +789,10 @@ namespace hello::daw {
                     it != m_roll->pointPreview.end()) {
                     notes.last().portamento = *it;
                 }
+                if (const auto it = m_roll->vibratoPreview.find(i);
+                    it != m_roll->vibratoPreview.end()) {
+                    notes.last().vibrato = *it;
+                }
             }
 
             const auto decl = m_roll->_decl;
@@ -812,6 +874,74 @@ namespace hello::daw {
                                         PointRadius);
                 }
             }
+
+            // The handles of the vibratos: the trapezoid with its top edge stressed, and the
+            // box of one period
+            for (int i = begin; i < end; ++i) {
+                const auto shape = m_roll->vibratoShapeOf(i);
+                if (!shape) {
+                    continue;
+                }
+                auto boxColor = decl->vibratoColor();
+                painter.setPen(QPen(boxColor, 1, Qt::DashLine));
+                boxColor.setAlphaF(boxColor.alphaF() * 0.2f);
+                painter.setBrush(boxColor);
+                painter.drawRect(shape->period);
+                painter.setBrush(Qt::NoBrush);
+                painter.setPen(QPen(decl->vibratoColor(), 1));
+                painter.drawPolyline(
+                    QPolygonF{shape->start, shape->fadeIn, shape->fadeOut, shape->end});
+                painter.setPen(QPen(decl->vibratoColor(), 2.5));
+                painter.drawLine(shape->fadeIn, shape->fadeOut);
+                painter.setPen(QPen(decl->vibratoColor(), 1.5));
+                painter.setBrush(decl->whiteRowColor());
+                for (const auto &handle : {shape->start, shape->fadeIn, shape->fadeOut}) {
+                    painter.drawEllipse(handle, PointRadius, PointRadius);
+                }
+                painter.setBrush(Qt::NoBrush);
+            }
+        }
+
+        // The handle of a vibrato at position, if any: its points first, then its top edge,
+        // the right edge of its period box and the inside of the box
+        std::optional<SceneHit> vibratoHitAt(QPointF position, int begin, int end) const {
+            const auto grip = m_roll->pointGrip;
+            const auto near = [grip, position](QPointF handle) {
+                return std::hypot(handle.x() - position.x(), handle.y() - position.y()) <= grip;
+            };
+            for (int i = begin; i < end; ++i) {
+                const auto shape = m_roll->vibratoShapeOf(i);
+                if (!shape) {
+                    continue;
+                }
+                SceneHit hit;
+                hit.node = m_roll->timeline->note(i).id;
+                hit.cursor = Qt::SizeHorCursor;
+                const auto period = shape->period;
+                const double left = std::min(shape->fadeIn.x(), shape->fadeOut.x());
+                const double right = std::max(shape->fadeIn.x(), shape->fadeOut.x());
+                if (near(shape->start)) {
+                    hit.part = VibratoStart;
+                } else if (near(shape->fadeIn)) {
+                    hit.part = VibratoFadeIn;
+                } else if (near(shape->fadeOut)) {
+                    hit.part = VibratoFadeOut;
+                } else if (position.x() >= left && position.x() <= right &&
+                           std::abs(position.y() - shape->fadeIn.y()) <= grip) {
+                    hit.part = VibratoDepth;
+                    hit.cursor = Qt::SizeVerCursor;
+                } else if (std::abs(position.x() - period.right()) <= grip &&
+                           position.y() >= period.top() - grip &&
+                           position.y() <= period.bottom() + grip) {
+                    hit.part = VibratoPeriod;
+                } else if (period.contains(position)) {
+                    hit.part = VibratoPhase;
+                } else {
+                    continue;
+                }
+                return hit;
+            }
+            return std::nullopt;
         }
 
         std::optional<SceneHit> hitTest(QPointF position) const override {
@@ -850,7 +980,11 @@ namespace hello::daw {
                     }
                 }
             }
-            return nearest;
+            if (nearest) {
+                return nearest;
+            }
+            // A period box may reach past the end of its note.
+            return vibratoHitAt(position, std::max(0, begin - 1), end);
         }
 
         std::unique_ptr<SceneGesture> press(const SceneHit &hit, QPointF position,
@@ -1373,6 +1507,91 @@ namespace hello::daw {
         }
     };
 
+    // A drag of a handle of the vibrato of a note (see Part). The values are whole numbers, as
+    // UTAU shows them, and the percentages lie between 0 and 100.
+    class PianoRoll::Impl::VibratoGesture : public SceneGesture {
+    public:
+        VibratoGesture(PianoRoll::Impl *roll, int index, int part, QPointF position)
+            : m_roll(roll), m_index(index), m_part(part), m_origin(position),
+              m_original(roll->vibratoOf(index).value_or(kit::Vibrato())) {
+        }
+
+        void move(QPointF position, Qt::KeyboardModifiers modifiers) override {
+            Q_UNUSED(modifiers);
+            const auto &time = m_roll->view->timeAxis();
+            const auto &keys = m_roll->view->keyAxis();
+            const double ticks = time.toTick(position.x()) - time.toTick(m_origin.x());
+            const double length = m_roll->timeline->note(m_index).length;
+            const double span = m_original.length / 100 * length;
+            const double period = m_roll->ticksOf(m_original.period, m_index);
+            const auto percent = [](double value) {
+                return std::clamp(std::round(value), 0.0, 100.0);
+            };
+
+            auto vibrato = m_original;
+            switch (m_part) {
+                case VibratoStart:
+                    vibrato.length = percent((span - ticks) / length * 100);
+                    break;
+                case VibratoFadeIn:
+                    if (span > 0) {
+                        vibrato.attack = percent(m_original.attack + ticks / span * 100);
+                    }
+                    break;
+                case VibratoFadeOut:
+                    if (span > 0) {
+                        vibrato.release = percent(m_original.release - ticks / span * 100);
+                    }
+                    break;
+                case VibratoDepth:
+                    vibrato.amplitude =
+                        std::max(0.0, std::round(m_original.amplitude + (keys.toKey(position.y()) -
+                                                                         keys.toKey(m_origin.y())) *
+                                                                            VibratoCentsPerRow));
+                    break;
+                case VibratoPeriod: {
+                    // The right edge of the box follows the pointer; the box starts at the
+                    // phase, a share of the period itself.
+                    const double share = 1 + m_original.phase / 100;
+                    vibrato.period = std::max(1.0, std::round(m_roll->millisecondsOf(
+                                                       (share * period + ticks) / share, m_index)));
+                    break;
+                }
+                case VibratoPhase:
+                    if (period > 0) {
+                        vibrato.phase = percent(m_original.phase + ticks / period * 100);
+                    }
+                    break;
+                default:
+                    break;
+            }
+            m_roll->vibratoPreview.insert(m_index, vibrato);
+            m_roll->view->viewport()->update();
+        }
+
+        void release(QPointF position, Qt::KeyboardModifiers modifiers) override {
+            move(position, modifiers);
+            const auto vibrato = m_roll->vibratoPreview.take(m_index);
+            m_roll->view->viewport()->update();
+            if (vibrato != m_original) {
+                kit::DiagnosticList diagnostics;
+                kit::ProjectEdits::setVibrato({m_roll->notes().at(m_index)}, vibrato, diagnostics);
+            }
+        }
+
+        void cancel() override {
+            m_roll->vibratoPreview.remove(m_index);
+            m_roll->view->viewport()->update();
+        }
+
+    private:
+        PianoRoll::Impl *m_roll;
+        int m_index;
+        int m_part;
+        QPointF m_origin;
+        kit::Vibrato m_original;
+    };
+
     std::unique_ptr<SceneGesture>
         PianoRoll::Impl::PitchLayer::press(const SceneHit &hit, QPointF position,
                                            Qt::MouseButton button,
@@ -1381,6 +1600,12 @@ namespace hello::daw {
         const int index = m_roll->indexOf(hit.node);
         if (index < 0) {
             return nullptr;
+        }
+        if (hit.part != PitchPoint) {
+            if (button != Qt::LeftButton) {
+                return nullptr;
+            }
+            return std::make_unique<VibratoGesture>(m_roll, index, hit.part, position);
         }
         const auto list = m_roll->notes().at(index).portamento();
         if (hit.index < 0 || hit.index >= list.size()) {

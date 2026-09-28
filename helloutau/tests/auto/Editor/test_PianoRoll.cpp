@@ -723,6 +723,46 @@ private Q_SLOTS:
         QCOMPARE(session.undoMessage(), PianoRoll::tr("Remove Vibrato"));
     }
 
+    // Each handle of the vibrato changes one value, rounded as UTAU shows it. With a pixel to a
+    // millisecond, the default vibrato of la spans 325 ms from 175 px to 500 px; its trapezoid
+    // stands on y 300 and is 35 / 50 rows high, its fades end at 240 px and begin at 435 px, and
+    // its period box spans 175 px to 355 px below it, down to y 312.
+    void the_handles_of_a_vibrato_change_its_values() {
+        const auto dragged = [this](QPoint from, QPoint to, double phase = 0) {
+            kit::Note la;
+            la.lyric = QStringLiteral("la");
+            la.length = 480;
+            la.noteNum = 60;
+            la.vibrato = VibratoDialog::defaultVibrato();
+            la.vibrato->phase = phase;
+            kit::Project project;
+            project.settings.tempo = 120;
+            project.tracks.push_back({});
+            project.tracks[0].notes = {la};
+            kit::ProjectSession session(project);
+            PianoRoll roll(&session);
+            showExactly(roll);
+            dragPoint(roll, from, to);
+            if (session.canUndo()) {
+                [&] { QCOMPARE(session.undoMessage(), kit::ProjectEdits::tr("Change Vibrato")); }();
+            }
+            return *session.snapshot().tracks[0].notes[0].vibrato;
+        };
+
+        QCOMPARE(dragged({175, 300}, {225, 300}).length, 55.0);
+        QCOMPARE(dragged({240, 283}, {305, 283}).attack, 40.0);
+        QCOMPARE(dragged({435, 283}, {403, 283}).release, 30.0);
+        QCOMPARE(dragged({337, 283}, {337, 259}).amplitude, 85.0);
+        QCOMPARE(dragged({355, 306}, {375, 306}).period, 200.0);
+        QCOMPARE(dragged({265, 306}, {301, 306}).phase, 20.0);
+        // At a phase of half a period the box spans 265 px to 445 px, and grows with the period.
+        QCOMPARE(dragged({445, 306}, {475, 306}, 50).period, 200.0);
+        // Nothing else changes.
+        auto expected = VibratoDialog::defaultVibrato();
+        expected.phase = 20;
+        QCOMPARE(dragged({265, 306}, {301, 306}), expected);
+    }
+
     // The distance from the portamento within which a double click inserts a point is a
     // property that a style sheet sets; beyond it the double click edits the lyric.
     void the_distance_to_the_portamento_is_a_property() {

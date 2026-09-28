@@ -70,6 +70,15 @@ namespace hello::daw {
             /// A Mode2 point, while the pitch is shown; SceneHit::index is its index in the
             /// note.
             PitchPoint,
+            /// The handles of a vibrato, while the pitch is shown: the start of its trapezoid,
+            /// which sets its length, the ends of its fades, its top edge, which sets its depth,
+            /// the right edge of its period box and the inside of the box, which sets its phase.
+            VibratoStart,
+            VibratoFadeIn,
+            VibratoFadeOut,
+            VibratoDepth,
+            VibratoPeriod,
+            VibratoPhase,
         };
 
         /// What a press on the background does.
