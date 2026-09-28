@@ -5,6 +5,8 @@
 #include <QtGui/QColor>
 #include <QtWidgets/QFrame>
 
+#include <helloutau/Theme/ThemeTypes.h>
+
 #include <helloutau/Widgets/CommandMatcher.h>
 #include <helloutau/Widgets/HelloUtauWidgetsGlobal.h>
 
@@ -25,12 +27,14 @@ namespace hello::daw {
     /// shortcut is triggered and when the focus leaves it. It follows the size of its window.
     ///
     /// The colors are properties that a style sheet can set; unset, they derive from the palette
-    /// of the widget. The shadow around the palette belongs to the style sheet as well.
+    /// of the widget. The shadow around the palette belongs to the style sheet as well, written
+    /// <tt>qproperty-shadow: qshadow(#40000000, 16px, 0 4px)</tt>; without it there is none.
     class HELLOUTAU_WIDGETS_EXPORT CommandPalette : public QFrame {
         Q_OBJECT
         Q_PROPERTY(QColor matchColor READ matchColor WRITE setMatchColor)
         Q_PROPERTY(QColor subtitleColor READ subtitleColor WRITE setSubtitleColor)
         Q_PROPERTY(QColor keyCapColor READ keyCapColor WRITE setKeyCapColor)
+        Q_PROPERTY(hello::daw::ThemeShadow shadow READ shadow WRITE setShadow)
     public:
         /// Creates a hidden palette over \a window.
         explicit CommandPalette(QWidget *window);
@@ -69,6 +73,10 @@ namespace hello::daw {
         QColor keyCapColor() const;
         void setKeyCapColor(const QColor &color);
 
+        /// The shadow around the palette, drawn by a QGraphicsDropShadowEffect.
+        ThemeShadow shadow() const;
+        void setShadow(const ThemeShadow &shadow);
+
     Q_SIGNALS:
         /// Emitted after the palette has closed, when the user chooses the command \a id.
         void commandActivated(const QString &id);
@@ -87,6 +95,7 @@ namespace hello::daw {
         QColor m_matchColor;
         QColor m_subtitleColor;
         QColor m_keyCapColor;
+        ThemeShadow m_shadow;
 
         void updateList();
         void place();

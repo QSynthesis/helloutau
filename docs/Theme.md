@@ -131,4 +131,19 @@ qtmediate 在样式表交给 Qt 之前做一次文本转换：
 | `ThemeReader` | 基本值的读取：颜色（`#RGB`、`#RRGGBB`、`#AARRGGBB`、颜色名、`rgb()`、`rgba()`、`hsv()`、`hsva()`、`hsl()`、`hsla()`）、像素尺寸（`1px`）、整数、实数、布尔、字符串 |
 | `ThemeStyleSheet` | 样式表的预处理，以同一分词规则跳过字符串与注释：`--key` 转为 `qproperty-key`，`---key` 去掉前缀，`:not(:x)` 转为 `:!x`，`url(@/a)` 转为相对样式表所在目录的路径，`Npx` 按界面缩放比例换算（`font-size` 另有比例）|
 
+## 实现的第二块：样式表赋值的类型
+
+**「样式表向自定义类型赋值」一节的机制已在 Qt 6.11.1 上验证**（`test_ThemeTypes`）：Qt 把 `qpen(...)` 以 `QStringList{"qpen", "<括号内原文>"}`、把单个词以 `QString` 交给 `setProperty`，经登记的 `QMetaType` 转换写入属性。转换函数返回 `std::optional`，无法解析时转换失败、属性保持原值，并以 `qCWarning`（类别 `hello.theme`）报告位置；函数名不符（例如给画笔属性写 `qfont(...)`）同样报告而不采用。单个词作为第一个参数（`qproperty-pen: red`）。
+
+| 类型 | 写法 | 参数 |
+|---|---|---|
+| `ThemePen` | `qpen(...)` | color（按钮状态）、width、style、cap、join、dashPattern、dashOffset、miterLimit、cosmetic，与 qsynthesis-docs 相同；虚线长度以像素写，换算为 Qt 以线宽为单位的长度 |
+| `ThemeFont` | `qfont(...)` | color（按钮状态）、size（`px` 或 `pt`）、weight（数值或 `thin` 到 `black`）、italic、family（一个名称或一组）。未写的字段保留所应用字体的值 |
+| `ThemeRect` | `qrect(...)` | color（按钮状态）、margins（一个、两个即上下与左右、四个即左上右下）、radius |
+| `ThemeShadow` | `qshadow(...)` | color、blur、offset（一个或两个长度）。qsynthesis-docs 中没有，为命令面板等弹出层的阴影新增 |
+
+`QMargins` 与 `QStringList` 都是 Qt 的内置类型，二者之间不能登记转换，因此边距只作为 `ThemeRect` 的字段，不单独成为 `qmargins(...)`。
+
+**使用这些类型的控件在构造时调用 `ThemeTypes::registerConversions()`**（可重复调用），以保证样式表生效前转换已登记。第一个使用者是命令面板：`qproperty-shadow: qshadow(#40000000, 16px, 0 4px)` 为它加上阴影，未设置时没有阴影。样式表中带命名空间的类名写作 `hello--daw--CommandPalette`。
+
 **主题系统是独立的子库 `HelloUtauTheme`**，位于 `helloutau/lib/Theme/`，头文件以 `<helloutau/Theme/...>` 引用，`HelloUtauWidgets` 与 `HelloUtauEditor` 依赖它。只有该子库链接 Qt 的私有模块，私有依赖因此集中在一处，也可以单独测试。命名空间为 `hello::daw`，不增加第三层：主题系统不会移出本仓库，不属于 `docs/Development.md` 所述的例外。类名以 `Theme`、`Svgx` 等为前缀，避免与其他子库的类重名。

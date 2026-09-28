@@ -7,6 +7,7 @@
 #include <QtGui/QPainter>
 #include <QtGui/QTextLayout>
 #include <QtWidgets/QApplication>
+#include <QtWidgets/QGraphicsDropShadowEffect>
 #include <QtWidgets/QLineEdit>
 #include <QtWidgets/QListWidget>
 #include <QtWidgets/QMainWindow>
@@ -176,6 +177,8 @@ namespace hello::daw {
     }
 
     CommandPalette::CommandPalette(QWidget *window) : QFrame(window) {
+        // Before a style sheet reaches the shadow property
+        ThemeTypes::registerConversions();
         setFrameShape(QFrame::StyledPanel);
         setAutoFillBackground(true);
 
@@ -275,6 +278,26 @@ namespace hello::daw {
     void CommandPalette::setSubtitleColor(const QColor &color) {
         m_subtitleColor = color;
         m_list->viewport()->update();
+    }
+
+    ThemeShadow CommandPalette::shadow() const {
+        return m_shadow;
+    }
+
+    void CommandPalette::setShadow(const ThemeShadow &shadow) {
+        m_shadow = shadow;
+        if (!shadow.isVisible()) {
+            setGraphicsEffect(nullptr);
+            return;
+        }
+        auto effect = qobject_cast<QGraphicsDropShadowEffect *>(graphicsEffect());
+        if (!effect) {
+            effect = new QGraphicsDropShadowEffect(this);
+            setGraphicsEffect(effect);
+        }
+        effect->setColor(shadow.color);
+        effect->setBlurRadius(shadow.blur);
+        effect->setOffset(shadow.offset);
     }
 
     QColor CommandPalette::keyCapColor() const {

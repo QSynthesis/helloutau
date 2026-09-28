@@ -1,6 +1,7 @@
 #include <QtTest/QSignalSpy>
 #include <QtTest/QTest>
 #include <QtWidgets/QApplication>
+#include <QtWidgets/QGraphicsDropShadowEffect>
 #include <QtWidgets/QLineEdit>
 #include <QtWidgets/QMainWindow>
 
@@ -47,6 +48,25 @@ private Q_SLOTS:
         palette.setQuery(QStringLiteral("nothing like it"));
         QVERIFY(palette.shownIds().isEmpty());
         QVERIFY(palette.currentId().isEmpty());
+    }
+
+    // The shadow comes from the style sheet, and there is none without it.
+    void the_style_sheet_gives_the_shadow() {
+        QMainWindow window;
+        CommandPalette palette(&window);
+        QVERIFY(!palette.graphicsEffect());
+
+        window.setStyleSheet(QStringLiteral(
+            "hello--daw--CommandPalette { qproperty-shadow: qshadow(#40000000, 16px, 0 4px); }"));
+        palette.ensurePolished();
+        const auto effect = qobject_cast<QGraphicsDropShadowEffect *>(palette.graphicsEffect());
+        QVERIFY(effect);
+        QCOMPARE(effect->blurRadius(), 16.0);
+        QCOMPARE(effect->offset(), QPointF(0, 4));
+        QCOMPARE(effect->color(), QColor(0, 0, 0, 0x40));
+
+        palette.setShadow({});
+        QVERIFY(!palette.graphicsEffect());
     }
 
     void the_keys_choose_and_enter_activates() {
