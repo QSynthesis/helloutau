@@ -17,32 +17,42 @@
 # libraries, the targets given after _hint. The DLLs are copied into the runtime output directory,
 # because the applocal deployment of vcpkg does not cover packages found this way, and both the
 # application and the tests run from there.
-function(_hello_find_external _package _hint)
-    cmake_parse_arguments(FUNC "" "" "COMPONENTS" ${ARGN})
+#
+# A macro rather than a function, so that the variables the package sets, such as those that its
+# CMake functions read, remain visible as after a direct call of find_package(). Its own
+# variables are removed at the end.
+macro(_hello_find_external _package _hint)
+    cmake_parse_arguments(_HELLO_FIND "" "" "COMPONENTS" ${ARGN})
     if(NOT ${_package}_DIR)
         message(FATAL_ERROR "${_package}_DIR is not set. ${_hint}")
     endif()
 
-    find_package(${_package} CONFIG REQUIRED COMPONENTS ${FUNC_COMPONENTS})
+    find_package(${_package} CONFIG REQUIRED COMPONENTS ${_HELLO_FIND_COMPONENTS})
 
-    set(_files)
-    foreach(_target IN LISTS FUNC_UNPARSED_ARGUMENTS)
-        get_target_property(_type ${_target} TYPE)
-        if(_type STREQUAL "SHARED_LIBRARY")
-            list(APPEND _files $<TARGET_FILE:${_target}>)
+    set(_hello_find_files)
+    foreach(_hello_find_target IN LISTS _HELLO_FIND_UNPARSED_ARGUMENTS)
+        get_target_property(_hello_find_type ${_hello_find_target} TYPE)
+        if(_hello_find_type STREQUAL "SHARED_LIBRARY")
+            list(APPEND _hello_find_files $<TARGET_FILE:${_hello_find_target}>)
         endif()
     endforeach()
 
-    if(WIN32 AND _files)
-        set(_deploy hello_deploy_${_package})
-        add_custom_target(${_deploy} ALL)
-        qm_add_copy_command(${_deploy}
-            SOURCES ${_files}
+    if(WIN32 AND _hello_find_files)
+        add_custom_target(hello_deploy_${_package} ALL)
+        qm_add_copy_command(hello_deploy_${_package}
+            SOURCES ${_hello_find_files}
             DESTINATION bin
             SKIP_INSTALL
         )
     endif()
-endfunction()
+
+    unset(_hello_find_files)
+    unset(_hello_find_target)
+    unset(_hello_find_type)
+    unset(_HELLO_FIND_COMPONENTS)
+    unset(_HELLO_FIND_UNPARSED_ARGUMENTS)
+    unset(_HELLO_FIND_KEYWORDS_MISSING_VALUES)
+endmacro()
 
 _hello_find_external(stdcorelib
     "Build https://github.com/stdware/stdcorelib and pass -Dstdcorelib_DIR=<prefix>/lib/cmake/stdcorelib."
