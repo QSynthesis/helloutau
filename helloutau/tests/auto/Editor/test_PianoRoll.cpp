@@ -971,6 +971,92 @@ private Q_SLOTS:
         QCOMPARE(envelope.anchors[1].x, 5.0);
     }
 
+    // la, li and lu overlapping by 20, 30 and 10 ms, and li with a middle anchor
+    static kit::Project overlappingNotes() {
+        kit::Project project;
+        project.settings.tempo = 120;
+        project.tracks.push_back({});
+        const std::tuple<const char *, int, double, double> notes[] = {
+            {"la", 60, 50, 20},
+            {"li", 62, 60, 30},
+            {"lu", 64, 40, 10},
+        };
+        for (const auto &[lyric, key, preUtterance, overlap] : notes) {
+            kit::Note note;
+            note.lyric = QString::fromLatin1(lyric);
+            note.length = 480;
+            note.noteNum = key;
+            note.preUtterance = preUtterance;
+            note.voiceOverlap = overlap;
+            project.tracks[0].notes.push_back(note);
+        }
+        project.tracks[0].notes[1].envelope = kit::Envelope::fromTimeOrder({
+            {0,  0  },
+            {5,  100},
+            {10, 80 },
+            {35, 90 },
+            {0,  0  }
+        });
+        return project;
+    }
+
+    // Each envelope fades over the overlaps with sung neighbours and loses its middle anchor;
+    // the first note has no overlap before it.
+    void envelopes_are_crossfaded_over_the_overlaps() {
+        const auto crossfaded = [this](PianoRoll::Crossfade crossfade) {
+            kit::ProjectSession session(overlappingNotes());
+            PianoRoll roll(&session);
+            show(roll);
+            roll.setSelectedIndices({0, 1});
+            kit::DiagnosticList diagnostics;
+            [&] { QVERIFY(roll.crossfadeEnvelopes(crossfade, diagnostics)); }();
+            [&] { QCOMPARE(session.undoMessage(), PianoRoll::tr("Crossfade Envelopes")); }();
+            const auto notes = session.snapshot().tracks[0].notes;
+            return std::pair{notes[0].envelope->anchorsInTimeOrder(),
+                             notes[1].envelope->anchorsInTimeOrder()};
+        };
+        using Anchors = QList<kit::EnvelopeAnchor>;
+
+        const auto [la, li] = crossfaded(PianoRoll::CrossfadeP2P3);
+        QCOMPARE(la, (Anchors{
+                         {0,  0  },
+                         {5,  100},
+                         {30, 100},
+                         {0,  0  }
+        }));
+        QCOMPARE(li, (Anchors{
+                         {0,  0  },
+                         {30, 100},
+                         {10, 90 },
+                         {0,  0  }
+        }));
+
+        const auto [la4, li4] = crossfaded(PianoRoll::CrossfadeP1P4);
+        QCOMPARE(la4, (Anchors{
+                          {0,  0  },
+                          {5,  100},
+                          {5,  100},
+                          {30, 100}
+        }));
+        QCOMPARE(li4, (Anchors{
+                          {30, 100},
+                          {5,  100},
+                          {5,  90 },
+                          {10, 90 }
+        }));
+    }
+
+    void envelopes_are_reset() {
+        kit::ProjectSession session(overlappingNotes());
+        PianoRoll roll(&session);
+        show(roll);
+        roll.setSelectedIndices({1});
+        kit::DiagnosticList diagnostics;
+        QVERIFY(roll.resetEnvelopes(diagnostics));
+        QVERIFY(!session.snapshot().tracks[0].notes[1].envelope);
+        QCOMPARE(session.undoMessage(), PianoRoll::tr("Reset Envelopes"));
+    }
+
     // The parameter area and the roll scroll together.
     void the_parameter_area_follows_the_roll() {
         kit::ProjectSession session(envelopedNote());

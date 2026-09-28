@@ -36,6 +36,9 @@
         <action id="helloutau.edit.toggleVibrato" text="Add or Remove &amp;Vibrato"
                 category="Edit" />
         <action id="helloutau.edit.editVibrato" text="Vibra&amp;to..." category="Edit" />
+        <action id="helloutau.edit.crossfadeP2P3" text="Crossfade (p&amp;2, p3)" category="Envelope" />
+        <action id="helloutau.edit.crossfadeP1P4" text="Crossfade (p&amp;1, p4)" category="Envelope" />
+        <action id="helloutau.edit.resetEnvelopes" text="&amp;Reset" category="Envelope" />
         <action id="helloutau.edit.editLyric" text="Edit &amp;Lyric" category="Edit"
                 shortcut="F2" />
         <action id="helloutau.edit.transposeUp" text="&amp;Up a Semitone" category="Transpose"
@@ -67,6 +70,7 @@
         <menu id="helloutau.file.export" text="&amp;Export" />
         <menu id="helloutau.edit" text="&amp;Edit" />
         <menu id="helloutau.edit.transpose" text="&amp;Transpose" />
+        <menu id="helloutau.edit.envelope" text="E&amp;nvelope" />
         <menu id="helloutau.view" text="&amp;View" />
         <menu id="helloutau.playback" text="&amp;Playback" />
         <menu id="helloutau.tools" text="&amp;Tools" />
@@ -100,6 +104,11 @@
                 <action id="helloutau.edit.togglePortamento" />
                 <action id="helloutau.edit.toggleVibrato" />
                 <action id="helloutau.edit.editVibrato" />
+                <menu id="helloutau.edit.envelope">
+                    <action id="helloutau.edit.crossfadeP2P3" />
+                    <action id="helloutau.edit.crossfadeP1P4" />
+                    <action id="helloutau.edit.resetEnvelopes" />
+                </menu>
                 <menu id="helloutau.edit.transpose">
                     <action id="helloutau.edit.transposeUp" />
                     <action id="helloutau.edit.transposeDown" />

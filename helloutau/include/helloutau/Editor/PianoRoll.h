@@ -173,6 +173,25 @@ namespace hello::daw {
         /// VibratoDialog::defaultVibrato(); if every such note has one, removes them.
         bool toggleVibrato(kit::DiagnosticList &diagnostics);
 
+        /// The two crossfades of the envelopes over the overlaps of the notes (QSynthesis).
+        enum Crossfade {
+            /// The attack from p1 at the start to p2 at the end of the overlap, the release
+            /// from p3 at the overlap of the next note to p4 at the end, the volumes kept
+            CrossfadeP2P3,
+            /// p1 at the end of the overlap with the volume of p2, and p2 5 ms after it; p4 at
+            /// the overlap of the next note with the volume of p3, and p3 5 ms before it
+            CrossfadeP1P4,
+        };
+
+        /// Fades the envelope of each selected sung note in over its overlap with the previous
+        /// note, if that is sung and the overlap after its correction positive, and out over
+        /// the overlap of the next note likewise. An envelope so changed loses its middle
+        /// anchor; a note without an envelope starts from the default of UTAU.
+        bool crossfadeEnvelopes(Crossfade crossfade, kit::DiagnosticList &diagnostics);
+
+        /// Removes the envelopes of the selected sung notes, which leaves the default of UTAU.
+        bool resetEnvelopes(kit::DiagnosticList &diagnostics);
+
         /// Inserts a note before the first selected note, with the key of that note and
         /// quantizedLength(), or after the last note if nothing is selected, and selects it.
         bool insertNote(kit::DiagnosticList &diagnostics);

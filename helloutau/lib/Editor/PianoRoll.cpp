@@ -2562,6 +2562,72 @@ namespace hello::daw {
         return transaction.commit(diagnostics);
     }
 
+    bool PianoRoll::crossfadeEnvelopes(Crossfade crossfade, kit::DiagnosticList &diagnostics) {
+        const auto timeline = _impl->timeline;
+        const auto &timings = _impl->sampleTimings();
+        const auto refs = _impl->notes();
+        const int count = timeline->noteCount();
+        // To a tenth of a millisecond, as the anchors that a drag moves
+        const auto rounded = [](double value) { return std::round(value * 10) / 10; };
+
+        auto transaction = _impl->session->transaction(tr("Crossfade Envelopes"));
+        for (const int index : selectedIndices()) {
+            if (timeline->note(index).rest) {
+                continue;
+            }
+            auto anchors = _impl->envelopeOf(index).anchorsInTimeOrder();
+            const int last = int(anchors.size()) - 1;
+            bool changed = false;
+            if (index > 0 && !timeline->note(index - 1).rest && timings[index].voiceOverlap > 0) {
+                const double overlap = rounded(timings[index].voiceOverlap);
+                if (crossfade == CrossfadeP2P3) {
+                    anchors[0].x = 0;
+                    anchors[1].x = overlap;
+                } else {
+                    anchors[0].x = overlap;
+                    anchors[0].y = anchors[1].y;
+                    anchors[1].x = 5;
+                }
+                changed = true;
+            }
+            if (index + 1 < count && !timeline->note(index + 1).rest &&
+                timings[index + 1].voiceOverlap > 0) {
+                const double overlap = rounded(timings[index + 1].voiceOverlap);
+                if (crossfade == CrossfadeP2P3) {
+                    anchors[last].x = 0;
+                    anchors[last - 1].x = overlap;
+                } else {
+                    anchors[last].x = overlap;
+                    anchors[last].y = anchors[last - 1].y;
+                    anchors[last - 1].x = 5;
+                }
+                changed = true;
+            }
+            if (!changed) {
+                continue;
+            }
+            if (anchors.size() == 5) {
+                anchors.removeAt(2);
+            }
+            kit::ProjectEdits::setEnvelope({refs.at(index)}, kit::Envelope::fromTimeOrder(anchors),
+                                           diagnostics);
+        }
+        return transaction.commit(diagnostics);
+    }
+
+    bool PianoRoll::resetEnvelopes(kit::DiagnosticList &diagnostics) {
+        const auto refs = _impl->notes();
+        QList<kit::NoteRef> sung;
+        for (const int index : selectedIndices()) {
+            if (!_impl->timeline->note(index).rest) {
+                sung.push_back(refs.at(index));
+            }
+        }
+        auto transaction = _impl->session->transaction(tr("Reset Envelopes"));
+        kit::ProjectEdits::setEnvelope(sung, std::nullopt, diagnostics);
+        return transaction.commit(diagnostics);
+    }
+
     bool PianoRoll::transposeSelected(int semitones, kit::DiagnosticList &diagnostics) {
         const auto notes = _impl->notes();
         QList<kit::NoteRef> refs;

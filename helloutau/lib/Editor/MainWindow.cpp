@@ -257,6 +257,22 @@ namespace hello::daw {
                 });
             });
             addCommand(QStringLiteral("helloutau.edit.editVibrato"), [this] { editVibrato(); });
+            const std::pair<const char *, PianoRoll::Crossfade> crossfades[] = {
+                {"helloutau.edit.crossfadeP2P3", PianoRoll::CrossfadeP2P3},
+                {"helloutau.edit.crossfadeP1P4", PianoRoll::CrossfadeP1P4},
+            };
+            for (const auto &[id, crossfade] : crossfades) {
+                addCommand(QLatin1String(id), [this, crossfade = crossfade] {
+                    edit(tr("Envelope"), [this, crossfade](kit::DiagnosticList &diagnostics) {
+                        return roll->crossfadeEnvelopes(crossfade, diagnostics);
+                    });
+                });
+            }
+            addCommand(QStringLiteral("helloutau.edit.resetEnvelopes"), [this] {
+                edit(tr("Envelope"), [this](kit::DiagnosticList &diagnostics) {
+                    return roll->resetEnvelopes(diagnostics);
+                });
+            });
             addCommand(QStringLiteral("helloutau.edit.editLyric"), [this] {
                 const auto indices = roll->selectedIndices();
                 if (!indices.isEmpty()) {
@@ -416,9 +432,10 @@ namespace hello::daw {
             const int selected = int(roll->selectedIndices().size());
             for (const auto id : {"helloutau.edit.delete", "helloutau.edit.editLyric",
                                   "helloutau.edit.togglePortamento", "helloutau.edit.toggleVibrato",
-                                  "helloutau.edit.editVibrato", "helloutau.edit.transposeUp",
-                                  "helloutau.edit.transposeDown", "helloutau.edit.octaveUp",
-                                  "helloutau.edit.octaveDown"}) {
+                                  "helloutau.edit.editVibrato", "helloutau.edit.crossfadeP2P3",
+                                  "helloutau.edit.crossfadeP1P4", "helloutau.edit.resetEnvelopes",
+                                  "helloutau.edit.transposeUp", "helloutau.edit.transposeDown",
+                                  "helloutau.edit.octaveUp", "helloutau.edit.octaveDown"}) {
                 actions.value(QLatin1String(id))->setEnabled(selected > 0);
             }
             actions.value(QStringLiteral("helloutau.edit.splitNote"))->setEnabled(selected == 1);
