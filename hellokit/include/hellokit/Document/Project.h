@@ -7,6 +7,7 @@
 #include <QtCore/QCoreApplication>
 #include <QtCore/QByteArray>
 #include <QtCore/QByteArrayView>
+#include <QtCore/QJsonDocument>
 #include <QtCore/QJsonObject>
 #include <QtCore/QList>
 #include <QtCore/QString>
@@ -90,8 +91,10 @@ namespace hello::kit {
     /// because \c .usth is not one format among several but the native serialization of a
     /// project. Every other format is converted through \c HelloKitInterchange into this class.
     ///
-    /// The file is UTF-8 JSON without a byte order mark, with line breaks. docs/UsthFormat.md
-    /// defines the format, and this implementation follows that definition. No encoding
+    /// The file is UTF-8 JSON without a byte order mark, written compact by default, without
+    /// indentation or line breaks, because a project with many notes would otherwise grow
+    /// several times in size. docs/UsthFormat.md defines the format, and this implementation
+    /// follows that definition. No encoding
     /// detection is required, which distinguishes it from reading a \c .ust.
     ///
     /// \note \c tracks currently holds exactly one track. The array exists from the start so
@@ -118,8 +121,10 @@ namespace hello::kit {
                                            DiagnosticList &diagnostics);
 
         /// Writes the project to \a path, with \c ProjectSettings::cacheDir replaced by
-        /// cacheDirOf() \a path, as UTAU does on save.
-        bool save(const std::filesystem::path &path, DiagnosticList &diagnostics) const;
+        /// cacheDirOf() \a path, as UTAU does on save. \a format \c Indented writes a file that
+        /// is easier to read and to compare, several times larger.
+        bool save(const std::filesystem::path &path, DiagnosticList &diagnostics,
+                  QJsonDocument::JsonFormat format = QJsonDocument::Compact) const;
 
         /// Returns the value of \c ProjectSettings::cacheDir for a project saved as \a file, as
         /// UTAU writes it on save: the file name without its extension, followed by \c .cache.
@@ -135,7 +140,7 @@ namespace hello::kit {
         static std::optional<Project> fromJson(QByteArrayView json, DiagnosticList &diagnostics);
 
         /// \overload
-        QByteArray toJson() const;
+        QByteArray toJson(QJsonDocument::JsonFormat format = QJsonDocument::Compact) const;
     };
 
 }

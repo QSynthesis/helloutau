@@ -66,7 +66,8 @@ namespace hello::kit {
 
         // The settings are a parameter, so that save() can write its own value of the cache
         // directory without copying the notes.
-        QByteArray jsonOf(const Project &project, const ProjectSettings &settings) {
+        QByteArray jsonOf(const Project &project, const ProjectSettings &settings,
+                          QJsonDocument::JsonFormat format) {
             // Starts from the fields not recognized when the file was read, so that they are
             // preserved. The known fields are inserted afterward, so that a stale copy of a known
             // field cannot take precedence.
@@ -89,7 +90,7 @@ namespace hello::kit {
             }
             root.insert(QLatin1String(KeyTracks), trackArray);
 
-            return QJsonDocument(root).toJson(QJsonDocument::Indented);
+            return QJsonDocument(root).toJson(format);
         }
 
         // Without a trailing separator, which would otherwise count as an empty last element
@@ -150,7 +151,8 @@ namespace hello::kit {
         return fromJson(QByteArrayView(bytes.data(), qsizetype(bytes.size())), diagnostics);
     }
 
-    bool Project::save(const std::filesystem::path &path, DiagnosticList &diagnostics) const {
+    bool Project::save(const std::filesystem::path &path, DiagnosticList &diagnostics,
+                       QJsonDocument::JsonFormat format) const {
         if (tracks.size() != 1) {
             JsonFields::fail(diagnostics,
                              tr("This version of HelloUtau supports one track per project, but "
@@ -161,10 +163,10 @@ namespace hello::kit {
 
         auto written = settings;
         written.cacheDir = cacheDirOf(path);
-        const auto bytes = jsonOf(*this, written);
+        const auto bytes = jsonOf(*this, written, format);
 
-        // Written in binary mode, so that line feeds are not converted to CRLF on Windows. The
-        // format specifies LF line endings, and project files are compared with diff tools.
+        // Written in binary mode, so that the line feeds of the indented form are not converted
+        // to CRLF on Windows. The format specifies LF line endings.
         std::ofstream out(path, std::ios::binary | std::ios::trunc);
         if (!out) {
             JsonFields::fail(diagnostics, tr("This file could not be written."));
@@ -266,8 +268,8 @@ namespace hello::kit {
         return project;
     }
 
-    QByteArray Project::toJson() const {
-        return jsonOf(*this, settings);
+    QByteArray Project::toJson(QJsonDocument::JsonFormat format) const {
+        return jsonOf(*this, settings, format);
     }
 
     QString Project::cacheDirOf(const std::filesystem::path &file) {

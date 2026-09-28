@@ -1,6 +1,6 @@
 # `.usth` 格式规格
 
-HelloUtau 的工程文件格式：JSON，UTF-8，**不带 BOM**，换行符为 `\n`。
+HelloUtau 的工程文件格式：JSON，UTF-8，**不带 BOM**。默认写成紧凑形式，不含缩进与换行，因为缩进会使音符多的工程体积增大数倍；需要阅读或比较文件时可以写成缩进形式，换行符为 `\n`。读取时两种形式都接受。下文的示例为便于阅读写成缩进形式。
 
 本文档是该格式的权威定义。产品层面的说明见 [`note.md`](note.md)，实测依据见 [`claude/utau-ust-preservation.md`](claude/utau-ust-preservation.md)。
 

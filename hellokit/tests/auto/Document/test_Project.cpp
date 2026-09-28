@@ -2,6 +2,7 @@
 
 #include <QtCore/QByteArray>
 #include <QtCore/QDir>
+#include <QtCore/QFile>
 #include <QtTest/QTest>
 
 #include <hellokit/Document/Project.h>
@@ -256,19 +257,44 @@ private Q_SLOTS:
         QCOMPARE(bend->values.at(1), 10.5);
     }
 
-    void the_file_is_utf8_without_a_bom_and_uses_newlines() {
+    void the_file_is_utf8_without_a_bom() {
         auto project = oneNote();
         project.tracks[0].notes[0].lyric = QString::fromUtf8("あ");
         project.settings.name = QString::fromUtf8("中文工程");
 
         const auto written = project.toJson();
         QVERIFY(!written.startsWith("\xEF\xBB\xBF"));
-        QVERIFY(!written.contains("\r\n"));
         QVERIFY(written.contains(QString::fromUtf8("中文工程").toUtf8()));
 
         const auto again = parsed(written);
         QVERIFY(again.has_value());
         QCOMPARE(again->tracks.first().notes.first().lyric, QString::fromUtf8("あ"));
+    }
+
+    // Compact by default, since indentation makes a project several times larger. The indented
+    // form breaks lines with LF only, also on Windows.
+    void the_file_is_compact_unless_indentation_is_requested() {
+        const auto dir = fs::temp_directory_path();
+        const auto compact = dir / u"hellokit_compact.usth";
+        const auto indented = dir / u"hellokit_indented.usth";
+        DiagnosticList diagnostics;
+        QVERIFY(oneNote().save(compact, diagnostics));
+        QVERIFY(oneNote().save(indented, diagnostics, QJsonDocument::Indented));
+
+        const auto read = [](const fs::path &path) {
+            QFile file(QString::fromStdU16String(path.u16string()));
+            return file.open(QIODevice::ReadOnly) ? file.readAll() : QByteArray();
+        };
+        const auto compactBytes = read(compact);
+        const auto indentedBytes = read(indented);
+        fs::remove(compact);
+        fs::remove(indented);
+
+        QVERIFY(!compactBytes.contains('\n'));
+        QVERIFY(!compactBytes.contains("  "));
+        QVERIFY(indentedBytes.contains("\n    \""));
+        QVERIFY(!indentedBytes.contains('\r'));
+        QVERIFY(compactBytes.size() < indentedBytes.size());
     }
 
     // Measured in UTAU: a relative path is relative to the directory of utau.exe, not to the
