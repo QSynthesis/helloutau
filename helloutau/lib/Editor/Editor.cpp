@@ -110,8 +110,10 @@ namespace hello::daw {
         } else {
             window = _impl->createWindow(this, std::move(document));
         }
-        // Shown after the window, so that the user sees which project they concern.
+        // Shown after the window, so that the user sees which project they concern, and before
+        // the voice bank is read, which may ask more.
         DiagnosticBox::show(window, title, diagnostics);
+        window->loadVoiceBank();
         return window;
     }
 

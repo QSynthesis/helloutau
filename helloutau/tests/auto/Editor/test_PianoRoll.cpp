@@ -4,6 +4,7 @@
 #include <hellokit/Edit/ProjectRefs.h>
 #include <hellokit/Edit/ProjectSession.h>
 #include <hellokit/Edit/TrackTimeline.h>
+#include <hellokit/VoiceBank/VoiceBank.h>
 
 #include <helloutau/Widgets/SceneView.h>
 #include <helloutau/Widgets/TimelineRuler.h>
@@ -123,6 +124,38 @@ private Q_SLOTS:
         QVERIFY(keys.toY(65) >= 0 && keys.toY(65) <= height);
         QVERIFY(keys.toY(60) >= 0 && keys.toY(60) <= height);
         QCOMPARE(roll.view()->timeAxis().left, 0.0);
+    }
+
+    // A sung note is looked up as synthesis looks it up; a rest is never missing a sample.
+    void a_note_without_a_sample_is_marked() {
+        kit::ProjectSession session(threeNotes());
+        PianoRoll roll(&session);
+
+        // Without a voice bank nothing is known of the samples.
+        QVERIFY(!roll.lacksSample(0));
+        QVERIFY(!roll.lacksSample(2));
+
+        kit::VoiceSample la;
+        la.path = "la.wav";
+        la.fileName = QStringLiteral("la.wav");
+        la.alias = QStringLiteral("la");
+        la.hasEntry = true;
+        auto bank = std::make_shared<const kit::VoiceBank>(
+            "bank", QList<kit::VoiceBankDirectory>{kit::VoiceBankDirectory()},
+            QList<kit::VoiceSample>{la});
+        roll.setVoiceBank(bank);
+        QCOMPARE(roll.voiceBank(), bank);
+        QVERIFY(!roll.lacksSample(0));
+        QVERIFY(!roll.lacksSample(1));
+        QVERIFY(roll.lacksSample(2));
+
+        // The lookup follows the tree.
+        {
+            auto tx = session.transaction(QStringLiteral("rename"));
+            kit::ProjectRef(&session).tracks().at(0).notes().at(2).setLyric(QStringLiteral("la"));
+            QVERIFY(tx.commit());
+        }
+        QVERIFY(!roll.lacksSample(2));
     }
 };
 

@@ -31,6 +31,13 @@ namespace hello::daw {
         /// project opened from a file may replace.
         bool isUnused() const;
 
+        /// Reads the voice bank of the project from the UTAU folder of the settings, asking the
+        /// user for the encoding of each folder that does not state it, and shows any problem.
+        /// The piano roll then marks the notes that have no sample.
+        ///
+        /// \return whether a voice bank was read
+        bool loadVoiceBank();
+
         /// \name Commands
         /// The commands of the menus. Each shows its errors to the user and returns whether it
         /// completed.

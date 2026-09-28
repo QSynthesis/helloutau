@@ -11,6 +11,7 @@
 namespace hello::kit {
     class ProjectSession;
     class TrackTimeline;
+    class VoiceBank;
 }
 
 namespace hello::daw {
@@ -32,6 +33,8 @@ namespace hello::daw {
         Q_PROPERTY(QColor noteColor READ noteColor WRITE setNoteColor)
         Q_PROPERTY(QColor restColor READ restColor WRITE setRestColor)
         Q_PROPERTY(QColor lyricColor READ lyricColor WRITE setLyricColor)
+        Q_PROPERTY(QColor unsampledColor READ unsampledColor WRITE setUnsampledColor)
+        Q_PROPERTY(QColor unsampledLyricColor READ unsampledLyricColor WRITE setUnsampledLyricColor)
         Q_PROPERTY(QColor whiteRowColor READ whiteRowColor WRITE setWhiteRowColor)
         Q_PROPERTY(QColor blackRowColor READ blackRowColor WRITE setBlackRowColor)
         Q_PROPERTY(QColor lineColor READ lineColor WRITE setLineColor)
@@ -53,12 +56,25 @@ namespace hello::daw {
         /// Scrolls to the start of the track and to the middle of the keys its notes use.
         void scrollToNotes();
 
+        /// The voice bank against which notes are looked up, or \c nullptr if none is known.
+        std::shared_ptr<const kit::VoiceBank> voiceBank() const;
+        void setVoiceBank(std::shared_ptr<const kit::VoiceBank> bank);
+
+        /// Returns whether note \a index of the timeline is to be sung but voiceBank() has no
+        /// sample for it. Such a note is drawn as an outline in unsampledColor(). Without a voice
+        /// bank no note is reported, since nothing is known of the samples.
+        bool lacksSample(int index) const;
+
         QColor noteColor() const;
         void setNoteColor(const QColor &color);
         QColor restColor() const;
         void setRestColor(const QColor &color);
         QColor lyricColor() const;
         void setLyricColor(const QColor &color);
+        QColor unsampledColor() const;
+        void setUnsampledColor(const QColor &color);
+        QColor unsampledLyricColor() const;
+        void setUnsampledLyricColor(const QColor &color);
         QColor whiteRowColor() const;
         void setWhiteRowColor(const QColor &color);
         QColor blackRowColor() const;

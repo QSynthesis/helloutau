@@ -133,10 +133,10 @@
 
 **验收标准**：打开一个数百个音符的真实工程，滚动与缩放流畅；撤销、重做后显示与树一致（测试中以命中测试与坐标换算的结果核对）。
 
-**进度**：分三块进行，前两块已完成。
+**进度**：分三块进行，均已完成，待作者验收。
 1. 场景接口（`HelloUtauWidgets`）：`SceneView`、`SceneAxis`、`SceneLayer` 与 `SceneGesture`、`TimelineRuler`、`PianoKeyboard`。
 2. 卷帘本体：`TrackTimeline`（`HelloKitEdit`，音符的位置，变化后在下次读取时计算）与 `PianoRoll`（`HelloUtauEditor`，网格层、音符层、标尺上的速度标记），取代原先的音符表。
-3. 音源：`ProjectDocument` 解析 `VoiceDir` 并打开音源，编码无法确定时按目录预览选择；找不到样本的音符另以样式区分。尚未开始。
+3. 音源：`ProjectDocument::loadVoiceBank()` 按设置中的 UTAU 目录解析 `VoiceDir` 并打开音源，得到一份快照；编码无法确定的目录由 `VoiceBankCharsetDialog` 逐目录询问，每个文本文件一页，按所选编码预览并标出不合法的字节序列数，选定后立即记录（见 [`Editing.md`](Editing.md) 的「编码的选择与记录」），也可跳过该目录。打开工程后读取，设置中的 UTAU 目录改变后各窗口重新读取。卷帘中找不到样本的音符（查找方法与合成相同，`VoiceBank::find`）画成空心，颜色为 `unsampledColor` 与 `unsampledLyricColor`；没有音源时不作标记。
 
 ### 第 4 步：音符编辑
 

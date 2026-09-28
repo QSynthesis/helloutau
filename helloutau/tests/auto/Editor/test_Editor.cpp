@@ -1,4 +1,5 @@
 #include <filesystem>
+#include <fstream>
 
 #include <QtCore/QTemporaryDir>
 #include <QtCore/QTimer>
@@ -19,6 +20,8 @@
 #include <helloutau/Editor/AppSettings.h>
 #include <helloutau/Editor/Editor.h>
 #include <helloutau/Editor/MainWindow.h>
+#include <helloutau/Editor/PianoRoll.h>
+#include <helloutau/Editor/VoiceBankCharsetDialog.h>
 
 using namespace hello;
 using namespace hello::daw;
@@ -210,6 +213,60 @@ private Q_SLOTS:
         edit(window);
         QVERIFY(window->save());
         QVERIFY(!window->isWindowModified());
+    }
+
+    // The voice bank is found through the UTAU folder of the settings, the user is asked for
+    // the encoding of its folder, and the piano roll marks the note it has no sample for.
+    void an_opened_project_reads_its_voice_bank() {
+        QTemporaryDir dir;
+        const auto utau = pathIn(dir, "utau");
+        const auto bank = utau / "voice" / "bank";
+        fs::create_directories(bank);
+        {
+            // The alias あ in Shift_JIS
+            std::ofstream oto(bank / "oto.ini", std::ios::binary);
+            oto << "a.wav=\x82\xa0,0,0,0,0,0\r\n";
+            std::ofstream wav(bank / "a.wav", std::ios::binary);
+        }
+
+        kit::Note a;
+        a.lyric = QString::fromUtf8("あ");
+        a.length = 480;
+        a.noteNum = 60;
+        kit::Note la = a;
+        la.lyric = QStringLiteral("la");
+        kit::Track track;
+        track.voiceDir = QStringLiteral("%VOICE%bank");
+        track.notes = {a, la};
+        kit::Project project;
+        project.tracks.push_back(track);
+        const auto path = pathIn(dir, "voiced.usth");
+        kit::DiagnosticList diagnostics;
+        QVERIFY(project.save(path, diagnostics));
+
+        const auto e = editor();
+        e->settings().setUtauDirectory(utau);
+        QStringList asked;
+        QTimer::singleShot(0, [&asked] {
+            const auto dialog =
+                qobject_cast<VoiceBankCharsetDialog *>(QApplication::activeModalWidget());
+            QVERIFY(dialog);
+            asked.push_back(dialog->windowTitle());
+            dialog->setSelectedCharset(QStringLiteral("Shift_JIS"));
+            dialog->accept();
+        });
+        const auto window = e->openFile(path);
+        e->settings().setUtauDirectory({});
+        QVERIFY(window);
+        QCOMPARE(asked, QStringList{QStringLiteral("Choose Encoding - bank")});
+        QVERIFY(fs::is_regular_file(bank / "hello-config.json"));
+
+        const auto roll = qobject_cast<PianoRoll *>(window->centralWidget());
+        QVERIFY(roll);
+        QVERIFY(roll->voiceBank());
+        QCOMPARE(roll->voiceBank(), window->document()->voiceBank());
+        QVERIFY(!roll->lacksSample(0));
+        QVERIFY(roll->lacksSample(1));
     }
 };
 

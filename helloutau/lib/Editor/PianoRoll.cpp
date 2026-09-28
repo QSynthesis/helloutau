@@ -10,6 +10,7 @@
 #include <hellokit/Document/DocumentConstants.h>
 #include <hellokit/Edit/ProjectSession.h>
 #include <hellokit/Edit/TrackTimeline.h>
+#include <hellokit/VoiceBank/VoiceBank.h>
 
 #include <helloutau/Widgets/PianoKeyboard.h>
 #include <helloutau/Widgets/SceneView.h>
@@ -99,11 +100,18 @@ namespace hello::daw {
                     if (!rect.intersects(exposed)) {
                         continue;
                     }
-                    painter.setPen(Qt::NoPen);
-                    painter.setBrush(note.rest ? m_roll->restColor() : m_roll->noteColor());
+                    const bool unsampled = m_roll->lacksSample(i);
+                    if (unsampled) {
+                        painter.setPen(QPen(m_roll->unsampledColor(), 1));
+                        painter.setBrush(Qt::NoBrush);
+                    } else {
+                        painter.setPen(Qt::NoPen);
+                        painter.setBrush(note.rest ? m_roll->restColor() : m_roll->noteColor());
+                    }
                     painter.drawRoundedRect(rect.adjusted(0.5, 0.5, -0.5, -0.5), NoteRadius,
                                             NoteRadius);
-                    painter.setPen(m_roll->lyricColor());
+                    painter.setPen(unsampled ? m_roll->unsampledLyricColor()
+                                             : m_roll->lyricColor());
                     painter.drawText(rect.adjusted(LyricPadding, 0, -LyricPadding, 0),
                                      Qt::AlignLeft | Qt::AlignVCenter, note.lyric);
                 }
@@ -149,10 +157,13 @@ namespace hello::daw {
         TimelineRuler *ruler = nullptr;
         PianoKeyboard *keyboard = nullptr;
         bool refreshPending = false;
+        std::shared_ptr<const kit::VoiceBank> voiceBank;
 
         QColor noteColor;
         QColor restColor;
         QColor lyricColor;
+        QColor unsampledColor;
+        QColor unsampledLyricColor;
         QColor whiteRowColor;
         QColor blackRowColor;
         QColor lineColor;
@@ -257,6 +268,24 @@ namespace hello::daw {
         _impl->view->setTimeAxis(time);
     }
 
+    std::shared_ptr<const kit::VoiceBank> PianoRoll::voiceBank() const {
+        return _impl->voiceBank;
+    }
+
+    void PianoRoll::setVoiceBank(std::shared_ptr<const kit::VoiceBank> bank) {
+        _impl->voiceBank = std::move(bank);
+        _impl->view->viewport()->update();
+    }
+
+    bool PianoRoll::lacksSample(int index) const {
+        const auto &bank = _impl->voiceBank;
+        if (!bank) {
+            return false;
+        }
+        const auto &note = _impl->timeline->note(index);
+        return !note.rest && !bank->find(note.key, note.lyric);
+    }
+
     QColor PianoRoll::noteColor() const {
         return _impl->noteColor.isValid() ? _impl->noteColor : palette().color(QPalette::Highlight);
     }
@@ -287,6 +316,26 @@ namespace hello::daw {
 
     void PianoRoll::setLyricColor(const QColor &color) {
         _impl->lyricColor = color;
+        _impl->view->viewport()->update();
+    }
+
+    QColor PianoRoll::unsampledColor() const {
+        return _impl->unsampledColor.isValid() ? _impl->unsampledColor
+                                               : palette().color(QPalette::Highlight);
+    }
+
+    void PianoRoll::setUnsampledColor(const QColor &color) {
+        _impl->unsampledColor = color;
+        _impl->view->viewport()->update();
+    }
+
+    QColor PianoRoll::unsampledLyricColor() const {
+        return _impl->unsampledLyricColor.isValid() ? _impl->unsampledLyricColor
+                                                    : palette().color(QPalette::Text);
+    }
+
+    void PianoRoll::setUnsampledLyricColor(const QColor &color) {
+        _impl->unsampledLyricColor = color;
         _impl->view->viewport()->update();
     }
 

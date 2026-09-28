@@ -24,6 +24,7 @@
 #include "ExportUstDialog.h"
 #include "PianoRoll.h"
 #include "SettingsDialog.h"
+#include "VoiceBankCharsetDialog.h"
 
 namespace hello::daw {
 
@@ -93,8 +94,15 @@ namespace hello::daw {
                 palette->popup();
             });
             addCommand(QStringLiteral("helloutau.tools.settings"), [this] {
+                const auto utau = editor->settings().utauDirectory();
                 SettingsDialog dialog(editor->settings(), _decl);
-                dialog.exec();
+                if (dialog.exec() == QDialog::Accepted &&
+                    editor->settings().utauDirectory() != utau) {
+                    // Every voice bank named relative to UTAU is now elsewhere.
+                    for (const auto window : editor->windows()) {
+                        window->loadVoiceBank();
+                    }
+                }
             });
 
             const auto registry = editor->actionRegistry();
@@ -152,8 +160,11 @@ namespace hello::daw {
         void bindDocument() {
             // Replaces the piano roll of the previous document, which is deleted with it.
             roll = new PianoRoll(document->session());
+            roll->setVoiceBank(document->voiceBank());
             _decl->setCentralWidget(roll);
 
+            QObject::connect(document.get(), &kit::ProjectDocument::voiceBankChanged, roll,
+                             [this] { roll->setVoiceBank(document->voiceBank()); });
             QObject::connect(document.get(), &kit::ProjectDocument::modifiedChanged, _decl,
                              [this] { updateTitle(); });
             QObject::connect(document.get(), &kit::ProjectDocument::filePathChanged, _decl,
@@ -234,6 +245,17 @@ namespace hello::daw {
 
     bool MainWindow::isUnused() const {
         return _impl->document->sourcePath().empty() && !_impl->document->isModified();
+    }
+
+    bool MainWindow::loadVoiceBank() {
+        const auto document = _impl->document.get();
+        const auto utau = _impl->editor->settings().utauDirectory();
+        VoiceBankCharsetDialog selector(this);
+        selector.setRoot(document->session()->snapshot().tracks.value(0).voiceDirectory(utau));
+        kit::DiagnosticList diagnostics;
+        const bool loaded = document->loadVoiceBank(utau, &selector, diagnostics);
+        DiagnosticBox::show(this, tr("Voice Bank"), diagnostics);
+        return loaded;
     }
 
     bool MainWindow::save() {
