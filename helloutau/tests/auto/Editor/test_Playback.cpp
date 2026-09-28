@@ -197,6 +197,57 @@ private Q_SLOTS:
         QVERIFY(fs::is_regular_file(playback.cacheDirectoryFor(*document) / "playback.wav"));
     }
 
+    // A preview plays from the note asked for to the end, reading the fragments in the cache
+    // rather than running the resampler, which here does not exist.
+    void a_preview_plays_from_a_note_to_the_end() {
+        if (AudioOutput::deviceSampleRate() <= 0) {
+            QSKIP("This machine has no audio output device.");
+        }
+        QTemporaryDir dir;
+        const auto document = singingDocument(dir);
+        QVERIFY(document);
+        Playback playback;
+
+        kit::SynthPlan::Options options;
+        options.cacheDirectory = playback.cacheDirectoryFor(*document);
+        options.outputFile = options.cacheDirectory / "playback.wav";
+        kit::DiagnosticList diagnostics;
+        const auto plan = kit::SynthPlan::make(document->session()->snapshot(),
+                                               *document->voiceBank(), options, diagnostics);
+        QVERIFY(plan);
+        fs::create_directories(options.cacheDirectory);
+        for (const auto &step : plan->steps()) {
+            writeBytes(step.cacheFile, silence());
+        }
+
+        QSignalSpy states(&playback, &Playback::stateChanged);
+        kit::SynthEngines engines;
+        engines.resampler = fs::path(dir.path().toStdU16String()) / "missing.exe";
+        QVERIFY(playback.preview(*document, 1, engines, diagnostics));
+        QCOMPARE(playback.state(), Playback::Playing);
+        const auto first = playback.position();
+        QVERIFY(first);
+        // From the second note on: 500 ms into the track at 120, less its pre-utterance of 0
+        QCOMPARE(*first, 500.0);
+
+        QTRY_COMPARE_WITH_TIMEOUT(playback.state(), Playback::Stopped, 5000);
+        QCOMPARE(states.size(), 2);
+        QCOMPARE(playback.pendingNotes(), 0);
+        QVERIFY(playback.takePreviewDiagnostics().isEmpty());
+    }
+
+    void a_preview_needs_a_resampler() {
+        QTemporaryDir dir;
+        const auto document = singingDocument(dir);
+        QVERIFY(document);
+        Playback playback;
+        kit::DiagnosticList diagnostics;
+        QVERIFY(!playback.preview(*document, std::nullopt, {}, diagnostics));
+        QVERIFY(kit::hasError(diagnostics));
+        QVERIFY(!playback.isBuffering());
+        QCOMPARE(playback.pendingNotes(), 0);
+    }
+
     // Stopping during a render cancels it, and nothing plays or fails afterwards.
     void stopping_cancels_the_render() {
         QTemporaryDir dir;

@@ -43,6 +43,9 @@ namespace hello::daw {
         // How often the playhead follows playback, in milliseconds
         constexpr int PlayheadInterval = 30;
 
+        // How long a message stays in the status bar, in milliseconds
+        constexpr int StatusMessageTimeout = 8000;
+
         QString textOf(const std::filesystem::path &path) {
             return QDir::toNativeSeparators(QString::fromStdU16String(path.u16string()));
         }
@@ -116,6 +119,9 @@ namespace hello::daw {
                                      playheadTimer.stop();
                                      roll->setPlayheadPosition(std::nullopt);
                                  }
+                                 if (state == Playback::Stopped) {
+                                     reportPreviewFailures();
+                                 }
                              });
             QObject::connect(playback, &Playback::progressed, _decl, [this](int done, int total) {
                 renderLabel->setText(tr("Rendering %1 of %2 notes").arg(done).arg(total));
@@ -132,6 +138,7 @@ namespace hello::daw {
                 if (const auto position = playback->position()) {
                     roll->setPlayheadPosition(roll->timeline()->tempoMap().tickOf(*position));
                 }
+                updatePreviewStatus();
             });
         }
 
@@ -153,6 +160,51 @@ namespace hello::daw {
             kit::DiagnosticList diagnostics;
             if (!playback->play(*document, range, engines, diagnostics)) {
                 DiagnosticBox::show(_decl, tr("Play"), diagnostics);
+            }
+        }
+
+        // Previews from the first selected note, or from the start, as the notes are rendered;
+        // or stops what plays.
+        void togglePreview() {
+            if (playback->state() != Playback::Stopped) {
+                playback->stop();
+                return;
+            }
+            std::optional<int> from;
+            if (const auto selected = roll->selectedIndices(); !selected.isEmpty()) {
+                from = selected.first();
+            }
+            kit::SynthEngines engines;
+            engines.resampler = pathOf(editor->settings().resampler());
+            engines.wavtool = pathOf(editor->settings().wavtool());
+            kit::DiagnosticList diagnostics;
+            if (!playback->preview(*document, from, engines, diagnostics)) {
+                DiagnosticBox::show(_decl, tr("Preview"), diagnostics);
+            }
+        }
+
+        // The notes a preview could not render, which played as silence, in the status bar
+        void reportPreviewFailures() {
+            const auto failed = playback->takePreviewDiagnostics();
+            if (!failed.isEmpty()) {
+                _decl->statusBar()->showMessage(
+                    MainWindow::tr("%n note(s) could not be rendered, and were silent.", nullptr,
+                                   int(failed.size())),
+                    StatusMessageTimeout);
+            }
+        }
+
+        // The state of a preview in the status bar: the notes still to render, and whether
+        // playback waits for them
+        void updatePreviewStatus() {
+            const int pending = playback->pendingNotes();
+            const bool buffering = playback->isBuffering();
+            renderLabel->setVisible(pending > 0 || buffering);
+            if (buffering) {
+                renderLabel->setText(
+                    MainWindow::tr("Buffering, %n note(s) to render", nullptr, pending));
+            } else if (pending > 0) {
+                renderLabel->setText(MainWindow::tr("%n note(s) to render", nullptr, pending));
             }
         }
 
@@ -228,6 +280,7 @@ namespace hello::daw {
                 palette->popup();
             });
             addCommand(QStringLiteral("helloutau.playback.play"), [this] { togglePlayback(); });
+            addCommand(QStringLiteral("helloutau.playback.preview"), [this] { togglePreview(); });
             addCommand(QStringLiteral("helloutau.tools.settings"), [this] {
                 const auto utau = editor->settings().utauDirectory();
                 SettingsDialog dialog(editor->settings(), _decl);
@@ -315,8 +368,11 @@ namespace hello::daw {
                              [this] { updateTitle(); });
             QObject::connect(document.get(), &kit::ProjectDocument::filePathChanged, _decl,
                              [this] { updateTitle(); });
-            QObject::connect(document->session(), &kit::ProjectSession::stepChanged, _decl,
-                             [this] { updateUndoActions(); });
+            QObject::connect(document->session(), &kit::ProjectSession::stepChanged, _decl, [this] {
+                updateUndoActions();
+                // A preview plays the notes as they now are.
+                playback->updatePlan(*document);
+            });
             updateTitle();
             updateUndoActions();
         }

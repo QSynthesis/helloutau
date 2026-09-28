@@ -206,6 +206,8 @@ private Q_SLOTS:
         QVERIFY(rt->waitReady(0, rt->length(), std::chrono::seconds(10)));
         QCOMPARE(rendered(), (QList<int>{2, 4, 1, 0}));
         QCOMPARE(rt->pendingCount(), 0);
+        QCOMPARE(rt->startOf(2), segments[2].start);
+        QCOMPARE(rt->startOf(9), qint64(0));
     }
 
     // Nothing is mixed before its notes are rendered, and the mix is that of the fragments.

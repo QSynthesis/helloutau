@@ -8,9 +8,11 @@
 
 #include <hellokit/Document/Project.h>
 #include <hellokit/Edit/ProjectDocument.h>
+#include <hellokit/Synth/RealtimeSynth.h>
 #include <hellokit/Synth/SynthPlan.h>
 #include <hellokit/Synth/ThreadedSynthRunner.h>
 #include <hellokit/Synth/WaveAudio.h>
+#include <hellokit/Synth/WavtoolMixer.h>
 #include <hellokit/VoiceBank/VoiceBank.h>
 
 #include <helloutau/Audio/AudioOutput.h>
@@ -114,6 +116,34 @@ namespace hello::daw {
         QList<QPointer<QThread>> workers;
         double startTime = 0;
 
+        // The preview: the synthesis, kept between previews for the fragments it holds, the
+        // stream it feeds, and the sample of the track file at which the stream began. The
+        // stream refers to the synthesis and goes first.
+        std::unique_ptr<kit::RealtimeSynth> synth;
+        kit::SynthEngines synthEngines;
+        std::shared_ptr<StreamSource> stream;
+        qint64 streamStart = 0;
+
+        // The plan of the whole track of \a document for the preview, whose track file is
+        // never written
+        std::optional<kit::SynthPlan> previewPlan(const kit::ProjectDocument &document,
+                                                  kit::DiagnosticList &diagnostics) {
+            const auto bank = document.voiceBank();
+            if (!bank) {
+                fail(diagnostics, Playback::tr("The project has no voice bank to sing with."));
+                return std::nullopt;
+            }
+            kit::SynthPlan::Options options;
+            options.cacheDirectory = _decl->cacheDirectoryFor(document);
+            options.outputFile = options.cacheDirectory / OutputFileName;
+            return kit::SynthPlan::make(document.session()->snapshot(), *bank, options,
+                                        diagnostics);
+        }
+
+        void endPreview() {
+            stream.reset();
+        }
+
         void setState(State value) {
             if (state != value) {
                 state = value;
@@ -157,6 +187,7 @@ namespace hello::daw {
     Playback::Playback(QObject *parent) : QObject(parent), _impl(std::make_unique<Impl>(this)) {
         _impl->output = new AudioOutput(this);
         connect(_impl->output, &AudioOutput::finished, this, [this] {
+            _impl->endPreview();
             if (_impl->state == Playing) {
                 _impl->setState(Stopped);
             }
@@ -164,6 +195,8 @@ namespace hello::daw {
     }
 
     Playback::~Playback() {
+        _impl->output->stop();
+        _impl->endPreview();
         _impl->cancelRender();
         // A worker refers to this object to report progress, so it must end first. A cancelled
         // render ends once the engine calls under way return.
@@ -225,15 +258,104 @@ namespace hello::daw {
         return true;
     }
 
+    bool Playback::preview(const kit::ProjectDocument &document, std::optional<int> fromNote,
+                           const kit::SynthEngines &engines, kit::DiagnosticList &diagnostics) {
+        stop();
+        if (engines.resampler.empty()) {
+            fail(diagnostics, tr("Set the resampler in the settings first."));
+            return false;
+        }
+        const int deviceRate = AudioOutput::deviceSampleRate();
+        if (deviceRate <= 0) {
+            fail(diagnostics, tr("There is no audio output device."));
+            return false;
+        }
+        const auto plan = _impl->previewPlan(document, diagnostics);
+        if (!plan) {
+            return false;
+        }
+
+        auto &synth = _impl->synth;
+        if (!synth || _impl->synthEngines.resampler != engines.resampler) {
+            synth = std::make_unique<kit::RealtimeSynth>(engines);
+            _impl->synthEngines = engines;
+        }
+        synth->setPlan(*plan);
+        const qint64 start = fromNote ? synth->startOf(*fromNote) : 0;
+        synth->setPosition(start);
+
+        // On the thread of the stream: waits briefly for the notes of the next block, and
+        // otherwise gives nothing, so that the device plays silence while they are rendered.
+        const auto at = std::make_shared<std::atomic<qint64>>(start);
+        auto generator = [synth = synth.get(), at](float *out, qsizetype frames) -> qsizetype {
+            const qint64 from = at->load();
+            const qint64 count = std::min<qint64>(frames, synth->length() - from);
+            if (count <= 0) {
+                return -1;
+            }
+            std::vector<qint16> block(static_cast<size_t>(count));
+            if (!synth->waitReady(from, count, std::chrono::milliseconds(50)) ||
+                !synth->mix(from, count, block.data())) {
+                return 0;
+            }
+            for (qint64 i = 0; i < count; ++i) {
+                out[i] = float(block[size_t(i)]) / 32768;
+            }
+            at->store(from + count);
+            synth->setPosition(from + count);
+            return count;
+        };
+        _impl->stream = std::make_shared<StreamSource>(std::move(generator),
+                                                       kit::WavtoolMixer::sampleRate, deviceRate);
+        _impl->streamStart = start;
+        _impl->stream->start();
+
+        QString error;
+        if (!_impl->output->start(_impl->stream, &error)) {
+            _impl->endPreview();
+            fail(diagnostics, error);
+            return false;
+        }
+        _impl->setState(Playing);
+        return true;
+    }
+
+    bool Playback::isBuffering() const {
+        return _impl->stream && _impl->stream->isStarved();
+    }
+
+    int Playback::pendingNotes() const {
+        return _impl->stream ? _impl->synth->pendingCount() : 0;
+    }
+
+    void Playback::updatePlan(const kit::ProjectDocument &document) {
+        if (!_impl->stream) {
+            return;
+        }
+        kit::DiagnosticList diagnostics;
+        if (const auto plan = _impl->previewPlan(document, diagnostics)) {
+            _impl->synth->setPlan(*plan);
+        }
+    }
+
+    kit::DiagnosticList Playback::takePreviewDiagnostics() {
+        return _impl->synth ? _impl->synth->takeDiagnostics() : kit::DiagnosticList();
+    }
+
     void Playback::stop() {
         _impl->cancelRender();
         _impl->output->stop();
+        _impl->endPreview();
         _impl->setState(Stopped);
     }
 
     std::optional<double> Playback::position() const {
         if (_impl->state != Playing) {
             return std::nullopt;
+        }
+        if (_impl->stream) {
+            const auto sample = double(_impl->streamStart + _impl->stream->position());
+            return _impl->synth->startTime() + sample * 1000 / kit::WavtoolMixer::sampleRate;
         }
         return _impl->startTime + _impl->output->elapsed();
     }

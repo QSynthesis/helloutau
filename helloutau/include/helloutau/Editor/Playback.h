@@ -56,6 +56,31 @@ namespace hello::daw {
         bool play(const kit::ProjectDocument &document, std::optional<std::pair<int, int>> range,
                   const kit::SynthEngines &engines, kit::DiagnosticList &diagnostics);
 
+        /// Plays the track as it is rendered, from the start of note \a fromNote or from the
+        /// start: the realtime preview of step 6 of docs/Widgets.md.
+        ///
+        /// Notes are resampled around the playback position and concatenated in the process, see
+        /// kit::RealtimeSynth, whose fragments are kept for the next preview. When a note is not
+        /// yet rendered, playback waits: isBuffering() holds and position() stands still. An edit
+        /// takes effect through updatePlan().
+        ///
+        /// \return whether playing started; the reason is in \a diagnostics otherwise
+        bool preview(const kit::ProjectDocument &document, std::optional<int> fromNote,
+                     const kit::SynthEngines &engines, kit::DiagnosticList &diagnostics);
+
+        /// Whether the preview waits for a note to be rendered.
+        bool isBuffering() const;
+
+        /// The notes the preview has still to render.
+        int pendingNotes() const;
+
+        /// Replaces the notes that the preview plays with those of \a document, after an edit.
+        /// Does nothing unless a preview plays.
+        void updatePlan(const kit::ProjectDocument &document);
+
+        /// Returns the warnings of the notes the preview could not render since the last call.
+        kit::DiagnosticList takePreviewDiagnostics();
+
         /// Cancels rendering, or stops playing.
         void stop();
 

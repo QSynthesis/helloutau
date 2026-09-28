@@ -50,6 +50,8 @@
 
         <action id="helloutau.playback.play" text="&amp;Play or Stop" category="Playback"
                 shortcut="Space" />
+        <action id="helloutau.playback.preview" text="Pre&amp;view or Stop" category="Playback"
+                shortcut="Shift+Space" />
 
         <action id="helloutau.tools.settings" text="&amp;Settings..." category="Tools" />
 
@@ -104,6 +106,7 @@
             </menu>
             <menu id="helloutau.playback">
                 <action id="helloutau.playback.play" />
+                <action id="helloutau.playback.preview" />
             </menu>
             <menu id="helloutau.tools">
                 <action id="helloutau.tools.settings" />

@@ -192,6 +192,12 @@
 
 **验收标准**：打开工程后立即从任意位置开始播放，无须等待整体渲染；播放中修改音符，播放到该处时听到的是修改后的结果；实时拼接与 wavtool 的输出按上述规定比较一致。
 
+**进度**：设计见 [`Synth.md`](Synth.md)「三、实时」（作者已确认），已实现，待作者验收。
+
+- `HelloKitSynth`：`WavtoolMixer`（进程内拼接，规则实测于 [`claude/wavtool-concatenation.md`](claude/wavtool-concatenation.md)，真实工程上与 `wavtool.exe` 只有 82 个样本相差 1）、`RealtimeSynth`（按播放位置调度重采样，按缓存文件跟踪片段）。
+- `HelloUtauAudio`：`StreamSource`，生产线程从生成函数取 44100 Hz 的样本，以 r8brain 的流式接口转换为设备采样率，经无锁环形缓冲（0.5 秒）交给音频线程；缓冲耗尽时输出静音且播放位置不动。
+- `HelloUtauEditor`：播放菜单的「试听」（Shift+Space，空格仍为第 5 步的渲染后播放），从第一个选中音符的片段起点或从头开始；试听中每次编辑都以新的计划替换，修改在环形缓冲的长度之后听到；状态栏显示待渲染的音符数与「缓冲中」，结束后在状态栏报告未能渲染而静音的音符数。`RealtimeSynth` 在两次试听之间保留，内存中的片段继续使用。
+
 ### 主题系统
 
 `HelloUtauTheme` 按 [`Theme.md`](Theme.md) 实现。各步的控件从一开始就以 `Q_PROPERTY` 声明颜色，因此主题系统可以在任一步之后接入，不影响控件的结构。它在第 5 步之后实施。

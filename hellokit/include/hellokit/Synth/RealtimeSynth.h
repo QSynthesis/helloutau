@@ -57,6 +57,10 @@ namespace hello::kit {
         /// The length of the track file in samples at 44100 Hz.
         qint64 length() const;
 
+        /// The first sample of the track file that note \a noteIndex of the track sounds in,
+        /// which precedes its start by its pre-utterance, or 0 if the plan has no such note.
+        qint64 startOf(int noteIndex) const;
+
         /// The position in the track, in milliseconds, of the first sample of the track file.
         /// \sa SynthPlan::startTime()
         double startTime() const;

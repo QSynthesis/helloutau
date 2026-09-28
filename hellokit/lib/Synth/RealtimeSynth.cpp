@@ -242,6 +242,16 @@ namespace hello::kit {
         return WavtoolMixer::lengthOf(_impl->segments);
     }
 
+    qint64 RealtimeSynth::startOf(int noteIndex) const {
+        const std::lock_guard lock(_impl->mutex);
+        for (int i = 0; i < _impl->steps.size(); ++i) {
+            if (_impl->steps[i].noteIndex == noteIndex) {
+                return _impl->segments[i].start;
+            }
+        }
+        return 0;
+    }
+
     double RealtimeSynth::startTime() const {
         const std::lock_guard lock(_impl->mutex);
         return _impl->startTime;
