@@ -552,6 +552,17 @@ private Q_SLOTS:
         QCOMPARE(points[2].y, 0.0);
     }
 
+    // Any point may lie before the start of its note, not only the first.
+    void a_later_point_moves_before_its_note() {
+        kit::ProjectSession session(bentNotes());
+        PianoRoll roll(&session);
+        showExactly(roll);
+
+        dragPoint(roll, pointOfLi(roll, 0, 100), pointOfLi(roll, -30, 100));
+        QCOMPARE(pointsOfLi(session)[1].x, -30.0);
+        QCOMPARE(session.undoMessage(), PianoRoll::tr("Move Pitch Points"));
+    }
+
     // Selected points move together, by as much as the one nearest to a neighbour that stays
     // allows.
     void selected_points_move_together() {

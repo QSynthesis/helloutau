@@ -209,13 +209,24 @@ private Q_SLOTS:
         QCOMPARE(diagnostics.first().message, message);
     }
 
-    // The first portamento point is relative to the start of the note and may precede it.
-    void the_first_portamento_point_may_precede_the_note() {
+    // Every portamento point counts from the start of the note and may precede it; only the
+    // order of the points is a constraint.
+    void a_portamento_point_may_precede_the_note() {
         ProjectSession session(richProject());
         const auto note = ProjectRef(&session).tracks().at(0).notes().at(0);
         auto transaction = session.transaction(QStringLiteral("Portamento"));
         note.portamento().at(0).setX(-100);
+        note.portamento().at(1).setX(-60);
         QVERIFY(transaction.commit());
+
+        auto passing = session.transaction(QStringLiteral("Portamento"));
+        note.portamento().at(1).setX(-120);
+        DiagnosticList diagnostics;
+        QVERIFY(!passing.commit(diagnostics));
+        QCOMPARE(diagnostics.first().message,
+                 ProjectSession::tr("The portamento point %1 is %2 ms before the preceding point.")
+                     .arg(2)
+                     .arg(20));
     }
 
     // A project read from a file may contain values that the constraints reject. Editing it
@@ -223,7 +234,7 @@ private Q_SLOTS:
     void a_violation_read_from_a_file_does_not_prevent_editing() {
         auto project = richProject();
         project.tracks[0].notes[0].noteNum = 200;
-        project.tracks[0].notes[0].portamento[1].x = -3;
+        project.tracks[0].notes[0].portamento[1].x = -50; // before the first point
         ProjectSession session(project);
         const auto note = ProjectRef(&session).tracks().at(0).notes().at(0);
 

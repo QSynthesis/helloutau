@@ -68,17 +68,22 @@ namespace hello::kit {
         void checkPortamento(const NoteNode &record, QList<edit::Violation> &violations) {
             const auto points =
                 static_cast<const ss::VectorNode *>(record.child(NoteSlots::Portamento.index));
-            for (int i = 1; i < points->size(); ++i) {
+            // Each x counts from the start of the note, so the interval that PBW writes is the
+            // difference from the point before.
+            const auto xOf = [points](int i) {
                 const auto &point = static_cast<const PortamentoPointNode &>(*points->at(i));
-                const auto x =
-                    edit::SlotValue<double>::fromVariant(point.variant(PortamentoSlots::X.index));
-                if (x < 0) {
+                return edit::SlotValue<double>::fromVariant(
+                    point.variant(PortamentoSlots::X.index));
+            };
+            for (int i = 1; i < points->size(); ++i) {
+                const double interval = xOf(i) - xOf(i - 1);
+                if (interval < 0) {
                     violations.push_back(
                         {NoteSlots::Portamento.index,
                          ProjectSession::tr("The portamento point %1 is %2 ms before the preceding "
                                             "point.")
                              .arg(i + 1)
-                             .arg(-x)});
+                             .arg(-interval)});
                 }
             }
         }

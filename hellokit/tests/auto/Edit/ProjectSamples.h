@@ -50,7 +50,7 @@ namespace hello::kit {
             {-40, 0,  PortamentoPoint::S     },
             {20,  -5, PortamentoPoint::Linear},
             {30,  3,  PortamentoPoint::R     },
-            {10,  0,  PortamentoPoint::J     }
+            {40,  0,  PortamentoPoint::J     }
         };
         first.pitchBend = PitchBend{
             -20.0, {0, 10.5, -20, 0}

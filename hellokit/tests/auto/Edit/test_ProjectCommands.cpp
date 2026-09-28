@@ -176,16 +176,16 @@ private Q_SLOTS:
     void a_portamento_point_is_inserted_with_the_name_of_its_type() {
         ProjectSession session(richProject());
         QVERIFY(run(session, QStringLiteral("insert /tracks/0/notes/0/portamento 4 "
-                                            "{\"x\": 10, \"y\": 1, \"type\": \"R\"}")));
+                                            "{\"x\": 50, \"y\": 1, \"type\": \"R\"}")));
         const auto point = noteAt(session, 0).portamento.last();
-        QCOMPARE(point.x, 10.0);
+        QCOMPARE(point.x, 50.0);
         QCOMPARE(point.type, PortamentoPoint::R);
 
         QVERIFY(run(session, QStringLiteral("set /tracks/0/notes/0/portamento/0/type J")));
         QCOMPARE(noteAt(session, 0).portamento.first().type, PortamentoPoint::J);
 
         verifyRefused(session, QStringLiteral("insert /tracks/0/notes/0/portamento 0 "
-                                              "{\"x\": 0, \"y\": 0, \"type\": \"s\"}"));
+                                              "{\"x\": -50, \"y\": 0, \"type\": \"s\"}"));
     }
 
     void the_entries_of_the_mappings_are_set_by_key() {
@@ -347,7 +347,7 @@ private Q_SLOTS:
             QStringLiteral("note insert /tracks/0/notes 2 {\"lyric\": \"sa\", \"length\": 240, "
                            "\"noteNum\": 64}"),
             QStringLiteral("note tempo /tracks/0/notes/2 140"),
-            QStringLiteral("insert /tracks/0/notes/0/portamento 4 {\"x\": 5, \"y\": 1, \"type\": "
+            QStringLiteral("insert /tracks/0/notes/0/portamento 4 {\"x\": 50, \"y\": 1, \"type\": "
                            "\"R\"}"),
             QStringLiteral("set /tracks/0/notes/0/userData $Custom \"x y\""),
             QStringLiteral("remove /tracks/0/notes/0/userData $custom"),

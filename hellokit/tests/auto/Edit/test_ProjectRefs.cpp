@@ -322,7 +322,11 @@ private Q_SLOTS:
     }
 
     void lists_insert_remove_and_move_items() {
+        // The points at one time, so that reordering them keeps them in order
         auto project = richProject();
+        for (auto &point : project.tracks[0].notes[0].portamento) {
+            point.x = 0;
+        }
         ProjectSession session(project);
         auto notes = ProjectRef(&session).tracks().at(0).notes();
         auto portamento = notes.at(0).portamento();
@@ -337,7 +341,7 @@ private Q_SLOTS:
         notes.move(0, 1, 2);
         notes.remove(3, 1);
         portamento.insert(4, {
-                                 {5, 6, PortamentoPoint::R}
+                                 {0, 6, PortamentoPoint::R}
         });
         portamento.remove(0, 1);
         portamento.move(0, 2, 1);
@@ -345,7 +349,7 @@ private Q_SLOTS:
 
         auto &track = project.tracks[0];
         auto &points = track.notes[0].portamento;
-        points.insert(4, {5, 6, PortamentoPoint::R});
+        points.insert(4, {0, 6, PortamentoPoint::R});
         points.remove(0);
         points.move(2, 0); // moving the first two by one equals moving the third to the front
         track.notes.insert(1, 2, added);
