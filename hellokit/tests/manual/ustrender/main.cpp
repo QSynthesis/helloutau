@@ -10,6 +10,7 @@
 ///   ustrender song.ust out.wav --voice "C:/UTAU/voice/uta" --charset Shift_JIS \
 ///       --resampler C:/UTAU/resampler.exe --wavtool C:/UTAU/wavtool.exe
 ///   ustrender song.usth out.wav --voice ... --plan
+///   ustrender song.ust out.wav --voice ... --compare-pitch
 ///   ustrender song.ust out.wav --voice ... --resampler ... --wavtool ... --compare-mix
 /// \endcode
 
@@ -28,8 +29,10 @@
 #include <stdcorelib/support/commandline.h>
 #include <stdcorelib/system.h>
 
+#include <hellokit/Document/TempoMap.h>
 #include <hellokit/Document/UstDocument.h>
 #include <hellokit/Support/TextCodec.h>
+#include <hellokit/Synth/PitchCurve.h>
 #include <hellokit/Synth/SynthPlan.h>
 #include <hellokit/Synth/ClassicSynthRunner.h>
 #include <hellokit/Synth/RealtimeSynth.h>
@@ -194,6 +197,36 @@ namespace {
         return written.size() == mixed.size() && largest <= 1 ? 0 : 2;
     }
 
+    /// Computes the pitch curve of each note of \a plan with PitchCurve, as the editor draws it,
+    /// and compares it with the curve the resampler receives, which must agree value for value.
+    int comparePitch(const Project &project, const SynthPlan &plan) {
+        const auto &notes = project.tracks.first().notes;
+        const auto tempos = TempoMap::of(project);
+        const auto &steps = plan.steps();
+        int differing = 0;
+        qsizetype values = 0;
+        for (qsizetype i = 0; i < steps.size(); ++i) {
+            const auto &step = steps[i];
+            PitchCurve::Timing timing;
+            timing.preUtterance = step.preUtterance;
+            timing.startPoint = step.startPoint;
+            if (i + 1 < steps.size()) {
+                timing.nextPreUtterance = steps[i + 1].preUtterance;
+                timing.nextOverlap = steps[i + 1].voiceOverlap;
+            }
+            const auto computed =
+                PitchCurve(notes, step.noteIndex, tempos.tempo(step.noteIndex)).values(timing);
+            values += computed.size();
+            if (computed != step.pitch) {
+                ++differing;
+                stdc::u8printf("pitch: note %d differs\n", step.noteIndex + 1);
+            }
+        }
+        stdc::u8printf("pitch: %d notes, %d values, %d notes differ\n", int(steps.size()),
+                       int(values), differing);
+        return differing == 0 ? 0 : 2;
+    }
+
     /// Renders \a plan as realtime playback does, from its start, and writes the whole track as a
     /// 16-bit WAV file, which only the wavtool of UTAU writes otherwise.
     int renderRealtime(const SynthPlan &plan, const SynthEngines &engines, const fs::path &output) {
@@ -311,6 +344,10 @@ namespace {
             return 0;
         }
 
+        if (result.option("--compare-pitch")) {
+            return comparePitch(*project, *plan);
+        }
+
         SynthEngines engines;
         engines.resampler = pathOf(option(result, "--resampler"));
         engines.wavtool = pathOf(option(result, "--wavtool"));
@@ -396,6 +433,9 @@ int main(int argc, char *argv[]) {
             .addOption(cli::Option({"--realtime"},
                                    "Render as realtime playback does, concatenating in the "
                                    "process instead of running the wavtool"))
+            .addOption(cli::Option({"--compare-pitch"},
+                                   "Compare the pitch curve the editor draws with that of the "
+                                   "resampler, without executing anything"))
             .addOption(cli::Option({"--compare-mix"},
                                    "Concatenate the fragments in the process as well, and compare "
                                    "the result with the file the wavtool wrote"))

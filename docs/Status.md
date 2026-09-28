@@ -9,7 +9,7 @@
 | `HelloKitSupport` | `Diagnostic`、`TextCodec`（编码名解析、转义与还原）、`FileSystemWatcher`（磁盘变化提示，由 `hello-fswatcher` 进程实现） |
 | `HelloKitDocument` | `PayloadCodec`、`Project` / `Track` / `Note` 模型、`.usth` 读写、`UstDocument` |
 | `HelloKitVoiceBank` | `VoiceBankConfig`、`VoiceBankSource`（原始扫描）、`VoiceBank`（解码后的内容与查询，纯值）、`VoiceBankFileSystemState`（磁盘状态：写回、与磁盘核对、重新读取）、`VoiceBankCheckScheduler` |
-| `HelloKitSynth` | `EngineProcess`、`SynthPlan`（仅计算，含轨道文件在轨道中的起始时刻）、`WaveAudio`（读取 wav）、`WavtoolMixer`（进程内拼接）、`RealtimeSynth`（实时试听的调度与混合）、`SynthRunner` 及其实现 `ClassicSynthRunner`、`ThreadedSynthRunner` |
+| `HelloKitSynth` | `EngineProcess`、`SynthPlan`（仅计算，含轨道文件在轨道中的起始时刻）、`WaveAudio`（读取 wav）、`WavtoolMixer`（进程内拼接）、`RealtimeSynth`（实时试听的调度与混合）、`PitchCurve`（音符的滑音与颤音曲线，与交给重采样器的曲线逐值相同）、`SynthRunner` 及其实现 `ClassicSynthRunner`、`ThreadedSynthRunner` |
 | `HelloKitInterchange` | 接口、注册表、`Formats/MidiConvert`（导入与导出） |
 | `HelloKitEditBase` | 编辑层的通用部分，命名空间 `hello::kit::edit`：`EditSession`（事务、撤销、变更通知、提交时校验）、`NodeRef`、`Change`、槽位、命令语法，以及扩展接口（字段表、按路径的命令、变更日志） |
 | `HelloKitEdit` | 编辑层的文档部分。工程：`ProjectDocument`（打开、导入、保存、是否已修改）、`TrackTimeline`（音符的位置）、`ProjectSession`、句柄 `ProjectRefs`、领域函数 `ProjectEdits`、命令 `ProjectCommands`。音源：`VoiceBankSession`（含保存与从磁盘重新读取）、句柄 `VoiceBankRefs`、领域函数 `VoiceBankEdits`、命令 `VoiceBankCommands` |

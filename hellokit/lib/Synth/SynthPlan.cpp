@@ -285,6 +285,10 @@ namespace hello::kit {
                 step.resamplerArguments = listOf(resampler.arguments());
             }
             step.wavtoolArguments = listOf(wavtool.arguments());
+            step.preUtterance = resampler.correctPreUttr;
+            step.voiceOverlap = resampler.correctOverlap;
+            step.startPoint = resampler.correctStp;
+            step.pitch = QList<int>(resampler.pitchCurves.begin(), resampler.pitchCurves.end());
 
             plan.m_steps.push_back(std::move(step));
         }

@@ -40,6 +40,17 @@ namespace hello::kit {
         /// The wavtool arguments. The wavtool runs for every note, including silent ones,
         /// because a rest supplies the duration of silence in the track.
         QStringList wavtoolArguments;
+
+        /// The timing of the sample in milliseconds, as reconciled with the previous note: the
+        /// pre-utterance and the overlap shortened where the previous note is too short for
+        /// them, and the start point moved by what the pre-utterance lost.
+        double preUtterance = 0;
+        double voiceOverlap = 0;
+        double startPoint = 0;
+
+        /// The pitch curve in the resampler arguments, in cents, as PitchCurve::values() gives
+        /// it.
+        QList<int> pitch;
     };
 
     /// The components of a render, determined without executing anything.
