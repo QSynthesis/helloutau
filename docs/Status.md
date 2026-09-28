@@ -13,7 +13,8 @@
 | `HelloKitInterchange` | 接口、注册表、`Formats/MidiConvert`（导入与导出） |
 | `HelloKitEditBase` | 编辑层的通用部分，命名空间 `hello::kit::edit`：`EditSession`（事务、撤销、变更通知、提交时校验）、`NodeRef`、`Change`、槽位、命令语法，以及扩展接口（字段表、按路径的命令、变更日志） |
 | `HelloKitEdit` | 编辑层的文档部分。工程：`ProjectSession`、句柄 `ProjectRefs`、领域函数 `ProjectEdits`、命令 `ProjectCommands`。音源：`VoiceBankSession`（含保存与从磁盘重新读取）、句柄 `VoiceBankRefs`、领域函数 `VoiceBankEdits`、命令 `VoiceBankCommands` |
-| `HelloUtauEditor` | 窗口骨架：QActionKit 清单生成的菜单、工程的打开（UST 编码选择）、保存、另存为与导出 UST、撤销与重做、未保存标记、设置；工程内容暂以只读的音符表显示，见 [`Widgets.md`](Widgets.md) 第 1 步 |
+| `HelloUtauWidgets` | 通用的控件基础设施：命令面板 `CommandPalette` 与其模糊匹配 `CommandMatcher` |
+| `HelloUtauEditor` | 窗口骨架：QActionKit 清单生成的菜单、工程的打开（UST 编码选择）、保存、另存为与导出 UST、撤销与重做、未保存标记、设置、命令面板（`Ctrl+Shift+P`）；工程内容暂以只读的音符表显示，见 [`Widgets.md`](Widgets.md) 第 1、2 步 |
 | `helloutau` | 薄驱动，仅含 `main.cpp` |
 
 已验证的构建链：qmsetup 的 `hellokit_add_library` / `helloutau_add_library` / `helloutau_add_application`、Qt 6.11 与 AUTOMOC、stdcorelib、stdutau、wolf-midi、QtTest 与 `add_auto_test`、ctest。
@@ -69,7 +70,7 @@
 
 缓存管理也已完成：已渲染的音频片段不会重复渲染；缓存文件名是其内容的摘要，因此修改过的音符会自动得到新文件名并重新渲染。见 [`Synth.md`](Synth.md) 的「缓存」一节。
 
-**第三阶段「编辑器骨架」的第一步 `HelloKitEdit` 已完成，七项验收标准均已达成；界面部分按 [`Widgets.md`](Widgets.md) 分六步进行，第 1 步「窗口骨架与工程的打开保存」已完成并经作者验收。** 编辑层自身的验收标准见 [`Editing.md`](Editing.md) 末尾，逐项状态如下：
+**第三阶段「编辑器骨架」的第一步 `HelloKitEdit` 已完成，七项验收标准均已达成；界面部分按 [`Widgets.md`](Widgets.md) 分六步进行，第 1 步「窗口骨架与工程的打开保存」与第 2 步「命令面板」已完成并经作者验收。** 编辑层自身的验收标准见 [`Editing.md`](Editing.md) 末尾，逐项状态如下：
 
 | 验收标准 | 状态 |
 |---|---|

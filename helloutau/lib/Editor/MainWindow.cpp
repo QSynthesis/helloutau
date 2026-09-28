@@ -3,6 +3,7 @@
 #include <QtCore/QDir>
 #include <QtCore/QHash>
 #include <QtCore/QStandardPaths>
+#include <QtCore/QTimer>
 #include <QtGui/QAction>
 #include <QtGui/QCloseEvent>
 #include <QtWidgets/QFileDialog>
@@ -11,10 +12,13 @@
 #include <QtWidgets/QMessageBox>
 #include <QtWidgets/QTableView>
 
+#include <QAKCore/actionextension.h>
 #include <QAKCore/actionregistry.h>
 #include <QAKWidgets/widgetactioncontext.h>
 
 #include <hellokit/Edit/ProjectDocument.h>
+
+#include <helloutau/Widgets/CommandPalette.h>
 
 #include "AppSettings.h"
 #include "DiagnosticBox_p.h"
@@ -61,6 +65,7 @@ namespace hello::daw {
         QTableView *view = nullptr;
         QAK::WidgetActionContext *context = nullptr;
         QHash<QString, QAction *> actions;
+        CommandPalette *palette = nullptr;
 
         QAction *addCommand(const QString &id, std::function<void()> handler) {
             auto action = new QAction(_decl);
@@ -85,6 +90,11 @@ namespace hello::daw {
                        [this] { document->session()->undo(); });
             addCommand(QStringLiteral("helloutau.edit.redo"),
                        [this] { document->session()->redo(); });
+            addCommand(QStringLiteral("helloutau.view.commandPalette"), [this] {
+                palette->setCommands(commandEntries());
+                palette->setRecentIds(editor->settings().recentCommands());
+                palette->popup();
+            });
             addCommand(QStringLiteral("helloutau.tools.settings"), [this] {
                 SettingsDialog dialog(editor->settings(), _decl);
                 dialog.exec();
@@ -96,6 +106,50 @@ namespace hello::daw {
                  {QAK::AE_Layouts, QAK::AE_Texts, QAK::AE_Keymap, QAK::AE_Icons}) {
                 registry->updateContext(element);
             }
+
+            palette = new CommandPalette(_decl);
+            QObject::connect(palette, &CommandPalette::commandActivated, _decl,
+                             [this](const QString &id) {
+                                 editor->settings().addRecentCommand(id);
+                                 // Run once the key press that chose it is over, since the command
+                                 // may open a dialog. It may have been disabled in between.
+                                 QTimer::singleShot(0, _decl, [this, id] {
+                                     if (const auto action = context->action(id);
+                                         action && action->isEnabled()) {
+                                         action->trigger();
+                                     }
+                                 });
+                             });
+        }
+
+        // The commands of the window as the command palette offers them: every action that is a
+        // command and is enabled now, as VS Code shows no disabled command, labelled with its
+        // category as "File: Save". The palette does not list itself.
+        QList<CommandEntry> commandEntries() const {
+            const auto registry = editor->actionRegistry();
+            QList<CommandEntry> entries;
+            for (const auto &id : registry->actionIds()) {
+                const auto info = registry->actionInfo(id);
+                const auto action = context->action(id);
+                if (!info || !info->isCommand() || !action || !action->isEnabled() ||
+                    id == QStringLiteral("helloutau.view.commandPalette")) {
+                    continue;
+                }
+                const auto label = [](const QAK::ActionText &category,
+                                      const QAK::ActionText &text) {
+                    const auto title = text.withoutMnemonic();
+                    const auto group = category.withoutMnemonic();
+                    return group.isEmpty() ? title : group + QStringLiteral(": ") + title;
+                };
+                const auto category = info->category();
+                const auto text = info->text();
+                const auto shown = label(category, text);
+                const auto source =
+                    label({category.source, std::nullopt}, {text.source, std::nullopt});
+                entries.push_back({id, shown, source == shown ? QString() : source,
+                                   action->shortcut(), action->isCheckable(), action->isChecked()});
+            }
+            return entries;
         }
 
         void bindDocument() {

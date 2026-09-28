@@ -26,6 +26,9 @@
         <action id="helloutau.edit.redo" text="&amp;Redo" category="Edit"
                 shortcuts="Ctrl+Y;Ctrl+Shift+Z" />
 
+        <action id="helloutau.view.commandPalette" text="&amp;Command Palette..." category="View"
+                shortcuts="Ctrl+Shift+P;F1" />
+
         <action id="helloutau.tools.settings" text="&amp;Settings..." category="Tools" />
 
         <menu id="helloutau.mainMenu" topLevel="true" />
@@ -33,6 +36,7 @@
         <!-- Formats other than .usth, UST first; MIDI and the rest will join it -->
         <menu id="helloutau.file.export" text="&amp;Export" />
         <menu id="helloutau.edit" text="&amp;Edit" />
+        <menu id="helloutau.view" text="&amp;View" />
         <menu id="helloutau.tools" text="&amp;Tools" />
     </items>
 
@@ -54,6 +58,9 @@
             <menu id="helloutau.edit">
                 <action id="helloutau.edit.undo" />
                 <action id="helloutau.edit.redo" />
+            </menu>
+            <menu id="helloutau.view">
+                <action id="helloutau.view.commandPalette" />
             </menu>
             <menu id="helloutau.tools">
                 <action id="helloutau.tools.settings" />

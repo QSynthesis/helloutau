@@ -10,6 +10,7 @@ namespace hello::daw {
         constexpr char KeyResampler[] = "engines/resampler";
         constexpr char KeyWavtool[] = "engines/wavtool";
         constexpr char KeyUstExportCharset[] = "files/ustExportCharset";
+        constexpr char KeyRecentCommands[] = "commandPalette/recent";
 
     }
 
@@ -58,6 +59,17 @@ namespace hello::daw {
 
     void AppSettings::setUstExportCharset(const QString &charset) {
         m_settings->setValue(QLatin1String(KeyUstExportCharset), charset);
+    }
+
+    QStringList AppSettings::recentCommands() const {
+        return m_settings->value(QLatin1String(KeyRecentCommands)).toStringList();
+    }
+
+    void AppSettings::addRecentCommand(const QString &id) {
+        auto ids = recentCommands();
+        ids.removeAll(id);
+        ids.prepend(id);
+        m_settings->setValue(QLatin1String(KeyRecentCommands), ids.mid(0, recentCommandCount));
     }
 
 }

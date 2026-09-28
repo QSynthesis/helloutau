@@ -6,6 +6,7 @@
 
 #include <QtCore/QSettings>
 #include <QtCore/QString>
+#include <QtCore/QStringList>
 
 #include <helloutau/Editor/HelloUtauEditorGlobal.h>
 
@@ -38,6 +39,15 @@ namespace hello::daw {
         /// The encoding initially selected when a UST is exported, UTF-8 by default.
         QString ustExportCharset() const;
         void setUstExportCharset(const QString &charset);
+
+        /// The commands last chosen in the command palette, the latest first, shared by all
+        /// windows.
+        QStringList recentCommands() const;
+
+        /// Puts \a id first among the recent commands. At most \c recentCommandCount are kept.
+        void addRecentCommand(const QString &id);
+
+        static constexpr int recentCommandCount = 20;
 
     private:
         Q_DISABLE_COPY(AppSettings)

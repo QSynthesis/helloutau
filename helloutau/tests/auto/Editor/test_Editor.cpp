@@ -5,6 +5,7 @@
 #include <QtGui/QAction>
 #include <QtTest/QTest>
 #include <QtWidgets/QApplication>
+#include <QtWidgets/QLineEdit>
 #include <QtWidgets/QMenu>
 #include <QtWidgets/QMenuBar>
 #include <QtWidgets/QMessageBox>
@@ -12,6 +13,8 @@
 
 #include <hellokit/Edit/ProjectDocument.h>
 #include <hellokit/Edit/ProjectRefs.h>
+
+#include <helloutau/Widgets/CommandPalette.h>
 
 #include <helloutau/Editor/AppSettings.h>
 #include <helloutau/Editor/Editor.h>
@@ -93,7 +96,7 @@ private Q_SLOTS:
             menus.push_back(action->text());
         }
         QCOMPARE(menus, (QStringList{QStringLiteral("&File"), QStringLiteral("&Edit"),
-                                     QStringLiteral("&Tools")}));
+                                     QStringLiteral("&View"), QStringLiteral("&Tools")}));
         const auto save = actionNamed(window, QStringLiteral("&Save"));
         QVERIFY(save);
         QCOMPARE(save->shortcut(), QKeySequence(QStringLiteral("Ctrl+S")));
@@ -145,6 +148,44 @@ private Q_SLOTS:
         // A file that is already open is not opened twice.
         QCOMPARE(e->openFile(a, second), first);
         QCOMPARE(e->windows().size(), 2);
+    }
+
+    // As in VS Code, the palette lists the commands that are enabled now, each after its
+    // category, and not itself.
+    void the_command_palette_offers_the_enabled_commands() {
+        const auto e = editor();
+        const auto window = e->newWindow();
+        const auto open = actionNamed(window, QStringLiteral("&Command Palette..."));
+        QVERIFY(open);
+        QCOMPARE(open->shortcuts(),
+                 (QList<QKeySequence>{QKeySequence(QStringLiteral("Ctrl+Shift+P")),
+                                      QKeySequence(Qt::Key_F1)}));
+
+        open->trigger();
+        const auto palette = window->findChild<CommandPalette *>();
+        QVERIFY(palette && palette->isVisible());
+        const auto ids = palette->shownIds();
+        QVERIFY(ids.contains(QStringLiteral("helloutau.file.save")));
+        QVERIFY(!ids.contains(QStringLiteral("helloutau.edit.undo")));
+        QVERIFY(!ids.contains(QStringLiteral("helloutau.view.commandPalette")));
+        for (const auto &entry : palette->commands()) {
+            if (entry.id == QStringLiteral("helloutau.file.save")) {
+                QCOMPARE(entry.label, QStringLiteral("File: Save"));
+                QCOMPARE(entry.shortcut, QKeySequence(QStringLiteral("Ctrl+S")));
+            }
+        }
+        QTest::keyClick(palette->findChild<QLineEdit *>(), Qt::Key_Escape);
+
+        // Once there is something to undo, the palette offers Undo and runs it.
+        edit(window);
+        open->trigger();
+        palette->setQuery(QStringLiteral("undo"));
+        QCOMPARE(palette->currentId(), QStringLiteral("helloutau.edit.undo"));
+        QTest::keyClick(palette->findChild<QLineEdit *>(), Qt::Key_Return);
+
+        // The command runs once the key press is over, and is remembered as recently used.
+        QTRY_VERIFY(!window->document()->isModified());
+        QCOMPARE(e->settings().recentCommands().first(), QStringLiteral("helloutau.edit.undo"));
     }
 
     void closing_a_modified_project_asks_to_save() {
