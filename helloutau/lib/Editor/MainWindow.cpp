@@ -403,6 +403,10 @@ namespace hello::daw {
                 actions.value(QLatin1String(id))->setEnabled(selected > 0);
             }
             actions.value(QStringLiteral("helloutau.edit.splitNote"))->setEnabled(selected == 1);
+            // Delete also removes the selected pitch points.
+            if (!roll->selectedPoints().isEmpty()) {
+                actions.value(QStringLiteral("helloutau.edit.delete"))->setEnabled(true);
+            }
         }
 
         // Performs an edit of the piano roll and shows why it was refused, if it was. Nothing

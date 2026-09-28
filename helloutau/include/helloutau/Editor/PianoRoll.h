@@ -3,7 +3,9 @@
 
 #include <memory>
 #include <optional>
+#include <utility>
 
+#include <QtCore/QList>
 #include <QtGui/QColor>
 #include <QtWidgets/QWidget>
 
@@ -61,6 +63,9 @@ namespace hello::daw {
             NoteEnd,
             /// Anywhere not on a note.
             Background,
+            /// A Mode2 point, while the pitch is shown; SceneHit::index is its index in the
+            /// note.
+            PitchPoint,
         };
 
         /// What a press on the background does.
@@ -119,6 +124,12 @@ namespace hello::daw {
         QList<int> selectedIndices() const;
         void setSelectedIndices(const QList<int> &indices);
         void selectAll();
+
+        /// The selected Mode2 points, as the index of the note and the index of the point in
+        /// it, in ascending order. Points and notes are not selected at the same time: selecting
+        /// either clears the other.
+        QList<std::pair<int, int>> selectedPoints() const;
+        void setSelectedPoints(const QList<std::pair<int, int>> &points);
         /// @}
 
         /// \name Operations on the selection
@@ -126,6 +137,9 @@ namespace hello::daw {
         /// Each is one undo step, and returns whether it was made, with the reason in
         /// \a diagnostics otherwise.
         /// @{
+
+        /// Removes the selected notes, or the selected points. Each note keeps two points at
+        /// least: where fewer would remain, its first and last points stay.
         bool removeSelected(kit::DiagnosticList &diagnostics);
         bool transposeSelected(int semitones, kit::DiagnosticList &diagnostics);
 
@@ -155,6 +169,13 @@ namespace hello::daw {
         /// Whether the pitch of each note is drawn: its portamento in pitchColor() and, apart
         /// from it, its vibrato around the middle of its row in vibratoColor(), both as the
         /// resampler receives them (kit::PitchCurve). See step 1 in docs/Tuning.md.
+        ///
+        /// While it is, the Mode2 points are drawn on the portamento and edited there (step 2 in
+        /// docs/Tuning.md): a point is dragged, with those selected with it, Shift snapping it to
+        /// the time of another point of its note and Ctrl its height to 50 cents; a double click
+        /// on the portamento inserts a point; the context menu of a point changes its shape or
+        /// removes it. The first point after a sung note starts at the pitch of that note and
+        /// only moves in time, as does the last point.
         bool isPitchVisible() const;
         void setPitchVisible(bool visible);
 

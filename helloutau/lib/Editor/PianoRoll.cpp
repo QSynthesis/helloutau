@@ -5,6 +5,7 @@
 #include <functional>
 #include <numeric>
 
+#include <QtCore/QHash>
 #include <QtCore/QSet>
 #include <QtCore/QTimer>
 #include <QtGui/QKeyEvent>
@@ -13,6 +14,7 @@
 #include <QtWidgets/QComboBox>
 #include <QtWidgets/QGridLayout>
 #include <QtWidgets/QLineEdit>
+#include <QtWidgets/QMenu>
 
 #include <hellokit/Document/DocumentConstants.h>
 #include <hellokit/Edit/ProjectEdits.h>
@@ -59,6 +61,19 @@ namespace hello::daw {
 
         // The pitch curves are sampled this many pixels apart, and at least a tick apart.
         constexpr double CurveStep = 2;
+
+        // A Mode2 point is drawn with this radius, and hit within this distance, in pixels; a
+        // double click inserts one within this distance of the portamento.
+        constexpr double PointRadius = 3.5;
+        constexpr double PointGrip = 6;
+        constexpr double CurveGrip = 5;
+
+        // Ctrl snaps the height of a point to this many cents.
+        constexpr double PitchSnap = 50;
+
+        // A note without points receives these, at this many milliseconds on either side of
+        // its start, when a point is inserted.
+        constexpr double DefaultPortamento = 15;
 
         QString tempoText(double tempo) {
             return QString::number(tempo, 'g', 6);
@@ -130,6 +145,7 @@ namespace hello::daw {
         class LengthGesture;
         class BandGesture;
         class DrawGesture;
+        class PointGesture;
 
         explicit Impl(PianoRoll *decl) : _decl(decl) {
         }
@@ -148,6 +164,10 @@ namespace hello::daw {
         int quantization = DefaultQuantization;
 
         QSet<kit::edit::NodeId> selection;
+        // The selected Mode2 points, by the identifiers of their nodes
+        QSet<kit::edit::NodeId> selectedPoints;
+        // What a gesture shows instead of the points of some notes, by note index
+        QHash<int, QList<kit::PortamentoPoint>> pointPreview;
         // The note from which Shift extends the selection
         kit::edit::NodeId anchor = 0;
 
@@ -195,14 +215,144 @@ namespace hello::daw {
             return selection.contains(timeline->note(index).id);
         }
 
+        // Selects the notes ids; selecting a note clears the selected points.
         void setSelection(const QSet<kit::edit::NodeId> &ids) {
-            if (ids == selection) {
+            const bool clearsPoints = !ids.isEmpty() && !selectedPoints.isEmpty();
+            if (ids == selection && !clearsPoints) {
                 return;
             }
             selection = ids;
+            if (clearsPoints) {
+                selectedPoints.clear();
+            }
             view->viewport()->update();
             Q_EMIT _decl->selectionChanged();
         }
+
+        // Selects the points ids; selecting a point clears the selected notes.
+        void selectPoints(const QSet<kit::edit::NodeId> &ids) {
+            const bool clearsNotes = !ids.isEmpty() && !selection.isEmpty();
+            if (ids == selectedPoints && !clearsNotes) {
+                return;
+            }
+            selectedPoints = ids;
+            if (clearsNotes) {
+                selection.clear();
+            }
+            view->viewport()->update();
+            Q_EMIT _decl->selectionChanged();
+        }
+
+        double ticksOf(double milliseconds, int index) const {
+            return milliseconds * timeline->tempoMap().tempo(index) * kit::ticksPerQuarter / 60000;
+        }
+
+        double millisecondsOf(double ticks, int index) const {
+            return ticks * 60000 / (timeline->tempoMap().tempo(index) * kit::ticksPerQuarter);
+        }
+
+        // Whether the first point of note index starts at the pitch of the previous note, as
+        // the resampler curve has it (kit::PitchCurve)
+        bool startsAtPrevious(int index) const {
+            return index > 0 && !timeline->note(index - 1).rest;
+        }
+
+        // Whether the height of point j of the count points of note index stays as it is: the
+        // first where it starts at the previous note, and the last
+        bool heightFixed(int index, int j, int count) const {
+            return (j == 0 && startsAtPrevious(index)) || (count >= 2 && j == count - 1);
+        }
+
+        // The points of note index, as a gesture shows them if it does
+        QList<kit::PortamentoPoint> pointsOf(int index) const {
+            if (const auto it = pointPreview.find(index); it != pointPreview.end()) {
+                return *it;
+            }
+            const auto list = notes().at(index).portamento();
+            QList<kit::PortamentoPoint> points;
+            for (int j = 0; j < list.size(); ++j) {
+                const auto ref = list.at(j);
+                kit::PortamentoPoint point;
+                point.x = ref.x();
+                point.y = ref.y();
+                point.type = ref.type();
+                points.push_back(point);
+            }
+            return points;
+        }
+
+        // Where point j of note index is drawn: at the pitch of the previous note if it starts
+        // there
+        QPointF positionOf(int index, int j, const kit::PortamentoPoint &point) const {
+            const auto &note = timeline->note(index);
+            const double cents = j == 0 && startsAtPrevious(index)
+                                     ? (timeline->note(index - 1).key - note.key) * 100.0
+                                     : point.y;
+            return {view->timeAxis().toX(double(note.start) + ticksOf(point.x, index)),
+                    view->keyAxis().toY(note.key + 0.5 + cents / 100)};
+        }
+
+        // Writes the points of several notes, by index, in one step
+        bool writePoints(const QString &message,
+                         const QHash<int, QList<kit::PortamentoPoint>> &points,
+                         kit::DiagnosticList &diagnostics) {
+            auto transaction = session->transaction(message);
+            const auto refs = notes();
+            for (auto it = points.begin(); it != points.end(); ++it) {
+                kit::ProjectEdits::setPortamento(refs.at(it.key()), it.value(), diagnostics);
+            }
+            return transaction.commit(diagnostics);
+        }
+
+        // The selected points, by note index and the indices of the points in the note
+        QHash<int, QSet<int>> selectedPointIndices() const {
+            QHash<int, QSet<int>> result;
+            if (selectedPoints.isEmpty()) {
+                return result;
+            }
+            const auto refs = notes();
+            for (int i = 0; i < timeline->noteCount(); ++i) {
+                const auto list = refs.at(i).portamento();
+                for (int j = 0; j < list.size(); ++j) {
+                    if (selectedPoints.contains(list.at(j).id())) {
+                        result[i].insert(j);
+                    }
+                }
+            }
+            return result;
+        }
+
+        // Removes the points of notes, by note index; each note keeps its first and last point
+        // where fewer than two would remain.
+        bool removePoints(const QHash<int, QSet<int>> &removed, kit::DiagnosticList &diagnostics) {
+            QHash<int, QList<kit::PortamentoPoint>> result;
+            for (auto it = removed.begin(); it != removed.end(); ++it) {
+                const auto points = pointsOf(it.key());
+                auto gone = it.value();
+                if (points.size() - gone.size() < 2) {
+                    gone.remove(0);
+                    gone.remove(int(points.size()) - 1);
+                }
+                QList<kit::PortamentoPoint> kept;
+                for (int j = 0; j < points.size(); ++j) {
+                    if (!gone.contains(j)) {
+                        kept.push_back(points[j]);
+                    }
+                }
+                if (kept.size() != points.size()) {
+                    result.insert(it.key(), kept);
+                }
+            }
+            if (result.isEmpty()) {
+                return true;
+            }
+            selectPoints({});
+            return writePoints(PianoRoll::tr("Delete Pitch Points"), result, diagnostics);
+        }
+
+        // Inserts a point where position lies on the portamento of a note, and selects it.
+        // The note is the one at that time, or the next one from its first point on.
+        bool insertPointAt(QPointF position);
 
         void selectOnly(int index) {
             anchor = timeline->note(index).id;
@@ -425,6 +575,12 @@ namespace hello::daw {
                                             Qt::MouseButton button,
                                             Qt::KeyboardModifiers modifiers) override;
 
+        // On the portamento a double click inserts a point.
+        bool doubleClick(const SceneHit &hit, QPointF position) override {
+            Q_UNUSED(hit);
+            return m_roll->insertPointAt(position);
+        }
+
     private:
         PianoRoll::Impl *m_roll;
     };
@@ -482,7 +638,10 @@ namespace hello::daw {
                                             Qt::KeyboardModifiers modifiers) override;
 
         bool doubleClick(const SceneHit &hit, QPointF position) override {
-            Q_UNUSED(position);
+            // On the portamento a double click inserts a point.
+            if (m_roll->insertPointAt(position)) {
+                return true;
+            }
             const int index = m_roll->indexOf(hit.node);
             if (index < 0) {
                 return false;
@@ -563,6 +722,10 @@ namespace hello::daw {
             QList<kit::Note> notes;
             for (int i = first; i < last; ++i) {
                 notes.push_back(refs.at(i).toNote());
+                if (const auto it = m_roll->pointPreview.find(i);
+                    it != m_roll->pointPreview.end()) {
+                    notes.last().portamento = *it;
+                }
             }
 
             const auto decl = m_roll->_decl;
@@ -622,10 +785,121 @@ namespace hello::daw {
                 painter.setPen(portamentoPen);
                 painter.drawPolyline(portamento);
             }
+
+            // The points, also those of the next note, which may lie before it: filled where
+            // they only move in time, and in the selection color where selected
+            for (int i = begin; i < last; ++i) {
+                if (timeline->note(i).rest) {
+                    continue;
+                }
+                const auto &points = notes.at(i - first).portamento;
+                const auto list = refs.at(i).portamento();
+                for (int j = 0; j < points.size(); ++j) {
+                    const bool selected =
+                        j < list.size() && m_roll->selectedPoints.contains(list.at(j).id());
+                    const bool fixed = m_roll->heightFixed(i, j, int(points.size()));
+                    painter.setPen(
+                        QPen(selected ? decl->selectionColor() : decl->pitchColor(), 1.5));
+                    painter.setBrush(selected
+                                         ? decl->selectionColor()
+                                         : (fixed ? decl->pitchColor() : decl->whiteRowColor()));
+                    painter.drawEllipse(m_roll->positionOf(i, j, points[j]), PointRadius,
+                                        PointRadius);
+                }
+            }
         }
+
+        std::optional<SceneHit> hitTest(QPointF position) const override {
+            if (!m_roll->pitchVisible || !m_roll->placements.isEmpty()) {
+                return std::nullopt;
+            }
+            // The notes around the position, and the next one, whose points may lie before it
+            const auto timeline = m_roll->timeline;
+            const auto &time = view()->timeAxis();
+            const double grip = PointGrip / time.pixelsPerTick;
+            auto [begin, end] = timeline->notesBetween(time.toTick(position.x()) - grip,
+                                                       time.toTick(position.x()) + grip);
+            begin = std::max(0, begin - 1);
+            end = std::min(timeline->noteCount(), end + 1);
+
+            std::optional<SceneHit> nearest;
+            double distance = PointGrip;
+            for (int i = begin; i < end; ++i) {
+                if (timeline->note(i).rest) {
+                    continue;
+                }
+                const auto points = m_roll->pointsOf(i);
+                for (int j = 0; j < points.size(); ++j) {
+                    const auto offset = m_roll->positionOf(i, j, points[j]) - position;
+                    const double d = std::hypot(offset.x(), offset.y());
+                    if (d <= distance) {
+                        distance = d;
+                        SceneHit hit;
+                        hit.node = timeline->note(i).id;
+                        hit.part = PitchPoint;
+                        hit.index = j;
+                        hit.cursor = m_roll->heightFixed(i, j, int(points.size()))
+                                         ? Qt::SizeHorCursor
+                                         : Qt::SizeAllCursor;
+                        nearest = hit;
+                    }
+                }
+            }
+            return nearest;
+        }
+
+        std::unique_ptr<SceneGesture> press(const SceneHit &hit, QPointF position,
+                                            Qt::MouseButton button,
+                                            Qt::KeyboardModifiers modifiers) override;
 
     private:
         PianoRoll::Impl *m_roll;
+
+        // The context menu of point j of note index: its shape, and its removal
+        void showMenu(int index, int j, QPointF position) {
+            const auto points = m_roll->pointsOf(index);
+            QMenu menu(view());
+            const std::pair<kit::PortamentoPoint::Type, const char *> shapes[] = {
+                {kit::PortamentoPoint::S,      QT_TRANSLATE_NOOP("hello::daw::PianoRoll", "S-Curve")},
+                {kit::PortamentoPoint::Linear,
+                 QT_TRANSLATE_NOOP("hello::daw::PianoRoll",                               "Linear") },
+                {kit::PortamentoPoint::R,      QT_TRANSLATE_NOOP("hello::daw::PianoRoll", "R-Curve")},
+                {kit::PortamentoPoint::J,      QT_TRANSLATE_NOOP("hello::daw::PianoRoll", "J-Curve")},
+            };
+            for (const auto &[type, name] : shapes) {
+                const auto action = menu.addAction(PianoRoll::tr(name));
+                action->setCheckable(true);
+                action->setChecked(points[j].type == type);
+                // The shape is that of the segment that ends at a point, which the first lacks.
+                action->setEnabled(j > 0);
+                QObject::connect(action, &QAction::triggered, view(),
+                                 [this, index, j, type = type] {
+                                     auto changed = m_roll->pointsOf(index);
+                                     if (j >= changed.size() || changed[j].type == type) {
+                                         return;
+                                     }
+                                     changed[j].type = type;
+                                     kit::DiagnosticList diagnostics;
+                                     m_roll->writePoints(PianoRoll::tr("Change Pitch Point"),
+                                                         {
+                                                             {index, changed}
+                                     },
+                                                         diagnostics);
+                                 });
+            }
+            menu.addSeparator();
+            const auto remove = menu.addAction(PianoRoll::tr("Delete Point"));
+            remove->setEnabled(points.size() > 2);
+            QObject::connect(remove, &QAction::triggered, view(), [this, index, j] {
+                kit::DiagnosticList diagnostics;
+                m_roll->removePoints(
+                    {
+                        {index, {j}}
+                },
+                    diagnostics);
+            });
+            menu.exec(view()->viewport()->mapToGlobal(position.toPoint()));
+        }
     };
 
     // What is drawn over everything: the selection rectangle and the playhead
@@ -935,6 +1209,235 @@ namespace hello::daw {
         }
     };
 
+    // A drag of the selected points, all by the same time and height. No point passes a
+    // neighbour that stays, and the heights that are fixed stay (heightFixed()). Shift snaps the
+    // pressed point to the time of another point of its note, Ctrl its height to PitchSnap.
+    class PianoRoll::Impl::PointGesture : public SceneGesture {
+    public:
+        PointGesture(PianoRoll::Impl *roll, int index, int point, QPointF position)
+            : m_roll(roll), m_index(index), m_point(point), m_origin(position) {
+        }
+
+        void move(QPointF position, Qt::KeyboardModifiers modifiers) override {
+            if (!m_dragging) {
+                if ((position - m_origin).manhattanLength() < QApplication::startDragDistance()) {
+                    return;
+                }
+                start();
+            }
+            const auto &time = m_roll->view->timeAxis();
+            const auto &keys = m_roll->view->keyAxis();
+            double ticks = time.toTick(position.x()) - time.toTick(m_origin.x());
+            double cents = (keys.toKey(position.y()) - keys.toKey(m_origin.y())) * 100;
+
+            const auto &pressedNote = m_original[m_index];
+            const auto &pressed = pressedNote[m_point];
+            if (modifiers & Qt::ShiftModifier) {
+                const double at = m_roll->ticksOf(pressed.x, m_index);
+                std::optional<double> nearest;
+                for (int j = 0; j < pressedNote.size(); ++j) {
+                    const double other = m_roll->ticksOf(pressedNote[j].x, m_index);
+                    if (!m_moving[m_index].contains(j) &&
+                        (!nearest ||
+                         std::abs(other - at - ticks) < std::abs(*nearest - at - ticks))) {
+                        nearest = other;
+                    }
+                }
+                if (nearest) {
+                    ticks = *nearest - at;
+                }
+            }
+            if (modifiers & Qt::ControlModifier) {
+                cents = std::round((pressed.y + cents) / PitchSnap) * PitchSnap - pressed.y;
+            }
+            for (auto it = m_moving.begin(); it != m_moving.end(); ++it) {
+                const int index = it.key();
+                const auto &points = m_original[index];
+                for (const int j : it.value()) {
+                    if (j > 0 && !it.value().contains(j - 1)) {
+                        ticks =
+                            std::max(ticks, m_roll->ticksOf(points[j - 1].x - points[j].x, index));
+                    }
+                    if (j + 1 < points.size() && !it.value().contains(j + 1)) {
+                        ticks =
+                            std::min(ticks, m_roll->ticksOf(points[j + 1].x - points[j].x, index));
+                    }
+                }
+            }
+
+            m_roll->pointPreview.clear();
+            for (auto it = m_moving.begin(); it != m_moving.end(); ++it) {
+                const int index = it.key();
+                auto points = m_original[index];
+                const int count = int(points.size());
+                for (const int j : it.value()) {
+                    // To a tenth of a millisecond and a cent, within the neighbours that stay
+                    auto x =
+                        std::round((points[j].x + m_roll->millisecondsOf(ticks, index)) * 10) / 10;
+                    if (j > 0 && !it.value().contains(j - 1)) {
+                        x = std::max(x, points[j - 1].x);
+                    }
+                    if (j + 1 < count && !it.value().contains(j + 1)) {
+                        x = std::min(x, points[j + 1].x);
+                    }
+                    points[j].x = x;
+                    if (!m_roll->heightFixed(index, j, count)) {
+                        points[j].y = std::round(points[j].y + cents);
+                    }
+                }
+                m_roll->pointPreview.insert(index, points);
+            }
+            m_roll->view->viewport()->update();
+        }
+
+        void release(QPointF position, Qt::KeyboardModifiers modifiers) override {
+            move(position, modifiers);
+            if (!m_dragging) {
+                return;
+            }
+            QHash<int, QList<kit::PortamentoPoint>> changed;
+            for (auto it = m_roll->pointPreview.begin(); it != m_roll->pointPreview.end(); ++it) {
+                if (it.value() != m_original[it.key()]) {
+                    changed.insert(it.key(), it.value());
+                }
+            }
+            m_roll->pointPreview.clear();
+            m_roll->view->viewport()->update();
+            if (!changed.isEmpty()) {
+                kit::DiagnosticList diagnostics;
+                m_roll->writePoints(PianoRoll::tr("Move Pitch Points"), changed, diagnostics);
+            }
+        }
+
+        void cancel() override {
+            m_roll->pointPreview.clear();
+            m_roll->view->viewport()->update();
+        }
+
+    private:
+        PianoRoll::Impl *m_roll;
+        int m_index;
+        int m_point;
+        QPointF m_origin;
+        bool m_dragging = false;
+        // The points that move, by note index, and the points of those notes before the drag
+        QHash<int, QSet<int>> m_moving;
+        QHash<int, QList<kit::PortamentoPoint>> m_original;
+
+        void start() {
+            m_dragging = true;
+            m_moving = m_roll->selectedPointIndices();
+            m_moving[m_index].insert(m_point);
+            for (auto it = m_moving.begin(); it != m_moving.end(); ++it) {
+                m_original.insert(it.key(), m_roll->pointsOf(it.key()));
+            }
+        }
+    };
+
+    std::unique_ptr<SceneGesture>
+        PianoRoll::Impl::PitchLayer::press(const SceneHit &hit, QPointF position,
+                                           Qt::MouseButton button,
+                                           Qt::KeyboardModifiers modifiers) {
+        m_roll->finishEditing(true);
+        const int index = m_roll->indexOf(hit.node);
+        if (index < 0) {
+            return nullptr;
+        }
+        const auto list = m_roll->notes().at(index).portamento();
+        if (hit.index < 0 || hit.index >= list.size()) {
+            return nullptr;
+        }
+        const auto id = list.at(hit.index).id();
+        if (button == Qt::RightButton) {
+            if (!m_roll->selectedPoints.contains(id)) {
+                m_roll->selectPoints({id});
+            }
+            showMenu(index, hit.index, position);
+            return nullptr;
+        }
+        if (button != Qt::LeftButton) {
+            return nullptr;
+        }
+        if (modifiers & Qt::ControlModifier) {
+            auto ids = m_roll->selectedPoints;
+            if (!ids.remove(id)) {
+                ids.insert(id);
+            }
+            m_roll->selectPoints(ids);
+            return nullptr;
+        }
+        if (!m_roll->selectedPoints.contains(id)) {
+            m_roll->selectPoints({id});
+        }
+        return std::make_unique<PointGesture>(m_roll, index, hit.index, position);
+    }
+
+    bool PianoRoll::Impl::insertPointAt(QPointF position) {
+        const int count = timeline->noteCount();
+        if (!pitchVisible || count == 0) {
+            return false;
+        }
+        const auto &time = view->timeAxis();
+        const auto &keys = view->keyAxis();
+        const double tick = time.toTick(position.x());
+        int index = timeline->noteAt(tick);
+        if (index < 0 || index >= count) {
+            return false;
+        }
+        if (index + 1 < count) {
+            const auto next = pointsOf(index + 1);
+            if (!next.isEmpty() && tick >= double(timeline->note(index + 1).start) +
+                                               ticksOf(next.first().x, index + 1)) {
+                ++index;
+            }
+        }
+        const auto &note = timeline->note(index);
+        if (note.rest) {
+            return false;
+        }
+
+        // Only on the portamento as it is drawn
+        const int first = std::max(0, index - 2);
+        const int last = std::min(count, index + 2);
+        const auto refs = notes();
+        QList<kit::Note> around;
+        for (int i = first; i < last; ++i) {
+            around.push_back(refs.at(i).toNote());
+        }
+        const double local = tick - double(note.start);
+        const kit::PitchCurve curve(around, index - first, timeline->tempoMap().tempo(index));
+        const double y = keys.toY(note.key + 0.5 + curve.portamentoAt(local) / 100);
+        if (std::abs(y - position.y()) > CurveGrip) {
+            return false;
+        }
+
+        auto points = pointsOf(index);
+        if (points.isEmpty()) {
+            kit::PortamentoPoint before;
+            before.x = -DefaultPortamento;
+            kit::PortamentoPoint after;
+            after.x = DefaultPortamento;
+            points = {before, after};
+        }
+        kit::PortamentoPoint point;
+        point.x = std::round(millisecondsOf(local, index) * 10) / 10;
+        point.y = std::round((keys.toKey(position.y()) - note.key - 0.5) * 100);
+        int at = 0;
+        while (at < points.size() && points[at].x <= point.x) {
+            ++at;
+        }
+        points.insert(at, point);
+        kit::DiagnosticList diagnostics;
+        if (writePoints(PianoRoll::tr("Insert Pitch Point"),
+                        {
+                            {index, points}
+        },
+                        diagnostics)) {
+            selectPoints({refs.at(index).portamento().at(at).id()});
+        }
+        return true;
+    }
+
     std::unique_ptr<SceneGesture>
         PianoRoll::Impl::GridLayer::press(const SceneHit &hit, QPointF position,
                                           Qt::MouseButton button, Qt::KeyboardModifiers modifiers) {
@@ -943,6 +1446,7 @@ namespace hello::daw {
             return nullptr;
         }
         m_roll->finishEditing(true);
+        m_roll->selectPoints({});
         if (m_roll->tool == PenTool &&
             view()->timeAxis().toTick(position.x()) >= double(m_roll->timeline->length())) {
             return std::make_unique<DrawGesture>(m_roll, position, modifiers);
@@ -957,6 +1461,7 @@ namespace hello::daw {
             return nullptr;
         }
         m_roll->finishEditing(true);
+        m_roll->selectPoints({});
         const int index = m_roll->indexOf(hit.node);
         if (index < 0) {
             return nullptr;
@@ -1168,7 +1673,37 @@ namespace hello::daw {
         }
     }
 
+    QList<std::pair<int, int>> PianoRoll::selectedPoints() const {
+        QList<std::pair<int, int>> result;
+        const auto selected = _impl->selectedPointIndices();
+        for (auto it = selected.begin(); it != selected.end(); ++it) {
+            for (const int j : it.value()) {
+                result.push_back({it.key(), j});
+            }
+        }
+        std::sort(result.begin(), result.end());
+        return result;
+    }
+
+    void PianoRoll::setSelectedPoints(const QList<std::pair<int, int>> &points) {
+        QSet<kit::edit::NodeId> ids;
+        const auto refs = _impl->notes();
+        for (const auto &[index, j] : points) {
+            if (index < 0 || index >= _impl->timeline->noteCount()) {
+                continue;
+            }
+            const auto list = refs.at(index).portamento();
+            if (j >= 0 && j < list.size()) {
+                ids.insert(list.at(j).id());
+            }
+        }
+        _impl->selectPoints(ids);
+    }
+
     bool PianoRoll::removeSelected(kit::DiagnosticList &diagnostics) {
+        if (!_impl->selectedPoints.isEmpty()) {
+            return _impl->removePoints(_impl->selectedPointIndices(), diagnostics);
+        }
         const auto indices = selectedIndices();
         if (indices.isEmpty()) {
             return true;

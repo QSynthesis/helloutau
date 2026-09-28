@@ -1,6 +1,8 @@
+#include <QtCore/QTimer>
 #include <QtTest/QTest>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QLineEdit>
+#include <QtWidgets/QMenu>
 
 #include <hellokit/Edit/ProjectEdits.h>
 #include <hellokit/Edit/ProjectRefs.h>
@@ -454,6 +456,222 @@ private Q_SLOTS:
         QVERIFY(!drawnNear(tick, 60, v, QColor(0, 255, 255)));
     }
 
+    // la at C4, then li at D4 with points 60 ms before its start, at its start 100 cents up,
+    // and 60 ms after, at 120 bpm, where a millisecond is 0.96 ticks
+    static kit::Project bentNotes() {
+        kit::Note la;
+        la.lyric = QStringLiteral("la");
+        la.length = 480;
+        la.noteNum = 60;
+        kit::Note li;
+        li.lyric = QStringLiteral("li");
+        li.length = 480;
+        li.noteNum = 62;
+        for (const auto &[x, y] : {
+                 std::pair{-60.0, 0.0  },
+                 {0.0,   100.0},
+                 {60.0,  0.0  }
+        }) {
+            kit::PortamentoPoint point;
+            point.x = x;
+            point.y = y;
+            li.portamento.push_back(point);
+        }
+        kit::Project project;
+        project.settings.tempo = 120;
+        project.tracks.push_back({});
+        project.tracks[0].notes = {la, li};
+        return project;
+    }
+
+    // Where point x, cents of li is drawn
+    static QPoint pointOfLi(const PianoRoll &roll, double x, double cents) {
+        return QPointF(roll.view()->timeAxis().toX(480 + x * 0.96),
+                       roll.view()->keyAxis().toY(62.5 + cents / 100))
+            .toPoint();
+    }
+
+    // Shows the roll with a pixel for each millisecond at 120 bpm and whole pixels for whole
+    // rows, so that a drag between points gives whole milliseconds
+    static void showExactly(PianoRoll &roll) {
+        show(roll);
+        auto time = roll.view()->timeAxis();
+        time.left = 0;
+        time.pixelsPerTick = 1 / 0.96;
+        roll.view()->setTimeAxis(time);
+        auto keys = roll.view()->keyAxis();
+        keys.top = 70;
+        keys.pixelsPerKey = 24;
+        roll.view()->setKeyAxis(keys);
+    }
+
+    // Presses without modifiers, since Ctrl on the press selects instead, and releases with
+    // modifiers, which snap
+    static void dragPoint(PianoRoll &roll, QPoint from, QPoint to,
+                          Qt::KeyboardModifiers modifiers = {}) {
+        const auto viewport = roll.view()->viewport();
+        QTest::mousePress(viewport, Qt::LeftButton, {}, from);
+        QTest::mouseMove(viewport, (from + to) / 2);
+        QTest::mouseMove(viewport, to);
+        QTest::mouseRelease(viewport, Qt::LeftButton, modifiers, to);
+    }
+
+    static QList<kit::PortamentoPoint> pointsOfLi(const kit::ProjectSession &session) {
+        return session.snapshot().tracks[0].notes[1].portamento;
+    }
+
+    // A point moves in time and height in one step; the first point after a sung note and the
+    // last one move only in time, and no point passes a neighbour.
+    void a_point_is_dragged_within_its_neighbours() {
+        kit::ProjectSession session(bentNotes());
+        PianoRoll roll(&session);
+        showExactly(roll);
+
+        // 48 ticks later is 50 ms; a row up is 100 cents.
+        dragPoint(roll, pointOfLi(roll, 0, 100), pointOfLi(roll, 50, 200));
+        auto points = pointsOfLi(session);
+        QCOMPARE(points[1].x, 50.0);
+        QCOMPARE(points[1].y, 200.0);
+        QCOMPARE(session.undoMessage(), PianoRoll::tr("Move Pitch Points"));
+        QCOMPARE(roll.selectedPoints(), (QList<std::pair<int, int>>{
+                                            {1, 1}
+        }));
+        QVERIFY(roll.selectedIndices().isEmpty());
+
+        // The first point is drawn at the pitch of la, 200 cents below li.
+        dragPoint(roll, pointOfLi(roll, -60, -200), pointOfLi(roll, -30, 0));
+        points = pointsOfLi(session);
+        QCOMPARE(points[0].x, -30.0);
+        QCOMPARE(points[0].y, 0.0);
+
+        // The last point does not pass the second, which stays at 50 ms.
+        dragPoint(roll, pointOfLi(roll, 60, 0), pointOfLi(roll, 0, 100));
+        points = pointsOfLi(session);
+        QCOMPARE(points[2].x, 50.0);
+        QCOMPARE(points[2].y, 0.0);
+    }
+
+    // Selected points move together, by as much as the one nearest to a neighbour that stays
+    // allows.
+    void selected_points_move_together() {
+        kit::ProjectSession session(bentNotes());
+        PianoRoll roll(&session);
+        showExactly(roll);
+
+        roll.setSelectedPoints({
+            {1, 0},
+            {1, 1}
+        });
+        dragPoint(roll, pointOfLi(roll, 0, 100), pointOfLi(roll, 100, 100));
+        const auto points = pointsOfLi(session);
+        QCOMPARE(points[0].x, 0.0);
+        QCOMPARE(points[1].x, 60.0);
+        QCOMPARE(points[2].x, 60.0);
+    }
+
+    // Shift snaps the time to another point of the note, Ctrl the height to 50 cents; Escape
+    // leaves the points as they were.
+    void a_point_snaps_with_modifiers() {
+        kit::ProjectSession session(bentNotes());
+        PianoRoll roll(&session);
+        showExactly(roll);
+
+        dragPoint(roll, pointOfLi(roll, 0, 100), pointOfLi(roll, 20, 170), Qt::ControlModifier);
+        auto points = pointsOfLi(session);
+        QCOMPARE(points[1].y, 150.0);
+
+        dragPoint(roll, pointOfLi(roll, 20, 150), pointOfLi(roll, 50, 150), Qt::ShiftModifier);
+        points = pointsOfLi(session);
+        QCOMPARE(points[1].x, 60.0);
+
+        const int step = session.currentStep();
+        const auto viewport = roll.view()->viewport();
+        QTest::mousePress(viewport, Qt::LeftButton, {}, pointOfLi(roll, 60, 150));
+        QTest::mouseMove(viewport, pointOfLi(roll, 10, 300));
+        QTest::keyClick(roll.view(), Qt::Key_Escape);
+        QTest::mouseRelease(viewport, Qt::LeftButton, {}, pointOfLi(roll, 10, 300));
+        QCOMPARE(session.currentStep(), step);
+    }
+
+    // A double click on the portamento inserts a point there; Delete removes the selected
+    // points, keeping two.
+    void points_are_inserted_and_deleted() {
+        kit::ProjectSession session(bentNotes());
+        PianoRoll roll(&session);
+        showExactly(roll);
+
+        // After its last point the portamento of li is at its own pitch.
+        QTest::mouseDClick(roll.view()->viewport(), Qt::LeftButton, {}, pointOfLi(roll, 250, 0));
+        auto points = pointsOfLi(session);
+        QCOMPARE(points.size(), 4);
+        QCOMPARE(points[3].x, 250.0);
+        QCOMPARE(points[3].y, 0.0);
+        QCOMPARE(session.undoMessage(), PianoRoll::tr("Insert Pitch Point"));
+        QCOMPARE(roll.selectedPoints(), (QList<std::pair<int, int>>{
+                                            {1, 3}
+        }));
+        QVERIFY(!roll.lyricEditor()->isVisible());
+
+        roll.setSelectedPoints({
+            {1, 0},
+            {1, 1},
+            {1, 2},
+            {1, 3}
+        });
+        kit::DiagnosticList diagnostics;
+        QVERIFY(roll.removeSelected(diagnostics));
+        points = pointsOfLi(session);
+        QCOMPARE(points.size(), 2);
+        QCOMPARE(points[0].x, -60.0);
+        QCOMPARE(points[1].x, 250.0);
+        QCOMPARE(session.undoMessage(), PianoRoll::tr("Delete Pitch Points"));
+        QCOMPARE(session.snapshot().tracks[0].notes.size(), 2);
+
+        // Selecting a note clears the selected points.
+        roll.setSelectedPoints({
+            {1, 0}
+        });
+        roll.setSelectedIndices({0});
+        QVERIFY(roll.selectedPoints().isEmpty());
+
+        // Hidden, the pitch has no points to hit.
+        roll.setPitchVisible(false);
+        QTest::mouseDClick(roll.view()->viewport(), Qt::LeftButton, {}, pointOfLi(roll, 250, 0));
+        QCOMPARE(pointsOfLi(session).size(), 2);
+    }
+
+    // The context menu of a point changes the shape of the segment that ends at it, and removes
+    // it while more than two remain.
+    void the_context_menu_changes_a_point() {
+        kit::ProjectSession session(bentNotes());
+        PianoRoll roll(&session);
+        showExactly(roll);
+
+        // Chooses the item named text from the menu once it is open.
+        const auto choose = [](const QString &text) {
+            QTimer::singleShot(0, [text] {
+                const auto menu = qobject_cast<QMenu *>(QApplication::activePopupWidget());
+                QVERIFY(menu);
+                for (const auto action : menu->actions()) {
+                    if (action->text() == text) {
+                        QVERIFY(action->isEnabled());
+                        action->trigger();
+                    }
+                }
+                menu->close();
+            });
+        };
+        const auto viewport = roll.view()->viewport();
+        choose(PianoRoll::tr("R-Curve"));
+        QTest::mouseClick(viewport, Qt::RightButton, {}, pointOfLi(roll, 0, 100));
+        QCOMPARE(pointsOfLi(session)[1].type, kit::PortamentoPoint::R);
+        QCOMPARE(session.undoMessage(), PianoRoll::tr("Change Pitch Point"));
+
+        choose(PianoRoll::tr("Delete Point"));
+        QTest::mouseClick(viewport, Qt::RightButton, {}, pointOfLi(roll, 0, 100));
+        QCOMPARE(pointsOfLi(session).size(), 2);
+    }
+
     // Tab commits the lyric and edits the next note; Escape leaves the lyric as it was.
     void a_lyric_is_edited_in_place() {
         kit::ProjectSession session(threeNotes());
@@ -475,8 +693,9 @@ private Q_SLOTS:
         QVERIFY(!editor->isVisible());
         QCOMPARE(lyricsOf(session), QStringLiteral("ka R li"));
 
-        // A double click edits the note, and Return commits it.
-        QTest::mouseDClick(roll.view()->viewport(), Qt::LeftButton, {}, pointOf(roll, 1680, 64));
+        // A double click on the note away from its portamento edits it, and Return commits it.
+        const QPointF upper(roll.view()->timeAxis().toX(1680), roll.view()->keyAxis().toY(64.85));
+        QTest::mouseDClick(roll.view()->viewport(), Qt::LeftButton, {}, upper.toPoint());
         QVERIFY(editor->isVisible());
         QCOMPARE(editor->text(), QStringLiteral("li"));
         editor->setText(QStringLiteral("ki"));
