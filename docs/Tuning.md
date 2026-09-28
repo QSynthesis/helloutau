@@ -179,6 +179,15 @@
 
 力度、调制、速度在参数区中以每音符一个手柄编辑（QSynthesis），拖动一个手柄时选中的音符一起改变。
 
+**进度**：已实现，待作者查看。
+
+- 参数区左侧一列四个按钮（Env、Int、Mod、Vel，提示为全称）切换参数区显示的内容（`PianoRoll::setLane()`），初始为包络。
+- 力度与速度的范围为 0 至 200，调制为 -200 至 200；虚线画在 UTAU 的默认值（均为 100，取自 stdutau）。
+- 每个非休止音符一个手柄（QSynthesis 的画法）：音符起点一个圆点，一条横线跨过音符，一根竖线落到参数区底部。音符不带该值时以 `faintPointColor` 画出，带值时以 `parameterColor`（新属性，默认调色板的 Highlight）画出；选中的音符圆点填实。
+- 按住圆点或横线纵向拖动：取整数并限于范围内。拖动选中的音符时，所有选中的非休止音符设为同一值（作者决定）；拖动未选中的音符只改它自己。右键去掉该值，即恢复 UTAU 的默认值，作用范围与拖动相同。一次操作一个撤销步骤。
+- 领域函数 `setParameter`（`ProjectEdits::NoteParameter`：`Intensity`、`Modulation`、`Velocity`），命令 `note parameter <intensity、modulation 或 velocity> <值或 null> <音符路径>…`。
+- 速度的负值：QSynthesis 的刻度到 -100，UTAU 对负值的处理未实测（`Velocity=250` 时 UTAU 退回默认值，见 [`Synth.md`](Synth.md)），因此暂只提供 0 至 200。
+
 ## 参考实现的取舍
 
 QSynthesis（`.cache/QSynthesis-Old`）、OpenUtau（`.cache/OpenUtau`）与 ds-editor-lite（`E:\GitHub\ds-editor-lite`）只作为设计参考，不作为代码来源。
@@ -223,8 +232,11 @@ QSynthesis（`.cache/QSynthesis-Old`）、OpenUtau（`.cache/OpenUtau`）与 ds-
 
 - **粘贴音符的位置**：插在首个选中音符之前（与「Insert Note」一致），没有选区时追加在末尾；不替换选中的音符。
 - **批量缩放音高偏移与颤音幅度**：做成对话框输入倍数，不做 ds-editor-lite 式的拖动。
+- **参数区的切换**：左侧一列按钮（QSynthesis）。
+- **拖动参数手柄时的选中音符**：设为同一值。
 
 ## 待作者决定的问题
 
 1. **末点与 R 型**：前后为 R 型时末点是否仍归 0，须实测 UTAU 后决定。
 2. **编辑被拒的提示方式**：现为状态栏；提示框的方案保留，作者日后可能改用。
+3. **速度的负值**：UTAU 如何处理负数 `Velocity` 须实测，再决定参数区是否提供负值（第 7 步）。

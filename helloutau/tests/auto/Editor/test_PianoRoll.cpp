@@ -3,6 +3,7 @@
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QLineEdit>
 #include <QtWidgets/QMenu>
+#include <QtWidgets/QToolButton>
 
 #include <hellokit/Edit/ProjectEdits.h>
 #include <hellokit/Edit/ProjectRefs.h>
@@ -1182,6 +1183,81 @@ private Q_SLOTS:
         QVERIFY(roll.pasteNotes(diagnostics));
         QCOMPARE(lyrics().mid(6), (QStringList{QStringLiteral("la"), QStringLiteral("li")}));
         QCOMPARE(roll.selectedIndices(), (QList<int>{6, 7}));
+    }
+
+    // Where the parameter area draws value on the line of note index, a little after its start
+    static QPoint valuePoint(const PianoRoll &roll, int index, double value) {
+        const auto view = roll.parameterView();
+        return QPointF(view->timeAxis().toX(double(roll.timeline()->note(index).start)) + 10,
+                       view->keyAxis().toY(value))
+            .toPoint();
+    }
+
+    static QToolButton *laneButton(const PianoRoll &roll, const QString &text) {
+        for (const auto button : roll.findChildren<QToolButton *>()) {
+            if (button->text() == text) {
+                return button;
+            }
+        }
+        return nullptr;
+    }
+
+    // A drag of the handle of a note sets the value of the lane shown on it, or on every
+    // selected note if it is selected; the right button removes the value.
+    void values_are_edited_in_the_parameter_area() {
+        kit::ProjectSession session(parameterSource());
+        PianoRoll roll(&session);
+        show(roll);
+        const auto viewport = roll.parameterView()->viewport();
+        const auto drag = [viewport](QPoint from, QPoint to) {
+            QTest::mousePress(viewport, Qt::LeftButton, {}, from);
+            QTest::mouseMove(viewport, (from + to) / 2);
+            QTest::mouseMove(viewport, to);
+            QTest::mouseRelease(viewport, Qt::LeftButton, {}, to);
+        };
+        const auto notes = [&session] { return session.snapshot().tracks[0].notes; };
+        QCOMPARE(roll.lane(), PianoRoll::EnvelopeLane);
+
+        roll.setLane(PianoRoll::IntensityLane);
+        QVERIFY(laneButton(roll, QStringLiteral("Int"))->isChecked());
+        // la alone, from the default of 100
+        drag(valuePoint(roll, 0, 100), valuePoint(roll, 0, 150));
+        QVERIFY(qAbs(*notes()[0].intensity - 150) <= 2);
+        QCOMPARE(*notes()[0].intensity, std::round(*notes()[0].intensity));
+        QVERIFY(!notes()[1].intensity);
+        QCOMPARE(session.undoMessage(), kit::ProjectEdits::tr("Change Intensity"));
+
+        // li and lu, selected, both to the value li is dragged to
+        roll.setSelectedIndices({1, 2});
+        drag(valuePoint(roll, 1, 100), valuePoint(roll, 1, 50));
+        QVERIFY(qAbs(*notes()[1].intensity - 50) <= 2);
+        QCOMPARE(notes()[2].intensity, notes()[1].intensity);
+        QVERIFY(qAbs(*notes()[0].intensity - 150) <= 2);
+        const int step = session.currentStep();
+
+        // The right button on lu removes the values of both.
+        const auto lu = valuePoint(roll, 2, *notes()[2].intensity);
+        QTest::mousePress(viewport, Qt::RightButton, {}, lu);
+        QTest::mouseRelease(viewport, Qt::RightButton, {}, lu);
+        QVERIFY(!notes()[1].intensity);
+        QVERIFY(!notes()[2].intensity);
+        QCOMPARE(session.currentStep(), step + 1);
+
+        // The velocity, chosen with its button, and the modulation, kept within -200
+        laneButton(roll, QStringLiteral("Vel"))->click();
+        QCOMPARE(roll.lane(), PianoRoll::VelocityLane);
+        roll.setSelectedIndices({});
+        drag(valuePoint(roll, 0, 100), valuePoint(roll, 0, 60));
+        QVERIFY(qAbs(*notes()[0].velocity - 60) <= 2);
+        QVERIFY(qAbs(*notes()[0].intensity - 150) <= 2);
+        roll.setLane(PianoRoll::ModulationLane);
+        // Every modulation is in view.
+        const auto &keys = roll.parameterView()->keyAxis();
+        QVERIFY(keys.toY(200) >= 0);
+        QVERIFY(keys.toY(-200) <= viewport->height());
+        QVERIFY(keys.toY(-200) - keys.toY(200) >= viewport->height() * 0.8);
+        drag(valuePoint(roll, 0, 100), valuePoint(roll, 0, -500));
+        QCOMPARE(notes()[0].modulation, std::optional<double>(-200));
     }
 
     // The depth of the vibrato of the selected notes is scaled, and the other notes keep theirs.

@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <functional>
+#include <limits>
 #include <numeric>
 
 #include <QtCore/QHash>
@@ -18,13 +19,16 @@
 #include <QtGui/QMouseEvent>
 #include <QtGui/QPainter>
 #include <QtWidgets/QApplication>
+#include <QtWidgets/QButtonGroup>
 #include <QtWidgets/QComboBox>
 #include <QtWidgets/QGridLayout>
-#include <QtWidgets/QLabel>
 #include <QtWidgets/QLineEdit>
 #include <QtWidgets/QMenu>
+#include <QtWidgets/QToolButton>
+#include <QtWidgets/QVBoxLayout>
 
 #include <stdcorelib/pimpl.h>
+#include <stdutau/utaconst.h>
 
 #include <hellokit/Document/DocumentConstants.h>
 #include <hellokit/Edit/ProjectEdits.h>
@@ -100,6 +104,12 @@ namespace hello::daw {
         constexpr int ParameterHeight = 120;
         constexpr double EnvelopeRange = 200;
         constexpr double ParameterMargin = 6;
+
+        // The values that the parameter area offers: intensity and velocity from 0, modulation
+        // from its negative (the ranges of QSynthesis, whose velocity also went below 0)
+        constexpr double IntensityRange = 200;
+        constexpr double ModulationRange = 200;
+        constexpr double VelocityRange = 200;
 
         // The envelope of a note that gives none, as UTAU applies it: 0 5 35 0 100 100 0
         kit::Envelope defaultEnvelope() {
@@ -228,6 +238,8 @@ namespace hello::daw {
         class OverlayLayer;
         class EnvelopeLayer;
         class EnvelopeGesture;
+        class ValueLayer;
+        class ValueGesture;
         class MoveGesture;
         class LengthGesture;
         class BandGesture;
@@ -261,10 +273,15 @@ namespace hello::daw {
         // What a gesture shows instead of the envelope of a note, by note index
         QHash<int, kit::Envelope> envelopePreview;
 
-        // The parameter area and its label
+        // The parameter area, what it shows, and the buttons that choose it
         SceneView *parameters = nullptr;
-        QLabel *parameterLabel = nullptr;
+        Lane lane = EnvelopeLane;
+        QButtonGroup *laneButtons = nullptr;
+        QWidget *laneBar = nullptr;
         QColor envelopeColor;
+        QColor parameterColor;
+        // What a gesture shows instead of the value of some notes, by note index
+        QHash<int, double> valuePreview;
 
         // The timing of the sample of every note, computed again after a change
         QList<kit::SampleTiming> timings;
@@ -423,13 +440,101 @@ namespace hello::daw {
                     view->keyAxis().toY(note.key + 0.5 + cents / 100)};
         }
 
-        // Shows every volume of an envelope in the height of the parameter area
+        // Shows every value of the lane in the height of the parameter area
         void fitParameters() {
+            const auto range = rangeOf(lane);
             auto axis = parameters->keyAxis();
             const double height = parameters->viewport()->height();
-            axis.pixelsPerKey = std::max(0.01, (height - 2 * ParameterMargin) / EnvelopeRange);
-            axis.top = EnvelopeRange + ParameterMargin / axis.pixelsPerKey;
+            axis.pixelsPerKey =
+                std::max(0.01, (height - 2 * ParameterMargin) / (range.maximum - range.minimum));
+            axis.top = range.maximum + ParameterMargin / axis.pixelsPerKey;
             parameters->setKeyAxis(axis);
+        }
+
+        // The values that a lane shows, and the one it draws a line at: that of UTAU where a
+        // note gives none
+        struct LaneRange {
+            double minimum;
+            double maximum;
+            double fallback;
+        };
+
+        static LaneRange rangeOf(Lane lane) {
+            switch (lane) {
+                case IntensityLane:
+                    return {0, IntensityRange, utau::DEFAULT_VALUE_INTENSITY};
+                case ModulationLane:
+                    return {-ModulationRange, ModulationRange, utau::DEFAULT_VALUE_MODULATION};
+                case VelocityLane:
+                    return {0, VelocityRange, utau::DEFAULT_VALUE_VELOCITY};
+                default:
+                    return {0, EnvelopeRange, 100};
+            }
+        }
+
+        static kit::ProjectEdits::NoteParameter parameterOf(Lane lane) {
+            switch (lane) {
+                case ModulationLane:
+                    return kit::ProjectEdits::Modulation;
+                case VelocityLane:
+                    return kit::ProjectEdits::Velocity;
+                default:
+                    return kit::ProjectEdits::Intensity;
+            }
+        }
+
+        // The value of the lane that note index gives, or none
+        std::optional<double> storedValueOf(int index) const {
+            const auto note = notes().at(index);
+            switch (lane) {
+                case ModulationLane:
+                    return note.modulation();
+                case VelocityLane:
+                    return note.velocity();
+                default:
+                    return note.intensity();
+            }
+        }
+
+        // The value of the lane for note index, as a gesture shows it if it does, or that of
+        // UTAU
+        double valueOf(int index) const {
+            if (const auto it = valuePreview.find(index); it != valuePreview.end()) {
+                return *it;
+            }
+            return storedValueOf(index).value_or(rangeOf(lane).fallback);
+        }
+
+        // The sung notes that an edit of the value of note index changes: the selected ones if
+        // it is selected, or else itself
+        QList<int> valueTargets(int index) const {
+            if (!isSelected(index)) {
+                return {index};
+            }
+            QList<int> targets;
+            for (int i = 0; i < timeline->noteCount(); ++i) {
+                if (isSelected(i) && !timeline->note(i).rest) {
+                    targets.push_back(i);
+                }
+            }
+            return targets;
+        }
+
+        // Sets the value of the lane of the notes indices, or removes it
+        void writeValue(const QList<int> &indices, std::optional<double> value) {
+            const auto refs = notes();
+            QList<kit::NoteRef> changed;
+            for (const int i : indices) {
+                if (storedValueOf(i) != value) {
+                    changed.push_back(refs.at(i));
+                }
+            }
+            if (changed.isEmpty()) {
+                return;
+            }
+            kit::DiagnosticList diagnostics;
+            kit::ProjectEdits::setParameter(changed, parameterOf(lane), value, diagnostics);
+            report(diagnostics);
         }
 
         // The timing of the sample of every note, with the voice bank if there is one
@@ -1294,9 +1399,10 @@ namespace hello::daw {
         PianoRoll::Impl *m_roll;
     };
 
-    // The envelope of each sung note in the parameter area, over the fragment of its sample: a
-    // filled outline from the start of the fragment through its anchors to its end, and a line
-    // at 100%. It answers every position, so that a double click reaches it anywhere.
+    // The background of the parameter area with a line at the value of UTAU, and on the lane of
+    // the envelopes the envelope of each sung note, over the fragment of its sample: a filled
+    // outline from the start of the fragment through its anchors to its end. On that lane it
+    // answers every position, so that a double click reaches it anywhere.
     class PianoRoll::Impl::EnvelopeLayer : public SceneLayer {
     public:
         explicit EnvelopeLayer(PianoRoll::Impl *roll) : m_roll(roll) {
@@ -1305,10 +1411,14 @@ namespace hello::daw {
         void paint(QPainter &painter, const QRect &exposed) override {
             const auto decl = m_roll->_decl;
             const auto &keys = view()->keyAxis();
+            const double fallback = keys.toY(rangeOf(m_roll->lane).fallback);
             painter.fillRect(exposed, decl->whiteRowColor());
             painter.setPen(QPen(decl->lineColor(), 1, Qt::DashLine));
-            painter.drawLine(QPointF(exposed.left(), keys.toY(100)),
-                             QPointF(exposed.right() + 1, keys.toY(100)));
+            painter.drawLine(QPointF(exposed.left(), fallback),
+                             QPointF(exposed.right() + 1, fallback));
+            if (m_roll->lane != EnvelopeLane) {
+                return;
+            }
 
             painter.setRenderHint(QPainter::Antialiasing);
             auto fill = decl->envelopeColor();
@@ -1331,6 +1441,9 @@ namespace hello::daw {
         }
 
         std::optional<SceneHit> hitTest(QPointF position) const override {
+            if (m_roll->lane != EnvelopeLane) {
+                return std::nullopt;
+            }
             SceneHit hit;
             hit.part = Background;
             double distance = m_roll->pointGrip;
@@ -1543,6 +1656,160 @@ namespace hello::daw {
             return nullptr;
         }
         return std::make_unique<EnvelopeGesture>(m_roll, index, hit.index, position);
+    }
+
+    // The value of the lane of each sung note in the parameter area, as QSynthesis draws it: a
+    // point at the start of the note, a line across the note at the value, and a stem down to
+    // the bottom of the area. A note that leaves the value to the default of UTAU is drawn in
+    // faintPointColor, a selected one filled.
+    class PianoRoll::Impl::ValueLayer : public SceneLayer {
+    public:
+        explicit ValueLayer(PianoRoll::Impl *roll) : m_roll(roll) {
+        }
+
+        void paint(QPainter &painter, const QRect &exposed) override {
+            if (m_roll->lane == EnvelopeLane) {
+                return;
+            }
+            const auto decl = m_roll->_decl;
+            const double bottom = view()->keyAxis().toY(rangeOf(m_roll->lane).minimum);
+            painter.setRenderHint(QPainter::Antialiasing);
+            const auto [begin, end] = visibleNotes(exposed);
+            for (int i = begin; i < end; ++i) {
+                if (m_roll->timeline->note(i).rest) {
+                    continue;
+                }
+                const auto [point, right] = handleOf(i);
+                const bool stored =
+                    m_roll->valuePreview.contains(i) || m_roll->storedValueOf(i).has_value();
+                const auto color = stored ? decl->parameterColor() : decl->faintPointColor();
+                painter.setPen(QPen(color, 1.5));
+                painter.drawLine(point, QPointF(point.x(), bottom));
+                painter.drawLine(point, QPointF(right, point.y()));
+                painter.setBrush(m_roll->isSelected(i) ? color : decl->whiteRowColor());
+                painter.drawEllipse(point, PointRadius, PointRadius);
+            }
+        }
+
+        // The point of a handle, or anywhere on the line across its note
+        std::optional<SceneHit> hitTest(QPointF position) const override {
+            if (m_roll->lane == EnvelopeLane) {
+                return std::nullopt;
+            }
+            std::optional<SceneHit> hit;
+            double distance = std::numeric_limits<double>::infinity();
+            const auto [begin, end] = visibleNotes(QRect(position.toPoint(), QSize(1, 1)));
+            for (int i = begin; i < end; ++i) {
+                if (m_roll->timeline->note(i).rest) {
+                    continue;
+                }
+                const auto [point, right] = handleOf(i);
+                const auto offset = point - position;
+                double d = std::hypot(offset.x(), offset.y());
+                if (d > m_roll->pointGrip) {
+                    d = position.x() >= point.x() && position.x() <= right
+                            ? std::abs(position.y() - point.y())
+                            : std::numeric_limits<double>::infinity();
+                    if (d > m_roll->curveGrip) {
+                        continue;
+                    }
+                }
+                if (d < distance) {
+                    distance = d;
+                    hit = SceneHit();
+                    hit->node = m_roll->timeline->note(i).id;
+                    hit->part = ParameterHandle;
+                    hit->cursor = Qt::SizeVerCursor;
+                }
+            }
+            return hit;
+        }
+
+        std::unique_ptr<SceneGesture> press(const SceneHit &hit, QPointF position,
+                                            Qt::MouseButton button,
+                                            Qt::KeyboardModifiers modifiers) override;
+
+    private:
+        PianoRoll::Impl *m_roll;
+
+        std::pair<int, int> visibleNotes(const QRect &rect) const {
+            const auto &time = view()->timeAxis();
+            return m_roll->timeline->notesBetween(time.toTick(rect.left()),
+                                                  time.toTick(rect.right() + 1));
+        }
+
+        // The point of the handle of note index, and the right end of its line
+        std::pair<QPointF, double> handleOf(int index) const {
+            const auto &note = m_roll->timeline->note(index);
+            const auto &time = view()->timeAxis();
+            return {QPointF(time.toX(double(note.start)),
+                            view()->keyAxis().toY(m_roll->valueOf(index))),
+                    time.toX(double(note.start + note.length))};
+        }
+    };
+
+    // A drag of the handle of a value: every note it changes takes the value it is dragged to,
+    // a whole number within the lane.
+    class PianoRoll::Impl::ValueGesture : public SceneGesture {
+    public:
+        ValueGesture(PianoRoll::Impl *roll, int index, QPointF position)
+            : m_roll(roll), m_targets(roll->valueTargets(index)), m_origin(position),
+              m_start(roll->valueOf(index)) {
+        }
+
+        void move(QPointF position, Qt::KeyboardModifiers modifiers) override {
+            Q_UNUSED(modifiers);
+            const auto &keys = m_roll->parameters->keyAxis();
+            const auto range = rangeOf(m_roll->lane);
+            const double value = std::clamp(
+                std::round(m_start + keys.toKey(position.y()) - keys.toKey(m_origin.y())),
+                range.minimum, range.maximum);
+            for (const int i : std::as_const(m_targets)) {
+                m_roll->valuePreview.insert(i, value);
+            }
+            m_roll->parameters->viewport()->update();
+        }
+
+        void release(QPointF position, Qt::KeyboardModifiers modifiers) override {
+            move(position, modifiers);
+            const double value = m_roll->valuePreview.value(m_targets.first());
+            m_roll->valuePreview.clear();
+            m_roll->parameters->viewport()->update();
+            m_roll->writeValue(m_targets, value);
+        }
+
+        void cancel() override {
+            m_roll->valuePreview.clear();
+            m_roll->parameters->viewport()->update();
+        }
+
+    private:
+        PianoRoll::Impl *m_roll;
+        QList<int> m_targets;
+        QPointF m_origin;
+        double m_start;
+    };
+
+    // A press on a handle drags it; the right button removes the value, which leaves the default
+    // of UTAU. Either applies to the selected notes if the note is selected.
+    std::unique_ptr<SceneGesture>
+        PianoRoll::Impl::ValueLayer::press(const SceneHit &hit, QPointF position,
+                                           Qt::MouseButton button,
+                                           Qt::KeyboardModifiers modifiers) {
+        Q_UNUSED(modifiers);
+        m_roll->finishEditing(true);
+        const int index = m_roll->indexOf(hit.node);
+        if (hit.part != ParameterHandle || index < 0) {
+            return nullptr;
+        }
+        if (button == Qt::RightButton) {
+            m_roll->writeValue(m_roll->valueTargets(index), std::nullopt);
+            return nullptr;
+        }
+        if (button != Qt::LeftButton) {
+            return nullptr;
+        }
+        return std::make_unique<ValueGesture>(m_roll, index, position);
     }
 
     // A drag of the selected notes: vertically transposes them, horizontally moves them in the
@@ -2301,8 +2568,37 @@ namespace hello::daw {
         // Room for the margins beyond the volumes
         impl.parameters->setKeyRange(-int(EnvelopeRange / 10), int(EnvelopeRange * 1.1));
         impl.parameters->addLayer(std::make_unique<Impl::EnvelopeLayer>(&impl));
-        impl.parameterLabel = new QLabel(tr("Envelope"));
-        impl.parameterLabel->setAlignment(Qt::AlignCenter);
+        impl.parameters->addLayer(std::make_unique<Impl::ValueLayer>(&impl));
+
+        // The buttons that choose what the parameter area shows, one above the other
+        // (QSynthesis)
+        impl.laneBar = new QWidget();
+        impl.laneButtons = new QButtonGroup(this);
+        auto laneLayout = new QVBoxLayout(impl.laneBar);
+        laneLayout->setContentsMargins(2, 2, 2, 2);
+        laneLayout->setSpacing(1);
+        const struct {
+            Lane lane;
+            const char *text;
+            const char *toolTip;
+        } lanes[] = {
+            {EnvelopeLane,   QT_TR_NOOP("Env"), QT_TR_NOOP("Envelope")  },
+            {IntensityLane,  QT_TR_NOOP("Int"), QT_TR_NOOP("Intensity") },
+            {ModulationLane, QT_TR_NOOP("Mod"), QT_TR_NOOP("Modulation")},
+            {VelocityLane,   QT_TR_NOOP("Vel"), QT_TR_NOOP("Velocity")  },
+        };
+        for (const auto &lane : lanes) {
+            auto button = new QToolButton();
+            button->setText(tr(lane.text));
+            button->setToolTip(tr(lane.toolTip));
+            button->setCheckable(true);
+            button->setChecked(lane.lane == impl.lane);
+            button->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+            impl.laneButtons->addButton(button, lane.lane);
+            laneLayout->addWidget(button);
+        }
+        connect(impl.laneButtons, &QButtonGroup::idClicked, this,
+                [this](int id) { setLane(Lane(id)); });
         new EventWatcher(impl.parameters->viewport(), [this](QEvent *event) {
             stdc_impl_t;
             if (event->type() == QEvent::Resize) {
@@ -2357,7 +2653,7 @@ namespace hello::daw {
         layout->addWidget(impl.ruler, 0, 1);
         layout->addWidget(impl.keyboard, 1, 0);
         layout->addWidget(impl.view, 1, 1);
-        layout->addWidget(impl.parameterLabel, 2, 0);
+        layout->addWidget(impl.laneBar, 2, 0);
         layout->addWidget(impl.parameters, 2, 1);
         layout->setColumnStretch(1, 1);
         layout->setRowStretch(1, 1);
@@ -2397,6 +2693,27 @@ namespace hello::daw {
     SceneView *PianoRoll::parameterView() const {
         stdc_impl_t;
         return impl.parameters;
+    }
+
+    PianoRoll::Lane PianoRoll::lane() const {
+        stdc_impl_t;
+        return impl.lane;
+    }
+
+    void PianoRoll::setLane(Lane lane) {
+        stdc_impl_t;
+        impl.laneButtons->button(lane)->setChecked(true);
+        if (lane == impl.lane) {
+            return;
+        }
+        impl.lane = lane;
+        // Room for the margins beyond the values
+        const auto range = Impl::rangeOf(lane);
+        const double span = range.maximum - range.minimum;
+        impl.parameters->setKeyRange(int(std::floor(range.minimum - span / 10)),
+                                     int(std::ceil(range.maximum + span / 10)));
+        impl.fitParameters();
+        impl.parameters->viewport()->update();
     }
 
     TimelineRuler *PianoRoll::ruler() const {
@@ -3066,6 +3383,19 @@ namespace hello::daw {
         stdc_impl_t;
         impl.faintPointColor = color;
         impl.view->viewport()->update();
+        impl.parameters->viewport()->update();
+    }
+
+    QColor PianoRoll::parameterColor() const {
+        stdc_impl_t;
+        return impl.parameterColor.isValid() ? impl.parameterColor
+                                             : palette().color(QPalette::Highlight);
+    }
+
+    void PianoRoll::setParameterColor(const QColor &color) {
+        stdc_impl_t;
+        impl.parameterColor = color;
+        impl.parameters->viewport()->update();
     }
 
     QColor PianoRoll::playheadColor() const {

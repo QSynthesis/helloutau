@@ -56,6 +56,7 @@ namespace hello::daw {
         Q_PROPERTY(QColor vibratoColor READ vibratoColor WRITE setVibratoColor)
         Q_PROPERTY(QColor faintPointColor READ faintPointColor WRITE setFaintPointColor)
         Q_PROPERTY(QColor envelopeColor READ envelopeColor WRITE setEnvelopeColor)
+        Q_PROPERTY(QColor parameterColor READ parameterColor WRITE setParameterColor)
         Q_PROPERTY(double pointGrip READ pointGrip WRITE setPointGrip)
         Q_PROPERTY(double curveGrip READ curveGrip WRITE setCurveGrip)
         Q_PROPERTY(QColor whiteRowColor READ whiteRowColor WRITE setWhiteRowColor)
@@ -85,6 +86,18 @@ namespace hello::daw {
             /// An anchor of an envelope in the parameter area; SceneHit::index is its index in
             /// time order.
             EnvelopePoint,
+            /// The handle of the value of a note in the parameter area, while it shows the
+            /// intensity, the modulation or the velocity.
+            ParameterHandle,
+        };
+
+        /// What the parameter area shows and edits.
+        enum Lane {
+            EnvelopeLane,
+            IntensityLane,
+            ModulationLane,
+            /// The consonant velocity
+            VelocityLane,
         };
 
         /// What a press on the background does.
@@ -101,8 +114,14 @@ namespace hello::daw {
         SceneView *view() const;
 
         /// The parameter area below the roll, which shares its time axis, and where the
-        /// envelopes of the notes are drawn and edited (step 4 in docs/Tuning.md).
+        /// envelopes of the notes are drawn and edited (step 4 in docs/Tuning.md), or one value
+        /// of each note (step 7).
         SceneView *parameterView() const;
+
+        /// What the parameter area shows, chosen with the buttons beside it. The envelopes at
+        /// first.
+        Lane lane() const;
+        void setLane(Lane lane);
         TimelineRuler *ruler() const;
         PianoKeyboard *keyboard() const;
         kit::TrackTimeline *timeline() const;
@@ -286,11 +305,15 @@ namespace hello::daw {
         void setPitchColor(const QColor &color);
         QColor vibratoColor() const;
         void setVibratoColor(const QColor &color);
-        /// The color of the points of the notes whose portamento is not under the pointer.
+        /// The color of the points of the notes whose portamento is not under the pointer, and
+        /// of the handles of the values that a note leaves to the default.
         QColor faintPointColor() const;
         void setFaintPointColor(const QColor &color);
         QColor envelopeColor() const;
         void setEnvelopeColor(const QColor &color);
+        /// The color of the handles of the values in the parameter area
+        QColor parameterColor() const;
+        void setParameterColor(const QColor &color);
         QColor playheadColor() const;
         void setPlayheadColor(const QColor &color);
         QColor whiteRowColor() const;

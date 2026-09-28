@@ -191,6 +191,7 @@ note.userData().remove(QStringLiteral("$Custom"));
 | `setVibrato` | 把若干音符的颤音设为同一值，或全部去掉。用于 [`Tuning.md`](Tuning.md) 第 3 步 |
 | `setEnvelope` | 把若干音符的包络设为同一值，或全部去掉（即 UTAU 的默认包络）。用于 [`Tuning.md`](Tuning.md) 第 4 步 |
 | `scalePitch` | 把若干音符各控制点的高度乘以一个倍数、颤音深度乘以另一个倍数，取整到音分；倍数不得为负。用于 [`Tuning.md`](Tuning.md) 第 6 步 |
+| `setParameter` | 把若干音符的力度、调制或速度（`NoteParameter`）设为同一值，或全部去掉（即 UTAU 的默认值）。用于 [`Tuning.md`](Tuning.md) 第 7 步 |
 
 ## 六种变更形状
 
@@ -276,7 +277,7 @@ note insert /tracks/0/notes 12 {"lyric": "a", "length": 480, "noteNum": 60}
 | `move <路径> <下标> <数量> <目标位置>` | 列表 | 目标位置是移动后第一项的下标 |
 | `insert` / `replace <路径> <下标> <数值>…` | 数组 | 插入或覆盖，覆盖可越过末尾 |
 
-**领域命令**（`ProjectCommands.h`）每个领域函数一条，形式为 `<名词> <动词> [参数…]`：`note transpose <半音数> <音符路径>…`、`note split <音符列表路径> <下标> <tick>`、`note insert <音符列表路径> <下标> <音符>…`、`note tempo <音符路径> <速度>`、`note remove <音符列表路径> <下标>…`、`note length <音符路径> <tick>`、`note move <音符列表路径> <下标> <个数> <目标下标>`、`note portamento <音符路径> <控制点数组>`、`note vibrato <颤音或 null> <音符路径>…`、`note envelope <包络或 null> <音符路径>…`、`note scale <控制点倍数> <颤音倍数> <音符路径>…`。音源的领域命令（`VoiceBankCommands.h`）：`entry set <条目路径> <条目>`、`entry insert <目录路径> <条目>…`、`entry include <目录路径> <文件名>…`、`entry remove <目录路径> <下标>…`、`prefix set <音高> <前缀>`、`prefix remove <音高>`、`directory charset <目录路径> <编码名>`。插入的条目按文件名排入，不由命令指定位置。
+**领域命令**（`ProjectCommands.h`）每个领域函数一条，形式为 `<名词> <动词> [参数…]`：`note transpose <半音数> <音符路径>…`、`note split <音符列表路径> <下标> <tick>`、`note insert <音符列表路径> <下标> <音符>…`、`note tempo <音符路径> <速度>`、`note remove <音符列表路径> <下标>…`、`note length <音符路径> <tick>`、`note move <音符列表路径> <下标> <个数> <目标下标>`、`note portamento <音符路径> <控制点数组>`、`note vibrato <颤音或 null> <音符路径>…`、`note envelope <包络或 null> <音符路径>…`、`note scale <控制点倍数> <颤音倍数> <音符路径>…`、`note parameter <intensity、modulation 或 velocity> <值或 null> <音符路径>…`。音源的领域命令（`VoiceBankCommands.h`）：`entry set <条目路径> <条目>`、`entry insert <目录路径> <条目>…`、`entry include <目录路径> <文件名>…`、`entry remove <目录路径> <下标>…`、`prefix set <音高> <前缀>`、`prefix remove <音高>`、`directory charset <目录路径> <编码名>`。插入的条目按文件名排入，不由命令指定位置。
 
 **查询只读取文档，不修改文档。** 目前只有一个：`get <路径>`，返回路径所指内容的 JSON，写法与命令的参数、变更日志相同：记录按其文档的写法（如音符、oto 条目），文档未定义写法的记录（如工程的根、音源的目录）写成各字段组成的对象；列表是数组，项在数组中的位置就是命令所用的下标；映射是对象，数组是数字的数组；空的值、缺席的记录或映射写作 `null`。不公开的字段既不能寻址，也不输出。查询不开事务，不产生撤销步骤，由 `ProjectCommands::query()` 与 `VoiceBankCommands::query()` 执行；交给 `execute()` 时被拒绝。例如 `entry remove` 所需的下标由 `get /directories/1/otoEntries` 查得。
 

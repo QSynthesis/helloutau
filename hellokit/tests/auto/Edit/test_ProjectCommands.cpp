@@ -367,6 +367,22 @@ private Q_SLOTS:
         verifyRefused(session, QStringLiteral("note scale 1 1"));
     }
 
+    void note_parameter_sets_and_removes_a_value() {
+        ProjectSession session(richProject());
+        QVERIFY(
+            run(session,
+                QStringLiteral("note parameter velocity 80 /tracks/0/notes/0 /tracks/0/notes/1")));
+        QCOMPARE(noteAt(session, 0).velocity, std::optional<double>(80));
+        QCOMPARE(noteAt(session, 1).velocity, std::optional<double>(80));
+        QVERIFY(run(session, QStringLiteral("note parameter intensity null /tracks/0/notes/0")));
+        QVERIFY(!noteAt(session, 0).intensity);
+        QVERIFY(run(session, QStringLiteral("note parameter modulation -50 /tracks/0/notes/0")));
+        QCOMPARE(noteAt(session, 0).modulation, std::optional<double>(-50));
+        verifyRefused(session, QStringLiteral("note parameter volume 80 /tracks/0/notes/0"));
+        verifyRefused(session, QStringLiteral("note parameter velocity fast /tracks/0/notes/0"));
+        verifyRefused(session, QStringLiteral("note parameter velocity 80"));
+    }
+
     // Acceptance criteria 3 and 4 of docs/Editing.md: undoing every command restores the
     // project, redoing every command restores the edited project, and the same commands produce
     // the same changes in another session.
@@ -525,15 +541,16 @@ private Q_SLOTS:
     }
 
     void names_lists_every_command() {
-        QCOMPARE(ProjectCommands::names(),
-                 QStringList({QStringLiteral("set"), QStringLiteral("insert"),
-                              QStringLiteral("remove"), QStringLiteral("move"),
-                              QStringLiteral("replace"), QStringLiteral("note transpose"),
-                              QStringLiteral("note split"), QStringLiteral("note insert"),
-                              QStringLiteral("note tempo"), QStringLiteral("note remove"),
-                              QStringLiteral("note length"), QStringLiteral("note move"),
-                              QStringLiteral("note portamento"), QStringLiteral("note vibrato"),
-                              QStringLiteral("note envelope"), QStringLiteral("note scale")}));
+        QCOMPARE(
+            ProjectCommands::names(),
+            QStringList({QStringLiteral("set"), QStringLiteral("insert"), QStringLiteral("remove"),
+                         QStringLiteral("move"), QStringLiteral("replace"),
+                         QStringLiteral("note transpose"), QStringLiteral("note split"),
+                         QStringLiteral("note insert"), QStringLiteral("note tempo"),
+                         QStringLiteral("note remove"), QStringLiteral("note length"),
+                         QStringLiteral("note move"), QStringLiteral("note portamento"),
+                         QStringLiteral("note vibrato"), QStringLiteral("note envelope"),
+                         QStringLiteral("note scale"), QStringLiteral("note parameter")}));
     }
 };
 

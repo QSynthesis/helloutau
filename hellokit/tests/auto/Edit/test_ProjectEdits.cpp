@@ -420,6 +420,37 @@ private Q_SLOTS:
         QCOMPARE(diagnostics.size(), 2);
         QCOMPARE(session.snapshot().toJson(), project.toJson());
     }
+
+    // Each value is set on the notes given, or removed, in one step; the others stay.
+    void a_parameter_is_set_on_several_notes_and_removed() {
+        const auto project = richProject();
+        ProjectSession session(project);
+        const auto notes = notesOf(session);
+
+        DiagnosticList diagnostics;
+        QVERIFY(ProjectEdits::setParameter({notes.at(0), notes.at(1)}, ProjectEdits::Modulation, 40,
+                                           diagnostics));
+        auto snapshot = session.snapshot().tracks[0].notes;
+        QCOMPARE(snapshot[0].modulation, std::optional<double>(40));
+        QCOMPARE(snapshot[1].modulation, std::optional<double>(40));
+        QCOMPARE(snapshot[0].intensity, project.tracks[0].notes[0].intensity);
+        QCOMPARE(snapshot[0].velocity, project.tracks[0].notes[0].velocity);
+        QCOMPARE(session.currentStep(), 1);
+        QCOMPARE(session.undoMessage(), ProjectEdits::tr("Change Modulation"));
+
+        QVERIFY(
+            ProjectEdits::setParameter({notes.at(0)}, ProjectEdits::Intensity, 120, diagnostics));
+        QVERIFY(ProjectEdits::setParameter({notes.at(0)}, ProjectEdits::Velocity, std::nullopt,
+                                           diagnostics));
+        snapshot = session.snapshot().tracks[0].notes;
+        QCOMPARE(snapshot[0].intensity, std::optional<double>(120));
+        QVERIFY(!snapshot[0].velocity);
+        QCOMPARE(session.undoMessage(), ProjectEdits::tr("Change Velocity"));
+        session.undo();
+        session.undo();
+        session.undo();
+        QCOMPARE(session.snapshot().toJson(), project.toJson());
+    }
 };
 
 QTEST_APPLESS_MAIN(test_ProjectEdits)

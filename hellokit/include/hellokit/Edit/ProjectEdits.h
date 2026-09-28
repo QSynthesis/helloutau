@@ -28,6 +28,14 @@ namespace hello::kit {
         Q_GADGET
         Q_DECLARE_TR_FUNCTIONS(hello::kit::ProjectEdits)
     public:
+        /// The values of a note that setParameter() sets
+        enum NoteParameter {
+            Intensity,
+            Modulation,
+            Velocity,
+        };
+        Q_ENUM(NoteParameter)
+
         /// Adds \a semitones to the note number of each of \a notes, rests included. The notes
         /// must belong to one session.
         Q_INVOKABLE static bool transpose(const QList<NoteRef> &notes, int semitones,
@@ -100,6 +108,13 @@ namespace hello::kit {
         /// factors must not be negative. The notes must belong to one session.
         Q_INVOKABLE static bool scalePitch(const QList<NoteRef> &notes, double portamento,
                                            double vibrato, DiagnosticList &diagnostics);
+
+        /// Sets \a parameter of each of \a notes to \a value, or removes it where \a value is
+        /// empty, which leaves the default of UTAU. The value is written even if it equals the
+        /// default. The notes must belong to one session.
+        Q_INVOKABLE static bool setParameter(const QList<NoteRef> &notes, NoteParameter parameter,
+                                             std::optional<double> value,
+                                             DiagnosticList &diagnostics);
     };
 
 }

@@ -215,4 +215,37 @@ namespace hello::kit {
         }
         return transaction.commit(diagnostics);
     }
+
+    bool ProjectEdits::setParameter(const QList<NoteRef> &notes, NoteParameter parameter,
+                                    std::optional<double> value, DiagnosticList &diagnostics) {
+        if (notes.isEmpty()) {
+            return true;
+        }
+        const char *messages[] = {
+            QT_TR_NOOP("Change Intensity"),
+            QT_TR_NOOP("Change Modulation"),
+            QT_TR_NOOP("Change Velocity"),
+        };
+        auto transaction = notes.first().session()->transaction(tr(messages[parameter]));
+        for (const auto &note : notes) {
+            switch (parameter) {
+                case Intensity:
+                    if (note.intensity() != value) {
+                        note.setIntensity(value);
+                    }
+                    break;
+                case Modulation:
+                    if (note.modulation() != value) {
+                        note.setModulation(value);
+                    }
+                    break;
+                case Velocity:
+                    if (note.velocity() != value) {
+                        note.setVelocity(value);
+                    }
+                    break;
+            }
+        }
+        return transaction.commit(diagnostics);
+    }
 }

@@ -312,6 +312,49 @@ namespace hello::kit {
             return ProjectEdits::scalePitch(notes, *portamento, *vibrato, diagnostics);
         }
 
+        bool parameterCommand(ProjectSession &session, const Arguments &arguments,
+                              DiagnosticList &diagnostics) {
+            if (arguments.size() < 3) {
+                return usage(diagnostics,
+                             "note parameter <intensity, modulation or velocity> <value or null> "
+                             "<note>...");
+            }
+            const std::pair<const char *, ProjectEdits::NoteParameter> names[] = {
+                {"intensity",  ProjectEdits::Intensity },
+                {"modulation", ProjectEdits::Modulation},
+                {"velocity",   ProjectEdits::Velocity  },
+            };
+            std::optional<ProjectEdits::NoteParameter> parameter;
+            for (const auto &[name, value] : names) {
+                if (arguments[0].text() == QLatin1String(name)) {
+                    parameter = value;
+                }
+            }
+            if (!parameter) {
+                return fail(diagnostics, ProjectCommands::tr("%1 is not intensity, modulation or "
+                                                             "velocity.")
+                                             .arg(arguments[0].text()));
+            }
+            std::optional<double> value;
+            if (edit::CommandSyntax::valueOf(arguments[1]).isNull()) {
+                value = std::nullopt;
+            } else if (const auto number = edit::NodeCommands::numberOf(
+                           arguments[1], ProjectCommands::tr("value"), diagnostics)) {
+                value = *number;
+            } else {
+                return false;
+            }
+            QList<NoteRef> notes;
+            for (const auto &argument : arguments.mid(2)) {
+                const auto note = noteAt(session, argument, diagnostics);
+                if (!note) {
+                    return false;
+                }
+                notes.push_back(*note);
+            }
+            return ProjectEdits::setParameter(notes, *parameter, value, diagnostics);
+        }
+
         using DomainCommand = bool (*)(ProjectSession &, const Arguments &, DiagnosticList &);
 
         // The domain commands, each with the function of ProjectEdits that it calls.
@@ -333,6 +376,7 @@ namespace hello::kit {
             {"vibrato",    vibratoCommand,    "setVibrato"   },
             {"envelope",   envelopeCommand,   "setEnvelope"  },
             {"scale",      scaleCommand,      "scalePitch"   },
+            {"parameter",  parameterCommand,  "setParameter" },
         };
 
         bool run(ProjectSession &session, const Arguments &arguments, DiagnosticList &diagnostics) {
@@ -348,7 +392,8 @@ namespace hello::kit {
                 return fail(diagnostics,
                             ProjectCommands::tr("The command note requires a verb: transpose, "
                                                 "split, insert, tempo, remove, length, move, "
-                                                "portamento, vibrato, envelope or scale."));
+                                                "portamento, vibrato, envelope, scale or "
+                                                "parameter."));
             }
             const auto verb = arguments[1].text();
             for (const auto &command : noteCommands) {
