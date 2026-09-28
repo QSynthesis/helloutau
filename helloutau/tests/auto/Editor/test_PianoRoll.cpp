@@ -557,9 +557,9 @@ private Q_SLOTS:
         }));
     }
 
-    // The points of the note under the pointer are drawn plainly, those of the others faintly:
-    // a plain point is filled, a faint one is only a thin ring through which the portamento
-    // shows.
+    // The points of the note whose portamento is under the pointer are drawn plainly, all others
+    // faintly: a plain point is filled, a faint one is only a thin ring through which the
+    // portamento shows.
     void the_points_of_the_note_under_the_pointer_stand_out() {
         kit::ProjectSession session(bentNotes());
         PianoRoll roll(&session);
@@ -580,19 +580,35 @@ private Q_SLOTS:
                    qAbs(pixel.blue() - color.blue()) < 80;
         };
 
-        // Nothing is hovered or selected: every point is plain.
-        QVERIFY(centerIs(QColor(0, 255, 0)));
+        // With nothing under the pointer every point is faint.
+        QVERIFY(centerIs(QColor(255, 0, 255)));
 
+        // On the portamento of la, whose curve runs along the middle of its row
         hoverAt(pointOfLi(roll, -300, -200));
         QVERIFY(centerIs(QColor(255, 0, 255)));
 
+        // On the portamento of li
         hoverAt(pointOfLi(roll, 250, 0));
         QVERIFY(centerIs(QColor(0, 255, 0)));
 
-        // A selected note keeps its points plain while the pointer is elsewhere.
+        // On li, but away from its portamento
+        hoverAt(pointOfLi(roll, 250, 60));
+        QVERIFY(centerIs(QColor(255, 0, 255)));
+
+        // A selection does not make points plain.
         roll.setSelectedIndices({1});
-        hoverAt(pointOfLi(roll, -300, -200));
+        QVERIFY(centerIs(QColor(255, 0, 255)));
+
+        // A drag keeps the note it began on, wherever the pointer goes.
+        hoverAt(pointOfLi(roll, 250, 0));
+        QTest::mousePress(viewport, Qt::LeftButton, {}, pointOfLi(roll, -60, -200));
+        const auto elsewhere = pointOfLi(roll, -300, 300);
+        QMouseEvent drag(QEvent::MouseMove, elsewhere, viewport->mapToGlobal(elsewhere),
+                         Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        QApplication::sendEvent(viewport, &drag);
         QVERIFY(centerIs(QColor(0, 255, 0)));
+        QTest::keyClick(roll.view(), Qt::Key_Escape);
+        QTest::mouseRelease(viewport, Qt::LeftButton, {}, elsewhere);
     }
 
     // Any point may lie before the start of its note, not only the first.

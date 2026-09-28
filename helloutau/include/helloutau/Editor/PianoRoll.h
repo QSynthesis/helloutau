@@ -53,6 +53,7 @@ namespace hello::daw {
         Q_PROPERTY(QColor playheadColor READ playheadColor WRITE setPlayheadColor)
         Q_PROPERTY(QColor pitchColor READ pitchColor WRITE setPitchColor)
         Q_PROPERTY(QColor vibratoColor READ vibratoColor WRITE setVibratoColor)
+        Q_PROPERTY(QColor faintPointColor READ faintPointColor WRITE setFaintPointColor)
         Q_PROPERTY(double pointGrip READ pointGrip WRITE setPointGrip)
         Q_PROPERTY(double curveGrip READ curveGrip WRITE setCurveGrip)
         Q_PROPERTY(QColor whiteRowColor READ whiteRowColor WRITE setWhiteRowColor)
@@ -226,6 +227,9 @@ namespace hello::daw {
         void setPitchColor(const QColor &color);
         QColor vibratoColor() const;
         void setVibratoColor(const QColor &color);
+        /// The color of the points of the notes whose portamento is not under the pointer.
+        QColor faintPointColor() const;
+        void setFaintPointColor(const QColor &color);
         QColor playheadColor() const;
         void setPlayheadColor(const QColor &color);
         QColor whiteRowColor() const;

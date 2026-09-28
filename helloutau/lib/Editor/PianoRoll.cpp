@@ -69,12 +69,11 @@ namespace hello::daw {
         // pixels; by default a double click inserts one within this distance of the portamento.
         // See PianoRoll::pointGrip() and PianoRoll::curveGrip().
         constexpr double PointRadius = 3.5;
-
-        // The points of the notes not stressed are drawn with this radius and opacity.
-        constexpr double FaintPointRadius = 2.5;
-        constexpr float FaintPointAlpha = 0.4f;
         constexpr double DefaultPointGrip = 6;
         constexpr double DefaultCurveGrip = 5;
+
+        // The points of the notes whose portamento is not under the pointer have this radius.
+        constexpr double FaintPointRadius = 3;
 
         // Ctrl snaps the height of a point to this many cents.
         constexpr double PitchSnap = 50;
@@ -225,6 +224,7 @@ namespace hello::daw {
         double curveGrip = DefaultCurveGrip;
         QColor pitchColor;
         QColor vibratoColor;
+        QColor faintPointColor;
 
         std::optional<double> playhead;
         QColor playheadColor;
@@ -271,40 +271,23 @@ namespace hello::daw {
             Q_EMIT _decl->selectionChanged();
         }
 
-        // The note under the pointer, whose points are stressed with those of the selection
+        // The note whose points are drawn plainly, the others' faintly: the one whose
+        // portamento or point is under the pointer, or -1
         int hovered = -1;
 
-        // The notes whose points are drawn plainly, the others' faintly: the one under the
-        // pointer, the selected ones and those of the selected points. None if there are none,
-        // and then every point is drawn plainly.
-        QSet<int> stressedNotes() const {
-            QSet<int> result;
-            if (hovered >= 0) {
-                result.insert(hovered);
-            }
-            for (int i = 0; i < timeline->noteCount(); ++i) {
-                if (selection.contains(timeline->note(i).id)) {
-                    result.insert(i);
-                }
-            }
-            const auto points = selectedPointIndices();
-            for (auto it = points.begin(); it != points.end(); ++it) {
-                result.insert(it.key());
-            }
-            return result;
-        }
-
-        // Follows the pointer: the note of the point under it, or else the note at its time
+        // Follows the pointer: the note of the point under it, or else the note whose
+        // portamento it is on. A gesture keeps the note it began on, so that no other note
+        // stands out while it lasts.
         void hover(std::optional<QPointF> position) {
+            if (view->hasGesture()) {
+                return;
+            }
             int note = -1;
             if (position && pitchVisible) {
                 if (const auto hit = view->hitAt(*position); hit && hit->part == PitchPoint) {
                     note = indexOf(hit->node);
-                } else {
-                    note = timeline->noteAt(view->timeAxis().toTick(position->x()));
-                    if (note >= timeline->noteCount() || (note >= 0 && timeline->note(note).rest)) {
-                        note = -1;
-                    }
+                } else if (const auto near = portamentoNear(*position)) {
+                    note = near->first;
                 }
             }
             if (note != hovered) {
@@ -482,8 +465,12 @@ namespace hello::daw {
             return writePoints(PianoRoll::tr("Delete Pitch Points"), result, diagnostics);
         }
 
+        // The note whose portamento lies within curveGrip of position, and the tick there from
+        // the start of the note. The note is the one at that time, or the next one from its first
+        // point on.
+        std::optional<std::pair<int, double>> portamentoNear(QPointF position) const;
+
         // Inserts a point where position lies on the portamento of a note, and selects it.
-        // The note is the one at that time, or the next one from its first point on.
         bool insertPointAt(QPointF position);
 
         void selectOnly(int index) {
@@ -922,29 +909,29 @@ namespace hello::daw {
                 painter.drawPolyline(portamento);
             }
 
-            // The points, also those of the next note, which may lie before it: filled where
-            // they only move in time, and in the selection color where selected. Those of the
-            // notes not stressed are smaller and faint, so that the points of a note stand out.
-            const auto stressed = m_roll->stressedNotes();
-            auto faintColor = decl->pitchColor();
-            faintColor.setAlphaF(faintColor.alphaF() * FaintPointAlpha);
+            // The points, also those of the next note, which may lie before it. Those of the note
+            // whose portamento is under the pointer are plain: filled where they only move in
+            // time, and in the selection color where selected. The others are small rings in
+            // faintPointColor, selected ones in the selection color, through which the
+            // portamento shows.
             for (int i = begin; i < last; ++i) {
                 if (timeline->note(i).rest) {
                     continue;
                 }
-                const bool faint = !stressed.isEmpty() && !stressed.contains(i);
+                const bool faint = i != m_roll->hovered;
                 const auto &points = notes.at(i - first).portamento;
                 const auto list = refs.at(i).portamento();
                 for (int j = 0; j < points.size(); ++j) {
                     const auto center = m_roll->positionOf(i, j, points[j]);
+                    const bool selected =
+                        j < list.size() && m_roll->selectedPoints.contains(list.at(j).id());
                     if (faint) {
-                        painter.setPen(QPen(faintColor, 1));
+                        painter.setPen(
+                            QPen(selected ? decl->selectionColor() : decl->faintPointColor(), 1));
                         painter.setBrush(Qt::NoBrush);
                         painter.drawEllipse(center, FaintPointRadius, FaintPointRadius);
                         continue;
                     }
-                    const bool selected =
-                        j < list.size() && m_roll->selectedPoints.contains(list.at(j).id());
                     const bool fixed = m_roll->heightFixed(i, j, int(points.size()));
                     painter.setPen(
                         QPen(selected ? decl->selectionColor() : decl->pitchColor(), 1.5));
@@ -1730,17 +1717,17 @@ namespace hello::daw {
         return std::make_unique<PointGesture>(m_roll, index, hit.index, position);
     }
 
-    bool PianoRoll::Impl::insertPointAt(QPointF position) {
+    std::optional<std::pair<int, double>> PianoRoll::Impl::portamentoNear(QPointF position) const {
         const int count = timeline->noteCount();
         if (!pitchVisible || count == 0) {
-            return false;
+            return std::nullopt;
         }
         const auto &time = view->timeAxis();
         const auto &keys = view->keyAxis();
         const double tick = time.toTick(position.x());
         int index = timeline->noteAt(tick);
         if (index < 0 || index >= count) {
-            return false;
+            return std::nullopt;
         }
         if (index + 1 < count) {
             const auto next = pointsOf(index + 1);
@@ -1751,10 +1738,10 @@ namespace hello::daw {
         }
         const auto &note = timeline->note(index);
         if (note.rest) {
-            return false;
+            return std::nullopt;
         }
 
-        // Only on the portamento as it is drawn
+        // The portamento as it is drawn
         const int first = std::max(0, index - 2);
         const int last = std::min(count, index + 2);
         const auto refs = notes();
@@ -1766,8 +1753,20 @@ namespace hello::daw {
         const kit::PitchCurve curve(around, index - first, timeline->tempoMap().tempo(index));
         const double y = keys.toY(note.key + 0.5 + curve.portamentoAt(local) / 100);
         if (std::abs(y - position.y()) > curveGrip) {
+            return std::nullopt;
+        }
+        return std::pair{index, local};
+    }
+
+    bool PianoRoll::Impl::insertPointAt(QPointF position) {
+        const auto near = portamentoNear(position);
+        if (!near) {
             return false;
         }
+        const auto [index, local] = *near;
+        const auto &note = timeline->note(index);
+        const auto &keys = view->keyAxis();
+        const auto refs = notes();
 
         auto points = pointsOf(index);
         if (points.isEmpty()) {
@@ -2307,6 +2306,16 @@ namespace hello::daw {
 
     void PianoRoll::setVibratoColor(const QColor &color) {
         _impl->vibratoColor = color;
+        _impl->view->viewport()->update();
+    }
+
+    QColor PianoRoll::faintPointColor() const {
+        return _impl->faintPointColor.isValid() ? _impl->faintPointColor
+                                                : palette().color(QPalette::Mid);
+    }
+
+    void PianoRoll::setFaintPointColor(const QColor &color) {
+        _impl->faintPointColor = color;
         _impl->view->viewport()->update();
     }
 
