@@ -9,12 +9,13 @@
 | `HelloKitSupport` | `Diagnostic`、`TextCodec`（编码名解析、转义与还原）、`FileSystemWatcher`（磁盘变化提示，由 `hello-fswatcher` 进程实现） |
 | `HelloKitDocument` | `PayloadCodec`、`Project` / `Track` / `Note` 模型、`.usth` 读写、`UstDocument` |
 | `HelloKitVoiceBank` | `VoiceBankConfig`、`VoiceBankSource`（原始扫描）、`VoiceBank`（解码后的内容与查询，纯值）、`VoiceBankFileSystemState`（磁盘状态：写回、与磁盘核对、重新读取）、`VoiceBankCheckScheduler` |
-| `HelloKitSynth` | `EngineProcess`、`SynthPlan`（仅计算）、`SynthRunner` 及其实现 `ClassicSynthRunner`、`ThreadedSynthRunner` |
+| `HelloKitSynth` | `EngineProcess`、`SynthPlan`（仅计算，含轨道文件在轨道中的起始时刻）、`WaveAudio`（读取 wav）、`SynthRunner` 及其实现 `ClassicSynthRunner`、`ThreadedSynthRunner` |
 | `HelloKitInterchange` | 接口、注册表、`Formats/MidiConvert`（导入与导出） |
 | `HelloKitEditBase` | 编辑层的通用部分，命名空间 `hello::kit::edit`：`EditSession`（事务、撤销、变更通知、提交时校验）、`NodeRef`、`Change`、槽位、命令语法，以及扩展接口（字段表、按路径的命令、变更日志） |
 | `HelloKitEdit` | 编辑层的文档部分。工程：`ProjectDocument`（打开、导入、保存、是否已修改）、`TrackTimeline`（音符的位置）、`ProjectSession`、句柄 `ProjectRefs`、领域函数 `ProjectEdits`、命令 `ProjectCommands`。音源：`VoiceBankSession`（含保存与从磁盘重新读取）、句柄 `VoiceBankRefs`、领域函数 `VoiceBankEdits`、命令 `VoiceBankCommands` |
 | `HelloUtauWidgets` | 通用的控件基础设施：命令面板 `CommandPalette` 与其模糊匹配 `CommandMatcher`；场景接口 `SceneView`、`SceneLayer`、`SceneGesture`，以及随其坐标轴的 `TimelineRuler` 与 `PianoKeyboard` |
-| `HelloUtauEditor` | 窗口骨架：QActionKit 清单生成的菜单、工程的打开（UST 编码选择）、保存、另存为与导出 UST、撤销与重做、未保存标记、设置、命令面板（`Ctrl+Shift+P`）；工程在卷帘 `PianoRoll` 中显示与编辑（选区、拖动移调与重排、改长度、笔工具、插入、删除、拆分、歌词就地编辑、量化）；打开工程后读取其音源（按目录选择编码），卷帘标出找不到样本的音符。见 [`Widgets.md`](Widgets.md) 第 1–4 步 |
+| `HelloUtauAudio` | 设备输出 `AudioOutput`（`QAudioSink` 回调接口）、`AudioSource` / `BufferSource`、采样率转换 `resampled()`（r8brain-free-src）|
+| `HelloUtauEditor` | 窗口骨架：QActionKit 清单生成的菜单、工程的打开（UST 编码选择）、保存、另存为与导出 UST、撤销与重做、未保存标记、设置、命令面板（`Ctrl+Shift+P`）；工程在卷帘 `PianoRoll` 中显示与编辑（选区、拖动移调与重排、改长度、笔工具、插入、删除、拆分、歌词就地编辑、量化）；打开工程后读取其音源（按目录选择编码），卷帘标出找不到样本的音符；空格渲染并播放整轨或选中范围（`Playback`），状态栏显示进度，卷帘显示播放线。见 [`Widgets.md`](Widgets.md) 第 1–5 步 |
 | `helloutau` | 薄驱动，仅含 `main.cpp` |
 
 已验证的构建链：qmsetup 的 `hellokit_add_library` / `helloutau_add_library` / `helloutau_add_application`、Qt 6.11 与 AUTOMOC、stdcorelib、stdutau、wolf-midi、QtTest 与 `add_auto_test`、ctest。
@@ -57,6 +58,7 @@
 - **wolf-midi**：MIDI 的解析与写出，是去除 Qt 依赖的 `QMidiFile`。来自 `E:/GitHub/ds-editor-lite/vcpkg`，同样通过 `-Dwolf-midi_DIR=` 指定。其 `MidiFile.cpp` 使用 `std::log2` 却未包含 `<cmath>`，GCC 下须以 `-DCMAKE_CXX_FLAGS="-include cmath"` 构建。
 - **substate**：`HelloKitEditBase` 与 `HelloKitEdit` 的节点树、事务与撤销历史（`stdware/substate`，含 `substate` 与 `qsubstate` 两个库），**仅作为私有依赖**，`ss::` 类型不出现在公开头文件中。与 stdutau 相同，不取自 vcpkg，也不作为子模块，自行构建安装后通过 `-Dsubstate_DIR=` 指定。默认构建为动态库。
 - **QActionKit**：菜单、工具栏与快捷键（`stdware/qactionkit` 的 `next` 分支）。与 stdutau 相同，不取自 vcpkg，也不作为子模块，自行构建安装后通过 `-DQActionKit_DIR=` 指定，本机安装在 `E:/GitHub/qactionkit/build/install`。只使用 Core 与 Widgets 两个模块，构建时可以传入 `-DQACTIONKIT_BUILD_QUICK=OFF` 省去 Quick 模块。目前还没有模块使用它。
+- **r8brain-free-src 6.5**：`HelloUtauAudio` 的采样率转换，私有依赖。由 DiffScope 的 vcpkg 端口构建为静态库，本机取自 `E:/GitHub/diffscope-project/vcpkg`，通过 `-Dunofficial-r8brain-free-src_DIR=` 指定。
 - **qmsetup**：来自 `D:/GitHub/synthrt/vcpkg`。
 - **Qt 6.11.1**：`D:/Qt/6.11.1/msvc2022_64`。
 

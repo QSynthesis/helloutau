@@ -53,6 +53,9 @@ namespace hello::daw {
 
         constexpr int DefaultQuantization = kit::ticksPerQuarter / 4;
 
+        // The part of the view to the left of the playhead after the view follows it
+        constexpr double FollowMargin = 0.1;
+
         QString tempoText(double tempo) {
             return QString::number(tempo, 'g', 6);
         }
@@ -150,6 +153,9 @@ namespace hello::daw {
 
         // The note whose lyric is edited, or 0
         kit::edit::NodeId editing = 0;
+
+        std::optional<double> playhead;
+        QColor playheadColor;
 
         QColor noteColor;
         QColor restColor;
@@ -444,6 +450,11 @@ namespace hello::daw {
                 color.setAlphaF(0.15f);
                 painter.setBrush(color);
                 painter.drawRect(*m_roll->band);
+            }
+            if (m_roll->playhead) {
+                const double x = view()->timeAxis().toX(*m_roll->playhead);
+                painter.setPen(QPen(m_roll->_decl->playheadColor(), 1));
+                painter.drawLine(QPointF(x, exposed.top()), QPointF(x, exposed.bottom() + 1));
             }
         }
 
@@ -1084,6 +1095,28 @@ namespace hello::daw {
         return _impl->editor;
     }
 
+    std::optional<double> PianoRoll::playheadPosition() const {
+        return _impl->playhead;
+    }
+
+    void PianoRoll::setPlayheadPosition(std::optional<double> tick) {
+        if (tick == _impl->playhead) {
+            return;
+        }
+        _impl->playhead = tick;
+        if (tick) {
+            // A page at a time, so that the view does not move under the pointer continuously
+            auto time = _impl->view->timeAxis();
+            const double width = _impl->view->viewport()->width();
+            const double x = time.toX(*tick);
+            if (x < 0 || x > width) {
+                time.left = *tick - width / time.pixelsPerTick * FollowMargin;
+                _impl->view->setTimeAxis(time);
+            }
+        }
+        _impl->view->viewport()->update();
+    }
+
     void PianoRoll::keyPressEvent(QKeyEvent *event) {
         if ((event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter) &&
             event->modifiers() == Qt::NoModifier) {
@@ -1157,6 +1190,16 @@ namespace hello::daw {
 
     void PianoRoll::setSelectionColor(const QColor &color) {
         _impl->selectionColor = color;
+        _impl->view->viewport()->update();
+    }
+
+    QColor PianoRoll::playheadColor() const {
+        return _impl->playheadColor.isValid() ? _impl->playheadColor
+                                              : palette().color(QPalette::Link);
+    }
+
+    void PianoRoll::setPlayheadColor(const QColor &color) {
+        _impl->playheadColor = color;
         _impl->view->viewport()->update();
     }
 

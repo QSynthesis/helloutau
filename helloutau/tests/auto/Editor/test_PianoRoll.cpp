@@ -365,6 +365,25 @@ private Q_SLOTS:
         QVERIFY(diagnostics.empty());
     }
 
+    // The view stays still while the playhead is in it, and follows once it leaves.
+    void the_view_follows_the_playhead() {
+        kit::ProjectSession session(threeNotes());
+        PianoRoll roll(&session);
+        show(roll);
+        const auto &time = roll.view()->timeAxis();
+        const double visible = roll.view()->viewport()->width() / time.pixelsPerTick;
+
+        roll.setPlayheadPosition(visible / 2);
+        QCOMPARE(roll.playheadPosition(), std::optional<double>(visible / 2));
+        QCOMPARE(time.left, 0.0);
+
+        roll.setPlayheadPosition(visible * 1.5);
+        QCOMPARE(time.left, visible * 1.4);
+        roll.setPlayheadPosition(std::nullopt);
+        QVERIFY(!roll.playheadPosition());
+        QCOMPARE(time.left, visible * 1.4);
+    }
+
     // Tab commits the lyric and edits the next note; Escape leaves the lyric as it was.
     void a_lyric_is_edited_in_place() {
         kit::ProjectSession session(threeNotes());

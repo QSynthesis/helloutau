@@ -48,6 +48,9 @@
         <action id="helloutau.view.commandPalette" text="&amp;Command Palette..." category="View"
                 shortcuts="Ctrl+Shift+P;F1" />
 
+        <action id="helloutau.playback.play" text="&amp;Play or Stop" category="Playback"
+                shortcut="Space" />
+
         <action id="helloutau.tools.settings" text="&amp;Settings..." category="Tools" />
 
         <menu id="helloutau.mainMenu" topLevel="true" />
@@ -57,6 +60,7 @@
         <menu id="helloutau.edit" text="&amp;Edit" />
         <menu id="helloutau.edit.transpose" text="&amp;Transpose" />
         <menu id="helloutau.view" text="&amp;View" />
+        <menu id="helloutau.playback" text="&amp;Playback" />
         <menu id="helloutau.tools" text="&amp;Tools" />
     </items>
 
@@ -97,6 +101,9 @@
             </menu>
             <menu id="helloutau.view">
                 <action id="helloutau.view.commandPalette" />
+            </menu>
+            <menu id="helloutau.playback">
+                <action id="helloutau.playback.play" />
             </menu>
             <menu id="helloutau.tools">
                 <action id="helloutau.tools.settings" />

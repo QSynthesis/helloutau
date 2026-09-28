@@ -2,6 +2,7 @@
 #define HELLOUTAU_EDITOR_PIANOROLL_H
 
 #include <memory>
+#include <optional>
 
 #include <QtGui/QColor>
 #include <QtWidgets/QWidget>
@@ -45,6 +46,7 @@ namespace hello::daw {
         Q_PROPERTY(QColor unsampledColor READ unsampledColor WRITE setUnsampledColor)
         Q_PROPERTY(QColor unsampledLyricColor READ unsampledLyricColor WRITE setUnsampledLyricColor)
         Q_PROPERTY(QColor selectionColor READ selectionColor WRITE setSelectionColor)
+        Q_PROPERTY(QColor playheadColor READ playheadColor WRITE setPlayheadColor)
         Q_PROPERTY(QColor whiteRowColor READ whiteRowColor WRITE setWhiteRowColor)
         Q_PROPERTY(QColor blackRowColor READ blackRowColor WRITE setBlackRowColor)
         Q_PROPERTY(QColor lineColor READ lineColor WRITE setLineColor)
@@ -142,6 +144,12 @@ namespace hello::daw {
         QLineEdit *lyricEditor() const;
         /// @}
 
+        /// The position of playback in ticks, drawn as a vertical line, or none. The view
+        /// scrolls to keep it in sight: once it passes the right edge, or is left of the view,
+        /// it continues from near the left edge.
+        std::optional<double> playheadPosition() const;
+        void setPlayheadPosition(std::optional<double> tick);
+
         QColor noteColor() const;
         void setNoteColor(const QColor &color);
         QColor restColor() const;
@@ -154,6 +162,8 @@ namespace hello::daw {
         void setUnsampledLyricColor(const QColor &color);
         QColor selectionColor() const;
         void setSelectionColor(const QColor &color);
+        QColor playheadColor() const;
+        void setPlayheadColor(const QColor &color);
         QColor whiteRowColor() const;
         void setWhiteRowColor(const QColor &color);
         QColor blackRowColor() const;

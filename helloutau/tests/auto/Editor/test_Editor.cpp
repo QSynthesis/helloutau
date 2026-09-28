@@ -100,7 +100,8 @@ private Q_SLOTS:
             menus.push_back(action->text());
         }
         QCOMPARE(menus, (QStringList{QStringLiteral("&File"), QStringLiteral("&Edit"),
-                                     QStringLiteral("&View"), QStringLiteral("&Tools")}));
+                                     QStringLiteral("&View"), QStringLiteral("&Playback"),
+                                     QStringLiteral("&Tools")}));
         const auto save = actionNamed(window, QStringLiteral("&Save"));
         QVERIFY(save);
         QCOMPARE(save->shortcut(), QKeySequence(QStringLiteral("Ctrl+S")));

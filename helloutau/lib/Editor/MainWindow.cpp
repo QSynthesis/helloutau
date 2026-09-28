@@ -9,8 +9,12 @@
 #include <QtGui/QCloseEvent>
 #include <QtWidgets/QFileDialog>
 #include <QtWidgets/QInputDialog>
+#include <QtWidgets/QLabel>
 #include <QtWidgets/QMenuBar>
 #include <QtWidgets/QMessageBox>
+#include <QtWidgets/QProgressBar>
+#include <QtWidgets/QPushButton>
+#include <QtWidgets/QStatusBar>
 
 #include <QAKCore/actionextension.h>
 #include <QAKCore/actionregistry.h>
@@ -28,12 +32,16 @@
 #include "Editor.h"
 #include "ExportUstDialog.h"
 #include "PianoRoll.h"
+#include "Playback.h"
 #include "SettingsDialog.h"
 #include "VoiceBankCharsetDialog.h"
 
 namespace hello::daw {
 
     namespace {
+
+        // How often the playhead follows playback, in milliseconds
+        constexpr int PlayheadInterval = 30;
 
         QString textOf(const std::filesystem::path &path) {
             return QDir::toNativeSeparators(QString::fromStdU16String(path.u16string()));
@@ -71,6 +79,83 @@ namespace hello::daw {
         QActionGroup *tools = nullptr;
         CommandPalette *palette = nullptr;
 
+        Playback *playback = nullptr;
+        QLabel *renderLabel = nullptr;
+        QProgressBar *renderProgress = nullptr;
+        QPushButton *renderCancel = nullptr;
+        QTimer playheadTimer;
+
+        // The render progress in the status bar, and the playhead that follows playback
+        void initPlayback() {
+            playback = new Playback(_decl);
+            renderLabel = new QLabel();
+            renderProgress = new QProgressBar();
+            renderProgress->setMaximumWidth(200);
+            renderProgress->setTextVisible(false);
+            renderCancel = new QPushButton(tr("Cancel"));
+            for (const auto widget :
+                 std::initializer_list<QWidget *>{renderLabel, renderProgress, renderCancel}) {
+                _decl->statusBar()->addPermanentWidget(widget);
+                widget->hide();
+            }
+            QObject::connect(renderCancel, &QPushButton::clicked, playback, &Playback::stop);
+
+            QObject::connect(playback, &Playback::stateChanged, _decl,
+                             [this](Playback::State state) {
+                                 const bool rendering = state == Playback::Rendering;
+                                 renderLabel->setVisible(rendering);
+                                 renderProgress->setVisible(rendering);
+                                 renderCancel->setVisible(rendering);
+                                 if (rendering) {
+                                     renderLabel->setText(tr("Rendering..."));
+                                     renderProgress->setRange(0, 0);
+                                 }
+                                 if (state == Playback::Playing) {
+                                     playheadTimer.start();
+                                 } else {
+                                     playheadTimer.stop();
+                                     roll->setPlayheadPosition(std::nullopt);
+                                 }
+                             });
+            QObject::connect(playback, &Playback::progressed, _decl, [this](int done, int total) {
+                renderLabel->setText(tr("Rendering %1 of %2 notes").arg(done).arg(total));
+                renderProgress->setRange(0, total);
+                renderProgress->setValue(done);
+            });
+            QObject::connect(playback, &Playback::failed, _decl,
+                             [this](const kit::DiagnosticList &diagnostics) {
+                                 DiagnosticBox::show(_decl, tr("Play"), diagnostics);
+                             });
+
+            playheadTimer.setInterval(PlayheadInterval);
+            QObject::connect(&playheadTimer, &QTimer::timeout, _decl, [this] {
+                if (const auto position = playback->position()) {
+                    roll->setPlayheadPosition(roll->timeline()->tempoMap().tickOf(*position));
+                }
+            });
+        }
+
+        // Plays the selected notes, from the first to the last, or the whole track, or stops
+        // what is playing or rendering.
+        void togglePlayback() {
+            if (playback->state() != Playback::Stopped) {
+                playback->stop();
+                return;
+            }
+            std::optional<std::pair<int, int>> range;
+            if (const auto selected = roll->selectedIndices(); !selected.isEmpty()) {
+                range = std::make_pair(selected.first(), selected.last());
+            }
+            const auto &settings = editor->settings();
+            kit::SynthEngines engines;
+            engines.resampler = pathOf(settings.resampler());
+            engines.wavtool = pathOf(settings.wavtool());
+            kit::DiagnosticList diagnostics;
+            if (!playback->play(*document, range, engines, diagnostics)) {
+                DiagnosticBox::show(_decl, tr("Play"), diagnostics);
+            }
+        }
+
         QAction *addCommand(const QString &id, std::function<void()> handler) {
             auto action = new QAction(_decl);
             QObject::connect(action, &QAction::triggered, _decl, std::move(handler));
@@ -82,6 +167,7 @@ namespace hello::daw {
         void initActions() {
             context = new QAK::WidgetActionContext(_decl);
             context->addMenuBar(QStringLiteral("helloutau.mainMenu"), _decl->menuBar());
+            initPlayback();
 
             addCommand(QStringLiteral("helloutau.file.new"), [this] { editor->newWindow(); });
             addCommand(QStringLiteral("helloutau.file.open"), [this] { open(); });
@@ -141,6 +227,7 @@ namespace hello::daw {
                 palette->setRecentIds(editor->settings().recentCommands());
                 palette->popup();
             });
+            addCommand(QStringLiteral("helloutau.playback.play"), [this] { togglePlayback(); });
             addCommand(QStringLiteral("helloutau.tools.settings"), [this] {
                 const auto utau = editor->settings().utauDirectory();
                 SettingsDialog dialog(editor->settings(), _decl);
@@ -344,7 +431,9 @@ namespace hello::daw {
     }
 
     MainWindow::~MainWindow() {
-        // The piano roll refers to the session of the document, which goes with _impl.
+        // Stopping updates the piano roll, which refers to the session of the document, which
+        // goes with _impl.
+        _impl->playback->stop();
         delete _impl->roll;
     }
 
@@ -353,6 +442,7 @@ namespace hello::daw {
     }
 
     void MainWindow::setDocument(std::unique_ptr<kit::ProjectDocument> document) {
+        _impl->playback->stop();
         auto previous = std::move(_impl->document);
         _impl->document = std::move(document);
         _impl->bindDocument();

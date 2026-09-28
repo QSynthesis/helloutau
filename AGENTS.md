@@ -53,6 +53,8 @@ Qt 6 + CMake + C++17。构建脚本的组织方式参照 synthrt：`find_package
 
 **MIDI 的解析使用 `wolf-midi`**（去除 Qt 依赖的 `QMidiFile`，vcpkg 端口），同样传入 `-Dwolf-midi_DIR=`，**私有依赖**，不出现在公开头文件中。不要自行实现 MIDI 解析。
 
+**采样率转换使用 r8brain-free-src 6.5**（MIT 许可），由 DiffScope 仓库的 vcpkg 端口（`scripts/vcpkg/ports/r8brain-free-src`）构建为静态库，传入 `-Dunofficial-r8brain-free-src_DIR=<prefix>/share/unofficial-r8brain-free-src`，是 `HelloUtauAudio` 的**私有依赖**。其头文件会引入 `windows.h`，因此该子库定义 `NOMINMAX`。
+
 **菜单、工具栏与快捷键由 QActionKit 提供**（`stdware/qactionkit` 的 `next` 分支，只使用 Core 与 Widgets 两个模块）。动作写在动作扩展清单中，由 AEC 在构建时编译（`qak_add_action_extension()`），用户对菜单的自定义以改动记录保存。清单格式见 qactionkit 仓库的 `docs/action-extension-spec.md`。目前还没有模块使用它，接入是为界面阶段做准备。
 
 **stdcorelib 仅作为私有依赖，不出现在公开头文件中。** 子库使用 `LINKS_PRIVATE stdcorelib::stdcorelib`，导出宏使用 `<QtCore/QtGlobal>` 的 `Q_DECL_EXPORT` / `Q_DECL_IMPORT`，不要使用 `STDC_DECL_EXPORT`。两个模块本就依赖 Qt，使用 Qt 的宏不增加额外依赖，而要求下游为一个宏安装 stdcorelib 是不合理的。

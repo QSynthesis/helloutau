@@ -6,6 +6,7 @@
 #     -Dwinacp_DIR=<prefix>/lib/cmake/winacp
 #     -Dsubstate_DIR=<prefix>/lib/cmake/substate
 #     -DQActionKit_DIR=<prefix>/lib/cmake/QActionKit
+#     -Dunofficial-r8brain-free-src_DIR=<prefix>/share/unofficial-r8brain-free-src
 #
 # stdcorelib, stdutau, substate and QActionKit are developed alongside this repository, so none is
 # taken from a vcpkg release. Each must be built and installed separately.
@@ -89,3 +90,11 @@ _hello_find_external(QActionKit
     "Build https://github.com/stdware/qactionkit and pass -DQActionKit_DIR=<prefix>/lib/cmake/QActionKit."
     QActionKit::Core QActionKit::Widgets
     COMPONENTS Widgets)
+
+# The sample rate converter of the audio output, version 6.5 under the MIT license, which has no
+# CMake package of its own. The vcpkg port of DiffScope (scripts/vcpkg/ports/r8brain-free-src in
+# https://github.com/diffscope/diffscope-project) builds it as a static library. See
+# docs/Widgets.md.
+_hello_find_external(unofficial-r8brain-free-src
+    "Install r8brain-free-src 6.5, for example with the vcpkg port of DiffScope, and pass -Dunofficial-r8brain-free-src_DIR=<prefix>/share/unofficial-r8brain-free-src."
+    unofficial::r8brain-free-src::r8bsrc)

@@ -17,7 +17,8 @@ qak_add_action_extension(_actions_src EditorActions.xml
 helloutau_add_library(${PROJECT_NAME} SHARED
     QT_AUTOGEN
     SOURCES ${_src} ${_hdr} ${_actions_src}
-    LINKS HelloUtauWidgets HelloKitEdit HelloKitDocument HelloKitVoiceBank
+    LINKS HelloUtauWidgets HelloUtauAudio HelloKitEdit HelloKitDocument HelloKitVoiceBank
+          HelloKitSynth
     LINKS_PRIVATE QActionKit::Widgets
     QT_LINKS Core Gui Widgets
     INCLUDE_PRIVATE ../../include/** **

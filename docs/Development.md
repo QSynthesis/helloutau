@@ -32,7 +32,7 @@
 | `HelloUtauTheme` | 主题系统，见 [`Theme.md`](Theme.md) |
 | `HelloUtauAudio` | 音频设备的输出，见 [`Widgets.md`](Widgets.md) |
 
-`HelloUtauTheme`、`HelloUtauAudio` 在第一次有内容时建立。
+`HelloUtauTheme` 在第一次有内容时建立。
 
 ## 目录与文件
 
