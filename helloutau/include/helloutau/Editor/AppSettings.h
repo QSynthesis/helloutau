@@ -1,0 +1,50 @@
+#ifndef HELLOUTAU_EDITOR_APPSETTINGS_H
+#define HELLOUTAU_EDITOR_APPSETTINGS_H
+
+#include <filesystem>
+#include <memory>
+
+#include <QtCore/QSettings>
+#include <QtCore/QString>
+
+#include <helloutau/Editor/HelloUtauEditorGlobal.h>
+
+namespace hello::daw {
+
+    /// The settings of the editor, stored per user in an INI file.
+    class HELLOUTAU_EDITOR_EXPORT AppSettings {
+    public:
+        /// The settings of the current user, in the location Qt chooses for the organization and
+        /// application names of \c QCoreApplication.
+        AppSettings();
+
+        /// The settings stored in \a fileName.
+        explicit AppSettings(const QString &fileName);
+
+        ~AppSettings();
+
+        /// The directory that contains \c utau.exe, which resolves the \c %VOICE% prefix and
+        /// relative paths in \c VoiceDir, see Track::voiceDirectory(). Empty if not set.
+        std::filesystem::path utauDirectory() const;
+        void setUtauDirectory(const std::filesystem::path &directory);
+
+        /// The engines used for rendering and written to an exported UST that specifies none.
+        /// The engines a project specifies are never used without asking, see AGENTS.md.
+        QString resampler() const;
+        void setResampler(const QString &path);
+        QString wavtool() const;
+        void setWavtool(const QString &path);
+
+        /// The encoding initially selected when a UST is exported, UTF-8 by default.
+        QString ustExportCharset() const;
+        void setUstExportCharset(const QString &charset);
+
+    private:
+        Q_DISABLE_COPY(AppSettings)
+
+        std::unique_ptr<QSettings> m_settings;
+    };
+
+}
+
+#endif // HELLOUTAU_EDITOR_APPSETTINGS_H

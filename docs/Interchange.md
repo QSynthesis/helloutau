@@ -212,11 +212,11 @@ stdcorelib 的 `StaticRegistry` / `DynamicRegistry` 正适用于此，但**它�
 | 部分 | 位置 | 职责 |
 |---|---|---|
 | `InterchangeReader::customStepId()` | `HelloKitInterchange` | 声明需要自定义界面页，并给出 ID |
-| `InterchangeStepPage` 的实现 | `HelloUtauWidgets` 或插件的 widgets 一侧 | 界面页本身 |
+| `InterchangeStepPage` 的实现 | `HelloUtauEditor` 或插件的 widgets 一侧 | 界面页本身 |
 
 ```cpp
-// HelloUtauWidgets 一侧
-class HELLOUTAU_WIDGETS_EXPORT InterchangeStepPage : public QWidget {
+// HelloUtauEditor 一侧
+class HELLOUTAU_EDITOR_EXPORT InterchangeStepPage : public QWidget {
     Q_OBJECT
 public:
     explicit InterchangeStepPage(QWidget *parent = nullptr);

@@ -21,7 +21,7 @@
 | 文件格式与读写 | `HelloKitDocument` / `HelloKitVoiceBank` |
 | 编辑、撤销、崩溃恢复 | **`HelloKitEdit`** |
 | 修改后的发声 | `HelloKitSynth` |
-| 鼠标操作到修改的转换 | `HelloUtauWidgets` |
+| 鼠标操作到修改的转换 | `HelloUtauEditor` |
 
 `HelloKitEdit` 不依赖界面，不链接 QtWidgets。
 

@@ -47,5 +47,5 @@ set(HELLOUTAU_POST_CONFIGURE_COMMANDS _helloutau_common_configure_target)
 qm_import(private/BuildSystem)
 
 # Named for the module rather than for PROJECT_NAME, which each sub-library sets to its own target
-# name, HelloUtauWidgets and the rest.
+# name, HelloUtauEditor and the rest.
 qm_setup_build_repo_helpers(helloutau)

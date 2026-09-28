@@ -39,9 +39,10 @@
 |---|---|---|
 | `HelloUtauTheme` | 主题系统，见 [`Theme.md`](Theme.md) | Qt Widgets 及其私有部分 |
 | `HelloUtauAudio` | 音频设备的输出与采样率转换，见「音频输出」 | Qt Multimedia、r8brain-free-src |
-| `HelloUtauWidgets` | 主窗口、卷帘、对话框、命令面板、工程文档对象 | `HelloUtauTheme`、`HelloUtauAudio`、hellokit 各子库、QActionKit |
+| `HelloUtauWidgets` | 通用的控件基础设施，如卷帘场景接口中与 UTAU 无关的部分 | `HelloUtauTheme` |
+| `HelloUtauEditor` | 应用层：主窗口、卷帘、对话框、命令面板、菜单清单、设置 | 以上各子库、hellokit 各子库、QActionKit |
 
-`HelloUtauWidgets` 目前只链接 `HelloKitDocument`，第 1 步起链接 `HelloKitEdit`、`HelloKitVoiceBank`、`HelloKitSynth`、`HelloKitInterchange`。
+各子库的划分见 [`Development.md`](Development.md) 的「模块」。`HelloUtauEditor` 按需逐步链接 `HelloKitVoiceBank`、`HelloKitSynth`、`HelloKitInterchange`。
 
 **应用侧同样须有测试。** 新增 `helloutau/tests/`，以 `QT_QPA_PLATFORM=offscreen` 运行。不依赖窗口的逻辑（工程文档对象、坐标换算、命中测试）写成不含控件的类，以便单独测试。
 
@@ -53,9 +54,9 @@
 - 会话与保存时的步数，据此判断是否未保存（[`Editing.md`](Editing.md) 的「变更通知」）。
 - 打开：`.ust` 先读原始字节，编码无法确定时由界面询问，再解码为工程。
 - 保存与另存为，保存时按规定改写 `CacheDir`。
-- 所用的音源：解析 `VoiceDir`，打开音源并取得 `VoiceBank` 快照，编码无法确定时由界面询问。
+- 所用的音源：解析 `VoiceDir`，打开音源并取得 `VoiceBank` 快照，编码无法确定时由界面询问。在第 3 步第一次需要音源时加入。
 
-该对象不含控件，放在 `HelloUtauWidgets` 中，由第 1 步实现并测试。
+该对象即 `ProjectDocument`，不含控件，属于 `HelloKitEdit`，见 [`Development.md`](Development.md) 的「模块」。
 
 ### 窗口
 
@@ -102,7 +103,7 @@
 
 ### 第 1 步：窗口骨架与工程的打开保存
 
-- `HelloUtauWidgets` 接入 QActionKit：动作清单、AEC、菜单栏。菜单项为新建、打开、保存、另存为、导出 UST、退出、撤销、重做。
+- `HelloUtauEditor` 接入 QActionKit：动作清单、AEC、菜单栏。菜单项为新建、打开、保存、另存为、导出 UST、退出、撤销、重做。
 - 工程文档对象；打开 `.ust` 与 `.usth`；UST 的编码选择对话框（候选取自 `TextCodec::ustCandidates()`，按候选即时预览原始字节）。
 - 应用设置：UTAU 的安装目录（用于解析 `VoiceDir`，可以不设置，此时由用户为工程选择音源）、重采样器与 wavtool 的路径。引擎只取自设置，不取工程中的 `Tool1`、`Tool2`。
 - 标题栏显示文件名与未保存标记；关闭未保存的工程时询问。

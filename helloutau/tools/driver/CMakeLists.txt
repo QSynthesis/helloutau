@@ -12,6 +12,6 @@ set(HELLOUTAU_CONSOLE_APPLICATION OFF)
 
 helloutau_add_application(${PROJECT_NAME}
     SOURCES ${_src}
-    LINKS HelloUtauWidgets
+    LINKS HelloUtauEditor
     QT_LINKS Core Widgets
 )

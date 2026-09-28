@@ -1,0 +1,255 @@
+#include "MainWindow.h"
+
+#include <QtCore/QDir>
+#include <QtCore/QHash>
+#include <QtCore/QStandardPaths>
+#include <QtGui/QAction>
+#include <QtGui/QCloseEvent>
+#include <QtWidgets/QFileDialog>
+#include <QtWidgets/QHeaderView>
+#include <QtWidgets/QMenuBar>
+#include <QtWidgets/QMessageBox>
+#include <QtWidgets/QTableView>
+
+#include <QAKCore/actionregistry.h>
+#include <QAKWidgets/widgetactioncontext.h>
+
+#include <hellokit/Edit/ProjectDocument.h>
+
+#include "AppSettings.h"
+#include "DiagnosticBox_p.h"
+#include "Editor.h"
+#include "ExportUstDialog.h"
+#include "NoteTableModel.h"
+#include "SettingsDialog.h"
+
+namespace hello::daw {
+
+    namespace {
+
+        QString textOf(const std::filesystem::path &path) {
+            return QDir::toNativeSeparators(QString::fromStdU16String(path.u16string()));
+        }
+
+        std::filesystem::path pathOf(const QString &text) {
+            return std::filesystem::path(QDir::fromNativeSeparators(text).toStdU16String());
+        }
+
+        // The file a document is saved or exported as by default: its own file, or else the file
+        // it came from, with \a extension, or else a new file in the documents directory.
+        std::filesystem::path proposedPath(const kit::ProjectDocument &document,
+                                           const char16_t *extension) {
+            auto path = document.sourcePath();
+            if (path.empty()) {
+                path = pathOf(QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation));
+                path /= u"Untitled";
+            }
+            return path.replace_extension(extension);
+        }
+
+    }
+
+    class MainWindow::Impl {
+    public:
+        Impl(MainWindow *decl, Editor *editor) : _decl(decl), editor(editor) {
+        }
+
+        MainWindow *_decl;
+        Editor *editor;
+        std::unique_ptr<kit::ProjectDocument> document;
+        NoteTableModel *model = nullptr;
+        QTableView *view = nullptr;
+        QAK::WidgetActionContext *context = nullptr;
+        QHash<QString, QAction *> actions;
+
+        QAction *addCommand(const QString &id, std::function<void()> handler) {
+            auto action = new QAction(_decl);
+            QObject::connect(action, &QAction::triggered, _decl, std::move(handler));
+            context->addAction(id, action);
+            actions.insert(id, action);
+            return action;
+        }
+
+        void initActions() {
+            context = new QAK::WidgetActionContext(_decl);
+            context->addMenuBar(QStringLiteral("helloutau.mainMenu"), _decl->menuBar());
+
+            addCommand(QStringLiteral("helloutau.file.new"), [this] { editor->newWindow(); });
+            addCommand(QStringLiteral("helloutau.file.open"), [this] { open(); });
+            addCommand(QStringLiteral("helloutau.file.save"), [this] { _decl->save(); });
+            addCommand(QStringLiteral("helloutau.file.saveAs"), [this] { _decl->saveAs(); });
+            addCommand(QStringLiteral("helloutau.file.exportUst"), [this] { _decl->exportUst(); });
+            addCommand(QStringLiteral("helloutau.file.close"), [this] { _decl->close(); });
+            addCommand(QStringLiteral("helloutau.file.quit"), [this] { editor->closeAll(); });
+            addCommand(QStringLiteral("helloutau.edit.undo"),
+                       [this] { document->session()->undo(); });
+            addCommand(QStringLiteral("helloutau.edit.redo"),
+                       [this] { document->session()->redo(); });
+            addCommand(QStringLiteral("helloutau.tools.settings"), [this] {
+                SettingsDialog dialog(editor->settings(), _decl);
+                dialog.exec();
+            });
+
+            const auto registry = editor->actionRegistry();
+            registry->addContext(context);
+            for (const auto element :
+                 {QAK::AE_Layouts, QAK::AE_Texts, QAK::AE_Keymap, QAK::AE_Icons}) {
+                registry->updateContext(element);
+            }
+        }
+
+        void bindDocument() {
+            view->setModel(nullptr);
+            delete model;
+            model = new NoteTableModel(document->session(), _decl);
+            view->setModel(model);
+
+            QObject::connect(document.get(), &kit::ProjectDocument::modifiedChanged, _decl,
+                             [this] { updateTitle(); });
+            QObject::connect(document.get(), &kit::ProjectDocument::filePathChanged, _decl,
+                             [this] { updateTitle(); });
+            QObject::connect(document->session(), &kit::ProjectSession::stepChanged, _decl,
+                             [this] { updateUndoActions(); });
+            updateTitle();
+            updateUndoActions();
+        }
+
+        void updateTitle() {
+            const auto name = document->displayName();
+            _decl->setWindowTitle(
+                QStringLiteral("%1[*] - HelloUtau").arg(name.isEmpty() ? tr("Untitled") : name));
+            _decl->setWindowModified(document->isModified());
+        }
+
+        void updateUndoActions() {
+            const auto session = document->session();
+            actions.value(QStringLiteral("helloutau.edit.undo"))->setEnabled(session->canUndo());
+            actions.value(QStringLiteral("helloutau.edit.redo"))->setEnabled(session->canRedo());
+        }
+
+        void open() {
+            const auto file = QFileDialog::getOpenFileName(
+                _decl, tr("Open"), {},
+                tr("Projects (*.usth *.ust);;HelloUtau projects (*.usth);;UTAU projects "
+                   "(*.ust);;All files (*)"));
+            if (!file.isEmpty()) {
+                editor->openFile(pathOf(file), _decl);
+            }
+        }
+
+        // Asks whether to save a modified project before it is closed. Returns whether closing
+        // may proceed.
+        bool maybeSave() {
+            if (!document->isModified()) {
+                return true;
+            }
+            const auto name = document->displayName();
+            const auto answer = QMessageBox::warning(
+                _decl, tr("HelloUtau"),
+                tr("Save the changes to %1?").arg(name.isEmpty() ? tr("Untitled") : name),
+                QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel);
+            if (answer == QMessageBox::Save) {
+                return _decl->save();
+            }
+            return answer == QMessageBox::Discard;
+        }
+
+        static QString tr(const char *text) {
+            return MainWindow::tr(text);
+        }
+    };
+
+    MainWindow::MainWindow(Editor *editor, std::unique_ptr<kit::ProjectDocument> document)
+        : _impl(std::make_unique<Impl>(this, editor)) {
+        _impl->view = new QTableView();
+        _impl->view->horizontalHeader()->setStretchLastSection(true);
+        setCentralWidget(_impl->view);
+
+        _impl->initActions();
+        _impl->document = std::move(document);
+        _impl->bindDocument();
+        resize(960, 640);
+    }
+
+    MainWindow::~MainWindow() {
+        // The model refers to the session of the document.
+        _impl->view->setModel(nullptr);
+        delete _impl->model;
+    }
+
+    kit::ProjectDocument *MainWindow::document() const {
+        return _impl->document.get();
+    }
+
+    void MainWindow::setDocument(std::unique_ptr<kit::ProjectDocument> document) {
+        auto previous = std::move(_impl->document);
+        _impl->document = std::move(document);
+        _impl->bindDocument();
+    }
+
+    bool MainWindow::isUnused() const {
+        return _impl->document->sourcePath().empty() && !_impl->document->isModified();
+    }
+
+    bool MainWindow::save() {
+        if (_impl->document->filePath().empty()) {
+            return saveAs();
+        }
+        kit::DiagnosticList diagnostics;
+        const bool saved = _impl->document->save(diagnostics);
+        DiagnosticBox::show(this, tr("Save"), diagnostics);
+        return saved;
+    }
+
+    bool MainWindow::saveAs() {
+        const auto file = QFileDialog::getSaveFileName(
+            this, tr("Save As"), textOf(proposedPath(*_impl->document, u".usth")),
+            tr("HelloUtau projects (*.usth)"));
+        if (file.isEmpty()) {
+            return false;
+        }
+        auto path = pathOf(file);
+        if (path.extension() != u".usth") {
+            path += u".usth";
+        }
+        kit::DiagnosticList diagnostics;
+        const bool saved = _impl->document->saveAs(path, diagnostics);
+        DiagnosticBox::show(this, tr("Save As"), diagnostics);
+        return saved;
+    }
+
+    bool MainWindow::exportUst() {
+        const auto &settings = _impl->editor->settings();
+        ExportUstDialog dialog(proposedPath(*_impl->document, u".ust"), settings.ustExportCharset(),
+                               this);
+        if (dialog.exec() != QDialog::Accepted) {
+            return false;
+        }
+        const auto path = dialog.path();
+        std::error_code error;
+        if (std::filesystem::exists(path, error) &&
+            QMessageBox::question(this, tr("Export UST"),
+                                  tr("%1 already exists. Replace it?").arg(textOf(path))) !=
+                QMessageBox::Yes) {
+            return false;
+        }
+
+        kit::UstDocument::ExportOptions options;
+        options.charset = dialog.charset();
+        options.wavtool = settings.wavtool();
+        options.resampler = settings.resampler();
+        kit::DiagnosticList diagnostics;
+        const bool exported = _impl->document->exportUst(path, options, diagnostics);
+        DiagnosticBox::show(this, tr("Export UST"), diagnostics);
+        return exported;
+    }
+
+    void MainWindow::closeEvent(QCloseEvent *event) {
+        if (!_impl->maybeSave()) {
+            event->ignore();
+            return;
+        }
+        QMainWindow::closeEvent(event);
+    }
+
+}

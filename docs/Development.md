@@ -11,7 +11,7 @@
 | 模块 | 命名空间 | 产出 | 依赖 |
 |---|---|---|---|
 | `hellokit/` | `hello::kit` | `HelloKitDocument`、今后的 `HelloKitCore` 等 | Qt Core、stdutau、stdcorelib（私有）、substate（私有，仅 `HelloKitEditBase` 与 `HelloKitEdit`） |
-| `helloutau/` | `hello::daw` | `HelloUtauWidgets` 等，以及 `HelloUtau` 可执行文件 | Qt Widgets、hellokit |
+| `helloutau/` | `hello::daw` | `HelloUtauEditor` 等，以及 `HelloUtau` 可执行文件 | Qt Widgets、hellokit |
 
 `hello` 仅作为外层命名空间，代码一律位于第二层。不要在 `hello` 中直接声明内容，也不要再增加第三层。
 
@@ -21,6 +21,19 @@
 
 **应用同样由库和一个薄驱动组成**，结构参照 lldb 的 `liblldb` 与 `tools/driver`。`tools/driver/main.cpp` 只包含入口，其余逻辑均位于库中，因此应用侧的逻辑同样可以测试：可执行文件无法链接进测试程序，而库可以。
 
+**不涉及界面的逻辑放在 `hellokit`，即使只有应用使用它。** 打开、保存、判断是否已修改的 `ProjectDocument` 属于 `HelloKitEdit`：它只需 Qt Core，无界面工具同样可以使用；需要询问用户之处以回调接口交给界面一侧实现，如 `UstCharsetSelector`、`VoiceBankCharsetSelector`。
+
+`helloutau` 的子库按层次划分，上层依赖下层：
+
+| 子库 | 内容 |
+|---|---|
+| `HelloUtauEditor` | 应用层：窗口、对话框、菜单与快捷键的清单、设置 |
+| `HelloUtauWidgets` | 通用的控件基础设施，与 UTAU 和 hellokit 无关，类似对 qtbase 的补充 |
+| `HelloUtauTheme` | 主题系统，见 [`Theme.md`](Theme.md) |
+| `HelloUtauAudio` | 音频设备的输出，见 [`Widgets.md`](Widgets.md) |
+
+`HelloUtauWidgets`、`HelloUtauTheme`、`HelloUtauAudio` 在第一次有内容时建立。
+
 ## 目录与文件
 
 每个模块包含一个 `include/` 和一个 `lib/`，各子库在其中各占一个目录，结构参照 synthrt：
@@ -29,8 +42,8 @@
 hellokit/include/hellokit/Document/PayloadCodec.h     ← #include <hellokit/Document/PayloadCodec.h>
 hellokit/lib/Document/PayloadCodec.cpp                ← 目标 HelloKitDocument
 
-helloutau/include/helloutau/Widgets/MainWindow.h
-helloutau/lib/Widgets/MainWindow.cpp             ← 目标 HelloUtauWidgets
+helloutau/include/helloutau/Editor/MainWindow.h
+helloutau/lib/Editor/MainWindow.cpp              ← 目标 HelloUtauEditor
 helloutau/plugins/                               ← 编辑界面扩展插件
 helloutau/tools/driver/main.cpp                  ← 目标 helloutau
 ```
@@ -54,10 +67,10 @@ helloutau/tools/driver/main.cpp                  ← 目标 helloutau
 | 层次 | 写法 | 示例 |
 |---|---|---|
 | CMake 包名、`project()`、配置模板 | 小写 | `hellokit`、`helloutauConfig.cmake.in` |
-| 子库目标名、动态库文件名 | 大驼峰 | `HelloKitDocument`、`HelloUtauWidgets.dll` |
+| 子库目标名、动态库文件名 | 大驼峰 | `HelloKitDocument`、`HelloUtauEditor.dll` |
 | include 命名空间 | 小写模块名 | `<hellokit/Document/...>` |
 
-子库目录采用大驼峰命名，与去掉族前缀后的目标名一致：`lib/Document/` 对应 `HelloKitDocument`，`lib/Widgets/` 对应 `HelloUtauWidgets`。
+子库目录采用大驼峰命名，与去掉族前缀后的目标名一致：`lib/Document/` 对应 `HelloKitDocument`，`lib/Editor/` 对应 `HelloUtauEditor`。
 
 ## C++ 命名
 
@@ -92,7 +105,7 @@ helloutau/tools/driver/main.cpp                  ← 目标 helloutau
 
 ```cmake
 file(GLOB_RECURSE _src "*.cpp")
-file(GLOB_RECURSE _hdr "${CMAKE_CURRENT_SOURCE_DIR}/../../include/helloutau/Widgets/*.h")
+file(GLOB_RECURSE _hdr "${CMAKE_CURRENT_SOURCE_DIR}/../../include/helloutau/Editor/*.h")
 
 helloutau_add_library(${PROJECT_NAME} SHARED
     QT_AUTOGEN

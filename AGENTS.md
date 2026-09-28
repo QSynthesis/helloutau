@@ -123,7 +123,7 @@ resampler / wavtool 的命令行参数由 `utau::ResamplerArguments::arguments()
 
 本仓库自己的规范是 [`docs/Development.md`](docs/Development.md)，**它才是权威**，以下仅为摘要。
 
-- 共两个模块，每个模块是**一组库**：`hellokit`（命名空间 `hello::kit`，Qt Core，产出 `HelloKitDocument` 等）和 `helloutau`（命名空间 `hello::daw`，Qt Widgets，产出 `HelloUtauWidgets` 等以及 `HelloUtau` 可执行文件）。**`hellokit` 不链接 QtWidgets**，核心逻辑不依赖 GUI 才便于测试。
+- 共两个模块，每个模块是**一组库**：`hellokit`（命名空间 `hello::kit`，Qt Core，产出 `HelloKitDocument` 等）和 `helloutau`（命名空间 `hello::daw`，Qt Widgets，产出 `HelloUtauEditor` 等以及 `HelloUtau` 可执行文件）。**`hellokit` 不链接 QtWidgets**，核心逻辑不依赖 GUI 才便于测试。
 - **应用同样由库和薄驱动组成**，参照 lldb 的 `liblldb` + `tools/driver`。`tools/driver/main.cpp` 只包含入口，其余逻辑位于库中，因为可执行文件无法链接进测试程序，而库可以。
 - 每个模块包含一个 `include/` 和一个 `lib/`，参照 synthrt：`hellokit/include/hellokit/Document/` 对应 `hellokit/lib/Document/`。**include 的命名空间是模块名而非目标名**，写 `<hellokit/Document/PayloadCodec.h>`。不使用 `sync_include`。私有头文件与源文件放在一起，加 `_p.h` 后缀，尽量少用。
 - **大小写分三个层次**：CMake 包名与 `project()` 小写（`hellokit`、`helloutauConfig.cmake.in`），子库目标与 dll 大驼峰（`HelloKitDocument`），include 命名空间小写。
@@ -219,6 +219,7 @@ Markdown：
 ## 已知问题
 
 - **`sed -i` 会将 CRLF 转换为 LF**，而仓库中的行尾是混合的。修改前用 `grep -qU $'\r'` 判断，CRLF 文件改用编辑工具修改。
+- **增量构建时，带 `Q_OBJECT` 的头文件移到另一个目标后，AUTOMOC 可能不再为它生成代码**：CMake 已重新配置、`AutogenInfo.json` 已列出该头文件，但 autogen 的缓存认为无须重新扫描，链接时缺少 `staticMetaObject` 等符号。删除该目标的 `<目标名>_autogen` 目录与 `CMakeFiles/<目标名>_autogen.dir/ParseCache.txt` 后重新构建即可，从空目录构建不受影响。
 - **`sed` 的替换表达式必须带行号地址**，否则会进行全局替换，且后续表达式会匹配前面已修改的文本，导致层层嵌套。
 - **绝不使用 bash heredoc 编写脚本**，也不要经由 shell 传递含反斜杠的 C++ 文本或含日文的字符串，因为 shell 会去掉一层反斜杠。应先写入文件再执行。
 - **官方 UTAU 的站点使用 Shift_JIS**，用 `curl` 下载后须显式按 `cp932` 解码，不要让工具猜测。

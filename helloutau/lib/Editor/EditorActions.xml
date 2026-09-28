@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The menus of the editor window. Format: docs/action-extension-spec.md in QActionKit. -->
+<actionExtension>
+    <version>1.0</version>
+    <id>helloutau.editor</id>
+
+    <configuration>
+        <translationContext
+            text="hello::daw::ActionText"
+            category="hello::daw::ActionCategory"
+            description="hello::daw::ActionDescription"
+        />
+    </configuration>
+
+    <items>
+        <action id="helloutau.file.new" text="&amp;New" category="File" shortcut="Ctrl+N" />
+        <action id="helloutau.file.open" text="&amp;Open..." category="File" shortcut="Ctrl+O" />
+        <action id="helloutau.file.save" text="&amp;Save" category="File" shortcut="Ctrl+S" />
+        <action id="helloutau.file.saveAs" text="Save &amp;As..." category="File"
+                shortcut="Ctrl+Shift+S" />
+        <action id="helloutau.file.exportUst" text="&amp;Export UST..." category="File" />
+        <action id="helloutau.file.close" text="&amp;Close" category="File" shortcut="Ctrl+W" />
+        <action id="helloutau.file.quit" text="&amp;Quit" category="File" shortcut="Ctrl+Q" />
+
+        <action id="helloutau.edit.undo" text="&amp;Undo" category="Edit" shortcut="Ctrl+Z" />
+        <action id="helloutau.edit.redo" text="&amp;Redo" category="Edit"
+                shortcuts="Ctrl+Y;Ctrl+Shift+Z" />
+
+        <action id="helloutau.tools.settings" text="&amp;Settings..." category="Tools" />
+
+        <menu id="helloutau.mainMenu" topLevel="true" />
+        <menu id="helloutau.file" text="&amp;File" />
+        <menu id="helloutau.edit" text="&amp;Edit" />
+        <menu id="helloutau.tools" text="&amp;Tools" />
+    </items>
+
+    <layouts>
+        <menu id="helloutau.mainMenu">
+            <menu id="helloutau.file">
+                <action id="helloutau.file.new" />
+                <action id="helloutau.file.open" />
+                <separator />
+                <action id="helloutau.file.save" />
+                <action id="helloutau.file.saveAs" />
+                <action id="helloutau.file.exportUst" />
+                <separator />
+                <action id="helloutau.file.close" />
+                <action id="helloutau.file.quit" />
+            </menu>
+            <menu id="helloutau.edit">
+                <action id="helloutau.edit.undo" />
+                <action id="helloutau.edit.redo" />
+            </menu>
+            <menu id="helloutau.tools">
+                <action id="helloutau.tools.settings" />
+            </menu>
+        </menu>
+    </layouts>
+</actionExtension>
