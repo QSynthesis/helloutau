@@ -15,7 +15,8 @@ namespace hello::daw {
     class HELLOUTAU_THEME_EXPORT ThemeStyleSheet {
     public:
         struct Options {
-            /// The folder of the style sheet, which \c url(@/...) is relative to.
+            /// The folder of the style sheet, which \c url(@/...) and the files of \c svg(...)
+            /// written \c @/... are relative to.
             QString directory;
 
             /// The factor applied to lengths in pixels, and to those of \c font-size.
@@ -24,8 +25,8 @@ namespace hello::daw {
         };
 
         /// Returns \a text with \c --key turned into \c qproperty-key, \c ---key into \c key,
-        /// \c :not(:x) into \c :!x, \c url(@/a) into a path in Options::directory, and each
-        /// \c Npx scaled.
+        /// \c :not(:x) into \c :!x, \c url(@/a) into a path in Options::directory, \c svg(...)
+        /// into the \c url(...) of a ThemeIcon, and each \c Npx scaled.
         static QString preprocess(QStringView text, const Options &options);
     };
 

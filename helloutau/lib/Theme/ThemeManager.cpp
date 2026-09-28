@@ -15,6 +15,7 @@
 #include <QtCore/QTimer>
 #include <QtWidgets/QWidget>
 
+#include "ThemeIcon.h"
 #include "ThemeLogging_p.h"
 #include "ThemeStyleSheet.h"
 
@@ -336,6 +337,8 @@ namespace hello::daw {
     }
 
     void ThemeManager::reload() {
+        // The icons are drawn from the files as they are now as well.
+        ThemeIcon::clearCache();
         _impl->read();
         _impl->schedule();
     }

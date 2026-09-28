@@ -28,6 +28,15 @@ namespace hello::daw {
     /// also the order of positional values.
     HELLOUTAU_THEME_EXPORT QStringView themeStateKey(ThemeButtonState state);
 
+    /// The state whose value \a state takes when a group does not give it: over and disabled
+    /// fall back to up, down to over, and the checked states likewise, their up to up.
+    constexpr ThemeButtonState themeStateFallback(ThemeButtonState state) {
+        using S = ThemeButtonState;
+        constexpr S fallback[8] = {S::Up, S::Up,        S::Over,        S::Up,
+                                   S::Up, S::CheckedUp, S::CheckedOver, S::CheckedUp};
+        return fallback[size_t(state)];
+    }
+
     /// A value for each ThemeButtonState, as a field that supports button states holds it.
     ///
     /// Written as one value for every state, or as a group such as <tt>(white, down=grey)</tt>
@@ -99,10 +108,11 @@ namespace hello::daw {
             }
 
             // Each state falls back to one that precedes it, so one pass in order suffices.
-            constexpr size_t fallback[8] = {0, 0, 1, 0, 0, 4, 5, 4};
             ThemeStates states;
             for (size_t i = 0; i < given.size(); ++i) {
-                states.m_values[i] = given[i] ? *given[i] : states.m_values[fallback[i]];
+                states.m_values[i] =
+                    given[i] ? *given[i]
+                             : states.m_values[size_t(themeStateFallback(ThemeButtonState(i)))];
             }
             return states;
         }

@@ -38,7 +38,7 @@ Requirements:
 | wolf-midi | [wolfgitpr/wolf-midi](https://github.com/wolfgitpr/wolf-midi) | `wolf-midi_DIR=<prefix>/lib/cmake/wolf-midi` |
 | r8brain-free-src 6.5 | [avaneev/r8brain-free-src](https://github.com/avaneev/r8brain-free-src), built by the vcpkg port in [diffscope/diffscope-project](https://github.com/diffscope/diffscope-project) (`scripts/vcpkg/ports/r8brain-free-src`) | `unofficial-r8brain-free-src_DIR=<prefix>/share/unofficial-r8brain-free-src` |
 
-The application also requires the Qt Multimedia module.
+The application also requires the Qt Multimedia and Qt SVG modules.
 
 ```sh
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug \

@@ -4,3 +4,5 @@ add_auto_test(test_ThemeSyntax.cpp HelloUtauTheme)
 add_auto_test(test_ThemeTypes.cpp HelloUtauTheme Qt${QT_VERSION_MAJOR}::Widgets)
 add_auto_test(test_ThemeManager.cpp HelloUtauTheme Qt${QT_VERSION_MAJOR}::Widgets
     RESOURCES themes)
+add_auto_test(test_ThemeIcon.cpp HelloUtauTheme Qt${QT_VERSION_MAJOR}::Widgets
+    RESOURCES icons)

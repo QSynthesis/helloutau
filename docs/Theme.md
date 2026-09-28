@@ -1,6 +1,6 @@
 # 主题系统
 
-本文档记录编辑器主题系统的设计来源与设计方向。主题系统尚未实现，将是 `helloutau` 模块的子库 `HelloUtauTheme`，见「已确定的事项」。
+本文档记录编辑器主题系统的设计来源、设计方向与实现。主题系统是 `helloutau` 模块的子库 `HelloUtauTheme`，见「已确定的事项」；已实现的部分见各「实现的第…块」。
 
 设计沿用同一作者此前在 [qtmediate](https://github.com/stdware/qtmediate) 中的做法，其原理说明见 [qsynthesis-docs「3. 元类型」](https://github.com/SineStriker/qsynthesis-docs/tree/main/3.%20%E5%85%83%E7%B1%BB%E5%9E%8B)。两者的副本位于 `.cache/qtmediate` 与 `.cache/qsynthesis-docs`。
 
@@ -175,3 +175,25 @@ qtmediate 在样式表交给 Qt 之前做一次文本转换：
 **编辑器的内置主题**位于 `helloutau/lib/Editor/themes/`，编入资源 `:/helloutau/themes`。`Editor` 持有一个 `ThemeManager`，以该资源为搜索路径；每个主窗口以标识 `MainWindow` 登记，其样式表对子控件同样生效。内置主题目前只有 `_common` 的命令面板阴影；浅色与深色主题的视觉设计须经作者确认后再加入。
 
 **主题系统是独立的子库 `HelloUtauTheme`**，位于 `helloutau/lib/Theme/`，头文件以 `<helloutau/Theme/...>` 引用，`HelloUtauWidgets` 与 `HelloUtauEditor` 依赖它。只有该子库链接 Qt 的私有模块，私有依赖因此集中在一处，也可以单独测试。命名空间为 `hello::daw`，不增加第三层：主题系统不会移出本仓库，不属于 `docs/Development.md` 所述的例外。类名以 `Theme`、`Svgx` 等为前缀，避免与其他子库的类重名。
+
+## 实现的第四块：可着色的 SVG 图标（作者确认前可改）
+
+`ThemeIcon` 实现「可着色的 SVG 图标」一节的前两部分。写法为 `svg(file, color)`，两个参数都可带按钮状态：
+
+```css
+QToolButton { qproperty-icon: svg("@/play.svg", (#333333, over=#000000, disabled=#999999)); }
+QToolButton { qproperty-icon: svg(("@/play.svg", up2="@/pause.svg"), auto); }
+```
+
+- **样式表**：`ThemeStyleSheet` 把 `svg(...)` 转为 `url("<描述>.svgx")`，文件写作 `@/...` 时相对样式表所在目录。无法解析的 `svg(...)` 以 `qCWarning` 报告并原样保留，Qt 忽略该声明。
+- **描述文件名**：参数以值语法写出（只写与回落结果不同的状态），整体以百分号编码，加后缀 `.svgx`，因此不含目录分隔符与引号。QIcon 按后缀选择图标引擎（`qtbase/src/gui/image/qicon.cpp` 的 `iconEngineFromSuffix`）；引擎以静态插件的形式编入 `HelloUtauTheme`（`ThemeIconPlugin`，键 `svgx`），库加载时即登记。
+- **颜色**：文件中的 `currentColor` 替换为 `#RRGGBB`。QtSvg 读以 `#` 开头的颜色时不读透明度（`qtsvg/src/svg/qsvghandler.cpp` 的 `resolveColor`），因此颜色的透明度作为整个图标的不透明度。写作 `auto` 或不写颜色即跟随文字：控件给出文字颜色时用它，否则用调色板的 `WindowText`（禁用状态取 `Disabled` 组）。
+- **状态**：QIcon 传来的模式与状态解读为：`Active` 与 `Selected` 为 over，`Disabled` 为 disabled，`On` 为选中组。按下等 QIcon 无法表达的状态，由控件以 `ThemeIcon::forState()` 取得固定于该状态（及文字颜色）的新 QIcon 再绘制。
+- **缓存**：文件内容按路径缓存；图像放入 `QPixmapCache`，键含代次、尺寸、颜色与路径。`ThemeManager::reload()` 调用 `ThemeIcon::clearCache()` 递增代次，不清空整个 `QPixmapCache`。
+
+**与「已确定的事项」的差异，须作者确认。** 该节规定按钮状态经私有接口传给图标引擎（以 `qicon_p.h` 取得引擎，再经 `virtual_hook` 设置状态）。实现改用公开接口：引擎的 `iconName()` 返回描述文件名，`ThemeIcon::of()` 由 `QIcon::name()` 取回描述，`forState()` 据此新建一个引擎。理由是不改写共享的引擎：Qt 把一条样式表声明解析出的 QIcon 缓存在该声明中（`qtbase/src/gui/text/qcssparser.cpp` 的 `Declaration::iconValue`），使用同一规则的控件共用一个引擎；qtmediate 在绘制前改写该引擎的状态与颜色，未调用钩子的控件（菜单、普通工具按钮）因此沿用别的控件最后留下的状态与颜色。代价是 `QIcon::name()` 对这类图标返回描述文件名；Qt 6.11.1 只在 `QIcon::hasThemeIcon` 与 Linux 的 D-Bus 托盘图标中读取该名称，二者都不涉及这类图标。
+
+**尚未实现**：
+
+- 「颜色跟随文字」中替换绘制引擎以截获文字颜色的部分（`qpaintengine_raster_p.h`），留待第一个使用图标的控件。
+- 控件须设置 `Qt::WA_Hover`，悬停时才会重绘，over 的颜色才会出现；样式表中没有依赖悬停状态的选择器时，Qt 不为控件设置该属性（`qtbase/src/widgets/styles/qstylesheetstyle.cpp` 的 `polish`）。

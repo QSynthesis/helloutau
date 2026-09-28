@@ -4,6 +4,7 @@
 
 #include <QtCore/QLoggingCategory>
 
+#include "ThemeArguments_p.h"
 #include "ThemeLogging_p.h"
 #include "ThemeReader.h"
 
@@ -23,37 +24,6 @@ namespace hello::daw {
                 *error = {position, message};
             }
             return std::nullopt;
-        }
-
-        // Assigns \a arguments to the parameters \a names, by position and then by keyword. An
-        // absent parameter is null.
-        std::optional<std::vector<const ThemeValue *>>
-            bind(const std::vector<ThemeArgument> &arguments,
-                 std::initializer_list<QStringView> names, ThemeError *error) {
-            std::vector<const ThemeValue *> bound(names.size(), nullptr);
-            size_t next = 0;
-            for (const auto &argument : arguments) {
-                size_t index = next++;
-                if (!argument.key.isEmpty()) {
-                    const auto found = std::find(names.begin(), names.end(), argument.key);
-                    if (found == names.end()) {
-                        return fail<std::vector<const ThemeValue *>>(
-                            error, argument.value.position,
-                            tr("\"%1\" is not a parameter here.").arg(argument.key));
-                    }
-                    index = size_t(found - names.begin());
-                } else if (index >= names.size()) {
-                    return fail<std::vector<const ThemeValue *>>(error, argument.value.position,
-                                                                 tr("There are too many values."));
-                }
-                if (bound[index]) {
-                    return fail<std::vector<const ThemeValue *>>(
-                        error, argument.value.position,
-                        tr("\"%1\" is given twice.").arg(*(names.begin() + index)));
-                }
-                bound[index] = &argument.value;
-            }
-            return bound;
         }
 
         // One of \a choices, by its name
@@ -171,10 +141,11 @@ namespace hello::daw {
 
     std::optional<ThemePen> ThemePen::read(const std::vector<ThemeArgument> &arguments,
                                            ThemeError *error) {
-        const auto bound = bind(arguments,
-                                {u"color", u"width", u"style", u"cap", u"join", u"dashPattern",
-                                 u"dashOffset", u"miterLimit", u"cosmetic"},
-                                error);
+        const auto bound =
+            ThemeArguments::bind(arguments,
+                                 {u"color", u"width", u"style", u"cap", u"join", u"dashPattern",
+                                  u"dashOffset", u"miterLimit", u"cosmetic"},
+                                 error);
         if (!bound) {
             return std::nullopt;
         }
@@ -296,8 +267,8 @@ namespace hello::daw {
 
     std::optional<ThemeFont> ThemeFont::read(const std::vector<ThemeArgument> &arguments,
                                              ThemeError *error) {
-        const auto bound =
-            bind(arguments, {u"color", u"size", u"weight", u"italic", u"family"}, error);
+        const auto bound = ThemeArguments::bind(
+            arguments, {u"color", u"size", u"weight", u"italic", u"family"}, error);
         if (!bound) {
             return std::nullopt;
         }
@@ -374,7 +345,8 @@ namespace hello::daw {
 
     std::optional<ThemeRect> ThemeRect::read(const std::vector<ThemeArgument> &arguments,
                                              ThemeError *error) {
-        const auto bound = bind(arguments, {u"color", u"margins", u"radius"}, error);
+        const auto bound =
+            ThemeArguments::bind(arguments, {u"color", u"margins", u"radius"}, error);
         if (!bound) {
             return std::nullopt;
         }
@@ -427,7 +399,7 @@ namespace hello::daw {
 
     std::optional<ThemeShadow> ThemeShadow::read(const std::vector<ThemeArgument> &arguments,
                                                  ThemeError *error) {
-        const auto bound = bind(arguments, {u"color", u"blur", u"offset"}, error);
+        const auto bound = ThemeArguments::bind(arguments, {u"color", u"blur", u"offset"}, error);
         if (!bound) {
             return std::nullopt;
         }

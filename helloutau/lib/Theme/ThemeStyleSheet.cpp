@@ -1,5 +1,8 @@
 #include "ThemeStyleSheet.h"
 
+#include "ThemeIcon.h"
+#include "ThemeLogging_p.h"
+
 namespace hello::daw {
 
     namespace {
@@ -106,6 +109,10 @@ namespace hello::daw {
                     m_at = end;
                     return;
                 }
+                if (startsWith(u"svg(") && (m_at == 0 || !isNameCharacter(m_text[m_at - 1]))) {
+                    icon();
+                    return;
+                }
                 if (startsWith(u"url(@/")) {
                     m_out += QStringLiteral("url(") + m_options.directory + u'/';
                     m_at += 6;
@@ -119,6 +126,58 @@ namespace hello::daw {
                     return;
                 }
                 copy(1);
+            }
+
+            // svg(...) becomes url("<name>.svgx") naming a ThemeIcon, its files written @/...
+            // taken in the folder of the style sheet. One that cannot be read is reported and left
+            // as written, which Qt ignores.
+            void icon() {
+                const qsizetype open = m_at + 4;
+                const qsizetype close = closingParenthesis(open);
+                if (close < 0) {
+                    copy(1);
+                    return;
+                }
+                const auto inner = m_text.sliced(open, close - open);
+                ThemeError error;
+                const auto arguments = ThemeSyntax::parseArguments(inner, &error);
+                auto icon = arguments ? ThemeIcon::read(*arguments, &error) : std::nullopt;
+                if (!icon) {
+                    qCWarning(lcTheme).noquote() << QStringLiteral("svg(%1): %2 (at %3)")
+                                                        .arg(inner.toString(), error.message)
+                                                        .arg(error.position);
+                    copy(close + 1 - m_at);
+                    return;
+                }
+                for (size_t i = 0; i < 8; ++i) {
+                    const auto state = ThemeButtonState(i);
+                    const auto &file = icon->files.value(state);
+                    if (file.startsWith(u"@/")) {
+                        icon->files.setValue(state, m_options.directory + file.mid(1));
+                    }
+                }
+                m_out += QStringLiteral("url(\"") + icon->fileName() + QStringLiteral("\")");
+                m_at = close + 1;
+            }
+
+            // The offset of the parenthesis that closes the one before \a at, or -1
+            qsizetype closingParenthesis(qsizetype at) const {
+                int depth = 1;
+                while (at < m_text.size()) {
+                    const QChar c = m_text[at];
+                    if (c == u'"' || c == u'\'') {
+                        ++at;
+                        while (at < m_text.size() && m_text[at] != c) {
+                            at += m_text[at] == u'\\' ? 2 : 1;
+                        }
+                    } else if (c == u'(') {
+                        ++depth;
+                    } else if (c == u')' && --depth == 0) {
+                        return at;
+                    }
+                    ++at;
+                }
+                return -1;
             }
 
             // A number, scaled if a length in pixels follows
