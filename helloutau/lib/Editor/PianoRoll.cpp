@@ -14,6 +14,7 @@
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QComboBox>
 #include <QtWidgets/QGridLayout>
+#include <QtWidgets/QLabel>
 #include <QtWidgets/QLineEdit>
 #include <QtWidgets/QMenu>
 
@@ -23,6 +24,7 @@
 #include <hellokit/Edit/ProjectSession.h>
 #include <hellokit/Edit/TrackTimeline.h>
 #include <hellokit/Synth/PitchCurve.h>
+#include <hellokit/Synth/SampleTiming.h>
 #include <hellokit/VoiceBank/VoiceBank.h>
 
 #include <helloutau/Widgets/PianoKeyboard.h>
@@ -82,6 +84,22 @@ namespace hello::daw {
         // its start, when a point is inserted.
         constexpr double DefaultPortamento = 15;
 
+        // The parameter area below the roll is this high, spans the volumes of an envelope from 0
+        // to this many percent, and leaves this many pixels above and below them.
+        constexpr int ParameterHeight = 120;
+        constexpr double EnvelopeRange = 200;
+        constexpr double ParameterMargin = 6;
+
+        // The envelope of a note that gives none, as UTAU applies it: 0 5 35 0 100 100 0
+        kit::Envelope defaultEnvelope() {
+            kit::Envelope envelope;
+            envelope.anchors[0] = {0, 0};
+            envelope.anchors[1] = {5, 100};
+            envelope.anchors[3] = {35, 100};
+            envelope.anchors[4] = {0, 0};
+            return envelope;
+        }
+
         // The trapezoid of a vibrato stands on a line this many rows below the pitch of its note,
         // this many cents to a row high, and its period box hangs this many rows below that line
         // (the form of OpenUtau).
@@ -100,6 +118,24 @@ namespace hello::daw {
             qint64 start = 0;
             int length = 0;
             int key = 0;
+        };
+
+        // Calls a function with each event of an object
+        class EventWatcher : public QObject {
+        public:
+            EventWatcher(QObject *watched, std::function<void(QEvent *)> seen)
+                : QObject(watched), m_seen(std::move(seen)) {
+                watched->installEventFilter(this);
+            }
+
+        protected:
+            bool eventFilter(QObject *watched, QEvent *event) override {
+                m_seen(event);
+                return QObject::eventFilter(watched, event);
+            }
+
+        private:
+            std::function<void(QEvent *)> m_seen;
         };
 
         // Reports where the pointer is over a widget, and none once it leaves
@@ -177,6 +213,8 @@ namespace hello::daw {
         class NoteLayer;
         class PitchLayer;
         class OverlayLayer;
+        class EnvelopeLayer;
+        class EnvelopeGesture;
         class MoveGesture;
         class LengthGesture;
         class BandGesture;
@@ -207,6 +245,17 @@ namespace hello::daw {
         QHash<int, QList<kit::PortamentoPoint>> pointPreview;
         // What a gesture shows instead of the vibrato of a note, by note index
         QHash<int, kit::Vibrato> vibratoPreview;
+        // What a gesture shows instead of the envelope of a note, by note index
+        QHash<int, kit::Envelope> envelopePreview;
+
+        // The parameter area and its label
+        SceneView *parameters = nullptr;
+        QLabel *parameterLabel = nullptr;
+        QColor envelopeColor;
+
+        // The timing of the sample of every note, computed again after a change
+        QList<kit::SampleTiming> timings;
+        bool timingsStale = true;
         // The note from which Shift extends the selection
         kit::edit::NodeId anchor = 0;
 
@@ -357,6 +406,72 @@ namespace hello::daw {
                                      : point.y;
             return {view->timeAxis().toX(double(note.start) + ticksOf(point.x, index)),
                     view->keyAxis().toY(note.key + 0.5 + cents / 100)};
+        }
+
+        // Shows every volume of an envelope in the height of the parameter area
+        void fitParameters() {
+            auto axis = parameters->keyAxis();
+            const double height = parameters->viewport()->height();
+            axis.pixelsPerKey = std::max(0.01, (height - 2 * ParameterMargin) / EnvelopeRange);
+            axis.top = EnvelopeRange + ParameterMargin / axis.pixelsPerKey;
+            parameters->setKeyAxis(axis);
+        }
+
+        // The timing of the sample of every note, with the voice bank if there is one
+        const QList<kit::SampleTiming> &sampleTimings() {
+            if (timingsStale) {
+                const auto refs = notes();
+                QList<kit::Note> all;
+                for (int i = 0; i < timeline->noteCount(); ++i) {
+                    all.push_back(refs.at(i).toNote());
+                }
+                timings = kit::SampleTiming::of(all, timeline->tempoMap(), voiceBank.get());
+                timingsStale = false;
+            }
+            return timings;
+        }
+
+        // The envelope of note index, as a gesture shows it if it does, or that of UTAU
+        kit::Envelope envelopeOf(int index) const {
+            if (const auto it = envelopePreview.find(index); it != envelopePreview.end()) {
+                return *it;
+            }
+            return notes().at(index).envelope().value_or(defaultEnvelope());
+        }
+
+        // Where the fragment of note index lies in the track: its start in milliseconds, and
+        // its length as the wavtool appends it
+        std::pair<double, double> fragmentOf(int index) {
+            const auto &all = sampleTimings();
+            const auto &map = timeline->tempoMap();
+            const double duration = timeline->note(index).length * 125.0 / map.tempo(index);
+            double length = duration + all[index].preUtterance;
+            if (index + 1 < all.size()) {
+                length += all[index + 1].voiceOverlap - all[index + 1].preUtterance;
+            }
+            return {map.startTime(index) - all[index].preUtterance, length};
+        }
+
+        // The anchors of envelope in time order, in milliseconds from the start of a fragment
+        // of length: p1, p2 and p5 count forward from the start, p3 and p4 back from the end,
+        // as the wavtool places them (WavtoolMixer::layOut)
+        static QList<double> anchorTimes(const kit::Envelope &envelope, double length) {
+            const auto &a = envelope.anchors;
+            QList<double> times{a[0].x, a[0].x + a[1].x};
+            if (envelope.hasMiddle) {
+                times.push_back(times.last() + a[2].x);
+            }
+            times.push_back(length - a[4].x - a[3].x);
+            times.push_back(length - a[4].x);
+            return times;
+        }
+
+        // Where the parameter area draws the volume at milliseconds into the fragment of note
+        // index
+        QPointF envelopePointOf(int index, double milliseconds, double volume) {
+            const double start = fragmentOf(index).first;
+            return {parameters->timeAxis().toX(timeline->tempoMap().tickOf(start + milliseconds)),
+                    parameters->keyAxis().toY(volume)};
         }
 
         // The vibrato of note index, as a gesture shows it if it does
@@ -582,6 +697,7 @@ namespace hello::daw {
             const auto bars =
                 std::max<qint64>(MinimumBars, timeline->length() / BarTicks + 1 + TrailingBars);
             view->setTickRange(0, double(bars * BarTicks));
+            parameters->setTickRange(0, double(bars * BarTicks));
 
             // The tempo at the start, and wherever a note sets one
             const auto &map = timeline->tempoMap();
@@ -1160,6 +1276,257 @@ namespace hello::daw {
     private:
         PianoRoll::Impl *m_roll;
     };
+
+    // The envelope of each sung note in the parameter area, over the fragment of its sample: a
+    // filled outline from the start of the fragment through its anchors to its end, and a line
+    // at 100%. It answers every position, so that a double click reaches it anywhere.
+    class PianoRoll::Impl::EnvelopeLayer : public SceneLayer {
+    public:
+        explicit EnvelopeLayer(PianoRoll::Impl *roll) : m_roll(roll) {
+        }
+
+        void paint(QPainter &painter, const QRect &exposed) override {
+            const auto decl = m_roll->_decl;
+            const auto &keys = view()->keyAxis();
+            painter.fillRect(exposed, decl->whiteRowColor());
+            painter.setPen(QPen(decl->lineColor(), 1, Qt::DashLine));
+            painter.drawLine(QPointF(exposed.left(), keys.toY(100)),
+                             QPointF(exposed.right() + 1, keys.toY(100)));
+
+            painter.setRenderHint(QPainter::Antialiasing);
+            auto fill = decl->envelopeColor();
+            fill.setAlphaF(fill.alphaF() * 0.25f);
+            const auto [begin, end] = visibleNotes(exposed);
+            for (int i = begin; i < end; ++i) {
+                if (m_roll->timeline->note(i).rest) {
+                    continue;
+                }
+                const auto outline = outlineOf(i);
+                painter.setPen(QPen(decl->envelopeColor(), 1.5));
+                painter.setBrush(fill);
+                painter.drawPolygon(outline);
+                painter.setBrush(decl->whiteRowColor());
+                // The anchors, without the ends of the fragment
+                for (qsizetype k = 1; k + 1 < outline.size(); ++k) {
+                    painter.drawEllipse(outline[k], PointRadius, PointRadius);
+                }
+            }
+        }
+
+        std::optional<SceneHit> hitTest(QPointF position) const override {
+            SceneHit hit;
+            hit.part = Background;
+            double distance = m_roll->pointGrip;
+            const auto [begin, end] = visibleNotes(QRect(position.toPoint(), QSize(1, 1)));
+            for (int i = begin; i < end; ++i) {
+                if (m_roll->timeline->note(i).rest) {
+                    continue;
+                }
+                const auto outline = outlineOf(i);
+                for (qsizetype k = 1; k + 1 < outline.size(); ++k) {
+                    const auto offset = outline[k] - position;
+                    const double d = std::hypot(offset.x(), offset.y());
+                    if (d <= distance) {
+                        distance = d;
+                        hit.node = m_roll->timeline->note(i).id;
+                        hit.part = EnvelopePoint;
+                        hit.index = int(k - 1);
+                        hit.cursor = Qt::SizeAllCursor;
+                    }
+                }
+            }
+            return hit;
+        }
+
+        std::unique_ptr<SceneGesture> press(const SceneHit &hit, QPointF position,
+                                            Qt::MouseButton button,
+                                            Qt::KeyboardModifiers modifiers) override;
+
+        // On the middle anchor a double click removes it; on the envelope between the end of
+        // the attack and the start of the release it inserts one there.
+        bool doubleClick(const SceneHit &hit, QPointF position) override {
+            if (hit.part == EnvelopePoint) {
+                const int index = m_roll->indexOf(hit.node);
+                auto envelope = m_roll->envelopeOf(index);
+                if (!envelope.hasMiddle || hit.index != 2) {
+                    return false;
+                }
+                envelope.hasMiddle = false;
+                write(index, envelope);
+                return true;
+            }
+            const auto [begin, end] = visibleNotes(QRect(position.toPoint(), QSize(1, 1)));
+            for (int i = begin; i < end; ++i) {
+                if (m_roll->timeline->note(i).rest) {
+                    continue;
+                }
+                auto envelope = m_roll->envelopeOf(i);
+                if (envelope.hasMiddle) {
+                    continue;
+                }
+                const auto outline = outlineOf(i);
+                // Between the end of the attack and the start of the release
+                const QLineF line(outline[2], outline[3]);
+                if (position.x() <= line.x1() || position.x() >= line.x2()) {
+                    continue;
+                }
+                const double share = (position.x() - line.x1()) / (line.x2() - line.x1());
+                const auto on = line.pointAt(share);
+                if (std::abs(on.y() - position.y()) > m_roll->curveGrip) {
+                    continue;
+                }
+                const auto [start, length] = m_roll->fragmentOf(i);
+                const auto times = anchorTimes(envelope, length);
+                const double at =
+                    m_roll->timeline->tempoMap().timeOf(view()->timeAxis().toTick(position.x())) -
+                    start;
+                envelope.hasMiddle = true;
+                envelope.anchors[2].x = std::round((at - times[1]) * 10) / 10;
+                envelope.anchors[2].y = std::round(view()->keyAxis().toKey(on.y()));
+                write(i, envelope);
+                return true;
+            }
+            return false;
+        }
+
+        void write(int index, const kit::Envelope &envelope) {
+            kit::DiagnosticList diagnostics;
+            kit::ProjectEdits::setEnvelope({m_roll->notes().at(index)}, envelope, diagnostics);
+            m_roll->report(diagnostics);
+        }
+
+    private:
+        PianoRoll::Impl *m_roll;
+
+        // The notes whose fragments may reach into rect: those at its time and one on either
+        // side, since a fragment starts before its note and ends after it
+        std::pair<int, int> visibleNotes(const QRect &rect) const {
+            const auto &time = view()->timeAxis();
+            const auto [begin, end] = m_roll->timeline->notesBetween(time.toTick(rect.left()),
+                                                                     time.toTick(rect.right() + 1));
+            return {std::max(0, begin - 1), std::min(m_roll->timeline->noteCount(), end + 1)};
+        }
+
+        // The outline of the envelope of note index: the start of its fragment, its anchors in
+        // time order, and the end of its fragment
+        QPolygonF outlineOf(int index) const {
+            const auto envelope = m_roll->envelopeOf(index);
+            const auto length = m_roll->fragmentOf(index).second;
+            const auto times = anchorTimes(envelope, length);
+            const auto anchors = envelope.anchorsInTimeOrder();
+            QPolygonF outline{m_roll->envelopePointOf(index, 0, 0)};
+            for (qsizetype k = 0; k < times.size(); ++k) {
+                outline.push_back(m_roll->envelopePointOf(index, times[k], anchors[k].y));
+            }
+            outline.push_back(m_roll->envelopePointOf(index, length, 0));
+            return outline;
+        }
+    };
+
+    // A drag of an anchor of an envelope: in time between its neighbours, the others staying
+    // where they are, and in volume from 0 to EnvelopeRange. Times are kept to a tenth of a
+    // millisecond, volumes to a percent.
+    class PianoRoll::Impl::EnvelopeGesture : public SceneGesture {
+    public:
+        EnvelopeGesture(PianoRoll::Impl *roll, int index, int anchor, QPointF position)
+            : m_roll(roll), m_index(index), m_anchor(anchor), m_origin(position),
+              m_original(roll->envelopeOf(index)) {
+            m_length = roll->fragmentOf(index).second;
+        }
+
+        void move(QPointF position, Qt::KeyboardModifiers modifiers) override {
+            Q_UNUSED(modifiers);
+            const auto view = m_roll->parameters;
+            const auto &map = m_roll->timeline->tempoMap();
+            const auto timeAt = [&](QPointF point) {
+                return map.timeOf(view->timeAxis().toTick(point.x()));
+            };
+            const auto times = anchorTimes(m_original, m_length);
+            const int last = int(times.size()) - 1;
+            const int k = m_anchor;
+            double delta = std::round((timeAt(position) - timeAt(m_origin)) * 10) / 10;
+            delta = std::clamp(delta, (k > 0 ? times[k - 1] : 0) - times[k],
+                               (k < last ? times[k + 1] : m_length) - times[k]);
+
+            // Each p counts from a neighbour, so a move changes two of them at most; the others
+            // keep their values exactly.
+            auto anchors = m_original.anchorsInTimeOrder();
+            if (k < last - 1) {
+                // p1, p2 and p5 count forward
+                anchors[k].x += delta;
+                if (k + 1 < last - 1) {
+                    anchors[k + 1].x -= delta;
+                }
+            } else if (k == last - 1) {
+                // p3 counts back from the end
+                anchors[k].x -= delta;
+            } else {
+                // p4 counts back from the end of the fragment, p3 back from it
+                anchors[k].x -= delta;
+                anchors[k - 1].x += delta;
+            }
+            const double volume = m_original.anchorsInTimeOrder()[k].y +
+                                  view->keyAxis().toKey(position.y()) -
+                                  view->keyAxis().toKey(m_origin.y());
+            anchors[k].y = std::clamp(std::round(volume), 0.0, EnvelopeRange);
+
+            m_roll->envelopePreview.insert(m_index, *kit::Envelope::fromTimeOrder(anchors));
+            view->viewport()->update();
+        }
+
+        void release(QPointF position, Qt::KeyboardModifiers modifiers) override {
+            move(position, modifiers);
+            const auto envelope = m_roll->envelopePreview.take(m_index);
+            m_roll->parameters->viewport()->update();
+            if (envelope != m_original) {
+                kit::DiagnosticList diagnostics;
+                kit::ProjectEdits::setEnvelope({m_roll->notes().at(m_index)}, envelope,
+                                               diagnostics);
+                m_roll->report(diagnostics);
+            }
+        }
+
+        void cancel() override {
+            m_roll->envelopePreview.remove(m_index);
+            m_roll->parameters->viewport()->update();
+        }
+
+    private:
+        PianoRoll::Impl *m_roll;
+        int m_index;
+        int m_anchor;
+        QPointF m_origin;
+        kit::Envelope m_original;
+        double m_length = 0;
+    };
+
+    // A press on an anchor drags it; the right button sets its volume to 100%.
+    std::unique_ptr<SceneGesture>
+        PianoRoll::Impl::EnvelopeLayer::press(const SceneHit &hit, QPointF position,
+                                              Qt::MouseButton button,
+                                              Qt::KeyboardModifiers modifiers) {
+        Q_UNUSED(modifiers);
+        if (hit.part != EnvelopePoint) {
+            return nullptr;
+        }
+        m_roll->finishEditing(true);
+        const int index = m_roll->indexOf(hit.node);
+        if (index < 0) {
+            return nullptr;
+        }
+        if (button == Qt::RightButton) {
+            auto anchors = m_roll->envelopeOf(index).anchorsInTimeOrder();
+            if (anchors[hit.index].y != 100) {
+                anchors[hit.index].y = 100;
+                write(index, *kit::Envelope::fromTimeOrder(anchors));
+            }
+            return nullptr;
+        }
+        if (button != Qt::LeftButton) {
+            return nullptr;
+        }
+        return std::make_unique<EnvelopeGesture>(m_roll, index, hit.index, position);
+    }
 
     // A drag of the selected notes: vertically transposes them, horizontally moves them in the
     // sequence to the boundary between notes nearest to where they are dragged. A selection with
@@ -1902,6 +2269,30 @@ namespace hello::daw {
         new PointerTracker(_impl->view->viewport(),
                            [this](std::optional<QPointF> position) { _impl->hover(position); });
 
+        // The parameter area: the time axis of the roll, and volumes in percent for keys, all
+        // of them in view
+        _impl->parameters = new SceneView();
+        _impl->parameters->setFixedHeight(ParameterHeight);
+        _impl->parameters->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+        _impl->parameters->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+        _impl->parameters->setKeyScaleRange(0.01, 100);
+        // Room for the margins beyond the volumes
+        _impl->parameters->setKeyRange(-int(EnvelopeRange / 10), int(EnvelopeRange * 1.1));
+        _impl->parameters->addLayer(std::make_unique<Impl::EnvelopeLayer>(_impl.get()));
+        _impl->parameterLabel = new QLabel(tr("Envelope"));
+        _impl->parameterLabel->setAlignment(Qt::AlignCenter);
+        new EventWatcher(_impl->parameters->viewport(), [this](QEvent *event) {
+            if (event->type() == QEvent::Resize) {
+                _impl->fitParameters();
+            }
+        });
+        connect(_impl->parameters, &SceneView::keyAxisChanged, this,
+                [this] { _impl->fitParameters(); });
+        connect(_impl->view, &SceneView::timeAxisChanged, this,
+                [this] { _impl->parameters->setTimeAxis(_impl->view->timeAxis()); });
+        connect(_impl->parameters, &SceneView::timeAxisChanged, this,
+                [this] { _impl->view->setTimeAxis(_impl->parameters->timeAxis()); });
+
         _impl->quantizer = new QComboBox();
         _impl->quantizer->setToolTip(tr("Quantization"));
         _impl->quantizer->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Fixed);
@@ -1927,11 +2318,15 @@ namespace hello::daw {
         layout->addWidget(_impl->ruler, 0, 1);
         layout->addWidget(_impl->keyboard, 1, 0);
         layout->addWidget(_impl->view, 1, 1);
+        layout->addWidget(_impl->parameterLabel, 2, 0);
+        layout->addWidget(_impl->parameters, 2, 1);
         layout->setColumnStretch(1, 1);
         layout->setRowStretch(1, 1);
 
         connect(_impl->timeline, &kit::TrackTimeline::invalidated, this, [this] {
+            _impl->timingsStale = true;
             _impl->view->viewport()->update();
+            _impl->parameters->viewport()->update();
             _impl->scheduleRefresh();
             // The note being edited may be gone, as may selected ones.
             if (_impl->editing && _impl->indexOf(_impl->editing) < 0) {
@@ -1952,6 +2347,10 @@ namespace hello::daw {
 
     SceneView *PianoRoll::view() const {
         return _impl->view;
+    }
+
+    SceneView *PianoRoll::parameterView() const {
+        return _impl->parameters;
     }
 
     TimelineRuler *PianoRoll::ruler() const {
@@ -1994,7 +2393,9 @@ namespace hello::daw {
 
     void PianoRoll::setVoiceBank(std::shared_ptr<const kit::VoiceBank> bank) {
         _impl->voiceBank = std::move(bank);
+        _impl->timingsStale = true;
         _impl->view->viewport()->update();
+        _impl->parameters->viewport()->update();
     }
 
     bool PianoRoll::lacksSample(int index) const {
@@ -2343,6 +2744,16 @@ namespace hello::daw {
     void PianoRoll::setVibratoColor(const QColor &color) {
         _impl->vibratoColor = color;
         _impl->view->viewport()->update();
+    }
+
+    QColor PianoRoll::envelopeColor() const {
+        return _impl->envelopeColor.isValid() ? _impl->envelopeColor
+                                              : palette().color(QPalette::Highlight);
+    }
+
+    void PianoRoll::setEnvelopeColor(const QColor &color) {
+        _impl->envelopeColor = color;
+        _impl->parameters->viewport()->update();
     }
 
     QColor PianoRoll::faintPointColor() const {

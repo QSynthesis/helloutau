@@ -54,6 +54,7 @@ namespace hello::daw {
         Q_PROPERTY(QColor pitchColor READ pitchColor WRITE setPitchColor)
         Q_PROPERTY(QColor vibratoColor READ vibratoColor WRITE setVibratoColor)
         Q_PROPERTY(QColor faintPointColor READ faintPointColor WRITE setFaintPointColor)
+        Q_PROPERTY(QColor envelopeColor READ envelopeColor WRITE setEnvelopeColor)
         Q_PROPERTY(double pointGrip READ pointGrip WRITE setPointGrip)
         Q_PROPERTY(double curveGrip READ curveGrip WRITE setCurveGrip)
         Q_PROPERTY(QColor whiteRowColor READ whiteRowColor WRITE setWhiteRowColor)
@@ -80,6 +81,9 @@ namespace hello::daw {
             VibratoDepth,
             VibratoPeriod,
             VibratoPhase,
+            /// An anchor of an envelope in the parameter area; SceneHit::index is its index in
+            /// time order.
+            EnvelopePoint,
         };
 
         /// What a press on the background does.
@@ -94,6 +98,10 @@ namespace hello::daw {
         ~PianoRoll();
 
         SceneView *view() const;
+
+        /// The parameter area below the roll, which shares its time axis, and where the
+        /// envelopes of the notes are drawn and edited (step 4 in docs/Tuning.md).
+        SceneView *parameterView() const;
         TimelineRuler *ruler() const;
         PianoKeyboard *keyboard() const;
         kit::TrackTimeline *timeline() const;
@@ -230,6 +238,8 @@ namespace hello::daw {
         /// The color of the points of the notes whose portamento is not under the pointer.
         QColor faintPointColor() const;
         void setFaintPointColor(const QColor &color);
+        QColor envelopeColor() const;
+        void setEnvelopeColor(const QColor &color);
         QColor playheadColor() const;
         void setPlayheadColor(const QColor &color);
         QColor whiteRowColor() const;

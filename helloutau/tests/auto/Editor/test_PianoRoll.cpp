@@ -852,6 +852,139 @@ private Q_SLOTS:
         QCOMPARE(dragged({265, 306}, {301, 306}), expected);
     }
 
+    // A rest of 500 ms, then la of 125 ms with 50 ms of pre-utterance and the envelope of UTAU:
+    // its fragment starts at 450 ms and lasts 175 ms, its anchors lie at 450, 455, 590 and
+    // 625 ms, with a pixel to a millisecond.
+    static kit::Project envelopedNote() {
+        kit::Note rest;
+        rest.lyric = QStringLiteral("R");
+        rest.length = 480;
+        rest.noteNum = 60;
+        kit::Note la;
+        la.lyric = QStringLiteral("la");
+        la.length = 120;
+        la.noteNum = 60;
+        la.preUtterance = 50;
+        kit::Project project;
+        project.settings.tempo = 120;
+        project.tracks.push_back({});
+        project.tracks[0].notes = {rest, la};
+        return project;
+    }
+
+    // Where the parameter area draws volume at milliseconds into the track
+    static QPoint envelopePoint(const PianoRoll &roll, double milliseconds, double volume) {
+        const auto view = roll.parameterView();
+        return QPointF(view->timeAxis().toX(milliseconds * 0.96), view->keyAxis().toY(volume))
+            .toPoint();
+    }
+
+    static kit::Envelope envelopeOfLa(const kit::ProjectSession &session) {
+        return session.snapshot().tracks[0].notes[1].envelope.value_or(kit::Envelope());
+    }
+
+    // An anchor moves in time between its neighbours, the others staying where they are, and in
+    // volume; the right button sets its volume to 100%.
+    void an_envelope_is_edited_in_the_parameter_area() {
+        const auto edited = [this](const std::function<void(PianoRoll &)> &edit) {
+            kit::ProjectSession session(envelopedNote());
+            PianoRoll roll(&session);
+            showExactly(roll);
+            [&] { QVERIFY(roll.parameterView()->timeAxis() == roll.view()->timeAxis()); }();
+            edit(roll);
+            if (session.canUndo()) {
+                [&] {
+                    QCOMPARE(session.undoMessage(), kit::ProjectEdits::tr("Change Envelope"));
+                }();
+            }
+            return envelopeOfLa(session).anchorsInTimeOrder();
+        };
+        const auto drag = [](PianoRoll &roll, QPoint from, QPoint to) {
+            const auto viewport = roll.parameterView()->viewport();
+            QTest::mousePress(viewport, Qt::LeftButton, {}, from);
+            QTest::mouseMove(viewport, (from + to) / 2);
+            QTest::mouseMove(viewport, to);
+            QTest::mouseRelease(viewport, Qt::LeftButton, {}, to);
+        };
+
+        // The end of the attack, 20 ms later and 20% louder; p1 and p3 stay.
+        auto anchors = edited([&](PianoRoll &roll) {
+            drag(roll, envelopePoint(roll, 455, 100), envelopePoint(roll, 475, 120));
+        });
+        QCOMPARE(anchors[0].x, 0.0);
+        QCOMPARE(anchors[1].x, 25.0);
+        QVERIFY(qAbs(anchors[1].y - 120) <= 2);
+        QCOMPARE(anchors[2].x, 35.0);
+
+        // The start, 3 ms later: p1 grows and p2 shrinks, the end of the attack staying.
+        anchors = edited([&](PianoRoll &roll) {
+            drag(roll, envelopePoint(roll, 450, 0), envelopePoint(roll, 453, 0));
+        });
+        QCOMPARE(anchors[0].x, 3.0);
+        QCOMPARE(anchors[1].x, 2.0);
+
+        // Not past the start of the release, at 590 ms
+        anchors = edited([&](PianoRoll &roll) {
+            drag(roll, envelopePoint(roll, 455, 100), envelopePoint(roll, 700, 100));
+        });
+        QCOMPARE(anchors[1].x, 140.0);
+
+        // Nor the start of the release before the end of the attack, at 455 ms
+        anchors = edited([&](PianoRoll &roll) {
+            drag(roll, envelopePoint(roll, 590, 100), envelopePoint(roll, 300, 100));
+        });
+        QCOMPARE(anchors[2].x, 170.0);
+
+        // The end, 25 ms earlier: p4 grows and p3 shrinks, the start of the release staying.
+        anchors = edited([&](PianoRoll &roll) {
+            drag(roll, envelopePoint(roll, 625, 0), envelopePoint(roll, 600, 0));
+        });
+        QCOMPARE(anchors[3].x, 25.0);
+        QCOMPARE(anchors[2].x, 10.0);
+        QCOMPARE(anchors[3].y, 0.0);
+
+        anchors = edited([&](PianoRoll &roll) {
+            QTest::mouseClick(roll.parameterView()->viewport(), Qt::RightButton, {},
+                              envelopePoint(roll, 450, 0));
+        });
+        QCOMPARE(anchors[0].y, 100.0);
+    }
+
+    // A double click on the envelope between the attack and the release inserts the middle
+    // anchor, and one on the middle anchor removes it.
+    void the_middle_anchor_is_inserted_and_removed() {
+        kit::ProjectSession session(envelopedNote());
+        PianoRoll roll(&session);
+        showExactly(roll);
+        const auto viewport = roll.parameterView()->viewport();
+
+        QTest::mouseDClick(viewport, Qt::LeftButton, {}, envelopePoint(roll, 520, 100));
+        auto envelope = envelopeOfLa(session);
+        QVERIFY(envelope.hasMiddle);
+        QCOMPARE(envelope.anchors[2].x, 65.0);
+        QCOMPARE(envelope.anchors[2].y, 100.0);
+        QCOMPARE(envelope.anchors[3].x, 35.0);
+
+        QTest::mouseDClick(viewport, Qt::LeftButton, {}, envelopePoint(roll, 520, 100));
+        envelope = envelopeOfLa(session);
+        QVERIFY(!envelope.hasMiddle);
+        QCOMPARE(envelope.anchors[1].x, 5.0);
+    }
+
+    // The parameter area and the roll scroll together.
+    void the_parameter_area_follows_the_roll() {
+        kit::ProjectSession session(envelopedNote());
+        PianoRoll roll(&session);
+        show(roll);
+        auto time = roll.view()->timeAxis();
+        time.left = 240;
+        roll.view()->setTimeAxis(time);
+        QCOMPARE(roll.parameterView()->timeAxis().left, 240.0);
+        time.left = 120;
+        roll.parameterView()->setTimeAxis(time);
+        QCOMPARE(roll.view()->timeAxis().left, 120.0);
+    }
+
     // The distance from the portamento within which a double click inserts a point is a
     // property that a style sheet sets; beyond it the double click edits the lyric.
     void the_distance_to_the_portamento_is_a_property() {
