@@ -51,6 +51,26 @@ namespace hello::kit {
         /// tempo. The tempo is written even if it equals the tempo already in effect.
         Q_INVOKABLE static bool setTempo(const NoteRef &note, double tempo,
                                          DiagnosticList &diagnostics);
+
+        /// Removes the notes at \a indices of \a notes, in any order. The following notes start
+        /// earlier by the length removed. Every field of a removed note goes with it, its tempo
+        /// included, so the tempo in effect before it continues.
+        Q_INVOKABLE static bool removeNotes(const NoteListRef &notes, const QList<int> &indices,
+                                            DiagnosticList &diagnostics);
+
+        /// Sets the length of \a note to \a ticks. The following notes start earlier or later by
+        /// the difference.
+        Q_INVOKABLE static bool setLength(const NoteRef &note, int ticks,
+                                          DiagnosticList &diagnostics);
+
+        /// Moves the \a count notes from \a index of \a notes so that the first of them is at
+        /// \a destination, an index of the list after the move.
+        ///
+        /// The notes are reordered in the sequence and no length changes, so the track keeps its
+        /// length. Every field moves with its note, its tempo included, so a tempo change moves
+        /// with the note that sets it. See step 4 in docs/Widgets.md.
+        Q_INVOKABLE static bool moveNotes(const NoteListRef &notes, int index, int count,
+                                          int destination, DiagnosticList &diagnostics);
     };
 
 }

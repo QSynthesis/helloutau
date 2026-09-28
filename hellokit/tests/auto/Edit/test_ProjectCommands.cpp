@@ -271,6 +271,39 @@ private Q_SLOTS:
         verifyRefused(session, QStringLiteral("note tempo /tracks/0/notes/1 fast"));
     }
 
+    void note_remove_deletes_the_given_notes() {
+        ProjectSession session(richProject());
+        QVERIFY(run(session, QStringLiteral("note remove /tracks/0/notes 0")));
+        QCOMPARE(ProjectRef(&session).tracks().at(0).notes().size(), 1);
+        QCOMPARE(noteAt(session, 0).lyric, QStringLiteral("R"));
+
+        verifyRefused(session, QStringLiteral("note remove /tracks/0/notes 1"));
+        verifyRefused(session, QStringLiteral("note remove /tracks/0/notes x"));
+        verifyRefused(session, QStringLiteral("note remove /tracks/0/notes"));
+    }
+
+    void note_length_sets_the_length_of_a_note() {
+        ProjectSession session(richProject());
+        QVERIFY(run(session, QStringLiteral("note length /tracks/0/notes/0 120")));
+        QCOMPARE(noteAt(session, 0).length, 120);
+        verifyRefused(session, QStringLiteral("note length /tracks/0/notes/0 0"));
+        verifyRefused(session, QStringLiteral("note length /tracks/0/notes 120"));
+    }
+
+    void note_move_reorders_the_notes() {
+        ProjectSession session(richProject());
+        QVERIFY(run(session, QStringLiteral("note insert /tracks/0/notes 2 {\"lyric\": \"ka\", "
+                                            "\"length\": 240, \"noteNum\": 62}")));
+        QVERIFY(run(session, QStringLiteral("note move /tracks/0/notes 0 1 2")));
+        QCOMPARE(noteAt(session, 0).lyric, QStringLiteral("R"));
+        QCOMPARE(noteAt(session, 1).lyric, QStringLiteral("ka"));
+        QCOMPARE(noteAt(session, 2).lyric, QString::fromUtf8("あ"));
+        QVERIFY(run(session, QStringLiteral("note move /tracks/0/notes 0 1 1")));
+        QCOMPARE(noteAt(session, 0).lyric, QStringLiteral("ka"));
+        verifyRefused(session, QStringLiteral("note move /tracks/0/notes 0 2 2"));
+        verifyRefused(session, QStringLiteral("note move /tracks/0/notes 0 1"));
+    }
+
     // Acceptance criteria 3 and 4 of docs/Editing.md: undoing every command restores the
     // project, redoing every command restores the edited project, and the same commands produce
     // the same changes in another session.
@@ -429,12 +462,13 @@ private Q_SLOTS:
     }
 
     void names_lists_every_command() {
-        QCOMPARE(
-            ProjectCommands::names(),
-            QStringList({QStringLiteral("set"), QStringLiteral("insert"), QStringLiteral("remove"),
-                         QStringLiteral("move"), QStringLiteral("replace"),
-                         QStringLiteral("note transpose"), QStringLiteral("note split"),
-                         QStringLiteral("note insert"), QStringLiteral("note tempo")}));
+        QCOMPARE(ProjectCommands::names(),
+                 QStringList({QStringLiteral("set"), QStringLiteral("insert"),
+                              QStringLiteral("remove"), QStringLiteral("move"),
+                              QStringLiteral("replace"), QStringLiteral("note transpose"),
+                              QStringLiteral("note split"), QStringLiteral("note insert"),
+                              QStringLiteral("note tempo"), QStringLiteral("note remove"),
+                              QStringLiteral("note length"), QStringLiteral("note move")}));
     }
 };
 

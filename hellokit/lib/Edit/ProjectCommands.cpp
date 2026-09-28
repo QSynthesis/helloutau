@@ -150,6 +150,59 @@ namespace hello::kit {
             return ProjectEdits::setTempo(*note, *tempo, diagnostics);
         }
 
+        bool removeCommand(ProjectSession &session, const Arguments &arguments,
+                           DiagnosticList &diagnostics) {
+            if (arguments.size() < 2) {
+                return usage(diagnostics, "note remove <notes> <index>...");
+            }
+            const auto notes = notesAt(session, arguments[0], diagnostics);
+            if (!notes) {
+                return false;
+            }
+            QList<int> indices;
+            for (const auto &argument : arguments.mid(1)) {
+                const auto index = edit::NodeCommands::integerOf(
+                    argument, ProjectCommands::tr("index"), diagnostics);
+                if (!index) {
+                    return false;
+                }
+                indices.push_back(*index);
+            }
+            return ProjectEdits::removeNotes(*notes, indices, diagnostics);
+        }
+
+        bool lengthCommand(ProjectSession &session, const Arguments &arguments,
+                           DiagnosticList &diagnostics) {
+            if (arguments.size() != 2) {
+                return usage(diagnostics, "note length <note> <ticks>");
+            }
+            const auto note = noteAt(session, arguments[0], diagnostics);
+            const auto ticks = edit::NodeCommands::integerOf(
+                arguments[1], ProjectCommands::tr("ticks"), diagnostics);
+            if (!note || !ticks) {
+                return false;
+            }
+            return ProjectEdits::setLength(*note, *ticks, diagnostics);
+        }
+
+        bool moveCommand(ProjectSession &session, const Arguments &arguments,
+                         DiagnosticList &diagnostics) {
+            if (arguments.size() != 4) {
+                return usage(diagnostics, "note move <notes> <index> <count> <destination>");
+            }
+            const auto notes = notesAt(session, arguments[0], diagnostics);
+            const auto index = edit::NodeCommands::integerOf(
+                arguments[1], ProjectCommands::tr("index"), diagnostics);
+            const auto count = edit::NodeCommands::integerOf(
+                arguments[2], ProjectCommands::tr("count"), diagnostics);
+            const auto destination = edit::NodeCommands::integerOf(
+                arguments[3], ProjectCommands::tr("destination"), diagnostics);
+            if (!notes || !index || !count || !destination) {
+                return false;
+            }
+            return ProjectEdits::moveNotes(*notes, *index, *count, *destination, diagnostics);
+        }
+
         using DomainCommand = bool (*)(ProjectSession &, const Arguments &, DiagnosticList &);
 
         // The domain commands, each with the function of ProjectEdits that it calls.
@@ -160,10 +213,13 @@ namespace hello::kit {
         };
 
         constexpr NoteCommand noteCommands[] = {
-            {"transpose", transposeCommand, "transpose" },
-            {"split",     splitCommand,     "splitNote" },
-            {"insert",    insertCommand,    "insertNote"},
-            {"tempo",     tempoCommand,     "setTempo"  },
+            {"transpose", transposeCommand, "transpose"  },
+            {"split",     splitCommand,     "splitNote"  },
+            {"insert",    insertCommand,    "insertNote" },
+            {"tempo",     tempoCommand,     "setTempo"   },
+            {"remove",    removeCommand,    "removeNotes"},
+            {"length",    lengthCommand,    "setLength"  },
+            {"move",      moveCommand,      "moveNotes"  },
         };
 
         bool run(ProjectSession &session, const Arguments &arguments, DiagnosticList &diagnostics) {
@@ -178,7 +234,7 @@ namespace hello::kit {
             if (arguments.size() < 2 || arguments[1].kind != edit::CommandArgument::Word) {
                 return fail(diagnostics,
                             ProjectCommands::tr("The command note requires a verb: transpose, "
-                                                "split, insert or tempo."));
+                                                "split, insert, tempo, remove, length or move."));
             }
             const auto verb = arguments[1].text();
             for (const auto &command : noteCommands) {

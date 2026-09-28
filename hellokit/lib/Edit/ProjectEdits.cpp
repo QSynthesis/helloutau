@@ -1,5 +1,7 @@
 #include "ProjectEdits.h"
 
+#include <algorithm>
+
 #include <hellokit/Document/DocumentConstants.h>
 
 namespace hello::kit {
@@ -66,4 +68,58 @@ namespace hello::kit {
         return transaction.commit(diagnostics);
     }
 
+    bool ProjectEdits::removeNotes(const NoteListRef &notes, const QList<int> &indices,
+                                   DiagnosticList &diagnostics) {
+        auto sorted = indices;
+        std::sort(sorted.begin(), sorted.end());
+        sorted.erase(std::unique(sorted.begin(), sorted.end()), sorted.end());
+        if (sorted.isEmpty()) {
+            return true;
+        }
+        if (sorted.first() < 0 || sorted.last() >= notes.size()) {
+            return fail(diagnostics, tr("The track has %1 notes, not a note %2.")
+                                         .arg(notes.size())
+                                         .arg(sorted.first() < 0 ? sorted.first() : sorted.last()));
+        }
+
+        // Each run of consecutive notes is one removal, the last run first, so that the indices
+        // of the runs before it still hold.
+        auto transaction = notes.session()->transaction(tr("Delete Notes"));
+        int end = int(sorted.size());
+        while (end > 0) {
+            int begin = end - 1;
+            while (begin > 0 && sorted[begin - 1] == sorted[begin] - 1) {
+                --begin;
+            }
+            notes.remove(sorted[begin], end - begin);
+            end = begin;
+        }
+        return transaction.commit(diagnostics);
+    }
+
+    bool ProjectEdits::setLength(const NoteRef &note, int ticks, DiagnosticList &diagnostics) {
+        auto transaction = note.session()->transaction(tr("Change Length"));
+        note.setLength(ticks);
+        return transaction.commit(diagnostics);
+    }
+
+    bool ProjectEdits::moveNotes(const NoteListRef &notes, int index, int count, int destination,
+                                 DiagnosticList &diagnostics) {
+        const int size = notes.size();
+        if (count <= 0 || index < 0 || index + count > size || destination < 0 ||
+            destination + count > size) {
+            return fail(diagnostics,
+                        tr("A track of %1 notes cannot move %2 notes from position %3 to %4.")
+                            .arg(size)
+                            .arg(count)
+                            .arg(index)
+                            .arg(destination));
+        }
+        if (destination == index) {
+            return true;
+        }
+        auto transaction = notes.session()->transaction(tr("Move Notes"));
+        notes.move(index, count, destination);
+        return transaction.commit(diagnostics);
+    }
 }

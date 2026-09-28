@@ -17,6 +17,33 @@ private:
         return ProjectRef(&session).tracks().at(0).notes();
     }
 
+    // Notes a to e of different lengths, where b sets the tempo 150
+    static Project fiveNotes() {
+        Track track;
+        int length = 120;
+        for (const auto lyric : {"a", "b", "c", "d", "e"}) {
+            Note note;
+            note.lyric = QString::fromLatin1(lyric);
+            note.length = length;
+            note.noteNum = 60;
+            track.notes.push_back(note);
+            length += 120;
+        }
+        track.notes[1].tempo = 150;
+        Project project;
+        project.tracks.push_back(track);
+        return project;
+    }
+
+    static QString lyricsOf(const ProjectSession &session) {
+        const auto project = session.snapshot();
+        QStringList lyrics;
+        for (const auto &note : project.tracks[0].notes) {
+            lyrics.push_back(note.lyric);
+        }
+        return lyrics.join(u' ');
+    }
+
 private Q_SLOTS:
     // Rests are transposed as well, and the whole operation is one undo step.
     void transposition_includes_rests_and_is_one_step() {
@@ -173,6 +200,75 @@ private Q_SLOTS:
         QCOMPARE(notes.at(1).noteNum(), 48);
         session.undo();
         QCOMPARE(session.snapshot().toJson(), project.toJson());
+    }
+
+    // Removed in one step whatever the order of the indices, and the following notes close up.
+    void notes_are_removed_in_one_step() {
+        const auto project = fiveNotes();
+        ProjectSession session(project);
+        const auto notes = notesOf(session);
+
+        DiagnosticList diagnostics;
+        QVERIFY(ProjectEdits::removeNotes(notes, {3, 0, 1, 3}, diagnostics));
+        QCOMPARE(lyricsOf(session), QStringLiteral("c e"));
+        QCOMPARE(session.currentStep(), 1);
+        QCOMPARE(session.undoMessage(), ProjectEdits::tr("Delete Notes"));
+        session.undo();
+        QCOMPARE(session.snapshot().toJson(), project.toJson());
+
+        // Removing nothing creates no step, and so keeps the redo history.
+        QVERIFY(ProjectEdits::removeNotes(notes, {}, diagnostics));
+        QCOMPARE(session.currentStep(), 0);
+        QVERIFY(session.canRedo());
+        QVERIFY(!ProjectEdits::removeNotes(notes, {1, 5}, diagnostics));
+        QVERIFY(!ProjectEdits::removeNotes(notes, {-1}, diagnostics));
+        QCOMPARE(session.snapshot().toJson(), project.toJson());
+    }
+
+    void a_length_is_set_within_its_range() {
+        const auto project = fiveNotes();
+        ProjectSession session(project);
+        const auto notes = notesOf(session);
+
+        DiagnosticList diagnostics;
+        QVERIFY(ProjectEdits::setLength(notes.at(2), 960, diagnostics));
+        QCOMPARE(notes.at(2).length(), 960);
+        QCOMPARE(session.undoMessage(), ProjectEdits::tr("Change Length"));
+
+        QVERIFY(!ProjectEdits::setLength(notes.at(2), 0, diagnostics));
+        QCOMPARE(notes.at(2).length(), 960);
+    }
+
+    // Reordering changes no length, so the track keeps its length, and a tempo moves with the
+    // note that sets it.
+    void moved_notes_keep_their_lengths_and_tempos() {
+        const auto project = fiveNotes();
+        ProjectSession session(project);
+        const auto notes = notesOf(session);
+
+        DiagnosticList diagnostics;
+        QVERIFY(ProjectEdits::moveNotes(notes, 1, 2, 3, diagnostics));
+        QCOMPARE(lyricsOf(session), QStringLiteral("a d e b c"));
+        auto expected = project;
+        expected.tracks[0].notes.move(1, 4);
+        expected.tracks[0].notes.move(1, 4);
+        QCOMPARE(session.snapshot().toJson(), expected.toJson());
+        QCOMPARE(notes.at(3).tempo(), std::optional<double>(150));
+        QCOMPARE(session.undoMessage(), ProjectEdits::tr("Move Notes"));
+
+        session.undo();
+        QVERIFY(ProjectEdits::moveNotes(notes, 3, 2, 0, diagnostics));
+        QCOMPARE(lyricsOf(session), QStringLiteral("d e a b c"));
+
+        // Moving to where the notes are creates no step.
+        const int step = session.currentStep();
+        QVERIFY(ProjectEdits::moveNotes(notes, 1, 2, 1, diagnostics));
+        QCOMPARE(session.currentStep(), step);
+
+        QVERIFY(!ProjectEdits::moveNotes(notes, 4, 2, 0, diagnostics));
+        QVERIFY(!ProjectEdits::moveNotes(notes, 0, 2, 4, diagnostics));
+        QVERIFY(!ProjectEdits::moveNotes(notes, 0, 0, 1, diagnostics));
+        QCOMPARE(lyricsOf(session), QStringLiteral("d e a b c"));
     }
 };
 

@@ -27,7 +27,7 @@
 | 保存时改写 `CacheDir` | [`note.md`](note.md) 规定随文件名改写，代码只原样复制 | 保存与另存为时一律写为 `<文件名去掉扩展名>.cache`；缓存目录不取自文件，而是 UST 旁边的这一目录 | 第 1 步 |
 | 编辑所需的领域函数 | 只有 `transpose`、`splitNote`、`insertNote`、`setTempo` | 删除、改变长度、重排等，重排的语义见第 4 步 | 第 4 步 |
 
-**前三项已经实现**：速度表为 `TempoMap`（`TempoMap.h`）；`VoiceDir` 的解析与写法为 `Track::voiceDirectory()` 与 `Track::voiceDirOf()`；缓存目录为 `Project::cacheDirOf()` 与 `Project::cacheDirectoryOf()`，`Project::save()` 与指定了 `ExportOptions::file` 的 UST 导出按此写入 `CacheDir`。
+**前三项已经实现**：速度表为 `TempoMap`（`TempoMap.h`）；`VoiceDir` 的解析与写法为 `Track::voiceDirectory()` 与 `Track::voiceDirOf()`；缓存目录为 `Project::cacheDirOf()` 与 `Project::cacheDirectoryOf()`，`Project::save()` 与指定了 `ExportOptions::file` 的 UST 导出按此写入 `CacheDir`。第四项的领域函数为 `removeNotes`、`setLength`、`moveNotes`，见 [`Editing.md`](Editing.md) 的「领域函数」。
 
 调查中另发现音高控制点的约定与文档不一致，已经处理：`x` 统一为距音符起点的毫秒数，`y` 改为音分，读写 UST 时换算，见 [`UsthFormat.md`](UsthFormat.md)。
 
@@ -133,7 +133,7 @@
 
 **验收标准**：打开一个数百个音符的真实工程，滚动与缩放流畅；撤销、重做后显示与树一致（测试中以命中测试与坐标换算的结果核对）。
 
-**进度**：分三块进行，均已完成，待作者验收。
+**进度**：分三块进行，均已完成，作者已验收。
 1. 场景接口（`HelloUtauWidgets`）：`SceneView`、`SceneAxis`、`SceneLayer` 与 `SceneGesture`、`TimelineRuler`、`PianoKeyboard`。
 2. 卷帘本体：`TrackTimeline`（`HelloKitEdit`，音符的位置，变化后在下次读取时计算）与 `PianoRoll`（`HelloUtauEditor`，网格层、音符层、标尺上的速度标记），取代原先的音符表。
 3. 音源：`ProjectDocument::loadVoiceBank()` 按设置中的 UTAU 目录解析 `VoiceDir` 并打开音源，得到一份快照；编码无法确定的目录由 `VoiceBankCharsetDialog` 逐目录询问，每个文本文件一页，按所选编码预览并标出不合法的字节序列数，选定后立即记录（见 [`Editing.md`](Editing.md) 的「编码的选择与记录」），也可跳过该目录。打开工程后读取，设置中的 UTAU 目录改变后各窗口重新读取。卷帘中找不到样本的音符（查找方法与合成相同，`VoiceBank::find`）画成空心，颜色为 `unsampledColor` 与 `unsampledLyricColor`；没有音源时不作标记。
