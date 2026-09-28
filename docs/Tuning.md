@@ -182,11 +182,10 @@
 **进度**：已实现，待作者查看。
 
 - 参数区左侧一列四个按钮（Env、Int、Mod、Vel，提示为全称）切换参数区显示的内容（`PianoRoll::setLane()`），初始为包络。
-- 力度与速度的范围为 0 至 200，调制为 -200 至 200；虚线画在 UTAU 的默认值（均为 100，取自 stdutau）。
+- 力度的范围为 0 至 200，调制为 -200 至 200，速度为 -100 至 200；虚线画在 UTAU 的默认值（均为 100，取自 stdutau）。速度按 QSynthesis 分段映射：100 至 200 占参数区的上半，-100 至 100 占下半，即下半每个像素两倍的值（作者决定支持负数，采用 QSynthesis 的做法）。
 - 每个非休止音符一个手柄（QSynthesis 的画法）：音符起点一个圆点，一条横线跨过音符，一根竖线落到参数区底部。音符不带该值时以 `faintPointColor` 画出，带值时以 `parameterColor`（新属性，默认调色板的 Highlight）画出；选中的音符圆点填实。
 - 按住圆点或横线纵向拖动：取整数并限于范围内。拖动选中的音符时，所有选中的非休止音符设为同一值（作者决定）；拖动未选中的音符只改它自己。右键去掉该值，即恢复 UTAU 的默认值，作用范围与拖动相同。一次操作一个撤销步骤。
 - 领域函数 `setParameter`（`ProjectEdits::NoteParameter`：`Intensity`、`Modulation`、`Velocity`），命令 `note parameter <intensity、modulation 或 velocity> <值或 null> <音符路径>…`。
-- 速度的负值：QSynthesis 的刻度到 -100，UTAU 对负值的处理未实测（`Velocity=250` 时 UTAU 退回默认值，见 [`Synth.md`](Synth.md)），因此暂只提供 0 至 200。
 
 ## 参考实现的取舍
 
@@ -234,9 +233,10 @@ QSynthesis（`.cache/QSynthesis-Old`）、OpenUtau（`.cache/OpenUtau`）与 ds-
 - **批量缩放音高偏移与颤音幅度**：做成对话框输入倍数，不做 ds-editor-lite 式的拖动。
 - **参数区的切换**：左侧一列按钮（QSynthesis）。
 - **拖动参数手柄时的选中音符**：设为同一值。
+- **速度支持负数**：按 QSynthesis 的分段映射（-100 至 200），UTAU 中的验证记为待办。
 
 ## 待作者决定的问题
 
 1. **末点与 R 型**：前后为 R 型时末点是否仍归 0，须实测 UTAU 后决定。
 2. **编辑被拒的提示方式**：现为状态栏；提示框的方案保留，作者日后可能改用。
-3. **速度的负值**：UTAU 如何处理负数 `Velocity` 须实测，再决定参数区是否提供负值（第 7 步）。
+3. **速度的负值（待验证）**：参数区已按 QSynthesis 提供 -100 至 100 的负值部分（作者决定先做）。UTAU 如何处理负数 `Velocity` 仍须实测（`Velocity=250` 时 UTAU 退回默认值，见 [`Synth.md`](Synth.md)），若 UTAU 同样退回默认值，则须重新考虑。

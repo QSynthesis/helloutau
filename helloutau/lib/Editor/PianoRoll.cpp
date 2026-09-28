@@ -105,11 +105,13 @@ namespace hello::daw {
         constexpr double EnvelopeRange = 200;
         constexpr double ParameterMargin = 6;
 
-        // The values that the parameter area offers: intensity and velocity from 0, modulation
-        // from its negative (the ranges of QSynthesis, whose velocity also went below 0)
+        // The values that the parameter area offers, as QSynthesis does: intensity from 0,
+        // modulation from its negative, and velocity from VelocityMinimum, whose half below
+        // the default is drawn at half the scale of the half above it
         constexpr double IntensityRange = 200;
         constexpr double ModulationRange = 200;
         constexpr double VelocityRange = 200;
+        constexpr double VelocityMinimum = -100;
 
         // The envelope of a note that gives none, as UTAU applies it: 0 5 35 0 100 100 0
         kit::Envelope defaultEnvelope() {
@@ -451,7 +453,7 @@ namespace hello::daw {
             parameters->setKeyAxis(axis);
         }
 
-        // The values that a lane shows, and the one it draws a line at: that of UTAU where a
+        // The keys that a lane spans, and the value it draws a line at: that of UTAU where a
         // note gives none
         struct LaneRange {
             double minimum;
@@ -459,6 +461,28 @@ namespace hello::daw {
             double fallback;
         };
 
+        // Where a value of the lane is drawn, in the keys of the parameter area, which span
+        // the minimum and maximum of rangeOf(). Velocity from VelocityMinimum to the default
+        // occupies the keys from 0 to the default, and the values above it their own keys
+        // (QSynthesis).
+        static double keyOf(Lane lane, double value) {
+            if (lane != VelocityLane || value >= utau::DEFAULT_VALUE_VELOCITY) {
+                return value;
+            }
+            return (value - VelocityMinimum) * utau::DEFAULT_VALUE_VELOCITY /
+                   (utau::DEFAULT_VALUE_VELOCITY - VelocityMinimum);
+        }
+
+        // The value of the lane drawn at key, the inverse of keyOf()
+        static double valueAt(Lane lane, double key) {
+            if (lane != VelocityLane || key >= utau::DEFAULT_VALUE_VELOCITY) {
+                return key;
+            }
+            return VelocityMinimum + key * (utau::DEFAULT_VALUE_VELOCITY - VelocityMinimum) /
+                                         utau::DEFAULT_VALUE_VELOCITY;
+        }
+
+        // The keys that the lane spans, see keyOf()
         static LaneRange rangeOf(Lane lane) {
             switch (lane) {
                 case IntensityLane:
@@ -1411,7 +1435,8 @@ namespace hello::daw {
         void paint(QPainter &painter, const QRect &exposed) override {
             const auto decl = m_roll->_decl;
             const auto &keys = view()->keyAxis();
-            const double fallback = keys.toY(rangeOf(m_roll->lane).fallback);
+            const auto lane = m_roll->lane;
+            const double fallback = keys.toY(keyOf(lane, rangeOf(lane).fallback));
             painter.fillRect(exposed, decl->whiteRowColor());
             painter.setPen(QPen(decl->lineColor(), 1, Qt::DashLine));
             painter.drawLine(QPointF(exposed.left(), fallback),
@@ -1738,12 +1763,16 @@ namespace hello::daw {
                                                   time.toTick(rect.right() + 1));
         }
 
-        // The point of the handle of note index, and the right end of its line
+        // The point of the handle of note index, and the right end of its line. A value beyond
+        // the lane is drawn at its edge.
         std::pair<QPointF, double> handleOf(int index) const {
             const auto &note = m_roll->timeline->note(index);
             const auto &time = view()->timeAxis();
-            return {QPointF(time.toX(double(note.start)),
-                            view()->keyAxis().toY(m_roll->valueOf(index))),
+            const auto lane = m_roll->lane;
+            const auto range = rangeOf(lane);
+            const double key =
+                std::clamp(keyOf(lane, m_roll->valueOf(index)), range.minimum, range.maximum);
+            return {QPointF(time.toX(double(note.start)), view()->keyAxis().toY(key)),
                     time.toX(double(note.start + note.length))};
         }
     };
@@ -1760,10 +1789,12 @@ namespace hello::daw {
         void move(QPointF position, Qt::KeyboardModifiers modifiers) override {
             Q_UNUSED(modifiers);
             const auto &keys = m_roll->parameters->keyAxis();
-            const auto range = rangeOf(m_roll->lane);
-            const double value = std::clamp(
-                std::round(m_start + keys.toKey(position.y()) - keys.toKey(m_origin.y())),
-                range.minimum, range.maximum);
+            const auto lane = m_roll->lane;
+            const auto range = rangeOf(lane);
+            const double key = std::clamp(keyOf(lane, m_start) + keys.toKey(position.y()) -
+                                              keys.toKey(m_origin.y()),
+                                          range.minimum, range.maximum);
+            const double value = std::round(valueAt(lane, key));
             for (const int i : std::as_const(m_targets)) {
                 m_roll->valuePreview.insert(i, value);
             }

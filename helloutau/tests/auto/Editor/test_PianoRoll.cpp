@@ -1247,8 +1247,14 @@ private Q_SLOTS:
         laneButton(roll, QStringLiteral("Vel"))->click();
         QCOMPARE(roll.lane(), PianoRoll::VelocityLane);
         roll.setSelectedIndices({});
-        drag(valuePoint(roll, 0, 100), valuePoint(roll, 0, 60));
-        QVERIFY(qAbs(*notes()[0].velocity - 60) <= 2);
+        // Above 100 each key is a value; below it, down to -100, each key is two (QSynthesis).
+        // valuePoint() takes the key here.
+        drag(valuePoint(roll, 0, 100), valuePoint(roll, 0, 150));
+        QVERIFY(qAbs(*notes()[0].velocity - 150) <= 2);
+        drag(valuePoint(roll, 0, 150), valuePoint(roll, 0, 40));
+        QVERIFY(qAbs(*notes()[0].velocity - -20) <= 4);
+        drag(valuePoint(roll, 0, 40), valuePoint(roll, 0, -100));
+        QCOMPARE(notes()[0].velocity, std::optional<double>(-100));
         QVERIFY(qAbs(*notes()[0].intensity - 150) <= 2);
         roll.setLane(PianoRoll::ModulationLane);
         // Every modulation is in view.
