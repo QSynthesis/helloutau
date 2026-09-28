@@ -91,12 +91,24 @@ namespace hello::kit {
             return m_cacheDirectory;
         }
 
+        /// The position in the track, in milliseconds from its start, at which the track file
+        /// begins: the start of the first note rendered, less its pre-utterance as reconciled
+        /// with its neighbors. The wavtool places the sample of a note that far before the note,
+        /// and extends the file by each note with the difference of the pre-utterances of the
+        /// note and the next one, so this offset holds for every note of the file.
+        ///
+        /// A player maps a position in the file to the track by adding it.
+        inline double startTime() const {
+            return m_startTime;
+        }
+
     private:
         SynthPlan() = default;
 
         QList<SynthStep> m_steps;
         std::filesystem::path m_outputFile;
         std::filesystem::path m_cacheDirectory;
+        double m_startTime = 0;
     };
 
 }

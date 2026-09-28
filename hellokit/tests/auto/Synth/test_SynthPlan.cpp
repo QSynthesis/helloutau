@@ -295,6 +295,22 @@ private Q_SLOTS:
         QCOMPARE(plan->steps().size(), 2);
         QCOMPARE(plan->steps().at(0).noteIndex, 1);
         QCOMPARE(plan->steps().at(1).noteIndex, 2);
+
+        // The file begins at ka, 500 ms into the track, less its pre-utterance of 41 ms.
+        QCOMPARE(plan->startTime(), 459.0);
+    }
+
+    // The sample of the first note starts before the track does, by its pre-utterance.
+    void the_track_file_begins_before_its_first_note() {
+        const auto voices = bank();
+        QVERIFY(voices.has_value());
+
+        DiagnosticList diagnostics;
+        const auto plan =
+            SynthPlan::make(projectOf({note(QStringLiteral("a")), note(QStringLiteral("ka"))}),
+                            *voices, options(), diagnostics);
+        QVERIFY(plan.has_value());
+        QCOMPARE(plan->startTime(), -40.0);
     }
 
     void a_range_outside_the_track_is_refused() {

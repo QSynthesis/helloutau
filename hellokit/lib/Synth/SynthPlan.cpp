@@ -9,6 +9,8 @@
 #include <stdutau/synth.h>
 #include <stdutau/utautils.h>
 
+#include <hellokit/Document/TempoMap.h>
+
 namespace hello::kit {
 
     namespace fs = std::filesystem;
@@ -250,6 +252,8 @@ namespace hello::kit {
         plan.m_outputFile = options.outputFile;
         plan.m_cacheDirectory = options.cacheDirectory;
         plan.m_steps.reserve(qsizetype(params.size()));
+        plan.m_startTime = TempoMap::of(project).startTime(range.first) -
+                           (params.empty() ? 0 : params.front().first.correctPreUttr);
 
         for (size_t i = 0; i < params.size(); ++i) {
             auto [resampler, wavtool] = params[i];
