@@ -1104,11 +1104,14 @@ namespace hello::daw {
     class PianoRoll::Impl::BandGesture : public SceneGesture {
     public:
         BandGesture(PianoRoll::Impl *roll, QPointF position, Qt::KeyboardModifiers modifiers)
-            : m_roll(roll), m_origin(position), m_previous(roll->selection) {
+            : m_roll(roll), m_origin(position), m_previous(roll->selection),
+              m_previousPoints(roll->selectedPoints) {
             if (modifiers & Qt::ControlModifier) {
                 m_base = roll->selection;
+                m_basePoints = roll->selectedPoints;
             }
             roll->setSelection(m_base);
+            roll->selectPoints(m_basePoints);
         }
 
         void move(QPointF position, Qt::KeyboardModifiers modifiers) override {
@@ -1116,18 +1119,46 @@ namespace hello::daw {
             const auto rect = QRectF(m_origin, position).normalized();
             const auto timeline = m_roll->timeline;
             const auto &time = m_roll->view->timeAxis();
-            auto ids = m_base;
             const auto [begin, end] =
                 timeline->notesBetween(time.toTick(rect.left()), time.toTick(rect.right()));
+            m_roll->band = rect;
+            m_roll->view->viewport()->update();
+
+            // With the pitch shown, the points in the rectangle if there are any, among them
+            // those of the notes beside it, which may lie beyond their notes
+            if (m_roll->pitchVisible) {
+                auto points = m_basePoints;
+                bool found = false;
+                const auto refs = m_roll->notes();
+                for (int i = std::max(0, begin - 1); i < std::min(timeline->noteCount(), end + 1);
+                     ++i) {
+                    if (timeline->note(i).rest) {
+                        continue;
+                    }
+                    const auto values = m_roll->pointsOf(i);
+                    const auto list = refs.at(i).portamento();
+                    for (int j = 0; j < values.size() && j < list.size(); ++j) {
+                        if (rect.contains(m_roll->positionOf(i, j, values[j]))) {
+                            points.insert(list.at(j).id());
+                            found = true;
+                        }
+                    }
+                }
+                if (found || !m_basePoints.isEmpty()) {
+                    m_roll->selectPoints(points);
+                    return;
+                }
+            }
+
+            auto ids = m_base;
             for (int i = begin; i < end; ++i) {
                 const auto &note = timeline->note(i);
                 if (m_roll->rectOf(note.start, note.length, note.key).intersects(rect)) {
                     ids.insert(note.id);
                 }
             }
-            m_roll->band = rect;
+            m_roll->selectPoints({});
             m_roll->setSelection(ids);
-            m_roll->view->viewport()->update();
         }
 
         void release(QPointF position, Qt::KeyboardModifiers modifiers) override {
@@ -1138,6 +1169,7 @@ namespace hello::daw {
         void cancel() override {
             m_roll->clearPreview();
             m_roll->setSelection(m_previous);
+            m_roll->selectPoints(m_previousPoints);
         }
 
     private:
@@ -1145,6 +1177,8 @@ namespace hello::daw {
         QPointF m_origin;
         QSet<kit::edit::NodeId> m_base;
         QSet<kit::edit::NodeId> m_previous;
+        QSet<kit::edit::NodeId> m_basePoints;
+        QSet<kit::edit::NodeId> m_previousPoints;
     };
 
     // A drag of the pen after the last note, which draws a note there. A gap before it is filled
@@ -1449,9 +1483,9 @@ namespace hello::daw {
             return nullptr;
         }
         m_roll->finishEditing(true);
-        m_roll->selectPoints({});
         if (m_roll->tool == PenTool &&
             view()->timeAxis().toTick(position.x()) >= double(m_roll->timeline->length())) {
+            m_roll->selectPoints({});
             return std::make_unique<DrawGesture>(m_roll, position, modifiers);
         }
         return std::make_unique<BandGesture>(m_roll, position, modifiers);
@@ -1712,6 +1746,35 @@ namespace hello::daw {
             return true;
         }
         return kit::ProjectEdits::removeNotes(_impl->notes(), indices, diagnostics);
+    }
+
+    bool PianoRoll::togglePortamento(kit::DiagnosticList &diagnostics) {
+        QList<int> sung;
+        bool lacking = false;
+        for (const int index : selectedIndices()) {
+            if (_impl->timeline->note(index).rest) {
+                continue;
+            }
+            sung.push_back(index);
+            lacking = lacking || _impl->pointsOf(index).isEmpty();
+        }
+        if (sung.isEmpty()) {
+            return true;
+        }
+        QHash<int, QList<kit::PortamentoPoint>> points;
+        for (const int index : std::as_const(sung)) {
+            if (!lacking) {
+                points.insert(index, {});
+            } else if (_impl->pointsOf(index).isEmpty()) {
+                kit::PortamentoPoint before;
+                before.x = -DefaultPortamento;
+                kit::PortamentoPoint after;
+                after.x = DefaultPortamento;
+                points.insert(index, {before, after});
+            }
+        }
+        return _impl->writePoints(lacking ? tr("Add Portamento") : tr("Remove Portamento"), points,
+                                  diagnostics);
     }
 
     bool PianoRoll::transposeSelected(int semitones, kit::DiagnosticList &diagnostics) {

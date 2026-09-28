@@ -147,6 +147,10 @@ namespace hello::daw {
         bool removeSelected(kit::DiagnosticList &diagnostics);
         bool transposeSelected(int semitones, kit::DiagnosticList &diagnostics);
 
+        /// Gives each selected sung note without Mode2 points the default two, 15 ms before
+        /// and after its start at its own pitch; if every such note has points, removes them.
+        bool togglePortamento(kit::DiagnosticList &diagnostics);
+
         /// Inserts a note before the first selected note, with the key of that note and
         /// quantizedLength(), or after the last note if nothing is selected, and selects it.
         bool insertNote(kit::DiagnosticList &diagnostics);

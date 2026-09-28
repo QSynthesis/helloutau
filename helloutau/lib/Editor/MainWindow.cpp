@@ -245,6 +245,11 @@ namespace hello::daw {
                 });
             });
             addCommand(QStringLiteral("helloutau.edit.splitNote"), [this] { splitNote(); });
+            addCommand(QStringLiteral("helloutau.edit.togglePortamento"), [this] {
+                edit(tr("Portamento"), [this](kit::DiagnosticList &diagnostics) {
+                    return roll->togglePortamento(diagnostics);
+                });
+            });
             addCommand(QStringLiteral("helloutau.edit.editLyric"), [this] {
                 const auto indices = roll->selectedIndices();
                 if (!indices.isEmpty()) {
@@ -398,8 +403,9 @@ namespace hello::daw {
         void updateEditActions() {
             const int selected = int(roll->selectedIndices().size());
             for (const auto id : {"helloutau.edit.delete", "helloutau.edit.editLyric",
-                                  "helloutau.edit.transposeUp", "helloutau.edit.transposeDown",
-                                  "helloutau.edit.octaveUp", "helloutau.edit.octaveDown"}) {
+                                  "helloutau.edit.togglePortamento", "helloutau.edit.transposeUp",
+                                  "helloutau.edit.transposeDown", "helloutau.edit.octaveUp",
+                                  "helloutau.edit.octaveDown"}) {
                 actions.value(QLatin1String(id))->setEnabled(selected > 0);
             }
             actions.value(QStringLiteral("helloutau.edit.splitNote"))->setEnabled(selected == 1);

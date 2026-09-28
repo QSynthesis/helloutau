@@ -110,7 +110,8 @@
   - 右键菜单改变类型（第一点无类型，菜单项禁用）或删除该点；
   - Delete 删除选中的点，每个音符至少保留两点（不足时保留首末两点）。
 - 撤销名为「Move Pitch Points」「Insert Pitch Point」「Change Pitch Point」「Delete Pitch Points」。
-- 尚未实现：框选控制点、「开关滑音」命令。
+- 框选：显示音高时，框内有控制点则选中控制点（含相邻音符伸出的点），否则选中音符；Ctrl 加入原有选区。
+- 「编辑」菜单的「Add or Remove Portamento」：选中的有声音符中有没有控制点的，就给这些音符加上默认的两点（起点前后各 15 毫秒，高度 0）；都有控制点时全部清除。撤销名为「Add Portamento」「Remove Portamento」。
 
 ### 第 3 步：颤音的编辑
 

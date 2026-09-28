@@ -640,6 +640,65 @@ private Q_SLOTS:
         QCOMPARE(pointsOfLi(session).size(), 2);
     }
 
+    // With the pitch shown, a rectangle selects the points in it if there are any, and the
+    // notes otherwise; Ctrl adds to the selection.
+    void a_rectangle_selects_points_before_notes() {
+        kit::ProjectSession session(bentNotes());
+        PianoRoll roll(&session);
+        showExactly(roll);
+        const auto band = [&roll](QPoint from, QPoint to, Qt::KeyboardModifiers modifiers = {}) {
+            const auto viewport = roll.view()->viewport();
+            QTest::mousePress(viewport, Qt::LeftButton, modifiers, from);
+            QTest::mouseMove(viewport, (from + to) / 2);
+            QTest::mouseMove(viewport, to);
+            QTest::mouseRelease(viewport, Qt::LeftButton, modifiers, to);
+        };
+
+        // Over the first two points of li, which also touches la
+        band(pointOfLi(roll, -80, 300), pointOfLi(roll, 20, -300));
+        QCOMPARE(roll.selectedPoints(), (QList<std::pair<int, int>>{
+                                            {1, 0},
+                                            {1, 1}
+        }));
+        QVERIFY(roll.selectedIndices().isEmpty());
+
+        band(pointOfLi(roll, 40, 170), pointOfLi(roll, 80, -50), Qt::ControlModifier);
+        QCOMPARE(roll.selectedPoints(), (QList<std::pair<int, int>>{
+                                            {1, 0},
+                                            {1, 1},
+                                            {1, 2}
+        }));
+
+        // Over la alone, which has no points
+        band(pointOfLi(roll, -400, -120), pointOfLi(roll, -300, -280));
+        QVERIFY(roll.selectedPoints().isEmpty());
+        QCOMPARE(roll.selectedIndices(), QList<int>{0});
+    }
+
+    // The default two points go to the selected notes without points; once all have points,
+    // the command removes them.
+    void portamento_is_added_and_removed() {
+        kit::ProjectSession session(bentNotes());
+        PianoRoll roll(&session);
+        show(roll);
+        roll.setSelectedIndices({0, 1});
+
+        kit::DiagnosticList diagnostics;
+        QVERIFY(roll.togglePortamento(diagnostics));
+        auto notes = session.snapshot().tracks[0].notes;
+        QCOMPARE(notes[0].portamento.size(), 2);
+        QCOMPARE(notes[0].portamento[0].x, -15.0);
+        QCOMPARE(notes[0].portamento[1].x, 15.0);
+        QCOMPARE(notes[1].portamento.size(), 3);
+        QCOMPARE(session.undoMessage(), PianoRoll::tr("Add Portamento"));
+
+        QVERIFY(roll.togglePortamento(diagnostics));
+        notes = session.snapshot().tracks[0].notes;
+        QVERIFY(notes[0].portamento.isEmpty());
+        QVERIFY(notes[1].portamento.isEmpty());
+        QCOMPARE(session.undoMessage(), PianoRoll::tr("Remove Portamento"));
+    }
+
     // The distance from the portamento within which a double click inserts a point is a
     // property that a style sheet sets; beyond it the double click edits the lyric.
     void the_distance_to_the_portamento_is_a_property() {
