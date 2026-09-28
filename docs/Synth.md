@@ -81,7 +81,9 @@ SynthRunner                 纯虚，render(plan, engines, observer, diagnostics
 
 原样复刻模式**必须由用户在明确的提示中选择**，提示须说明这意味着由工程文件决定执行哪些命令。不提供「记住我的选择」一类的全局开关。
 
-提供两种模式而非只提供安全模式，是因为 moresampler 这类引擎会解析脚本文本，转义改变了文本，可能导致这类引擎出错。**这一点尚未实测。** 若遇到此类情况，即可获得证据；在此之前一律使用安全模式。
+提供两种模式而非只提供安全模式，是因为 moresampler 这类引擎会解析脚本文本，转义改变了文本，可能导致这类引擎出错。
+
+这一点已有一处实证（[`claude/moresampler-temp-bat.md`](claude/moresampler-temp-bat.md)）：moresampler 只认 UTAU 写法的 `@set temp=…` 一行，`@set "temp=…"` 使它判断不出最后一个音符，不写出最终的 wav。因此安全模式下**只有这一行**按 UTAU 的写法不加引号，其中 cmd 的运算符 `& | < > ^ ( )` 各以 `^` 转义、`%` 加倍，读出的值与原值相同，工程数据仍不能成为命令。其余赋值仍用 `set "name=value"`。
 
 ## 二、多线程阻塞
 

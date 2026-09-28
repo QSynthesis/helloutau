@@ -26,5 +26,5 @@ UTAU 的缓存文件名以音符序号开头（如 `12_あ_C4_abcdef.wav`），�
 ## 对 helloutau 的影响
 
 - `ClassicSynthRunner` 的安全模式（`Quoting::Escaped`）写的是 `@set "temp=..."`，**不匹配**，因此以 moresampler 为 wavtool 时不会进入 mode 5，渲染不出最终的 wav。`docs/Synth.md` 中「转义改变了文本，可能导致这类引擎出错，尚未实测」由此确认。
-- 修正方向：`temp` 一行写成 `@set temp=<值>`，以 `^` 转义 cmd 的特殊字符并把 `%` 加倍。moresampler 只取最后一个分隔符之后的文件名，且只比较第一个 `.` 或 `_` 之前的部分，目录中的 `^` 不影响判断。
+- 已修正：`temp` 一行写成 `@set temp=<值>`，以 `^` 转义 cmd 的特殊字符并把 `%` 加倍。cmd 读出的值与原值相同，moresampler 读到的是 cmd 执行前的原文，但它只取最后一个分隔符之后的文件名，且只比较第一个 `.` 或 `_` 之前的部分（音符序号），`^` 不影响判断。
 - 在 Linux 上经 moreloader 运行时，脚本是 `temp.sh`，moresampler 找不到 `temp.bat`。要么在 moresampler 的工作目录另放一个不执行的 `temp.bat`（只需 `@set temp=` 行正确），要么在最后一个有声音符的 wavtool 调用末尾加 `LAST_NOTE`。

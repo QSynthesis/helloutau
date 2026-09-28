@@ -180,6 +180,60 @@ private Q_SLOTS:
         }
     }
 
+    // The fragment is assigned in the form UTAU writes, which moresampler reads from the script,
+    // and still no operator in it reaches cmd: read as cmd reads it, the line sets exactly the
+    // fragment. The lyric is part of the fragment name.
+    void the_fragment_is_set_as_utau_writes_it_data() {
+        QTest::addColumn<QString>("lyric");
+
+        QTest::newRow("plain") << QStringLiteral("a");
+        QTest::newRow("ampersand") << QStringLiteral("a&whoami");
+        QTest::newRow("parenthesis") << QStringLiteral("a)&whoami&(");
+        QTest::newRow("caret") << QStringLiteral("a^&whoami");
+        QTest::newRow("variable") << QStringLiteral("%PATH%");
+    }
+
+    void the_fragment_is_set_as_utau_writes_it() {
+        QFETCH(QString, lyric);
+
+        const auto plan = planFor(lyric, QString());
+        QVERIFY(plan.has_value());
+
+        ClassicSynthRunner runner;
+        runner.shell = ClassicSynthRunner::ScriptShell::Batch;
+        DiagnosticList diagnostics;
+        const auto written = runner.scripts(*plan, engines(), diagnostics);
+        QVERIFY(written.has_value());
+
+        QString line;
+        for (const auto &l : written->first.split(QLatin1String("\r\n"))) {
+            if (l.startsWith(QLatin1String("@set temp="))) {
+                line = l;
+            }
+        }
+        QVERIFY2(!line.isEmpty(), qPrintable(written->first));
+
+        // A caret makes the next character literal, a pair of percent signs is one, and an
+        // operator without a caret would end the assignment.
+        const auto raw = line.mid(QLatin1String("@set temp=").size());
+        QString value;
+        for (qsizetype i = 0; i < raw.size(); ++i) {
+            const QChar c = raw.at(i);
+            if (c == QLatin1Char('^')) {
+                QVERIFY(i + 1 < raw.size());
+                value += raw.at(++i);
+            } else if (c == QLatin1Char('%')) {
+                QVERIFY2(i + 1 < raw.size() && raw.at(i + 1) == QLatin1Char('%'), qPrintable(raw));
+                value += c;
+                ++i;
+            } else {
+                QVERIFY2(!QLatin1String("&|<>()\"").contains(c), qPrintable(raw));
+                value += c;
+            }
+        }
+        QCOMPARE(value, plan->steps().first().resamplerArguments.at(1));
+    }
+
     // The mode for an engine that requires the script text to match UTAU exactly. It is unsafe,
     // and the test asserts this explicitly.
     void the_verbatim_mode_writes_what_it_was_given() {

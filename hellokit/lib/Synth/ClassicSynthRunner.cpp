@@ -119,6 +119,37 @@ namespace hello::kit {
                        QLatin1Char('\'');
             }
 
+            /// One assignment in the form UTAU writes, set name=value without quotes, for a
+            /// value that an engine reads from the script text.
+            ///
+            /// moresampler reads temp.bat to determine whether the current call is the last one
+            /// (the Wavtool page cited in docs/Synth.md), so the fragment is written as UTAU
+            /// writes it. Outside quotes cmd parses operators, so each of them is escaped with a
+            /// caret, which makes the next character literal, and every percent sign is doubled.
+            /// A POSIX shell has no such reader, and the value is quoted as by assign().
+            ///
+            /// \return the assignment, or \c std::nullopt if the value cannot be written
+            std::optional<QString> assignUnquoted(const char *name, const QString &value) const {
+                if (!_batch || _quoting == Quoting::Verbatim) {
+                    return assign(name, value);
+                }
+                if (!isWritable(value)) {
+                    return std::nullopt;
+                }
+                QString escaped;
+                for (const QChar c : value) {
+                    if (c == QLatin1Char('%')) {
+                        escaped += QLatin1String("%%");
+                        continue;
+                    }
+                    if (QLatin1String("&|<>^()").contains(c)) {
+                        escaped += QLatin1Char('^');
+                    }
+                    escaped += c;
+                }
+                return QLatin1String("@set ") + QLatin1String(name) + QLatin1Char('=') + escaped;
+            }
+
             /// One argument as written onto a command line in the script.
             ///
             /// Quoted only if necessary. UTAU quotes paths and leaves numbers unquoted, and
@@ -292,8 +323,10 @@ namespace hello::kit {
                 }
             }
 
-            void set(const char *name, const QString &value, std::optional<int> noteIndex = {}) {
-                const auto written = _syntax.assign(name, value);
+            void set(const char *name, const QString &value, std::optional<int> noteIndex = {},
+                     bool unquoted = false) {
+                const auto written =
+                    unquoted ? _syntax.assignUnquoted(name, value) : _syntax.assign(name, value);
                 if (!written) {
                     fail(_diagnostics,
                          ClassicSynthRunner::tr("\"%1\" contains a quotation mark or a line break, "
@@ -391,7 +424,8 @@ namespace hello::kit {
             script.set("env", joined(w.mid(4)), step.noteIndex);
             script.set("stp", w.at(2), step.noteIndex);
             script.set("vel", r.at(3), step.noteIndex);
-            script.set("temp", r.at(1), step.noteIndex);
+            // As UTAU writes it, for the engines that read the script
+            script.set("temp", r.at(1), step.noteIndex, true);
             script.line(syntax.echo(QStringLiteral("(%1/%2)").arg(done).arg(total)));
             script.line(syntax.callHelper(
                 joined(quotedAll(syntax, {r.at(0), r.at(2), w.at(3), r.at(5), r.at(6), r.at(7),
