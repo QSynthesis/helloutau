@@ -1148,6 +1148,60 @@ private Q_SLOTS:
         QVERIFY(notes[2].envelope);
     }
 
+    // Copied notes are pasted as they are before the first selected note, or after the last
+    // note without a selection, in one step, and become the selection.
+    void notes_are_pasted_before_the_selection() {
+        kit::ProjectSession session(parameterSource());
+        PianoRoll roll(&session);
+        show(roll);
+        const auto source = session.snapshot().tracks[0].notes[0];
+        const auto lyrics = [&session] {
+            QStringList result;
+            const auto project = session.snapshot();
+            for (const auto &note : project.tracks[0].notes) {
+                result.push_back(note.lyric);
+            }
+            return result;
+        };
+
+        roll.setSelectedIndices({0, 1});
+        QVERIFY(roll.copySelected());
+        roll.setSelectedIndices({2, 3});
+        kit::DiagnosticList diagnostics;
+        QVERIFY(roll.pasteNotes(diagnostics));
+        QCOMPARE(lyrics(),
+                 (QStringList{QStringLiteral("la"), QStringLiteral("li"), QStringLiteral("la"),
+                              QStringLiteral("li"), QStringLiteral("lu"), QStringLiteral("R")}));
+        QCOMPARE(roll.selectedIndices(), (QList<int>{2, 3}));
+        QCOMPARE(session.snapshot().tracks[0].notes[2].portamento, source.portamento);
+        QCOMPARE(session.snapshot().tracks[0].notes[2].vibrato, source.vibrato);
+        QCOMPARE(session.currentStep(), 1);
+        QCOMPARE(session.undoMessage(), PianoRoll::tr("Paste"));
+
+        roll.setSelectedIndices({});
+        QVERIFY(roll.pasteNotes(diagnostics));
+        QCOMPARE(lyrics().mid(6), (QStringList{QStringLiteral("la"), QStringLiteral("li")}));
+        QCOMPARE(roll.selectedIndices(), (QList<int>{6, 7}));
+    }
+
+    // The depth of the vibrato of the selected notes is scaled, and the other notes keep theirs.
+    void the_pitch_of_the_selection_is_scaled() {
+        auto project = parameterSource();
+        project.tracks[0].notes[1].vibrato = VibratoDialog::defaultVibrato();
+        kit::ProjectSession session(project);
+        PianoRoll roll(&session);
+        show(roll);
+
+        roll.setSelectedIndices({0, 3});
+        kit::DiagnosticList diagnostics;
+        QVERIFY(roll.scalePitch(1, 2, diagnostics));
+        const auto notes = session.snapshot().tracks[0].notes;
+        const double depth = VibratoDialog::defaultVibrato().amplitude;
+        QCOMPARE(notes[0].vibrato->amplitude, depth * 2);
+        QCOMPARE(notes[1].vibrato->amplitude, depth);
+        QCOMPARE(session.undoMessage(), kit::ProjectEdits::tr("Scale Pitch"));
+    }
+
     // The parameter area and the roll scroll together.
     void the_parameter_area_follows_the_roll() {
         kit::ProjectSession session(envelopedNote());

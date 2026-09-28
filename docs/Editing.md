@@ -107,7 +107,7 @@ ID **不保存到文件**。打开文件时重新生成，因为它是会话内�
 命令（文本）        note set 0 12 lyric a
       │            仅为接口，没有独有的能力
       ▼
-领域函数            transpose / quantize / insertNote / splitNote …
+领域函数            transpose / quantize / insertNotes / splitNote …
       │            数量多；组合下一层；每次调用包含在一个事务中
       ▼
 节点操作            set 槽位 / insert / remove / move
@@ -172,7 +172,7 @@ note.userData().remove(QStringLiteral("$Custom"));
 
 ### 领域函数：数量多，组合节点操作
 
-`insertNote`、`splitNote`、`transpose`、`quantize`、`setTempoAt`、`normalizeEnvelopes` 等，数量不设上限，因为它们是产品功能。每个领域函数将若干节点操作包含在**一个事务**中，因此构成**一个撤销步骤**。
+`insertNotes`、`splitNote`、`transpose`、`quantize`、`setTempoAt`、`normalizeEnvelopes` 等，数量不设上限，因为它们是产品功能。每个领域函数将若干节点操作包含在**一个事务**中，因此构成**一个撤销步骤**。
 
 领域函数不自行记录变更，其调用的节点操作已经记录。
 
@@ -182,7 +182,7 @@ note.userData().remove(QStringLiteral("$Custom"));
 |---|---|
 | `transpose` | 给定音符的 `noteNum` 各加一个半音数，休止符同样移调 |
 | `splitNote` | 在音符内部的某个 tick 处拆分。原音符保留全部字段并缩短，其后插入一个新音符：剩余长度、相同的 `noteNum`、默认歌词，不带其他字段 |
-| `insertNote` | 在某个音符之前或最后一个音符之后插入，其后的音符整体后移，不切分任何音符 |
+| `insertNotes` | 在某个音符之前或最后一个音符之后按顺序插入若干音符，其后的音符整体后移，不切分任何音符；各字段原样写入，包括速度。用于插入音符、画笔与 [`Tuning.md`](Tuning.md) 第 6 步的粘贴 |
 | `setTempo` | 写入音符的速度，即使与该处已生效的速度相同也写入。速度从该音符起生效，直至下一个带速度的音符，后续音符的生效速度是由此推导的状态，不写入工程 |
 | `removeNotes` | 删除给定下标的音符（顺序任意），其后的音符前移。被删除音符的全部字段随之删除，包括速度，因此其前生效的速度延续下去 |
 | `setLength` | 设定一个音符的长度，其后的音符随之前移或后移 |
@@ -190,6 +190,7 @@ note.userData().remove(QStringLiteral("$Custom"));
 | `setPortamento` | 替换一个音符的 Mode2 控制点，只写入有差别的点，其余的点保留其节点；多出的点从末尾删除，新增的点追加在末尾。控制点须保持顺序（自第二点起不早于前一点）。用于 [`Tuning.md`](Tuning.md) 第 2 步 |
 | `setVibrato` | 把若干音符的颤音设为同一值，或全部去掉。用于 [`Tuning.md`](Tuning.md) 第 3 步 |
 | `setEnvelope` | 把若干音符的包络设为同一值，或全部去掉（即 UTAU 的默认包络）。用于 [`Tuning.md`](Tuning.md) 第 4 步 |
+| `scalePitch` | 把若干音符各控制点的高度乘以一个倍数、颤音深度乘以另一个倍数，取整到音分；倍数不得为负。用于 [`Tuning.md`](Tuning.md) 第 6 步 |
 
 ## 六种变更形状
 
@@ -275,7 +276,7 @@ note insert /tracks/0/notes 12 {"lyric": "a", "length": 480, "noteNum": 60}
 | `move <路径> <下标> <数量> <目标位置>` | 列表 | 目标位置是移动后第一项的下标 |
 | `insert` / `replace <路径> <下标> <数值>…` | 数组 | 插入或覆盖，覆盖可越过末尾 |
 
-**领域命令**（`ProjectCommands.h`）每个领域函数一条，形式为 `<名词> <动词> [参数…]`：`note transpose <半音数> <音符路径>…`、`note split <音符列表路径> <下标> <tick>`、`note insert <音符列表路径> <下标> <音符>`、`note tempo <音符路径> <速度>`、`note remove <音符列表路径> <下标>…`、`note length <音符路径> <tick>`、`note move <音符列表路径> <下标> <个数> <目标下标>`、`note portamento <音符路径> <控制点数组>`、`note vibrato <颤音或 null> <音符路径>…`、`note envelope <包络或 null> <音符路径>…`。音源的领域命令（`VoiceBankCommands.h`）：`entry set <条目路径> <条目>`、`entry insert <目录路径> <条目>…`、`entry include <目录路径> <文件名>…`、`entry remove <目录路径> <下标>…`、`prefix set <音高> <前缀>`、`prefix remove <音高>`、`directory charset <目录路径> <编码名>`。插入的条目按文件名排入，不由命令指定位置。
+**领域命令**（`ProjectCommands.h`）每个领域函数一条，形式为 `<名词> <动词> [参数…]`：`note transpose <半音数> <音符路径>…`、`note split <音符列表路径> <下标> <tick>`、`note insert <音符列表路径> <下标> <音符>…`、`note tempo <音符路径> <速度>`、`note remove <音符列表路径> <下标>…`、`note length <音符路径> <tick>`、`note move <音符列表路径> <下标> <个数> <目标下标>`、`note portamento <音符路径> <控制点数组>`、`note vibrato <颤音或 null> <音符路径>…`、`note envelope <包络或 null> <音符路径>…`、`note scale <控制点倍数> <颤音倍数> <音符路径>…`。音源的领域命令（`VoiceBankCommands.h`）：`entry set <条目路径> <条目>`、`entry insert <目录路径> <条目>…`、`entry include <目录路径> <文件名>…`、`entry remove <目录路径> <下标>…`、`prefix set <音高> <前缀>`、`prefix remove <音高>`、`directory charset <目录路径> <编码名>`。插入的条目按文件名排入，不由命令指定位置。
 
 **查询只读取文档，不修改文档。** 目前只有一个：`get <路径>`，返回路径所指内容的 JSON，写法与命令的参数、变更日志相同：记录按其文档的写法（如音符、oto 条目），文档未定义写法的记录（如工程的根、音源的目录）写成各字段组成的对象；列表是数组，项在数组中的位置就是命令所用的下标；映射是对象，数组是数字的数组；空的值、缺席的记录或映射写作 `null`。不公开的字段既不能寻址，也不输出。查询不开事务，不产生撤销步骤，由 `ProjectCommands::query()` 与 `VoiceBankCommands::query()` 执行；交给 `execute()` 时被拒绝。例如 `entry remove` 所需的下标由 `get /directories/1/otoEntries` 查得。
 

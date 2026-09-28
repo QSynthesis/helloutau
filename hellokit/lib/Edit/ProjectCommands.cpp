@@ -114,8 +114,8 @@ namespace hello::kit {
 
         bool insertCommand(ProjectSession &session, const Arguments &arguments,
                            DiagnosticList &diagnostics) {
-            if (arguments.size() != 3) {
-                return usage(diagnostics, "note insert <notes> <index> <note>");
+            if (arguments.size() < 3) {
+                return usage(diagnostics, "note insert <notes> <index> <note>...");
             }
             const auto notes = notesAt(session, arguments[0], diagnostics);
             const auto index = edit::NodeCommands::integerOf(
@@ -123,18 +123,21 @@ namespace hello::kit {
             if (!notes || !index) {
                 return false;
             }
-            const auto json = edit::CommandSyntax::valueOf(arguments[2]);
-            if (!json.isObject()) {
-                return fail(diagnostics, ProjectCommands::tr("The note must be an object."));
+            QList<Note> inserted;
+            for (const auto &argument : arguments.mid(2)) {
+                const auto json = edit::CommandSyntax::valueOf(argument);
+                if (!json.isObject()) {
+                    return fail(diagnostics, ProjectCommands::tr("The note must be an object."));
+                }
+                // Converted through a tree, which checks each field against the field table.
+                const auto tree = edit::NodeCommands::treeOf(*projectRecordOf(NoteType),
+                                                             json.toObject(), diagnostics);
+                if (!tree) {
+                    return false;
+                }
+                inserted.push_back(edit::fromTree<Note>(tree.get()));
             }
-            // Converted through a tree, which checks each field against the field table.
-            const auto tree = edit::NodeCommands::treeOf(*projectRecordOf(NoteType),
-                                                         json.toObject(), diagnostics);
-            if (!tree) {
-                return false;
-            }
-            return ProjectEdits::insertNote(*notes, *index, edit::fromTree<Note>(tree.get()),
-                                            diagnostics);
+            return ProjectEdits::insertNotes(*notes, *index, inserted, diagnostics);
         }
 
         bool tempoCommand(ProjectSession &session, const Arguments &arguments,
@@ -285,6 +288,30 @@ namespace hello::kit {
             return ProjectEdits::setEnvelope(notes, envelope, diagnostics);
         }
 
+        bool scaleCommand(ProjectSession &session, const Arguments &arguments,
+                          DiagnosticList &diagnostics) {
+            if (arguments.size() < 3) {
+                return usage(diagnostics,
+                             "note scale <portamento factor> <vibrato factor> <note>...");
+            }
+            const auto portamento = edit::NodeCommands::numberOf(
+                arguments[0], ProjectCommands::tr("portamento factor"), diagnostics);
+            const auto vibrato = edit::NodeCommands::numberOf(
+                arguments[1], ProjectCommands::tr("vibrato factor"), diagnostics);
+            if (!portamento || !vibrato) {
+                return false;
+            }
+            QList<NoteRef> notes;
+            for (const auto &argument : arguments.mid(2)) {
+                const auto note = noteAt(session, argument, diagnostics);
+                if (!note) {
+                    return false;
+                }
+                notes.push_back(*note);
+            }
+            return ProjectEdits::scalePitch(notes, *portamento, *vibrato, diagnostics);
+        }
+
         using DomainCommand = bool (*)(ProjectSession &, const Arguments &, DiagnosticList &);
 
         // The domain commands, each with the function of ProjectEdits that it calls.
@@ -297,7 +324,7 @@ namespace hello::kit {
         constexpr NoteCommand noteCommands[] = {
             {"transpose",  transposeCommand,  "transpose"    },
             {"split",      splitCommand,      "splitNote"    },
-            {"insert",     insertCommand,     "insertNote"   },
+            {"insert",     insertCommand,     "insertNotes"  },
             {"tempo",      tempoCommand,      "setTempo"     },
             {"remove",     removeCommand,     "removeNotes"  },
             {"length",     lengthCommand,     "setLength"    },
@@ -305,6 +332,7 @@ namespace hello::kit {
             {"portamento", portamentoCommand, "setPortamento"},
             {"vibrato",    vibratoCommand,    "setVibrato"   },
             {"envelope",   envelopeCommand,   "setEnvelope"  },
+            {"scale",      scaleCommand,      "scalePitch"   },
         };
 
         bool run(ProjectSession &session, const Arguments &arguments, DiagnosticList &diagnostics) {
@@ -320,7 +348,7 @@ namespace hello::kit {
                 return fail(diagnostics,
                             ProjectCommands::tr("The command note requires a verb: transpose, "
                                                 "split, insert, tempo, remove, length, move, "
-                                                "portamento, vibrato or envelope."));
+                                                "portamento, vibrato, envelope or scale."));
             }
             const auto verb = arguments[1].text();
             for (const auto &command : noteCommands) {

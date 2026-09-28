@@ -29,6 +29,7 @@
 #include <helloutau/Editor/MainWindow.h>
 #include <helloutau/Editor/PianoRoll.h>
 #include <helloutau/Editor/PasteParametersDialog.h>
+#include <helloutau/Editor/ScalePitchDialog.h>
 #include <helloutau/Editor/VibratoDialog.h>
 #include <helloutau/Editor/VoiceBankCharsetDialog.h>
 
@@ -277,15 +278,23 @@ private Q_SLOTS:
         QVERIFY(window);
         auto roll = qobject_cast<PianoRoll *>(window->centralWidget());
         QGuiApplication::clipboard()->clear();
-        const auto paste = actionNamed(window, QStringLiteral("Paste &Parameters..."));
-        QVERIFY(paste);
+        const auto paste = actionNamed(window, QStringLiteral("Paste Para&meters..."));
+        const auto pasteNotes = actionNamed(window, QStringLiteral("&Paste"));
+        QVERIFY(paste && pasteNotes);
 
         roll->selectAll();
         QVERIFY(!paste->isEnabled());
+        QVERIFY(!pasteNotes->isEnabled());
         kit::DiagnosticList diagnostics;
         roll->toggleVibrato(diagnostics);
         actionNamed(window, QStringLiteral("&Copy"))->trigger();
         QVERIFY(paste->isEnabled());
+        QVERIFY(pasteNotes->isEnabled());
+        // Notes are pasted after the last note without a selection, parameters onto none.
+        roll->setSelectedIndices({});
+        QVERIFY(pasteNotes->isEnabled());
+        QVERIFY(!paste->isEnabled());
+        roll->selectAll();
 
         roll->toggleVibrato(diagnostics);
         QVERIFY(!window->document()->session()->snapshot().tracks[0].notes[0].vibrato);
@@ -299,6 +308,35 @@ private Q_SLOTS:
         });
         paste->trigger();
         QVERIFY(window->document()->session()->snapshot().tracks[0].notes[0].vibrato);
+    }
+
+    // Scale Pitch scales the vibrato of the selection by the factor entered in its dialog.
+    void the_pitch_is_scaled_through_the_menu() {
+        const auto e = editor();
+        const auto window = e->openFile(savedProject(m_dir, "s.usth"));
+        QVERIFY(window);
+        auto roll = qobject_cast<PianoRoll *>(window->centralWidget());
+        const auto scale = actionNamed(window, QStringLiteral("Scale Pitc&h..."));
+        QVERIFY(scale);
+        QVERIFY(!scale->isEnabled());
+
+        roll->selectAll();
+        QVERIFY(scale->isEnabled());
+        kit::DiagnosticList diagnostics;
+        roll->toggleVibrato(diagnostics);
+        const auto depth = [window] {
+            return window->document()->session()->snapshot().tracks[0].notes[0].vibrato->amplitude;
+        };
+        const double before = depth();
+        QTimer::singleShot(0, [] {
+            const auto dialog = qobject_cast<ScalePitchDialog *>(QApplication::activeModalWidget());
+            QVERIFY(dialog);
+            QCOMPARE(dialog->vibratoBox()->value(), 100.0);
+            dialog->vibratoBox()->setValue(200);
+            dialog->accept();
+        });
+        scale->trigger();
+        QCOMPARE(depth(), before * 2);
     }
 
     void nothing_chosen_pastes_nothing() {

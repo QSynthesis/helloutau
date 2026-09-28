@@ -344,6 +344,29 @@ private Q_SLOTS:
         verifyRefused(session, QStringLiteral("note vibrato null"));
     }
 
+    void note_insert_adds_several_notes_in_their_order() {
+        ProjectSession session(richProject());
+        QVERIFY(
+            run(session, QStringLiteral("note insert /tracks/0/notes 1 "
+                                        "{\"lyric\": \"ka\", \"length\": 240, \"noteNum\": 62} "
+                                        "{\"lyric\": \"sa\", \"length\": 120, \"noteNum\": 64}")));
+        QCOMPARE(noteAt(session, 1).lyric, QStringLiteral("ka"));
+        QCOMPARE(noteAt(session, 2).lyric, QStringLiteral("sa"));
+        QCOMPARE(session.currentStep(), 1);
+        verifyRefused(session, QStringLiteral("note insert /tracks/0/notes 0 {\"lyric\": \"ka\", "
+                                              "\"length\": 240, \"noteNum\": 62} ka"));
+    }
+
+    void note_scale_scales_the_pitch() {
+        ProjectSession session(richProject());
+        QVERIFY(run(session, QStringLiteral("note scale 2 0.5 /tracks/0/notes/0")));
+        QCOMPARE(noteAt(session, 0).portamento[1].y, -10.0);
+        QCOMPARE(noteAt(session, 0).vibrato->amplitude, 18.0);
+        verifyRefused(session, QStringLiteral("note scale -1 1 /tracks/0/notes/0"));
+        verifyRefused(session, QStringLiteral("note scale 1 /tracks/0/notes/0"));
+        verifyRefused(session, QStringLiteral("note scale 1 1"));
+    }
+
     // Acceptance criteria 3 and 4 of docs/Editing.md: undoing every command restores the
     // project, redoing every command restores the edited project, and the same commands produce
     // the same changes in another session.
@@ -502,15 +525,15 @@ private Q_SLOTS:
     }
 
     void names_lists_every_command() {
-        QCOMPARE(
-            ProjectCommands::names(),
-            QStringList({QStringLiteral("set"), QStringLiteral("insert"), QStringLiteral("remove"),
-                         QStringLiteral("move"), QStringLiteral("replace"),
-                         QStringLiteral("note transpose"), QStringLiteral("note split"),
-                         QStringLiteral("note insert"), QStringLiteral("note tempo"),
-                         QStringLiteral("note remove"), QStringLiteral("note length"),
-                         QStringLiteral("note move"), QStringLiteral("note portamento"),
-                         QStringLiteral("note vibrato"), QStringLiteral("note envelope")}));
+        QCOMPARE(ProjectCommands::names(),
+                 QStringList({QStringLiteral("set"), QStringLiteral("insert"),
+                              QStringLiteral("remove"), QStringLiteral("move"),
+                              QStringLiteral("replace"), QStringLiteral("note transpose"),
+                              QStringLiteral("note split"), QStringLiteral("note insert"),
+                              QStringLiteral("note tempo"), QStringLiteral("note remove"),
+                              QStringLiteral("note length"), QStringLiteral("note move"),
+                              QStringLiteral("note portamento"), QStringLiteral("note vibrato"),
+                              QStringLiteral("note envelope"), QStringLiteral("note scale")}));
     }
 };
 

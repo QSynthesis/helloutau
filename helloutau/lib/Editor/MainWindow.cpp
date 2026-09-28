@@ -40,6 +40,7 @@
 #include "PianoRoll.h"
 #include "Playback.h"
 #include "PasteParametersDialog.h"
+#include "ScalePitchDialog.h"
 #include "SettingsDialog.h"
 #include "VibratoDialog.h"
 #include "VoiceBankCharsetDialog.h"
@@ -307,8 +308,14 @@ namespace hello::daw {
                 roll->copySelected();
                 updateEditActions();
             });
+            addCommand(QStringLiteral("helloutau.edit.paste"), [this] {
+                edit(tr("Paste"), [this](kit::DiagnosticList &diagnostics) {
+                    return roll->pasteNotes(diagnostics);
+                });
+            });
             addCommand(QStringLiteral("helloutau.edit.pasteParameters"),
                        [this] { pasteParameters(); });
+            addCommand(QStringLiteral("helloutau.edit.scalePitch"), [this] { scalePitch(); });
             const std::pair<const char *, PianoRoll::Parameters> resets[] = {
                 {"helloutau.edit.resetPortamento", PianoRoll::PortamentoParameter},
                 {"helloutau.edit.resetVibratos",   PianoRoll::VibratoParameter   },
@@ -489,15 +496,18 @@ namespace hello::daw {
             const int selected = int(roll->selectedIndices().size());
             for (const auto id : {"helloutau.edit.delete", "helloutau.edit.editLyric",
                                   "helloutau.edit.togglePortamento", "helloutau.edit.toggleVibrato",
-                                  "helloutau.edit.editVibrato", "helloutau.edit.crossfadeP2P3",
-                                  "helloutau.edit.crossfadeP1P4", "helloutau.edit.copy",
-                                  "helloutau.edit.transposeUp", "helloutau.edit.transposeDown",
-                                  "helloutau.edit.octaveUp", "helloutau.edit.octaveDown"}) {
+                                  "helloutau.edit.editVibrato", "helloutau.edit.scalePitch",
+                                  "helloutau.edit.crossfadeP2P3", "helloutau.edit.crossfadeP1P4",
+                                  "helloutau.edit.copy", "helloutau.edit.transposeUp",
+                                  "helloutau.edit.transposeDown", "helloutau.edit.octaveUp",
+                                  "helloutau.edit.octaveDown"}) {
                 actions.value(QLatin1String(id))->setEnabled(selected > 0);
             }
             actions.value(QStringLiteral("helloutau.edit.splitNote"))->setEnabled(selected == 1);
+            const bool copied = !PianoRoll::copiedNotes().isEmpty();
+            actions.value(QStringLiteral("helloutau.edit.paste"))->setEnabled(copied);
             actions.value(QStringLiteral("helloutau.edit.pasteParameters"))
-                ->setEnabled(selected > 0 && !PianoRoll::copiedNotes().isEmpty());
+                ->setEnabled(selected > 0 && copied);
             // Delete also removes the selected pitch points.
             if (!roll->selectedPoints().isEmpty()) {
                 actions.value(QStringLiteral("helloutau.edit.delete"))->setEnabled(true);
@@ -531,6 +541,21 @@ namespace hello::daw {
             kit::DiagnosticList diagnostics;
             roll->pasteParameters(pastedParameters, diagnostics);
             DiagnosticBox::show(&decl, tr("Paste Parameters"), diagnostics);
+        }
+
+        // Scales the pitch of the selected sung notes by the factors that the user enters.
+        void scalePitch() {
+            stdc_decl_t;
+            if (roll->lyricEditor()->isVisible()) {
+                return;
+            }
+            ScalePitchDialog dialog(&decl);
+            if (dialog.exec() != QDialog::Accepted) {
+                return;
+            }
+            kit::DiagnosticList diagnostics;
+            roll->scalePitch(dialog.portamento(), dialog.vibrato(), diagnostics);
+            DiagnosticBox::show(&decl, tr("Scale Pitch"), diagnostics);
         }
 
         // Sets the vibrato of the selected sung notes to one that the user enters, starting from

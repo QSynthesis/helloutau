@@ -41,11 +41,13 @@ namespace hello::kit {
         Q_INVOKABLE static bool splitNote(const NoteListRef &notes, int index, int ticks,
                                           DiagnosticList &diagnostics);
 
-        /// Inserts \a note before the note at \a index of \a notes, or after the last note if
-        /// \a index is the number of notes. The following notes start later by the length of
-        /// \a note. No note is divided.
-        Q_INVOKABLE static bool insertNote(const NoteListRef &notes, int index, const Note &note,
-                                           DiagnosticList &diagnostics);
+        /// Inserts \a inserted in their order before the note at \a index of \a notes, or after
+        /// the last note if \a index is the number of notes. The following notes start later by
+        /// the length of \a inserted. No note is divided. Every field of an inserted note is
+        /// written as it is, its tempo included.
+        Q_INVOKABLE static bool insertNotes(const NoteListRef &notes, int index,
+                                            const QList<Note> &inserted,
+                                            DiagnosticList &diagnostics);
 
         /// Sets the tempo of \a note, which applies from the note until the next note with a
         /// tempo. The tempo is written even if it equals the tempo already in effect.
@@ -92,6 +94,12 @@ namespace hello::kit {
         Q_INVOKABLE static bool setEnvelope(const QList<NoteRef> &notes,
                                             const std::optional<Envelope> &envelope,
                                             DiagnosticList &diagnostics);
+
+        /// Multiplies the height of each Mode2 point of each of \a notes by \a portamento, and
+        /// the depth of its vibrato by \a vibrato. The results are rounded to whole cents. The
+        /// factors must not be negative. The notes must belong to one session.
+        Q_INVOKABLE static bool scalePitch(const QList<NoteRef> &notes, double portamento,
+                                           double vibrato, DiagnosticList &diagnostics);
     };
 
 }

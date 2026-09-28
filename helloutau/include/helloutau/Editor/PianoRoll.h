@@ -216,9 +216,17 @@ namespace hello::daw {
         /// selected, which leaves the defaults of UTAU: no points, no vibrato, its envelope.
         bool resetParameters(Parameters parameters, kit::DiagnosticList &diagnostics);
 
+        /// Multiplies the heights of the points of the selected sung notes by \a portamento and
+        /// the depths of their vibratos by \a vibrato.
+        bool scalePitch(double portamento, double vibrato, kit::DiagnosticList &diagnostics);
+
         /// Inserts a note before the first selected note, with the key of that note and
         /// quantizedLength(), or after the last note if nothing is selected, and selects it.
         bool insertNote(kit::DiagnosticList &diagnostics);
+
+        /// Inserts the copied notes as they are, before the first selected note or after the
+        /// last note if nothing is selected, and selects them.
+        bool pasteNotes(kit::DiagnosticList &diagnostics);
         /// @}
 
         /// \name Editing a lyric in place

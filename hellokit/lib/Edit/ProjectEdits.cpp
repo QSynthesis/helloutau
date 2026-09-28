@@ -1,6 +1,7 @@
 #include "ProjectEdits.h"
 
 #include <algorithm>
+#include <cmath>
 
 #include <hellokit/Document/DocumentConstants.h>
 
@@ -50,15 +51,19 @@ namespace hello::kit {
         return transaction.commit(diagnostics);
     }
 
-    bool ProjectEdits::insertNote(const NoteListRef &notes, int index, const Note &note,
-                                  DiagnosticList &diagnostics) {
+    bool ProjectEdits::insertNotes(const NoteListRef &notes, int index, const QList<Note> &inserted,
+                                   DiagnosticList &diagnostics) {
         if (index < 0 || index > notes.size()) {
             return fail(diagnostics, tr("A track of %1 notes has no position %2 for a new note.")
                                          .arg(notes.size())
                                          .arg(index + 1));
         }
-        auto transaction = notes.session()->transaction(tr("Insert Note"));
-        notes.insert(index, {note});
+        if (inserted.isEmpty()) {
+            return true;
+        }
+        auto transaction = notes.session()->transaction(inserted.size() == 1 ? tr("Insert Note")
+                                                                             : tr("Insert Notes"));
+        notes.insert(index, inserted);
         return transaction.commit(diagnostics);
     }
 
@@ -174,6 +179,38 @@ namespace hello::kit {
         for (const auto &note : notes) {
             if (note.envelope() != envelope) {
                 note.setEnvelope(envelope);
+            }
+        }
+        return transaction.commit(diagnostics);
+    }
+
+    bool ProjectEdits::scalePitch(const QList<NoteRef> &notes, double portamento, double vibrato,
+                                  DiagnosticList &diagnostics) {
+        if (portamento < 0 || vibrato < 0) {
+            return fail(diagnostics,
+                        tr("The pitch cannot be scaled by a negative factor, %1 or %2.")
+                            .arg(portamento)
+                            .arg(vibrato));
+        }
+        if (notes.isEmpty()) {
+            return true;
+        }
+        auto transaction = notes.first().session()->transaction(tr("Scale Pitch"));
+        for (const auto &note : notes) {
+            const auto points = note.portamento();
+            for (int i = 0; i < points.size(); ++i) {
+                const auto point = points.at(i);
+                const double y = std::round(point.y() * portamento);
+                if (point.y() != y) {
+                    point.setY(y);
+                }
+            }
+            if (auto value = note.vibrato()) {
+                const double amplitude = std::round(value->amplitude * vibrato);
+                if (value->amplitude != amplitude) {
+                    value->amplitude = amplitude;
+                    note.setVibrato(value);
+                }
             }
         }
         return transaction.commit(diagnostics);

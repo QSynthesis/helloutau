@@ -133,9 +133,9 @@ private Q_SLOTS:
         added.noteNum = 64;
 
         DiagnosticList diagnostics;
-        QVERIFY(ProjectEdits::insertNote(notes, 1, added, diagnostics));
-        QVERIFY(ProjectEdits::insertNote(notes, 3, added, diagnostics));
-        QVERIFY(ProjectEdits::insertNote(notes, 0, added, diagnostics));
+        QVERIFY(ProjectEdits::insertNotes(notes, 1, {added}, diagnostics));
+        QVERIFY(ProjectEdits::insertNotes(notes, 3, {added}, diagnostics));
+        QVERIFY(ProjectEdits::insertNotes(notes, 0, {added}, diagnostics));
 
         auto expected = project;
         auto &expectedNotes = expected.tracks[0].notes;
@@ -154,14 +154,14 @@ private Q_SLOTS:
         added.length = 240;
 
         DiagnosticList diagnostics;
-        QVERIFY(!ProjectEdits::insertNote(notes, 3, added, diagnostics));
-        QVERIFY(!ProjectEdits::insertNote(notes, -1, added, diagnostics));
+        QVERIFY(!ProjectEdits::insertNotes(notes, 3, {added}, diagnostics));
+        QVERIFY(!ProjectEdits::insertNotes(notes, -1, {added}, diagnostics));
         QCOMPARE(diagnostics.size(), 2);
 
         // A note that violates a constraint is refused as well.
         added.length = 0;
         diagnostics.clear();
-        QVERIFY(!ProjectEdits::insertNote(notes, 0, added, diagnostics));
+        QVERIFY(!ProjectEdits::insertNotes(notes, 0, {added}, diagnostics));
         QCOMPARE(diagnostics.size(), 1);
         QCOMPARE(notes.size(), 2);
     }
@@ -362,6 +362,62 @@ private Q_SLOTS:
         QVERIFY(!notes.at(1).vibrato());
         session.undo();
         session.undo();
+        QCOMPARE(session.snapshot().toJson(), project.toJson());
+    }
+
+    // Several notes are inserted in their order, as one step.
+    void several_notes_are_inserted_in_their_order() {
+        const auto project = richProject();
+        ProjectSession session(project);
+        const auto notes = notesOf(session);
+
+        Note a;
+        a.lyric = QStringLiteral("a");
+        a.length = 240;
+        a.noteNum = 64;
+        Note b = a;
+        b.lyric = QStringLiteral("b");
+        b.tempo = 150;
+
+        DiagnosticList diagnostics;
+        QVERIFY(ProjectEdits::insertNotes(notes, 1, {a, b}, diagnostics));
+        auto expected = project;
+        expected.tracks[0].notes.insert(1, a);
+        expected.tracks[0].notes.insert(2, b);
+        QCOMPARE(session.snapshot().toJson(), expected.toJson());
+        QCOMPARE(session.currentStep(), 1);
+        QCOMPARE(session.undoMessage(), ProjectEdits::tr("Insert Notes"));
+
+        // Nothing to insert is no step.
+        QVERIFY(ProjectEdits::insertNotes(notes, 0, {}, diagnostics));
+        QCOMPARE(session.currentStep(), 1);
+    }
+
+    // The heights of the points and the depth of the vibrato are scaled, to whole cents.
+    void the_pitch_is_scaled() {
+        const auto project = richProject();
+        ProjectSession session(project);
+        const auto notes = notesOf(session);
+
+        DiagnosticList diagnostics;
+        QVERIFY(ProjectEdits::scalePitch({notes.at(0), notes.at(1)}, 1.5, 2, diagnostics));
+        const auto note = session.snapshot().tracks[0].notes[0];
+        QList<double> heights;
+        for (const auto &point : note.portamento) {
+            heights.push_back(point.y);
+        }
+        QCOMPARE(heights, (QList<double>{0, -8, 5, 0}));
+        QCOMPARE(note.portamento[1].x, 20.0);
+        QCOMPARE(note.vibrato->amplitude, 70.0);
+        QCOMPARE(note.vibrato->period, 180.0);
+        QCOMPARE(session.currentStep(), 1);
+        QCOMPARE(session.undoMessage(), ProjectEdits::tr("Scale Pitch"));
+        session.undo();
+        QCOMPARE(session.snapshot().toJson(), project.toJson());
+
+        QVERIFY(!ProjectEdits::scalePitch({notes.at(0)}, -1, 1, diagnostics));
+        QVERIFY(!ProjectEdits::scalePitch({notes.at(0)}, 1, -1, diagnostics));
+        QCOMPARE(diagnostics.size(), 2);
         QCOMPARE(session.snapshot().toJson(), project.toJson());
     }
 };

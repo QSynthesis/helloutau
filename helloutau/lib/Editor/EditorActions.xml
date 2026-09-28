@@ -39,10 +39,12 @@
         <action id="helloutau.edit.toggleVibrato" text="Add or Remove &amp;Vibrato"
                 category="Edit" />
         <action id="helloutau.edit.editVibrato" text="Vibra&amp;to..." category="Edit" />
+        <action id="helloutau.edit.scalePitch" text="Scale Pitc&amp;h..." category="Edit" />
         <action id="helloutau.edit.crossfadeP2P3" text="Crossfade (p&amp;2, p3)" category="Envelope" />
         <action id="helloutau.edit.crossfadeP1P4" text="Crossfade (p&amp;1, p4)" category="Envelope" />
         <action id="helloutau.edit.copy" text="&amp;Copy" category="Edit" shortcut="Ctrl+C" />
-        <action id="helloutau.edit.pasteParameters" text="Paste &amp;Parameters..." category="Edit"
+        <action id="helloutau.edit.paste" text="&amp;Paste" category="Edit" shortcut="Ctrl+V" />
+        <action id="helloutau.edit.pasteParameters" text="Paste Para&amp;meters..." category="Edit"
                 shortcut="Ctrl+Shift+V" />
         <action id="helloutau.edit.resetPortamento" text="&amp;Pitch Points" category="Reset" />
         <action id="helloutau.edit.resetVibratos" text="&amp;Vibratos" category="Reset" />
@@ -107,6 +109,7 @@
                 <action id="helloutau.edit.redo" />
                 <separator />
                 <action id="helloutau.edit.copy" />
+                <action id="helloutau.edit.paste" />
                 <action id="helloutau.edit.pasteParameters" />
                 <action id="helloutau.edit.delete" />
                 <action id="helloutau.edit.selectAll" />
@@ -117,6 +120,7 @@
                 <action id="helloutau.edit.togglePortamento" />
                 <action id="helloutau.edit.toggleVibrato" />
                 <action id="helloutau.edit.editVibrato" />
+                <action id="helloutau.edit.scalePitch" />
                 <menu id="helloutau.edit.reset">
                     <action id="helloutau.edit.resetPortamento" />
                     <action id="helloutau.edit.resetVibratos" />

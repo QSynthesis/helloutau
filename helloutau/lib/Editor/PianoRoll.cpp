@@ -1823,22 +1823,24 @@ namespace hello::daw {
             m_roll->clearPreview();
 
             const auto notes = m_roll->notes();
-            int index = notes.size();
-            auto transaction = m_roll->session->transaction(PianoRoll::tr("Insert Note"));
-            kit::DiagnosticList diagnostics;
+            QList<kit::Note> inserted;
             if (m_start > m_end) {
                 kit::Note rest;
                 rest.lyric = QString::fromLatin1(kit::restLyric);
                 rest.length = int(m_start - m_end);
                 rest.noteNum = m_key;
-                kit::ProjectEdits::insertNote(notes, index++, rest, diagnostics);
+                inserted.push_back(rest);
             }
             kit::Note note;
             note.lyric = QString::fromLatin1(kit::defaultLyric);
             note.length = m_length;
             note.noteNum = m_key;
-            kit::ProjectEdits::insertNote(notes, index, note, diagnostics);
-            const auto id = notes.at(index).id();
+            inserted.push_back(note);
+            // One note drawn, with the rest before it
+            auto transaction = m_roll->session->transaction(PianoRoll::tr("Insert Note"));
+            kit::DiagnosticList diagnostics;
+            kit::ProjectEdits::insertNotes(notes, notes.size(), inserted, diagnostics);
+            const auto id = notes.at(notes.size() - 1).id();
             if (transaction.commit(diagnostics)) {
                 m_roll->anchor = id;
                 m_roll->setSelection({id});
@@ -2793,6 +2795,19 @@ namespace hello::daw {
         return transaction.commit(diagnostics);
     }
 
+    bool PianoRoll::scalePitch(double portamento, double vibrato,
+                               kit::DiagnosticList &diagnostics) {
+        stdc_impl_t;
+        const auto refs = impl.notes();
+        QList<kit::NoteRef> sung;
+        for (const int index : selectedIndices()) {
+            if (!impl.timeline->note(index).rest) {
+                sung.push_back(refs.at(index));
+            }
+        }
+        return kit::ProjectEdits::scalePitch(sung, portamento, vibrato, diagnostics);
+    }
+
     bool PianoRoll::transposeSelected(int semitones, kit::DiagnosticList &diagnostics) {
         stdc_impl_t;
         const auto notes = impl.notes();
@@ -2817,11 +2832,35 @@ namespace hello::daw {
                        : count > 0   ? timeline->note(count - 1).key
                                      : 60;
         const auto notes = impl.notes();
-        if (!kit::ProjectEdits::insertNote(notes, index, note, diagnostics)) {
+        if (!kit::ProjectEdits::insertNotes(notes, index, {note}, diagnostics)) {
             return false;
         }
         impl.anchor = notes.at(index).id();
         impl.setSelection({impl.anchor});
+        return true;
+    }
+
+    bool PianoRoll::pasteNotes(kit::DiagnosticList &diagnostics) {
+        stdc_impl_t;
+        const auto copied = copiedNotes();
+        if (copied.isEmpty()) {
+            return true;
+        }
+        const auto indices = selectedIndices();
+        const int index = indices.isEmpty() ? impl.timeline->noteCount() : indices.first();
+        const auto notes = impl.notes();
+        auto transaction = impl.session->transaction(tr("Paste"));
+        kit::ProjectEdits::insertNotes(notes, index, copied, diagnostics);
+        QSet<kit::edit::NodeId> pasted;
+        for (int i = 0; i < copied.size(); ++i) {
+            pasted.insert(notes.at(index + i).id());
+        }
+        const auto first = notes.at(index).id();
+        if (!transaction.commit(diagnostics)) {
+            return false;
+        }
+        impl.anchor = first;
+        impl.setSelection(pasted);
         return true;
     }
 
