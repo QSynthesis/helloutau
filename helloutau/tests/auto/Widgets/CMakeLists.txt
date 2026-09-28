@@ -1,0 +1,2 @@
+add_auto_test(test_CommandMatcher.cpp HelloUtauWidgets)
+add_auto_test(test_CommandPalette.cpp HelloUtauWidgets)
