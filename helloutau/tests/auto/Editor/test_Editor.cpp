@@ -5,6 +5,7 @@
 #include <QtGui/QAction>
 #include <QtTest/QTest>
 #include <QtWidgets/QApplication>
+#include <QtWidgets/QMenu>
 #include <QtWidgets/QMenuBar>
 #include <QtWidgets/QMessageBox>
 #include <QtWidgets/QPushButton>
@@ -96,6 +97,18 @@ private Q_SLOTS:
         const auto save = actionNamed(window, QStringLiteral("&Save"));
         QVERIFY(save);
         QCOMPARE(save->shortcut(), QKeySequence(QStringLiteral("Ctrl+S")));
+
+        // Exporting is a menu of formats, which MIDI and others will join.
+        const auto file = window->menuBar()->actions().first()->menu();
+        QMenu *exportMenu = nullptr;
+        for (const auto action : file->actions()) {
+            if (action->text() == QStringLiteral("&Export")) {
+                exportMenu = action->menu();
+            }
+        }
+        QVERIFY(exportMenu);
+        QCOMPARE(exportMenu->actions().size(), 1);
+        QCOMPARE(exportMenu->actions().first()->text(), QStringLiteral("&UST..."));
     }
 
     void undo_and_the_modified_mark_follow_the_project() {
