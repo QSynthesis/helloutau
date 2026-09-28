@@ -38,7 +38,13 @@
         <action id="helloutau.edit.editVibrato" text="Vibra&amp;to..." category="Edit" />
         <action id="helloutau.edit.crossfadeP2P3" text="Crossfade (p&amp;2, p3)" category="Envelope" />
         <action id="helloutau.edit.crossfadeP1P4" text="Crossfade (p&amp;1, p4)" category="Envelope" />
-        <action id="helloutau.edit.resetEnvelopes" text="&amp;Reset" category="Envelope" />
+        <action id="helloutau.edit.copy" text="&amp;Copy" category="Edit" shortcut="Ctrl+C" />
+        <action id="helloutau.edit.pasteParameters" text="Paste &amp;Parameters..." category="Edit"
+                shortcut="Ctrl+Shift+V" />
+        <action id="helloutau.edit.resetPortamento" text="&amp;Pitch Points" category="Reset" />
+        <action id="helloutau.edit.resetVibratos" text="&amp;Vibratos" category="Reset" />
+        <action id="helloutau.edit.resetEnvelopes" text="&amp;Envelopes" category="Reset" />
+        <action id="helloutau.edit.resetAll" text="&amp;All" category="Reset" />
         <action id="helloutau.edit.editLyric" text="Edit &amp;Lyric" category="Edit"
                 shortcut="F2" />
         <action id="helloutau.edit.transposeUp" text="&amp;Up a Semitone" category="Transpose"
@@ -71,6 +77,7 @@
         <menu id="helloutau.edit" text="&amp;Edit" />
         <menu id="helloutau.edit.transpose" text="&amp;Transpose" />
         <menu id="helloutau.edit.envelope" text="E&amp;nvelope" />
+        <menu id="helloutau.edit.reset" text="Rese&amp;t" />
         <menu id="helloutau.view" text="&amp;View" />
         <menu id="helloutau.playback" text="&amp;Playback" />
         <menu id="helloutau.tools" text="&amp;Tools" />
@@ -95,6 +102,8 @@
                 <action id="helloutau.edit.undo" />
                 <action id="helloutau.edit.redo" />
                 <separator />
+                <action id="helloutau.edit.copy" />
+                <action id="helloutau.edit.pasteParameters" />
                 <action id="helloutau.edit.delete" />
                 <action id="helloutau.edit.selectAll" />
                 <separator />
@@ -104,10 +113,16 @@
                 <action id="helloutau.edit.togglePortamento" />
                 <action id="helloutau.edit.toggleVibrato" />
                 <action id="helloutau.edit.editVibrato" />
+                <menu id="helloutau.edit.reset">
+                    <action id="helloutau.edit.resetPortamento" />
+                    <action id="helloutau.edit.resetVibratos" />
+                    <action id="helloutau.edit.resetEnvelopes" />
+                    <separator />
+                    <action id="helloutau.edit.resetAll" />
+                </menu>
                 <menu id="helloutau.edit.envelope">
                     <action id="helloutau.edit.crossfadeP2P3" />
                     <action id="helloutau.edit.crossfadeP1P4" />
-                    <action id="helloutau.edit.resetEnvelopes" />
                 </menu>
                 <menu id="helloutau.edit.transpose">
                     <action id="helloutau.edit.transposeUp" />

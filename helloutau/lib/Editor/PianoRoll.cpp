@@ -6,8 +6,14 @@
 #include <numeric>
 
 #include <QtCore/QHash>
+#include <QtCore/QJsonArray>
+#include <QtCore/QJsonDocument>
+#include <QtCore/QJsonObject>
+#include <QtCore/QMimeData>
 #include <QtCore/QSet>
 #include <QtCore/QTimer>
+#include <QtGui/QClipboard>
+#include <QtGui/QGuiApplication>
 #include <QtGui/QKeyEvent>
 #include <QtGui/QMouseEvent>
 #include <QtGui/QPainter>
@@ -60,6 +66,9 @@ namespace hello::daw {
         constexpr int MinimumEditorWidth = 80;
 
         constexpr int DefaultQuantization = kit::ticksPerQuarter / 4;
+
+        // The type of the notes that PianoRoll::copySelected() puts on the clipboard
+        constexpr char NotesMimeType[] = "application/x-helloutau-notes+json";
 
         // The part of the view to the left of the playhead after the view follows it
         constexpr double FollowMargin = 0.1;
@@ -2615,16 +2624,112 @@ namespace hello::daw {
         return transaction.commit(diagnostics);
     }
 
-    bool PianoRoll::resetEnvelopes(kit::DiagnosticList &diagnostics) {
+    bool PianoRoll::copySelected() {
+        const auto indices = selectedIndices();
+        if (indices.isEmpty()) {
+            return false;
+        }
+        const auto refs = _impl->notes();
+        QJsonArray notes;
+        for (const int index : indices) {
+            notes.append(refs.at(index).toNote().toJson());
+        }
+        const auto bytes = QJsonDocument(QJsonObject{
+                                             {QLatin1String("notes"), notes}
+        })
+                               .toJson(QJsonDocument::Compact);
+        auto data = new QMimeData();
+        data->setData(QLatin1String(NotesMimeType), bytes);
+        data->setText(QString::fromUtf8(bytes));
+        QGuiApplication::clipboard()->setMimeData(data);
+        return true;
+    }
+
+    QList<kit::Note> PianoRoll::copiedNotes() {
+        const auto data = QGuiApplication::clipboard()->mimeData();
+        if (!data || !data->hasFormat(QLatin1String(NotesMimeType))) {
+            return {};
+        }
+        const auto document = QJsonDocument::fromJson(data->data(QLatin1String(NotesMimeType)));
+        QList<kit::Note> notes;
+        kit::DiagnosticList diagnostics;
+        for (const auto &value : document.object().value(QLatin1String("notes")).toArray()) {
+            if (const auto note = kit::Note::fromJson(value.toObject(), diagnostics)) {
+                notes.push_back(*note);
+            }
+        }
+        return notes;
+    }
+
+    bool PianoRoll::pasteParameters(Parameters parameters, kit::DiagnosticList &diagnostics) {
+        QList<kit::Note> sources;
+        for (const auto &note : copiedNotes()) {
+            if (!note.isRest()) {
+                sources.push_back(note);
+            }
+        }
+        QList<int> targets;
+        for (const int index : selectedIndices()) {
+            if (!_impl->timeline->note(index).rest) {
+                targets.push_back(index);
+            }
+        }
+        if (sources.isEmpty() || targets.isEmpty() || !parameters) {
+            return true;
+        }
+
+        const auto refs = _impl->notes();
+        const bool one = sources.size() == 1;
+        const auto count = one ? targets.size() : std::min(sources.size(), targets.size());
+        auto transaction = _impl->session->transaction(tr("Paste Parameters"));
+        for (qsizetype k = 0; k < count; ++k) {
+            const auto &source = sources[one ? 0 : k];
+            const auto target = refs.at(targets[k]);
+            if (parameters & PortamentoParameter) {
+                kit::ProjectEdits::setPortamento(target, source.portamento, diagnostics);
+            }
+            if (parameters & VibratoParameter) {
+                kit::ProjectEdits::setVibrato({target}, source.vibrato, diagnostics);
+            }
+            if (parameters & EnvelopeParameter) {
+                kit::ProjectEdits::setEnvelope({target}, source.envelope, diagnostics);
+            }
+        }
+        return transaction.commit(diagnostics);
+    }
+
+    bool PianoRoll::resetParameters(Parameters parameters, kit::DiagnosticList &diagnostics) {
+        // The selected notes, those of the selected points, or all
+        auto indices = selectedIndices();
+        if (indices.isEmpty()) {
+            indices = _impl->selectedPointIndices().keys();
+        }
+        if (indices.isEmpty()) {
+            indices = _impl->identityOrder();
+        }
         const auto refs = _impl->notes();
         QList<kit::NoteRef> sung;
-        for (const int index : selectedIndices()) {
+        for (const int index : std::as_const(indices)) {
             if (!_impl->timeline->note(index).rest) {
                 sung.push_back(refs.at(index));
             }
         }
-        auto transaction = _impl->session->transaction(tr("Reset Envelopes"));
-        kit::ProjectEdits::setEnvelope(sung, std::nullopt, diagnostics);
+        if (sung.isEmpty() || !parameters) {
+            return true;
+        }
+
+        auto transaction = _impl->session->transaction(tr("Reset Parameters"));
+        if (parameters & PortamentoParameter) {
+            for (const auto &note : std::as_const(sung)) {
+                kit::ProjectEdits::setPortamento(note, {}, diagnostics);
+            }
+        }
+        if (parameters & VibratoParameter) {
+            kit::ProjectEdits::setVibrato(sung, std::nullopt, diagnostics);
+        }
+        if (parameters & EnvelopeParameter) {
+            kit::ProjectEdits::setEnvelope(sung, std::nullopt, diagnostics);
+        }
         return transaction.commit(diagnostics);
     }
 

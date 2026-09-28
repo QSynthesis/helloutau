@@ -1046,15 +1046,106 @@ private Q_SLOTS:
         }));
     }
 
-    void envelopes_are_reset() {
-        kit::ProjectSession session(overlappingNotes());
+    // la with points, a vibrato and an envelope, then li and lu with none of them, and a rest
+    static kit::Project parameterSource() {
+        auto project = overlappingNotes();
+        auto &notes = project.tracks[0].notes;
+        kit::PortamentoPoint first;
+        first.x = -40;
+        kit::PortamentoPoint last;
+        last.x = 20;
+        notes[0].portamento = {first, last};
+        notes[0].vibrato = VibratoDialog::defaultVibrato();
+        notes[0].envelope = kit::Envelope::fromTimeOrder({
+            {0,  0  },
+            {10, 100},
+            {20, 100},
+            {5,  0  }
+        });
+        notes[1].envelope.reset();
+        notes[2].envelope = notes[0].envelope;
+        kit::Note rest;
+        rest.lyric = QStringLiteral("R");
+        rest.length = 480;
+        rest.noteNum = 60;
+        notes.push_back(rest);
+        return project;
+    }
+
+    // The parameters chosen of one copied note go to every selected note, of several to the
+    // selected notes in order; rests take none.
+    void parameters_are_copied_and_pasted() {
+        kit::ProjectSession session(parameterSource());
         PianoRoll roll(&session);
         show(roll);
-        roll.setSelectedIndices({1});
+        const auto original = session.snapshot().tracks[0].notes;
+        const auto source = original[0];
+
+        roll.setSelectedIndices({0});
+        QVERIFY(roll.copySelected());
+        QCOMPARE(PianoRoll::copiedNotes().size(), 1);
+        QCOMPARE(PianoRoll::copiedNotes().first().portamento, source.portamento);
+
+        roll.setSelectedIndices({1, 2, 3});
         kit::DiagnosticList diagnostics;
-        QVERIFY(roll.resetEnvelopes(diagnostics));
-        QVERIFY(!session.snapshot().tracks[0].notes[1].envelope);
-        QCOMPARE(session.undoMessage(), PianoRoll::tr("Reset Envelopes"));
+        QVERIFY(roll.pasteParameters(PianoRoll::PortamentoParameter | PianoRoll::VibratoParameter,
+                                     diagnostics));
+        auto notes = session.snapshot().tracks[0].notes;
+        for (const int i : {1, 2}) {
+            QCOMPARE(notes[i].portamento, source.portamento);
+            QCOMPARE(notes[i].vibrato, source.vibrato);
+            // The envelope was not chosen and stays as it was.
+            QCOMPARE(notes[i].envelope, original[i].envelope);
+        }
+        QVERIFY(notes[3].portamento.isEmpty());
+        QCOMPARE(session.undoMessage(), PianoRoll::tr("Paste Parameters"));
+
+        // Two copied notes, la and li, to lu alone: those of la
+        session.undo();
+        roll.setSelectedIndices({0, 1});
+        QVERIFY(roll.copySelected());
+        roll.setSelectedIndices({2});
+        QVERIFY(roll.pasteParameters(PianoRoll::EnvelopeParameter, diagnostics));
+        notes = session.snapshot().tracks[0].notes;
+        QCOMPARE(notes[2].envelope, source.envelope);
+        QVERIFY(notes[2].portamento.isEmpty());
+    }
+
+    // Without a selection a reset applies to every note, with one to the selected notes.
+    void parameters_are_reset() {
+        kit::ProjectSession session(parameterSource());
+        PianoRoll roll(&session);
+        show(roll);
+        kit::DiagnosticList diagnostics;
+
+        roll.setSelectedIndices({0});
+        QVERIFY(roll.resetParameters(PianoRoll::VibratoParameter, diagnostics));
+        auto notes = session.snapshot().tracks[0].notes;
+        QVERIFY(!notes[0].vibrato);
+        QVERIFY(notes[0].envelope);
+        QCOMPARE(session.undoMessage(), PianoRoll::tr("Reset Parameters"));
+        session.undo();
+
+        roll.setSelectedIndices({});
+        QVERIFY(roll.resetParameters(PianoRoll::AllParameters, diagnostics));
+        notes = session.snapshot().tracks[0].notes;
+        for (const auto &note : notes) {
+            QVERIFY(note.portamento.isEmpty());
+            QVERIFY(!note.vibrato);
+            QVERIFY(!note.envelope);
+        }
+        session.undo();
+
+        // With points selected, their notes
+        roll.setSelectedPoints({
+            {0, 1}
+        });
+        QVERIFY(roll.resetParameters(PianoRoll::EnvelopeParameter, diagnostics));
+        notes = session.snapshot().tracks[0].notes;
+        QVERIFY(!notes[0].envelope);
+        QVERIFY(notes[0].vibrato);
+        QCOMPARE(notes[0].portamento.size(), 2);
+        QVERIFY(notes[2].envelope);
     }
 
     // The parameter area and the roll scroll together.

@@ -5,7 +5,10 @@
 #include <QtCore/QTimer>
 #include <QtGui/QAction>
 #include <QtTest/QTest>
+#include <QtGui/QClipboard>
 #include <QtWidgets/QApplication>
+#include <QtWidgets/QCheckBox>
+#include <QtWidgets/QDialogButtonBox>
 #include <QtWidgets/QDoubleSpinBox>
 #include <QtWidgets/QGraphicsDropShadowEffect>
 #include <QtWidgets/QInputDialog>
@@ -25,6 +28,7 @@
 #include <helloutau/Editor/Editor.h>
 #include <helloutau/Editor/MainWindow.h>
 #include <helloutau/Editor/PianoRoll.h>
+#include <helloutau/Editor/PasteParametersDialog.h>
 #include <helloutau/Editor/VibratoDialog.h>
 #include <helloutau/Editor/VoiceBankCharsetDialog.h>
 
@@ -264,6 +268,46 @@ private Q_SLOTS:
         QVERIFY(vibrato);
         QCOMPARE(vibrato->period, 240.0);
         QCOMPARE(vibrato->length, 65.0);
+    }
+
+    // Copy enables Paste Parameters, whose dialog chooses what to paste onto the selection.
+    void parameters_are_pasted_through_the_menu() {
+        const auto e = editor();
+        const auto window = e->openFile(savedProject(m_dir, "p.usth"));
+        QVERIFY(window);
+        auto roll = qobject_cast<PianoRoll *>(window->centralWidget());
+        QGuiApplication::clipboard()->clear();
+        const auto paste = actionNamed(window, QStringLiteral("Paste &Parameters..."));
+        QVERIFY(paste);
+
+        roll->selectAll();
+        QVERIFY(!paste->isEnabled());
+        kit::DiagnosticList diagnostics;
+        roll->toggleVibrato(diagnostics);
+        actionNamed(window, QStringLiteral("&Copy"))->trigger();
+        QVERIFY(paste->isEnabled());
+
+        roll->toggleVibrato(diagnostics);
+        QVERIFY(!window->document()->session()->snapshot().tracks[0].notes[0].vibrato);
+        QTimer::singleShot(0, [] {
+            const auto dialog =
+                qobject_cast<PasteParametersDialog *>(QApplication::activeModalWidget());
+            QVERIFY(dialog);
+            dialog->box(PianoRoll::PortamentoParameter)->setChecked(false);
+            dialog->box(PianoRoll::EnvelopeParameter)->setChecked(false);
+            dialog->accept();
+        });
+        paste->trigger();
+        QVERIFY(window->document()->session()->snapshot().tracks[0].notes[0].vibrato);
+    }
+
+    void nothing_chosen_pastes_nothing() {
+        PasteParametersDialog dialog(PianoRoll::VibratoParameter);
+        const auto ok = dialog.findChild<QDialogButtonBox *>()->button(QDialogButtonBox::Ok);
+        QVERIFY(ok->isEnabled());
+        QCOMPARE(dialog.parameters(), PianoRoll::Parameters(PianoRoll::VibratoParameter));
+        dialog.box(PianoRoll::VibratoParameter)->setChecked(false);
+        QVERIFY(!ok->isEnabled());
     }
 
     // Why an edit in the piano roll was refused appears in the status bar.

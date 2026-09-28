@@ -9,6 +9,7 @@
 #include <QtGui/QColor>
 #include <QtWidgets/QWidget>
 
+#include <hellokit/Document/Note.h>
 #include <hellokit/Support/Diagnostic.h>
 
 #include <helloutau/Editor/HelloUtauEditorGlobal.h>
@@ -189,8 +190,31 @@ namespace hello::daw {
         /// anchor; a note without an envelope starts from the default of UTAU.
         bool crossfadeEnvelopes(Crossfade crossfade, kit::DiagnosticList &diagnostics);
 
-        /// Removes the envelopes of the selected sung notes, which leaves the default of UTAU.
-        bool resetEnvelopes(kit::DiagnosticList &diagnostics);
+        /// The parameters of a note that are copied, pasted and reset together.
+        enum Parameter {
+            /// The Mode2 points
+            PortamentoParameter = 0x1,
+            VibratoParameter = 0x2,
+            EnvelopeParameter = 0x4,
+            AllParameters = PortamentoParameter | VibratoParameter | EnvelopeParameter,
+        };
+        Q_DECLARE_FLAGS(Parameters, Parameter)
+
+        /// Puts the selected notes on the clipboard, as \c .usth writes notes, and returns
+        /// whether there were any.
+        bool copySelected();
+
+        /// The notes on the clipboard, as copySelected() put them there, or none.
+        static QList<kit::Note> copiedNotes();
+
+        /// Gives the selected sung notes \a parameters of the copied notes as they are: those of
+        /// the one copied note to every selected note, or those of several copied notes to the
+        /// selected notes in order, as far as both go. Rests are skipped on either side.
+        bool pasteParameters(Parameters parameters, kit::DiagnosticList &diagnostics);
+
+        /// Removes \a parameters from the selected sung notes, or from every note if none is
+        /// selected, which leaves the defaults of UTAU: no points, no vibrato, its envelope.
+        bool resetParameters(Parameters parameters, kit::DiagnosticList &diagnostics);
 
         /// Inserts a note before the first selected note, with the key of that note and
         /// quantizedLength(), or after the last note if nothing is selected, and selects it.
@@ -287,6 +311,7 @@ namespace hello::daw {
         std::unique_ptr<Impl> _impl;
     };
 
+    Q_DECLARE_OPERATORS_FOR_FLAGS(PianoRoll::Parameters)
 }
 
 #endif // HELLOUTAU_EDITOR_PIANOROLL_H

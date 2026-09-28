@@ -6,7 +6,9 @@
 #include <QtCore/QTimer>
 #include <QtGui/QAction>
 #include <QtGui/QActionGroup>
+#include <QtGui/QClipboard>
 #include <QtGui/QCloseEvent>
+#include <QtGui/QGuiApplication>
 #include <QtWidgets/QFileDialog>
 #include <QtWidgets/QInputDialog>
 #include <QtWidgets/QLabel>
@@ -34,6 +36,7 @@
 #include "ExportUstDialog.h"
 #include "PianoRoll.h"
 #include "Playback.h"
+#include "PasteParametersDialog.h"
 #include "SettingsDialog.h"
 #include "VibratoDialog.h"
 #include "VoiceBankCharsetDialog.h"
@@ -83,6 +86,8 @@ namespace hello::daw {
         QHash<QString, QAction *> actions;
         QActionGroup *tools = nullptr;
         CommandPalette *palette = nullptr;
+        // What Paste Parameters pasted last
+        PianoRoll::Parameters pastedParameters = PianoRoll::AllParameters;
 
         Playback *playback = nullptr;
         QLabel *renderLabel = nullptr;
@@ -268,11 +273,28 @@ namespace hello::daw {
                     });
                 });
             }
-            addCommand(QStringLiteral("helloutau.edit.resetEnvelopes"), [this] {
-                edit(tr("Envelope"), [this](kit::DiagnosticList &diagnostics) {
-                    return roll->resetEnvelopes(diagnostics);
-                });
+            addCommand(QStringLiteral("helloutau.edit.copy"), [this] {
+                roll->copySelected();
+                updateEditActions();
             });
+            addCommand(QStringLiteral("helloutau.edit.pasteParameters"),
+                       [this] { pasteParameters(); });
+            const std::pair<const char *, PianoRoll::Parameters> resets[] = {
+                {"helloutau.edit.resetPortamento", PianoRoll::PortamentoParameter},
+                {"helloutau.edit.resetVibratos",   PianoRoll::VibratoParameter   },
+                {"helloutau.edit.resetEnvelopes",  PianoRoll::EnvelopeParameter  },
+                {"helloutau.edit.resetAll",        PianoRoll::AllParameters      },
+            };
+            for (const auto &[id, parameters] : resets) {
+                addCommand(QLatin1String(id), [this, parameters = parameters] {
+                    edit(tr("Reset"), [this, parameters](kit::DiagnosticList &diagnostics) {
+                        return roll->resetParameters(parameters, diagnostics);
+                    });
+                });
+            }
+            // Whether there is something to paste changes with the clipboard.
+            QObject::connect(QGuiApplication::clipboard(), &QClipboard::dataChanged, _decl,
+                             [this] { updateEditActions(); });
             addCommand(QStringLiteral("helloutau.edit.editLyric"), [this] {
                 const auto indices = roll->selectedIndices();
                 if (!indices.isEmpty()) {
@@ -433,12 +455,14 @@ namespace hello::daw {
             for (const auto id : {"helloutau.edit.delete", "helloutau.edit.editLyric",
                                   "helloutau.edit.togglePortamento", "helloutau.edit.toggleVibrato",
                                   "helloutau.edit.editVibrato", "helloutau.edit.crossfadeP2P3",
-                                  "helloutau.edit.crossfadeP1P4", "helloutau.edit.resetEnvelopes",
+                                  "helloutau.edit.crossfadeP1P4", "helloutau.edit.copy",
                                   "helloutau.edit.transposeUp", "helloutau.edit.transposeDown",
                                   "helloutau.edit.octaveUp", "helloutau.edit.octaveDown"}) {
                 actions.value(QLatin1String(id))->setEnabled(selected > 0);
             }
             actions.value(QStringLiteral("helloutau.edit.splitNote"))->setEnabled(selected == 1);
+            actions.value(QStringLiteral("helloutau.edit.pasteParameters"))
+                ->setEnabled(selected > 0 && !PianoRoll::copiedNotes().isEmpty());
             // Delete also removes the selected pitch points.
             if (!roll->selectedPoints().isEmpty()) {
                 actions.value(QStringLiteral("helloutau.edit.delete"))->setEnabled(true);
@@ -454,6 +478,22 @@ namespace hello::daw {
             kit::DiagnosticList diagnostics;
             run(diagnostics);
             DiagnosticBox::show(_decl, title, diagnostics);
+        }
+
+        // Pastes the parameters of the copied notes that the user chooses, those chosen last
+        // time at first
+        void pasteParameters() {
+            if (roll->lyricEditor()->isVisible()) {
+                return;
+            }
+            PasteParametersDialog dialog(pastedParameters, _decl);
+            if (dialog.exec() != QDialog::Accepted) {
+                return;
+            }
+            pastedParameters = dialog.parameters();
+            kit::DiagnosticList diagnostics;
+            roll->pasteParameters(pastedParameters, diagnostics);
+            DiagnosticBox::show(_decl, tr("Paste Parameters"), diagnostics);
         }
 
         // Sets the vibrato of the selected sung notes to one that the user enters, starting from
