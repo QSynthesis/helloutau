@@ -113,4 +113,22 @@ qtmediate 在样式表交给 Qt 之前做一次文本转换：
 
 无法解析的值以 `qCWarning` 报告，写明所在位置，不静默采用默认值。
 
+## 实现的第一块：语法（2026-09-28 起，作者确认前可改）
+
+**值语法沿用 qsynthesis-docs「3. 元类型」**（函数名、位置参数与关键字参数、按钮状态组、`qlist` 与 `qmap` 的元素推断），只在以下几处明确或改变：
+
+- **按钮状态的键名**为 `up`、`over`、`down`、`disabled` 与选中组的 `up2`、`over2`、`down2`、`disabled2`，位置参数按这一顺序。qtmediate 输出 `hover` 而解析 `over` 的不一致不再存在：只有 `over`。
+- **含 `=` 或逗号的文字**须写成字符串（单引号或双引号，反斜杠转义），与原文档相同；关键字只能是词。
+- **写出关键字参数后再写位置参数是错误**，报告其位置，不静默忽略。
+- **词**是除空白、逗号、括号、等号、引号以外的连续字符，`#FFF`、`1px`、`solid`、`-2px` 都是词；词后紧跟 `(` 即为函数。以空白分隔的多个值组成一个序列（`2px 2px`）。
+
+**组成**（`helloutau/lib/Theme/`）：
+
+| 类 | 职责 |
+|---|---|
+| `ThemeValue`、`ThemeSyntax` | 分词与解析：得到词、字符串、函数、括号组或序列，每个值记着它在原文中的位置，供报告错误 |
+| `ThemeStates<T>` | 八种按钮状态的值与回落规则；从单个值或状态组读出 |
+| `ThemeReader` | 基本值的读取：颜色（`#RGB`、`#RRGGBB`、`#AARRGGBB`、颜色名、`rgb()`、`rgba()`、`hsv()`、`hsva()`、`hsl()`、`hsla()`）、像素尺寸（`1px`）、整数、实数、布尔、字符串 |
+| `ThemeStyleSheet` | 样式表的预处理，以同一分词规则跳过字符串与注释：`--key` 转为 `qproperty-key`，`---key` 去掉前缀，`:not(:x)` 转为 `:!x`，`url(@/a)` 转为相对样式表所在目录的路径，`Npx` 按界面缩放比例换算（`font-size` 另有比例）|
+
 **主题系统是独立的子库 `HelloUtauTheme`**，位于 `helloutau/lib/Theme/`，头文件以 `<helloutau/Theme/...>` 引用，`HelloUtauWidgets` 与 `HelloUtauEditor` 依赖它。只有该子库链接 Qt 的私有模块，私有依赖因此集中在一处，也可以单独测试。命名空间为 `hello::daw`，不增加第三层：主题系统不会移出本仓库，不属于 `docs/Development.md` 所述的例外。类名以 `Theme`、`Svgx` 等为前缀，避免与其他子库的类重名。
