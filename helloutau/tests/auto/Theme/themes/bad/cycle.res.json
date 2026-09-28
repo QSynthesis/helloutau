@@ -1,0 +1,10 @@
+{
+    "widgets": { "x": ["x", "y"] },
+    "variables": { "a": { "_base": "b" }, "b": { "_base": "a" } },
+    "stylesheets": {
+        "a": {
+            "x": { "content": "X { color: ${missing}; }" },
+            "y": { "file": "absent.qss" }
+        }
+    }
+}

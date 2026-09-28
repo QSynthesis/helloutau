@@ -1,0 +1,4 @@
+{
+    "config": { "priority": 0 },
+    "variables": { "dark": { "text": "#123456" } }
+}

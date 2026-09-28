@@ -146,4 +146,30 @@ qtmediate 在样式表交给 Qt 之前做一次文本转换：
 
 **使用这些类型的控件在构造时调用 `ThemeTypes::registerConversions()`**（可重复调用），以保证样式表生效前转换已登记。第一个使用者是命令面板：`qproperty-shadow: qshadow(#40000000, 16px, 0 4px)` 为它加上阴影，未设置时没有阴影。样式表中带命名空间的类名写作 `hello--daw--CommandPalette`。
 
+## 实现的第三块：主题的组织
+
+`ThemeManager` 实现「主题的组织」一节，描述文件的格式沿用 qtmediate：
+
+```json
+{
+    "config": { "priority": 1, "ratio": 1 },
+    "widgets": { "MainWindow": ["window", "roll"] },
+    "variables": {
+        "light": { "text": "#000000" },
+        "dark": { "_base": "light", "text": { "value": "#EEEEEE", "priority": 2 } }
+    },
+    "stylesheets": {
+        "_common": { "window": { "content": "A { margin: ${gap}; }" } },
+        "light": { "window": { "file": "light/window.qss" }, "roll": [ { "content": "..." } ] }
+    }
+}
+```
+
+- 描述文件为搜索路径下任意层的 `*.res.json`，按路径排序后依次读取。`file` 相对描述文件所在目录，样式表中的 `url(@/...)` 相对样式表文件所在目录。
+- **按平台给值**：键全为 `win`、`windows`、`mac`、`macos`、`linux` 的对象按当前系统取值，没有当前系统的键即为未给出；其他对象（如 `{ "value": ..., "priority": ... }`）照常解读。
+- **组装**：控件的各标识映射到的命名空间依次收集；先 `_common` 的继承链，再当前主题的继承链（`_base`，由最基础的主题开始，检测循环）；同一主题内按优先级升序稳定排序，同一优先级按命名空间的顺序、再按文件与数组中的顺序。
+- **变量**：`${name}` 以整条链（含 `_common`）合并后的变量替换，派生主题覆盖其基础主题，因此基础主题的样式表也使用派生主题的值（与 qtmediate 不同：它以每个主题自己的变量替换其样式表）。同一主题中同名变量取优先级高者，相同时取后读到的（与 qtmediate 相反，它取优先级数值小者；这里与样式表统一为数值大者胜出）。未定义的变量原样保留并报告。
+- **比例**：每个样式表的 `ratio` 乘以管理器的界面缩放比例与字号比例，交给 `ThemeStyleSheet` 换算。
+- **刷新**：主题、比例改变或重新读取文件后，已登记的控件在事件循环中统一重新设置一次样式表；控件销毁后自动移除。
+
 **主题系统是独立的子库 `HelloUtauTheme`**，位于 `helloutau/lib/Theme/`，头文件以 `<helloutau/Theme/...>` 引用，`HelloUtauWidgets` 与 `HelloUtauEditor` 依赖它。只有该子库链接 Qt 的私有模块，私有依赖因此集中在一处，也可以单独测试。命名空间为 `hello::daw`，不增加第三层：主题系统不会移出本仓库，不属于 `docs/Development.md` 所述的例外。类名以 `Theme`、`Svgx` 等为前缀，避免与其他子库的类重名。

@@ -6,12 +6,12 @@ project(HelloUtauTheme
 file(GLOB_RECURSE _src "*.cpp" "*_p.h")
 file(GLOB_RECURSE _hdr "${CMAKE_CURRENT_SOURCE_DIR}/../../include/helloutau/Theme/*.h")
 
-qm_find_qt(Core Gui)
+qm_find_qt(Core Gui Widgets)
 
 helloutau_add_library(${PROJECT_NAME} SHARED
     QT_AUTOGEN
     SOURCES ${_src} ${_hdr}
-    QT_LINKS Core Gui
+    QT_LINKS Core Gui Widgets
     INCLUDE_PRIVATE ../../include/** **
     MACRO_PREFIX HELLOUTAU_THEME
 )

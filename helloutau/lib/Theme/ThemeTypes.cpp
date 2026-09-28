@@ -4,6 +4,7 @@
 
 #include <QtCore/QLoggingCategory>
 
+#include "ThemeLogging_p.h"
 #include "ThemeReader.h"
 
 namespace hello::daw {

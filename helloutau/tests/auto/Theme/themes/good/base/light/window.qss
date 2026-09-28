@@ -1,0 +1,1 @@
+W { color: ${text}; image: url(@/icon.png); }

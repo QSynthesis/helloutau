@@ -1,0 +1,12 @@
+{
+    "config": { "priority": 3 },
+    "variables": { "dark": { "back": { "value": "#101010" } } },
+    "stylesheets": {
+        "dark": {
+            "roll": {
+                "content": "R { border: 1px; }",
+                "ratio": { "win": 2, "mac": 2, "linux": 2 }
+            }
+        }
+    }
+}

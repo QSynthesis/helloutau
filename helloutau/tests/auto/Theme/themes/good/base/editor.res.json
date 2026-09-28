@@ -1,0 +1,19 @@
+{
+    "widgets": { "MainWindow": ["window", "roll"], "Palette": "palette" },
+    "variables": {
+        "_common": { "gap": "4px" },
+        "light": { "text": "#000000", "back": "#FFFFFF" },
+        "dark": { "_base": "light", "text": "#EEEEEE" }
+    },
+    "stylesheets": {
+        "_common": { "window": { "content": "A { margin: ${gap}; }" } },
+        "light": {
+            "window": { "file": "light/window.qss" },
+            "roll": [
+                { "content": "R { color: ${text}; }", "priority": 2 },
+                { "content": "R { background: ${back}; }", "priority": 1 }
+            ]
+        },
+        "dark": { "palette": { "content": "P { --shadow: qshadow(#40000000, 8px); }" } }
+    }
+}
