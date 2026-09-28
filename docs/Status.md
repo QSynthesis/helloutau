@@ -15,7 +15,7 @@
 | `HelloKitEdit` | 编辑层的文档部分。工程：`ProjectDocument`（打开、导入、保存、是否已修改）、`TrackTimeline`（音符的位置）、`ProjectSession`、句柄 `ProjectRefs`、领域函数 `ProjectEdits`、命令 `ProjectCommands`。音源：`VoiceBankSession`（含保存与从磁盘重新读取）、句柄 `VoiceBankRefs`、领域函数 `VoiceBankEdits`、命令 `VoiceBankCommands` |
 | `HelloUtauWidgets` | 通用的控件基础设施：命令面板 `CommandPalette` 与其模糊匹配 `CommandMatcher`；场景接口 `SceneView`、`SceneLayer`、`SceneGesture`，以及随其坐标轴的 `TimelineRuler` 与 `PianoKeyboard` |
 | `HelloUtauAudio` | 设备输出 `AudioOutput`（`QAudioSink` 回调接口）、`AudioSource` / `BufferSource` / `StreamSource`（流式，环形缓冲）、采样率转换 `resampled()`（r8brain-free-src）|
-| `HelloUtauEditor` | 窗口骨架：QActionKit 清单生成的菜单、工程的打开（UST 编码选择）、保存、另存为与导出 UST、撤销与重做、未保存标记、设置、命令面板（`Ctrl+Shift+P`）；工程在卷帘 `PianoRoll` 中显示与编辑（选区、拖动移调与重排、改长度、笔工具、插入、删除、拆分、歌词就地编辑、量化）；打开工程后读取其音源（按目录选择编码），卷帘标出找不到样本的音符；空格渲染并播放整轨或选中范围（`Playback`），状态栏显示进度，卷帘显示播放线；Shift+Space 实时试听。见 [`Widgets.md`](Widgets.md) 第 1–6 步 |
+| `HelloUtauEditor` | 窗口骨架：QActionKit 清单生成的菜单、工程的打开（UST 编码选择）、保存、另存为与导出 UST、撤销与重做、未保存标记、设置、命令面板（`Ctrl+Shift+P`）；工程在卷帘 `PianoRoll` 中显示与编辑（选区、拖动移调与重排、改长度、笔工具、插入、删除、拆分、歌词就地编辑、量化）；打开工程后读取其音源（按目录选择编码），卷帘标出找不到样本的音符；空格渲染并播放整轨或选中范围（`Playback`），状态栏显示进度，卷帘显示播放线；Shift+Space 实时试听；「显示音高」绘制每个音符的滑音与颤音曲线。见 [`Widgets.md`](Widgets.md) 第 1–6 步与 [`Tuning.md`](Tuning.md) 第 1 步 |
 | `helloutau` | 薄驱动，仅含 `main.cpp` |
 
 已验证的构建链：qmsetup 的 `hellokit_add_library` / `helloutau_add_library` / `helloutau_add_application`、Qt 6.11 与 AUTOMOC、stdcorelib、stdutau、wolf-midi、QtTest 与 `add_auto_test`、ctest。

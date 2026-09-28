@@ -19,6 +19,7 @@
 #include <hellokit/Edit/ProjectRefs.h>
 #include <hellokit/Edit/ProjectSession.h>
 #include <hellokit/Edit/TrackTimeline.h>
+#include <hellokit/Synth/PitchCurve.h>
 #include <hellokit/VoiceBank/VoiceBank.h>
 
 #include <helloutau/Widgets/PianoKeyboard.h>
@@ -55,6 +56,9 @@ namespace hello::daw {
 
         // The part of the view to the left of the playhead after the view follows it
         constexpr double FollowMargin = 0.1;
+
+        // The pitch curves are sampled this many pixels apart, and at least a tick apart.
+        constexpr double CurveStep = 2;
 
         QString tempoText(double tempo) {
             return QString::number(tempo, 'g', 6);
@@ -120,6 +124,8 @@ namespace hello::daw {
     public:
         class GridLayer;
         class NoteLayer;
+        class PitchLayer;
+        class OverlayLayer;
         class MoveGesture;
         class LengthGesture;
         class BandGesture;
@@ -153,6 +159,10 @@ namespace hello::daw {
 
         // The note whose lyric is edited, or 0
         kit::edit::NodeId editing = 0;
+
+        bool pitchVisible = true;
+        QColor pitchColor;
+        QColor vibratoColor;
 
         std::optional<double> playhead;
         QColor playheadColor;
@@ -444,18 +454,6 @@ namespace hello::daw {
             if (m_roll->drawn) {
                 paintNote(painter, exposed, *m_roll->drawn);
             }
-            if (m_roll->band) {
-                auto color = m_roll->_decl->selectionColor();
-                painter.setPen(QPen(color, 1));
-                color.setAlphaF(0.15f);
-                painter.setBrush(color);
-                painter.drawRect(*m_roll->band);
-            }
-            if (m_roll->playhead) {
-                const double x = view()->timeAxis().toX(*m_roll->playhead);
-                painter.setPen(QPen(m_roll->_decl->playheadColor(), 1));
-                painter.drawLine(QPointF(x, exposed.top()), QPointF(x, exposed.bottom() + 1));
-            }
         }
 
         std::optional<SceneHit> hitTest(QPointF position) const override {
@@ -534,6 +532,125 @@ namespace hello::daw {
                              Qt::AlignLeft | Qt::AlignVCenter,
                              drawn ? QString::fromLatin1(kit::defaultLyric) : note->lyric);
         }
+    };
+
+    // The pitch of each sung note, as the resampler receives it: the portamento as a line through
+    // the rows, and apart from it the vibrato around the middle of the row of the note
+    class PianoRoll::Impl::PitchLayer : public SceneLayer {
+    public:
+        explicit PitchLayer(PianoRoll::Impl *roll) : m_roll(roll) {
+        }
+
+        void paint(QPainter &painter, const QRect &exposed) override {
+            // While notes are dragged, their curves are not yet known.
+            if (!m_roll->pitchVisible || !m_roll->placements.isEmpty()) {
+                return;
+            }
+            const auto timeline = m_roll->timeline;
+            const auto &time = view()->timeAxis();
+            const auto &keys = view()->keyAxis();
+            const double left = time.toTick(exposed.left());
+            const double right = time.toTick(exposed.right() + 1);
+            const auto [begin, end] = timeline->notesBetween(left, right);
+            if (begin >= end) {
+                return;
+            }
+
+            // The curve of a note reads the two notes before it and the one after.
+            const int first = std::max(0, begin - 2);
+            const int last = std::min(timeline->noteCount(), end + 1);
+            const auto refs = m_roll->notes();
+            QList<kit::Note> notes;
+            for (int i = first; i < last; ++i) {
+                notes.push_back(refs.at(i).toNote());
+            }
+
+            const auto decl = m_roll->_decl;
+            const QPen portamentoPen(decl->pitchColor(), 1.5);
+            const QPen vibratoPen(decl->vibratoColor(), 1);
+            painter.setRenderHint(QPainter::Antialiasing);
+            painter.setBrush(Qt::NoBrush);
+            const double step = std::max(1.0, CurveStep / time.pixelsPerTick);
+            for (int i = begin; i < end; ++i) {
+                const auto &entry = timeline->note(i);
+                if (entry.rest) {
+                    continue;
+                }
+                const auto &note = notes.at(i - first);
+                const double tempo = timeline->tempoMap().tempo(i);
+                const kit::PitchCurve curve(notes, i - first, tempo);
+
+                // Each note draws its own span, which its neighbours also bend. The span before
+                // it belongs to the previous note, unless that is a rest.
+                double from = 0;
+                if ((i == 0 || timeline->note(i - 1).rest) && !note.portamento.isEmpty()) {
+                    from = std::min(0.0, note.portamento.first().x * tempo * kit::ticksPerQuarter /
+                                             60000);
+                }
+                from = std::max(from, left - double(entry.start) - step);
+                const double to =
+                    std::min(double(entry.length), right - double(entry.start) + step);
+                if (from >= to) {
+                    continue;
+                }
+
+                const auto pointAt = [&](double tick, double cents) {
+                    return QPointF(time.toX(double(entry.start) + tick),
+                                   keys.toY(entry.key + 0.5 + cents / 100));
+                };
+                QPolygonF portamento;
+                QList<QPolygonF> vibrato;
+                bool vibrating = false;
+                for (double tick = from;; tick = std::min(tick + step, to)) {
+                    portamento.push_back(pointAt(tick, curve.portamentoAt(tick)));
+                    const double v = curve.vibratoAt(tick);
+                    if (v != 0) {
+                        if (!vibrating) {
+                            vibrato.push_back({});
+                        }
+                        vibrato.last().push_back(pointAt(tick, v));
+                    }
+                    vibrating = v != 0;
+                    if (tick >= to) {
+                        break;
+                    }
+                }
+                painter.setPen(vibratoPen);
+                for (const auto &run : std::as_const(vibrato)) {
+                    painter.drawPolyline(run);
+                }
+                painter.setPen(portamentoPen);
+                painter.drawPolyline(portamento);
+            }
+        }
+
+    private:
+        PianoRoll::Impl *m_roll;
+    };
+
+    // What is drawn over everything: the selection rectangle and the playhead
+    class PianoRoll::Impl::OverlayLayer : public SceneLayer {
+    public:
+        explicit OverlayLayer(PianoRoll::Impl *roll) : m_roll(roll) {
+        }
+
+        void paint(QPainter &painter, const QRect &exposed) override {
+            if (m_roll->band) {
+                auto color = m_roll->_decl->selectionColor();
+                painter.setPen(QPen(color, 1));
+                color.setAlphaF(0.15f);
+                painter.setBrush(color);
+                painter.drawRect(*m_roll->band);
+            }
+            if (m_roll->playhead) {
+                const double x = view()->timeAxis().toX(*m_roll->playhead);
+                painter.setPen(QPen(m_roll->_decl->playheadColor(), 1));
+                painter.drawLine(QPointF(x, exposed.top()), QPointF(x, exposed.bottom() + 1));
+            }
+        }
+
+    private:
+        PianoRoll::Impl *m_roll;
     };
 
     // A drag of the selected notes: vertically transposes them, horizontally moves them in the
@@ -882,6 +999,8 @@ namespace hello::daw {
 
         _impl->view->addLayer(std::make_unique<Impl::GridLayer>(_impl.get()));
         _impl->view->addLayer(std::make_unique<Impl::NoteLayer>(_impl.get()));
+        _impl->view->addLayer(std::make_unique<Impl::PitchLayer>(_impl.get()));
+        _impl->view->addLayer(std::make_unique<Impl::OverlayLayer>(_impl.get()));
 
         _impl->quantizer = new QComboBox();
         _impl->quantizer->setToolTip(tr("Quantization"));
@@ -1117,6 +1236,15 @@ namespace hello::daw {
         _impl->view->viewport()->update();
     }
 
+    bool PianoRoll::isPitchVisible() const {
+        return _impl->pitchVisible;
+    }
+
+    void PianoRoll::setPitchVisible(bool visible) {
+        _impl->pitchVisible = visible;
+        _impl->view->viewport()->update();
+    }
+
     void PianoRoll::keyPressEvent(QKeyEvent *event) {
         if ((event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter) &&
             event->modifiers() == Qt::NoModifier) {
@@ -1190,6 +1318,29 @@ namespace hello::daw {
 
     void PianoRoll::setSelectionColor(const QColor &color) {
         _impl->selectionColor = color;
+        _impl->view->viewport()->update();
+    }
+
+    QColor PianoRoll::pitchColor() const {
+        return _impl->pitchColor.isValid() ? _impl->pitchColor : palette().color(QPalette::Text);
+    }
+
+    void PianoRoll::setPitchColor(const QColor &color) {
+        _impl->pitchColor = color;
+        _impl->view->viewport()->update();
+    }
+
+    QColor PianoRoll::vibratoColor() const {
+        if (_impl->vibratoColor.isValid()) {
+            return _impl->vibratoColor;
+        }
+        auto color = palette().color(QPalette::Text);
+        color.setAlphaF(0.5f);
+        return color;
+    }
+
+    void PianoRoll::setVibratoColor(const QColor &color) {
+        _impl->vibratoColor = color;
         _impl->view->viewport()->update();
     }
 

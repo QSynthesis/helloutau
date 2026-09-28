@@ -6,6 +6,7 @@
 #include <hellokit/Edit/ProjectRefs.h>
 #include <hellokit/Edit/ProjectSession.h>
 #include <hellokit/Edit/TrackTimeline.h>
+#include <hellokit/Synth/PitchCurve.h>
 #include <hellokit/VoiceBank/VoiceBank.h>
 
 #include <helloutau/Widgets/SceneView.h>
@@ -382,6 +383,75 @@ private Q_SLOTS:
         roll.setPlayheadPosition(std::nullopt);
         QVERIFY(!roll.playheadPosition());
         QCOMPARE(time.left, visible * 1.4);
+    }
+
+    // The portamento runs through the rows as the resampler receives it, and the vibrato apart
+    // around the middle of the row; both only while the pitch is shown.
+    void the_pitch_is_drawn_as_the_resampler_receives_it() {
+        kit::Note la;
+        la.lyric = QStringLiteral("la");
+        la.length = 960;
+        la.noteNum = 60;
+        kit::Vibrato vibrato;
+        vibrato.length = 50;
+        vibrato.period = 200;
+        vibrato.amplitude = 80;
+        la.vibrato = vibrato;
+        kit::Note li;
+        li.lyric = QStringLiteral("li");
+        li.length = 480;
+        li.noteNum = 64;
+        kit::PortamentoPoint first;
+        first.x = -100;
+        kit::PortamentoPoint second;
+        second.x = 100;
+        li.portamento = {first, second};
+        kit::Project project;
+        project.settings.tempo = 120;
+        project.tracks.push_back({});
+        project.tracks[0].notes = {la, li};
+
+        kit::ProjectSession session(project);
+        PianoRoll roll(&session);
+        roll.setPitchColor(QColor(255, 0, 255));
+        roll.setVibratoColor(QColor(0, 255, 255));
+        show(roll);
+
+        // Whether a pixel of \a color lies within two pixels of (tick, cents from key)
+        const auto drawnNear = [&roll](double tick, int key, double cents, QColor color) {
+            const auto image = roll.view()->viewport()->grab().toImage();
+            const QPointF center(roll.view()->timeAxis().toX(tick),
+                                 roll.view()->keyAxis().toY(key + 0.5 + cents / 100));
+            for (int dx = -2; dx <= 2; ++dx) {
+                for (int dy = -2; dy <= 2; ++dy) {
+                    const auto pixel = image.pixelColor(center.toPoint() + QPoint(dx, dy));
+                    if (qAbs(pixel.red() - color.red()) < 60 &&
+                        qAbs(pixel.green() - color.green()) < 60 &&
+                        qAbs(pixel.blue() - color.blue()) < 60) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        };
+
+        const QList<kit::Note> notes = {la, li};
+        const kit::PitchCurve secondCurve(notes, 1, 120);
+        // From 100 ms before li to 100 ms after it, li bends up from la; at its start halfway
+        const double bend = secondCurve.portamentoAt(0);
+        QVERIFY(bend < -100 && bend > -300);
+        QVERIFY(drawnNear(960, 64, bend, QColor(255, 0, 255)));
+        QVERIFY(drawnNear(960 + 300, 64, 0, QColor(255, 0, 255)));
+
+        const kit::PitchCurve firstCurve(notes, 0, 120);
+        const double tick = 960 * 0.5 + 120;
+        const double v = firstCurve.vibratoAt(tick);
+        QVERIFY(qAbs(v) > 20);
+        QVERIFY(drawnNear(tick, 60, v, QColor(0, 255, 255)));
+
+        roll.setPitchVisible(false);
+        QVERIFY(!drawnNear(960 + 300, 64, 0, QColor(255, 0, 255)));
+        QVERIFY(!drawnNear(tick, 60, v, QColor(0, 255, 255)));
     }
 
     // Tab commits the lyric and edits the next note; Escape leaves the lyric as it was.

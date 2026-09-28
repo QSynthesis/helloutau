@@ -275,6 +275,12 @@ namespace hello::daw {
                 tools->addAction(action);
             }
             selectTool->setChecked(true);
+            const auto showPitch = addCommand(QStringLiteral("helloutau.view.showPitch"), [this] {
+                roll->setPitchVisible(
+                    actions.value(QStringLiteral("helloutau.view.showPitch"))->isChecked());
+            });
+            showPitch->setCheckable(true);
+            showPitch->setChecked(true);
             addCommand(QStringLiteral("helloutau.view.commandPalette"), [this] {
                 palette->setCommands(commandEntries());
                 palette->setRecentIds(editor->settings().recentCommands());
@@ -348,7 +354,8 @@ namespace hello::daw {
 
         void bindDocument() {
             // Replaces the piano roll of the previous document, which is deleted with it. The
-            // tool and the quantization belong to the window and carry over.
+            // tool, the quantization and whether the pitch is shown belong to the window and
+            // carry over.
             const auto quantization = roll ? roll->quantization() : -1;
             roll = new PianoRoll(document->session());
             roll->setVoiceBank(document->voiceBank());
@@ -358,6 +365,8 @@ namespace hello::daw {
             roll->setTool(actions.value(QStringLiteral("helloutau.edit.penTool"))->isChecked()
                               ? PianoRoll::PenTool
                               : PianoRoll::SelectTool);
+            roll->setPitchVisible(
+                actions.value(QStringLiteral("helloutau.view.showPitch"))->isChecked());
             _decl->setCentralWidget(roll);
 
             QObject::connect(document.get(), &kit::ProjectDocument::voiceBankChanged, roll,

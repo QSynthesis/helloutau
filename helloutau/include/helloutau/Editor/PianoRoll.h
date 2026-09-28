@@ -47,6 +47,8 @@ namespace hello::daw {
         Q_PROPERTY(QColor unsampledLyricColor READ unsampledLyricColor WRITE setUnsampledLyricColor)
         Q_PROPERTY(QColor selectionColor READ selectionColor WRITE setSelectionColor)
         Q_PROPERTY(QColor playheadColor READ playheadColor WRITE setPlayheadColor)
+        Q_PROPERTY(QColor pitchColor READ pitchColor WRITE setPitchColor)
+        Q_PROPERTY(QColor vibratoColor READ vibratoColor WRITE setVibratoColor)
         Q_PROPERTY(QColor whiteRowColor READ whiteRowColor WRITE setWhiteRowColor)
         Q_PROPERTY(QColor blackRowColor READ blackRowColor WRITE setBlackRowColor)
         Q_PROPERTY(QColor lineColor READ lineColor WRITE setLineColor)
@@ -150,6 +152,12 @@ namespace hello::daw {
         std::optional<double> playheadPosition() const;
         void setPlayheadPosition(std::optional<double> tick);
 
+        /// Whether the pitch of each note is drawn: its portamento in pitchColor() and, apart
+        /// from it, its vibrato around the middle of its row in vibratoColor(), both as the
+        /// resampler receives them (kit::PitchCurve). See step 1 in docs/Tuning.md.
+        bool isPitchVisible() const;
+        void setPitchVisible(bool visible);
+
         QColor noteColor() const;
         void setNoteColor(const QColor &color);
         QColor restColor() const;
@@ -162,6 +170,10 @@ namespace hello::daw {
         void setUnsampledLyricColor(const QColor &color);
         QColor selectionColor() const;
         void setSelectionColor(const QColor &color);
+        QColor pitchColor() const;
+        void setPitchColor(const QColor &color);
+        QColor vibratoColor() const;
+        void setVibratoColor(const QColor &color);
         QColor playheadColor() const;
         void setPlayheadColor(const QColor &color);
         QColor whiteRowColor() const;

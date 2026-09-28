@@ -45,6 +45,7 @@
                 shortcut="V" />
         <action id="helloutau.edit.penTool" text="P&amp;en Tool" category="Edit" shortcut="B" />
 
+        <action id="helloutau.view.showPitch" text="Show &amp;Pitch" category="View" />
         <action id="helloutau.view.commandPalette" text="&amp;Command Palette..." category="View"
                 shortcuts="Ctrl+Shift+P;F1" />
 
@@ -102,6 +103,8 @@
                 <action id="helloutau.edit.penTool" />
             </menu>
             <menu id="helloutau.view">
+                <action id="helloutau.view.showPitch" />
+                <separator />
                 <action id="helloutau.view.commandPalette" />
             </menu>
             <menu id="helloutau.playback">
