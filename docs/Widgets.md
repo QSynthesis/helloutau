@@ -133,6 +133,11 @@
 
 **验收标准**：打开一个数百个音符的真实工程，滚动与缩放流畅；撤销、重做后显示与树一致（测试中以命中测试与坐标换算的结果核对）。
 
+**进度**：分三块进行，前两块已完成。
+1. 场景接口（`HelloUtauWidgets`）：`SceneView`、`SceneAxis`、`SceneLayer` 与 `SceneGesture`、`TimelineRuler`、`PianoKeyboard`。
+2. 卷帘本体：`TrackTimeline`（`HelloKitEdit`，音符的位置，变化后在下次读取时计算）与 `PianoRoll`（`HelloUtauEditor`，网格层、音符层、标尺上的速度标记），取代原先的音符表。
+3. 音源：`ProjectDocument` 解析 `VoiceDir` 并打开音源，编码无法确定时按目录预览选择；找不到样本的音符另以样式区分。尚未开始。
+
 ### 第 4 步：音符编辑
 
 - 选区：单击、Ctrl 与 Shift 组合、框选；选区记录 `NodeId`。

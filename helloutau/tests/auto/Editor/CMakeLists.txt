@@ -1,3 +1,4 @@
 add_auto_test(test_AppSettings.cpp HelloUtauEditor)
 add_auto_test(test_Editor.cpp HelloUtauEditor)
+add_auto_test(test_PianoRoll.cpp HelloUtauEditor)
 add_auto_test(test_UstCharsetDialog.cpp HelloUtauEditor)

@@ -7,10 +7,8 @@
 #include <QtGui/QAction>
 #include <QtGui/QCloseEvent>
 #include <QtWidgets/QFileDialog>
-#include <QtWidgets/QHeaderView>
 #include <QtWidgets/QMenuBar>
 #include <QtWidgets/QMessageBox>
-#include <QtWidgets/QTableView>
 
 #include <QAKCore/actionextension.h>
 #include <QAKCore/actionregistry.h>
@@ -24,7 +22,7 @@
 #include "DiagnosticBox_p.h"
 #include "Editor.h"
 #include "ExportUstDialog.h"
-#include "NoteTableModel.h"
+#include "PianoRoll.h"
 #include "SettingsDialog.h"
 
 namespace hello::daw {
@@ -61,8 +59,7 @@ namespace hello::daw {
         MainWindow *_decl;
         Editor *editor;
         std::unique_ptr<kit::ProjectDocument> document;
-        NoteTableModel *model = nullptr;
-        QTableView *view = nullptr;
+        PianoRoll *roll = nullptr;
         QAK::WidgetActionContext *context = nullptr;
         QHash<QString, QAction *> actions;
         CommandPalette *palette = nullptr;
@@ -153,10 +150,9 @@ namespace hello::daw {
         }
 
         void bindDocument() {
-            view->setModel(nullptr);
-            delete model;
-            model = new NoteTableModel(document->session(), _decl);
-            view->setModel(model);
+            // Replaces the piano roll of the previous document, which is deleted with it.
+            roll = new PianoRoll(document->session());
+            _decl->setCentralWidget(roll);
 
             QObject::connect(document.get(), &kit::ProjectDocument::modifiedChanged, _decl,
                              [this] { updateTitle(); });
@@ -215,10 +211,6 @@ namespace hello::daw {
 
     MainWindow::MainWindow(Editor *editor, std::unique_ptr<kit::ProjectDocument> document)
         : _impl(std::make_unique<Impl>(this, editor)) {
-        _impl->view = new QTableView();
-        _impl->view->horizontalHeader()->setStretchLastSection(true);
-        setCentralWidget(_impl->view);
-
         _impl->initActions();
         _impl->document = std::move(document);
         _impl->bindDocument();
@@ -226,9 +218,8 @@ namespace hello::daw {
     }
 
     MainWindow::~MainWindow() {
-        // The model refers to the session of the document.
-        _impl->view->setModel(nullptr);
-        delete _impl->model;
+        // The piano roll refers to the session of the document, which goes with _impl.
+        delete _impl->roll;
     }
 
     kit::ProjectDocument *MainWindow::document() const {
