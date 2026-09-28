@@ -6,6 +6,7 @@
 #include <QtGui/QAction>
 #include <QtTest/QTest>
 #include <QtWidgets/QApplication>
+#include <QtWidgets/QDoubleSpinBox>
 #include <QtWidgets/QGraphicsDropShadowEffect>
 #include <QtWidgets/QInputDialog>
 #include <QtWidgets/QLineEdit>
@@ -23,6 +24,7 @@
 #include <helloutau/Editor/Editor.h>
 #include <helloutau/Editor/MainWindow.h>
 #include <helloutau/Editor/PianoRoll.h>
+#include <helloutau/Editor/VibratoDialog.h>
 #include <helloutau/Editor/VoiceBankCharsetDialog.h>
 
 using namespace hello;
@@ -234,6 +236,35 @@ private Q_SLOTS:
 
     // The commands on the selection are enabled by it, and the tool and the quantization stay
     // with the window when it shows another project.
+    // The vibrato command opens the dialog with that of the first selected note, or the
+    // default, and gives what it accepts to every selected note.
+    void the_vibrato_of_the_selected_notes_is_edited() {
+        const auto e = editor();
+        const auto window = e->openFile(savedProject(m_dir, "v.usth"));
+        QVERIFY(window);
+        auto roll = qobject_cast<PianoRoll *>(window->centralWidget());
+        const auto edit = actionNamed(window, QStringLiteral("Vibra&to..."));
+        QVERIFY(edit);
+        QVERIFY(!edit->isEnabled());
+
+        roll->selectAll();
+        QVERIFY(edit->isEnabled());
+        double shown = 0;
+        QTimer::singleShot(0, [&shown] {
+            const auto dialog = qobject_cast<VibratoDialog *>(QApplication::activeModalWidget());
+            QVERIFY(dialog);
+            shown = dialog->field(1)->value();
+            dialog->field(1)->setValue(240);
+            dialog->accept();
+        });
+        edit->trigger();
+        QCOMPARE(shown, 180.0);
+        const auto vibrato = window->document()->session()->snapshot().tracks[0].notes[0].vibrato;
+        QVERIFY(vibrato);
+        QCOMPARE(vibrato->period, 240.0);
+        QCOMPARE(vibrato->length, 65.0);
+    }
+
     void the_edit_commands_follow_the_selection() {
         const auto e = editor();
         const auto window = e->openFile(savedProject(m_dir, "d.usth"));

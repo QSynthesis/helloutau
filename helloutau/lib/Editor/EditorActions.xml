@@ -33,6 +33,9 @@
         <action id="helloutau.edit.splitNote" text="S&amp;plit Note..." category="Edit" />
         <action id="helloutau.edit.togglePortamento" text="Add or Remove P&amp;ortamento"
                 category="Edit" />
+        <action id="helloutau.edit.toggleVibrato" text="Add or Remove &amp;Vibrato"
+                category="Edit" />
+        <action id="helloutau.edit.editVibrato" text="Vibra&amp;to..." category="Edit" />
         <action id="helloutau.edit.editLyric" text="Edit &amp;Lyric" category="Edit"
                 shortcut="F2" />
         <action id="helloutau.edit.transposeUp" text="&amp;Up a Semitone" category="Transpose"
@@ -95,6 +98,8 @@
                 <action id="helloutau.edit.splitNote" />
                 <action id="helloutau.edit.editLyric" />
                 <action id="helloutau.edit.togglePortamento" />
+                <action id="helloutau.edit.toggleVibrato" />
+                <action id="helloutau.edit.editVibrato" />
                 <menu id="helloutau.edit.transpose">
                     <action id="helloutau.edit.transposeUp" />
                     <action id="helloutau.edit.transposeDown" />

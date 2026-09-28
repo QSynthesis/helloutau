@@ -15,6 +15,7 @@
 #include <helloutau/Widgets/TimelineRuler.h>
 
 #include <helloutau/Editor/PianoRoll.h>
+#include <helloutau/Editor/VibratoDialog.h>
 
 using namespace hello;
 using namespace hello::daw;
@@ -697,6 +698,29 @@ private Q_SLOTS:
         QVERIFY(notes[0].portamento.isEmpty());
         QVERIFY(notes[1].portamento.isEmpty());
         QCOMPARE(session.undoMessage(), PianoRoll::tr("Remove Portamento"));
+    }
+
+    // The default vibrato goes to the selected sung notes without one; once all have one, the
+    // command removes them. Rests are left alone.
+    void vibrato_is_added_and_removed() {
+        kit::ProjectSession session(threeNotes());
+        PianoRoll roll(&session);
+        show(roll);
+        roll.setSelectedIndices({0, 1, 2});
+
+        kit::DiagnosticList diagnostics;
+        QVERIFY(roll.toggleVibrato(diagnostics));
+        auto notes = session.snapshot().tracks[0].notes;
+        QCOMPARE(notes[0].vibrato, std::optional<kit::Vibrato>(VibratoDialog::defaultVibrato()));
+        QVERIFY(!notes[1].vibrato);
+        QCOMPARE(notes[2].vibrato, std::optional<kit::Vibrato>(VibratoDialog::defaultVibrato()));
+        QCOMPARE(session.undoMessage(), PianoRoll::tr("Add Vibrato"));
+
+        QVERIFY(roll.toggleVibrato(diagnostics));
+        notes = session.snapshot().tracks[0].notes;
+        QVERIFY(!notes[0].vibrato);
+        QVERIFY(!notes[2].vibrato);
+        QCOMPARE(session.undoMessage(), PianoRoll::tr("Remove Vibrato"));
     }
 
     // The distance from the portamento within which a double click inserts a point is a

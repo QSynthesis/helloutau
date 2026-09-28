@@ -35,6 +35,7 @@
 #include "PianoRoll.h"
 #include "Playback.h"
 #include "SettingsDialog.h"
+#include "VibratoDialog.h"
 #include "VoiceBankCharsetDialog.h"
 
 namespace hello::daw {
@@ -250,6 +251,12 @@ namespace hello::daw {
                     return roll->togglePortamento(diagnostics);
                 });
             });
+            addCommand(QStringLiteral("helloutau.edit.toggleVibrato"), [this] {
+                edit(tr("Vibrato"), [this](kit::DiagnosticList &diagnostics) {
+                    return roll->toggleVibrato(diagnostics);
+                });
+            });
+            addCommand(QStringLiteral("helloutau.edit.editVibrato"), [this] { editVibrato(); });
             addCommand(QStringLiteral("helloutau.edit.editLyric"), [this] {
                 const auto indices = roll->selectedIndices();
                 if (!indices.isEmpty()) {
@@ -403,7 +410,8 @@ namespace hello::daw {
         void updateEditActions() {
             const int selected = int(roll->selectedIndices().size());
             for (const auto id : {"helloutau.edit.delete", "helloutau.edit.editLyric",
-                                  "helloutau.edit.togglePortamento", "helloutau.edit.transposeUp",
+                                  "helloutau.edit.togglePortamento", "helloutau.edit.toggleVibrato",
+                                  "helloutau.edit.editVibrato", "helloutau.edit.transposeUp",
                                   "helloutau.edit.transposeDown", "helloutau.edit.octaveUp",
                                   "helloutau.edit.octaveDown"}) {
                 actions.value(QLatin1String(id))->setEnabled(selected > 0);
@@ -424,6 +432,32 @@ namespace hello::daw {
             kit::DiagnosticList diagnostics;
             run(diagnostics);
             DiagnosticBox::show(_decl, title, diagnostics);
+        }
+
+        // Sets the vibrato of the selected sung notes to one that the user enters, starting from
+        // that of the first of them, or the default.
+        void editVibrato() {
+            if (roll->lyricEditor()->isVisible()) {
+                return;
+            }
+            const auto refs = kit::ProjectRef(document->session()).tracks().at(0).notes();
+            QList<kit::NoteRef> sung;
+            for (const int index : roll->selectedIndices()) {
+                if (!roll->timeline()->note(index).rest) {
+                    sung.push_back(refs.at(index));
+                }
+            }
+            if (sung.isEmpty()) {
+                return;
+            }
+            VibratoDialog dialog(sung.first().vibrato().value_or(VibratoDialog::defaultVibrato()),
+                                 _decl);
+            if (dialog.exec() != QDialog::Accepted) {
+                return;
+            }
+            kit::DiagnosticList diagnostics;
+            kit::ProjectEdits::setVibrato(sung, dialog.vibrato(), diagnostics);
+            DiagnosticBox::show(_decl, tr("Vibrato"), diagnostics);
         }
 
         // Splits the selected note after a length that the user enters.

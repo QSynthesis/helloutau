@@ -28,6 +28,8 @@
 #include <helloutau/Widgets/SceneView.h>
 #include <helloutau/Widgets/TimelineRuler.h>
 
+#include "VibratoDialog.h"
+
 namespace hello::daw {
 
     namespace {
@@ -1775,6 +1777,32 @@ namespace hello::daw {
         }
         return _impl->writePoints(lacking ? tr("Add Portamento") : tr("Remove Portamento"), points,
                                   diagnostics);
+    }
+
+    bool PianoRoll::toggleVibrato(kit::DiagnosticList &diagnostics) {
+        const auto refs = _impl->notes();
+        QList<kit::NoteRef> sung;
+        QList<kit::NoteRef> lacking;
+        for (const int index : selectedIndices()) {
+            if (_impl->timeline->note(index).rest) {
+                continue;
+            }
+            sung.push_back(refs.at(index));
+            if (!sung.last().vibrato()) {
+                lacking.push_back(sung.last());
+            }
+        }
+        if (sung.isEmpty()) {
+            return true;
+        }
+        auto transaction = _impl->session->transaction(lacking.isEmpty() ? tr("Remove Vibrato")
+                                                                         : tr("Add Vibrato"));
+        if (lacking.isEmpty()) {
+            kit::ProjectEdits::setVibrato(sung, std::nullopt, diagnostics);
+        } else {
+            kit::ProjectEdits::setVibrato(lacking, VibratoDialog::defaultVibrato(), diagnostics);
+        }
+        return transaction.commit(diagnostics);
     }
 
     bool PianoRoll::transposeSelected(int semitones, kit::DiagnosticList &diagnostics) {
