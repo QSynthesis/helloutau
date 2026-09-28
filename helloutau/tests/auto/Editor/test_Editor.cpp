@@ -6,6 +6,7 @@
 #include <QtGui/QAction>
 #include <QtTest/QTest>
 #include <QtWidgets/QApplication>
+#include <QtWidgets/QInputDialog>
 #include <QtWidgets/QLineEdit>
 #include <QtWidgets/QMenu>
 #include <QtWidgets/QMenuBar>
@@ -213,6 +214,54 @@ private Q_SLOTS:
         edit(window);
         QVERIFY(window->save());
         QVERIFY(!window->isWindowModified());
+    }
+
+    // The commands on the selection are enabled by it, and the tool and the quantization stay
+    // with the window when it shows another project.
+    void the_edit_commands_follow_the_selection() {
+        const auto e = editor();
+        const auto window = e->openFile(savedProject(m_dir, "d.usth"));
+        QVERIFY(window);
+        auto roll = qobject_cast<PianoRoll *>(window->centralWidget());
+        const auto remove = actionNamed(window, QStringLiteral("&Delete"));
+        const auto split = actionNamed(window, QStringLiteral("S&plit Note..."));
+        QVERIFY(remove && split);
+        QVERIFY(!remove->isEnabled());
+        QVERIFY(!split->isEnabled());
+
+        roll->selectAll();
+        QVERIFY(remove->isEnabled());
+        QVERIFY(split->isEnabled());
+
+        // Splitting proposes half the note on the grid, and asks for the first part.
+        int proposed = 0;
+        QTimer::singleShot(0, [&proposed] {
+            const auto dialog = qobject_cast<QInputDialog *>(QApplication::activeModalWidget());
+            QVERIFY(dialog);
+            proposed = dialog->intValue();
+            dialog->setIntValue(120);
+            dialog->accept();
+        });
+        split->trigger();
+        QCOMPARE(proposed, 240);
+        const auto notes = window->document()->session()->snapshot().tracks[0].notes;
+        QCOMPARE(notes.size(), 2);
+        QCOMPARE(notes[0].length, 120);
+        QCOMPARE(notes[1].length, 360);
+
+        roll->selectAll();
+        QVERIFY(!split->isEnabled());
+        remove->trigger();
+        QVERIFY(window->document()->session()->snapshot().tracks[0].notes.isEmpty());
+        QVERIFY(!remove->isEnabled());
+
+        actionNamed(window, QStringLiteral("P&en Tool"))->trigger();
+        QCOMPARE(roll->tool(), PianoRoll::PenTool);
+        roll->setQuantization(60);
+        window->setDocument(std::make_unique<kit::ProjectDocument>());
+        roll = qobject_cast<PianoRoll *>(window->centralWidget());
+        QCOMPARE(roll->tool(), PianoRoll::PenTool);
+        QCOMPARE(roll->quantization(), 60);
     }
 
     // The voice bank is found through the UTAU folder of the settings, the user is asked for

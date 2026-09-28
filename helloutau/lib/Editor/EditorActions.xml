@@ -25,6 +25,25 @@
         <action id="helloutau.edit.undo" text="&amp;Undo" category="Edit" shortcut="Ctrl+Z" />
         <action id="helloutau.edit.redo" text="&amp;Redo" category="Edit"
                 shortcuts="Ctrl+Y;Ctrl+Shift+Z" />
+        <action id="helloutau.edit.delete" text="&amp;Delete" category="Edit" shortcut="Del" />
+        <action id="helloutau.edit.selectAll" text="Select &amp;All" category="Edit"
+                shortcut="Ctrl+A" />
+        <action id="helloutau.edit.insertNote" text="&amp;Insert Note" category="Edit"
+                shortcut="Ins" />
+        <action id="helloutau.edit.splitNote" text="S&amp;plit Note..." category="Edit" />
+        <action id="helloutau.edit.editLyric" text="Edit &amp;Lyric" category="Edit"
+                shortcut="F2" />
+        <action id="helloutau.edit.transposeUp" text="&amp;Up a Semitone" category="Transpose"
+                shortcut="Ctrl+Up" />
+        <action id="helloutau.edit.transposeDown" text="&amp;Down a Semitone"
+                category="Transpose" shortcut="Ctrl+Down" />
+        <action id="helloutau.edit.octaveUp" text="Up an &amp;Octave" category="Transpose"
+                shortcut="Ctrl+Shift+Up" />
+        <action id="helloutau.edit.octaveDown" text="Down an O&amp;ctave" category="Transpose"
+                shortcut="Ctrl+Shift+Down" />
+        <action id="helloutau.edit.selectTool" text="&amp;Select Tool" category="Edit"
+                shortcut="V" />
+        <action id="helloutau.edit.penTool" text="P&amp;en Tool" category="Edit" shortcut="B" />
 
         <action id="helloutau.view.commandPalette" text="&amp;Command Palette..." category="View"
                 shortcuts="Ctrl+Shift+P;F1" />
@@ -36,6 +55,7 @@
         <!-- Formats other than .usth, UST first; MIDI and the rest will join it -->
         <menu id="helloutau.file.export" text="&amp;Export" />
         <menu id="helloutau.edit" text="&amp;Edit" />
+        <menu id="helloutau.edit.transpose" text="&amp;Transpose" />
         <menu id="helloutau.view" text="&amp;View" />
         <menu id="helloutau.tools" text="&amp;Tools" />
     </items>
@@ -58,6 +78,22 @@
             <menu id="helloutau.edit">
                 <action id="helloutau.edit.undo" />
                 <action id="helloutau.edit.redo" />
+                <separator />
+                <action id="helloutau.edit.delete" />
+                <action id="helloutau.edit.selectAll" />
+                <separator />
+                <action id="helloutau.edit.insertNote" />
+                <action id="helloutau.edit.splitNote" />
+                <action id="helloutau.edit.editLyric" />
+                <menu id="helloutau.edit.transpose">
+                    <action id="helloutau.edit.transposeUp" />
+                    <action id="helloutau.edit.transposeDown" />
+                    <action id="helloutau.edit.octaveUp" />
+                    <action id="helloutau.edit.octaveDown" />
+                </menu>
+                <separator />
+                <action id="helloutau.edit.selectTool" />
+                <action id="helloutau.edit.penTool" />
             </menu>
             <menu id="helloutau.view">
                 <action id="helloutau.view.commandPalette" />

@@ -5,8 +5,10 @@
 #include <QtCore/QStandardPaths>
 #include <QtCore/QTimer>
 #include <QtGui/QAction>
+#include <QtGui/QActionGroup>
 #include <QtGui/QCloseEvent>
 #include <QtWidgets/QFileDialog>
+#include <QtWidgets/QInputDialog>
 #include <QtWidgets/QMenuBar>
 #include <QtWidgets/QMessageBox>
 
@@ -15,6 +17,9 @@
 #include <QAKWidgets/widgetactioncontext.h>
 
 #include <hellokit/Edit/ProjectDocument.h>
+#include <hellokit/Edit/ProjectEdits.h>
+#include <hellokit/Edit/ProjectRefs.h>
+#include <hellokit/Edit/TrackTimeline.h>
 
 #include <helloutau/Widgets/CommandPalette.h>
 
@@ -63,6 +68,7 @@ namespace hello::daw {
         PianoRoll *roll = nullptr;
         QAK::WidgetActionContext *context = nullptr;
         QHash<QString, QAction *> actions;
+        QActionGroup *tools = nullptr;
         CommandPalette *palette = nullptr;
 
         QAction *addCommand(const QString &id, std::function<void()> handler) {
@@ -88,6 +94,48 @@ namespace hello::daw {
                        [this] { document->session()->undo(); });
             addCommand(QStringLiteral("helloutau.edit.redo"),
                        [this] { document->session()->redo(); });
+            addCommand(QStringLiteral("helloutau.edit.delete"), [this] {
+                edit(tr("Delete"), [this](kit::DiagnosticList &diagnostics) {
+                    return roll->removeSelected(diagnostics);
+                });
+            });
+            addCommand(QStringLiteral("helloutau.edit.selectAll"), [this] { roll->selectAll(); });
+            addCommand(QStringLiteral("helloutau.edit.insertNote"), [this] {
+                edit(tr("Insert Note"), [this](kit::DiagnosticList &diagnostics) {
+                    return roll->insertNote(diagnostics);
+                });
+            });
+            addCommand(QStringLiteral("helloutau.edit.splitNote"), [this] { splitNote(); });
+            addCommand(QStringLiteral("helloutau.edit.editLyric"), [this] {
+                const auto indices = roll->selectedIndices();
+                if (!indices.isEmpty()) {
+                    roll->editLyric(indices.first());
+                }
+            });
+            const std::pair<const char *, int> transpositions[] = {
+                {"helloutau.edit.transposeUp",   1  },
+                {"helloutau.edit.transposeDown", -1 },
+                {"helloutau.edit.octaveUp",      12 },
+                {"helloutau.edit.octaveDown",    -12},
+            };
+            for (const auto &[id, semitones] : transpositions) {
+                addCommand(QLatin1String(id), [this, semitones = semitones] {
+                    edit(tr("Transpose"), [this, semitones](kit::DiagnosticList &diagnostics) {
+                        return roll->transposeSelected(semitones, diagnostics);
+                    });
+                });
+            }
+
+            tools = new QActionGroup(_decl);
+            const auto selectTool = addCommand(QStringLiteral("helloutau.edit.selectTool"),
+                                               [this] { roll->setTool(PianoRoll::SelectTool); });
+            const auto penTool = addCommand(QStringLiteral("helloutau.edit.penTool"),
+                                            [this] { roll->setTool(PianoRoll::PenTool); });
+            for (const auto action : {selectTool, penTool}) {
+                action->setCheckable(true);
+                tools->addAction(action);
+            }
+            selectTool->setChecked(true);
             addCommand(QStringLiteral("helloutau.view.commandPalette"), [this] {
                 palette->setCommands(commandEntries());
                 palette->setRecentIds(editor->settings().recentCommands());
@@ -158,13 +206,24 @@ namespace hello::daw {
         }
 
         void bindDocument() {
-            // Replaces the piano roll of the previous document, which is deleted with it.
+            // Replaces the piano roll of the previous document, which is deleted with it. The
+            // tool and the quantization belong to the window and carry over.
+            const auto quantization = roll ? roll->quantization() : -1;
             roll = new PianoRoll(document->session());
             roll->setVoiceBank(document->voiceBank());
+            if (quantization >= 0) {
+                roll->setQuantization(quantization);
+            }
+            roll->setTool(actions.value(QStringLiteral("helloutau.edit.penTool"))->isChecked()
+                              ? PianoRoll::PenTool
+                              : PianoRoll::SelectTool);
             _decl->setCentralWidget(roll);
 
             QObject::connect(document.get(), &kit::ProjectDocument::voiceBankChanged, roll,
                              [this] { roll->setVoiceBank(document->voiceBank()); });
+            QObject::connect(roll, &PianoRoll::selectionChanged, _decl,
+                             [this] { updateEditActions(); });
+            updateEditActions();
             QObject::connect(document.get(), &kit::ProjectDocument::modifiedChanged, _decl,
                              [this] { updateTitle(); });
             QObject::connect(document.get(), &kit::ProjectDocument::filePathChanged, _decl,
@@ -180,6 +239,62 @@ namespace hello::daw {
             _decl->setWindowTitle(
                 QStringLiteral("%1[*] - HelloUtau").arg(name.isEmpty() ? tr("Untitled") : name));
             _decl->setWindowModified(document->isModified());
+        }
+
+        // Enables the commands that act on the selection when there is one.
+        void updateEditActions() {
+            const int selected = int(roll->selectedIndices().size());
+            for (const auto id : {"helloutau.edit.delete", "helloutau.edit.editLyric",
+                                  "helloutau.edit.transposeUp", "helloutau.edit.transposeDown",
+                                  "helloutau.edit.octaveUp", "helloutau.edit.octaveDown"}) {
+                actions.value(QLatin1String(id))->setEnabled(selected > 0);
+            }
+            actions.value(QStringLiteral("helloutau.edit.splitNote"))->setEnabled(selected == 1);
+        }
+
+        // Performs an edit of the piano roll and shows why it was refused, if it was. Nothing
+        // is edited while a lyric is, since the editor has the keyboard.
+        void edit(const QString &title, const std::function<bool(kit::DiagnosticList &)> &run) {
+            if (roll->lyricEditor()->isVisible()) {
+                return;
+            }
+            kit::DiagnosticList diagnostics;
+            run(diagnostics);
+            DiagnosticBox::show(_decl, title, diagnostics);
+        }
+
+        // Splits the selected note after a length that the user enters.
+        void splitNote() {
+            const auto indices = roll->selectedIndices();
+            if (indices.size() != 1) {
+                return;
+            }
+            const int index = indices.first();
+            const int length = roll->timeline()->note(index).length;
+            if (length < 2) {
+                QMessageBox::information(_decl, tr("Split Note"),
+                                         tr("A note of one tick cannot be split."));
+                return;
+            }
+            // Half the note, on the grid if there is one
+            const int step = roll->quantization();
+            int proposed = length / 2;
+            if (step > 0 && step < length) {
+                proposed = std::clamp((proposed + step / 2) / step * step, step, length - 1);
+            }
+            bool ok = false;
+            const int ticks =
+                QInputDialog::getInt(_decl, tr("Split Note"),
+                                     tr("Length of the first part in ticks, of %1:").arg(length),
+                                     proposed, 1, length - 1, 1, &ok);
+            if (!ok) {
+                return;
+            }
+            edit(tr("Split Note"), [&](kit::DiagnosticList &diagnostics) {
+                return kit::ProjectEdits::splitNote(
+                    kit::ProjectRef(document->session()).tracks().at(0).notes(), index, ticks,
+                    diagnostics);
+            });
         }
 
         void updateUndoActions() {

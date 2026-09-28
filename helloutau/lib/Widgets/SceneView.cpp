@@ -227,6 +227,18 @@ namespace hello::daw {
         event->accept();
     }
 
+    void SceneView::mouseDoubleClickEvent(QMouseEvent *event) {
+        const auto position = event->position();
+        const auto hit = hitAt(position);
+        if (event->button() == Qt::LeftButton && hit &&
+            m_layers[size_t(hit->layer)]->doubleClick(*hit, position)) {
+            cancelGesture();
+            event->accept();
+            return;
+        }
+        mousePressEvent(event);
+    }
+
     void SceneView::keyPressEvent(QKeyEvent *event) {
         if (event->key() == Qt::Key_Escape && m_gesture) {
             cancelGesture();

@@ -85,6 +85,12 @@ namespace hello::daw {
                                                     Qt::MouseButton button,
                                                     Qt::KeyboardModifiers modifiers);
 
+        /// Responds to a double click on what \a hit reports, and returns whether it did.
+        ///
+        /// The press of the first click has already been delivered to press(). If the layer does
+        /// not respond, the second press is delivered to press() as well.
+        virtual bool doubleClick(const SceneHit &hit, QPointF position);
+
         /// Asks the view to draw the layer again.
         void update();
 

@@ -27,6 +27,12 @@ namespace hello::daw {
         return nullptr;
     }
 
+    bool SceneLayer::doubleClick(const SceneHit &hit, QPointF position) {
+        Q_UNUSED(hit);
+        Q_UNUSED(position);
+        return false;
+    }
+
     void SceneLayer::update() {
         if (m_view) {
             m_view->viewport()->update();

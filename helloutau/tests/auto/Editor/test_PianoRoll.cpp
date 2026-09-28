@@ -1,6 +1,8 @@
 #include <QtTest/QTest>
 #include <QtWidgets/QApplication>
+#include <QtWidgets/QLineEdit>
 
+#include <hellokit/Edit/ProjectEdits.h>
 #include <hellokit/Edit/ProjectRefs.h>
 #include <hellokit/Edit/ProjectSession.h>
 #include <hellokit/Edit/TrackTimeline.h>
@@ -46,6 +48,45 @@ private:
         return kit::ProjectRef(&session).tracks().at(0).notes().at(index).id();
     }
 
+    static void show(PianoRoll &roll) {
+        roll.resize(800, 600);
+        roll.show();
+        roll.scrollToNotes();
+    }
+
+    // The point at \a tick in the middle of the row of \a key
+    static QPoint pointOf(const PianoRoll &roll, double tick, int key) {
+        return QPointF(roll.view()->timeAxis().toX(tick), roll.view()->keyAxis().toY(key + 0.5))
+            .toPoint();
+    }
+
+    static void click(PianoRoll &roll, double tick, int key, Qt::KeyboardModifiers modifiers = {}) {
+        QTest::mouseClick(roll.view()->viewport(), Qt::LeftButton, modifiers,
+                          pointOf(roll, tick, key));
+    }
+
+    // Drags from (tick, key) \a from to \a to, through a point on the way so that the drag
+    // passes the start distance.
+    static void drag(PianoRoll &roll, std::pair<double, int> from, std::pair<double, int> to,
+                     Qt::KeyboardModifiers modifiers = {}) {
+        const auto viewport = roll.view()->viewport();
+        const auto start = pointOf(roll, from.first, from.second);
+        const auto end = pointOf(roll, to.first, to.second);
+        QTest::mousePress(viewport, Qt::LeftButton, modifiers, start);
+        QTest::mouseMove(viewport, (start + end) / 2);
+        QTest::mouseMove(viewport, end);
+        QTest::mouseRelease(viewport, Qt::LeftButton, modifiers, end);
+    }
+
+    static QString lyricsOf(const kit::ProjectSession &session) {
+        const auto project = session.snapshot();
+        QStringList lyrics;
+        for (const auto &note : project.tracks[0].notes) {
+            lyrics.push_back(note.lyric);
+        }
+        return lyrics.join(u' ');
+    }
+
     // The middle of the bar of a note from \a tick to \a tick + \a length at \a key
     static QPointF middleOf(const PianoRoll &roll, double tick, double length, int key) {
         return {roll.view()->timeAxis().toX(tick + length / 2),
@@ -69,9 +110,16 @@ private Q_SLOTS:
         QCOMPARE(roll.view()->hitAt(middleOf(roll, 1440, 480, 64))->node,
                  quint64(idOf(session, 2)));
 
-        // The row of another key, or past the last note, is empty.
-        QVERIFY(!roll.view()->hitAt(middleOf(roll, 0, 480, 61)));
-        QVERIFY(!roll.view()->hitAt(middleOf(roll, 1920, 480, 64)));
+        // The row of another key, or past the last note, is background.
+        QCOMPARE(roll.view()->hitAt(middleOf(roll, 0, 480, 61))->part, int(PianoRoll::Background));
+        QCOMPARE(roll.view()->hitAt(middleOf(roll, 1920, 480, 64))->part,
+                 int(PianoRoll::Background));
+
+        // The right edge of a note changes its length.
+        const auto edge = roll.view()->hitAt(middleOf(roll, 0, 950, 60));
+        QCOMPARE(edge->node, quint64(idOf(session, 0)));
+        QCOMPARE(edge->part, int(PianoRoll::NoteEnd));
+        QCOMPARE(edge->cursor, Qt::SizeHorCursor);
     }
 
     void an_edit_moves_what_is_drawn() {
@@ -156,6 +204,197 @@ private Q_SLOTS:
             QVERIFY(tx.commit());
         }
         QVERIFY(!roll.lacksSample(2));
+    }
+
+    void a_click_selects_and_modifiers_extend_the_selection() {
+        kit::ProjectSession session(threeNotes());
+        PianoRoll roll(&session);
+        show(roll);
+
+        click(roll, 240, 60);
+        QCOMPARE(roll.selectedIndices(), QList<int>{0});
+        click(roll, 1680, 64, Qt::ControlModifier);
+        QCOMPARE(roll.selectedIndices(), (QList<int>{0, 2}));
+        click(roll, 240, 60, Qt::ControlModifier);
+        QCOMPARE(roll.selectedIndices(), QList<int>{2});
+        click(roll, 1680, 64, Qt::ShiftModifier);
+        QCOMPARE(roll.selectedIndices(), (QList<int>{0, 1, 2}));
+
+        // A click on one of several selected notes selects it alone, and one beside the notes
+        // selects nothing.
+        click(roll, 960, 60);
+        QCOMPARE(roll.selectedIndices(), QList<int>{1});
+        click(roll, 240, 70);
+        QVERIFY(roll.selectedIndices().isEmpty());
+        QCOMPARE(session.currentStep(), 0);
+    }
+
+    void a_rectangle_selects_the_notes_it_touches() {
+        kit::ProjectSession session(threeNotes());
+        PianoRoll roll(&session);
+        show(roll);
+
+        drag(roll, {0, 70}, {2000, 62});
+        QCOMPARE(roll.selectedIndices(), QList<int>{2});
+        drag(roll, {10, 61}, {100, 60}, Qt::ControlModifier);
+        QCOMPARE(roll.selectedIndices(), (QList<int>{0, 2}));
+        drag(roll, {10, 61}, {100, 60});
+        QCOMPARE(roll.selectedIndices(), QList<int>{0});
+    }
+
+    // A drag moves the note in the sequence and transposes it in one step, and changes no
+    // length.
+    void a_drag_moves_and_transposes_in_one_step() {
+        const auto project = threeNotes();
+        kit::ProjectSession session(project);
+        PianoRoll roll(&session);
+        show(roll);
+
+        drag(roll, {1680, 64}, {240, 66});
+        QCOMPARE(lyricsOf(session), QStringLiteral("li la R"));
+        const auto notes = session.snapshot().tracks[0].notes;
+        QCOMPARE(notes[0].noteNum, 66);
+        QCOMPARE(notes[1].noteNum, 60);
+        QCOMPARE(notes[0].length, 480);
+        QCOMPARE(notes[2].length, 960);
+        QCOMPARE(session.currentStep(), 1);
+        QCOMPARE(session.undoMessage(), PianoRoll::tr("Move Notes"));
+        QCOMPARE(roll.selectedIndices(), QList<int>{0});
+
+        session.undo();
+        QCOMPARE(session.snapshot().toJson(), project.toJson());
+
+        // Dragged 1000 ticks later, la lands on the nearest boundary, after the rest.
+        drag(roll, {240, 60}, {1240, 60});
+        QCOMPARE(lyricsOf(session), QStringLiteral("R la li"));
+        session.undo();
+
+        // A vertical drag only transposes.
+        drag(roll, {240, 60}, {240, 59});
+        QCOMPARE(lyricsOf(session), QStringLiteral("la R li"));
+        QCOMPARE(session.snapshot().tracks[0].notes[0].noteNum, 59);
+        QCOMPARE(session.undoMessage(), PianoRoll::tr("Transpose"));
+    }
+
+    void escape_abandons_a_drag() {
+        kit::ProjectSession session(threeNotes());
+        PianoRoll roll(&session);
+        show(roll);
+        click(roll, 1680, 64);
+
+        const auto viewport = roll.view()->viewport();
+        QTest::mousePress(viewport, Qt::LeftButton, {}, pointOf(roll, 240, 60));
+        QTest::mouseMove(viewport, pointOf(roll, 1680, 66));
+        QTest::keyClick(roll.view(), Qt::Key_Escape);
+        QTest::mouseRelease(viewport, Qt::LeftButton, {}, pointOf(roll, 1680, 66));
+        QCOMPARE(session.currentStep(), 0);
+        QVERIFY(!session.canUndo());
+        QCOMPARE(roll.selectedIndices(), QList<int>{0});
+
+        // A drag extends a selection with gaps to the run it spans; Escape restores it.
+        click(roll, 1680, 64, Qt::ControlModifier);
+        QTest::mousePress(viewport, Qt::LeftButton, {}, pointOf(roll, 240, 60));
+        QTest::mouseMove(viewport, pointOf(roll, 240, 63));
+        QCOMPARE(roll.selectedIndices(), (QList<int>{0, 1, 2}));
+        QTest::keyClick(roll.view(), Qt::Key_Escape);
+        QTest::mouseRelease(viewport, Qt::LeftButton, {}, pointOf(roll, 240, 63));
+        QCOMPARE(roll.selectedIndices(), (QList<int>{0, 2}));
+        QVERIFY(!session.canUndo());
+    }
+
+    // The right edge changes the length, snapped to the quantization.
+    void the_right_edge_changes_the_length() {
+        kit::ProjectSession session(threeNotes());
+        PianoRoll roll(&session);
+        show(roll);
+        QCOMPARE(roll.quantization(), 120);
+
+        drag(roll, {470, 60}, {700, 60});
+        QCOMPARE(session.snapshot().tracks[0].notes[0].length, 720);
+        QCOMPARE(session.undoMessage(), kit::ProjectEdits::tr("Change Length"));
+
+        // Without quantization the length follows the pointer.
+        roll.setQuantization(0);
+        drag(roll, {710, 60}, {800, 60});
+        QCOMPARE(session.snapshot().tracks[0].notes[0].length, 800);
+    }
+
+    // The pen draws a note after the last one, and fills the gap before it with a rest.
+    void the_pen_draws_after_the_last_note() {
+        kit::ProjectSession session(threeNotes());
+        PianoRoll roll(&session);
+        show(roll);
+        roll.setTool(PianoRoll::PenTool);
+
+        drag(roll, {2400, 62}, {2900, 62});
+        QCOMPARE(lyricsOf(session), QStringLiteral("la R li R la"));
+        const auto notes = session.snapshot().tracks[0].notes;
+        QCOMPARE(notes[3].length, 480);
+        QCOMPARE(notes[4].length, 480);
+        QCOMPARE(notes[4].noteNum, 62);
+        QCOMPARE(session.currentStep(), 1);
+        QCOMPARE(roll.selectedIndices(), QList<int>{4});
+
+        // Before the end the pen selects, as the select tool does.
+        drag(roll, {0, 70}, {1900, 62});
+        QCOMPARE(roll.selectedIndices(), QList<int>{2});
+        QCOMPARE(session.currentStep(), 1);
+    }
+
+    void the_selection_is_deleted_transposed_and_inserted_before() {
+        kit::ProjectSession session(threeNotes());
+        PianoRoll roll(&session);
+        kit::DiagnosticList diagnostics;
+
+        roll.setSelectedIndices({0, 2});
+        QVERIFY(roll.transposeSelected(12, diagnostics));
+        QCOMPARE(session.snapshot().tracks[0].notes[2].noteNum, 76);
+
+        QVERIFY(roll.removeSelected(diagnostics));
+        QCOMPARE(lyricsOf(session), QStringLiteral("R"));
+        QVERIFY(roll.selectedIndices().isEmpty());
+
+        // With nothing selected, a note is appended with the key of the last note.
+        QVERIFY(roll.insertNote(diagnostics));
+        QCOMPARE(lyricsOf(session), QStringLiteral("R la"));
+        QCOMPARE(roll.selectedIndices(), QList<int>{1});
+        QVERIFY(roll.insertNote(diagnostics));
+        QCOMPARE(lyricsOf(session), QStringLiteral("R la la"));
+        QCOMPARE(roll.selectedIndices(), QList<int>{1});
+        QCOMPARE(session.snapshot().tracks[0].notes[1].length, roll.quantization());
+        QVERIFY(diagnostics.empty());
+    }
+
+    // Tab commits the lyric and edits the next note; Escape leaves the lyric as it was.
+    void a_lyric_is_edited_in_place() {
+        kit::ProjectSession session(threeNotes());
+        PianoRoll roll(&session);
+        show(roll);
+        const auto editor = roll.lyricEditor();
+
+        roll.editLyric(0);
+        QVERIFY(editor->isVisible());
+        QCOMPARE(editor->text(), QStringLiteral("la"));
+        editor->setText(QStringLiteral("ka"));
+        QTest::keyClick(editor, Qt::Key_Tab);
+        QCOMPARE(lyricsOf(session), QStringLiteral("ka R li"));
+        QCOMPARE(editor->text(), QStringLiteral("R"));
+        QCOMPARE(roll.selectedIndices(), QList<int>{1});
+
+        editor->setText(QStringLiteral("x"));
+        QTest::keyClick(editor, Qt::Key_Escape);
+        QVERIFY(!editor->isVisible());
+        QCOMPARE(lyricsOf(session), QStringLiteral("ka R li"));
+
+        // A double click edits the note, and Return commits it.
+        QTest::mouseDClick(roll.view()->viewport(), Qt::LeftButton, {}, pointOf(roll, 1680, 64));
+        QVERIFY(editor->isVisible());
+        QCOMPARE(editor->text(), QStringLiteral("li"));
+        editor->setText(QStringLiteral("ki"));
+        QTest::keyClick(editor, Qt::Key_Return);
+        QVERIFY(!editor->isVisible());
+        QCOMPARE(lyricsOf(session), QStringLiteral("ka R ki"));
+        QCOMPARE(session.undoMessage(), PianoRoll::tr("Change Lyric"));
     }
 };
 

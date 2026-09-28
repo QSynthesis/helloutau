@@ -52,10 +52,26 @@ namespace {
             return std::make_unique<RecordingGesture>();
         }
 
+        bool doubleClick(const SceneHit &, QPointF position) override {
+            if (!respondsToDoubleClick) {
+                return false;
+            }
+            g_log.push_back(QStringLiteral("double %1").arg(position.x()));
+            return true;
+        }
+
+        bool respondsToDoubleClick = false;
+
     private:
         QRectF m_area;
         quint64 m_node;
     };
+
+    void doubleClick(SceneView &view, QPointF at) {
+        QMouseEvent event(QEvent::MouseButtonDblClick, at, view.viewport()->mapToGlobal(at),
+                          Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        QApplication::sendEvent(view.viewport(), &event);
+    }
 
     void wheel(SceneView &view, int notches, Qt::KeyboardModifiers modifiers, QPointF at) {
         QWheelEvent event(at, view.viewport()->mapToGlobal(at), QPoint(), QPoint(0, notches * 120),
@@ -187,6 +203,25 @@ private Q_SLOTS:
         QTest::mousePress(view->viewport(), Qt::LeftButton, {}, QPoint(300, 300));
         QVERIFY(!view->hasGesture());
         QVERIFY(g_log.isEmpty());
+    }
+
+    // A layer that responds to a double click receives it instead of a press; otherwise the
+    // second click is a press as the first was.
+    void a_double_click_goes_to_the_layer_hit() {
+        const auto view = shownView();
+        const auto layer = static_cast<RectLayer *>(
+            view->addLayer(std::make_unique<RectLayer>(QRectF(0, 0, 100, 100), 1)));
+
+        doubleClick(*view, QPointF(20, 20));
+        QCOMPARE(g_log, QStringList{QStringLiteral("press 20")});
+        QVERIFY(view->hasGesture());
+        QTest::mouseRelease(view->viewport(), Qt::LeftButton, {}, QPoint(20, 20));
+
+        g_log.clear();
+        layer->respondsToDoubleClick = true;
+        doubleClick(*view, QPointF(30, 20));
+        QCOMPARE(g_log, QStringList{QStringLiteral("double 30")});
+        QVERIFY(!view->hasGesture());
     }
 
     void escape_cancels_the_gesture() {

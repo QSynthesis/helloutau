@@ -14,7 +14,7 @@
 | `HelloKitEditBase` | 编辑层的通用部分，命名空间 `hello::kit::edit`：`EditSession`（事务、撤销、变更通知、提交时校验）、`NodeRef`、`Change`、槽位、命令语法，以及扩展接口（字段表、按路径的命令、变更日志） |
 | `HelloKitEdit` | 编辑层的文档部分。工程：`ProjectDocument`（打开、导入、保存、是否已修改）、`TrackTimeline`（音符的位置）、`ProjectSession`、句柄 `ProjectRefs`、领域函数 `ProjectEdits`、命令 `ProjectCommands`。音源：`VoiceBankSession`（含保存与从磁盘重新读取）、句柄 `VoiceBankRefs`、领域函数 `VoiceBankEdits`、命令 `VoiceBankCommands` |
 | `HelloUtauWidgets` | 通用的控件基础设施：命令面板 `CommandPalette` 与其模糊匹配 `CommandMatcher`；场景接口 `SceneView`、`SceneLayer`、`SceneGesture`，以及随其坐标轴的 `TimelineRuler` 与 `PianoKeyboard` |
-| `HelloUtauEditor` | 窗口骨架：QActionKit 清单生成的菜单、工程的打开（UST 编码选择）、保存、另存为与导出 UST、撤销与重做、未保存标记、设置、命令面板（`Ctrl+Shift+P`）；工程以只读的卷帘 `PianoRoll` 显示；打开工程后读取其音源（按目录选择编码），卷帘标出找不到样本的音符。见 [`Widgets.md`](Widgets.md) 第 1–3 步 |
+| `HelloUtauEditor` | 窗口骨架：QActionKit 清单生成的菜单、工程的打开（UST 编码选择）、保存、另存为与导出 UST、撤销与重做、未保存标记、设置、命令面板（`Ctrl+Shift+P`）；工程在卷帘 `PianoRoll` 中显示与编辑（选区、拖动移调与重排、改长度、笔工具、插入、删除、拆分、歌词就地编辑、量化）；打开工程后读取其音源（按目录选择编码），卷帘标出找不到样本的音符。见 [`Widgets.md`](Widgets.md) 第 1–4 步 |
 | `helloutau` | 薄驱动，仅含 `main.cpp` |
 
 已验证的构建链：qmsetup 的 `hellokit_add_library` / `helloutau_add_library` / `helloutau_add_application`、Qt 6.11 与 AUTOMOC、stdcorelib、stdutau、wolf-midi、QtTest 与 `add_auto_test`、ctest。
