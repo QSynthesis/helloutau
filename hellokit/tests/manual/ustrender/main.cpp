@@ -13,6 +13,7 @@
 ///   ustrender song.ust out.wav --voice ... --resampler ... --wavtool ... --compare-mix
 /// \endcode
 
+#include <chrono>
 #include <cmath>
 #include <cstdio>
 #include <filesystem>
@@ -31,6 +32,7 @@
 #include <hellokit/Support/TextCodec.h>
 #include <hellokit/Synth/SynthPlan.h>
 #include <hellokit/Synth/ClassicSynthRunner.h>
+#include <hellokit/Synth/RealtimeSynth.h>
 #include <hellokit/Synth/ThreadedSynthRunner.h>
 #include <hellokit/Synth/WaveAudio.h>
 #include <hellokit/Synth/WavtoolMixer.h>
@@ -192,6 +194,55 @@ namespace {
         return written.size() == mixed.size() && largest <= 1 ? 0 : 2;
     }
 
+    /// Renders \a plan as realtime playback does, from its start, and writes the whole track as a
+    /// 16-bit WAV file, which only the wavtool of UTAU writes otherwise.
+    int renderRealtime(const SynthPlan &plan, const SynthEngines &engines, const fs::path &output) {
+        const auto started = std::chrono::steady_clock::now();
+        RealtimeSynth synth(engines);
+        synth.setPlan(plan);
+        const qint64 length = synth.length();
+
+        // The first second is what playback waits for before it starts.
+        synth.waitReady(0, std::min<qint64>(length, WavtoolMixer::sampleRate),
+                        std::chrono::minutes(5));
+        const auto firstSecond = std::chrono::steady_clock::now() - started;
+        if (!synth.waitReady(0, length, std::chrono::minutes(30))) {
+            stdc::console::u8fputs("error: the notes were not rendered in time\n", stderr);
+            return 1;
+        }
+        const auto whole = std::chrono::steady_clock::now() - started;
+        report(synth.takeDiagnostics());
+
+        std::vector<qint16> samples(static_cast<size_t>(length));
+        synth.mix(0, length, samples.data());
+        const auto bytes = quint32(samples.size() * sizeof(qint16));
+        std::ofstream out(output, std::ios::binary);
+        const auto u32 = [&out](quint32 value) { out.write(reinterpret_cast<char *>(&value), 4); };
+        const auto u16 = [&out](quint16 value) { out.write(reinterpret_cast<char *>(&value), 2); };
+        out.write("RIFF", 4);
+        u32(36 + bytes);
+        out.write("WAVEfmt ", 8);
+        u32(16);
+        u16(1);
+        u16(1);
+        u32(WavtoolMixer::sampleRate);
+        u32(WavtoolMixer::sampleRate * 2);
+        u16(2);
+        u16(16);
+        out.write("data", 4);
+        u32(bytes);
+        out.write(reinterpret_cast<const char *>(samples.data()), std::streamsize(bytes));
+
+        using std::chrono::duration_cast;
+        using std::chrono::milliseconds;
+        stdc::u8printf("realtime: the first second after %lld ms, all %d notes after %lld ms\n",
+                       qint64(duration_cast<milliseconds>(firstSecond).count()),
+                       int(plan.steps().size()),
+                       qint64(duration_cast<milliseconds>(whole).count()));
+        stdc::u8printf("wrote %s\n", stdc::path::to_utf8(output).c_str());
+        return 0;
+    }
+
     std::string option(const stdc::cli::ParseResult &result, const char *token) {
         return result.valueForOption<std::string>(token).value_or(std::string());
     }
@@ -270,6 +321,10 @@ namespace {
             return 1;
         }
 
+        if (result.option("--realtime")) {
+            return renderRealtime(*plan, engines, output);
+        }
+
         // The runner is a compatibility setting, not an implementation detail. See
         // docs/Synth.md.
         std::unique_ptr<SynthRunner> runner;
@@ -338,6 +393,9 @@ int main(int argc, char *argv[]) {
                 cli::Option({"--keep-scripts"}, "Keep temp.bat after rendering, for inspection"))
             .addOption(cli::Option({"--verbatim"},
                                    "Write the script without escaping, as UTAU does. Unsafe"))
+            .addOption(cli::Option({"--realtime"},
+                                   "Render as realtime playback does, concatenating in the "
+                                   "process instead of running the wavtool"))
             .addOption(cli::Option({"--compare-mix"},
                                    "Concatenate the fragments in the process as well, and compare "
                                    "the result with the file the wavtool wrote"))
