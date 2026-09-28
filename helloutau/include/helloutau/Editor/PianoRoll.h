@@ -40,6 +40,8 @@ namespace hello::daw {
     /// and redo.
     ///
     /// The colors are properties that a style sheet can set; unset, they derive from the palette.
+    /// So are the distances within which the pitch responds to the pointer, pointGrip() and
+    /// curveGrip().
     class HELLOUTAU_EDITOR_EXPORT PianoRoll : public QWidget {
         Q_OBJECT
         Q_PROPERTY(QColor noteColor READ noteColor WRITE setNoteColor)
@@ -51,6 +53,8 @@ namespace hello::daw {
         Q_PROPERTY(QColor playheadColor READ playheadColor WRITE setPlayheadColor)
         Q_PROPERTY(QColor pitchColor READ pitchColor WRITE setPitchColor)
         Q_PROPERTY(QColor vibratoColor READ vibratoColor WRITE setVibratoColor)
+        Q_PROPERTY(double pointGrip READ pointGrip WRITE setPointGrip)
+        Q_PROPERTY(double curveGrip READ curveGrip WRITE setCurveGrip)
         Q_PROPERTY(QColor whiteRowColor READ whiteRowColor WRITE setWhiteRowColor)
         Q_PROPERTY(QColor blackRowColor READ blackRowColor WRITE setBlackRowColor)
         Q_PROPERTY(QColor lineColor READ lineColor WRITE setLineColor)
@@ -178,6 +182,16 @@ namespace hello::daw {
         /// only moves in time, as does the last point.
         bool isPitchVisible() const;
         void setPitchVisible(bool visible);
+
+        /// The distance in pixels within which a Mode2 point is hit, 6 by default.
+        double pointGrip() const;
+        void setPointGrip(double pixels);
+
+        /// The distance in pixels above and below the portamento within which a double click
+        /// inserts a point, 5 by default. Elsewhere on a note a double click edits its lyric,
+        /// as F2 does. See the questions in docs/Tuning.md.
+        double curveGrip() const;
+        void setCurveGrip(double pixels);
 
         QColor noteColor() const;
         void setNoteColor(const QColor &color);

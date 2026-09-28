@@ -640,6 +640,26 @@ private Q_SLOTS:
         QCOMPARE(pointsOfLi(session).size(), 2);
     }
 
+    // The distance from the portamento within which a double click inserts a point is a
+    // property that a style sheet sets; beyond it the double click edits the lyric.
+    void the_distance_to_the_portamento_is_a_property() {
+        kit::ProjectSession session(bentNotes());
+        PianoRoll roll(&session);
+        roll.setStyleSheet(QStringLiteral("hello--daw--PianoRoll { qproperty-curveGrip: 2; }"));
+        showExactly(roll);
+        QCOMPARE(roll.curveGrip(), 2.0);
+
+        const auto below = pointOfLi(roll, 250, 0) + QPoint(0, 4);
+        QTest::mouseDClick(roll.view()->viewport(), Qt::LeftButton, {}, below);
+        QCOMPARE(pointsOfLi(session).size(), 3);
+        QVERIFY(roll.lyricEditor()->isVisible());
+        QTest::keyClick(roll.lyricEditor(), Qt::Key_Escape);
+
+        roll.setCurveGrip(5);
+        QTest::mouseDClick(roll.view()->viewport(), Qt::LeftButton, {}, below);
+        QCOMPARE(pointsOfLi(session).size(), 4);
+    }
+
     // The context menu of a point changes the shape of the segment that ends at it, and removes
     // it while more than two remain.
     void the_context_menu_changes_a_point() {

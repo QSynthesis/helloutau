@@ -62,11 +62,12 @@ namespace hello::daw {
         // The pitch curves are sampled this many pixels apart, and at least a tick apart.
         constexpr double CurveStep = 2;
 
-        // A Mode2 point is drawn with this radius, and hit within this distance, in pixels; a
-        // double click inserts one within this distance of the portamento.
+        // A Mode2 point is drawn with this radius, and by default hit within this distance, in
+        // pixels; by default a double click inserts one within this distance of the portamento.
+        // See PianoRoll::pointGrip() and PianoRoll::curveGrip().
         constexpr double PointRadius = 3.5;
-        constexpr double PointGrip = 6;
-        constexpr double CurveGrip = 5;
+        constexpr double DefaultPointGrip = 6;
+        constexpr double DefaultCurveGrip = 5;
 
         // Ctrl snaps the height of a point to this many cents.
         constexpr double PitchSnap = 50;
@@ -181,6 +182,8 @@ namespace hello::daw {
         kit::edit::NodeId editing = 0;
 
         bool pitchVisible = true;
+        double pointGrip = DefaultPointGrip;
+        double curveGrip = DefaultCurveGrip;
         QColor pitchColor;
         QColor vibratoColor;
 
@@ -816,14 +819,14 @@ namespace hello::daw {
             // The notes around the position, and the next one, whose points may lie before it
             const auto timeline = m_roll->timeline;
             const auto &time = view()->timeAxis();
-            const double grip = PointGrip / time.pixelsPerTick;
+            const double grip = m_roll->pointGrip / time.pixelsPerTick;
             auto [begin, end] = timeline->notesBetween(time.toTick(position.x()) - grip,
                                                        time.toTick(position.x()) + grip);
             begin = std::max(0, begin - 1);
             end = std::min(timeline->noteCount(), end + 1);
 
             std::optional<SceneHit> nearest;
-            double distance = PointGrip;
+            double distance = m_roll->pointGrip;
             for (int i = begin; i < end; ++i) {
                 if (timeline->note(i).rest) {
                     continue;
@@ -1407,7 +1410,7 @@ namespace hello::daw {
         const double local = tick - double(note.start);
         const kit::PitchCurve curve(around, index - first, timeline->tempoMap().tempo(index));
         const double y = keys.toY(note.key + 0.5 + curve.portamentoAt(local) / 100);
-        if (std::abs(y - position.y()) > CurveGrip) {
+        if (std::abs(y - position.y()) > curveGrip) {
             return false;
         }
 
@@ -1778,6 +1781,22 @@ namespace hello::daw {
     void PianoRoll::setPitchVisible(bool visible) {
         _impl->pitchVisible = visible;
         _impl->view->viewport()->update();
+    }
+
+    double PianoRoll::pointGrip() const {
+        return _impl->pointGrip;
+    }
+
+    void PianoRoll::setPointGrip(double pixels) {
+        _impl->pointGrip = std::max(0.0, pixels);
+    }
+
+    double PianoRoll::curveGrip() const {
+        return _impl->curveGrip;
+    }
+
+    void PianoRoll::setCurveGrip(double pixels) {
+        _impl->curveGrip = std::max(0.0, pixels);
     }
 
     void PianoRoll::keyPressEvent(QKeyEvent *event) {
