@@ -292,6 +292,11 @@ namespace hello::kit {
 
         /// Returns whether the note is a rest. UTAU determines this from the lyric alone.
         inline bool isRest() const {
+            return isRestLyric(lyric);
+        }
+
+        /// Returns whether a note with \a lyric is a rest: an empty lyric, \c R or \c r.
+        static inline bool isRestLyric(QStringView lyric) {
             return lyric.isEmpty() ||
                    lyric.compare(QLatin1String(restLyric), Qt::CaseInsensitive) == 0;
         }
