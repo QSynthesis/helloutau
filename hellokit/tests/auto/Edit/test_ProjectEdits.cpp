@@ -315,6 +315,32 @@ private Q_SLOTS:
         QCOMPARE(session.snapshot().toJson(), project.toJson());
     }
 
+    void an_envelope_is_set_on_several_notes_and_removed() {
+        const auto project = fiveNotes();
+        ProjectSession session(project);
+        const auto notes = notesOf(session);
+
+        const auto envelope = Envelope::fromTimeOrder({
+            {0,  0  },
+            {5,  100},
+            {35, 90 },
+            {10, 0  }
+        });
+        QVERIFY(envelope);
+        DiagnosticList diagnostics;
+        QVERIFY(ProjectEdits::setEnvelope({notes.at(0), notes.at(4)}, envelope, diagnostics));
+        QCOMPARE(notes.at(0).envelope(), envelope);
+        QCOMPARE(notes.at(4).envelope(), envelope);
+        QVERIFY(!notes.at(2).envelope());
+        QCOMPARE(session.undoMessage(), ProjectEdits::tr("Change Envelope"));
+
+        QVERIFY(ProjectEdits::setEnvelope({notes.at(0)}, std::nullopt, diagnostics));
+        QVERIFY(!notes.at(0).envelope());
+        session.undo();
+        session.undo();
+        QCOMPARE(session.snapshot().toJson(), project.toJson());
+    }
+
     void a_vibrato_is_set_on_several_notes_and_removed() {
         const auto project = fiveNotes();
         ProjectSession session(project);

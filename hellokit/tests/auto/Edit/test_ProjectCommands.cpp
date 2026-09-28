@@ -320,6 +320,18 @@ private Q_SLOTS:
                                               "[{\"x\": 0}, {\"x\": -10}]"));
     }
 
+    void note_envelope_sets_and_removes_the_envelope() {
+        ProjectSession session(richProject());
+        QVERIFY(run(session, QStringLiteral("note envelope {\"anchors\": [{\"x\": 0, \"y\": 0}, "
+                                            "{\"x\": 5, \"y\": 100}, {\"x\": 35, \"y\": 100}, "
+                                            "{\"x\": 0, \"y\": 0}]} /tracks/0/notes/1")));
+        QCOMPARE(noteAt(session, 1).envelope->anchors[3].x, 35.0);
+        QVERIFY(run(session, QStringLiteral("note envelope null /tracks/0/notes/1")));
+        QVERIFY(!noteAt(session, 1).envelope);
+        verifyRefused(session, QStringLiteral("note envelope {\"anchors\": []} /tracks/0/notes/1"));
+        verifyRefused(session, QStringLiteral("note envelope 3 /tracks/0/notes/1"));
+    }
+
     void note_vibrato_sets_and_removes_the_vibrato() {
         ProjectSession session(richProject());
         QVERIFY(run(session, QStringLiteral("note vibrato {\"length\": 65, \"period\": 180} "
@@ -490,14 +502,15 @@ private Q_SLOTS:
     }
 
     void names_lists_every_command() {
-        QCOMPARE(ProjectCommands::names(),
-                 QStringList({QStringLiteral("set"), QStringLiteral("insert"),
-                              QStringLiteral("remove"), QStringLiteral("move"),
-                              QStringLiteral("replace"), QStringLiteral("note transpose"),
-                              QStringLiteral("note split"), QStringLiteral("note insert"),
-                              QStringLiteral("note tempo"), QStringLiteral("note remove"),
-                              QStringLiteral("note length"), QStringLiteral("note move"),
-                              QStringLiteral("note portamento"), QStringLiteral("note vibrato")}));
+        QCOMPARE(
+            ProjectCommands::names(),
+            QStringList({QStringLiteral("set"), QStringLiteral("insert"), QStringLiteral("remove"),
+                         QStringLiteral("move"), QStringLiteral("replace"),
+                         QStringLiteral("note transpose"), QStringLiteral("note split"),
+                         QStringLiteral("note insert"), QStringLiteral("note tempo"),
+                         QStringLiteral("note remove"), QStringLiteral("note length"),
+                         QStringLiteral("note move"), QStringLiteral("note portamento"),
+                         QStringLiteral("note vibrato"), QStringLiteral("note envelope")}));
     }
 };
 

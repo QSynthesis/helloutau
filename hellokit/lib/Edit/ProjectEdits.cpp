@@ -163,4 +163,19 @@ namespace hello::kit {
         }
         return transaction.commit(diagnostics);
     }
+
+    bool ProjectEdits::setEnvelope(const QList<NoteRef> &notes,
+                                   const std::optional<Envelope> &envelope,
+                                   DiagnosticList &diagnostics) {
+        if (notes.isEmpty()) {
+            return true;
+        }
+        auto transaction = notes.first().session()->transaction(tr("Change Envelope"));
+        for (const auto &note : notes) {
+            if (note.envelope() != envelope) {
+                note.setEnvelope(envelope);
+            }
+        }
+        return transaction.commit(diagnostics);
+    }
 }

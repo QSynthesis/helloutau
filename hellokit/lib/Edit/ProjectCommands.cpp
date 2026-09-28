@@ -257,6 +257,34 @@ namespace hello::kit {
             return ProjectEdits::setVibrato(notes, vibrato, diagnostics);
         }
 
+        bool envelopeCommand(ProjectSession &session, const Arguments &arguments,
+                             DiagnosticList &diagnostics) {
+            if (arguments.size() < 2) {
+                return usage(diagnostics, "note envelope <envelope or null> <note>...");
+            }
+            const auto json = edit::CommandSyntax::valueOf(arguments[0]);
+            std::optional<Envelope> envelope;
+            if (json.isObject()) {
+                envelope = Envelope::fromJson(json.toObject());
+                if (!envelope) {
+                    return fail(diagnostics,
+                                ProjectCommands::tr("An envelope has four or five anchors."));
+                }
+            } else if (!json.isNull()) {
+                return fail(diagnostics,
+                            ProjectCommands::tr("The envelope must be an object or null."));
+            }
+            QList<NoteRef> notes;
+            for (const auto &argument : arguments.mid(1)) {
+                const auto note = noteAt(session, argument, diagnostics);
+                if (!note) {
+                    return false;
+                }
+                notes.push_back(*note);
+            }
+            return ProjectEdits::setEnvelope(notes, envelope, diagnostics);
+        }
+
         using DomainCommand = bool (*)(ProjectSession &, const Arguments &, DiagnosticList &);
 
         // The domain commands, each with the function of ProjectEdits that it calls.
@@ -276,6 +304,7 @@ namespace hello::kit {
             {"move",       moveCommand,       "moveNotes"    },
             {"portamento", portamentoCommand, "setPortamento"},
             {"vibrato",    vibratoCommand,    "setVibrato"   },
+            {"envelope",   envelopeCommand,   "setEnvelope"  },
         };
 
         bool run(ProjectSession &session, const Arguments &arguments, DiagnosticList &diagnostics) {
@@ -288,11 +317,10 @@ namespace hello::kit {
                                                    arguments.mid(1), diagnostics);
             }
             if (arguments.size() < 2 || arguments[1].kind != edit::CommandArgument::Word) {
-                return fail(
-                    diagnostics,
-                    ProjectCommands::tr(
-                        "The command note requires a verb: transpose, "
-                        "split, insert, tempo, remove, length, move, portamento or vibrato."));
+                return fail(diagnostics,
+                            ProjectCommands::tr("The command note requires a verb: transpose, "
+                                                "split, insert, tempo, remove, length, move, "
+                                                "portamento, vibrato or envelope."));
             }
             const auto verb = arguments[1].text();
             for (const auto &command : noteCommands) {

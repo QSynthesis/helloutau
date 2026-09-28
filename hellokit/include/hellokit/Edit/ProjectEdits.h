@@ -85,6 +85,13 @@ namespace hello::kit {
         Q_INVOKABLE static bool setVibrato(const QList<NoteRef> &notes,
                                            const std::optional<Vibrato> &vibrato,
                                            DiagnosticList &diagnostics);
+
+        /// Sets the envelope of each of \a notes to \a envelope, or removes it where
+        /// \a envelope is empty, which leaves the default of UTAU. The notes must belong to one
+        /// session.
+        Q_INVOKABLE static bool setEnvelope(const QList<NoteRef> &notes,
+                                            const std::optional<Envelope> &envelope,
+                                            DiagnosticList &diagnostics);
     };
 
 }
