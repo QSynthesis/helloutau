@@ -104,7 +104,7 @@ qtmediate 在样式表交给 Qt 之前做一次文本转换：
 
 **接受 qtmediate 所用范围内的 Qt 私有头文件**，即 QtCore、QtGui、QtWidgets 三个模块的私有部分，包括 `qicon_p.h`、`qpaintengine_raster_p.h`、`qcssparser_p.h` 等。超出这一范围时须先与作者确定。同样的效果能以公开接口实现时优先使用公开接口，以减少 Qt 升级时须核对的内容。已知的一处：
 
-- **按钮状态必须经由私有接口传给图标引擎。** 以 `QIcon::Mode` 与 `QIcon::State` 的八种组合传递状态不可行：Qt 自带的样式在按钮获得焦点时给出 `Active`，工具按钮只在自动浮起且悬停时给出 `Active`，按下的状态从不传递（Qt 6.11.1 `qtbase/src/widgets/styles/qcommonstyle.cpp`）。因此须以 `qicon_p.h` 取得图标引擎，再经 `virtual_hook` 设置状态。
+- **按钮状态不能只靠 `QIcon::Mode` 与 `QIcon::State` 传给图标引擎。** Qt 自带的样式在按钮获得焦点时给出 `Active`，工具按钮只在自动浮起且悬停时给出 `Active`，按下的状态从不传递（Qt 6.11.1 `qtbase/src/widgets/styles/qcommonstyle.cpp`）。**需要这些状态的控件重写绘制，经公开接口取得固定于该状态的图标**（`ThemeIcon::forState()`，作者 2026-09-28 确定），不以 `qicon_p.h` 取得并改写共享的图标引擎，理由见「实现的第四块」。
 
 **值语法与扩展语法由一个分词器解析，不使用正则替换。** 分词器识别字符串、注释与括号的嵌套，供两处共用：
 
@@ -192,7 +192,7 @@ QToolButton { qproperty-icon: svg(("@/play.svg", up2="@/pause.svg"), auto); }
 - **缓存**：文件内容按路径缓存；图像放入 `QPixmapCache`，键含代次、尺寸、颜色与路径。`ThemeManager::reload()` 调用 `ThemeIcon::clearCache()` 递增代次，不清空整个 `QPixmapCache`。
 - **适用范围（作者确定，2026-09-28）**：只针对两种图标，一是样式表以 `svg(...)` 给出的，二是代码中有意设置的 `ThemeIcon`（`ThemeIcon::icon()`）。主题更新时，登记的控件统一重设一次样式表即可，控件无须为此编写代码（`test_ThemeManager` 的 `installed_icons_follow_the_theme`）。需要表达按下等 QIcon 无法传递的状态的控件，自行重写绘制，以 `forState()` 取得该状态的图标；不另设事件过滤器替控件切换状态。
 
-**与「已确定的事项」的差异，须作者确认。** 该节规定按钮状态经私有接口传给图标引擎（以 `qicon_p.h` 取得引擎，再经 `virtual_hook` 设置状态）。实现改用公开接口：引擎的 `iconName()` 返回描述文件名，`ThemeIcon::of()` 由 `QIcon::name()` 取回描述，`forState()` 据此新建一个引擎。理由是不改写共享的引擎：Qt 把一条样式表声明解析出的 QIcon 缓存在该声明中（`qtbase/src/gui/text/qcssparser.cpp` 的 `Declaration::iconValue`），使用同一规则的控件共用一个引擎；qtmediate 在绘制前改写该引擎的状态与颜色，未调用钩子的控件（菜单、普通工具按钮）因此沿用别的控件最后留下的状态与颜色。代价是 `QIcon::name()` 对这类图标返回描述文件名；Qt 6.11.1 只在 `QIcon::hasThemeIcon` 与 Linux 的 D-Bus 托盘图标中读取该名称，二者都不涉及这类图标。
+**按钮状态经公开接口传递（作者 2026-09-28 确定）。** 最初的设计沿用 qtmediate，以 `qicon_p.h` 取得引擎，再经 `virtual_hook` 设置状态。实现改用公开接口：引擎的 `iconName()` 返回描述文件名，`ThemeIcon::of()` 由 `QIcon::name()` 取回描述，`forState()` 据此新建一个引擎。理由是不改写共享的引擎：Qt 把一条样式表声明解析出的 QIcon 缓存在该声明中（`qtbase/src/gui/text/qcssparser.cpp` 的 `Declaration::iconValue`），使用同一规则的控件共用一个引擎；qtmediate 在绘制前改写该引擎的状态与颜色，未调用钩子的控件（菜单、普通工具按钮）因此沿用别的控件最后留下的状态与颜色。代价是 `QIcon::name()` 对这类图标返回描述文件名；Qt 6.11.1 只在 `QIcon::hasThemeIcon` 与 Linux 的 D-Bus 托盘图标中读取该名称，二者都不涉及这类图标。
 
 **尚未实现**：
 
