@@ -8,6 +8,8 @@
 #include <QtMultimedia/QAudioSink>
 #include <QtMultimedia/QMediaDevices>
 
+#include <stdcorelib/pimpl.h>
+
 #include <r8brain-free-src/CDSPResampler.h>
 
 namespace hello::daw {
@@ -26,6 +28,8 @@ namespace hello::daw {
 
     class BufferSource::Impl {
     public:
+        using Decl = BufferSource;
+
         std::vector<float> samples;
         int channels = 1;
         std::atomic<qsizetype> position = 0;
@@ -33,17 +37,19 @@ namespace hello::daw {
 
     BufferSource::BufferSource(std::vector<float> samples, int channels)
         : _impl(std::make_unique<Impl>()) {
-        _impl->samples = std::move(samples);
-        _impl->channels = std::max(1, channels);
+        stdc_impl_t;
+        impl.samples = std::move(samples);
+        impl.channels = std::max(1, channels);
     }
 
     BufferSource::~BufferSource() = default;
 
     qsizetype BufferSource::read(float *out, qsizetype frames, int channels) noexcept {
-        const int own = _impl->channels;
-        const auto position = _impl->position.load(std::memory_order_relaxed);
+        stdc_impl_t;
+        const int own = impl.channels;
+        const auto position = impl.position.load(std::memory_order_relaxed);
         const auto count = std::clamp<qsizetype>(frameCount() - position, 0, frames);
-        const float *from = _impl->samples.data() + position * own;
+        const float *from = impl.samples.data() + position * own;
         for (qsizetype frame = 0; frame < count; ++frame) {
             for (int channel = 0; channel < channels; ++channel) {
                 // Mono on every channel; otherwise channel by channel, silence beyond them
@@ -52,16 +58,18 @@ namespace hello::daw {
             }
             from += own;
         }
-        _impl->position.store(position + count, std::memory_order_relaxed);
+        impl.position.store(position + count, std::memory_order_relaxed);
         return count;
     }
 
     qsizetype BufferSource::frameCount() const {
-        return qsizetype(_impl->samples.size()) / _impl->channels;
+        stdc_impl_t;
+        return qsizetype(impl.samples.size()) / impl.channels;
     }
 
     qsizetype BufferSource::position() const {
-        return _impl->position.load(std::memory_order_relaxed);
+        stdc_impl_t;
+        return impl.position.load(std::memory_order_relaxed);
     }
 
     namespace {
@@ -123,10 +131,12 @@ namespace hello::daw {
 
     class AudioOutput::Impl {
     public:
-        explicit Impl(AudioOutput *decl) : _decl(decl) {
+        using Decl = AudioOutput;
+
+        explicit Impl(Decl *decl) : _decl(decl) {
         }
 
-        AudioOutput *_decl;
+        Decl *_decl;
         std::unique_ptr<QAudioSink> sink;
 #ifdef HELLOUTAU_AUDIO_PULL_DEVICE
         std::unique_ptr<QIODevice> device;
@@ -139,18 +149,21 @@ namespace hello::daw {
 
     AudioOutput::AudioOutput(QObject *parent)
         : QObject(parent), _impl(std::make_unique<Impl>(this)) {
-        _impl->poll.setInterval(PollInterval);
-        connect(&_impl->poll, &QTimer::timeout, this, [this] {
-            if (!_impl->ended || !_impl->ended->load() || _impl->draining) {
+        stdc_impl_t;
+        impl.poll.setInterval(PollInterval);
+        connect(&impl.poll, &QTimer::timeout, this, [this] {
+            stdc_impl_t;
+            if (!impl.ended || !impl.ended->load() || impl.draining) {
                 return;
             }
             // What the device has buffered still plays after the source has ended.
-            _impl->draining = true;
-            const auto format = _impl->sink->format();
+            impl.draining = true;
+            const auto format = impl.sink->format();
             const int buffered =
-                int(format.durationForFrames(qint32(_impl->sink->bufferFrameCount())) / 1000);
+                int(format.durationForFrames(qint32(impl.sink->bufferFrameCount())) / 1000);
             QTimer::singleShot(buffered + PollInterval, this, [this] {
-                if (_impl->draining) {
+                stdc_impl_t;
+                if (impl.draining) {
                     stop();
                 }
             });
@@ -158,8 +171,9 @@ namespace hello::daw {
     }
 
     AudioOutput::~AudioOutput() {
-        if (_impl->sink) {
-            _impl->sink->stop();
+        stdc_impl_t;
+        if (impl.sink) {
+            impl.sink->stop();
         }
     }
 
@@ -169,6 +183,7 @@ namespace hello::daw {
     }
 
     bool AudioOutput::start(std::shared_ptr<AudioSource> source, QString *error) {
+        stdc_impl_t;
         stop();
         const auto fail = [error](const QString &message) {
             if (error) {
@@ -188,50 +203,53 @@ namespace hello::daw {
                             .arg(device.description()));
         }
 
-        _impl->sink = std::make_unique<QAudioSink>(device, format);
+        impl.sink = std::make_unique<QAudioSink>(device, format);
         auto ended = std::make_shared<std::atomic<bool>>(false);
-        _impl->ended = ended;
-        _impl->draining = false;
+        impl.ended = ended;
+        impl.draining = false;
         const int channels = format.channelCount();
 #ifdef HELLOUTAU_AUDIO_PULL_DEVICE
-        _impl->device = std::make_unique<SourceDevice>(std::move(source), channels, ended);
-        _impl->device->open(QIODevice::ReadOnly);
-        _impl->sink->start(_impl->device.get());
+        impl.device = std::make_unique<SourceDevice>(std::move(source), channels, ended);
+        impl.device->open(QIODevice::ReadOnly);
+        impl.sink->start(impl.device.get());
 #else
-        _impl->sink->start([source = std::move(source), ended, channels](QSpan<float> buffer) {
+        impl.sink->start([source = std::move(source), ended, channels](QSpan<float> buffer) {
             fill(*source, buffer.data(), buffer.size() / channels, channels, *ended);
         });
 #endif
-        if (_impl->sink->error() != QtAudio::NoError) {
-            _impl->sink.reset();
+        if (impl.sink->error() != QtAudio::NoError) {
+            impl.sink.reset();
             return fail(tr("The audio output device \"%1\" could not be started.")
                             .arg(device.description()));
         }
-        _impl->poll.start();
+        impl.poll.start();
         return true;
     }
 
     void AudioOutput::stop() {
-        if (!_impl->sink) {
+        stdc_impl_t;
+        if (!impl.sink) {
             return;
         }
-        _impl->poll.stop();
-        _impl->draining = false;
-        _impl->sink->stop();
-        _impl->sink.reset();
+        impl.poll.stop();
+        impl.draining = false;
+        impl.sink->stop();
+        impl.sink.reset();
 #ifdef HELLOUTAU_AUDIO_PULL_DEVICE
-        _impl->device.reset();
+        impl.device.reset();
 #endif
-        _impl->ended.reset();
+        impl.ended.reset();
         Q_EMIT finished();
     }
 
     bool AudioOutput::isPlaying() const {
-        return bool(_impl->sink);
+        stdc_impl_t;
+        return bool(impl.sink);
     }
 
     double AudioOutput::elapsed() const {
-        return _impl->sink ? double(_impl->sink->processedUSecs()) / 1000 : 0;
+        stdc_impl_t;
+        return impl.sink ? double(impl.sink->processedUSecs()) / 1000 : 0;
     }
 
     std::vector<float> resampled(const std::vector<float> &samples, int channels, int sourceRate,

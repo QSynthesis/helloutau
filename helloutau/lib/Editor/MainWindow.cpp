@@ -19,6 +19,8 @@
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QStatusBar>
 
+#include <stdcorelib/pimpl.h>
+
 #include <QAKCore/actionextension.h>
 #include <QAKCore/actionregistry.h>
 #include <QAKWidgets/widgetactioncontext.h>
@@ -76,10 +78,12 @@ namespace hello::daw {
 
     class MainWindow::Impl {
     public:
-        Impl(MainWindow *decl, Editor *editor) : _decl(decl), editor(editor) {
+        using Decl = MainWindow;
+
+        Impl(Decl *decl, Editor *editor) : _decl(decl), editor(editor) {
         }
 
-        MainWindow *_decl;
+        Decl *_decl;
         Editor *editor;
         std::unique_ptr<kit::ProjectDocument> document;
         PianoRoll *roll = nullptr;
@@ -99,7 +103,8 @@ namespace hello::daw {
 
         // The render progress in the status bar, and the playhead that follows playback
         void initPlayback() {
-            playback = new Playback(_decl);
+            stdc_decl_t;
+            playback = new Playback(&decl);
             renderLabel = new QLabel();
             renderProgress = new QProgressBar();
             renderProgress->setMaximumWidth(200);
@@ -107,12 +112,12 @@ namespace hello::daw {
             renderCancel = new QPushButton(tr("Cancel"));
             for (const auto widget :
                  std::initializer_list<QWidget *>{renderLabel, renderProgress, renderCancel}) {
-                _decl->statusBar()->addPermanentWidget(widget);
+                decl.statusBar()->addPermanentWidget(widget);
                 widget->hide();
             }
             QObject::connect(renderCancel, &QPushButton::clicked, playback, &Playback::stop);
 
-            QObject::connect(playback, &Playback::stateChanged, _decl,
+            QObject::connect(playback, &Playback::stateChanged, &decl,
                              [this](Playback::State state) {
                                  const bool rendering = state == Playback::Rendering;
                                  renderLabel->setVisible(rendering);
@@ -132,18 +137,19 @@ namespace hello::daw {
                                      reportPreviewFailures();
                                  }
                              });
-            QObject::connect(playback, &Playback::progressed, _decl, [this](int done, int total) {
+            QObject::connect(playback, &Playback::progressed, &decl, [this](int done, int total) {
                 renderLabel->setText(tr("Rendering %1 of %2 notes").arg(done).arg(total));
                 renderProgress->setRange(0, total);
                 renderProgress->setValue(done);
             });
-            QObject::connect(playback, &Playback::failed, _decl,
+            QObject::connect(playback, &Playback::failed, &decl,
                              [this](const kit::DiagnosticList &diagnostics) {
-                                 DiagnosticBox::show(_decl, tr("Play"), diagnostics);
+                                 stdc_decl_t;
+                                 DiagnosticBox::show(&decl, tr("Play"), diagnostics);
                              });
 
             playheadTimer.setInterval(PlayheadInterval);
-            QObject::connect(&playheadTimer, &QTimer::timeout, _decl, [this] {
+            QObject::connect(&playheadTimer, &QTimer::timeout, &decl, [this] {
                 if (const auto position = playback->position()) {
                     roll->setPlayheadPosition(roll->timeline()->tempoMap().tickOf(*position));
                 }
@@ -154,6 +160,7 @@ namespace hello::daw {
         // Plays the selected notes, from the first to the last, or the whole track, or stops
         // what is playing or rendering.
         void togglePlayback() {
+            stdc_decl_t;
             if (playback->state() != Playback::Stopped) {
                 playback->stop();
                 return;
@@ -168,13 +175,14 @@ namespace hello::daw {
             engines.wavtool = pathOf(settings.wavtool());
             kit::DiagnosticList diagnostics;
             if (!playback->play(*document, range, engines, diagnostics)) {
-                DiagnosticBox::show(_decl, tr("Play"), diagnostics);
+                DiagnosticBox::show(&decl, tr("Play"), diagnostics);
             }
         }
 
         // Previews from the first selected note, or from the start, as the notes are rendered;
         // or stops what plays.
         void togglePreview() {
+            stdc_decl_t;
             if (playback->state() != Playback::Stopped) {
                 playback->stop();
                 return;
@@ -188,15 +196,16 @@ namespace hello::daw {
             engines.wavtool = pathOf(editor->settings().wavtool());
             kit::DiagnosticList diagnostics;
             if (!playback->preview(*document, from, engines, diagnostics)) {
-                DiagnosticBox::show(_decl, tr("Preview"), diagnostics);
+                DiagnosticBox::show(&decl, tr("Preview"), diagnostics);
             }
         }
 
         // The notes a preview could not render, which played as silence, in the status bar
         void reportPreviewFailures() {
+            stdc_decl_t;
             const auto failed = playback->takePreviewDiagnostics();
             if (!failed.isEmpty()) {
-                _decl->statusBar()->showMessage(
+                decl.statusBar()->showMessage(
                     MainWindow::tr("%n note(s) could not be rendered, and were silent.", nullptr,
                                    int(failed.size())),
                     StatusMessageTimeout);
@@ -218,29 +227,43 @@ namespace hello::daw {
         }
 
         QAction *addCommand(const QString &id, std::function<void()> handler) {
-            auto action = new QAction(_decl);
-            QObject::connect(action, &QAction::triggered, _decl, std::move(handler));
+            stdc_decl_t;
+            auto action = new QAction(&decl);
+            QObject::connect(action, &QAction::triggered, &decl, std::move(handler));
             context->addAction(id, action);
             actions.insert(id, action);
             return action;
         }
 
         void initActions() {
-            context = new QAK::WidgetActionContext(_decl);
-            context->addMenuBar(QStringLiteral("helloutau.mainMenu"), _decl->menuBar());
+            stdc_decl_t;
+            context = new QAK::WidgetActionContext(&decl);
+            context->addMenuBar(QStringLiteral("helloutau.mainMenu"), decl.menuBar());
             initPlayback();
 
             addCommand(QStringLiteral("helloutau.file.new"), [this] { editor->newWindow(); });
             addCommand(QStringLiteral("helloutau.file.open"), [this] { open(); });
             // An external action: its menu is ours to fill, each time it opens.
-            recentMenu = new QMenu(_decl);
-            QObject::connect(recentMenu, &QMenu::aboutToShow, _decl, [this] { fillRecentMenu(); });
+            recentMenu = new QMenu(&decl);
+            QObject::connect(recentMenu, &QMenu::aboutToShow, &decl, [this] { fillRecentMenu(); });
             context->addAction(QStringLiteral("helloutau.file.openRecent"),
                                recentMenu->menuAction());
-            addCommand(QStringLiteral("helloutau.file.save"), [this] { _decl->save(); });
-            addCommand(QStringLiteral("helloutau.file.saveAs"), [this] { _decl->saveAs(); });
-            addCommand(QStringLiteral("helloutau.file.exportUst"), [this] { _decl->exportUst(); });
-            addCommand(QStringLiteral("helloutau.file.close"), [this] { _decl->close(); });
+            addCommand(QStringLiteral("helloutau.file.save"), [this] {
+                stdc_decl_t;
+                decl.save();
+            });
+            addCommand(QStringLiteral("helloutau.file.saveAs"), [this] {
+                stdc_decl_t;
+                decl.saveAs();
+            });
+            addCommand(QStringLiteral("helloutau.file.exportUst"), [this] {
+                stdc_decl_t;
+                decl.exportUst();
+            });
+            addCommand(QStringLiteral("helloutau.file.close"), [this] {
+                stdc_decl_t;
+                decl.close();
+            });
             addCommand(QStringLiteral("helloutau.file.quit"), [this] { editor->closeAll(); });
             addCommand(QStringLiteral("helloutau.edit.undo"),
                        [this] { document->session()->undo(); });
@@ -300,7 +323,7 @@ namespace hello::daw {
                 });
             }
             // Whether there is something to paste changes with the clipboard.
-            QObject::connect(QGuiApplication::clipboard(), &QClipboard::dataChanged, _decl,
+            QObject::connect(QGuiApplication::clipboard(), &QClipboard::dataChanged, &decl,
                              [this] { updateEditActions(); });
             addCommand(QStringLiteral("helloutau.edit.editLyric"), [this] {
                 const auto indices = roll->selectedIndices();
@@ -322,7 +345,7 @@ namespace hello::daw {
                 });
             }
 
-            tools = new QActionGroup(_decl);
+            tools = new QActionGroup(&decl);
             const auto selectTool = addCommand(QStringLiteral("helloutau.edit.selectTool"),
                                                [this] { roll->setTool(PianoRoll::SelectTool); });
             const auto penTool = addCommand(QStringLiteral("helloutau.edit.penTool"),
@@ -346,8 +369,9 @@ namespace hello::daw {
             addCommand(QStringLiteral("helloutau.playback.play"), [this] { togglePlayback(); });
             addCommand(QStringLiteral("helloutau.playback.preview"), [this] { togglePreview(); });
             addCommand(QStringLiteral("helloutau.tools.settings"), [this] {
+                stdc_decl_t;
                 const auto utau = editor->settings().utauDirectory();
-                SettingsDialog dialog(editor->settings(), _decl);
+                SettingsDialog dialog(editor->settings(), &decl);
                 if (dialog.exec() == QDialog::Accepted &&
                     editor->settings().utauDirectory() != utau) {
                     // Every voice bank named relative to UTAU is now elsewhere.
@@ -364,13 +388,14 @@ namespace hello::daw {
                 registry->updateContext(element);
             }
 
-            palette = new CommandPalette(_decl);
-            QObject::connect(palette, &CommandPalette::commandActivated, _decl,
+            palette = new CommandPalette(&decl);
+            QObject::connect(palette, &CommandPalette::commandActivated, &decl,
                              [this](const QString &id) {
+                                 stdc_decl_t;
                                  editor->settings().addRecentCommand(id);
                                  // Run once the key press that chose it is over, since the command
                                  // may open a dialog. It may have been disabled in between.
-                                 QTimer::singleShot(0, _decl, [this, id] {
+                                 QTimer::singleShot(0, &decl, [this, id] {
                                      if (const auto action = context->action(id);
                                          action && action->isEnabled()) {
                                          action->trigger();
@@ -410,6 +435,7 @@ namespace hello::daw {
         }
 
         void bindDocument() {
+            stdc_decl_t;
             // Replaces the piano roll of the previous document, which is deleted with it. The
             // tool, the quantization and whether the pitch is shown belong to the window and
             // carry over.
@@ -424,23 +450,24 @@ namespace hello::daw {
                               : PianoRoll::SelectTool);
             roll->setPitchVisible(
                 actions.value(QStringLiteral("helloutau.view.showPitch"))->isChecked());
-            _decl->setCentralWidget(roll);
+            decl.setCentralWidget(roll);
 
             QObject::connect(document.get(), &kit::ProjectDocument::voiceBankChanged, roll,
                              [this] { roll->setVoiceBank(document->voiceBank()); });
-            QObject::connect(roll, &PianoRoll::selectionChanged, _decl,
+            QObject::connect(roll, &PianoRoll::selectionChanged, &decl,
                              [this] { updateEditActions(); });
             // In the status bar, so that a refused drag does not stop the work with a dialog.
             // A dialog remains an alternative, see the open questions in docs/Tuning.md.
-            QObject::connect(roll, &PianoRoll::editRefused, _decl, [this](const QString &message) {
-                _decl->statusBar()->showMessage(message, StatusMessageTimeout);
+            QObject::connect(roll, &PianoRoll::editRefused, &decl, [this](const QString &message) {
+                stdc_decl_t;
+                decl.statusBar()->showMessage(message, StatusMessageTimeout);
             });
             updateEditActions();
-            QObject::connect(document.get(), &kit::ProjectDocument::modifiedChanged, _decl,
+            QObject::connect(document.get(), &kit::ProjectDocument::modifiedChanged, &decl,
                              [this] { updateTitle(); });
-            QObject::connect(document.get(), &kit::ProjectDocument::filePathChanged, _decl,
+            QObject::connect(document.get(), &kit::ProjectDocument::filePathChanged, &decl,
                              [this] { updateTitle(); });
-            QObject::connect(document->session(), &kit::ProjectSession::stepChanged, _decl, [this] {
+            QObject::connect(document->session(), &kit::ProjectSession::stepChanged, &decl, [this] {
                 updateUndoActions();
                 // A preview plays the notes as they now are.
                 playback->updatePlan(*document);
@@ -450,10 +477,11 @@ namespace hello::daw {
         }
 
         void updateTitle() {
+            stdc_decl_t;
             const auto name = document->displayName();
-            _decl->setWindowTitle(
+            decl.setWindowTitle(
                 QStringLiteral("%1[*] - HelloUtau").arg(name.isEmpty() ? tr("Untitled") : name));
-            _decl->setWindowModified(document->isModified());
+            decl.setWindowModified(document->isModified());
         }
 
         // Enables the commands that act on the selection when there is one.
@@ -479,33 +507,36 @@ namespace hello::daw {
         // Performs an edit of the piano roll and shows why it was refused, if it was. Nothing
         // is edited while a lyric is, since the editor has the keyboard.
         void edit(const QString &title, const std::function<bool(kit::DiagnosticList &)> &run) {
+            stdc_decl_t;
             if (roll->lyricEditor()->isVisible()) {
                 return;
             }
             kit::DiagnosticList diagnostics;
             run(diagnostics);
-            DiagnosticBox::show(_decl, title, diagnostics);
+            DiagnosticBox::show(&decl, title, diagnostics);
         }
 
         // Pastes the parameters of the copied notes that the user chooses, those chosen last
         // time at first
         void pasteParameters() {
+            stdc_decl_t;
             if (roll->lyricEditor()->isVisible()) {
                 return;
             }
-            PasteParametersDialog dialog(pastedParameters, _decl);
+            PasteParametersDialog dialog(pastedParameters, &decl);
             if (dialog.exec() != QDialog::Accepted) {
                 return;
             }
             pastedParameters = dialog.parameters();
             kit::DiagnosticList diagnostics;
             roll->pasteParameters(pastedParameters, diagnostics);
-            DiagnosticBox::show(_decl, tr("Paste Parameters"), diagnostics);
+            DiagnosticBox::show(&decl, tr("Paste Parameters"), diagnostics);
         }
 
         // Sets the vibrato of the selected sung notes to one that the user enters, starting from
         // that of the first of them, or the default.
         void editVibrato() {
+            stdc_decl_t;
             if (roll->lyricEditor()->isVisible()) {
                 return;
             }
@@ -520,17 +551,18 @@ namespace hello::daw {
                 return;
             }
             VibratoDialog dialog(sung.first().vibrato().value_or(VibratoDialog::defaultVibrato()),
-                                 _decl);
+                                 &decl);
             if (dialog.exec() != QDialog::Accepted) {
                 return;
             }
             kit::DiagnosticList diagnostics;
             kit::ProjectEdits::setVibrato(sung, dialog.vibrato(), diagnostics);
-            DiagnosticBox::show(_decl, tr("Vibrato"), diagnostics);
+            DiagnosticBox::show(&decl, tr("Vibrato"), diagnostics);
         }
 
         // Splits the selected note after a length that the user enters.
         void splitNote() {
+            stdc_decl_t;
             const auto indices = roll->selectedIndices();
             if (indices.size() != 1) {
                 return;
@@ -538,7 +570,7 @@ namespace hello::daw {
             const int index = indices.first();
             const int length = roll->timeline()->note(index).length;
             if (length < 2) {
-                QMessageBox::information(_decl, tr("Split Note"),
+                QMessageBox::information(&decl, tr("Split Note"),
                                          tr("A note of one tick cannot be split."));
                 return;
             }
@@ -550,7 +582,7 @@ namespace hello::daw {
             }
             bool ok = false;
             const int ticks =
-                QInputDialog::getInt(_decl, tr("Split Note"),
+                QInputDialog::getInt(&decl, tr("Split Note"),
                                      tr("Length of the first part in ticks, of %1:").arg(length),
                                      proposed, 1, length - 1, 1, &ok);
             if (!ok) {
@@ -570,18 +602,20 @@ namespace hello::daw {
         }
 
         void open() {
+            stdc_decl_t;
             const auto file = QFileDialog::getOpenFileName(
-                _decl, tr("Open"), {},
+                &decl, tr("Open"), {},
                 tr("Projects (*.usth *.ust);;HelloUtau projects (*.usth);;UTAU projects "
                    "(*.ust);;All files (*)"));
             if (!file.isEmpty()) {
-                editor->openFile(pathOf(file), _decl);
+                editor->openFile(pathOf(file), &decl);
             }
         }
 
         // The files last opened, numbered, the latest first, and a command that forgets them.
         // A file that is gone is reported and forgotten when chosen.
         void fillRecentMenu() {
+            stdc_decl_t;
             recentMenu->clear();
             const auto files = editor->settings().recentFiles();
             if (files.isEmpty()) {
@@ -596,36 +630,38 @@ namespace hello::daw {
                     QStringLiteral("&%1 %2")
                         .arg((i + 1) % 10)
                         .arg(QString(text).replace(QLatin1Char('&'), QStringLiteral("&&"))));
-                QObject::connect(action, &QAction::triggered, _decl, [this, path] {
+                QObject::connect(action, &QAction::triggered, &decl, [this, path] {
+                    stdc_decl_t;
                     std::error_code error;
                     if (!std::filesystem::is_regular_file(path, error)) {
                         QMessageBox::warning(
-                            _decl, tr("Open Recent"),
+                            &decl, tr("Open Recent"),
                             tr("%1 no longer exists.").arg(QDir::toNativeSeparators(textOf(path))));
                         editor->settings().removeRecentFile(path);
                         return;
                     }
-                    editor->openFile(path, _decl);
+                    editor->openFile(path, &decl);
                 });
             }
             recentMenu->addSeparator();
             QObject::connect(recentMenu->addAction(tr("&Clear Recent Files")), &QAction::triggered,
-                             _decl, [this] { editor->settings().clearRecentFiles(); });
+                             &decl, [this] { editor->settings().clearRecentFiles(); });
         }
 
         // Asks whether to save a modified project before it is closed. Returns whether closing
         // may proceed.
         bool maybeSave() {
+            stdc_decl_t;
             if (!document->isModified()) {
                 return true;
             }
             const auto name = document->displayName();
             const auto answer = QMessageBox::warning(
-                _decl, tr("HelloUtau"),
+                &decl, tr("HelloUtau"),
                 tr("Save the changes to %1?").arg(name.isEmpty() ? tr("Untitled") : name),
                 QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel);
             if (answer == QMessageBox::Save) {
-                return _decl->save();
+                return decl.save();
             }
             return answer == QMessageBox::Discard;
         }
@@ -637,38 +673,44 @@ namespace hello::daw {
 
     MainWindow::MainWindow(Editor *editor, std::unique_ptr<kit::ProjectDocument> document)
         : _impl(std::make_unique<Impl>(this, editor)) {
-        _impl->initActions();
-        _impl->document = std::move(document);
-        _impl->bindDocument();
+        stdc_impl_t;
+        impl.initActions();
+        impl.document = std::move(document);
+        impl.bindDocument();
         editor->themeManager()->install(this, {QStringLiteral("MainWindow")});
         resize(960, 640);
     }
 
     MainWindow::~MainWindow() {
+        stdc_impl_t;
         // Stopping updates the piano roll, which refers to the session of the document, which
         // goes with _impl.
-        _impl->playback->stop();
-        delete _impl->roll;
+        impl.playback->stop();
+        delete impl.roll;
     }
 
     kit::ProjectDocument *MainWindow::document() const {
-        return _impl->document.get();
+        stdc_impl_t;
+        return impl.document.get();
     }
 
     void MainWindow::setDocument(std::unique_ptr<kit::ProjectDocument> document) {
-        _impl->playback->stop();
-        auto previous = std::move(_impl->document);
-        _impl->document = std::move(document);
-        _impl->bindDocument();
+        stdc_impl_t;
+        impl.playback->stop();
+        auto previous = std::move(impl.document);
+        impl.document = std::move(document);
+        impl.bindDocument();
     }
 
     bool MainWindow::isUnused() const {
-        return _impl->document->sourcePath().empty() && !_impl->document->isModified();
+        stdc_impl_t;
+        return impl.document->sourcePath().empty() && !impl.document->isModified();
     }
 
     bool MainWindow::loadVoiceBank() {
-        const auto document = _impl->document.get();
-        const auto utau = _impl->editor->settings().utauDirectory();
+        stdc_impl_t;
+        const auto document = impl.document.get();
+        const auto utau = impl.editor->settings().utauDirectory();
         VoiceBankCharsetDialog selector(this);
         selector.setRoot(document->session()->snapshot().tracks.value(0).voiceDirectory(utau));
         kit::DiagnosticList diagnostics;
@@ -678,18 +720,20 @@ namespace hello::daw {
     }
 
     bool MainWindow::save() {
-        if (_impl->document->filePath().empty()) {
+        stdc_impl_t;
+        if (impl.document->filePath().empty()) {
             return saveAs();
         }
         kit::DiagnosticList diagnostics;
-        const bool saved = _impl->document->save(diagnostics);
+        const bool saved = impl.document->save(diagnostics);
         DiagnosticBox::show(this, tr("Save"), diagnostics);
         return saved;
     }
 
     bool MainWindow::saveAs() {
+        stdc_impl_t;
         const auto file = QFileDialog::getSaveFileName(
-            this, tr("Save As"), textOf(proposedPath(*_impl->document, u".usth")),
+            this, tr("Save As"), textOf(proposedPath(*impl.document, u".usth")),
             tr("HelloUtau projects (*.usth)"));
         if (file.isEmpty()) {
             return false;
@@ -699,17 +743,18 @@ namespace hello::daw {
             path += u".usth";
         }
         kit::DiagnosticList diagnostics;
-        const bool saved = _impl->document->saveAs(path, diagnostics);
+        const bool saved = impl.document->saveAs(path, diagnostics);
         DiagnosticBox::show(this, tr("Save As"), diagnostics);
         if (saved) {
-            _impl->editor->settings().addRecentFile(path);
+            impl.editor->settings().addRecentFile(path);
         }
         return saved;
     }
 
     bool MainWindow::exportUst() {
-        const auto &settings = _impl->editor->settings();
-        ExportUstDialog dialog(proposedPath(*_impl->document, u".ust"), settings.ustExportCharset(),
+        stdc_impl_t;
+        const auto &settings = impl.editor->settings();
+        ExportUstDialog dialog(proposedPath(*impl.document, u".ust"), settings.ustExportCharset(),
                                this);
         if (dialog.exec() != QDialog::Accepted) {
             return false;
@@ -728,13 +773,14 @@ namespace hello::daw {
         options.wavtool = settings.wavtool();
         options.resampler = settings.resampler();
         kit::DiagnosticList diagnostics;
-        const bool exported = _impl->document->exportUst(path, options, diagnostics);
+        const bool exported = impl.document->exportUst(path, options, diagnostics);
         DiagnosticBox::show(this, tr("Export UST"), diagnostics);
         return exported;
     }
 
     void MainWindow::closeEvent(QCloseEvent *event) {
-        if (!_impl->maybeSave()) {
+        stdc_impl_t;
+        if (!impl.maybeSave()) {
             event->ignore();
             return;
         }

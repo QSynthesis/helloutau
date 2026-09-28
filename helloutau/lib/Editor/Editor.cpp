@@ -2,6 +2,8 @@
 
 #include <QtCore/QPointer>
 
+#include <stdcorelib/pimpl.h>
+
 #include <QAKCore/actionregistry.h>
 
 #include <hellokit/Edit/ProjectDocument.h>
@@ -32,6 +34,8 @@ namespace hello::daw {
 
     class Editor::Impl {
     public:
+        using Decl = Editor;
+
         explicit Impl(std::unique_ptr<AppSettings> settings) : settings(std::move(settings)) {
         }
 
@@ -55,34 +59,40 @@ namespace hello::daw {
 
     Editor::Editor(std::unique_ptr<AppSettings> settings, QObject *parent)
         : QObject(parent), _impl(std::make_unique<Impl>(std::move(settings))) {
-        _impl->registry = new QAK::ActionRegistry(this);
-        _impl->registry->setExtensions({editorActions()});
-        _impl->themes = new ThemeManager(this);
-        _impl->themes->addSearchPath(QStringLiteral(":/helloutau/themes"));
+        stdc_impl_t;
+        impl.registry = new QAK::ActionRegistry(this);
+        impl.registry->setExtensions({editorActions()});
+        impl.themes = new ThemeManager(this);
+        impl.themes->addSearchPath(QStringLiteral(":/helloutau/themes"));
     }
 
     Editor::~Editor() {
+        stdc_impl_t;
         // The windows refer to the registry and the settings, so they go first.
-        for (const auto &window : std::as_const(_impl->windows)) {
+        for (const auto &window : std::as_const(impl.windows)) {
             delete window.data();
         }
     }
 
     AppSettings &Editor::settings() const {
-        return *_impl->settings;
+        stdc_impl_t;
+        return *impl.settings;
     }
 
     QAK::ActionRegistry *Editor::actionRegistry() const {
-        return _impl->registry;
+        stdc_impl_t;
+        return impl.registry;
     }
 
     ThemeManager *Editor::themeManager() const {
-        return _impl->themes;
+        stdc_impl_t;
+        return impl.themes;
     }
 
     QList<MainWindow *> Editor::windows() const {
+        stdc_impl_t;
         QList<MainWindow *> result;
-        for (const auto &window : std::as_const(_impl->windows)) {
+        for (const auto &window : std::as_const(impl.windows)) {
             if (window) {
                 result.push_back(window);
             }
@@ -91,10 +101,12 @@ namespace hello::daw {
     }
 
     MainWindow *Editor::newWindow() {
-        return _impl->createWindow(this, std::make_unique<kit::ProjectDocument>());
+        stdc_impl_t;
+        return impl.createWindow(this, std::make_unique<kit::ProjectDocument>());
     }
 
     MainWindow *Editor::openFile(const std::filesystem::path &path, MainWindow *from) {
+        stdc_impl_t;
         for (const auto window : windows()) {
             if (isSameFile(window->document()->sourcePath(), path)) {
                 window->raise();
@@ -112,13 +124,13 @@ namespace hello::daw {
             DiagnosticBox::show(from, title, diagnostics);
             return nullptr;
         }
-        _impl->settings->addRecentFile(path);
+        impl.settings->addRecentFile(path);
 
         MainWindow *window = from;
         if (window && window->isUnused()) {
             window->setDocument(std::move(document));
         } else {
-            window = _impl->createWindow(this, std::move(document));
+            window = impl.createWindow(this, std::move(document));
         }
         // Shown after the window, so that the user sees which project they concern, and before
         // the voice bank is read, which may ask more.

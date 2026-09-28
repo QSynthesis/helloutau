@@ -15,6 +15,8 @@
 #include <QtCore/QTimer>
 #include <QtWidgets/QWidget>
 
+#include <stdcorelib/pimpl.h>
+
 #include "ThemeIcon.h"
 #include "ThemeLogging_p.h"
 #include "ThemeStyleSheet.h"
@@ -83,10 +85,12 @@ namespace hello::daw {
 
     class ThemeManager::Impl {
     public:
-        explicit Impl(ThemeManager *decl) : _decl(decl) {
+        using Decl = ThemeManager;
+
+        explicit Impl(Decl *decl) : _decl(decl) {
         }
 
-        ThemeManager *_decl;
+        Decl *_decl;
         QStringList searchPaths;
         QString current;
         double scale = 1;
@@ -309,11 +313,12 @@ namespace hello::daw {
         }
 
         void schedule() {
+            stdc_decl_t;
             if (pending) {
                 return;
             }
             pending = true;
-            QTimer::singleShot(0, _decl, [this] { refresh(); });
+            QTimer::singleShot(0, &decl, [this] { refresh(); });
         }
 
         void refresh() {
@@ -332,20 +337,23 @@ namespace hello::daw {
     ThemeManager::~ThemeManager() = default;
 
     void ThemeManager::addSearchPath(const QString &directory) {
-        _impl->searchPaths.push_back(directory);
+        stdc_impl_t;
+        impl.searchPaths.push_back(directory);
         reload();
     }
 
     void ThemeManager::reload() {
+        stdc_impl_t;
         // The icons are drawn from the files as they are now as well.
         ThemeIcon::clearCache();
-        _impl->read();
-        _impl->schedule();
+        impl.read();
+        impl.schedule();
     }
 
     QStringList ThemeManager::themes() const {
+        stdc_impl_t;
         QStringList result;
-        for (const auto &theme : _impl->sheets.keys() + _impl->variables.keys()) {
+        for (const auto &theme : impl.sheets.keys() + impl.variables.keys()) {
             if (theme != QString::fromUtf16(CommonTheme) && !result.contains(theme)) {
                 result.push_back(theme);
             }
@@ -355,47 +363,55 @@ namespace hello::daw {
     }
 
     QString ThemeManager::currentTheme() const {
-        return _impl->current;
+        stdc_impl_t;
+        return impl.current;
     }
 
     void ThemeManager::setCurrentTheme(const QString &theme) {
-        if (theme == _impl->current) {
+        stdc_impl_t;
+        if (theme == impl.current) {
             return;
         }
-        _impl->current = theme;
-        _impl->schedule();
+        impl.current = theme;
+        impl.schedule();
         Q_EMIT currentThemeChanged();
     }
 
     double ThemeManager::scale() const {
-        return _impl->scale;
+        stdc_impl_t;
+        return impl.scale;
     }
 
     void ThemeManager::setScale(double scale) {
-        if (scale > 0 && scale != _impl->scale) {
-            _impl->scale = scale;
-            _impl->schedule();
+        stdc_impl_t;
+        if (scale > 0 && scale != impl.scale) {
+            impl.scale = scale;
+            impl.schedule();
         }
     }
 
     double ThemeManager::fontScale() const {
-        return _impl->fontScale;
+        stdc_impl_t;
+        return impl.fontScale;
     }
 
     void ThemeManager::setFontScale(double scale) {
-        if (scale > 0 && scale != _impl->fontScale) {
-            _impl->fontScale = scale;
-            _impl->schedule();
+        stdc_impl_t;
+        if (scale > 0 && scale != impl.fontScale) {
+            impl.fontScale = scale;
+            impl.schedule();
         }
     }
 
     void ThemeManager::install(QWidget *widget, const QStringList &ids) {
-        _impl->widgets.push_back({widget, ids});
-        widget->setStyleSheet(_impl->assemble(ids));
+        stdc_impl_t;
+        impl.widgets.push_back({widget, ids});
+        widget->setStyleSheet(impl.assemble(ids));
     }
 
     QString ThemeManager::styleSheet(const QStringList &ids) const {
-        return _impl->assemble(ids);
+        stdc_impl_t;
+        return impl.assemble(ids);
     }
 
 }

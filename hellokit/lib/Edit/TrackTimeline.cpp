@@ -2,6 +2,8 @@
 
 #include <algorithm>
 
+#include <stdcorelib/pimpl.h>
+
 #include "ProjectRefs.h"
 #include "ProjectSession.h"
 
@@ -9,19 +11,20 @@ namespace hello::kit {
 
     class TrackTimeline::Impl {
     public:
-        Impl(ProjectSession *session, int trackIndex)
-            : session(session), trackIndex(trackIndex) {
+        using Decl = TrackTimeline;
+
+        Impl(ProjectSession *session, int trackIndex) : session(session), trackIndex(trackIndex) {
         }
 
         ProjectSession *session;
         int trackIndex;
 
         // Computed on demand, and marked stale by any change of the session
-        bool stale = true;
-        QList<Note> notes;
-        TempoMap tempoMap;
+        mutable bool stale = true;
+        mutable QList<Note> notes;
+        mutable TempoMap tempoMap;
 
-        void compute() {
+        void compute() const {
             if (!stale) {
                 return;
             }
@@ -56,8 +59,9 @@ namespace hello::kit {
     TrackTimeline::TrackTimeline(ProjectSession *session, int trackIndex, QObject *parent)
         : QObject(parent), _impl(std::make_unique<Impl>(session, trackIndex)) {
         connect(session, &ProjectSession::changed, this, [this] {
-            if (!_impl->stale) {
-                _impl->stale = true;
+            stdc_impl_t;
+            if (!impl.stale) {
+                impl.stale = true;
                 Q_EMIT invalidated();
             }
         });
@@ -66,18 +70,21 @@ namespace hello::kit {
     TrackTimeline::~TrackTimeline() = default;
 
     int TrackTimeline::noteCount() const {
-        _impl->compute();
-        return int(_impl->notes.size());
+        stdc_impl_t;
+        impl.compute();
+        return int(impl.notes.size());
     }
 
     const TrackTimeline::Note &TrackTimeline::note(int index) const {
-        _impl->compute();
-        return _impl->notes.at(index);
+        stdc_impl_t;
+        impl.compute();
+        return impl.notes.at(index);
     }
 
     const TempoMap &TrackTimeline::tempoMap() const {
-        _impl->compute();
-        return _impl->tempoMap;
+        stdc_impl_t;
+        impl.compute();
+        return impl.tempoMap;
     }
 
     qint64 TrackTimeline::length() const {

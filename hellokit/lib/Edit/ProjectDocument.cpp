@@ -2,6 +2,8 @@
 
 #include <QtCore/QDir>
 
+#include <stdcorelib/pimpl.h>
+
 #include <hellokit/VoiceBank/VoiceBankFileSystemState.h>
 
 namespace hello::kit {
@@ -59,14 +61,16 @@ namespace hello::kit {
 
     class ProjectDocument::Impl {
     public:
-        Impl(ProjectDocument *decl, const Project &project, const std::filesystem::path &sourcePath,
+        using Decl = ProjectDocument;
+
+        Impl(Decl *decl, const Project &project, const std::filesystem::path &sourcePath,
              bool native)
             : _decl(decl), session(project), sourcePath(sourcePath),
               filePath(native ? sourcePath : std::filesystem::path()),
               savedStep(session.currentStep()) {
         }
 
-        ProjectDocument *_decl;
+        Decl *_decl;
         ProjectSession session;
         std::filesystem::path sourcePath;
         std::filesystem::path filePath;
@@ -75,10 +79,11 @@ namespace hello::kit {
         std::shared_ptr<const VoiceBank> voiceBank;
 
         void updateModified() {
+            stdc_decl_t;
             const bool now = session.currentStep() != savedStep;
             if (now != modified) {
                 modified = now;
-                Q_EMIT _decl->modifiedChanged(now);
+                Q_EMIT decl.modifiedChanged(now);
             }
         }
 
@@ -95,8 +100,11 @@ namespace hello::kit {
                                      const std::filesystem::path &sourcePath, bool native,
                                      QObject *parent)
         : QObject(parent), _impl(std::make_unique<Impl>(this, project, sourcePath, native)) {
-        connect(&_impl->session, &ProjectSession::stepChanged, this,
-                [this] { _impl->updateModified(); });
+        stdc_impl_t;
+        connect(&impl.session, &ProjectSession::stepChanged, this, [this] {
+            stdc_impl_t;
+            impl.updateModified();
+        });
     }
 
     ProjectDocument::~ProjectDocument() = default;
@@ -142,44 +150,56 @@ namespace hello::kit {
         return nullptr;
     }
 
-    ProjectSession *ProjectDocument::session() const {
-        return &_impl->session;
+    ProjectSession *ProjectDocument::session() {
+        stdc_impl_t;
+        return &impl.session;
+    }
+
+    const ProjectSession *ProjectDocument::session() const {
+        stdc_impl_t;
+        return &impl.session;
     }
 
     std::filesystem::path ProjectDocument::filePath() const {
-        return _impl->filePath;
+        stdc_impl_t;
+        return impl.filePath;
     }
 
     std::filesystem::path ProjectDocument::sourcePath() const {
-        return _impl->sourcePath;
+        stdc_impl_t;
+        return impl.sourcePath;
     }
 
     QString ProjectDocument::displayName() const {
-        return QString::fromStdU16String(_impl->sourcePath.filename().u16string());
+        stdc_impl_t;
+        return QString::fromStdU16String(impl.sourcePath.filename().u16string());
     }
 
     bool ProjectDocument::isModified() const {
-        return _impl->modified;
+        stdc_impl_t;
+        return impl.modified;
     }
 
     bool ProjectDocument::save(DiagnosticList &diagnostics) {
-        Q_ASSERT(!_impl->filePath.empty());
-        if (!_impl->write(_impl->filePath, diagnostics)) {
+        stdc_impl_t;
+        Q_ASSERT(!impl.filePath.empty());
+        if (!impl.write(impl.filePath, diagnostics)) {
             return false;
         }
-        _impl->savedStep = _impl->session.currentStep();
-        _impl->updateModified();
+        impl.savedStep = impl.session.currentStep();
+        impl.updateModified();
         return true;
     }
 
     bool ProjectDocument::saveAs(const std::filesystem::path &path, DiagnosticList &diagnostics) {
-        if (!_impl->write(path, diagnostics)) {
+        stdc_impl_t;
+        if (!impl.write(path, diagnostics)) {
             return false;
         }
-        _impl->savedStep = _impl->session.currentStep();
-        _impl->updateModified();
-        _impl->filePath = path;
-        _impl->sourcePath = path;
+        impl.savedStep = impl.session.currentStep();
+        impl.updateModified();
+        impl.filePath = path;
+        impl.sourcePath = path;
         Q_EMIT filePathChanged();
         return true;
     }
@@ -187,26 +207,30 @@ namespace hello::kit {
     bool ProjectDocument::exportUst(const std::filesystem::path &path,
                                     UstDocument::ExportOptions options,
                                     DiagnosticList &diagnostics) const {
+        stdc_impl_t;
         options.file = path;
-        const auto ust = UstDocument::fromProject(_impl->session.snapshot(), options, diagnostics);
+        const auto ust = UstDocument::fromProject(impl.session.snapshot(), options, diagnostics);
         return ust && ust->save(path, diagnostics);
     }
 
     std::shared_ptr<const VoiceBank> ProjectDocument::voiceBank() const {
-        return _impl->voiceBank;
+        stdc_impl_t;
+        return impl.voiceBank;
     }
 
     bool ProjectDocument::loadVoiceBank(const std::filesystem::path &utauDirectory,
                                         VoiceBankCharsetSelector *selector,
                                         DiagnosticList &diagnostics) {
+        stdc_impl_t;
         const auto set = [this](std::shared_ptr<const VoiceBank> bank) {
-            if (bank != _impl->voiceBank) {
-                _impl->voiceBank = std::move(bank);
+            stdc_impl_t;
+            if (bank != impl.voiceBank) {
+                impl.voiceBank = std::move(bank);
                 Q_EMIT voiceBankChanged();
             }
         };
 
-        const auto track = _impl->session.snapshot().tracks.value(0);
+        const auto track = impl.session.snapshot().tracks.value(0);
         if (track.voiceDir.isEmpty()) {
             set(nullptr);
             return false;

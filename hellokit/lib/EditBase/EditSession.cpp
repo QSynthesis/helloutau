@@ -3,6 +3,8 @@
 
 #include <utility>
 
+#include <stdcorelib/pimpl.h>
+
 #include <substate/BytesNode.h>
 #include <substate/VectorNode.h>
 #include <qsubstate/MappingNode.h>
@@ -97,7 +99,7 @@ namespace hello::kit::edit {
 
     }
 
-    EditSession::Impl::Impl(EditSession *q) : q(q) {
+    EditSession::Impl::Impl(Decl *decl) : _decl(decl) {
         model.addObserver(this);
     }
 
@@ -109,6 +111,7 @@ namespace hello::kit::edit {
 
     void EditSession::Impl::actionAboutToApply(const ss::Action &action,
                                                ss::Action::Operation operation) {
+        stdc_decl_t;
         // The first execution is the modification by the caller. Undo, redo and rollback restore
         // states that the validation has already accepted or that it does not concern.
         if (operation == ss::Action::Execute && !validators.empty()) {
@@ -125,12 +128,13 @@ namespace hello::kit::edit {
             return;
         }
         if (const auto change = it->second(action, operation)) {
-            Q_EMIT q->changed(change);
+            Q_EMIT decl.changed(change);
         }
     }
 
     void EditSession::Impl::actionApplied(const ss::Action &action,
                                           ss::Action::Operation operation) {
+        stdc_decl_t;
         if (operation == ss::Action::Execute && action.type() == ss::Action::VectorInsert) {
             for (const auto child :
                  static_cast<const ss::VectorInsDelAction &>(action).children()) {
@@ -147,7 +151,7 @@ namespace hello::kit::edit {
             return;
         }
         if (const auto change = it->second(action, operation)) {
-            Q_EMIT q->changed(change);
+            Q_EMIT decl.changed(change);
         }
     }
 
@@ -197,7 +201,8 @@ namespace hello::kit::edit {
     }
 
     void EditSession::Impl::stepChanged(int step) {
-        Q_EMIT q->stepChanged(step);
+        stdc_decl_t;
+        Q_EMIT decl.stepChanged(step);
     }
 
     EditSession::Transaction::Transaction(EditSession *session) : m_session(session) {
@@ -268,63 +273,75 @@ namespace hello::kit::edit {
     EditSession::~EditSession() = default;
 
     NodeId EditSession::root() const {
-        const auto root = _impl->model.root();
+        stdc_impl_t;
+        const auto root = impl.model.root();
         return root ? root->id() : 0;
     }
 
     bool EditSession::contains(NodeId node) const {
-        return _impl->find(node);
+        stdc_impl_t;
+        return impl.find(node);
     }
 
     EditSession::Transaction EditSession::transaction(const QString &message) {
+        stdc_impl_t;
         // substate supports no nesting, therefore only the outermost transaction begins one.
-        if (_impl->depth++ == 0) {
-            _impl->model.beginTransaction();
-            _impl->message = message;
+        if (impl.depth++ == 0) {
+            impl.model.beginTransaction();
+            impl.message = message;
         }
         return Transaction(this);
     }
 
     bool EditSession::inTransaction() const {
-        return _impl->model.inTransaction();
+        stdc_impl_t;
+        return impl.model.inTransaction();
     }
 
     bool EditSession::canUndo() const {
-        return !inTransaction() && _impl->model.canUndo();
+        stdc_impl_t;
+        return !inTransaction() && impl.model.canUndo();
     }
 
     bool EditSession::canRedo() const {
-        return !inTransaction() && _impl->model.canRedo();
+        stdc_impl_t;
+        return !inTransaction() && impl.model.canRedo();
     }
 
     void EditSession::undo() {
+        stdc_impl_t;
         Q_ASSERT_X(!inTransaction(), "EditSession", "undo during a transaction");
         if (canUndo()) {
-            _impl->model.undo();
+            impl.model.undo();
         }
     }
 
     void EditSession::redo() {
+        stdc_impl_t;
         Q_ASSERT_X(!inTransaction(), "EditSession", "redo during a transaction");
         if (canRedo()) {
-            _impl->model.redo();
+            impl.model.redo();
         }
     }
 
     int EditSession::currentStep() const {
-        return _impl->model.currentStep();
+        stdc_impl_t;
+        return impl.model.currentStep();
     }
 
     int EditSession::minimumStep() const {
-        return _impl->model.minimumStep();
+        stdc_impl_t;
+        return impl.model.minimumStep();
     }
 
     int EditSession::maximumStep() const {
-        return _impl->model.maximumStep();
+        stdc_impl_t;
+        return impl.model.maximumStep();
     }
 
     QString EditSession::stepMessage(int step) const {
-        return messageOf(_impl->model.stepMessage(step));
+        stdc_impl_t;
+        return messageOf(impl.model.stepMessage(step));
     }
 
     QString EditSession::undoMessage() const {

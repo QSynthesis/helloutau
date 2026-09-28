@@ -24,6 +24,8 @@
 #include <QtWidgets/QLineEdit>
 #include <QtWidgets/QMenu>
 
+#include <stdcorelib/pimpl.h>
+
 #include <hellokit/Document/DocumentConstants.h>
 #include <hellokit/Edit/ProjectEdits.h>
 #include <hellokit/Edit/ProjectRefs.h>
@@ -218,6 +220,8 @@ namespace hello::daw {
 
     class PianoRoll::Impl {
     public:
+        using Decl = PianoRoll;
+
         class GridLayer;
         class NoteLayer;
         class PitchLayer;
@@ -231,10 +235,10 @@ namespace hello::daw {
         class PointGesture;
         class VibratoGesture;
 
-        explicit Impl(PianoRoll *decl) : _decl(decl) {
+        explicit Impl(Decl *decl) : _decl(decl) {
         }
 
-        PianoRoll *_decl;
+        Decl *_decl;
         kit::ProjectSession *session = nullptr;
         kit::TrackTimeline *timeline = nullptr;
         SceneView *view = nullptr;
@@ -317,6 +321,7 @@ namespace hello::daw {
 
         // Selects the notes ids; selecting a note clears the selected points.
         void setSelection(const QSet<kit::edit::NodeId> &ids) {
+            stdc_decl_t;
             const bool clearsPoints = !ids.isEmpty() && !selectedPoints.isEmpty();
             if (ids == selection && !clearsPoints) {
                 return;
@@ -326,7 +331,7 @@ namespace hello::daw {
                 selectedPoints.clear();
             }
             view->viewport()->update();
-            Q_EMIT _decl->selectionChanged();
+            Q_EMIT decl.selectionChanged();
         }
 
         // The note whose points are drawn plainly, the others' faintly: the one whose
@@ -356,6 +361,7 @@ namespace hello::daw {
 
         // Selects the points ids; selecting a point clears the selected notes.
         void selectPoints(const QSet<kit::edit::NodeId> &ids) {
+            stdc_decl_t;
             const bool clearsNotes = !ids.isEmpty() && !selection.isEmpty();
             if (ids == selectedPoints && !clearsNotes) {
                 return;
@@ -365,7 +371,7 @@ namespace hello::daw {
                 selection.clear();
             }
             view->viewport()->update();
-            Q_EMIT _decl->selectionChanged();
+            Q_EMIT decl.selectionChanged();
         }
 
         double ticksOf(double milliseconds, int index) const {
@@ -533,6 +539,7 @@ namespace hello::daw {
 
         // Reports why an edit made in the roll was refused, if it was
         void report(const kit::DiagnosticList &diagnostics) {
+            stdc_decl_t;
             QStringList messages;
             for (const auto &diagnostic : diagnostics) {
                 if (diagnostic.severity == kit::DiagnosticSeverity::Error) {
@@ -540,7 +547,7 @@ namespace hello::daw {
                 }
             }
             if (!messages.isEmpty()) {
-                Q_EMIT _decl->editRefused(messages.join(u' '));
+                Q_EMIT decl.editRefused(messages.join(u' '));
             }
         }
 
@@ -694,11 +701,12 @@ namespace hello::daw {
         // Updates what depends on the notes as a whole, once control returns to the event
         // loop, so that a transaction of many changes updates it once.
         void scheduleRefresh() {
+            stdc_decl_t;
             if (refreshPending) {
                 return;
             }
             refreshPending = true;
-            QTimer::singleShot(0, _decl, [this] { refresh(); });
+            QTimer::singleShot(0, &decl, [this] { refresh(); });
         }
 
         void refresh() {
@@ -2263,119 +2271,150 @@ namespace hello::daw {
 
     PianoRoll::PianoRoll(kit::ProjectSession *session, QWidget *parent)
         : QWidget(parent), _impl(std::make_unique<Impl>(this)) {
-        _impl->session = session;
-        _impl->timeline = new kit::TrackTimeline(session, 0, this);
-        _impl->view = new SceneView();
-        _impl->ruler = new TimelineRuler(_impl->view);
-        _impl->keyboard = new PianoKeyboard(_impl->view);
-        _impl->ruler->setTicksPerBeat(kit::ticksPerQuarter);
-        _impl->ruler->setBeatsPerBar(BeatsPerBar);
+        stdc_impl_t;
+        impl.session = session;
+        impl.timeline = new kit::TrackTimeline(session, 0, this);
+        impl.view = new SceneView();
+        impl.ruler = new TimelineRuler(impl.view);
+        impl.keyboard = new PianoKeyboard(impl.view);
+        impl.ruler->setTicksPerBeat(kit::ticksPerQuarter);
+        impl.ruler->setBeatsPerBar(BeatsPerBar);
 
-        _impl->view->addLayer(std::make_unique<Impl::GridLayer>(_impl.get()));
-        _impl->view->addLayer(std::make_unique<Impl::NoteLayer>(_impl.get()));
-        _impl->view->addLayer(std::make_unique<Impl::PitchLayer>(_impl.get()));
-        _impl->view->addLayer(std::make_unique<Impl::OverlayLayer>(_impl.get()));
-        new PointerTracker(_impl->view->viewport(),
-                           [this](std::optional<QPointF> position) { _impl->hover(position); });
+        impl.view->addLayer(std::make_unique<Impl::GridLayer>(&impl));
+        impl.view->addLayer(std::make_unique<Impl::NoteLayer>(&impl));
+        impl.view->addLayer(std::make_unique<Impl::PitchLayer>(&impl));
+        impl.view->addLayer(std::make_unique<Impl::OverlayLayer>(&impl));
+        new PointerTracker(impl.view->viewport(), [this](std::optional<QPointF> position) {
+            stdc_impl_t;
+            impl.hover(position);
+        });
 
         // The parameter area: the time axis of the roll, and volumes in percent for keys, all
         // of them in view
-        _impl->parameters = new SceneView();
-        _impl->parameters->setFixedHeight(ParameterHeight);
-        _impl->parameters->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-        _impl->parameters->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-        _impl->parameters->setKeyScaleRange(0.01, 100);
+        impl.parameters = new SceneView();
+        impl.parameters->setFixedHeight(ParameterHeight);
+        impl.parameters->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+        impl.parameters->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+        impl.parameters->setKeyScaleRange(0.01, 100);
         // Room for the margins beyond the volumes
-        _impl->parameters->setKeyRange(-int(EnvelopeRange / 10), int(EnvelopeRange * 1.1));
-        _impl->parameters->addLayer(std::make_unique<Impl::EnvelopeLayer>(_impl.get()));
-        _impl->parameterLabel = new QLabel(tr("Envelope"));
-        _impl->parameterLabel->setAlignment(Qt::AlignCenter);
-        new EventWatcher(_impl->parameters->viewport(), [this](QEvent *event) {
+        impl.parameters->setKeyRange(-int(EnvelopeRange / 10), int(EnvelopeRange * 1.1));
+        impl.parameters->addLayer(std::make_unique<Impl::EnvelopeLayer>(&impl));
+        impl.parameterLabel = new QLabel(tr("Envelope"));
+        impl.parameterLabel->setAlignment(Qt::AlignCenter);
+        new EventWatcher(impl.parameters->viewport(), [this](QEvent *event) {
+            stdc_impl_t;
             if (event->type() == QEvent::Resize) {
-                _impl->fitParameters();
+                impl.fitParameters();
             }
         });
-        connect(_impl->parameters, &SceneView::keyAxisChanged, this,
-                [this] { _impl->fitParameters(); });
-        connect(_impl->view, &SceneView::timeAxisChanged, this,
-                [this] { _impl->parameters->setTimeAxis(_impl->view->timeAxis()); });
-        connect(_impl->parameters, &SceneView::timeAxisChanged, this,
-                [this] { _impl->view->setTimeAxis(_impl->parameters->timeAxis()); });
+        connect(impl.parameters, &SceneView::keyAxisChanged, this, [this] {
+            stdc_impl_t;
+            impl.fitParameters();
+        });
+        connect(impl.view, &SceneView::timeAxisChanged, this, [this] {
+            stdc_impl_t;
+            impl.parameters->setTimeAxis(impl.view->timeAxis());
+        });
+        connect(impl.parameters, &SceneView::timeAxisChanged, this, [this] {
+            stdc_impl_t;
+            impl.view->setTimeAxis(impl.parameters->timeAxis());
+        });
 
-        _impl->quantizer = new QComboBox();
-        _impl->quantizer->setToolTip(tr("Quantization"));
-        _impl->quantizer->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Fixed);
+        impl.quantizer = new QComboBox();
+        impl.quantizer->setToolTip(tr("Quantization"));
+        impl.quantizer->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Fixed);
         for (const int ticks : quantizations()) {
-            _impl->quantizer->addItem(
+            impl.quantizer->addItem(
                 ticks > 0 ? QStringLiteral("1/%1").arg(BarTicks / ticks) : tr("Off"), ticks);
         }
-        connect(_impl->quantizer, &QComboBox::currentIndexChanged, this, [this](int index) {
-            _impl->quantization = _impl->quantizer->itemData(index).toInt();
+        connect(impl.quantizer, &QComboBox::currentIndexChanged, this, [this](int index) {
+            stdc_impl_t;
+            impl.quantization = impl.quantizer->itemData(index).toInt();
         });
         setQuantization(DefaultQuantization);
 
-        _impl->editor = new LyricEditor(_impl->view->viewport());
-        _impl->editor->hide();
-        _impl->editor->committed = [this] { _impl->finishEditing(true); };
-        _impl->editor->cancelled = [this] { _impl->finishEditing(false); };
-        _impl->editor->tabbed = [this](bool forward) { _impl->editNext(forward); };
+        impl.editor = new LyricEditor(impl.view->viewport());
+        impl.editor->hide();
+        impl.editor->committed = [this] {
+            stdc_impl_t;
+            impl.finishEditing(true);
+        };
+        impl.editor->cancelled = [this] {
+            stdc_impl_t;
+            impl.finishEditing(false);
+        };
+        impl.editor->tabbed = [this](bool forward) {
+            stdc_impl_t;
+            impl.editNext(forward);
+        };
 
         auto layout = new QGridLayout(this);
         layout->setContentsMargins(0, 0, 0, 0);
         layout->setSpacing(0);
-        layout->addWidget(_impl->quantizer, 0, 0);
-        layout->addWidget(_impl->ruler, 0, 1);
-        layout->addWidget(_impl->keyboard, 1, 0);
-        layout->addWidget(_impl->view, 1, 1);
-        layout->addWidget(_impl->parameterLabel, 2, 0);
-        layout->addWidget(_impl->parameters, 2, 1);
+        layout->addWidget(impl.quantizer, 0, 0);
+        layout->addWidget(impl.ruler, 0, 1);
+        layout->addWidget(impl.keyboard, 1, 0);
+        layout->addWidget(impl.view, 1, 1);
+        layout->addWidget(impl.parameterLabel, 2, 0);
+        layout->addWidget(impl.parameters, 2, 1);
         layout->setColumnStretch(1, 1);
         layout->setRowStretch(1, 1);
 
-        connect(_impl->timeline, &kit::TrackTimeline::invalidated, this, [this] {
-            _impl->timingsStale = true;
-            _impl->view->viewport()->update();
-            _impl->parameters->viewport()->update();
-            _impl->scheduleRefresh();
+        connect(impl.timeline, &kit::TrackTimeline::invalidated, this, [this] {
+            stdc_impl_t;
+            impl.timingsStale = true;
+            impl.view->viewport()->update();
+            impl.parameters->viewport()->update();
+            impl.scheduleRefresh();
             // The note being edited may be gone, as may selected ones.
-            if (_impl->editing && _impl->indexOf(_impl->editing) < 0) {
-                _impl->finishEditing(false);
+            if (impl.editing && impl.indexOf(impl.editing) < 0) {
+                impl.finishEditing(false);
             }
             Q_EMIT selectionChanged();
         });
         // Scrolling and zooming move the note away from the editor.
-        connect(_impl->view, &SceneView::timeAxisChanged, this,
-                [this] { _impl->finishEditing(true); });
-        connect(_impl->view, &SceneView::keyAxisChanged, this,
-                [this] { _impl->finishEditing(true); });
-        _impl->refresh();
+        connect(impl.view, &SceneView::timeAxisChanged, this, [this] {
+            stdc_impl_t;
+            impl.finishEditing(true);
+        });
+        connect(impl.view, &SceneView::keyAxisChanged, this, [this] {
+            stdc_impl_t;
+            impl.finishEditing(true);
+        });
+        impl.refresh();
         scrollToNotes();
     }
 
     PianoRoll::~PianoRoll() = default;
 
     SceneView *PianoRoll::view() const {
-        return _impl->view;
+        stdc_impl_t;
+        return impl.view;
     }
 
     SceneView *PianoRoll::parameterView() const {
-        return _impl->parameters;
+        stdc_impl_t;
+        return impl.parameters;
     }
 
     TimelineRuler *PianoRoll::ruler() const {
-        return _impl->ruler;
+        stdc_impl_t;
+        return impl.ruler;
     }
 
     PianoKeyboard *PianoRoll::keyboard() const {
-        return _impl->keyboard;
+        stdc_impl_t;
+        return impl.keyboard;
     }
 
     kit::TrackTimeline *PianoRoll::timeline() const {
-        return _impl->timeline;
+        stdc_impl_t;
+        return impl.timeline;
     }
 
     void PianoRoll::scrollToNotes() {
-        const auto timeline = _impl->timeline;
+        stdc_impl_t;
+        const auto timeline = impl.timeline;
         int lowest = 127;
         int highest = 0;
         for (int i = 0; i < timeline->noteCount(); ++i) {
@@ -2388,52 +2427,59 @@ namespace hello::daw {
         // C4 when the track has no sung note
         const double middle = lowest <= highest ? (lowest + highest + 1) / 2.0 : 60.5;
 
-        auto keys = _impl->view->keyAxis();
-        keys.top = middle + _impl->view->viewport()->height() / keys.pixelsPerKey / 2;
-        _impl->view->setKeyAxis(keys);
-        auto time = _impl->view->timeAxis();
+        auto keys = impl.view->keyAxis();
+        keys.top = middle + impl.view->viewport()->height() / keys.pixelsPerKey / 2;
+        impl.view->setKeyAxis(keys);
+        auto time = impl.view->timeAxis();
         time.left = 0;
-        _impl->view->setTimeAxis(time);
+        impl.view->setTimeAxis(time);
     }
 
     std::shared_ptr<const kit::VoiceBank> PianoRoll::voiceBank() const {
-        return _impl->voiceBank;
+        stdc_impl_t;
+        return impl.voiceBank;
     }
 
     void PianoRoll::setVoiceBank(std::shared_ptr<const kit::VoiceBank> bank) {
-        _impl->voiceBank = std::move(bank);
-        _impl->timingsStale = true;
-        _impl->view->viewport()->update();
-        _impl->parameters->viewport()->update();
+        stdc_impl_t;
+        impl.voiceBank = std::move(bank);
+        impl.timingsStale = true;
+        impl.view->viewport()->update();
+        impl.parameters->viewport()->update();
     }
 
     bool PianoRoll::lacksSample(int index) const {
-        const auto &bank = _impl->voiceBank;
+        stdc_impl_t;
+        const auto &bank = impl.voiceBank;
         if (!bank) {
             return false;
         }
-        const auto &note = _impl->timeline->note(index);
+        const auto &note = impl.timeline->note(index);
         return !note.rest && !bank->find(note.key, note.lyric);
     }
 
     PianoRoll::Tool PianoRoll::tool() const {
-        return _impl->tool;
+        stdc_impl_t;
+        return impl.tool;
     }
 
     void PianoRoll::setTool(Tool tool) {
-        _impl->tool = tool;
+        stdc_impl_t;
+        impl.tool = tool;
     }
 
     int PianoRoll::quantization() const {
-        return _impl->quantization;
+        stdc_impl_t;
+        return impl.quantization;
     }
 
     void PianoRoll::setQuantization(int ticks) {
-        const int index = _impl->quantizer->findData(ticks);
+        stdc_impl_t;
+        const int index = impl.quantizer->findData(ticks);
         if (index >= 0) {
-            _impl->quantizer->setCurrentIndex(index);
+            impl.quantizer->setCurrentIndex(index);
         }
-        _impl->quantization = ticks;
+        impl.quantization = ticks;
     }
 
     QList<int> PianoRoll::quantizations() {
@@ -2441,20 +2487,23 @@ namespace hello::daw {
     }
 
     int PianoRoll::quantizedLength() const {
-        return _impl->quantization > 0 ? _impl->quantization : kit::ticksPerQuarter;
+        stdc_impl_t;
+        return impl.quantization > 0 ? impl.quantization : kit::ticksPerQuarter;
     }
 
     QComboBox *PianoRoll::quantizationBox() const {
-        return _impl->quantizer;
+        stdc_impl_t;
+        return impl.quantizer;
     }
 
     QList<int> PianoRoll::selectedIndices() const {
+        stdc_impl_t;
         QList<int> indices;
-        if (_impl->selection.isEmpty()) {
+        if (impl.selection.isEmpty()) {
             return indices;
         }
-        for (int i = 0; i < _impl->timeline->noteCount(); ++i) {
-            if (_impl->isSelected(i)) {
+        for (int i = 0; i < impl.timeline->noteCount(); ++i) {
+            if (impl.isSelected(i)) {
                 indices.push_back(i);
             }
         }
@@ -2462,25 +2511,28 @@ namespace hello::daw {
     }
 
     void PianoRoll::setSelectedIndices(const QList<int> &indices) {
+        stdc_impl_t;
         QSet<kit::edit::NodeId> ids;
         for (const int index : indices) {
-            ids.insert(_impl->timeline->note(index).id);
+            ids.insert(impl.timeline->note(index).id);
         }
         if (!indices.isEmpty()) {
-            _impl->anchor = _impl->timeline->note(indices.first()).id;
+            impl.anchor = impl.timeline->note(indices.first()).id;
         }
-        _impl->setSelection(ids);
+        impl.setSelection(ids);
     }
 
     void PianoRoll::selectAll() {
-        if (_impl->timeline->noteCount() > 0) {
-            _impl->selectRange(0, _impl->timeline->noteCount() - 1);
+        stdc_impl_t;
+        if (impl.timeline->noteCount() > 0) {
+            impl.selectRange(0, impl.timeline->noteCount() - 1);
         }
     }
 
     QList<std::pair<int, int>> PianoRoll::selectedPoints() const {
+        stdc_impl_t;
         QList<std::pair<int, int>> result;
-        const auto selected = _impl->selectedPointIndices();
+        const auto selected = impl.selectedPointIndices();
         for (auto it = selected.begin(); it != selected.end(); ++it) {
             for (const int j : it.value()) {
                 result.push_back({it.key(), j});
@@ -2491,10 +2543,11 @@ namespace hello::daw {
     }
 
     void PianoRoll::setSelectedPoints(const QList<std::pair<int, int>> &points) {
+        stdc_impl_t;
         QSet<kit::edit::NodeId> ids;
-        const auto refs = _impl->notes();
+        const auto refs = impl.notes();
         for (const auto &[index, j] : points) {
-            if (index < 0 || index >= _impl->timeline->noteCount()) {
+            if (index < 0 || index >= impl.timeline->noteCount()) {
                 continue;
             }
             const auto list = refs.at(index).portamento();
@@ -2502,29 +2555,31 @@ namespace hello::daw {
                 ids.insert(list.at(j).id());
             }
         }
-        _impl->selectPoints(ids);
+        impl.selectPoints(ids);
     }
 
     bool PianoRoll::removeSelected(kit::DiagnosticList &diagnostics) {
-        if (!_impl->selectedPoints.isEmpty()) {
-            return _impl->removePoints(_impl->selectedPointIndices(), diagnostics);
+        stdc_impl_t;
+        if (!impl.selectedPoints.isEmpty()) {
+            return impl.removePoints(impl.selectedPointIndices(), diagnostics);
         }
         const auto indices = selectedIndices();
         if (indices.isEmpty()) {
             return true;
         }
-        return kit::ProjectEdits::removeNotes(_impl->notes(), indices, diagnostics);
+        return kit::ProjectEdits::removeNotes(impl.notes(), indices, diagnostics);
     }
 
     bool PianoRoll::togglePortamento(kit::DiagnosticList &diagnostics) {
+        stdc_impl_t;
         QList<int> sung;
         bool lacking = false;
         for (const int index : selectedIndices()) {
-            if (_impl->timeline->note(index).rest) {
+            if (impl.timeline->note(index).rest) {
                 continue;
             }
             sung.push_back(index);
-            lacking = lacking || _impl->pointsOf(index).isEmpty();
+            lacking = lacking || impl.pointsOf(index).isEmpty();
         }
         if (sung.isEmpty()) {
             return true;
@@ -2533,7 +2588,7 @@ namespace hello::daw {
         for (const int index : std::as_const(sung)) {
             if (!lacking) {
                 points.insert(index, {});
-            } else if (_impl->pointsOf(index).isEmpty()) {
+            } else if (impl.pointsOf(index).isEmpty()) {
                 kit::PortamentoPoint before;
                 before.x = -DefaultPortamento;
                 kit::PortamentoPoint after;
@@ -2541,16 +2596,17 @@ namespace hello::daw {
                 points.insert(index, {before, after});
             }
         }
-        return _impl->writePoints(lacking ? tr("Add Portamento") : tr("Remove Portamento"), points,
-                                  diagnostics);
+        return impl.writePoints(lacking ? tr("Add Portamento") : tr("Remove Portamento"), points,
+                                diagnostics);
     }
 
     bool PianoRoll::toggleVibrato(kit::DiagnosticList &diagnostics) {
-        const auto refs = _impl->notes();
+        stdc_impl_t;
+        const auto refs = impl.notes();
         QList<kit::NoteRef> sung;
         QList<kit::NoteRef> lacking;
         for (const int index : selectedIndices()) {
-            if (_impl->timeline->note(index).rest) {
+            if (impl.timeline->note(index).rest) {
                 continue;
             }
             sung.push_back(refs.at(index));
@@ -2561,8 +2617,8 @@ namespace hello::daw {
         if (sung.isEmpty()) {
             return true;
         }
-        auto transaction = _impl->session->transaction(lacking.isEmpty() ? tr("Remove Vibrato")
-                                                                         : tr("Add Vibrato"));
+        auto transaction =
+            impl.session->transaction(lacking.isEmpty() ? tr("Remove Vibrato") : tr("Add Vibrato"));
         if (lacking.isEmpty()) {
             kit::ProjectEdits::setVibrato(sung, std::nullopt, diagnostics);
         } else {
@@ -2572,19 +2628,20 @@ namespace hello::daw {
     }
 
     bool PianoRoll::crossfadeEnvelopes(Crossfade crossfade, kit::DiagnosticList &diagnostics) {
-        const auto timeline = _impl->timeline;
-        const auto &timings = _impl->sampleTimings();
-        const auto refs = _impl->notes();
+        stdc_impl_t;
+        const auto timeline = impl.timeline;
+        const auto &timings = impl.sampleTimings();
+        const auto refs = impl.notes();
         const int count = timeline->noteCount();
         // To a tenth of a millisecond, as the anchors that a drag moves
         const auto rounded = [](double value) { return std::round(value * 10) / 10; };
 
-        auto transaction = _impl->session->transaction(tr("Crossfade Envelopes"));
+        auto transaction = impl.session->transaction(tr("Crossfade Envelopes"));
         for (const int index : selectedIndices()) {
             if (timeline->note(index).rest) {
                 continue;
             }
-            auto anchors = _impl->envelopeOf(index).anchorsInTimeOrder();
+            auto anchors = impl.envelopeOf(index).anchorsInTimeOrder();
             const int last = int(anchors.size()) - 1;
             bool changed = false;
             if (index > 0 && !timeline->note(index - 1).rest && timings[index].voiceOverlap > 0) {
@@ -2625,11 +2682,12 @@ namespace hello::daw {
     }
 
     bool PianoRoll::copySelected() {
+        stdc_impl_t;
         const auto indices = selectedIndices();
         if (indices.isEmpty()) {
             return false;
         }
-        const auto refs = _impl->notes();
+        const auto refs = impl.notes();
         QJsonArray notes;
         for (const int index : indices) {
             notes.append(refs.at(index).toNote().toJson());
@@ -2662,6 +2720,7 @@ namespace hello::daw {
     }
 
     bool PianoRoll::pasteParameters(Parameters parameters, kit::DiagnosticList &diagnostics) {
+        stdc_impl_t;
         QList<kit::Note> sources;
         for (const auto &note : copiedNotes()) {
             if (!note.isRest()) {
@@ -2670,7 +2729,7 @@ namespace hello::daw {
         }
         QList<int> targets;
         for (const int index : selectedIndices()) {
-            if (!_impl->timeline->note(index).rest) {
+            if (!impl.timeline->note(index).rest) {
                 targets.push_back(index);
             }
         }
@@ -2678,10 +2737,10 @@ namespace hello::daw {
             return true;
         }
 
-        const auto refs = _impl->notes();
+        const auto refs = impl.notes();
         const bool one = sources.size() == 1;
         const auto count = one ? targets.size() : std::min(sources.size(), targets.size());
-        auto transaction = _impl->session->transaction(tr("Paste Parameters"));
+        auto transaction = impl.session->transaction(tr("Paste Parameters"));
         for (qsizetype k = 0; k < count; ++k) {
             const auto &source = sources[one ? 0 : k];
             const auto target = refs.at(targets[k]);
@@ -2699,18 +2758,19 @@ namespace hello::daw {
     }
 
     bool PianoRoll::resetParameters(Parameters parameters, kit::DiagnosticList &diagnostics) {
+        stdc_impl_t;
         // The selected notes, those of the selected points, or all
         auto indices = selectedIndices();
         if (indices.isEmpty()) {
-            indices = _impl->selectedPointIndices().keys();
+            indices = impl.selectedPointIndices().keys();
         }
         if (indices.isEmpty()) {
-            indices = _impl->identityOrder();
+            indices = impl.identityOrder();
         }
-        const auto refs = _impl->notes();
+        const auto refs = impl.notes();
         QList<kit::NoteRef> sung;
         for (const int index : std::as_const(indices)) {
-            if (!_impl->timeline->note(index).rest) {
+            if (!impl.timeline->note(index).rest) {
                 sung.push_back(refs.at(index));
             }
         }
@@ -2718,7 +2778,7 @@ namespace hello::daw {
             return true;
         }
 
-        auto transaction = _impl->session->transaction(tr("Reset Parameters"));
+        auto transaction = impl.session->transaction(tr("Reset Parameters"));
         if (parameters & PortamentoParameter) {
             for (const auto &note : std::as_const(sung)) {
                 kit::ProjectEdits::setPortamento(note, {}, diagnostics);
@@ -2734,7 +2794,8 @@ namespace hello::daw {
     }
 
     bool PianoRoll::transposeSelected(int semitones, kit::DiagnosticList &diagnostics) {
-        const auto notes = _impl->notes();
+        stdc_impl_t;
+        const auto notes = impl.notes();
         QList<kit::NoteRef> refs;
         for (const int index : selectedIndices()) {
             refs.push_back(notes.at(index));
@@ -2743,8 +2804,9 @@ namespace hello::daw {
     }
 
     bool PianoRoll::insertNote(kit::DiagnosticList &diagnostics) {
+        stdc_impl_t;
         const auto indices = selectedIndices();
-        const auto timeline = _impl->timeline;
+        const auto timeline = impl.timeline;
         const int count = timeline->noteCount();
         const int index = indices.isEmpty() ? count : indices.first();
 
@@ -2754,68 +2816,78 @@ namespace hello::daw {
         note.noteNum = index < count ? timeline->note(index).key
                        : count > 0   ? timeline->note(count - 1).key
                                      : 60;
-        const auto notes = _impl->notes();
+        const auto notes = impl.notes();
         if (!kit::ProjectEdits::insertNote(notes, index, note, diagnostics)) {
             return false;
         }
-        _impl->anchor = notes.at(index).id();
-        _impl->setSelection({_impl->anchor});
+        impl.anchor = notes.at(index).id();
+        impl.setSelection({impl.anchor});
         return true;
     }
 
     void PianoRoll::editLyric(int index) {
-        _impl->startEditing(index);
+        stdc_impl_t;
+        impl.startEditing(index);
     }
 
     QLineEdit *PianoRoll::lyricEditor() const {
-        return _impl->editor;
+        stdc_impl_t;
+        return impl.editor;
     }
 
     std::optional<double> PianoRoll::playheadPosition() const {
-        return _impl->playhead;
+        stdc_impl_t;
+        return impl.playhead;
     }
 
     void PianoRoll::setPlayheadPosition(std::optional<double> tick) {
-        if (tick == _impl->playhead) {
+        stdc_impl_t;
+        if (tick == impl.playhead) {
             return;
         }
-        _impl->playhead = tick;
+        impl.playhead = tick;
         if (tick) {
             // A page at a time, so that the view does not move under the pointer continuously
-            auto time = _impl->view->timeAxis();
-            const double width = _impl->view->viewport()->width();
+            auto time = impl.view->timeAxis();
+            const double width = impl.view->viewport()->width();
             const double x = time.toX(*tick);
             if (x < 0 || x > width) {
                 time.left = *tick - width / time.pixelsPerTick * FollowMargin;
-                _impl->view->setTimeAxis(time);
+                impl.view->setTimeAxis(time);
             }
         }
-        _impl->view->viewport()->update();
+        impl.view->viewport()->update();
     }
 
     bool PianoRoll::isPitchVisible() const {
-        return _impl->pitchVisible;
+        stdc_impl_t;
+        return impl.pitchVisible;
     }
 
     void PianoRoll::setPitchVisible(bool visible) {
-        _impl->pitchVisible = visible;
-        _impl->view->viewport()->update();
+        stdc_impl_t;
+        impl.pitchVisible = visible;
+        impl.view->viewport()->update();
     }
 
     double PianoRoll::pointGrip() const {
-        return _impl->pointGrip;
+        stdc_impl_t;
+        return impl.pointGrip;
     }
 
     void PianoRoll::setPointGrip(double pixels) {
-        _impl->pointGrip = std::max(0.0, pixels);
+        stdc_impl_t;
+        impl.pointGrip = std::max(0.0, pixels);
     }
 
     double PianoRoll::curveGrip() const {
-        return _impl->curveGrip;
+        stdc_impl_t;
+        return impl.curveGrip;
     }
 
     void PianoRoll::setCurveGrip(double pixels) {
-        _impl->curveGrip = std::max(0.0, pixels);
+        stdc_impl_t;
+        impl.curveGrip = std::max(0.0, pixels);
     }
 
     void PianoRoll::keyPressEvent(QKeyEvent *event) {
@@ -2832,17 +2904,20 @@ namespace hello::daw {
     }
 
     QColor PianoRoll::noteColor() const {
-        return _impl->noteColor.isValid() ? _impl->noteColor : palette().color(QPalette::Highlight);
+        stdc_impl_t;
+        return impl.noteColor.isValid() ? impl.noteColor : palette().color(QPalette::Highlight);
     }
 
     void PianoRoll::setNoteColor(const QColor &color) {
-        _impl->noteColor = color;
-        _impl->view->viewport()->update();
+        stdc_impl_t;
+        impl.noteColor = color;
+        impl.view->viewport()->update();
     }
 
     QColor PianoRoll::restColor() const {
-        if (_impl->restColor.isValid()) {
-            return _impl->restColor;
+        stdc_impl_t;
+        if (impl.restColor.isValid()) {
+            return impl.restColor;
         }
         auto color = palette().color(QPalette::Mid);
         color.setAlphaF(0.4f);
@@ -2850,62 +2925,74 @@ namespace hello::daw {
     }
 
     void PianoRoll::setRestColor(const QColor &color) {
-        _impl->restColor = color;
-        _impl->view->viewport()->update();
+        stdc_impl_t;
+        impl.restColor = color;
+        impl.view->viewport()->update();
     }
 
     QColor PianoRoll::lyricColor() const {
-        return _impl->lyricColor.isValid() ? _impl->lyricColor
-                                           : palette().color(QPalette::HighlightedText);
+        stdc_impl_t;
+        return impl.lyricColor.isValid() ? impl.lyricColor
+                                         : palette().color(QPalette::HighlightedText);
     }
 
     void PianoRoll::setLyricColor(const QColor &color) {
-        _impl->lyricColor = color;
-        _impl->view->viewport()->update();
+        stdc_impl_t;
+        impl.lyricColor = color;
+        impl.view->viewport()->update();
     }
 
     QColor PianoRoll::unsampledColor() const {
-        return _impl->unsampledColor.isValid() ? _impl->unsampledColor
-                                               : palette().color(QPalette::Highlight);
+        stdc_impl_t;
+        return impl.unsampledColor.isValid() ? impl.unsampledColor
+                                             : palette().color(QPalette::Highlight);
     }
 
     void PianoRoll::setUnsampledColor(const QColor &color) {
-        _impl->unsampledColor = color;
-        _impl->view->viewport()->update();
+        stdc_impl_t;
+        impl.unsampledColor = color;
+        impl.view->viewport()->update();
     }
 
     QColor PianoRoll::unsampledLyricColor() const {
-        return _impl->unsampledLyricColor.isValid() ? _impl->unsampledLyricColor
-                                                    : palette().color(QPalette::Text);
+        stdc_impl_t;
+        return impl.unsampledLyricColor.isValid() ? impl.unsampledLyricColor
+                                                  : palette().color(QPalette::Text);
     }
 
     void PianoRoll::setUnsampledLyricColor(const QColor &color) {
-        _impl->unsampledLyricColor = color;
-        _impl->view->viewport()->update();
+        stdc_impl_t;
+        impl.unsampledLyricColor = color;
+        impl.view->viewport()->update();
     }
 
     QColor PianoRoll::selectionColor() const {
-        return _impl->selectionColor.isValid() ? _impl->selectionColor
-                                               : palette().color(QPalette::WindowText);
+        stdc_impl_t;
+        return impl.selectionColor.isValid() ? impl.selectionColor
+                                             : palette().color(QPalette::WindowText);
     }
 
     void PianoRoll::setSelectionColor(const QColor &color) {
-        _impl->selectionColor = color;
-        _impl->view->viewport()->update();
+        stdc_impl_t;
+        impl.selectionColor = color;
+        impl.view->viewport()->update();
     }
 
     QColor PianoRoll::pitchColor() const {
-        return _impl->pitchColor.isValid() ? _impl->pitchColor : palette().color(QPalette::Text);
+        stdc_impl_t;
+        return impl.pitchColor.isValid() ? impl.pitchColor : palette().color(QPalette::Text);
     }
 
     void PianoRoll::setPitchColor(const QColor &color) {
-        _impl->pitchColor = color;
-        _impl->view->viewport()->update();
+        stdc_impl_t;
+        impl.pitchColor = color;
+        impl.view->viewport()->update();
     }
 
     QColor PianoRoll::vibratoColor() const {
-        if (_impl->vibratoColor.isValid()) {
-            return _impl->vibratoColor;
+        stdc_impl_t;
+        if (impl.vibratoColor.isValid()) {
+            return impl.vibratoColor;
         }
         auto color = palette().color(QPalette::Text);
         color.setAlphaF(0.5f);
@@ -2913,63 +3000,73 @@ namespace hello::daw {
     }
 
     void PianoRoll::setVibratoColor(const QColor &color) {
-        _impl->vibratoColor = color;
-        _impl->view->viewport()->update();
+        stdc_impl_t;
+        impl.vibratoColor = color;
+        impl.view->viewport()->update();
     }
 
     QColor PianoRoll::envelopeColor() const {
-        return _impl->envelopeColor.isValid() ? _impl->envelopeColor
-                                              : palette().color(QPalette::Highlight);
+        stdc_impl_t;
+        return impl.envelopeColor.isValid() ? impl.envelopeColor
+                                            : palette().color(QPalette::Highlight);
     }
 
     void PianoRoll::setEnvelopeColor(const QColor &color) {
-        _impl->envelopeColor = color;
-        _impl->parameters->viewport()->update();
+        stdc_impl_t;
+        impl.envelopeColor = color;
+        impl.parameters->viewport()->update();
     }
 
     QColor PianoRoll::faintPointColor() const {
-        return _impl->faintPointColor.isValid() ? _impl->faintPointColor
-                                                : palette().color(QPalette::Mid);
+        stdc_impl_t;
+        return impl.faintPointColor.isValid() ? impl.faintPointColor
+                                              : palette().color(QPalette::Mid);
     }
 
     void PianoRoll::setFaintPointColor(const QColor &color) {
-        _impl->faintPointColor = color;
-        _impl->view->viewport()->update();
+        stdc_impl_t;
+        impl.faintPointColor = color;
+        impl.view->viewport()->update();
     }
 
     QColor PianoRoll::playheadColor() const {
-        return _impl->playheadColor.isValid() ? _impl->playheadColor
-                                              : palette().color(QPalette::Link);
+        stdc_impl_t;
+        return impl.playheadColor.isValid() ? impl.playheadColor : palette().color(QPalette::Link);
     }
 
     void PianoRoll::setPlayheadColor(const QColor &color) {
-        _impl->playheadColor = color;
-        _impl->view->viewport()->update();
+        stdc_impl_t;
+        impl.playheadColor = color;
+        impl.view->viewport()->update();
     }
 
     QColor PianoRoll::whiteRowColor() const {
-        return _impl->whiteRowColor.isValid() ? _impl->whiteRowColor
-                                              : palette().color(QPalette::Base);
+        stdc_impl_t;
+        return impl.whiteRowColor.isValid() ? impl.whiteRowColor : palette().color(QPalette::Base);
     }
 
     void PianoRoll::setWhiteRowColor(const QColor &color) {
-        _impl->whiteRowColor = color;
-        _impl->view->viewport()->update();
+        stdc_impl_t;
+        impl.whiteRowColor = color;
+        impl.view->viewport()->update();
     }
 
     QColor PianoRoll::blackRowColor() const {
-        return _impl->blackRowColor.isValid() ? _impl->blackRowColor
-                                              : palette().color(QPalette::AlternateBase);
+        stdc_impl_t;
+        return impl.blackRowColor.isValid() ? impl.blackRowColor
+                                            : palette().color(QPalette::AlternateBase);
     }
 
     void PianoRoll::setBlackRowColor(const QColor &color) {
-        _impl->blackRowColor = color;
-        _impl->view->viewport()->update();
+        stdc_impl_t;
+        impl.blackRowColor = color;
+        impl.view->viewport()->update();
     }
 
     QColor PianoRoll::lineColor() const {
-        if (_impl->lineColor.isValid()) {
-            return _impl->lineColor;
+        stdc_impl_t;
+        if (impl.lineColor.isValid()) {
+            return impl.lineColor;
         }
         auto color = palette().color(QPalette::Mid);
         color.setAlphaF(0.35f);
@@ -2977,17 +3074,20 @@ namespace hello::daw {
     }
 
     void PianoRoll::setLineColor(const QColor &color) {
-        _impl->lineColor = color;
-        _impl->view->viewport()->update();
+        stdc_impl_t;
+        impl.lineColor = color;
+        impl.view->viewport()->update();
     }
 
     QColor PianoRoll::barLineColor() const {
-        return _impl->barLineColor.isValid() ? _impl->barLineColor : palette().color(QPalette::Mid);
+        stdc_impl_t;
+        return impl.barLineColor.isValid() ? impl.barLineColor : palette().color(QPalette::Mid);
     }
 
     void PianoRoll::setBarLineColor(const QColor &color) {
-        _impl->barLineColor = color;
-        _impl->view->viewport()->update();
+        stdc_impl_t;
+        impl.barLineColor = color;
+        impl.view->viewport()->update();
     }
 
 }

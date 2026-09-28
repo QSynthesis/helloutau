@@ -54,10 +54,12 @@ namespace hello::kit::edit {
 
     class EditSession::Impl : public ss::ModelObserver {
     public:
-        explicit Impl(EditSession *q);
+        using Decl = EditSession;
+
+        explicit Impl(Decl *decl);
         ~Impl();
 
-        EditSession *q;
+        Decl *_decl;
         ss::Model model;
 
         /// The message of the outermost transaction in progress.

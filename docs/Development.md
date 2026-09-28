@@ -83,6 +83,19 @@ helloutau/tools/driver/main.cpp                  ← 目标 helloutau
 - 全局非静态变量使用 `g_` 前缀，全局静态变量使用 `s_` 前缀。应尽量避免引入全局可变状态。
 - 命名空间结束处不添加注释。
 
+## PImpl
+
+PImpl 采用 stdcorelib 的写法（`<stdcorelib/pimpl.h>`），使用 PImpl 的子库以 `LINKS_PRIVATE` 链接 `stdcorelib::stdcorelib`。
+
+- 声明类在头文件中声明嵌套类 `class Impl;` 与成员 `std::unique_ptr<Impl> _impl;`。
+- 实现类声明 `using Decl = <声明类>;`。需要访问声明对象时，持有成员 `Decl *_decl;`，由构造函数的参数 `Decl *decl` 初始化。
+- 声明类的成员函数以 `stdc_impl_t;` 取得引用 `impl`，写 `impl.member`，不直接写 `_impl->member`。
+- 实现类的成员函数以 `stdc_decl_t;` 取得引用 `decl`，写 `decl.member` 或 `&decl`，不直接写 `_decl->member`。
+- 两个宏在 const 成员函数中给出 const 引用。
+- 保存到函数返回之后的 lambda（信号连接、定时器等）不捕获 `impl` 或 `decl`，而是捕获 `this`，并在 lambda 体内再写一次宏。
+- 实现类的构造函数直接使用参数 `decl`。
+- 声明类以外的代码（友元、实现类的嵌套类）经由指针访问，不使用宏。
+
 ## 前缀
 
 | 用途 | 前缀 | 示例 |

@@ -11,7 +11,7 @@ qm_find_qt(Core Multimedia)
 helloutau_add_library(${PROJECT_NAME} SHARED
     QT_AUTOGEN
     SOURCES ${_src} ${_hdr}
-    LINKS_PRIVATE unofficial::r8brain-free-src::r8bsrc
+    LINKS_PRIVATE stdcorelib::stdcorelib unofficial::r8brain-free-src::r8bsrc
     QT_LINKS Core Multimedia
     INCLUDE_PRIVATE ../../include/** **
     MACRO_PREFIX HELLOUTAU_AUDIO

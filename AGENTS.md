@@ -130,7 +130,7 @@ resampler / wavtool 的命令行参数由 `utau::ResamplerArguments::arguments()
 - 每个模块包含一个 `include/` 和一个 `lib/`，参照 synthrt：`hellokit/include/hellokit/Document/` 对应 `hellokit/lib/Document/`。**include 的命名空间是模块名而非目标名**，写 `<hellokit/Document/PayloadCodec.h>`。不使用 `sync_include`。私有头文件与源文件放在一起，加 `_p.h` 后缀，尽量少用。
 - **大小写分三个层次**：CMake 包名与 `project()` 小写（`hellokit`、`helloutauConfig.cmake.in`），子库目标与 dll 大驼峰（`HelloKitDocument`），include 命名空间小写。
 - 文件名采用大驼峰，与其中的主要类型同名。入口 `main.cpp` 小写；每个子库有一个 `<目标名>Global.h` 存放导出宏。
-- 类型采用大驼峰，函数 / 参数 / 变量 / 命名空间采用小驼峰，枚举成员采用大驼峰。私有数据成员使用 `m_` 前缀，PImpl 的两个指针例外，使用 `_impl` 和 `_decl`。getter 使用属性名，setter 使用 `set` 加属性名。
+- 类型采用大驼峰，函数 / 参数 / 变量 / 命名空间采用小驼峰，枚举成员采用大驼峰。私有数据成员使用 `m_` 前缀，PImpl 的两个指针例外，使用 `_impl` 和 `_decl`。**PImpl 采用 stdcorelib 的写法**：`using Decl`，成员函数中用 `stdc_impl_t` / `stdc_decl_t` 取得引用，不直接写 `_impl->` / `_decl->`（见 Development.md「PImpl」）。getter 使用属性名，setter 使用 `set` 加属性名。
 - **Qt 的头文件须带模块名**，写 `<QtCore/QByteArray>`、`<QtWidgets/QMainWindow>`，不写 `<QByteArray>`。
 - 头文件中引用项目公开头文件时使用尖括号和完整路径；源文件中引用同一目标的头文件时使用双引号。源文件最上方的第一个引用块是同名公开头文件和 `_p.h`，其后依次为系统库、标准库、第三方库、项目内其他目标，当前目标内的其余头文件在最底部单独成块。
 - 初始化表达式为指针时写 `auto name = ...`，不写 `auto *name = ...`。析构函数不写 `override`，头文件中被继承的类不写 `final`。

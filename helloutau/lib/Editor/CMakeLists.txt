@@ -22,7 +22,7 @@ helloutau_add_library(${PROJECT_NAME} SHARED
     SOURCES ${_src} ${_hdr} ${_actions_src} ${_themes_qrc}
     LINKS HelloUtauWidgets HelloUtauTheme HelloUtauAudio HelloKitEdit HelloKitDocument
           HelloKitVoiceBank HelloKitSynth
-    LINKS_PRIVATE QActionKit::Widgets
+    LINKS_PRIVATE stdcorelib::stdcorelib QActionKit::Widgets
     QT_LINKS Core Gui Widgets
     INCLUDE_PRIVATE ../../include/** **
     MACRO_PREFIX HELLOUTAU_EDITOR

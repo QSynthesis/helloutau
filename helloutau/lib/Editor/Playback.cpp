@@ -6,6 +6,8 @@
 #include <QtCore/QTemporaryDir>
 #include <QtCore/QThread>
 
+#include <stdcorelib/pimpl.h>
+
 #include <hellokit/Document/Project.h>
 #include <hellokit/Edit/ProjectDocument.h>
 #include <hellokit/Synth/RealtimeSynth.h>
@@ -100,10 +102,12 @@ namespace hello::daw {
 
     class Playback::Impl {
     public:
-        explicit Impl(Playback *decl) : _decl(decl) {
+        using Decl = Playback;
+
+        explicit Impl(Decl *decl) : _decl(decl) {
         }
 
-        Playback *_decl;
+        Decl *_decl;
         State state = Stopped;
         std::shared_ptr<const kit::SynthRunner> runner =
             std::make_shared<kit::ThreadedSynthRunner>();
@@ -128,13 +132,14 @@ namespace hello::daw {
         // never written
         std::optional<kit::SynthPlan> previewPlan(const kit::ProjectDocument &document,
                                                   kit::DiagnosticList &diagnostics) {
+            stdc_decl_t;
             const auto bank = document.voiceBank();
             if (!bank) {
                 fail(diagnostics, Playback::tr("The project has no voice bank to sing with."));
                 return std::nullopt;
             }
             kit::SynthPlan::Options options;
-            options.cacheDirectory = _decl->cacheDirectoryFor(document);
+            options.cacheDirectory = decl.cacheDirectoryFor(document);
             options.outputFile = options.cacheDirectory / OutputFileName;
             return kit::SynthPlan::make(document.session()->snapshot(), *bank, options,
                                         diagnostics);
@@ -145,9 +150,10 @@ namespace hello::daw {
         }
 
         void setState(State value) {
+            stdc_decl_t;
             if (state != value) {
                 state = value;
-                Q_EMIT _decl->stateChanged(value);
+                Q_EMIT decl.stateChanged(value);
             }
         }
 
@@ -160,13 +166,14 @@ namespace hello::daw {
 
         // Plays the result of \a finished, unless it was cancelled or superseded meanwhile.
         void rendered(const std::shared_ptr<Job> &finished) {
+            stdc_decl_t;
             if (finished != job) {
                 return;
             }
             job.reset();
             if (!finished->rendered) {
                 setState(Stopped);
-                Q_EMIT _decl->failed(finished->diagnostics);
+                Q_EMIT decl.failed(finished->diagnostics);
                 return;
             }
             QString error;
@@ -177,7 +184,7 @@ namespace hello::daw {
                 setState(Stopped);
                 kit::DiagnosticList diagnostics;
                 fail(diagnostics, error);
-                Q_EMIT _decl->failed(diagnostics);
+                Q_EMIT decl.failed(diagnostics);
                 return;
             }
             setState(Playing);
@@ -185,22 +192,25 @@ namespace hello::daw {
     };
 
     Playback::Playback(QObject *parent) : QObject(parent), _impl(std::make_unique<Impl>(this)) {
-        _impl->output = new AudioOutput(this);
-        connect(_impl->output, &AudioOutput::finished, this, [this] {
-            _impl->endPreview();
-            if (_impl->state == Playing) {
-                _impl->setState(Stopped);
+        stdc_impl_t;
+        impl.output = new AudioOutput(this);
+        connect(impl.output, &AudioOutput::finished, this, [this] {
+            stdc_impl_t;
+            impl.endPreview();
+            if (impl.state == Playing) {
+                impl.setState(Stopped);
             }
         });
     }
 
     Playback::~Playback() {
-        _impl->output->stop();
-        _impl->endPreview();
-        _impl->cancelRender();
+        stdc_impl_t;
+        impl.output->stop();
+        impl.endPreview();
+        impl.cancelRender();
         // A worker refers to this object to report progress, so it must end first. A cancelled
         // render ends once the engine calls under way return.
-        for (const auto &worker : std::as_const(_impl->workers)) {
+        for (const auto &worker : std::as_const(impl.workers)) {
             if (worker) {
                 worker->wait();
             }
@@ -208,16 +218,19 @@ namespace hello::daw {
     }
 
     void Playback::setRunner(std::shared_ptr<const kit::SynthRunner> runner) {
-        _impl->runner = std::move(runner);
+        stdc_impl_t;
+        impl.runner = std::move(runner);
     }
 
     Playback::State Playback::state() const {
-        return _impl->state;
+        stdc_impl_t;
+        return impl.state;
     }
 
     bool Playback::play(const kit::ProjectDocument &document,
                         std::optional<std::pair<int, int>> range, const kit::SynthEngines &engines,
                         kit::DiagnosticList &diagnostics) {
+        stdc_impl_t;
         stop();
         if (engines.resampler.empty() || engines.wavtool.empty()) {
             fail(diagnostics, tr("Set the resampler and the wavtool in the settings first."));
@@ -241,25 +254,31 @@ namespace hello::daw {
         job->options.outputFile = job->options.cacheDirectory / OutputFileName;
         job->options.range = range;
         job->engines = engines;
-        job->runner = _impl->runner;
+        job->runner = impl.runner;
         job->deviceRate = deviceRate;
-        _impl->job = job;
+        impl.job = job;
 
         const auto worker = QThread::create([this, job] {
             run(*job, this);
             QMetaObject::invokeMethod(
-                this, [this, job] { _impl->rendered(job); }, Qt::QueuedConnection);
+                this,
+                [this, job] {
+                    stdc_impl_t;
+                    impl.rendered(job);
+                },
+                Qt::QueuedConnection);
         });
         connect(worker, &QThread::finished, worker, &QObject::deleteLater);
-        _impl->workers.removeAll(nullptr);
-        _impl->workers.push_back(worker);
+        impl.workers.removeAll(nullptr);
+        impl.workers.push_back(worker);
         worker->start();
-        _impl->setState(Rendering);
+        impl.setState(Rendering);
         return true;
     }
 
     bool Playback::preview(const kit::ProjectDocument &document, std::optional<int> fromNote,
                            const kit::SynthEngines &engines, kit::DiagnosticList &diagnostics) {
+        stdc_impl_t;
         stop();
         if (engines.resampler.empty()) {
             fail(diagnostics, tr("Set the resampler in the settings first."));
@@ -270,15 +289,15 @@ namespace hello::daw {
             fail(diagnostics, tr("There is no audio output device."));
             return false;
         }
-        const auto plan = _impl->previewPlan(document, diagnostics);
+        const auto plan = impl.previewPlan(document, diagnostics);
         if (!plan) {
             return false;
         }
 
-        auto &synth = _impl->synth;
-        if (!synth || _impl->synthEngines.resampler != engines.resampler) {
+        auto &synth = impl.synth;
+        if (!synth || impl.synthEngines.resampler != engines.resampler) {
             synth = std::make_unique<kit::RealtimeSynth>(engines);
-            _impl->synthEngines = engines;
+            impl.synthEngines = engines;
         }
         synth->setPlan(*plan);
         const qint64 start = fromNote ? synth->startOf(*fromNote) : 0;
@@ -305,71 +324,78 @@ namespace hello::daw {
             synth->setPosition(from + count);
             return count;
         };
-        _impl->stream = std::make_shared<StreamSource>(std::move(generator),
-                                                       kit::WavtoolMixer::sampleRate, deviceRate);
-        _impl->streamStart = start;
-        _impl->stream->start();
+        impl.stream = std::make_shared<StreamSource>(std::move(generator),
+                                                     kit::WavtoolMixer::sampleRate, deviceRate);
+        impl.streamStart = start;
+        impl.stream->start();
 
         QString error;
-        if (!_impl->output->start(_impl->stream, &error)) {
-            _impl->endPreview();
+        if (!impl.output->start(impl.stream, &error)) {
+            impl.endPreview();
             fail(diagnostics, error);
             return false;
         }
-        _impl->setState(Playing);
+        impl.setState(Playing);
         return true;
     }
 
     bool Playback::isBuffering() const {
-        return _impl->stream && _impl->stream->isStarved();
+        stdc_impl_t;
+        return impl.stream && impl.stream->isStarved();
     }
 
     int Playback::pendingNotes() const {
-        return _impl->stream ? _impl->synth->pendingCount() : 0;
+        stdc_impl_t;
+        return impl.stream ? impl.synth->pendingCount() : 0;
     }
 
     void Playback::updatePlan(const kit::ProjectDocument &document) {
-        if (!_impl->stream) {
+        stdc_impl_t;
+        if (!impl.stream) {
             return;
         }
         kit::DiagnosticList diagnostics;
-        if (const auto plan = _impl->previewPlan(document, diagnostics)) {
-            _impl->synth->setPlan(*plan);
+        if (const auto plan = impl.previewPlan(document, diagnostics)) {
+            impl.synth->setPlan(*plan);
         }
     }
 
     kit::DiagnosticList Playback::takePreviewDiagnostics() {
-        return _impl->synth ? _impl->synth->takeDiagnostics() : kit::DiagnosticList();
+        stdc_impl_t;
+        return impl.synth ? impl.synth->takeDiagnostics() : kit::DiagnosticList();
     }
 
     void Playback::stop() {
-        _impl->cancelRender();
-        _impl->output->stop();
-        _impl->endPreview();
-        _impl->setState(Stopped);
+        stdc_impl_t;
+        impl.cancelRender();
+        impl.output->stop();
+        impl.endPreview();
+        impl.setState(Stopped);
     }
 
     std::optional<double> Playback::position() const {
-        if (_impl->state != Playing) {
+        stdc_impl_t;
+        if (impl.state != Playing) {
             return std::nullopt;
         }
-        if (_impl->stream) {
-            const auto sample = double(_impl->streamStart + _impl->stream->position());
-            return _impl->synth->startTime() + sample * 1000 / kit::WavtoolMixer::sampleRate;
+        if (impl.stream) {
+            const auto sample = double(impl.streamStart + impl.stream->position());
+            return impl.synth->startTime() + sample * 1000 / kit::WavtoolMixer::sampleRate;
         }
-        return _impl->startTime + _impl->output->elapsed();
+        return impl.startTime + impl.output->elapsed();
     }
 
     std::filesystem::path Playback::cacheDirectoryFor(const kit::ProjectDocument &document) {
+        stdc_impl_t;
         // The .usth, or else the UST imported, whose cache UTAU uses as well
         const auto file = document.filePath().empty() ? document.sourcePath() : document.filePath();
         if (!file.empty()) {
             return kit::Project::cacheDirectoryOf(file);
         }
-        if (!_impl->temporary) {
-            _impl->temporary = std::make_unique<QTemporaryDir>();
+        if (!impl.temporary) {
+            impl.temporary = std::make_unique<QTemporaryDir>();
         }
-        return std::filesystem::path(_impl->temporary->path().toStdU16String());
+        return std::filesystem::path(impl.temporary->path().toStdU16String());
     }
 
 }

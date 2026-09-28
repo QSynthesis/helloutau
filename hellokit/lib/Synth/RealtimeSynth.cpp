@@ -8,6 +8,8 @@
 
 #include <QtCore/QThread>
 
+#include <stdcorelib/pimpl.h>
+
 #include <hellokit/Synth/WaveAudio.h>
 #include <hellokit/Synth/WavtoolMixer.h>
 
@@ -44,6 +46,8 @@ namespace hello::kit {
 
     class RealtimeSynth::Impl {
     public:
+        using Decl = RealtimeSynth;
+
         enum State {
             Waiting,
             Running,
@@ -165,28 +169,34 @@ namespace hello::kit {
 
     RealtimeSynth::RealtimeSynth(SynthEngines engines, int threadCount, EngineFactory engineFactory)
         : _impl(std::make_unique<Impl>()) {
-        _impl->engines = std::move(engines);
-        _impl->engineFactory = engineFactory ? std::move(engineFactory)
-                                             : [] { return std::make_unique<EngineProcess>(); };
+        stdc_impl_t;
+        impl.engines = std::move(engines);
+        impl.engineFactory = engineFactory ? std::move(engineFactory)
+                                           : [] { return std::make_unique<EngineProcess>(); };
         const int count = threadCount > 0 ? threadCount : std::max(1, QThread::idealThreadCount());
         for (int i = 0; i < count; ++i) {
-            _impl->workers.emplace_back([this] { _impl->runWorker(); });
+            impl.workers.emplace_back([this] {
+                stdc_impl_t;
+                impl.runWorker();
+            });
         }
     }
 
     RealtimeSynth::~RealtimeSynth() {
+        stdc_impl_t;
         {
-            const std::lock_guard lock(_impl->mutex);
-            _impl->stopping = true;
+            const std::lock_guard lock(impl.mutex);
+            impl.stopping = true;
         }
-        _impl->work.notify_all();
-        _impl->changed.notify_all();
-        for (auto &worker : _impl->workers) {
+        impl.work.notify_all();
+        impl.changed.notify_all();
+        for (auto &worker : impl.workers) {
             worker.join();
         }
     }
 
     void RealtimeSynth::setPlan(const SynthPlan &plan) {
+        stdc_impl_t;
         QList<WavtoolCall> calls;
         DiagnosticList unreadable;
         for (const auto &step : plan.steps()) {
@@ -204,85 +214,92 @@ namespace hello::kit {
         auto segments = WavtoolMixer::layOut(calls);
 
         {
-            const std::lock_guard lock(_impl->mutex);
-            _impl->steps = plan.steps();
-            _impl->segments = std::move(segments);
-            _impl->cacheDirectory = plan.cacheDirectory();
-            _impl->startTime = plan.startTime();
-            _impl->diagnostics.append(unreadable);
+            const std::lock_guard lock(impl.mutex);
+            impl.steps = plan.steps();
+            impl.segments = std::move(segments);
+            impl.cacheDirectory = plan.cacheDirectory();
+            impl.startTime = plan.startTime();
+            impl.diagnostics.append(unreadable);
 
             // Fragments no longer in the plan are forgotten, unless a worker renders one now.
             std::map<fs::path, Impl::Fragment> kept;
-            for (const auto &step : std::as_const(_impl->steps)) {
+            for (const auto &step : std::as_const(impl.steps)) {
                 if (step.silent) {
                     continue;
                 }
-                const auto found = _impl->fragments.find(step.cacheFile);
+                const auto found = impl.fragments.find(step.cacheFile);
                 kept[step.cacheFile] =
-                    found != _impl->fragments.end() ? found->second : Impl::Fragment();
+                    found != impl.fragments.end() ? found->second : Impl::Fragment();
             }
-            for (const auto &[path, fragment] : _impl->fragments) {
+            for (const auto &[path, fragment] : impl.fragments) {
                 if (fragment.state == Impl::Running) {
                     kept.emplace(path, fragment);
                 }
             }
-            _impl->fragments = std::move(kept);
+            impl.fragments = std::move(kept);
         }
-        _impl->work.notify_all();
-        _impl->changed.notify_all();
+        impl.work.notify_all();
+        impl.changed.notify_all();
     }
 
     void RealtimeSynth::setPosition(qint64 sample) {
-        const std::lock_guard lock(_impl->mutex);
-        _impl->position = sample;
+        stdc_impl_t;
+        const std::lock_guard lock(impl.mutex);
+        impl.position = sample;
     }
 
     qint64 RealtimeSynth::length() const {
-        const std::lock_guard lock(_impl->mutex);
-        return WavtoolMixer::lengthOf(_impl->segments);
+        stdc_impl_t;
+        const std::lock_guard lock(impl.mutex);
+        return WavtoolMixer::lengthOf(impl.segments);
     }
 
     qint64 RealtimeSynth::startOf(int noteIndex) const {
-        const std::lock_guard lock(_impl->mutex);
-        for (int i = 0; i < _impl->steps.size(); ++i) {
-            if (_impl->steps[i].noteIndex == noteIndex) {
-                return _impl->segments[i].start;
+        stdc_impl_t;
+        const std::lock_guard lock(impl.mutex);
+        for (int i = 0; i < impl.steps.size(); ++i) {
+            if (impl.steps[i].noteIndex == noteIndex) {
+                return impl.segments[i].start;
             }
         }
         return 0;
     }
 
     double RealtimeSynth::startTime() const {
-        const std::lock_guard lock(_impl->mutex);
-        return _impl->startTime;
+        stdc_impl_t;
+        const std::lock_guard lock(impl.mutex);
+        return impl.startTime;
     }
 
     bool RealtimeSynth::isReady(qint64 first, qint64 count) const {
-        const std::lock_guard lock(_impl->mutex);
-        return _impl->ready(first, count);
+        stdc_impl_t;
+        const std::lock_guard lock(impl.mutex);
+        return impl.ready(first, count);
     }
 
     bool RealtimeSynth::waitReady(qint64 first, qint64 count,
                                   std::chrono::milliseconds timeout) const {
-        std::unique_lock lock(_impl->mutex);
-        return _impl->changed.wait_for(lock, timeout, [&] {
-            return _impl->stopping || _impl->ready(first, count);
-        }) && !_impl->stopping;
+        stdc_impl_t;
+        std::unique_lock lock(impl.mutex);
+        return impl.changed.wait_for(lock, timeout, [&] {
+            return impl.stopping || impl.ready(first, count);
+        }) && !impl.stopping;
     }
 
     bool RealtimeSynth::mix(qint64 first, qint64 count, qint16 *out) const {
+        stdc_impl_t;
         QList<WavtoolMixer::Segment> segments;
         std::vector<Samples> samples;
         {
-            const std::lock_guard lock(_impl->mutex);
-            if (!_impl->ready(first, count)) {
+            const std::lock_guard lock(impl.mutex);
+            if (!impl.ready(first, count)) {
                 return false;
             }
-            segments = _impl->segments;
+            segments = impl.segments;
             samples.resize(size_t(segments.size()));
             for (int i = 0; i < segments.size(); ++i) {
-                const auto found = _impl->fragments.find(_impl->steps[i].cacheFile);
-                if (found != _impl->fragments.end()) {
+                const auto found = impl.fragments.find(impl.steps[i].cacheFile);
+                if (found != impl.fragments.end()) {
                     samples[size_t(i)] = found->second.samples;
                 }
             }
@@ -296,10 +313,11 @@ namespace hello::kit {
     }
 
     int RealtimeSynth::pendingCount() const {
-        const std::lock_guard lock(_impl->mutex);
+        stdc_impl_t;
+        const std::lock_guard lock(impl.mutex);
         int count = 0;
-        for (int i = 0; i < _impl->steps.size(); ++i) {
-            if (_impl->needs(i)) {
+        for (int i = 0; i < impl.steps.size(); ++i) {
+            if (impl.needs(i)) {
                 ++count;
             }
         }
@@ -307,8 +325,9 @@ namespace hello::kit {
     }
 
     DiagnosticList RealtimeSynth::takeDiagnostics() {
-        const std::lock_guard lock(_impl->mutex);
-        return std::exchange(_impl->diagnostics, {});
+        stdc_impl_t;
+        const std::lock_guard lock(impl.mutex);
+        return std::exchange(impl.diagnostics, {});
     }
 
 }

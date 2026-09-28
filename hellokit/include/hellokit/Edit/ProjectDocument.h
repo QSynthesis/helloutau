@@ -58,7 +58,8 @@ namespace hello::kit {
                                                      DiagnosticList &diagnostics,
                                                      QObject *parent = nullptr);
 
-        ProjectSession *session() const;
+        ProjectSession *session();
+        const ProjectSession *session() const;
 
         /// The \c .usth the document is saved to, or an empty path if it has none: a new
         /// document, or one imported from a UST.
