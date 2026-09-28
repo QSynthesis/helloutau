@@ -14,6 +14,7 @@
 #include <QtWidgets/QMenuBar>
 #include <QtWidgets/QMessageBox>
 #include <QtWidgets/QPushButton>
+#include <QtWidgets/QStatusBar>
 
 #include <hellokit/Edit/ProjectDocument.h>
 #include <hellokit/Edit/ProjectRefs.h>
@@ -263,6 +264,17 @@ private Q_SLOTS:
         QVERIFY(vibrato);
         QCOMPARE(vibrato->period, 240.0);
         QCOMPARE(vibrato->length, 65.0);
+    }
+
+    // Why an edit in the piano roll was refused appears in the status bar.
+    void a_refused_edit_is_reported_in_the_status_bar() {
+        const auto e = editor();
+        const auto window = e->newWindow();
+        auto roll = qobject_cast<PianoRoll *>(window->centralWidget());
+        QVERIFY(roll);
+        Q_EMIT roll->editRefused(QStringLiteral("The point is before the one before it."));
+        QCOMPARE(window->statusBar()->currentMessage(),
+                 QStringLiteral("The point is before the one before it."));
     }
 
     void the_edit_commands_follow_the_selection() {

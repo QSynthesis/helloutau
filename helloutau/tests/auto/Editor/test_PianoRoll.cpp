@@ -545,13 +545,14 @@ private Q_SLOTS:
         QCOMPARE(points[0].x, -30.0);
         QCOMPARE(points[0].y, 0.0);
 
-        // The last point passes the second, at 50 ms, keeping its height, and stays selected.
+        // The last point passes the second, at 50 ms, keeping its height, and stays selected;
+        // the second, now last, ends at the pitch of the note.
         dragPoint(roll, pointOfLi(roll, 60, 0), pointOfLi(roll, 0, 100));
         points = pointsOfLi(session);
         QCOMPARE(points[1].x, 0.0);
         QCOMPARE(points[1].y, 0.0);
         QCOMPARE(points[2].x, 50.0);
-        QCOMPARE(points[2].y, 200.0);
+        QCOMPARE(points[2].y, 0.0);
         QCOMPARE(roll.selectedPoints(), (QList<std::pair<int, int>>{
                                             {1, 1}
         }));
@@ -611,6 +612,20 @@ private Q_SLOTS:
         QTest::mouseRelease(viewport, Qt::LeftButton, {}, elsewhere);
     }
 
+    // An edit of the points of a note ends them at its pitch, whatever the file gave the last.
+    void an_edit_ends_the_points_at_the_pitch_of_the_note() {
+        auto project = bentNotes();
+        project.tracks[0].notes[1].portamento[2].y = -20;
+        kit::ProjectSession session(project);
+        PianoRoll roll(&session);
+        showExactly(roll);
+
+        dragPoint(roll, pointOfLi(roll, 0, 100), pointOfLi(roll, 10, 100));
+        const auto points = pointsOfLi(session);
+        QCOMPARE(points[1].x, 10.0);
+        QCOMPARE(points[2].y, 0.0);
+    }
+
     // Any point may lie before the start of its note, not only the first.
     void a_later_point_moves_before_its_note() {
         kit::ProjectSession session(bentNotes());
@@ -637,7 +652,7 @@ private Q_SLOTS:
         QCOMPARE(points[0].x, 40.0);
         QCOMPARE(points[1].x, 60.0);
         QCOMPARE(points[2].x, 100.0);
-        QCOMPARE(points[2].y, 100.0);
+        QCOMPARE(points[2].y, 0.0); // now the last point
         QCOMPARE(roll.selectedPoints(), (QList<std::pair<int, int>>{
                                             {1, 0},
                                             {1, 2}

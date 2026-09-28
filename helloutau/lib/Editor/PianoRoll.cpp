@@ -407,14 +407,38 @@ namespace hello::daw {
             return shape;
         }
 
-        // Writes the points of several notes, by index, in one step
+        // Reports why an edit made in the roll was refused, if it was
+        void report(const kit::DiagnosticList &diagnostics) {
+            QStringList messages;
+            for (const auto &diagnostic : diagnostics) {
+                if (diagnostic.severity == kit::DiagnosticSeverity::Error) {
+                    messages.push_back(diagnostic.message);
+                }
+            }
+            if (!messages.isEmpty()) {
+                Q_EMIT _decl->editRefused(messages.join(u' '));
+            }
+        }
+
+        // An edit of the points of a note ends them at the pitch of the note, as UTAU draws
+        // them (see step 2 in docs/Tuning.md).
+        static void endAtPitch(QList<kit::PortamentoPoint> &points) {
+            if (!points.isEmpty()) {
+                points.last().y = 0;
+            }
+        }
+
+        // Writes the points of several notes, by index, in one step, each ending at the pitch
+        // of its note
         bool writePoints(const QString &message,
                          const QHash<int, QList<kit::PortamentoPoint>> &points,
                          kit::DiagnosticList &diagnostics) {
             auto transaction = session->transaction(message);
             const auto refs = notes();
             for (auto it = points.begin(); it != points.end(); ++it) {
-                kit::ProjectEdits::setPortamento(refs.at(it.key()), it.value(), diagnostics);
+                auto written = it.value();
+                endAtPitch(written);
+                kit::ProjectEdits::setPortamento(refs.at(it.key()), written, diagnostics);
             }
             return transaction.commit(diagnostics);
         }
@@ -626,7 +650,9 @@ namespace hello::daw {
             }
             auto transaction = session->transaction(PianoRoll::tr("Change Lyric"));
             notes().at(index).setLyric(text);
-            transaction.commit();
+            kit::DiagnosticList diagnostics;
+            transaction.commit(diagnostics);
+            report(diagnostics);
         }
 
         void editNext(bool forward) {
@@ -1091,6 +1117,7 @@ namespace hello::daw {
                                                              {index, changed}
                                      },
                                                          diagnostics);
+                                     m_roll->report(diagnostics);
                                  });
             }
             menu.addSeparator();
@@ -1103,6 +1130,7 @@ namespace hello::daw {
                         {index, {j}}
                 },
                     diagnostics);
+                m_roll->report(diagnostics);
             });
             menu.exec(view()->viewport()->mapToGlobal(position.toPoint()));
         }
@@ -1226,6 +1254,7 @@ namespace hello::daw {
             }
             kit::ProjectEdits::transpose(run, m_semitones, diagnostics);
             transaction.commit(diagnostics);
+            m_roll->report(diagnostics);
         }
 
         void cancel() override {
@@ -1288,6 +1317,7 @@ namespace hello::daw {
             }
             kit::DiagnosticList diagnostics;
             kit::ProjectEdits::setLength(m_roll->notes().at(m_index), m_length, diagnostics);
+            m_roll->report(diagnostics);
         }
 
         void cancel() override {
@@ -1429,6 +1459,7 @@ namespace hello::daw {
                 m_roll->anchor = id;
                 m_roll->setSelection({id});
             }
+            m_roll->report(diagnostics);
         }
 
         void cancel() override {
@@ -1524,6 +1555,8 @@ namespace hello::daw {
                         m_moved[index].insert(j);
                     }
                 }
+                // As it will be written
+                endAtPitch(sorted);
                 m_roll->pointPreview.insert(index, sorted);
             }
             m_roll->view->viewport()->update();
@@ -1547,6 +1580,7 @@ namespace hello::daw {
             }
             kit::DiagnosticList diagnostics;
             if (!m_roll->writePoints(PianoRoll::tr("Move Pitch Points"), changed, diagnostics)) {
+                m_roll->report(diagnostics);
                 return;
             }
             // The same points stay selected where the order put them.
@@ -1657,6 +1691,7 @@ namespace hello::daw {
             if (vibrato != m_original) {
                 kit::DiagnosticList diagnostics;
                 kit::ProjectEdits::setVibrato({m_roll->notes().at(m_index)}, vibrato, diagnostics);
+                m_roll->report(diagnostics);
             }
         }
 
@@ -1792,6 +1827,7 @@ namespace hello::daw {
                         diagnostics)) {
             selectPoints({refs.at(index).portamento().at(at).id()});
         }
+        report(diagnostics);
         return true;
     }
 

@@ -245,6 +245,11 @@ namespace hello::daw {
         /// The selection changed, or the notes it refers to did.
         void selectionChanged();
 
+        /// An edit made in the roll itself, by a gesture, a lyric or a context menu, was refused
+        /// and left the project as it was; \a message states why. The functions of the roll
+        /// report in their diagnostics instead.
+        void editRefused(const QString &message);
+
     protected:
         void keyPressEvent(QKeyEvent *event) override;
 

@@ -385,6 +385,11 @@ namespace hello::daw {
                              [this] { roll->setVoiceBank(document->voiceBank()); });
             QObject::connect(roll, &PianoRoll::selectionChanged, _decl,
                              [this] { updateEditActions(); });
+            // In the status bar, so that a refused drag does not stop the work with a dialog.
+            // A dialog remains an alternative, see the open questions in docs/Tuning.md.
+            QObject::connect(roll, &PianoRoll::editRefused, _decl, [this](const QString &message) {
+                _decl->statusBar()->showMessage(message, StatusMessageTimeout);
+            });
             updateEditActions();
             QObject::connect(document.get(), &kit::ProjectDocument::modifiedChanged, _decl,
                              [this] { updateTitle(); });
