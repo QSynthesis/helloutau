@@ -82,16 +82,27 @@ namespace hello::daw {
 
             void paint(QPainter *painter, const QStyleOptionViewItem &option,
                        const QModelIndex &index) const override {
-                // The background and the selection come from the style, the text is drawn here.
+                // The background comes from the style, but not the selection, whose colors the
+                // palette gives together with those of the text drawn here.
+                const bool selected = option.state & QStyle::State_Selected;
                 QStyleOptionViewItem background(option);
                 initStyleOption(&background, index);
                 background.text.clear();
+                background.state &= ~QStyle::State_Selected;
                 const auto style = option.widget ? option.widget->style() : QApplication::style();
                 style->drawControl(QStyle::CE_ItemViewItem, &background, painter, option.widget);
+                if (selected) {
+                    painter->save();
+                    painter->setRenderHint(QPainter::Antialiasing);
+                    painter->setPen(Qt::NoPen);
+                    painter->setBrush(m_palette->highlightColor());
+                    painter->drawRoundedRect(QRectF(option.rect).adjusted(1, 1, -1, -1),
+                                             KeyCapRadius, KeyCapRadius);
+                    painter->restore();
+                }
 
-                const bool selected = option.state & QStyle::State_Selected;
-                const auto textColor =
-                    option.palette.color(selected ? QPalette::HighlightedText : QPalette::Text);
+                const auto textColor = selected ? m_palette->highlightedTextColor()
+                                                : option.palette.color(QPalette::Text);
                 const QFontMetrics metrics(option.font);
                 const auto area =
                     option.rect.adjusted(ItemPadding, ItemPadding, -ItemPadding, -ItemPadding);
@@ -311,6 +322,25 @@ namespace hello::daw {
 
     void CommandPalette::setKeyCapColor(const QColor &color) {
         m_keyCapColor = color;
+        m_list->viewport()->update();
+    }
+
+    QColor CommandPalette::highlightColor() const {
+        return m_highlightColor.isValid() ? m_highlightColor : palette().color(QPalette::Highlight);
+    }
+
+    void CommandPalette::setHighlightColor(const QColor &color) {
+        m_highlightColor = color;
+        m_list->viewport()->update();
+    }
+
+    QColor CommandPalette::highlightedTextColor() const {
+        return m_highlightedTextColor.isValid() ? m_highlightedTextColor
+                                                : palette().color(QPalette::HighlightedText);
+    }
+
+    void CommandPalette::setHighlightedTextColor(const QColor &color) {
+        m_highlightedTextColor = color;
         m_list->viewport()->update();
     }
 

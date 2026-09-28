@@ -3,6 +3,7 @@
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QGraphicsDropShadowEffect>
 #include <QtWidgets/QLineEdit>
+#include <QtWidgets/QListWidget>
 #include <QtWidgets/QMainWindow>
 
 #include <helloutau/Widgets/CommandPalette.h>
@@ -48,6 +49,44 @@ private Q_SLOTS:
         palette.setQuery(QStringLiteral("nothing like it"));
         QVERIFY(palette.shownIds().isEmpty());
         QVERIFY(palette.currentId().isEmpty());
+    }
+
+    // The selected command is drawn on the highlight of the palette in its highlighted text,
+    // whatever the style draws for a selection, and the others in the text of the palette.
+    void the_selection_is_drawn_in_the_highlight_colors() {
+        QMainWindow window;
+        window.resize(800, 600);
+        window.show();
+        CommandPalette palette(&window);
+        palette.setHighlightColor(QColor(0, 0, 255));
+        palette.setHighlightedTextColor(QColor(255, 255, 0));
+        palette.setCommands(commands());
+        palette.popup();
+
+        const auto list = palette.findChild<QListWidget *>();
+        QVERIFY(list && list->count() > 1);
+        const int current = list->currentRow();
+        QVERIFY(current >= 0);
+        const auto image = list->viewport()->grab().toImage();
+        const auto first = list->visualItemRect(list->item(current));
+        const auto second = list->visualItemRect(list->item((current + 1) % list->count()));
+        // Pixels of a color within a row
+        const auto count = [&image](const QRect &row, QColor color) {
+            int found = 0;
+            for (int y = row.top(); y <= row.bottom(); ++y) {
+                for (int x = row.left(); x <= row.right(); ++x) {
+                    const auto pixel = image.pixelColor(x, y);
+                    found += qAbs(pixel.red() - color.red()) < 40 &&
+                             qAbs(pixel.green() - color.green()) < 40 &&
+                             qAbs(pixel.blue() - color.blue()) < 40;
+                }
+            }
+            return found;
+        };
+        QCOMPARE(image.pixelColor(first.center().x(), first.top() + 3), QColor(0, 0, 255));
+        QVERIFY(count(first, QColor(255, 255, 0)) > 10);
+        QCOMPARE(count(second, QColor(0, 0, 255)), 0);
+        QCOMPARE(count(second, QColor(255, 255, 0)), 0);
     }
 
     // The shadow comes from the style sheet, and there is none without it.

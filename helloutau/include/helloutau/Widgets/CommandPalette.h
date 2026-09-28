@@ -34,6 +34,9 @@ namespace hello::daw {
         Q_PROPERTY(QColor matchColor READ matchColor WRITE setMatchColor)
         Q_PROPERTY(QColor subtitleColor READ subtitleColor WRITE setSubtitleColor)
         Q_PROPERTY(QColor keyCapColor READ keyCapColor WRITE setKeyCapColor)
+        Q_PROPERTY(QColor highlightColor READ highlightColor WRITE setHighlightColor)
+        Q_PROPERTY(
+            QColor highlightedTextColor READ highlightedTextColor WRITE setHighlightedTextColor)
         Q_PROPERTY(hello::daw::ThemeShadow shadow READ shadow WRITE setShadow)
     public:
         /// Creates a hidden palette over \a window.
@@ -73,6 +76,15 @@ namespace hello::daw {
         QColor keyCapColor() const;
         void setKeyCapColor(const QColor &color);
 
+        /// The background of the selected command and the color of its text, drawn by the
+        /// palette rather than by the style, so that the two always go together: a style may
+        /// draw a selection pale and its text in the ordinary color (the Windows 11 style of
+        /// Qt 6.11 does).
+        QColor highlightColor() const;
+        void setHighlightColor(const QColor &color);
+        QColor highlightedTextColor() const;
+        void setHighlightedTextColor(const QColor &color);
+
         /// The shadow around the palette, drawn by a QGraphicsDropShadowEffect.
         ThemeShadow shadow() const;
         void setShadow(const ThemeShadow &shadow);
@@ -95,6 +107,8 @@ namespace hello::daw {
         QColor m_matchColor;
         QColor m_subtitleColor;
         QColor m_keyCapColor;
+        QColor m_highlightColor;
+        QColor m_highlightedTextColor;
         ThemeShadow m_shadow;
 
         void updateList();
