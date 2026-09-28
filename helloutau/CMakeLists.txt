@@ -21,6 +21,10 @@ add_subdirectory(plugins)
 
 add_subdirectory(tools)
 
+if(HELLO_BUILD_TESTS)
+    add_subdirectory(tests)
+endif()
+
 helloutau_install()
 
 helloutau_finish_buildsystem()
