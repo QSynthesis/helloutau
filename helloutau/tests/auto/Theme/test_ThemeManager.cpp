@@ -1,7 +1,11 @@
 #include <QtCore/QDir>
+#include <QtCore/QFile>
+#include <QtCore/QTemporaryDir>
+#include <QtGui/QIcon>
 #include <QtTest/QSignalSpy>
 #include <QtTest/QTest>
 #include <QtWidgets/QApplication>
+#include <QtWidgets/QToolButton>
 #include <QtWidgets/QWidget>
 
 #include <helloutau/Theme/ThemeManager.h>
@@ -11,12 +15,17 @@ using namespace hello::daw;
 namespace {
 
     // The description files beside the test: good holds two themes, dark extending light, over a
-    // common part, in two files; bad holds a cycle, a missing variable and file, and no JSON.
+    // common part, in two files; bad holds a cycle, a missing variable and file, and no JSON;
+    // icons gives a button an icon in a color of each theme.
     QString themes(const char *set) {
         return QDir(QString::fromUtf8(TEST_RESOURCE_DIRECTORY))
             .absoluteFilePath(QStringLiteral("themes/") + QString::fromLatin1(set));
     }
 
+    // The color in the middle of an icon of 16 pixels
+    QColor colorOf(const QIcon &icon) {
+        return icon.pixmap(QSize(16, 16), 1.0).toImage().pixelColor(8, 8);
+    }
 }
 
 class test_ThemeManager : public QObject {
@@ -81,6 +90,35 @@ private Q_SLOTS:
         manager.setCurrentTheme(QStringLiteral("light"));
         widget.reset();
         QTest::qWait(10);
+    }
+
+    // A plain button whose icon the style sheet gives follows the theme, and the files as they
+    // are when the themes are read again, without code of its own.
+    void installed_icons_follow_the_theme() {
+        QTemporaryDir dir;
+        for (const auto name : {"icons.res.json", "square.svg"}) {
+            QVERIFY(QFile::copy(QDir(themes("icons")).filePath(QString::fromLatin1(name)),
+                                dir.filePath(QString::fromLatin1(name))));
+        }
+        ThemeManager manager;
+        manager.addSearchPath(dir.path());
+        manager.setCurrentTheme(QStringLiteral("light"));
+
+        QToolButton button;
+        manager.install(&button, {QStringLiteral("Button")});
+        button.ensurePolished();
+        QCOMPARE(colorOf(button.icon()), QColor(255, 0, 0));
+
+        manager.setCurrentTheme(QStringLiteral("dark"));
+        QTRY_COMPARE(colorOf(button.icon()), QColor(0, 0, 255));
+
+        QFile file(dir.filePath(QStringLiteral("square.svg")));
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        file.write("<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\">"
+                   "<rect width=\"16\" height=\"16\" fill=\"#00FF00\"/></svg>");
+        file.close();
+        manager.reload();
+        QTRY_COMPARE(colorOf(button.icon()), QColor(0, 255, 0));
     }
 
     void problems_are_reported() {

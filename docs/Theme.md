@@ -190,6 +190,7 @@ QToolButton { qproperty-icon: svg(("@/play.svg", up2="@/pause.svg"), auto); }
 - **颜色**：文件中的 `currentColor` 替换为 `#RRGGBB`。QtSvg 读以 `#` 开头的颜色时不读透明度（`qtsvg/src/svg/qsvghandler.cpp` 的 `resolveColor`），因此颜色的透明度作为整个图标的不透明度。写作 `auto` 或不写颜色即跟随文字：控件给出文字颜色时用它，否则用调色板的 `WindowText`（禁用状态取 `Disabled` 组）。
 - **状态**：QIcon 传来的模式与状态解读为：`Active` 与 `Selected` 为 over，`Disabled` 为 disabled，`On` 为选中组。按下等 QIcon 无法表达的状态，由控件以 `ThemeIcon::forState()` 取得固定于该状态（及文字颜色）的新 QIcon 再绘制。
 - **缓存**：文件内容按路径缓存；图像放入 `QPixmapCache`，键含代次、尺寸、颜色与路径。`ThemeManager::reload()` 调用 `ThemeIcon::clearCache()` 递增代次，不清空整个 `QPixmapCache`。
+- **适用范围（作者确定，2026-09-28）**：只针对两种图标，一是样式表以 `svg(...)` 给出的，二是代码中有意设置的 `ThemeIcon`（`ThemeIcon::icon()`）。主题更新时，登记的控件统一重设一次样式表即可，控件无须为此编写代码（`test_ThemeManager` 的 `installed_icons_follow_the_theme`）。需要表达按下等 QIcon 无法传递的状态的控件，自行重写绘制，以 `forState()` 取得该状态的图标；不另设事件过滤器替控件切换状态。
 
 **与「已确定的事项」的差异，须作者确认。** 该节规定按钮状态经私有接口传给图标引擎（以 `qicon_p.h` 取得引擎，再经 `virtual_hook` 设置状态）。实现改用公开接口：引擎的 `iconName()` 返回描述文件名，`ThemeIcon::of()` 由 `QIcon::name()` 取回描述，`forState()` 据此新建一个引擎。理由是不改写共享的引擎：Qt 把一条样式表声明解析出的 QIcon 缓存在该声明中（`qtbase/src/gui/text/qcssparser.cpp` 的 `Declaration::iconValue`），使用同一规则的控件共用一个引擎；qtmediate 在绘制前改写该引擎的状态与颜色，未调用钩子的控件（菜单、普通工具按钮）因此沿用别的控件最后留下的状态与颜色。代价是 `QIcon::name()` 对这类图标返回描述文件名；Qt 6.11.1 只在 `QIcon::hasThemeIcon` 与 Linux 的 D-Bus 托盘图标中读取该名称，二者都不涉及这类图标。
 

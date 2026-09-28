@@ -1,0 +1,10 @@
+{
+    "widgets": { "Button": "button" },
+    "variables": {
+        "light": { "icon": "#FF0000" },
+        "dark": { "_base": "light", "icon": "#0000FF" }
+    },
+    "stylesheets": {
+        "light": { "button": { "content": "QToolButton { --icon: svg(\"@/square.svg\", ${icon}); }" } }
+    }
+}
