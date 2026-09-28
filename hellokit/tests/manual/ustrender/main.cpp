@@ -10,10 +10,13 @@
 ///   ustrender song.ust out.wav --voice "C:/UTAU/voice/uta" --charset Shift_JIS \
 ///       --resampler C:/UTAU/resampler.exe --wavtool C:/UTAU/wavtool.exe
 ///   ustrender song.usth out.wav --voice ... --plan
+///   ustrender song.ust out.wav --voice ... --resampler ... --wavtool ... --compare-mix
 /// \endcode
 
+#include <cmath>
 #include <cstdio>
 #include <filesystem>
+#include <fstream>
 #include <memory>
 #include <string>
 
@@ -29,6 +32,8 @@
 #include <hellokit/Synth/SynthPlan.h>
 #include <hellokit/Synth/ClassicSynthRunner.h>
 #include <hellokit/Synth/ThreadedSynthRunner.h>
+#include <hellokit/Synth/WaveAudio.h>
+#include <hellokit/Synth/WavtoolMixer.h>
 #include <hellokit/VoiceBank/VoiceBank.h>
 
 using namespace hello::kit;
@@ -112,6 +117,79 @@ namespace {
             settled = *found;
         }
         return ust->toProject(settled, diagnostics);
+    }
+
+    /// Reads a 16-bit WAV file as its samples, or an empty list.
+    std::vector<qint16> samplesOf(const fs::path &path) {
+        DiagnosticList ignored;
+        const auto audio = WaveAudio::read(path, ignored);
+        std::vector<qint16> samples;
+        if (audio) {
+            samples.reserve(audio->samples.size());
+            for (const float sample : audio->samples) {
+                samples.push_back(qint16(std::lround(sample * 32768)));
+            }
+        }
+        return samples;
+    }
+
+    /// Concatenates the fragments of \a plan in the process and compares the result with the
+    /// track file the wavtool wrote. See the section on realtime rendering in docs/Synth.md for
+    /// the permitted difference.
+    int compareMix(const SynthPlan &plan, const fs::path &output) {
+        QList<WavtoolCall> calls;
+        std::vector<std::vector<qint16>> fragments;
+        for (const auto &step : plan.steps()) {
+            const auto call = WavtoolCall::parse(step.wavtoolArguments);
+            if (!call) {
+                stdc::console::u8fprintf(stderr,
+                                         "error: note %d has wavtool arguments that "
+                                         "cannot be read\n",
+                                         step.noteIndex + 1);
+                return 1;
+            }
+            calls.push_back(*call);
+            fragments.push_back(step.silent ? std::vector<qint16>() : samplesOf(step.cacheFile));
+        }
+        const auto segments = WavtoolMixer::layOut(calls);
+        std::vector<qint16> mixed(size_t(WavtoolMixer::lengthOf(segments)));
+        WavtoolMixer::mix(
+            segments,
+            [&](int index) {
+                const auto &fragment = fragments[size_t(index)];
+                return fragment.empty() ? nullptr : &fragment;
+            },
+            0, qint64(mixed.size()), mixed.data());
+
+        // The result beside the track file, as raw 16-bit samples, for a closer look
+        auto raw = output;
+        raw += ".mixed.raw";
+        std::ofstream(raw, std::ios::binary)
+            .write(reinterpret_cast<const char *>(mixed.data()),
+                   std::streamsize(mixed.size() * sizeof(qint16)));
+
+        const auto written = samplesOf(output);
+        const size_t common = std::min(written.size(), mixed.size());
+        int largest = 0;
+        size_t differing = 0;
+        size_t firstDifference = common;
+        for (size_t i = 0; i < common; ++i) {
+            const int difference = std::abs(int(written[i]) - int(mixed[i]));
+            if (difference > 0) {
+                ++differing;
+                firstDifference = std::min(firstDifference, i);
+            }
+            largest = std::max(largest, difference);
+        }
+        stdc::u8printf("compare: wavtool %zu samples, in process %zu samples\n", written.size(),
+                       mixed.size());
+        stdc::u8printf("compare: %zu samples differ, the largest by %d", differing, largest);
+        if (differing > 0) {
+            stdc::u8printf(", the first at %zu (%.3f ms)", firstDifference,
+                           double(firstDifference) * 1000 / WavtoolMixer::sampleRate);
+        }
+        stdc::u8printf("\n");
+        return written.size() == mixed.size() && largest <= 1 ? 0 : 2;
     }
 
     std::string option(const stdc::cli::ParseResult &result, const char *token) {
@@ -221,6 +299,10 @@ namespace {
             return 1;
         }
         stdc::u8printf("wrote %s\n", stdc::path::to_utf8(output).c_str());
+
+        if (result.option("--compare-mix")) {
+            return compareMix(*plan, output);
+        }
         return 0;
     }
 
@@ -256,6 +338,9 @@ int main(int argc, char *argv[]) {
                 cli::Option({"--keep-scripts"}, "Keep temp.bat after rendering, for inspection"))
             .addOption(cli::Option({"--verbatim"},
                                    "Write the script without escaping, as UTAU does. Unsafe"))
+            .addOption(cli::Option({"--compare-mix"},
+                                   "Concatenate the fragments in the process as well, and compare "
+                                   "the result with the file the wavtool wrote"))
             .setHandler(render)
             .addHelpOption(true)
             .addVersionOption("0.0.1"));
