@@ -59,20 +59,20 @@ namespace hello::kit {
         class Writer {
         public:
             Writer(const ShellSyntax &syntax, DiagnosticList &diagnostics)
-                : _syntax(syntax), _diagnostics(diagnostics) {
+                : m_syntax(syntax), m_diagnostics(diagnostics) {
             }
 
             bool ok() const {
-                return _ok;
+                return m_ok;
             }
 
             const QString &text() const {
-                return _text;
+                return m_text;
             }
 
             void line(const QString &text) {
-                _text += text;
-                _text += QLatin1String(_syntax.lineEnd());
+                m_text += text;
+                m_text += QLatin1String(m_syntax.lineEnd());
             }
 
             void lines(const QStringList &texts) {
@@ -84,24 +84,24 @@ namespace hello::kit {
             void set(const char *name, const QString &value, std::optional<int> noteIndex = {},
                      bool unquoted = false) {
                 const auto written =
-                    unquoted ? _syntax.assignUnquoted(name, value) : _syntax.assign(name, value);
+                    unquoted ? m_syntax.assignUnquoted(name, value) : m_syntax.assign(name, value);
                 if (!written) {
-                    fail(_diagnostics,
+                    fail(m_diagnostics,
                          ClassicSynthRunner::tr("\"%1\" contains a quotation mark or a line break, "
                                                 "which cannot be written into a rendering script.")
                              .arg(QLatin1String(name)),
                          noteIndex);
-                    _ok = false;
+                    m_ok = false;
                     return;
                 }
                 line(*written);
             }
 
         private:
-            const ShellSyntax &_syntax;
-            DiagnosticList &_diagnostics;
-            QString _text;
-            bool _ok = true;
+            const ShellSyntax &m_syntax;
+            DiagnosticList &m_diagnostics;
+            QString m_text;
+            bool m_ok = true;
         };
 
     }

@@ -77,23 +77,23 @@ namespace hello::kit {
         class Reader {
         public:
             Reader(const TextCodec &codec, bool unescaping)
-                : _codec(codec), _unescaping(unescaping) {
+                : m_codec(codec), m_unescaping(unescaping) {
             }
 
             QString text(const std::string &bytes, bool *ok = nullptr) const {
-                const auto decoded = _codec.decode(viewOf(bytes));
+                const auto decoded = m_codec.decode(viewOf(bytes));
                 if (ok) {
                     *ok = decoded.has_value();
                 }
                 if (!decoded) {
                     return {};
                 }
-                return _unescaping ? TextCodec::unescape(*decoded) : *decoded;
+                return m_unescaping ? TextCodec::unescape(*decoded) : *decoded;
             }
 
         private:
-            const TextCodec &_codec;
-            bool _unescaping;
+            const TextCodec &m_codec;
+            bool m_unescaping;
         };
 
         PortamentoPoint::Type joinOf(utau::Point::Type type) {

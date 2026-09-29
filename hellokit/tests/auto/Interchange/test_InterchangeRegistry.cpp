@@ -12,17 +12,17 @@ namespace {
     class NamedReader : public InterchangeReader {
     public:
         explicit NamedReader(QString id, QStringList suffixes)
-            : _id(std::move(id)), _suffixes(std::move(suffixes)) {
+            : m_id(std::move(id)), m_suffixes(std::move(suffixes)) {
         }
 
         QString id() const override {
-            return _id;
+            return m_id;
         }
         QString name() const override {
-            return _id;
+            return m_id;
         }
         QStringList suffixes() const override {
-            return _suffixes;
+            return m_suffixes;
         }
 
         std::optional<InterchangeSource> inspect(const std::filesystem::path &,
@@ -37,8 +37,8 @@ namespace {
         }
 
     private:
-        QString _id;
-        QStringList _suffixes;
+        QString m_id;
+        QStringList m_suffixes;
     };
 
     std::unique_ptr<InterchangeReader> fake() {

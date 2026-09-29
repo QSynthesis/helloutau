@@ -21,7 +21,7 @@ namespace {
     class TempMidi {
     public:
         explicit TempMidi(const std::string &name) {
-            _path = fs::temp_directory_path() / ("hellokit_" + name + ".mid");
+            m_path = fs::temp_directory_path() / ("hellokit_" + name + ".mid");
             midi.setFileFormat(1);
             midi.setDivisionType(Midi::MidiFile::PPQ);
             midi.setResolution(Resolution);
@@ -30,7 +30,7 @@ namespace {
 
         ~TempMidi() {
             std::error_code ignored;
-            fs::remove(_path, ignored);
+            fs::remove(m_path, ignored);
         }
 
         void note(int startTick, int endTick, int pitch, int voice = 0) {
@@ -46,15 +46,15 @@ namespace {
         }
 
         const fs::path &save() {
-            midi.save(_path);
-            return _path;
+            midi.save(m_path);
+            return m_path;
         }
 
         Midi::MidiFile midi;
         int track = 0;
 
     private:
-        fs::path _path;
+        fs::path m_path;
     };
 
     ImportResult importOf(const fs::path &path) {
@@ -66,7 +66,7 @@ namespace {
     // through the public interface only.
     class FixedEncodingSelector : public InterchangeSelector {
     public:
-        explicit FixedEncodingSelector(QString encoding) : _encoding(std::move(encoding)) {
+        explicit FixedEncodingSelector(QString encoding) : m_encoding(std::move(encoding)) {
         }
 
         std::optional<ImportRequest> selectImport(const InterchangeReader &,
@@ -78,12 +78,12 @@ namespace {
         std::optional<ExportRequest> selectExport(const InterchangeWriter &, const Project &,
                                                   DiagnosticList &) override {
             ExportRequest request;
-            request.driverOptions.insert(QStringLiteral("encoding"), _encoding);
+            request.driverOptions.insert(QStringLiteral("encoding"), m_encoding);
             return request;
         }
 
     private:
-        QString _encoding;
+        QString m_encoding;
     };
 
     bool warned(const DiagnosticList &diagnostics) {

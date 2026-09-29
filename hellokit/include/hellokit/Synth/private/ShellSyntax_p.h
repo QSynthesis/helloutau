@@ -40,30 +40,30 @@ namespace hello::kit {
         using Quoting = ClassicSynthRunner::Quoting;
 
         ShellSyntax(ClassicSynthRunner::ScriptShell which, Quoting quoting)
-            : _batch(which == ClassicSynthRunner::ScriptShell::Batch), _quoting(quoting) {
+            : m_batch(which == ClassicSynthRunner::ScriptShell::Batch), m_quoting(quoting) {
         }
 
         bool isBatch() const {
-            return _batch;
+            return m_batch;
         }
 
         const char *scriptName() const {
-            return _batch ? "temp.bat" : "temp.sh";
+            return m_batch ? "temp.bat" : "temp.sh";
         }
 
         const char *helperName() const {
-            return _batch ? "temp_helper.bat" : "temp_helper.sh";
+            return m_batch ? "temp_helper.bat" : "temp_helper.sh";
         }
 
         /// The prefix of every line, which suppresses command echo in a batch file.
         const char *quiet() const {
-            return _batch ? "@" : "";
+            return m_batch ? "@" : "";
         }
 
         /// A reference to a previously assigned variable.
         QString expand(const char *name) const {
-            return _batch ? QLatin1Char('%') + QLatin1String(name) + QLatin1Char('%')
-                          : QLatin1String("${") + QLatin1String(name) + QLatin1Char('}');
+            return m_batch ? QLatin1Char('%') + QLatin1String(name) + QLatin1Char('%')
+                           : QLatin1String("${") + QLatin1String(name) + QLatin1Char('}');
         }
 
         /// One assignment, with the value quoted as a literal.
@@ -71,14 +71,14 @@ namespace hello::kit {
         /// \return the assignment, or \c std::nullopt if the value cannot be written
         std::optional<QString> assign(const char *name, const QString &value) const {
             const auto key = QLatin1String(name);
-            if (_quoting == Quoting::Verbatim) {
-                return _batch ? QLatin1String("@set ") + key + QLatin1Char('=') + value
-                              : QLatin1String("export ") + key + QLatin1Char('=') + value;
+            if (m_quoting == Quoting::Verbatim) {
+                return m_batch ? QLatin1String("@set ") + key + QLatin1Char('=') + value
+                               : QLatin1String("export ") + key + QLatin1Char('=') + value;
             }
             if (!isWritable(value)) {
                 return std::nullopt;
             }
-            if (_batch) {
+            if (m_batch) {
                 // The set "name=value" form is used instead of escaping each character,
                 // because cmd does not parse operators inside the quotes, so &, |, > and (
                 // are literal. The percent sign must still be doubled, because variable
@@ -108,7 +108,7 @@ namespace hello::kit {
         ///
         /// \return the assignment, or \c std::nullopt if the value cannot be written
         std::optional<QString> assignUnquoted(const char *name, const QString &value) const {
-            if (!_batch || _quoting == Quoting::Verbatim) {
+            if (!m_batch || m_quoting == Quoting::Verbatim) {
                 return assign(name, value);
             }
             if (!isWritable(value)) {
@@ -139,17 +139,17 @@ namespace hello::kit {
         /// the quotes, escaping it and reopening them. A quotation mark or a line break cannot
         /// be written in a batch file, which isWritable() reports and the caller checks.
         QString argument(const QString &value) const {
-            const QLatin1String quote(_batch ? "\"" : "'");
+            const QLatin1String quote(m_batch ? "\"" : "'");
             if (value.isEmpty()) {
                 return quote + quote;
             }
             QString text = value;
-            if (_batch) {
+            if (m_batch) {
                 text.replace(QLatin1Char('%'), QLatin1String("%%"));
             } else {
                 text.replace(QLatin1Char('\''), QLatin1String("'\\''"));
             }
-            const QLatin1String special(_batch ? " \t&|<>^()!,;=" : " \t&|<>^()!;*?$`\"\\'");
+            const QLatin1String special(m_batch ? " \t&|<>^()!,;=" : " \t&|<>^()!;*?$`\"\\'");
             for (const QChar c : value) {
                 if (special.toString().contains(c)) {
                     return quote + text + quote;
@@ -164,7 +164,7 @@ namespace hello::kit {
         /// written in a batch file, which isWritable() reports and the caller checks.
         QString quoted(const QString &value) const {
             QString text = value;
-            if (_batch) {
+            if (m_batch) {
                 text.replace(QLatin1Char('%'), QLatin1String("%%"));
                 return QLatin1Char('"') + text + QLatin1Char('"');
             }
@@ -174,18 +174,18 @@ namespace hello::kit {
 
         /// Deletion of a file that may not exist.
         QString remove(const QString &path) const {
-            return _batch ? QLatin1String("@del \"") + path + QLatin1String("\" 2>nul")
-                          : QLatin1String("rm -f \"") + path + QLatin1Char('"');
+            return m_batch ? QLatin1String("@del \"") + path + QLatin1String("\" 2>nul")
+                           : QLatin1String("rm -f \"") + path + QLatin1Char('"');
         }
 
         QString makeDirectory(const QString &path) const {
-            return _batch ? QLatin1String("@mkdir \"") + path + QLatin1String("\" 2>nul")
-                          : QLatin1String("mkdir -p \"") + path + QLatin1Char('"');
+            return m_batch ? QLatin1String("@mkdir \"") + path + QLatin1String("\" 2>nul")
+                           : QLatin1String("mkdir -p \"") + path + QLatin1Char('"');
         }
 
         QString echo(const QString &text) const {
-            return _batch ? QLatin1String("@echo ") + text
-                          : QLatin1String("echo '") + text + QLatin1Char('\'');
+            return m_batch ? QLatin1String("@echo ") + text
+                           : QLatin1String("echo '") + text + QLatin1Char('\'');
         }
 
         /// The progress that UTAU shows before note \a done of \a total, counted from 1: a bar
@@ -207,8 +207,8 @@ namespace hello::kit {
         /// Invocation of the helper with the nine arguments of a note.
         QString callHelper(const QString &arguments) const {
             const auto helper = QLatin1Char('"') + expand("helper") + QLatin1Char('"');
-            return _batch ? QLatin1String("@call ") + helper + QLatin1Char(' ') + arguments
-                          : helper + QLatin1Char(' ') + arguments;
+            return m_batch ? QLatin1String("@call ") + helper + QLatin1Char(' ') + arguments
+                           : helper + QLatin1Char(' ') + arguments;
         }
 
         /// Direct invocation of one engine, as required for a rest.
@@ -219,7 +219,7 @@ namespace hello::kit {
 
         /// The opening lines of the script, before any assignment.
         QStringList prologue() const {
-            if (_batch) {
+            if (m_batch) {
                 return {QLatin1String("@rem hellokit")};
             }
             return {QLatin1String("#!/bin/sh"), QLatin1String("# hellokit")};
@@ -229,7 +229,7 @@ namespace hello::kit {
         /// followed by cleanup.
         QStringList epilogue() const {
             const auto out = expand("output");
-            if (_batch) {
+            if (m_batch) {
                 return {
                     QLatin1String("@if not exist \"") + out + QLatin1String(".whd\" goto E"),
                     QLatin1String("@if not exist \"") + out + QLatin1String(".dat\" goto E"),
@@ -257,7 +257,7 @@ namespace hello::kit {
         ///        which is how the UTAU helper reuses fragments. Without it every note is
         ///        rendered again.
         QStringList helper(bool reuse) const {
-            if (_batch) {
+            if (m_batch) {
                 QStringList lines;
                 if (reuse) {
                     lines += QLatin1String("@if exist \"%temp%\" goto A");
@@ -288,12 +288,12 @@ namespace hello::kit {
         /// The line terminator: CRLF for a batch file, and LF for a shell script, which
         /// accepts either.
         const char *lineEnd() const {
-            return _batch ? "\r\n" : "\n";
+            return m_batch ? "\r\n" : "\n";
         }
 
     private:
-        bool _batch;
-        Quoting _quoting;
+        bool m_batch;
+        Quoting m_quoting;
     };
 
 }

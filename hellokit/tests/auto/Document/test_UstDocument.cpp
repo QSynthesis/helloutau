@@ -23,32 +23,32 @@ namespace {
     class TempUst {
     public:
         explicit TempUst(const std::string &name) {
-            _path = fs::temp_directory_path() / ("hellokit_" + name + ".ust");
+            m_path = fs::temp_directory_path() / ("hellokit_" + name + ".ust");
         }
 
         ~TempUst() {
             std::error_code ignored;
-            fs::remove(_path, ignored);
+            fs::remove(m_path, ignored);
         }
 
         void writeBytes(const QByteArray &bytes) const {
-            std::ofstream out(_path, std::ios::binary | std::ios::trunc);
+            std::ofstream out(m_path, std::ios::binary | std::ios::trunc);
             out.write(bytes.constData(), bytes.size());
         }
 
         QByteArray readBytes() const {
-            std::ifstream in(_path, std::ios::binary);
+            std::ifstream in(m_path, std::ios::binary);
             const std::string all((std::istreambuf_iterator<char>(in)),
                                   std::istreambuf_iterator<char>());
             return QByteArray(all.data(), qsizetype(all.size()));
         }
 
         const fs::path &path() const {
-            return _path;
+            return m_path;
         }
 
     private:
-        fs::path _path;
+        fs::path m_path;
     };
 
     Project oneNote(const QString &lyric = QStringLiteral("la")) {

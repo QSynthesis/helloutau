@@ -44,11 +44,11 @@ namespace ustconv {
         /// Collects differences, each under a prefix identifying its location in the file.
         class Recorder {
         public:
-            explicit Recorder(std::vector<Difference> &out) : _out(out) {
+            explicit Recorder(std::vector<Difference> &out) : m_out(out) {
             }
 
             void enter(std::string where) {
-                _where = std::move(where);
+                m_where = std::move(where);
             }
 
             template <class T>
@@ -56,16 +56,16 @@ namespace ustconv {
                 if (before == after) {
                     return;
                 }
-                _out.push_back({_where + field, show(before), show(after)});
+                m_out.push_back({m_where + field, show(before), show(after)});
             }
 
             void record(const std::string &field, std::string before, std::string after) {
-                _out.push_back({_where + field, std::move(before), std::move(after)});
+                m_out.push_back({m_where + field, std::move(before), std::move(after)});
             }
 
         private:
-            std::vector<Difference> &_out;
-            std::string _where;
+            std::vector<Difference> &m_out;
+            std::string m_where;
         };
 
         std::string at(const char *name, size_t i) {
