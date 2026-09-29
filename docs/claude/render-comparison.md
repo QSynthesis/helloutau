@@ -181,6 +181,14 @@ ustrender compare-manifests <清单一> <清单二>
 - 用同类样本 `o_.wav` 的调用两侧相同，从参数上看不出这三个样本有何特别。
 - 最终 wav 从第 79059 个样本（1.79 秒，第 8 号音符 `_ei`）起不同，是这一差异的后果。
 - **是确定性的偏差，而非随机波动**：在 WSL 中把第 16 步的调用单独运行两次，两次结果逐字节相同，也与完整运行时相同，但与 Windows 不同。Windows 上连续两次完整运行的结果也逐字节相同。这是 moreloader 模拟行为上的偏差，由 moreloader 一侧查明。
+- **原因与修复（moreloader 一侧，同日）**：这 6 次调用的音高曲线恰好以 `/` 开头（音高字符串的字母表含 `/`），加载器把它当作主机路径改写了。修复后以干净的音源副本重跑 `temp.sh`，`compare_snapshots.py` 报告 203 步全部相同，最终 wav 相同，`desc.mrq` 只有时间戳不同。
+
+### 两点提醒（来自 moreloader 一侧）
+
+- 从 Git Bash 直接运行 Windows 版 moresampler 时须设 `MSYS_NO_PATHCONV=1`，否则以 `/` 开头的参数（包括音高曲线）同样会被 Git Bash 改写。经 cmd 运行 `temp.bat`（如本机实测）不受影响。
+- 复制音源须保留修改时间（Linux 用 `cp -p`），否则 moresampler 可能判定 wav 比 `.llsm` 新而重新分析（`auto-update-llsm-mrq on`）。
+  - `copy-voice` 在 Windows 上保留修改时间，因为 `std::filesystem::copy_file` 调用 `CopyFile`。
+  - 把副本复制到 WSL 时须用 `cp -rp`。
 
 ### 在 UTAU 中的对照
 
@@ -196,7 +204,10 @@ ustrender compare-manifests <清单一> <清单二>
 - **UTAU 的 `temp.bat` 写法**：`@set temp="%cachedir%\<序号>_…wav"`，值带引号且不展开变量。moresampler 只取文件名开头的序号，与本工具的写法效果相同。
 - **UTAU 与 helloutau 渲染出的音频不逐字节相同**：这是 [`../Synth.md`](../Synth.md)「与 UTAU 的偏差」中已记录的曲线偏差，以及 UTAU 删除曲线末尾零值所致。两侧 moresampler 对音源的分析逐字节相同，helloutau 的脚本重复运行结果也逐字节相同。
   - moreloader 的比较两侧都使用本工具的脚本，不受此影响。
-- **`utaucompare` 的解析问题**：UTAU 开启缓存时，`temp_helper.bat` 多出一行 `@if exist "%cachedir%\%9_*.wav" del …`，`utaucompare` 会把 wavtool 一行误当作 resampler 一行解析，尚未修正。
+- **`utaucompare` 的解析问题（已修正）**：
+  - **原因**：`utaucompare` 原先按展开后的程序路径判断一行调用的是哪个引擎。本次 Tool1 与 Tool2 是同一个 moresampler，wavtool 一行因此被当作 resampler 一行。
+  - **修正**：改为按原文所调用的变量（`%resamp%`、`%tool%`）判断；路径字段也不再因分隔符不同而报差异。
+  - **修正后的结果**：与 Synth.md 的记录一致，8673 个读数，均值 0.437 音分，最大 15 音分，17 个音符逐点相同。参数上只剩两处有意的差异：缓存名，以及第 25 号音符的 `0Q134`。
 
 实测中发现并已修正的两处，见第四、五节：
 - 输出目录不存在时 moresampler 无限等锁，现由脚本先建立该目录；
