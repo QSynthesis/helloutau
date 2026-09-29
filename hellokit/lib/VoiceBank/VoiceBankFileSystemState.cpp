@@ -1108,7 +1108,22 @@ namespace hello::kit {
             same = same && it != book.files.end() && it->second.digest == record.digest;
         }
         if (same) {
-            book.stamp = source.stamp;
+            // The subdirectories keep their entries of the old stamp: this reads the audio
+            // files only, so a subdirectory that appeared or went since must still be reported
+            // by the next check, as the stamp is what finds it.
+            using Entry = VoiceBankDirectoryStamp::Entry;
+            auto stamp = source.stamp;
+            stamp.entries.erase(std::remove_if(stamp.entries.begin(), stamp.entries.end(),
+                                               [](const Entry &entry) { return entry.directory; }),
+                                stamp.entries.end());
+            for (const auto &entry : book.stamp.entries) {
+                if (entry.directory) {
+                    stamp.entries.push_back(entry);
+                }
+            }
+            std::sort(stamp.entries.begin(), stamp.entries.end(),
+                      [](const Entry &a, const Entry &b) { return a.name < b.name; });
+            book.stamp = std::move(stamp);
         }
     }
 

@@ -201,6 +201,37 @@ private Q_SLOTS:
         QVERIFY(gone.added.isEmpty());
     }
 
+    // A new directory that a reload of the audio files of its parent took into the file system
+    // state, but not into the tree, is read by reading everything.
+    void reading_everything_takes_a_directory_left_untaken() {
+        write(QStringLiteral("new/oto.ini"), "n.wav=n,1,2,3,4,5\r\n");
+        write(QStringLiteral("c.wav"), "RIFF");
+        DirectorySelector selector({
+            {fs::path("new"), QStringLiteral("UTF-8")},
+        });
+        DiagnosticList diagnostics;
+        const auto found = m_session->checkDisk();
+        QCOMPARE(found.added, QList<fs::path>{fs::path("new")});
+        VoiceBankChanges audio;
+        audio.audio = found.audio;
+        m_session->reloadFromDisk(audio, &selector, diagnostics);
+        QCOMPARE(indexOf("new"), -1);
+        QCOMPARE(m_session->checkDisk().added, QList<fs::path>{fs::path("new")});
+
+        const auto done = m_session->reloadAllFromDisk(&selector, diagnostics);
+        QVERIFY(done.added.contains(fs::path("new")));
+        QVERIFY(indexOf("new") > 0);
+        QVERIFY(m_session->checkDisk().isEmpty());
+
+        // Nor does such a reload hide a subdirectory removed since.
+        write(QStringLiteral("d.wav"), "RIFF");
+        VoiceBankChanges more;
+        more.audio = m_session->checkDisk().audio;
+        QVERIFY(QDir(pathOf(QStringLiteral("sub"))).removeRecursively());
+        m_session->reloadFromDisk(more, &selector, diagnostics);
+        QCOMPARE(m_session->checkDisk().removed, QList<fs::path>{fs::path("sub")});
+    }
+
     // A change of the audio files alone updates the samples without an entry, and is not an
     // undo step.
     void a_new_audio_file_is_no_undo_step() {
