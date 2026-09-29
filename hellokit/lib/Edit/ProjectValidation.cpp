@@ -26,6 +26,9 @@ namespace hello::kit {
         void checkNoteRanges(const NoteNode &record, QList<edit::Violation> &violations) {
             edit::Validation::checkRange(record, NoteSlots::Length, violations);
             edit::Validation::checkRange(record, NoteSlots::NoteNum, violations);
+            edit::Validation::checkRange(record, NoteSlots::Intensity, violations);
+            edit::Validation::checkRange(record, NoteSlots::Modulation, violations);
+            edit::Validation::checkRange(record, NoteSlots::Velocity, violations);
             edit::Validation::checkRange(record, NoteSlots::Tempo, violations);
         }
 

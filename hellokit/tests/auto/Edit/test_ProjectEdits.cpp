@@ -451,6 +451,27 @@ private Q_SLOTS:
         session.undo();
         QCOMPARE(session.snapshot().toJson(), project.toJson());
     }
+
+    // Values beyond those UTAU accepts are kept, within -1000 and 1000.
+    void a_parameter_is_kept_within_a_thousand_either_way() {
+        const auto project = richProject();
+        ProjectSession session(project);
+        const auto notes = notesOf(session);
+
+        DiagnosticList diagnostics;
+        for (const auto parameter :
+             {ProjectEdits::Intensity, ProjectEdits::Modulation, ProjectEdits::Velocity}) {
+            QVERIFY(ProjectEdits::setParameter({notes.at(0)}, parameter, -1000, diagnostics));
+            QVERIFY(ProjectEdits::setParameter({notes.at(0)}, parameter, 1000, diagnostics));
+            QVERIFY(!ProjectEdits::setParameter({notes.at(0)}, parameter, 1000.5, diagnostics));
+            QVERIFY(!ProjectEdits::setParameter({notes.at(0)}, parameter, -1001, diagnostics));
+        }
+        QCOMPARE(diagnostics.size(), 6);
+        const auto note = session.snapshot().tracks[0].notes[0];
+        QCOMPARE(note.intensity, std::optional<double>(1000));
+        QCOMPARE(note.modulation, std::optional<double>(1000));
+        QCOMPARE(note.velocity, std::optional<double>(1000));
+    }
 };
 
 QTEST_APPLESS_MAIN(test_ProjectEdits)

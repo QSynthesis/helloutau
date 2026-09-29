@@ -56,9 +56,15 @@ namespace hello::kit {
         inline constexpr edit::Slot<QString> Lyric{0, "lyric"};
         inline constexpr edit::Slot<int> Length{1, "length", edit::Range<int>::atLeast(1)};
         inline constexpr edit::Slot<int> NoteNum{2, "noteNum", edit::Range<int>::between(0, 127)};
-        inline constexpr edit::Slot<std::optional<double>> Intensity{3, "intensity"};
-        inline constexpr edit::Slot<std::optional<double>> Modulation{4, "modulation"};
-        inline constexpr edit::Slot<std::optional<double>> Velocity{5, "velocity"};
+        // Wider than UTAU, which passes a velocity beyond 0 to 200 as 100 and cuts intensity to
+        // 0 to 200 and modulation to -100 to 200 (docs/Synth.md): the values are kept as they
+        // are, within these bounds (step 7 in docs/Tuning.md).
+        inline constexpr edit::Slot<std::optional<double>> Intensity{
+            3, "intensity", edit::Range<double>::between(-1000, 1000)};
+        inline constexpr edit::Slot<std::optional<double>> Modulation{
+            4, "modulation", edit::Range<double>::between(-1000, 1000)};
+        inline constexpr edit::Slot<std::optional<double>> Velocity{
+            5, "velocity", edit::Range<double>::between(-1000, 1000)};
         inline constexpr edit::Slot<std::optional<double>> PreUtterance{6, "preUtterance"};
         inline constexpr edit::Slot<std::optional<double>> VoiceOverlap{7, "voiceOverlap"};
         inline constexpr edit::Slot<std::optional<double>> StartPoint{8, "startPoint"};
