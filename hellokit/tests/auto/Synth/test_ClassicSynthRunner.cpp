@@ -134,6 +134,8 @@ private Q_SLOTS:
         QVERIFY(bat.contains(QLatin1String("@set \"cachedir=")));
         QVERIFY(bat.contains(QLatin1String("@call \"%helper%\"")));
         QVERIFY(bat.contains(QLatin1String("@mkdir \"%cachedir%\" 2>nul")));
+        QVERIFY(bat.contains(QLatin1String("@echo ") + QString(40, QLatin1Char('#')) +
+                             QLatin1String("(1/1)")));
 
         // The wavtool writes the header and the sample data separately, and joining them is the
         // final step.
@@ -619,6 +621,18 @@ private Q_SLOTS:
         diagnostics.clear();
         QVERIFY(runner.scripts(*plan, engines(), diagnostics).has_value());
         QVERIFY(diagnostics.isEmpty());
+    }
+
+    // The progress bar as UTAU writes it, halves rounded to even
+    void the_progress_is_shown_as_utau_shows_it() {
+        const auto bar = [](int filled) {
+            return QString(filled, QLatin1Char('#')) + QString(40 - filled, QLatin1Char('-'));
+        };
+        QCOMPARE(ShellSyntax::progress(1, 16), bar(2) + QLatin1String("(1/16)"));
+        QCOMPARE(ShellSyntax::progress(5, 16), bar(12) + QLatin1String("(5/16)"));
+        QCOMPARE(ShellSyntax::progress(3, 16), bar(8) + QLatin1String("(3/16)"));
+        QCOMPARE(ShellSyntax::progress(16, 51), bar(13) + QLatin1String("(16/51)"));
+        QCOMPARE(ShellSyntax::progress(50, 51), bar(39) + QLatin1String("(50/51)"));
     }
 
     // A script that writes nothing fails, though the track file of an earlier render is there,

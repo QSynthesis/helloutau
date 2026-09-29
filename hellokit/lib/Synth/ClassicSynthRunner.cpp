@@ -184,7 +184,7 @@ namespace hello::kit {
             script.set("vel", r.at(3), step.noteIndex);
             // As UTAU writes it, for the engines that read the script
             script.set("temp", r.at(1), step.noteIndex, true);
-            script.line(syntax.echo(QStringLiteral("(%1/%2)").arg(done).arg(total)));
+            script.line(syntax.echo(ShellSyntax::progress(done, total)));
             script.line(syntax.callHelper(
                 joined(quotedAll(syntax, {r.at(0), r.at(2), w.at(3), r.at(5), r.at(6), r.at(7),
                                           r.at(8), QString::number(step.noteIndex)}))));

@@ -188,6 +188,22 @@ namespace hello::kit {
                           : QLatin1String("echo '") + text + QLatin1Char('\'');
         }
 
+        /// The progress that UTAU shows before note \a done of \a total, counted from 1: a bar
+        /// of 40 characters, \c # for the part done, rounded with halves to even, then \c - ,
+        /// and the count. See "与 UTAU 的实测对照" in docs/Synth.md.
+        static QString progress(int done, int total) {
+            constexpr int width = 40;
+            const qint64 scaled = qint64(width) * done;
+            qint64 filled = scaled / total;
+            const qint64 remainder = scaled % total;
+            if (2 * remainder > total || (2 * remainder == total && filled % 2 == 1)) {
+                ++filled;
+            }
+            return QString(qsizetype(filled), QLatin1Char('#')) +
+                   QString(qsizetype(width - filled), QLatin1Char('-')) +
+                   QStringLiteral("(%1/%2)").arg(done).arg(total);
+        }
+
         /// Invocation of the helper with the nine arguments of a note.
         QString callHelper(const QString &arguments) const {
             const auto helper = QLatin1Char('"') + expand("helper") + QLatin1Char('"');
