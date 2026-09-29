@@ -11,6 +11,8 @@
 
 #include <hellokit/Document/TempoMap.h>
 
+#include "PitchCurve.h"
+
 namespace hello::kit {
 
     namespace fs = std::filesystem;
@@ -252,12 +254,29 @@ namespace hello::kit {
         plan.m_outputFile = options.outputFile;
         plan.m_cacheDirectory = options.cacheDirectory;
         plan.m_steps.reserve(qsizetype(params.size()));
-        plan.m_startTime = TempoMap::of(project).startTime(range.first) -
+        const auto tempos = TempoMap::of(project);
+        plan.m_startTime = tempos.startTime(range.first) -
                            (params.empty() ? 0 : params.front().first.correctPreUttr);
 
         for (size_t i = 0; i < params.size(); ++i) {
             auto [resampler, wavtool] = params[i];
             const int noteIndex = range.first + int(i);
+
+            // With Mode2 off UTAU passes the curve of Mode1 instead, without the points and
+            // the vibrato that calc() drew (docs/Synth.md). Before the cache name, which
+            // depends on the curve.
+            if (!project.settings.mode2 && !resampler.inFile.empty()) {
+                PitchCurve::Timing timing;
+                timing.preUtterance = resampler.correctPreUttr;
+                timing.startPoint = resampler.correctStp;
+                if (i + 1 < params.size()) {
+                    timing.nextPreUtterance = params[i + 1].first.correctPreUttr;
+                    timing.nextOverlap = params[i + 1].first.correctOverlap;
+                }
+                const auto curve =
+                    PitchCurve(notes, noteIndex, tempos.tempo(noteIndex)).mode1Values(timing);
+                resampler.pitchCurves.assign(curve.begin(), curve.end());
+            }
 
             SynthStep step;
             step.noteIndex = noteIndex;

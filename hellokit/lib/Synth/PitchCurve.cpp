@@ -1,5 +1,6 @@
 #include "PitchCurve.h"
 
+#include <algorithm>
 #include <cmath>
 #include <limits>
 
@@ -65,7 +66,10 @@ namespace hello::kit {
 
         const auto &note = notes.at(index);
         const Note *previous = index > 0 ? &notes.at(index - 1) : nullptr;
+        m_bend = note.pitchBend;
         if (previous) {
+            m_previousBend = previous->pitchBend;
+            m_previousLength = previous->length;
             m_previous = partOf(*previous);
             if (!m_previous.points.isEmpty() && index > 1) {
                 correct(&notes.at(index - 2), *previous, m_previous.points.first());
@@ -108,11 +112,8 @@ namespace hello::kit {
         const auto sumOf = [](const Impact &impact) {
             return impact.portamento + impact.vibrato + impact.shift;
         };
-        const double end =
-            double(m_current.length) + ticksOf(-timing.nextPreUtterance + timing.nextOverlap);
         QList<int> result;
-        for (double tick = ticksOf(-(timing.preUtterance + timing.startPoint)); tick < end + 4;
-             tick = tick + 5) {
+        for (const double tick : readingTicks(timing)) {
             const double sum =
                 sumOf(currentAt(tick)) + sumOf(previousAt(tick)) + sumOf(nextAt(tick, tick - 5));
             result.push_back(int(std::floor(sum + 0.5)));
@@ -120,8 +121,57 @@ namespace hello::kit {
         return result;
     }
 
+    double PitchCurve::mode1At(double tick) const {
+        if (const auto own = bendAt(m_bend, tick)) {
+            return *own;
+        }
+        if (tick < 0) {
+            if (const auto previous = bendAt(m_previousBend, tick + m_previousLength)) {
+                return *previous;
+            }
+        }
+        return 0;
+    }
+
+    QList<int> PitchCurve::mode1Values(const Timing &timing) const {
+        QList<int> result;
+        for (const double tick : readingTicks(timing)) {
+            result.push_back(int(std::round(mode1At(tick))));
+        }
+        return result;
+    }
+
     double PitchCurve::ticksOf(double milliseconds) const {
         return milliseconds * m_tempo / 60 * 480 / 1000;
+    }
+
+    QList<double> PitchCurve::readingTicks(const Timing &timing) const {
+        const double end =
+            double(m_current.length) + ticksOf(-timing.nextPreUtterance + timing.nextOverlap);
+        QList<double> ticks;
+        for (double tick = ticksOf(-(timing.preUtterance + timing.startPoint)); tick < end + 4;
+             tick = tick + 5) {
+            ticks.push_back(tick);
+        }
+        return ticks;
+    }
+
+    std::optional<double> PitchCurve::bendAt(const std::optional<PitchBend> &bend,
+                                             double tick) const {
+        if (!bend || bend->values.isEmpty()) {
+            return std::nullopt;
+        }
+        const double position = (tick - ticksOf(bend->start.value_or(0))) / 5;
+        if (position < 0) {
+            return std::nullopt;
+        }
+        const auto &values = bend->values;
+        const auto k = qsizetype(std::floor(position));
+        if (k >= values.size()) {
+            return 0.0;
+        }
+        const double next = values[std::min(k + 1, values.size() - 1)];
+        return values[k] + (next - values[k]) * (position - double(k));
     }
 
     PitchCurve::Impact PitchCurve::impactOf(const Part &part, double tick, Whose whose) const {

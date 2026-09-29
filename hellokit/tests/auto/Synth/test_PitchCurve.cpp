@@ -221,6 +221,114 @@ private Q_SLOTS:
         QVERIFY(curve.portamentoAt(480 - 48) > 100);
     }
 
+    // A note of 480 ticks with Mode1 values; the probe of docs/Synth.md used such notes.
+    static Note bent(const QList<double> &values, double start) {
+        auto n = note(QStringLiteral("a"), 60);
+        PitchBend bend;
+        bend.start = start;
+        bend.values = values;
+        n.pitchBend = bend;
+        return n;
+    }
+
+    static QList<double> ramp() {
+        QList<double> values;
+        for (int i = 0; i < 96; ++i) {
+            values.push_back(i * 2);
+        }
+        return values;
+    }
+
+    // The first readings of the curve of Mode1, alone between rests at 120 bpm with the first
+    // reading 8.925 ms before the note, as UTAU passed them in the probe of docs/Synth.md
+    static QList<int> mode1Readings(const Note &n,
+                                    const Note &before = note(QStringLiteral("R"), 60)) {
+        PitchCurve::Timing timing;
+        timing.preUtterance = 8.925;
+        return PitchCurve({before, n}, 1, 120).mode1Values(timing);
+    }
+
+    void the_curve_of_mode1_is_that_of_utau() {
+        QCOMPARE(mode1Readings(bent(ramp(), 0)).mid(0, 7), (QList<int>{0, 0, 1, 3, 5, 7, 9}));
+        QCOMPARE(mode1Readings(bent(ramp(), -50)).mid(0, 4), (QList<int>{16, 18, 20, 22}));
+        QCOMPARE(mode1Readings(bent(ramp(), -20.5)).mid(0, 4), (QList<int>{4, 6, 8, 10}));
+        QCOMPARE(mode1Readings(bent(ramp(), 20)).mid(0, 9),
+                 (QList<int>{0, 0, 0, 0, 0, 0, 1, 3, 5}));
+        QCOMPARE(mode1Readings(bent(ramp(), 0)).size(), 99);
+
+        // The interval after the last value holds it, and then it is 0.
+        const auto ten = mode1Readings(bent(QList<double>(10, 100), 0));
+        QCOMPARE(ten.mid(0, 13),
+                 (QList<int>{0, 0, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 0}));
+        QCOMPARE(ten.last(), 0);
+
+        // Rounded, and interpolated between values
+        QCOMPARE(mode1Readings(bent(QList<double>(96, 10.5), 0)).mid(0, 4),
+                 (QList<int>{0, 0, 11, 11}));
+        QList<double> alternating;
+        for (int i = 0; i < 96; ++i) {
+            alternating.push_back(i % 2 ? -300 : 300);
+        }
+        QCOMPARE(mode1Readings(bent(alternating, 0)).mid(0, 5), (QList<int>{0, 0, 128, -128, 128}));
+    }
+
+    // Neither the Mode2 points nor the vibrato take part in the curve of Mode1.
+    void mode1_leaves_out_the_points_and_the_vibrato() {
+        auto n = bent(QList<double>(96, 50), 0);
+        n.portamento = {point(-40, 0), point(0, 300)};
+        Vibrato v;
+        v.length = 65;
+        v.period = 180;
+        v.amplitude = 35;
+        n.vibrato = v;
+        const auto readings = mode1Readings(n);
+        QCOMPARE(readings.mid(0, 4), (QList<int>{0, 0, 50, 50}));
+        QCOMPARE(readings.at(60), 50);
+    }
+
+    // Before the start of a note, and before its own values, the curve is that of the previous
+    // note, as for Mode2. UTAU passed 188 for the first reading, which this gives as 189 (the
+    // boundary of docs/Synth.md).
+    void mode1_continues_the_previous_note_before_the_start() {
+        const auto readings = mode1Readings(note(QStringLiteral("a"), 60), bent(ramp(), 0));
+        QVERIFY(qAbs(readings.at(0) - 188) <= 1);
+        QCOMPARE(readings.mid(1, 3), (QList<int>{190, 0, 0}));
+    }
+
+    // With Mode2 off the resampler receives the curve of Mode1, with it on the curve of the
+    // points and the vibrato.
+    void the_setting_of_the_project_chooses_the_curve() {
+        const auto voices = bank();
+        QVERIFY(voices);
+        auto n = bent(ramp(), -20);
+        n.portamento = {point(-40, 0), point(0, 300)};
+        Project project;
+        project.settings.tempo = 120;
+        Track track;
+        track.notes = {note(QStringLiteral("R"), 60), n};
+        project.tracks.push_back(track);
+        SynthPlan::Options options;
+        options.cacheDirectory = root() / "cache";
+        options.outputFile = root() / "out.wav";
+
+        const auto curves = [&](bool mode2) {
+            project.settings.mode2 = mode2;
+            DiagnosticList diagnostics;
+            const auto plan = SynthPlan::make(project, *voices, options, diagnostics);
+            const auto &step = plan->steps().at(1);
+            PitchCurve::Timing timing;
+            timing.preUtterance = step.preUtterance;
+            timing.startPoint = step.startPoint;
+            const PitchCurve curve(project.tracks[0].notes, 1, 120);
+            return std::make_tuple(step.pitch, curve.mode1Values(timing), curve.values(timing));
+        };
+        const auto [offPitch, offMode1, offMode2] = curves(false);
+        QCOMPARE(offPitch, offMode1);
+        QVERIFY(offPitch != offMode2);
+        const auto [onPitch, onMode1, onMode2] = curves(true);
+        QCOMPARE(onPitch, onMode2);
+    }
+
     // A vibrato of 50 ms or less is left out on its own note but reaches into the next.
     void a_short_vibrato_only_reaches_into_the_next_note() {
         auto first = note(QStringLiteral("a"), 60, 240);

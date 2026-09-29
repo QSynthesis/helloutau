@@ -216,8 +216,10 @@ namespace {
                 timing.nextPreUtterance = steps[i + 1].preUtterance;
                 timing.nextOverlap = steps[i + 1].voiceOverlap;
             }
+            // The curve of Mode1 where the project turns Mode2 off, as the resampler receives it
+            const PitchCurve curve(notes, step.noteIndex, tempos.tempo(step.noteIndex));
             const auto computed =
-                PitchCurve(notes, step.noteIndex, tempos.tempo(step.noteIndex)).values(timing);
+                project.settings.mode2 ? curve.values(timing) : curve.mode1Values(timing);
             values += computed.size();
             if (computed != step.pitch) {
                 ++differing;
