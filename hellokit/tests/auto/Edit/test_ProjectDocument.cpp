@@ -5,6 +5,8 @@
 #include <QtTest/QSignalSpy>
 #include <QtTest/QTest>
 
+#include <hellokit/Document/UstDocument.h>
+
 #include <hellokit/Edit/ProjectDocument.h>
 #include <hellokit/Edit/ProjectRefs.h>
 #include <hellokit/VoiceBank/VoiceBank.h>
@@ -172,6 +174,42 @@ private Q_SLOTS:
         // Undoing past the saved step modifies the document again.
         document->session()->undo();
         QVERIFY(document->isModified());
+    }
+
+    // The last point of every note is at the pitch of the note once opened, as the editor writes
+    // points, and opening does not modify the document.
+    void the_last_point_ends_at_the_pitch_of_the_note_when_opened() {
+        auto project = oneNote();
+        PortamentoPoint first;
+        first.x = -40;
+        first.y = 20;
+        PortamentoPoint last;
+        last.x = 40;
+        last.y = 30;
+        project.tracks[0].notes[0].portamento = {first, last};
+
+        QTemporaryDir dir;
+        DiagnosticList diagnostics;
+        const auto usth = pathIn(dir, "song.usth");
+        QVERIFY(project.save(usth, diagnostics));
+        const auto ust = pathIn(dir, "song.ust");
+        UstDocument::ExportOptions options;
+        options.charset = QStringLiteral("UTF-8");
+        options.file = ust;
+        const auto exported = UstDocument::fromProject(project, options, diagnostics);
+        QVERIFY(exported && exported->save(ust, diagnostics));
+
+        FixedSelector selector(QStringLiteral("UTF-8"));
+        for (const auto &path : {usth, ust}) {
+            const auto document = ProjectDocument::open(path, &selector, diagnostics);
+            QVERIFY(document);
+            const auto points = document->session()->snapshot().tracks[0].notes[0].portamento;
+            QCOMPARE(points.size(), 2);
+            QCOMPARE(points[0].y, 20.0);
+            QCOMPARE(points[1].y, 0.0);
+            QVERIFY(!document->isModified());
+            QVERIFY(!document->session()->canUndo());
+        }
     }
 
     // A UST is imported: the document has no file until it is saved as .usth.

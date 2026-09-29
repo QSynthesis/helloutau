@@ -26,6 +26,21 @@ namespace hello::kit {
             diagnostics.push_back({DiagnosticSeverity::Error, message, std::nullopt});
         }
 
+        // The project with the last Mode2 point of every note at the pitch of the note, as the
+        // editor writes points (see step 2 in docs/Tuning.md). The editor of UTAU moves that point
+        // only horizontally and keeps any height it was given, which is not meant to be kept.
+        // Done before the session exists, so the document is not modified by it.
+        Project endingAtPitch(Project project) {
+            for (auto &track : project.tracks) {
+                for (auto &note : track.notes) {
+                    if (!note.portamento.isEmpty()) {
+                        note.portamento.last().y = 0;
+                    }
+                }
+            }
+            return project;
+        }
+
         void warn(DiagnosticList &diagnostics, const QString &message) {
             diagnostics.push_back({DiagnosticSeverity::Warning, message, std::nullopt});
         }
@@ -119,7 +134,7 @@ namespace hello::kit {
                 return nullptr;
             }
             return std::unique_ptr<ProjectDocument>(
-                new ProjectDocument(*project, path, true, parent));
+                new ProjectDocument(endingAtPitch(*project), path, true, parent));
         }
 
         if (hasExtension(path, u".ust")) {
@@ -143,7 +158,7 @@ namespace hello::kit {
                 return nullptr;
             }
             return std::unique_ptr<ProjectDocument>(
-                new ProjectDocument(*project, path, false, parent));
+                new ProjectDocument(endingAtPitch(*project), path, false, parent));
         }
 
         fail(diagnostics, tr("This file is neither a HelloUtau project nor a UST."));
