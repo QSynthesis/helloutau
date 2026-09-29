@@ -9,6 +9,9 @@
 
 #include <helloutau/Editor/HelloUtauEditorGlobal.h>
 
+class QMenu;
+class QWidget;
+
 namespace QAK {
     class ActionRegistry;
 }
@@ -18,9 +21,10 @@ namespace hello::daw {
     class AppSettings;
     class MainWindow;
     class ThemeManager;
+    class VoiceBankWindow;
 
     /// The editor as a whole: the settings, the actions shared by every window, the themes, and
-    /// the windows, each of which edits one project.
+    /// the windows, each of which edits one project or one voice bank.
     class HELLOUTAU_EDITOR_EXPORT Editor : public QObject {
         Q_OBJECT
     public:
@@ -53,8 +57,22 @@ namespace hello::daw {
         /// \return the window that shows the file, or \c nullptr if it was not opened
         MainWindow *openFile(const std::filesystem::path &path, MainWindow *from = nullptr);
 
-        /// Closes every window, each asking to save its project first. Stops at the first window
-        /// whose user cancels, and returns whether every window was closed.
+        /// The open voice bank windows, in the order in which they were opened.
+        QList<VoiceBankWindow *> voiceBankWindows() const;
+
+        /// Opens the voice bank in the folder \a root in a window of its own. A window that
+        /// already shows it is activated instead. The user is asked for the encoding of each
+        /// folder that does not record it, and errors are shown, over \a from.
+        ///
+        /// \return the window that shows the voice bank, or \c nullptr if it was not opened
+        VoiceBankWindow *openVoiceBank(const std::filesystem::path &root, QWidget *from = nullptr);
+
+        /// Fills \a menu, the menu "Open Recent" of a window, with the files opened last. A
+        /// project opens in \a from if it is a project window that is unused.
+        void fillRecentMenu(QMenu *menu, QWidget *from);
+
+        /// Closes every window, each asking to save its document first. Stops at the first
+        /// window whose user cancels, and returns whether every window was closed.
         bool closeAll();
 
     private:

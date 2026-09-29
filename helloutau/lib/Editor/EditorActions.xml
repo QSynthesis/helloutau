@@ -15,6 +15,8 @@
     <items>
         <action id="helloutau.file.new" text="&amp;New" category="File" shortcut="Ctrl+N" />
         <action id="helloutau.file.open" text="&amp;Open..." category="File" shortcut="Ctrl+O" />
+        <!-- A folder, opened in a voice bank window (docs/VoiceBankEditor.md) -->
+        <action id="helloutau.file.openVoiceBank" text="Open &amp;Voice Bank..." category="File" />
         <!-- Filled by the window with the files last opened -->
         <action id="helloutau.file.openRecent" text="Open &amp;Recent" category="File"
                 external="true" />
@@ -78,6 +80,8 @@
                 shortcut="Shift+Space" />
 
         <action id="helloutau.tools.settings" text="&amp;Settings..." category="Tools" />
+        <!-- The voice bank of the project, in its window -->
+        <action id="helloutau.tools.editVoiceBank" text="Edit &amp;Voice Bank" category="Tools" />
 
         <menu id="helloutau.mainMenu" topLevel="true" />
         <menu id="helloutau.file" text="&amp;File" />
@@ -90,6 +94,13 @@
         <menu id="helloutau.view" text="&amp;View" />
         <menu id="helloutau.playback" text="&amp;Playback" />
         <menu id="helloutau.tools" text="&amp;Tools" />
+
+        <!-- The menus of the voice bank window -->
+        <menu id="helloutau.voiceBankMenu" topLevel="true" />
+        <menu id="helloutau.voiceBank.file" text="&amp;File" />
+        <menu id="helloutau.voiceBank.edit" text="&amp;Edit" />
+        <menu id="helloutau.voiceBank.view" text="&amp;View" />
+        <menu id="helloutau.voiceBank.tools" text="&amp;Tools" />
     </items>
 
     <layouts>
@@ -97,6 +108,7 @@
             <menu id="helloutau.file">
                 <action id="helloutau.file.new" />
                 <action id="helloutau.file.open" />
+                <action id="helloutau.file.openVoiceBank" />
                 <action id="helloutau.file.openRecent" />
                 <separator />
                 <action id="helloutau.file.save" />
@@ -159,6 +171,32 @@
                 <action id="helloutau.playback.preview" />
             </menu>
             <menu id="helloutau.tools">
+                <action id="helloutau.tools.editVoiceBank" />
+                <separator />
+                <action id="helloutau.tools.settings" />
+            </menu>
+        </menu>
+        <menu id="helloutau.voiceBankMenu">
+            <menu id="helloutau.voiceBank.file">
+                <action id="helloutau.file.new" />
+                <action id="helloutau.file.open" />
+                <action id="helloutau.file.openVoiceBank" />
+                <action id="helloutau.file.openRecent" />
+                <separator />
+                <action id="helloutau.file.save" />
+                <action id="helloutau.file.saveAs" />
+                <separator />
+                <action id="helloutau.file.close" />
+                <action id="helloutau.file.quit" />
+            </menu>
+            <menu id="helloutau.voiceBank.edit">
+                <action id="helloutau.edit.undo" />
+                <action id="helloutau.edit.redo" />
+            </menu>
+            <menu id="helloutau.voiceBank.view">
+                <action id="helloutau.view.commandPalette" />
+            </menu>
+            <menu id="helloutau.voiceBank.tools">
                 <action id="helloutau.tools.settings" />
             </menu>
         </menu>

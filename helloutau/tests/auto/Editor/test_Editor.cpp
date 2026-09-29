@@ -18,10 +18,14 @@
 #include <QtWidgets/QMessageBox>
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QStatusBar>
+#include <QtWidgets/QTableView>
+#include <QtWidgets/QTreeWidget>
 
 #include <hellokit/Edit/ProjectDocument.h>
 #include <hellokit/Edit/ProjectEdits.h>
 #include <hellokit/Edit/ProjectRefs.h>
+#include <hellokit/Edit/VoiceBankDocument.h>
+#include <hellokit/Edit/VoiceBankRefs.h>
 
 #include <helloutau/Widgets/CommandPalette.h>
 
@@ -33,6 +37,8 @@
 #include <helloutau/Editor/ScalePitchDialog.h>
 #include <helloutau/Editor/VibratoDialog.h>
 #include <helloutau/Editor/VoiceBankCharsetDialog.h>
+#include <helloutau/Editor/VoiceBankEntryModel.h>
+#include <helloutau/Editor/VoiceBankWindow.h>
 
 using namespace hello;
 using namespace hello::daw;
@@ -524,6 +530,153 @@ private Q_SLOTS:
         QCOMPARE(roll->voiceBank(), window->document()->voiceBank());
         QVERIFY(!roll->lacksSample(0));
         QVERIFY(roll->lacksSample(1));
+    }
+
+private:
+    // A voice bank in UTF-8, declared, so that nothing is asked: in the root a.wav with an
+    // entry, b.wav an entry without its file and c.wav a file without an entry; in sub, x.wav.
+    static fs::path voiceBank(const QTemporaryDir &dir, const char *name = "bank") {
+        const auto bank = pathIn(dir, name);
+        fs::create_directories(bank / "sub");
+        const auto write = [](const fs::path &path, const char *text) {
+            std::ofstream file(path, std::ios::binary);
+            file << text;
+        };
+        write(bank / "oto.ini",
+              "#Charset:UTF-8\r\na.wav=a,10,20,-30,40,5\r\nb.wav=b,1,2,3,4,5\r\n");
+        write(bank / "a.wav", "");
+        write(bank / "c.wav", "");
+        write(bank / "sub" / "oto.ini", "#Charset:UTF-8\r\nx.wav=x,9.0,2,3,4,5\r\n");
+        write(bank / "sub" / "x.wav", "");
+        return bank;
+    }
+
+    static QList<int> kindsOf(const VoiceBankWindow *window) {
+        const auto table = window->entryTable();
+        QList<int> kinds;
+        for (int row = 0; row < table->model()->rowCount(); ++row) {
+            kinds.push_back(
+                table->model()->index(row, 0).data(VoiceBankEntryModel::RowKindRole).toInt());
+        }
+        return kinds;
+    }
+
+    static bool isSame(const fs::path &a, const fs::path &b) {
+        std::error_code error;
+        return fs::equivalent(a, b, error);
+    }
+
+private Q_SLOTS:
+    // A voice bank opens in a window of its own, its folders in a tree and the entries of the
+    // folder chosen there in a table, with the files without an entry among them.
+    void a_voice_bank_opens_in_a_window_of_its_own() {
+        QTemporaryDir dir;
+        const auto bank = voiceBank(dir);
+        const auto e = editor();
+        const auto window = e->openVoiceBank(bank);
+        QVERIFY(window);
+        QCOMPARE(e->voiceBankWindows(), QList<VoiceBankWindow *>{window});
+        QCOMPARE(window->windowTitle(), QStringLiteral("bank[*] - HelloUtau"));
+        QVERIFY(!window->isWindowModified());
+        QStringList menus;
+        for (const auto action : window->menuBar()->actions()) {
+            menus.push_back(action->text());
+        }
+        QCOMPARE(menus, (QStringList{QStringLiteral("&File"), QStringLiteral("&Edit"),
+                                     QStringLiteral("&View"), QStringLiteral("&Tools")}));
+
+        // All folders at first: a, b missing, c unlisted, and x in sub
+        const auto tree = window->directoryTree();
+        QCOMPARE(tree->topLevelItemCount(), 2);
+        QCOMPARE(tree->topLevelItem(1)->text(0), QStringLiteral("bank"));
+        QCOMPARE(tree->topLevelItem(1)->child(0)->text(0), QStringLiteral("sub"));
+        QCOMPARE(
+            kindsOf(window),
+            (QList<int>{VoiceBankEntryModel::EntryRow, VoiceBankEntryModel::MissingAudioRow,
+                        VoiceBankEntryModel::UnlistedAudioRow, VoiceBankEntryModel::EntryRow}));
+        QVERIFY(!window->entryTable()->isColumnHidden(VoiceBankEntryModel::DirectoryColumn));
+
+        tree->setCurrentItem(tree->topLevelItem(1)->child(0));
+        QCOMPARE(kindsOf(window), QList<int>{VoiceBankEntryModel::EntryRow});
+        QVERIFY(window->entryTable()->isColumnHidden(VoiceBankEntryModel::DirectoryColumn));
+        const auto model = window->entryTable()->model();
+        QCOMPARE(model->index(0, VoiceBankEntryModel::OffsetColumn).data().toString(),
+                 QStringLiteral("9.0"));
+
+        // The search matches file names and aliases, not the values.
+        tree->setCurrentItem(tree->topLevelItem(0));
+        window->searchBox()->setText(QStringLiteral("C"));
+        QCOMPARE(model->rowCount(), 1);
+        QCOMPARE(model->index(0, VoiceBankEntryModel::FileColumn).data().toString(),
+                 QStringLiteral("c.wav"));
+        window->searchBox()->setText(QStringLiteral("9"));
+        QCOMPARE(model->rowCount(), 0);
+
+        // Opened again, the same window is shown.
+        QCOMPARE(e->openVoiceBank(bank), window);
+        QCOMPARE(e->voiceBankWindows().size(), 1);
+    }
+
+    // An edit makes the voice bank modified; saving writes it, and closing asks first.
+    void the_voice_bank_window_saves_and_asks_before_closing() {
+        QTemporaryDir dir;
+        const auto bank = voiceBank(dir);
+        const auto e = editor();
+        const auto window = e->openVoiceBank(bank);
+        QVERIFY(window);
+        const auto rename = [window](const QString &alias) {
+            const auto session = window->document()->session();
+            auto transaction = session->transaction(QStringLiteral("rename"));
+            kit::VoiceBankRef(session).directories().at(0).otoEntries().at(0).setAlias(alias);
+            QVERIFY(transaction.commit());
+        };
+        rename(QStringLiteral("renamed"));
+        QVERIFY(window->isWindowModified());
+        QVERIFY(actionNamed(window, QStringLiteral("&Undo"))->isEnabled());
+        QCoreApplication::processEvents();
+        QCOMPARE(window->entryModel()->index(0, VoiceBankEntryModel::AliasColumn).data().toString(),
+                 QStringLiteral("renamed"));
+
+        QVERIFY(window->save());
+        QVERIFY(!window->isWindowModified());
+        std::ifstream in(bank / "oto.ini", std::ios::binary);
+        const std::string text((std::istreambuf_iterator<char>(in)),
+                               std::istreambuf_iterator<char>());
+        QVERIFY(text.find("a.wav=renamed,10,20,-30,40,5") != std::string::npos);
+
+        rename(QStringLiteral("again"));
+        bool asked = false;
+        QTimer::singleShot(0, [&asked] {
+            if (const auto box = qobject_cast<QMessageBox *>(QApplication::activeModalWidget())) {
+                asked = true;
+                box->button(QMessageBox::Discard)->click();
+            }
+        });
+        QVERIFY(window->close());
+        QVERIFY(asked);
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        QVERIFY(e->voiceBankWindows().isEmpty());
+    }
+
+    // The project window opens the voice bank of the project in its window.
+    void a_project_window_edits_its_voice_bank() {
+        QTemporaryDir dir;
+        const auto utau = pathIn(dir, "utau");
+        fs::create_directories(utau / "voice");
+        const auto bank = voiceBank(dir, "utau/voice/bank");
+        const auto e = editor();
+        e->settings().setUtauDirectory(utau);
+        const auto window = e->newWindow();
+        {
+            const auto session = window->document()->session();
+            auto transaction = session->transaction(QStringLiteral("voice"));
+            kit::ProjectRef(session).tracks().at(0).setVoiceDir(QStringLiteral("%VOICE%bank"));
+            QVERIFY(transaction.commit());
+        }
+        actionNamed(window, QStringLiteral("Edit &Voice Bank"))->trigger();
+        e->settings().setUtauDirectory({});
+        QCOMPARE(e->voiceBankWindows().size(), 1);
+        QVERIFY(isSame(e->voiceBankWindows().first()->document()->rootPath(), bank));
     }
 };
 

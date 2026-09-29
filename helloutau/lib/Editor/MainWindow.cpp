@@ -34,6 +34,7 @@
 #include <helloutau/Widgets/CommandPalette.h>
 
 #include "AppSettings.h"
+#include "CommandEntries_p.h"
 #include "DiagnosticBox_p.h"
 #include "Editor.h"
 #include "ExportUstDialog.h"
@@ -244,6 +245,15 @@ namespace hello::daw {
 
             addCommand(QStringLiteral("helloutau.file.new"), [this] { editor->newWindow(); });
             addCommand(QStringLiteral("helloutau.file.open"), [this] { open(); });
+            addCommand(QStringLiteral("helloutau.file.openVoiceBank"), [this] {
+                stdc_decl_t;
+                const auto folder = QFileDialog::getExistingDirectory(&decl, tr("Open Voice Bank"));
+                if (!folder.isEmpty()) {
+                    editor->openVoiceBank(pathOf(folder), &decl);
+                }
+            });
+            addCommand(QStringLiteral("helloutau.tools.editVoiceBank"),
+                       [this] { editVoiceBank(); });
             // An external action: its menu is ours to fill, each time it opens.
             recentMenu = new QMenu(&decl);
             QObject::connect(recentMenu, &QMenu::aboutToShow, &decl, [this] { fillRecentMenu(); });
@@ -425,34 +435,9 @@ namespace hello::daw {
                              });
         }
 
-        // The commands of the window as the command palette offers them: every action that is a
-        // command and is enabled now, as VS Code shows no disabled command, labelled with its
-        // category as "File: Save". The palette does not list itself.
         QList<CommandEntry> commandEntries() const {
-            const auto registry = editor->actionRegistry();
-            QList<CommandEntry> entries;
-            for (const auto &id : registry->actionIds()) {
-                const auto info = registry->actionInfo(id);
-                const auto action = context->action(id);
-                if (!info || !info->isCommand() || !action || !action->isEnabled() ||
-                    id == QStringLiteral("helloutau.view.commandPalette")) {
-                    continue;
-                }
-                const auto label = [](const QAK::ActionText &category,
-                                      const QAK::ActionText &text) {
-                    const auto title = text.withoutMnemonic();
-                    const auto group = category.withoutMnemonic();
-                    return group.isEmpty() ? title : group + QStringLiteral(": ") + title;
-                };
-                const auto category = info->category();
-                const auto text = info->text();
-                const auto shown = label(category, text);
-                const auto source =
-                    label({category.source, std::nullopt}, {text.source, std::nullopt});
-                entries.push_back({id, shown, source == shown ? QString() : source,
-                                   action->shortcut(), action->isCheckable(), action->isChecked()});
-            }
-            return entries;
+            return commandEntriesOf(editor->actionRegistry(), context,
+                                    QStringLiteral("helloutau.view.commandPalette"));
         }
 
         void bindDocument() {
@@ -671,38 +656,28 @@ namespace hello::daw {
 
         // The files last opened, numbered, the latest first, and a command that forgets them.
         // A file that is gone is reported and forgotten when chosen.
-        void fillRecentMenu() {
+        // Opens the voice bank of the project in its window, as the UTAU folder of the settings
+        // resolves it.
+        void editVoiceBank() {
             stdc_decl_t;
-            recentMenu->clear();
-            const auto files = editor->settings().recentFiles();
-            if (files.isEmpty()) {
-                recentMenu->addAction(tr("No Recent Files"))->setEnabled(false);
+            const auto track = document->session()->snapshot().tracks.value(0);
+            const auto root = track.voiceDirectory(editor->settings().utauDirectory());
+            if (track.voiceDir.isEmpty() || root.empty()) {
+                QMessageBox::information(
+                    &decl, tr("Edit Voice Bank"),
+                    track.voiceDir.isEmpty()
+                        ? tr("The project names no voice bank.")
+                        : tr("The voice bank \"%1\" is in the UTAU folder, which is not set in the "
+                             "settings.")
+                              .arg(track.voiceDir));
                 return;
             }
-            for (qsizetype i = 0; i < files.size(); ++i) {
-                const auto path = files[i];
-                const auto text = QDir::toNativeSeparators(textOf(path));
-                // Numbered 1 to 9 and then 0, as the keys of the first ten
-                const auto action = recentMenu->addAction(
-                    QStringLiteral("&%1 %2")
-                        .arg((i + 1) % 10)
-                        .arg(QString(text).replace(QLatin1Char('&'), QStringLiteral("&&"))));
-                QObject::connect(action, &QAction::triggered, &decl, [this, path] {
-                    stdc_decl_t;
-                    std::error_code error;
-                    if (!std::filesystem::is_regular_file(path, error)) {
-                        QMessageBox::warning(
-                            &decl, tr("Open Recent"),
-                            tr("%1 no longer exists.").arg(QDir::toNativeSeparators(textOf(path))));
-                        editor->settings().removeRecentFile(path);
-                        return;
-                    }
-                    editor->openFile(path, &decl);
-                });
-            }
-            recentMenu->addSeparator();
-            QObject::connect(recentMenu->addAction(tr("&Clear Recent Files")), &QAction::triggered,
-                             &decl, [this] { editor->settings().clearRecentFiles(); });
+            editor->openVoiceBank(root, &decl);
+        }
+
+        void fillRecentMenu() {
+            stdc_decl_t;
+            editor->fillRecentMenu(recentMenu, &decl);
         }
 
         // Asks whether to save a modified project before it is closed. Returns whether closing
