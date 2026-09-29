@@ -71,6 +71,11 @@ namespace hello::daw {
         /// project opens in \a from if it is a project window that is unused.
         void fillRecentMenu(QMenu *menu, QWidget *from);
 
+        /// Shows the settings over \a from, and once they are accepted, applies them to every
+        /// project window: reads the voice banks anew if the UTAU folder changed, and plays in
+        /// the playback mode chosen.
+        void showSettings(QWidget *from);
+
         /// Closes every window, each asking to save its document first. Stops at the first
         /// window whose user cancels, and returns whether every window was closed.
         bool closeAll();

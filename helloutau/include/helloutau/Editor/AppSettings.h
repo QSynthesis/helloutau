@@ -37,6 +37,21 @@ namespace hello::daw {
         QString wavtool() const;
         void setWavtool(const QString &path);
 
+        /// The manner in which a project plays, see the playback modes in docs/Widgets.md.
+        enum PlaybackMode {
+            /// The selected notes are rendered by \c temp.bat in a console, as UTAU renders
+            /// them, and then played.
+            Prerender,
+
+            /// The track is rendered in the background, from the playhead first, and plays from
+            /// the playhead at once.
+            Realtime,
+        };
+
+        /// Prerender by default, as UTAU plays.
+        PlaybackMode playbackMode() const;
+        void setPlaybackMode(PlaybackMode mode);
+
         /// The encoding initially selected when a UST is exported, UTF-8 by default.
         QString ustExportCharset() const;
         void setUstExportCharset(const QString &charset);

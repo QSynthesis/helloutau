@@ -43,7 +43,6 @@
 #include "Playback.h"
 #include "PasteParametersDialog.h"
 #include "ScalePitchDialog.h"
-#include "SettingsDialog.h"
 #include "VibratoDialog.h"
 #include "VoiceBankCharsetDialog.h"
 #include "VoiceBankWindow.h"
@@ -59,8 +58,11 @@ namespace hello::daw {
         constexpr int StatusMessageTimeout = 8000;
 
         // A preview restarts from a moved playhead this many milliseconds later, once for the
-        // moves of a drag within them.
+        // moves of a drag within them; so does the rendering in the background.
         constexpr int PreviewRestartDelay = 50;
+
+        // How often the status bar counts the notes rendered in the background, in milliseconds
+        constexpr int RenderStatusInterval = 250;
 
         QString textOf(const std::filesystem::path &path) {
             return QDir::toNativeSeparators(QString::fromStdU16String(path.u16string()));
@@ -108,6 +110,8 @@ namespace hello::daw {
         QProgressBar *renderProgress = nullptr;
         QPushButton *renderCancel = nullptr;
         QTimer playheadTimer;
+        // The notes still to render in the background, in the realtime mode
+        QTimer statusTimer;
         // Whether the playback is a preview, and whether it restarts from the playhead soon
         bool previewing = false;
         bool restartPending = false;
@@ -147,6 +151,17 @@ namespace hello::daw {
                                  if (state == Playback::Stopped) {
                                      previewing = false;
                                      reportPreviewFailures();
+                                     // Later, since a preview stops before it restarts, and
+                                     // a window stops as it closes.
+                                     QMetaObject::invokeMethod(
+                                         _decl,
+                                         [this] {
+                                             if (realtime() &&
+                                                 playback->state() == Playback::Stopped) {
+                                                 updateBackground();
+                                             }
+                                         },
+                                         Qt::QueuedConnection);
                                  }
                              });
             QObject::connect(playback, &Playback::progressed, &decl, [this](int done, int total) {
@@ -167,59 +182,83 @@ namespace hello::daw {
                 }
                 updatePreviewStatus();
             });
+            statusTimer.setInterval(RenderStatusInterval);
+            QObject::connect(&statusTimer, &QTimer::timeout, &decl,
+                             [this] { updatePreviewStatus(); });
         }
 
-        // Plays the selected notes, from the first to the last, or the whole track, or stops
-        // what is playing or rendering.
+        bool realtime() const {
+            return editor->settings().playbackMode() == AppSettings::Realtime;
+        }
+
+        kit::SynthEngines engines() const {
+            kit::SynthEngines engines;
+            engines.resampler = pathOf(editor->settings().resampler());
+            engines.wavtool = pathOf(editor->settings().wavtool());
+            return engines;
+        }
+
+        // The time of the playhead at rest, in milliseconds
+        double cursorTime() const {
+            return roll->timeline()->tempoMap().timeOf(roll->cursorPosition());
+        }
+
+        // Plays in the playback mode of the settings (docs/Widgets.md), or stops what is playing
+        // or rendering: renders the selected notes, from the first to the last, and plays
+        // them; or plays from the playhead as the track is rendered.
         void togglePlayback() {
             stdc_decl_t;
             if (playback->state() != Playback::Stopped) {
                 playback->stop();
                 return;
             }
-            std::optional<std::pair<int, int>> range;
-            if (const auto selected = roll->selectedIndices(); !selected.isEmpty()) {
-                range = std::make_pair(selected.first(), selected.last());
+            if (realtime()) {
+                startPreview();
+                return;
             }
-            const auto &settings = editor->settings();
-            kit::SynthEngines engines;
-            engines.resampler = pathOf(settings.resampler());
-            engines.wavtool = pathOf(settings.wavtool());
+            const auto selected = roll->selectedIndices();
+            if (selected.isEmpty()) {
+                decl.statusBar()->showMessage(MainWindow::tr("Select the notes to render first."),
+                                              StatusMessageTimeout);
+                return;
+            }
             kit::DiagnosticList diagnostics;
-            if (!playback->play(*document, range, engines, diagnostics)) {
+            if (!playback->play(*document, std::make_pair(selected.first(), selected.last()),
+                                engines(), diagnostics)) {
                 DiagnosticBox::show(&decl, tr("Play"), diagnostics);
             }
         }
 
-        // Previews from the first selected note, or from the start, as the notes are rendered;
-        // or stops what plays.
-        void togglePreview() {
-            if (playback->state() != Playback::Stopped) {
-                playback->stop();
-                return;
-            }
-            startPreview();
-        }
-
-        // Previews from the playhead at rest (step 6 in docs/Widgets.md).
+        // Plays from the playhead at rest as the track is rendered.
         void startPreview() {
             stdc_decl_t;
-            kit::SynthEngines engines;
-            engines.resampler = pathOf(editor->settings().resampler());
-            engines.wavtool = pathOf(editor->settings().wavtool());
-            const double from = roll->timeline()->tempoMap().timeOf(roll->cursorPosition());
             kit::DiagnosticList diagnostics;
-            previewing = playback->preview(*document, from, engines, diagnostics);
+            previewing = playback->preview(*document, cursorTime(), engines(), diagnostics);
             if (!previewing) {
-                DiagnosticBox::show(&decl, tr("Preview"), diagnostics);
+                DiagnosticBox::show(&decl, tr("Play"), diagnostics);
             }
         }
 
-        // The playhead moved on the ruler: a preview goes on from there, once a drag has
-        // settled for a moment.
+        // In the realtime mode, renders the track in the background, from the playhead first;
+        // in the prerender mode, nothing. What prevents rendering, such as a missing voice
+        // bank, is reported once the user plays.
+        void updateBackground() {
+            if (!realtime()) {
+                playback->release();
+                statusTimer.stop();
+                updatePreviewStatus();
+                return;
+            }
+            kit::DiagnosticList diagnostics;
+            playback->prepare(*document, cursorTime(), engines(), diagnostics);
+            statusTimer.start();
+        }
+
+        // The playhead moved on the ruler: once a drag has settled for a moment, a preview goes
+        // on from there, and otherwise the rendering in the background starts from there.
         void cursorMoved() {
             stdc_decl_t;
-            if (!previewing || restartPending) {
+            if (restartPending) {
                 return;
             }
             restartPending = true;
@@ -227,6 +266,8 @@ namespace hello::daw {
                 restartPending = false;
                 if (previewing) {
                     startPreview();
+                } else if (playback->state() == Playback::Stopped) {
+                    updateBackground();
                 }
             });
         }
@@ -428,18 +469,9 @@ namespace hello::daw {
                 palette->popup();
             });
             addCommand(QStringLiteral("helloutau.playback.play"), [this] { togglePlayback(); });
-            addCommand(QStringLiteral("helloutau.playback.preview"), [this] { togglePreview(); });
             addCommand(QStringLiteral("helloutau.tools.settings"), [this] {
                 stdc_decl_t;
-                const auto utau = editor->settings().utauDirectory();
-                SettingsDialog dialog(editor->settings(), &decl);
-                if (dialog.exec() == QDialog::Accepted &&
-                    editor->settings().utauDirectory() != utau) {
-                    // Every voice bank named relative to UTAU is now elsewhere.
-                    for (const auto window : editor->windows()) {
-                        window->loadVoiceBank();
-                    }
-                }
+                editor->showSettings(&decl);
             });
 
             const auto registry = editor->actionRegistry();
@@ -490,8 +522,10 @@ namespace hello::daw {
                 actions.value(QStringLiteral("helloutau.view.showPitch"))->isChecked());
             decl.setCentralWidget(roll);
 
-            QObject::connect(document.get(), &kit::ProjectDocument::voiceBankChanged, roll,
-                             [this] { roll->setVoiceBank(document->voiceBank()); });
+            QObject::connect(document.get(), &kit::ProjectDocument::voiceBankChanged, roll, [this] {
+                roll->setVoiceBank(document->voiceBank());
+                updateBackground();
+            });
             QObject::connect(roll, &PianoRoll::selectionChanged, &decl,
                              [this] { updateEditActions(); });
             // In the status bar, so that a refused drag does not stop the work with a dialog.
@@ -504,17 +538,21 @@ namespace hello::daw {
             updateEditActions();
             QObject::connect(document.get(), &kit::ProjectDocument::modifiedChanged, &decl,
                              [this] { updateTitle(); });
-            QObject::connect(document.get(), &kit::ProjectDocument::filePathChanged, &decl,
-                             [this] { updateTitle(); });
+            QObject::connect(document.get(), &kit::ProjectDocument::filePathChanged, &decl, [this] {
+                updateTitle();
+                // The render cache is beside the file.
+                playback->updatePlan(*document);
+            });
             QObject::connect(document->session(), &kit::ProjectSession::stepChanged, &decl, [this] {
                 updateUndoActions();
                 updatePitchActions();
-                // A preview plays the notes as they now are.
+                // A preview plays, and the background renders, the notes as they now are.
                 playback->updatePlan(*document);
             });
             updateTitle();
             updateUndoActions();
             updatePitchActions();
+            updateBackground();
         }
 
         // Checks Mode2 as the project has it, and enables the pitch tool while it draws: with
@@ -784,6 +822,16 @@ namespace hello::daw {
         auto previous = std::move(impl.document);
         impl.document = std::move(document);
         impl.bindDocument();
+    }
+
+    void MainWindow::applySettings() {
+        stdc_impl_t;
+        // What plays in the other mode stops.
+        const auto state = impl.playback->state();
+        if (impl.realtime() ? state == Playback::Rendering : impl.previewing) {
+            impl.playback->stop();
+        }
+        impl.updateBackground();
     }
 
     bool MainWindow::isUnused() const {

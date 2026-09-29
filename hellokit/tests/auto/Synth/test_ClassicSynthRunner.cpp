@@ -13,6 +13,7 @@
 #include <QtTest/QTest>
 
 #include <hellokit/Synth/ClassicSynthRunner.h>
+#include <hellokit/Synth/EngineProcess.h>
 #include <hellokit/Synth/private/ShellSyntax_p.h>
 
 using namespace hello::kit;
@@ -66,11 +67,38 @@ private:
         return SynthPlan::make(project, *bank, options, diagnostics);
     }
 
+    /// Runs no script, and records the time limit it was given.
+    class StandIn : public EngineProcess {
+    public:
+        explicit StandIn(int *timeout) : m_timeout(timeout) {
+        }
+
+        EngineRun runScript(const std::filesystem::path &, DiagnosticList &) const override {
+            *m_timeout = timeout;
+            EngineRun run;
+            run.started = true;
+            return run;
+        }
+
+    private:
+        int *m_timeout;
+    };
+
+    /// A runner whose script runs nothing.
+    class StubbedRunner : public ClassicSynthRunner {
+    public:
+        mutable int timeout = 0;
+
+        std::unique_ptr<EngineProcess> makeEngineProcess() const override {
+            return std::make_unique<StandIn>(&timeout);
+        }
+    };
+
     /// Two nonexistent paths that are never executed.
     ///
-    /// No test calls render(). scripts() only builds the text of the two files, so an engine
-    /// path is a string assigned to a script variable and verified there. A real path would
-    /// verify nothing more and would make the test machine-dependent.
+    /// Only the stubbed runner calls render(). scripts() only builds the text of the two files, so
+    /// an engine path is a string assigned to a script variable and verified there. A real path
+    /// would verify nothing more and would make the test machine-dependent.
     static SynthEngines engines() {
         SynthEngines e;
         e.resampler = "C:/UTAU/resampler.exe";
@@ -591,6 +619,24 @@ private Q_SLOTS:
         diagnostics.clear();
         QVERIFY(runner.scripts(*plan, engines(), diagnostics).has_value());
         QVERIFY(diagnostics.isEmpty());
+    }
+
+    // A script that writes nothing fails, though the track file of an earlier render is there,
+    // and the script of a track is allowed the time of each of its engine calls.
+    void a_script_is_judged_by_what_it_writes_in_its_time() {
+        const auto plan = planFor(QStringLiteral("a"), QString());
+        QVERIFY(plan.has_value());
+        write(QStringLiteral("out.wav"), "RIFF");
+
+        StubbedRunner runner;
+        runner.scriptDirectory = root() / "script";
+        DiagnosticList diagnostics;
+        const auto outcome = runner.render(*plan, engines(), nullptr, diagnostics);
+        QVERIFY(!outcome.rendered);
+        QVERIFY(!QFile::exists(m_dir->path() + QStringLiteral("/out.wav")));
+        QCOMPARE(diagnostics.size(), 1);
+
+        QCOMPARE(runner.timeout, EngineProcess().timeout * 2 * int(plan->steps().size()));
     }
 };
 

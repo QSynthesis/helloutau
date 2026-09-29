@@ -16,6 +16,7 @@ private Q_SLOTS:
         QVERIFY(settings.resampler().isEmpty());
         QVERIFY(settings.wavtool().isEmpty());
         QCOMPARE(settings.ustExportCharset(), QStringLiteral("UTF-8"));
+        QCOMPARE(settings.playbackMode(), AppSettings::Prerender);
     }
 
     // The latest first, each once, at most ten, whole paths in any script
@@ -55,12 +56,14 @@ private Q_SLOTS:
             settings.setResampler(QStringLiteral("C:/UTAU/resampler.exe"));
             settings.setWavtool(QStringLiteral("C:/UTAU/wavtool.exe"));
             settings.setUstExportCharset(QStringLiteral("Shift_JIS"));
+            settings.setPlaybackMode(AppSettings::Realtime);
         }
         const AppSettings settings(file);
         QCOMPARE(settings.utauDirectory(), utau);
         QCOMPARE(settings.resampler(), QStringLiteral("C:/UTAU/resampler.exe"));
         QCOMPARE(settings.wavtool(), QStringLiteral("C:/UTAU/wavtool.exe"));
         QCOMPARE(settings.ustExportCharset(), QStringLiteral("Shift_JIS"));
+        QCOMPARE(settings.playbackMode(), AppSettings::Realtime);
     }
 };
 

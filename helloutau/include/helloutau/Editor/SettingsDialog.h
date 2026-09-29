@@ -27,6 +27,7 @@ namespace hello::daw {
         QLineEdit *m_utauDirectory;
         QLineEdit *m_resampler;
         QLineEdit *m_wavtool;
+        QComboBox *m_playbackMode;
         QComboBox *m_ustExportCharset;
 
         // Adds a row with a line edit and a button that browses for a directory or a file.

@@ -1,6 +1,8 @@
 #include "ClassicSynthRunner.h"
 
+#include <algorithm>
 #include <fstream>
+#include <limits>
 #include <system_error>
 
 #include <QtCore/QCoreApplication>
@@ -272,10 +274,19 @@ namespace hello::kit {
             return outcome;
         }
 
+        // The script removes the track file first as well, but a script that does not start
+        // would leave the file of the previous render, to be taken for the result.
+        fs::remove(plan.outputFile(), error);
+
         const auto engine = makeEngineProcess();
         // The script references everything by absolute path, so nothing depends on this. It is
         // set so that an engine writing to its working directory writes beside the script.
         engine->workingDirectory = directory;
+        // The limit of one engine call for each call the script makes, a resampler and a
+        // wavtool call per note, rather than one call's limit for the whole track.
+        engine->timeout =
+            int(std::min<qint64>(std::numeric_limits<int>::max(),
+                                 qint64(engine->timeout) * 2 * qint64(plan.steps().size())));
 
         const auto run = engine->runScript(scriptPath, diagnostics);
 

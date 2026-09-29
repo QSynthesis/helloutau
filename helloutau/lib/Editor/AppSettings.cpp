@@ -9,6 +9,9 @@ namespace hello::daw {
         constexpr char KeyUtauDirectory[] = "engines/utauDirectory";
         constexpr char KeyResampler[] = "engines/resampler";
         constexpr char KeyWavtool[] = "engines/wavtool";
+        constexpr char KeyPlaybackMode[] = "playback/mode";
+        constexpr char PrerenderValue[] = "prerender";
+        constexpr char RealtimeValue[] = "realtime";
         constexpr char KeyUstExportCharset[] = "files/ustExportCharset";
         constexpr char KeyRecentCommands[] = "commandPalette/recent";
         constexpr char KeyRecentFiles[] = "files/recent";
@@ -55,6 +58,18 @@ namespace hello::daw {
 
     void AppSettings::setWavtool(const QString &path) {
         m_settings->setValue(QLatin1String(KeyWavtool), path);
+    }
+
+    AppSettings::PlaybackMode AppSettings::playbackMode() const {
+        return m_settings->value(QLatin1String(KeyPlaybackMode)).toString() ==
+                       QLatin1String(RealtimeValue)
+                   ? Realtime
+                   : Prerender;
+    }
+
+    void AppSettings::setPlaybackMode(PlaybackMode mode) {
+        m_settings->setValue(QLatin1String(KeyPlaybackMode),
+                             QLatin1String(mode == Realtime ? RealtimeValue : PrerenderValue));
     }
 
     QString AppSettings::ustExportCharset() const {

@@ -20,10 +20,13 @@ namespace hello::daw {
 
     class AudioOutput;
 
-    /// Renders a project, or some of its notes, and plays the result: step 5 of docs/Widgets.md.
+    /// Plays a project in either of the playback modes of docs/Widgets.md: renders some of its
+    /// notes and plays the result, or renders the track in the background and plays it as it is
+    /// rendered.
     ///
-    /// Rendering runs on a worker thread with the engines of the settings, never those the
-    /// project names, and reports its progress; it can be cancelled. The track file is then read,
+    /// A render runs on a worker thread with the engines of the settings, never those the
+    /// project names, by \c temp.bat in a console as UTAU renders; it can be cancelled, though
+    /// the script runs on until it ends or its window is closed. The track file is then read,
     /// converted to the sample rate of the output device, and played. position() maps what is
     /// heard to the track, see kit::SynthPlan::startTime().
     ///
@@ -43,7 +46,7 @@ namespace hello::daw {
         explicit Playback(QObject *parent = nullptr);
         ~Playback() override;
 
-        /// Replaces the runner, for tests. The default is a kit::ThreadedSynthRunner.
+        /// Replaces the runner, for tests. The default is a kit::ClassicSynthRunner.
         void setRunner(std::shared_ptr<const kit::SynthRunner> runner);
 
         State state() const;
@@ -52,13 +55,14 @@ namespace hello::daw {
         /// plays the result once it is rendered. Stops what played or rendered before.
         ///
         /// \return whether rendering started; the reason is in \a diagnostics otherwise, such as
-        ///         a document without a voice bank or engines that are not set
+        ///         a document without a voice bank, engines that are not set, or a render
+        ///         cancelled before that has not ended
         bool play(const kit::ProjectDocument &document, std::optional<std::pair<int, int>> range,
                   const kit::SynthEngines &engines, kit::DiagnosticList &diagnostics);
 
         /// Plays the track as it is rendered, from \a fromTime in milliseconds from the start of
-        /// the track, or from the start: the realtime preview of step 6 of docs/Widgets.md. The
-        /// notes that sound at that time are heard from there on.
+        /// the track, or from the start: the realtime mode of docs/Widgets.md. The notes that
+        /// sound at that time are heard from there on, and those prepare() rendered are kept.
         ///
         /// Notes are resampled around the playback position and concatenated in the process, see
         /// kit::RealtimeSynth, whose fragments are kept for the next preview. When a note is not
@@ -69,14 +73,27 @@ namespace hello::daw {
         bool preview(const kit::ProjectDocument &document, std::optional<double> fromTime,
                      const kit::SynthEngines &engines, kit::DiagnosticList &diagnostics);
 
+        /// Renders the track of \a document in the background, the notes after \a fromTime
+        /// first, so that preview() from there plays at once: the realtime mode. Called again
+        /// after the playhead moves, it renders from there first. While a preview plays, only
+        /// the notes are replaced, as by updatePlan().
+        ///
+        /// \return whether rendering started; the reason is in \a diagnostics otherwise
+        bool prepare(const kit::ProjectDocument &document, std::optional<double> fromTime,
+                     const kit::SynthEngines &engines, kit::DiagnosticList &diagnostics);
+
+        /// Stops the preview and the rendering in the background, and forgets the fragments
+        /// held in memory: the prerender mode.
+        void release();
+
         /// Whether the preview waits for a note to be rendered.
         bool isBuffering() const;
 
-        /// The notes the preview has still to render.
+        /// The notes of the preview or of prepare() still to render.
         int pendingNotes() const;
 
-        /// Replaces the notes that the preview plays with those of \a document, after an edit.
-        /// Does nothing unless a preview plays.
+        /// Replaces the notes that the preview plays, or that prepare() renders, with those of
+        /// \a document, after an edit. Does nothing unless either is under way.
         void updatePlan(const kit::ProjectDocument &document);
 
         /// Returns the warnings of the notes the preview could not render since the last call.

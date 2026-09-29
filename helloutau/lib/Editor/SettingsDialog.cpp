@@ -29,6 +29,16 @@ namespace hello::daw {
         m_resampler = addPathRow(form, tr("&Resampler:"), settings.resampler(), false);
         m_wavtool = addPathRow(form, tr("&Wavtool:"), settings.wavtool(), false);
 
+        m_playbackMode = new QComboBox();
+        m_playbackMode->addItem(tr("Prerender, by temp.bat in a console as UTAU does"),
+                                AppSettings::Prerender);
+        m_playbackMode->addItem(tr("Realtime, rendered in the background from the playhead"),
+                                AppSettings::Realtime);
+        m_playbackMode->setCurrentIndex(m_playbackMode->findData(settings.playbackMode()));
+        form->addRow(tr("&Playback:"), m_playbackMode);
+        form->addRow(new QLabel(tr("Realtime playback joins the notes as wavtool.exe does, "
+                                   "whichever wavtool is chosen.")));
+
         m_ustExportCharset = new QComboBox();
         m_ustExportCharset->addItems(ExportUstDialog::charsets());
         const int index = m_ustExportCharset->findText(settings.ustExportCharset());
@@ -54,6 +64,8 @@ namespace hello::daw {
         m_settings.setUtauDirectory(std::filesystem::path(path(m_utauDirectory).toStdU16String()));
         m_settings.setResampler(path(m_resampler));
         m_settings.setWavtool(path(m_wavtool));
+        m_settings.setPlaybackMode(
+            AppSettings::PlaybackMode(m_playbackMode->currentData().toInt()));
         m_settings.setUstExportCharset(m_ustExportCharset->currentText());
         QDialog::accept();
     }

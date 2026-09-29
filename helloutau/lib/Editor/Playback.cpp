@@ -4,6 +4,7 @@
 #include <atomic>
 #include <cmath>
 
+#include <QtCore/QCoreApplication>
 #include <QtCore/QPointer>
 #include <QtCore/QTemporaryDir>
 #include <QtCore/QThread>
@@ -12,9 +13,9 @@
 
 #include <hellokit/Document/Project.h>
 #include <hellokit/Edit/ProjectDocument.h>
+#include <hellokit/Synth/ClassicSynthRunner.h>
 #include <hellokit/Synth/RealtimeSynth.h>
 #include <hellokit/Synth/SynthPlan.h>
-#include <hellokit/Synth/ThreadedSynthRunner.h>
 #include <hellokit/Synth/WaveAudio.h>
 #include <hellokit/Synth/WavtoolMixer.h>
 #include <hellokit/VoiceBank/VoiceBank.h>
@@ -51,19 +52,37 @@ namespace hello::daw {
             double startTime = 0;
         };
 
+        // The playback that renders report to, read and written on the main thread only, and
+        // null once the playback is gone. A render by script runs on until the script ends,
+        // which the playback does not wait for when its window closes.
+        struct Recipient {
+            Playback *playback = nullptr;
+        };
+
+        // Calls \a function on the main thread with the playback, if it is still there.
+        template <class Function>
+        void deliver(const std::shared_ptr<Recipient> &recipient, Function function) {
+            QMetaObject::invokeMethod(
+                QCoreApplication::instance(),
+                [recipient, function = std::move(function)] {
+                    if (recipient->playback) {
+                        function(*recipient->playback);
+                    }
+                },
+                Qt::QueuedConnection);
+        }
+
         // Relays progress to the main thread and cancellation to the runner.
         class Observer : public kit::SynthObserver {
         public:
-            Observer(Job &job, Playback *playback) : m_job(job), m_playback(playback) {
+            Observer(Job &job, std::shared_ptr<Recipient> recipient)
+                : m_job(job), m_recipient(std::move(recipient)) {
             }
 
             void progressed(int done, int total) override {
-                QMetaObject::invokeMethod(
-                    m_playback,
-                    [playback = m_playback, done, total] {
-                        Q_EMIT playback->progressed(done, total);
-                    },
-                    Qt::QueuedConnection);
+                deliver(m_recipient, [done, total](Playback &playback) {
+                    Q_EMIT playback.progressed(done, total);
+                });
             }
 
             bool cancelled() override {
@@ -72,11 +91,11 @@ namespace hello::daw {
 
         private:
             Job &m_job;
-            Playback *m_playback;
+            std::shared_ptr<Recipient> m_recipient;
         };
 
         // Renders, reads and converts, on the worker thread.
-        void run(Job &job, Playback *playback) {
+        void run(Job &job, const std::shared_ptr<Recipient> &recipient) {
             std::error_code error;
             std::filesystem::create_directories(job.options.cacheDirectory, error);
             const auto plan =
@@ -84,7 +103,7 @@ namespace hello::daw {
             if (!plan) {
                 return;
             }
-            Observer observer(job, playback);
+            Observer observer(job, recipient);
             const auto outcome = job.runner->render(*plan, job.engines, &observer, job.diagnostics);
             if (!outcome.rendered || outcome.cancelled || job.cancel.load()) {
                 return;
@@ -99,20 +118,21 @@ namespace hello::daw {
             job.startTime = plan->startTime();
             job.rendered = true;
         }
-
     }
 
     class Playback::Impl {
     public:
         using Decl = Playback;
 
-        explicit Impl(Decl *decl) : _decl(decl) {
+        explicit Impl(Decl *decl)
+            : _decl(decl), recipient(std::make_shared<Recipient>(Recipient{decl})) {
         }
 
         Decl *_decl;
+        std::shared_ptr<Recipient> recipient;
         State state = Stopped;
         std::shared_ptr<const kit::SynthRunner> runner =
-            std::make_shared<kit::ThreadedSynthRunner>();
+            std::make_shared<kit::ClassicSynthRunner>();
         AudioOutput *output = nullptr;
         std::unique_ptr<QTemporaryDir> temporary;
 
@@ -145,6 +165,46 @@ namespace hello::daw {
             options.outputFile = options.cacheDirectory / OutputFileName;
             return kit::SynthPlan::make(document.session()->snapshot(), *bank, options,
                                         diagnostics);
+        }
+
+        // Gives the synth the plan of \a document and the position of \a fromTime, making the
+        // synth first or anew for other engines, and returns that position in samples of the
+        // track file.
+        std::optional<qint64> prepare(const kit::ProjectDocument &document,
+                                      std::optional<double> fromTime,
+                                      const kit::SynthEngines &engines,
+                                      kit::DiagnosticList &diagnostics) {
+            if (engines.resampler.empty()) {
+                fail(diagnostics, Playback::tr("Set the resampler in the settings first."));
+                return std::nullopt;
+            }
+            const auto plan = previewPlan(document, diagnostics);
+            if (!plan) {
+                return std::nullopt;
+            }
+            if (!synth || synthEngines.resampler != engines.resampler) {
+                endPreview();
+                synth = std::make_unique<kit::RealtimeSynth>(engines);
+                synthEngines = engines;
+            }
+            synth->setPlan(*plan);
+            // The sample of the track file at that time; the file starts at startTime().
+            const qint64 start =
+                fromTime ? std::clamp<qint64>(std::llround((*fromTime - synth->startTime()) *
+                                                           kit::WavtoolMixer::sampleRate / 1000),
+                                              0, synth->length())
+                         : 0;
+            synth->setPosition(start);
+            return start;
+        }
+
+        // Whether a render cancelled before has yet to end, as a script does, which runs in its
+        // console until it ends or its window is closed.
+        bool rendersStill() {
+            workers.removeAll(nullptr);
+            return std::any_of(
+                workers.cbegin(), workers.cend(),
+                [](const QPointer<QThread> &worker) { return worker && worker->isRunning(); });
         }
 
         // The generator of the stream calls the synth, which may go before the stream does: the
@@ -215,13 +275,8 @@ namespace hello::daw {
         impl.output->stop();
         impl.endPreview();
         impl.cancelRender();
-        // A worker refers to this object to report progress, so it must end first. A cancelled
-        // render ends once the engine calls under way return.
-        for (const auto &worker : std::as_const(impl.workers)) {
-            if (worker) {
-                worker->wait();
-            }
-        }
+        // The workers are not waited for: a script runs until it ends or its window is closed.
+        impl.recipient->playback = nullptr;
     }
 
     void Playback::setRunner(std::shared_ptr<const kit::SynthRunner> runner) {
@@ -239,6 +294,11 @@ namespace hello::daw {
                         kit::DiagnosticList &diagnostics) {
         stdc_impl_t;
         stop();
+        if (impl.rendersStill()) {
+            fail(diagnostics, tr("The previous render has not ended yet. Closing its console "
+                                 "window stops it."));
+            return false;
+        }
         if (engines.resampler.empty() || engines.wavtool.empty()) {
             fail(diagnostics, tr("Set the resampler and the wavtool in the settings first."));
             return false;
@@ -265,15 +325,9 @@ namespace hello::daw {
         job->deviceRate = deviceRate;
         impl.job = job;
 
-        const auto worker = QThread::create([this, job] {
-            run(*job, this);
-            QMetaObject::invokeMethod(
-                this,
-                [this, job] {
-                    stdc_impl_t;
-                    impl.rendered(job);
-                },
-                Qt::QueuedConnection);
+        const auto worker = QThread::create([recipient = impl.recipient, job] {
+            run(*job, recipient);
+            deliver(recipient, [job](Playback &playback) { playback._impl->rendered(job); });
         });
         connect(worker, &QThread::finished, worker, &QObject::deleteLater);
         impl.workers.removeAll(nullptr);
@@ -296,24 +350,12 @@ namespace hello::daw {
             fail(diagnostics, tr("There is no audio output device."));
             return false;
         }
-        const auto plan = impl.previewPlan(document, diagnostics);
-        if (!plan) {
+        const auto prepared = impl.prepare(document, fromTime, engines, diagnostics);
+        if (!prepared) {
             return false;
         }
-
-        auto &synth = impl.synth;
-        if (!synth || impl.synthEngines.resampler != engines.resampler) {
-            synth = std::make_unique<kit::RealtimeSynth>(engines);
-            impl.synthEngines = engines;
-        }
-        synth->setPlan(*plan);
-        // The sample of the track file at that time; the file starts at startTime().
-        const qint64 start =
-            fromTime ? std::clamp<qint64>(std::llround((*fromTime - synth->startTime()) *
-                                                       kit::WavtoolMixer::sampleRate / 1000),
-                                          0, synth->length())
-                     : 0;
-        synth->setPosition(start);
+        const qint64 start = *prepared;
+        const auto &synth = impl.synth;
 
         // On the thread of the stream: waits briefly for the notes of the next block, and
         // otherwise gives nothing, so that the device plays silence while they are rendered.
@@ -356,14 +398,32 @@ namespace hello::daw {
         return impl.stream && impl.stream->isStarved();
     }
 
+    bool Playback::prepare(const kit::ProjectDocument &document, std::optional<double> fromTime,
+                           const kit::SynthEngines &engines, kit::DiagnosticList &diagnostics) {
+        stdc_impl_t;
+        if (impl.stream) {
+            updatePlan(document);
+            return true;
+        }
+        return impl.prepare(document, fromTime, engines, diagnostics).has_value();
+    }
+
+    void Playback::release() {
+        stdc_impl_t;
+        if (impl.synth) {
+            stop();
+            impl.synth.reset();
+        }
+    }
+
     int Playback::pendingNotes() const {
         stdc_impl_t;
-        return impl.stream ? impl.synth->pendingCount() : 0;
+        return impl.synth ? impl.synth->pendingCount() : 0;
     }
 
     void Playback::updatePlan(const kit::ProjectDocument &document) {
         stdc_impl_t;
-        if (!impl.stream) {
+        if (!impl.synth) {
             return;
         }
         kit::DiagnosticList diagnostics;

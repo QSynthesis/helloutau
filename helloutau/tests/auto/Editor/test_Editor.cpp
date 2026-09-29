@@ -396,6 +396,17 @@ private Q_SLOTS:
                  QStringLiteral("The point is before the one before it."));
     }
 
+    // In the prerender mode, as in UTAU, playing renders the selected notes, and without them
+    // nothing.
+    void prerendering_needs_notes_selected() {
+        const auto e = editor();
+        QCOMPARE(e->settings().playbackMode(), AppSettings::Prerender);
+        const auto window = e->newWindow();
+        actionNamed(window, QStringLiteral("&Play or Stop"))->trigger();
+        QCOMPARE(window->statusBar()->currentMessage(),
+                 QStringLiteral("Select the notes to render first."));
+    }
+
     void the_edit_commands_follow_the_selection() {
         const auto e = editor();
         const auto window = e->openFile(savedProject(m_dir, "d.usth"));

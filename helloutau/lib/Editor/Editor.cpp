@@ -17,6 +17,7 @@
 #include "AppSettings.h"
 #include "DiagnosticBox_p.h"
 #include "MainWindow.h"
+#include "SettingsDialog.h"
 #include "UstCharsetDialog.h"
 #include "VoiceBankCharsetDialog.h"
 #include "VoiceBankWindow.h"
@@ -226,6 +227,22 @@ namespace hello::daw {
             stdc_impl_t;
             impl.settings->clearRecentFiles();
         });
+    }
+
+    void Editor::showSettings(QWidget *from) {
+        const auto utau = settings().utauDirectory();
+        SettingsDialog dialog(settings(), from);
+        if (dialog.exec() != QDialog::Accepted) {
+            return;
+        }
+        // Every voice bank named relative to UTAU is now elsewhere.
+        const bool moved = settings().utauDirectory() != utau;
+        for (const auto window : windows()) {
+            if (moved) {
+                window->loadVoiceBank();
+            }
+            window->applySettings();
+        }
     }
 
     bool Editor::closeAll() {

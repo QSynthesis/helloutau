@@ -9,6 +9,7 @@
 #include <QtWidgets/QApplication>
 
 #include <hellokit/Edit/ProjectDocument.h>
+#include <hellokit/Edit/ProjectRefs.h>
 #include <hellokit/Synth/SynthPlan.h>
 
 #include <helloutau/Audio/AudioOutput.h>
@@ -61,6 +62,8 @@ namespace {
         mutable std::atomic<int> started = 0;
         mutable QList<fs::path> caches;
         mutable std::atomic<bool> waitForCancel = false;
+        // Runs on until released, cancelled or not, as a script does
+        mutable std::atomic<bool> hold = false;
 
         kit::SynthOutcome render(const kit::SynthPlan &plan, const kit::SynthEngines &engines,
                                  kit::SynthObserver *observer,
@@ -71,6 +74,9 @@ namespace {
             stepCounts.push_back(int(plan.steps().size()));
             ++started;
             kit::SynthOutcome outcome;
+            while (hold.load()) {
+                QThread::msleep(5);
+            }
             while (waitForCancel.load()) {
                 if (observer->cancelled()) {
                     outcome.cancelled = true;
@@ -109,6 +115,25 @@ namespace {
             document->loadVoiceBank({}, nullptr, diagnostics);
         }
         return document;
+    }
+
+    // Puts the fragment of every note of \a document in the cache of \a playback, so that no
+    // resampler needs to run.
+    bool writeFragments(Playback &playback, const kit::ProjectDocument &document) {
+        kit::SynthPlan::Options options;
+        options.cacheDirectory = playback.cacheDirectoryFor(document);
+        options.outputFile = options.cacheDirectory / "playback.wav";
+        kit::DiagnosticList diagnostics;
+        const auto plan = kit::SynthPlan::make(document.session()->snapshot(),
+                                               *document.voiceBank(), options, diagnostics);
+        if (!plan) {
+            return false;
+        }
+        fs::create_directories(options.cacheDirectory);
+        for (const auto &step : plan->steps()) {
+            writeBytes(step.cacheFile, silence());
+        }
+        return true;
     }
 
     kit::SynthEngines someEngines() {
@@ -208,18 +233,9 @@ private Q_SLOTS:
         QVERIFY(document);
         Playback playback;
 
-        kit::SynthPlan::Options options;
-        options.cacheDirectory = playback.cacheDirectoryFor(*document);
-        options.outputFile = options.cacheDirectory / "playback.wav";
-        kit::DiagnosticList diagnostics;
-        const auto plan = kit::SynthPlan::make(document->session()->snapshot(),
-                                               *document->voiceBank(), options, diagnostics);
-        QVERIFY(plan);
-        fs::create_directories(options.cacheDirectory);
-        for (const auto &step : plan->steps()) {
-            writeBytes(step.cacheFile, silence());
-        }
+        QVERIFY(writeFragments(playback, *document));
 
+        kit::DiagnosticList diagnostics;
         QSignalSpy states(&playback, &Playback::stateChanged);
         kit::SynthEngines engines;
         engines.resampler = fs::path(dir.path().toStdU16String()) / "missing.exe";
@@ -272,6 +288,89 @@ private Q_SLOTS:
         QCOMPARE(states.size(), 2);
         QCOMPARE(failures.size(), 0);
         QVERIFY(!playback.position());
+    }
+
+    // A render that goes on after it was cancelled, as a script does in its console, has to
+    // end before the next can start, which would write the same files.
+    void a_render_cancelled_ends_before_the_next() {
+        QTemporaryDir dir;
+        const auto document = singingDocument(dir);
+        QVERIFY(document);
+        Playback playback;
+        const auto runner = std::make_shared<SilentRunner>();
+        runner->hold = true;
+        playback.setRunner(runner);
+
+        kit::DiagnosticList diagnostics;
+        if (!playback.play(*document, std::nullopt, someEngines(), diagnostics)) {
+            QSKIP("This machine has no audio output device.");
+        }
+        QTRY_COMPARE(runner->started.load(), 1);
+        playback.stop();
+        QVERIFY(!playback.play(*document, std::nullopt, someEngines(), diagnostics));
+        QVERIFY(kit::hasError(diagnostics));
+        QCOMPARE(runner->started.load(), 1);
+
+        runner->hold = false;
+        bool started = false;
+        for (int attempts = 0; attempts < 500 && !started; ++attempts) {
+            diagnostics.clear();
+            started = playback.play(*document, std::nullopt, someEngines(), diagnostics);
+            if (!started) {
+                QTest::qWait(10);
+            }
+        }
+        QVERIFY2(started, qPrintable(diagnostics.value(0).message));
+        QTRY_COMPARE(playback.state(), Playback::Playing);
+    }
+
+    // The track is rendered in the background, here from the cache, without playing, and
+    // release() forgets it.
+    void the_track_is_rendered_in_the_background() {
+        QTemporaryDir dir;
+        const auto document = singingDocument(dir);
+        QVERIFY(document);
+        Playback playback;
+        kit::DiagnosticList diagnostics;
+        QVERIFY(!playback.prepare(*document, std::nullopt, {}, diagnostics));
+        QVERIFY(kit::hasError(diagnostics));
+
+        QVERIFY(writeFragments(playback, *document));
+        QSignalSpy states(&playback, &Playback::stateChanged);
+        kit::SynthEngines engines;
+        engines.resampler = fs::path(dir.path().toStdU16String()) / "missing.exe";
+        diagnostics.clear();
+        QVERIFY(playback.prepare(*document, 750.0, engines, diagnostics));
+        QTRY_COMPARE(playback.pendingNotes(), 0);
+        QVERIFY(playback.takePreviewDiagnostics().isEmpty());
+        QCOMPARE(playback.state(), Playback::Stopped);
+        QCOMPARE(states.size(), 0);
+
+        // An edit renders the note anew, whose fragment the resampler cannot make.
+        {
+            const auto session = document->session();
+            auto tx = session->transaction(QStringLiteral("transpose"));
+            kit::ProjectRef(session).tracks().at(0).notes().at(1).setNoteNum(62);
+            tx.commit();
+        }
+        playback.updatePlan(*document);
+        kit::DiagnosticList failed;
+        QTRY_VERIFY((failed.append(playback.takePreviewDiagnostics()), !failed.isEmpty()));
+        QCOMPARE(failed.last().severity, kit::DiagnosticSeverity::Warning);
+        QVERIFY(failed.last().noteIndex == 1);
+
+        // Released, nothing is rendered after an edit.
+        playback.release();
+        QCOMPARE(playback.pendingNotes(), 0);
+        {
+            const auto session = document->session();
+            auto tx = session->transaction(QStringLiteral("transpose"));
+            kit::ProjectRef(session).tracks().at(0).notes().at(1).setNoteNum(64);
+            tx.commit();
+        }
+        playback.updatePlan(*document);
+        QTest::qWait(200);
+        QVERIFY(playback.takePreviewDiagnostics().isEmpty());
     }
 };
 

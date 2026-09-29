@@ -37,8 +37,6 @@
 #include "CommandEntries_p.h"
 #include "DiagnosticBox_p.h"
 #include "Editor.h"
-#include "MainWindow.h"
-#include "SettingsDialog.h"
 #include "VoiceBankEntryModel.h"
 
 namespace hello::daw {
@@ -170,15 +168,7 @@ namespace hello::daw {
             });
             addCommand(QStringLiteral("helloutau.tools.settings"), [this] {
                 stdc_decl_t;
-                const auto utau = editor->settings().utauDirectory();
-                SettingsDialog dialog(editor->settings(), &decl);
-                if (dialog.exec() == QDialog::Accepted &&
-                    editor->settings().utauDirectory() != utau) {
-                    // Every voice bank named relative to UTAU is now elsewhere.
-                    for (const auto window : editor->windows()) {
-                        window->loadVoiceBank();
-                    }
-                }
+                editor->showSettings(&decl);
             });
 
             const auto registry = editor->actionRegistry();

@@ -38,6 +38,11 @@ namespace hello::daw {
         /// \return whether a voice bank was read
         bool loadVoiceBank();
 
+        /// Plays in the playback mode of the settings, with their engines, after they changed:
+        /// what plays in the other mode stops, and in the realtime mode the track is rendered
+        /// in the background.
+        void applySettings();
+
         /// \name Commands
         /// The commands of the menus. Each shows its errors to the user and returns whether it
         /// completed.
