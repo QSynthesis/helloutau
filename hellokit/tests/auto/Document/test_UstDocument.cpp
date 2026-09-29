@@ -153,6 +153,28 @@ private Q_SLOTS:
         QCOMPARE(again->tracks.first().voiceDir, QStringLiteral("%VOICE%uta"));
     }
 
+    // The Mode1 values are written as UTAU writes those it draws, every value a number, zeros
+    // at the end included: the last value holds for an interval (docs/Synth.md, "Mode1 的音高"),
+    // so that dropping the zeros after it would change the curve.
+    void mode1_values_are_written_each_with_the_zeros_at_the_end() {
+        TempUst file("mode1");
+        auto project = oneNote();
+        project.tracks[0].notes[0].pitchBend = PitchBend{
+            -8.938, {0, 17, 0, -5.5, 100, 0, 0}
+        };
+
+        DiagnosticList diagnostics;
+        QVERIFY(writeTo(project, file, {}, diagnostics));
+        const auto bytes = file.readBytes();
+        QVERIFY2(bytes.contains("\r\nPitchBend=0,17,0,-5.5,100,0,0\r\n"), bytes.constData());
+        QVERIFY2(bytes.contains("\r\nPBStart=-8.938\r\n"), bytes.constData());
+
+        const auto again = readAs(file, QStringLiteral("UTF-8"));
+        QVERIFY(again.has_value());
+        QCOMPARE(again->tracks.first().notes.first().pitchBend,
+                 project.tracks[0].notes[0].pitchBend);
+    }
+
     // UTAU ignores the eighth value of VBR and exposes no field for it, but it must still be
     // preserved. Otherwise a file would lose data on every round trip.
     void the_vibrato_value_utau_ignores_still_comes_back() {
