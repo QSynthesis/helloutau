@@ -267,16 +267,13 @@ namespace hello::kit {
             tempos.append(note.length(), note.tempo());
         }
         const auto note = notes.at(index);
-        const auto before = note.toNote().pitchBend;
-        std::optional<PitchBend> previous;
-        int previousLength = 0;
+        const auto current = note.toNote();
+        const auto &before = current.pitchBend;
+        PreviousBend previous;
         if (index > 0) {
-            const auto ref = notes.at(index - 1);
-            previous = ref.toNote().pitchBend;
-            previousLength = ref.length();
+            previous = PreviousBend::of(notes.at(index - 1).toNote(), current);
         }
-        const auto after =
-            PitchBend::drawn(before, previous, previousLength, tempos.tempo(index), tick, values);
+        const auto after = PitchBend::drawn(before, previous, tempos.tempo(index), tick, values);
         if (after == before) {
             return true;
         }

@@ -1413,11 +1413,9 @@ namespace hello::daw {
                     continue;
                 }
                 const auto &bend = notes.at(i - first).pitchBend;
-                std::optional<kit::PitchBend> previous;
-                int previousLength = 0;
+                kit::PreviousBend previous;
                 if (i > 0) {
-                    previous = notes.at(i - 1 - first).pitchBend;
-                    previousLength = notes.at(i - 1 - first).length;
+                    previous = kit::PreviousBend::of(notes.at(i - 1 - first), notes.at(i - first));
                 }
                 const double tempo = timeline->tempoMap().tempo(i);
 
@@ -1433,8 +1431,7 @@ namespace hello::daw {
                 }
                 QPolygonF line;
                 for (double tick = from;; tick = std::min(tick + step, to)) {
-                    const double cents =
-                        kit::PitchBend::curveAt(bend, previous, previousLength, tick, tempo);
+                    const double cents = kit::PitchBend::curveAt(bend, previous, tick, tempo);
                     line.push_back(QPointF(time.toX(double(entry.start) + tick),
                                            keys.toY(entry.key + 0.5 + cents / 100)));
                     if (tick >= to) {
@@ -2675,11 +2672,9 @@ namespace hello::daw {
                 if (m_erases && !hasValues) {
                     continue;
                 }
-                std::optional<kit::PitchBend> previous;
-                int previousLength = 0;
+                kit::PreviousBend previous;
                 if (i > 0) {
-                    previous = refs.at(i - 1).toNote().pitchBend;
-                    previousLength = timeline->note(i - 1).length;
+                    previous = kit::PreviousBend::of(refs.at(i - 1).toNote(), note);
                 }
                 const double tempo = timeline->tempoMap().tempo(i);
 
@@ -2718,9 +2713,9 @@ namespace hello::daw {
                     }
                     const double at = origin + BendInterval * double(k);
                     const auto key = keyAt(double(entry.start) + at);
-                    values.push_back(key ? std::round((*key - entry.key - 0.5) * 100)
-                                         : std::round(kit::PitchBend::curveAt(
-                                               bend, previous, previousLength, at, tempo)));
+                    values.push_back(
+                        key ? std::round((*key - entry.key - 0.5) * 100)
+                            : std::round(kit::PitchBend::curveAt(bend, previous, at, tempo)));
                 }
                 if (values.isEmpty()) {
                     continue;
@@ -2731,16 +2726,15 @@ namespace hello::daw {
                     // From the first reading, the curve as it was up to the stroke
                     QList<double> before;
                     for (qsizetype j = 0; j < firstK; ++j) {
-                        before.push_back(std::round(
-                            kit::PitchBend::curveAt(bend, previous, previousLength,
-                                                    origin + BendInterval * double(j), tempo)));
+                        before.push_back(std::round(kit::PitchBend::curveAt(
+                            bend, previous, origin + BendInterval * double(j), tempo)));
                     }
                     values = before + values;
                     tick = origin;
                 }
                 m_drawn.insert(i, {tick, values});
                 m_roll->bendPreview.insert(
-                    i, kit::PitchBend::drawn(bend, previous, previousLength, tempo, tick, values));
+                    i, kit::PitchBend::drawn(bend, previous, tempo, tick, values));
             }
             m_roll->view->viewport()->update();
         }

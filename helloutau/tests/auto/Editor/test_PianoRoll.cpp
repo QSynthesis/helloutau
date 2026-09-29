@@ -716,9 +716,11 @@ private Q_SLOTS:
             laValues[k] = 100;
         }
         QCOMPARE(notes[0].pitchBend->values, laValues);
-        // At 422 ticks, la was 0 before the stroke; afterwards it is 60, on its way from 100.
+        // Before li, its curve is that of la, 200 cents lower. At 422 ticks la was 0 before the
+        // stroke, so -200 for li; afterwards it is 60, on its way from 100.
         QList<double> liValues(4, -100);
-        liValues.append(QList<double>(13, 0));
+        liValues.append(QList<double>(12, -200));
+        liValues.append(0);
         QCOMPARE(notes[1].pitchBend, std::optional(kit::PitchBend{-78.0, liValues}));
         QCOMPARE(session.currentStep(), 1);
     }

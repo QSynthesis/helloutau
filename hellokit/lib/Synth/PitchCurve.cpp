@@ -67,8 +67,7 @@ namespace hello::kit {
         const Note *previous = index > 0 ? &notes.at(index - 1) : nullptr;
         m_bend = note.pitchBend;
         if (previous) {
-            m_previousBend = previous->pitchBend;
-            m_previousLength = previous->length;
+            m_previousBend = PreviousBend::of(*previous, note);
             m_previous = partOf(*previous);
             if (!m_previous.points.isEmpty() && index > 1) {
                 correct(&notes.at(index - 2), *previous, m_previous.points.first());
@@ -121,7 +120,7 @@ namespace hello::kit {
     }
 
     double PitchCurve::mode1At(double tick) const {
-        return PitchBend::curveAt(m_bend, m_previousBend, m_previousLength, tick, m_tempo);
+        return PitchBend::curveAt(m_bend, m_previousBend, tick, m_tempo);
     }
 
     QList<int> PitchCurve::mode1Values(const Timing &timing) const {

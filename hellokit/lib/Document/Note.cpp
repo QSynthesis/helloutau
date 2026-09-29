@@ -151,9 +151,10 @@ namespace hello::kit {
             return ticks / ticksPerQuarter * 1000 * 60 / tempo;
         }
 
-        // The value of bend at tick, or none before its first value
+        // The value of bend at tick, or none before its first value, or none from the end of
+        // the interval after its last value on unless beyond is true, which gives 0 there
         std::optional<double> valueAt(const std::optional<PitchBend> &bend, double tick,
-                                      double tempo) {
+                                      double tempo, bool beyond) {
             if (!bend || bend->values.isEmpty()) {
                 return std::nullopt;
             }
@@ -164,30 +165,37 @@ namespace hello::kit {
             const auto &values = bend->values;
             const auto k = qsizetype(std::floor(position));
             if (k >= values.size()) {
-                return 0.0;
+                return beyond ? std::optional<double>(0) : std::nullopt;
             }
             const double next = values[std::min(k + 1, values.size() - 1)];
             return values[k] + (next - values[k]) * (position - double(k));
         }
-
     }
 
-    double PitchBend::curveAt(const std::optional<PitchBend> &bend,
-                              const std::optional<PitchBend> &previous, int previousLength,
+    PreviousBend PreviousBend::of(const Note &previous, const Note &note) {
+        PreviousBend result;
+        result.bend = previous.pitchBend;
+        result.length = previous.length;
+        if (!previous.isRest() && previous.noteNum > 0) {
+            result.offset = (previous.noteNum - note.noteNum) * 100.0;
+        }
+        return result;
+    }
+
+    double PitchBend::curveAt(const std::optional<PitchBend> &bend, const PreviousBend &previous,
                               double tick, double tempo) {
-        if (const auto own = valueAt(bend, tick, tempo)) {
+        if (const auto own = valueAt(bend, tick, tempo, true)) {
             return *own;
         }
         if (tick < 0) {
-            if (const auto before = valueAt(previous, tick + previousLength, tempo)) {
-                return *before;
+            if (const auto before = valueAt(previous.bend, tick + previous.length, tempo, false)) {
+                return *before + previous.offset;
             }
         }
         return 0;
     }
 
-    PitchBend PitchBend::drawn(const std::optional<PitchBend> &bend,
-                               const std::optional<PitchBend> &previous, int previousLength,
+    PitchBend PitchBend::drawn(const std::optional<PitchBend> &bend, const PreviousBend &previous,
                                double tempo, double tick, const QList<double> &values) {
         if (values.isEmpty()) {
             return bend.value_or(PitchBend());
@@ -219,8 +227,8 @@ namespace hello::kit {
             } else if (k >= 0 && k < size) {
                 result.values.push_back(bend->values[k]);
             } else {
-                result.values.push_back(std::round(curveAt(
-                    bend, previous, previousLength, origin + double(k) * BendInterval, tempo)));
+                result.values.push_back(
+                    std::round(curveAt(bend, previous, origin + double(k) * BendInterval, tempo)));
             }
         }
         return result;

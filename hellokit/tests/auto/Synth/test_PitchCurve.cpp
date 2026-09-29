@@ -295,6 +295,42 @@ private Q_SLOTS:
         QCOMPARE(readings.mid(1, 3), (QList<int>{190, 0, 0}));
     }
 
+    // The previous note counts relative to this one: its values move by the difference of the
+    // pitches, as far as they reach with the interval after them, and beyond that the curve is
+    // 0. UTAU passed these readings for li after la in the tuning comparison of step 5 in
+    // docs/Tuning.md, the first 85 ticks before li.
+    void mode1_counts_the_previous_note_from_this_one() {
+        QList<double> laValues;
+        for (int k = 0; k < 26; ++k) {
+            laValues.push_back(-100 + 4 * k);
+        }
+        laValues.append(QList<double>(60, 0));
+        auto la = note(QStringLiteral("la"), 60);
+        la.pitchBend = PitchBend{-31.25, laValues};
+        auto li = note(QStringLiteral("li"), 62);
+        li.pitchBend = PitchBend{-41.667, QList<double>(20, 50)};
+
+        PitchCurve::Timing timing;
+        timing.preUtterance = 85 * 125.0 / 120;
+        QCOMPARE(PitchCurve({la, li}, 1, 120).mode1Values(timing).mid(0, 10),
+                 (QList<int>{-200, 0, 0, 0, 0, 0, 0, 0, 0, 50}));
+
+        // After a rest, as for the first Mode2 point, the values do not move.
+        la.lyric = QStringLiteral("R");
+        la.pitchBend->values.last() = 30;
+        QCOMPARE(PitchCurve({la, li}, 1, 120).mode1Values(timing).first(), 30);
+    }
+
+    // Where the values of a note end before its start, the curve is 0 there, not that of the
+    // previous note. Not yet measured in UTAU (docs/Synth.md).
+    void mode1_values_that_end_before_the_start_end_the_curve() {
+        auto a = bent(QList<double>(96, 100), 0);
+        auto b = bent({50, 50}, -60 * 125.0 / 120);
+        const PitchCurve curve({a, b}, 1, 120);
+        QCOMPARE(curve.mode1At(-55), 50.0);
+        QCOMPARE(curve.mode1At(-30), 0.0);
+    }
+
     // With Mode2 off the resampler receives the curve of Mode1, with it on the curve of the
     // points and the vibrato.
     void the_setting_of_the_project_chooses_the_curve() {

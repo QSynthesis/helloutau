@@ -25,12 +25,14 @@
 #include <filesystem>
 #include <string>
 
+#include <QtCore/QRegularExpression>
 #include <QtCore/QString>
 
 #include <stdcorelib/console.h>
 #include <stdcorelib/support/commandline.h>
 #include <stdcorelib/system.h>
 
+#include <hellokit/Document/DocumentConstants.h>
 #include <hellokit/Document/UstDocument.h>
 #include <hellokit/Support/TextCodec.h>
 #include <hellokit/Synth/SynthPlan.h>
@@ -287,11 +289,29 @@ namespace {
         stdc::u8printf("plan: %d notes\n", int(plan->steps().size()));
 
         QString error;
-        const auto calls =
+        auto calls =
             readScript(pathOf(script), fromStd(option(result, "--script-charset")), &error);
         if (!calls) {
             stdc::console::u8fprintf(stderr, "error: %s\n", toStd(error).c_str());
             return 1;
+        }
+        // The control note of a UST that HelloUtau wrote, which UTAU renders as a note of its
+        // own and HelloUtau does not read as one (docs/UsthFormat.md)
+        if (!calls->isEmpty() && !calls->first().resamplerArguments.isEmpty()) {
+            const auto &sample = calls->first().resamplerArguments.first();
+            const auto name =
+                sample.mid(sample.lastIndexOf(QRegularExpression(QStringLiteral("[\\\\/]"))) + 1);
+            if (name.compare(QLatin1String(controlNoteLyric) + QStringLiteral(".wav"),
+                             Qt::CaseInsensitive) == 0) {
+                calls->removeFirst();
+                // UTAU numbers the notes after it from 1.
+                for (auto &call : *calls) {
+                    if (call.noteIndex) {
+                        --*call.noteIndex;
+                    }
+                }
+                stdc::u8printf("script: the control note left out\n");
+            }
         }
         int withResampler = 0;
         for (const auto &call : *calls) {

@@ -57,8 +57,9 @@ namespace hello::kit {
         QList<int> values(const Timing &timing) const;
 
         /// The curve of Mode1 at \a tick, counted from the start of the note, as measured in
-        /// UTAU: PitchBend::curveAt() of Note::pitchBend and that of the previous note, at the
-        /// tempo of the note. Neither the Mode2 points nor the vibrato take part.
+        /// UTAU: PitchBend::curveAt() of Note::pitchBend after the previous note
+        /// (PreviousBend::of()), at the tempo of the note. Neither the Mode2 points nor the vibrato
+        /// take part.
         double mode1At(double tick) const;
 
         /// The values of the curve of Mode1 at the ticks of values(), each rounded.
@@ -101,8 +102,7 @@ namespace hello::kit {
         double m_tempo;
 
         // The Mode1 values of the previous note and this one
-        std::optional<PitchBend> m_previousBend;
-        int m_previousLength = 0;
+        PreviousBend m_previousBend;
         std::optional<PitchBend> m_bend;
 
         double ticksOf(double milliseconds) const;
