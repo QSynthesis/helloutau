@@ -82,6 +82,8 @@
         <action id="helloutau.tools.editVoiceBank" text="Edit &amp;Voice Bank" category="Tools" />
         <!-- The entry that the first selected note uses, in the window of the voice bank -->
         <action id="helloutau.tools.showEntry" text="Go to Voice Bank &amp;Entry" category="Tools" />
+        <!-- Deletes the fragments and the track file of the render cache of the project -->
+        <action id="helloutau.tools.clearCache" text="&amp;Clear Render Cache" category="Tools" />
 
         <menu id="helloutau.mainMenu" topLevel="true" />
         <menu id="helloutau.file" text="&amp;File" />
@@ -172,6 +174,7 @@
             <menu id="helloutau.tools">
                 <action id="helloutau.tools.editVoiceBank" />
                 <action id="helloutau.tools.showEntry" />
+                <action id="helloutau.tools.clearCache" />
                 <separator />
                 <action id="helloutau.tools.settings" />
             </menu>

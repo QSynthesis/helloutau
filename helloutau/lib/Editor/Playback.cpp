@@ -484,6 +484,41 @@ namespace hello::daw {
         return impl.startTime + impl.output->elapsed();
     }
 
+    std::optional<int> Playback::clearCache(const kit::ProjectDocument &document,
+                                            kit::DiagnosticList &diagnostics) {
+        stdc_impl_t;
+        if (impl.state == Rendering || impl.rendersStill()) {
+            fail(diagnostics, tr("A render has not ended yet. Closing its console window stops "
+                                 "it."));
+            return std::nullopt;
+        }
+        // The synth waits for the engine calls under way, which would write into the cache.
+        stop();
+        impl.synth.reset();
+
+        namespace fs = std::filesystem;
+        const auto directory = cacheDirectoryFor(document);
+        int deleted = 0;
+        std::error_code error;
+        for (fs::directory_iterator it(directory, error), end; !error && it != end;
+             it.increment(error)) {
+            std::error_code status;
+            if (!it->is_regular_file(status)) {
+                continue;
+            }
+            std::error_code removal;
+            if (fs::remove(it->path(), removal)) {
+                ++deleted;
+            } else {
+                diagnostics.push_back({kit::DiagnosticSeverity::Warning,
+                                       tr("\"%1\" could not be deleted.")
+                                           .arg(QString::fromStdU16String(it->path().u16string())),
+                                       std::nullopt});
+            }
+        }
+        return deleted;
+    }
+
     std::filesystem::path Playback::cacheDirectoryFor(const kit::ProjectDocument &document) {
         stdc_impl_t;
         // The .usth, or else the UST imported, whose cache UTAU uses as well

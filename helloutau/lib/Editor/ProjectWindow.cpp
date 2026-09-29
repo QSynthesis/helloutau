@@ -225,6 +225,21 @@ namespace hello::daw {
             });
         }
 
+        // Deletes the render cache of the project; the realtime mode renders it anew.
+        void clearCache() {
+            stdc_decl_t;
+            kit::DiagnosticList diagnostics;
+            const auto deleted = playback->clearCache(*document, diagnostics);
+            DiagnosticBox::show(&decl, tr("Clear Render Cache"), diagnostics);
+            if (!deleted) {
+                return;
+            }
+            decl.statusBar()->showMessage(
+                ProjectWindow::tr("%n file(s) deleted from the render cache.", nullptr, *deleted),
+                StatusMessageTimeout);
+            updateBackground();
+        }
+
         // How far each note is rendered, on the ruler: as the background renders them, or by
         // the fragments in the cache (the render states in docs/Widgets.md)
         void updateRenderStates() {
@@ -523,6 +538,7 @@ namespace hello::daw {
                 palette->popup();
             });
             addCommand(QStringLiteral("helloutau.playback.play"), [this] { togglePlayback(); });
+            addCommand(QStringLiteral("helloutau.tools.clearCache"), [this] { clearCache(); });
             addCommand(QStringLiteral("helloutau.tools.settings"), [this] {
                 stdc_decl_t;
                 editor->showSettings(&decl);

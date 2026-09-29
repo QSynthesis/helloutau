@@ -290,6 +290,41 @@ private Q_SLOTS:
         QVERIFY(!playback.position());
     }
 
+    // Clearing the cache deletes its files, not its folders, and the fragments in memory; not
+    // while a render goes on, which writes into it.
+    void the_cache_is_cleared_of_its_files() {
+        using S = kit::RealtimeSynth;
+        QTemporaryDir dir;
+        const auto document = singingDocument(dir);
+        QVERIFY(document);
+        Playback playback;
+        QVERIFY(writeFragments(playback, *document));
+        const auto cache = playback.cacheDirectoryFor(*document);
+        fs::create_directories(cache / "kept");
+        kit::SynthEngines engines;
+        engines.resampler = fs::path(dir.path().toStdU16String()) / "missing.exe";
+        kit::DiagnosticList diagnostics;
+        QVERIFY(playback.prepare(*document, std::nullopt, engines, diagnostics));
+        QTRY_COMPARE(playback.noteStates(*document), (QList<S::NoteState>{S::Ready, S::Ready}));
+
+        QCOMPARE(playback.clearCache(*document, diagnostics), std::optional<int>(2));
+        QVERIFY(diagnostics.isEmpty());
+        QVERIFY(fs::is_directory(cache / "kept"));
+        QCOMPARE(playback.noteStates(*document), (QList<S::NoteState>{S::Waiting, S::Waiting}));
+
+        const auto runner = std::make_shared<SilentRunner>();
+        runner->hold = true;
+        playback.setRunner(runner);
+        if (!playback.play(*document, std::nullopt, someEngines(), diagnostics)) {
+            return;
+        }
+        QTRY_COMPARE(runner->started.load(), 1);
+        QVERIFY(!playback.clearCache(*document, diagnostics));
+        QVERIFY(kit::hasError(diagnostics));
+        runner->hold = false;
+        playback.stop();
+    }
+
     // A render that goes on after it was cancelled, as a script does in its console, has to
     // end before the next can start, which would write the same files.
     void a_render_cancelled_ends_before_the_next() {

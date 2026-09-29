@@ -114,6 +114,16 @@ namespace hello::daw {
         /// The directory of the render cache of \a document.
         std::filesystem::path cacheDirectoryFor(const kit::ProjectDocument &document);
 
+        /// Stops playing, forgets the fragments held in memory, and deletes the files of the
+        /// render cache of \a document: the files directly in the directory, which the engines
+        /// and the renders wrote, and not the folders in it.
+        ///
+        /// \return the number of files deleted, or \c std::nullopt if a render has not ended,
+        ///         whose script would write into the cache meanwhile; the files that could not
+        ///         be deleted are in \a diagnostics
+        std::optional<int> clearCache(const kit::ProjectDocument &document,
+                                      kit::DiagnosticList &diagnostics);
+
     Q_SIGNALS:
         void stateChanged(State state);
 
