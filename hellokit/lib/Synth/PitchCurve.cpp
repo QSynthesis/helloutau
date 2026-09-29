@@ -1,6 +1,5 @@
 #include "PitchCurve.h"
 
-#include <algorithm>
 #include <cmath>
 #include <limits>
 
@@ -122,15 +121,7 @@ namespace hello::kit {
     }
 
     double PitchCurve::mode1At(double tick) const {
-        if (const auto own = bendAt(m_bend, tick)) {
-            return *own;
-        }
-        if (tick < 0) {
-            if (const auto previous = bendAt(m_previousBend, tick + m_previousLength)) {
-                return *previous;
-            }
-        }
-        return 0;
+        return PitchBend::curveAt(m_bend, m_previousBend, m_previousLength, tick, m_tempo);
     }
 
     QList<int> PitchCurve::mode1Values(const Timing &timing) const {
@@ -154,24 +145,6 @@ namespace hello::kit {
             ticks.push_back(tick);
         }
         return ticks;
-    }
-
-    std::optional<double> PitchCurve::bendAt(const std::optional<PitchBend> &bend,
-                                             double tick) const {
-        if (!bend || bend->values.isEmpty()) {
-            return std::nullopt;
-        }
-        const double position = (tick - ticksOf(bend->start.value_or(0))) / 5;
-        if (position < 0) {
-            return std::nullopt;
-        }
-        const auto &values = bend->values;
-        const auto k = qsizetype(std::floor(position));
-        if (k >= values.size()) {
-            return 0.0;
-        }
-        const double next = values[std::min(k + 1, values.size() - 1)];
-        return values[k] + (next - values[k]) * (position - double(k));
     }
 
     PitchCurve::Impact PitchCurve::impactOf(const Part &part, double tick, Whose whose) const {

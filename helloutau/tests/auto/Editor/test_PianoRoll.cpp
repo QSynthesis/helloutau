@@ -522,6 +522,123 @@ private Q_SLOTS:
         return session.snapshot().tracks[0].notes[1].portamento;
     }
 
+    // A stroke with button from \a from to \a to, through the middle
+    static void stroke(PianoRoll &roll, Qt::MouseButton button, QPoint from, QPoint to) {
+        const auto viewport = roll.view()->viewport();
+        QTest::mousePress(viewport, button, {}, from);
+        QTest::mouseMove(viewport, (from + to) / 2);
+        QTest::mouseMove(viewport, to);
+        QTest::mouseRelease(viewport, button, {}, to);
+    }
+
+    // With Mode2 off, the points are hidden; the pitch tool draws the Mode1 values of the notes
+    // along a stroke, a note without values starting them at its first reading, and a stroke
+    // with the right button returns them to 0, each in one step.
+    void mode1_values_are_drawn_and_erased() {
+        auto project = bentNotes();
+        project.settings.mode2 = false;
+        kit::ProjectSession session(project);
+        PianoRoll roll(&session);
+        showExactly(roll);
+        const auto hit = roll.view()->hitAt(pointOfLi(roll, 0, 100));
+        QVERIFY(!hit || hit->part != PianoRoll::PitchPoint);
+        roll.setTool(PianoRoll::PitchTool);
+
+        // Across la, 100 cents above it, from about 100 ticks to about 300. Without a voice
+        // bank the first reading is at the start of the note.
+        const auto &time = roll.view()->timeAxis();
+        const auto from = QPointF(time.toX(100), roll.view()->keyAxis().toY(61.5)).toPoint();
+        const auto to = QPointF(time.toX(300), roll.view()->keyAxis().toY(61.5)).toPoint();
+        stroke(roll, Qt::LeftButton, from, to);
+        const auto first = int(std::ceil(time.toTick(from.x()) / 5));
+        const auto last = int(std::floor(time.toTick(to.x()) / 5));
+        QList<double> values(first, 0);
+        values.append(QList<double>(last - first + 1, 100));
+        auto bend = session.snapshot().tracks[0].notes[0].pitchBend;
+        QVERIFY(bend);
+        QCOMPARE(bend->start, std::optional<double>(0));
+        QCOMPARE(bend->values, values);
+        QVERIFY(!session.snapshot().tracks[0].notes[1].pitchBend);
+        QCOMPARE(session.currentStep(), 1);
+        QCOMPARE(session.undoMessage(), PianoRoll::tr("Draw Pitch"));
+
+        // The right button erases with any tool, only where the values are.
+        roll.setTool(PianoRoll::SelectTool);
+        const auto eraseFrom = QPointF(time.toX(200), roll.view()->keyAxis().toY(65)).toPoint();
+        const auto eraseTo = QPointF(time.toX(700), roll.view()->keyAxis().toY(65)).toPoint();
+        stroke(roll, Qt::RightButton, eraseFrom, eraseTo);
+        for (int k = int(std::ceil(time.toTick(eraseFrom.x()) / 5)); k <= last; ++k) {
+            values[k] = 0;
+        }
+        bend = session.snapshot().tracks[0].notes[0].pitchBend;
+        QCOMPARE(bend->values, values);
+        QVERIFY(!session.snapshot().tracks[0].notes[1].pitchBend);
+        QCOMPARE(session.undoMessage(), PianoRoll::tr("Reset Pitch"));
+
+        // With Mode2 on, the points are back, and the pitch tool selects.
+        kit::DiagnosticList diagnostics;
+        QVERIFY(
+            kit::ProjectEdits::setMode2(kit::ProjectRef(&session).settings(), true, diagnostics));
+        const auto point = roll.view()->hitAt(pointOfLi(roll, 0, 100));
+        QVERIFY(point && point->part == PianoRoll::PitchPoint);
+        roll.setTool(PianoRoll::PitchTool);
+        const int step = session.currentStep();
+        stroke(roll, Qt::RightButton, eraseFrom, eraseTo);
+        QCOMPARE(session.currentStep(), step);
+        click(roll, 240, 60);
+        QCOMPARE(roll.selectedIndices(), QList<int>{0});
+    }
+
+    // A stroke across two notes: the values that the second note gains before its own, beyond
+    // the stroke, take the curve of the first note as it was before the stroke, which there
+    // still leans towards its last drawn value.
+    void a_stroke_fills_from_the_curve_as_it_was() {
+        // At 125 bpm a tick is a millisecond. la has values of 0 over its length; li reads
+        // its curve from 100 ms before it, and has one value 2 ms after its start.
+        kit::Note la;
+        la.lyric = QStringLiteral("la");
+        la.length = 480;
+        la.noteNum = 60;
+        la.pitchBend = kit::PitchBend{0.0, QList<double>(97, 0)};
+        kit::Note li = la;
+        li.lyric = QStringLiteral("li");
+        li.noteNum = 62;
+        li.preUtterance = 100;
+        li.pitchBend = kit::PitchBend{2.0, {0}};
+        kit::Project project;
+        project.settings.tempo = 125;
+        project.settings.mode2 = false;
+        project.tracks.push_back({});
+        project.tracks[0].notes = {la, li};
+        kit::ProjectSession session(project);
+        PianoRoll roll(&session);
+        show(roll);
+        auto time = roll.view()->timeAxis();
+        time.left = 0;
+        time.pixelsPerTick = 1;
+        roll.view()->setTimeAxis(time);
+        auto keys = roll.view()->keyAxis();
+        keys.top = 70;
+        keys.pixelsPerKey = 24;
+        roll.view()->setKeyAxis(keys);
+        roll.setTool(PianoRoll::PitchTool);
+
+        // From 400 to 421 ticks at 61.5 keys: la takes 100 cents at 400 to 420, li -100 cents
+        // at 402 to 417 (-78 to -63 ms from its start).
+        stroke(roll, Qt::LeftButton, QPoint(400, 204), QPoint(421, 204));
+        const auto notes = session.snapshot().tracks[0].notes;
+        auto laValues = la.pitchBend->values;
+        for (int k = 80; k <= 84; ++k) {
+            laValues[k] = 100;
+        }
+        QCOMPARE(notes[0].pitchBend->values, laValues);
+        // At 422 ticks, la was 0 before the stroke; afterwards it is 60, on its way from 100.
+        QList<double> liValues(4, -100);
+        liValues.append(QList<double>(13, 0));
+        QCOMPARE(notes[1].pitchBend, std::optional(kit::PitchBend{-78.0, liValues}));
+        QCOMPARE(session.currentStep(), 1);
+    }
+
     // A point moves in time and height in one step; the first point after a sung note and the
     // last one move only in time, and a point passes its neighbours into its place in time.
     void a_point_is_dragged_past_its_neighbours() {

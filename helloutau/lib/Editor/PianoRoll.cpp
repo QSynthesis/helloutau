@@ -99,6 +99,9 @@ namespace hello::daw {
         // its start, when a point is inserted.
         constexpr double DefaultPortamento = 15;
 
+        // The Mode1 values lie this many ticks apart (kit::PitchBend).
+        constexpr double BendInterval = 5;
+
         // The parameter area below the roll is this high, spans the volumes of an envelope from 0
         // to this many percent, and leaves this many pixels above and below them.
         constexpr int ParameterHeight = 120;
@@ -248,6 +251,7 @@ namespace hello::daw {
         class DrawGesture;
         class PointGesture;
         class VibratoGesture;
+        class BendGesture;
 
         explicit Impl(Decl *decl) : _decl(decl) {
         }
@@ -274,6 +278,8 @@ namespace hello::daw {
         QHash<int, kit::Vibrato> vibratoPreview;
         // What a gesture shows instead of the envelope of a note, by note index
         QHash<int, kit::Envelope> envelopePreview;
+        // What a gesture shows instead of the Mode1 values of a note, by note index
+        QHash<int, kit::PitchBend> bendPreview;
 
         // The parameter area, what it shows, and the buttons that choose it
         SceneView *parameters = nullptr;
@@ -325,6 +331,31 @@ namespace hello::daw {
             return kit::ProjectRef(session).tracks().at(0).notes();
         }
 
+        // Whether the project turns Mode2 off, so that the pitch is that of the Mode1 values
+        bool mode1() const {
+            return !kit::ProjectRef(session).settings().mode2();
+        }
+
+        // Whether the Mode2 points and the vibratos are drawn and edited
+        bool pointsShown() const {
+            return pitchVisible && !mode1();
+        }
+
+        // Whether the Mode1 pitch is drawn and edited
+        bool bendShown() const {
+            return pitchVisible && mode1();
+        }
+
+        // Whether a press with button draws the Mode1 pitch: the left button with the pitch
+        // tool, the right one with any tool
+        bool drawsBend(Qt::MouseButton button) const {
+            return bendShown() &&
+                   ((button == Qt::LeftButton && tool == PitchTool) || button == Qt::RightButton);
+        }
+
+        // A stroke of the Mode1 pitch from position, see BendGesture
+        std::unique_ptr<SceneGesture> bendGesture(QPointF position, Qt::MouseButton button);
+
         int indexOf(kit::edit::NodeId id) const {
             for (int i = 0; i < timeline->noteCount(); ++i) {
                 if (timeline->note(i).id == id) {
@@ -365,7 +396,7 @@ namespace hello::daw {
                 return;
             }
             int note = -1;
-            if (position && pitchVisible) {
+            if (position && pointsShown()) {
                 if (const auto hit = view->hitAt(*position); hit && hit->part == PitchPoint) {
                     note = indexOf(hit->node);
                 } else if (const auto near = portamentoNear(*position)) {
@@ -971,8 +1002,9 @@ namespace hello::daw {
         std::optional<SceneHit> hitTest(QPointF position) const override {
             SceneHit hit;
             hit.part = Background;
-            if (m_roll->tool == PenTool &&
-                view()->timeAxis().toTick(position.x()) >= double(m_roll->timeline->length())) {
+            if ((m_roll->tool == PenTool &&
+                 view()->timeAxis().toTick(position.x()) >= double(m_roll->timeline->length())) ||
+                m_roll->drawsBend(Qt::LeftButton)) {
                 hit.cursor = Qt::CrossCursor;
             }
             return hit;
@@ -1033,7 +1065,9 @@ namespace hello::daw {
             SceneHit hit;
             hit.node = note.id;
             hit.part = NoteBody;
-            if (rect.width() >= MinimumGripWidth && position.x() >= rect.right() - EndGrip) {
+            if (m_roll->drawsBend(Qt::LeftButton)) {
+                hit.cursor = Qt::CrossCursor;
+            } else if (rect.width() >= MinimumGripWidth && position.x() >= rect.right() - EndGrip) {
                 hit.part = NoteEnd;
                 hit.cursor = Qt::SizeHorCursor;
             }
@@ -1045,6 +1079,10 @@ namespace hello::daw {
                                             Qt::KeyboardModifiers modifiers) override;
 
         bool doubleClick(const SceneHit &hit, QPointF position) override {
+            // The pitch tool only draws.
+            if (m_roll->drawsBend(Qt::LeftButton)) {
+                return true;
+            }
             // On the portamento a double click inserts a point.
             if (m_roll->insertPointAt(position)) {
                 return true;
@@ -1137,6 +1175,13 @@ namespace hello::daw {
                     it != m_roll->vibratoPreview.end()) {
                     notes.last().vibrato = *it;
                 }
+                if (const auto it = m_roll->bendPreview.find(i); it != m_roll->bendPreview.end()) {
+                    notes.last().pitchBend = *it;
+                }
+            }
+            if (m_roll->mode1()) {
+                paintBends(painter, exposed, notes, first, begin, end);
+                return;
             }
 
             const auto decl = m_roll->_decl;
@@ -1300,7 +1345,7 @@ namespace hello::daw {
         }
 
         std::optional<SceneHit> hitTest(QPointF position) const override {
-            if (!m_roll->pitchVisible || !m_roll->placements.isEmpty()) {
+            if (!m_roll->pointsShown() || !m_roll->placements.isEmpty()) {
                 return std::nullopt;
             }
             // The notes around the position, and the next one, whose points may lie before it
@@ -1348,6 +1393,58 @@ namespace hello::daw {
 
     private:
         PianoRoll::Impl *m_roll;
+
+        // The Mode1 pitch of the sung notes from begin to end, of which notes holds those from
+        // first on, drawn as the portamento is: each note over its own span, and a note after
+        // a rest or none from its first value on
+        void paintBends(QPainter &painter, const QRect &exposed, const QList<kit::Note> &notes,
+                        int first, int begin, int end) {
+            const auto timeline = m_roll->timeline;
+            const auto &time = view()->timeAxis();
+            const auto &keys = view()->keyAxis();
+            const double left = time.toTick(exposed.left());
+            const double right = time.toTick(exposed.right() + 1);
+            const double step = std::max(1.0, CurveStep / time.pixelsPerTick);
+            painter.setRenderHint(QPainter::Antialiasing);
+            painter.setBrush(Qt::NoBrush);
+            painter.setPen(QPen(m_roll->_decl->pitchColor(), 1.5));
+            for (int i = begin; i < end; ++i) {
+                const auto &entry = timeline->note(i);
+                if (entry.rest) {
+                    continue;
+                }
+                const auto &bend = notes.at(i - first).pitchBend;
+                std::optional<kit::PitchBend> previous;
+                int previousLength = 0;
+                if (i > 0) {
+                    previous = notes.at(i - 1 - first).pitchBend;
+                    previousLength = notes.at(i - 1 - first).length;
+                }
+                const double tempo = timeline->tempoMap().tempo(i);
+
+                double from = 0;
+                if ((i == 0 || timeline->note(i - 1).rest) && bend && !bend->values.isEmpty()) {
+                    from = std::min(0.0, m_roll->ticksOf(bend->start.value_or(0), i));
+                }
+                from = std::max(from, left - double(entry.start) - step);
+                const double to =
+                    std::min(double(entry.length), right - double(entry.start) + step);
+                if (from >= to) {
+                    continue;
+                }
+                QPolygonF line;
+                for (double tick = from;; tick = std::min(tick + step, to)) {
+                    const double cents =
+                        kit::PitchBend::curveAt(bend, previous, previousLength, tick, tempo);
+                    line.push_back(QPointF(time.toX(double(entry.start) + tick),
+                                           keys.toY(entry.key + 0.5 + cents / 100)));
+                    if (tick >= to) {
+                        break;
+                    }
+                }
+                painter.drawPolyline(line);
+            }
+        }
 
         // The context menu of point j of note index: its shape, and its removal
         void showMenu(int index, int j, QPointF position) {
@@ -2041,7 +2138,7 @@ namespace hello::daw {
 
             // With the pitch shown, the points in the rectangle if there are any, among them
             // those of the notes beside it, which may lie beyond their notes
-            if (m_roll->pitchVisible) {
+            if (m_roll->pointsShown()) {
                 auto points = m_basePoints;
                 bool found = false;
                 const auto refs = m_roll->notes();
@@ -2392,6 +2489,192 @@ namespace hello::daw {
         kit::Vibrato m_original;
     };
 
+    // A stroke of the Mode1 pitch (step 5 in docs/Tuning.md). Each sung note along it takes, at
+    // the places of its values from its first reading to its end, the pitch of the path of the
+    // pointer there, a later part of the path over an earlier one, in whole cents; or 0 for a
+    // stroke that erases, which changes only the values a note has. A note without values
+    // starts them at its first reading, as UTAU does, those before the stroke taking the curve
+    // as it was. Written when released, in one step.
+    class PianoRoll::Impl::BendGesture : public SceneGesture {
+    public:
+        BendGesture(PianoRoll::Impl *roll, QPointF position, bool erases)
+            : m_roll(roll), m_erases(erases) {
+            add(position);
+            update();
+        }
+
+        void move(QPointF position, Qt::KeyboardModifiers modifiers) override {
+            Q_UNUSED(modifiers);
+            add(position);
+            update();
+        }
+
+        void release(QPointF position, Qt::KeyboardModifiers modifiers) override {
+            move(position, modifiers);
+            m_roll->bendPreview.clear();
+            m_roll->view->viewport()->update();
+            if (m_drawn.isEmpty()) {
+                return;
+            }
+            kit::DiagnosticList diagnostics;
+            auto transaction = m_roll->session->transaction(m_erases ? PianoRoll::tr("Reset Pitch")
+                                                                     : PianoRoll::tr("Draw Pitch"));
+            // From the last note back, so that each note fills its gaps from the curve of the
+            // previous note as it was
+            auto indices = m_drawn.keys();
+            std::sort(indices.begin(), indices.end(), std::greater<>());
+            const auto notes = m_roll->notes();
+            for (const int index : std::as_const(indices)) {
+                const auto &[tick, values] = m_drawn[index];
+                kit::ProjectEdits::drawPitchBend(notes, index, tick, values, diagnostics);
+            }
+            transaction.commit(diagnostics);
+            m_roll->report(diagnostics);
+        }
+
+        void cancel() override {
+            m_roll->bendPreview.clear();
+            m_roll->view->viewport()->update();
+        }
+
+    private:
+        PianoRoll::Impl *m_roll;
+        bool m_erases;
+        // The path of the pointer, in ticks and keys
+        QList<QPointF> m_path;
+        // What is written, by note index: the tick of the first value, and the values
+        QHash<int, std::pair<double, QList<double>>> m_drawn;
+
+        void add(QPointF position) {
+            const auto &time = m_roll->view->timeAxis();
+            const auto &keys = m_roll->view->keyAxis();
+            m_path.push_back({time.toTick(position.x()), keys.toKey(position.y())});
+        }
+
+        // The key of the path at tick, where the latest part of the path that spans it lies
+        std::optional<double> keyAt(double tick) const {
+            for (auto i = m_path.size() - 1; i >= 1; --i) {
+                const auto a = m_path[i - 1];
+                const auto b = m_path[i];
+                if (tick < std::min(a.x(), b.x()) || tick > std::max(a.x(), b.x())) {
+                    continue;
+                }
+                if (a.x() == b.x()) {
+                    return b.y();
+                }
+                return a.y() + (b.y() - a.y()) * (tick - a.x()) / (b.x() - a.x());
+            }
+            if (m_path.size() == 1 && tick == m_path.first().x()) {
+                return m_path.first().y();
+            }
+            return std::nullopt;
+        }
+
+        void update() {
+            m_roll->bendPreview.clear();
+            m_drawn.clear();
+            double low = m_path.first().x();
+            double high = low;
+            for (const auto &point : std::as_const(m_path)) {
+                low = std::min(low, point.x());
+                high = std::max(high, point.x());
+            }
+
+            // The notes along the path, and the next one, which reads its curve before it
+            const auto timeline = m_roll->timeline;
+            const int count = timeline->noteCount();
+            auto [begin, end] = timeline->notesBetween(low, high);
+            end = std::min(count, end + 1);
+            const auto &timings = m_roll->sampleTimings();
+            const auto refs = m_roll->notes();
+            for (int i = begin; i < end; ++i) {
+                const auto &entry = timeline->note(i);
+                if (entry.rest) {
+                    continue;
+                }
+                const auto note = refs.at(i).toNote();
+                const auto &bend = note.pitchBend;
+                const bool hasValues = bend && !bend->values.isEmpty();
+                if (m_erases && !hasValues) {
+                    continue;
+                }
+                std::optional<kit::PitchBend> previous;
+                int previousLength = 0;
+                if (i > 0) {
+                    previous = refs.at(i - 1).toNote().pitchBend;
+                    previousLength = timeline->note(i - 1).length;
+                }
+                const double tempo = timeline->tempoMap().tempo(i);
+
+                // The first reading of the resampler, as the synthesis places it
+                kit::PitchCurve::Timing timing;
+                timing.preUtterance = timings[i].preUtterance;
+                timing.startPoint = timings[i].startPoint;
+                if (i + 1 < count) {
+                    timing.nextPreUtterance = timings[i + 1].preUtterance;
+                    timing.nextOverlap = timings[i + 1].voiceOverlap;
+                }
+                const auto readings = kit::PitchCurve({note}, 0, tempo).readingTicks(timing);
+                if (readings.isEmpty()) {
+                    continue;
+                }
+                const double firstReading = readings.first();
+
+                // The places of the values within the stroke, from the first reading to the
+                // end of the note, or for an erasure within the values
+                const double origin =
+                    hasValues ? m_roll->ticksOf(bend->start.value_or(0), i) : firstReading;
+                double from = std::max(low - double(entry.start), firstReading);
+                double to = std::min(high - double(entry.start), double(entry.length));
+                if (m_erases) {
+                    from = std::max(from, origin);
+                    to = std::min(to, origin + BendInterval * double(bend->values.size() - 1));
+                }
+                auto k = qsizetype(std::ceil((from - origin) / BendInterval - 1e-9));
+                QList<double> values;
+                for (; origin + BendInterval * double(k) <= to + 1e-9 &&
+                       origin + BendInterval * double(k) < double(entry.length);
+                     ++k) {
+                    if (m_erases) {
+                        values.push_back(0);
+                        continue;
+                    }
+                    const double at = origin + BendInterval * double(k);
+                    const auto key = keyAt(double(entry.start) + at);
+                    values.push_back(key ? std::round((*key - entry.key - 0.5) * 100)
+                                         : std::round(kit::PitchBend::curveAt(
+                                               bend, previous, previousLength, at, tempo)));
+                }
+                if (values.isEmpty()) {
+                    continue;
+                }
+                const auto firstK = k - values.size();
+                double tick = origin + BendInterval * double(firstK);
+                if (!hasValues) {
+                    // From the first reading, the curve as it was up to the stroke
+                    QList<double> before;
+                    for (qsizetype j = 0; j < firstK; ++j) {
+                        before.push_back(std::round(
+                            kit::PitchBend::curveAt(bend, previous, previousLength,
+                                                    origin + BendInterval * double(j), tempo)));
+                    }
+                    values = before + values;
+                    tick = origin;
+                }
+                m_drawn.insert(i, {tick, values});
+                m_roll->bendPreview.insert(
+                    i, kit::PitchBend::drawn(bend, previous, previousLength, tempo, tick, values));
+            }
+            m_roll->view->viewport()->update();
+        }
+    };
+
+    std::unique_ptr<SceneGesture> PianoRoll::Impl::bendGesture(QPointF position,
+                                                               Qt::MouseButton button) {
+        finishEditing(true);
+        return std::make_unique<BendGesture>(this, position, button == Qt::RightButton);
+    }
+
     std::unique_ptr<SceneGesture>
         PianoRoll::Impl::PitchLayer::press(const SceneHit &hit, QPointF position,
                                            Qt::MouseButton button,
@@ -2438,7 +2721,7 @@ namespace hello::daw {
 
     std::optional<std::pair<int, double>> PianoRoll::Impl::portamentoNear(QPointF position) const {
         const int count = timeline->noteCount();
-        if (!pitchVisible || count == 0) {
+        if (!pointsShown() || count == 0) {
             return std::nullopt;
         }
         const auto &time = view->timeAxis();
@@ -2519,6 +2802,9 @@ namespace hello::daw {
         PianoRoll::Impl::GridLayer::press(const SceneHit &hit, QPointF position,
                                           Qt::MouseButton button, Qt::KeyboardModifiers modifiers) {
         Q_UNUSED(hit);
+        if (m_roll->drawsBend(button)) {
+            return m_roll->bendGesture(position, button);
+        }
         if (button != Qt::LeftButton) {
             return nullptr;
         }
@@ -2534,6 +2820,9 @@ namespace hello::daw {
     std::unique_ptr<SceneGesture>
         PianoRoll::Impl::NoteLayer::press(const SceneHit &hit, QPointF position,
                                           Qt::MouseButton button, Qt::KeyboardModifiers modifiers) {
+        if (m_roll->drawsBend(button)) {
+            return m_roll->bendGesture(position, button);
+        }
         if (button != Qt::LeftButton) {
             return nullptr;
         }
@@ -2698,6 +2987,11 @@ namespace hello::daw {
             // The note being edited may be gone, as may selected ones.
             if (impl.editing && impl.indexOf(impl.editing) < 0) {
                 impl.finishEditing(false);
+            }
+            // With Mode2 off, the points are hidden and none is selected.
+            if (impl.mode1()) {
+                impl.selectedPoints.clear();
+                impl.hovered = -1;
             }
             Q_EMIT selectionChanged();
         });

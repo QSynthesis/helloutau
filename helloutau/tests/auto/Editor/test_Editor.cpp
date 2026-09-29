@@ -20,6 +20,7 @@
 #include <QtWidgets/QStatusBar>
 
 #include <hellokit/Edit/ProjectDocument.h>
+#include <hellokit/Edit/ProjectEdits.h>
 #include <hellokit/Edit/ProjectRefs.h>
 
 #include <helloutau/Widgets/CommandPalette.h>
@@ -433,6 +434,42 @@ private Q_SLOTS:
         roll = qobject_cast<PianoRoll *>(window->centralWidget());
         QCOMPARE(roll->tool(), PianoRoll::PenTool);
         QCOMPARE(roll->quantization(), 60);
+    }
+
+    // Mode2 is checked as the project has it, and turned over as an undo step. The pitch tool is
+    // enabled while Mode2 is off and the pitch shown, and otherwise gives way to the select
+    // tool.
+    void mode2_follows_the_project() {
+        const auto e = editor();
+        const auto window = e->newWindow();
+        const auto roll = qobject_cast<PianoRoll *>(window->centralWidget());
+        const auto session = window->document()->session();
+        const auto mode2 = actionNamed(window, QStringLiteral("Mode&2 Pitch"));
+        const auto pitchTool = actionNamed(window, QStringLiteral("&Freehand Pitch Tool"));
+        const auto showPitch = actionNamed(window, QStringLiteral("Show &Pitch"));
+        QVERIFY(mode2 && pitchTool && showPitch);
+        QVERIFY(mode2->isChecked());
+        QVERIFY(!pitchTool->isEnabled());
+
+        mode2->trigger();
+        QVERIFY(!mode2->isChecked());
+        QVERIFY(!session->snapshot().settings.mode2);
+        QCOMPARE(session->undoMessage(), kit::ProjectEdits::tr("Turn Mode2 Off"));
+        QVERIFY(pitchTool->isEnabled());
+        pitchTool->trigger();
+        QCOMPARE(roll->tool(), PianoRoll::PitchTool);
+
+        showPitch->trigger();
+        QVERIFY(!pitchTool->isEnabled());
+        QCOMPARE(roll->tool(), PianoRoll::SelectTool);
+        showPitch->trigger();
+        pitchTool->trigger();
+        QCOMPARE(roll->tool(), PianoRoll::PitchTool);
+
+        actionNamed(window, QStringLiteral("&Undo"))->trigger();
+        QVERIFY(mode2->isChecked());
+        QVERIFY(session->snapshot().settings.mode2);
+        QCOMPARE(roll->tool(), PianoRoll::SelectTool);
     }
 
     // The voice bank is found through the UTAU folder of the settings, the user is asked for

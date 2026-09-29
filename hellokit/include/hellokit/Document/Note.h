@@ -222,8 +222,32 @@ namespace hello::kit {
     ///       round trip through \c .ust can guarantee. No separate empty state exists, because
     ///       it could not be preserved.
     struct HELLOKIT_DOCUMENT_EXPORT PitchBend {
-        std::optional<double> start;
-        QList<double> values;
+        std::optional<double> start; ///< \c PBStart, in milliseconds from the start of the note
+        QList<double> values;        ///< \c PitchBend, in cents
+
+        /// The curve of Mode1 of a note with \a bend at \a tick, counted from the start of the
+        /// note, as UTAU passes it to the resampler (docs/Synth.md, "Mode1 的音高"): value k lies
+        /// 5 k ticks after the start, and between two values the curve is their linear
+        /// interpolation. Before the first value it is 0, but before the start of the note the
+        /// curve of \a previous, the values of the previous note, \a previousLength ticks long.
+        /// The interval after the last value holds it, and from there on the curve is 0. The
+        /// starts of both convert to ticks at \a tempo, the tempo of the note.
+        static double curveAt(const std::optional<PitchBend> &bend,
+                              const std::optional<PitchBend> &previous, int previousLength,
+                              double tick, double tempo);
+
+        /// \a bend with \a values drawn over it, the first at \a tick from the start of the note
+        /// and the others every five ticks after it, at \a tempo; \a previous and
+        /// \a previousLength are those of curveAt().
+        ///
+        /// Without values, \a bend starts at \a tick, to a thousandth of a millisecond as UTAU
+        /// writes \c PBStart. Otherwise it keeps its start, \a tick is rounded to the nearest of
+        /// its positions, and its values extend before or after as far as \a values do. The
+        /// values between those drawn and those it had take the curve as it was, rounded, so
+        /// that what is not drawn sounds as before.
+        static PitchBend drawn(const std::optional<PitchBend> &bend,
+                               const std::optional<PitchBend> &previous, int previousLength,
+                               double tempo, double tick, const QList<double> &values);
 
         inline bool operator==(const PitchBend &RHS) const {
             return start == RHS.start && values == RHS.values;

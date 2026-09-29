@@ -57,15 +57,16 @@ namespace hello::kit {
         QList<int> values(const Timing &timing) const;
 
         /// The curve of Mode1 at \a tick, counted from the start of the note, as measured in
-        /// UTAU (docs/Synth.md, "Mode1 的音高"): value k of Note::pitchBend lies 5 k ticks after
-        /// its start in milliseconds, and between two values the curve is their linear
-        /// interpolation. Before the first value it is 0, but before the start of the note the
-        /// curve of the previous note; the interval after the last value holds it, and from
-        /// there on it is 0. Neither the Mode2 points nor the vibrato take part.
+        /// UTAU: PitchBend::curveAt() of Note::pitchBend and that of the previous note, at the
+        /// tempo of the note. Neither the Mode2 points nor the vibrato take part.
         double mode1At(double tick) const;
 
         /// The values of the curve of Mode1 at the ticks of values(), each rounded.
         QList<int> mode1Values(const Timing &timing) const;
+
+        /// The ticks, counted from the start of the note, at which values() and mode1Values()
+        /// read the curve.
+        QList<double> readingTicks(const Timing &timing) const;
 
     private:
         // A point in milliseconds and tenths of a semitone, as stdutau keeps it
@@ -105,10 +106,6 @@ namespace hello::kit {
         std::optional<PitchBend> m_bend;
 
         double ticksOf(double milliseconds) const;
-        // The ticks of the values the resampler receives
-        QList<double> readingTicks(const Timing &timing) const;
-        // The Mode1 value of bend at tick, or none before its first value
-        std::optional<double> bendAt(const std::optional<PitchBend> &bend, double tick) const;
         Impact impactOf(const Part &part, double tick, Whose whose) const;
         Impact previousAt(double tick) const;
         Impact currentAt(double tick) const;

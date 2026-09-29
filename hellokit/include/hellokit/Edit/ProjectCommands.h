@@ -23,8 +23,9 @@ namespace hello::kit {
     /// - <tt>set</tt>, <tt>insert</tt>, <tt>remove</tt>, <tt>move</tt> and <tt>replace</tt>, the
     ///   node operations on the field at a path such as <tt>/tracks/0/notes/12/lyric</tt>.
     /// - <tt>note transpose \<semitones\> \<note\>...</tt>, <tt>note split \<notes\> \<index\>
-    ///   \<ticks\></tt>, <tt>note insert \<notes\> \<index\> \<note\></tt> and
-    ///   <tt>note tempo \<note\> \<tempo\></tt>, the domain functions. A note is given by its
+    ///   \<ticks\></tt>, <tt>note insert \<notes\> \<index\> \<note\></tt>,
+    ///   <tt>note tempo \<note\> \<tempo\></tt> and the others of domainFunctions(), such as
+    ///   <tt>settings mode2 \<true or false\></tt>, the domain functions. A note is given by its
     ///   path, the notes of a track by the path of their list, and a new note by its JSON.
     ///
     /// See the section on commands in docs/Editing.md.

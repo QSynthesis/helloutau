@@ -472,6 +472,105 @@ private Q_SLOTS:
         QCOMPARE(note.modulation, std::optional<double>(1000));
         QCOMPARE(note.velocity, std::optional<double>(1000));
     }
+
+    // Two notes at 125 BPM, where a tick is a millisecond; the first bends up to 60 cents at
+    // its end.
+    static Project bentNotes() {
+        Project project;
+        project.settings.tempo = 125;
+        Track track;
+        Note first;
+        first.lyric = QStringLiteral("a");
+        first.length = 480;
+        first.noteNum = 60;
+        first.pitchBend = PitchBend{
+            450, {40, 60}
+        };
+        Note second = first;
+        second.pitchBend.reset();
+        track.notes = {first, second};
+        project.tracks.push_back(track);
+        return project;
+    }
+
+    static std::optional<PitchBend> bendOf(const ProjectSession &session, int index) {
+        return session.snapshot().tracks[0].notes[index].pitchBend;
+    }
+
+    // A note without Mode1 values starts them where they are drawn.
+    void mode1_values_start_where_first_drawn() {
+        const auto project = bentNotes();
+        ProjectSession session(project);
+        const auto notes = notesOf(session);
+
+        DiagnosticList diagnostics;
+        QVERIFY(ProjectEdits::drawPitchBend(notes, 1, -20.0004, {1, 2, 3}, diagnostics));
+        QCOMPARE(bendOf(session, 1), std::optional(PitchBend{
+                                         -20, {1, 2, 3}
+        }));
+        QCOMPARE(session.currentStep(), 1);
+        QCOMPARE(session.undoMessage(), ProjectEdits::tr("Draw Pitch"));
+
+        // The same values again change nothing.
+        QVERIFY(ProjectEdits::drawPitchBend(notes, 1, -20, {1, 2}, diagnostics));
+        QCOMPARE(session.currentStep(), 1);
+        session.undo();
+        QCOMPARE(session.snapshot().toJson(), project.toJson());
+    }
+
+    // Drawn values replace those at their places and extend them either way; the gaps take the
+    // curve as it was: before the note that of the previous note, after the values the last one
+    // for an interval, then 0.
+    void mode1_values_are_drawn_over_and_extended() {
+        auto project = bentNotes();
+        project.tracks[0].notes[1].pitchBend = PitchBend{
+            -20, {10, 20, 30}
+        };
+        ProjectSession session(project);
+        const auto notes = notesOf(session);
+
+        DiagnosticList diagnostics;
+        // At -32 ticks, the nearest place is -30.
+        QVERIFY(ProjectEdits::drawPitchBend(notes, 1, -32, {5}, diagnostics));
+        QCOMPARE(bendOf(session, 1), std::optional(PitchBend{
+                                         -30, {5, 60, 10, 20, 30}
+        }));
+        QVERIFY(ProjectEdits::drawPitchBend(notes, 1, 5, {1, 2}, diagnostics));
+        QCOMPARE(bendOf(session, 1), std::optional(PitchBend{
+                                         -30, {5, 60, 10, 20, 30, 0, 0, 1, 2}
+        }));
+        QVERIFY(ProjectEdits::drawPitchBend(notes, 1, -20, {99}, diagnostics));
+        QCOMPARE(bendOf(session, 1), std::optional(PitchBend{
+                                         -30, {5, 60, 99, 20, 30, 0, 0, 1, 2}
+        }));
+        QCOMPARE(session.currentStep(), 3);
+        QCOMPARE(bendOf(session, 0), project.tracks[0].notes[0].pitchBend);
+
+        QVERIFY(!ProjectEdits::drawPitchBend(notes, 2, 0, {1}, diagnostics));
+        QCOMPARE(session.currentStep(), 3);
+        while (session.canUndo()) {
+            session.undo();
+        }
+        QCOMPARE(session.snapshot().toJson(), project.toJson());
+    }
+
+    // Mode2 is turned on and off as an undo step, which keeps the data of either mode.
+    void mode2_is_turned_on_and_off() {
+        const auto project = richProject();
+        ProjectSession session(project);
+        const auto settings = ProjectRef(&session).settings();
+        const bool mode2 = settings.mode2();
+
+        DiagnosticList diagnostics;
+        QVERIFY(ProjectEdits::setMode2(settings, !mode2, diagnostics));
+        QCOMPARE(settings.mode2(), !mode2);
+        QCOMPARE(session.undoMessage(),
+                 mode2 ? ProjectEdits::tr("Turn Mode2 Off") : ProjectEdits::tr("Turn Mode2 On"));
+        QVERIFY(ProjectEdits::setMode2(settings, !mode2, diagnostics));
+        QCOMPARE(session.currentStep(), 1);
+        session.undo();
+        QCOMPARE(session.snapshot().toJson(), project.toJson());
+    }
 };
 
 QTEST_APPLESS_MAIN(test_ProjectEdits)

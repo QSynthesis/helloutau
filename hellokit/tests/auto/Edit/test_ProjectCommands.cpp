@@ -383,6 +383,34 @@ private Q_SLOTS:
         verifyRefused(session, QStringLiteral("note parameter velocity 80"));
     }
 
+    void note_bend_draws_mode1_values() {
+        ProjectSession session(richProject());
+        // The values start 20 ms before the note, about 20 ticks at its tempo; the second note,
+        // a rest, has an empty curve.
+        auto expected = *noteAt(session, 0).pitchBend;
+        QVERIFY(run(session, QStringLiteral("note bend /tracks/0/notes 0 -20 [7, 8]")));
+        expected.values[0] = 7;
+        expected.values[1] = 8;
+        QCOMPARE(noteAt(session, 0).pitchBend, std::optional(expected));
+        QVERIFY(run(session, QStringLiteral("note bend /tracks/0/notes 1 0 [1]")));
+        QCOMPARE(noteAt(session, 1).pitchBend, std::optional(PitchBend{0.0, {1}}));
+        verifyRefused(session, QStringLiteral("note bend /tracks/0/notes 0 0 7"));
+        verifyRefused(session, QStringLiteral("note bend /tracks/0/notes 0 0 [\"a\"]"));
+        verifyRefused(session, QStringLiteral("note bend /tracks/0/notes 99 0 [1]"));
+    }
+
+    void settings_mode2_turns_mode2_on_and_off() {
+        ProjectSession session(richProject());
+        QVERIFY(run(session, QStringLiteral("settings mode2 true")));
+        QVERIFY(session.snapshot().settings.mode2);
+        QVERIFY(run(session, QStringLiteral("settings mode2 false")));
+        QVERIFY(!session.snapshot().settings.mode2);
+        verifyRefused(session, QStringLiteral("settings mode2 1"));
+        verifyRefused(session, QStringLiteral("settings mode2"));
+        verifyRefused(session, QStringLiteral("settings"));
+        verifyRefused(session, QStringLiteral("settings tempo 120"));
+    }
+
     // Acceptance criteria 3 and 4 of docs/Editing.md: undoing every command restores the
     // project, redoing every command restores the edited project, and the same commands produce
     // the same changes in another session.
@@ -550,7 +578,8 @@ private Q_SLOTS:
                          QStringLiteral("note remove"), QStringLiteral("note length"),
                          QStringLiteral("note move"), QStringLiteral("note portamento"),
                          QStringLiteral("note vibrato"), QStringLiteral("note envelope"),
-                         QStringLiteral("note scale"), QStringLiteral("note parameter")}));
+                         QStringLiteral("note scale"), QStringLiteral("note parameter"),
+                         QStringLiteral("note bend"), QStringLiteral("settings mode2")}));
     }
 };
 

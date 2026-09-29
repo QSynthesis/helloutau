@@ -4,6 +4,7 @@
 #include <cmath>
 
 #include <hellokit/Document/DocumentConstants.h>
+#include <hellokit/Document/TempoMap.h>
 
 namespace hello::kit {
 
@@ -246,6 +247,69 @@ namespace hello::kit {
                     break;
             }
         }
+        return transaction.commit(diagnostics);
+    }
+
+    bool ProjectEdits::drawPitchBend(const NoteListRef &notes, int index, double tick,
+                                     const QList<double> &values, DiagnosticList &diagnostics) {
+        if (index < 0 || index >= notes.size()) {
+            return fail(diagnostics,
+                        tr("The track has %1 notes, not a note %2.").arg(notes.size()).arg(index));
+        }
+        if (values.isEmpty()) {
+            return true;
+        }
+
+        // The tempo in effect for the note
+        TempoMap tempos(ProjectRef(notes.session()).settings().tempo());
+        for (int i = 0; i <= index; ++i) {
+            const auto note = notes.at(i);
+            tempos.append(note.length(), note.tempo());
+        }
+        const auto note = notes.at(index);
+        const auto before = note.toNote().pitchBend;
+        std::optional<PitchBend> previous;
+        int previousLength = 0;
+        if (index > 0) {
+            const auto ref = notes.at(index - 1);
+            previous = ref.toNote().pitchBend;
+            previousLength = ref.length();
+        }
+        const auto after =
+            PitchBend::drawn(before, previous, previousLength, tempos.tempo(index), tick, values);
+        if (after == before) {
+            return true;
+        }
+
+        auto transaction = notes.session()->transaction(tr("Draw Pitch"));
+        const auto bend = note.pitchBend();
+        if (!bend.isValid()) {
+            note.setPitchBend(after);
+            return transaction.commit(diagnostics);
+        }
+        if (bend.start() != after.start) {
+            bend.setStart(after.start);
+        }
+        // A drawing never shortens the values.
+        const int size = bend.valuesSize();
+        const auto replaced = after.values.mid(0, size);
+        if (replaced != before->values) {
+            bend.replaceValues(0, replaced);
+        }
+        if (after.values.size() > size) {
+            bend.insertValues(size, after.values.mid(size));
+        }
+        return transaction.commit(diagnostics);
+    }
+
+    bool ProjectEdits::setMode2(const SettingsRef &settings, bool mode2,
+                                DiagnosticList &diagnostics) {
+        if (settings.mode2() == mode2) {
+            return true;
+        }
+        auto transaction =
+            settings.session()->transaction(mode2 ? tr("Turn Mode2 On") : tr("Turn Mode2 Off"));
+        settings.setMode2(mode2);
         return transaction.commit(diagnostics);
     }
 }

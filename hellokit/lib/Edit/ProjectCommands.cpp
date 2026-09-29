@@ -355,28 +355,71 @@ namespace hello::kit {
             return ProjectEdits::setParameter(notes, *parameter, value, diagnostics);
         }
 
+        bool bendCommand(ProjectSession &session, const Arguments &arguments,
+                         DiagnosticList &diagnostics) {
+            if (arguments.size() != 4) {
+                return usage(diagnostics, "note bend <notes> <index> <ticks> <values>");
+            }
+            const auto notes = notesAt(session, arguments[0], diagnostics);
+            const auto index = edit::NodeCommands::integerOf(
+                arguments[1], ProjectCommands::tr("index"), diagnostics);
+            const auto tick = edit::NodeCommands::numberOf(
+                arguments[2], ProjectCommands::tr("ticks"), diagnostics);
+            if (!notes || !index || !tick) {
+                return false;
+            }
+            const auto json = edit::CommandSyntax::valueOf(arguments[3]);
+            if (!json.isArray()) {
+                return fail(diagnostics, ProjectCommands::tr("The values must be an array."));
+            }
+            QList<double> values;
+            for (const auto &item : json.toArray()) {
+                if (!item.isDouble()) {
+                    return fail(diagnostics, ProjectCommands::tr("Each value must be a number."));
+                }
+                values.push_back(item.toDouble());
+            }
+            return ProjectEdits::drawPitchBend(*notes, *index, *tick, values, diagnostics);
+        }
+
+        bool mode2Command(ProjectSession &session, const Arguments &arguments,
+                          DiagnosticList &diagnostics) {
+            if (arguments.size() != 1) {
+                return usage(diagnostics, "settings mode2 <true or false>");
+            }
+            const auto json = edit::CommandSyntax::valueOf(arguments[0]);
+            if (!json.isBool()) {
+                return fail(diagnostics, ProjectCommands::tr("Mode2 is true or false."));
+            }
+            return ProjectEdits::setMode2(ProjectRef(&session).settings(), json.toBool(),
+                                          diagnostics);
+        }
+
         using DomainCommand = bool (*)(ProjectSession &, const Arguments &, DiagnosticList &);
 
         // The domain commands, each with the function of ProjectEdits that it calls.
-        struct NoteCommand {
+        struct DomainCommandInfo {
+            const char *noun;
             const char *verb;
             DomainCommand command;
             const char *function;
         };
 
-        constexpr NoteCommand noteCommands[] = {
-            {"transpose",  transposeCommand,  "transpose"    },
-            {"split",      splitCommand,      "splitNote"    },
-            {"insert",     insertCommand,     "insertNotes"  },
-            {"tempo",      tempoCommand,      "setTempo"     },
-            {"remove",     removeCommand,     "removeNotes"  },
-            {"length",     lengthCommand,     "setLength"    },
-            {"move",       moveCommand,       "moveNotes"    },
-            {"portamento", portamentoCommand, "setPortamento"},
-            {"vibrato",    vibratoCommand,    "setVibrato"   },
-            {"envelope",   envelopeCommand,   "setEnvelope"  },
-            {"scale",      scaleCommand,      "scalePitch"   },
-            {"parameter",  parameterCommand,  "setParameter" },
+        constexpr DomainCommandInfo domainCommands[] = {
+            {"note",     "transpose",  transposeCommand,  "transpose"    },
+            {"note",     "split",      splitCommand,      "splitNote"    },
+            {"note",     "insert",     insertCommand,     "insertNotes"  },
+            {"note",     "tempo",      tempoCommand,      "setTempo"     },
+            {"note",     "remove",     removeCommand,     "removeNotes"  },
+            {"note",     "length",     lengthCommand,     "setLength"    },
+            {"note",     "move",       moveCommand,       "moveNotes"    },
+            {"note",     "portamento", portamentoCommand, "setPortamento"},
+            {"note",     "vibrato",    vibratoCommand,    "setVibrato"   },
+            {"note",     "envelope",   envelopeCommand,   "setEnvelope"  },
+            {"note",     "scale",      scaleCommand,      "scalePitch"   },
+            {"note",     "parameter",  parameterCommand,  "setParameter" },
+            {"note",     "bend",       bendCommand,       "drawPitchBend"},
+            {"settings", "mode2",      mode2Command,      "setMode2"     },
         };
 
         bool run(ProjectSession &session, const Arguments &arguments, DiagnosticList &diagnostics) {
@@ -384,24 +427,29 @@ namespace hello::kit {
             if (name.kind != edit::CommandArgument::Word) {
                 return fail(diagnostics, ProjectCommands::tr("A command begins with its name."));
             }
-            if (name.text() != QLatin1String("note")) {
-                return edit::NodeCommands::execute(session, projectRecord(), name.text(),
-                                                   arguments.mid(1), diagnostics);
+            const auto noun = name.text();
+            QStringList verbs;
+            for (const auto &command : domainCommands) {
+                if (noun == QLatin1String(command.noun)) {
+                    verbs.push_back(QLatin1String(command.verb));
+                }
+            }
+            if (verbs.isEmpty()) {
+                return edit::NodeCommands::execute(session, projectRecord(), noun, arguments.mid(1),
+                                                   diagnostics);
             }
             if (arguments.size() < 2 || arguments[1].kind != edit::CommandArgument::Word) {
-                return fail(diagnostics,
-                            ProjectCommands::tr("The command note requires a verb: transpose, "
-                                                "split, insert, tempo, remove, length, move, "
-                                                "portamento, vibrato, envelope, scale or "
-                                                "parameter."));
+                return fail(diagnostics, ProjectCommands::tr("The command %1 requires a verb: %2.")
+                                             .arg(noun, verbs.join(QStringLiteral(", "))));
             }
             const auto verb = arguments[1].text();
-            for (const auto &command : noteCommands) {
-                if (verb == QLatin1String(command.verb)) {
+            for (const auto &command : domainCommands) {
+                if (noun == QLatin1String(command.noun) && verb == QLatin1String(command.verb)) {
                     return command.command(session, arguments.mid(2), diagnostics);
                 }
             }
-            return fail(diagnostics, ProjectCommands::tr("note %1 is not a command.").arg(verb));
+            return fail(diagnostics,
+                        ProjectCommands::tr("%1 %2 is not a command.").arg(noun, verb));
         }
 
     }
@@ -426,8 +474,9 @@ namespace hello::kit {
 
     QStringList ProjectCommands::names() {
         auto names = edit::NodeCommands::names();
-        for (const auto &command : noteCommands) {
-            names.push_back(QStringLiteral("note ") + QLatin1String(command.verb));
+        for (const auto &command : domainCommands) {
+            names.push_back(QLatin1String(command.noun) + QLatin1Char(' ') +
+                            QLatin1String(command.verb));
         }
         return names;
     }
@@ -453,9 +502,10 @@ namespace hello::kit {
 
     QMap<QString, QString> ProjectCommands::domainFunctions() {
         QMap<QString, QString> functions;
-        for (const auto &command : noteCommands) {
-            functions.insert(QLatin1String(command.function),
-                             QStringLiteral("note ") + QLatin1String(command.verb));
+        for (const auto &command : domainCommands) {
+            functions.insert(QLatin1String(command.function), QLatin1String(command.noun) +
+                                                                  QLatin1Char(' ') +
+                                                                  QLatin1String(command.verb));
         }
         return functions;
     }

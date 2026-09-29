@@ -115,6 +115,19 @@ namespace hello::kit {
         Q_INVOKABLE static bool setParameter(const QList<NoteRef> &notes, NoteParameter parameter,
                                              std::optional<double> value,
                                              DiagnosticList &diagnostics);
+
+        /// Draws \a values into the Mode1 values of the note at \a index of \a notes, the first
+        /// at \a tick from the start of the note and the others every five ticks after it, as
+        /// PitchBend::drawn() gives them at the tempo of the note. See step 5 in
+        /// docs/Tuning.md.
+        Q_INVOKABLE static bool drawPitchBend(const NoteListRef &notes, int index, double tick,
+                                              const QList<double> &values,
+                                              DiagnosticList &diagnostics);
+
+        /// Turns Mode2 of the project of \a settings on or off: which of the Mode2 points and
+        /// vibratos, or the Mode1 values, the synthesis uses, as UTAU does. The other is kept.
+        Q_INVOKABLE static bool setMode2(const SettingsRef &settings, bool mode2,
+                                         DiagnosticList &diagnostics);
     };
 
 }

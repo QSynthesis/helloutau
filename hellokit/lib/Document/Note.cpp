@@ -1,9 +1,12 @@
 #include "Note.h"
 
+#include <algorithm>
 #include <cmath>
 #include <utility>
 
 #include <QtCore/QJsonArray>
+
+#include <hellokit/Document/DocumentConstants.h>
 
 #include "JsonFields_p.h"
 
@@ -133,6 +136,94 @@ namespace hello::kit {
             bend.values.push_back(value.toDouble());
         }
         return bend;
+    }
+
+    namespace {
+
+        // The Mode1 values lie this many ticks apart.
+        constexpr int BendInterval = 5;
+
+        double ticksOf(double milliseconds, double tempo) {
+            return milliseconds * tempo / 60 * ticksPerQuarter / 1000;
+        }
+
+        double millisecondsOf(double ticks, double tempo) {
+            return ticks / ticksPerQuarter * 1000 * 60 / tempo;
+        }
+
+        // The value of bend at tick, or none before its first value
+        std::optional<double> valueAt(const std::optional<PitchBend> &bend, double tick,
+                                      double tempo) {
+            if (!bend || bend->values.isEmpty()) {
+                return std::nullopt;
+            }
+            const double position = (tick - ticksOf(bend->start.value_or(0), tempo)) / BendInterval;
+            if (position < 0) {
+                return std::nullopt;
+            }
+            const auto &values = bend->values;
+            const auto k = qsizetype(std::floor(position));
+            if (k >= values.size()) {
+                return 0.0;
+            }
+            const double next = values[std::min(k + 1, values.size() - 1)];
+            return values[k] + (next - values[k]) * (position - double(k));
+        }
+
+    }
+
+    double PitchBend::curveAt(const std::optional<PitchBend> &bend,
+                              const std::optional<PitchBend> &previous, int previousLength,
+                              double tick, double tempo) {
+        if (const auto own = valueAt(bend, tick, tempo)) {
+            return *own;
+        }
+        if (tick < 0) {
+            if (const auto before = valueAt(previous, tick + previousLength, tempo)) {
+                return *before;
+            }
+        }
+        return 0;
+    }
+
+    PitchBend PitchBend::drawn(const std::optional<PitchBend> &bend,
+                               const std::optional<PitchBend> &previous, int previousLength,
+                               double tempo, double tick, const QList<double> &values) {
+        if (values.isEmpty()) {
+            return bend.value_or(PitchBend());
+        }
+        const auto thousandth = [](double milliseconds) {
+            return std::round(milliseconds * 1000) / 1000;
+        };
+        if (!bend || bend->values.isEmpty()) {
+            PitchBend result;
+            result.start = thousandth(millisecondsOf(tick, tempo));
+            result.values = values;
+            return result;
+        }
+
+        const double start = bend->start.value_or(0);
+        const double origin = ticksOf(start, tempo);
+        const auto size = bend->values.size();
+        const auto first = qsizetype(std::llround((tick - origin) / BendInterval));
+        const auto from = std::min<qsizetype>(first, 0);
+        const auto to = std::max(size, first + values.size());
+
+        PitchBend result;
+        result.start = from < 0
+                           ? thousandth(start - millisecondsOf(double(-from) * BendInterval, tempo))
+                           : bend->start;
+        for (auto k = from; k < to; ++k) {
+            if (k >= first && k < first + values.size()) {
+                result.values.push_back(values[k - first]);
+            } else if (k >= 0 && k < size) {
+                result.values.push_back(bend->values[k]);
+            } else {
+                result.values.push_back(std::round(curveAt(
+                    bend, previous, previousLength, origin + double(k) * BendInterval, tempo)));
+            }
+        }
+        return result;
     }
 
     QJsonObject Note::toJson() const {

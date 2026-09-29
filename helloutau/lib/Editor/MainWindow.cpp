@@ -352,12 +352,25 @@ namespace hello::daw {
                 });
             }
 
+            // Checked as the project has it; a click turns it over as an edit.
+            const auto mode2 = addCommand(QStringLiteral("helloutau.edit.mode2"), [this] {
+                const bool on = actions.value(QStringLiteral("helloutau.edit.mode2"))->isChecked();
+                edit(tr("Mode2"), [this, on](kit::DiagnosticList &diagnostics) {
+                    return kit::ProjectEdits::setMode2(
+                        kit::ProjectRef(document->session()).settings(), on, diagnostics);
+                });
+                updatePitchActions();
+            });
+            mode2->setCheckable(true);
+
             tools = new QActionGroup(&decl);
             const auto selectTool = addCommand(QStringLiteral("helloutau.edit.selectTool"),
                                                [this] { roll->setTool(PianoRoll::SelectTool); });
             const auto penTool = addCommand(QStringLiteral("helloutau.edit.penTool"),
                                             [this] { roll->setTool(PianoRoll::PenTool); });
-            for (const auto action : {selectTool, penTool}) {
+            const auto pitchTool = addCommand(QStringLiteral("helloutau.edit.pitchTool"),
+                                              [this] { roll->setTool(PianoRoll::PitchTool); });
+            for (const auto action : {selectTool, penTool, pitchTool}) {
                 action->setCheckable(true);
                 tools->addAction(action);
             }
@@ -365,6 +378,7 @@ namespace hello::daw {
             const auto showPitch = addCommand(QStringLiteral("helloutau.view.showPitch"), [this] {
                 roll->setPitchVisible(
                     actions.value(QStringLiteral("helloutau.view.showPitch"))->isChecked());
+                updatePitchActions();
             });
             showPitch->setCheckable(true);
             showPitch->setChecked(true);
@@ -452,9 +466,11 @@ namespace hello::daw {
             if (quantization >= 0) {
                 roll->setQuantization(quantization);
             }
-            roll->setTool(actions.value(QStringLiteral("helloutau.edit.penTool"))->isChecked()
-                              ? PianoRoll::PenTool
-                              : PianoRoll::SelectTool);
+            if (actions.value(QStringLiteral("helloutau.edit.penTool"))->isChecked()) {
+                roll->setTool(PianoRoll::PenTool);
+            } else if (actions.value(QStringLiteral("helloutau.edit.pitchTool"))->isChecked()) {
+                roll->setTool(PianoRoll::PitchTool);
+            }
             roll->setPitchVisible(
                 actions.value(QStringLiteral("helloutau.view.showPitch"))->isChecked());
             decl.setCentralWidget(roll);
@@ -476,11 +492,27 @@ namespace hello::daw {
                              [this] { updateTitle(); });
             QObject::connect(document->session(), &kit::ProjectSession::stepChanged, &decl, [this] {
                 updateUndoActions();
+                updatePitchActions();
                 // A preview plays the notes as they now are.
                 playback->updatePlan(*document);
             });
             updateTitle();
             updateUndoActions();
+            updatePitchActions();
+        }
+
+        // Checks Mode2 as the project has it, and enables the pitch tool while it draws: with
+        // the pitch shown and Mode2 off. Without it, the select tool takes its place.
+        void updatePitchActions() {
+            const bool mode2 = kit::ProjectRef(document->session()).settings().mode2();
+            actions.value(QStringLiteral("helloutau.edit.mode2"))->setChecked(mode2);
+            const auto pitchTool = actions.value(QStringLiteral("helloutau.edit.pitchTool"));
+            pitchTool->setEnabled(
+                !mode2 && actions.value(QStringLiteral("helloutau.view.showPitch"))->isChecked());
+            if (!pitchTool->isEnabled() && pitchTool->isChecked()) {
+                actions.value(QStringLiteral("helloutau.edit.selectTool"))->setChecked(true);
+                roll->setTool(PianoRoll::SelectTool);
+            }
         }
 
         void updateTitle() {

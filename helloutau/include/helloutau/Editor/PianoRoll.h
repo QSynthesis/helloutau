@@ -106,6 +106,10 @@ namespace hello::daw {
             SelectTool,
             /// Draws a note after the last one.
             PenTool,
+            /// Draws the Mode1 pitch, anywhere in the roll, while the pitch is shown and the
+            /// project turns Mode2 off; otherwise it acts as SelectTool. See
+            /// isPitchVisible().
+            PitchTool,
         };
 
         explicit PianoRoll(kit::ProjectSession *session, QWidget *parent = nullptr);
@@ -276,6 +280,14 @@ namespace hello::daw {
         /// on the portamento inserts a point; the context menu of a point changes its shape or
         /// removes it. The first point after a sung note starts at the pitch of that note and
         /// only moves in time, as does the last point.
+        ///
+        /// While the project turns Mode2 off, the pitch is the curve of the Mode1 values
+        /// instead, as UTAU synthesizes it (kit::PitchBend::curveAt()), and the points and
+        /// vibratos are hidden, though kept (step 5 in docs/Tuning.md). PitchTool draws the
+        /// curve: along a stroke, the values of each note from its first reading to its end
+        /// take the pitch under the pointer, and a stroke with the right button, with any tool,
+        /// returns them to 0. A note without values starts them at its first reading, as UTAU
+        /// does.
         bool isPitchVisible() const;
         void setPitchVisible(bool visible);
 

@@ -34,6 +34,8 @@
         <action id="helloutau.edit.insertNote" text="&amp;Insert Note" category="Edit"
                 shortcut="Ins" />
         <action id="helloutau.edit.splitNote" text="S&amp;plit Note..." category="Edit" />
+        <!-- Checked while the project turns Mode2 on -->
+        <action id="helloutau.edit.mode2" text="Mode&amp;2 Pitch" category="Edit" />
         <action id="helloutau.edit.togglePortamento" text="Add or Remove P&amp;ortamento"
                 category="Edit" />
         <action id="helloutau.edit.toggleVibrato" text="Add or Remove &amp;Vibrato"
@@ -63,6 +65,8 @@
         <action id="helloutau.edit.selectTool" text="&amp;Select Tool" category="Edit"
                 shortcut="V" />
         <action id="helloutau.edit.penTool" text="P&amp;en Tool" category="Edit" shortcut="B" />
+        <action id="helloutau.edit.pitchTool" text="&amp;Freehand Pitch Tool" category="Edit"
+                shortcut="F" />
 
         <action id="helloutau.view.showPitch" text="Show &amp;Pitch" category="View" />
         <action id="helloutau.view.commandPalette" text="&amp;Command Palette..." category="View"
@@ -117,6 +121,8 @@
                 <action id="helloutau.edit.insertNote" />
                 <action id="helloutau.edit.splitNote" />
                 <action id="helloutau.edit.editLyric" />
+                <separator />
+                <action id="helloutau.edit.mode2" />
                 <action id="helloutau.edit.togglePortamento" />
                 <action id="helloutau.edit.toggleVibrato" />
                 <action id="helloutau.edit.editVibrato" />
@@ -141,6 +147,7 @@
                 <separator />
                 <action id="helloutau.edit.selectTool" />
                 <action id="helloutau.edit.penTool" />
+                <action id="helloutau.edit.pitchTool" />
             </menu>
             <menu id="helloutau.view">
                 <action id="helloutau.view.showPitch" />
