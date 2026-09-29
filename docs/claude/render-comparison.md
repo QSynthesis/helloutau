@@ -65,8 +65,8 @@ ustrender script W/project.ust W/out/out.wav -c GBK --target windows \
 MSYS_NO_PATHCONV=1 ustrender script W/project.ust L/out/out.wav -c GBK --target linux \
     --voice W/voice --voice-as L/voice --cache L/cache --script-dir L/run \
     --emit-dir W/linux --snapshots L/snap \
-    --resampler-command /home/user/moreloader/moreloader L/moresampler/moresampler.exe \
-    --wavtool-command /home/user/moreloader/moreloader L/moresampler/moresampler.exe
+    --resampler-command /mnt/e/GitHub/moreloader/build/out/bin/moreloader L/moresampler/moresampler.exe \
+    --wavtool-command /mnt/e/GitHub/moreloader/build/out/bin/moreloader L/moresampler/moresampler.exe
 ```
 
 ### 3. 自检
@@ -166,6 +166,21 @@ ustrender compare-manifests <清单一> <清单二>
   - 拼接之后的 `out.wav`；
   - `final_out.wav` 与 `final_desc.mrq`。
 - **自检**：两份清单去掉路径根后相同（`same: 203 steps`）。
+
+### Linux 实测（WSL，moreloader）
+
+同日，以同一份音源的另一份干净副本、同一套 moresampler 与 `moreconfig.txt`，在 WSL 的 `~/moreloader-compare-render/linux/` 中以 `/mnt/e/GitHub/moreloader/build/out/bin/moreloader` 运行 `temp.sh`。快照由 `.cache/claude/tools/work/compare-render/compare_snapshots.py` 按清单逐步比较：wav 逐样本比较，其余逐字节比较，路径根先换成占位符。
+
+**`temp.sh` 的行为与 `temp.bat` 相同**：
+- 用时 22 秒，96 次 resampler 与 106 次 wavtool 的退出码全为 0，拼接为 `skipped`，快照同样 301 个；
+- 第 1 至 200 步 wavtool 写出的索引、全部 96 个缓存 wav 与两侧音源分析出的 45 个 `.llsm` 逐字节相同；
+- 结尾休止符同样在 mode 5 之后追加索引，替换路径根后两侧相同；
+- `desc.mrq` 的 45 处差异都是每个条目中 2 字节的时间戳。
+
+**唯一的差异在 moresampler 的合成结果**：6 次 resampler 调用的 `.llsm.tmp` 不同，Linux 一侧短 85 至 145 字节，都从第 165 字节起不同。这 6 次调用用到的样本只有三个：`ei_.wav`（第 16、104 步，同一片段）、`ai_.wav`（第 162 步）与 `ong_.wav`（第 181、190、196 步）。
+- 用同类样本 `o_.wav` 的调用两侧相同，从参数上看不出这三个样本有何特别。
+- 最终 wav 从第 79059 个样本（1.79 秒，第 8 号音符 `_ei`）起不同，是这一差异的后果。
+- **是确定性的偏差，而非随机波动**：在 WSL 中把第 16 步的调用单独运行两次，两次结果逐字节相同，也与完整运行时相同，但与 Windows 不同。Windows 上连续两次完整运行的结果也逐字节相同。这是 moreloader 模拟行为上的偏差，由 moreloader 一侧查明。
 
 ### 在 UTAU 中的对照
 
