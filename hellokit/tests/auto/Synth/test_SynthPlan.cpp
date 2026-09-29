@@ -235,6 +235,9 @@ private Q_SLOTS:
         QVERIFY(rest.silent);
         QVERIFY(rest.resamplerArguments.isEmpty());
         QVERIFY(!rest.wavtoolArguments.isEmpty());
+        // The input of the wavtool is R.wav of the voice bank, as UTAU passes it.
+        QCOMPARE(rest.wavtoolArguments.at(1),
+                 QString::fromStdU16String((voices->root() / "R.wav").u16string()));
 
         // A rest is not an error, so no diagnostic is produced.
         QVERIFY(diagnostics.isEmpty());

@@ -278,7 +278,9 @@ namespace hello::kit {
                 cacheFileFor(resampler.outFile, resampler, step.sample, options.cacheDirectory);
 
             resampler.outFile = utf8(step.cacheFile);
-            wavtool.inFile = utf8(step.cacheFile);
+            // A silent note passes R.wav of the voice bank, as UTAU does (docs/Synth.md). The
+            // file does not exist, and the wavtool appends silence for it.
+            wavtool.inFile = utf8(step.silent ? bank.root() / "R.wav" : step.cacheFile);
             wavtool.outFile = utf8(options.outputFile);
 
             if (!step.silent) {
