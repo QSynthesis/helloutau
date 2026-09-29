@@ -154,6 +154,24 @@ private Q_SLOTS:
         QCOMPARE(spy.count(), 3);
     }
 
+    // A new step that takes the number of the saved one, after an undo, is not the saved state.
+    void a_step_that_replaces_the_saved_one_is_modified() {
+        ProjectDocument document;
+        rename(document, QStringLiteral("a"));
+        QTemporaryDir dir;
+        DiagnosticList diagnostics;
+        QVERIFY(document.saveAs(fs::path(dir.path().toStdU16String()) / "a.usth", diagnostics));
+        QVERIFY(!document.isModified());
+
+        document.session()->undo();
+        QVERIFY(document.isModified());
+        rename(document, QStringLiteral("b"));
+        QCOMPARE(document.session()->currentStep(), 1);
+        QVERIFY(document.isModified());
+        document.session()->undo();
+        QVERIFY(document.isModified());
+    }
+
     void a_usth_opens_with_its_file_and_saves_to_it() {
         QTemporaryDir dir;
         const auto path = pathIn(dir, "song.usth");

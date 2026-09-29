@@ -148,6 +148,12 @@ namespace hello::kit::edit {
         /// \sa currentStep()
         void stepChanged(int step);
 
+        /// The steps from \a first to \a last left the undo history, because a commit discarded
+        /// the transactions that redo() could apply. Emitted before stepChanged() of that
+        /// commit, whose transaction takes the number \a first, so that a document forgets a
+        /// saved step among them before it compares the new step with it.
+        void stepsDiscarded(int first, int last);
+
     protected:
         /// Creates a session without a tree. The constructor of the subclass installs the tree
         /// through the extension interface in EditSession_p.h.

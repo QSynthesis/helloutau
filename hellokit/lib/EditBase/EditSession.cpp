@@ -202,6 +202,9 @@ namespace hello::kit::edit {
 
     void EditSession::Impl::stepChanged(int step) {
         stdc_decl_t;
+        if (discardedFirst >= 0 && step == discardedFirst) {
+            Q_EMIT decl.stepsDiscarded(std::exchange(discardedFirst, -1), discardedLast);
+        }
         Q_EMIT decl.stepChanged(step);
     }
 
@@ -230,9 +233,15 @@ namespace hello::kit::edit {
         }
 
         if (committed) {
+            // The commit discards the steps that could be redone.
+            if (model.currentStep() < model.maximumStep()) {
+                discardedFirst = model.currentStep() + 1;
+                discardedLast = model.maximumStep();
+            }
             model.commitTransaction({
                 {messageKey, message.toStdString()}
             });
+            discardedFirst = -1;
         } else {
             model.abortTransaction();
         }

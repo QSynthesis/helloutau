@@ -6,6 +6,8 @@
 
 #include <hellokit/VoiceBank/VoiceBankFileSystemState.h>
 
+#include "RecordingSelector_p.h"
+
 namespace hello::kit {
 
     namespace {
@@ -49,27 +51,6 @@ namespace hello::kit {
             return QDir::toNativeSeparators(QString::fromStdU16String(path.u16string()));
         }
 
-        // Passes each question on, and records the directories for which the user chose an
-        // encoding.
-        class RecordingSelector : public VoiceBankCharsetSelector {
-        public:
-            explicit RecordingSelector(VoiceBankCharsetSelector *selector) : m_selector(selector) {
-            }
-
-            std::optional<QString> selectCharset(const VoiceBankDirectorySource &directory,
-                                                 DiagnosticList &diagnostics) override {
-                auto charset = m_selector->selectCharset(directory, diagnostics);
-                if (charset) {
-                    chosen.push_back(directory.path);
-                }
-                return charset;
-            }
-
-            QList<std::filesystem::path> chosen;
-
-        private:
-            VoiceBankCharsetSelector *m_selector;
-        };
     }
 
     UstCharsetSelector::~UstCharsetSelector() = default;
@@ -119,6 +100,14 @@ namespace hello::kit {
         connect(&impl.session, &ProjectSession::stepChanged, this, [this] {
             stdc_impl_t;
             impl.updateModified();
+        });
+        // A new step may take the number of the saved one; the document then differs from it
+        // whatever the step.
+        connect(&impl.session, &ProjectSession::stepsDiscarded, this, [this](int first, int last) {
+            stdc_impl_t;
+            if (impl.savedStep >= first && impl.savedStep <= last) {
+                impl.savedStep = -1;
+            }
         });
     }
 

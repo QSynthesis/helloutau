@@ -285,6 +285,40 @@ private Q_SLOTS:
         QCOMPARE(steps, QList<int>({1, 2, 3, 2, 1, 2}));
     }
 
+    // A commit after undo reports the steps it discards before its own step, which takes the
+    // number of the first of them; a redo and a commit without changes discard nothing.
+    void a_commit_reports_the_steps_it_discards_before_its_step() {
+        TestSession session;
+        QStringList events;
+        connect(&session, &EditSession::stepsDiscarded, &session, [&events](int first, int last) {
+            events.push_back(QStringLiteral("discarded %1-%2").arg(first).arg(last));
+        });
+        connect(&session, &EditSession::stepChanged, &session,
+                [&events](int step) { events.push_back(QStringLiteral("step %1").arg(step)); });
+        const auto commit = [&session](const QString &title) {
+            auto transaction = session.transaction(title);
+            session.setTitle(title);
+            transaction.commit();
+        };
+        commit(QStringLiteral("1"));
+        commit(QStringLiteral("2"));
+        commit(QStringLiteral("3"));
+        session.undo();
+        session.undo();
+        session.redo();
+        events.clear();
+
+        // Unchanged: no step, nothing discarded
+        commit(session.title());
+        QVERIFY(events.isEmpty());
+
+        commit(QStringLiteral("branch"));
+        QCOMPARE(events, (QStringList{QStringLiteral("discarded 3-3"), QStringLiteral("step 3")}));
+        events.clear();
+        commit(QStringLiteral("next"));
+        QCOMPARE(events, QStringList{QStringLiteral("step 4")});
+    }
+
     void a_transaction_without_changes_creates_no_undo_step() {
         TestSession session;
         auto transaction = session.transaction(QStringLiteral("Nothing"));

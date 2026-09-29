@@ -77,6 +77,11 @@ namespace hello::kit::edit {
         /// \sa EditSessionPrivate::markAsRead()
         bool read = false;
 
+        /// The steps that the commit in progress discards, the redoable ones, reported by
+        /// stepsDiscarded() before its stepChanged(); first is -1 if none
+        int discardedFirst = -1;
+        int discardedLast = -1;
+
         /// Ends the innermost transaction in progress. The outermost transaction is committed if
         /// \a commit is true and no nested transaction was discarded, and rolled back otherwise.
         ///
