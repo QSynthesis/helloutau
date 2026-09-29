@@ -532,6 +532,16 @@ private Q_SLOTS:
         QVERIFY(!lineAt(960));
         roll.setPlayheadPosition(std::nullopt);
         QVERIFY(lineAt(960));
+
+        // Disabled, as in the prerender mode, the playhead at rest is neither drawn nor moved,
+        // and only playback draws one.
+        roll.setCursorEnabled(false);
+        QVERIFY(!lineAt(960));
+        QTest::mouseClick(ruler, Qt::LeftButton, {}, on(1500));
+        QCOMPARE(roll.cursorPosition(), 960.0);
+        QCOMPARE(moved.size(), count);
+        roll.setPlayheadPosition(1440);
+        QVERIFY(lineAt(1440));
     }
 
     // The portamento runs through the rows as the resampler receives it, and the vibrato apart

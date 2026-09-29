@@ -240,9 +240,10 @@ namespace hello::daw {
         }
 
         // In the realtime mode, renders the track in the background, from the playhead first;
-        // in the prerender mode, nothing. What prevents rendering, such as a missing voice
-        // bank, is reported once the user plays.
+        // in the prerender mode, nothing, and the playhead shows only where playback is. What
+        // prevents rendering, such as a missing voice bank, is reported once the user plays.
         void updateBackground() {
+            roll->setCursorEnabled(realtime());
             if (!realtime()) {
                 playback->release();
                 statusTimer.stop();

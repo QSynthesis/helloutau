@@ -280,6 +280,12 @@ namespace hello::daw {
         double cursorPosition() const;
         void setCursorPosition(double tick);
 
+        /// Whether the playhead at rest is drawn and moved on the ruler, as in the realtime
+        /// playback mode; true at first. Without it, as in the prerender mode, only
+        /// playheadPosition() is drawn, and the ruler moves nothing.
+        bool isCursorEnabled() const;
+        void setCursorEnabled(bool enabled);
+
         /// Whether the pitch of each note is drawn: its portamento in pitchColor() and, apart
         /// from it, its vibrato around the middle of its row in vibratoColor(), both as the
         /// resampler receives them (kit::PitchCurve). See step 1 in docs/Tuning.md.

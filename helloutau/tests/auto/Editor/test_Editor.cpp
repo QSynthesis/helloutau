@@ -405,6 +405,17 @@ private Q_SLOTS:
         actionNamed(window, QStringLiteral("&Play or Stop"))->trigger();
         QCOMPARE(window->statusBar()->currentMessage(),
                  QStringLiteral("Select the notes to render first."));
+
+        // Only playback shows the playhead, which the realtime mode shows at rest as well.
+        const auto roll = qobject_cast<PianoRoll *>(window->centralWidget());
+        QVERIFY(roll);
+        QVERIFY(!roll->isCursorEnabled());
+        e->settings().setPlaybackMode(AppSettings::Realtime);
+        window->applySettings();
+        QVERIFY(roll->isCursorEnabled());
+        e->settings().setPlaybackMode(AppSettings::Prerender);
+        window->applySettings();
+        QVERIFY(!roll->isCursorEnabled());
     }
 
     void the_edit_commands_follow_the_selection() {

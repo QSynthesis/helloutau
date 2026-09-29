@@ -314,8 +314,9 @@ namespace hello::daw {
         QColor faintPointColor;
 
         std::optional<double> playhead;
-        // The playhead at rest
+        // The playhead at rest, and whether it is drawn and moved
         double cursor = 0;
+        bool cursorEnabled = true;
         QColor playheadColor;
 
         QColor noteColor;
@@ -1508,9 +1509,11 @@ namespace hello::daw {
                 painter.drawRect(*m_roll->band);
             }
             // The playhead where playback is, or at rest
-            const double x = view()->timeAxis().toX(m_roll->playhead.value_or(m_roll->cursor));
-            painter.setPen(QPen(m_roll->_decl->playheadColor(), 1));
-            painter.drawLine(QPointF(x, exposed.top()), QPointF(x, exposed.bottom() + 1));
+            if (m_roll->playhead || m_roll->cursorEnabled) {
+                const double x = view()->timeAxis().toX(m_roll->playhead.value_or(m_roll->cursor));
+                painter.setPen(QPen(m_roll->_decl->playheadColor(), 1));
+                painter.drawLine(QPointF(x, exposed.top()), QPointF(x, exposed.bottom() + 1));
+            }
         }
 
     private:
@@ -2942,6 +2945,9 @@ namespace hello::daw {
         connect(impl.ruler, &TimelineRuler::positionPressed, this,
                 [this](double tick, Qt::KeyboardModifiers modifiers) {
                     stdc_impl_t;
+                    if (!impl.cursorEnabled) {
+                        return;
+                    }
                     const double at = std::max<double>(0, double(impl.snapped(tick, modifiers)));
                     const bool moved = at != impl.cursor;
                     setCursorPosition(at);
@@ -3633,6 +3639,17 @@ namespace hello::daw {
             return;
         }
         impl.cursor = tick;
+        impl.view->viewport()->update();
+    }
+
+    bool PianoRoll::isCursorEnabled() const {
+        stdc_impl_t;
+        return impl.cursorEnabled;
+    }
+
+    void PianoRoll::setCursorEnabled(bool enabled) {
+        stdc_impl_t;
+        impl.cursorEnabled = enabled;
         impl.view->viewport()->update();
     }
 
