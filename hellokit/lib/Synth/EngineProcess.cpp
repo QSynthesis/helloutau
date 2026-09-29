@@ -71,6 +71,11 @@ namespace hello::kit {
         if (!workingDirectory.empty()) {
             process.cwd(workingDirectory);
         }
+#ifdef _WIN32
+        // Engines are console programs. Started from a program without a console, as the
+        // editor is, each would open a console window of its own, two for every note.
+        process.creationFlags(CREATE_NO_WINDOW);
+#endif
 
         if (!process.start()) {
             fail(diagnostics,
