@@ -252,6 +252,96 @@ private Q_SLOTS:
         playback.stop();
     }
 
+    // A render plays again without the engines while its notes stay the same, and is rendered
+    // anew once they change.
+    void a_render_plays_again_while_its_notes_stay() {
+        if (AudioOutput::deviceSampleRate() <= 0) {
+            QSKIP("This machine has no audio output device.");
+        }
+        QTemporaryDir dir;
+        const auto document = singingDocument(dir);
+        QVERIFY(document);
+        Playback playback;
+        const auto runner = std::make_shared<SilentRunner>();
+        playback.setRunner(runner);
+
+        kit::DiagnosticList diagnostics;
+        QVERIFY(playback.play(*document, std::nullopt, someEngines(), diagnostics));
+        QTRY_COMPARE_WITH_TIMEOUT(playback.state(), Playback::Playing, 5000);
+        playback.stop();
+        QVERIFY(playback.play(*document, std::nullopt, someEngines(), diagnostics));
+        QCOMPARE(playback.state(), Playback::Playing);
+        QCOMPARE(runner->started.load(), 1);
+        playback.stop();
+
+        // Another range, or an edit, renders anew.
+        QVERIFY(playback.play(*document, std::make_pair(1, 1), someEngines(), diagnostics));
+        QCOMPARE(playback.state(), Playback::Rendering);
+        QTRY_COMPARE_WITH_TIMEOUT(playback.state(), Playback::Playing, 5000);
+        playback.stop();
+        {
+            const auto session = document->session();
+            auto tx = session->transaction(QStringLiteral("transpose"));
+            kit::ProjectRef(session).tracks().at(0).notes().at(1).setNoteNum(62);
+            tx.commit();
+        }
+        QVERIFY(playback.play(*document, std::make_pair(1, 1), someEngines(), diagnostics));
+        QCOMPARE(playback.state(), Playback::Rendering);
+        QTRY_COMPARE_WITH_TIMEOUT(runner->started.load(), 3, 5000);
+        QTRY_COMPARE_WITH_TIMEOUT(playback.state(), Playback::Playing, 5000);
+        playback.stop();
+
+        // So does a sample recorded again, which names its fragment anew.
+        writeBytes(fs::path(dir.path().toStdU16String()) / "bank" / "a.wav", "RIFF");
+        QVERIFY(document->loadVoiceBank({}, nullptr, diagnostics));
+        QVERIFY(playback.play(*document, std::make_pair(1, 1), someEngines(), diagnostics));
+        QCOMPARE(playback.state(), Playback::Rendering);
+        playback.stop();
+    }
+
+    // A paused render keeps where it was, and goes on from there.
+    void a_render_pauses_and_goes_on() {
+        if (AudioOutput::deviceSampleRate() <= 0) {
+            QSKIP("This machine has no audio output device.");
+        }
+        QTemporaryDir dir;
+        const auto document = singingDocument(dir);
+        QVERIFY(document);
+        Playback playback;
+        const auto runner = std::make_shared<SilentRunner>();
+        runner->frames = 44100;
+        playback.setRunner(runner);
+        QVERIFY(!playback.pause());
+
+        kit::DiagnosticList diagnostics;
+        QVERIFY(playback.play(*document, std::nullopt, someEngines(), diagnostics));
+        QTRY_COMPARE_WITH_TIMEOUT(playback.state(), Playback::Playing, 5000);
+        QTest::qWait(300);
+        QSignalSpy states(&playback, &Playback::stateChanged);
+        QVERIFY(playback.pause());
+        QCOMPARE(playback.state(), Playback::Paused);
+        QCOMPARE(states.size(), 1);
+        QVERIFY(!playback.isPreviewPaused());
+        const auto paused = playback.position();
+        QVERIFY(paused);
+        QTest::qWait(200);
+        QCOMPARE(playback.position(), paused);
+
+        QVERIFY(playback.resume());
+        QCOMPARE(playback.state(), Playback::Playing);
+        QTest::qWait(200);
+        const auto later = playback.position();
+        QVERIFY(later);
+        QVERIFY2(*later > *paused + 100 && *later < *paused + 400,
+                 qPrintable(QStringLiteral("%1 %2").arg(*paused).arg(*later)));
+
+        playback.pause();
+        playback.stop();
+        QCOMPARE(playback.state(), Playback::Stopped);
+        QVERIFY(!playback.position());
+        QVERIFY(!playback.resume());
+    }
+
     // A preview plays from the time asked for to the end, here within the second note, reading
     // the fragments in the cache rather than running the resampler, which here does not exist.
     void a_preview_plays_from_a_time_to_the_end() {

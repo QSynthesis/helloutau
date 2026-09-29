@@ -136,6 +136,8 @@ namespace hello::daw {
         QTimer renderStateTimer;
         // Whether the playback is a preview, and whether it restarts from the playhead soon
         bool previewing = false;
+        // The notes last rendered, which Replay renders again
+        std::optional<std::pair<int, int>> lastRange;
         bool restartPending = false;
 
         // The render progress in the status bar, and the playhead that follows playback
@@ -169,7 +171,13 @@ namespace hello::daw {
                                      playheadTimer.start();
                                  } else {
                                      playheadTimer.stop();
-                                     roll->setPlayheadPosition(std::nullopt);
+                                     // Paused, the line stays where playback was.
+                                     const auto at = playback->position();
+                                     roll->setPlayheadPosition(
+                                         state == Playback::Paused && at
+                                             ? std::optional(
+                                                   roll->timeline()->tempoMap().tickOf(*at))
+                                             : std::nullopt);
                                  }
                                  if (state == Playback::Stopped) {
                                      previewing = false;
@@ -275,9 +283,18 @@ namespace hello::daw {
         // them; or plays from the playhead as the track is rendered.
         void togglePlayback() {
             stdc_decl_t;
-            if (playback->state() != Playback::Stopped) {
-                playback->stop();
-                return;
+            switch (playback->state()) {
+                case Playback::Rendering:
+                    playback->stop();
+                    return;
+                case Playback::Playing:
+                    playback->pause();
+                    return;
+                case Playback::Paused:
+                    resumePlayback();
+                    return;
+                default:
+                    break;
             }
             if (realtime()) {
                 startPreview();
@@ -289,10 +306,54 @@ namespace hello::daw {
                                               StatusMessageTimeout);
                 return;
             }
+            playRange(std::make_pair(selected.first(), selected.last()));
+        }
+
+        // Renders notes range and plays them, or plays the last render again if they sound the
+        // same.
+        void playRange(std::pair<int, int> range) {
+            stdc_decl_t;
+            lastRange = range;
             kit::DiagnosticList diagnostics;
-            if (!playback->play(*document, std::make_pair(selected.first(), selected.last()),
-                                engines(), diagnostics)) {
+            if (!playback->play(*document, range, engines(), diagnostics)) {
                 DiagnosticBox::show(&decl, tr("Play"), diagnostics);
+            }
+        }
+
+        // Pauses what plays, or goes on with what was paused.
+        void pauseOrResume() {
+            if (playback->state() == Playback::Playing) {
+                playback->pause();
+            } else if (playback->state() == Playback::Paused) {
+                resumePlayback();
+            }
+        }
+
+        // A paused render goes on from where it was, a paused preview previews from there.
+        void resumePlayback() {
+            stdc_decl_t;
+            if (!playback->isPreviewPaused()) {
+                playback->resume();
+                return;
+            }
+            const auto at = playback->position();
+            kit::DiagnosticList diagnostics;
+            previewing = playback->preview(*document, at, engines(), diagnostics);
+            if (!previewing) {
+                DiagnosticBox::show(&decl, tr("Play"), diagnostics);
+            }
+        }
+
+        // Plays the last playback again from its start: from the playhead at rest in the
+        // realtime mode, the notes last rendered in the prerender mode.
+        void replay() {
+            playback->stop();
+            if (realtime()) {
+                startPreview();
+            } else if (lastRange) {
+                playRange(*lastRange);
+            } else {
+                togglePlayback();
             }
         }
 
@@ -333,7 +394,11 @@ namespace hello::daw {
             restartPending = true;
             QTimer::singleShot(PreviewRestartDelay, &decl, [this] {
                 restartPending = false;
-                if (previewing) {
+                if (playback->state() == Playback::Paused) {
+                    // Resumed from the playhead instead of where playback was
+                    playback->stop();
+                    updateBackground();
+                } else if (previewing) {
                     startPreview();
                 } else if (playback->state() == Playback::Stopped) {
                     updateBackground();
@@ -538,6 +603,9 @@ namespace hello::daw {
                 palette->popup();
             });
             addCommand(QStringLiteral("helloutau.playback.play"), [this] { togglePlayback(); });
+            addCommand(QStringLiteral("helloutau.playback.pause"), [this] { pauseOrResume(); });
+            addCommand(QStringLiteral("helloutau.playback.stop"), [this] { playback->stop(); });
+            addCommand(QStringLiteral("helloutau.playback.replay"), [this] { replay(); });
             addCommand(QStringLiteral("helloutau.tools.clearCache"), [this] { clearCache(); });
             addCommand(QStringLiteral("helloutau.tools.settings"), [this] {
                 stdc_decl_t;

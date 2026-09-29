@@ -37,9 +37,8 @@ namespace hello::daw {
         // One render: its inputs, taken on the main thread, and its results, filled on the
         // worker thread.
         struct Job {
-            kit::Project project;
-            std::shared_ptr<const kit::VoiceBank> bank;
-            kit::SynthPlan::Options options;
+            std::optional<kit::SynthPlan> plan;
+            QString key;
             kit::SynthEngines engines;
             std::shared_ptr<const kit::SynthRunner> runner;
             int deviceRate = 0;
@@ -47,10 +46,26 @@ namespace hello::daw {
 
             bool rendered = false;
             kit::DiagnosticList diagnostics;
-            std::vector<float> samples;
+            std::shared_ptr<const std::vector<float>> samples;
             int channels = 0;
             double startTime = 0;
         };
+
+        // What a render depends on: every argument of every engine call, among them the names
+        // of the fragments, which stand for the state of the samples, the engines, and the rate
+        // it is played at. A render of the same key sounds the same.
+        QString keyOf(const kit::SynthPlan &plan, const kit::SynthEngines &engines,
+                      int deviceRate) {
+            QStringList parts{QString::fromStdU16String(engines.resampler.u16string()),
+                              QString::fromStdU16String(engines.wavtool.u16string()),
+                              QString::fromStdU16String(plan.outputFile().u16string()),
+                              QString::number(deviceRate)};
+            for (const auto &step : plan.steps()) {
+                parts.push_back(step.resamplerArguments.join(QChar(0x1f)));
+                parts.push_back(step.wavtoolArguments.join(QChar(0x1f)));
+            }
+            return parts.join(QChar(0x1e));
+        }
 
         // The playback that renders report to, read and written on the main thread only, and
         // null once the playback is gone. A render by script runs on until the script ends,
@@ -97,12 +112,8 @@ namespace hello::daw {
         // Renders, reads and converts, on the worker thread.
         void run(Job &job, const std::shared_ptr<Recipient> &recipient) {
             std::error_code error;
-            std::filesystem::create_directories(job.options.cacheDirectory, error);
-            const auto plan =
-                kit::SynthPlan::make(job.project, *job.bank, job.options, job.diagnostics);
-            if (!plan) {
-                return;
-            }
+            std::filesystem::create_directories(job.plan->cacheDirectory(), error);
+            const auto &plan = job.plan;
             Observer observer(job, recipient);
             const auto outcome = job.runner->render(*plan, job.engines, &observer, job.diagnostics);
             if (!outcome.rendered || outcome.cancelled || job.cancel.load()) {
@@ -112,8 +123,8 @@ namespace hello::daw {
             if (!audio) {
                 return;
             }
-            job.samples =
-                resampled(audio->samples, audio->channels, audio->sampleRate, job.deviceRate);
+            job.samples = std::make_shared<const std::vector<float>>(
+                resampled(audio->samples, audio->channels, audio->sampleRate, job.deviceRate));
             job.channels = audio->channels;
             job.startTime = plan->startTime();
             job.rendered = true;
@@ -141,9 +152,19 @@ namespace hello::daw {
         // of cancelled renders
         std::shared_ptr<Job> job;
         QList<QPointer<QThread>> workers;
-        // Where the track file of the render played starts, and the rate it plays at
-        double startTime = 0;
-        int deviceRate = 0;
+        // The last render, kept to be played again while it sounds the same, and paused in
+        struct Rendered {
+            QString key;
+            std::shared_ptr<const std::vector<float>> samples;
+            int channels = 0;
+            // Where its track file starts, and the rate it plays at
+            double startTime = 0;
+            int deviceRate = 0;
+        };
+        std::optional<Rendered> kept;
+        // Where playback was paused, and whether a preview was, while it is
+        std::optional<double> pausedAt;
+        bool pausedPreview = false;
 
         // The preview: the synthesis, kept between previews for the fragments it holds, the
         // stream it feeds, and the sample of the track file at which the stream began. The
@@ -246,11 +267,16 @@ namespace hello::daw {
                 Q_EMIT decl.failed(finished->diagnostics);
                 return;
             }
+            kept = Rendered{finished->key, finished->samples, finished->channels,
+                            finished->startTime, finished->deviceRate};
+            playRendered(0);
+        }
+
+        // Plays the kept render from frame first on.
+        void playRendered(qsizetype first) {
+            stdc_decl_t;
             QString error;
-            startTime = finished->startTime;
-            deviceRate = finished->deviceRate;
-            if (!output->start(std::make_shared<BufferSource>(std::move(finished->samples),
-                                                              finished->channels),
+            if (!output->start(std::make_shared<BufferSource>(kept->samples, kept->channels, first),
                                &error)) {
                 setState(Stopped);
                 kit::DiagnosticList diagnostics;
@@ -286,6 +312,7 @@ namespace hello::daw {
     void Playback::setRunner(std::shared_ptr<const kit::SynthRunner> runner) {
         stdc_impl_t;
         impl.runner = std::move(runner);
+        impl.kept.reset();
     }
 
     Playback::State Playback::state() const {
@@ -317,13 +344,26 @@ namespace hello::daw {
             fail(diagnostics, tr("There is no audio output device."));
             return false;
         }
+        kit::SynthPlan::Options options;
+        options.cacheDirectory = cacheDirectoryFor(document);
+        options.outputFile = options.cacheDirectory / OutputFileName;
+        options.range = range;
+        auto plan =
+            kit::SynthPlan::make(document.session()->snapshot(), *bank, options, diagnostics);
+        if (!plan) {
+            return false;
+        }
+
+        // The same notes as the last render, which plays again without the engines
+        auto key = keyOf(*plan, engines, deviceRate);
+        if (impl.kept && impl.kept->key == key) {
+            impl.playRendered(0);
+            return impl.state == Playing;
+        }
 
         auto job = std::make_shared<Job>();
-        job->project = document.session()->snapshot();
-        job->bank = bank;
-        job->options.cacheDirectory = cacheDirectoryFor(document);
-        job->options.outputFile = job->options.cacheDirectory / OutputFileName;
-        job->options.range = range;
+        job->plan = std::move(plan);
+        job->key = std::move(key);
         job->engines = engines;
         job->runner = impl.runner;
         job->deviceRate = deviceRate;
@@ -467,6 +507,37 @@ namespace hello::daw {
         return impl.synth ? impl.synth->takeDiagnostics() : kit::DiagnosticList();
     }
 
+    bool Playback::pause() {
+        stdc_impl_t;
+        if (impl.state != Playing) {
+            return false;
+        }
+        impl.pausedAt = position();
+        impl.pausedPreview = bool(impl.stream);
+        // Paused before the output stops, so that its end does not stop playback
+        impl.setState(Paused);
+        impl.output->stop();
+        impl.endPreview();
+        return true;
+    }
+
+    bool Playback::isPreviewPaused() const {
+        stdc_impl_t;
+        return impl.state == Paused && impl.pausedPreview;
+    }
+
+    bool Playback::resume() {
+        stdc_impl_t;
+        if (impl.state != Paused || impl.pausedPreview || !impl.kept || !impl.pausedAt) {
+            return false;
+        }
+        const auto &rendered = *impl.kept;
+        const auto first =
+            std::llround((*impl.pausedAt - rendered.startTime) * rendered.deviceRate / 1000);
+        impl.playRendered(qsizetype(first));
+        return impl.state == Playing;
+    }
+
     void Playback::stop() {
         stdc_impl_t;
         impl.cancelRender();
@@ -477,6 +548,9 @@ namespace hello::daw {
 
     std::optional<double> Playback::position() const {
         stdc_impl_t;
+        if (impl.state == Paused) {
+            return impl.pausedAt;
+        }
         if (impl.state != Playing) {
             return std::nullopt;
         }
@@ -487,7 +561,8 @@ namespace hello::daw {
             const auto sample = double(impl.streamStart) + heard;
             return impl.synth->startTime() + sample * 1000 / kit::WavtoolMixer::sampleRate;
         }
-        return impl.startTime + heard * 1000 / std::max(1, impl.deviceRate);
+        return impl.kept ? impl.kept->startTime + heard * 1000 / std::max(1, impl.kept->deviceRate)
+                         : std::optional<double>();
     }
 
     std::optional<int> Playback::clearCache(const kit::ProjectDocument &document,
@@ -501,6 +576,7 @@ namespace hello::daw {
         // The synth waits for the engine calls under way, which would write into the cache.
         stop();
         impl.synth.reset();
+        impl.kept.reset();
 
         namespace fs = std::filesystem;
         const auto directory = cacheDirectoryFor(document);

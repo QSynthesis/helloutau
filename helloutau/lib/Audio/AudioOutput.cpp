@@ -30,16 +30,22 @@ namespace hello::daw {
     public:
         using Decl = BufferSource;
 
-        std::vector<float> samples;
+        std::shared_ptr<const std::vector<float>> samples;
         int channels = 1;
         std::atomic<qsizetype> position = 0;
     };
 
     BufferSource::BufferSource(std::vector<float> samples, int channels)
+        : BufferSource(std::make_shared<const std::vector<float>>(std::move(samples)), channels) {
+    }
+
+    BufferSource::BufferSource(std::shared_ptr<const std::vector<float>> samples, int channels,
+                               qsizetype first)
         : _impl(std::make_unique<Impl>()) {
         stdc_impl_t;
-        impl.samples = std::move(samples);
+        impl.samples = samples ? std::move(samples) : std::make_shared<const std::vector<float>>();
         impl.channels = std::max(1, channels);
+        impl.position = std::clamp<qsizetype>(first, 0, frameCount());
     }
 
     BufferSource::~BufferSource() = default;
@@ -49,7 +55,7 @@ namespace hello::daw {
         const int own = impl.channels;
         const auto position = impl.position.load(std::memory_order_relaxed);
         const auto count = std::clamp<qsizetype>(frameCount() - position, 0, frames);
-        const float *from = impl.samples.data() + position * own;
+        const float *from = impl.samples->data() + position * own;
         for (qsizetype frame = 0; frame < count; ++frame) {
             for (int channel = 0; channel < channels; ++channel) {
                 // Mono on every channel; otherwise channel by channel, silence beyond them
@@ -64,7 +70,7 @@ namespace hello::daw {
 
     qsizetype BufferSource::frameCount() const {
         stdc_impl_t;
-        return qsizetype(impl.samples.size()) / impl.channels;
+        return qsizetype(impl.samples->size()) / impl.channels;
     }
 
     qint64 BufferSource::position() const {

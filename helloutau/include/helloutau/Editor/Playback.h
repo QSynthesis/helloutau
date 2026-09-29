@@ -41,6 +41,9 @@ namespace hello::daw {
             Stopped,
             Rendering,
             Playing,
+            /// Stopped where it was, to go on from there with resume(), or with a preview from
+            /// position() for a paused preview
+            Paused,
         };
         Q_ENUM(State)
 
@@ -54,6 +57,9 @@ namespace hello::daw {
 
         /// Starts rendering notes \a range of the first track of \a document, or all of them, and
         /// plays the result once it is rendered. Stops what played or rendered before.
+        ///
+        /// The last render is kept: while every engine call of the notes would be the same, it
+        /// plays again at once, without the engines.
         ///
         /// \return whether rendering started; the reason is in \a diagnostics otherwise, such as
         ///         a document without a voice bank, engines that are not set, or a render
@@ -105,10 +111,21 @@ namespace hello::daw {
         /// Returns the warnings of the notes the preview could not render since the last call.
         kit::DiagnosticList takePreviewDiagnostics();
 
-        /// Cancels rendering, or stops playing.
+        /// Pauses what plays, keeping position(), and returns whether something played.
+        bool pause();
+
+        /// Plays a paused render on from where it was paused, and returns whether it did. A
+        /// paused preview is not resumed here: the caller previews from position().
+        bool resume();
+
+        /// Whether a preview is paused.
+        bool isPreviewPaused() const;
+
+        /// Cancels rendering, or stops playing or being paused.
         void stop();
 
-        /// The position heard, in milliseconds from the start of the track, while playing.
+        /// The position heard, in milliseconds from the start of the track, while playing, or
+        /// where playback was paused.
         std::optional<double> position() const;
 
         /// The directory of the render cache of \a document.

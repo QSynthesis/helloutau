@@ -454,7 +454,7 @@ private Q_SLOTS:
         const auto e = editor();
         QCOMPARE(e->settings().playbackMode(), AppSettings::Prerender);
         const auto window = e->newWindow();
-        actionNamed(window, QStringLiteral("&Play or Stop"))->trigger();
+        actionNamed(window, QStringLiteral("&Play or Pause"))->trigger();
         QCOMPARE(window->statusBar()->currentMessage(),
                  QStringLiteral("Select the notes to render first."));
 

@@ -74,8 +74,17 @@
         <action id="helloutau.view.commandPalette" text="&amp;Command Palette..." category="View"
                 shortcuts="Ctrl+Shift+P;F1" />
 
-        <action id="helloutau.playback.play" text="&amp;Play or Stop" category="Playback"
+        <!-- Plays, pauses what plays, or goes on from where it was paused -->
+        <action id="helloutau.playback.play" text="&amp;Play or Pause" category="Playback"
                 shortcut="Space" />
+
+        <action id="helloutau.playback.pause" text="Pa&amp;use or Resume" category="Playback"
+                shortcut="F6" />
+        <action id="helloutau.playback.stop" text="&amp;Stop" category="Playback" shortcut="F7" />
+        <!-- Plays the last playback again from its start, the last render without the engines
+             while its notes stay the same -->
+        <action id="helloutau.playback.replay" text="&amp;Replay" category="Playback"
+                shortcut="Shift+F5" />
 
         <action id="helloutau.tools.settings" text="&amp;Settings..." category="Tools" />
         <!-- The voice bank of the project, in its window -->
@@ -170,6 +179,9 @@
             </menu>
             <menu id="helloutau.playback">
                 <action id="helloutau.playback.play" />
+                <action id="helloutau.playback.pause" />
+                <action id="helloutau.playback.stop" />
+                <action id="helloutau.playback.replay" />
             </menu>
             <menu id="helloutau.tools">
                 <action id="helloutau.tools.editVoiceBank" />

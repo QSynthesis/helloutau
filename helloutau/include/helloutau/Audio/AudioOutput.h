@@ -41,13 +41,18 @@ namespace hello::daw {
     public:
         /// \a samples interleaved by \a channels.
         BufferSource(std::vector<float> samples, int channels);
+
+        /// \a samples interleaved by \a channels, shared, played from frame \a first on: to
+        /// play a render again, or on from where it was paused.
+        BufferSource(std::shared_ptr<const std::vector<float>> samples, int channels,
+                     qsizetype first = 0);
         ~BufferSource() override;
 
         qsizetype read(float *out, qsizetype frames, int channels) noexcept override;
 
         qsizetype frameCount() const;
 
-        /// The frames read so far.
+        /// The frame to be read next, which starts at the first played.
         qint64 position() const override;
 
     private:
