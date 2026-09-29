@@ -325,25 +325,109 @@ private Q_SLOTS:
     }
 
     // The pen draws a note after the last one, and fills the gap before it with a rest.
-    void the_pen_draws_after_the_last_note() {
+private:
+    // A drag of the pen on the background of threeNotes (la 0-480, a rest 480-1440 that sets
+    // the tempo 60, li 1440-1920) from tick from to tick to in the row of key 70, or at key; the
+    // lyrics and lengths after it, the drawn note being selected, in one step
+    struct Drawn {
+        QString lyrics;
+        QList<int> lengths;
+        QList<std::optional<double>> tempos;
+        QList<int> selected;
+        int steps = 0;
+    };
+
+    static Drawn penDrag(double from, double to, Qt::KeyboardModifiers modifiers = {},
+                         int key = 70) {
         kit::ProjectSession session(threeNotes());
         PianoRoll roll(&session);
         show(roll);
         roll.setTool(PianoRoll::PenTool);
-
-        drag(roll, {2400, 62}, {2900, 62});
-        QCOMPARE(lyricsOf(session), QStringLiteral("la R li R la"));
+        drag(roll, {from, key}, {to, key}, modifiers);
+        Drawn drawn;
+        drawn.lyrics = lyricsOf(session);
         const auto notes = session.snapshot().tracks[0].notes;
-        QCOMPARE(notes[3].length, 480);
-        QCOMPARE(notes[4].length, 480);
-        QCOMPARE(notes[4].noteNum, 62);
-        QCOMPARE(session.currentStep(), 1);
-        QCOMPARE(roll.selectedIndices(), QList<int>{4});
+        for (const auto &note : notes) {
+            drawn.lengths.push_back(note.length);
+            drawn.tempos.push_back(note.tempo);
+        }
+        drawn.selected = roll.selectedIndices();
+        drawn.steps = session.currentStep();
+        return drawn;
+    }
 
-        // Before the end the pen selects, as the select tool does.
-        drag(roll, {0, 70}, {1900, 62});
+private Q_SLOTS:
+    // The pen draws from the end of the previous note, before the note at the pointer, which
+    // moves later; after the last note, from its end. A note that sets a tempo passes it on.
+    void the_pen_draws_from_the_end_of_the_previous_note() {
+        auto drawn = penDrag(2400, 2880, {}, 62);
+        QCOMPARE(drawn.lyrics, QStringLiteral("la R li la"));
+        QCOMPARE(drawn.lengths, (QList<int>{480, 960, 480, 960}));
+        QCOMPARE(drawn.selected, QList<int>{3});
+        QCOMPARE(drawn.steps, 1);
+
+        drawn = penDrag(1700, 1800);
+        QCOMPARE(drawn.lyrics, QStringLiteral("la R la li"));
+        QCOMPARE(drawn.lengths, (QList<int>{480, 960, 360, 480}));
+        QCOMPARE(drawn.selected, QList<int>{2});
+
+        drawn = penDrag(900, 960);
+        QCOMPARE(drawn.lyrics, QStringLiteral("la la R li"));
+        QCOMPARE(drawn.lengths, (QList<int>{480, 480, 960, 480}));
+        QCOMPARE(drawn.tempos[1], std::optional<double>(60));
+        QCOMPARE(drawn.tempos[2], std::optional<double>(60));
+        QCOMPARE(drawn.selected, QList<int>{1});
+    }
+
+    // With Shift, a rest fills the gap up to the pointer; within a rest, the note takes the place
+    // of part of it, and the notes after it move only as far as the note passes its end.
+    void the_pen_with_shift_draws_at_the_pointer() {
+        auto drawn = penDrag(2400, 2880, Qt::ShiftModifier, 62);
+        QCOMPARE(drawn.lyrics, QStringLiteral("la R li R la"));
+        QCOMPARE(drawn.lengths, (QList<int>{480, 960, 480, 480, 480}));
+        QCOMPARE(drawn.selected, QList<int>{4});
+        QCOMPARE(drawn.steps, 1);
+
+        drawn = penDrag(1700, 1800, Qt::ShiftModifier);
+        QCOMPARE(drawn.lyrics, QStringLiteral("la R R la li"));
+        QCOMPARE(drawn.lengths, (QList<int>{480, 960, 240, 120, 480}));
+        QCOMPARE(drawn.selected, QList<int>{3});
+
+        // Within the rest, which keeps what lies before and after the note
+        drawn = penDrag(720, 960, Qt::ShiftModifier);
+        QCOMPARE(drawn.lyrics, QStringLiteral("la R la R li"));
+        QCOMPARE(drawn.lengths, (QList<int>{480, 240, 240, 480, 480}));
+        QCOMPARE(drawn.tempos[1], std::optional<double>(60));
+        QCOMPARE(drawn.selected, QList<int>{2});
+
+        // Past its end, which moves li later
+        drawn = penDrag(1200, 1680, Qt::ShiftModifier);
+        QCOMPARE(drawn.lyrics, QStringLiteral("la R la li"));
+        QCOMPARE(drawn.lengths, (QList<int>{480, 720, 480, 480}));
+
+        // At its start, where the note takes its tempo
+        drawn = penDrag(480, 720, Qt::ShiftModifier);
+        QCOMPARE(drawn.lyrics, QStringLiteral("la la R li"));
+        QCOMPARE(drawn.lengths, (QList<int>{480, 240, 720, 480}));
+        QCOMPARE(drawn.tempos[1], std::optional<double>(60));
+        QCOMPARE(drawn.selected, QList<int>{1});
+
+        // Over the whole of it, which it replaces
+        drawn = penDrag(480, 1440, Qt::ShiftModifier);
+        QCOMPARE(drawn.lyrics, QStringLiteral("la la li"));
+        QCOMPARE(drawn.lengths, (QList<int>{480, 960, 480}));
+        QCOMPARE(drawn.tempos[1], std::optional<double>(60));
+    }
+
+    // On a note the pen selects, as the select tool does.
+    void the_pen_selects_on_a_note() {
+        kit::ProjectSession session(threeNotes());
+        PianoRoll roll(&session);
+        show(roll);
+        roll.setTool(PianoRoll::PenTool);
+        click(roll, 1700, 64);
         QCOMPARE(roll.selectedIndices(), QList<int>{2});
-        QCOMPARE(session.currentStep(), 1);
+        QCOMPARE(session.currentStep(), 0);
     }
 
     void the_selection_is_deleted_transposed_and_inserted_before() {

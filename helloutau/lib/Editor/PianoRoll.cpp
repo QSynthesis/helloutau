@@ -1002,9 +1002,8 @@ namespace hello::daw {
         std::optional<SceneHit> hitTest(QPointF position) const override {
             SceneHit hit;
             hit.part = Background;
-            if ((m_roll->tool == PenTool &&
-                 view()->timeAxis().toTick(position.x()) >= double(m_roll->timeline->length())) ||
-                m_roll->drawsBend(Qt::LeftButton)) {
+            Q_UNUSED(position);
+            if (m_roll->tool == PenTool || m_roll->drawsBend(Qt::LeftButton)) {
                 hit.cursor = Qt::CrossCursor;
             }
             return hit;
@@ -2193,17 +2192,30 @@ namespace hello::daw {
         QSet<kit::edit::NodeId> m_previousPoints;
     };
 
-    // A drag of the pen after the last note, which draws a note there. A gap before it is filled
-    // with a rest.
+    // A drag of the pen on the background, which draws a note (step 4 in docs/Widgets.md). The
+    // note goes before the note at the pointer, or after the last note, and starts where the note
+    // before it ends; the notes after it start later by its length. With Shift held on the press,
+    // a rest fills the gap from there to the pointer and the note starts at the pointer; within
+    // a rest, the two take its place, and the notes after it start later only as far as the note
+    // passes its end. The drag sets the length, snapped to the quantization. The first note
+    // inserted where a note that sets a tempo started takes that tempo, so that the tempo there
+    // stays.
     class PianoRoll::Impl::DrawGesture : public SceneGesture {
     public:
         DrawGesture(PianoRoll::Impl *roll, QPointF position, Qt::KeyboardModifiers modifiers)
-            : m_roll(roll), m_end(roll->timeline->length()) {
+            : m_roll(roll) {
+            const auto timeline = roll->timeline;
             const auto &keys = roll->view->keyAxis();
             m_key = std::clamp(keys.keyAt(position.y()), kit::lowestNoteNum, kit::highestNoteNum);
             const double tick = roll->view->timeAxis().toTick(position.x());
-            m_start = std::max(m_end, roll->snappedDown(tick, modifiers));
-            update(roll->_decl->quantizedLength());
+            const int count = timeline->noteCount();
+            m_index = std::clamp(timeline->noteAt(tick), 0, count);
+            m_from = m_index < count ? timeline->note(m_index).start : timeline->length();
+            m_fills = modifiers & Qt::ShiftModifier;
+            m_splits = m_fills && m_index < count && timeline->note(m_index).rest;
+            m_start = m_fills ? std::max(m_from, roll->snappedDown(tick, modifiers)) : m_from;
+            const qint64 reach = roll->snapped(tick, modifiers) - m_start;
+            update(!m_fills && reach > 0 ? int(reach) : roll->_decl->quantizedLength());
         }
 
         void move(QPointF position, Qt::KeyboardModifiers modifiers) override {
@@ -2218,25 +2230,56 @@ namespace hello::daw {
             m_roll->clearPreview();
 
             const auto notes = m_roll->notes();
-            QList<kit::Note> inserted;
-            if (m_start > m_end) {
-                kit::Note rest;
-                rest.lyric = QString::fromLatin1(kit::restLyric);
-                rest.length = int(m_start - m_end);
-                rest.noteNum = m_key;
-                inserted.push_back(rest);
-            }
+            const auto rest = [this](int length) {
+                kit::Note note;
+                note.lyric = QString::fromLatin1(kit::restLyric);
+                note.length = length;
+                note.noteNum = m_key;
+                return note;
+            };
             kit::Note note;
             note.lyric = QString::fromLatin1(kit::defaultLyric);
             note.length = m_length;
             note.noteNum = m_key;
-            inserted.push_back(note);
-            // One note drawn, with the rest before it
+            const auto tempo = m_index < notes.size() ? notes.at(m_index).tempo() : std::nullopt;
+
+            // One note drawn, with the rests around it
             auto transaction = m_roll->session->transaction(PianoRoll::tr("Insert Note"));
             kit::DiagnosticList diagnostics;
-            kit::ProjectEdits::insertNotes(notes, notes.size(), inserted, diagnostics);
-            const auto id = notes.at(notes.size() - 1).id();
+            int drawn = m_index;
+            if (m_splits) {
+                const auto split = notes.at(m_index);
+                const int offset = int(m_start - m_from);
+                const int remainder = split.length() - offset - m_length;
+                if (offset > 0) {
+                    kit::ProjectEdits::setLength(split, offset, diagnostics);
+                    QList<kit::Note> inserted{note};
+                    if (remainder > 0) {
+                        inserted.push_back(rest(remainder));
+                    }
+                    drawn = m_index + 1;
+                    kit::ProjectEdits::insertNotes(notes, drawn, inserted, diagnostics);
+                } else {
+                    note.tempo = tempo;
+                    if (remainder > 0) {
+                        kit::ProjectEdits::setLength(split, remainder, diagnostics);
+                    } else {
+                        kit::ProjectEdits::removeNotes(notes, {m_index}, diagnostics);
+                    }
+                    kit::ProjectEdits::insertNotes(notes, m_index, {note}, diagnostics);
+                }
+            } else {
+                QList<kit::Note> inserted;
+                if (m_start > m_from) {
+                    inserted.push_back(rest(int(m_start - m_from)));
+                }
+                inserted.push_back(note);
+                inserted.first().tempo = tempo;
+                drawn = m_index + int(inserted.size()) - 1;
+                kit::ProjectEdits::insertNotes(notes, m_index, inserted, diagnostics);
+            }
             if (transaction.commit(diagnostics)) {
+                const auto id = notes.at(drawn).id();
                 m_roll->anchor = id;
                 m_roll->setSelection({id});
             }
@@ -2249,14 +2292,48 @@ namespace hello::daw {
 
     private:
         PianoRoll::Impl *m_roll;
-        qint64 m_end;
+        // The note before which the note goes, or the number of notes, and where it starts
+        int m_index = 0;
+        qint64 m_from = 0;
+        // Whether a rest fills the gap up to the pointer, and whether it splits a rest
+        bool m_fills = false;
+        bool m_splits = false;
         qint64 m_start = 0;
         int m_key = 0;
         int m_length = 0;
 
+        // Shows the note, and the notes after it where they move to
         void update(int length) {
             m_length = length;
             m_roll->drawn = Placement{-1, m_start, m_length, m_key};
+            const auto timeline = m_roll->timeline;
+            m_roll->placements.clear();
+            if (m_index < timeline->noteCount()) {
+                const auto &at = timeline->note(m_index);
+                const qint64 shift =
+                    m_splits ? std::max<qint64>(0, m_start + m_length - at.start - at.length)
+                             : m_start - m_from + m_length;
+                for (int i = 0; i < timeline->noteCount(); ++i) {
+                    const auto &note = timeline->note(i);
+                    Placement placement{i, note.start, note.length, note.key};
+                    if (i == m_index && m_splits) {
+                        // What remains of the rest: before the note, or else after it
+                        const qint64 before = m_start - m_from;
+                        const qint64 after = at.length - before - m_length;
+                        if (before > 0) {
+                            placement.length = int(before);
+                        } else if (after > 0) {
+                            placement.start = m_start + m_length;
+                            placement.length = int(after);
+                        } else {
+                            continue;
+                        }
+                    } else if (i >= m_index) {
+                        placement.start += shift;
+                    }
+                    m_roll->placements.push_back(placement);
+                }
+            }
             m_roll->view->viewport()->update();
         }
     };
@@ -2809,8 +2886,7 @@ namespace hello::daw {
             return nullptr;
         }
         m_roll->finishEditing(true);
-        if (m_roll->tool == PenTool &&
-            view()->timeAxis().toTick(position.x()) >= double(m_roll->timeline->length())) {
+        if (m_roll->tool == PenTool) {
             m_roll->selectPoints({});
             return std::make_unique<DrawGesture>(m_roll, position, modifiers);
         }

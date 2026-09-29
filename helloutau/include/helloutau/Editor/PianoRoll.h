@@ -104,7 +104,10 @@ namespace hello::daw {
         enum Tool {
             /// Selects the notes in a rectangle.
             SelectTool,
-            /// Draws a note after the last one.
+            /// Draws a note on the background: before the note at the pointer, or after the last
+            /// note, from where the note before it ends; with Shift, from the pointer after a
+            /// rest, or within a rest in its place. A press on a note selects and moves it, as
+            /// with SelectTool.
             PenTool,
             /// Draws the Mode1 pitch, anywhere in the roll, while the pitch is shown and the
             /// project turns Mode2 off; otherwise it acts as SelectTool. See
