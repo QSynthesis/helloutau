@@ -78,12 +78,17 @@ namespace {
             probe = argumentProbe();
         } else if (kind == QStringLiteral("vibrato")) {
             probe = vibratoProbe();
+        } else if (kind == QStringLiteral("bounds")) {
+            probe = boundsProbe();
+        } else if (kind == QStringLiteral("mode1")) {
+            probe = mode1Probe();
+        } else if (kind == QStringLiteral("save")) {
+            probe = saveProbe();
         } else {
-            stdc::console::u8fprintf(
-                stderr,
-                "error: there is no probe called %s. There is arguments and there is "
-                "vibrato\n",
-                toStd(kind).c_str());
+            stdc::console::u8fprintf(stderr,
+                                     "error: there is no probe called %s. There are arguments, "
+                                     "vibrato, bounds, mode1 and save\n",
+                                     toStd(kind).c_str());
             return 1;
         }
 
@@ -98,6 +103,7 @@ namespace {
         if (!tempo.empty()) {
             settings.tempo = fromStd(tempo);
         }
+        settings.mode2 = !result.option("--mode1").has_value();
 
         // UTAU reads a UST in the ANSI code page of the host, so the probe is written in the
         // encoding in which it will be opened, not in UTF-8.
@@ -141,7 +147,7 @@ int main(int argc, char *argv[]) {
 
     cli::Parser parser(
         cli::Command("utauprobe", "Write a project designed to determine UTAU behavior")
-            .addArgument(cli::Argument("kind", "arguments, or vibrato"))
+            .addArgument(cli::Argument("kind", "arguments, vibrato, bounds, mode1 or save"))
             .addArgument(cli::Argument("output", "The .ust to write"))
             .addOption(cli::Option({"--voice"},
                                    "The voice bank folder in UTAU notation: the folder name "
@@ -154,6 +160,7 @@ int main(int argc, char *argv[]) {
             .addOption(cli::Option({"--flags"}, "The project flags").arg(cli::Argument("flags")))
             .addOption(cli::Option({"--tempo"}, "The project tempo, in UTAU notation")
                            .arg(cli::Argument("bpm")))
+            .addOption(cli::Option({"--mode1"}, "Write Mode2=False, for the pitch of Mode1"))
             .addOption(cli::Option({"-c", "--charset"},
                                    "The encoding of the UST, which must be the ANSI code page of "
                                    "the machine running UTAU. Defaults to that of this machine")

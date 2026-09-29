@@ -35,6 +35,7 @@ namespace utauprobe {
             QString cacheDir; ///< CacheDir
             QString flags;    ///< the project flags
             QString tempo = QStringLiteral("120.00");
+            bool mode2 = true; ///< Mode2, which false turns off for the pitch of Mode1
         };
 
         void note(ProbeNote note);
@@ -69,6 +70,23 @@ namespace utauprobe {
     /// removes and what it retains, what carries over into the next note, how far the tail of a
     /// note is bent by the following note, and when UTAU sends no curve at all.
     Probe vibratoProbe();
+
+    /// The values beyond the ranges the editor offers (step 7 in docs/Tuning.md): velocity
+    /// below 0 and above 200, intensity below 0 and above 200, modulation beyond -200 and 200.
+    /// Which value UTAU passes for each, or whether it falls back to the default, as it does for
+    /// Velocity=250 (docs/Synth.md).
+    Probe boundsProbe();
+
+    /// The pitch of Mode1 (step 5 in docs/Tuning.md): how UTAU forms the curve from PBStart and
+    /// PitchBend, what follows the end of the values, how a vibrato combines with them, and
+    /// which of the data of Mode1 and Mode2 a note with both gives. Rendered twice, with Mode2
+    /// off and on, the second answering which data the project setting selects.
+    Probe mode1Probe();
+
+    /// The notes for opening in UTAU and saving again, not for rendering: whether UTAU keeps an
+    /// envelope equal to its default, and how it writes an envelope and points it read (step 4
+    /// in docs/Tuning.md).
+    Probe saveProbe();
 
 }
 

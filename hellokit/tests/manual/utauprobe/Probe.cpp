@@ -1,5 +1,6 @@
 #include "Probe.h"
 
+#include <functional>
 #include <utility>
 
 #include <QtCore/QPair>
@@ -47,7 +48,7 @@ namespace utauprobe {
             QStringLiteral("CacheDir=%1").arg(settings.cacheDir),
             QStringLiteral("Tool1=wavtool.exe"),
             QStringLiteral("Tool2=resampler.exe"),
-            QStringLiteral("Mode2=True"),
+            settings.mode2 ? QStringLiteral("Mode2=True") : QStringLiteral("Mode2=False"),
             QStringLiteral("Flags=%1").arg(settings.flags),
         };
 
@@ -526,6 +527,150 @@ namespace utauprobe {
                   {entry("PreUtterance", pre)});
         }
 
+        probe.rest();
+        return probe;
+    }
+
+    // ------------------------------------------------------------------------ the bounds probe
+
+    Probe boundsProbe() {
+        Probe probe;
+        // Each value alone between rests, as in the vibrato probe
+        const auto alone = [&probe](const char *key, const QString &asks, int value) {
+            probe.rest();
+            ProbeNote note;
+            note.length = LENGTH;
+            note.lyric = QLatin1String(LYRIC);
+            note.entries = {entry(key, value)};
+            note.asks = asks;
+            note.detail = QString::number(value);
+            probe.note(note);
+        };
+        // Below 0 the editor offers velocity to -100, as QSynthesis does. Velocity=250 is known
+        // to fall back to 100.
+        for (const int value : {-200, -100, -50, -1, 0, 200, 201, 210, 225, 250, 300, 1000}) {
+            alone("Velocity", QStringLiteral("velocity"), value);
+        }
+        for (const int value : {-100, -1, 0, 200, 201, 250, 500}) {
+            alone("Intensity", QStringLiteral("intensity"), value);
+        }
+        for (const int value : {-300, -201, -200, 200, 201, 300}) {
+            alone("Modulation", QStringLiteral("modulation"), value);
+        }
+        probe.rest();
+        return probe;
+    }
+
+    // ------------------------------------------------------------------------- the Mode1 probe
+
+    Probe mode1Probe() {
+        Probe probe;
+        const auto values = [](int count, const std::function<QString(int)> &at) {
+            QStringList out;
+            for (int i = 0; i < count; ++i) {
+                out += at(i);
+            }
+            return out.join(QLatin1Char(','));
+        };
+        // A note of 480 ticks holds 96 values at one per 5 ticks.
+        const auto alone = [&probe](const QString &asks, const QString &detail,
+                                    const QStringList &entries) {
+            probe.rest();
+            ProbeNote note;
+            note.length = 480;
+            note.lyric = QLatin1String(LYRIC);
+            note.entries = entries;
+            note.asks = asks;
+            note.detail = detail;
+            probe.note(note);
+        };
+        const auto bend = [](const QString &start, const QString &pitches) {
+            return QStringList{QStringLiteral("PBType=5"), entry("PBStart", start),
+                               entry("PitchBend", pitches)};
+        };
+        const auto ramp = values(96, [](int i) { return QString::number(i * 2); });
+
+        alone(QStringLiteral("mode1"), QStringLiteral("absent"), {});
+        alone(QStringLiteral("mode1"), QStringLiteral("96 values of 50, PBStart 0"),
+              bend(QStringLiteral("0"), values(96, [](int) { return QStringLiteral("50"); })));
+        alone(QStringLiteral("mode1"), QStringLiteral("ramp 0 to 190 by 2, PBStart 0"),
+              bend(QStringLiteral("0"), ramp));
+        // The unit and the sign of PBStart
+        for (const char *start : {"-50", "-20.5", "20", "50"}) {
+            alone(QStringLiteral("pbstart"),
+                  QStringLiteral("ramp, PBStart %1").arg(QLatin1String(start)),
+                  bend(QLatin1String(start), ramp));
+        }
+        // What follows the end of the values, and what the values beyond the note do
+        alone(QStringLiteral("extent"), QStringLiteral("10 values of 100, then none"),
+              bend(QStringLiteral("0"), values(10, [](int) { return QStringLiteral("100"); })));
+        alone(QStringLiteral("extent"), QStringLiteral("150 values of 100, beyond the note"),
+              bend(QStringLiteral("0"), values(150, [](int) { return QStringLiteral("100"); })));
+        alone(QStringLiteral("precision"), QStringLiteral("96 values of 10.5"),
+              bend(QStringLiteral("0"), values(96, [](int) { return QStringLiteral("10.5"); })));
+        alone(QStringLiteral("precision"), QStringLiteral("alternating 300 and -300"),
+              bend(QStringLiteral("0"),
+                   values(96, [](int i) { return QString::number(i % 2 ? -300 : 300); })));
+        // With a vibrato
+        const auto vibrato = QStringLiteral("VBR=65,180,35,20,20,0,0,0");
+        alone(QStringLiteral("vibrato"), QStringLiteral("vibrato alone"), {vibrato});
+        alone(QStringLiteral("vibrato"), QStringLiteral("values of 0 and a vibrato"),
+              bend(QStringLiteral("0"), values(96, [](int) { return QStringLiteral("0"); })) +
+                  QStringList{vibrato});
+        alone(QStringLiteral("vibrato"), QStringLiteral("ramp and a vibrato"),
+              bend(QStringLiteral("0"), ramp) + QStringList{vibrato});
+        // Data of both modes, and of Mode2 alone, which the setting of the project selects
+        const QStringList points = {QStringLiteral("PBS=-40;0"), QStringLiteral("PBW=40,40"),
+                                    QStringLiteral("PBY=50")};
+        alone(QStringLiteral("both"), QStringLiteral("Mode2 points alone"), points);
+        alone(QStringLiteral("both"), QStringLiteral("ramp and Mode2 points"),
+              bend(QStringLiteral("0"), ramp) + points);
+        // A note after a note with values, which may carry into it as a Mode2 curve does
+        alone(QStringLiteral("carry"), QStringLiteral("ramp"), bend(QStringLiteral("0"), ramp));
+        ProbeNote next;
+        next.length = 480;
+        next.lyric = QLatin1String(LYRIC);
+        next.asks = QStringLiteral("carry");
+        next.detail = QStringLiteral("the note after, absent");
+        probe.note(next);
+        probe.rest();
+        return probe;
+    }
+
+    // -------------------------------------------------------------------------- the save probe
+
+    Probe saveProbe() {
+        Probe probe;
+        const auto alone = [&probe](const QString &asks, const QString &detail,
+                                    const QStringList &entries) {
+            probe.rest();
+            ProbeNote note;
+            note.length = LENGTH;
+            note.lyric = QLatin1String(LYRIC);
+            note.entries = entries;
+            note.asks = asks;
+            note.detail = detail;
+            probe.note(note);
+        };
+        alone(QStringLiteral("envelope"), QStringLiteral("absent"), {});
+        for (const char *envelope :
+             {"0,5,35,0,100,100,0", "0,5,35,0,100,100,0,0", "0,5,35,0,100,100,0,0,0,100",
+              "0,5,35,0,100,100", "0,5,35,0,100,100,0,10"}) {
+            alone(QStringLiteral("envelope"), QLatin1String(envelope),
+                  {entry("Envelope", QLatin1String(envelope))});
+        }
+        // Points whose last one does not end at the pitch of the note, with each shape
+        for (const char *mode : {"", "s", "r", "j"}) {
+            QStringList entries = {QStringLiteral("PBS=-40;0"), QStringLiteral("PBW=40,40"),
+                                   QStringLiteral("PBY=20,30")};
+            if (*mode) {
+                entries += entry("PBM", QStringLiteral("%1,%1").arg(QLatin1String(mode)));
+            }
+            alone(QStringLiteral("points"),
+                  QStringLiteral("last point at 30, PBM %1")
+                      .arg(*mode ? QLatin1String(mode) : QLatin1String("absent")),
+                  entries);
+        }
         probe.rest();
         return probe;
     }
