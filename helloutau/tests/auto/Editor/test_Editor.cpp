@@ -31,6 +31,7 @@
 
 #include <helloutau/Editor/AppSettings.h>
 #include <helloutau/Editor/Editor.h>
+#include <helloutau/Editor/ProjectPropertiesDialog.h>
 #include <helloutau/Editor/ProjectWindow.h>
 #include <helloutau/Editor/PianoRoll.h>
 #include <helloutau/Editor/PasteParametersDialog.h>
@@ -468,6 +469,55 @@ private Q_SLOTS:
         e->settings().setPlaybackMode(AppSettings::Prerender);
         window->applySettings();
         QVERIFY(!roll->isCursorEnabled());
+    }
+
+    // The dialog gives the fields that differ from the project, the tempo only once edited, so
+    // that a tempo the box rounds stays as it is.
+    void the_properties_dialog_gives_what_differs() {
+        kit::Project project;
+        project.settings.name = QStringLiteral("song");
+        project.settings.tempo = 125.125;
+        project.settings.flags = QStringLiteral("g-5");
+        project.tracks.push_back({});
+        project.tracks[0].voiceDir = QStringLiteral("%VOICE%bank");
+
+        ProjectPropertiesDialog dialog(project);
+        QVERIFY(dialog.changes().isEmpty());
+        QCOMPARE(dialog.voiceDirEdit()->text(), QStringLiteral("%VOICE%bank"));
+
+        dialog.nameEdit()->setText(QStringLiteral("other"));
+        dialog.voiceDirEdit()->setText(QStringLiteral("C:/voice/other"));
+        dialog.mode2Box()->setChecked(!project.settings.mode2);
+        auto changes = dialog.changes();
+        QCOMPARE(changes.name, std::optional(QStringLiteral("other")));
+        QCOMPARE(changes.voiceDir, std::optional(QStringLiteral("C:/voice/other")));
+        QCOMPARE(changes.mode2, std::optional(!project.settings.mode2));
+        QVERIFY(!changes.tempo && !changes.flags && !changes.wavtool && !changes.resampler &&
+                !changes.outputFile);
+
+        dialog.tempoBox()->setValue(90);
+        QCOMPARE(dialog.changes().tempo, std::optional(90.0));
+    }
+
+    // Project Properties changes the project in one step, and reads a new voice folder.
+    void the_project_properties_are_edited_from_the_menu() {
+        const auto e = editor();
+        const auto window = e->newWindow();
+        const auto properties = actionNamed(window, QStringLiteral("Project &Properties..."));
+        QVERIFY(properties);
+        QTimer::singleShot(0, [] {
+            const auto dialog =
+                qobject_cast<ProjectPropertiesDialog *>(QApplication::activeModalWidget());
+            QVERIFY(dialog);
+            dialog->nameEdit()->setText(QStringLiteral("renamed"));
+            dialog->flagsEdit()->setText(QStringLiteral("B0"));
+            dialog->accept();
+        });
+        properties->trigger();
+        const auto session = window->document()->session();
+        QCOMPARE(session->snapshot().settings.name, QStringLiteral("renamed"));
+        QCOMPARE(session->snapshot().settings.flags, QStringLiteral("B0"));
+        QCOMPARE(session->currentStep(), 1);
     }
 
     void the_edit_commands_follow_the_selection() {

@@ -554,6 +554,49 @@ private Q_SLOTS:
         QCOMPARE(session.snapshot().toJson(), project.toJson());
     }
 
+    // The properties set change in one step, the others stay; none that differs makes no step.
+    void the_properties_change_in_one_step() {
+        const auto project = richProject();
+        ProjectSession session(project);
+        const auto ref = ProjectRef(&session);
+
+        ProjectPropertyChanges changes;
+        changes.name = QStringLiteral("song");
+        changes.tempo = 90;
+        changes.flags = QStringLiteral("g-5");
+        changes.voiceDir = QStringLiteral("%VOICE%other");
+        changes.resampler = QStringLiteral("C:/tools/moresampler.exe");
+        DiagnosticList diagnostics;
+        QVERIFY(ProjectEdits::setProperties(ref, changes, diagnostics));
+        const auto edited = session.snapshot();
+        QCOMPARE(edited.settings.name, QStringLiteral("song"));
+        QCOMPARE(edited.settings.tempo, 90.0);
+        QCOMPARE(edited.settings.flags, QStringLiteral("g-5"));
+        QCOMPARE(edited.tracks[0].voiceDir, QStringLiteral("%VOICE%other"));
+        QCOMPARE(edited.settings.resampler, QStringLiteral("C:/tools/moresampler.exe"));
+        QCOMPARE(edited.settings.outputFile, project.settings.outputFile);
+        QCOMPARE(edited.settings.wavtool, project.settings.wavtool);
+        QCOMPARE(edited.settings.mode2, project.settings.mode2);
+        QCOMPARE(session.currentStep(), 1);
+        QCOMPARE(session.undoMessage(), ProjectEdits::tr("Change Project Properties"));
+
+        // The same again, or nothing, makes no step.
+        QVERIFY(ProjectEdits::setProperties(ref, changes, diagnostics));
+        QVERIFY(ProjectEdits::setProperties(ref, {}, diagnostics));
+        QCOMPARE(session.currentStep(), 1);
+
+        // A tempo that is not positive is refused, and changes nothing.
+        ProjectPropertyChanges wrong;
+        wrong.name = QStringLiteral("other");
+        wrong.tempo = 0;
+        QVERIFY(!ProjectEdits::setProperties(ref, wrong, diagnostics));
+        QVERIFY(hasError(diagnostics));
+        QCOMPARE(session.snapshot().settings.name, QStringLiteral("song"));
+
+        session.undo();
+        QCOMPARE(session.snapshot().toJson(), project.toJson());
+    }
+
     // Mode2 is turned on and off as an undo step, which keeps the data of either mode.
     void mode2_is_turned_on_and_off() {
         const auto project = richProject();

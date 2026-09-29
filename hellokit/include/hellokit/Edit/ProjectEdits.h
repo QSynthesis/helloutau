@@ -1,8 +1,11 @@
 #ifndef HELLOKIT_EDIT_PROJECTEDITS_H
 #define HELLOKIT_EDIT_PROJECTEDITS_H
 
+#include <optional>
+
 #include <QtCore/QCoreApplication>
 #include <QtCore/QList>
+#include <QtCore/QString>
 
 #include <hellokit/Document/Note.h>
 #include <hellokit/Support/Diagnostic.h>
@@ -24,6 +27,29 @@ namespace hello::kit {
     /// command.
     ///
     /// \sa EditSession::Transaction, ProjectCommands::domainFunctions()
+    /// Changes to the properties of a project, the fields of the dialog of UTAU and the tempo:
+    /// each field that is set replaces the property, the others stay.
+    struct ProjectPropertyChanges {
+        std::optional<QString> name;
+        std::optional<double> tempo;
+        std::optional<QString> flags;
+        std::optional<QString> outputFile;
+
+        /// The voice directory of the first track, as the file writes it
+        std::optional<QString> voiceDir;
+
+        /// \warning Untrusted, stored and never executed, see ProjectSettings::wavtool.
+        std::optional<QString> wavtool;
+        std::optional<QString> resampler;
+
+        std::optional<bool> mode2;
+
+        inline bool isEmpty() const {
+            return !name && !tempo && !flags && !outputFile && !voiceDir && !wavtool &&
+                   !resampler && !mode2;
+        }
+    };
+
     class HELLOKIT_EDIT_EXPORT ProjectEdits {
         Q_GADGET
         Q_DECLARE_TR_FUNCTIONS(hello::kit::ProjectEdits)
@@ -128,6 +154,12 @@ namespace hello::kit {
         /// vibratos, or the Mode1 values, the synthesis uses, as UTAU does. The other is kept.
         Q_INVOKABLE static bool setMode2(const SettingsRef &settings, bool mode2,
                                          DiagnosticList &diagnostics);
+
+        /// Changes the properties of \a project that \a changes sets, in one step, and makes no
+        /// step if none differs. The voice directory is that of the first track.
+        Q_INVOKABLE static bool setProperties(const ProjectRef &project,
+                                              const ProjectPropertyChanges &changes,
+                                              DiagnosticList &diagnostics);
     };
 
 }

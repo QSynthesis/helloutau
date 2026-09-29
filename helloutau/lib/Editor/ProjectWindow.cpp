@@ -40,6 +40,7 @@
 #include "Editor.h"
 #include "ExportUstDialog.h"
 #include "PianoRoll.h"
+#include "ProjectPropertiesDialog.h"
 #include "Playback.h"
 #include "PasteParametersDialog.h"
 #include "ScalePitchDialog.h"
@@ -231,6 +232,27 @@ namespace hello::daw {
                     scheduleRenderStates();
                 }
             });
+        }
+
+        // The properties of the project in their dialog, changed in one step; a new voice
+        // folder is read at once.
+        void editProperties() {
+            stdc_decl_t;
+            ProjectPropertiesDialog dialog(document->session()->snapshot(), &decl);
+            if (dialog.exec() != QDialog::Accepted) {
+                return;
+            }
+            const auto changes = dialog.changes();
+            if (changes.isEmpty()) {
+                return;
+            }
+            kit::DiagnosticList diagnostics;
+            const bool changed = kit::ProjectEdits::setProperties(
+                kit::ProjectRef(document->session()), changes, diagnostics);
+            DiagnosticBox::show(&decl, tr("Project Properties"), diagnostics);
+            if (changed && changes.voiceDir) {
+                decl.loadVoiceBank();
+            }
         }
 
         // Deletes the render cache of the project; the realtime mode renders it anew.
@@ -476,6 +498,7 @@ namespace hello::daw {
                 stdc_decl_t;
                 decl.exportUst();
             });
+            addCommand(QStringLiteral("helloutau.file.properties"), [this] { editProperties(); });
             addCommand(QStringLiteral("helloutau.file.close"), [this] {
                 stdc_decl_t;
                 decl.close();

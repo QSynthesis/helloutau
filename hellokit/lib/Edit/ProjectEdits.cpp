@@ -299,6 +299,40 @@ namespace hello::kit {
         return transaction.commit(diagnostics);
     }
 
+    bool ProjectEdits::setProperties(const ProjectRef &project,
+                                     const ProjectPropertyChanges &changes,
+                                     DiagnosticList &diagnostics) {
+        // A transaction that changes nothing makes no step.
+        const auto settings = project.settings();
+        const auto tracks = project.tracks();
+        auto transaction = project.session()->transaction(tr("Change Project Properties"));
+        if (changes.name) {
+            settings.setName(*changes.name);
+        }
+        if (changes.tempo) {
+            settings.setTempo(*changes.tempo);
+        }
+        if (changes.flags) {
+            settings.setFlags(*changes.flags);
+        }
+        if (changes.outputFile) {
+            settings.setOutputFile(*changes.outputFile);
+        }
+        if (changes.voiceDir && tracks.size() > 0) {
+            tracks.at(0).setVoiceDir(*changes.voiceDir);
+        }
+        if (changes.wavtool) {
+            settings.setWavtool(*changes.wavtool);
+        }
+        if (changes.resampler) {
+            settings.setResampler(*changes.resampler);
+        }
+        if (changes.mode2) {
+            settings.setMode2(*changes.mode2);
+        }
+        return transaction.commit(diagnostics);
+    }
+
     bool ProjectEdits::setMode2(const SettingsRef &settings, bool mode2,
                                 DiagnosticList &diagnostics) {
         if (settings.mode2() == mode2) {

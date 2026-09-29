@@ -395,6 +395,65 @@ namespace hello::kit {
                                           diagnostics);
         }
 
+        // settings properties {"name": "...", "tempo": 120, ...}: the fields set replace the
+        // properties, see ProjectPropertyChanges.
+        bool propertiesCommand(ProjectSession &session, const Arguments &arguments,
+                               DiagnosticList &diagnostics) {
+            if (arguments.size() != 1) {
+                return usage(diagnostics, "settings properties <object>");
+            }
+            const auto json = edit::CommandSyntax::valueOf(arguments[0]);
+            if (!json.isObject()) {
+                return fail(diagnostics, ProjectCommands::tr("The properties must be an object."));
+            }
+            ProjectPropertyChanges changes;
+            const auto object = json.toObject();
+            for (auto it = object.begin(); it != object.end(); ++it) {
+                const auto &key = it.key();
+                const auto value = it.value();
+                const auto text = [&](std::optional<QString> &field) {
+                    if (!value.isString()) {
+                        return fail(diagnostics,
+                                    ProjectCommands::tr("%1 must be a string.").arg(key));
+                    }
+                    field = value.toString();
+                    return true;
+                };
+                bool ok = true;
+                if (key == QLatin1String("name")) {
+                    ok = text(changes.name);
+                } else if (key == QLatin1String("flags")) {
+                    ok = text(changes.flags);
+                } else if (key == QLatin1String("outputFile")) {
+                    ok = text(changes.outputFile);
+                } else if (key == QLatin1String("voiceDir")) {
+                    ok = text(changes.voiceDir);
+                } else if (key == QLatin1String("wavtool")) {
+                    ok = text(changes.wavtool);
+                } else if (key == QLatin1String("resampler")) {
+                    ok = text(changes.resampler);
+                } else if (key == QLatin1String("tempo")) {
+                    if (!value.isDouble()) {
+                        return fail(diagnostics, ProjectCommands::tr("tempo must be a number."));
+                    }
+                    changes.tempo = value.toDouble();
+                } else if (key == QLatin1String("mode2")) {
+                    if (!value.isBool()) {
+                        return fail(diagnostics, ProjectCommands::tr("Mode2 is true or false."));
+                    }
+                    changes.mode2 = value.toBool();
+                } else {
+                    return fail(
+                        diagnostics,
+                        ProjectCommands::tr("%1 is not a property of the project.").arg(key));
+                }
+                if (!ok) {
+                    return false;
+                }
+            }
+            return ProjectEdits::setProperties(ProjectRef(&session), changes, diagnostics);
+        }
+
         using DomainCommand = bool (*)(ProjectSession &, const Arguments &, DiagnosticList &);
 
         // The domain commands, each with the function of ProjectEdits that it calls.
@@ -420,6 +479,7 @@ namespace hello::kit {
             {"note",     "parameter",  parameterCommand,  "setParameter" },
             {"note",     "bend",       bendCommand,       "drawPitchBend"},
             {"settings", "mode2",      mode2Command,      "setMode2"     },
+            {"settings", "properties", propertiesCommand, "setProperties"},
         };
 
         bool run(ProjectSession &session, const Arguments &arguments, DiagnosticList &diagnostics) {

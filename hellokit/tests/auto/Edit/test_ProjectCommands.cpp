@@ -568,18 +568,45 @@ private Q_SLOTS:
         QCOMPARE(ProjectCommands::queryNames(), QStringList{QStringLiteral("get")});
     }
 
+    void settings_properties_changes_the_fields_given() {
+        ProjectSession session(richProject());
+        QVERIFY(
+            run(session, QStringLiteral("settings properties {\"name\": \"song\", \"tempo\": 90, "
+                                        "\"voiceDir\": \"bank\", \"mode2\": false}")));
+        const auto project = session.snapshot();
+        QCOMPARE(project.settings.name, QStringLiteral("song"));
+        QCOMPARE(project.settings.tempo, 90.0);
+        QCOMPARE(project.tracks[0].voiceDir, QStringLiteral("bank"));
+        QVERIFY(!project.settings.mode2);
+        verifyRefused(session, QStringLiteral("settings properties {\"colour\": \"red\"}"));
+        verifyRefused(session, QStringLiteral("settings properties {\"tempo\": \"fast\"}"));
+        verifyRefused(session, QStringLiteral("settings properties {\"name\": 1}"));
+        verifyRefused(session, QStringLiteral("settings properties {\"mode2\": 1}"));
+        verifyRefused(session, QStringLiteral("settings properties [1]"));
+        verifyRefused(session, QStringLiteral("settings properties"));
+    }
+
     void names_lists_every_command() {
-        QCOMPARE(
-            ProjectCommands::names(),
-            QStringList({QStringLiteral("set"), QStringLiteral("insert"), QStringLiteral("remove"),
-                         QStringLiteral("move"), QStringLiteral("replace"),
-                         QStringLiteral("note transpose"), QStringLiteral("note split"),
-                         QStringLiteral("note insert"), QStringLiteral("note tempo"),
-                         QStringLiteral("note remove"), QStringLiteral("note length"),
-                         QStringLiteral("note move"), QStringLiteral("note portamento"),
-                         QStringLiteral("note vibrato"), QStringLiteral("note envelope"),
-                         QStringLiteral("note scale"), QStringLiteral("note parameter"),
-                         QStringLiteral("note bend"), QStringLiteral("settings mode2")}));
+        QCOMPARE(ProjectCommands::names(), QStringList({QStringLiteral("set"),
+                                                        QStringLiteral("insert"),
+                                                        QStringLiteral("remove"),
+                                                        QStringLiteral("move"),
+                                                        QStringLiteral("replace"),
+                                                        QStringLiteral("note transpose"),
+                                                        QStringLiteral("note split"),
+                                                        QStringLiteral("note insert"),
+                                                        QStringLiteral("note tempo"),
+                                                        QStringLiteral("note remove"),
+                                                        QStringLiteral("note length"),
+                                                        QStringLiteral("note move"),
+                                                        QStringLiteral("note portamento"),
+                                                        QStringLiteral("note vibrato"),
+                                                        QStringLiteral("note envelope"),
+                                                        QStringLiteral("note scale"),
+                                                        QStringLiteral("note parameter"),
+                                                        QStringLiteral("note bend"),
+                                                        QStringLiteral("settings mode2"),
+                                                        QStringLiteral("settings properties")}));
     }
 };
 

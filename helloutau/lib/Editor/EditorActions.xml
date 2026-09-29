@@ -24,6 +24,8 @@
         <action id="helloutau.file.saveAs" text="Save &amp;As..." category="File"
                 shortcut="Ctrl+Shift+S" />
         <action id="helloutau.file.exportUst" text="&amp;UST..." category="File" />
+        <!-- The name, tempo, flags, output file, voice folder, engines and Mode2 of the project -->
+        <action id="helloutau.file.properties" text="Project &amp;Properties..." category="File" />
         <action id="helloutau.file.close" text="&amp;Close" category="File" shortcut="Ctrl+W" />
         <action id="helloutau.file.quit" text="&amp;Quit" category="File" shortcut="Ctrl+Q" />
 
@@ -127,6 +129,8 @@
                 <menu id="helloutau.file.export">
                     <action id="helloutau.file.exportUst" />
                 </menu>
+                <separator />
+                <action id="helloutau.file.properties" />
                 <separator />
                 <action id="helloutau.file.close" />
                 <action id="helloutau.file.quit" />
