@@ -3,7 +3,7 @@
 #include <QtWidgets/QApplication>
 
 #include <helloutau/Editor/Editor.h>
-#include <helloutau/Editor/MainWindow.h>
+#include <helloutau/Editor/ProjectWindow.h>
 
 int main(int argc, char *argv[]) {
     QApplication app(argc, argv);

@@ -1,5 +1,5 @@
-#ifndef HELLOUTAU_EDITOR_MAINWINDOW_H
-#define HELLOUTAU_EDITOR_MAINWINDOW_H
+#ifndef HELLOUTAU_EDITOR_PROJECTWINDOW_H
+#define HELLOUTAU_EDITOR_PROJECTWINDOW_H
 
 #include <memory>
 
@@ -15,12 +15,12 @@ namespace hello::daw {
 
     class Editor;
 
-    /// The editor window, which edits one project. Created by Editor.
-    class HELLOUTAU_EDITOR_EXPORT MainWindow : public QMainWindow {
+    /// The window of a project, which edits it. Created by Editor.
+    class HELLOUTAU_EDITOR_EXPORT ProjectWindow : public QMainWindow {
         Q_OBJECT
     public:
-        MainWindow(Editor *editor, std::unique_ptr<kit::ProjectDocument> document);
-        ~MainWindow();
+        ProjectWindow(Editor *editor, std::unique_ptr<kit::ProjectDocument> document);
+        ~ProjectWindow();
 
         kit::ProjectDocument *document() const;
 
@@ -62,4 +62,4 @@ namespace hello::daw {
 
 }
 
-#endif // HELLOUTAU_EDITOR_MAINWINDOW_H
+#endif // HELLOUTAU_EDITOR_PROJECTWINDOW_H

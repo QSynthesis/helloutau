@@ -1,5 +1,5 @@
 {
-    "widgets": { "MainWindow": ["palette"] },
+    "widgets": { "ProjectWindow": ["palette"] },
     "stylesheets": {
         "_common": { "palette": { "file": "common/palette.qss" } }
     }

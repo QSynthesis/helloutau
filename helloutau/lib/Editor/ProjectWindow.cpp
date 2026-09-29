@@ -1,4 +1,4 @@
-#include "MainWindow.h"
+#include "ProjectWindow.h"
 
 #include <QtCore/QDir>
 #include <QtCore/QHash>
@@ -86,9 +86,9 @@ namespace hello::daw {
 
     }
 
-    class MainWindow::Impl {
+    class ProjectWindow::Impl {
     public:
-        using Decl = MainWindow;
+        using Decl = ProjectWindow;
 
         Impl(Decl *decl, Editor *editor) : _decl(decl), editor(editor) {
         }
@@ -218,7 +218,7 @@ namespace hello::daw {
             }
             const auto selected = roll->selectedIndices();
             if (selected.isEmpty()) {
-                decl.statusBar()->showMessage(MainWindow::tr("Select the notes to render first."),
+                decl.statusBar()->showMessage(ProjectWindow::tr("Select the notes to render first."),
                                               StatusMessageTimeout);
                 return;
             }
@@ -279,7 +279,7 @@ namespace hello::daw {
             const auto failed = playback->takePreviewDiagnostics();
             if (!failed.isEmpty()) {
                 decl.statusBar()->showMessage(
-                    MainWindow::tr("%n note(s) could not be rendered, and were silent.", nullptr,
+                    ProjectWindow::tr("%n note(s) could not be rendered, and were silent.", nullptr,
                                    int(failed.size())),
                     StatusMessageTimeout);
             }
@@ -293,9 +293,9 @@ namespace hello::daw {
             renderLabel->setVisible(pending > 0 || buffering);
             if (buffering) {
                 renderLabel->setText(
-                    MainWindow::tr("Buffering, %n note(s) to render", nullptr, pending));
+                    ProjectWindow::tr("Buffering, %n note(s) to render", nullptr, pending));
             } else if (pending > 0) {
-                renderLabel->setText(MainWindow::tr("%n note(s) to render", nullptr, pending));
+                renderLabel->setText(ProjectWindow::tr("%n note(s) to render", nullptr, pending));
             }
         }
 
@@ -790,21 +790,21 @@ namespace hello::daw {
         }
 
         static QString tr(const char *text) {
-            return MainWindow::tr(text);
+            return ProjectWindow::tr(text);
         }
     };
 
-    MainWindow::MainWindow(Editor *editor, std::unique_ptr<kit::ProjectDocument> document)
+    ProjectWindow::ProjectWindow(Editor *editor, std::unique_ptr<kit::ProjectDocument> document)
         : _impl(std::make_unique<Impl>(this, editor)) {
         stdc_impl_t;
         impl.initActions();
         impl.document = std::move(document);
         impl.bindDocument();
-        editor->themeManager()->install(this, {QStringLiteral("MainWindow")});
+        editor->themeManager()->install(this, {QStringLiteral("ProjectWindow")});
         resize(960, 640);
     }
 
-    MainWindow::~MainWindow() {
+    ProjectWindow::~ProjectWindow() {
         stdc_impl_t;
         // Stopping updates the piano roll, which refers to the session of the document, which
         // goes with _impl.
@@ -812,12 +812,12 @@ namespace hello::daw {
         delete impl.roll;
     }
 
-    kit::ProjectDocument *MainWindow::document() const {
+    kit::ProjectDocument *ProjectWindow::document() const {
         stdc_impl_t;
         return impl.document.get();
     }
 
-    void MainWindow::setDocument(std::unique_ptr<kit::ProjectDocument> document) {
+    void ProjectWindow::setDocument(std::unique_ptr<kit::ProjectDocument> document) {
         stdc_impl_t;
         impl.playback->stop();
         auto previous = std::move(impl.document);
@@ -825,7 +825,7 @@ namespace hello::daw {
         impl.bindDocument();
     }
 
-    void MainWindow::applySettings() {
+    void ProjectWindow::applySettings() {
         stdc_impl_t;
         // What plays in the other mode stops.
         const auto state = impl.playback->state();
@@ -835,12 +835,12 @@ namespace hello::daw {
         impl.updateBackground();
     }
 
-    bool MainWindow::isUnused() const {
+    bool ProjectWindow::isUnused() const {
         stdc_impl_t;
         return impl.document->sourcePath().empty() && !impl.document->isModified();
     }
 
-    bool MainWindow::loadVoiceBank() {
+    bool ProjectWindow::loadVoiceBank() {
         stdc_impl_t;
         const auto document = impl.document.get();
         const auto utau = impl.editor->settings().utauDirectory();
@@ -852,7 +852,7 @@ namespace hello::daw {
         return loaded;
     }
 
-    bool MainWindow::save() {
+    bool ProjectWindow::save() {
         stdc_impl_t;
         if (impl.document->filePath().empty()) {
             return saveAs();
@@ -863,7 +863,7 @@ namespace hello::daw {
         return saved;
     }
 
-    bool MainWindow::saveAs() {
+    bool ProjectWindow::saveAs() {
         stdc_impl_t;
         const auto file = QFileDialog::getSaveFileName(
             this, tr("Save As"), textOf(proposedPath(*impl.document, u".usth")),
@@ -884,7 +884,7 @@ namespace hello::daw {
         return saved;
     }
 
-    bool MainWindow::exportUst() {
+    bool ProjectWindow::exportUst() {
         stdc_impl_t;
         const auto &settings = impl.editor->settings();
         ExportUstDialog dialog(proposedPath(*impl.document, u".ust"), settings.ustExportCharset(),
@@ -911,7 +911,7 @@ namespace hello::daw {
         return exported;
     }
 
-    void MainWindow::closeEvent(QCloseEvent *event) {
+    void ProjectWindow::closeEvent(QCloseEvent *event) {
         stdc_impl_t;
         if (!impl.maybeSave()) {
             event->ignore();

@@ -42,8 +42,8 @@
 hellokit/include/hellokit/Document/PayloadCodec.h     ← #include <hellokit/Document/PayloadCodec.h>
 hellokit/lib/Document/PayloadCodec.cpp                ← 目标 HelloKitDocument
 
-helloutau/include/helloutau/Editor/MainWindow.h
-helloutau/lib/Editor/MainWindow.cpp              ← 目标 HelloUtauEditor
+helloutau/include/helloutau/Editor/ProjectWindow.h
+helloutau/lib/Editor/ProjectWindow.cpp           ← 目标 HelloUtauEditor
 helloutau/plugins/                               ← 编辑界面扩展插件
 helloutau/tools/driver/main.cpp                  ← 目标 helloutau
 ```

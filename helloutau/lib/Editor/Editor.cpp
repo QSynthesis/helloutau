@@ -16,7 +16,7 @@
 
 #include "AppSettings.h"
 #include "DiagnosticBox_p.h"
-#include "MainWindow.h"
+#include "ProjectWindow.h"
 #include "SettingsDialog.h"
 #include "UstCharsetDialog.h"
 #include "VoiceBankCharsetDialog.h"
@@ -53,11 +53,11 @@ namespace hello::daw {
         std::unique_ptr<AppSettings> settings;
         QAK::ActionRegistry *registry = nullptr;
         ThemeManager *themes = nullptr;
-        QList<QPointer<MainWindow>> windows;
+        QList<QPointer<ProjectWindow>> windows;
         QList<QPointer<VoiceBankWindow>> voiceBankWindows;
 
-        MainWindow *createWindow(Editor *editor, std::unique_ptr<kit::ProjectDocument> document) {
-            auto window = new MainWindow(editor, std::move(document));
+        ProjectWindow *createWindow(Editor *editor, std::unique_ptr<kit::ProjectDocument> document) {
+            auto window = new ProjectWindow(editor, std::move(document));
             window->setAttribute(Qt::WA_DeleteOnClose);
             windows.removeAll(nullptr);
             windows.push_back(window);
@@ -104,9 +104,9 @@ namespace hello::daw {
         return impl.themes;
     }
 
-    QList<MainWindow *> Editor::windows() const {
+    QList<ProjectWindow *> Editor::windows() const {
         stdc_impl_t;
-        QList<MainWindow *> result;
+        QList<ProjectWindow *> result;
         for (const auto &window : std::as_const(impl.windows)) {
             if (window) {
                 result.push_back(window);
@@ -115,12 +115,12 @@ namespace hello::daw {
         return result;
     }
 
-    MainWindow *Editor::newWindow() {
+    ProjectWindow *Editor::newWindow() {
         stdc_impl_t;
         return impl.createWindow(this, std::make_unique<kit::ProjectDocument>());
     }
 
-    MainWindow *Editor::openFile(const std::filesystem::path &path, MainWindow *from) {
+    ProjectWindow *Editor::openFile(const std::filesystem::path &path, ProjectWindow *from) {
         stdc_impl_t;
         for (const auto window : windows()) {
             if (isSameFile(window->document()->sourcePath(), path)) {
@@ -141,7 +141,7 @@ namespace hello::daw {
         }
         impl.settings->addRecentFile(path);
 
-        MainWindow *window = from;
+        ProjectWindow *window = from;
         if (window && window->isUnused()) {
             window->setDocument(std::move(document));
         } else {
@@ -200,7 +200,7 @@ namespace hello::daw {
             menu->addAction(tr("No Recent Files"))->setEnabled(false);
             return;
         }
-        const auto project = qobject_cast<MainWindow *>(from);
+        const auto project = qobject_cast<ProjectWindow *>(from);
         for (qsizetype i = 0; i < files.size(); ++i) {
             const auto path = files[i];
             const auto text = QDir::toNativeSeparators(textOf(path));

@@ -31,7 +31,7 @@
 
 #include <helloutau/Editor/AppSettings.h>
 #include <helloutau/Editor/Editor.h>
-#include <helloutau/Editor/MainWindow.h>
+#include <helloutau/Editor/ProjectWindow.h>
 #include <helloutau/Editor/PianoRoll.h>
 #include <helloutau/Editor/PasteParametersDialog.h>
 #include <helloutau/Editor/ScalePitchDialog.h>
@@ -66,7 +66,7 @@ namespace {
         return path;
     }
 
-    void edit(MainWindow *window) {
+    void edit(ProjectWindow *window) {
         const auto session = window->document()->session();
         auto tx = session->transaction(QStringLiteral("rename"));
         kit::ProjectRef(session).tracks().at(0).setVoiceDir(QStringLiteral("changed"));
