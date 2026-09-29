@@ -50,6 +50,27 @@ namespace hello::kit {
         }
     };
 
+    /// Changes to the properties of notes, those of the note property dialog of UTAU: each field
+    /// that is set replaces the property of every note, the others stay. A property that a note
+    /// may leave to the default, such as the tempo, is cleared by setting it to \c std::nullopt.
+    struct NotePropertyChanges {
+        std::optional<QString> lyric;
+        std::optional<int> length;
+        std::optional<std::optional<double>> tempo;
+        std::optional<std::optional<double>> intensity;
+        std::optional<std::optional<double>> modulation;
+        std::optional<std::optional<double>> velocity;
+        std::optional<std::optional<double>> preUtterance;
+        std::optional<std::optional<double>> voiceOverlap;
+        std::optional<std::optional<double>> startPoint;
+        std::optional<QString> flags;
+
+        inline bool isEmpty() const {
+            return !lyric && !length && !tempo && !intensity && !modulation && !velocity &&
+                   !preUtterance && !voiceOverlap && !startPoint && !flags;
+        }
+    };
+
     class HELLOKIT_EDIT_EXPORT ProjectEdits {
         Q_GADGET
         Q_DECLARE_TR_FUNCTIONS(hello::kit::ProjectEdits)
@@ -160,6 +181,12 @@ namespace hello::kit {
         Q_INVOKABLE static bool setProperties(const ProjectRef &project,
                                               const ProjectPropertyChanges &changes,
                                               DiagnosticList &diagnostics);
+
+        /// Changes the properties of \a notes that \a changes sets, in one step, and makes no
+        /// step if none differs. See the note properties in docs/Widgets.md.
+        Q_INVOKABLE static bool setNoteProperties(const QList<NoteRef> &notes,
+                                                  const NotePropertyChanges &changes,
+                                                  DiagnosticList &diagnostics);
     };
 
 }

@@ -397,6 +397,12 @@ namespace hello::daw {
         /// The user moved the playhead at rest to \a tick on the ruler.
         void cursorMoved(double tick);
 
+        /// The tempo of note \a index is to be edited, as UTAU sets it: its mark on the ruler
+        /// was double-clicked, or "Set Tempo Here..." chosen in the menu of the ruler at the
+        /// time of the note. "Remove Tempo Mark" in that menu clears the tempo of the note
+        /// itself, see the note tempo in docs/Widgets.md.
+        void tempoRequested(int index);
+
     protected:
         void keyPressEvent(QKeyEvent *event) override;
 

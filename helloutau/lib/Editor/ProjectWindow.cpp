@@ -40,6 +40,7 @@
 #include "Editor.h"
 #include "ExportUstDialog.h"
 #include "PianoRoll.h"
+#include "NotePropertiesDialog.h"
 #include "ProjectPropertiesDialog.h"
 #include "Playback.h"
 #include "PasteParametersDialog.h"
@@ -232,6 +233,49 @@ namespace hello::daw {
                     scheduleRenderStates();
                 }
             });
+        }
+
+        // The tempo of note index in its dialog: a value, or following the tempo before
+        void editTempo(int index) {
+            stdc_decl_t;
+            const auto notes = kit::ProjectRef(document->session()).tracks().at(0).notes();
+            if (index < 0 || index >= notes.size()) {
+                return;
+            }
+            TempoDialog dialog(notes.at(index).tempo(), roll->timeline()->tempoMap().tempo(index),
+                               &decl);
+            if (dialog.exec() != QDialog::Accepted) {
+                return;
+            }
+            kit::NotePropertyChanges changes;
+            changes.tempo = dialog.tempo();
+            kit::DiagnosticList diagnostics;
+            kit::ProjectEdits::setNoteProperties({notes.at(index)}, changes, diagnostics);
+            DiagnosticBox::show(&decl, tr("Tempo"), diagnostics);
+        }
+
+        // The properties of the selected notes in their dialog, changed in one step
+        void editNoteProperties() {
+            stdc_decl_t;
+            const auto indices = roll->selectedIndices();
+            if (indices.isEmpty()) {
+                return;
+            }
+            const auto project = document->session()->snapshot();
+            const auto refs = kit::ProjectRef(document->session()).tracks().at(0).notes();
+            QList<kit::Note> notes;
+            QList<kit::NoteRef> selected;
+            for (const int index : indices) {
+                notes.push_back(project.tracks[0].notes[index]);
+                selected.push_back(refs.at(index));
+            }
+            NotePropertiesDialog dialog(notes, &decl);
+            if (dialog.exec() != QDialog::Accepted) {
+                return;
+            }
+            kit::DiagnosticList diagnostics;
+            kit::ProjectEdits::setNoteProperties(selected, dialog.changes(), diagnostics);
+            DiagnosticBox::show(&decl, tr("Note Properties"), diagnostics);
         }
 
         // The properties of the project in their dialog, changed in one step; a new voice
@@ -499,6 +543,14 @@ namespace hello::daw {
                 decl.exportUst();
             });
             addCommand(QStringLiteral("helloutau.file.properties"), [this] { editProperties(); });
+            addCommand(QStringLiteral("helloutau.edit.setTempo"), [this] {
+                const auto selected = roll->selectedIndices();
+                if (!selected.isEmpty()) {
+                    editTempo(selected.first());
+                }
+            });
+            addCommand(QStringLiteral("helloutau.edit.noteProperties"),
+                       [this] { editNoteProperties(); });
             addCommand(QStringLiteral("helloutau.file.close"), [this] {
                 stdc_decl_t;
                 decl.close();
@@ -692,6 +744,8 @@ namespace hello::daw {
             // In the status bar, so that a refused drag does not stop the work with a dialog.
             // A dialog remains an alternative, see the open questions in docs/Tuning.md.
             QObject::connect(roll, &PianoRoll::cursorMoved, &decl, [this] { cursorMoved(); });
+            QObject::connect(roll, &PianoRoll::tempoRequested, &decl,
+                             [this](int index) { editTempo(index); });
             QObject::connect(roll, &PianoRoll::editRefused, &decl, [this](const QString &message) {
                 stdc_decl_t;
                 decl.statusBar()->showMessage(message, StatusMessageTimeout);
@@ -749,7 +803,8 @@ namespace hello::daw {
                                   "helloutau.edit.crossfadeP2P3", "helloutau.edit.crossfadeP1P4",
                                   "helloutau.edit.copy", "helloutau.edit.transposeUp",
                                   "helloutau.edit.transposeDown", "helloutau.edit.octaveUp",
-                                  "helloutau.edit.octaveDown", "helloutau.tools.showEntry"}) {
+                                  "helloutau.edit.octaveDown", "helloutau.tools.showEntry",
+                                  "helloutau.edit.setTempo", "helloutau.edit.noteProperties"}) {
                 actions.value(QLatin1String(id))->setEnabled(selected > 0);
             }
             actions.value(QStringLiteral("helloutau.edit.splitNote"))->setEnabled(selected == 1);

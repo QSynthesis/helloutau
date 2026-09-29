@@ -320,6 +320,31 @@ namespace hello::daw {
         double cursor = 0;
         bool cursorEnabled = true;
 
+        // The note of each mark of the ruler
+        QList<int> markNotes;
+
+        // The menu of the ruler at tick: the tempo of the note there
+        void showRulerMenu(double tick, const QPoint &globalPosition) {
+            stdc_decl_t;
+            const int count = timeline->noteCount();
+            const int index = count == 0 ? -1 : std::clamp(timeline->noteAt(tick), 0, count - 1);
+            QMenu menu(&decl);
+            const auto set = menu.addAction(PianoRoll::tr("Set Tempo &Here..."));
+            set->setEnabled(index >= 0);
+            QObject::connect(set, &QAction::triggered, &decl,
+                             [this, index] { Q_EMIT _decl->tempoRequested(index); });
+            const auto remove = menu.addAction(PianoRoll::tr("&Remove Tempo Mark"));
+            remove->setEnabled(index > 0 && notes().at(index).tempo().has_value());
+            QObject::connect(remove, &QAction::triggered, &decl, [this, index] {
+                kit::NotePropertyChanges changes;
+                changes.tempo = std::optional<double>();
+                kit::DiagnosticList diagnostics;
+                kit::ProjectEdits::setNoteProperties({notes().at(index)}, changes, diagnostics);
+                report(diagnostics);
+            });
+            menu.exec(globalPosition);
+        }
+
         // How far each note is rendered, and the colors of the states from RenderWaiting on
         QList<PianoRoll::RenderState> renderStates;
         QColor renderColors[4];
@@ -888,10 +913,12 @@ namespace hello::daw {
             // The tempo at the start, and wherever a note sets one
             const auto &map = timeline->tempoMap();
             QList<TimelineRuler::Mark> marks;
+            markNotes.clear();
             for (int i = 0; i < timeline->noteCount(); ++i) {
                 const auto &note = timeline->note(i);
                 if (i == 0 || note.tempo) {
                     marks.push_back({double(note.start), tempoText(map.tempo(i))});
+                    markNotes.push_back(i);
                 }
             }
             ruler->setMarks(marks);
@@ -3054,6 +3081,17 @@ namespace hello::daw {
         impl.keyboard = new PianoKeyboard(impl.view);
         impl.ruler->setTicksPerBeat(kit::ticksPerQuarter);
         impl.ruler->setBeatsPerBar(BeatsPerBar);
+        connect(impl.ruler, &TimelineRuler::markDoubleClicked, this, [this](int mark) {
+            stdc_impl_t;
+            if (mark >= 0 && mark < impl.markNotes.size()) {
+                Q_EMIT tempoRequested(impl.markNotes[mark]);
+            }
+        });
+        connect(impl.ruler, &TimelineRuler::menuRequested, this,
+                [this](double tick, const QPoint &globalPosition) {
+                    stdc_impl_t;
+                    impl.showRulerMenu(tick, globalPosition);
+                });
         connect(impl.ruler, &TimelineRuler::positionPressed, this,
                 [this](double tick, Qt::KeyboardModifiers modifiers) {
                     stdc_impl_t;

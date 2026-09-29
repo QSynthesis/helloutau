@@ -31,6 +31,7 @@
 
 #include <helloutau/Editor/AppSettings.h>
 #include <helloutau/Editor/Editor.h>
+#include <helloutau/Editor/NotePropertiesDialog.h>
 #include <helloutau/Editor/ProjectPropertiesDialog.h>
 #include <helloutau/Editor/ProjectWindow.h>
 #include <helloutau/Editor/PianoRoll.h>
@@ -497,6 +498,84 @@ private Q_SLOTS:
 
         dialog.tempoBox()->setValue(90);
         QCOMPARE(dialog.changes().tempo, std::optional(90.0));
+    }
+
+    // The dialog shows what the notes share, "(various)" where they differ, and gives only the
+    // fields edited: an emptied number back to the default, one that does not read left out.
+    void the_note_properties_dialog_gives_what_was_edited() {
+        kit::Note a;
+        a.lyric = QStringLiteral("a");
+        a.length = 480;
+        a.intensity = 80;
+        a.flags = QStringLiteral("g-2");
+        auto b = a;
+        b.lyric = QStringLiteral("ka");
+        b.tempo = 150;
+        using F = NotePropertiesDialog;
+        NotePropertiesDialog dialog({a, b});
+        QVERIFY(dialog.changes().isEmpty());
+        QCOMPARE(dialog.field(F::Lyric)->text(), QString());
+        QCOMPARE(dialog.field(F::Lyric)->placeholderText(), QStringLiteral("(various)"));
+        QCOMPARE(dialog.field(F::Length)->text(), QStringLiteral("480"));
+        QCOMPARE(dialog.field(F::Intensity)->text(), QStringLiteral("80"));
+        QCOMPARE(dialog.field(F::Tempo)->placeholderText(), QStringLiteral("(various)"));
+        QCOMPARE(dialog.field(F::Modulation)->placeholderText(), QStringLiteral("(default)"));
+        QCOMPARE(dialog.field(F::Flags)->text(), QStringLiteral("g-2"));
+
+        QTest::keyClicks(dialog.field(F::Tempo), QStringLiteral("140"));
+        dialog.field(F::Intensity)->clear();
+        Q_EMIT dialog.field(F::Intensity)->textEdited(QString());
+        QTest::keyClicks(dialog.field(F::Modulation), QStringLiteral("-"));
+        auto changes = dialog.changes();
+        using Change = std::optional<std::optional<double>>;
+        QCOMPARE(changes.tempo, Change(std::optional(140.0)));
+        QCOMPARE(changes.intensity, Change(std::optional<double>()));
+        QVERIFY(!changes.modulation);
+        QVERIFY(!changes.lyric && !changes.length && !changes.flags && !changes.velocity);
+
+        TempoDialog tempo(std::nullopt, 120);
+        QVERIFY(tempo.followBox()->isChecked());
+        QCOMPARE(tempo.tempoBox()->value(), 120.0);
+        QCOMPARE(tempo.tempo(), std::nullopt);
+        tempo.followBox()->setChecked(false);
+        tempo.tempoBox()->setValue(96);
+        QCOMPARE(tempo.tempo(), std::optional(96.0));
+    }
+
+    // Set Tempo sets the tempo of the first selected note, and Note Properties those of all.
+    void the_tempo_and_the_note_properties_are_set_from_the_menu() {
+        const auto e = editor();
+        const auto window = e->openFile(savedProject(m_dir, "t.usth"));
+        QVERIFY(window);
+        auto roll = qobject_cast<PianoRoll *>(window->centralWidget());
+        const auto setTempo = actionNamed(window, QStringLiteral("Set Te&mpo..."));
+        const auto properties = actionNamed(window, QStringLiteral("Note Propert&ies..."));
+        QVERIFY(setTempo && properties);
+        QVERIFY(!setTempo->isEnabled());
+        QCOMPARE(properties->shortcut(), QKeySequence(QStringLiteral("Ctrl+E")));
+        roll->selectAll();
+
+        QTimer::singleShot(0, [] {
+            const auto dialog = qobject_cast<TempoDialog *>(QApplication::activeModalWidget());
+            QVERIFY(dialog);
+            dialog->followBox()->setChecked(false);
+            dialog->tempoBox()->setValue(150);
+            dialog->accept();
+        });
+        setTempo->trigger();
+        const auto session = window->document()->session();
+        QCOMPARE(session->snapshot().tracks[0].notes[0].tempo, std::optional(150.0));
+
+        QTimer::singleShot(0, [] {
+            const auto dialog =
+                qobject_cast<NotePropertiesDialog *>(QApplication::activeModalWidget());
+            QVERIFY(dialog);
+            QTest::keyClicks(dialog->field(NotePropertiesDialog::Lyric), QStringLiteral("ka"));
+            dialog->accept();
+        });
+        properties->trigger();
+        QCOMPARE(session->snapshot().tracks[0].notes[0].lyric, QStringLiteral("laka"));
+        QCOMPARE(session->currentStep(), 2);
     }
 
     // Project Properties changes the project in one step, and reads a new voice folder.

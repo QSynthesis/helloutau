@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 
+#include <QtGui/QContextMenuEvent>
 #include <QtGui/QMouseEvent>
 #include <QtGui/QPainter>
 
@@ -108,15 +109,50 @@ namespace hello::daw {
         mouseMoveEvent(event);
     }
 
+    double TimelineRuler::offset() const {
+        return m_view->viewport()->mapTo(window(), QPoint()).x() - mapTo(window(), QPoint()).x();
+    }
+
+    int TimelineRuler::markAt(const QPointF &position) const {
+        if (!m_view || position.y() < height() / 2) {
+            return -1;
+        }
+        const auto metrics = fontMetrics();
+        for (int i = 0; i < m_marks.size(); ++i) {
+            const double left = offset() + m_view->timeAxis().toX(m_marks[i].tick) + LabelPadding;
+            if (position.x() >= left &&
+                position.x() <= left + metrics.horizontalAdvance(m_marks[i].text)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    void TimelineRuler::mouseDoubleClickEvent(QMouseEvent *event) {
+        const int mark = event->button() == Qt::LeftButton ? markAt(event->position()) : -1;
+        if (mark < 0) {
+            QWidget::mouseDoubleClickEvent(event);
+            return;
+        }
+        Q_EMIT markDoubleClicked(mark);
+    }
+
+    void TimelineRuler::contextMenuEvent(QContextMenuEvent *event) {
+        if (!m_view) {
+            QWidget::contextMenuEvent(event);
+            return;
+        }
+        Q_EMIT menuRequested(m_view->timeAxis().toTick(event->pos().x() - offset()),
+                             event->globalPos());
+    }
+
     void TimelineRuler::mouseMoveEvent(QMouseEvent *event) {
         if (!(event->buttons() & Qt::LeftButton) || !m_view) {
             QWidget::mouseMoveEvent(event);
             return;
         }
         // As painted: the ruler starts where the viewport of the view does.
-        const double offset =
-            m_view->viewport()->mapTo(window(), QPoint()).x() - mapTo(window(), QPoint()).x();
-        Q_EMIT positionPressed(m_view->timeAxis().toTick(event->position().x() - offset),
+        Q_EMIT positionPressed(m_view->timeAxis().toTick(event->position().x() - offset()),
                                event->modifiers());
     }
 
@@ -128,8 +164,7 @@ namespace hello::daw {
         QPainter painter(this);
         const auto &axis = m_view->timeAxis();
         // The ruler starts where the viewport of the view does.
-        const double offset =
-            m_view->viewport()->mapTo(window(), QPoint()).x() - mapTo(window(), QPoint()).x();
+        const double offset = this->offset();
         const auto metrics = fontMetrics();
         const int half = height() / 2;
 

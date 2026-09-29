@@ -554,6 +554,54 @@ private Q_SLOTS:
         QCOMPARE(session.snapshot().toJson(), project.toJson());
     }
 
+    // The properties set change on every note in one step, a cleared one goes back to the
+    // default, and the others stay; none that differs makes no step.
+    void the_note_properties_change_in_one_step() {
+        const auto project = richProject();
+        ProjectSession session(project);
+        const auto notes = ProjectRef(&session).tracks().at(0).notes();
+        const QList<NoteRef> both{notes.at(0), notes.at(1)};
+
+        NotePropertyChanges changes;
+        changes.tempo = std::optional(150.0);
+        changes.intensity = std::optional<double>();
+        changes.flags = QStringLiteral("B0");
+        DiagnosticList diagnostics;
+        QVERIFY(ProjectEdits::setNoteProperties(both, changes, diagnostics));
+        const auto edited = session.snapshot();
+        for (int i : {0, 1}) {
+            const auto &note = edited.tracks[0].notes[i];
+            QCOMPARE(note.tempo, std::optional(150.0));
+            QVERIFY(!note.intensity);
+            QCOMPARE(note.flags, QStringLiteral("B0"));
+            QCOMPARE(note.lyric, project.tracks[0].notes[i].lyric);
+        }
+        QCOMPARE(session.currentStep(), 1);
+        QCOMPARE(session.undoMessage(), ProjectEdits::tr("Change Note Properties"));
+
+        QVERIFY(ProjectEdits::setNoteProperties(both, changes, diagnostics));
+        QVERIFY(ProjectEdits::setNoteProperties(both, {}, diagnostics));
+        QVERIFY(ProjectEdits::setNoteProperties({}, changes, diagnostics));
+        QCOMPARE(session.currentStep(), 1);
+
+        // Clearing the tempo, and a length that is not positive, refused with nothing changed
+        NotePropertyChanges wrong;
+        wrong.tempo = std::optional<double>();
+        wrong.length = 0;
+        QVERIFY(!ProjectEdits::setNoteProperties(both, wrong, diagnostics));
+        QVERIFY(hasError(diagnostics));
+        QCOMPARE(session.snapshot().tracks[0].notes[0].tempo, std::optional(150.0));
+
+        NotePropertyChanges clear;
+        clear.tempo = std::optional<double>();
+        QVERIFY(ProjectEdits::setNoteProperties({notes.at(1)}, clear, diagnostics));
+        QVERIFY(!session.snapshot().tracks[0].notes[1].tempo);
+
+        session.undo();
+        session.undo();
+        QCOMPARE(session.snapshot().toJson(), project.toJson());
+    }
+
     // The properties set change in one step, the others stay; none that differs makes no step.
     void the_properties_change_in_one_step() {
         const auto project = richProject();

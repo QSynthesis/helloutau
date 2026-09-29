@@ -1,5 +1,8 @@
 #include "ProjectCommands.h"
 
+#include <algorithm>
+#include <cmath>
+
 #include <QtCore/QJsonArray>
 #include <QtCore/QJsonObject>
 
@@ -454,6 +457,76 @@ namespace hello::kit {
             return ProjectEdits::setProperties(ProjectRef(&session), changes, diagnostics);
         }
 
+        // note properties {"lyric": "a", "tempo": null, ...} <notes>...: the fields set replace
+        // the properties of the notes, null clearing one that may be left to the default, see
+        // NotePropertyChanges.
+        bool notePropertiesCommand(ProjectSession &session, const Arguments &arguments,
+                                   DiagnosticList &diagnostics) {
+            if (arguments.size() < 2) {
+                return usage(diagnostics, "note properties <object> <notes>...");
+            }
+            const auto json = edit::CommandSyntax::valueOf(arguments[0]);
+            if (!json.isObject()) {
+                return fail(diagnostics, ProjectCommands::tr("The properties must be an object."));
+            }
+            NotePropertyChanges changes;
+            const auto object = json.toObject();
+            const std::pair<const char *,
+                            std::optional<std::optional<double>> NotePropertyChanges::*>
+                numbers[] = {
+                    {"tempo",        &NotePropertyChanges::tempo       },
+                    {"intensity",    &NotePropertyChanges::intensity   },
+                    {"modulation",   &NotePropertyChanges::modulation  },
+                    {"velocity",     &NotePropertyChanges::velocity    },
+                    {"preUtterance", &NotePropertyChanges::preUtterance},
+                    {"voiceOverlap", &NotePropertyChanges::voiceOverlap},
+                    {"startPoint",   &NotePropertyChanges::startPoint  },
+            };
+            for (auto it = object.begin(); it != object.end(); ++it) {
+                const auto &key = it.key();
+                const auto value = it.value();
+                const auto number =
+                    std::find_if(std::begin(numbers), std::end(numbers), [&key](const auto &entry) {
+                        return key == QLatin1String(entry.first);
+                    });
+                if (number != std::end(numbers)) {
+                    if (value.isNull()) {
+                        changes.*(number->second) = std::optional<double>();
+                    } else if (value.isDouble()) {
+                        changes.*(number->second) = std::optional(value.toDouble());
+                    } else {
+                        return fail(diagnostics,
+                                    ProjectCommands::tr("%1 must be a number or null.").arg(key));
+                    }
+                } else if (key == QLatin1String("lyric") || key == QLatin1String("flags")) {
+                    if (!value.isString()) {
+                        return fail(diagnostics,
+                                    ProjectCommands::tr("%1 must be a string.").arg(key));
+                    }
+                    (key == QLatin1String("lyric") ? changes.lyric : changes.flags) =
+                        value.toString();
+                } else if (key == QLatin1String("length")) {
+                    if (!value.isDouble() || value.toDouble() != std::floor(value.toDouble())) {
+                        return fail(diagnostics,
+                                    ProjectCommands::tr("length must be a whole number."));
+                    }
+                    changes.length = value.toInt();
+                } else {
+                    return fail(diagnostics,
+                                ProjectCommands::tr("%1 is not a property of a note.").arg(key));
+                }
+            }
+            QList<NoteRef> notes;
+            for (const auto &argument : arguments.mid(1)) {
+                const auto note = noteAt(session, argument, diagnostics);
+                if (!note) {
+                    return false;
+                }
+                notes.push_back(*note);
+            }
+            return ProjectEdits::setNoteProperties(notes, changes, diagnostics);
+        }
+
         using DomainCommand = bool (*)(ProjectSession &, const Arguments &, DiagnosticList &);
 
         // The domain commands, each with the function of ProjectEdits that it calls.
@@ -465,21 +538,22 @@ namespace hello::kit {
         };
 
         constexpr DomainCommandInfo domainCommands[] = {
-            {"note",     "transpose",  transposeCommand,  "transpose"    },
-            {"note",     "split",      splitCommand,      "splitNote"    },
-            {"note",     "insert",     insertCommand,     "insertNotes"  },
-            {"note",     "tempo",      tempoCommand,      "setTempo"     },
-            {"note",     "remove",     removeCommand,     "removeNotes"  },
-            {"note",     "length",     lengthCommand,     "setLength"    },
-            {"note",     "move",       moveCommand,       "moveNotes"    },
-            {"note",     "portamento", portamentoCommand, "setPortamento"},
-            {"note",     "vibrato",    vibratoCommand,    "setVibrato"   },
-            {"note",     "envelope",   envelopeCommand,   "setEnvelope"  },
-            {"note",     "scale",      scaleCommand,      "scalePitch"   },
-            {"note",     "parameter",  parameterCommand,  "setParameter" },
-            {"note",     "bend",       bendCommand,       "drawPitchBend"},
-            {"settings", "mode2",      mode2Command,      "setMode2"     },
-            {"settings", "properties", propertiesCommand, "setProperties"},
+            {"note",     "transpose",  transposeCommand,      "transpose"        },
+            {"note",     "split",      splitCommand,          "splitNote"        },
+            {"note",     "insert",     insertCommand,         "insertNotes"      },
+            {"note",     "tempo",      tempoCommand,          "setTempo"         },
+            {"note",     "remove",     removeCommand,         "removeNotes"      },
+            {"note",     "length",     lengthCommand,         "setLength"        },
+            {"note",     "move",       moveCommand,           "moveNotes"        },
+            {"note",     "portamento", portamentoCommand,     "setPortamento"    },
+            {"note",     "vibrato",    vibratoCommand,        "setVibrato"       },
+            {"note",     "envelope",   envelopeCommand,       "setEnvelope"      },
+            {"note",     "scale",      scaleCommand,          "scalePitch"       },
+            {"note",     "parameter",  parameterCommand,      "setParameter"     },
+            {"note",     "bend",       bendCommand,           "drawPitchBend"    },
+            {"note",     "properties", notePropertiesCommand, "setNoteProperties"},
+            {"settings", "mode2",      mode2Command,          "setMode2"         },
+            {"settings", "properties", propertiesCommand,     "setProperties"    },
         };
 
         bool run(ProjectSession &session, const Arguments &arguments, DiagnosticList &diagnostics) {

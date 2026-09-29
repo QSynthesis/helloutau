@@ -74,10 +74,18 @@ namespace hello::daw {
         /// \a modifiers: a request to move the playhead, which the owner of the ruler decides.
         void positionPressed(double tick, Qt::KeyboardModifiers modifiers);
 
+        /// Mark \a index of marks() was double-clicked on its text.
+        void markDoubleClicked(int index);
+
+        /// The context menu was asked for at \a tick, to be shown at \a globalPosition.
+        void menuRequested(double tick, const QPoint &globalPosition);
+
     protected:
         void paintEvent(QPaintEvent *event) override;
         void mousePressEvent(QMouseEvent *event) override;
         void mouseMoveEvent(QMouseEvent *event) override;
+        void mouseDoubleClickEvent(QMouseEvent *event) override;
+        void contextMenuEvent(QContextMenuEvent *event) override;
 
     private:
         QPointer<SceneView> m_view;
@@ -87,6 +95,12 @@ namespace hello::daw {
         QList<Span> m_spans;
         QColor m_lineColor;
         QColor m_markColor;
+
+        // Where the ruler starts in the time axis of the view, as it is painted
+        double offset() const;
+
+        // The index of the mark whose text is at position, or -1
+        int markAt(const QPointF &position) const;
     };
 
 }

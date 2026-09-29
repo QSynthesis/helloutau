@@ -333,6 +333,49 @@ namespace hello::kit {
         return transaction.commit(diagnostics);
     }
 
+    bool ProjectEdits::setNoteProperties(const QList<NoteRef> &notes,
+                                         const NotePropertyChanges &changes,
+                                         DiagnosticList &diagnostics) {
+        if (notes.isEmpty() || changes.isEmpty()) {
+            return true;
+        }
+        // A transaction that changes nothing makes no step.
+        auto transaction = notes.first().session()->transaction(tr("Change Note Properties"));
+        for (const auto &note : notes) {
+            if (changes.lyric) {
+                note.setLyric(*changes.lyric);
+            }
+            if (changes.length) {
+                note.setLength(*changes.length);
+            }
+            if (changes.tempo) {
+                note.setTempo(*changes.tempo);
+            }
+            if (changes.intensity) {
+                note.setIntensity(*changes.intensity);
+            }
+            if (changes.modulation) {
+                note.setModulation(*changes.modulation);
+            }
+            if (changes.velocity) {
+                note.setVelocity(*changes.velocity);
+            }
+            if (changes.preUtterance) {
+                note.setPreUtterance(*changes.preUtterance);
+            }
+            if (changes.voiceOverlap) {
+                note.setVoiceOverlap(*changes.voiceOverlap);
+            }
+            if (changes.startPoint) {
+                note.setStartPoint(*changes.startPoint);
+            }
+            if (changes.flags) {
+                note.setFlags(*changes.flags);
+            }
+        }
+        return transaction.commit(diagnostics);
+    }
+
     bool ProjectEdits::setMode2(const SettingsRef &settings, bool mode2,
                                 DiagnosticList &diagnostics) {
         if (settings.mode2() == mode2) {

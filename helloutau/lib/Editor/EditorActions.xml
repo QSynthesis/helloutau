@@ -38,6 +38,11 @@
         <action id="helloutau.edit.insertNote" text="&amp;Insert Note" category="Edit"
                 shortcut="Ins" />
         <action id="helloutau.edit.splitNote" text="S&amp;plit Note..." category="Edit" />
+        <!-- The tempo of the first selected note, from which it applies -->
+        <action id="helloutau.edit.setTempo" text="Set Te&amp;mpo..." category="Edit" />
+        <!-- The properties of the selected notes, as the note property dialog of UTAU -->
+        <action id="helloutau.edit.noteProperties" text="Note Propert&amp;ies..." category="Edit"
+                shortcut="Ctrl+E" />
         <!-- Checked while the project turns Mode2 on -->
         <action id="helloutau.edit.mode2" text="Mode&amp;2 Pitch" category="Edit" />
         <action id="helloutau.edit.togglePortamento" text="Add or Remove P&amp;ortamento"
@@ -148,6 +153,8 @@
                 <action id="helloutau.edit.insertNote" />
                 <action id="helloutau.edit.splitNote" />
                 <action id="helloutau.edit.editLyric" />
+                <action id="helloutau.edit.setTempo" />
+                <action id="helloutau.edit.noteProperties" />
                 <separator />
                 <action id="helloutau.edit.mode2" />
                 <action id="helloutau.edit.togglePortamento" />

@@ -568,6 +568,31 @@ private Q_SLOTS:
         QCOMPARE(ProjectCommands::queryNames(), QStringList{QStringLiteral("get")});
     }
 
+    void note_properties_changes_the_fields_given() {
+        ProjectSession session(richProject());
+        QVERIFY(
+            run(session, QStringLiteral("note properties {\"lyric\": \"ka\", \"tempo\": 150, "
+                                        "\"length\": 240, \"velocity\": null, \"flags\": \"g-3\"} "
+                                        "/tracks/0/notes/0 /tracks/0/notes/1")));
+        for (int i : {0, 1}) {
+            const auto note = noteAt(session, i);
+            QCOMPARE(note.lyric, QStringLiteral("ka"));
+            QCOMPARE(note.tempo, std::optional(150.0));
+            QCOMPARE(note.length, 240);
+            QVERIFY(!note.velocity);
+            QCOMPARE(note.flags, QStringLiteral("g-3"));
+        }
+        verifyRefused(session, QStringLiteral("note properties {\"colour\": 1} /tracks/0/notes/0"));
+        verifyRefused(session,
+                      QStringLiteral("note properties {\"tempo\": \"x\"} /tracks/0/notes/0"));
+        verifyRefused(session, QStringLiteral("note properties {\"lyric\": 1} /tracks/0/notes/0"));
+        verifyRefused(session,
+                      QStringLiteral("note properties {\"length\": 1.5} /tracks/0/notes/0"));
+        verifyRefused(session, QStringLiteral("note properties {} /tracks/0/notes/99"));
+        verifyRefused(session, QStringLiteral("note properties [1] /tracks/0/notes/0"));
+        verifyRefused(session, QStringLiteral("note properties {}"));
+    }
+
     void settings_properties_changes_the_fields_given() {
         ProjectSession session(richProject());
         QVERIFY(
@@ -605,6 +630,7 @@ private Q_SLOTS:
                                                         QStringLiteral("note scale"),
                                                         QStringLiteral("note parameter"),
                                                         QStringLiteral("note bend"),
+                                                        QStringLiteral("note properties"),
                                                         QStringLiteral("settings mode2"),
                                                         QStringLiteral("settings properties")}));
     }

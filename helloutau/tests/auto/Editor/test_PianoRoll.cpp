@@ -5,6 +5,7 @@
 #include <QtTest/QTest>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QLineEdit>
+#include <QtGui/QContextMenuEvent>
 #include <QtWidgets/QMenu>
 #include <QtWidgets/QToolButton>
 
@@ -561,6 +562,58 @@ private Q_SLOTS:
         QCOMPARE(moved.size(), count);
         roll.setPlayheadPosition(1440);
         QVERIFY(lineAt(1440));
+    }
+
+    // A double click on a tempo mark of the ruler asks for the tempo of its note, and so does
+    // Set Tempo Here in the menu of the ruler; Remove Tempo Mark clears the tempo of the note.
+    void the_ruler_asks_for_the_tempo_of_a_note() {
+        kit::ProjectSession session(threeNotes());
+        PianoRoll roll(&session);
+        show(roll);
+        QSignalSpy requested(&roll, &PianoRoll::tempoRequested);
+        const auto ruler = roll.ruler();
+        // The text of the mark at tick, in the lower half of the ruler
+        const auto on = [&roll, ruler](double tick) {
+            auto point = ruler->mapFrom(
+                &roll, roll.view()->viewport()->mapTo(
+                           &roll, QPoint(int(roll.view()->timeAxis().toX(tick)) + 8, 0)));
+            point.setY(ruler->height() * 3 / 4);
+            return point;
+        };
+        QTest::mouseDClick(ruler, Qt::LeftButton, {}, on(480));
+        QCOMPARE(requested.size(), 1);
+        QCOMPARE(requested.last().at(0).toInt(), 1);
+        // Away from any mark, nothing
+        QTest::mouseDClick(ruler, Qt::LeftButton, {}, on(1700));
+        QCOMPARE(requested.size(), 1);
+
+        // The menu, on the rest, which sets a tempo
+        const auto choose = [](const QString &text) {
+            QTimer::singleShot(0, [text] {
+                const auto menu = qobject_cast<QMenu *>(QApplication::activePopupWidget());
+                QVERIFY(menu);
+                for (const auto action : menu->actions()) {
+                    if (action->text() == text) {
+                        QVERIFY(action->isEnabled());
+                        action->trigger();
+                        menu->close();
+                        return;
+                    }
+                }
+                QFAIL("No such item");
+            });
+        };
+        choose(QStringLiteral("Set Tempo &Here..."));
+        QContextMenuEvent menuEvent(QContextMenuEvent::Mouse, on(1000),
+                                    ruler->mapToGlobal(on(1000)));
+        QApplication::sendEvent(ruler, &menuEvent);
+        QCOMPARE(requested.size(), 2);
+        QCOMPARE(requested.last().at(0).toInt(), 1);
+
+        choose(QStringLiteral("&Remove Tempo Mark"));
+        QApplication::sendEvent(ruler, &menuEvent);
+        QVERIFY(!session.snapshot().tracks[0].notes[1].tempo);
+        QCOMPARE(session.undoMessage(), kit::ProjectEdits::tr("Change Note Properties"));
     }
 
     // The render state of each note lies along the bottom of the ruler under the time of the
