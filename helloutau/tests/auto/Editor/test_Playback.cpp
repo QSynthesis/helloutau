@@ -197,9 +197,9 @@ private Q_SLOTS:
         QVERIFY(fs::is_regular_file(playback.cacheDirectoryFor(*document) / "playback.wav"));
     }
 
-    // A preview plays from the note asked for to the end, reading the fragments in the cache
-    // rather than running the resampler, which here does not exist.
-    void a_preview_plays_from_a_note_to_the_end() {
+    // A preview plays from the time asked for to the end, here within the second note, reading
+    // the fragments in the cache rather than running the resampler, which here does not exist.
+    void a_preview_plays_from_a_time_to_the_end() {
         if (AudioOutput::deviceSampleRate() <= 0) {
             QSKIP("This machine has no audio output device.");
         }
@@ -223,13 +223,13 @@ private Q_SLOTS:
         QSignalSpy states(&playback, &Playback::stateChanged);
         kit::SynthEngines engines;
         engines.resampler = fs::path(dir.path().toStdU16String()) / "missing.exe";
-        QVERIFY(playback.preview(*document, 1, engines, diagnostics));
+        QVERIFY(playback.preview(*document, 750.0, engines, diagnostics));
         QCOMPARE(playback.state(), Playback::Playing);
         const auto first = playback.position();
         QVERIFY(first);
-        // From the second note on: 500 ms into the track at 120, less its pre-utterance of 0,
-        // and no more ahead than a device that pulls a buffer as it starts has read
-        QVERIFY2(*first >= 500 && *first < 800, qPrintable(QString::number(*first)));
+        // From 750 ms on, half way through the second note at 120 bpm, and no more ahead than a
+        // device that pulls a buffer as it starts has read
+        QVERIFY2(*first >= 750 && *first < 1050, qPrintable(QString::number(*first)));
 
         QTRY_COMPARE_WITH_TIMEOUT(playback.state(), Playback::Stopped, 5000);
         QCOMPARE(states.size(), 2);

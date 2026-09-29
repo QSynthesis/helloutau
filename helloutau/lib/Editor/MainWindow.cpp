@@ -58,6 +58,10 @@ namespace hello::daw {
         // How long a message stays in the status bar, in milliseconds
         constexpr int StatusMessageTimeout = 8000;
 
+        // A preview restarts from a moved playhead this many milliseconds later, once for the
+        // moves of a drag within them.
+        constexpr int PreviewRestartDelay = 50;
+
         QString textOf(const std::filesystem::path &path) {
             return QDir::toNativeSeparators(QString::fromStdU16String(path.u16string()));
         }
@@ -104,6 +108,9 @@ namespace hello::daw {
         QProgressBar *renderProgress = nullptr;
         QPushButton *renderCancel = nullptr;
         QTimer playheadTimer;
+        // Whether the playback is a preview, and whether it restarts from the playhead soon
+        bool previewing = false;
+        bool restartPending = false;
 
         // The render progress in the status bar, and the playhead that follows playback
         void initPlayback() {
@@ -138,6 +145,7 @@ namespace hello::daw {
                                      roll->setPlayheadPosition(std::nullopt);
                                  }
                                  if (state == Playback::Stopped) {
+                                     previewing = false;
                                      reportPreviewFailures();
                                  }
                              });
@@ -186,22 +194,41 @@ namespace hello::daw {
         // Previews from the first selected note, or from the start, as the notes are rendered;
         // or stops what plays.
         void togglePreview() {
-            stdc_decl_t;
             if (playback->state() != Playback::Stopped) {
                 playback->stop();
                 return;
             }
-            std::optional<int> from;
-            if (const auto selected = roll->selectedIndices(); !selected.isEmpty()) {
-                from = selected.first();
-            }
+            startPreview();
+        }
+
+        // Previews from the playhead at rest (step 6 in docs/Widgets.md).
+        void startPreview() {
+            stdc_decl_t;
             kit::SynthEngines engines;
             engines.resampler = pathOf(editor->settings().resampler());
             engines.wavtool = pathOf(editor->settings().wavtool());
+            const double from = roll->timeline()->tempoMap().timeOf(roll->cursorPosition());
             kit::DiagnosticList diagnostics;
-            if (!playback->preview(*document, from, engines, diagnostics)) {
+            previewing = playback->preview(*document, from, engines, diagnostics);
+            if (!previewing) {
                 DiagnosticBox::show(&decl, tr("Preview"), diagnostics);
             }
+        }
+
+        // The playhead moved on the ruler: a preview goes on from there, once a drag has
+        // settled for a moment.
+        void cursorMoved() {
+            stdc_decl_t;
+            if (!previewing || restartPending) {
+                return;
+            }
+            restartPending = true;
+            QTimer::singleShot(PreviewRestartDelay, &decl, [this] {
+                restartPending = false;
+                if (previewing) {
+                    startPreview();
+                }
+            });
         }
 
         // The notes a preview could not render, which played as silence, in the status bar
@@ -469,6 +496,7 @@ namespace hello::daw {
                              [this] { updateEditActions(); });
             // In the status bar, so that a refused drag does not stop the work with a dialog.
             // A dialog remains an alternative, see the open questions in docs/Tuning.md.
+            QObject::connect(roll, &PianoRoll::cursorMoved, &decl, [this] { cursorMoved(); });
             QObject::connect(roll, &PianoRoll::editRefused, &decl, [this](const QString &message) {
                 stdc_decl_t;
                 decl.statusBar()->showMessage(message, StatusMessageTimeout);

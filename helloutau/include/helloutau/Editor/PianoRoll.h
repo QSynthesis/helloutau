@@ -273,6 +273,13 @@ namespace hello::daw {
         std::optional<double> playheadPosition() const;
         void setPlayheadPosition(std::optional<double> tick);
 
+        /// The playhead at rest, in ticks, 0 at first: where a preview starts and where the line
+        /// returns to when playback stops. The line is drawn there while playheadPosition() is
+        /// none. Pressing or dragging on the ruler moves it, snapped to the quantization unless
+        /// Alt is held, and reports cursorMoved(). See step 6 in docs/Widgets.md.
+        double cursorPosition() const;
+        void setCursorPosition(double tick);
+
         /// Whether the pitch of each note is drawn: its portamento in pitchColor() and, apart
         /// from it, its vibrato around the middle of its row in vibratoColor(), both as the
         /// resampler receives them (kit::PitchCurve). See step 1 in docs/Tuning.md.
@@ -348,6 +355,9 @@ namespace hello::daw {
         /// and left the project as it was; \a message states why. The functions of the roll
         /// report in their diagnostics instead.
         void editRefused(const QString &message);
+
+        /// The user moved the playhead at rest to \a tick on the ruler.
+        void cursorMoved(double tick);
 
     protected:
         void keyPressEvent(QKeyEvent *event) override;

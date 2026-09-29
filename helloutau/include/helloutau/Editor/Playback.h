@@ -56,8 +56,9 @@ namespace hello::daw {
         bool play(const kit::ProjectDocument &document, std::optional<std::pair<int, int>> range,
                   const kit::SynthEngines &engines, kit::DiagnosticList &diagnostics);
 
-        /// Plays the track as it is rendered, from the start of note \a fromNote or from the
-        /// start: the realtime preview of step 6 of docs/Widgets.md.
+        /// Plays the track as it is rendered, from \a fromTime in milliseconds from the start of
+        /// the track, or from the start: the realtime preview of step 6 of docs/Widgets.md. The
+        /// notes that sound at that time are heard from there on.
         ///
         /// Notes are resampled around the playback position and concatenated in the process, see
         /// kit::RealtimeSynth, whose fragments are kept for the next preview. When a note is not
@@ -65,7 +66,7 @@ namespace hello::daw {
         /// takes effect through updatePlan().
         ///
         /// \return whether playing started; the reason is in \a diagnostics otherwise
-        bool preview(const kit::ProjectDocument &document, std::optional<int> fromNote,
+        bool preview(const kit::ProjectDocument &document, std::optional<double> fromTime,
                      const kit::SynthEngines &engines, kit::DiagnosticList &diagnostics);
 
         /// Whether the preview waits for a note to be rendered.

@@ -1,4 +1,7 @@
+#include <cmath>
+
 #include <QtCore/QTimer>
+#include <QtTest/QSignalSpy>
 #include <QtTest/QTest>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QLineEdit>
@@ -471,6 +474,64 @@ private Q_SLOTS:
         roll.setPlayheadPosition(std::nullopt);
         QVERIFY(!roll.playheadPosition());
         QCOMPARE(time.left, visible * 1.4);
+    }
+
+    // The playhead at rest moves where the ruler is pressed or dragged, snapped to the
+    // quantization unless Alt is held, and is reported; drawn where playback is not.
+    void the_ruler_moves_the_playhead_at_rest() {
+        kit::ProjectSession session(threeNotes());
+        PianoRoll roll(&session);
+        show(roll);
+        QCOMPARE(roll.cursorPosition(), 0.0);
+        QSignalSpy moved(&roll, &PianoRoll::cursorMoved);
+        const auto ruler = roll.ruler();
+        // The point of the ruler above the pixel of the viewport at tick
+        const auto xOf = [&roll](double tick) {
+            return int(std::lround(roll.view()->timeAxis().toX(tick)));
+        };
+        const auto on = [&roll, ruler, xOf](double tick) {
+            auto point =
+                ruler->mapFrom(&roll, roll.view()->viewport()->mapTo(&roll, QPoint(xOf(tick), 0)));
+            point.setY(ruler->height() / 2);
+            return point;
+        };
+
+        // The quantization is a sixteenth, 120 ticks.
+        QTest::mouseClick(ruler, Qt::LeftButton, {}, on(1000));
+        QCOMPARE(roll.cursorPosition(), 960.0);
+        QCOMPARE(moved.size(), 1);
+        QCOMPARE(moved.last().at(0).toDouble(), 960.0);
+
+        QTest::mousePress(ruler, Qt::LeftButton, {}, on(1500));
+        QTest::mouseMove(ruler, on(1700));
+        QTest::mouseRelease(ruler, Qt::LeftButton, {}, on(1700));
+        QCOMPARE(roll.cursorPosition(), 1680.0);
+        QCOMPARE(moved.size(), 3);
+
+        // Unsnapped, the tick of that very pixel of the viewport
+        QTest::mouseClick(ruler, Qt::LeftButton, Qt::AltModifier, on(1000));
+        QCOMPARE(roll.cursorPosition(), std::round(roll.view()->timeAxis().toTick(xOf(1000))));
+        QVERIFY(std::fmod(roll.cursorPosition(), 120) != 0);
+
+        // Clicking at the same place again reports nothing.
+        const auto count = moved.size();
+        QTest::mouseClick(ruler, Qt::LeftButton, Qt::AltModifier, on(1000));
+        QCOMPARE(moved.size(), count);
+
+        // Drawn at rest, and where playback is while it plays
+        roll.setPlayheadColor(QColor(255, 0, 255));
+        roll.setCursorPosition(960);
+        const auto lineAt = [&roll](double tick) {
+            const auto image = roll.view()->viewport()->grab().toImage();
+            const int x = int(std::floor(roll.view()->timeAxis().toX(tick)));
+            return image.pixelColor(x, 2) == QColor(255, 0, 255);
+        };
+        QVERIFY(lineAt(960));
+        roll.setPlayheadPosition(1440);
+        QVERIFY(lineAt(1440));
+        QVERIFY(!lineAt(960));
+        roll.setPlayheadPosition(std::nullopt);
+        QVERIFY(lineAt(960));
     }
 
     // The portamento runs through the rows as the resampler receives it, and the vibrato apart

@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 
+#include <QtGui/QMouseEvent>
 #include <QtGui/QPainter>
 
 #include "SceneView.h"
@@ -85,6 +86,26 @@ namespace hello::daw {
             interval *= 2;
         }
         return interval;
+    }
+
+    void TimelineRuler::mousePressEvent(QMouseEvent *event) {
+        if (event->button() != Qt::LeftButton || !m_view) {
+            QWidget::mousePressEvent(event);
+            return;
+        }
+        mouseMoveEvent(event);
+    }
+
+    void TimelineRuler::mouseMoveEvent(QMouseEvent *event) {
+        if (!(event->buttons() & Qt::LeftButton) || !m_view) {
+            QWidget::mouseMoveEvent(event);
+            return;
+        }
+        // As painted: the ruler starts where the viewport of the view does.
+        const double offset =
+            m_view->viewport()->mapTo(window(), QPoint()).x() - mapTo(window(), QPoint()).x();
+        Q_EMIT positionPressed(m_view->timeAxis().toTick(event->position().x() - offset),
+                               event->modifiers());
     }
 
     void TimelineRuler::paintEvent(QPaintEvent *event) {

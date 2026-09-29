@@ -1,6 +1,8 @@
 #include "Playback.h"
 
+#include <algorithm>
 #include <atomic>
+#include <cmath>
 
 #include <QtCore/QPointer>
 #include <QtCore/QTemporaryDir>
@@ -281,7 +283,7 @@ namespace hello::daw {
         return true;
     }
 
-    bool Playback::preview(const kit::ProjectDocument &document, std::optional<int> fromNote,
+    bool Playback::preview(const kit::ProjectDocument &document, std::optional<double> fromTime,
                            const kit::SynthEngines &engines, kit::DiagnosticList &diagnostics) {
         stdc_impl_t;
         stop();
@@ -305,7 +307,12 @@ namespace hello::daw {
             impl.synthEngines = engines;
         }
         synth->setPlan(*plan);
-        const qint64 start = fromNote ? synth->startOf(*fromNote) : 0;
+        // The sample of the track file at that time; the file starts at startTime().
+        const qint64 start =
+            fromTime ? std::clamp<qint64>(std::llround((*fromTime - synth->startTime()) *
+                                                       kit::WavtoolMixer::sampleRate / 1000),
+                                          0, synth->length())
+                     : 0;
         synth->setPosition(start);
 
         // On the thread of the stream: waits briefly for the notes of the next block, and

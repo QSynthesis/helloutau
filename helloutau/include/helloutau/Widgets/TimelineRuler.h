@@ -57,8 +57,15 @@ namespace hello::daw {
         /// pixels apart do not crowd: 1, 2, 4, 8 and so on.
         static int labelInterval(double barWidth, double labelWidth);
 
+    Q_SIGNALS:
+        /// The left button was pressed at \a tick, or moved there while held, with
+        /// \a modifiers: a request to move the playhead, which the owner of the ruler decides.
+        void positionPressed(double tick, Qt::KeyboardModifiers modifiers);
+
     protected:
         void paintEvent(QPaintEvent *event) override;
+        void mousePressEvent(QMouseEvent *event) override;
+        void mouseMoveEvent(QMouseEvent *event) override;
 
     private:
         QPointer<SceneView> m_view;
