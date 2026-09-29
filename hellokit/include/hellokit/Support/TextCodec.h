@@ -30,7 +30,9 @@ namespace hello::kit {
     ///   errors.
     ///
     /// \note No encoding detection is performed. The encoding of a file is taken from its
-    ///       recorded metadata or specified by the user.
+    ///       recorded metadata or specified by the user. ranked() only orders the candidates
+    ///       that a dialog offers, so that the likeliest is selected first for the user to
+    ///       confirm, see the section on default encodings in docs/Interchange.md.
     ///
     /// \sa canEncode(), docs/note.md
     class HELLOKIT_SUPPORT_EXPORT TextCodec {
@@ -127,6 +129,22 @@ namespace hello::kit {
         /// practice is Japan, mainland China or Taiwan. The system encoding is appended if it is
         /// none of these.
         static QStringList ustCandidates();
+
+        /// Orders \a candidates by how well \a texts read in each, the best first, the order
+        /// given kept among equals: for the encoding that a dialog selects before the user
+        /// confirms one, never in place of the user.
+        ///
+        /// Each candidate decodes the bytes, and the characters score by what they are in text
+        /// and in misread text. Kana, ideographs, Hangul and full-width punctuation count for
+        /// it; invalid bytes, control characters, the private use area, half-width katakana and
+        /// Latin-1 letters count against it; each non-ASCII character of valid UTF-8 counts
+        /// for UTF-8 once more, since other bytes seldom form it. Japanese read as GBK thus
+        /// loses its kana, Chinese read as Shift_JIS turns into half-width katakana and the
+        /// private use area, and Big5 read as GBK into the private use area.
+        static QStringList ranked(const QList<QByteArray> &texts, const QStringList &candidates);
+
+        /// The score of ranked() for \a texts read in \a name, higher for better text.
+        static qint64 plausibility(const QList<QByteArray> &texts, const QString &name);
 
         /// All encodings available to this class, for files in none of the above.
         ///

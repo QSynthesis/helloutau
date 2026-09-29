@@ -307,6 +307,15 @@ namespace hello::kit {
 
     FixedCharsetSelector::~FixedCharsetSelector() = default;
 
+    QList<std::optional<QString>> VoiceBankCharsetSelector::selectCharsets(
+        const QList<const VoiceBankDirectorySource *> &directories, DiagnosticList &diagnostics) {
+        QList<std::optional<QString>> charsets;
+        for (const auto directory : directories) {
+            charsets.push_back(selectCharset(*directory, diagnostics));
+        }
+        return charsets;
+    }
+
     std::optional<QString> FixedCharsetSelector::selectCharset(const VoiceBankDirectorySource &,
                                                                DiagnosticList &) {
         return m_charset;

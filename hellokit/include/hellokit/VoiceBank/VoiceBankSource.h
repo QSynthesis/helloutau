@@ -216,6 +216,18 @@ namespace hello::kit {
         ///       declined. The caller has no other means of distinguishing the two.
         virtual std::optional<QString> selectCharset(const VoiceBankDirectorySource &directory,
                                                      DiagnosticList &diagnostics) = 0;
+
+        /// Selects the encodings of \a directories of one voice bank at once, so that a user
+        /// is asked once rather than once per directory.
+        ///
+        /// Queried on opening a voice bank, with every directory that selectCharset() would be
+        /// queried for, in the order of the voice bank.
+        ///
+        /// \return one encoding per directory in the same order, \c std::nullopt to leave that
+        ///         directory out; by default, the answers of selectCharset() for each
+        virtual QList<std::optional<QString>>
+            selectCharsets(const QList<const VoiceBankDirectorySource *> &directories,
+                           DiagnosticList &diagnostics);
     };
 
     /// Selects the same encoding for every directory.

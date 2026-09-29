@@ -4,6 +4,9 @@
 #  include <QtCore/qt_windows.h>
 #endif
 
+#include <algorithm>
+#include <limits>
+
 #include <QtCore/QStringConverter>
 #include <QtCore/QStringDecoder>
 #include <QtCore/QStringEncoder>
@@ -322,6 +325,62 @@ namespace hello::kit {
         const QString system = systemName();
         if (!names.contains(system, Qt::CaseInsensitive)) {
             names.append(system);
+        }
+        return names;
+    }
+
+    qint64 TextCodec::plausibility(const QList<QByteArray> &texts, const QString &name) {
+        const TextCodec codec(name);
+        if (!codec.isValid()) {
+            return std::numeric_limits<qint64>::min();
+        }
+        const bool utf8 = codec.isUtf8();
+        qint64 score = 0;
+        for (const auto &bytes : texts) {
+            qsizetype invalid = 0;
+            const auto text = codec.decodeReplacing(bytes, &invalid);
+            score -= 10 * qint64(invalid);
+            for (const auto character : text) {
+                const char16_t c = character.unicode();
+                if (c < 0x80) {
+                    if (c < 0x20 && c != u'\t' && c != u'\n' && c != u'\r') {
+                        score -= 10;
+                    }
+                    continue;
+                }
+                if (utf8) {
+                    score += 2;
+                }
+                if (c == 0xFFFD) {
+                    continue; // counted as invalid
+                } else if (c < 0xA0 || (c >= 0xE000 && c < 0xF900)) {
+                    score -= 10; // C1 controls, the private use area
+                } else if (c < 0x250) {
+                    score -= 1; // Latin-1 and Latin Extended, as bytes of another text read
+                } else if (c >= 0x3040 && c < 0x3100) {
+                    score += 2; // kana
+                } else if ((c >= 0x4E00 && c < 0xA000) || (c >= 0x3400 && c < 0x4DC0) ||
+                           (c >= 0xAC00 && c < 0xD7A4) || (c >= 0x3000 && c < 0x3040) ||
+                           (c >= 0xFF01 && c < 0xFF5F)) {
+                    score += 1; // ideographs, Hangul, CJK and full-width punctuation
+                } else if (c >= 0xFF61 && c < 0xFFA0) {
+                    score -= 3; // half-width katakana
+                }
+            }
+        }
+        return score;
+    }
+
+    QStringList TextCodec::ranked(const QList<QByteArray> &texts, const QStringList &candidates) {
+        QList<std::pair<qint64, QString>> scored;
+        for (const auto &name : candidates) {
+            scored.push_back({plausibility(texts, name), name});
+        }
+        std::stable_sort(scored.begin(), scored.end(),
+                         [](const auto &a, const auto &b) { return a.first > b.first; });
+        QStringList names;
+        for (const auto &[score, name] : scored) {
+            names.push_back(name);
         }
         return names;
     }

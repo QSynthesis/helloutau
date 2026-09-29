@@ -47,6 +47,21 @@ private Q_SLOTS:
         QVERIFY(dialog.previewText().contains(QStringLiteral("(not valid in this encoding)")));
     }
 
+    // The encoding that reads the file best is selected at first, and those that cannot read
+    // it are grey.
+    void the_encoding_that_reads_best_is_selected_first() {
+        QTemporaryDir dir;
+        const auto ust = shiftJisUst(dir);
+        QVERIFY(ust);
+
+        UstCharsetDialog dialog;
+        dialog.setDocument(*ust, "song.ust");
+        QCOMPARE(dialog.selectedCharset(), QStringLiteral("Shift_JIS"));
+        QVERIFY(!dialog.isGrey(QStringLiteral("Shift_JIS")));
+        QVERIFY(dialog.isGrey(QStringLiteral("GBK")));
+        QVERIFY(dialog.isGrey(QStringLiteral("UTF-8")));
+    }
+
     void the_export_encodings_start_with_utf8() {
         auto charsets = ExportUstDialog::charsets();
         QCOMPARE(charsets.first(), QStringLiteral("UTF-8"));

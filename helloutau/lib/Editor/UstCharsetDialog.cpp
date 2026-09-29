@@ -1,5 +1,7 @@
 #include "UstCharsetDialog.h"
 
+#include <algorithm>
+
 #include <QtWidgets/QDialogButtonBox>
 #include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QLabel>
@@ -73,7 +75,30 @@ namespace hello::daw {
         m_ust = &ust;
         setWindowTitle(
             tr("Choose Encoding - %1").arg(QString::fromStdU16String(path.filename().u16string())));
+
+        // The text of the file, by which the encoding that reads it best is selected, and those
+        // that cannot read it are grey
+        QList<QByteArray> texts{ust.rawProjectName().toByteArray(),
+                                ust.rawVoiceDir().toByteArray()};
+        for (const auto lyric : ust.rawLyrics()) {
+            texts.push_back(lyric.toByteArray());
+        }
+        const auto grey = palette().brush(QPalette::Disabled, QPalette::Text);
+        for (int i = 0; i < m_charsets->count(); ++i) {
+            const auto item = m_charsets->item(i);
+            const kit::TextCodec codec(item->text());
+            const bool readable = std::all_of(texts.cbegin(), texts.cend(), [&](const auto &t) {
+                return codec.decode(t).has_value();
+            });
+            item->setForeground(readable ? QBrush() : grey);
+        }
+        setSelectedCharset(kit::TextCodec::ranked(texts, kit::TextCodec::ustCandidates()).value(0));
         updatePreview();
+    }
+
+    bool UstCharsetDialog::isGrey(const QString &charset) const {
+        const auto items = m_charsets->findItems(charset, Qt::MatchExactly);
+        return !items.isEmpty() && items.first()->foreground().style() != Qt::NoBrush;
     }
 
     QString UstCharsetDialog::selectedCharset() const {

@@ -376,6 +376,54 @@ private Q_SLOTS:
         QCOMPARE(recorded(), name("Shift_JIS"));
     }
 
+    // The directories that nothing determines are asked about at once, and each takes its own
+    // answer, or is left out without one.
+    void the_directories_are_asked_about_at_once() {
+        class Batch : public VoiceBankCharsetSelector {
+        public:
+            std::optional<QString> selectCharset(const VoiceBankDirectorySource &,
+                                                 DiagnosticList &) override {
+                ++single;
+                return std::nullopt;
+            }
+
+            QList<std::optional<QString>>
+                selectCharsets(const QList<const VoiceBankDirectorySource *> &directories,
+                               DiagnosticList &) override {
+                ++batches;
+                for (const auto directory : directories) {
+                    asked.push_back(directory->path);
+                }
+                return {QStringLiteral("Shift_JIS"), std::nullopt};
+            }
+
+            int single = 0;
+            int batches = 0;
+            QList<std::filesystem::path> asked;
+        };
+
+        write(QStringLiteral("oto.ini"), "a.wav=" + kShiftJisA + ",1,2,3,4,5\r\n");
+        write(QStringLiteral("a.wav"), "RIFF");
+        write(QStringLiteral("sub/oto.ini"), "b.wav=" + kShiftJisA + ",1,2,3,4,5\r\n");
+        write(QStringLiteral("sub/b.wav"), "RIFF");
+        write(QStringLiteral("utf/oto.ini"), "#Charset:UTF-8\r\nc.wav=c,1,2,3,4,5\r\n");
+        write(QStringLiteral("utf/c.wav"), "RIFF");
+
+        Batch selector;
+        DiagnosticList diagnostics;
+        auto opened = VoiceBankFileSystemState::open(root(), &selector, diagnostics);
+        QVERIFY(opened.has_value());
+        QCOMPARE(selector.batches, 1);
+        QCOMPARE(selector.single, 0);
+        QCOMPARE(selector.asked, (QList<std::filesystem::path>{std::filesystem::path(), "sub"}));
+        const auto &directories = opened->bank.directories();
+        QCOMPARE(directories.size(), 3);
+        QVERIFY(!directories.at(0).leftOut);
+        QCOMPARE(directories.at(0).charset, name("Shift_JIS"));
+        QVERIFY(directories.at(1).leftOut);
+        QVERIFY(!directories.at(2).leftOut);
+    }
+
     void rereading_brings_in_a_directory_that_was_left_out() {
         write(QStringLiteral("oto.ini"), "a.wav=" + kShiftJisA + ",1,2,3,4,5\r\n");
         write(QStringLiteral("a.wav"), "RIFF");

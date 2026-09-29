@@ -15,7 +15,9 @@ namespace hello::daw {
     /// Asks the user in which encoding to read a UST that does not state it.
     ///
     /// The candidates are those of \c TextCodec::ustCandidates(). The text of the file is
-    /// previewed in the selected encoding, so that the user can recognize the right one.
+    /// previewed in the selected encoding, so that the user can recognize the right one. The
+    /// encoding that reads it best is selected at first, see TextCodec::ranked(), and those that
+    /// cannot read it are grey.
     class HELLOUTAU_EDITOR_EXPORT UstCharsetDialog : public QDialog,
                                                      public kit::UstCharsetSelector {
         Q_OBJECT
@@ -39,6 +41,9 @@ namespace hello::daw {
         void setSelectedCharset(const QString &charset);
 
         QString previewText() const;
+
+        /// Whether candidate \a charset is grey, unable to read the text of the file.
+        bool isGrey(const QString &charset) const;
 
     private:
         const kit::UstDocument *m_ust = nullptr;

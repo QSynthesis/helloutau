@@ -41,6 +41,62 @@ private:
     }
 
 private Q_SLOTS:
+    // The encoding a text was written in reads best of the candidates, and bytes that read
+    // alike in all keep the order given.
+    void the_encoding_of_a_text_reads_best_data() {
+        QTest::addColumn<QString>("text");
+        QTest::addColumn<QString>("charset");
+
+        QTest::newRow("Japanese in Shift_JIS")
+            << QString::fromUtf8("あ.wav=- あ,6,52,-400,31,3\r\nか.wav=- か,12,90,-300,60,20\r\n"
+                                 "歌声合成のための音源です。")
+            << QStringLiteral("Shift_JIS");
+        QTest::newRow("Chinese in GBK")
+            << QString::fromUtf8("a.wav=啊,6,52,-400,31,3\r\n这是一个中文音源，用于歌声合成。"
+                                 "请在使用前阅读说明。")
+            << QStringLiteral("GBK");
+        QTest::newRow("Chinese in Big5")
+            << QString::fromUtf8("a.wav=啊,6,52,-400,31,3\r\n這是一個中文音源，用於歌聲合成。"
+                                 "請在使用前閱讀說明。")
+            << QStringLiteral("Big5");
+        QTest::newRow("Japanese in UTF-8")
+            << QString::fromUtf8("あ.wav=- あ,6,52,-400,31,3\r\n歌声合成のための音源です。")
+            << QStringLiteral("UTF-8");
+        QTest::newRow("Chinese in UTF-8")
+            << QString::fromUtf8("这是一个中文音源，用于歌声合成。") << QStringLiteral("UTF-8");
+    }
+
+    void the_encoding_of_a_text_reads_best() {
+        QFETCH(QString, text);
+        QFETCH(QString, charset);
+        const auto candidates = QStringList{QStringLiteral("UTF-8"), QStringLiteral("Shift_JIS"),
+                                            QStringLiteral("GBK"), QStringLiteral("Big5")};
+        const auto bytes = TextCodec(charset).encode(text);
+        QCOMPARE(TextCodec::ranked({bytes}, candidates).first(), charset);
+    }
+
+    // A character of the private use area counts against the encoding, and one of valid UTF-8
+    // for UTF-8, even a Latin-1 letter.
+    void misread_and_utf8_characters_count() {
+        QVERIFY(TextCodec::plausibility({QByteArray("\xaa\xa1")}, QStringLiteral("GBK")) < 0);
+        QVERIFY(TextCodec::plausibility({QByteArray("\xc3\xa9")}, QStringLiteral("UTF-8")) > 0);
+    }
+
+    void ascii_keeps_the_order_given() {
+        const auto candidates = QStringList{QStringLiteral("Shift_JIS"), QStringLiteral("UTF-8"),
+                                            QStringLiteral("GBK")};
+        QCOMPARE(TextCodec::ranked({QByteArray("a.wav=a,6,52,-400,31,3\r\n")}, candidates),
+                 candidates);
+        // Several files count together, and an unknown name comes last.
+        const auto japanese = TextCodec(QStringLiteral("Shift_JIS"))
+                                  .encode(QString::fromUtf8("あいうえお、かきくけこ"));
+        QCOMPARE(TextCodec::ranked({QByteArray("ascii"), japanese},
+                                   {QStringLiteral("no-such-code"), QStringLiteral("GBK"),
+                                    QStringLiteral("Shift_JIS")}),
+                 (QStringList{QStringLiteral("Shift_JIS"), QStringLiteral("GBK"),
+                              QStringLiteral("no-such-code")}));
+    }
+
     void an_unknown_name_gives_an_invalid_codec() {
         QVERIFY(!TextCodec(QStringLiteral("Klingon-1")).isValid());
         QVERIFY(utf8().isValid());

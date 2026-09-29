@@ -25,6 +25,18 @@ namespace hello::kit {
             return charset;
         }
 
+        QList<std::optional<QString>>
+            selectCharsets(const QList<const VoiceBankDirectorySource *> &directories,
+                           DiagnosticList &diagnostics) override {
+            auto charsets = m_selector->selectCharsets(directories, diagnostics);
+            for (qsizetype i = 0; i < directories.size() && i < charsets.size(); ++i) {
+                if (charsets[i]) {
+                    chosen.push_back(directories[i]->path);
+                }
+            }
+            return charsets;
+        }
+
         QList<std::filesystem::path> chosen;
 
     private:

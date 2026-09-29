@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <fstream>
 #include <iterator>
+#include <map>
 #include <set>
 #include <system_error>
 
@@ -93,6 +94,20 @@ namespace hello::kit {
             }
             return availableCharset(directory, *name, diagnostics);
         }
+
+        /// The answers of one question about several directories, given as each directory is
+        /// read.
+        class AnsweredSelector : public VoiceBankCharsetSelector {
+        public:
+            std::optional<QString> selectCharset(const VoiceBankDirectorySource &directory,
+                                                 DiagnosticList &diagnostics) override {
+                Q_UNUSED(diagnostics);
+                const auto found = answers.find(directory.path);
+                return found != answers.end() ? found->second : std::nullopt;
+            }
+
+            std::map<fs::path, std::optional<QString>> answers;
+        };
 
         /// Decodes the text of one file, replacing invalid bytes with U+FFFD, and counts them.
         class Decoder {
@@ -583,9 +598,26 @@ namespace hello::kit {
         bank.m_root = source.root();
         files.m_root = source.root();
 
+        // The directories that nothing determines, asked about at once
+        AnsweredSelector answered;
+        if (selector) {
+            QList<const VoiceBankDirectorySource *> unsettled;
+            for (const auto &directory : source.directories()) {
+                if (!directory.textFiles().empty() && !directory.settledCharset()) {
+                    unsettled.push_back(&directory);
+                }
+            }
+            if (!unsettled.isEmpty()) {
+                const auto charsets = selector->selectCharsets(unsettled, diagnostics);
+                for (qsizetype i = 0; i < unsettled.size(); ++i) {
+                    answered.answers[unsettled[i]->path] = charsets.value(i);
+                }
+            }
+        }
         for (const auto &directory : source.directories()) {
-            files.appendDirectory(bank, directory, charsetFor(directory, selector, diagnostics),
-                                  diagnostics);
+            files.appendDirectory(
+                bank, directory, charsetFor(directory, selector ? &answered : nullptr, diagnostics),
+                diagnostics);
         }
 
         bank.reindex();
