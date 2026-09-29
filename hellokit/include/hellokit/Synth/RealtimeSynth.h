@@ -79,6 +79,24 @@ namespace hello::kit {
         /// The number of notes still to render.
         int pendingCount() const;
 
+        /// How far the fragment of a note has come.
+        enum NoteState {
+            /// A rest, or a note that sounds nothing, which has no fragment
+            Silent,
+            /// Not yet taken by a worker
+            Waiting,
+            /// Being rendered by the resampler
+            Running,
+            /// Rendered, or read from the cache
+            Ready,
+            /// Not rendered by the resampler, and played as silence
+            Failed,
+        };
+
+        /// The state of each note of the plan, by its index in the track. The notes the plan
+        /// does not include are Silent.
+        QList<NoteState> noteStates() const;
+
         /// Returns the warnings of the notes that failed since the last call, and forgets them.
         DiagnosticList takeDiagnostics();
 

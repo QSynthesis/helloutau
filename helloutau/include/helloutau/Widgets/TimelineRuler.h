@@ -29,6 +29,15 @@ namespace hello::daw {
             QString text;
         };
 
+        /// A stretch of the time axis from \a first to \a last ticks, drawn in \a color as a
+        /// strip along the bottom edge of the ruler, such as how far the notes there are
+        /// rendered.
+        struct Span {
+            double first = 0;
+            double last = 0;
+            QColor color;
+        };
+
         explicit TimelineRuler(SceneView *view, QWidget *parent = nullptr);
         ~TimelineRuler();
 
@@ -41,6 +50,9 @@ namespace hello::daw {
 
         QList<Mark> marks() const;
         void setMarks(const QList<Mark> &marks);
+
+        QList<Span> spans() const;
+        void setSpans(const QList<Span> &spans);
 
         /// The color of the lines and bar numbers, by default that of text with some
         /// transparency.
@@ -72,6 +84,7 @@ namespace hello::daw {
         int m_ticksPerBeat = 480;
         int m_beatsPerBar = 4;
         QList<Mark> m_marks;
+        QList<Span> m_spans;
         QColor m_lineColor;
         QColor m_markColor;
     };

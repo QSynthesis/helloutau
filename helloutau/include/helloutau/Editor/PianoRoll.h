@@ -52,6 +52,10 @@ namespace hello::daw {
         Q_PROPERTY(QColor unsampledLyricColor READ unsampledLyricColor WRITE setUnsampledLyricColor)
         Q_PROPERTY(QColor selectionColor READ selectionColor WRITE setSelectionColor)
         Q_PROPERTY(QColor playheadColor READ playheadColor WRITE setPlayheadColor)
+        Q_PROPERTY(QColor renderWaitingColor READ renderWaitingColor WRITE setRenderWaitingColor)
+        Q_PROPERTY(QColor renderRunningColor READ renderRunningColor WRITE setRenderRunningColor)
+        Q_PROPERTY(QColor renderReadyColor READ renderReadyColor WRITE setRenderReadyColor)
+        Q_PROPERTY(QColor renderFailedColor READ renderFailedColor WRITE setRenderFailedColor)
         Q_PROPERTY(QColor pitchColor READ pitchColor WRITE setPitchColor)
         Q_PROPERTY(QColor vibratoColor READ vibratoColor WRITE setVibratoColor)
         Q_PROPERTY(QColor faintPointColor READ faintPointColor WRITE setFaintPointColor)
@@ -289,6 +293,22 @@ namespace hello::daw {
         bool isCursorEnabled() const;
         void setCursorEnabled(bool enabled);
 
+        /// How far a note is rendered.
+        enum RenderState {
+            /// A rest, or a note that sounds nothing, for which nothing is drawn
+            RenderSilent,
+            RenderWaiting,
+            RenderRunning,
+            RenderReady,
+            RenderFailed,
+        };
+
+        /// The render state of each note by its index, drawn along the bottom of the ruler
+        /// under the time of the note in renderWaitingColor() and the like. Notes beyond the
+        /// list are drawn as RenderSilent. See the render states in docs/Widgets.md.
+        QList<RenderState> renderStates() const;
+        void setRenderStates(const QList<RenderState> &states);
+
         /// Whether the pitch of each note is drawn: its portamento in pitchColor() and, apart
         /// from it, its vibrato around the middle of its row in vibratoColor(), both as the
         /// resampler receives them (kit::PitchCurve). See step 1 in docs/Tuning.md.
@@ -347,6 +367,15 @@ namespace hello::daw {
         void setParameterColor(const QColor &color);
         QColor playheadColor() const;
         void setPlayheadColor(const QColor &color);
+        /// The colors of the render states: by default grey, amber, green and red.
+        QColor renderWaitingColor() const;
+        void setRenderWaitingColor(const QColor &color);
+        QColor renderRunningColor() const;
+        void setRenderRunningColor(const QColor &color);
+        QColor renderReadyColor() const;
+        void setRenderReadyColor(const QColor &color);
+        QColor renderFailedColor() const;
+        void setRenderFailedColor(const QColor &color);
         QColor whiteRowColor() const;
         void setWhiteRowColor(const QColor &color);
         QColor blackRowColor() const;

@@ -422,6 +422,32 @@ namespace hello::daw {
         return impl.synth ? impl.synth->pendingCount() : 0;
     }
 
+    QList<kit::RealtimeSynth::NoteState>
+        Playback::noteStates(const kit::ProjectDocument &document) {
+        stdc_impl_t;
+        using State = kit::RealtimeSynth::NoteState;
+        if (impl.synth) {
+            return impl.synth->noteStates();
+        }
+        kit::DiagnosticList ignored;
+        const auto plan = impl.previewPlan(document, ignored);
+        if (!plan) {
+            return {};
+        }
+        QList<State> states;
+        for (const auto &step : plan->steps()) {
+            if (step.noteIndex >= states.size()) {
+                states.resize(step.noteIndex + 1, State::Silent);
+            }
+            if (!step.silent) {
+                std::error_code error;
+                states[step.noteIndex] =
+                    std::filesystem::exists(step.cacheFile, error) ? State::Ready : State::Waiting;
+            }
+        }
+        return states;
+    }
+
     void Playback::updatePlan(const kit::ProjectDocument &document) {
         stdc_impl_t;
         if (!impl.synth) {

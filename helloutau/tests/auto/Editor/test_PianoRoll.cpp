@@ -563,6 +563,48 @@ private Q_SLOTS:
         QVERIFY(lineAt(1440));
     }
 
+    // The render state of each note lies along the bottom of the ruler under the time of the
+    // note, neighbors of one state in one span; silent notes and those beyond the list have
+    // none. The spans follow the notes.
+    void the_render_states_lie_under_the_notes() {
+        using R = PianoRoll;
+        kit::ProjectSession session(threeNotes());
+        PianoRoll roll(&session);
+        show(roll);
+
+        roll.setRenderStates({R::RenderReady, R::RenderSilent});
+        auto spans = roll.ruler()->spans();
+        QCOMPARE(spans.size(), 1);
+        QCOMPARE(spans[0].first, 0.0);
+        QCOMPARE(spans[0].last, 480.0);
+        QCOMPARE(spans[0].color, roll.renderReadyColor());
+
+        roll.setRenderFailedColor(QColor(255, 0, 255));
+        roll.setRenderStates({R::RenderReady, R::RenderReady, R::RenderFailed});
+        spans = roll.ruler()->spans();
+        QCOMPARE(spans.size(), 2);
+        QCOMPARE(spans[0].last, 1440.0);
+        QCOMPARE(spans[1].first, 1440.0);
+        QCOMPARE(spans[1].last, 1920.0);
+        QCOMPARE(spans[1].color, QColor(255, 0, 255));
+
+        const auto ruler = roll.ruler();
+        const auto x =
+            ruler
+                ->mapFrom(&roll, roll.view()->viewport()->mapTo(
+                                     &roll, QPoint(int(roll.view()->timeAxis().toX(1700)), 0)))
+                .x();
+        QCOMPARE(ruler->grab().toImage().pixelColor(x, ruler->height() - 3), QColor(255, 0, 255));
+
+        {
+            auto tx = session.transaction(QStringLiteral("lengthen"));
+            kit::ProjectRef(&session).tracks().at(0).notes().at(0).setLength(960);
+            QVERIFY(tx.commit());
+        }
+        QTRY_COMPARE(roll.ruler()->spans().value(1).first, 1920.0);
+        QCOMPARE(roll.ruler()->spans().value(1).last, 2400.0);
+    }
+
     // The portamento runs through the rows as the resampler receives it, and the vibrato apart
     // around the middle of the row; both only while the pitch is shown.
     void the_pitch_is_drawn_as_the_resampler_receives_it() {

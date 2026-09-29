@@ -319,6 +319,10 @@ namespace hello::daw {
         // The playhead at rest, and whether it is drawn and moved
         double cursor = 0;
         bool cursorEnabled = true;
+
+        // How far each note is rendered, and the colors of the states from RenderWaiting on
+        QList<PianoRoll::RenderState> renderStates;
+        QColor renderColors[4];
         QColor playheadColor;
 
         QColor noteColor;
@@ -891,7 +895,53 @@ namespace hello::daw {
                 }
             }
             ruler->setMarks(marks);
+            updateRenderSpans();
             view->viewport()->update();
+        }
+
+        // The render states on the ruler, under the time of their notes, neighbors of one
+        // state in one span
+        void updateRenderSpans() {
+            stdc_decl_t;
+            QList<TimelineRuler::Span> spans;
+            PianoRoll::RenderState last = PianoRoll::RenderSilent;
+            const int count = std::min<int>(timeline->noteCount(), int(renderStates.size()));
+            for (int i = 0; i < count; ++i) {
+                const auto state = renderStates[i];
+                if (state == PianoRoll::RenderSilent) {
+                    last = state;
+                    continue;
+                }
+                const auto &note = timeline->note(i);
+                const double end = double(note.start + note.length);
+                if (state == last && !spans.isEmpty()) {
+                    spans.last().last = end;
+                } else {
+                    spans.push_back({double(note.start), end, renderColor(state)});
+                }
+                last = state;
+            }
+            ruler->setSpans(spans);
+        }
+
+        QColor renderColor(PianoRoll::RenderState state) const {
+            stdc_decl_t;
+            switch (state) {
+                case PianoRoll::RenderWaiting:
+                    return decl.renderWaitingColor();
+                case PianoRoll::RenderRunning:
+                    return decl.renderRunningColor();
+                case PianoRoll::RenderReady:
+                    return decl.renderReadyColor();
+                case PianoRoll::RenderFailed:
+                    return decl.renderFailedColor();
+                default:
+                    return {};
+            }
+        }
+
+        QColor &renderColorOf(PianoRoll::RenderState state) {
+            return renderColors[int(state) - int(PianoRoll::RenderWaiting)];
         }
 
         // Scrolls so that note index is in view, if it is not.
@@ -3704,6 +3754,20 @@ namespace hello::daw {
         impl.view->viewport()->update();
     }
 
+    QList<PianoRoll::RenderState> PianoRoll::renderStates() const {
+        stdc_impl_t;
+        return impl.renderStates;
+    }
+
+    void PianoRoll::setRenderStates(const QList<RenderState> &states) {
+        stdc_impl_t;
+        if (states == impl.renderStates) {
+            return;
+        }
+        impl.renderStates = states;
+        impl.updateRenderSpans();
+    }
+
     bool PianoRoll::isCursorEnabled() const {
         stdc_impl_t;
         return impl.cursorEnabled;
@@ -3907,6 +3971,54 @@ namespace hello::daw {
         stdc_impl_t;
         impl.playheadColor = color;
         impl.view->viewport()->update();
+    }
+
+    QColor PianoRoll::renderWaitingColor() const {
+        stdc_impl_t;
+        const auto &color = impl.renderColors[0];
+        return color.isValid() ? color : palette().color(QPalette::Mid);
+    }
+
+    void PianoRoll::setRenderWaitingColor(const QColor &color) {
+        stdc_impl_t;
+        impl.renderColorOf(RenderWaiting) = color;
+        impl.updateRenderSpans();
+    }
+
+    QColor PianoRoll::renderRunningColor() const {
+        stdc_impl_t;
+        const auto &color = impl.renderColors[1];
+        return color.isValid() ? color : QColor(0xE0, 0xA0, 0x30);
+    }
+
+    void PianoRoll::setRenderRunningColor(const QColor &color) {
+        stdc_impl_t;
+        impl.renderColorOf(RenderRunning) = color;
+        impl.updateRenderSpans();
+    }
+
+    QColor PianoRoll::renderReadyColor() const {
+        stdc_impl_t;
+        const auto &color = impl.renderColors[2];
+        return color.isValid() ? color : QColor(0x4C, 0xAF, 0x50);
+    }
+
+    void PianoRoll::setRenderReadyColor(const QColor &color) {
+        stdc_impl_t;
+        impl.renderColorOf(RenderReady) = color;
+        impl.updateRenderSpans();
+    }
+
+    QColor PianoRoll::renderFailedColor() const {
+        stdc_impl_t;
+        const auto &color = impl.renderColors[3];
+        return color.isValid() ? color : QColor(0xD0, 0x40, 0x40);
+    }
+
+    void PianoRoll::setRenderFailedColor(const QColor &color) {
+        stdc_impl_t;
+        impl.renderColorOf(RenderFailed) = color;
+        impl.updateRenderSpans();
     }
 
     QColor PianoRoll::whiteRowColor() const {

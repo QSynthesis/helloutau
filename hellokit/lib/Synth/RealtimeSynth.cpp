@@ -48,15 +48,9 @@ namespace hello::kit {
     public:
         using Decl = RealtimeSynth;
 
-        enum State {
-            Waiting,
-            Running,
-            Ready,
-            Failed,
-        };
-
+        // A fragment is never Silent: silent steps have none.
         struct Fragment {
-            State state = Waiting;
+            NoteState state = Waiting;
             Samples samples;
         };
 
@@ -232,7 +226,7 @@ namespace hello::kit {
                     found != impl.fragments.end() ? found->second : Impl::Fragment();
             }
             for (const auto &[path, fragment] : impl.fragments) {
-                if (fragment.state == Impl::Running) {
+                if (fragment.state == Running) {
                     kept.emplace(path, fragment);
                 }
             }
@@ -322,6 +316,24 @@ namespace hello::kit {
             }
         }
         return count;
+    }
+
+    QList<RealtimeSynth::NoteState> RealtimeSynth::noteStates() const {
+        stdc_impl_t;
+        const std::lock_guard lock(impl.mutex);
+        QList<NoteState> states;
+        for (int i = 0; i < impl.steps.size(); ++i) {
+            const auto &step = impl.steps[i];
+            if (step.noteIndex >= states.size()) {
+                states.resize(step.noteIndex + 1, Silent);
+            }
+            if (step.silent || impl.segments[i].silent) {
+                continue;
+            }
+            const auto found = impl.fragments.find(step.cacheFile);
+            states[step.noteIndex] = found != impl.fragments.end() ? found->second.state : Waiting;
+        }
+        return states;
     }
 
     DiagnosticList RealtimeSynth::takeDiagnostics() {

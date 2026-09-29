@@ -8,6 +8,7 @@
 #include <QtCore/QObject>
 
 #include <hellokit/Support/Diagnostic.h>
+#include <hellokit/Synth/RealtimeSynth.h>
 #include <hellokit/Synth/SynthRunner.h>
 
 #include <helloutau/Editor/HelloUtauEditorGlobal.h>
@@ -91,6 +92,11 @@ namespace hello::daw {
 
         /// The notes of the preview or of prepare() still to render.
         int pendingNotes() const;
+
+        /// How far each note of the first track of \a document is rendered, by its index: as
+        /// the preview or prepare() has it, or else by the fragments in the render cache, Ready
+        /// where the fragment is there and Waiting where not. Empty without a voice bank.
+        QList<kit::RealtimeSynth::NoteState> noteStates(const kit::ProjectDocument &document);
 
         /// Replaces the notes that the preview plays, or that prepare() renders, with those of
         /// \a document, after an edit. Does nothing unless either is under way.

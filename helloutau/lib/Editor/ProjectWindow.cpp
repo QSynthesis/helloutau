@@ -64,6 +64,25 @@ namespace hello::daw {
         // How often the status bar counts the notes rendered in the background, in milliseconds
         constexpr int RenderStatusInterval = 250;
 
+        // The render states on the ruler follow a change this many milliseconds later, once for
+        // the changes within them, and a script that renders as often.
+        constexpr int RenderStateDelay = 300;
+
+        PianoRoll::RenderState renderStateOf(kit::RealtimeSynth::NoteState state) {
+            switch (state) {
+                case kit::RealtimeSynth::Waiting:
+                    return PianoRoll::RenderWaiting;
+                case kit::RealtimeSynth::Running:
+                    return PianoRoll::RenderRunning;
+                case kit::RealtimeSynth::Ready:
+                    return PianoRoll::RenderReady;
+                case kit::RealtimeSynth::Failed:
+                    return PianoRoll::RenderFailed;
+                default:
+                    return PianoRoll::RenderSilent;
+            }
+        }
+
         QString textOf(const std::filesystem::path &path) {
             return QDir::toNativeSeparators(QString::fromStdU16String(path.u16string()));
         }
@@ -112,6 +131,9 @@ namespace hello::daw {
         QTimer playheadTimer;
         // The notes still to render in the background, in the realtime mode
         QTimer statusTimer;
+        int lastPending = -1;
+        // The render states on the ruler, updated after a change
+        QTimer renderStateTimer;
         // Whether the playback is a preview, and whether it restarts from the playhead soon
         bool previewing = false;
         bool restartPending = false;
@@ -134,6 +156,7 @@ namespace hello::daw {
 
             QObject::connect(playback, &Playback::stateChanged, &decl,
                              [this](Playback::State state) {
+                                 scheduleRenderStates();
                                  const bool rendering = state == Playback::Rendering;
                                  renderLabel->setVisible(rendering);
                                  renderProgress->setVisible(rendering);
@@ -183,8 +206,37 @@ namespace hello::daw {
                 updatePreviewStatus();
             });
             statusTimer.setInterval(RenderStatusInterval);
-            QObject::connect(&statusTimer, &QTimer::timeout, &decl,
-                             [this] { updatePreviewStatus(); });
+            QObject::connect(&statusTimer, &QTimer::timeout, &decl, [this] {
+                updatePreviewStatus();
+                // While notes are rendered, and once more when they are
+                const int pending = playback->pendingNotes();
+                if (pending > 0 || pending != lastPending) {
+                    updateRenderStates();
+                }
+                lastPending = pending;
+            });
+            renderStateTimer.setSingleShot(true);
+            renderStateTimer.setInterval(RenderStateDelay);
+            QObject::connect(&renderStateTimer, &QTimer::timeout, &decl, [this] {
+                updateRenderStates();
+                if (playback->state() == Playback::Rendering) {
+                    scheduleRenderStates();
+                }
+            });
+        }
+
+        // How far each note is rendered, on the ruler: as the background renders them, or by
+        // the fragments in the cache (the render states in docs/Widgets.md)
+        void updateRenderStates() {
+            QList<PianoRoll::RenderState> states;
+            for (const auto state : playback->noteStates(*document)) {
+                states.push_back(renderStateOf(state));
+            }
+            roll->setRenderStates(states);
+        }
+
+        void scheduleRenderStates() {
+            renderStateTimer.start();
         }
 
         bool realtime() const {
@@ -244,6 +296,7 @@ namespace hello::daw {
         // prevents rendering, such as a missing voice bank, is reported once the user plays.
         void updateBackground() {
             roll->setCursorEnabled(realtime());
+            scheduleRenderStates();
             if (!realtime()) {
                 playback->release();
                 statusTimer.stop();
@@ -543,12 +596,14 @@ namespace hello::daw {
                 updateTitle();
                 // The render cache is beside the file.
                 playback->updatePlan(*document);
+                scheduleRenderStates();
             });
             QObject::connect(document->session(), &kit::ProjectSession::stepChanged, &decl, [this] {
                 updateUndoActions();
                 updatePitchActions();
                 // A preview plays, and the background renders, the notes as they now are.
                 playback->updatePlan(*document);
+                scheduleRenderStates();
             });
             updateTitle();
             updateUndoActions();

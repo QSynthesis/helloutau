@@ -284,6 +284,23 @@ private Q_SLOTS:
         QCOMPARE(rendered(), (QList<int>{0, 1, 2, 4, 2}));
     }
 
+    // Each note tells how far its fragment has come, and the rest that it has none.
+    void each_note_tells_how_far_it_is_rendered() {
+        using S = RealtimeSynth;
+        const auto plan = planOf(fiveNotes());
+        QVERIFY(plan);
+        m_record.failing.insert(1);
+        m_record.held = true;
+        const auto rt = synth();
+        rt->setPlan(*plan);
+        QTRY_COMPARE(rt->noteStates(), (QList<S::NoteState>{S::Running, S::Waiting, S::Waiting,
+                                                            S::Silent, S::Waiting}));
+        m_record.held = false;
+        QVERIFY(rt->waitReady(0, rt->length(), std::chrono::seconds(10)));
+        QCOMPARE(rt->noteStates(),
+                 (QList<S::NoteState>{S::Ready, S::Failed, S::Ready, S::Silent, S::Ready}));
+    }
+
     // A note the resampler cannot render is silent, with a warning, and does not hold back
     // playback.
     void a_failed_note_is_silent() {

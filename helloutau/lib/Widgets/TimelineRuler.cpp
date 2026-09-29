@@ -18,6 +18,9 @@ namespace hello::daw {
         // Space around a bar number, in pixels.
         constexpr int LabelPadding = 4;
 
+        // The height of the strip of the spans, in pixels.
+        constexpr int SpanHeight = 3;
+
     }
 
     TimelineRuler::TimelineRuler(SceneView *view, QWidget *parent) : QWidget(parent), m_view(view) {
@@ -50,6 +53,15 @@ namespace hello::daw {
 
     void TimelineRuler::setMarks(const QList<Mark> &marks) {
         m_marks = marks;
+        update();
+    }
+
+    QList<TimelineRuler::Span> TimelineRuler::spans() const {
+        return m_spans;
+    }
+
+    void TimelineRuler::setSpans(const QList<Span> &spans) {
+        m_spans = spans;
         update();
     }
 
@@ -146,6 +158,15 @@ namespace hello::daw {
                     const double beatX = barX + beat * beatWidth;
                     painter.drawLine(QPointF(beatX, height() - half / 2), QPointF(beatX, height()));
                 }
+            }
+        }
+        // The spans above the bottom line
+        for (const auto &span : std::as_const(m_spans)) {
+            const double left = std::max(0.0, offset + axis.toX(span.first));
+            const double right = std::min(double(width()), offset + axis.toX(span.last));
+            if (right > left) {
+                painter.fillRect(QRectF(left, height() - 1 - SpanHeight, right - left, SpanHeight),
+                                 span.color);
             }
         }
         painter.drawLine(0, height() - 1, width(), height() - 1);

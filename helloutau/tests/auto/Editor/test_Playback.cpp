@@ -335,7 +335,11 @@ private Q_SLOTS:
         QVERIFY(!playback.prepare(*document, std::nullopt, {}, diagnostics));
         QVERIFY(kit::hasError(diagnostics));
 
+        // Without the synth, by the cache: nothing there yet, then the fragments
+        using S = kit::RealtimeSynth;
+        QCOMPARE(playback.noteStates(*document), (QList<S::NoteState>{S::Waiting, S::Waiting}));
         QVERIFY(writeFragments(playback, *document));
+        QCOMPARE(playback.noteStates(*document), (QList<S::NoteState>{S::Ready, S::Ready}));
         QSignalSpy states(&playback, &Playback::stateChanged);
         kit::SynthEngines engines;
         engines.resampler = fs::path(dir.path().toStdU16String()) / "missing.exe";
@@ -358,6 +362,8 @@ private Q_SLOTS:
         QTRY_VERIFY((failed.append(playback.takePreviewDiagnostics()), !failed.isEmpty()));
         QCOMPARE(failed.last().severity, kit::DiagnosticSeverity::Warning);
         QVERIFY(failed.last().noteIndex == 1);
+        // As the synth has them
+        QCOMPARE(playback.noteStates(*document), (QList<S::NoteState>{S::Ready, S::Failed}));
 
         // Released, nothing is rendered after an edit.
         playback.release();
