@@ -8,6 +8,7 @@
 #include <QtGui/QClipboard>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QCheckBox>
+#include <QtWidgets/QComboBox>
 #include <QtWidgets/QDialogButtonBox>
 #include <QtWidgets/QDoubleSpinBox>
 #include <QtWidgets/QGraphicsDropShadowEffect>
@@ -28,6 +29,8 @@
 #include <hellokit/Edit/VoiceBankRefs.h>
 
 #include <helloutau/Widgets/CommandPalette.h>
+#include <helloutau/Widgets/SettingPage.h>
+#include <helloutau/Widgets/SettingsDialog.h>
 
 #include <helloutau/Editor/AppSettings.h>
 #include <helloutau/Editor/Editor.h>
@@ -540,6 +543,32 @@ private Q_SLOTS:
         tempo.followBox()->setChecked(false);
         tempo.tempoBox()->setValue(96);
         QCOMPARE(tempo.tempo(), std::optional(96.0));
+    }
+
+    // The settings are pages of the catalog of the editor, and what their dialog applies
+    // reaches every project window at once.
+    void the_settings_apply_to_every_window() {
+        const auto e = editor();
+        QCOMPARE(e->settingCatalog()->pages().size(), 2);
+        QVERIFY(e->settingCatalog()->page(QStringLiteral("editor.General")));
+        const auto window = e->newWindow();
+        const auto roll = qobject_cast<PianoRoll *>(window->centralWidget());
+        QVERIFY(roll && !roll->isCursorEnabled());
+
+        QTimer::singleShot(0, [] {
+            const auto dialog = qobject_cast<SettingsDialog *>(QApplication::activeModalWidget());
+            QVERIFY(dialog);
+            QCOMPARE(dialog->currentPage()->id(), QStringLiteral("editor.Rendering"));
+            const auto mode = dialog->currentPage()->widget()->findChild<QComboBox *>();
+            QVERIFY(mode);
+            mode->setCurrentIndex(mode->findData(AppSettings::Realtime));
+            QVERIFY(dialog->applyButton()->isEnabled());
+            dialog->accept();
+        });
+        e->showSettings(window, QStringLiteral("editor.Rendering"));
+        QCOMPARE(e->settings().playbackMode(), AppSettings::Realtime);
+        QVERIFY(roll->isCursorEnabled());
+        e->settings().setPlaybackMode(AppSettings::Prerender);
     }
 
     // The shortcuts of UTAU (its menu resource) where they do not clash with ours, and no key

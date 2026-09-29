@@ -14,11 +14,13 @@
 
 #include <helloutau/Theme/ThemeManager.h>
 #include <helloutau/Widgets/CommandPalette.h>
+#include <helloutau/Widgets/SettingPage.h>
+#include <helloutau/Widgets/SettingsDialog.h>
 
 #include "AppSettings.h"
 #include "DiagnosticBox_p.h"
+#include "EditorSettingPages_p.h"
 #include "ProjectWindow.h"
-#include "SettingsDialog.h"
 #include "UstCharsetDialog.h"
 #include "VoiceBankCharsetDialog.h"
 #include "VoiceBankWindow.h"
@@ -63,6 +65,7 @@ namespace hello::daw {
         std::unique_ptr<AppSettings> settings;
         QAK::ActionRegistry *registry = nullptr;
         ThemeManager *themes = nullptr;
+        SettingCatalog *catalog = nullptr;
         QList<QPointer<ProjectWindow>> windows;
         QList<QPointer<VoiceBankWindow>> voiceBankWindows;
 
@@ -146,6 +149,13 @@ namespace hello::daw {
         impl.registry->setExtensions({editorActions()});
         impl.themes = new ThemeManager(this);
         impl.themes->addSearchPath(QStringLiteral(":/helloutau/themes"));
+        impl.catalog = new SettingCatalog(this);
+        addEditorSettingPages(impl.catalog, *impl.settings);
+    }
+
+    SettingCatalog *Editor::settingCatalog() const {
+        stdc_impl_t;
+        return impl.catalog;
     }
 
     Editor::~Editor() {
@@ -306,20 +316,25 @@ namespace hello::daw {
         });
     }
 
-    void Editor::showSettings(QWidget *from) {
-        const auto utau = settings().utauDirectory();
-        SettingsDialog dialog(settings(), from);
-        if (dialog.exec() != QDialog::Accepted) {
-            return;
+    void Editor::showSettings(QWidget *from, const QString &page) {
+        stdc_impl_t;
+        auto utau = settings().utauDirectory();
+        SettingsDialog dialog(impl.catalog, from);
+        if (!page.isEmpty()) {
+            dialog.selectPage(page);
         }
-        // Every voice bank named relative to UTAU is now elsewhere.
-        const bool moved = settings().utauDirectory() != utau;
-        for (const auto window : windows()) {
-            if (moved) {
-                window->loadVoiceBank();
+        connect(&dialog, &SettingsDialog::applied, this, [this, &utau] {
+            // Every voice bank named relative to UTAU is now elsewhere.
+            const bool moved = settings().utauDirectory() != utau;
+            utau = settings().utauDirectory();
+            for (const auto window : windows()) {
+                if (moved) {
+                    window->loadVoiceBank();
+                }
+                window->applySettings();
             }
-            window->applySettings();
-        }
+        });
+        dialog.exec();
     }
 
     bool Editor::closeAll() {

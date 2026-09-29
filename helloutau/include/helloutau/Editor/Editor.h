@@ -20,6 +20,7 @@ namespace hello::daw {
 
     class AppSettings;
     class ProjectWindow;
+    class SettingCatalog;
     class ThemeManager;
     class VoiceBankWindow;
 
@@ -43,6 +44,10 @@ namespace hello::daw {
 
         /// The themes of all windows, with the built-in one under \c :/helloutau/themes.
         ThemeManager *themeManager() const;
+
+        /// The pages of the settings dialog, those of the editor registered at start; see the
+        /// settings dialog in docs/Widgets.md.
+        SettingCatalog *settingCatalog() const;
 
         /// The open project windows, in the order in which they were opened.
         QList<ProjectWindow *> windows() const;
@@ -71,10 +76,10 @@ namespace hello::daw {
         /// project opens in \a from if it is a project window that is unused.
         void fillRecentMenu(QMenu *menu, QWidget *from);
 
-        /// Shows the settings over \a from, and once they are accepted, applies them to every
-        /// project window: reads the voice banks anew if the UTAU folder changed, and plays in
-        /// the playback mode chosen.
-        void showSettings(QWidget *from);
+        /// Shows the settings over \a from, on the page of \a page if given, and each time they
+        /// are applied, applies them to every project window: reads the voice banks anew if the
+        /// UTAU folder changed, and plays in the playback mode chosen.
+        void showSettings(QWidget *from, const QString &page = {});
 
         /// Closes every window, each asking to save its document first. Stops at the first
         /// window whose user cancels, and returns whether every window was closed.
