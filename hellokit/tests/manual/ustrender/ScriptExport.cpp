@@ -691,6 +691,13 @@ int copyVoice(const fs::path &from, const fs::path &to) {
             error(QStringLiteral("%1 could not be copied.").arg(textOf(it->path())));
             return 1;
         }
+        // With its modification time, which moresampler compares with its analysis files and
+        // which the cache names include; copy_file keeps it on Windows only.
+        fs::last_write_time(target, fs::last_write_time(it->path(), code), code);
+        if (code) {
+            error(QStringLiteral("%1 could not be dated.").arg(textOf(target)));
+            return 1;
+        }
         ++copied;
     }
     stdc::u8printf("copied %d files\n", copied);

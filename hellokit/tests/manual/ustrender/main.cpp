@@ -582,7 +582,7 @@ int main(int argc, char *argv[]) {
                             .setHandler(compare))
             .addCommand(cli::Command("copy-voice",
                                      "Copy a voice bank without the files engines derive from its "
-                                     "samples")
+                                     "samples, keeping the modification times")
                             .addArgument(cli::Argument("from", "The voice bank folder"))
                             .addArgument(cli::Argument("to", "A new folder"))
                             .setHandler(copy))

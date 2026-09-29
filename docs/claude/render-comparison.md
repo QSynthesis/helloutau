@@ -133,6 +133,9 @@ ustrender compare-manifests <清单一> <清单二>
   - 客体经 `_wgetcwd()` 取得的工作目录拼上 `\temp.bat` 后，映射到脚本目录中的那份 `temp.bat`。
   - 该行中的路径用哪种写法都不影响判断，moresampler 只取文件名开头的音符序号。
 - **`LAST_NOTE`**：`--last-note` 是另一种触发方式，不依赖 `temp.bat`。默认不用，以便走与 UTAU 相同的路径。
+- **两侧的处理器数须相同**（moreloader 一侧实测）：moresampler 分析样本时的 OpenMP 线程数等于进程可用的处理器数，与 `multithread-synthesis` 无关。主线程与工作线程的 x87 精度不同，第一段由主线程计算、段长随线程数而变，所以输出随处理器数而变。同一台 Windows 机器限定 8 个处理器与用 16 个时，结果从第 3 步起不同。比较前先让两侧可用的处理器数相同：
+  - Windows：`start "" /affinity <十六进制掩码> /wait cmd /c temp.bat`，例如 8 个处理器为 `FF`；
+  - Linux：`taskset -c 0-<n-1> sh temp.sh`。
 - **缓存文件名**：与 UTAU 相同，由序号、别名、音高和一个摘要组成。摘要含全部 resampler 参数（包括样本路径）以及样本文件的大小与修改时间。
   - 两份脚本都从同一份副本（`--voice`）生成，再以 `--voice-as` 替换路径，因此两侧的缓存名相同。
   - 若分别从两份副本生成，修改时间不同，缓存名也会不同。
@@ -154,7 +157,7 @@ ustrender compare-manifests <清单一> <清单二>
 
 2026-09-29，本机 Windows 11。按第一节第 2 步的示例生成脚本，以原生 moresampler 0.8.4 运行 `temp.bat`。moresampler 的副本附带的 `moreconfig.txt` 为 `resampler-compatibility off`、`multithread-synthesis on`；音源副本不含派生文件，缓存目录为空。
 
-- **用时与退出码**：10.6 秒。`exitcodes.log` 中 96 次 resampler 与 106 次 wavtool 的退出码均为 0。拼接为 `skipped`：非兼容模式下 moresampler 不写 `.whd` 与 `.dat`，UTAU 的 `temp.bat` 在这里同样跳过。
+- **用时与退出码**：10.6 秒。`exitcodes.log` 中 96 次 resampler 与 106 次 wavtool 的退出码均为 0。拼接为 `skipped`：moresampler 不写 `.whd` 与 `.dat`，UTAU 的 `temp.bat` 在这里同样跳过。moreloader 一侧实测，`resampler-compatibility` 打开时同样不写，拼接在四种组合（兼容开关 × 多线程开关）下都被跳过。
 - **最终 wav**：`out.wav` 为 44100 Hz、16 位、单声道，38.284 秒，可正常读取。
 - **时长差**：工程共 40.075 秒，差值 1.791 秒即结尾休止符（1920 tick）的长度。
   - 原因：最终 wav 在第 201 步（最后一个有声音符，第 104 号）写出，结尾的休止符在其后才调用。
@@ -170,6 +173,8 @@ ustrender compare-manifests <清单一> <清单二>
 ### Linux 实测（WSL，moreloader）
 
 同日，以同一份音源的另一份干净副本、同一套 moresampler 与 `moreconfig.txt`，在 WSL 的 `~/moreloader-compare-render/linux/` 中以 `/mnt/e/GitHub/moreloader/build/out/bin/moreloader` 运行 `temp.sh`。快照由 `.cache/claude/tools/work/compare-render/compare_snapshots.py` 按清单逐步比较：wav 逐样本比较，其余逐字节比较，路径根先换成占位符。
+
+wavtool 的索引以 UTF-16LE 内嵌绝对路径，各以 NUL 结尾（Windows 为 `E:\…`，Wine 下为 `Z:\home\…`）。运行目录与清单不符时，例如运行后改了目录名，只替换路径根就不够，每个索引都会被报告为不同（moreloader 一侧见到 107 个）。因此脚本另把每个内嵌绝对路径的目录部分换成 `<dir>`，保留文件名，比较不再依赖目录名的长度。
 
 **`temp.sh` 的行为与 `temp.bat` 相同**：
 - 用时 22 秒，96 次 resampler 与 106 次 wavtool 的退出码全为 0，拼接为 `skipped`，快照同样 301 个；
@@ -187,7 +192,8 @@ ustrender compare-manifests <清单一> <清单二>
 
 - 从 Git Bash 直接运行 Windows 版 moresampler 时须设 `MSYS_NO_PATHCONV=1`，否则以 `/` 开头的参数（包括音高曲线）同样会被 Git Bash 改写。经 cmd 运行 `temp.bat`（如本机实测）不受影响。
 - 复制音源须保留修改时间（Linux 用 `cp -p`），否则 moresampler 可能判定 wav 比 `.llsm` 新而重新分析（`auto-update-llsm-mrq on`）。
-  - `copy-voice` 在 Windows 上保留修改时间，因为 `std::filesystem::copy_file` 调用 `CopyFile`。
+  - moresampler 以 `_wstat` 比较 wav 与 `.llsm` 的修改时间，还比较 `desc.mrq` 条目的时间戳。wav 较新时报告「The .wav file is newer than the data record」并重新分析，第一次运行的输出因而不同。
+  - `copy-voice` 复制每个文件后显式设置同样的修改时间：`std::filesystem::copy_file` 只在 Windows 上（经 `CopyFile`）保留它。本机实测，一份音源的 435 个 wav 与 `oto.ini` 的修改时间全部相同。
   - 把副本复制到 WSL 时须用 `cp -rp`。
 
 ### 在 UTAU 中的对照
