@@ -41,6 +41,8 @@
 #include <hellokit/Synth/WavtoolMixer.h>
 #include <hellokit/VoiceBank/VoiceBank.h>
 
+#include "ScriptExport.h"
+
 using namespace hello::kit;
 namespace fs = std::filesystem;
 
@@ -398,6 +400,92 @@ namespace {
         return 0;
     }
 
+    QStringList listOption(const stdc::cli::ParseResult &result, const char *token) {
+        QStringList out;
+        if (const auto given = result.option(token)) {
+            for (const auto &value :
+                 given->values<std::string>(0).value_or(std::vector<std::string>())) {
+                out.push_back(fromStd(value));
+            }
+        }
+        return out;
+    }
+
+    // The scripts that run the engines of a render one call after another, for comparing
+    // environments. See docs/claude/render-comparison.md.
+    int script(const stdc::cli::ParseResult &result) {
+        const fs::path input = pathOf(*result.value(0));
+        const auto output = fromStd(*result.value(1));
+        const QString charset = fromStd(option(result, "--charset"));
+
+        ScriptExport exporter;
+        const auto target = option(result, "--target");
+        if (target == "windows") {
+            exporter.target = ScriptExport::Windows;
+        } else if (target == "linux") {
+            exporter.target = ScriptExport::Linux;
+        } else {
+            stdc::console::u8fputs("error: --target is windows or linux\n", stderr);
+            return 1;
+        }
+        exporter.project = fromStd(*result.value(0));
+        exporter.voice = pathOf(option(result, "--voice"));
+        exporter.voiceAs = fromStd(option(result, "--voice-as"));
+        exporter.scriptDirectory = fromStd(option(result, "--script-dir"));
+        exporter.emitDirectory = pathOf(option(result, "--emit-dir"));
+        exporter.snapshotDirectory = fromStd(option(result, "--snapshots"));
+        exporter.resamplerCommand = listOption(result, "--resampler-command");
+        exporter.wavtoolCommand = listOption(result, "--wavtool-command");
+        exporter.lastNote = result.option("--last-note").has_value();
+        if (exporter.voice.empty() || exporter.scriptDirectory.isEmpty()) {
+            stdc::console::u8fputs("error: --voice and --script-dir are required\n", stderr);
+            return 1;
+        }
+
+        DiagnosticList diagnostics;
+        const auto project = readProject(input, charset, diagnostics);
+        report(diagnostics);
+        if (!project) {
+            return 1;
+        }
+        auto bankCharset = fromStd(option(result, "--voice-charset"));
+        if (bankCharset.isEmpty()) {
+            bankCharset = charset;
+        }
+        FixedCharsetSelector selector(bankCharset);
+        diagnostics.clear();
+        const auto bank = VoiceBank::open(exporter.voice, &selector, diagnostics);
+        report(diagnostics);
+        if (!bank) {
+            return 1;
+        }
+
+        // The paths as the script writes them. They need not exist here: for Linux they are
+        // paths of the other system.
+        SynthPlan::Options options;
+        options.outputFile = fs::path(output.toStdU16String());
+        const auto cache = option(result, "--cache");
+        options.cacheDirectory =
+            cache.empty() ? fs::path((output + QStringLiteral(".cache")).toStdU16String())
+                          : fs::path(fromStd(cache).toStdU16String());
+        diagnostics.clear();
+        const auto plan = SynthPlan::make(*project, *bank, options, diagnostics);
+        report(diagnostics);
+        if (!plan) {
+            return 1;
+        }
+        stdc::u8printf("plan: %d notes\n", int(plan->steps().size()));
+        return exporter.write(*plan);
+    }
+
+    int compare(const stdc::cli::ParseResult &result) {
+        return compareManifests(pathOf(*result.value(0)), pathOf(*result.value(1)));
+    }
+
+    int copy(const stdc::cli::ParseResult &result) {
+        return copyVoice(pathOf(*result.value(0)), pathOf(*result.value(1)));
+    }
+
 }
 
 int main(int argc, char *argv[]) {
@@ -440,6 +528,62 @@ int main(int argc, char *argv[]) {
                                    "Concatenate the fragments in the process as well, and compare "
                                    "the result with the file the wavtool wrote"))
             .setHandler(render)
+            .addCommand(
+                cli::Command("script",
+                             "Write the scripts of a render, a call at a time, with a manifest, "
+                             "for comparing the engines in two environments")
+                    .addArgument(cli::Argument("input", "The .ust or .usth to render"))
+                    .addArgument(
+                        cli::Argument("output", "The track file, as the script refers to it"))
+                    .addOption(cli::Option({"--target"}, "windows for temp.bat, linux for temp.sh")
+                                   .arg(cli::Argument("system")))
+                    .addOption(cli::Option({"--voice"}, "The voice bank folder to read")
+                                   .arg(cli::Argument("folder")))
+                    .addOption(cli::Option({"--voice-as"},
+                                           "The voice bank folder as the script refers to it, if "
+                                           "another")
+                                   .arg(cli::Argument("folder")))
+                    .addOption(cli::Option({"-c", "--charset"},
+                                           "The encoding of the UST, if the file does not declare "
+                                           "one")
+                                   .arg(cli::Argument("name")))
+                    .addOption(
+                        cli::Option({"--voice-charset"},
+                                    "The encoding of the voice bank, if it differs from that "
+                                    "of the project")
+                            .arg(cli::Argument("name")))
+                    .addOption(cli::Option({"--cache"}, "The folder of the fragments")
+                                   .arg(cli::Argument("folder")))
+                    .addOption(cli::Option({"--script-dir"},
+                                           "The folder of the scripts and the working folder of "
+                                           "the engines, as the script refers to it")
+                                   .arg(cli::Argument("folder")))
+                    .addOption(cli::Option({"--emit-dir"},
+                                           "Where to write the files, if not the script folder")
+                                   .arg(cli::Argument("folder")))
+                    .addOption(cli::Option({"--snapshots"},
+                                           "The folder for a copy of what each call wrote")
+                                   .arg(cli::Argument("folder")))
+                    .addOption(cli::Option({"--resampler-command"},
+                                           "The program and the arguments before those of a call")
+                                   .arg(cli::Argument("argument").multi()))
+                    .addOption(cli::Option({"--wavtool-command"},
+                                           "The program and the arguments before those of a call")
+                                   .arg(cli::Argument("argument").multi()))
+                    .addOption(cli::Option({"--last-note"},
+                                           "Pass LAST_NOTE to the wavtool with the last sung note"))
+                    .setHandler(script))
+            .addCommand(cli::Command("compare-manifests",
+                                     "Compare two manifests without the roots of their paths")
+                            .addArgument(cli::Argument("first", "A manifest.json"))
+                            .addArgument(cli::Argument("second", "Another manifest.json"))
+                            .setHandler(compare))
+            .addCommand(cli::Command("copy-voice",
+                                     "Copy a voice bank without the files engines derive from its "
+                                     "samples")
+                            .addArgument(cli::Argument("from", "The voice bank folder"))
+                            .addArgument(cli::Argument("to", "A new folder"))
+                            .setHandler(copy))
             .addHelpOption(true)
             .addVersionOption("0.0.1"));
 
