@@ -331,6 +331,24 @@ private Q_SLOTS:
         QVERIFY(hasError(diagnostics));
     }
 
+    // Mode2 is on where the setting is present, as UTAU writes it, and off without it or where it
+    // is False, which UTAU reads as off (docs/Synth.md).
+    void mode2_is_off_without_the_setting_or_where_it_is_false() {
+        for (const auto &[line, on] : std::initializer_list<std::pair<QByteArray, bool>>{
+                 {"Mode2=True\r\n",  true },
+                 {"Mode2=False\r\n", false},
+                 {"",                false}
+        }) {
+            TempUst file("mode2");
+            file.writeBytes("[#VERSION]\r\nUST Version1.2\r\n[#SETTING]\r\nTempo=120.00\r\n" +
+                            line +
+                            "[#0000]\r\nLength=480\r\nLyric=a\r\nNoteNum=60\r\n[#TRACKEND]\r\n");
+            const auto project = readAs(file, QStringLiteral("UTF-8"));
+            QVERIFY(project.has_value());
+            QCOMPARE(project->settings.mode2, on);
+        }
+    }
+
     // The engine paths of the project take precedence, and the local ones are used only if the
     // project specifies none.
     void the_engines_come_from_the_project_first() {

@@ -168,7 +168,7 @@
 - 合成已实现：`PitchCurve::mode1At()` 与 `mode1Values()` 按实测的规则求 Mode1 的曲线。`SynthPlan` 在工程关闭 Mode2 时以它代替控制点与颤音的曲线。
 - 测试以探针中 UTAU 实际传出的读数为期望值。`ustrender --compare-pitch` 对关闭 Mode2 的工程比较 Mode1 的曲线。
 - 显示、自由绘制与 Mode2 开关未做。
-- **stdutau 读 `Mode2=False` 为打开**：它只看有没有这个键。UTAU 实测按关闭处理，自己关闭时则不写此键。修正须改 stdutau，待作者同意。
+- **`Mode2=False` 读作关闭**：stdutau 原先只看有没有这个键，把它读成打开；UTAU 实测按关闭处理，自己关闭时则不写此键。已在 stdutau 中修正（作者同意），`test_UstDocument` 检验 `True`、`False` 与缺省三种情况。
 
 ### 第 6 步：批量操作
 
