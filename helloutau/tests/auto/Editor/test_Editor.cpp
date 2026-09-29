@@ -104,9 +104,13 @@ class test_Editor : public QObject {
 private:
     QTemporaryDir m_dir;
 
+    // An editor whose voice bank windows do not follow the disk on their own, which would ask
+    // at any moment; a test calls VoiceBankWindow::checkDisk() instead.
     std::unique_ptr<Editor> editor() const {
-        return std::make_unique<Editor>(
+        auto e = std::make_unique<Editor>(
             std::make_unique<AppSettings>(m_dir.filePath(QStringLiteral("settings.ini"))));
+        e->setWatchesDisk(false);
+        return e;
     }
 
 private Q_SLOTS:
@@ -822,6 +826,20 @@ private:
         return bank;
     }
 
+    static void writeFile(const fs::path &path, const char *text) {
+        std::ofstream file(path, std::ios::binary | std::ios::trunc);
+        file << text;
+    }
+
+    static int entryCount(const VoiceBankWindow *window) {
+        int count = 0;
+        const auto bank = window->document()->session()->snapshot();
+        for (const auto &sample : bank.samples()) {
+            count += sample.hasEntry ? 1 : 0;
+        }
+        return count;
+    }
+
     static QList<int> kindsOf(const VoiceBankWindow *window) {
         const auto table = window->entryTable();
         QList<int> kinds;
@@ -840,6 +858,103 @@ private:
 private Q_SLOTS:
     // A voice bank opens in a window of its own, its folders in a tree and the entries of the
     // folder chosen there in a table, with the files without an entry among them.
+    // A changed oto.ini is asked about and read as one undo step; declined, it is listed in the
+    // bar and not asked about again until it changes again. A new folder waits in the bar, and a
+    // new audio file is taken at once.
+    void the_voice_bank_window_follows_the_disk() {
+        QTemporaryDir dir;
+        const auto bank = voiceBank(dir);
+        const auto e = editor();
+        const auto window = e->openVoiceBank(bank);
+        QVERIFY(window);
+        QVERIFY(window->changeBar()->isHidden());
+        const auto session = window->document()->session();
+        QCOMPARE(entryCount(window), 4);
+
+        writeFile(bank / "oto.ini",
+                  "#Charset:UTF-8\r\na.wav=a,10,20,-30,40,5\r\nb.wav=,1,2,3,4,5\r\n"
+                  "c.wav=c,1,2,3,4,5\r\n");
+        bool asked = false;
+        QTimer::singleShot(0, [&asked] {
+            const auto box = qobject_cast<QMessageBox *>(QApplication::activeModalWidget());
+            QVERIFY(box);
+            asked = true;
+            box->button(QMessageBox::Yes)->click();
+        });
+        window->checkDisk();
+        QVERIFY(asked);
+        QCOMPARE(entryCount(window), 5);
+        QVERIFY(window->changeBar()->isHidden());
+        session->undo();
+        QCOMPARE(entryCount(window), 4);
+        session->redo();
+
+        // Declined, then checked again without a question, then changed again
+        writeFile(bank / "sub" / "oto.ini", "#Charset:UTF-8\r\nx.wav=x,9.0,2,3,4,5\r\n");
+        asked = false;
+        QTimer::singleShot(0, [&asked] {
+            const auto box = qobject_cast<QMessageBox *>(QApplication::activeModalWidget());
+            QVERIFY(box);
+            asked = true;
+            box->button(QMessageBox::No)->click();
+        });
+        window->checkDisk();
+        QVERIFY(asked);
+        QVERIFY(!window->changeBar()->isHidden());
+        QCOMPARE(entryCount(window), 5);
+        window->checkDisk();
+        QVERIFY(QApplication::activeModalWidget() == nullptr);
+        QVERIFY(!window->changeBar()->isHidden());
+
+        writeFile(bank / "sub" / "oto.ini", "#Charset:UTF-8\r\nx.wav=z,9.0,2,3,4,5\r\n");
+        asked = false;
+        QTimer::singleShot(0, [&asked] {
+            const auto box = qobject_cast<QMessageBox *>(QApplication::activeModalWidget());
+            QVERIFY(box);
+            asked = true;
+            box->button(QMessageBox::No)->click();
+        });
+        window->checkDisk();
+        QVERIFY(asked);
+
+        // The bar reads what it lists.
+        QPushButton *readAgain = nullptr;
+        for (const auto button : window->changeBar()->findChildren<QPushButton *>()) {
+            if (button->text() == QStringLiteral("&Read Again")) {
+                readAgain = button;
+            }
+        }
+        QVERIFY(readAgain && readAgain->isVisible());
+        readAgain->click();
+        QCOMPARE(entryCount(window), 4);
+        QVERIFY(window->changeBar()->isHidden());
+
+        // A new audio file is taken as no step; a new folder waits in the bar.
+        const int step = session->currentStep();
+        writeFile(bank / "d.wav", "");
+        fs::create_directories(bank / "new");
+        writeFile(bank / "new" / "oto.ini", "#Charset:UTF-8\r\nn.wav=n,1,2,3,4,5\r\n");
+        writeFile(bank / "new" / "n.wav", "");
+        window->checkDisk();
+        QCOMPARE(session->currentStep(), step);
+        QVERIFY(!window->changeBar()->isHidden());
+        QCOMPARE(entryCount(window), 4);
+        bool unlisted = false;
+        const auto model = window->entryModel();
+        window->directoryTree()->setCurrentItem(window->directoryTree()->topLevelItem(0));
+        for (int row = 0; row < model->rowCount(); ++row) {
+            unlisted =
+                unlisted || model->index(row, VoiceBankEntryModel::FileColumn).data().toString() ==
+                                QStringLiteral("d.wav");
+        }
+        QVERIFY(unlisted);
+
+        // Read All reads everything, the new folder too.
+        window->reloadAll();
+        QCOMPARE(entryCount(window), 5);
+        QVERIFY(window->changeBar()->isHidden());
+    }
+
     void a_voice_bank_opens_in_a_window_of_its_own() {
         QTemporaryDir dir;
         const auto bank = voiceBank(dir);

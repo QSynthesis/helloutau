@@ -123,6 +123,10 @@
         <menu id="helloutau.tools" text="&amp;Tools" />
 
         <!-- The menus of the voice bank window -->
+        <!-- Every folder of the voice bank read again, whatever the stamps of its files, as the
+             refresh of UTAU -->
+        <action id="helloutau.voiceBank.reloadAll" text="Re&amp;load All from Disk" category="File" />
+
         <menu id="helloutau.voiceBankMenu" topLevel="true" />
         <menu id="helloutau.voiceBank.file" text="&amp;File" />
         <menu id="helloutau.voiceBank.edit" text="&amp;Edit" />
@@ -222,6 +226,7 @@
                 <separator />
                 <action id="helloutau.file.save" />
                 <action id="helloutau.file.saveAs" />
+                <action id="helloutau.voiceBank.reloadAll" />
                 <separator />
                 <action id="helloutau.file.close" />
                 <action id="helloutau.file.quit" />

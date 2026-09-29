@@ -49,6 +49,12 @@ namespace hello::daw {
         /// settings dialog in docs/Widgets.md.
         SettingCatalog *settingCatalog() const;
 
+        /// Whether a voice bank window opened from now on follows the disk on its own, when a
+        /// file changes, when it is activated and every minute; true by default. Tests turn it
+        /// off, and call VoiceBankWindow::checkDisk() instead.
+        bool watchesDisk() const;
+        void setWatchesDisk(bool watches);
+
         /// The open project windows, in the order in which they were opened.
         QList<ProjectWindow *> windows() const;
 

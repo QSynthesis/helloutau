@@ -66,6 +66,7 @@ namespace hello::daw {
         QAK::ActionRegistry *registry = nullptr;
         ThemeManager *themes = nullptr;
         SettingCatalog *catalog = nullptr;
+        bool watchesDisk = true;
         QList<QPointer<ProjectWindow>> windows;
         QList<QPointer<VoiceBankWindow>> voiceBankWindows;
 
@@ -156,6 +157,16 @@ namespace hello::daw {
     SettingCatalog *Editor::settingCatalog() const {
         stdc_impl_t;
         return impl.catalog;
+    }
+
+    bool Editor::watchesDisk() const {
+        stdc_impl_t;
+        return impl.watchesDisk;
+    }
+
+    void Editor::setWatchesDisk(bool watches) {
+        stdc_impl_t;
+        impl.watchesDisk = watches;
     }
 
     Editor::~Editor() {

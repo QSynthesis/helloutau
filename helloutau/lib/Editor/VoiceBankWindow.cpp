@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <functional>
+#include <map>
 
 #include <QtCore/QDir>
 #include <QtCore/QRegularExpression>
@@ -11,11 +12,15 @@
 #include <QtGui/QAction>
 #include <QtGui/QCloseEvent>
 #include <QtWidgets/QFileDialog>
+#include <QtWidgets/QFrame>
+#include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QHeaderView>
+#include <QtWidgets/QLabel>
 #include <QtWidgets/QLineEdit>
 #include <QtWidgets/QMenu>
 #include <QtWidgets/QMenuBar>
 #include <QtWidgets/QMessageBox>
+#include <QtWidgets/QPushButton>
 #include <QtWidgets/QSplitter>
 #include <QtWidgets/QTableView>
 #include <QtWidgets/QTreeWidget>
@@ -29,6 +34,7 @@
 
 #include <hellokit/Edit/VoiceBankDocument.h>
 #include <hellokit/Edit/VoiceBankRefs.h>
+#include <hellokit/VoiceBank/VoiceBankCheckScheduler.h>
 
 #include <helloutau/Theme/ThemeManager.h>
 #include <helloutau/Widgets/CommandPalette.h>
@@ -37,6 +43,7 @@
 #include "CommandEntries_p.h"
 #include "DiagnosticBox_p.h"
 #include "Editor.h"
+#include "VoiceBankCharsetDialog.h"
 #include "VoiceBankEntryModel.h"
 
 namespace hello::daw {
@@ -98,6 +105,18 @@ namespace hello::daw {
         QHash<QString, QAction *> actions;
         CommandPalette *palette = nullptr;
         QMenu *recentMenu = nullptr;
+
+        // Follows the disk while the window is open; see checkDisk().
+        kit::VoiceBankCheckScheduler *scheduler = nullptr;
+        bool checking = false;
+        // The changes of text files declined, with the stamp of the files at that time
+        std::map<std::filesystem::path, QString> declined;
+        // The changes that the bar lists
+        kit::VoiceBankChanges pending;
+        QWidget *bar = nullptr;
+        QLabel *barText = nullptr;
+        QPushButton *readChanged = nullptr;
+        QPushButton *readAdded = nullptr;
 
         QTreeWidget *tree = nullptr;
         QTableView *table = nullptr;
@@ -166,6 +185,10 @@ namespace hello::daw {
                 palette->setRecentIds(editor->settings().recentCommands());
                 palette->popup();
             });
+            addCommand(QStringLiteral("helloutau.voiceBank.reloadAll"), [this] {
+                stdc_decl_t;
+                decl.reloadAll();
+            });
             addCommand(QStringLiteral("helloutau.tools.settings"), [this] {
                 stdc_decl_t;
                 editor->showSettings(&decl);
@@ -233,9 +256,33 @@ namespace hello::daw {
                     QRegularExpression::escape(text), QRegularExpression::CaseInsensitiveOption));
             });
 
+            bar = new QFrame();
+            static_cast<QFrame *>(bar)->setFrameShape(QFrame::StyledPanel);
+            barText = new QLabel();
+            barText->setWordWrap(true);
+            readChanged = new QPushButton(tr("&Read Again"));
+            readAdded = new QPushButton(tr("Read &New Folders"));
+            auto barLayout = new QHBoxLayout(bar);
+            barLayout->addWidget(barText, 1);
+            barLayout->addWidget(readChanged);
+            barLayout->addWidget(readAdded);
+            bar->hide();
+            QObject::connect(readChanged, &QPushButton::clicked, &decl, [this] {
+                kit::VoiceBankChanges changes;
+                changes.changed = pending.changed;
+                changes.removed = pending.removed;
+                read(changes);
+            });
+            QObject::connect(readAdded, &QPushButton::clicked, &decl, [this] {
+                kit::VoiceBankChanges changes;
+                changes.added = pending.added;
+                read(changes);
+            });
+
             auto right = new QWidget();
             auto layout = new QVBoxLayout(right);
             layout->setContentsMargins(0, 0, 0, 0);
+            layout->addWidget(bar);
             layout->addWidget(search);
             layout->addWidget(table);
 
@@ -248,6 +295,164 @@ namespace hello::daw {
 
             QObject::connect(tree, &QTreeWidget::currentItemChanged, &decl,
                              [this](QTreeWidgetItem *item) { showDirectoryOf(item); });
+        }
+
+        // The name of folder directory of the voice bank in a message
+        QString folderName(const std::filesystem::path &directory) const {
+            return directory.empty()
+                       ? QString::fromStdU16String(document->rootPath().filename().u16string())
+                       : QDir::toNativeSeparators(QString::fromStdU16String(directory.u16string()));
+        }
+
+        QString folderNames(const QList<std::filesystem::path> &directories) const {
+            QStringList names;
+            for (const auto &directory : directories) {
+                names.push_back(folderName(directory));
+            }
+            return names.join(QStringLiteral(", "));
+        }
+
+        // The size and time of the text files of directory, by which a declined change is
+        // known again, or "removed"
+        QString stampOf(const std::filesystem::path &directory) const {
+            namespace fs = std::filesystem;
+            const auto folder = document->rootPath() / directory;
+            std::error_code error;
+            if (!fs::is_directory(folder, error)) {
+                return QStringLiteral("removed");
+            }
+            QStringList parts;
+            for (const auto &entry : fs::directory_iterator(folder, error)) {
+                const auto name = QString::fromStdU16String(entry.path().filename().u16string());
+                if (!name.endsWith(QLatin1String(".txt"), Qt::CaseInsensitive) &&
+                    !name.endsWith(QLatin1String(".ini"), Qt::CaseInsensitive) &&
+                    !name.endsWith(QLatin1String(".map"), Qt::CaseInsensitive)) {
+                    continue;
+                }
+                std::error_code status;
+                const auto size = entry.file_size(status);
+                const auto time = entry.last_write_time(status).time_since_epoch().count();
+                parts.push_back(QStringLiteral("%1:%2:%3").arg(name).arg(size).arg(time));
+            }
+            parts.sort();
+            return parts.join(QLatin1Char('|'));
+        }
+
+        // Reads changes from the disk, one undo step unless only audio files changed.
+        void read(const kit::VoiceBankChanges &changes) {
+            stdc_decl_t;
+            VoiceBankCharsetDialog selector(&decl);
+            selector.setRoot(document->rootPath());
+            kit::DiagnosticList diagnostics;
+            document->reloadFromDisk(changes, &selector, diagnostics);
+            DiagnosticBox::show(&decl, tr("Read from Disk"), diagnostics);
+            for (const auto &directory : changes.changed) {
+                declined.erase(directory);
+            }
+            for (const auto &directory : changes.removed) {
+                declined.erase(directory);
+            }
+            check({});
+        }
+
+        // Handles what the disk holds that the voice bank does not, in places or everywhere.
+        void check(const QList<std::filesystem::path> &places) {
+            stdc_decl_t;
+            if (checking) {
+                return;
+            }
+            checking = true;
+            auto changes = places.isEmpty() ? document->checkDisk() : document->checkDisk(places);
+
+            // Audio files are taken as they are: nothing the user edited is replaced.
+            if (!changes.audio.isEmpty()) {
+                kit::VoiceBankChanges audio;
+                audio.audio = changes.audio;
+                kit::DiagnosticList diagnostics;
+                document->reloadFromDisk(audio, nullptr, diagnostics);
+                // Not an edit of the tree, which the model follows by itself
+                model->refresh();
+            }
+
+            // A change of text not declined as it is now is asked about.
+            QList<std::filesystem::path> ask;
+            for (const auto &list : {changes.changed, changes.removed}) {
+                for (const auto &directory : list) {
+                    const auto found = declined.find(directory);
+                    if (found == declined.end() || found->second != stampOf(directory)) {
+                        ask.push_back(directory);
+                    }
+                }
+            }
+            if (!ask.isEmpty()) {
+                const auto answer = QMessageBox::question(
+                    &decl, tr("Changed on Disk"),
+                    tr("These folders of the voice bank were changed by another program: %1.\n\n"
+                       "Read them again? What you did not save in them is replaced, and Undo "
+                       "brings it back.")
+                        .arg(folderNames(ask)),
+                    QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
+                if (answer == QMessageBox::Yes) {
+                    kit::VoiceBankChanges reread;
+                    for (const auto &directory : ask) {
+                        (changes.removed.contains(directory) ? reread.removed : reread.changed)
+                            .push_back(directory);
+                    }
+                    checking = false;
+                    read(reread);
+                    return;
+                }
+                for (const auto &directory : ask) {
+                    declined[directory] = stampOf(directory);
+                }
+            }
+
+            pending = changes;
+            updateBar();
+            checking = false;
+        }
+
+        void updateBar() {
+            QStringList lines;
+            const auto changed = pending.changed + pending.removed;
+            if (!changed.isEmpty()) {
+                lines.push_back(tr("Changed on disk and not read: %1.").arg(folderNames(changed)));
+            }
+            if (!pending.added.isEmpty()) {
+                lines.push_back(tr("New folders on disk: %1.").arg(folderNames(pending.added)));
+            }
+            if (pending.rootNotFound) {
+                lines.push_back(tr("The folder of the voice bank no longer exists. Saving writes "
+                                   "it again."));
+            }
+            barText->setText(lines.join(QLatin1Char('\n')));
+            readChanged->setVisible(!changed.isEmpty());
+            readAdded->setVisible(!pending.added.isEmpty());
+            bar->setVisible(!lines.isEmpty());
+        }
+
+        void initScheduler() {
+            stdc_decl_t;
+            if (!editor->watchesDisk()) {
+                return;
+            }
+            scheduler = new kit::VoiceBankCheckScheduler(&decl);
+            QObject::connect(scheduler, &kit::VoiceBankCheckScheduler::checkNeeded, &decl,
+                             [this](const QStringList &places) {
+                                 QList<std::filesystem::path> paths;
+                                 for (const auto &place : places) {
+                                     paths.push_back(std::filesystem::path(place.toStdU16String()));
+                                 }
+                                 check(paths);
+                             });
+            followRoot();
+        }
+
+        void followRoot() {
+            if (scheduler) {
+                scheduler->setRoot(QDir::fromNativeSeparators(
+                    QString::fromStdU16String(document->rootPath().u16string())));
+            }
         }
 
         void showDirectoryOf(QTreeWidgetItem *item) {
@@ -361,6 +566,7 @@ namespace hello::daw {
         impl.initActions();
         impl.initWidgets();
         impl.refreshTree();
+        impl.initScheduler();
 
         const auto session = impl.document->session();
         connect(session, &kit::VoiceBankSession::stepChanged, this, [this] {
@@ -377,6 +583,8 @@ namespace hello::daw {
             impl.updateTitle();
             impl.shownDirectories.clear();
             impl.refreshTree();
+            impl.declined.clear();
+            impl.followRoot();
         });
         impl.updateTitle();
         impl.updateUndoActions();
@@ -448,6 +656,37 @@ namespace hello::daw {
         const bool saved = impl.document->save(diagnostics);
         DiagnosticBox::show(this, tr("Save"), diagnostics);
         return saved;
+    }
+
+    void VoiceBankWindow::checkDisk() {
+        stdc_impl_t;
+        impl.check({});
+    }
+
+    QWidget *VoiceBankWindow::changeBar() const {
+        stdc_impl_t;
+        return impl.bar;
+    }
+
+    bool VoiceBankWindow::reloadAll() {
+        stdc_impl_t;
+        VoiceBankCharsetDialog selector(this);
+        selector.setRoot(impl.document->rootPath());
+        kit::DiagnosticList diagnostics;
+        impl.document->reloadAllFromDisk(&selector, diagnostics);
+        DiagnosticBox::show(this, tr("Read All from Disk"), diagnostics);
+        impl.declined.clear();
+        impl.check({});
+        return !kit::hasError(diagnostics);
+    }
+
+    void VoiceBankWindow::changeEvent(QEvent *event) {
+        stdc_impl_t;
+        QMainWindow::changeEvent(event);
+        // Back from another program, which may have changed the files
+        if (event->type() == QEvent::ActivationChange && isActiveWindow() && impl.scheduler) {
+            impl.scheduler->requestFull();
+        }
     }
 
     bool VoiceBankWindow::saveAs() {

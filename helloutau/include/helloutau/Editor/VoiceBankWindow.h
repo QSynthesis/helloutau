@@ -47,6 +47,23 @@ namespace hello::daw {
         /// and selects its row, clearing the search. Returns whether one was found.
         bool showEntryFor(int noteNum, const QString &lyric);
 
+        /// Compares the voice bank with the disk now, as the window does on its own when a file
+        /// changes, when it is activated and every minute (Editor::watchesDisk()). See the disk
+        /// changes in docs/VoiceBankEditor.md:
+        /// - a changed text file or a removed folder asks whether to read it again, as one undo
+        ///   step; declined, the same change is listed in changeBar() instead, and asked about
+        ///   again only once the file changes again;
+        /// - an audio file added or removed is taken at once, as no undo step;
+        /// - a new folder, and a root that no longer exists, are listed in changeBar().
+        void checkDisk();
+
+        /// The bar above the table that lists the changes on disk not read, with the buttons
+        /// that read them; hidden without any.
+        QWidget *changeBar() const;
+
+        /// Reads every folder again, whatever the stamps of its files, as one undo step.
+        bool reloadAll();
+
         /// \name Commands
         /// Each shows its errors to the user and returns whether it completed.
         /// @{
@@ -59,6 +76,7 @@ namespace hello::daw {
 
     protected:
         void closeEvent(QCloseEvent *event) override;
+        void changeEvent(QEvent *event) override;
 
     private:
         class Impl;
