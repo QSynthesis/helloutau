@@ -568,6 +568,22 @@ private Q_SLOTS:
         QCOMPARE(ProjectCommands::queryNames(), QStringList{QStringLiteral("get")});
     }
 
+    void note_merge_merges_a_run_of_notes() {
+        ProjectSession session(richProject());
+        const int count = int(session.snapshot().tracks[0].notes.size());
+        const int length = noteAt(session, 0).length + noteAt(session, 1).length;
+        // Not while the second note sets a tempo
+        verifyRefused(session, QStringLiteral("note merge /tracks/0/notes 0 2"));
+        QVERIFY(
+            run(session, QStringLiteral("note properties {\"tempo\": null} /tracks/0/notes/1")));
+        QVERIFY(run(session, QStringLiteral("note merge /tracks/0/notes 0 2")));
+        QCOMPARE(int(session.snapshot().tracks[0].notes.size()), count - 1);
+        QCOMPARE(noteAt(session, 0).length, length);
+        verifyRefused(session, QStringLiteral("note merge /tracks/0/notes 0 1"));
+        verifyRefused(session, QStringLiteral("note merge /tracks/0/notes 0 x"));
+        verifyRefused(session, QStringLiteral("note merge /tracks/0/notes 0"));
+    }
+
     void note_properties_changes_the_fields_given() {
         ProjectSession session(richProject());
         QVERIFY(
@@ -631,6 +647,7 @@ private Q_SLOTS:
                                                         QStringLiteral("note parameter"),
                                                         QStringLiteral("note bend"),
                                                         QStringLiteral("note properties"),
+                                                        QStringLiteral("note merge"),
                                                         QStringLiteral("settings mode2"),
                                                         QStringLiteral("settings properties")}));
     }

@@ -602,6 +602,44 @@ private Q_SLOTS:
         QCOMPARE(session.snapshot().toJson(), project.toJson());
     }
 
+    // Merged notes become the first of them, as long as all of them; not fewer than two, nor
+    // past a note that sets a tempo.
+    void notes_are_merged_into_the_first() {
+        Project project;
+        Track track;
+        for (const auto lyric : {"a", "ka", "sa", "ta"}) {
+            Note note;
+            note.lyric = QString::fromLatin1(lyric);
+            note.length = 240;
+            note.noteNum = 60;
+            track.notes.push_back(note);
+        }
+        track.notes[1].length = 480;
+        track.notes[3].tempo = 90;
+        project.tracks.push_back(track);
+        ProjectSession session(project);
+        const auto notes = ProjectRef(&session).tracks().at(0).notes();
+
+        DiagnosticList diagnostics;
+        QVERIFY(ProjectEdits::mergeNotes(notes, 0, 3, diagnostics));
+        auto merged = session.snapshot().tracks[0].notes;
+        QCOMPARE(merged.size(), 2);
+        QCOMPARE(merged[0].lyric, QStringLiteral("a"));
+        QCOMPARE(merged[0].length, 960);
+        QCOMPARE(merged[1].lyric, QStringLiteral("ta"));
+        QCOMPARE(session.undoMessage(), ProjectEdits::tr("Merge Notes"));
+
+        QVERIFY(!ProjectEdits::mergeNotes(notes, 0, 2, diagnostics));
+        QVERIFY(hasError(diagnostics));
+        diagnostics.clear();
+        QVERIFY(!ProjectEdits::mergeNotes(notes, 0, 1, diagnostics));
+        QVERIFY(!ProjectEdits::mergeNotes(notes, 1, 2, diagnostics));
+        QCOMPARE(session.currentStep(), 1);
+
+        session.undo();
+        QCOMPARE(session.snapshot().toJson(), project.toJson());
+    }
+
     // The properties set change in one step, the others stay; none that differs makes no step.
     void the_properties_change_in_one_step() {
         const auto project = richProject();

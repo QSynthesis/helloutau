@@ -376,6 +376,33 @@ namespace hello::kit {
         return transaction.commit(diagnostics);
     }
 
+    bool ProjectEdits::mergeNotes(const NoteListRef &notes, int index, int count,
+                                  DiagnosticList &diagnostics) {
+        if (count < 2) {
+            return fail(diagnostics, tr("Merging takes at least two notes."));
+        }
+        if (index < 0 || index + count > notes.size()) {
+            return fail(diagnostics, tr("The track has %1 notes, not notes %2 to %3.")
+                                         .arg(notes.size())
+                                         .arg(index)
+                                         .arg(index + count - 1));
+        }
+        int length = 0;
+        for (int i = index; i < index + count; ++i) {
+            const auto note = notes.at(i);
+            if (i > index && note.tempo()) {
+                return fail(diagnostics, tr("Note %1 sets a tempo, which merging would lose, "
+                                            "and the notes after it would move.")
+                                             .arg(i));
+            }
+            length += note.length();
+        }
+        auto transaction = notes.session()->transaction(tr("Merge Notes"));
+        notes.at(index).setLength(length);
+        notes.remove(index + 1, count - 1);
+        return transaction.commit(diagnostics);
+    }
+
     bool ProjectEdits::setMode2(const SettingsRef &settings, bool mode2,
                                 DiagnosticList &diagnostics) {
         if (settings.mode2() == mode2) {

@@ -542,6 +542,44 @@ private Q_SLOTS:
         QCOMPARE(tempo.tempo(), std::optional(96.0));
     }
 
+    // The shortcuts of UTAU (its menu resource) where they do not clash with ours, and no key
+    // for two commands of a window.
+    void the_shortcuts_follow_utau() {
+        const auto e = editor();
+        const auto window = e->newWindow();
+        const QList<std::pair<QString, QString>> expected{
+            {QStringLiteral("&Play or Pause"),      QStringLiteral("Space; F5")     },
+            {QStringLiteral("Pa&use or Resume"),    QStringLiteral("F6")            },
+            {QStringLiteral("&Stop"),               QStringLiteral("F7")            },
+            {QStringLiteral("&Replay"),             QStringLiteral("Shift+F5")      },
+            {QStringLiteral("&Delete"),             QStringLiteral("Del; Shift+Del")},
+            {QStringLiteral("Show &Pitch"),         QStringLiteral("F4")            },
+            {QStringLiteral("Edit &Voice Bank"),    QStringLiteral("Ctrl+G")        },
+            {QStringLiteral("Note Propert&ies..."), QStringLiteral("Ctrl+E")        },
+            {QStringLiteral("Insert &Rest"),        QStringLiteral("Ctrl+R")        },
+            {QStringLiteral("Mer&ge Notes"),        QStringLiteral("Ctrl+U")        },
+            {QStringLiteral("&Save"),               QStringLiteral("Ctrl+S")        },
+            {QStringLiteral("&Undo"),               QStringLiteral("Ctrl+Z")        },
+            {QStringLiteral("Select &All"),         QStringLiteral("Ctrl+A")        },
+        };
+        for (const auto &[text, keys] : expected) {
+            const auto action = actionNamed(window, text);
+            QVERIFY2(action, qPrintable(text));
+            QCOMPARE(QKeySequence::listToString(action->shortcuts()), keys);
+        }
+
+        QHash<QKeySequence, QString> owners;
+        for (const auto action : window->findChildren<QAction *>()) {
+            for (const auto &key : action->shortcuts()) {
+                const auto owner = owners.value(key);
+                QVERIFY2(owner.isEmpty() || owner == action->text(),
+                         qPrintable(key.toString() + QLatin1Char(' ') + owner + QLatin1Char(' ') +
+                                    action->text()));
+                owners.insert(key, action->text());
+            }
+        }
+    }
+
     // Set Tempo sets the tempo of the first selected note, and Note Properties those of all.
     void the_tempo_and_the_note_properties_are_set_from_the_menu() {
         const auto e = editor();

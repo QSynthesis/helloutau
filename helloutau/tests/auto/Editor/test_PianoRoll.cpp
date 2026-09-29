@@ -564,6 +564,38 @@ private Q_SLOTS:
         QVERIFY(lineAt(1440));
     }
 
+    // A rest goes before the first selected note, and the notes from the first selected to the
+    // last merge into the first; each is selected after.
+    void a_rest_is_inserted_and_notes_merged() {
+        kit::ProjectSession session(threeNotes());
+        PianoRoll roll(&session);
+        show(roll);
+        kit::DiagnosticList diagnostics;
+
+        click(roll, 240, 60);
+        QVERIFY(roll.insertRest(diagnostics));
+        QCOMPARE(lyricsOf(session), QStringLiteral("R la R li"));
+        QCOMPARE(session.snapshot().tracks[0].notes[0].length, roll.quantizedLength());
+        QCOMPARE(roll.selectedIndices(), QList<int>{0});
+        QVERIFY(roll.insertRest(diagnostics));
+        QCOMPARE(lyricsOf(session), QStringLiteral("R R la R li"));
+
+        // The two rests of 120 ticks, and la after them
+        drag(roll, {10, 70}, {300, 70}, {}, Qt::RightButton);
+        QCOMPARE(roll.selectedIndices(), (QList<int>{0, 1, 2}));
+        QVERIFY(roll.mergeSelected(diagnostics));
+        QCOMPARE(lyricsOf(session), QStringLiteral("R R li"));
+        QCOMPARE(session.snapshot().tracks[0].notes[0].length, 2 * roll.quantizedLength() + 480);
+        QCOMPARE(roll.selectedIndices(), QList<int>{0});
+
+        // Past the rest that sets a tempo, refused
+        drag(roll, {10, 70}, {1000, 70}, {}, Qt::RightButton);
+        QCOMPARE(roll.selectedIndices(), (QList<int>{0, 1}));
+        QVERIFY(!roll.mergeSelected(diagnostics));
+        QVERIFY(kit::hasError(diagnostics));
+        QCOMPARE(lyricsOf(session), QStringLiteral("R R li"));
+    }
+
     // A double click on a tempo mark of the ruler asks for the tempo of its note, and so does
     // Set Tempo Here in the menu of the ruler; Remove Tempo Mark clears the tempo of the note.
     void the_ruler_asks_for_the_tempo_of_a_note() {

@@ -571,6 +571,16 @@ namespace hello::daw {
                     return roll->insertNote(diagnostics);
                 });
             });
+            addCommand(QStringLiteral("helloutau.edit.insertRest"), [this] {
+                edit(tr("Insert Rest"), [this](kit::DiagnosticList &diagnostics) {
+                    return roll->insertRest(diagnostics);
+                });
+            });
+            addCommand(QStringLiteral("helloutau.edit.mergeNotes"), [this] {
+                edit(tr("Merge Notes"), [this](kit::DiagnosticList &diagnostics) {
+                    return roll->mergeSelected(diagnostics);
+                });
+            });
             addCommand(QStringLiteral("helloutau.edit.splitNote"), [this] { splitNote(); });
             addCommand(QStringLiteral("helloutau.edit.togglePortamento"), [this] {
                 edit(tr("Portamento"), [this](kit::DiagnosticList &diagnostics) {
@@ -808,6 +818,7 @@ namespace hello::daw {
                 actions.value(QLatin1String(id))->setEnabled(selected > 0);
             }
             actions.value(QStringLiteral("helloutau.edit.splitNote"))->setEnabled(selected == 1);
+            actions.value(QStringLiteral("helloutau.edit.mergeNotes"))->setEnabled(selected > 1);
             const bool copied = !PianoRoll::copiedNotes().isEmpty();
             actions.value(QStringLiteral("helloutau.edit.paste"))->setEnabled(copied);
             actions.value(QStringLiteral("helloutau.edit.pasteParameters"))

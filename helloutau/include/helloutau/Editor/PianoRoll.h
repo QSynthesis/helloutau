@@ -257,6 +257,14 @@ namespace hello::daw {
         /// quantizedLength(), or after the last note if nothing is selected, and selects it.
         bool insertNote(kit::DiagnosticList &diagnostics);
 
+        /// Inserts a rest as insertNote() inserts a note, as UTAU inserts one (Ctrl+R), and
+        /// selects it.
+        bool insertRest(kit::DiagnosticList &diagnostics);
+
+        /// Merges the notes from the first selected to the last into the first, as UTAU merges
+        /// notes (Ctrl+U), see ProjectEdits::mergeNotes(), and selects it.
+        bool mergeSelected(kit::DiagnosticList &diagnostics);
+
         /// Inserts the copied notes as they are, before the first selected note or after the
         /// last note if nothing is selected, and selects them.
         bool pasteNotes(kit::DiagnosticList &diagnostics);

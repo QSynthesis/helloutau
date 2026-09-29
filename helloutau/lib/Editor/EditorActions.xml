@@ -32,12 +32,19 @@
         <action id="helloutau.edit.undo" text="&amp;Undo" category="Edit" shortcut="Ctrl+Z" />
         <action id="helloutau.edit.redo" text="&amp;Redo" category="Edit"
                 shortcuts="Ctrl+Y;Ctrl+Shift+Z" />
-        <action id="helloutau.edit.delete" text="&amp;Delete" category="Edit" shortcut="Del" />
+        <action id="helloutau.edit.delete" text="&amp;Delete" category="Edit"
+                shortcuts="Del;Shift+Del" />
         <action id="helloutau.edit.selectAll" text="Select &amp;All" category="Edit"
                 shortcut="Ctrl+A" />
         <action id="helloutau.edit.insertNote" text="&amp;Insert Note" category="Edit"
                 shortcut="Ins" />
         <action id="helloutau.edit.splitNote" text="S&amp;plit Note..." category="Edit" />
+        <!-- A rest before the first selected note, as UTAU inserts one -->
+        <action id="helloutau.edit.insertRest" text="Insert &amp;Rest" category="Edit"
+                shortcut="Ctrl+R" />
+        <!-- The selected notes into the first, their lengths summed, as UTAU merges them -->
+        <action id="helloutau.edit.mergeNotes" text="Mer&amp;ge Notes" category="Edit"
+                shortcut="Ctrl+U" />
         <!-- The tempo of the first selected note, from which it applies -->
         <action id="helloutau.edit.setTempo" text="Set Te&amp;mpo..." category="Edit" />
         <!-- The properties of the selected notes, as the note property dialog of UTAU -->
@@ -77,13 +84,14 @@
         <action id="helloutau.edit.pitchTool" text="&amp;Freehand Pitch Tool" category="Edit"
                 shortcut="F" />
 
-        <action id="helloutau.view.showPitch" text="Show &amp;Pitch" category="View" />
+        <action id="helloutau.view.showPitch" text="Show &amp;Pitch" category="View"
+                shortcut="F4" />
         <action id="helloutau.view.commandPalette" text="&amp;Command Palette..." category="View"
                 shortcuts="Ctrl+Shift+P;F1" />
 
         <!-- Plays, pauses what plays, or goes on from where it was paused -->
         <action id="helloutau.playback.play" text="&amp;Play or Pause" category="Playback"
-                shortcut="Space" />
+                shortcuts="Space;F5" />
 
         <action id="helloutau.playback.pause" text="Pa&amp;use or Resume" category="Playback"
                 shortcut="F6" />
@@ -95,7 +103,8 @@
 
         <action id="helloutau.tools.settings" text="&amp;Settings..." category="Tools" />
         <!-- The voice bank of the project, in its window -->
-        <action id="helloutau.tools.editVoiceBank" text="Edit &amp;Voice Bank" category="Tools" />
+        <action id="helloutau.tools.editVoiceBank" text="Edit &amp;Voice Bank" category="Tools"
+                shortcut="Ctrl+G" />
         <!-- The entry that the first selected note uses, in the window of the voice bank -->
         <action id="helloutau.tools.showEntry" text="Go to Voice Bank &amp;Entry" category="Tools" />
         <!-- Deletes the fragments and the track file of the render cache of the project -->
@@ -151,7 +160,9 @@
                 <action id="helloutau.edit.selectAll" />
                 <separator />
                 <action id="helloutau.edit.insertNote" />
+                <action id="helloutau.edit.insertRest" />
                 <action id="helloutau.edit.splitNote" />
+                <action id="helloutau.edit.mergeNotes" />
                 <action id="helloutau.edit.editLyric" />
                 <action id="helloutau.edit.setTempo" />
                 <action id="helloutau.edit.noteProperties" />

@@ -323,6 +323,10 @@ namespace hello::daw {
         // The note of each mark of the ruler
         QList<int> markNotes;
 
+        // Inserts a note of lyric before the first selected note or after the last, with the
+        // key of that note and the quantized length, and selects it.
+        bool insert(const QString &lyric, kit::DiagnosticList &diagnostics);
+
         // The menu of the ruler at tick: the tempo of the note there
         void showRulerMenu(double tick, const QPoint &globalPosition) {
             stdc_decl_t;
@@ -3699,23 +3703,48 @@ namespace hello::daw {
 
     bool PianoRoll::insertNote(kit::DiagnosticList &diagnostics) {
         stdc_impl_t;
+        return impl.insert(QString::fromLatin1(kit::defaultLyric), diagnostics);
+    }
+
+    bool PianoRoll::insertRest(kit::DiagnosticList &diagnostics) {
+        stdc_impl_t;
+        return impl.insert(QStringLiteral("R"), diagnostics);
+    }
+
+    bool PianoRoll::mergeSelected(kit::DiagnosticList &diagnostics) {
+        stdc_impl_t;
         const auto indices = selectedIndices();
-        const auto timeline = impl.timeline;
+        if (indices.size() < 2) {
+            return true;
+        }
+        const auto notes = impl.notes();
+        const int first = indices.first();
+        if (!kit::ProjectEdits::mergeNotes(notes, first, indices.last() - first + 1, diagnostics)) {
+            return false;
+        }
+        impl.anchor = notes.at(first).id();
+        impl.setSelection({impl.anchor});
+        return true;
+    }
+
+    bool PianoRoll::Impl::insert(const QString &lyric, kit::DiagnosticList &diagnostics) {
+        stdc_decl_t;
+        const auto indices = decl.selectedIndices();
         const int count = timeline->noteCount();
         const int index = indices.isEmpty() ? count : indices.first();
 
         kit::Note note;
-        note.lyric = QString::fromLatin1(kit::defaultLyric);
-        note.length = quantizedLength();
+        note.lyric = lyric;
+        note.length = decl.quantizedLength();
         note.noteNum = index < count ? timeline->note(index).key
                        : count > 0   ? timeline->note(count - 1).key
                                      : 60;
-        const auto notes = impl.notes();
-        if (!kit::ProjectEdits::insertNotes(notes, index, {note}, diagnostics)) {
+        const auto refs = notes();
+        if (!kit::ProjectEdits::insertNotes(refs, index, {note}, diagnostics)) {
             return false;
         }
-        impl.anchor = notes.at(index).id();
-        impl.setSelection({impl.anchor});
+        anchor = refs.at(index).id();
+        setSelection({anchor});
         return true;
     }
 

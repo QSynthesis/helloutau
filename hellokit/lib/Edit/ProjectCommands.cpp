@@ -527,6 +527,22 @@ namespace hello::kit {
             return ProjectEdits::setNoteProperties(notes, changes, diagnostics);
         }
 
+        bool mergeCommand(ProjectSession &session, const Arguments &arguments,
+                          DiagnosticList &diagnostics) {
+            if (arguments.size() != 3) {
+                return usage(diagnostics, "note merge <notes> <index> <count>");
+            }
+            const auto notes = notesAt(session, arguments[0], diagnostics);
+            const auto index = edit::NodeCommands::integerOf(
+                arguments[1], ProjectCommands::tr("index"), diagnostics);
+            const auto count = edit::NodeCommands::integerOf(
+                arguments[2], ProjectCommands::tr("count"), diagnostics);
+            if (!notes || !index || !count) {
+                return false;
+            }
+            return ProjectEdits::mergeNotes(*notes, *index, *count, diagnostics);
+        }
+
         using DomainCommand = bool (*)(ProjectSession &, const Arguments &, DiagnosticList &);
 
         // The domain commands, each with the function of ProjectEdits that it calls.
@@ -552,6 +568,7 @@ namespace hello::kit {
             {"note",     "parameter",  parameterCommand,      "setParameter"     },
             {"note",     "bend",       bendCommand,           "drawPitchBend"    },
             {"note",     "properties", notePropertiesCommand, "setNoteProperties"},
+            {"note",     "merge",      mergeCommand,          "mergeNotes"       },
             {"settings", "mode2",      mode2Command,          "setMode2"         },
             {"settings", "properties", propertiesCommand,     "setProperties"    },
         };

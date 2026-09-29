@@ -224,7 +224,7 @@
 - 「编辑 → Note Properties...」（Ctrl+E，同 UTAU 的「选区属性」）一次编辑选中音符的歌词、长度、曲速、力度、调制、辅音速度、先行发声、重叠、STP 与 flags。各栏显示选中音符共同的值，不同时留空并显示「(various)」，都未设时显示「(default)」；只有编辑过的栏才改动，对每个选中音符相同；清空一个数值栏即恢复默认。
 - 以上都经 `ProjectEdits::setNoteProperties()`，各为一个撤销步骤。
 
-**快捷键对照 UTAU**（作者 2026-09-29 要求）：以 UTAU 菜单资源（`res/000.menu.txt`）中的快捷键为准。与我们已有的冲突时保留我们的（作者决定）：Ctrl+W 仍为关闭（UTAU 为「全选不含首尾休止符」），Ctrl+N 仍为新建（UTAU 为下一个音符，Ctrl+B 为上一个音符）。
+**快捷键对照 UTAU**（作者 2026-09-29 要求）：以 UTAU 菜单资源（`res/000.menu.txt`）中的快捷键为准。与我们已有的冲突时保留我们的（作者决定）：Ctrl+W 仍为关闭（UTAU 为「全选不含首尾休止符」），Ctrl+N 仍为新建（UTAU 为下一个音符，Ctrl+B 为上一个音符）。已对齐的有：Ctrl+R 插入休止符（在第一个选中音符之前，或最后一个音符之后，长度为量化单位，同 QSynthesis-Old）、Ctrl+U 音符合并（从第一个选中音符到最后一个，见 `ProjectEdits::mergeNotes()`）、F5 播放（与空格相同）、Shift+F5 重播、F6 暂停、F7 停止、F4 显示音高、Ctrl+E 音符属性、Ctrl+G 编辑音源、Shift+Del 删除（Del 保留），以及 Ctrl+S、Ctrl+Z、Ctrl+C、Ctrl+V、Ctrl+A。`test_Editor` 检验这些键，并检验一个窗口中没有两个命令共用一个键。
 
 **工程属性**（作者 2026-09-29 要求）：「文件 → Project Properties...」编辑工程名、速度、flags、音源目录、输出文件、两个引擎（Tool1、Tool2）与 Mode2，对应 UTAU 的工程属性对话框另加速度。确认后只把改动了的字段交给 `ProjectEdits::setProperties()`，作为一个撤销步骤；速度只有编辑过才算改动，以免数值框的舍入改掉原值。改了音源目录即重新读取音源。对话框注明两个引擎只记录在工程中，渲染始终用设置中的引擎。
 
