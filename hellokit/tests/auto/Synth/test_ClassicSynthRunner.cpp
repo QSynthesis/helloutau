@@ -13,6 +13,7 @@
 #include <QtTest/QTest>
 
 #include <hellokit/Synth/ClassicSynthRunner.h>
+#include <hellokit/Synth/private/ShellSyntax_p.h>
 
 using namespace hello::kit;
 
@@ -377,6 +378,106 @@ private Q_SLOTS:
             }
         }
         QCOMPARE(checked, 2);
+    }
+
+    // A percent sign in a path would start a variable in a batch file, and a single quote would
+    // end the quoting in a shell script. Read as each shell reads it, the first argument of the
+    // helper is the sample.
+    void a_path_with_a_quote_or_a_percent_sign_arrives_as_it_is_data() {
+        QTest::addColumn<bool>("batch");
+
+        QTest::newRow("batch") << true;
+        QTest::newRow("shell") << false;
+    }
+
+    void a_path_with_a_quote_or_a_percent_sign_arrives_as_it_is() {
+        QFETCH(bool, batch);
+
+        write(QStringLiteral("it's_100%/oto.ini"), "a.wav=a,10,20,30,40,5\n");
+        write(QStringLiteral("it's_100%/a.wav"), "RIFF");
+        FixedCharsetSelector selector(QStringLiteral("UTF-8"));
+        DiagnosticList diagnostics;
+        const auto bank = VoiceBank::open(root() / "it's_100%", &selector, diagnostics);
+        QVERIFY(bank.has_value());
+
+        Note note;
+        note.lyric = QStringLiteral("a");
+        note.noteNum = 60;
+        note.length = 480;
+        Project project;
+        Track track;
+        track.notes.push_back(note);
+        project.tracks.push_back(track);
+        SynthPlan::Options options;
+        options.cacheDirectory = root() / "cache";
+        options.outputFile = root() / "out.wav";
+        const auto plan = SynthPlan::make(project, *bank, options, diagnostics);
+        QVERIFY(plan.has_value());
+
+        ClassicSynthRunner runner;
+        runner.shell =
+            batch ? ClassicSynthRunner::ScriptShell::Batch : ClassicSynthRunner::ScriptShell::Posix;
+        const auto written = runner.scripts(*plan, engines(), diagnostics);
+        QVERIFY(written.has_value());
+
+        const QString call =
+            batch ? QStringLiteral("@call \"%helper%\" ") : QStringLiteral("\"${helper}\" ");
+        QString line;
+        for (const auto &l :
+             written->first.split(batch ? QStringLiteral("\r\n") : QStringLiteral("\n"))) {
+            if (l.startsWith(call)) {
+                line = l.mid(call.size());
+            }
+        }
+        QVERIFY2(!line.isEmpty(), qPrintable(written->first));
+
+        // The first argument, as the shell reads it
+        QString value;
+        bool quoted = false;
+        for (qsizetype i = 0; i < line.size(); ++i) {
+            const QChar c = line.at(i);
+            if (batch) {
+                if (c == QLatin1Char('%')) {
+                    QVERIFY2(i + 1 < line.size() && line.at(i + 1) == QLatin1Char('%'),
+                             qPrintable(line));
+                    value += c;
+                    ++i;
+                    continue;
+                }
+                if (c == QLatin1Char('"')) {
+                    quoted = !quoted;
+                    continue;
+                }
+            } else {
+                if (c == QLatin1Char('\'')) {
+                    quoted = !quoted;
+                    continue;
+                }
+                if (!quoted && c == QLatin1Char('\\')) {
+                    value += line.at(++i);
+                    continue;
+                }
+            }
+            if (!quoted && c == QLatin1Char(' ')) {
+                break;
+            }
+            value += c;
+        }
+        QCOMPARE(value, plan->steps().first().resamplerArguments.at(0));
+    }
+
+    // The same for a value without any other character that requires quotes, which a path on
+    // Windows always has in its separators.
+    void a_lone_quote_or_percent_sign_is_escaped() {
+        const ShellSyntax shell(ClassicSynthRunner::ScriptShell::Posix,
+                                ClassicSynthRunner::Quoting::Escaped);
+        QCOMPARE(shell.argument(QStringLiteral("it's")), QStringLiteral("'it'\\''s'"));
+        QCOMPARE(shell.argument(QStringLiteral("100%")), QStringLiteral("100%"));
+
+        const ShellSyntax batch(ClassicSynthRunner::ScriptShell::Batch,
+                                ClassicSynthRunner::Quoting::Escaped);
+        QCOMPARE(batch.argument(QStringLiteral("100%")), QStringLiteral("100%%"));
+        QCOMPARE(batch.argument(QStringLiteral("it's")), QStringLiteral("it's"));
     }
 
     // On other systems the UTAU engines run under Wine, and the script that starts them is a
