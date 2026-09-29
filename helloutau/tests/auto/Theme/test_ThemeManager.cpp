@@ -26,6 +26,7 @@ namespace {
     QColor colorOf(const QIcon &icon) {
         return icon.pixmap(QSize(16, 16), 1.0).toImage().pixelColor(8, 8);
     }
+
 }
 
 class test_ThemeManager : public QObject {

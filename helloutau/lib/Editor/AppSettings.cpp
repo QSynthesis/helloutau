@@ -20,6 +20,7 @@ namespace hello::daw {
         QString textOf(const std::filesystem::path &path) {
             return QString::fromStdU16String(path.u16string());
         }
+
     }
 
     AppSettings::AppSettings()

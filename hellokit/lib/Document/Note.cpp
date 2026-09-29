@@ -170,6 +170,7 @@ namespace hello::kit {
             const double next = values[std::min(k + 1, values.size() - 1)];
             return values[k] + (next - values[k]) * (position - double(k));
         }
+
     }
 
     PreviousBend PreviousBend::of(const Note &previous, const Note &note) {

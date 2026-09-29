@@ -377,6 +377,7 @@ namespace hello::daw {
     };
 
     Q_DECLARE_OPERATORS_FOR_FLAGS(PianoRoll::Parameters)
+
 }
 
 #endif // HELLOUTAU_EDITOR_PIANOROLL_H

@@ -350,6 +350,7 @@ namespace hello::kit {
         /// That of \a previous for \a note.
         static PreviousBend of(const Note &previous, const Note &note);
     };
+
 }
 
 #endif // HELLOKIT_DOCUMENT_NOTE_H

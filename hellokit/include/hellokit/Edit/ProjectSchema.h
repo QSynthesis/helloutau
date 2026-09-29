@@ -17,6 +17,7 @@ namespace hello::kit {
 
     /// The slots of the root node.
     namespace ProjectSlots {
+
         /// A record with the slots of \c SettingsSlots.
         inline constexpr edit::ChildSlot Settings{0, "settings"};
 
@@ -27,9 +28,11 @@ namespace hello::kit {
         inline constexpr edit::ChildSlot UnknownFields{2, "unknownFields"};
 
         inline constexpr int count = 3;
+
     }
 
     namespace SettingsSlots {
+
         inline constexpr edit::Slot<QString> Name{0, "name"};
         inline constexpr edit::Slot<double> Tempo{1, "tempo", edit::Range<double>::greaterThan(0)};
         inline constexpr edit::Slot<QString> Flags{2, "flags"};
@@ -40,9 +43,11 @@ namespace hello::kit {
         inline constexpr edit::Slot<bool> Mode2{7, "mode2"};
 
         inline constexpr int count = 8;
+
     }
 
     namespace TrackSlots {
+
         inline constexpr edit::Slot<QString> Name{0, "name"};
         inline constexpr edit::Slot<QString> VoiceDir{1, "voiceDir"};
 
@@ -50,9 +55,11 @@ namespace hello::kit {
         inline constexpr edit::ChildSlot Notes{2, "notes"};
 
         inline constexpr int count = 3;
+
     }
 
     namespace NoteSlots {
+
         inline constexpr edit::Slot<QString> Lyric{0, "lyric"};
         inline constexpr edit::Slot<int> Length{1, "length", edit::Range<int>::atLeast(1)};
         inline constexpr edit::Slot<int> NoteNum{2, "noteNum", edit::Range<int>::between(0, 127)};
@@ -95,23 +102,28 @@ namespace hello::kit {
         inline constexpr edit::ChildSlot UserData{20, "userData"};
 
         inline constexpr int count = 21;
+
     }
 
     namespace PortamentoSlots {
+
         inline constexpr edit::Slot<double> X{0, "x"};
         inline constexpr edit::Slot<double> Y{1, "y"};
         inline constexpr edit::Slot<PortamentoPoint::Type> Type{2, "type"};
 
         inline constexpr int count = 3;
+
     }
 
     namespace PitchBendSlots {
+
         inline constexpr edit::Slot<std::optional<double>> Start{0, "start"};
 
         /// An array of the values in the order of \c PitchBend::values.
         inline constexpr edit::ChildSlot Values{1, "values"};
 
         inline constexpr int count = 2;
+
     }
 
     /// Stores the portamento type as its integer value, which requires no registration of the

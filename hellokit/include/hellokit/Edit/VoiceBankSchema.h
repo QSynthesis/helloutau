@@ -23,6 +23,7 @@ namespace hello::kit {
     /// The slots of the root node. The character, the prefix map and the readme belong to the
     /// voice bank as a whole and are read from its root directory only.
     namespace VoiceBankSlots {
+
         /// A record with the slots of \c VoiceCharacterSlots, or empty if the root has no
         /// \c character.txt .
         inline constexpr edit::ChildSlot Character{0, "character"};
@@ -38,12 +39,14 @@ namespace hello::kit {
         inline constexpr edit::ChildSlot Directories{3, "directories"};
 
         inline constexpr int count = 4;
+
     }
 
     /// The slots of \c character.txt .
     ///
     /// \sa VoiceCharacter
     namespace VoiceCharacterSlots {
+
         inline constexpr edit::Slot<QString> Name{0, "name"};
         inline constexpr edit::Slot<QString> Image{1, "image"};
         inline constexpr edit::Slot<QString> Sample{2, "sample"};
@@ -54,6 +57,7 @@ namespace hello::kit {
         inline constexpr edit::Slot<QStringList> ExtraLines{5, "extraLines"};
 
         inline constexpr int count = 6;
+
     }
 
     /// The slots of one directory. Every slot except the entries is read-only: the path is a fact
@@ -63,6 +67,7 @@ namespace hello::kit {
     ///
     /// \sa VoiceBankDirectory, VoiceBankSession::excludedDirectories()
     namespace VoiceDirectorySlots {
+
         /// The location relative to the root, with slashes as separators. Empty for the root.
         inline constexpr edit::Slot<QString> Path{0, "path"};
 
@@ -77,6 +82,7 @@ namespace hello::kit {
         inline constexpr edit::ChildSlot OtoEntries{2, "otoEntries"};
 
         inline constexpr int count = 3;
+
     }
 
     /// The original text of the five numbers of an entry.
@@ -88,6 +94,7 @@ namespace hello::kit {
     ///
     /// \sa VoiceOtoEntry
     namespace OtoEntrySlots {
+
         inline constexpr edit::Slot<QString> FileName{0, "fileName"};
         inline constexpr edit::Slot<QString> Alias{1, "alias"};
         inline constexpr edit::Slot<double> Offset{2, "offset"};
@@ -101,6 +108,7 @@ namespace hello::kit {
         inline constexpr edit::Slot<OtoSpellings> Spellings{7, "spellings"};
 
         inline constexpr int count = 8;
+
     }
 
     /// Stores the spellings as a list of five byte arrays, with an invalid value for a number

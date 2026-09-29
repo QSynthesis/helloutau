@@ -278,4 +278,5 @@ namespace hello::kit {
         set(std::make_shared<const VoiceBank>(std::move(opened->bank)));
         return true;
     }
+
 }

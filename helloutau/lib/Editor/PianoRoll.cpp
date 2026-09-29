@@ -231,6 +231,7 @@ namespace hello::daw {
                 }
             }
         };
+
     }
 
     class PianoRoll::Impl {

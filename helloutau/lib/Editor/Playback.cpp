@@ -118,6 +118,7 @@ namespace hello::daw {
             job.startTime = plan->startTime();
             job.rendered = true;
         }
+
     }
 
     class Playback::Impl {
