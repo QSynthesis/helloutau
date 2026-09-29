@@ -100,7 +100,10 @@ namespace hello::daw {
             VelocityLane,
         };
 
-        /// What a press on the background does.
+        /// What a press on the background does with the left button. With the right button,
+        /// every tool but PitchTool drawing selects the notes in the span of time of a drag,
+        /// whatever their keys, and with Ctrl adds them to the selection, as a drag selects in
+        /// UTAU.
         enum Tool {
             /// Selects the notes in a rectangle.
             SelectTool,
@@ -301,9 +304,9 @@ namespace hello::daw {
         /// instead, as UTAU synthesizes it (kit::PitchBend::curveAt()), and the points and
         /// vibratos are hidden, though kept (step 5 in docs/Tuning.md). PitchTool draws the
         /// curve: along a stroke, the values of each note from its first reading to its end
-        /// take the pitch under the pointer, and a stroke with the right button, with any tool,
-        /// returns them to 0. A note without values starts them at its first reading, as UTAU
-        /// does.
+        /// take the pitch under the pointer, and a stroke with its right button returns them to 0.
+        /// With the other tools, the right button selects a span of time, see Tool. A note without
+        /// values starts them at its first reading, as UTAU does.
         bool isPitchVisible() const;
         void setPitchVisible(bool visible);
 

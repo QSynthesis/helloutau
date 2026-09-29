@@ -248,6 +248,7 @@ namespace hello::daw {
         class MoveGesture;
         class LengthGesture;
         class BandGesture;
+        class SpanGesture;
         class DrawGesture;
         class PointGesture;
         class VibratoGesture;
@@ -349,11 +350,11 @@ namespace hello::daw {
             return pitchVisible && mode1();
         }
 
-        // Whether a press with button draws the Mode1 pitch: the left button with the pitch
-        // tool, the right one with any tool
+        // Whether a press with button draws the Mode1 pitch, which the pitch tool does with
+        // either button; the right button selects a span of time with the other tools
         bool drawsBend(Qt::MouseButton button) const {
-            return bendShown() &&
-                   ((button == Qt::LeftButton && tool == PitchTool) || button == Qt::RightButton);
+            return bendShown() && tool == PitchTool &&
+                   (button == Qt::LeftButton || button == Qt::RightButton);
         }
 
         // A stroke of the Mode1 pitch from position, see BendGesture
@@ -2193,6 +2194,58 @@ namespace hello::daw {
         QSet<kit::edit::NodeId> m_previousPoints;
     };
 
+    // A drag with the right button, which selects every note in the time it spans whatever its
+    // key, as a drag selects in UTAU and a right drag in QSynthesis; with Ctrl held, in
+    // addition to the notes selected before.
+    class PianoRoll::Impl::SpanGesture : public SceneGesture {
+    public:
+        SpanGesture(PianoRoll::Impl *roll, QPointF position, Qt::KeyboardModifiers modifiers)
+            : m_roll(roll), m_origin(position.x()), m_previous(roll->selection),
+              m_previousPoints(roll->selectedPoints) {
+            if (modifiers & Qt::ControlModifier) {
+                m_base = roll->selection;
+            }
+            roll->selectPoints({});
+            move(position, modifiers);
+        }
+
+        void move(QPointF position, Qt::KeyboardModifiers modifiers) override {
+            Q_UNUSED(modifiers);
+            const double left = std::min(m_origin, position.x());
+            const double right = std::max(m_origin, position.x());
+            const auto &time = m_roll->view->timeAxis();
+            const auto timeline = m_roll->timeline;
+            const auto [begin, end] = timeline->notesBetween(time.toTick(left), time.toTick(right));
+            auto ids = m_base;
+            for (int i = begin; i < end; ++i) {
+                ids.insert(timeline->note(i).id);
+            }
+            m_roll->setSelection(ids);
+            // Over the whole height, its top and bottom edges out of sight
+            m_roll->band =
+                QRectF(QPointF(left, -1), QPointF(right, m_roll->view->viewport()->height() + 1));
+            m_roll->view->viewport()->update();
+        }
+
+        void release(QPointF position, Qt::KeyboardModifiers modifiers) override {
+            move(position, modifiers);
+            m_roll->clearPreview();
+        }
+
+        void cancel() override {
+            m_roll->clearPreview();
+            m_roll->setSelection(m_previous);
+            m_roll->selectPoints(m_previousPoints);
+        }
+
+    private:
+        PianoRoll::Impl *m_roll;
+        double m_origin;
+        QSet<kit::edit::NodeId> m_base;
+        QSet<kit::edit::NodeId> m_previous;
+        QSet<kit::edit::NodeId> m_previousPoints;
+    };
+
     // A drag of the pen on the background, which draws a note (step 4 in docs/Widgets.md). The
     // note goes before the note at the pointer, or after the last note, and starts where the note
     // before it ends; the notes after it start later by its length. With Shift held on the press,
@@ -2880,6 +2933,10 @@ namespace hello::daw {
         if (m_roll->drawsBend(button)) {
             return m_roll->bendGesture(position, button);
         }
+        if (button == Qt::RightButton) {
+            m_roll->finishEditing(true);
+            return std::make_unique<SpanGesture>(m_roll, position, modifiers);
+        }
         if (button != Qt::LeftButton) {
             return nullptr;
         }
@@ -2896,6 +2953,10 @@ namespace hello::daw {
                                           Qt::MouseButton button, Qt::KeyboardModifiers modifiers) {
         if (m_roll->drawsBend(button)) {
             return m_roll->bendGesture(position, button);
+        }
+        if (button == Qt::RightButton) {
+            m_roll->finishEditing(true);
+            return std::make_unique<SpanGesture>(m_roll, position, modifiers);
         }
         if (button != Qt::LeftButton) {
             return nullptr;

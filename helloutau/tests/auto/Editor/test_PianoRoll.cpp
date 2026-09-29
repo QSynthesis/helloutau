@@ -76,14 +76,15 @@ private:
     // Drags from (tick, key) \a from to \a to, through a point on the way so that the drag
     // passes the start distance.
     static void drag(PianoRoll &roll, std::pair<double, int> from, std::pair<double, int> to,
-                     Qt::KeyboardModifiers modifiers = {}) {
+                     Qt::KeyboardModifiers modifiers = {},
+                     Qt::MouseButton button = Qt::LeftButton) {
         const auto viewport = roll.view()->viewport();
         const auto start = pointOf(roll, from.first, from.second);
         const auto end = pointOf(roll, to.first, to.second);
-        QTest::mousePress(viewport, Qt::LeftButton, modifiers, start);
+        QTest::mousePress(viewport, button, modifiers, start);
         QTest::mouseMove(viewport, (start + end) / 2);
         QTest::mouseMove(viewport, end);
-        QTest::mouseRelease(viewport, Qt::LeftButton, modifiers, end);
+        QTest::mouseRelease(viewport, button, modifiers, end);
     }
 
     static QString lyricsOf(const kit::ProjectSession &session) {
@@ -248,6 +249,24 @@ private Q_SLOTS:
         QCOMPARE(roll.selectedIndices(), (QList<int>{0, 2}));
         drag(roll, {10, 61}, {100, 60});
         QCOMPARE(roll.selectedIndices(), QList<int>{0});
+    }
+
+    // A drag with the right button selects the notes of the span of time it covers, whatever
+    // their keys, rests too; from a note as well, and with Ctrl in addition to the selection.
+    void a_right_drag_selects_a_span_of_time() {
+        kit::ProjectSession session(threeNotes());
+        PianoRoll roll(&session);
+        show(roll);
+
+        drag(roll, {240, 70}, {1000, 50}, {}, Qt::RightButton);
+        QCOMPARE(roll.selectedIndices(), (QList<int>{0, 1}));
+        drag(roll, {1500, 70}, {1600, 70}, Qt::ControlModifier, Qt::RightButton);
+        QCOMPARE(roll.selectedIndices(), (QList<int>{0, 1, 2}));
+        drag(roll, {1600, 70}, {1500, 70}, {}, Qt::RightButton);
+        QCOMPARE(roll.selectedIndices(), QList<int>{2});
+        drag(roll, {240, 60}, {300, 60}, {}, Qt::RightButton);
+        QCOMPARE(roll.selectedIndices(), QList<int>{0});
+        QCOMPARE(session.currentStep(), 0);
     }
 
     // A drag moves the note in the sequence and transposes it in one step, and changes no
@@ -717,10 +736,16 @@ private Q_SLOTS:
         QCOMPARE(session.currentStep(), 1);
         QCOMPARE(session.undoMessage(), PianoRoll::tr("Draw Pitch"));
 
-        // The right button erases with any tool, only where the values are.
+        // With another tool the right button selects the span of time instead.
         roll.setTool(PianoRoll::SelectTool);
         const auto eraseFrom = QPointF(time.toX(200), roll.view()->keyAxis().toY(65)).toPoint();
         const auto eraseTo = QPointF(time.toX(700), roll.view()->keyAxis().toY(65)).toPoint();
+        stroke(roll, Qt::RightButton, eraseFrom, eraseTo);
+        QCOMPARE(session.currentStep(), 1);
+        QCOMPARE(roll.selectedIndices(), (QList<int>{0, 1}));
+
+        // The right button of the pitch tool erases, only where the values are.
+        roll.setTool(PianoRoll::PitchTool);
         stroke(roll, Qt::RightButton, eraseFrom, eraseTo);
         for (int k = int(std::ceil(time.toTick(eraseFrom.x()) / 5)); k <= last; ++k) {
             values[k] = 0;
