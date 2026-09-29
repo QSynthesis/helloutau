@@ -82,6 +82,12 @@ namespace utaucompare {
             if (ours == theirs) {
                 return true;
             }
+            // A path names the same file with either separator, which Windows accepts alike.
+            if (what == QLatin1String("sample") || what == QLatin1String("cacheFile") ||
+                what == QLatin1String("outputFile")) {
+                return QString(ours).replace(QLatin1Char('\\'), QLatin1Char('/')) ==
+                       QString(theirs).replace(QLatin1Char('\\'), QLatin1Char('/'));
+            }
             if (!isMeasurement(what)) {
                 return false;
             }

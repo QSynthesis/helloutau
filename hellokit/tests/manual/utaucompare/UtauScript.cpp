@@ -107,6 +107,21 @@ namespace utaucompare {
             return out;
         }
 
+        /// The engine that a line calls, by the variable it calls through before expansion.
+        ///
+        /// The expanded path cannot tell them apart when one program serves as both, as
+        /// moresampler does.
+        Engine engineNamed(const QString &line) {
+            const QString program = split(line).value(0);
+            if (program == QLatin1String("%resamp%")) {
+                return Engine::Resampler;
+            }
+            if (program == QLatin1String("%tool%")) {
+                return Engine::Wavtool;
+            }
+            return Engine::None;
+        }
+
         QString unquote(const QString &token) {
             QString out = token;
             out.remove(QLatin1Char('"'));
@@ -163,7 +178,12 @@ namespace utaucompare {
         QHash<QString, QString> variables;
         QList<ScriptCall> calls;
 
-        const auto engineOf = [&variables](const QStringList &arguments) {
+        // By the variable the line calls through, or else by the program, for a script that
+        // writes the path itself
+        const auto engineOf = [&variables](const QString &line, const QStringList &arguments) {
+            if (const auto named = engineNamed(line); named != Engine::None) {
+                return named;
+            }
             if (arguments.isEmpty()) {
                 return Engine::None;
             }
@@ -191,7 +211,7 @@ namespace utaucompare {
             for (const QString &helperLine : helperLines) {
                 const QStringList arguments =
                     split(expand(body(helperLine), variables, positional));
-                switch (engineOf(arguments)) {
+                switch (engineOf(body(helperLine), arguments)) {
                     case Engine::Resampler:
                         call.resamplerArguments = arguments.mid(1);
                         break;
@@ -234,7 +254,7 @@ namespace utaucompare {
             // A note rendered without the helper, as for a rest: no resampler, and one wavtool
             // call that supplies the duration of the silence.
             const QStringList arguments = split(expand(statement, variables, QStringList()));
-            if (engineOf(arguments) == Engine::Wavtool) {
+            if (engineOf(statement, arguments) == Engine::Wavtool) {
                 ScriptCall call;
                 call.wavtoolArguments = arguments.mid(1);
                 calls += call;
