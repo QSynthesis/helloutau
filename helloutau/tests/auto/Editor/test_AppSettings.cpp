@@ -19,14 +19,14 @@ private Q_SLOTS:
         QCOMPARE(settings.playbackMode(), AppSettings::Prerender);
     }
 
-    // The latest first, each once, at most ten, whole paths in any script
+    // The latest first, each once, at most recentFileCount, whole paths in any script
     void recent_files_are_kept_latest_first() {
         QTemporaryDir dir;
         const auto file = dir.filePath(QStringLiteral("settings.ini"));
         {
             AppSettings settings(file);
             QVERIFY(settings.recentFiles().isEmpty());
-            for (int i = 0; i < 12; ++i) {
+            for (int i = 0; i < AppSettings::recentFileCount + 2; ++i) {
                 settings.addRecentFile(std::filesystem::path(u"C:/songs/歌") /
                                        (std::to_string(i) + ".usth"));
             }
@@ -36,7 +36,8 @@ private Q_SLOTS:
         auto files = settings.recentFiles();
         QCOMPARE(files.size(), AppSettings::recentFileCount);
         QCOMPARE(files.first(), std::filesystem::path(u"C:/songs/歌") / "5.usth");
-        QCOMPARE(files.at(1), std::filesystem::path(u"C:/songs/歌") / "11.usth");
+        QCOMPARE(files.at(1), std::filesystem::path(u"C:/songs/歌") /
+                                  (std::to_string(AppSettings::recentFileCount + 1) + ".usth"));
         QCOMPARE(files.count(files.first()), 1);
 
         settings.removeRecentFile(files.at(1));
@@ -44,6 +45,26 @@ private Q_SLOTS:
         QVERIFY(!settings.recentFiles().contains(files.at(1)));
         settings.clearRecentFiles();
         QVERIFY(settings.recentFiles().isEmpty());
+    }
+
+    // The voice banks are a list of their own, kept as the files are.
+    void recent_voice_banks_are_kept_apart() {
+        QTemporaryDir dir;
+        AppSettings settings(dir.filePath(QStringLiteral("settings.ini")));
+        const auto bank = std::filesystem::path(u"C:/voice/音源");
+        settings.addRecentFile(std::filesystem::path(u"C:/songs/a.usth"));
+        settings.addRecentVoiceBank(bank);
+        settings.addRecentVoiceBank(std::filesystem::path(u"C:/voice/other"));
+        settings.addRecentVoiceBank(bank);
+        QCOMPARE(settings.recentVoiceBanks(),
+                 (QList<std::filesystem::path>{bank, std::filesystem::path(u"C:/voice/other")}));
+        QCOMPARE(settings.recentFiles().size(), 1);
+
+        settings.removeRecentVoiceBank(bank);
+        QCOMPARE(settings.recentVoiceBanks().size(), 1);
+        settings.clearRecentVoiceBanks();
+        QVERIFY(settings.recentVoiceBanks().isEmpty());
+        QCOMPARE(settings.recentFiles().size(), 1);
     }
 
     void values_persist_in_the_file() {

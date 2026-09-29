@@ -15,6 +15,7 @@ namespace hello::daw {
         constexpr char KeyUstExportCharset[] = "files/ustExportCharset";
         constexpr char KeyRecentCommands[] = "commandPalette/recent";
         constexpr char KeyRecentFiles[] = "files/recent";
+        constexpr char KeyRecentVoiceBanks[] = "files/recentVoiceBanks";
 
         // A path as the settings keep it, whole and in UTF-16
         QString textOf(const std::filesystem::path &path) {
@@ -93,29 +94,58 @@ namespace hello::daw {
         m_settings->setValue(QLatin1String(KeyRecentCommands), ids.mid(0, recentCommandCount));
     }
 
-    QList<std::filesystem::path> AppSettings::recentFiles() const {
+    QList<std::filesystem::path> AppSettings::recentPaths(const char *key) const {
         QList<std::filesystem::path> paths;
-        for (const auto &text : m_settings->value(QLatin1String(KeyRecentFiles)).toStringList()) {
+        for (const auto &text : m_settings->value(QLatin1String(key)).toStringList()) {
             paths.push_back(std::filesystem::path(text.toStdU16String()));
         }
         return paths;
     }
 
-    void AppSettings::addRecentFile(const std::filesystem::path &path) {
-        auto texts = m_settings->value(QLatin1String(KeyRecentFiles)).toStringList();
+    void AppSettings::addRecentPath(const char *key, const std::filesystem::path &path) {
+        auto texts = m_settings->value(QLatin1String(key)).toStringList();
         const auto text = textOf(path);
         texts.removeAll(text);
         texts.prepend(text);
-        m_settings->setValue(QLatin1String(KeyRecentFiles), texts.mid(0, recentFileCount));
+        m_settings->setValue(QLatin1String(key), texts.mid(0, recentFileCount));
+    }
+
+    void AppSettings::removeRecentPath(const char *key, const std::filesystem::path &path) {
+        auto texts = m_settings->value(QLatin1String(key)).toStringList();
+        texts.removeAll(textOf(path));
+        m_settings->setValue(QLatin1String(key), texts);
+    }
+
+    QList<std::filesystem::path> AppSettings::recentFiles() const {
+        return recentPaths(KeyRecentFiles);
+    }
+
+    void AppSettings::addRecentFile(const std::filesystem::path &path) {
+        addRecentPath(KeyRecentFiles, path);
     }
 
     void AppSettings::removeRecentFile(const std::filesystem::path &path) {
-        auto texts = m_settings->value(QLatin1String(KeyRecentFiles)).toStringList();
-        texts.removeAll(textOf(path));
-        m_settings->setValue(QLatin1String(KeyRecentFiles), texts);
+        removeRecentPath(KeyRecentFiles, path);
     }
 
     void AppSettings::clearRecentFiles() {
         m_settings->remove(QLatin1String(KeyRecentFiles));
     }
+
+    QList<std::filesystem::path> AppSettings::recentVoiceBanks() const {
+        return recentPaths(KeyRecentVoiceBanks);
+    }
+
+    void AppSettings::addRecentVoiceBank(const std::filesystem::path &root) {
+        addRecentPath(KeyRecentVoiceBanks, root);
+    }
+
+    void AppSettings::removeRecentVoiceBank(const std::filesystem::path &root) {
+        removeRecentPath(KeyRecentVoiceBanks, root);
+    }
+
+    void AppSettings::clearRecentVoiceBanks() {
+        m_settings->remove(QLatin1String(KeyRecentVoiceBanks));
+    }
+
 }

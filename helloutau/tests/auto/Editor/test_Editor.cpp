@@ -357,9 +357,61 @@ private Q_SLOTS:
 
     // An opened file heads Open Recent, from which it opens again; a file gone is reported and
     // forgotten.
+    // "Open Recent" as in VS Code: the latest ten projects, then the latest ten voice banks,
+    // the first ten numbered; "More..." lists them all in a palette, the projects first, and
+    // "Clear Recent" forgets both.
+    void open_recent_lists_projects_then_voice_banks() {
+        const auto e = editor();
+        e->settings().clearRecentFiles();
+        e->settings().clearRecentVoiceBanks();
+        for (int i = 0; i < 12; ++i) {
+            e->settings().addRecentFile(
+                pathIn(m_dir, qPrintable(QStringLiteral("f%1.usth").arg(i))));
+        }
+        e->settings().addRecentVoiceBank(pathIn(m_dir, "bank0"));
+        e->settings().addRecentVoiceBank(pathIn(m_dir, "bank1"));
+        const auto window = e->newWindow();
+        const auto recent = actionNamed(window, QStringLiteral("Open &Recent"));
+        QVERIFY(recent && recent->menu());
+        Q_EMIT recent->menu()->aboutToShow();
+        auto items = recent->menu()->actions();
+        QCOMPARE(items.size(), 10 + 1 + 2 + 1 + 2);
+        QVERIFY(items[0]->text().startsWith(QStringLiteral("&1 ")));
+        QVERIFY(items[0]->text().endsWith(QStringLiteral("f11.usth")));
+        QVERIFY(items[9]->text().startsWith(QStringLiteral("&0 ")));
+        QVERIFY(items[10]->isSeparator());
+        QVERIFY(items[11]->text().endsWith(QStringLiteral("bank1")));
+        QVERIFY(!items[11]->text().startsWith(QLatin1Char('&')));
+        QVERIFY(items[13]->isSeparator());
+        QCOMPARE(items[14]->text(), QStringLiteral("&More..."));
+        QCOMPARE(items[15]->text(), QStringLiteral("&Clear Recent"));
+
+        items[14]->trigger();
+        const auto palette = window->findChild<CommandPalette *>(QStringLiteral("recentPalette"));
+        QVERIFY(palette && palette->isVisible());
+        const auto commands = palette->commands();
+        QCOMPARE(commands.size(), 14);
+        QCOMPARE(commands[0].id,
+                 QStringLiteral("project:") +
+                     QString::fromStdU16String(pathIn(m_dir, "f11.usth").u16string()));
+        QCOMPARE(commands[0].label, QStringLiteral("Project: f11.usth"));
+        QCOMPARE(commands[12].label, QStringLiteral("Voice Bank: bank1"));
+        QVERIFY(commands[13].id.startsWith(QStringLiteral("voicebank:")));
+        palette->hide();
+
+        items[15]->trigger();
+        QVERIFY(e->settings().recentFiles().isEmpty());
+        QVERIFY(e->settings().recentVoiceBanks().isEmpty());
+        Q_EMIT recent->menu()->aboutToShow();
+        items = recent->menu()->actions();
+        QCOMPARE(items.size(), 1);
+        QVERIFY(!items[0]->isEnabled());
+    }
+
     void recent_files_open_from_their_menu() {
         const auto e = editor();
         e->settings().clearRecentFiles();
+        e->settings().clearRecentVoiceBanks();
         const auto first = savedProject(m_dir, "r1.usth");
         const auto second = savedProject(m_dir, "r2.usth");
         e->openFile(first);
@@ -599,6 +651,7 @@ private Q_SLOTS:
         const auto window = e->openVoiceBank(bank);
         QVERIFY(window);
         QCOMPARE(e->voiceBankWindows(), QList<VoiceBankWindow *>{window});
+        QCOMPARE(e->settings().recentVoiceBanks().value(0), bank);
         QCOMPARE(window->windowTitle(), QStringLiteral("bank[*] - HelloUtau"));
         QVERIFY(!window->isWindowModified());
         QStringList menus;

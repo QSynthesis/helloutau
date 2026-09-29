@@ -461,6 +461,9 @@ namespace hello::daw {
         kit::DiagnosticList diagnostics;
         const bool saved =
             impl.document->saveAs(pathOf(folder), kit::VoiceBankSession::AllFiles, diagnostics);
+        if (saved) {
+            impl.editor->settings().addRecentVoiceBank(impl.document->rootPath());
+        }
         DiagnosticBox::show(this, tr("Save As"), diagnostics);
         return saved;
     }

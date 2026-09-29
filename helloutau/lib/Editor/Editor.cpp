@@ -13,6 +13,7 @@
 #include <hellokit/Edit/VoiceBankDocument.h>
 
 #include <helloutau/Theme/ThemeManager.h>
+#include <helloutau/Widgets/CommandPalette.h>
 
 #include "AppSettings.h"
 #include "DiagnosticBox_p.h"
@@ -28,6 +29,15 @@
 namespace hello::daw {
 
     namespace {
+
+        // The recent projects and voice banks listed in "Open Recent", each; "More..." lists
+        // all that the settings keep.
+        constexpr int RecentMenuCount = 10;
+
+        // The palette of "More...", and the prefixes of its entries by kind
+        constexpr char RecentPaletteName[] = "recentPalette";
+        const QString ProjectPrefix = QStringLiteral("project:");
+        const QString VoiceBankPrefix = QStringLiteral("voicebank:");
 
         QString textOf(const std::filesystem::path &path) {
             return QString::fromStdU16String(path.u16string());
@@ -55,6 +65,66 @@ namespace hello::daw {
         ThemeManager *themes = nullptr;
         QList<QPointer<ProjectWindow>> windows;
         QList<QPointer<VoiceBankWindow>> voiceBankWindows;
+
+        // Opens a recent project, or voice bank if bank, over from, or forgets it if it is gone
+        void openRecent(Editor *editor, const std::filesystem::path &path, bool bank,
+                        QWidget *from) {
+            std::error_code error;
+            if (bank ? !std::filesystem::is_directory(path, error)
+                     : !std::filesystem::is_regular_file(path, error)) {
+                QMessageBox::warning(
+                    from, Editor::tr("Open Recent"),
+                    Editor::tr("%1 no longer exists.").arg(QDir::toNativeSeparators(textOf(path))));
+                if (bank) {
+                    settings->removeRecentVoiceBank(path);
+                } else {
+                    settings->removeRecentFile(path);
+                }
+                return;
+            }
+            if (bank) {
+                editor->openVoiceBank(path, from);
+            } else {
+                editor->openFile(path, qobject_cast<ProjectWindow *>(from));
+            }
+        }
+
+        // Every recent project and voice bank in a command palette over from, the latest first,
+        // as "More..." of "Open Recent" in VS Code
+        void showAllRecent(Editor *editor, QWidget *from) {
+            auto palette = from->findChild<CommandPalette *>(RecentPaletteName);
+            if (!palette) {
+                palette = new CommandPalette(from);
+                palette->setObjectName(RecentPaletteName);
+                QObject::connect(palette, &CommandPalette::commandActivated, from,
+                                 [this, editor, from](const QString &id) {
+                                     const bool bank = id.startsWith(VoiceBankPrefix);
+                                     const auto text = id.mid(bank ? VoiceBankPrefix.size()
+                                                                   : ProjectPrefix.size());
+                                     openRecent(editor,
+                                                std::filesystem::path(text.toStdU16String()), bank,
+                                                from);
+                                 });
+            }
+            QList<CommandEntry> entries;
+            const auto entry = [](const QString &prefix, const QString &kind,
+                                  const std::filesystem::path &path) {
+                CommandEntry e;
+                e.id = prefix + textOf(path);
+                e.label = kind.arg(QString::fromStdU16String(path.filename().u16string()));
+                e.alternative = QDir::toNativeSeparators(textOf(path));
+                return e;
+            };
+            for (const auto &path : settings->recentFiles()) {
+                entries.push_back(entry(ProjectPrefix, Editor::tr("Project: %1"), path));
+            }
+            for (const auto &path : settings->recentVoiceBanks()) {
+                entries.push_back(entry(VoiceBankPrefix, Editor::tr("Voice Bank: %1"), path));
+            }
+            palette->setCommands(entries);
+            palette->setRecentIds({});
+            palette->popup();
+        }
 
         ProjectWindow *createWindow(Editor *editor, std::unique_ptr<kit::ProjectDocument> document) {
             auto window = new ProjectWindow(editor, std::move(document));
@@ -183,6 +253,8 @@ namespace hello::daw {
             DiagnosticBox::show(from, title, diagnostics);
             return nullptr;
         }
+        impl.settings->addRecentVoiceBank(root);
+
         auto window = new VoiceBankWindow(this, std::move(document));
         window->setAttribute(Qt::WA_DeleteOnClose);
         impl.voiceBankWindows.removeAll(nullptr);
@@ -196,36 +268,41 @@ namespace hello::daw {
         stdc_impl_t;
         menu->clear();
         const auto files = impl.settings->recentFiles();
-        if (files.isEmpty()) {
+        const auto banks = impl.settings->recentVoiceBanks();
+        if (files.isEmpty() && banks.isEmpty()) {
             menu->addAction(tr("No Recent Files"))->setEnabled(false);
             return;
         }
-        const auto project = qobject_cast<ProjectWindow *>(from);
-        for (qsizetype i = 0; i < files.size(); ++i) {
-            const auto path = files[i];
-            const auto text = QDir::toNativeSeparators(textOf(path));
-            // Numbered 1 to 9 and then 0, as the keys of the first ten
+        // Numbered 1 to 9 and then 0, as the keys of the first ten items
+        int number = 0;
+        const auto add = [&](const std::filesystem::path &path, bool bank) {
+            const auto text = QString(QDir::toNativeSeparators(textOf(path)))
+                                  .replace(QLatin1Char('&'), QStringLiteral("&&"));
             const auto action = menu->addAction(
-                QStringLiteral("&%1 %2")
-                    .arg((i + 1) % 10)
-                    .arg(QString(text).replace(QLatin1Char('&'), QStringLiteral("&&"))));
-            connect(action, &QAction::triggered, menu, [this, path, from, project] {
+                ++number <= 10 ? QStringLiteral("&%1 %2").arg(number % 10).arg(text) : text);
+            connect(action, &QAction::triggered, menu, [this, path, bank, from] {
                 stdc_impl_t;
-                std::error_code error;
-                if (!std::filesystem::is_regular_file(path, error)) {
-                    QMessageBox::warning(
-                        from, tr("Open Recent"),
-                        tr("%1 no longer exists.").arg(QDir::toNativeSeparators(textOf(path))));
-                    impl.settings->removeRecentFile(path);
-                    return;
-                }
-                openFile(path, project);
+                impl.openRecent(this, path, bank, from);
             });
+        };
+        for (const auto &path : files.mid(0, RecentMenuCount)) {
+            add(path, false);
+        }
+        if (!files.isEmpty() && !banks.isEmpty()) {
+            menu->addSeparator();
+        }
+        for (const auto &path : banks.mid(0, RecentMenuCount)) {
+            add(path, true);
         }
         menu->addSeparator();
-        connect(menu->addAction(tr("&Clear Recent Files")), &QAction::triggered, menu, [this] {
+        connect(menu->addAction(tr("&More...")), &QAction::triggered, menu, [this, from] {
+            stdc_impl_t;
+            impl.showAllRecent(this, from);
+        });
+        connect(menu->addAction(tr("&Clear Recent")), &QAction::triggered, menu, [this] {
             stdc_impl_t;
             impl.settings->clearRecentFiles();
+            impl.settings->clearRecentVoiceBanks();
         });
     }
 

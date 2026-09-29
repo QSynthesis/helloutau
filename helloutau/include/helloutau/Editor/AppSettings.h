@@ -65,7 +65,7 @@ namespace hello::daw {
 
         static constexpr int recentCommandCount = 20;
 
-        /// The files last opened or saved as, the latest first, shared by all windows.
+        /// The project files last opened or saved as, the latest first, shared by all windows.
         QList<std::filesystem::path> recentFiles() const;
 
         /// Puts \a path first among the recent files. At most \c recentFileCount are kept.
@@ -73,10 +73,25 @@ namespace hello::daw {
         void removeRecentFile(const std::filesystem::path &path);
         void clearRecentFiles();
 
-        static constexpr int recentFileCount = 10;
+        /// The folders of the voice banks last opened or saved as, the latest first, shared by
+        /// all windows.
+        QList<std::filesystem::path> recentVoiceBanks() const;
+
+        /// Puts \a root first among the recent voice banks. At most \c recentFileCount are kept.
+        void addRecentVoiceBank(const std::filesystem::path &root);
+        void removeRecentVoiceBank(const std::filesystem::path &root);
+        void clearRecentVoiceBanks();
+
+        /// How many recent files and voice banks are kept, each. The menu "Open Recent" shows
+        /// fewer, and "More..." all of them.
+        static constexpr int recentFileCount = 50;
 
     private:
         Q_DISABLE_COPY(AppSettings)
+
+        QList<std::filesystem::path> recentPaths(const char *key) const;
+        void addRecentPath(const char *key, const std::filesystem::path &path);
+        void removeRecentPath(const char *key, const std::filesystem::path &path);
 
         std::unique_ptr<QSettings> m_settings;
     };
