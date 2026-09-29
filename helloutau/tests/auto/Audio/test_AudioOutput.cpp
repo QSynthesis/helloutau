@@ -169,6 +169,32 @@ private Q_SLOTS:
         QCOMPARE(source.position(), qint64(4410));
     }
 
+    // Once stopped, a stream calls its generator no more, though it is still held and read.
+    void a_stopped_stream_calls_its_generator_no_more() {
+        std::atomic<int> calls = 0;
+        auto source = std::make_shared<StreamSource>(
+            [&calls](float *out, qsizetype frames) -> qsizetype {
+                ++calls;
+                std::fill(out, out + frames, 0.25f);
+                return frames;
+            },
+            44100, 44100);
+        source->start();
+        for (int attempts = 0; attempts < 5000 && calls.load() == 0; ++attempts) {
+            QThread::msleep(1);
+        }
+        QVERIFY(calls.load() > 0);
+
+        source->stop();
+        const int stopped = calls.load();
+        float frames[4096];
+        for (int i = 0; i < 20; ++i) {
+            source->read(frames, 4096, 1);
+            QThread::msleep(1);
+        }
+        QCOMPARE(calls.load(), stopped);
+    }
+
     // Interleaved channels are converted separately.
     void channels_are_resampled_separately() {
         std::vector<float> stereo;

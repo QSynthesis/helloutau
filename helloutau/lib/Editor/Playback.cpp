@@ -145,7 +145,12 @@ namespace hello::daw {
                                         diagnostics);
         }
 
+        // The generator of the stream calls the synth, which may go before the stream does: the
+        // device can release the stream later than it stops.
         void endPreview() {
+            if (stream) {
+                stream->stop();
+            }
             stream.reset();
         }
 

@@ -68,6 +68,11 @@ namespace hello::daw {
         /// Starts the thread that produces the audio.
         void start();
 
+        /// Ends the thread that produces the audio and waits for it, so that the generator is
+        /// not called any more, even while the device still holds the source. Reading gives
+        /// what was produced, and silence after it.
+        void stop();
+
         qsizetype read(float *out, qsizetype frames, int channels) noexcept override;
 
         /// The samples of the generator played so far, at its rate.

@@ -134,6 +134,10 @@ namespace hello::daw {
     }
 
     StreamSource::~StreamSource() {
+        stop();
+    }
+
+    void StreamSource::stop() {
         _impl->stopping.store(true);
         if (_impl->producer.joinable()) {
             _impl->producer.join();
