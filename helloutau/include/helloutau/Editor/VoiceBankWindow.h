@@ -42,6 +42,11 @@ namespace hello::daw {
         /// Filters the entries by file name and alias, as the text is typed.
         QLineEdit *searchBox() const;
 
+        /// Shows the entry that sings \a lyric at \a noteNum, found as the synthesis finds it
+        /// (kit::VoiceBank::find()) in the voice bank as edited: chooses its folder in the tree
+        /// and selects its row, clearing the search. Returns whether one was found.
+        bool showEntryFor(int noteNum, const QString &lyric);
+
         /// \name Commands
         /// Each shows its errors to the user and returns whether it completed.
         /// @{

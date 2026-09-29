@@ -65,6 +65,11 @@ namespace hello::daw {
         /// Rebuilds the rows now rather than once control returns to the event loop.
         void refresh();
 
+        /// The row of the entry of \a fileName with \a alias in the folder \a directory, or of the
+        /// audio file \a fileName without an entry, whose alias is empty; -1 if none is shown.
+        int rowOf(const std::filesystem::path &directory, const QString &fileName,
+                  const QString &alias) const;
+
         int rowCount(const QModelIndex &parent = {}) const override;
         int columnCount(const QModelIndex &parent = {}) const override;
         QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;

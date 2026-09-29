@@ -152,6 +152,19 @@ namespace hello::daw {
         impl.build();
     }
 
+    int VoiceBankEntryModel::rowOf(const std::filesystem::path &directory, const QString &fileName,
+                                   const QString &alias) const {
+        stdc_impl_t;
+        for (int i = 0; i < impl.rows.size(); ++i) {
+            const auto &row = impl.rows.at(i);
+            if (row.directory == directory && fileKey(row.entry.fileName) == fileKey(fileName) &&
+                row.entry.alias == alias) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
     int VoiceBankEntryModel::rowCount(const QModelIndex &parent) const {
         stdc_impl_t;
         return parent.isValid() ? 0 : int(impl.rows.size());

@@ -32,6 +32,7 @@
 
 #include <helloutau/Theme/ThemeManager.h>
 #include <helloutau/Widgets/CommandPalette.h>
+#include <helloutau/Widgets/PianoKeyboard.h>
 
 #include "AppSettings.h"
 #include "CommandEntries_p.h"
@@ -45,6 +46,7 @@
 #include "SettingsDialog.h"
 #include "VibratoDialog.h"
 #include "VoiceBankCharsetDialog.h"
+#include "VoiceBankWindow.h"
 
 namespace hello::daw {
 
@@ -254,6 +256,7 @@ namespace hello::daw {
             });
             addCommand(QStringLiteral("helloutau.tools.editVoiceBank"),
                        [this] { editVoiceBank(); });
+            addCommand(QStringLiteral("helloutau.tools.showEntry"), [this] { showEntry(); });
             // An external action: its menu is ours to fill, each time it opens.
             recentMenu = new QMenu(&decl);
             QObject::connect(recentMenu, &QMenu::aboutToShow, &decl, [this] { fillRecentMenu(); });
@@ -517,7 +520,7 @@ namespace hello::daw {
                                   "helloutau.edit.crossfadeP2P3", "helloutau.edit.crossfadeP1P4",
                                   "helloutau.edit.copy", "helloutau.edit.transposeUp",
                                   "helloutau.edit.transposeDown", "helloutau.edit.octaveUp",
-                                  "helloutau.edit.octaveDown"}) {
+                                  "helloutau.edit.octaveDown", "helloutau.tools.showEntry"}) {
                 actions.value(QLatin1String(id))->setEnabled(selected > 0);
             }
             actions.value(QStringLiteral("helloutau.edit.splitNote"))->setEnabled(selected == 1);
@@ -657,8 +660,8 @@ namespace hello::daw {
         // The files last opened, numbered, the latest first, and a command that forgets them.
         // A file that is gone is reported and forgotten when chosen.
         // Opens the voice bank of the project in its window, as the UTAU folder of the settings
-        // resolves it.
-        void editVoiceBank() {
+        // resolves it, or returns null after telling the user why not.
+        VoiceBankWindow *editVoiceBank() {
             stdc_decl_t;
             const auto track = document->session()->snapshot().tracks.value(0);
             const auto root = track.voiceDirectory(editor->settings().utauDirectory());
@@ -670,9 +673,30 @@ namespace hello::daw {
                         : tr("The voice bank \"%1\" is in the UTAU folder, which is not set in the "
                              "settings.")
                               .arg(track.voiceDir));
+                return nullptr;
+            }
+            return editor->openVoiceBank(root, &decl);
+        }
+
+        // Shows the entry that the first selected note uses in the window of the voice bank.
+        void showEntry() {
+            stdc_decl_t;
+            const auto indices = roll->selectedIndices();
+            if (indices.isEmpty()) {
                 return;
             }
-            editor->openVoiceBank(root, &decl);
+            const auto &note = roll->timeline()->note(indices.first());
+            if (note.rest) {
+                decl.statusBar()->showMessage(tr("A rest has no entry."), StatusMessageTimeout);
+                return;
+            }
+            const auto window = editVoiceBank();
+            if (window && !window->showEntryFor(note.key, note.lyric)) {
+                decl.statusBar()->showMessage(
+                    tr("The voice bank has no entry for \"%1\" at %2.")
+                        .arg(note.lyric, PianoKeyboard::keyName(note.key)),
+                    StatusMessageTimeout);
+            }
         }
 
         void fillRecentMenu() {

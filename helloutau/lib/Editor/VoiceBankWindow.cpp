@@ -19,6 +19,7 @@
 #include <QtWidgets/QSplitter>
 #include <QtWidgets/QTableView>
 #include <QtWidgets/QTreeWidget>
+#include <QtWidgets/QTreeWidgetItemIterator>
 #include <QtWidgets/QVBoxLayout>
 
 #include <stdcorelib/pimpl.h>
@@ -418,6 +419,37 @@ namespace hello::daw {
     QLineEdit *VoiceBankWindow::searchBox() const {
         stdc_impl_t;
         return impl.search;
+    }
+
+    bool VoiceBankWindow::showEntryFor(int noteNum, const QString &lyric) {
+        stdc_impl_t;
+        const auto bank = impl.document->session()->snapshot();
+        const auto sample = bank.find(noteNum, lyric);
+        if (!sample) {
+            return false;
+        }
+        const auto directory = bank.directories().at(sample->directory).path;
+
+        // Its folder in the tree, which shows its entries
+        const auto key = textOf(directory);
+        for (QTreeWidgetItemIterator it(impl.tree); *it; ++it) {
+            if (!(*it)->data(0, AllRole).toBool() && (*it)->data(0, PathRole).toString() == key) {
+                impl.tree->setCurrentItem(*it);
+                break;
+            }
+        }
+        impl.search->clear();
+        const int row = impl.model->rowOf(directory, sample->fileName, sample->alias);
+        if (row < 0) {
+            return false;
+        }
+        const auto index =
+            impl.proxy->mapFromSource(impl.model->index(row, VoiceBankEntryModel::FileColumn));
+        impl.table->setCurrentIndex(index);
+        impl.table->scrollTo(index);
+        raise();
+        activateWindow();
+        return true;
     }
 
     bool VoiceBankWindow::save() {

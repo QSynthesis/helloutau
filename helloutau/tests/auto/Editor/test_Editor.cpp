@@ -534,7 +534,8 @@ private Q_SLOTS:
 
 private:
     // A voice bank in UTF-8, declared, so that nothing is asked: in the root a.wav with an
-    // entry, b.wav an entry without its file and c.wav a file without an entry; in sub, x.wav.
+    // entry, b.wav an entry without an alias and without its file, and c.wav a file without an
+    // entry; in sub, x.wav with the aliases x and y.
     static fs::path voiceBank(const QTemporaryDir &dir, const char *name = "bank") {
         const auto bank = pathIn(dir, name);
         fs::create_directories(bank / "sub");
@@ -542,11 +543,11 @@ private:
             std::ofstream file(path, std::ios::binary);
             file << text;
         };
-        write(bank / "oto.ini",
-              "#Charset:UTF-8\r\na.wav=a,10,20,-30,40,5\r\nb.wav=b,1,2,3,4,5\r\n");
+        write(bank / "oto.ini", "#Charset:UTF-8\r\na.wav=a,10,20,-30,40,5\r\nb.wav=,1,2,3,4,5\r\n");
         write(bank / "a.wav", "");
         write(bank / "c.wav", "");
-        write(bank / "sub" / "oto.ini", "#Charset:UTF-8\r\nx.wav=x,9.0,2,3,4,5\r\n");
+        write(bank / "sub" / "oto.ini",
+              "#Charset:UTF-8\r\nx.wav=x,9.0,2,3,4,5\r\nx.wav=y,1,2,3,4,5\r\n");
         write(bank / "sub" / "x.wav", "");
         return bank;
     }
@@ -585,19 +586,20 @@ private Q_SLOTS:
         QCOMPARE(menus, (QStringList{QStringLiteral("&File"), QStringLiteral("&Edit"),
                                      QStringLiteral("&View"), QStringLiteral("&Tools")}));
 
-        // All folders at first: a, b missing, c unlisted, and x in sub
+        // All folders at first: a, b missing, c unlisted, and x and y in sub
         const auto tree = window->directoryTree();
         QCOMPARE(tree->topLevelItemCount(), 2);
         QCOMPARE(tree->topLevelItem(1)->text(0), QStringLiteral("bank"));
         QCOMPARE(tree->topLevelItem(1)->child(0)->text(0), QStringLiteral("sub"));
-        QCOMPARE(
-            kindsOf(window),
-            (QList<int>{VoiceBankEntryModel::EntryRow, VoiceBankEntryModel::MissingAudioRow,
-                        VoiceBankEntryModel::UnlistedAudioRow, VoiceBankEntryModel::EntryRow}));
+        QCOMPARE(kindsOf(window),
+                 (QList<int>{VoiceBankEntryModel::EntryRow, VoiceBankEntryModel::MissingAudioRow,
+                             VoiceBankEntryModel::UnlistedAudioRow, VoiceBankEntryModel::EntryRow,
+                             VoiceBankEntryModel::EntryRow}));
         QVERIFY(!window->entryTable()->isColumnHidden(VoiceBankEntryModel::DirectoryColumn));
 
         tree->setCurrentItem(tree->topLevelItem(1)->child(0));
-        QCOMPARE(kindsOf(window), QList<int>{VoiceBankEntryModel::EntryRow});
+        QCOMPARE(kindsOf(window),
+                 (QList<int>{VoiceBankEntryModel::EntryRow, VoiceBankEntryModel::EntryRow}));
         QVERIFY(window->entryTable()->isColumnHidden(VoiceBankEntryModel::DirectoryColumn));
         const auto model = window->entryTable()->model();
         QCOMPARE(model->index(0, VoiceBankEntryModel::OffsetColumn).data().toString(),
@@ -674,9 +676,64 @@ private Q_SLOTS:
             QVERIFY(transaction.commit());
         }
         actionNamed(window, QStringLiteral("Edit &Voice Bank"))->trigger();
-        e->settings().setUtauDirectory({});
         QCOMPARE(e->voiceBankWindows().size(), 1);
-        QVERIFY(isSame(e->voiceBankWindows().first()->document()->rootPath(), bank));
+        const auto bankWindow = e->voiceBankWindows().first();
+        QVERIFY(isSame(bankWindow->document()->rootPath(), bank));
+
+        // From a note to the entry it uses: x in sub, c without an entry in the root, y the
+        // second entry of x.wav; none for zzz, and none for a rest.
+        {
+            const auto session = window->document()->session();
+            QList<kit::Note> notes;
+            for (const auto lyric : {"x", "c", "zzz", "R", "y"}) {
+                kit::Note note;
+                note.lyric = QString::fromLatin1(lyric);
+                note.length = 480;
+                note.noteNum = 60;
+                notes.push_back(note);
+            }
+            kit::DiagnosticList diagnostics;
+            QVERIFY(kit::ProjectEdits::insertNotes(kit::ProjectRef(session).tracks().at(0).notes(),
+                                                   0, notes, diagnostics));
+        }
+        const auto roll = qobject_cast<PianoRoll *>(window->centralWidget());
+        const auto go = actionNamed(window, QStringLiteral("Go to Voice Bank &Entry"));
+        QVERIFY(go);
+        roll->setSelectedIndices({});
+        QVERIFY(!go->isEnabled());
+        const auto current = [bankWindow](int column) {
+            return bankWindow->entryTable()
+                ->currentIndex()
+                .siblingAtColumn(column)
+                .data()
+                .toString();
+        };
+
+        roll->setSelectedIndices({0});
+        go->trigger();
+        QCOMPARE(bankWindow->directoryTree()->currentItem()->text(0), QStringLiteral("sub"));
+        QCOMPARE(current(VoiceBankEntryModel::FileColumn), QStringLiteral("x.wav"));
+        QCOMPARE(current(VoiceBankEntryModel::AliasColumn), QStringLiteral("x"));
+
+        bankWindow->searchBox()->setText(QStringLiteral("a"));
+        roll->setSelectedIndices({1});
+        go->trigger();
+        QVERIFY(bankWindow->searchBox()->text().isEmpty());
+        QCOMPARE(bankWindow->directoryTree()->currentItem()->text(0), QStringLiteral("bank"));
+        QCOMPARE(current(VoiceBankEntryModel::FileColumn), QStringLiteral("c.wav"));
+
+        roll->setSelectedIndices({2});
+        go->trigger();
+        QVERIFY(window->statusBar()->currentMessage().contains(QStringLiteral("zzz")));
+        roll->setSelectedIndices({3});
+        go->trigger();
+        QCOMPARE(window->statusBar()->currentMessage(), QStringLiteral("A rest has no entry."));
+
+        roll->setSelectedIndices({4});
+        go->trigger();
+        QCOMPARE(current(VoiceBankEntryModel::FileColumn), QStringLiteral("x.wav"));
+        QCOMPARE(current(VoiceBankEntryModel::AliasColumn), QStringLiteral("y"));
+        e->settings().setUtauDirectory({});
     }
 };
 
