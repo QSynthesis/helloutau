@@ -1,8 +1,12 @@
 #ifndef HELLOUTAU_AUDIO_AUDIOOUTPUT_H
 #define HELLOUTAU_AUDIO_AUDIOOUTPUT_H
 
+#include <array>
+#include <atomic>
+#include <chrono>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <vector>
 
 #include <QtCore/QObject>
@@ -24,6 +28,9 @@ namespace hello::daw {
         /// Writes up to \a frames frames of \a channels interleaved samples to \a out, and
         /// returns the number written. Fewer than requested marks the end of the source.
         virtual qsizetype read(float *out, qsizetype frames, int channels) noexcept = 0;
+
+        /// How far the source has been read, in its own frames, which any thread may query.
+        virtual qint64 position() const = 0;
     };
 
     /// Audio held in memory at the rate of the device, played from its start to its end.
@@ -40,8 +47,8 @@ namespace hello::daw {
 
         qsizetype frameCount() const;
 
-        /// The frames read so far, which any thread may query.
-        qsizetype position() const;
+        /// The frames read so far.
+        qint64 position() const override;
 
     private:
         class Impl;
@@ -75,8 +82,8 @@ namespace hello::daw {
 
         qsizetype read(float *out, qsizetype frames, int channels) noexcept override;
 
-        /// The samples of the generator played so far, at its rate.
-        qint64 position() const;
+        /// The samples of the generator read by the device so far, at its rate.
+        qint64 position() const override;
 
         /// Whether the device last found no samples before the end, and plays silence meanwhile.
         bool isStarved() const;
@@ -84,6 +91,48 @@ namespace hello::daw {
     private:
         class Impl;
         std::unique_ptr<Impl> _impl;
+    };
+
+    /// Finds what a device plays at a moment from what it has pulled: the frames of each pull and
+    /// the AudioSource::position() after it.
+    ///
+    /// A device pulls ahead of what it plays by what its buffers hold, some 45 ms with WASAPI
+    /// (measured, see the section on audio output in docs/Widgets.md), and plays as time passes
+    /// from its first pull. The position that
+    /// the device plays at a moment is therefore the position after the pull that holds the
+    /// frame played then, found as far into the pull as that frame is. While the source is
+    /// starved, its position stands still across the pull, and so does the one found.
+    ///
+    /// Written on the audio thread, which neither locks nor allocates here, and read on any
+    /// other. The last pulls are kept, far more than a device holds.
+    class HELLOUTAU_AUDIO_EXPORT DeviceClock {
+    public:
+        using Clock = std::chrono::steady_clock;
+
+        explicit DeviceClock(int sampleRate);
+
+        /// Records a pull of \a frames at \a now, the source at \a before before it and at
+        /// \a after after it. The first pull starts the clock.
+        void pulled(qsizetype frames, double before, double after, Clock::time_point now) noexcept;
+
+        /// The position of the source that the device plays at \a now, or none before the first
+        /// pull.
+        std::optional<double> heard(Clock::time_point now) const;
+
+    private:
+        static constexpr int Kept = 64;
+
+        struct Pull {
+            std::atomic<qint64> end{0};
+            std::atomic<double> after{0};
+        };
+
+        int m_sampleRate;
+        std::array<Pull, Kept> m_pulls;
+        std::atomic<qint64> m_count{0};
+        std::atomic<Clock::rep> m_start{0};
+        std::atomic<double> m_initial{0};
+        qint64 m_frames = 0;
     };
 
     /// Plays an AudioSource on the default output device of the system.
@@ -111,8 +160,9 @@ namespace hello::daw {
 
         bool isPlaying() const;
 
-        /// The time the device has played since start(), in milliseconds.
-        double elapsed() const;
+        /// The AudioSource::position() of the source that the device plays now, see
+        /// DeviceClock, or none before the device has pulled from it.
+        std::optional<double> heardPosition() const;
 
     Q_SIGNALS:
         /// Playing ended, at the end of the source or on stop().

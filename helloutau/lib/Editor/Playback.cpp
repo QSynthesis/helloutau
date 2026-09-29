@@ -141,7 +141,9 @@ namespace hello::daw {
         // of cancelled renders
         std::shared_ptr<Job> job;
         QList<QPointer<QThread>> workers;
+        // Where the track file of the render played starts, and the rate it plays at
         double startTime = 0;
+        int deviceRate = 0;
 
         // The preview: the synthesis, kept between previews for the fragments it holds, the
         // stream it feeds, and the sample of the track file at which the stream began. The
@@ -246,6 +248,7 @@ namespace hello::daw {
             }
             QString error;
             startTime = finished->startTime;
+            deviceRate = finished->deviceRate;
             if (!output->start(std::make_shared<BufferSource>(std::move(finished->samples),
                                                               finished->channels),
                                &error)) {
@@ -477,11 +480,14 @@ namespace hello::daw {
         if (impl.state != Playing) {
             return std::nullopt;
         }
+        // What the device plays, which it pulled some time before, from the start until it
+        // has pulled
+        const double heard = impl.output->heardPosition().value_or(0);
         if (impl.stream) {
-            const auto sample = double(impl.streamStart + impl.stream->position());
+            const auto sample = double(impl.streamStart) + heard;
             return impl.synth->startTime() + sample * 1000 / kit::WavtoolMixer::sampleRate;
         }
-        return impl.startTime + impl.output->elapsed();
+        return impl.startTime + heard * 1000 / std::max(1, impl.deviceRate);
     }
 
     std::optional<int> Playback::clearCache(const kit::ProjectDocument &document,

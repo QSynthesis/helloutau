@@ -67,7 +67,7 @@ namespace hello::daw {
         return qsizetype(impl.samples.size()) / impl.channels;
     }
 
-    qsizetype BufferSource::position() const {
+    qint64 BufferSource::position() const {
         stdc_impl_t;
         return impl.position.load(std::memory_order_relaxed);
     }
@@ -75,14 +75,18 @@ namespace hello::daw {
     namespace {
 
         // Writes the samples of \a source into \a out, \a channels interleaved, silence after its
-        // end, which \a ended then reports. Called on the thread that the device pulls on.
-        void fill(AudioSource &source, float *out, qsizetype frames, int channels,
-                  std::atomic<bool> &ended) {
+        // end, which \a ended then reports, and records the pull in \a clock. Called on the
+        // thread that the device pulls on.
+        void fill(AudioSource &source, DeviceClock &clock, float *out, qsizetype frames,
+                  int channels, std::atomic<bool> &ended) {
+            const auto now = DeviceClock::Clock::now();
+            const auto before = double(source.position());
             const auto written = source.read(out, frames, channels);
             if (written < frames) {
                 std::fill(out + written * channels, out + frames * channels, 0.0f);
                 ended.store(true);
             }
+            clock.pulled(frames, before, double(source.position()), now);
         }
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 11, 0) || defined(HELLOUTAU_AUDIO_PULL)
@@ -92,9 +96,10 @@ namespace hello::daw {
         // 32-bit floating-point samples.
         class SourceDevice : public QIODevice {
         public:
-            SourceDevice(std::shared_ptr<AudioSource> source, int channels,
-                         std::shared_ptr<std::atomic<bool>> ended)
-                : m_source(std::move(source)), m_channels(channels), m_ended(std::move(ended)) {
+            SourceDevice(std::shared_ptr<AudioSource> source, std::shared_ptr<DeviceClock> clock,
+                         int channels, std::shared_ptr<std::atomic<bool>> ended)
+                : m_source(std::move(source)), m_clock(std::move(clock)), m_channels(channels),
+                  m_ended(std::move(ended)) {
             }
 
             bool isSequential() const override {
@@ -110,7 +115,8 @@ namespace hello::daw {
             qint64 readData(char *data, qint64 maxSize) override {
                 const qint64 frameBytes = qint64(sizeof(float)) * m_channels;
                 const qint64 frames = maxSize / frameBytes;
-                fill(*m_source, reinterpret_cast<float *>(data), frames, m_channels, *m_ended);
+                fill(*m_source, *m_clock, reinterpret_cast<float *>(data), frames, m_channels,
+                     *m_ended);
                 return frames * frameBytes;
             }
 
@@ -122,6 +128,7 @@ namespace hello::daw {
 
         private:
             std::shared_ptr<AudioSource> m_source;
+            std::shared_ptr<DeviceClock> m_clock;
             int m_channels;
             std::shared_ptr<std::atomic<bool>> m_ended;
         };
@@ -143,6 +150,8 @@ namespace hello::daw {
 #endif
         // Set on the audio thread once the source has ended
         std::shared_ptr<std::atomic<bool>> ended;
+        // Written on the audio thread
+        std::shared_ptr<DeviceClock> clock;
         QTimer poll;
         bool draining = false;
     };
@@ -206,15 +215,19 @@ namespace hello::daw {
         impl.sink = std::make_unique<QAudioSink>(device, format);
         auto ended = std::make_shared<std::atomic<bool>>(false);
         impl.ended = ended;
+        auto clock = std::make_shared<DeviceClock>(format.sampleRate());
+        impl.clock = clock;
         impl.draining = false;
         const int channels = format.channelCount();
 #ifdef HELLOUTAU_AUDIO_PULL_DEVICE
-        impl.device = std::make_unique<SourceDevice>(std::move(source), channels, ended);
+        impl.device =
+            std::make_unique<SourceDevice>(std::move(source), std::move(clock), channels, ended);
         impl.device->open(QIODevice::ReadOnly);
         impl.sink->start(impl.device.get());
 #else
-        impl.sink->start([source = std::move(source), ended, channels](QSpan<float> buffer) {
-            fill(*source, buffer.data(), buffer.size() / channels, channels, *ended);
+        impl.sink->start([source = std::move(source), clock = std::move(clock), ended,
+                          channels](QSpan<float> buffer) {
+            fill(*source, *clock, buffer.data(), buffer.size() / channels, channels, *ended);
         });
 #endif
         if (impl.sink->error() != QtAudio::NoError) {
@@ -239,6 +252,7 @@ namespace hello::daw {
         impl.device.reset();
 #endif
         impl.ended.reset();
+        impl.clock.reset();
         Q_EMIT finished();
     }
 
@@ -247,9 +261,57 @@ namespace hello::daw {
         return bool(impl.sink);
     }
 
-    double AudioOutput::elapsed() const {
+    std::optional<double> AudioOutput::heardPosition() const {
         stdc_impl_t;
-        return impl.sink ? double(impl.sink->processedUSecs()) / 1000 : 0;
+        return impl.clock ? impl.clock->heard(DeviceClock::Clock::now()) : std::nullopt;
+    }
+
+    DeviceClock::DeviceClock(int sampleRate) : m_sampleRate(std::max(1, sampleRate)) {
+    }
+
+    void DeviceClock::pulled(qsizetype frames, double before, double after,
+                             Clock::time_point now) noexcept {
+        const qint64 count = m_count.load(std::memory_order_relaxed);
+        if (count == 0) {
+            m_start.store(now.time_since_epoch().count(), std::memory_order_relaxed);
+            m_initial.store(before, std::memory_order_relaxed);
+        }
+        m_frames += frames;
+        auto &pull = m_pulls[size_t(count % Kept)];
+        pull.end.store(m_frames, std::memory_order_relaxed);
+        pull.after.store(after, std::memory_order_relaxed);
+        m_count.store(count + 1, std::memory_order_release);
+    }
+
+    std::optional<double> DeviceClock::heard(Clock::time_point now) const {
+        const qint64 count = m_count.load(std::memory_order_acquire);
+        if (count == 0) {
+            return std::nullopt;
+        }
+        const Clock::time_point start{Clock::duration(m_start.load(std::memory_order_relaxed))};
+        // The frame played now, counted from the first frame pulled
+        const double played =
+            std::chrono::duration<double>(now - start).count() * double(m_sampleRate);
+        // Newest first, short of the oldest pulls, which the audio thread may be replacing
+        const qint64 oldest = std::max<qint64>(0, count - (Kept - 2));
+        for (qint64 i = count - 1; i >= oldest; --i) {
+            const auto &pull = m_pulls[size_t(i % Kept)];
+            const auto end = double(pull.end.load(std::memory_order_relaxed));
+            const auto after = pull.after.load(std::memory_order_relaxed);
+            if (played >= end) {
+                return after;
+            }
+            const auto &previous = m_pulls[size_t((i + Kept - 1) % Kept)];
+            const double begin = i == 0 ? 0 : double(previous.end.load(std::memory_order_relaxed));
+            const double before = i == 0 ? m_initial.load(std::memory_order_relaxed)
+                                         : previous.after.load(std::memory_order_relaxed);
+            if (played >= begin || i == oldest) {
+                const double part =
+                    end > begin ? std::clamp((played - begin) / (end - begin), 0.0, 1.0) : 1.0;
+                return before + part * (after - before);
+            }
+        }
+        return std::nullopt;
     }
 
     std::vector<float> resampled(const std::vector<float> &samples, int channels, int sourceRate,

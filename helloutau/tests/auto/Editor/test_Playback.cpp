@@ -27,9 +27,9 @@ namespace {
         out.write(bytes.constData(), bytes.size());
     }
 
-    // A tenth of a second of 16-bit mono silence at 44100 Hz
-    QByteArray silence() {
-        const quint32 data = 4410 * 2;
+    // \a frames of 16-bit mono silence at 44100 Hz, a tenth of a second by default
+    QByteArray silence(quint32 frames = 4410) {
+        const quint32 data = frames * 2;
         QByteArray bytes("RIFF");
         const auto u32 = [&bytes](quint32 value) {
             for (int i = 0; i < 4; ++i) {
@@ -64,6 +64,8 @@ namespace {
         mutable std::atomic<bool> waitForCancel = false;
         // Runs on until released, cancelled or not, as a script does
         mutable std::atomic<bool> hold = false;
+        // The frames of the track file
+        quint32 frames = 4410;
 
         kit::SynthOutcome render(const kit::SynthPlan &plan, const kit::SynthEngines &engines,
                                  kit::SynthObserver *observer,
@@ -85,7 +87,7 @@ namespace {
                 QThread::msleep(5);
             }
             observer->progressed(int(plan.steps().size()), int(plan.steps().size()));
-            writeBytes(plan.outputFile(), silence());
+            writeBytes(plan.outputFile(), silence(frames));
             outcome.rendered = true;
             return outcome;
         }
@@ -220,6 +222,34 @@ private Q_SLOTS:
         QCOMPARE(runner->stepCounts, QList<int>{1});
         QCOMPARE(runner->caches, QList<fs::path>{playback.cacheDirectoryFor(*document)});
         QVERIFY(fs::is_regular_file(playback.cacheDirectoryFor(*document) / "playback.wav"));
+    }
+
+    // While a render plays, the playhead moves with what the device plays, from where the track
+    // file starts.
+    void the_playhead_follows_a_render_as_it_plays() {
+        if (AudioOutput::deviceSampleRate() <= 0) {
+            QSKIP("This machine has no audio output device.");
+        }
+        QTemporaryDir dir;
+        const auto document = singingDocument(dir);
+        QVERIFY(document);
+        Playback playback;
+        const auto runner = std::make_shared<SilentRunner>();
+        runner->frames = 44100;
+        playback.setRunner(runner);
+
+        kit::DiagnosticList diagnostics;
+        QVERIFY(playback.play(*document, std::nullopt, someEngines(), diagnostics));
+        QTRY_COMPARE_WITH_TIMEOUT(playback.state(), Playback::Playing, 5000);
+        const auto first = playback.position();
+        QVERIFY(first);
+        QTest::qWait(400);
+        const auto later = playback.position();
+        QVERIFY(later);
+        // Within what a device may hold back, and a timer may be late
+        const double moved = *later - *first;
+        QVERIFY2(moved > 250 && moved < 600, qPrintable(QString::number(moved)));
+        playback.stop();
     }
 
     // A preview plays from the time asked for to the end, here within the second note, reading
