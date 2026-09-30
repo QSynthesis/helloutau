@@ -1,6 +1,10 @@
 #include <QtCore/QDir>
 #include <QtCore/QFile>
 #include <QtCore/QFileInfo>
+#include <QtCore/QJsonArray>
+#include <QtCore/QJsonDocument>
+#include <QtCore/QJsonObject>
+#include <QtCore/QStandardPaths>
 #include <QtCore/QTemporaryDir>
 #include <QtTest/QTest>
 #include <QtWidgets/QApplication>
@@ -39,7 +43,7 @@ namespace {
     QStringList arguments(const QStringList &files = {}) {
         static QTemporaryDir directory;
         return QStringList({QStringLiteral("helloutau"), QLatin1String(AppLoader::settingsOption),
-                            directory.filePath(QStringLiteral("settings.json"))}) +
+                            directory.path()}) +
                files;
     }
 
@@ -62,23 +66,29 @@ private Q_SLOTS:
         qApp->setProperty("appLoaderEvents", QStringList());
     }
 
-    // --plugin-path adds the directory after it, --settings names the settings file, and the
-    // other arguments are files.
+    // --plugin-path adds the directory after it, --settings names the directory of the
+    // settings, and the other arguments are files.
     void the_arguments_are_plugin_paths_and_files() {
         QCOMPARE(AppLoader::instance(), nullptr);
         QTemporaryDir directory;
-        const auto settings = directory.filePath(QStringLiteral("settings.json"));
         {
             const AppLoader loader({QStringLiteral("helloutau"), QStringLiteral("a.ust"),
                                     QStringLiteral("--plugin-path"), QStringLiteral("extra"),
-                                    QStringLiteral("--settings"), settings, QStringLiteral("b.ust"),
-                                    QStringLiteral("--plugin-path")});
+                                    QStringLiteral("--settings"), directory.path(),
+                                    QStringLiteral("b.ust"), QStringLiteral("--plugin-path")});
             QCOMPARE(AppLoader::instance(), &loader);
             QCOMPARE(loader.pluginPaths(),
                      QStringList({AppLoader::builtinPluginPath(), QStringLiteral("extra")}));
             QCOMPARE(loader.files(),
                      QStringList({QStringLiteral("a.ust"), QStringLiteral("b.ust")}));
-            QCOMPARE(loader.settings().fileName(), settings);
+            QCOMPARE(loader.settingsDirectory(), directory.path());
+            QCOMPARE(loader.settings().fileName(),
+                     directory.filePath(QStringLiteral("settings.json")));
+        }
+        // Without --settings, those of the user
+        {
+            const AppLoader loader({QStringLiteral("helloutau")});
+            QCOMPARE(loader.settingsDirectory(), AppSettings::defaultDirectory());
         }
         QCOMPARE(AppLoader::instance(), nullptr);
 
@@ -166,24 +176,22 @@ private Q_SLOTS:
         }
     }
 
-    // The plugins that the settings enable or disable override their metadata.
+    // The plugins that plugins.json enables or disables override their metadata.
     void the_settings_enable_and_disable_plugins() {
         QTemporaryDir directory;
         const auto settingsOf = [&](const QByteArray &json) {
-            const auto file = directory.filePath(QStringLiteral("settings.json"));
-            QFile out(file);
+            QFile out(directory.filePath(QStringLiteral("plugins.json")));
             [&] { QVERIFY(out.open(QIODevice::WriteOnly)); }();
             out.write(json);
-            return file;
+            return directory.path();
         };
         QString error;
         {
             QTemporaryDir root;
             addPlugin(root.path(), QStringLiteral("Core"), QStringLiteral(TEST_APPLOADER_CORE),
                       QLatin1String(AppLoader::corePluginId));
-            AppLoader loader(
-                {QStringLiteral("helloutau"), QStringLiteral("--settings"),
-                 settingsOf(R"({"plugins": {"disabledPlugins": ["org.helloutau.core"]}})")});
+            AppLoader loader({QStringLiteral("helloutau"), QStringLiteral("--settings"),
+                              settingsOf(R"({"disabledPlugins": ["org.helloutau.core"]})")});
             loader.setPluginPaths({root.path()});
             QVERIFY(!loader.load(&error));
             QCOMPARE(error, QStringLiteral("The core plugin is disabled."));
@@ -193,12 +201,55 @@ private Q_SLOTS:
             addPlugin(root.path(), QStringLiteral("Core"), QStringLiteral(TEST_APPLOADER_CORE),
                       QLatin1String(AppLoader::corePluginId),
                       QStringLiteral(R"(,"enabledByDefault":false)"));
-            AppLoader loader(
-                {QStringLiteral("helloutau"), QStringLiteral("--settings"),
-                 settingsOf(R"({"plugins": {"enabledPlugins": ["org.helloutau.core"]}})")});
+            AppLoader loader({QStringLiteral("helloutau"), QStringLiteral("--settings"),
+                              settingsOf(R"({"enabledPlugins": ["org.helloutau.core"]})")});
             loader.setPluginPaths({root.path()});
             QVERIFY2(loader.load(&error), qPrintable(error));
         }
+    }
+
+    // A plugin keeps its values under its ID in the userData of plugins.json, beside the
+    // plugins that the user enabled or disabled, which stay. The application's settings are
+    // another file.
+    void the_plugins_keep_their_values() {
+        QTemporaryDir directory;
+        const auto file = directory.filePath(QStringLiteral("plugins.json"));
+        {
+            QFile out(file);
+            QVERIFY(out.open(QIODevice::WriteOnly));
+            out.write(R"({"disabledPlugins": ["org.test.off"]})");
+        }
+        const QStringList command = {QStringLiteral("helloutau"), QStringLiteral("--settings"),
+                                     directory.path()};
+        {
+            AppLoader loader(command);
+            QVERIFY(loader.pluginValue(QStringLiteral("org.test.p"), QStringLiteral("a/b"))
+                        .isUndefined());
+            loader.setPluginValue(QStringLiteral("org.test.p"), QStringLiteral("a/b"), 7);
+            loader.setPluginValue(QStringLiteral("org.test.q"), QStringLiteral("c"),
+                                  QJsonArray({QStringLiteral("x")}));
+        }
+        {
+            AppLoader loader(command);
+            QCOMPARE(loader.pluginValue(QStringLiteral("org.test.p"), QStringLiteral("a/b")),
+                     QJsonValue(7));
+            QCOMPARE(loader.pluginValue(QStringLiteral("org.test.q"), QStringLiteral("c")),
+                     QJsonValue(QJsonArray({QStringLiteral("x")})));
+            loader.setPluginValue(QStringLiteral("org.test.q"), QStringLiteral("c"), QJsonValue());
+        }
+
+        QFile in(file);
+        QVERIFY(in.open(QIODevice::ReadOnly));
+        const auto root = QJsonDocument::fromJson(in.readAll()).object();
+        QCOMPARE(root.value(QStringLiteral("disabledPlugins")),
+                 QJsonValue(QJsonArray({QStringLiteral("org.test.off")})));
+        const auto userData = root.value(QStringLiteral("userData")).toObject();
+        QCOMPARE(userData.value(QStringLiteral("org.test.p")),
+                 QJsonValue(QJsonObject({
+                     {QStringLiteral("a"), QJsonObject({{QStringLiteral("b"), 7}})}
+        })));
+        QVERIFY(!userData.contains(QStringLiteral("org.test.q")));
+        QVERIFY(!QFile::exists(directory.filePath(QStringLiteral("settings.json"))));
     }
 
     // The core plugin that comes with the application, found beside the program, opens a new
@@ -217,8 +268,10 @@ private Q_SLOTS:
 };
 
 int main(int argc, char *argv[]) {
-    // Runs without a display.
+    // Runs without a display. The directory of the settings of the user is one for tests, should
+    // a loader reach it.
     qputenv("QT_QPA_PLATFORM", "offscreen");
+    QStandardPaths::setTestModeEnabled(true);
     QApplication app(argc, argv);
     test_AppLoader test;
     return QTest::qExec(&test, argc, argv);

@@ -18,6 +18,7 @@
 #include <hellokit/Edit/ProjectRefs.h>
 #include <hellokit/Edit/ProjectSession.h>
 
+#include <helloutau/Editor/AppLoader.h>
 #include <helloutau/Editor/AppSettings.h>
 #include <helloutau/Editor/Editor.h>
 #include <helloutau/Editor/PianoRoll.h>
@@ -40,17 +41,14 @@ namespace hello::daw {
             return QDir::toNativeSeparators(QString::fromStdU16String(path.u16string()));
         }
 
-        // The ID of this plugin, under which the settings keep its values
+        // The ID of this plugin, under which the settings of the plugins keep its values
         const char pluginId[] = "org.helloutau.classicpluginhost";
 
-        // The programs that the user allowed to run, in the group of this plugin, each as the
-        // folder of its plugin and the fingerprint of the program
+        // The programs that the user allowed to run, each as the folder of its plugin and the
+        // fingerprint of the program
         //
         //     "approved": [{"folder": "C:\\UTAU\\plugins\\Foo", "program": "<SHA-256>"}]
-        QString approvedKey() {
-            return AppSettings::pluginKey(QLatin1String(pluginId)) + QStringLiteral("/approved");
-        }
-
+        const char approvedKey[] = "approved";
         const char folderKey[] = "folder";
         const char programKey[] = "program";
 
@@ -65,8 +63,13 @@ namespace hello::daw {
         }
 
         // Asks the user to allow a program that has not run before, or that has changed since.
-        bool approve(QWidget *parent, AppSettings &settings, const ClassicPlugin &plugin) {
-            auto approved = settings.value(approvedKey()).toArray();
+        // Without a loader, which keeps the answers, the user is asked each time.
+        bool approve(QWidget *parent, const ClassicPlugin &plugin) {
+            const auto loader = AppLoader::instance();
+            auto approved =
+                loader ? loader->pluginValue(QLatin1String(pluginId), QLatin1String(approvedKey))
+                             .toArray()
+                       : QJsonArray();
             const auto folder = textOf(plugin.folder);
             const auto fingerprint = fingerprintOf(plugin);
             qsizetype index = -1;
@@ -105,7 +108,10 @@ namespace hello::daw {
             } else {
                 approved.push_back(entry);
             }
-            settings.setValue(approvedKey(), approved);
+            if (loader) {
+                loader->setPluginValue(QLatin1String(pluginId), QLatin1String(approvedKey),
+                                       approved);
+            }
             return true;
         }
 
@@ -166,7 +172,7 @@ namespace hello::daw {
             count = selected.last() - first + 1;
         }
 
-        if (!approve(window, window->editor()->settings(), plugin)) {
+        if (!approve(window, plugin)) {
             return;
         }
 

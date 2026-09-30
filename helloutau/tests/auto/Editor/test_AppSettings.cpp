@@ -150,26 +150,6 @@ private Q_SLOTS:
         QVERIFY(!readFile(file).contains(QStringLiteral("a")));
     }
 
-    // A plugin keeps its values in its own group of plugins/userData.
-    void a_plugin_has_a_group() {
-        QTemporaryDir dir;
-        const auto file = dir.filePath(QStringLiteral("settings.json"));
-        {
-            AppSettings settings(file);
-            settings.setValue(
-                AppSettings::pluginKey(QStringLiteral("org.test.p")) + QStringLiteral("/count"), 7);
-        }
-        QCOMPARE(readFile(file)
-                     .value(QStringLiteral("plugins"))
-                     .toObject()
-                     .value(QStringLiteral("userData"))
-                     .toObject()
-                     .value(QStringLiteral("org.test.p"))
-                     .toObject()
-                     .value(QStringLiteral("count")),
-                 QJsonValue(7));
-    }
-
     // A file that is not a JSON object is read as empty, and replaced by the next change.
     void an_unreadable_file_is_empty() {
         QTemporaryDir dir;

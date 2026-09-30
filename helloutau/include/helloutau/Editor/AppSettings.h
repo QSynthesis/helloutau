@@ -13,7 +13,8 @@
 
 namespace hello::daw {
 
-    /// The settings of the application and of its plugins, stored per user in one JSON file.
+    /// The settings of the application, stored per user in a JSON file. Those of the plugins are
+    /// kept apart, see AppLoader.
     ///
     /// The file is read once, and written whole at each change. Of two applications that change
     /// it, the one that writes last prevails.
@@ -27,8 +28,11 @@ namespace hello::daw {
 
         ~AppSettings();
 
-        /// \c settings.json in the data directory that Qt chooses for the organization and
-        /// application names of \c QCoreApplication.
+        /// The directory of the settings of the current user: the data directory that Qt
+        /// chooses for the organization and application names of \c QCoreApplication.
+        static QString defaultDirectory();
+
+        /// \c settings.json in defaultDirectory().
         static QString defaultFileName();
 
         QString fileName() const;
@@ -110,22 +114,11 @@ namespace hello::daw {
         void setValue(const QString &key, const QJsonValue &value);
         /// @}
 
-        /// The group of the plugin \a id, under which it keeps its own values, such as
-        /// <tt>pluginKey(id) + "/approved"</tt>.
-        ///
-        /// It lies in the group \c plugins, in the form that \c PluginSettings of
-        /// stdcorelib.plugin reads: the IDs of the plugins that the user enabled or disabled,
-        /// \c enabledPlugins and \c disabledPlugins, which AppLoader applies, and the values of
-        /// each plugin under its ID in \c userData.
-        static QString pluginKey(const QString &id);
-
     private:
         class Impl;
         std::unique_ptr<Impl> _impl;
 
         Q_DISABLE_COPY(AppSettings)
-
-        friend class AppLoader;
     };
 
 }

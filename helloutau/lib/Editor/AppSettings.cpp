@@ -1,16 +1,11 @@
 #include "AppSettings.h"
 #include "AppSettings_p.h"
 
-#include <QtCore/QDir>
-#include <QtCore/QFile>
-#include <QtCore/QFileInfo>
-#include <QtCore/QJsonArray>
-#include <QtCore/QJsonObject>
-#include <QtCore/QSaveFile>
 #include <QtCore/QStandardPaths>
-#include <QtCore/QtDebug>
 
 #include <stdcorelib/pimpl.h>
+
+#include "SettingsJson_p.h"
 
 namespace hello::daw {
 
@@ -28,7 +23,6 @@ namespace hello::daw {
         constexpr char KeyRecentCommands[] = "commandPalette/recent";
         constexpr char KeyRecentFiles[] = "files/recent";
         constexpr char KeyRecentVoiceBanks[] = "files/recentVoiceBanks";
-        constexpr char KeyPluginData[] = "plugins/userData/";
 
         QString textOf(const std::string &utf8) {
             return QString::fromStdString(utf8);
@@ -56,155 +50,19 @@ namespace hello::daw {
             return json::Value(std::move(array));
         }
 
-        // The value in the JSON of Qt, at the boundary of the public interface. A number without
-        // a fractional part that fits an integer becomes one, as the JSON of Qt keeps it.
-        json::Value stdcOf(const QJsonValue &value) {
-            switch (value.type()) {
-                case QJsonValue::Bool:
-                    return json::Value(value.toBool());
-                case QJsonValue::Double: {
-                    const auto integer = value.toInteger();
-                    return double(integer) == value.toDouble() ? json::Value(int64_t(integer))
-                                                               : json::Value(value.toDouble());
-                }
-                case QJsonValue::String:
-                    return json::Value(value.toString().toStdString());
-                case QJsonValue::Array: {
-                    json::Array array;
-                    for (const auto &item : value.toArray()) {
-                        array.push_back(stdcOf(item));
-                    }
-                    return json::Value(std::move(array));
-                }
-                case QJsonValue::Object: {
-                    json::Object object;
-                    const auto from = value.toObject();
-                    for (auto it = from.begin(); it != from.end(); ++it) {
-                        object.emplace(it.key().toStdString(), stdcOf(it.value()));
-                    }
-                    return json::Value(std::move(object));
-                }
-                case QJsonValue::Null:
-                case QJsonValue::Undefined:
-                    break;
-            }
-            return {};
-        }
-
-        // The other way. Binary data, which no setting holds, has no counterpart and reads as
-        // null.
-        QJsonValue qtOf(const json::Value &value) {
-            switch (value.type()) {
-                case json::Type::Bool:
-                    return value.toBool();
-                case json::Type::Int:
-                    return qint64(value.toInt());
-                case json::Type::Double:
-                    return value.toDouble();
-                case json::Type::String:
-                    return textOf(value.toString());
-                case json::Type::Array: {
-                    QJsonArray array;
-                    for (const auto &item : value.toArray()) {
-                        array.push_back(qtOf(item));
-                    }
-                    return array;
-                }
-                case json::Type::Object: {
-                    QJsonObject object;
-                    for (const auto &[key, item] : value.toObject()) {
-                        object.insert(textOf(key), qtOf(item));
-                    }
-                    return object;
-                }
-                case json::Type::Null:
-                case json::Type::Binary:
-                    break;
-            }
-            return QJsonValue::Null;
-        }
-
-        // Replaces the value at \a key in \a object, or removes it if \a value is null, and with
-        // it each group that it leaves empty.
-        void insertAt(json::Object &object, std::string_view key, json::Value &&value) {
-            const auto slash = key.find('/');
-            const auto name = key.substr(0, slash);
-            auto it = object.find(name);
-            if (slash == std::string_view::npos) {
-                if (!value.isNull()) {
-                    object.insert_or_assign(std::string(name), std::move(value));
-                } else if (it != object.end()) {
-                    object.erase(it);
-                }
-                return;
-            }
-            if (it == object.end() || !it->second.isObject()) {
-                if (value.isNull()) {
-                    return;
-                }
-                it = object.insert_or_assign(std::string(name), json::Value(json::Object())).first;
-            }
-            auto &group = *it->second.asObject();
-            insertAt(group, key.substr(slash + 1), std::move(value));
-            if (group.empty()) {
-                object.erase(it);
-            }
-        }
-
     }
 
-    AppSettings::Impl::Impl(const QString &fileName) : fileName(fileName) {
-        QFile file(fileName);
-        if (!file.open(QIODevice::ReadOnly)) {
-            return;
-        }
-        const auto text = file.readAll();
-        json::ParseError error;
-        auto document = json::Value::fromJson(std::string_view(text.data(), size_t(text.size())),
-                                              false, &error);
-        if (const auto object = document.asObject()) {
-            root = std::move(*object);
-            return;
-        }
-        // Replaced by the next change, as a file of another program would be
-        qWarning().noquote() << "The settings in" << fileName
-                             << "cannot be read:" << QString::fromStdString(error.message());
+    AppSettings::Impl::Impl(const QString &fileName)
+        : fileName(fileName), root(SettingsJson::read(fileName)) {
     }
 
     const json::Value &AppSettings::Impl::value(std::string_view key) const {
-        static const json::Value null;
-        const json::Object *object = &root;
-        for (;;) {
-            const auto slash = key.find('/');
-            const auto it = object->find(key.substr(0, slash));
-            if (it == object->end()) {
-                return null;
-            }
-            if (slash == std::string_view::npos) {
-                return it->second;
-            }
-            object = it->second.asObject();
-            if (!object) {
-                return null;
-            }
-            key = key.substr(slash + 1);
-        }
+        return SettingsJson::valueAt(root, key);
     }
 
     void AppSettings::Impl::setValue(std::string_view key, json::Value value) {
-        insertAt(root, key, std::move(value));
-        save();
-    }
-
-    void AppSettings::Impl::save() const {
-        QDir().mkpath(QFileInfo(fileName).absolutePath());
-        const auto text = json::Value(root).toJson(4);
-        QSaveFile file(fileName);
-        if (!file.open(QIODevice::WriteOnly) || file.write(text.data(), qint64(text.size())) < 0 ||
-            !file.commit()) {
-            qWarning().noquote() << "The settings cannot be written to" << fileName << ":"
-                                 << file.errorString();
-        }
+        SettingsJson::insertAt(root, key, std::move(value));
+        SettingsJson::write(fileName, json::Value(root));
     }
 
     AppSettings::AppSettings() : AppSettings(defaultFileName()) {
@@ -215,9 +73,12 @@ namespace hello::daw {
 
     AppSettings::~AppSettings() = default;
 
+    QString AppSettings::defaultDirectory() {
+        return QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    }
+
     QString AppSettings::defaultFileName() {
-        return QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) +
-               QStringLiteral("/settings.json");
+        return defaultDirectory() + QStringLiteral("/settings.json");
     }
 
     QString AppSettings::fileName() const {
@@ -355,16 +216,12 @@ namespace hello::daw {
         const auto &value = impl.value(path);
         // A value that is absent reads as null, which a present null does not come apart from:
         // setValue() never writes one.
-        return value.isNull() ? QJsonValue(QJsonValue::Undefined) : qtOf(value);
+        return value.isNull() ? QJsonValue(QJsonValue::Undefined) : SettingsJson::qtOf(value);
     }
 
     void AppSettings::setValue(const QString &key, const QJsonValue &value) {
         stdc_impl_t;
-        impl.setValue(key.toStdString(), stdcOf(value));
-    }
-
-    QString AppSettings::pluginKey(const QString &id) {
-        return QLatin1String(KeyPluginData) + id;
+        impl.setValue(key.toStdString(), SettingsJson::stdcOf(value));
     }
 
 }

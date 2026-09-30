@@ -13,7 +13,7 @@
 #include <stdcorelib/pluginsystem/pluginsystem.h>
 
 #include "AppSettings.h"
-#include "AppSettings_p.h"
+#include "SettingsJson_p.h"
 
 namespace hello::daw {
 
@@ -29,25 +29,27 @@ namespace hello::daw {
                                                 stdc::pluginsystem::PluginSystem::Bundle};
         QStringList pluginPaths;
         QStringList files;
+        QString settingsDirectory;
         std::unique_ptr<AppSettings> settings;
+        stdc::pluginsystem::PluginSettings pluginSettings;
         bool loaded = false;
 
-        // The plugins that the user enabled or disabled, which override those of their
-        // metadata. Settings that the library rejects leave every plugin as its metadata says.
-        void applyPluginSettings() {
-            const auto &value = settings->_impl->value("plugins");
-            if (value.isNull()) {
-                return;
-            }
+        QString pluginSettingsFile() const {
+            return settingsDirectory + QStringLiteral("/plugins.json");
+        }
+
+        // Settings that the library rejects are reported, and leave every plugin as its
+        // metadata says, until the next change replaces them.
+        void readPluginSettings() {
             std::string error;
-            auto pluginSettings = stdc::pluginsystem::PluginSettings::fromJson(value, &error);
-            if (!pluginSettings) {
-                qWarning().noquote()
-                    << "The settings of the plugins are ignored:" << QString::fromStdString(error);
+            auto read = stdc::pluginsystem::PluginSettings::fromJson(
+                stdc::json::Value(SettingsJson::read(pluginSettingsFile())), &error);
+            if (!read) {
+                qWarning().noquote() << "The settings of the plugins in" << pluginSettingsFile()
+                                     << "are ignored:" << QString::fromStdString(error);
                 return;
             }
-            system.setPluginSettings(stdc::pluginsystem::PluginSystem::Local,
-                                     std::move(*pluginSettings));
+            pluginSettings = std::move(*read);
         }
     };
 
@@ -57,7 +59,7 @@ namespace hello::daw {
         currentAppLoader = this;
 
         impl.pluginPaths.push_back(builtinPluginPath());
-        QString settingsFile;
+        impl.settingsDirectory = AppSettings::defaultDirectory();
         for (int i = 1; i < arguments.size(); ++i) {
             // A trailing option without its value is ignored.
             if (arguments[i] == QLatin1String(pluginPathOption)) {
@@ -68,14 +70,15 @@ namespace hello::daw {
             }
             if (arguments[i] == QLatin1String(settingsOption)) {
                 if (++i < arguments.size()) {
-                    settingsFile = arguments[i];
+                    impl.settingsDirectory = arguments[i];
                 }
                 continue;
             }
             impl.files.push_back(arguments[i]);
         }
-        impl.settings = settingsFile.isEmpty() ? std::make_unique<AppSettings>()
-                                               : std::make_unique<AppSettings>(settingsFile);
+        impl.settings = std::make_unique<AppSettings>(impl.settingsDirectory +
+                                                      QStringLiteral("/settings.json"));
+        impl.readPluginSettings();
     }
 
     AppLoader::~AppLoader() {
@@ -107,6 +110,26 @@ namespace hello::daw {
         return impl.files;
     }
 
+    QString AppLoader::settingsDirectory() const {
+        stdc_impl_t;
+        return impl.settingsDirectory;
+    }
+
+    QJsonValue AppLoader::pluginValue(const QString &id, const QString &key) const {
+        stdc_impl_t;
+        const auto &value = SettingsJson::valueAt(impl.pluginSettings.userData(),
+                                                  (id + QLatin1Char('/') + key).toStdString());
+        return value.isNull() ? QJsonValue(QJsonValue::Undefined) : SettingsJson::qtOf(value);
+    }
+
+    void AppLoader::setPluginValue(const QString &id, const QString &key, const QJsonValue &value) {
+        stdc_impl_t;
+        SettingsJson::insertAt(impl.pluginSettings.userData(),
+                               (id + QLatin1Char('/') + key).toStdString(),
+                               SettingsJson::stdcOf(value));
+        SettingsJson::write(impl.pluginSettingsFile(), impl.pluginSettings.toJson());
+    }
+
     AppSettings &AppLoader::settings() const {
         stdc_impl_t;
         return *impl.settings;
@@ -121,7 +144,9 @@ namespace hello::daw {
                 paths.emplace_back(path.toStdU16String());
             }
             impl.system.setPluginPaths(paths);
-            impl.applyPluginSettings();
+            // The plugins that the user enabled or disabled override their metadata.
+            impl.system.setPluginSettings(stdc::pluginsystem::PluginSystem::Local,
+                                          impl.pluginSettings);
             impl.system.loadPlugins();
         }
 

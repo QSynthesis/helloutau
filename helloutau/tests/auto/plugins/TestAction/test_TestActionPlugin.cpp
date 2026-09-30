@@ -1,3 +1,4 @@
+#include <QtCore/QStandardPaths>
 #include <QtCore/QTemporaryDir>
 #include <QtCore/QVariant>
 #include <QtGui/QAction>
@@ -51,7 +52,7 @@ private Q_SLOTS:
         // The settings in a directory of the test rather than those of the user
         QTemporaryDir settings;
         AppLoader loader({QStringLiteral("helloutau"), QLatin1String(AppLoader::settingsOption),
-                          settings.filePath(QStringLiteral("settings.json"))});
+                          settings.path()});
         loader.setPluginPaths(
             {AppLoader::builtinPluginPath(), QStringLiteral(TEST_ACTION_PLUGINS_DIR)});
         QString error;
@@ -74,8 +75,10 @@ private Q_SLOTS:
 };
 
 int main(int argc, char *argv[]) {
-    // Runs without a display.
+    // Runs without a display. The directory of the settings of the user is one for tests, should
+    // a loader reach it.
     qputenv("QT_QPA_PLATFORM", "offscreen");
+    QStandardPaths::setTestModeEnabled(true);
     QApplication app(argc, argv);
     test_TestActionPlugin test;
     return QTest::qExec(&test, argc, argv);

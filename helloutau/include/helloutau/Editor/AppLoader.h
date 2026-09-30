@@ -4,6 +4,7 @@
 #include <memory>
 
 #include <QtCore/QCoreApplication>
+#include <QtCore/QJsonValue>
 #include <QtCore/QString>
 #include <QtCore/QStringList>
 
@@ -31,13 +32,13 @@ namespace hello::daw {
         /// The option that adds a directory to search for plugins, followed by the directory.
         static constexpr char pluginPathOption[] = "--plugin-path";
 
-        /// The option that names the settings file in place of the one of the user, followed by
-        /// the file.
+        /// The option that names the directory of the settings in place of that of the user,
+        /// followed by the directory.
         static constexpr char settingsOption[] = "--settings";
 
         /// A loader for the command line \a arguments, the first of which is the program. Each
         /// \c --plugin-path adds the directory after it to the plugin paths, \c --settings names
-        /// the settings file, and the other arguments are files.
+        /// the directory of the settings, and the other arguments are files.
         explicit AppLoader(const QStringList &arguments);
 
         /// Shuts the plugins down if they are still loaded.
@@ -62,9 +63,31 @@ namespace hello::daw {
         /// The files named on the command line, which the core plugin opens.
         QStringList files() const;
 
-        /// The settings of the application, which the core plugin gives to the editor and the
-        /// plugins read their own data from: those of the user, or the file of \c --settings.
+        /// The directory of the settings: AppSettings::defaultDirectory(), or that of
+        /// \c --settings. It holds \c settings.json, the settings of the application, and
+        /// \c plugins.json, those of the plugins.
+        QString settingsDirectory() const;
+
+        /// The settings of the application in \c settings.json, which the core plugin gives to
+        /// the editor.
         AppSettings &settings() const;
+
+        /// \name Settings of the plugins
+        ///
+        /// \c plugins.json, in the form that \c PluginSettings of stdcorelib.plugin reads: the
+        /// IDs of the plugins that the user enabled or disabled, \c enabledPlugins and
+        /// \c disabledPlugins, which load() applies, and the values that each plugin keeps under
+        /// its ID in \c userData. A key is the path of a value in the groups of a plugin, as for
+        /// AppSettings::value().
+        /// @{
+
+        /// The value that the plugin \a id keeps at \a key, undefined if there is none.
+        QJsonValue pluginValue(const QString &id, const QString &key) const;
+
+        /// Replaces the value that the plugin \a id keeps at \a key, and writes the file. An
+        /// undefined or null \a value removes it.
+        void setPluginValue(const QString &id, const QString &key, const QJsonValue &value);
+        /// @}
 
         /// Loads the plugins once, with the plugins that the settings enable or disable. The
         /// errors of plugins other than the core plugin are logged.
