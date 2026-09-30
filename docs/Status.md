@@ -10,17 +10,21 @@
 | `HelloKitDocument` | `PayloadCodec`、`Project` / `Track` / `Note` 模型、`.usth` 读写、`UstDocument` |
 | `HelloKitVoiceBank` | `VoiceBankConfig`、`VoiceBankSource`（原始扫描）、`VoiceBank`（解码后的内容与查询，纯值）、`VoiceBankFileSystemState`（磁盘状态：写回、与磁盘核对、重新读取）、`VoiceBankCheckScheduler`、`WaveMetadata`（wav 中 `fmt ` 与 `data` 以外的块的查找与去除）、频率表的只读格式层 `FrequencyFormat` / `FrequencyFormatRegistry` / `FrequencyFormatRegistration`（内置 frq、dio、mrq 由 `BuiltinFrequencyFormats` 登记，FrequencyEditor 插件持有） |
 | `HelloKitSynth` | `EngineProcess`、`SynthPlan`（仅计算，含轨道文件在轨道中的起始时刻）、`WaveAudio`（读取 wav）、`Spectrogram`（显示用的频谱）、`WavtoolMixer`（进程内拼接）、`RealtimeSynth`（实时试听的调度与混合）、`PitchCurve`（音符的滑音与颤音曲线，与交给重采样器的曲线逐值相同）、`SampleTiming`（修正后的先行发声、重叠与 STP，与合成相同）、`SynthRunner` 及其实现 `ClassicSynthRunner`、`ThreadedSynthRunner` |
-| `HelloKitInterchange` | 接口、注册表、`Formats/MidiConvert`（导入与导出） |
+| `HelloKitInterchange` | 接口、注册表 `InterchangeRegistry` 与登记对象 `InterchangeRegistration`、`Formats/MidiConvert`（导入与导出，由 `BuiltinInterchangeDrivers` 登记，Interchange 插件持有） |
 | `HelloKitEditBase` | 编辑层的通用部分，命名空间 `hello::kit::edit`：`EditSession`（事务、撤销、变更通知、提交时校验）、`NodeRef`、`Change`、槽位、命令语法，以及扩展接口（字段表、按路径的命令、变更日志） |
 | `HelloKitEdit` | 编辑层的文档部分。工程：`ProjectDocument`（打开、导入、保存、是否已修改）、`TrackTimeline`（音符的位置）、`ProjectSession`、句柄 `ProjectRefs`、领域函数 `ProjectEdits`、命令 `ProjectCommands`。音源：`VoiceBankSession`（含保存与从磁盘重新读取）、句柄 `VoiceBankRefs`、领域函数 `VoiceBankEdits`、命令 `VoiceBankCommands` |
 | `HelloUtauWidgets` | 通用的控件基础设施：命令面板 `CommandPalette` 与其模糊匹配 `CommandMatcher`；场景接口 `SceneView`、`SceneLayer`、`SceneGesture`，以及随其坐标轴的 `TimelineRuler` 与 `PianoKeyboard` |
 | `HelloUtauAudio` | 设备输出 `AudioOutput`（`QAudioSink` 回调接口）、`AudioSource` / `BufferSource` / `StreamSource`（流式，环形缓冲）、采样率转换 `resampled()`（r8brain-free-src）|
-| `HelloUtauEditor` | 窗口骨架：QActionKit 清单生成的菜单、工程的打开（UST 编码选择）、保存、另存为与导出 UST、撤销与重做、未保存标记、设置、命令面板（`Ctrl+Shift+P`）；工程在卷帘 `PianoRoll` 中显示与编辑（选区、拖动移调与重排、改长度、笔工具、插入、删除、拆分、歌词就地编辑、量化）；打开工程后读取其音源（按目录选择编码），卷帘标出找不到样本的音符；空格按设置中的播放方式播放（`Playback`）：预渲染以 `temp.bat` 在控制台中渲染选中的音符后播放，实时方式在后台渲染整轨、从播放头直接播放；状态栏显示进度，卷帘显示播放线；「Open Recent」列出最近打开的文件；「显示音高」绘制每个音符的滑音与颤音曲线，并在其上编辑 Mode2 控制点与颤音；Mode2 可在菜单中关闭，此时卷帘显示 Mode1 的曲线并以画笔工具手绘；卷帘下方的参数区编辑包络、力度、调制与速度；复制与粘贴音符、粘贴参数、恢复默认、缩放音高、包络交叉淡化。见 [`Widgets.md`](Widgets.md) 第 1–6 步与 [`Tuning.md`](Tuning.md) 第 1–7 步。音源窗口 `VoiceBankWindow`：条目表的编辑、波形区 `OtoWaveformView` 上拖动与按键设定五个值、试听与以重采样器试合成（`SamplePreview`）、清除音频元数据，见 [`VoiceBankEditor.md`](VoiceBankEditor.md) 第 1–4 步 |
-| `helloutau` | 薄驱动，仅含 `main.cpp` |
+| `HelloUtauEditor` | 窗口骨架：QActionKit 清单生成的菜单、工程的打开（UST 编码选择）、保存、另存为与导出 UST、撤销与重做、未保存标记、设置、命令面板（`Ctrl+Shift+P`）；工程在卷帘 `PianoRoll` 中显示与编辑（选区、拖动移调与重排、改长度、笔工具、插入、删除、拆分、歌词就地编辑、量化）；打开工程后读取其音源（按目录选择编码），卷帘标出找不到样本的音符；空格按设置中的播放方式播放（`Playback`）：预渲染以 `temp.bat` 在控制台中渲染选中的音符后播放，实时方式在后台渲染整轨、从播放头直接播放；状态栏显示进度，卷帘显示播放线；「Open Recent」列出最近打开的文件；「显示音高」绘制每个音符的滑音与颤音曲线，并在其上编辑 Mode2 控制点与颤音；Mode2 可在菜单中关闭，此时卷帘显示 Mode1 的曲线并以画笔工具手绘；卷帘下方的参数区编辑包络、力度、调制与速度；复制与粘贴音符、粘贴参数、恢复默认、缩放音高、包络交叉淡化。见 [`Widgets.md`](Widgets.md) 第 1–6 步与 [`Tuning.md`](Tuning.md) 第 1–7 步。音源窗口 `VoiceBankWindow`：条目表的编辑、波形区 `OtoWaveformView` 上拖动与按键设定五个值、试听与以重采样器试合成（`SamplePreview`）、清除音频元数据，见 [`VoiceBankEditor.md`](VoiceBankEditor.md) 第 1–4 步。插件的基础设施：加载器 `AppLoader`（载入原生插件、`--plugin-path` 与 `--settings`、插件列表与启用设置）、设置文件 `settings.json`（`AppSettings`）与 `plugins.json`（`PluginSettings` 格式），动作的登记 `ActionContribution` / `ActionRegistration` / `BuiltinActions`，见 [`Plugins.md`](Plugins.md) |
+| `helloutau` | 加载器程序：`main.cpp` 只构造 `AppLoader` 并运行 |
+| Core 插件 | 创建 `Editor`，登记编辑器的动作清单（`BuiltinActions`），打开命令行中的文件；设置的「Plugins」页 |
+| ClassicPluginHost 插件 | 原版 UTAU 插件：发现、`plugin.txt` / `plugin.json`、临时文件的写出与结果的合并、进程的启动与取消、「工具 → 插件」菜单、首次运行的确认，见 [`ClassicPluginHost.md`](ClassicPluginHost.md)，待作者以社区插件验收 |
+| FrequencyEditor 插件 | 登记内置的频率表格式 frq、dio、mrq |
+| Interchange 插件 | 登记 MIDI 驱动；「文件 → 导入…」与「文件 → 导出 → 其他格式…」的向导、插入逻辑 `ImportMerge`、MIDI 的编码页，见 [`ImportExport.md`](ImportExport.md)，待作者试用 |
 
-已验证的构建链：qmsetup 的 `hellokit_add_library` / `helloutau_add_library` / `helloutau_add_application`、Qt 6.11 与 AUTOMOC、stdcorelib、stdutau、wolf-midi、QtTest 与 `add_auto_test`、ctest。
+已验证的构建链：qmsetup 的 `hellokit_add_library` / `helloutau_add_library` / `helloutau_add_application`、原生插件的 `helloutau_add_native_plugin`、Qt 6.11 与 AUTOMOC、QActionKit 的清单编译器 AEC、stdcorelib 与 stdcorelib.plugin、stdutau、wolf-midi、QtTest 与 `add_auto_test`、ctest。
 
-`HelloKitSupport` 包含 `Diagnostic` 和 `TextCodec`。编码相关的全部逻辑集中在 `TextCodec`：编码名的解析、无效字节的拒绝（音源另有替换为 U+FFFD 的解码）、不可表示字符的转义。`HelloKitDocument` 包含 `PayloadCodec`、`Project` / `Track` / `Note` 数据模型和 `.usth` 读写。**`.usth` 的读写属于 `Project`**，因为 `.usth` 不是众多格式之一，而是工程本身的序列化形式；其他格式均经由 Interchange 转换为 `Project`。`.ust` 由 `UstDocument` 表示，即一份**已读入但尚未解码**的 UST：`open()` 只解析一次，编码探测与 `toProject()` 均使用该次解析结果。`HelloKitInterchange` 的接口与注册表已完成（`InterchangeReader` / `InterchangeWriter` / `InterchangeSource` / `InterchangeSelector` / `AutomaticSelector` / `InterchangeRegistry` / `InterchangeRegistration`，内置驱动由 Interchange 插件登记），第一个格式 `Formats/MidiConvert` 支持导入与导出，可在无界面环境下运行和测试。结构与约束见 [`Interchange.md`](Interchange.md)。**界面尚未实现**：轨道选择页和编码选择页属于第三阶段。
+`HelloKitSupport` 包含 `Diagnostic` 和 `TextCodec`。编码相关的全部逻辑集中在 `TextCodec`：编码名的解析、无效字节的拒绝（音源另有替换为 U+FFFD 的解码）、不可表示字符的转义。`HelloKitDocument` 包含 `PayloadCodec`、`Project` / `Track` / `Note` 数据模型和 `.usth` 读写。**`.usth` 的读写属于 `Project`**，因为 `.usth` 不是众多格式之一，而是工程本身的序列化形式；其他格式均经由 Interchange 转换为 `Project`。`.ust` 由 `UstDocument` 表示，即一份**已读入但尚未解码**的 UST：`open()` 只解析一次，编码探测与 `toProject()` 均使用该次解析结果。`HelloKitInterchange` 的接口与注册表已完成（`InterchangeReader` / `InterchangeWriter` / `InterchangeSource` / `InterchangeSelector` / `AutomaticSelector` / `InterchangeRegistry` / `InterchangeRegistration`，内置驱动由 Interchange 插件登记），第一个格式 `Formats/MidiConvert` 支持导入与导出，可在无界面环境下运行和测试。结构与约束见 [`Interchange.md`](Interchange.md)。界面由 Interchange 插件提供：导入与导出向导、轨道选择、插入位置与 MIDI 的编码页，见 [`ImportExport.md`](ImportExport.md)。
 
 `HelloKitVoiceBank` 是音源的目录模型。读取与解码分为两步，理由与 `.ust` 相同：编码选择界面必须先向用户展示原始字节，而读取本身不能依赖编码。`VoiceBankSource` 遍历目录树，收集每一级目录的 `oto.ini` / `prefix.map` / `character.txt` / `readme.txt` / `hello-config.json` 和音频文件名，**不做任何解码，也不写入任何文件**：记录编码意味着向用户的音源目录写入文件，扫描阶段不应做此决定。`VoiceBank` 通过 `VoiceBankCharsetSelector`（无界面环境使用 `FixedCharsetSelector`）逐目录获取编码并解码，`find(noteNum, lyric)` 按「prefix.map → 别名 → 文件名」的顺序返回样本及其时间参数。
 
@@ -52,13 +56,13 @@
 
 ## 依赖来源
 
-- **stdcorelib、stdutau**：**均不取自 vcpkg，也均不作为子模块**，二者都与本仓库同步开发。分别构建并安装，配置时传入 `-Dstdcorelib_DIR=` 和 `-Dstdutau_DIR=`，指向 `<prefix>/lib/cmake/<名称>`。`third-party/Dependencies.cmake` 统一执行 `find_package`，由根目录的 `CMakeLists.txt` 通过 `include()` 引入。在 Windows 上，该文件还会将动态库复制到运行输出目录，vcpkg 的 applocal 不再负责这两个库。stdutau 目前是静态库，因此没有需要复制的 DLL。
+- **stdcorelib、stdutau**：**均不取自 vcpkg，也均不作为子模块**，二者都与本仓库同步开发。分别构建并安装，配置时传入 `-Dstdcorelib_DIR=` 和 `-Dstdutau_DIR=`，指向 `<prefix>/lib/cmake/<名称>`。`third-party/Dependencies.cmake` 统一执行 `find_package`，由根目录的 `CMakeLists.txt` 通过 `include()` 引入。在 Windows 上，该文件还会将动态库复制到运行输出目录（目标 `hello_deploy_<包名>`，属于 ALL），vcpkg 的 applocal 不再负责这两个库。stdutau 可构建为静态库或动态库，为动态库时其 DLL 只在完整构建时复制。
 - **stdcorelib 仅作为私有依赖**：子库使用 `LINKS_PRIVATE`，公开头文件中的导出宏使用 `<QtCore/QtGlobal>` 的 `Q_DECL_EXPORT` / `Q_DECL_IMPORT`。
 - **stdcorelib.plugin**：原生插件的载入与生命周期（`stdware/stdcorelib.plugin`），构建为动态库，同样是私有依赖。与 stdcorelib 相同，自行构建安装后通过 `-Dstdcorelib-plugin_DIR=` 指定，DLL 由 `third-party/Dependencies.cmake` 复制到运行输出目录。本机安装在 `D:/GitHub/stdcorelib.plugin/build/install`，Debug 与 Release 并存。见 [`Plugins.md`](Plugins.md)。
 - **winacp**：Windows 全部 ANSI 代码页的转换表，由 Windows 的 `MultiByteToWideChar` / `WideCharToMultiByte` 生成，在三个平台上逐字节一致。`TextCodec` 的 Shift_JIS、GBK、Big5、EUC-KR 以及 `windows-874`、`windows-1250`–`1258` 均由其转换。需自行构建安装，配置时传入 `-Dwinacp_DIR=`。采用它的原因是 macOS 版 Qt 不包含 ICU，原有实现在 macOS 上无法打开任何 Shift_JIS 文件。
 - **wolf-midi**：MIDI 的解析与写出，是去除 Qt 依赖的 `QMidiFile`。来自 `E:/GitHub/ds-editor-lite/vcpkg`，同样通过 `-Dwolf-midi_DIR=` 指定。其 `MidiFile.cpp` 使用 `std::log2` 却未包含 `<cmath>`，GCC 下须以 `-DCMAKE_CXX_FLAGS="-include cmath"` 构建。
 - **substate**：`HelloKitEditBase` 与 `HelloKitEdit` 的节点树、事务与撤销历史（`stdware/substate`，含 `substate` 与 `qsubstate` 两个库），**仅作为私有依赖**，`ss::` 类型不出现在公开头文件中。与 stdutau 相同，不取自 vcpkg，也不作为子模块，自行构建安装后通过 `-Dsubstate_DIR=` 指定。默认构建为动态库。
-- **QActionKit**：菜单、工具栏与快捷键（`stdware/qactionkit` 的 `next` 分支）。与 stdutau 相同，不取自 vcpkg，也不作为子模块，自行构建安装后通过 `-DQActionKit_DIR=` 指定，本机安装在 `E:/GitHub/qactionkit/build/install`。只使用 Core 与 Widgets 两个模块，构建时可以传入 `-DQACTIONKIT_BUILD_QUICK=OFF` 省去 Quick 模块。目前还没有模块使用它。
+- **QActionKit**：菜单、工具栏与快捷键（`stdware/qactionkit` 的 `next` 分支）。与 stdutau 相同，不取自 vcpkg，也不作为子模块，自行构建安装后通过 `-DQActionKit_DIR=` 指定，本机安装在 `E:/GitHub/qactionkit/build/install`。只使用 Core 与 Widgets 两个模块，构建时可以传入 `-DQACTIONKIT_BUILD_QUICK=OFF` 省去 Quick 模块。`HelloUtauEditor` 与各插件的菜单、快捷键和命令面板均由它生成。
 - **r8brain-free-src 6.5**：`HelloUtauAudio` 的采样率转换，私有依赖。由 DiffScope 的 vcpkg 端口构建为静态库，本机取自 `E:/GitHub/diffscope-project/vcpkg`，通过 `-Dunofficial-r8brain-free-src_DIR=` 指定。
 - **qmsetup**：来自 `D:/GitHub/synthrt/vcpkg`。
 - **Qt 6.11.1**：`D:/Qt/6.11.1/msvc2022_64`。
@@ -73,7 +77,7 @@
 
 缓存管理也已完成：已渲染的音频片段不会重复渲染；缓存文件名是其内容的摘要，因此修改过的音符会自动得到新文件名并重新渲染。见 [`Synth.md`](Synth.md) 的「缓存」一节。
 
-**第三阶段「编辑器骨架」的第一步 `HelloKitEdit` 已完成，七项验收标准均已达成；界面部分按 [`Widgets.md`](Widgets.md) 分六步进行，第 1 步「窗口骨架与工程的打开保存」与第 2 步「命令面板」已完成并经作者验收。** 编辑层自身的验收标准见 [`Editing.md`](Editing.md) 末尾，逐项状态如下：
+**第三阶段「编辑器骨架」的第一步 `HelloKitEdit` 已完成，七项验收标准均已达成；界面部分按 [`Widgets.md`](Widgets.md) 分六步进行，六步均已实现，第 1–3 步经作者验收，第 4–6 步待作者验收。** 第三阶段遗留的导入界面（轨道选择与插入位置）已由 Interchange 插件实现，见 [`ImportExport.md`](ImportExport.md)。编辑层自身的验收标准见 [`Editing.md`](Editing.md) 末尾，逐项状态如下：
 
 | 验收标准 | 状态 |
 |---|---|
@@ -85,19 +89,24 @@
 | 6. 音源：修改一条 oto 条目并保存后编码不变，未修改的条目逐字节不变 | 达成。`test_VoiceBankSession_Disk` 自动检验；`voicedit` 在夏语遥音源（Shift_JIS，五个目录，`mid` 等三个目录各 2518 条）的副本上修改 `mid` 的一个 offset 与 `breath sound` 中一条数字全空条目的 cutoff 并保存：两个 `oto.ini` 各只有该行改变，行尾仍为 CRLF，其余数字全空的条目仍为空，其他文件均未重写。这两个文件原本按文件名排列；未按此顺序排列的 `oto.ini` 在第一次修改时整体重排一次，见 Editing.md「读写的保证」 |
 | 7. 每个节点操作和领域函数都有对应的命令，由对照两侧列表的测试保证 | 达成。领域函数的类为 `Q_GADGET`，函数标记为 `Q_INVOKABLE`，由 moc 生成的元对象列出；测试将其与命令表中登记的函数对照（`ProjectCommands::domainFunctions()`、`VoiceBankCommands::domainFunctions()`），新增领域函数而未添加命令时测试失败 |
 
+**第四阶段「调音」的验收比较已完成**（2026-09-29）：Mode2 与 Mode1 各一个工程交给 UTAU 合成，参数全部相同，见 [`Tuning.md`](Tuning.md) 与 [`Synth.md`](Synth.md)「调音结果的比较」。
+
+**第五阶段「插件」进行中**：原生插件的载入、设置与「Plugins」设置页，频率表格式与格式转换驱动的登记，ClassicPluginHost 均已实现，验收（社区常用的原版插件）待作者进行。选区编辑与音源批量操作的扩展点尚未建立，见 [`Plugins.md`](Plugins.md)。
+
 ## 扩展点位置
 
 插件只有一种原生插件（见 [`Plugins.md`](Plugins.md)），各扩展点的注册接口按归属划分，而非按类型划分：
 
-| 扩展点 | 归属 | 理由 |
+| 扩展点 | 归属 | 状态 |
 |---|---|---|
-| 选区编辑、音源批量操作 | `hellokit` | 只处理数据，不涉及界面 |
-| 格式转换、频率表格式 | `HelloKitInterchange`、`HelloKitVoiceBank` | 只处理数据，随各自的注册表 |
-| 编辑界面扩展 | 应用一侧 | 涉及界面 |
+| 格式转换 | `HelloKitInterchange`（驱动），Interchange 插件（界面与自定义页） | 已实现 |
+| 频率表格式 | `HelloKitVoiceBank` | 已实现 |
+| 编辑界面扩展 | `HelloUtauEditor`（`ActionContribution`，动作与命令） | 动作已实现，其余随功能加入 |
+| 选区编辑、音源批量操作 | `hellokit` | 未建立：选区编辑待第二个使用者出现时从 ClassicPluginHost 提炼 |
 
 **由此 `hellokit` 完全不需要链接 QtWidgets**，「核心不依赖 GUI」与「插件可扩展界面」两项要求不再冲突。
 
-插件是运行时加载的 MODULE 库，只依赖接口头文件，不反向链接应用，因此应用无需拆分为「共享库加薄驱动」。此结论成立的前提是**接口必须是纯虚类，且不含非内联符号**，编写接口时必须遵守。
+应用由加载器程序与若干动态库组成，原生插件链接这些库（`hellokit` 的子库与 `HelloUtauEditor` 等），插件本身也可作为库供其他插件链接。因此插件须与宿主以同一编译器、同一 Qt 与 hellokit 版本构建，见 Plugins.md「目录」一节的兼容性说明。
 
 ## 待定事项
 

@@ -7,7 +7,10 @@
 
 #include <helloutau/Editor/ActionRegistration.h>
 
+#include <Interchange/InterchangeStepRegistration.h>
+
 #include "InterchangeContribution.h"
+#include "MidiEncodingPage.h"
 
 namespace hello::daw {
 
@@ -19,6 +22,8 @@ namespace hello::daw {
         Q_UNUSED(errorMessage);
         m_drivers = std::make_unique<kit::BuiltinInterchangeDrivers>();
         m_registry = std::make_unique<kit::InterchangeRegistry>();
+        m_midiEncoding = std::make_unique<InterchangeStepRegistration>(
+            QString::fromLatin1(MidiEncodingPage::stepId), [] { return new MidiEncodingPage(); });
         m_actions = std::make_unique<ActionRegistration>(
             std::make_unique<InterchangeContribution>(m_registry.get()));
         return true;
@@ -27,6 +32,7 @@ namespace hello::daw {
     // The actions are destroyed first because they reference the registry.
     void InterchangePlugin::aboutToShutdown() {
         m_actions.reset();
+        m_midiEncoding.reset();
         m_registry.reset();
         m_drivers.reset();
     }

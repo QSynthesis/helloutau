@@ -26,6 +26,8 @@
 #include <helloutau/Editor/PianoRoll.h>
 #include <helloutau/Editor/ProjectWindow.h>
 
+#include <Interchange/InterchangeStepPage.h>
+#include <Interchange/InterchangeStepRegistry.h>
 #include <Interchange/PresetSelector.h>
 
 #include "InterchangeOptionForm.h"
@@ -124,13 +126,18 @@ namespace hello::daw {
                 m_state.reader = driver;
                 m_state.source = std::move(source);
                 m_state.request = {};
+                m_state.diagnostics.clear();
                 return true;
             }
 
+            // The options page is skipped for a driver without options and without a custom
+            // step.
             int nextId() const override {
                 const auto driver = reader();
-                return driver && driver->optionSchema().isEmpty() ? ImportWizard::EntriesPage
-                                                                  : ImportWizard::OptionsPage;
+                return driver && driver->optionSchema().isEmpty() &&
+                               driver->customStepId().isEmpty()
+                           ? ImportWizard::EntriesPage
+                           : ImportWizard::OptionsPage;
             }
 
         private:
@@ -176,14 +183,50 @@ namespace hello::daw {
                 m_layout = new QVBoxLayout(this);
             }
 
+            // Shows the custom step of the driver if it is registered, else the form generated
+            // from the option schema.
             void initializePage() override {
                 delete m_form;
-                m_form = new InterchangeOptionForm(m_state.reader->optionSchema());
-                m_layout->insertWidget(0, m_form);
+                delete m_step;
+                const auto &reader = *m_state.reader;
+                const auto stepId = reader.customStepId();
+                if (!stepId.isEmpty()) {
+                    m_step = InterchangeStepRegistry::create(stepId);
+                    if (!m_step) {
+                        m_state.diagnostics.push_back(
+                            {kit::DiagnosticSeverity::Note,
+                             tr("The custom options page \"%1\" is not registered. The generated "
+                                "form was shown instead.")
+                                 .arg(stepId),
+                             std::nullopt});
+                    }
+                }
+                if (m_step) {
+                    m_step->reset(reader, *m_state.source);
+                    connect(m_step, &InterchangeStepPage::completeChanged, this,
+                            &QWizardPage::completeChanged);
+                    m_layout->insertWidget(0, m_step, 1);
+                } else {
+                    m_form = new InterchangeOptionForm(reader.optionSchema());
+                    m_layout->insertWidget(0, m_form);
+                }
+            }
+
+            bool isComplete() const override {
+                return !m_step || m_step->isComplete();
             }
 
             bool validatePage() override {
-                m_state.request.driverOptions = m_form->values();
+                auto &request = m_state.request;
+                if (m_step) {
+                    // The schema supplies the defaults of the options that the page leaves unset.
+                    request.driverOptions.clear();
+                    for (const auto &option : m_state.reader->optionSchema()) {
+                        request.driverOptions.insert(option.key, option.defaultValue);
+                    }
+                    return m_step->apply(request);
+                }
+                request.driverOptions = m_form->values();
                 return true;
             }
 
@@ -191,6 +234,7 @@ namespace hello::daw {
             ImportWizard::State &m_state;
             QVBoxLayout *m_layout;
             QPointer<InterchangeOptionForm> m_form;
+            QPointer<InterchangeStepPage> m_step;
         };
 
         class EntriesWizardPage : public QWizardPage {
@@ -326,7 +370,7 @@ namespace hello::daw {
             void initializePage() override {
                 PresetSelector selector(m_state.request, int(m_state.source->entries.size()));
                 auto result = m_state.reader->read(m_state.path, &selector);
-                auto diagnostics = result.diagnostics;
+                auto diagnostics = m_state.diagnostics + result.diagnostics;
                 std::optional<ImportMerge::Range> range;
                 if (result.project) {
                     const auto document = m_state.window->document();

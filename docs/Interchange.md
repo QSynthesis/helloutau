@@ -218,42 +218,54 @@ stdcorelib 的 `StaticRegistry` / `DynamicRegistry` 正适用于此，但**它�
 | 部分 | 位置 | 职责 |
 |---|---|---|
 | `InterchangeReader::customStepId()` | `HelloKitInterchange` | 声明需要自定义界面页，并给出 ID |
-| `InterchangeStepPage` 的实现 | `HelloUtauEditor` 或插件的 widgets 一侧 | 界面页本身 |
+| `InterchangeStepPage` 的实现 | Interchange 插件，或依赖它的插件 | 界面页本身 |
+
+界面页的基类与登记接口在 Interchange 插件的公开头文件中（`helloutau/plugins/Interchange/`，见 [`ImportExport.md`](ImportExport.md)），原定的 HelloUtauEditor 与 Widgets 中不设这些类型：
 
 ```cpp
-// HelloUtauEditor 一侧
-class HELLOUTAU_EDITOR_EXPORT InterchangeStepPage : public QWidget {
+class INTERCHANGEPLUGIN_EXPORT InterchangeStepPage : public QWidget {
     Q_OBJECT
 public:
-    explicit InterchangeStepPage(QWidget *parent = nullptr);
-    ~InterchangeStepPage() override;
+    /// 显示 reader 探查所得的 source，并将控件设为初始值。
+    virtual void reset(const InterchangeReader &reader, const InterchangeSource &source) = 0;
 
-    /// 将源文件的信息显示在界面上。
-    virtual void reset(const InterchangeSource &source) = 0;
-
-    /// 将界面上的选择写入 request，返回 false 表示该页尚未填写完整。
+    /// 将控件的值写入 request，页面未填写完整时返回 false。
     virtual bool apply(ImportRequest &request) const = 0;
+
+    /// 页面是否已填写完整，默认为 true。
+    virtual bool isComplete() const;
+
+Q_SIGNALS:
+    void completeChanged();
 };
 
-class HELLOUTAU_WIDGETS_EXPORT InterchangeStepRegistry {
+/// 登记对象，形状同 Plugins.md「注册接口」：存在期间，该 ID 的页可由 InterchangeStepRegistry 创建。
+class INTERCHANGEPLUGIN_EXPORT InterchangeStepRegistration {
 public:
-    using Factory = std::function<InterchangeStepPage *(QWidget *parent)>;
+    using Factory = std::function<InterchangeStepPage *()>;
+    InterchangeStepRegistration(const QString &id, Factory factory);
+};
 
-    void registerStep(const QString &id, Factory factory);
-    InterchangeStepPage *create(const QString &id, QWidget *parent) const;
+class INTERCHANGEPLUGIN_EXPORT InterchangeStepRegistry {
+public:
+    static bool contains(const QString &id);
+    /// 同一 ID 取先登记的；未登记时返回 null。
+    static InterchangeStepPage *create(const QString &id, QWidget *parent = nullptr);
 };
 ```
+
+`reset()` 另接收驱动本身，页面据此读取 `optionSchema()` 中的候选值与默认值。注册表不持有状态，每次调用时读取进程级的登记列表，因此不需要监听。
 
 规则如下：
 
 - **自定义页取代的是生成的表单，而非 `optionSchema()` 本身。** 驱动仍然声明其选项，因为该表是**键名与默认值的声明**，自定义页只是填写同一组键的另一种界面。若不声明，`AutomaticSelector` 将无法获取默认值，无界面导入也将无法确定编码。
-- **界面上二者择一，不并存。** 一个驱动要么使用生成的表单，要么使用自定义页。若选项分散在两处，用户难以查找，维护成本也过高。
+- **界面上二者择一，不并存。** 一个驱动要么使用生成的表单，要么使用自定义页。若选项分散在两处，用户难以查找，维护成本也过高。因此自定义页负责驱动的全部选项：MIDI 的编码页在编码列表与预览之下，以生成的表单显示其余选项（无歌词音符的默认歌词）。自定义页未设置的键取 schema 中的默认值。
 - **它是一页，而非整个对话框。** 条目选择、确定与取消、诊断展示等公共部分仍由导入对话框提供，以保证各驱动之间的一致性。
 - **找不到已注册的页时退回通用表单**，并记录一条诊断。只安装了 kit 一侧的插件应当仍然可用，而不是无法打开。
 
 ### 默认编码可以推测，最终编码不可以
 
-编码页打开时的默认选中项允许通过启发式规则确定：**先尝试 UTF-8，若解码出现非法字符则退回系统编码**。
+编码页打开时的默认选中项允许通过启发式规则确定：**先尝试 UTF-8，若解码出现非法字符则退回系统编码**。系统编码不在驱动声明的候选中或同样无法解码时，取 `TextCodec::ranked()` 排在首位的候选（`SourcePreview::defaultEncoding()`）。
 
 这与 [`AGENTS.md`](../AGENTS.md) 中「不要猜测编码，也不要以检测代替记录」并不冲突，因为推测的是**默认选中项**，而非最终结果。用户仍会对照预览确认或更改，确认后该编码即被记录。禁止的是将检测结果直接作为答案、不经用户确认就继续执行。
 

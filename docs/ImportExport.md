@@ -31,6 +31,7 @@
 - 插件的公开头文件（`helloutau/plugins/Interchange/`）提供库一级的类，在 `tests/auto/plugins/Interchange/` 中测试：
   - `ImportMerge`：应用层的插入逻辑（Interchange.md「应用层的导入流程」），无界面。以 `ProjectRef` / `NoteRef` 的公开接口在一个事务中修改工程，与 ClassicPluginHost 应用结果的方式相同。库中不需要新增接口。
   - `PresetSelector`：返回向导预先收集的请求的选择器，见下文「向导与选择器」。
+  - `SourcePreview`：以指定编码解码探查结果中的文本，供编码页预览，并给出默认选中的编码。
 - `InterchangeStepPage` 与 `InterchangeStepRegistry` 原定放在 HelloUtauEditor 或 Widgets（Interchange.md「自定义选择步骤」），改为放在插件的公开头文件中，登记形状同 Plugins.md「注册接口」：`InterchangeStepRegistration(id, 工厂)`。提供新格式的插件依赖 Interchange 插件并以此登记自定义页。MIDI 的编码页由 Interchange 插件登记。
 
 ### 向导与选择器
@@ -55,8 +56,9 @@
 
 ### MIDI 的编码页
 
-- 左侧为编码列表，右侧预览轨名、歌词与标记，切换编码时全部重新解码。实现方式同 `UstCharsetDialog`：候选与排序取自 `TextCodec`，无法解码的编码显示为灰色。
-- 默认选中项：先尝试 UTF-8，出现非法字节序列时改用系统编码（Interchange.md「默认编码可以推测」）。
+- 左侧为编码列表，右侧预览轨名、歌词与标记，切换编码时全部重新解码。候选为驱动在 `encoding` 选项中声明的值，无法解码文件文本的编码以禁用文字的颜色显示，同 `UstCharsetDialog`。
+- 默认选中项：先尝试 UTF-8，出现非法字节序列时改用系统编码，二者都不适用时取 `TextCodec::ranked()` 的首位（Interchange.md「默认编码可以推测」）。
+- 编码列表与预览之下是驱动其余选项的生成表单（无歌词音符的默认歌词），自定义页负责驱动的全部选项。
 - 所选编码经 `ImportRequest::driverOptions["encoding"]` 传给驱动。
 
 ### 插入规则
@@ -80,5 +82,5 @@
 
 1. ~~插件持有注册表；「导入…」与「导出 → 其他格式…」两个命令；`ImportMerge` 及其测试。~~
 2. ~~向导：文件、由 `optionSchema()` 生成的表单、条目、插入位置、结果各页；`PresetSelector` 及其测试。~~ 待作者试用界面。
-3. 自定义页：`InterchangeStepPage` / `InterchangeStepRegistration`，MIDI 的编码页。
-4. Interchange.md、Plugins.md、Status.md 的相应更新。
+3. ~~自定义页：`InterchangeStepPage` / `InterchangeStepRegistration` / `InterchangeStepRegistry`，MIDI 的编码页（`Internal/MidiEncodingPage`），编码的预览与默认选择（`SourcePreview`）及其测试。~~ 待作者试用界面。
+4. ~~Interchange.md、Plugins.md、Status.md 的相应更新。~~

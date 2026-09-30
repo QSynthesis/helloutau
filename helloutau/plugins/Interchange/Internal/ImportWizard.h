@@ -46,6 +46,8 @@ namespace hello::daw {
             std::optional<kit::InterchangeSource> source;
             kit::ImportRequest request;
             ImportMerge::Options merge;
+            // Diagnostics of the pages, listed on the result page before those of the import
+            kit::DiagnosticList diagnostics;
             // Whether the project has notes. Determines the default of keepLeadingRest.
             bool projectHasNotes = false;
         };
