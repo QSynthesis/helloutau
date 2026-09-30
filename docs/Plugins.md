@@ -49,7 +49,7 @@ stdcorelib.plugin 的交接记录（其仓库 `.cache/codex/2026-08-21-1722-stdc
 ### 注册接口
 
 - 每个扩展点在其所属的 hellokit 子库中有一张**进程级的工厂表**，内部以 `stdc::DynamicRegistry` 实现。stdcorelib 仍只是私有依赖：公开头文件中只有本仓库的类型。
-- 公开的是一个**登记对象**：构造时把「标识、名称、工厂」登记进表，析构时注销。插件把登记对象作为自己的成员，在 `initialize()` 中创建，随插件实例析构而注销。
+- 公开的是一个**登记对象**：构造时把「标识、名称、工厂」登记进表，析构时注销。插件把登记对象作为自己的成员，在 `initialize()` 中创建，在 `aboutToShutdown()` 中销毁。不能等插件实例析构：实例是插件库中的静态对象，随库卸载才析构，那时 `Editor` 已销毁，且析构发生在卸载库的过程中。
 - 内置的格式与驱动经同一途径登记，与插件不分主次，保持 `InterchangeRegistry` 与 `FrequencyFormatRegistry` 已有的原则。
 - 应用与测试持有的注册表（`FrequencyFormatRegistry` 等）**仍然不是全局单例**：它们从工厂表取得实例。测试可以只放入自己需要的内容，不受进程级状态影响。
 - 注册表订阅工厂表的增删通知（`DynamicRegistry` 的监听），因此插件在运行中才登记或注销也能反映到界面，例如音源窗口的「F0」下拉框。
@@ -61,7 +61,7 @@ stdcorelib.plugin 的交接记录（其仓库 `.cache/codex/2026-08-21-1722-stdc
 
 - **程序只是加载器。** `helloutau.exe` 的 `main` 设置应用名，构造 `hello::daw::AppLoader` 并调用 `run()`。
 - **`AppLoader`**（HelloUtauEditor）：持有 `PluginSystem`（目录布局）。命令行中的 `--plugin-path <目录>` 追加搜索目录，其余参数为文件，交给 Core 插件。`run()` 载入插件；Core 插件不存在、有错误或停用时报告原因并退出；否则运行事件循环，结束后关闭插件。其他插件的错误暂时写入日志，将来显示在「Plugins」页。同一时刻只有一个加载器，插件经 `AppLoader::instance()` 取得它。
-- **Core 插件**（ID `org.helloutau.core`，目录 `Core`，目标 `CorePlugin`，插件类在 `Internal` 中）：`initialize()` 创建 `Editor`；`pluginsInitialized()` 打开命令行中的文件，没有则新建工程；`aboutToShutdown()` 销毁 `Editor` 及其窗口。`pluginsInitialized()` 按依赖的逆序调用，依赖 Core 的插件先于它完成，因此窗口打开时各插件都已登记完毕。
+- **Core 插件**（ID `org.helloutau.core`，目录 `Core`，目标 `CorePlugin`，插件类在 `Internal` 中）：`initialize()` 登记编辑器的动作清单（`BuiltinActions`，见下文「编辑界面扩展：动作与命令」）并创建 `Editor`；`pluginsInitialized()` 打开命令行中的文件，没有则新建工程；`aboutToShutdown()` 销毁 `Editor` 及其窗口。`pluginsInitialized()` 按依赖的逆序调用，依赖 Core 的插件先于它完成，因此窗口打开时各插件都已登记完毕。
 
 ### 目录
 
@@ -81,15 +81,28 @@ macOS 的 bundle 中为 `HelloUtau.app/Contents/MacOS`（程序）与 `HelloUtau
 
 - 目录布局（stdcorelib.plugin 的 `Bundle`）：每个插件占搜索目录下的一个子目录，其中有插件的库与一个元数据 JSON：根字段 `name` 给出库的平台无关名（`name` 为 `vs4ufrq` 时可对应 `vs4ufrq.dll`、`libvs4ufrq.so`、`libvs4ufrq.dylib`），其余为 `id`、`displayName`、`version`、`dependencies` 与宿主字段。IID 仍以 `stdc_add_plugin_metadata()` 嵌在库中。插件的其他文件（翻译、图标、数据）放在同一子目录中。
 - 内置插件的搜索目录（`AppLoader::builtinPluginPath()`）为程序所在目录上一级的 `lib/plugins/helloutau`；macOS 打包为 bundle 时沿用 qmsetup 的布局，程序在 `Contents/MacOS`，插件在 `Contents/Plugins`。这一相对路径不写在 C++ 中，由 HelloUtauEditor 的 CMake 从 qmsetup 的运行目录与插件目录算出，并核对构建目录与安装目录一致。目前尚未打包为 bundle，测试程序也不在 bundle 中。用户安装插件的目录将来在「Plugins」页一并加入，都与 UTAU 插件的目录分开。
-- 本仓库的插件以 `helloutau_add_native_plugin()`（`helloutau/plugins/CMakeLists.txt`）构建：输出到各自的子目录，嵌入 IID，并在构建时写出 `plugin.json`。
+- 本仓库的插件以 `helloutau_add_native_plugin()`（`helloutau/plugins/CMakeLists.txt`）构建：输出到各自的子目录，嵌入 IID，并在构建时写出 `plugin.json`（`DEPENDENCIES` 写入必需依赖）。只供测试的插件以 `DIRECTORY` 构建到测试自己的目录，不安装。
 - **插件同时是库**（作者 2026-09-30 要求）：与子库一样导出目标并安装头文件，供其他插件在它之上构建。公开头文件与源文件同在 `helloutau/plugins/<插件目录>/`，插件目标以 `helloutau/plugins` 为公开的包含目录，以 `<插件目录>/<头文件>` 引用；安装到 `include/helloutau/plugins/<插件目录>/`，安装后的包含目录指向 `include/helloutau/plugins`。导出宏头文件为 `<目标名>Global.h`，有公开的类时才添加。
 - **插件类不导出**（作者 2026-09-30，同 DiffScope 的 `coreplugin/internal`）：插件类与其余实现放在插件目录的 `Internal` 中，不导出，不安装。stdcorelib.plugin 因此仍是私有依赖。
+- **插件的测试**位于 `helloutau/tests/auto/plugins/<插件>/`，只为插件中库一级的内容（工具类等）而写，不为菜单布局之类会随时调整的东西写测试（作者 2026-09-30）。只供测试的插件（如 TestAction）也放在那里。
 - 插件目录关闭 vcpkg 的 applocal：插件链接的库在载入插件前已由程序载入，applocal 只会把 vcpkg 安装树中的库复制到插件旁，其中包括与程序所用版本不同的 stdcorelib（实际发生过）。
 - 元数据文件名：沿用该库默认的 `plugin.json`，以 `PluginSystem(iid, PluginSystem::Bundle)` 直接构造（作者 2026-09-30 决定）。它与 UTAU 插件文件夹的 `plugin.json` 同名，但两种目录不会互相搜索，库中的 IID 也能区分原生插件，不会误读。
 - 兼容性：C++ 插件须与宿主以同一编译器、同一 Qt 与 hellokit 版本构建。元数据加一个宿主字段（如 `helloutau` 的版本范围），由载入判定检查；判定也用于平台限制（如只在 Windows 可用的 vs4ufrq 格式插件）。
 - 设置：用户的启用设置存为用户配置目录中的一个 JSON 文件（`PluginSettings`），全局设置随安装提供。设置对话框增加「Plugins」页：列出插件、勾选启用、显示错误与依赖。
 - **关闭顺序**：插件登记的工厂与由它造出的对象，代码都在插件的库中，必须在卸载前销毁。Core 插件在 `aboutToShutdown()` 中销毁 `Editor`，依赖 Core 的插件的 `aboutToShutdown()` 在它之前调用，各库都在此后才卸载。插件的实例是库中的静态对象，随库卸载而析构，因此窗口等 Qt 对象不能留到那时。
 - **插件交给宿主的数据不能指向插件库的静态存储**：`QStringLiteral` 的文本就在库中，库卸载后仍被宿主持有的这类字符串即成悬空（`test_AppLoader` 的测试插件遇到过）。交给宿主、可能在卸载后仍被使用的字符串须是分配的副本。
+
+### 编辑界面扩展：动作与命令
+
+作者 2026-09-30 要求插件能注册自己的动作（命令），这是「编辑界面扩展」扩展点的第一部分。
+
+- **qactionkit 已有的部分**：多份清单合并，插件的清单以 `<insertions>` 插入宿主的菜单（`anchor`、`priority`）。为插件卸载补充了 `ActionRegistry::removeExtension()`（qactionkit `46bce9b`），移除后立即重新计算，registry 中不再有指向该清单的视图。
+- **`ActionContribution`**（HelloUtauEditor）：一份 AEC 编译的清单，加上为每种窗口创建动作的 `addActions(ProjectWindow *, context)` 与 `addActions(VoiceBankWindow *, context)`。动作以窗口为父对象，贡献移除时由编辑器从 context 移除并删除。插进某种窗口菜单的条目若没有该窗口的动作，context 显示一个不做任何事的占位项。
+- **`ActionRegistration`**：登记对象。进程级的贡献列表在 HelloUtauEditor 中，只在主线程使用，不用 `DynamicRegistry`。每个 `Editor` 监听它：构造时加入已有的清单，之后随登记加入清单与各窗口的动作，随注销移除，然后刷新各窗口的菜单、文字、快捷键与图标。窗口创建时加入已有贡献的动作。命令面板取 registry 与 context 的交集，插件的命令自动出现在其中。
+- **编辑器自己的清单也经此登记**（作者 2026-09-30，方案 1 加 3）：原来的 `EditorActions.xml` 分为两份，`AppActions.xml` 为两种窗口的菜单栏与顶层菜单，以及新建、打开、打开音源、最近文件、关闭、退出、命令面板、设置；`EditorActions.xml` 为其余的窗口命令及其子菜单，以插入放入前者的菜单，排出的菜单与拆分前相同。两份由 `BuiltinActions` 登记，Core 插件持有它，不经 Core 构造 `Editor` 的测试自己持有一个。处理函数仍在窗口中，窗口自己创建这些动作。
+- **最终目标**（作者 2026-09-30）：清单与处理函数都由 Core 插件提供，窗口只提供能力。这需要窗口公开相应的操作，届时另行设计。
+- **静态字符串**：AEC 生成的字符串是 `QStringLiteral`，位于清单所在库的静态存储中，由条目取得的 `QString` 与之共享数据。目前所有库都在 Core 销毁 `Editor` 之后才卸载，这些副本随 `Editor` 一起销毁，因此没有问题。将来支持在运行中停用单个插件时，须让 AEC 生成自有内存的字符串。
+- **测试**：`test_ActionContribution`（登记前后打开的窗口、注销、先于或晚于 `Editor` 的登记）；TestAction 插件（`tests/auto/plugins/TestAction`，依赖 Core，向工程窗口的 Tools 菜单加入 Hello）由 `test_TestActionPlugin` 与 Core 一同载入。
 
 ### 异步
 
@@ -107,7 +120,8 @@ stdcorelib.plugin 的生命周期是同步的，不依赖事件循环。HelloUta
 
 1. ~~**依赖**~~：stdcorelib.plugin 与 stdcorelib 一样单独构建安装（动态库），`third-party/Dependencies.cmake` 以 `-Dstdcorelib-plugin_DIR=` 引入，作为私有依赖，Windows 上其 DLL 复制到运行输出目录。README、AGENTS.md 与 Status.md 已补充。
 2. ~~**note.md**~~：已按作者的决定改写插件一节（一种原生插件、五个扩展点、UTAU 插件由一个原生插件支持），AGENTS.md、Roadmap.md、Status.md、Interchange.md、FrequencyTables.md 的相应说法一并更新。
-3. **加载器与 Core 插件**：`AppLoader`、Core 插件、`helloutau_add_native_plugin()`，程序只剩加载器。`test_AppLoader` 以测试插件覆盖参数、Core 插件的必需与三种失败、生命周期，并载入真正的 Core 插件打开窗口。
+3. ~~**加载器与 Core 插件**~~：`AppLoader`、Core 插件、`helloutau_add_native_plugin()`，程序只剩加载器。`test_AppLoader` 以测试插件覆盖参数、Core 插件的必需与三种失败、生命周期，并载入真正的 Core 插件打开窗口。
+   - ~~**插件作为库与动作的扩展**~~：插件导出目标、安装头文件；`ActionContribution` / `ActionRegistration`；编辑器的清单拆为两份，经 `BuiltinActions` 由 Core 登记；TestAction 测试插件。见「编辑界面扩展：动作与命令」。
 4. **试点：频率表格式与 FrequencyEditor 插件**。工厂表、登记对象、`FrequencyFormatRegistry` 改为从工厂表取得并订阅增删；删除 `FrequencyFormatPlugin`。新建 FrequencyEditor 插件（ID `org.helloutau.frequencyeditor`，目录 `FrequencyEditor`，作者定名），登记 frq、dio、mrq；读取这些文件的代码留在 hellokit。将来的频率表编辑界面也由它负责。测试中构建一个真实的插件模块，复制到临时目录的一个子目录并写出其元数据，由 `PluginSystem` 以目录布局载入、登记一个格式、关闭后注销。
    - 多个格式都匹配重采样器时，默认选**后登记的**，即后载入的插件的格式（作者 2026-09-30 决定）：想接管内置处理的插件依赖 FrequencyEditor，必在其后载入。
 5. **设置**：用户的启用设置文件，设置对话框的「Plugins」页。
@@ -126,3 +140,5 @@ stdcorelib.plugin 的生命周期是同步的，不依赖事件循环。HelloUta
 6. IID 为 `org.OpenVPI.HelloUtau.Plugin`，常量放在 HelloUtauEditor。
 7. 程序只是加载器（`AppLoader`，不用 `Loader` 这样的名称），原来程序入口的工作由 Core 插件负责；目录为 `bin` 与 `lib/plugins/helloutau/<插件>`；程序文件名为小写的 `helloutau`，Windows 资源中的名称显式为 `HelloUtau`。
 8. 频率表插件名为 FrequencyEditor。多个格式匹配重采样器时选后载入的。
+9. 插件可以注册自己的动作（命令），属于编辑界面扩展。插件也是库：导出目标、安装头文件，插件中库一级的内容在 `tests/auto/plugins` 中测试，不测试菜单布局。
+10. 编辑器的清单由 Core 注册：现在按方案 1 加 3（清单拆成应用层与窗口层两份，都经 Core 登记，处理函数仍在窗口中），最终目标是方案 2（清单与处理函数都在 Core 中）。

@@ -13,6 +13,10 @@ class QLineEdit;
 class QTableView;
 class QTreeWidget;
 
+namespace QAK {
+    class WidgetActionContext;
+}
+
 namespace hello::kit {
     class VoiceBankDocument;
 }
@@ -34,6 +38,10 @@ namespace hello::daw {
         ~VoiceBankWindow();
 
         kit::VoiceBankDocument *document() const;
+
+        /// The actions of the window by the ids of the action extensions, those of plugins
+        /// included; see ActionContribution.
+        QAK::WidgetActionContext *actionContext() const;
 
         /// The folders: the item of all of them, then the root with its subfolders. Choosing
         /// one shows its entries.

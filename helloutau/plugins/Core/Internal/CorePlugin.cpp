@@ -3,6 +3,7 @@
 #include <filesystem>
 
 #include <helloutau/Editor/AppLoader.h>
+#include <helloutau/Editor/BuiltinActions.h>
 #include <helloutau/Editor/Editor.h>
 
 namespace hello::daw {
@@ -13,6 +14,7 @@ namespace hello::daw {
 
     bool CorePlugin::initialize(std::string *errorMessage) {
         Q_UNUSED(errorMessage);
+        m_actions = std::make_unique<BuiltinActions>();
         m_editor = std::make_unique<Editor>();
         return true;
     }
@@ -34,6 +36,7 @@ namespace hello::daw {
     // instance, a static of the library destroyed as the library is unloaded.
     void CorePlugin::aboutToShutdown() {
         m_editor.reset();
+        m_actions.reset();
     }
 
 }

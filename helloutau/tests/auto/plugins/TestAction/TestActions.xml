@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<actionExtension>
+
+    <version>1.0</version>
+    <id>org.helloutau.test.action</id>
+
+    <items>
+        <action id="helloutau.test.hello" text="Hello" category="Test" />
+    </items>
+
+    <insertions>
+        <insertion target="helloutau.tools">
+            <action id="helloutau.test.hello" />
+        </insertion>
+    </insertions>
+
+</actionExtension>

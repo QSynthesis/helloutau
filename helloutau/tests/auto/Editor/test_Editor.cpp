@@ -40,6 +40,7 @@
 #include <helloutau/Widgets/SettingsDialog.h>
 
 #include <helloutau/Editor/AppSettings.h>
+#include <helloutau/Editor/BuiltinActions.h>
 #include <helloutau/Editor/Editor.h>
 #include <helloutau/Editor/NotePropertiesDialog.h>
 #include <helloutau/Editor/OtoWaveformView.h>
@@ -112,6 +113,8 @@ class test_Editor : public QObject {
 
 private:
     QTemporaryDir m_dir;
+    // The menus and commands of the editor, which the core plugin registers in the application
+    BuiltinActions m_actions;
 
     // An editor whose voice bank windows do not follow the disk on their own, which would ask
     // at any moment; a test calls VoiceBankWindow::checkDisk() instead.

@@ -8,11 +8,18 @@ file(GLOB_RECURSE _hdr "${CMAKE_CURRENT_SOURCE_DIR}/../../include/helloutau/Edit
 
 qm_find_qt(Core Gui Widgets)
 
-# The menus of the editor window, compiled by AEC into EditorActions.qak.h and its source
+# The menus of the windows with the commands of the application, and the commands of the windows,
+# compiled by AEC into AppActions.qak.h, EditorActions.qak.h and their sources. BuiltinActions
+# registers both.
+qak_add_action_extension(_app_actions_src AppActions.xml
+    FUNCTION appActions
+    NAMESPACE hello::daw
+)
 qak_add_action_extension(_actions_src EditorActions.xml
     FUNCTION editorActions
     NAMESPACE hello::daw
 )
+list(APPEND _actions_src ${_app_actions_src})
 
 # The built-in theme, under :/helloutau/themes
 set(_themes_qrc themes/Themes.qrc)

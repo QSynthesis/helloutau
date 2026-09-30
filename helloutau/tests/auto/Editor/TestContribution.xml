@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<actionExtension>
+
+    <version>1.0</version>
+    <id>org.helloutau.test.contribution</id>
+
+    <items>
+        <action id="test.contribution.hello" text="Hello" category="Test" />
+        <action id="test.contribution.bank" text="Bank Hello" category="Test" />
+    </items>
+
+    <!-- Into the Tools menus of the project window and of the voice bank window -->
+    <insertions>
+        <insertion target="helloutau.tools">
+            <action id="test.contribution.hello" />
+        </insertion>
+        <insertion target="helloutau.voiceBank.tools">
+            <action id="test.contribution.bank" />
+        </insertion>
+    </insertions>
+
+</actionExtension>

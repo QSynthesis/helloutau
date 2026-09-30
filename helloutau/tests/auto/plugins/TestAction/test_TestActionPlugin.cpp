@@ -1,0 +1,84 @@
+#include <QtCore/QSettings>
+#include <QtCore/QTemporaryDir>
+#include <QtCore/QVariant>
+#include <QtGui/QAction>
+#include <QtTest/QTest>
+#include <QtWidgets/QApplication>
+#include <QtWidgets/QMenu>
+#include <QtWidgets/QMenuBar>
+
+#include <QAKCore/actionregistry.h>
+#include <QAKWidgets/widgetactioncontext.h>
+
+#include <helloutau/Editor/AppLoader.h>
+#include <helloutau/Editor/ProjectWindow.h>
+
+using namespace hello::daw;
+
+namespace {
+
+    const QString HelloId = QStringLiteral("helloutau.test.hello");
+
+    ProjectWindow *projectWindow() {
+        for (const auto widget : QApplication::topLevelWidgets()) {
+            if (const auto window = qobject_cast<ProjectWindow *>(widget)) {
+                return window;
+            }
+        }
+        return nullptr;
+    }
+
+    QStringList toolsMenu(const ProjectWindow *window) {
+        QStringList texts;
+        for (const auto action : window->menuBar()->actions()) {
+            if (action->text() == QStringLiteral("&Tools")) {
+                for (const auto item : action->menu()->actions()) {
+                    texts.push_back(item->text());
+                }
+            }
+        }
+        return texts;
+    }
+
+}
+
+class test_TestActionPlugin : public QObject {
+    Q_OBJECT
+
+private Q_SLOTS:
+    // Loaded with the core plugin, the plugin adds its command to the window that the core
+    // plugin opens, which the command palette would offer, and takes it away at shutdown.
+    void the_plugin_adds_a_command_to_the_project_window() {
+        AppLoader loader({QStringLiteral("helloutau")});
+        loader.setPluginPaths(
+            {AppLoader::builtinPluginPath(), QStringLiteral(TEST_ACTION_PLUGINS_DIR)});
+        QString error;
+        QVERIFY2(loader.load(&error), qPrintable(error));
+
+        const auto window = projectWindow();
+        QVERIFY(window);
+        const auto action = window->actionContext()->action(HelloId);
+        QVERIFY(action);
+        QVERIFY(action->isEnabled());
+        QVERIFY(toolsMenu(window).contains(QStringLiteral("Hello")));
+
+        action->trigger();
+        QCOMPARE(qApp->property("testActionTriggered").toInt(), 1);
+
+        loader.shutdown();
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        QVERIFY(!projectWindow());
+    }
+};
+
+int main(int argc, char *argv[]) {
+    // Runs without a display, and the settings of the editor go to a directory of the test.
+    qputenv("QT_QPA_PLATFORM", "offscreen");
+    QApplication app(argc, argv);
+    QTemporaryDir settings;
+    QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settings.path());
+    test_TestActionPlugin test;
+    return QTest::qExec(&test, argc, argv);
+}
+
+#include "test_TestActionPlugin.moc"

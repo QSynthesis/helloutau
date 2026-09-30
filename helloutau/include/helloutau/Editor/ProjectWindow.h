@@ -7,6 +7,10 @@
 
 #include <helloutau/Editor/HelloUtauEditorGlobal.h>
 
+namespace QAK {
+    class WidgetActionContext;
+}
+
 namespace hello::kit {
     class ProjectDocument;
 }
@@ -23,6 +27,10 @@ namespace hello::daw {
         ~ProjectWindow();
 
         kit::ProjectDocument *document() const;
+
+        /// The actions of the window by the ids of the action extensions, those of plugins
+        /// included; see ActionContribution.
+        QAK::WidgetActionContext *actionContext() const;
 
         /// Replaces the project of the window with \a document.
         void setDocument(std::unique_ptr<kit::ProjectDocument> document);

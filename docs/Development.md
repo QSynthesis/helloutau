@@ -47,6 +47,7 @@ helloutau/lib/Editor/ProjectWindow.cpp           ← 目标 HelloUtauEditor
 helloutau/plugins/Core/                          ← 目标 CorePlugin，输出到 lib/plugins/helloutau/Core；
                                                     公开头文件在此，以 <Core/...> 引用
 helloutau/plugins/Core/Internal/CorePlugin.cpp   ← 插件类与其余实现，不安装
+helloutau/tests/auto/plugins/                    ← 插件中库一级内容的测试，以及只供测试的插件
 helloutau/tools/driver/main.cpp                  ← 目标 helloutau
 ```
 

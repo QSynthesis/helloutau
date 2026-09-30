@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The menus of the windows and the commands of the application, which the core plugin registers.
+     The commands of the windows are inserted into them from EditorActions.xml. Format:
+     docs/action-extension-spec.md in QActionKit. -->
+<actionExtension>
+    <version>1.0</version>
+    <id>helloutau.app</id>
+
+    <configuration>
+        <translationContext
+            text="hello::daw::ActionText"
+            category="hello::daw::ActionCategory"
+            description="hello::daw::ActionDescription"
+        />
+    </configuration>
+
+    <items>
+        <action id="helloutau.file.new" text="&amp;New" category="File" shortcut="Ctrl+N" />
+        <action id="helloutau.file.open" text="&amp;Open..." category="File" shortcut="Ctrl+O" />
+        <!-- A folder, opened in a voice bank window (docs/VoiceBankEditor.md) -->
+        <action id="helloutau.file.openVoiceBank" text="Open &amp;Voice Bank..." category="File" />
+        <!-- Filled by the window with the files last opened -->
+        <action id="helloutau.file.openRecent" text="Open &amp;Recent" category="File"
+                external="true" />
+        <action id="helloutau.file.close" text="&amp;Close" category="File" shortcut="Ctrl+W" />
+        <action id="helloutau.file.quit" text="&amp;Quit" category="File" shortcut="Ctrl+Q" />
+        <action id="helloutau.view.commandPalette" text="&amp;Command Palette..." category="View"
+                shortcuts="Ctrl+Shift+P;F1" />
+        <action id="helloutau.tools.settings" text="&amp;Settings..." category="Tools" />
+
+        <menu id="helloutau.mainMenu" topLevel="true" />
+        <menu id="helloutau.file" text="&amp;File" />
+        <menu id="helloutau.edit" text="&amp;Edit" />
+        <menu id="helloutau.view" text="&amp;View" />
+        <menu id="helloutau.playback" text="&amp;Playback" />
+        <menu id="helloutau.tools" text="&amp;Tools" />
+
+        <!-- The menus of the voice bank window -->
+        <menu id="helloutau.voiceBankMenu" topLevel="true" />
+        <menu id="helloutau.voiceBank.file" text="&amp;File" />
+        <menu id="helloutau.voiceBank.edit" text="&amp;Edit" />
+        <menu id="helloutau.voiceBank.view" text="&amp;View" />
+        <menu id="helloutau.voiceBank.playback" text="&amp;Playback" />
+        <menu id="helloutau.voiceBank.tools" text="&amp;Tools" />
+    </items>
+
+    <layouts>
+        <menu id="helloutau.mainMenu">
+            <menu id="helloutau.file">
+                <action id="helloutau.file.new" />
+                <action id="helloutau.file.open" />
+                <action id="helloutau.file.openVoiceBank" />
+                <action id="helloutau.file.openRecent" />
+                <separator />
+                <action id="helloutau.file.close" />
+                <action id="helloutau.file.quit" />
+            </menu>
+            <menu id="helloutau.edit" />
+            <menu id="helloutau.view">
+                <separator />
+                <action id="helloutau.view.commandPalette" />
+            </menu>
+            <menu id="helloutau.playback" />
+            <menu id="helloutau.tools">
+                <separator />
+                <action id="helloutau.tools.settings" />
+            </menu>
+        </menu>
+        <menu id="helloutau.voiceBankMenu">
+            <menu id="helloutau.voiceBank.file">
+                <action id="helloutau.file.new" />
+                <action id="helloutau.file.open" />
+                <action id="helloutau.file.openVoiceBank" />
+                <action id="helloutau.file.openRecent" />
+                <separator />
+                <action id="helloutau.file.close" />
+                <action id="helloutau.file.quit" />
+            </menu>
+            <menu id="helloutau.voiceBank.edit" />
+            <menu id="helloutau.voiceBank.view">
+                <separator />
+                <action id="helloutau.view.commandPalette" />
+            </menu>
+            <menu id="helloutau.voiceBank.playback" />
+            <menu id="helloutau.voiceBank.tools">
+                <separator />
+                <action id="helloutau.tools.settings" />
+            </menu>
+        </menu>
+    </layouts>
+</actionExtension>

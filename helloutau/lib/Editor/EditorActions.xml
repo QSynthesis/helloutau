@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- The menus of the editor window. Format: docs/action-extension-spec.md in QActionKit. -->
+<!-- The commands of the project window and of the voice bank window, inserted into the menus of
+     AppActions.xml, which the core plugin registers as well. Format:
+     docs/action-extension-spec.md in QActionKit. -->
 <actionExtension>
     <version>1.0</version>
     <id>helloutau.editor</id>
@@ -13,21 +15,12 @@
     </configuration>
 
     <items>
-        <action id="helloutau.file.new" text="&amp;New" category="File" shortcut="Ctrl+N" />
-        <action id="helloutau.file.open" text="&amp;Open..." category="File" shortcut="Ctrl+O" />
-        <!-- A folder, opened in a voice bank window (docs/VoiceBankEditor.md) -->
-        <action id="helloutau.file.openVoiceBank" text="Open &amp;Voice Bank..." category="File" />
-        <!-- Filled by the window with the files last opened -->
-        <action id="helloutau.file.openRecent" text="Open &amp;Recent" category="File"
-                external="true" />
         <action id="helloutau.file.save" text="&amp;Save" category="File" shortcut="Ctrl+S" />
         <action id="helloutau.file.saveAs" text="Save &amp;As..." category="File"
                 shortcut="Ctrl+Shift+S" />
         <action id="helloutau.file.exportUst" text="&amp;UST..." category="File" />
         <!-- The name, tempo, flags, output file, voice folder, engines and Mode2 of the project -->
         <action id="helloutau.file.properties" text="Project &amp;Properties..." category="File" />
-        <action id="helloutau.file.close" text="&amp;Close" category="File" shortcut="Ctrl+W" />
-        <action id="helloutau.file.quit" text="&amp;Quit" category="File" shortcut="Ctrl+Q" />
 
         <action id="helloutau.edit.undo" text="&amp;Undo" category="Edit" shortcut="Ctrl+Z" />
         <action id="helloutau.edit.redo" text="&amp;Redo" category="Edit"
@@ -89,8 +82,6 @@
         <!-- The envelope of each note above its bar, from where its pre-utterance starts, as
              UTAU draws it -->
         <action id="helloutau.view.showEnvelopes" text="Show &amp;Envelopes" category="View" />
-        <action id="helloutau.view.commandPalette" text="&amp;Command Palette..." category="View"
-                shortcuts="Ctrl+Shift+P;F1" />
 
         <!-- Plays, pauses what plays, or goes on from where it was paused -->
         <action id="helloutau.playback.play" text="&amp;Play or Pause" category="Playback"
@@ -104,7 +95,6 @@
         <action id="helloutau.playback.replay" text="&amp;Replay" category="Playback"
                 shortcut="Shift+F5" />
 
-        <action id="helloutau.tools.settings" text="&amp;Settings..." category="Tools" />
         <!-- The voice bank of the project, in its window -->
         <action id="helloutau.tools.editVoiceBank" text="Edit &amp;Voice Bank" category="Tools"
                 shortcut="Ctrl+G" />
@@ -113,19 +103,13 @@
         <!-- Deletes the fragments and the track file of the render cache of the project -->
         <action id="helloutau.tools.clearCache" text="&amp;Clear Render Cache" category="Tools" />
 
-        <menu id="helloutau.mainMenu" topLevel="true" />
-        <menu id="helloutau.file" text="&amp;File" />
         <!-- Formats other than .usth, UST first; MIDI and the rest will join it -->
         <menu id="helloutau.file.export" text="&amp;Export" />
-        <menu id="helloutau.edit" text="&amp;Edit" />
         <menu id="helloutau.edit.transpose" text="&amp;Transpose" />
         <menu id="helloutau.edit.envelope" text="E&amp;nvelope" />
         <menu id="helloutau.edit.reset" text="Rese&amp;t" />
-        <menu id="helloutau.view" text="&amp;View" />
-        <menu id="helloutau.playback" text="&amp;Playback" />
-        <menu id="helloutau.tools" text="&amp;Tools" />
 
-        <!-- The menus of the voice bank window -->
+        <!-- The commands of the voice bank window -->
         <!-- Every folder of the voice bank read again, whatever the stamps of its files, as the
              refresh of UTAU -->
         <action id="helloutau.voiceBank.reloadAll" text="Re&amp;load All from Disk" category="File" />
@@ -179,152 +163,133 @@
         <action id="helloutau.voiceBank.removeMetadata" text="Remove Audio &amp;Metadata..."
                 category="Tools" />
 
-        <menu id="helloutau.voiceBankMenu" topLevel="true" />
-        <menu id="helloutau.voiceBank.file" text="&amp;File" />
-        <menu id="helloutau.voiceBank.edit" text="&amp;Edit" />
         <menu id="helloutau.voiceBank.setValue" text="&amp;Set at Pointer" />
-        <menu id="helloutau.voiceBank.view" text="&amp;View" />
-        <menu id="helloutau.voiceBank.playback" text="&amp;Playback" />
-        <menu id="helloutau.voiceBank.tools" text="&amp;Tools" />
     </items>
 
+    <!-- The submenus of this extension, which the insertions place -->
     <layouts>
-        <menu id="helloutau.mainMenu">
-            <menu id="helloutau.file">
-                <action id="helloutau.file.new" />
-                <action id="helloutau.file.open" />
-                <action id="helloutau.file.openVoiceBank" />
-                <action id="helloutau.file.openRecent" />
-                <separator />
-                <action id="helloutau.file.save" />
-                <action id="helloutau.file.saveAs" />
-                <menu id="helloutau.file.export">
-                    <action id="helloutau.file.exportUst" />
-                </menu>
-                <separator />
-                <action id="helloutau.file.properties" />
-                <separator />
-                <action id="helloutau.file.close" />
-                <action id="helloutau.file.quit" />
-            </menu>
-            <menu id="helloutau.edit">
-                <action id="helloutau.edit.undo" />
-                <action id="helloutau.edit.redo" />
-                <separator />
-                <action id="helloutau.edit.copy" />
-                <action id="helloutau.edit.paste" />
-                <action id="helloutau.edit.pasteParameters" />
-                <action id="helloutau.edit.delete" />
-                <action id="helloutau.edit.selectAll" />
-                <separator />
-                <action id="helloutau.edit.insertNote" />
-                <action id="helloutau.edit.insertRest" />
-                <action id="helloutau.edit.splitNote" />
-                <action id="helloutau.edit.mergeNotes" />
-                <action id="helloutau.edit.editLyric" />
-                <action id="helloutau.edit.setTempo" />
-                <action id="helloutau.edit.noteProperties" />
-                <separator />
-                <action id="helloutau.edit.mode2" />
-                <action id="helloutau.edit.togglePortamento" />
-                <action id="helloutau.edit.toggleVibrato" />
-                <action id="helloutau.edit.editVibrato" />
-                <action id="helloutau.edit.scalePitch" />
-                <menu id="helloutau.edit.reset">
-                    <action id="helloutau.edit.resetPortamento" />
-                    <action id="helloutau.edit.resetVibratos" />
-                    <action id="helloutau.edit.resetEnvelopes" />
-                    <separator />
-                    <action id="helloutau.edit.resetAll" />
-                </menu>
-                <menu id="helloutau.edit.envelope">
-                    <action id="helloutau.edit.crossfadeP2P3" />
-                    <action id="helloutau.edit.crossfadeP1P4" />
-                </menu>
-                <menu id="helloutau.edit.transpose">
-                    <action id="helloutau.edit.transposeUp" />
-                    <action id="helloutau.edit.transposeDown" />
-                    <action id="helloutau.edit.octaveUp" />
-                    <action id="helloutau.edit.octaveDown" />
-                </menu>
-                <separator />
-                <action id="helloutau.edit.selectTool" />
-                <action id="helloutau.edit.penTool" />
-                <action id="helloutau.edit.pitchTool" />
-            </menu>
-            <menu id="helloutau.view">
-                <action id="helloutau.view.showPitch" />
-                <action id="helloutau.view.showEnvelopes" />
-                <separator />
-                <action id="helloutau.view.commandPalette" />
-            </menu>
-            <menu id="helloutau.playback">
-                <action id="helloutau.playback.play" />
-                <action id="helloutau.playback.pause" />
-                <action id="helloutau.playback.stop" />
-                <action id="helloutau.playback.replay" />
-            </menu>
-            <menu id="helloutau.tools">
-                <action id="helloutau.tools.editVoiceBank" />
-                <action id="helloutau.tools.showEntry" />
-                <action id="helloutau.tools.clearCache" />
-                <separator />
-                <action id="helloutau.tools.settings" />
-            </menu>
+        <menu id="helloutau.file.export">
+            <action id="helloutau.file.exportUst" />
         </menu>
-        <menu id="helloutau.voiceBankMenu">
-            <menu id="helloutau.voiceBank.file">
-                <action id="helloutau.file.new" />
-                <action id="helloutau.file.open" />
-                <action id="helloutau.file.openVoiceBank" />
-                <action id="helloutau.file.openRecent" />
-                <separator />
-                <action id="helloutau.file.save" />
-                <action id="helloutau.file.saveAs" />
-                <action id="helloutau.voiceBank.reloadAll" />
-                <separator />
-                <action id="helloutau.file.close" />
-                <action id="helloutau.file.quit" />
-            </menu>
-            <menu id="helloutau.voiceBank.edit">
-                <action id="helloutau.edit.undo" />
-                <action id="helloutau.edit.redo" />
-                <separator />
-                <action id="helloutau.voiceBank.insertEntry" />
-                <action id="helloutau.voiceBank.duplicateEntries" />
-                <action id="helloutau.voiceBank.includeAudio" />
-                <action id="helloutau.edit.delete" />
-                <separator />
-                <menu id="helloutau.voiceBank.setValue">
-                    <action id="helloutau.voiceBank.setOffset" />
-                    <action id="helloutau.voiceBank.setOverlap" />
-                    <action id="helloutau.voiceBank.setPreUtterance" />
-                    <action id="helloutau.voiceBank.setConsonant" />
-                    <action id="helloutau.voiceBank.setCutoff" />
-                </menu>
-                <separator />
-                <action id="helloutau.voiceBank.convertCharset" />
-                <action id="helloutau.voiceBank.rereadCharset" />
-            </menu>
-            <menu id="helloutau.voiceBank.view">
-                <action id="helloutau.voiceBank.showSpectrogram" />
-                <action id="helloutau.voiceBank.showInfo" />
-                <separator />
-                <action id="helloutau.view.commandPalette" />
-            </menu>
-            <menu id="helloutau.voiceBank.playback">
-                <action id="helloutau.voiceBank.playAudio" />
-                <action id="helloutau.voiceBank.playSpan" />
-                <action id="helloutau.voiceBank.playFromPointer" />
-                <action id="helloutau.voiceBank.synthesize" />
-                <separator />
-                <action id="helloutau.playback.stop" />
-            </menu>
-            <menu id="helloutau.voiceBank.tools">
-                <action id="helloutau.voiceBank.removeMetadata" />
-                <separator />
-                <action id="helloutau.tools.settings" />
-            </menu>
+        <menu id="helloutau.edit.reset">
+            <action id="helloutau.edit.resetPortamento" />
+            <action id="helloutau.edit.resetVibratos" />
+            <action id="helloutau.edit.resetEnvelopes" />
+            <separator />
+            <action id="helloutau.edit.resetAll" />
+        </menu>
+        <menu id="helloutau.edit.envelope">
+            <action id="helloutau.edit.crossfadeP2P3" />
+            <action id="helloutau.edit.crossfadeP1P4" />
+        </menu>
+        <menu id="helloutau.edit.transpose">
+            <action id="helloutau.edit.transposeUp" />
+            <action id="helloutau.edit.transposeDown" />
+            <action id="helloutau.edit.octaveUp" />
+            <action id="helloutau.edit.octaveDown" />
+        </menu>
+        <menu id="helloutau.voiceBank.setValue">
+            <action id="helloutau.voiceBank.setOffset" />
+            <action id="helloutau.voiceBank.setOverlap" />
+            <action id="helloutau.voiceBank.setPreUtterance" />
+            <action id="helloutau.voiceBank.setConsonant" />
+            <action id="helloutau.voiceBank.setCutoff" />
         </menu>
     </layouts>
+
+    <insertions>
+        <!-- The project window -->
+        <insertion target="helloutau.file" anchor="before" relativeTo="helloutau.file.close">
+            <action id="helloutau.file.save" />
+            <action id="helloutau.file.saveAs" />
+            <menu id="helloutau.file.export" />
+            <separator />
+            <action id="helloutau.file.properties" />
+            <separator />
+        </insertion>
+        <insertion target="helloutau.edit">
+            <action id="helloutau.edit.undo" />
+            <action id="helloutau.edit.redo" />
+            <separator />
+            <action id="helloutau.edit.copy" />
+            <action id="helloutau.edit.paste" />
+            <action id="helloutau.edit.pasteParameters" />
+            <action id="helloutau.edit.delete" />
+            <action id="helloutau.edit.selectAll" />
+            <separator />
+            <action id="helloutau.edit.insertNote" />
+            <action id="helloutau.edit.insertRest" />
+            <action id="helloutau.edit.splitNote" />
+            <action id="helloutau.edit.mergeNotes" />
+            <action id="helloutau.edit.editLyric" />
+            <action id="helloutau.edit.setTempo" />
+            <action id="helloutau.edit.noteProperties" />
+            <separator />
+            <action id="helloutau.edit.mode2" />
+            <action id="helloutau.edit.togglePortamento" />
+            <action id="helloutau.edit.toggleVibrato" />
+            <action id="helloutau.edit.editVibrato" />
+            <action id="helloutau.edit.scalePitch" />
+            <menu id="helloutau.edit.reset" />
+            <menu id="helloutau.edit.envelope" />
+            <menu id="helloutau.edit.transpose" />
+            <separator />
+            <action id="helloutau.edit.selectTool" />
+            <action id="helloutau.edit.penTool" />
+            <action id="helloutau.edit.pitchTool" />
+        </insertion>
+        <insertion target="helloutau.view" anchor="first">
+            <action id="helloutau.view.showPitch" />
+            <action id="helloutau.view.showEnvelopes" />
+        </insertion>
+        <insertion target="helloutau.playback">
+            <action id="helloutau.playback.play" />
+            <action id="helloutau.playback.pause" />
+            <action id="helloutau.playback.stop" />
+            <action id="helloutau.playback.replay" />
+        </insertion>
+        <insertion target="helloutau.tools" anchor="first">
+            <action id="helloutau.tools.editVoiceBank" />
+            <action id="helloutau.tools.showEntry" />
+            <action id="helloutau.tools.clearCache" />
+        </insertion>
+
+        <!-- The voice bank window -->
+        <insertion target="helloutau.voiceBank.file" anchor="before"
+                   relativeTo="helloutau.file.close">
+            <action id="helloutau.file.save" />
+            <action id="helloutau.file.saveAs" />
+            <action id="helloutau.voiceBank.reloadAll" />
+            <separator />
+        </insertion>
+        <insertion target="helloutau.voiceBank.edit">
+            <action id="helloutau.edit.undo" />
+            <action id="helloutau.edit.redo" />
+            <separator />
+            <action id="helloutau.voiceBank.insertEntry" />
+            <action id="helloutau.voiceBank.duplicateEntries" />
+            <action id="helloutau.voiceBank.includeAudio" />
+            <action id="helloutau.edit.delete" />
+            <separator />
+            <menu id="helloutau.voiceBank.setValue" />
+            <separator />
+            <action id="helloutau.voiceBank.convertCharset" />
+            <action id="helloutau.voiceBank.rereadCharset" />
+        </insertion>
+        <insertion target="helloutau.voiceBank.view" anchor="first">
+            <action id="helloutau.voiceBank.showSpectrogram" />
+            <action id="helloutau.voiceBank.showInfo" />
+        </insertion>
+        <insertion target="helloutau.voiceBank.playback">
+            <action id="helloutau.voiceBank.playAudio" />
+            <action id="helloutau.voiceBank.playSpan" />
+            <action id="helloutau.voiceBank.playFromPointer" />
+            <action id="helloutau.voiceBank.synthesize" />
+            <separator />
+            <action id="helloutau.playback.stop" />
+        </insertion>
+        <insertion target="helloutau.voiceBank.tools" anchor="first">
+            <action id="helloutau.voiceBank.removeMetadata" />
+        </insertion>
+    </insertions>
 </actionExtension>

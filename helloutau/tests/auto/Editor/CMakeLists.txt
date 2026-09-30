@@ -8,6 +8,15 @@ add_auto_test(test_Playback.cpp HelloUtauEditor)
 add_auto_test(test_SamplePreview.cpp HelloUtauEditor)
 add_auto_test(test_VibratoDialog.cpp HelloUtauEditor)
 
+# The contribution of the test, with a manifest of its own
+qak_add_action_extension(_contribution_src TestContribution.xml
+    FUNCTION testContribution
+    NAMESPACE hello::daw::test
+)
+add_auto_test(test_ActionContribution.cpp HelloUtauEditor QActionKit::Widgets)
+target_sources(test_ActionContribution PRIVATE ${_contribution_src})
+target_include_directories(test_ActionContribution PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+
 # The plugins that test_AppLoader copies into plugin directories of its own, built with the
 # interface ID of the native plugins: one that records its calls, and one whose initialization
 # fails.

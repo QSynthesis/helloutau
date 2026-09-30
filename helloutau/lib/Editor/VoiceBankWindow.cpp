@@ -53,6 +53,7 @@
 #include <helloutau/Theme/ThemeManager.h>
 #include <helloutau/Widgets/CommandPalette.h>
 
+#include "ActionContributions_p.h"
 #include "AppSettings.h"
 #include "CommandEntries_p.h"
 #include "DiagnosticBox_p.h"
@@ -306,6 +307,7 @@ namespace hello::daw {
                 stdc_decl_t;
                 editor->showSettings(&decl);
             });
+            ActionContributions::instance().addActions(&decl, context);
 
             const auto registry = editor->actionRegistry();
             registry->addContext(context);
@@ -1305,6 +1307,11 @@ namespace hello::daw {
     kit::VoiceBankDocument *VoiceBankWindow::document() const {
         stdc_impl_t;
         return impl.document.get();
+    }
+
+    QAK::WidgetActionContext *VoiceBankWindow::actionContext() const {
+        stdc_impl_t;
+        return impl.context;
     }
 
     QTreeWidget *VoiceBankWindow::directoryTree() const {
