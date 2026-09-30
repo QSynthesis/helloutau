@@ -114,9 +114,8 @@ namespace hello::daw {
         /// Shows every recent item of \a kind that the settings keep, the latest first, in a
         /// command palette over \a from, as "More..." of "Open Recent" in VS Code: the name of
         /// each item with the folder that contains it after the name, both matched by the query,
-        /// and the latest first while the user types. The project or the voice bank of \a from
-        /// itself is left out. The chosen item opens as from "Open Recent", and the button of an
-        /// item removes it from the recent items.
+        /// and the latest first while the user types. The chosen item opens as from "Open
+        /// Recent", and the button of an item removes it from the recent items.
         void showRecent(RecentKind kind, QWidget *from);
 
         /// Shows the settings over \a from, on the page \a page if given. Each time the settings

@@ -190,18 +190,8 @@ namespace hello::daw {
                                             ? Editor::tr("Select a recent project to open")
                                             : Editor::tr("Select a recent voice bank to open"));
 
-            // The project or the voice bank of the window itself is not offered.
-            std::filesystem::path own;
-            if (const auto window = qobject_cast<ProjectWindow *>(from)) {
-                own = window->document()->sourcePath();
-            } else if (const auto window = qobject_cast<VoiceBankWindow *>(from)) {
-                own = window->document()->rootPath();
-            }
             QList<CommandEntry> entries;
             const auto add = [&](const QString &prefix, const std::filesystem::path &path) {
-                if (!own.empty() && isSameFile(own, path)) {
-                    return;
-                }
                 CommandEntry e;
                 e.id = prefix + textOf(path);
                 e.label = QString::fromStdU16String(path.filename().u16string());

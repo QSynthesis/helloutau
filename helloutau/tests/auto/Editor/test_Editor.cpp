@@ -606,12 +606,12 @@ private Q_SLOTS:
         QVERIFY(window);
         QCOMPARE(e->settings().recentFiles(), (QList<std::filesystem::path>{second, first}));
 
-        // The palette of a window leaves out the project of the window.
+        // The palette of a window lists the project of the window as well.
         e->showRecent(Editor::RecentProjects, window);
         const auto palette = window->findChild<CommandPalette *>(QStringLiteral("recentPalette"));
         QVERIFY(palette);
-        QCOMPARE(palette->commands().size(), 1);
-        QCOMPARE(palette->commands()[0].label, QStringLiteral("r1.usth"));
+        QCOMPARE(palette->commands().size(), 2);
+        QCOMPARE(palette->commands()[0].label, QStringLiteral("r2.usth"));
         palette->hide();
 
         // The menu of the external action, filled when it opens
