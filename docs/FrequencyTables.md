@@ -102,6 +102,8 @@ qfrqeditor 的 `Core` 按本仓库规范重写后移入 hellokit 的新子库（
 
 之后作者决定插件只有一种原生插件（[`Plugins.md`](Plugins.md)），频率表格式随之改为它的一个扩展点，`FrequencyFormatPlugin` 已删除，由登记对象 `FrequencyFormatRegistration` 取代；内置的 frq、dio、mrq 由 FrequencyEditor 插件登记，多个格式匹配重采样器时后登记者优先，见 [`Plugins.md`](Plugins.md) 实施步骤 4。
 
+**以后的调整**（作者 2026-09-30 定，尚未实施）：每种格式各占一个源文件（现在三种都在 `BuiltinFrequencyFormats.cpp` 中）；`BuiltinFrequencyFormats` 只保留 UTAU 自带的 frq，dio 与 mrq 移到插件中，由插件各自登记。
+
 ### 闭源与无公开资料的格式
 
 - **vs4ufrq** 须经 Windows 上的 `vslib.dll`（1.52 及以上的 64 位版本，作者已定）。建议做成可选的驱动：找不到 `vslib.dll` 时不注册，其他平台上不可用。
