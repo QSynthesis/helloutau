@@ -1353,6 +1353,35 @@ private Q_SLOTS:
         QVERIFY(!stop->isEnabled());
     }
 
+    // The audio files that carry metadata are listed, and written again without it once the
+    // user agrees.
+    void the_metadata_of_the_audio_files_is_removed() {
+        QTemporaryDir dir;
+        const auto bank = voiceBank(dir);
+        writeWave(bank / "a.wav", 100);
+        writeWave(bank / "sub" / "x.wav", 100);
+        {
+            std::ofstream file(bank / "sub" / "x.wav", std::ios::binary | std::ios::app);
+            file.write("LIST\x04\0\0\0abcd", 12);
+        }
+        const auto size = [&bank] { return fs::file_size(bank / "sub" / "x.wav"); };
+        const auto e = editor();
+        const auto window = e->openVoiceBank(bank);
+        QVERIFY(window);
+
+        answerMessageBox(QMessageBox::No);
+        QVERIFY(!window->removeAudioMetadata());
+        QCOMPARE(size(), std::uintmax_t(44 + 200 + 12));
+
+        answerMessageBox(QMessageBox::Yes);
+        QCOMPARE(window->removeAudioMetadata(), std::optional<int>(1));
+        QCOMPARE(size(), std::uintmax_t(44 + 200));
+        QCOMPARE(fs::file_size(bank / "a.wav"), std::uintmax_t(44 + 200));
+
+        answerMessageBox(QMessageBox::Ok);
+        QVERIFY(!window->removeAudioMetadata());
+    }
+
     // An alias that another entry of the same file has, as read, is marked.
     void the_entry_table_marks_a_repeated_alias() {
         QTemporaryDir dir;

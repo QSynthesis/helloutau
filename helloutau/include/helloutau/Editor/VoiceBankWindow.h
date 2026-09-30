@@ -2,6 +2,7 @@
 #define HELLOUTAU_EDITOR_VOICEBANKWINDOW_H
 
 #include <memory>
+#include <optional>
 
 #include <QtWidgets/QMainWindow>
 
@@ -104,6 +105,14 @@ namespace hello::daw {
 
         /// Removes the selected entries, as one undo step.
         bool removeEntries();
+
+        /// Lists the audio files of the folders that carry metadata, see kit::WaveMetadata, and
+        /// asks whether to write them again without it. The files are written at once, which
+        /// no undo reverts.
+        ///
+        /// \return the number of files written, or \c std::nullopt if the user declined or no
+        ///         file carries metadata
+        std::optional<int> removeAudioMetadata();
         /// @}
 
     protected:

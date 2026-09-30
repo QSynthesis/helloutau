@@ -160,6 +160,10 @@
              the length beside the waveform -->
         <action id="helloutau.voiceBank.synthesize" text="&amp;Synthesize Note" category="Playback"
                 shortcut="Ctrl+Return" />
+        <!-- The chunks of the audio files besides the format and the audio, written away after
+             a confirmation -->
+        <action id="helloutau.voiceBank.removeMetadata" text="Remove Audio &amp;Metadata..."
+                category="Tools" />
 
         <menu id="helloutau.voiceBankMenu" topLevel="true" />
         <menu id="helloutau.voiceBank.file" text="&amp;File" />
@@ -296,6 +300,8 @@
                 <action id="helloutau.playback.stop" />
             </menu>
             <menu id="helloutau.voiceBank.tools">
+                <action id="helloutau.voiceBank.removeMetadata" />
+                <separator />
                 <action id="helloutau.tools.settings" />
             </menu>
         </menu>

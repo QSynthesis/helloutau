@@ -12,6 +12,7 @@
 #include <QtCore/QTimer>
 #include <QtGui/QAction>
 #include <QtGui/QCloseEvent>
+#include <QtWidgets/QApplication>
 #include <QtWidgets/QComboBox>
 #include <QtWidgets/QFileDialog>
 #include <QtWidgets/QFrame>
@@ -43,6 +44,7 @@
 #include <hellokit/Edit/VoiceBankRefs.h>
 #include <hellokit/Synth/WaveAudio.h>
 #include <hellokit/VoiceBank/VoiceBankCheckScheduler.h>
+#include <hellokit/VoiceBank/WaveMetadata.h>
 
 #include <helloutau/Theme/ThemeManager.h>
 #include <helloutau/Widgets/CommandPalette.h>
@@ -260,6 +262,10 @@ namespace hello::daw {
                 if (const auto time = waveform->pointerTime()) {
                     playAudio(*time, std::nullopt);
                 }
+            });
+            addCommand(QStringLiteral("helloutau.voiceBank.removeMetadata"), [this] {
+                stdc_decl_t;
+                decl.removeAudioMetadata();
             });
             addCommand(QStringLiteral("helloutau.voiceBank.synthesize"), [this] { synthesize(); });
             addCommand(QStringLiteral("helloutau.playback.stop"), [this] { preview->stop(); });
@@ -1280,6 +1286,70 @@ namespace hello::daw {
             impl.model->refresh();
         }
         return committed;
+    }
+
+    std::optional<int> VoiceBankWindow::removeAudioMetadata() {
+        stdc_impl_t;
+        // The audio files with metadata, of every folder in the tree
+        QList<std::pair<std::filesystem::path, kit::WaveMetadata::Report>> found;
+        QStringList lines;
+        kit::DiagnosticList unreadable;
+        {
+            QApplication::setOverrideCursor(Qt::WaitCursor);
+            const auto directories = kit::VoiceBankRef(impl.document->session()).directories();
+            for (int i = 0; i < directories.size(); ++i) {
+                const auto directory = directories.at(i).path();
+                for (const auto &name : impl.document->session()->audioFiles(directory)) {
+                    const auto path = impl.document->rootPath() / directory / pathOf(name);
+                    const auto report = kit::WaveMetadata::find(path, unreadable);
+                    if (!report || report->isEmpty()) {
+                        continue;
+                    }
+                    QStringList parts;
+                    for (const auto &chunk : report->chunks) {
+                        parts.push_back(QString::fromLatin1(chunk).trimmed());
+                    }
+                    if (report->trailingBytes > 0) {
+                        parts.push_back(tr("%n bytes after the last chunk", nullptr,
+                                           int(report->trailingBytes)));
+                    }
+                    lines.push_back(QStringLiteral("%1: %2").arg(
+                        QDir::toNativeSeparators(textOf(directory / pathOf(name))),
+                        parts.join(QStringLiteral(", "))));
+                    found.push_back({path, *report});
+                }
+            }
+            QApplication::restoreOverrideCursor();
+        }
+        if (found.isEmpty()) {
+            QMessageBox::information(this, tr("Remove Audio Metadata"),
+                                     tr("No audio file of the voice bank carries metadata."));
+            return std::nullopt;
+        }
+        QMessageBox box(QMessageBox::Question, tr("Remove Audio Metadata"),
+                        tr("%n audio files carry chunks besides the format and the audio, such "
+                           "as the tags that recording programs write.\n\nWrite them again "
+                           "without these chunks? The audio stays the same. The files are "
+                           "written at once, and Undo does not bring the chunks back.",
+                           nullptr, int(found.size())),
+                        QMessageBox::Yes | QMessageBox::No, this);
+        box.setDefaultButton(QMessageBox::No);
+        box.setDetailedText(lines.join(QLatin1Char('\n')));
+        if (box.exec() != QMessageBox::Yes) {
+            return std::nullopt;
+        }
+        kit::DiagnosticList diagnostics;
+        int written = 0;
+        for (const auto &[path, report] : std::as_const(found)) {
+            written += kit::WaveMetadata::strip(path, diagnostics) ? 1 : 0;
+        }
+        DiagnosticBox::show(this, tr("Remove Audio Metadata"), diagnostics);
+        statusBar()->showMessage(
+            tr("The metadata of %n audio files was removed.", nullptr, written));
+        impl.readAudio.clear();
+        impl.waveform->setAudio(nullptr);
+        impl.showCurrentEntry();
+        return written;
     }
 
     bool VoiceBankWindow::showEntryFor(int noteNum, const QString &lyric) {
