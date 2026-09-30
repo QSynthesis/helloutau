@@ -3,6 +3,10 @@
 #include <algorithm>
 #include <system_error>
 
+#include <QtCore/QFile>
+#include <QtCore/QJsonDocument>
+#include <QtCore/QJsonObject>
+
 #include <stdutau/plugintxt.h>
 #include <stdutau/utaconst.h>
 
@@ -67,34 +71,78 @@ namespace hello::daw {
 
     std::optional<ClassicPlugin> ClassicPlugin::read(const std::filesystem::path &folder,
                                                      kit::DiagnosticList &diagnostics) {
-        const auto file = folder / u"plugin.txt";
-        std::error_code error;
-        if (!std::filesystem::is_regular_file(file, error)) {
-            return std::nullopt;
-        }
-        utau::PluginTxt txt;
-        if (!txt.load(file)) {
-            diagnostics.push_back(
-                {kit::DiagnosticSeverity::Warning,
-                 tr("The plugin in \"%1\" could not be read.").arg(textOf(folder))});
-            return std::nullopt;
-        }
-
         ClassicPlugin plugin;
         plugin.folder = folder;
-        plugin.charset = localCharset();
-        const kit::TextCodec codec(plugin.charset);
-        const auto decode = [&](const std::string &bytes) {
-            return codec.decodeReplacing(QByteArrayView(bytes.data(), qsizetype(bytes.size())));
+        QString execute;
+        const auto unreadable = [&](const QString &reason) {
+            diagnostics.push_back(
+                {kit::DiagnosticSeverity::Warning,
+                 tr("The plugin in \"%1\" could not be read: %2").arg(textOf(folder), reason)});
+            return std::nullopt;
         };
 
-        plugin.name = decode(txt.name).trimmed();
+        std::error_code error;
+        if (const auto file = folder / u"plugin.json";
+            std::filesystem::is_regular_file(file, error)) {
+            // The manifest of a plugin that supports HelloUtau, in UTF-8, which replaces
+            // plugin.txt: nothing of plugin.txt is read. See the plugins in docs/note.md.
+            QFile in(textOf(file));
+            if (!in.open(QIODevice::ReadOnly)) {
+                return unreadable(in.errorString());
+            }
+            QJsonParseError parseError;
+            const auto document = QJsonDocument::fromJson(in.readAll(), &parseError);
+            if (!document.isObject()) {
+                return unreadable(parseError.errorString());
+            }
+            const auto manifest = document.object();
+            plugin.name = manifest.value(QLatin1String("name")).toString().trimmed();
+            execute = manifest.value(QLatin1String("execute")).toString().trimmed();
+            plugin.shell = manifest.value(QLatin1String("shell")).toBool();
+
+            const auto notes =
+                manifest.value(QLatin1String("notes")).toString(QStringLiteral("selection"));
+            plugin.wholeTrack = notes == QLatin1String("all");
+            if (!plugin.wholeTrack && notes != QLatin1String("selection")) {
+                plugin.unavailableReason =
+                    tr("Its plugin.json asks for the notes \"%1\", which are unknown.").arg(notes);
+            }
+
+            // The encoding of the temporary file, that of UTAU if not given
+            const auto charset = manifest.value(QLatin1String("charset")).toString();
+            const kit::TextCodec codec(charset.isEmpty() ? localCharset() : charset);
+            plugin.charset = codec.name();
+            if (!codec.isValid()) {
+                plugin.charset = charset;
+                plugin.unavailableReason = tr("Its encoding \"%1\" is not available.").arg(charset);
+            }
+        } else if (const auto file = folder / u"plugin.txt";
+                   std::filesystem::is_regular_file(file, error)) {
+            utau::PluginTxt txt;
+            if (!txt.load(file)) {
+                return unreadable(tr("plugin.txt cannot be opened."));
+            }
+            plugin.charset = localCharset();
+            const kit::TextCodec codec(plugin.charset);
+            const auto decode = [&](const std::string &bytes) {
+                return codec.decodeReplacing(QByteArrayView(bytes.data(), qsizetype(bytes.size())));
+            };
+            plugin.name = decode(txt.name).trimmed();
+            execute = decode(txt.execute).trimmed();
+            plugin.shell = txt.shell == utau::VALUE_PLUGIN_SHELL_USE;
+            plugin.wholeTrack = txt.notes.has_value();
+        } else {
+            return std::nullopt;
+        }
+
         if (plugin.name.isEmpty()) {
             plugin.name = textOf(folder.filename());
         }
-        plugin.shell = txt.shell == utau::VALUE_PLUGIN_SHELL_USE;
-        plugin.wholeTrack = txt.notes.has_value();
-        plugin.program = programOf(folder, decode(txt.execute).trimmed(), plugin.unavailableReason);
+        QString programReason;
+        plugin.program = programOf(folder, execute, programReason);
+        if (plugin.isAvailable()) {
+            plugin.unavailableReason = programReason;
+        }
 
 #ifndef Q_OS_WINDOWS
         // Wine is to be considered later, see docs/ClassicPluginHost.md.

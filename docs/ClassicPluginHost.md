@@ -78,7 +78,7 @@
 - 插件的用户目录为应用数据目录下的 `UtauPlugins`（Windows 上为 `%APPDATA%\OpenVPI\HelloUtau\UtauPlugins`，Qt 依次接上组织名与应用名），与原生插件的目录分开。插件在菜单第一次打开、「刷新」与设置中的 UTAU 文件夹改变后重新发现。
 - 首次运行的确认记在插件设置 `plugins.json` 中本插件的值（`AppLoader::pluginValue()`）：`userData/org.helloutau.classicpluginhost/approved` 为数组，每项是插件文件夹 `folder` 与程序内容的 SHA-256 `program`，程序改变后再次询问。
 - 选区为空时提示先选择音符（`notes` 插件除外）；读回的文件与写出的相同时视为取消。
-- 编码按 note.md「插件」：`plugin.json` 声明插件接收 UTF-8 时，临时文件写成 UTF-8、结果按 UTF-8 读回（作者 2026-09-30 定，比 UTAU 稳妥）；否则与 UTAU 兼容，Windows 上为系统 ANSI 代码页、其他平台为 CP932，音符条目中无法表示的字符按 note.md 转义；`[#SETTING]` 的路径与 `@` 条目只读，不转义，路径用系统的分隔符，同 UTAU。写出与读回用同一编码。`plugin.json` 中声明所用的字段随其格式一并确定。
+- 编码按 note.md「插件」：`plugin.json` 的 `charset` 声明 UTF-8 时，临时文件写成 UTF-8、结果按 UTF-8 读回（作者 2026-09-30 定，比 UTAU 稳妥）；否则与 UTAU 兼容，Windows 上为系统 ANSI 代码页、其他平台为 CP932，音符条目中无法表示的字符按 note.md 转义；`[#SETTING]` 的路径与 `@` 条目只读，不转义，路径用系统的分隔符，同 UTAU。写出与读回用同一编码。`plugin.json` 的格式见 note.md「插件」，有它时不再读 `plugin.txt`。
 
 ## 实施步骤
 
@@ -88,7 +88,8 @@
    - ~~宿主一侧~~（stdutau `2004f8e`）：原来插件一侧的两个类与宿主要的两半合并为 `PluginInput` 与 `PluginResult`（作者定，不保留旧名），测试以实测样本与往返为依据。
 3. ~~**HelloUtauEditor**~~：已完成（`f6faf4b`）。`ProjectWindow::pianoRoll()` 公开卷帘，选区由它的 `selectedIndices()` 取得、`selectionChanged()` 跟踪；卷帘随文档替换，替换后发出 `ProjectWindow::documentChanged()`。
 4. ~~**ClassicPluginHost**~~：发现、`plugin.txt` 与编码、写出与合并（`fab6818`）；进程的启动与取消、菜单、模态对话框、首次确认（未提交）。库一级的部分在 `tests/auto/plugins/ClassicPluginHost` 中测试：合并以探针 R1–R3 的结果对照 UTAU 另存的工程；运行以批处理、`shell=use` 与测试程序自身充当的 `.exe` 插件端到端运行，包括取消时结束插件启动的后台进程。菜单与对话框由作者试用。
-   - 未做：`plugin.json`（声明 UTF-8 等，格式未定）；`ustversion` 1.00 与 1.10 的条目名（现在一律按 1.20 写出，其格式未经实测）。
+   - `plugin.json`（作者定的格式，见 note.md「插件」）：已实现。
+   - 未做：`ustversion` 1.00 与 1.10 的条目名（现在一律按 1.20 写出，其格式未经实测）。
 5. **验收**：作者以社区常用的原版插件试用。
 
 ## 作者的决定（2026-09-30）

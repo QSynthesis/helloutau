@@ -90,9 +90,17 @@ UST 自身的 `Charset` 只有两种取值：空，或 `UTF-8`。它表示的是
 
 ### 插件
 
-插件文件夹中没有 `plugin.json` 时，在 Windows 上按系统 ANSI 代码页读取，在其他平台上按 CP932 读取，因为绝大多数 UTAU 插件是日文的，而 ANSI 代码页的概念在 Windows 之外不存在。有 `plugin.json` 时，按其中指定的编码读取。
+插件文件夹中没有 `plugin.json` 时，`plugin.txt` 在 Windows 上按系统 ANSI 代码页读取，在其他平台上按 CP932 读取，因为绝大多数 UTAU 插件是日文的，而 ANSI 代码页的概念在 Windows 之外不存在。
 
-**传给插件的临时文件**（作者 2026-09-30 定）：`plugin.json` 声明插件接收 UTF-8 时，临时文件写成 UTF-8，插件的结果也按 UTF-8 读回；否则与 UTAU 兼容，按上述本地编码写出与读回，无法表示的字符按下文转义。UTAU 实际使用本地编码（系统 ANSI 代码页，见 [`claude/utau-plugin-protocol.md`](claude/utau-plugin-protocol.md)）；插件规格写作 Shift_JIS，只因规格作者使用日文系统。
+有 `plugin.json` 时以它为准，不再读 `plugin.txt`（作者 2026-09-30 定）。它是 UTF-8 的 JSON：
+
+```json
+{"name": "插件名", "execute": "plugin.exe", "shell": false, "notes": "selection", "charset": "UTF-8"}
+```
+
+`name` 省略时取文件夹名；`shell` 为 `true` 时同 `plugin.txt` 的 `shell=use`；`notes` 为 `selection`（默认）或 `all`；`charset` 为传给插件的临时文件的编码，省略时与 UTAU 相同，即上述本地编码。
+
+**传给插件的临时文件**（作者 2026-09-30 定）：`plugin.json` 的 `charset` 声明 `UTF-8` 时，临时文件写成 UTF-8，插件的结果也按 UTF-8 读回；否则与 UTAU 兼容，按上述本地编码写出与读回，无法表示的字符按下文转义。UTAU 实际使用本地编码（系统 ANSI 代码页，见 [`claude/utau-plugin-protocol.md`](claude/utau-plugin-protocol.md)）；插件规格写作 Shift_JIS，只因规格作者使用日文系统。
 
 ### 转义
 

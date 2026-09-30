@@ -21,10 +21,12 @@ class test_ClassicPlugin : public QObject {
         return fs::path(m_dir.path().toStdU16String());
     }
 
-    // A folder of plugins/<name> with the plugin.txt \a txt , in ASCII, and the files \a files
+    // A folder of <directory>/<name> with the plugin.txt \a txt , in ASCII, and the files
+    // \a files
     fs::path plugin(const std::string &name, const std::string &txt,
-                    std::initializer_list<const char *> files = {}) const {
-        const auto folder = root() / "plugins" / name;
+                    std::initializer_list<const char *> files = {},
+                    const char *directory = "plugins") const {
+        const auto folder = root() / directory / name;
         fs::create_directories(folder);
         std::ofstream(folder / "plugin.txt", std::ios::binary) << txt;
         for (const auto file : files) {
@@ -33,7 +35,74 @@ class test_ClassicPlugin : public QObject {
         return folder;
     }
 
+    // Writes \a json as the plugin.json of \a folder
+    static void manifest(const fs::path &folder, const std::string &json) {
+        fs::create_directories(folder);
+        std::ofstream(folder / "plugin.json", std::ios::binary) << json;
+    }
+
 private Q_SLOTS:
+    // A plugin.json, in UTF-8, replaces plugin.txt: nothing of plugin.txt is read, and the
+    // encoding of the temporary file is its charset.
+    void plugin_json_replaces_plugin_txt() {
+        const auto folder = plugin("json", "name=Old\r\nexecute=old.bat\r\nnotes=all\r\n",
+                                   {"old.bat", "new.bat"}, "manifests");
+        manifest(folder, R"({"name": "新しい", "execute": "new.bat", "shell": true, )"
+                         R"("notes": "selection", "charset": "UTF-8"})");
+        kit::DiagnosticList diagnostics;
+        const auto read = ClassicPlugin::read(folder, diagnostics);
+        QVERIFY(read);
+        QVERIFY(read->isAvailable());
+        QCOMPARE(read->name, QStringLiteral("新しい"));
+        QVERIFY(fs::equivalent(read->program, folder / "new.bat"));
+        QVERIFY(read->shell);
+        QVERIFY(!read->wholeTrack);
+        QCOMPARE(read->charset, QStringLiteral("UTF-8"));
+    }
+
+    // What plugin.json omits: the name of the folder, the program run as such, the selection,
+    // and the encoding of UTAU.
+    void plugin_json_defaults() {
+        const auto folder = root() / "manifests" / "defaults";
+        manifest(folder, R"({"execute": "a.bat"})");
+        std::ofstream(folder / "a.bat", std::ios::binary);
+        kit::DiagnosticList diagnostics;
+        const auto read = ClassicPlugin::read(folder, diagnostics);
+        QVERIFY(read);
+        QVERIFY(read->isAvailable());
+        QCOMPARE(read->name, QStringLiteral("defaults"));
+        QVERIFY(!read->shell);
+        QVERIFY(!read->wholeTrack);
+        QCOMPARE(read->charset, ClassicPlugin::localCharset());
+
+        manifest(folder, R"({"execute": "a.bat", "notes": "all"})");
+        QVERIFY(ClassicPlugin::read(folder, diagnostics)->wholeTrack);
+        QVERIFY(diagnostics.isEmpty());
+    }
+
+    // An unknown value leaves the plugin unavailable with the reason, and a plugin.json that is
+    // no JSON object is reported and leaves the folder out.
+    void plugin_json_that_is_wrong() {
+        const auto folder = root() / "manifests" / "wrong";
+        std::error_code error;
+        fs::create_directories(folder, error);
+        std::ofstream(folder / "a.bat", std::ios::binary);
+        for (const auto json : {R"({"execute": "a.bat", "notes": "some"})",
+                                R"({"execute": "a.bat", "charset": "no-such-encoding"})",
+                                R"({"execute": "../a.bat"})"}) {
+            manifest(folder, json);
+            kit::DiagnosticList diagnostics;
+            const auto read = ClassicPlugin::read(folder, diagnostics);
+            QVERIFY(read);
+            QVERIFY2(!read->isAvailable(), json);
+        }
+
+        manifest(folder, "[1,");
+        kit::DiagnosticList diagnostics;
+        QVERIFY(!ClassicPlugin::read(folder, diagnostics));
+        QCOMPARE(diagnostics.size(), 1);
+    }
+
     // The folders of a directory in the order of their names, each read from its plugin.txt. A
     // folder without one is no plugin.
     void plugins_are_found_by_folder() {

@@ -21,8 +21,20 @@ namespace hello::daw {
     class CLASSICPLUGINHOST_EXPORT ClassicPlugin {
         Q_DECLARE_TR_FUNCTIONS(hello::daw::ClassicPlugin)
     public:
-        /// Reads the plugin in \a folder , or returns \c std::nullopt if the folder has no
-        /// \c plugin.txt or it cannot be read.
+        /// Reads the plugin in \a folder , or returns \c std::nullopt if the folder has neither
+        /// file below or the file cannot be read.
+        ///
+        /// A plugin that supports HelloUtau has a \c plugin.json in UTF-8, which replaces
+        /// \c plugin.txt , none of which is then read:
+        ///
+        /// \code
+        ///   {"name": "...", "execute": "plugin.exe", "shell": false, "notes": "selection",
+        ///    "charset": "UTF-8"}
+        /// \endcode
+        ///
+        /// \c notes is \c selection or \c all , \c selection if omitted. \c charset is the
+        /// encoding of the temporary file, localCharset() if omitted. Other plugins have the
+        /// \c plugin.txt of UTAU in localCharset(). See the plugins in docs/note.md.
         ///
         /// A plugin whose program cannot run is returned all the same, with the reason in
         /// \a unavailableReason , so that a menu can show it disabled.
@@ -61,7 +73,7 @@ namespace hello::daw {
         /// (\c notes ), which UTAU does whatever the value is.
         bool wholeTrack = false;
 
-        /// The encoding of the temporary file.
+        /// The encoding of the temporary file, which the result is read back in too.
         QString charset;
 
         /// Why the plugin cannot run, empty if it can.
