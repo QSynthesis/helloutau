@@ -15,8 +15,10 @@ class QMenu;
 
 namespace hello::daw {
 
-    /// The submenu Plugins of the Tools menu of the project windows, as in UTAU: the discovered
-    /// UTAU plugins, followed by Refresh and the commands that open the plugin folders.
+    /// The submenu Classic Plugins of the Tools menu of the project windows, as the plugin menu
+    /// of UTAU: the discovered UTAU plugins, followed by Refresh and the commands that open the
+    /// plugin folders. The command Classic Plugins at Pointer (key N, as in UTAU) shows the same
+    /// menu at the mouse pointer. That command is in no menu.
     ///
     /// The plugins are discovered when the menu first opens, on Refresh, and after the UTAU
     /// folder in the settings has changed. The discovery covers the \c plugins folder of UTAU

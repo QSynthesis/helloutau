@@ -92,7 +92,7 @@ MIDI 导入属于「兼容周边」类别，但优先级被提至最高，并且
 
 - 原生插件的载入、设置与「Plugins」设置页。
 - 扩展点：选区编辑、音源批量操作（`hellokit`），编辑界面扩展（应用一侧），格式转换（`HelloKitInterchange`，见 [`Interchange.md`](Interchange.md)），频率表格式（`HelloKitVoiceBank`）。
-- 随 HelloUtau 提供的 UTAU 插件支持插件 ClassicPluginHost：把原版 UTAU 插件作为命令加入「工具 → 插件」菜单（`shell=use` 的插件在 Windows 上以 `ShellExecuteEx` 启动），计划见 [`ClassicPluginHost.md`](ClassicPluginHost.md)。
+- 随 HelloUtau 提供的 UTAU 插件支持插件 ClassicPluginHost：把原版 UTAU 插件作为命令加入「工具 → Classic Plugins」菜单（`shell=use` 的插件在 Windows 上以 `ShellExecuteEx` 启动），计划见 [`ClassicPluginHost.md`](ClassicPluginHost.md)。
 
 **验收标准**：若干社区常用的原版插件能够正常执行并写回结果；注册接口为纯虚类或值类型，插件不反向链接应用。
 

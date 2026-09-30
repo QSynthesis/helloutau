@@ -18,7 +18,7 @@
 | `HelloUtauEditor` | 窗口骨架：QActionKit 清单生成的菜单、工程的打开（UST 编码选择）、保存、另存为与导出 UST、撤销与重做、未保存标记、设置、命令面板（`Ctrl+Shift+P`）；工程在卷帘 `PianoRoll` 中显示与编辑（选区、拖动移调与重排、改长度、笔工具、插入、删除、拆分、歌词就地编辑、量化）；打开工程后读取其音源（按目录选择编码），卷帘标出找不到样本的音符；空格按设置中的播放方式播放（`Playback`）：预渲染以 `temp.bat` 在控制台中渲染选中的音符后播放，实时方式在后台渲染整轨、从播放头直接播放；状态栏显示进度，卷帘显示播放线；「Open Recent」列出最近打开的文件；「显示音高」绘制每个音符的滑音与颤音曲线，并在其上编辑 Mode2 控制点与颤音；Mode2 可在菜单中关闭，此时卷帘显示 Mode1 的曲线并以画笔工具手绘；卷帘下方的参数区编辑包络、力度、调制与速度；复制与粘贴音符、粘贴参数、恢复默认、缩放音高、包络交叉淡化。见 [`Widgets.md`](Widgets.md) 第 1–6 步与 [`Tuning.md`](Tuning.md) 第 1–7 步。音源窗口 `VoiceBankWindow`：条目表的编辑、波形区 `OtoWaveformView` 上拖动与按键设定五个值、试听与以重采样器试合成（`SamplePreview`）、清除音频元数据，见 [`VoiceBankEditor.md`](VoiceBankEditor.md) 第 1–4 步。插件的基础设施：加载器 `AppLoader`（载入原生插件、`--plugin-path` 与 `--settings`、插件列表与启用设置）、设置文件 `settings.json`（`AppSettings`）与 `plugins.json`（`PluginSettings` 格式），动作的登记 `ActionContribution` / `ActionRegistration` / `BuiltinActions`，见 [`Plugins.md`](Plugins.md) |
 | `helloutau` | 加载器程序：`main.cpp` 只构造 `AppLoader` 并运行 |
 | Core 插件 | 创建 `Editor`，登记编辑器的动作清单（`BuiltinActions`），打开命令行中的文件；设置的「Plugins」页 |
-| ClassicPluginHost 插件 | 原版 UTAU 插件：发现、`plugin.txt` / `plugin.json`、临时文件的写出与结果的合并、进程的启动与取消、「工具 → 插件」菜单、首次运行的确认，见 [`ClassicPluginHost.md`](ClassicPluginHost.md)，待作者以社区插件验收 |
+| ClassicPluginHost 插件 | 原版 UTAU 插件：发现、`plugin.txt` / `plugin.json`、临时文件的写出与结果的合并、进程的启动与取消、「工具 → Classic Plugins」菜单、首次运行的确认，见 [`ClassicPluginHost.md`](ClassicPluginHost.md)，待作者以社区插件验收 |
 | FrequencyEditor 插件 | 登记内置的频率表格式 frq、dio、mrq |
 | Interchange 插件 | 登记 MIDI 驱动；「文件 → 导入…」与「文件 → 导出 → 其他格式…」的向导、插入逻辑 `ImportMerge`、MIDI 的编码页，见 [`ImportExport.md`](ImportExport.md)，待作者试用 |
 

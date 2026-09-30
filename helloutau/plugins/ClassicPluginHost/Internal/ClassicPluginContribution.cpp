@@ -2,9 +2,11 @@
 
 #include <system_error>
 
+#include <QtCore/QPointer>
 #include <QtCore/QStandardPaths>
 #include <QtCore/QUrl>
 #include <QtGui/QAction>
+#include <QtGui/QCursor>
 #include <QtGui/QDesktopServices>
 #include <QtWidgets/QMenu>
 
@@ -54,7 +56,19 @@ namespace hello::daw {
                          [this, menu, window] { fill(menu, window); });
         // Converted from UTF-8 rather than a literal, whose data would be unloaded with this
         // library
-        context->addAction(QString::fromUtf8("helloutau.tools.plugins"), menu->menuAction());
+        context->addAction(QString::fromUtf8("helloutau.tools.classicPlugins"), menu->menuAction());
+
+        // The menu at the mouse pointer. The action is in no menu, so the window holds it for its
+        // shortcut to take effect.
+        const auto atPointer = new QAction(window);
+        window->addAction(atPointer);
+        const QPointer<QMenu> guarded(menu);
+        QObject::connect(atPointer, &QAction::triggered, window, [guarded] {
+            if (guarded) {
+                guarded->popup(QCursor::pos());
+            }
+        });
+        context->addAction(QString::fromUtf8("helloutau.tools.classicPluginsAtPointer"), atPointer);
     }
 
     std::filesystem::path ClassicPluginContribution::userDirectory() {

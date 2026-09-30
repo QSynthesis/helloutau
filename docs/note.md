@@ -159,7 +159,7 @@ HelloUtau 的插件只有一种：**原生插件**，即由 stdcorelib.plugin �
 
 HelloUtau 内置的功能与插件经同一途径登记，不分主次。
 
-**原版 UTAU 插件**（`plugin.txt` 加可执行文件）不是一种插件，而由随 HelloUtau 提供的一个原生插件支持：它发现 UTAU 插件文件夹，把其中每个 UTAU 插件作为一项命令加入「工具 → 插件」菜单，运行时修改选区。停用这个原生插件即不再提供 UTAU 插件。UTAU 插件的运行方式：
+**原版 UTAU 插件**（`plugin.txt` 加可执行文件）不是一种插件，而由随 HelloUtau 提供的一个原生插件支持：它发现 UTAU 插件文件夹，把其中每个 UTAU 插件作为一项命令加入「工具 → Classic Plugins」菜单，运行时修改选区。停用这个原生插件即不再提供 UTAU 插件。UTAU 插件的运行方式：
 
 - 以包含当前选区的 `temp.ust` 作为第一个命令行参数的可执行文件，执行选区修改，执行期间阻塞界面
 - 也可以不是 `.exe`。对于 `plugin.txt` 中含 `shell=use` 的插件，官方 UTAU 使用 `ShellExecuteEx` 而非 `CreateProcess` 启动，因此 `.jar`、`.html`、`.hta`、`.bat` 均可运行，实际运行的是系统为该扩展名注册的处理程序。`.bat` 插件须与官方一样显示可见的控制台窗口，使用户能直接看到脚本的输出

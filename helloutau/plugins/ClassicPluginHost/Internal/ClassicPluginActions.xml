@@ -6,13 +6,17 @@
 
     <items>
         <!-- Filled with the UTAU plugins by this plugin each time the menu opens -->
-        <action id="helloutau.tools.plugins" text="&amp;Plugins" category="Tools"
+        <action id="helloutau.tools.classicPlugins" text="Classic &amp;Plugins" category="Tools"
                 external="true" />
+        <!-- Shows the same menu at the mouse pointer. The key N shows the plugin menu of UTAU in
+             the same way. The command is in no menu, only in the command palette. -->
+        <action id="helloutau.tools.classicPluginsAtPointer"
+                text="Classic Plugins at P&amp;ointer" category="Tools" shortcut="N" />
     </items>
 
     <insertions>
         <insertion target="helloutau.tools" anchor="after" relativeTo="helloutau.tools.clearCache">
-            <action id="helloutau.tools.plugins" />
+            <action id="helloutau.tools.classicPlugins" />
         </insertion>
     </insertions>
 
