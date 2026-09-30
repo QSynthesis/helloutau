@@ -212,9 +212,13 @@ private Q_SLOTS:
         QSignalSpy failures(&playback, &Playback::failed);
 
         kit::DiagnosticList diagnostics;
+        QVERIFY(playback.lastRenderFile().empty());
         QVERIFY(playback.play(*document, std::make_pair(1, 1), someEngines(), diagnostics));
         QCOMPARE(playback.state(), Playback::Rendering);
+        QVERIFY(playback.lastRenderFile().empty());
         QTRY_COMPARE_WITH_TIMEOUT(states.size(), 3, 5000);
+        // The track file of the render, which Save Last Played copies
+        QCOMPARE(playback.lastRenderFile(), playback.cacheDirectoryFor(*document) / "playback.wav");
         QCOMPARE(failures.size(), 0);
         QCOMPARE(states.at(1).at(0).value<Playback::State>(), Playback::Playing);
         QCOMPARE(states.at(2).at(0).value<Playback::State>(), Playback::Stopped);

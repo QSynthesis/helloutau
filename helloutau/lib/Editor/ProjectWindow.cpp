@@ -17,6 +17,7 @@
 #include <QtWidgets/QMenuBar>
 #include <QtWidgets/QMessageBox>
 #include <QtWidgets/QProgressBar>
+#include <QtWidgets/QProgressDialog>
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QStatusBar>
 
@@ -168,6 +169,7 @@ namespace hello::daw {
             QObject::connect(playback, &Playback::stateChanged, &decl,
                              [this](Playback::State state) {
                                  scheduleRenderStates();
+                                 updateSaveLastPlayed();
                                  const bool rendering = state == Playback::Rendering;
                                  renderLabel->setVisible(rendering);
                                  renderProgress->setVisible(rendering);
@@ -369,6 +371,10 @@ namespace hello::daw {
         // Plays in the playback mode of the settings (docs/Widgets.md), or stops what is playing
         // or rendering: renders the selected notes, from the first to the last, and plays
         // them; or plays from the playhead as the track is rendered.
+        //
+        // In the prerender mode, as in UTAU, the key stops what plays, and at rest it renders
+        // the current selection again. A paused render counts as at rest. The realtime mode
+        // pauses and resumes instead.
         void togglePlayback() {
             stdc_decl_t;
             switch (playback->state()) {
@@ -376,11 +382,19 @@ namespace hello::daw {
                     playback->stop();
                     return;
                 case Playback::Playing:
-                    playback->pause();
+                    if (realtime()) {
+                        playback->pause();
+                    } else {
+                        playback->stop();
+                    }
                     return;
                 case Playback::Paused:
-                    resumePlayback();
-                    return;
+                    if (realtime()) {
+                        resumePlayback();
+                        return;
+                    }
+                    playback->stop();
+                    break;
                 default:
                     break;
             }
@@ -405,7 +419,78 @@ namespace hello::daw {
             kit::DiagnosticList diagnostics;
             if (!playback->play(*document, range, engines(), diagnostics)) {
                 DiagnosticBox::show(&decl, tr("Play"), diagnostics);
+                return;
             }
+            waitForRender();
+        }
+
+        // Shows a modal dialog while a prerender runs, as UTAU does while its script runs, so
+        // that the project is not edited meanwhile. Cancel stops the render. The dialog closes
+        // once the render ends and playback starts, or fails.
+        void waitForRender() {
+            stdc_decl_t;
+            if (playback->state() != Playback::Rendering) {
+                return;
+            }
+            QProgressDialog dialog(tr("Rendering..."), tr("Cancel"), 0, 0, &decl);
+            dialog.setWindowTitle(tr("Play"));
+            dialog.setWindowModality(Qt::WindowModal);
+            dialog.setMinimumDuration(0);
+            dialog.setAutoClose(false);
+            dialog.setAutoReset(false);
+            QObject::connect(
+                playback, &Playback::progressed, &dialog, [&dialog](int done, int total) {
+                    dialog.setLabelText(tr("Rendering %1 of %2 notes").arg(done).arg(total));
+                    dialog.setMaximum(total);
+                    dialog.setValue(done);
+                });
+            QObject::connect(playback, &Playback::stateChanged, &dialog,
+                             [&dialog](Playback::State state) {
+                                 if (state != Playback::Rendering) {
+                                     dialog.accept();
+                                 }
+                             });
+            QObject::connect(&dialog, &QProgressDialog::canceled, playback, &Playback::stop);
+            dialog.exec();
+        }
+
+        // Saves a copy of the track file of the last prerender, the temp.wav of UTAU, where the
+        // user chooses. The output file of the project is not involved.
+        void saveLastPlayed() {
+            stdc_decl_t;
+            const auto source = playback->lastRenderFile();
+            std::error_code error;
+            if (source.empty() || !std::filesystem::is_regular_file(source, error)) {
+                QMessageBox::information(&decl, tr("Save Last Played"),
+                                         tr("Nothing has been rendered since the render cache "
+                                            "was last cleared."));
+                return;
+            }
+            auto proposed = document->sourcePath();
+            proposed = proposed.empty() ? std::filesystem::path(u"untitled.wav")
+                                        : proposed.replace_extension(u".wav");
+            const auto chosen = QFileDialog::getSaveFileName(
+                &decl, tr("Save Last Played"), QString::fromStdU16String(proposed.u16string()),
+                tr("WAV files (*.wav)"));
+            if (chosen.isEmpty()) {
+                return;
+            }
+            const auto target = std::filesystem::path(chosen.toStdU16String());
+            // The file dialog has confirmed the replacement.
+            std::filesystem::copy_file(source, target,
+                                       std::filesystem::copy_options::overwrite_existing, error);
+            if (error) {
+                QMessageBox::critical(
+                    &decl, tr("Save Last Played"),
+                    tr("%1 could not be written.").arg(QDir::toNativeSeparators(chosen)));
+            }
+        }
+
+        // Save Last Played applies to the prerender mode, after a render.
+        void updateSaveLastPlayed() {
+            actions.value(QStringLiteral("helloutau.playback.saveLastPlayed"))
+                ->setEnabled(!realtime() && playback->state() != Playback::Rendering &&
+                             !playback->lastRenderFile().empty());
         }
 
         // Pauses what plays, or goes on with what was paused.
@@ -461,6 +546,7 @@ namespace hello::daw {
         void updateBackground() {
             roll->setCursorEnabled(realtime());
             scheduleRenderStates();
+            updateSaveLastPlayed();
             if (!realtime()) {
                 playback->release();
                 statusTimer.stop();
@@ -746,6 +832,8 @@ namespace hello::daw {
             addCommand(QStringLiteral("helloutau.playback.pause"), [this] { pauseOrResume(); });
             addCommand(QStringLiteral("helloutau.playback.stop"), [this] { playback->stop(); });
             addCommand(QStringLiteral("helloutau.playback.replay"), [this] { replay(); });
+            addCommand(QStringLiteral("helloutau.playback.saveLastPlayed"),
+                       [this] { saveLastPlayed(); });
             addCommand(QStringLiteral("helloutau.tools.clearCache"), [this] { clearCache(); });
             addCommand(QStringLiteral("helloutau.tools.settings"), [this] {
                 stdc_decl_t;

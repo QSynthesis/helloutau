@@ -128,6 +128,11 @@ namespace hello::daw {
         /// where playback was paused.
         std::optional<double> position() const;
 
+        /// Returns the track file of the last completed render of play(), the \c temp.wav of
+        /// UTAU, or an empty path if play() has not completed a render. The file stays in the
+        /// render cache until the next render or until the cache is cleared.
+        std::filesystem::path lastRenderFile() const;
+
         /// The directory of the render cache of \a document.
         std::filesystem::path cacheDirectoryFor(const kit::ProjectDocument &document);
 

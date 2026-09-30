@@ -96,6 +96,10 @@
              while its notes stay the same -->
         <action id="helloutau.playback.replay" text="&amp;Replay" category="Playback"
                 shortcut="Shift+F5" />
+        <!-- A copy of the track file of the last prerender, the temp.wav of UTAU, apart from the
+             output file of the project -->
+        <action id="helloutau.playback.saveLastPlayed" text="Save &amp;Last Played As..."
+                category="Playback" />
 
         <!-- The voice bank of the project in its window, at the entry of the first selected note
              if a note is selected, as Ctrl+G in UTAU -->
@@ -255,6 +259,8 @@
             <action id="helloutau.playback.pause" />
             <action id="helloutau.playback.stop" />
             <action id="helloutau.playback.replay" />
+            <separator />
+            <action id="helloutau.playback.saveLastPlayed" />
         </insertion>
         <insertion target="helloutau.tools" anchor="first">
             <action id="helloutau.tools.editVoiceBank" />

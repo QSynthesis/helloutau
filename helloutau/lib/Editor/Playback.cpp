@@ -160,6 +160,8 @@ namespace hello::daw {
             // Where its track file starts, and the rate it plays at
             double startTime = 0;
             int deviceRate = 0;
+            // The track file that the render wrote
+            std::filesystem::path file;
         };
         std::optional<Rendered> kept;
         // Where playback was paused, and whether a preview was, while it is
@@ -267,8 +269,9 @@ namespace hello::daw {
                 Q_EMIT decl.failed(finished->diagnostics);
                 return;
             }
-            kept = Rendered{finished->key, finished->samples, finished->channels,
-                            finished->startTime, finished->deviceRate};
+            kept =
+                Rendered{finished->key,       finished->samples,    finished->channels,
+                         finished->startTime, finished->deviceRate, finished->plan->outputFile()};
             playRendered(0);
         }
 
@@ -544,6 +547,11 @@ namespace hello::daw {
         impl.output->stop();
         impl.endPreview();
         impl.setState(Stopped);
+    }
+
+    std::filesystem::path Playback::lastRenderFile() const {
+        stdc_impl_t;
+        return impl.kept ? impl.kept->file : std::filesystem::path();
     }
 
     std::optional<double> Playback::position() const {
