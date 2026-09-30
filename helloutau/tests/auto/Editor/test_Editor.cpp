@@ -29,6 +29,7 @@
 #include <hellokit/Edit/VoiceBankDocument.h>
 #include <hellokit/Edit/VoiceBankRefs.h>
 
+#include <helloutau/Audio/AudioOutput.h>
 #include <helloutau/Widgets/CommandPalette.h>
 #include <helloutau/Widgets/SettingPage.h>
 #include <helloutau/Widgets/SettingsDialog.h>
@@ -1003,7 +1004,8 @@ private Q_SLOTS:
             menus.push_back(action->text());
         }
         QCOMPARE(menus, (QStringList{QStringLiteral("&File"), QStringLiteral("&Edit"),
-                                     QStringLiteral("&View"), QStringLiteral("&Tools")}));
+                                     QStringLiteral("&View"), QStringLiteral("&Playback"),
+                                     QStringLiteral("&Tools")}));
 
         // All folders at first: a, b missing, c unlisted, and x and y in sub
         const auto tree = window->directoryTree();
@@ -1319,6 +1321,36 @@ private Q_SLOTS:
         window->setCurrentRow(1);
         QVERIFY(!view->audio());
         window->hide();
+    }
+
+    // Play Audio File plays the audio of the current entry, and again stops it.
+    void the_audio_file_of_the_current_entry_plays() {
+        if (AudioOutput::deviceSampleRate() <= 0) {
+            QSKIP("This machine has no audio output device.");
+        }
+        QTemporaryDir dir;
+        const auto bank = voiceBank(dir);
+        writeWave(bank / "a.wav", 1000);
+        const auto e = editor();
+        const auto window = e->openVoiceBank(bank);
+        QVERIFY(window);
+        const auto tree = window->directoryTree();
+        tree->setCurrentItem(tree->topLevelItem(1));
+        window->setCurrentRow(0);
+        const auto play = actionNamed(window, QStringLiteral("&Play Audio File"));
+        const auto stop = actionNamed(window, QStringLiteral("&Stop"));
+        QVERIFY(play && stop);
+        QVERIFY(!stop->isEnabled());
+        play->trigger();
+        QVERIFY(stop->isEnabled());
+        play->trigger();
+        QVERIFY(!stop->isEnabled());
+
+        // Another entry stops it.
+        play->trigger();
+        QVERIFY(stop->isEnabled());
+        window->setCurrentRow(1);
+        QVERIFY(!stop->isEnabled());
     }
 
     // An alias that another entry of the same file has, as read, is marked.

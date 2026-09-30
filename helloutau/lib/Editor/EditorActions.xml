@@ -147,12 +147,26 @@
                 category="Set at Pointer" shortcut="4" />
         <action id="helloutau.voiceBank.setCutoff" text="C&amp;utoff" category="Set at Pointer"
                 shortcut="5" />
+        <!-- The audio file of the current entry, or a stop of what plays -->
+        <action id="helloutau.voiceBank.playAudio" text="&amp;Play Audio File" category="Playback"
+                shortcut="Space" />
+        <action id="helloutau.voiceBank.playSpan" text="Play from &amp;Offset to Cutoff"
+                category="Playback" shortcut="Shift+Space" />
+        <!-- From the time under the pointer, while the pointer is over the waveform; a double
+             click there does the same -->
+        <action id="helloutau.voiceBank.playFromPointer" text="Play from Poi&amp;nter"
+                category="Playback" shortcut="P" />
+        <!-- A note of the current entry by the resampler of the settings, at the pitch and of
+             the length beside the waveform -->
+        <action id="helloutau.voiceBank.synthesize" text="&amp;Synthesize Note" category="Playback"
+                shortcut="Ctrl+Return" />
 
         <menu id="helloutau.voiceBankMenu" topLevel="true" />
         <menu id="helloutau.voiceBank.file" text="&amp;File" />
         <menu id="helloutau.voiceBank.edit" text="&amp;Edit" />
         <menu id="helloutau.voiceBank.setValue" text="&amp;Set at Pointer" />
         <menu id="helloutau.voiceBank.view" text="&amp;View" />
+        <menu id="helloutau.voiceBank.playback" text="&amp;Playback" />
         <menu id="helloutau.voiceBank.tools" text="&amp;Tools" />
     </items>
 
@@ -272,6 +286,14 @@
             </menu>
             <menu id="helloutau.voiceBank.view">
                 <action id="helloutau.view.commandPalette" />
+            </menu>
+            <menu id="helloutau.voiceBank.playback">
+                <action id="helloutau.voiceBank.playAudio" />
+                <action id="helloutau.voiceBank.playSpan" />
+                <action id="helloutau.voiceBank.playFromPointer" />
+                <action id="helloutau.voiceBank.synthesize" />
+                <separator />
+                <action id="helloutau.playback.stop" />
             </menu>
             <menu id="helloutau.voiceBank.tools">
                 <action id="helloutau.tools.settings" />

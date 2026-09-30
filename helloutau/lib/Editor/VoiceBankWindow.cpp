@@ -12,6 +12,7 @@
 #include <QtCore/QTimer>
 #include <QtGui/QAction>
 #include <QtGui/QCloseEvent>
+#include <QtWidgets/QComboBox>
 #include <QtWidgets/QFileDialog>
 #include <QtWidgets/QFrame>
 #include <QtWidgets/QHBoxLayout>
@@ -23,8 +24,10 @@
 #include <QtWidgets/QMenuBar>
 #include <QtWidgets/QMessageBox>
 #include <QtWidgets/QPushButton>
+#include <QtWidgets/QSpinBox>
 #include <QtWidgets/QSplitter>
 #include <QtWidgets/QStatusBar>
+#include <QtWidgets/QToolButton>
 #include <QtWidgets/QTableView>
 #include <QtWidgets/QTreeWidget>
 #include <QtWidgets/QTreeWidgetItemIterator>
@@ -49,6 +52,7 @@
 #include "DiagnosticBox_p.h"
 #include "Editor.h"
 #include "OtoWaveformView.h"
+#include "SamplePreview.h"
 #include "VoiceBankCharsetDialog.h"
 #include "VoiceBankEntryModel.h"
 
@@ -131,6 +135,12 @@ namespace hello::daw {
         QSortFilterProxyModel *proxy = nullptr;
         OtoWaveformView *waveform = nullptr;
         QVBoxLayout *lowerLayout = nullptr;
+        SamplePreview *preview = nullptr;
+        QComboBox *pitchBox = nullptr;
+        QSpinBox *lengthBox = nullptr;
+        QTimer *playheadTimer = nullptr;
+        // The folder and alias whose pitch pitchBox shows by default
+        std::optional<std::pair<std::filesystem::path, QString>> pitchOf;
         // The audio files read for the waveform, by path, with the size and time they had
         struct ReadAudio {
             QString stamp;
@@ -232,6 +242,27 @@ namespace hello::daw {
                 stdc_decl_t;
                 decl.removeEntries();
             });
+            addCommand(QStringLiteral("helloutau.voiceBank.playAudio"), [this] {
+                if (preview->state() != SamplePreview::Stopped) {
+                    preview->stop();
+                    return;
+                }
+                playAudio(0, std::nullopt);
+            });
+            addCommand(QStringLiteral("helloutau.voiceBank.playSpan"), [this] {
+                if (const auto entry = waveform->entry()) {
+                    const double length = waveform->duration();
+                    playAudio(OtoWaveformView::positionOf(*entry, OtoWaveformView::Offset, length),
+                              OtoWaveformView::positionOf(*entry, OtoWaveformView::Cutoff, length));
+                }
+            });
+            addCommand(QStringLiteral("helloutau.voiceBank.playFromPointer"), [this] {
+                if (const auto time = waveform->pointerTime()) {
+                    playAudio(*time, std::nullopt);
+                }
+            });
+            addCommand(QStringLiteral("helloutau.voiceBank.synthesize"), [this] { synthesize(); });
+            addCommand(QStringLiteral("helloutau.playback.stop"), [this] { preview->stop(); });
             for (const auto &[id, value] : valueCommands()) {
                 addCommand(id, [this, value = value] {
                     if (const auto time = waveform->pointerTime()) {
@@ -344,14 +375,20 @@ namespace hello::daw {
 
             // The waveform of the current entry below, across the window
             waveform = new OtoWaveformView();
+            // Keys of the waveform alone, which the table and the search box type otherwise
+            QStringList waveformIds{QStringLiteral("helloutau.voiceBank.playFromPointer")};
             for (const auto &command : valueCommands()) {
-                const auto action = actions.value(command.first);
+                waveformIds.push_back(command.first);
+            }
+            for (const auto &id : std::as_const(waveformIds)) {
+                const auto action = actions.value(id);
                 action->setShortcutContext(Qt::WidgetWithChildrenShortcut);
                 waveform->addAction(action);
             }
             auto lower = new QWidget();
             lowerLayout = new QVBoxLayout(lower);
             lowerLayout->setContentsMargins(0, 0, 0, 0);
+            lowerLayout->addLayout(previewControls());
             lowerLayout->addWidget(waveform, 1);
 
             auto vertical = new QSplitter(Qt::Vertical);
@@ -755,7 +792,13 @@ namespace hello::daw {
         void initWaveform() {
             stdc_decl_t;
             QObject::connect(table->selectionModel(), &QItemSelectionModel::currentRowChanged,
-                             &decl, [this] { showCurrentEntry(); });
+                             &decl, [this] {
+                                 preview->stop();
+                                 showCurrentEntry();
+                                 updatePitch();
+                             });
+            QObject::connect(waveform, &OtoWaveformView::playRequested, &decl,
+                             [this](double time) { playAudio(time, std::nullopt); });
             QObject::connect(model, &QAbstractItemModel::dataChanged, &decl,
                              [this] { showCurrentEntry(); });
             QObject::connect(model, &QAbstractItemModel::modelReset, &decl,
@@ -773,6 +816,127 @@ namespace hello::daw {
                                  model->refresh();
                                  showCurrentEntry();
                              });
+        }
+
+        static QString noteName(int noteNum) {
+            static const char *const names[] = {"C",  "C#", "D",  "D#", "E",  "F",
+                                                "F#", "G",  "G#", "A",  "A#", "B"};
+            return QString::fromLatin1(names[noteNum % 12]) + QString::number(noteNum / 12 - 1);
+        }
+
+        // The buttons of the preview above the waveform, with the pitch and the length of the
+        // synthesized note
+        QHBoxLayout *previewControls() {
+            stdc_decl_t;
+            preview = new SamplePreview(&decl);
+            auto controls = new QHBoxLayout();
+            for (const auto id : {"helloutau.voiceBank.playAudio", "helloutau.voiceBank.playSpan",
+                                  "helloutau.voiceBank.synthesize", "helloutau.playback.stop"}) {
+                auto button = new QToolButton();
+                button->setDefaultAction(actions.value(QString::fromLatin1(id)));
+                button->setToolButtonStyle(Qt::ToolButtonTextOnly);
+                controls->addWidget(button);
+            }
+            controls->addSpacing(12);
+            pitchBox = new QComboBox();
+            for (int noteNum = kit::VoicePrefix::minimumKey;
+                 noteNum <= kit::VoicePrefix::maximumKey; ++noteNum) {
+                pitchBox->addItem(noteName(noteNum), noteNum);
+            }
+            pitchBox->setCurrentIndex(pitchBox->findData(60));
+            auto pitchLabel = new QLabel(tr("&Pitch:"));
+            pitchLabel->setBuddy(pitchBox);
+            controls->addWidget(pitchLabel);
+            controls->addWidget(pitchBox);
+            lengthBox = new QSpinBox();
+            lengthBox->setRange(15, 7680);
+            lengthBox->setSingleStep(15);
+            lengthBox->setValue(480);
+            lengthBox->setSuffix(tr(" ticks"));
+            auto lengthLabel = new QLabel(tr("&Length:"));
+            lengthLabel->setBuddy(lengthBox);
+            controls->addWidget(lengthLabel);
+            controls->addWidget(lengthBox);
+            controls->addStretch();
+
+            playheadTimer = new QTimer(&decl);
+            playheadTimer->setInterval(30);
+            QObject::connect(playheadTimer, &QTimer::timeout, &decl,
+                             [this] { waveform->setPlayhead(preview->position()); });
+            QObject::connect(preview, &SamplePreview::stateChanged, &decl,
+                             [this](SamplePreview::State state) {
+                                 if (state == SamplePreview::Playing) {
+                                     playheadTimer->start();
+                                 } else {
+                                     playheadTimer->stop();
+                                     waveform->setPlayhead(std::nullopt);
+                                 }
+                                 actions.value(QStringLiteral("helloutau.playback.stop"))
+                                     ->setEnabled(state != SamplePreview::Stopped);
+                             });
+            QObject::connect(preview, &SamplePreview::failed, &decl,
+                             [this](const kit::DiagnosticList &diagnostics) {
+                                 stdc_decl_t;
+                                 DiagnosticBox::show(&decl, tr("Preview"), diagnostics);
+                             });
+            actions.value(QStringLiteral("helloutau.playback.stop"))->setEnabled(false);
+            return controls;
+        }
+
+        void playAudio(double from, std::optional<double> to) {
+            stdc_decl_t;
+            if (!waveform->audio()) {
+                return;
+            }
+            kit::DiagnosticList diagnostics;
+            preview->play(waveform->audio(), from, to, diagnostics);
+            DiagnosticBox::show(&decl, tr("Play"), diagnostics);
+        }
+
+        void synthesize() {
+            stdc_decl_t;
+            const int row = decl.currentRow();
+            if (row < 0) {
+                return;
+            }
+            const auto entry = model->entryOf(row);
+            kit::VoiceSample sample;
+            sample.path = audioPathOf(row);
+            sample.fileName = entry.fileName;
+            sample.alias = entry.alias;
+            sample.offset = entry.offset;
+            sample.consonant = entry.consonant;
+            sample.cutoff = entry.cutoff;
+            sample.preUtterance = entry.preUtterance;
+            sample.voiceOverlap = entry.voiceOverlap;
+            kit::DiagnosticList diagnostics;
+            preview->synthesize(sample, pitchBox->currentData().toInt(), lengthBox->value(),
+                                pathOf(editor->settings().resampler()), diagnostics);
+            DiagnosticBox::show(&decl, tr("Synthesize"), diagnostics);
+        }
+
+        // Sets the pitch of the synthesized note to that of the folder of the current entry,
+        // once another entry becomes current.
+        void updatePitch() {
+            stdc_decl_t;
+            const int row = decl.currentRow();
+            if (row < 0) {
+                return;
+            }
+            const std::pair key{model->directoryOf(row), model->entryOf(row).alias};
+            if (pitchOf == key) {
+                return;
+            }
+            pitchOf = key;
+            QMap<int, kit::VoicePrefix> prefixMap;
+            const auto map = kit::VoiceBankRef(document->session()).prefixMap();
+            if (map.isValid()) {
+                for (const int noteNum : map.keys()) {
+                    prefixMap.insert(noteNum, map.value(noteNum));
+                }
+            }
+            pitchBox->setCurrentIndex(
+                pitchBox->findData(SamplePreview::noteNumFor(prefixMap, key.first, key.second)));
         }
 
         void showDirectoryOf(QTreeWidgetItem *item) {
