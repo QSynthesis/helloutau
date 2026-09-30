@@ -12,6 +12,9 @@
 #include <stdcorelib/pimpl.h>
 #include <stdcorelib/pluginsystem/pluginsystem.h>
 
+#include "AppSettings.h"
+#include "AppSettings_p.h"
+
 namespace hello::daw {
 
     namespace {
@@ -26,7 +29,26 @@ namespace hello::daw {
                                                 stdc::pluginsystem::PluginSystem::Bundle};
         QStringList pluginPaths;
         QStringList files;
+        std::unique_ptr<AppSettings> settings;
         bool loaded = false;
+
+        // The plugins that the user enabled or disabled, which override those of their
+        // metadata. Settings that the library rejects leave every plugin as its metadata says.
+        void applyPluginSettings() {
+            const auto &value = settings->_impl->value("plugins");
+            if (value.isNull()) {
+                return;
+            }
+            std::string error;
+            auto pluginSettings = stdc::pluginsystem::PluginSettings::fromJson(value, &error);
+            if (!pluginSettings) {
+                qWarning().noquote()
+                    << "The settings of the plugins are ignored:" << QString::fromStdString(error);
+                return;
+            }
+            system.setPluginSettings(stdc::pluginsystem::PluginSystem::Local,
+                                     std::move(*pluginSettings));
+        }
     };
 
     AppLoader::AppLoader(const QStringList &arguments) : _impl(std::make_unique<Impl>()) {
@@ -35,16 +57,25 @@ namespace hello::daw {
         currentAppLoader = this;
 
         impl.pluginPaths.push_back(builtinPluginPath());
+        QString settingsFile;
         for (int i = 1; i < arguments.size(); ++i) {
+            // A trailing option without its value is ignored.
             if (arguments[i] == QLatin1String(pluginPathOption)) {
-                // A trailing option without a directory is ignored.
                 if (++i < arguments.size()) {
                     impl.pluginPaths.push_back(arguments[i]);
                 }
                 continue;
             }
+            if (arguments[i] == QLatin1String(settingsOption)) {
+                if (++i < arguments.size()) {
+                    settingsFile = arguments[i];
+                }
+                continue;
+            }
             impl.files.push_back(arguments[i]);
         }
+        impl.settings = settingsFile.isEmpty() ? std::make_unique<AppSettings>()
+                                               : std::make_unique<AppSettings>(settingsFile);
     }
 
     AppLoader::~AppLoader() {
@@ -76,6 +107,11 @@ namespace hello::daw {
         return impl.files;
     }
 
+    AppSettings &AppLoader::settings() const {
+        stdc_impl_t;
+        return *impl.settings;
+    }
+
     bool AppLoader::load(QString *error) {
         stdc_impl_t;
         if (!impl.loaded) {
@@ -85,6 +121,7 @@ namespace hello::daw {
                 paths.emplace_back(path.toStdU16String());
             }
             impl.system.setPluginPaths(paths);
+            impl.applyPluginSettings();
             impl.system.loadPlugins();
         }
 

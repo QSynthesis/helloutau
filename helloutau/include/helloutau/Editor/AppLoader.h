@@ -11,6 +11,8 @@
 
 namespace hello::daw {
 
+    class AppSettings;
+
     /// Starts the application: loads the native plugins, of which the core plugin creates the
     /// editor and opens its windows, and runs the event loop. The program does nothing else. See
     /// docs/Plugins.md.
@@ -29,9 +31,13 @@ namespace hello::daw {
         /// The option that adds a directory to search for plugins, followed by the directory.
         static constexpr char pluginPathOption[] = "--plugin-path";
 
+        /// The option that names the settings file in place of the one of the user, followed by
+        /// the file.
+        static constexpr char settingsOption[] = "--settings";
+
         /// A loader for the command line \a arguments, the first of which is the program. Each
-        /// \c --plugin-path adds the directory after it to the plugin paths, and the other
-        /// arguments are files.
+        /// \c --plugin-path adds the directory after it to the plugin paths, \c --settings names
+        /// the settings file, and the other arguments are files.
         explicit AppLoader(const QStringList &arguments);
 
         /// Shuts the plugins down if they are still loaded.
@@ -56,7 +62,12 @@ namespace hello::daw {
         /// The files named on the command line, which the core plugin opens.
         QStringList files() const;
 
-        /// Loads the plugins once. The errors of plugins other than the core plugin are logged.
+        /// The settings of the application, which the core plugin gives to the editor and the
+        /// plugins read their own data from: those of the user, or the file of \c --settings.
+        AppSettings &settings() const;
+
+        /// Loads the plugins once, with the plugins that the settings enable or disable. The
+        /// errors of plugins other than the core plugin are logged.
         ///
         /// \return whether the core plugin runs, or else false with the reason in \a error
         bool load(QString *error);

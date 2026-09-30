@@ -1,3 +1,8 @@
+#include <QtCore/QFile>
+#include <QtCore/QJsonArray>
+#include <QtCore/QJsonDocument>
+#include <QtCore/QJsonObject>
+#include <QtCore/QRegularExpression>
 #include <QtCore/QTemporaryDir>
 #include <QtTest/QTest>
 
@@ -11,7 +16,7 @@ class test_AppSettings : public QObject {
 private Q_SLOTS:
     void unset_values_are_empty_except_the_export_encoding() {
         QTemporaryDir dir;
-        const AppSettings settings(dir.filePath(QStringLiteral("settings.ini")));
+        const AppSettings settings(dir.filePath(QStringLiteral("settings.json")));
         QVERIFY(settings.utauDirectory().empty());
         QVERIFY(settings.resampler().isEmpty());
         QVERIFY(settings.wavtool().isEmpty());
@@ -22,7 +27,7 @@ private Q_SLOTS:
     // The latest first, each once, at most recentFileCount, whole paths in any script
     void recent_files_are_kept_latest_first() {
         QTemporaryDir dir;
-        const auto file = dir.filePath(QStringLiteral("settings.ini"));
+        const auto file = dir.filePath(QStringLiteral("settings.json"));
         {
             AppSettings settings(file);
             QVERIFY(settings.recentFiles().isEmpty());
@@ -50,7 +55,7 @@ private Q_SLOTS:
     // The voice banks are a list of their own, kept as the files are.
     void recent_voice_banks_are_kept_apart() {
         QTemporaryDir dir;
-        AppSettings settings(dir.filePath(QStringLiteral("settings.ini")));
+        AppSettings settings(dir.filePath(QStringLiteral("settings.json")));
         const auto bank = std::filesystem::path(u"C:/voice/音源");
         settings.addRecentFile(std::filesystem::path(u"C:/songs/a.usth"));
         settings.addRecentVoiceBank(bank);
@@ -69,7 +74,7 @@ private Q_SLOTS:
 
     void values_persist_in_the_file() {
         QTemporaryDir dir;
-        const auto file = dir.filePath(QStringLiteral("settings.ini"));
+        const auto file = dir.filePath(QStringLiteral("settings.json"));
         const auto utau = std::filesystem::path(u"C:/UTAU/歌");
         {
             AppSettings settings(file);
@@ -85,6 +90,109 @@ private Q_SLOTS:
         QCOMPARE(settings.wavtool(), QStringLiteral("C:/UTAU/wavtool.exe"));
         QCOMPARE(settings.ustExportCharset(), QStringLiteral("Shift_JIS"));
         QCOMPARE(settings.playbackMode(), AppSettings::Realtime);
+    }
+
+    // The file keeps its groups: the settings of the application under engines, playback,
+    // files and commandPalette, and a group empties away with its last value.
+    void the_file_keeps_its_groups() {
+        QTemporaryDir dir;
+        const auto file = dir.filePath(QStringLiteral("settings.json"));
+        {
+            AppSettings settings(file);
+            settings.setResampler(QStringLiteral("r.exe"));
+            settings.setWavtool(QStringLiteral("w.exe"));
+            settings.setPlaybackMode(AppSettings::Realtime);
+            settings.addRecentFile(std::filesystem::path(u"C:/a.usth"));
+        }
+        const auto root = readFile(file);
+        QCOMPARE(
+            root.value(QStringLiteral("engines")).toObject().value(QStringLiteral("resampler")),
+            QJsonValue(QStringLiteral("r.exe")));
+        QCOMPARE(root.value(QStringLiteral("playback")).toObject().value(QStringLiteral("mode")),
+                 QJsonValue(QStringLiteral("realtime")));
+        QCOMPARE(root.value(QStringLiteral("files")).toObject().value(QStringLiteral("recent")),
+                 QJsonValue(QJsonArray({QStringLiteral("C:/a.usth")})));
+
+        AppSettings settings(file);
+        settings.clearRecentFiles();
+        QVERIFY(!readFile(file).contains(QStringLiteral("files")));
+        QCOMPARE(settings.value(QStringLiteral("engines/wavtool")),
+                 QJsonValue(QStringLiteral("w.exe")));
+    }
+
+    // Any value by its key, a path of names: set within its groups, which are created, and
+    // removed with those it leaves empty.
+    void values_by_key() {
+        QTemporaryDir dir;
+        const auto file = dir.filePath(QStringLiteral("settings.json"));
+        {
+            AppSettings settings(file);
+            QVERIFY(settings.value(QStringLiteral("a/b/c")).isUndefined());
+            settings.setValue(QStringLiteral("a/b/c"), 1);
+            settings.setValue(QStringLiteral("a/b/d"),
+                              QJsonArray({true, 2.5, QStringLiteral("x")}));
+            settings.setValue(QStringLiteral("a/e"), QJsonObject({
+                                                         {QStringLiteral("f"), 3}
+            }));
+        }
+        AppSettings settings(file);
+        QCOMPARE(settings.value(QStringLiteral("a/b/c")), QJsonValue(1));
+        QCOMPARE(settings.value(QStringLiteral("a/b/d")),
+                 QJsonValue(QJsonArray({true, 2.5, QStringLiteral("x")})));
+        QCOMPARE(settings.value(QStringLiteral("a/e/f")), QJsonValue(3));
+        // A value is no group to look into.
+        QVERIFY(settings.value(QStringLiteral("a/b/c/g")).isUndefined());
+
+        settings.setValue(QStringLiteral("a/b/c"), QJsonValue());
+        settings.setValue(QStringLiteral("a/b/d"), QJsonValue::Undefined);
+        QVERIFY(settings.value(QStringLiteral("a/b")).isUndefined());
+        settings.setValue(QStringLiteral("a/e/f"), QJsonValue());
+        QVERIFY(!readFile(file).contains(QStringLiteral("a")));
+    }
+
+    // A plugin keeps its values in its own group of plugins/userData.
+    void a_plugin_has_a_group() {
+        QTemporaryDir dir;
+        const auto file = dir.filePath(QStringLiteral("settings.json"));
+        {
+            AppSettings settings(file);
+            settings.setValue(
+                AppSettings::pluginKey(QStringLiteral("org.test.p")) + QStringLiteral("/count"), 7);
+        }
+        QCOMPARE(readFile(file)
+                     .value(QStringLiteral("plugins"))
+                     .toObject()
+                     .value(QStringLiteral("userData"))
+                     .toObject()
+                     .value(QStringLiteral("org.test.p"))
+                     .toObject()
+                     .value(QStringLiteral("count")),
+                 QJsonValue(7));
+    }
+
+    // A file that is not a JSON object is read as empty, and replaced by the next change.
+    void an_unreadable_file_is_empty() {
+        QTemporaryDir dir;
+        const auto file = dir.filePath(QStringLiteral("settings.json"));
+        {
+            QFile out(file);
+            QVERIFY(out.open(QIODevice::WriteOnly));
+            out.write("[#VERSION]");
+        }
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(QStringLiteral("cannot be read")));
+        AppSettings settings(file);
+        QVERIFY(settings.resampler().isEmpty());
+        settings.setResampler(QStringLiteral("r.exe"));
+        QCOMPARE(AppSettings(file).resampler(), QStringLiteral("r.exe"));
+    }
+
+private:
+    static QJsonObject readFile(const QString &file) {
+        QFile in(file);
+        if (!in.open(QIODevice::ReadOnly)) {
+            return {};
+        }
+        return QJsonDocument::fromJson(in.readAll()).object();
     }
 };
 

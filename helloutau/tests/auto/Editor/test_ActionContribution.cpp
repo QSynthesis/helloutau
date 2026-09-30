@@ -88,7 +88,7 @@ class test_ActionContribution : public QObject {
 
     std::unique_ptr<Editor> editor() const {
         auto e = std::make_unique<Editor>(
-            std::make_unique<AppSettings>(m_dir.filePath(QStringLiteral("settings.ini"))));
+            std::make_unique<AppSettings>(m_dir.filePath(QStringLiteral("settings.json"))));
         e->setWatchesDisk(false);
         return e;
     }

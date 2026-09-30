@@ -4,8 +4,8 @@
 #include <filesystem>
 #include <memory>
 
+#include <QtCore/QJsonValue>
 #include <QtCore/QList>
-#include <QtCore/QSettings>
 #include <QtCore/QString>
 #include <QtCore/QStringList>
 
@@ -13,17 +13,25 @@
 
 namespace hello::daw {
 
-    /// The settings of the editor, stored per user in an INI file.
+    /// The settings of the application and of its plugins, stored per user in one JSON file.
+    ///
+    /// The file is read once, and written whole at each change. Of two applications that change
+    /// it, the one that writes last prevails.
     class HELLOUTAU_EDITOR_EXPORT AppSettings {
     public:
-        /// The settings of the current user, in the location Qt chooses for the organization and
-        /// application names of \c QCoreApplication.
+        /// The settings of the current user, in defaultFileName().
         AppSettings();
 
         /// The settings stored in \a fileName.
         explicit AppSettings(const QString &fileName);
 
         ~AppSettings();
+
+        /// \c settings.json in the data directory that Qt chooses for the organization and
+        /// application names of \c QCoreApplication.
+        static QString defaultFileName();
+
+        QString fileName() const;
 
         /// The directory that contains \c utau.exe, which resolves the \c %VOICE% prefix and
         /// relative paths in \c VoiceDir, see Track::voiceDirectory(). Empty if not set.
@@ -86,14 +94,38 @@ namespace hello::daw {
         /// fewer, and "More..." all of them.
         static constexpr int recentFileCount = 50;
 
+        /// \name Values by key
+        ///
+        /// Any value of the file, by its key: the names of its groups and its own, joined by
+        /// slashes, such as \c engines/resampler. The functions above are these for the values
+        /// of the application.
+        /// @{
+
+        /// The value at \a key, undefined if there is none.
+        QJsonValue value(const QString &key) const;
+
+        /// Replaces the value at \a key, creating the groups it lies in, and writes the file.
+        /// An undefined or null \a value removes it, and with it each group that it leaves
+        /// empty.
+        void setValue(const QString &key, const QJsonValue &value);
+        /// @}
+
+        /// The group of the plugin \a id, under which it keeps its own values, such as
+        /// <tt>pluginKey(id) + "/approved"</tt>.
+        ///
+        /// It lies in the group \c plugins, in the form that \c PluginSettings of
+        /// stdcorelib.plugin reads: the IDs of the plugins that the user enabled or disabled,
+        /// \c enabledPlugins and \c disabledPlugins, which AppLoader applies, and the values of
+        /// each plugin under its ID in \c userData.
+        static QString pluginKey(const QString &id);
+
     private:
+        class Impl;
+        std::unique_ptr<Impl> _impl;
+
         Q_DISABLE_COPY(AppSettings)
 
-        QList<std::filesystem::path> recentPaths(const char *key) const;
-        void addRecentPath(const char *key, const std::filesystem::path &path);
-        void removeRecentPath(const char *key, const std::filesystem::path &path);
-
-        std::unique_ptr<QSettings> m_settings;
+        friend class AppLoader;
     };
 
 }

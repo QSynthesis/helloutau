@@ -39,6 +39,10 @@ namespace hello::daw {
         /// An editor with \a settings, for tests.
         explicit Editor(std::unique_ptr<AppSettings> settings, QObject *parent = nullptr);
 
+        /// An editor with \a settings that another object owns and that outlive the editor, as
+        /// the core plugin takes those of AppLoader.
+        explicit Editor(AppSettings &settings, QObject *parent = nullptr);
+
         ~Editor();
 
         AppSettings &settings() const;

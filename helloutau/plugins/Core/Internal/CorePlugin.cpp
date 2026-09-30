@@ -15,7 +15,11 @@ namespace hello::daw {
     bool CorePlugin::initialize(std::string *errorMessage) {
         Q_UNUSED(errorMessage);
         m_actions = std::make_unique<BuiltinActions>();
-        m_editor = std::make_unique<Editor>();
+        // The settings of the loader, which outlive the editor, or those of the user if no
+        // loader loaded this plugin
+        const auto loader = AppLoader::instance();
+        m_editor =
+            loader ? std::make_unique<Editor>(loader->settings()) : std::make_unique<Editor>();
         return true;
     }
 

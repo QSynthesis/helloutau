@@ -4,7 +4,8 @@
 #include <QtCore/QCryptographicHash>
 #include <QtCore/QDir>
 #include <QtCore/QFile>
-#include <QtCore/QSettings>
+#include <QtCore/QJsonArray>
+#include <QtCore/QJsonObject>
 #include <QtWidgets/QDialog>
 #include <QtWidgets/QDialogButtonBox>
 #include <QtWidgets/QLabel>
@@ -39,20 +40,19 @@ namespace hello::daw {
             return QDir::toNativeSeparators(QString::fromStdU16String(path.u16string()));
         }
 
-        // The programs that the user allowed to run, by the folder of their plugin: a file of
-        // its own beside the settings of the editor
-        QSettings approvals() {
-            return QSettings(QSettings::IniFormat, QSettings::UserScope,
-                             QCoreApplication::organizationName(),
-                             QStringLiteral("ClassicPluginHost"));
+        // The ID of this plugin, under which the settings keep its values
+        const char pluginId[] = "org.helloutau.classicpluginhost";
+
+        // The programs that the user allowed to run, in the group of this plugin, each as the
+        // folder of its plugin and the fingerprint of the program
+        //
+        //     "approved": [{"folder": "C:\\UTAU\\plugins\\Foo", "program": "<SHA-256>"}]
+        QString approvedKey() {
+            return AppSettings::pluginKey(QLatin1String(pluginId)) + QStringLiteral("/approved");
         }
 
-        QString keyOf(const ClassicPlugin &plugin) {
-            return QStringLiteral("approved/") +
-                   QString::fromLatin1(QCryptographicHash::hash(textOf(plugin.folder).toUtf8(),
-                                                                QCryptographicHash::Sha1)
-                                           .toHex());
-        }
+        const char folderKey[] = "folder";
+        const char programKey[] = "program";
 
         // The content of the program, so that a changed program is asked for again
         QString fingerprintOf(const ClassicPlugin &plugin) {
@@ -65,15 +65,24 @@ namespace hello::daw {
         }
 
         // Asks the user to allow a program that has not run before, or that has changed since.
-        bool approve(QWidget *parent, const ClassicPlugin &plugin) {
-            auto settings = approvals();
-            const auto key = keyOf(plugin);
+        bool approve(QWidget *parent, AppSettings &settings, const ClassicPlugin &plugin) {
+            auto approved = settings.value(approvedKey()).toArray();
+            const auto folder = textOf(plugin.folder);
             const auto fingerprint = fingerprintOf(plugin);
-            if (settings.value(key).toString() == fingerprint) {
+            qsizetype index = -1;
+            for (qsizetype i = 0; i < approved.size(); ++i) {
+                if (approved[i].toObject().value(QLatin1String(folderKey)).toString() == folder) {
+                    index = i;
+                    break;
+                }
+            }
+            if (index >= 0 &&
+                approved[index].toObject().value(QLatin1String(programKey)).toString() ==
+                    fingerprint) {
                 return true;
             }
             const auto question =
-                settings.contains(key)
+                index >= 0
                     ? ClassicPluginRun::tr("The program of the plugin \"%1\" has changed since it "
                                            "last ran. It runs this program:")
                     : ClassicPluginRun::tr("The plugin \"%1\" has not run before. It runs this "
@@ -87,7 +96,16 @@ namespace hello::daw {
             if (answer != QMessageBox::Yes) {
                 return false;
             }
-            settings.setValue(key, fingerprint);
+            const QJsonObject entry{
+                {QLatin1String(folderKey),  folder     },
+                {QLatin1String(programKey), fingerprint}
+            };
+            if (index >= 0) {
+                approved[index] = entry;
+            } else {
+                approved.push_back(entry);
+            }
+            settings.setValue(approvedKey(), approved);
             return true;
         }
 
@@ -148,7 +166,7 @@ namespace hello::daw {
             count = selected.last() - first + 1;
         }
 
-        if (!approve(window, plugin)) {
+        if (!approve(window, window->editor()->settings(), plugin)) {
             return;
         }
 

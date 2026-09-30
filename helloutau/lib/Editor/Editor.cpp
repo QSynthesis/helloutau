@@ -62,7 +62,24 @@ namespace hello::daw {
     public:
         using Decl = Editor;
 
-        explicit Impl(std::unique_ptr<AppSettings> settings) : settings(std::move(settings)) {
+        // The settings of \a owned, or else \a settings, which another object owns
+        Impl(std::unique_ptr<AppSettings> owned, AppSettings *settings)
+            : ownedSettings(std::move(owned)),
+              settings(ownedSettings ? ownedSettings.get() : settings) {
+        }
+
+        void init(Editor *decl) {
+            // The extensions of the editor itself come as contributions too, see
+            // BuiltinActions.
+            registry = new QAK::ActionRegistry(decl);
+            for (const auto contribution : ActionRegistrations::instance().contributions()) {
+                registry->addExtension(contribution->extension());
+            }
+            ActionRegistrations::instance().addListener(this);
+            themes = new ThemeManager(decl);
+            themes->addSearchPath(QStringLiteral(":/helloutau/themes"));
+            catalog = new SettingCatalog(decl);
+            addEditorSettingPages(catalog, *settings);
         }
 
         // The windows take the actions of a contribution as it comes, and the menus and
@@ -105,7 +122,8 @@ namespace hello::daw {
             }
         }
 
-        std::unique_ptr<AppSettings> settings;
+        std::unique_ptr<AppSettings> ownedSettings;
+        AppSettings *settings;
         QAK::ActionRegistry *registry = nullptr;
         ThemeManager *themes = nullptr;
         SettingCatalog *catalog = nullptr;
@@ -189,18 +207,13 @@ namespace hello::daw {
     }
 
     Editor::Editor(std::unique_ptr<AppSettings> settings, QObject *parent)
-        : QObject(parent), _impl(std::make_unique<Impl>(std::move(settings))) {
-        stdc_impl_t;
-        // The extensions of the editor itself come as contributions too, see BuiltinActions.
-        impl.registry = new QAK::ActionRegistry(this);
-        for (const auto contribution : ActionRegistrations::instance().contributions()) {
-            impl.registry->addExtension(contribution->extension());
-        }
-        ActionRegistrations::instance().addListener(&impl);
-        impl.themes = new ThemeManager(this);
-        impl.themes->addSearchPath(QStringLiteral(":/helloutau/themes"));
-        impl.catalog = new SettingCatalog(this);
-        addEditorSettingPages(impl.catalog, *impl.settings);
+        : QObject(parent), _impl(std::make_unique<Impl>(std::move(settings), nullptr)) {
+        _impl->init(this);
+    }
+
+    Editor::Editor(AppSettings &settings, QObject *parent)
+        : QObject(parent), _impl(std::make_unique<Impl>(nullptr, &settings)) {
+        _impl->init(this);
     }
 
     kit::FrequencyFormatRegistry &Editor::frequencyFormats() const {

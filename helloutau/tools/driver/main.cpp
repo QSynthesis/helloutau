@@ -4,8 +4,8 @@
 
 int main(int argc, char *argv[]) {
     QApplication app(argc, argv);
-    // Names the settings file, see AppSettings
-    QApplication::setOrganizationName(QStringLiteral("HelloUtau"));
+    // Name the directory of the settings file and of the user's plugins of UTAU, see AppSettings
+    QApplication::setOrganizationName(QStringLiteral("OpenVPI"));
     QApplication::setApplicationName(QStringLiteral("HelloUtau"));
 
     // The core plugin creates the editor and opens the windows.

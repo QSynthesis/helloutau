@@ -98,7 +98,7 @@ macOS 的 bundle 中为 `HelloUtau.app/Contents/MacOS`（程序）与 `HelloUtau
 - 插件目录关闭 vcpkg 的 applocal：插件链接的库在载入插件前已由程序载入，applocal 只会把 vcpkg 安装树中的库复制到插件旁，其中包括与程序所用版本不同的 stdcorelib（实际发生过）。
 - 元数据文件名：沿用该库默认的 `plugin.json`，以 `PluginSystem(iid, PluginSystem::Bundle)` 直接构造（作者 2026-09-30 决定）。它与 UTAU 插件文件夹的 `plugin.json` 同名，但两种目录不会互相搜索，库中的 IID 也能区分原生插件，不会误读。
 - 兼容性：C++ 插件须与宿主以同一编译器、同一 Qt 与 hellokit 版本构建。元数据加一个宿主字段（如 `helloutau` 的版本范围），由载入判定检查；判定也用于平台限制（如只在 Windows 可用的 vs4ufrq 格式插件）。
-- 设置：用户的启用设置存为用户配置目录中的一个 JSON 文件（`PluginSettings`），全局设置随安装提供。设置对话框增加「Plugins」页：列出插件、勾选启用、显示错误与依赖。
+- 设置：应用与插件的设置合为一个 JSON 文件，应用数据目录中的 `settings.json`（`AppSettings`，作者 2026-09-30 定；Windows 上为 `%APPDATA%\OpenVPI\HelloUtau\settings.json`，组织名 `OpenVPI`），分组存放：`engines`、`playback`、`files`、`commandPalette` 为应用的设置，`plugins` 为 `PluginSettings` 读取的形式：用户启用或停用的插件 `enabledPlugins` / `disabledPlugins`，以及各插件自己的值 `userData/<插件 ID>`。`AppLoader` 持有设置（`--settings <文件>` 可另指定，测试用它），载入插件前把 `plugins` 交给 `PluginSystem` 的用户一级；Core 插件把同一份设置交给 `Editor`。插件经 `AppSettings::value()` / `setValue()` 以 `a/b/c` 形式的键读写任意一层，自己的组为 `AppSettings::pluginKey(id)`。内部存储用 stdcorelib 的 JSON（值可就地修改），公开接口用 `QJsonValue`，stdcorelib 仍是私有依赖。整个文件在每次修改时重写，多开时后写的覆盖先写的，以后再做独占。全局设置随安装提供，尚未实现。设置对话框增加「Plugins」页：列出插件、勾选启用、显示错误与依赖。
 - **关闭顺序**：插件登记的对象，代码都在插件的库中，必须在卸载前销毁。Core 插件在 `aboutToShutdown()` 中销毁 `Editor`，依赖 Core 的插件的 `aboutToShutdown()` 在它之前调用，各库都在此后才卸载。插件的实例是库中的静态对象，随库卸载而析构，因此窗口等 Qt 对象不能留到那时。
 - **插件交给宿主的数据不能指向插件库的静态存储**：`QStringLiteral` 的文本就在库中，库卸载后仍被宿主持有的这类字符串即成悬空（`test_AppLoader` 的测试插件遇到过）。交给宿主、可能在卸载后仍被使用的字符串须是分配的副本。
 
@@ -141,7 +141,7 @@ stdcorelib.plugin 的生命周期是同步的，不依赖事件循环。HelloUta
    - 删除 `FrequencyFormatPlugin`。
    - 多个格式都匹配重采样器时，默认选**后登记的**，即后载入的插件的格式（作者 2026-09-30 决定）：想接管内置处理的插件依赖 FrequencyEditor，必在其后载入。
    - `AppLoader::errors()` 列出核心插件以外载入失败的插件，`test_AppLoader` 据此检查随应用提供的插件全部载入。起因：`helloutau_add_native_plugin()` 的 `DEPENDENCIES` 原为多值参数，吞掉了其后交给 `helloutau_add_plugin()` 的参数，FrequencyEditor 的 `plugin.json` 因而带有虚假的依赖而载入失败，只写入日志，测试没有发现。`DEPENDENCIES` 现为单值参数，多个依赖以分号分隔。
-5. **设置**：用户的启用设置文件，设置对话框的「Plugins」页。
+5. **设置**：~~用户的启用设置文件~~（`settings.json` 的 `plugins` 组，见上文「设置」），设置对话框的「Plugins」页（未做），随安装提供的全局设置（未做）。
 6. **格式转换驱动**：同样改为注册接口，删除 `InterchangePlugin`。
 7. **ClassicPluginHost 插件**（计划见 [`ClassicPluginHost.md`](ClassicPluginHost.md)）：随 HelloUtau 提供的原生插件，把 UTAU 插件作为命令加入「工具 → 插件」菜单，运行后把结果作为一个撤销步骤应用到选区。选区编辑的注册接口暂不建。验收同 Roadmap 第五阶段：若干社区常用的原版插件能够正常执行并写回结果。
 8. **其余扩展点**：编辑界面扩展、音源批量操作，随各自功能的实现加入。

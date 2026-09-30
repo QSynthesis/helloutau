@@ -1,4 +1,3 @@
-#include <QtCore/QSettings>
 #include <QtCore/QTemporaryDir>
 #include <QtCore/QVariant>
 #include <QtGui/QAction>
@@ -49,7 +48,10 @@ private Q_SLOTS:
     // Loaded with the core plugin, the plugin adds its command to the window that the core
     // plugin opens, which the command palette would offer, and takes it away at shutdown.
     void the_plugin_adds_a_command_to_the_project_window() {
-        AppLoader loader({QStringLiteral("helloutau")});
+        // The settings in a directory of the test rather than those of the user
+        QTemporaryDir settings;
+        AppLoader loader({QStringLiteral("helloutau"), QLatin1String(AppLoader::settingsOption),
+                          settings.filePath(QStringLiteral("settings.json"))});
         loader.setPluginPaths(
             {AppLoader::builtinPluginPath(), QStringLiteral(TEST_ACTION_PLUGINS_DIR)});
         QString error;
@@ -72,11 +74,9 @@ private Q_SLOTS:
 };
 
 int main(int argc, char *argv[]) {
-    // Runs without a display, and the settings of the editor go to a directory of the test.
+    // Runs without a display.
     qputenv("QT_QPA_PLATFORM", "offscreen");
     QApplication app(argc, argv);
-    QTemporaryDir settings;
-    QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settings.path());
     test_TestActionPlugin test;
     return QTest::qExec(&test, argc, argv);
 }
