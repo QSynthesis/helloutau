@@ -1,6 +1,7 @@
 # The external packages this repository builds against, each pointed at by its own `<name>_DIR`.
 #
 #     -Dstdcorelib_DIR=<prefix>/lib/cmake/stdcorelib
+#     -Dstdcorelib-plugin_DIR=<prefix>/lib/cmake/stdcorelib-plugin
 #     -Dstdutau_DIR=<prefix>/lib/cmake/stdutau
 #     -Dwolf-midi_DIR=<prefix>/lib/cmake/wolf-midi
 #     -Dwinacp_DIR=<prefix>/lib/cmake/winacp
@@ -8,8 +9,8 @@
 #     -DQActionKit_DIR=<prefix>/lib/cmake/QActionKit
 #     -Dunofficial-r8brain-free-src_DIR=<prefix>/share/unofficial-r8brain-free-src
 #
-# stdcorelib, stdutau, substate and QActionKit are developed alongside this repository, so none is
-# taken from a vcpkg release. Each must be built and installed separately.
+# stdcorelib, stdcorelib.plugin, stdutau, substate and QActionKit are developed alongside this
+# repository, so none is taken from a vcpkg release. Each must be built and installed separately.
 #
 # Included from the root rather than added as a subdirectory, so that the imported targets are in
 # scope for every module.
@@ -58,6 +59,12 @@ endmacro()
 _hello_find_external(stdcorelib
     "Build https://github.com/stdware/stdcorelib and pass -Dstdcorelib_DIR=<prefix>/lib/cmake/stdcorelib."
     stdcorelib::stdcorelib)
+
+# The loading and lifecycle of the native plugins, a private dependency like stdcorelib, which it
+# requires. HelloUtau defines no plugin class of its own. See docs/Plugins.md.
+_hello_find_external(stdcorelib-plugin
+    "Build https://github.com/stdware/stdcorelib.plugin as a shared library and pass -Dstdcorelib-plugin_DIR=<prefix>/lib/cmake/stdcorelib-plugin."
+    stdcorelib::plugin)
 
 _hello_find_external(stdutau
     "Build https://github.com/diffscope/stdutau and pass -Dstdutau_DIR=<prefix>/lib/cmake/stdutau."

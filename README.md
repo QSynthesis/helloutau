@@ -32,6 +32,7 @@ Requirements:
 | QActionKit | [stdware/qactionkit](https://github.com/stdware/qactionkit), branch `next` | `QActionKit_DIR=<prefix>/lib/cmake/QActionKit` |
 | qmsetup | [stdware/qmsetup](https://github.com/stdware/qmsetup) | `qmsetup_DIR=<prefix>/lib/cmake/qmsetup` |
 | stdcorelib | [stdware/stdcorelib](https://github.com/stdware/stdcorelib) | `stdcorelib_DIR=<prefix>/lib/cmake/stdcorelib` |
+| stdcorelib.plugin | [stdware/stdcorelib.plugin](https://github.com/stdware/stdcorelib.plugin), a shared library | `stdcorelib-plugin_DIR=<prefix>/lib/cmake/stdcorelib-plugin` |
 | stdutau | [diffscope/stdutau](https://github.com/diffscope/stdutau) | `stdutau_DIR=<prefix>/lib/cmake/stdutau` |
 | substate | [stdware/substate](https://github.com/stdware/substate) | `substate_DIR=<prefix>/lib/cmake/substate` |
 | winacp | [QSynthesis/winacp](https://github.com/QSynthesis/winacp) | `winacp_DIR=<prefix>/lib/cmake/winacp` |
@@ -43,8 +44,8 @@ The application also requires the Qt Multimedia and Qt SVG modules.
 ```sh
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug \
     -DCMAKE_PREFIX_PATH=<Qt> \
-    -DQActionKit_DIR=... -Dqmsetup_DIR=... -Dstdcorelib_DIR=... -Dstdutau_DIR=... \
-    -Dsubstate_DIR=... -Dwinacp_DIR=... -Dwolf-midi_DIR=... \
+    -DQActionKit_DIR=... -Dqmsetup_DIR=... -Dstdcorelib_DIR=... -Dstdcorelib-plugin_DIR=... \
+    -Dstdutau_DIR=... -Dsubstate_DIR=... -Dwinacp_DIR=... -Dwolf-midi_DIR=... \
     -Dunofficial-r8brain-free-src_DIR=...
 cmake --build build
 ctest --test-dir build

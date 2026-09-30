@@ -45,7 +45,7 @@ Qt 6 + CMake + C++17。构建脚本的组织方式参照 synthrt：`find_package
 
 **qmsetup 由外部提供**，不纳入仓库，通过 vcpkg 获取。
 
-**stdcorelib、stdutau、substate 和 QActionKit 均不取自 vcpkg，也均不作为子模块。** 四者都与本仓库同步开发，使用子模块指针会导致每次改动都必须先推送才能使用。分别构建并安装，配置时传入 `-Dstdcorelib_DIR=<prefix>/lib/cmake/stdcorelib`、`-Dstdutau_DIR=<prefix>/lib/cmake/stdutau`、`-Dsubstate_DIR=<prefix>/lib/cmake/substate` 和 `-DQActionKit_DIR=<prefix>/lib/cmake/QActionKit`。`third-party/Dependencies.cmake` 统一执行 `find_package`，由根目录的 `CMakeLists.txt` 通过 `include()` 引入；若使用 `add_subdirectory`，导入目标只在该目录作用域内可见，其他模块无法使用。在 Windows 上，该文件还会将 DLL 复制到运行输出目录，vcpkg 的 applocal 不再负责这些库。
+**stdcorelib、stdcorelib.plugin、stdutau、substate 和 QActionKit 均不取自 vcpkg，也均不作为子模块。** 五者都与本仓库同步开发，使用子模块指针会导致每次改动都必须先推送才能使用。分别构建并安装，配置时传入 `-Dstdcorelib_DIR=<prefix>/lib/cmake/stdcorelib`、`-Dstdcorelib-plugin_DIR=<prefix>/lib/cmake/stdcorelib-plugin`、`-Dstdutau_DIR=<prefix>/lib/cmake/stdutau`、`-Dsubstate_DIR=<prefix>/lib/cmake/substate` 和 `-DQActionKit_DIR=<prefix>/lib/cmake/QActionKit`。`third-party/Dependencies.cmake` 统一执行 `find_package`，由根目录的 `CMakeLists.txt` 通过 `include()` 引入；若使用 `add_subdirectory`，导入目标只在该目录作用域内可见，其他模块无法使用。在 Windows 上，该文件还会将 DLL 复制到运行输出目录，vcpkg 的 applocal 不再负责这些库。
 
 **编辑层的文档模型使用 substate**（`stdware/substate`，包含不依赖 Qt 的 `substate` 与存放 `QVariant` 属性节点的 `qsubstate` 两个库），**仅作为 `HelloKitEditBase` 与 `HelloKitEdit` 的私有依赖**：`ss::` 类型不出现在任何公开头文件中（`HelloKitEditBase` 的扩展接口在 `private/` 下，不属于公开接口），节点以 `NodeId` 引用，变更通知由编辑层转换为自己的信号。所有权、事务与撤销的设计见 substate 仓库的 `docs/Design.md`，编辑层的结构见 [`docs/Editing.md`](docs/Editing.md)。
 
@@ -58,6 +58,8 @@ Qt 6 + CMake + C++17。构建脚本的组织方式参照 synthrt：`find_package
 **菜单、工具栏与快捷键由 QActionKit 提供**（`stdware/qactionkit` 的 `next` 分支，只使用 Core 与 Widgets 两个模块）。动作写在动作扩展清单中，由 AEC 在构建时编译（`qak_add_action_extension()`），用户对菜单的自定义以改动记录保存。清单格式见 qactionkit 仓库的 `docs/action-extension-spec.md`。目前还没有模块使用它，接入是为界面阶段做准备。
 
 **stdcorelib 仅作为私有依赖，不出现在公开头文件中。** 子库使用 `LINKS_PRIVATE stdcorelib::stdcorelib`，导出宏使用 `<QtCore/QtGlobal>` 的 `Q_DECL_EXPORT` / `Q_DECL_IMPORT`，不要使用 `STDC_DECL_EXPORT`。两个模块本就依赖 Qt，使用 Qt 的宏不增加额外依赖，而要求下游为一个宏安装 stdcorelib 是不合理的。
+
+**原生插件由 stdcorelib.plugin 载入**（`stdware/stdcorelib.plugin`，构建为动态库，`D:\GitHub\stdcorelib.plugin`），与 stdcorelib 一样是**私有依赖**。本仓库不定义插件类，只提供各扩展点的注册接口，见 [`docs/Plugins.md`](docs/Plugins.md)。该库发现不足时直接修改它，改动单独提交到该仓库，遵守其 `AGENTS.md`。
 
 这些库稳定之后再考虑改为子模块。stdutau 改为子模块时，URL 须写为两级的 `../../diffscope/stdutau.git`：helloutau 位于 `QSynthesis` 组织而 stdutau 位于 `diffscope` 组织，一级的 `../stdutau` 会被解析为 `QSynthesis/stdutau`。
 

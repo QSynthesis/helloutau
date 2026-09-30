@@ -76,14 +76,14 @@ stdcorelib.plugin 的生命周期是同步的，不依赖事件循环。HelloUta
 
 ## 实施步骤
 
-1. **依赖**：stdcorelib.plugin 与 stdcorelib 一样单独构建安装，`third-party/Dependencies.cmake` 以 `-Dstdcorelib-plugin_DIR=` 引入，作为私有依赖。AGENTS.md 与 Status.md 相应补充。
+1. ~~**依赖**~~：stdcorelib.plugin 与 stdcorelib 一样单独构建安装（动态库），`third-party/Dependencies.cmake` 以 `-Dstdcorelib-plugin_DIR=` 引入，作为私有依赖，Windows 上其 DLL 复制到运行输出目录。README、AGENTS.md 与 Status.md 已补充。
 2. ~~**note.md**~~：已按作者的决定改写插件一节（一种原生插件、五个扩展点、UTAU 插件由一个原生插件支持），AGENTS.md、Roadmap.md、Status.md、Interchange.md、FrequencyTables.md 的相应说法一并更新。
 3. **试点：频率表格式**。工厂表、登记对象、`FrequencyFormatRegistry` 改为从工厂表取得并订阅增删；内置的 frq、dio、mrq 经登记对象登记；删除 `FrequencyFormatPlugin`。测试中构建一个真实的插件模块（`MODULE` 目标，`stdc_add_plugin_metadata()`），复制到临时目录的一个子目录并写出其元数据，由 `PluginSystem` 以目录布局载入、登记一个格式、关闭后注销。
 4. **应用**：`Editor` 持有 `PluginSystem`，载入与关闭顺序，用户设置文件，设置对话框的「Plugins」页。
 5. **格式转换驱动**：同样改为注册接口，删除 `InterchangePlugin`。
 6. **选区编辑与 UTAU 插件支持插件**：选区编辑的注册接口；随 HelloUtau 提供的原生插件，把 UTAU 插件登记为选区编辑；应用的「插件」菜单列出已登记的选区编辑。验收同 Roadmap 第五阶段：若干社区常用的原版插件能够正常执行并写回结果。
 7. **其余扩展点**：编辑界面扩展、音源批量操作，随各自功能的实现加入。
-8. **stdcorelib.plugin 的 `loadOrder()`**：已实现（该仓库单独提交），测试覆盖依赖链与可选依赖、同层按发现顺序、停用与未选中与无效插件的排除、失败插件的保留、载入中的重入查询。「Plugins」页在第 4 步使用它。
+8. **stdcorelib.plugin 的 `loadOrder()`**：已实现（该仓库 `e1f7ad6`），测试覆盖依赖链与可选依赖、同层按发现顺序、停用与未选中与无效插件的排除、失败插件的保留、载入中的重入查询。「Plugins」页在第 4 步使用它。
 
 ## 作者的决定（2026-09-30）
 

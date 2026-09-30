@@ -54,6 +54,7 @@
 
 - **stdcorelib、stdutau**：**均不取自 vcpkg，也均不作为子模块**，二者都与本仓库同步开发。分别构建并安装，配置时传入 `-Dstdcorelib_DIR=` 和 `-Dstdutau_DIR=`，指向 `<prefix>/lib/cmake/<名称>`。`third-party/Dependencies.cmake` 统一执行 `find_package`，由根目录的 `CMakeLists.txt` 通过 `include()` 引入。在 Windows 上，该文件还会将动态库复制到运行输出目录，vcpkg 的 applocal 不再负责这两个库。stdutau 目前是静态库，因此没有需要复制的 DLL。
 - **stdcorelib 仅作为私有依赖**：子库使用 `LINKS_PRIVATE`，公开头文件中的导出宏使用 `<QtCore/QtGlobal>` 的 `Q_DECL_EXPORT` / `Q_DECL_IMPORT`。
+- **stdcorelib.plugin**：原生插件的载入与生命周期（`stdware/stdcorelib.plugin`），构建为动态库，同样是私有依赖。与 stdcorelib 相同，自行构建安装后通过 `-Dstdcorelib-plugin_DIR=` 指定，DLL 由 `third-party/Dependencies.cmake` 复制到运行输出目录。本机安装在 `D:/GitHub/stdcorelib.plugin/build/install`，Debug 与 Release 并存。见 [`Plugins.md`](Plugins.md)。
 - **winacp**：Windows 全部 ANSI 代码页的转换表，由 Windows 的 `MultiByteToWideChar` / `WideCharToMultiByte` 生成，在三个平台上逐字节一致。`TextCodec` 的 Shift_JIS、GBK、Big5、EUC-KR 以及 `windows-874`、`windows-1250`–`1258` 均由其转换。需自行构建安装，配置时传入 `-Dwinacp_DIR=`。采用它的原因是 macOS 版 Qt 不包含 ICU，原有实现在 macOS 上无法打开任何 Shift_JIS 文件。
 - **wolf-midi**：MIDI 的解析与写出，是去除 Qt 依赖的 `QMidiFile`。来自 `E:/GitHub/ds-editor-lite/vcpkg`，同样通过 `-Dwolf-midi_DIR=` 指定。其 `MidiFile.cpp` 使用 `std::log2` 却未包含 `<cmath>`，GCC 下须以 `-DCMAKE_CXX_FLAGS="-include cmath"` 构建。
 - **substate**：`HelloKitEditBase` 与 `HelloKitEdit` 的节点树、事务与撤销历史（`stdware/substate`，含 `substate` 与 `qsubstate` 两个库），**仅作为私有依赖**，`ss::` 类型不出现在公开头文件中。与 stdutau 相同，不取自 vcpkg，也不作为子模块，自行构建安装后通过 `-Dsubstate_DIR=` 指定。默认构建为动态库。
