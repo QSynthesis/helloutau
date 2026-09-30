@@ -18,6 +18,7 @@ namespace hello::kit {
 namespace hello::daw {
 
     class Editor;
+    class OtoWaveformView;
     class VoiceBankEntryModel;
 
     /// The window of a voice bank, a document of its own beside the projects: its folders in a
@@ -41,6 +42,10 @@ namespace hello::daw {
 
         /// Filters the entries by file name and alias, as the text is typed.
         QLineEdit *searchBox() const;
+
+        /// The waveform of the entry of the current row, where its values are dragged, and set
+        /// at the pointer by the keys 1 to 5.
+        OtoWaveformView *waveformView() const;
 
         /// The rows of entryModel() selected in the table, in the order of the model.
         QList<int> selectedRows() const;

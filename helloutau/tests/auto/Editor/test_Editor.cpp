@@ -36,6 +36,7 @@
 #include <helloutau/Editor/AppSettings.h>
 #include <helloutau/Editor/Editor.h>
 #include <helloutau/Editor/NotePropertiesDialog.h>
+#include <helloutau/Editor/OtoWaveformView.h>
 #include <helloutau/Editor/ProjectPropertiesDialog.h>
 #include <helloutau/Editor/ProjectWindow.h>
 #include <helloutau/Editor/PianoRoll.h>
@@ -832,6 +833,37 @@ private:
         file << text;
     }
 
+    // A WAVE file of 16-bit mono PCM at 1000 Hz, one frame per millisecond
+    static void writeWave(const fs::path &path, int frames) {
+        QByteArray bytes;
+        const auto put32 = [&bytes](quint32 value) {
+            for (int i = 0; i < 4; ++i) {
+                bytes.push_back(char((value >> (8 * i)) & 0xff));
+            }
+        };
+        const auto put16 = [&bytes](quint16 value) {
+            bytes.push_back(char(value & 0xff));
+            bytes.push_back(char(value >> 8));
+        };
+        bytes.append("RIFF");
+        put32(quint32(36 + frames * 2));
+        bytes.append("WAVEfmt ");
+        put32(16);
+        put16(1);
+        put16(1);
+        put32(1000);
+        put32(2000);
+        put16(2);
+        put16(16);
+        bytes.append("data");
+        put32(quint32(frames * 2));
+        for (int i = 0; i < frames; ++i) {
+            put16(quint16(i % 2 ? 8000 : -8000));
+        }
+        std::ofstream file(path, std::ios::binary | std::ios::trunc);
+        file.write(bytes.constData(), bytes.size());
+    }
+
     static int entryCount(const VoiceBankWindow *window) {
         int count = 0;
         const auto bank = window->document()->session()->snapshot();
@@ -1218,6 +1250,75 @@ private Q_SLOTS:
         QCoreApplication::processEvents();
         QCOMPARE(aliases(), (QStringList{QStringLiteral("a.wav=a"), QStringLiteral("b.wav="),
                                          QStringLiteral("c.wav=")}));
+    }
+
+    // The waveform shows the current entry; a drag and the keys 1 to 5 over it edit the entry,
+    // each as one undo step, and an unlisted file is included by them.
+    void the_waveform_edits_the_current_entry() {
+        QTemporaryDir dir;
+        const auto bank = voiceBank(dir);
+        writeWave(bank / "a.wav", 1000);
+        writeWave(bank / "c.wav", 500);
+        const auto e = editor();
+        const auto window = e->openVoiceBank(bank);
+        QVERIFY(window);
+        window->resize(1000, 700);
+        window->show();
+        const auto session = window->document()->session();
+        const auto tree = window->directoryTree();
+        tree->setCurrentItem(tree->topLevelItem(1));
+        const auto view = window->waveformView();
+        QVERIFY(!view->audio());
+
+        window->setCurrentRow(0);
+        QVERIFY(view->audio());
+        QCOMPARE(view->duration(), 1000.0);
+        QCOMPARE(view->entry()->preUtterance, 40.0);
+
+        // The pre-utterance at 50 dragged to 200
+        const int step = session->currentStep();
+        const auto viewport = view->viewport();
+        const auto point = [view](double time) { return QPointF(view->xOf(time), 100).toPoint(); };
+        QTest::mousePress(viewport, Qt::LeftButton, {}, point(50));
+        QTest::mouseMove(viewport, point(120));
+        QTest::mouseMove(viewport, point(200));
+        QTest::mouseRelease(viewport, Qt::LeftButton, {}, point(200));
+        QCOMPARE(session->currentStep(), step + 1);
+        QCOMPARE(window->entryModel()->entryOf(0).preUtterance, 190.0);
+        QCOMPARE(window->currentRow(), 0);
+
+        // The key 2 sets the overlap at the pointer.
+        view->setFocus();
+        QTest::mouseMove(viewport, point(100));
+        QTest::keyClick(view, Qt::Key_2);
+        QCOMPARE(session->currentStep(), step + 2);
+        QCOMPARE(window->entryModel()->entryOf(0).voiceOverlap, 90.0);
+        session->undo();
+        QCoreApplication::processEvents();
+        QCOMPARE(view->entry()->voiceOverlap, 5.0);
+
+        // Elsewhere the key is typed, with the pointer still over the waveform.
+        window->searchBox()->setFocus();
+        QTest::keyClick(window->searchBox(), Qt::Key_2);
+        QCOMPARE(window->searchBox()->text(), QStringLiteral("2"));
+        QCOMPARE(session->currentStep(), step + 1);
+        window->searchBox()->clear();
+
+        // The key 1 on the unlisted c.wav includes it with its offset.
+        window->setCurrentRow(2);
+        QCOMPARE(view->duration(), 500.0);
+        view->setFocus();
+        QTest::mouseMove(viewport, point(30));
+        QTest::keyClick(view, Qt::Key_1);
+        QCOMPARE(window->entryModel()->index(2, 0).data(VoiceBankEntryModel::RowKindRole).toInt(),
+                 int(VoiceBankEntryModel::EntryRow));
+        QCOMPARE(window->entryModel()->entryOf(2).offset, 30.0);
+        QCOMPARE(window->currentRow(), 2);
+
+        // The missing b.wav has no audio to show values on.
+        window->setCurrentRow(1);
+        QVERIFY(!view->audio());
+        window->hide();
     }
 
     // An alias that another entry of the same file has, as read, is marked.

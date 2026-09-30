@@ -135,10 +135,23 @@
         <!-- An entry with an empty alias for each selected audio file without one -->
         <action id="helloutau.voiceBank.includeAudio" text="Include Audio &amp;Files"
                 category="Edit" />
+        <!-- A value of the current entry at the time under the pointer, while the pointer is over
+             the waveform; the keys are those of OpenUtau -->
+        <action id="helloutau.voiceBank.setOffset" text="&amp;Offset" category="Set at Pointer"
+                shortcut="1" />
+        <action id="helloutau.voiceBank.setOverlap" text="O&amp;verlap" category="Set at Pointer"
+                shortcut="2" />
+        <action id="helloutau.voiceBank.setPreUtterance" text="&amp;Pre-utterance"
+                category="Set at Pointer" shortcut="3" />
+        <action id="helloutau.voiceBank.setConsonant" text="&amp;Consonant"
+                category="Set at Pointer" shortcut="4" />
+        <action id="helloutau.voiceBank.setCutoff" text="C&amp;utoff" category="Set at Pointer"
+                shortcut="5" />
 
         <menu id="helloutau.voiceBankMenu" topLevel="true" />
         <menu id="helloutau.voiceBank.file" text="&amp;File" />
         <menu id="helloutau.voiceBank.edit" text="&amp;Edit" />
+        <menu id="helloutau.voiceBank.setValue" text="&amp;Set at Pointer" />
         <menu id="helloutau.voiceBank.view" text="&amp;View" />
         <menu id="helloutau.voiceBank.tools" text="&amp;Tools" />
     </items>
@@ -248,6 +261,14 @@
                 <action id="helloutau.voiceBank.duplicateEntries" />
                 <action id="helloutau.voiceBank.includeAudio" />
                 <action id="helloutau.edit.delete" />
+                <separator />
+                <menu id="helloutau.voiceBank.setValue">
+                    <action id="helloutau.voiceBank.setOffset" />
+                    <action id="helloutau.voiceBank.setOverlap" />
+                    <action id="helloutau.voiceBank.setPreUtterance" />
+                    <action id="helloutau.voiceBank.setConsonant" />
+                    <action id="helloutau.voiceBank.setCutoff" />
+                </menu>
             </menu>
             <menu id="helloutau.voiceBank.view">
                 <action id="helloutau.view.commandPalette" />

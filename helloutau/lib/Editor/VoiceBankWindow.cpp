@@ -24,6 +24,7 @@
 #include <QtWidgets/QMessageBox>
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QSplitter>
+#include <QtWidgets/QStatusBar>
 #include <QtWidgets/QTableView>
 #include <QtWidgets/QTreeWidget>
 #include <QtWidgets/QTreeWidgetItemIterator>
@@ -37,6 +38,7 @@
 #include <hellokit/Edit/VoiceBankDocument.h>
 #include <hellokit/Edit/VoiceBankEdits.h>
 #include <hellokit/Edit/VoiceBankRefs.h>
+#include <hellokit/Synth/WaveAudio.h>
 #include <hellokit/VoiceBank/VoiceBankCheckScheduler.h>
 
 #include <helloutau/Theme/ThemeManager.h>
@@ -46,6 +48,7 @@
 #include "CommandEntries_p.h"
 #include "DiagnosticBox_p.h"
 #include "Editor.h"
+#include "OtoWaveformView.h"
 #include "VoiceBankCharsetDialog.h"
 #include "VoiceBankEntryModel.h"
 
@@ -126,12 +129,33 @@ namespace hello::daw {
         QLineEdit *search = nullptr;
         VoiceBankEntryModel *model = nullptr;
         QSortFilterProxyModel *proxy = nullptr;
+        OtoWaveformView *waveform = nullptr;
+        QVBoxLayout *lowerLayout = nullptr;
+        // The audio files read for the waveform, by path, with the size and time they had
+        struct ReadAudio {
+            QString stamp;
+            std::shared_ptr<const kit::WaveAudio> audio;
+        };
+        std::map<std::filesystem::path, ReadAudio> readAudio;
+
         // The folders the tree shows, to rebuild it only when they change
         QList<std::filesystem::path> shownDirectories;
         QList<std::filesystem::path> shownExcluded;
 
         static QString tr(const char *text) {
             return VoiceBankWindow::tr(text);
+        }
+
+        // The commands that set a value at the pointer, by the key 1 to 5 over the waveform
+        static QList<std::pair<QString, OtoWaveformView::Value>> valueCommands() {
+            return {
+                {QStringLiteral("helloutau.voiceBank.setOffset"),       OtoWaveformView::Offset   },
+                {QStringLiteral("helloutau.voiceBank.setOverlap"),      OtoWaveformView::Overlap  },
+                {QStringLiteral("helloutau.voiceBank.setPreUtterance"),
+                 OtoWaveformView::PreUtterance                                                    },
+                {QStringLiteral("helloutau.voiceBank.setConsonant"),    OtoWaveformView::Consonant},
+                {QStringLiteral("helloutau.voiceBank.setCutoff"),       OtoWaveformView::Cutoff   },
+            };
         }
 
         QAction *addCommand(const QString &id, std::function<void()> handler) {
@@ -208,6 +232,13 @@ namespace hello::daw {
                 stdc_decl_t;
                 decl.removeEntries();
             });
+            for (const auto &[id, value] : valueCommands()) {
+                addCommand(id, [this, value = value] {
+                    if (const auto time = waveform->pointerTime()) {
+                        waveform->setValueAt(value, *time);
+                    }
+                });
+            }
             addCommand(QStringLiteral("helloutau.tools.settings"), [this] {
                 stdc_decl_t;
                 editor->showSettings(&decl);
@@ -310,7 +341,25 @@ namespace hello::daw {
             splitter->addWidget(right);
             splitter->setStretchFactor(1, 1);
             splitter->setSizes({200, 760});
-            decl.setCentralWidget(splitter);
+
+            // The waveform of the current entry below, across the window
+            waveform = new OtoWaveformView();
+            for (const auto &command : valueCommands()) {
+                const auto action = actions.value(command.first);
+                action->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+                waveform->addAction(action);
+            }
+            auto lower = new QWidget();
+            lowerLayout = new QVBoxLayout(lower);
+            lowerLayout->setContentsMargins(0, 0, 0, 0);
+            lowerLayout->addWidget(waveform, 1);
+
+            auto vertical = new QSplitter(Qt::Vertical);
+            vertical->addWidget(splitter);
+            vertical->addWidget(lower);
+            vertical->setStretchFactor(0, 1);
+            vertical->setSizes({380, 260});
+            decl.setCentralWidget(vertical);
 
             QObject::connect(tree, &QTreeWidget::currentItemChanged, &decl,
                              [this](QTreeWidgetItem *item) { showDirectoryOf(item); });
@@ -634,6 +683,98 @@ namespace hello::daw {
             updateEditActions();
         }
 
+        // The audio file of row of the model
+        std::filesystem::path audioPathOf(int row) const {
+            return document->rootPath() / model->directoryOf(row) /
+                   pathOf(model->entryOf(row).fileName);
+        }
+
+        // The audio at path, read again once its size or time changes, or null if it does not
+        // read
+        std::shared_ptr<const kit::WaveAudio> audioAt(const std::filesystem::path &path) {
+            std::error_code error;
+            const auto size = std::filesystem::file_size(path, error);
+            const auto time = std::filesystem::last_write_time(path, error);
+            if (error) {
+                readAudio.erase(path);
+                return nullptr;
+            }
+            const auto stamp =
+                QStringLiteral("%1:%2").arg(size).arg(time.time_since_epoch().count());
+            if (const auto found = readAudio.find(path);
+                found != readAudio.end() && found->second.stamp == stamp) {
+                return found->second.audio;
+            }
+            kit::DiagnosticList diagnostics;
+            auto read = kit::WaveAudio::read(path, diagnostics);
+            std::shared_ptr<const kit::WaveAudio> audio =
+                read ? std::make_shared<const kit::WaveAudio>(std::move(*read)) : nullptr;
+            // A few files, those last looked at
+            if (readAudio.size() >= 16) {
+                readAudio.clear();
+            }
+            readAudio[path] = {stamp, audio};
+            return audio;
+        }
+
+        // Shows the audio and the values of the current row in the waveform.
+        void showCurrentEntry() {
+            stdc_decl_t;
+            const int row = decl.currentRow();
+            if (row < 0) {
+                waveform->setAudio(nullptr);
+                waveform->setEntry(std::nullopt);
+                return;
+            }
+            const auto audio = audioAt(audioPathOf(row));
+            if (audio != waveform->audio()) {
+                waveform->setAudio(audio);
+            }
+            const auto entry = model->entryOf(row);
+            if (waveform->entry() != entry) {
+                waveform->setEntry(entry);
+            }
+        }
+
+        void showPointer() {
+            stdc_decl_t;
+            const auto time = waveform->pointerTime();
+            if (!time || !waveform->audio()) {
+                decl.statusBar()->clearMessage();
+                return;
+            }
+            const auto value = waveform->activeValue();
+            decl.statusBar()->showMessage(
+                value ? tr("%1 at %2 ms")
+                            .arg(OtoWaveformView::nameOf(*value))
+                            .arg(OtoWaveformView::positionOf(*waveform->entry(), *value,
+                                                             waveform->duration()))
+                      : tr("%1 ms").arg(std::round(*time * 10) / 10));
+        }
+
+        void initWaveform() {
+            stdc_decl_t;
+            QObject::connect(table->selectionModel(), &QItemSelectionModel::currentRowChanged,
+                             &decl, [this] { showCurrentEntry(); });
+            QObject::connect(model, &QAbstractItemModel::dataChanged, &decl,
+                             [this] { showCurrentEntry(); });
+            QObject::connect(model, &QAbstractItemModel::modelReset, &decl,
+                             [this] { showCurrentEntry(); });
+            QObject::connect(waveform, &OtoWaveformView::pointerMoved, &decl,
+                             [this] { showPointer(); });
+            QObject::connect(waveform, &OtoWaveformView::entryEdited, &decl,
+                             [this](const kit::VoiceOtoEntry &entry) {
+                                 stdc_decl_t;
+                                 const int row = decl.currentRow();
+                                 kit::DiagnosticList diagnostics;
+                                 if (row < 0 || !model->setEntry(row, entry, diagnostics)) {
+                                     DiagnosticBox::show(&decl, tr("Edit Entry"), diagnostics);
+                                 }
+                                 model->refresh();
+                                 showCurrentEntry();
+                             });
+        }
+
         void showDirectoryOf(QTreeWidgetItem *item) {
             if (!item || item->data(0, AllRole).toBool()) {
                 model->setDirectory(std::nullopt);
@@ -745,6 +886,7 @@ namespace hello::daw {
         impl.initActions();
         impl.initWidgets();
         impl.initTableEditing();
+        impl.initWaveform();
         impl.refreshTree();
         impl.initScheduler();
 
@@ -797,6 +939,11 @@ namespace hello::daw {
     QLineEdit *VoiceBankWindow::searchBox() const {
         stdc_impl_t;
         return impl.search;
+    }
+
+    OtoWaveformView *VoiceBankWindow::waveformView() const {
+        stdc_impl_t;
+        return impl.waveform;
     }
 
     QList<int> VoiceBankWindow::selectedRows() const {
