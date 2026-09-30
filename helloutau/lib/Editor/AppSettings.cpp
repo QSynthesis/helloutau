@@ -20,6 +20,8 @@ namespace hello::daw {
         constexpr char PrerenderValue[] = "prerender";
         constexpr char RealtimeValue[] = "realtime";
         constexpr char KeyUstExportCharset[] = "files/ustExportCharset";
+        constexpr char KeyPitchVisible[] = "view/showPitch";
+        constexpr char KeyEnvelopesVisible[] = "view/showEnvelopes";
         constexpr char KeyRecentCommands[] = "commandPalette/recent";
         constexpr char KeyRecentFiles[] = "files/recent";
         constexpr char KeyRecentVoiceBanks[] = "files/recentVoiceBanks";
@@ -131,6 +133,26 @@ namespace hello::daw {
         stdc_impl_t;
         impl.setValue(KeyPlaybackMode,
                       std::string(mode == Realtime ? RealtimeValue : PrerenderValue));
+    }
+
+    bool AppSettings::isPitchVisible() const {
+        stdc_impl_t;
+        return impl.value(KeyPitchVisible).toBool(true);
+    }
+
+    void AppSettings::setPitchVisible(bool visible) {
+        stdc_impl_t;
+        impl.setValue(KeyPitchVisible, visible);
+    }
+
+    bool AppSettings::areEnvelopesVisible() const {
+        stdc_impl_t;
+        return impl.value(KeyEnvelopesVisible).toBool(true);
+    }
+
+    void AppSettings::setEnvelopesVisible(bool visible) {
+        stdc_impl_t;
+        impl.setValue(KeyEnvelopesVisible, visible);
     }
 
     QString AppSettings::ustExportCharset() const {

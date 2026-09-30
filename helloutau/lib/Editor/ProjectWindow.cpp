@@ -709,19 +709,25 @@ namespace hello::daw {
                 tools->addAction(action);
             }
             selectTool->setChecked(true);
+            // The two display toggles start from the settings and are stored when changed.
             const auto showPitch = addCommand(QStringLiteral("helloutau.view.showPitch"), [this] {
-                roll->setPitchVisible(
-                    actions.value(QStringLiteral("helloutau.view.showPitch"))->isChecked());
+                const bool visible =
+                    actions.value(QStringLiteral("helloutau.view.showPitch"))->isChecked();
+                editor->settings().setPitchVisible(visible);
+                roll->setPitchVisible(visible);
                 updatePitchActions();
             });
             showPitch->setCheckable(true);
-            showPitch->setChecked(true);
+            showPitch->setChecked(editor->settings().isPitchVisible());
             const auto showEnvelopes =
                 addCommand(QStringLiteral("helloutau.view.showEnvelopes"), [this] {
-                    roll->setEnvelopesVisible(
-                        actions.value(QStringLiteral("helloutau.view.showEnvelopes"))->isChecked());
+                    const bool visible =
+                        actions.value(QStringLiteral("helloutau.view.showEnvelopes"))->isChecked();
+                    editor->settings().setEnvelopesVisible(visible);
+                    roll->setEnvelopesVisible(visible);
                 });
             showEnvelopes->setCheckable(true);
+            showEnvelopes->setChecked(editor->settings().areEnvelopesVisible());
             addCommand(QStringLiteral("helloutau.view.commandPalette"), [this] {
                 palette->setCommands(commandEntries());
                 palette->setRecentIds(editor->settings().recentCommands());

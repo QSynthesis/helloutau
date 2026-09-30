@@ -70,6 +70,16 @@ namespace hello::daw {
         PlaybackMode playbackMode() const;
         void setPlaybackMode(PlaybackMode mode);
 
+        /// Whether the piano roll shows the pitch curves (View > Show Pitch). The default is
+        /// true.
+        bool isPitchVisible() const;
+        void setPitchVisible(bool visible);
+
+        /// Whether the piano roll shows the envelopes (View > Show Envelopes). The default is
+        /// true.
+        bool areEnvelopesVisible() const;
+        void setEnvelopesVisible(bool visible);
+
         /// Encoding initially selected when a UST is exported. The default is UTF-8.
         QString ustExportCharset() const;
         void setUstExportCharset(const QString &charset);

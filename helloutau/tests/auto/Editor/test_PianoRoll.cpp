@@ -811,10 +811,10 @@ private Q_SLOTS:
         QVERIFY(!roll.areEnvelopesVisible());
 
         // la starts at 500 ms; 420 ms is within its pre-utterance, at 0.96 ticks a millisecond
-        const auto drawnAt = [&roll](double milliseconds) {
+        const auto drawnAt = [&roll](double milliseconds, int key = 62) {
             const auto image = roll.view()->viewport()->grab().toImage();
             const QPointF at(roll.view()->timeAxis().toX(milliseconds * 0.96),
-                             roll.view()->keyAxis().toY(62));
+                             roll.view()->keyAxis().toY(key));
             for (int dy = -2; dy <= 2; ++dy) {
                 const auto pixel = image.pixelColor(at.toPoint() + QPoint(0, dy));
                 if (pixel.red() > 180 && pixel.green() < 120 && pixel.blue() > 180) {
@@ -828,6 +828,15 @@ private Q_SLOTS:
         QVERIFY(drawnAt(420));
         QVERIFY(drawnAt(700));
         QVERIFY(!drawnAt(380));
+
+        // An intensity of 200 draws the envelope two rows high, as in UTAU.
+        {
+            auto transaction = session.transaction(QStringLiteral("intensity"));
+            kit::ProjectRef(&session).tracks().at(0).notes().at(1).setIntensity(200);
+            QVERIFY(transaction.commit());
+        }
+        QVERIFY(drawnAt(700, 63));
+        QVERIFY(!drawnAt(700, 62));
     }
 
     // la at C4, then li at D4 with points 60 ms before its start, at its start 100 cents up,

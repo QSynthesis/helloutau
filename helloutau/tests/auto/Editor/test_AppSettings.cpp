@@ -22,6 +22,8 @@ private Q_SLOTS:
         QVERIFY(settings.wavtool().isEmpty());
         QCOMPARE(settings.ustExportCharset(), QStringLiteral("UTF-8"));
         QCOMPARE(settings.playbackMode(), AppSettings::Prerender);
+        QVERIFY(settings.isPitchVisible());
+        QVERIFY(settings.areEnvelopesVisible());
     }
 
     // Recent files are stored most recent first, without duplicates, at most recentFileCount,
@@ -84,8 +86,12 @@ private Q_SLOTS:
             settings.setWavtool(QStringLiteral("C:/UTAU/wavtool.exe"));
             settings.setUstExportCharset(QStringLiteral("Shift_JIS"));
             settings.setPlaybackMode(AppSettings::Realtime);
+            settings.setPitchVisible(false);
+            settings.setEnvelopesVisible(false);
         }
         const AppSettings settings(file);
+        QVERIFY(!settings.isPitchVisible());
+        QVERIFY(!settings.areEnvelopesVisible());
         QCOMPARE(settings.utauDirectory(), utau);
         QCOMPARE(settings.resampler(), QStringLiteral("C:/UTAU/resampler.exe"));
         QCOMPARE(settings.wavtool(), QStringLiteral("C:/UTAU/wavtool.exe"));

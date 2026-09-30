@@ -210,9 +210,13 @@ namespace hello::daw {
         const auto times = anchorTimes(envelope, length);
         const auto anchors = envelope.anchorsInTimeOrder();
         const auto &map = m_state->timeline->tempoMap();
+        // A volume of 100 at an intensity of 100 is one key high. The intensity scales the
+        // height, as in UTAU.
+        const double intensity =
+            std::max(0.0, m_state->notes().at(index).intensity().value_or(100)) / 100;
         const auto pointAt = [&](double milliseconds, double volume) {
             return QPointF(view()->timeAxis().toX(map.tickOf(start + milliseconds)),
-                           base - volume / 100 * row);
+                           base - volume / 100 * intensity * row);
         };
         QPolygonF outline{pointAt(0, 0)};
         for (qsizetype k = 0; k < times.size(); ++k) {
