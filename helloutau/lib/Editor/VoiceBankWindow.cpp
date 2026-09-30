@@ -15,7 +15,6 @@
 #include <QtGui/QCloseEvent>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QComboBox>
-#include <QtWidgets/QDockWidget>
 #include <QtWidgets/QFileDialog>
 #include <QtWidgets/QFrame>
 #include <QtWidgets/QHBoxLayout>
@@ -146,7 +145,6 @@ namespace hello::daw {
         OtoWaveformView *waveform = nullptr;
         QVBoxLayout *lowerLayout = nullptr;
         VoiceBankInfoPanel *info = nullptr;
-        QDockWidget *infoDock = nullptr;
         // The folder of the context menu of the tree while it is open
         std::optional<std::filesystem::path> menuFolder;
         SamplePreview *preview = nullptr;
@@ -218,6 +216,14 @@ namespace hello::daw {
             });
             context->addAction(QStringLiteral("helloutau.file.openRecent"),
                                recentMenu->menuAction());
+            addCommand(QStringLiteral("helloutau.file.openRecentProject"), [this] {
+                stdc_decl_t;
+                editor->showRecent(Editor::RecentProjects, &decl);
+            });
+            addCommand(QStringLiteral("helloutau.file.openRecentVoiceBank"), [this] {
+                stdc_decl_t;
+                editor->showRecent(Editor::RecentVoiceBanks, &decl);
+            });
             addCommand(QStringLiteral("helloutau.file.save"), [this] {
                 stdc_decl_t;
                 decl.save();
@@ -236,9 +242,7 @@ namespace hello::daw {
             addCommand(QStringLiteral("helloutau.edit.redo"),
                        [this] { document->session()->redo(); });
             addCommand(QStringLiteral("helloutau.view.commandPalette"), [this] {
-                palette->setCommands(
-                    commandEntriesOf(editor->actionRegistry(), context,
-                                     QStringLiteral("helloutau.view.commandPalette")));
+                palette->setCommands(commandEntriesOf(editor->actionRegistry(), context));
                 palette->setRecentIds(editor->settings().recentCommands());
                 palette->popup();
             });
@@ -293,7 +297,7 @@ namespace hello::daw {
                 showSpectrum();
             })->setCheckable(true);
             addCommand(QStringLiteral("helloutau.voiceBank.showInfo"), [this] {
-                infoDock->setVisible(
+                info->setVisible(
                     actions.value(QStringLiteral("helloutau.voiceBank.showInfo"))->isChecked());
             })->setCheckable(true);
             addCommand(QStringLiteral("helloutau.voiceBank.convertCharset"),
@@ -440,22 +444,20 @@ namespace hello::daw {
             vertical->addWidget(lower);
             vertical->setStretchFactor(0, 1);
             vertical->setSizes({380, 260});
-            decl.setCentralWidget(vertical);
 
-            // The information of the voice bank on the right
+            // The information of the voice bank stays in the window and does not float.
             info = new VoiceBankInfoPanel(document->session());
             info->setRoot(document->rootPath());
-            infoDock = new QDockWidget(tr("Voice Bank Info"), &decl);
-            infoDock->setObjectName(QStringLiteral("info"));
-            infoDock->setWidget(info);
-            decl.addDockWidget(Qt::RightDockWidgetArea, infoDock);
+            auto main = new QSplitter(Qt::Horizontal);
+            main->addWidget(vertical);
+            main->addWidget(info);
+            main->setStretchFactor(0, 1);
+            main->setStretchFactor(1, 0);
+            main->setSizes({760, 280});
+            decl.setCentralWidget(main);
+
             const auto showInfo = actions.value(QStringLiteral("helloutau.voiceBank.showInfo"));
             showInfo->setChecked(true);
-            QObject::connect(infoDock, &QDockWidget::visibilityChanged, &decl, [this, showInfo] {
-                if (!infoDock->isHidden() != showInfo->isChecked()) {
-                    showInfo->setChecked(!infoDock->isHidden());
-                }
-            });
             QObject::connect(info, &VoiceBankInfoPanel::editRejected, &decl,
                              [this](const kit::DiagnosticList &diagnostics) {
                                  stdc_decl_t;
@@ -1205,8 +1207,8 @@ namespace hello::daw {
             fillFrequencyBox();
             QObject::connect(frequencyBox, &QComboBox::currentIndexChanged, &decl,
                              [this] { showFrequency(); });
-            QObject::connect(&editor->frequencyFormats(), &kit::FrequencyFormatRegistry::formatsChanged,
-                             &decl, [this] {
+            QObject::connect(&editor->frequencyFormats(),
+                             &kit::FrequencyFormatRegistry::formatsChanged, &decl, [this] {
                                  fillFrequencyBox();
                                  frequencyShown = {};
                                  showFrequency();
@@ -1442,10 +1444,9 @@ namespace hello::daw {
 
     VoiceBankWindow::~VoiceBankWindow() {
         stdc_impl_t;
-        // The dock goes while the document is there: its panel writes what it holds when it
-        // loses the focus, and hiding it reports to the window.
-        QObject::disconnect(impl.infoDock, nullptr, this, nullptr);
-        delete impl.infoDock;
+        // The panel goes while the document is there: it writes what it holds when it loses the
+        // focus.
+        delete impl.info;
     }
 
     kit::VoiceBankDocument *VoiceBankWindow::document() const {

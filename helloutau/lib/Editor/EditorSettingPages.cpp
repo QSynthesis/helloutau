@@ -115,8 +115,8 @@ namespace hello::daw {
     QWidget *RenderingSettingPage::createWidget() {
         auto widget = new QWidget();
         auto form = new QFormLayout(widget);
-        m_resampler = addPathRow(form, widget, tr("&Resampler:"), m_settings.resampler(), false);
         m_wavtool = addPathRow(form, widget, tr("&Wavtool:"), m_settings.wavtool(), false);
+        m_resampler = addPathRow(form, widget, tr("&Resampler:"), m_settings.resampler(), false);
         form->addRow(note(tr("A project renders with these engines, not with those it names.")));
 
         m_playbackMode = new QComboBox();

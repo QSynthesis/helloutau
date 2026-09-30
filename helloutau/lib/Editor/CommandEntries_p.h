@@ -13,15 +13,14 @@ namespace hello::daw {
 
     /// The commands of a window as the command palette offers them: every action of \a context
     /// that is a command and is enabled now, as VS Code shows no disabled command, labelled with
-    /// its category as "File: Save". The palette, \a palette, does not list itself.
+    /// its category as "File: Save".
     inline QList<CommandEntry> commandEntriesOf(const QAK::ActionRegistry *registry,
-                                                const QAK::WidgetActionContext *context,
-                                                const QString &palette) {
+                                                const QAK::WidgetActionContext *context) {
         QList<CommandEntry> entries;
         for (const auto &id : registry->actionIds()) {
             const auto info = registry->actionInfo(id);
             const auto action = context->action(id);
-            if (!info || !info->isCommand() || !action || !action->isEnabled() || id == palette) {
+            if (!info || !info->isCommand() || !action || !action->isEnabled()) {
                 continue;
             }
             const auto label = [](const QAK::ActionText &category, const QAK::ActionText &text) {

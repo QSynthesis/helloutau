@@ -2,6 +2,7 @@
 
 #include <QtCore/QDir>
 #include <QtCore/QHash>
+#include <QtCore/QMetaObject>
 #include <QtCore/QStandardPaths>
 #include <QtCore/QTimer>
 #include <QtGui/QAction>
@@ -139,6 +140,11 @@ namespace hello::daw {
         QTimer renderStateTimer;
         // Whether the playback is a preview, and whether it restarts from the playhead soon
         bool previewing = false;
+        // The voice bank root used by the last load attempt. A project undo can restore the
+        // recorded path without changing the loaded voice bank, so the two paths are tracked
+        // separately.
+        std::filesystem::path voiceBankRoot;
+        bool voiceBankReloadPending = false;
         // The notes last rendered, which Replay renders again
         std::optional<std::pair<int, int>> lastRange;
         bool restartPending = false;
@@ -289,13 +295,21 @@ namespace hello::daw {
             }
             const auto changes = dialog.changes();
             if (changes.isEmpty()) {
+                const auto track = document->session()->snapshot().tracks.value(0);
+                const auto root = track.voiceDirectory(editor->settings().utauDirectory());
+                if (!document->voiceBank() && !root.empty() && root == voiceBankRoot) {
+                    decl.loadVoiceBank();
+                }
                 return;
             }
             kit::DiagnosticList diagnostics;
             const bool changed = kit::ProjectEdits::setProperties(
                 kit::ProjectRef(document->session()), changes, diagnostics);
             DiagnosticBox::show(&decl, tr("Project Properties"), diagnostics);
-            if (changed && changes.voiceDir) {
+            const auto track = document->session()->snapshot().tracks.value(0);
+            const auto root = track.voiceDirectory(editor->settings().utauDirectory());
+            if ((changed && changes.voiceDir) ||
+                (!document->voiceBank() && !root.empty() && root == voiceBankRoot)) {
                 decl.loadVoiceBank();
             }
         }
@@ -531,6 +545,14 @@ namespace hello::daw {
             QObject::connect(recentMenu, &QMenu::aboutToShow, &decl, [this] { fillRecentMenu(); });
             context->addAction(QStringLiteral("helloutau.file.openRecent"),
                                recentMenu->menuAction());
+            addCommand(QStringLiteral("helloutau.file.openRecentProject"), [this] {
+                stdc_decl_t;
+                editor->showRecent(Editor::RecentProjects, &decl);
+            });
+            addCommand(QStringLiteral("helloutau.file.openRecentVoiceBank"), [this] {
+                stdc_decl_t;
+                editor->showRecent(Editor::RecentVoiceBanks, &decl);
+            });
             addCommand(QStringLiteral("helloutau.file.save"), [this] {
                 stdc_decl_t;
                 decl.save();
@@ -729,8 +751,7 @@ namespace hello::daw {
         }
 
         QList<CommandEntry> commandEntries() const {
-            return commandEntriesOf(editor->actionRegistry(), context,
-                                    QStringLiteral("helloutau.view.commandPalette"));
+            return commandEntriesOf(editor->actionRegistry(), context);
         }
 
         void bindDocument() {
@@ -782,6 +803,23 @@ namespace hello::daw {
             QObject::connect(document->session(), &kit::ProjectSession::stepChanged, &decl, [this] {
                 updateUndoActions();
                 updatePitchActions();
+                const auto track = document->session()->snapshot().tracks.value(0);
+                const auto root = track.voiceDirectory(editor->settings().utauDirectory());
+                if (root != voiceBankRoot && !voiceBankReloadPending) {
+                    voiceBankReloadPending = true;
+                    QMetaObject::invokeMethod(
+                        _decl,
+                        [this] {
+                            voiceBankReloadPending = false;
+                            const auto track = document->session()->snapshot().tracks.value(0);
+                            const auto root =
+                                track.voiceDirectory(editor->settings().utauDirectory());
+                            if (root != voiceBankRoot) {
+                                _decl->loadVoiceBank();
+                            }
+                        },
+                        Qt::QueuedConnection);
+                }
                 // A preview plays, and the background renders, the notes as they now are.
                 playback->updatePlan(*document);
                 scheduleRenderStates();
@@ -1073,6 +1111,8 @@ namespace hello::daw {
     void ProjectWindow::setDocument(std::unique_ptr<kit::ProjectDocument> document) {
         stdc_impl_t;
         impl.playback->stop();
+        impl.voiceBankRoot.clear();
+        impl.voiceBankReloadPending = false;
         auto previous = std::move(impl.document);
         impl.document = std::move(document);
         impl.bindDocument();
@@ -1098,8 +1138,10 @@ namespace hello::daw {
         stdc_impl_t;
         const auto document = impl.document.get();
         const auto utau = impl.editor->settings().utauDirectory();
+        const auto track = document->session()->snapshot().tracks.value(0);
+        impl.voiceBankRoot = track.voiceDirectory(utau);
         VoiceBankCharsetDialog selector(this);
-        selector.setRoot(document->session()->snapshot().tracks.value(0).voiceDirectory(utau));
+        selector.setRoot(impl.voiceBankRoot);
         kit::DiagnosticList diagnostics;
         const bool loaded = document->loadVoiceBank(utau, &selector, diagnostics);
         DiagnosticBox::show(this, tr("Voice Bank"), diagnostics);

@@ -198,7 +198,7 @@ private Q_SLOTS:
     }
 
     // As in VS Code, the palette lists the commands that are enabled now, each after its
-    // category, and not itself.
+    // category, including the command that opens the palette.
     void the_command_palette_offers_the_enabled_commands() {
         const auto e = editor();
         const auto window = e->newWindow();
@@ -214,7 +214,7 @@ private Q_SLOTS:
         const auto ids = palette->shownIds();
         QVERIFY(ids.contains(QStringLiteral("helloutau.file.save")));
         QVERIFY(!ids.contains(QStringLiteral("helloutau.edit.undo")));
-        QVERIFY(!ids.contains(QStringLiteral("helloutau.view.commandPalette")));
+        QVERIFY(ids.contains(QStringLiteral("helloutau.view.commandPalette")));
         for (const auto &entry : palette->commands()) {
             if (entry.id == QStringLiteral("helloutau.file.save")) {
                 QCOMPARE(entry.label, QStringLiteral("File: Save"));
@@ -384,8 +384,8 @@ private Q_SLOTS:
     // An opened file heads Open Recent, from which it opens again; a file gone is reported and
     // forgotten.
     // "Open Recent" as in VS Code: the latest ten projects, then the latest ten voice banks,
-    // the first ten numbered; "More..." lists them all in a palette, the projects first, and
-    // "Clear Recent" forgets both.
+    // the first ten numbered. A section with ten items ends with a "More" item, which lists
+    // every item of its kind in a palette. "Clear Recent" forgets both kinds.
     void open_recent_lists_projects_then_voice_banks() {
         const auto e = editor();
         e->settings().clearRecentFiles();
@@ -401,31 +401,60 @@ private Q_SLOTS:
         QVERIFY(recent && recent->menu());
         Q_EMIT recent->menu()->aboutToShow();
         auto items = recent->menu()->actions();
-        QCOMPARE(items.size(), 10 + 1 + 2 + 1 + 2);
+        QCOMPARE(items.size(), 10 + 1 + 1 + 2 + 1 + 1);
         QVERIFY(items[0]->text().startsWith(QStringLiteral("&1 ")));
         QVERIFY(items[0]->text().endsWith(QStringLiteral("f11.usth")));
         QVERIFY(items[9]->text().startsWith(QStringLiteral("&0 ")));
-        QVERIFY(items[10]->isSeparator());
-        QVERIFY(items[11]->text().endsWith(QStringLiteral("bank1")));
-        QVERIFY(!items[11]->text().startsWith(QLatin1Char('&')));
-        QVERIFY(items[13]->isSeparator());
-        QCOMPARE(items[14]->text(), QStringLiteral("&More..."));
+        QCOMPARE(items[10]->text(), QStringLiteral("More &Projects..."));
+        QVERIFY(items[11]->isSeparator());
+        QVERIFY(items[12]->text().endsWith(QStringLiteral("bank1")));
+        QVERIFY(!items[12]->text().startsWith(QLatin1Char('&')));
+        QVERIFY(items[14]->isSeparator());
         QCOMPARE(items[15]->text(), QStringLiteral("&Clear Recent"));
 
-        items[14]->trigger();
+        items[10]->trigger();
         const auto palette = window->findChild<CommandPalette *>(QStringLiteral("recentPalette"));
         QVERIFY(palette && palette->isVisible());
-        const auto commands = palette->commands();
-        QCOMPARE(commands.size(), 14);
+        auto commands = palette->commands();
+        QCOMPARE(commands.size(), 12);
         QCOMPARE(commands[0].id,
                  QStringLiteral("project:") +
                      QString::fromStdU16String(pathIn(m_dir, "f11.usth").u16string()));
-        QCOMPARE(commands[0].label, QStringLiteral("Project: f11.usth"));
-        QCOMPARE(commands[12].label, QStringLiteral("Voice Bank: bank1"));
-        QVERIFY(commands[13].id.startsWith(QStringLiteral("voicebank:")));
+        QCOMPARE(commands[0].label, QStringLiteral("f11.usth"));
         palette->hide();
 
-        items[15]->trigger();
+        // The command in no menu lists the voice banks.
+        const auto command = actionNamed(window, QStringLiteral("Open Recent &Voice Bank..."));
+        QVERIFY(command);
+        command->trigger();
+        commands = palette->commands();
+        QCOMPARE(commands.size(), 2);
+        QCOMPARE(commands[0].label, QStringLiteral("bank1"));
+        QVERIFY(commands[1].id.startsWith(QStringLiteral("voicebank:")));
+        palette->hide();
+
+        // Ten voice banks end their section with a "More" item as well.
+        for (int i = 2; i < 10; ++i) {
+            e->settings().addRecentVoiceBank(
+                pathIn(m_dir, qPrintable(QStringLiteral("bank%1").arg(i))));
+        }
+        Q_EMIT recent->menu()->aboutToShow();
+        items = recent->menu()->actions();
+        QCOMPARE(items[22]->text(), QStringLiteral("More &Voice Banks..."));
+
+        // Nine projects end their section without one.
+        for (int i = 0; i < 3; ++i) {
+            e->settings().removeRecentFile(
+                pathIn(m_dir, qPrintable(QStringLiteral("f%1.usth").arg(i))));
+        }
+        Q_EMIT recent->menu()->aboutToShow();
+        items = recent->menu()->actions();
+        QVERIFY(items[9]->isSeparator());
+        QVERIFY(std::none_of(items.begin(), items.end(), [](const QAction *item) {
+            return item->text() == QStringLiteral("More &Projects...");
+        }));
+
+        items.last()->trigger();
         QVERIFY(e->settings().recentFiles().isEmpty());
         QVERIFY(e->settings().recentVoiceBanks().isEmpty());
         Q_EMIT recent->menu()->aboutToShow();
@@ -1549,8 +1578,8 @@ private Q_SLOTS:
         QCOMPARE(box->currentData().toString(), QStringLiteral("mrq"));
     }
 
-    // The dock edits character.txt, readme.txt and prefix.map, each edit one step, creating the
-    // files the voice bank lacks; the tree converts the encoding of a folder.
+    // The information pane edits character.txt, readme.txt and prefix.map, each edit one step,
+    // creating the files the voice bank lacks; the tree converts the encoding of a folder.
     void the_voice_bank_info_is_edited() {
         QTemporaryDir dir;
         const auto bank = voiceBank(dir);

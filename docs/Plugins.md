@@ -122,6 +122,7 @@ macOS 的 bundle 中为 `HelloUtau.app/Contents/MacOS`（程序）与 `HelloUtau
 - **编辑器自己的清单也经此登记**（作者 2026-09-30，方案 1 加 3）：原来的 `EditorActions.xml` 分为两份，`AppActions.xml` 为两种窗口的菜单栏与顶层菜单，以及新建、打开、打开音源、最近文件、关闭、退出、命令面板、设置；`EditorActions.xml` 为其余的窗口命令及其子菜单，以插入放入前者的菜单，排出的菜单与拆分前相同。两份由 `BuiltinActions` 登记，Core 插件持有它，不经 Core 构造 `Editor` 的测试自己持有一个。处理函数仍在窗口中，窗口自己创建这些动作。
 - **最终目标**（作者 2026-09-30）：清单与处理函数都由 Core 插件提供，窗口只提供能力。这需要窗口公开相应的操作，届时另行设计。
 - **现状的两条路径**：内置命令的处理函数在窗口私有的实现中，由窗口在 `initActions()` 中自己创建动作，`BuiltinActions` 的贡献不创建动作；插件的动作由其贡献的 `addActions()` 创建并连接。插件能连接自己的处理函数，但处理函数只能使用窗口的公开接口，目前很少。内置命令移入贡献之后只剩一条路径。
+- **不在菜单中的命令**：动作的快捷键经菜单栏生效，不在任何菜单中而有快捷键的命令（如 ClassicPluginHost 的 Classic Plugins at Pointer），由贡献方以 `window->addAction()` 将动作挂到窗口上（作者 2026-09-30 定）。未来可选：由编辑器统一将快捷键范围为 `WindowShortcut` 的动作挂到窗口上。重复挂载不会使快捷键触发两次，但须跳过另设范围的动作（如音源窗口波形区的 `WidgetWithChildrenShortcut`），否则其快捷键扩展到整个窗口。
 - **编辑器的组件化**（作者 2026-09-30 定的方向）：`Editor` 与窗口逐步拆成组件，最终只保留较底层、偏元的功能（窗口、文档、动作与设置的基础设施），高级功能由插件组合而成。每移出一块功能，先让窗口公开它所需的能力，再把命令与界面移入插件。
 - **静态字符串**：AEC 生成的字符串是 `QStringLiteral`，位于清单所在库的静态存储中，由条目取得的 `QString` 与之共享数据。目前所有库都在 Core 销毁 `Editor` 之后才卸载，这些副本随 `Editor` 一起销毁，因此没有问题。将来支持在运行中停用单个插件时，须让 AEC 生成自有内存的字符串。
 - **测试**：`test_ActionContribution`（登记前后打开的窗口、注销、先于或晚于 `Editor` 的登记）；TestAction 插件（`tests/auto/plugins/TestAction`，依赖 Core，向工程窗口的 Tools 菜单加入 Hello）由 `test_TestActionPlugin` 与 Core 一同载入。

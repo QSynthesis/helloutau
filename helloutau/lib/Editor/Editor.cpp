@@ -35,11 +35,11 @@ namespace hello::daw {
 
     namespace {
 
-        // The recent projects and voice banks listed in "Open Recent", each; "More..." lists
-        // all that the settings keep.
+        // The number of recent projects, and of recent voice banks, listed in "Open Recent". The
+        // palette of each kind lists every item that the settings keep.
         constexpr int RecentMenuCount = 10;
 
-        // The palette of "More...", and the prefixes of its entries by kind
+        // The palette of the recent items, and the prefixes of its entries by kind
         constexpr char RecentPaletteName[] = "recentPalette";
         const QString ProjectPrefix = QStringLiteral("project:");
         const QString VoiceBankPrefix = QStringLiteral("voicebank:");
@@ -156,9 +156,8 @@ namespace hello::daw {
             }
         }
 
-        // Every recent project and voice bank in a command palette over from, the latest first,
-        // as "More..." of "Open Recent" in VS Code
-        void showAllRecent(Editor *editor, QWidget *from) {
+        // Shows every recent item of kind in a command palette over from, the latest first
+        void showRecent(Editor *editor, RecentKind kind, QWidget *from) {
             auto palette = from->findChild<CommandPalette *>(RecentPaletteName);
             if (!palette) {
                 palette = new CommandPalette(from);
@@ -173,20 +172,23 @@ namespace hello::daw {
                                                 from);
                                  });
             }
+            // Each item labelled with its name, and found by its full path as well
             QList<CommandEntry> entries;
-            const auto entry = [](const QString &prefix, const QString &kind,
-                                  const std::filesystem::path &path) {
+            const auto entry = [](const QString &prefix, const std::filesystem::path &path) {
                 CommandEntry e;
                 e.id = prefix + textOf(path);
-                e.label = kind.arg(QString::fromStdU16String(path.filename().u16string()));
+                e.label = QString::fromStdU16String(path.filename().u16string());
                 e.alternative = QDir::toNativeSeparators(textOf(path));
                 return e;
             };
-            for (const auto &path : settings->recentFiles()) {
-                entries.push_back(entry(ProjectPrefix, Editor::tr("Project: %1"), path));
-            }
-            for (const auto &path : settings->recentVoiceBanks()) {
-                entries.push_back(entry(VoiceBankPrefix, Editor::tr("Voice Bank: %1"), path));
+            if (kind == RecentProjects) {
+                for (const auto &path : settings->recentFiles()) {
+                    entries.push_back(entry(ProjectPrefix, path));
+                }
+            } else {
+                for (const auto &path : settings->recentVoiceBanks()) {
+                    entries.push_back(entry(VoiceBankPrefix, path));
+                }
             }
             palette->setCommands(entries);
             palette->setRecentIds({});
@@ -388,8 +390,16 @@ namespace hello::daw {
                 impl.openRecent(this, path, bank, from);
             });
         };
+        // A section with ten items ends with the palette of all items of its kind.
+        const auto more = [&](const QString &text, RecentKind kind) {
+            connect(menu->addAction(text), &QAction::triggered, menu,
+                    [this, kind, from] { showRecent(kind, from); });
+        };
         for (const auto &path : files.mid(0, RecentMenuCount)) {
             add(path, false);
+        }
+        if (files.size() >= RecentMenuCount) {
+            more(tr("More &Projects..."), RecentProjects);
         }
         if (!files.isEmpty() && !banks.isEmpty()) {
             menu->addSeparator();
@@ -397,16 +407,20 @@ namespace hello::daw {
         for (const auto &path : banks.mid(0, RecentMenuCount)) {
             add(path, true);
         }
+        if (banks.size() >= RecentMenuCount) {
+            more(tr("More &Voice Banks..."), RecentVoiceBanks);
+        }
         menu->addSeparator();
-        connect(menu->addAction(tr("&More...")), &QAction::triggered, menu, [this, from] {
-            stdc_impl_t;
-            impl.showAllRecent(this, from);
-        });
         connect(menu->addAction(tr("&Clear Recent")), &QAction::triggered, menu, [this] {
             stdc_impl_t;
             impl.settings->clearRecentFiles();
             impl.settings->clearRecentVoiceBanks();
         });
+    }
+
+    void Editor::showRecent(RecentKind kind, QWidget *from) {
+        stdc_impl_t;
+        impl.showRecent(this, kind, from);
     }
 
     void Editor::showSettings(QWidget *from, const QString &page) {

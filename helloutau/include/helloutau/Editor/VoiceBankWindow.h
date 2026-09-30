@@ -58,8 +58,7 @@ namespace hello::daw {
         /// at the pointer by the keys 1 to 5.
         OtoWaveformView *waveformView() const;
 
-        /// The information of the voice bank, in a dock on the right that the View menu shows
-        /// and hides.
+        /// The information of the voice bank, in a right pane that the View menu shows and hides.
         VoiceBankInfoPanel *infoPanel() const;
 
         /// The rows of entryModel() selected in the table, in the order of the model.

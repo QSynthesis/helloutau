@@ -94,9 +94,22 @@ namespace hello::daw {
         /// opened
         VoiceBankWindow *openVoiceBank(const std::filesystem::path &root, QWidget *from = nullptr);
 
-        /// Fills \a menu, the "Open Recent" menu of a window, with the files opened last. A
-        /// project opens in \a from if \a from is an unused project window.
+        /// Fills \a menu, the "Open Recent" menu of a window: the ten latest projects, then the
+        /// ten latest voice banks, and "Clear Recent". A section with ten items ends with a
+        /// "More" item, which calls showRecent() for its kind. A project opens in \a from if
+        /// \a from is an unused project window.
         void fillRecentMenu(QMenu *menu, QWidget *from);
+
+        /// The kind of recent items that showRecent() lists
+        enum RecentKind {
+            RecentProjects,
+            RecentVoiceBanks,
+        };
+
+        /// Shows every recent item of \a kind that the settings keep, the latest first, in a
+        /// command palette over \a from, as "More..." of "Open Recent" in VS Code. The chosen
+        /// item opens as from "Open Recent".
+        void showRecent(RecentKind kind, QWidget *from);
 
         /// Shows the settings over \a from, on the page \a page if given. Each time the settings
         /// are applied, applies them to every project window: rereads the voice banks if the

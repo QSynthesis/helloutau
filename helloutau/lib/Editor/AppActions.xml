@@ -22,6 +22,13 @@
         <!-- Filled by the window with the files last opened -->
         <action id="helloutau.file.openRecent" text="Open &amp;Recent" category="File"
                 external="true" />
+        <!-- Every recent project, or every recent voice bank, in a command palette. These
+             commands are in no menu, only in the command palette, like the "More" items of Open
+             Recent. -->
+        <action id="helloutau.file.openRecentProject" text="Open Recent &amp;Project..."
+                category="File" />
+        <action id="helloutau.file.openRecentVoiceBank" text="Open Recent &amp;Voice Bank..."
+                category="File" />
         <action id="helloutau.file.close" text="&amp;Close" category="File" shortcut="Ctrl+W" />
         <action id="helloutau.file.quit" text="&amp;Quit" category="File" shortcut="Ctrl+Q" />
         <action id="helloutau.view.commandPalette" text="&amp;Command Palette..." category="View"

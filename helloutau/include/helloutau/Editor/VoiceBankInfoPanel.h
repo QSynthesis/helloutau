@@ -21,7 +21,7 @@ namespace hello::kit {
 
 namespace hello::daw {
 
-    /// The information of a voice bank beside its entries, in a dock of VoiceBankWindow: the
+    /// The information of a voice bank beside its entries, in the right pane of VoiceBankWindow:
     /// contents of \c character.txt, \c readme.txt and \c prefix.map of the root. See step 5
     /// of docs/VoiceBankEditor.md.
     ///
