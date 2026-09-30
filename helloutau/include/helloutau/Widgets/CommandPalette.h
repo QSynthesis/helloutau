@@ -70,6 +70,30 @@ namespace hello::daw {
         /// in the font of \a metrics.
         static QRect removeButtonRect(const QRect &rect, const QFontMetrics &metrics);
 
+        /// One part of a shortcut as the palette draws it.
+        struct KeyPart {
+            enum Kind {
+                /// A key, drawn as a key cap
+                Cap,
+                /// The plus sign between the keys of a combination, drawn without a cap
+                Plus,
+                /// The space between the combinations of a sequence
+                Gap,
+            };
+
+            Kind kind = Cap;
+            QString text;
+
+            inline bool operator==(const KeyPart &other) const {
+                return kind == other.kind && text == other.text;
+            }
+        };
+
+        /// Returns the parts of \a shortcut from left to right, as VS Code draws a shortcut:
+        /// "Ctrl", "+", "Shift", "+", "P" where the platform joins the keys by plus signs, and
+        /// one cap for each modifier symbol without plus signs on macOS.
+        static QList<KeyPart> keyParts(const QKeySequence &shortcut);
+
         /// Shows the palette with an empty query and gives it the focus.
         void popup();
 

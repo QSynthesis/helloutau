@@ -41,34 +41,6 @@ namespace hello::daw {
         constexpr int KeyCapRadius = 3;
         constexpr int GroupSpacing = 12;
 
-        // The keys of a shortcut as they are drawn, one cap each: "Ctrl", "Shift", "P". Chords
-        // are separated by an empty string.
-        QStringList keyCapsOf(const QKeySequence &shortcut) {
-            QStringList caps;
-            for (int i = 0; i < shortcut.count(); ++i) {
-                if (i > 0) {
-                    caps.push_back(QString());
-                }
-                const auto combination = shortcut[i];
-                const auto whole = QKeySequence(combination).toString(QKeySequence::NativeText);
-                const auto key = QKeySequence(combination.key()).toString(QKeySequence::NativeText);
-                // The modifiers precede the key, joined by "+" where the platform writes them so,
-                // and as one symbol each on macOS.
-                const auto modifiers = whole.left(whole.size() - key.size());
-                if (modifiers.contains(u'+')) {
-                    for (const auto &part : modifiers.split(u'+', Qt::SkipEmptyParts)) {
-                        caps.push_back(part);
-                    }
-                } else {
-                    for (const auto symbol : modifiers) {
-                        caps.push_back(QString(symbol));
-                    }
-                }
-                caps.push_back(key);
-            }
-            return caps;
-        }
-
         class EntryDelegate : public QStyledItemDelegate {
         public:
             explicit EntryDelegate(CommandPalette *palette)
@@ -122,19 +94,24 @@ namespace hello::daw {
                     painter->drawText(button, Qt::AlignCenter, QString(QChar(0x00d7)));
                     right = button.left() - GroupSpacing;
                 }
-                const auto caps = keyCapsOf(index.data(ShortcutRole).value<QKeySequence>());
+                const auto caps =
+                    CommandPalette::keyParts(index.data(ShortcutRole).value<QKeySequence>());
                 for (auto it = caps.crbegin(); it != caps.crend(); ++it) {
-                    if (it->isEmpty()) {
+                    if (it->kind == CommandPalette::KeyPart::Gap) {
                         right -= KeyCapSpacing * 2;
                         continue;
                     }
-                    const int width = metrics.horizontalAdvance(*it) + 2 * KeyCapPadding;
-                    const QRect cap(right - width + 1, area.top(), width, metrics.height());
-                    painter->setPen(Qt::NoPen);
-                    painter->setBrush(m_palette->keyCapColor());
-                    painter->drawRoundedRect(cap, KeyCapRadius, KeyCapRadius);
+                    const bool cap = it->kind == CommandPalette::KeyPart::Cap;
+                    const int width =
+                        metrics.horizontalAdvance(it->text) + (cap ? 2 * KeyCapPadding : 0);
+                    const QRect rect(right - width + 1, area.top(), width, metrics.height());
+                    if (cap) {
+                        painter->setPen(Qt::NoPen);
+                        painter->setBrush(m_palette->keyCapColor());
+                        painter->drawRoundedRect(rect, KeyCapRadius, KeyCapRadius);
+                    }
                     painter->setPen(textColor);
-                    painter->drawText(cap, Qt::AlignCenter, *it);
+                    painter->drawText(rect, Qt::AlignCenter, it->text);
                     right -= width + KeyCapSpacing;
                 }
                 if (index.data(RecentRole).toBool()) {
@@ -293,6 +270,33 @@ namespace hello::daw {
     void CommandPalette::setRemovable(bool removable) {
         m_removable = removable;
         m_list->viewport()->update();
+    }
+
+    QList<CommandPalette::KeyPart> CommandPalette::keyParts(const QKeySequence &shortcut) {
+        QList<KeyPart> parts;
+        for (int i = 0; i < shortcut.count(); ++i) {
+            if (i > 0) {
+                parts.push_back({KeyPart::Gap, {}});
+            }
+            const auto combination = shortcut[i];
+            const auto whole = QKeySequence(combination).toString(QKeySequence::NativeText);
+            const auto key = QKeySequence(combination.key()).toString(QKeySequence::NativeText);
+            // The modifiers precede the key, joined by "+" where the platform writes them so,
+            // and as one symbol each on macOS.
+            const auto modifiers = whole.left(whole.size() - key.size());
+            if (modifiers.contains(u'+')) {
+                for (const auto &part : modifiers.split(u'+', Qt::SkipEmptyParts)) {
+                    parts.push_back({KeyPart::Cap, part});
+                    parts.push_back({KeyPart::Plus, QStringLiteral("+")});
+                }
+            } else {
+                for (const auto symbol : modifiers) {
+                    parts.push_back({KeyPart::Cap, QString(symbol)});
+                }
+            }
+            parts.push_back({KeyPart::Cap, key});
+        }
+        return parts;
     }
 
     QRect CommandPalette::removeButtonRect(const QRect &rect, const QFontMetrics &metrics) {

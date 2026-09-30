@@ -197,6 +197,45 @@ private Q_SLOTS:
         QCOMPARE(spy.count(), 0);
     }
 
+    // A shortcut is drawn as VS Code draws it: on Windows and Linux the keys of a combination
+    // are joined by plus signs without caps, and on macOS the modifier symbols follow each other
+    // without them (the separators of UILabelProvider in src/vs/base/common/keybindingLabels.ts).
+    // The combinations of a sequence are separated by a gap.
+    void a_shortcut_is_drawn_as_key_caps() {
+        using Part = CommandPalette::KeyPart;
+        const auto parts =
+            CommandPalette::keyParts(QKeySequence(QStringLiteral("Ctrl+Shift+P, F1")));
+#ifdef Q_OS_MACOS
+        const QList<Part> expected{
+            {Part::Cap, QString(QChar(0x21e7))},
+            {Part::Cap, QString(QChar(0x2318))},
+            {Part::Cap, QStringLiteral("P")},
+            {Part::Gap, {}},
+            {Part::Cap, QStringLiteral("F1")},
+        };
+        QCOMPARE(parts, expected);
+#else
+        const QList<Part> expected{
+            {Part::Cap, QStringLiteral("Ctrl")},
+            {Part::Plus, QStringLiteral("+")},
+            {Part::Cap, QStringLiteral("Shift")},
+            {Part::Plus, QStringLiteral("+")},
+            {Part::Cap, QStringLiteral("P")},
+            {Part::Gap, {}},
+            {Part::Cap, QStringLiteral("F1")},
+        };
+        QCOMPARE(parts, expected);
+
+        // The plus key is a cap of its own after the plus sign.
+        const QList<Part> plus{
+            {Part::Cap, QStringLiteral("Ctrl")},
+            {Part::Plus, QStringLiteral("+")},
+            {Part::Cap, QStringLiteral("+")},
+        };
+        QCOMPARE(CommandPalette::keyParts(QKeySequence(Qt::CTRL | Qt::Key_Plus)), plus);
+#endif
+    }
+
     void enter_with_nothing_shown_does_nothing() {
         QMainWindow window;
         window.show();
