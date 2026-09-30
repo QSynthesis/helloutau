@@ -181,7 +181,15 @@ namespace hello::kit {
     }
 
     std::optional<SynthPlan> SynthPlan::make(const Project &project, const VoiceBank &bank,
-                                             const Options &options, DiagnosticList &diagnostics) {
+                                             const Options &requested,
+                                             DiagnosticList &diagnostics) {
+        // The paths in the preferred separators of the system. The rendering script and the
+        // engines receive them as text, and the copy command of Windows rejects a path written
+        // with forward slashes, which a file dialog of Qt returns.
+        auto options = requested;
+        options.outputFile.make_preferred();
+        options.cacheDirectory.make_preferred();
+
         if (project.tracks.size() != 1) {
             fail(diagnostics,
                  tr("Rendering requires exactly one track, but this project contains %1.")
@@ -315,5 +323,4 @@ namespace hello::kit {
         }
         return plan;
     }
-
 }

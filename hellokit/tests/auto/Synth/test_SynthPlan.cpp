@@ -214,8 +214,36 @@ private Q_SLOTS:
         // The wavtool appends the same fragment to the track, with the track first, because the
         // engine reads its arguments as <outfile> <infile>.
         const auto &wavtool = step.wavtoolArguments;
-        QCOMPARE(wavtool.at(0), QString::fromStdU16String((root() / "out.wav").u16string()));
+        QCOMPARE(wavtool.at(0),
+                 QString::fromStdU16String((root() / "out.wav").make_preferred().u16string()));
         QCOMPARE(wavtool.at(1), QString::fromStdU16String(step.cacheFile.u16string()));
+    }
+
+    // The output file and the cache directory are written in the preferred separators, because
+    // the rendering script passes them as text, and the copy command of Windows rejects forward
+    // slashes. A file dialog of Qt returns forward slashes.
+    void the_paths_use_the_preferred_separators() {
+        const auto voices = bank();
+        QVERIFY(voices.has_value());
+
+        auto requested = options();
+        requested.outputFile = std::filesystem::path(
+            (m_dir->path() + QStringLiteral("/sub/out.wav")).toStdU16String());
+        requested.cacheDirectory =
+            std::filesystem::path((m_dir->path() + QStringLiteral("/sub/cache")).toStdU16String());
+        DiagnosticList diagnostics;
+        const auto plan = SynthPlan::make(projectOf({note(QStringLiteral("a"))}), *voices,
+                                          requested, diagnostics);
+        QVERIFY(plan.has_value());
+
+        const auto preferred = [](std::filesystem::path path) {
+            return QString::fromStdU16String(path.make_preferred().u16string());
+        };
+        QCOMPARE(QString::fromStdU16String(plan->outputFile().u16string()),
+                 preferred(requested.outputFile));
+        QCOMPARE(QString::fromStdU16String(plan->cacheDirectory().u16string()),
+                 preferred(requested.cacheDirectory));
+        QCOMPARE(plan->steps().at(0).wavtoolArguments.at(0), preferred(requested.outputFile));
     }
 
     // A rest has no sample and requires no resampling. The wavtool still runs, because a rest
