@@ -16,7 +16,10 @@
 
     <items>
         <action id="helloutau.file.import" text="&amp;Import..." category="File" />
-        <action id="helloutau.file.exportOther" text="&amp;Other Formats..." category="File" />
+        <!-- Other Formats... in the Export menu, and Export Other Formats... in the command
+             palette -->
+        <action id="helloutau.file.exportOther" text="Export &amp;Other Formats..."
+                shortText="&amp;Other Formats..." category="File" />
     </items>
 
     <insertions>

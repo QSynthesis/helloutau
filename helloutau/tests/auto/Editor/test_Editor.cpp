@@ -245,12 +245,19 @@ private Q_SLOTS:
         QVERIFY(ids.contains(QStringLiteral("helloutau.file.save")));
         QVERIFY(!ids.contains(QStringLiteral("helloutau.edit.undo")));
         QVERIFY(ids.contains(QStringLiteral("helloutau.view.commandPalette")));
+        bool exportFound = false;
         for (const auto &entry : palette->commands()) {
             if (entry.id == QStringLiteral("helloutau.file.save")) {
                 QCOMPARE(entry.label, QStringLiteral("File: Save"));
                 QCOMPARE(entry.shortcut, QKeySequence(QStringLiteral("Ctrl+S")));
             }
+            // The palette shows the full text, and the Export menu shows UST...
+            if (entry.id == QStringLiteral("helloutau.file.exportUst")) {
+                QCOMPARE(entry.label, QStringLiteral("File: Export UST..."));
+                exportFound = true;
+            }
         }
+        QVERIFY(exportFound);
         QTest::keyClick(palette->findChild<QLineEdit *>(), Qt::Key_Escape);
 
         // Once there is something to undo, the palette offers Undo and runs it.

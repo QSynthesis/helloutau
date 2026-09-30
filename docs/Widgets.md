@@ -128,7 +128,7 @@
 
 ### 第 2 步：命令面板
 
-- 列出 `isCommand()` 为真且当前可用的动作，显示为「类别: 文字」，文字去掉助记符（`ActionText::withoutMnemonic()`），并显示快捷键。与 VS Code 相同，不可用的命令不列出（[VS Code 的扩展文档](https://code.visualstudio.com/api/references/contribution-points)：「the Command Palette doesn't show icons nor disabled commands」）。
+- 列出 `isCommand()` 为真且当前可用的动作，显示为「类别: 文字」，文字去掉助记符（`ActionText::withoutMnemonic()`），并显示快捷键。文字取清单的 `text`，即命令的完整名称；菜单中显示的是 `shortText`，未指定时同 `text`，二者对应 VS Code 的 `title` 与 `shortTitle`。例如「导出」菜单中的「UST...」在面板中为「File: Export UST...」。与 VS Code 相同，不可用的命令不列出（[VS Code 的扩展文档](https://code.visualstudio.com/api/references/contribution-points)：「the Command Palette doesn't show icons nor disabled commands」）。
 - 按输入即时模糊匹配并排序：字符按顺序出现即匹配，词首与相连的字符得分高，已输入的字符以强调色显示。翻译后的文字与清单中的原文都参与匹配，界面不是英文时原文显示在第二行。
 - 回车执行；Esc、点击面板以外、触发任何快捷键或失去焦点时关闭。最近执行的命令在未输入时排在最前，记在 `AppSettings` 中，各窗口共用。
 - 外观与显示逻辑参照 QSynthesis Revenge（[`SineStriker/qsynthesis-revenge`](https://github.com/SineStriker/qsynthesis-revenge)，`refactor` 分支 `6c20777`）的命令面板：位于窗口顶部居中，宽高各为窗口的一半并有上下限，快捷键画成键帽，键之间的分隔同 VS Code（其 keybindingLabels.ts 中的 UILabelProvider）：Windows 与 Linux 上以不带键帽的「+」相连，macOS 上修饰键为符号，之间不加分隔，多段组合键之间只留空隙。面板的阴影由主题系统以样式表提供，不自行绘制。

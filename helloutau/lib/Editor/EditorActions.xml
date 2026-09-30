@@ -18,7 +18,9 @@
         <action id="helloutau.file.save" text="&amp;Save" category="File" shortcut="Ctrl+S" />
         <action id="helloutau.file.saveAs" text="Save &amp;As..." category="File"
                 shortcut="Ctrl+Shift+S" />
-        <action id="helloutau.file.exportUst" text="&amp;UST..." category="File" />
+        <!-- UST... in the Export menu, and Export UST... in the command palette -->
+        <action id="helloutau.file.exportUst" text="Export &amp;UST..." shortText="&amp;UST..."
+                category="File" />
         <!-- The name, tempo, flags, output file, voice folder, engines and Mode2 of the project -->
         <action id="helloutau.file.properties" text="Project &amp;Properties..." category="File" />
 
