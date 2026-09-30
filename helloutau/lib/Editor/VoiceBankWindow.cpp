@@ -376,6 +376,9 @@ namespace hello::daw {
             table->setSelectionBehavior(QAbstractItemView::SelectRows);
             table->verticalHeader()->hide();
             table->horizontalHeader()->setStretchLastSection(false);
+            table->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+            table->setMinimumWidth(0);
+            table->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Expanding);
 
             search = new QLineEdit();
             search->setPlaceholderText(tr("Search file names and aliases"));
@@ -409,6 +412,7 @@ namespace hello::daw {
             });
 
             auto right = new QWidget();
+            right->setMinimumWidth(0);
             auto layout = new QVBoxLayout(right);
             layout->setContentsMargins(0, 0, 0, 0);
             layout->addWidget(bar);
@@ -453,6 +457,9 @@ namespace hello::daw {
             main->addWidget(info);
             main->setStretchFactor(0, 1);
             main->setStretchFactor(1, 0);
+            main->setCollapsible(1, true);
+            info->setMinimumWidth(0);
+            info->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Expanding);
             main->setSizes({760, 280});
             decl.setCentralWidget(main);
 
