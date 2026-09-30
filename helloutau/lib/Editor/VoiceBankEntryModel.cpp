@@ -58,6 +58,7 @@ namespace hello::daw {
                     return entry.voiceOverlap;
             }
         }
+
     }
 
     class VoiceBankEntryModel::Impl {
@@ -471,4 +472,5 @@ namespace hello::daw {
         refresh();
         return true;
     }
+
 }
