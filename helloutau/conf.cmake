@@ -19,6 +19,8 @@ set(HELLOUTAU_INSTALL_PLUGINS_DIR ${CMAKE_INSTALL_LIBDIR}/plugins/helloutau)
 # Windows resource metadata. The libraries share the description of the module. A program is
 # described by the DESCRIPTION of the project() of its own directory, which the function reads in
 # the scope of that directory. project() without DESCRIPTION leaves PROJECT_DESCRIPTION empty.
+# The name is that of the target unless the directory sets HELLOUTAU_RC_NAME, as a program whose
+# file name is in lower case does for the name shown to the user.
 set(HELLOUTAU_RC_DESCRIPTION "${PROJECT_DESCRIPTION}")
 set(HELLOUTAU_RC_COPYRIGHT "Copyright (c) 2026-present SineStriker")
 
@@ -28,9 +30,14 @@ function(_helloutau_common_configure_target _target)
         set(_description "${PROJECT_DESCRIPTION}")
     endif()
 
+    set(_name ${_target})
+    if(HELLOUTAU_RC_NAME)
+        set(_name "${HELLOUTAU_RC_NAME}")
+    endif()
+
     if(WIN32)
         qm_add_win_rc(${_target}
-            NAME ${_target}
+            NAME "${_name}"
             DESCRIPTION "${_description}"
             COPYRIGHT "${HELLOUTAU_RC_COPYRIGHT}"
         )
