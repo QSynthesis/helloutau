@@ -29,12 +29,16 @@
 | `[#0004] Velocity=`、`Length=240`，省略 `Flags` | u 的 `Velocity` 消失（回到默认），`Length=240`，`Flags=g-5` 保留 | 空值恢复默认，省略即不变 |
 | `[#NEXT] Lyric=Q` | e 变为 Q，`Label` 与 `$probe` 保留 | `[#NEXT]` 的修改被应用 |
 | 空文件 | 工程不变 | 全部段落省略即取消 |
+| `[#INSERT] Lyric=B` 写在 `[#PREV]`（段落头）之前，`[#INSERT] Lyric=F` 写在 `[#NEXT]`（段落头）之后 | B 在 a 与 i 之间，F 在 u 与 e 之间，a 与 e 不变 | **插入不会越出选区**：写在 PREV 之前等于插在选区起点，写在 NEXT 之后等于插在选区终点 |
 
-运行时 UTAU 没有弹出提示。三次应用均可撤销（作者先另存、再撤销、再做下一步：R2、R3 的临时文件中 `Project` 分别为上一步另存的文件，而音符是撤销后的原样）。
+最后一行是 R4，与前三次分开补做，从 `probe.ust` 重新打开，选区同为 i、R、u；其结果文件的写法与 stdutau `PluginFileWriter::prependNotesBeforePrev` / `appendNotesAfterNext` 的输出相同。
+
+运行时 UTAU 没有弹出提示。前三次应用均可撤销（作者先另存、再撤销、再做下一步：R2、R3 的临时文件中 `Project` 分别为上一步另存的文件，而音符是撤销后的原样）。
 
 ## 对 HelloUtau 的影响
 
 - 临时文件按上述写法生成：轨道位置编号，完整的 `[#PREV]` / `[#NEXT]`，`UST Version 1.20`，绝对路径，CRLF，`PreUtterance=` 空值，`@` 条目在末尾。`notes` 存在时传入全部音符，不写 `[#PREV]` / `[#NEXT]`。
 - 结果按出现顺序应用，`[#PREV]` / `[#NEXT]` 的修改应用，逐条合并（省略不变、空值恢复默认），`[#INSERT]` 的默认值取自后一个音符，空文件为取消。与 [`../ClassicPluginHost.md`](../ClassicPluginHost.md) 的设计一致。
 - stdutau 的 `PluginFileReader` 注释称临时文件「总从 0 编号」，与实测不符，须改正。
+- stdutau 的 `PluginFileWriter::prependNotesBeforePrev` / `appendNotesAfterNext` 称插到选区外，实测只插在选区的起点与终点，须改正。
 - 临时文件的编码是本地编码，与 note.md 对没有 `plugin.json` 的插件的规定一致；声明接收 UTF-8 的插件改用 UTF-8。
