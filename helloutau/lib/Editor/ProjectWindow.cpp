@@ -294,24 +294,31 @@ namespace hello::daw {
                 return;
             }
             const auto changes = dialog.changes();
-            if (changes.isEmpty()) {
-                const auto track = document->session()->snapshot().tracks.value(0);
-                const auto root = track.voiceDirectory(editor->settings().utauDirectory());
-                if (!document->voiceBank() && !root.empty() && root == voiceBankRoot) {
-                    decl.loadVoiceBank();
-                }
-                return;
+            bool newFolder = false;
+            if (!changes.isEmpty()) {
+                kit::DiagnosticList diagnostics;
+                const bool changed = kit::ProjectEdits::setProperties(
+                    kit::ProjectRef(document->session()), changes, diagnostics);
+                DiagnosticBox::show(&decl, tr("Project Properties"), diagnostics);
+                newFolder = changed && changes.voiceDir.has_value();
             }
-            kit::DiagnosticList diagnostics;
-            const bool changed = kit::ProjectEdits::setProperties(
-                kit::ProjectRef(document->session()), changes, diagnostics);
-            DiagnosticBox::show(&decl, tr("Project Properties"), diagnostics);
-            const auto track = document->session()->snapshot().tracks.value(0);
-            const auto root = track.voiceDirectory(editor->settings().utauDirectory());
-            if ((changed && changes.voiceDir) ||
-                (!document->voiceBank() && !root.empty() && root == voiceBankRoot)) {
+            // A folder that failed to load before is read again once the dialog confirms it.
+            const auto root = voiceRoot();
+            if (newFolder || (!document->voiceBank() && !root.empty() && root == voiceBankRoot)) {
                 decl.loadVoiceBank();
             }
+        }
+
+        // Returns the voice bank folder that the project names, resolved against the UTAU
+        // folder of the settings. Reads the field alone rather than a snapshot of the project.
+        std::filesystem::path voiceRoot() const {
+            const auto tracks = kit::ProjectRef(document->session()).tracks();
+            if (tracks.size() == 0) {
+                return {};
+            }
+            kit::Track track;
+            track.voiceDir = tracks.at(0).voiceDir();
+            return track.voiceDirectory(editor->settings().utauDirectory());
         }
 
         // Deletes the render cache of the project; the realtime mode renders it anew.
@@ -803,18 +810,15 @@ namespace hello::daw {
             QObject::connect(document->session(), &kit::ProjectSession::stepChanged, &decl, [this] {
                 updateUndoActions();
                 updatePitchActions();
-                const auto track = document->session()->snapshot().tracks.value(0);
-                const auto root = track.voiceDirectory(editor->settings().utauDirectory());
-                if (root != voiceBankRoot && !voiceBankReloadPending) {
+                // An undo or redo that changes the voice folder reads the folder again. The read
+                // is queued so that it does not run inside the notification of the step.
+                if (!voiceBankReloadPending && voiceRoot() != voiceBankRoot) {
                     voiceBankReloadPending = true;
                     QMetaObject::invokeMethod(
                         _decl,
                         [this] {
                             voiceBankReloadPending = false;
-                            const auto track = document->session()->snapshot().tracks.value(0);
-                            const auto root =
-                                track.voiceDirectory(editor->settings().utauDirectory());
-                            if (root != voiceBankRoot) {
+                            if (voiceRoot() != voiceBankRoot) {
                                 _decl->loadVoiceBank();
                             }
                         },
@@ -1138,8 +1142,7 @@ namespace hello::daw {
         stdc_impl_t;
         const auto document = impl.document.get();
         const auto utau = impl.editor->settings().utauDirectory();
-        const auto track = document->session()->snapshot().tracks.value(0);
-        impl.voiceBankRoot = track.voiceDirectory(utau);
+        impl.voiceBankRoot = impl.voiceRoot();
         VoiceBankCharsetDialog selector(this);
         selector.setRoot(impl.voiceBankRoot);
         kit::DiagnosticList diagnostics;

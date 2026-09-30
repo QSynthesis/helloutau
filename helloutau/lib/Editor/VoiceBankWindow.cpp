@@ -457,8 +457,10 @@ namespace hello::daw {
             main->addWidget(info);
             main->setStretchFactor(0, 1);
             main->setStretchFactor(1, 0);
-            main->setCollapsible(1, true);
-            info->setMinimumWidth(0);
+            // The panel keeps a readable width. It is hidden by View > Voice Bank Info rather
+            // than by dragging the splitter, which would leave the command checked.
+            main->setCollapsible(1, false);
+            info->setMinimumWidth(180);
             info->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Expanding);
             main->setSizes({760, 280});
             decl.setCentralWidget(main);
