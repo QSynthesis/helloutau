@@ -115,6 +115,18 @@ PImpl 采用 stdcorelib 的写法（`<stdcorelib/pimpl.h>`），使用 PImpl 的
 
 `<目标名>Global.h` 引用 `<QtCore/QtGlobal>`，导出宏展开为 `Q_DECL_EXPORT` / `Q_DECL_IMPORT`。两个模块都依赖 Qt，而 stdcorelib 是私有依赖，不出现在公开头文件中。
 
+## 构建与安装选项
+
+| 选项 | 默认 | 作用 |
+|---|---|---|
+| `HELLO_BUILD_TESTS` | OFF | 构建测试 |
+| `HELLO_BUILD_APPLICATION` | ON | 构建编辑器（`helloutau` 模块），关闭时只构建 `hellokit` |
+| `HELLO_INSTALL` | ON | 安装 |
+| `HELLO_DEVEL` | OFF | 另外安装开发所需的文件：导入库与静态库、头文件、CMake 包、调试符号 |
+
+- `HELLO_DEVEL` 关闭时只安装运行所需的文件：程序、动态库、插件及其 `plugin.json`。两个模块把它传给 qmsetup 的 `<模块>_DEVEL`（导入库、头文件、CMake 包）与 `<模块>_INSTALL_PDB`（调试符号）；插件的公开头文件同样只在 `HELLOUTAU_DEVEL` 下安装。
+- 调试符号：qmsetup 原先只以 CMake 的 `MSVC` 判断是否安装 PDB。GNU 前端的 clang 面向 MSVC ABI 时（`CMAKE_CXX_SIMULATE_ID` 为 `MSVC`，链接器为 lld-link，生成 PDB）不算 `MSVC`，会被当作 ELF 处理：装出以 `objcopy` 抽取的 `.debug` 而不是 `.pdb`，并对装出的程序与动态库执行 `strip`。qmsetup 已改为同时认模拟的 `MSVC`（2026-09-30），所用的 qmsetup 更新之前，这种工具链下仍是旧的行为。
+
 ## Qt
 
 **带 `Q_OBJECT` 的头文件必须出现在目标的 `SOURCES` 中。** AUTOMOC 只处理 `SOURCES` 中列出的文件，而位于 `include/` 下的头文件不会被源文件的 glob 匹配，moc 因此不会生成代码，链接时将缺少 `metaObject`、`qt_metacast`、`qt_metacall`、`staticMetaObject` 四个符号。因此子库必须将头文件一并加入 glob：

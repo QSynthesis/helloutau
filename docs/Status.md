@@ -102,8 +102,6 @@
 ## 待定事项
 
 - stdutau 转为子模块的时机。
-- 是否安装 `hellokit` 并提供给插件作者。目前 `HELLOKIT_DEVEL` 为 ON，头文件和 CMake 包均会安装。
-- 是否将编辑界面扩展的注册接口头文件安装并提供给第三方。若提供，需将 `HELLOUTAU_DEVEL` 由 OFF 改为 ON。
 
 ## 已知问题
 

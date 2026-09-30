@@ -5,8 +5,11 @@ include(GNUInstallDirs)
 # ----------------------------------
 set(HELLOUTAU_INCLUDE_DIR "include")
 
-# The editor libraries install their headers, so that plugins can be built against them.
-set(HELLOUTAU_DEVEL ON)
+# The files for development, see HELLO_DEVEL, so that plugins can be built against the editor
+# libraries and the plugins: <proj>_DEVEL gates the import libraries, the headers and the CMake
+# package, <proj>_INSTALL_PDB the debug symbols.
+set(HELLOUTAU_DEVEL ${HELLO_DEVEL})
+set(HELLOUTAU_INSTALL_PDB ${HELLO_DEVEL})
 
 set(HELLOUTAU_INSTALL_CONFIG_TEMPLATE
     "${CMAKE_CURRENT_LIST_DIR}/${HELLOUTAU_INSTALL_NAME}Config.cmake.in"

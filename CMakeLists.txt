@@ -11,8 +11,11 @@ project(helloutau
 # Build Options
 # ----------------------------------
 option(HELLO_BUILD_TESTS "Build test cases" OFF)
-option(HELLO_BUILD_APP "Build the editor application" ON)
+option(HELLO_BUILD_APPLICATION "Build the editor application" ON)
 option(HELLO_INSTALL "Install the project" ON)
+# Installs what building on the libraries and plugins needs besides the programs: the import and
+# static libraries, the headers, the CMake packages, and the debug symbols (PDB on Windows).
+option(HELLO_DEVEL "Install the files for development" OFF)
 option(HELLO_INSTALL_MSVC_RUNTIME "Install MSVC runtime" OFF)
 
 # ----------------------------------
@@ -83,6 +86,6 @@ endif()
 # ----------------------------------
 add_subdirectory(hellokit)
 
-if(HELLO_BUILD_APP)
+if(HELLO_BUILD_APPLICATION)
     add_subdirectory(helloutau)
 endif()

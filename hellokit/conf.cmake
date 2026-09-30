@@ -5,9 +5,10 @@ include(GNUInstallDirs)
 # ----------------------------------
 set(HELLOKIT_INCLUDE_DIR "include")
 
-# Install the CMake package files and the public headers alongside the binaries.
-# The generic helpers gate both on <proj>_DEVEL, which defaults to off.
-set(HELLOKIT_DEVEL ON)
+# The files for development, see HELLO_DEVEL: the generic helpers gate the import libraries, the
+# headers and the CMake package on <proj>_DEVEL, and the debug symbols on <proj>_INSTALL_PDB.
+set(HELLOKIT_DEVEL ${HELLO_DEVEL})
+set(HELLOKIT_INSTALL_PDB ${HELLO_DEVEL})
 
 set(HELLOKIT_INSTALL_CONFIG_TEMPLATE
     "${CMAKE_CURRENT_LIST_DIR}/${HELLOKIT_INSTALL_NAME}Config.cmake.in"
