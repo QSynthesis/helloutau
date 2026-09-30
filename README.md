@@ -1,5 +1,7 @@
 # HelloUtau
 
+English | [简体中文](docs/README.zh-CN.md)
+
 A cross-platform editor for UTAU projects and voice banks, for Windows, macOS and Linux.
 
 HelloUtau aims at functional parity with UTAU 0.4.19, while its interface, its handling of text encodings and its extension mechanism are designed anew.
