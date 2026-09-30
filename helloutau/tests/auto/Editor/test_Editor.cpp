@@ -4,6 +4,7 @@
 #include <QtCore/QTemporaryDir>
 #include <QtCore/QTimer>
 #include <QtGui/QAction>
+#include <QtTest/QSignalSpy>
 #include <QtTest/QTest>
 #include <QtGui/QClipboard>
 #include <QtWidgets/QApplication>
@@ -1044,6 +1045,198 @@ private Q_SLOTS:
         QVERIFY(asked);
         QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
         QVERIFY(e->voiceBankWindows().isEmpty());
+    }
+
+    // Every cell of an entry edits it as one undo step; an unlisted file is included by editing
+    // its alias. A value that is not a number, and an alias that another entry of the file
+    // has, are refused with a message.
+    void the_entry_table_edits_the_entries() {
+        QTemporaryDir dir;
+        const auto bank = voiceBank(dir);
+        const auto e = editor();
+        const auto window = e->openVoiceBank(bank);
+        QVERIFY(window);
+        const auto session = window->document()->session();
+        const auto tree = window->directoryTree();
+        tree->setCurrentItem(tree->topLevelItem(1));
+        const auto model = window->entryModel();
+        QSignalSpy rejected(model, &VoiceBankEntryModel::editRejected);
+        QCOMPARE(model->rowCount(), 3);
+        QVERIFY(!(model->flags(model->index(0, VoiceBankEntryModel::DirectoryColumn)) &
+                  Qt::ItemIsEditable));
+        QVERIFY(model->flags(model->index(0, VoiceBankEntryModel::FileColumn)) &
+                Qt::ItemIsEditable);
+        QVERIFY(
+            !(model->flags(model->index(2, VoiceBankEntryModel::FileColumn)) & Qt::ItemIsEditable));
+
+        // The alias and a value, each one step; the edited row stays current.
+        window->setCurrentRow(0);
+        const int step = session->currentStep();
+        QVERIFY(model->setData(model->index(0, VoiceBankEntryModel::AliasColumn),
+                               QStringLiteral("aa")));
+        QVERIFY(model->setData(model->index(0, VoiceBankEntryModel::OffsetColumn),
+                               QStringLiteral(" 15.5")));
+        QCOMPARE(session->currentStep(), step + 2);
+        QCOMPARE(window->currentRow(), 0);
+        QCOMPARE(model->index(0, VoiceBankEntryModel::OffsetColumn).data().toString(),
+                 QStringLiteral("15.5"));
+
+        // The message is shown once the editor would have closed, and answered after it.
+        QVERIFY(!model->setData(model->index(0, VoiceBankEntryModel::CutoffColumn),
+                                QStringLiteral("abc")));
+        answerMessageBox(QMessageBox::Ok);
+        QCoreApplication::processEvents();
+        QCOMPARE(rejected.size(), 1);
+        QCOMPARE(session->currentStep(), step + 2);
+
+        // An unlisted file is included by its alias, in one step.
+        QVERIFY(model->setData(model->index(2, VoiceBankEntryModel::AliasColumn),
+                               QStringLiteral("cc")));
+        QCOMPARE(session->currentStep(), step + 3);
+        QCOMPARE(model->index(2, 0).data(VoiceBankEntryModel::RowKindRole).toInt(),
+                 int(VoiceBankEntryModel::EntryRow));
+        QCOMPARE(model->entryOf(2).alias, QStringLiteral("cc"));
+        session->undo();
+        QCoreApplication::processEvents();
+        QCOMPARE(model->index(2, 0).data(VoiceBankEntryModel::RowKindRole).toInt(),
+                 int(VoiceBankEntryModel::UnlistedAudioRow));
+        session->redo();
+        QCoreApplication::processEvents();
+
+        // In sub, y cannot become x, which x.wav already has.
+        tree->setCurrentItem(tree->topLevelItem(1)->child(0));
+        QVERIFY(!model->setData(model->index(1, VoiceBankEntryModel::AliasColumn),
+                                QStringLiteral("x")));
+        answerMessageBox(QMessageBox::Ok);
+        QCoreApplication::processEvents();
+        QCOMPARE(rejected.size(), 2);
+        QCOMPARE(model->entryOf(1).alias, QStringLiteral("y"));
+
+        QVERIFY(window->save());
+        std::ifstream in(bank / "oto.ini", std::ios::binary);
+        const std::string text((std::istreambuf_iterator<char>(in)),
+                               std::istreambuf_iterator<char>());
+        QCOMPARE(QByteArray::fromStdString(text),
+                 QByteArray("#Charset:UTF-8\r\na.wav=aa,15.5,20,-30,40,5\r\nb.wav=,1,2,3,4,5\r\n"
+                            "c.wav=cc,0,0,0,0,0\r\n"));
+    }
+
+    // Insert, Duplicate, Include and Delete each make one undo step and select what they made.
+    void the_entry_table_inserts_duplicates_includes_and_removes() {
+        QTemporaryDir dir;
+        const auto bank = voiceBank(dir);
+        const auto e = editor();
+        const auto window = e->openVoiceBank(bank);
+        QVERIFY(window);
+        const auto session = window->document()->session();
+        const auto tree = window->directoryTree();
+        tree->setCurrentItem(tree->topLevelItem(1));
+        const auto model = window->entryModel();
+        const auto aliases = [model] {
+            QStringList list;
+            for (int row = 0; row < model->rowCount(); ++row) {
+                list.push_back(model->entryOf(row).fileName + QLatin1Char('=') +
+                               model->entryOf(row).alias);
+            }
+            return list;
+        };
+        const auto duplicate = actionNamed(window, QStringLiteral("D&uplicate Entries"));
+        const auto include = actionNamed(window, QStringLiteral("Include Audio &Files"));
+        const auto remove = actionNamed(window, QStringLiteral("&Delete"));
+        QVERIFY(duplicate && include && remove);
+
+        // Only an entry is duplicated or removed, and only an unlisted file included.
+        window->setCurrentRow(2);
+        QVERIFY(!duplicate->isEnabled());
+        QVERIFY(!remove->isEnabled());
+        QVERIFY(include->isEnabled());
+        window->setCurrentRow(0);
+        QVERIFY(duplicate->isEnabled());
+        QVERIFY(!include->isEnabled());
+
+        // a2 after a, twice a3 as the next free name
+        const int step = session->currentStep();
+        duplicate->trigger();
+        QCOMPARE(session->currentStep(), step + 1);
+        QCOMPARE(aliases(), (QStringList{QStringLiteral("a.wav=a"), QStringLiteral("a.wav=a2"),
+                                         QStringLiteral("b.wav="), QStringLiteral("c.wav=")}));
+        QCOMPARE(window->selectedRows(), QList<int>{1});
+        window->setCurrentRow(0);
+        duplicate->trigger();
+        QCOMPARE(model->entryOf(2).alias, QStringLiteral("a3"));
+
+        // The unlisted file and an entry selected: Include takes the file alone.
+        window->setCurrentRow(4);
+        include->trigger();
+        QCOMPARE(session->currentStep(), step + 3);
+        QCOMPARE(model->index(4, 0).data(VoiceBankEntryModel::RowKindRole).toInt(),
+                 int(VoiceBankEntryModel::EntryRow));
+        QCOMPARE(window->selectedRows(), QList<int>{4});
+
+        // b.wav and a3 removed in one step
+        window->setCurrentRow(2);
+        window->entryTable()->selectionModel()->select(window->entryTable()->model()->index(3, 0),
+                                                       QItemSelectionModel::Select |
+                                                           QItemSelectionModel::Rows);
+        remove->trigger();
+        QCOMPARE(session->currentStep(), step + 4);
+        QCOMPARE(aliases(), (QStringList{QStringLiteral("a.wav=a"), QStringLiteral("a.wav=a2"),
+                                         QStringLiteral("c.wav=")}));
+
+        // An entry for a.wav, whose stem is taken: a3
+        window->setCurrentRow(0);
+        QTimer::singleShot(0, [] {
+            const auto input = qobject_cast<QInputDialog *>(QApplication::activeModalWidget());
+            QVERIFY(input);
+            QCOMPARE(input->textValue(), QStringLiteral("a.wav"));
+            input->accept();
+        });
+        QVERIFY(window->insertEntry());
+        QCOMPARE(session->currentStep(), step + 5);
+        QCOMPARE(aliases(), (QStringList{QStringLiteral("a.wav=a"), QStringLiteral("a.wav=a2"),
+                                         QStringLiteral("a.wav=a3"), QStringLiteral("c.wav=")}));
+        QCOMPARE(window->currentRow(), 2);
+
+        // An entry for c.wav, whose stem is free: an empty alias
+        window->setCurrentRow(3);
+        QTimer::singleShot(0, [] {
+            const auto input = qobject_cast<QInputDialog *>(QApplication::activeModalWidget());
+            QVERIFY(input);
+            input->setTextValue(QStringLiteral("d.wav"));
+            input->accept();
+        });
+        QVERIFY(window->insertEntry());
+        QCOMPARE(model->entryOf(4).fileName, QStringLiteral("d.wav"));
+        QCOMPARE(model->entryOf(4).alias, QString());
+        QCOMPARE(model->index(4, 0).data(VoiceBankEntryModel::RowKindRole).toInt(),
+                 int(VoiceBankEntryModel::MissingAudioRow));
+
+        QCOMPARE(session->currentStep(), step + 6);
+        for (int i = 0; i < 6; ++i) {
+            session->undo();
+        }
+        QCoreApplication::processEvents();
+        QCOMPARE(aliases(), (QStringList{QStringLiteral("a.wav=a"), QStringLiteral("b.wav="),
+                                         QStringLiteral("c.wav=")}));
+    }
+
+    // An alias that another entry of the same file has, as read, is marked.
+    void the_entry_table_marks_a_repeated_alias() {
+        QTemporaryDir dir;
+        const auto bank = voiceBank(dir);
+        writeFile(bank / "sub" / "oto.ini",
+                  "#Charset:UTF-8\r\nx.wav=x,9.0,2,3,4,5\r\nx.wav=,1,2,3,4,5\r\n"
+                  "x.wav=y,1,2,3,4,5\r\n");
+        const auto e = editor();
+        const auto window = e->openVoiceBank(bank);
+        QVERIFY(window);
+        const auto tree = window->directoryTree();
+        tree->setCurrentItem(tree->topLevelItem(1)->child(0));
+        const auto model = window->entryModel();
+        QCOMPARE(model->rowCount(), 3);
+        QVERIFY(model->index(0, 0).data(VoiceBankEntryModel::DuplicateAliasRole).toBool());
+        QVERIFY(model->index(1, 0).data(VoiceBankEntryModel::DuplicateAliasRole).toBool());
+        QVERIFY(!model->index(2, 0).data(VoiceBankEntryModel::DuplicateAliasRole).toBool());
     }
 
     // The project window opens the voice bank of the project in its window.

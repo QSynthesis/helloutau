@@ -42,6 +42,16 @@ namespace hello::daw {
         /// Filters the entries by file name and alias, as the text is typed.
         QLineEdit *searchBox() const;
 
+        /// The rows of entryModel() selected in the table, in the order of the model.
+        QList<int> selectedRows() const;
+
+        /// The row of entryModel() current in the table, or -1.
+        int currentRow() const;
+
+        /// Makes \a row of entryModel() current and the only row selected, clearing the search
+        /// if it hides the row.
+        void setCurrentRow(int row);
+
         /// Shows the entry that sings \a lyric at \a noteNum, found as the synthesis finds it
         /// (kit::VoiceBank::find()) in the voice bank as edited: chooses its folder in the tree
         /// and selects its row, clearing the search. Returns whether one was found.
@@ -72,6 +82,23 @@ namespace hello::daw {
         /// Saves the voice bank into another folder, which must not exist or be empty, and
         /// edits it there from now on.
         bool saveAs();
+
+        /// Asks for an audio file of the folder of the current row, or of the folder chosen in
+        /// the tree, and inserts an entry for it with zero values, whose alias the table then
+        /// edits. The alias is empty, which counts as the stem of the file name, unless another
+        /// entry of the file has that name; then the stem with the first free number.
+        bool insertEntry();
+
+        /// Inserts a copy of each selected entry beside it, its alias followed by the first
+        /// number that no entry of the file has, as one undo step.
+        bool duplicateEntries();
+
+        /// Includes the selected audio files without an entry, each with an empty alias and
+        /// zero values, as one undo step.
+        bool includeAudio();
+
+        /// Removes the selected entries, as one undo step.
+        bool removeEntries();
         /// @}
 
     protected:

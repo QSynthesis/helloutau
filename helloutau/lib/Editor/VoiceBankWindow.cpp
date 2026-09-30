@@ -7,6 +7,7 @@
 #include <QtCore/QDir>
 #include <QtCore/QRegularExpression>
 #include <QtCore/QHash>
+#include <QtCore/QSet>
 #include <QtCore/QSortFilterProxyModel>
 #include <QtCore/QTimer>
 #include <QtGui/QAction>
@@ -15,6 +16,7 @@
 #include <QtWidgets/QFrame>
 #include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QHeaderView>
+#include <QtWidgets/QInputDialog>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QLineEdit>
 #include <QtWidgets/QMenu>
@@ -33,6 +35,7 @@
 #include <QAKWidgets/widgetactioncontext.h>
 
 #include <hellokit/Edit/VoiceBankDocument.h>
+#include <hellokit/Edit/VoiceBankEdits.h>
 #include <hellokit/Edit/VoiceBankRefs.h>
 #include <hellokit/VoiceBank/VoiceBankCheckScheduler.h>
 
@@ -188,6 +191,22 @@ namespace hello::daw {
             addCommand(QStringLiteral("helloutau.voiceBank.reloadAll"), [this] {
                 stdc_decl_t;
                 decl.reloadAll();
+            });
+            addCommand(QStringLiteral("helloutau.voiceBank.insertEntry"), [this] {
+                stdc_decl_t;
+                decl.insertEntry();
+            });
+            addCommand(QStringLiteral("helloutau.voiceBank.duplicateEntries"), [this] {
+                stdc_decl_t;
+                decl.duplicateEntries();
+            });
+            addCommand(QStringLiteral("helloutau.voiceBank.includeAudio"), [this] {
+                stdc_decl_t;
+                decl.includeAudio();
+            });
+            addCommand(QStringLiteral("helloutau.edit.delete"), [this] {
+                stdc_decl_t;
+                decl.removeEntries();
             });
             addCommand(QStringLiteral("helloutau.tools.settings"), [this] {
                 stdc_decl_t;
@@ -455,6 +474,166 @@ namespace hello::daw {
             }
         }
 
+        std::optional<kit::VoiceDirectoryRef>
+            directoryRef(const std::filesystem::path &path) const {
+            const auto list = kit::VoiceBankRef(document->session()).directories();
+            for (int i = 0; i < list.size(); ++i) {
+                if (list.at(i).path() == path) {
+                    return list.at(i);
+                }
+            }
+            return std::nullopt;
+        }
+
+        static QString stemOf(const QString &fileName) {
+            return QString::fromStdU16String(
+                std::filesystem::path(fileName.toStdU16String()).stem().u16string());
+        }
+
+        // The names under which the entries of fileName in directory are matched: the aliases,
+        // an empty one as the stem of the file name, as the edit layer counts them
+        static QSet<QString> namesOf(const kit::VoiceDirectoryRef &directory,
+                                     const QString &fileName) {
+            QSet<QString> names;
+            const auto list = directory.otoEntries();
+            for (int i = 0; i < list.size(); ++i) {
+                if (list.at(i).fileName() == fileName) {
+                    const auto alias = list.at(i).alias();
+                    names.insert(alias.isEmpty() ? stemOf(fileName) : alias);
+                }
+            }
+            return names;
+        }
+
+        // base, or else base followed by the first number from 2 that is not among names
+        static QString freeName(const QString &base, const QSet<QString> &names) {
+            if (!names.contains(base)) {
+                return base;
+            }
+            for (int n = 2;; ++n) {
+                const auto name = base + QString::number(n);
+                if (!names.contains(name)) {
+                    return name;
+                }
+            }
+        }
+
+        QList<int> selectedRows() const {
+            QList<int> rows;
+            for (const auto &index : table->selectionModel()->selectedRows()) {
+                rows.push_back(proxy->mapToSource(index).row());
+            }
+            std::sort(rows.begin(), rows.end());
+            return rows;
+        }
+
+        // The selected rows of kind, either entries or else audio files without one
+        QList<int> selectedRows(bool entries) const {
+            QList<int> rows;
+            for (const int row : selectedRows()) {
+                const bool unlisted =
+                    model->index(row, 0).data(VoiceBankEntryModel::RowKindRole).toInt() ==
+                    VoiceBankEntryModel::UnlistedAudioRow;
+                if (unlisted != entries) {
+                    rows.push_back(row);
+                }
+            }
+            return rows;
+        }
+
+        // Selects rows of the model, the first of them current, clearing the search if it hides
+        // one.
+        void selectRows(const QList<int> &rows) {
+            const auto indexOf = [this](int row) {
+                return proxy->mapFromSource(model->index(row, VoiceBankEntryModel::FileColumn));
+            };
+            for (const int row : rows) {
+                if (row >= 0 && !indexOf(row).isValid()) {
+                    search->clear();
+                    break;
+                }
+            }
+            const auto selection = table->selectionModel();
+            selection->clearSelection();
+            for (const int row : rows) {
+                const auto index = indexOf(row);
+                if (index.isValid()) {
+                    selection->select(index,
+                                      QItemSelectionModel::Select | QItemSelectionModel::Rows);
+                }
+            }
+            if (!rows.isEmpty() && indexOf(rows.first()).isValid()) {
+                selection->setCurrentIndex(indexOf(rows.first()), QItemSelectionModel::NoUpdate);
+                table->scrollTo(indexOf(rows.first()));
+            }
+        }
+
+        void updateEditActions() {
+            const bool entries = !selectedRows(true).isEmpty();
+            actions.value(QStringLiteral("helloutau.edit.delete"))->setEnabled(entries);
+            actions.value(QStringLiteral("helloutau.voiceBank.duplicateEntries"))
+                ->setEnabled(entries);
+            actions.value(QStringLiteral("helloutau.voiceBank.includeAudio"))
+                ->setEnabled(!selectedRows(false).isEmpty());
+        }
+
+        // The current row across a rebuild of the rows, by its folder, file and alias
+        struct RowKey {
+            std::filesystem::path directory;
+            QString fileName;
+            QString alias;
+        };
+        std::optional<RowKey> keptRow;
+
+        void initTableEditing() {
+            stdc_decl_t;
+            QObject::connect(model, &QAbstractItemModel::modelAboutToBeReset, &decl, [this] {
+                stdc_decl_t;
+                const int row = decl.currentRow();
+                keptRow.reset();
+                if (row >= 0) {
+                    const auto entry = model->entryOf(row);
+                    keptRow = RowKey{model->directoryOf(row), entry.fileName, entry.alias};
+                }
+            });
+            QObject::connect(model, &QAbstractItemModel::modelReset, &decl, [this] {
+                if (keptRow) {
+                    const int row =
+                        model->rowOf(keptRow->directory, keptRow->fileName, keptRow->alias);
+                    if (row >= 0) {
+                        selectRows({row});
+                    }
+                }
+                keptRow.reset();
+                updateEditActions();
+            });
+            QObject::connect(table->selectionModel(), &QItemSelectionModel::selectionChanged, &decl,
+                             [this] { updateEditActions(); });
+            QObject::connect(model, &VoiceBankEntryModel::editRejected, &decl,
+                             [this](const kit::DiagnosticList &diagnostics) {
+                                 stdc_decl_t;
+                                 // Once the editor of the cell has closed
+                                 QTimer::singleShot(0, &decl, [this, diagnostics] {
+                                     stdc_decl_t;
+                                     DiagnosticBox::show(&decl, tr("Edit Entry"), diagnostics);
+                                 });
+                             });
+
+            table->setContextMenuPolicy(Qt::CustomContextMenu);
+            QObject::connect(
+                table, &QWidget::customContextMenuRequested, &decl, [this](const QPoint &position) {
+                    stdc_decl_t;
+                    QMenu menu(&decl);
+                    for (const auto id :
+                         {"helloutau.voiceBank.insertEntry", "helloutau.voiceBank.duplicateEntries",
+                          "helloutau.voiceBank.includeAudio", "helloutau.edit.delete"}) {
+                        menu.addAction(actions.value(QString::fromLatin1(id)));
+                    }
+                    menu.exec(table->viewport()->mapToGlobal(position));
+                });
+            updateEditActions();
+        }
+
         void showDirectoryOf(QTreeWidgetItem *item) {
             if (!item || item->data(0, AllRole).toBool()) {
                 model->setDirectory(std::nullopt);
@@ -565,6 +744,7 @@ namespace hello::daw {
         impl.document = std::move(document);
         impl.initActions();
         impl.initWidgets();
+        impl.initTableEditing();
         impl.refreshTree();
         impl.initScheduler();
 
@@ -617,6 +797,178 @@ namespace hello::daw {
     QLineEdit *VoiceBankWindow::searchBox() const {
         stdc_impl_t;
         return impl.search;
+    }
+
+    QList<int> VoiceBankWindow::selectedRows() const {
+        stdc_impl_t;
+        return impl.selectedRows();
+    }
+
+    int VoiceBankWindow::currentRow() const {
+        stdc_impl_t;
+        const auto index = impl.table->currentIndex();
+        return index.isValid() ? impl.proxy->mapToSource(index).row() : -1;
+    }
+
+    void VoiceBankWindow::setCurrentRow(int row) {
+        stdc_impl_t;
+        impl.selectRows({row});
+    }
+
+    bool VoiceBankWindow::insertEntry() {
+        stdc_impl_t;
+        const int row = currentRow();
+        const auto path = row >= 0 ? impl.model->directoryOf(row)
+                                   : impl.model->directory().value_or(std::filesystem::path());
+        const auto directory = impl.directoryRef(path);
+        if (!directory) {
+            return false;
+        }
+        const auto files = impl.document->session()->audioFiles(path);
+        const auto current = row >= 0 ? impl.model->entryOf(row).fileName : QString();
+        bool ok = false;
+        const auto fileName = QInputDialog::getItem(
+            this, tr("Insert Entry"), tr("Audio file of the folder %1:").arg(impl.folderName(path)),
+            files, std::max(0, int(files.indexOf(current))), true, &ok);
+        if (!ok || fileName.trimmed().isEmpty()) {
+            return false;
+        }
+        kit::VoiceOtoEntry entry;
+        entry.fileName = fileName;
+        const auto names = Impl::namesOf(*directory, fileName);
+        const auto stem = Impl::stemOf(fileName);
+        if (names.contains(stem)) {
+            entry.alias = Impl::freeName(stem, names);
+        }
+        kit::DiagnosticList diagnostics;
+        const bool inserted = kit::VoiceBankEdits::insertEntries(*directory, {entry}, diagnostics);
+        DiagnosticBox::show(this, tr("Insert Entry"), diagnostics);
+        if (!inserted) {
+            return false;
+        }
+        impl.model->refresh();
+        const int added = impl.model->rowOf(path, entry.fileName, entry.alias);
+        impl.selectRows({added});
+        const auto index =
+            impl.proxy->mapFromSource(impl.model->index(added, VoiceBankEntryModel::AliasColumn));
+        if (index.isValid()) {
+            impl.table->setCurrentIndex(index);
+            impl.table->edit(index);
+        }
+        return true;
+    }
+
+    bool VoiceBankWindow::duplicateEntries() {
+        stdc_impl_t;
+        const auto rows = impl.selectedRows(true);
+        if (rows.isEmpty()) {
+            return false;
+        }
+        const auto session = impl.document->session();
+        auto transaction = session->transaction(tr("Duplicate Oto Entries"));
+        kit::DiagnosticList diagnostics;
+        // The copies by folder, and the names taken by each file meanwhile
+        std::map<std::filesystem::path, QList<kit::VoiceOtoEntry>> copies;
+        std::map<std::pair<std::filesystem::path, QString>, QSet<QString>> taken;
+        QList<std::pair<std::filesystem::path, kit::VoiceOtoEntry>> made;
+        for (const int row : rows) {
+            const auto path = impl.model->directoryOf(row);
+            const auto directory = impl.directoryRef(path);
+            if (!directory) {
+                continue;
+            }
+            auto entry = impl.model->entryOf(row);
+            auto &names = taken[{path, entry.fileName}];
+            if (names.isEmpty()) {
+                names = Impl::namesOf(*directory, entry.fileName);
+            }
+            entry.alias = Impl::freeName(
+                entry.alias.isEmpty() ? Impl::stemOf(entry.fileName) : entry.alias, names);
+            names.insert(entry.alias);
+            copies[path].push_back(entry);
+            made.push_back({path, entry});
+        }
+        for (const auto &[path, entries] : copies) {
+            if (!kit::VoiceBankEdits::insertEntries(*impl.directoryRef(path), entries,
+                                                    diagnostics)) {
+                DiagnosticBox::show(this, tr("Duplicate Entries"), diagnostics);
+                return false;
+            }
+        }
+        const bool committed = transaction.commit(diagnostics);
+        DiagnosticBox::show(this, tr("Duplicate Entries"), diagnostics);
+        if (!committed) {
+            return false;
+        }
+        impl.model->refresh();
+        QList<int> selected;
+        for (const auto &[path, entry] : std::as_const(made)) {
+            selected.push_back(impl.model->rowOf(path, entry.fileName, entry.alias));
+        }
+        impl.selectRows(selected);
+        return true;
+    }
+
+    bool VoiceBankWindow::includeAudio() {
+        stdc_impl_t;
+        const auto rows = impl.selectedRows(false);
+        if (rows.isEmpty()) {
+            return false;
+        }
+        std::map<std::filesystem::path, QStringList> files;
+        for (const int row : rows) {
+            files[impl.model->directoryOf(row)].push_back(impl.model->entryOf(row).fileName);
+        }
+        auto transaction = impl.document->session()->transaction(tr("Include Audio Files"));
+        kit::DiagnosticList diagnostics;
+        for (const auto &[path, names] : files) {
+            const auto directory = impl.directoryRef(path);
+            if (!directory || !kit::VoiceBankEdits::includeAudio(*directory, names, diagnostics)) {
+                DiagnosticBox::show(this, tr("Include Audio Files"), diagnostics);
+                return false;
+            }
+        }
+        const bool committed = transaction.commit(diagnostics);
+        DiagnosticBox::show(this, tr("Include Audio Files"), diagnostics);
+        if (!committed) {
+            return false;
+        }
+        impl.model->refresh();
+        QList<int> selected;
+        for (const auto &[path, names] : files) {
+            for (const auto &name : names) {
+                selected.push_back(impl.model->rowOf(path, name, {}));
+            }
+        }
+        impl.selectRows(selected);
+        return true;
+    }
+
+    bool VoiceBankWindow::removeEntries() {
+        stdc_impl_t;
+        const auto rows = impl.selectedRows(true);
+        if (rows.isEmpty()) {
+            return false;
+        }
+        std::map<std::filesystem::path, QList<int>> indices;
+        for (const int row : rows) {
+            indices[impl.model->directoryOf(row)].push_back(impl.model->entryIndexOf(row));
+        }
+        auto transaction = impl.document->session()->transaction(tr("Remove Oto Entries"));
+        kit::DiagnosticList diagnostics;
+        for (const auto &[path, list] : indices) {
+            const auto directory = impl.directoryRef(path);
+            if (!directory || !kit::VoiceBankEdits::removeEntries(*directory, list, diagnostics)) {
+                DiagnosticBox::show(this, tr("Remove Entries"), diagnostics);
+                return false;
+            }
+        }
+        const bool committed = transaction.commit(diagnostics);
+        DiagnosticBox::show(this, tr("Remove Entries"), diagnostics);
+        if (committed) {
+            impl.model->refresh();
+        }
+        return committed;
     }
 
     bool VoiceBankWindow::showEntryFor(int noteNum, const QString &lyric) {
