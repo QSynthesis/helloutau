@@ -198,8 +198,8 @@ struct ImportResult {
 - 驱动经 `InterchangeRegistration` 登记（形状见 [`Plugins.md`](Plugins.md)「注册接口」）：一个登记对象持有一个导入驱动或一个导出驱动，两种各有一个构造函数，`reader()` / `writer()` 中另一个为空；同时支持两个方向的驱动登记两次。登记对象存在期间，驱动出现在进程中的每个注册表里，析构即移除。
 - 注册表是 `QObject`，内容来自进程级的登记列表（私有的 `InterchangeRegistrations_p.h`），按登记顺序；登记与注销时发出 `driversChanged()`。不再有 `addReader()` / `addWriter()`。
 - 同一 ID 的多个驱动只取先登记的，它注销后由下一个接替；同一扩展名由先登记的驱动处理。两条规则都使插件不能接管内置格式。
-- 内置驱动（MIDI 的读与写）由 `BuiltinInterchangeDrivers` 登记，Interchange 插件（ID `org.helloutau.interchange`，目录 `Interchange`，依赖 Core，作者 2026-09-30 定）持有它；将来的导入导出菜单、对话框与驱动的自定义步骤也在该插件中。需要这些驱动的测试自己持有一个。
-- 应用目前还没有持有注册表：导入导出界面属于第三阶段。
+- 内置驱动（MIDI 的读与写）由 `BuiltinInterchangeDrivers` 登记，Interchange 插件（ID `org.helloutau.interchange`，目录 `Interchange`，依赖 Core，作者 2026-09-30 定）持有它。需要这些驱动的测试持有自己的实例。
+- 注册表的使用方是 Interchange 插件的导入与导出向导，见 [`ImportExport.md`](ImportExport.md)。
 
 stdcorelib 的 `StaticRegistry` / `DynamicRegistry` 正适用于此，但**它是私有依赖，不得出现在公开头文件中**。`InterchangeRegistry` 是 hellokit 自身的类型，需要使用 stdcorelib 时仅在 `.cpp` 中使用。
 

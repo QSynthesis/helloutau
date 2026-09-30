@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The import and export commands of the File menu of the project window. See
+     docs/ImportExport.md. Format: docs/action-extension-spec.md in QActionKit. -->
+<actionExtension>
+
+    <version>1.0</version>
+    <id>org.helloutau.interchange</id>
+
+    <configuration>
+        <translationContext
+            text="hello::daw::ActionText"
+            category="hello::daw::ActionCategory"
+            description="hello::daw::ActionDescription"
+        />
+    </configuration>
+
+    <items>
+        <action id="helloutau.file.import" text="&amp;Import..." category="File" />
+        <action id="helloutau.file.exportOther" text="&amp;Other Formats..." category="File" />
+    </items>
+
+    <insertions>
+        <insertion target="helloutau.file" anchor="before" relativeTo="helloutau.file.export">
+            <action id="helloutau.file.import" />
+        </insertion>
+        <insertion target="helloutau.file.export" anchor="after"
+                   relativeTo="helloutau.file.exportUst">
+            <action id="helloutau.file.exportOther" />
+        </insertion>
+    </insertions>
+
+</actionExtension>
