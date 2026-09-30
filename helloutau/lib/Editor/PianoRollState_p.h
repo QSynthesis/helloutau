@@ -155,6 +155,7 @@ namespace hello::daw {
         class GridLayer;
         class NoteLayer;
         class NoteEnvelopeLayer;
+        class NoteParameterLayer;
         class PitchLayer;
         class OverlayLayer;
         class EnvelopeLayer;
@@ -221,6 +222,7 @@ namespace hello::daw {
 
         bool pitchVisible = true;
         bool envelopesVisible = false;
+        bool parametersVisible = false;
         double pointGrip = DefaultPointGrip;
         double curveGrip = DefaultCurveGrip;
         QColor pitchColor;

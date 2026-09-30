@@ -345,6 +345,12 @@ namespace hello::daw {
         bool areEnvelopesVisible() const;
         void setEnvelopesVisible(bool visible);
 
+        /// Whether the parameters of each sung note are drawn below its bar, as UTAU shows them:
+        /// the modulation as "mod 100" one row below the note, and the flags as written two rows
+        /// below. Off by default.
+        bool areParametersVisible() const;
+        void setParametersVisible(bool visible);
+
         /// The distance in pixels within which a Mode2 point is hit, 6 by default.
         double pointGrip() const;
         void setPointGrip(double pixels);

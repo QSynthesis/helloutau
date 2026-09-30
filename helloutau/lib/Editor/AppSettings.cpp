@@ -22,6 +22,7 @@ namespace hello::daw {
         constexpr char KeyUstExportCharset[] = "files/ustExportCharset";
         constexpr char KeyPitchVisible[] = "view/showPitch";
         constexpr char KeyEnvelopesVisible[] = "view/showEnvelopes";
+        constexpr char KeyParametersVisible[] = "view/showParameters";
         constexpr char KeyRecentCommands[] = "commandPalette/recent";
         constexpr char KeyRecentFiles[] = "files/recent";
         constexpr char KeyRecentVoiceBanks[] = "files/recentVoiceBanks";
@@ -153,6 +154,16 @@ namespace hello::daw {
     void AppSettings::setEnvelopesVisible(bool visible) {
         stdc_impl_t;
         impl.setValue(KeyEnvelopesVisible, visible);
+    }
+
+    bool AppSettings::areParametersVisible() const {
+        stdc_impl_t;
+        return impl.value(KeyParametersVisible).toBool(false);
+    }
+
+    void AppSettings::setParametersVisible(bool visible) {
+        stdc_impl_t;
+        impl.setValue(KeyParametersVisible, visible);
     }
 
     QString AppSettings::ustExportCharset() const {

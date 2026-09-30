@@ -255,6 +255,8 @@
 - 片段起点上方标出音符的音量（intensity，缺省 100）；
 - 拖动音符时不画，与音高曲线相同。包络仍在参数区编辑，此处只显示。
 
+**显示参数**（作者 2026-10-01 要求，同 UTAU）：「视图 → Show Parameters」开关，默认关闭，状态存入设置（`view/showParameters`）。打开后每个有声音符的下方写出其参数：下方一个半音的行写调制，形如「mod 100」（缺省 100）；下方两个半音的行写 flags 原文，没有 flags 时不写。休止符不写，拖动音符时不画。
+
 ### 设置对话框
 
 作者 2026-09-30 要求：同 JetBrains 的设置对话框，可扩展，结构取 DiffScope 原版的 catalog + page（`SettingCatalog` + `ISettingPage`），并弥补其不足。DiffScope 的做法由其前身 qsynthesis-revenge 中 choruskit 的源码得知（DiffScope 的检出中这些子模块为空）。

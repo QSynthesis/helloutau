@@ -839,6 +839,57 @@ private Q_SLOTS:
         QVERIFY(!drawnAt(700, 62));
     }
 
+    // With parameters shown, the modulation is written one row below a sung note and its flags
+    // two rows below. A rest has none.
+    void the_parameters_are_shown_below_the_notes() {
+        kit::Note rest;
+        rest.lyric = QStringLiteral("R");
+        rest.length = 480;
+        rest.noteNum = 60;
+        kit::Note la;
+        la.lyric = QStringLiteral("la");
+        la.length = 960;
+        la.noteNum = 60;
+        la.flags = QStringLiteral("g-5B30");
+        kit::Project project;
+        project.settings.tempo = 120;
+        project.tracks.push_back({});
+        project.tracks[0].notes = {rest, la};
+
+        kit::ProjectSession session(project);
+        PianoRoll roll(&session);
+        roll.setPitchVisible(false);
+        auto palette = roll.palette();
+        palette.setColor(QPalette::Active, QPalette::Text, QColor(0, 200, 0));
+        roll.setPalette(palette);
+        show(roll);
+        QVERIFY(!roll.areParametersVisible());
+
+        // Whether text is drawn in the row of key over the notes from tick to tick + 480
+        const auto textIn = [&roll](double tick, int key) {
+            const auto image = roll.view()->viewport()->grab().toImage();
+            const int left = int(roll.view()->timeAxis().toX(tick));
+            const int right = int(roll.view()->timeAxis().toX(tick + 480));
+            const int top = int(roll.view()->keyAxis().toY(key + 1)) + 1;
+            const int bottom = int(roll.view()->keyAxis().toY(key)) - 1;
+            for (int x = left; x < right; ++x) {
+                for (int y = top; y < bottom; ++y) {
+                    const auto pixel = image.pixelColor(x, y);
+                    if (pixel.green() > 150 && pixel.red() < 80 && pixel.blue() < 80) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        };
+        QVERIFY(!textIn(480, 59));
+        roll.setParametersVisible(true);
+        QVERIFY(textIn(480, 59));
+        QVERIFY(textIn(480, 58));
+        QVERIFY(!textIn(0, 59));
+        QVERIFY(!textIn(0, 58));
+    }
+
     // la at C4, then li at D4 with points 60 ms before its start, at its start 100 cents up,
     // and 60 ms after, at 120 bpm, where a millisecond is 0.96 ticks
     static kit::Project bentNotes() {

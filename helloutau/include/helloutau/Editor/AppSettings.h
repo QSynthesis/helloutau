@@ -80,6 +80,11 @@ namespace hello::daw {
         bool areEnvelopesVisible() const;
         void setEnvelopesVisible(bool visible);
 
+        /// Whether the piano roll shows the modulation and the flags of the notes (View > Show
+        /// Parameters). The default is false.
+        bool areParametersVisible() const;
+        void setParametersVisible(bool visible);
+
         /// Encoding initially selected when a UST is exported. The default is UTF-8.
         QString ustExportCharset() const;
         void setUstExportCharset(const QString &charset);

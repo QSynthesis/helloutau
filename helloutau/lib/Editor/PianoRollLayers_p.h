@@ -81,6 +81,22 @@ namespace hello::daw {
         QPolygonF outlineOf(int index) const;
     };
 
+    /// The parameters of each sung note below its bar, as UTAU shows them: the modulation, as
+    /// "mod 100", in the row one key below the note, and the flags as written in the row two
+    /// keys below.
+    class PianoRollState::NoteParameterLayer : public SceneLayer {
+    public:
+        explicit NoteParameterLayer(PianoRollState *state) : m_state(state) {
+        }
+
+        void paint(QPainter &painter, const QRect &exposed) override;
+
+        std::optional<SceneHit> hitTest(QPointF position) const override;
+
+    private:
+        PianoRollState *m_state;
+    };
+
     /// The pitch of each sung note, as the resampler receives it: the portamento as a line through
     /// the rows, and apart from it the vibrato around the middle of the row of the note
     class PianoRollState::PitchLayer : public SceneLayer {

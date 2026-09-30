@@ -82,6 +82,8 @@
         <!-- The envelope of each note above its bar, from where its pre-utterance starts, as
              UTAU draws it -->
         <action id="helloutau.view.showEnvelopes" text="Show &amp;Envelopes" category="View" />
+        <!-- The modulation and the flags of each note below its bar, as UTAU shows them -->
+        <action id="helloutau.view.showParameters" text="Show P&amp;arameters" category="View" />
 
         <!-- Plays, pauses what plays, or goes on from where it was paused -->
         <action id="helloutau.playback.play" text="&amp;Play or Pause" category="Playback"
@@ -246,6 +248,7 @@
         <insertion target="helloutau.view" anchor="first">
             <action id="helloutau.view.showPitch" />
             <action id="helloutau.view.showEnvelopes" />
+            <action id="helloutau.view.showParameters" />
         </insertion>
         <insertion target="helloutau.playback">
             <action id="helloutau.playback.play" />

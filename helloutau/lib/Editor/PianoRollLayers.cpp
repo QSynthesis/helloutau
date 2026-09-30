@@ -5,6 +5,8 @@
 
 #include <QtWidgets/QMenu>
 
+#include <stdutau/utaconst.h>
+
 #include <hellokit/Synth/PitchCurve.h>
 
 #include <helloutau/Widgets/PianoKeyboard.h>
@@ -224,6 +226,41 @@ namespace hello::daw {
         }
         outline.push_back(pointAt(length, 0));
         return outline;
+    }
+
+    void PianoRollState::NoteParameterLayer::paint(QPainter &painter, const QRect &exposed) {
+        // While notes are dragged, their rows are not yet known.
+        if (!m_state->parametersVisible || !m_state->placements.isEmpty()) {
+            return;
+        }
+        const auto timeline = m_state->timeline;
+        const auto &time = view()->timeAxis();
+        const auto [begin, end] =
+            timeline->notesBetween(time.toTick(exposed.left()), time.toTick(exposed.right() + 1));
+        const auto refs = m_state->notes();
+        painter.setPen(m_state->widget->palette().color(QPalette::Active, QPalette::Text));
+        for (int i = begin; i < end; ++i) {
+            const auto &note = timeline->note(i);
+            if (note.rest) {
+                continue;
+            }
+            const auto ref = refs.at(i);
+            const auto textIn = [&](int key, const QString &text) {
+                const auto rect = m_state->rectOf(note.start, note.length, key).toAlignedRect();
+                painter.drawText(rect.adjusted(LyricPadding, 0, -LyricPadding, 0),
+                                 Qt::AlignLeft | Qt::AlignVCenter, text);
+            };
+            textIn(note.key - 1, QStringLiteral("mod %1").arg(
+                                     ref.modulation().value_or(utau::DEFAULT_VALUE_MODULATION)));
+            if (const auto flags = ref.flags(); !flags.isEmpty()) {
+                textIn(note.key - 2, flags);
+            }
+        }
+    }
+
+    std::optional<SceneHit> PianoRollState::NoteParameterLayer::hitTest(QPointF position) const {
+        Q_UNUSED(position);
+        return std::nullopt;
     }
 
     void PianoRollState::PitchLayer::paint(QPainter &painter, const QRect &exposed) {

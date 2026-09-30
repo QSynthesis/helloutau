@@ -24,6 +24,7 @@ private Q_SLOTS:
         QCOMPARE(settings.playbackMode(), AppSettings::Prerender);
         QVERIFY(settings.isPitchVisible());
         QVERIFY(settings.areEnvelopesVisible());
+        QVERIFY(!settings.areParametersVisible());
     }
 
     // Recent files are stored most recent first, without duplicates, at most recentFileCount,
@@ -88,10 +89,12 @@ private Q_SLOTS:
             settings.setPlaybackMode(AppSettings::Realtime);
             settings.setPitchVisible(false);
             settings.setEnvelopesVisible(false);
+            settings.setParametersVisible(true);
         }
         const AppSettings settings(file);
         QVERIFY(!settings.isPitchVisible());
         QVERIFY(!settings.areEnvelopesVisible());
+        QVERIFY(settings.areParametersVisible());
         QCOMPARE(settings.utauDirectory(), utau);
         QCOMPARE(settings.resampler(), QStringLiteral("C:/UTAU/resampler.exe"));
         QCOMPARE(settings.wavtool(), QStringLiteral("C:/UTAU/wavtool.exe"));

@@ -134,6 +134,7 @@ namespace hello::daw {
         impl.view->addLayer(std::make_unique<Impl::GridLayer>(&impl));
         impl.view->addLayer(std::make_unique<Impl::NoteLayer>(&impl));
         impl.view->addLayer(std::make_unique<Impl::NoteEnvelopeLayer>(&impl));
+        impl.view->addLayer(std::make_unique<Impl::NoteParameterLayer>(&impl));
         impl.view->addLayer(std::make_unique<Impl::PitchLayer>(&impl));
         impl.view->addLayer(std::make_unique<Impl::OverlayLayer>(&impl));
         new PointerTracker(impl.view->viewport(), [this](std::optional<QPointF> position) {
@@ -872,6 +873,17 @@ namespace hello::daw {
     void PianoRoll::setEnvelopesVisible(bool visible) {
         stdc_impl_t;
         impl.envelopesVisible = visible;
+        impl.view->viewport()->update();
+    }
+
+    bool PianoRoll::areParametersVisible() const {
+        stdc_impl_t;
+        return impl.parametersVisible;
+    }
+
+    void PianoRoll::setParametersVisible(bool visible) {
+        stdc_impl_t;
+        impl.parametersVisible = visible;
         impl.view->viewport()->update();
     }
 
