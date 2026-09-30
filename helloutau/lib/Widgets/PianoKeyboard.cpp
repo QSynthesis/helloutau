@@ -15,7 +15,7 @@ namespace hello::daw {
 
         constexpr int LabelPadding = 4;
 
-        constexpr int DefaultWidth = 64;
+        constexpr int DefaultWidth = 80;
 
     }
 
