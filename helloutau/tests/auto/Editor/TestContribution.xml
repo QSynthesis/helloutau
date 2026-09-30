@@ -7,12 +7,15 @@
     <items>
         <action id="test.contribution.hello" text="Hello" category="Test" />
         <action id="test.contribution.bank" text="Bank Hello" category="Test" />
+        <!-- A menu that the contribution fills -->
+        <action id="test.contribution.menu" text="Hello Menu" category="Test" external="true" />
     </items>
 
     <!-- Into the Tools menus of the project window and of the voice bank window -->
     <insertions>
         <insertion target="helloutau.tools">
             <action id="test.contribution.hello" />
+            <action id="test.contribution.menu" />
         </insertion>
         <insertion target="helloutau.voiceBank.tools">
             <action id="test.contribution.bank" />

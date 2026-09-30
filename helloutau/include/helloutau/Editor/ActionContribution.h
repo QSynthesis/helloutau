@@ -29,6 +29,10 @@ namespace hello::daw {
         ///
         /// For an item in a menu of the window without an action, the context shows a stand-in
         /// that does nothing.
+        ///
+        /// The action of an external item is the \c menuAction() of a menu parented to
+        /// \a window, whose content the contribution maintains. The editor deletes the menu
+        /// then, which deletes the action.
         virtual void addActions(ProjectWindow *window, QAK::WidgetActionContext *context);
         virtual void addActions(VoiceBankWindow *window, QAK::WidgetActionContext *context);
     };

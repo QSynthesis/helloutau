@@ -1050,6 +1050,11 @@ namespace hello::daw {
         delete impl.roll;
     }
 
+    Editor *ProjectWindow::editor() const {
+        stdc_impl_t;
+        return impl.editor;
+    }
+
     kit::ProjectDocument *ProjectWindow::document() const {
         stdc_impl_t;
         return impl.document.get();

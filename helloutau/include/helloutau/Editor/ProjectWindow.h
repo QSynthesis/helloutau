@@ -27,6 +27,9 @@ namespace hello::daw {
         ProjectWindow(Editor *editor, std::unique_ptr<kit::ProjectDocument> document);
         ~ProjectWindow();
 
+        /// The editor of the window, whose settings a plugin reads.
+        Editor *editor() const;
+
         kit::ProjectDocument *document() const;
 
         /// The actions of the window by the ids of the action extensions, those of plugins

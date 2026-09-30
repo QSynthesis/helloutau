@@ -3,6 +3,7 @@
 
 #include <QtCore/QPointer>
 #include <QtGui/QAction>
+#include <QtWidgets/QMenu>
 
 #include <QAKCore/actionextension.h>
 #include <QAKWidgets/widgetactioncontext.h>
@@ -66,7 +67,14 @@ namespace hello::daw {
                 continue;
             }
             context->remove(id);
-            delete action.data();
+            // The action of an external item is the menuAction() of its menu, which the menu
+            // owns: the menu goes, and the action with it.
+            const auto menu = qobject_cast<QMenu *>(action->parent());
+            if (menu && menu->menuAction() == action) {
+                delete menu;
+            } else {
+                delete action.data();
+            }
         }
     }
 

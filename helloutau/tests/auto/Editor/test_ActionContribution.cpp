@@ -31,6 +31,7 @@ namespace {
 
     const QString HelloId = QStringLiteral("test.contribution.hello");
     const QString BankId = QStringLiteral("test.contribution.bank");
+    const QString MenuId = QStringLiteral("test.contribution.menu");
 
     // The contribution of TestContribution.xml: Hello in project windows, which counts its
     // triggers, and Bank Hello in voice bank windows
@@ -47,6 +48,8 @@ namespace {
             const auto action = new QAction(window);
             QObject::connect(action, &QAction::triggered, [this] { ++*m_triggered; });
             context->addAction(HelloId, action);
+            // An external item: the action of a menu, which the menu owns
+            context->addAction(MenuId, (new QMenu(window))->menuAction());
         }
 
         void addActions(VoiceBankWindow *window, QAK::WidgetActionContext *context) override {
@@ -135,6 +138,25 @@ private Q_SLOTS:
         for (const auto &action : std::as_const(actions)) {
             QVERIFY(action.isNull());
         }
+    }
+
+    // The menu of an external item goes with the registration, and its action with it, which
+    // the menu owns.
+    void an_external_menu_goes_with_its_registration() {
+        const auto e = editor();
+        int triggered = 0;
+        auto reg = registration(&triggered);
+        const auto window = e->newWindow();
+        const auto action = window->actionContext()->action(MenuId);
+        QVERIFY(action);
+        const QPointer<QMenu> menu = qobject_cast<QMenu *>(action->parent());
+        QVERIFY(menu);
+        QCOMPARE(menu->menuAction(), action);
+        QCOMPARE(menu->parent(), window);
+
+        reg.reset();
+        QVERIFY(menu.isNull());
+        QVERIFY(!window->actionContext()->action(MenuId));
     }
 
     // An editor created after the registration takes it, a voice bank window its own actions.
