@@ -1,14 +1,17 @@
 #ifndef HELLOUTAU_CLASSICPLUGINHOST_CLASSICPLUGINHOSTPLUGIN_H
 #define HELLOUTAU_CLASSICPLUGINHOST_CLASSICPLUGINHOSTPLUGIN_H
 
+#include <memory>
 #include <string>
 
 #include <stdcorelib/pluginsystem/iplugin.h>
 
 namespace hello::daw {
 
-    /// The plugin that runs the plugins of UTAU on the selection of a project window. See
-    /// docs/ClassicPluginHost.md.
+    class ActionRegistration;
+
+    /// The plugin that runs the plugins of UTAU on the selection of a project window, from the
+    /// submenu Plugins of the Tools menu. See docs/ClassicPluginHost.md.
     class ClassicPluginHostPlugin : public stdc::pluginsystem::IPlugin {
     public:
         ClassicPluginHostPlugin();
@@ -16,6 +19,9 @@ namespace hello::daw {
 
         bool initialize(std::string *errorMessage) override;
         void aboutToShutdown() override;
+
+    private:
+        std::unique_ptr<ActionRegistration> m_registration;
     };
 
 }

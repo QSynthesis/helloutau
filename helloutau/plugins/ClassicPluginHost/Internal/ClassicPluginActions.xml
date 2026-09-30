@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<actionExtension>
+
+    <version>1.0</version>
+    <id>org.helloutau.classicpluginhost</id>
+
+    <items>
+        <!-- Filled by the plugin with the plugins of UTAU, each time it opens -->
+        <action id="helloutau.tools.plugins" text="&amp;Plugins" category="Tools"
+                external="true" />
+    </items>
+
+    <insertions>
+        <insertion target="helloutau.tools" anchor="after" relativeTo="helloutau.tools.clearCache">
+            <action id="helloutau.tools.plugins" />
+        </insertion>
+    </insertions>
+
+</actionExtension>

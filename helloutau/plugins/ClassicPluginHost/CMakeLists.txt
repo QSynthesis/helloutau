@@ -5,6 +5,12 @@ project(ClassicPluginHostPlugin
 
 file(GLOB_RECURSE _src "*.cpp" "*.h")
 
+# The submenu Plugins of the Tools menu, compiled by AEC into ClassicPluginActions.qak.h
+qak_add_action_extension(_actions_src Internal/ClassicPluginActions.xml
+    FUNCTION classicPluginActions
+    NAMESPACE hello::daw
+)
+
 qm_find_qt(Core Gui Widgets)
 
 helloutau_add_native_plugin(${PROJECT_NAME}
@@ -13,11 +19,12 @@ helloutau_add_native_plugin(${PROJECT_NAME}
     CATEGORY ClassicPluginHost
     DEPENDENCIES org.helloutau.core
     QT_AUTOGEN
-    SOURCES ${_src}
+    SOURCES ${_src} ${_actions_src}
     LINKS HelloUtauEditor HelloKitEdit HelloKitDocument HelloKitVoiceBank HelloKitSynth
           HelloKitSupport
-    LINKS_PRIVATE stdutau::stdutau
+    LINKS_PRIVATE stdutau::stdutau QActionKit::Widgets
     QT_LINKS Core Gui Widgets
     INCLUDE_PRIVATE Internal
     MACRO_PREFIX CLASSICPLUGINHOST
 )
+target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
