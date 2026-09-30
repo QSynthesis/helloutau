@@ -112,15 +112,17 @@ namespace hello::kit {
         const int total = int(steps.size());
 
         // All observer notifications pass through here, so that the observer receives one call
-        // at a time regardless of the worker thread.
+        // at a time regardless of the worker thread. Each note counts as two steps, its
+        // resampling and its append.
         QMutex lock;
         std::atomic_bool stopped{false};
         int done = 0;
 
-        const auto report = [&] {
+        const auto report = [&](int count) {
             const QMutexLocker locked(&lock);
+            done += count;
             if (observer) {
-                observer->progressed(++done, total);
+                observer->progressed(done, 2 * total);
             }
         };
         const auto cancelled = [&] {
@@ -135,6 +137,13 @@ namespace hello::kit {
         // The resampler calls are mutually independent and dominate render time. The wavtool
         // calls below append to a single file and always run in track order.
         QList<ResampleOutcome> outcomes(total);
+        // The first step of each note that requires no resampler call is complete before the
+        // resampler calls start.
+        int skipped = 0;
+        for (int i = 0; i < total; ++i) {
+            skipped += steps.at(i).silent || alreadyThere.at(i) ? 1 : 0;
+        }
+        report(skipped);
         {
             QThreadPool pool;
             pool.setMaxThreadCount(threadCount > 0 ? threadCount
@@ -159,7 +168,7 @@ namespace hello::kit {
                     if (stopOnFirstFailure && !fs::exists(steps.at(i).cacheFile)) {
                         stopped.store(true);
                     }
-                    report();
+                    report(1);
                 });
             }
 
@@ -209,15 +218,22 @@ namespace hello::kit {
             }
         }
 
-        // These calls append to a single file and therefore run sequentially on one thread.
+        // These calls append to a single file and therefore run sequentially on one thread. The
+        // header and the data of a cancelled render are removed.
         for (const auto &step : steps) {
-            if (!step.silent && !fs::exists(step.cacheFile)) {
-                continue;
-            }
-            const auto run = engine->run(engines.wavtool, step.wavtoolArguments, diagnostics);
-            if (!run.started) {
+            if (cancelled()) {
+                fs::remove(header, error);
+                fs::remove(data, error);
+                outcome.cancelled = true;
                 return outcome;
             }
+            if (step.silent || fs::exists(step.cacheFile)) {
+                const auto run = engine->run(engines.wavtool, step.wavtoolArguments, diagnostics);
+                if (!run.started) {
+                    return outcome;
+                }
+            }
+            report(1);
         }
 
         if (!fs::exists(header) || !fs::exists(data)) {

@@ -87,6 +87,24 @@ namespace {
         Behaviour m_wavtool;
     };
 
+    /// Records the progress reports and requests cancellation once \c cancelAt steps are
+    /// complete.
+    ///
+    /// \note The runner serializes the calls of its observer, so no lock is required.
+    class Recorder : public SynthObserver {
+    public:
+        QList<std::pair<int, int>> reports;
+        int cancelAt = -1;
+
+        void progressed(int done, int total) override {
+            reports.push_back({done, total});
+        }
+
+        bool cancelled() override {
+            return cancelAt >= 0 && !reports.isEmpty() && reports.last().first >= cancelAt;
+        }
+    };
+
     /// A runner that starts the substitute engine supplied by the test.
     class StubbedRunner : public ThreadedSynthRunner {
     public:
@@ -170,6 +188,16 @@ private:
             data << std::string(100, 'D');
             return bool(header) && bool(data);
         };
+    }
+
+    /// Writes a fragment for every note of \a plan into the cache. The cache is then in the state
+    /// that an earlier render leaves.
+    static void fillCache(const SynthPlan &plan) {
+        std::filesystem::create_directories(plan.cacheDirectory());
+        for (const auto &step : plan.steps()) {
+            std::ofstream out(step.cacheFile, std::ios::binary | std::ios::trunc);
+            out << "RIFF already rendered";
+        }
     }
 
     /// A plan for \a notes notes, sufficient for every test here.
@@ -348,6 +376,52 @@ private Q_SLOTS:
         QCOMPARE(outcome.reused, 1);
         QCOMPARE(outcome.resampled, 0);
         QCOMPARE(outcome.failed, 0);
+    }
+
+    // Each note counts as two steps, its resampling and its append. A render from a full cache
+    // runs only the wavtool, and its progress must advance with each append rather than remain
+    // indeterminate until the end.
+    void progress_advances_through_the_appends() {
+        const auto p = plan(3);
+        QVERIFY(p.has_value());
+        fillCache(*p);
+
+        EngineLog log;
+        const auto engines = somewhere();
+        StubbedRunner runner(&log, engines, writesNothing(), appends(p->outputFile()));
+        Recorder recorder;
+
+        DiagnosticList diagnostics;
+        QVERIFY(runner.render(*p, engines, &recorder, diagnostics).rendered);
+
+        QCOMPARE(log.resampled(), 0);
+        const QList<std::pair<int, int>> expected{{3, 6}, {4, 6}, {5, 6}, {6, 6}};
+        QCOMPARE(recorder.reports, expected);
+    }
+
+    // A render from a full cache consists of appends only. A cancellation therefore takes effect
+    // between the appends as well. The partial header and data are removed, and no track is
+    // written.
+    void a_render_is_cancelled_between_the_appends() {
+        const auto p = plan(3);
+        QVERIFY(p.has_value());
+        fillCache(*p);
+
+        EngineLog log;
+        const auto engines = somewhere();
+        StubbedRunner runner(&log, engines, writesNothing(), appends(p->outputFile()));
+        Recorder recorder;
+        recorder.cancelAt = 4;
+
+        DiagnosticList diagnostics;
+        const auto outcome = runner.render(*p, engines, &recorder, diagnostics);
+
+        QVERIFY(outcome.cancelled);
+        QVERIFY(!outcome.rendered);
+        QCOMPARE(log.appended(), 1);
+        QVERIFY(!std::filesystem::exists(p->outputFile()));
+        QVERIFY(!std::filesystem::exists(withSuffix(p->outputFile(), ".whd")));
+        QVERIFY(!std::filesystem::exists(withSuffix(p->outputFile(), ".dat")));
     }
 
     // The override for the case in which the engine itself has changed.

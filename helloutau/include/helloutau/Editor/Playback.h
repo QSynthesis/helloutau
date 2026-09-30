@@ -162,7 +162,9 @@ namespace hello::daw {
     Q_SIGNALS:
         void stateChanged(State state);
 
-        /// \a done of \a total notes of the render in progress are processed.
+        /// \a done of \a total steps of the render in progress are complete.
+        ///
+        /// \sa kit::SynthObserver::progressed()
         void progressed(int done, int total);
 
         /// The render of renderTrack() wrote \a file.

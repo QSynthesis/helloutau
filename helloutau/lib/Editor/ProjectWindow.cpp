@@ -212,7 +212,6 @@ namespace hello::daw {
                                  }
                              });
             QObject::connect(playback, &Playback::progressed, &decl, [this](int done, int total) {
-                renderLabel->setText(tr("Rendering %1 of %2 notes").arg(done).arg(total));
                 renderProgress->setRange(0, total);
                 renderProgress->setValue(done);
             });
@@ -443,12 +442,11 @@ namespace hello::daw {
             dialog.setMinimumDuration(0);
             dialog.setAutoClose(false);
             dialog.setAutoReset(false);
-            QObject::connect(
-                playback, &Playback::progressed, &dialog, [&dialog](int done, int total) {
-                    dialog.setLabelText(tr("Rendering %1 of %2 notes").arg(done).arg(total));
-                    dialog.setMaximum(total);
-                    dialog.setValue(done);
-                });
+            QObject::connect(playback, &Playback::progressed, &dialog,
+                             [&dialog](int done, int total) {
+                                 dialog.setMaximum(total);
+                                 dialog.setValue(done);
+                             });
             QObject::connect(playback, &Playback::stateChanged, &dialog,
                              [&dialog](Playback::State state) {
                                  if (state != Playback::Rendering) {

@@ -55,7 +55,8 @@ namespace hello::kit {
     public:
         virtual ~SynthObserver();
 
-        /// \a done of \a total notes have been processed.
+        /// Receives the progress of the render: \a done of \a total steps are complete. Each
+        /// runner defines its steps. \a total is constant within one render.
         virtual void progressed(int done, int total);
 
         /// Queried between notes. Returning true stops the render once the running calls

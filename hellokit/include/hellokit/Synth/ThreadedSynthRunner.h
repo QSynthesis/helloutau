@@ -15,6 +15,11 @@ namespace hello::kit {
     /// always run in track order. The multi-core mode of UTAU works the same way: it runs the
     /// resamplers from several scripts and leaves appending to a final one.
     ///
+    /// Progress is reported in two steps per note: its resampling and its append to the track.
+    /// The first step of a silent note, or of a note whose fragment is reused, is complete before
+    /// any engine runs. A render from a full cache therefore reports progress for each append. A
+    /// cancellation takes effect between the resampler calls and between the wavtool calls.
+    ///
     /// \sa docs/Synth.md
     class HELLOKIT_SYNTH_EXPORT ThreadedSynthRunner : public SynthRunner {
         Q_DECLARE_TR_FUNCTIONS(hello::kit::ThreadedSynthRunner)
