@@ -4,6 +4,7 @@
 #include <QtWidgets/QHeaderView>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QStyle>
+#include <QtWidgets/QStyledItemDelegate>
 #include <QtWidgets/QTreeWidget>
 #include <QtWidgets/QVBoxLayout>
 
@@ -39,6 +40,30 @@ namespace hello::daw {
             return PluginSettingPage::tr("Not loaded");
         }
 
+        // Draws the check box of an item that is not user-checkable as disabled, and the rest
+        // of the item in its normal colors. The style draws the whole item in one pass, so the
+        // item is drawn as disabled with the disabled colors of its text and selection replaced
+        // by the normal ones.
+        class LockedCheckDelegate : public QStyledItemDelegate {
+        public:
+            using QStyledItemDelegate::QStyledItemDelegate;
+
+        protected:
+            void initStyleOption(QStyleOptionViewItem *option,
+                                 const QModelIndex &index) const override {
+                QStyledItemDelegate::initStyleOption(option, index);
+                if (!(option->features & QStyleOptionViewItem::HasCheckIndicator) ||
+                    (index.flags() & Qt::ItemIsUserCheckable)) {
+                    return;
+                }
+                option->state &= ~QStyle::State_Enabled;
+                for (const auto role : {QPalette::Text, QPalette::WindowText, QPalette::Base,
+                                        QPalette::Highlight, QPalette::HighlightedText}) {
+                    option->palette.setColor(QPalette::Disabled, role,
+                                             option->palette.color(QPalette::Active, role));
+                }
+            }
+        };
     }
 
     PluginSettingPage::PluginSettingPage(AppLoader &loader, QObject *parent)
@@ -67,6 +92,7 @@ namespace hello::daw {
         m_tree->header()->setSectionResizeMode(NameColumn, QHeaderView::Stretch);
         m_tree->header()->setSectionResizeMode(VersionColumn, QHeaderView::ResizeToContents);
         m_tree->header()->setSectionResizeMode(StateColumn, QHeaderView::ResizeToContents);
+        m_tree->setItemDelegateForColumn(NameColumn, new LockedCheckDelegate(m_tree));
         const auto warning = widget->style()->standardIcon(QStyle::SP_MessageBoxWarning);
         for (int row = 0; row < m_plugins.size(); ++row) {
             const auto &info = m_plugins[row];
@@ -76,7 +102,7 @@ namespace hello::daw {
             item->setText(StateColumn, stateText(info));
             item->setCheckState(NameColumn, enabledAtNextStart(row) ? Qt::Checked : Qt::Unchecked);
             if (isCore(info)) {
-                // Checked and not user-checkable
+                // Checked and not user-checkable, its check box drawn as disabled
                 item->setFlags(item->flags() & ~Qt::ItemIsUserCheckable);
                 item->setToolTip(NameColumn,
                                  tr("The application requires the core plugin to start."));
