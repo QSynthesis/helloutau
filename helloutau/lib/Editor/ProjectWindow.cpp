@@ -516,7 +516,8 @@ namespace hello::daw {
 
         // Renders the whole track into a WAV file that the user chooses, by default the output
         // file of the project, as File > Render WAV of UTAU. The render of the last playback
-        // stays as it is.
+        // stays as it is. A message box reports the written file once the progress dialog has
+        // closed.
         void renderTrack() {
             stdc_decl_t;
             playback->stop();
@@ -526,13 +527,27 @@ namespace hello::daw {
             if (file.isEmpty()) {
                 return;
             }
+            std::optional<std::filesystem::path> written;
+            const auto connection =
+                QObject::connect(playback, &Playback::trackRendered, &decl,
+                                 [&written](const std::filesystem::path &path) { written = path; });
             kit::DiagnosticList diagnostics;
-            if (!playback->renderTrack(*document, std::filesystem::path(file.toStdU16String()),
-                                       engines(), diagnostics)) {
+            const bool started = playback->renderTrack(
+                *document, std::filesystem::path(file.toStdU16String()), engines(), diagnostics);
+            if (started) {
+                waitForRender(tr("Render Track"));
+            }
+            QObject::disconnect(connection);
+            if (!started) {
                 DiagnosticBox::show(&decl, tr("Render Track"), diagnostics);
                 return;
             }
-            waitForRender(tr("Render Track"));
+            if (written) {
+                const auto path = QString::fromStdU16String(written->u16string());
+                QMessageBox::information(
+                    &decl, tr("Render Track"),
+                    tr("The track has been saved to %1.").arg(QDir::toNativeSeparators(path)));
+            }
         }
 
         // The output file of the project, resolved against the folder of the project file, or
