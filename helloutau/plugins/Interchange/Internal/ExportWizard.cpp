@@ -201,7 +201,6 @@ namespace hello::daw {
         : QWizard(window) {
         setWindowTitle(tr("Export"));
         setOption(QWizard::NoCancelButtonOnLastPage);
-        setOption(QWizard::NoBackButtonOnLastPage);
         m_state.window = window;
         m_state.registry = registry;
         setPage(FilePage, new FileWizardPage(m_state));

@@ -406,7 +406,6 @@ namespace hello::daw {
         : QWizard(window) {
         setWindowTitle(tr("Import"));
         setOption(QWizard::NoCancelButtonOnLastPage);
-        setOption(QWizard::NoBackButtonOnLastPage);
         m_state.window = window;
         m_state.registry = registry;
 
