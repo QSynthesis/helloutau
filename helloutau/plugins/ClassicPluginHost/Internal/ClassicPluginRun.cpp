@@ -44,13 +44,23 @@ namespace hello::daw {
         // The ID of this plugin, under which the settings of the plugins keep its values
         const char pluginId[] = "org.helloutau.classicpluginhost";
 
-        // The programs that the user allowed to run, each as the folder of its plugin and the
-        // fingerprint of the program
+        // The programs that the user allowed to run, each as the folder of its plugin, the path
+        // of the program in the folder for the reader, and the fingerprint of the program, which
+        // alone is compared
         //
-        //     "approved": [{"folder": "C:\\UTAU\\plugins\\Foo", "program": "<SHA-256>"}]
+        //     "approved": [{"folder": "C:\\UTAU\\plugins\\Foo", "relativePath": "foo.exe",
+        //                   "sha256": "<SHA-256>"}]
         const char approvedKey[] = "approved";
         const char folderKey[] = "folder";
-        const char programKey[] = "program";
+        const char relativePathKey[] = "relativePath";
+        const char sha256Key[] = "sha256";
+
+        // The program relative to the folder of its plugin, where ClassicPlugin keeps it
+        std::filesystem::path programInFolder(const ClassicPlugin &plugin) {
+            std::error_code error;
+            auto relative = std::filesystem::relative(plugin.program, plugin.folder, error);
+            return error || relative.empty() ? plugin.program.filename() : relative;
+        }
 
         // The content of the program, so that a changed program is asked for again
         QString fingerprintOf(const ClassicPlugin &plugin) {
@@ -80,7 +90,7 @@ namespace hello::daw {
                 }
             }
             if (index >= 0 &&
-                approved[index].toObject().value(QLatin1String(programKey)).toString() ==
+                approved[index].toObject().value(QLatin1String(sha256Key)).toString() ==
                     fingerprint) {
                 return true;
             }
@@ -100,8 +110,9 @@ namespace hello::daw {
                 return false;
             }
             const QJsonObject entry{
-                {QLatin1String(folderKey),  folder     },
-                {QLatin1String(programKey), fingerprint}
+                {QLatin1String(folderKey),       folder                         },
+                {QLatin1String(relativePathKey), textOf(programInFolder(plugin))},
+                {QLatin1String(sha256Key),       fingerprint                    }
             };
             if (index >= 0) {
                 approved[index] = entry;

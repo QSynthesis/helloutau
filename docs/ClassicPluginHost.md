@@ -76,7 +76,7 @@
 - `execute` 是不可信路径：拒绝绝对路径、`..` 与解析后落在插件文件夹以外的路径；临时文件路径只作为参数数组的一项传入，不拼接命令行（AGENTS.md）。工作目录为插件文件夹。
 - 启动：Windows 上以 `CreateProcess` 挂起启动、放入作业对象后再恢复，插件启动的进程都在作业中，「取消」以 `TerminateJobObject` 结束整棵进程树；`shell=use` 以 `ShellExecuteEx`，其进程同样放入作业。控制台窗口可见，同 UTAU。批处理（`.bat`、`.cmd`）以 `cmd.exe /d /s /c ""程序" "文件""` 启动：直接交给 `CreateProcess` 时 Windows 以 `cmd /c` 执行整行，会剥掉首尾引号而拆坏路径；路径含 `%` 时拒绝运行，因为引号内 cmd 仍会展开变量。其他平台以 `QProcess` 在独立的进程组中启动，「取消」结束整个进程组。
 - 插件的用户目录为应用数据目录下的 `UtauPlugins`（Windows 上为 `%APPDATA%\OpenVPI\HelloUtau\UtauPlugins`，Qt 依次接上组织名与应用名），与原生插件的目录分开。插件在菜单第一次打开、「刷新」与设置中的 UTAU 文件夹改变后重新发现。
-- 首次运行的确认记在插件设置 `plugins.json` 中本插件的值（`AppLoader::pluginValue()`）：`userData/org.helloutau.classicpluginhost/approved` 为数组，每项是插件文件夹 `folder` 与程序内容的 SHA-256 `program`，程序改变后再次询问。
+- 首次运行的确认记在插件设置 `plugins.json` 中本插件的值（`AppLoader::pluginValue()`）：`userData/org.helloutau.classicpluginhost/approved` 为数组，每项是插件文件夹 `folder`、程序在插件文件夹中的相对路径 `relativePath`（只供人读）与程序内容的 SHA-256 `sha256`；只比较 `sha256`，程序改变后再次询问。
 - 选区为空时提示先选择音符（`notes` 插件除外）；读回的文件与写出的相同时视为取消。
 - 编码按 note.md「插件」：`plugin.json` 的 `charset` 声明 UTF-8 时，临时文件写成 UTF-8、结果按 UTF-8 读回（作者 2026-09-30 定，比 UTAU 稳妥）；否则与 UTAU 兼容，Windows 上为系统 ANSI 代码页、其他平台为 CP932，音符条目中无法表示的字符按 note.md 转义；`[#SETTING]` 的路径与 `@` 条目只读，不转义，路径用系统的分隔符，同 UTAU。写出与读回用同一编码。`plugin.json` 的格式见 note.md「插件」，有它时不再读 `plugin.txt`。
 
