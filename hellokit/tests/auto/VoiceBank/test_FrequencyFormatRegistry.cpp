@@ -107,7 +107,7 @@ private:
     }
 
 private Q_SLOTS:
-    // The format of a resampler is chosen by its file name alone; frq otherwise.
+    // The format of a resampler depends on its file name only, with frq as the fallback.
     void a_format_is_chosen_by_the_resampler() {
         FrequencyFormatRegistry registry;
         QVERIFY(!registry.formatForResampler("resampler.exe"));
@@ -126,9 +126,9 @@ private Q_SLOTS:
         QCOMPARE(idOf(""), QStringLiteral("frq"));
     }
 
-    // Registries follow the registrations, those before them and those after, in their order.
-    // Of two formats of one ID, the first is used until it goes; of two formats for a
-    // resampler, the later takes it.
+    // A registry lists registrations made before and after its construction, in the order of
+    // registration. Of two formats with one ID, the first is used until its registration is
+    // destroyed. Of two formats for one resampler, the later registered is used.
     void registries_follow_the_registrations() {
         const auto sc = registration("sc", {QStringLiteral("straycat*")});
         FrequencyFormatRegistry registry;
@@ -188,7 +188,7 @@ private Q_SLOTS:
         QCOMPARE(table->frames[2].amplitude, std::optional<double>(22.1));
         QVERIFY(diagnostics.isEmpty());
 
-        // Cut short, or of another kind
+        // A truncated file and a file of another format
         write(pathOf("a_wav.frq"), bytes.left(bytes.size() - 1));
         QVERIFY(!frq->read(wav, 44100, diagnostics));
         write(pathOf("a_wav.frq"), "FREQ0002");
@@ -217,7 +217,7 @@ private Q_SLOTS:
         QVERIFY(!table->averageFrequency);
     }
 
-    // An entry of desc.mrq, found by name past a deleted entry, its case aside
+    // An entry of desc.mrq, found by case-insensitive name after a deleted entry
     void an_mrq_entry_reads() {
         QDir(m_dir.path()).mkdir(QStringLiteral("m"));
         const BuiltinFrequencyFormats builtins;

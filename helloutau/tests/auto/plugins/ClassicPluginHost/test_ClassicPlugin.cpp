@@ -21,8 +21,8 @@ class test_ClassicPlugin : public QObject {
         return fs::path(m_dir.path().toStdU16String());
     }
 
-    // A folder of <directory>/<name> with the plugin.txt \a txt , in ASCII, and the files
-    // \a files
+    // Creates the folder <directory>/<name> with the plugin.txt \a txt in ASCII and the files
+    // \a files .
     fs::path plugin(const std::string &name, const std::string &txt,
                     std::initializer_list<const char *> files = {},
                     const char *directory = "plugins") const {
@@ -35,15 +35,15 @@ class test_ClassicPlugin : public QObject {
         return folder;
     }
 
-    // Writes \a json as the plugin.json of \a folder
+    // Writes \a json as the plugin.json of \a folder .
     static void manifest(const fs::path &folder, const std::string &json) {
         fs::create_directories(folder);
         std::ofstream(folder / "plugin.json", std::ios::binary) << json;
     }
 
 private Q_SLOTS:
-    // A plugin.json, in UTF-8, replaces plugin.txt: nothing of plugin.txt is read, and the
-    // encoding of the temporary file is its charset.
+    // A plugin.json in UTF-8 replaces plugin.txt entirely. The plugin.txt is not read, and the
+    // encoding of the temporary file is the charset of the plugin.json.
     void plugin_json_replaces_plugin_txt() {
         const auto folder = plugin("json", "name=Old\r\nexecute=old.bat\r\nnotes=all\r\n",
                                    {"old.bat", "new.bat"}, "manifests");
@@ -60,8 +60,8 @@ private Q_SLOTS:
         QCOMPARE(read->charset, QStringLiteral("UTF-8"));
     }
 
-    // What plugin.json omits: the name of the folder, the program run as such, the selection,
-    // and the encoding of UTAU.
+    // The defaults of plugin.json: the folder name, the program started directly, the
+    // selection, and the encoding of UTAU.
     void plugin_json_defaults() {
         const auto folder = root() / "manifests" / "defaults";
         manifest(folder, R"({"execute": "a.bat"})");
@@ -80,8 +80,8 @@ private Q_SLOTS:
         QVERIFY(diagnostics.isEmpty());
     }
 
-    // An unknown value leaves the plugin unavailable with the reason, and a plugin.json that is
-    // no JSON object is reported and leaves the folder out.
+    // An unknown value makes the plugin unavailable with the reason. A plugin.json that is not
+    // a JSON object is reported, and the folder is skipped.
     void plugin_json_that_is_wrong() {
         const auto folder = root() / "manifests" / "wrong";
         std::error_code error;
@@ -103,8 +103,8 @@ private Q_SLOTS:
         QCOMPARE(diagnostics.size(), 1);
     }
 
-    // The folders of a directory in the order of their names, each read from its plugin.txt. A
-    // folder without one is no plugin.
+    // The folders of a directory are read in the order of their names, each from its
+    // plugin.txt. A folder without a plugin.txt is not a plugin.
     void plugins_are_found_by_folder() {
         plugin("b", "name=Beta\r\nexecute=b.bat\r\nshell=use\r\nnotes=all\r\n", {"b.bat"});
         plugin("a", "name=Alpha\r\nexecute=a.bat\r\n", {"a.bat"});
@@ -128,12 +128,12 @@ private Q_SLOTS:
         QVERIFY(plugins[1].shell);
         QVERIFY(plugins[1].wholeTrack);
 
-        // Without a name, the folder names the plugin.
+        // Without a name, the folder name is used.
         QCOMPARE(plugins[2].name, QStringLiteral("d"));
     }
 
-    // The program must lie in the folder of the plugin: an absolute path, any parent step or a
-    // missing file leaves the plugin unavailable, with the reason.
+    // The program must be inside the plugin folder. An absolute path, any .. component, or a
+    // missing file makes the plugin unavailable, with the reason.
     void the_program_must_be_in_the_folder() {
         fs::create_directories(root() / "outside");
         std::ofstream(root() / "outside" / "x.bat", std::ios::binary);
@@ -155,7 +155,7 @@ private Q_SLOTS:
             QVERIFY(read->program.empty());
         }
 
-        // Within the folder, a subfolder is fine.
+        // A program in a subfolder of the plugin folder is accepted.
         const auto folder = plugin("q", "execute=sub/q.bat\r\n");
         fs::create_directories(folder / "sub");
         std::ofstream(folder / "sub" / "q.bat", std::ios::binary);

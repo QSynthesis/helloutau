@@ -15,12 +15,12 @@ class QMenu;
 
 namespace hello::daw {
 
-    /// The submenu Plugins of the Tools menu of the project windows, as in UTAU: the plugins of
-    /// UTAU that were found, then Refresh and the folders of the plugins.
+    /// The submenu Plugins of the Tools menu of the project windows, as in UTAU: the discovered
+    /// UTAU plugins, followed by Refresh and the commands that open the plugin folders.
     ///
-    /// The plugins are found the first time the menu opens, again on Refresh, and again when the
-    /// UTAU folder of the settings has changed. They are found in the \c plugins folder of UTAU
-    /// and in the folder of HelloUtau for them, userDirectory().
+    /// The plugins are discovered when the menu first opens, on Refresh, and after the UTAU
+    /// folder in the settings has changed. The discovery covers the \c plugins folder of UTAU
+    /// and the HelloUtau folder for UTAU plugins, userDirectory().
     class ClassicPluginContribution : public ActionContribution {
         Q_DECLARE_TR_FUNCTIONS(hello::daw::ClassicPluginContribution)
     public:
@@ -30,8 +30,8 @@ namespace hello::daw {
         const QAK::ActionExtension *extension() const override;
         void addActions(ProjectWindow *window, QAK::WidgetActionContext *context) override;
 
-        /// The folder of the plugins of UTAU that the user installs for HelloUtau, apart from
-        /// those of UTAU and from the native plugins.
+        /// Returns the folder of the UTAU plugins that the user installs for HelloUtau, separate
+        /// from the \c plugins folder of UTAU and from the native plugins.
         static std::filesystem::path userDirectory();
 
     private:
@@ -40,7 +40,8 @@ namespace hello::daw {
 
         QList<ClassicPlugin> m_plugins;
 
-        // The UTAU folder of the settings when the plugins were last found, absent before
+        // The UTAU folder in the settings at the last discovery, or \c std::nullopt before the
+        // first discovery
         std::optional<std::filesystem::path> m_utauDirectory;
     };
 

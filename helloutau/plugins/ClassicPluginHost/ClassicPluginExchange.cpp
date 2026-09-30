@@ -23,13 +23,13 @@ namespace hello::daw {
 
     namespace {
 
-        // A path as the plugin reads it, with the separators of the system, as UTAU writes them
+        // Returns \a path with native separators, as UTAU writes paths for the plugin.
         QString textOf(const std::filesystem::path &path) {
             return QDir::toNativeSeparators(QString::fromStdU16String(path.u16string()));
         }
 
-        // The text of a file of the plugin. The notes are escaped in an encoding other than
-        // UTF-8, see TextCodec::escape(), since they come back and are read again.
+        // The text encoding of a plugin file. In an encoding other than UTF-8, the notes are
+        // escaped (see TextCodec::escape()) because they are read back from the result.
         class Text {
         public:
             explicit Text(const QString &charset)
@@ -44,9 +44,10 @@ namespace hello::daw {
                 return m_escaping;
             }
 
-            // What the plugin only reads: the settings, which are paths it opens, and the values
-            // the synthesis computes. They are not escaped, which would double every backslash
-            // of a path. A character that the encoding lacks is lost, as in UTAU.
+            // Encodes read-only text: the settings, which are paths that the plugin opens, and
+            // the values computed by the synthesis. This text is not escaped because escaping
+            // would double every backslash of a path. An unrepresentable character is lost, as
+            // in UTAU.
             std::string encodeReadOnly(const QString &text) const {
                 const auto bytes = m_codec.encode(text);
                 return std::string(bytes.data(), size_t(bytes.size()));
@@ -63,7 +64,7 @@ namespace hello::daw {
             bool m_escaping;
         };
 
-        // The entries that the note properties hold. Any other entry is user data.
+        // The keys of the entries that map to note properties. Any other entry is user data.
         const std::set<std::string> &propertyKeys() {
             static const std::set<std::string> keys = {
                 utau::KEY_NAME_LYRIC,         utau::KEY_NAME_LENGTH,
@@ -82,9 +83,9 @@ namespace hello::daw {
             return keys;
         }
 
-        // Sets the properties of \a ref that \a section has to those of \a note , which the
-        // section converts to. A property whose entry is empty in the section is blank in the
-        // note, which removes it.
+        // Sets each property of \a ref whose entry \a section contains to the value in \a note ,
+        // the conversion of the section. A property whose entry is empty in the section is
+        // blank in \a note , and setting it removes the property.
         void assign(const kit::NoteRef &ref, const utau::PluginResult::Section &section,
                     const kit::Note &note, const Text &text) {
             const auto has = [&](const char *key) { return section.keys.count(key) != 0; };
@@ -144,7 +145,7 @@ namespace hello::daw {
                 ref.setVibrato(note.vibrato);
             }
 
-            // The four entries of the Mode2 pitch together make one curve.
+            // The four entries of the Mode2 pitch form one curve.
             if (has(utau::KEY_NAME_PBS) || has(utau::KEY_NAME_PBW) || has(utau::KEY_NAME_PBY) ||
                 has(utau::KEY_NAME_PBM)) {
                 const auto points = ref.portamento();
@@ -156,7 +157,7 @@ namespace hello::daw {
                 }
             }
 
-            // The start and the values of the Mode1 pitch, each kept if the section omits it
+            // The start and the values of the Mode1 pitch, each unchanged if the section omits it
             if (has(utau::KEY_NAME_PITCH_BEND) || has(utau::KEY_NAME_PB_START)) {
                 const auto current = ref.pitchBend();
                 kit::PitchBend bend = current.isValid() ? current.toPitchBend() : kit::PitchBend();
@@ -201,8 +202,8 @@ namespace hello::daw {
         const auto tempos = kit::TempoMap::of(project);
         const auto timings = kit::SampleTiming::of(notes, tempos, voiceBank);
 
-        // A note with the values that the synthesis computes for it. A rest has no sample, and
-        // its values are zero, as UTAU writes them.
+        // Returns the note at \a index with the values computed by the synthesis. A rest has no
+        // sample, and its values are zero, as UTAU writes them.
         const auto noteAt = [&](int index) {
             const auto &from = notes.at(index);
             utau::NoteExt note;
@@ -216,7 +217,7 @@ namespace hello::daw {
                 if (const auto sample = voiceBank->find(from.noteNum, from.lyric)) {
                     const auto file = sample->path.lexically_proximate(voiceBank->root());
                     note.filenameRO = text.encodeReadOnly(textOf(file.lexically_normal()));
-                    // Written only where the prefix map sings the lyric under another alias
+                    // Written only if the prefix map maps the lyric to another alias
                     const auto alias = voiceBank->prefixedLyric(from.noteNum, from.lyric);
                     if (alias != from.lyric) {
                         note.aliasRO = text.encodeReadOnly(alias);
@@ -266,13 +267,14 @@ namespace hello::daw {
         const auto ignored = [&](const QString &section) {
             diagnostics.push_back(
                 {kit::DiagnosticSeverity::Warning,
-                 tr("The plugin wrote %1 where there is no note, which was ignored.")
+                 tr("The section %1 written by the plugin has no corresponding note and was "
+                    "ignored.")
                      .arg(section)});
         };
 
         auto transaction = notes.session()->transaction(plugin.name);
-        // The next note of the selection, and the end of the selection, which the insertions
-        // and deletions move
+        // The index of the next note of the selection and the end of the selection, both
+        // shifted by insertions and deletions
         int next = first;
         int end = first + count;
         for (const auto &section : file.sections) {
@@ -312,9 +314,9 @@ namespace hello::daw {
                     --end;
                     break;
                 case Section::Insert: {
-                    // What the section omits of the length, the lyric and the note number comes
-                    // from the note after it, as UTAU inserts.
-                    // At the end of the track, those of a new note.
+                    // The length, lyric, and note number omitted by the section are copied from
+                    // the following note, as UTAU inserts notes. At the end of the track, the
+                    // values of a new note are used.
                     auto inserted = note;
                     kit::Note after;
                     if (next < notes.size()) {

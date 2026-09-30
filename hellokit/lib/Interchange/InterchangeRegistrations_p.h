@@ -7,14 +7,15 @@
 
 namespace hello::kit {
 
-    /// The drivers registered in the process, in the order of registration, and the registries
-    /// that follow them.
+    /// The process-wide list of registrations in the order of registration, and the listeners
+    /// notified of changes.
     ///
-    /// Kept here rather than in a stdc::DynamicRegistry, whose entries are ordered by name,
-    /// since the first of two drivers for a suffix takes precedence.
+    /// A stdc::DynamicRegistry is not used because it orders entries by name, and the
+    /// precedence of drivers for a suffix depends on the order of registration.
     class InterchangeRegistrations {
     public:
-        /// Told of each registration added or removed after it was added.
+        /// Receives a notification for each registration added or removed after the listener
+        /// was added.
         class Listener {
         public:
             virtual ~Listener() = default;

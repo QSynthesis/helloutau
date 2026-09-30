@@ -10,12 +10,12 @@
 
 namespace hello::kit {
 
-    /// Registers a format of frequency tables with every FrequencyFormatRegistry while the
-    /// registration exists. See docs/Plugins.md.
+    /// Registration of a frequency table format. The format is present in every
+    /// FrequencyFormatRegistry for the lifetime of the registration. See docs/Plugins.md.
     ///
     /// A plugin creates its registrations in initialize() and destroys them in
     /// aboutToShutdown(), before its library is unloaded. Registrations and registries are used
-    /// on the thread of the application only.
+    /// on the application thread only.
     class HELLOKIT_VOICEBANK_EXPORT FrequencyFormatRegistration {
     public:
         explicit FrequencyFormatRegistration(std::unique_ptr<FrequencyFormat> format);

@@ -10,7 +10,7 @@ namespace hello::daw {
 
     namespace {
 
-        // An extension whose actions the windows create themselves
+        // Contribution of an extension whose actions the windows create themselves
         class ExtensionContribution : public ActionContribution {
         public:
             explicit ExtensionContribution(const QAK::ActionExtension *extension)

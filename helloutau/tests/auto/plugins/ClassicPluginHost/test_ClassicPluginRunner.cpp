@@ -20,8 +20,8 @@ namespace fs = std::filesystem;
 
 namespace {
 
-    // Set for a copy of this test that acts as a plugin: it writes the value of the variable
-    // over the file of its only argument.
+    // Set for a copy of this test that acts as a plugin. The copy writes the value of the
+    // variable over the file given as its only argument.
     const char replyVariable[] = "HELLOUTAU_TEST_PLUGIN_REPLY";
 
 }
@@ -31,8 +31,8 @@ class test_ClassicPluginRunner : public QObject {
 
     QTemporaryDir m_dir;
 
-    // A plugin in the folder \a name whose program is the script \a script , a batch file on
-    // Windows and a shell script elsewhere
+    // Returns a plugin in the folder \a name whose program is the script \a script , written
+    // as a batch file on Windows and as a shell script elsewhere.
     ClassicPlugin plugin(const std::string &name, const std::string &script) const {
         const auto folder = fs::path(m_dir.path().toStdU16String()) / name;
         fs::create_directories(folder);
@@ -62,8 +62,8 @@ class test_ClassicPluginRunner : public QObject {
     }
 
 private Q_SLOTS:
-    // The program runs in its folder on a file named as UTAU names it, and the file as the
-    // program leaves it is the result.
+    // The program runs in its folder on a file named as in UTAU, and the file as left by the
+    // program is the result.
     void the_result_is_read_back() {
 #ifdef Q_OS_WINDOWS
         const auto p = plugin("reply", "echo %~nx1> \"%~dp0name.txt\"\r\n"
@@ -93,7 +93,7 @@ private Q_SLOTS:
                  QDir(QString::fromStdU16String(p.folder.u16string())));
     }
 
-    // A program that leaves the file alone leaves it unchanged.
+    // A program that does not write the file leaves it unchanged.
     void an_untouched_file_is_unchanged() {
         const auto p = plugin("nothing", "");
         ClassicPluginRunner runner;
@@ -104,8 +104,8 @@ private Q_SLOTS:
         QVERIFY(runner.isUnchanged());
     }
 
-    // Cancelling ends the program at once, and what it started with it: the process that it
-    // left in the background never writes its file.
+    // Cancellation terminates the program immediately, together with the processes started by
+    // it. The background process started by the program never writes its file.
     void cancelling_ends_what_the_program_started() {
 #ifdef Q_OS_WINDOWS
         const auto p = plugin("waiting", "start \"\" /b cmd /c \"ping -n 3 127.0.0.1 >nul & "
@@ -134,7 +134,7 @@ private Q_SLOTS:
         QVERIFY(!fs::exists(p.folder / "late.txt"));
     }
 
-    // With shell=use, the handler of the file type runs the program, as UTAU starts it.
+    // With shell=use, the handler of the file type starts the program, as in UTAU.
     void the_shell_starts_a_plugin_that_asks_for_it() {
 #ifdef Q_OS_WINDOWS
         auto p = plugin("shell", "copy /y \"%~dp0reply.txt\" \"%~1\" >nul\r\n");
@@ -152,8 +152,8 @@ private Q_SLOTS:
 #endif
     }
 
-    // A program runs as such, its path and that of the file each one argument: this test
-    // itself, copied into a folder whose name has a space, answers as a plugin.
+    // An executable runs directly, with its path and the file path as separate arguments. This
+    // test, copied into a folder whose name contains a space, acts as the plugin.
     void a_program_runs_on_the_file() {
         const auto folder = fs::path(m_dir.path().toStdU16String()) / "a program";
         fs::create_directories(folder);
@@ -165,7 +165,7 @@ private Q_SLOTS:
         p.folder = folder;
         p.name = QStringLiteral("program");
         p.program = program;
-        // The copy finds the libraries beside this test through the path that it inherits.
+        // The libraries beside this test are located through the PATH inherited by the copy.
         const auto path = qgetenv("PATH");
         qputenv("PATH", QFile::encodeName(
                             QDir::toNativeSeparators(QCoreApplication::applicationDirPath())) +
@@ -183,7 +183,7 @@ private Q_SLOTS:
         QCOMPARE(runner.result(), QByteArray("[#0000]\r\nLyric=p\r\n"));
     }
 
-    // A program that cannot start is reported, with no run to wait for.
+    // A program that cannot start is reported, and no run begins.
     void a_missing_program_is_reported() {
         auto p = plugin("missing", "");
         p.program = p.folder / "missing.exe";

@@ -44,8 +44,8 @@ namespace hello::daw {
     PluginSettingPage::PluginSettingPage(AppLoader &loader, QObject *parent)
         : SettingPage(QStringLiteral("core.Plugins"), parent), m_loader(loader) {
         setTitle(tr("Plugins"));
-        setDescription(tr("The plugins found, and which of them run. A plugin enabled or disabled "
-                          "here runs or stops at the next start."));
+        setDescription(tr("The plugins found and their states. Enabling or disabling a plugin "
+                          "takes effect at the next start."));
         setKeywords({QStringLiteral("Plugins"), QStringLiteral("extensions")});
     }
 
@@ -54,7 +54,7 @@ namespace hello::daw {
 
         auto widget = new QWidget();
         auto layout = new QVBoxLayout(widget);
-        m_restart = new QLabel(tr("Restart %1 for the plugins enabled or disabled to run or stop.")
+        m_restart = new QLabel(tr("Restart %1 to apply the changes to the enabled plugins.")
                                    .arg(QCoreApplication::applicationName()));
         m_restart->setWordWrap(true);
         layout->addWidget(m_restart);
@@ -76,10 +76,10 @@ namespace hello::daw {
             item->setText(StateColumn, stateText(info));
             item->setCheckState(NameColumn, enabledAtNextStart(row) ? Qt::Checked : Qt::Unchecked);
             if (isCore(info)) {
-                // Shown checked, and not to be unchecked
+                // Checked and not user-checkable
                 item->setFlags(item->flags() & ~Qt::ItemIsUserCheckable);
                 item->setToolTip(NameColumn,
-                                 tr("The application does not start without the core plugin."));
+                                 tr("The application requires the core plugin to start."));
             }
             if (info.state == AppLoader::PluginInfo::Failed) {
                 item->setIcon(StateColumn, warning);
@@ -119,8 +119,8 @@ namespace hello::daw {
         return false;
     }
 
-    // A choice equal to what the metadata says is no choice, so that plugins.json keeps only
-    // the plugins that the user changed.
+    // A choice equal to the default of the metadata is recorded as no choice, so that
+    // plugins.json records only the plugins that the user changed.
     bool PluginSettingPage::apply(QString *error) {
         Q_UNUSED(error);
         for (int row = 0; row < m_plugins.size(); ++row) {
@@ -147,7 +147,8 @@ namespace hello::daw {
         return m_tree->topLevelItem(row)->checkState(NameColumn) == Qt::Checked;
     }
 
-    // Shown while a plugin is checked otherwise than it was enabled in this run, applied or not
+    // The restart notice is visible while the check state of any plugin differs from its enabled
+    // state in this run, whether the change is applied or not.
     void PluginSettingPage::updateRestart() {
         bool differs = false;
         for (int row = 0; row < m_plugins.size(); ++row) {
@@ -186,7 +187,7 @@ namespace hello::daw {
             tr("ID: %1").arg(info.id),
             tr("Library: %1").arg(QDir::toNativeSeparators(info.filePath)),
             tr("Depends on: %1").arg(listOf(dependsOn)),
-            tr("Needed by: %1").arg(listOf(requiredBy)),
+            tr("Required by: %1").arg(listOf(requiredBy)),
         };
         if (!info.error.isEmpty()) {
             lines.push_back(tr("Error: %1").arg(info.error));

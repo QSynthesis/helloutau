@@ -32,12 +32,13 @@ namespace hello::daw {
         QString settingsDirectory;
         std::unique_ptr<AppSettings> settings;
         stdc::pluginsystem::PluginSettings pluginSettings;
-        // After the settings of the plugins, so that it goes first and writes what is pending
+        // Declared after the settings of the plugins, so that it is destroyed first and writes
+        // the pending changes
         std::unique_ptr<SettingsFile> pluginFile;
         bool loaded = false;
 
-        // Settings that the library rejects are reported, and leave every plugin as its
-        // metadata says, until the next change replaces them.
+        // Settings rejected by the library are reported and ignored. Every plugin then follows
+        // its metadata until the next change replaces the settings.
         void readPluginSettings() {
             const auto fileName = settingsDirectory + QStringLiteral("/plugins.json");
             pluginFile = std::make_unique<SettingsFile>(fileName,
@@ -231,7 +232,7 @@ namespace hello::daw {
         QStringList result;
         bool coreSeen = false;
         for (const auto &info : plugins()) {
-            // load() reports on the first core plugin, and another of the same ID is an error here.
+            // load() reports the first core plugin. Another plugin with the same ID is an error.
             if (info.id == QLatin1String(corePluginId) && !coreSeen) {
                 coreSeen = true;
                 continue;

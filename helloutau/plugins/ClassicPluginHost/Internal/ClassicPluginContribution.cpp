@@ -27,7 +27,7 @@ namespace hello::daw {
             return utauDirectory.empty() ? std::filesystem::path() : utauDirectory / u"plugins";
         }
 
-        // Opens \a directory in the file manager, creating it if need be.
+        // Opens \a directory in the file manager, and creates it if necessary.
         void open(const std::filesystem::path &directory) {
             std::error_code error;
             std::filesystem::create_directories(directory, error);
@@ -47,12 +47,13 @@ namespace hello::daw {
 
     void ClassicPluginContribution::addActions(ProjectWindow *window,
                                                QAK::WidgetActionContext *context) {
-        // An external action: its menu is ours to fill, each time it opens.
+        // An external action. This plugin fills its menu each time the menu opens.
         const auto menu = new QMenu(window);
         menu->setToolTipsVisible(true);
         QObject::connect(menu, &QMenu::aboutToShow, menu,
                          [this, menu, window] { fill(menu, window); });
-        // Copied from UTF-8 rather than a literal, whose text would go with this library
+        // Converted from UTF-8 rather than a literal, whose data would be unloaded with this
+        // library
         context->addAction(QString::fromUtf8("helloutau.tools.plugins"), menu->menuAction());
     }
 
@@ -70,7 +71,7 @@ namespace hello::daw {
 
         menu->clear();
         for (const auto &plugin : std::as_const(m_plugins)) {
-            // A name is text, and an ampersand in it no mnemonic.
+            // The name is plain text. An ampersand in it is not a mnemonic.
             auto name = plugin.name;
             const auto action =
                 menu->addAction(name.replace(QLatin1Char('&'), QLatin1String("&&")));
@@ -103,7 +104,7 @@ namespace hello::daw {
         }
         directories.push_back(userDirectory());
 
-        // A plugin.txt that cannot be read leaves its folder out, as UTAU does.
+        // A folder whose plugin.txt cannot be read is skipped, as in UTAU.
         kit::DiagnosticList diagnostics;
         m_plugins = ClassicPlugin::discover(directories, diagnostics);
         m_utauDirectory = utauDirectory;

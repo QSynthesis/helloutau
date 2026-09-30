@@ -28,7 +28,7 @@ namespace hello::daw {
             return QString::fromStdString(utf8);
         }
 
-        // A path as the settings keep it, whole
+        // A path in the form stored in the settings, converted without loss
         QString textOf(const std::filesystem::path &path) {
             return QString::fromStdU16String(path.u16string());
         }
@@ -219,8 +219,8 @@ namespace hello::daw {
         stdc_impl_t;
         const auto path = key.toStdString();
         const auto &value = impl.value(path);
-        // A value that is absent reads as null, which a present null does not come apart from:
-        // setValue() never writes one.
+        // An absent value reads as null and is indistinguishable from a stored null. setValue()
+        // never stores null.
         return value.isNull() ? QJsonValue(QJsonValue::Undefined) : SettingsJson::qtOf(value);
     }
 

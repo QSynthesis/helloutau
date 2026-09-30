@@ -18,8 +18,9 @@ using namespace hello::daw;
 
 namespace {
 
-    /// Copies the plugin library \a library into the directory \a name of \a root with a
-    /// plugin.json of the ID \a id and the further fields \a fields, the directory layout.
+    /// Copies the plugin library \a library into the subdirectory \a name of \a root, together
+    /// with a plugin.json that specifies the ID \a id and the additional fields \a fields, as the
+    /// directory layout requires.
     void addPlugin(const QString &root, const QString &name, const QString &library,
                    const QString &id, const QString &fields = {}) {
         const QDir directory(root + QLatin1Char('/') + name);
@@ -39,8 +40,8 @@ namespace {
         return qApp->property("appLoaderEvents").toStringList();
     }
 
-    // The command line of the program on \a files, with the settings in a directory of the test
-    // rather than those of the user
+    // Returns the command line of the program for \a files, with the settings in a directory of
+    // the test instead of the settings directory of the user.
     QStringList arguments(const QStringList &files = {}) {
         static QTemporaryDir directory;
         return QStringList({QStringLiteral("helloutau"), QLatin1String(AppLoader::settingsOption),
@@ -67,8 +68,8 @@ private Q_SLOTS:
         qApp->setProperty("appLoaderEvents", QStringList());
     }
 
-    // --plugin-path adds the directory after it, --settings names the directory of the
-    // settings, and the other arguments are files.
+    // --plugin-path adds the following directory, --settings specifies the settings directory,
+    // and the remaining arguments are files.
     void the_arguments_are_plugin_paths_and_files() {
         QCOMPARE(AppLoader::instance(), nullptr);
         QTemporaryDir directory;
@@ -86,20 +87,21 @@ private Q_SLOTS:
             QCOMPARE(loader.settings().fileName(),
                      directory.filePath(QStringLiteral("settings.json")));
         }
-        // Without --settings, those of the user
+        // Without --settings, the loader uses the settings directory of the user.
         {
             const AppLoader loader({QStringLiteral("helloutau")});
             QCOMPARE(loader.settingsDirectory(), AppSettings::defaultDirectory());
         }
         QCOMPARE(AppLoader::instance(), nullptr);
 
-        // The layout outside a macOS bundle, where the tests run
+        // The tests run outside a macOS bundle and therefore use the layout without a bundle.
         QCOMPARE(AppLoader::builtinPluginPath(),
                  QDir::cleanPath(QCoreApplication::applicationDirPath() +
                                  QStringLiteral("/../lib/plugins/helloutau")));
     }
 
-    // The core plugin is initialized, told when every plugin is, and shut down once.
+    // The core plugin is initialized, notified after every plugin is initialized, and shut down
+    // once.
     void the_core_plugin_runs() {
         QTemporaryDir root;
         addPlugin(root.path(), QStringLiteral("Core"), QStringLiteral(TEST_APPLOADER_CORE),
@@ -113,7 +115,7 @@ private Q_SLOTS:
         QCOMPARE(events(), QStringList({QStringLiteral("initialize a.ust"),
                                         QStringLiteral("pluginsInitialized")}));
 
-        // Loading again loads nothing.
+        // A second call of load() loads no plugin.
         QVERIFY(loader.load(&error));
         QCOMPARE(events().size(), 2);
 
@@ -124,7 +126,8 @@ private Q_SLOTS:
                                         QStringLiteral("aboutToShutdown")}));
     }
 
-    // Another plugin that fails leaves the application running, its reason among the errors.
+    // A failure of another plugin does not prevent the application from running. The reason is
+    // listed among the errors.
     void another_plugin_may_fail() {
         QTemporaryDir root;
         addPlugin(root.path(), QStringLiteral("Core"), QStringLiteral(TEST_APPLOADER_CORE),
@@ -141,7 +144,7 @@ private Q_SLOTS:
                  QStringList({QStringLiteral("org.helloutau.other: intentional failure")}));
     }
 
-    // Every plugin found is listed with what became of it, running, disabled or failed.
+    // Every plugin found is listed with its state: running, disabled, or failed.
     void the_plugins_are_listed() {
         QTemporaryDir root;
         addPlugin(root.path(), QStringLiteral("Core"), QStringLiteral(TEST_APPLOADER_CORE),
@@ -190,7 +193,7 @@ private Q_SLOTS:
         QVERIFY(!failing.dependencies[0].optional);
         QCOMPARE(failing.dependencies[1].id, QStringLiteral("org.test.off"));
         QVERIFY(failing.dependencies[1].optional);
-        // A disabled plugin is no error.
+        // A disabled plugin is not an error.
         QCOMPARE(loader.errors(),
                  QStringList({QStringLiteral("org.test.failing: intentional failure")}));
 
@@ -200,8 +203,8 @@ private Q_SLOTS:
         }
     }
 
-    // The choice of the user to enable or disable a plugin goes into plugins.json, and leaves
-    // the plugins that run as they are until the next start.
+    // The choice of the user to enable or disable a plugin is recorded in plugins.json. The
+    // running plugins remain unchanged until the next start.
     void the_user_enables_and_disables_plugins() {
         QTemporaryDir directory;
         QTemporaryDir root;
@@ -258,11 +261,11 @@ private Q_SLOTS:
         QCOMPARE(written().value(QStringLiteral("enabledPlugins")), QJsonValue(QJsonArray()));
     }
 
-    // Without the core plugin, running or not, the loader gives the reason.
+    // If the core plugin is missing or does not run, load() reports the reason.
     void the_core_plugin_is_required() {
         QString error;
         {
-            // A plugin of another ID is no core plugin.
+            // A plugin with another ID is not the core plugin.
             QTemporaryDir root;
             addPlugin(root.path(), QStringLiteral("Other"), QStringLiteral(TEST_APPLOADER_CORE),
                       QStringLiteral("org.helloutau.other"));
@@ -294,7 +297,7 @@ private Q_SLOTS:
         }
     }
 
-    // The plugins that plugins.json enables or disables override their metadata.
+    // The plugins enabled or disabled in plugins.json override their metadata.
     void the_settings_enable_and_disable_plugins() {
         QTemporaryDir directory;
         const auto settingsOf = [&](const QByteArray &json) {
@@ -326,9 +329,9 @@ private Q_SLOTS:
         }
     }
 
-    // A plugin keeps its values under its ID in the userData of plugins.json, beside the
-    // plugins that the user enabled or disabled, which stay. The application's settings are
-    // another file.
+    // The values of a plugin are stored under its ID in the userData of plugins.json, beside the
+    // plugins that the user enabled or disabled, which are preserved. The settings of the
+    // application are stored in another file.
     void the_plugins_keep_their_values() {
         QTemporaryDir directory;
         const auto file = directory.filePath(QStringLiteral("plugins.json"));
@@ -370,7 +373,7 @@ private Q_SLOTS:
         QVERIFY(!QFile::exists(directory.filePath(QStringLiteral("settings.json"))));
     }
 
-    // The two files are written once the event loop runs, or at once by syncSettings().
+    // The two files are written once the event loop runs, or immediately by syncSettings().
     void the_settings_are_written_later_or_on_sync() {
         QTemporaryDir directory;
         const auto plugins = directory.filePath(QStringLiteral("plugins.json"));
@@ -390,13 +393,13 @@ private Q_SLOTS:
         QTRY_VERIFY(QFile::exists(plugins));
     }
 
-    // The core plugin that comes with the application, found beside the program, opens a new
-    // project, and its windows close when it shuts down.
+    // The bundled core plugin, found beside the program, opens a new project. Its windows close
+    // when the plugin shuts down.
     void the_builtin_core_plugin_opens_a_window() {
         AppLoader loader(arguments());
         QString error;
         QVERIFY2(loader.load(&error), qPrintable(error));
-        // Every plugin that comes with the application loads.
+        // Every bundled plugin loads without error.
         QCOMPARE(loader.errors(), QStringList());
         QCOMPARE(projectWindowCount(), 1);
 
@@ -406,8 +409,8 @@ private Q_SLOTS:
 };
 
 int main(int argc, char *argv[]) {
-    // Runs without a display. The directory of the settings of the user is one for tests, should
-    // a loader reach it.
+    // Runs without a display. The settings directory of the user is a test directory in case a
+    // loader accesses it.
     qputenv("QT_QPA_PLATFORM", "offscreen");
     QStandardPaths::setTestModeEnabled(true);
     QApplication app(argc, argv);

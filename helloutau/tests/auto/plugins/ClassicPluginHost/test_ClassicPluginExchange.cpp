@@ -29,8 +29,8 @@ namespace {
         return note;
     }
 
-    // The project of the probe in docs/claude/utau-plugin-protocol.md: R a i R u e o, with
-    // pitch, vibrato, flags, velocity, a label and a user entry
+    // Returns the project of the probe in docs/claude/utau-plugin-protocol.md: R a i R u e o,
+    // with pitch, vibrato, flags, velocity, a label, and a user entry.
     kit::Project probe() {
         auto a = noteOf(QStringLiteral("a"), 480, 60);
         a.intensity = 100;
@@ -91,8 +91,9 @@ class test_ClassicPluginExchange : public QObject {
     Q_OBJECT
 
 private Q_SLOTS:
-    // The selection numbered by its position, with the notes around it, the settings with
-    // their absolute paths, and the computed values of the synthesis, zero without a voice bank
+    // The input contains the selection numbered by track position, the adjacent notes, the
+    // settings with absolute paths, and the values computed by the synthesis, which are zero
+    // without a voice bank.
     void the_input_is_written_as_utau_writes_it() {
         ClassicPluginExchange::Paths paths;
         paths.project = fs::path(u"/songs/song.ust");
@@ -123,7 +124,7 @@ private Q_SLOTS:
         QCOMPARE(file.nextNote->lyric, std::string("e"));
     }
 
-    // A plugin that receives the whole track gets every note, and no note around them.
+    // A plugin that receives the whole track receives every note and no adjacent note.
     void the_whole_track_has_no_notes_around_it() {
         auto plugin = pluginOf(QStringLiteral("UTF-8"));
         plugin.wholeTrack = true;
@@ -134,10 +135,10 @@ private Q_SLOTS:
         QVERIFY(!file.nextNote);
     }
 
-    // The result of the probe R2 gives the track that UTAU saved: the notes around the
-    // selection edited, an insertion with the length and note number of the next note, a note
-    // unchanged as a bare header, a deletion, an empty entry removed and an omitted one kept.
-    // It is one undo step.
+    // The result of the probe R2 produces the track saved by UTAU: edited adjacent notes, an
+    // insertion with the length and note number of the following note, an unchanged note
+    // written as a bare header, a deletion, a removed empty entry, and a kept omitted entry.
+    // The result forms one undo step.
     void the_result_applies_as_utau_applies_it() {
         kit::ProjectSession session(probe());
         const auto notes = kit::ProjectRef(&session).tracks().at(0).notes();
@@ -170,7 +171,7 @@ private Q_SLOTS:
         QVERIFY(!session.canUndo());
     }
 
-    // The probe R1: the sections apply in their order, whatever their numbers.
+    // The probe R1: the sections are applied in order of appearance regardless of their numbers.
     void the_numbers_do_not_matter() {
         kit::ProjectSession session(probe());
         const auto notes = kit::ProjectRef(&session).tracks().at(0).notes();
@@ -181,7 +182,7 @@ private Q_SLOTS:
         QCOMPARE(lyricsOf(session.snapshot()), QStringList({"R", "a", "X", "R", "Z", "e", "o"}));
     }
 
-    // The probe R3: a file without a note cancels, and makes no undo step.
+    // The probe R3: a file without a note section cancels the run and creates no undo step.
     void an_empty_result_cancels() {
         kit::ProjectSession session(probe());
         const auto notes = kit::ProjectRef(&session).tracks().at(0).notes();
@@ -192,8 +193,8 @@ private Q_SLOTS:
         QVERIFY(!session.canUndo());
     }
 
-    // A section past the selection is ignored with a warning, rather than applied to the note
-    // after it.
+    // A section beyond the selection is ignored with a warning rather than applied to the
+    // following note.
     void sections_beyond_the_selection_are_ignored() {
         kit::ProjectSession session(probe());
         const auto notes = kit::ProjectRef(&session).tracks().at(0).notes();
@@ -205,7 +206,7 @@ private Q_SLOTS:
         QCOMPARE(lyricsOf(session.snapshot()), lyricsOf(probe()));
     }
 
-    // An empty entry removes the property, a user entry included.
+    // An empty entry removes the property, including a user entry.
     void empty_entries_remove() {
         kit::ProjectSession session(probe());
         const auto notes = kit::ProjectRef(&session).tracks().at(0).notes();
@@ -219,8 +220,8 @@ private Q_SLOTS:
         QCOMPARE(e.modulation.value_or(-1), 0.0);
     }
 
-    // At the end of the track, an insertion has no note after it and takes the length, the
-    // note number and the lyric of a new note where it gives none.
+    // At the end of the track, an insertion has no following note. The length, note number,
+    // and lyric that the insertion omits are those of a new note.
     void an_insertion_at_the_end() {
         kit::ProjectSession session(probe());
         const auto notes = kit::ProjectRef(&session).tracks().at(0).notes();
@@ -234,13 +235,11 @@ private Q_SLOTS:
         QCOMPARE(result[7].lyric, QStringLiteral("a"));
     }
 
-    // In an encoding other than UTF-8, what it cannot represent is escaped in the input, and
-    // the escapes of the result are read back.
-    // The settings are paths that the plugin opens: with the separators of the system, and not
-    // escaped outside UTF-8, which would double every backslash.
+    // The settings are paths that the plugin opens. They use native separators and are not
+    // escaped outside UTF-8 because escaping would double every backslash.
     void paths_are_written_as_the_plugin_opens_them() {
-        // A voice directory made of a setting with slashes and of what the file writes with
-        // backslashes, as the UTAU folder and "voice" make one
+        // A voice directory joined from a setting with forward slashes and a relative path
+        // with backslashes, as the UTAU folder and "voice" are joined
         ClassicPluginExchange::Paths paths;
         paths.voiceDirectory = fs::path(u"C:/UTAU") / fs::path(u"voice\\bank");
         const auto bytes = ClassicPluginExchange::input(pluginOf(QStringLiteral("Shift_JIS")),
@@ -251,6 +250,8 @@ private Q_SLOTS:
         QVERIFY(!bytes.contains("\\\\"));
     }
 
+    // In an encoding other than UTF-8, an unrepresentable character is escaped in the input,
+    // and the escape sequences of the result are decoded.
     void text_is_escaped_outside_utf8() {
         auto project = probe();
         project.tracks.first().notes[2].lyric = QString(QChar(0x4f60));

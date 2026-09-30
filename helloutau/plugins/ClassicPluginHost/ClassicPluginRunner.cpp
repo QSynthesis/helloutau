@@ -26,9 +26,9 @@ namespace hello::daw {
     namespace {
 
 #ifdef Q_OS_WINDOWS
-        // \a argument quoted for CommandLineToArgvW(), by which a program reads its command
-        // line: a backslash doubled before a quotation mark and at the end, and the quotation
-        // mark escaped.
+        // Returns \a argument quoted for CommandLineToArgvW(), which parses the command line of
+        // a program. Backslashes are doubled before a quotation mark and at the end, and a
+        // quotation mark is escaped.
         std::wstring quotedArgument(const std::wstring &argument) {
             std::wstring out = L"\"";
             for (size_t i = 0;; ++i) {
@@ -80,8 +80,8 @@ namespace hello::daw {
         bool unobservable = false;
 
 #ifdef Q_OS_WINDOWS
-        // The job holds the program and every process that it starts, so that cancel() ends
-        // them all.
+        // The job contains the program and every process started by it, so that cancel()
+        // terminates all of them.
         HANDLE job = nullptr;
         HANDLE process = nullptr;
         QWinEventNotifier *notifier = nullptr;
@@ -96,7 +96,7 @@ namespace hello::daw {
                 *error = directory->errorString();
                 return false;
             }
-            // tmp and up to four hexadecimal digits, as UTAU names it
+            // tmp followed by up to four hexadecimal digits, as in UTAU
             const auto number = QString::number(QRandomGenerator::global()->bounded(0x10000), 16);
             file = directory->filePath(QStringLiteral("tmp%1.tmp").arg(number.toUpper()));
             QFile out(file);
@@ -109,13 +109,13 @@ namespace hello::daw {
 
         bool startProgram(const ClassicPlugin &plugin, QString *error);
 
-        // Ends the program and what it started, without reading the result.
+        // Terminates the program and the processes started by it, without reading the result.
         void kill();
 
         // Frees the handles of the program.
         void release();
 
-        // Ends the run: reads the result unless it was cancelled.
+        // Ends the run, and reads the result unless the run was cancelled.
         void end() {
             if (!running) {
                 return;
@@ -145,7 +145,7 @@ namespace hello::daw {
         const auto argument = quotedArgument(QDir::toNativeSeparators(file).toStdWString());
 
         if (plugin.shell) {
-            // The handler of the file type, as UTAU starts such a plugin
+            // Started by the handler of the file type, as in UTAU
             SHELLEXECUTEINFOW info = {};
             info.cbSize = sizeof(info);
             info.fMask = SEE_MASK_NOCLOSEPROCESS | SEE_MASK_NOASYNC | SEE_MASK_FLAG_NO_UI;
@@ -161,24 +161,25 @@ namespace hello::daw {
                 unobservable = true;
                 return true;
             }
-            // The handler may have started processes already, which the job then misses.
+            // Processes that the handler has already started are not in the job.
             AssignProcessToJobObject(job, info.hProcess);
             process = info.hProcess;
         } else {
             auto application = program;
             auto commandLine = quotedArgument(program) + L' ' + argument;
 
-            // A batch file runs in the command processor, which Windows would start with the
-            // command line after /c and strip its first and last quotation marks, cutting both
-            // paths. /s strips only the pair around the whole command. Within the quotation
-            // marks nothing is a command but the variables, which a path may not contain.
+            // A batch file runs in the command processor. Windows would start the processor
+            // with the command line after /c and strip its first and last quotation marks,
+            // which breaks both paths. With /s, only the pair around the whole command is
+            // stripped. Within the quotation marks, the processor interprets only variables,
+            // and therefore a path must not contain %.
             const auto extension =
                 QString::fromStdU16String(plugin.program.extension().u16string());
             if (extension.compare(QLatin1String(".bat"), Qt::CaseInsensitive) == 0 ||
                 extension.compare(QLatin1String(".cmd"), Qt::CaseInsensitive) == 0) {
                 if (commandLine.find(L'%') != std::wstring::npos) {
                     *error = ClassicPluginRunner::tr(
-                        "A batch file cannot run on a path that contains \"%\".");
+                        "A batch file cannot run with a path that contains \"%\".");
                     return false;
                 }
                 wchar_t processor[MAX_PATH];
@@ -188,7 +189,8 @@ namespace hello::daw {
                 commandLine = quotedArgument(application) + L" /d /s /c \"" + commandLine + L'"';
             }
 
-            // Suspended until it is in the job, so that nothing it starts escapes the job
+            // Suspended until it is assigned to the job, so that every process it starts is in
+            // the job
             STARTUPINFOW startup = {};
             startup.cb = sizeof(startup);
             PROCESS_INFORMATION info = {};
@@ -214,7 +216,7 @@ namespace hello::daw {
         if (job) {
             TerminateJobObject(job, 1);
         }
-        // A process that the job missed
+        // A process outside the job
         if (process) {
             TerminateProcess(process, 1);
             WaitForSingleObject(process, INFINITE);
@@ -222,7 +224,7 @@ namespace hello::daw {
     }
 
     void ClassicPluginRunner::Impl::release() {
-        // Called from its signal as well
+        // Also called from the signal of the notifier
         if (notifier) {
             notifier->setEnabled(false);
             notifier->deleteLater();
@@ -243,7 +245,8 @@ namespace hello::daw {
         process->setProgram(QString::fromStdU16String(plugin.program.u16string()));
         process->setArguments({file});
         process->setWorkingDirectory(QString::fromStdU16String(plugin.folder.u16string()));
-        // A process group of its own, so that cancel() ends what it started
+        // A dedicated process group, so that cancel() terminates the processes started by the
+        // program
         process->setChildProcessModifier([] { ::setpgid(0, 0); });
         QObject::connect(process, &QProcess::finished, q, [this] { end(); });
         process->start();

@@ -12,10 +12,11 @@ namespace hello::kit {
 
     class FrequencyFormatRegistration;
 
-    /// Registers the formats of this library while it exists: frq of resampler.exe, dio of
-    /// world4utau and mrq of moresampler, the formats whose layouts are public.
+    /// Registrations of the formats of this library for the lifetime of the object: frq of
+    /// resampler.exe, dio of world4utau and mrq of moresampler, the formats with public layouts.
     ///
-    /// The plugin FrequencyEditor holds one, and so does a test that needs them.
+    /// The FrequencyEditor plugin owns an instance. A test that requires these formats owns its
+    /// own instance.
     class HELLOKIT_VOICEBANK_EXPORT BuiltinFrequencyFormats {
     public:
         BuiltinFrequencyFormats();

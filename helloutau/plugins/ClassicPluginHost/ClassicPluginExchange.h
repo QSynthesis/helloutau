@@ -21,45 +21,46 @@ namespace hello::daw {
 
     class ClassicPlugin;
 
-    /// The two halves of a run of a ClassicPlugin that concern the project: the temporary file
-    /// written for the plugin, and the modification of the track by the file it writes back.
+    /// The two project-related parts of a ClassicPlugin run: writing the temporary file for the
+    /// plugin, and modifying the track according to the file that the plugin writes back.
     ///
-    /// The file is written as UTAU writes it and applied as UTAU applies it, see
+    /// The file is written and applied as UTAU writes and applies it. See
     /// docs/claude/utau-plugin-protocol.md.
     class CLASSICPLUGINHOST_EXPORT ClassicPluginExchange {
         Q_DECLARE_TR_FUNCTIONS(hello::daw::ClassicPluginExchange)
     public:
-        /// The absolute paths that the file carries in its settings. A path is empty if the
-        /// project has none, such as a project not yet saved.
+        /// The absolute paths in the settings of the file. A path is empty if the project has
+        /// no such path, as for an unsaved project.
         struct Paths {
             std::filesystem::path project;
             std::filesystem::path voiceDirectory;
             std::filesystem::path cacheDirectory;
         };
 
-        /// The temporary file for \a plugin with the \a count notes from \a first of the track
-        /// of \a project , or with every note if the plugin receives the whole track.
+        /// Returns the temporary file for \a plugin with the \a count notes of the track of
+        /// \a project from index \a first , or with every note if the plugin receives the whole
+        /// track.
         ///
-        /// Each note carries the values that the synthesis computes for it with \a voiceBank ,
-        /// which may be null: its pre-utterance, overlap and start point, and the file and the
-        /// alias of its sample.
+        /// Each note contains the values computed by the synthesis with \a voiceBank , which
+        /// may be null: the pre-utterance, overlap, and start point, and the file and alias of
+        /// the sample.
         static QByteArray input(const ClassicPlugin &plugin, const kit::Project &project, int first,
                                 int count, const Paths &paths, const kit::VoiceBank *voiceBank);
 
         enum Outcome {
             Applied,   ///< the modifications form one undo step
-            Cancelled, ///< the file has no section of a note
+            Cancelled, ///< the file contains no note section
             Failed,    ///< the modifications were rolled back, see the diagnostics
         };
 
-        /// Applies \a result , the file that \a plugin wrote back, to the \a count notes from
-        /// \a first of \a notes , as input() wrote them, in one transaction.
+        /// Applies \a result , the file written back by \a plugin , to the \a count notes of
+        /// \a notes from index \a first , as passed to input(), in one transaction.
         ///
-        /// The sections apply in their order: a numbered section to the next note of the
-        /// selection, whatever its number. An entry that a section omits stays, and an entry
-        /// with an empty value is removed, which restores the default. A note inserted without
-        /// a length, a lyric or a note number takes that of the note after it. A section beyond
-        /// the selection is ignored with a warning.
+        /// The sections are applied in order of appearance. A numbered section applies to the
+        /// next note of the selection regardless of its number. An entry omitted from a section
+        /// is unchanged, and an entry with an empty value is removed, which restores the
+        /// default. An inserted note that omits the length, lyric, or note number copies it
+        /// from the following note. A section beyond the selection is ignored with a warning.
         static Outcome apply(const ClassicPlugin &plugin, const kit::NoteListRef &notes, int first,
                              int count, QByteArrayView result, kit::DiagnosticList &diagnostics);
     };

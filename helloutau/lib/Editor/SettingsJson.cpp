@@ -166,7 +166,7 @@ namespace hello::daw {
             return;
         }
         m_pending = true;
-        // Without an application there is no event loop to wait for.
+        // Without an application instance, no event loop exists to wait for.
         if (QCoreApplication::instance()) {
             m_timer.start();
         } else {

@@ -11,11 +11,13 @@ namespace hello::daw {
 
     class ActionRegistration;
 
-    /// Registers the action extensions of the editor while it exists: the menus of the windows
-    /// with the commands of the application, and the commands of the windows inserted into
-    /// them. The windows create the actions of these commands themselves.
+    /// Registers the action extensions of the editor for the lifetime of this object. The
+    /// extensions declare the menus of the windows with the commands of the application, and
+    /// insert the commands of the windows into these menus. The windows create the actions of
+    /// these commands themselves.
     ///
-    /// The core plugin holds one, and so does a test that creates an Editor without the plugin.
+    /// The core plugin holds an instance. A test that creates an Editor without the plugin also
+    /// holds an instance.
     class HELLOUTAU_EDITOR_EXPORT BuiltinActions {
     public:
         BuiltinActions();

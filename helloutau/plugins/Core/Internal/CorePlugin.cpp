@@ -18,20 +18,20 @@ namespace hello::daw {
     bool CorePlugin::initialize(std::string *errorMessage) {
         Q_UNUSED(errorMessage);
         m_actions = std::make_unique<BuiltinActions>();
-        // The settings of the loader, which outlive the editor, or those of the user if no
-        // loader loaded this plugin
+        // The editor uses the settings of the loader, which outlive the editor, or the settings
+        // of the user if no loader loaded this plugin.
         const auto loader = AppLoader::instance();
         m_editor =
             loader ? std::make_unique<Editor>(loader->settings()) : std::make_unique<Editor>();
-        // The page of the plugins, which only a loader has; the catalog owns it
+        // The Plugins page exists only with a loader. The setting catalog owns the page.
         if (loader) {
             m_editor->settingCatalog()->addPage(new PluginSettingPage(*loader));
         }
         return true;
     }
 
-    // Called on the core plugin last, so that the windows open with everything the other
-    // plugins registered.
+    // Called on the core plugin last, so that the windows open with all registrations of the
+    // other plugins.
     void CorePlugin::pluginsInitialized() {
         if (const auto loader = AppLoader::instance()) {
             for (const auto &file : loader->files()) {
@@ -43,8 +43,8 @@ namespace hello::daw {
         }
     }
 
-    // The editor and its windows go now, while every library is loaded, rather than with this
-    // instance, a static of the library destroyed as the library is unloaded.
+    // Destroys the editor and its windows while every library is still loaded. This instance is
+    // a static object of the library and is destroyed only when the library is unloaded.
     void CorePlugin::aboutToShutdown() {
         m_editor.reset();
         m_actions.reset();

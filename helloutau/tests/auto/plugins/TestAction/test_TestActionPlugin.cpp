@@ -46,10 +46,11 @@ class test_TestActionPlugin : public QObject {
     Q_OBJECT
 
 private Q_SLOTS:
-    // Loaded with the core plugin, the plugin adds its command to the window that the core
-    // plugin opens, which the command palette would offer, and takes it away at shutdown.
+    // If loaded with the core plugin, the plugin adds its command to the window that the core
+    // plugin opens, which makes the command available to the command palette. The plugin
+    // removes the command at shutdown.
     void the_plugin_adds_a_command_to_the_project_window() {
-        // The settings in a directory of the test rather than those of the user
+        // The settings in a directory of the test instead of the settings directory of the user
         QTemporaryDir settings;
         AppLoader loader({QStringLiteral("helloutau"), QLatin1String(AppLoader::settingsOption),
                           settings.path()});
@@ -75,8 +76,8 @@ private Q_SLOTS:
 };
 
 int main(int argc, char *argv[]) {
-    // Runs without a display. The directory of the settings of the user is one for tests, should
-    // a loader reach it.
+    // Runs without a display. The settings directory of the user is a test directory in case a
+    // loader accesses it.
     qputenv("QT_QPA_PLATFORM", "offscreen");
     QStandardPaths::setTestModeEnabled(true);
     QApplication app(argc, argv);

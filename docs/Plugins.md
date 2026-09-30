@@ -155,7 +155,7 @@ stdcorelib.plugin 的生命周期是同步的，不依赖事件循环。HelloUta
 6. ~~**格式转换驱动**~~：`InterchangeRegistration`（HelloKitInterchange，一个导入或导出驱动）、进程级列表 `InterchangeRegistrations_p.h`、`InterchangeRegistry` 成为监听列表的 `QObject`（`driversChanged()`），`BuiltinInterchangeDrivers` 登记 MIDI 的读与写，由新的 Interchange 插件（ID `org.helloutau.interchange`，依赖 Core，作者 2026-09-30 定）持有；删除 `InterchangePlugin`。规则见 [`Interchange.md`](Interchange.md)「注册表」。
 7. **ClassicPluginHost 插件**（计划见 [`ClassicPluginHost.md`](ClassicPluginHost.md)）：随 HelloUtau 提供的原生插件，把 UTAU 插件作为命令加入「工具 → 插件」菜单，运行后把结果作为一个撤销步骤应用到选区。选区编辑的注册接口暂不建。验收同 Roadmap 第五阶段：若干社区常用的原版插件能够正常执行并写回结果。
 8. **其余扩展点**：编辑界面扩展、音源批量操作，随各自功能的实现加入。
-9. ~~**stdcorelib.plugin 的 `loadOrder()`**~~：已实现（该仓库 `e1f7ad6`），测试覆盖依赖链与可选依赖、同层按发现顺序、停用与未选中与无效插件的排除、失败插件的保留、载入中的重入查询。「Plugins」页最终按发现顺序列出（`plugins()`，停用的插件也要列出，而 `loadOrder()` 不含它们），目前未使用它。
+9. ~~**stdcorelib.plugin 的 `loadOrder()`**~~：已实现（该仓库 `e1f7ad6`），测试覆盖依赖链与可选依赖、同层按发现顺序、停用与未选中与无效插件的排除、失败插件的保留、载入中的重入查询。「Plugins」页须列出停用的插件，而 `loadOrder()` 不含停用的插件，因此该页按发现顺序列出（`plugins()`），不使用 `loadOrder()`。
 
 ## 作者的决定（2026-09-30）
 

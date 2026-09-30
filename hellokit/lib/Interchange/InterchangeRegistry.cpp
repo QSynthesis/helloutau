@@ -20,9 +20,9 @@ namespace hello::kit {
             return registration->writer();
         }
 
-        // The drivers of one kind in the order of registration, the first of each ID only.
-        // Registration order resolves a suffix registered by several drivers, so it must be
-        // preserved rather than replaced by the order of a hash table.
+        // Returns the drivers of one kind in the order of registration, only the first of each
+        // ID. The order determines the driver for a suffix claimed by several drivers, so a hash
+        // table is not used.
         template <class T>
         QList<T *> driversOf() {
             QList<T *> result;

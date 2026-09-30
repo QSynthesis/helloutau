@@ -13,30 +13,32 @@
 
 namespace hello::kit {
 
-    /// The formats of frequency tables registered in the process, which come and go with their
-    /// registrations. See docs/FrequencyTables.md.
+    /// The frequency table formats registered in the process. The content changes as
+    /// registrations are created and destroyed. See docs/FrequencyTables.md.
     ///
-    /// Built-in formats and those of plugins are registered alike by
-    /// FrequencyFormatRegistration. The registry is no singleton: the application owns one and
-    /// passes it on, and each registry signals the changes.
+    /// Built-in formats and plugin formats are both registered by FrequencyFormatRegistration.
+    /// The registry is not a singleton. The owner passes it to its users, and each registry
+    /// emits formatsChanged().
     class HELLOKIT_VOICEBANK_EXPORT FrequencyFormatRegistry : public QObject {
         Q_OBJECT
     public:
         explicit FrequencyFormatRegistry(QObject *parent = nullptr);
         ~FrequencyFormatRegistry();
 
-        /// In the order of registration. Of formats of the same ID, only the first registered is
-        /// included. A format goes when its registration goes.
+        /// Returns the formats in the order of registration. Of several formats with the same
+        /// ID, only the first registered is included. A format is removed when its registration
+        /// is destroyed.
         QList<FrequencyFormat *> formats() const;
 
         FrequencyFormat *format(const QString &id) const;
 
-        /// Returns the format that the resampler \a resampler reads: the last registered whose
-        /// patterns match its file name, compared case-insensitively, or else \c frq, which the
-        /// resampler of UTAU reads; null if neither is registered. A plugin registered later
-        /// thereby takes over a resampler from a format before it.
+        /// Returns the format read by the resampler \a resampler: the last registered format
+        /// whose patterns match the file name case-insensitively. A format registered later
+        /// therefore takes precedence over an earlier format for the same resampler. Only the
+        /// file name is examined. The resampler is not executed.
         ///
-        /// Only the file name is looked at. Nothing is run.
+        /// \return the matching format, else \c frq (the format of the UTAU resampler), or null
+        ///         if neither is registered
         FrequencyFormat *formatForResampler(const std::filesystem::path &resampler) const;
 
     Q_SIGNALS:

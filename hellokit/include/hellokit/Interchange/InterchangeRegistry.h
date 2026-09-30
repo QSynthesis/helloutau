@@ -14,26 +14,27 @@
 
 namespace hello::kit {
 
-    /// All formats that this build can import or export: the drivers registered in the process,
-    /// which come and go with their registrations. See docs/Interchange.md.
+    /// The import and export drivers registered in the process. The content changes as
+    /// registrations are created and destroyed. See docs/Interchange.md.
     ///
-    /// Built-in drivers and plugin drivers are registered alike by InterchangeRegistration and
-    /// are not distinguished anywhere. The file dialog filters, the lookup by suffix and the
-    /// import menu are all generated from the registry, so a registered format appears in all
-    /// of them.
+    /// Built-in drivers and plugin drivers are both registered by InterchangeRegistration and
+    /// are not distinguished. The file dialog filters and the lookup by suffix are generated
+    /// from the registry, so a registered format is available in each of them.
     ///
-    /// \note Deliberately not a singleton, and there is no global instance. The application
-    ///       owns one and passes it on, and each registry signals the changes. A test registers
-    ///       only the drivers it needs, and its registrations go when it ends.
+    /// \note Deliberately not a singleton, and there is no global instance. The owner passes
+    ///       the registry to its users, and each registry emits driversChanged(). A test
+    ///       registers only the drivers it requires, and destroys the registrations when it
+    ///       ends.
     class HELLOKIT_INTERCHANGE_EXPORT InterchangeRegistry : public QObject {
         Q_OBJECT
     public:
         explicit InterchangeRegistry(QObject *parent = nullptr);
         ~InterchangeRegistry();
 
-        /// In the order of registration. Of drivers of the same ID, only the first registered is
-        /// included, so that a plugin cannot replace a built-in driver; the next registered
-        /// takes its place once it goes.
+        /// Returns the drivers in the order of registration. Of several drivers with the same
+        /// ID, only the first registered is included, so that a plugin cannot replace a built-in
+        /// driver. When that driver is unregistered, the next registered driver with the ID
+        /// replaces it.
         QList<InterchangeReader *> readers() const;
         QList<InterchangeWriter *> writers() const;
 
@@ -43,9 +44,9 @@ namespace hello::kit {
         /// Returns the driver registered for \a suffix , compared without the leading dot and
         /// case-insensitively.
         ///
-        /// \return the first matching driver, or null. If two drivers register the same suffix,
-        ///         the one registered first takes precedence, so a plugin cannot take over a
-        ///         built-in format by registering it again.
+        /// \return the first registered driver with a matching suffix, or null if none matches.
+        ///         The precedence of the first registration prevents a plugin from taking over a
+        ///         built-in format.
         InterchangeReader *readerForSuffix(const QString &suffix) const;
         InterchangeWriter *writerForSuffix(const QString &suffix) const;
 

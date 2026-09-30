@@ -33,7 +33,7 @@ namespace {
     const QString BankId = QStringLiteral("test.contribution.bank");
     const QString MenuId = QStringLiteral("test.contribution.menu");
 
-    // The contribution of TestContribution.xml: Hello in project windows, which counts its
+    // Contribution of TestContribution.xml: Hello in project windows, which counts its
     // triggers, and Bank Hello in voice bank windows
     class TestContribution : public ActionContribution {
     public:
@@ -48,7 +48,7 @@ namespace {
             const auto action = new QAction(window);
             QObject::connect(action, &QAction::triggered, [this] { ++*m_triggered; });
             context->addAction(HelloId, action);
-            // An external item: the action of a menu, which the menu owns
+            // An external item, whose action is the menu action owned by the menu
             context->addAction(MenuId, (new QMenu(window))->menuAction());
         }
 
@@ -64,7 +64,7 @@ namespace {
         return std::make_unique<ActionRegistration>(std::make_unique<TestContribution>(triggered));
     }
 
-    // The texts of the menu of the menu bar of window whose title is title
+    // Returns the item texts of the menu titled \a title in the menu bar of \a window.
     QStringList menuTexts(QMainWindow *window, const QString &title) {
         QStringList texts;
         for (const auto action : window->menuBar()->actions()) {
@@ -83,7 +83,7 @@ class test_ActionContribution : public QObject {
     Q_OBJECT
 
     QTemporaryDir m_dir;
-    // The menus of the editor, which the contributions insert into
+    // Registers the menus of the editor, into which the contributions insert their items
     BuiltinActions m_actions;
 
     std::unique_ptr<Editor> editor() const {
@@ -93,7 +93,7 @@ class test_ActionContribution : public QObject {
         return e;
     }
 
-    // A voice bank that declares its encoding, so that nothing is asked
+    // Returns a voice bank that records its encoding, so that the user is not prompted.
     fs::path voiceBank() const {
         const auto bank = fs::path(m_dir.path().toStdU16String()) / "bank";
         fs::create_directories(bank);
@@ -104,8 +104,8 @@ class test_ActionContribution : public QObject {
     }
 
 private Q_SLOTS:
-    // The windows open at the registration take the actions, as do those opened after it, and
-    // they all lose them with the registration.
+    // The windows open at the time of registration receive the actions, as do the windows
+    // opened later. All windows lose the actions when the registration is destroyed.
     void a_registration_reaches_the_open_windows_and_ends_with_them() {
         const auto e = editor();
         const auto first = e->newWindow();
@@ -140,8 +140,8 @@ private Q_SLOTS:
         }
     }
 
-    // The menu of an external item goes with the registration, and its action with it, which
-    // the menu owns.
+    // The menu of an external item is deleted with the registration, together with its action,
+    // which the menu owns.
     void an_external_menu_goes_with_its_registration() {
         const auto e = editor();
         int triggered = 0;
@@ -159,7 +159,8 @@ private Q_SLOTS:
         QVERIFY(!window->actionContext()->action(MenuId));
     }
 
-    // An editor created after the registration takes it, a voice bank window its own actions.
+    // An editor created after the registration applies the registration. A voice bank window
+    // receives its own actions.
     void an_editor_takes_the_registrations_before_it() {
         int triggered = 0;
         const auto reg = registration(&triggered);
@@ -170,7 +171,7 @@ private Q_SLOTS:
 
         const auto bank = e->openVoiceBank(voiceBank());
         QVERIFY(bank);
-        // Created by the contribution, rather than as a stand-in by the context
+        // Created by the contribution, not a placeholder created by the context
         const auto bankAction = bank->actionContext()->action(BankId);
         QVERIFY(bankAction);
         QCOMPARE(bankAction->parent(), bank);
@@ -188,7 +189,7 @@ private Q_SLOTS:
         }
         reg.reset();
 
-        // A later editor has none of it.
+        // An editor created later has no action of the contribution.
         const auto e = editor();
         QVERIFY(!e->actionRegistry()->actionInfo(HelloId));
     }

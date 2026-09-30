@@ -11,10 +11,11 @@ class QTreeWidget;
 
 namespace hello::daw {
 
-    /// The plugins that the loader found, what became of each in this run, and whether the user
-    /// enables it, which takes effect at the next start. See docs/Plugins.md.
+    /// Setting page that lists the plugins found by the loader, the state of each plugin in this
+    /// run, and whether the user enables it. A change takes effect at the next start. See
+    /// docs/Plugins.md.
     ///
-    /// The core plugin cannot be disabled, since the application does not start without it.
+    /// The core plugin cannot be disabled because the application requires it in order to start.
     class PluginSettingPage : public SettingPage {
         Q_OBJECT
     public:
@@ -28,13 +29,14 @@ namespace hello::daw {
 
     private:
         AppLoader &m_loader;
-        // The plugins as they were when the widget was created, in the order of the rows
+        // Snapshot of the plugins at the creation of the widget, in row order
         QList<AppLoader::PluginInfo> m_plugins;
         QPointer<QTreeWidget> m_tree;
         QPointer<QLabel> m_restart;
         QPointer<QLabel> m_details;
 
-        // Whether the user enables the plugin of \a row at the next start, as the settings are
+        // Returns whether the plugin of \a row is enabled at the next start according to the
+        // current settings.
         bool enabledAtNextStart(int row) const;
         bool isChecked(int row) const;
         void updateRestart();

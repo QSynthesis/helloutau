@@ -41,12 +41,12 @@ namespace hello::daw {
             return QDir::toNativeSeparators(QString::fromStdU16String(path.u16string()));
         }
 
-        // The ID of this plugin, under which the settings of the plugins keep its values
+        // The ID of this plugin, the key of its values in the plugin settings
         const char pluginId[] = "org.helloutau.classicpluginhost";
 
-        // The programs that the user allowed to run, each as the folder of its plugin, the path
-        // of the program in the folder for the reader, and the fingerprint of the program, which
-        // alone is compared
+        // The programs approved by the user. Each entry records the plugin folder, the path of
+        // the program relative to the folder for human readers, and the fingerprint of the
+        // program. Only the fingerprint is compared.
         //
         //     "approved": [{"folder": "C:\\UTAU\\plugins\\Foo", "relativePath": "foo.exe",
         //                   "sha256": "<SHA-256>"}]
@@ -55,14 +55,16 @@ namespace hello::daw {
         const char relativePathKey[] = "relativePath";
         const char sha256Key[] = "sha256";
 
-        // The program relative to the folder of its plugin, where ClassicPlugin keeps it
+        // Returns the path of the program relative to the plugin folder. ClassicPlugin::program
+        // always lies inside the folder.
         std::filesystem::path programInFolder(const ClassicPlugin &plugin) {
             std::error_code error;
             auto relative = std::filesystem::relative(plugin.program, plugin.folder, error);
             return error || relative.empty() ? plugin.program.filename() : relative;
         }
 
-        // The content of the program, so that a changed program is asked for again
+        // Returns the SHA-256 of the program content, so that a changed program requires
+        // approval again.
         QString fingerprintOf(const ClassicPlugin &plugin) {
             QFile file(QString::fromStdU16String(plugin.program.u16string()));
             QCryptographicHash hash(QCryptographicHash::Sha256);
@@ -72,8 +74,9 @@ namespace hello::daw {
             return QString::fromLatin1(hash.result().toHex());
         }
 
-        // Asks the user to allow a program that has not run before, or that has changed since.
-        // Without a loader, which keeps the answers, the user is asked each time.
+        // Asks the user to approve a program that has not run before or has changed since its
+        // last run, and returns whether the program is approved. Without a loader, which stores
+        // the answers, the user is asked each time.
         bool approve(QWidget *parent, const ClassicPlugin &plugin) {
             const auto loader = AppLoader::instance();
             auto approved =
@@ -96,15 +99,15 @@ namespace hello::daw {
             }
             const auto question =
                 index >= 0
-                    ? ClassicPluginRun::tr("The program of the plugin \"%1\" has changed since it "
-                                           "last ran. It runs this program:")
-                    : ClassicPluginRun::tr("The plugin \"%1\" has not run before. It runs this "
-                                           "program:");
+                    ? ClassicPluginRun::tr("The program of the plugin \"%1\" has changed since its "
+                                           "last run. The plugin runs the following program:")
+                    : ClassicPluginRun::tr("The plugin \"%1\" has not run before. The plugin runs "
+                                           "the following program:");
             const auto answer = QMessageBox::question(
                 parent, ClassicPluginRun::tr("Run Plugin"),
                 question.arg(plugin.name) + QStringLiteral("\n\n") + textOf(plugin.program) +
                     QStringLiteral("\n\n") +
-                    ClassicPluginRun::tr("Run it only if you trust where it comes from."),
+                    ClassicPluginRun::tr("Run the program only if its source is trusted."),
                 QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
             if (answer != QMessageBox::Yes) {
                 return false;
@@ -134,8 +137,8 @@ namespace hello::daw {
             return messages.join(QLatin1Char('\n'));
         }
 
-        // Shows that the plugin runs until it ends, with Cancel, and with Done where its end
-        // cannot be observed. Returns whether it ended rather than being cancelled.
+        // Shows a modal dialog until the run ends, with Cancel, and with Done if the end of the
+        // program cannot be observed. Returns whether the run ended without cancellation.
         bool waitFor(QWidget *parent, const ClassicPlugin &plugin, ClassicPluginRunner &runner) {
             QDialog dialog(parent);
             dialog.setWindowTitle(plugin.name);
@@ -169,7 +172,7 @@ namespace hello::daw {
         const auto project = document->session()->snapshot();
         const int size = int(project.tracks.first().notes.size());
 
-        // The selection as UTAU has it, from the first selected note to the last
+        // A contiguous selection as in UTAU, from the first selected note to the last
         int first = 0;
         int count = size;
         if (!plugin.wholeTrack) {

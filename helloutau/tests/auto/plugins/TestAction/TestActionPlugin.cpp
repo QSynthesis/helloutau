@@ -19,8 +19,8 @@ namespace {
 
     using namespace hello::daw;
 
-    // Hello in the Tools menu of the project window, which counts its triggers in the property
-    // "testActionTriggered" of the application
+    // Contribution of Hello in the Tools menu of the project window. The command counts its
+    // triggers in the property testActionTriggered of the application.
     class TestActionContribution : public ActionContribution {
     public:
         const QAK::ActionExtension *extension() const override {
@@ -33,12 +33,13 @@ namespace {
                 qApp->setProperty("testActionTriggered",
                                   qApp->property("testActionTriggered").toInt() + 1);
             });
-            // Copied from UTF-8 rather than a literal, whose text would go with this library
+            // Copied from UTF-8 instead of a literal, whose text becomes invalid when this library
+            // is unloaded
             context->addAction(QString::fromUtf8("helloutau.test.hello"), action);
         }
     };
 
-    /// A plugin for the tests that adds the command Hello to the project windows.
+    /// Test plugin that adds the command Hello to the project windows.
     class TestActionPlugin : public stdc::pluginsystem::IPlugin {
     public:
         bool initialize(std::string *errorMessage) override {

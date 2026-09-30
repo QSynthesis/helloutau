@@ -11,7 +11,7 @@ using namespace hello::kit;
 
 namespace {
 
-    // Only the properties the registry uses: the ID and the registered suffixes.
+    // Implements only the properties used by the registry: the ID and the suffixes.
     class NamedReader : public InterchangeReader {
     public:
         explicit NamedReader(QString id, QStringList suffixes)
@@ -112,8 +112,8 @@ private Q_SLOTS:
         QVERIFY(registry.writerForId("fake") == nullptr);
     }
 
-    // A plugin registering an ID that the application already registered must not replace it.
-    // The second takes the place of the first once the first goes.
+    // A second registration of an ID does not replace the first. After the first registration is
+    // destroyed, the second driver is used.
     void of_two_drivers_of_one_id_the_first_is_used() {
         InterchangeRegistry registry;
         auto first = reader("fake");
@@ -126,8 +126,7 @@ private Q_SLOTS:
         QCOMPARE(registry.readerForId("fake"), second->reader());
     }
 
-    // Two drivers may register the same suffix, and the first registration takes precedence,
-    // so that a plugin cannot take over a built-in format.
+    // Of two drivers with the same suffix, the first registered is used for the suffix.
     void the_first_to_claim_a_suffix_keeps_it() {
         InterchangeRegistry registry;
         const auto first = writer("first", {QStringLiteral("mid")});
@@ -138,8 +137,8 @@ private Q_SLOTS:
         QCOMPARE(found->id(), QStringLiteral("first"));
     }
 
-    // Registries follow the registrations, those before them and those after, in their order,
-    // readers and writers apart.
+    // A registry lists registrations made before and after its construction, in the order of
+    // registration, with readers and writers separate, and emits driversChanged() on each change.
     void registries_follow_the_registrations() {
         const auto before = reader("before");
         InterchangeRegistry registry;

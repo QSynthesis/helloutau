@@ -7,14 +7,15 @@
 
 namespace hello::kit {
 
-    /// The formats registered in the process, in the order of registration, and the registries
-    /// that follow them.
+    /// The process-wide list of registered formats in the order of registration, and the
+    /// listeners notified of changes.
     ///
-    /// Kept here rather than in a stdc::DynamicRegistry, whose entries are ordered by name,
-    /// since the later of two formats for a resampler takes precedence.
+    /// A stdc::DynamicRegistry is not used because it orders entries by name, and the
+    /// precedence of formats for a resampler depends on the order of registration.
     class FrequencyFormatRegistrations {
     public:
-        /// Told of each format registered or unregistered after it was added.
+        /// Receives a notification for each format registered or unregistered after the
+        /// listener was added.
         class Listener {
         public:
             virtual ~Listener() = default;

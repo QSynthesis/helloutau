@@ -1,9 +1,10 @@
-# The native plugins that come with the application, one directory each under
-# ${HELLOUTAU_BUILD_PLUGINS_DIR}, the directory layout of stdcorelib.plugin. See docs/Plugins.md.
+# Native plugins bundled with the application. Each plugin has its own directory under
+# ${HELLOUTAU_BUILD_PLUGINS_DIR}, following the directory layout of stdcorelib.plugin. See
+# docs/Plugins.md.
 
-# The application has loaded every library a plugin links before it loads the plugin. The applocal
-# deployment of vcpkg would instead copy the libraries that its installed tree holds beside each
-# plugin, among them versions of stdcorelib other than the one the application runs.
+# The application loads every library that a plugin links before it loads the plugin. The applocal
+# deployment of vcpkg would instead copy the libraries of the vcpkg installed tree beside each
+# plugin, including versions of stdcorelib other than the version that the application uses.
 set(VCPKG_APPLOCAL_DEPS OFF)
 
 # helloutau_add_native_plugin(<target>
@@ -13,18 +14,20 @@ set(VCPKG_APPLOCAL_DEPS OFF)
 #     [arguments of helloutau_add_plugin()...]
 # )
 #
-# Builds the library into the directory <directory> of the plugins, embeds the interface ID
-# HELLOUTAU_PLUGIN_IID, and writes the plugin.json beside it that the directory layout reads:
-# the name of the library without prefix and suffix, the ID, the name shown, the version, and
-# the plugins of DEPENDENCIES as required dependencies of the same version. DEPENDENCIES takes one
-# argument, a list, since the arguments after it go on to helloutau_add_plugin() under keywords
-# that this function does not know.
+# Builds the library into the subdirectory <directory> of the plugins directory, embeds the
+# interface ID HELLOUTAU_PLUGIN_IID, and writes beside the library the plugin.json that the
+# directory layout reads. The plugin.json records the library name without prefix and suffix, the
+# ID, the display name, the version, and the plugins of DEPENDENCIES as required dependencies of
+# the same version. DEPENDENCIES is a one-value keyword whose value is a list, because the
+# remaining arguments are forwarded to helloutau_add_plugin() under keywords that this function
+# does not parse.
 #
-# The plugin is installed with its headers and exported like a library, since other plugins may
-# build on it. Its public headers lie beside its sources in helloutau/plugins/<directory>,
-# included as <<directory>/<header>> in the build and after installation. The plugin class and
-# the rest of its implementation lie in Internal, which is not installed. With DIRECTORY, as for
-# the plugins of the tests, it is built there instead and not installed.
+# The plugin is installed with its headers and exported like a library, because other plugins may
+# depend on it. Its public headers are located beside its sources in helloutau/plugins/<directory>
+# and are included as <<directory>/<header>> in the build and after installation. The plugin
+# class and the remaining implementation are located in Internal, which is not installed. If
+# DIRECTORY is specified, as for the plugins of the tests, the plugin is built into that directory
+# and not installed.
 function(helloutau_add_native_plugin _target)
     set(options)
     set(oneValueArgs ID DISPLAY_NAME CATEGORY DIRECTORY DEPENDENCIES)
@@ -35,8 +38,8 @@ function(helloutau_add_native_plugin _target)
     set(_extra_args)
     if(FUNC_DIRECTORY)
         set(_plugins_dir ${FUNC_DIRECTORY})
-        # A generator expression, which helloutau_add_plugin() takes as it is rather than below
-        # its own directory
+        # A generator expression, because helloutau_add_plugin() uses such a path unchanged
+        # instead of placing it below its own directory
         set(_output "$<1:${FUNC_DIRECTORY}/${FUNC_CATEGORY}>")
         list(APPEND _extra_args NO_INSTALL
             RUNTIME_DIRECTORY ${_output}
@@ -63,7 +66,7 @@ function(helloutau_add_native_plugin _target)
     endforeach()
     list(JOIN _dependencies ", " _dependencies)
 
-    # The base name includes the postfix of the configuration, if there is one.
+    # The base name includes the configuration postfix, if any.
     set(_metadata "{\n"
         "    \"name\": \"$<TARGET_FILE_BASE_NAME:${_target}>\",\n"
         "    \"id\": \"${FUNC_ID}\",\n"

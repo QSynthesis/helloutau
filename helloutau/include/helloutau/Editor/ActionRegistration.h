@@ -10,13 +10,14 @@
 
 namespace hello::daw {
 
-    /// Registers a contribution with every editor while the registration exists: each editor
-    /// adds its extension and its actions to the open windows and to those opened later, and
-    /// removes them when the registration is destroyed. See docs/Plugins.md.
+    /// Registers a contribution with every editor for the lifetime of the registration. Each
+    /// editor adds the extension and the actions of the contribution to the open windows and to
+    /// windows opened later, and removes them when the registration is destroyed. See
+    /// docs/Plugins.md.
     ///
     /// A plugin creates its registrations in initialize() and destroys them in
-    /// aboutToShutdown(), before its library is unloaded. Registrations and editors are used on
-    /// the thread of the application only.
+    /// aboutToShutdown(), before its library is unloaded. Registrations and editors are used
+    /// only on the application thread.
     class HELLOUTAU_EDITOR_EXPORT ActionRegistration {
     public:
         explicit ActionRegistration(std::unique_ptr<ActionContribution> contribution);

@@ -34,7 +34,7 @@ namespace hello::daw {
 
     void ActionRegistrations::add(ActionContribution *contribution) {
         m_contributions.push_back(contribution);
-        // A copy, since a listener may remove itself
+        // Iterates over a copy because a listener may remove itself
         for (const auto listener : QList<Listener *>(m_listeners)) {
             listener->contributionAdded(contribution);
         }
@@ -61,14 +61,14 @@ namespace hello::daw {
                                             QAK::WidgetActionContext *context) {
         for (int i = 0; i < extension->itemCount(); ++i) {
             const auto id = extension->item(i).id();
-            // A context deletes an action that it owns as it removes it.
+            // A context deletes an owned action on removal.
             const QPointer<QAction> action = context->action(id);
             if (!action) {
                 continue;
             }
             context->remove(id);
-            // The action of an external item is the menuAction() of its menu, which the menu
-            // owns: the menu goes, and the action with it.
+            // The action of an external item is the menuAction() of its menu and is owned by the
+            // menu. Deleting the menu deletes the action.
             const auto menu = qobject_cast<QMenu *>(action->parent());
             if (menu && menu->menuAction() == action) {
                 delete menu;

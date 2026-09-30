@@ -5,7 +5,7 @@
     <id>org.helloutau.classicpluginhost</id>
 
     <items>
-        <!-- Filled by the plugin with the plugins of UTAU, each time it opens -->
+        <!-- Filled with the UTAU plugins by this plugin each time the menu opens -->
         <action id="helloutau.tools.plugins" text="&amp;Plugins" category="Tools"
                 external="true" />
     </items>

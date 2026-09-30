@@ -10,8 +10,8 @@ namespace hello::daw {
 
     class ActionRegistration;
 
-    /// The plugin that runs the plugins of UTAU on the selection of a project window, from the
-    /// submenu Plugins of the Tools menu. See docs/ClassicPluginHost.md.
+    /// The plugin that runs UTAU plugins on the selection of a project window from the submenu
+    /// Plugins of the Tools menu. See docs/ClassicPluginHost.md.
     class ClassicPluginHostPlugin : public stdc::pluginsystem::IPlugin {
     public:
         ClassicPluginHostPlugin();

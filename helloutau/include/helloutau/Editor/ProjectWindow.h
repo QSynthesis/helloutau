@@ -20,48 +20,47 @@ namespace hello::daw {
     class Editor;
     class PianoRoll;
 
-    /// The window of a project, which edits it. Created by Editor.
+    /// Window that edits a project. Instances are created by Editor.
     class HELLOUTAU_EDITOR_EXPORT ProjectWindow : public QMainWindow {
         Q_OBJECT
     public:
         ProjectWindow(Editor *editor, std::unique_ptr<kit::ProjectDocument> document);
         ~ProjectWindow();
 
-        /// The editor of the window, whose settings a plugin reads.
+        /// Returns the editor of the window, through which a plugin reads the settings.
         Editor *editor() const;
 
         kit::ProjectDocument *document() const;
 
-        /// The actions of the window by the ids of the action extensions, those of plugins
-        /// included; see ActionContribution.
+        /// Returns the action context of the window, keyed by the IDs of the action extensions,
+        /// including the extensions of plugins. See ActionContribution.
         QAK::WidgetActionContext *actionContext() const;
 
-        /// The piano roll of the project, which holds the selection. It is replaced with the
-        /// document; see documentChanged().
+        /// Returns the piano roll of the project, which holds the selection. The piano roll is
+        /// replaced together with the document, see documentChanged().
         PianoRoll *pianoRoll() const;
 
-        /// Replaces the project of the window with \a document, and its piano roll.
+        /// Replaces the project of the window with \a document, together with its piano roll.
         void setDocument(std::unique_ptr<kit::ProjectDocument> document);
 
-        /// Returns whether the window shows a new project that has not been modified, which a
-        /// project opened from a file may replace.
+        /// Returns whether the window shows an unmodified new project, which a project opened
+        /// from a file may replace.
         bool isUnused() const;
 
-        /// Reads the voice bank of the project from the UTAU folder of the settings, asking the
-        /// user for the encoding of each folder that does not state it, and shows any problem.
-        /// The piano roll then marks the notes that have no sample.
+        /// Reads the voice bank of the project from the UTAU folder of the settings, prompting
+        /// the user for the encoding of each folder that does not record its encoding, and shows
+        /// any problem. The piano roll then marks the notes that have no sample.
         ///
         /// \return whether a voice bank was read
         bool loadVoiceBank();
 
-        /// Plays in the playback mode of the settings, with their engines, after they changed:
-        /// what plays in the other mode stops, and in the realtime mode the track is rendered
-        /// in the background.
+        /// Applies the playback mode and the engines of the settings after a change. Playback in
+        /// the other mode stops. In the realtime mode, the track is rendered in the background.
         void applySettings();
 
         /// \name Commands
-        /// The commands of the menus. Each shows its errors to the user and returns whether it
-        /// completed.
+        /// Commands of the menus. Each command shows its errors to the user and returns whether
+        /// it completed.
         /// @{
         bool save();
         bool saveAs();
@@ -69,7 +68,7 @@ namespace hello::daw {
         /// @}
 
     Q_SIGNALS:
-        /// Emitted after setDocument() replaced the document and the piano roll.
+        /// Emitted after setDocument() has replaced the document and the piano roll.
         void documentChanged();
 
     protected:

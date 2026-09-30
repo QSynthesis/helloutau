@@ -28,7 +28,7 @@ namespace hello::kit {
 
     void FrequencyFormatRegistrations::add(FrequencyFormat *format) {
         m_formats.push_back(format);
-        // A copy, since a listener may remove itself
+        // Iterates over a copy because a listener may remove itself during the notification.
         for (const auto listener : QList<Listener *>(m_listeners)) {
             listener->formatAdded(format);
         }

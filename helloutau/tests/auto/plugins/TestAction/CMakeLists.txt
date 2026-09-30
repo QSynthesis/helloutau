@@ -1,5 +1,5 @@
-# A plugin that only the tests load, built into a directory of plugins of its own, which adds the
-# command Hello to the project windows
+# Test plugin that adds the command Hello to the project windows. Only the tests load the plugin,
+# which is built into a separate plugins directory.
 set(_plugins_dir ${CMAKE_CURRENT_BINARY_DIR}/plugins)
 
 qak_add_action_extension(_actions_src TestActions.xml
@@ -9,7 +9,7 @@ qak_add_action_extension(_actions_src TestActions.xml
 
 qm_find_qt(Core Widgets)
 
-# The libraries it links are loaded already, see helloutau/plugins.
+# The libraries that the plugin links are already loaded, see helloutau/plugins.
 set(VCPKG_APPLOCAL_DEPS OFF)
 helloutau_add_native_plugin(TestActionPlugin
     ID org.helloutau.test.action

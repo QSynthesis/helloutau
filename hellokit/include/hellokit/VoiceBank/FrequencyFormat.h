@@ -15,25 +15,26 @@
 
 namespace hello::kit {
 
-    /// The driver of one format of frequency tables, the file that a resampler analyzes an
-    /// audio file into. Built-in formats and those of plugins are registered alike in a
-    /// FrequencyFormatRegistry. See docs/FrequencyTables.md.
+    /// Driver of a frequency table format. A frequency table is the analysis file that a
+    /// resampler generates for an audio file. Built-in formats and plugin formats are both
+    /// registered in FrequencyFormatRegistry. See docs/FrequencyTables.md.
     ///
-    /// A driver only reads: nothing here writes a table or runs a resampler.
+    /// The interface is read-only. It neither writes tables nor executes resamplers.
     class HELLOKIT_VOICEBANK_EXPORT FrequencyFormat {
         Q_DECLARE_TR_FUNCTIONS(hello::kit::FrequencyFormat)
     public:
         virtual ~FrequencyFormat();
 
-        /// A short identifier, unique in a registry, such as \c frq.
+        /// Returns a short identifier that is unique in a registry, such as \c frq.
         virtual QString id() const = 0;
 
-        /// The name shown to the user, which names the resampler as well.
+        /// Returns the display name, which includes the name of the resampler.
         virtual QString name() const = 0;
 
-        /// The wildcard patterns of the file names of the resamplers that read the format, such
-        /// as <tt>moresampler*.exe</tt>, by which the format of the resampler in use is chosen.
-        /// Empty if the format is chosen only by hand.
+        /// Returns the wildcard patterns of the file names of the resamplers that read this
+        /// format, such as <tt>moresampler*.exe</tt>. The registry selects the format of the
+        /// configured resampler by these patterns. Empty if the format is selected only
+        /// manually.
         ///
         /// \sa FrequencyFormatRegistry::formatForResampler()
         virtual QStringList resamplerPatterns() const = 0;
@@ -41,10 +42,10 @@ namespace hello::kit {
         /// Returns whether the audio file \a wav has a table of this format.
         virtual bool exists(const std::filesystem::path &wav) const = 0;
 
-        /// Reads the table of the audio file \a wav, whose sample rate is \a sampleRate.
+        /// Reads the table of the audio file \a wav with the sample rate \a sampleRate.
         ///
-        /// \return the table, or \c std::nullopt with the reason in \a diagnostics if it is
-        ///         missing or does not read
+        /// \return the table, or \c std::nullopt with the reason in \a diagnostics if the table
+        ///         is missing or invalid
         virtual std::optional<FrequencyTable> read(const std::filesystem::path &wav, int sampleRate,
                                                    DiagnosticList &diagnostics) const = 0;
     };

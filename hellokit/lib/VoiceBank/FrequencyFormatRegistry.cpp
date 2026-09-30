@@ -39,8 +39,8 @@ namespace hello::kit {
         FrequencyFormatRegistrations::instance().removeListener(&impl);
     }
 
-    // Of the formats of one ID, the first registered is used, and the next one registered once
-    // it goes.
+    // Of several formats with the same ID, the first registered is used. When its registration
+    // is destroyed, the next registered format with the ID replaces it.
     QList<FrequencyFormat *> FrequencyFormatRegistry::formats() const {
         QList<FrequencyFormat *> result;
         for (const auto format : FrequencyFormatRegistrations::instance().formats()) {
@@ -68,7 +68,7 @@ namespace hello::kit {
         const auto all = formats();
         for (auto it = all.crbegin(); it != all.crend(); ++it) {
             for (const auto &pattern : (*it)->resamplerPatterns()) {
-                // The whole name, so that resampler*.exe does not match moresampler.exe
+                // Matches the whole name, so that resampler*.exe does not match moresampler.exe.
                 const QRegularExpression expression(
                     QRegularExpression::wildcardToRegularExpression(pattern),
                     QRegularExpression::CaseInsensitiveOption);

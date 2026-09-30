@@ -12,44 +12,47 @@
 
 namespace hello::daw {
 
-    /// The JSON files of the settings: the settings of the application and those of the plugins.
-    /// Their content is kept in the JSON of stdcorelib, whose values change in place, and crosses
-    /// into Qt only at the public interfaces.
+    /// JSON files of the settings: the settings of the application and the settings of the
+    /// plugins. The content is held in the JSON types of stdcorelib, whose values are mutable in
+    /// place, and is converted to Qt types only at the public interfaces.
     class SettingsJson {
     public:
-        /// The object in \a fileName, empty if the file does not exist. A file that is not a JSON
-        /// object is reported and read as empty, and the next change replaces it.
+        /// Returns the object in \a fileName, or an empty object if the file does not exist. A
+        /// file that does not contain a JSON object is reported and read as empty. The next
+        /// change replaces the file.
         static stdc::json::Object read(const QString &fileName);
 
-        /// Writes \a value to \a fileName whole, creating its directory, or reports why not.
+        /// Writes the whole \a value to \a fileName, creating its directory, or reports the
+        /// failure.
         static void write(const QString &fileName, const stdc::json::Value &value);
 
-        /// The value at \a key in \a object, null if there is none. A key is the path of a value
-        /// in the groups of the object, the names joined by slashes, such as
+        /// Returns the value at \a key in \a object, or null if absent. A key is the path of a
+        /// value in the groups of the object, with the names joined by slashes, such as
         /// <tt>engines/resampler</tt>.
         static const stdc::json::Value &valueAt(const stdc::json::Object &object,
                                                 std::string_view key);
 
-        /// Replaces the value at \a key in \a object, creating the groups it lies in, or removes
-        /// it if \a value is null, and with it each group that it leaves empty.
+        /// Replaces the value at \a key in \a object, creating the enclosing groups. If \a value
+        /// is null, removes the value together with each group that the removal leaves empty.
         static void insertAt(stdc::json::Object &object, std::string_view key,
                              stdc::json::Value value);
 
-        /// A value of Qt in stdcorelib. A number without a fractional part that fits an integer
-        /// becomes one, as Qt keeps it. Undefined becomes null.
+        /// Converts a Qt JSON value to a stdcorelib JSON value. A number without a fractional
+        /// part that fits an integer becomes an integer, as Qt stores it. Undefined becomes null.
         static stdc::json::Value stdcOf(const QJsonValue &value);
 
-        /// The other way. Binary data, which no setting holds, has no counterpart and reads as
-        /// null.
+        /// Converts a stdcorelib JSON value to a Qt JSON value. Binary data, which no setting
+        /// holds, has no Qt counterpart and converts to null.
         static QJsonValue qtOf(const stdc::json::Value &value);
     };
 
-    /// A settings file written after its changes, once the event loop runs, so that the changes
-    /// of one pass of the loop make one write. Changes that are still pending are written by
-    /// sync() and at destruction.
+    /// A settings file that is written once the event loop runs after its changes, so that the
+    /// changes of one pass of the loop result in one write. sync() and the destructor write the
+    /// pending changes.
     class SettingsFile {
     public:
-        /// The file \a fileName, whose content \a content gives at each write.
+        /// Constructs the settings file \a fileName. \a content returns the content at each
+        /// write.
         SettingsFile(QString fileName, std::function<stdc::json::Value()> content);
 
         /// Writes the pending changes.
@@ -59,10 +62,10 @@ namespace hello::daw {
             return m_fileName;
         }
 
-        /// Writes the file once the event loop runs, unless a write is pending already.
+        /// Writes the file once the event loop runs, unless a write is already pending.
         void changed();
 
-        /// Writes the pending changes now.
+        /// Writes the pending changes immediately.
         void sync();
 
     private:

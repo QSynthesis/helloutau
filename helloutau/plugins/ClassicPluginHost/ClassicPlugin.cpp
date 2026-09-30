@@ -25,20 +25,21 @@ namespace hello::daw {
         }
 
 #ifndef Q_OS_WINDOWS
-        // Whether the extension of \a path is .exe, in any case.
+        // Returns whether the extension of \a path is .exe, compared case-insensitively.
         bool isExe(const std::filesystem::path &path) {
             return textOf(path.extension()).compare(QLatin1String(".exe"), Qt::CaseInsensitive) ==
                    0;
         }
 #endif
 
-        // The program that \a execute names in \a folder , or the reason it may not run. The
-        // name comes from a file on disk and is untrusted: an absolute path, a parent step or a
-        // link out of the folder would run a program that the plugin does not contain.
+        // Returns the program that \a execute specifies in \a folder , or an empty path with
+        // the reason in \a reason . The name is read from a file on disk and is untrusted. An
+        // absolute path, a .. component, or a link that leaves the folder would run a program
+        // outside the plugin.
         std::filesystem::path programOf(const std::filesystem::path &folder, const QString &execute,
                                         QString &reason) {
             if (execute.isEmpty()) {
-                reason = ClassicPlugin::tr("Its plugin.txt names no program.");
+                reason = ClassicPlugin::tr("Its plugin.txt specifies no program.");
                 return {};
             }
             const auto relative = pathOf(execute);
@@ -84,8 +85,8 @@ namespace hello::daw {
         std::error_code error;
         if (const auto file = folder / u"plugin.json";
             std::filesystem::is_regular_file(file, error)) {
-            // The manifest of a plugin that supports HelloUtau, in UTF-8, which replaces
-            // plugin.txt: nothing of plugin.txt is read. See the plugins in docs/note.md.
+            // The UTF-8 manifest of a plugin that supports HelloUtau. It replaces plugin.txt
+            // entirely, and plugin.txt is not read. See the plugin section of docs/note.md.
             QFile in(textOf(file));
             if (!in.open(QIODevice::ReadOnly)) {
                 return unreadable(in.errorString());
@@ -105,10 +106,10 @@ namespace hello::daw {
             plugin.wholeTrack = notes == QLatin1String("all");
             if (!plugin.wholeTrack && notes != QLatin1String("selection")) {
                 plugin.unavailableReason =
-                    tr("Its plugin.json asks for the notes \"%1\", which are unknown.").arg(notes);
+                    tr("Its plugin.json specifies the unknown value \"%1\" for notes.").arg(notes);
             }
 
-            // The encoding of the temporary file, that of UTAU if not given
+            // The encoding of the temporary file, which defaults to the encoding of UTAU
             const auto charset = manifest.value(QLatin1String("charset")).toString();
             const kit::TextCodec codec(charset.isEmpty() ? localCharset() : charset);
             plugin.charset = codec.name();
@@ -145,7 +146,7 @@ namespace hello::daw {
         }
 
 #ifndef Q_OS_WINDOWS
-        // Wine is to be considered later, see docs/ClassicPluginHost.md.
+        // Support for Wine is deferred. See docs/ClassicPluginHost.md.
         if (plugin.isAvailable() && (plugin.shell || isExe(plugin.program))) {
             plugin.unavailableReason = tr("It runs on Windows only.");
         }

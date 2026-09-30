@@ -12,11 +12,12 @@ namespace QAK {
 
 namespace hello::daw {
 
-    /// The registered action contributions of the process, in the order of registration, and
+    /// Registry of the action contributions of the process, in the order of registration, and of
     /// the editors that apply them.
     class ActionRegistrations {
     public:
-        /// Told of each contribution registered or unregistered after it was added.
+        /// Receives a notification of each contribution registered or unregistered after the
+        /// listener was added.
         class Listener {
         public:
             virtual ~Listener() = default;
@@ -35,8 +36,8 @@ namespace hello::daw {
         void addListener(Listener *listener);
         void removeListener(Listener *listener);
 
-        /// Adds the actions of every contribution to \a context of \a window, as a window does
-        /// when it is created.
+        /// Adds the actions of every contribution to \a context of \a window. A window calls this
+        /// function when it is created.
         template <class Window>
         void addActions(Window *window, QAK::WidgetActionContext *context) const {
             for (const auto contribution : m_contributions) {
@@ -44,7 +45,7 @@ namespace hello::daw {
             }
         }
 
-        /// Removes from \a context the actions of the items of \a extension, and deletes them.
+        /// Removes the actions of the items of \a extension from \a context and deletes them.
         static void removeActions(const QAK::ActionExtension *extension,
                                   QAK::WidgetActionContext *context);
 

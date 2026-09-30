@@ -36,7 +36,7 @@ namespace hello::kit {
 
     void InterchangeRegistrations::add(InterchangeRegistration *registration) {
         m_registrations.push_back(registration);
-        // A copy, since a listener may remove itself
+        // Iterates over a copy because a listener may remove itself during the notification.
         for (const auto listener : QList<Listener *>(m_listeners)) {
             listener->registrationAdded(registration);
         }

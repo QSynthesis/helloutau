@@ -12,9 +12,11 @@ namespace hello::kit {
 
     class InterchangeRegistration;
 
-    /// Registers the drivers of this library while it exists: MidiReader and MidiWriter.
+    /// Registrations of the drivers of this library, MidiReader and MidiWriter, for the lifetime
+    /// of the object.
     ///
-    /// The plugin Interchange holds one, and so does a test that needs them.
+    /// The Interchange plugin owns an instance. A test that requires these drivers owns its own
+    /// instance.
     class HELLOKIT_INTERCHANGE_EXPORT BuiltinInterchangeDrivers {
     public:
         BuiltinInterchangeDrivers();

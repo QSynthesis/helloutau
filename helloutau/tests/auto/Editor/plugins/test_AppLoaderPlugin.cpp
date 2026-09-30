@@ -8,11 +8,12 @@
 
 namespace {
 
-    /// A plugin for test_AppLoader that appends its calls to the property "appLoaderEvents" of the
-    /// application. Built with TEST_APPLOADER_FAILS, its initialization fails.
+    /// Test plugin of test_AppLoader that appends its calls to the property \c appLoaderEvents
+    /// of the application. If built with TEST_APPLOADER_FAILS, the plugin fails to initialize.
     ///
-    /// The events are copied from UTF-8 rather than written with QStringLiteral, whose text stays
-    /// in this library and is gone once the library is unloaded, while the test still reads it.
+    /// The events are copied from UTF-8 instead of being created with QStringLiteral. The text of
+    /// a QStringLiteral is stored in this library and becomes invalid when the library is
+    /// unloaded, while the test still reads the events.
     class TestAppLoaderPlugin : public stdc::pluginsystem::IPlugin {
     public:
         bool initialize(std::string *errorMessage) override {

@@ -24,7 +24,8 @@ private Q_SLOTS:
         QCOMPARE(settings.playbackMode(), AppSettings::Prerender);
     }
 
-    // The latest first, each once, at most recentFileCount, whole paths in any script
+    // Recent files are stored most recent first, without duplicates, at most recentFileCount,
+    // as full paths in any script.
     void recent_files_are_kept_latest_first() {
         QTemporaryDir dir;
         const auto file = dir.filePath(QStringLiteral("settings.json"));
@@ -52,7 +53,7 @@ private Q_SLOTS:
         QVERIFY(settings.recentFiles().isEmpty());
     }
 
-    // The voice banks are a list of their own, kept as the files are.
+    // The voice banks form a separate list, stored in the same manner as the files.
     void recent_voice_banks_are_kept_apart() {
         QTemporaryDir dir;
         AppSettings settings(dir.filePath(QStringLiteral("settings.json")));
@@ -92,8 +93,8 @@ private Q_SLOTS:
         QCOMPARE(settings.playbackMode(), AppSettings::Realtime);
     }
 
-    // The file keeps its groups: the settings of the application under engines, playback,
-    // files and commandPalette, and a group empties away with its last value.
+    // The file stores the settings of the application in the groups engines, playback, files
+    // and commandPalette. A group is removed together with its last value.
     void the_file_keeps_its_groups() {
         QTemporaryDir dir;
         const auto file = dir.filePath(QStringLiteral("settings.json"));
@@ -121,8 +122,8 @@ private Q_SLOTS:
                  QJsonValue(QStringLiteral("w.exe")));
     }
 
-    // Any value by its key, a path of names: set within its groups, which are created, and
-    // removed with those it leaves empty.
+    // Any value is accessible by its key, a path of names. Setting a value creates the enclosing
+    // groups. Removing a value removes each group that the removal leaves empty.
     void values_by_key() {
         QTemporaryDir dir;
         const auto file = dir.filePath(QStringLiteral("settings.json"));
@@ -141,7 +142,7 @@ private Q_SLOTS:
         QCOMPARE(settings.value(QStringLiteral("a/b/d")),
                  QJsonValue(QJsonArray({true, 2.5, QStringLiteral("x")})));
         QCOMPARE(settings.value(QStringLiteral("a/e/f")), QJsonValue(3));
-        // A value is no group to look into.
+        // A value is not a group, and a key below it has no value.
         QVERIFY(settings.value(QStringLiteral("a/b/c/g")).isUndefined());
 
         settings.setValue(QStringLiteral("a/b/c"), QJsonValue());
@@ -152,8 +153,8 @@ private Q_SLOTS:
         QVERIFY(!readFile(file).contains(QStringLiteral("a")));
     }
 
-    // The changes are written once the event loop runs, those of one pass in one write, or at
-    // once by sync().
+    // The changes are written once the event loop runs, the changes of one pass in one write, or
+    // immediately by sync().
     void changes_are_written_once_the_loop_runs() {
         QTemporaryDir dir;
         const auto file = dir.filePath(QStringLiteral("settings.json"));
@@ -175,7 +176,8 @@ private Q_SLOTS:
                  QJsonValue(QStringLiteral("s.exe")));
     }
 
-    // A file that is not a JSON object is read as empty, and replaced by the next change.
+    // A file that does not contain a JSON object is read as empty and replaced by the next
+    // change.
     void an_unreadable_file_is_empty() {
         QTemporaryDir dir;
         const auto file = dir.filePath(QStringLiteral("settings.json"));
