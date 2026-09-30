@@ -99,6 +99,23 @@ private Q_SLOTS:
                                         QStringLiteral("aboutToShutdown")}));
     }
 
+    // Another plugin that fails leaves the application running, its reason among the errors.
+    void another_plugin_may_fail() {
+        QTemporaryDir root;
+        addPlugin(root.path(), QStringLiteral("Core"), QStringLiteral(TEST_APPLOADER_CORE),
+                  QLatin1String(AppLoader::corePluginId));
+        addPlugin(root.path(), QStringLiteral("Other"),
+                  QStringLiteral(TEST_APPLOADER_FAILING_CORE),
+                  QStringLiteral("org.helloutau.other"));
+        AppLoader loader({QStringLiteral("helloutau")});
+        loader.setPluginPaths({root.path()});
+        QString error;
+        QTest::ignoreMessage(QtWarningMsg, "Plugin org.helloutau.other: intentional failure");
+        QVERIFY2(loader.load(&error), qPrintable(error));
+        QCOMPARE(loader.errors(),
+                 QStringList({QStringLiteral("org.helloutau.other: intentional failure")}));
+    }
+
     // Without the core plugin, running or not, the loader gives the reason.
     void the_core_plugin_is_required() {
         QString error;
@@ -141,6 +158,8 @@ private Q_SLOTS:
         AppLoader loader({QStringLiteral("helloutau")});
         QString error;
         QVERIFY2(loader.load(&error), qPrintable(error));
+        // Every plugin that comes with the application loads.
+        QCOMPARE(loader.errors(), QStringList());
         QCOMPARE(projectWindowCount(), 1);
 
         loader.shutdown();

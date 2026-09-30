@@ -32,7 +32,8 @@ unset(VCPKG_APPLOCAL_DEPS)
 target_compile_definitions(test_AppLoaderFailingPlugin PRIVATE TEST_APPLOADER_FAILS)
 
 add_auto_test(test_AppLoader.cpp HelloUtauEditor)
-add_dependencies(test_AppLoader test_AppLoaderPlugin test_AppLoaderFailingPlugin CorePlugin)
+add_dependencies(test_AppLoader test_AppLoaderPlugin test_AppLoaderFailingPlugin CorePlugin
+    FrequencyEditorPlugin)
 target_compile_definitions(test_AppLoader PRIVATE
     TEST_APPLOADER_CORE="$<TARGET_FILE:test_AppLoaderPlugin>"
     TEST_APPLOADER_FAILING_CORE="$<TARGET_FILE:test_AppLoaderFailingPlugin>"

@@ -22,7 +22,7 @@
 #include <helloutau/Widgets/SettingPage.h>
 #include <helloutau/Widgets/SettingsDialog.h>
 
-#include "ActionContributions_p.h"
+#include "ActionRegistrations_p.h"
 #include "AppSettings.h"
 #include "DiagnosticBox_p.h"
 #include "EditorSettingPages_p.h"
@@ -58,7 +58,7 @@ namespace hello::daw {
 
     }
 
-    class Editor::Impl : public ActionContributions::Listener {
+    class Editor::Impl : public ActionRegistrations::Listener {
     public:
         using Decl = Editor;
 
@@ -86,12 +86,12 @@ namespace hello::daw {
             const auto extension = contribution->extension();
             for (const auto &window : std::as_const(windows)) {
                 if (window) {
-                    ActionContributions::removeActions(extension, window->actionContext());
+                    ActionRegistrations::removeActions(extension, window->actionContext());
                 }
             }
             for (const auto &window : std::as_const(voiceBankWindows)) {
                 if (window) {
-                    ActionContributions::removeActions(extension, window->actionContext());
+                    ActionRegistrations::removeActions(extension, window->actionContext());
                 }
             }
             registry->removeExtension(extension);
@@ -193,15 +193,14 @@ namespace hello::daw {
         stdc_impl_t;
         // The extensions of the editor itself come as contributions too, see BuiltinActions.
         impl.registry = new QAK::ActionRegistry(this);
-        for (const auto contribution : ActionContributions::instance().contributions()) {
+        for (const auto contribution : ActionRegistrations::instance().contributions()) {
             impl.registry->addExtension(contribution->extension());
         }
-        ActionContributions::instance().addListener(&impl);
+        ActionRegistrations::instance().addListener(&impl);
         impl.themes = new ThemeManager(this);
         impl.themes->addSearchPath(QStringLiteral(":/helloutau/themes"));
         impl.catalog = new SettingCatalog(this);
         addEditorSettingPages(impl.catalog, *impl.settings);
-        impl.frequencyFormats->addBuiltinFormats();
     }
 
     kit::FrequencyFormatRegistry &Editor::frequencyFormats() const {
@@ -226,7 +225,7 @@ namespace hello::daw {
 
     Editor::~Editor() {
         stdc_impl_t;
-        ActionContributions::instance().removeListener(&impl);
+        ActionRegistrations::instance().removeListener(&impl);
         // The windows refer to the registry and the settings, so they go first.
         for (const auto &window : std::as_const(impl.windows)) {
             delete window.data();

@@ -44,15 +44,25 @@ stdcorelib.plugin 的交接记录（其仓库 `.cache/codex/2026-08-21-1722-stdc
 - 插件 ID 参照 DiffScope（`org.diffscope.core`）：`org.helloutau.<名称>`，全小写。
 - 插件在 `initialize()` 中经本仓库的注册接口登记它提供的东西。note.md 中原来的五种 C++ 插件改为五个**扩展点**：频率表格式、格式转换驱动（读写器）、选区编辑、编辑界面扩展、音源批量操作。
 - **原版 UTAU 插件的支持本身也是一个原生插件**（作者 2026-09-30 决定）：随 HelloUtau 提供，目录为 `ClassicPlugin`。它在 `initialize()` 中发现 UTAU 插件文件夹（`plugin.txt`，有 `plugin.json` 时以其为准，编码规则见 note.md），把每个 UTAU 插件登记为一项选区编辑，运行时写出 `temp.ust`、启动可执行文件、读回结果。停用它即不再提供 UTAU 插件，应用本身不含 UTAU 插件的代码。它依赖的 `temp.ust` 读写与编码处理在 hellokit 中，插件链接 hellokit 使用。
-- 删除 `FrequencyFormatPlugin` 与 `InterchangePlugin` 两个接口。
+- 删除 `FrequencyFormatPlugin`（已删）与 `InterchangePlugin` 两个接口。
 
 ### 注册接口
 
-- 每个扩展点在其所属的 hellokit 子库中有一张**进程级的工厂表**，内部以 `stdc::DynamicRegistry` 实现。stdcorelib 仍只是私有依赖：公开头文件中只有本仓库的类型。
-- 公开的是一个**登记对象**：构造时把「标识、名称、工厂」登记进表，析构时注销。插件把登记对象作为自己的成员，在 `initialize()` 中创建，在 `aboutToShutdown()` 中销毁。不能等插件实例析构：实例是插件库中的静态对象，随库卸载才析构，那时 `Editor` 已销毁，且析构发生在卸载库的过程中。
+- 各扩展点的登记形状一致（作者 2026-09-30 要求统一），以动作与频率表格式为例：
+
+  | 部分 | 动作（HelloUtauEditor） | 频率表格式（HelloKitVoiceBank） |
+  |---|---|---|
+  | 被登记的对象 | `ActionContribution` | `FrequencyFormat` |
+  | 登记对象 | `ActionRegistration(std::unique_ptr<ActionContribution>)`，`contribution()` | `FrequencyFormatRegistration(std::unique_ptr<FrequencyFormat>)`，`format()` |
+  | 进程级列表（私有） | `ActionRegistrations_p.h` | `FrequencyFormatRegistrations_p.h` |
+  | 使用方 | 每个 `Editor` 监听列表 | 每个 `FrequencyFormatRegistry` 监听列表 |
+  | 内置的登记 | `BuiltinActions`（Core 持有） | `BuiltinFrequencyFormats`（FrequencyEditor 持有） |
+
+- 登记对象持有被登记的对象，构造时加入进程级列表，析构时移除；所有使用方共用这一个对象。列表按登记顺序保存，只在应用的线程上使用，不用 `stdc::DynamicRegistry`：后者按名称排序，表达不了登记顺序。列表在所属的子库中，子库是动态库，因此每个进程只有一份。
+- 插件把登记对象作为自己的成员，在 `initialize()` 中创建，在 `aboutToShutdown()` 中销毁。不能等插件实例析构：实例是插件库中的静态对象，随库卸载才析构，那时 `Editor` 已销毁，且析构发生在卸载库的过程中。
 - 内置的格式与驱动经同一途径登记，与插件不分主次，保持 `InterchangeRegistry` 与 `FrequencyFormatRegistry` 已有的原则。
-- 应用与测试持有的注册表（`FrequencyFormatRegistry` 等）**仍然不是全局单例**：它们从工厂表取得实例。测试可以只放入自己需要的内容，不受进程级状态影响。
-- 注册表订阅工厂表的增删通知（`DynamicRegistry` 的监听），因此插件在运行中才登记或注销也能反映到界面，例如音源窗口的「F0」下拉框。
+- 应用与测试持有的注册表（`FrequencyFormatRegistry` 等）**仍然不是全局单例**，内容来自进程级列表。测试只登记自己需要的内容，登记对象随测试结束而销毁。
+- 注册表监听列表的增删，因此插件在运行中才登记或注销也能反映到界面，例如音源窗口的「F0」下拉框。
 - 登记对象在 `initialize()` 中创建（作者 2026-09-30 决定）：生命周期明确，可带运行时参数，例如 UTAU 插件支持插件按发现结果登记的各项。未采用的做法是以静态对象在插件载入时自动登记：名称须是字面量、登记不加锁，且公开头文件中会出现 stdcorelib 的类型。
 
 ### 加载器与 Core 插件
@@ -89,7 +99,7 @@ macOS 的 bundle 中为 `HelloUtau.app/Contents/MacOS`（程序）与 `HelloUtau
 - 元数据文件名：沿用该库默认的 `plugin.json`，以 `PluginSystem(iid, PluginSystem::Bundle)` 直接构造（作者 2026-09-30 决定）。它与 UTAU 插件文件夹的 `plugin.json` 同名，但两种目录不会互相搜索，库中的 IID 也能区分原生插件，不会误读。
 - 兼容性：C++ 插件须与宿主以同一编译器、同一 Qt 与 hellokit 版本构建。元数据加一个宿主字段（如 `helloutau` 的版本范围），由载入判定检查；判定也用于平台限制（如只在 Windows 可用的 vs4ufrq 格式插件）。
 - 设置：用户的启用设置存为用户配置目录中的一个 JSON 文件（`PluginSettings`），全局设置随安装提供。设置对话框增加「Plugins」页：列出插件、勾选启用、显示错误与依赖。
-- **关闭顺序**：插件登记的工厂与由它造出的对象，代码都在插件的库中，必须在卸载前销毁。Core 插件在 `aboutToShutdown()` 中销毁 `Editor`，依赖 Core 的插件的 `aboutToShutdown()` 在它之前调用，各库都在此后才卸载。插件的实例是库中的静态对象，随库卸载而析构，因此窗口等 Qt 对象不能留到那时。
+- **关闭顺序**：插件登记的对象，代码都在插件的库中，必须在卸载前销毁。Core 插件在 `aboutToShutdown()` 中销毁 `Editor`，依赖 Core 的插件的 `aboutToShutdown()` 在它之前调用，各库都在此后才卸载。插件的实例是库中的静态对象，随库卸载而析构，因此窗口等 Qt 对象不能留到那时。
 - **插件交给宿主的数据不能指向插件库的静态存储**：`QStringLiteral` 的文本就在库中，库卸载后仍被宿主持有的这类字符串即成悬空（`test_AppLoader` 的测试插件遇到过）。交给宿主、可能在卸载后仍被使用的字符串须是分配的副本。
 
 ### 编辑界面扩展：动作与命令
@@ -98,9 +108,11 @@ macOS 的 bundle 中为 `HelloUtau.app/Contents/MacOS`（程序）与 `HelloUtau
 
 - **qactionkit 已有的部分**：多份清单合并，插件的清单以 `<insertions>` 插入宿主的菜单（`anchor`、`priority`）。为插件卸载补充了 `ActionRegistry::removeExtension()`（qactionkit `46bce9b`），移除后立即重新计算，registry 中不再有指向该清单的视图。
 - **`ActionContribution`**（HelloUtauEditor）：一份 AEC 编译的清单，加上为每种窗口创建动作的 `addActions(ProjectWindow *, context)` 与 `addActions(VoiceBankWindow *, context)`。动作以窗口为父对象，贡献移除时由编辑器从 context 移除并删除。插进某种窗口菜单的条目若没有该窗口的动作，context 显示一个不做任何事的占位项。
-- **`ActionRegistration`**：登记对象。进程级的贡献列表在 HelloUtauEditor 中，只在主线程使用，不用 `DynamicRegistry`。每个 `Editor` 监听它：构造时加入已有的清单，之后随登记加入清单与各窗口的动作，随注销移除，然后刷新各窗口的菜单、文字、快捷键与图标。窗口创建时加入已有贡献的动作。命令面板取 registry 与 context 的交集，插件的命令自动出现在其中。
+- **`ActionRegistration`**：登记对象。每个 `Editor` 监听进程级的列表：构造时加入已有的清单，之后随登记加入清单与各窗口的动作，随注销移除，然后刷新各窗口的菜单、文字、快捷键与图标。窗口创建时加入已有贡献的动作。命令面板取 registry 与 context 的交集，插件的命令自动出现在其中。
 - **编辑器自己的清单也经此登记**（作者 2026-09-30，方案 1 加 3）：原来的 `EditorActions.xml` 分为两份，`AppActions.xml` 为两种窗口的菜单栏与顶层菜单，以及新建、打开、打开音源、最近文件、关闭、退出、命令面板、设置；`EditorActions.xml` 为其余的窗口命令及其子菜单，以插入放入前者的菜单，排出的菜单与拆分前相同。两份由 `BuiltinActions` 登记，Core 插件持有它，不经 Core 构造 `Editor` 的测试自己持有一个。处理函数仍在窗口中，窗口自己创建这些动作。
 - **最终目标**（作者 2026-09-30）：清单与处理函数都由 Core 插件提供，窗口只提供能力。这需要窗口公开相应的操作，届时另行设计。
+- **现状的两条路径**：内置命令的处理函数在窗口私有的实现中，由窗口在 `initActions()` 中自己创建动作，`BuiltinActions` 的贡献不创建动作；插件的动作由其贡献的 `addActions()` 创建并连接。插件能连接自己的处理函数，但处理函数只能使用窗口的公开接口，目前很少。内置命令移入贡献之后只剩一条路径。
+- **编辑器的组件化**（作者 2026-09-30 定的方向）：`Editor` 与窗口逐步拆成组件，最终只保留较底层、偏元的功能（窗口、文档、动作与设置的基础设施），高级功能由插件组合而成。每移出一块功能，先让窗口公开它所需的能力，再把命令与界面移入插件。
 - **静态字符串**：AEC 生成的字符串是 `QStringLiteral`，位于清单所在库的静态存储中，由条目取得的 `QString` 与之共享数据。目前所有库都在 Core 销毁 `Editor` 之后才卸载，这些副本随 `Editor` 一起销毁，因此没有问题。将来支持在运行中停用单个插件时，须让 AEC 生成自有内存的字符串。
 - **测试**：`test_ActionContribution`（登记前后打开的窗口、注销、先于或晚于 `Editor` 的登记）；TestAction 插件（`tests/auto/plugins/TestAction`，依赖 Core，向工程窗口的 Tools 菜单加入 Hello）由 `test_TestActionPlugin` 与 Core 一同载入。
 
@@ -122,8 +134,13 @@ stdcorelib.plugin 的生命周期是同步的，不依赖事件循环。HelloUta
 2. ~~**note.md**~~：已按作者的决定改写插件一节（一种原生插件、五个扩展点、UTAU 插件由一个原生插件支持），AGENTS.md、Roadmap.md、Status.md、Interchange.md、FrequencyTables.md 的相应说法一并更新。
 3. ~~**加载器与 Core 插件**~~：`AppLoader`、Core 插件、`helloutau_add_native_plugin()`，程序只剩加载器。`test_AppLoader` 以测试插件覆盖参数、Core 插件的必需与三种失败、生命周期，并载入真正的 Core 插件打开窗口。
    - ~~**插件作为库与动作的扩展**~~：插件导出目标、安装头文件；`ActionContribution` / `ActionRegistration`；编辑器的清单拆为两份，经 `BuiltinActions` 由 Core 登记；TestAction 测试插件。见「编辑界面扩展：动作与命令」。
-4. **试点：频率表格式与 FrequencyEditor 插件**。工厂表、登记对象、`FrequencyFormatRegistry` 改为从工厂表取得并订阅增删；删除 `FrequencyFormatPlugin`。新建 FrequencyEditor 插件（ID `org.helloutau.frequencyeditor`，目录 `FrequencyEditor`，作者定名），登记 frq、dio、mrq；读取这些文件的代码留在 hellokit。将来的频率表编辑界面也由它负责。测试中构建一个真实的插件模块，复制到临时目录的一个子目录并写出其元数据，由 `PluginSystem` 以目录布局载入、登记一个格式、关闭后注销。
+4. ~~**试点：频率表格式与 FrequencyEditor 插件**~~：
+   - `FrequencyFormatRegistration`（HelloKitVoiceBank）：登记对象，持有一种格式，形状与 `ActionRegistration` 相同（见「注册接口」）。
+   - `FrequencyFormatRegistry` 成为 `QObject`：内容来自进程级列表，按登记顺序；同一 ID 的多个格式只取先登记的，它注销后由下一个接替，与 qactionkit 对重复条目的处理一致；变化时发出 `formatsChanged()`。不再有 `add()` 与 `addBuiltinFormats()`。音源窗口的「F0」下拉框随之重建：所选格式仍在则保留，否则改选重采样器对应的格式。
+   - `BuiltinFrequencyFormats` 登记 frq、dio、mrq，FrequencyEditor 插件（ID `org.helloutau.frequencyeditor`，目录 `FrequencyEditor`，依赖 Core，作者定名）持有它；读取这些文件的代码留在 hellokit。将来的频率表编辑界面也由它负责。需要这些格式的测试自己持有一个。
+   - 删除 `FrequencyFormatPlugin`。
    - 多个格式都匹配重采样器时，默认选**后登记的**，即后载入的插件的格式（作者 2026-09-30 决定）：想接管内置处理的插件依赖 FrequencyEditor，必在其后载入。
+   - `AppLoader::errors()` 列出核心插件以外载入失败的插件，`test_AppLoader` 据此检查随应用提供的插件全部载入。起因：`helloutau_add_native_plugin()` 的 `DEPENDENCIES` 原为多值参数，吞掉了其后交给 `helloutau_add_plugin()` 的参数，FrequencyEditor 的 `plugin.json` 因而带有虚假的依赖而载入失败，只写入日志，测试没有发现。`DEPENDENCIES` 现为单值参数，多个依赖以分号分隔。
 5. **设置**：用户的启用设置文件，设置对话框的「Plugins」页。
 6. **格式转换驱动**：同样改为注册接口，删除 `InterchangePlugin`。
 7. **选区编辑与 ClassicPlugin 插件**：选区编辑的注册接口；随 HelloUtau 提供的原生插件，把 UTAU 插件登记为选区编辑；应用的「插件」菜单列出已登记的选区编辑。验收同 Roadmap 第五阶段：若干社区常用的原版插件能够正常执行并写回结果。

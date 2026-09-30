@@ -1,10 +1,13 @@
-#include "BuiltinFrequencyFormats_p.h"
+#include "BuiltinFrequencyFormats.h"
 
 #include <cstring>
 
 #include <QtCore/QByteArray>
 #include <QtCore/QFile>
 #include <QtCore/QtEndian>
+
+#include "FrequencyFormat.h"
+#include "FrequencyFormatRegistration.h"
 
 namespace hello::kit {
 
@@ -315,12 +318,16 @@ namespace hello::kit {
 
     }
 
-    std::vector<std::unique_ptr<FrequencyFormat>> builtinFrequencyFormats() {
-        std::vector<std::unique_ptr<FrequencyFormat>> formats;
-        formats.push_back(std::make_unique<Frq>());
-        formats.push_back(std::make_unique<Dio>());
-        formats.push_back(std::make_unique<Mrq>());
-        return formats;
+    // frq, dio and mrq in this order of registration
+    BuiltinFrequencyFormats::BuiltinFrequencyFormats() {
+        m_registrations.push_back(
+            std::make_unique<FrequencyFormatRegistration>(std::make_unique<Frq>()));
+        m_registrations.push_back(
+            std::make_unique<FrequencyFormatRegistration>(std::make_unique<Dio>()));
+        m_registrations.push_back(
+            std::make_unique<FrequencyFormatRegistration>(std::make_unique<Mrq>()));
     }
+
+    BuiltinFrequencyFormats::~BuiltinFrequencyFormats() = default;
 
 }

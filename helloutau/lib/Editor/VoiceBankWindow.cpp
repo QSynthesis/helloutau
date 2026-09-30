@@ -8,6 +8,7 @@
 #include <QtCore/QRegularExpression>
 #include <QtCore/QHash>
 #include <QtCore/QSet>
+#include <QtCore/QSignalBlocker>
 #include <QtCore/QSortFilterProxyModel>
 #include <QtCore/QTimer>
 #include <QtGui/QAction>
@@ -53,7 +54,7 @@
 #include <helloutau/Theme/ThemeManager.h>
 #include <helloutau/Widgets/CommandPalette.h>
 
-#include "ActionContributions_p.h"
+#include "ActionRegistrations_p.h"
 #include "AppSettings.h"
 #include "CommandEntries_p.h"
 #include "DiagnosticBox_p.h"
@@ -307,7 +308,7 @@ namespace hello::daw {
                 stdc_decl_t;
                 editor->showSettings(&decl);
             });
-            ActionContributions::instance().addActions(&decl, context);
+            ActionRegistrations::instance().addActions(&decl, context);
 
             const auto registry = editor->actionRegistry();
             registry->addContext(context);
@@ -936,6 +937,28 @@ namespace hello::daw {
             waveform->setSpectrogram(spectrum);
         }
 
+        // The formats registered, as they come and go. The format chosen stays while it is
+        // registered; at first, and in place of a format that went, the one of the resampler of
+        // the settings is chosen.
+        void fillFrequencyBox() {
+            const QSignalBlocker blocker(frequencyBox);
+            const bool filled = frequencyBox->count() > 0;
+            const auto chosen = frequencyBox->currentData().toString();
+            frequencyBox->clear();
+            frequencyBox->addItem(tr("None"), QString());
+            const auto &formats = editor->frequencyFormats();
+            for (const auto format : formats.formats()) {
+                frequencyBox->addItem(format->name(), format->id());
+            }
+            int index = filled ? frequencyBox->findData(chosen) : -1;
+            if (index < 0) {
+                const auto format =
+                    formats.formatForResampler(pathOf(editor->settings().resampler()));
+                index = format ? std::max(0, frequencyBox->findData(format->id())) : 0;
+            }
+            frequencyBox->setCurrentIndex(index);
+        }
+
         // The frequency table of the audio of the current row in the format of the box. The box
         // marks the formats without a table for the audio file.
         void showFrequency() {
@@ -1057,16 +1080,15 @@ namespace hello::daw {
             // at first (docs/FrequencyTables.md)
             frequencyBox = new QComboBox();
             frequencyBox->setObjectName(QStringLiteral("frequencyFormat"));
-            frequencyBox->addItem(tr("None"), QString());
-            const auto &formats = editor->frequencyFormats();
-            for (const auto format : formats.formats()) {
-                frequencyBox->addItem(format->name(), format->id());
-            }
-            const auto chosen = formats.formatForResampler(pathOf(editor->settings().resampler()));
-            frequencyBox->setCurrentIndex(chosen ? std::max(0, frequencyBox->findData(chosen->id()))
-                                                 : 0);
+            fillFrequencyBox();
             QObject::connect(frequencyBox, &QComboBox::currentIndexChanged, &decl,
                              [this] { showFrequency(); });
+            QObject::connect(&editor->frequencyFormats(), &kit::FrequencyFormatRegistry::formatsChanged,
+                             &decl, [this] {
+                                 fillFrequencyBox();
+                                 frequencyShown = {};
+                                 showFrequency();
+                             });
             auto frequencyLabel = new QLabel(tr("&F0:"));
             frequencyLabel->setBuddy(frequencyBox);
             controls->addWidget(frequencyLabel);

@@ -49,8 +49,9 @@ namespace hello::daw {
         /// The themes of all windows, with the built-in one under \c :/helloutau/themes.
         ThemeManager *themeManager() const;
 
-        /// The formats of frequency tables that the voice bank windows read, the built-in ones
-        /// registered at start; see docs/FrequencyTables.md.
+        /// The formats of frequency tables that the voice bank windows read, those registered
+        /// by FrequencyFormatRegistration, the built-in ones by the plugin FrequencyEditor; see
+        /// docs/FrequencyTables.md.
         kit::FrequencyFormatRegistry &frequencyFormats() const;
 
         /// The pages of the settings dialog, those of the editor registered at start; see the

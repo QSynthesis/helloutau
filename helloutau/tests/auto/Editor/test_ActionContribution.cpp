@@ -13,6 +13,7 @@
 #include <QAKWidgets/widgetactioncontext.h>
 
 #include <helloutau/Editor/ActionContribution.h>
+#include <helloutau/Editor/ActionRegistration.h>
 #include <helloutau/Editor/AppSettings.h>
 #include <helloutau/Editor/BuiltinActions.h>
 #include <helloutau/Editor/Editor.h>

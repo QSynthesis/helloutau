@@ -33,6 +33,8 @@
 #include <hellokit/Edit/ProjectRefs.h>
 #include <hellokit/Edit/VoiceBankDocument.h>
 #include <hellokit/Edit/VoiceBankRefs.h>
+#include <hellokit/VoiceBank/BuiltinFrequencyFormats.h>
+#include <hellokit/VoiceBank/FrequencyFormatRegistration.h>
 
 #include <helloutau/Audio/AudioOutput.h>
 #include <helloutau/Widgets/CommandPalette.h>
@@ -115,6 +117,9 @@ private:
     QTemporaryDir m_dir;
     // The menus and commands of the editor, which the core plugin registers in the application
     BuiltinActions m_actions;
+    // The formats of frequency tables, which the plugin FrequencyEditor registers in the
+    // application
+    kit::BuiltinFrequencyFormats m_formats;
 
     // An editor whose voice bank windows do not follow the disk on their own, which would ask
     // at any moment; a test calls VoiceBankWindow::checkDisk() instead.
@@ -1485,6 +1490,47 @@ private Q_SLOTS:
         QVERIFY(view->spectrogram());
         spectrogram->trigger();
         QVERIFY(!view->spectrogram());
+    }
+
+    // The box of formats follows the registrations: the format chosen stays while it is
+    // registered, and gives way to that of the resampler when it goes.
+    void the_frequency_box_follows_the_registrations() {
+        QTemporaryDir dir;
+        const auto e = editor();
+        e->settings().setResampler(QStringLiteral("C:/engines/moresampler.exe"));
+        const auto window = e->openVoiceBank(voiceBank(dir));
+        QVERIFY(window);
+        const auto box = window->findChild<QComboBox *>(QStringLiteral("frequencyFormat"));
+        QVERIFY(box);
+        box->setCurrentIndex(box->findData(QStringLiteral("frq")));
+
+        class Extra : public kit::FrequencyFormat {
+        public:
+            QString id() const override {
+                return QStringLiteral("extra");
+            }
+            QString name() const override {
+                return QStringLiteral("Extra");
+            }
+            QStringList resamplerPatterns() const override {
+                return {};
+            }
+            bool exists(const fs::path &) const override {
+                return false;
+            }
+            std::optional<kit::FrequencyTable> read(const fs::path &, int,
+                                                    kit::DiagnosticList &) const override {
+                return std::nullopt;
+            }
+        };
+        auto extra = std::make_unique<kit::FrequencyFormatRegistration>(std::make_unique<Extra>());
+        QVERIFY(box->findData(QStringLiteral("extra")) > 0);
+        QCOMPARE(box->currentData().toString(), QStringLiteral("frq"));
+
+        box->setCurrentIndex(box->findData(QStringLiteral("extra")));
+        extra.reset();
+        QCOMPARE(box->findData(QStringLiteral("extra")), -1);
+        QCOMPARE(box->currentData().toString(), QStringLiteral("mrq"));
     }
 
     // The dock edits character.txt, readme.txt and prefix.map, each edit one step, creating the

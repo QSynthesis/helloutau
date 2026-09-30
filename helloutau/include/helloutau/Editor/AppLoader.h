@@ -61,6 +61,9 @@ namespace hello::daw {
         /// \return whether the core plugin runs, or else false with the reason in \a error
         bool load(QString *error);
 
+        /// The plugins other than the core plugin that failed, each as its ID and the reason.
+        QStringList errors() const;
+
         /// Loads the plugins, shows the reason if the core plugin does not run, runs the event
         /// loop, and shuts the plugins down.
         ///

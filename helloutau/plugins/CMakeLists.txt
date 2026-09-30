@@ -8,7 +8,7 @@ set(VCPKG_APPLOCAL_DEPS OFF)
 
 # helloutau_add_native_plugin(<target>
 #     ID <id> DISPLAY_NAME <name> CATEGORY <directory>
-#     [DEPENDENCIES <id>...]
+#     [DEPENDENCIES <id>[;<id>...]]
 #     [DIRECTORY <plugins directory>]
 #     [arguments of helloutau_add_plugin()...]
 # )
@@ -16,7 +16,9 @@ set(VCPKG_APPLOCAL_DEPS OFF)
 # Builds the library into the directory <directory> of the plugins, embeds the interface ID
 # HELLOUTAU_PLUGIN_IID, and writes the plugin.json beside it that the directory layout reads:
 # the name of the library without prefix and suffix, the ID, the name shown, the version, and
-# the plugins of DEPENDENCIES as required dependencies of the same version.
+# the plugins of DEPENDENCIES as required dependencies of the same version. DEPENDENCIES takes one
+# argument, a list, since the arguments after it go on to helloutau_add_plugin() under keywords
+# that this function does not know.
 #
 # The plugin is installed with its headers and exported like a library, since other plugins may
 # build on it. Its public headers lie beside its sources in helloutau/plugins/<directory>,
@@ -25,8 +27,8 @@ set(VCPKG_APPLOCAL_DEPS OFF)
 # the plugins of the tests, it is built there instead and not installed.
 function(helloutau_add_native_plugin _target)
     set(options)
-    set(oneValueArgs ID DISPLAY_NAME CATEGORY DIRECTORY)
-    set(multiValueArgs DEPENDENCIES)
+    set(oneValueArgs ID DISPLAY_NAME CATEGORY DIRECTORY DEPENDENCIES)
+    set(multiValueArgs)
     cmake_parse_arguments(FUNC "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
     set(_plugins_dir ${HELLOUTAU_BUILD_PLUGINS_DIR})
@@ -91,3 +93,4 @@ function(helloutau_add_native_plugin _target)
 endfunction()
 
 add_subdirectory(Core)
+add_subdirectory(FrequencyEditor)

@@ -100,7 +100,7 @@ qfrqeditor 的 `Core` 按本仓库规范重写后移入 hellokit 的新子库（
 
 作者 2026-09-30 决定：**新增第六种插件「频率表格式插件」**（`kit::FrequencyFormatPlugin`），已写入 [`note.md`](note.md)。未采用的做法是归入音源库插件或格式转换插件：频率表格式与它们的接口完全不同，塞进去会使接口含混。与格式转换插件相同，目前只有接口，应用尚无载入插件的机制。
 
-之后作者决定插件只有一种原生插件（[`Plugins.md`](Plugins.md)），频率表格式随之改为它的一个扩展点，`FrequencyFormatPlugin` 将在试点中删除，由注册接口取代。
+之后作者决定插件只有一种原生插件（[`Plugins.md`](Plugins.md)），频率表格式随之改为它的一个扩展点，`FrequencyFormatPlugin` 已删除，由登记对象 `FrequencyFormatRegistration` 取代；内置的 frq、dio、mrq 由 FrequencyEditor 插件登记，多个格式匹配重采样器时后登记者优先，见 [`Plugins.md`](Plugins.md) 实施步骤 4。
 
 ### 闭源与无公开资料的格式
 
@@ -120,8 +120,7 @@ qfrqeditor 的 `Core` 按本仓库规范重写后移入 hellokit 的新子库（
 - 格式层（`HelloKitVoiceBank`）：
   - `kit::FrequencyTable`：各格式的公共部分，每帧的时间（毫秒）、频率（赫兹，0 为无声）与可选的振幅，以及可选的平均频率。
   - `kit::FrequencyFormat`：格式驱动，目前只有标识、名称、重采样器文件名的通配符、`exists()` 与 `read()`；写、删除与生成到后面的步骤再加。
-  - `kit::FrequencyFormatRegistry`：内置格式与插件格式同一途径注册，ID 不得重复，先注册者优先；`formatForResampler()` 按重采样器的文件名（整名匹配、不分大小写）取第一个匹配的格式，都不匹配时为 frq。不执行任何程序。
-  - `kit::FrequencyFormatPlugin`：第六种插件的接口。
+  - `kit::FrequencyFormatRegistry`：内置格式与插件格式同一途径登记（`kit::FrequencyFormatRegistration`），ID 不得重复；`formatForResampler()` 按重采样器的文件名（整名匹配、不分大小写）取匹配的格式，都不匹配时为 frq。不执行任何程序。原先先注册者优先、以 `kit::FrequencyFormatPlugin` 加入插件格式，插件机制改定后改为后登记者优先，见 [`Plugins.md`](Plugins.md) 实施步骤 4。
   - 内置三种有公开资料的格式，注释引用的都是公开资料：
     - frq（`resampler*.exe`）：`a_wav.frq`，布局按 OpenUtau 0.1.565 的 `Frq.cs`；帧时间由帧间隔与 wav 的采样率算出。
     - dio（`w4u*.exe`、`world4utau*.exe`）：`a.dio`，布局按 world4utau 的源码；每帧自带时间。

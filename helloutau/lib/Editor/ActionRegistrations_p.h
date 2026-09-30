@@ -1,5 +1,5 @@
-#ifndef HELLOUTAU_EDITOR_ACTIONCONTRIBUTIONS_P_H
-#define HELLOUTAU_EDITOR_ACTIONCONTRIBUTIONS_P_H
+#ifndef HELLOUTAU_EDITOR_ACTIONREGISTRATIONS_P_H
+#define HELLOUTAU_EDITOR_ACTIONREGISTRATIONS_P_H
 
 #include <QtCore/QList>
 
@@ -14,7 +14,7 @@ namespace hello::daw {
 
     /// The registered action contributions of the process, in the order of registration, and
     /// the editors that apply them.
-    class ActionContributions {
+    class ActionRegistrations {
     public:
         /// Told of each contribution registered or unregistered after it was added.
         class Listener {
@@ -25,7 +25,7 @@ namespace hello::daw {
             virtual void contributionRemoved(ActionContribution *contribution) = 0;
         };
 
-        static ActionContributions &instance();
+        static ActionRegistrations &instance();
 
         QList<ActionContribution *> contributions() const;
 
@@ -55,4 +55,4 @@ namespace hello::daw {
 
 }
 
-#endif // HELLOUTAU_EDITOR_ACTIONCONTRIBUTIONS_P_H
+#endif // HELLOUTAU_EDITOR_ACTIONREGISTRATIONS_P_H

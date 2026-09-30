@@ -88,13 +88,14 @@ namespace hello::daw {
             impl.system.loadPlugins();
         }
 
+        for (const auto &message : errors()) {
+            qWarning().noquote() << "Plugin" << message;
+        }
         stdc::pluginsystem::PluginSpec *core = nullptr;
         for (const auto spec : impl.system.plugins()) {
-            if (spec->id() == corePluginId && !core) {
+            if (spec->id() == corePluginId) {
                 core = spec;
-            } else if (spec->hasError()) {
-                qWarning().noquote() << "Plugin" << QString::fromStdString(spec->id())
-                                     << "failed:" << QString::fromStdString(spec->errorMessage());
+                break;
             }
         }
 
@@ -111,6 +112,24 @@ namespace hello::daw {
             return false;
         }
         return true;
+    }
+
+    QStringList AppLoader::errors() const {
+        stdc_impl_t;
+        QStringList result;
+        bool coreSeen = false;
+        for (const auto spec : impl.system.plugins()) {
+            // load() reports on the first core plugin, and another of the same ID is an error here.
+            if (spec->id() == corePluginId && !coreSeen) {
+                coreSeen = true;
+                continue;
+            }
+            if (spec->hasError()) {
+                result.push_back(QString::fromStdString(spec->id()) + QStringLiteral(": ") +
+                                 QString::fromStdString(spec->errorMessage()));
+            }
+        }
+        return result;
     }
 
     int AppLoader::run() {
