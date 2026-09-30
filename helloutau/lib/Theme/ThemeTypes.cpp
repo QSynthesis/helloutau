@@ -26,7 +26,7 @@ namespace hello::daw {
             return std::nullopt;
         }
 
-        // One of \a choices, by its name
+        // Returns the value in \a choices whose name matches \a value
         template <class T>
         std::optional<T> choice(const ThemeValue &value,
                                 std::initializer_list<std::pair<QStringView, T>> choices,
@@ -50,7 +50,7 @@ namespace hello::daw {
                 error);
         }
 
-        // The items of a group, or the value alone
+        // Returns the items of a group, or \a value itself if it is not a group
         std::vector<const ThemeValue *> itemsOf(const ThemeValue &value) {
             std::vector<const ThemeValue *> items;
             if (value.kind == ThemeValue::Group) {
@@ -81,7 +81,7 @@ namespace hello::daw {
                 }
                 return result;
             };
-            // A function, as Qt passes it: its name and the text in its parentheses
+            // A function, which Qt passes as its name and the text inside its parentheses
             QMetaType::registerConverter<QStringList, T>([name,
                                                           fromArguments](const QStringList &list)
                                                              -> std::optional<T> {
@@ -92,7 +92,7 @@ namespace hello::daw {
                 }
                 return fromArguments(list[1]);
             });
-            // A word or a string, taken as the first argument
+            // A word or a string, read as the first argument
             QMetaType::registerConverter<QString, T>(
                 [name](const QString &text) -> std::optional<T> {
                     ThemeError error;
@@ -125,7 +125,7 @@ namespace hello::daw {
     QPen ThemePen::pen(ThemeButtonState state) const {
         QPen result(color.value(state), width, style, cap, join);
         if (!dashPattern.isEmpty()) {
-            // Qt counts the dashes in widths of the pen.
+            // Qt measures the dash pattern in units of the pen width.
             QList<qreal> pattern;
             const double unit = std::max(width, 1.0);
             for (const double dash : dashPattern) {
@@ -380,7 +380,7 @@ namespace hello::daw {
                     break;
                 default:
                     return fail<ThemeRect>(error, b[1]->position,
-                                           tr("The margins are one, two or four lengths."));
+                                           tr("The margins must be one, two or four lengths."));
             }
         }
         if (b[2]) {

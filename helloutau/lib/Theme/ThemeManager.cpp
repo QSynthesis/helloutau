@@ -23,13 +23,12 @@
 
 namespace hello::daw {
 
-
     namespace {
 
         constexpr char16_t CommonTheme[] = u"_common";
         constexpr char16_t BaseVariable[] = u"_base";
 
-        // The keys under which a value may be given for this system alone
+        // The keys of the values specific to the current operating system
         const QStringList &platformKeys() {
             static const QStringList keys{
 #if defined(Q_OS_WINDOWS)
@@ -45,8 +44,9 @@ namespace hello::daw {
             return keys;
         }
 
-        // A value, or the one for this system if it is given per system: an object whose keys
-        // are all names of systems
+        // Returns \a value, or its entry for the current operating system if \a value is
+        // specified per system as a nonempty object whose keys are all operating system names.
+        // Returns an undefined value if such an object has no entry for the current system.
         QJsonValue forPlatform(const QJsonValue &value) {
             static const QStringList systems{QStringLiteral("win"), QStringLiteral("windows"),
                                              QStringLiteral("mac"), QStringLiteral("macos"),
@@ -68,7 +68,7 @@ namespace hello::daw {
             return QJsonValue::Undefined;
         }
 
-        // One style sheet of a namespace
+        // A style sheet of a namespace
         struct Sheet {
             double priority = 1;
             double ratio = 1;
@@ -96,7 +96,8 @@ namespace hello::daw {
         double scale = 1;
         double fontScale = 1;
 
-        // id to namespaces, theme to namespace to sheets, theme to variables
+        // Maps from identifier to namespaces, from theme to namespace to sheets, and from theme
+        // to variables
         QHash<QString, QStringList> namespaces;
         QHash<QString, QHash<QString, QList<Sheet>>> sheets;
         QHash<QString, QHash<QString, Variable>> variables;
@@ -115,7 +116,7 @@ namespace hello::daw {
                 while (it.hasNext()) {
                     files.push_back(it.next());
                 }
-                // In a fixed order, so that the order of sheets of one priority is stable
+                // Sorted, so that sheets of equal priority have a stable order
                 files.sort();
                 for (const auto &file : std::as_const(files)) {
                     readFile(file);
@@ -219,7 +220,7 @@ namespace hello::daw {
             }
         }
 
-        // The themes from the most basic to \a theme, along _base
+        // Returns the chain of themes along _base, from the most basic theme to \a theme
         QStringList chain(const QString &theme) const {
             QStringList result;
             QString at = theme;
@@ -234,7 +235,7 @@ namespace hello::daw {
             return result;
         }
 
-        // The variables of a chain, the later themes overriding the earlier
+        // Returns the variables of a chain, in which later themes override earlier themes
         QHash<QString, QString> variablesOf(const QStringList &themes) const {
             QHash<QString, QString> result;
             for (const auto &theme : themes) {
@@ -278,8 +279,8 @@ namespace hello::daw {
                     }
                 }
             }
-            // _common first, then the chain of the current theme; each with the variables of
-            // the themes it belongs under
+            // The chain of _common first, followed by the chain of the current theme. Every sheet
+            // uses the variables of both chains.
             const auto common = chain(QString::fromUtf16(CommonTheme));
             auto themes = common;
             if (!current.isEmpty() && current != QString::fromUtf16(CommonTheme)) {
@@ -295,8 +296,8 @@ namespace hello::daw {
                 for (const auto &space : std::as_const(spaces)) {
                     selected += sheets.value(theme).value(space);
                 }
-                // Of one priority, in the order of the namespaces of the widget, and within a
-                // namespace in the order of the files and their arrays
+                // Sheets of equal priority remain in the order of the namespaces of the widget,
+                // and within a namespace in the order of the files and of the arrays in them
                 std::stable_sort(
                     selected.begin(), selected.end(),
                     [](const Sheet &a, const Sheet &b) { return a.priority < b.priority; });
@@ -344,7 +345,7 @@ namespace hello::daw {
 
     void ThemeManager::reload() {
         stdc_impl_t;
-        // The icons are drawn from the files as they are now as well.
+        // Clears the icon cache as well, so that icons are drawn from the current files.
         ThemeIcon::clearCache();
         impl.read();
         impl.schedule();

@@ -11,8 +11,8 @@
 
 namespace hello::daw {
 
-    /// The states in which an interactive element is drawn: up, under the pointer, pressed and
-    /// disabled, each unchecked and checked.
+    /// The states in which an interactive element is drawn: up, hovered, pressed and disabled,
+    /// each unchecked and checked.
     enum class ThemeButtonState {
         Up,
         Over,
@@ -24,12 +24,13 @@ namespace hello::daw {
         CheckedDisabled,
     };
 
-    /// The keywords of the states in a state group, in the order of ThemeButtonState, which is
-    /// also the order of positional values.
+    /// Returns the keyword of \a state in a state group. The order of ThemeButtonState is also
+    /// the order of positional values.
     HELLOUTAU_THEME_EXPORT QStringView themeStateKey(ThemeButtonState state);
 
-    /// The state whose value \a state takes when a group does not give it: over and disabled
-    /// fall back to up, down to over, and the checked states likewise, their up to up.
+    /// Returns the state from which \a state takes its value if a group omits \a state. Over and
+    /// disabled fall back to up, and down falls back to over. The checked states fall back in
+    /// the same way among themselves, and checked up falls back to up.
     constexpr ThemeButtonState themeStateFallback(ThemeButtonState state) {
         using S = ThemeButtonState;
         constexpr S fallback[8] = {S::Up, S::Up,        S::Over,        S::Up,
@@ -37,12 +38,12 @@ namespace hello::daw {
         return fallback[size_t(state)];
     }
 
-    /// A value for each ThemeButtonState, as a field that supports button states holds it.
+    /// A value for each ThemeButtonState, as stored by a field that supports button states.
     ///
-    /// Written as one value for every state, or as a group such as <tt>(white, down=grey)</tt>
-    /// whose missing states fall back: over to up, down to over, disabled to up, up2 to up, and
-    /// within the checked states as within the unchecked ones. See the section on the value
-    /// syntax in docs/Theme.md.
+    /// The syntax is one value for every state, or a group such as <tt>(white, down=grey)</tt>.
+    /// The states that a group omits fall back: over to up, down to over, disabled to up, up2 to
+    /// up, and among the checked states as among the unchecked states. See the section on the
+    /// value syntax in docs/Theme.md.
     template <class T>
     class ThemeStates {
     public:
@@ -64,8 +65,10 @@ namespace hello::daw {
             return m_values == RHS.m_values;
         }
 
-        /// Reads \a value with \a read, a function from a ThemeValue and a ThemeError pointer to
-        /// an optional T, for one value or for each state of a group.
+        /// Reads \a value as one value or as a group of states, each by \a read, a function from
+        /// a ThemeValue and a ThemeError pointer to an optional T. Returns \c std::nullopt, with
+        /// the reason in \a error, if a value is malformed, a key is not a state, the group has
+        /// more than eight values, or the group omits \c up.
         template <class Read>
         static std::optional<ThemeStates> read(const ThemeValue &value, Read read,
                                                ThemeError *error) {
@@ -92,9 +95,10 @@ namespace hello::daw {
                                         .arg(argument.key));
                     }
                 } else if (index >= given.size()) {
-                    return fail(error, argument.value.position,
-                                QCoreApplication::translate("hello::daw::ThemeStates",
-                                                            "There are only eight button states."));
+                    return fail(
+                        error, argument.value.position,
+                        QCoreApplication::translate("hello::daw::ThemeStates",
+                                                    "A group has at most eight button states."));
                 }
                 given[index] = read(argument.value, error);
                 if (!given[index]) {
@@ -107,7 +111,7 @@ namespace hello::daw {
                                                         "The state \"up\" is required."));
             }
 
-            // Each state falls back to one that precedes it, so one pass in order suffices.
+            // Because each state falls back to a preceding state, a single pass in order suffices.
             ThemeStates states;
             for (size_t i = 0; i < given.size(); ++i) {
                 states.m_values[i] =

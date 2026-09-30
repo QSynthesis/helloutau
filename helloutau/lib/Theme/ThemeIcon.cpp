@@ -23,8 +23,9 @@ namespace hello::daw {
 
         constexpr QStringView Suffix = u".svgx";
 
-        // The contents of the files read, by path, and the generation of the images drawn,
-        // which clearCache() advances so that the images in QPixmapCache are no longer found
+        // The cached file contents by path, and the generation of the rendered images.
+        // clearCache() increments the generation, so that lookups in QPixmapCache no longer
+        // match the earlier images.
         struct FileCache {
             QMutex mutex;
             QHash<QString, QByteArray> files;
@@ -36,7 +37,8 @@ namespace hello::daw {
             return cache;
         }
 
-        // The contents of \a path, or nothing if it cannot be read, which is reported once
+        // Returns the contents of \a path, or an empty array if the file cannot be read. The
+        // failure is reported once per path.
         QByteArray fileData(const QString &path, quint64 *generation) {
             auto &cache = fileCache();
             QMutexLocker lock(&cache.mutex);
@@ -66,8 +68,8 @@ namespace hello::daw {
             return result + u'"';
         }
 
-        // \a states as a group that gives only the states that differ from their fallback, which
-        // ThemeStates reads back to the same values
+        // Writes \a states as a group that lists only the states whose values differ from their
+        // fallback states. ThemeStates::read() restores the same values from the group.
         template <class T, class Write>
         QString writeStates(const ThemeStates<T> &states, Write write) {
             QStringList parts{write(states.value(ThemeButtonState::Up))};
@@ -106,7 +108,7 @@ namespace hello::daw {
     QString ThemeIcon::fileName() const {
         const auto text =
             writeStates(files, quoted) + QStringLiteral(", ") + writeStates(colors, writeColor);
-        // Encoded, so that the name has no separator of folders and no quote of a style sheet
+        // Percent-encoded, so that the name contains no path separator and no style sheet quote
         return QString::fromLatin1(QUrl::toPercentEncoding(text)) + Suffix;
     }
 
@@ -191,7 +193,7 @@ namespace hello::daw {
             return;
         }
         image.setDevicePixelRatio(ratio);
-        // Centered where the image keeps the aspect of the file
+        // Centered in \a rect, because the image preserves the aspect ratio of the file
         const auto size = image.deviceIndependentSize();
         const QPointF origin(rect.x() + (rect.width() - size.width()) / 2,
                              rect.y() + (rect.height() - size.height()) / 2);
@@ -231,7 +233,8 @@ namespace hello::daw {
             return result;
         }
 
-        // QtSvg reads no alpha in a color written #RRGGBB; the alpha applies to the whole icon.
+        // QtSvg reads no alpha channel from a color in the form #RRGGBB. The alpha therefore
+        // applies to the whole icon as the opacity of the painter.
         data.replace("currentColor", color.name(QColor::HexRgb).toLatin1());
         QSvgRenderer renderer(data);
         if (!renderer.isValid()) {
@@ -301,7 +304,7 @@ namespace hello::daw {
         if (m_text.isValid()) {
             return m_text;
         }
-        // The text of a window, as the icon goes with no text that it knows of
+        // The window text color, because no text color is associated with the icon
         const bool disabled =
             state == ThemeButtonState::Disabled || state == ThemeButtonState::CheckedDisabled;
         return QGuiApplication::palette().color(disabled ? QPalette::Disabled : QPalette::Active,

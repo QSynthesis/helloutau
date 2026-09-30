@@ -9,7 +9,7 @@ namespace hello::daw {
                    c != u'\'';
         }
 
-        // Reads the syntax by recursive descent. The first error ends the reading.
+        // A recursive descent parser of the syntax. Parsing stops at the first error.
         class Reader {
         public:
             explicit Reader(QStringView text) : m_text(text) {
@@ -42,7 +42,7 @@ namespace hello::daw {
                 return sequence;
             }
 
-            // The arguments up to \a close, or to the end of the text if \a close is null
+            // Parses the arguments up to \a close, or up to the end of the text if \a close is null
             std::optional<std::vector<ThemeArgument>> arguments(QChar close) {
                 std::vector<ThemeArgument> result;
                 skipBlanks();
@@ -89,7 +89,7 @@ namespace hello::daw {
                     }
                     return fail(
                         m_at, close.isNull()
-                                  ? ThemeSyntax::tr("A comma or the end was expected.")
+                                  ? ThemeSyntax::tr("A comma or the end of the text was expected.")
                                   : ThemeSyntax::tr("A comma or \"%1\" was expected.").arg(close));
                 }
             }
@@ -158,7 +158,7 @@ namespace hello::daw {
                     return value;
                 }
                 if (!isWordCharacter(c)) {
-                    return fail(start, ThemeSyntax::tr("\"%1\" is not expected here.").arg(c));
+                    return fail(start, ThemeSyntax::tr("Unexpected character \"%1\".").arg(c));
                 }
                 while (!atEnd() && isWordCharacter(peek())) {
                     ++m_at;
@@ -190,7 +190,7 @@ namespace hello::daw {
                     ++m_at;
                 }
                 if (atEnd()) {
-                    return fail(start, ThemeSyntax::tr("The string is not closed."));
+                    return fail(start, ThemeSyntax::tr("The string is not terminated."));
                 }
                 ++m_at;
                 ThemeValue value;
@@ -245,7 +245,7 @@ namespace hello::daw {
             reader.skipBlanks();
             if (!reader.atEnd()) {
                 value.reset();
-                reader.error = {reader.at(), tr("Nothing may follow the value.")};
+                reader.error = {reader.at(), tr("Unexpected text after the value.")};
             }
         }
         if (!value && error) {

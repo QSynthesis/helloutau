@@ -9,10 +9,11 @@
 
 namespace hello::daw {
 
-    /// The icon engine that draws a ThemeIcon, in the state that QIcon passes or in a fixed one.
+    /// The icon engine that draws a ThemeIcon, in the state that QIcon passes or in a fixed
+    /// state.
     ///
-    /// Its icon name is the file name that describes the icon, so that ThemeIcon::of() finds the
-    /// icon of a QIcon through public interfaces.
+    /// The icon name of the engine is the file name that encodes the icon, so that
+    /// ThemeIcon::of() retrieves the icon from a QIcon through public interfaces.
     class ThemeIconEngine : public QIconEngine {
     public:
         explicit ThemeIconEngine(ThemeIcon icon,

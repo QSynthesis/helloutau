@@ -51,7 +51,7 @@ private Q_SLOTS:
         QCOMPARE(pen.arguments[4].value.kind, ThemeValue::String);
         QCOMPARE(pen.arguments[4].value.text, QStringLiteral("A, B"));
 
-        // Blanks separate a sequence, and the text round-trips.
+        // Blanks separate the items of a sequence, and toString() restores the original text.
         const auto size = parsed(QStringLiteral("  2px   3px "));
         QCOMPARE(size.kind, ThemeValue::Sequence);
         QCOMPARE(size.items.size(), size_t(2));
@@ -74,14 +74,14 @@ private Q_SLOTS:
         QCOMPARE(errorOf(QStringLiteral("a) b")), 1);
         QCOMPARE(errorOf(QStringLiteral("f(,)")), 2);
 
-        // The arguments that a style sheet passes without the parentheses
+        // Arguments without the enclosing parentheses, as passed from a style sheet
         const auto arguments = ThemeSyntax::parseArguments(QStringLiteral("white, 1px"));
         QVERIFY(arguments);
         QCOMPARE(arguments->size(), size_t(2));
     }
 
-    // Missing states fall back: over to up, down to over, disabled to up, the checked ones to
-    // their unchecked counterparts through up2.
+    // Omitted states fall back: over to up, down to over, disabled to up, and the checked states
+    // in the same way among themselves, with up2 falling back to up.
     void button_states_fall_back() {
         using S = ThemeButtonState;
         auto states = ThemeStates<QColor>::read(
@@ -96,12 +96,12 @@ private Q_SLOTS:
         QCOMPARE(states->value(S::CheckedDown), QColor(Qt::green));
         QCOMPARE(states->value(S::CheckedDisabled), QColor(Qt::green));
 
-        // Positional states in the order of the keys; a single value for all
+        // Positional states follow the order of the keys. A single value applies to all states.
         states = ThemeStates<QColor>::read(parsed(QStringLiteral("(red, lime, blue)")), readColor,
                                            nullptr);
         QCOMPARE(states->value(S::Over), QColor(Qt::green));
         QCOMPARE(states->value(S::CheckedDown), QColor(Qt::red));
-        // Down falls back to over, not to up
+        // Down falls back to over, not to up.
         states = ThemeStates<QColor>::read(parsed(QStringLiteral("(red, over=lime)")), readColor,
                                            nullptr);
         QCOMPARE(states->value(S::Down), QColor(Qt::green));
@@ -153,7 +153,8 @@ private Q_SLOTS:
         QCOMPARE(converted(QStringLiteral("A { image: url(@/icons/a.png) }")),
                  QStringLiteral("A { image: url(C:/themes/dark/icons/a.png) }"));
 
-        // Lengths scale, fonts by their own factor; strings, comments and names are left alone.
+        // Lengths are scaled, and font sizes are scaled by their own factor. Strings, comments
+        // and names remain unchanged.
         QCOMPARE(converted(QStringLiteral("A { width: 10px; font-size: 12px; --pen: qpen(red, "
                                           "1.5px); icon: url(\"12px.png\") /* 4px */; b2px: 1 }"),
                            2, 1.5),
@@ -161,7 +162,7 @@ private Q_SLOTS:
                                 "3px); icon: url(\"12px.png\") /* 4px */; b2px: 1 }"));
         QCOMPARE(converted(QStringLiteral("A { margin: -3px 4px; x: a2px }"), 2),
                  QStringLiteral("A { margin: -6px 8px; x: a2px }"));
-        // Unchanged at a factor of one
+        // A scale factor of one leaves lengths unchanged.
         QCOMPARE(converted(QStringLiteral("A { width: 1.5px }")),
                  QStringLiteral("A { width: 1.5px }"));
     }

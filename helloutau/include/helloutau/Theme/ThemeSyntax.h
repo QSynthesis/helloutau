@@ -14,16 +14,16 @@ namespace hello::daw {
 
     struct ThemeArgument;
 
-    /// One value of the value syntax of themes, as ThemeSyntax reads it. See the section on the
+    /// A value of the value syntax of themes, as parsed by ThemeSyntax. See the section on the
     /// syntax in docs/Theme.md.
     struct HELLOUTAU_THEME_EXPORT ThemeValue {
         enum Kind {
             /// A run of characters other than blanks, commas, parentheses, equal signs and
             /// quotes: \c white, \c #FFF, \c 1px, \c solid.
             Word,
-            /// A quoted text, without its quotes and escapes.
+            /// A quoted string, stored without its quotes and escape characters.
             String,
-            /// A word followed at once by parentheses: \c qpen(white, 1px).
+            /// A word immediately followed by parentheses: \c qpen(white, 1px).
             Function,
             /// Parenthesized values without a name, such as a group of button states.
             Group,
@@ -42,37 +42,39 @@ namespace hello::daw {
         /// The values of a sequence.
         std::vector<ThemeValue> items;
 
-        /// The offset of the value in the text it was read from, for messages.
+        /// The offset of the value in the source text, for error messages.
         qsizetype position = 0;
 
-        /// Returns the value as it would be written.
+        /// Returns the value in its written form.
         QString toString() const;
     };
 
-    /// An argument of a function or a group: a value, with the key it was given by, if any.
+    /// An argument of a function or a group: a value and its optional key.
     struct HELLOUTAU_THEME_EXPORT ThemeArgument {
         /// Empty for a positional argument.
         QString key;
         ThemeValue value;
     };
 
-    /// A problem in a value, at an offset in its text.
+    /// An error in a value, with its offset in the source text.
     struct ThemeError {
         qsizetype position = 0;
         QString message;
     };
 
-    /// Reads the value syntax of themes. Positional arguments precede keyword arguments, and a
-    /// positional argument after a keyword argument is an error, as is anything unbalanced or
-    /// left over.
+    /// The parser of the value syntax of themes. Positional arguments precede keyword arguments.
+    /// A positional argument after a keyword argument, unbalanced delimiters and trailing text
+    /// are errors.
     class HELLOUTAU_THEME_EXPORT ThemeSyntax {
         Q_DECLARE_TR_FUNCTIONS(hello::daw::ThemeSyntax)
     public:
-        /// Reads \a text as one value, or returns \c std::nullopt with the reason in \a error.
+        /// Parses \a text as one value. Returns \c std::nullopt, with the reason in \a error, if
+        /// \a text is malformed.
         static std::optional<ThemeValue> parse(QStringView text, ThemeError *error = nullptr);
 
-        /// Reads \a text as the arguments of a function, without its parentheses, as a style
-        /// sheet passes them for \c func(...).
+        /// Parses \a text as the arguments of a function without the enclosing parentheses, in
+        /// the form in which Qt passes the arguments of \c func(...) from a style sheet. Returns
+        /// \c std::nullopt, with the reason in \a error, if \a text is malformed.
         static std::optional<std::vector<ThemeArgument>>
             parseArguments(QStringView text, ThemeError *error = nullptr);
     };

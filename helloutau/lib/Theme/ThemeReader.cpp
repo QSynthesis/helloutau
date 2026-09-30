@@ -20,7 +20,7 @@ namespace hello::daw {
             return std::nullopt;
         }
 
-        // A color component: a number, or a percentage of \a full
+        // Reads a color component: a number, or a percentage of \a full
         std::optional<double> component(const ThemeValue &value, double full) {
             if (value.kind != ThemeValue::Word) {
                 return std::nullopt;
@@ -34,7 +34,7 @@ namespace hello::daw {
             return ok ? std::optional<double>(number) : std::nullopt;
         }
 
-        // An alpha: 0 to 255, a fraction written with a point, or a percentage
+        // Reads an alpha value: 0 to 255, a fraction written with a decimal point, or a percentage
         std::optional<double> alpha(const ThemeValue &value) {
             const auto number = component(value, 255);
             if (number && value.kind == ThemeValue::Word && !value.text.endsWith(u'%') &&
@@ -67,19 +67,19 @@ namespace hello::daw {
         if ((model != u"rgb" && model != u"hsv" && model != u"hsl") ||
             value.arguments.size() != count) {
             return fail<QColor>(error, value,
-                                tr("A color function is rgb, hsv or hsl with three numbers, or "
-                                   "rgba, hsva or hsla with four."));
+                                tr("A color function must be rgb, hsv or hsl with three "
+                                   "components, or rgba, hsva or hsla with four components."));
         }
         double parts[4] = {0, 0, 0, 255};
         for (size_t i = 0; i < count; ++i) {
             const auto &argument = value.arguments[i];
-            // The hue is in degrees; the rest range up to 255.
+            // The hue is in degrees. The other components range up to 255.
             const auto part =
                 i == 3 ? alpha(argument.value)
                        : component(argument.value, model != u"rgb" && i == 0 ? 359 : 255);
             if (!argument.key.isEmpty() || !part) {
                 return fail<QColor>(error, argument.value,
-                                    tr("A color component is a number or a percentage."));
+                                    tr("A color component must be a number or a percentage."));
             }
             parts[i] = *part;
         }
@@ -132,21 +132,21 @@ namespace hello::daw {
         bool ok = false;
         const int result = value.kind == ThemeValue::Word ? value.text.toInt(&ok) : 0;
         return ok ? std::optional<int>(result)
-                  : fail<int>(error, value, tr("A whole number was expected."));
+                  : fail<int>(error, value, tr("An integer was expected."));
     }
 
     std::optional<bool> ThemeReader::boolean(const ThemeValue &value, ThemeError *error) {
         if (value.kind == ThemeValue::Word && (value.text == u"true" || value.text == u"false")) {
             return value.text == u"true";
         }
-        return fail<bool>(error, value, tr("true or false was expected."));
+        return fail<bool>(error, value, tr("A boolean value (true or false) was expected."));
     }
 
     std::optional<QString> ThemeReader::text(const ThemeValue &value, ThemeError *error) {
         if (value.kind == ThemeValue::String || value.kind == ThemeValue::Word) {
             return value.text;
         }
-        return fail<QString>(error, value, tr("A text was expected."));
+        return fail<QString>(error, value, tr("A string was expected."));
     }
 
 }

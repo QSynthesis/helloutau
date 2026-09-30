@@ -8,7 +8,7 @@ using namespace hello::daw;
 
 namespace {
 
-    // A widget with a property of each type, as a control declares them
+    // A widget with a property of each type, declared as in a control
     class Probe : public QWidget {
         Q_OBJECT
         Q_PROPERTY(hello::daw::ThemePen linePen MEMBER linePen)
@@ -22,7 +22,7 @@ namespace {
         ThemeShadow shadow;
     };
 
-    // The value of a property of \a probe after applying \a sheet
+    // Applies the declarations \a sheet to \a probe
     void apply(Probe &probe, const QString &sheet) {
         probe.setStyleSheet(QStringLiteral("Probe { %1 }").arg(sheet));
         probe.ensurePolished();
@@ -38,9 +38,9 @@ private Q_SLOTS:
         ThemeTypes::registerConversions();
     }
 
-    // The mechanism the theme system rests on: a style sheet assigns a custom type through the
-    // conversions registered for it. See the section on assigning custom types in
-    // docs/Theme.md.
+    // The mechanism on which the theme system is based: a style sheet assigns a value of a
+    // custom type through the conversions registered for the type. See the section on assigning
+    // custom types in docs/Theme.md.
     void a_style_sheet_assigns_the_types() {
         Probe probe;
         apply(probe, QStringLiteral(
@@ -77,7 +77,7 @@ private Q_SLOTS:
         QVERIFY(probe.shadow.isVisible());
     }
 
-    // A plain value is the first argument; the function form may also come as a word.
+    // A plain value is read as the first argument. Qt may also pass the function form as a word.
     void a_word_is_the_first_argument() {
         Probe probe;
         apply(probe, QStringLiteral("qproperty-linePen: red;"));
@@ -85,7 +85,7 @@ private Q_SLOTS:
         QCOMPARE(probe.linePen.width, 1.0);
     }
 
-    // A value that cannot be read leaves the property as it was, with a warning.
+    // A malformed value is reported with a warning, and the property keeps its previous value.
     void a_malformed_value_changes_nothing() {
         Probe probe;
         probe.linePen.width = 5;
@@ -97,7 +97,7 @@ private Q_SLOTS:
         apply(probe, QStringLiteral("qproperty-linePen: qpen(red, 1px, wavy);"));
         QCOMPARE(probe.linePen.width, 5.0);
 
-        // Another type's function is not taken for this one.
+        // The function of another type is rejected.
         QTest::ignoreMessage(QtWarningMsg, QRegularExpression(QStringLiteral("qpen was expected")));
         apply(probe, QStringLiteral("qproperty-linePen: qfont(red);"));
         QCOMPARE(probe.linePen.width, 5.0);
@@ -122,7 +122,7 @@ private Q_SLOTS:
         QVERIFY(font);
         QCOMPARE(font->pointSize, 12.0);
         QCOMPARE(font->weight, 350);
-        // What is not written stays as the base font has it.
+        // Omitted attributes keep the values of the base font.
         QFont base;
         base.setPixelSize(20);
         const auto colorOnly = ThemeSyntax::parseArguments(QStringLiteral("red"));
@@ -131,7 +131,7 @@ private Q_SLOTS:
 };
 
 int main(int argc, char *argv[]) {
-    // Runs without a display
+    // The offscreen platform requires no display.
     qputenv("QT_QPA_PLATFORM", "offscreen");
     QApplication app(argc, argv);
     test_ThemeTypes test;

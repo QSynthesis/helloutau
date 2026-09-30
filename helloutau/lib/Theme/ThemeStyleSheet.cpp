@@ -128,9 +128,9 @@ namespace hello::daw {
                 copy(1);
             }
 
-            // svg(...) becomes url("<name>.svgx") naming a ThemeIcon, its files written @/...
-            // taken in the folder of the style sheet. One that cannot be read is reported and left
-            // as written, which Qt ignores.
+            // Converts svg(...) into url("<name>.svgx"), which encodes a ThemeIcon, and resolves
+            // its files written @/... against the directory of the style sheet. A malformed
+            // svg(...) is reported and left unchanged, and Qt ignores it.
             void icon() {
                 const qsizetype open = m_at + 4;
                 const qsizetype close = closingParenthesis(open);
@@ -160,7 +160,8 @@ namespace hello::daw {
                 m_at = close + 1;
             }
 
-            // The offset of the parenthesis that closes the one before \a at, or -1
+            // Returns the offset of the parenthesis that closes the parenthesis preceding \a at,
+            // or -1 if the parenthesis is not closed
             qsizetype closingParenthesis(qsizetype at) const {
                 int depth = 1;
                 while (at < m_text.size()) {
@@ -180,7 +181,7 @@ namespace hello::daw {
                 return -1;
             }
 
-            // A number, scaled if a length in pixels follows
+            // Copies a number, scaled if the number is a length in pixels
             void length() {
                 qsizetype end = m_at;
                 while (end < m_text.size() && (m_text[end].isDigit() || m_text[end] == u'.')) {
@@ -199,7 +200,7 @@ namespace hello::daw {
                 m_at = end;
             }
 
-            // A selector: :not(:x) becomes :!x
+            // Copies a selector, with :not(:x) converted to :!x
             void selectorPart() {
                 if (startsWith(u":not(")) {
                     qsizetype at = m_at + 5;

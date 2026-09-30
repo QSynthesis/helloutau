@@ -14,15 +14,16 @@ using namespace hello::daw;
 
 namespace {
 
-    // The description files beside the test: good holds two themes, dark extending light, over a
-    // common part, in two files; bad holds a cycle, a missing variable and file, and no JSON;
-    // icons gives a button an icon in a color of each theme.
+    // The description files in the test resources. The set good defines two themes, dark
+    // extending light, above a common part, in two files. The set bad contains a cycle, a missing
+    // variable, a missing file and a file that is not JSON. The set icons assigns a button an
+    // icon in a different color per theme.
     QString themes(const char *set) {
         return QDir(QString::fromUtf8(TEST_RESOURCE_DIRECTORY))
             .absoluteFilePath(QStringLiteral("themes/") + QString::fromLatin1(set));
     }
 
-    // The color in the middle of an icon of 16 pixels
+    // The color at the center of a 16-pixel icon
     QColor colorOf(const QIcon &icon) {
         return icon.pixmap(QSize(16, 16), 1.0).toImage().pixelColor(8, 8);
     }
@@ -39,8 +40,9 @@ private Q_SLOTS:
         QCOMPARE(manager.themes(), (QStringList{QStringLiteral("dark"), QStringLiteral("light")}));
     }
 
-    // _common first; within a theme by priority; each file relative to its folder; variables of
-    // the whole chain, the derived theme overriding its base
+    // The sheets of _common come first, and the sheets within a theme are ordered by priority.
+    // Each file is resolved against its own directory. The variables come from the whole chain,
+    // and the derived theme overrides its base.
     void a_style_sheet_is_assembled_along_the_chain() {
         ThemeManager manager;
         manager.addSearchPath(themes("good"));
@@ -72,7 +74,8 @@ private Q_SLOTS:
         QVERIFY(scaled.contains(QStringLiteral("R { border: 4px; }")));
     }
 
-    // An installed widget follows the theme, once per series of changes, until it is destroyed.
+    // An installed widget receives the style sheet of the current theme, once per series of
+    // changes, until it is destroyed.
     void installed_widgets_follow_the_theme() {
         ThemeManager manager;
         manager.addSearchPath(themes("good"));
@@ -87,14 +90,14 @@ private Q_SLOTS:
         QVERIFY(widget->styleSheet().isEmpty());
         QTRY_VERIFY(widget->styleSheet().contains(QStringLiteral("qshadow")));
 
-        // A destroyed widget is forgotten before the next refresh.
+        // A destroyed widget is removed before the next refresh.
         manager.setCurrentTheme(QStringLiteral("light"));
         widget.reset();
         QTest::qWait(10);
     }
 
-    // A plain button whose icon the style sheet gives follows the theme, and the files as they
-    // are when the themes are read again, without code of its own.
+    // A plain button whose icon is assigned by the style sheet reflects the current theme, and
+    // the current icon files after a reload, without code specific to themes.
     void installed_icons_follow_the_theme() {
         QTemporaryDir dir;
         for (const auto name : {"icons.res.json", "square.svg"}) {
@@ -131,14 +134,14 @@ private Q_SLOTS:
         manager.setCurrentTheme(QStringLiteral("a"));
         QTest::ignoreMessage(QtWarningMsg, QRegularExpression(QStringLiteral("cycle")));
         QTest::ignoreMessage(QtWarningMsg, QRegularExpression(QStringLiteral("missing")));
-        // An unknown variable is left as written.
+        // An unknown variable is left unchanged.
         QCOMPARE(manager.styleSheet({QStringLiteral("x")}),
                  QStringLiteral("X { color: ${missing}; }"));
     }
 };
 
 int main(int argc, char *argv[]) {
-    // Runs without a display
+    // The offscreen platform requires no display.
     qputenv("QT_QPA_PLATFORM", "offscreen");
     QApplication app(argc, argv);
     test_ThemeManager test;

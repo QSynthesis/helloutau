@@ -20,16 +20,18 @@ namespace hello::daw {
             if (!argument.key.isEmpty()) {
                 const auto found = std::find(names.begin(), names.end(), argument.key);
                 if (found == names.end()) {
-                    return fail(argument.value.position,
-                                tr("\"%1\" is not a parameter here.").arg(argument.key));
+                    return fail(
+                        argument.value.position,
+                        tr("\"%1\" is not a parameter of this function.").arg(argument.key));
                 }
                 index = size_t(found - names.begin());
             } else if (index >= names.size()) {
-                return fail(argument.value.position, tr("There are too many values."));
+                return fail(argument.value.position, tr("There are too many arguments."));
             }
             if (bound[index]) {
-                return fail(argument.value.position,
-                            tr("\"%1\" is given twice.").arg(*(names.begin() + index)));
+                return fail(
+                    argument.value.position,
+                    tr("\"%1\" is specified more than once.").arg(*(names.begin() + index)));
             }
             bound[index] = &argument.value;
         }

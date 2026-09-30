@@ -15,8 +15,8 @@ using namespace hello::daw;
 
 namespace {
 
-    // The icons beside the test: square fills the whole icon with currentColor, half its left
-    // half.
+    // The icons in the test resources: square fills the whole icon with currentColor, and half
+    // fills the left half.
     QString icons() {
         return QDir(QString::fromUtf8(TEST_RESOURCE_DIRECTORY))
             .absoluteFilePath(QStringLiteral("icons"));
@@ -36,7 +36,7 @@ namespace {
         return icon.pixmap(QSize(16, 16), 1.0, mode, state).toImage();
     }
 
-    // The color in the left half, and whether the right half is empty
+    // The color of the left half, and whether the right half is empty
     QColor leftOf(const QImage &image) {
         return image.pixelColor(4, 8);
     }
@@ -56,8 +56,8 @@ class test_ThemeIcon : public QObject {
     Q_OBJECT
 
 private Q_SLOTS:
-    // Missing states fall back as for every field with button states; auto and a missing color
-    // follow the text.
+    // Omitted states fall back as in every field with button states. The keyword auto and an
+    // omitted color select the text color.
     void an_icon_is_read_with_its_states() {
         const auto icon = read(
             QStringLiteral("(\"a.svg\", up2=\"b.svg\"), (#FF0000, over=#00FF00, disabled=auto)"));
@@ -79,7 +79,8 @@ private Q_SLOTS:
         QVERIFY(!read(QStringLiteral("a.svg, notacolor"), &error));
     }
 
-    // The name has no separator of folders and no quote, whatever the paths hold.
+    // The name contains no path separator and no quote, regardless of the characters in the
+    // paths.
     void the_file_name_describes_the_icon() {
         ThemeIcon icon;
         const auto path =
@@ -97,7 +98,8 @@ private Q_SLOTS:
         QVERIFY(!ThemeIcon::fromFileName(u"icon.png"));
     }
 
-    // QIcon passes its mode and state: active and selected as over, disabled, on as checked.
+    // QIcon passes its mode and state, mapped as follows: active and selected to over, disabled
+    // to disabled, and on to checked.
     void qicon_chooses_the_engine_by_the_suffix() {
         const auto icon = read(quoted(icons() + QStringLiteral("/square.svg")) +
                                QStringLiteral(", (#FF0000, over=#00FF00, disabled=#800000FF)"));
@@ -124,7 +126,7 @@ private Q_SLOTS:
         QVERIFY(!rightIsEmpty(imageOf(qicon)));
     }
 
-    // A control passes the state that QIcon cannot, such as pressed, and the color of its text.
+    // A control passes a state that QIcon cannot represent, such as pressed, and its text color.
     void for_state_fixes_the_state_and_the_text() {
         const auto icon = read(quoted(icons() + QStringLiteral("/square.svg")) +
                                QStringLiteral(", (auto, down=#00FF00)"));
@@ -146,8 +148,8 @@ private Q_SLOTS:
         QVERIFY(!ThemeIcon::of(other));
     }
 
-    // svg(...) becomes a url, its files @/... in the folder of the style sheet; comments and
-    // strings stay as written.
+    // svg(...) is converted into a url, with its @/... files resolved against the directory of
+    // the style sheet. Comments and strings remain unchanged.
     void a_style_sheet_gives_an_icon() {
         ThemeStyleSheet::Options options;
         options.directory = icons();
@@ -171,7 +173,7 @@ private Q_SLOTS:
         QCOMPARE(ThemeStyleSheet::preprocess(bad, options), QString::fromUtf16(bad));
     }
 
-    // The files are read once, until the cache is cleared.
+    // The files are read once and are read again only after the cache is cleared.
     void clearing_the_cache_reads_the_files_again() {
         QTemporaryDir dir;
         const auto path = dir.filePath(QStringLiteral("icon.svg"));
@@ -190,7 +192,7 @@ private Q_SLOTS:
 };
 
 int main(int argc, char *argv[]) {
-    // Runs without a display
+    // The offscreen platform requires no display.
     qputenv("QT_QPA_PLATFORM", "offscreen");
     QApplication app(argc, argv);
     test_ThemeIcon test;

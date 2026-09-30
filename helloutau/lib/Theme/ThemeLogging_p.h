@@ -5,7 +5,7 @@
 
 namespace hello::daw {
 
-    /// The category of the problems found in themes, \c hello.theme.
+    /// The logging category of errors in themes, \c hello.theme.
     Q_DECLARE_LOGGING_CATEGORY(lcTheme)
 
 }
