@@ -11,7 +11,7 @@
 | 模块 | 命名空间 | 产出 | 依赖 |
 |---|---|---|---|
 | `hellokit/` | `hello::kit` | `HelloKitDocument`、今后的 `HelloKitCore` 等 | Qt Core、stdutau、stdcorelib（私有）、substate（私有，仅 `HelloKitEditBase` 与 `HelloKitEdit`） |
-| `helloutau/` | `hello::daw` | `HelloUtauEditor` 等，以及 `HelloUtau` 可执行文件 | Qt Widgets、hellokit |
+| `helloutau/` | `hello::daw` | `HelloUtauEditor` 等、随应用提供的原生插件，以及 `helloutau` 可执行文件 | Qt Widgets、hellokit、stdcorelib.plugin（私有） |
 
 `hello` 仅作为外层命名空间，代码一律位于第二层。不要在 `hello` 中直接声明内容，也不要再增加第三层。
 
@@ -19,7 +19,7 @@
 
 **`hellokit` 不链接 QtWidgets。** 界面属于应用程序，核心逻辑不依赖 GUI 工具包才便于测试。
 
-**应用同样由库和一个薄驱动组成**，结构参照 lldb 的 `liblldb` 与 `tools/driver`。`tools/driver/main.cpp` 只包含入口，其余逻辑均位于库中，因此应用侧的逻辑同样可以测试：可执行文件无法链接进测试程序，而库可以。
+**应用同样由库和一个薄驱动组成**，结构参照 lldb 的 `liblldb` 与 `tools/driver`。`tools/driver/main.cpp` 只包含入口，其余逻辑均位于库中，因此应用侧的逻辑同样可以测试：可执行文件无法链接进测试程序，而库可以。入口只构造加载器 `AppLoader` 并运行，创建编辑器、打开窗口由 Core 插件负责，见 [`Plugins.md`](Plugins.md)。
 
 **不涉及界面的逻辑放在 `hellokit`，即使只有应用使用它。** 打开、保存、判断是否已修改的 `ProjectDocument` 属于 `HelloKitEdit`：它只需 Qt Core，无界面工具同样可以使用；需要询问用户之处以回调接口交给界面一侧实现，如 `UstCharsetSelector`、`VoiceBankCharsetSelector`。
 
@@ -44,7 +44,7 @@ hellokit/lib/Document/PayloadCodec.cpp                ← 目标 HelloKitDocumen
 
 helloutau/include/helloutau/Editor/ProjectWindow.h
 helloutau/lib/Editor/ProjectWindow.cpp           ← 目标 HelloUtauEditor
-helloutau/plugins/                               ← 编辑界面扩展插件
+helloutau/plugins/Core/CorePlugin.cpp            ← 目标 coreplugin，输出到 lib/plugins/helloutau/Core
 helloutau/tools/driver/main.cpp                  ← 目标 helloutau
 ```
 

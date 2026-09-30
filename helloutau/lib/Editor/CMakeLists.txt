@@ -22,10 +22,24 @@ helloutau_add_library(${PROJECT_NAME} SHARED
     SOURCES ${_src} ${_hdr} ${_actions_src} ${_themes_qrc}
     LINKS HelloUtauWidgets HelloUtauTheme HelloUtauAudio HelloKitEdit HelloKitDocument
           HelloKitVoiceBank HelloKitSynth
-    LINKS_PRIVATE stdcorelib::stdcorelib QActionKit::Widgets
+    LINKS_PRIVATE stdcorelib::stdcorelib stdcorelib::plugin QActionKit::Widgets
     QT_LINKS Core Gui Widgets
     INCLUDE_PRIVATE ../../include/** **
     MACRO_PREFIX HELLOUTAU_EDITOR
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+
+# Where AppLoader finds the plugins that come with the application, relative to the directory of
+# the program: ../lib/plugins/helloutau, or ../Plugins in a macOS bundle. The build and the
+# installation lay them out alike.
+file(RELATIVE_PATH _builtin_plugins ${HELLOUTAU_BUILD_RUNTIME_DIR} ${HELLOUTAU_BUILD_PLUGINS_DIR})
+file(RELATIVE_PATH _installed_plugins
+    /${HELLOUTAU_INSTALL_RUNTIME_DIR} /${HELLOUTAU_INSTALL_PLUGINS_DIR})
+if(NOT _builtin_plugins STREQUAL _installed_plugins)
+    message(FATAL_ERROR "The plugins are at ${_builtin_plugins} from the program in the build "
+        "but at ${_installed_plugins} in the installation.")
+endif()
+target_compile_definitions(${PROJECT_NAME} PRIVATE
+    HELLOUTAU_BUILTIN_PLUGINS_PATH="${_builtin_plugins}"
+)

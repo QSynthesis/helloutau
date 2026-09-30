@@ -12,9 +12,16 @@ set(HELLOUTAU_INSTALL_CONFIG_TEMPLATE
     "${CMAKE_CURRENT_LIST_DIR}/${HELLOUTAU_INSTALL_NAME}Config.cmake.in"
 )
 
-# Keep the plugin layout: <lib>/plugins/<name>.
-set(HELLOUTAU_BUILD_PLUGINS_DIR ${QMSETUP_BUILD_DIR}/lib/plugins/helloutau)
-set(HELLOUTAU_INSTALL_PLUGINS_DIR ${CMAKE_INSTALL_LIBDIR}/plugins/helloutau)
+# Keep the plugin layout: <lib>/plugins/<name>. A macOS bundle keeps that of qmsetup,
+# Contents/Plugins beside Contents/MacOS of the program.
+if(NOT (APPLE AND HELLOUTAU_MACOSX_BUNDLE_NAME))
+    set(HELLOUTAU_BUILD_PLUGINS_DIR ${QMSETUP_BUILD_DIR}/lib/plugins/helloutau)
+    set(HELLOUTAU_INSTALL_PLUGINS_DIR ${CMAKE_INSTALL_LIBDIR}/plugins/helloutau)
+endif()
+
+# The interface ID of the native plugins, the same as hello::daw::AppLoader::pluginIid, which
+# test_AppLoader checks by loading a plugin built with this one.
+set(HELLOUTAU_PLUGIN_IID "org.OpenVPI.HelloUtau.Plugin")
 
 # Windows resource metadata. The libraries share the description of the module. A program is
 # described by the DESCRIPTION of the project() of its own directory, which the function reads in
