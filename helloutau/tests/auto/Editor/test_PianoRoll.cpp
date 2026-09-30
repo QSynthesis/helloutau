@@ -1,6 +1,7 @@
 #include <cmath>
 
 #include <QtCore/QTimer>
+#include <QtGui/QPalette>
 #include <QtTest/QSignalSpy>
 #include <QtTest/QTest>
 #include <QtWidgets/QApplication>
@@ -104,6 +105,22 @@ private:
     }
 
 private Q_SLOTS:
+    void canvas_colors_use_the_active_palette_group() {
+        kit::ProjectSession session(threeNotes());
+        PianoRoll roll(&session);
+        auto palette = roll.palette();
+        palette.setColor(QPalette::Active, QPalette::Highlight, QColor(255, 0, 0));
+        palette.setColor(QPalette::Inactive, QPalette::Highlight, QColor(0, 0, 255, 0));
+        palette.setColor(QPalette::Active, QPalette::Text, QColor(0, 255, 0));
+        palette.setColor(QPalette::Inactive, QPalette::Text, QColor(0, 0, 0, 0));
+        roll.setPalette(palette);
+
+        QCOMPARE(roll.noteColor(), QColor(255, 0, 0));
+        QCOMPARE(roll.parameterColor(), QColor(255, 0, 0));
+        QCOMPARE(roll.pitchColor(), QColor(0, 255, 0));
+        QCOMPARE(roll.unsampledLyricColor(), QColor(0, 255, 0));
+    }
+
     void a_note_is_hit_where_it_is_drawn() {
         kit::ProjectSession session(threeNotes());
         PianoRoll roll(&session);

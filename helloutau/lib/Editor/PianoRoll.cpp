@@ -910,7 +910,8 @@ namespace hello::daw {
 
     QColor PianoRoll::noteColor() const {
         stdc_impl_t;
-        return impl.noteColor.isValid() ? impl.noteColor : palette().color(QPalette::Highlight);
+        return impl.noteColor.isValid() ? impl.noteColor
+                                        : palette().color(QPalette::Active, QPalette::Highlight);
     }
 
     void PianoRoll::setNoteColor(const QColor &color) {
@@ -924,7 +925,7 @@ namespace hello::daw {
         if (impl.restColor.isValid()) {
             return impl.restColor;
         }
-        auto color = palette().color(QPalette::Mid);
+        auto color = palette().color(QPalette::Active, QPalette::Mid);
         color.setAlphaF(0.4f);
         return color;
     }
@@ -937,8 +938,9 @@ namespace hello::daw {
 
     QColor PianoRoll::lyricColor() const {
         stdc_impl_t;
-        return impl.lyricColor.isValid() ? impl.lyricColor
-                                         : palette().color(QPalette::HighlightedText);
+        return impl.lyricColor.isValid()
+                   ? impl.lyricColor
+                   : palette().color(QPalette::Active, QPalette::HighlightedText);
     }
 
     void PianoRoll::setLyricColor(const QColor &color) {
@@ -949,8 +951,9 @@ namespace hello::daw {
 
     QColor PianoRoll::unsampledColor() const {
         stdc_impl_t;
-        return impl.unsampledColor.isValid() ? impl.unsampledColor
-                                             : palette().color(QPalette::Highlight);
+        return impl.unsampledColor.isValid()
+                   ? impl.unsampledColor
+                   : palette().color(QPalette::Active, QPalette::Highlight);
     }
 
     void PianoRoll::setUnsampledColor(const QColor &color) {
@@ -961,8 +964,9 @@ namespace hello::daw {
 
     QColor PianoRoll::unsampledLyricColor() const {
         stdc_impl_t;
-        return impl.unsampledLyricColor.isValid() ? impl.unsampledLyricColor
-                                                  : palette().color(QPalette::Text);
+        return impl.unsampledLyricColor.isValid()
+                   ? impl.unsampledLyricColor
+                   : palette().color(QPalette::Active, QPalette::Text);
     }
 
     void PianoRoll::setUnsampledLyricColor(const QColor &color) {
@@ -973,8 +977,9 @@ namespace hello::daw {
 
     QColor PianoRoll::selectionColor() const {
         stdc_impl_t;
-        return impl.selectionColor.isValid() ? impl.selectionColor
-                                             : palette().color(QPalette::WindowText);
+        return impl.selectionColor.isValid()
+                   ? impl.selectionColor
+                   : palette().color(QPalette::Active, QPalette::WindowText);
     }
 
     void PianoRoll::setSelectionColor(const QColor &color) {
@@ -985,7 +990,8 @@ namespace hello::daw {
 
     QColor PianoRoll::pitchColor() const {
         stdc_impl_t;
-        return impl.pitchColor.isValid() ? impl.pitchColor : palette().color(QPalette::Text);
+        return impl.pitchColor.isValid() ? impl.pitchColor
+                                         : palette().color(QPalette::Active, QPalette::Text);
     }
 
     void PianoRoll::setPitchColor(const QColor &color) {
@@ -999,7 +1005,7 @@ namespace hello::daw {
         if (impl.vibratoColor.isValid()) {
             return impl.vibratoColor;
         }
-        auto color = palette().color(QPalette::Text);
+        auto color = palette().color(QPalette::Active, QPalette::Text);
         color.setAlphaF(0.5f);
         return color;
     }
@@ -1012,8 +1018,9 @@ namespace hello::daw {
 
     QColor PianoRoll::envelopeColor() const {
         stdc_impl_t;
-        return impl.envelopeColor.isValid() ? impl.envelopeColor
-                                            : palette().color(QPalette::Highlight);
+        return impl.envelopeColor.isValid()
+                   ? impl.envelopeColor
+                   : palette().color(QPalette::Active, QPalette::Highlight);
     }
 
     void PianoRoll::setEnvelopeColor(const QColor &color) {
@@ -1025,7 +1032,7 @@ namespace hello::daw {
     QColor PianoRoll::faintPointColor() const {
         stdc_impl_t;
         return impl.faintPointColor.isValid() ? impl.faintPointColor
-                                              : palette().color(QPalette::Mid);
+                                              : palette().color(QPalette::Active, QPalette::Mid);
     }
 
     void PianoRoll::setFaintPointColor(const QColor &color) {
@@ -1037,8 +1044,9 @@ namespace hello::daw {
 
     QColor PianoRoll::parameterColor() const {
         stdc_impl_t;
-        return impl.parameterColor.isValid() ? impl.parameterColor
-                                             : palette().color(QPalette::Highlight);
+        return impl.parameterColor.isValid()
+                   ? impl.parameterColor
+                   : palette().color(QPalette::Active, QPalette::Highlight);
     }
 
     void PianoRoll::setParameterColor(const QColor &color) {
@@ -1049,7 +1057,8 @@ namespace hello::daw {
 
     QColor PianoRoll::playheadColor() const {
         stdc_impl_t;
-        return impl.playheadColor.isValid() ? impl.playheadColor : palette().color(QPalette::Link);
+        return impl.playheadColor.isValid() ? impl.playheadColor
+                                            : palette().color(QPalette::Active, QPalette::Link);
     }
 
     void PianoRoll::setPlayheadColor(const QColor &color) {
@@ -1061,7 +1070,7 @@ namespace hello::daw {
     QColor PianoRoll::renderWaitingColor() const {
         stdc_impl_t;
         const auto &color = impl.renderColors[0];
-        return color.isValid() ? color : palette().color(QPalette::Mid);
+        return color.isValid() ? color : palette().color(QPalette::Active, QPalette::Mid);
     }
 
     void PianoRoll::setRenderWaitingColor(const QColor &color) {
@@ -1108,7 +1117,8 @@ namespace hello::daw {
 
     QColor PianoRoll::whiteRowColor() const {
         stdc_impl_t;
-        return impl.whiteRowColor.isValid() ? impl.whiteRowColor : palette().color(QPalette::Base);
+        return impl.whiteRowColor.isValid() ? impl.whiteRowColor
+                                            : palette().color(QPalette::Active, QPalette::Base);
     }
 
     void PianoRoll::setWhiteRowColor(const QColor &color) {
@@ -1119,8 +1129,9 @@ namespace hello::daw {
 
     QColor PianoRoll::blackRowColor() const {
         stdc_impl_t;
-        return impl.blackRowColor.isValid() ? impl.blackRowColor
-                                            : palette().color(QPalette::AlternateBase);
+        return impl.blackRowColor.isValid()
+                   ? impl.blackRowColor
+                   : palette().color(QPalette::Active, QPalette::AlternateBase);
     }
 
     void PianoRoll::setBlackRowColor(const QColor &color) {
@@ -1134,7 +1145,7 @@ namespace hello::daw {
         if (impl.lineColor.isValid()) {
             return impl.lineColor;
         }
-        auto color = palette().color(QPalette::Mid);
+        auto color = palette().color(QPalette::Active, QPalette::Mid);
         color.setAlphaF(0.35f);
         return color;
     }
@@ -1147,7 +1158,8 @@ namespace hello::daw {
 
     QColor PianoRoll::barLineColor() const {
         stdc_impl_t;
-        return impl.barLineColor.isValid() ? impl.barLineColor : palette().color(QPalette::Mid);
+        return impl.barLineColor.isValid() ? impl.barLineColor
+                                           : palette().color(QPalette::Active, QPalette::Mid);
     }
 
     void PianoRoll::setBarLineColor(const QColor &color) {
