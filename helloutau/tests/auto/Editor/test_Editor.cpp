@@ -1786,6 +1786,42 @@ private Q_SLOTS:
         QCOMPARE(box->currentData().toString(), QStringLiteral("mrq"));
     }
 
+    // A voice bank that is opened and checked against the disk without an edit is not
+    // modified, so that closing it asks nothing. The files of UTAU end their lines with CRLF,
+    // which a text box shows as LF, and the other lines of character.txt may be one empty line,
+    // which a text box shows as none. Neither counts as an edit of the panel.
+    void an_unedited_voice_bank_is_not_modified_data() {
+        QTest::addColumn<QByteArray>("character");
+        QTest::newRow("lines") << QByteArray("name=Voice\r\nimage=icon.png\r\n\r\nvoice: a\r\n");
+        QTest::newRow("an empty line") << QByteArray("name=Voice\r\n\r\n");
+    }
+
+    void an_unedited_voice_bank_is_not_modified() {
+        QFETCH(QByteArray, character);
+        QTemporaryDir dir;
+        const auto bank = voiceBank(dir);
+        // The line breaks are mixed, which a text box does not keep either.
+        writeFile(bank / "readme.txt", "The first line.\r\nThe second line.\nThe third line.\r\n");
+        writeFile(bank / "character.txt", character.constData());
+        const auto e = editor();
+        const auto window = e->openVoiceBank(bank);
+        QVERIFY(window);
+        const auto document = window->document();
+        const int step = document->session()->currentStep();
+        QVERIFY(!document->isModified());
+
+        window->infoPanel()->commit();
+        window->checkDisk();
+        QCOMPARE(document->session()->currentStep(), step);
+        QVERIFY(!document->isModified());
+
+        // An edited readme keeps the CRLF of the file.
+        window->infoPanel()->readmeEdit()->setPlainText(QStringLiteral("The first line.\nNew."));
+        window->infoPanel()->commit();
+        QCOMPARE(kit::VoiceBankRef(document->session()).readme(),
+                 QStringLiteral("The first line.\r\nNew."));
+    }
+
     // The information pane edits character.txt, readme.txt and prefix.map, each edit one step,
     // creating the files the voice bank lacks; the tree converts the encoding of a folder.
     void the_voice_bank_info_is_edited() {

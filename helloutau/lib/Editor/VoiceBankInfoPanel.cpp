@@ -57,6 +57,12 @@ namespace hello::daw {
             return QString::fromLatin1(names[noteNum % 12]) + QString::number(noteNum / 12 - 1);
         }
 
+        // Returns text with each CRLF and each CR as LF, as a text box shows the line breaks.
+        QString lineFeeds(QString text) {
+            return text.replace(QStringLiteral("\r\n"), QStringLiteral("\n"))
+                .replace(QLatin1Char('\r'), QLatin1Char('\n'));
+        }
+
         // The lines of a text box, none for an empty box
         QStringList linesOf(const QPlainTextEdit *edit) {
             const auto text = edit->toPlainText();
@@ -120,7 +126,11 @@ namespace hello::daw {
             value.sample = sample->text();
             value.author = author->text();
             value.web = web->text();
-            value.extraLines = linesOf(otherLines);
+            // The lines are compared as the text shown, because the box shows no lines and one
+            // empty line alike.
+            if (otherLines->toPlainText() != lineFeeds(stored.extraLines.join(QLatin1Char('\n')))) {
+                value.extraLines = linesOf(otherLines);
+            }
             if (value == stored) {
                 return;
             }
@@ -129,12 +139,24 @@ namespace hello::daw {
             report(diagnostics);
         }
 
+        // Writes the text of readme.txt as shown, unless it is the text stored. A text box
+        // shows every line break as LF, so the stored text is compared with its line breaks
+        // as LF, and the text is written with CRLF if the stored text has CRLF, as the files
+        // of UTAU have.
         void writeReadme() {
-            if (updating || readme->toPlainText() == bank().readme()) {
+            if (updating) {
                 return;
             }
+            const auto stored = bank().readme();
+            auto text = readme->toPlainText();
+            if (text == lineFeeds(stored)) {
+                return;
+            }
+            if (stored.contains(QStringLiteral("\r\n"))) {
+                text.replace(QLatin1Char('\n'), QStringLiteral("\r\n"));
+            }
             kit::DiagnosticList diagnostics;
-            kit::VoiceBankEdits::setReadme(bank(), readme->toPlainText(), diagnostics);
+            kit::VoiceBankEdits::setReadme(bank(), text, diagnostics);
             report(diagnostics);
         }
 
