@@ -38,6 +38,7 @@
 
 #include <helloutau/Audio/AudioOutput.h>
 #include <helloutau/Widgets/CommandPalette.h>
+#include <helloutau/Widgets/FindBar.h>
 #include <helloutau/Widgets/SettingPage.h>
 #include <helloutau/Widgets/SettingsDialog.h>
 
@@ -81,6 +82,34 @@ namespace {
         kit::DiagnosticList diagnostics;
         project.save(path, diagnostics);
         return path;
+    }
+
+    // A project of quarter notes with lyrics
+    fs::path savedLyrics(const QTemporaryDir &dir, const char *name, const QStringList &lyrics) {
+        kit::Track track;
+        for (const auto &lyric : lyrics) {
+            kit::Note note;
+            note.lyric = lyric;
+            note.length = 480;
+            note.noteNum = 60;
+            track.notes.push_back(note);
+        }
+        kit::Project project;
+        project.tracks.push_back(track);
+
+        const auto path = pathIn(dir, name);
+        kit::DiagnosticList diagnostics;
+        project.save(path, diagnostics);
+        return path;
+    }
+
+    QStringList lyricsOf(ProjectWindow *window) {
+        QStringList lyrics;
+        const auto project = window->document()->session()->snapshot();
+        for (const auto &note : project.tracks[0].notes) {
+            lyrics.push_back(note.lyric);
+        }
+        return lyrics;
     }
 
     void edit(ProjectWindow *window) {
@@ -302,6 +331,75 @@ private Q_SLOTS:
         QVERIFY(vibrato);
         QCOMPARE(vibrato->period, 240.0);
         QCOMPARE(vibrato->length, 65.0);
+    }
+
+    // The find bar selects the notes whose lyric matches, from the selected note on and from the
+    // start again past the last match. Replace changes the selected match and selects the next
+    // match. Replace All changes every match. Each replacement is one undo step.
+    void lyrics_are_found_and_replaced() {
+        const auto e = editor();
+        const auto window =
+            e->openFile(savedLyrics(m_dir, "find.usth", {"ka", "a", "sa", "ka", "R"}));
+        QVERIFY(window);
+        const auto roll = window->pianoRoll();
+        const auto bar = window->findChild<FindBar *>();
+        QVERIFY(bar);
+        const auto find = actionNamed(window, QStringLiteral("&Find"));
+        const auto next = actionNamed(window, QStringLiteral("Find &Next"));
+        const auto previous = actionNamed(window, QStringLiteral("Find Pre&vious"));
+        QVERIFY(find && next && previous);
+
+        find->trigger();
+        QVERIFY(bar->isVisible());
+        QVERIFY(!bar->isReplaceShown());
+        bar->setText(QStringLiteral("ka"));
+        QCOMPARE(roll->selectedIndices(), QList<int>{0});
+        QCOMPARE(bar->resultText(), QStringLiteral("1 of 2"));
+        next->trigger();
+        QCOMPARE(roll->selectedIndices(), QList<int>{3});
+        next->trigger();
+        QCOMPARE(roll->selectedIndices(), QList<int>{0});
+        previous->trigger();
+        QCOMPARE(roll->selectedIndices(), QList<int>{3});
+
+        // A whole word matches only the lyric a. Rests are searched as well.
+        bar->setWholeWord(true);
+        bar->setText(QStringLiteral("a"));
+        QCOMPARE(roll->selectedIndices(), QList<int>{1});
+        QCOMPARE(bar->resultText(), QStringLiteral("1 of 1"));
+        // A change of the query keeps the selected note if it still matches.
+        bar->setWholeWord(false);
+        QCOMPARE(roll->selectedIndices(), QList<int>{1});
+        bar->setText(QStringLiteral("r"));
+        QCOMPARE(roll->selectedIndices(), QList<int>{4});
+
+        bar->setRegularExpression(true);
+        bar->setText(QStringLiteral("("));
+        QCOMPARE(bar->resultText(), QStringLiteral("Invalid"));
+
+        // The search starts from the selected note: sa is the next match of (k|s)a after a.
+        roll->setSelectedIndices({1});
+        bar->setText(QStringLiteral("(k|s)a"));
+        QCOMPARE(roll->selectedIndices(), QList<int>{2});
+        const auto session = window->document()->session();
+        const int step = session->currentStep();
+        actionNamed(window, QStringLiteral("Rep&lace"))->trigger();
+        QVERIFY(bar->isReplaceShown());
+        bar->setReplacement(QStringLiteral("$1o"));
+        QTest::keyClick(bar->replaceField(), Qt::Key_Return);
+        QCOMPARE(lyricsOf(window), (QStringList{"ka", "a", "so", "ka", "R"}));
+        QCOMPARE(session->currentStep(), step + 1);
+        QCOMPARE(roll->selectedIndices(), QList<int>{3});
+
+        QTest::keyClick(bar->replaceField(), Qt::Key_Return,
+                        Qt::ControlModifier | Qt::AltModifier);
+        QCOMPARE(lyricsOf(window), (QStringList{"ko", "a", "so", "ko", "R"}));
+        QCOMPARE(session->currentStep(), step + 2);
+        QCOMPARE(roll->selectedIndices(), (QList<int>{0, 3}));
+        QCOMPARE(bar->resultText(), QStringLiteral("No results"));
+
+        session->undo();
+        QCOMPARE(lyricsOf(window), (QStringList{"ka", "a", "so", "ka", "R"}));
     }
 
     // Copy enables Paste Parameters, whose dialog chooses what to paste onto the selection.
@@ -1316,6 +1414,74 @@ private Q_SLOTS:
         QCoreApplication::processEvents();
         QCOMPARE(aliases(), (QStringList{QStringLiteral("a.wav=a"), QStringLiteral("b.wav="),
                                          QStringLiteral("c.wav=")}));
+    }
+
+    // The find bar of the voice bank window searches the names of the entries, an empty alias
+    // counting as the stem of the file name, or the file names. Only aliases are replaced, each
+    // replacement as one undo step. A replacement that gives two entries of one audio file the
+    // same name is refused.
+    void aliases_and_file_names_are_found_and_replaced() {
+        QTemporaryDir dir;
+        const auto bank = voiceBank(dir);
+        const auto e = editor();
+        const auto window = e->openVoiceBank(bank);
+        QVERIFY(window);
+        const auto session = window->document()->session();
+        const auto tree = window->directoryTree();
+        tree->setCurrentItem(tree->topLevelItem(1));
+        const auto model = window->entryModel();
+        const auto bar = window->findChild<FindBar *>();
+        QVERIFY(bar);
+        actionNamed(window, QStringLiteral("&Find"))->trigger();
+        QCOMPARE(bar->scopes().size(), 2);
+
+        bar->setText(QStringLiteral("b"));
+        QCOMPARE(window->currentRow(), 1);
+        QCOMPARE(bar->resultText(), QStringLiteral("1 of 1"));
+        // c.wav has no entry and therefore no alias.
+        bar->setText(QStringLiteral("c"));
+        QCOMPARE(bar->resultText(), QStringLiteral("No results"));
+        bar->setScope(1);
+        QCOMPARE(window->currentRow(), 2);
+        QVERIFY(!bar->replaceField()->isEnabled());
+
+        bar->setScope(0);
+        QVERIFY(bar->replaceField()->isEnabled());
+        bar->setRegularExpression(true);
+        bar->setText(QStringLiteral("^"));
+        bar->setReplacement(QStringLiteral("x_"));
+        const int step = session->currentStep();
+        QTest::keyClick(bar->findField(), Qt::Key_Return, Qt::ControlModifier | Qt::AltModifier);
+        QCOMPARE(session->currentStep(), step + 1);
+        QCOMPARE(model->entryOf(0).alias, QStringLiteral("x_a"));
+        QCOMPARE(model->entryOf(1).alias, QStringLiteral("x_b"));
+
+        // x.wav of the subfolder has the entries x and y.
+        tree->setCurrentItem(tree->topLevelItem(1)->child(0));
+        bar->setRegularExpression(false);
+        bar->setText(QStringLiteral("y"));
+        QCOMPARE(window->currentRow(), 1);
+        bar->setReplacement(QStringLiteral("x"));
+        answerMessageBox(QMessageBox::Ok);
+        QTest::keyClick(bar->findField(), Qt::Key_Return, Qt::ControlModifier | Qt::AltModifier);
+        QCOMPARE(session->currentStep(), step + 1);
+        QCOMPARE(model->entryOf(1).alias, QStringLiteral("y"));
+
+        bar->setReplacement(QStringLiteral("z"));
+        QTest::keyClick(bar->replaceField(), Qt::Key_Return);
+        QCOMPARE(session->currentStep(), step + 2);
+        QCOMPARE(model->entryOf(1).alias, QStringLiteral("z"));
+
+        // An empty alias is refused, as the renaming of aliases refuses it, although the stem a
+        // of a.wav is free.
+        tree->setCurrentItem(tree->topLevelItem(1));
+        bar->setText(QStringLiteral("x_a"));
+        QCOMPARE(window->currentRow(), 0);
+        bar->setReplacement(QString());
+        answerMessageBox(QMessageBox::Ok);
+        QTest::keyClick(bar->replaceField(), Qt::Key_Return);
+        QCOMPARE(session->currentStep(), step + 2);
+        QCOMPARE(model->entryOf(0).alias, QStringLiteral("x_a"));
     }
 
     // The waveform shows the current entry; a drag and the keys 1 to 5 over it edit the entry,

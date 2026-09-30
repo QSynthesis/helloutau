@@ -47,11 +47,13 @@
 #include <hellokit/Synth/Spectrogram.h>
 #include <hellokit/Synth/WaveAudio.h>
 #include <hellokit/VoiceBank/FrequencyFormatRegistry.h>
+#include <hellokit/VoiceBank/VoiceAliasRule.h>
 #include <hellokit/VoiceBank/VoiceBankCheckScheduler.h>
 #include <hellokit/VoiceBank/WaveMetadata.h>
 
 #include <helloutau/Theme/ThemeManager.h>
 #include <helloutau/Widgets/CommandPalette.h>
+#include <helloutau/Widgets/FindBar.h>
 
 #include "ActionRegistrations_p.h"
 #include "VoiceAliasRuleDialog.h"
@@ -59,6 +61,7 @@
 #include "CommandEntries_p.h"
 #include "DiagnosticBox_p.h"
 #include "Editor.h"
+#include "FindSupport_p.h"
 #include "OtoWaveformView.h"
 #include "SamplePreview.h"
 #include "VoiceBankCharsetDialog.h"
@@ -81,6 +84,12 @@ namespace hello::daw {
         // folders lacks
         constexpr int PathRole = Qt::UserRole;
         constexpr int AllRole = Qt::UserRole + 1;
+
+        // The scopes of the find bar: the aliases, which can be replaced, and the file names
+        enum FindScope {
+            AliasScope,
+            FileScope,
+        };
 
         // Keeps the rows whose file name or alias contains the search text.
         class EntryFilter : public QSortFilterProxyModel {
@@ -123,6 +132,7 @@ namespace hello::daw {
         QAK::WidgetActionContext *context = nullptr;
         QHash<QString, QAction *> actions;
         CommandPalette *palette = nullptr;
+        FindBar *findBar = nullptr;
         QMenu *recentMenu = nullptr;
 
         // Follows the disk while the window is open; see checkDisk().
@@ -241,6 +251,17 @@ namespace hello::daw {
                        [this] { document->session()->undo(); });
             addCommand(QStringLiteral("helloutau.edit.redo"),
                        [this] { document->session()->redo(); });
+            addCommand(QStringLiteral("helloutau.edit.find"), [this] {
+                findBar->showFind();
+                updateFindResult();
+            });
+            addCommand(QStringLiteral("helloutau.edit.replace"), [this] {
+                findBar->showReplace();
+                updateFindResult();
+            });
+            addCommand(QStringLiteral("helloutau.edit.findNext"), [this] { findAgain(true); });
+            addCommand(QStringLiteral("helloutau.edit.findPrevious"),
+                       [this] { findAgain(false); });
             addCommand(QStringLiteral("helloutau.view.commandPalette"), [this] {
                 palette->setCommands(commandEntriesOf(editor->actionRegistry(), context));
                 palette->setRecentIds(editor->settings().recentCommands());
@@ -812,6 +833,247 @@ namespace hello::daw {
             }
             selectRows(selected);
             return true;
+        }
+
+        void initFind() {
+            stdc_decl_t;
+            findBar = new FindBar(&decl);
+            findBar->setScopes({tr("Aliases"), tr("File Names")});
+            findBar->setAnchor(table);
+            QObject::connect(findBar, &FindBar::queryChanged, &decl, [this] {
+                findBar->setReplaceEnabled(findBar->scope() == AliasScope);
+                findEntry(true, true);
+            });
+            QObject::connect(findBar, &FindBar::findNextRequested, &decl,
+                             [this] { findEntry(true, false); });
+            QObject::connect(findBar, &FindBar::findPreviousRequested, &decl,
+                             [this] { findEntry(false, false); });
+            QObject::connect(findBar, &FindBar::replaceRequested, &decl,
+                             [this] { replaceAlias(); });
+            QObject::connect(findBar, &FindBar::replaceAllRequested, &decl,
+                             [this] { replaceAllAliases(); });
+            // The count is updated when the rows of the table or the current row change.
+            QObject::connect(proxy, &QAbstractItemModel::layoutChanged, &decl,
+                             [this] { updateFindResult(); });
+            QObject::connect(proxy, &QAbstractItemModel::modelReset, &decl,
+                             [this] { updateFindResult(); });
+            QObject::connect(proxy, &QAbstractItemModel::rowsInserted, &decl,
+                             [this] { updateFindResult(); });
+            QObject::connect(proxy, &QAbstractItemModel::rowsRemoved, &decl,
+                             [this] { updateFindResult(); });
+            QObject::connect(proxy, &QAbstractItemModel::dataChanged, &decl,
+                             [this] { updateFindResult(); });
+            QObject::connect(table->selectionModel(), &QItemSelectionModel::currentRowChanged,
+                             &decl, [this] { updateFindResult(); });
+        }
+
+        // Returns the text of row of the model that the find bar searches: the file name, or the
+        // name that the entry denotes, the stem of the file name for an empty alias. An audio
+        // file without an entry has no alias, which is returned as std::nullopt.
+        std::optional<QString> findTextOf(int row) const {
+            const auto entry = model->entryOf(row);
+            if (findBar->scope() == FileScope) {
+                return entry.fileName;
+            }
+            if (model->index(row, 0).data(VoiceBankEntryModel::RowKindRole).toInt() ==
+                VoiceBankEntryModel::UnlistedAudioRow) {
+                return std::nullopt;
+            }
+            return kit::VoiceAliasRule::nameOf(entry.fileName, entry.alias);
+        }
+
+        // Returns the row of the model that row of the table shows.
+        int sourceRowOf(int shown) const {
+            return proxy->mapToSource(proxy->index(shown, 0)).row();
+        }
+
+        // Returns the rows of the table, in the order shown, whose text search matches. The rows
+        // that the folder and the search box hide are not searched.
+        QList<int> entryMatches(const kit::TextSearch &search) const {
+            QList<int> matches;
+            if (!search.isValid()) {
+                return matches;
+            }
+            for (int shown = 0; shown < proxy->rowCount(); ++shown) {
+                const auto text = findTextOf(sourceRowOf(shown));
+                if (text && search.matches(*text)) {
+                    matches.push_back(shown);
+                }
+            }
+            return matches;
+        }
+
+        // Returns the current row of the table, or -1 if there is none.
+        int currentShownRow() const {
+            const auto index = table->currentIndex();
+            return index.isValid() ? index.row() : -1;
+        }
+
+        void updateFindResult() {
+            if (!findBar || findBar->isHidden()) {
+                return;
+            }
+            const auto search = FindSupport::searchOf(findBar);
+            FindSupport::showResult(findBar, search, entryMatches(search), currentShownRow());
+        }
+
+        // Selects the next or the previous row whose text matches, from the current row. With
+        // inclusive, as for typing in the find field, the current row is itself a candidate.
+        void findEntry(bool forward, bool inclusive) {
+            const auto search = FindSupport::searchOf(findBar);
+            const auto matches = entryMatches(search);
+            if (const auto at =
+                    FindSupport::adjacentMatch(matches, currentShownRow(), forward, inclusive)) {
+                selectRows({sourceRowOf(matches[*at])});
+            }
+            updateFindResult();
+        }
+
+        // Selects the next or the previous match for F3 and Shift+F3, or shows the find bar if it
+        // has no query.
+        void findAgain(bool forward) {
+            if (findBar->isHidden() || findBar->text().isEmpty()) {
+                findBar->showFind();
+                updateFindResult();
+                return;
+            }
+            findEntry(forward, false);
+        }
+
+        // Returns the planned aliases of the entries at rows of the model, which the search
+        // matches, by folder. Each change is checked against the entries of its folder, as the
+        // renaming of aliases checks them. Unchanged aliases are left out.
+        std::map<std::filesystem::path, QList<kit::VoiceAliasRule::Change>>
+            aliasChanges(const QList<int> &rows, const kit::TextSearch &search) const {
+            std::map<std::filesystem::path, QList<kit::VoiceAliasRule::Change>> changes;
+            for (const int row : rows) {
+                const int index = model->entryIndexOf(row);
+                if (index < 0) {
+                    continue;
+                }
+                const auto entry = model->entryOf(row);
+                const auto name = kit::VoiceAliasRule::nameOf(entry.fileName, entry.alias);
+                kit::VoiceAliasRule::Change change;
+                change.index = index;
+                change.to = search.replaced(name, findBar->replacement());
+                if (change.to != name) {
+                    changes[model->directoryOf(row)].push_back(change);
+                }
+            }
+            for (auto &[path, list] : changes) {
+                QList<kit::VoiceAliasRule::Entry> entries;
+                if (const auto directory = directoryRef(path)) {
+                    const auto oto = directory->otoEntries();
+                    for (int i = 0; i < oto.size(); ++i) {
+                        entries.push_back({oto.at(i).fileName(), oto.at(i).alias()});
+                    }
+                }
+                list = kit::VoiceAliasRule::check(entries, list, false);
+            }
+            return changes;
+        }
+
+        // Writes the planned aliases as one undo step named title and selects the entries.
+        // If a change has a problem, the problems are reported and nothing is written. Returns
+        // whether the step is committed.
+        bool applyAliasChanges(
+            const std::map<std::filesystem::path, QList<kit::VoiceAliasRule::Change>> &changes,
+            const QString &title) {
+            stdc_decl_t;
+            kit::DiagnosticList problems;
+            for (const auto &[path, list] : changes) {
+                for (const auto &change : list) {
+                    if (!change.problem.isEmpty()) {
+                        kit::Diagnostic diagnostic;
+                        diagnostic.severity = kit::DiagnosticSeverity::Error;
+                        diagnostic.message = tr("\"%1\" to \"%2\": %3")
+                                                 .arg(change.from, change.to, change.problem);
+                        problems.push_back(diagnostic);
+                    }
+                }
+            }
+            if (!problems.isEmpty()) {
+                DiagnosticBox::show(&decl, title, problems);
+                return false;
+            }
+            auto transaction = document->session()->transaction(title);
+            kit::DiagnosticList diagnostics;
+            QList<RowKey> made;
+            for (const auto &[path, list] : changes) {
+                const auto directory = directoryRef(path);
+                if (!directory) {
+                    continue;
+                }
+                const auto entries = directory->otoEntries();
+                for (const auto &change : list) {
+                    auto value = entries.at(change.index).toVoiceOtoEntry();
+                    value.alias = change.to;
+                    if (!kit::VoiceBankEdits::setEntry(entries.at(change.index), value,
+                                                       diagnostics)) {
+                        DiagnosticBox::show(&decl, title, diagnostics);
+                        return false;
+                    }
+                    made.push_back({path, value.fileName, value.alias});
+                }
+            }
+            const bool committed = transaction.commit(diagnostics);
+            DiagnosticBox::show(&decl, title, diagnostics);
+            if (!committed) {
+                return false;
+            }
+            model->refresh();
+            QList<int> selected;
+            for (const auto &key : std::as_const(made)) {
+                selected.push_back(model->rowOf(key.directory, key.fileName, key.alias));
+            }
+            selectRows(selected);
+            return true;
+        }
+
+        // Replaces the matches in the alias of the current entry if it matches, and selects the
+        // next match, as Replace of VS Code does. Without a matching entry current, only the next
+        // match is selected.
+        void replaceAlias() {
+            if (findBar->scope() != AliasScope) {
+                return;
+            }
+            const auto search = FindSupport::searchOf(findBar);
+            const int shown = currentShownRow();
+            if (search.isValid() && shown >= 0) {
+                const int row = sourceRowOf(shown);
+                const auto text = findTextOf(row);
+                if (text && search.matches(*text)) {
+                    const auto changes = aliasChanges({row}, search);
+                    if (!changes.empty() && !applyAliasChanges(changes, tr("Replace"))) {
+                        return;
+                    }
+                }
+            }
+            findEntry(true, false);
+        }
+
+        // Replaces the matches in the aliases of every row that the table shows as one undo
+        // step, and selects the changed entries.
+        void replaceAllAliases() {
+            stdc_decl_t;
+            if (findBar->scope() != AliasScope) {
+                return;
+            }
+            const auto search = FindSupport::searchOf(findBar);
+            QList<int> rows;
+            for (const int shown : entryMatches(search)) {
+                rows.push_back(sourceRowOf(shown));
+            }
+            const auto changes = aliasChanges(rows, search);
+            int count = 0;
+            for (const auto &[path, list] : changes) {
+                count += int(list.size());
+            }
+            if (count == 0 || !applyAliasChanges(changes, tr("Replace All"))) {
+                return;
+            }
+            decl.statusBar()->showMessage(
+                VoiceBankWindow::tr("%n alias(es) replaced.", nullptr, count));
         }
 
         QList<int> selectedRows() const {
@@ -1421,6 +1683,7 @@ namespace hello::daw {
         impl.initActions();
         impl.initWidgets();
         impl.initTableEditing();
+        impl.initFind();
         impl.initWaveform();
         impl.refreshTree();
         impl.initScheduler();

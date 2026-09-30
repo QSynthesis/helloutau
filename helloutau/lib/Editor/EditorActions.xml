@@ -29,6 +29,16 @@
                 shortcuts="Del;Shift+Del" />
         <action id="helloutau.edit.selectAll" text="Select &amp;All" category="Edit"
                 shortcut="Ctrl+A" />
+        <!-- The find bar over the piano roll or the entry table, as the find widget of VS Code:
+             the lyrics in the project window, the aliases and the file names in the voice bank
+             window -->
+        <action id="helloutau.edit.find" text="&amp;Find" category="Edit" shortcut="Ctrl+F" />
+        <action id="helloutau.edit.replace" text="Rep&amp;lace" category="Edit"
+                shortcut="Ctrl+H" />
+        <action id="helloutau.edit.findNext" text="Find &amp;Next" category="Edit"
+                shortcut="F3" />
+        <action id="helloutau.edit.findPrevious" text="Find Pre&amp;vious" category="Edit"
+                shortcut="Shift+F3" />
         <action id="helloutau.edit.insertNote" text="&amp;Insert Note" category="Edit"
                 shortcut="Ins" />
         <action id="helloutau.edit.splitNote" text="S&amp;plit Note..." category="Edit" />
@@ -232,6 +242,11 @@
             <action id="helloutau.edit.delete" />
             <action id="helloutau.edit.selectAll" />
             <separator />
+            <action id="helloutau.edit.find" />
+            <action id="helloutau.edit.replace" />
+            <action id="helloutau.edit.findNext" />
+            <action id="helloutau.edit.findPrevious" />
+            <separator />
             <action id="helloutau.edit.insertNote" />
             <action id="helloutau.edit.insertRest" />
             <action id="helloutau.edit.splitNote" />
@@ -283,6 +298,11 @@
         <insertion target="helloutau.voiceBank.edit">
             <action id="helloutau.edit.undo" />
             <action id="helloutau.edit.redo" />
+            <separator />
+            <action id="helloutau.edit.find" />
+            <action id="helloutau.edit.replace" />
+            <action id="helloutau.edit.findNext" />
+            <action id="helloutau.edit.findPrevious" />
             <separator />
             <action id="helloutau.voiceBank.insertEntry" />
             <action id="helloutau.voiceBank.duplicateEntries" />

@@ -143,6 +143,9 @@ namespace hello::daw {
         /// Scrolls to the start of the track and to the middle of the keys its notes use.
         void scrollToNotes();
 
+        /// Scrolls the view to note \a index of the timeline if the note is outside it.
+        void showNote(int index);
+
         /// The voice bank against which notes are looked up, or \c nullptr if none is known.
         std::shared_ptr<const kit::VoiceBank> voiceBank() const;
         void setVoiceBank(std::shared_ptr<const kit::VoiceBank> bank);

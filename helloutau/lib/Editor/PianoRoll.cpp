@@ -323,6 +323,13 @@ namespace hello::daw {
         return impl.timeline;
     }
 
+    void PianoRoll::showNote(int index) {
+        stdc_impl_t;
+        if (index >= 0 && index < impl.timeline->noteCount()) {
+            impl.ensureVisible(index);
+        }
+    }
+
     void PianoRoll::scrollToNotes() {
         stdc_impl_t;
         const auto timeline = impl.timeline;

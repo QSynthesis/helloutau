@@ -36,7 +36,9 @@
 
 #include <helloutau/Theme/ThemeManager.h>
 #include <helloutau/Widgets/CommandPalette.h>
+#include <helloutau/Widgets/FindBar.h>
 #include <helloutau/Widgets/PianoKeyboard.h>
+#include <helloutau/Widgets/SceneView.h>
 
 #include "ActionRegistrations_p.h"
 #include "AppSettings.h"
@@ -44,6 +46,7 @@
 #include "DiagnosticBox_p.h"
 #include "Editor.h"
 #include "ExportUstDialog.h"
+#include "FindSupport_p.h"
 #include "PianoRoll.h"
 #include "NotePropertiesDialog.h"
 #include "ProjectPropertiesDialog.h"
@@ -127,6 +130,7 @@ namespace hello::daw {
         QHash<QString, QAction *> actions;
         QActionGroup *tools = nullptr;
         CommandPalette *palette = nullptr;
+        FindBar *findBar = nullptr;
         QMenu *recentMenu = nullptr;
         // What Paste Parameters pasted last
         PianoRoll::Parameters pastedParameters = PianoRoll::AllParameters;
@@ -770,6 +774,17 @@ namespace hello::daw {
                 });
             });
             addCommand(QStringLiteral("helloutau.edit.selectAll"), [this] { roll->selectAll(); });
+            addCommand(QStringLiteral("helloutau.edit.find"), [this] {
+                findBar->showFind();
+                updateFindResult();
+            });
+            addCommand(QStringLiteral("helloutau.edit.replace"), [this] {
+                findBar->showReplace();
+                updateFindResult();
+            });
+            addCommand(QStringLiteral("helloutau.edit.findNext"), [this] { findAgain(true); });
+            addCommand(QStringLiteral("helloutau.edit.findPrevious"),
+                       [this] { findAgain(false); });
             addCommand(QStringLiteral("helloutau.edit.insertNote"), [this] {
                 edit(tr("Insert Note"), [this](kit::DiagnosticList &diagnostics) {
                     return roll->insertNote(diagnostics);
@@ -947,6 +962,136 @@ namespace hello::daw {
                                      }
                                  });
                              });
+
+            findBar = new FindBar(&decl);
+            QObject::connect(findBar, &FindBar::queryChanged, &decl,
+                             [this] { findLyric(true, true); });
+            QObject::connect(findBar, &FindBar::findNextRequested, &decl,
+                             [this] { findLyric(true, false); });
+            QObject::connect(findBar, &FindBar::findPreviousRequested, &decl,
+                             [this] { findLyric(false, false); });
+            QObject::connect(findBar, &FindBar::replaceRequested, &decl,
+                             [this] { replaceLyric(); });
+            QObject::connect(findBar, &FindBar::replaceAllRequested, &decl,
+                             [this] { replaceAllLyrics(); });
+        }
+
+        // Returns the notes whose lyric search matches, rests included, in track order.
+        QList<int> lyricMatches(const kit::TextSearch &search) const {
+            QList<int> matches;
+            const auto timeline = roll->timeline();
+            for (int i = 0; i < timeline->noteCount(); ++i) {
+                if (search.matches(timeline->note(i).lyric)) {
+                    matches.push_back(i);
+                }
+            }
+            return matches;
+        }
+
+        // Counts the matches of the find bar and shows whether the selected note is one of them.
+        void updateFindResult() {
+            if (findBar->isHidden()) {
+                return;
+            }
+            const auto search = FindSupport::searchOf(findBar);
+            const auto selected = roll->selectedIndices();
+            FindSupport::showResult(findBar, search, lyricMatches(search),
+                                    selected.size() == 1 ? selected.first() : -1);
+        }
+
+        // Selects the next or the previous note whose lyric matches, from the first selected
+        // note, as the find widget of VS Code moves from the cursor. With inclusive, as for typing
+        // in the find field, the first selected note is itself a candidate.
+        void findLyric(bool forward, bool inclusive) {
+            const auto search = FindSupport::searchOf(findBar);
+            const auto matches = lyricMatches(search);
+            const auto selected = roll->selectedIndices();
+            const auto at = FindSupport::adjacentMatch(
+                matches, selected.isEmpty() ? -1 : selected.first(), forward, inclusive);
+            if (at) {
+                const int index = matches[*at];
+                roll->setSelectedIndices({index});
+                roll->showNote(index);
+            }
+            updateFindResult();
+        }
+
+        // Selects the next or the previous match for F3 and Shift+F3, or shows the find bar if it
+        // has no query.
+        void findAgain(bool forward) {
+            if (findBar->isHidden() || findBar->text().isEmpty()) {
+                findBar->showFind();
+                updateFindResult();
+                return;
+            }
+            findLyric(forward, false);
+        }
+
+        // Replaces the matches in the lyric of the selected note if it matches, and selects the
+        // next match, as Replace of VS Code does. Without a matching note selected, only the next
+        // match is selected.
+        void replaceLyric() {
+            const auto search = FindSupport::searchOf(findBar);
+            const auto selected = roll->selectedIndices();
+            if (search.isValid() && selected.size() == 1) {
+                const int index = selected.first();
+                const auto lyric = roll->timeline()->note(index).lyric;
+                if (search.matches(lyric) &&
+                    !setLyrics({{index, search.replaced(lyric, findBar->replacement())}},
+                               tr("Replace"))) {
+                    return;
+                }
+            }
+            findLyric(true, false);
+        }
+
+        // Replaces the matches in every lyric as one undo step and selects the changed notes.
+        void replaceAllLyrics() {
+            stdc_decl_t;
+            const auto search = FindSupport::searchOf(findBar);
+            QList<std::pair<int, QString>> lyrics;
+            for (const int index : lyricMatches(search)) {
+                const auto lyric = roll->timeline()->note(index).lyric;
+                const auto replaced = search.replaced(lyric, findBar->replacement());
+                if (replaced != lyric) {
+                    lyrics.push_back({index, replaced});
+                }
+            }
+            if (lyrics.isEmpty() || !setLyrics(lyrics, tr("Replace All"))) {
+                return;
+            }
+            QList<int> changed;
+            for (const auto &lyric : std::as_const(lyrics)) {
+                changed.push_back(lyric.first);
+            }
+            roll->setSelectedIndices(changed);
+            decl.statusBar()->showMessage(
+                ProjectWindow::tr("%n lyric(s) replaced.", nullptr, int(changed.size())),
+                StatusMessageTimeout);
+        }
+
+        // Sets the lyric of each note index to its text as one undo step named title. Returns
+        // whether the step is committed.
+        bool setLyrics(const QList<std::pair<int, QString>> &lyrics, const QString &title) {
+            stdc_decl_t;
+            if (roll->lyricEditor()->isVisible()) {
+                return false;
+            }
+            const auto notes = kit::ProjectRef(document->session()).tracks().at(0).notes();
+            auto transaction = document->session()->transaction(title);
+            kit::DiagnosticList diagnostics;
+            for (const auto &[index, lyric] : lyrics) {
+                kit::NotePropertyChanges changes;
+                changes.lyric = lyric;
+                if (!kit::ProjectEdits::setNoteProperties({notes.at(index)}, changes,
+                                                          diagnostics)) {
+                    DiagnosticBox::show(&decl, title, diagnostics);
+                    return false;
+                }
+            }
+            const bool committed = transaction.commit(diagnostics);
+            DiagnosticBox::show(&decl, title, diagnostics);
+            return committed;
         }
 
         QList<CommandEntry> commandEntries() const {
@@ -981,8 +1126,11 @@ namespace hello::daw {
                 roll->setVoiceBank(document->voiceBank());
                 updateBackground();
             });
-            QObject::connect(roll, &PianoRoll::selectionChanged, &decl,
-                             [this] { updateEditActions(); });
+            QObject::connect(roll, &PianoRoll::selectionChanged, &decl, [this] {
+                updateEditActions();
+                updateFindResult();
+            });
+            findBar->setAnchor(roll->view());
             // In the status bar, so that a refused drag does not stop the work with a dialog.
             // A dialog remains an alternative, see the open questions in docs/Tuning.md.
             QObject::connect(roll, &PianoRoll::cursorMoved, &decl, [this] { cursorMoved(); });
@@ -1004,6 +1152,7 @@ namespace hello::daw {
             QObject::connect(document->session(), &kit::ProjectSession::stepChanged, &decl, [this] {
                 updateUndoActions();
                 updatePitchActions();
+                updateFindResult();
                 // An undo or redo that changes the voice folder reads the folder again. The read
                 // is queued so that it does not run inside the notification of the step.
                 if (!voiceBankReloadPending && voiceRoot() != voiceBankRoot) {
