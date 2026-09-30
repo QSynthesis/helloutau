@@ -6,12 +6,13 @@ HelloUtau aims at functional parity with UTAU 0.4.19, while its interface, its h
 
 ## Status
 
-Early development. The editor window is not implemented yet. The libraries in `hellokit` are implemented and tested on all three systems:
+Early development. The editor is usable but incomplete, and its interface is under review. The libraries in `hellokit` are tested on all three systems. Implemented:
 
-- Reading and writing of `.ust` and of `.usth`, the native project format
-- Voice banks: reading, editing and saving `oto.ini`, `prefix.map` and `character.txt` in the encoding of each directory, and detection of changes on disk
-- Rendering with UTAU resamplers and wavtools
-- MIDI import and export
+- Projects: reading and writing of `.ust` and of `.usth`, the native project format. A piano roll edits notes, lyrics, pitch curves in Mode1 and Mode2, vibratos, envelopes and note parameters, with undo, redo, and find and replace of lyrics.
+- Playback: prerendering through the rendering script of UTAU or on several threads, realtime playback, and rendering of a whole track into a WAV file
+- Voice banks: a window that edits `oto.ini`, `prefix.map`, `character.txt` and `readme.txt` in the encoding of each directory, sets the values of an entry on its waveform, previews samples, and detects changes on disk
+- Plugins: native plugins of HelloUtau, and the plugins of UTAU
+- Import and export: MIDI
 
 ## Compatibility
 
