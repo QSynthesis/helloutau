@@ -72,6 +72,10 @@ namespace hello::daw {
         /// the editor.
         AppSettings &settings() const;
 
+        /// Writes the changes of both files that are pending now, which are otherwise written
+        /// once the event loop runs, or at the destruction of the loader.
+        void syncSettings();
+
         /// \name Settings of the plugins
         ///
         /// \c plugins.json, in the form that \c PluginSettings of stdcorelib.plugin reads: the
@@ -84,8 +88,9 @@ namespace hello::daw {
         /// The value that the plugin \a id keeps at \a key, undefined if there is none.
         QJsonValue pluginValue(const QString &id, const QString &key) const;
 
-        /// Replaces the value that the plugin \a id keeps at \a key, and writes the file. An
-        /// undefined or null \a value removes it.
+        /// Replaces the value that the plugin \a id keeps at \a key, and writes the file once the
+        /// event loop runs, or at the destruction of the loader. An undefined or null \a value
+        /// removes it.
         void setPluginValue(const QString &id, const QString &key, const QJsonValue &value);
         /// @}
 

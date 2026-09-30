@@ -1,5 +1,6 @@
 #include "SettingsJson_p.h"
 
+#include <QtCore/QCoreApplication>
 #include <QtCore/QDir>
 #include <QtCore/QFile>
 #include <QtCore/QFileInfo>
@@ -147,6 +148,39 @@ namespace hello::daw {
                 break;
         }
         return QJsonValue::Null;
+    }
+
+    SettingsFile::SettingsFile(QString fileName, std::function<json::Value()> content)
+        : m_fileName(std::move(fileName)), m_content(std::move(content)) {
+        m_timer.setSingleShot(true);
+        m_timer.setInterval(0);
+        QObject::connect(&m_timer, &QTimer::timeout, &m_timer, [this] { sync(); });
+    }
+
+    SettingsFile::~SettingsFile() {
+        sync();
+    }
+
+    void SettingsFile::changed() {
+        if (m_pending) {
+            return;
+        }
+        m_pending = true;
+        // Without an application there is no event loop to wait for.
+        if (QCoreApplication::instance()) {
+            m_timer.start();
+        } else {
+            sync();
+        }
+    }
+
+    void SettingsFile::sync() {
+        if (!m_pending) {
+            return;
+        }
+        m_pending = false;
+        m_timer.stop();
+        SettingsJson::write(m_fileName, m_content());
     }
 
 }

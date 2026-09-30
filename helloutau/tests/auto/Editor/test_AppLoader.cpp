@@ -252,6 +252,26 @@ private Q_SLOTS:
         QVERIFY(!QFile::exists(directory.filePath(QStringLiteral("settings.json"))));
     }
 
+    // The two files are written once the event loop runs, or at once by syncSettings().
+    void the_settings_are_written_later_or_on_sync() {
+        QTemporaryDir directory;
+        const auto plugins = directory.filePath(QStringLiteral("plugins.json"));
+        const auto settings = directory.filePath(QStringLiteral("settings.json"));
+        AppLoader loader(
+            {QStringLiteral("helloutau"), QStringLiteral("--settings"), directory.path()});
+        loader.setPluginValue(QStringLiteral("org.test.p"), QStringLiteral("a"), 1);
+        loader.settings().setResampler(QStringLiteral("r.exe"));
+        QVERIFY(!QFile::exists(plugins));
+        QVERIFY(!QFile::exists(settings));
+        loader.syncSettings();
+        QVERIFY(QFile::exists(plugins));
+        QVERIFY(QFile::exists(settings));
+
+        QVERIFY(QFile::remove(plugins));
+        loader.setPluginValue(QStringLiteral("org.test.p"), QStringLiteral("a"), 2);
+        QTRY_VERIFY(QFile::exists(plugins));
+    }
+
     // The core plugin that comes with the application, found beside the program, opens a new
     // project, and its windows close when it shuts down.
     void the_builtin_core_plugin_opens_a_window() {

@@ -1,10 +1,12 @@
 #ifndef HELLOUTAU_EDITOR_SETTINGSJSON_P_H
 #define HELLOUTAU_EDITOR_SETTINGSJSON_P_H
 
+#include <functional>
 #include <string_view>
 
 #include <QtCore/QJsonValue>
 #include <QtCore/QString>
+#include <QtCore/QTimer>
 
 #include <stdcorelib/support/json.h>
 
@@ -40,6 +42,36 @@ namespace hello::daw {
         /// The other way. Binary data, which no setting holds, has no counterpart and reads as
         /// null.
         static QJsonValue qtOf(const stdc::json::Value &value);
+    };
+
+    /// A settings file written after its changes, once the event loop runs, so that the changes
+    /// of one pass of the loop make one write. Changes that are still pending are written by
+    /// sync() and at destruction.
+    class SettingsFile {
+    public:
+        /// The file \a fileName, whose content \a content gives at each write.
+        SettingsFile(QString fileName, std::function<stdc::json::Value()> content);
+
+        /// Writes the pending changes.
+        ~SettingsFile();
+
+        inline const QString &fileName() const {
+            return m_fileName;
+        }
+
+        /// Writes the file once the event loop runs, unless a write is pending already.
+        void changed();
+
+        /// Writes the pending changes now.
+        void sync();
+
+    private:
+        QString m_fileName;
+        std::function<stdc::json::Value()> m_content;
+        QTimer m_timer;
+        bool m_pending = false;
+
+        Q_DISABLE_COPY(SettingsFile)
     };
 
 }

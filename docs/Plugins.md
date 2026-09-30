@@ -101,7 +101,7 @@ macOS 的 bundle 中为 `HelloUtau.app/Contents/MacOS`（程序）与 `HelloUtau
 - 设置：应用数据目录中的两个 JSON 文件（作者 2026-09-30 定；Windows 上为 `%APPDATA%\OpenVPI\HelloUtau\`，组织名 `OpenVPI`），应用与插件分开，一方写坏不牵连另一方，插件一份也与将来随安装提供的全局一份同格式：
   - `settings.json`：应用的设置（`AppSettings`），分组存放 `engines`、`playback`、`files`、`commandPalette`，也可经 `value()` / `setValue()` 以 `a/b/c` 形式的键读写任意一层。Core 插件把 `AppLoader` 的这一份交给 `Editor`。
   - `plugins.json`：严格为 stdcorelib.plugin `PluginSettings` 的格式：用户启用或停用的插件 `enabledPlugins` / `disabledPlugins`，以及各插件自己的值 `userData/<插件 ID>`。`AppLoader` 读写它，载入插件前把它交给 `PluginSystem` 的用户一级；插件经 `AppLoader::pluginValue(id, key)` / `setPluginValue()` 以相对于自己那一组的 `a/b/c` 键读写。
-  - `AppLoader` 的 `--settings <目录>` 另指定两者所在的目录，测试用它。内部存储用 stdcorelib 的 JSON（值可就地修改，`SettingsJson`），公开接口用 `QJsonValue`，stdcorelib 仍是私有依赖。每次修改重写整个文件，多开时后写的覆盖先写的，以后再做独占。
+  - `AppLoader` 的 `--settings <目录>` 另指定两者所在的目录，测试用它。内部存储用 stdcorelib 的 JSON（值可就地修改，`SettingsJson`），公开接口用 `QJsonValue`，stdcorelib 仍是私有依赖。修改后等事件循环运行时重写整个文件（`SettingsFile`，同一轮循环的修改合为一次写），`AppSettings::sync()`、`AppLoader::syncSettings()` 与析构时立即写出未写的修改；多开时后写的覆盖先写的，以后再做独占。
   - 随安装提供的全局一份尚未实现。设置对话框增加「Plugins」页：列出插件、勾选启用、显示错误与依赖。
 - **关闭顺序**：插件登记的对象，代码都在插件的库中，必须在卸载前销毁。Core 插件在 `aboutToShutdown()` 中销毁 `Editor`，依赖 Core 的插件的 `aboutToShutdown()` 在它之前调用，各库都在此后才卸载。插件的实例是库中的静态对象，随库卸载而析构，因此窗口等 Qt 对象不能留到那时。
 - **插件交给宿主的数据不能指向插件库的静态存储**：`QStringLiteral` 的文本就在库中，库卸载后仍被宿主持有的这类字符串即成悬空（`test_AppLoader` 的测试插件遇到过）。交给宿主、可能在卸载后仍被使用的字符串须是分配的副本。

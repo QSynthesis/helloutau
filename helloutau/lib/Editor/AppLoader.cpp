@@ -32,20 +32,21 @@ namespace hello::daw {
         QString settingsDirectory;
         std::unique_ptr<AppSettings> settings;
         stdc::pluginsystem::PluginSettings pluginSettings;
+        // After the settings of the plugins, so that it goes first and writes what is pending
+        std::unique_ptr<SettingsFile> pluginFile;
         bool loaded = false;
-
-        QString pluginSettingsFile() const {
-            return settingsDirectory + QStringLiteral("/plugins.json");
-        }
 
         // Settings that the library rejects are reported, and leave every plugin as its
         // metadata says, until the next change replaces them.
         void readPluginSettings() {
+            const auto fileName = settingsDirectory + QStringLiteral("/plugins.json");
+            pluginFile = std::make_unique<SettingsFile>(fileName,
+                                                        [this] { return pluginSettings.toJson(); });
             std::string error;
             auto read = stdc::pluginsystem::PluginSettings::fromJson(
-                stdc::json::Value(SettingsJson::read(pluginSettingsFile())), &error);
+                stdc::json::Value(SettingsJson::read(fileName)), &error);
             if (!read) {
-                qWarning().noquote() << "The settings of the plugins in" << pluginSettingsFile()
+                qWarning().noquote() << "The settings of the plugins in" << fileName
                                      << "are ignored:" << QString::fromStdString(error);
                 return;
             }
@@ -110,6 +111,12 @@ namespace hello::daw {
         return impl.files;
     }
 
+    void AppLoader::syncSettings() {
+        stdc_impl_t;
+        impl.settings->sync();
+        impl.pluginFile->sync();
+    }
+
     QString AppLoader::settingsDirectory() const {
         stdc_impl_t;
         return impl.settingsDirectory;
@@ -127,7 +134,7 @@ namespace hello::daw {
         SettingsJson::insertAt(impl.pluginSettings.userData(),
                                (id + QLatin1Char('/') + key).toStdString(),
                                SettingsJson::stdcOf(value));
-        SettingsJson::write(impl.pluginSettingsFile(), impl.pluginSettings.toJson());
+        impl.pluginFile->changed();
     }
 
     AppSettings &AppLoader::settings() const {

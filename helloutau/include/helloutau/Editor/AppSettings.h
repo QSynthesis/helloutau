@@ -16,8 +16,9 @@ namespace hello::daw {
     /// The settings of the application, stored per user in a JSON file. Those of the plugins are
     /// kept apart, see AppLoader.
     ///
-    /// The file is read once, and written whole at each change. Of two applications that change
-    /// it, the one that writes last prevails.
+    /// The file is read once. It is written whole after the changes, once the event loop runs,
+    /// so that the changes of one pass of the loop make one write, and by sync() and the
+    /// destructor. Of two applications that change it, the one that writes last prevails.
     class HELLOUTAU_EDITOR_EXPORT AppSettings {
     public:
         /// The settings of the current user, in defaultFileName().
@@ -36,6 +37,9 @@ namespace hello::daw {
         static QString defaultFileName();
 
         QString fileName() const;
+
+        /// Writes the changes that are pending now.
+        void sync();
 
         /// The directory that contains \c utau.exe, which resolves the \c %VOICE% prefix and
         /// relative paths in \c VoiceDir, see Track::voiceDirectory(). Empty if not set.

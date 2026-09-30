@@ -115,6 +115,7 @@ private Q_SLOTS:
 
         AppSettings settings(file);
         settings.clearRecentFiles();
+        settings.sync();
         QVERIFY(!readFile(file).contains(QStringLiteral("files")));
         QCOMPARE(settings.value(QStringLiteral("engines/wavtool")),
                  QJsonValue(QStringLiteral("w.exe")));
@@ -147,7 +148,31 @@ private Q_SLOTS:
         settings.setValue(QStringLiteral("a/b/d"), QJsonValue::Undefined);
         QVERIFY(settings.value(QStringLiteral("a/b")).isUndefined());
         settings.setValue(QStringLiteral("a/e/f"), QJsonValue());
+        settings.sync();
         QVERIFY(!readFile(file).contains(QStringLiteral("a")));
+    }
+
+    // The changes are written once the event loop runs, those of one pass in one write, or at
+    // once by sync().
+    void changes_are_written_once_the_loop_runs() {
+        QTemporaryDir dir;
+        const auto file = dir.filePath(QStringLiteral("settings.json"));
+        AppSettings settings(file);
+        settings.setResampler(QStringLiteral("r.exe"));
+        settings.setWavtool(QStringLiteral("w.exe"));
+        QVERIFY(!QFile::exists(file));
+        QTRY_VERIFY(QFile::exists(file));
+        const auto engines = readFile(file).value(QStringLiteral("engines")).toObject();
+        QCOMPARE(engines.value(QStringLiteral("resampler")), QJsonValue(QStringLiteral("r.exe")));
+        QCOMPARE(engines.value(QStringLiteral("wavtool")), QJsonValue(QStringLiteral("w.exe")));
+
+        settings.setResampler(QStringLiteral("s.exe"));
+        settings.sync();
+        QCOMPARE(readFile(file)
+                     .value(QStringLiteral("engines"))
+                     .toObject()
+                     .value(QStringLiteral("resampler")),
+                 QJsonValue(QStringLiteral("s.exe")));
     }
 
     // A file that is not a JSON object is read as empty, and replaced by the next change.
@@ -163,6 +188,7 @@ private Q_SLOTS:
         AppSettings settings(file);
         QVERIFY(settings.resampler().isEmpty());
         settings.setResampler(QStringLiteral("r.exe"));
+        settings.sync();
         QCOMPARE(AppSettings(file).resampler(), QStringLiteral("r.exe"));
     }
 
@@ -176,6 +202,6 @@ private:
     }
 };
 
-QTEST_APPLESS_MAIN(test_AppSettings)
+QTEST_GUILESS_MAIN(test_AppSettings)
 
 #include "test_AppSettings.moc"

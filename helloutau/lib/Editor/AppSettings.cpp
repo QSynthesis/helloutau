@@ -53,7 +53,7 @@ namespace hello::daw {
     }
 
     AppSettings::Impl::Impl(const QString &fileName)
-        : fileName(fileName), root(SettingsJson::read(fileName)) {
+        : root(SettingsJson::read(fileName)), file(fileName, [this] { return json::Value(root); }) {
     }
 
     const json::Value &AppSettings::Impl::value(std::string_view key) const {
@@ -62,7 +62,7 @@ namespace hello::daw {
 
     void AppSettings::Impl::setValue(std::string_view key, json::Value value) {
         SettingsJson::insertAt(root, key, std::move(value));
-        SettingsJson::write(fileName, json::Value(root));
+        file.changed();
     }
 
     AppSettings::AppSettings() : AppSettings(defaultFileName()) {
@@ -83,7 +83,12 @@ namespace hello::daw {
 
     QString AppSettings::fileName() const {
         stdc_impl_t;
-        return impl.fileName;
+        return impl.file.fileName();
+    }
+
+    void AppSettings::sync() {
+        stdc_impl_t;
+        impl.file.sync();
     }
 
     std::filesystem::path AppSettings::utauDirectory() const {

@@ -8,6 +8,7 @@
 #include <stdcorelib/support/json.h>
 
 #include "AppSettings.h"
+#include "SettingsJson_p.h"
 
 namespace hello::daw {
 
@@ -25,11 +26,14 @@ namespace hello::daw {
         const stdc::json::Value &value(std::string_view key) const;
 
         /// Replaces or removes the value at \a key, see SettingsJson::insertAt(), and writes the
-        /// file.
+        /// file once the event loop runs.
         void setValue(std::string_view key, stdc::json::Value value);
 
-        QString fileName;
         stdc::json::Object root;
+
+        // After the content, so that it goes first and writes what is pending while the content
+        // is still there
+        SettingsFile file;
     };
 
 }
