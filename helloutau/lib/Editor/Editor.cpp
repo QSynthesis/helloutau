@@ -13,6 +13,7 @@
 
 #include <hellokit/Edit/ProjectDocument.h>
 #include <hellokit/Edit/VoiceBankDocument.h>
+#include <hellokit/VoiceBank/FrequencyFormatRegistry.h>
 #include <hellokit/VoiceBank/VoiceBank.h>
 
 #include <helloutau/Theme/ThemeManager.h>
@@ -69,6 +70,8 @@ namespace hello::daw {
         QAK::ActionRegistry *registry = nullptr;
         ThemeManager *themes = nullptr;
         SettingCatalog *catalog = nullptr;
+        std::unique_ptr<kit::FrequencyFormatRegistry> frequencyFormats =
+            std::make_unique<kit::FrequencyFormatRegistry>();
         bool watchesDisk = true;
         QList<QPointer<ProjectWindow>> windows;
         QList<QPointer<VoiceBankWindow>> voiceBankWindows;
@@ -155,6 +158,12 @@ namespace hello::daw {
         impl.themes->addSearchPath(QStringLiteral(":/helloutau/themes"));
         impl.catalog = new SettingCatalog(this);
         addEditorSettingPages(impl.catalog, *impl.settings);
+        impl.frequencyFormats->addBuiltinFormats();
+    }
+
+    kit::FrequencyFormatRegistry &Editor::frequencyFormats() const {
+        stdc_impl_t;
+        return *impl.frequencyFormats;
     }
 
     SettingCatalog *Editor::settingCatalog() const {

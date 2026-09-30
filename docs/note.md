@@ -130,7 +130,7 @@ UST 自身的 `Charset` 只有两种取值：空，或 `UTF-8`。它表示的是
 
 ## HelloUtau 插件
 
-HelloUtau 支持五种插件：
+HelloUtau 支持六种插件：
 
 - 原版 UTAU 插件：
   - 以包含当前选区的 `temp.ust` 作为第一个命令行参数的可执行文件，执行选区修改，执行期间阻塞界面
@@ -144,3 +144,6 @@ HelloUtau 支持五种插件：
 - 格式转换插件：
   - 继承自 `InterchangePlugin` 的 C++ 实例，为 HelloUtau 增加一种可导入或可导出的外部格式，例如 MIDI、VSQ、`.ustx`
   - 它提供格式驱动而非界面。需要自定义选择步骤界面时另行提供一个页面，接口结构见 [`Interchange.md`](Interchange.md)
+- 频率表格式插件（作者 2026-09-30 决定新增）：
+  - 继承自 `FrequencyFormatPlugin` 的 C++ 实例，为 HelloUtau 增加一种频率表格式（重采样器为音频文件事先分析的基频），例如某个重采样器自己的分析文件
+  - 它提供格式驱动而非界面，与内置的 frq、dio、mrq 经同一个注册表加入，接口见 [`FrequencyTables.md`](FrequencyTables.md)

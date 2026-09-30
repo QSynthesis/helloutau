@@ -3,6 +3,7 @@
 
 #include <QtCore/QTemporaryDir>
 #include <QtCore/QTimer>
+#include <QtCore/QtEndian>
 #include <QtGui/QAction>
 #include <QtGui/QImage>
 #include <QtTest/QSignalSpy>
@@ -839,6 +840,11 @@ private:
         file << text;
     }
 
+    static void writeFile(const fs::path &path, const char *bytes, qsizetype size) {
+        std::ofstream file(path, std::ios::binary | std::ios::trunc);
+        file.write(bytes, std::streamsize(size));
+    }
+
     // A WAVE file of 16-bit mono PCM at 1000 Hz, one frame per millisecond
     static void writeWave(const fs::path &path, int frames) {
         QByteArray bytes;
@@ -1404,6 +1410,78 @@ private Q_SLOTS:
         QVERIFY(model->index(0, 0).data(VoiceBankEntryModel::DuplicateAliasRole).toBool());
         QVERIFY(model->index(1, 0).data(VoiceBankEntryModel::DuplicateAliasRole).toBool());
         QVERIFY(!model->index(2, 0).data(VoiceBankEntryModel::DuplicateAliasRole).toBool());
+    }
+
+    // The frequency table of the current entry is drawn over its audio, in the format of the
+    // resampler of the settings at first, another chosen in the box; the View menu shows the
+    // spectrogram in place of the waveform.
+    void the_frequency_table_of_the_entry_is_shown() {
+        QTemporaryDir dir;
+        const auto bank = voiceBank(dir);
+        writeWave(bank / "a.wav", 1000);
+        writeWave(bank / "c.wav", 1000);
+        const auto le = [](auto value) {
+            QByteArray bytes(sizeof(value), '\0');
+            qToLittleEndian(value, bytes.data());
+            return bytes;
+        };
+        // a_wav.frq at 220 Hz, and an entry of desc.mrq at 440 Hz, a frame each 10 ms
+        QByteArray frq("FREQ0003");
+        frq += le(qint32(10)) + le(220.0) + QByteArray(16, '\0') + le(qint32(100));
+        for (int i = 0; i < 100; ++i) {
+            frq += le(220.0) + le(1.0);
+        }
+        writeFile(bank / "a_wav.frq", frq.constData(), frq.size());
+        QByteArray data = le(qint32(100)) + le(qint32(1000)) + le(qint32(10));
+        for (int i = 0; i < 100; ++i) {
+            data += le(440.0f);
+        }
+        QByteArray mrq("mrq ");
+        mrq += le(qint32(2)) + le(qint32(1)) + le(qint32(5));
+        for (const auto c : QStringLiteral("a.wav")) {
+            mrq += le(quint16(c.unicode()));
+        }
+        mrq += le(qint32(data.size())) + data;
+        writeFile(bank / "desc.mrq", mrq.constData(), mrq.size());
+
+        const auto e = editor();
+        e->settings().setResampler(QStringLiteral("C:/engines/moresampler.exe"));
+        const auto window = e->openVoiceBank(bank);
+        QVERIFY(window);
+        const auto tree = window->directoryTree();
+        tree->setCurrentItem(tree->topLevelItem(1));
+        window->setCurrentRow(0);
+        const auto view = window->waveformView();
+        const auto box = window->findChild<QComboBox *>(QStringLiteral("frequencyFormat"));
+        QVERIFY(box);
+        QCOMPARE(box->currentData().toString(), QStringLiteral("mrq"));
+        QVERIFY(view->frequencyTable());
+        QCOMPARE(view->frequencyTable()->frames.at(50).frequency, 440.0);
+        QCOMPARE(view->frequencyTable()->frames.at(50).time, 500.0);
+        QCOMPARE(box->itemText(box->findData(QStringLiteral("dio"))),
+                 QStringLiteral("dio (world4utau) (none)"));
+
+        box->setCurrentIndex(box->findData(QStringLiteral("frq")));
+        QCOMPARE(view->frequencyTable()->frames.at(50).frequency, 220.0);
+        box->setCurrentIndex(box->findData(QString()));
+        QVERIFY(!view->frequencyTable());
+        box->setCurrentIndex(box->findData(QStringLiteral("frq")));
+
+        // c.wav has no table.
+        window->setCurrentRow(2);
+        QVERIFY(!view->frequencyTable());
+        QCOMPARE(box->itemText(box->findData(QStringLiteral("frq"))),
+                 QStringLiteral("frq (resampler.exe) (none)"));
+
+        const auto spectrogram = actionNamed(window, QStringLiteral("Show &Spectrogram"));
+        QVERIFY(spectrogram && !spectrogram->isChecked());
+        QVERIFY(!view->spectrogram());
+        spectrogram->trigger();
+        QVERIFY(view->spectrogram());
+        window->setCurrentRow(0);
+        QVERIFY(view->spectrogram());
+        spectrogram->trigger();
+        QVERIFY(!view->spectrogram());
     }
 
     // The dock edits character.txt, readme.txt and prefix.map, each edit one step, creating the

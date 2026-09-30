@@ -1,3 +1,5 @@
+#include <cmath>
+
 #include <QtTest/QSignalSpy>
 #include <QtTest/QTest>
 #include <QtWidgets/QApplication>
@@ -191,6 +193,63 @@ private Q_SLOTS:
         QCOMPARE(view.entry()->voiceOverlap, -10.0);
         QVERIFY(!view.setValueAt(Value::Overlap, 90));
         QCOMPARE(edited.size(), 1);
+    }
+
+    // The curve of a frequency table on the pitch axis, an octave of room below and above,
+    // with a gap where the frames are unvoiced
+    void the_frequency_curve_is_drawn() {
+        OtoWaveformView view;
+        show(view);
+        view.setFrequencyColor(QColor(255, 0, 255));
+        QCOMPARE(view.pitchRange(), (std::pair<double, double>(36, 84)));
+        kit::FrequencyTable table;
+        for (int time = 0; time <= 1000; time += 5) {
+            table.frames.push_back({double(time), time >= 290 && time <= 310 ? 0.0 : 440.0, {}});
+        }
+        view.setFrequencyTable(table);
+        QCOMPARE(view.pitchRange(), (std::pair<double, double>(57, 81)));
+        QCOMPARE(view.frequencyTable()->frames.size(), table.frames.size());
+
+        const auto drawnAt = [&view](double time, double note) {
+            const auto image = view.viewport()->grab().toImage();
+            const QPoint at(int(view.xOf(time)), int(view.yOfNote(note)));
+            for (int dy = -2; dy <= 2; ++dy) {
+                const auto pixel = image.pixelColor(at + QPoint(0, dy));
+                if (pixel.red() > 180 && pixel.green() < 120 && pixel.blue() > 180) {
+                    return true;
+                }
+            }
+            return false;
+        };
+        QVERIFY(drawnAt(600, 69));
+        QVERIFY(!drawnAt(300, 69));
+        QVERIFY(!drawnAt(600, 75));
+        view.setFrequencyTable(std::nullopt);
+        QVERIFY(!drawnAt(600, 69));
+    }
+
+    // The spectrogram in place of the waveform: a sine is bright at its pitch.
+    void the_spectrogram_shows_the_pitch() {
+        auto audio = std::make_shared<kit::WaveAudio>();
+        audio->sampleRate = 8000;
+        audio->channels = 1;
+        for (int i = 0; i < 8000; ++i) {
+            audio->samples.push_back(float(0.5 * std::sin(2 * 3.14159265358979 * 440 * i / 8000)));
+        }
+        OtoWaveformView view;
+        view.resize(1040, 300);
+        view.show();
+        view.setAudio(audio);
+        view.setSpectrumColor(QColor(0, 0, 255));
+        view.setSpectrogram(std::make_shared<const kit::Spectrogram>(kit::Spectrogram::of(*audio)));
+        QVERIFY(view.spectrogram());
+        const auto image = view.viewport()->grab().toImage();
+        const auto at = [&](double note) {
+            return image.pixelColor(QPoint(int(view.xOf(500)), int(view.yOfNote(note))));
+        };
+        // Blue where the sine is, the background an octave above
+        QVERIFY(at(69).red() < 100);
+        QVERIFY(at(81).red() > 200);
     }
 
     // Zooming keeps the time under the pointer; a double click off the boundaries asks to

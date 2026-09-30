@@ -16,6 +16,10 @@ namespace QAK {
     class ActionRegistry;
 }
 
+namespace hello::kit {
+    class FrequencyFormatRegistry;
+}
+
 namespace hello::daw {
 
     class AppSettings;
@@ -44,6 +48,10 @@ namespace hello::daw {
 
         /// The themes of all windows, with the built-in one under \c :/helloutau/themes.
         ThemeManager *themeManager() const;
+
+        /// The formats of frequency tables that the voice bank windows read, the built-in ones
+        /// registered at start; see docs/FrequencyTables.md.
+        kit::FrequencyFormatRegistry &frequencyFormats() const;
 
         /// The pages of the settings dialog, those of the editor registered at start; see the
         /// settings dialog in docs/Widgets.md.

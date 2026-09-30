@@ -163,6 +163,9 @@
              the length beside the waveform -->
         <action id="helloutau.voiceBank.synthesize" text="&amp;Synthesize Note" category="Playback"
                 shortcut="Ctrl+Return" />
+        <!-- The spectrogram of the audio in place of its waveform -->
+        <action id="helloutau.voiceBank.showSpectrogram" text="Show &amp;Spectrogram"
+                category="View" />
         <!-- The dock of character.txt, readme.txt and prefix.map -->
         <action id="helloutau.voiceBank.showInfo" text="Voice Bank &amp;Info" category="View" />
         <!-- The folder chosen in the tree: its files saved in another encoding, the text staying,
@@ -304,6 +307,7 @@
                 <action id="helloutau.voiceBank.rereadCharset" />
             </menu>
             <menu id="helloutau.voiceBank.view">
+                <action id="helloutau.voiceBank.showSpectrogram" />
                 <action id="helloutau.voiceBank.showInfo" />
                 <separator />
                 <action id="helloutau.view.commandPalette" />

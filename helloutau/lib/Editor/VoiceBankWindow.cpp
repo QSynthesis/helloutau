@@ -44,7 +44,9 @@
 #include <hellokit/Edit/VoiceBankEdits.h>
 #include <hellokit/Edit/VoiceBankRefs.h>
 #include <hellokit/Support/TextCodec.h>
+#include <hellokit/Synth/Spectrogram.h>
 #include <hellokit/Synth/WaveAudio.h>
+#include <hellokit/VoiceBank/FrequencyFormatRegistry.h>
 #include <hellokit/VoiceBank/VoiceBankCheckScheduler.h>
 #include <hellokit/VoiceBank/WaveMetadata.h>
 
@@ -146,6 +148,12 @@ namespace hello::daw {
         std::optional<std::filesystem::path> menuFolder;
         SamplePreview *preview = nullptr;
         QComboBox *pitchBox = nullptr;
+        QComboBox *frequencyBox = nullptr;
+        // The audio file and the format of the frequency table shown, and the spectrogram of
+        // the audio it was computed from
+        std::pair<std::filesystem::path, QString> frequencyShown;
+        std::shared_ptr<const kit::Spectrogram> spectrum;
+        std::shared_ptr<const kit::WaveAudio> spectrumOf;
         QSpinBox *lengthBox = nullptr;
         QTimer *playheadTimer = nullptr;
         // The folder and alias whose pitch pitchBox shows by default
@@ -270,6 +278,9 @@ namespace hello::daw {
                     playAudio(*time, std::nullopt);
                 }
             });
+            addCommand(QStringLiteral("helloutau.voiceBank.showSpectrogram"), [this] {
+                showSpectrum();
+            })->setCheckable(true);
             addCommand(QStringLiteral("helloutau.voiceBank.showInfo"), [this] {
                 infoDock->setVisible(
                     actions.value(QStringLiteral("helloutau.voiceBank.showInfo"))->isChecked());
@@ -890,16 +901,68 @@ namespace hello::daw {
             if (row < 0) {
                 waveform->setAudio(nullptr);
                 waveform->setEntry(std::nullopt);
+                waveform->setSpectrogram(nullptr);
+                waveform->setFrequencyTable(std::nullopt);
+                frequencyShown = {};
                 return;
             }
             const auto audio = audioAt(audioPathOf(row));
             if (audio != waveform->audio()) {
                 waveform->setAudio(audio);
+                showSpectrum();
             }
+            showFrequency();
             const auto entry = model->entryOf(row);
             if (waveform->entry() != entry) {
                 waveform->setEntry(entry);
             }
+        }
+
+        // The spectrogram of the audio shown, while the View menu asks for it
+        void showSpectrum() {
+            const auto audio = waveform->audio();
+            const bool shown =
+                actions.value(QStringLiteral("helloutau.voiceBank.showSpectrogram"))->isChecked();
+            if (!shown || !audio) {
+                waveform->setSpectrogram(nullptr);
+                return;
+            }
+            if (spectrumOf != audio) {
+                spectrum = std::make_shared<const kit::Spectrogram>(kit::Spectrogram::of(*audio));
+                spectrumOf = audio;
+            }
+            waveform->setSpectrogram(spectrum);
+        }
+
+        // The frequency table of the audio of the current row in the format of the box. The box
+        // marks the formats without a table for the audio file.
+        void showFrequency() {
+            stdc_decl_t;
+            const int row = decl.currentRow();
+            const auto path = row >= 0 ? audioPathOf(row) : std::filesystem::path();
+            const auto id = frequencyBox->currentData().toString();
+            const auto &formats = editor->frequencyFormats();
+            for (int i = 1; i < frequencyBox->count(); ++i) {
+                const auto format = formats.format(frequencyBox->itemData(i).toString());
+                const bool present = !path.empty() && format && format->exists(path);
+                frequencyBox->setItemText(i, present ? format->name()
+                                                     : tr("%1 (none)").arg(format->name()));
+            }
+            const auto audio = waveform->audio();
+            if (frequencyShown == std::pair{path, id}) {
+                return;
+            }
+            frequencyShown = {path, id};
+            const auto format = formats.format(id);
+            std::optional<kit::FrequencyTable> table;
+            if (format && audio && format->exists(path)) {
+                kit::DiagnosticList diagnostics;
+                table = format->read(path, audio->sampleRate, diagnostics);
+                if (!table) {
+                    decl.statusBar()->showMessage(diagnostics.value(0).message);
+                }
+            }
+            waveform->setFrequencyTable(table);
         }
 
         void showPointer() {
@@ -986,6 +1049,26 @@ namespace hello::daw {
             lengthLabel->setBuddy(lengthBox);
             controls->addWidget(lengthLabel);
             controls->addWidget(lengthBox);
+            controls->addSpacing(12);
+
+            // The frequency table drawn over the audio, that of the resampler of the settings
+            // at first (docs/FrequencyTables.md)
+            frequencyBox = new QComboBox();
+            frequencyBox->setObjectName(QStringLiteral("frequencyFormat"));
+            frequencyBox->addItem(tr("None"), QString());
+            const auto &formats = editor->frequencyFormats();
+            for (const auto format : formats.formats()) {
+                frequencyBox->addItem(format->name(), format->id());
+            }
+            const auto chosen = formats.formatForResampler(pathOf(editor->settings().resampler()));
+            frequencyBox->setCurrentIndex(chosen ? std::max(0, frequencyBox->findData(chosen->id()))
+                                                 : 0);
+            QObject::connect(frequencyBox, &QComboBox::currentIndexChanged, &decl,
+                             [this] { showFrequency(); });
+            auto frequencyLabel = new QLabel(tr("&F0:"));
+            frequencyLabel->setBuddy(frequencyBox);
+            controls->addWidget(frequencyLabel);
+            controls->addWidget(frequencyBox);
             controls->addStretch();
 
             playheadTimer = new QTimer(&decl);

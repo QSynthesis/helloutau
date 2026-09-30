@@ -88,7 +88,7 @@ MIDI 导入属于「兼容周边」类别，但优先级被提至最高，并且
 
 ### 五、插件
 
-五类插件，定义见 `docs/note.md`。
+六类插件，定义见 `docs/note.md`。
 
 - 原版 UTAU 插件（含 `.bat`，通过 `stdc::Popen::shell(true)` 执行）。
 - 内置的 `RangeEditPlugin`、`VoiceBankPlugin`（`hellokit`）。

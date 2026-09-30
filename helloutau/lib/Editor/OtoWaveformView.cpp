@@ -3,8 +3,10 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <limits>
 #include <vector>
 
+#include <QtGui/QImage>
 #include <QtGui/QKeyEvent>
 #include <QtGui/QMouseEvent>
 #include <QtGui/QPainter>
@@ -69,7 +71,101 @@ namespace hello::daw {
         double grip = 5;
 
         QColor waveColor, maskColor, consonantColor, preUtteranceColor, overlapColor, boundaryColor,
-            envelopeColor, playheadColor;
+            envelopeColor, playheadColor, frequencyColor, spectrumColor;
+
+        std::shared_ptr<const kit::Spectrogram> spectrogram;
+        std::optional<kit::FrequencyTable> table;
+        // The pitch axis, see OtoWaveformView::pitchRange()
+        std::pair<double, double> range{36, 84};
+
+        // The spectrogram drawn for the view it was drawn in
+        struct SpectrumImage {
+            QImage image;
+            double scale = 0;
+            double viewStart = 0;
+            QSize size;
+            std::pair<double, double> range;
+            const kit::Spectrogram *spectrogram = nullptr;
+            QRgb background = 0;
+            QRgb color = 0;
+        } spectrumImage;
+
+        static double noteOf(double frequency) {
+            return 69 + 12 * std::log2(frequency / 440);
+        }
+
+        void updateRange() {
+            double low = std::numeric_limits<double>::infinity();
+            double high = -low;
+            if (table) {
+                for (const auto &frame : table->frames) {
+                    if (frame.frequency > 0 && std::isfinite(frame.frequency)) {
+                        low = std::min(low, noteOf(frame.frequency));
+                        high = std::max(high, noteOf(frame.frequency));
+                    }
+                }
+            }
+            if (low > high) {
+                range = {36, 84};
+                return;
+            }
+            // Within C1 and the top of B7, the keys of prefix.map
+            range = {std::max(24.0, std::floor(low) - 12), std::min(108.0, std::ceil(high) + 12)};
+            if (range.second <= range.first) {
+                range = {36, 84};
+            }
+        }
+
+        // The spectrogram of the view in area of the viewport
+        const QImage &spectrumImageOf(const QRect &area) {
+            stdc_decl_t;
+            const auto background = decl.palette().color(QPalette::Base).rgb();
+            const auto color = decl.spectrumColor().rgb();
+            auto &cached = spectrumImage;
+            if (cached.spectrogram == spectrogram.get() && cached.scale == scale &&
+                cached.viewStart == viewStart && cached.size == area.size() &&
+                cached.range == range && cached.background == background && cached.color == color) {
+                return cached.image;
+            }
+            cached = {QImage(area.size(), QImage::Format_RGB32),
+                      scale,
+                      viewStart,
+                      area.size(),
+                      range,
+                      spectrogram.get(),
+                      background,
+                      color};
+            const auto &data = *spectrogram;
+            const double peak = std::max(1e-9f, data.peak());
+            // The bin of each row, the top first
+            std::vector<int> bins(size_t(std::max(0, area.height())));
+            for (int y = 0; y < area.height(); ++y) {
+                const double note =
+                    range.second - (y + 0.5) / area.height() * (range.second - range.first);
+                bins[size_t(y)] =
+                    int(std::lround(data.binOf(440 * std::pow(2.0, (note - 69) / 12))));
+            }
+            const auto blend = [&](double level) {
+                const auto mix = [level](int a, int b) { return int(a + (b - a) * level); };
+                return qRgb(mix(qRed(background), qRed(color)),
+                            mix(qGreen(background), qGreen(color)),
+                            mix(qBlue(background), qBlue(color)));
+            };
+            for (int x = 0; x < area.width(); ++x) {
+                const int frame = int(std::lround(decl.timeAt(x + 0.5) * data.sampleRate() / 1000 /
+                                                  kit::Spectrogram::hopSize));
+                for (int y = 0; y < area.height(); ++y) {
+                    const float magnitude = data.magnitude(frame, bins[size_t(y)]);
+                    // 60 decibels below the peak and down are the background.
+                    const double level =
+                        magnitude > 0
+                            ? std::clamp((20 * std::log10(magnitude / peak) + 60) / 60, 0.0, 1.0)
+                            : 0.0;
+                    cached.image.setPixel(x, y, blend(level));
+                }
+            }
+            return cached.image;
+        }
 
         // The smallest and largest sample under each pixel column, for the view they were
         // taken in
@@ -315,6 +411,41 @@ namespace hello::daw {
         }
     }
 
+    std::shared_ptr<const kit::Spectrogram> OtoWaveformView::spectrogram() const {
+        stdc_impl_t;
+        return impl.spectrogram;
+    }
+
+    void OtoWaveformView::setSpectrogram(std::shared_ptr<const kit::Spectrogram> spectrogram) {
+        stdc_impl_t;
+        impl.spectrogram = std::move(spectrogram);
+        viewport()->update();
+    }
+
+    std::optional<kit::FrequencyTable> OtoWaveformView::frequencyTable() const {
+        stdc_impl_t;
+        return impl.table;
+    }
+
+    void OtoWaveformView::setFrequencyTable(const std::optional<kit::FrequencyTable> &table) {
+        stdc_impl_t;
+        impl.table = table;
+        impl.updateRange();
+        viewport()->update();
+    }
+
+    std::pair<double, double> OtoWaveformView::pitchRange() const {
+        stdc_impl_t;
+        return impl.range;
+    }
+
+    double OtoWaveformView::yOfNote(double note) const {
+        stdc_impl_t;
+        const double height = std::max(1, viewport()->height() - axisHeight);
+        const auto [low, high] = impl.range;
+        return axisHeight + (high - note) / (high - low) * height;
+    }
+
     double OtoWaveformView::grip() const {
         stdc_impl_t;
         return impl.grip;
@@ -443,6 +574,13 @@ namespace hello::daw {
             return values ? xOf(positionOf(*impl.entry, value, length)) : 0.0;
         };
 
+        // The spectrogram in place of the waveform
+        const double end = xOf(length);
+        if (impl.spectrogram) {
+            const QRect rect(0, axisHeight, area.width(), int(wave.height()));
+            painter.drawImage(rect.topLeft(), impl.spectrumImageOf(rect));
+        }
+
         // The consonant under the waveform
         if (values) {
             painter.fillRect(
@@ -451,25 +589,68 @@ namespace hello::daw {
         }
 
         // The waveform, one column of peaks per pixel
-        painter.setPen(QPen(waveColor(), 1));
-        const auto &columns = impl.columns();
-        const double end = xOf(length);
-        for (int x = 0; x < int(columns.size()) && x < end; ++x) {
-            const auto [low, high] = columns[size_t(x)];
-            painter.drawLine(QPointF(x + 0.5, middle - high * half),
-                             QPointF(x + 0.5, middle - low * half));
-        }
-        painter.setPen(palette().color(QPalette::Mid));
-        painter.drawLine(QPointF(0, middle), QPointF(std::min<double>(end, area.width()), middle));
-        if (!values) {
-            return;
+        if (!impl.spectrogram) {
+            painter.setPen(QPen(waveColor(), 1));
+            const auto &columns = impl.columns();
+            for (int x = 0; x < int(columns.size()) && x < end; ++x) {
+                const auto [low, high] = columns[size_t(x)];
+                painter.drawLine(QPointF(x + 0.5, middle - high * half),
+                                 QPointF(x + 0.5, middle - low * half));
+            }
+            painter.setPen(palette().color(QPalette::Mid));
+            painter.drawLine(QPointF(0, middle),
+                             QPointF(std::min<double>(end, area.width()), middle));
         }
 
         // What the offset and the cutoff leave out
-        painter.fillRect(QRectF(QPointF(xOf(0), wave.top()), QPointF(at(Offset), wave.bottom())),
-                         maskColor());
-        painter.fillRect(QRectF(QPointF(at(Cutoff), wave.top()), QPointF(end, wave.bottom())),
-                         maskColor());
+        if (values) {
+            painter.fillRect(
+                QRectF(QPointF(xOf(0), wave.top()), QPointF(at(Offset), wave.bottom())),
+                maskColor());
+            painter.fillRect(QRectF(QPointF(at(Cutoff), wave.top()), QPointF(end, wave.bottom())),
+                             maskColor());
+        }
+
+        // The pitch axis, a line at each C, and the curve of the frequency table
+        if (impl.spectrogram || impl.table) {
+            painter.setRenderHint(QPainter::Antialiasing, false);
+            for (int note = int(std::ceil(impl.range.first / 12)) * 12; note < impl.range.second;
+                 note += 12) {
+                const double y = std::round(yOfNote(note)) + 0.5;
+                painter.setPen(QPen(palette().color(QPalette::Mid), 1, Qt::DotLine));
+                painter.drawLine(QPointF(0, y), QPointF(area.width(), y));
+                painter.setPen(text);
+                painter.drawText(QRectF(0, y - 14, area.width() - 3, 13), Qt::AlignRight,
+                                 QStringLiteral("C%1").arg(note / 12 - 1));
+            }
+        }
+        if (impl.table) {
+            QPainterPath curve;
+            bool drawing = false;
+            for (const auto &frame : impl.table->frames) {
+                if (!(frame.frequency > 0) || !std::isfinite(frame.frequency)) {
+                    drawing = false;
+                    continue;
+                }
+                const QPointF point(xOf(frame.time), yOfNote(Impl::noteOf(frame.frequency)));
+                if (drawing) {
+                    curve.lineTo(point);
+                } else {
+                    curve.moveTo(point);
+                    drawing = true;
+                }
+            }
+            painter.save();
+            painter.setClipRect(wave);
+            painter.setRenderHint(QPainter::Antialiasing);
+            painter.setPen(QPen(frequencyColor(), 1.5));
+            painter.setBrush(Qt::NoBrush);
+            painter.drawPath(curve);
+            painter.restore();
+        }
+        if (!values) {
+            return;
+        }
 
         // The envelope: in over the overlap, out at the cutoff
         painter.setRenderHint(QPainter::Antialiasing);
@@ -711,6 +892,28 @@ namespace hello::daw {
     void OtoWaveformView::setPlayheadColor(const QColor &color) {
         stdc_impl_t;
         impl.playheadColor = color;
+        viewport()->update();
+    }
+
+    QColor OtoWaveformView::frequencyColor() const {
+        stdc_impl_t;
+        return impl.frequencyColor.isValid() ? impl.frequencyColor : QColor(0xe0, 0x30, 0xa0);
+    }
+
+    void OtoWaveformView::setFrequencyColor(const QColor &color) {
+        stdc_impl_t;
+        impl.frequencyColor = color;
+        viewport()->update();
+    }
+
+    QColor OtoWaveformView::spectrumColor() const {
+        stdc_impl_t;
+        return impl.spectrumColor.isValid() ? impl.spectrumColor : QColor(0x20, 0x60, 0xd0);
+    }
+
+    void OtoWaveformView::setSpectrumColor(const QColor &color) {
+        stdc_impl_t;
+        impl.spectrumColor = color;
         viewport()->update();
     }
 

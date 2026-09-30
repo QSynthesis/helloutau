@@ -3,11 +3,14 @@
 
 #include <memory>
 #include <optional>
+#include <utility>
 
 #include <QtGui/QColor>
 #include <QtWidgets/QAbstractScrollArea>
 
+#include <hellokit/Synth/Spectrogram.h>
 #include <hellokit/Synth/WaveAudio.h>
+#include <hellokit/VoiceBank/FrequencyTable.h>
 #include <hellokit/VoiceBank/VoiceBank.h>
 
 #include <helloutau/Editor/HelloUtauEditorGlobal.h>
@@ -38,6 +41,8 @@ namespace hello::daw {
         Q_PROPERTY(QColor boundaryColor READ boundaryColor WRITE setBoundaryColor)
         Q_PROPERTY(QColor envelopeColor READ envelopeColor WRITE setEnvelopeColor)
         Q_PROPERTY(QColor playheadColor READ playheadColor WRITE setPlayheadColor)
+        Q_PROPERTY(QColor frequencyColor READ frequencyColor WRITE setFrequencyColor)
+        Q_PROPERTY(QColor spectrumColor READ spectrumColor WRITE setSpectrumColor)
         Q_PROPERTY(double grip READ grip WRITE setGrip)
     public:
         /// The values of an entry, in the order of the keys 1 to 5 that set them at the pointer,
@@ -102,6 +107,30 @@ namespace hello::daw {
         /// The time of the line that marks what plays, or none.
         void setPlayhead(std::optional<double> time);
 
+        /// \name The spectrum and the frequency table
+        /// See docs/FrequencyTables.md.
+        /// @{
+
+        /// The spectrogram drawn in place of the waveform, or null to draw the waveform. Its
+        /// rows follow the pitch axis, see pitchRange().
+        std::shared_ptr<const kit::Spectrogram> spectrogram() const;
+        void setSpectrogram(std::shared_ptr<const kit::Spectrogram> spectrogram);
+
+        /// The frequency table whose curve is drawn over the audio, or none. The frames of a
+        /// frequency of 0 are gaps in the curve.
+        std::optional<kit::FrequencyTable> frequencyTable() const;
+        void setFrequencyTable(const std::optional<kit::FrequencyTable> &table);
+
+        /// The notes at the bottom and the top of the audio on the pitch axis, on which the
+        /// curve and the spectrogram are drawn: those of the voiced frames of the table an
+        /// octave apart below and above, within C1 to B7, or C2 to C6 without a table.
+        std::pair<double, double> pitchRange() const;
+
+        /// The y of the viewport of \a note on the pitch axis, where 60 is C4 and a fraction is
+        /// a part of a semitone.
+        double yOfNote(double note) const;
+        /// @}
+
         /// The distance in pixels within which the pointer takes a boundary. 5 by default.
         double grip() const;
         void setGrip(double grip);
@@ -144,6 +173,15 @@ namespace hello::daw {
         void setEnvelopeColor(const QColor &color);
         QColor playheadColor() const;
         void setPlayheadColor(const QColor &color);
+
+        /// The curve of the frequency table
+        QColor frequencyColor() const;
+        void setFrequencyColor(const QColor &color);
+
+        /// The loudest part of the spectrogram, which fades into the background of the view
+        /// with the level
+        QColor spectrumColor() const;
+        void setSpectrumColor(const QColor &color);
 
     Q_SIGNALS:
         /// A drag ended, or setValueAt() moved a value: \a entry is to be written.
