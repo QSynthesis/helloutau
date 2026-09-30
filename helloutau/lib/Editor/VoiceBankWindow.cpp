@@ -55,6 +55,7 @@
 #include <helloutau/Widgets/CommandPalette.h>
 
 #include "ActionRegistrations_p.h"
+#include "VoiceAliasRuleDialog.h"
 #include "AppSettings.h"
 #include "CommandEntries_p.h"
 #include "DiagnosticBox_p.h"
@@ -252,6 +253,14 @@ namespace hello::daw {
             addCommand(QStringLiteral("helloutau.voiceBank.duplicateEntries"), [this] {
                 stdc_decl_t;
                 decl.duplicateEntries();
+            });
+            addCommand(QStringLiteral("helloutau.voiceBank.duplicateWithRule"), [this] {
+                stdc_decl_t;
+                decl.duplicateWithRule();
+            });
+            addCommand(QStringLiteral("helloutau.voiceBank.renameAliases"), [this] {
+                stdc_decl_t;
+                decl.renameAliases();
             });
             addCommand(QStringLiteral("helloutau.voiceBank.includeAudio"), [this] {
                 stdc_decl_t;
@@ -686,6 +695,114 @@ namespace hello::daw {
             }
         }
 
+        // The selected entries by directory, each group with all entries of its directory and
+        // the indices of the selected entries among them
+        std::vector<std::pair<std::filesystem::path, VoiceAliasRuleDialog::Group>>
+            aliasGroups() const {
+            std::map<std::filesystem::path, QList<int>> rowsByDirectory;
+            for (const int row : selectedRows(true)) {
+                rowsByDirectory[model->directoryOf(row)].push_back(row);
+            }
+            std::vector<std::pair<std::filesystem::path, VoiceAliasRuleDialog::Group>> groups;
+            for (const auto &[path, rows] : rowsByDirectory) {
+                const auto directory = directoryRef(path);
+                if (!directory) {
+                    continue;
+                }
+                VoiceAliasRuleDialog::Group group;
+                const auto list = directory->otoEntries();
+                for (int i = 0; i < list.size(); ++i) {
+                    group.entries.push_back({list.at(i).fileName(), list.at(i).alias()});
+                }
+                for (const int row : rows) {
+                    const auto entry = model->entryOf(row);
+                    for (int i = 0; i < group.entries.size(); ++i) {
+                        if (group.entries[i].fileName == entry.fileName &&
+                            group.entries[i].alias == entry.alias) {
+                            group.selected.push_back(i);
+                            break;
+                        }
+                    }
+                }
+                groups.emplace_back(path, group);
+            }
+            return groups;
+        }
+
+        // Opens VoiceAliasRuleDialog in mode for the selected entries and applies the rule in one
+        // transaction: a copy of each entry for Duplicate, a new alias for Rename.
+        bool applyAliasRule(VoiceAliasRuleDialog::Mode mode) {
+            stdc_decl_t;
+            const auto groups = aliasGroups();
+            if (groups.empty()) {
+                return false;
+            }
+            QList<VoiceAliasRuleDialog::Group> dialogGroups;
+            for (const auto &group : groups) {
+                dialogGroups.push_back(group.second);
+            }
+            VoiceAliasRuleDialog dialog(mode, dialogGroups, &decl);
+            if (dialog.exec() != QDialog::Accepted) {
+                return false;
+            }
+            const auto changes = dialog.changes();
+            const auto title = mode == VoiceAliasRuleDialog::Rename
+                                   ? tr("Rename Aliases")
+                                   : tr("Duplicate Entries with Rule");
+
+            auto transaction = document->session()->transaction(title);
+            kit::DiagnosticList diagnostics;
+            // The resulting entries, selected afterward
+            QList<RowKey> made;
+            for (size_t g = 0; g < groups.size(); ++g) {
+                const auto &path = groups[g].first;
+                const auto directory = directoryRef(path);
+                if (!directory) {
+                    continue;
+                }
+                const auto list = directory->otoEntries();
+                QList<kit::VoiceOtoEntry> copies;
+                for (const auto &change : changes[qsizetype(g)]) {
+                    if (!change.problem.isEmpty()) {
+                        return false;
+                    }
+                    auto value = list.at(change.index).toVoiceOtoEntry();
+                    if (mode == VoiceAliasRuleDialog::Rename) {
+                        if (change.to == change.from) {
+                            continue;
+                        }
+                        value.alias = change.to;
+                        if (!kit::VoiceBankEdits::setEntry(list.at(change.index), value,
+                                                           diagnostics)) {
+                            DiagnosticBox::show(&decl, title, diagnostics);
+                            return false;
+                        }
+                    } else {
+                        value.alias = change.to;
+                        copies.push_back(value);
+                    }
+                    made.push_back({path, value.fileName, value.alias});
+                }
+                if (!copies.isEmpty() &&
+                    !kit::VoiceBankEdits::insertEntries(*directory, copies, diagnostics)) {
+                    DiagnosticBox::show(&decl, title, diagnostics);
+                    return false;
+                }
+            }
+            const bool committed = transaction.commit(diagnostics);
+            DiagnosticBox::show(&decl, title, diagnostics);
+            if (!committed) {
+                return false;
+            }
+            model->refresh();
+            QList<int> selected;
+            for (const auto &key : std::as_const(made)) {
+                selected.push_back(model->rowOf(key.directory, key.fileName, key.alias));
+            }
+            selectRows(selected);
+            return true;
+        }
+
         QList<int> selectedRows() const {
             QList<int> rows;
             for (const auto &index : table->selectionModel()->selectedRows()) {
@@ -741,6 +858,9 @@ namespace hello::daw {
             actions.value(QStringLiteral("helloutau.edit.delete"))->setEnabled(entries);
             actions.value(QStringLiteral("helloutau.voiceBank.duplicateEntries"))
                 ->setEnabled(entries);
+            actions.value(QStringLiteral("helloutau.voiceBank.duplicateWithRule"))
+                ->setEnabled(entries);
+            actions.value(QStringLiteral("helloutau.voiceBank.renameAliases"))->setEnabled(entries);
             actions.value(QStringLiteral("helloutau.voiceBank.includeAudio"))
                 ->setEnabled(!selectedRows(false).isEmpty());
         }
@@ -794,7 +914,9 @@ namespace hello::daw {
                     QMenu menu(&decl);
                     for (const auto id :
                          {"helloutau.voiceBank.insertEntry", "helloutau.voiceBank.duplicateEntries",
-                          "helloutau.voiceBank.includeAudio", "helloutau.edit.delete"}) {
+                          "helloutau.voiceBank.duplicateWithRule",
+                          "helloutau.voiceBank.renameAliases", "helloutau.voiceBank.includeAudio",
+                          "helloutau.edit.delete"}) {
                         menu.addAction(actions.value(QString::fromLatin1(id)));
                     }
                     menu.exec(table->viewport()->mapToGlobal(position));
@@ -1497,6 +1619,16 @@ namespace hello::daw {
         }
         impl.selectRows(selected);
         return true;
+    }
+
+    bool VoiceBankWindow::duplicateWithRule() {
+        stdc_impl_t;
+        return impl.applyAliasRule(VoiceAliasRuleDialog::Duplicate);
+    }
+
+    bool VoiceBankWindow::renameAliases() {
+        stdc_impl_t;
+        return impl.applyAliasRule(VoiceAliasRuleDialog::Rename);
     }
 
     bool VoiceBankWindow::includeAudio() {

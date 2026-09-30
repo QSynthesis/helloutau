@@ -119,6 +119,12 @@
         <!-- A copy of each selected entry, its alias followed by a free number -->
         <action id="helloutau.voiceBank.duplicateEntries" text="D&amp;uplicate Entries"
                 category="Edit" shortcut="Ctrl+D" />
+        <!-- A copy of each selected entry, its alias derived by a rule -->
+        <action id="helloutau.voiceBank.duplicateWithRule" text="Duplicate &amp;with Rule..."
+                category="Edit" />
+        <!-- The aliases of the selected entries, derived by a rule -->
+        <action id="helloutau.voiceBank.renameAliases" text="Rename &amp;Aliases..."
+                category="Edit" />
         <!-- An entry with an empty alias for each selected audio file without one -->
         <action id="helloutau.voiceBank.includeAudio" text="Include Audio &amp;Files"
                 category="Edit" />
@@ -268,6 +274,8 @@
             <separator />
             <action id="helloutau.voiceBank.insertEntry" />
             <action id="helloutau.voiceBank.duplicateEntries" />
+            <action id="helloutau.voiceBank.duplicateWithRule" />
+            <action id="helloutau.voiceBank.renameAliases" />
             <action id="helloutau.voiceBank.includeAudio" />
             <action id="helloutau.edit.delete" />
             <separator />

@@ -6,6 +6,7 @@ add_auto_test(test_VoiceBankFileSystemState_Charset.cpp HelloKitVoiceBank)
 add_auto_test(test_VoiceBankFileSystemState_Changes.cpp HelloKitVoiceBank)
 add_auto_test(test_WaveMetadata.cpp HelloKitVoiceBank)
 add_auto_test(test_FrequencyFormatRegistry.cpp HelloKitVoiceBank)
+add_auto_test(test_VoiceAliasRule.cpp HelloKitVoiceBank)
 
 # Starts the watcher, whose monitor program must be built into the same directory.
 add_auto_test(test_VoiceBankCheckScheduler.cpp HelloKitVoiceBank)

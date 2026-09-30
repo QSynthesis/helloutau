@@ -113,6 +113,16 @@ namespace hello::daw {
         /// number that no entry of the file has, as one undo step.
         bool duplicateEntries();
 
+        /// Opens VoiceAliasRuleDialog for the selected entries and inserts a copy of each with the
+        /// alias that the rule derives, as one undo step. Returns false if the dialog is
+        /// cancelled or the insertion fails.
+        bool duplicateWithRule();
+
+        /// Opens VoiceAliasRuleDialog for the selected entries and replaces their aliases with
+        /// those that the rule derives, as one undo step. Returns false if the dialog is cancelled
+        /// or the change fails.
+        bool renameAliases();
+
         /// Includes the selected audio files without an entry, each with an empty alias and
         /// zero values, as one undo step.
         bool includeAudio();
