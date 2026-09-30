@@ -106,7 +106,7 @@ resampler / wavtool 的命令行参数由 `utau::ResamplerArguments::arguments()
 
 - **绝不将参数拼接为一条命令行字符串。** 官方 UTAU 渲染时默认写出并执行批处理文件（v0.4.12 的更新日志中有「wav生成時にバッチを使用しない」这一开关，说明默认使用批处理），而写入批处理的文件名、别名、flags 只要包含 `&` 或换行符即可追加命令。这是 CWE-78 最可能的机制。
 - **「经由 shell 执行」与「拼接命令行」是两回事，不可混淆。** 非 exe 插件是必须支持的功能，通过 `stdc::Popen::shell(true)` 执行：它保持参数向量的语义，对每个元素进行 `^` 转义并加引号，再包装为 `cmd /d /v:off /s /c`，比 Python 的 `shell=True` 严格得多。禁止的是自行拼接字符串，而非这个开关。
-- **`plugin.txt` 的 `shell=use` 对应 `ShellExecuteEx`，而非命令处理器。** [官方规格](https://w.atwiki.jp/utaou/pages/64.html)原文为「通常はCreateProcessでプラグインが起動されますが、shell=useを指定した場合はShellExecuteExで起動されます。これにより、exeファイル以外を実行することができます(jar、html、htaなど)」。即实际运行的是系统为该扩展名注册的处理程序，`plugin.txt` 中并未指定该程序；`.bat` 恰好由 `cmd.exe` 处理，不要将这一巧合当作定义。**HelloUtau 在 Windows 上照 UTAU 沿用 `ShellExecuteEx`**（作者 2026-09-30 决定，见 [`docs/ClassicPlugin.md`](docs/ClassicPlugin.md)），不按扩展名自行分派；处理程序不返回进程句柄时，由用户在插件完成后手动确认。
+- **`plugin.txt` 的 `shell=use` 对应 `ShellExecuteEx`，而非命令处理器。** [官方规格](https://w.atwiki.jp/utaou/pages/64.html)原文为「通常はCreateProcessでプラグインが起動されますが、shell=useを指定した場合はShellExecuteExで起動されます。これにより、exeファイル以外を実行することができます(jar、html、htaなど)」。即实际运行的是系统为该扩展名注册的处理程序，`plugin.txt` 中并未指定该程序；`.bat` 恰好由 `cmd.exe` 处理，不要将这一巧合当作定义。**HelloUtau 在 Windows 上照 UTAU 沿用 `ShellExecuteEx`**（作者 2026-09-30 决定，见 [`docs/ClassicPluginHost.md`](docs/ClassicPluginHost.md)），不按扩展名自行分派；处理程序不返回进程句柄时，由用户在插件完成后手动确认。
 - **默认不使用从工程文件读取的引擎路径。** `Tool1`、`Tool2` 和音符上的 `$patch` 是写在工程中的路径，直接执行等于让工程决定运行哪个程序。应使用本地配置的引擎，除非用户在明确的提示中选择信任。这是「执行任意程序」，与上一条的「注入任意命令」不同，两者都必须防范。
 - **但必须原样保存。** 逐工程配置引擎是 UTAU 的正常用法，不保存等于删除用户的设置，那是以安全为借口破坏数据。**需要防范的是未经询问即执行，而非保存。** 这一规则同样适用于 `$patch` 和 `userData`。
 - `.ust` 中的所有路径在使用前解析为绝对路径并进行检查，相对路径不得超出工程目录。

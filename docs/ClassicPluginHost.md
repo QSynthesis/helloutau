@@ -1,12 +1,12 @@
-# ClassicPlugin：原版 UTAU 插件的支持
+# ClassicPluginHost：原版 UTAU 插件的支持
 
-本文档是 ClassicPlugin 插件与「选区编辑」扩展点的计划，写于 2026-09-30，尚未实现。作者已于同日决定全部待定事项，见末尾。插件机制见 [`Plugins.md`](Plugins.md)，插件的定义以 [`note.md`](note.md) 为准。
+本文档是 ClassicPluginHost 插件与「选区编辑」扩展点的计划，写于 2026-09-30，尚未实现。作者已于同日决定全部待定事项，见末尾。插件机制见 [`Plugins.md`](Plugins.md)，插件的定义以 [`note.md`](note.md) 为准。
 
 ## 目标
 
 原版 UTAU 插件是一个文件夹，含 `plugin.txt` 与一个可执行文件。UTAU 把选区写入一个临时文件，以其路径为第一个参数启动插件，等待插件结束，读回插件改写后的文件并应用其中的修改。验收同 Roadmap 第五阶段：若干社区常用的原版插件能够正常执行并写回结果。
 
-按 note.md，这一支持本身是一个原生插件（ClassicPlugin）：它发现 UTAU 插件，把每个登记为一项**选区编辑**；应用本身不含 UTAU 插件的代码。
+按 note.md，这一支持本身是一个原生插件（ClassicPluginHost）：它发现 UTAU 插件，把每个登记为一项**选区编辑**；应用本身不含 UTAU 插件的代码。
 
 ## 调研
 
@@ -15,7 +15,7 @@
 官方规格为 <https://w.atwiki.jp/utaou/pages/64.html>（「プラグイン仕様」，页面最后更新 2019-01-04）。要点：
 
 - **`plugin.txt`**：`name`（菜单文字）、`execute`（可执行文件名）、`shell=use`（以 `ShellExecuteEx` 代替 `CreateProcess`，可运行 jar、html、hta 等）、`ustversion`（0.4.15 起，临时文件的条目格式 1.00 / 1.10 / 1.20，省略时用 UTAU 的设置）、`notes`（0.4.15 起，「指定した場合」忽略选区、传入全部音符）。**规格中没有编码的键。**
-- **临时文件**：Shift_JIS，CRLF。规格不规定文件名与位置。插件改写同一文件作为结果。
+- **临时文件**：规格写作 Shift_JIS，实为本地编码（规格作者使用日文系统；实测见下），CRLF。规格不规定文件名与位置。插件改写同一文件作为结果。
   - `[#VERSION]`（`UST Version 1.20`）、`[#SETTING]`（只读，输出时可省略）。
   - 编号段落是所选音符。**编号没有意义，输出的段落按出现顺序应用到选区**。
   - `[#PREV]` / `[#NEXT]` 是选区前后各一个音符，没有时省略；输出中若出现，其修改被应用。
@@ -26,7 +26,11 @@
 
 ### 实测
 
-`.cache/utau-probe/voicedir/results/dump-*.ust` 是 utau.exe 0.04.0018 在**全选**时传给探针插件的临时文件（记录见 [`claude/utau-voicedir-cachedir.md`](claude/utau-voicedir-cachedir.md)）：Shift_JIS、CRLF，`[#VERSION]` 为 `UST Version 1.20`，`[#SETTING]` 为 `Project`、`Tempo`、`VoiceDir`、`CacheDir`（均为解析后的绝对路径）、`Mode2`，音符从 `[#0000]` 编号并带只读的 `@` 条目。**尚无部分选区、`[#PREV]`/`[#NEXT]`、`notes=` 的样本，临时文件的路径与名称也未记录。**
+2026-09-30 以 utau.exe 0.04.0018 实测，记录见 [`claude/utau-plugin-protocol.md`](claude/utau-plugin-protocol.md)：
+
+- 临时文件为 `%TEMP%\utau1\tmpXXXX.tmp`，系统 ANSI 代码页，CRLF，`UST Version 1.20`，`[#SETTING]` 为绝对路径。
+- **编号段落以轨道位置编号**（部分选区不从 0 起）；`[#PREV]`/`[#NEXT]` 是完整的音符，选区在开头或结尾时省略；`notes=all` 传入全部音符，不写 `[#PREV]`/`[#NEXT]`。
+- 结果**按出现顺序**应用；`[#PREV]`/`[#NEXT]` 的修改被应用；省略的条目不变，空值恢复默认；`[#INSERT]` 的长度与音高取自后一个音符；空文件为取消。与下文的设计一致。
 
 ### 参考实现
 
@@ -43,7 +47,7 @@
 
 ### stdutau
 
-`PluginTxt` 可直接用于读 `plugin.txt`（原始字节，编码与路径校验由宿主负责）。`PluginFileReader` / `PluginFileWriter` 是**插件一侧**的读写，不能用于宿主：读者忽略 `[#INSERT]`/`[#DELETE]`，丢弃只有段落头的音符，且在省略 `PBS` 时清空 Mode2 音高，违反「省略即不变」。另有两处与规格不符，须一并修正：`PluginFileWriter::prependNotesBeforePrev` / `appendNotesAfterNext` 声称插到选区外；`PluginFileReader` 关于「临时文件总从 0 编号」的注释没有依据。
+`PluginTxt` 可直接用于读 `plugin.txt`（原始字节，编码与路径校验由宿主负责）。`PluginFileReader` / `PluginFileWriter` 是**插件一侧**的读写，不能用于宿主：读者忽略 `[#INSERT]`/`[#DELETE]`，丢弃只有段落头的音符，且在省略 `PBS` 时清空 Mode2 音高，违反「省略即不变」。另有两处与规格或实测不符，须一并修正：`PluginFileWriter::prependNotesBeforePrev` / `appendNotesAfterNext` 声称插到选区外；`PluginFileReader` 关于「临时文件总从 0 编号」的注释与实测相反（以轨道位置编号）。
 
 ## 设计
 
@@ -56,7 +60,9 @@
    - `RangeEdit`：`id()`、`name()`、`run(input, cancel, diagnostics)`。输入是工程的只读快照与选区（加上是否要全部音符由编辑自己决定）；输出是「以这些音符替换这一段，另可改选区前后各一个音符」，或取消。`run` 在工作线程上执行。
    - `RangeEditRegistration(std::unique_ptr<RangeEdit>)` 与 `RangeEditRegistrations`，形状同 Plugins.md「注册接口」。
    - 应用输出为**一个撤销步骤**（需要一个领域函数，替换一段音符并可改前后音符）。
-3. **ClassicPlugin 插件**：发现 UTAU 插件，为每个登记一个 `RangeEdit`。其 `run`：校验 `execute` 路径、按编码写出临时文件、启动进程并等待（可取消）、读回、解析、合并为输出。
+3. **ClassicPluginHost 插件**：发现 UTAU 插件，为每个登记一个 `RangeEdit`。其 `run`：校验 `execute` 路径、按编码写出临时文件、启动进程并等待（可取消）、读回、解析、合并为输出。
+   - 名称（作者 2026-09-30 定）：目录与工程 `ClassicPluginHost`，插件类 `ClassicPluginHostPlugin`（`Internal`，不导出），ID `org.helloutau.classicpluginhost`，显示名 Classic Plugin Host。
+   - 一次运行（写出、启动、等待或取消、读回）由内部的 `ClassicPluginRunner` 完成，发现与登记由插件本身负责（OpenUtau 同样分为 `PluginLoader` 与 `PluginRunner`）。
 4. **应用（HelloUtauEditor）**：工程窗口的「工具 → 插件」子菜单（同 UTAU），列出已登记的选区编辑，其后是「刷新」与「打开插件目录」。运行期间显示模态对话框（插件名、「取消」），结束后应用结果或报告错误。
 
 ### 已按规格或约定确定的做法（作者可推翻）
@@ -66,16 +72,16 @@
 - 合并按条目：省略的条目不变；空值（如 `Intensity=`）按规格恢复默认。
 - 文件内容未变，或所有段落都省略，视为取消，不产生撤销步骤。
 - `ustversion` 省略时按 1.20 写出，与实测一致。`notes` 只要出现即传入全部音符（规格「指定した場合」，同 stdutau）。
-- 临时文件每次运行唯一，位于系统临时目录下的一个子目录，读回后删除；扩展名 `.tmp`，同 UTAU 系插件的惯例。
+- 临时文件每次运行唯一，位于系统临时目录下的一个子目录，读回后删除；名称同 UTAU 为 `tmpXXXX.tmp`。
 - `execute` 是不可信路径：拒绝绝对路径、`..` 与解析后落在插件文件夹以外的路径；临时文件路径只作为参数数组的一项传入，不拼接命令行（AGENTS.md）。工作目录为插件文件夹。
-- 编码按 note.md：插件文件夹有 `plugin.json` 时按其中的编码，否则 Windows 上为系统 ANSI 代码页、其他平台为 CP932；目标编码无法表示的字符按 note.md 转义。写出与读回用同一编码。
+- 编码按 note.md「插件」：`plugin.json` 声明插件接收 UTF-8 时，临时文件写成 UTF-8、结果按 UTF-8 读回（作者 2026-09-30 定，比 UTAU 稳妥）；否则与 UTAU 兼容，Windows 上为系统 ANSI 代码页、其他平台为 CP932，无法表示的字符按 note.md 转义。写出与读回用同一编码。`plugin.json` 中声明所用的字段随其格式一并确定。
 
 ## 实施步骤
 
-1. **探针**：用 utau.exe 实测部分选区、选区在开头与结尾、`notes=all`、休止符与间隙时的临时文件，补齐样本（`.cache/utau-probe`），并记录临时文件的路径与名称。
+1. ~~**探针**~~：已完成（2026-09-30），见 [`claude/utau-plugin-protocol.md`](claude/utau-plugin-protocol.md)。
 2. **stdutau**：宿主一侧的写出与解析，测试以实测样本与 `PluginFileWriter` 的输出为依据；修正上文两处与规格不符的地方。单独提交到 stdutau。
 3. **选区编辑扩展点**：`RangeEdit` 与登记、领域函数、测试。
-4. **ClassicPlugin**：发现、`plugin.txt` 与编码、进程的启动与取消、读回与合并。插件中库一级的部分（发现、合并）在 `tests/auto/plugins/ClassicPlugin` 中测试，以一个测试用的 UTAU 插件（脚本或小程序）端到端运行。
+4. **ClassicPluginHost**：发现、`plugin.txt` 与编码、进程的启动与取消、读回与合并。插件中库一级的部分（发现、合并）在 `tests/auto/plugins/ClassicPluginHost` 中测试，以一个测试用的 UTAU 插件（脚本或小程序）端到端运行。
 5. **应用**：「工具 → 插件」子菜单、模态对话框、应用结果。
 6. **验收**：作者以社区常用的原版插件试用。
 
