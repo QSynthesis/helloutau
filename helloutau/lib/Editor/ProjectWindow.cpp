@@ -738,6 +738,10 @@ namespace hello::daw {
                 stdc_decl_t;
                 editor->showRecent(Editor::RecentVoiceBanks, &decl);
             });
+            addCommand(QStringLiteral("helloutau.file.clearRecent"), [this] {
+                stdc_decl_t;
+                editor->clearRecent(&decl);
+            });
             addCommand(QStringLiteral("helloutau.file.save"), [this] {
                 stdc_decl_t;
                 decl.save();

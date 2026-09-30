@@ -29,6 +29,10 @@ namespace hello::daw {
         /// palette shows what running the command does, "(On)" or "(Off)", after the label.
         bool checkable = false;
         bool checked = false;
+
+        /// A text shown after the label on the same line in a dimmer color, and matched as
+        /// well, such as the folder of a recent file in VS Code. Empty for none.
+        QString description;
     };
 
     /// Fuzzy matching and ranking of commands by the text typed into the command palette.
@@ -52,8 +56,21 @@ namespace hello::daw {
             qsizetype index = 0;
 
             /// The positions of the matched characters in the label, empty if the entry
-            /// matched through its alternative text only.
+            /// matched through another text.
             QList<qsizetype> positions;
+
+            /// The positions of the matched characters in the description, empty if the entry
+            /// matched through another text.
+            QList<qsizetype> descriptionPositions;
+        };
+
+        /// The order of the entries that rank() returns.
+        enum Order {
+            /// The best match first
+            ByScore,
+            /// The order of the given entries, as the list of recent files of VS Code keeps
+            /// the latest first while the user types
+            AsGiven,
         };
 
         /// Returns the best match of \a query in \a text, or \c std::nullopt if the characters
@@ -61,10 +78,12 @@ namespace hello::daw {
         /// with a score of zero.
         static std::optional<Match> match(QStringView query, QStringView text);
 
-        /// Returns the entries that match \a query, the best first. Entries that score equally
-        /// are ordered by the length and then the text of their labels, so that the order does
-        /// not depend on the order of \a entries.
-        static QList<Ranked> rank(QStringView query, const QList<CommandEntry> &entries);
+        /// Returns the entries that match \a query through their label, description or
+        /// alternative text, whichever matches best. With \c ByScore, the best match comes first,
+        /// and entries that score equally are ordered by the length and then the text of their
+        /// labels, so that the order does not depend on the order of \a entries.
+        static QList<Ranked> rank(QStringView query, const QList<CommandEntry> &entries,
+                                  Order order = ByScore);
     };
 
 }

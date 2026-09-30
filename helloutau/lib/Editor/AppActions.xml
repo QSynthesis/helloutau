@@ -29,6 +29,11 @@
                 category="File" />
         <action id="helloutau.file.openRecentVoiceBank" text="Open Recent &amp;Voice Bank..."
                 category="File" />
+        <!-- Forgets every recent project and voice bank after a confirmation, as "Clear
+             Recently Opened..." of VS Code. The command is in no menu, and Open Recent has an
+             item of its own. -->
+        <action id="helloutau.file.clearRecent" text="&amp;Clear Recently Opened..."
+                category="File" />
         <action id="helloutau.file.close" text="&amp;Close" category="File" shortcut="Ctrl+W" />
         <action id="helloutau.file.quit" text="&amp;Quit" category="File" shortcut="Ctrl+Q" />
         <action id="helloutau.view.commandPalette" text="&amp;Command Palette..." category="View"

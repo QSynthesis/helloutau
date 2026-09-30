@@ -101,7 +101,8 @@ namespace hello::daw {
     }
 
     QList<CommandMatcher::Ranked> CommandMatcher::rank(QStringView query,
-                                                       const QList<CommandEntry> &entries) {
+                                                       const QList<CommandEntry> &entries,
+                                                       Order order) {
         struct Candidate {
             Ranked ranked;
             int score;
@@ -111,22 +112,32 @@ namespace hello::daw {
         for (qsizetype i = 0; i < entries.size(); ++i) {
             const auto &entry = entries[i];
             const auto byLabel = match(query, entry.label);
+            const auto byDescription =
+                entry.description.isEmpty() ? std::nullopt : match(query, entry.description);
             const auto byAlternative =
                 entry.alternative.isEmpty() ? std::nullopt : match(query, entry.alternative);
-            if (byLabel && (!byAlternative || byLabel->score >= byAlternative->score)) {
+            const auto score = [](const std::optional<Match> &m) { return m ? m->score : -1; };
+            // The label wins a tie, then the description.
+            if (byLabel && score(byLabel) >= std::max(score(byDescription), score(byAlternative))) {
                 candidates.push_back({
-                    {i, byLabel->positions},
+                    {i, byLabel->positions, {}},
                     byLabel->score
+                });
+            } else if (byDescription && score(byDescription) >= score(byAlternative)) {
+                candidates.push_back({
+                    {i, {}, byDescription->positions},
+                    byDescription->score
                 });
             } else if (byAlternative) {
                 candidates.push_back({
-                    {i, {}},
+                    {i, {}, {}},
                     byAlternative->score
                 });
             }
         }
 
-        std::stable_sort(candidates.begin(), candidates.end(),
+        if (order == ByScore) {
+            std::stable_sort(candidates.begin(), candidates.end(),
                          [&entries](const Candidate &a, const Candidate &b) {
                              if (a.score != b.score) {
                                  return a.score > b.score;
@@ -138,6 +149,7 @@ namespace hello::daw {
                              }
                              return labelA < labelB;
                          });
+        }
 
         QList<Ranked> result;
         result.reserve(qsizetype(candidates.size()));

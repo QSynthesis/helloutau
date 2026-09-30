@@ -17,6 +17,7 @@
 #include <QtWidgets/QGraphicsDropShadowEffect>
 #include <QtWidgets/QInputDialog>
 #include <QtWidgets/QLineEdit>
+#include <QtWidgets/QListWidget>
 #include <QtWidgets/QMenu>
 #include <QtWidgets/QMenuBar>
 #include <QtWidgets/QMessageBox>
@@ -508,7 +509,7 @@ private Q_SLOTS:
         QVERIFY(items[12]->text().endsWith(QStringLiteral("bank1")));
         QVERIFY(!items[12]->text().startsWith(QLatin1Char('&')));
         QVERIFY(items[14]->isSeparator());
-        QCOMPARE(items[15]->text(), QStringLiteral("&Clear Recent"));
+        QCOMPARE(items[15]->text(), QStringLiteral("&Clear Recently Opened..."));
 
         items[10]->trigger();
         const auto palette = window->findChild<CommandPalette *>(QStringLiteral("recentPalette"));
@@ -519,6 +520,11 @@ private Q_SLOTS:
                  QStringLiteral("project:") +
                      QString::fromStdU16String(pathIn(m_dir, "f11.usth").u16string()));
         QCOMPARE(commands[0].label, QStringLiteral("f11.usth"));
+        QCOMPARE(commands[0].description, QDir::toNativeSeparators(m_dir.path()));
+        // The latest first, also while the user types
+        QCOMPARE(palette->shownIds().first(), commands[0].id);
+        palette->setQuery(QStringLiteral("f1"));
+        QCOMPARE(palette->shownIds().first(), commands[0].id);
         palette->hide();
 
         // The command in no menu lists the voice banks.
@@ -529,7 +535,18 @@ private Q_SLOTS:
         QCOMPARE(commands.size(), 2);
         QCOMPARE(commands[0].label, QStringLiteral("bank1"));
         QVERIFY(commands[1].id.startsWith(QStringLiteral("voicebank:")));
+
+        // The button of an item forgets it, and the palette stays open.
+        const auto list = palette->findChild<QListWidget *>();
+        QVERIFY(list);
+        const auto button = CommandPalette::removeButtonRect(list->visualItemRect(list->item(1)),
+                                                             list->fontMetrics());
+        QTest::mouseClick(list->viewport(), Qt::LeftButton, {}, button.center());
+        QCOMPARE(palette->commands().size(), 1);
+        QCOMPARE(e->settings().recentVoiceBanks(), QList<fs::path>{pathIn(m_dir, "bank1")});
+        QVERIFY(palette->isVisible());
         palette->hide();
+        e->settings().addRecentVoiceBank(pathIn(m_dir, "bank0"));
 
         // Ten voice banks end their section with a "More" item as well.
         for (int i = 2; i < 10; ++i) {
@@ -552,6 +569,23 @@ private Q_SLOTS:
             return item->text() == QStringLiteral("More &Projects...");
         }));
 
+        // Clearing asks first, and Cancel keeps both kinds.
+        const auto answer = [](bool clear) {
+            QTimer::singleShot(0, [clear] {
+                const auto box = qobject_cast<QMessageBox *>(QApplication::activeModalWidget());
+                QVERIFY(box);
+                for (const auto button : box->buttons()) {
+                    if ((box->buttonRole(button) == QMessageBox::DestructiveRole) == clear) {
+                        button->click();
+                        return;
+                    }
+                }
+            });
+        };
+        answer(false);
+        items.last()->trigger();
+        QVERIFY(!e->settings().recentFiles().isEmpty());
+        answer(true);
         items.last()->trigger();
         QVERIFY(e->settings().recentFiles().isEmpty());
         QVERIFY(e->settings().recentVoiceBanks().isEmpty());
@@ -571,6 +605,14 @@ private Q_SLOTS:
         const auto window = e->openFile(second);
         QVERIFY(window);
         QCOMPARE(e->settings().recentFiles(), (QList<std::filesystem::path>{second, first}));
+
+        // The palette of a window leaves out the project of the window.
+        e->showRecent(Editor::RecentProjects, window);
+        const auto palette = window->findChild<CommandPalette *>(QStringLiteral("recentPalette"));
+        QVERIFY(palette);
+        QCOMPARE(palette->commands().size(), 1);
+        QCOMPARE(palette->commands()[0].label, QStringLiteral("r1.usth"));
+        palette->hide();
 
         // The menu of the external action, filled when it opens
         const auto recent = actionNamed(window, QStringLiteral("Open &Recent"));

@@ -93,6 +93,29 @@ private Q_SLOTS:
         QCOMPARE(byChinese.size(), 1);
         QCOMPARE(byChinese.first().positions, (QList<qsizetype>{4, 5}));
     }
+
+    // The description is matched and its matched characters are reported. The given order is
+    // kept on request, as the recent files of VS Code keep the latest first.
+    void the_description_matches_and_the_order_can_be_kept() {
+        CommandEntry late;
+        late.id = QStringLiteral("late");
+        late.label = QStringLiteral("song.usth");
+        late.description = QStringLiteral("D:\\work");
+        CommandEntry early;
+        early.id = QStringLiteral("early");
+        early.label = QStringLiteral("a.usth");
+        early.description = QStringLiteral("D:\\work");
+        const QList<CommandEntry> entries{late, early};
+
+        const auto byFolder = CommandMatcher::rank(u"work", entries);
+        QCOMPARE(byFolder.size(), 2);
+        QVERIFY(byFolder.first().positions.isEmpty());
+        QCOMPARE(byFolder.first().descriptionPositions, (QList<qsizetype>{3, 4, 5, 6}));
+
+        // By score, the shorter label first. As given, the first entry first.
+        QCOMPARE(CommandMatcher::rank(u"usth", entries).first().index, 1);
+        QCOMPARE(CommandMatcher::rank(u"usth", entries, CommandMatcher::AsGiven).first().index, 0);
+    }
 };
 
 QTEST_APPLESS_MAIN(test_CommandMatcher)

@@ -26,6 +26,8 @@ namespace hello::daw {
             PositionsRole,
             StateRole,
             RecentRole,
+            DescriptionRole,
+            DescriptionPositionsRole,
         };
 
         // The palette takes half the width and half the height of its window, within limits.
@@ -111,8 +113,15 @@ namespace hello::daw {
                 painter->setRenderHint(QPainter::Antialiasing);
                 painter->setFont(option.font);
 
-                // From the right: the key caps, then the recently used mark.
+                // From the right: the remove button, the key caps, then the recently used mark.
                 int right = area.right();
+                const bool hovered = option.state & QStyle::State_MouseOver;
+                if (m_palette->isRemovable() && (selected || hovered)) {
+                    const auto button = CommandPalette::removeButtonRect(option.rect, metrics);
+                    painter->setPen(textColor);
+                    painter->drawText(button, Qt::AlignCenter, QString(QChar(0x00d7)));
+                    right = button.left() - GroupSpacing;
+                }
                 const auto caps = keyCapsOf(index.data(ShortcutRole).value<QKeySequence>());
                 for (auto it = caps.crbegin(); it != caps.crend(); ++it) {
                     if (it->isEmpty()) {
@@ -139,20 +148,36 @@ namespace hello::daw {
                 }
                 const int textRight = right - GroupSpacing;
 
-                // The label, with the typed characters in the match color, and the state of a
-                // checkable command after it.
+                // The label, with the typed characters in the match color, the state of a
+                // checkable command after it, and the description after both in the subtitle
+                // color.
                 const auto label = index.data(Qt::DisplayRole).toString();
                 const auto state = index.data(StateRole).toString();
+                const auto description = index.data(DescriptionRole).toString();
+                auto text = state.isEmpty() ? label : label + u' ' + state;
                 QList<QTextLayout::FormatRange> formats;
-                for (const auto &position : index.data(PositionsRole).toList()) {
+                const auto mark = [&](const QVariantList &positions, qsizetype offset) {
+                    for (const auto &position : positions) {
+                        QTextLayout::FormatRange range;
+                        range.start = int(offset) + position.toInt();
+                        range.length = 1;
+                        range.format.setForeground(selected ? textColor : m_palette->matchColor());
+                        range.format.setFontWeight(QFont::Bold);
+                        formats.push_back(range);
+                    }
+                };
+                if (!description.isEmpty()) {
+                    text += QStringLiteral("  ");
                     QTextLayout::FormatRange range;
-                    range.start = position.toInt();
-                    range.length = 1;
-                    range.format.setForeground(selected ? textColor : m_palette->matchColor());
-                    range.format.setFontWeight(QFont::Bold);
+                    range.start = int(text.size());
+                    range.length = int(description.size());
+                    range.format.setForeground(selected ? textColor : m_palette->subtitleColor());
                     formats.push_back(range);
+                    mark(index.data(DescriptionPositionsRole).toList(), text.size());
+                    text += description;
                 }
-                QTextLayout layout(state.isEmpty() ? label : label + u' ' + state, option.font);
+                mark(index.data(PositionsRole).toList(), 0);
+                QTextLayout layout(text, option.font);
                 layout.setFormats(formats);
                 layout.beginLayout();
                 auto line = layout.createLine();
@@ -200,6 +225,9 @@ namespace hello::daw {
         m_list->setUniformItemSizes(false);
         m_list->setFocusPolicy(Qt::NoFocus);
         m_list->setItemDelegate(new EntryDelegate(this));
+        // The item under the pointer shows its remove button.
+        m_list->setMouseTracking(true);
+        m_list->viewport()->setAttribute(Qt::WA_Hover);
 
         auto layout = new QVBoxLayout(this);
         layout->setContentsMargins(6, 6, 6, 6);
@@ -239,6 +267,37 @@ namespace hello::daw {
     void CommandPalette::setRecentIds(const QStringList &ids) {
         m_recentIds = ids;
         updateList();
+    }
+
+    QString CommandPalette::placeholderText() const {
+        return m_input->placeholderText();
+    }
+
+    void CommandPalette::setPlaceholderText(const QString &text) {
+        m_input->setPlaceholderText(text);
+    }
+
+    CommandMatcher::Order CommandPalette::order() const {
+        return m_order;
+    }
+
+    void CommandPalette::setOrder(CommandMatcher::Order order) {
+        m_order = order;
+        updateList();
+    }
+
+    bool CommandPalette::isRemovable() const {
+        return m_removable;
+    }
+
+    void CommandPalette::setRemovable(bool removable) {
+        m_removable = removable;
+        m_list->viewport()->update();
+    }
+
+    QRect CommandPalette::removeButtonRect(const QRect &rect, const QFontMetrics &metrics) {
+        const int size = metrics.height();
+        return {rect.right() - ItemPadding - size + 1, rect.top() + ItemPadding, size, size};
     }
 
     void CommandPalette::popup() {
@@ -354,6 +413,15 @@ namespace hello::daw {
         switch (event->type()) {
             case QEvent::MouseButtonPress: {
                 const auto position = static_cast<QMouseEvent *>(event)->globalPosition().toPoint();
+                if (m_removable && watched == m_list->viewport()) {
+                    const auto local = m_list->viewport()->mapFromGlobal(position);
+                    const auto item = m_list->itemAt(local);
+                    if (item && removeButtonRect(m_list->visualItemRect(item), m_list->fontMetrics())
+                                    .contains(local)) {
+                        remove(item->data(IdRole).toString());
+                        return true;
+                    }
+                }
                 if (!rect().contains(mapFromGlobal(position)) && !isMenu(watched)) {
                     dismiss();
                 }
@@ -416,7 +484,7 @@ namespace hello::daw {
     void CommandPalette::updateList() {
         m_list->clear();
 
-        auto ranked = CommandMatcher::rank(m_input->text(), m_commands);
+        auto ranked = CommandMatcher::rank(m_input->text(), m_commands, m_order);
         int recentCount = 0;
         if (m_input->text().isEmpty()) {
             // The recently used commands first, the latest first, the rest as ranked
@@ -443,6 +511,12 @@ namespace hello::daw {
                 positions.push_back(int(position));
             }
             item->setData(PositionsRole, positions);
+            item->setData(DescriptionRole, entry.description);
+            QVariantList descriptionPositions;
+            for (const auto position : ranked[i].descriptionPositions) {
+                descriptionPositions.push_back(int(position));
+            }
+            item->setData(DescriptionPositionsRole, descriptionPositions);
             if (entry.checkable) {
                 // What running the command does, as in QSynthesis Revenge
                 item->setData(StateRole, entry.checked ? tr("(Off)") : tr("(On)"));
@@ -477,6 +551,14 @@ namespace hello::daw {
         }
         dismiss();
         Q_EMIT commandActivated(id);
+    }
+
+    void CommandPalette::remove(const QString &id) {
+        const int row = m_list->currentRow();
+        m_commands.removeIf([&id](const CommandEntry &entry) { return entry.id == id; });
+        updateList();
+        m_list->setCurrentRow(std::min(row, m_list->count() - 1));
+        Q_EMIT commandRemoved(id);
     }
 
     void CommandPalette::dismiss() {

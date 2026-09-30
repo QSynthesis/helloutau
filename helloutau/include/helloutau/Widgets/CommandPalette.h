@@ -52,6 +52,24 @@ namespace hello::daw {
         QStringList recentIds() const;
         void setRecentIds(const QStringList &ids);
 
+        /// The hint in the empty input, "Type a command" at first.
+        QString placeholderText() const;
+        void setPlaceholderText(const QString &text);
+
+        /// The order of the commands that match the query, the best match first at first.
+        CommandMatcher::Order order() const;
+        void setOrder(CommandMatcher::Order order);
+
+        /// Whether the selected command and the command under the pointer show a button that
+        /// removes the command from the list, as the recent files of VS Code do. A click on the
+        /// button emits commandRemoved() and keeps the palette open. False at first.
+        bool isRemovable() const;
+        void setRemovable(bool removable);
+
+        /// Returns the remove button of isRemovable() in the item of the list at \a rect, drawn
+        /// in the font of \a metrics.
+        static QRect removeButtonRect(const QRect &rect, const QFontMetrics &metrics);
+
         /// Shows the palette with an empty query and gives it the focus.
         void popup();
 
@@ -93,6 +111,9 @@ namespace hello::daw {
         /// Emitted after the palette has closed, when the user chooses the command \a id.
         void commandActivated(const QString &id);
 
+        /// Emitted after the command \a id was removed from the list by its button.
+        void commandRemoved(const QString &id);
+
     protected:
         bool eventFilter(QObject *watched, QEvent *event) override;
         bool event(QEvent *event) override;
@@ -100,6 +121,8 @@ namespace hello::daw {
     private:
         QList<CommandEntry> m_commands;
         QStringList m_recentIds;
+        CommandMatcher::Order m_order = CommandMatcher::ByScore;
+        bool m_removable = false;
         QLineEdit *m_input;
         QListWidget *m_list;
         QPointer<QWidget> m_previousFocus;
@@ -115,6 +138,7 @@ namespace hello::daw {
         void place();
         void activateCurrent();
         void dismiss();
+        void remove(const QString &id);
     };
 
 }

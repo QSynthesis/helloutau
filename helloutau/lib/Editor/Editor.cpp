@@ -6,6 +6,7 @@
 #include <QtCore/QPointer>
 #include <QtWidgets/QMenu>
 #include <QtWidgets/QMessageBox>
+#include <QtWidgets/QPushButton>
 
 #include <stdcorelib/pimpl.h>
 
@@ -158,36 +159,62 @@ namespace hello::daw {
 
         // Shows every recent item of kind in a command palette over from, the latest first
         void showRecent(Editor *editor, RecentKind kind, QWidget *from) {
+            // The path of an item follows its prefix in the identifier.
+            const auto pathOf = [](const QString &id) {
+                const bool bank = id.startsWith(VoiceBankPrefix);
+                const auto text = id.mid(bank ? VoiceBankPrefix.size() : ProjectPrefix.size());
+                return std::pair{std::filesystem::path(text.toStdU16String()), bank};
+            };
             auto palette = from->findChild<CommandPalette *>(RecentPaletteName);
             if (!palette) {
                 palette = new CommandPalette(from);
                 palette->setObjectName(RecentPaletteName);
+                palette->setOrder(CommandMatcher::AsGiven);
+                palette->setRemovable(true);
                 QObject::connect(palette, &CommandPalette::commandActivated, from,
-                                 [this, editor, from](const QString &id) {
-                                     const bool bank = id.startsWith(VoiceBankPrefix);
-                                     const auto text = id.mid(bank ? VoiceBankPrefix.size()
-                                                                   : ProjectPrefix.size());
-                                     openRecent(editor,
-                                                std::filesystem::path(text.toStdU16String()), bank,
-                                                from);
+                                 [this, editor, from, pathOf](const QString &id) {
+                                     const auto [path, bank] = pathOf(id);
+                                     openRecent(editor, path, bank, from);
+                                 });
+                QObject::connect(palette, &CommandPalette::commandRemoved, from,
+                                 [this, pathOf](const QString &id) {
+                                     const auto [path, bank] = pathOf(id);
+                                     if (bank) {
+                                         settings->removeRecentVoiceBank(path);
+                                     } else {
+                                         settings->removeRecentFile(path);
+                                     }
                                  });
             }
-            // Each item labelled with its name, and found by its full path as well
+            palette->setPlaceholderText(kind == RecentProjects
+                                            ? Editor::tr("Select a recent project to open")
+                                            : Editor::tr("Select a recent voice bank to open"));
+
+            // The project or the voice bank of the window itself is not offered.
+            std::filesystem::path own;
+            if (const auto window = qobject_cast<ProjectWindow *>(from)) {
+                own = window->document()->sourcePath();
+            } else if (const auto window = qobject_cast<VoiceBankWindow *>(from)) {
+                own = window->document()->rootPath();
+            }
             QList<CommandEntry> entries;
-            const auto entry = [](const QString &prefix, const std::filesystem::path &path) {
+            const auto add = [&](const QString &prefix, const std::filesystem::path &path) {
+                if (!own.empty() && isSameFile(own, path)) {
+                    return;
+                }
                 CommandEntry e;
                 e.id = prefix + textOf(path);
                 e.label = QString::fromStdU16String(path.filename().u16string());
-                e.alternative = QDir::toNativeSeparators(textOf(path));
-                return e;
+                e.description = QDir::toNativeSeparators(textOf(path.parent_path()));
+                entries.push_back(e);
             };
             if (kind == RecentProjects) {
                 for (const auto &path : settings->recentFiles()) {
-                    entries.push_back(entry(ProjectPrefix, path));
+                    add(ProjectPrefix, path);
                 }
             } else {
                 for (const auto &path : settings->recentVoiceBanks()) {
-                    entries.push_back(entry(VoiceBankPrefix, path));
+                    add(VoiceBankPrefix, path);
                 }
             }
             palette->setCommands(entries);
@@ -411,11 +438,25 @@ namespace hello::daw {
             more(tr("More &Voice Banks..."), RecentVoiceBanks);
         }
         menu->addSeparator();
-        connect(menu->addAction(tr("&Clear Recent")), &QAction::triggered, menu, [this] {
-            stdc_impl_t;
-            impl.settings->clearRecentFiles();
-            impl.settings->clearRecentVoiceBanks();
-        });
+        connect(menu->addAction(tr("&Clear Recently Opened...")), &QAction::triggered, menu,
+                [this, from] { clearRecent(from); });
+    }
+
+    bool Editor::clearRecent(QWidget *from) {
+        stdc_impl_t;
+        QMessageBox box(QMessageBox::Warning, tr("Clear Recently Opened"),
+                        tr("Clear the recently opened projects and voice banks?"),
+                        QMessageBox::Cancel, from);
+        box.setInformativeText(tr("This action cannot be undone."));
+        const auto clear = box.addButton(tr("&Clear"), QMessageBox::DestructiveRole);
+        box.setDefaultButton(QMessageBox::Cancel);
+        box.exec();
+        if (box.clickedButton() != clear) {
+            return false;
+        }
+        impl.settings->clearRecentFiles();
+        impl.settings->clearRecentVoiceBanks();
+        return true;
     }
 
     void Editor::showRecent(RecentKind kind, QWidget *from) {

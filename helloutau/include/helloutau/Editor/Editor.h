@@ -95,10 +95,15 @@ namespace hello::daw {
         VoiceBankWindow *openVoiceBank(const std::filesystem::path &root, QWidget *from = nullptr);
 
         /// Fills \a menu, the "Open Recent" menu of a window: the ten latest projects, then the
-        /// ten latest voice banks, and "Clear Recent". A section with ten items ends with a
-        /// "More" item, which calls showRecent() for its kind. A project opens in \a from if
-        /// \a from is an unused project window.
+        /// ten latest voice banks, and "Clear Recently Opened...", which calls clearRecent(). A
+        /// section with ten items ends with a "More" item, which calls showRecent() for its kind.
+        /// A project opens in \a from if \a from is an unused project window.
         void fillRecentMenu(QMenu *menu, QWidget *from);
+
+        /// Asks over \a from whether to forget every recent project and voice bank, as "Clear
+        /// Recently Opened..." of VS Code asks, and forgets them if the user confirms. Returns
+        /// whether they were forgotten.
+        bool clearRecent(QWidget *from);
 
         /// The kind of recent items that showRecent() lists
         enum RecentKind {
@@ -107,8 +112,11 @@ namespace hello::daw {
         };
 
         /// Shows every recent item of \a kind that the settings keep, the latest first, in a
-        /// command palette over \a from, as "More..." of "Open Recent" in VS Code. The chosen
-        /// item opens as from "Open Recent".
+        /// command palette over \a from, as "More..." of "Open Recent" in VS Code: the name of
+        /// each item with the folder that contains it after the name, both matched by the query,
+        /// and the latest first while the user types. The project or the voice bank of \a from
+        /// itself is left out. The chosen item opens as from "Open Recent", and the button of an
+        /// item removes it from the recent items.
         void showRecent(RecentKind kind, QWidget *from);
 
         /// Shows the settings over \a from, on the page \a page if given. Each time the settings
