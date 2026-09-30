@@ -61,6 +61,20 @@ namespace hello::kit {
         Q_INVOKABLE static bool removePrefix(const VoiceBankRef &bank, int noteNum,
                                              DiagnosticList &diagnostics);
 
+        /// Replaces the contents of \c character.txt with \a character, creating the file if the
+        /// voice bank has none. The name is written as given, without the default of the folder
+        /// name.
+        ///
+        /// \sa VoiceBankDirectory::character
+        Q_INVOKABLE static bool setCharacter(const VoiceBankRef &bank,
+                                             const VoiceCharacter &character,
+                                             DiagnosticList &diagnostics);
+
+        /// Replaces the text of \c readme.txt with \a readme, creating the file if the voice
+        /// bank has none.
+        Q_INVOKABLE static bool setReadme(const VoiceBankRef &bank, const QString &readme,
+                                          DiagnosticList &diagnostics);
+
         /// Makes \a charset the encoding in which the files of \a directory are saved. The text
         /// is unchanged and the bytes change. See the section on encodings in docs/Editing.md.
         ///

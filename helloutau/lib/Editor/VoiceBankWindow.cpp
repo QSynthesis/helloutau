@@ -14,6 +14,7 @@
 #include <QtGui/QCloseEvent>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QComboBox>
+#include <QtWidgets/QDockWidget>
 #include <QtWidgets/QFileDialog>
 #include <QtWidgets/QFrame>
 #include <QtWidgets/QHBoxLayout>
@@ -42,6 +43,7 @@
 #include <hellokit/Edit/VoiceBankDocument.h>
 #include <hellokit/Edit/VoiceBankEdits.h>
 #include <hellokit/Edit/VoiceBankRefs.h>
+#include <hellokit/Support/TextCodec.h>
 #include <hellokit/Synth/WaveAudio.h>
 #include <hellokit/VoiceBank/VoiceBankCheckScheduler.h>
 #include <hellokit/VoiceBank/WaveMetadata.h>
@@ -57,6 +59,7 @@
 #include "SamplePreview.h"
 #include "VoiceBankCharsetDialog.h"
 #include "VoiceBankEntryModel.h"
+#include "VoiceBankInfoPanel.h"
 
 namespace hello::daw {
 
@@ -137,6 +140,10 @@ namespace hello::daw {
         QSortFilterProxyModel *proxy = nullptr;
         OtoWaveformView *waveform = nullptr;
         QVBoxLayout *lowerLayout = nullptr;
+        VoiceBankInfoPanel *info = nullptr;
+        QDockWidget *infoDock = nullptr;
+        // The folder of the context menu of the tree while it is open
+        std::optional<std::filesystem::path> menuFolder;
         SamplePreview *preview = nullptr;
         QComboBox *pitchBox = nullptr;
         QSpinBox *lengthBox = nullptr;
@@ -263,6 +270,14 @@ namespace hello::daw {
                     playAudio(*time, std::nullopt);
                 }
             });
+            addCommand(QStringLiteral("helloutau.voiceBank.showInfo"), [this] {
+                infoDock->setVisible(
+                    actions.value(QStringLiteral("helloutau.voiceBank.showInfo"))->isChecked());
+            })->setCheckable(true);
+            addCommand(QStringLiteral("helloutau.voiceBank.convertCharset"),
+                       [this] { askCharset(false); });
+            addCommand(QStringLiteral("helloutau.voiceBank.rereadCharset"),
+                       [this] { askCharset(true); });
             addCommand(QStringLiteral("helloutau.voiceBank.removeMetadata"), [this] {
                 stdc_decl_t;
                 decl.removeAudioMetadata();
@@ -403,6 +418,53 @@ namespace hello::daw {
             vertical->setStretchFactor(0, 1);
             vertical->setSizes({380, 260});
             decl.setCentralWidget(vertical);
+
+            // The information of the voice bank on the right
+            info = new VoiceBankInfoPanel(document->session());
+            info->setRoot(document->rootPath());
+            infoDock = new QDockWidget(tr("Voice Bank Info"), &decl);
+            infoDock->setObjectName(QStringLiteral("info"));
+            infoDock->setWidget(info);
+            decl.addDockWidget(Qt::RightDockWidgetArea, infoDock);
+            const auto showInfo = actions.value(QStringLiteral("helloutau.voiceBank.showInfo"));
+            showInfo->setChecked(true);
+            QObject::connect(infoDock, &QDockWidget::visibilityChanged, &decl, [this, showInfo] {
+                if (!infoDock->isHidden() != showInfo->isChecked()) {
+                    showInfo->setChecked(!infoDock->isHidden());
+                }
+            });
+            QObject::connect(info, &VoiceBankInfoPanel::editRejected, &decl,
+                             [this](const kit::DiagnosticList &diagnostics) {
+                                 stdc_decl_t;
+                                 // Once the box that lost the focus has settled
+                                 QTimer::singleShot(0, &decl, [this, diagnostics] {
+                                     stdc_decl_t;
+                                     DiagnosticBox::show(&decl, tr("Voice Bank Info"), diagnostics);
+                                 });
+                             });
+
+            tree->setContextMenuPolicy(Qt::CustomContextMenu);
+            QObject::connect(
+                tree, &QWidget::customContextMenuRequested, &decl, [this](const QPoint &position) {
+                    stdc_decl_t;
+                    const auto item = tree->itemAt(position);
+                    if (!item || item->data(0, AllRole).toBool()) {
+                        return;
+                    }
+                    // The folder under the pointer, even one not read
+                    menuFolder = pathOf(item->data(0, PathRole).toString());
+                    QMenu menu(&decl);
+                    const auto convert =
+                        actions.value(QStringLiteral("helloutau.voiceBank.convertCharset"));
+                    menu.addAction(convert);
+                    menu.addAction(
+                        actions.value(QStringLiteral("helloutau.voiceBank.rereadCharset")));
+                    const bool enabled = convert->isEnabled();
+                    convert->setEnabled(directoryRef(*menuFolder).has_value());
+                    menu.exec(tree->viewport()->mapToGlobal(position));
+                    convert->setEnabled(enabled);
+                    menuFolder.reset();
+                });
 
             QObject::connect(tree, &QTreeWidget::currentItemChanged, &decl,
                              [this](QTreeWidgetItem *item) { showDirectoryOf(item); });
@@ -726,6 +788,67 @@ namespace hello::daw {
             updateEditActions();
         }
 
+        // The encoding of the folder at path, in the tree or not read
+        QString charsetOf(const std::filesystem::path &path) const {
+            if (const auto ref = directoryRef(path)) {
+                return ref->charset();
+            }
+            for (const auto &directory : document->session()->excludedDirectories()) {
+                if (directory.path == path) {
+                    return directory.charset;
+                }
+            }
+            return {};
+        }
+
+        // Asks for an encoding of the folder of the context menu of the tree, or else the one
+        // chosen there, and converts the folder to it or reads the folder again in it.
+        void askCharset(bool reread) {
+            stdc_decl_t;
+            std::filesystem::path folder;
+            if (menuFolder) {
+                folder = *menuFolder;
+            } else if (const auto item = tree->currentItem();
+                       item && !item->data(0, AllRole).toBool()) {
+                folder = pathOf(item->data(0, PathRole).toString());
+            }
+            const auto current = charsetOf(folder);
+            auto candidates = kit::TextCodec::ustCandidates();
+            if (!current.isEmpty() && !candidates.contains(current)) {
+                candidates.prepend(current);
+            }
+            const auto label =
+                reread ? tr("Read the files of %1 again in the encoding (the text changes, and "
+                            "Undo brings it back):")
+                       : tr("Save the files of %1 in the encoding (the text stays the same):");
+            bool ok = false;
+            const auto charset = QInputDialog::getItem(
+                &decl, reread ? tr("Read Again in Encoding") : tr("Convert Encoding"),
+                label.arg(folderName(folder)), candidates,
+                std::max(0, int(candidates.indexOf(current))), false, &ok);
+            if (!ok) {
+                return;
+            }
+            if (reread) {
+                decl.rereadCharset(folder, charset);
+            } else {
+                decl.convertCharset(folder, charset);
+            }
+        }
+
+        // The encoding of each folder in its tooltip
+        void updateTreeTips() {
+            for (QTreeWidgetItemIterator it(tree); *it; ++it) {
+                const auto item = *it;
+                if (item->data(0, AllRole).toBool() || item->isDisabled()) {
+                    continue;
+                }
+                const auto charset = charsetOf(pathOf(item->data(0, PathRole).toString()));
+                item->setToolTip(0,
+                                 charset.isEmpty() ? QString() : tr("Encoding: %1").arg(charset));
+            }
+        }
+
         // The audio file of row of the model
         std::filesystem::path audioPathOf(int row) const {
             return document->rootPath() / model->directoryOf(row) /
@@ -1017,6 +1140,7 @@ namespace hello::daw {
             tree->expandAll();
             tree->setCurrentItem(current);
             showDirectoryOf(current);
+            updateTreeTips();
         }
 
         void updateTitle() {
@@ -1035,6 +1159,7 @@ namespace hello::daw {
         // closing may proceed.
         bool maybeSave() {
             stdc_decl_t;
+            info->commit();
             if (!document->isModified()) {
                 return true;
             }
@@ -1065,6 +1190,7 @@ namespace hello::daw {
             stdc_impl_t;
             impl.updateUndoActions();
             impl.refreshTree();
+            impl.updateTreeTips();
         });
         connect(impl.document.get(), &kit::VoiceBankDocument::modifiedChanged, this, [this] {
             stdc_impl_t;
@@ -1077,6 +1203,7 @@ namespace hello::daw {
             impl.refreshTree();
             impl.declined.clear();
             impl.followRoot();
+            impl.info->setRoot(impl.document->rootPath());
         });
         impl.updateTitle();
         impl.updateUndoActions();
@@ -1084,7 +1211,13 @@ namespace hello::daw {
         resize(960, 640);
     }
 
-    VoiceBankWindow::~VoiceBankWindow() = default;
+    VoiceBankWindow::~VoiceBankWindow() {
+        stdc_impl_t;
+        // The dock goes while the document is there: its panel writes what it holds when it
+        // loses the focus, and hiding it reports to the window.
+        QObject::disconnect(impl.infoDock, nullptr, this, nullptr);
+        delete impl.infoDock;
+    }
 
     kit::VoiceBankDocument *VoiceBankWindow::document() const {
         stdc_impl_t;
@@ -1114,6 +1247,34 @@ namespace hello::daw {
     OtoWaveformView *VoiceBankWindow::waveformView() const {
         stdc_impl_t;
         return impl.waveform;
+    }
+
+    VoiceBankInfoPanel *VoiceBankWindow::infoPanel() const {
+        stdc_impl_t;
+        return impl.info;
+    }
+
+    bool VoiceBankWindow::convertCharset(const std::filesystem::path &directory,
+                                         const QString &charset) {
+        stdc_impl_t;
+        const auto ref = impl.directoryRef(directory);
+        kit::DiagnosticList diagnostics;
+        const bool converted =
+            ref && kit::VoiceBankEdits::convertCharset(*ref, charset, diagnostics);
+        DiagnosticBox::show(this, tr("Convert Encoding"), diagnostics);
+        return converted;
+    }
+
+    bool VoiceBankWindow::rereadCharset(const std::filesystem::path &directory,
+                                        const QString &charset) {
+        stdc_impl_t;
+        kit::DiagnosticList diagnostics;
+        const bool read = impl.document->session()->reread(directory, charset, diagnostics);
+        DiagnosticBox::show(this, tr("Read Again in Encoding"), diagnostics);
+        if (read) {
+            impl.model->refresh();
+        }
+        return read;
     }
 
     QList<int> VoiceBankWindow::selectedRows() const {
@@ -1386,6 +1547,7 @@ namespace hello::daw {
     bool VoiceBankWindow::save() {
         stdc_impl_t;
         kit::DiagnosticList diagnostics;
+        impl.info->commit();
         const bool saved = impl.document->save(diagnostics);
         DiagnosticBox::show(this, tr("Save"), diagnostics);
         return saved;

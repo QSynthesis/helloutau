@@ -1,6 +1,7 @@
 #ifndef HELLOUTAU_EDITOR_VOICEBANKWINDOW_H
 #define HELLOUTAU_EDITOR_VOICEBANKWINDOW_H
 
+#include <filesystem>
 #include <memory>
 #include <optional>
 
@@ -21,6 +22,7 @@ namespace hello::daw {
     class Editor;
     class OtoWaveformView;
     class VoiceBankEntryModel;
+    class VoiceBankInfoPanel;
 
     /// The window of a voice bank, a document of its own beside the projects: its folders in a
     /// tree, and the oto entries of the folder chosen there in a table. Created by Editor. See
@@ -47,6 +49,10 @@ namespace hello::daw {
         /// The waveform of the entry of the current row, where its values are dragged, and set
         /// at the pointer by the keys 1 to 5.
         OtoWaveformView *waveformView() const;
+
+        /// The information of the voice bank, in a dock on the right that the View menu shows
+        /// and hides.
+        VoiceBankInfoPanel *infoPanel() const;
 
         /// The rows of entryModel() selected in the table, in the order of the model.
         QList<int> selectedRows() const;
@@ -105,6 +111,15 @@ namespace hello::daw {
 
         /// Removes the selected entries, as one undo step.
         bool removeEntries();
+
+        /// Makes \a charset the encoding in which the files of the folder \a directory are
+        /// saved, as one undo step: the text stays and the bytes change. See the section on
+        /// setting an encoding in docs/Editing.md.
+        bool convertCharset(const std::filesystem::path &directory, const QString &charset);
+
+        /// Reads the folder \a directory again in \a charset, as one undo step: the bytes stay
+        /// and the text changes. A folder that was not read, for want of an encoding, is read.
+        bool rereadCharset(const std::filesystem::path &directory, const QString &charset);
 
         /// Lists the audio files of the folders that carry metadata, see kit::WaveMetadata, and
         /// asks whether to write them again without it. The files are written at once, which

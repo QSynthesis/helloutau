@@ -183,6 +183,34 @@ private Q_SLOTS:
         verifyRefused(QStringLiteral("prefix remove"), QStringLiteral("Usage"));
     }
 
+    // The character is set as a whole, field by field where the voice bank has one; an
+    // unchanged character is no step.
+    void the_character_and_the_readme_are_set() {
+        QVERIFY(run(QStringLiteral("character set {\"name\": \"N\", \"author\": \"A\", "
+                                   "\"extraLines\": [\"x: y\"]}")));
+        const auto character = VoiceBankRef(m_session.get()).character();
+        QVERIFY(character.isValid());
+        QCOMPARE(character.name(), QStringLiteral("N"));
+        QCOMPARE(character.author(), QStringLiteral("A"));
+        QCOMPARE(character.image(), QString());
+        QCOMPARE(character.extraLines(), QStringList{QStringLiteral("x: y")});
+        const int step = m_session->currentStep();
+        QVERIFY(run(QStringLiteral("character set {\"name\": \"N\", \"author\": \"A\", "
+                                   "\"extraLines\": [\"x: y\"]}")));
+        QCOMPARE(m_session->currentStep(), step);
+
+        QVERIFY(run(QStringLiteral("readme set \"line 1\\nline 2\"")));
+        QCOMPARE(VoiceBankRef(m_session.get()).readme(), QStringLiteral("line 1\nline 2"));
+        m_session->undo();
+        QCOMPARE(VoiceBankRef(m_session.get()).readme(), m_bank->readme());
+
+        verifyRefused(QStringLiteral("character set \"N\""), QStringLiteral("must be an object"));
+        verifyRefused(QStringLiteral("character set {\"nickname\": \"N\"}"),
+                      QStringLiteral("has no field nickname"));
+        verifyRefused(QStringLiteral("readme set 1"), QStringLiteral("must be a string"));
+        verifyRefused(QStringLiteral("readme set"), QStringLiteral("Usage"));
+    }
+
     void an_encoding_is_converted() {
         const auto sub = m_bank->indexOf("sub");
         QVERIFY(sub > 0);
@@ -253,14 +281,14 @@ private Q_SLOTS:
     }
 
     void names_lists_every_command() {
-        QCOMPARE(
-            VoiceBankCommands::names(),
-            QStringList({QStringLiteral("set"), QStringLiteral("insert"), QStringLiteral("remove"),
-                         QStringLiteral("move"), QStringLiteral("replace"),
-                         QStringLiteral("entry set"), QStringLiteral("entry insert"),
-                         QStringLiteral("entry include"), QStringLiteral("entry remove"),
-                         QStringLiteral("prefix set"), QStringLiteral("prefix remove"),
-                         QStringLiteral("directory charset")}));
+        QCOMPARE(VoiceBankCommands::names(),
+                 QStringList({QStringLiteral("set"), QStringLiteral("insert"),
+                              QStringLiteral("remove"), QStringLiteral("move"),
+                              QStringLiteral("replace"), QStringLiteral("entry set"),
+                              QStringLiteral("entry insert"), QStringLiteral("entry include"),
+                              QStringLiteral("entry remove"), QStringLiteral("prefix set"),
+                              QStringLiteral("prefix remove"), QStringLiteral("character set"),
+                              QStringLiteral("readme set"), QStringLiteral("directory charset")}));
     }
 };
 

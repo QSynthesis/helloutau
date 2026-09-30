@@ -190,6 +190,15 @@
 
 - `character.txt`、`readme.txt`、`prefix.map` 的编辑；目录编码的转换与重新解读（`Editing.md`「设置编码」的两种操作）。
 
+**进度**（2026-09-30 完成）：
+- 编辑层补充领域函数 `VoiceBankEdits::setCharacter()`（整份替换，原有 `character.txt` 时逐字段写入，没有时创建）与 `setReadme()`，命令为 `character set <对象>`、`readme set <文本>`。内容不变时不产生撤销步骤。
+- 音源窗口右侧的停靠窗「Voice Bank Info」（`VoiceBankInfoPanel`），由「视图 → Voice Bank Info」显示或隐藏，分三页：
+  - Character：名字（空时即以文件夹名为名，输入框中以占位文字说明）、图片、试听音、作者、网站，以及不是字段的其余各行（UTAU 作为人物介绍显示的行）；图片按 UTAU 要求的 100×100 预览，读不了时说明。音源没有 `character.txt` 时各栏为空，填入内容即创建该文件。
+  - Readme：`readme.txt` 的全文。
+  - Prefix Map：C1–B7 共 84 行，文件中没有的键音名灰显、前后缀为空；编辑单元格即写入该键，音源没有 `prefix.map` 时创建；行的右键菜单删除该键。
+- 写入的时机：单行框在编辑结束（回车或失去焦点）时，多行框在失去焦点时，表格在编辑单元格后；各为一个撤销步骤。保存与关闭前先写入仍在输入的内容。撤销、重做与从磁盘重新读取后面板随之更新，但不改动正在输入的框。
+- 目录编码：目录树的右键菜单与「编辑」菜单中的 Convert Encoding...（转换：文字不变、字节改变，`VoiceBankEdits::convertCharset`）与 Read Again in Encoding...（重新解读：字节不变、文字改变，`VoiceBankSession::reread`，未能读取的目录也可由此读入），候选编码与打开时的编码对话框相同。目录树的提示显示每个目录的编码。
+
 ### 第 6 步：频谱与 F0
 
 - 频谱图；读取 frq 等频率表，把 F0 画在波形上。频率表的生成与编辑属于「频率表」一项（移入 qfrqeditor），不在此步。

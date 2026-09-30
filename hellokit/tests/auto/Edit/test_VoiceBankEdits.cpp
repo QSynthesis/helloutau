@@ -78,6 +78,35 @@ private Q_SLOTS:
         m_dir.reset();
     }
 
+    // The character and the readme each change in one step; without character.txt, setting
+    // the character creates it.
+    void the_character_and_the_readme_are_set() {
+        const auto bank = VoiceBankRef(m_session.get());
+        {
+            auto transaction = m_session->transaction(QStringLiteral("remove"));
+            bank.setCharacter(std::nullopt);
+            QVERIFY(transaction.commit());
+        }
+        QVERIFY(!bank.character().isValid());
+        VoiceCharacter character;
+        character.name = QStringLiteral("M");
+        character.web = QStringLiteral("https://example.com");
+        DiagnosticList diagnostics;
+        QVERIFY(VoiceBankEdits::setCharacter(bank, character, diagnostics));
+        QCOMPARE(bank.character().toVoiceCharacter(), character);
+        QCOMPARE(m_session->undoMessage(), QStringLiteral("Set Character"));
+
+        character.name = QStringLiteral("N");
+        QVERIFY(VoiceBankEdits::setCharacter(bank, character, diagnostics));
+        QCOMPARE(bank.character().name(), QStringLiteral("N"));
+        QCOMPARE(m_session->currentStep(), 3);
+
+        QVERIFY(VoiceBankEdits::setReadme(bank, QStringLiteral("text"), diagnostics));
+        QCOMPARE(bank.readme(), QStringLiteral("text"));
+        QCOMPARE(m_session->undoMessage(), QStringLiteral("Set Readme"));
+        QVERIFY(diagnostics.isEmpty());
+    }
+
     // Every public field changes in one step. A spelling that still reads as the number is
     // kept, so an unchanged number is saved as it was written.
     void an_entry_is_changed_as_a_whole() {

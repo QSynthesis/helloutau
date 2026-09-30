@@ -4,6 +4,7 @@
 #include <QtCore/QTemporaryDir>
 #include <QtCore/QTimer>
 #include <QtGui/QAction>
+#include <QtGui/QImage>
 #include <QtTest/QSignalSpy>
 #include <QtTest/QTest>
 #include <QtGui/QClipboard>
@@ -20,7 +21,10 @@
 #include <QtWidgets/QMessageBox>
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QStatusBar>
+#include <QtWidgets/QLabel>
+#include <QtWidgets/QPlainTextEdit>
 #include <QtWidgets/QTableView>
+#include <QtWidgets/QTableWidget>
 #include <QtWidgets/QTreeWidget>
 
 #include <hellokit/Edit/ProjectDocument.h>
@@ -46,6 +50,7 @@
 #include <helloutau/Editor/VibratoDialog.h>
 #include <helloutau/Editor/VoiceBankCharsetDialog.h>
 #include <helloutau/Editor/VoiceBankEntryModel.h>
+#include <helloutau/Editor/VoiceBankInfoPanel.h>
 #include <helloutau/Editor/VoiceBankWindow.h>
 
 using namespace hello;
@@ -1399,6 +1404,85 @@ private Q_SLOTS:
         QVERIFY(model->index(0, 0).data(VoiceBankEntryModel::DuplicateAliasRole).toBool());
         QVERIFY(model->index(1, 0).data(VoiceBankEntryModel::DuplicateAliasRole).toBool());
         QVERIFY(!model->index(2, 0).data(VoiceBankEntryModel::DuplicateAliasRole).toBool());
+    }
+
+    // The dock edits character.txt, readme.txt and prefix.map, each edit one step, creating the
+    // files the voice bank lacks; the tree converts the encoding of a folder.
+    void the_voice_bank_info_is_edited() {
+        QTemporaryDir dir;
+        const auto bank = voiceBank(dir);
+        QImage icon(10, 10, QImage::Format_RGB32);
+        icon.fill(Qt::red);
+        QVERIFY(icon.save(QString::fromStdU16String((bank / "icon.png").u16string())));
+        const auto e = editor();
+        const auto window = e->openVoiceBank(bank);
+        QVERIFY(window);
+        const auto session = window->document()->session();
+        const auto panel = window->infoPanel();
+        QVERIFY(panel);
+        QVERIFY(panel->nameEdit()->text().isEmpty());
+        const int step = session->currentStep();
+
+        panel->nameEdit()->setText(QStringLiteral("Name"));
+        Q_EMIT panel->nameEdit()->editingFinished();
+        QCOMPARE(session->currentStep(), step + 1);
+        QCOMPARE(kit::VoiceBankRef(session).character().name(), QStringLiteral("Name"));
+        panel->imageEdit()->setText(QStringLiteral("icon.png"));
+        Q_EMIT panel->imageEdit()->editingFinished();
+        QVERIFY(!panel->imagePreview()->pixmap().isNull());
+        // Finishing again without a change is no step.
+        Q_EMIT panel->imageEdit()->editingFinished();
+        QCOMPARE(session->currentStep(), step + 2);
+
+        panel->otherLinesEdit()->setPlainText(QStringLiteral("voice: a"));
+        panel->readmeEdit()->setPlainText(QStringLiteral("Read me."));
+        panel->commit();
+        QCOMPARE(session->currentStep(), step + 4);
+        QCOMPARE(kit::VoiceBankRef(session).character().extraLines(),
+                 QStringList{QStringLiteral("voice: a")});
+        QCOMPARE(kit::VoiceBankRef(session).readme(), QStringLiteral("Read me."));
+
+        // A key of prefix.map, which the voice bank lacks, from its cell
+        const auto table = panel->prefixTable();
+        const int row = 60 - kit::VoicePrefix::minimumKey;
+        QCOMPARE(table->item(row, 0)->text(), QStringLiteral("C4"));
+        table->item(row, 2)->setText(QStringLiteral("_H"));
+        QCOMPARE(session->currentStep(), step + 5);
+        QCOMPARE(kit::VoiceBankRef(session).prefixMap().value(60).suffix, QStringLiteral("_H"));
+        table->item(row + 1, 1)->setText(QStringLiteral("x"));
+        QVERIFY(panel->removePrefix(61));
+        QCOMPARE(kit::VoiceBankRef(session).prefixMap().keys(), QList<int>{60});
+
+        // The panel follows an undo.
+        session->undo();
+        QCoreApplication::processEvents();
+        QCOMPARE(table->item(row + 1, 1)->text(), QStringLiteral("x"));
+        session->redo();
+        QCoreApplication::processEvents();
+        QCOMPARE(table->item(row + 1, 1)->text(), QString());
+
+        QVERIFY(window->convertCharset({}, QStringLiteral("Shift_JIS")));
+        QCOMPARE(kit::VoiceBankRef(session).directories().at(0).charset(),
+                 QStringLiteral("Shift_JIS"));
+        QCOMPARE(window->directoryTree()->topLevelItem(1)->toolTip(0),
+                 QStringLiteral("Encoding: Shift_JIS"));
+        QVERIFY(window->rereadCharset("sub", QStringLiteral("UTF-8")));
+
+        // A text still being typed is saved with the rest.
+        panel->readmeEdit()->setPlainText(QStringLiteral("Saved."));
+        QVERIFY(window->save());
+        std::ifstream readme(bank / "readme.txt", std::ios::binary);
+        QCOMPARE(
+            std::string((std::istreambuf_iterator<char>(readme)), std::istreambuf_iterator<char>()),
+            std::string("Saved."));
+        QVERIFY(fs::exists(bank / "character.txt"));
+        QVERIFY(fs::exists(bank / "readme.txt"));
+        QVERIFY(fs::exists(bank / "prefix.map"));
+        std::ifstream in(bank / "character.txt", std::ios::binary);
+        const std::string text((std::istreambuf_iterator<char>(in)),
+                               std::istreambuf_iterator<char>());
+        QVERIFY(text.find("name=Name") != std::string::npos);
+        QVERIFY(text.find("image=icon.png") != std::string::npos);
     }
 
     // Saved in its window, a voice bank reaches the projects that sing it, without an edit of

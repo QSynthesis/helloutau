@@ -163,6 +163,14 @@
              the length beside the waveform -->
         <action id="helloutau.voiceBank.synthesize" text="&amp;Synthesize Note" category="Playback"
                 shortcut="Ctrl+Return" />
+        <!-- The dock of character.txt, readme.txt and prefix.map -->
+        <action id="helloutau.voiceBank.showInfo" text="Voice Bank &amp;Info" category="View" />
+        <!-- The folder chosen in the tree: its files saved in another encoding, the text staying,
+             or read again in another encoding, the bytes staying -->
+        <action id="helloutau.voiceBank.convertCharset" text="Con&amp;vert Encoding..."
+                category="Edit" />
+        <action id="helloutau.voiceBank.rereadCharset" text="Read Again in &amp;Encoding..."
+                category="Edit" />
         <!-- The chunks of the audio files besides the format and the audio, written away after
              a confirmation -->
         <action id="helloutau.voiceBank.removeMetadata" text="Remove Audio &amp;Metadata..."
@@ -291,8 +299,13 @@
                     <action id="helloutau.voiceBank.setConsonant" />
                     <action id="helloutau.voiceBank.setCutoff" />
                 </menu>
+                <separator />
+                <action id="helloutau.voiceBank.convertCharset" />
+                <action id="helloutau.voiceBank.rereadCharset" />
             </menu>
             <menu id="helloutau.voiceBank.view">
+                <action id="helloutau.voiceBank.showInfo" />
+                <separator />
                 <action id="helloutau.view.commandPalette" />
             </menu>
             <menu id="helloutau.voiceBank.playback">

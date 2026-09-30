@@ -143,6 +143,31 @@ namespace hello::kit {
         return transaction.commit(diagnostics);
     }
 
+    bool VoiceBankEdits::setCharacter(const VoiceBankRef &bank, const VoiceCharacter &character,
+                                      DiagnosticList &diagnostics) {
+        auto transaction = bank.session()->transaction(tr("Set Character"));
+        const auto ref = bank.character();
+        if (!ref.isValid()) {
+            bank.setCharacter(character);
+            return transaction.commit(diagnostics);
+        }
+        // Field by field, so that the change log names the fields that changed
+        ref.setName(character.name);
+        ref.setImage(character.image);
+        ref.setSample(character.sample);
+        ref.setAuthor(character.author);
+        ref.setWeb(character.web);
+        ref.setExtraLines(character.extraLines);
+        return transaction.commit(diagnostics);
+    }
+
+    bool VoiceBankEdits::setReadme(const VoiceBankRef &bank, const QString &readme,
+                                   DiagnosticList &diagnostics) {
+        auto transaction = bank.session()->transaction(tr("Set Readme"));
+        bank.setReadme(readme);
+        return transaction.commit(diagnostics);
+    }
+
     bool VoiceBankEdits::convertCharset(const VoiceDirectoryRef &directory, const QString &charset,
                                         DiagnosticList &diagnostics) {
         const TextCodec codec(charset);

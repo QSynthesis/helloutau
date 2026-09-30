@@ -185,6 +185,37 @@ namespace hello::kit {
             return VoiceBankEdits::removePrefix(VoiceBankRef(&session), *noteNum, diagnostics);
         }
 
+        bool characterSetCommand(VoiceBankSession &session, const Arguments &arguments,
+                                 DiagnosticList &diagnostics) {
+            if (arguments.size() != 1) {
+                return usage(diagnostics, "character set <character JSON>");
+            }
+            const auto json = edit::CommandSyntax::valueOf(arguments[0]);
+            if (!json.isObject()) {
+                return fail(diagnostics, VoiceBankCommands::tr("A character must be an object."));
+            }
+            const auto tree = edit::NodeCommands::treeOf(*voiceBankRecordOf(VoiceCharacterType),
+                                                         json.toObject(), diagnostics);
+            if (!tree) {
+                return false;
+            }
+            return VoiceBankEdits::setCharacter(
+                VoiceBankRef(&session), edit::fromTree<VoiceCharacter>(tree.get()), diagnostics);
+        }
+
+        bool readmeSetCommand(VoiceBankSession &session, const Arguments &arguments,
+                              DiagnosticList &diagnostics) {
+            if (arguments.size() != 1) {
+                return usage(diagnostics, "readme set <text>");
+            }
+            const auto readme = edit::NodeCommands::stringOf(
+                arguments[0], VoiceBankCommands::tr("text"), diagnostics);
+            if (!readme) {
+                return false;
+            }
+            return VoiceBankEdits::setReadme(VoiceBankRef(&session), *readme, diagnostics);
+        }
+
         bool directoryCharsetCommand(VoiceBankSession &session, const Arguments &arguments,
                                      DiagnosticList &diagnostics) {
             if (arguments.size() != 2) {
@@ -216,6 +247,8 @@ namespace hello::kit {
             {"entry",     "remove",  entryRemoveCommand,      "removeEntries" },
             {"prefix",    "set",     prefixSetCommand,        "setPrefix"     },
             {"prefix",    "remove",  prefixRemoveCommand,     "removePrefix"  },
+            {"character", "set",     characterSetCommand,     "setCharacter"  },
+            {"readme",    "set",     readmeSetCommand,        "setReadme"     },
             {"directory", "charset", directoryCharsetCommand, "convertCharset"},
         };
 
