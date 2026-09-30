@@ -5,6 +5,9 @@
 #include <helloutau/Editor/AppLoader.h>
 #include <helloutau/Editor/BuiltinActions.h>
 #include <helloutau/Editor/Editor.h>
+#include <helloutau/Widgets/SettingPage.h>
+
+#include "PluginSettingPage.h"
 
 namespace hello::daw {
 
@@ -20,6 +23,10 @@ namespace hello::daw {
         const auto loader = AppLoader::instance();
         m_editor =
             loader ? std::make_unique<Editor>(loader->settings()) : std::make_unique<Editor>();
+        // The page of the plugins, which only a loader has; the catalog owns it
+        if (loader) {
+            m_editor->settingCatalog()->addPage(new PluginSettingPage(*loader));
+        }
         return true;
     }
 

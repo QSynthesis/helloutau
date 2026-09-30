@@ -2,9 +2,11 @@
 #define HELLOUTAU_EDITOR_APPLOADER_H
 
 #include <memory>
+#include <optional>
 
 #include <QtCore/QCoreApplication>
 #include <QtCore/QJsonValue>
+#include <QtCore/QList>
 #include <QtCore/QString>
 #include <QtCore/QStringList>
 
@@ -35,6 +37,42 @@ namespace hello::daw {
         /// The option that names the directory of the settings in place of that of the user,
         /// followed by the directory.
         static constexpr char settingsOption[] = "--settings";
+
+        /// A plugin that the loader found, as the Plugins page of the settings shows it.
+        struct PluginInfo {
+            /// What became of the plugin in this run.
+            enum State {
+                /// Loaded and running.
+                Running,
+                /// Disabled by its metadata or by the settings.
+                Disabled,
+                /// Failed to be read, resolved, loaded or initialized, with the reason in error.
+                Failed,
+                /// Neither running nor failed, as after shutdown().
+                NotLoaded,
+            };
+
+            /// A plugin that this one depends on.
+            struct Dependency {
+                QString id;
+                /// Whether this plugin runs without it.
+                bool optional = false;
+            };
+
+            QString id;
+            QString displayName;
+            QString version;
+            /// The library of the plugin.
+            QString filePath;
+            QList<Dependency> dependencies;
+            State state = NotLoaded;
+            QString error;
+            /// Whether the metadata enables the plugin, before the settings of the user.
+            bool enabledByDefault = false;
+            /// Whether the plugin was enabled in this run, with the settings of the user as they
+            /// were when load() started.
+            bool enabled = false;
+        };
 
         /// A loader for the command line \a arguments, the first of which is the program. Each
         /// \c --plugin-path adds the directory after it to the plugin paths, \c --settings names
@@ -92,6 +130,15 @@ namespace hello::daw {
         /// event loop runs, or at the destruction of the loader. An undefined or null \a value
         /// removes it.
         void setPluginValue(const QString &id, const QString &key, const QJsonValue &value);
+
+        /// Whether the user enabled (true) or disabled (false) the plugin \a id, or nothing if
+        /// its metadata decides.
+        std::optional<bool> pluginEnabled(const QString &id) const;
+
+        /// Replaces the choice of the user for the plugin \a id, nothing to leave it to its
+        /// metadata, and writes the file as setPluginValue() does. The plugins that run do not
+        /// change: the choice takes effect at the next start.
+        void setPluginEnabled(const QString &id, std::optional<bool> enabled);
         /// @}
 
         /// Loads the plugins once, with the plugins that the settings enable or disable. The
@@ -99,6 +146,9 @@ namespace hello::daw {
         ///
         /// \return whether the core plugin runs, or else false with the reason in \a error
         bool load(QString *error);
+
+        /// Every plugin found in the plugin paths, in the order in which they were found.
+        QList<PluginInfo> plugins() const;
 
         /// The plugins other than the core plugin that failed, each as its ID and the reason.
         QStringList errors() const;

@@ -1,6 +1,7 @@
 #include <QtCore/QDir>
 #include <QtCore/QFile>
 #include <QtCore/QFileInfo>
+#include <QtCore/QHash>
 #include <QtCore/QJsonArray>
 #include <QtCore/QJsonDocument>
 #include <QtCore/QJsonObject>
@@ -138,6 +139,123 @@ private Q_SLOTS:
         QVERIFY2(loader.load(&error), qPrintable(error));
         QCOMPARE(loader.errors(),
                  QStringList({QStringLiteral("org.helloutau.other: intentional failure")}));
+    }
+
+    // Every plugin found is listed with what became of it, running, disabled or failed.
+    void the_plugins_are_listed() {
+        QTemporaryDir root;
+        addPlugin(root.path(), QStringLiteral("Core"), QStringLiteral(TEST_APPLOADER_CORE),
+                  QLatin1String(AppLoader::corePluginId));
+        addPlugin(root.path(), QStringLiteral("Off"), QStringLiteral(TEST_APPLOADER_CORE),
+                  QStringLiteral("org.test.off"), QStringLiteral(R"(,"enabledByDefault":false)"));
+        addPlugin(
+            root.path(), QStringLiteral("Failing"), QStringLiteral(TEST_APPLOADER_FAILING_CORE),
+            QStringLiteral("org.test.failing"),
+            QStringLiteral(
+                R"(,"dependencies":[{"id":"org.helloutau.core","version":"1.0","type":"required"},)"
+                R"({"id":"org.test.off","version":"1.0","type":"optional"}])"));
+        AppLoader loader(arguments());
+        loader.setPluginPaths({root.path()});
+        QString error;
+        QTest::ignoreMessage(QtWarningMsg, "Plugin org.test.failing: intentional failure");
+        QVERIFY2(loader.load(&error), qPrintable(error));
+
+        QHash<QString, AppLoader::PluginInfo> plugins;
+        for (const auto &info : loader.plugins()) {
+            plugins.insert(info.id, info);
+        }
+        QCOMPARE(plugins.size(), 3);
+
+        const auto core = plugins.value(QLatin1String(AppLoader::corePluginId));
+        QCOMPARE(core.state, AppLoader::PluginInfo::Running);
+        QCOMPARE(core.displayName, QStringLiteral("Core"));
+        QCOMPARE(core.version, QStringLiteral("1.0"));
+        QCOMPARE(QFileInfo(core.filePath).absoluteDir(),
+                 QDir(QDir(root.path()).filePath(QStringLiteral("Core"))));
+        QVERIFY(core.dependencies.isEmpty());
+        QVERIFY(core.error.isEmpty());
+        QVERIFY(core.enabledByDefault);
+        QVERIFY(core.enabled);
+
+        const auto off = plugins.value(QStringLiteral("org.test.off"));
+        QCOMPARE(off.state, AppLoader::PluginInfo::Disabled);
+        QVERIFY(!off.enabledByDefault);
+        QVERIFY(!off.enabled);
+
+        const auto failing = plugins.value(QStringLiteral("org.test.failing"));
+        QCOMPARE(failing.state, AppLoader::PluginInfo::Failed);
+        QCOMPARE(failing.error, QStringLiteral("intentional failure"));
+        QCOMPARE(failing.dependencies.size(), 2);
+        QCOMPARE(failing.dependencies[0].id, QLatin1String(AppLoader::corePluginId));
+        QVERIFY(!failing.dependencies[0].optional);
+        QCOMPARE(failing.dependencies[1].id, QStringLiteral("org.test.off"));
+        QVERIFY(failing.dependencies[1].optional);
+        // A disabled plugin is no error.
+        QCOMPARE(loader.errors(),
+                 QStringList({QStringLiteral("org.test.failing: intentional failure")}));
+
+        loader.shutdown();
+        for (const auto &info : loader.plugins()) {
+            QVERIFY(info.state != AppLoader::PluginInfo::Running);
+        }
+    }
+
+    // The choice of the user to enable or disable a plugin goes into plugins.json, and leaves
+    // the plugins that run as they are until the next start.
+    void the_user_enables_and_disables_plugins() {
+        QTemporaryDir directory;
+        QTemporaryDir root;
+        addPlugin(root.path(), QStringLiteral("Core"), QStringLiteral(TEST_APPLOADER_CORE),
+                  QLatin1String(AppLoader::corePluginId));
+        addPlugin(root.path(), QStringLiteral("Off"), QStringLiteral(TEST_APPLOADER_CORE),
+                  QStringLiteral("org.test.off"), QStringLiteral(R"(,"enabledByDefault":false)"));
+        const QStringList command = {QStringLiteral("helloutau"), QStringLiteral("--settings"),
+                                     directory.path()};
+        const auto file = directory.filePath(QStringLiteral("plugins.json"));
+        const auto written = [&] {
+            QFile in(file);
+            [&] { QVERIFY(in.open(QIODevice::ReadOnly)); }();
+            return QJsonDocument::fromJson(in.readAll()).object();
+        };
+        QString error;
+        {
+            AppLoader loader(command);
+            loader.setPluginPaths({root.path()});
+            QVERIFY2(loader.load(&error), qPrintable(error));
+            QCOMPARE(loader.pluginEnabled(QStringLiteral("org.test.off")), std::nullopt);
+            loader.setPluginEnabled(QStringLiteral("org.test.off"), true);
+            loader.setPluginEnabled(QStringLiteral("org.test.other"), false);
+            QCOMPARE(loader.pluginEnabled(QStringLiteral("org.test.off")), true);
+            QCOMPARE(loader.pluginEnabled(QStringLiteral("org.test.other")), false);
+            for (const auto &info : loader.plugins()) {
+                if (info.id == QStringLiteral("org.test.off")) {
+                    QCOMPARE(info.state, AppLoader::PluginInfo::Disabled);
+                }
+            }
+            loader.syncSettings();
+            QCOMPARE(written().value(QStringLiteral("enabledPlugins")),
+                     QJsonValue(QJsonArray({QStringLiteral("org.test.off")})));
+            QCOMPARE(written().value(QStringLiteral("disabledPlugins")),
+                     QJsonValue(QJsonArray({QStringLiteral("org.test.other")})));
+        }
+        {
+            AppLoader loader(command);
+            loader.setPluginPaths({root.path()});
+            QVERIFY2(loader.load(&error), qPrintable(error));
+            bool found = false;
+            for (const auto &info : loader.plugins()) {
+                if (info.id == QStringLiteral("org.test.off")) {
+                    found = true;
+                    QCOMPARE(info.state, AppLoader::PluginInfo::Running);
+                    QVERIFY(!info.enabledByDefault);
+                    QVERIFY(info.enabled);
+                }
+            }
+            QVERIFY(found);
+            loader.setPluginEnabled(QStringLiteral("org.test.off"), std::nullopt);
+            QCOMPARE(loader.pluginEnabled(QStringLiteral("org.test.off")), std::nullopt);
+        }
+        QCOMPARE(written().value(QStringLiteral("enabledPlugins")), QJsonValue(QJsonArray()));
     }
 
     // Without the core plugin, running or not, the loader gives the reason.

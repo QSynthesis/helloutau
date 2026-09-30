@@ -137,6 +137,20 @@ namespace hello::daw {
         impl.pluginFile->changed();
     }
 
+    std::optional<bool> AppLoader::pluginEnabled(const QString &id) const {
+        stdc_impl_t;
+        return impl.pluginSettings.pluginEnabled(id.toStdString());
+    }
+
+    void AppLoader::setPluginEnabled(const QString &id, std::optional<bool> enabled) {
+        stdc_impl_t;
+        if (impl.pluginSettings.pluginEnabled(id.toStdString()) == enabled) {
+            return;
+        }
+        impl.pluginSettings.setPluginEnabled(id.toStdString(), enabled);
+        impl.pluginFile->changed();
+    }
+
     AppSettings &AppLoader::settings() const {
         stdc_impl_t;
         return *impl.settings;
@@ -183,19 +197,47 @@ namespace hello::daw {
         return true;
     }
 
-    QStringList AppLoader::errors() const {
+    QList<AppLoader::PluginInfo> AppLoader::plugins() const {
         stdc_impl_t;
+        using Spec = stdc::pluginsystem::PluginSpec;
+        QList<PluginInfo> result;
+        for (const auto spec : impl.system.plugins()) {
+            PluginInfo info;
+            info.id = QString::fromStdString(spec->id());
+            info.displayName = QString::fromStdString(spec->displayName());
+            info.version = QString::fromStdString(spec->version().toString());
+            info.filePath = QString::fromStdU16String(spec->filePath().u16string());
+            for (const auto &dependency : spec->dependencies()) {
+                info.dependencies.push_back(
+                    {QString::fromStdString(dependency.id()),
+                     dependency.type() == stdc::pluginsystem::PluginDependency::Optional});
+            }
+            if (spec->hasError()) {
+                info.state = PluginInfo::Failed;
+                info.error = QString::fromStdString(spec->errorMessage());
+            } else if (!spec->isEnabled()) {
+                info.state = PluginInfo::Disabled;
+            } else if (spec->state() == Spec::Running) {
+                info.state = PluginInfo::Running;
+            }
+            info.enabledByDefault = spec->enabledByGlobalSettings();
+            info.enabled = spec->isEnabled();
+            result.push_back(info);
+        }
+        return result;
+    }
+
+    QStringList AppLoader::errors() const {
         QStringList result;
         bool coreSeen = false;
-        for (const auto spec : impl.system.plugins()) {
+        for (const auto &info : plugins()) {
             // load() reports on the first core plugin, and another of the same ID is an error here.
-            if (spec->id() == corePluginId && !coreSeen) {
+            if (info.id == QLatin1String(corePluginId) && !coreSeen) {
                 coreSeen = true;
                 continue;
             }
-            if (spec->hasError()) {
-                result.push_back(QString::fromStdString(spec->id()) + QStringLiteral(": ") +
-                                 QString::fromStdString(spec->errorMessage()));
+            if (info.state == PluginInfo::Failed) {
+                result.push_back(info.id + QStringLiteral(": ") + info.error);
             }
         }
         return result;

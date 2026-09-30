@@ -70,7 +70,7 @@ stdcorelib.plugin 的交接记录（其仓库 `.cache/codex/2026-08-21-1722-stdc
 作者 2026-09-30 决定，参照 DiffScope 的加载器（choruskit 的 `CkLoader`：程序的 `main` 只配置并调用 `run()`，核心功能在 Core 插件中），但不像 DiffScope 把编辑器核心全放进 Core：编辑器的实现已在 hellokit 与 helloutau 的库中，Core 插件只接管原来程序入口的工作。
 
 - **程序只是加载器。** `helloutau.exe` 的 `main` 设置应用名，构造 `hello::daw::AppLoader` 并调用 `run()`。
-- **`AppLoader`**（HelloUtauEditor）：持有 `PluginSystem`（目录布局）。命令行中的 `--plugin-path <目录>` 追加搜索目录，其余参数为文件，交给 Core 插件。`run()` 载入插件；Core 插件不存在、有错误或停用时报告原因并退出；否则运行事件循环，结束后关闭插件。其他插件的错误暂时写入日志，将来显示在「Plugins」页。同一时刻只有一个加载器，插件经 `AppLoader::instance()` 取得它。
+- **`AppLoader`**（HelloUtauEditor）：持有 `PluginSystem`（目录布局）。命令行中的 `--plugin-path <目录>` 追加搜索目录，其余参数为文件，交给 Core 插件。`run()` 载入插件；Core 插件不存在、有错误或停用时报告原因并退出；否则运行事件循环，结束后关闭插件。其他插件的错误写入日志，并显示在设置的「Plugins」页。同一时刻只有一个加载器，插件经 `AppLoader::instance()` 取得它。
 - **Core 插件**（ID `org.helloutau.core`，目录 `Core`，目标 `CorePlugin`，插件类在 `Internal` 中）：`initialize()` 登记编辑器的动作清单（`BuiltinActions`，见下文「编辑界面扩展：动作与命令」）并创建 `Editor`；`pluginsInitialized()` 打开命令行中的文件，没有则新建工程；`aboutToShutdown()` 销毁 `Editor` 及其窗口。`pluginsInitialized()` 按依赖的逆序调用，依赖 Core 的插件先于它完成，因此窗口打开时各插件都已登记完毕。
 
 ### 目录
@@ -102,7 +102,12 @@ macOS 的 bundle 中为 `HelloUtau.app/Contents/MacOS`（程序）与 `HelloUtau
   - `settings.json`：应用的设置（`AppSettings`），分组存放 `engines`、`playback`、`files`、`commandPalette`，也可经 `value()` / `setValue()` 以 `a/b/c` 形式的键读写任意一层。Core 插件把 `AppLoader` 的这一份交给 `Editor`。
   - `plugins.json`：严格为 stdcorelib.plugin `PluginSettings` 的格式：用户启用或停用的插件 `enabledPlugins` / `disabledPlugins`，以及各插件自己的值 `userData/<插件 ID>`。`AppLoader` 读写它，载入插件前把它交给 `PluginSystem` 的用户一级；插件经 `AppLoader::pluginValue(id, key)` / `setPluginValue()` 以相对于自己那一组的 `a/b/c` 键读写。
   - `AppLoader` 的 `--settings <目录>` 另指定两者所在的目录，测试用它。内部存储用 stdcorelib 的 JSON（值可就地修改，`SettingsJson`），公开接口用 `QJsonValue`，stdcorelib 仍是私有依赖。修改后等事件循环运行时重写整个文件（`SettingsFile`，同一轮循环的修改合为一次写），`AppSettings::sync()`、`AppLoader::syncSettings()` 与析构时立即写出未写的修改；多开时后写的覆盖先写的，以后再做独占。
-  - 随安装提供的全局一份尚未实现。设置对话框增加「Plugins」页：列出插件、勾选启用、显示错误与依赖。
+  - 随安装提供的全局一份尚未实现。
+- **设置的「Plugins」页**（`core.Plugins`，作者 2026-09-30 同意的方案）：由 Core 插件在创建 `Editor` 后加入其 `settingCatalog()`（`plugins/Core/Internal/PluginSettingPage`），因为只有经加载器启动时才有这一页，测试中直接构造的 `Editor` 没有它。
+  - 数据来自 `AppLoader::plugins()`：每个找到的插件一项 `PluginInfo`（ID、显示名、版本、库文件、依赖及是否可选、本次运行的状态「运行中 / 已停用 / 出错 / 未载入」、错误、元数据是否启用、本次是否启用），公开接口不含 stdcorelib 的类型。`errors()` 由它筛出。
+  - 列表为「名称（勾选框）、版本、状态」三列，出错的插件在状态列带警告图标，提示为错误全文；选中一项时下方显示 ID、库文件、所依赖的插件与依赖它的插件（标出可选依赖）、错误。
+  - 勾选表示下次启动是否启用，经 `AppLoader::pluginEnabled()` / `setPluginEnabled()` 写入 `plugins.json` 的 `enabledPlugins` / `disabledPlugins`，本次运行的插件不变；与元数据相同的选择不写入，文件中只留用户改过的插件。有插件的勾选与本次运行不同时，页首提示重启。
+  - Core 插件的勾选框不能取消。停用被依赖的插件不加阻止，依赖它的插件在下次启动时显示依赖错误。
 - **关闭顺序**：插件登记的对象，代码都在插件的库中，必须在卸载前销毁。Core 插件在 `aboutToShutdown()` 中销毁 `Editor`，依赖 Core 的插件的 `aboutToShutdown()` 在它之前调用，各库都在此后才卸载。插件的实例是库中的静态对象，随库卸载而析构，因此窗口等 Qt 对象不能留到那时。
 - **插件交给宿主的数据不能指向插件库的静态存储**：`QStringLiteral` 的文本就在库中，库卸载后仍被宿主持有的这类字符串即成悬空（`test_AppLoader` 的测试插件遇到过）。交给宿主、可能在卸载后仍被使用的字符串须是分配的副本。
 
@@ -145,11 +150,11 @@ stdcorelib.plugin 的生命周期是同步的，不依赖事件循环。HelloUta
    - 删除 `FrequencyFormatPlugin`。
    - 多个格式都匹配重采样器时，默认选**后登记的**，即后载入的插件的格式（作者 2026-09-30 决定）：想接管内置处理的插件依赖 FrequencyEditor，必在其后载入。
    - `AppLoader::errors()` 列出核心插件以外载入失败的插件，`test_AppLoader` 据此检查随应用提供的插件全部载入。起因：`helloutau_add_native_plugin()` 的 `DEPENDENCIES` 原为多值参数，吞掉了其后交给 `helloutau_add_plugin()` 的参数，FrequencyEditor 的 `plugin.json` 因而带有虚假的依赖而载入失败，只写入日志，测试没有发现。`DEPENDENCIES` 现为单值参数，多个依赖以分号分隔。
-5. **设置**：~~用户的启用设置文件~~（`plugins.json`，见上文「设置」），设置对话框的「Plugins」页（未做），随安装提供的全局设置（未做）。
+5. **设置**：~~用户的启用设置文件~~（`plugins.json`，见上文「设置」），~~设置对话框的「Plugins」页~~（见上文），随安装提供的全局设置（未做）。
 6. **格式转换驱动**：同样改为注册接口，删除 `InterchangePlugin`。
 7. **ClassicPluginHost 插件**（计划见 [`ClassicPluginHost.md`](ClassicPluginHost.md)）：随 HelloUtau 提供的原生插件，把 UTAU 插件作为命令加入「工具 → 插件」菜单，运行后把结果作为一个撤销步骤应用到选区。选区编辑的注册接口暂不建。验收同 Roadmap 第五阶段：若干社区常用的原版插件能够正常执行并写回结果。
 8. **其余扩展点**：编辑界面扩展、音源批量操作，随各自功能的实现加入。
-9. ~~**stdcorelib.plugin 的 `loadOrder()`**~~：已实现（该仓库 `e1f7ad6`），测试覆盖依赖链与可选依赖、同层按发现顺序、停用与未选中与无效插件的排除、失败插件的保留、载入中的重入查询。「Plugins」页在第 5 步使用它。
+9. ~~**stdcorelib.plugin 的 `loadOrder()`**~~：已实现（该仓库 `e1f7ad6`），测试覆盖依赖链与可选依赖、同层按发现顺序、停用与未选中与无效插件的排除、失败插件的保留、载入中的重入查询。「Plugins」页最终按发现顺序列出（`plugins()`，停用的插件也要列出，而 `loadOrder()` 不含它们），目前未使用它。
 
 ## 作者的决定（2026-09-30）
 
