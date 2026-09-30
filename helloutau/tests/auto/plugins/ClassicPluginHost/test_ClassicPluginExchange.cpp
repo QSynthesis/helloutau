@@ -2,6 +2,7 @@
 #include <string>
 #include <string_view>
 
+#include <QtCore/QDir>
 #include <QtTest/QTest>
 
 #include <stdutau/pluginfile.h>
@@ -103,9 +104,10 @@ private Q_SLOTS:
 
         const auto file = read(bytes);
         QCOMPARE(QString::fromStdString(file.settings.project),
-                 QString::fromStdU16String(paths.project.u16string()));
-        QCOMPARE(QString::fromStdString(file.settings.voiceDir),
-                 QString::fromStdU16String(paths.voiceDirectory.u16string()));
+                 QDir::toNativeSeparators(QString::fromStdU16String(paths.project.u16string())));
+        QCOMPARE(
+            QString::fromStdString(file.settings.voiceDir),
+            QDir::toNativeSeparators(QString::fromStdU16String(paths.voiceDirectory.u16string())));
         QVERIFY(file.settings.isMode2);
         QCOMPARE(file.startIndex, 2);
         QVERIFY(bytes.contains("[#0002]\r\n"));
@@ -234,6 +236,21 @@ private Q_SLOTS:
 
     // In an encoding other than UTF-8, what it cannot represent is escaped in the input, and
     // the escapes of the result are read back.
+    // The settings are paths that the plugin opens: with the separators of the system, and not
+    // escaped outside UTF-8, which would double every backslash.
+    void paths_are_written_as_the_plugin_opens_them() {
+        // A voice directory made of a setting with slashes and of what the file writes with
+        // backslashes, as the UTAU folder and "voice" make one
+        ClassicPluginExchange::Paths paths;
+        paths.voiceDirectory = fs::path(u"C:/UTAU") / fs::path(u"voice\\bank");
+        const auto bytes = ClassicPluginExchange::input(pluginOf(QStringLiteral("Shift_JIS")),
+                                                        probe(), 2, 1, paths, nullptr);
+        const auto expected =
+            QDir::toNativeSeparators(QString::fromStdU16String(paths.voiceDirectory.u16string()));
+        QVERIFY(bytes.contains("\r\nVoiceDir=" + expected.toLatin1() + "\r\n"));
+        QVERIFY(!bytes.contains("\\\\"));
+    }
+
     void text_is_escaped_outside_utf8() {
         auto project = probe();
         project.tracks.first().notes[2].lyric = QString(QChar(0x4f60));

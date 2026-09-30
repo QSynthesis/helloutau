@@ -3,6 +3,8 @@
 #include <set>
 #include <string>
 
+#include <QtCore/QDir>
+
 #include <stdutau/pluginfile.h>
 #include <stdutau/utaconst.h>
 
@@ -21,12 +23,13 @@ namespace hello::daw {
 
     namespace {
 
+        // A path as the plugin reads it, with the separators of the system, as UTAU writes them
         QString textOf(const std::filesystem::path &path) {
-            return QString::fromStdU16String(path.u16string());
+            return QDir::toNativeSeparators(QString::fromStdU16String(path.u16string()));
         }
 
-        // The text of a file of the plugin, escaped in an encoding other than UTF-8, see
-        // TextCodec::escape().
+        // The text of a file of the plugin. The notes are escaped in an encoding other than
+        // UTF-8, see TextCodec::escape(), since they come back and are read again.
         class Text {
         public:
             explicit Text(const QString &charset)
@@ -41,8 +44,11 @@ namespace hello::daw {
                 return m_escaping;
             }
 
-            std::string encode(const QString &text) const {
-                const auto bytes = m_codec.encode(m_escaping ? m_codec.escape(text) : text);
+            // What the plugin only reads: the settings, which are paths it opens, and the values
+            // the synthesis computes. They are not escaped, which would double every backslash
+            // of a path. A character that the encoding lacks is lost, as in UTAU.
+            std::string encodeReadOnly(const QString &text) const {
+                const auto bytes = m_codec.encode(text);
                 return std::string(bytes.data(), size_t(bytes.size()));
             }
 
@@ -209,11 +215,11 @@ namespace hello::daw {
             if (voiceBank && !from.isRest()) {
                 if (const auto sample = voiceBank->find(from.noteNum, from.lyric)) {
                     const auto file = sample->path.lexically_proximate(voiceBank->root());
-                    note.filenameRO = text.encode(textOf(file.lexically_normal().make_preferred()));
+                    note.filenameRO = text.encodeReadOnly(textOf(file.lexically_normal()));
                     // Written only where the prefix map sings the lyric under another alias
                     const auto alias = voiceBank->prefixedLyric(from.noteNum, from.lyric);
                     if (alias != from.lyric) {
-                        note.aliasRO = text.encode(alias);
+                        note.aliasRO = text.encodeReadOnly(alias);
                     }
                 }
             }
@@ -221,11 +227,11 @@ namespace hello::daw {
         };
 
         utau::PluginInput file;
-        file.settings.project = text.encode(textOf(paths.project));
+        file.settings.project = text.encodeReadOnly(textOf(paths.project));
         file.settings.tempo = notes.isEmpty() ? project.settings.tempo
                                               : tempos.tempo(qMin(first, int(notes.size()) - 1));
-        file.settings.voiceDir = text.encode(textOf(paths.voiceDirectory));
-        file.settings.cacheDir = text.encode(textOf(paths.cacheDirectory));
+        file.settings.voiceDir = text.encodeReadOnly(textOf(paths.voiceDirectory));
+        file.settings.cacheDir = text.encodeReadOnly(textOf(paths.cacheDirectory));
         file.settings.isMode2 = project.settings.mode2;
         file.startIndex = first;
         if (!plugin.wholeTrack && first > 0) {

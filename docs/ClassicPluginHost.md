@@ -78,7 +78,7 @@
 - 插件的用户目录为应用数据目录下的 `UtauPlugins`（Windows 上为 `%APPDATA%\OpenVPI\HelloUtau\UtauPlugins`），与原生插件的目录分开。插件在菜单第一次打开、「刷新」与设置中的 UTAU 文件夹改变后重新发现。
 - 首次运行的确认记在设置旁单独的 `ClassicPluginHost.ini`：以插件文件夹为键，值为程序内容的 SHA-256，程序改变后再次询问。
 - 选区为空时提示先选择音符（`notes` 插件除外）；读回的文件与写出的相同时视为取消。
-- 编码按 note.md「插件」：`plugin.json` 声明插件接收 UTF-8 时，临时文件写成 UTF-8、结果按 UTF-8 读回（作者 2026-09-30 定，比 UTAU 稳妥）；否则与 UTAU 兼容，Windows 上为系统 ANSI 代码页、其他平台为 CP932，无法表示的字符按 note.md 转义。写出与读回用同一编码。`plugin.json` 中声明所用的字段随其格式一并确定。
+- 编码按 note.md「插件」：`plugin.json` 声明插件接收 UTF-8 时，临时文件写成 UTF-8、结果按 UTF-8 读回（作者 2026-09-30 定，比 UTAU 稳妥）；否则与 UTAU 兼容，Windows 上为系统 ANSI 代码页、其他平台为 CP932，音符条目中无法表示的字符按 note.md 转义；`[#SETTING]` 的路径与 `@` 条目只读，不转义，路径用系统的分隔符，同 UTAU。写出与读回用同一编码。`plugin.json` 中声明所用的字段随其格式一并确定。
 
 ## 实施步骤
 
