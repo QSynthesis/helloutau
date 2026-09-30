@@ -84,13 +84,24 @@ private Q_SLOTS:
 
         // A step that takes the number of the saved one is not the saved state.
         document->session()->redo();
+        QSignalSpy saved(document.get(), &VoiceBankDocument::saved);
         DiagnosticList diagnostics;
         QVERIFY(document->save(diagnostics));
         QVERIFY(!document->isModified());
+        QCOMPARE(saved.count(), 1);
         document->session()->undo();
         rename(*document, QStringLiteral("c"));
         QCOMPARE(document->session()->currentStep(), 1);
         QVERIFY(document->isModified());
+
+        // A save that fails, into a root that is a file now, reports none.
+        QVERIFY(QDir(m_dir->path()).removeRecursively());
+        QFile blocker(m_dir->path());
+        QVERIFY(blocker.open(QIODevice::WriteOnly));
+        blocker.close();
+        QVERIFY(!document->save(diagnostics));
+        QCOMPARE(saved.count(), 1);
+        QVERIFY(QFile::remove(m_dir->path()));
     }
 
     // An encoding chosen on opening is recorded by the next save, which is needed even
@@ -157,11 +168,13 @@ private Q_SLOTS:
         const auto document = open();
         rename(*document, QStringLiteral("b"));
         QSignalSpy moved(document.get(), &VoiceBankDocument::rootPathChanged);
+        QSignalSpy saved(document.get(), &VoiceBankDocument::saved);
         QTemporaryDir other;
         const auto folder = fs::path(other.path().toStdU16String()) / "copy";
         DiagnosticList diagnostics;
         QVERIFY(document->saveAs(folder, VoiceBankSession::AllFiles, diagnostics));
         QCOMPARE(moved.count(), 1);
+        QCOMPARE(saved.count(), 1);
         QCOMPARE(document->rootPath(), folder);
         QCOMPARE(document->displayName(), QStringLiteral("copy"));
         QVERIFY(!document->isModified());

@@ -222,16 +222,20 @@ namespace hello::kit {
         return impl.voiceBank;
     }
 
+    void ProjectDocument::setVoiceBank(std::shared_ptr<const VoiceBank> bank) {
+        stdc_impl_t;
+        if (bank != impl.voiceBank) {
+            impl.voiceBank = std::move(bank);
+            Q_EMIT voiceBankChanged();
+        }
+    }
+
     bool ProjectDocument::loadVoiceBank(const std::filesystem::path &utauDirectory,
                                         VoiceBankCharsetSelector *selector,
                                         DiagnosticList &diagnostics) {
         stdc_impl_t;
         const auto set = [this](std::shared_ptr<const VoiceBank> bank) {
-            stdc_impl_t;
-            if (bank != impl.voiceBank) {
-                impl.voiceBank = std::move(bank);
-                Q_EMIT voiceBankChanged();
-            }
+            setVoiceBank(std::move(bank));
         };
 
         const auto track = impl.session.snapshot().tracks.value(0);

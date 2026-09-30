@@ -136,6 +136,21 @@ private Q_SLOTS:
         QCOMPARE(ProjectRef(document.session()).tracks().size(), 1);
     }
 
+    // A voice bank given as saved elsewhere is no edit of the project.
+    void a_voice_bank_is_set_without_an_edit() {
+        ProjectDocument document;
+        QSignalSpy changed(&document, &ProjectDocument::voiceBankChanged);
+        const auto bank = std::make_shared<const VoiceBank>(
+            fs::path("bank"), QList<VoiceBankDirectory>{{}}, QList<VoiceSample>{});
+        document.setVoiceBank(bank);
+        QCOMPARE(document.voiceBank(), bank);
+        QCOMPARE(changed.count(), 1);
+        document.setVoiceBank(bank);
+        QCOMPARE(changed.count(), 1);
+        QVERIFY(!document.isModified());
+        QVERIFY(!document.session()->canUndo());
+    }
+
     // Modified means a step other than the saved one, so undoing back to it clears the state.
     void the_modified_state_follows_the_step_of_the_session() {
         ProjectDocument document;

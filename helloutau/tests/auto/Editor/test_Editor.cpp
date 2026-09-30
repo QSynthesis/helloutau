@@ -1401,6 +1401,75 @@ private Q_SLOTS:
         QVERIFY(!model->index(2, 0).data(VoiceBankEntryModel::DuplicateAliasRole).toBool());
     }
 
+    // Saved in its window, a voice bank reaches the projects that sing it, without an edit of
+    // them; unsaved edits do not.
+    void a_saved_voice_bank_reaches_its_projects() {
+        QTemporaryDir dir;
+        const auto utau = pathIn(dir, "utau");
+        fs::create_directories(utau / "voice");
+        const auto bank = voiceBank(dir, "utau/voice/bank");
+        const auto e = editor();
+        e->settings().setUtauDirectory(utau);
+        const auto window = e->newWindow();
+        const auto session = window->document()->session();
+        {
+            auto transaction = session->transaction(QStringLiteral("voice"));
+            kit::ProjectRef(session).tracks().at(0).setVoiceDir(QStringLiteral("%VOICE%bank"));
+            QVERIFY(transaction.commit());
+            kit::Note note;
+            note.lyric = QStringLiteral("zzz");
+            note.length = 480;
+            note.noteNum = 60;
+            kit::DiagnosticList diagnostics;
+            QVERIFY(kit::ProjectEdits::insertNotes(kit::ProjectRef(session).tracks().at(0).notes(),
+                                                   0, {note}, diagnostics));
+        }
+        QVERIFY(window->loadVoiceBank());
+        const auto roll = qobject_cast<PianoRoll *>(window->centralWidget());
+        QVERIFY(roll->lacksSample(0));
+        const int step = session->currentStep();
+        const bool modified = window->document()->isModified();
+
+        const auto bankWindow = e->openVoiceBank(bank);
+        QVERIFY(bankWindow);
+        const auto bankSession = bankWindow->document()->session();
+        {
+            auto transaction = bankSession->transaction(QStringLiteral("rename"));
+            kit::VoiceBankRef(bankSession)
+                .directories()
+                .at(0)
+                .otoEntries()
+                .at(0)
+                .setAlias(QStringLiteral("zzz"));
+            QVERIFY(transaction.commit());
+        }
+        QVERIFY(roll->lacksSample(0));
+
+        QVERIFY(bankWindow->save());
+        QVERIFY(!roll->lacksSample(0));
+        QVERIFY(window->document()->voiceBank()->find(60, QStringLiteral("zzz")));
+        QCOMPARE(session->currentStep(), step);
+        QCOMPARE(window->document()->isModified(), modified);
+
+        // Saved into another folder, it is another voice bank than that of the project.
+        {
+            auto transaction = bankSession->transaction(QStringLiteral("rename"));
+            kit::VoiceBankRef(bankSession)
+                .directories()
+                .at(0)
+                .otoEntries()
+                .at(0)
+                .setAlias(QStringLiteral("yyy"));
+            QVERIFY(transaction.commit());
+        }
+        kit::DiagnosticList diagnostics;
+        QVERIFY(bankWindow->document()->saveAs(pathIn(dir, "copy"),
+                                               kit::VoiceBankSession::TextFiles, diagnostics));
+        QVERIFY(window->document()->voiceBank()->find(60, QStringLiteral("zzz")));
+        QVERIFY(!window->document()->voiceBank()->find(60, QStringLiteral("yyy")));
+        e->settings().setUtauDirectory({});
+    }
+
     // The project window opens the voice bank of the project in its window.
     void a_project_window_edits_its_voice_bank() {
         QTemporaryDir dir;

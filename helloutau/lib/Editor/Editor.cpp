@@ -1,5 +1,7 @@
 #include "Editor.h"
 
+#include <memory>
+
 #include <QtCore/QDir>
 #include <QtCore/QPointer>
 #include <QtWidgets/QMenu>
@@ -11,6 +13,7 @@
 
 #include <hellokit/Edit/ProjectDocument.h>
 #include <hellokit/Edit/VoiceBankDocument.h>
+#include <hellokit/VoiceBank/VoiceBank.h>
 
 #include <helloutau/Theme/ThemeManager.h>
 #include <helloutau/Widgets/CommandPalette.h>
@@ -278,6 +281,20 @@ namespace hello::daw {
 
         auto window = new VoiceBankWindow(this, std::move(document));
         window->setAttribute(Qt::WA_DeleteOnClose);
+        // The projects that sing the voice bank take it as saved (docs/Editing.md).
+        const auto saved = window->document();
+        QObject::connect(saved, &kit::VoiceBankDocument::saved, window, [this, saved] {
+            std::shared_ptr<const kit::VoiceBank> bank;
+            for (const auto project : windows()) {
+                const auto sung = project->document()->voiceBank();
+                if (sung && isSameFile(sung->root(), saved->rootPath())) {
+                    if (!bank) {
+                        bank = std::make_shared<const kit::VoiceBank>(saved->session()->snapshot());
+                    }
+                    project->document()->setVoiceBank(bank);
+                }
+            }
+        });
         impl.voiceBankWindows.removeAll(nullptr);
         impl.voiceBankWindows.push_back(window);
         window->show();

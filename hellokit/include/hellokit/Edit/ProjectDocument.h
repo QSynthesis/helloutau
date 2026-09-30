@@ -110,13 +110,18 @@ namespace hello::kit {
         bool loadVoiceBank(const std::filesystem::path &utauDirectory,
                            VoiceBankCharsetSelector *selector, DiagnosticList &diagnostics);
 
+        /// Makes \a bank voiceBank() without reading the disk: the snapshot of the voice bank as
+        /// an editor saved it. Neither an edit of the project nor a change of its saved state,
+        /// see the section on a saved voice bank in docs/Editing.md.
+        void setVoiceBank(std::shared_ptr<const VoiceBank> bank);
+
     Q_SIGNALS:
         void modifiedChanged(bool modified);
 
         /// Emitted when filePath() changes, on saveAs().
         void filePathChanged();
 
-        /// Emitted when voiceBank() changes, on loadVoiceBank().
+        /// Emitted when voiceBank() changes, on loadVoiceBank() and setVoiceBank().
         void voiceBankChanged();
 
     private:

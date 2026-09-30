@@ -125,6 +125,7 @@ namespace hello::kit {
             return false;
         }
         impl.saved();
+        Q_EMIT saved();
         return true;
     }
 
@@ -137,6 +138,7 @@ namespace hello::kit {
         }
         impl.saved();
         Q_EMIT rootPathChanged();
+        Q_EMIT saved();
         return true;
     }
 

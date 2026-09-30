@@ -83,6 +83,11 @@ namespace hello::kit {
         /// rootPath() changed, by saveAs().
         void rootPathChanged();
 
+        /// The voice bank was written into rootPath(), by save() or saveAs(). The projects that
+        /// sing it take the snapshot of the session then, see the section on a saved voice bank
+        /// in docs/Editing.md.
+        void saved();
+
     private:
         explicit VoiceBankDocument(std::unique_ptr<VoiceBankSession> session, QObject *parent);
 
