@@ -84,14 +84,15 @@
 | 6. 音源：修改一条 oto 条目并保存后编码不变，未修改的条目逐字节不变 | 达成。`test_VoiceBankSession_Disk` 自动检验；`voicedit` 在夏语遥音源（Shift_JIS，五个目录，`mid` 等三个目录各 2518 条）的副本上修改 `mid` 的一个 offset 与 `breath sound` 中一条数字全空条目的 cutoff 并保存：两个 `oto.ini` 各只有该行改变，行尾仍为 CRLF，其余数字全空的条目仍为空，其他文件均未重写。这两个文件原本按文件名排列；未按此顺序排列的 `oto.ini` 在第一次修改时整体重排一次，见 Editing.md「读写的保证」 |
 | 7. 每个节点操作和领域函数都有对应的命令，由对照两侧列表的测试保证 | 达成。领域函数的类为 `Q_GADGET`，函数标记为 `Q_INVOKABLE`，由 moc 生成的元对象列出；测试将其与命令表中登记的函数对照（`ProjectCommands::domainFunctions()`、`VoiceBankCommands::domainFunctions()`），新增领域函数而未添加命令时测试失败 |
 
-## 插件位置
+## 扩展点位置
 
-按归属划分，而非按类型划分：
+插件只有一种原生插件（见 [`Plugins.md`](Plugins.md)），各扩展点的注册接口按归属划分，而非按类型划分：
 
-| 插件 | 归属 | 理由 |
+| 扩展点 | 归属 | 理由 |
 |---|---|---|
-| `RangeEditPlugin`、`VoiceBankPlugin` | `hellokit` | 只处理数据，不涉及界面 |
-| `EditorExtensionPlugin` | `helloutau/plugins/` | 涉及界面，归属应用一侧 |
+| 选区编辑、音源批量操作 | `hellokit` | 只处理数据，不涉及界面 |
+| 格式转换、频率表格式 | `HelloKitInterchange`、`HelloKitVoiceBank` | 只处理数据，随各自的注册表 |
+| 编辑界面扩展 | 应用一侧 | 涉及界面 |
 
 **由此 `hellokit` 完全不需要链接 QtWidgets**，「核心不依赖 GUI」与「插件可扩展界面」两项要求不再冲突。
 
@@ -101,7 +102,7 @@
 
 - stdutau 转为子模块的时机。
 - 是否安装 `hellokit` 并提供给插件作者。目前 `HELLOKIT_DEVEL` 为 ON，头文件和 CMake 包均会安装。
-- 是否将 `EditorExtensionPlugin` 的接口头文件安装并提供给第三方。若提供，需将 `HELLOUTAU_DEVEL` 由 OFF 改为 ON。
+- 是否将编辑界面扩展的注册接口头文件安装并提供给第三方。若提供，需将 `HELLOUTAU_DEVEL` 由 OFF 改为 ON。
 
 ## 已知问题
 

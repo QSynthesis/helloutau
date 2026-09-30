@@ -130,20 +130,24 @@ UST 自身的 `Charset` 只有两种取值：空，或 `UTF-8`。它表示的是
 
 ## HelloUtau 插件
 
-HelloUtau 支持六种插件：
+HelloUtau 的插件只有一种：**原生插件**，即由 stdcorelib.plugin 载入的 C++ 动态库（作者 2026-09-30 决定，计划见 [`Plugins.md`](Plugins.md)）。HelloUtau 不定义插件类，只提供五个**扩展点**的注册接口，插件在初始化时经这些接口登记它提供的内容：
 
-- 原版 UTAU 插件：
-  - 以包含当前选区的 `temp.ust` 作为第一个命令行参数的可执行文件，执行选区修改，执行期间阻塞界面
-  - 也可以不是 `.exe`。对于 `plugin.txt` 中含 `shell=use` 的插件，官方 UTAU 使用 `ShellExecuteEx` 而非 `CreateProcess` 启动，因此 `.jar`、`.html`、`.hta`、`.bat` 均可运行，实际运行的是系统为该扩展名注册的处理程序。`.bat` 插件须与官方一样显示可见的控制台窗口，使用户能直接看到脚本的输出
-- 原版 UTAU 插件的内置版本：
-  - 继承自 `RangeEditPlugin` 的 C++ 实例，执行选区修改，执行期间阻塞界面
-- 编辑界面扩展插件：
-  - 继承自 `EditorExtensionPlugin` 的 C++ 实例，提供额外的编辑界面，执行期间不阻塞界面
-- 音源库插件：
-  - 继承自 `VoiceBankPlugin` 的 C++ 实例，对音源库执行批量操作，执行期间阻塞界面
-- 格式转换插件：
-  - 继承自 `InterchangePlugin` 的 C++ 实例，为 HelloUtau 增加一种可导入或可导出的外部格式，例如 MIDI、VSQ、`.ustx`
-  - 它提供格式驱动而非界面。需要自定义选择步骤界面时另行提供一个页面，接口结构见 [`Interchange.md`](Interchange.md)
-- 频率表格式插件（作者 2026-09-30 决定新增）：
-  - 继承自 `FrequencyFormatPlugin` 的 C++ 实例，为 HelloUtau 增加一种频率表格式（重采样器为音频文件事先分析的基频），例如某个重采样器自己的分析文件
-  - 它提供格式驱动而非界面，与内置的 frq、dio、mrq 经同一个注册表加入，接口见 [`FrequencyTables.md`](FrequencyTables.md)
+- 选区编辑：
+  - 执行选区修改，执行期间阻塞界面
+- 编辑界面扩展：
+  - 提供额外的编辑界面，执行期间不阻塞界面
+- 音源批量操作：
+  - 对音源库执行批量操作，执行期间阻塞界面
+- 格式转换：
+  - 为 HelloUtau 增加一种可导入或可导出的外部格式，例如 MIDI、VSQ、`.ustx`
+  - 登记的是格式驱动而非界面。需要自定义选择步骤界面时另行提供一个页面，接口结构见 [`Interchange.md`](Interchange.md)
+- 频率表格式（作者 2026-09-30 决定新增）：
+  - 为 HelloUtau 增加一种频率表格式（重采样器为音频文件事先分析的基频），例如某个重采样器自己的分析文件
+  - 登记的是格式驱动而非界面，与内置的 frq、dio、mrq 经同一途径加入，格式接口见 [`FrequencyTables.md`](FrequencyTables.md)
+
+HelloUtau 内置的功能与插件经同一途径登记，不分主次。
+
+**原版 UTAU 插件**（`plugin.txt` 加可执行文件）不是一种插件，而由随 HelloUtau 提供的一个原生插件支持：它发现 UTAU 插件文件夹，把其中每个 UTAU 插件登记为一项选区编辑。停用这个原生插件即不再提供 UTAU 插件。UTAU 插件的运行方式：
+
+- 以包含当前选区的 `temp.ust` 作为第一个命令行参数的可执行文件，执行选区修改，执行期间阻塞界面
+- 也可以不是 `.exe`。对于 `plugin.txt` 中含 `shell=use` 的插件，官方 UTAU 使用 `ShellExecuteEx` 而非 `CreateProcess` 启动，因此 `.jar`、`.html`、`.hta`、`.bat` 均可运行，实际运行的是系统为该扩展名注册的处理程序。`.bat` 插件须与官方一样显示可见的控制台窗口，使用户能直接看到脚本的输出
