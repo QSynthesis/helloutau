@@ -228,6 +228,31 @@ private Q_SLOTS:
         QVERIFY(fs::is_regular_file(playback.cacheDirectoryFor(*document) / "playback.wav"));
     }
 
+    // The whole track is rendered into a file of the caller's choice, without playing it and
+    // without replacing the render kept for playback.
+    void a_track_is_rendered_into_a_file() {
+        QTemporaryDir dir;
+        const auto document = singingDocument(dir);
+        QVERIFY(document);
+        Playback playback;
+        const auto runner = std::make_shared<SilentRunner>();
+        playback.setRunner(runner);
+        QSignalSpy rendered(&playback, &Playback::trackRendered);
+        QSignalSpy failures(&playback, &Playback::failed);
+
+        const auto file = fs::path(dir.path().toStdU16String()) / "out" / "song.wav";
+        fs::create_directories(file.parent_path());
+        kit::DiagnosticList diagnostics;
+        QVERIFY(playback.renderTrack(*document, file, someEngines(), diagnostics));
+        QCOMPARE(playback.state(), Playback::Rendering);
+        QTRY_COMPARE_WITH_TIMEOUT(rendered.size(), 1, 5000);
+        QCOMPARE(failures.size(), 0);
+        QCOMPARE(rendered.first().first().value<fs::path>(), file);
+        QCOMPARE(playback.state(), Playback::Stopped);
+        QVERIFY(fs::is_regular_file(file));
+        QVERIFY(playback.lastRenderFile().empty());
+    }
+
     // While a render plays, the playhead moves with what the device plays, from where the track
     // file starts.
     void the_playhead_follows_a_render_as_it_plays() {

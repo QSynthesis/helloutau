@@ -15,7 +15,7 @@ namespace hello::daw {
     /// Content of the file, organized in groups:
     ///
     ///     {"engines": {"utauDirectory": ..., "resampler": ..., "wavtool": ...},
-    ///      "playback": {"mode": ...},
+    ///      "playback": {"mode": ..., "threads": ...},
     ///      "view": {"showPitch": ..., "showEnvelopes": ..., "showParameters": ...},
     ///      "files": {"ustExportCharset": ..., "recent": [...], "recentVoiceBanks": [...]},
     ///      "commandPalette": {"recent": [...]}}

@@ -31,6 +31,8 @@
 #include <hellokit/Edit/ProjectEdits.h>
 #include <hellokit/Edit/ProjectRefs.h>
 #include <hellokit/Edit/TrackTimeline.h>
+#include <hellokit/Synth/ClassicSynthRunner.h>
+#include <hellokit/Synth/ThreadedSynthRunner.h>
 
 #include <helloutau/Theme/ThemeManager.h>
 #include <helloutau/Widgets/CommandPalette.h>
@@ -146,6 +148,9 @@ namespace hello::daw {
         // separately.
         std::filesystem::path voiceBankRoot;
         bool voiceBankReloadPending = false;
+        // The kind of the runner of the playback, and its thread count, see updateRunner()
+        std::optional<bool> runnerClassic;
+        int runnerThreads = 0;
         // The notes last rendered, which Replay renders again
         std::optional<std::pair<int, int>> lastRange;
         bool restartPending = false;
@@ -421,19 +426,19 @@ namespace hello::daw {
                 DiagnosticBox::show(&decl, tr("Play"), diagnostics);
                 return;
             }
-            waitForRender();
+            waitForRender(tr("Play"));
         }
 
         // Shows a modal dialog while a prerender runs, as UTAU does while its script runs, so
         // that the project is not edited meanwhile. Cancel stops the render. The dialog closes
         // once the render ends and playback starts, or fails.
-        void waitForRender() {
+        void waitForRender(const QString &title) {
             stdc_decl_t;
             if (playback->state() != Playback::Rendering) {
                 return;
             }
             QProgressDialog dialog(tr("Rendering..."), tr("Cancel"), 0, 0, &decl);
-            dialog.setWindowTitle(tr("Play"));
+            dialog.setWindowTitle(title);
             dialog.setWindowModality(Qt::WindowModal);
             dialog.setMinimumDuration(0);
             dialog.setAutoClose(false);
@@ -484,6 +489,71 @@ namespace hello::daw {
                     &decl, tr("Save Last Played"),
                     tr("%1 could not be written.").arg(QDir::toNativeSeparators(chosen)));
             }
+        }
+
+        // The runner of the playback mode: temp.bat in a console for the classic prerender, and
+        // several threads otherwise, which also render a whole track in the realtime mode. The
+        // runner is replaced only when the mode or the thread count changed, because a new
+        // runner discards the kept render.
+        void updateRunner() {
+            const auto &settings = editor->settings();
+            const bool classic = settings.playbackMode() == AppSettings::Prerender;
+            const int threads = settings.renderThreadCount();
+            playback->setThreadCount(threads);
+            if (runnerClassic == classic && (classic || runnerThreads == threads)) {
+                return;
+            }
+            if (classic) {
+                playback->setRunner(std::make_shared<kit::ClassicSynthRunner>());
+            } else {
+                auto runner = std::make_shared<kit::ThreadedSynthRunner>();
+                runner->threadCount = threads;
+                playback->setRunner(runner);
+            }
+            runnerClassic = classic;
+            runnerThreads = threads;
+        }
+
+        // Renders the whole track into a WAV file that the user chooses, by default the output
+        // file of the project, as File > Render WAV of UTAU. The render of the last playback
+        // stays as it is.
+        void renderTrack() {
+            stdc_decl_t;
+            playback->stop();
+            const auto file = QFileDialog::getSaveFileName(
+                &decl, tr("Render Track"),
+                QString::fromStdU16String(defaultTrackFile().u16string()), tr("WAV files (*.wav)"));
+            if (file.isEmpty()) {
+                return;
+            }
+            kit::DiagnosticList diagnostics;
+            if (!playback->renderTrack(*document, std::filesystem::path(file.toStdU16String()),
+                                       engines(), diagnostics)) {
+                DiagnosticBox::show(&decl, tr("Render Track"), diagnostics);
+                return;
+            }
+            waitForRender(tr("Render Track"));
+        }
+
+        // The output file of the project, resolved against the folder of the project file, or
+        // against the music folder of the user for a project without a file. A project without
+        // an output file proposes its name with the extension .wav.
+        std::filesystem::path defaultTrackFile() const {
+            const auto source = document->sourcePath();
+            const auto folder =
+                source.empty() ? std::filesystem::path(
+                                     QStandardPaths::writableLocation(QStandardPaths::MusicLocation)
+                                         .toStdU16String())
+                               : source.parent_path();
+            auto output = std::filesystem::path(
+                QDir::fromNativeSeparators(
+                    kit::ProjectRef(document->session()).settings().outputFile())
+                    .toStdU16String());
+            if (output.empty()) {
+                output = source.empty() ? std::filesystem::path(u"untitled.wav")
+                                        : source.filename().replace_extension(u".wav");
+            }
+            return output.is_absolute() ? output : folder / output;
         }
 
         // Save Last Played applies to the prerender mode, after a render.
@@ -544,6 +614,7 @@ namespace hello::daw {
         // in the prerender mode, nothing, and the playhead shows only where playback is. What
         // prevents rendering, such as a missing voice bank, is reported once the user plays.
         void updateBackground() {
+            updateRunner();
             roll->setCursorEnabled(realtime());
             scheduleRenderStates();
             updateSaveLastPlayed();
@@ -834,6 +905,7 @@ namespace hello::daw {
             addCommand(QStringLiteral("helloutau.playback.replay"), [this] { replay(); });
             addCommand(QStringLiteral("helloutau.playback.saveLastPlayed"),
                        [this] { saveLastPlayed(); });
+            addCommand(QStringLiteral("helloutau.playback.renderTrack"), [this] { renderTrack(); });
             addCommand(QStringLiteral("helloutau.tools.clearCache"), [this] { clearCache(); });
             addCommand(QStringLiteral("helloutau.tools.settings"), [this] {
                 stdc_decl_t;

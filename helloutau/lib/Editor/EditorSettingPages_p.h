@@ -7,6 +7,7 @@
 
 class QComboBox;
 class QLineEdit;
+class QSpinBox;
 
 namespace hello::daw {
 
@@ -33,7 +34,7 @@ namespace hello::daw {
         QPointer<QComboBox> m_ustExportCharset;
     };
 
-    /// The engines that render, and the playback mode.
+    /// The engines that render, the playback mode, and the number of rendering threads.
     class RenderingSettingPage : public SettingPage {
         Q_OBJECT
     public:
@@ -45,6 +46,7 @@ namespace hello::daw {
         QLineEdit *resamplerEdit() const;
         QLineEdit *wavtoolEdit() const;
         QComboBox *playbackModeBox() const;
+        QSpinBox *threadCountBox() const;
 
     protected:
         QWidget *createWidget() override;
@@ -54,6 +56,7 @@ namespace hello::daw {
         QPointer<QLineEdit> m_resampler;
         QPointer<QLineEdit> m_wavtool;
         QPointer<QComboBox> m_playbackMode;
+        QPointer<QSpinBox> m_threads;
     };
 
     /// Adds the pages of the editor to \a catalog.

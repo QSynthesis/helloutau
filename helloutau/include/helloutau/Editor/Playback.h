@@ -53,6 +53,10 @@ namespace hello::daw {
         /// Replaces the runner, for tests. The default is a kit::ClassicSynthRunner.
         void setRunner(std::shared_ptr<const kit::SynthRunner> runner);
 
+        /// Sets the number of threads of the realtime synthesis, zero for one per hardware
+        /// thread, the default. A change takes effect with the next preview or prepare().
+        void setThreadCount(int count);
+
         State state() const;
 
         /// Starts rendering notes \a range of the first track of \a document, or all of them, and
@@ -66,6 +70,15 @@ namespace hello::daw {
         ///         cancelled before that has not ended
         bool play(const kit::ProjectDocument &document, std::optional<std::pair<int, int>> range,
                   const kit::SynthEngines &engines, kit::DiagnosticList &diagnostics);
+
+        /// Starts rendering the whole track of \a document into \a file with the runner of
+        /// setRunner(), and emits trackRendered() once the file is written. Nothing is played,
+        /// and the kept render of play() stays as it is. Stops what played or rendered before.
+        /// The state is Rendering until the render ends, and stop() cancels it.
+        ///
+        /// \return whether rendering started; the reason is in \a diagnostics otherwise
+        bool renderTrack(const kit::ProjectDocument &document, const std::filesystem::path &file,
+                         const kit::SynthEngines &engines, kit::DiagnosticList &diagnostics);
 
         /// Plays the track as it is rendered, from \a fromTime in milliseconds from the start of
         /// the track, or from the start: the realtime mode of docs/Widgets.md. The notes that
@@ -151,6 +164,9 @@ namespace hello::daw {
 
         /// \a done of \a total notes of the render in progress are processed.
         void progressed(int done, int total);
+
+        /// The render of renderTrack() wrote \a file.
+        void trackRendered(const std::filesystem::path &file);
 
         /// Rendering or playing failed, for the reasons in \a diagnostics.
         void failed(const kit::DiagnosticList &diagnostics);

@@ -1,5 +1,8 @@
 #include "EditorSettingPages_p.h"
 
+#include <algorithm>
+#include <thread>
+
 #include <QtCore/QDir>
 #include <QtWidgets/QComboBox>
 #include <QtWidgets/QFileDialog>
@@ -8,6 +11,7 @@
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QLineEdit>
 #include <QtWidgets/QPushButton>
+#include <QtWidgets/QSpinBox>
 
 #include "AppSettings.h"
 #include "ExportUstDialog.h"
@@ -120,29 +124,47 @@ namespace hello::daw {
         form->addRow(note(tr("A project renders with these engines, not with those it names.")));
 
         m_playbackMode = new QComboBox();
-        m_playbackMode->addItem(tr("Prerender, by temp.bat in a console as UTAU does"),
+        m_playbackMode->addItem(tr("Classic prerender, by temp.bat in a console as UTAU does"),
                                 AppSettings::Prerender);
+        m_playbackMode->addItem(tr("Threaded prerender, rendered by several threads"),
+                                AppSettings::ThreadedPrerender);
         m_playbackMode->addItem(tr("Realtime, rendered in the background from the playhead"),
                                 AppSettings::Realtime);
         m_playbackMode->setCurrentIndex(m_playbackMode->findData(m_settings.playbackMode()));
         form->addRow(tr("&Playback:"), m_playbackMode);
         form->addRow(note(tr("Realtime playback joins the notes as wavtool.exe does, whichever "
-                             "wavtool is chosen.")));
+                             "wavtool is chosen. Rendering a whole track uses temp.bat in the "
+                             "classic mode and several threads otherwise.")));
+
+        // Zero stands for one thread per hardware thread.
+        m_threads = new QSpinBox();
+        m_threads->setRange(0, 256);
+        m_threads->setSpecialValueText(
+            tr("Automatic (%1)").arg(std::max(1u, std::thread::hardware_concurrency())));
+        m_threads->setValue(m_settings.renderThreadCount());
+        form->addRow(tr("Rendering &threads:"), m_threads);
+        const auto updateThreads = [this] {
+            m_threads->setEnabled(m_playbackMode->currentData().toInt() != AppSettings::Prerender);
+        };
+        updateThreads();
 
         connect(m_resampler, &QLineEdit::textChanged, this, &SettingPage::modifiedChanged);
         connect(m_wavtool, &QLineEdit::textChanged, this, &SettingPage::modifiedChanged);
+        connect(m_playbackMode, &QComboBox::currentIndexChanged, this, updateThreads);
         connect(m_playbackMode, &QComboBox::currentIndexChanged, this,
                 &SettingPage::modifiedChanged);
+        connect(m_threads, &QSpinBox::valueChanged, this, &SettingPage::modifiedChanged);
         return widget;
     }
 
     bool RenderingSettingPage::isModified() const {
-        if (!m_resampler || !m_wavtool || !m_playbackMode) {
+        if (!m_resampler || !m_wavtool || !m_playbackMode || !m_threads) {
             return false;
         }
         return pathText(m_resampler) != QDir::fromNativeSeparators(m_settings.resampler()) ||
                pathText(m_wavtool) != QDir::fromNativeSeparators(m_settings.wavtool()) ||
-               m_playbackMode->currentData().toInt() != m_settings.playbackMode();
+               m_playbackMode->currentData().toInt() != m_settings.playbackMode() ||
+               m_threads->value() != m_settings.renderThreadCount();
     }
 
     bool RenderingSettingPage::apply(QString *error) {
@@ -151,6 +173,7 @@ namespace hello::daw {
         m_settings.setWavtool(pathText(m_wavtool));
         m_settings.setPlaybackMode(
             AppSettings::PlaybackMode(m_playbackMode->currentData().toInt()));
+        m_settings.setRenderThreadCount(m_threads->value());
         Q_EMIT modifiedChanged();
         return true;
     }
@@ -165,6 +188,10 @@ namespace hello::daw {
 
     QComboBox *RenderingSettingPage::playbackModeBox() const {
         return m_playbackMode;
+    }
+
+    QSpinBox *RenderingSettingPage::threadCountBox() const {
+        return m_threads;
     }
 
     void addEditorSettingPages(SettingCatalog *catalog, AppSettings &settings) {

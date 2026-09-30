@@ -61,6 +61,10 @@ namespace hello::daw {
             /// played.
             Prerender,
 
+            /// The selected notes are rendered by several threads in the process, and then
+            /// played.
+            ThreadedPrerender,
+
             /// The track is rendered in the background, starting from the playhead. Playback
             /// starts from the playhead immediately.
             Realtime,
@@ -69,6 +73,12 @@ namespace hello::daw {
         /// Playback mode. The default is Prerender, as in UTAU.
         PlaybackMode playbackMode() const;
         void setPlaybackMode(PlaybackMode mode);
+
+        /// Number of rendering threads of the ThreadedPrerender and Realtime modes, and of the
+        /// rendering of a whole track outside the Prerender mode. Zero, the default, stands for
+        /// one thread per hardware thread.
+        int renderThreadCount() const;
+        void setRenderThreadCount(int count);
 
         /// Whether the piano roll shows the pitch curves (View > Show Pitch). The default is
         /// true.

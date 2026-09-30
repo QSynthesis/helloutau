@@ -1,6 +1,8 @@
 #include "AppSettings.h"
 #include "AppSettings_p.h"
 
+#include <algorithm>
+
 #include <QtCore/QStandardPaths>
 
 #include <stdcorelib/pimpl.h>
@@ -18,7 +20,9 @@ namespace hello::daw {
         constexpr char KeyWavtool[] = "engines/wavtool";
         constexpr char KeyPlaybackMode[] = "playback/mode";
         constexpr char PrerenderValue[] = "prerender";
+        constexpr char ThreadedValue[] = "threaded";
         constexpr char RealtimeValue[] = "realtime";
+        constexpr char KeyRenderThreads[] = "playback/threads";
         constexpr char KeyUstExportCharset[] = "files/ustExportCharset";
         constexpr char KeyPitchVisible[] = "view/showPitch";
         constexpr char KeyEnvelopesVisible[] = "view/showEnvelopes";
@@ -127,13 +131,33 @@ namespace hello::daw {
 
     AppSettings::PlaybackMode AppSettings::playbackMode() const {
         stdc_impl_t;
-        return impl.value(KeyPlaybackMode).toString() == RealtimeValue ? Realtime : Prerender;
+        const auto value = impl.value(KeyPlaybackMode).toString();
+        if (value == RealtimeValue) {
+            return Realtime;
+        }
+        return value == ThreadedValue ? ThreadedPrerender : Prerender;
     }
 
     void AppSettings::setPlaybackMode(PlaybackMode mode) {
         stdc_impl_t;
-        impl.setValue(KeyPlaybackMode,
-                      std::string(mode == Realtime ? RealtimeValue : PrerenderValue));
+        const char *value = PrerenderValue;
+        if (mode == ThreadedPrerender) {
+            value = ThreadedValue;
+        } else if (mode == Realtime) {
+            value = RealtimeValue;
+        }
+        impl.setValue(KeyPlaybackMode, std::string(value));
+    }
+
+    int AppSettings::renderThreadCount() const {
+        stdc_impl_t;
+        return std::max(0, int(impl.value(KeyRenderThreads).toInt(0)));
+    }
+
+    void AppSettings::setRenderThreadCount(int count) {
+        stdc_impl_t;
+        // The default is not written, so that the file keeps no value that was never chosen.
+        impl.setValue(KeyRenderThreads, count > 0 ? json::Value(int64_t(count)) : json::Value());
     }
 
     bool AppSettings::isPitchVisible() const {

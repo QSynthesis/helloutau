@@ -42,6 +42,8 @@ namespace hello::daw {
             kit::SynthEngines engines;
             std::shared_ptr<const kit::SynthRunner> runner;
             int deviceRate = 0;
+            // Whether the render only writes its track file, for renderTrack()
+            bool fileOnly = false;
             std::atomic<bool> cancel = false;
 
             bool rendered = false;
@@ -119,6 +121,10 @@ namespace hello::daw {
             if (!outcome.rendered || outcome.cancelled || job.cancel.load()) {
                 return;
             }
+            if (job.fileOnly) {
+                job.rendered = true;
+                return;
+            }
             const auto audio = kit::WaveAudio::read(plan->outputFile(), job.diagnostics);
             if (!audio) {
                 return;
@@ -173,6 +179,9 @@ namespace hello::daw {
         // stream refers to the synthesis and goes first.
         std::unique_ptr<kit::RealtimeSynth> synth;
         kit::SynthEngines synthEngines;
+        // The thread count set, and that of the synthesis, zero for one per hardware thread
+        int threadCount = 0;
+        int synthThreads = 0;
         std::shared_ptr<StreamSource> stream;
         qint64 streamStart = 0;
 
@@ -208,10 +217,12 @@ namespace hello::daw {
             if (!plan) {
                 return std::nullopt;
             }
-            if (!synth || synthEngines.resampler != engines.resampler) {
+            if (!synth || synthEngines.resampler != engines.resampler ||
+                synthThreads != threadCount) {
                 endPreview();
-                synth = std::make_unique<kit::RealtimeSynth>(engines);
+                synth = std::make_unique<kit::RealtimeSynth>(engines, threadCount);
                 synthEngines = engines;
+                synthThreads = threadCount;
             }
             synth->setPlan(*plan);
             // The sample of the track file at that time; the file starts at startTime().
@@ -222,6 +233,21 @@ namespace hello::daw {
                          : 0;
             synth->setPosition(start);
             return start;
+        }
+
+        // Starts job on a worker thread, which reports to rendered() once the render ends.
+        void start(const std::shared_ptr<Job> &started) {
+            job = started;
+            const auto worker = QThread::create([recipient = recipient, started] {
+                run(*started, recipient);
+                deliver(recipient,
+                        [started](Playback &playback) { playback._impl->rendered(started); });
+            });
+            QObject::connect(worker, &QThread::finished, worker, &QObject::deleteLater);
+            workers.removeAll(nullptr);
+            workers.push_back(worker);
+            worker->start();
+            setState(Rendering);
         }
 
         // Whether a render cancelled before has yet to end, as a script does, which runs in its
@@ -267,6 +293,11 @@ namespace hello::daw {
             if (!finished->rendered) {
                 setState(Stopped);
                 Q_EMIT decl.failed(finished->diagnostics);
+                return;
+            }
+            if (finished->fileOnly) {
+                setState(Stopped);
+                Q_EMIT decl.trackRendered(finished->plan->outputFile());
                 return;
             }
             kept =
@@ -316,6 +347,11 @@ namespace hello::daw {
         stdc_impl_t;
         impl.runner = std::move(runner);
         impl.kept.reset();
+    }
+
+    void Playback::setThreadCount(int count) {
+        stdc_impl_t;
+        impl.threadCount = std::max(0, count);
     }
 
     Playback::State Playback::state() const {
@@ -370,17 +406,43 @@ namespace hello::daw {
         job->engines = engines;
         job->runner = impl.runner;
         job->deviceRate = deviceRate;
-        impl.job = job;
+        impl.start(job);
+        return true;
+    }
 
-        const auto worker = QThread::create([recipient = impl.recipient, job] {
-            run(*job, recipient);
-            deliver(recipient, [job](Playback &playback) { playback._impl->rendered(job); });
-        });
-        connect(worker, &QThread::finished, worker, &QObject::deleteLater);
-        impl.workers.removeAll(nullptr);
-        impl.workers.push_back(worker);
-        worker->start();
-        impl.setState(Rendering);
+    bool Playback::renderTrack(const kit::ProjectDocument &document,
+                               const std::filesystem::path &file, const kit::SynthEngines &engines,
+                               kit::DiagnosticList &diagnostics) {
+        stdc_impl_t;
+        stop();
+        if (impl.rendersStill()) {
+            fail(diagnostics, tr("The previous render has not ended yet. Closing its console "
+                                 "window stops it."));
+            return false;
+        }
+        if (engines.resampler.empty() || engines.wavtool.empty()) {
+            fail(diagnostics, tr("Set the resampler and the wavtool in the settings first."));
+            return false;
+        }
+        const auto bank = document.voiceBank();
+        if (!bank) {
+            fail(diagnostics, tr("The project has no voice bank to sing with."));
+            return false;
+        }
+        kit::SynthPlan::Options options;
+        options.cacheDirectory = cacheDirectoryFor(document);
+        options.outputFile = file;
+        auto plan =
+            kit::SynthPlan::make(document.session()->snapshot(), *bank, options, diagnostics);
+        if (!plan) {
+            return false;
+        }
+        auto job = std::make_shared<Job>();
+        job->plan = std::move(plan);
+        job->engines = engines;
+        job->runner = impl.runner;
+        job->fileOnly = true;
+        impl.start(job);
         return true;
     }
 

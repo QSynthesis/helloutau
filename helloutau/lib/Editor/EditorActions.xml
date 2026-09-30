@@ -100,6 +100,10 @@
              output file of the project -->
         <action id="helloutau.playback.saveLastPlayed" text="Save &amp;Last Played As..."
                 category="Playback" />
+        <!-- The whole track into a WAV file, by default the output file of the project, as
+             Render WAV of UTAU -->
+        <action id="helloutau.playback.renderTrack" text="Render &amp;Track to WAV..."
+                category="Playback" />
 
         <!-- The voice bank of the project in its window, at the entry of the first selected note
              if a note is selected, as Ctrl+G in UTAU -->
@@ -261,6 +265,7 @@
             <action id="helloutau.playback.replay" />
             <separator />
             <action id="helloutau.playback.saveLastPlayed" />
+            <action id="helloutau.playback.renderTrack" />
         </insertion>
         <insertion target="helloutau.tools" anchor="first">
             <action id="helloutau.tools.editVoiceBank" />
