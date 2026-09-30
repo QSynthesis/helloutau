@@ -11,7 +11,7 @@
 | 模块 | 命名空间 | 产出 | 依赖 |
 |---|---|---|---|
 | `hellokit/` | `hello::kit` | `HelloKitDocument`、今后的 `HelloKitCore` 等 | Qt Core、stdutau、stdcorelib（私有）、substate（私有，仅 `HelloKitEditBase` 与 `HelloKitEdit`） |
-| `helloutau/` | `hello::daw` | `HelloUtauEditor` 等、随应用提供的原生插件，以及 `helloutau` 可执行文件 | Qt Widgets、hellokit、stdcorelib.plugin（私有） |
+| `helloutau/` | `hello::daw` | `HelloUtauEditor` 等、随应用提供的原生插件，以及 `helloutau` 可执行文件 | Qt Widgets、hellokit、QActionKit、stdcorelib.plugin（私有） |
 
 `hello` 仅作为外层命名空间，代码一律位于第二层。不要在 `hello` 中直接声明内容，也不要再增加第三层。
 
@@ -44,7 +44,9 @@ hellokit/lib/Document/PayloadCodec.cpp                ← 目标 HelloKitDocumen
 
 helloutau/include/helloutau/Editor/ProjectWindow.h
 helloutau/lib/Editor/ProjectWindow.cpp           ← 目标 HelloUtauEditor
-helloutau/plugins/Core/CorePlugin.cpp            ← 目标 coreplugin，输出到 lib/plugins/helloutau/Core
+helloutau/plugins/Core/                          ← 目标 CorePlugin，输出到 lib/plugins/helloutau/Core；
+                                                    公开头文件在此，以 <Core/...> 引用
+helloutau/plugins/Core/Internal/CorePlugin.cpp   ← 插件类与其余实现，不安装
 helloutau/tools/driver/main.cpp                  ← 目标 helloutau
 ```
 

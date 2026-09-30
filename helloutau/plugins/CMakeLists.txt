@@ -14,6 +14,11 @@ set(VCPKG_APPLOCAL_DEPS OFF)
 # Builds the library into the directory <directory> of the plugins, embeds the interface ID
 # HELLOUTAU_PLUGIN_IID, and writes the plugin.json beside it that the directory layout reads:
 # the name of the library without prefix and suffix, the ID, the name shown and the version.
+#
+# The plugin is installed with its headers and exported like a library, since other plugins may
+# build on it. Its public headers lie beside its sources in helloutau/plugins/<directory>,
+# included as <<directory>/<header>> in the build and after installation. The plugin class and
+# the rest of its implementation lie in Internal, which is not installed.
 function(helloutau_add_native_plugin _target)
     set(options)
     set(oneValueArgs ID DISPLAY_NAME CATEGORY)
@@ -22,13 +27,16 @@ function(helloutau_add_native_plugin _target)
 
     helloutau_add_plugin(${_target}
         CATEGORY ${FUNC_CATEGORY}
-        NO_EXPORT
         ${FUNC_UNPARSED_ARGUMENTS}
     )
     target_link_libraries(${_target} PRIVATE stdcorelib::plugin)
+    target_include_directories(${_target} PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>
+        $<INSTALL_INTERFACE:${HELLOUTAU_INSTALL_INCLUDE_DIR}/helloutau/plugins>
+    )
     stdc_add_plugin_metadata(TARGET ${_target} IID ${HELLOUTAU_PLUGIN_IID})
 
-    # The base name includes the postfix of the configuration, as in coreplugind.
+    # The base name includes the postfix of the configuration, if there is one.
     set(_metadata "{\n"
         "    \"name\": \"$<TARGET_FILE_BASE_NAME:${_target}>\",\n"
         "    \"id\": \"${FUNC_ID}\",\n"
@@ -44,6 +52,15 @@ function(helloutau_add_native_plugin _target)
         install(FILES ${_metadata_file}
             DESTINATION ${HELLOUTAU_INSTALL_PLUGINS_DIR}/${FUNC_CATEGORY}
         )
+        file(GLOB _headers ${CMAKE_CURRENT_SOURCE_DIR}/*.h)
+        if(HELLOUTAU_DEVEL AND _headers)
+            install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/
+                DESTINATION ${HELLOUTAU_INSTALL_INCLUDE_DIR}/helloutau/plugins/${FUNC_CATEGORY}
+                FILES_MATCHING PATTERN "*.h"
+                PATTERN "*_p.h" EXCLUDE
+                PATTERN "Internal" EXCLUDE
+            )
+        endif()
     endif()
 endfunction()
 

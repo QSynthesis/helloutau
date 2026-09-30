@@ -1,9 +1,9 @@
-project(coreplugin
+project(CorePlugin
     DESCRIPTION "HelloUtau Core Plugin"
     LANGUAGES CXX
 )
 
-file(GLOB_RECURSE _src "*.cpp")
+file(GLOB_RECURSE _src "*.cpp" "*.h")
 
 qm_find_qt(Core Widgets)
 
@@ -14,4 +14,5 @@ helloutau_add_native_plugin(${PROJECT_NAME}
     SOURCES ${_src}
     LINKS HelloUtauEditor
     QT_LINKS Core Widgets
+    INCLUDE_PRIVATE Internal
 )
