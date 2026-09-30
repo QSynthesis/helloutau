@@ -1,99 +1,121 @@
 #include "InterchangeRegistry.h"
 
-#include <QtCore/QHash>
+#include <algorithm>
 
 #include <stdcorelib/pimpl.h>
 
+#include "InterchangeRegistrations_p.h"
+
 namespace hello::kit {
 
-    // One list per driver kind, in registration order, plus an index by ID. Registration order
-    // resolves a suffix registered by several drivers, so it must be preserved rather than
-    // replaced by the order of a hash table.
-    template <class T>
-    struct Table {
-        std::vector<std::unique_ptr<T>> owned;
-        QHash<QString, T *> byId;
+    namespace {
 
-        bool add(std::unique_ptr<T> item) {
-            if (!item || byId.contains(item->id())) {
-                return false;
-            }
-            byId.insert(item->id(), item.get());
-            owned.push_back(std::move(item));
-            return true;
+        InterchangeReader *driverOf(const InterchangeRegistration *registration,
+                                    const InterchangeReader *) {
+            return registration->reader();
         }
 
-        QList<T *> all() const {
+        InterchangeWriter *driverOf(const InterchangeRegistration *registration,
+                                    const InterchangeWriter *) {
+            return registration->writer();
+        }
+
+        // The drivers of one kind in the order of registration, the first of each ID only.
+        // Registration order resolves a suffix registered by several drivers, so it must be
+        // preserved rather than replaced by the order of a hash table.
+        template <class T>
+        QList<T *> driversOf() {
             QList<T *> result;
-            result.reserve(int(owned.size()));
-            for (const auto &item : owned) {
-                result.push_back(item.get());
+            for (const auto registration : InterchangeRegistrations::instance().registrations()) {
+                const auto driver = driverOf(registration, static_cast<const T *>(nullptr));
+                if (!driver) {
+                    continue;
+                }
+                const auto id = driver->id();
+                if (std::none_of(result.begin(), result.end(),
+                                 [&id](const T *other) { return other->id() == id; })) {
+                    result.push_back(driver);
+                }
             }
             return result;
         }
 
-        T *forSuffix(const QString &suffix) const {
+        template <class T>
+        T *driverForId(const QString &id) {
+            for (const auto driver : driversOf<T>()) {
+                if (driver->id() == id) {
+                    return driver;
+                }
+            }
+            return nullptr;
+        }
+
+        template <class T>
+        T *driverForSuffix(const QString &suffix) {
             const QString wanted = suffix.startsWith(QLatin1Char('.')) ? suffix.mid(1) : suffix;
-            for (const auto &item : owned) {
-                for (const auto &candidate : item->suffixes()) {
+            for (const auto driver : driversOf<T>()) {
+                for (const auto &candidate : driver->suffixes()) {
                     if (candidate.compare(wanted, Qt::CaseInsensitive) == 0) {
-                        return item.get();
+                        return driver;
                     }
                 }
             }
             return nullptr;
         }
-    };
 
-    class InterchangeRegistry::Impl {
+    }
+
+    class InterchangeRegistry::Impl : public InterchangeRegistrations::Listener {
     public:
-        Table<InterchangeReader> readers;
-        Table<InterchangeWriter> writers;
+        explicit Impl(InterchangeRegistry *registry) : registry(registry) {
+        }
+
+        InterchangeRegistry *registry;
+
+        void registrationAdded(InterchangeRegistration *registration) override {
+            Q_UNUSED(registration);
+            Q_EMIT registry->driversChanged();
+        }
+
+        void registrationRemoved(InterchangeRegistration *registration) override {
+            Q_UNUSED(registration);
+            Q_EMIT registry->driversChanged();
+        }
     };
 
-    InterchangeRegistry::InterchangeRegistry() : _impl(std::make_unique<Impl>()) {
+    InterchangeRegistry::InterchangeRegistry(QObject *parent)
+        : QObject(parent), _impl(std::make_unique<Impl>(this)) {
+        stdc_impl_t;
+        InterchangeRegistrations::instance().addListener(&impl);
     }
 
-    InterchangeRegistry::~InterchangeRegistry() = default;
-
-    bool InterchangeRegistry::addReader(std::unique_ptr<InterchangeReader> reader) {
+    InterchangeRegistry::~InterchangeRegistry() {
         stdc_impl_t;
-        return impl.readers.add(std::move(reader));
-    }
-
-    bool InterchangeRegistry::addWriter(std::unique_ptr<InterchangeWriter> writer) {
-        stdc_impl_t;
-        return impl.writers.add(std::move(writer));
+        InterchangeRegistrations::instance().removeListener(&impl);
     }
 
     QList<InterchangeReader *> InterchangeRegistry::readers() const {
-        stdc_impl_t;
-        return impl.readers.all();
+        return driversOf<InterchangeReader>();
     }
 
     QList<InterchangeWriter *> InterchangeRegistry::writers() const {
-        stdc_impl_t;
-        return impl.writers.all();
+        return driversOf<InterchangeWriter>();
     }
 
     InterchangeReader *InterchangeRegistry::readerForId(const QString &id) const {
-        stdc_impl_t;
-        return impl.readers.byId.value(id);
+        return driverForId<InterchangeReader>(id);
     }
 
     InterchangeWriter *InterchangeRegistry::writerForId(const QString &id) const {
-        stdc_impl_t;
-        return impl.writers.byId.value(id);
+        return driverForId<InterchangeWriter>(id);
     }
 
     InterchangeReader *InterchangeRegistry::readerForSuffix(const QString &suffix) const {
-        stdc_impl_t;
-        return impl.readers.forSuffix(suffix);
+        return driverForSuffix<InterchangeReader>(suffix);
     }
 
     InterchangeWriter *InterchangeRegistry::writerForSuffix(const QString &suffix) const {
-        stdc_impl_t;
-        return impl.writers.forSuffix(suffix);
+        return driverForSuffix<InterchangeWriter>(suffix);
     }
 
 }

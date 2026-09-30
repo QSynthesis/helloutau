@@ -44,19 +44,19 @@ stdcorelib.plugin 的交接记录（其仓库 `.cache/codex/2026-08-21-1722-stdc
 - 插件 ID 参照 DiffScope（`org.diffscope.core`）：`org.helloutau.<名称>`，全小写。
 - 插件在 `initialize()` 中经本仓库的注册接口登记它提供的东西。note.md 中原来的五种 C++ 插件改为五个**扩展点**：频率表格式、格式转换驱动（读写器）、选区编辑、编辑界面扩展、音源批量操作。
 - **原版 UTAU 插件的支持本身也是一个原生插件**（作者 2026-09-30 决定）：随 HelloUtau 提供，名为 ClassicPluginHost（作者定名）。它在 `initialize()` 中发现 UTAU 插件文件夹（`plugin.txt`，有 `plugin.json` 时以其为准，编码规则见 note.md），把每个 UTAU 插件作为一项命令加入「工具 → 插件」菜单，运行时写出临时文件、启动可执行文件、读回结果。停用它即不再提供 UTAU 插件，应用本身不含 UTAU 插件的代码。临时文件的写出与结果的解析在 stdutau 中，其余全部在插件中，库中不为它新开模块；「选区编辑」的通用扩展点等出现第二个使用者时再提炼（作者 2026-09-30 定，见 [`ClassicPluginHost.md`](ClassicPluginHost.md)）。
-- 删除 `FrequencyFormatPlugin`（已删）与 `InterchangePlugin` 两个接口。
+- 删除 `FrequencyFormatPlugin` 与 `InterchangePlugin` 两个接口（均已删）。
 
 ### 注册接口
 
-- 各扩展点的登记形状一致（作者 2026-09-30 要求统一），以动作与频率表格式为例：
+- 各扩展点的登记形状一致（作者 2026-09-30 要求统一）：
 
-  | 部分 | 动作（HelloUtauEditor） | 频率表格式（HelloKitVoiceBank） |
-  |---|---|---|
-  | 被登记的对象 | `ActionContribution` | `FrequencyFormat` |
-  | 登记对象 | `ActionRegistration(std::unique_ptr<ActionContribution>)`，`contribution()` | `FrequencyFormatRegistration(std::unique_ptr<FrequencyFormat>)`，`format()` |
-  | 进程级列表（私有） | `ActionRegistrations_p.h` | `FrequencyFormatRegistrations_p.h` |
-  | 使用方 | 每个 `Editor` 监听列表 | 每个 `FrequencyFormatRegistry` 监听列表 |
-  | 内置的登记 | `BuiltinActions`（Core 持有） | `BuiltinFrequencyFormats`（FrequencyEditor 持有） |
+  | 部分 | 动作（HelloUtauEditor） | 频率表格式（HelloKitVoiceBank） | 格式转换驱动（HelloKitInterchange） |
+  |---|---|---|---|
+  | 被登记的对象 | `ActionContribution` | `FrequencyFormat` | `InterchangeReader` 或 `InterchangeWriter` |
+  | 登记对象 | `ActionRegistration(std::unique_ptr<ActionContribution>)`，`contribution()` | `FrequencyFormatRegistration(std::unique_ptr<FrequencyFormat>)`，`format()` | `InterchangeRegistration`，两个构造函数，`reader()` / `writer()` |
+  | 进程级列表（私有） | `ActionRegistrations_p.h` | `FrequencyFormatRegistrations_p.h` | `InterchangeRegistrations_p.h` |
+  | 使用方 | 每个 `Editor` 监听列表 | 每个 `FrequencyFormatRegistry` 监听列表 | 每个 `InterchangeRegistry` 监听列表 |
+  | 内置的登记 | `BuiltinActions`（Core 持有） | `BuiltinFrequencyFormats`（FrequencyEditor 持有） | `BuiltinInterchangeDrivers`（Interchange 持有） |
 
 - 登记对象持有被登记的对象，构造时加入进程级列表，析构时移除；所有使用方共用这一个对象。列表按登记顺序保存，只在应用的线程上使用，不用 `stdc::DynamicRegistry`：后者按名称排序，表达不了登记顺序。列表在所属的子库中，子库是动态库，因此每个进程只有一份。
 - 插件把登记对象作为自己的成员，在 `initialize()` 中创建，在 `aboutToShutdown()` 中销毁。不能等插件实例析构：实例是插件库中的静态对象，随库卸载才析构，那时 `Editor` 已销毁，且析构发生在卸载库的过程中。
@@ -85,6 +85,7 @@ lib/plugins/helloutau/
     Core/
     ClassicPluginHost/
     FrequencyEditor/
+    Interchange/
 ```
 
 macOS 的 bundle 中为 `HelloUtau.app/Contents/MacOS`（程序）与 `HelloUtau.app/Contents/Plugins/<插件>`。
@@ -151,7 +152,7 @@ stdcorelib.plugin 的生命周期是同步的，不依赖事件循环。HelloUta
    - 多个格式都匹配重采样器时，默认选**后登记的**，即后载入的插件的格式（作者 2026-09-30 决定）：想接管内置处理的插件依赖 FrequencyEditor，必在其后载入。
    - `AppLoader::errors()` 列出核心插件以外载入失败的插件，`test_AppLoader` 据此检查随应用提供的插件全部载入。起因：`helloutau_add_native_plugin()` 的 `DEPENDENCIES` 原为多值参数，吞掉了其后交给 `helloutau_add_plugin()` 的参数，FrequencyEditor 的 `plugin.json` 因而带有虚假的依赖而载入失败，只写入日志，测试没有发现。`DEPENDENCIES` 现为单值参数，多个依赖以分号分隔。
 5. **设置**：~~用户的启用设置文件~~（`plugins.json`，见上文「设置」），~~设置对话框的「Plugins」页~~（见上文），随安装提供的全局设置（未做）。
-6. **格式转换驱动**：同样改为注册接口，删除 `InterchangePlugin`。
+6. ~~**格式转换驱动**~~：`InterchangeRegistration`（HelloKitInterchange，一个导入或导出驱动）、进程级列表 `InterchangeRegistrations_p.h`、`InterchangeRegistry` 成为监听列表的 `QObject`（`driversChanged()`），`BuiltinInterchangeDrivers` 登记 MIDI 的读与写，由新的 Interchange 插件（ID `org.helloutau.interchange`，依赖 Core，作者 2026-09-30 定）持有；删除 `InterchangePlugin`。规则见 [`Interchange.md`](Interchange.md)「注册表」。
 7. **ClassicPluginHost 插件**（计划见 [`ClassicPluginHost.md`](ClassicPluginHost.md)）：随 HelloUtau 提供的原生插件，把 UTAU 插件作为命令加入「工具 → 插件」菜单，运行后把结果作为一个撤销步骤应用到选区。选区编辑的注册接口暂不建。验收同 Roadmap 第五阶段：若干社区常用的原版插件能够正常执行并写回结果。
 8. **其余扩展点**：编辑界面扩展、音源批量操作，随各自功能的实现加入。
 9. ~~**stdcorelib.plugin 的 `loadOrder()`**~~：已实现（该仓库 `e1f7ad6`），测试覆盖依赖链与可选依赖、同层按发现顺序、停用与未选中与无效插件的排除、失败插件的保留、载入中的重入查询。「Plugins」页最终按发现顺序列出（`plugins()`，停用的插件也要列出，而 `loadOrder()` 不含它们），目前未使用它。

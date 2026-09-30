@@ -1,7 +1,10 @@
 #include <memory>
 
+#include <QtTest/QSignalSpy>
 #include <QtTest/QTest>
 
+#include <hellokit/Interchange/BuiltinInterchangeDrivers.h>
+#include <hellokit/Interchange/InterchangeRegistration.h>
 #include <hellokit/Interchange/InterchangeRegistry.h>
 
 using namespace hello::kit;
@@ -41,9 +44,52 @@ namespace {
         QStringList m_suffixes;
     };
 
-    std::unique_ptr<InterchangeReader> fake() {
-        return std::make_unique<NamedReader>(
-            QStringLiteral("fake"), QStringList{QStringLiteral("fake"), QStringLiteral("FK")});
+    class NamedWriter : public InterchangeWriter {
+    public:
+        explicit NamedWriter(QString id, QStringList suffixes)
+            : m_id(std::move(id)), m_suffixes(std::move(suffixes)) {
+        }
+
+        QString id() const override {
+            return m_id;
+        }
+        QString name() const override {
+            return m_id;
+        }
+        QStringList suffixes() const override {
+            return m_suffixes;
+        }
+
+    protected:
+        bool convert(const Project &, const std::filesystem::path &, const ExportRequest &,
+                     DiagnosticList &) override {
+            return false;
+        }
+
+    private:
+        QString m_id;
+        QStringList m_suffixes;
+    };
+
+    std::unique_ptr<InterchangeRegistration> reader(const char *id,
+                                                    QStringList suffixes = {QStringLiteral("x")}) {
+        return std::make_unique<InterchangeRegistration>(
+            std::make_unique<NamedReader>(QString::fromLatin1(id), std::move(suffixes)));
+    }
+
+    std::unique_ptr<InterchangeRegistration> writer(const char *id,
+                                                    QStringList suffixes = {QStringLiteral("x")}) {
+        return std::make_unique<InterchangeRegistration>(
+            std::make_unique<NamedWriter>(QString::fromLatin1(id), std::move(suffixes)));
+    }
+
+    template <class T>
+    QStringList idsOf(const QList<T *> &drivers) {
+        QStringList ids;
+        for (const auto driver : drivers) {
+            ids.push_back(driver->id());
+        }
+        return ids;
     }
 
 }
@@ -54,36 +100,71 @@ class test_InterchangeRegistry : public QObject {
 private Q_SLOTS:
     void a_driver_is_found_by_suffix() {
         InterchangeRegistry registry;
-        QVERIFY(registry.addReader(fake()));
+        const auto fake = reader("fake", {QStringLiteral("fake"), QStringLiteral("FK")});
 
         QVERIFY(registry.readerForSuffix("fake") != nullptr);
         QVERIFY(registry.readerForSuffix(".fake") != nullptr); // with the dot
         QVERIFY(registry.readerForSuffix("FAKE") != nullptr);  // and case-insensitively
         QVERIFY(registry.readerForSuffix("fk") != nullptr);
         QVERIFY(registry.readerForSuffix("mid") == nullptr);
-        QVERIFY(registry.readerForId("fake") != nullptr);
+        QCOMPARE(registry.readerForId("fake"), fake->reader());
+        QVERIFY(registry.writerForSuffix("fake") == nullptr);
+        QVERIFY(registry.writerForId("fake") == nullptr);
     }
 
     // A plugin registering an ID that the application already registered must not replace it.
-    void a_duplicate_id_is_refused() {
+    // The second takes the place of the first once the first goes.
+    void of_two_drivers_of_one_id_the_first_is_used() {
         InterchangeRegistry registry;
-        QVERIFY(registry.addReader(fake()));
-        QVERIFY(!registry.addReader(fake()));
+        auto first = reader("fake");
+        const auto second = reader("fake");
         QCOMPARE(registry.readers().size(), 1);
+        QCOMPARE(registry.readerForId("fake"), first->reader());
+
+        first.reset();
+        QCOMPARE(registry.readers().size(), 1);
+        QCOMPARE(registry.readerForId("fake"), second->reader());
     }
 
     // Two drivers may register the same suffix, and the first registration takes precedence,
     // so that a plugin cannot take over a built-in format.
     void the_first_to_claim_a_suffix_keeps_it() {
         InterchangeRegistry registry;
-        QVERIFY(registry.addReader(std::make_unique<NamedReader>(
-            QStringLiteral("first"), QStringList{QStringLiteral("mid")})));
-        QVERIFY(registry.addReader(std::make_unique<NamedReader>(
-            QStringLiteral("second"), QStringList{QStringLiteral("mid")})));
+        const auto first = writer("first", {QStringLiteral("mid")});
+        const auto second = writer("second", {QStringLiteral("mid")});
 
-        const auto *found = registry.readerForSuffix("mid");
+        const auto *found = registry.writerForSuffix("mid");
         QVERIFY(found != nullptr);
         QCOMPARE(found->id(), QStringLiteral("first"));
+    }
+
+    // Registries follow the registrations, those before them and those after, in their order,
+    // readers and writers apart.
+    void registries_follow_the_registrations() {
+        const auto before = reader("before");
+        InterchangeRegistry registry;
+        QSignalSpy changed(&registry, &InterchangeRegistry::driversChanged);
+        QCOMPARE(idsOf(registry.readers()), QStringList({"before"}));
+        QVERIFY(registry.writers().isEmpty());
+
+        auto builtins = std::make_unique<BuiltinInterchangeDrivers>();
+        QCOMPARE(changed.size(), 2);
+        QCOMPARE(idsOf(registry.readers()), QStringList({"before", "midi"}));
+        QCOMPARE(idsOf(registry.writers()), QStringList({"midi"}));
+        QCOMPARE(registry.readerForSuffix("mid")->id(), QStringLiteral("midi"));
+        QCOMPARE(registry.writerForSuffix("mid")->id(), QStringLiteral("midi"));
+
+        auto after = writer("after");
+        QCOMPARE(changed.size(), 3);
+        const InterchangeRegistry later;
+        QCOMPARE(idsOf(later.writers()), QStringList({"midi", "after"}));
+
+        builtins.reset();
+        after.reset();
+        QCOMPARE(changed.size(), 6);
+        QCOMPARE(idsOf(registry.readers()), QStringList({"before"}));
+        QVERIFY(registry.writers().isEmpty());
+        QVERIFY(!registry.readerForSuffix("mid"));
     }
 };
 

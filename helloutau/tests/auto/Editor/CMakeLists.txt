@@ -33,7 +33,7 @@ target_compile_definitions(test_AppLoaderFailingPlugin PRIVATE TEST_APPLOADER_FA
 
 add_auto_test(test_AppLoader.cpp HelloUtauEditor)
 add_dependencies(test_AppLoader test_AppLoaderPlugin test_AppLoaderFailingPlugin CorePlugin
-    FrequencyEditorPlugin)
+    ClassicPluginHostPlugin FrequencyEditorPlugin InterchangePlugin)
 target_compile_definitions(test_AppLoader PRIVATE
     TEST_APPLOADER_CORE="$<TARGET_FILE:test_AppLoaderPlugin>"
     TEST_APPLOADER_FAILING_CORE="$<TARGET_FILE:test_AppLoaderFailingPlugin>"

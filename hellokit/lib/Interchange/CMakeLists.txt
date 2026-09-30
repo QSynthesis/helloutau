@@ -12,6 +12,7 @@ hellokit_add_library(${PROJECT_NAME} SHARED
     LINKS HelloKitDocument
     LINKS_PRIVATE stdcorelib::stdcorelib wolf-midi::wolf-midi
     QT_LINKS Core
+    QT_AUTOGEN
     INCLUDE_PRIVATE ../../include/hellokit/Interchange/** **
     MACRO_PREFIX HELLOKIT_INTERCHANGE
 )
