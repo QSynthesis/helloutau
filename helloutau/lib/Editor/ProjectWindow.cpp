@@ -1060,12 +1060,18 @@ namespace hello::daw {
         return impl.context;
     }
 
+    PianoRoll *ProjectWindow::pianoRoll() const {
+        stdc_impl_t;
+        return impl.roll;
+    }
+
     void ProjectWindow::setDocument(std::unique_ptr<kit::ProjectDocument> document) {
         stdc_impl_t;
         impl.playback->stop();
         auto previous = std::move(impl.document);
         impl.document = std::move(document);
         impl.bindDocument();
+        Q_EMIT documentChanged();
     }
 
     void ProjectWindow::applySettings() {

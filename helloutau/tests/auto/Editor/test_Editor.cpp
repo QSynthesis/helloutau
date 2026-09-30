@@ -733,6 +733,22 @@ private Q_SLOTS:
         QCOMPARE(roll->quantization(), 60);
     }
 
+    // The window gives its piano roll, where plugins find the selection, and tells when a new
+    // document replaced it.
+    void the_piano_roll_is_replaced_with_the_document() {
+        const auto e = editor();
+        const auto window = e->newWindow();
+        const auto first = window->pianoRoll();
+        QVERIFY(first);
+        QVERIFY(first == window->centralWidget());
+
+        QSignalSpy changed(window, &ProjectWindow::documentChanged);
+        window->setDocument(std::make_unique<kit::ProjectDocument>());
+        QCOMPARE(changed.count(), 1);
+        QVERIFY(window->pianoRoll() != first);
+        QVERIFY(window->pianoRoll() == window->centralWidget());
+    }
+
     // Mode2 is checked as the project has it, and turned over as an undo step. The pitch tool is
     // enabled while Mode2 is off and the pitch shown, and otherwise gives way to the select
     // tool.

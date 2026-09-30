@@ -18,6 +18,7 @@ namespace hello::kit {
 namespace hello::daw {
 
     class Editor;
+    class PianoRoll;
 
     /// The window of a project, which edits it. Created by Editor.
     class HELLOUTAU_EDITOR_EXPORT ProjectWindow : public QMainWindow {
@@ -32,7 +33,11 @@ namespace hello::daw {
         /// included; see ActionContribution.
         QAK::WidgetActionContext *actionContext() const;
 
-        /// Replaces the project of the window with \a document.
+        /// The piano roll of the project, which holds the selection. It is replaced with the
+        /// document; see documentChanged().
+        PianoRoll *pianoRoll() const;
+
+        /// Replaces the project of the window with \a document, and its piano roll.
         void setDocument(std::unique_ptr<kit::ProjectDocument> document);
 
         /// Returns whether the window shows a new project that has not been modified, which a
@@ -59,6 +64,10 @@ namespace hello::daw {
         bool saveAs();
         bool exportUst();
         /// @}
+
+    Q_SIGNALS:
+        /// Emitted after setDocument() replaced the document and the piano roll.
+        void documentChanged();
 
     protected:
         void closeEvent(QCloseEvent *event) override;
