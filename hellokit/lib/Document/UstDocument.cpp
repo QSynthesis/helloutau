@@ -257,6 +257,14 @@ namespace hello::kit {
 
     }
 
+    Note UstDocument::noteFromUst(const utau::Note &note, const TextCodec &codec, bool unescaping) {
+        return noteFrom(note, Reader(codec, unescaping));
+    }
+
+    utau::Note UstDocument::noteToUst(const Note &note, const TextCodec &codec, bool escaping) {
+        return noteTo(note, codec, escaping);
+    }
+
     std::optional<UstDocument> UstDocument::open(const std::filesystem::path &path,
                                                  DiagnosticList &diagnostics) {
         UstDocument document;

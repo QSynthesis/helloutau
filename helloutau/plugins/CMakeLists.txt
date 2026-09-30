@@ -93,4 +93,5 @@ function(helloutau_add_native_plugin _target)
 endfunction()
 
 add_subdirectory(Core)
+add_subdirectory(ClassicPluginHost)
 add_subdirectory(FrequencyEditor)

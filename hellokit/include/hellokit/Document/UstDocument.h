@@ -18,6 +18,8 @@
 
 namespace hello::kit {
 
+    class TextCodec;
+
     /// A \c .ust, either read from disk or built from a project.
     ///
     /// UST can declare its encoding only as UTF-8 or not UTF-8, so the user must often specify
@@ -116,6 +118,18 @@ namespace hello::kit {
         /// The control note is removed. Otherwise the next file written would contain a second
         /// one, and repeated round trips would accumulate leading control notes.
         std::optional<Project> toProject(const QString &charset, DiagnosticList &diagnostics) const;
+
+        /// \name Notes
+        ///
+        /// The conversion of one note, as open() with toProject() and fromProject() convert
+        /// every note, for another file of UST notes, such as the temporary file of a plugin.
+        /// Every string of a utau::Note is bytes in \a codec. Escape sequences are read and
+        /// written only in a file that this program wrote in an encoding other than UTF-8, see
+        /// TextCodec::escape().
+        /// @{
+        static Note noteFromUst(const utau::Note &note, const TextCodec &codec, bool unescaping);
+        static utau::Note noteToUst(const Note &note, const TextCodec &codec, bool escaping);
+        /// @}
 
         /// The underlying parse, for data that \c Project cannot represent.
         ///
