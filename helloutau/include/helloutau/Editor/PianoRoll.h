@@ -338,6 +338,13 @@ namespace hello::daw {
         bool isPitchVisible() const;
         void setPitchVisible(bool visible);
 
+        /// Whether the envelope of each sung note is drawn above its bar, as UTAU draws it: over
+        /// the fragment of its sample, which starts the pre-utterance before the note, a volume
+        /// of 100 one row high, with its intensity at the start. Off by default; the parameter
+        /// area edits the envelopes either way.
+        bool areEnvelopesVisible() const;
+        void setEnvelopesVisible(bool visible);
+
         /// The distance in pixels within which a Mode2 point is hit, 6 by default.
         double pointGrip() const;
         void setPointGrip(double pixels);

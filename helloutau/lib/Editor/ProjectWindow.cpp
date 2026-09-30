@@ -682,6 +682,12 @@ namespace hello::daw {
             });
             showPitch->setCheckable(true);
             showPitch->setChecked(true);
+            const auto showEnvelopes =
+                addCommand(QStringLiteral("helloutau.view.showEnvelopes"), [this] {
+                    roll->setEnvelopesVisible(
+                        actions.value(QStringLiteral("helloutau.view.showEnvelopes"))->isChecked());
+                });
+            showEnvelopes->setCheckable(true);
             addCommand(QStringLiteral("helloutau.view.commandPalette"), [this] {
                 palette->setCommands(commandEntries());
                 palette->setRecentIds(editor->settings().recentCommands());
@@ -743,6 +749,8 @@ namespace hello::daw {
             }
             roll->setPitchVisible(
                 actions.value(QStringLiteral("helloutau.view.showPitch"))->isChecked());
+            roll->setEnvelopesVisible(
+                actions.value(QStringLiteral("helloutau.view.showEnvelopes"))->isChecked());
             decl.setCentralWidget(roll);
 
             QObject::connect(document.get(), &kit::ProjectDocument::voiceBankChanged, roll, [this] {

@@ -86,6 +86,9 @@
 
         <action id="helloutau.view.showPitch" text="Show &amp;Pitch" category="View"
                 shortcut="F4" />
+        <!-- The envelope of each note above its bar, from where its pre-utterance starts, as
+             UTAU draws it -->
+        <action id="helloutau.view.showEnvelopes" text="Show &amp;Envelopes" category="View" />
         <action id="helloutau.view.commandPalette" text="&amp;Command Palette..." category="View"
                 shortcuts="Ctrl+Shift+P;F1" />
 
@@ -240,6 +243,7 @@
             </menu>
             <menu id="helloutau.view">
                 <action id="helloutau.view.showPitch" />
+                <action id="helloutau.view.showEnvelopes" />
                 <separator />
                 <action id="helloutau.view.commandPalette" />
             </menu>

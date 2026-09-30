@@ -240,6 +240,7 @@ namespace hello::daw {
 
         class GridLayer;
         class NoteLayer;
+        class NoteEnvelopeLayer;
         class PitchLayer;
         class OverlayLayer;
         class EnvelopeLayer;
@@ -309,6 +310,7 @@ namespace hello::daw {
         kit::edit::NodeId editing = 0;
 
         bool pitchVisible = true;
+        bool envelopesVisible = false;
         double pointGrip = DefaultPointGrip;
         double curveGrip = DefaultCurveGrip;
         QColor pitchColor;
@@ -1220,6 +1222,80 @@ namespace hello::daw {
             painter.drawText(rect.adjusted(LyricPadding, 0, -LyricPadding, 0),
                              Qt::AlignLeft | Qt::AlignVCenter,
                              drawn ? QString::fromLatin1(kit::defaultLyric) : note->lyric);
+        }
+    };
+
+    // The envelope of each sung note above its bar, as UTAU draws it: over the fragment of its
+    // sample, which starts the pre-utterance before the note, from the top of the row of the note
+    // upward, a volume of 100 one row high; its intensity at the start of the fragment.
+    class PianoRoll::Impl::NoteEnvelopeLayer : public SceneLayer {
+    public:
+        explicit NoteEnvelopeLayer(PianoRoll::Impl *roll) : m_roll(roll) {
+        }
+
+        void paint(QPainter &painter, const QRect &exposed) override {
+            // While notes are dragged, their fragments are not yet known.
+            if (!m_roll->envelopesVisible || !m_roll->placements.isEmpty()) {
+                return;
+            }
+            const auto decl = m_roll->_decl;
+            const auto timeline = m_roll->timeline;
+            const auto &time = view()->timeAxis();
+            // Fragments reach before and after their notes.
+            const auto [first, last] = timeline->notesBetween(time.toTick(exposed.left()),
+                                                              time.toTick(exposed.right() + 1));
+            const int begin = std::max(0, first - 1);
+            const int end = std::min(timeline->noteCount(), last + 1);
+            painter.setRenderHint(QPainter::Antialiasing);
+            auto fill = decl->envelopeColor();
+            fill.setAlphaF(fill.alphaF() * 0.15f);
+            const auto refs = m_roll->notes();
+            for (int i = begin; i < end; ++i) {
+                const auto &note = timeline->note(i);
+                if (note.rest) {
+                    continue;
+                }
+                const auto outline = outlineOf(i);
+                painter.setPen(QPen(decl->envelopeColor(), 1));
+                painter.setBrush(fill);
+                painter.drawPolygon(outline);
+                painter.setPen(decl->envelopeColor());
+                painter.drawText(outline.first() + QPointF(2, -view()->keyAxis().pixelsPerKey - 2),
+                                 QString::number(refs.at(i).intensity().value_or(100)));
+            }
+        }
+
+        std::optional<SceneHit> hitTest(QPointF position) const override {
+            Q_UNUSED(position);
+            return std::nullopt;
+        }
+
+    private:
+        PianoRoll::Impl *m_roll;
+
+        // The start of the fragment of note index on the top of its row, its anchors in time
+        // order, and the end of the fragment
+        QPolygonF outlineOf(int index) const {
+            const auto &note = m_roll->timeline->note(index);
+            const double base = m_roll->rectOf(note.start, note.length, note.key).top();
+            const double row = view()->keyAxis().pixelsPerKey;
+            const auto fragment = m_roll->fragmentOf(index);
+            const double start = fragment.first;
+            const double length = fragment.second;
+            const auto envelope = m_roll->envelopeOf(index);
+            const auto times = anchorTimes(envelope, length);
+            const auto anchors = envelope.anchorsInTimeOrder();
+            const auto &map = m_roll->timeline->tempoMap();
+            const auto pointAt = [&](double milliseconds, double volume) {
+                return QPointF(view()->timeAxis().toX(map.tickOf(start + milliseconds)),
+                               base - volume / 100 * row);
+            };
+            QPolygonF outline{pointAt(0, 0)};
+            for (qsizetype k = 0; k < times.size(); ++k) {
+                outline.push_back(pointAt(times[k], anchors[k].y));
+            }
+            outline.push_back(pointAt(length, 0));
+            return outline;
         }
     };
 
@@ -3112,6 +3188,7 @@ namespace hello::daw {
 
         impl.view->addLayer(std::make_unique<Impl::GridLayer>(&impl));
         impl.view->addLayer(std::make_unique<Impl::NoteLayer>(&impl));
+        impl.view->addLayer(std::make_unique<Impl::NoteEnvelopeLayer>(&impl));
         impl.view->addLayer(std::make_unique<Impl::PitchLayer>(&impl));
         impl.view->addLayer(std::make_unique<Impl::OverlayLayer>(&impl));
         new PointerTracker(impl.view->viewport(), [this](std::optional<QPointF> position) {
@@ -3854,6 +3931,17 @@ namespace hello::daw {
     void PianoRoll::setPitchVisible(bool visible) {
         stdc_impl_t;
         impl.pitchVisible = visible;
+        impl.view->viewport()->update();
+    }
+
+    bool PianoRoll::areEnvelopesVisible() const {
+        stdc_impl_t;
+        return impl.envelopesVisible;
+    }
+
+    void PianoRoll::setEnvelopesVisible(bool visible) {
+        stdc_impl_t;
+        impl.envelopesVisible = visible;
         impl.view->viewport()->update();
     }
 

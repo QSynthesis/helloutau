@@ -759,6 +759,60 @@ private Q_SLOTS:
         QVERIFY(!drawnNear(tick, 60, v, QColor(0, 255, 255)));
     }
 
+    // With envelopes shown, the envelope of la stands above its bar from where its pre-utterance
+    // of 100 ms starts, a volume of 100 one row high; hidden by default.
+    void the_envelopes_are_shown_above_the_notes() {
+        kit::Note rest;
+        rest.lyric = QStringLiteral("R");
+        rest.length = 480;
+        rest.noteNum = 60;
+        kit::Note la;
+        la.lyric = QStringLiteral("la");
+        la.length = 480;
+        la.noteNum = 60;
+        kit::Project project;
+        project.settings.tempo = 120;
+        project.tracks.push_back({});
+        project.tracks[0].notes = {rest, la};
+
+        kit::VoiceSample sample;
+        sample.path = std::filesystem::path("la.wav");
+        sample.fileName = QStringLiteral("la.wav");
+        sample.alias = QStringLiteral("la");
+        sample.preUtterance = 100;
+        sample.hasEntry = true;
+        const auto bank = std::make_shared<const kit::VoiceBank>(std::filesystem::path("bank"),
+                                                                 QList<kit::VoiceBankDirectory>{{}},
+                                                                 QList<kit::VoiceSample>{sample});
+
+        kit::ProjectSession session(project);
+        PianoRoll roll(&session);
+        roll.setVoiceBank(bank);
+        roll.setEnvelopeColor(QColor(255, 0, 255));
+        roll.setPitchVisible(false);
+        show(roll);
+        QVERIFY(!roll.areEnvelopesVisible());
+
+        // la starts at 500 ms; 420 ms is within its pre-utterance, at 0.96 ticks a millisecond
+        const auto drawnAt = [&roll](double milliseconds) {
+            const auto image = roll.view()->viewport()->grab().toImage();
+            const QPointF at(roll.view()->timeAxis().toX(milliseconds * 0.96),
+                             roll.view()->keyAxis().toY(62));
+            for (int dy = -2; dy <= 2; ++dy) {
+                const auto pixel = image.pixelColor(at.toPoint() + QPoint(0, dy));
+                if (pixel.red() > 180 && pixel.green() < 120 && pixel.blue() > 180) {
+                    return true;
+                }
+            }
+            return false;
+        };
+        QVERIFY(!drawnAt(420));
+        roll.setEnvelopesVisible(true);
+        QVERIFY(drawnAt(420));
+        QVERIFY(drawnAt(700));
+        QVERIFY(!drawnAt(380));
+    }
+
     // la at C4, then li at D4 with points 60 ms before its start, at its start 100 cents up,
     // and 60 ms after, at 120 bpm, where a millisecond is 0.96 ticks
     static kit::Project bentNotes() {
