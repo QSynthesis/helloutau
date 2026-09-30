@@ -1792,7 +1792,21 @@ namespace hello::daw {
         const auto index =
             impl.proxy->mapFromSource(impl.model->index(row, VoiceBankEntryModel::FileColumn));
         impl.table->setCurrentIndex(index);
-        impl.table->scrollTo(index);
+        impl.table->scrollTo(index, QAbstractItemView::PositionAtCenter);
+        // Scrolled again once the event loop runs: a window opened just now has no geometry
+        // yet, and the change of folder may rebuild the rows. The row is found again by its
+        // folder, file and alias.
+        QTimer::singleShot(0, this,
+                           [this, directory, fileName = sample->fileName, alias = sample->alias] {
+                               stdc_impl_t;
+                               const int row = impl.model->rowOf(directory, fileName, alias);
+                               if (row < 0) {
+                                   return;
+                               }
+                               const auto index = impl.proxy->mapFromSource(
+                                   impl.model->index(row, VoiceBankEntryModel::FileColumn));
+                               impl.table->scrollTo(index, QAbstractItemView::PositionAtCenter);
+                           });
         raise();
         activateWindow();
         return true;

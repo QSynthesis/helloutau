@@ -544,9 +544,13 @@ namespace hello::daw {
                     editor->openVoiceBank(pathOf(folder), &decl);
                 }
             });
-            addCommand(QStringLiteral("helloutau.tools.editVoiceBank"),
-                       [this] { editVoiceBank(); });
-            addCommand(QStringLiteral("helloutau.tools.showEntry"), [this] { showEntry(); });
+            addCommand(QStringLiteral("helloutau.tools.editVoiceBank"), [this] {
+                if (roll->selectedIndices().isEmpty()) {
+                    editVoiceBank();
+                } else {
+                    showEntry();
+                }
+            });
             // An external action: its menu is ours to fill, each time it opens.
             recentMenu = new QMenu(&decl);
             QObject::connect(recentMenu, &QMenu::aboutToShow, &decl, [this] { fillRecentMenu(); });
@@ -865,8 +869,8 @@ namespace hello::daw {
                                   "helloutau.edit.crossfadeP2P3", "helloutau.edit.crossfadeP1P4",
                                   "helloutau.edit.copy", "helloutau.edit.transposeUp",
                                   "helloutau.edit.transposeDown", "helloutau.edit.octaveUp",
-                                  "helloutau.edit.octaveDown", "helloutau.tools.showEntry",
-                                  "helloutau.edit.setTempo", "helloutau.edit.noteProperties"}) {
+                                  "helloutau.edit.octaveDown", "helloutau.edit.setTempo",
+                                  "helloutau.edit.noteProperties"}) {
                 actions.value(QLatin1String(id))->setEnabled(selected > 0);
             }
             actions.value(QStringLiteral("helloutau.edit.splitNote"))->setEnabled(selected == 1);
@@ -1025,7 +1029,8 @@ namespace hello::daw {
             return editor->openVoiceBank(root, &decl);
         }
 
-        // Shows the entry that the first selected note uses in the window of the voice bank.
+        // Opens the voice bank at the entry that the first selected note uses. For a rest, or a
+        // note without an entry, the voice bank opens and the status bar reports the reason.
         void showEntry() {
             stdc_decl_t;
             const auto indices = roll->selectedIndices();
@@ -1033,12 +1038,10 @@ namespace hello::daw {
                 return;
             }
             const auto &note = roll->timeline()->note(indices.first());
-            if (note.rest) {
-                decl.statusBar()->showMessage(tr("A rest has no entry."), StatusMessageTimeout);
-                return;
-            }
             const auto window = editVoiceBank();
-            if (window && !window->showEntryFor(note.key, note.lyric)) {
+            if (window && note.rest) {
+                decl.statusBar()->showMessage(tr("A rest has no entry."), StatusMessageTimeout);
+            } else if (window && !window->showEntryFor(note.key, note.lyric)) {
                 decl.statusBar()->showMessage(
                     tr("The voice bank has no entry for \"%1\" at %2.")
                         .arg(note.lyric, PianoKeyboard::keyName(note.key)),

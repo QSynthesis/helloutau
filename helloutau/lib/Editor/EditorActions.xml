@@ -95,11 +95,10 @@
         <action id="helloutau.playback.replay" text="&amp;Replay" category="Playback"
                 shortcut="Shift+F5" />
 
-        <!-- The voice bank of the project, in its window -->
+        <!-- The voice bank of the project in its window, at the entry of the first selected note
+             if a note is selected, as Ctrl+G in UTAU -->
         <action id="helloutau.tools.editVoiceBank" text="Edit &amp;Voice Bank" category="Tools"
                 shortcut="Ctrl+G" />
-        <!-- The entry that the first selected note uses, in the window of the voice bank -->
-        <action id="helloutau.tools.showEntry" text="Go to Voice Bank &amp;Entry" category="Tools" />
         <!-- Deletes the fragments and the track file of the render cache of the project -->
         <action id="helloutau.tools.clearCache" text="&amp;Clear Render Cache" category="Tools" />
 
@@ -256,7 +255,6 @@
         </insertion>
         <insertion target="helloutau.tools" anchor="first">
             <action id="helloutau.tools.editVoiceBank" />
-            <action id="helloutau.tools.showEntry" />
             <action id="helloutau.tools.clearCache" />
         </insertion>
 

@@ -1763,10 +1763,10 @@ private Q_SLOTS:
                                                    0, notes, diagnostics));
         }
         const auto roll = qobject_cast<PianoRoll *>(window->centralWidget());
-        const auto go = actionNamed(window, QStringLiteral("Go to Voice Bank &Entry"));
+        // With a selection, Edit Voice Bank goes to the entry of the first selected note.
+        const auto go = actionNamed(window, QStringLiteral("Edit &Voice Bank"));
         QVERIFY(go);
-        roll->setSelectedIndices({});
-        QVERIFY(!go->isEnabled());
+        QVERIFY(!actionNamed(window, QStringLiteral("Go to Voice Bank &Entry")));
         const auto current = [bankWindow](int column) {
             return bankWindow->entryTable()
                 ->currentIndex()
