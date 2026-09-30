@@ -133,6 +133,26 @@ private Q_SLOTS:
         QCOMPARE(changes.size(), 1);
         QCOMPARE(changes[0].index, 0);
     }
+
+    // Given aliases are checked as the aliases of a rule, and the from of each change is set
+    // to the name that it replaces.
+    void given_aliases_are_checked() {
+        const QList<VoiceAliasRule::Entry> entries = {
+            {"a.wav", "x"},
+            {"a.wav", "y"},
+            {"b.wav", ""},
+        };
+        VoiceAliasRule::Change toY;
+        toY.index = 0;
+        toY.to = QStringLiteral("y");
+        VoiceAliasRule::Change toZ;
+        toZ.index = 2;
+        toZ.to = QStringLiteral("z");
+        const auto changes = VoiceAliasRule::check(entries, {toY, toZ}, false);
+        QCOMPARE(changes[0].from, QStringLiteral("x"));
+        QCOMPARE(changes[1].from, QStringLiteral("b"));
+        QCOMPARE(problemsOf(changes), QList<bool>({true, false}));
+    }
 };
 
 QTEST_APPLESS_MAIN(test_VoiceAliasRule)

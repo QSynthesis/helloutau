@@ -69,6 +69,12 @@ namespace hello::kit {
         /// caller. A copy with an unchanged name has the problem of the equal name.
         QList<Change> plan(const QList<Entry> &entries, const QList<int> &selected,
                            bool copy) const;
+
+        /// Checks \a changes as plan() checks the changes of a rule, and returns them with their
+        /// \c from and \c problem set. The \c index and the \c to of each change are given, one
+        /// change per entry at most. The find bar of the voice bank window checks its
+        /// replacements with this function.
+        static QList<Change> check(const QList<Entry> &entries, QList<Change> changes, bool copy);
     };
 
 }

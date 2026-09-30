@@ -49,9 +49,19 @@ namespace hello::kit {
             const auto &entry = entries[index];
             Change change;
             change.index = index;
-            change.from = nameOf(entry.fileName, entry.alias);
-            change.to = apply(change.from);
+            change.to = apply(nameOf(entry.fileName, entry.alias));
             changes.push_back(change);
+        }
+        return check(entries, changes, copy);
+    }
+
+    QList<VoiceAliasRule::Change> VoiceAliasRule::check(const QList<Entry> &entries,
+                                                        QList<Change> changes, bool copy) {
+        QSet<int> chosen;
+        for (auto &change : changes) {
+            const auto &entry = entries[change.index];
+            change.from = nameOf(entry.fileName, entry.alias);
+            chosen.insert(change.index);
         }
 
         // The names of each audio file after the operation, counted
