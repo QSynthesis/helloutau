@@ -1,12 +1,12 @@
 # ClassicPluginHost：原版 UTAU 插件的支持
 
-本文档是 ClassicPluginHost 插件与「选区编辑」扩展点的计划，写于 2026-09-30，尚未实现。作者已于同日决定全部待定事项，见末尾。插件机制见 [`Plugins.md`](Plugins.md)，插件的定义以 [`note.md`](note.md) 为准。
+本文档是 ClassicPluginHost 插件的计划，写于 2026-09-30，尚未实现。作者已于同日决定全部待定事项，见末尾。插件机制见 [`Plugins.md`](Plugins.md)，插件的定义以 [`note.md`](note.md) 为准。
 
 ## 目标
 
 原版 UTAU 插件是一个文件夹，含 `plugin.txt` 与一个可执行文件。UTAU 把选区写入一个临时文件，以其路径为第一个参数启动插件，等待插件结束，读回插件改写后的文件并应用其中的修改。验收同 Roadmap 第五阶段：若干社区常用的原版插件能够正常执行并写回结果。
 
-按 note.md，这一支持本身是一个原生插件（ClassicPluginHost）：它发现 UTAU 插件，把每个登记为一项**选区编辑**；应用本身不含 UTAU 插件的代码。
+按 note.md，这一支持本身是一个原生插件（ClassicPluginHost）：它发现 UTAU 插件，把每个作为一项命令加入「工具 → 插件」菜单，运行时修改选区；应用本身不含 UTAU 插件的代码。
 
 ## 调研
 
@@ -47,23 +47,23 @@
 
 ### stdutau
 
-`PluginTxt` 可直接用于读 `plugin.txt`（原始字节，编码与路径校验由宿主负责）。`PluginFileReader` / `PluginFileWriter` 是**插件一侧**的读写，不能用于宿主：读者忽略 `[#INSERT]`/`[#DELETE]`，丢弃只有段落头的音符，且在省略 `PBS` 时清空 Mode2 音高，违反「省略即不变」。另有两处与规格或实测不符，须一并修正：`PluginFileWriter::prependNotesBeforePrev` / `appendNotesAfterNext` 声称插到选区外；`PluginFileReader` 关于「临时文件总从 0 编号」的注释与实测相反（以轨道位置编号）。
+`PluginTxt` 可直接用于读 `plugin.txt`（原始字节，编码与路径校验由宿主负责）。`PluginFileReader` / `PluginFileWriter` 是**插件一侧**的读写，不能用于宿主：读者忽略 `[#INSERT]`/`[#DELETE]`，丢弃只有段落头的音符，且在省略 `PBS` 时清空 Mode2 音高，违反「省略即不变」。另有两处与规格或实测不符，已修正（见实施步骤 2）：`PluginFileWriter::prependNotesBeforePrev` / `appendNotesAfterNext` 声称插到选区外；`PluginFileReader` 关于「临时文件总从 0 编号」的注释与实测相反（以轨道位置编号）。
 
 ## 设计
 
 ### 分层
 
-1. **协议（stdutau）**：宿主一侧的两部分，都在原始字节上工作。
-   - 临时文件的写出：`[#VERSION]`、`[#SETTING]`（Project、选区起点的 Tempo、绝对 VoiceDir 与 CacheDir、Mode2）、`[#PREV]`、编号音符（带只读的 `@` 条目）、`[#NEXT]`，CRLF。
-   - 结果的解析：按出现顺序的段落序列，编号段落、`[#INSERT]`、`[#DELETE]`、`[#PREV]`/`[#NEXT]`，每个段落只记录**出现过的条目**，供宿主在原音符上逐条合并；全部省略即取消。
-2. **选区编辑扩展点（HelloKitEdit）**：不涉及界面，可测试。
-   - `RangeEdit`：`id()`、`name()`、`run(input, cancel, diagnostics)`。输入是工程的只读快照与选区（加上是否要全部音符由编辑自己决定）；输出是「以这些音符替换这一段，另可改选区前后各一个音符」，或取消。`run` 在工作线程上执行。
-   - `RangeEditRegistration(std::unique_ptr<RangeEdit>)` 与 `RangeEditRegistrations`，形状同 Plugins.md「注册接口」。
-   - 应用输出为**一个撤销步骤**（需要一个领域函数，替换一段音符并可改前后音符）。
-3. **ClassicPluginHost 插件**：发现 UTAU 插件，为每个登记一个 `RangeEdit`。其 `run`：校验 `execute` 路径、按编码写出临时文件、启动进程并等待（可取消）、读回、解析、合并为输出。
+除协议外全部实现在 ClassicPluginHost 插件中，HelloUtau 的库中不为它新开模块（作者 2026-09-30 定）。「选区编辑」的通用扩展点等出现第二个使用者时再从插件中提炼。
+
+1. **协议（stdutau）**：宿主一侧的两个类，都在原始字节上工作，名称由作者定。
+   - `ClassicPluginInputWriter`，临时文件的写出：`[#VERSION]`、`[#SETTING]`（Project、选区起点的 Tempo、绝对 VoiceDir 与 CacheDir、Mode2）、`[#PREV]`、编号音符（带只读的 `@` 条目）、`[#NEXT]`，CRLF。
+   - `ClassicPluginResultReader`，结果的解析：按出现顺序的段落序列，编号段落、`[#INSERT]`、`[#DELETE]`、`[#PREV]`/`[#NEXT]`，每个段落只记录**出现过的条目**，供宿主在原音符上逐条合并；全部省略即取消。
+2. **ClassicPluginHost 插件**：
    - 名称（作者 2026-09-30 定）：目录与工程 `ClassicPluginHost`，插件类 `ClassicPluginHostPlugin`（`Internal`，不导出），ID `org.helloutau.classicpluginhost`，显示名 Classic Plugin Host。
-   - 一次运行（写出、启动、等待或取消、读回）由内部的 `ClassicPluginRunner` 完成，发现与登记由插件本身负责（OpenUtau 同样分为 `PluginLoader` 与 `PluginRunner`）。
-4. **应用（HelloUtauEditor）**：工程窗口的「工具 → 插件」子菜单（同 UTAU），列出已登记的选区编辑，其后是「刷新」与「打开插件目录」。运行期间显示模态对话框（插件名、「取消」），结束后应用结果或报告错误。
+   - 发现 UTAU 插件，以一个 `ActionContribution` 向工程窗口加入「工具 → 插件」子菜单（同 UTAU）：每个 UTAU 插件一项，其后是「刷新」与「打开插件目录」。刷新时重新登记这份贡献。
+   - 一次运行（校验 `execute` 路径、按编码写出临时文件、启动进程并等待或取消、读回、解析）由内部的 `ClassicPluginRunner` 在工作线程上完成（OpenUtau 同样分为 `PluginLoader` 与 `PluginRunner`）。运行期间显示模态对话框（插件名、「取消」）。
+   - 合并：在一个 `EditSession::Transaction` 中按段落顺序应用结果，调用 `ProjectEdits` 已有的函数（在事务中调用时并入该事务）并直接修改音符的条目，整个结果为**一个撤销步骤**。合并中不涉及界面的部分是库一级的内容，可测试。
+3. **HelloUtauEditor**：只补插件需要的能力，不新开模块。所缺的只有选区：`ProjectWindow` 公开其卷帘（`pianoRoll()`），符合 Plugins.md「编辑器的组件化」中「窗口公开能力」的方向。UTAU 的选区是连续的一段，卷帘的选区不一定连续，插件取第一个到最后一个所选音符的范围。
 
 ### 已按规格或约定确定的做法（作者可推翻）
 
@@ -79,11 +79,12 @@
 ## 实施步骤
 
 1. ~~**探针**~~：已完成（2026-09-30），见 [`claude/utau-plugin-protocol.md`](claude/utau-plugin-protocol.md)。
-2. **stdutau**：宿主一侧的写出与解析，测试以实测样本与 `PluginFileWriter` 的输出为依据；修正上文两处与规格不符的地方。单独提交到 stdutau。
-3. **选区编辑扩展点**：`RangeEdit` 与登记、领域函数、测试。
-4. **ClassicPluginHost**：发现、`plugin.txt` 与编码、进程的启动与取消、读回与合并。插件中库一级的部分（发现、合并）在 `tests/auto/plugins/ClassicPluginHost` 中测试，以一个测试用的 UTAU 插件（脚本或小程序）端到端运行。
-5. **应用**：「工具 → 插件」子菜单、模态对话框、应用结果。
-6. **验收**：作者以社区常用的原版插件试用。
+2. **stdutau**：
+   - 插件一侧的修正（已完成，未提交）：删除 `PluginFileWriter::prependNotesBeforePrev` / `appendNotesAfterNext`（作者定；实测插入不越出选区，二者等于在选区两端 `insertNotes()`）；`PluginFileReader::load()` 以第一个编号段落的编号为 `startIndex`。
+   - 宿主一侧的 `ClassicPluginInputWriter` 与 `ClassicPluginResultReader`，测试以实测样本与 `PluginFileWriter` 的输出为依据。单独提交到 stdutau。
+3. ~~**HelloUtauEditor**~~：已完成（未提交）。`ProjectWindow::pianoRoll()` 公开卷帘，选区由它的 `selectedIndices()` 取得、`selectionChanged()` 跟踪；卷帘随文档替换，替换后发出 `ProjectWindow::documentChanged()`。
+4. **ClassicPluginHost**：发现、`plugin.txt` 与编码、菜单、进程的启动与取消、模态对话框、读回与合并。插件中库一级的部分（发现、合并）在 `tests/auto/plugins/ClassicPluginHost` 中测试，以一个测试用的 UTAU 插件（脚本或小程序）端到端运行。
+5. **验收**：作者以社区常用的原版插件试用。
 
 ## 作者的决定（2026-09-30）
 

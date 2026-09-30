@@ -43,7 +43,7 @@ stdcorelib.plugin 的交接记录（其仓库 `.cache/codex/2026-08-21-1722-stdc
 - IID 为 `org.OpenVPI.HelloUtau.Plugin`（作者 2026-09-30 决定，同 DiffScope 的 `org.OpenVPI.DiffScope.Plugin`，QSynthesis 亦属 OpenVPI）。C++ 中为 `hello::daw::AppLoader::pluginIid`，本仓库插件的 CMake 中为 `HELLOUTAU_PLUGIN_IID`（`helloutau/conf.cmake`），两者由 `test_AppLoader` 以按后者构建的插件经前者载入来核对。
 - 插件 ID 参照 DiffScope（`org.diffscope.core`）：`org.helloutau.<名称>`，全小写。
 - 插件在 `initialize()` 中经本仓库的注册接口登记它提供的东西。note.md 中原来的五种 C++ 插件改为五个**扩展点**：频率表格式、格式转换驱动（读写器）、选区编辑、编辑界面扩展、音源批量操作。
-- **原版 UTAU 插件的支持本身也是一个原生插件**（作者 2026-09-30 决定）：随 HelloUtau 提供，名为 ClassicPluginHost（作者定名）。它在 `initialize()` 中发现 UTAU 插件文件夹（`plugin.txt`，有 `plugin.json` 时以其为准，编码规则见 note.md），把每个 UTAU 插件登记为一项选区编辑，运行时写出临时文件、启动可执行文件、读回结果。停用它即不再提供 UTAU 插件，应用本身不含 UTAU 插件的代码。临时文件的写出与结果的解析在 stdutau 中（见 [`ClassicPluginHost.md`](ClassicPluginHost.md)）。
+- **原版 UTAU 插件的支持本身也是一个原生插件**（作者 2026-09-30 决定）：随 HelloUtau 提供，名为 ClassicPluginHost（作者定名）。它在 `initialize()` 中发现 UTAU 插件文件夹（`plugin.txt`，有 `plugin.json` 时以其为准，编码规则见 note.md），把每个 UTAU 插件作为一项命令加入「工具 → 插件」菜单，运行时写出临时文件、启动可执行文件、读回结果。停用它即不再提供 UTAU 插件，应用本身不含 UTAU 插件的代码。临时文件的写出与结果的解析在 stdutau 中，其余全部在插件中，库中不为它新开模块；「选区编辑」的通用扩展点等出现第二个使用者时再提炼（作者 2026-09-30 定，见 [`ClassicPluginHost.md`](ClassicPluginHost.md)）。
 - 删除 `FrequencyFormatPlugin`（已删）与 `InterchangePlugin` 两个接口。
 
 ### 注册接口
@@ -143,7 +143,7 @@ stdcorelib.plugin 的生命周期是同步的，不依赖事件循环。HelloUta
    - `AppLoader::errors()` 列出核心插件以外载入失败的插件，`test_AppLoader` 据此检查随应用提供的插件全部载入。起因：`helloutau_add_native_plugin()` 的 `DEPENDENCIES` 原为多值参数，吞掉了其后交给 `helloutau_add_plugin()` 的参数，FrequencyEditor 的 `plugin.json` 因而带有虚假的依赖而载入失败，只写入日志，测试没有发现。`DEPENDENCIES` 现为单值参数，多个依赖以分号分隔。
 5. **设置**：用户的启用设置文件，设置对话框的「Plugins」页。
 6. **格式转换驱动**：同样改为注册接口，删除 `InterchangePlugin`。
-7. **选区编辑与 ClassicPluginHost 插件**（计划见 [`ClassicPluginHost.md`](ClassicPluginHost.md)）：选区编辑的注册接口；随 HelloUtau 提供的原生插件，把 UTAU 插件登记为选区编辑；应用的「插件」菜单列出已登记的选区编辑。验收同 Roadmap 第五阶段：若干社区常用的原版插件能够正常执行并写回结果。
+7. **ClassicPluginHost 插件**（计划见 [`ClassicPluginHost.md`](ClassicPluginHost.md)）：随 HelloUtau 提供的原生插件，把 UTAU 插件作为命令加入「工具 → 插件」菜单，运行后把结果作为一个撤销步骤应用到选区。选区编辑的注册接口暂不建。验收同 Roadmap 第五阶段：若干社区常用的原版插件能够正常执行并写回结果。
 8. **其余扩展点**：编辑界面扩展、音源批量操作，随各自功能的实现加入。
 9. ~~**stdcorelib.plugin 的 `loadOrder()`**~~：已实现（该仓库 `e1f7ad6`），测试覆盖依赖链与可选依赖、同层按发现顺序、停用与未选中与无效插件的排除、失败插件的保留、载入中的重入查询。「Plugins」页在第 5 步使用它。
 
