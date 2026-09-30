@@ -39,6 +39,5 @@
 
 - 临时文件按上述写法生成：轨道位置编号，完整的 `[#PREV]` / `[#NEXT]`，`UST Version 1.20`，绝对路径，CRLF，`PreUtterance=` 空值，`@` 条目在末尾。`notes` 存在时传入全部音符，不写 `[#PREV]` / `[#NEXT]`。
 - 结果按出现顺序应用，`[#PREV]` / `[#NEXT]` 的修改应用，逐条合并（省略不变、空值恢复默认），`[#INSERT]` 的默认值取自后一个音符，空文件为取消。与 [`../ClassicPluginHost.md`](../ClassicPluginHost.md) 的设计一致。
-- stdutau 的 `PluginFileReader` 注释称临时文件「总从 0 编号」，与实测不符，须改正。
-- stdutau 的 `PluginFileWriter::prependNotesBeforePrev` / `appendNotesAfterNext` 称插到选区外，实测只插在选区的起点与终点，须改正。
+- stdutau 的 `PluginFileReader`（现并入 `PluginInput`）注释称临时文件「总从 0 编号」，与实测不符；`PluginFileWriter`（现并入 `PluginResult`）的 `prependNotesBeforePrev` / `appendNotesAfterNext` 称插到选区外，实测只插在选区的起点与终点。两处已在 stdutau `ae46c5c` 改正。
 - 临时文件的编码是本地编码，与 note.md 对没有 `plugin.json` 的插件的规定一致；声明接收 UTF-8 的插件改用 UTF-8。

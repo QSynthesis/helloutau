@@ -47,7 +47,7 @@
 
 ### stdutau
 
-`PluginTxt` 可直接用于读 `plugin.txt`（原始字节，编码与路径校验由宿主负责）。`PluginFileReader` / `PluginFileWriter` 是**插件一侧**的读写，不能用于宿主：读者忽略 `[#INSERT]`/`[#DELETE]`，丢弃只有段落头的音符，且在省略 `PBS` 时清空 Mode2 音高，违反「省略即不变」。另有两处与规格或实测不符，已修正（见实施步骤 2）：`PluginFileWriter::prependNotesBeforePrev` / `appendNotesAfterNext` 声称插到选区外；`PluginFileReader` 关于「临时文件总从 0 编号」的注释与实测相反（以轨道位置编号）。
+`PluginTxt` 可直接用于读 `plugin.txt`（原始字节，编码与路径校验由宿主负责）。原有的 `PluginFileReader` / `PluginFileWriter` 是**插件一侧**的读写，不能用于宿主：读者忽略 `[#INSERT]`/`[#DELETE]`，丢弃只有段落头的音符，且在省略 `PBS` 时清空 Mode2 音高，违反「省略即不变」。另有两处与规格或实测不符，已修正（见实施步骤 2）：写者的 `prependNotesBeforePrev` / `appendNotesAfterNext` 声称插到选区外；读者关于「临时文件总从 0 编号」的注释与实测相反（以轨道位置编号）。
 
 ## 设计
 
@@ -55,9 +55,9 @@
 
 除协议外全部实现在 ClassicPluginHost 插件中，HelloUtau 的库中不为它新开模块（作者 2026-09-30 定）。「选区编辑」的通用扩展点等出现第二个使用者时再从插件中提炼。
 
-1. **协议（stdutau）**：宿主一侧的两个类，都在原始字节上工作，名称由作者定。
-   - `ClassicPluginInputWriter`，临时文件的写出：`[#VERSION]`、`[#SETTING]`（Project、选区起点的 Tempo、绝对 VoiceDir 与 CacheDir、Mode2）、`[#PREV]`、编号音符（带只读的 `@` 条目）、`[#NEXT]`，CRLF。
-   - `ClassicPluginResultReader`，结果的解析：按出现顺序的段落序列，编号段落、`[#INSERT]`、`[#DELETE]`、`[#PREV]`/`[#NEXT]`，每个段落只记录**出现过的条目**，供宿主在原音符上逐条合并；全部省略即取消。
+1. **协议（stdutau `pluginfile.h`，`2004f8e`）**：一个文件一个类，插件与宿主共用（作者定），都在原始字节上工作。
+   - `PluginInput`，传给插件的临时文件：插件读，宿主写。写出 `[#VERSION]`（`UST Version 1.20`）、`[#SETTING]`（Project、选区起点的 Tempo、绝对 VoiceDir 与 CacheDir、Mode2）、`[#PREV]`、以轨道位置编号的音符（带只读的 `@` 条目）、`[#NEXT]`，CRLF。
+   - `PluginResult`，插件写回的结果：插件写，宿主读。数据是按出现顺序的段落列表（编号、`[#INSERT]`、`[#DELETE]`、`[#PREV]`/`[#NEXT]`），每段记录**出现过的条目**（`keys`）与其值（`note`），空值的条目保持空白，供宿主在原音符上逐条合并；没有音符段落即取消（`isCancelled()`）。`PluginResult(input)` 为全部不变的结果，`Section::assign()` 设置一个音符。
 2. **ClassicPluginHost 插件**：
    - 名称（作者 2026-09-30 定）：目录与工程 `ClassicPluginHost`，插件类 `ClassicPluginHostPlugin`（`Internal`，不导出），ID `org.helloutau.classicpluginhost`，显示名 Classic Plugin Host。
    - 发现 UTAU 插件，以一个 `ActionContribution` 向工程窗口加入「工具 → 插件」子菜单（同 UTAU）：每个 UTAU 插件一项，其后是「刷新」与「打开插件目录」。刷新时重新登记这份贡献。
@@ -80,22 +80,22 @@
 
 1. ~~**探针**~~：已完成（2026-09-30），见 [`claude/utau-plugin-protocol.md`](claude/utau-plugin-protocol.md)。
 2. **stdutau**：
-   - 插件一侧的修正（已完成，未提交）：删除 `PluginFileWriter::prependNotesBeforePrev` / `appendNotesAfterNext`（作者定；实测插入不越出选区，二者等于在选区两端 `insertNotes()`）；`PluginFileReader::load()` 以第一个编号段落的编号为 `startIndex`。
-   - 宿主一侧的 `ClassicPluginInputWriter` 与 `ClassicPluginResultReader`，测试以实测样本与 `PluginFileWriter` 的输出为依据。单独提交到 stdutau。
-3. ~~**HelloUtauEditor**~~：已完成（未提交）。`ProjectWindow::pianoRoll()` 公开卷帘，选区由它的 `selectedIndices()` 取得、`selectionChanged()` 跟踪；卷帘随文档替换，替换后发出 `ProjectWindow::documentChanged()`。
+   - ~~插件一侧的修正~~（stdutau `ae46c5c`）：删除 `prependNotesBeforePrev` / `appendNotesAfterNext`（作者定；实测插入不越出选区，二者等于在选区两端 `insertNotes()`）；读者的 `load()` 以第一个编号段落的编号为 `startIndex`。
+   - ~~宿主一侧~~（stdutau `2004f8e`）：原来插件一侧的两个类与宿主要的两半合并为 `PluginInput` 与 `PluginResult`（作者定，不保留旧名），测试以实测样本与往返为依据。
+3. ~~**HelloUtauEditor**~~：已完成（`f6faf4b`）。`ProjectWindow::pianoRoll()` 公开卷帘，选区由它的 `selectedIndices()` 取得、`selectionChanged()` 跟踪；卷帘随文档替换，替换后发出 `ProjectWindow::documentChanged()`。
 4. **ClassicPluginHost**：发现、`plugin.txt` 与编码、菜单、进程的启动与取消、模态对话框、读回与合并。插件中库一级的部分（发现、合并）在 `tests/auto/plugins/ClassicPluginHost` 中测试，以一个测试用的 UTAU 插件（脚本或小程序）端到端运行。
 5. **验收**：作者以社区常用的原版插件试用。
 
 ## 作者的决定（2026-09-30）
 
-- stdutau 中插件一侧的 `PluginFileReader` / `PluginFileWriter` 不用于宿主。
+- stdutau 中插件一侧原有的读写不用于宿主（后改为插件与宿主共用 `PluginInput` / `PluginResult`，见实施步骤 2）。
 - **`shell=use`**：Windows 上照 UTAU 用 `ShellExecuteEx`。处理程序不返回进程句柄时（html、hta 可能交给已打开的程序）无法等待，提示用户在插件完成后手动确认。AGENTS.md 中的「尚未确定」随之解决。
 - **非 Windows 平台上的 `.exe` 插件**：第一版在菜单中显示但不可用，并说明原因。Wine 以后再议。
 - **发现**：设置中 UTAU 文件夹下的 `plugins`（一层，同 UTAU），另加 HelloUtau 自己的用户目录（与原生插件的目录分开）。启动时与「刷新」时重新扫描。
 - **取消**：「取消」结束插件的整个进程树并丢弃结果，不设超时。
 - **退出码**：不检查，只看文件。
-- **协议代码放在 stdutau**，与 `PluginTxt`、插件一侧的 `PluginFileReader` / `PluginFileWriter` 同处。stdutau 现有的是协议的插件一半（读输入、写结果），宿主要的是另一半，须新增两个类：
+- **协议代码放在 stdutau**，与 `PluginTxt`、插件一侧原有的读写同处。stdutau 原有的是协议的插件一半（读输入、写结果），宿主要的是另一半：
   - 输入的写出：由设置、前后音符与选区写出 `[#VERSION]`、`[#SETTING]`、`[#PREV]`、带 `@` 条目的编号音符、`[#NEXT]`，CRLF；
   - 结果的读取：把插件写回的文件解析为按顺序的段落（编号音符、`[#INSERT]`、`[#DELETE]`、`[#PREV]`/`[#NEXT]`），并记录每段出现过的条目，供宿主逐条合并。
-  - `PluginFileWriter` 的输出正是结果读取的输入，可作测试的对照。
+  - 插件一侧写出的结果正是宿主读取的输入，可作测试的对照。
 - **首次运行的确认**：新发现的插件第一次运行前弹出一次确认（插件名与将运行的程序），确认过的记入设置，不再询问；插件的程序改变后重新询问。

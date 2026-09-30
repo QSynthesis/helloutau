@@ -27,7 +27,7 @@ v0.4.19 修复的是 JVN#71404925 报告的两个漏洞：
 
 六个参考仓库的定位各不相同，不可混用。
 
-**stdutau**（<https://github.com/diffscope/stdutau>，由 `third-party/Dependencies.cmake` 引入）：UTAU 数据层的实现，是依赖而非参考。`utau::UstFile`、`OtoIni`、`PrefixMap`、`PluginFileReader/Writer`、`Synth::calc` 已覆盖 ust / oto.ini / prefix.map 的读写、插件临时文件协议和合成参数计算。**凡属这几项功能，一律使用 stdutau，不要在本仓库中重新实现**；发现其功能不足时修改 stdutau，见「与 stdutau 协作」。
+**stdutau**（<https://github.com/diffscope/stdutau>，由 `third-party/Dependencies.cmake` 引入）：UTAU 数据层的实现，是依赖而非参考。`utau::UstFile`、`OtoIni`、`PrefixMap`、`PluginInput`、`PluginResult`、`Synth::calc` 已覆盖 ust / oto.ini / prefix.map 的读写、插件临时文件协议和合成参数计算。**凡属这几项功能，一律使用 stdutau，不要在本仓库中重新实现**；发现其功能不足时修改 stdutau，见「与 stdutau 协作」。
 
 **QSynthesis-Old**（<https://github.com/QSynthesis/QSynthesis-Old>）：同一作者 2021 年停止维护的 Qt 5 前作，副本位于 `.cache/QSynthesis-Old`。**只作为行为参考，不作为代码来源。** 值得参考的是它遇到过的实际问题：`Frontend/Process/` 的渲染调度（`RealtimeRenderer` + `ResampleWork` + `ConcatenateWork` 的线程池模型）、`Backend/Documents/Import/` 的 MIDI / VSQ / frq / presamp 导入、`Backend/VoiceBank/` 的音源目录模型。不应迁移的是它的整套 `Q` 前缀类型、自行实现的 `MiniSystem` 基础设施，以及将编码问题推迟到界面层处理的做法。`Synth::calc` 中标有「Port from QSynthesis begin」的音高曲线代码已迁移至 stdutau，不要再从旧仓库迁移一次。
 
