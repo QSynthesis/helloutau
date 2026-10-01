@@ -60,6 +60,7 @@ namespace hello::daw {
         Q_PROPERTY(QColor renderReadyColor READ renderReadyColor WRITE setRenderReadyColor)
         Q_PROPERTY(QColor renderFailedColor READ renderFailedColor WRITE setRenderFailedColor)
         Q_PROPERTY(QColor pitchColor READ pitchColor WRITE setPitchColor)
+        Q_PROPERTY(QColor renderedPitchColor READ renderedPitchColor WRITE setRenderedPitchColor)
         Q_PROPERTY(QColor vibratoColor READ vibratoColor WRITE setVibratoColor)
         Q_PROPERTY(QColor faintPointColor READ faintPointColor WRITE setFaintPointColor)
         Q_PROPERTY(QColor envelopeColor READ envelopeColor WRITE setEnvelopeColor)
@@ -338,9 +339,10 @@ namespace hello::daw {
         QList<RenderState> renderStates() const;
         void setRenderStates(const QList<RenderState> &states);
 
-        /// Whether the pitch of each note is drawn: its portamento in pitchColor() and, apart
-        /// from it, its vibrato around the middle of its row in vibratoColor(), both as the
-        /// resampler receives them (kit::PitchCurve). See step 1 in docs/Tuning.md.
+        /// Whether the pitch of each note is drawn: the portamento of its own points in
+        /// pitchColor(), from its first point to its last, and apart from it its vibrato around
+        /// the middle of its row in vibratoColor() (kit::PitchCurve::ownPortamentoAt()). A note
+        /// without points has no portamento drawn. See step 1 in docs/Tuning.md.
         ///
         /// While it is, the Mode2 points are drawn on the portamento and edited there (step 2 in
         /// docs/Tuning.md): a point is dragged, with those selected with it, Shift snapping it to
@@ -358,6 +360,14 @@ namespace hello::daw {
         /// values starts them at its first reading, as UTAU does.
         bool isPitchVisible() const;
         void setPitchVisible(bool visible);
+
+        /// Whether the pitch that the resampler receives for each sung note is drawn as a dashed
+        /// line in renderedPitchColor(), over the readings of its sample from its pre-utterance
+        /// to the overlap of the next note: in Mode2 the sum of the portamento and the vibrato
+        /// of the note and its neighbours, otherwise the Mode1 curve. Independent of
+        /// isPitchVisible(). Off by default.
+        bool isRenderedPitchVisible() const;
+        void setRenderedPitchVisible(bool visible);
 
         /// Whether the envelope of each sung note is drawn above its bar, as UTAU draws it: over
         /// the fragment of its sample, which starts the pre-utterance before the note, a volume
@@ -403,6 +413,9 @@ namespace hello::daw {
         void setFindMatchTextColor(const QColor &color);
         QColor pitchColor() const;
         void setPitchColor(const QColor &color);
+        /// The color of the dashed rendered pitch, pitchColor() at half opacity by default
+        QColor renderedPitchColor() const;
+        void setRenderedPitchColor(const QColor &color);
         QColor vibratoColor() const;
         void setVibratoColor(const QColor &color);
         /// The color of the points of the notes whose portamento is not under the pointer, and

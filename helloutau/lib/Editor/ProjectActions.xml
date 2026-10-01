@@ -124,6 +124,9 @@
         <!-- X as in UTAU -->
         <action id="helloutau.view.showPitch" text="Show &amp;Pitch" category="View"
                 shortcut="X" />
+        <!-- The pitch that the resampler receives, dashed, over the whole sample of each note -->
+        <action id="helloutau.view.showRenderedPitch" text="Show &amp;Rendered Pitch"
+                category="View" />
         <!-- The envelope of each note above its bar, from where its pre-utterance starts, as
              UTAU draws it -->
         <action id="helloutau.view.showEnvelopes" text="Show &amp;Envelopes" category="View" />
@@ -237,6 +240,7 @@
                 <action id="helloutau.view.showToolBar" />
                 <separator />
                 <action id="helloutau.view.showPitch" />
+                <action id="helloutau.view.showRenderedPitch" />
                 <action id="helloutau.view.showEnvelopes" />
                 <action id="helloutau.view.showParameters" />
                 <separator />

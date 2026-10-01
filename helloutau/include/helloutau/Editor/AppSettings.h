@@ -85,6 +85,11 @@ namespace hello::daw {
         bool isPitchVisible() const;
         void setPitchVisible(bool visible);
 
+        /// Whether the piano roll shows the pitch that the resampler receives (View > Show
+        /// Rendered Pitch). The default is true.
+        bool isRenderedPitchVisible() const;
+        void setRenderedPitchVisible(bool visible);
+
         /// Whether the piano roll shows the envelopes (View > Show Envelopes). The default is
         /// true.
         bool areEnvelopesVisible() const;

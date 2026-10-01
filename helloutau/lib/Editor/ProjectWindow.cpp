@@ -1029,7 +1029,7 @@ namespace hello::daw {
                 tools->addAction(action);
             }
             selectTool->setChecked(true);
-            // The two display toggles start from the settings and are stored when changed.
+            // The display toggles start from the settings and are stored when changed.
             const auto showPitch = addCommand(QStringLiteral("helloutau.view.showPitch"), [this] {
                 const bool visible =
                     actions.value(QStringLiteral("helloutau.view.showPitch"))->isChecked();
@@ -1039,6 +1039,16 @@ namespace hello::daw {
             });
             showPitch->setCheckable(true);
             showPitch->setChecked(editor->settings().isPitchVisible());
+            const auto showRenderedPitch =
+                addCommand(QStringLiteral("helloutau.view.showRenderedPitch"), [this] {
+                    const bool visible =
+                        actions.value(QStringLiteral("helloutau.view.showRenderedPitch"))
+                            ->isChecked();
+                    editor->settings().setRenderedPitchVisible(visible);
+                    roll->setRenderedPitchVisible(visible);
+                });
+            showRenderedPitch->setCheckable(true);
+            showRenderedPitch->setChecked(editor->settings().isRenderedPitchVisible());
             const auto showEnvelopes =
                 addCommand(QStringLiteral("helloutau.view.showEnvelopes"), [this] {
                     const bool visible =
@@ -1268,6 +1278,8 @@ namespace hello::daw {
             }
             roll->setPitchVisible(
                 actions.value(QStringLiteral("helloutau.view.showPitch"))->isChecked());
+            roll->setRenderedPitchVisible(
+                actions.value(QStringLiteral("helloutau.view.showRenderedPitch"))->isChecked());
             roll->setEnvelopesVisible(
                 actions.value(QStringLiteral("helloutau.view.showEnvelopes"))->isChecked());
             roll->setParametersVisible(

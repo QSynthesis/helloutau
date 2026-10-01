@@ -136,6 +136,7 @@ namespace hello::daw {
         impl.view->addLayer(std::make_unique<Impl::NoteLayer>(&impl));
         impl.view->addLayer(std::make_unique<Impl::NoteEnvelopeLayer>(&impl));
         impl.view->addLayer(std::make_unique<Impl::NoteParameterLayer>(&impl));
+        impl.view->addLayer(std::make_unique<Impl::RenderedPitchLayer>(&impl));
         impl.view->addLayer(std::make_unique<Impl::PitchLayer>(&impl));
         impl.view->addLayer(std::make_unique<Impl::OverlayLayer>(&impl));
         new PointerTracker(impl.view->viewport(), [this](std::optional<QPointF> position) {
@@ -885,6 +886,17 @@ namespace hello::daw {
         impl.view->viewport()->update();
     }
 
+    bool PianoRoll::isRenderedPitchVisible() const {
+        stdc_impl_t;
+        return impl.renderedPitchVisible;
+    }
+
+    void PianoRoll::setRenderedPitchVisible(bool visible) {
+        stdc_impl_t;
+        impl.renderedPitchVisible = visible;
+        impl.view->viewport()->update();
+    }
+
     bool PianoRoll::areEnvelopesVisible() const {
         stdc_impl_t;
         return impl.envelopesVisible;
@@ -1062,6 +1074,22 @@ namespace hello::daw {
     void PianoRoll::setPitchColor(const QColor &color) {
         stdc_impl_t;
         impl.pitchColor = color;
+        impl.view->viewport()->update();
+    }
+
+    QColor PianoRoll::renderedPitchColor() const {
+        stdc_impl_t;
+        if (impl.renderedPitchColor.isValid()) {
+            return impl.renderedPitchColor;
+        }
+        auto color = pitchColor();
+        color.setAlphaF(color.alphaF() * 0.5f);
+        return color;
+    }
+
+    void PianoRoll::setRenderedPitchColor(const QColor &color) {
+        stdc_impl_t;
+        impl.renderedPitchColor = color;
         impl.view->viewport()->update();
     }
 

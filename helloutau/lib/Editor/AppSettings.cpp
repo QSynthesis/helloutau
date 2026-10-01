@@ -25,6 +25,7 @@ namespace hello::daw {
         constexpr char KeyRenderThreads[] = "playback/threads";
         constexpr char KeyUstExportCharset[] = "files/ustExportCharset";
         constexpr char KeyPitchVisible[] = "view/showPitch";
+        constexpr char KeyRenderedPitchVisible[] = "view/showRenderedPitch";
         constexpr char KeyEnvelopesVisible[] = "view/showEnvelopes";
         constexpr char KeyParametersVisible[] = "view/showParameters";
         constexpr char KeyToolBarVisible[] = "view/showToolBar";
@@ -169,6 +170,16 @@ namespace hello::daw {
     void AppSettings::setPitchVisible(bool visible) {
         stdc_impl_t;
         impl.setValue(KeyPitchVisible, visible);
+    }
+
+    bool AppSettings::isRenderedPitchVisible() const {
+        stdc_impl_t;
+        return impl.value(KeyRenderedPitchVisible).toBool(true);
+    }
+
+    void AppSettings::setRenderedPitchVisible(bool visible) {
+        stdc_impl_t;
+        impl.setValue(KeyRenderedPitchVisible, visible);
     }
 
     bool AppSettings::areEnvelopesVisible() const {

@@ -282,6 +282,61 @@ namespace hello::daw {
         return std::nullopt;
     }
 
+    void PianoRollState::RenderedPitchLayer::paint(QPainter &painter, const QRect &exposed) {
+        // While notes are dragged, their timings are not yet known.
+        if (!m_state->renderedPitchVisible || !m_state->placements.isEmpty()) {
+            return;
+        }
+        const auto timeline = m_state->timeline;
+        const auto &time = view()->timeAxis();
+        const auto &keys = view()->keyAxis();
+        const int count = timeline->noteCount();
+        auto [begin, end] =
+            timeline->notesBetween(time.toTick(exposed.left()), time.toTick(exposed.right() + 1));
+        // The sample of a note starts before the note, and ends after the next note starts.
+        begin = std::max(0, begin - 1);
+        end = std::min(count, end + 1);
+        if (begin >= end) {
+            return;
+        }
+
+        // The curve of a note reads the two notes before it and the one after.
+        const int first = std::max(0, begin - 2);
+        const auto notes = m_state->previewedNotes(first, std::min(count, end + 1));
+        const auto &timings = m_state->sampleTimings();
+        const bool mode1 = m_state->mode1();
+        painter.setRenderHint(QPainter::Antialiasing);
+        painter.setBrush(Qt::NoBrush);
+        painter.setPen(QPen(m_state->widget->renderedPitchColor(), 1, Qt::DashLine));
+        for (int i = begin; i < end; ++i) {
+            const auto &entry = timeline->note(i);
+            if (entry.rest) {
+                continue;
+            }
+            kit::PitchCurve::Timing timing;
+            timing.preUtterance = timings[i].preUtterance;
+            timing.startPoint = timings[i].startPoint;
+            if (i + 1 < count) {
+                timing.nextPreUtterance = timings[i + 1].preUtterance;
+                timing.nextOverlap = timings[i + 1].voiceOverlap;
+            }
+            const kit::PitchCurve curve(notes, i - first, timeline->tempoMap().tempo(i));
+            const auto ticks = curve.readingTicks(timing);
+            const auto values = mode1 ? curve.mode1Values(timing) : curve.values(timing);
+            QPolygonF line;
+            for (qsizetype k = 0; k < ticks.size(); ++k) {
+                line.push_back(QPointF(time.toX(double(entry.start) + ticks[k]),
+                                       keys.toY(entry.key + 0.5 + values[k] / 100.0)));
+            }
+            painter.drawPolyline(line);
+        }
+    }
+
+    std::optional<SceneHit> PianoRollState::RenderedPitchLayer::hitTest(QPointF position) const {
+        Q_UNUSED(position);
+        return std::nullopt;
+    }
+
     void PianoRollState::PitchLayer::paint(QPainter &painter, const QRect &exposed) {
         // While notes are dragged, their curves are not yet known.
         if (!m_state->pitchVisible || !m_state->placements.isEmpty()) {
@@ -302,20 +357,7 @@ namespace hello::daw {
         const int first = std::max(0, begin - 2);
         const int last = std::min(timeline->noteCount(), end + 1);
         const auto refs = m_state->notes();
-        QList<kit::Note> notes;
-        for (int i = first; i < last; ++i) {
-            notes.push_back(refs.at(i).toNote());
-            if (const auto it = m_state->pointPreview.find(i); it != m_state->pointPreview.end()) {
-                notes.last().portamento = *it;
-            }
-            if (const auto it = m_state->vibratoPreview.find(i);
-                it != m_state->vibratoPreview.end()) {
-                notes.last().vibrato = *it;
-            }
-            if (const auto it = m_state->bendPreview.find(i); it != m_state->bendPreview.end()) {
-                notes.last().pitchBend = *it;
-            }
-        }
+        const auto notes = m_state->previewedNotes(first, last);
         if (m_state->mode1()) {
             paintBends(painter, exposed, notes, first, begin, end);
             return;

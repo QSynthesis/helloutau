@@ -23,6 +23,7 @@ private Q_SLOTS:
         QCOMPARE(settings.ustExportCharset(), QStringLiteral("UTF-8"));
         QCOMPARE(settings.playbackMode(), AppSettings::Prerender);
         QVERIFY(settings.isPitchVisible());
+        QVERIFY(settings.isRenderedPitchVisible());
         QVERIFY(settings.areEnvelopesVisible());
         QVERIFY(!settings.areParametersVisible());
         QCOMPARE(settings.renderThreadCount(), 0);
@@ -113,11 +114,13 @@ private Q_SLOTS:
             settings.setUstExportCharset(QStringLiteral("Shift_JIS"));
             settings.setPlaybackMode(AppSettings::Realtime);
             settings.setPitchVisible(false);
+            settings.setRenderedPitchVisible(false);
             settings.setEnvelopesVisible(false);
             settings.setParametersVisible(true);
         }
         const AppSettings settings(file);
         QVERIFY(!settings.isPitchVisible());
+        QVERIFY(!settings.isRenderedPitchVisible());
         QVERIFY(!settings.areEnvelopesVisible());
         QVERIFY(settings.areParametersVisible());
         QCOMPARE(settings.utauDirectory(), utau);

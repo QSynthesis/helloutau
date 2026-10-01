@@ -887,6 +887,67 @@ private Q_SLOTS:
         QVERIFY(!roll.lyricEditor()->isVisible());
     }
 
+    // The rendered pitch is the curve that the resampler receives over the readings of each
+    // sung note, dashed, also where no portamento is drawn: on la, which has no points, and on
+    // li after its last point. Hidden by default.
+    void the_rendered_pitch_is_drawn_dashed() {
+        kit::ProjectSession session(bentNotes());
+        PianoRoll roll(&session);
+        const QColor magenta(255, 0, 255);
+        roll.setPitchColor(magenta);
+        roll.setRenderedPitchColor(QColor(0, 160, 0));
+        showExactly(roll);
+        // Whether green prevails in a pixel, also where the line of one pixel is blended with a
+        // note bar
+        const auto isGreen = [](QColor pixel) {
+            return pixel.green() > pixel.red() + 60 && pixel.green() > pixel.blue() + 30;
+        };
+        // Whether a green pixel lies within two pixels of (tick, cents from key)
+        const auto greenNear = [&roll, &isGreen](double tick, int key, double cents) {
+            const auto image = roll.view()->viewport()->grab().toImage();
+            const QPointF center(roll.view()->timeAxis().toX(tick),
+                                 roll.view()->keyAxis().toY(key + 0.5 + cents / 100));
+            for (int dx = -2; dx <= 2; ++dx) {
+                for (int dy = -2; dy <= 2; ++dy) {
+                    if (isGreen(image.pixelColor(center.toPoint() + QPoint(dx, dy)))) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        };
+        QVERIFY(!roll.isRenderedPitchVisible());
+        QVERIFY(!greenNear(240, 60, 0));
+
+        roll.setRenderedPitchVisible(true);
+        QVERIFY(greenNear(240, 60, 0));
+        QVERIFY(greenNear(480 + 100, 62, 0));
+        QVERIFY(!drawnNear(roll, 480 + 100, 62, 0, magenta));
+        // Before li, la bends towards li as the resampler receives it, also with the pitch
+        // hidden.
+        roll.setPitchVisible(false);
+        const kit::PitchCurve la(session.snapshot().tracks[0].notes, 0, 120);
+        const double bend = la.portamentoAt(470);
+        QVERIFY(bend > 50);
+        QVERIFY(greenNear(470, 60, bend));
+
+        // Along la, the line has dashes and gaps.
+        const auto image = roll.view()->viewport()->grab().toImage();
+        const int y = roll.view()->keyAxis().toY(60.5);
+        int dashes = 0;
+        int gaps = 0;
+        for (int x = int(roll.view()->timeAxis().toX(100)); x < roll.view()->timeAxis().toX(300);
+             ++x) {
+            bool green = false;
+            for (int dy = -1; dy <= 1; ++dy) {
+                green = green || isGreen(image.pixelColor(x, y + dy));
+            }
+            (green ? dashes : gaps) += 1;
+        }
+        QVERIFY(dashes > 20);
+        QVERIFY(gaps > 20);
+    }
+
     // With envelopes shown, the envelope of la stands above its bar from where its pre-utterance
     // of 100 ms starts, a volume of 100 one row high; hidden by default.
     void the_envelopes_are_shown_above_the_notes() {

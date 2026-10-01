@@ -320,6 +320,24 @@ namespace hello::daw {
         return timings;
     }
 
+    QList<kit::Note> PianoRollState::previewedNotes(int first, int last) const {
+        const auto refs = notes();
+        QList<kit::Note> result;
+        for (int i = first; i < last; ++i) {
+            result.push_back(refs.at(i).toNote());
+            if (const auto it = pointPreview.find(i); it != pointPreview.end()) {
+                result.last().portamento = *it;
+            }
+            if (const auto it = vibratoPreview.find(i); it != vibratoPreview.end()) {
+                result.last().vibrato = *it;
+            }
+            if (const auto it = bendPreview.find(i); it != bendPreview.end()) {
+                result.last().pitchBend = *it;
+            }
+        }
+        return result;
+    }
+
     kit::Envelope PianoRollState::envelopeOf(int index) const {
         if (const auto it = envelopePreview.find(index); it != envelopePreview.end()) {
             return *it;

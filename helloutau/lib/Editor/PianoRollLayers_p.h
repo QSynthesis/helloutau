@@ -97,8 +97,24 @@ namespace hello::daw {
         PianoRollState *m_state;
     };
 
-    /// The pitch of each sung note, as the resampler receives it: the portamento as a line through
-    /// the rows, and apart from it the vibrato around the middle of the row of the note
+    /// The pitch that the resampler receives for each sung note, as a dashed line over the readings
+    /// of its sample, from its pre-utterance to the overlap of the next note: in Mode2 the sum of
+    /// the portamento and the vibrato of the note and its neighbours, otherwise the Mode1 curve
+    class PianoRollState::RenderedPitchLayer : public SceneLayer {
+    public:
+        explicit RenderedPitchLayer(PianoRollState *state) : m_state(state) {
+        }
+
+        void paint(QPainter &painter, const QRect &exposed) override;
+
+        std::optional<SceneHit> hitTest(QPointF position) const override;
+
+    private:
+        PianoRollState *m_state;
+    };
+
+    /// The pitch of each sung note: the portamento of its own points as a line through the rows,
+    /// and apart from it its vibrato around the middle of its row
     class PianoRollState::PitchLayer : public SceneLayer {
     public:
         explicit PitchLayer(PianoRollState *state) : m_state(state) {

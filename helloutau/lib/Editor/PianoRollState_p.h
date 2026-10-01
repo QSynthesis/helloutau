@@ -156,6 +156,7 @@ namespace hello::daw {
         class NoteLayer;
         class NoteEnvelopeLayer;
         class NoteParameterLayer;
+        class RenderedPitchLayer;
         class PitchLayer;
         class OverlayLayer;
         class EnvelopeLayer;
@@ -220,11 +221,13 @@ namespace hello::daw {
         kit::edit::NodeId editing = 0;
 
         bool pitchVisible = true;
+        bool renderedPitchVisible = false;
         bool envelopesVisible = false;
         bool parametersVisible = false;
         double pointGrip = DefaultPointGrip;
         double curveGrip = DefaultCurveGrip;
         QColor pitchColor;
+        QColor renderedPitchColor;
         QColor vibratoColor;
         QColor faintPointColor;
 
@@ -360,6 +363,10 @@ namespace hello::daw {
 
         /// The timing of the sample of every note, with the voice bank if there is one
         const QList<kit::SampleTiming> &sampleTimings();
+
+        /// The notes from first to last, last excluded, with the points, vibratos and Mode1
+        /// values that a gesture previews
+        QList<kit::Note> previewedNotes(int first, int last) const;
 
         /// The envelope of note index, as a gesture shows it if it does, or that of UTAU
         kit::Envelope envelopeOf(int index) const;
