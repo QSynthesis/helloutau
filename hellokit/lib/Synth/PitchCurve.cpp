@@ -119,6 +119,11 @@ namespace hello::kit {
                 std::max(double(m_current.length), ticksOf(points.last().x))};
     }
 
+    std::pair<double, double> PitchCurve::pointSpan() const {
+        const auto &points = m_current.points;
+        return {ticksOf(points.first().x), ticksOf(points.last().x)};
+    }
+
     QList<int> PitchCurve::values(const Timing &timing) const {
         // In the order of stdutau: each note's portamento and vibrato first, then the note,
         // the previous one and the next one, so that the sums agree to the last bit

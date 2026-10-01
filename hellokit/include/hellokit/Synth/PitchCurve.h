@@ -60,6 +60,11 @@ namespace hello::kit {
         /// last point, or the end of the note if later.
         std::pair<double, double> ownSpan() const;
 
+        /// Returns the range of ticks, counted from the start of the note, from the first point
+        /// of the note to its last point. The piano roll draws the own portamento over this
+        /// range only.
+        std::pair<double, double> pointSpan() const;
+
         /// The timing of the samples of the note and the next one, in milliseconds, as
         /// reconciled with their neighbours (SynthStep::preUtterance and the like).
         struct Timing {

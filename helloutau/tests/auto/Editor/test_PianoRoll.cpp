@@ -760,11 +760,12 @@ private Q_SLOTS:
 
         const QList<kit::Note> notes = {la, li};
         const kit::PitchCurve secondCurve(notes, 1, 120);
-        // From 100 ms before li to 100 ms after it, li bends up from la; at its start halfway
+        // From 100 ms before li to 100 ms after it, li bends up from la; at its start halfway.
+        // After its last point, nothing is drawn.
         const double bend = secondCurve.portamentoAt(0);
         QVERIFY(bend < -100 && bend > -300);
         QVERIFY(drawnNear(roll, 960, 64, bend, QColor(255, 0, 255)));
-        QVERIFY(drawnNear(roll, 960 + 300, 64, 0, QColor(255, 0, 255)));
+        QVERIFY(!drawnNear(roll, 960 + 300, 64, 0, QColor(255, 0, 255)));
 
         const kit::PitchCurve firstCurve(notes, 0, 120);
         const double tick = 960 * 0.5 + 120;
@@ -773,14 +774,15 @@ private Q_SLOTS:
         QVERIFY(drawnNear(roll, tick, 60, v, QColor(0, 255, 255)));
 
         roll.setPitchVisible(false);
-        QVERIFY(!drawnNear(roll, 960 + 300, 64, 0, QColor(255, 0, 255)));
+        QVERIFY(!drawnNear(roll, 960, 64, bend, QColor(255, 0, 255)));
         QVERIFY(!drawnNear(roll, tick, 60, v, QColor(0, 255, 255)));
     }
 
-    // Each note draws the curve of its own points alone. The points of li begin 600 ms, or
-    // 576 ticks, before it, before the start of la. The curve of li therefore crosses la, whose
-    // curve stays at its pitch, and begins over the rest before la. A double click inserts a
-    // point into the note whose curve it hits.
+    // Each note draws the curve of its own points alone, from its first point to its last. The
+    // points of li begin 600 ms, or 576 ticks, before it, before the start of la. The curve of
+    // li therefore crosses la, whose curve stays at its pitch between its points at 576 and 672
+    // ticks, and begins over the rest before la. A double click inserts a point into the note
+    // whose curve it hits.
     void the_curves_of_the_notes_are_independent() {
         kit::Note rest;
         rest.lyric = QStringLiteral("R");
@@ -819,8 +821,13 @@ private Q_SLOTS:
         // At tick 720, halfway between the first two points, li is 200 cents below its pitch.
         QVERIFY(liAt(720) < -150 && liAt(720) > -250);
         QVERIFY(drawnNear(roll, 720, 64, liAt(720), QColor(255, 0, 255)));
-        QVERIFY(drawnNear(roll, 720, 60, 0, QColor(255, 0, 255)));
+        QVERIFY(drawnNear(roll, 624, 60, 0, QColor(255, 0, 255)));
         QVERIFY(drawnNear(roll, 400, 64, liAt(400), QColor(255, 0, 255)));
+        // Neither before the first point of la nor after its last, where li runs far enough away
+        const auto &keys = roll.view()->keyAxis();
+        QVERIFY(keys.toY(60.5) - keys.toY(64.5 + liAt(500) / 100) > 6);
+        QVERIFY(!drawnNear(roll, 500, 60, 0, QColor(255, 0, 255)));
+        QVERIFY(!drawnNear(roll, 720, 60, 0, QColor(255, 0, 255)));
 
         const auto viewport = roll.view()->viewport();
         const auto pointsOf = [&session](int index) {
@@ -865,8 +872,11 @@ private Q_SLOTS:
         roll.setVibratoColor(QColor(0, 255, 255));
         showExactly(roll);
 
+        // li, between its points at -60 and 60 ms
+        const kit::PitchCurve liCurve(project.tracks[0].notes, 1, 120);
         QVERIFY(!drawnNear(roll, 120, 60, 0, QColor(255, 0, 255)));
-        QVERIFY(drawnNear(roll, 480 + 100 * 0.96, 62, 0, QColor(255, 0, 255)));
+        QVERIFY(drawnNear(roll, 480 + 30 * 0.96, 62, liCurve.ownPortamentoAt(30 * 0.96),
+                          QColor(255, 0, 255)));
         const kit::PitchCurve curve(project.tracks[0].notes, 0, 120);
         const double tick = 480 * 0.5 + 60;
         QVERIFY(qAbs(curve.ownVibratoAt(tick)) > 20);

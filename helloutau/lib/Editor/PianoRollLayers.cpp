@@ -328,48 +328,61 @@ namespace hello::daw {
         painter.setBrush(Qt::NoBrush);
         const double step = std::max(1.0, CurveStep / time.pixelsPerTick);
         // Each note draws the curve of its own points alone, which crosses the curves of its
-        // neighbours if its points lie among theirs. A note without points has no portamento
-        // drawn, as in UTAU, but its vibrato.
+        // neighbours if its points lie among theirs. The portamento runs from the first point
+        // to the last point only, and the vibrato within the note. A note without points has
+        // no portamento drawn, as in UTAU, but its vibrato.
         for (int i = std::max(0, begin - 1); i < last; ++i) {
             const auto &entry = timeline->note(i);
             if (entry.rest) {
                 continue;
             }
-            const bool bent = !notes.at(i - first).portamento.isEmpty();
             const kit::PitchCurve curve(notes, i - first, timeline->tempoMap().tempo(i));
-            const auto [start, stop] = curve.ownSpan();
-            const double from = std::max(start, left - double(entry.start) - step);
-            const double to = std::min(stop, right - double(entry.start) + step);
-            if (from >= to) {
-                continue;
-            }
-
+            const double low = left - double(entry.start) - step;
+            const double high = right - double(entry.start) + step;
             const auto pointAt = [&](double tick, double cents) {
                 return QPointF(time.toX(double(entry.start) + tick),
                                keys.toY(entry.key + 0.5 + cents / 100));
             };
-            QPolygonF portamento;
+            // Visits the ticks from from to to, both included, step apart
+            const auto sample = [step](double from, double to, const auto &visit) {
+                for (double tick = from;; tick = std::min(tick + step, to)) {
+                    visit(tick);
+                    if (tick >= to) {
+                        break;
+                    }
+                }
+            };
+
             QList<QPolygonF> vibrato;
             bool vibrating = false;
-            for (double tick = from;; tick = std::min(tick + step, to)) {
-                portamento.push_back(pointAt(tick, curve.ownPortamentoAt(tick)));
-                const double v = curve.ownVibratoAt(tick);
-                if (v != 0) {
-                    if (!vibrating) {
-                        vibrato.push_back({});
+            if (const double from = std::max(0.0, low), to = std::min(double(entry.length), high);
+                from < to) {
+                sample(from, to, [&](double tick) {
+                    const double v = curve.ownVibratoAt(tick);
+                    if (v != 0) {
+                        if (!vibrating) {
+                            vibrato.push_back({});
+                        }
+                        vibrato.last().push_back(pointAt(tick, v));
                     }
-                    vibrato.last().push_back(pointAt(tick, v));
-                }
-                vibrating = v != 0;
-                if (tick >= to) {
-                    break;
-                }
+                    vibrating = v != 0;
+                });
             }
             painter.setPen(vibratoPen);
             for (const auto &run : std::as_const(vibrato)) {
                 painter.drawPolyline(run);
             }
-            if (bent) {
+
+            if (notes.at(i - first).portamento.isEmpty()) {
+                continue;
+            }
+            const auto [firstPoint, lastPoint] = curve.pointSpan();
+            if (const double from = std::max(firstPoint, low), to = std::min(lastPoint, high);
+                from < to) {
+                QPolygonF portamento;
+                sample(from, to, [&](double tick) {
+                    portamento.push_back(pointAt(tick, curve.ownPortamentoAt(tick)));
+                });
                 painter.setPen(portamentoPen);
                 painter.drawPolyline(portamento);
             }

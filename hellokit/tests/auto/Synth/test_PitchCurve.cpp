@@ -287,6 +287,10 @@ private Q_SLOTS:
 
         const PitchCurve next(notes, 1, 120);
         QCOMPARE(next.ownSpan(), (std::pair{-576.0, 672.0}));
+        QCOMPARE(next.pointSpan(), (std::pair{-576.0, 672.0}));
+        second.portamento = {point(100, 0), point(200, 0)};
+        QCOMPARE(PitchCurve({first, second}, 1, 120).pointSpan(), (std::pair{96.0, 192.0}));
+        QCOMPARE(PitchCurve({first, second}, 1, 120).ownSpan(), (std::pair{0.0, 480.0}));
         QCOMPARE(next.ownPortamentoAt(-1000), -200.0);
         QVERIFY(next.vibratoAt(-100) != 0);
         QCOMPARE(next.ownVibratoAt(-100), 0.0);
