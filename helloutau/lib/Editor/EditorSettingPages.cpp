@@ -150,7 +150,7 @@ namespace hello::daw {
         form->addRow(note(tr("A project renders with these engines, not with those it names.")));
 
         m_playbackMode = new QComboBox();
-        m_playbackMode->addItem(tr("Classic prerender, by temp.bat in a console as UTAU does"),
+        m_playbackMode->addItem(tr("Classic prerender, in an external console as UTAU does"),
                                 AppSettings::Prerender);
         m_playbackMode->addItem(tr("Threaded prerender, rendered by several threads"),
                                 AppSettings::ThreadedPrerender);
@@ -158,9 +158,10 @@ namespace hello::daw {
                                 AppSettings::Realtime);
         m_playbackMode->setCurrentIndex(m_playbackMode->findData(m_settings.playbackMode()));
         form->addRow(tr("&Playback:"), m_playbackMode);
-        form->addRow(note(tr("Realtime playback joins the notes as wavtool.exe does, whichever "
-                             "wavtool is chosen. Rendering a whole track uses temp.bat in the "
-                             "classic mode and several threads otherwise.")));
+        form->addRow(note(tr("Realtime playback joins the notes by the rules of the external "
+                             "wavtool and does not run the wavtool chosen above. Rendering a "
+                             "whole track uses an external console in the classic mode and "
+                             "several threads otherwise.")));
 
         // Zero stands for one thread per hardware thread.
         m_threads = new QSpinBox();
