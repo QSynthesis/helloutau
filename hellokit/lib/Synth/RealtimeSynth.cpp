@@ -70,18 +70,17 @@ namespace hello::kit {
         qint64 position = 0;
 
         std::map<fs::path, Fragment> fragments;
+        // The fragment of each step, null for a silent step. The queries under the lock go
+        // through it, because the comparison of paths in fragments takes long enough to keep
+        // the main thread waiting for the lock while the workers look for the next step.
+        std::vector<Fragment *> fragmentOf;
         DiagnosticList diagnostics;
         std::vector<std::thread> workers;
 
         // Whether step \a index sounds and still needs its fragment
         bool needs(int index) const {
-            const auto &step = steps[index];
-            if (step.silent || segments[index].silent) {
-                return false;
-            }
-            const auto found = fragments.find(step.cacheFile);
-            return found == fragments.end() || found->second.state == Waiting ||
-                   found->second.state == Running;
+            const auto fragment = fragmentOf[size_t(index)];
+            return fragment && (fragment->state == Waiting || fragment->state == Running);
         }
 
         bool ready(qint64 first, qint64 count) const {
@@ -100,12 +99,8 @@ namespace hello::kit {
             int best = -1;
             qint64 bestKey = 0;
             for (int i = 0; i < steps.size(); ++i) {
-                const auto &step = steps[i];
-                if (step.silent || segments[i].silent) {
-                    continue;
-                }
-                const auto found = fragments.find(step.cacheFile);
-                if (found == fragments.end() || found->second.state != Waiting) {
+                const auto fragment = fragmentOf[size_t(i)];
+                if (!fragment || fragment->state != Waiting) {
                     continue;
                 }
                 const auto &segment = segments[i];
@@ -132,7 +127,7 @@ namespace hello::kit {
                 }
                 const auto step = steps[index];
                 const auto directory = cacheDirectory;
-                fragments[step.cacheFile].state = Running;
+                fragmentOf[size_t(index)]->state = Running;
                 lock.unlock();
 
                 // The fragment of an earlier render is taken as it is, as the other runners do.
@@ -231,6 +226,13 @@ namespace hello::kit {
                 }
             }
             impl.fragments = std::move(kept);
+            impl.fragmentOf.assign(size_t(impl.steps.size()), nullptr);
+            for (int i = 0; i < impl.steps.size(); ++i) {
+                const auto &step = impl.steps[i];
+                if (!step.silent && !impl.segments[i].silent) {
+                    impl.fragmentOf[size_t(i)] = &impl.fragments.at(step.cacheFile);
+                }
+            }
         }
         impl.work.notify_all();
         impl.changed.notify_all();
@@ -292,9 +294,8 @@ namespace hello::kit {
             segments = impl.segments;
             samples.resize(size_t(segments.size()));
             for (int i = 0; i < segments.size(); ++i) {
-                const auto found = impl.fragments.find(impl.steps[i].cacheFile);
-                if (found != impl.fragments.end()) {
-                    samples[size_t(i)] = found->second.samples;
+                if (const auto fragment = impl.fragmentOf[size_t(i)]) {
+                    samples[size_t(i)] = fragment->samples;
                 }
             }
         }
@@ -327,11 +328,9 @@ namespace hello::kit {
             if (step.noteIndex >= states.size()) {
                 states.resize(step.noteIndex + 1, Silent);
             }
-            if (step.silent || impl.segments[i].silent) {
-                continue;
+            if (const auto fragment = impl.fragmentOf[size_t(i)]) {
+                states[step.noteIndex] = fragment->state;
             }
-            const auto found = impl.fragments.find(step.cacheFile);
-            states[step.noteIndex] = found != impl.fragments.end() ? found->second.state : Waiting;
         }
         return states;
     }
