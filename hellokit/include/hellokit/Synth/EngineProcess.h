@@ -2,6 +2,7 @@
 #define HELLOKIT_SYNTH_ENGINEPROCESS_H
 
 #include <filesystem>
+#include <functional>
 
 #include <QtCore/QCoreApplication>
 #include <QtCore/QString>
@@ -31,6 +32,10 @@ namespace hello::kit {
 
         /// Whether the engine was killed because it exceeded the time limit.
         bool timedOut = false;
+
+        /// Whether the script was killed, with the processes it started, because the caller
+        /// cancelled it.
+        bool cancelled = false;
 
         /// All output of the engine on both streams, for the diagnostic on failure.
         QString output;
@@ -90,6 +95,10 @@ namespace hello::kit {
         /// termination are handled in one place, and it takes a path rather than text so that
         /// no caller can pass an ad hoc command.
         ///
+        /// \a cancelled, if given, is queried about every 100 milliseconds while the script
+        /// runs. Once it returns true, the script and every process it started are killed,
+        /// and \c EngineRun::cancelled is set. The time limit kills them all as well.
+        ///
         /// \note The visible console matches UTAU behavior and is intentional: the output of
         ///       the script is meant to be read by the user. Nothing is captured, so
         ///       \c EngineRun::output is empty.
@@ -98,7 +107,8 @@ namespace hello::kit {
         ///          shell script, so a lyric or a flags string written into it unescaped appends
         ///          commands. See \c ClassicSynthRunner, the only caller.
         virtual EngineRun runScript(const std::filesystem::path &script,
-                                    DiagnosticList &diagnostics) const;
+                                    DiagnosticList &diagnostics,
+                                    const std::function<bool()> &cancelled = {}) const;
     };
 
 }

@@ -2,9 +2,15 @@
 
 #ifdef _WIN32
 #  include <QtCore/qt_windows.h>
+#  include <tlhelp32.h>
+#else
+#  include <signal.h>
 #endif
 
+#include <algorithm>
+#include <chrono>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <QtCore/QCoreApplication>
@@ -19,6 +25,53 @@ namespace hello::kit {
 
         void fail(DiagnosticList &diagnostics, const QString &message) {
             diagnostics.push_back({DiagnosticSeverity::Error, message});
+        }
+
+        // The interval in milliseconds at which a running script is checked for cancellation
+        constexpr int ScriptPollInterval = 100;
+
+        // Kills the script of process and the engines it started, which a kill of the script
+        // alone would leave running. On Windows these are the descendants of the command
+        // processor, found by the process ID of the parent that Windows records for each
+        // process and keeps after the parent ends. Elsewhere they are the process group of the
+        // script.
+        void killTree(stdc::Popen &process) {
+#ifdef _WIN32
+            const auto root = DWORD(process.pid());
+            // The command processor first, so that it starts nothing more
+            process.kill();
+            process.wait();
+            const auto snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+            if (snapshot == INVALID_HANDLE_VALUE) {
+                return;
+            }
+            std::vector<std::pair<DWORD, DWORD>> processes;
+            PROCESSENTRY32W entry{};
+            entry.dwSize = sizeof(entry);
+            for (BOOL found = Process32FirstW(snapshot, &entry); found;
+                 found = Process32NextW(snapshot, &entry)) {
+                processes.push_back({entry.th32ProcessID, entry.th32ParentProcessID});
+            }
+            CloseHandle(snapshot);
+            std::vector<DWORD> tree{root};
+            for (size_t i = 0; i < tree.size(); ++i) {
+                for (const auto &[id, parent] : processes) {
+                    if (parent == tree[i] &&
+                        std::find(tree.begin(), tree.end(), id) == tree.end()) {
+                        tree.push_back(id);
+                    }
+                }
+            }
+            for (size_t i = 1; i < tree.size(); ++i) {
+                if (const auto handle = OpenProcess(PROCESS_TERMINATE, FALSE, tree[i])) {
+                    TerminateProcess(handle, 1);
+                    CloseHandle(handle);
+                }
+            }
+#else
+            ::kill(-pid_t(process.pid()), SIGKILL);
+            process.wait();
+#endif
         }
 
         QString displayed(const std::filesystem::path &path) {
@@ -106,7 +159,8 @@ namespace hello::kit {
     }
 
     EngineRun EngineProcess::runScript(const std::filesystem::path &script,
-                                       DiagnosticList &diagnostics) const {
+                                       DiagnosticList &diagnostics,
+                                       const std::function<bool()> &cancelled) const {
         EngineRun result;
 
         stdc::Popen process;
@@ -126,6 +180,9 @@ namespace hello::kit {
         info.dwFlags = STARTF_USESHOWWINDOW;
         info.wShowWindow = SW_SHOWNORMAL;
         process.startupInfo(info);
+#else
+        // A process group of its own, which killTree() kills with the engines in it
+        process.processGroup(0);
 #endif
 
         if (!process.start()) {
@@ -135,14 +192,22 @@ namespace hello::kit {
         }
         result.started = true;
 
-        if (!process.wait(timeout)) {
-            process.kill();
-            process.wait();
-            result.timedOut = true;
-            fail(diagnostics, tr("The rendering script did not finish within %1 seconds and was "
-                                 "stopped.")
-                                  .arg(timeout / 1000));
-            return result;
+        const auto deadline =
+            std::chrono::steady_clock::now() + std::chrono::milliseconds(std::max(0, timeout));
+        while (!process.wait(ScriptPollInterval)) {
+            if (cancelled && cancelled()) {
+                killTree(process);
+                result.cancelled = true;
+                return result;
+            }
+            if (timeout >= 0 && std::chrono::steady_clock::now() >= deadline) {
+                killTree(process);
+                result.timedOut = true;
+                fail(diagnostics, tr("The rendering script did not finish within %1 seconds and "
+                                     "was stopped.")
+                                      .arg(timeout / 1000));
+                return result;
+            }
         }
 
         result.exitCode = process.returnCode().value_or(-1);

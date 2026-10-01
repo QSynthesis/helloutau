@@ -3,13 +3,18 @@
 #  include <io.h>
 #endif
 
+#include <chrono>
 #include <cstdio>
 #include <cstring>
+#include <fstream>
 #include <string>
+#include <thread>
 
 #include <QtCore/QCoreApplication>
+#include <QtCore/QElapsedTimer>
 #include <QtCore/QFile>
 #include <QtCore/QStringList>
+#include <QtCore/QTemporaryDir>
 #include <QtTest/QTest>
 
 #include <hellokit/Synth/EngineProcess.h>
@@ -27,6 +32,9 @@ namespace {
     /// The argument that makes it fail, for the exit code case.
     constexpr char failWith[] = "--fail-with";
 
+    /// The argument that makes it write the first file that follows at once and the second a
+    /// second later, for the case of an engine started by a script.
+    constexpr char writeLater[] = "--write-later";
 }
 
 class test_EngineProcess : public QObject {
@@ -133,6 +141,52 @@ private Q_SLOTS:
         QVERIFY(!result.succeeded());
         QVERIFY(hasError(diagnostics));
     }
+
+    // A cancelled script ends at once with the engine it started, which would otherwise write
+    // its second file a second later. A kill of the script alone leaves the engine running, as
+    // Popen.kill() of Python does. The script is cancelled once the engine runs, which writes
+    // its first file. The console of the script shows briefly.
+    void a_cancelled_script_ends_with_its_engines() {
+        QTemporaryDir dir;
+        const auto started = dir.filePath(QStringLiteral("started"));
+        const auto marker = dir.filePath(QStringLiteral("written"));
+#ifdef _WIN32
+        const auto script = dir.filePath(QStringLiteral("temp.bat"));
+#else
+        const auto script = dir.filePath(QStringLiteral("temp.sh"));
+#endif
+        {
+            QFile file(script);
+            QVERIFY(file.open(QIODevice::WriteOnly));
+            file.write(QStringLiteral("\"%1\" %2 \"%3\" \"%4\"\n")
+                           .arg(QString::fromStdU16String(self().u16string()),
+                                QLatin1String(writeLater), started, marker)
+                           .toUtf8());
+        }
+        QFile::setPermissions(script, QFile::permissions(script) | QFile::ExeOwner);
+
+        // Cancelled once the engine runs, or after five seconds without it
+        QElapsedTimer elapsed;
+        elapsed.start();
+        qint64 cancelledAt = -1;
+        EngineProcess engine;
+        DiagnosticList diagnostics;
+        const auto result = engine.runScript(
+            std::filesystem::path(script.toStdU16String()), diagnostics,
+            [&elapsed, &cancelledAt, &started] {
+                if (cancelledAt < 0 && (QFile::exists(started) || elapsed.elapsed() > 5000)) {
+                    cancelledAt = elapsed.elapsed();
+                }
+                return cancelledAt >= 0;
+            });
+        QVERIFY(QFile::exists(started));
+        QVERIFY(result.started);
+        QVERIFY(result.cancelled);
+        QVERIFY2(elapsed.elapsed() - cancelledAt < 500,
+                 qPrintable(QString::number(elapsed.elapsed() - cancelledAt)));
+        QTest::qWait(1500);
+        QVERIFY(!QFile::exists(marker));
+    }
 };
 
 int main(int argc, char *argv[]) {
@@ -155,6 +209,12 @@ int main(int argc, char *argv[]) {
         }
         if (mode == failWith) {
             return argc >= 3 ? std::atoi(argv[2]) : 1;
+        }
+        if (mode == writeLater && argc >= 4) {
+            std::ofstream(argv[2]).put('x');
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+            std::ofstream(argv[3]).put('x');
+            return 0;
         }
         if (mode == sleepForever) {
             for (;;) {

@@ -86,8 +86,8 @@ namespace hello::daw {
         }
 
         // The playback that renders report to, read and written on the main thread only, and
-        // null once the playback is gone. A render by script runs on until the script ends,
-        // which the playback does not wait for when its window closes.
+        // null once the playback is gone. A cancelled render ends on its worker thread after
+        // the playback, which does not wait for it when its window closes.
         struct Recipient {
             Playback *playback = nullptr;
         };
@@ -519,8 +519,8 @@ namespace hello::daw {
             setState(Rendering);
         }
 
-        // Whether a render cancelled before has yet to end, as a script does, which runs in its
-        // console until it ends or its window is closed.
+        // Whether a render cancelled before has yet to end: the engine calls under way, or a
+        // script, which ends within moments with the engines it started.
         bool rendersStill() {
             workers.removeAll(nullptr);
             return std::any_of(
@@ -617,7 +617,7 @@ namespace hello::daw {
         impl.endPreview();
         impl.cancelRender();
         impl.stopPlanning();
-        // The workers are not waited for: a script runs until it ends or its window is closed.
+        // The workers are not waited for. A cancelled render ends on its own within moments.
         impl.recipient->playback = nullptr;
     }
 

@@ -288,7 +288,12 @@ namespace hello::kit {
             int(std::min<qint64>(std::numeric_limits<int>::max(),
                                  qint64(engine->timeout) * 2 * qint64(plan.steps().size())));
 
-        const auto run = engine->runScript(scriptPath, diagnostics);
+        const auto run = engine->runScript(
+            scriptPath, diagnostics, [observer] { return observer && observer->cancelled(); });
+        if (run.cancelled) {
+            outcome.cancelled = true;
+            return outcome;
+        }
 
         // A single script, so progress is reported as one step rather than one per note.
         if (observer) {

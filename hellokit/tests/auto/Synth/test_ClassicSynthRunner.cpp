@@ -73,7 +73,8 @@ private:
         explicit StandIn(int *timeout) : m_timeout(timeout) {
         }
 
-        EngineRun runScript(const std::filesystem::path &, DiagnosticList &) const override {
+        EngineRun runScript(const std::filesystem::path &, DiagnosticList &,
+                            const std::function<bool()> &) const override {
             *m_timeout = timeout;
             EngineRun run;
             run.started = true;

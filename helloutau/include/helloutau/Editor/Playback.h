@@ -27,10 +27,11 @@ namespace hello::daw {
     /// rendered.
     ///
     /// A render runs on a worker thread with the engines of the settings, never those the
-    /// project names, by \c temp.bat in a console as UTAU renders; it can be cancelled, though
-    /// the script runs on until it ends or its window is closed. The track file is then read,
-    /// converted to the sample rate of the output device, and played. position() maps what is
-    /// heard to the track, see kit::SynthPlan::startTime().
+    /// project names, by \c temp.bat in a console as UTAU renders, or by several threads.
+    /// Cancelling it kills the script with the engines it started, see
+    /// kit::EngineProcess::runScript(), or lets the running engine calls end. The track file is
+    /// then read, converted to the sample rate of the output device, and played. position()
+    /// maps what is heard to the track, see kit::SynthPlan::startTime().
     ///
     /// Every plan is made on a worker thread from a snapshot of the document, because a plan of
     /// a track of many notes takes long enough to stall the window: that of a render before it
