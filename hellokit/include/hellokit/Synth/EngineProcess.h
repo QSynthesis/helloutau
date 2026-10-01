@@ -58,7 +58,7 @@ namespace hello::kit {
     ///          them without confirmation lets the file choose which program runs. Storing them
     ///          is permitted. Executing them is not.
     ///
-    /// See AGENTS.md for both rules and the reason they are separate rules.
+    /// See CLAUDE.md for both rules and the reason they are separate rules.
     class HELLOKIT_SYNTH_EXPORT EngineProcess {
         Q_DECLARE_TR_FUNCTIONS(hello::kit::EngineProcess)
     public:

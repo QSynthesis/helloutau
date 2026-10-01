@@ -1,6 +1,6 @@
 # 合成
 
-本文规定 `HelloKitSynth` 的结构。开始工作前应先阅读 [`note.md`](note.md)（产品形态）和 [`Roadmap.md`](Roadmap.md)（阶段与验收标准），安全底线见 [`../AGENTS.md`](../AGENTS.md)。
+本文规定 `HelloKitSynth` 的结构。开始工作前应先阅读 [`note.md`](note.md)（产品形态）和 [`Roadmap.md`](Roadmap.md)（阶段与验收标准），安全底线见 [`../CLAUDE.md`](../CLAUDE.md)。
 
 ## 现有组件
 
@@ -37,7 +37,7 @@ SynthRunner                 纯虚，render(plan, engines, observer, diagnostics
 
 **`SynthObserver` 报告进度并查询是否取消。** 它是接口而非回调函数，因为实时策略需要查询的不止「是否已取消」。它由工作线程调用，线程安全由实现方负责。这一点与 `InterchangeSelector` 理由相同：`hellokit` 不链接 QtWidgets，界面侧的事务不属于本层。
 
-**引擎路径始终由宿主提供，不从工程中读取。** `Tool1`、`Tool2` 按原样保存，但不直接执行。这一规则对三种策略均成立，见 `AGENTS.md`。
+**引擎路径始终由宿主提供，不从工程中读取。** `Tool1`、`Tool2` 按原样保存，但不直接执行。这一规则对三种策略均成立，见 `CLAUDE.md`。
 
 ## 一、经典（渲染脚本）
 

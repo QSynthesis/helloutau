@@ -49,7 +49,7 @@ namespace hello::daw {
 
         /// Engines used for rendering and written to an exported UST that specifies no engine.
         /// The engines specified by a project are never used without confirmation by the user,
-        /// see AGENTS.md.
+        /// see CLAUDE.md.
         QString resampler() const;
         void setResampler(const QString &path);
         QString wavtool() const;

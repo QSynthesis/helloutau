@@ -17,7 +17,7 @@ namespace hello::kit {
     /// \warning Always the engines configured by the host, never those specified by the
     ///          project. \c Tool1 and \c Tool2 are paths chosen by a file, and executing them
     ///          without confirmation lets the file choose which program runs.
-    /// \sa AGENTS.md
+    /// \sa CLAUDE.md
     struct SynthEngines {
         std::filesystem::path resampler;
         std::filesystem::path wavtool;

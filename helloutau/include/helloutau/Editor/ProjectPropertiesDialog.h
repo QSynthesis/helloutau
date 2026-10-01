@@ -19,7 +19,7 @@ namespace hello::daw {
     /// track, the two engines, and Mode2.
     ///
     /// The engines are only recorded in the project: rendering always uses the engines of the
-    /// settings, as the dialog states, see the security section of AGENTS.md.
+    /// settings, as the dialog states, see the security section of CLAUDE.md.
     class HELLOUTAU_EDITOR_EXPORT ProjectPropertiesDialog : public QDialog {
         Q_OBJECT
     public:

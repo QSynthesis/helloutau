@@ -28,7 +28,7 @@ QSynthesis 是同一作者已停止维护的前作，副本位于 `.cache/QSynth
 | VSQ / SynthV / presamp / frq 导入 | **沿用，但靠后** | 属于兼容周边，不影响主干 |
 | **多轨** | **暂不沿用，见下文** | UST 为单轨（`Tracks=1`） |
 | `MiniSystem` 的文件监视与路径树 | **不沿用** | 文件监视由 `FileSystemWatcher` 和 `hello-fswatcher` 实现 |
-| 将编码问题推迟到界面层处理 | **不沿用** | 本仓库在 I/O 边界解决编码问题，见 `AGENTS.md` |
+| 将编码问题推迟到界面层处理 | **不沿用** | 本仓库在 I/O 边界解决编码问题，见 `CLAUDE.md` |
 
 ### 多轨设计
 
@@ -61,7 +61,7 @@ MIDI 导入属于「兼容周边」类别，但优先级被提至最高，并且
 
 仍不涉及界面。本阶段完成后 HelloUtau 能够输出音频。
 
-- `HelloKitSynth`：用 `utau::Synth::calc` 计算参数，用 `stdc::Popen` 启动引擎，**以参数数组传递，不拼接命令行**，见 `AGENTS.md` 的安全底线。
+- `HelloKitSynth`：用 `utau::Synth::calc` 计算参数，用 `stdc::Popen` 启动引擎，**以参数数组传递，不拼接命令行**，见 `CLAUDE.md` 的安全底线。
 - 多线程调度，结构参考 QSynthesis 的 `Frontend/Process/`。
 - 缓存管理，`CacheDir` 随工程而定（这是 UTAU 的实际行为，已经实测）。
 
@@ -108,8 +108,8 @@ MIDI 导入属于「兼容周边」类别，但优先级被提至最高，并且
 
 以下三项不属于任何单一阶段，每个阶段都必须兼顾：
 
-**编码。** 这是本仓库最容易出错的部分。规则只有一条，见 `AGENTS.md`：`std::string` 一律为 UTF-8，原始字节不得离开 I/O 边界层。
+**编码。** 这是本仓库最容易出错的部分。规则只有一条，见 `CLAUDE.md`：`std::string` 一律为 UTF-8，原始字节不得离开 I/O 边界层。
 
-**安全。** 官方 UTAU 的两个 CVE 对应两条安全底线，见 `AGENTS.md`。畸形输入必须有专门的测试，没有测试即视为未实现。
+**安全。** 官方 UTAU 的两个 CVE 对应两条安全底线，见 `CLAUDE.md`。畸形输入必须有专门的测试，没有测试即视为未实现。
 
 **可测试性。** 核心逻辑位于不依赖 QtWidgets 的层中，应用侧逻辑位于库中而非可执行文件中。这是模块划分方式的依据。

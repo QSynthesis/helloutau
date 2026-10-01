@@ -306,7 +306,7 @@ namespace hello::kit {
         /// \warning Untrusted. Stored verbatim, because per-project engine configuration is
         ///          common UTAU practice and discarding it would delete user settings, but never
         ///          executed without explicit user consent. See the security section of
-        ///          AGENTS.md.
+        ///          CLAUDE.md.
         QString patch;
 
         QString region;

@@ -75,7 +75,7 @@ namespace hello::kit {
         /// \warning Untrusted, like \c Note::patch. Stored verbatim, because per-project engine
         ///          configuration is common UTAU practice and discarding it would delete user
         ///          settings. What is forbidden is executing them without confirmation, not
-        ///          storing them. See the security section of AGENTS.md.
+        ///          storing them. See the security section of CLAUDE.md.
         QString wavtool;
         QString resampler;
 

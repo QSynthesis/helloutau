@@ -73,7 +73,7 @@
 - 文件内容未变，或所有段落都省略，视为取消，不产生撤销步骤。
 - `ustversion` 省略时按 1.20 写出，与实测一致。`notes` 只要出现即传入全部音符（规格「指定した場合」，同 stdutau）。
 - 临时文件每次运行唯一，位于系统临时目录下的一个子目录，读回后删除；名称同 UTAU 为 `tmpXXXX.tmp`。
-- `execute` 是不可信路径：拒绝绝对路径、`..` 与解析后落在插件文件夹以外的路径；临时文件路径只作为参数数组的一项传入，不拼接命令行（AGENTS.md）。工作目录为插件文件夹。
+- `execute` 是不可信路径：拒绝绝对路径、`..` 与解析后落在插件文件夹以外的路径；临时文件路径只作为参数数组的一项传入，不拼接命令行（CLAUDE.md）。工作目录为插件文件夹。
 - 启动：Windows 上以 `CreateProcess` 挂起启动、放入作业对象后再恢复，插件启动的进程都在作业中，「取消」以 `TerminateJobObject` 结束整棵进程树；`shell=use` 以 `ShellExecuteEx`，其进程同样放入作业。控制台窗口可见，同 UTAU。批处理（`.bat`、`.cmd`）以 `cmd.exe /d /s /c ""程序" "文件""` 启动：直接交给 `CreateProcess` 时 Windows 以 `cmd /c` 执行整行，会去除首尾引号而破坏路径；路径含 `%` 时拒绝运行，因为引号内 cmd 仍会展开变量。其他平台以 `QProcess` 在独立的进程组中启动，「取消」结束整个进程组。
 - 插件的用户目录为应用数据目录下的 `UtauPlugins`（Windows 上为 `%APPDATA%\OpenVPI\HelloUtau\UtauPlugins`，Qt 依次附加组织名与应用名），与原生插件的目录分开。插件在菜单第一次打开、「刷新」与设置中的 UTAU 文件夹改变后重新发现。
 - 首次运行的确认记在插件设置 `plugins.json` 中本插件的值（`AppLoader::pluginValue()`）：`userData/org.helloutau.classicpluginhost/approved` 为数组，每项是插件文件夹 `folder`、程序在插件文件夹中的相对路径 `relativePath`（仅供阅读）与程序内容的 SHA-256 `sha256`；仅比较 `sha256`，程序改变后再次询问。
@@ -95,7 +95,7 @@
 ## 作者的决定（2026-09-30）
 
 - stdutau 中插件一侧原有的读写不用于宿主（后改为插件与宿主共用 `PluginInput` / `PluginResult`，见实施步骤 2）。
-- **`shell=use`**：Windows 上按照 UTAU 的做法使用 `ShellExecuteEx`。处理程序不返回进程句柄时（html、hta 可能交给已打开的程序）无法等待，提示用户在插件完成后手动确认。AGENTS.md 中的「尚未确定」随之解决。
+- **`shell=use`**：Windows 上按照 UTAU 的做法使用 `ShellExecuteEx`。处理程序不返回进程句柄时（html、hta 可能交给已打开的程序）无法等待，提示用户在插件完成后手动确认。CLAUDE.md 中的「尚未确定」随之解决。
 - **非 Windows 平台上的 `.exe` 插件**：第一版在菜单中显示但不可用，并说明原因。Wine 留待以后决定。
 - **发现**：设置中 UTAU 文件夹下的 `plugins`（一层，同 UTAU），另加 HelloUtau 自己的用户目录（与原生插件的目录分开）。启动时与「刷新」时重新扫描。
 - **取消**：「取消」结束插件的整个进程树并丢弃结果，不设超时。

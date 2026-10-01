@@ -26,7 +26,7 @@
 
 stdcorelib.plugin 的交接记录（其仓库 `.cache/codex/2026-08-21-1722-stdcorelib-plugin-handoff.md`）明确不沿用 ExtensionSystem 的对象池（无类型的全局服务定位器）、Aggregation、`OptionsParser` 与界面。
 
-**结论：采用 stdcorelib.plugin。** 它与「只提供注册接口」的设想一致，许可证与分层都与本仓库相容，符合 AGENTS.md「基础设施优先使用 stdcorelib」。代价是 API 可能随迁移反馈调整，HelloUtau 将是它的首个真实使用者之一；与 stdutau、substate 相同，发现不足时直接修改该库。
+**结论：采用 stdcorelib.plugin。** 它与「只提供注册接口」的设想一致，许可证与分层都与本仓库相容，符合 CLAUDE.md「基础设施优先使用 stdcorelib」。代价是 API 可能随迁移反馈调整，HelloUtau 将是它的首个真实使用者之一；与 stdutau、substate 相同，发现不足时直接修改该库。
 
 ### stdcorelib.plugin 提供的部分
 
@@ -142,8 +142,8 @@ stdcorelib.plugin 的生命周期是同步的，不依赖事件循环。HelloUta
 
 ## 实施步骤
 
-1. ~~**依赖**~~：stdcorelib.plugin 与 stdcorelib 一样单独构建安装（动态库），`third-party/Dependencies.cmake` 以 `-Dstdcorelib-plugin_DIR=` 引入，作为私有依赖，Windows 上其 DLL 复制到运行输出目录。README、AGENTS.md 与 Status.md 已补充。
-2. ~~**note.md**~~：已按作者的决定改写插件一节（一种原生插件、五个扩展点、UTAU 插件由一个原生插件支持），AGENTS.md、Roadmap.md、Status.md、Interchange.md、FrequencyTables.md 的相应说法一并更新。
+1. ~~**依赖**~~：stdcorelib.plugin 与 stdcorelib 一样单独构建安装（动态库），`third-party/Dependencies.cmake` 以 `-Dstdcorelib-plugin_DIR=` 引入，作为私有依赖，Windows 上其 DLL 复制到运行输出目录。README、CLAUDE.md 与 Status.md 已补充。
+2. ~~**note.md**~~：已按作者的决定改写插件一节（一种原生插件、五个扩展点、UTAU 插件由一个原生插件支持），CLAUDE.md、Roadmap.md、Status.md、Interchange.md、FrequencyTables.md 的相应说法一并更新。
 3. ~~**加载器与 Core 插件**~~：`AppLoader`、Core 插件、`helloutau_add_native_plugin()`，程序只剩加载器。`test_AppLoader` 以测试插件覆盖参数、Core 插件的必需与三种失败、生命周期，并载入真正的 Core 插件打开窗口。
    - ~~**插件作为库与动作的扩展**~~：插件导出目标、安装头文件；`ActionContribution` / `ActionRegistration`；编辑器的清单拆为两份，经 `BuiltinActions` 由 Core 登记；TestAction 测试插件。见「编辑界面扩展：动作与命令」。
 4. ~~**试点：频率表格式与 FrequencyEditor 插件**~~：

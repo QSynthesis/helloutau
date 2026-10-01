@@ -19,7 +19,7 @@ namespace hello::daw {
     /// The file is named \c tmpXXXX.tmp as in UTAU, is located in a dedicated directory under
     /// the system temporary directory, and is removed with the runner. The program starts in
     /// the plugin folder with the file path as its only argument, never through a shell command
-    /// line (AGENTS.md). With \c shell=use , the program is started by the handler of its file
+    /// line (CLAUDE.md). With \c shell=use , the program is started by the handler of its file
     /// type, as with \c ShellExecuteEx .
     ///
     /// cancel() terminates the program and every process started by it. There is no time

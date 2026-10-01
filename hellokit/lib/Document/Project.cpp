@@ -48,7 +48,7 @@ namespace hello::kit {
 
             // Stored verbatim. Executing them is a separate, guarded decision, whereas discarding
             // them here would delete a deliberate user setting. See the security section of
-            // AGENTS.md.
+            // CLAUDE.md.
             settings.wavtool = JsonFields::readString(object, "wavtool");
             settings.resampler = JsonFields::readString(object, "resampler");
 
