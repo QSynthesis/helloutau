@@ -2,5 +2,6 @@
 # library, and the plugins that only tests load.
 
 add_subdirectory(ClassicPluginHost)
+add_subdirectory(Core)
 add_subdirectory(Interchange)
 add_subdirectory(TestAction)

@@ -83,14 +83,14 @@ namespace hello::daw {
             addEditorIcons(registry);
             // The shortcuts that the user assigned and the changes to the menus and tool bars,
             // each in a file of its own beside the settings
-            const auto keymapFile = KeymapFile::fileNameFor(settings->fileName());
+            keymapFile = KeymapFile::fileNameFor(settings->fileName());
             KeymapFile::read(registry, keymapFile);
-            const auto actionLayoutsFile = ActionLayoutsFile::fileNameFor(settings->fileName());
+            actionLayoutsFile = ActionLayoutsFile::fileNameFor(settings->fileName());
             ActionLayoutsFile::read(registry, actionLayoutsFile);
             themes = new ThemeManager(decl);
             themes->addSearchPath(QStringLiteral(":/helloutau/themes"));
             catalog = new SettingCatalog(decl);
-            addEditorSettingPages(catalog, *settings, registry, keymapFile, actionLayoutsFile);
+            addEditorSettingPages(catalog, *settings);
         }
 
         // The windows take the actions of a contribution as it comes, and the menus and
@@ -136,6 +136,9 @@ namespace hello::daw {
         std::unique_ptr<AppSettings> ownedSettings;
         AppSettings *settings;
         QAK::ActionRegistry *registry = nullptr;
+        // The files of the shortcuts and of the changes to the menus, beside the settings
+        QString keymapFile;
+        QString actionLayoutsFile;
         ThemeManager *themes = nullptr;
         SettingCatalog *catalog = nullptr;
         std::unique_ptr<kit::FrequencyFormatRegistry> frequencyFormats =
@@ -253,6 +256,16 @@ namespace hello::daw {
     SettingCatalog *Editor::settingCatalog() const {
         stdc_impl_t;
         return impl.catalog;
+    }
+
+    bool Editor::saveKeymap(QString *error) const {
+        stdc_impl_t;
+        return KeymapFile::write(impl.registry, impl.keymapFile, error);
+    }
+
+    bool Editor::saveActionLayouts(QString *error) const {
+        stdc_impl_t;
+        return ActionLayoutsFile::write(impl.registry, impl.actionLayoutsFile, error);
     }
 
     bool Editor::watchesDisk() const {

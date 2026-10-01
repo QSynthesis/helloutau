@@ -1,0 +1,18 @@
+#ifndef HELLOUTAU_CORE_COREPLUGINGLOBAL_H
+#define HELLOUTAU_CORE_COREPLUGINGLOBAL_H
+
+#include <QtCore/QtGlobal>
+
+#ifndef COREPLUGIN_EXPORT
+#  ifdef COREPLUGIN_STATIC
+#    define COREPLUGIN_EXPORT
+#  else
+#    ifdef COREPLUGIN_LIBRARY
+#      define COREPLUGIN_EXPORT Q_DECL_EXPORT
+#    else
+#      define COREPLUGIN_EXPORT Q_DECL_IMPORT
+#    endif
+#  endif
+#endif
+
+#endif // HELLOUTAU_CORE_COREPLUGINGLOBAL_H

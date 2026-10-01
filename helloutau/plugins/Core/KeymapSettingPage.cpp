@@ -1,4 +1,4 @@
-#include "KeymapSettingPage_p.h"
+#include "KeymapSettingPage.h"
 
 #include <functional>
 
@@ -20,8 +20,7 @@
 
 #include <QAKCore/actionregistry.h>
 
-#include "EditorSettingPages_p.h"
-#include "KeymapFile_p.h"
+#include <helloutau/Editor/Editor.h>
 
 namespace hello::daw {
 
@@ -53,10 +52,9 @@ namespace hello::daw {
 
     }
 
-    KeymapSettingPage::KeymapSettingPage(QAK::ActionRegistry *registry, const QString &fileName,
-                                         QObject *parent)
-        : SettingPage(QLatin1String(EditorSettingPageIds::keymap), parent), m_registry(registry),
-          m_fileName(fileName) {
+    KeymapSettingPage::KeymapSettingPage(Editor *editor, QObject *parent)
+        : SettingPage(QLatin1String(pageId), parent), m_editor(editor),
+          m_registry(editor->actionRegistry()) {
         setTitle(tr("Keymap"));
         setDescription(tr("The shortcuts of the commands."));
         setKeywords(
@@ -150,7 +148,7 @@ namespace hello::daw {
         }
         m_registry->setShortcutsFamily(family);
         m_registry->updateContext(QAK::AE_Keymap);
-        if (!KeymapFile::write(m_registry, m_fileName, error)) {
+        if (!m_editor->saveKeymap(error)) {
             return false;
         }
         updateItems();

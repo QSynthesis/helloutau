@@ -1,4 +1,4 @@
-#include "MenusSettingPage_p.h"
+#include "MenusSettingPage.h"
 
 #include <QtCore/QIdentityProxyModel>
 #include <QtWidgets/QDialog>
@@ -14,8 +14,7 @@
 #include <QAKCore/actionlayoutsmodel.h>
 #include <QAKCore/actionregistry.h>
 
-#include "EditorSettingPages_p.h"
-#include "ActionLayoutsFile_p.h"
+#include <helloutau/Editor/Editor.h>
 
 namespace hello::daw {
 
@@ -109,10 +108,9 @@ namespace hello::daw {
         QAK::ActionRegistry *m_registry;
     };
 
-    MenusSettingPage::MenusSettingPage(QAK::ActionRegistry *registry, const QString &fileName,
-                                       QObject *parent)
-        : SettingPage(QLatin1String(EditorSettingPageIds::menusAndToolbars), parent),
-          m_registry(registry), m_fileName(fileName) {
+    MenusSettingPage::MenusSettingPage(Editor *editor, QObject *parent)
+        : SettingPage(QLatin1String(pageId), parent), m_editor(editor),
+          m_registry(editor->actionRegistry()) {
         setTitle(tr("Menus and Toolbars"));
         setDescription(tr("The commands of the menus and the tool bars of the windows."));
         setKeywords({QStringLiteral("Menus and Toolbars"), QStringLiteral("menu"),
@@ -133,7 +131,7 @@ namespace hello::daw {
     bool MenusSettingPage::apply(QString *error) {
         m_registry->setLayoutChanges(m_registry->computeLayoutChanges(m_model->actionLayouts()));
         m_registry->updateContext(QAK::AE_Layouts);
-        if (!ActionLayoutsFile::write(m_registry, m_fileName, error)) {
+        if (!m_editor->saveActionLayouts(error)) {
             return false;
         }
         Q_EMIT modifiedChanged();

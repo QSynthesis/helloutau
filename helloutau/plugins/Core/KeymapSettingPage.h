@@ -1,5 +1,5 @@
-#ifndef HELLOUTAU_EDITOR_KEYMAPSETTINGPAGE_P_H
-#define HELLOUTAU_EDITOR_KEYMAPSETTINGPAGE_P_H
+#ifndef HELLOUTAU_CORE_KEYMAPSETTINGPAGE_H
+#define HELLOUTAU_CORE_KEYMAPSETTINGPAGE_H
 
 #include <QtCore/QHash>
 #include <QtCore/QPointer>
@@ -7,6 +7,8 @@
 #include <QtGui/QKeySequence>
 
 #include <helloutau/Widgets/SettingPage.h>
+
+#include <Core/CorePluginGlobal.h>
 
 class QKeySequenceEdit;
 class QLineEdit;
@@ -20,21 +22,25 @@ namespace QAK {
 
 namespace hello::daw {
 
+    class Editor;
+
     /// The shortcuts of the commands, as the keymap of the settings of JetBrains IDEs. See the
     /// keymap in the settings dialog in docs/Widgets.md.
     ///
     /// The tree lists the commands of each window under the menus that hold them, and the
     /// commands in no menu under Other. The page edits a copy of the shortcuts. apply() gives
-    /// them to the registry, updates every window and writes \c keymap.json, see KeymapFile.
+    /// them to the action registry of the editor, updates every window and writes them with
+    /// Editor::saveKeymap().
     ///
     /// A shortcut conflicts with the shortcut of another command of the same window. A command
     /// in no menu counts as a command of every window, since the window that runs it is not
     /// known from the layouts.
-    class KeymapSettingPage : public SettingPage {
+    class COREPLUGIN_EXPORT KeymapSettingPage : public SettingPage {
         Q_OBJECT
     public:
-        KeymapSettingPage(QAK::ActionRegistry *registry, const QString &fileName,
-                          QObject *parent = nullptr);
+        static constexpr char pageId[] = "core.Keymap";
+
+        explicit KeymapSettingPage(Editor *editor, QObject *parent = nullptr);
 
         bool isModified() const override;
         bool apply(QString *error) override;
@@ -68,8 +74,8 @@ namespace hello::daw {
         QWidget *createWidget() override;
 
     private:
+        Editor *m_editor;
         QAK::ActionRegistry *m_registry;
-        QString m_fileName;
 
         // The shortcuts as the page has them, by command
         QHash<QString, QList<QKeySequence>> m_shortcuts;
@@ -98,4 +104,4 @@ namespace hello::daw {
 
 }
 
-#endif // HELLOUTAU_EDITOR_KEYMAPSETTINGPAGE_P_H
+#endif // HELLOUTAU_CORE_KEYMAPSETTINGPAGE_H

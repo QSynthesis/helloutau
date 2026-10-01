@@ -10,7 +10,10 @@
 #include <QAKCore/actionregistry.h>
 #include <QAKWidgets/widgetactioncontext.h>
 
+#include <helloutau/Widgets/SettingPage.h>
+
 #include <helloutau/Editor/AppLoader.h>
+#include <helloutau/Editor/Editor.h>
 #include <helloutau/Editor/ProjectWindow.h>
 
 using namespace hello::daw;
@@ -61,6 +64,8 @@ private Q_SLOTS:
 
         const auto window = projectWindow();
         QVERIFY(window);
+        // The core plugin adds its pages to the settings, see test_CoreSettingPages.
+        QVERIFY(window->editor()->settingCatalog()->page(QStringLiteral("core.Keymap")));
         const auto action = window->actionContext()->action(HelloId);
         QVERIFY(action);
         QVERIFY(action->isEnabled());

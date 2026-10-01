@@ -14,6 +14,8 @@ helloutau_add_native_plugin(${PROJECT_NAME}
     QT_AUTOGEN
     SOURCES ${_src}
     LINKS HelloUtauEditor
+    LINKS_PRIVATE QActionKit::Widgets
     QT_LINKS Core Widgets
     INCLUDE_PRIVATE Internal
+    MACRO_PREFIX COREPLUGIN
 )

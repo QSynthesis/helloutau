@@ -60,8 +60,22 @@ namespace hello::daw {
         kit::FrequencyFormatRegistry &frequencyFormats() const;
 
         /// Returns the catalog of the pages of the settings dialog, including the pages of the
-        /// editor registered at start. See the settings dialog in docs/Widgets.md.
+        /// editor registered at start, whose ids are in EditorSettingPageIds. See the settings
+        /// dialog in docs/Widgets.md.
         SettingCatalog *settingCatalog() const;
+
+        /// Writes the shortcuts that actionRegistry() overrides to \c keymap.json beside the
+        /// settings, which the next editor reads at start. See the keymap in docs/Widgets.md.
+        ///
+        /// \return whether the file is written, with the reason in \a error otherwise
+        bool saveKeymap(QString *error) const;
+
+        /// Writes the changes of actionRegistry() to the default layouts of the menus and the
+        /// tool bars to \c actionLayouts.json beside the settings, which the next editor reads
+        /// at start. See the menus and tool bars in docs/Widgets.md.
+        ///
+        /// \return whether the file is written, with the reason in \a error otherwise
+        bool saveActionLayouts(QString *error) const;
 
         /// Whether a voice bank window opened after the change monitors the disk automatically:
         /// when a file changes, when the window is activated, and every minute. The default is

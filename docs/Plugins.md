@@ -104,6 +104,7 @@ macOS 的 bundle 中为 `HelloUtau.app/Contents/MacOS`（程序）与 `HelloUtau
   - `plugins.json`：严格为 stdcorelib.plugin `PluginSettings` 的格式：用户启用或停用的插件 `enabledPlugins` / `disabledPlugins`，以及各插件自己的值 `userData/<插件 ID>`。`AppLoader` 读写它，载入插件前把它交给 `PluginSystem` 的用户一级；插件经 `AppLoader::pluginValue(id, key)` / `setPluginValue()` 以相对于自己那一组的 `a/b/c` 键读写。
   - `AppLoader` 的 `--settings <目录>` 另指定两者所在的目录，测试用它。内部存储用 stdcorelib 的 JSON（值可就地修改，`SettingsJson`），公开接口用 `QJsonValue`，stdcorelib 仍是私有依赖。修改后等事件循环运行时重写整个文件（`SettingsFile`，同一轮循环的修改合为一次写），`AppSettings::sync()`、`AppLoader::syncSettings()` 与析构时立即写出未写的修改；多开时后写的覆盖先写的，以后再做独占。
   - 随安装提供的全局一份尚未实现。
+- **设置的「Keymap」与「Menus and Toolbars」页**（`core.Keymap`、`core.MenusAndToolbars`，作者 2026-10-01 同意）：由 Core 插件在创建 `Editor` 后经 `addCoreSettingPages()` 加入，位置见 [`Widgets.md`](Widgets.md)「页面的归属」。两页与该函数在插件根目录导出（`COREPLUGIN_EXPORT`），供 `tests/auto/plugins/Core` 测试，插件类仍在 `Internal` 中。
 - **设置的「Plugins」页**（`core.Plugins`，作者 2026-09-30 同意的方案）：由 Core 插件在创建 `Editor` 后加入其 `settingCatalog()`，排在 Rendering 之前（`plugins/Core/Internal/PluginSettingPage`），因为只有经加载器启动时才有这一页，测试中直接构造的 `Editor` 没有它。
   - 数据来自 `AppLoader::plugins()`：每个找到的插件一项 `PluginInfo`（ID、显示名、版本、库文件、依赖及是否可选、本次运行的状态「运行中 / 已停用 / 出错 / 未载入」、错误、元数据是否启用、本次是否启用），公开接口不含 stdcorelib 的类型。`errors()` 由它筛出。
   - 列表为「名称（勾选框）、版本、状态」三列，出错的插件在状态列带警告图标，提示为错误全文；选中一项时下方显示 ID、库文件、所依赖的插件与依赖它的插件（标出可选依赖）、错误。

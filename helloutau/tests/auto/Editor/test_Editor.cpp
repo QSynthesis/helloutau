@@ -29,11 +29,8 @@
 #include <QtWidgets/QTableWidget>
 #include <QtWidgets/QToolBar>
 #include <QtWidgets/QToolButton>
-#include <QtWidgets/QTreeView>
 #include <QtWidgets/QTreeWidget>
 #include <QtCore/QFile>
-#include <QtWidgets/QTreeWidgetItemIterator>
-#include <QtWidgets/QKeySequenceEdit>
 
 #include <hellokit/Edit/ProjectDocument.h>
 #include <hellokit/Edit/ProjectEdits.h>
@@ -835,177 +832,6 @@ private Q_SLOTS:
         palette->hide();
     }
 
-    // Menus and Toolbars edits the menus of the windows: an entry moved down, an entry removed,
-    // and an action added to a menu. The page applies the layouts to every window and writes
-    // actionLayouts.json beside the settings, which a new editor reads. Restore Defaults restores
-    // them.
-    void the_menus_are_edited() {
-        QTemporaryDir dir;
-        const auto settingsFile = dir.filePath(QStringLiteral("settings.json"));
-        auto e = std::make_unique<Editor>(std::make_unique<AppSettings>(settingsFile));
-        e->setWatchesDisk(false);
-        const auto window = e->newWindow();
-        const auto page = e->settingCatalog()->page(QStringLiteral("editor.MenusAndToolbars"));
-        QVERIFY(page);
-        QCOMPARE(page->parentPage()->id(), QStringLiteral("editor.AppearanceAndBehavior"));
-        const auto tree = page->widget()->findChild<QTreeView *>(QStringLiteral("layouts"));
-        QVERIFY(tree);
-        const auto model = tree->model();
-        QCOMPARE(model->index(0, 0).data().toString(), QStringLiteral("Project Window: Main Menu"));
-        const auto childNamed = [model](const QModelIndex &parent, const QString &text) {
-            for (int row = 0; row < model->rowCount(parent); ++row) {
-                if (model->index(row, 0, parent).data().toString() == text) {
-                    return model->index(row, 0, parent);
-                }
-            }
-            return QModelIndex();
-        };
-        const auto button = [page](const char *name) {
-            return page->widget()->findChild<QPushButton *>(QLatin1String(name));
-        };
-        const auto tools = [&] { return childNamed(model->index(0, 0), QStringLiteral("Tools")); };
-        QVERIFY(tools().isValid());
-
-        tree->setCurrentIndex(childNamed(tools(), QStringLiteral("Edit Voice Bank")));
-        QVERIFY(!button("moveUp")->isEnabled());
-        button("moveDown")->click();
-        QCOMPARE(model->index(1, 0, tools()).data().toString(), QStringLiteral("Edit Voice Bank"));
-        tree->setCurrentIndex(childNamed(tools(), QStringLiteral("Clear Render Cache")));
-        button("remove")->click();
-        QVERIFY(!childNamed(tools(), QStringLiteral("Clear Render Cache")).isValid());
-
-        tree->setCurrentIndex(tools());
-        QTimer::singleShot(0, [] {
-            const auto dialog = QApplication::activeModalWidget();
-            QVERIFY(dialog);
-            const auto list = dialog->findChild<QListWidget *>(QStringLiteral("actions"));
-            for (int i = 0; i < list->count(); ++i) {
-                if (list->item(i)->data(Qt::UserRole).toString() ==
-                    QStringLiteral("helloutau.playback.renderTrack")) {
-                    list->setCurrentRow(i);
-                }
-            }
-            dialog->findChild<QDialogButtonBox *>()->button(QDialogButtonBox::Ok)->click();
-        });
-        button("add")->click();
-        QVERIFY(childNamed(tools(), QStringLiteral("Render Track to WAV...")).isValid());
-        QVERIFY(page->isModified());
-
-        QString error;
-        QVERIFY(page->apply(&error));
-        QVERIFY(!page->isModified());
-        const auto texts = [](QWidget *w) {
-            QStringList list;
-            for (const auto action : actionNamed(w, QStringLiteral("&Tools"))->menu()->actions()) {
-                list.push_back(action->text());
-            }
-            return list;
-        };
-        auto menu = texts(window);
-        QVERIFY(!menu.contains(QStringLiteral("&Clear Render Cache")));
-        QVERIFY(menu.contains(QStringLiteral("Render &Track to WAV...")));
-        QVERIFY(QFile::exists(dir.filePath(QStringLiteral("actionLayouts.json"))));
-
-        // A new editor reads the file.
-        e.reset();
-        const auto again = std::make_unique<Editor>(std::make_unique<AppSettings>(settingsFile));
-        again->setWatchesDisk(false);
-        const auto other = again->newWindow();
-        menu = texts(other);
-        QVERIFY(!menu.contains(QStringLiteral("&Clear Render Cache")));
-        QVERIFY(menu.contains(QStringLiteral("Render &Track to WAV...")));
-
-        const auto layouts =
-            again->settingCatalog()->page(QStringLiteral("editor.MenusAndToolbars"));
-        layouts->widget()->findChild<QPushButton *>(QStringLiteral("restoreDefaults"))->click();
-        QVERIFY(layouts->apply(&error));
-        menu = texts(other);
-        QVERIFY(menu.contains(QStringLiteral("&Clear Render Cache")));
-        QVERIFY(!menu.contains(QStringLiteral("Render &Track to WAV...")));
-    }
-
-    // The keymap lists the commands of each window under their menus. A shortcut conflicts with
-    // a command of the same window only, and the user may remove it from that command. The page
-    // applies the shortcuts to every window and writes keymap.json beside the settings, which a
-    // new editor reads.
-    void the_keymap_assigns_shortcuts() {
-        QTemporaryDir dir;
-        const auto settingsFile = dir.filePath(QStringLiteral("settings.json"));
-        auto e = std::make_unique<Editor>(std::make_unique<AppSettings>(settingsFile));
-        e->setWatchesDisk(false);
-        const auto window = e->newWindow();
-        const auto page = e->settingCatalog()->page(QStringLiteral("editor.Keymap"));
-        QVERIFY(page);
-        const auto tree = page->widget()->findChild<QTreeWidget *>(QStringLiteral("commands"));
-        QVERIFY(tree);
-        QCOMPARE(tree->topLevelItem(0)->text(0), QStringLiteral("Project Window"));
-        QCOMPARE(tree->topLevelItem(1)->text(0), QStringLiteral("Voice Bank Window"));
-        const auto itemOf = [tree](const QString &id) -> QTreeWidgetItem * {
-            for (QTreeWidgetItemIterator it(tree); *it; ++it) {
-                if ((*it)->data(0, Qt::UserRole).toString() == id) {
-                    return *it;
-                }
-            }
-            return nullptr;
-        };
-        const auto merge = itemOf(QStringLiteral("helloutau.edit.mergeNotes"));
-        QVERIFY(merge);
-        QCOMPARE(merge->parent()->text(0), QStringLiteral("Edit"));
-
-        // Ins conflicts with Insert Note of the project window, and not with Insert Entry of the
-        // voice bank window. The conflict is removed.
-        tree->setCurrentItem(merge);
-        QString conflicts;
-        QTimer::singleShot(0, [&conflicts] {
-            const auto dialog = QApplication::activeModalWidget();
-            QVERIFY(dialog);
-            const auto edit = dialog->findChild<QKeySequenceEdit *>(QStringLiteral("shortcut"));
-            edit->setKeySequence(QKeySequence(Qt::Key_Insert));
-            Q_EMIT edit->keySequenceChanged(edit->keySequence());
-            conflicts = dialog->findChild<QLabel *>(QStringLiteral("conflicts"))->text();
-            QTimer::singleShot(0, [] {
-                const auto box = qobject_cast<QMessageBox *>(QApplication::activeModalWidget());
-                QVERIFY(box);
-                for (const auto button : box->buttons()) {
-                    if (box->buttonRole(button) == QMessageBox::AcceptRole) {
-                        button->click();
-                    }
-                }
-            });
-            dialog->findChild<QDialogButtonBox *>()->button(QDialogButtonBox::Ok)->click();
-        });
-        page->widget()->findChild<QPushButton *>(QStringLiteral("add"))->click();
-        QVERIFY(conflicts.contains(QStringLiteral("Insert Note")));
-        QVERIFY(!conflicts.contains(QStringLiteral("Insert Entry")));
-        QVERIFY(merge->text(1).contains(QKeySequence(Qt::Key_Insert).toString(
-            QKeySequence::NativeText)));
-        QVERIFY(itemOf(QStringLiteral("helloutau.edit.insertNote"))->text(1).isEmpty());
-        QVERIFY(page->isModified());
-
-        QString error;
-        QVERIFY(page->apply(&error));
-        QVERIFY(!page->isModified());
-        QCOMPARE(actionNamed(window, QStringLiteral("Mer&ge Notes"))->shortcuts(),
-                 (QList<QKeySequence>{QKeySequence(Qt::CTRL | Qt::Key_U),
-                                      QKeySequence(Qt::Key_Insert)}));
-        QVERIFY(actionNamed(window, QStringLiteral("&Insert Note"))->shortcuts().isEmpty());
-        QVERIFY(QFile::exists(dir.filePath(QStringLiteral("keymap.json"))));
-
-        // A new editor reads the file.
-        e.reset();
-        const auto again = std::make_unique<Editor>(std::make_unique<AppSettings>(settingsFile));
-        again->setWatchesDisk(false);
-        const auto other = again->newWindow();
-        QVERIFY(actionNamed(other, QStringLiteral("&Insert Note"))->shortcuts().isEmpty());
-
-        // Restoring the defaults gives Insert Note its key again.
-        const auto keymap = again->settingCatalog()->page(QStringLiteral("editor.Keymap"));
-        keymap->widget()->findChild<QPushButton *>(QStringLiteral("resetAll"))->click();
-        QVERIFY(keymap->apply(&error));
-        QCOMPARE(actionNamed(other, QStringLiteral("&Insert Note"))->shortcuts(),
-                 QList<QKeySequence>{QKeySequence(Qt::Key_Insert)});
-    }
-
     // The settings are pages of the catalog of the editor, in the order of the settings of
     // JetBrains IDEs, and what their dialog applies reaches every project window at once.
     void the_settings_apply_to_every_window() {
@@ -1014,8 +840,9 @@ private Q_SLOTS:
         for (const auto page : e->settingCatalog()->pages()) {
             topLevel.push_back(page->id());
         }
-        QCOMPARE(topLevel, (QStringList{"editor.AppearanceAndBehavior", "editor.Keymap",
-                                        "editor.Editor", "editor.Rendering"}));
+        // Keymap and Menus and Toolbars are pages of the core plugin, see test_CoreSettingPages.
+        QCOMPARE(topLevel, (QStringList{"editor.AppearanceAndBehavior", "editor.Editor",
+                                        "editor.Rendering"}));
         const auto system = e->settingCatalog()->page(QStringLiteral("editor.SystemSettings"));
         QVERIFY(system);
         QCOMPARE(system->parentPage()->id(), QStringLiteral("editor.AppearanceAndBehavior"));

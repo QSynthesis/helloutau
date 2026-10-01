@@ -14,9 +14,8 @@
 #include <QtWidgets/QSpinBox>
 
 #include "AppSettings.h"
+#include "EditorSettingPageIds.h"
 #include "ExportUstDialog.h"
-#include "KeymapSettingPage_p.h"
-#include "MenusSettingPage_p.h"
 
 namespace hello::daw {
 
@@ -221,18 +220,14 @@ namespace hello::daw {
         return m_threads;
     }
 
-    void addEditorSettingPages(SettingCatalog *catalog, AppSettings &settings,
-                               QAK::ActionRegistry *registry, const QString &keymapFile,
-                               const QString &actionLayoutsFile) {
+    void addEditorSettingPages(SettingCatalog *catalog, AppSettings &settings) {
         // Appearance & Behavior is a category, which the dialog shows as the links to its pages.
         auto appearance =
             new SettingPage(QLatin1String(EditorSettingPageIds::appearanceAndBehavior));
         appearance->setTitle(SettingPage::tr("Appearance & Behavior"));
         appearance->setKeywords({QStringLiteral("Appearance & Behavior")});
-        appearance->addPage(new MenusSettingPage(registry, actionLayoutsFile));
         appearance->addPage(new SystemSettingsPage(settings));
         catalog->addPage(appearance);
-        catalog->addPage(new KeymapSettingPage(registry, keymapFile));
         catalog->addPage(new EditorSettingPage(settings));
         catalog->addPage(new RenderingSettingPage(settings));
     }
