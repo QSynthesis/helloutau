@@ -92,6 +92,20 @@ namespace hello::daw {
         /// the program, or <tt>Contents/Plugins</tt> of a macOS bundle.
         static QString builtinPluginPath();
 
+        /// Adds the directories of the Qt plugins of the installation to the library paths of
+        /// Qt, ahead of the defaults. Called before the application object is created, because
+        /// Qt loads the platform plugin as the object is created, so that no \c qt.conf is
+        /// needed. See qtPluginPaths(). Qt searches the directory of the program as well, where
+        /// a user may have put the plugin directories of Qt. On macOS Qt finds the plugins of
+        /// the bundle itself.
+        static void addQtPluginPaths();
+
+        /// Returns the directories of the Qt plugins for the program in \a programDirectory that
+        /// exist, the first to be searched first: \c plugins in the directory of the program,
+        /// where a user may copy the plugins of Qt, and <tt>lib/plugins/Qt</tt> beside the
+        /// plugins of the application, where the package puts them.
+        static QStringList qtPluginPaths(const QString &programDirectory);
+
         /// Returns the plugin paths: builtinPluginPath() followed by the directories of the
         /// command line.
         QStringList pluginPaths() const;

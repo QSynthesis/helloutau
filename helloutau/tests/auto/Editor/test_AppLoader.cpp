@@ -100,6 +100,44 @@ private Q_SLOTS:
                                  QStringLiteral("/../lib/plugins/helloutau")));
     }
 
+    // The plugins of Qt are searched in bin/plugins, where a user may copy them, before
+    // lib/plugins/Qt, where the package puts them. A directory that does not exist is left out.
+    void the_qt_plugins_are_found_beside_the_program() {
+        QTemporaryDir dir;
+        const auto bin = dir.filePath(QStringLiteral("bin"));
+        const auto copied = dir.filePath(QStringLiteral("bin/plugins"));
+        const auto packaged = dir.filePath(QStringLiteral("lib/plugins/Qt"));
+        QVERIFY(QDir().mkpath(bin));
+        QVERIFY(AppLoader::qtPluginPaths(bin).isEmpty());
+        QVERIFY(QDir().mkpath(packaged));
+        QCOMPARE(AppLoader::qtPluginPaths(bin), QStringList{packaged});
+        QVERIFY(QDir().mkpath(copied));
+        QCOMPARE(AppLoader::qtPluginPaths(bin), (QStringList{copied, packaged}));
+    }
+
+    // The directories are added for the program that runs, ahead of the defaults of Qt and in
+    // the order of qtPluginPaths(). They are created beside the test for the time of the test,
+    // and the test is skipped if either exists already.
+    void the_qt_plugin_paths_are_added_for_the_program() {
+        const auto program = QCoreApplication::applicationDirPath();
+        const auto copied = program + QStringLiteral("/plugins");
+        const auto packaged = QDir::cleanPath(program + QStringLiteral("/../lib/plugins/Qt"));
+        if (QFileInfo::exists(copied) || QFileInfo::exists(packaged)) {
+            QSKIP("The directory of the test already holds the plugins of Qt.");
+        }
+        QVERIFY(QDir().mkpath(copied));
+        QVERIFY(QDir().mkpath(packaged));
+        const QStringList expected{QDir(copied).canonicalPath(), QDir(packaged).canonicalPath()};
+        const auto before = QCoreApplication::libraryPaths();
+        AppLoader::addQtPluginPaths();
+        const auto after = QCoreApplication::libraryPaths();
+        QDir(copied).removeRecursively();
+        QDir(packaged).removeRecursively();
+        QCoreApplication::setLibraryPaths(before);
+        QCOMPARE(after.mid(0, 2), expected);
+        QCOMPARE(after.mid(2), before);
+    }
+
     // The core plugin is initialized, notified after every plugin is initialized, and shut down
     // once.
     void the_core_plugin_runs() {

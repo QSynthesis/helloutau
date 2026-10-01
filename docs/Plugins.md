@@ -71,6 +71,7 @@ stdcorelib.plugin 的交接记录（其仓库 `.cache/codex/2026-08-21-1722-stdc
 
 - **程序只是加载器。** `helloutau.exe` 的 `main` 设置应用名，构造 `hello::daw::AppLoader` 并调用 `run()`。
 - **`AppLoader`**（HelloUtauEditor）：持有 `PluginSystem`（目录布局）。命令行中的 `--plugin-path <目录>` 追加搜索目录，其余参数为文件，交给 Core 插件。`run()` 载入插件；Core 插件不存在、有错误或停用时报告原因并退出；否则运行事件循环，结束后关闭插件。其他插件的错误写入日志，并显示在设置的「Plugins」页。同一时刻只有一个加载器，插件经 `AppLoader::instance()` 取得它。
+- **Qt 的插件**（作者 2026-10-01 要求，不用 `qt.conf`）：安装后的布局为 `bin`（程序与各库）、`lib/plugins/helloutau`（本程序的插件）、`lib/plugins/Qt`（Qt 的插件）。程序入口在创建 `QApplication` 之前调用 `AppLoader::addQtPluginPaths()`，因为 Qt 在创建应用对象时载入平台插件。它以 stdcorelib 的 `application_directory()` 取得程序所在目录，把存在的 `bin/plugins`（用户自行复制 Qt 插件的位置）与 `lib/plugins/Qt` 依次加在 Qt 默认路径之前；Qt 6 保留创建应用对象之前加入的路径，并自行搜索程序所在目录，因此 Qt 插件目录直接散在 `bin` 中也能找到。Windows 的打包脚本不在仓库中（`.cache/claude/tools/package_windows.ps1`）：`cmake --install` 之后补上构建时复制到程序旁的依赖 DLL，以 windeployqt 的 `--plugindir` 部署 Qt，复制 VC 运行库的 DLL，并删除头文件、CMake 包与导入库。
 - **Core 插件**（ID `org.helloutau.core`，目录 `Core`，目标 `CorePlugin`，插件类在 `Internal` 中）：`initialize()` 登记编辑器的动作清单（`BuiltinActions`，见下文「编辑界面扩展：动作与命令」）并创建 `Editor`；`pluginsInitialized()` 打开命令行中的文件，没有则新建工程；`aboutToShutdown()` 销毁 `Editor` 及其窗口。`pluginsInitialized()` 按依赖的逆序调用，依赖 Core 的插件先于它完成，因此窗口打开时各插件都已登记完毕。
 
 ### 目录

@@ -5,12 +5,14 @@
 #include <vector>
 
 #include <QtCore/QDir>
+#include <QtCore/QFileInfo>
 #include <QtCore/QtDebug>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QMessageBox>
 
 #include <stdcorelib/pimpl.h>
 #include <stdcorelib/pluginsystem/pluginsystem.h>
+#include <stdcorelib/system.h>
 
 #include "AppSettings.h"
 #include "SettingsJson_p.h"
@@ -95,6 +97,38 @@ namespace hello::daw {
     QString AppLoader::builtinPluginPath() {
         return QDir::cleanPath(QCoreApplication::applicationDirPath() + QLatin1Char('/') +
                                QStringLiteral(HELLOUTAU_BUILTIN_PLUGINS_PATH));
+    }
+
+    void AppLoader::addQtPluginPaths() {
+        // The directory of the program from the system, known before the application object
+        const auto directory =
+            QString::fromStdU16String(stdc::system::application_directory().u16string());
+        if (directory.isEmpty()) {
+            return;
+        }
+        // addLibraryPath() prepends, so the paths are added from the last to the first. Qt keeps
+        // the paths added before the application object, ahead of those it computes then.
+        const auto paths = qtPluginPaths(directory);
+        for (auto it = paths.crbegin(); it != paths.crend(); ++it) {
+            QCoreApplication::addLibraryPath(*it);
+        }
+    }
+
+    QStringList AppLoader::qtPluginPaths(const QString &programDirectory) {
+        // lib/plugins/Qt is the sibling of lib/plugins/helloutau.
+        const QString candidates[] = {
+            QDir::cleanPath(programDirectory + QStringLiteral("/plugins")),
+            QDir::cleanPath(programDirectory + QLatin1Char('/') +
+                            QStringLiteral(HELLOUTAU_BUILTIN_PLUGINS_PATH) +
+                            QStringLiteral("/../Qt")),
+        };
+        QStringList paths;
+        for (const auto &path : candidates) {
+            if (QFileInfo(path).isDir()) {
+                paths.push_back(path);
+            }
+        }
+        return paths;
     }
 
     QStringList AppLoader::pluginPaths() const {
