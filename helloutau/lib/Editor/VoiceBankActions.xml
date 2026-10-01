@@ -9,6 +9,9 @@
     <id>helloutau.voiceBank</id>
 
     <configuration>
+        <vars>
+            <var key="APP_NAME" value="HelloUtau" />
+        </vars>
         <translationContext
             text="hello::daw::ActionText"
             category="hello::daw::ActionCategory"
@@ -52,6 +55,8 @@
                 shortcuts="Ctrl+Shift+P;F1" />
         <action id="helloutau.playback.stop" text="&amp;Stop" category="Playback" shortcut="F7" />
         <action id="helloutau.tools.settings" text="&amp;Settings..." category="Tools" />
+        <action id="helloutau.help.about" text="About &amp;${APP_NAME}" category="Help" />
+        <action id="helloutau.help.aboutQt" text="About &amp;Qt" category="Help" />
 
         <!-- Every folder of the voice bank read again, whatever the stamps of its files, as the
              refresh of UTAU -->
@@ -124,6 +129,7 @@
         <menu id="helloutau.voiceBank.view" text="&amp;View" />
         <menu id="helloutau.voiceBank.playback" text="&amp;Playback" />
         <menu id="helloutau.voiceBank.tools" text="&amp;Tools" />
+        <menu id="helloutau.voiceBank.help" text="&amp;Help" />
         <menu id="helloutau.voiceBank.setValue" text="&amp;Set at Pointer" />
 
         <!-- The tool bar of the sample area above the waveform, which the window places -->
@@ -184,6 +190,10 @@
                 <action id="helloutau.voiceBank.removeMetadata" />
                 <separator />
                 <action id="helloutau.tools.settings" />
+            </menu>
+            <menu id="helloutau.voiceBank.help">
+                <action id="helloutau.help.about" />
+                <action id="helloutau.help.aboutQt" />
             </menu>
         </menu>
         <menu id="helloutau.voiceBank.sampleToolBar">

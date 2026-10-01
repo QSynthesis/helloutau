@@ -9,6 +9,9 @@
     <id>helloutau.project</id>
 
     <configuration>
+        <vars>
+            <var key="APP_NAME" value="HelloUtau" />
+        </vars>
         <translationContext
             text="hello::daw::ActionText"
             category="hello::daw::ActionCategory"
@@ -174,6 +177,8 @@
         <!-- Deletes the fragments and the track file of the render cache of the project -->
         <action id="helloutau.tools.clearCache" text="&amp;Clear Render Cache" category="Tools" />
         <action id="helloutau.tools.settings" text="&amp;Settings..." category="Tools" />
+        <action id="helloutau.help.about" text="About &amp;${APP_NAME}" category="Help" />
+        <action id="helloutau.help.aboutQt" text="About &amp;Qt" category="Help" />
 
         <menu id="helloutau.mainMenu" topLevel="true" />
         <menu id="helloutau.file" text="&amp;File" />
@@ -182,6 +187,7 @@
         <menu id="helloutau.view" text="&amp;View" />
         <menu id="helloutau.playback" text="&amp;Playback" />
         <menu id="helloutau.tools" text="&amp;Tools" />
+        <menu id="helloutau.help" text="&amp;Help" />
         <!-- Formats other than .usth, UST first; MIDI and the rest will join it -->
         <menu id="helloutau.file.export" text="&amp;Export" />
         <menu id="helloutau.edit.transpose" text="&amp;Transpose" />
@@ -281,6 +287,10 @@
                 <action id="helloutau.tools.clearCache" />
                 <separator />
                 <action id="helloutau.tools.settings" />
+            </menu>
+            <menu id="helloutau.help">
+                <action id="helloutau.help.about" />
+                <action id="helloutau.help.aboutQt" />
             </menu>
         </menu>
         <menu id="helloutau.mainToolBar">

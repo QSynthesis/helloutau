@@ -58,6 +58,10 @@ endfunction()
 
 set(HELLOUTAU_POST_CONFIGURE_COMMANDS _helloutau_common_configure_target)
 
+# Emit build metadata for the About dialog.
+set(HELLOUTAU_BUILD_INFO_HEADER_PATH helloutau/BuildInfo.h)
+set(HELLOUTAU_BUILD_INFO_HEADER_PREFIX HELLOUTAU)
+
 # ----------------------------------
 # Include Build Helpers
 # ----------------------------------

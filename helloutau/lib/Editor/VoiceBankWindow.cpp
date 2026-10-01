@@ -58,6 +58,7 @@
 #include <helloutau/Widgets/FindBar.h>
 
 #include "ActionRegistrations_p.h"
+#include "AboutDialog_p.h"
 #include "VoiceAliasRuleDialog.h"
 #include "AppSettings.h"
 #include "CommandEntries_p.h"
@@ -382,6 +383,14 @@ namespace hello::daw {
             addCommand(QStringLiteral("helloutau.tools.settings"), [this] {
                 stdc_decl_t;
                 editor->showSettings(&decl);
+            });
+            addCommand(QStringLiteral("helloutau.help.about"), [this] {
+                stdc_decl_t;
+                showAboutHelloUtau(&decl);
+            });
+            addCommand(QStringLiteral("helloutau.help.aboutQt"), [this] {
+                stdc_decl_t;
+                QMessageBox::aboutQt(&decl);
             });
             ActionRegistrations::instance().addActions(&decl, context);
 
