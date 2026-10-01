@@ -708,6 +708,81 @@ private Q_SLOTS:
         QCOMPARE(roll.ruler()->spans().value(1).last, 2400.0);
     }
 
+    // The label of la and the region V from li to lu, ended by $region_end of lu, are sections
+    // of the ruler: the region outlined, the label filled. A double click on one asks to edit
+    // it; loading the region selects its notes and scrolls to it with a tenth of the view
+    // before it.
+    void labels_and_regions_are_on_the_ruler() {
+        kit::Project project;
+        project.settings.tempo = 120;
+        project.tracks.push_back({});
+        for (const auto lyric : {"la", "li", "lu", "le"}) {
+            kit::Note note;
+            note.lyric = QLatin1String(lyric);
+            note.length = 480;
+            note.noteNum = 60;
+            project.tracks[0].notes.push_back(note);
+        }
+        project.tracks[0].notes[0].label = QStringLiteral("A");
+        project.tracks[0].notes[1].region = QStringLiteral("V");
+        project.tracks[0].notes[2].regionEnd = QStringLiteral("V");
+        kit::ProjectSession session(project);
+        PianoRoll roll(&session);
+        show(roll);
+
+        const auto regions = roll.regions();
+        QCOMPARE(regions.size(), 1);
+        QCOMPARE(regions[0].name, QStringLiteral("V"));
+        QCOMPARE(regions[0].first, 1);
+        QCOMPARE(regions[0].last, 2);
+        QTRY_COMPARE(roll.ruler()->sections().size(), 2);
+        const auto sections = roll.ruler()->sections();
+        QCOMPARE(sections[0].text, QStringLiteral("V"));
+        QCOMPARE(sections[0].first, 480.0);
+        QCOMPARE(sections[0].last, 1440.0);
+        QVERIFY(!sections[0].filled);
+        QCOMPARE(sections[1].text, QStringLiteral("A"));
+        QCOMPARE(sections[1].last, 480.0);
+        QVERIFY(sections[1].filled);
+
+        // Where tick lies in the top row of the ruler
+        const auto onRuler = [&roll](double tick) {
+            const auto ruler = roll.ruler();
+            return QPoint(
+                ruler
+                    ->mapFrom(&roll, roll.view()->viewport()->mapTo(
+                                         &roll, QPoint(int(roll.view()->timeAxis().toX(tick)), 0)))
+                    .x(),
+                3);
+        };
+        QSignalSpy label(&roll, &PianoRoll::labelRequested);
+        QSignalSpy region(&roll, &PianoRoll::regionRequested);
+        QTest::mouseDClick(roll.ruler(), Qt::LeftButton, {}, onRuler(240));
+        QCOMPARE(label.size(), 1);
+        QCOMPARE(label[0][0].toInt(), 0);
+        QTest::mouseDClick(roll.ruler(), Qt::LeftButton, {}, onRuler(1200));
+        QCOMPARE(region.size(), 1);
+        QCOMPARE(region[0][0].toInt(), 1);
+        QCOMPARE(region[0][1].toInt(), 2);
+
+        roll.setSelectedIndices({0, 2});
+        QCOMPARE(roll.selectedRange(), std::nullopt);
+        roll.loadRegion(1, 2);
+        QCOMPARE(roll.selectedIndices(), (QList<int>{1, 2}));
+        QCOMPARE(roll.selectedRange(), (std::optional<std::pair<int, int>>{
+                                           {1, 2}
+        }));
+        const auto &time = roll.view()->timeAxis();
+        const double margin = roll.view()->viewport()->width() / 10.0 / time.pixelsPerTick;
+        QCOMPARE(time.left, std::max(0.0, 480.0 - margin));
+
+        // A new label shows at once.
+        kit::DiagnosticList diagnostics;
+        QVERIFY(kit::ProjectEdits::setLabel(kit::ProjectRef(&session).tracks().at(0).notes().at(3),
+                                            QStringLiteral("B"), diagnostics));
+        QTRY_COMPARE(roll.ruler()->sections().size(), 3);
+    }
+
     // Whether a pixel of \a color lies within two pixels of (tick, cents from key)
     static bool drawnNear(const PianoRoll &roll, double tick, int key, double cents, QColor color) {
         const auto image = roll.view()->viewport()->grab().toImage();

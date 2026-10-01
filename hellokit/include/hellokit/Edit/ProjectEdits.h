@@ -177,6 +177,17 @@ namespace hello::kit {
                                              const std::optional<PitchBend> &bend,
                                              DiagnosticList &diagnostics);
 
+        /// Sets the label of \a note, which UTAU shows on the timeline over the note, or removes
+        /// it if \a label is empty.
+        Q_INVOKABLE static bool setLabel(const NoteRef &note, const QString &label,
+                                         DiagnosticList &diagnostics);
+
+        /// Names the region of the \a count notes of \a notes from \a index: \c $region of the
+        /// first and \c $region_end of the last take \a name, or are removed if \a name is
+        /// empty. Refused for an empty range or one beyond the notes.
+        Q_INVOKABLE static bool nameRegion(const NoteListRef &notes, int index, int count,
+                                           const QString &name, DiagnosticList &diagnostics);
+
         /// Turns Mode2 of the project of \a settings on or off: which of the Mode2 points and
         /// vibratos, or the Mode1 values, the synthesis uses, as UTAU does. The other is kept.
         Q_INVOKABLE static bool setMode2(const SettingsRef &settings, bool mode2,

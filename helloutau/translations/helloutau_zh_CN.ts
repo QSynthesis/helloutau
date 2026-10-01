@@ -287,6 +287,14 @@
         <translation>设置曲速(&amp;M)...</translation>
     </message>
     <message>
+        <source>Set La&amp;bel...</source>
+        <translation>设置标签(&amp;B)...</translation>
+    </message>
+    <message>
+        <source>Name Re&amp;gion...</source>
+        <translation>命名区间(&amp;G)...</translation>
+    </message>
+    <message>
         <source>Note Propert&amp;ies...</source>
         <translation>音符属性(&amp;I)...</translation>
     </message>
@@ -413,6 +421,10 @@
     <message>
         <source>Show P&amp;arameters</source>
         <translation>显示参数(&amp;A)</translation>
+    </message>
+    <message>
+        <source>&amp;Load Region</source>
+        <translation>载入区间(&amp;L)</translation>
     </message>
     <message>
         <source>&amp;Play or Pause</source>
@@ -831,6 +843,10 @@
         <translation>关闭</translation>
     </message>
     <message>
+        <source>No Regions</source>
+        <translation>无区间</translation>
+    </message>
+    <message>
         <source>Add Portamento</source>
         <translation>添加滑音</translation>
     </message>
@@ -925,6 +941,18 @@
     <message>
         <source>&amp;Remove Tempo Mark</source>
         <translation>移除曲速标记(&amp;R)</translation>
+    </message>
+    <message>
+        <source>Set &amp;Label Here...</source>
+        <translation>在此处设置标签(&amp;L)...</translation>
+    </message>
+    <message>
+        <source>&amp;Name Region...</source>
+        <translation>命名区间(&amp;N)...</translation>
+    </message>
+    <message>
+        <source>L&amp;oad Region</source>
+        <translation>载入区间(&amp;O)</translation>
     </message>
     <message>
         <source>Delete Pitch Points</source>
@@ -1046,6 +1074,22 @@
     <message>
         <source>Tempo</source>
         <translation>曲速</translation>
+    </message>
+    <message>
+        <source>Set Label</source>
+        <translation>设置标签</translation>
+    </message>
+    <message>
+        <source>&amp;Label:</source>
+        <translation>标签(&amp;L)：</translation>
+    </message>
+    <message>
+        <source>Name Region</source>
+        <translation>命名区间</translation>
+    </message>
+    <message>
+        <source>&amp;Name:</source>
+        <translation>名称(&amp;N)：</translation>
     </message>
     <message>
         <source>Note Properties</source>
@@ -2594,6 +2638,14 @@ Write them again without these chunks? The audio stays the same. The files are w
         <translation>%1不是音符的属性。</translation>
     </message>
     <message>
+        <source>label</source>
+        <translation>标签</translation>
+    </message>
+    <message>
+        <source>name</source>
+        <translation>名称</translation>
+    </message>
+    <message>
         <source>A command begins with its name.</source>
         <translation>命令须以命令名开头。</translation>
     </message>
@@ -2722,6 +2774,14 @@ Write them again without these chunks? The audio stays the same. The files are w
     <message>
         <source>Change Note Properties</source>
         <translation>修改音符属性</translation>
+    </message>
+    <message>
+        <source>Set Label</source>
+        <translation>设置标签</translation>
+    </message>
+    <message>
+        <source>Name Region</source>
+        <translation>命名区间</translation>
     </message>
     <message>
         <source>Merging takes at least two notes.</source>

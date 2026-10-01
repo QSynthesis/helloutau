@@ -383,6 +383,35 @@ namespace hello::kit {
         return transaction.commit(diagnostics);
     }
 
+    bool ProjectEdits::setLabel(const NoteRef &note, const QString &label,
+                                DiagnosticList &diagnostics) {
+        auto transaction = note.session()->transaction(tr("Set Label"));
+        if (note.label() != label) {
+            note.setLabel(label);
+        }
+        return transaction.commit(diagnostics);
+    }
+
+    bool ProjectEdits::nameRegion(const NoteListRef &notes, int index, int count,
+                                  const QString &name, DiagnosticList &diagnostics) {
+        if (count < 1 || index < 0 || index + count > notes.size()) {
+            return fail(diagnostics, tr("The track has %1 notes, not notes %2 to %3.")
+                                         .arg(notes.size())
+                                         .arg(index)
+                                         .arg(index + count - 1));
+        }
+        auto transaction = notes.session()->transaction(tr("Name Region"));
+        const auto first = notes.at(index);
+        const auto last = notes.at(index + count - 1);
+        if (first.region() != name) {
+            first.setRegion(name);
+        }
+        if (last.regionEnd() != name) {
+            last.setRegionEnd(name);
+        }
+        return transaction.commit(diagnostics);
+    }
+
     bool ProjectEdits::mergeNotes(const NoteListRef &notes, int index, int count,
                                   DiagnosticList &diagnostics) {
         if (count < 2) {

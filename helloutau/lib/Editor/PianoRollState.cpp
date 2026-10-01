@@ -83,6 +83,21 @@ namespace hello::daw {
             kit::ProjectEdits::setNoteProperties({notes().at(index)}, changes, diagnostics);
             report(diagnostics);
         });
+
+        menu.addSeparator();
+        const auto label = menu.addAction(PianoRoll::tr("Set &Label Here..."));
+        label->setEnabled(index >= 0);
+        QObject::connect(label, &QAction::triggered, &decl,
+                         [this, index] { Q_EMIT widget->labelRequested(index); });
+        // The selected notes if unbroken, otherwise the note at the position
+        const auto range = decl.selectedRange().value_or(std::pair{index, index});
+        const auto region = menu.addAction(PianoRoll::tr("&Name Region..."));
+        region->setEnabled(index >= 0);
+        QObject::connect(region, &QAction::triggered, &decl, [this, range] {
+            Q_EMIT widget->regionRequested(range.first, range.second);
+        });
+        const auto load = menu.addMenu(PianoRoll::tr("L&oad Region"));
+        decl.fillRegionMenu(load);
         menu.exec(globalPosition);
     }
 
@@ -587,6 +602,28 @@ namespace hello::daw {
             }
         }
         ruler->setMarks(marks);
+
+        // The regions, then the label of each note that has one
+        QList<TimelineRuler::Section> sections;
+        sectionNotes.clear();
+        for (const auto &region : widget->regions()) {
+            sections.push_back(
+                {double(timeline->note(region.first).start),
+                 double(timeline->note(region.last).start + timeline->note(region.last).length),
+                 region.name, false});
+            sectionNotes.push_back({region.first, region.last, false});
+        }
+        const auto refs = notes();
+        for (int i = 0; i < timeline->noteCount(); ++i) {
+            const auto label = refs.at(i).label();
+            if (!label.isEmpty()) {
+                const auto &note = timeline->note(i);
+                sections.push_back(
+                    {double(note.start), double(note.start + note.length), label, true});
+                sectionNotes.push_back({i, i, true});
+            }
+        }
+        ruler->setSections(sections);
         updateRenderSpans();
         view->viewport()->update();
     }

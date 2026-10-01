@@ -554,6 +554,40 @@ private Q_SLOTS:
         QCOMPARE(session.snapshot().toJson(), project.toJson());
     }
 
+    // A label is set on a note and removed by an empty text. A region names its first note with
+    // $region and its last with $region_end, one step each; beyond the notes it is refused.
+    void labels_and_regions_are_named() {
+        const auto project = richProject();
+        ProjectSession session(project);
+        const auto notes = notesOf(session);
+        DiagnosticList diagnostics;
+
+        QVERIFY(ProjectEdits::setLabel(notes.at(0), QStringLiteral("A"), diagnostics));
+        QCOMPARE(session.snapshot().tracks[0].notes[0].label, QStringLiteral("A"));
+        QCOMPARE(session.undoMessage(), ProjectEdits::tr("Set Label"));
+        QVERIFY(ProjectEdits::setLabel(notes.at(0), QString(), diagnostics));
+        QVERIFY(session.snapshot().tracks[0].notes[0].label.isEmpty());
+
+        QVERIFY(ProjectEdits::nameRegion(notes, 0, 2, QStringLiteral("Verse"), diagnostics));
+        auto snapshot = session.snapshot().tracks[0].notes;
+        QCOMPARE(snapshot[0].region, QStringLiteral("Verse"));
+        QCOMPARE(snapshot[0].regionEnd, project.tracks[0].notes[0].regionEnd);
+        QCOMPARE(snapshot[1].regionEnd, QStringLiteral("Verse"));
+        QCOMPARE(snapshot[1].region, project.tracks[0].notes[1].region);
+        QCOMPARE(session.undoMessage(), ProjectEdits::tr("Name Region"));
+        const int step = session.currentStep();
+
+        QVERIFY(ProjectEdits::nameRegion(notes, 0, 2, QString(), diagnostics));
+        snapshot = session.snapshot().tracks[0].notes;
+        QVERIFY(snapshot[0].region.isEmpty());
+        QVERIFY(snapshot[1].regionEnd.isEmpty());
+
+        QVERIFY(
+            !ProjectEdits::nameRegion(notes, 1, notes.size(), QStringLiteral("X"), diagnostics));
+        QVERIFY(!ProjectEdits::nameRegion(notes, 0, 0, QStringLiteral("X"), diagnostics));
+        QCOMPARE(session.currentStep(), step + 1);
+    }
+
     // Mode1 values replace those of a note whole and are removed by an empty value; equal
     // values make no step.
     void mode1_values_are_replaced_and_removed() {

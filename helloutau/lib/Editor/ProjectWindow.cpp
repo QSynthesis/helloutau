@@ -153,6 +153,7 @@ namespace hello::daw {
         // The boxes of the quantization in the tool bars, which follow the piano roll
         QList<QPointer<QComboBox>> quantizationBoxes;
         QMenu *recentMenu = nullptr;
+        QMenu *regionMenu = nullptr;
         // What Paste Parameters pasted last
         PianoRoll::Parameters pastedParameters = PianoRoll::AllParameters;
 
@@ -307,6 +308,45 @@ namespace hello::daw {
             kit::DiagnosticList diagnostics;
             kit::ProjectEdits::setNoteProperties({notes.at(index)}, changes, diagnostics);
             DiagnosticBox::show(&decl, tr("Tempo"), diagnostics);
+        }
+
+        // The label of note index, entered by the user; an empty text removes it
+        void editLabel(int index) {
+            stdc_decl_t;
+            const auto notes = kit::ProjectRef(document->session()).tracks().at(0).notes();
+            if (index < 0 || index >= notes.size()) {
+                return;
+            }
+            bool ok = false;
+            const auto label =
+                QInputDialog::getText(&decl, tr("Set Label"), tr("&Label:"), QLineEdit::Normal,
+                                      notes.at(index).label(), &ok);
+            if (!ok) {
+                return;
+            }
+            kit::DiagnosticList diagnostics;
+            kit::ProjectEdits::setLabel(notes.at(index), label, diagnostics);
+            DiagnosticBox::show(&decl, tr("Set Label"), diagnostics);
+        }
+
+        // The name of the region of the notes from first to last, entered by the user; an empty
+        // name removes the region
+        void nameRegion(int first, int last) {
+            stdc_decl_t;
+            const auto notes = kit::ProjectRef(document->session()).tracks().at(0).notes();
+            if (first < 0 || last < first || last >= notes.size()) {
+                return;
+            }
+            bool ok = false;
+            const auto name =
+                QInputDialog::getText(&decl, tr("Name Region"), tr("&Name:"), QLineEdit::Normal,
+                                      notes.at(first).region(), &ok);
+            if (!ok) {
+                return;
+            }
+            kit::DiagnosticList diagnostics;
+            kit::ProjectEdits::nameRegion(notes, first, last - first + 1, name, diagnostics);
+            DiagnosticBox::show(&decl, tr("Name Region"), diagnostics);
         }
 
         // The properties of the selected notes in their dialog, changed in one step
@@ -889,6 +929,23 @@ namespace hello::daw {
             });
             addCommand(QStringLiteral("helloutau.edit.noteProperties"),
                        [this] { editNoteProperties(); });
+            addCommand(QStringLiteral("helloutau.edit.setLabel"), [this] {
+                const auto selected = roll->selectedIndices();
+                if (!selected.isEmpty()) {
+                    editLabel(selected.first());
+                }
+            });
+            addCommand(QStringLiteral("helloutau.edit.nameRegion"), [this] {
+                if (const auto range = roll->selectedRange()) {
+                    nameRegion(range->first, range->second);
+                }
+            });
+            // An external action: its menu is ours to fill, each time it opens.
+            regionMenu = new QMenu(&decl);
+            QObject::connect(regionMenu, &QMenu::aboutToShow, &decl,
+                             [this] { roll->fillRegionMenu(regionMenu); });
+            context->addAction(QStringLiteral("helloutau.view.loadRegion"),
+                               regionMenu->menuAction());
             addCommand(QStringLiteral("helloutau.file.close"), [this] {
                 stdc_decl_t;
                 decl.close();
@@ -1302,6 +1359,10 @@ namespace hello::daw {
             QObject::connect(roll, &PianoRoll::cursorMoved, &decl, [this] { cursorMoved(); });
             QObject::connect(roll, &PianoRoll::tempoRequested, &decl,
                              [this](int index) { editTempo(index); });
+            QObject::connect(roll, &PianoRoll::labelRequested, &decl,
+                             [this](int index) { editLabel(index); });
+            QObject::connect(roll, &PianoRoll::regionRequested, &decl,
+                             [this](int first, int last) { nameRegion(first, last); });
             QObject::connect(roll, &PianoRoll::editRefused, &decl, [this](const QString &message) {
                 stdc_decl_t;
                 decl.statusBar()->showMessage(message, StatusMessageTimeout);
@@ -1380,6 +1441,9 @@ namespace hello::daw {
                 actions.value(QLatin1String(id))->setEnabled(selected > 0);
             }
             actions.value(QStringLiteral("helloutau.edit.splitNote"))->setEnabled(selected == 1);
+            actions.value(QStringLiteral("helloutau.edit.setLabel"))->setEnabled(selected > 0);
+            actions.value(QStringLiteral("helloutau.edit.nameRegion"))
+                ->setEnabled(roll->selectedRange().has_value());
             actions.value(QStringLiteral("helloutau.edit.mergeNotes"))->setEnabled(selected > 1);
             const bool copied = !PianoRoll::copiedNotes().isEmpty();
             actions.value(QStringLiteral("helloutau.edit.paste"))->setEnabled(copied);

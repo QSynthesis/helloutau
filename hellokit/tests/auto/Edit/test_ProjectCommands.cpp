@@ -399,6 +399,18 @@ private Q_SLOTS:
         verifyRefused(session, QStringLiteral("note bend /tracks/0/notes 99 0 [1]"));
     }
 
+    void note_label_and_region_name_notes() {
+        ProjectSession session(richProject());
+        QVERIFY(run(session, QStringLiteral("note label \"A\" /tracks/0/notes/0")));
+        QCOMPARE(noteAt(session, 0).label, QStringLiteral("A"));
+        QVERIFY(run(session, QStringLiteral("note region /tracks/0/notes 0 2 \"Verse\"")));
+        QCOMPARE(noteAt(session, 0).region, QStringLiteral("Verse"));
+        QCOMPARE(noteAt(session, 1).regionEnd, QStringLiteral("Verse"));
+        verifyRefused(session, QStringLiteral("note label \"A\""));
+        verifyRefused(session, QStringLiteral("note region /tracks/0/notes 0 99 \"X\""));
+        verifyRefused(session, QStringLiteral("note region /tracks/0/notes 0 1 7"));
+    }
+
     void note_pitchbend_replaces_mode1_values() {
         ProjectSession session(richProject());
         QVERIFY(run(session, QStringLiteral("note pitchbend {\"start\": -8.5, \"values\": [3, 4]} "
@@ -663,6 +675,8 @@ private Q_SLOTS:
                                                         QStringLiteral("note pitchbend"),
                                                         QStringLiteral("note properties"),
                                                         QStringLiteral("note merge"),
+                                                        QStringLiteral("note label"),
+                                                        QStringLiteral("note region"),
                                                         QStringLiteral("settings mode2"),
                                                         QStringLiteral("settings properties")}));
     }

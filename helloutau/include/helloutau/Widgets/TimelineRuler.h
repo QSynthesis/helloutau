@@ -12,8 +12,9 @@ namespace hello::daw {
 
     class SceneView;
 
-    /// The ruler above a scene view: bar numbers and beat lines along its time axis, and marks
-    /// at given positions, such as changes of tempo.
+    /// The ruler above a scene view: in its top row named sections such as labels and regions,
+    /// below them bar numbers and beat lines along its time axis, and marks at given positions,
+    /// such as changes of tempo.
     ///
     /// The ruler follows the time axis of its view. Lines are drawn as densely as they stay
     /// apart: beats only when they are far enough apart, and bar numbers at an interval that
@@ -38,6 +39,16 @@ namespace hello::daw {
             QColor color;
         };
 
+        /// A named stretch of the time axis from \a first to \a last ticks, drawn in the top row
+        /// of the ruler in markColor(): filled for a label, outlined for a region. Labels are
+        /// drawn over regions.
+        struct Section {
+            double first = 0;
+            double last = 0;
+            QString text;
+            bool filled = false;
+        };
+
         explicit TimelineRuler(SceneView *view, QWidget *parent = nullptr);
         ~TimelineRuler();
 
@@ -53,6 +64,9 @@ namespace hello::daw {
 
         QList<Span> spans() const;
         void setSpans(const QList<Span> &spans);
+
+        QList<Section> sections() const;
+        void setSections(const QList<Section> &sections);
 
         /// The color of the lines and bar numbers, by default that of text with some
         /// transparency.
@@ -77,6 +91,9 @@ namespace hello::daw {
         /// Mark \a index of marks() was double-clicked on its text.
         void markDoubleClicked(int index);
 
+        /// Section \a index of sections() was double-clicked.
+        void sectionDoubleClicked(int index);
+
         /// The context menu was asked for at \a tick, to be shown at \a globalPosition.
         void menuRequested(double tick, const QPoint &globalPosition);
 
@@ -93,14 +110,22 @@ namespace hello::daw {
         int m_beatsPerBar = 4;
         QList<Mark> m_marks;
         QList<Span> m_spans;
+        QList<Section> m_sections;
         QColor m_lineColor;
         QColor m_markColor;
 
         // Where the ruler starts in the time axis of the view, as it is painted
         double offset() const;
 
+        // The height of the top row, of the sections; the bar numbers and the marks share the
+        // rest in halves.
+        int sectionRowHeight() const;
+
         // The index of the mark whose text is at position, or -1
         int markAt(const QPointF &position) const;
+
+        // The index of the section at position, a label before a region, or -1
+        int sectionAt(const QPointF &position) const;
     };
 
 }

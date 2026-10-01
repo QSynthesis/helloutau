@@ -563,6 +563,38 @@ namespace hello::kit {
             return ProjectEdits::mergeNotes(*notes, *index, *count, diagnostics);
         }
 
+        bool labelCommand(ProjectSession &session, const Arguments &arguments,
+                          DiagnosticList &diagnostics) {
+            if (arguments.size() != 2) {
+                return usage(diagnostics, "note label <text> <note>");
+            }
+            const auto label = edit::NodeCommands::stringOf(
+                arguments[0], ProjectCommands::tr("label"), diagnostics);
+            const auto note = noteAt(session, arguments[1], diagnostics);
+            if (!label || !note) {
+                return false;
+            }
+            return ProjectEdits::setLabel(*note, *label, diagnostics);
+        }
+
+        bool regionCommand(ProjectSession &session, const Arguments &arguments,
+                           DiagnosticList &diagnostics) {
+            if (arguments.size() != 4) {
+                return usage(diagnostics, "note region <notes> <index> <count> <name>");
+            }
+            const auto notes = notesAt(session, arguments[0], diagnostics);
+            const auto index = edit::NodeCommands::integerOf(
+                arguments[1], ProjectCommands::tr("index"), diagnostics);
+            const auto count = edit::NodeCommands::integerOf(
+                arguments[2], ProjectCommands::tr("count"), diagnostics);
+            const auto name = edit::NodeCommands::stringOf(
+                arguments[3], ProjectCommands::tr("name"), diagnostics);
+            if (!notes || !index || !count || !name) {
+                return false;
+            }
+            return ProjectEdits::nameRegion(*notes, *index, *count, *name, diagnostics);
+        }
+
         using DomainCommand = bool (*)(ProjectSession &, const Arguments &, DiagnosticList &);
 
         // The domain commands, each with the function of ProjectEdits that it calls.
@@ -590,6 +622,8 @@ namespace hello::kit {
             {"note",     "pitchbend",  pitchBendCommand,      "setPitchBend"     },
             {"note",     "properties", notePropertiesCommand, "setNoteProperties"},
             {"note",     "merge",      mergeCommand,          "mergeNotes"       },
+            {"note",     "label",      labelCommand,          "setLabel"         },
+            {"note",     "region",     regionCommand,         "nameRegion"       },
             {"settings", "mode2",      mode2Command,          "setMode2"         },
             {"settings", "properties", propertiesCommand,     "setProperties"    },
         };

@@ -247,6 +247,14 @@ namespace hello::daw {
         /// The note of each mark of the ruler
         QList<int> markNotes;
 
+        /// The notes of each section of the ruler, first and last, and whether it is a label
+        struct SectionNotes {
+            int first = 0;
+            int last = 0;
+            bool label = false;
+        };
+        QList<SectionNotes> sectionNotes;
+
         /// Inserts a note of lyric before the first selected note or after the last, with the
         /// key of that note and the quantized length, and selects it.
         bool insert(const QString &lyric, kit::DiagnosticList &diagnostics);

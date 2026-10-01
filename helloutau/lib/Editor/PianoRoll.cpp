@@ -18,6 +18,7 @@
 #include <QtWidgets/QComboBox>
 #include <QtWidgets/QGridLayout>
 #include <QtWidgets/QLineEdit>
+#include <QtWidgets/QMenu>
 #include <QtWidgets/QToolButton>
 #include <QtWidgets/QVBoxLayout>
 
@@ -111,6 +112,18 @@ namespace hello::daw {
             stdc_impl_t;
             if (mark >= 0 && mark < impl.markNotes.size()) {
                 Q_EMIT tempoRequested(impl.markNotes[mark]);
+            }
+        });
+        connect(impl.ruler, &TimelineRuler::sectionDoubleClicked, this, [this](int section) {
+            stdc_impl_t;
+            if (section < 0 || section >= impl.sectionNotes.size()) {
+                return;
+            }
+            const auto notes = impl.sectionNotes[section];
+            if (notes.label) {
+                Q_EMIT labelRequested(notes.first);
+            } else {
+                Q_EMIT regionRequested(notes.first, notes.last);
             }
         });
         connect(impl.ruler, &TimelineRuler::menuRequested, this,
@@ -400,6 +413,63 @@ namespace hello::daw {
     int PianoRoll::quantizedLength() const {
         stdc_impl_t;
         return impl.quantization > 0 ? impl.quantization : kit::ticksPerQuarter;
+    }
+
+    std::optional<std::pair<int, int>> PianoRoll::selectedRange() const {
+        const auto indices = selectedIndices();
+        if (indices.isEmpty() || indices.last() - indices.first() + 1 != indices.size()) {
+            return std::nullopt;
+        }
+        return std::pair{indices.first(), indices.last()};
+    }
+
+    QList<PianoRoll::Region> PianoRoll::regions() const {
+        stdc_impl_t;
+        const auto refs = impl.notes();
+        const int count = impl.timeline->noteCount();
+        QList<Region> result;
+        for (int i = 0; i < count; ++i) {
+            const auto name = refs.at(i).region();
+            if (name.isEmpty()) {
+                continue;
+            }
+            int last = i;
+            while (last + 1 < count && refs.at(last).regionEnd().isEmpty()) {
+                ++last;
+            }
+            result.push_back({name, i, last});
+        }
+        return result;
+    }
+
+    void PianoRoll::loadRegion(int first, int last) {
+        stdc_impl_t;
+        const int count = impl.timeline->noteCount();
+        if (first < 0 || last < first || last >= count) {
+            return;
+        }
+        QList<int> indices;
+        for (int i = first; i <= last; ++i) {
+            indices.push_back(i);
+        }
+        setSelectedIndices(indices);
+        auto time = impl.view->timeAxis();
+        const double margin = impl.view->viewport()->width() / 10.0 / time.pixelsPerTick;
+        time.left = std::max(0.0, double(impl.timeline->note(first).start) - margin);
+        impl.view->setTimeAxis(time);
+    }
+
+    void PianoRoll::fillRegionMenu(QMenu *menu) {
+        menu->clear();
+        const auto all = regions();
+        if (all.isEmpty()) {
+            menu->addAction(tr("No Regions"))->setEnabled(false);
+            return;
+        }
+        for (const auto &region : all) {
+            connect(menu->addAction(region.name), &QAction::triggered, this,
+                    [this, region] { loadRegion(region.first, region.last); });
+        }
     }
 
     QList<int> PianoRoll::selectedIndices() const {

@@ -17,6 +17,7 @@
 
 class QComboBox;
 class QLineEdit;
+class QMenu;
 
 namespace hello::kit {
     class ProjectSession;
@@ -189,11 +190,38 @@ namespace hello::daw {
         void setSelectedIndices(const QList<int> &indices);
         void selectAll();
 
+        /// Returns the first and the last index of the selected notes if they are one unbroken
+        /// stretch, as a region requires, or \c std::nullopt otherwise.
+        std::optional<std::pair<int, int>> selectedRange() const;
+
         /// The selected Mode2 points, as the index of the note and the index of the point in
         /// it, in ascending order. Points and notes are not selected at the same time: selecting
         /// either clears the other.
         QList<std::pair<int, int>> selectedPoints() const;
         void setSelectedPoints(const QList<std::pair<int, int>> &points);
+        /// @}
+
+        /// \name Labels and regions
+        /// @{
+
+        /// A named stretch of notes, as UTAU names one: from a note whose \c $region names it to
+        /// the first note from there whose \c $region_end is not empty, or to the last note.
+        struct Region {
+            QString name;
+            int first = 0;
+            int last = 0;
+        };
+
+        /// Returns the regions of the track in the order of their first notes.
+        QList<Region> regions() const;
+
+        /// Selects the notes from \a first to \a last and scrolls to them, the first a tenth of
+        /// the width of the view from its left edge.
+        void loadRegion(int first, int last);
+
+        /// Fills \a menu with an item for each region, which loads it, or with one disabled
+        /// item if there is none.
+        void fillRegionMenu(QMenu *menu);
         /// @}
 
         /// \name Operations on the selection
@@ -467,6 +495,16 @@ namespace hello::daw {
         /// time of the note. "Remove Tempo Mark" in that menu clears the tempo of the note
         /// itself, see the note tempo in docs/Widgets.md.
         void tempoRequested(int index);
+
+        /// The label of note \a index is to be edited: its label on the ruler was
+        /// double-clicked, or "Set Label Here..." chosen in the menu of the ruler at the time of
+        /// the note.
+        void labelRequested(int index);
+
+        /// The region of the notes from \a first to \a last is to be named: its name on the
+        /// ruler was double-clicked, or "Name Region..." chosen in the menu of the ruler, for
+        /// the selected notes if they are unbroken, otherwise for the note at that time.
+        void regionRequested(int first, int last);
 
     protected:
         void keyPressEvent(QKeyEvent *event) override;
