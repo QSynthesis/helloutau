@@ -306,6 +306,7 @@ namespace hello::daw {
 
         /// Selects the notes ids; selecting a note clears the selected points.
         void setSelection(const QSet<kit::edit::NodeId> &ids);
+        void updateRulerSelection();
 
         /// The note whose points are drawn plainly, the others' faintly: the one whose
         /// portamento or point is under the pointer, or -1

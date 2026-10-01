@@ -12,9 +12,9 @@ namespace hello::daw {
 
     class SceneView;
 
-    /// The ruler above a scene view: in its top row named sections such as labels and regions,
-    /// below them bar numbers and beat lines along its time axis, and marks at given positions,
-    /// such as changes of tempo.
+    /// The ruler above a scene view: in its top rows named labels and regions, below them bar
+    /// numbers and beat lines along its time axis, and marks at given positions, such as changes
+    /// of tempo.
     ///
     /// The ruler follows the time axis of its view. Lines are drawn as densely as they stay
     /// apart: beats only when they are far enough apart, and bar numbers at an interval that
@@ -47,6 +47,7 @@ namespace hello::daw {
             double last = 0;
             QString text;
             bool filled = false;
+            bool selected = false;
         };
 
         explicit TimelineRuler(SceneView *view, QWidget *parent = nullptr);
@@ -94,6 +95,9 @@ namespace hello::daw {
         /// Section \a index of sections() was double-clicked.
         void sectionDoubleClicked(int index);
 
+        /// Section \a index was clicked.
+        void sectionClicked(int index);
+
         /// The context menu was asked for at \a tick, to be shown at \a globalPosition.
         void menuRequested(double tick, const QPoint &globalPosition);
 
@@ -102,6 +106,7 @@ namespace hello::daw {
         void mousePressEvent(QMouseEvent *event) override;
         void mouseMoveEvent(QMouseEvent *event) override;
         void mouseDoubleClickEvent(QMouseEvent *event) override;
+        void leaveEvent(QEvent *event) override;
         void contextMenuEvent(QContextMenuEvent *event) override;
 
     private:
@@ -113,12 +118,13 @@ namespace hello::daw {
         QList<Section> m_sections;
         QColor m_lineColor;
         QColor m_markColor;
+        int m_hoveredSection = -1;
 
         // Where the ruler starts in the time axis of the view, as it is painted
         double offset() const;
 
-        // The height of the top row, of the sections; the bar numbers and the marks share the
-        // rest in halves.
+        // The height of each label and region row. The bar numbers and marks share the rest in
+        // halves.
         int sectionRowHeight() const;
 
         // The index of the mark whose text is at position, or -1
@@ -126,6 +132,8 @@ namespace hello::daw {
 
         // The index of the section at position, a label before a region, or -1
         int sectionAt(const QPointF &position) const;
+
+        void updateSectionHover(const QPointF &position);
     };
 
 }

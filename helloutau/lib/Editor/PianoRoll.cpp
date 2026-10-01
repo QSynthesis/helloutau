@@ -126,6 +126,13 @@ namespace hello::daw {
                 Q_EMIT regionRequested(notes.first, notes.last);
             }
         });
+        connect(impl.ruler, &TimelineRuler::sectionClicked, this, [this](int section) {
+            stdc_impl_t;
+            if (section >= 0 && section < impl.sectionNotes.size()) {
+                const auto notes = impl.sectionNotes.at(section);
+                impl.selectRange(notes.first, notes.last);
+            }
+        });
         connect(impl.ruler, &TimelineRuler::menuRequested, this,
                 [this](double tick, const QPoint &globalPosition) {
                     stdc_impl_t;
@@ -440,6 +447,40 @@ namespace hello::daw {
             result.push_back({name, i, last});
         }
         return result;
+    }
+
+    std::optional<PianoRoll::Region> PianoRoll::regionAt(int index) const {
+        std::optional<Region> found;
+        for (const auto &region : regions()) {
+            if (region.first <= index && index <= region.last) {
+                found = region;
+            }
+        }
+        return found;
+    }
+
+    bool PianoRoll::removeLabels(const QList<int> &indices, kit::DiagnosticList &diagnostics) {
+        stdc_impl_t;
+        const auto refs = impl.notes();
+        auto transaction = impl.session->transaction(tr("Remove Label"));
+        for (const int index : indices) {
+            if (index >= 0 && index < refs.size() && !refs.at(index).label().isEmpty()) {
+                kit::ProjectEdits::setLabel(refs.at(index), QString(), diagnostics);
+            }
+        }
+        return transaction.commit(diagnostics);
+    }
+
+    bool PianoRoll::removeRegion(int index, kit::DiagnosticList &diagnostics) {
+        stdc_impl_t;
+        const auto region = regionAt(index);
+        if (!region) {
+            return true;
+        }
+        auto transaction = impl.session->transaction(tr("Remove Region"));
+        kit::ProjectEdits::nameRegion(impl.notes(), region->first, region->last - region->first + 1,
+                                      QString(), diagnostics);
+        return transaction.commit(diagnostics);
     }
 
     void PianoRoll::loadRegion(int first, int last) {

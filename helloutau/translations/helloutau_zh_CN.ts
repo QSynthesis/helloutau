@@ -295,6 +295,14 @@
         <translation>命名区间(&amp;G)...</translation>
     </message>
     <message>
+        <source>Remove Label</source>
+        <translation>移除标签</translation>
+    </message>
+    <message>
+        <source>Remove Region</source>
+        <translation>移除区间</translation>
+    </message>
+    <message>
         <source>Note Propert&amp;ies...</source>
         <translation>音符属性(&amp;I)...</translation>
     </message>
@@ -859,6 +867,14 @@
         <translation>移除颤音</translation>
     </message>
     <message>
+        <source>Remove Label</source>
+        <translation>移除标签</translation>
+    </message>
+    <message>
+        <source>Remove Region</source>
+        <translation>移除区间</translation>
+    </message>
+    <message>
         <source>Add Vibrato</source>
         <translation>添加颤音</translation>
     </message>
@@ -949,6 +965,14 @@
     <message>
         <source>&amp;Name Region...</source>
         <translation>命名区间(&amp;N)...</translation>
+    </message>
+    <message>
+        <source>Remove La&amp;bel</source>
+        <translation>移除标签(&amp;B)</translation>
+    </message>
+    <message>
+        <source>Remove Re&amp;gion</source>
+        <translation>移除区间(&amp;G)</translation>
     </message>
     <message>
         <source>L&amp;oad Region</source>
@@ -1086,6 +1110,14 @@
     <message>
         <source>Name Region</source>
         <translation>命名区间</translation>
+    </message>
+    <message>
+        <source>Remove Label</source>
+        <translation>移除标签</translation>
+    </message>
+    <message>
+        <source>Remove Region</source>
+        <translation>移除区间</translation>
     </message>
     <message>
         <source>&amp;Name:</source>

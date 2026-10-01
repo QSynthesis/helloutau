@@ -709,9 +709,9 @@ private Q_SLOTS:
     }
 
     // The label of la and the region V from li to lu, ended by $region_end of lu, are sections
-    // of the ruler: the region outlined, the label filled. A double click on one asks to edit
-    // it; loading the region selects its notes and scrolls to it with a tenth of the view
-    // before it.
+    // of the ruler: the region outlined, the label filled. Clicking one selects its notes and
+    // highlights its border. A double click asks to edit it; loading the region selects its notes
+    // and scrolls to it with a tenth of the view before it.
     void labels_and_regions_are_on_the_ruler() {
         kit::Project project;
         project.settings.tempo = 120;
@@ -746,21 +746,29 @@ private Q_SLOTS:
         QVERIFY(sections[1].filled);
 
         // Where tick lies in the top row of the ruler
-        const auto onRuler = [&roll](double tick) {
+        const auto onRuler = [&roll](double tick, int y = 3) {
             const auto ruler = roll.ruler();
             return QPoint(
                 ruler
                     ->mapFrom(&roll, roll.view()->viewport()->mapTo(
                                          &roll, QPoint(int(roll.view()->timeAxis().toX(tick)), 0)))
                     .x(),
-                3);
+                y);
         };
+        roll.setSelectedIndices({});
+        QTest::mouseClick(roll.ruler(), Qt::LeftButton, {}, onRuler(240));
+        QCOMPARE(roll.selectedIndices(), (QList<int>{0}));
+        QVERIFY(roll.ruler()->sections().at(1).selected);
+        roll.setSelectedIndices({});
+        QVERIFY(!roll.ruler()->sections().at(1).selected);
+
         QSignalSpy label(&roll, &PianoRoll::labelRequested);
         QSignalSpy region(&roll, &PianoRoll::regionRequested);
         QTest::mouseDClick(roll.ruler(), Qt::LeftButton, {}, onRuler(240));
         QCOMPARE(label.size(), 1);
         QCOMPARE(label[0][0].toInt(), 0);
-        QTest::mouseDClick(roll.ruler(), Qt::LeftButton, {}, onRuler(1200));
+        QTest::mouseDClick(roll.ruler(), Qt::LeftButton, {},
+                           onRuler(1200, roll.ruler()->height() / 4 + 3));
         QCOMPARE(region.size(), 1);
         QCOMPARE(region[0][0].toInt(), 1);
         QCOMPARE(region[0][1].toInt(), 2);
@@ -781,6 +789,21 @@ private Q_SLOTS:
         QVERIFY(kit::ProjectEdits::setLabel(kit::ProjectRef(&session).tracks().at(0).notes().at(3),
                                             QStringLiteral("B"), diagnostics));
         QTRY_COMPARE(roll.ruler()->sections().size(), 3);
+
+        // Removed, each in one step: the labels of la and le, then the region around lu
+        QCOMPARE(roll.regionAt(2)->name, QStringLiteral("V"));
+        QVERIFY(!roll.regionAt(0));
+        QVERIFY(roll.removeLabels({0, 1, 3}, diagnostics));
+        QCOMPARE(session.undoMessage(), PianoRoll::tr("Remove Label"));
+        QVERIFY(roll.removeRegion(2, diagnostics));
+        QCOMPARE(session.undoMessage(), PianoRoll::tr("Remove Region"));
+        const auto notes = session.snapshot().tracks[0].notes;
+        QVERIFY(notes[0].label.isEmpty() && notes[3].label.isEmpty());
+        QVERIFY(notes[1].region.isEmpty() && notes[2].regionEnd.isEmpty());
+        QVERIFY(roll.regions().isEmpty());
+        QTRY_COMPARE(roll.ruler()->sections().size(), 0);
+        session.undo();
+        QCOMPARE(roll.regions().size(), 1);
     }
 
     // Whether a pixel of \a color lies within two pixels of (tick, cents from key)

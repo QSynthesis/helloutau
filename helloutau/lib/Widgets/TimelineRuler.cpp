@@ -6,6 +6,7 @@
 #include <QtGui/QContextMenuEvent>
 #include <QtGui/QMouseEvent>
 #include <QtGui/QPainter>
+#include <QtGui/QPen>
 
 #include "SceneView.h"
 
@@ -25,6 +26,7 @@ namespace hello::daw {
     }
 
     TimelineRuler::TimelineRuler(SceneView *view, QWidget *parent) : QWidget(parent), m_view(view) {
+        setMouseTracking(true);
         connect(view, &SceneView::timeAxisChanged, this, qOverload<>(&QWidget::update));
     }
 
@@ -99,11 +101,11 @@ namespace hello::daw {
     }
 
     QSize TimelineRuler::sizeHint() const {
-        return {0, fontMetrics().height() * 3 + 3 * LabelPadding};
+        return {0, fontMetrics().height() * 4 + 4 * LabelPadding};
     }
 
     int TimelineRuler::sectionRowHeight() const {
-        return height() / 3;
+        return height() / 4;
     }
 
     int TimelineRuler::labelInterval(double barWidth, double labelWidth) {
@@ -119,6 +121,10 @@ namespace hello::daw {
             QWidget::mousePressEvent(event);
             return;
         }
+        if (const int section = sectionAt(event->position()); section >= 0) {
+            Q_EMIT sectionClicked(section);
+            return;
+        }
         mouseMoveEvent(event);
     }
 
@@ -128,7 +134,7 @@ namespace hello::daw {
 
     int TimelineRuler::markAt(const QPointF &position) const {
         const int top = sectionRowHeight();
-        if (!m_view || position.y() < top + (height() - top) / 2) {
+        if (!m_view || position.y() < 2 * top + (height() - 2 * top) / 2) {
             return -1;
         }
         const auto metrics = fontMetrics();
@@ -143,19 +149,18 @@ namespace hello::daw {
     }
 
     int TimelineRuler::sectionAt(const QPointF &position) const {
-        if (!m_view || position.y() >= sectionRowHeight()) {
+        if (!m_view || position.y() < 0 || position.y() >= 2 * sectionRowHeight()) {
             return -1;
         }
+        const bool labelRow = position.y() < sectionRowHeight();
         const double tick = m_view->timeAxis().toTick(position.x() - offset());
-        int found = -1;
         for (int i = 0; i < m_sections.size(); ++i) {
             const auto &section = m_sections[i];
-            if (tick >= section.first && tick < section.last &&
-                (found < 0 || (section.filled && !m_sections[found].filled))) {
-                found = i;
+            if (section.filled == labelRow && tick >= section.first && tick < section.last) {
+                return i;
             }
         }
-        return found;
+        return -1;
     }
 
     void TimelineRuler::mouseDoubleClickEvent(QMouseEvent *event) {
@@ -182,13 +187,32 @@ namespace hello::daw {
     }
 
     void TimelineRuler::mouseMoveEvent(QMouseEvent *event) {
-        if (!(event->buttons() & Qt::LeftButton) || !m_view) {
+        if (!m_view) {
+            QWidget::mouseMoveEvent(event);
+            return;
+        }
+        updateSectionHover(event->position());
+        if (!(event->buttons() & Qt::LeftButton)) {
             QWidget::mouseMoveEvent(event);
             return;
         }
         // As painted: the ruler starts where the viewport of the view does.
         Q_EMIT positionPressed(m_view->timeAxis().toTick(event->position().x() - offset()),
                                event->modifiers());
+    }
+
+    void TimelineRuler::updateSectionHover(const QPointF &position) {
+        const int section = sectionAt(position);
+        if (section != m_hoveredSection) {
+            m_hoveredSection = section;
+            update();
+        }
+    }
+
+    void TimelineRuler::leaveEvent(QEvent *event) {
+        m_hoveredSection = -1;
+        update();
+        QWidget::leaveEvent(event);
     }
 
     void TimelineRuler::paintEvent(QPaintEvent *event) {
@@ -201,9 +225,11 @@ namespace hello::daw {
         // The ruler starts where the viewport of the view does.
         const double offset = this->offset();
         const auto metrics = fontMetrics();
-        // The sections in the top row, the bar numbers and the marks in halves of the rest
+        // Labels and regions in separate rows, then the bar numbers and marks in halves of the
+        // remaining area.
         const int top = sectionRowHeight();
-        const int half = (height() - top) / 2;
+        const int timelineTop = 2 * top;
+        const int half = (height() - timelineTop) / 2;
 
         const double barTicks = double(m_ticksPerBeat) * m_beatsPerBar;
         const double beatWidth = m_ticksPerBeat * axis.pixelsPerTick;
@@ -220,10 +246,11 @@ namespace hello::daw {
         painter.setPen(lineColor());
         for (auto bar = firstBar; bar <= lastBar; ++bar) {
             const double barX = offset + axis.toX(double(bar) * barTicks);
-            painter.drawLine(QPointF(barX, top + half), QPointF(barX, height()));
+            painter.drawLine(QPointF(barX, timelineTop + half), QPointF(barX, height()));
             if (bar % interval == 0) {
-                painter.drawText(QRectF(barX + LabelPadding, top, barWidth * interval, half),
-                                 Qt::AlignLeft | Qt::AlignVCenter, QString::number(bar + 1));
+                painter.drawText(
+                    QRectF(barX + LabelPadding, timelineTop, barWidth * interval, half),
+                    Qt::AlignLeft | Qt::AlignVCenter, QString::number(bar + 1));
             }
             if (beatWidth >= MinimumBeatSpacing) {
                 for (int beat = 1; beat < m_beatsPerBar; ++beat) {
@@ -249,32 +276,34 @@ namespace hello::daw {
             if (x < -metrics.horizontalAdvance(mark.text) || x > width()) {
                 continue;
             }
-            painter.drawText(QRectF(x + LabelPadding, top + half, width(), half),
+            painter.drawText(QRectF(x + LabelPadding, timelineTop + half, width(), half),
                              Qt::AlignLeft | Qt::AlignVCenter, mark.text);
         }
 
-        // The regions outlined, then the labels filled over them
+        // Regions in the lower section row, labels in the upper section row.
         auto fill = markColor();
         fill.setAlphaF(fill.alphaF() * 0.25f);
-        for (const bool filled : {false, true}) {
-            for (const auto &section : std::as_const(m_sections)) {
-                if (section.filled != filled) {
-                    continue;
-                }
-                const double left = offset + axis.toX(section.first);
-                const double right = offset + axis.toX(section.last);
-                if (right < 0 || left > width()) {
-                    continue;
-                }
-                const QRectF box(left + 0.5, 1.5, std::max(1.0, right - left - 1), top - 3);
-                painter.setPen(markColor());
-                painter.setBrush(filled ? QBrush(fill) : QBrush(Qt::NoBrush));
-                painter.drawRect(box);
-                painter.drawText(box.adjusted(LabelPadding, 0, -LabelPadding, 0),
-                                 Qt::AlignLeft | Qt::AlignVCenter,
-                                 metrics.elidedText(section.text, Qt::ElideRight,
-                                                    int(box.width()) - 2 * LabelPadding));
+        for (int index = 0; index < m_sections.size(); ++index) {
+            const auto &section = m_sections.at(index);
+            const double left = offset + axis.toX(section.first);
+            const double right = offset + axis.toX(section.last);
+            if (right < 0 || left > width()) {
+                continue;
             }
+            const double rowTop = section.filled ? 0 : top;
+            const QRectF box(left + 0.5, rowTop + 1.5, std::max(1.0, right - left - 1), top - 3);
+            QPen pen(markColor());
+            if (section.selected || index == m_hoveredSection) {
+                pen.setColor(pen.color().lighter(130));
+                pen.setWidthF(2.0);
+            }
+            painter.setPen(pen);
+            painter.setBrush(section.filled ? QBrush(fill) : QBrush(Qt::NoBrush));
+            painter.drawRect(box);
+            painter.drawText(box.adjusted(LabelPadding, 0, -LabelPadding, 0),
+                             Qt::AlignLeft | Qt::AlignVCenter,
+                             metrics.elidedText(section.text, Qt::ElideRight,
+                                                int(box.width()) - 2 * LabelPadding));
         }
     }
 

@@ -76,6 +76,8 @@
         <!-- The label of a note and the name of a region, as UTAU shows them on the timeline -->
         <action id="helloutau.edit.setLabel" text="Set La&amp;bel..." category="Edit" />
         <action id="helloutau.edit.nameRegion" text="Name Re&amp;gion..." category="Edit" />
+        <action id="helloutau.edit.removeLabel" text="Remove Label" category="Edit" />
+        <action id="helloutau.edit.removeRegion" text="Remove Region" category="Edit" />
         <!-- The properties of the selected notes, as the note property dialog of UTAU -->
         <action id="helloutau.edit.noteProperties" text="Note Propert&amp;ies..." category="Edit"
                 shortcut="Ctrl+E" />
@@ -226,6 +228,8 @@
                 <action id="helloutau.edit.setTempo" />
                 <action id="helloutau.edit.setLabel" />
                 <action id="helloutau.edit.nameRegion" />
+                <action id="helloutau.edit.removeLabel" />
+                <action id="helloutau.edit.removeRegion" />
                 <action id="helloutau.edit.noteProperties" />
                 <separator />
                 <action id="helloutau.edit.mode2" />

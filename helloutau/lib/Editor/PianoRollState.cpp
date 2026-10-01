@@ -96,6 +96,20 @@ namespace hello::daw {
         QObject::connect(region, &QAction::triggered, &decl, [this, range] {
             Q_EMIT widget->regionRequested(range.first, range.second);
         });
+        const auto removeLabel = menu.addAction(PianoRoll::tr("Remove La&bel"));
+        removeLabel->setEnabled(index >= 0 && !notes().at(index).label().isEmpty());
+        QObject::connect(removeLabel, &QAction::triggered, &decl, [this, index] {
+            kit::DiagnosticList diagnostics;
+            widget->removeLabels({index}, diagnostics);
+            report(diagnostics);
+        });
+        const auto removeRegion = menu.addAction(PianoRoll::tr("Remove Re&gion"));
+        removeRegion->setEnabled(index >= 0 && decl.regionAt(index).has_value());
+        QObject::connect(removeRegion, &QAction::triggered, &decl, [this, index] {
+            kit::DiagnosticList diagnostics;
+            widget->removeRegion(index, diagnostics);
+            report(diagnostics);
+        });
         const auto load = menu.addMenu(PianoRoll::tr("L&oad Region"));
         decl.fillRegionMenu(load);
         menu.exec(globalPosition);
@@ -146,7 +160,23 @@ namespace hello::daw {
             selectedPoints.clear();
         }
         view->viewport()->update();
+        updateRulerSelection();
         Q_EMIT decl.selectionChanged();
+    }
+
+    void PianoRollState::updateRulerSelection() {
+        auto sections = ruler->sections();
+        for (int i = 0; i < sections.size() && i < sectionNotes.size(); ++i) {
+            const auto &range = sectionNotes.at(i);
+            sections[i].selected = true;
+            for (int note = range.first; note <= range.last; ++note) {
+                if (!isSelected(note)) {
+                    sections[i].selected = false;
+                    break;
+                }
+            }
+        }
+        ruler->setSections(sections);
     }
 
     void PianoRollState::hover(std::optional<QPointF> position) {
@@ -624,6 +654,7 @@ namespace hello::daw {
             }
         }
         ruler->setSections(sections);
+        updateRulerSelection();
         updateRenderSpans();
         view->viewport()->update();
     }

@@ -215,6 +215,17 @@ namespace hello::daw {
         /// Returns the regions of the track in the order of their first notes.
         QList<Region> regions() const;
 
+        /// Returns the region that contains note \a index, the last to start at or before it if
+        /// several do, or \c std::nullopt if none does.
+        std::optional<Region> regionAt(int index) const;
+
+        /// Removes the labels of the notes \a indices, in one step.
+        bool removeLabels(const QList<int> &indices, kit::DiagnosticList &diagnostics);
+
+        /// Removes the region that contains note \a index (regionAt()), in one step: its
+        /// \c $region and \c $region_end.
+        bool removeRegion(int index, kit::DiagnosticList &diagnostics);
+
         /// Selects the notes from \a first to \a last and scrolls to them, the first a tenth of
         /// the width of the view from its left edge.
         void loadRegion(int first, int last);

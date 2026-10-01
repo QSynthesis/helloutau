@@ -201,6 +201,8 @@ note.userData().remove(QStringLiteral("$Custom"));
 | `setNoteProperties` | 改音符的属性（`NotePropertyChanges`）：歌词、长度、曲速、力度、调制、辅音速度、先行发声、重叠、STP、flags，只改给出的字段，对每个音符相同，一个撤销步骤「Change Note Properties」；能留给默认值的字段设为空即清除。用于音符属性对话框与曲速（作者 2026-09-29 要求） |
 | `setProperties` | 改工程的属性（`ProjectPropertyChanges`）：名称、速度、flags、输出文件、第一条音轨的音源目录、两个引擎、Mode2，只改给出的字段，一个撤销步骤「Change Project Properties」；没有任何变化时不产生步骤。两个引擎只记录，不执行。用于工程属性对话框（作者 2026-09-29 要求） |
 
+卷帘的「Remove Label」与「Remove Region」是界面操作，不新增领域函数：前者对选中的音符分别调用 `setLabel` 清空标签，后者对第一个选中音符所在的区间调用 `nameRegion` 清空两端字段。每项操作在外层合并为一个事务，因此各占一个撤销步骤。
+
 ## 六种变更形状
 
 变更记录是通用的，按形状各实现一次，而非每个函数各实现一次。每种形状对应 substate 的一种动作：

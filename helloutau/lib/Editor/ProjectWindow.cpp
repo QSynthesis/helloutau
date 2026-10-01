@@ -1,5 +1,7 @@
 #include "ProjectWindow.h"
 
+#include <algorithm>
+
 #include <QtCore/QDir>
 #include <QtCore/QHash>
 #include <QtCore/QMetaObject>
@@ -200,46 +202,44 @@ namespace hello::daw {
             }
             QObject::connect(renderCancel, &QPushButton::clicked, playback, &Playback::stop);
 
-            QObject::connect(playback, &Playback::stateChanged, &decl,
-                             [this](Playback::State state) {
-                                 scheduleRenderStates();
-                                 updateSaveLastPlayed();
-                                 const bool rendering = state == Playback::Rendering;
-                                 renderLabel->setVisible(rendering);
-                                 renderProgress->setVisible(rendering);
-                                 renderCancel->setVisible(rendering);
-                                 if (rendering) {
-                                     renderLabel->setText(tr("Rendering..."));
-                                     renderProgress->setRange(0, 0);
-                                 }
-                                 if (state == Playback::Playing) {
-                                     playheadTimer.start();
-                                 } else {
-                                     playheadTimer.stop();
-                                     // Paused, the line stays where playback was.
-                                     const auto at = playback->position();
-                                     roll->setPlayheadPosition(
-                                         state == Playback::Paused && at
-                                             ? std::optional(
-                                                   roll->timeline()->tempoMap().tickOf(*at))
-                                             : std::nullopt);
-                                 }
-                                 if (state == Playback::Stopped) {
-                                     previewing = false;
-                                     reportPreviewFailures();
-                                     // Later, since a preview stops before it restarts, and
-                                     // a window stops as it closes.
-                                     QMetaObject::invokeMethod(
-                                         _decl,
-                                         [this] {
-                                             if (realtime() &&
-                                                 playback->state() == Playback::Stopped) {
-                                                 updateBackground();
-                                             }
-                                         },
-                                         Qt::QueuedConnection);
-                                 }
-                             });
+            QObject::connect(
+                playback, &Playback::stateChanged, &decl, [this](Playback::State state) {
+                    scheduleRenderStates();
+                    updateSaveLastPlayed();
+                    const bool rendering = state == Playback::Rendering;
+                    renderLabel->setVisible(rendering);
+                    renderProgress->setVisible(rendering);
+                    renderCancel->setVisible(rendering);
+                    if (rendering) {
+                        renderLabel->setText(tr("Rendering..."));
+                        renderProgress->setRange(0, 0);
+                    }
+                    if (state == Playback::Playing) {
+                        playheadTimer.start();
+                    } else {
+                        playheadTimer.stop();
+                        // Paused, the line stays where playback was.
+                        const auto at = playback->position();
+                        roll->setPlayheadPosition(
+                            state == Playback::Paused && at
+                                ? std::optional(roll->timeline()->tempoMap().tickOf(*at))
+                                : std::nullopt);
+                    }
+                    if (state == Playback::Stopped) {
+                        previewing = false;
+                        reportPreviewFailures();
+                        // Later, since a preview stops before it restarts, and
+                        // a window stops as it closes.
+                        QMetaObject::invokeMethod(
+                            _decl,
+                            [this] {
+                                if (realtime() && playback->state() == Playback::Stopped) {
+                                    updateBackground();
+                                }
+                            },
+                            Qt::QueuedConnection);
+                    }
+                });
             QObject::connect(playback, &Playback::progressed, &decl, [this](int done, int total) {
                 renderLabel->setText(tr("Rendering..."));
                 renderProgress->setRange(0, total);
@@ -500,8 +500,8 @@ namespace hello::daw {
             }
             const auto selected = roll->selectedIndices();
             if (selected.isEmpty()) {
-                decl.statusBar()->showMessage(ProjectWindow::tr("Select the notes to render first."),
-                                              StatusMessageTimeout);
+                decl.statusBar()->showMessage(
+                    ProjectWindow::tr("Select the notes to render first."), StatusMessageTimeout);
                 return;
             }
             playRange(std::make_pair(selected.first(), selected.last()));
@@ -770,7 +770,7 @@ namespace hello::daw {
             if (!failed.isEmpty()) {
                 decl.statusBar()->showMessage(
                     ProjectWindow::tr("%n note(s) could not be rendered, and were silent.", nullptr,
-                                   int(failed.size())),
+                                      int(failed.size())),
                     StatusMessageTimeout);
             }
         }
@@ -827,26 +827,26 @@ namespace hello::daw {
             context->addToolBar(QStringLiteral("helloutau.mainToolBar"), toolBar);
             const auto id = QStringLiteral("helloutau.edit.quantization");
             context->addWidgetFactory(id, [this](QWidget *parent) -> QWidget * {
-                    auto box = new QComboBox(parent);
-                    box->setObjectName(QStringLiteral("quantization"));
-                    box->setToolTip(tr("Quantization"));
-                    // Wider than its longest choice, which looks cramped in the tool bar
-                    box->setMinimumContentsLength(8);
-                    box->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
-                    for (const int ticks : PianoRoll::quantizations()) {
-                        box->addItem(PianoRoll::quantizationName(ticks), ticks);
-                    }
+                auto box = new QComboBox(parent);
+                box->setObjectName(QStringLiteral("quantization"));
+                box->setToolTip(tr("Quantization"));
+                // Wider than its longest choice, which looks cramped in the tool bar
+                box->setMinimumContentsLength(8);
+                box->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
+                for (const int ticks : PianoRoll::quantizations()) {
+                    box->addItem(PianoRoll::quantizationName(ticks), ticks);
+                }
+                if (roll) {
+                    box->setCurrentIndex(box->findData(roll->quantization()));
+                }
+                QObject::connect(box, &QComboBox::currentIndexChanged, box, [this, box] {
                     if (roll) {
-                        box->setCurrentIndex(box->findData(roll->quantization()));
+                        roll->setQuantization(box->currentData().toInt());
                     }
-                    QObject::connect(box, &QComboBox::currentIndexChanged, box, [this, box] {
-                        if (roll) {
-                            roll->setQuantization(box->currentData().toInt());
-                        }
-                    });
-                    quantizationBoxes.push_back(box);
-                    return box;
                 });
+                quantizationBoxes.push_back(box);
+                return box;
+            });
         }
 
         // Shows ticks in the boxes of the quantization, as the piano roll has it.
@@ -940,6 +940,20 @@ namespace hello::daw {
                     nameRegion(range->first, range->second);
                 }
             });
+            addCommand(QStringLiteral("helloutau.edit.removeLabel"), [this] {
+                edit(tr("Remove Label"), [this](kit::DiagnosticList &diagnostics) {
+                    return roll->removeLabels(roll->selectedIndices(), diagnostics);
+                });
+            });
+            addCommand(QStringLiteral("helloutau.edit.removeRegion"), [this] {
+                const auto selected = roll->selectedIndices();
+                if (selected.isEmpty()) {
+                    return;
+                }
+                edit(tr("Remove Region"), [this, &selected](kit::DiagnosticList &diagnostics) {
+                    return roll->removeRegion(selected.first(), diagnostics);
+                });
+            });
             // An external action: its menu is ours to fill, each time it opens.
             regionMenu = new QMenu(&decl);
             QObject::connect(regionMenu, &QMenu::aboutToShow, &decl,
@@ -970,8 +984,7 @@ namespace hello::daw {
                 updateFindResult();
             });
             addCommand(QStringLiteral("helloutau.edit.findNext"), [this] { findAgain(true); });
-            addCommand(QStringLiteral("helloutau.edit.findPrevious"),
-                       [this] { findAgain(false); });
+            addCommand(QStringLiteral("helloutau.edit.findPrevious"), [this] { findAgain(false); });
             addCommand(QStringLiteral("helloutau.edit.insertNote"), [this] {
                 edit(tr("Insert Note"), [this](kit::DiagnosticList &diagnostics) {
                     return roll->insertNote(diagnostics);
@@ -1253,8 +1266,11 @@ namespace hello::daw {
                 const int index = selected.first();
                 const auto lyric = roll->timeline()->note(index).lyric;
                 if (search.matches(lyric) &&
-                    !setLyrics({{index, search.replaced(lyric, findBar->replacement())}},
-                               tr("Replace"))) {
+                    !setLyrics(
+                        {
+                            {index, search.replaced(lyric, findBar->replacement())}
+                },
+                        tr("Replace"))) {
                     return;
                 }
             }
@@ -1444,6 +1460,15 @@ namespace hello::daw {
             actions.value(QStringLiteral("helloutau.edit.setLabel"))->setEnabled(selected > 0);
             actions.value(QStringLiteral("helloutau.edit.nameRegion"))
                 ->setEnabled(roll->selectedRange().has_value());
+            // A label to remove among the selected notes, a region around the first of them
+            const auto indices = roll->selectedIndices();
+            const auto notes = kit::ProjectRef(document->session()).tracks().at(0).notes();
+            const bool labeled = std::any_of(indices.begin(), indices.end(), [&notes](int i) {
+                return !notes.at(i).label().isEmpty();
+            });
+            actions.value(QStringLiteral("helloutau.edit.removeLabel"))->setEnabled(labeled);
+            actions.value(QStringLiteral("helloutau.edit.removeRegion"))
+                ->setEnabled(!indices.isEmpty() && roll->regionAt(indices.first()).has_value());
             actions.value(QStringLiteral("helloutau.edit.mergeNotes"))->setEnabled(selected > 1);
             const bool copied = !PianoRoll::copiedNotes().isEmpty();
             actions.value(QStringLiteral("helloutau.edit.paste"))->setEnabled(copied);
