@@ -95,6 +95,11 @@ namespace hello::daw {
         bool areParametersVisible() const;
         void setParametersVisible(bool visible);
 
+        /// Whether the project window shows its tool bar (View > Show Toolbar). The default is
+        /// true.
+        bool isToolBarVisible() const;
+        void setToolBarVisible(bool visible);
+
         /// Encoding initially selected when a UST is exported. The default is UTF-8.
         QString ustExportCharset() const;
         void setUstExportCharset(const QString &charset);

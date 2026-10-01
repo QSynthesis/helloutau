@@ -7,6 +7,8 @@
 
 #include <helloutau/Editor/HelloUtauEditorGlobal.h>
 
+class QComboBox;
+
 namespace QAK {
     class WidgetActionContext;
 }
@@ -39,6 +41,10 @@ namespace hello::daw {
         /// Returns the piano roll of the project, which holds the selection. The piano roll is
         /// replaced together with the document, see documentChanged().
         PianoRoll *pianoRoll() const;
+
+        /// Returns the box of the quantization in the tool bar, or null while the tool bar has
+        /// none. A rebuilt tool bar has a new box.
+        QComboBox *quantizationBox() const;
 
         /// Replaces the project of the window with \a document, together with its piano roll.
         void setDocument(std::unique_ptr<kit::ProjectDocument> document);

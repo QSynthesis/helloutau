@@ -26,6 +26,7 @@
 #include "ActionRegistrations_p.h"
 #include "AppSettings.h"
 #include "DiagnosticBox_p.h"
+#include "EditorIcons_p.h"
 #include "EditorSettingPages_p.h"
 #include "ProjectWindow.h"
 #include "UstCharsetDialog.h"
@@ -77,6 +78,7 @@ namespace hello::daw {
                 registry->addExtension(contribution->extension());
             }
             ActionRegistrations::instance().addListener(this);
+            addEditorIcons(registry);
             themes = new ThemeManager(decl);
             themes->addSearchPath(QStringLiteral(":/helloutau/themes"));
             catalog = new SettingCatalog(decl);

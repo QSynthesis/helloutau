@@ -161,7 +161,7 @@ namespace hello::daw {
         /// \name Quantization
         ///
         /// The grid in ticks to which drags snap, or 0 for none. Holding Alt during a drag
-        /// suspends it.
+        /// suspends it. The window offers the choices in its tool bar.
         /// @{
         int quantization() const;
         void setQuantization(int ticks);
@@ -169,11 +169,12 @@ namespace hello::daw {
         /// The choices offered, from a quarter note to a sixty-fourth, and 0.
         static QList<int> quantizations();
 
+        /// Returns the name of the quantization \a ticks, such as 1/16, or Off for 0.
+        static QString quantizationName(int ticks);
+
         /// The length of a note that a command or a click creates: the quantization, or a
         /// quarter note if there is none.
         int quantizedLength() const;
-
-        QComboBox *quantizationBox() const;
         /// @}
 
         /// \name Selection
@@ -412,6 +413,9 @@ namespace hello::daw {
     Q_SIGNALS:
         /// The selection changed, or the notes it refers to did.
         void selectionChanged();
+
+        /// The quantization changed to \a ticks.
+        void quantizationChanged(int ticks);
 
         /// An edit made in the roll itself, by a gesture, a lyric or a context menu, was refused
         /// and left the project as it was; \a message states why. The functions of the roll

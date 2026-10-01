@@ -3,6 +3,7 @@
 #include <QtCore/QDir>
 #include <QtCore/QHash>
 #include <QtCore/QMetaObject>
+#include <QtCore/QSignalBlocker>
 #include <QtCore/QStandardPaths>
 #include <QtCore/QTimer>
 #include <QtGui/QAction>
@@ -10,6 +11,7 @@
 #include <QtGui/QClipboard>
 #include <QtGui/QCloseEvent>
 #include <QtGui/QGuiApplication>
+#include <QtWidgets/QComboBox>
 #include <QtWidgets/QFileDialog>
 #include <QtWidgets/QInputDialog>
 #include <QtWidgets/QLabel>
@@ -20,6 +22,7 @@
 #include <QtWidgets/QProgressDialog>
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QStatusBar>
+#include <QtWidgets/QToolBar>
 
 #include <stdcorelib/pimpl.h>
 
@@ -131,6 +134,9 @@ namespace hello::daw {
         QActionGroup *tools = nullptr;
         CommandPalette *palette = nullptr;
         FindBar *findBar = nullptr;
+        QToolBar *toolBar = nullptr;
+        // The boxes of the quantization in the tool bars, which follow the piano roll
+        QList<QPointer<QComboBox>> quantizationBoxes;
         QMenu *recentMenu = nullptr;
         // What Paste Parameters pasted last
         PianoRoll::Parameters pastedParameters = PianoRoll::AllParameters;
@@ -703,10 +709,61 @@ namespace hello::daw {
             return action;
         }
 
+        // Creates the tool bar, which QActionKit fills from the layout of helloutau.mainToolBar,
+        // with the box of the quantization that each tool bar creates for itself.
+        void initToolBar() {
+            stdc_decl_t;
+            toolBar = new QToolBar(tr("Main Toolbar"));
+            toolBar->setObjectName(QStringLiteral("mainToolBar"));
+            toolBar->setMovable(false);
+            toolBar->setVisible(editor->settings().isToolBarVisible());
+            decl.addToolBar(toolBar);
+            context->addToolBar(QStringLiteral("helloutau.mainToolBar"), toolBar);
+            const auto id = QStringLiteral("helloutau.edit.quantization");
+            context->addWidgetFactory(id, [this](QWidget *parent) -> QWidget * {
+                    auto box = new QComboBox(parent);
+                    box->setObjectName(QStringLiteral("quantization"));
+                    box->setToolTip(tr("Quantization"));
+                    for (const int ticks : PianoRoll::quantizations()) {
+                        box->addItem(PianoRoll::quantizationName(ticks), ticks);
+                    }
+                    if (roll) {
+                        box->setCurrentIndex(box->findData(roll->quantization()));
+                    }
+                    QObject::connect(box, &QComboBox::currentIndexChanged, box, [this, box] {
+                        if (roll) {
+                            roll->setQuantization(box->currentData().toInt());
+                        }
+                    });
+                    quantizationBoxes.push_back(box);
+                    return box;
+                });
+        }
+
+        // Shows ticks in the boxes of the quantization, as the piano roll has it.
+        void showQuantization(int ticks) {
+            quantizationBoxes.removeAll(nullptr);
+            for (const auto &box : std::as_const(quantizationBoxes)) {
+                const QSignalBlocker blocker(box.data());
+                box->setCurrentIndex(box->findData(ticks));
+            }
+        }
+
+        // Selects the next finer quantization if finer is true, else the next coarser one. Off
+        // counts as the finest.
+        void stepQuantization(bool finer) {
+            const auto choices = PianoRoll::quantizations();
+            const auto index = choices.indexOf(roll->quantization());
+            const auto last = choices.size() - 1;
+            const auto next = std::clamp(index + (finer ? 1 : -1), qsizetype(0), last);
+            roll->setQuantization(choices[next]);
+        }
+
         void initActions() {
             stdc_decl_t;
             context = new QAK::WidgetActionContext(&decl);
             context->addMenuBar(QStringLiteral("helloutau.mainMenu"), decl.menuBar());
+            initToolBar();
             initPlayback();
 
             addCommand(QStringLiteral("helloutau.file.new"), [this] { editor->newWindow(); });
@@ -926,6 +983,19 @@ namespace hello::daw {
                 });
             showParameters->setCheckable(true);
             showParameters->setChecked(editor->settings().areParametersVisible());
+            const auto showToolBar =
+                addCommand(QStringLiteral("helloutau.view.showToolBar"), [this] {
+                    const bool visible =
+                        actions.value(QStringLiteral("helloutau.view.showToolBar"))->isChecked();
+                    editor->settings().setToolBarVisible(visible);
+                    toolBar->setVisible(visible);
+                });
+            showToolBar->setCheckable(true);
+            showToolBar->setChecked(editor->settings().isToolBarVisible());
+            addCommand(QStringLiteral("helloutau.edit.finerQuantization"),
+                       [this] { stepQuantization(true); });
+            addCommand(QStringLiteral("helloutau.edit.coarserQuantization"),
+                       [this] { stepQuantization(false); });
             addCommand(QStringLiteral("helloutau.view.commandPalette"), [this] {
                 palette->setCommands(commandEntries());
                 palette->setRecentIds(editor->settings().recentCommands());
@@ -1113,6 +1183,9 @@ namespace hello::daw {
             if (quantization >= 0) {
                 roll->setQuantization(quantization);
             }
+            showQuantization(roll->quantization());
+            QObject::connect(roll, &PianoRoll::quantizationChanged, &decl,
+                             [this](int ticks) { showQuantization(ticks); });
             if (actions.value(QStringLiteral("helloutau.edit.penTool"))->isChecked()) {
                 roll->setTool(PianoRoll::PenTool);
             } else if (actions.value(QStringLiteral("helloutau.edit.pitchTool"))->isChecked()) {
@@ -1456,6 +1529,18 @@ namespace hello::daw {
     PianoRoll *ProjectWindow::pianoRoll() const {
         stdc_impl_t;
         return impl.roll;
+    }
+
+    QComboBox *ProjectWindow::quantizationBox() const {
+        stdc_impl_t;
+        // The box created last, by the latest rebuild of the tool bar
+        for (auto it = impl.quantizationBoxes.crbegin(); it != impl.quantizationBoxes.crend();
+             ++it) {
+            if (*it) {
+                return *it;
+            }
+        }
+        return nullptr;
     }
 
     void ProjectWindow::setDocument(std::unique_ptr<kit::ProjectDocument> document) {

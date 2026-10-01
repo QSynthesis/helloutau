@@ -1,0 +1,12 @@
+<RCC>
+    <qresource prefix="/helloutau/icons">
+        <file>intellij/edit.svg</file>
+        <file>intellij/pause.svg</file>
+        <file>intellij/redo.svg</file>
+        <file>intellij/rerun.svg</file>
+        <file>intellij/run.svg</file>
+        <file>intellij/search.svg</file>
+        <file>intellij/stop.svg</file>
+        <file>intellij/undo.svg</file>
+    </qresource>
+</RCC>

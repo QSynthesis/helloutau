@@ -203,21 +203,6 @@ namespace hello::daw {
             impl.view->setTimeAxis(impl.parameters->timeAxis());
         });
 
-        impl.quantizer = new QComboBox();
-        impl.quantizer->setToolTip(tr("Quantization"));
-        impl.quantizer->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Fixed);
-        for (const int ticks : quantizations()) {
-            impl.quantizer->addItem(
-                ticks > 0 ? QStringLiteral("1/%1").arg(PianoRollState::BarTicks / ticks)
-                          : tr("Off"),
-                ticks);
-        }
-        connect(impl.quantizer, &QComboBox::currentIndexChanged, this, [this](int index) {
-            stdc_impl_t;
-            impl.quantization = impl.quantizer->itemData(index).toInt();
-        });
-        setQuantization(PianoRollState::DefaultQuantization);
-
         impl.editor = new PianoRollState::LyricEditor(impl.view->viewport());
         impl.editor->hide();
         impl.editor->committed = [this] {
@@ -236,7 +221,6 @@ namespace hello::daw {
         auto layout = new QGridLayout(this);
         layout->setContentsMargins(0, 0, 0, 0);
         layout->setSpacing(0);
-        layout->addWidget(impl.quantizer, 0, 0);
         layout->addWidget(impl.ruler, 0, 1);
         layout->addWidget(impl.keyboard, 1, 0);
         layout->addWidget(impl.view, 1, 1);
@@ -393,11 +377,15 @@ namespace hello::daw {
 
     void PianoRoll::setQuantization(int ticks) {
         stdc_impl_t;
-        const int index = impl.quantizer->findData(ticks);
-        if (index >= 0) {
-            impl.quantizer->setCurrentIndex(index);
+        if (impl.quantization == ticks) {
+            return;
         }
         impl.quantization = ticks;
+        Q_EMIT quantizationChanged(ticks);
+    }
+
+    QString PianoRoll::quantizationName(int ticks) {
+        return ticks > 0 ? QStringLiteral("1/%1").arg(PianoRollState::BarTicks / ticks) : tr("Off");
     }
 
     QList<int> PianoRoll::quantizations() {
@@ -409,11 +397,6 @@ namespace hello::daw {
     int PianoRoll::quantizedLength() const {
         stdc_impl_t;
         return impl.quantization > 0 ? impl.quantization : kit::ticksPerQuarter;
-    }
-
-    QComboBox *PianoRoll::quantizationBox() const {
-        stdc_impl_t;
-        return impl.quantizer;
     }
 
     QList<int> PianoRoll::selectedIndices() const {

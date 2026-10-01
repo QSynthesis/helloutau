@@ -281,6 +281,15 @@
 - **工程窗口**：查找所有音符的歌词，休止符（R）也在其中。替换经 `ProjectEdits::setNoteProperties` 在同一个事务中完成。
 - **音源窗口**：查找栏前有范围选择「Aliases」「File Names」。别名范围中，空别名按其表示的文件名主干匹配（同批量改名），没有条目的音频文件不参与；文件名范围只查不替换，替换行不可用。只查找条目表当前显示的行，即当前文件夹与过滤框留下的行，顺序为表中的顺序。替换前按 `VoiceAliasRule::check()` 检查，与批量改名相同：新别名为空，或与同一音频文件的另一条目同名时，整批拒绝并列出问题。
 
+### 工具栏
+
+作者 2026-10-01 要求，由 QActionKit 管理（清单中 `topLevel` 的 menu，窗口以 `addToolBar()` 登记）。
+
+- **工程窗口**（`helloutau.mainToolBar`）：撤销与重做，选择、笔、手绘音高三个工具，Mode2 与显示音高、显示包络、显示参数，两种包络淡化，量化，播放或暂停、停止与重播，查找。各组之间以分隔线隔开。「视图 → Show Toolbar」显示或隐藏，状态存入设置（`view/showToolBar`，默认显示）。
+- **量化**：原来在钢琴键上方的下拉框移到工具栏（作者决定去掉原处），由 QActionKit 的控件工厂创建，与卷帘双向同步，换文档后保留。工具栏隐藏时以「编辑 → Finer Quantization」（Ctrl+[）与「Coarser Quantization」（Ctrl+]）逐档切换，「Off」算最细的一档，到两端为止。
+- **音源窗口**（`helloutau.voiceBank.sampleToolBar`）：波形上方采样区的一行改为工具栏：播放音频、从偏移播放到 cutoff、试合成与停止，试合成的音高与长度，F0 的格式。三个下拉框由控件工厂创建，QActionKit 重建工具栏时会重新创建，因此其值由窗口保存。
+- **图标**：取自 IntelliJ Community 的新界面图标（Apache 2.0，来源与改动见 `lib/Editor/icons/intellij/README.md`），由 `ThemeIcon` 按控件的文字颜色绘制，同一文件适用于深浅两种主题。已有图标的命令：撤销、重做、笔工具、查找、播放、暂停、停止、重播、播放音频。没有对应图标的命令暂以文字显示。图标也显示在菜单中。
+
 ### 设置对话框
 
 作者 2026-09-30 要求：同 JetBrains 的设置对话框，可扩展，结构取 DiffScope 原版的 catalog + page（`SettingCatalog` + `ISettingPage`），并弥补其不足。DiffScope 的做法由其前身 qsynthesis-revenge 中 choruskit 的源码得知（DiffScope 的检出中这些子模块为空）。

@@ -88,6 +88,13 @@
         <action id="helloutau.edit.penTool" text="P&amp;en Tool" category="Edit" shortcut="B" />
         <action id="helloutau.edit.pitchTool" text="&amp;Freehand Pitch Tool" category="Edit"
                 shortcut="F" />
+        <!-- The grid to which drags snap, a box in the tool bar. The two commands step through
+             its choices, from a quarter note to a sixty-fourth and off. -->
+        <action id="helloutau.edit.quantization" text="Quantization" category="Edit" />
+        <action id="helloutau.edit.finerQuantization" text="&amp;Finer Quantization"
+                category="Edit" shortcut="Ctrl+[" />
+        <action id="helloutau.edit.coarserQuantization" text="&amp;Coarser Quantization"
+                category="Edit" shortcut="Ctrl+]" />
 
         <action id="helloutau.view.showPitch" text="Show &amp;Pitch" category="View"
                 shortcut="F4" />
@@ -96,6 +103,8 @@
         <action id="helloutau.view.showEnvelopes" text="Show &amp;Envelopes" category="View" />
         <!-- The modulation and the flags of each note below its bar, as UTAU shows them -->
         <action id="helloutau.view.showParameters" text="Show P&amp;arameters" category="View" />
+        <!-- The tool bar of the project window, shown or hidden as the settings store it -->
+        <action id="helloutau.view.showToolBar" text="Show &amp;Toolbar" category="View" />
 
         <!-- Plays, pauses what plays, or goes on from where it was paused -->
         <action id="helloutau.playback.play" text="&amp;Play or Pause" category="Playback"
@@ -191,10 +200,56 @@
                 category="Tools" />
 
         <menu id="helloutau.voiceBank.setValue" text="&amp;Set at Pointer" />
+
+        <!-- The boxes of the sample tool bar of the voice bank window: the pitch and the length
+             of the synthesized note, and the format of the frequency table drawn -->
+        <action id="helloutau.voiceBank.pitch" text="Pitch" category="Preview" />
+        <action id="helloutau.voiceBank.length" text="Length" category="Preview" />
+        <action id="helloutau.voiceBank.frequencyFormat" text="F0" category="Preview" />
+
+        <!-- The tool bars, which the windows place: the tool bar of the project window, and the
+             tool bar of the sample area above the waveform of the voice bank window -->
+        <menu id="helloutau.mainToolBar" text="Main Toolbar" topLevel="true" />
+        <menu id="helloutau.voiceBank.sampleToolBar" text="Sample Toolbar" topLevel="true" />
     </items>
 
-    <!-- The submenus of this extension, which the insertions place -->
+    <!-- The submenus of this extension, which the insertions place, and the tool bars -->
     <layouts>
+        <menu id="helloutau.mainToolBar">
+            <action id="helloutau.edit.undo" />
+            <action id="helloutau.edit.redo" />
+            <separator />
+            <action id="helloutau.edit.selectTool" />
+            <action id="helloutau.edit.penTool" />
+            <action id="helloutau.edit.pitchTool" />
+            <separator />
+            <action id="helloutau.edit.mode2" />
+            <action id="helloutau.view.showPitch" />
+            <action id="helloutau.view.showEnvelopes" />
+            <action id="helloutau.view.showParameters" />
+            <separator />
+            <action id="helloutau.edit.crossfadeP2P3" />
+            <action id="helloutau.edit.crossfadeP1P4" />
+            <separator />
+            <action id="helloutau.edit.quantization" />
+            <separator />
+            <action id="helloutau.playback.play" />
+            <action id="helloutau.playback.stop" />
+            <action id="helloutau.playback.replay" />
+            <separator />
+            <action id="helloutau.edit.find" />
+        </menu>
+        <menu id="helloutau.voiceBank.sampleToolBar">
+            <action id="helloutau.voiceBank.playAudio" />
+            <action id="helloutau.voiceBank.playSpan" />
+            <action id="helloutau.voiceBank.synthesize" />
+            <action id="helloutau.playback.stop" />
+            <separator />
+            <action id="helloutau.voiceBank.pitch" />
+            <action id="helloutau.voiceBank.length" />
+            <separator />
+            <action id="helloutau.voiceBank.frequencyFormat" />
+        </menu>
         <menu id="helloutau.file.export">
             <action id="helloutau.file.exportUst" />
         </menu>
@@ -269,8 +324,12 @@
             <action id="helloutau.edit.selectTool" />
             <action id="helloutau.edit.penTool" />
             <action id="helloutau.edit.pitchTool" />
+            <action id="helloutau.edit.finerQuantization" />
+            <action id="helloutau.edit.coarserQuantization" />
         </insertion>
         <insertion target="helloutau.view" anchor="first">
+            <action id="helloutau.view.showToolBar" />
+            <separator />
             <action id="helloutau.view.showPitch" />
             <action id="helloutau.view.showEnvelopes" />
             <action id="helloutau.view.showParameters" />

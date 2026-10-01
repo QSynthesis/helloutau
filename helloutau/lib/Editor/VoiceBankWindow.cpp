@@ -29,6 +29,7 @@
 #include <QtWidgets/QSpinBox>
 #include <QtWidgets/QSplitter>
 #include <QtWidgets/QStatusBar>
+#include <QtWidgets/QToolBar>
 #include <QtWidgets/QToolButton>
 #include <QtWidgets/QTableView>
 #include <QtWidgets/QTreeWidget>
@@ -158,16 +159,24 @@ namespace hello::daw {
         // The folder of the context menu of the tree while it is open
         std::optional<std::filesystem::path> menuFolder;
         SamplePreview *preview = nullptr;
-        QComboBox *pitchBox = nullptr;
-        QComboBox *frequencyBox = nullptr;
+        QToolBar *sampleToolBar = nullptr;
+        // The boxes of the sample tool bar, which QActionKit creates again as it rebuilds the
+        // tool bar, and the values that they show
+        QPointer<QComboBox> pitchBox;
+        QPointer<QSpinBox> lengthBox;
+        QPointer<QComboBox> frequencyBox;
+        int synthesizedPitch = 60;
+        int synthesizedLength = 480;
+        // The id of the format of the frequency table chosen in its box, empty for none, or
+        // std::nullopt until the user chooses one
+        std::optional<QString> frequencyFormat;
         // The audio file and the format of the frequency table shown, and the spectrogram of
         // the audio it was computed from
         std::pair<std::filesystem::path, QString> frequencyShown;
         std::shared_ptr<const kit::Spectrogram> spectrum;
         std::shared_ptr<const kit::WaveAudio> spectrumOf;
-        QSpinBox *lengthBox = nullptr;
         QTimer *playheadTimer = nullptr;
-        // The folder and alias whose pitch pitchBox shows by default
+        // The folder and alias whose pitch the synthesized note has by default
         std::optional<std::pair<std::filesystem::path, QString>> pitchOf;
         // The audio files read for the waveform, by path, with the size and time they had
         struct ReadAudio {
@@ -209,6 +218,7 @@ namespace hello::daw {
             stdc_decl_t;
             context = new QAK::WidgetActionContext(&decl);
             context->addMenuBar(QStringLiteral("helloutau.voiceBankMenu"), decl.menuBar());
+            initSampleToolBar();
 
             addCommand(QStringLiteral("helloutau.file.new"), [this] { editor->newWindow(); });
             addCommand(QStringLiteral("helloutau.file.open"), [this] { open(); });
@@ -465,7 +475,8 @@ namespace hello::daw {
             auto lower = new QWidget();
             lowerLayout = new QVBoxLayout(lower);
             lowerLayout->setContentsMargins(0, 0, 0, 0);
-            lowerLayout->addLayout(previewControls());
+            initPreview();
+            lowerLayout->addWidget(sampleToolBar);
             lowerLayout->addWidget(waveform, 1);
 
             auto vertical = new QSplitter(Qt::Vertical);
@@ -1336,37 +1347,44 @@ namespace hello::daw {
             waveform->setSpectrogram(spectrum);
         }
 
-        // The formats registered, as they come and go. The format chosen stays while it is
-        // registered; at first, and in place of a format that went, the one of the resampler of
-        // the settings is chosen.
-        void fillFrequencyBox() {
-            const QSignalBlocker blocker(frequencyBox);
-            const bool filled = frequencyBox->count() > 0;
-            const auto chosen = frequencyBox->currentData().toString();
-            frequencyBox->clear();
-            frequencyBox->addItem(tr("None"), QString());
+        // Returns the id of the format of the frequency table in effect, or an empty string for
+        // none. The format chosen stays while it is registered. At first, and in place of a
+        // format that is no longer registered, the format of the resampler of the settings is
+        // in effect.
+        QString currentFrequencyFormat() const {
             const auto &formats = editor->frequencyFormats();
-            for (const auto format : formats.formats()) {
-                frequencyBox->addItem(format->name(), format->id());
+            if (frequencyFormat &&
+                (frequencyFormat->isEmpty() || formats.format(*frequencyFormat))) {
+                return *frequencyFormat;
             }
-            int index = filled ? frequencyBox->findData(chosen) : -1;
-            if (index < 0) {
-                const auto format =
-                    formats.formatForResampler(pathOf(editor->settings().resampler()));
-                index = format ? std::max(0, frequencyBox->findData(format->id())) : 0;
-            }
-            frequencyBox->setCurrentIndex(index);
+            const auto format = formats.formatForResampler(pathOf(editor->settings().resampler()));
+            return format ? format->id() : QString();
         }
 
-        // The frequency table of the audio of the current row in the format of the box. The box
-        // marks the formats without a table for the audio file.
+        // Fills the box of the format with the formats registered, as they come and go.
+        void fillFrequencyBox() {
+            if (!frequencyBox) {
+                return;
+            }
+            const QSignalBlocker blocker(frequencyBox.data());
+            frequencyBox->clear();
+            frequencyBox->addItem(tr("None"), QString());
+            for (const auto format : editor->frequencyFormats().formats()) {
+                frequencyBox->addItem(format->name(), format->id());
+            }
+            frequencyBox->setCurrentIndex(
+                std::max(0, frequencyBox->findData(currentFrequencyFormat())));
+        }
+
+        // Shows the frequency table of the audio of the current row in the format in effect. The
+        // box marks the formats without a table for the audio file.
         void showFrequency() {
             stdc_decl_t;
             const int row = decl.currentRow();
             const auto path = row >= 0 ? audioPathOf(row) : std::filesystem::path();
-            const auto id = frequencyBox->currentData().toString();
+            const auto id = currentFrequencyFormat();
             const auto &formats = editor->frequencyFormats();
-            for (int i = 1; i < frequencyBox->count(); ++i) {
+            for (int i = 1; frequencyBox && i < frequencyBox->count(); ++i) {
                 const auto format = formats.format(frequencyBox->itemData(i).toString());
                 const bool present = !path.empty() && format && format->exists(path);
                 frequencyBox->setItemText(i, present ? format->name()
@@ -1440,60 +1458,84 @@ namespace hello::daw {
             return QString::fromLatin1(names[noteNum % 12]) + QString::number(noteNum / 12 - 1);
         }
 
-        // The buttons of the preview above the waveform, with the pitch and the length of the
-        // synthesized note
-        QHBoxLayout *previewControls() {
-            stdc_decl_t;
-            preview = new SamplePreview(&decl);
-            auto controls = new QHBoxLayout();
-            for (const auto id : {"helloutau.voiceBank.playAudio", "helloutau.voiceBank.playSpan",
-                                  "helloutau.voiceBank.synthesize", "helloutau.playback.stop"}) {
-                auto button = new QToolButton();
-                button->setDefaultAction(actions.value(QString::fromLatin1(id)));
-                button->setToolButtonStyle(Qt::ToolButtonTextOnly);
-                controls->addWidget(button);
-            }
-            controls->addSpacing(12);
-            pitchBox = new QComboBox();
-            for (int noteNum = kit::VoicePrefix::minimumKey;
-                 noteNum <= kit::VoicePrefix::maximumKey; ++noteNum) {
-                pitchBox->addItem(noteName(noteNum), noteNum);
-            }
-            pitchBox->setCurrentIndex(pitchBox->findData(60));
-            auto pitchLabel = new QLabel(tr("&Pitch:"));
-            pitchLabel->setBuddy(pitchBox);
-            controls->addWidget(pitchLabel);
-            controls->addWidget(pitchBox);
-            lengthBox = new QSpinBox();
-            lengthBox->setRange(15, 7680);
-            lengthBox->setSingleStep(15);
-            lengthBox->setValue(480);
-            lengthBox->setSuffix(tr(" ticks"));
-            auto lengthLabel = new QLabel(tr("&Length:"));
-            lengthLabel->setBuddy(lengthBox);
-            controls->addWidget(lengthLabel);
-            controls->addWidget(lengthBox);
-            controls->addSpacing(12);
+        // Returns a widget of the sample tool bar that holds box after its label.
+        static QWidget *labelled(QWidget *parent, const QString &label, QWidget *box) {
+            auto widget = new QWidget(parent);
+            auto layout = new QHBoxLayout(widget);
+            layout->setContentsMargins(4, 0, 4, 0);
+            auto text = new QLabel(label);
+            text->setBuddy(box);
+            layout->addWidget(text);
+            layout->addWidget(box);
+            return widget;
+        }
 
-            // The frequency table drawn over the audio, that of the resampler of the settings
-            // at first (docs/FrequencyTables.md)
-            frequencyBox = new QComboBox();
-            frequencyBox->setObjectName(QStringLiteral("frequencyFormat"));
-            fillFrequencyBox();
-            QObject::connect(frequencyBox, &QComboBox::currentIndexChanged, &decl,
-                             [this] { showFrequency(); });
+        // Creates the tool bar above the waveform, which QActionKit fills from the layout of
+        // helloutau.voiceBank.sampleToolBar: the buttons of the preview, the pitch and the length
+        // of the synthesized note, and the format of the frequency table. QActionKit creates the
+        // boxes again whenever it rebuilds the tool bar, so the window keeps their values.
+        void initSampleToolBar() {
+            stdc_decl_t;
+            sampleToolBar = new QToolBar();
+            sampleToolBar->setObjectName(QStringLiteral("sampleToolBar"));
+            context->addToolBar(QStringLiteral("helloutau.voiceBank.sampleToolBar"),
+                                sampleToolBar);
+            context->addWidgetFactory(
+                QStringLiteral("helloutau.voiceBank.pitch"), [this](QWidget *parent) -> QWidget * {
+                    auto box = new QComboBox();
+                    for (int noteNum = kit::VoicePrefix::minimumKey;
+                         noteNum <= kit::VoicePrefix::maximumKey; ++noteNum) {
+                        box->addItem(noteName(noteNum), noteNum);
+                    }
+                    box->setCurrentIndex(box->findData(synthesizedPitch));
+                    QObject::connect(box, &QComboBox::currentIndexChanged, box, [this, box] {
+                        synthesizedPitch = box->currentData().toInt();
+                    });
+                    pitchBox = box;
+                    return labelled(parent, tr("&Pitch:"), box);
+                });
+            context->addWidgetFactory(
+                QStringLiteral("helloutau.voiceBank.length"), [this](QWidget *parent) -> QWidget * {
+                    auto box = new QSpinBox();
+                    box->setRange(15, 7680);
+                    box->setSingleStep(15);
+                    box->setSuffix(tr(" ticks"));
+                    box->setValue(synthesizedLength);
+                    QObject::connect(box, &QSpinBox::valueChanged, box,
+                                     [this](int value) { synthesizedLength = value; });
+                    lengthBox = box;
+                    return labelled(parent, tr("&Length:"), box);
+                });
+            // The frequency table drawn over the audio, that of the resampler of the settings at
+            // first (docs/FrequencyTables.md)
+            context->addWidgetFactory(QStringLiteral("helloutau.voiceBank.frequencyFormat"),
+                                      [this](QWidget *parent) -> QWidget * {
+                                          auto box = new QComboBox();
+                                          box->setObjectName(QStringLiteral("frequencyFormat"));
+                                          frequencyBox = box;
+                                          fillFrequencyBox();
+                                          QObject::connect(
+                                              box, &QComboBox::currentIndexChanged, box,
+                                              [this, box] {
+                                                  frequencyFormat = box->currentData().toString();
+                                                  showFrequency();
+                                              });
+                                          return labelled(parent, tr("&F0:"), box);
+                                      });
             QObject::connect(&editor->frequencyFormats(),
                              &kit::FrequencyFormatRegistry::formatsChanged, &decl, [this] {
+                                 frequencyFormat = currentFrequencyFormat();
                                  fillFrequencyBox();
                                  frequencyShown = {};
                                  showFrequency();
                              });
-            auto frequencyLabel = new QLabel(tr("&F0:"));
-            frequencyLabel->setBuddy(frequencyBox);
-            controls->addWidget(frequencyLabel);
-            controls->addWidget(frequencyBox);
-            controls->addStretch();
+        }
 
+        // Creates the preview of the audio and of the synthesized note, with the playhead on the
+        // waveform while it plays.
+        void initPreview() {
+            stdc_decl_t;
+            preview = new SamplePreview(&decl);
             playheadTimer = new QTimer(&decl);
             playheadTimer->setInterval(30);
             QObject::connect(playheadTimer, &QTimer::timeout, &decl,
@@ -1515,7 +1557,6 @@ namespace hello::daw {
                                  DiagnosticBox::show(&decl, tr("Preview"), diagnostics);
                              });
             actions.value(QStringLiteral("helloutau.playback.stop"))->setEnabled(false);
-            return controls;
         }
 
         void playAudio(double from, std::optional<double> to) {
@@ -1545,7 +1586,7 @@ namespace hello::daw {
             sample.preUtterance = entry.preUtterance;
             sample.voiceOverlap = entry.voiceOverlap;
             kit::DiagnosticList diagnostics;
-            preview->synthesize(sample, pitchBox->currentData().toInt(), lengthBox->value(),
+            preview->synthesize(sample, synthesizedPitch, synthesizedLength,
                                 pathOf(editor->settings().resampler()), diagnostics);
             DiagnosticBox::show(&decl, tr("Synthesize"), diagnostics);
         }
@@ -1570,8 +1611,10 @@ namespace hello::daw {
                     prefixMap.insert(noteNum, map.value(noteNum));
                 }
             }
-            pitchBox->setCurrentIndex(
-                pitchBox->findData(SamplePreview::noteNumFor(prefixMap, key.first, key.second)));
+            synthesizedPitch = SamplePreview::noteNumFor(prefixMap, key.first, key.second);
+            if (pitchBox) {
+                pitchBox->setCurrentIndex(pitchBox->findData(synthesizedPitch));
+            }
         }
 
         void showDirectoryOf(QTreeWidgetItem *item) {
@@ -1753,6 +1796,11 @@ namespace hello::daw {
     QLineEdit *VoiceBankWindow::searchBox() const {
         stdc_impl_t;
         return impl.search;
+    }
+
+    QComboBox *VoiceBankWindow::frequencyFormatBox() const {
+        stdc_impl_t;
+        return impl.frequencyBox;
     }
 
     OtoWaveformView *VoiceBankWindow::waveformView() const {

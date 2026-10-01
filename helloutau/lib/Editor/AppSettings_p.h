@@ -16,7 +16,8 @@ namespace hello::daw {
     ///
     ///     {"engines": {"utauDirectory": ..., "resampler": ..., "wavtool": ...},
     ///      "playback": {"mode": ..., "threads": ...},
-    ///      "view": {"showPitch": ..., "showEnvelopes": ..., "showParameters": ...},
+    ///      "view": {"showPitch": ..., "showEnvelopes": ..., "showParameters": ...,
+    ///               "showToolBar": ...},
     ///      "files": {"ustExportCharset": ..., "recent": [...], "recentVoiceBanks": [...]},
     ///      "commandPalette": {"recent": [...]}}
     class AppSettings::Impl {

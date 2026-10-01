@@ -27,6 +27,7 @@ namespace hello::daw {
         constexpr char KeyPitchVisible[] = "view/showPitch";
         constexpr char KeyEnvelopesVisible[] = "view/showEnvelopes";
         constexpr char KeyParametersVisible[] = "view/showParameters";
+        constexpr char KeyToolBarVisible[] = "view/showToolBar";
         constexpr char KeyRecentCommands[] = "commandPalette/recent";
         constexpr char KeyRecentFiles[] = "files/recent";
         constexpr char KeyRecentVoiceBanks[] = "files/recentVoiceBanks";
@@ -188,6 +189,16 @@ namespace hello::daw {
     void AppSettings::setParametersVisible(bool visible) {
         stdc_impl_t;
         impl.setValue(KeyParametersVisible, visible);
+    }
+
+    bool AppSettings::isToolBarVisible() const {
+        stdc_impl_t;
+        return impl.value(KeyToolBarVisible).toBool(true);
+    }
+
+    void AppSettings::setToolBarVisible(bool visible) {
+        stdc_impl_t;
+        impl.setValue(KeyToolBarVisible, visible);
     }
 
     QString AppSettings::ustExportCharset() const {

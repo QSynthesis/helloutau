@@ -27,6 +27,7 @@
 #include <QtWidgets/QPlainTextEdit>
 #include <QtWidgets/QTableView>
 #include <QtWidgets/QTableWidget>
+#include <QtWidgets/QToolBar>
 #include <QtWidgets/QTreeWidget>
 
 #include <hellokit/Edit/ProjectDocument.h>
@@ -740,6 +741,58 @@ private Q_SLOTS:
         tempo.followBox()->setChecked(false);
         tempo.tempoBox()->setValue(96);
         QCOMPARE(tempo.tempo(), std::optional(96.0));
+    }
+
+    // The tool bar of the project window holds the box of the quantization, which follows the
+    // piano roll both ways, and the two commands step through the quantizations. The tool bar
+    // is shown as the settings store it, and the commands carry icons.
+    void the_tool_bar_holds_the_quantization() {
+        const auto e = editor();
+        const auto window = e->newWindow();
+        window->show();
+        const auto roll = window->pianoRoll();
+        const auto toolBar = window->findChild<QToolBar *>(QStringLiteral("mainToolBar"));
+        QVERIFY(toolBar && toolBar->isVisible());
+        const auto box = window->quantizationBox();
+        QVERIFY(box);
+        QCOMPARE(box->currentData().toInt(), roll->quantization());
+
+        box->setCurrentIndex(box->findData(60));
+        QCOMPARE(roll->quantization(), 60);
+        roll->setQuantization(240);
+        QCOMPARE(box->currentData().toInt(), 240);
+
+        // Finer steps down to off and coarser steps up to a quarter note, and neither goes further.
+        const auto finer = actionNamed(window, QStringLiteral("&Finer Quantization"));
+        const auto coarser = actionNamed(window, QStringLiteral("&Coarser Quantization"));
+        QVERIFY(finer && coarser);
+        QCOMPARE(finer->shortcut(), QKeySequence(QStringLiteral("Ctrl+[")));
+        for (int i = 0; i < 10; ++i) {
+            finer->trigger();
+        }
+        QCOMPARE(roll->quantization(), 0);
+        QCOMPARE(box->currentData().toInt(), 0);
+        for (int i = 0; i < 10; ++i) {
+            coarser->trigger();
+        }
+        QCOMPARE(roll->quantization(), PianoRoll::quantizations().first());
+
+        const auto show = actionNamed(window, QStringLiteral("Show &Toolbar"));
+        QVERIFY(show && show->isChecked());
+        show->trigger();
+        QVERIFY(toolBar->isHidden());
+        QVERIFY(!e->settings().isToolBarVisible());
+        show->trigger();
+        QVERIFY(e->settings().isToolBarVisible());
+
+        QVERIFY(!actionNamed(window, QStringLiteral("&Undo"))->icon().isNull());
+
+        // The box is no command of the palette, since the context has no action for a box.
+        actionNamed(window, QStringLiteral("&Command Palette..."))->trigger();
+        const auto palette = window->findChild<CommandPalette *>();
+        QVERIFY(palette);
+        QVERIFY(!palette->shownIds().contains(QStringLiteral("helloutau.edit.quantization")));
+        palette->hide();
     }
 
     // The settings are pages of the catalog of the editor, in the order of the settings of
@@ -1575,12 +1628,15 @@ private Q_SLOTS:
         QCOMPARE(window->entryModel()->entryOf(0).preUtterance, 190.0);
         QCOMPARE(window->currentRow(), 0);
 
-        // The key 2 sets the overlap at the pointer.
+        // The key 2 sets the overlap at the pointer, the whole millisecond of the pixel nearest
+        // to 100 ms, after the offset of 10 ms.
         view->setFocus();
         QTest::mouseMove(viewport, point(100));
+        QVERIFY(view->pointerTime() && std::abs(*view->pointerTime() - 100) < 1);
         QTest::keyClick(view, Qt::Key_2);
         QCOMPARE(session->currentStep(), step + 2);
-        QCOMPARE(window->entryModel()->entryOf(0).voiceOverlap, 90.0);
+        QCOMPARE(window->entryModel()->entryOf(0).voiceOverlap,
+                 std::round(*view->pointerTime()) - 10);
         session->undo();
         QCoreApplication::processEvents();
         QCOMPARE(view->entry()->voiceOverlap, 5.0);
@@ -1727,7 +1783,7 @@ private Q_SLOTS:
         tree->setCurrentItem(tree->topLevelItem(1));
         window->setCurrentRow(0);
         const auto view = window->waveformView();
-        const auto box = window->findChild<QComboBox *>(QStringLiteral("frequencyFormat"));
+        const auto box = window->frequencyFormatBox();
         QVERIFY(box);
         QCOMPARE(box->currentData().toString(), QStringLiteral("mrq"));
         QVERIFY(view->frequencyTable());
@@ -1767,7 +1823,7 @@ private Q_SLOTS:
         e->settings().setResampler(QStringLiteral("C:/engines/moresampler.exe"));
         const auto window = e->openVoiceBank(voiceBank(dir));
         QVERIFY(window);
-        const auto box = window->findChild<QComboBox *>(QStringLiteral("frequencyFormat"));
+        const auto box = window->frequencyFormatBox();
         QVERIFY(box);
         box->setCurrentIndex(box->findData(QStringLiteral("frq")));
 

@@ -21,12 +21,14 @@ qak_add_action_extension(_actions_src EditorActions.xml
 )
 list(APPEND _actions_src ${_app_actions_src})
 
-# The built-in theme, under :/helloutau/themes
+# The built-in theme, under :/helloutau/themes, and the icons of the commands, under
+# :/helloutau/icons
 set(_themes_qrc themes/Themes.qrc)
+set(_icons_qrc icons/Icons.qrc)
 
 helloutau_add_library(${PROJECT_NAME} SHARED
     QT_AUTOGEN
-    SOURCES ${_src} ${_hdr} ${_actions_src} ${_themes_qrc}
+    SOURCES ${_src} ${_hdr} ${_actions_src} ${_themes_qrc} ${_icons_qrc}
     LINKS HelloUtauWidgets HelloUtauTheme HelloUtauAudio HelloKitEdit HelloKitDocument
           HelloKitVoiceBank HelloKitSynth
     LINKS_PRIVATE stdcorelib::stdcorelib stdcorelib::plugin QActionKit::Widgets

@@ -9,6 +9,7 @@
 
 #include <helloutau/Editor/HelloUtauEditorGlobal.h>
 
+class QComboBox;
 class QLineEdit;
 class QTableView;
 class QTreeWidget;
@@ -53,6 +54,10 @@ namespace hello::daw {
 
         /// Filters the entries by file name and alias, as the text is typed.
         QLineEdit *searchBox() const;
+
+        /// The box of the format of the frequency table in the sample tool bar, or null while
+        /// the tool bar has none. A rebuilt tool bar has a new box.
+        QComboBox *frequencyFormatBox() const;
 
         /// The waveform of the entry of the current row, where its values are dragged, and set
         /// at the pointer by the keys 1 to 5.
