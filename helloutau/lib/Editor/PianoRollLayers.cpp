@@ -328,12 +328,14 @@ namespace hello::daw {
         painter.setBrush(Qt::NoBrush);
         const double step = std::max(1.0, CurveStep / time.pixelsPerTick);
         // Each note draws the curve of its own points alone, which crosses the curves of its
-        // neighbours if its points lie among theirs.
+        // neighbours if its points lie among theirs. A note without points has no portamento
+        // drawn, as in UTAU, but its vibrato.
         for (int i = std::max(0, begin - 1); i < last; ++i) {
             const auto &entry = timeline->note(i);
             if (entry.rest) {
                 continue;
             }
+            const bool bent = !notes.at(i - first).portamento.isEmpty();
             const kit::PitchCurve curve(notes, i - first, timeline->tempoMap().tempo(i));
             const auto [start, stop] = curve.ownSpan();
             const double from = std::max(start, left - double(entry.start) - step);
@@ -367,8 +369,10 @@ namespace hello::daw {
             for (const auto &run : std::as_const(vibrato)) {
                 painter.drawPolyline(run);
             }
-            painter.setPen(portamentoPen);
-            painter.drawPolyline(portamento);
+            if (bent) {
+                painter.setPen(portamentoPen);
+                painter.drawPolyline(portamento);
+            }
         }
 
         // The points, also those of the next note, which may lie before it. Those of the note

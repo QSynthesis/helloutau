@@ -694,10 +694,10 @@ namespace hello::daw {
             return std::nullopt;
         }
 
-        // The portamento as it is drawn, of the note at the position, of the note before it,
-        // whose last point may lie past its end, and of the note after it, whose points may
-        // lie before its start. The nearest curve is taken, the later note if two curves are
-        // equally near.
+        // The own portamento of the note at the position, of the note before it, whose last
+        // point may lie past its end, and of the note after it, whose points may lie before
+        // its start. The flat portamento of a note without points is hit, although it is not
+        // drawn. The nearest curve is taken, the later note if two curves are equally near.
         const int first = std::max(0, at - 2);
         const int last = std::min(count, at + 2);
         const auto refs = notes();

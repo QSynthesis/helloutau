@@ -790,13 +790,16 @@ private Q_SLOTS:
         la.lyric = QStringLiteral("la");
         la.length = 480;
         la.noteNum = 60;
+        kit::PortamentoPoint first;
+        first.x = 100;
+        kit::PortamentoPoint second;
+        second.x = 200;
+        la.portamento = {first, second};
         kit::Note li;
         li.lyric = QStringLiteral("li");
         li.length = 480;
         li.noteNum = 64;
-        kit::PortamentoPoint first;
         first.x = -600;
-        kit::PortamentoPoint second;
         second.x = 100;
         li.portamento = {first, second};
         kit::Project project;
@@ -836,15 +839,42 @@ private Q_SLOTS:
         }
         QVERIFY(pointOf(roll, tick, 60).y() - onLi(tick).y() < roll.curveGrip());
         QTest::mouseDClick(viewport, Qt::LeftButton, {}, onLi(tick).toPoint());
-        QCOMPARE(pointsOf(1).size(), 0);
+        QCOMPARE(pointsOf(1).size(), 2);
         QCOMPARE(pointsOf(2).size(), 3);
 
-        QTest::mouseDClick(viewport, Qt::LeftButton, {}, pointOf(roll, 720, 60));
+        QTest::mouseDClick(viewport, Qt::LeftButton, {}, pointOf(roll, 900, 60));
         QCOMPARE(pointsOf(1).size(), 3);
         QCOMPARE(pointsOf(2).size(), 3);
         QTest::mouseDClick(viewport, Qt::LeftButton, {}, onLi(720).toPoint());
         QCOMPARE(pointsOf(1).size(), 3);
         QCOMPARE(pointsOf(2).size(), 4);
+    }
+
+    // With Mode2, a note without points has no portamento drawn, as in UTAU, but its vibrato. A
+    // double click on its flat portamento still inserts a point after the two default points.
+    void a_note_without_points_has_no_portamento() {
+        auto project = bentNotes();
+        kit::Vibrato vibrato;
+        vibrato.length = 50;
+        vibrato.period = 200;
+        vibrato.amplitude = 80;
+        project.tracks[0].notes[0].vibrato = vibrato;
+        kit::ProjectSession session(project);
+        PianoRoll roll(&session);
+        roll.setPitchColor(QColor(255, 0, 255));
+        roll.setVibratoColor(QColor(0, 255, 255));
+        showExactly(roll);
+
+        QVERIFY(!drawnNear(roll, 120, 60, 0, QColor(255, 0, 255)));
+        QVERIFY(drawnNear(roll, 480 + 100 * 0.96, 62, 0, QColor(255, 0, 255)));
+        const kit::PitchCurve curve(project.tracks[0].notes, 0, 120);
+        const double tick = 480 * 0.5 + 60;
+        QVERIFY(qAbs(curve.ownVibratoAt(tick)) > 20);
+        QVERIFY(drawnNear(roll, tick, 60, curve.ownVibratoAt(tick), QColor(0, 255, 255)));
+
+        QTest::mouseDClick(roll.view()->viewport(), Qt::LeftButton, {}, pointOf(roll, 120, 60));
+        QCOMPARE(session.snapshot().tracks[0].notes[0].portamento.size(), 3);
+        QVERIFY(!roll.lyricEditor()->isVisible());
     }
 
     // With envelopes shown, the envelope of la stands above its bar from where its pre-utterance
