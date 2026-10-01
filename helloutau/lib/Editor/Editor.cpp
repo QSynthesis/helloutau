@@ -29,7 +29,7 @@
 #include "EditorIcons_p.h"
 #include "EditorSettingPages_p.h"
 #include "KeymapFile_p.h"
-#include "LayoutsFile_p.h"
+#include "ActionLayoutsFile_p.h"
 #include "ProjectWindow.h"
 #include "UstCharsetDialog.h"
 #include "VoiceBankCharsetDialog.h"
@@ -85,12 +85,12 @@ namespace hello::daw {
             // each in a file of its own beside the settings
             const auto keymapFile = KeymapFile::fileNameFor(settings->fileName());
             KeymapFile::read(registry, keymapFile);
-            const auto layoutsFile = LayoutsFile::fileNameFor(settings->fileName());
-            LayoutsFile::read(registry, layoutsFile);
+            const auto actionLayoutsFile = ActionLayoutsFile::fileNameFor(settings->fileName());
+            ActionLayoutsFile::read(registry, actionLayoutsFile);
             themes = new ThemeManager(decl);
             themes->addSearchPath(QStringLiteral(":/helloutau/themes"));
             catalog = new SettingCatalog(decl);
-            addEditorSettingPages(catalog, *settings, registry, keymapFile, layoutsFile);
+            addEditorSettingPages(catalog, *settings, registry, keymapFile, actionLayoutsFile);
         }
 
         // The windows take the actions of a contribution as it comes, and the menus and

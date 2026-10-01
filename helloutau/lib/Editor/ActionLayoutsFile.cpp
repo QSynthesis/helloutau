@@ -1,4 +1,4 @@
-#include "LayoutsFile_p.h"
+#include "ActionLayoutsFile_p.h"
 
 #include <QtCore/QDir>
 #include <QtCore/QFile>
@@ -18,11 +18,11 @@ namespace hello::daw {
 
     }
 
-    QString LayoutsFile::fileNameFor(const QString &settingsFile) {
-        return QFileInfo(settingsFile).dir().filePath(QStringLiteral("layouts.json"));
+    QString ActionLayoutsFile::fileNameFor(const QString &settingsFile) {
+        return QFileInfo(settingsFile).dir().filePath(QStringLiteral("actionLayouts.json"));
     }
 
-    void LayoutsFile::read(QAK::ActionRegistry *registry, const QString &fileName) {
+    void ActionLayoutsFile::read(QAK::ActionRegistry *registry, const QString &fileName) {
         QFile file(fileName);
         if (!file.exists()) {
             return;
@@ -50,7 +50,7 @@ namespace hello::daw {
         registry->setLayoutChanges(read);
     }
 
-    bool LayoutsFile::write(const QAK::ActionRegistry *registry, const QString &fileName,
+    bool ActionLayoutsFile::write(const QAK::ActionRegistry *registry, const QString &fileName,
                             QString *error) {
         QJsonArray changes;
         for (const auto &change : registry->layoutChanges()) {

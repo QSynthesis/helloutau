@@ -322,8 +322,8 @@
 - 树的顶层是两个窗口的菜单栏与工具栏：「Project Window: Main Menu」「Project Window: Main Toolbar」「Voice Bank Window: Main Menu」「Voice Bank Window: Sample Toolbar」，其下为各条目，名称与图标同菜单中所见（`shortText`），分隔线与伸缩空白以灰字标出。几个容器共用的子菜单在每处各出现一次，改动一处即改动全部。
 - 右侧按钮：「Add Action...」（从可搜索的动作列表中选一个，加在当前条目之后，当前项是菜单或工具栏时加在其末尾）、「Add Separator」、「Remove」、「Move Up」「Move Down」（在所在菜单内移动），以及「Restore Defaults」。菜单栏与工具栏本身不能删除或移动。
 - 编辑经 QActionKit 的 `ActionLayoutsModel`，它按清单检查每次改动：条目须已声明，形态须为声明的类型所允许，不能形成环。不被允许的改动不生效并提示。
-- 页面只改动副本，「Apply」与「OK」时以 `computeLayoutChanges()` 求出与默认布局的差别交给注册表，更新所有窗口，并写入 `layouts.json`。「Restore Defaults」即没有任何改动。
-- **存储**：`settings.json` 同目录下单独的 `layouts.json`，记 QActionKit 的改动记录（`ActionLayoutChange`），形如 `{"changes": [...]}`。启动时读入。注册表在任何时候登记的扩展上重放这些改动，因此之后载入的插件同样适用，插件不再声明的条目所涉及的改动被跳过并警告。
+- 页面只改动副本，「Apply」与「OK」时以 `computeLayoutChanges()` 求出与默认布局的差别交给注册表，更新所有窗口，并写入 `actionLayouts.json`。「Restore Defaults」即没有任何改动。
+- **存储**：`settings.json` 同目录下单独的 `actionLayouts.json`，记 QActionKit 的改动记录（`ActionLayoutChange`），形如 `{"changes": [...]}`。启动时读入。注册表在任何时候登记的扩展上重放这些改动，因此之后载入的插件同样适用，插件不再声明的条目所涉及的改动被跳过并警告。
 
 ### 主题系统
 

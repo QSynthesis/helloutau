@@ -15,7 +15,7 @@
 #include <QAKCore/actionregistry.h>
 
 #include "EditorSettingPages_p.h"
-#include "LayoutsFile_p.h"
+#include "ActionLayoutsFile_p.h"
 
 namespace hello::daw {
 
@@ -133,7 +133,7 @@ namespace hello::daw {
     bool MenusSettingPage::apply(QString *error) {
         m_registry->setLayoutChanges(m_registry->computeLayoutChanges(m_model->actionLayouts()));
         m_registry->updateContext(QAK::AE_Layouts);
-        if (!LayoutsFile::write(m_registry, m_fileName, error)) {
+        if (!ActionLayoutsFile::write(m_registry, m_fileName, error)) {
             return false;
         }
         Q_EMIT modifiedChanged();

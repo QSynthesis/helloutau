@@ -26,7 +26,7 @@ namespace hello::daw {
     /// that several containers hold under each of them. The page edits a copy of the layouts in
     /// QActionKit's ActionLayoutsModel, which checks each edit against the manifests. apply()
     /// gives the registry the changes from the default layouts, updates every window and writes
-    /// \c layouts.json, see LayoutsFile.
+    /// \c actionLayouts.json, see ActionLayoutsFile.
     class MenusSettingPage : public SettingPage {
         Q_OBJECT
     public:

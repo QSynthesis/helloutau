@@ -95,10 +95,10 @@ namespace hello::daw {
     /// and System Settings in it, Keymap, Editor, and Rendering. A plugin places its pages among
     /// them, as Core places Plugins before Rendering. The keymap edits the shortcuts of
     /// \a registry and writes them to \a keymapFile. Menus and Toolbars edits the layouts of
-    /// \a registry and writes them to \a layoutsFile.
+    /// \a registry and writes them to \a actionLayoutsFile.
     void addEditorSettingPages(SettingCatalog *catalog, AppSettings &settings,
                                QAK::ActionRegistry *registry, const QString &keymapFile,
-                               const QString &layoutsFile);
+                               const QString &actionLayoutsFile);
 
 }
 

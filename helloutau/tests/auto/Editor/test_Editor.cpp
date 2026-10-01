@@ -801,7 +801,7 @@ private Q_SLOTS:
 
     // Menus and Toolbars edits the menus of the windows: an entry moved down, an entry removed,
     // and an action added to a menu. The page applies the layouts to every window and writes
-    // layouts.json beside the settings, which a new editor reads. Restore Defaults restores
+    // actionLayouts.json beside the settings, which a new editor reads. Restore Defaults restores
     // them.
     void the_menus_are_edited() {
         QTemporaryDir dir;
@@ -868,7 +868,7 @@ private Q_SLOTS:
         auto menu = texts(window);
         QVERIFY(!menu.contains(QStringLiteral("&Clear Render Cache")));
         QVERIFY(menu.contains(QStringLiteral("Render &Track to WAV...")));
-        QVERIFY(QFile::exists(dir.filePath(QStringLiteral("layouts.json"))));
+        QVERIFY(QFile::exists(dir.filePath(QStringLiteral("actionLayouts.json"))));
 
         // A new editor reads the file.
         e.reset();
