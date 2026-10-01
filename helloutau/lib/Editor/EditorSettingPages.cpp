@@ -55,14 +55,15 @@ namespace hello::daw {
 
     }
 
-    GeneralSettingPage::GeneralSettingPage(AppSettings &settings, QObject *parent)
-        : SettingPage(QStringLiteral("editor.General"), parent), m_settings(settings) {
-        setTitle(tr("General"));
-        setDescription(tr("Where UTAU is, and how projects are exported."));
-        setKeywords({QStringLiteral("General"), QStringLiteral("UTAU")});
+    SystemSettingsPage::SystemSettingsPage(AppSettings &settings, QObject *parent)
+        : SettingPage(QLatin1String(EditorSettingPageIds::systemSettings), parent),
+          m_settings(settings) {
+        setTitle(tr("System Settings"));
+        setDescription(tr("Where UTAU is."));
+        setKeywords({QStringLiteral("System Settings"), QStringLiteral("UTAU")});
     }
 
-    QWidget *GeneralSettingPage::createWidget() {
+    QWidget *SystemSettingsPage::createWidget() {
         auto widget = new QWidget();
         auto form = new QFormLayout(widget);
         m_utauDirectory =
@@ -70,46 +71,69 @@ namespace hello::daw {
                        QString::fromStdU16String(m_settings.utauDirectory().u16string()), true);
         form->addRow(note(tr("Resolves the voice banks of projects that name them relative to "
                              "UTAU, such as %VOICE%.")));
+        connect(m_utauDirectory, &QLineEdit::textChanged, this, &SettingPage::modifiedChanged);
+        return widget;
+    }
+
+    bool SystemSettingsPage::isModified() const {
+        if (!m_utauDirectory) {
+            return false;
+        }
+        return pathText(m_utauDirectory) != QDir::fromNativeSeparators(QString::fromStdU16String(
+                                                m_settings.utauDirectory().u16string()));
+    }
+
+    bool SystemSettingsPage::apply(QString *error) {
+        Q_UNUSED(error);
+        m_settings.setUtauDirectory(
+            std::filesystem::path(pathText(m_utauDirectory).toStdU16String()));
+        Q_EMIT modifiedChanged();
+        return true;
+    }
+
+    QLineEdit *SystemSettingsPage::utauDirectoryEdit() const {
+        return m_utauDirectory;
+    }
+
+    EditorSettingPage::EditorSettingPage(AppSettings &settings, QObject *parent)
+        : SettingPage(QLatin1String(EditorSettingPageIds::editor), parent), m_settings(settings) {
+        setTitle(tr("Editor"));
+        setDescription(tr("How projects are edited and exported."));
+        setKeywords({QStringLiteral("Editor"), QStringLiteral("UST")});
+    }
+
+    QWidget *EditorSettingPage::createWidget() {
+        auto widget = new QWidget();
+        auto form = new QFormLayout(widget);
         m_ustExportCharset = new QComboBox();
         m_ustExportCharset->addItems(ExportUstDialog::charsets());
         const int index = m_ustExportCharset->findText(m_settings.ustExportCharset());
         m_ustExportCharset->setCurrentIndex(index >= 0 ? index : 0);
         form->addRow(tr("UST &export encoding:"), m_ustExportCharset);
-
-        connect(m_utauDirectory, &QLineEdit::textChanged, this, &SettingPage::modifiedChanged);
         connect(m_ustExportCharset, &QComboBox::currentTextChanged, this,
                 &SettingPage::modifiedChanged);
         return widget;
     }
 
-    bool GeneralSettingPage::isModified() const {
-        if (!m_utauDirectory || !m_ustExportCharset) {
-            return false;
-        }
-        return pathText(m_utauDirectory) != QDir::fromNativeSeparators(QString::fromStdU16String(
-                                                m_settings.utauDirectory().u16string())) ||
+    bool EditorSettingPage::isModified() const {
+        return m_ustExportCharset &&
                m_ustExportCharset->currentText() != m_settings.ustExportCharset();
     }
 
-    bool GeneralSettingPage::apply(QString *error) {
+    bool EditorSettingPage::apply(QString *error) {
         Q_UNUSED(error);
-        m_settings.setUtauDirectory(
-            std::filesystem::path(pathText(m_utauDirectory).toStdU16String()));
         m_settings.setUstExportCharset(m_ustExportCharset->currentText());
         Q_EMIT modifiedChanged();
         return true;
     }
 
-    QLineEdit *GeneralSettingPage::utauDirectoryEdit() const {
-        return m_utauDirectory;
-    }
-
-    QComboBox *GeneralSettingPage::ustExportCharsetBox() const {
+    QComboBox *EditorSettingPage::ustExportCharsetBox() const {
         return m_ustExportCharset;
     }
 
     RenderingSettingPage::RenderingSettingPage(AppSettings &settings, QObject *parent)
-        : SettingPage(QStringLiteral("editor.Rendering"), parent), m_settings(settings) {
+        : SettingPage(QLatin1String(EditorSettingPageIds::rendering), parent),
+          m_settings(settings) {
         setTitle(tr("Rendering"));
         setDescription(tr("The engines that render, and how playback renders."));
         setKeywords({QStringLiteral("Rendering"), QStringLiteral("resampler"),
@@ -195,7 +219,13 @@ namespace hello::daw {
     }
 
     void addEditorSettingPages(SettingCatalog *catalog, AppSettings &settings) {
-        catalog->addPage(new GeneralSettingPage(settings));
+        // Appearance & Behavior is a category, which the dialog shows as the links to its pages.
+        auto appearance = new SettingPage(QLatin1String(EditorSettingPageIds::appearanceAndBehavior));
+        appearance->setTitle(SettingPage::tr("Appearance & Behavior"));
+        appearance->setKeywords({QStringLiteral("Appearance & Behavior")});
+        appearance->addPage(new SystemSettingsPage(settings));
+        catalog->addPage(appearance);
+        catalog->addPage(new EditorSettingPage(settings));
         catalog->addPage(new RenderingSettingPage(settings));
     }
 

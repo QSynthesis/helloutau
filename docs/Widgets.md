@@ -296,7 +296,7 @@
 - **搜索页面里的设置**：除标题、说明与页面声明的关键词外，还匹配页面控件上的文字（标签、按钮、复选框、分组框的标题）。搜索时树只留匹配的页面及其上级，全部展开，当前页面被隐藏时自动选中第一个匹配的页面，没有结果时显示「No matching settings」；当前页面中匹配的控件以高亮色标出。
 - 取消时丢弃所有未提交的修改；页面不在控件上直接改动全局状态，所以取消不需要撤回什么。
 
-**现有的页面**：「General」（UTAU 文件夹、导出 UST 的编码）、「Rendering」（重采样器、wavtool、播放方式）。以后的外观、快捷键、音频等各为一个页面。
+**页面的目录**（作者 2026-10-01 定，按 JetBrains IDE 的设置排列）：「Appearance & Behavior」为分类页，其下有「System Settings」（UTAU 文件夹），以后加入「Menus and Toolbars」。「Keymap」（将加入）。「Editor」（导出 UST 的编码，以后的编辑设置）。「Plugins」（Core 插件加入，`SettingCatalog::addPage()` 的 `before` 参数将它排在 Rendering 之前）。「Rendering」（重采样器、wavtool、播放方式与线程数）。没有内容的页不建，例如外观页等有了主题设置再加。
 
 ### 主题系统
 

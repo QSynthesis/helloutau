@@ -88,8 +88,11 @@ namespace hello::daw {
         explicit SettingCatalog(QObject *parent = nullptr);
         ~SettingCatalog() override;
 
-        /// Adds \a page at the top level, which the catalog then owns.
-        void addPage(SettingPage *page);
+        /// Adds \a page at the top level, which the catalog then owns: before the top-level page
+        /// of the id \a before, or last if \a before is empty or names no top-level page. A plugin
+        /// that adds its page after the pages of the editor places it with \a before in the order
+        /// of the settings of JetBrains IDEs.
+        void addPage(SettingPage *page, const QString &before = {});
         QList<SettingPage *> pages() const;
 
         /// The page of \a id at any level, or null. Ids are to be unique.

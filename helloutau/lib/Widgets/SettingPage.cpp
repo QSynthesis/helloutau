@@ -92,9 +92,12 @@ namespace hello::daw {
 
     SettingCatalog::~SettingCatalog() = default;
 
-    void SettingCatalog::addPage(SettingPage *page) {
+    void SettingCatalog::addPage(SettingPage *page, const QString &before) {
         page->setParent(this);
-        m_pages.push_back(page);
+        const auto at = std::find_if(m_pages.begin(), m_pages.end(), [&before](SettingPage *p) {
+            return !before.isEmpty() && p->id() == before;
+        });
+        m_pages.insert(at, page);
     }
 
     QList<SettingPage *> SettingCatalog::pages() const {

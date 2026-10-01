@@ -742,12 +742,19 @@ private Q_SLOTS:
         QCOMPARE(tempo.tempo(), std::optional(96.0));
     }
 
-    // The settings are pages of the catalog of the editor, and what their dialog applies
-    // reaches every project window at once.
+    // The settings are pages of the catalog of the editor, in the order of the settings of
+    // JetBrains IDEs, and what their dialog applies reaches every project window at once.
     void the_settings_apply_to_every_window() {
         const auto e = editor();
-        QCOMPARE(e->settingCatalog()->pages().size(), 2);
-        QVERIFY(e->settingCatalog()->page(QStringLiteral("editor.General")));
+        QStringList topLevel;
+        for (const auto page : e->settingCatalog()->pages()) {
+            topLevel.push_back(page->id());
+        }
+        QCOMPARE(topLevel, (QStringList{"editor.AppearanceAndBehavior", "editor.Editor",
+                                        "editor.Rendering"}));
+        const auto system = e->settingCatalog()->page(QStringLiteral("editor.SystemSettings"));
+        QVERIFY(system);
+        QCOMPARE(system->parentPage()->id(), QStringLiteral("editor.AppearanceAndBehavior"));
         const auto window = e->newWindow();
         const auto roll = qobject_cast<PianoRoll *>(window->centralWidget());
         QVERIFY(roll && !roll->isCursorEnabled());

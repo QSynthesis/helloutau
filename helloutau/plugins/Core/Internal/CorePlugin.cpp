@@ -23,9 +23,11 @@ namespace hello::daw {
         const auto loader = AppLoader::instance();
         m_editor =
             loader ? std::make_unique<Editor>(loader->settings()) : std::make_unique<Editor>();
-        // The Plugins page exists only with a loader. The setting catalog owns the page.
+        // The Plugins page exists only with a loader. The setting catalog owns the page, which
+        // precedes Rendering as Plugins precedes the build settings in JetBrains IDEs.
         if (loader) {
-            m_editor->settingCatalog()->addPage(new PluginSettingPage(*loader));
+            m_editor->settingCatalog()->addPage(new PluginSettingPage(*loader),
+                                                QStringLiteral("editor.Rendering"));
         }
         return true;
     }

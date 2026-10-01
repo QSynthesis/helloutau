@@ -125,6 +125,21 @@ private Q_SLOTS:
         QVERIFY(!dialog.selectPage(QStringLiteral("none")));
     }
 
+    // A page added later takes its place before a given top-level page, or comes last if that
+    // page is not at the top level.
+    void a_page_is_added_before_another() {
+        Pages pages;
+        pages.catalog.addPage(new SettingPage(QStringLiteral("plugins")),
+                              QStringLiteral("appearance"));
+        pages.catalog.addPage(new SettingPage(QStringLiteral("tools")),
+                              QStringLiteral("audio.output"));
+        QStringList ids;
+        for (const auto page : pages.catalog.pages()) {
+            ids.push_back(page->id());
+        }
+        QCOMPARE(ids, (QStringList{"audio", "plugins", "appearance", "tools"}));
+    }
+
     // The search finds pages by title, description, keywords and the text of their controls,
     // keeps their parents, marks the controls that match, and says when nothing does.
     void the_search_finds_settings_within_pages() {
