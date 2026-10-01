@@ -14,7 +14,9 @@ namespace hello::daw {
 
     namespace {
 
-        QString tr(const char *text) {
+        // The texts are marked with QT_TRANSLATE_NOOP, since lupdate would attribute those of a
+        // function named tr at namespace scope to the namespace or to the enclosing class.
+        QString translated(const char *text) {
             return QCoreApplication::translate("hello::daw::ThemeTypes", text);
         }
 
@@ -40,8 +42,10 @@ namespace hello::daw {
             for (const auto &[name, result] : choices) {
                 names.push_back(name.toString());
             }
-            return fail<T>(error, value.position,
-                           tr("One of %1 was expected.").arg(names.join(QStringLiteral(", "))));
+            return fail<T>(
+                error, value.position,
+                translated(QT_TRANSLATE_NOOP("hello::daw::ThemeTypes", "One of %1 was expected."))
+                    .arg(names.join(QStringLiteral(", "))));
         }
 
         std::optional<ThemeStates<QColor>> colors(const ThemeValue &value, ThemeError *error) {
@@ -292,7 +296,9 @@ namespace hello::daw {
             }
             if (!ok) {
                 return fail<ThemeFont>(error, size.position,
-                                       tr("A size in pixels (px) or points (pt) was expected."));
+                                       translated(QT_TRANSLATE_NOOP(
+                                           "hello::daw::ThemeTypes",
+                                           "A size in pixels (px) or points (pt) was expected.")));
             }
         }
         if (b[2]) {
@@ -380,7 +386,9 @@ namespace hello::daw {
                     break;
                 default:
                     return fail<ThemeRect>(error, b[1]->position,
-                                           tr("The margins must be one, two or four lengths."));
+                                           translated(QT_TRANSLATE_NOOP(
+                                               "hello::daw::ThemeTypes",
+                                               "The margins must be one, two or four lengths.")));
             }
         }
         if (b[2]) {
