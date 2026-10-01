@@ -5,9 +5,8 @@ class QToolBar;
 
 namespace hello::daw {
 
-    /// Gives each button of \a toolBar polished after the call a subtle background for the
-    /// checked state in place of the accent color, as in the tool bars of JetBrains IDEs, and
-    /// the window text color for its text and icon. The palette follows the color scheme of the
+    /// Gives each button of \a toolBar white text for its checked state. The system accent color
+    /// remains the checked background. The palette follows the color scheme of the
     /// application. Menus keep the palette of the application.
     void followToolBarPalette(QToolBar *toolBar);
 

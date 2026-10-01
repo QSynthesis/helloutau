@@ -879,17 +879,15 @@ private Q_SLOTS:
             QVERIFY2(drawn, qPrintable(QStringLiteral("mode %1, state %2").arg(mode).arg(state)));
         }
 
-        // A checked button has a subtle background and the text color of the other buttons, so
-        // that its icon in the window text color remains visible.
+        // A checked button has a subtle background and white text.
         const auto buttons = toolBar->findChildren<QToolButton *>();
         QVERIFY(!buttons.isEmpty());
         const auto colors = buttons.first()->palette();
-        QVERIFY(colors.color(QPalette::Active, QPalette::Accent) !=
-                QGuiApplication::palette().color(QPalette::Active, QPalette::Accent));
+        QCOMPARE(colors.color(QPalette::Active, QPalette::Accent),
+                 QGuiApplication::palette().color(QPalette::Active, QPalette::Accent));
         // The Windows 11 style uses the button text color for a checked button only if it is set.
         QVERIFY(colors.isBrushSet(QPalette::Active, QPalette::ButtonText));
-        QCOMPARE(colors.color(QPalette::Active, QPalette::ButtonText),
-                 QGuiApplication::palette().color(QPalette::Active, QPalette::WindowText));
+        QCOMPARE(colors.color(QPalette::Active, QPalette::ButtonText), QColor(Qt::white));
 
         // The box is no command of the palette, since the context has no action for a box.
         actionNamed(window, QStringLiteral("&Command Palette..."))->trigger();
