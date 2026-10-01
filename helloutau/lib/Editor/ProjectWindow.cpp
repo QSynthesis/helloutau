@@ -825,7 +825,7 @@ namespace hello::daw {
             toolBar->setVisible(editor->settings().isToolBarVisible());
             decl.addToolBar(toolBar);
             context->addToolBar(QStringLiteral("helloutau.mainToolBar"), toolBar);
-            const auto id = QStringLiteral("helloutau.edit.quantization");
+            const auto id = QStringLiteral("helloutau.select.quantization");
             context->addWidgetFactory(id, [this](QWidget *parent) -> QWidget * {
                 auto box = new QComboBox(parent);
                 box->setObjectName(QStringLiteral("quantization"));
@@ -974,7 +974,7 @@ namespace hello::daw {
                     return roll->removeSelected(diagnostics);
                 });
             });
-            addCommand(QStringLiteral("helloutau.edit.selectAll"), [this] { roll->selectAll(); });
+            addCommand(QStringLiteral("helloutau.select.selectAll"), [this] { roll->selectAll(); });
             addCommand(QStringLiteral("helloutau.edit.find"), [this] {
                 findBar->showFind();
                 updateFindResult();
@@ -1088,11 +1088,11 @@ namespace hello::daw {
             mode2->setCheckable(true);
 
             tools = new QActionGroup(&decl);
-            const auto selectTool = addCommand(QStringLiteral("helloutau.edit.selectTool"),
+            const auto selectTool = addCommand(QStringLiteral("helloutau.select.selectTool"),
                                                [this] { roll->setTool(PianoRoll::SelectTool); });
-            const auto penTool = addCommand(QStringLiteral("helloutau.edit.penTool"),
+            const auto penTool = addCommand(QStringLiteral("helloutau.select.penTool"),
                                             [this] { roll->setTool(PianoRoll::PenTool); });
-            const auto pitchTool = addCommand(QStringLiteral("helloutau.edit.pitchTool"),
+            const auto pitchTool = addCommand(QStringLiteral("helloutau.select.pitchTool"),
                                               [this] { roll->setTool(PianoRoll::PitchTool); });
             for (const auto action : {selectTool, penTool, pitchTool}) {
                 action->setCheckable(true);
@@ -1146,9 +1146,9 @@ namespace hello::daw {
                 });
             showToolBar->setCheckable(true);
             showToolBar->setChecked(editor->settings().isToolBarVisible());
-            addCommand(QStringLiteral("helloutau.edit.finerQuantization"),
+            addCommand(QStringLiteral("helloutau.select.finerQuantization"),
                        [this] { stepQuantization(true); });
-            addCommand(QStringLiteral("helloutau.edit.coarserQuantization"),
+            addCommand(QStringLiteral("helloutau.select.coarserQuantization"),
                        [this] { stepQuantization(false); });
             addCommand(QStringLiteral("helloutau.view.commandPalette"), [this] {
                 palette->setCommands(commandEntries());
@@ -1344,9 +1344,9 @@ namespace hello::daw {
             showQuantization(roll->quantization());
             QObject::connect(roll, &PianoRoll::quantizationChanged, &decl,
                              [this](int ticks) { showQuantization(ticks); });
-            if (actions.value(QStringLiteral("helloutau.edit.penTool"))->isChecked()) {
+            if (actions.value(QStringLiteral("helloutau.select.penTool"))->isChecked()) {
                 roll->setTool(PianoRoll::PenTool);
-            } else if (actions.value(QStringLiteral("helloutau.edit.pitchTool"))->isChecked()) {
+            } else if (actions.value(QStringLiteral("helloutau.select.pitchTool"))->isChecked()) {
                 roll->setTool(PianoRoll::PitchTool);
             }
             roll->setPitchVisible(
@@ -1425,11 +1425,11 @@ namespace hello::daw {
         void updatePitchActions() {
             const bool mode2 = kit::ProjectRef(document->session()).settings().mode2();
             actions.value(QStringLiteral("helloutau.edit.mode2"))->setChecked(mode2);
-            const auto pitchTool = actions.value(QStringLiteral("helloutau.edit.pitchTool"));
+            const auto pitchTool = actions.value(QStringLiteral("helloutau.select.pitchTool"));
             pitchTool->setEnabled(
                 !mode2 && actions.value(QStringLiteral("helloutau.view.showPitch"))->isChecked());
             if (!pitchTool->isEnabled() && pitchTool->isChecked()) {
-                actions.value(QStringLiteral("helloutau.edit.selectTool"))->setChecked(true);
+                actions.value(QStringLiteral("helloutau.select.selectTool"))->setChecked(true);
                 roll->setTool(PianoRoll::SelectTool);
             }
         }

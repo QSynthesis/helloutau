@@ -838,8 +838,8 @@ private Q_SLOTS:
         QCOMPARE(box->currentData().toInt(), 240);
 
         // Finer steps down to off and coarser steps up to a quarter note, and neither goes further.
-        const auto finer = actionNamed(window, QStringLiteral("&Finer Quantization"));
-        const auto coarser = actionNamed(window, QStringLiteral("&Coarser Quantization"));
+        const auto finer = actionNamed(window, QStringLiteral("&Decrease Quantization Interval"));
+        const auto coarser = actionNamed(window, QStringLiteral("&Increase Quantization Interval"));
         QVERIFY(finer && coarser);
         QCOMPARE(finer->shortcut(), QKeySequence(QStringLiteral("Ctrl+[")));
         for (int i = 0; i < 10; ++i) {
@@ -895,7 +895,7 @@ private Q_SLOTS:
         actionNamed(window, QStringLiteral("&Command Palette..."))->trigger();
         const auto palette = window->findChild<CommandPalette *>();
         QVERIFY(palette);
-        QVERIFY(!palette->shownIds().contains(QStringLiteral("helloutau.edit.quantization")));
+        QVERIFY(!palette->shownIds().contains(QStringLiteral("helloutau.select.quantization")));
         palette->hide();
     }
 

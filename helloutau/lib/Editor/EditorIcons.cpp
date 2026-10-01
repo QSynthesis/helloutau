@@ -13,9 +13,9 @@ namespace hello::daw {
         static const std::pair<const char *, const char *> icons[] = {
             {"helloutau.edit.undo",                "intellij/undo.svg"              },
             {"helloutau.edit.redo",                "intellij/redo.svg"              },
-            {"helloutau.edit.selectTool",          "helloutau/selectTool.svg"       },
-            {"helloutau.edit.penTool",             "intellij/edit.svg"              },
-            {"helloutau.edit.pitchTool",           "helloutau/pitchTool.svg"        },
+            {"helloutau.select.selectTool",        "helloutau/selectTool.svg"       },
+            {"helloutau.select.penTool",           "intellij/edit.svg"              },
+            {"helloutau.select.pitchTool",         "helloutau/pitchTool.svg"        },
             {"helloutau.edit.mode2",               "helloutau/mode2.svg"            },
             {"helloutau.edit.convertPitchToMode1", "intellij/freeze.svg"            },
             {"helloutau.view.showPitch",           "helloutau/showPitch.svg"        },

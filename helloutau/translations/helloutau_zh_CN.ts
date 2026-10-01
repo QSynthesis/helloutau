@@ -12,6 +12,10 @@
         <translation>编辑</translation>
     </message>
     <message>
+        <source>Select</source>
+        <translation>选择</translation>
+    </message>
+    <message>
         <source>View</source>
         <translation>视图</translation>
     </message>
@@ -267,6 +271,10 @@
         <translation>全选(&amp;A)</translation>
     </message>
     <message>
+        <source>&amp;Select</source>
+        <translation>选择(&amp;S)</translation>
+    </message>
+    <message>
         <source>&amp;Insert Note</source>
         <translation>插入音符(&amp;I)</translation>
     </message>
@@ -403,12 +411,12 @@
         <translation>量化</translation>
     </message>
     <message>
-        <source>&amp;Finer Quantization</source>
-        <translation>更细的量化(&amp;F)</translation>
+        <source>&amp;Decrease Quantization Interval</source>
+        <translation>减小量化间隔(&amp;D)</translation>
     </message>
     <message>
-        <source>&amp;Coarser Quantization</source>
-        <translation>更粗的量化(&amp;C)</translation>
+        <source>&amp;Increase Quantization Interval</source>
+        <translation>增大量化间隔(&amp;I)</translation>
     </message>
     <message>
         <source>Show &amp;Toolbar</source>

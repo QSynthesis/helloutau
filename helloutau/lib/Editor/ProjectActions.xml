@@ -52,8 +52,6 @@
                 shortcuts="Ctrl+Y;Ctrl+Shift+Z" />
         <action id="helloutau.edit.delete" text="&amp;Delete" category="Edit"
                 shortcuts="Del;Shift+Del" />
-        <action id="helloutau.edit.selectAll" text="Select &amp;All" category="Edit"
-                shortcut="Ctrl+A" />
         <!-- The find bar over the piano roll, as the find widget of VS Code, for the lyrics -->
         <action id="helloutau.edit.find" text="&amp;Find" category="Edit" shortcut="Ctrl+F" />
         <action id="helloutau.edit.replace" text="Rep&amp;lace" category="Edit"
@@ -111,18 +109,20 @@
                 shortcut="Ctrl+Shift+Up" />
         <action id="helloutau.edit.octaveDown" text="Down an O&amp;ctave" category="Transpose"
                 shortcut="Ctrl+Shift+Down" />
-        <action id="helloutau.edit.selectTool" text="&amp;Select Tool" category="Edit"
+        <action id="helloutau.select.selectTool" text="&amp;Select Tool" category="Select"
                 shortcut="V" />
-        <action id="helloutau.edit.penTool" text="P&amp;en Tool" category="Edit" shortcut="B" />
-        <action id="helloutau.edit.pitchTool" text="&amp;Freehand Pitch Tool" category="Edit"
+        <action id="helloutau.select.penTool" text="P&amp;en Tool" category="Select" shortcut="B" />
+        <action id="helloutau.select.pitchTool" text="&amp;Freehand Pitch Tool" category="Select"
                 shortcut="F" />
         <!-- The grid to which drags snap, a box in the tool bar. The two commands step through
              its choices, from a quarter note to a sixty-fourth and off. -->
-        <action id="helloutau.edit.quantization" text="Quantization" category="Edit" />
-        <action id="helloutau.edit.finerQuantization" text="&amp;Finer Quantization"
-                category="Edit" shortcut="Ctrl+[" />
-        <action id="helloutau.edit.coarserQuantization" text="&amp;Coarser Quantization"
-                category="Edit" shortcut="Ctrl+]" />
+        <action id="helloutau.select.quantization" text="Quantization" category="Select" />
+        <action id="helloutau.select.finerQuantization" text="&amp;Decrease Quantization Interval"
+                category="Select" shortcut="Ctrl+[" />
+        <action id="helloutau.select.coarserQuantization" text="&amp;Increase Quantization Interval"
+                category="Select" shortcut="Ctrl+]" />
+        <action id="helloutau.select.selectAll" text="Select &amp;All" category="Select"
+                shortcut="Ctrl+A" />
 
         <!-- The tool bar of the project window, shown or hidden as the settings store it -->
         <action id="helloutau.view.showToolBar" text="Show &amp;Toolbar" category="View" />
@@ -175,6 +175,7 @@
         <menu id="helloutau.mainMenu" topLevel="true" />
         <menu id="helloutau.file" text="&amp;File" />
         <menu id="helloutau.edit" text="&amp;Edit" />
+        <menu id="helloutau.select" text="&amp;Select" />
         <menu id="helloutau.view" text="&amp;View" />
         <menu id="helloutau.playback" text="&amp;Playback" />
         <menu id="helloutau.tools" text="&amp;Tools" />
@@ -213,7 +214,6 @@
                 <action id="helloutau.edit.paste" />
                 <action id="helloutau.edit.pasteParameters" />
                 <action id="helloutau.edit.delete" />
-                <action id="helloutau.edit.selectAll" />
                 <separator />
                 <action id="helloutau.edit.find" />
                 <action id="helloutau.edit.replace" />
@@ -241,12 +241,17 @@
                 <menu id="helloutau.edit.reset" />
                 <menu id="helloutau.edit.envelope" />
                 <menu id="helloutau.edit.transpose" />
+            </menu>
+            <menu id="helloutau.select">
+                <action id="helloutau.select.selectAll" />
                 <separator />
-                <action id="helloutau.edit.selectTool" />
-                <action id="helloutau.edit.penTool" />
-                <action id="helloutau.edit.pitchTool" />
-                <action id="helloutau.edit.finerQuantization" />
-                <action id="helloutau.edit.coarserQuantization" />
+                <action id="helloutau.select.selectTool" />
+                <action id="helloutau.select.penTool" />
+                <action id="helloutau.select.pitchTool" />
+                <separator />
+                <action id="helloutau.select.quantization" />
+                <action id="helloutau.select.finerQuantization" />
+                <action id="helloutau.select.coarserQuantization" />
             </menu>
             <menu id="helloutau.view">
                 <action id="helloutau.view.showToolBar" />
@@ -280,9 +285,9 @@
             <action id="helloutau.edit.undo" />
             <action id="helloutau.edit.redo" />
             <separator />
-            <action id="helloutau.edit.selectTool" />
-            <action id="helloutau.edit.penTool" />
-            <action id="helloutau.edit.pitchTool" />
+            <action id="helloutau.select.selectTool" />
+            <action id="helloutau.select.penTool" />
+            <action id="helloutau.select.pitchTool" />
             <separator />
             <action id="helloutau.edit.mode2" />
             <action id="helloutau.edit.convertPitchToMode1" />
@@ -294,7 +299,7 @@
             <action id="helloutau.edit.crossfadeP2P3" />
             <action id="helloutau.edit.crossfadeP1P4" />
             <separator />
-            <action id="helloutau.edit.quantization" />
+            <action id="helloutau.select.quantization" />
             <separator />
             <action id="helloutau.playback.play" />
             <action id="helloutau.playback.stop" />
