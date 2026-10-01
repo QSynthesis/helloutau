@@ -3,6 +3,7 @@
 #include <cmath>
 
 #include <QtGui/QPainter>
+#include <QtGui/QMouseEvent>
 
 #include "SceneView.h"
 
@@ -112,6 +113,21 @@ namespace hello::daw {
         }
         painter.setPen(lineColor());
         painter.drawLine(width() - 1, 0, width() - 1, height());
+    }
+
+    void PianoKeyboard::mousePressEvent(QMouseEvent *event) {
+        if (!m_view || event->button() != Qt::LeftButton) {
+            QWidget::mousePressEvent(event);
+            return;
+        }
+        const auto &axis = m_view->keyAxis();
+        const double offset =
+            m_view->viewport()->mapTo(window(), QPoint()).y() - mapTo(window(), QPoint()).y();
+        const int key = axis.keyAt(event->position().y() - offset);
+        if (key >= 0 && key <= 127) {
+            Q_EMIT keyPressed(key);
+        }
+        event->accept();
     }
 
 }

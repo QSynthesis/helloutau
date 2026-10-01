@@ -7,6 +7,8 @@
 
 #include <helloutau/Widgets/HelloUtauWidgetsGlobal.h>
 
+class QMouseEvent;
+
 namespace hello::daw {
 
     class SceneView;
@@ -37,8 +39,13 @@ namespace hello::daw {
 
         QSize sizeHint() const override;
 
+    Q_SIGNALS:
+        /// A piano key was pressed. The value is a MIDI note number.
+        void keyPressed(int key);
+
     protected:
         void paintEvent(QPaintEvent *event) override;
+        void mousePressEvent(QMouseEvent *event) override;
 
     private:
         QPointer<SceneView> m_view;

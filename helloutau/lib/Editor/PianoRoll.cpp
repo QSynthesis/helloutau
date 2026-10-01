@@ -34,6 +34,8 @@
 #include <hellokit/Synth/PitchCurve.h>
 #include <hellokit/VoiceBank/VoiceBank.h>
 
+#include <helloutau/Audio/AudioOutput.h>
+#include <helloutau/Audio/SineWaveSource.h>
 #include <helloutau/Widgets/PianoKeyboard.h>
 #include <helloutau/Widgets/SceneView.h>
 #include <helloutau/Widgets/TimelineRuler.h>
@@ -108,6 +110,16 @@ namespace hello::daw {
         impl.view = new SceneView();
         impl.ruler = new TimelineRuler(impl.view);
         impl.keyboard = new PianoKeyboard(impl.view);
+        auto keyOutput = new AudioOutput(this);
+        connect(impl.keyboard, &PianoKeyboard::keyPressed, this, [keyOutput](int key) {
+            const int rate = AudioOutput::deviceSampleRate();
+            if (rate <= 0) {
+                return;
+            }
+            constexpr double duration = 0.35;
+            const double frequency = 440 * std::pow(2.0, (key - 69) / 12.0);
+            keyOutput->start(std::make_shared<SineWaveSource>(rate, frequency, duration));
+        });
         impl.voiceBankButton = new QToolButton();
         impl.voiceBankButton->setAutoRaise(true);
         impl.voiceBankButton->setToolButtonStyle(Qt::ToolButtonIconOnly);
