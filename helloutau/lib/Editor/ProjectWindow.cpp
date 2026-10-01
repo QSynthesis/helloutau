@@ -790,6 +790,9 @@ namespace hello::daw {
                     auto box = new QComboBox(parent);
                     box->setObjectName(QStringLiteral("quantization"));
                     box->setToolTip(tr("Quantization"));
+                    // Wider than its longest choice, which looks cramped in the tool bar
+                    box->setMinimumContentsLength(8);
+                    box->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
                     for (const int ticks : PianoRoll::quantizations()) {
                         box->addItem(PianoRoll::quantizationName(ticks), ticks);
                     }
