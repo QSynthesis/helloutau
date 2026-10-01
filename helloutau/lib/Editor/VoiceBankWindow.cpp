@@ -141,6 +141,7 @@ namespace hello::daw {
                 FindSupport::drawItemMatches(painter, item, matches, FindSupport::matchColor());
             }
         };
+
     }
 
     class VoiceBankWindow::Impl {

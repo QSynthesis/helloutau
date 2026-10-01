@@ -169,6 +169,7 @@ namespace hello::daw {
             QObject::connect(thread, &QThread::finished, thread, &QObject::deleteLater);
             thread->start();
         }
+
     }
 
     class Playback::Impl {

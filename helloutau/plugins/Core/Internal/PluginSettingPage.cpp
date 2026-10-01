@@ -64,6 +64,7 @@ namespace hello::daw {
                 }
             }
         };
+
     }
 
     PluginSettingPage::PluginSettingPage(AppLoader &loader, QObject *parent)
