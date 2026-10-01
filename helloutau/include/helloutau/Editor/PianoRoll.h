@@ -11,6 +11,7 @@
 
 #include <hellokit/Document/Note.h>
 #include <hellokit/Support/Diagnostic.h>
+#include <hellokit/Support/TextSearch.h>
 
 #include <helloutau/Editor/HelloUtauEditorGlobal.h>
 
@@ -51,6 +52,8 @@ namespace hello::daw {
         Q_PROPERTY(QColor unsampledColor READ unsampledColor WRITE setUnsampledColor)
         Q_PROPERTY(QColor unsampledLyricColor READ unsampledLyricColor WRITE setUnsampledLyricColor)
         Q_PROPERTY(QColor selectionColor READ selectionColor WRITE setSelectionColor)
+        Q_PROPERTY(QColor findMatchColor READ findMatchColor WRITE setFindMatchColor)
+        Q_PROPERTY(QColor findMatchTextColor READ findMatchTextColor WRITE setFindMatchTextColor)
         Q_PROPERTY(QColor playheadColor READ playheadColor WRITE setPlayheadColor)
         Q_PROPERTY(QColor renderWaitingColor READ renderWaitingColor WRITE setRenderWaitingColor)
         Q_PROPERTY(QColor renderRunningColor READ renderRunningColor WRITE setRenderRunningColor)
@@ -305,6 +308,12 @@ namespace hello::daw {
         bool isCursorEnabled() const;
         void setCursorEnabled(bool enabled);
 
+        /// The search whose matches are highlighted in the lyrics, as a browser highlights the
+        /// matches of its find bar: the characters of a match in findMatchTextColor() on
+        /// findMatchColor(). An invalid search, the default, highlights nothing.
+        kit::TextSearch lyricSearch() const;
+        void setLyricSearch(const kit::TextSearch &search);
+
         /// How far a note is rendered.
         enum RenderState {
             /// A rest, or a note that sounds nothing, for which nothing is drawn
@@ -377,6 +386,13 @@ namespace hello::daw {
         void setUnsampledLyricColor(const QColor &color);
         QColor selectionColor() const;
         void setSelectionColor(const QColor &color);
+        /// The color under the matches of lyricSearch(), opaque yellow by default, which stands
+        /// out on the notes
+        QColor findMatchColor() const;
+        void setFindMatchColor(const QColor &color);
+        /// The color of the characters of a match of lyricSearch(), black by default
+        QColor findMatchTextColor() const;
+        void setFindMatchTextColor(const QColor &color);
         QColor pitchColor() const;
         void setPitchColor(const QColor &color);
         QColor vibratoColor() const;

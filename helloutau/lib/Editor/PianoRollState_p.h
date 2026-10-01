@@ -243,6 +243,8 @@ namespace hello::daw {
         /// The menu of the ruler at tick: the tempo of the note there
         void showRulerMenu(double tick, const QPoint &globalPosition);
 
+        kit::TextSearch lyricSearch;
+
         /// How far each note is rendered, and the colors of the states from RenderWaiting on
         QList<PianoRoll::RenderState> renderStates;
         QColor renderColors[4];
@@ -254,6 +256,8 @@ namespace hello::daw {
         QColor unsampledColor;
         QColor unsampledLyricColor;
         QColor selectionColor;
+        QColor findMatchColor;
+        QColor findMatchTextColor;
         QColor whiteRowColor;
         QColor blackRowColor;
         QColor lineColor;

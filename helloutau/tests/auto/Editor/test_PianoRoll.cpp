@@ -841,6 +841,56 @@ private Q_SLOTS:
 
     // With parameters shown, the modulation is written one row below a sung note and its flags
     // two rows below. A rest has none.
+    // The matches of the lyric search are drawn under the characters they cover, and nothing is
+    // drawn without a search.
+    void the_matches_in_the_lyrics_are_highlighted() {
+        kit::ProjectSession session(threeNotes());
+        PianoRoll roll(&session);
+        roll.setPitchVisible(false);
+        const QColor background(255, 0, 255);
+        const QColor text(0, 255, 255);
+        roll.setFindMatchColor(background);
+        roll.setFindMatchTextColor(text);
+        show(roll);
+        QVERIFY(!roll.lyricSearch().isValid());
+
+        // The leftmost column of color over the notes from tick to tick + 480 at key, or -1
+        const auto leftmostIn = [&roll](double tick, int key, const QColor &color) {
+            const auto image = roll.view()->viewport()->grab().toImage();
+            const int left = int(roll.view()->timeAxis().toX(tick));
+            const int right = int(roll.view()->timeAxis().toX(tick + 480));
+            const int top = int(roll.view()->keyAxis().toY(key + 1)) + 1;
+            const int bottom = int(roll.view()->keyAxis().toY(key)) - 1;
+            for (int x = left; x < right; ++x) {
+                for (int y = top; y < bottom; ++y) {
+                    if (image.pixelColor(x, y) == color) {
+                        return x;
+                    }
+                }
+            }
+            return -1;
+        };
+        QCOMPARE(leftmostIn(0, 60, background), -1);
+        QCOMPARE(leftmostIn(0, 60, text), -1);
+
+        roll.setLyricSearch(kit::TextSearch(QStringLiteral("la"), {}));
+        QCOMPARE(roll.lyricSearch().pattern(), QStringLiteral("la"));
+        const int whole = leftmostIn(0, 60, background);
+        QVERIFY(whole >= 0);
+        QVERIFY(leftmostIn(0, 60, text) >= whole);
+        QCOMPARE(leftmostIn(1440, 64, background), -1);
+
+        // The match a starts after the character l.
+        roll.setLyricSearch(kit::TextSearch(QStringLiteral("a"), {}));
+        const int part = leftmostIn(0, 60, background);
+        QVERIFY(part > whole);
+        QVERIFY(leftmostIn(0, 60, text) >= part);
+
+        roll.setLyricSearch(kit::TextSearch());
+        QCOMPARE(leftmostIn(0, 60, background), -1);
+        QCOMPARE(leftmostIn(0, 60, text), -1);
+    }
+
     void the_parameters_are_shown_below_the_notes() {
         kit::Note rest;
         rest.lyric = QStringLiteral("R");

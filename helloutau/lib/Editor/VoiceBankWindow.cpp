@@ -29,6 +29,7 @@
 #include <QtWidgets/QSpinBox>
 #include <QtWidgets/QSplitter>
 #include <QtWidgets/QStatusBar>
+#include <QtWidgets/QStyledItemDelegate>
 #include <QtWidgets/QToolBar>
 #include <QtWidgets/QToolButton>
 #include <QtWidgets/QTableView>
@@ -119,6 +120,27 @@ namespace hello::daw {
             }
         };
 
+        // Draws the matches of the find bar over the text of a cell after the style has drawn
+        // the cell.
+        class MatchDelegate : public QStyledItemDelegate {
+        public:
+            using QStyledItemDelegate::QStyledItemDelegate;
+
+            // Returns the matches in the text of a cell
+            std::function<QList<kit::TextSearch::Match>(const QModelIndex &)> matchesOf;
+
+            void paint(QPainter *painter, const QStyleOptionViewItem &option,
+                       const QModelIndex &index) const override {
+                QStyledItemDelegate::paint(painter, option, index);
+                const auto matches = matchesOf(index);
+                if (matches.isEmpty()) {
+                    return;
+                }
+                auto item = option;
+                initStyleOption(&item, index);
+                FindSupport::drawItemMatches(painter, item, matches, FindSupport::matchColor());
+            }
+        };
     }
 
     class VoiceBankWindow::Impl {
@@ -135,6 +157,8 @@ namespace hello::daw {
         QHash<QString, QAction *> actions;
         CommandPalette *palette = nullptr;
         FindBar *findBar = nullptr;
+        // The search whose matches the table highlights, invalid while the find bar is hidden
+        kit::TextSearch highlightedSearch;
         QMenu *recentMenu = nullptr;
 
         // Follows the disk while the window is open; see checkDisk().
@@ -410,6 +434,9 @@ namespace hello::daw {
             table->setSortingEnabled(true);
             table->sortByColumn(-1, Qt::AscendingOrder);
             table->setSelectionBehavior(QAbstractItemView::SelectRows);
+            // A row has one line, so that a long name is elided and the matches of the find bar
+            // are highlighted up to the ellipsis.
+            table->setWordWrap(false);
             table->verticalHeader()->hide();
             table->horizontalHeader()->setStretchLastSection(false);
             table->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
@@ -881,6 +908,46 @@ namespace hello::daw {
                              [this] { updateFindResult(); });
             QObject::connect(table->selectionModel(), &QItemSelectionModel::currentRowChanged,
                              &decl, [this] { updateFindResult(); });
+
+            const auto delegate = new MatchDelegate(table);
+            delegate->matchesOf = [this](const QModelIndex &index) { return cellMatches(index); };
+            table->setItemDelegate(delegate);
+            QObject::connect(findBar, &FindBar::closed, &decl,
+                             [this] { highlight(kit::TextSearch()); });
+        }
+
+        void highlight(const kit::TextSearch &search) {
+            highlightedSearch = search;
+            table->viewport()->update();
+        }
+
+        // Returns the matches of the highlighted search in the text of the cell at index of the
+        // table. An empty alias denotes the stem of the file name, whose matches are therefore
+        // drawn in the file name.
+        QList<kit::TextSearch::Match> cellMatches(const QModelIndex &index) const {
+            if (!highlightedSearch.isValid()) {
+                return {};
+            }
+            const int row = proxy->mapToSource(index).row();
+            const auto entry = model->entryOf(row);
+            const int column = index.column();
+            if (findBar->scope() == FileScope) {
+                return column == VoiceBankEntryModel::FileColumn
+                           ? highlightedSearch.matchesIn(entry.fileName)
+                           : QList<kit::TextSearch::Match>();
+            }
+            const auto name = findTextOf(row);
+            if (!name) {
+                return {};
+            }
+            if (column == VoiceBankEntryModel::AliasColumn && !entry.alias.isEmpty()) {
+                return highlightedSearch.matchesIn(entry.alias);
+            }
+            if (column == VoiceBankEntryModel::FileColumn && entry.alias.isEmpty() &&
+                entry.fileName.startsWith(*name)) {
+                return highlightedSearch.matchesIn(*name);
+            }
+            return {};
         }
 
         // Returns the text of row of the model that the find bar searches: the file name, or the
@@ -930,6 +997,7 @@ namespace hello::daw {
                 return;
             }
             const auto search = FindSupport::searchOf(findBar);
+            highlight(search);
             FindSupport::showResult(findBar, search, entryMatches(search), currentShownRow());
         }
 

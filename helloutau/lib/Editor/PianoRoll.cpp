@@ -990,6 +990,39 @@ namespace hello::daw {
         impl.view->viewport()->update();
     }
 
+    kit::TextSearch PianoRoll::lyricSearch() const {
+        stdc_impl_t;
+        return impl.lyricSearch;
+    }
+
+    void PianoRoll::setLyricSearch(const kit::TextSearch &search) {
+        stdc_impl_t;
+        impl.lyricSearch = search;
+        impl.view->viewport()->update();
+    }
+
+    QColor PianoRoll::findMatchColor() const {
+        stdc_impl_t;
+        return impl.findMatchColor.isValid() ? impl.findMatchColor : QColor(0xff, 0xd8, 0x00);
+    }
+
+    void PianoRoll::setFindMatchColor(const QColor &color) {
+        stdc_impl_t;
+        impl.findMatchColor = color;
+        impl.view->viewport()->update();
+    }
+
+    QColor PianoRoll::findMatchTextColor() const {
+        stdc_impl_t;
+        return impl.findMatchTextColor.isValid() ? impl.findMatchTextColor : QColor(Qt::black);
+    }
+
+    void PianoRoll::setFindMatchTextColor(const QColor &color) {
+        stdc_impl_t;
+        impl.findMatchTextColor = color;
+        impl.view->viewport()->update();
+    }
+
     QColor PianoRoll::pitchColor() const {
         stdc_impl_t;
         return impl.pitchColor.isValid() ? impl.pitchColor

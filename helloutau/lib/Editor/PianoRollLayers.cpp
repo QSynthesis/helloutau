@@ -11,6 +11,7 @@
 
 #include <helloutau/Widgets/PianoKeyboard.h>
 
+#include "FindSupport_p.h"
 #include "PianoRollGestures_p.h"
 
 namespace hello::daw {
@@ -158,10 +159,28 @@ namespace hello::daw {
         if (note && note->id == m_state->editing) {
             return;
         }
+        const auto textRect = rect.adjusted(LyricPadding, 0, -LyricPadding, 0);
+        const auto lyric = drawn ? QString::fromLatin1(kit::defaultLyric) : note->lyric;
+        QList<QRectF> matches;
+        if (note && m_state->lyricSearch.isValid()) {
+            matches = FindSupport::matchRects(QFontMetricsF(painter.font()), textRect,
+                                              Qt::AlignLeft | Qt::AlignVCenter, lyric,
+                                              m_state->lyricSearch.matchesIn(lyric));
+        }
+        for (const auto &match : std::as_const(matches)) {
+            painter.fillRect(match & textRect, decl->findMatchColor());
+        }
         painter.setPen(unsampled ? decl->unsampledLyricColor() : decl->lyricColor());
-        painter.drawText(rect.adjusted(LyricPadding, 0, -LyricPadding, 0),
-                         Qt::AlignLeft | Qt::AlignVCenter,
-                         drawn ? QString::fromLatin1(kit::defaultLyric) : note->lyric);
+        painter.drawText(textRect, Qt::AlignLeft | Qt::AlignVCenter, lyric);
+        // The characters of a match are drawn again in their own color, clipped to the match,
+        // so that they stand at the same positions as the rest of the lyric.
+        for (const auto &match : std::as_const(matches)) {
+            painter.save();
+            painter.setClipRect(match & textRect, Qt::IntersectClip);
+            painter.setPen(decl->findMatchTextColor());
+            painter.drawText(textRect, Qt::AlignLeft | Qt::AlignVCenter, lyric);
+            painter.restore();
+        }
     }
 
     void PianoRollState::NoteEnvelopeLayer::paint(QPainter &painter, const QRect &exposed) {

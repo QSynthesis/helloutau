@@ -369,6 +369,7 @@ private Q_SLOTS:
         bar->setText(QStringLiteral("ka"));
         QCOMPARE(roll->selectedIndices(), QList<int>{0});
         QCOMPARE(bar->resultText(), QStringLiteral("1 of 2"));
+        QCOMPARE(roll->lyricSearch().pattern(), QStringLiteral("ka"));
         next->trigger();
         QCOMPARE(roll->selectedIndices(), QList<int>{3});
         next->trigger();
@@ -414,6 +415,11 @@ private Q_SLOTS:
 
         session->undo();
         QCOMPARE(lyricsOf(window), (QStringList{"ka", "a", "so", "ka", "R"}));
+
+        // The roll highlights the matches until the find bar is closed.
+        QVERIFY(roll->lyricSearch().isValid());
+        QTest::keyClick(bar->findField(), Qt::Key_Escape);
+        QVERIFY(!roll->lyricSearch().isValid());
     }
 
     // Copy enables Paste Parameters, whose dialog chooses what to paste onto the selection.
@@ -1728,6 +1734,68 @@ private Q_SLOTS:
         QCoreApplication::processEvents();
         QCOMPARE(aliases(), (QStringList{QStringLiteral("a.wav=a"), QStringLiteral("b.wav="),
                                          QStringLiteral("c.wav=")}));
+    }
+
+    // The table highlights the matches of the find bar in the aliases, in the file name for an
+    // empty alias, whose stem is matched, and in the file names in their scope. A query without
+    // matches keeps the current row, so that a cell is compared in the same state of selection.
+    void matches_are_highlighted_in_the_entry_table() {
+        QTemporaryDir dir;
+        const auto e = editor();
+        const auto window = e->openVoiceBank(voiceBank(dir));
+        QVERIFY(window);
+        window->resize(1000, 600);
+        window->show();
+        const auto tree = window->directoryTree();
+        tree->setCurrentItem(tree->topLevelItem(1));
+        const auto table = window->entryTable();
+        const auto cell = [table](int row, int column) {
+            const auto rect = table->visualRect(table->model()->index(row, column));
+            return table->viewport()->grab(rect).toImage();
+        };
+        const auto bar = window->findChild<FindBar *>();
+        actionNamed(window, QStringLiteral("&Find"))->trigger();
+
+        bar->setText(QStringLiteral("a"));
+        QCOMPARE(window->currentRow(), 0);
+        auto alias = cell(0, VoiceBankEntryModel::AliasColumn);
+        auto file = cell(0, VoiceBankEntryModel::FileColumn);
+        bar->setText(QStringLiteral("none"));
+        QVERIFY(cell(0, VoiceBankEntryModel::AliasColumn) != alias);
+        QVERIFY(cell(0, VoiceBankEntryModel::FileColumn) == file);
+
+        // b.wav has an empty alias.
+        bar->setText(QStringLiteral("b"));
+        QCOMPARE(window->currentRow(), 1);
+        file = cell(1, VoiceBankEntryModel::FileColumn);
+        bar->setText(QStringLiteral("none"));
+        QVERIFY(cell(1, VoiceBankEntryModel::FileColumn) != file);
+
+        bar->setScope(1);
+        bar->setText(QStringLiteral("c"));
+        QCOMPARE(window->currentRow(), 2);
+        file = cell(2, VoiceBankEntryModel::FileColumn);
+        bar->setText(QStringLiteral("none"));
+        QVERIFY(cell(2, VoiceBankEntryModel::FileColumn) != file);
+
+        // Closing the find bar removes the orange of the highlight from a row not selected.
+        const auto orange = [&cell](int row) {
+            const auto image = cell(row, VoiceBankEntryModel::FileColumn);
+            for (int y = 0; y < image.height(); ++y) {
+                for (int x = 0; x < image.width(); ++x) {
+                    const auto pixel = image.pixelColor(x, y);
+                    if (pixel.red() - pixel.blue() > 40 && pixel.red() - pixel.green() > 20) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        };
+        bar->setText(QStringLiteral("wav"));
+        QCOMPARE(window->currentRow(), 2);
+        QVERIFY(orange(0));
+        QTest::keyClick(bar->findField(), Qt::Key_Escape);
+        QVERIFY(!orange(0));
     }
 
     // The find bar of the voice bank window searches the names of the entries, an empty alias

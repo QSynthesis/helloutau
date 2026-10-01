@@ -1070,6 +1070,7 @@ namespace hello::daw {
                 return;
             }
             const auto search = FindSupport::searchOf(findBar);
+            roll->setLyricSearch(search);
             const auto selected = roll->selectedIndices();
             FindSupport::showResult(findBar, search, lyricMatches(search),
                                     selected.size() == 1 ? selected.first() : -1);
@@ -1210,6 +1211,8 @@ namespace hello::daw {
                 updateFindResult();
             });
             findBar->setAnchor(roll->view());
+            QObject::connect(findBar, &FindBar::closed, roll,
+                             [this] { roll->setLyricSearch(kit::TextSearch()); });
             // In the status bar, so that a refused drag does not stop the work with a dialog.
             // A dialog remains an alternative, see the open questions in docs/Tuning.md.
             QObject::connect(roll, &PianoRoll::cursorMoved, &decl, [this] { cursorMoved(); });

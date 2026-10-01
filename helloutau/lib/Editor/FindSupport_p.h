@@ -4,8 +4,14 @@
 #include <optional>
 
 #include <QtCore/QList>
+#include <QtCore/QRectF>
+#include <QtGui/QColor>
+#include <QtGui/QFontMetricsF>
+#include <QtWidgets/QStyleOptionViewItem>
 
 #include <hellokit/Support/TextSearch.h>
+
+class QPainter;
 
 namespace hello::daw {
 
@@ -31,6 +37,25 @@ namespace hello::daw {
         /// match, or the error of \a search if it is invalid.
         static void showResult(FindBar *bar, const kit::TextSearch &search,
                                const QList<int> &matches, int current);
+
+        /// Returns the translucent orange in which VS Code highlights the matches in the editor
+        /// in both its light and dark themes.
+        static QColor matchColor();
+
+        /// Returns the rectangles of the nonempty \a matches in \a text, drawn on one line in
+        /// \a rect with \a alignment and the font of \a metrics.
+        static QList<QRectF> matchRects(const QFontMetricsF &metrics, const QRectF &rect,
+                                        Qt::Alignment alignment, const QString &text,
+                                        const QList<kit::TextSearch::Match> &matches);
+
+        /// Fills the rectangles of \a matches in the text of the item of \a option with
+        /// \a color, after the style has drawn the item. The rectangles follow the text layout
+        /// of QCommonStyle, which the Windows 11 style and the Fusion style also use. If the
+        /// text is elided at the right, the matches after the ellipsis are not drawn. Nothing
+        /// is drawn for other elisions or for wrapped text that does not fit on one line.
+        static void drawItemMatches(QPainter *painter, const QStyleOptionViewItem &option,
+                                    const QList<kit::TextSearch::Match> &matches,
+                                    const QColor &color);
     };
 
 }
