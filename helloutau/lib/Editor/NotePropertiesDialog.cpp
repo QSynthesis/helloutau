@@ -16,8 +16,8 @@ namespace hello::daw {
 
     namespace {
 
-        // The tempo a box offers, which a note may exceed, since UTAU writes any value
-        constexpr double MaximumTempo = 1000;
+        constexpr double MinimumTempo = 10;
+        constexpr double MaximumTempo = 512;
 
         QString numberText(double value) {
             return QString::number(value, 'g', 12);
@@ -189,7 +189,7 @@ namespace hello::daw {
 
         m_tempo = new QDoubleSpinBox();
         m_tempo->setDecimals(2);
-        m_tempo->setRange(0.01, MaximumTempo);
+        m_tempo->setRange(MinimumTempo, MaximumTempo);
         m_tempo->setValue(tempo.value_or(current));
         m_tempo->setSuffix(tr(" BPM"));
         m_follow = new QCheckBox(tr("&Follow the tempo before"));

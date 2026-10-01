@@ -117,6 +117,7 @@
         <!-- The grid to which drags snap, a box in the tool bar. The two commands step through
              its choices, from a quarter note to a sixty-fourth and off. -->
         <action id="helloutau.select.quantization" text="Quantization" category="Select" />
+        <action id="helloutau.project.tempo" text="Project Tempo" category="Project" />
         <action id="helloutau.select.decreaseQuantizationInterval"
                 text="&amp;Decrease Quantization Interval"
                 category="Select" shortcut="Ctrl+[" />
@@ -301,6 +302,7 @@
             <action id="helloutau.edit.crossfadeP1P4" />
             <separator />
             <action id="helloutau.select.quantization" />
+            <action id="helloutau.project.tempo" />
             <separator />
             <action id="helloutau.playback.play" />
             <action id="helloutau.playback.stop" />

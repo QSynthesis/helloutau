@@ -17,6 +17,7 @@
 #include <QtGui/QDropEvent>
 #include <QtGui/QGuiApplication>
 #include <QtWidgets/QComboBox>
+#include <QtWidgets/QDoubleSpinBox>
 #include <QtWidgets/QFileDialog>
 #include <QtWidgets/QInputDialog>
 #include <QtWidgets/QLabel>
@@ -155,6 +156,7 @@ namespace hello::daw {
         QToolBar *toolBar = nullptr;
         // The boxes of the quantization in the tool bars, which follow the piano roll
         QList<QPointer<QComboBox>> quantizationBoxes;
+        QList<QPointer<QDoubleSpinBox>> tempoBoxes;
         QMenu *recentMenu = nullptr;
         QMenu *regionMenu = nullptr;
         // What Paste Parameters pasted last
@@ -857,11 +859,12 @@ namespace hello::daw {
                 box->setObjectName(QStringLiteral("quantization"));
                 box->setToolTip(tr("Quantization"));
                 // Wider than its longest choice, which looks cramped in the tool bar
-                box->setMinimumContentsLength(8);
+                box->setMinimumContentsLength(6);
                 box->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
                 for (const int ticks : PianoRoll::quantizations()) {
                     box->addItem(PianoRoll::quantizationName(ticks), ticks);
                 }
+                box->setFixedWidth(int(box->sizeHint().width() * 0.8));
                 if (roll) {
                     box->setCurrentIndex(box->findData(roll->quantization()));
                 }
@@ -873,6 +876,35 @@ namespace hello::daw {
                 quantizationBoxes.push_back(box);
                 return box;
             });
+            context->addWidgetFactory(
+                QStringLiteral("helloutau.project.tempo"),
+                [this, &decl](QWidget *parent) -> QWidget * {
+                    auto box = new QDoubleSpinBox(parent);
+                    box->setObjectName(QStringLiteral("tempo"));
+                    box->setToolTip(tr("Project Tempo"));
+                    box->setDecimals(2);
+                    box->setRange(10, 512);
+                    box->setSuffix(tr(" BPM"));
+                    if (!quantizationBoxes.isEmpty()) {
+                        box->setFixedHeight(quantizationBoxes.first()->sizeHint().height());
+                    }
+                    box->setValue(document ? kit::ProjectRef(document->session()).settings().tempo()
+                                             : 120);
+                    QObject::connect(
+                        box, &QDoubleSpinBox::valueChanged, box, [this, &decl](double tempo) {
+                            if (!document) {
+                                return;
+                            }
+                            kit::ProjectPropertyChanges changes;
+                            changes.tempo = tempo;
+                            kit::DiagnosticList diagnostics;
+                            kit::ProjectEdits::setProperties(kit::ProjectRef(document->session()),
+                                                             changes, diagnostics);
+                            DiagnosticBox::show(&decl, tr("Project Tempo"), diagnostics);
+                        });
+                    tempoBoxes.push_back(box);
+                    return box;
+                });
         }
 
         // Shows ticks in the boxes of the quantization, as the piano roll has it.
@@ -881,6 +913,14 @@ namespace hello::daw {
             for (const auto &box : std::as_const(quantizationBoxes)) {
                 const QSignalBlocker blocker(box.data());
                 box->setCurrentIndex(box->findData(ticks));
+            }
+        }
+
+        void showTempo(double tempo) {
+            tempoBoxes.removeAll(nullptr);
+            for (const auto &box : std::as_const(tempoBoxes)) {
+                const QSignalBlocker blocker(box.data());
+                box->setValue(tempo);
             }
         }
 
@@ -1370,6 +1410,7 @@ namespace hello::daw {
                 roll->setQuantization(quantization);
             }
             showQuantization(roll->quantization());
+            showTempo(kit::ProjectRef(document->session()).settings().tempo());
             QObject::connect(roll, &PianoRoll::quantizationChanged, &decl,
                              [this](int ticks) { showQuantization(ticks); });
             if (actions.value(QStringLiteral("helloutau.select.penTool"))->isChecked()) {
@@ -1391,6 +1432,10 @@ namespace hello::daw {
                 roll->setVoiceBank(document->voiceBank());
                 updateBackground();
             });
+            QObject::connect(document->session(), &kit::edit::EditSession::changed, &decl,
+                             [this] {
+                                 showTempo(kit::ProjectRef(document->session()).settings().tempo());
+                             });
             QObject::connect(roll, &PianoRoll::selectionChanged, &decl, [this] {
                 updateEditActions();
                 updateFindResult();

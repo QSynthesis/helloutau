@@ -23,8 +23,8 @@ namespace hello::daw {
 
     namespace {
 
-        // The tempo a box offers, which the project may exceed, since UTAU writes any value
-        constexpr double MaximumTempo = 1000;
+        constexpr double MinimumTempo = 10;
+        constexpr double MaximumTempo = 512;
 
         // A line edit with a button beside it that browses for its value
         QHBoxLayout *withBrowse(QLineEdit *edit, QWidget *parent,
@@ -60,7 +60,7 @@ namespace hello::daw {
         m_name = new QLineEdit(settings.name);
         m_tempo = new QDoubleSpinBox();
         m_tempo->setDecimals(2);
-        m_tempo->setRange(0.01, MaximumTempo);
+        m_tempo->setRange(MinimumTempo, MaximumTempo);
         m_tempo->setValue(settings.tempo);
         connect(m_tempo, &QDoubleSpinBox::valueChanged, this, [this] { m_tempoEdited = true; });
         m_flags = new QLineEdit(settings.flags);
