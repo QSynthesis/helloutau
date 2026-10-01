@@ -297,7 +297,8 @@ namespace hello::daw {
             return;
         }
 
-        // The curve of a note reads the two notes before it and the one after.
+        // The curves of the note before the exposed notes and of the note after them may reach
+        // into the exposed range. The curve of each note reads the note before it.
         const int first = std::max(0, begin - 2);
         const int last = std::min(timeline->noteCount(), end + 1);
         const auto refs = m_state->notes();
@@ -326,24 +327,17 @@ namespace hello::daw {
         painter.setRenderHint(QPainter::Antialiasing);
         painter.setBrush(Qt::NoBrush);
         const double step = std::max(1.0, CurveStep / time.pixelsPerTick);
-        for (int i = begin; i < end; ++i) {
+        // Each note draws the curve of its own points alone, which crosses the curves of its
+        // neighbours if its points lie among theirs.
+        for (int i = std::max(0, begin - 1); i < last; ++i) {
             const auto &entry = timeline->note(i);
             if (entry.rest) {
                 continue;
             }
-            const auto &note = notes.at(i - first);
-            const double tempo = timeline->tempoMap().tempo(i);
-            const kit::PitchCurve curve(notes, i - first, tempo);
-
-            // Each note draws its own span, which its neighbours also bend. The span before
-            // it belongs to the previous note, unless that is a rest.
-            double from = 0;
-            if ((i == 0 || timeline->note(i - 1).rest) && !note.portamento.isEmpty()) {
-                from =
-                    std::min(0.0, note.portamento.first().x * tempo * kit::ticksPerQuarter / 60000);
-            }
-            from = std::max(from, left - double(entry.start) - step);
-            const double to = std::min(double(entry.length), right - double(entry.start) + step);
+            const kit::PitchCurve curve(notes, i - first, timeline->tempoMap().tempo(i));
+            const auto [start, stop] = curve.ownSpan();
+            const double from = std::max(start, left - double(entry.start) - step);
+            const double to = std::min(stop, right - double(entry.start) + step);
             if (from >= to) {
                 continue;
             }
@@ -356,8 +350,8 @@ namespace hello::daw {
             QList<QPolygonF> vibrato;
             bool vibrating = false;
             for (double tick = from;; tick = std::min(tick + step, to)) {
-                portamento.push_back(pointAt(tick, curve.portamentoAt(tick)));
-                const double v = curve.vibratoAt(tick);
+                portamento.push_back(pointAt(tick, curve.ownPortamentoAt(tick)));
+                const double v = curve.ownVibratoAt(tick);
                 if (v != 0) {
                     if (!vibrating) {
                         vibrato.push_back({});

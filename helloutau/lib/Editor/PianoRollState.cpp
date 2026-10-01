@@ -689,37 +689,42 @@ namespace hello::daw {
         const auto &time = view->timeAxis();
         const auto &keys = view->keyAxis();
         const double tick = time.toTick(position.x());
-        int index = timeline->noteAt(tick);
-        if (index < 0 || index >= count) {
-            return std::nullopt;
-        }
-        if (index + 1 < count) {
-            const auto next = pointsOf(index + 1);
-            if (!next.isEmpty() && tick >= double(timeline->note(index + 1).start) +
-                                               ticksOf(next.first().x, index + 1)) {
-                ++index;
-            }
-        }
-        const auto &note = timeline->note(index);
-        if (note.rest) {
+        const int at = timeline->noteAt(tick);
+        if (at < 0 || at >= count) {
             return std::nullopt;
         }
 
-        // The portamento as it is drawn
-        const int first = std::max(0, index - 2);
-        const int last = std::min(count, index + 2);
+        // The portamento as it is drawn, of the note at the position, of the note before it,
+        // whose last point may lie past its end, and of the note after it, whose points may
+        // lie before its start. The nearest curve is taken, the later note if two curves are
+        // equally near.
+        const int first = std::max(0, at - 2);
+        const int last = std::min(count, at + 2);
         const auto refs = notes();
         QList<kit::Note> around;
         for (int i = first; i < last; ++i) {
             around.push_back(refs.at(i).toNote());
         }
-        const double local = tick - double(note.start);
-        const kit::PitchCurve curve(around, index - first, timeline->tempoMap().tempo(index));
-        const double y = keys.toY(note.key + 0.5 + curve.portamentoAt(local) / 100);
-        if (std::abs(y - position.y()) > curveGrip) {
-            return std::nullopt;
+        std::optional<std::pair<int, double>> nearest;
+        double distance = curveGrip;
+        for (int index = std::max(0, at - 1); index < last; ++index) {
+            const auto &note = timeline->note(index);
+            if (note.rest) {
+                continue;
+            }
+            const kit::PitchCurve curve(around, index - first, timeline->tempoMap().tempo(index));
+            const double local = tick - double(note.start);
+            const auto [start, stop] = curve.ownSpan();
+            if (local < start || local > stop) {
+                continue;
+            }
+            const double y = keys.toY(note.key + 0.5 + curve.ownPortamentoAt(local) / 100);
+            if (const double d = std::abs(y - position.y()); d <= distance) {
+                distance = d;
+                nearest = std::pair{index, local};
+            }
         }
-        return std::pair{index, local};
+        return nearest;
     }
 
     bool PianoRollState::insertPointAt(QPointF position) {

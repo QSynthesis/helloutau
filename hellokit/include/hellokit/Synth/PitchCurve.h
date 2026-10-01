@@ -2,6 +2,7 @@
 #define HELLOKIT_SYNTH_PITCHCURVE_H
 
 #include <optional>
+#include <utility>
 
 #include <QtCore/QList>
 
@@ -12,9 +13,10 @@
 namespace hello::kit {
 
     /// The pitch curve of a note as UTAU passes it to the resampler, in cents relative to the
-    /// note, in the two parts that an editor draws separately: the portamento of the Mode2
-    /// points and the vibrato. Both include what the neighbouring notes contribute: the
-    /// previous note before the start of this one, and the next note from its first point on.
+    /// note, in two parts: the portamento of the Mode2 points and the vibrato. Both include the
+    /// contributions of the neighbouring notes: the previous note before the start of this one,
+    /// and the next note from its first point on. The contribution of this note alone is given
+    /// by ownPortamentoAt() and ownVibratoAt().
     ///
     /// The rules are those of stdutau (\c synth.cpp, \c UtaPitchCurves), which the second stage
     /// compared with UTAU (docs/Synth.md), and a test compares the values with those of stdutau
@@ -41,6 +43,22 @@ namespace hello::kit {
 
         /// The vibrato at \a tick, counted from the start of the note.
         double vibratoAt(double tick) const;
+
+        /// The portamento of the points of this note alone at \a tick, counted from the start
+        /// of the note, without the contributions of the neighbours. The value is the height
+        /// of the first point before that point, and zero after the last point.
+        ///
+        /// The piano roll draws this part for each note, so that the curves of adjacent notes
+        /// are independent of each other and may cross.
+        double ownPortamentoAt(double tick) const;
+
+        /// The vibrato of this note alone at \a tick, counted from the start of the note.
+        double ownVibratoAt(double tick) const;
+
+        /// Returns the range of ticks, counted from the start of the note, that the own
+        /// portamento spans: from the first point, or the start of the note if later, to the
+        /// last point, or the end of the note if later.
+        std::pair<double, double> ownSpan() const;
 
         /// The timing of the samples of the note and the next one, in milliseconds, as
         /// reconciled with their neighbours (SynthStep::preUtterance and the like).

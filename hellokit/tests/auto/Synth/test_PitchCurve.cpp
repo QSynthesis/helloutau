@@ -155,7 +155,7 @@ private Q_SLOTS:
         return -1;
     }
 
-    // The purpose of the class: the curve drawn is the curve the resampler receives.
+    // The purpose of the class: the curve is the curve the resampler receives.
     void the_values_are_those_of_the_resampler() {
         const auto voices = bank();
         QVERIFY(voices);
@@ -219,6 +219,33 @@ private Q_SLOTS:
         // Seen from the first note, the second note has begun to bend towards its own pitch.
         const PitchCurve curve(notes, 0, 120);
         QVERIFY(curve.portamentoAt(480 - 48) > 100);
+    }
+
+    // The own curve of a note leaves out the neighbours and spans the points of the note that
+    // lie before its start or after its end, 576 and 672 ticks at 120 bpm.
+    void the_own_curve_leaves_out_the_neighbours() {
+        auto first = note(QStringLiteral("a"), 60);
+        Vibrato v;
+        v.length = 100;
+        v.period = 100;
+        v.amplitude = 50;
+        first.vibrato = v;
+        auto second = note(QStringLiteral("ka"), 62);
+        second.portamento = {point(-600, 0), point(0, 0), point(700, 0)};
+        const QList<Note> notes = {first, second};
+
+        // The points of the second note lie before the start of the first.
+        const PitchCurve curve(notes, 0, 120);
+        QVERIFY(curve.portamentoAt(100) > 0);
+        QCOMPARE(curve.ownPortamentoAt(100), 0.0);
+        QCOMPARE(curve.ownSpan(), (std::pair{0.0, 480.0}));
+
+        const PitchCurve next(notes, 1, 120);
+        QCOMPARE(next.ownSpan(), (std::pair{-576.0, 672.0}));
+        QCOMPARE(next.ownPortamentoAt(-1000), -200.0);
+        QVERIFY(next.vibratoAt(-100) != 0);
+        QCOMPARE(next.ownVibratoAt(-100), 0.0);
+        QVERIFY(curve.ownVibratoAt(380) != 0);
     }
 
     // A note of 480 ticks with Mode1 values; the probe of docs/Synth.md used such notes.

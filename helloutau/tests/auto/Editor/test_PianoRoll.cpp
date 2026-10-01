@@ -707,9 +707,27 @@ private Q_SLOTS:
         QCOMPARE(roll.ruler()->spans().value(1).last, 2400.0);
     }
 
-    // The portamento runs through the rows as the resampler receives it, and the vibrato apart
-    // around the middle of the row; both only while the pitch is shown.
-    void the_pitch_is_drawn_as_the_resampler_receives_it() {
+    // Whether a pixel of \a color lies within two pixels of (tick, cents from key)
+    static bool drawnNear(const PianoRoll &roll, double tick, int key, double cents, QColor color) {
+        const auto image = roll.view()->viewport()->grab().toImage();
+        const QPointF center(roll.view()->timeAxis().toX(tick),
+                             roll.view()->keyAxis().toY(key + 0.5 + cents / 100));
+        for (int dx = -2; dx <= 2; ++dx) {
+            for (int dy = -2; dy <= 2; ++dy) {
+                const auto pixel = image.pixelColor(center.toPoint() + QPoint(dx, dy));
+                if (qAbs(pixel.red() - color.red()) < 60 &&
+                    qAbs(pixel.green() - color.green()) < 60 &&
+                    qAbs(pixel.blue() - color.blue()) < 60) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    // The portamento runs through the rows, and the vibrato apart around the middle of the
+    // row; both only while the pitch is shown.
+    void the_pitch_is_drawn_while_shown() {
         kit::Note la;
         la.lyric = QStringLiteral("la");
         la.length = 960;
@@ -739,41 +757,93 @@ private Q_SLOTS:
         roll.setVibratoColor(QColor(0, 255, 255));
         show(roll);
 
-        // Whether a pixel of \a color lies within two pixels of (tick, cents from key)
-        const auto drawnNear = [&roll](double tick, int key, double cents, QColor color) {
-            const auto image = roll.view()->viewport()->grab().toImage();
-            const QPointF center(roll.view()->timeAxis().toX(tick),
-                                 roll.view()->keyAxis().toY(key + 0.5 + cents / 100));
-            for (int dx = -2; dx <= 2; ++dx) {
-                for (int dy = -2; dy <= 2; ++dy) {
-                    const auto pixel = image.pixelColor(center.toPoint() + QPoint(dx, dy));
-                    if (qAbs(pixel.red() - color.red()) < 60 &&
-                        qAbs(pixel.green() - color.green()) < 60 &&
-                        qAbs(pixel.blue() - color.blue()) < 60) {
-                        return true;
-                    }
-                }
-            }
-            return false;
-        };
-
         const QList<kit::Note> notes = {la, li};
         const kit::PitchCurve secondCurve(notes, 1, 120);
         // From 100 ms before li to 100 ms after it, li bends up from la; at its start halfway
         const double bend = secondCurve.portamentoAt(0);
         QVERIFY(bend < -100 && bend > -300);
-        QVERIFY(drawnNear(960, 64, bend, QColor(255, 0, 255)));
-        QVERIFY(drawnNear(960 + 300, 64, 0, QColor(255, 0, 255)));
+        QVERIFY(drawnNear(roll, 960, 64, bend, QColor(255, 0, 255)));
+        QVERIFY(drawnNear(roll, 960 + 300, 64, 0, QColor(255, 0, 255)));
 
         const kit::PitchCurve firstCurve(notes, 0, 120);
         const double tick = 960 * 0.5 + 120;
         const double v = firstCurve.vibratoAt(tick);
         QVERIFY(qAbs(v) > 20);
-        QVERIFY(drawnNear(tick, 60, v, QColor(0, 255, 255)));
+        QVERIFY(drawnNear(roll, tick, 60, v, QColor(0, 255, 255)));
 
         roll.setPitchVisible(false);
-        QVERIFY(!drawnNear(960 + 300, 64, 0, QColor(255, 0, 255)));
-        QVERIFY(!drawnNear(tick, 60, v, QColor(0, 255, 255)));
+        QVERIFY(!drawnNear(roll, 960 + 300, 64, 0, QColor(255, 0, 255)));
+        QVERIFY(!drawnNear(roll, tick, 60, v, QColor(0, 255, 255)));
+    }
+
+    // Each note draws the curve of its own points alone. The points of li begin 600 ms, or
+    // 576 ticks, before it, before the start of la. The curve of li therefore crosses la, whose
+    // curve stays at its pitch, and begins over the rest before la. A double click inserts a
+    // point into the note whose curve it hits.
+    void the_curves_of_the_notes_are_independent() {
+        kit::Note rest;
+        rest.lyric = QStringLiteral("R");
+        rest.length = 480;
+        rest.noteNum = 60;
+        kit::Note la;
+        la.lyric = QStringLiteral("la");
+        la.length = 480;
+        la.noteNum = 60;
+        kit::Note li;
+        li.lyric = QStringLiteral("li");
+        li.length = 480;
+        li.noteNum = 64;
+        kit::PortamentoPoint first;
+        first.x = -600;
+        kit::PortamentoPoint second;
+        second.x = 100;
+        li.portamento = {first, second};
+        kit::Project project;
+        project.settings.tempo = 120;
+        project.tracks.push_back({});
+        project.tracks[0].notes = {rest, la, li};
+
+        kit::ProjectSession session(project);
+        PianoRoll roll(&session);
+        roll.setPitchColor(QColor(255, 0, 255));
+        show(roll);
+
+        const auto liAt = [&session](double tick) {
+            const kit::PitchCurve curve(session.snapshot().tracks[0].notes, 2, 120);
+            return curve.ownPortamentoAt(tick - 960);
+        };
+        // At tick 720, halfway between the first two points, li is 200 cents below its pitch.
+        QVERIFY(liAt(720) < -150 && liAt(720) > -250);
+        QVERIFY(drawnNear(roll, 720, 64, liAt(720), QColor(255, 0, 255)));
+        QVERIFY(drawnNear(roll, 720, 60, 0, QColor(255, 0, 255)));
+        QVERIFY(drawnNear(roll, 400, 64, liAt(400), QColor(255, 0, 255)));
+
+        const auto viewport = roll.view()->viewport();
+        const auto pointsOf = [&session](int index) {
+            return session.snapshot().tracks[0].notes[index].portamento;
+        };
+        const auto onLi = [&](double tick) {
+            return QPointF(roll.view()->timeAxis().toX(tick),
+                           roll.view()->keyAxis().toY(64.5 + liAt(tick) / 100));
+        };
+
+        // Where the curve of li rises 3 to 4 pixels above la, both curves are within reach,
+        // and the nearer curve is hit.
+        double tick = 480;
+        while (tick < 720 && pointOf(roll, tick, 60).y() - onLi(tick).y() < 3) {
+            ++tick;
+        }
+        QVERIFY(pointOf(roll, tick, 60).y() - onLi(tick).y() < roll.curveGrip());
+        QTest::mouseDClick(viewport, Qt::LeftButton, {}, onLi(tick).toPoint());
+        QCOMPARE(pointsOf(1).size(), 0);
+        QCOMPARE(pointsOf(2).size(), 3);
+
+        QTest::mouseDClick(viewport, Qt::LeftButton, {}, pointOf(roll, 720, 60));
+        QCOMPARE(pointsOf(1).size(), 3);
+        QCOMPARE(pointsOf(2).size(), 3);
+        QTest::mouseDClick(viewport, Qt::LeftButton, {}, onLi(720).toPoint());
+        QCOMPARE(pointsOf(1).size(), 3);
+        QCOMPARE(pointsOf(2).size(), 4);
     }
 
     // With envelopes shown, the envelope of la stands above its bar from where its pre-utterance

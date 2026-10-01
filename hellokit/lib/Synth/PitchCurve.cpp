@@ -1,5 +1,6 @@
 #include "PitchCurve.h"
 
+#include <algorithm>
 #include <cmath>
 #include <limits>
 
@@ -102,6 +103,20 @@ namespace hello::kit {
 
     double PitchCurve::vibratoAt(double tick) const {
         return currentAt(tick).vibrato + previousAt(tick).vibrato + nextAt(tick, tick).vibrato;
+    }
+
+    double PitchCurve::ownPortamentoAt(double tick) const {
+        return currentAt(tick).portamento;
+    }
+
+    double PitchCurve::ownVibratoAt(double tick) const {
+        return currentAt(tick).vibrato;
+    }
+
+    std::pair<double, double> PitchCurve::ownSpan() const {
+        const auto &points = m_current.points;
+        return {std::min(0.0, ticksOf(points.first().x)),
+                std::max(double(m_current.length), ticksOf(points.last().x))};
     }
 
     QList<int> PitchCurve::values(const Timing &timing) const {
