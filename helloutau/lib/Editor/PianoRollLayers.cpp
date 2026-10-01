@@ -662,6 +662,30 @@ namespace hello::daw {
         menu.exec(view()->viewport()->mapToGlobal(position.toPoint()));
     }
 
+    bool PianoRollState::PitchLayer::doubleClick(const SceneHit &hit, QPointF position) {
+        Q_UNUSED(position);
+        if (hit.part != PianoRoll::PitchPoint) {
+            return false;
+        }
+        const int index = m_state->indexOf(hit.node);
+        if (index < 0) {
+            return false;
+        }
+        if (m_state->pointsOf(index).size() <= 2) {
+            Q_EMIT m_state->widget->editRefused(
+                PianoRoll::tr("A note keeps at least two pitch points."));
+            return true;
+        }
+        kit::DiagnosticList diagnostics;
+        m_state->removePoints(
+            {
+                {index, {hit.index}}
+        },
+            diagnostics);
+        m_state->report(diagnostics);
+        return true;
+    }
+
     void PianoRollState::OverlayLayer::paint(QPainter &painter, const QRect &exposed) {
         if (m_state->band) {
             auto color = m_state->widget->selectionColor();

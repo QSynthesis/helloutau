@@ -1463,6 +1463,27 @@ private Q_SLOTS:
         QCOMPARE(session.currentStep(), step);
     }
 
+    // A double click on a point removes it, while its note keeps two; beyond that the refusal is
+    // reported.
+    void a_double_click_removes_a_point() {
+        kit::ProjectSession session(bentNotes());
+        PianoRoll roll(&session);
+        showExactly(roll);
+        QSignalSpy refused(&roll, &PianoRoll::editRefused);
+
+        QTest::mouseDClick(roll.view()->viewport(), Qt::LeftButton, {}, pointOfLi(roll, 0, 100));
+        auto points = pointsOfLi(session);
+        QCOMPARE(points.size(), 2);
+        QCOMPARE(points[0].x, -60.0);
+        QCOMPARE(points[1].x, 60.0);
+        QCOMPARE(session.undoMessage(), PianoRoll::tr("Delete Pitch Points"));
+        QVERIFY(refused.isEmpty());
+
+        QTest::mouseDClick(roll.view()->viewport(), Qt::LeftButton, {}, pointOfLi(roll, 60, 0));
+        QCOMPARE(pointsOfLi(session).size(), 2);
+        QCOMPARE(refused.size(), 1);
+    }
+
     // A double click on the portamento inserts a point there; Delete removes the selected
     // points, keeping two.
     void points_are_inserted_and_deleted() {
@@ -1731,7 +1752,8 @@ private Q_SLOTS:
     }
 
     // A double click on the envelope between the attack and the release inserts the middle
-    // anchor, and one on the middle anchor removes it.
+    // anchor, and one on an anchor removes it. Of four, the end of the attack at 5 ms gives way
+    // to one halfway between the start and the start of the release at 140 ms.
     void the_middle_anchor_is_inserted_and_removed() {
         kit::ProjectSession session(envelopedNote());
         PianoRoll roll(&session);
@@ -1749,6 +1771,13 @@ private Q_SLOTS:
         envelope = envelopeOfLa(session);
         QVERIFY(!envelope.hasMiddle);
         QCOMPARE(envelope.anchors[1].x, 5.0);
+
+        QTest::mouseDClick(viewport, Qt::LeftButton, {}, envelopePoint(roll, 455, 100));
+        envelope = envelopeOfLa(session);
+        QVERIFY(!envelope.hasMiddle);
+        QCOMPARE(envelope.anchors[1].x, 70.0);
+        QCOMPARE(envelope.anchors[1].y, 50.0);
+        QCOMPARE(envelope.anchors[3].x, 35.0);
     }
 
     // la, li and lu overlapping by 20, 30 and 10 ms, and li with a middle anchor

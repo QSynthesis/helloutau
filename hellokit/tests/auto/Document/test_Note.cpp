@@ -56,6 +56,64 @@ private Q_SLOTS:
         QVERIFY(!Envelope::fromTimeOrder(QList<EnvelopeAnchor>(6)).has_value());
     }
 
+    // Of a fragment of 175 ms, anchors at 0, 5, 130 and 165 ms. Without one of them the others
+    // stay, and of four the removed one is replaced halfway between its neighbours, the ends of
+    // the fragment at 0 included.
+    void an_anchor_is_removed_and_the_others_stay() {
+        const auto anchorsOf = [](const QList<EnvelopeAnchor> &timeOrder, int index) {
+            return Envelope::fromTimeOrder(timeOrder)
+                ->withoutAnchor(index, 175)
+                .anchorsInTimeOrder();
+        };
+        const QList<EnvelopeAnchor> four{
+            {0,  0  },
+            {5,  100},
+            {35, 90 },
+            {10, 0  }
+        };
+        QCOMPARE(anchorsOf(four, 1), (QList<EnvelopeAnchor>{
+                                         {0,  0 },
+                                         {65, 45},
+                                         {35, 90},
+                                         {10, 0 }
+        }));
+        QCOMPARE(anchorsOf(four, 0), (QList<EnvelopeAnchor>{
+                                         {2.5, 50 },
+                                         {2.5, 100},
+                                         {35,  90 },
+                                         {10,  0  }
+        }));
+        QCOMPARE(anchorsOf(four, 3), (QList<EnvelopeAnchor>{
+                                         {0,    0  },
+                                         {5,    100},
+                                         {22.5, 90 },
+                                         {22.5, 45 }
+        }));
+        QCOMPARE(anchorsOf(four, 4), four);
+
+        const QList<EnvelopeAnchor> five{
+            {0,  0  },
+            {5,  100},
+            {20, 80 },
+            {35, 90 },
+            {10, 0  }
+        };
+        QCOMPARE(anchorsOf(five, 2), four);
+        QCOMPARE(anchorsOf(five, 1), (QList<EnvelopeAnchor>{
+                                         {0,  0 },
+                                         {25, 80},
+                                         {35, 90},
+                                         {10, 0 }
+        }));
+        // p3 and p5 remain, as the new p3 and p4.
+        QCOMPARE(anchorsOf(five, 4), (QList<EnvelopeAnchor>{
+                                         {0,   0  },
+                                         {5,   100},
+                                         {105, 80 },
+                                         {45,  90 }
+        }));
+    }
+
     // The unused middle anchor is not part of the envelope, so it does not affect equality.
     void an_unused_middle_anchor_is_not_compared() {
         Envelope first;

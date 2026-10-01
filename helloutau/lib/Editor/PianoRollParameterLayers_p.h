@@ -34,8 +34,9 @@ namespace hello::daw {
                                             Qt::MouseButton button,
                                             Qt::KeyboardModifiers modifiers) override;
 
-        /// On the middle anchor a double click removes it; on the envelope between the end of
-        /// the attack and the start of the release it inserts one there.
+        /// On an anchor a double click removes it, the others staying where they are
+        /// (kit::Envelope::withoutAnchor()); on the envelope between the end of the attack and
+        /// the start of the release it inserts the middle anchor there.
         bool doubleClick(const SceneHit &hit, QPointF position) override;
 
         void write(int index, const kit::Envelope &envelope);

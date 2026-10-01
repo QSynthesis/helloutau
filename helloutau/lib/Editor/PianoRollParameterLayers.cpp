@@ -75,12 +75,11 @@ namespace hello::daw {
     bool PianoRollState::EnvelopeLayer::doubleClick(const SceneHit &hit, QPointF position) {
         if (hit.part == PianoRoll::EnvelopePoint) {
             const int index = m_state->indexOf(hit.node);
-            auto envelope = m_state->envelopeOf(index);
-            if (!envelope.hasMiddle || hit.index != 2) {
+            if (index < 0) {
                 return false;
             }
-            envelope.hasMiddle = false;
-            write(index, envelope);
+            write(index, m_state->envelopeOf(index).withoutAnchor(
+                             hit.index, m_state->fragmentOf(index).second));
             return true;
         }
         const auto [begin, end] = visibleNotes(QRect(position.toPoint(), QSize(1, 1)));

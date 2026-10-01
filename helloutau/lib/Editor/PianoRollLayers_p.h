@@ -132,6 +132,10 @@ namespace hello::daw {
                                             Qt::MouseButton button,
                                             Qt::KeyboardModifiers modifiers) override;
 
+        /// On a Mode2 point a double click removes it, unless its note would keep fewer than
+        /// two points, which is reported instead.
+        bool doubleClick(const SceneHit &hit, QPointF position) override;
+
     private:
         PianoRollState *m_state;
 
