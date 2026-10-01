@@ -223,7 +223,10 @@ private Q_SLOTS:
         QCOMPARE(failures.size(), 0);
         QCOMPARE(states.at(1).at(0).value<Playback::State>(), Playback::Playing);
         QCOMPARE(states.at(2).at(0).value<Playback::State>(), Playback::Stopped);
-        QCOMPARE(progress.size(), 1);
+        // The start of the render, of unknown steps, and its end
+        QCOMPARE(progress.size(), 2);
+        QCOMPARE(progress.first(), (QList<QVariant>{0, 0}));
+        QCOMPARE(progress.last(), (QList<QVariant>{1, 1}));
         // The plan of the one note, made on the worker thread before the render
         QVERIFY(!planProgress.isEmpty());
         QCOMPARE(planProgress.first(), (QList<QVariant>{0, 1}));

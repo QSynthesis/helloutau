@@ -484,6 +484,9 @@ namespace hello::daw {
             std::error_code error;
             std::filesystem::create_directories(plan.cacheDirectory(), error);
             Observer observer(*job, recipient);
+            // The render starts. A runner reports its steps from here on, if at all, as the
+            // classic runner does only once its script has ended.
+            observer.progressed(0, 0);
             const auto outcome =
                 job->runner->render(plan, job->engines, &observer, job->diagnostics);
             if (!outcome.rendered || outcome.cancelled || job->cancel.load()) {

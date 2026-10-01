@@ -185,7 +185,8 @@ namespace hello::daw {
     Q_SIGNALS:
         void stateChanged(State state);
 
-        /// \a done of \a total steps of the render in progress are complete.
+        /// \a done of \a total steps of the render in progress are complete. Emitted with zero
+        /// and zero once the plan is made and the runner starts, before the steps are known.
         ///
         /// \sa kit::SynthObserver::progressed()
         void progressed(int done, int total);
