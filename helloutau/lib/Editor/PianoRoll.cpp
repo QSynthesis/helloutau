@@ -49,6 +49,9 @@ namespace hello::daw {
 
     namespace {
 
+        constexpr int LowestPianoKey = 24;   // C1
+        constexpr int HighestPianoKey = 107; // B7
+
         // Calls a function with each event of an object
         class EventWatcher : public QObject {
         public:
@@ -108,6 +111,7 @@ namespace hello::daw {
         impl.session = session;
         impl.timeline = new kit::TrackTimeline(session, 0, this);
         impl.view = new SceneView();
+        impl.view->setKeyRange(LowestPianoKey, HighestPianoKey);
         impl.ruler = new TimelineRuler(impl.view);
         impl.keyboard = new PianoKeyboard(impl.view);
         auto keyOutput = new AudioOutput(this);

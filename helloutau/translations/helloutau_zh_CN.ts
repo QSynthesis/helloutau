@@ -1164,6 +1164,10 @@
         <translation>曲速</translation>
     </message>
     <message>
+        <source>Project Tempo</source>
+        <translation>工程曲速</translation>
+    </message>
+    <message>
         <source>Set Label</source>
         <translation>设置标签</translation>
     </message>

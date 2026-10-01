@@ -6,13 +6,15 @@ A cross-platform editor for UTAU projects and voice banks, for Windows, macOS an
 
 HelloUtau aims at functional parity with UTAU 0.4.19, while its interface, its handling of text encodings and its extension mechanism are designed anew.
 
+For the end-user workflow, see the [user guide](docs/UserGuide.md). Set the UTAU folder before opening projects so that voice banks and plugins can be located. Set the default resampler and wavtool in Rendering before playback. Project engine paths are preserved and are executed only after validity and trust checks.
+
 ## Status
 
 Early development. The editor is usable but incomplete, and its interface is under review. The libraries in `hellokit` are tested on all three systems. Implemented:
 
-- Projects: reading and writing of `.ust` and of `.usth`, the native project format. A piano roll edits notes, lyrics, pitch curves in Mode1 and Mode2, vibratos, envelopes and note parameters, with undo, redo, and find and replace of lyrics.
+- Projects: reading and writing of `.ust` and of `.usth`, the native project format. A piano roll edits notes, lyrics, pitch curves in Mode1 and Mode2, vibratos, envelopes and note parameters, with undo, redo, find and replace of lyrics, project tempo editing, and piano-key sine-wave preview.
 - Playback: prerendering through the rendering script of UTAU or on several threads, realtime playback, and rendering of a whole track into a WAV file
-- Voice banks: a window that edits `oto.ini`, `prefix.map`, `character.txt` and `readme.txt` in the encoding of each directory, sets the values of an entry on its waveform, previews samples, and detects changes on disk
+- Voice banks: a window that edits `oto.ini`, `prefix.map`, `character.txt` and `readme.txt` in the encoding of each directory, sets the values of an entry on its waveform, previews samples, displays the current voice-bank image above the piano keyboard, and detects changes on disk
 - Plugins: native plugins of HelloUtau, and the plugins of UTAU
 - Import and export: MIDI
 

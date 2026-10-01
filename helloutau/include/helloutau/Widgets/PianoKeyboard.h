@@ -8,6 +8,7 @@
 #include <helloutau/Widgets/HelloUtauWidgetsGlobal.h>
 
 class QMouseEvent;
+class QEvent;
 
 namespace hello::daw {
 
@@ -46,9 +47,12 @@ namespace hello::daw {
     protected:
         void paintEvent(QPaintEvent *event) override;
         void mousePressEvent(QMouseEvent *event) override;
+        void mouseMoveEvent(QMouseEvent *event) override;
+        void leaveEvent(QEvent *event) override;
 
     private:
         QPointer<SceneView> m_view;
+        int m_hoveredKey = -1;
         QColor m_whiteKeyColor;
         QColor m_blackKeyColor;
         QColor m_lineColor;

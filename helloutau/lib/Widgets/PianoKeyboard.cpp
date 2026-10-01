@@ -21,6 +21,7 @@ namespace hello::daw {
     }
 
     PianoKeyboard::PianoKeyboard(SceneView *view, QWidget *parent) : QWidget(parent), m_view(view) {
+        setMouseTracking(true);
         connect(view, &SceneView::keyAxisChanged, this, qOverload<>(&QWidget::update));
     }
 
@@ -105,7 +106,7 @@ namespace hello::daw {
                 painter.setPen(lineColor());
                 painter.drawLine(QPointF(0, bottom), QPointF(width(), bottom));
             }
-            if (degree == 0) {
+            if (degree == 0 || key == m_hoveredKey) {
                 painter.setPen(palette().color(QPalette::Text));
                 painter.drawText(QRectF(0, top, width() - LabelPadding, bottom - top),
                                  Qt::AlignRight | Qt::AlignVCenter, keyName(key));
@@ -128,6 +129,29 @@ namespace hello::daw {
             Q_EMIT keyPressed(key);
         }
         event->accept();
+    }
+
+    void PianoKeyboard::mouseMoveEvent(QMouseEvent *event) {
+        if (!m_view) {
+            QWidget::mouseMoveEvent(event);
+            return;
+        }
+        const auto &axis = m_view->keyAxis();
+        const double offset =
+            m_view->viewport()->mapTo(window(), QPoint()).y() - mapTo(window(), QPoint()).y();
+        const int key = axis.keyAt(event->position().y() - offset);
+        const int hoveredKey = key >= 0 && key <= 127 ? key : -1;
+        if (m_hoveredKey != hoveredKey) {
+            m_hoveredKey = hoveredKey;
+            update();
+        }
+        QWidget::mouseMoveEvent(event);
+    }
+
+    void PianoKeyboard::leaveEvent(QEvent *event) {
+        m_hoveredKey = -1;
+        update();
+        QWidget::leaveEvent(event);
     }
 
 }
