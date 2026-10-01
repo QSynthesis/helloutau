@@ -487,6 +487,9 @@ namespace hello::daw {
         void setBarLineColor(const QColor &color);
 
     Q_SIGNALS:
+        /// The voice bank image above the keyboard was activated.
+        void voiceBankRequested();
+
         /// The selection changed, or the notes it refers to did.
         void selectionChanged();
 

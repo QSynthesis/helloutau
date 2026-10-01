@@ -14,12 +14,14 @@
 #include <QtGui/QGuiApplication>
 #include <QtGui/QKeyEvent>
 #include <QtGui/QMouseEvent>
+#include <QtGui/QPixmap>
 #include <QtWidgets/QButtonGroup>
 #include <QtWidgets/QComboBox>
 #include <QtWidgets/QGridLayout>
 #include <QtWidgets/QLineEdit>
 #include <QtWidgets/QMenu>
 #include <QtWidgets/QToolButton>
+#include <QtWidgets/QStyle>
 #include <QtWidgets/QVBoxLayout>
 
 #include <stdcorelib/pimpl.h>
@@ -106,6 +108,15 @@ namespace hello::daw {
         impl.view = new SceneView();
         impl.ruler = new TimelineRuler(impl.view);
         impl.keyboard = new PianoKeyboard(impl.view);
+        impl.voiceBankButton = new QToolButton();
+        impl.voiceBankButton->setAutoRaise(true);
+        impl.voiceBankButton->setToolButtonStyle(Qt::ToolButtonIconOnly);
+        impl.voiceBankButton->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+        impl.voiceBankButton->setIconSize(QSize(64, 64));
+        impl.voiceBankButton->setIcon(style()->standardIcon(QStyle::SP_FileIcon));
+        impl.voiceBankButton->setToolTip(tr("Open Project Properties"));
+        connect(impl.voiceBankButton, &QToolButton::clicked, this,
+                [this] { Q_EMIT voiceBankRequested(); });
         impl.ruler->setTicksPerBeat(kit::ticksPerQuarter);
         impl.ruler->setBeatsPerBar(PianoRollState::BeatsPerBar);
         connect(impl.ruler, &TimelineRuler::markDoubleClicked, this, [this](int mark) {
@@ -245,6 +256,7 @@ namespace hello::daw {
         layout->setContentsMargins(0, 0, 0, 0);
         layout->setSpacing(0);
         layout->addWidget(impl.ruler, 0, 1);
+        layout->addWidget(impl.voiceBankButton, 0, 0);
         layout->addWidget(impl.keyboard, 1, 0);
         layout->addWidget(impl.view, 1, 1);
         layout->addWidget(impl.laneBar, 2, 0);
@@ -368,6 +380,18 @@ namespace hello::daw {
     void PianoRoll::setVoiceBank(std::shared_ptr<const kit::VoiceBank> bank) {
         stdc_impl_t;
         impl.voiceBank = std::move(bank);
+        QPixmap image;
+        if (impl.voiceBank && !impl.voiceBank->character().image.isEmpty()) {
+            const auto path =
+                impl.voiceBank->root() /
+                std::filesystem::path(impl.voiceBank->character().image.toStdU16String());
+            image.load(QString::fromStdU16String(path.u16string()));
+        }
+        if (image.isNull()) {
+            impl.voiceBankButton->setIcon(style()->standardIcon(QStyle::SP_FileIcon));
+        } else {
+            impl.voiceBankButton->setIcon(QIcon(image));
+        }
         impl.timingsStale = true;
         impl.view->viewport()->update();
         impl.parameters->viewport()->update();

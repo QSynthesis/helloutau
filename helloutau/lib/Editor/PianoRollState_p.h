@@ -31,6 +31,7 @@
 
 class QButtonGroup;
 class QComboBox;
+class QToolButton;
 class QWidget;
 
 namespace hello::daw {
@@ -178,6 +179,7 @@ namespace hello::daw {
         SceneView *view = nullptr;
         TimelineRuler *ruler = nullptr;
         PianoKeyboard *keyboard = nullptr;
+        QToolButton *voiceBankButton = nullptr;
         LyricEditor *editor = nullptr;
         bool refreshPending = false;
         std::shared_ptr<const kit::VoiceBank> voiceBank;

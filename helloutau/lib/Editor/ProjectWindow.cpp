@@ -1364,6 +1364,8 @@ namespace hello::daw {
             const auto quantization = roll ? roll->quantization() : -1;
             roll = new PianoRoll(document->session());
             roll->setVoiceBank(document->voiceBank());
+            QObject::connect(roll, &PianoRoll::voiceBankRequested, &decl,
+                             [this] { editProperties(); });
             if (quantization >= 0) {
                 roll->setQuantization(quantization);
             }
