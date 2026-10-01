@@ -8,6 +8,8 @@
 #include <helloutau/Editor/HelloUtauEditorGlobal.h>
 
 class QComboBox;
+class QDragEnterEvent;
+class QDropEvent;
 
 namespace QAK {
     class WidgetActionContext;
@@ -79,6 +81,13 @@ namespace hello::daw {
 
     protected:
         void closeEvent(QCloseEvent *event) override;
+
+        /// The files dropped on the window open as by Open of the File menu, see
+        /// Editor::openFile(): in this window if it shows an unmodified new project, and in
+        /// windows of their own otherwise. A file that a window shows already activates that
+        /// window.
+        void dragEnterEvent(QDragEnterEvent *event) override;
+        void dropEvent(QDropEvent *event) override;
 
     private:
         class Impl;

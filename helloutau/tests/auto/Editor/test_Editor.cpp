@@ -1,12 +1,17 @@
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
+#include <optional>
 #include <thread>
 
+#include <QtCore/QMimeData>
 #include <QtCore/QTemporaryDir>
 #include <QtCore/QTimer>
+#include <QtCore/QUrl>
 #include <QtCore/QtEndian>
 #include <QtGui/QAction>
+#include <QtGui/QDragEnterEvent>
+#include <QtGui/QDropEvent>
 #include <QtGui/QImage>
 #include <QtTest/QSignalSpy>
 #include <QtTest/QTest>
@@ -304,6 +309,65 @@ private Q_SLOTS:
         QVERIFY(window->close());
         QApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
         QCOMPARE(e->windows().size(), 0);
+    }
+
+    // A file dropped on a window opens as by Open: in the window if it shows an unmodified new
+    // project, in a window of its own otherwise, and the window that shows it already is
+    // activated. Nothing asks whether to save.
+    void a_dropped_file_opens_as_by_open() {
+        const auto e = editor();
+        const auto first = savedProject(m_dir, "drop1.usth");
+        const auto second = savedProject(m_dir, "drop2.usth");
+        const auto window = e->newWindow();
+        // Drops path on target and returns whether the user was asked to save, answering with
+        // answer if so.
+        const auto drop = [](ProjectWindow *target, const fs::path &path,
+                             QMessageBox::StandardButton answer = QMessageBox::Cancel) {
+            QMimeData data;
+            data.setUrls({QUrl::fromLocalFile(QString::fromStdU16String(path.u16string()))});
+            QDragEnterEvent enter(QPoint(10, 10), Qt::CopyAction, &data, Qt::LeftButton,
+                                  Qt::NoModifier);
+            QCoreApplication::sendEvent(target, &enter);
+            if (!enter.isAccepted()) {
+                return false;
+            }
+            QDropEvent event(QPointF(10, 10), Qt::CopyAction, &data, Qt::LeftButton,
+                             Qt::NoModifier);
+            QCoreApplication::sendEvent(target, &event);
+            // The file opens once the drop has returned, which may ask whether to save.
+            bool asked = false;
+            QTimer::singleShot(0, [&asked, answer] {
+                if (const auto box =
+                        qobject_cast<QMessageBox *>(QApplication::activeModalWidget())) {
+                    asked = true;
+                    box->button(answer)->click();
+                }
+            });
+            QCoreApplication::processEvents();
+            QCoreApplication::processEvents();
+            return asked;
+        };
+        const auto shows = [](ProjectWindow *target, const fs::path &path) {
+            std::error_code error;
+            return fs::equivalent(target->document()->sourcePath(), path, error);
+        };
+
+        QVERIFY(window->acceptDrops());
+        QVERIFY(!drop(window, first));
+        QCOMPARE(e->windows().size(), 1);
+        QVERIFY(shows(window, first));
+
+        edit(window);
+        QVERIFY(!drop(window, second));
+        QCOMPARE(e->windows().size(), 2);
+        QVERIFY(shows(window, first));
+        QVERIFY(window->isWindowModified());
+        const auto other = e->windows().at(1);
+        QVERIFY(shows(other, second));
+
+        QVERIFY(!drop(window, second));
+        QCOMPARE(e->windows().size(), 2);
+        QVERIFY(shows(window, first));
     }
 
     void saving_a_project_with_its_file_needs_no_dialog() {

@@ -3,6 +3,7 @@
 #include <QtCore/QDir>
 #include <QtCore/QHash>
 #include <QtCore/QMetaObject>
+#include <QtCore/QMimeData>
 #include <QtCore/QSignalBlocker>
 #include <QtCore/QStandardPaths>
 #include <QtCore/QTimer>
@@ -10,6 +11,8 @@
 #include <QtGui/QActionGroup>
 #include <QtGui/QClipboard>
 #include <QtGui/QCloseEvent>
+#include <QtGui/QDragEnterEvent>
+#include <QtGui/QDropEvent>
 #include <QtGui/QGuiApplication>
 #include <QtWidgets/QComboBox>
 #include <QtWidgets/QFileDialog>
@@ -103,6 +106,17 @@ namespace hello::daw {
 
         std::filesystem::path pathOf(const QString &text) {
             return std::filesystem::path(QDir::fromNativeSeparators(text).toStdU16String());
+        }
+
+        // The local files of a drag, in the order dragged
+        QList<std::filesystem::path> localFilesOf(const QMimeData *data) {
+            QList<std::filesystem::path> files;
+            for (const auto &url : data->urls()) {
+                if (url.isLocalFile()) {
+                    files.push_back(pathOf(url.toLocalFile()));
+                }
+            }
+            return files;
         }
 
         // The file a document is saved or exported as by default: its own file, or else the file
@@ -1555,6 +1569,9 @@ namespace hello::daw {
         impl.document = std::move(document);
         impl.bindDocument();
         editor->themeManager()->install(this, {QStringLiteral("ProjectWindow")});
+        // Files dropped on the window open, see dropEvent(). QMainWindow accepts drops already,
+        // for its dock widgets, which the window does not rely on.
+        setAcceptDrops(true);
         resize(960, 640);
     }
 
@@ -1703,6 +1720,27 @@ namespace hello::daw {
             return;
         }
         QMainWindow::closeEvent(event);
+    }
+
+    void ProjectWindow::dragEnterEvent(QDragEnterEvent *event) {
+        if (!localFilesOf(event->mimeData()).isEmpty()) {
+            event->acceptProposedAction();
+        }
+    }
+
+    void ProjectWindow::dropEvent(QDropEvent *event) {
+        const auto files = localFilesOf(event->mimeData());
+        if (files.isEmpty()) {
+            return;
+        }
+        event->acceptProposedAction();
+        // Later, so that the dialogs that opening may show run after the drag has ended
+        QTimer::singleShot(0, this, [this, files] {
+            stdc_impl_t;
+            for (const auto &file : files) {
+                impl.editor->openFile(file, this);
+            }
+        });
     }
 
 }
