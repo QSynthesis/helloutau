@@ -1,5 +1,6 @@
 #include "SettingPage.h"
 
+#include <algorithm>
 #include <functional>
 
 namespace hello::daw {
@@ -39,9 +40,12 @@ namespace hello::daw {
         m_keywords = keywords;
     }
 
-    void SettingPage::addPage(SettingPage *page) {
+    void SettingPage::addPage(SettingPage *page, const QString &before) {
         page->setParent(this);
-        m_pages.push_back(page);
+        const auto at = std::find_if(m_pages.begin(), m_pages.end(), [&before](SettingPage *p) {
+            return !before.isEmpty() && p->id() == before;
+        });
+        m_pages.insert(at, page);
     }
 
     QList<SettingPage *> SettingPage::pages() const {

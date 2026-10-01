@@ -125,19 +125,30 @@ private Q_SLOTS:
         QVERIFY(!dialog.selectPage(QStringLiteral("none")));
     }
 
-    // A page added later takes its place before a given top-level page, or comes last if that
-    // page is not at the top level.
+    // A page added later takes its place before a given page of the same level, or comes last
+    // if that page is not at that level.
     void a_page_is_added_before_another() {
         Pages pages;
         pages.catalog.addPage(new SettingPage(QStringLiteral("plugins")),
                               QStringLiteral("appearance"));
         pages.catalog.addPage(new SettingPage(QStringLiteral("tools")),
                               QStringLiteral("audio.output"));
-        QStringList ids;
-        for (const auto page : pages.catalog.pages()) {
-            ids.push_back(page->id());
-        }
-        QCOMPARE(ids, (QStringList{"audio", "plugins", "appearance", "tools"}));
+        pages.audio->addPage(new SettingPage(QStringLiteral("audio.input")),
+                             QStringLiteral("audio.export"));
+        pages.audio->addPage(new SettingPage(QStringLiteral("audio.midi")),
+                             QStringLiteral("appearance"));
+        const auto idsOf = [](const QList<SettingPage *> &list) {
+            QStringList ids;
+            for (const auto page : list) {
+                ids.push_back(page->id());
+            }
+            return ids;
+        };
+        QCOMPARE(idsOf(pages.catalog.pages()),
+                 (QStringList{"audio", "plugins", "appearance", "tools"}));
+        QCOMPARE(idsOf(pages.audio->pages()),
+                 (QStringList{"audio.output", "audio.input", "audio.export", "audio.midi"}));
+        QCOMPARE(pages.catalog.page(QStringLiteral("audio.input"))->parentPage(), pages.audio);
     }
 
     // The search finds pages by title, description, keywords and the text of their controls,

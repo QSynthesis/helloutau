@@ -40,8 +40,9 @@ namespace hello::daw {
         QStringList keywords() const;
         void setKeywords(const QStringList &keywords);
 
-        /// Adds \a page as the last child, which this page then owns.
-        void addPage(SettingPage *page);
+        /// Adds \a page as a child, which this page then owns: before the child of the id
+        /// \a before, or last if \a before is empty or names no child.
+        void addPage(SettingPage *page, const QString &before = {});
         QList<SettingPage *> pages() const;
         SettingPage *parentPage() const;
 
