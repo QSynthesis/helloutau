@@ -150,6 +150,9 @@ namespace hello::daw {
         // The notes still to render in the background, in the realtime mode
         QTimer statusTimer;
         int lastPending = -1;
+        // The notes that sound, from the last render states, as the total of the background
+        // render in the status bar
+        int soundingNotes = 0;
         // The render states on the ruler, updated after a change
         QTimer renderStateTimer;
         // Whether the playback is a preview, and whether it restarts from the playhead soon
@@ -357,8 +360,12 @@ namespace hello::daw {
         // the fragments in the cache (the render states in docs/Widgets.md)
         void updateRenderStates() {
             QList<PianoRoll::RenderState> states;
+            soundingNotes = 0;
             for (const auto state : playback->noteStates(*document)) {
                 states.push_back(renderStateOf(state));
+                if (state != kit::RealtimeSynth::Silent) {
+                    ++soundingNotes;
+                }
             }
             roll->setRenderStates(states);
         }
@@ -693,6 +700,13 @@ namespace hello::daw {
             const int pending = playback->pendingNotes();
             const bool buffering = playback->isBuffering();
             renderLabel->setVisible(pending > 0 || buffering);
+            // The bar of a render in the prerender mode follows the state of the playback.
+            if (playback->state() != Playback::Rendering) {
+                renderProgress->setVisible(pending > 0);
+                const int total = std::max(soundingNotes, pending);
+                renderProgress->setRange(0, total);
+                renderProgress->setValue(total - pending);
+            }
             if (buffering) {
                 renderLabel->setText(
                     ProjectWindow::tr("Buffering, %n note(s) to render", nullptr, pending));
