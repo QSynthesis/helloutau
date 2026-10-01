@@ -11,7 +11,9 @@
 | | 归属 |
 |---|---|
 | `.usth`、`.ust` | `HelloKitDocument` |
-| MIDI 导入与导出、VSQ / VSQX 导入、SynthV `.svp` 导入、OpenUTAU `.ustx` 导入 | `HelloKitInterchange` |
+| MIDI 导入与导出、VSQ / VSQX 导入、SynthV `.svp` 导入 | `HelloKitInterchange` |
+
+OpenUTAU 的 `.ustx` 不内置驱动（作者 2026-10-01 决定），需要时以 LibreSVIP 转换为 UST，见 [`Roadmap.md`](Roadmap.md) 第六阶段。本文中以 `.ustx` 为例的段落只用于说明接口的设计。
 | `presamp`、`frq` | `HelloKitVoiceBank` |
 
 `presamp` 和 `frq` 在 Roadmap 中与 MIDI 列于同一行，那是按「兼容周边」分类，而非按模块分类。这两者描述的是音源而非工程。

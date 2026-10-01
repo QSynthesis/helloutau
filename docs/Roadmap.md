@@ -100,7 +100,8 @@ MIDI 导入属于「兼容周边」类别，但优先级被提至最高，并且
 
 - 原音设定编辑器（`oto.ini` 的可视化编辑）。UTAU 自带此功能，用户依赖程度高。作为独立的音源窗口实现，结构与步骤见 [`VoiceBankEditor.md`](VoiceBankEditor.md)。
 - 频率表（frq、mrq、pmk 等）的读取、生成与编辑。参考实现 qfrqeditor 已完成，见 [`claude/frqeditor-reference.md`](claude/frqeditor-reference.md)。
-- VSQ / SynthV / `.ustx` 导入。经由 `HelloKitInterchange` 实现，见 [`Interchange.md`](Interchange.md)。MIDI 的导入与导出已完成，界面见 [`ImportExport.md`](ImportExport.md)。
+- VSQ / SynthV 导入。经由 `HelloKitInterchange` 实现，见 [`Interchange.md`](Interchange.md)。MIDI 的导入与导出已完成，界面见 [`ImportExport.md`](ImportExport.md)。
+- OpenUtau 的 `.ustx` 不内置导入（作者 2026-10-01 决定）：该格式结构混乱且随版本变动，维护成本过高。需要时由用户以 [LibreSVIP](https://github.com/SoulMelody/LibreSVIP) 转换为 UST 后打开。第三方仍可经格式转换扩展点以插件提供。
 - `.uar` 音源安装，**条目路径按安全底线处理**。暂缓（作者 2026-09-30）：先记下，不排期。
 
 ## 贯穿各阶段的要求
