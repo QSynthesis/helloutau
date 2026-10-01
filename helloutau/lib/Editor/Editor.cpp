@@ -29,6 +29,7 @@
 #include "EditorIcons_p.h"
 #include "EditorSettingPages_p.h"
 #include "KeymapFile_p.h"
+#include "LayoutsFile_p.h"
 #include "ProjectWindow.h"
 #include "UstCharsetDialog.h"
 #include "VoiceBankCharsetDialog.h"
@@ -80,13 +81,16 @@ namespace hello::daw {
             }
             ActionRegistrations::instance().addListener(this);
             addEditorIcons(registry);
-            // The shortcuts that the user assigned, in a file of their own beside the settings
+            // The shortcuts that the user assigned and the changes to the menus and tool bars,
+            // each in a file of its own beside the settings
             const auto keymapFile = KeymapFile::fileNameFor(settings->fileName());
             KeymapFile::read(registry, keymapFile);
+            const auto layoutsFile = LayoutsFile::fileNameFor(settings->fileName());
+            LayoutsFile::read(registry, layoutsFile);
             themes = new ThemeManager(decl);
             themes->addSearchPath(QStringLiteral(":/helloutau/themes"));
             catalog = new SettingCatalog(decl);
-            addEditorSettingPages(catalog, *settings, registry, keymapFile);
+            addEditorSettingPages(catalog, *settings, registry, keymapFile, layoutsFile);
         }
 
         // The windows take the actions of a contribution as it comes, and the menus and

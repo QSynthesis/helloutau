@@ -305,7 +305,7 @@
 - **搜索页面里的设置**：除标题、说明与页面声明的关键词外，还匹配页面控件上的文字（标签、按钮、复选框、分组框的标题）。搜索时树只留匹配的页面及其上级，全部展开，当前页面被隐藏时自动选中第一个匹配的页面，没有结果时显示「No matching settings」；当前页面中匹配的控件以高亮色标出。
 - 取消时丢弃所有未提交的修改；页面不在控件上直接改动全局状态，所以取消不需要撤回什么。
 
-**页面的目录**（作者 2026-10-01 定，按 JetBrains IDE 的设置排列）：「Appearance & Behavior」为分类页，其下有「System Settings」（UTAU 文件夹），以后加入「Menus and Toolbars」。「Keymap」（快捷键，见下）。「Editor」（导出 UST 的编码，以后的编辑设置）。「Plugins」（Core 插件加入，`SettingCatalog::addPage()` 的 `before` 参数将它排在 Rendering 之前）。「Rendering」（重采样器、wavtool、播放方式与线程数）。没有内容的页不建，例如外观页等有了主题设置再加。
+**页面的目录**（作者 2026-10-01 定，按 JetBrains IDE 的设置排列）：「Appearance & Behavior」为分类页，其下有「Menus and Toolbars」（菜单与工具栏，见下）与「System Settings」（UTAU 文件夹）。「Keymap」（快捷键，见下）。「Editor」（导出 UST 的编码，以后的编辑设置）。「Plugins」（Core 插件加入，`SettingCatalog::addPage()` 的 `before` 参数将它排在 Rendering 之前）。「Rendering」（重采样器、wavtool、播放方式与线程数）。没有内容的页不建，例如外观页等有了主题设置再加。
 
 **Keymap 页**（作者 2026-10-01 定，仿 JetBrains IDE 的 Keymap）：
 
@@ -315,6 +315,15 @@
 - 冲突只在同一窗口的命令之间判断：命令属于其菜单栏或工具栏包含它的窗口，不在菜单中的命令算作每个窗口都有，因为从布局无法得知由哪个窗口执行它。两个窗口原本共用的键（如空格、Ins）因此不算冲突。
 - 页面只改动副本，「Apply」与「OK」时交给 QActionKit 的注册表，更新所有窗口，并写入 `keymap.json`。
 - **存储**：`settings.json` 同目录下单独的 `keymap.json`（作者要求不与设置、插件设置放在一起），只记与清单不同的命令，形如 `{"shortcuts": [{"id": ..., "keys": [...]}]}`，空列表表示该命令没有快捷键。启动时读入，文件无法读作快捷键表时忽略并警告，按清单的快捷键运行。未载入的插件的命令所记的快捷键保留在文件中。
+- **以后**（作者 2026-10-01 提出）：快捷键的数据改为一个 item model，类似 QActionKit 的 `ActionLayoutsModel`，页面只负责显示与操作。放在本仓库还是 QActionKit 待定，冲突的判断按窗口进行，属于本仓库的规则。QActionKit 中空的 `keymapsettingswidget` 与 `layoutssettingswidget` 无法通用化，以后删除。
+
+**Menus and Toolbars 页**（作者 2026-10-01 定，仿 JetBrains IDE 的 Menus and Toolbars，位于 Appearance & Behavior 下）：
+
+- 树的顶层是两个窗口的菜单栏与工具栏：「Project Window: Main Menu」「Project Window: Main Toolbar」「Voice Bank Window: Main Menu」「Voice Bank Window: Sample Toolbar」，其下为各条目，名称与图标同菜单中所见（`shortText`），分隔线与伸缩空白以灰字标出。几个容器共用的子菜单在每处各出现一次，改动一处即改动全部。
+- 右侧按钮：「Add Action...」（从可搜索的动作列表中选一个，加在当前条目之后，当前项是菜单或工具栏时加在其末尾）、「Add Separator」、「Remove」、「Move Up」「Move Down」（在所在菜单内移动），以及「Restore Defaults」。菜单栏与工具栏本身不能删除或移动。
+- 编辑经 QActionKit 的 `ActionLayoutsModel`，它按清单检查每次改动：条目须已声明，形态须为声明的类型所允许，不能形成环。不被允许的改动不生效并提示。
+- 页面只改动副本，「Apply」与「OK」时以 `computeLayoutChanges()` 求出与默认布局的差别交给注册表，更新所有窗口，并写入 `layouts.json`。「Restore Defaults」即没有任何改动。
+- **存储**：`settings.json` 同目录下单独的 `layouts.json`，记 QActionKit 的改动记录（`ActionLayoutChange`），形如 `{"changes": [...]}`。启动时读入。注册表在任何时候登记的扩展上重放这些改动，因此之后载入的插件同样适用，插件不再声明的条目所涉及的改动被跳过并警告。
 
 ### 主题系统
 

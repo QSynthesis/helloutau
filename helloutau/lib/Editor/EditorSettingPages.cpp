@@ -16,6 +16,7 @@
 #include "AppSettings.h"
 #include "ExportUstDialog.h"
 #include "KeymapSettingPage_p.h"
+#include "MenusSettingPage_p.h"
 
 namespace hello::daw {
 
@@ -220,12 +221,14 @@ namespace hello::daw {
     }
 
     void addEditorSettingPages(SettingCatalog *catalog, AppSettings &settings,
-                               QAK::ActionRegistry *registry, const QString &keymapFile) {
+                               QAK::ActionRegistry *registry, const QString &keymapFile,
+                               const QString &layoutsFile) {
         // Appearance & Behavior is a category, which the dialog shows as the links to its pages.
         auto appearance =
             new SettingPage(QLatin1String(EditorSettingPageIds::appearanceAndBehavior));
         appearance->setTitle(SettingPage::tr("Appearance & Behavior"));
         appearance->setKeywords({QStringLiteral("Appearance & Behavior")});
+        appearance->addPage(new MenusSettingPage(registry, layoutsFile));
         appearance->addPage(new SystemSettingsPage(settings));
         catalog->addPage(appearance);
         catalog->addPage(new KeymapSettingPage(registry, keymapFile));

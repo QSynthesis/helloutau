@@ -28,6 +28,7 @@
 #include <QtWidgets/QTableView>
 #include <QtWidgets/QTableWidget>
 #include <QtWidgets/QToolBar>
+#include <QtWidgets/QTreeView>
 #include <QtWidgets/QTreeWidget>
 #include <QtCore/QFile>
 #include <QtWidgets/QTreeWidgetItemIterator>
@@ -796,6 +797,95 @@ private Q_SLOTS:
         QVERIFY(palette);
         QVERIFY(!palette->shownIds().contains(QStringLiteral("helloutau.edit.quantization")));
         palette->hide();
+    }
+
+    // Menus and Toolbars edits the menus of the windows: an entry moved down, an entry removed,
+    // and an action added to a menu. The page applies the layouts to every window and writes
+    // layouts.json beside the settings, which a new editor reads. Restore Defaults restores
+    // them.
+    void the_menus_are_edited() {
+        QTemporaryDir dir;
+        const auto settingsFile = dir.filePath(QStringLiteral("settings.json"));
+        auto e = std::make_unique<Editor>(std::make_unique<AppSettings>(settingsFile));
+        e->setWatchesDisk(false);
+        const auto window = e->newWindow();
+        const auto page = e->settingCatalog()->page(QStringLiteral("editor.MenusAndToolbars"));
+        QVERIFY(page);
+        QCOMPARE(page->parentPage()->id(), QStringLiteral("editor.AppearanceAndBehavior"));
+        const auto tree = page->widget()->findChild<QTreeView *>(QStringLiteral("layouts"));
+        QVERIFY(tree);
+        const auto model = tree->model();
+        QCOMPARE(model->index(0, 0).data().toString(), QStringLiteral("Project Window: Main Menu"));
+        const auto childNamed = [model](const QModelIndex &parent, const QString &text) {
+            for (int row = 0; row < model->rowCount(parent); ++row) {
+                if (model->index(row, 0, parent).data().toString() == text) {
+                    return model->index(row, 0, parent);
+                }
+            }
+            return QModelIndex();
+        };
+        const auto button = [page](const char *name) {
+            return page->widget()->findChild<QPushButton *>(QLatin1String(name));
+        };
+        const auto tools = [&] { return childNamed(model->index(0, 0), QStringLiteral("Tools")); };
+        QVERIFY(tools().isValid());
+
+        tree->setCurrentIndex(childNamed(tools(), QStringLiteral("Edit Voice Bank")));
+        QVERIFY(!button("moveUp")->isEnabled());
+        button("moveDown")->click();
+        QCOMPARE(model->index(1, 0, tools()).data().toString(), QStringLiteral("Edit Voice Bank"));
+        tree->setCurrentIndex(childNamed(tools(), QStringLiteral("Clear Render Cache")));
+        button("remove")->click();
+        QVERIFY(!childNamed(tools(), QStringLiteral("Clear Render Cache")).isValid());
+
+        tree->setCurrentIndex(tools());
+        QTimer::singleShot(0, [] {
+            const auto dialog = QApplication::activeModalWidget();
+            QVERIFY(dialog);
+            const auto list = dialog->findChild<QListWidget *>(QStringLiteral("actions"));
+            for (int i = 0; i < list->count(); ++i) {
+                if (list->item(i)->data(Qt::UserRole).toString() ==
+                    QStringLiteral("helloutau.playback.renderTrack")) {
+                    list->setCurrentRow(i);
+                }
+            }
+            dialog->findChild<QDialogButtonBox *>()->button(QDialogButtonBox::Ok)->click();
+        });
+        button("add")->click();
+        QVERIFY(childNamed(tools(), QStringLiteral("Render Track to WAV...")).isValid());
+        QVERIFY(page->isModified());
+
+        QString error;
+        QVERIFY(page->apply(&error));
+        QVERIFY(!page->isModified());
+        const auto texts = [](QWidget *w) {
+            QStringList list;
+            for (const auto action : actionNamed(w, QStringLiteral("&Tools"))->menu()->actions()) {
+                list.push_back(action->text());
+            }
+            return list;
+        };
+        auto menu = texts(window);
+        QVERIFY(!menu.contains(QStringLiteral("&Clear Render Cache")));
+        QVERIFY(menu.contains(QStringLiteral("Render &Track to WAV...")));
+        QVERIFY(QFile::exists(dir.filePath(QStringLiteral("layouts.json"))));
+
+        // A new editor reads the file.
+        e.reset();
+        const auto again = std::make_unique<Editor>(std::make_unique<AppSettings>(settingsFile));
+        again->setWatchesDisk(false);
+        const auto other = again->newWindow();
+        menu = texts(other);
+        QVERIFY(!menu.contains(QStringLiteral("&Clear Render Cache")));
+        QVERIFY(menu.contains(QStringLiteral("Render &Track to WAV...")));
+
+        const auto layouts =
+            again->settingCatalog()->page(QStringLiteral("editor.MenusAndToolbars"));
+        layouts->widget()->findChild<QPushButton *>(QStringLiteral("restoreDefaults"))->click();
+        QVERIFY(layouts->apply(&error));
+        menu = texts(other);
+        QVERIFY(menu.contains(QStringLiteral("&Clear Render Cache")));
+        QVERIFY(!menu.contains(QStringLiteral("Render &Track to WAV...")));
     }
 
     // The keymap lists the commands of each window under their menus. A shortcut conflicts with

@@ -21,6 +21,7 @@ namespace hello::daw {
     /// settings dialog in docs/Widgets.md.
     struct EditorSettingPageIds {
         static constexpr char appearanceAndBehavior[] = "editor.AppearanceAndBehavior";
+        static constexpr char menusAndToolbars[] = "editor.MenusAndToolbars";
         static constexpr char systemSettings[] = "editor.SystemSettings";
         static constexpr char keymap[] = "editor.Keymap";
         static constexpr char editor[] = "editor.Editor";
@@ -90,12 +91,14 @@ namespace hello::daw {
         QPointer<QSpinBox> m_threads;
     };
 
-    /// Adds the pages of the editor to \a catalog: Appearance & Behavior with System Settings in
-    /// it, Keymap, Editor, and Rendering. A plugin places its pages among them, as Core places
-    /// Plugins before Rendering. The keymap edits the shortcuts of \a registry and writes them to
-    /// \a keymapFile.
+    /// Adds the pages of the editor to \a catalog: Appearance & Behavior with Menus and Toolbars
+    /// and System Settings in it, Keymap, Editor, and Rendering. A plugin places its pages among
+    /// them, as Core places Plugins before Rendering. The keymap edits the shortcuts of
+    /// \a registry and writes them to \a keymapFile. Menus and Toolbars edits the layouts of
+    /// \a registry and writes them to \a layoutsFile.
     void addEditorSettingPages(SettingCatalog *catalog, AppSettings &settings,
-                               QAK::ActionRegistry *registry, const QString &keymapFile);
+                               QAK::ActionRegistry *registry, const QString &keymapFile,
+                               const QString &layoutsFile);
 
 }
 
