@@ -1,5 +1,7 @@
 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
 <path d="M4.5 2.6C4.5 1.9 5 1.5 5.75 1.5C6.5 1.5 7 1.9 7 2.6C7 3.4 6.4 3.9 4.5 6.5H7.25" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/>
 <path d="M8.75 1.5H11.25L9.75 3.5C10.8 3.5 11.5 4 11.5 5C11.5 6 10.8 6.5 9.9 6.5C9.3 6.5 8.9 6.3 8.6 6" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M1.5 14.5L4.5 9.5H11.5L14.5 14.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M1.5 14.5L3.93 10.44M5.6 9.5H10.4M12.07 10.44L14.5 14.5" stroke="currentColor" stroke-linecap="round"/>
+<circle cx="4.5" cy="9.5" r="1.1" stroke="currentColor"/>
+<circle cx="11.5" cy="9.5" r="1.1" stroke="currentColor"/>
 </svg>
