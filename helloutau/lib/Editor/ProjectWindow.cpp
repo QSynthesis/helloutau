@@ -53,6 +53,7 @@
 #include "CommandEntries_p.h"
 #include "DiagnosticBox_p.h"
 #include "Editor.h"
+#include "EngineTrust_p.h"
 #include "ExportUstDialog.h"
 #include "FindSupport_p.h"
 #include "PianoRoll.h"
@@ -377,7 +378,8 @@ namespace hello::daw {
         // folder is read at once.
         void editProperties() {
             stdc_decl_t;
-            ProjectPropertiesDialog dialog(document->session()->snapshot(), &decl);
+            ProjectPropertiesDialog dialog(document->session()->snapshot(), editor->settings(),
+                                           &decl);
             if (dialog.exec() != QDialog::Accepted) {
                 return;
             }
@@ -452,10 +454,34 @@ namespace hello::daw {
             return editor->settings().playbackMode() == AppSettings::Realtime;
         }
 
-        kit::SynthEngines engines() const {
+        kit::SynthEngines engines() {
             kit::SynthEngines engines;
-            engines.resampler = pathOf(editor->settings().resampler());
-            engines.wavtool = pathOf(editor->settings().wavtool());
+            auto &appSettings = editor->settings();
+            engines.resampler = pathOf(appSettings.resampler());
+            engines.wavtool = pathOf(appSettings.wavtool());
+            const auto project = kit::ProjectRef(document->session()).settings();
+            const auto utau = appSettings.utauDirectory();
+            const auto projectWavtool = std::filesystem::path(project.wavtool().toStdU16String());
+            const auto projectResampler =
+                std::filesystem::path(project.resampler().toStdU16String());
+            if (!projectWavtool.is_absolute() && !projectResampler.is_absolute() &&
+                EngineTrust::exists(project.wavtool(), utau) &&
+                EngineTrust::exists(project.resampler(), utau)) {
+                const bool wavtool = EngineTrust::samePath(
+                                         project.wavtool(), appSettings.wavtool(), utau) ||
+                                     EngineTrust::ask(
+                                         _decl, appSettings, project.wavtool(), utau,
+                                         EngineTrust::Kind::Wavtool);
+                const bool resampler = EngineTrust::samePath(
+                                            project.resampler(), appSettings.resampler(), utau) ||
+                                        EngineTrust::ask(
+                                            _decl, appSettings, project.resampler(), utau,
+                                            EngineTrust::Kind::Resampler);
+                if (wavtool && resampler) {
+                    engines.wavtool = EngineTrust::resolved(project.wavtool(), utau);
+                    engines.resampler = EngineTrust::resolved(project.resampler(), utau);
+                }
+            }
             return engines;
         }
 

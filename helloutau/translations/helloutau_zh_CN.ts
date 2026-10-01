@@ -1088,6 +1088,62 @@
         <source>The engines are only recorded in the project. HelloUtau renders with the engines of its settings.</source>
         <translation>引擎仅记录在工程中。HelloUtau渲染时使用其设置中指定的引擎。</translation>
     </message>
+    <message>
+        <source>Reset to settings defaults</source>
+        <translation>重置为设置中的默认工具</translation>
+    </message>
+    <message>
+        <source>Trust project engines</source>
+        <translation>信任工程中的工具</translation>
+    </message>
+    <message>
+        <source>Warning: project engines are untrusted. Playback uses the settings engines until both project engines are trusted.</source>
+        <translation>警告：工程中的工具尚未信任。在两个工具都获得信任前，播放使用设置中的工具。</translation>
+    </message>
+    <message>
+        <source>Both project engines are trusted.</source>
+        <translation>工程中的两个工具都已信任。</translation>
+    </message>
+    <message>
+        <source>Using the default %1 from Settings.</source>
+        <translation>使用设置中的默认%1。</translation>
+    </message>
+    <message>
+        <source>Project %1 is trusted.</source>
+        <translation>工程中的%1已信任。</translation>
+    </message>
+    <message>
+        <source>Project %1 is untrusted.</source>
+        <translation>工程中的%1未信任。</translation>
+    </message>
+    <message>
+        <source>wavtool</source>
+        <translation>wavtool</translation>
+    </message>
+    <message>
+        <source>resampler</source>
+        <translation>重采样器</translation>
+    </message>
+    <message>
+        <source>Project engines are untrusted. Playback uses the engines from Settings.</source>
+        <translation>工程中的工具尚未信任。播放使用设置中的工具。</translation>
+    </message>
+    <message>
+        <source>The project requests this %1:&#10;&#10;%2&#10;&#10;Trust and run it?</source>
+        <translation>工程请求使用以下%1：&#10;&#10;%2&#10;&#10;是否信任并运行？</translation>
+    </message>
+    <message>
+        <source>Trust Project Engine</source>
+        <translation>信任工程工具</translation>
+    </message>
+    <message>
+        <source>Invalid Project Path</source>
+        <translation>工程路径无效</translation>
+    </message>
+    <message>
+        <source>The voice folder, wavtool, and resampler must exist.</source>
+        <translation>音源文件夹、wavtool和重采样器必须存在。</translation>
+    </message>
 </context>
 <context>
     <name>hello::daw::ProjectWindow</name>

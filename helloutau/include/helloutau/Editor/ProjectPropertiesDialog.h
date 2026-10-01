@@ -10,20 +10,25 @@
 
 class QCheckBox;
 class QDoubleSpinBox;
+class QLabel;
 class QLineEdit;
 
 namespace hello::daw {
+
+    class AppSettings;
 
     /// Edits the properties of a project, the fields of the dialog of UTAU and the tempo: the
     /// name, the tempo, the flags of every note, the output file, the voice folder of the first
     /// track, the two engines, and Mode2.
     ///
-    /// The engines are only recorded in the project: rendering always uses the engines of the
-    /// settings, as the dialog states, see the security section of CLAUDE.md.
+    /// Project engines are used only after both programs have been trusted in the application
+    /// settings. Otherwise rendering uses the configured defaults.
     class HELLOUTAU_EDITOR_EXPORT ProjectPropertiesDialog : public QDialog {
         Q_OBJECT
     public:
         explicit ProjectPropertiesDialog(const kit::Project &project, QWidget *parent = nullptr);
+        ProjectPropertiesDialog(const kit::Project &project, AppSettings &settings,
+                                QWidget *parent = nullptr);
         ~ProjectPropertiesDialog();
 
         /// The fields that differ from the project, for ProjectEdits::setProperties(). The tempo
@@ -40,7 +45,11 @@ namespace hello::daw {
         QCheckBox *mode2Box() const;
 
     private:
+        ProjectPropertiesDialog(const kit::Project &project, AppSettings *settings,
+                                QWidget *parent);
+
         kit::Project m_project;
+        AppSettings *m_appSettings = nullptr;
         QLineEdit *m_name;
         QDoubleSpinBox *m_tempo;
         bool m_tempoEdited = false;
@@ -49,6 +58,7 @@ namespace hello::daw {
         QLineEdit *m_voiceDir;
         QLineEdit *m_wavtool;
         QLineEdit *m_resampler;
+        QLabel *m_engineWarning;
         QCheckBox *m_mode2;
     };
 
