@@ -1,11 +1,21 @@
 <RCC>
     <qresource prefix="/helloutau/icons">
+        <file>intellij/arrowLeftRight.svg</file>
+        <file>intellij/coverage.svg</file>
         <file>intellij/edit.svg</file>
+        <file>intellij/graphLayout.svg</file>
+        <file>intellij/inSelection.svg</file>
+        <file>intellij/lightning.svg</file>
+        <file>intellij/merge.svg</file>
+        <file>intellij/palette.svg</file>
+        <file>intellij/parameter.svg</file>
         <file>intellij/pause.svg</file>
         <file>intellij/redo.svg</file>
         <file>intellij/rerun.svg</file>
         <file>intellij/run.svg</file>
+        <file>intellij/runToCursor.svg</file>
         <file>intellij/search.svg</file>
+        <file>intellij/softWrap.svg</file>
         <file>intellij/stop.svg</file>
         <file>intellij/undo.svg</file>
     </qresource>
