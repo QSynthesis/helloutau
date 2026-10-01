@@ -64,8 +64,10 @@ private Q_SLOTS:
 
         const auto window = projectWindow();
         QVERIFY(window);
-        // The core plugin adds its pages to the settings, see test_CoreSettingPages.
+        // The core plugin adds its pages to the settings, the Plugins page with the loader, see
+        // test_CoreSettingPages.
         QVERIFY(window->editor()->settingCatalog()->page(QStringLiteral("core.Keymap")));
+        QVERIFY(window->editor()->settingCatalog()->page(QStringLiteral("core.Plugins")));
         const auto action = window->actionContext()->action(HelloId);
         QVERIFY(action);
         QVERIFY(action->isEnabled());

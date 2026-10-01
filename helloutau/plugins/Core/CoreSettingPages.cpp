@@ -6,10 +6,11 @@
 
 #include "KeymapSettingPage.h"
 #include "MenusSettingPage.h"
+#include "PluginSettingPage.h"
 
 namespace hello::daw {
 
-    void addCoreSettingPages(Editor *editor) {
+    void addCoreSettingPages(Editor *editor, AppLoader *loader) {
         const auto catalog = editor->settingCatalog();
         if (const auto appearance =
                 catalog->page(QLatin1String(EditorSettingPageIds::appearanceAndBehavior))) {
@@ -18,6 +19,11 @@ namespace hello::daw {
         }
         catalog->addPage(new KeymapSettingPage(editor),
                          QLatin1String(EditorSettingPageIds::editor));
+        // Plugins precedes Rendering as Plugins precedes the build settings in JetBrains IDEs.
+        if (loader) {
+            catalog->addPage(new PluginSettingPage(*loader),
+                             QLatin1String(EditorSettingPageIds::rendering));
+        }
     }
 
 }

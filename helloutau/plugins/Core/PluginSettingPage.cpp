@@ -68,7 +68,7 @@ namespace hello::daw {
     }
 
     PluginSettingPage::PluginSettingPage(AppLoader &loader, QObject *parent)
-        : SettingPage(QStringLiteral("core.Plugins"), parent), m_loader(loader) {
+        : SettingPage(QLatin1String(pageId), parent), m_loader(loader) {
         setTitle(tr("Plugins"));
         setDescription(tr("The plugins found and their states. Enabling or disabling a plugin "
                           "takes effect at the next start."));
@@ -82,10 +82,12 @@ namespace hello::daw {
         auto layout = new QVBoxLayout(widget);
         m_restart = new QLabel(tr("Restart %1 to apply the changes to the enabled plugins.")
                                    .arg(QCoreApplication::applicationName()));
+        m_restart->setObjectName(QStringLiteral("restart"));
         m_restart->setWordWrap(true);
         layout->addWidget(m_restart);
 
         m_tree = new QTreeWidget();
+        m_tree->setObjectName(QStringLiteral("plugins"));
         m_tree->setRootIsDecorated(false);
         m_tree->setUniformRowHeights(true);
         m_tree->setHeaderLabels({tr("Name"), tr("Version"), tr("State")});

@@ -5,12 +5,8 @@
 #include <helloutau/Editor/AppLoader.h>
 #include <helloutau/Editor/BuiltinActions.h>
 #include <helloutau/Editor/Editor.h>
-#include <helloutau/Editor/EditorSettingPageIds.h>
-#include <helloutau/Widgets/SettingPage.h>
 
 #include <Core/CoreSettingPages.h>
-
-#include "PluginSettingPage.h"
 
 namespace hello::daw {
 
@@ -26,13 +22,8 @@ namespace hello::daw {
         const auto loader = AppLoader::instance();
         m_editor =
             loader ? std::make_unique<Editor>(loader->settings()) : std::make_unique<Editor>();
-        addCoreSettingPages(m_editor.get());
-        // The Plugins page exists only with a loader. The setting catalog owns the page, which
-        // precedes Rendering as Plugins precedes the build settings in JetBrains IDEs.
-        if (loader) {
-            m_editor->settingCatalog()->addPage(new PluginSettingPage(*loader),
-                                                QLatin1String(EditorSettingPageIds::rendering));
-        }
+        // The Plugins page exists only with a loader.
+        addCoreSettingPages(m_editor.get(), loader);
         return true;
     }
 
