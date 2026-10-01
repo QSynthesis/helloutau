@@ -9,6 +9,7 @@
 #include <Core/CorePluginGlobal.h>
 
 class QLabel;
+class QPlainTextEdit;
 class QTreeWidget;
 
 namespace hello::daw {
@@ -37,7 +38,7 @@ namespace hello::daw {
         QList<AppLoader::PluginInfo> m_plugins;
         QPointer<QTreeWidget> m_tree;
         QPointer<QLabel> m_restart;
-        QPointer<QLabel> m_details;
+        QPointer<QPlainTextEdit> m_details;
 
         // Returns whether the plugin of \a row is enabled at the next start according to the
         // current settings.

@@ -1,10 +1,13 @@
 #include "PluginSettingPage.h"
 
 #include <QtCore/QDir>
+#include <QtGui/QFontMetrics>
 #include <QtWidgets/QHeaderView>
 #include <QtWidgets/QLabel>
+#include <QtWidgets/QPlainTextEdit>
 #include <QtWidgets/QStyle>
 #include <QtWidgets/QStyledItemDelegate>
+#include <QtWidgets/QSizePolicy>
 #include <QtWidgets/QTreeWidget>
 #include <QtWidgets/QVBoxLayout>
 
@@ -92,9 +95,10 @@ namespace hello::daw {
         m_tree->setUniformRowHeights(true);
         m_tree->setHeaderLabels({tr("Name"), tr("Version"), tr("State")});
         m_tree->header()->setStretchLastSection(false);
-        m_tree->header()->setSectionResizeMode(NameColumn, QHeaderView::Stretch);
-        m_tree->header()->setSectionResizeMode(VersionColumn, QHeaderView::ResizeToContents);
-        m_tree->header()->setSectionResizeMode(StateColumn, QHeaderView::ResizeToContents);
+        m_tree->header()->setSectionResizeMode(NameColumn, QHeaderView::Interactive);
+        m_tree->header()->setSectionResizeMode(VersionColumn, QHeaderView::Interactive);
+        m_tree->header()->setSectionResizeMode(StateColumn, QHeaderView::Interactive);
+        m_tree->header()->setMinimumSectionSize(40);
         m_tree->setItemDelegateForColumn(NameColumn, new LockedCheckDelegate(m_tree));
         const auto warning = widget->style()->standardIcon(QStyle::SP_MessageBoxWarning);
         for (int row = 0; row < m_plugins.size(); ++row) {
@@ -115,12 +119,30 @@ namespace hello::daw {
                 item->setToolTip(StateColumn, info.error);
             }
         }
+        const QFontMetrics metrics(m_tree->font());
+        int nameWidth = 180;
+        for (const auto &info : std::as_const(m_plugins)) {
+            nameWidth = std::max(nameWidth, metrics.horizontalAdvance(nameOf(info)) + 44);
+        }
+        m_tree->header()->resizeSection(NameColumn, std::min(nameWidth, 360));
+        m_tree->header()->resizeSection(VersionColumn, 110);
+        m_tree->header()->resizeSection(StateColumn, 100);
         layout->addWidget(m_tree, 1);
 
-        m_details = new QLabel();
-        m_details->setWordWrap(true);
-        m_details->setTextFormat(Qt::PlainText);
-        m_details->setTextInteractionFlags(Qt::TextSelectableByMouse);
+        m_details = new QPlainTextEdit();
+        m_details->setReadOnly(true);
+        m_details->setFrameStyle(QFrame::NoFrame);
+        m_details->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+        m_details->setLineWrapMode(QPlainTextEdit::WidgetWidth);
+        auto textOption = m_details->document()->defaultTextOption();
+        textOption.setWrapMode(QTextOption::WrapAnywhere);
+        m_details->document()->setDefaultTextOption(textOption);
+        // Long paths and dependency lists must wrap within the page instead of determining the
+        // page's minimum width. Otherwise the settings splitter squeezes the navigation tree,
+        // and changing the selected plugin changes the splitter width.
+        m_details->setMinimumWidth(0);
+        m_details->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+        m_details->setMinimumHeight(m_details->fontMetrics().lineSpacing() * 4);
         layout->addWidget(m_details);
 
         connect(m_tree, &QTreeWidget::itemChanged, this, [this] {
@@ -221,7 +243,7 @@ namespace hello::daw {
         if (!info.error.isEmpty()) {
             lines.push_back(tr("Error: %1").arg(info.error));
         }
-        m_details->setText(lines.join(QLatin1Char('\n')));
+        m_details->setPlainText(lines.join(QLatin1Char('\n')));
     }
 
 }
