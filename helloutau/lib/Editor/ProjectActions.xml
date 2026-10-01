@@ -273,6 +273,7 @@
             <action id="helloutau.edit.mode2" />
             <action id="helloutau.edit.convertPitchToMode1" />
             <action id="helloutau.view.showPitch" />
+            <action id="helloutau.view.showRenderedPitch" />
             <action id="helloutau.view.showEnvelopes" />
             <action id="helloutau.view.showParameters" />
             <separator />
