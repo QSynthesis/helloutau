@@ -248,6 +248,12 @@ namespace hello::daw {
         }
     }
 
+    double PianoRollState::quarterNearest(PianoRoll::Lane lane, double key) {
+        const auto range = rangeOf(lane);
+        const double quarter = (range.maximum - range.minimum) / 4;
+        return range.minimum + std::round((key - range.minimum) / quarter) * quarter;
+    }
+
     kit::ProjectEdits::NoteParameter PianoRollState::parameterOf(PianoRoll::Lane lane) {
         switch (lane) {
             case PianoRoll::ModulationLane:

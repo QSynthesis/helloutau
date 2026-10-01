@@ -161,6 +161,7 @@ namespace hello::daw {
         class OverlayLayer;
         class EnvelopeLayer;
         class EnvelopeGesture;
+        class DragLabelLayer;
         class ValueLayer;
         class ValueGesture;
         class MoveGesture;
@@ -204,6 +205,13 @@ namespace hello::daw {
         QColor parameterColor;
         /// What a gesture shows instead of the value of some notes, by note index
         QHash<int, double> valuePreview;
+
+        /// The text that a drag in the parameter area shows beside the dragged handle
+        struct DragLabel {
+            QPointF handle;
+            QString text;
+        };
+        std::optional<DragLabel> dragLabel;
 
         /// The timing of the sample of every note, computed again after a change
         QList<kit::SampleTiming> timings;
@@ -344,6 +352,10 @@ namespace hello::daw {
 
         /// The keys that the lane spans, see keyOf()
         static LaneRange rangeOf(PianoRoll::Lane lane);
+
+        /// The quarter of the keys of the lane nearest to key: the minimum, the maximum, or one
+        /// of the three lines between them at equal distances
+        static double quarterNearest(PianoRoll::Lane lane, double key);
 
         static kit::ProjectEdits::NoteParameter parameterOf(PianoRoll::Lane lane);
 

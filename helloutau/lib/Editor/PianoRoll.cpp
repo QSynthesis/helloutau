@@ -156,6 +156,7 @@ namespace hello::daw {
                                      int(PianoRollState::EnvelopeRange * 1.1));
         impl.parameters->addLayer(std::make_unique<Impl::EnvelopeLayer>(&impl));
         impl.parameters->addLayer(std::make_unique<Impl::ValueLayer>(&impl));
+        impl.parameters->addLayer(std::make_unique<Impl::DragLabelLayer>(&impl));
 
         // The buttons that choose what the parameter area shows, one above the other
         // (QSynthesis)

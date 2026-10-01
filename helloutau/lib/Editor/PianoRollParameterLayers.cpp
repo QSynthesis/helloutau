@@ -4,6 +4,10 @@
 #include <cmath>
 #include <limits>
 
+#include <QtGui/QFontMetrics>
+#include <QtGui/QPainter>
+#include <QtGui/QPalette>
+
 #include <hellokit/Edit/ProjectEdits.h>
 
 namespace hello::daw {
@@ -147,7 +151,6 @@ namespace hello::daw {
     }
 
     void PianoRollState::EnvelopeGesture::move(QPointF position, Qt::KeyboardModifiers modifiers) {
-        Q_UNUSED(modifiers);
         const auto view = m_state->parameters;
         const auto &map = m_state->timeline->tempoMap();
         const auto timeAt = [&](QPointF point) {
@@ -177,12 +180,23 @@ namespace hello::daw {
             anchors[k].x -= delta;
             anchors[k - 1].x += delta;
         }
-        const double volume = m_original.anchorsInTimeOrder()[k].y +
-                              view->keyAxis().toKey(position.y()) -
-                              view->keyAxis().toKey(m_origin.y());
+        double volume = m_original.anchorsInTimeOrder()[k].y + view->keyAxis().toKey(position.y()) -
+                        view->keyAxis().toKey(m_origin.y());
+        if (modifiers & Qt::ControlModifier) {
+            volume = quarterNearest(PianoRoll::EnvelopeLane, volume);
+        }
         anchors[k].y = std::clamp(std::round(volume), 0.0, EnvelopeRange);
 
-        m_state->envelopePreview.insert(m_index, *kit::Envelope::fromTimeOrder(anchors));
+        const auto envelope = *kit::Envelope::fromTimeOrder(anchors);
+        m_state->envelopePreview.insert(m_index, envelope);
+        // The anchors in time order are p1, p2, p5 if present, p3 and p4.
+        static const char *const names[] = {"p1", "p2", "p5", "p3", "p4"};
+        const int role = k < 2 || envelope.hasMiddle ? k : k + 1;
+        m_state->dragLabel = DragLabel{
+            m_state->envelopePointOf(m_index, anchorTimes(envelope, m_length)[k], anchors[k].y),
+            QStringLiteral("%1 %2 ms, %3")
+                .arg(QLatin1String(names[role]), QString::number(anchors[k].x),
+                     QString::number(anchors[k].y))};
         view->viewport()->update();
     }
 
@@ -190,6 +204,7 @@ namespace hello::daw {
                                                   Qt::KeyboardModifiers modifiers) {
         move(position, modifiers);
         const auto envelope = m_state->envelopePreview.take(m_index);
+        m_state->dragLabel.reset();
         m_state->parameters->viewport()->update();
         if (envelope != m_original) {
             kit::DiagnosticList diagnostics;
@@ -200,6 +215,7 @@ namespace hello::daw {
 
     void PianoRollState::EnvelopeGesture::cancel() {
         m_state->envelopePreview.remove(m_index);
+        m_state->dragLabel.reset();
         m_state->parameters->viewport()->update();
     }
 
@@ -306,31 +322,70 @@ namespace hello::daw {
     }
 
     void PianoRollState::ValueGesture::move(QPointF position, Qt::KeyboardModifiers modifiers) {
-        Q_UNUSED(modifiers);
-        const auto &keys = m_state->parameters->keyAxis();
+        const auto view = m_state->parameters;
+        const auto &keys = view->keyAxis();
         const auto lane = m_state->lane;
         const auto range = rangeOf(lane);
-        const double key =
+        double key =
             std::clamp(keyOf(lane, m_start) + keys.toKey(position.y()) - keys.toKey(m_origin.y()),
                        range.minimum, range.maximum);
+        if (modifiers & Qt::ControlModifier) {
+            key = quarterNearest(lane, key);
+        }
         const double value = std::round(valueAt(lane, key));
         for (const int i : std::as_const(m_targets)) {
             m_state->valuePreview.insert(i, value);
         }
-        m_state->parameters->viewport()->update();
+        const double start = double(m_state->timeline->note(m_index).start);
+        m_state->dragLabel =
+            DragLabel{QPointF(view->timeAxis().toX(start), keys.toY(keyOf(lane, value))),
+                      QString::number(value)};
+        view->viewport()->update();
     }
 
     void PianoRollState::ValueGesture::release(QPointF position, Qt::KeyboardModifiers modifiers) {
         move(position, modifiers);
         const double value = m_state->valuePreview.value(m_targets.first());
         m_state->valuePreview.clear();
+        m_state->dragLabel.reset();
         m_state->parameters->viewport()->update();
         m_state->writeValue(m_targets, value);
     }
 
     void PianoRollState::ValueGesture::cancel() {
         m_state->valuePreview.clear();
+        m_state->dragLabel.reset();
         m_state->parameters->viewport()->update();
+    }
+
+    void PianoRollState::DragLabelLayer::paint(QPainter &painter, const QRect &exposed) {
+        Q_UNUSED(exposed);
+        if (!m_state->dragLabel) {
+            return;
+        }
+        // Above and to the right of the handle, moved inside the area if it would leave it
+        const auto decl = m_state->widget;
+        const QFontMetrics metrics(decl->font());
+        const auto &[handle, text] = *m_state->dragLabel;
+        QRectF box(0, 0, metrics.horizontalAdvance(text) + 8, metrics.height() + 4);
+        box.moveBottomLeft(handle + QPointF(8, -6));
+        const QRectF area = view()->viewport()->rect();
+        box.moveLeft(
+            std::clamp(box.left(), area.left(), std::max(area.left(), area.right() - box.width())));
+        box.moveTop(
+            std::clamp(box.top(), area.top(), std::max(area.top(), area.bottom() - box.height())));
+        const auto palette = decl->palette();
+        painter.setRenderHint(QPainter::Antialiasing);
+        painter.setPen(QPen(palette.color(QPalette::ToolTipText), 1));
+        painter.setBrush(palette.color(QPalette::ToolTipBase));
+        painter.drawRoundedRect(box, 3, 3);
+        painter.setFont(decl->font());
+        painter.drawText(box, Qt::AlignCenter, text);
+    }
+
+    std::optional<SceneHit> PianoRollState::DragLabelLayer::hitTest(QPointF position) const {
+        Q_UNUSED(position);
+        return std::nullopt;
     }
 
     // A press on a handle drags it; the right button removes the value, which leaves the default

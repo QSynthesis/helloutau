@@ -53,8 +53,9 @@ namespace hello::daw {
     };
 
     /// A drag of an anchor of an envelope: in time between its neighbours, the others staying
-    /// where they are, and in volume from 0 to EnvelopeRange. Times are kept to a tenth of a
-    /// millisecond, volumes to a percent.
+    /// where they are, and in volume from 0 to EnvelopeRange, or with Ctrl the nearest quarter of
+    /// it. Times are kept to a tenth of a millisecond, volumes to a percent. The p of the anchor,
+    /// its time and its volume are shown beside it.
     class PianoRollState::EnvelopeGesture : public SceneGesture {
     public:
         EnvelopeGesture(PianoRollState *state, int index, int anchor, QPointF position);
@@ -103,12 +104,13 @@ namespace hello::daw {
     };
 
     /// A drag of the handle of a value: every note it changes takes the value it is dragged to,
-    /// a whole number within the lane.
+    /// a whole number within the lane, or with Ctrl the nearest quarter of the lane. The value
+    /// is shown beside the handle.
     class PianoRollState::ValueGesture : public SceneGesture {
     public:
         ValueGesture(PianoRollState *state, int index, QPointF position)
-            : m_state(state), m_targets(state->valueTargets(index)), m_origin(position),
-              m_start(state->valueOf(index)) {
+            : m_state(state), m_index(index), m_targets(state->valueTargets(index)),
+              m_origin(position), m_start(state->valueOf(index)) {
         }
 
         void move(QPointF position, Qt::KeyboardModifiers modifiers) override;
@@ -119,9 +121,25 @@ namespace hello::daw {
 
     private:
         PianoRollState *m_state;
+        int m_index;
         QList<int> m_targets;
         QPointF m_origin;
         double m_start;
+    };
+
+    /// The text that a drag in the parameter area shows beside the dragged handle, over the
+    /// other layers
+    class PianoRollState::DragLabelLayer : public SceneLayer {
+    public:
+        explicit DragLabelLayer(PianoRollState *state) : m_state(state) {
+        }
+
+        void paint(QPainter &painter, const QRect &exposed) override;
+
+        std::optional<SceneHit> hitTest(QPointF position) const override;
+
+    private:
+        PianoRollState *m_state;
     };
 
 }

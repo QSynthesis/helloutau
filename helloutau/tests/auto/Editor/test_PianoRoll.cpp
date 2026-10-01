@@ -2045,6 +2045,59 @@ private Q_SLOTS:
         QCOMPARE(notes()[0].modulation, std::optional<double>(-200));
     }
 
+    // Released with Ctrl, a value goes to the nearest quarter of the lane and a volume of an
+    // envelope to the nearest quarter of 0 to 200. While a handle is dragged, its value is
+    // shown beside it in the tool tip colors, and gone after the release.
+    void parameters_snap_to_quarters_and_show_their_values() {
+        // Whether a pixel of the tool tip base, pure green here, is in the parameter area
+        const auto labelShown = [](const PianoRoll &roll) {
+            const auto image = roll.parameterView()->viewport()->grab().toImage();
+            for (int y = 0; y < image.height(); ++y) {
+                for (int x = 0; x < image.width(); ++x) {
+                    if (image.pixelColor(x, y) == QColor(0, 255, 0)) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        };
+        const auto withLabelColor = [](PianoRoll &roll) {
+            auto palette = roll.palette();
+            palette.setColor(QPalette::ToolTipBase, QColor(0, 255, 0));
+            roll.setPalette(palette);
+        };
+
+        {
+            kit::ProjectSession session(parameterSource());
+            PianoRoll roll(&session);
+            withLabelColor(roll);
+            show(roll);
+            roll.setLane(PianoRoll::IntensityLane);
+            const auto viewport = roll.parameterView()->viewport();
+            const auto to = valuePoint(roll, 0, 70);
+            QTest::mousePress(viewport, Qt::LeftButton, {}, valuePoint(roll, 0, 100));
+            QVERIFY(!labelShown(roll));
+            QTest::mouseMove(viewport, to);
+            QVERIFY(labelShown(roll));
+            QTest::mouseRelease(viewport, Qt::LeftButton, Qt::ControlModifier, to);
+            QVERIFY(!labelShown(roll));
+            QCOMPARE(session.snapshot().tracks[0].notes[0].intensity, std::optional<double>(50));
+        }
+
+        kit::ProjectSession session(envelopedNote());
+        PianoRoll roll(&session);
+        withLabelColor(roll);
+        showExactly(roll);
+        const auto viewport = roll.parameterView()->viewport();
+        const auto to = envelopePoint(roll, 475, 130);
+        QTest::mousePress(viewport, Qt::LeftButton, {}, envelopePoint(roll, 455, 100));
+        QTest::mouseMove(viewport, to);
+        QVERIFY(labelShown(roll));
+        QTest::mouseRelease(viewport, Qt::LeftButton, Qt::ControlModifier, to);
+        QVERIFY(!labelShown(roll));
+        QCOMPARE(envelopeOfLa(session).anchorsInTimeOrder()[1].y, 150.0);
+    }
+
     // The depth of the vibrato of the selected notes is scaled, and the other notes keep theirs.
     void the_pitch_of_the_selection_is_scaled() {
         auto project = parameterSource();
