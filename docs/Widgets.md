@@ -305,7 +305,16 @@
 - **搜索页面里的设置**：除标题、说明与页面声明的关键词外，还匹配页面控件上的文字（标签、按钮、复选框、分组框的标题）。搜索时树只留匹配的页面及其上级，全部展开，当前页面被隐藏时自动选中第一个匹配的页面，没有结果时显示「No matching settings」；当前页面中匹配的控件以高亮色标出。
 - 取消时丢弃所有未提交的修改；页面不在控件上直接改动全局状态，所以取消不需要撤回什么。
 
-**页面的目录**（作者 2026-10-01 定，按 JetBrains IDE 的设置排列）：「Appearance & Behavior」为分类页，其下有「System Settings」（UTAU 文件夹），以后加入「Menus and Toolbars」。「Keymap」（将加入）。「Editor」（导出 UST 的编码，以后的编辑设置）。「Plugins」（Core 插件加入，`SettingCatalog::addPage()` 的 `before` 参数将它排在 Rendering 之前）。「Rendering」（重采样器、wavtool、播放方式与线程数）。没有内容的页不建，例如外观页等有了主题设置再加。
+**页面的目录**（作者 2026-10-01 定，按 JetBrains IDE 的设置排列）：「Appearance & Behavior」为分类页，其下有「System Settings」（UTAU 文件夹），以后加入「Menus and Toolbars」。「Keymap」（快捷键，见下）。「Editor」（导出 UST 的编码，以后的编辑设置）。「Plugins」（Core 插件加入，`SettingCatalog::addPage()` 的 `before` 参数将它排在 Rendering 之前）。「Rendering」（重采样器、wavtool、播放方式与线程数）。没有内容的页不建，例如外观页等有了主题设置再加。
+
+**Keymap 页**（作者 2026-10-01 定，仿 JetBrains IDE 的 Keymap）：
+
+- 命令树按「Project Window」「Voice Bank Window」分组，各组下按菜单逐级列出命令，组（group）的命令直接列在其菜单下。不在任何菜单中的命令列在「Other」下。每行为命令名与快捷键，快捷键与清单不同的命令以链接色标出。
+- 顶部可按名称搜索（译文与英文原文都参与匹配），也可在「Shortcut」框中按下快捷键，只留有该快捷键的命令。
+- 「Add Shortcut...」（双击也可）打开录键对话框，按下的键已分给其他命令时当场列出它们，确定后询问「Remove」从它们移除或「Leave」保留二者。「Remove Shortcut」删除快捷键，有多个时从菜单中选。「Reset」恢复该命令清单中的快捷键，「Restore Defaults」恢复全部命令。右键菜单有同样的操作。
+- 冲突只在同一窗口的命令之间判断：命令属于其菜单栏或工具栏包含它的窗口，不在菜单中的命令算作每个窗口都有，因为从布局无法得知由哪个窗口执行它。两个窗口原本共用的键（如空格、Ins）因此不算冲突。
+- 页面只改动副本，「Apply」与「OK」时交给 QActionKit 的注册表，更新所有窗口，并写入 `keymap.json`。
+- **存储**：`settings.json` 同目录下单独的 `keymap.json`（作者要求不与设置、插件设置放在一起），只记与清单不同的命令，形如 `{"shortcuts": [{"id": ..., "keys": [...]}]}`，空列表表示该命令没有快捷键。启动时读入，文件无法读作快捷键表时忽略并警告，按清单的快捷键运行。未载入的插件的命令所记的快捷键保留在文件中。
 
 ### 主题系统
 

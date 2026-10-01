@@ -9,6 +9,10 @@ class QComboBox;
 class QLineEdit;
 class QSpinBox;
 
+namespace QAK {
+    class ActionRegistry;
+}
+
 namespace hello::daw {
 
     class AppSettings;
@@ -18,6 +22,7 @@ namespace hello::daw {
     struct EditorSettingPageIds {
         static constexpr char appearanceAndBehavior[] = "editor.AppearanceAndBehavior";
         static constexpr char systemSettings[] = "editor.SystemSettings";
+        static constexpr char keymap[] = "editor.Keymap";
         static constexpr char editor[] = "editor.Editor";
         static constexpr char rendering[] = "editor.Rendering";
     };
@@ -86,9 +91,11 @@ namespace hello::daw {
     };
 
     /// Adds the pages of the editor to \a catalog: Appearance & Behavior with System Settings in
-    /// it, Editor, and Rendering. A plugin places its pages among them, as Core places Plugins
-    /// before Rendering.
-    void addEditorSettingPages(SettingCatalog *catalog, AppSettings &settings);
+    /// it, Keymap, Editor, and Rendering. A plugin places its pages among them, as Core places
+    /// Plugins before Rendering. The keymap edits the shortcuts of \a registry and writes them to
+    /// \a keymapFile.
+    void addEditorSettingPages(SettingCatalog *catalog, AppSettings &settings,
+                               QAK::ActionRegistry *registry, const QString &keymapFile);
 
 }
 
