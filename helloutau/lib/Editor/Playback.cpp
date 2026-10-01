@@ -2,7 +2,9 @@
 
 #include <algorithm>
 #include <atomic>
+#include <chrono>
 #include <cmath>
+#include <functional>
 
 #include <QtCore/QCoreApplication>
 #include <QtCore/QPointer>
@@ -34,11 +36,21 @@ namespace hello::daw {
             diagnostics.push_back({kit::DiagnosticSeverity::Error, message, std::nullopt});
         }
 
+        // The inputs of a plan, taken on the main thread, where the document lives. The plan is
+        // made on a worker thread, because it takes long enough for a track of many notes to
+        // stall the window.
+        struct PlanInput {
+            kit::Project project;
+            std::shared_ptr<const kit::VoiceBank> bank;
+            kit::SynthPlan::Options options;
+        };
+
         // One render: its inputs, taken on the main thread, and its results, filled on the
         // worker thread.
         struct Job {
-            std::optional<kit::SynthPlan> plan;
-            QString key;
+            PlanInput input;
+            // The key of the render kept when the job started
+            QString keptKey;
             kit::SynthEngines engines;
             std::shared_ptr<const kit::SynthRunner> runner;
             int deviceRate = 0;
@@ -46,6 +58,10 @@ namespace hello::daw {
             bool fileOnly = false;
             std::atomic<bool> cancel = false;
 
+            std::optional<kit::SynthPlan> plan;
+            QString key;
+            // Whether the plan has the key of the kept render, which then plays again
+            bool sameAsKept = false;
             bool rendered = false;
             kit::DiagnosticList diagnostics;
             std::shared_ptr<const std::vector<float>> samples;
@@ -111,31 +127,48 @@ namespace hello::daw {
             std::shared_ptr<Recipient> m_recipient;
         };
 
-        // Renders, reads and converts, on the worker thread.
-        void run(Job &job, const std::shared_ptr<Recipient> &recipient) {
-            std::error_code error;
-            std::filesystem::create_directories(job.plan->cacheDirectory(), error);
-            const auto &plan = job.plan;
-            Observer observer(job, recipient);
-            const auto outcome = job.runner->render(*plan, job.engines, &observer, job.diagnostics);
-            if (!outcome.rendered || outcome.cancelled || job.cancel.load()) {
-                return;
-            }
-            if (job.fileOnly) {
-                job.rendered = true;
-                return;
-            }
-            const auto audio = kit::WaveAudio::read(plan->outputFile(), job.diagnostics);
-            if (!audio) {
-                return;
-            }
-            job.samples = std::make_shared<const std::vector<float>>(
-                resampled(audio->samples, audio->channels, audio->sampleRate, job.deviceRate));
-            job.channels = audio->channels;
-            job.startTime = plan->startTime();
-            job.rendered = true;
-        }
+        // Relays the progress of a plan to the main thread, at its start and end and otherwise
+        // at most every 50 milliseconds, and its cancellation to kit::SynthPlan::make().
+        class PlanObserver : public kit::SynthObserver {
+        public:
+            // Called on the main thread with the playback, if any
+            using Report = std::function<void(Playback &, int, int)>;
 
+            PlanObserver(const std::atomic<bool> &cancel, std::shared_ptr<Recipient> recipient,
+                         Report report)
+                : m_cancel(cancel), m_recipient(std::move(recipient)), m_report(std::move(report)) {
+            }
+
+            void progressed(int done, int total) override {
+                const auto now = std::chrono::steady_clock::now();
+                if (!m_report ||
+                    (done > 0 && done < total && now - m_last < std::chrono::milliseconds(50))) {
+                    return;
+                }
+                m_last = now;
+                deliver(m_recipient, [report = m_report, done, total](Playback &playback) {
+                    report(playback, done, total);
+                });
+            }
+
+            bool cancelled() override {
+                return m_cancel.load();
+            }
+
+        private:
+            const std::atomic<bool> &m_cancel;
+            std::shared_ptr<Recipient> m_recipient;
+            Report m_report;
+            std::chrono::steady_clock::time_point m_last;
+        };
+
+        // Runs \a function on a thread of its own, which deletes itself once it ends.
+        template <class Function>
+        void detach(Function function) {
+            const auto thread = QThread::create(std::move(function));
+            QObject::connect(thread, &QThread::finished, thread, &QObject::deleteLater);
+            thread->start();
+        }
     }
 
     class Playback::Impl {
@@ -185,38 +218,42 @@ namespace hello::daw {
         std::shared_ptr<StreamSource> stream;
         qint64 streamStart = 0;
 
-        // The plan of the whole track of \a document for the preview, whose track file is
-        // never written
-        std::optional<kit::SynthPlan> previewPlan(const kit::ProjectDocument &document,
-                                                  kit::DiagnosticList &diagnostics) {
+        // The plan of the synth made on a worker thread: the cancellation of the plan under
+        // way, the number of the latest request, whose result alone is taken, and its progress
+        // in notes while it is made
+        std::shared_ptr<std::atomic<bool>> planCancel;
+        int planRequest = 0;
+        std::optional<std::pair<int, int>> planProgress;
+        // The time in milliseconds from which the synth renders once the plan arrives, if
+        // prepare() or preview() requested one, and the device rate of the preview that then
+        // starts
+        std::optional<std::optional<double>> plannedFrom;
+        std::optional<int> waitingPreview;
+
+        // Without a synth, the states of the notes by the fragments in the render cache, and
+        // the scan of the cache made on a worker thread
+        QList<kit::RealtimeSynth::NoteState> cacheStates;
+        std::shared_ptr<std::atomic<bool>> scanCancel;
+        int scanRequest = 0;
+
+        // The inputs of the plan of the whole track of \a document for the realtime mode,
+        // whose track file is never written
+        std::optional<PlanInput> previewInput(const kit::ProjectDocument &document,
+                                              kit::DiagnosticList &diagnostics) {
             stdc_decl_t;
             const auto bank = document.voiceBank();
             if (!bank) {
                 fail(diagnostics, Playback::tr("The project has no voice bank to sing with."));
                 return std::nullopt;
             }
-            kit::SynthPlan::Options options;
-            options.cacheDirectory = decl.cacheDirectoryFor(document);
-            options.outputFile = options.cacheDirectory / OutputFileName;
-            return kit::SynthPlan::make(document.session()->snapshot(), *bank, options,
-                                        diagnostics);
+            PlanInput input{document.session()->snapshot(), bank, {}};
+            input.options.cacheDirectory = decl.cacheDirectoryFor(document);
+            input.options.outputFile = input.options.cacheDirectory / OutputFileName;
+            return input;
         }
 
-        // Gives the synth the plan of \a document and the position of \a fromTime, making the
-        // synth first or anew for other engines, and returns that position in samples of the
-        // track file.
-        std::optional<qint64> prepare(const kit::ProjectDocument &document,
-                                      std::optional<double> fromTime,
-                                      const kit::SynthEngines &engines,
-                                      kit::DiagnosticList &diagnostics) {
-            if (engines.resampler.empty()) {
-                fail(diagnostics, Playback::tr("Set the resampler in the settings first."));
-                return std::nullopt;
-            }
-            const auto plan = previewPlan(document, diagnostics);
-            if (!plan) {
-                return std::nullopt;
-            }
+        // Makes the synth, or makes it anew for other engines or another thread count.
+        void ensureSynth(const kit::SynthEngines &engines) {
             if (!synth || synthEngines.resampler != engines.resampler ||
                 synthThreads != threadCount) {
                 endPreview();
@@ -224,22 +261,254 @@ namespace hello::daw {
                 synthEngines = engines;
                 synthThreads = threadCount;
             }
+        }
+
+        // Makes the plan of \a input for the synth on a worker thread, in place of the plan
+        // under way. planned() receives it.
+        void requestPlan(PlanInput input) {
+            if (planCancel) {
+                planCancel->store(true);
+            }
+            const auto cancel = std::make_shared<std::atomic<bool>>(false);
+            planCancel = cancel;
+            const int request = ++planRequest;
+            planProgress = std::make_pair(0, 0);
+            detach([recipient = recipient, cancel, request, input = std::move(input)] {
+                PlanObserver observer(*cancel, recipient,
+                                      [request](Playback &playback, int done, int total) {
+                                          playback._impl->planProgressed(request, done, total);
+                                      });
+                auto diagnostics = std::make_shared<kit::DiagnosticList>();
+                const auto plan =
+                    std::make_shared<std::optional<kit::SynthPlan>>(kit::SynthPlan::make(
+                        input.project, *input.bank, input.options, *diagnostics, &observer));
+                if (cancel->load()) {
+                    return;
+                }
+                deliver(recipient, [request, plan, diagnostics](Playback &playback) {
+                    playback._impl->planned(request, *plan, *diagnostics);
+                });
+            });
+        }
+
+        void planProgressed(int request, int done, int total) {
+            stdc_decl_t;
+            if (request == planRequest && planProgress) {
+                planProgress = std::make_pair(done, total);
+                Q_EMIT decl.planProgressed(done, total);
+            }
+        }
+
+        // Gives the synth the plan of request, unless a later request superseded it, and starts
+        // the preview that waits for it. Without a plan the synth keeps the plan it has, and
+        // the preview that waits fails.
+        void planned(int request, const std::optional<kit::SynthPlan> &plan,
+                     const kit::DiagnosticList &diagnostics) {
+            stdc_decl_t;
+            if (request != planRequest) {
+                return;
+            }
+            planCancel.reset();
+            planProgress.reset();
+            if (!synth) {
+                return;
+            }
+            if (!plan) {
+                plannedFrom.reset();
+                if (waitingPreview) {
+                    waitingPreview.reset();
+                    setState(Stopped);
+                    Q_EMIT decl.failed(diagnostics);
+                }
+                return;
+            }
             synth->setPlan(*plan);
-            // The sample of the track file at that time; the file starts at startTime().
-            const qint64 start =
-                fromTime ? std::clamp<qint64>(std::llround((*fromTime - synth->startTime()) *
-                                                           kit::WavtoolMixer::sampleRate / 1000),
-                                              0, synth->length())
-                         : 0;
-            synth->setPosition(start);
-            return start;
+            qint64 start = 0;
+            if (plannedFrom) {
+                // The sample of the track file at that time; the file starts at startTime().
+                const auto fromTime = *plannedFrom;
+                start = fromTime
+                            ? std::clamp<qint64>(std::llround((*fromTime - synth->startTime()) *
+                                                              kit::WavtoolMixer::sampleRate / 1000),
+                                                 0, synth->length())
+                            : 0;
+                synth->setPosition(start);
+                plannedFrom.reset();
+            }
+            if (waitingPreview) {
+                const int deviceRate = *waitingPreview;
+                waitingPreview.reset();
+                startStream(start, deviceRate);
+            }
+            Q_EMIT decl.noteStatesChanged();
+        }
+
+        // Plays the synth from sample start of the track file on the output device.
+        void startStream(qint64 start, int deviceRate) {
+            stdc_decl_t;
+            // On the thread of the stream: waits briefly for the notes of the next block, and
+            // otherwise gives nothing, so that the device plays silence while they are rendered.
+            const auto at = std::make_shared<std::atomic<qint64>>(start);
+            auto generator = [synth = synth.get(), at](float *out, qsizetype frames) -> qsizetype {
+                const qint64 from = at->load();
+                const qint64 count = std::min<qint64>(frames, synth->length() - from);
+                if (count <= 0) {
+                    return -1;
+                }
+                std::vector<qint16> block(static_cast<size_t>(count));
+                if (!synth->waitReady(from, count, std::chrono::milliseconds(50)) ||
+                    !synth->mix(from, count, block.data())) {
+                    return 0;
+                }
+                for (qint64 i = 0; i < count; ++i) {
+                    out[i] = float(block[size_t(i)]) / 32768;
+                }
+                at->store(from + count);
+                synth->setPosition(from + count);
+                return count;
+            };
+            stream = std::make_shared<StreamSource>(std::move(generator),
+                                                    kit::WavtoolMixer::sampleRate, deviceRate);
+            streamStart = start;
+            stream->start();
+
+            QString error;
+            if (!output->start(stream, &error)) {
+                endPreview();
+                setState(Stopped);
+                kit::DiagnosticList diagnostics;
+                fail(diagnostics, error);
+                Q_EMIT decl.failed(diagnostics);
+                return;
+            }
+            setState(Playing);
+        }
+
+        // Ends the plans and the scans under way, whose results are then ignored, and the
+        // preview that waits for a plan.
+        void stopPlanning() {
+            for (const auto &cancel : {planCancel, scanCancel}) {
+                if (cancel) {
+                    cancel->store(true);
+                }
+            }
+            planCancel.reset();
+            scanCancel.reset();
+            ++planRequest;
+            ++scanRequest;
+            planProgress.reset();
+            plannedFrom.reset();
+            waitingPreview.reset();
+        }
+
+        // Scans the render cache for the fragments of the plan of \a document on a worker
+        // thread, for the states of the notes without a synth.
+        void scanCache(const kit::ProjectDocument &document) {
+            stdc_decl_t;
+            kit::DiagnosticList ignored;
+            auto input = previewInput(document, ignored);
+            if (!input) {
+                cacheStates.clear();
+                Q_EMIT decl.noteStatesChanged();
+                return;
+            }
+            if (scanCancel) {
+                scanCancel->store(true);
+            }
+            const auto cancel = std::make_shared<std::atomic<bool>>(false);
+            scanCancel = cancel;
+            const int request = ++scanRequest;
+            detach([recipient = recipient, cancel, request, input = std::move(*input)] {
+                using State = kit::RealtimeSynth::NoteState;
+                PlanObserver observer(*cancel, recipient, {});
+                kit::DiagnosticList diagnostics;
+                const auto plan = kit::SynthPlan::make(input.project, *input.bank, input.options,
+                                                       diagnostics, &observer);
+                QList<State> states;
+                for (const auto &step : plan ? plan->steps() : QList<kit::SynthStep>()) {
+                    if (cancel->load()) {
+                        return;
+                    }
+                    if (step.noteIndex >= states.size()) {
+                        states.resize(step.noteIndex + 1, State::Silent);
+                    }
+                    if (!step.silent) {
+                        std::error_code error;
+                        states[step.noteIndex] = std::filesystem::exists(step.cacheFile, error)
+                                                     ? State::Ready
+                                                     : State::Waiting;
+                    }
+                }
+                if (cancel->load()) {
+                    return;
+                }
+                deliver(recipient, [request, states](Playback &playback) {
+                    playback._impl->scanned(request, states);
+                });
+            });
+        }
+
+        void scanned(int request, const QList<kit::RealtimeSynth::NoteState> &states) {
+            stdc_decl_t;
+            if (request != scanRequest || synth) {
+                return;
+            }
+            scanCancel.reset();
+            cacheStates = states;
+            Q_EMIT decl.noteStatesChanged();
+        }
+
+        // Makes the plan, renders, reads and converts, on the worker thread. A plan with the
+        // key of the kept render is not rendered, because the kept render plays again.
+        static void run(const std::shared_ptr<Job> &job,
+                        const std::shared_ptr<Recipient> &recipient) {
+            PlanObserver planObserver(job->cancel, recipient,
+                                      [job](Playback &playback, int done, int total) {
+                                          if (playback._impl->job == job) {
+                                              Q_EMIT playback.planProgressed(done, total);
+                                          }
+                                      });
+            job->plan = kit::SynthPlan::make(job->input.project, *job->input.bank,
+                                             job->input.options, job->diagnostics, &planObserver);
+            if (!job->plan || job->cancel.load()) {
+                return;
+            }
+            const auto &plan = *job->plan;
+            if (!job->fileOnly) {
+                job->key = keyOf(plan, job->engines, job->deviceRate);
+                if (job->key == job->keptKey) {
+                    job->sameAsKept = true;
+                    return;
+                }
+            }
+            std::error_code error;
+            std::filesystem::create_directories(plan.cacheDirectory(), error);
+            Observer observer(*job, recipient);
+            const auto outcome =
+                job->runner->render(plan, job->engines, &observer, job->diagnostics);
+            if (!outcome.rendered || outcome.cancelled || job->cancel.load()) {
+                return;
+            }
+            if (job->fileOnly) {
+                job->rendered = true;
+                return;
+            }
+            const auto audio = kit::WaveAudio::read(plan.outputFile(), job->diagnostics);
+            if (!audio) {
+                return;
+            }
+            job->samples = std::make_shared<const std::vector<float>>(
+                resampled(audio->samples, audio->channels, audio->sampleRate, job->deviceRate));
+            job->channels = audio->channels;
+            job->startTime = plan.startTime();
+            job->rendered = true;
         }
 
         // Starts job on a worker thread, which reports to rendered() once the render ends.
         void start(const std::shared_ptr<Job> &started) {
             job = started;
             const auto worker = QThread::create([recipient = recipient, started] {
-                run(*started, recipient);
+                run(started, recipient);
                 deliver(recipient,
                         [started](Playback &playback) { playback._impl->rendered(started); });
             });
@@ -290,6 +559,14 @@ namespace hello::daw {
                 return;
             }
             job.reset();
+            if (finished->sameAsKept) {
+                if (kept && kept->key == finished->key) {
+                    playRendered(0);
+                } else {
+                    setState(Stopped);
+                }
+                return;
+            }
             if (!finished->rendered) {
                 setState(Stopped);
                 Q_EMIT decl.failed(finished->diagnostics);
@@ -339,6 +616,7 @@ namespace hello::daw {
         impl.output->stop();
         impl.endPreview();
         impl.cancelRender();
+        impl.stopPlanning();
         // The workers are not waited for: a script runs until it ends or its window is closed.
         impl.recipient->playback = nullptr;
     }
@@ -383,26 +661,13 @@ namespace hello::daw {
             fail(diagnostics, tr("There is no audio output device."));
             return false;
         }
-        kit::SynthPlan::Options options;
-        options.cacheDirectory = cacheDirectoryFor(document);
-        options.outputFile = options.cacheDirectory / OutputFileName;
-        options.range = range;
-        auto plan =
-            kit::SynthPlan::make(document.session()->snapshot(), *bank, options, diagnostics);
-        if (!plan) {
-            return false;
-        }
-
-        // The same notes as the last render, which plays again without the engines
-        auto key = keyOf(*plan, engines, deviceRate);
-        if (impl.kept && impl.kept->key == key) {
-            impl.playRendered(0);
-            return impl.state == Playing;
-        }
-
         auto job = std::make_shared<Job>();
-        job->plan = std::move(plan);
-        job->key = std::move(key);
+        job->input = {document.session()->snapshot(), bank, {}};
+        job->input.options.cacheDirectory = cacheDirectoryFor(document);
+        job->input.options.outputFile = job->input.options.cacheDirectory / OutputFileName;
+        job->input.options.range = range;
+        // The same notes as the last render play again without the engines.
+        job->keptKey = impl.kept ? impl.kept->key : QString();
         job->engines = engines;
         job->runner = impl.runner;
         job->deviceRate = deviceRate;
@@ -429,16 +694,10 @@ namespace hello::daw {
             fail(diagnostics, tr("The project has no voice bank to sing with."));
             return false;
         }
-        kit::SynthPlan::Options options;
-        options.cacheDirectory = cacheDirectoryFor(document);
-        options.outputFile = file;
-        auto plan =
-            kit::SynthPlan::make(document.session()->snapshot(), *bank, options, diagnostics);
-        if (!plan) {
-            return false;
-        }
         auto job = std::make_shared<Job>();
-        job->plan = std::move(plan);
+        job->input = {document.session()->snapshot(), bank, {}};
+        job->input.options.cacheDirectory = cacheDirectoryFor(document);
+        job->input.options.outputFile = file;
         job->engines = engines;
         job->runner = impl.runner;
         job->fileOnly = true;
@@ -459,46 +718,15 @@ namespace hello::daw {
             fail(diagnostics, tr("There is no audio output device."));
             return false;
         }
-        const auto prepared = impl.prepare(document, fromTime, engines, diagnostics);
-        if (!prepared) {
+        auto input = impl.previewInput(document, diagnostics);
+        if (!input) {
             return false;
         }
-        const qint64 start = *prepared;
-        const auto &synth = impl.synth;
-
-        // On the thread of the stream: waits briefly for the notes of the next block, and
-        // otherwise gives nothing, so that the device plays silence while they are rendered.
-        const auto at = std::make_shared<std::atomic<qint64>>(start);
-        auto generator = [synth = synth.get(), at](float *out, qsizetype frames) -> qsizetype {
-            const qint64 from = at->load();
-            const qint64 count = std::min<qint64>(frames, synth->length() - from);
-            if (count <= 0) {
-                return -1;
-            }
-            std::vector<qint16> block(static_cast<size_t>(count));
-            if (!synth->waitReady(from, count, std::chrono::milliseconds(50)) ||
-                !synth->mix(from, count, block.data())) {
-                return 0;
-            }
-            for (qint64 i = 0; i < count; ++i) {
-                out[i] = float(block[size_t(i)]) / 32768;
-            }
-            at->store(from + count);
-            synth->setPosition(from + count);
-            return count;
-        };
-        impl.stream = std::make_shared<StreamSource>(std::move(generator),
-                                                     kit::WavtoolMixer::sampleRate, deviceRate);
-        impl.streamStart = start;
-        impl.stream->start();
-
-        QString error;
-        if (!impl.output->start(impl.stream, &error)) {
-            impl.endPreview();
-            fail(diagnostics, error);
-            return false;
-        }
-        impl.setState(Playing);
+        impl.ensureSynth(engines);
+        impl.plannedFrom = fromTime;
+        impl.waitingPreview = deviceRate;
+        impl.requestPlan(std::move(*input));
+        impl.setState(Rendering);
         return true;
     }
 
@@ -514,15 +742,32 @@ namespace hello::daw {
             updatePlan(document);
             return true;
         }
-        return impl.prepare(document, fromTime, engines, diagnostics).has_value();
+        if (engines.resampler.empty()) {
+            fail(diagnostics, tr("Set the resampler in the settings first."));
+            return false;
+        }
+        auto input = impl.previewInput(document, diagnostics);
+        if (!input) {
+            return false;
+        }
+        impl.ensureSynth(engines);
+        impl.plannedFrom = fromTime;
+        impl.requestPlan(std::move(*input));
+        return true;
     }
 
     void Playback::release() {
         stdc_impl_t;
+        impl.stopPlanning();
         if (impl.synth) {
             stop();
             impl.synth.reset();
         }
+    }
+
+    std::optional<std::pair<int, int>> Playback::planProgress() const {
+        stdc_impl_t;
+        return impl.planProgress;
     }
 
     int Playback::pendingNotes() const {
@@ -530,30 +775,18 @@ namespace hello::daw {
         return impl.synth ? impl.synth->pendingCount() : 0;
     }
 
-    QList<kit::RealtimeSynth::NoteState>
-        Playback::noteStates(const kit::ProjectDocument &document) {
+    QList<kit::RealtimeSynth::NoteState> Playback::noteStates() const {
         stdc_impl_t;
-        using State = kit::RealtimeSynth::NoteState;
+        return impl.synth ? impl.synth->noteStates() : impl.cacheStates;
+    }
+
+    void Playback::refreshNoteStates(const kit::ProjectDocument &document) {
+        stdc_impl_t;
         if (impl.synth) {
-            return impl.synth->noteStates();
+            Q_EMIT noteStatesChanged();
+            return;
         }
-        kit::DiagnosticList ignored;
-        const auto plan = impl.previewPlan(document, ignored);
-        if (!plan) {
-            return {};
-        }
-        QList<State> states;
-        for (const auto &step : plan->steps()) {
-            if (step.noteIndex >= states.size()) {
-                states.resize(step.noteIndex + 1, State::Silent);
-            }
-            if (!step.silent) {
-                std::error_code error;
-                states[step.noteIndex] =
-                    std::filesystem::exists(step.cacheFile, error) ? State::Ready : State::Waiting;
-            }
-        }
-        return states;
+        impl.scanCache(document);
     }
 
     void Playback::updatePlan(const kit::ProjectDocument &document) {
@@ -561,9 +794,9 @@ namespace hello::daw {
         if (!impl.synth) {
             return;
         }
-        kit::DiagnosticList diagnostics;
-        if (const auto plan = impl.previewPlan(document, diagnostics)) {
-            impl.synth->setPlan(*plan);
+        kit::DiagnosticList ignored;
+        if (auto input = impl.previewInput(document, ignored)) {
+            impl.requestPlan(std::move(*input));
         }
     }
 
@@ -606,6 +839,8 @@ namespace hello::daw {
     void Playback::stop() {
         stdc_impl_t;
         impl.cancelRender();
+        // The plan goes on for the rendering in the background.
+        impl.waitingPreview.reset();
         impl.output->stop();
         impl.endPreview();
         impl.setState(Stopped);
@@ -645,8 +880,10 @@ namespace hello::daw {
         }
         // The synth waits for the engine calls under way, which would write into the cache.
         stop();
+        impl.stopPlanning();
         impl.synth.reset();
         impl.kept.reset();
+        impl.cacheStates.clear();
 
         namespace fs = std::filesystem;
         const auto directory = cacheDirectoryFor(document);

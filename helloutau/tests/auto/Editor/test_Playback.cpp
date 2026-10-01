@@ -209,6 +209,7 @@ private Q_SLOTS:
         playback.setRunner(runner);
         QSignalSpy states(&playback, &Playback::stateChanged);
         QSignalSpy progress(&playback, &Playback::progressed);
+        QSignalSpy planProgress(&playback, &Playback::planProgressed);
         QSignalSpy failures(&playback, &Playback::failed);
 
         kit::DiagnosticList diagnostics;
@@ -223,6 +224,10 @@ private Q_SLOTS:
         QCOMPARE(states.at(1).at(0).value<Playback::State>(), Playback::Playing);
         QCOMPARE(states.at(2).at(0).value<Playback::State>(), Playback::Stopped);
         QCOMPARE(progress.size(), 1);
+        // The plan of the one note, made on the worker thread before the render
+        QVERIFY(!planProgress.isEmpty());
+        QCOMPARE(planProgress.first(), (QList<QVariant>{0, 1}));
+        QCOMPARE(planProgress.last(), (QList<QVariant>{1, 1}));
         QCOMPARE(runner->stepCounts, QList<int>{1});
         QCOMPARE(runner->caches, QList<fs::path>{playback.cacheDirectoryFor(*document)});
         QVERIFY(fs::is_regular_file(playback.cacheDirectoryFor(*document) / "playback.wav"));
@@ -299,7 +304,7 @@ private Q_SLOTS:
         QTRY_COMPARE_WITH_TIMEOUT(playback.state(), Playback::Playing, 5000);
         playback.stop();
         QVERIFY(playback.play(*document, std::nullopt, someEngines(), diagnostics));
-        QCOMPARE(playback.state(), Playback::Playing);
+        QTRY_COMPARE_WITH_TIMEOUT(playback.state(), Playback::Playing, 5000);
         QCOMPARE(runner->started.load(), 1);
         playback.stop();
 
@@ -389,7 +394,11 @@ private Q_SLOTS:
         kit::SynthEngines engines;
         engines.resampler = fs::path(dir.path().toStdU16String()) / "missing.exe";
         QVERIFY(playback.preview(*document, 750.0, engines, diagnostics));
-        QCOMPARE(playback.state(), Playback::Playing);
+        // Rendering until the plan of the track is made
+        QCOMPARE(playback.state(), Playback::Rendering);
+        QVERIFY(playback.planProgress());
+        QTRY_COMPARE_WITH_TIMEOUT(playback.state(), Playback::Playing, 5000);
+        QVERIFY(!playback.planProgress());
         const auto first = playback.position();
         QVERIFY(first);
         // From 750 ms on, half way through the second note at 120 bpm, and no more ahead than a
@@ -397,7 +406,7 @@ private Q_SLOTS:
         QVERIFY2(*first >= 750 && *first < 1050, qPrintable(QString::number(*first)));
 
         QTRY_COMPARE_WITH_TIMEOUT(playback.state(), Playback::Stopped, 5000);
-        QCOMPARE(states.size(), 2);
+        QCOMPARE(states.size(), 3);
         QCOMPARE(playback.pendingNotes(), 0);
         QVERIFY(playback.takePreviewDiagnostics().isEmpty());
     }
@@ -439,6 +448,29 @@ private Q_SLOTS:
         QVERIFY(!playback.position());
     }
 
+    // A plan is made on the worker thread, so that a range without notes is reported by
+    // failed(), and nothing is rendered.
+    void a_failure_of_the_plan_is_reported_later() {
+        QTemporaryDir dir;
+        const auto document = singingDocument(dir);
+        QVERIFY(document);
+        Playback playback;
+        const auto runner = std::make_shared<SilentRunner>();
+        playback.setRunner(runner);
+        QSignalSpy failures(&playback, &Playback::failed);
+
+        kit::DiagnosticList diagnostics;
+        if (!playback.play(*document, std::make_pair(5, 9), someEngines(), diagnostics)) {
+            QSKIP("This machine has no audio output device.");
+        }
+        QVERIFY(diagnostics.isEmpty());
+        QCOMPARE(playback.state(), Playback::Rendering);
+        QTRY_COMPARE_WITH_TIMEOUT(failures.size(), 1, 5000);
+        QVERIFY(kit::hasError(failures.first().first().value<kit::DiagnosticList>()));
+        QCOMPARE(playback.state(), Playback::Stopped);
+        QCOMPARE(runner->started.load(), 0);
+    }
+
     // Clearing the cache deletes its files, not its folders, and the fragments in memory; not
     // while a render goes on, which writes into it.
     void the_cache_is_cleared_of_its_files() {
@@ -454,12 +486,13 @@ private Q_SLOTS:
         engines.resampler = fs::path(dir.path().toStdU16String()) / "missing.exe";
         kit::DiagnosticList diagnostics;
         QVERIFY(playback.prepare(*document, std::nullopt, engines, diagnostics));
-        QTRY_COMPARE(playback.noteStates(*document), (QList<S::NoteState>{S::Ready, S::Ready}));
+        QTRY_COMPARE(playback.noteStates(), (QList<S::NoteState>{S::Ready, S::Ready}));
 
         QCOMPARE(playback.clearCache(*document, diagnostics), std::optional<int>(2));
         QVERIFY(diagnostics.isEmpty());
         QVERIFY(fs::is_directory(cache / "kept"));
-        QCOMPARE(playback.noteStates(*document), (QList<S::NoteState>{S::Waiting, S::Waiting}));
+        playback.refreshNoteStates(*document);
+        QTRY_COMPARE(playback.noteStates(), (QList<S::NoteState>{S::Waiting, S::Waiting}));
 
         const auto runner = std::make_shared<SilentRunner>();
         runner->hold = true;
@@ -519,17 +552,28 @@ private Q_SLOTS:
         QVERIFY(!playback.prepare(*document, std::nullopt, {}, diagnostics));
         QVERIFY(kit::hasError(diagnostics));
 
-        // Without the synth, by the cache: nothing there yet, then the fragments
+        // Without the synth, by the cache scanned on a worker thread: nothing there yet, then
+        // the fragments
         using S = kit::RealtimeSynth;
-        QCOMPARE(playback.noteStates(*document), (QList<S::NoteState>{S::Waiting, S::Waiting}));
+        QSignalSpy changes(&playback, &Playback::noteStatesChanged);
+        QVERIFY(playback.noteStates().isEmpty());
+        playback.refreshNoteStates(*document);
+        QVERIFY(playback.noteStates().isEmpty());
+        QTRY_COMPARE(changes.size(), 1);
+        QCOMPARE(playback.noteStates(), (QList<S::NoteState>{S::Waiting, S::Waiting}));
         QVERIFY(writeFragments(playback, *document));
-        QCOMPARE(playback.noteStates(*document), (QList<S::NoteState>{S::Ready, S::Ready}));
+        playback.refreshNoteStates(*document);
+        QTRY_COMPARE(playback.noteStates(), (QList<S::NoteState>{S::Ready, S::Ready}));
         QSignalSpy states(&playback, &Playback::stateChanged);
         kit::SynthEngines engines;
         engines.resampler = fs::path(dir.path().toStdU16String()) / "missing.exe";
         diagnostics.clear();
         QVERIFY(playback.prepare(*document, 750.0, engines, diagnostics));
-        QTRY_COMPARE(playback.pendingNotes(), 0);
+        // The plan is made on a worker thread, and the synth takes the fragments from the cache.
+        QVERIFY(playback.planProgress());
+        QTRY_VERIFY(!playback.planProgress());
+        QTRY_COMPARE(playback.noteStates(), (QList<S::NoteState>{S::Ready, S::Ready}));
+        QCOMPARE(playback.pendingNotes(), 0);
         QVERIFY(playback.takePreviewDiagnostics().isEmpty());
         QCOMPARE(playback.state(), Playback::Stopped);
         QCOMPARE(states.size(), 0);
@@ -547,7 +591,7 @@ private Q_SLOTS:
         QCOMPARE(failed.last().severity, kit::DiagnosticSeverity::Warning);
         QVERIFY(failed.last().noteIndex == 1);
         // As the synth has them
-        QCOMPARE(playback.noteStates(*document), (QList<S::NoteState>{S::Ready, S::Failed}));
+        QCOMPARE(playback.noteStates(), (QList<S::NoteState>{S::Ready, S::Failed}));
 
         // Released, nothing is rendered after an edit.
         playback.release();

@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <memory>
 #include <optional>
+#include <utility>
 
 #include <QtCore/QObject>
 
@@ -30,6 +31,11 @@ namespace hello::daw {
     /// the script runs on until it ends or its window is closed. The track file is then read,
     /// converted to the sample rate of the output device, and played. position() maps what is
     /// heard to the track, see kit::SynthPlan::startTime().
+    ///
+    /// Every plan is made on a worker thread from a snapshot of the document, because a plan of
+    /// a track of many notes takes long enough to stall the window: that of a render before it
+    /// starts, which planProgressed() reports, and those of the realtime mode and of
+    /// noteStates(). A failure found in the plan of a render is reported by failed().
     ///
     /// The render cache of a document is the directory beside its \c .usth, or beside the UST it
     /// was imported from, as UTAU uses it; a document without a file renders into a temporary
@@ -65,9 +71,10 @@ namespace hello::daw {
         /// The last render is kept: while every engine call of the notes would be the same, it
         /// plays again at once, without the engines.
         ///
-        /// \return whether rendering started; the reason is in \a diagnostics otherwise, such as
+        /// \return whether rendering started. The reason is in \a diagnostics otherwise, such as
         ///         a document without a voice bank, engines that are not set, or a render
-        ///         cancelled before that has not ended
+        ///         cancelled before that has not ended. The reasons found in the plan, such as
+        ///         a range without notes, are reported by failed().
         bool play(const kit::ProjectDocument &document, std::optional<std::pair<int, int>> range,
                   const kit::SynthEngines &engines, kit::DiagnosticList &diagnostics);
 
@@ -89,7 +96,10 @@ namespace hello::daw {
         /// yet rendered, playback waits: isBuffering() holds and position() stands still. An edit
         /// takes effect through updatePlan().
         ///
-        /// \return whether playing started; the reason is in \a diagnostics otherwise
+        /// The state is Rendering until the plan of the track is made, and Playing from then
+        /// on. A plan that cannot be made is reported by failed().
+        ///
+        /// \return whether the preview started. The reason is in \a diagnostics otherwise.
         bool preview(const kit::ProjectDocument &document, std::optional<double> fromTime,
                      const kit::SynthEngines &engines, kit::DiagnosticList &diagnostics);
 
@@ -112,13 +122,25 @@ namespace hello::daw {
         /// The notes of the preview or of prepare() still to render.
         int pendingNotes() const;
 
-        /// How far each note of the first track of \a document is rendered, by its index: as
-        /// the preview or prepare() has it, or else by the fragments in the render cache, Ready
-        /// where the fragment is there and Waiting where not. Empty without a voice bank.
-        QList<kit::RealtimeSynth::NoteState> noteStates(const kit::ProjectDocument &document);
+        /// The progress in notes of the plan of the preview or of prepare() while it is made,
+        /// as done and total, or \c std::nullopt if none is made. The total is zero until the
+        /// notes are counted.
+        std::optional<std::pair<int, int>> planProgress() const;
+
+        /// How far each note of the first track is rendered, by its index: as the preview or
+        /// prepare() has it, or else by the fragments in the render cache as the last
+        /// refreshNoteStates() found them, Ready if the fragment is there and Waiting if not.
+        /// Empty without a voice bank.
+        QList<kit::RealtimeSynth::NoteState> noteStates() const;
+
+        /// Updates noteStates() for \a document and emits noteStatesChanged() once it is
+        /// updated: at once while the preview or prepare() renders, and otherwise after the
+        /// render cache is scanned on a worker thread.
+        void refreshNoteStates(const kit::ProjectDocument &document);
 
         /// Replaces the notes that the preview plays, or that prepare() renders, with those of
-        /// \a document, after an edit. Does nothing unless either is under way.
+        /// \a document once their plan is made, after an edit. Does nothing unless either is
+        /// under way.
         void updatePlan(const kit::ProjectDocument &document);
 
         /// Returns the warnings of the notes the preview could not render since the last call.
@@ -166,6 +188,14 @@ namespace hello::daw {
         ///
         /// \sa kit::SynthObserver::progressed()
         void progressed(int done, int total);
+
+        /// The plan of the render in progress, or of the preview or prepare(), covers \a done
+        /// of \a total notes. The plans of a render and of the realtime mode report alike.
+        void planProgressed(int done, int total);
+
+        /// noteStates() changed: refreshNoteStates() updated it, or a new plan of the preview
+        /// or of prepare() arrived.
+        void noteStatesChanged();
 
         /// The render of renderTrack() wrote \a file.
         void trackRendered(const std::filesystem::path &file);

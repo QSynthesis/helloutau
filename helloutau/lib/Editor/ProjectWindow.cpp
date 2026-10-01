@@ -226,6 +226,7 @@ namespace hello::daw {
                                  }
                              });
             QObject::connect(playback, &Playback::progressed, &decl, [this](int done, int total) {
+                renderLabel->setText(tr("Rendering..."));
                 renderProgress->setRange(0, total);
                 renderProgress->setValue(done);
             });
@@ -254,8 +255,21 @@ namespace hello::daw {
             });
             renderStateTimer.setSingleShot(true);
             renderStateTimer.setInterval(RenderStateDelay);
+            QObject::connect(playback, &Playback::noteStatesChanged, &decl,
+                             [this] { updateRenderStates(); });
+            // The status of a plan made in the background, in notes as UTAU counts them
+            QObject::connect(playback, &Playback::planProgressed, &decl,
+                             [this](int done, int total) {
+                                 if (playback->state() == Playback::Rendering) {
+                                     renderLabel->setText(preparingText(done, total));
+                                     renderProgress->setRange(0, total);
+                                     renderProgress->setValue(done);
+                                 } else {
+                                     updatePreviewStatus();
+                                 }
+                             });
             QObject::connect(&renderStateTimer, &QTimer::timeout, &decl, [this] {
-                updateRenderStates();
+                playback->refreshNoteStates(*document);
                 if (playback->state() == Playback::Rendering) {
                     scheduleRenderStates();
                 }
@@ -358,10 +372,16 @@ namespace hello::daw {
 
         // How far each note is rendered, on the ruler: as the background renders them, or by
         // the fragments in the cache (the render states in docs/Widgets.md)
+        // The status of a plan made in the background, which counts notes as UTAU does while
+        // it renders
+        static QString preparingText(int done, int total) {
+            return ProjectWindow::tr("Preparing notes (%1/%2)").arg(done).arg(total);
+        }
+
         void updateRenderStates() {
             QList<PianoRoll::RenderState> states;
             soundingNotes = 0;
-            for (const auto state : playback->noteStates(*document)) {
+            for (const auto state : playback->noteStates()) {
                 states.push_back(renderStateOf(state));
                 if (state != kit::RealtimeSynth::Silent) {
                     ++soundingNotes;
@@ -460,8 +480,15 @@ namespace hello::daw {
             dialog.setMinimumDuration(0);
             dialog.setAutoClose(false);
             dialog.setAutoReset(false);
+            QObject::connect(playback, &Playback::planProgressed, &dialog,
+                             [&dialog](int done, int total) {
+                                 dialog.setLabelText(preparingText(done, total));
+                                 dialog.setMaximum(total);
+                                 dialog.setValue(done);
+                             });
             QObject::connect(playback, &Playback::progressed, &dialog,
                              [&dialog](int done, int total) {
+                                 dialog.setLabelText(tr("Rendering..."));
                                  dialog.setMaximum(total);
                                  dialog.setValue(done);
                              });
@@ -694,19 +721,28 @@ namespace hello::daw {
             }
         }
 
-        // The state of a preview in the status bar: the notes still to render, and whether
-        // playback waits for them
+        // The state of a preview in the status bar: the plan while it is made, the notes still
+        // to render, and whether playback waits for them
         void updatePreviewStatus() {
+            const auto planning = playback->planProgress();
             const int pending = playback->pendingNotes();
             const bool buffering = playback->isBuffering();
-            renderLabel->setVisible(pending > 0 || buffering);
-            // The bar of a render in the prerender mode follows the state of the playback.
-            if (playback->state() != Playback::Rendering) {
-                renderProgress->setVisible(pending > 0);
-                const int total = std::max(soundingNotes, pending);
-                renderProgress->setRange(0, total);
-                renderProgress->setValue(total - pending);
+            // The status of a render, and of a preview that waits for its plan, follows the
+            // state of the playback.
+            if (playback->state() == Playback::Rendering) {
+                return;
             }
+            renderLabel->setVisible(planning || pending > 0 || buffering);
+            renderProgress->setVisible(planning || pending > 0);
+            if (planning) {
+                renderLabel->setText(preparingText(planning->first, planning->second));
+                renderProgress->setRange(0, planning->second);
+                renderProgress->setValue(planning->first);
+                return;
+            }
+            const int total = std::max(soundingNotes, pending);
+            renderProgress->setRange(0, total);
+            renderProgress->setValue(total - pending);
             if (buffering) {
                 renderLabel->setText(
                     ProjectWindow::tr("Buffering, %n note(s) to render", nullptr, pending));

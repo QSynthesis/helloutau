@@ -1284,6 +1284,11 @@ private Q_SLOTS:
         QCOMPARE(roll->voiceBank(), window->document()->voiceBank());
         QVERIFY(!roll->lacksSample(0));
         QVERIFY(roll->lacksSample(1));
+
+        // The ruler shows the render states once the cache is scanned on a worker thread: the
+        // sung note without its fragment, and the silent note without a sample.
+        QTRY_COMPARE(roll->renderStates(), (QList<PianoRoll::RenderState>{
+                                               PianoRoll::RenderWaiting, PianoRoll::RenderSilent}));
     }
 
 private:
