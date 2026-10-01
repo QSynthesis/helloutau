@@ -96,9 +96,9 @@
         <action id="helloutau.edit.coarserQuantization" text="&amp;Coarser Quantization"
                 category="Edit" shortcut="Ctrl+]" />
 
-        <!-- X as in UTAU, and F4 from the menu resource of UTAU -->
+        <!-- X as in UTAU -->
         <action id="helloutau.view.showPitch" text="Show &amp;Pitch" category="View"
-                shortcuts="X;F4" />
+                shortcut="X" />
         <!-- The envelope of each note above its bar, from where its pre-utterance starts, as
              UTAU draws it -->
         <action id="helloutau.view.showEnvelopes" text="Show &amp;Envelopes" category="View" />

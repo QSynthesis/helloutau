@@ -932,7 +932,7 @@ private Q_SLOTS:
             {QStringLiteral("&Stop"),               QStringLiteral("F7")            },
             {QStringLiteral("&Replay"),             QStringLiteral("Shift+F5")      },
             {QStringLiteral("&Delete"),             QStringLiteral("Del; Shift+Del")},
-            {QStringLiteral("Show &Pitch"),         QStringLiteral("X; F4")         },
+            {QStringLiteral("Show &Pitch"),         QStringLiteral("X")             },
             {QStringLiteral("Show P&arameters"),    QStringLiteral("Z")             },
             {QStringLiteral("Edit &Voice Bank"),    QStringLiteral("Ctrl+G")        },
             {QStringLiteral("Note Propert&ies..."), QStringLiteral("Ctrl+E")        },
