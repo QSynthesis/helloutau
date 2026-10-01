@@ -96,13 +96,16 @@
         <action id="helloutau.edit.coarserQuantization" text="&amp;Coarser Quantization"
                 category="Edit" shortcut="Ctrl+]" />
 
+        <!-- X as in UTAU, and F4 from the menu resource of UTAU -->
         <action id="helloutau.view.showPitch" text="Show &amp;Pitch" category="View"
-                shortcut="F4" />
+                shortcuts="X;F4" />
         <!-- The envelope of each note above its bar, from where its pre-utterance starts, as
              UTAU draws it -->
         <action id="helloutau.view.showEnvelopes" text="Show &amp;Envelopes" category="View" />
-        <!-- The modulation and the flags of each note below its bar, as UTAU shows them -->
-        <action id="helloutau.view.showParameters" text="Show P&amp;arameters" category="View" />
+        <!-- The modulation and the flags of each note below its bar, as UTAU shows them, with Z
+             as in UTAU -->
+        <action id="helloutau.view.showParameters" text="Show P&amp;arameters" category="View"
+                shortcut="Z" />
         <!-- The tool bar of the project window, shown or hidden as the settings store it -->
         <action id="helloutau.view.showToolBar" text="Show &amp;Toolbar" category="View" />
 
