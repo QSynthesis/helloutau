@@ -1011,7 +1011,7 @@
     </message>
     <message>
         <source>Set the resampler and the wavtool in the settings first.</source>
-        <translation>请先在设置中指定重采样器和wavtool。</translation>
+        <translation>请先在设置中指定重采样器与合成器。</translation>
     </message>
     <message>
         <source>There is no audio output device.</source>
@@ -1078,7 +1078,7 @@
     </message>
     <message>
         <source>Wav&amp;tool (Tool1):</source>
-        <translation>wavtool（Tool1）(&amp;T)：</translation>
+        <translation>合成器（Tool1）(&amp;T)：</translation>
     </message>
     <message>
         <source>&amp;Resampler (Tool2):</source>
@@ -1118,7 +1118,7 @@
     </message>
     <message>
         <source>wavtool</source>
-        <translation>wavtool</translation>
+        <translation>合成器</translation>
     </message>
     <message>
         <source>resampler</source>
@@ -1142,7 +1142,7 @@
     </message>
     <message>
         <source>The voice folder, wavtool, and resampler must exist.</source>
-        <translation>音源文件夹、wavtool和重采样器必须存在。</translation>
+        <translation>音源文件夹、合成器与重采样器必须存在。</translation>
     </message>
 </context>
 <context>
@@ -1426,7 +1426,7 @@
     </message>
     <message>
         <source>&amp;Wavtool:</source>
-        <translation>Wavtool(&amp;W)：</translation>
+        <translation>合成器(&amp;W)：</translation>
     </message>
     <message>
         <source>&amp;Resampler:</source>
@@ -1454,7 +1454,7 @@
     </message>
     <message>
         <source>Realtime playback joins the notes by the rules of the external wavtool and does not run the wavtool chosen above. Rendering a whole track uses an external console in the classic mode and several threads otherwise.</source>
-        <translation>实时播放按外部wavtool的规则拼接音符，不运行上方选择的wavtool。渲染整个音轨时，经典模式使用外部控制台，其他模式使用多个线程。</translation>
+        <translation>实时播放按外部合成器的规则拼接音符，不运行上方选择的合成器。渲染整个音轨时，经典模式使用外部控制台，其他模式使用多个线程。</translation>
     </message>
     <message>
         <source>Automatic (%1)</source>
@@ -2286,7 +2286,7 @@ Read them again? What you did not save in them is replaced, and Undo brings it b
 
 Write them again without these chunks? The audio stays the same. The files are written at once, and Undo does not bring the chunks back.</source>
         <translation>
-            <numerusform>%n个音频文件除格式和音频数据外还含有其他数据块，例如录音程序写入的标签。
+            <numerusform>%n个音频文件除格式与音频数据外还含有其他数据块，例如录音程序写入的标签。
 
 是否去除这些数据块并重新写入？音频内容不变。文件会立即写入，撤销无法恢复这些数据块。</numerusform>
         </translation>
@@ -2520,7 +2520,7 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>A MIDI file contains only notes and lyrics. The envelope, vibrato, pitch curve, flags and per-note parameters were omitted.</source>
-        <translation>MIDI文件只包含音符和歌词。包络、颤音、音高曲线、Flags和逐音符参数已省略。</translation>
+        <translation>MIDI文件只包含音符与歌词。包络、颤音、音高曲线、Flags与逐音符参数已省略。</translation>
     </message>
     <message>
         <source>%1 lyrics cannot be represented in %2 and were written as question marks.</source>
@@ -2927,7 +2927,7 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>The wavtool arguments of this note cannot be read, so it is silent.</source>
-        <translation>无法读取此音符的wavtool参数，因此该音符静音。</translation>
+        <translation>无法读取此音符的合成器参数，因此该音符静音。</translation>
     </message>
 </context>
 <context>
@@ -2942,7 +2942,7 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>Rendering requires an output file and a cache directory.</source>
-        <translation>渲染需要输出文件和缓存目录。</translation>
+        <translation>渲染需要输出文件与缓存目录。</translation>
     </message>
     <message>
         <source>The requested range contains no notes.</source>
@@ -2973,7 +2973,7 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>The wavtool produced no output for &quot;%1&quot;. The configured wavtool may not accept these arguments.</source>
-        <translation>wavtool没有为「%1」产生输出。所配置的wavtool可能不接受这些参数。</translation>
+        <translation>合成器没有为「%1」产生输出。所配置的合成器可能不接受这些参数。</translation>
     </message>
     <message>
         <source>&quot;%1&quot; could not be written.</source>

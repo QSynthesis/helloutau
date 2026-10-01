@@ -99,64 +99,67 @@ namespace hello::daw {
         reset->setEnabled(m_appSettings);
         form->addRow(reset);
         auto trust = new QPushButton(tr("Trust project engines"));
-        connect(trust, &QPushButton::clicked, this, [this] {
-            if (!m_appSettings) {
-                return;
-            }
-            const auto utau = m_appSettings->utauDirectory();
-            const bool wavtool = EngineTrust::ask(
-                this, *m_appSettings, m_wavtool->text(), utau, EngineTrust::Kind::Wavtool);
-            const bool resampler = EngineTrust::ask(
-                this, *m_appSettings, m_resampler->text(), utau, EngineTrust::Kind::Resampler);
-        });
         trust->setEnabled(m_appSettings);
         form->addRow(trust);
         m_engineWarning = new QLabel(
-            tr("Warning: project engines are untrusted. Playback uses the settings engines until "
-               "both project engines are trusted."));
+            tr("Warning: project engines are untrusted. Playback does not render until the "
+               "required project engines are trusted."));
         m_engineWarning->setWordWrap(true);
         const auto updateTrust = [this] {
             if (!m_appSettings) {
                 return;
             }
             const auto utau = m_appSettings->utauDirectory();
-            const auto isUntrusted = [this, &utau](QLineEdit *edit, const QString &defaultPath,
-                                                   EngineTrust::Kind kind) {
-                return !EngineTrust::samePath(edit->text(), defaultPath, utau) &&
-                       !EngineTrust::isTrusted(*m_appSettings, edit->text(), utau, kind);
-            };
             const auto status = [this, &utau](QLineEdit *edit, const QString &defaultPath,
                                               EngineTrust::Kind kind) {
+                QString text;
                 if (EngineTrust::samePath(edit->text(), defaultPath, utau)) {
-                    return tr("Using the default %1 from Settings.")
-                        .arg(kind == EngineTrust::Kind::Wavtool ? tr("wavtool")
-                                                               : tr("resampler"));
+                    text = tr("Using the default %1 from Settings.")
+                               .arg(kind == EngineTrust::Kind::Wavtool ? tr("wavtool")
+                                                                      : tr("resampler"));
+                    return qMakePair(text, false);
                 }
                 if (EngineTrust::isTrusted(*m_appSettings, edit->text(), utau, kind)) {
-                    return tr("Project %1 is trusted.")
-                        .arg(kind == EngineTrust::Kind::Wavtool ? tr("wavtool")
-                                                               : tr("resampler"));
+                    text = tr("Project %1 is trusted.")
+                               .arg(kind == EngineTrust::Kind::Wavtool ? tr("wavtool")
+                                                                      : tr("resampler"));
+                    return qMakePair(text, false);
                 }
-                return tr("Project %1 is untrusted.")
-                    .arg(kind == EngineTrust::Kind::Wavtool ? tr("wavtool")
-                                                           : tr("resampler"));
+                text = tr("Project %1 is untrusted.")
+                           .arg(kind == EngineTrust::Kind::Wavtool ? tr("wavtool")
+                                                                  : tr("resampler"));
+                return qMakePair(text, true);
             };
-            const auto wavtool = status(m_wavtool, m_appSettings->wavtool(),
-                                        EngineTrust::Kind::Wavtool);
-            const auto resampler = status(m_resampler, m_appSettings->resampler(),
-                                          EngineTrust::Kind::Resampler);
-            m_engineWarning->setText(wavtool + QLatin1Char('\n') + resampler);
-            const bool untrusted =
-                isUntrusted(m_wavtool, m_appSettings->wavtool(), EngineTrust::Kind::Wavtool) ||
-                isUntrusted(m_resampler, m_appSettings->resampler(),
-                            EngineTrust::Kind::Resampler);
-            m_engineWarning->setStyleSheet(
-                untrusted ? QStringLiteral("color: #b00020; font-weight: bold;")
-                          : QStringLiteral("color: #176b2c; font-weight: bold;"));
+            const auto wavtool =
+                status(m_wavtool, m_appSettings->wavtool(), EngineTrust::Kind::Wavtool);
+            const auto resampler =
+                status(m_resampler, m_appSettings->resampler(), EngineTrust::Kind::Resampler);
+            const auto line = [](const QPair<QString, bool> &value) {
+                return QStringLiteral("<span style=\"color:%1; font-weight:bold;\">%2</span>")
+                    .arg(value.second ? QStringLiteral("#b00020") : QStringLiteral("#176b2c"),
+                         value.first.toHtmlEscaped());
+            };
+            m_engineWarning->setText(line(wavtool) + QStringLiteral("<br>") + line(resampler));
+            m_engineWarning->setTextFormat(Qt::RichText);
         };
         connect(m_wavtool, &QLineEdit::textChanged, this, updateTrust);
         connect(m_resampler, &QLineEdit::textChanged, this, updateTrust);
         updateTrust();
+        connect(trust, &QPushButton::clicked, this, [this, updateTrust] {
+            if (!m_appSettings) {
+                return;
+            }
+            const auto utau = m_appSettings->utauDirectory();
+            if (!EngineTrust::samePath(m_wavtool->text(), m_appSettings->wavtool(), utau)) {
+                EngineTrust::ask(this, *m_appSettings, m_wavtool->text(), utau,
+                                 EngineTrust::Kind::Wavtool);
+            }
+            if (!EngineTrust::samePath(m_resampler->text(), m_appSettings->resampler(), utau)) {
+                EngineTrust::ask(this, *m_appSettings, m_resampler->text(), utau,
+                                 EngineTrust::Kind::Resampler);
+            }
+            updateTrust();
+        });
         form->addRow(m_engineWarning);
         form->addRow(m_mode2);
 

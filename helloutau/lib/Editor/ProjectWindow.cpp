@@ -466,23 +466,41 @@ namespace hello::daw {
             const auto projectWavtool = std::filesystem::path(project.wavtool().toStdU16String());
             const auto projectResampler =
                 std::filesystem::path(project.resampler().toStdU16String());
-            if (!projectWavtool.is_absolute() && !projectResampler.is_absolute() &&
-                EngineTrust::exists(project.wavtool(), utau) &&
-                EngineTrust::exists(project.resampler(), utau)) {
-                const bool wavtool = EngineTrust::samePath(
-                                         project.wavtool(), appSettings.wavtool(), utau) ||
-                                     EngineTrust::ask(
-                                         _decl, appSettings, project.wavtool(), utau,
-                                         EngineTrust::Kind::Wavtool);
-                const bool resampler = EngineTrust::samePath(
-                                            project.resampler(), appSettings.resampler(), utau) ||
-                                        EngineTrust::ask(
-                                            _decl, appSettings, project.resampler(), utau,
-                                            EngineTrust::Kind::Resampler);
-                if (wavtool && resampler) {
-                    engines.wavtool = EngineTrust::resolved(project.wavtool(), utau);
+            if (realtime()) {
+                const bool resamplerValid = !projectResampler.is_absolute() &&
+                                            EngineTrust::exists(project.resampler(), utau);
+                const bool resamplerTrusted =
+                    resamplerValid &&
+                    (EngineTrust::samePath(project.resampler(), appSettings.resampler(), utau) ||
+                     EngineTrust::ask(_decl, appSettings, project.resampler(), utau,
+                                      EngineTrust::Kind::Resampler));
+                if (resamplerTrusted) {
                     engines.resampler = EngineTrust::resolved(project.resampler(), utau);
+                } else {
+                    engines.resampler.clear();
                 }
+                return engines;
+            }
+            const bool wavtoolValid = !projectWavtool.is_absolute() &&
+                                      EngineTrust::exists(project.wavtool(), utau);
+            const bool wavtoolTrusted =
+                wavtoolValid &&
+                (EngineTrust::samePath(project.wavtool(), appSettings.wavtool(), utau) ||
+                 EngineTrust::ask(_decl, appSettings, project.wavtool(), utau,
+                                  EngineTrust::Kind::Wavtool));
+            const bool resamplerValid = !projectResampler.is_absolute() &&
+                                        EngineTrust::exists(project.resampler(), utau);
+            const bool resamplerTrusted =
+                resamplerValid &&
+                (EngineTrust::samePath(project.resampler(), appSettings.resampler(), utau) ||
+                 EngineTrust::ask(_decl, appSettings, project.resampler(), utau,
+                                  EngineTrust::Kind::Resampler));
+            if (wavtoolTrusted && resamplerTrusted) {
+                engines.wavtool = EngineTrust::resolved(project.wavtool(), utau);
+                engines.resampler = EngineTrust::resolved(project.resampler(), utau);
+            } else {
+                engines.wavtool.clear();
+                engines.resampler.clear();
             }
             return engines;
         }
