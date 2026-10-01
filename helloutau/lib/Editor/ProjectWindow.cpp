@@ -1146,9 +1146,9 @@ namespace hello::daw {
                 });
             showToolBar->setCheckable(true);
             showToolBar->setChecked(editor->settings().isToolBarVisible());
-            addCommand(QStringLiteral("helloutau.select.finerQuantization"),
+            addCommand(QStringLiteral("helloutau.select.decreaseQuantizationInterval"),
                        [this] { stepQuantization(true); });
-            addCommand(QStringLiteral("helloutau.select.coarserQuantization"),
+            addCommand(QStringLiteral("helloutau.select.increaseQuantizationInterval"),
                        [this] { stepQuantization(false); });
             addCommand(QStringLiteral("helloutau.view.commandPalette"), [this] {
                 palette->setCommands(commandEntries());

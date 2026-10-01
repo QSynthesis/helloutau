@@ -117,9 +117,11 @@
         <!-- The grid to which drags snap, a box in the tool bar. The two commands step through
              its choices, from a quarter note to a sixty-fourth and off. -->
         <action id="helloutau.select.quantization" text="Quantization" category="Select" />
-        <action id="helloutau.select.finerQuantization" text="&amp;Decrease Quantization Interval"
+        <action id="helloutau.select.decreaseQuantizationInterval"
+                text="&amp;Decrease Quantization Interval"
                 category="Select" shortcut="Ctrl+[" />
-        <action id="helloutau.select.coarserQuantization" text="&amp;Increase Quantization Interval"
+        <action id="helloutau.select.increaseQuantizationInterval"
+                text="&amp;Increase Quantization Interval"
                 category="Select" shortcut="Ctrl+]" />
         <action id="helloutau.select.selectAll" text="Select &amp;All" category="Select"
                 shortcut="Ctrl+A" />
@@ -249,9 +251,8 @@
                 <action id="helloutau.select.penTool" />
                 <action id="helloutau.select.pitchTool" />
                 <separator />
-                <action id="helloutau.select.quantization" />
-                <action id="helloutau.select.finerQuantization" />
-                <action id="helloutau.select.coarserQuantization" />
+                <action id="helloutau.select.decreaseQuantizationInterval" />
+                <action id="helloutau.select.increaseQuantizationInterval" />
             </menu>
             <menu id="helloutau.view">
                 <action id="helloutau.view.showToolBar" />
