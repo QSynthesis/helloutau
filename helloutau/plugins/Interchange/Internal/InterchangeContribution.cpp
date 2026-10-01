@@ -20,8 +20,9 @@ namespace hello::daw {
 
     InterchangeContribution::~InterchangeContribution() = default;
 
-    const QAK::ActionExtension *InterchangeContribution::extension() const {
-        return interchangeActions();
+    // Projects are imported and exported from the project window alone.
+    const QAK::ActionExtension *InterchangeContribution::extension(Editor::WindowKind kind) const {
+        return kind == Editor::ProjectWindowKind ? interchangeActions() : nullptr;
     }
 
     void InterchangeContribution::addActions(ProjectWindow *window,

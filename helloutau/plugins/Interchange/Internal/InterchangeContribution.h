@@ -16,7 +16,7 @@ namespace hello::daw {
         explicit InterchangeContribution(kit::InterchangeRegistry *registry);
         ~InterchangeContribution();
 
-        const QAK::ActionExtension *extension() const override;
+        const QAK::ActionExtension *extension(Editor::WindowKind kind) const override;
         void addActions(ProjectWindow *window, QAK::WidgetActionContext *context) override;
 
     private:

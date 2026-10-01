@@ -45,10 +45,22 @@ namespace hello::daw {
 
         ~Editor();
 
+        /// The kinds of window, each with an action registry of its own
+        enum WindowKind {
+            ProjectWindowKind,
+            VoiceBankWindowKind,
+        };
+
+        /// The kinds of window in the order in which the settings list them
+        static constexpr WindowKind windowKinds[] = {ProjectWindowKind, VoiceBankWindowKind};
+
         AppSettings &settings() const;
 
-        /// Returns the action registry of all windows. Each window is a context of the registry.
-        QAK::ActionRegistry *actionRegistry() const;
+        /// Returns the action registry of the windows of \a kind, with the menus, the tool bars,
+        /// the commands and the shortcuts of that kind. Each window of the kind is a context of
+        /// the registry. The shortcuts and the changes to the menus of one kind do not affect
+        /// the other.
+        QAK::ActionRegistry *actionRegistry(WindowKind kind) const;
 
         /// Returns the theme manager of all windows, with the built-in theme under
         /// \c :/helloutau/themes.
@@ -64,15 +76,17 @@ namespace hello::daw {
         /// dialog in docs/Widgets.md.
         SettingCatalog *settingCatalog() const;
 
-        /// Writes the shortcuts that actionRegistry() overrides to \c keymap.json beside the
-        /// settings, which the next editor reads at start. See the keymap in docs/Widgets.md.
+        /// Writes the shortcuts that the action registries override to \c keymap.json beside the
+        /// settings, a section for each kind of window, which the next editor reads at start.
+        /// See the keymap in docs/Widgets.md.
         ///
         /// \return whether the file is written, with the reason in \a error otherwise
         bool saveKeymap(QString *error) const;
 
-        /// Writes the changes of actionRegistry() to the default layouts of the menus and the
-        /// tool bars to \c actionLayouts.json beside the settings, which the next editor reads
-        /// at start. See the menus and tool bars in docs/Widgets.md.
+        /// Writes the changes of the action registries to the default layouts of the menus and
+        /// the tool bars to \c actionLayouts.json beside the settings, a section for each kind of
+        /// window, which the next editor reads at start. See the menus and tool bars in
+        /// docs/Widgets.md.
         ///
         /// \return whether the file is written, with the reason in \a error otherwise
         bool saveActionLayouts(QString *error) const;

@@ -1,6 +1,8 @@
 #include "Editor.h"
 
+#include <iterator>
 #include <memory>
+#include <utility>
 
 #include <QtCore/QDir>
 #include <QtCore/QPointer>
@@ -73,20 +75,25 @@ namespace hello::daw {
         }
 
         void init(Editor *decl) {
-            // The extensions of the editor itself come as contributions too, see
-            // BuiltinActions.
-            registry = new QAK::ActionRegistry(decl);
-            for (const auto contribution : ActionRegistrations::instance().contributions()) {
-                registry->addExtension(contribution->extension());
+            // A registry for each kind of window. The extensions of the editor itself come as
+            // contributions too, see BuiltinActions.
+            for (const auto kind : Editor::windowKinds) {
+                const auto registry = new QAK::ActionRegistry(decl);
+                registries[kind] = registry;
+                for (const auto contribution : ActionRegistrations::instance().contributions()) {
+                    if (const auto extension = contribution->extension(kind)) {
+                        registry->addExtension(extension);
+                    }
+                }
+                addEditorIcons(registry);
             }
             ActionRegistrations::instance().addListener(this);
-            addEditorIcons(registry);
             // The shortcuts that the user assigned and the changes to the menus and tool bars,
-            // each in a file of its own beside the settings
+            // each in a file of its own beside the settings with a section for each kind
             keymapFile = KeymapFile::fileNameFor(settings->fileName());
-            KeymapFile::read(registry, keymapFile);
+            KeymapFile::read(sections(), keymapFile);
             actionLayoutsFile = ActionLayoutsFile::fileNameFor(settings->fileName());
-            ActionLayoutsFile::read(registry, actionLayoutsFile);
+            ActionLayoutsFile::read(sections(), actionLayoutsFile);
             themes = new ThemeManager(decl);
             themes->addSearchPath(QStringLiteral(":/helloutau/themes"));
             catalog = new SettingCatalog(decl);
@@ -96,7 +103,11 @@ namespace hello::daw {
         // The windows take the actions of a contribution as it comes, and the menus and
         // shortcuts are rebuilt with the extension of the contribution
         void contributionAdded(ActionContribution *contribution) override {
-            registry->addExtension(contribution->extension());
+            for (const auto kind : Editor::windowKinds) {
+                if (const auto extension = contribution->extension(kind)) {
+                    registries[kind]->addExtension(extension);
+                }
+            }
             for (const auto &window : std::as_const(windows)) {
                 if (window) {
                     contribution->addActions(window.data(), window->actionContext());
@@ -111,31 +122,46 @@ namespace hello::daw {
         }
 
         void contributionRemoved(ActionContribution *contribution) override {
-            const auto extension = contribution->extension();
-            for (const auto &window : std::as_const(windows)) {
-                if (window) {
-                    ActionRegistrations::removeActions(extension, window->actionContext());
+            if (const auto extension = contribution->extension(Editor::ProjectWindowKind)) {
+                for (const auto &window : std::as_const(windows)) {
+                    if (window) {
+                        ActionRegistrations::removeActions(extension, window->actionContext());
+                    }
                 }
+                registries[Editor::ProjectWindowKind]->removeExtension(extension);
             }
-            for (const auto &window : std::as_const(voiceBankWindows)) {
-                if (window) {
-                    ActionRegistrations::removeActions(extension, window->actionContext());
+            if (const auto extension = contribution->extension(Editor::VoiceBankWindowKind)) {
+                for (const auto &window : std::as_const(voiceBankWindows)) {
+                    if (window) {
+                        ActionRegistrations::removeActions(extension, window->actionContext());
+                    }
                 }
+                registries[Editor::VoiceBankWindowKind]->removeExtension(extension);
             }
-            registry->removeExtension(extension);
             updateContexts();
         }
 
         void updateContexts() const {
-            for (const auto element :
-                 {QAK::AE_Layouts, QAK::AE_Texts, QAK::AE_Keymap, QAK::AE_Icons}) {
-                registry->updateContext(element);
+            for (const auto registry : registries) {
+                for (const auto element :
+                     {QAK::AE_Layouts, QAK::AE_Texts, QAK::AE_Keymap, QAK::AE_Icons}) {
+                    registry->updateContext(element);
+                }
             }
+        }
+
+        // The registries with the keys of their sections in the keymap and layout files
+        QList<std::pair<QString, QAK::ActionRegistry *>> sections() const {
+            return {
+                {QStringLiteral("projectWindow"),   registries[Editor::ProjectWindowKind]  },
+                {QStringLiteral("voiceBankWindow"), registries[Editor::VoiceBankWindowKind]},
+            };
         }
 
         std::unique_ptr<AppSettings> ownedSettings;
         AppSettings *settings;
-        QAK::ActionRegistry *registry = nullptr;
+        // The registry of each kind of window, by Editor::WindowKind
+        QAK::ActionRegistry *registries[std::size(Editor::windowKinds)] = {};
         // The files of the shortcuts and of the changes to the menus, beside the settings
         QString keymapFile;
         QString actionLayoutsFile;
@@ -260,12 +286,12 @@ namespace hello::daw {
 
     bool Editor::saveKeymap(QString *error) const {
         stdc_impl_t;
-        return KeymapFile::write(impl.registry, impl.keymapFile, error);
+        return KeymapFile::write(impl.sections(), impl.keymapFile, error);
     }
 
     bool Editor::saveActionLayouts(QString *error) const {
         stdc_impl_t;
-        return ActionLayoutsFile::write(impl.registry, impl.actionLayoutsFile, error);
+        return ActionLayoutsFile::write(impl.sections(), impl.actionLayoutsFile, error);
     }
 
     bool Editor::watchesDisk() const {
@@ -281,7 +307,7 @@ namespace hello::daw {
     Editor::~Editor() {
         stdc_impl_t;
         ActionRegistrations::instance().removeListener(&impl);
-        // The windows refer to the registry and the settings, so they go first.
+        // The windows refer to the registries and the settings, so they go first.
         for (const auto &window : std::as_const(impl.windows)) {
             delete window.data();
         }
@@ -295,9 +321,9 @@ namespace hello::daw {
         return *impl.settings;
     }
 
-    QAK::ActionRegistry *Editor::actionRegistry() const {
+    QAK::ActionRegistry *Editor::actionRegistry(WindowKind kind) const {
         stdc_impl_t;
-        return impl.registry;
+        return impl.registries[kind];
     }
 
     ThemeManager *Editor::themeManager() const {

@@ -2,6 +2,7 @@
 
 #include <functional>
 
+#include <QtCore/QSet>
 #include <QtGui/QAction>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QDialog>
@@ -20,26 +21,28 @@
 
 #include <QAKCore/actionregistry.h>
 
-#include <helloutau/Editor/Editor.h>
-
 namespace hello::daw {
 
     namespace {
 
+        // The id and the kind of window of the command of an item. A window or a menu has no id.
         constexpr int IdRole = Qt::UserRole;
+        constexpr int KindRole = Qt::UserRole + 1;
 
-        // A window, by the top-level menus of its layouts: its menu bar and its tool bar
+        // A kind of window, by its name and the top-level menu of its menu bar
         struct WindowLayout {
+            Editor::WindowKind kind;
             const char *name;
             const char *menuBar;
-            const char *toolBar;
         };
 
         const WindowLayout windowLayouts[] = {
-            {QT_TRANSLATE_NOOP("hello::daw::KeymapSettingPage", "Project Window"),
-             "helloutau.mainMenu",      "helloutau.mainToolBar"            },
-            {QT_TRANSLATE_NOOP("hello::daw::KeymapSettingPage", "Voice Bank Window"),
-             "helloutau.voiceBankMenu", "helloutau.voiceBank.sampleToolBar"},
+            {Editor::ProjectWindowKind,
+             QT_TRANSLATE_NOOP("hello::daw::KeymapSettingPage", "Project Window"),
+             "helloutau.mainMenu"     },
+            {Editor::VoiceBankWindowKind,
+             QT_TRANSLATE_NOOP("hello::daw::KeymapSettingPage", "Voice Bank Window"),
+             "helloutau.voiceBankMenu"},
         };
 
         QString textOf(const QList<QKeySequence> &keys) {
@@ -50,64 +53,75 @@ namespace hello::daw {
             return texts.join(QStringLiteral(", "));
         }
 
+        // Returns the command of item, or std::nullopt for a window or a menu.
+        std::optional<KeymapSettingPage::Command> commandOf(const QTreeWidgetItem *item) {
+            const auto id = item ? item->data(0, IdRole).toString() : QString();
+            if (id.isEmpty()) {
+                return std::nullopt;
+            }
+            return KeymapSettingPage::Command{Editor::WindowKind(item->data(0, KindRole).toInt()),
+                                              id};
+        }
+
     }
 
     KeymapSettingPage::KeymapSettingPage(Editor *editor, QObject *parent)
-        : SettingPage(QLatin1String(pageId), parent), m_editor(editor),
-          m_registry(editor->actionRegistry()) {
+        : SettingPage(QLatin1String(pageId), parent), m_editor(editor) {
         setTitle(tr("Keymap"));
         setDescription(tr("The shortcuts of the commands."));
         setKeywords(
             {QStringLiteral("Keymap"), QStringLiteral("shortcut"), QStringLiteral("keyboard")});
     }
 
-    QList<QKeySequence> KeymapSettingPage::shortcuts(const QString &id) const {
-        return m_shortcuts.value(id);
+    QAK::ActionRegistry *KeymapSettingPage::registry(Editor::WindowKind kind) const {
+        return m_editor->actionRegistry(kind);
     }
 
-    bool KeymapSettingPage::sharesWindow(const QString &a, const QString &b) const {
-        const auto first = m_windows.value(a);
-        const auto second = m_windows.value(b);
-        return first.isEmpty() || second.isEmpty() || first.intersects(second);
+    QList<QKeySequence> KeymapSettingPage::shortcuts(const Command &command) const {
+        return m_shortcuts[command.kind].value(command.id);
     }
 
-    QStringList KeymapSettingPage::conflicts(const QString &id, const QKeySequence &key) const {
-        QStringList result;
-        for (const auto &other : m_commands) {
-            if (other != id && m_shortcuts.value(other).contains(key) && sharesWindow(id, other)) {
-                result.push_back(other);
+    QList<KeymapSettingPage::Command> KeymapSettingPage::conflicts(const Command &command,
+                                                                   const QKeySequence &key) const {
+        QList<Command> result;
+        for (const auto &other : m_commands[command.kind]) {
+            if (other != command.id && m_shortcuts[command.kind].value(other).contains(key)) {
+                result.push_back({command.kind, other});
             }
         }
         return result;
     }
 
-    void KeymapSettingPage::addShortcut(const QString &id, const QKeySequence &key,
-                                        const QStringList &removed) {
+    void KeymapSettingPage::addShortcut(const Command &command, const QKeySequence &key,
+                                        const QList<Command> &removed) {
         for (const auto &other : removed) {
-            m_shortcuts[other].removeAll(key);
+            m_shortcuts[other.kind][other.id].removeAll(key);
         }
-        if (!m_shortcuts[id].contains(key)) {
-            m_shortcuts[id].push_back(key);
+        auto &keys = m_shortcuts[command.kind][command.id];
+        if (!keys.contains(key)) {
+            keys.push_back(key);
         }
         updateItems();
         Q_EMIT modifiedChanged();
     }
 
-    void KeymapSettingPage::removeShortcut(const QString &id, const QKeySequence &key) {
-        m_shortcuts[id].removeAll(key);
+    void KeymapSettingPage::removeShortcut(const Command &command, const QKeySequence &key) {
+        m_shortcuts[command.kind][command.id].removeAll(key);
         updateItems();
         Q_EMIT modifiedChanged();
     }
 
-    void KeymapSettingPage::resetShortcuts(const QString &id) {
-        m_shortcuts[id] = defaultsOf(id);
+    void KeymapSettingPage::resetShortcuts(const Command &command) {
+        m_shortcuts[command.kind][command.id] = defaultsOf(command);
         updateItems();
         Q_EMIT modifiedChanged();
     }
 
     void KeymapSettingPage::resetAll() {
-        for (const auto &id : m_commands) {
-            m_shortcuts[id] = defaultsOf(id);
+        for (const auto kind : Editor::windowKinds) {
+            for (const auto &id : std::as_const(m_commands[kind])) {
+                m_shortcuts[kind][id] = defaultsOf({kind, id});
+            }
         }
         updateItems();
         Q_EMIT modifiedChanged();
@@ -117,37 +131,41 @@ namespace hello::daw {
         return m_tree;
     }
 
-    QString KeymapSettingPage::currentId() const {
-        const auto item = m_tree ? m_tree->currentItem() : nullptr;
-        return item ? item->data(0, IdRole).toString() : QString();
+    std::optional<KeymapSettingPage::Command> KeymapSettingPage::currentCommand() const {
+        return commandOf(m_tree ? m_tree->currentItem() : nullptr);
     }
 
     bool KeymapSettingPage::isModified() const {
         if (!m_tree) {
             return false;
         }
-        for (const auto &id : m_commands) {
-            if (m_shortcuts.value(id) != m_registry->actionShortcuts(id)) {
-                return true;
+        for (const auto kind : Editor::windowKinds) {
+            for (const auto &id : m_commands[kind]) {
+                if (m_shortcuts[kind].value(id) != registry(kind)->actionShortcuts(id)) {
+                    return true;
+                }
             }
         }
         return false;
     }
 
     bool KeymapSettingPage::apply(QString *error) {
-        // The overrides of commands that are not registered now, such as those of a plugin
-        // turned off, stay.
-        auto family = m_registry->shortcutsFamily();
-        for (const auto &id : std::as_const(m_commands)) {
-            const auto keys = m_shortcuts.value(id);
-            if (keys == defaultsOf(id)) {
-                family.remove(id);
-            } else {
-                family.insert(id, keys);
+        for (const auto kind : Editor::windowKinds) {
+            // The overrides of commands that are not registered now, such as those of a plugin
+            // turned off, stay.
+            const auto actions = registry(kind);
+            auto family = actions->shortcutsFamily();
+            for (const auto &id : std::as_const(m_commands[kind])) {
+                const auto keys = m_shortcuts[kind].value(id);
+                if (keys == defaultsOf({kind, id})) {
+                    family.remove(id);
+                } else {
+                    family.insert(id, keys);
+                }
             }
+            actions->setShortcutsFamily(family);
+            actions->updateContext(QAK::AE_Keymap);
         }
-        m_registry->setShortcutsFamily(family);
-        m_registry->updateContext(QAK::AE_Keymap);
         if (!m_editor->saveKeymap(error)) {
             return false;
         }
@@ -156,103 +174,88 @@ namespace hello::daw {
         return true;
     }
 
-    QString KeymapSettingPage::nameOf(const QString &id) const {
-        const auto info = m_registry->actionInfo(id);
-        return info ? info->text().withoutMnemonic() : id;
+    QString KeymapSettingPage::nameOf(const Command &command) const {
+        const auto info = registry(command.kind)->actionInfo(command.id);
+        return info ? info->text().withoutMnemonic() : command.id;
     }
 
-    QList<QKeySequence> KeymapSettingPage::defaultsOf(const QString &id) const {
-        const auto info = m_registry->actionInfo(id);
+    QList<QKeySequence> KeymapSettingPage::defaultsOf(const Command &command) const {
+        const auto info = registry(command.kind)->actionInfo(command.id);
         return info ? info->shortcuts() : QList<QKeySequence>();
     }
 
     void KeymapSettingPage::load() {
-        m_commands.clear();
-        m_shortcuts.clear();
-        m_windows.clear();
-        for (const auto &id : m_registry->actionIds()) {
-            const auto info = m_registry->actionInfo(id);
-            if (info && info->isCommand()) {
-                m_commands.push_back(id);
-                m_shortcuts.insert(id, m_registry->actionShortcuts(id));
+        for (const auto kind : Editor::windowKinds) {
+            m_commands[kind].clear();
+            m_shortcuts[kind].clear();
+            const auto actions = registry(kind);
+            for (const auto &id : actions->actionIds()) {
+                const auto info = actions->actionInfo(id);
+                if (info && info->isCommand()) {
+                    m_commands[kind].push_back(id);
+                    m_shortcuts[kind].insert(id, actions->actionShortcuts(id));
+                }
             }
-        }
-        // Records the windows whose menu bar or tool bar holds each command.
-        const auto layouts = m_registry->layouts().adjacencyMap();
-        for (const auto &window : windowLayouts) {
-            QSet<QString> visited;
-            const std::function<void(const QString &)> visit = [&](const QString &container) {
-                if (visited.contains(container)) {
-                    return;
-                }
-                visited.insert(container);
-                for (const auto &entry : layouts.value(container)) {
-                    if (entry.type() == QAK::ActionLayoutEntry::Action) {
-                        m_windows[entry.id()].insert(QLatin1String(window.name));
-                    } else if (entry.type() == QAK::ActionLayoutEntry::Menu ||
-                               entry.type() == QAK::ActionLayoutEntry::Group) {
-                        visit(entry.id());
-                    }
-                }
-            };
-            visit(QLatin1String(window.menuBar));
-            visit(QLatin1String(window.toolBar));
         }
     }
 
     void KeymapSettingPage::fillTree() {
         m_tree->clear();
-        const auto layouts = m_registry->layouts().adjacencyMap();
-        QSet<QString> listed;
-        const auto leaf = [&](QTreeWidgetItem *parent, const QString &id) {
-            auto item = new QTreeWidgetItem(parent, {nameOf(id)});
-            item->setData(0, IdRole, id);
-            const auto info = m_registry->actionInfo(id);
-            if (const auto icon = m_registry->actionIcon(QString(), id, info->icon())) {
-                item->setIcon(0, icon->icon());
-            }
-            listed.insert(id);
-        };
-        // Lists the commands of the menus under parent. A menu becomes an item of its own, and a
-        // group is listed inline. An empty menu is removed.
-        QSet<QString> visited;
-        const std::function<void(QTreeWidgetItem *, const QString &)> fill =
-            [&](QTreeWidgetItem *parent, const QString &container) {
-                if (visited.contains(container)) {
-                    return;
+        for (const auto &window : windowLayouts) {
+            const auto kind = window.kind;
+            const auto actions = registry(kind);
+            const auto layouts = actions->layouts().adjacencyMap();
+            QSet<QString> listed;
+            const auto leaf = [&](QTreeWidgetItem *parent, const QString &id) {
+                auto item = new QTreeWidgetItem(parent, {nameOf({kind, id})});
+                item->setData(0, IdRole, id);
+                item->setData(0, KindRole, int(kind));
+                const auto info = actions->actionInfo(id);
+                if (const auto icon = actions->actionIcon(QString(), id, info->icon())) {
+                    item->setIcon(0, icon->icon());
                 }
-                visited.insert(container);
-                for (const auto &entry : layouts.value(container)) {
-                    const auto id = entry.id();
-                    if (entry.type() == QAK::ActionLayoutEntry::Action) {
-                        if (m_shortcuts.contains(id)) {
-                            leaf(parent, id);
-                        }
-                    } else if (entry.type() == QAK::ActionLayoutEntry::Group) {
-                        fill(parent, id);
-                    } else if (entry.type() == QAK::ActionLayoutEntry::Menu) {
-                        auto menu = new QTreeWidgetItem(parent, {nameOf(id)});
-                        fill(menu, id);
-                        if (menu->childCount() == 0) {
-                            delete menu;
+                listed.insert(id);
+            };
+            // Lists the commands of the menus under parent. A menu becomes an item of its own,
+            // and a group is listed inline. An empty menu is removed.
+            QSet<QString> visited;
+            const std::function<void(QTreeWidgetItem *, const QString &)> fill =
+                [&](QTreeWidgetItem *parent, const QString &container) {
+                    if (visited.contains(container)) {
+                        return;
+                    }
+                    visited.insert(container);
+                    for (const auto &entry : layouts.value(container)) {
+                        const auto id = entry.id();
+                        if (entry.type() == QAK::ActionLayoutEntry::Action) {
+                            if (m_shortcuts[kind].contains(id)) {
+                                leaf(parent, id);
+                            }
+                        } else if (entry.type() == QAK::ActionLayoutEntry::Group) {
+                            fill(parent, id);
+                        } else if (entry.type() == QAK::ActionLayoutEntry::Menu) {
+                            auto menu = new QTreeWidgetItem(parent, {nameOf({kind, id})});
+                            fill(menu, id);
+                            if (menu->childCount() == 0) {
+                                delete menu;
+                            }
                         }
                     }
-                }
-                visited.remove(container);
-            };
-        for (const auto &window : windowLayouts) {
+                    visited.remove(container);
+                };
             auto item = new QTreeWidgetItem(m_tree, {tr(window.name)});
             fill(item, QLatin1String(window.menuBar));
-        }
-        auto other = new QTreeWidgetItem(m_tree, {tr("Other")});
-        for (const auto &id : std::as_const(m_commands)) {
-            if (!listed.contains(id)) {
-                leaf(other, id);
+            // The commands of this kind of window in no menu of its menu bar
+            auto other = new QTreeWidgetItem(item, {tr("Other")});
+            for (const auto &id : std::as_const(m_commands[kind])) {
+                if (!listed.contains(id)) {
+                    leaf(other, id);
+                }
             }
-        }
-        other->sortChildren(0, Qt::AscendingOrder);
-        if (other->childCount() == 0) {
-            delete other;
+            other->sortChildren(0, Qt::AscendingOrder);
+            if (other->childCount() == 0) {
+                delete other;
+            }
         }
         updateItems();
         m_tree->expandToDepth(0);
@@ -266,13 +269,13 @@ namespace hello::daw {
         // as JetBrains IDEs mark them.
         const auto modified = m_tree->palette().color(QPalette::Link);
         for (QTreeWidgetItemIterator it(m_tree); *it; ++it) {
-            const auto id = (*it)->data(0, IdRole).toString();
-            if (id.isEmpty()) {
+            const auto command = commandOf(*it);
+            if (!command) {
                 continue;
             }
-            const auto keys = m_shortcuts.value(id);
+            const auto keys = shortcuts(*command);
             (*it)->setText(1, textOf(keys));
-            const auto brush = keys == defaultsOf(id) ? QBrush() : QBrush(modified);
+            const auto brush = keys == defaultsOf(*command) ? QBrush() : QBrush(modified);
             (*it)->setForeground(0, brush);
             (*it)->setForeground(1, brush);
         }
@@ -286,16 +289,16 @@ namespace hello::daw {
         }
         const auto text = m_search->text().trimmed();
         const auto key = m_keySearch->keySequence();
-        // A command is shown if it matches, and a menu if one of its items is shown.
+        // A command is shown if it matches, and a window or a menu if one of its items is shown.
         const std::function<bool(QTreeWidgetItem *)> show = [&](QTreeWidgetItem *item) {
-            const auto id = item->data(0, IdRole).toString();
+            const auto command = commandOf(item);
             bool shown = false;
-            if (!id.isEmpty()) {
-                const auto info = m_registry->actionInfo(id);
+            if (command) {
+                const auto info = registry(command->kind)->actionInfo(command->id);
                 const bool byText =
                     text.isEmpty() || item->text(0).contains(text, Qt::CaseInsensitive) ||
                     (info && info->text().source.contains(text, Qt::CaseInsensitive));
-                const bool byKey = key.isEmpty() || m_shortcuts.value(id).contains(key);
+                const bool byKey = key.isEmpty() || shortcuts(*command).contains(key);
                 shown = byText && byKey;
             } else {
                 for (int i = 0; i < item->childCount(); ++i) {
@@ -314,17 +317,18 @@ namespace hello::daw {
     }
 
     void KeymapSettingPage::updateButtons() {
-        const auto id = currentId();
-        m_add->setEnabled(!id.isEmpty());
-        m_remove->setEnabled(!id.isEmpty() && !m_shortcuts.value(id).isEmpty());
-        m_reset->setEnabled(!id.isEmpty() && m_shortcuts.value(id) != defaultsOf(id));
+        const auto command = currentCommand();
+        m_add->setEnabled(command.has_value());
+        m_remove->setEnabled(command && !shortcuts(*command).isEmpty());
+        m_reset->setEnabled(command && shortcuts(*command) != defaultsOf(*command));
     }
 
-    // Asks for a shortcut of the current command in a dialog that lists the commands that
-    // already have it, and adds it, after asking whether to remove it from them.
+    // Asks for a shortcut of the current command in a dialog that lists the commands of the same
+    // kind of window that already have it, and adds it, after asking whether to remove it from
+    // them.
     void KeymapSettingPage::askShortcut() {
-        const auto id = currentId();
-        if (id.isEmpty()) {
+        const auto command = currentCommand();
+        if (!command) {
             return;
         }
         QDialog dialog(m_tree->window());
@@ -338,18 +342,22 @@ namespace hello::daw {
         conflictLabel->setWordWrap(true);
         auto buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
         auto layout = new QVBoxLayout(&dialog);
-        layout->addWidget(new QLabel(tr("Press the shortcut of %1:").arg(nameOf(id))));
+        layout->addWidget(new QLabel(tr("Press the shortcut of %1:").arg(nameOf(*command))));
         layout->addWidget(edit);
         layout->addWidget(conflictLabel);
         layout->addWidget(buttons);
-        const auto update = [&] {
-            const auto key = edit->keySequence();
+        const auto namesOf = [this](const QList<Command> &commands) {
             QStringList names;
-            for (const auto &other : conflicts(id, key)) {
+            for (const auto &other : commands) {
                 names.push_back(nameOf(other));
             }
+            return names.join(u", ");
+        };
+        const auto update = [&] {
+            const auto key = edit->keySequence();
+            const auto others = conflicts(*command, key);
             conflictLabel->setText(
-                names.isEmpty() ? QString() : tr("Already assigned to: %1").arg(names.join(u", ")));
+                others.isEmpty() ? QString() : tr("Already assigned to: %1").arg(namesOf(others)));
             buttons->button(QDialogButtonBox::Ok)->setEnabled(!key.isEmpty());
         };
         connect(edit, &QKeySequenceEdit::keySequenceChanged, &dialog, update);
@@ -360,16 +368,12 @@ namespace hello::daw {
             return;
         }
         const auto key = edit->keySequence();
-        const auto others = conflicts(id, key);
-        QStringList removed;
+        const auto others = conflicts(*command, key);
+        QList<Command> removed;
         if (!others.isEmpty()) {
-            QStringList names;
-            for (const auto &other : others) {
-                names.push_back(nameOf(other));
-            }
             QMessageBox box(QMessageBox::Warning, tr("Add Keyboard Shortcut"),
                             tr("%1 is already assigned to %2. Remove it from them?")
-                                .arg(key.toString(QKeySequence::NativeText), names.join(u", ")),
+                                .arg(key.toString(QKeySequence::NativeText), namesOf(others)),
                             QMessageBox::Cancel, m_tree->window());
             const auto remove = box.addButton(tr("&Remove"), QMessageBox::AcceptRole);
             const auto leave = box.addButton(tr("&Leave"), QMessageBox::NoRole);
@@ -381,7 +385,7 @@ namespace hello::daw {
                 return;
             }
         }
-        addShortcut(id, key, removed);
+        addShortcut(*command, key, removed);
     }
 
     QWidget *KeymapSettingPage::createWidget() {
@@ -440,23 +444,27 @@ namespace hello::daw {
         connect(m_add, &QPushButton::clicked, this, [this] { askShortcut(); });
         connect(resetAllButton, &QPushButton::clicked, this, [this] { resetAll(); });
         connect(m_reset, &QPushButton::clicked, this, [this] {
-            if (const auto id = currentId(); !id.isEmpty()) {
-                resetShortcuts(id);
+            if (const auto command = currentCommand()) {
+                resetShortcuts(*command);
             }
         });
         // Removes the shortcut of the current command, or the shortcut chosen from a menu if the
         // command has several.
         const auto removeFrom = [this](const QPoint &at) {
-            const auto id = currentId();
-            const auto keys = m_shortcuts.value(id);
+            const auto command = currentCommand();
+            if (!command) {
+                return;
+            }
+            const auto keys = shortcuts(*command);
             if (keys.size() == 1) {
-                removeShortcut(id, keys.first());
+                removeShortcut(*command, keys.first());
                 return;
             }
             QMenu menu(m_tree);
             for (const auto &key : keys) {
                 connect(menu.addAction(tr("Remove %1").arg(key.toString(QKeySequence::NativeText))),
-                        &QAction::triggered, this, [this, id, key] { removeShortcut(id, key); });
+                        &QAction::triggered, this,
+                        [this, command, key] { removeShortcut(*command, key); });
             }
             menu.exec(at);
         };
@@ -464,20 +472,22 @@ namespace hello::daw {
             removeFrom(m_remove->mapToGlobal(QPoint(0, m_remove->height())));
         });
         connect(m_tree, &QWidget::customContextMenuRequested, this, [this](const QPoint &at) {
-            const auto id = currentId();
-            if (id.isEmpty()) {
+            const auto command = currentCommand();
+            if (!command) {
                 return;
             }
             QMenu menu(m_tree);
             connect(menu.addAction(tr("&Add Keyboard Shortcut...")), &QAction::triggered, this,
                     [this] { askShortcut(); });
-            for (const auto &key : m_shortcuts.value(id)) {
+            for (const auto &key : shortcuts(*command)) {
                 connect(menu.addAction(tr("Remove %1").arg(key.toString(QKeySequence::NativeText))),
-                        &QAction::triggered, this, [this, id, key] { removeShortcut(id, key); });
+                        &QAction::triggered, this,
+                        [this, command, key] { removeShortcut(*command, key); });
             }
             const auto reset = menu.addAction(tr("Re&set Shortcuts"));
-            reset->setEnabled(m_shortcuts.value(id) != defaultsOf(id));
-            connect(reset, &QAction::triggered, this, [this, id] { resetShortcuts(id); });
+            reset->setEnabled(shortcuts(*command) != defaultsOf(*command));
+            connect(reset, &QAction::triggered, this,
+                    [this, command] { resetShortcuts(*command); });
             menu.exec(m_tree->viewport()->mapToGlobal(at));
         });
         return widget;

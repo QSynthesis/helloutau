@@ -43,8 +43,11 @@ namespace hello::daw {
 
     ClassicPluginContribution::~ClassicPluginContribution() = default;
 
-    const QAK::ActionExtension *ClassicPluginContribution::extension() const {
-        return classicPluginActions();
+    // The plugins of UTAU edit the notes of a project, so the commands are in the project window
+    // alone.
+    const QAK::ActionExtension *
+        ClassicPluginContribution::extension(Editor::WindowKind kind) const {
+        return kind == Editor::ProjectWindowKind ? classicPluginActions() : nullptr;
     }
 
     void ClassicPluginContribution::addActions(ProjectWindow *window,

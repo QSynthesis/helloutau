@@ -1,0 +1,303 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The menus, the tool bar and the commands of the project window, registered with the action
+     registry of the project windows. The commands that the voice bank window has as well are
+     declared again in VoiceBankActions.xml, since each kind of window has a registry of its own
+     and the shortcuts of the two are set apart. Format: docs/action-extension-spec.md in
+     QActionKit. -->
+<actionExtension>
+    <version>1.0</version>
+    <id>helloutau.project</id>
+
+    <configuration>
+        <translationContext
+            text="hello::daw::ActionText"
+            category="hello::daw::ActionCategory"
+            description="hello::daw::ActionDescription"
+        />
+    </configuration>
+
+    <items>
+        <action id="helloutau.file.new" text="&amp;New" category="File" shortcut="Ctrl+N" />
+        <action id="helloutau.file.open" text="&amp;Open..." category="File" shortcut="Ctrl+O" />
+        <!-- A folder, opened in a voice bank window (docs/VoiceBankEditor.md) -->
+        <action id="helloutau.file.openVoiceBank" text="Open &amp;Voice Bank..." category="File" />
+        <!-- Filled by the window with the files last opened -->
+        <action id="helloutau.file.openRecent" text="Open &amp;Recent" category="File"
+                external="true" />
+        <!-- Every recent project, or every recent voice bank, in a command palette. These
+             commands are in no menu, only in the command palette, like the "More" items of Open
+             Recent. -->
+        <action id="helloutau.file.openRecentProject" text="Open Recent &amp;Project..."
+                category="File" />
+        <action id="helloutau.file.openRecentVoiceBank" text="Open Recent &amp;Voice Bank..."
+                category="File" />
+        <!-- Forgets every recent project and voice bank after a confirmation, as "Clear
+             Recently Opened..." of VS Code. The command is in no menu, and Open Recent has an
+             item of its own. -->
+        <action id="helloutau.file.clearRecent" text="&amp;Clear Recently Opened..."
+                category="File" />
+        <action id="helloutau.file.save" text="&amp;Save" category="File" shortcut="Ctrl+S" />
+        <action id="helloutau.file.saveAs" text="Save &amp;As..." category="File"
+                shortcut="Ctrl+Shift+S" />
+        <!-- UST... in the Export menu, and Export UST... in the command palette -->
+        <action id="helloutau.file.exportUst" text="Export &amp;UST..." shortText="&amp;UST..."
+                category="File" />
+        <!-- The name, tempo, flags, output file, voice folder, engines and Mode2 of the project -->
+        <action id="helloutau.file.properties" text="Project &amp;Properties..." category="File" />
+        <action id="helloutau.file.close" text="&amp;Close" category="File" shortcut="Ctrl+W" />
+        <action id="helloutau.file.quit" text="&amp;Quit" category="File" shortcut="Ctrl+Q" />
+
+        <action id="helloutau.edit.undo" text="&amp;Undo" category="Edit" shortcut="Ctrl+Z" />
+        <action id="helloutau.edit.redo" text="&amp;Redo" category="Edit"
+                shortcuts="Ctrl+Y;Ctrl+Shift+Z" />
+        <action id="helloutau.edit.delete" text="&amp;Delete" category="Edit"
+                shortcuts="Del;Shift+Del" />
+        <action id="helloutau.edit.selectAll" text="Select &amp;All" category="Edit"
+                shortcut="Ctrl+A" />
+        <!-- The find bar over the piano roll, as the find widget of VS Code, for the lyrics -->
+        <action id="helloutau.edit.find" text="&amp;Find" category="Edit" shortcut="Ctrl+F" />
+        <action id="helloutau.edit.replace" text="Rep&amp;lace" category="Edit"
+                shortcut="Ctrl+H" />
+        <action id="helloutau.edit.findNext" text="Find &amp;Next" category="Edit"
+                shortcut="F3" />
+        <action id="helloutau.edit.findPrevious" text="Find Pre&amp;vious" category="Edit"
+                shortcut="Shift+F3" />
+        <action id="helloutau.edit.insertNote" text="&amp;Insert Note" category="Edit"
+                shortcut="Ins" />
+        <action id="helloutau.edit.splitNote" text="S&amp;plit Note..." category="Edit" />
+        <!-- A rest before the first selected note, as UTAU inserts one -->
+        <action id="helloutau.edit.insertRest" text="Insert &amp;Rest" category="Edit"
+                shortcut="Ctrl+R" />
+        <!-- The selected notes into the first, their lengths summed, as UTAU merges them -->
+        <action id="helloutau.edit.mergeNotes" text="Mer&amp;ge Notes" category="Edit"
+                shortcut="Ctrl+U" />
+        <!-- The tempo of the first selected note, from which it applies -->
+        <action id="helloutau.edit.setTempo" text="Set Te&amp;mpo..." category="Edit" />
+        <!-- The properties of the selected notes, as the note property dialog of UTAU -->
+        <action id="helloutau.edit.noteProperties" text="Note Propert&amp;ies..." category="Edit"
+                shortcut="Ctrl+E" />
+        <!-- Checked while the project turns Mode2 on -->
+        <action id="helloutau.edit.mode2" text="Mode&amp;2 Pitch" category="Edit" />
+        <action id="helloutau.edit.togglePortamento" text="Add or Remove P&amp;ortamento"
+                category="Edit" />
+        <action id="helloutau.edit.toggleVibrato" text="Add or Remove &amp;Vibrato"
+                category="Edit" />
+        <action id="helloutau.edit.editVibrato" text="Vibra&amp;to..." category="Edit" />
+        <action id="helloutau.edit.scalePitch" text="Scale Pitc&amp;h..." category="Edit" />
+        <action id="helloutau.edit.crossfadeP2P3" text="Crossfade (p&amp;2, p3)" category="Envelope" />
+        <action id="helloutau.edit.crossfadeP1P4" text="Crossfade (p&amp;1, p4)" category="Envelope" />
+        <action id="helloutau.edit.copy" text="&amp;Copy" category="Edit" shortcut="Ctrl+C" />
+        <action id="helloutau.edit.paste" text="&amp;Paste" category="Edit" shortcut="Ctrl+V" />
+        <action id="helloutau.edit.pasteParameters" text="Paste Para&amp;meters..." category="Edit"
+                shortcut="Ctrl+Shift+V" />
+        <action id="helloutau.edit.resetPortamento" text="&amp;Pitch Points" category="Reset" />
+        <action id="helloutau.edit.resetVibratos" text="&amp;Vibratos" category="Reset" />
+        <action id="helloutau.edit.resetEnvelopes" text="&amp;Envelopes" category="Reset" />
+        <action id="helloutau.edit.resetAll" text="&amp;All" category="Reset" />
+        <action id="helloutau.edit.editLyric" text="Edit &amp;Lyric" category="Edit"
+                shortcut="F2" />
+        <action id="helloutau.edit.transposeUp" text="&amp;Up a Semitone" category="Transpose"
+                shortcut="Ctrl+Up" />
+        <action id="helloutau.edit.transposeDown" text="&amp;Down a Semitone"
+                category="Transpose" shortcut="Ctrl+Down" />
+        <action id="helloutau.edit.octaveUp" text="Up an &amp;Octave" category="Transpose"
+                shortcut="Ctrl+Shift+Up" />
+        <action id="helloutau.edit.octaveDown" text="Down an O&amp;ctave" category="Transpose"
+                shortcut="Ctrl+Shift+Down" />
+        <action id="helloutau.edit.selectTool" text="&amp;Select Tool" category="Edit"
+                shortcut="V" />
+        <action id="helloutau.edit.penTool" text="P&amp;en Tool" category="Edit" shortcut="B" />
+        <action id="helloutau.edit.pitchTool" text="&amp;Freehand Pitch Tool" category="Edit"
+                shortcut="F" />
+        <!-- The grid to which drags snap, a box in the tool bar. The two commands step through
+             its choices, from a quarter note to a sixty-fourth and off. -->
+        <action id="helloutau.edit.quantization" text="Quantization" category="Edit" />
+        <action id="helloutau.edit.finerQuantization" text="&amp;Finer Quantization"
+                category="Edit" shortcut="Ctrl+[" />
+        <action id="helloutau.edit.coarserQuantization" text="&amp;Coarser Quantization"
+                category="Edit" shortcut="Ctrl+]" />
+
+        <!-- The tool bar of the project window, shown or hidden as the settings store it -->
+        <action id="helloutau.view.showToolBar" text="Show &amp;Toolbar" category="View" />
+        <!-- X as in UTAU -->
+        <action id="helloutau.view.showPitch" text="Show &amp;Pitch" category="View"
+                shortcut="X" />
+        <!-- The envelope of each note above its bar, from where its pre-utterance starts, as
+             UTAU draws it -->
+        <action id="helloutau.view.showEnvelopes" text="Show &amp;Envelopes" category="View" />
+        <!-- The modulation and the flags of each note below its bar, as UTAU shows them, with Z
+             as in UTAU -->
+        <action id="helloutau.view.showParameters" text="Show P&amp;arameters" category="View"
+                shortcut="Z" />
+        <action id="helloutau.view.commandPalette" text="&amp;Command Palette..." category="View"
+                shortcuts="Ctrl+Shift+P;F1" />
+
+        <!-- Plays, pauses what plays, or goes on from where it was paused -->
+        <action id="helloutau.playback.play" text="&amp;Play or Pause" category="Playback"
+                shortcuts="Space;F5" />
+        <action id="helloutau.playback.pause" text="Pa&amp;use or Resume" category="Playback"
+                shortcut="F6" />
+        <action id="helloutau.playback.stop" text="&amp;Stop" category="Playback" shortcut="F7" />
+        <!-- Plays the last playback again from its start, the last render without the engines
+             while its notes stay the same -->
+        <action id="helloutau.playback.replay" text="&amp;Replay" category="Playback"
+                shortcut="Shift+F5" />
+        <!-- A copy of the track file of the last prerender, the temp.wav of UTAU, apart from the
+             output file of the project -->
+        <action id="helloutau.playback.saveLastPlayed" text="Save &amp;Last Played As..."
+                category="Playback" />
+        <!-- The whole track into a WAV file, by default the output file of the project, as
+             Render WAV of UTAU -->
+        <action id="helloutau.playback.renderTrack" text="Render &amp;Track to WAV..."
+                category="Playback" />
+
+        <!-- The voice bank of the project in its window, at the entry of the first selected note
+             if a note is selected, as Ctrl+G in UTAU -->
+        <action id="helloutau.tools.editVoiceBank" text="Edit &amp;Voice Bank" category="Tools"
+                shortcut="Ctrl+G" />
+        <!-- Deletes the fragments and the track file of the render cache of the project -->
+        <action id="helloutau.tools.clearCache" text="&amp;Clear Render Cache" category="Tools" />
+        <action id="helloutau.tools.settings" text="&amp;Settings..." category="Tools" />
+
+        <menu id="helloutau.mainMenu" topLevel="true" />
+        <menu id="helloutau.file" text="&amp;File" />
+        <menu id="helloutau.edit" text="&amp;Edit" />
+        <menu id="helloutau.view" text="&amp;View" />
+        <menu id="helloutau.playback" text="&amp;Playback" />
+        <menu id="helloutau.tools" text="&amp;Tools" />
+        <!-- Formats other than .usth, UST first; MIDI and the rest will join it -->
+        <menu id="helloutau.file.export" text="&amp;Export" />
+        <menu id="helloutau.edit.transpose" text="&amp;Transpose" />
+        <menu id="helloutau.edit.envelope" text="E&amp;nvelope" />
+        <menu id="helloutau.edit.reset" text="Rese&amp;t" />
+
+        <!-- The tool bar, which the window places -->
+        <menu id="helloutau.mainToolBar" text="Main Toolbar" topLevel="true" />
+    </items>
+
+    <layouts>
+        <menu id="helloutau.mainMenu">
+            <menu id="helloutau.file">
+                <action id="helloutau.file.new" />
+                <action id="helloutau.file.open" />
+                <action id="helloutau.file.openVoiceBank" />
+                <action id="helloutau.file.openRecent" />
+                <separator />
+                <action id="helloutau.file.save" />
+                <action id="helloutau.file.saveAs" />
+                <menu id="helloutau.file.export" />
+                <separator />
+                <action id="helloutau.file.properties" />
+                <separator />
+                <action id="helloutau.file.close" />
+                <action id="helloutau.file.quit" />
+            </menu>
+            <menu id="helloutau.edit">
+                <action id="helloutau.edit.undo" />
+                <action id="helloutau.edit.redo" />
+                <separator />
+                <action id="helloutau.edit.copy" />
+                <action id="helloutau.edit.paste" />
+                <action id="helloutau.edit.pasteParameters" />
+                <action id="helloutau.edit.delete" />
+                <action id="helloutau.edit.selectAll" />
+                <separator />
+                <action id="helloutau.edit.find" />
+                <action id="helloutau.edit.replace" />
+                <action id="helloutau.edit.findNext" />
+                <action id="helloutau.edit.findPrevious" />
+                <separator />
+                <action id="helloutau.edit.insertNote" />
+                <action id="helloutau.edit.insertRest" />
+                <action id="helloutau.edit.splitNote" />
+                <action id="helloutau.edit.mergeNotes" />
+                <action id="helloutau.edit.editLyric" />
+                <action id="helloutau.edit.setTempo" />
+                <action id="helloutau.edit.noteProperties" />
+                <separator />
+                <action id="helloutau.edit.mode2" />
+                <action id="helloutau.edit.togglePortamento" />
+                <action id="helloutau.edit.toggleVibrato" />
+                <action id="helloutau.edit.editVibrato" />
+                <action id="helloutau.edit.scalePitch" />
+                <menu id="helloutau.edit.reset" />
+                <menu id="helloutau.edit.envelope" />
+                <menu id="helloutau.edit.transpose" />
+                <separator />
+                <action id="helloutau.edit.selectTool" />
+                <action id="helloutau.edit.penTool" />
+                <action id="helloutau.edit.pitchTool" />
+                <action id="helloutau.edit.finerQuantization" />
+                <action id="helloutau.edit.coarserQuantization" />
+            </menu>
+            <menu id="helloutau.view">
+                <action id="helloutau.view.showToolBar" />
+                <separator />
+                <action id="helloutau.view.showPitch" />
+                <action id="helloutau.view.showEnvelopes" />
+                <action id="helloutau.view.showParameters" />
+                <separator />
+                <action id="helloutau.view.commandPalette" />
+            </menu>
+            <menu id="helloutau.playback">
+                <action id="helloutau.playback.play" />
+                <action id="helloutau.playback.pause" />
+                <action id="helloutau.playback.stop" />
+                <action id="helloutau.playback.replay" />
+                <separator />
+                <action id="helloutau.playback.saveLastPlayed" />
+                <action id="helloutau.playback.renderTrack" />
+            </menu>
+            <menu id="helloutau.tools">
+                <action id="helloutau.tools.editVoiceBank" />
+                <action id="helloutau.tools.clearCache" />
+                <separator />
+                <action id="helloutau.tools.settings" />
+            </menu>
+        </menu>
+        <menu id="helloutau.mainToolBar">
+            <action id="helloutau.edit.undo" />
+            <action id="helloutau.edit.redo" />
+            <separator />
+            <action id="helloutau.edit.selectTool" />
+            <action id="helloutau.edit.penTool" />
+            <action id="helloutau.edit.pitchTool" />
+            <separator />
+            <action id="helloutau.edit.mode2" />
+            <action id="helloutau.view.showPitch" />
+            <action id="helloutau.view.showEnvelopes" />
+            <action id="helloutau.view.showParameters" />
+            <separator />
+            <action id="helloutau.edit.crossfadeP2P3" />
+            <action id="helloutau.edit.crossfadeP1P4" />
+            <separator />
+            <action id="helloutau.edit.quantization" />
+            <separator />
+            <action id="helloutau.playback.play" />
+            <action id="helloutau.playback.stop" />
+            <action id="helloutau.playback.replay" />
+            <separator />
+            <action id="helloutau.edit.find" />
+        </menu>
+        <menu id="helloutau.file.export">
+            <action id="helloutau.file.exportUst" />
+        </menu>
+        <menu id="helloutau.edit.reset">
+            <action id="helloutau.edit.resetPortamento" />
+            <action id="helloutau.edit.resetVibratos" />
+            <action id="helloutau.edit.resetEnvelopes" />
+            <separator />
+            <action id="helloutau.edit.resetAll" />
+        </menu>
+        <menu id="helloutau.edit.envelope">
+            <action id="helloutau.edit.crossfadeP2P3" />
+            <action id="helloutau.edit.crossfadeP1P4" />
+        </menu>
+        <menu id="helloutau.edit.transpose">
+            <action id="helloutau.edit.transposeUp" />
+            <action id="helloutau.edit.transposeDown" />
+            <action id="helloutau.edit.octaveUp" />
+            <action id="helloutau.edit.octaveDown" />
+        </menu>
+    </layouts>
+</actionExtension>

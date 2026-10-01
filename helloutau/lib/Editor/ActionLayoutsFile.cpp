@@ -22,7 +22,7 @@ namespace hello::daw {
         return QFileInfo(settingsFile).dir().filePath(QStringLiteral("actionLayouts.json"));
     }
 
-    void ActionLayoutsFile::read(QAK::ActionRegistry *registry, const QString &fileName) {
+    void ActionLayoutsFile::read(const Sections &sections, const QString &fileName) {
         QFile file(fileName);
         if (!file.exists()) {
             return;
@@ -33,31 +33,47 @@ namespace hello::daw {
         }
         QJsonParseError error;
         const auto document = QJsonDocument::fromJson(file.readAll(), &error);
-        const auto changes = document.object().value(QLatin1String(ChangesKey));
-        if (error.error != QJsonParseError::NoError || !changes.isArray()) {
+        if (error.error != QJsonParseError::NoError || !document.isObject()) {
             qWarning("Layouts: %s is not a list of changes and is ignored.", qPrintable(fileName));
             return;
         }
-        QVector<QAK::ActionLayoutChange> read;
-        for (const auto &value : changes.toArray()) {
-            if (const auto change = QAK::ActionLayoutChange::fromJsonObject(value.toObject())) {
-                read.push_back(*change);
-            } else {
-                qWarning("Layouts: a change of %s does not read and is skipped.",
-                         qPrintable(fileName));
+        const auto root = document.object();
+        for (const auto &[key, registry] : sections) {
+            const auto section = root.value(key);
+            if (section.isUndefined()) {
+                continue;
             }
+            const auto changes = section.toObject().value(QLatin1String(ChangesKey));
+            if (!changes.isArray()) {
+                qWarning("Layouts: the section %s of %s is not a list of changes and is ignored.",
+                         qPrintable(key), qPrintable(fileName));
+                continue;
+            }
+            QVector<QAK::ActionLayoutChange> read;
+            for (const auto &value : changes.toArray()) {
+                if (const auto change = QAK::ActionLayoutChange::fromJsonObject(value.toObject())) {
+                    read.push_back(*change);
+                } else {
+                    qWarning("Layouts: a change of %s does not read and is skipped.",
+                             qPrintable(fileName));
+                }
+            }
+            registry->setLayoutChanges(read);
         }
-        registry->setLayoutChanges(read);
     }
 
-    bool ActionLayoutsFile::write(const QAK::ActionRegistry *registry, const QString &fileName,
-                            QString *error) {
-        QJsonArray changes;
-        for (const auto &change : registry->layoutChanges()) {
-            changes.push_back(change.toJsonObject());
-        }
+    bool ActionLayoutsFile::write(const Sections &sections, const QString &fileName,
+                                  QString *error) {
         QJsonObject object;
-        object.insert(QLatin1String(ChangesKey), changes);
+        for (const auto &[key, registry] : sections) {
+            QJsonArray changes;
+            for (const auto &change : registry->layoutChanges()) {
+                changes.push_back(change.toJsonObject());
+            }
+            QJsonObject section;
+            section.insert(QLatin1String(ChangesKey), changes);
+            object.insert(key, section);
+        }
 
         QDir().mkpath(QFileInfo(fileName).absolutePath());
         QSaveFile file(fileName);

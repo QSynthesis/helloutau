@@ -303,7 +303,8 @@ namespace hello::daw {
             addCommand(QStringLiteral("helloutau.edit.findPrevious"),
                        [this] { findAgain(false); });
             addCommand(QStringLiteral("helloutau.view.commandPalette"), [this] {
-                palette->setCommands(commandEntriesOf(editor->actionRegistry(), context));
+                palette->setCommands(
+                    commandEntriesOf(editor->actionRegistry(Editor::VoiceBankWindowKind), context));
                 palette->setRecentIds(editor->settings().recentCommands());
                 palette->popup();
             });
@@ -384,7 +385,7 @@ namespace hello::daw {
             });
             ActionRegistrations::instance().addActions(&decl, context);
 
-            const auto registry = editor->actionRegistry();
+            const auto registry = editor->actionRegistry(Editor::VoiceBankWindowKind);
             registry->addContext(context);
             for (const auto element :
                  {QAK::AE_Layouts, QAK::AE_Texts, QAK::AE_Keymap, QAK::AE_Icons}) {

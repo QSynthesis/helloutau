@@ -23,8 +23,8 @@ namespace {
     // triggers in the property testActionTriggered of the application.
     class TestActionContribution : public ActionContribution {
     public:
-        const QAK::ActionExtension *extension() const override {
-            return test::testActions();
+        const QAK::ActionExtension *extension(Editor::WindowKind kind) const override {
+            return kind == Editor::ProjectWindowKind ? test::testActions() : nullptr;
         }
 
         void addActions(ProjectWindow *window, QAK::WidgetActionContext *context) override {

@@ -8,13 +8,12 @@
 #include <QtWidgets/QListWidget>
 #include <QtWidgets/QMessageBox>
 #include <QtWidgets/QPushButton>
+#include <QtWidgets/QTabWidget>
 #include <QtWidgets/QTreeView>
 #include <QtWidgets/QVBoxLayout>
 
 #include <QAKCore/actionlayoutsmodel.h>
 #include <QAKCore/actionregistry.h>
-
-#include <helloutau/Editor/Editor.h>
 
 namespace hello::daw {
 
@@ -22,18 +21,43 @@ namespace hello::daw {
 
         using Entry = QAK::ActionLayoutEntry;
 
-        // The menu bars and the tool bars of the windows, which the tree shows at the top
-        const std::pair<const char *, const char *> topLevelNodes[] = {
-            {"helloutau.mainMenu",
-             QT_TRANSLATE_NOOP("hello::daw::MenusSettingPage", "Project Window: Main Menu")   },
-            {"helloutau.mainToolBar",
-             QT_TRANSLATE_NOOP("hello::daw::MenusSettingPage", "Project Window: Main Toolbar")},
-            {"helloutau.voiceBankMenu",
-             QT_TRANSLATE_NOOP("hello::daw::MenusSettingPage", "Voice Bank Window: Main Menu")},
-            {"helloutau.voiceBank.sampleToolBar",
-             QT_TRANSLATE_NOOP("hello::daw::MenusSettingPage",
-             "Voice Bank Window: Sample Toolbar")                                             },
+        // A top-level container of a kind of window, by its id and the name the tree shows
+        struct TopLevelNode {
+            const char *id;
+            const char *name;
         };
+
+        // A kind of window, by the name of its tab and its menu bar and tool bars, which the tree
+        // shows at the top
+        struct WindowLayouts {
+            Editor::WindowKind kind;
+            const char *name;
+            TopLevelNode nodes[2];
+        };
+
+        const WindowLayouts windowLayouts[] = {
+            {Editor::ProjectWindowKind,
+             QT_TRANSLATE_NOOP("hello::daw::MenusSettingPage", "Project Window"),
+             {{"helloutau.mainMenu",
+               QT_TRANSLATE_NOOP("hello::daw::MenusSettingPage", "Main Menu")},
+              {"helloutau.mainToolBar",
+               QT_TRANSLATE_NOOP("hello::daw::MenusSettingPage", "Main Toolbar")}}  },
+            {Editor::VoiceBankWindowKind,
+             QT_TRANSLATE_NOOP("hello::daw::MenusSettingPage", "Voice Bank Window"),
+             {{"helloutau.voiceBankMenu",
+               QT_TRANSLATE_NOOP("hello::daw::MenusSettingPage", "Main Menu")},
+              {"helloutau.voiceBank.sampleToolBar",
+               QT_TRANSLATE_NOOP("hello::daw::MenusSettingPage", "Sample Toolbar")}}},
+        };
+
+        const WindowLayouts &layoutsOf(Editor::WindowKind kind) {
+            for (const auto &layouts : windowLayouts) {
+                if (layouts.kind == kind) {
+                    return layouts;
+                }
+            }
+            return windowLayouts[0];
+        }
 
         Entry entryOf(const QModelIndex &index) {
             return index.data(Qt::UserRole).value<Entry>();
@@ -62,12 +86,12 @@ namespace hello::daw {
 
     }
 
-    /// The layouts with the text of each entry as the menus show it, in place of its id, and
-    /// its icon.
+    /// The layouts of a kind of window with the text of each entry as the menus show it, in
+    /// place of its id, and its icon.
     class LayoutNamesModel : public QIdentityProxyModel {
     public:
-        LayoutNamesModel(QAK::ActionRegistry *registry, QObject *parent)
-            : QIdentityProxyModel(parent), m_registry(registry) {
+        LayoutNamesModel(QAK::ActionRegistry *registry, Editor::WindowKind kind, QObject *parent)
+            : QIdentityProxyModel(parent), m_registry(registry), m_kind(kind) {
         }
 
         QVariant data(const QModelIndex &index, int role) const override {
@@ -94,9 +118,9 @@ namespace hello::daw {
                 return MenusSettingPage::tr("Stretch");
             }
             if (!index.parent().isValid()) {
-                for (const auto &[id, name] : topLevelNodes) {
-                    if (entry.id() == QLatin1String(id)) {
-                        return MenusSettingPage::tr(name);
+                for (const auto &node : layoutsOf(m_kind).nodes) {
+                    if (entry.id() == QLatin1String(node.id)) {
+                        return MenusSettingPage::tr(node.name);
                     }
                 }
             }
@@ -106,11 +130,11 @@ namespace hello::daw {
 
     private:
         QAK::ActionRegistry *m_registry;
+        Editor::WindowKind m_kind;
     };
 
     MenusSettingPage::MenusSettingPage(Editor *editor, QObject *parent)
-        : SettingPage(QLatin1String(pageId), parent), m_editor(editor),
-          m_registry(editor->actionRegistry()) {
+        : SettingPage(QLatin1String(pageId), parent), m_editor(editor) {
         setTitle(tr("Menus and Toolbars"));
         setDescription(tr("The commands of the menus and the tool bars of the windows."));
         setKeywords({QStringLiteral("Menus and Toolbars"), QStringLiteral("menu"),
@@ -119,18 +143,51 @@ namespace hello::daw {
 
     MenusSettingPage::~MenusSettingPage() = default;
 
-    QTreeView *MenusSettingPage::tree() const {
-        return m_tree;
+    QAK::ActionRegistry *MenusSettingPage::registry(Editor::WindowKind kind) const {
+        return m_editor->actionRegistry(kind);
+    }
+
+    QTreeView *MenusSettingPage::tree(Editor::WindowKind kind) const {
+        return m_panels[kind].tree;
+    }
+
+    Editor::WindowKind MenusSettingPage::currentKind() const {
+        return m_tabs ? windowLayouts[m_tabs->currentIndex()].kind : windowLayouts[0].kind;
+    }
+
+    void MenusSettingPage::setCurrentKind(Editor::WindowKind kind) {
+        for (int i = 0; m_tabs && i < int(std::size(windowLayouts)); ++i) {
+            if (windowLayouts[i].kind == kind) {
+                m_tabs->setCurrentIndex(i);
+            }
+        }
+    }
+
+    const MenusSettingPage::Panel &MenusSettingPage::current() const {
+        return m_panels[currentKind()];
     }
 
     bool MenusSettingPage::isModified() const {
-        return m_model &&
-               m_model->actionLayouts().adjacencyMap() != m_registry->layouts().adjacencyMap();
+        for (const auto kind : Editor::windowKinds) {
+            const auto &panel = m_panels[kind];
+            if (panel.model && panel.model->actionLayouts().adjacencyMap() !=
+                                   registry(kind)->layouts().adjacencyMap()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     bool MenusSettingPage::apply(QString *error) {
-        m_registry->setLayoutChanges(m_registry->computeLayoutChanges(m_model->actionLayouts()));
-        m_registry->updateContext(QAK::AE_Layouts);
+        for (const auto kind : Editor::windowKinds) {
+            const auto &panel = m_panels[kind];
+            if (!panel.model) {
+                continue;
+            }
+            const auto actions = registry(kind);
+            actions->setLayoutChanges(actions->computeLayoutChanges(panel.model->actionLayouts()));
+            actions->updateContext(QAK::AE_Layouts);
+        }
         if (!m_editor->saveActionLayouts(error)) {
             return false;
         }
@@ -139,34 +196,37 @@ namespace hello::daw {
     }
 
     void MenusSettingPage::select(const QList<int> &path) {
-        const auto index = m_names->mapFromSource(indexAt(m_model, path));
+        const auto &panel = current();
+        const auto index = panel.names->mapFromSource(indexAt(panel.model, path));
         if (index.isValid()) {
-            m_tree->setCurrentIndex(index);
-            m_tree->scrollTo(index);
+            panel.tree->setCurrentIndex(index);
+            panel.tree->scrollTo(index);
         }
         updateButtons();
     }
 
     bool MenusSettingPage::addEntry(const QAK::ActionLayoutEntry &entry) {
-        const auto current = m_names->mapToSource(m_tree->currentIndex());
-        if (!current.isValid()) {
+        const auto &panel = current();
+        const auto model = panel.model;
+        const auto at = panel.names->mapToSource(panel.tree->currentIndex());
+        if (!at.isValid()) {
             return false;
         }
-        const auto currentPath = pathOf(current);
-        const auto type = entryOf(current).type();
+        const auto currentPath = pathOf(at);
+        const auto type = entryOf(at).type();
         const bool container =
-            !current.parent().isValid() || type == Entry::Menu || type == Entry::Group;
-        const auto parent = container ? current : current.parent();
-        const int row = container ? m_model->rowCount(current) : current.row() + 1;
+            !at.parent().isValid() || type == Entry::Menu || type == Entry::Group;
+        const auto parent = container ? at : at.parent();
+        const int row = container ? model->rowCount(at) : at.row() + 1;
         // The model resets after an edit of a menu that several containers hold, so the parent
         // is found again by its path.
         const auto parentPath = pathOf(parent);
-        if (!m_model->insertRows(row, 1, parent)) {
+        if (!model->insertRows(row, 1, parent)) {
             return false;
         }
-        const auto inserted = m_model->index(row, 0, indexAt(m_model, parentPath));
-        if (!m_model->setData(inserted, QVariant::fromValue(entry), Qt::UserRole)) {
-            m_model->removeRows(row, 1, indexAt(m_model, parentPath));
+        const auto inserted = model->index(row, 0, indexAt(model, parentPath));
+        if (!model->setData(inserted, QVariant::fromValue(entry), Qt::UserRole)) {
+            model->removeRows(row, 1, indexAt(model, parentPath));
             select(currentPath);
             return false;
         }
@@ -175,63 +235,73 @@ namespace hello::daw {
     }
 
     void MenusSettingPage::removeCurrent() {
-        const auto current = m_names->mapToSource(m_tree->currentIndex());
-        if (!current.isValid() || !current.parent().isValid()) {
+        const auto &panel = current();
+        const auto model = panel.model;
+        const auto at = panel.names->mapToSource(panel.tree->currentIndex());
+        if (!at.isValid() || !at.parent().isValid()) {
             return;
         }
-        const auto parentPath = pathOf(current.parent());
-        const int row = current.row();
-        m_model->removeRows(row, 1, current.parent());
-        const int count = m_model->rowCount(indexAt(m_model, parentPath));
+        const auto parentPath = pathOf(at.parent());
+        const int row = at.row();
+        model->removeRows(row, 1, at.parent());
+        const int count = model->rowCount(indexAt(model, parentPath));
         select(count > 0 ? parentPath + QList<int>{std::min(row, count - 1)} : parentPath);
     }
 
     void MenusSettingPage::moveCurrent(bool up) {
-        const auto current = m_names->mapToSource(m_tree->currentIndex());
-        if (!current.isValid() || !current.parent().isValid()) {
+        const auto &panel = current();
+        const auto model = panel.model;
+        const auto at = panel.names->mapToSource(panel.tree->currentIndex());
+        if (!at.isValid() || !at.parent().isValid()) {
             return;
         }
-        const auto parent = current.parent();
+        const auto parent = at.parent();
         const auto parentPath = pathOf(parent);
-        const int row = current.row();
+        const int row = at.row();
         const int to = up ? row - 1 : row + 1;
-        if (to < 0 || to >= m_model->rowCount(parent)) {
+        if (to < 0 || to >= model->rowCount(parent)) {
             return;
         }
         // The destination is the row before which the entry goes.
-        if (m_model->moveRows(parent, row, 1, parent, up ? to : to + 1)) {
+        if (model->moveRows(parent, row, 1, parent, up ? to : to + 1)) {
             select(parentPath + QList<int>{to});
         }
     }
 
     void MenusSettingPage::restoreDefaults() {
-        m_model->setActionLayouts(m_registry->defaultLayouts());
-        m_tree->expandToDepth(0);
+        for (const auto kind : Editor::windowKinds) {
+            const auto &panel = m_panels[kind];
+            panel.model->setActionLayouts(registry(kind)->defaultLayouts());
+            panel.tree->expandToDepth(0);
+        }
         updateButtons();
         Q_EMIT modifiedChanged();
     }
 
     void MenusSettingPage::updateButtons() {
-        const auto current = m_names->mapToSource(m_tree->currentIndex());
-        const bool entry = current.isValid() && current.parent().isValid();
-        m_add->setEnabled(current.isValid());
-        m_addSeparator->setEnabled(current.isValid());
+        const auto &panel = current();
+        const auto at = panel.names->mapToSource(panel.tree->currentIndex());
+        const bool entry = at.isValid() && at.parent().isValid();
+        m_add->setEnabled(at.isValid());
+        m_addSeparator->setEnabled(at.isValid());
         m_remove->setEnabled(entry);
-        m_up->setEnabled(entry && current.row() > 0);
-        m_down->setEnabled(entry && current.row() + 1 < m_model->rowCount(current.parent()));
+        m_up->setEnabled(entry && at.row() > 0);
+        m_down->setEnabled(entry && at.row() + 1 < panel.model->rowCount(at.parent()));
     }
 
-    // Asks for an action in a list that the user filters by its text, and adds it.
+    // Asks for an action of the registry of the current tab in a list that the user filters by
+    // its text, and adds it.
     void MenusSettingPage::askAction() {
-        QDialog dialog(m_tree->window());
+        const auto actions = registry(currentKind());
+        QDialog dialog(m_tabs->window());
         dialog.setWindowTitle(tr("Add Action"));
         auto search = new QLineEdit();
         search->setPlaceholderText(tr("Search"));
         search->setClearButtonEnabled(true);
         auto list = new QListWidget();
         list->setObjectName(QStringLiteral("actions"));
-        for (const auto &id : m_registry->actionIds()) {
-            const auto info = m_registry->actionInfo(id);
+        for (const auto &id : actions->actionIds()) {
+            const auto info = actions->actionInfo(id);
             if (!info || info->type() != QAK::ActionItemInfo::Action) {
                 continue;
             }
@@ -240,7 +310,7 @@ namespace hello::daw {
             auto item =
                 new QListWidgetItem(category.isEmpty() ? text : category + u": " + text, list);
             item->setData(Qt::UserRole, id);
-            if (const auto icon = m_registry->actionIcon(QString(), id, info->icon())) {
+            if (const auto icon = actions->actionIcon(QString(), id, info->icon())) {
                 item->setIcon(icon->icon());
             }
         }
@@ -265,29 +335,36 @@ namespace hello::daw {
         }
         const auto id = list->currentItem()->data(Qt::UserRole).toString();
         if (!addEntry(Entry(id, Entry::Action))) {
-            QMessageBox::warning(m_tree->window(), tr("Add Action"),
+            QMessageBox::warning(m_tabs->window(), tr("Add Action"),
                                  tr("%1 cannot be added here.").arg(list->currentItem()->text()));
         }
     }
 
     QWidget *MenusSettingPage::createWidget() {
         auto widget = new QWidget();
-        m_model = new QAK::ActionLayoutsModel(widget);
-        m_model->setRegistry(m_registry);
-        QVector<Entry> nodes;
-        for (const auto &[id, name] : topLevelNodes) {
-            nodes.push_back(Entry(QLatin1String(id), Entry::Menu));
-        }
-        m_model->setTopLevelNodes(nodes);
-        m_model->setActionLayouts(m_registry->layouts());
-        m_names = new LayoutNamesModel(m_registry, widget);
-        m_names->setSourceModel(m_model);
+        m_tabs = new QTabWidget();
+        m_tabs->setObjectName(QStringLiteral("windows"));
+        for (const auto &window : windowLayouts) {
+            const auto actions = registry(window.kind);
+            auto &panel = m_panels[window.kind];
+            panel.model = new QAK::ActionLayoutsModel(widget);
+            panel.model->setRegistry(actions);
+            QVector<Entry> nodes;
+            for (const auto &node : window.nodes) {
+                nodes.push_back(Entry(QLatin1String(node.id), Entry::Menu));
+            }
+            panel.model->setTopLevelNodes(nodes);
+            panel.model->setActionLayouts(actions->layouts());
+            panel.names = new LayoutNamesModel(actions, window.kind, widget);
+            panel.names->setSourceModel(panel.model);
 
-        m_tree = new QTreeView();
-        m_tree->setObjectName(QStringLiteral("layouts"));
-        m_tree->setHeaderHidden(true);
-        m_tree->setModel(m_names);
-        m_tree->expandToDepth(0);
+            panel.tree = new QTreeView();
+            panel.tree->setObjectName(QStringLiteral("layouts"));
+            panel.tree->setHeaderHidden(true);
+            panel.tree->setModel(panel.names);
+            panel.tree->expandToDepth(0);
+            m_tabs->addTab(panel.tree, tr(window.name));
+        }
 
         m_add = new QPushButton(tr("&Add Action..."));
         m_add->setObjectName(QStringLiteral("add"));
@@ -311,7 +388,7 @@ namespace hello::daw {
 
         auto layout = new QHBoxLayout(widget);
         layout->setContentsMargins(0, 0, 0, 0);
-        layout->addWidget(m_tree, 1);
+        layout->addWidget(m_tabs, 1);
         layout->addLayout(buttons);
 
         connect(m_add, &QPushButton::clicked, this, [this] { askAction(); });
@@ -321,15 +398,22 @@ namespace hello::daw {
         connect(m_up, &QPushButton::clicked, this, [this] { moveCurrent(true); });
         connect(m_down, &QPushButton::clicked, this, [this] { moveCurrent(false); });
         connect(restore, &QPushButton::clicked, this, [this] { restoreDefaults(); });
-        connect(m_tree->selectionModel(), &QItemSelectionModel::currentChanged, this,
-                [this] { updateButtons(); });
-        for (const auto signal :
-             {&QAbstractItemModel::rowsInserted, &QAbstractItemModel::rowsRemoved}) {
-            connect(m_model, signal, this, &SettingPage::modifiedChanged);
+        connect(m_tabs, &QTabWidget::currentChanged, this, [this] { updateButtons(); });
+        for (const auto kind : Editor::windowKinds) {
+            const auto &panel = m_panels[kind];
+            connect(panel.tree->selectionModel(), &QItemSelectionModel::currentChanged, this,
+                    [this] { updateButtons(); });
+            for (const auto signal :
+                 {&QAbstractItemModel::rowsInserted, &QAbstractItemModel::rowsRemoved}) {
+                connect(panel.model, signal, this, &SettingPage::modifiedChanged);
+            }
+            connect(panel.model, &QAbstractItemModel::rowsMoved, this,
+                    &SettingPage::modifiedChanged);
+            connect(panel.model, &QAbstractItemModel::dataChanged, this,
+                    &SettingPage::modifiedChanged);
+            connect(panel.model, &QAbstractItemModel::modelReset, this,
+                    &SettingPage::modifiedChanged);
         }
-        connect(m_model, &QAbstractItemModel::rowsMoved, this, &SettingPage::modifiedChanged);
-        connect(m_model, &QAbstractItemModel::dataChanged, this, &SettingPage::modifiedChanged);
-        connect(m_model, &QAbstractItemModel::modelReset, this, &SettingPage::modifiedChanged);
         updateButtons();
         return widget;
     }

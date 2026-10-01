@@ -29,7 +29,7 @@ namespace hello::daw {
         ClassicPluginContribution();
         ~ClassicPluginContribution();
 
-        const QAK::ActionExtension *extension() const override;
+        const QAK::ActionExtension *extension(Editor::WindowKind kind) const override;
         void addActions(ProjectWindow *window, QAK::WidgetActionContext *context) override;
 
         /// Returns the folder of the UTAU plugins that the user installs for HelloUtau, separate

@@ -118,9 +118,9 @@ macOS 的 bundle 中为 `HelloUtau.app/Contents/MacOS`（程序）与 `HelloUtau
 作者 2026-09-30 要求插件能注册自己的动作（命令），这是「编辑界面扩展」扩展点的第一部分。
 
 - **qactionkit 已有的部分**：多份清单合并，插件的清单以 `<insertions>` 插入宿主的菜单（`anchor`、`priority`）。为插件卸载补充了 `ActionRegistry::removeExtension()`（qactionkit `46bce9b`），移除后立即重新计算，registry 中不再有指向该清单的视图。
-- **`ActionContribution`**（HelloUtauEditor）：一份 AEC 编译的清单，加上为每种窗口创建动作的 `addActions(ProjectWindow *, context)` 与 `addActions(VoiceBankWindow *, context)`。动作以窗口为父对象，贡献移除时由编辑器从 context 移除并删除。插进某种窗口菜单的条目若没有该窗口的动作，context 显示一个不做任何事的占位项。
+- **`ActionContribution`**（HelloUtauEditor）：每种窗口至多一份 AEC 编译的清单，由 `extension(Editor::WindowKind)` 给出，编辑器把它登记到该种窗口的 registry（每种窗口一个 registry，见 [`Widgets.md`](Widgets.md)「Keymap 页」），加上为每种窗口创建动作的 `addActions(ProjectWindow *, context)` 与 `addActions(VoiceBankWindow *, context)`。动作以窗口为父对象，贡献移除时由编辑器从 context 移除并删除。插进某种窗口菜单的条目若没有该窗口的动作，context 显示一个不做任何事的占位项。
 - **`ActionRegistration`**：登记对象。每个 `Editor` 监听进程级的列表：构造时加入已有的清单，之后随登记加入清单与各窗口的动作，随注销移除，然后刷新各窗口的菜单、文字、快捷键与图标。窗口创建时加入已有贡献的动作。命令面板取 registry 与 context 的交集，插件的命令自动出现在其中。
-- **编辑器自己的清单也经此登记**（作者 2026-09-30，方案 1 加 3）：原来的 `EditorActions.xml` 分为两份，`AppActions.xml` 为两种窗口的菜单栏与顶层菜单，以及新建、打开、打开音源、最近文件、关闭、退出、命令面板、设置；`EditorActions.xml` 为其余的窗口命令及其子菜单，以插入放入前者的菜单，排出的菜单与拆分前相同。两份由 `BuiltinActions` 登记，Core 插件持有它，不经 Core 构造 `Editor` 的测试自己持有一个。处理函数仍在窗口中，窗口自己创建这些动作。
+- **编辑器自己的清单也经此登记**（作者 2026-09-30，方案 1 加 3；2026-10-01 改为每种窗口一份）：`ProjectActions.xml` 与 `VoiceBankActions.xml` 各含一种窗口的全部命令、菜单栏与工具栏，布局写全，不用插入；两种窗口共有的命令在两份中各声明一次。两份由 `BuiltinActions` 分别登记到两种窗口的 registry，Core 插件持有它，不经 Core 构造 `Editor` 的测试自己持有一个。处理函数仍在窗口中，窗口自己创建这些动作。
 - **最终目标**（作者 2026-09-30）：清单与处理函数都由 Core 插件提供，窗口只提供能力。这需要窗口公开相应的操作，届时另行设计。
 - **现状的两条路径**：内置命令的处理函数在窗口私有的实现中，由窗口在 `initActions()` 中自己创建动作，`BuiltinActions` 的贡献不创建动作；插件的动作由其贡献的 `addActions()` 创建并连接。插件能连接自己的处理函数，但处理函数只能使用窗口的公开接口，目前很少。内置命令移入贡献之后只剩一条路径。
 - **不在菜单中的命令**：动作的快捷键经菜单栏生效，不在任何菜单中而有快捷键的命令（如 ClassicPluginHost 的 Classic Plugins at Pointer），由贡献方以 `window->addAction()` 将动作挂到窗口上（作者 2026-09-30 定）。未来可选：由编辑器统一将快捷键范围为 `WindowShortcut` 的动作挂到窗口上。重复挂载不会使快捷键触发两次，但须跳过另设范围的动作（如音源窗口波形区的 `WidgetWithChildrenShortcut`），否则其快捷键扩展到整个窗口。

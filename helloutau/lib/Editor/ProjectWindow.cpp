@@ -1067,7 +1067,7 @@ namespace hello::daw {
             });
             ActionRegistrations::instance().addActions(&decl, context);
 
-            const auto registry = editor->actionRegistry();
+            const auto registry = editor->actionRegistry(Editor::ProjectWindowKind);
             registry->addContext(context);
             for (const auto element :
                  {QAK::AE_Layouts, QAK::AE_Texts, QAK::AE_Keymap, QAK::AE_Icons}) {
@@ -1222,7 +1222,7 @@ namespace hello::daw {
         }
 
         QList<CommandEntry> commandEntries() const {
-            return commandEntriesOf(editor->actionRegistry(), context);
+            return commandEntriesOf(editor->actionRegistry(Editor::ProjectWindowKind), context);
         }
 
         void bindDocument() {

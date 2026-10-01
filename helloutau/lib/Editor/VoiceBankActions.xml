@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The menus, the sample tool bar and the commands of the voice bank window, registered with the
+     action registry of the voice bank windows. The commands that the project window has as well
+     are declared again in ProjectActions.xml, since each kind of window has a registry of its own
+     and the shortcuts of the two are set apart. Format: docs/action-extension-spec.md in
+     QActionKit. -->
+<actionExtension>
+    <version>1.0</version>
+    <id>helloutau.voiceBank</id>
+
+    <configuration>
+        <translationContext
+            text="hello::daw::ActionText"
+            category="hello::daw::ActionCategory"
+            description="hello::daw::ActionDescription"
+        />
+    </configuration>
+
+    <items>
+        <!-- The commands that the project window has as well -->
+        <action id="helloutau.file.new" text="&amp;New" category="File" shortcut="Ctrl+N" />
+        <action id="helloutau.file.open" text="&amp;Open..." category="File" shortcut="Ctrl+O" />
+        <action id="helloutau.file.openVoiceBank" text="Open &amp;Voice Bank..." category="File" />
+        <action id="helloutau.file.openRecent" text="Open &amp;Recent" category="File"
+                external="true" />
+        <action id="helloutau.file.openRecentProject" text="Open Recent &amp;Project..."
+                category="File" />
+        <action id="helloutau.file.openRecentVoiceBank" text="Open Recent &amp;Voice Bank..."
+                category="File" />
+        <action id="helloutau.file.clearRecent" text="&amp;Clear Recently Opened..."
+                category="File" />
+        <action id="helloutau.file.save" text="&amp;Save" category="File" shortcut="Ctrl+S" />
+        <action id="helloutau.file.saveAs" text="Save &amp;As..." category="File"
+                shortcut="Ctrl+Shift+S" />
+        <action id="helloutau.file.close" text="&amp;Close" category="File" shortcut="Ctrl+W" />
+        <action id="helloutau.file.quit" text="&amp;Quit" category="File" shortcut="Ctrl+Q" />
+        <action id="helloutau.edit.undo" text="&amp;Undo" category="Edit" shortcut="Ctrl+Z" />
+        <action id="helloutau.edit.redo" text="&amp;Redo" category="Edit"
+                shortcuts="Ctrl+Y;Ctrl+Shift+Z" />
+        <action id="helloutau.edit.delete" text="&amp;Delete" category="Edit"
+                shortcuts="Del;Shift+Del" />
+        <!-- The find bar over the entry table, as the find widget of VS Code, for the aliases and
+             the file names -->
+        <action id="helloutau.edit.find" text="&amp;Find" category="Edit" shortcut="Ctrl+F" />
+        <action id="helloutau.edit.replace" text="Rep&amp;lace" category="Edit"
+                shortcut="Ctrl+H" />
+        <action id="helloutau.edit.findNext" text="Find &amp;Next" category="Edit"
+                shortcut="F3" />
+        <action id="helloutau.edit.findPrevious" text="Find Pre&amp;vious" category="Edit"
+                shortcut="Shift+F3" />
+        <action id="helloutau.view.commandPalette" text="&amp;Command Palette..." category="View"
+                shortcuts="Ctrl+Shift+P;F1" />
+        <action id="helloutau.playback.stop" text="&amp;Stop" category="Playback" shortcut="F7" />
+        <action id="helloutau.tools.settings" text="&amp;Settings..." category="Tools" />
+
+        <!-- Every folder of the voice bank read again, whatever the stamps of its files, as the
+             refresh of UTAU -->
+        <action id="helloutau.voiceBank.reloadAll" text="Re&amp;load All from Disk" category="File" />
+        <!-- An entry for an audio file of the folder, whose alias the table then edits -->
+        <action id="helloutau.voiceBank.insertEntry" text="&amp;Insert Entry..." category="Edit"
+                shortcut="Ins" />
+        <!-- A copy of each selected entry, its alias followed by a free number -->
+        <action id="helloutau.voiceBank.duplicateEntries" text="D&amp;uplicate Entries"
+                category="Edit" shortcut="Ctrl+D" />
+        <!-- A copy of each selected entry, its alias derived by a rule -->
+        <action id="helloutau.voiceBank.duplicateWithRule" text="Duplicate &amp;with Rule..."
+                category="Edit" />
+        <!-- The aliases of the selected entries, derived by a rule -->
+        <action id="helloutau.voiceBank.renameAliases" text="Rename &amp;Aliases..."
+                category="Edit" />
+        <!-- An entry with an empty alias for each selected audio file without one -->
+        <action id="helloutau.voiceBank.includeAudio" text="Include Audio &amp;Files"
+                category="Edit" />
+        <!-- A value of the current entry at the time under the pointer, while the pointer is over
+             the waveform; the keys are those of OpenUtau -->
+        <action id="helloutau.voiceBank.setOffset" text="&amp;Offset" category="Set at Pointer"
+                shortcut="1" />
+        <action id="helloutau.voiceBank.setOverlap" text="O&amp;verlap" category="Set at Pointer"
+                shortcut="2" />
+        <action id="helloutau.voiceBank.setPreUtterance" text="&amp;Pre-utterance"
+                category="Set at Pointer" shortcut="3" />
+        <action id="helloutau.voiceBank.setConsonant" text="&amp;Consonant"
+                category="Set at Pointer" shortcut="4" />
+        <action id="helloutau.voiceBank.setCutoff" text="C&amp;utoff" category="Set at Pointer"
+                shortcut="5" />
+        <!-- The audio file of the current entry, or a stop of what plays -->
+        <action id="helloutau.voiceBank.playAudio" text="&amp;Play Audio File" category="Playback"
+                shortcut="Space" />
+        <action id="helloutau.voiceBank.playSpan" text="Play from &amp;Offset to Cutoff"
+                category="Playback" shortcut="Shift+Space" />
+        <!-- From the time under the pointer, while the pointer is over the waveform; a double
+             click there does the same -->
+        <action id="helloutau.voiceBank.playFromPointer" text="Play from Poi&amp;nter"
+                category="Playback" shortcut="P" />
+        <!-- A note of the current entry by the resampler of the settings, at the pitch and of
+             the length beside the waveform -->
+        <action id="helloutau.voiceBank.synthesize" text="&amp;Synthesize Note" category="Playback"
+                shortcut="Ctrl+Return" />
+        <!-- The spectrogram of the audio in place of its waveform -->
+        <action id="helloutau.voiceBank.showSpectrogram" text="Show &amp;Spectrogram"
+                category="View" />
+        <!-- The dock of character.txt, readme.txt and prefix.map -->
+        <action id="helloutau.voiceBank.showInfo" text="Voice Bank &amp;Info" category="View" />
+        <!-- The folder chosen in the tree: its files saved in another encoding, the text staying,
+             or read again in another encoding, the bytes staying -->
+        <action id="helloutau.voiceBank.convertCharset" text="Con&amp;vert Encoding..."
+                category="Edit" />
+        <action id="helloutau.voiceBank.rereadCharset" text="Read Again in &amp;Encoding..."
+                category="Edit" />
+        <!-- The chunks of the audio files besides the format and the audio, written away after
+             a confirmation -->
+        <action id="helloutau.voiceBank.removeMetadata" text="Remove Audio &amp;Metadata..."
+                category="Tools" />
+
+        <!-- The boxes of the sample tool bar: the pitch and the length of the synthesized note,
+             and the format of the frequency table drawn -->
+        <action id="helloutau.voiceBank.pitch" text="Pitch" category="Preview" />
+        <action id="helloutau.voiceBank.length" text="Length" category="Preview" />
+        <action id="helloutau.voiceBank.frequencyFormat" text="F0" category="Preview" />
+
+        <menu id="helloutau.voiceBankMenu" topLevel="true" />
+        <menu id="helloutau.voiceBank.file" text="&amp;File" />
+        <menu id="helloutau.voiceBank.edit" text="&amp;Edit" />
+        <menu id="helloutau.voiceBank.view" text="&amp;View" />
+        <menu id="helloutau.voiceBank.playback" text="&amp;Playback" />
+        <menu id="helloutau.voiceBank.tools" text="&amp;Tools" />
+        <menu id="helloutau.voiceBank.setValue" text="&amp;Set at Pointer" />
+
+        <!-- The tool bar of the sample area above the waveform, which the window places -->
+        <menu id="helloutau.voiceBank.sampleToolBar" text="Sample Toolbar" topLevel="true" />
+    </items>
+
+    <layouts>
+        <menu id="helloutau.voiceBankMenu">
+            <menu id="helloutau.voiceBank.file">
+                <action id="helloutau.file.new" />
+                <action id="helloutau.file.open" />
+                <action id="helloutau.file.openVoiceBank" />
+                <action id="helloutau.file.openRecent" />
+                <separator />
+                <action id="helloutau.file.save" />
+                <action id="helloutau.file.saveAs" />
+                <action id="helloutau.voiceBank.reloadAll" />
+                <separator />
+                <action id="helloutau.file.close" />
+                <action id="helloutau.file.quit" />
+            </menu>
+            <menu id="helloutau.voiceBank.edit">
+                <action id="helloutau.edit.undo" />
+                <action id="helloutau.edit.redo" />
+                <separator />
+                <action id="helloutau.edit.find" />
+                <action id="helloutau.edit.replace" />
+                <action id="helloutau.edit.findNext" />
+                <action id="helloutau.edit.findPrevious" />
+                <separator />
+                <action id="helloutau.voiceBank.insertEntry" />
+                <action id="helloutau.voiceBank.duplicateEntries" />
+                <action id="helloutau.voiceBank.duplicateWithRule" />
+                <action id="helloutau.voiceBank.renameAliases" />
+                <action id="helloutau.voiceBank.includeAudio" />
+                <action id="helloutau.edit.delete" />
+                <separator />
+                <menu id="helloutau.voiceBank.setValue" />
+                <separator />
+                <action id="helloutau.voiceBank.convertCharset" />
+                <action id="helloutau.voiceBank.rereadCharset" />
+            </menu>
+            <menu id="helloutau.voiceBank.view">
+                <action id="helloutau.voiceBank.showSpectrogram" />
+                <action id="helloutau.voiceBank.showInfo" />
+                <separator />
+                <action id="helloutau.view.commandPalette" />
+            </menu>
+            <menu id="helloutau.voiceBank.playback">
+                <action id="helloutau.voiceBank.playAudio" />
+                <action id="helloutau.voiceBank.playSpan" />
+                <action id="helloutau.voiceBank.playFromPointer" />
+                <action id="helloutau.voiceBank.synthesize" />
+                <separator />
+                <action id="helloutau.playback.stop" />
+            </menu>
+            <menu id="helloutau.voiceBank.tools">
+                <action id="helloutau.voiceBank.removeMetadata" />
+                <separator />
+                <action id="helloutau.tools.settings" />
+            </menu>
+        </menu>
+        <menu id="helloutau.voiceBank.sampleToolBar">
+            <action id="helloutau.voiceBank.playAudio" />
+            <action id="helloutau.voiceBank.playSpan" />
+            <action id="helloutau.voiceBank.synthesize" />
+            <action id="helloutau.playback.stop" />
+            <separator />
+            <action id="helloutau.voiceBank.pitch" />
+            <action id="helloutau.voiceBank.length" />
+            <separator />
+            <action id="helloutau.voiceBank.frequencyFormat" />
+        </menu>
+        <menu id="helloutau.voiceBank.setValue">
+            <action id="helloutau.voiceBank.setOffset" />
+            <action id="helloutau.voiceBank.setOverlap" />
+            <action id="helloutau.voiceBank.setPreUtterance" />
+            <action id="helloutau.voiceBank.setConsonant" />
+            <action id="helloutau.voiceBank.setCutoff" />
+        </menu>
+    </layouts>
+</actionExtension>

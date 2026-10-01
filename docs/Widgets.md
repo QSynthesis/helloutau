@@ -318,21 +318,22 @@
 
 **Keymap 页**（作者 2026-10-01 定，仿 JetBrains IDE 的 Keymap）：
 
-- 命令树按「Project Window」「Voice Bank Window」分组，各组下按菜单逐级列出命令，组（group）的命令直接列在其菜单下。不在任何菜单中的命令列在「Other」下。每行为命令名与快捷键，快捷键与清单不同的命令以链接色标出。
+- **每种窗口一个 action registry**（作者 2026-10-01 定）：QActionKit 默认一个应用只有一种窗口，这种窗口对应一个 registry，它的每个实例是一个 context。HelloUtau 有两种窗口，因此 `Editor::actionRegistry(WindowKind)` 为工程窗口与音源窗口各给一个 registry，各有自己的清单（`ProjectActions.xml`、`VoiceBankActions.xml`）、布局、快捷键与用户改动。两种窗口共有的命令（新建、打开、撤销、查找、设置等）在两份清单中各声明一次，其快捷键因此各自独立（作者决定）。插件的 `ActionContribution::extension(WindowKind)` 为每种窗口给出各自的扩展，ClassicPluginHost 与 Interchange 只给工程窗口。
+- 命令树的顶层是两种窗口「Project Window」「Voice Bank Window」，各窗口下按其菜单栏逐级列出命令，组（group）的命令直接列在其菜单下，最后是该窗口自己的「Other」，列出它不在菜单中的命令（如工程窗口的 Classic Plugins at Pointer，N 键）。两种窗口共有的命令在两边各出现一次，分别设定。每行为命令名与快捷键，快捷键与清单不同的命令以链接色标出。
 - 顶部可按名称搜索（译文与英文原文都参与匹配），也可在「Shortcut」框中按下快捷键，只留有该快捷键的命令。
 - 「Add Shortcut...」（双击也可）打开录键对话框，按下的键已分给其他命令时当场列出它们，确定后询问「Remove」从它们移除或「Leave」保留二者。「Remove Shortcut」删除快捷键，有多个时从菜单中选。「Reset」恢复该命令清单中的快捷键，「Restore Defaults」恢复全部命令。右键菜单有同样的操作。
-- 冲突只在同一窗口的命令之间判断：命令属于其菜单栏或工具栏包含它的窗口，不在菜单中的命令算作每个窗口都有，因为从布局无法得知由哪个窗口执行它。两个窗口原本共用的键（如空格、Ins）因此不算冲突。
-- 页面只改动副本，「Apply」与「OK」时交给 QActionKit 的注册表，更新所有窗口，并写入 `keymap.json`。
-- **存储**：`settings.json` 同目录下单独的 `keymap.json`（作者要求不与设置、插件设置放在一起），只记与清单不同的命令，形如 `{"shortcuts": [{"id": ..., "keys": [...]}]}`，空列表表示该命令没有快捷键。启动时读入，文件无法读作快捷键表时忽略并警告，按清单的快捷键运行。未载入的插件的命令所记的快捷键保留在文件中。
+- 冲突只在同一种窗口的命令之间判断，即同一个 registry 之内，与菜单布局无关。两种窗口各自使用的键（如空格、Ins）因此不算冲突。
+- 页面只改动副本，「Apply」与「OK」时交给两个 registry，更新所有窗口，并写入 `keymap.json`。
+- **存储**：`settings.json` 同目录下单独的 `keymap.json`（作者要求不与设置、插件设置放在一起），每种窗口一节，只记与清单不同的命令，形如 `{"projectWindow": {"shortcuts": [{"id": ..., "keys": [...]}]}, "voiceBankWindow": {...}}`，空列表表示该命令没有快捷键。分节之前的文件（顶层即 `shortcuts`）不再读取。启动时读入，文件无法读作快捷键表时忽略并警告，按清单的快捷键运行。未载入的插件的命令所记的快捷键保留在文件中。
 - **以后**（作者 2026-10-01 提出）：快捷键的数据改为一个 item model，类似 QActionKit 的 `ActionLayoutsModel`，页面只负责显示与操作。放在本仓库还是 QActionKit 待定，冲突的判断按窗口进行，属于本仓库的规则。QActionKit 中空的 `keymapsettingswidget` 与 `layoutssettingswidget` 无法通用化，以后删除。
 
 **Menus and Toolbars 页**（作者 2026-10-01 定，仿 JetBrains IDE 的 Menus and Toolbars，位于 Appearance & Behavior 下）：
 
-- 树的顶层是两个窗口的菜单栏与工具栏：「Project Window: Main Menu」「Project Window: Main Toolbar」「Voice Bank Window: Main Menu」「Voice Bank Window: Sample Toolbar」，其下为各条目，名称与图标同菜单中所见（`shortText`），分隔线与伸缩空白以灰字标出。几个容器共用的子菜单在每处各出现一次，改动一处即改动全部。
+- 每种窗口一个标签页「Project Window」「Voice Bank Window」，各有自己 registry 的布局。树的顶层是该窗口的菜单栏与工具栏：工程窗口为「Main Menu」「Main Toolbar」，音源窗口为「Main Menu」「Sample Toolbar」，其下为各条目，名称与图标同菜单中所见（`shortText`），分隔线与伸缩空白以灰字标出。几个容器共用的子菜单在每处各出现一次，改动一处即改动全部。
 - 右侧按钮：「Add Action...」（从可搜索的动作列表中选一个，加在当前条目之后，当前项是菜单或工具栏时加在其末尾）、「Add Separator」、「Remove」、「Move Up」「Move Down」（在所在菜单内移动），以及「Restore Defaults」。菜单栏与工具栏本身不能删除或移动。
 - 编辑经 QActionKit 的 `ActionLayoutsModel`，它按清单检查每次改动：条目须已声明，形态须为声明的类型所允许，不能形成环。不被允许的改动不生效并提示。
-- 页面只改动副本，「Apply」与「OK」时以 `computeLayoutChanges()` 求出与默认布局的差别交给注册表，更新所有窗口，并写入 `actionLayouts.json`。「Restore Defaults」即没有任何改动。
-- **存储**：`settings.json` 同目录下单独的 `actionLayouts.json`，记 QActionKit 的改动记录（`ActionLayoutChange`），形如 `{"changes": [...]}`。启动时读入。注册表在任何时候登记的扩展上重放这些改动，因此之后载入的插件同样适用，插件不再声明的条目所涉及的改动被跳过并警告。
+- 增删与移动作用于当前标签页。页面只改动副本，「Apply」与「OK」时以 `computeLayoutChanges()` 求出每个 registry 与其默认布局的差别交给它，更新所有窗口，并写入 `actionLayouts.json`。「Restore Defaults」恢复两种窗口，即没有任何改动。
+- **存储**：`settings.json` 同目录下单独的 `actionLayouts.json`，每种窗口一节，记 QActionKit 的改动记录（`ActionLayoutChange`），形如 `{"projectWindow": {"changes": [...]}, "voiceBankWindow": {...}}`。分节之前的文件不再读取。启动时读入。注册表在任何时候登记的扩展上重放这些改动，因此之后载入的插件同样适用，插件不再声明的条目所涉及的改动被跳过并警告。
 
 ### 主题系统
 

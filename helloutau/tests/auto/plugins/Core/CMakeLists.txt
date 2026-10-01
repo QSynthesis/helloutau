@@ -1,8 +1,8 @@
 # The library-level content of Core: the pages of the settings that the plugin adds to the
 # catalog of the editor.
 add_auto_test(test_CoreSettingPages.cpp CorePlugin HelloUtauEditor)
-add_auto_test(test_KeymapSettingPage.cpp CorePlugin HelloUtauEditor)
-add_auto_test(test_MenusSettingPage.cpp CorePlugin HelloUtauEditor)
+add_auto_test(test_KeymapSettingPage.cpp CorePlugin HelloUtauEditor QActionKit::Widgets)
+add_auto_test(test_MenusSettingPage.cpp CorePlugin HelloUtauEditor QActionKit::Widgets)
 add_auto_test(test_PluginSettingPage.cpp CorePlugin HelloUtauEditor)
 
 # The plugin is in its own directory of the plugins, not beside the tests.

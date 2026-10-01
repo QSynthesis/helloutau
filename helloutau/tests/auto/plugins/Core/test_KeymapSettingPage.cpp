@@ -1,6 +1,9 @@
 #include <memory>
 
 #include <QtCore/QFile>
+#include <QtCore/QJsonArray>
+#include <QtCore/QJsonDocument>
+#include <QtCore/QJsonObject>
 #include <QtCore/QTemporaryDir>
 #include <QtCore/QTimer>
 #include <QtGui/QAction>
@@ -13,6 +16,8 @@
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QTreeWidget>
 #include <QtWidgets/QTreeWidgetItemIterator>
+
+#include <QAKCore/actionregistry.h>
 
 #include <helloutau/Editor/AppSettings.h>
 #include <helloutau/Editor/BuiltinActions.h>
@@ -123,6 +128,70 @@ private Q_SLOTS:
         QVERIFY(keymap.apply(&error));
         QCOMPARE(actionNamed(other, QStringLiteral("&Insert Note"))->shortcuts(),
                  QList<QKeySequence>{QKeySequence(Qt::Key_Insert)});
+    }
+
+    // The tree has the kinds of window at the top, each with an Other of its commands in no
+    // menu. A command of both kinds, Undo, has shortcuts in each apart from the other, a
+    // shortcut conflicts within one kind alone, and keymap.json has a section for each kind.
+    void each_kind_of_window_has_its_own_keymap() {
+        using Command = KeymapSettingPage::Command;
+        QTemporaryDir dir;
+        const auto settingsFile = dir.filePath(QStringLiteral("settings.json"));
+        const auto e = std::make_unique<Editor>(std::make_unique<AppSettings>(settingsFile));
+        e->setWatchesDisk(false);
+        KeymapSettingPage page(e.get());
+        const auto tree = page.widget()->findChild<QTreeWidget *>(QStringLiteral("commands"));
+        QCOMPARE(tree->topLevelItemCount(), 2);
+        for (int i = 0; i < 2; ++i) {
+            const auto window = tree->topLevelItem(i);
+            const auto other = window->child(window->childCount() - 1);
+            QCOMPARE(other->text(0), QStringLiteral("Other"));
+            QStringList ids;
+            for (int j = 0; j < other->childCount(); ++j) {
+                ids.push_back(other->child(j)->data(0, Qt::UserRole).toString());
+            }
+            QVERIFY(ids.contains(QStringLiteral("helloutau.file.openRecentProject")));
+        }
+
+        const Command insertEntry{Editor::VoiceBankWindowKind,
+                                  QStringLiteral("helloutau.voiceBank.insertEntry")};
+        const Command mergeNotes{Editor::ProjectWindowKind,
+                                 QStringLiteral("helloutau.edit.mergeNotes")};
+        QVERIFY(page.conflicts(insertEntry, QKeySequence(Qt::Key_Insert)).isEmpty());
+        QCOMPARE(page.conflicts(insertEntry, QKeySequence(Qt::CTRL | Qt::Key_D)),
+                 (QList<Command>{
+                     {Editor::VoiceBankWindowKind,
+                      QStringLiteral("helloutau.voiceBank.duplicateEntries")}
+        }));
+        QCOMPARE(page.conflicts(mergeNotes, QKeySequence(Qt::Key_Insert)),
+                 (QList<Command>{
+                     {Editor::ProjectWindowKind, QStringLiteral("helloutau.edit.insertNote")}
+        }));
+
+        const auto undo = QStringLiteral("helloutau.edit.undo");
+        const QKeySequence key(Qt::CTRL | Qt::ALT | Qt::Key_Z);
+        page.addShortcut({Editor::ProjectWindowKind, undo}, key);
+        QString error;
+        QVERIFY(page.apply(&error));
+        QCOMPARE(e->actionRegistry(Editor::ProjectWindowKind)->actionShortcuts(undo),
+                 (QList<QKeySequence>{QKeySequence(Qt::CTRL | Qt::Key_Z), key}));
+        QCOMPARE(e->actionRegistry(Editor::VoiceBankWindowKind)->actionShortcuts(undo),
+                 QList<QKeySequence>{QKeySequence(Qt::CTRL | Qt::Key_Z)});
+
+        QFile file(dir.filePath(QStringLiteral("keymap.json")));
+        QVERIFY(file.open(QIODevice::ReadOnly));
+        const auto object = QJsonDocument::fromJson(file.readAll()).object();
+        QCOMPARE(object.value(QStringLiteral("projectWindow"))
+                     .toObject()
+                     .value(QStringLiteral("shortcuts"))
+                     .toArray()
+                     .size(),
+                 1);
+        QVERIFY(object.value(QStringLiteral("voiceBankWindow"))
+                    .toObject()
+                    .value(QStringLiteral("shortcuts"))
+                    .toArray()
+                    .isEmpty());
     }
 };
 

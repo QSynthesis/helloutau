@@ -1,6 +1,9 @@
 #ifndef HELLOUTAU_EDITOR_ACTIONLAYOUTSFILE_P_H
 #define HELLOUTAU_EDITOR_ACTIONLAYOUTSFILE_P_H
 
+#include <utility>
+
+#include <QtCore/QList>
 #include <QtCore/QString>
 
 namespace QAK {
@@ -11,29 +14,34 @@ namespace hello::daw {
 
     /// The file of the changes that the user has made to the menus and the tool bars,
     /// \c actionLayouts.json beside \c settings.json, apart from the settings, the plugin
-    /// settings and the keymap. It holds the changes to the default layouts as QActionKit
-    /// records them, see \c QAK::ActionLayoutChange:
+    /// settings and the keymap. It has a section for the action registry of each kind of window,
+    /// which holds the changes to the default layouts as QActionKit records them, see
+    /// \c QAK::ActionLayoutChange:
     ///
-    ///     {"changes": [{"kind": "add", "container": ..., "entry": {...}, ...}, ...]}
+    ///     {"projectWindow": {"changes": [{"kind": "add", "container": ..., ...}, ...]},
+    ///      "voiceBankWindow": {"changes": [...]}}
     ///
     /// The registry replays the changes on the layouts of the extensions registered at any
     /// time, so that a plugin registered later finds them applied. See the menus and tool bars
     /// in the settings dialog in docs/Widgets.md.
     class ActionLayoutsFile {
     public:
+        /// The key of a section and the registry whose changes it holds
+        using Sections = QList<std::pair<QString, QAK::ActionRegistry *>>;
+
         /// Returns the path of \c actionLayouts.json in the directory of \a settingsFile.
         static QString fileNameFor(const QString &settingsFile);
 
-        /// Gives \a registry the changes that \a fileName records. A missing file records none.
-        /// A file that does not read as a list of changes is ignored with a warning, and a
-        /// change that does not read is skipped with a warning, so that the default layouts
-        /// apply in their place.
-        static void read(QAK::ActionRegistry *registry, const QString &fileName);
+        /// Gives the registry of each of \a sections the changes that its section of \a fileName
+        /// records. A missing file or section records none. A file or a section that does not
+        /// read as a list of changes is ignored with a warning, and a change that does not read
+        /// is skipped with a warning, so that the default layouts apply in their place.
+        static void read(const Sections &sections, const QString &fileName);
 
-        /// Writes the changes of \a registry to \a fileName, replacing it at once. Returns
-        /// whether the file is written, with the reason in \a error otherwise.
-        static bool write(const QAK::ActionRegistry *registry, const QString &fileName,
-                          QString *error);
+        /// Writes the changes of the registry of each of \a sections to its section of
+        /// \a fileName, replacing the file at once. Returns whether the file is written, with
+        /// the reason in \a error otherwise.
+        static bool write(const Sections &sections, const QString &fileName, QString *error);
     };
 
 }
