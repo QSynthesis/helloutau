@@ -1,5 +1,7 @@
 #include "Translations.h"
 
+#include <QtCore/QCoreApplication>
+#include <QtCore/QDir>
 #include <QtCore/QLibraryInfo>
 #include <QtCore/QPointer>
 #include <QtCore/QTranslator>
@@ -36,7 +38,13 @@ namespace hello::daw {
         QLocale::setDefault(localeOf(language));
         // Qt has no file for English, and the file of another language is installed only if Qt
         // ships it, so that the standard buttons and dialogs match the rest.
-        load(QStringLiteral("qtbase"), QLibraryInfo::path(QLibraryInfo::TranslationsPath));
+        const auto packaged = QDir(QCoreApplication::applicationDirPath()).filePath(
+            QStringLiteral("../share/Qt/translations"));
+        const auto system = QLibraryInfo::path(QLibraryInfo::TranslationsPath);
+        if (!load(QStringLiteral("qtbase"), QDir::cleanPath(packaged)) &&
+            QDir::cleanPath(packaged) != QDir::cleanPath(system)) {
+            load(QStringLiteral("qtbase"), system);
+        }
         load(QStringLiteral("helloutau"), QStringLiteral(":/helloutau/translations"));
     }
 
