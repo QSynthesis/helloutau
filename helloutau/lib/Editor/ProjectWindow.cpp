@@ -56,6 +56,7 @@
 #include "Playback.h"
 #include "PasteParametersDialog.h"
 #include "ScalePitchDialog.h"
+#include "ToolBarPalette_p.h"
 #include "VibratoDialog.h"
 #include "VoiceBankCharsetDialog.h"
 #include "VoiceBankWindow.h"
@@ -716,6 +717,7 @@ namespace hello::daw {
             toolBar = new QToolBar(tr("Main Toolbar"));
             toolBar->setObjectName(QStringLiteral("mainToolBar"));
             toolBar->setMovable(false);
+            followToolBarPalette(toolBar);
             toolBar->setVisible(editor->settings().isToolBarVisible());
             decl.addToolBar(toolBar);
             context->addToolBar(QStringLiteral("helloutau.mainToolBar"), toolBar);

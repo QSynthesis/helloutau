@@ -65,6 +65,7 @@
 #include "FindSupport_p.h"
 #include "OtoWaveformView.h"
 #include "SamplePreview.h"
+#include "ToolBarPalette_p.h"
 #include "VoiceBankCharsetDialog.h"
 #include "VoiceBankEntryModel.h"
 #include "VoiceBankInfoPanel.h"
@@ -1478,6 +1479,7 @@ namespace hello::daw {
             stdc_decl_t;
             sampleToolBar = new QToolBar();
             sampleToolBar->setObjectName(QStringLiteral("sampleToolBar"));
+            followToolBarPalette(sampleToolBar);
             context->addToolBar(QStringLiteral("helloutau.voiceBank.sampleToolBar"),
                                 sampleToolBar);
             context->addWidgetFactory(

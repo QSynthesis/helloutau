@@ -28,6 +28,7 @@
 #include <QtWidgets/QTableView>
 #include <QtWidgets/QTableWidget>
 #include <QtWidgets/QToolBar>
+#include <QtWidgets/QToolButton>
 #include <QtWidgets/QTreeView>
 #include <QtWidgets/QTreeWidget>
 #include <QtCore/QFile>
@@ -790,6 +791,35 @@ private Q_SLOTS:
         QVERIFY(e->settings().isToolBarVisible());
 
         QVERIFY(!actionNamed(window, QStringLiteral("&Undo"))->icon().isNull());
+
+        // The icon has visible pixels in the checked, disabled and hover states.
+        const auto icon = actionNamed(window, QStringLiteral("Show &Pitch"))->icon();
+        for (const auto &[mode, state] : {
+                 std::pair{QIcon::Normal,   QIcon::On },
+                 std::pair{QIcon::Disabled, QIcon::Off},
+                 std::pair{QIcon::Active,   QIcon::Off}
+        }) {
+            const auto image = icon.pixmap(QSize(16, 16), 1.0, mode, state).toImage();
+            bool drawn = false;
+            for (int y = 0; y < image.height() && !drawn; ++y) {
+                for (int x = 0; x < image.width() && !drawn; ++x) {
+                    drawn = qAlpha(image.pixel(x, y)) > 0;
+                }
+            }
+            QVERIFY2(drawn, qPrintable(QStringLiteral("mode %1, state %2").arg(mode).arg(state)));
+        }
+
+        // A checked button has a subtle background and the text color of the other buttons, so
+        // that its icon in the window text color remains visible.
+        const auto buttons = toolBar->findChildren<QToolButton *>();
+        QVERIFY(!buttons.isEmpty());
+        const auto colors = buttons.first()->palette();
+        QVERIFY(colors.color(QPalette::Active, QPalette::Accent) !=
+                QGuiApplication::palette().color(QPalette::Active, QPalette::Accent));
+        // The Windows 11 style uses the button text color for a checked button only if it is set.
+        QVERIFY(colors.isBrushSet(QPalette::Active, QPalette::ButtonText));
+        QCOMPARE(colors.color(QPalette::Active, QPalette::ButtonText),
+                 QGuiApplication::palette().color(QPalette::Active, QPalette::WindowText));
 
         // The box is no command of the palette, since the context has no action for a box.
         actionNamed(window, QStringLiteral("&Command Palette..."))->trigger();

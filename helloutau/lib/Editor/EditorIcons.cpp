@@ -32,9 +32,11 @@ namespace hello::daw {
             {"helloutau.voiceBank.synthesize", "intellij/lightning.svg"     },
         };
         for (const auto &[id, file] : icons) {
+            // The constructor assigns the file to every state. setValue() assigns one state, and
+            // the icon engine has no file for the other states.
             ThemeIcon icon;
-            icon.files.setValue(ThemeButtonState::Up,
-                                QStringLiteral(":/helloutau/icons/") + QLatin1String(file));
+            icon.files =
+                ThemeStates<QString>(QStringLiteral(":/helloutau/icons/") + QLatin1String(file));
             // QActionKit passes a local file to QIcon, which selects the engine of ThemeIcon by
             // the suffix of the encoded name.
             registry->addIcon(QString(), QLatin1String(id),
