@@ -220,7 +220,8 @@ namespace hello::daw {
 
     void addEditorSettingPages(SettingCatalog *catalog, AppSettings &settings) {
         // Appearance & Behavior is a category, which the dialog shows as the links to its pages.
-        auto appearance = new SettingPage(QLatin1String(EditorSettingPageIds::appearanceAndBehavior));
+        auto appearance =
+            new SettingPage(QLatin1String(EditorSettingPageIds::appearanceAndBehavior));
         appearance->setTitle(SettingPage::tr("Appearance & Behavior"));
         appearance->setKeywords({QStringLiteral("Appearance & Behavior")});
         appearance->addPage(new SystemSettingsPage(settings));
