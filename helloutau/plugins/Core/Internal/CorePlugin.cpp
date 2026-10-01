@@ -5,6 +5,7 @@
 #include <helloutau/Editor/AppLoader.h>
 #include <helloutau/Editor/BuiltinActions.h>
 #include <helloutau/Editor/Editor.h>
+#include <helloutau/Editor/Translations.h>
 
 #include <Core/CoreSettingPages.h>
 
@@ -16,6 +17,8 @@ namespace hello::daw {
 
     bool CorePlugin::initialize(std::string *errorMessage) {
         Q_UNUSED(errorMessage);
+        Translations::load(QStringLiteral("Core"),
+                           QStringLiteral(":/helloutau/plugins/Core/translations"));
         m_actions = std::make_unique<BuiltinActions>();
         // The editor uses the settings of the loader, which outlive the editor, or the settings
         // of the user if no loader loaded this plugin.

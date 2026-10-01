@@ -40,12 +40,20 @@ namespace {
         return qApp->property("appLoaderEvents").toStringList();
     }
 
+    // Returns \a directory, with settings in it that choose English, so that the messages do not
+    // depend on the language of the system
+    QString inEnglish(const QString &directory) {
+        AppSettings(directory + QStringLiteral("/settings.json")).setLanguage(QStringLiteral("en"));
+        return directory;
+    }
+
     // Returns the command line of the program for \a files, with the settings in a directory of
     // the test instead of the settings directory of the user.
     QStringList arguments(const QStringList &files = {}) {
         static QTemporaryDir directory;
-        return QStringList({QStringLiteral("helloutau"), QLatin1String(AppLoader::settingsOption),
-                            directory.path()}) +
+        static const auto path = inEnglish(directory.path());
+        return QStringList(
+                   {QStringLiteral("helloutau"), QLatin1String(AppLoader::settingsOption), path}) +
                files;
     }
 
@@ -342,7 +350,7 @@ private Q_SLOTS:
             QFile out(directory.filePath(QStringLiteral("plugins.json")));
             [&] { QVERIFY(out.open(QIODevice::WriteOnly)); }();
             out.write(json);
-            return directory.path();
+            return inEnglish(directory.path());
         };
         QString error;
         {

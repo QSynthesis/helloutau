@@ -15,7 +15,9 @@
 #include <stdcorelib/system.h>
 
 #include "AppSettings.h"
+#include "Restarter.h"
 #include "SettingsJson_p.h"
+#include "Translations.h"
 
 namespace hello::daw {
 
@@ -31,6 +33,8 @@ namespace hello::daw {
                                                 stdc::pluginsystem::PluginSystem::Bundle};
         QStringList pluginPaths;
         QStringList files;
+        // The options of the command line without the files, which a restart passes again
+        QStringList options;
         QString settingsDirectory;
         std::unique_ptr<AppSettings> settings;
         stdc::pluginsystem::PluginSettings pluginSettings;
@@ -69,12 +73,14 @@ namespace hello::daw {
             if (arguments[i] == QLatin1String(pluginPathOption)) {
                 if (++i < arguments.size()) {
                     impl.pluginPaths.push_back(arguments[i]);
+                    impl.options += {arguments[i - 1], arguments[i]};
                 }
                 continue;
             }
             if (arguments[i] == QLatin1String(settingsOption)) {
                 if (++i < arguments.size()) {
                     impl.settingsDirectory = arguments[i];
+                    impl.options += {arguments[i - 1], arguments[i]};
                 }
                 continue;
             }
@@ -83,6 +89,7 @@ namespace hello::daw {
         impl.settings = std::make_unique<AppSettings>(impl.settingsDirectory +
                                                       QStringLiteral("/settings.json"));
         impl.readPluginSettings();
+        Translations::install(impl.settings->language());
     }
 
     AppLoader::~AppLoader() {
@@ -279,6 +286,7 @@ namespace hello::daw {
     }
 
     int AppLoader::run() {
+        stdc_impl_t;
         QString error;
         if (!load(&error)) {
             QMessageBox::critical(nullptr, QApplication::applicationName(),
@@ -287,6 +295,7 @@ namespace hello::daw {
         }
         const int code = QApplication::exec();
         shutdown();
+        Restarter::startAgain(impl.options);
         return code;
     }
 

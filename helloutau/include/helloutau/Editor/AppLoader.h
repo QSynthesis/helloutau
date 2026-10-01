@@ -79,6 +79,7 @@ namespace hello::daw {
         /// Creates a loader for the command-line \a arguments, whose first element is the
         /// program. Each \c --plugin-path adds the following directory to the plugin paths.
         /// \c --settings specifies the settings directory. The remaining arguments are files.
+        /// Installs the translations of the language in the settings (Translations::install()).
         explicit AppLoader(const QStringList &arguments);
 
         /// Shuts the plugins down if they are still loaded.
@@ -170,7 +171,8 @@ namespace hello::daw {
         QStringList errors() const;
 
         /// Loads the plugins, shows the reason if the core plugin does not run, runs the event
-        /// loop, and shuts the plugins down.
+        /// loop, and shuts the plugins down. If the application quit to restart, starts it again
+        /// with the same options and without the files (Restarter::startAgain()).
         ///
         /// \return the exit code of the event loop, or 1 if the core plugin does not run
         int run();

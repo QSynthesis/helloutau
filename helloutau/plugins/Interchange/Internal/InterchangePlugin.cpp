@@ -6,6 +6,7 @@
 #include <hellokit/Interchange/InterchangeRegistry.h>
 
 #include <helloutau/Editor/ActionRegistration.h>
+#include <helloutau/Editor/Translations.h>
 
 #include <Interchange/InterchangeStepRegistration.h>
 
@@ -20,6 +21,8 @@ namespace hello::daw {
 
     bool InterchangePlugin::initialize(std::string *errorMessage) {
         Q_UNUSED(errorMessage);
+        Translations::load(QStringLiteral("Interchange"),
+                           QStringLiteral(":/helloutau/plugins/Interchange/translations"));
         m_drivers = std::make_unique<kit::BuiltinInterchangeDrivers>();
         m_registry = std::make_unique<kit::InterchangeRegistry>();
         m_midiEncoding = std::make_unique<InterchangeStepRegistration>(

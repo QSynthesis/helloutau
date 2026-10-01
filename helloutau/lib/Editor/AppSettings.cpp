@@ -24,6 +24,7 @@ namespace hello::daw {
         constexpr char RealtimeValue[] = "realtime";
         constexpr char KeyRenderThreads[] = "playback/threads";
         constexpr char KeyUstExportCharset[] = "files/ustExportCharset";
+        constexpr char KeyLanguage[] = "appearance/language";
         constexpr char KeyPitchVisible[] = "view/showPitch";
         constexpr char KeyRenderedPitchVisible[] = "view/showRenderedPitch";
         constexpr char KeyEnvelopesVisible[] = "view/showEnvelopes";
@@ -210,6 +211,17 @@ namespace hello::daw {
     void AppSettings::setToolBarVisible(bool visible) {
         stdc_impl_t;
         impl.setValue(KeyToolBarVisible, visible);
+    }
+
+    QString AppSettings::language() const {
+        stdc_impl_t;
+        const auto language = impl.value(KeyLanguage).asString();
+        return language ? textOf(*language) : QString();
+    }
+
+    void AppSettings::setLanguage(const QString &language) {
+        stdc_impl_t;
+        impl.setValue(KeyLanguage, language.toStdString());
     }
 
     QString AppSettings::ustExportCharset() const {

@@ -33,6 +33,7 @@
 #include "KeymapFile_p.h"
 #include "ActionLayoutsFile_p.h"
 #include "ProjectWindow.h"
+#include "Restarter.h"
 #include "UstCharsetDialog.h"
 #include "VoiceBankCharsetDialog.h"
 #include "VoiceBankWindow.h"
@@ -522,6 +523,7 @@ namespace hello::daw {
             }
         });
         dialog.exec();
+        Restarter::offer(from, this);
     }
 
     bool Editor::closeAll() {

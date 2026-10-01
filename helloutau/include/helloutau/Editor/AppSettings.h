@@ -105,6 +105,11 @@ namespace hello::daw {
         bool isToolBarVisible() const;
         void setToolBarVisible(bool visible);
 
+        /// The language of the interface, as a locale name such as \c zh_CN, or empty for that of
+        /// the system, the default. It takes effect at the next start, see Translations.
+        QString language() const;
+        void setLanguage(const QString &language);
+
         /// Encoding initially selected when a UST is exported. The default is UTF-8.
         QString ustExportCharset() const;
         void setUstExportCharset(const QString &charset);

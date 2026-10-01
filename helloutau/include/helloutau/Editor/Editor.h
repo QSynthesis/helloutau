@@ -148,7 +148,8 @@ namespace hello::daw {
 
         /// Shows the settings over \a from, on the page \a page if given. Each time the settings
         /// are applied, applies them to every project window: rereads the voice banks if the
-        /// UTAU folder changed, and plays in the selected playback mode.
+        /// UTAU folder changed, and plays in the selected playback mode. Once the dialog closes,
+        /// offers a restart if an applied setting requires one (Restarter::offer()).
         void showSettings(QWidget *from, const QString &page = {});
 
         /// Closes every window. Each window prompts the user to save its document first. Stops

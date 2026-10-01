@@ -17,6 +17,8 @@
 #include "AppSettings.h"
 #include "EditorSettingPageIds.h"
 #include "ExportUstDialog.h"
+#include "Restarter.h"
+#include "Translations.h"
 
 namespace hello::daw {
 
@@ -61,13 +63,23 @@ namespace hello::daw {
         : SettingPage(QLatin1String(EditorSettingPageIds::systemSettings), parent),
           m_settings(settings) {
         setTitle(tr("System Settings"));
-        setDescription(tr("Where UTAU is."));
-        setKeywords({QStringLiteral("System Settings"), QStringLiteral("UTAU")});
+        setDescription(tr("The language of the interface, and where UTAU is."));
+        setKeywords({QStringLiteral("System Settings"), QStringLiteral("Language"),
+                     QStringLiteral("UTAU")});
     }
 
     QWidget *SystemSettingsPage::createWidget() {
         auto widget = new QWidget();
         auto form = new QFormLayout(widget);
+        m_language = new QComboBox(widget);
+        m_language->setObjectName(QStringLiteral("language"));
+        for (const auto &[language, name] : Translations::languages()) {
+            m_language->addItem(name, language);
+        }
+        m_language->setCurrentIndex(std::max(0, m_language->findData(m_settings.language())));
+        form->addRow(tr("&Language:"), m_language);
+        form->addRow(note(tr("Takes effect after a restart.")));
+        connect(m_language, &QComboBox::currentIndexChanged, this, &SettingPage::modifiedChanged);
         m_utauDirectory =
             addPathRow(form, widget, tr("&UTAU folder:"),
                        QString::fromStdU16String(m_settings.utauDirectory().u16string()), true);
@@ -81,12 +93,18 @@ namespace hello::daw {
         if (!m_utauDirectory) {
             return false;
         }
-        return pathText(m_utauDirectory) != QDir::fromNativeSeparators(QString::fromStdU16String(
+        return m_language->currentData().toString() != m_settings.language() ||
+               pathText(m_utauDirectory) != QDir::fromNativeSeparators(QString::fromStdU16String(
                                                 m_settings.utauDirectory().u16string()));
     }
 
     bool SystemSettingsPage::apply(QString *error) {
         Q_UNUSED(error);
+        const auto language = m_language->currentData().toString();
+        if (language != m_settings.language()) {
+            m_settings.setLanguage(language);
+            Restarter::markNeeded();
+        }
         m_settings.setUtauDirectory(
             std::filesystem::path(pathText(m_utauDirectory).toStdU16String()));
         Q_EMIT modifiedChanged();
@@ -95,6 +113,10 @@ namespace hello::daw {
 
     QLineEdit *SystemSettingsPage::utauDirectoryEdit() const {
         return m_utauDirectory;
+    }
+
+    QComboBox *SystemSettingsPage::languageBox() const {
+        return m_language;
     }
 
     EditorSettingPage::EditorSettingPage(AppSettings &settings, QObject *parent)

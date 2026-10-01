@@ -28,3 +28,12 @@ helloutau_add_native_plugin(${PROJECT_NAME}
     MACRO_PREFIX INTERCHANGEPLUGIN
 )
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+
+# The translations of the plugin, embedded in it under :/helloutau/plugins/Interchange/translations
+qt_add_translations(
+    TARGETS ${PROJECT_NAME}
+    SOURCE_TARGETS ${PROJECT_NAME}
+    TS_FILES translations/Interchange_zh_CN.ts
+    RESOURCE_PREFIX /helloutau/plugins/Interchange/translations
+    LUPDATE_OPTIONS -locations none -no-obsolete
+)

@@ -13,6 +13,7 @@
 #include <helloutau/Widgets/SettingPage.h>
 
 #include <helloutau/Editor/AppLoader.h>
+#include <helloutau/Editor/AppSettings.h>
 #include <helloutau/Editor/Editor.h>
 #include <helloutau/Editor/ProjectWindow.h>
 
@@ -53,8 +54,11 @@ private Q_SLOTS:
     // plugin opens, which makes the command available to the command palette. The plugin
     // removes the command at shutdown.
     void the_plugin_adds_a_command_to_the_project_window() {
-        // The settings in a directory of the test instead of the settings directory of the user
+        // The settings in a directory of the test instead of the settings directory of the user,
+        // in English, so that the menus do not depend on the language of the system
         QTemporaryDir settings;
+        AppSettings(settings.filePath(QStringLiteral("settings.json")))
+            .setLanguage(QStringLiteral("en"));
         AppLoader loader({QStringLiteral("helloutau"), QLatin1String(AppLoader::settingsOption),
                           settings.path()});
         loader.setPluginPaths(

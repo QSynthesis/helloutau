@@ -317,6 +317,8 @@
 
 **页面的归属**（作者 2026-10-01 同意）：编辑器自己加入 Appearance & Behavior、System Settings、Editor 与 Rendering，id 公开在 `EditorSettingPageIds` 中，插件据此安放自己的页。Keymap（`core.Keymap`）与 Menus and Toolbars（`core.MenusAndToolbars`）属于 Core 插件（`plugins/Core`，`addCoreSettingPages()`），以 `SettingCatalog::addPage()` 与 `SettingPage::addPage()` 的 `before` 参数分别排在 Editor 之前与 System Settings 之前，同属 Core 插件的 Plugins（`core.Plugins`）在有加载器时排在 Rendering 之前。三页放在一起并导出供测试使用（`tests/auto/plugins/Core`）。快捷键与布局的文件仍由编辑器读写：启动时由 `Editor` 读入，页面应用后调用 `Editor::saveKeymap()` 与 `Editor::saveActionLayouts()` 写出，因此文件格式不出编辑器，没有这两页时用户的设置照样生效。
 
+**界面语言**（作者 2026-10-01 要求）：「System Settings」页的「Language」下拉框在跟随系统（默认）、English 与简体中文之间选择，记入设置（`appearance/language`，语言区域名，跟随系统时为空）。语言在启动时生效：`AppLoader` 构造时调用 `Translations::install()`，把该语言设为默认区域，装入 Qt 自带的 `qtbase` 译文（找得到时）与各库的译文，各插件在 `initialize()` 中以 `Translations::load()` 装入自己的译文。应用了新的语言后，设置对话框关闭时询问是否立即重启（`Restarter`）：同意则像退出时一样关闭全部窗口（未保存的工程照常询问），全部关闭后程序退出，`AppLoader::run()` 在事件循环结束后以原来的选项（不含文件）启动新进程（`QProcess::startDetached`，作者决定）；拒绝或在保存询问中取消则不重启。译文的来源与构建见 [`Plugins.md`](Plugins.md)「翻译」。
+
 **Keymap 页**（作者 2026-10-01 定，仿 JetBrains IDE 的 Keymap）：
 
 - **每种窗口一个 action registry**（作者 2026-10-01 定）：QActionKit 默认一个应用只有一种窗口，这种窗口对应一个 registry，它的每个实例是一个 context。HelloUtau 有两种窗口，因此 `Editor::actionRegistry(WindowKind)` 为工程窗口与音源窗口各给一个 registry，各有自己的清单（`ProjectActions.xml`、`VoiceBankActions.xml`）、布局、快捷键与用户改动。两种窗口共有的命令（新建、打开、撤销、查找、设置等）在两份清单中各声明一次，其快捷键因此各自独立（作者决定）。插件的 `ActionContribution::extension(WindowKind)` 为每种窗口给出各自的扩展，ClassicPluginHost 与 Interchange 只给工程窗口。

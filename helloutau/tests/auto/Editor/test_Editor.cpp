@@ -60,6 +60,7 @@
 #include <helloutau/Editor/OtoWaveformView.h>
 #include <helloutau/Editor/ProjectPropertiesDialog.h>
 #include <helloutau/Editor/ProjectWindow.h>
+#include <helloutau/Editor/Restarter.h>
 #include <helloutau/Editor/PianoRoll.h>
 #include <helloutau/Editor/PasteParametersDialog.h>
 #include <helloutau/Editor/ScalePitchDialog.h>
@@ -930,6 +931,53 @@ private Q_SLOTS:
         QCOMPARE(e->settings().playbackMode(), AppSettings::Realtime);
         QVERIFY(roll->isCursorEnabled());
         e->settings().setPlaybackMode(AppSettings::Prerender);
+    }
+
+    // The language is chosen on System Settings from the system default, English and Simplified
+    // Chinese. A changed language is applied for the next start, and once the dialog closes a
+    // restart is offered; declined, nothing restarts.
+    void the_language_is_chosen_for_the_next_start() {
+        const auto e = editor();
+        e->settings().setLanguage(QString());
+        const auto page = e->settingCatalog()->page(QStringLiteral("editor.SystemSettings"));
+        QVERIFY(page);
+        const auto box = page->widget()->findChild<QComboBox *>(QStringLiteral("language"));
+        QVERIFY(box);
+        QStringList languages;
+        for (int i = 0; i < box->count(); ++i) {
+            languages.push_back(box->itemData(i).toString());
+        }
+        QCOMPARE(languages,
+                 (QStringList{QString(), QStringLiteral("en"), QStringLiteral("zh_CN")}));
+        QCOMPARE(box->currentIndex(), 0);
+        QVERIFY(!page->isModified());
+
+        const auto window = e->newWindow();
+        bool asked = false;
+        QTimer::singleShot(0, [&asked] {
+            const auto dialog = qobject_cast<SettingsDialog *>(QApplication::activeModalWidget());
+            QVERIFY(dialog);
+            const auto language =
+                dialog->currentPage()->widget()->findChild<QComboBox *>(QStringLiteral("language"));
+            QVERIFY(language);
+            language->setCurrentIndex(language->findData(QStringLiteral("zh_CN")));
+            QVERIFY(dialog->applyButton()->isEnabled());
+            // The question comes once the dialog has closed.
+            QTimer::singleShot(0, [&asked] {
+                const auto box = qobject_cast<QMessageBox *>(QApplication::activeModalWidget());
+                QVERIFY(box);
+                asked = true;
+                box->button(QMessageBox::No)->click();
+            });
+            dialog->accept();
+        });
+        e->showSettings(window, QStringLiteral("editor.SystemSettings"));
+        QVERIFY(asked);
+        QCOMPARE(e->settings().language(), QStringLiteral("zh_CN"));
+        QVERIFY(!Restarter::isNeeded());
+        QVERIFY(!Restarter::isRestarting());
+        QVERIFY(window->isVisible());
+        e->settings().setLanguage(QString());
     }
 
     // The number of rendering threads is chosen from Automatic, the powers of two below the
