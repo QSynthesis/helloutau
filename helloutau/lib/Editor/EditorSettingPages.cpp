@@ -1,9 +1,11 @@
 #include "EditorSettingPages_p.h"
 
 #include <algorithm>
+#include <limits>
 #include <thread>
 
 #include <QtCore/QDir>
+#include <QtGui/QIntValidator>
 #include <QtWidgets/QComboBox>
 #include <QtWidgets/QFileDialog>
 #include <QtWidgets/QFormLayout>
@@ -11,7 +13,6 @@
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QLineEdit>
 #include <QtWidgets/QPushButton>
-#include <QtWidgets/QSpinBox>
 
 #include "AppSettings.h"
 #include "EditorSettingPageIds.h"
@@ -162,12 +163,25 @@ namespace hello::daw {
                              "whole track uses an external console in the classic mode and "
                              "several threads otherwise.")));
 
-        // Zero stands for one thread per hardware thread.
-        m_threads = new QSpinBox();
-        m_threads->setRange(0, 256);
-        m_threads->setSpecialValueText(
-            tr("Automatic (%1)").arg(std::max(1u, std::thread::hardware_concurrency())));
-        m_threads->setValue(m_settings.renderThreadCount());
+        // Zero stands for one thread per hardware thread. The list offers the powers of two below
+        // the number of hardware threads and that number, and any other count can be typed in.
+        const int hardware = int(std::max(1u, std::thread::hardware_concurrency()));
+        m_threads = new QComboBox();
+        m_threads->setObjectName(QStringLiteral("threads"));
+        m_threads->setEditable(true);
+        m_threads->setInsertPolicy(QComboBox::NoInsert);
+        m_threads->setValidator(new QIntValidator(1, std::numeric_limits<int>::max(), m_threads));
+        m_threads->addItem(tr("Automatic (%1)").arg(hardware), 0);
+        for (int count = 1; count < hardware; count *= 2) {
+            m_threads->addItem(QString::number(count), count);
+        }
+        m_threads->addItem(QString::number(hardware), hardware);
+        const int current = m_settings.renderThreadCount();
+        if (const int index = m_threads->findData(current); index >= 0) {
+            m_threads->setCurrentIndex(index);
+        } else {
+            m_threads->setEditText(QString::number(current));
+        }
         form->addRow(tr("Rendering &threads:"), m_threads);
         const auto updateThreads = [this] {
             m_threads->setEnabled(m_playbackMode->currentData().toInt() != AppSettings::Prerender);
@@ -179,8 +193,21 @@ namespace hello::daw {
         connect(m_playbackMode, &QComboBox::currentIndexChanged, this, updateThreads);
         connect(m_playbackMode, &QComboBox::currentIndexChanged, this,
                 &SettingPage::modifiedChanged);
-        connect(m_threads, &QSpinBox::valueChanged, this, &SettingPage::modifiedChanged);
+        connect(m_threads, &QComboBox::currentTextChanged, this, &SettingPage::modifiedChanged);
         return widget;
+    }
+
+    std::optional<int> RenderingSettingPage::threadCount() const {
+        const auto text = m_threads->currentText();
+        if (const int index = m_threads->findText(text); index >= 0) {
+            return m_threads->itemData(index).toInt();
+        }
+        bool number = false;
+        const int count = text.trimmed().toInt(&number);
+        if (!number || count < 1) {
+            return std::nullopt;
+        }
+        return count;
     }
 
     bool RenderingSettingPage::isModified() const {
@@ -190,16 +217,23 @@ namespace hello::daw {
         return pathText(m_resampler) != QDir::fromNativeSeparators(m_settings.resampler()) ||
                pathText(m_wavtool) != QDir::fromNativeSeparators(m_settings.wavtool()) ||
                m_playbackMode->currentData().toInt() != m_settings.playbackMode() ||
-               m_threads->value() != m_settings.renderThreadCount();
+               threadCount() != m_settings.renderThreadCount();
     }
 
     bool RenderingSettingPage::apply(QString *error) {
-        Q_UNUSED(error);
+        const auto threads = threadCount();
+        if (!threads) {
+            if (error) {
+                *error = tr("The number of rendering threads is a positive whole number, or "
+                            "Automatic.");
+            }
+            return false;
+        }
         m_settings.setResampler(pathText(m_resampler));
         m_settings.setWavtool(pathText(m_wavtool));
         m_settings.setPlaybackMode(
             AppSettings::PlaybackMode(m_playbackMode->currentData().toInt()));
-        m_settings.setRenderThreadCount(m_threads->value());
+        m_settings.setRenderThreadCount(*threads);
         Q_EMIT modifiedChanged();
         return true;
     }
@@ -216,7 +250,7 @@ namespace hello::daw {
         return m_playbackMode;
     }
 
-    QSpinBox *RenderingSettingPage::threadCountBox() const {
+    QComboBox *RenderingSettingPage::threadCountBox() const {
         return m_threads;
     }
 

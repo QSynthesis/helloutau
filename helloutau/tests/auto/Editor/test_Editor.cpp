@@ -1,5 +1,7 @@
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
+#include <thread>
 
 #include <QtCore/QTemporaryDir>
 #include <QtCore/QTimer>
@@ -864,6 +866,59 @@ private Q_SLOTS:
         QCOMPARE(e->settings().playbackMode(), AppSettings::Realtime);
         QVERIFY(roll->isCursorEnabled());
         e->settings().setPlaybackMode(AppSettings::Prerender);
+    }
+
+    // The number of rendering threads is chosen from Automatic, the powers of two below the
+    // number of hardware threads and that number, or typed in without an upper limit. A text
+    // that is not a positive count is not applied.
+    void the_thread_count_is_chosen_or_typed() {
+        const auto e = editor();
+        e->settings().setRenderThreadCount(0);
+        const auto page = e->settingCatalog()->page(QStringLiteral("editor.Rendering"));
+        QVERIFY(page);
+        const auto box = page->widget()->findChild<QComboBox *>(QStringLiteral("threads"));
+        QVERIFY(box);
+        QVERIFY(box->isEditable());
+        const int hardware = int(std::max(1u, std::thread::hardware_concurrency()));
+        QList<int> counts;
+        for (int i = 0; i < box->count(); ++i) {
+            counts.push_back(box->itemData(i).toInt());
+        }
+        QList<int> expected{0};
+        for (int count = 1; count < hardware; count *= 2) {
+            expected.push_back(count);
+        }
+        expected.push_back(hardware);
+        QCOMPARE(counts, expected);
+        QCOMPARE(box->currentIndex(), 0);
+        QVERIFY(box->currentText().startsWith(QStringLiteral("Automatic (")));
+        QVERIFY(!page->isModified());
+
+        QString error;
+        box->setCurrentIndex(1);
+        QVERIFY(page->isModified());
+        QVERIFY(page->apply(&error));
+        QCOMPARE(e->settings().renderThreadCount(), 1);
+
+        box->setEditText(QStringLiteral("1000"));
+        QVERIFY(page->apply(&error));
+        QCOMPARE(e->settings().renderThreadCount(), 1000);
+
+        box->setEditText(QStringLiteral("0"));
+        QVERIFY(!page->apply(&error));
+        QVERIFY(!error.isEmpty());
+        QCOMPARE(e->settings().renderThreadCount(), 1000);
+
+        // A count not in the list is shown as typed.
+        const auto again = editor();
+        again->settings().setRenderThreadCount(6);
+        const auto shown = again->settingCatalog()
+                               ->page(QStringLiteral("editor.Rendering"))
+                               ->widget()
+                               ->findChild<QComboBox *>(QStringLiteral("threads"));
+        QCOMPARE(shown->currentText(), QStringLiteral("6"));
+        again->settings().setRenderThreadCount(0);
+        e->settings().setRenderThreadCount(0);
     }
 
     // The shortcuts of UTAU (its menu resource) where they do not clash with ours, and no key

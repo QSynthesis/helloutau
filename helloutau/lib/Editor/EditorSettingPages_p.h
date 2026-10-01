@@ -1,17 +1,14 @@
 #ifndef HELLOUTAU_EDITOR_EDITORSETTINGPAGES_P_H
 #define HELLOUTAU_EDITOR_EDITORSETTINGPAGES_P_H
 
+#include <optional>
+
 #include <QtCore/QPointer>
 
 #include <helloutau/Widgets/SettingPage.h>
 
 class QComboBox;
 class QLineEdit;
-class QSpinBox;
-
-namespace QAK {
-    class ActionRegistry;
-}
 
 namespace hello::daw {
 
@@ -67,7 +64,12 @@ namespace hello::daw {
         QLineEdit *resamplerEdit() const;
         QLineEdit *wavtoolEdit() const;
         QComboBox *playbackModeBox() const;
-        QSpinBox *threadCountBox() const;
+        QComboBox *threadCountBox() const;
+
+        /// Returns the number of rendering threads in the box, zero for Automatic, or
+        /// \c std::nullopt if the text typed in is not a positive count. There is no upper
+        /// limit, as there is none for the jobs of ninja and make.
+        std::optional<int> threadCount() const;
 
     protected:
         QWidget *createWidget() override;
@@ -77,7 +79,7 @@ namespace hello::daw {
         QPointer<QLineEdit> m_resampler;
         QPointer<QLineEdit> m_wavtool;
         QPointer<QComboBox> m_playbackMode;
-        QPointer<QSpinBox> m_threads;
+        QPointer<QComboBox> m_threads;
     };
 
     /// Adds the pages of the editor to \a catalog: Appearance & Behavior with System Settings in
