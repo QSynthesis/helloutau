@@ -21,6 +21,7 @@
 #include <hellokit/VoiceBank/VoiceBank.h>
 
 #include <helloutau/Theme/ThemeManager.h>
+#include <helloutau/Audio/AudioOutput.h>
 #include <helloutau/Widgets/CommandPalette.h>
 #include <helloutau/Widgets/SettingPage.h>
 #include <helloutau/Widgets/SettingsDialog.h>
@@ -76,6 +77,7 @@ namespace hello::daw {
         }
 
         void init(Editor *decl) {
+            AudioOutput::setOutputDeviceId(settings->audioOutputDevice());
             // A registry for each kind of window. The extensions of the editor itself come as
             // contributions too, see BuiltinActions.
             for (const auto kind : Editor::windowKinds) {

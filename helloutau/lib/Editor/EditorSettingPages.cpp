@@ -20,6 +20,9 @@
 #include "Restarter.h"
 #include "Translations.h"
 
+#include <helloutau/Audio/AudioOutput.h>
+#include <helloutau/Audio/SineWaveSource.h>
+
 namespace hello::daw {
 
     namespace {
@@ -155,6 +158,62 @@ namespace hello::daw {
         return m_ustExportCharset;
     }
 
+    AudioSettingPage::AudioSettingPage(AppSettings &settings, QObject *parent)
+        : SettingPage(QLatin1String(EditorSettingPageIds::audio), parent), m_settings(settings) {
+        setTitle(tr("Audio"));
+        setDescription(tr("The output device used for playback."));
+        setKeywords({QStringLiteral("Audio"), QStringLiteral("Output"), QStringLiteral("Device")});
+    }
+
+    QWidget *AudioSettingPage::createWidget() {
+        auto widget = new QWidget();
+        auto form = new QFormLayout(widget);
+        m_output = new QComboBox(widget);
+        m_output->addItem(tr("System default"), QByteArray());
+        const auto selected = m_settings.audioOutputDevice();
+        int selectedIndex = 0;
+        int index = 1;
+        for (const auto &id : AudioOutput::outputDeviceIds()) {
+            m_output->addItem(AudioOutput::outputDeviceDescription(id), id);
+            if (id == selected) {
+                selectedIndex = index;
+            }
+            ++index;
+        }
+        m_output->setCurrentIndex(selectedIndex);
+        form->addRow(tr("&Output device:"), m_output);
+        auto test = new QPushButton(tr("Test"), widget);
+        form->addRow({}, test);
+        form->addRow(note(tr("The test plays a short sine wave on the selected device.")));
+        connect(m_output, &QComboBox::currentIndexChanged, this, [this] {
+            AudioOutput::setOutputDeviceId(m_output->currentData().toByteArray());
+            Q_EMIT modifiedChanged();
+        });
+        connect(test, &QPushButton::clicked, widget, [this, widget] {
+            const int rate = AudioOutput::deviceSampleRate();
+            if (rate <= 0) {
+                return;
+            }
+            auto output = new AudioOutput(widget);
+            output->start(std::make_shared<SineWaveSource>(rate, 440.0, 0.5));
+            connect(output, &AudioOutput::finished, output, &QObject::deleteLater);
+        });
+        return widget;
+    }
+
+    bool AudioSettingPage::isModified() const {
+        return m_output && m_output->currentData().toByteArray() != m_settings.audioOutputDevice();
+    }
+
+    bool AudioSettingPage::apply(QString *error) {
+        Q_UNUSED(error);
+        const auto id = m_output->currentData().toByteArray();
+        m_settings.setAudioOutputDevice(id);
+        AudioOutput::setOutputDeviceId(id);
+        Q_EMIT modifiedChanged();
+        return true;
+    }
+
     RenderingSettingPage::RenderingSettingPage(AppSettings &settings, QObject *parent)
         : SettingPage(QLatin1String(EditorSettingPageIds::rendering), parent),
           m_settings(settings) {
@@ -285,6 +344,7 @@ namespace hello::daw {
         appearance->addPage(new SystemSettingsPage(settings));
         catalog->addPage(appearance);
         catalog->addPage(new EditorSettingPage(settings));
+        catalog->addPage(new AudioSettingPage(settings));
         catalog->addPage(new RenderingSettingPage(settings));
     }
 

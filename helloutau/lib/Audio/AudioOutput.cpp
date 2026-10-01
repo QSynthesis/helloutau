@@ -15,6 +15,10 @@
 namespace hello::daw {
 
     namespace {
+        QByteArray PreferredOutputDevice;
+    }
+
+    namespace {
 
         // The block in which the resampler takes its input, in samples
         constexpr int ResamplerBlock = 4096;
@@ -193,8 +197,41 @@ namespace hello::daw {
     }
 
     int AudioOutput::deviceSampleRate() {
-        const auto device = QMediaDevices::defaultAudioOutput();
+        auto device = QMediaDevices::defaultAudioOutput();
+        if (!PreferredOutputDevice.isEmpty()) {
+            for (const auto &candidate : QMediaDevices::audioOutputs()) {
+                if (candidate.id() == PreferredOutputDevice) {
+                    device = candidate;
+                    break;
+                }
+            }
+        }
         return device.isNull() ? 0 : device.preferredFormat().sampleRate();
+    }
+
+    QList<QByteArray> AudioOutput::outputDeviceIds() {
+        QList<QByteArray> ids;
+        for (const auto &device : QMediaDevices::audioOutputs()) {
+            ids.push_back(device.id());
+        }
+        return ids;
+    }
+
+    QString AudioOutput::outputDeviceDescription(const QByteArray &id) {
+        for (const auto &device : QMediaDevices::audioOutputs()) {
+            if (device.id() == id) {
+                return device.description();
+            }
+        }
+        return {};
+    }
+
+    QByteArray AudioOutput::outputDeviceId() {
+        return PreferredOutputDevice;
+    }
+
+    void AudioOutput::setOutputDeviceId(const QByteArray &id) {
+        PreferredOutputDevice = id;
     }
 
     bool AudioOutput::start(std::shared_ptr<AudioSource> source, QString *error) {
@@ -207,7 +244,15 @@ namespace hello::daw {
             return false;
         };
 
-        const auto device = QMediaDevices::defaultAudioOutput();
+        auto device = QMediaDevices::defaultAudioOutput();
+        if (!PreferredOutputDevice.isEmpty()) {
+            for (const auto &candidate : QMediaDevices::audioOutputs()) {
+                if (candidate.id() == PreferredOutputDevice) {
+                    device = candidate;
+                    break;
+                }
+            }
+        }
         if (device.isNull()) {
             return fail(tr("There is no audio output device."));
         }

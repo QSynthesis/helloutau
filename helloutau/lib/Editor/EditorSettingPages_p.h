@@ -56,6 +56,21 @@ namespace hello::daw {
         QPointer<QComboBox> m_ustExportCharset;
     };
 
+    class AudioSettingPage : public SettingPage {
+        Q_OBJECT
+    public:
+        explicit AudioSettingPage(AppSettings &settings, QObject *parent = nullptr);
+        bool isModified() const override;
+        bool apply(QString *error) override;
+
+    protected:
+        QWidget *createWidget() override;
+
+    private:
+        AppSettings &m_settings;
+        QPointer<QComboBox> m_output;
+    };
+
     /// The engines that render, the playback mode, and the number of rendering threads.
     class RenderingSettingPage : public SettingPage {
         Q_OBJECT

@@ -10,6 +10,8 @@
 #include <vector>
 
 #include <QtCore/QObject>
+#include <QtCore/QByteArray>
+#include <QtCore/QList>
 #include <QtCore/QString>
 
 #include <helloutau/Audio/HelloUtauAudioGlobal.h>
@@ -154,6 +156,11 @@ namespace hello::daw {
         /// The sample rate of the default device, to which a source must be converted, or 0 if
         /// the system has no output device.
         static int deviceSampleRate();
+
+        static QList<QByteArray> outputDeviceIds();
+        static QString outputDeviceDescription(const QByteArray &id);
+        static QByteArray outputDeviceId();
+        static void setOutputDeviceId(const QByteArray &id);
 
         /// Starts playing \a source on the default device, stopping what played before.
         ///

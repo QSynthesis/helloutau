@@ -5,6 +5,7 @@
 #include <memory>
 
 #include <QtCore/QJsonValue>
+#include <QtCore/QByteArray>
 #include <QtCore/QList>
 #include <QtCore/QString>
 #include <QtCore/QStringList>
@@ -54,6 +55,9 @@ namespace hello::daw {
         void setResampler(const QString &path);
         QString wavtool() const;
         void setWavtool(const QString &path);
+
+        QByteArray audioOutputDevice() const;
+        void setAudioOutputDevice(const QByteArray &id);
 
         /// Playback mode of a project, see the playback modes in docs/Widgets.md.
         enum PlaybackMode {

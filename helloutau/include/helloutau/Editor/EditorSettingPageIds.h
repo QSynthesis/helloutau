@@ -10,6 +10,7 @@ namespace hello::daw {
         static constexpr char appearanceAndBehavior[] = "editor.AppearanceAndBehavior";
         static constexpr char systemSettings[] = "editor.SystemSettings";
         static constexpr char editor[] = "editor.Editor";
+        static constexpr char audio[] = "editor.Audio";
         static constexpr char rendering[] = "editor.Rendering";
     };
 

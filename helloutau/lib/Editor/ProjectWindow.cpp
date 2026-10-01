@@ -520,6 +520,7 @@ namespace hello::daw {
         // pauses and resumes instead.
         void togglePlayback() {
             stdc_decl_t;
+            roll->stopKeyboardPreview();
             switch (playback->state()) {
                 case Playback::Rendering:
                     playback->stop();

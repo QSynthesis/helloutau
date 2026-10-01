@@ -18,6 +18,7 @@ namespace hello::daw {
         constexpr char KeyUtauDirectory[] = "engines/utauDirectory";
         constexpr char KeyResampler[] = "engines/resampler";
         constexpr char KeyWavtool[] = "engines/wavtool";
+        constexpr char KeyAudioOutputDevice[] = "audio/outputDevice";
         constexpr char KeyPlaybackMode[] = "playback/mode";
         constexpr char PrerenderValue[] = "prerender";
         constexpr char ThreadedValue[] = "threaded";
@@ -130,6 +131,16 @@ namespace hello::daw {
     void AppSettings::setWavtool(const QString &path) {
         stdc_impl_t;
         impl.setValue(KeyWavtool, path.toStdString());
+    }
+
+    QByteArray AppSettings::audioOutputDevice() const {
+        stdc_impl_t;
+        return QByteArray::fromBase64(QByteArray::fromStdString(impl.value(KeyAudioOutputDevice).toString()));
+    }
+
+    void AppSettings::setAudioOutputDevice(const QByteArray &id) {
+        stdc_impl_t;
+        impl.setValue(KeyAudioOutputDevice, id.toBase64().toStdString());
     }
 
     AppSettings::PlaybackMode AppSettings::playbackMode() const {
