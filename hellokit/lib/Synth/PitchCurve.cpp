@@ -146,6 +146,34 @@ namespace hello::kit {
         return result;
     }
 
+    PitchBend PitchCurve::toMode1(const Timing &timing) const {
+        // Rounded down, because a first reading before PBStart would take no value of the note
+        PitchBend bend;
+        bend.start = std::floor(-(timing.preUtterance + timing.startPoint) * 1000) / 1000;
+
+        // Each reading lies up to a thousandth of a millisecond after its value and therefore
+        // interpolates towards the next value. On a steep curve that moves the rounded reading,
+        // so each value is chosen from the last back, among the target and its neighbours, such
+        // that its reading rounds to the target.
+        const auto ticks = readingTicks(timing);
+        const auto targets = values(timing);
+        const double origin = ticksOf(*bend.start);
+        bend.values.resize(targets.size());
+        for (auto k = targets.size() - 1; k >= 0; --k) {
+            const double target = targets[k];
+            const double next = k + 1 < targets.size() ? bend.values[k + 1] : target;
+            const double fraction = (ticks[k] - origin) / 5 - double(k);
+            bend.values[k] = target;
+            for (const double value : {target, target - 1, target + 1, target - 2, target + 2}) {
+                if (std::round(value + (next - value) * fraction) == target) {
+                    bend.values[k] = value;
+                    break;
+                }
+            }
+        }
+        return bend;
+    }
+
     double PitchCurve::ticksOf(double milliseconds) const {
         return milliseconds * m_tempo / 60 * 480 / 1000;
     }

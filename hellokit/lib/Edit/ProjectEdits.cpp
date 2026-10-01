@@ -299,6 +299,13 @@ namespace hello::kit {
         return transaction.commit(diagnostics);
     }
 
+    bool ProjectEdits::setPitchBend(const NoteRef &note, const std::optional<PitchBend> &bend,
+                                    DiagnosticList &diagnostics) {
+        auto transaction = note.session()->transaction(tr("Change Pitch"));
+        note.setPitchBend(bend);
+        return transaction.commit(diagnostics);
+    }
+
     bool ProjectEdits::setProperties(const ProjectRef &project,
                                      const ProjectPropertyChanges &changes,
                                      DiagnosticList &diagnostics) {

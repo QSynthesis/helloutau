@@ -260,6 +260,14 @@ namespace hello::daw {
         /// the depths of their vibratos by \a vibrato.
         bool scalePitch(double portamento, double vibrato, kit::DiagnosticList &diagnostics);
 
+        /// Replaces the Mode1 values of the selected sung notes, in one step, with the curve of
+        /// Mode2 that the resampler receives over the sample of each note, from its
+        /// pre-utterance to the overlap of the next note, the contributions of the neighbours
+        /// included. The Mode2 points and vibratos are kept.
+        ///
+        /// \sa kit::PitchCurve::toMode1()
+        bool convertPitchToMode1(kit::DiagnosticList &diagnostics);
+
         /// Inserts a note before the first selected note, with the key of that note and
         /// quantizedLength(), or after the last note if nothing is selected, and selects it.
         bool insertNote(kit::DiagnosticList &diagnostics);

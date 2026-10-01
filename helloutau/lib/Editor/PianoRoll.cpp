@@ -28,6 +28,7 @@
 #include <hellokit/Edit/ProjectRefs.h>
 #include <hellokit/Edit/ProjectSession.h>
 #include <hellokit/Edit/TrackTimeline.h>
+#include <hellokit/Synth/PitchCurve.h>
 #include <hellokit/VoiceBank/VoiceBank.h>
 
 #include <helloutau/Widgets/PianoKeyboard.h>
@@ -708,6 +709,35 @@ namespace hello::daw {
             }
         }
         return kit::ProjectEdits::scalePitch(sung, portamento, vibrato, diagnostics);
+    }
+
+    bool PianoRoll::convertPitchToMode1(kit::DiagnosticList &diagnostics) {
+        stdc_impl_t;
+        const auto timeline = impl.timeline;
+        const int count = timeline->noteCount();
+        const auto refs = impl.notes();
+        QList<kit::Note> notes;
+        for (int i = 0; i < count; ++i) {
+            notes.push_back(refs.at(i).toNote());
+        }
+        const auto &timings = impl.sampleTimings();
+
+        auto transaction = impl.session->transaction(tr("Convert Mode2 Pitch to Mode1"));
+        for (const int index : selectedIndices()) {
+            if (timeline->note(index).rest) {
+                continue;
+            }
+            kit::PitchCurve::Timing timing;
+            timing.preUtterance = timings[index].preUtterance;
+            timing.startPoint = timings[index].startPoint;
+            if (index + 1 < count) {
+                timing.nextPreUtterance = timings[index + 1].preUtterance;
+                timing.nextOverlap = timings[index + 1].voiceOverlap;
+            }
+            const kit::PitchCurve curve(notes, index, timeline->tempoMap().tempo(index));
+            kit::ProjectEdits::setPitchBend(refs.at(index), curve.toMode1(timing), diagnostics);
+        }
+        return transaction.commit(diagnostics);
     }
 
     bool PianoRoll::transposeSelected(int semitones, kit::DiagnosticList &diagnostics) {

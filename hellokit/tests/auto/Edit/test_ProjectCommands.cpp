@@ -399,6 +399,20 @@ private Q_SLOTS:
         verifyRefused(session, QStringLiteral("note bend /tracks/0/notes 99 0 [1]"));
     }
 
+    void note_pitchbend_replaces_mode1_values() {
+        ProjectSession session(richProject());
+        QVERIFY(run(session, QStringLiteral("note pitchbend {\"start\": -8.5, \"values\": [3, 4]} "
+                                            "/tracks/0/notes/0")));
+        QCOMPARE(noteAt(session, 0).pitchBend, std::optional(PitchBend{
+                                                   -8.5, {3, 4}
+        }));
+        QVERIFY(run(session, QStringLiteral("note pitchbend null /tracks/0/notes/0")));
+        QCOMPARE(noteAt(session, 0).pitchBend, std::nullopt);
+        verifyRefused(session, QStringLiteral("note pitchbend [3] /tracks/0/notes/0"));
+        verifyRefused(session, QStringLiteral("note pitchbend null"));
+        verifyRefused(session, QStringLiteral("note pitchbend null /tracks/0/notes"));
+    }
+
     void settings_mode2_turns_mode2_on_and_off() {
         ProjectSession session(richProject());
         QVERIFY(run(session, QStringLiteral("settings mode2 true")));
@@ -646,6 +660,7 @@ private Q_SLOTS:
                                                         QStringLiteral("note scale"),
                                                         QStringLiteral("note parameter"),
                                                         QStringLiteral("note bend"),
+                                                        QStringLiteral("note pitchbend"),
                                                         QStringLiteral("note properties"),
                                                         QStringLiteral("note merge"),
                                                         QStringLiteral("settings mode2"),

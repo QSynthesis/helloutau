@@ -965,6 +965,11 @@ namespace hello::daw {
             addCommand(QStringLiteral("helloutau.edit.pasteParameters"),
                        [this] { pasteParameters(); });
             addCommand(QStringLiteral("helloutau.edit.scalePitch"), [this] { scalePitch(); });
+            addCommand(QStringLiteral("helloutau.edit.convertPitchToMode1"), [this] {
+                edit(tr("Convert Mode2 Pitch to Mode1"), [this](kit::DiagnosticList &diagnostics) {
+                    return roll->convertPitchToMode1(diagnostics);
+                });
+            });
             const std::pair<const char *, PianoRoll::Parameters> resets[] = {
                 {"helloutau.edit.resetPortamento", PianoRoll::PortamentoParameter},
                 {"helloutau.edit.resetVibratos",   PianoRoll::VibratoParameter   },
@@ -1351,14 +1356,15 @@ namespace hello::daw {
         // Enables the commands that act on the selection when there is one.
         void updateEditActions() {
             const int selected = int(roll->selectedIndices().size());
-            for (const auto id : {"helloutau.edit.delete", "helloutau.edit.editLyric",
-                                  "helloutau.edit.togglePortamento", "helloutau.edit.toggleVibrato",
-                                  "helloutau.edit.editVibrato", "helloutau.edit.scalePitch",
-                                  "helloutau.edit.crossfadeP2P3", "helloutau.edit.crossfadeP1P4",
-                                  "helloutau.edit.copy", "helloutau.edit.transposeUp",
-                                  "helloutau.edit.transposeDown", "helloutau.edit.octaveUp",
-                                  "helloutau.edit.octaveDown", "helloutau.edit.setTempo",
-                                  "helloutau.edit.noteProperties"}) {
+            for (const auto id :
+                 {"helloutau.edit.delete", "helloutau.edit.editLyric",
+                  "helloutau.edit.togglePortamento", "helloutau.edit.toggleVibrato",
+                  "helloutau.edit.editVibrato", "helloutau.edit.scalePitch",
+                  "helloutau.edit.convertPitchToMode1", "helloutau.edit.crossfadeP2P3",
+                  "helloutau.edit.crossfadeP1P4", "helloutau.edit.copy",
+                  "helloutau.edit.transposeUp", "helloutau.edit.transposeDown",
+                  "helloutau.edit.octaveUp", "helloutau.edit.octaveDown", "helloutau.edit.setTempo",
+                  "helloutau.edit.noteProperties"}) {
                 actions.value(QLatin1String(id))->setEnabled(selected > 0);
             }
             actions.value(QStringLiteral("helloutau.edit.splitNote"))->setEnabled(selected == 1);

@@ -385,6 +385,26 @@ namespace hello::kit {
             return ProjectEdits::drawPitchBend(*notes, *index, *tick, values, diagnostics);
         }
 
+        bool pitchBendCommand(ProjectSession &session, const Arguments &arguments,
+                              DiagnosticList &diagnostics) {
+            if (arguments.size() != 2) {
+                return usage(diagnostics, "note pitchbend <Mode1 values or null> <note>");
+            }
+            const auto json = edit::CommandSyntax::valueOf(arguments[0]);
+            std::optional<PitchBend> bend;
+            if (json.isObject()) {
+                bend = PitchBend::fromJson(json.toObject());
+            } else if (!json.isNull()) {
+                return fail(diagnostics,
+                            ProjectCommands::tr("The Mode1 values must be an object or null."));
+            }
+            const auto note = noteAt(session, arguments[1], diagnostics);
+            if (!note) {
+                return false;
+            }
+            return ProjectEdits::setPitchBend(*note, bend, diagnostics);
+        }
+
         bool mode2Command(ProjectSession &session, const Arguments &arguments,
                           DiagnosticList &diagnostics) {
             if (arguments.size() != 1) {
@@ -567,6 +587,7 @@ namespace hello::kit {
             {"note",     "scale",      scaleCommand,          "scalePitch"       },
             {"note",     "parameter",  parameterCommand,      "setParameter"     },
             {"note",     "bend",       bendCommand,           "drawPitchBend"    },
+            {"note",     "pitchbend",  pitchBendCommand,      "setPitchBend"     },
             {"note",     "properties", notePropertiesCommand, "setNoteProperties"},
             {"note",     "merge",      mergeCommand,          "mergeNotes"       },
             {"settings", "mode2",      mode2Command,          "setMode2"         },

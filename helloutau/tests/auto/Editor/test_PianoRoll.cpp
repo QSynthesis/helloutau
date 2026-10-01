@@ -15,6 +15,7 @@
 #include <hellokit/Edit/ProjectSession.h>
 #include <hellokit/Edit/TrackTimeline.h>
 #include <hellokit/Synth/PitchCurve.h>
+#include <hellokit/Synth/SampleTiming.h>
 #include <hellokit/VoiceBank/VoiceBank.h>
 
 #include <helloutau/Widgets/SceneView.h>
@@ -1959,6 +1960,60 @@ private Q_SLOTS:
         QCOMPARE(notes[0].vibrato->amplitude, depth * 2);
         QCOMPARE(notes[1].vibrato->amplitude, depth);
         QCOMPARE(session.undoMessage(), kit::ProjectEdits::tr("Scale Pitch"));
+    }
+
+    // The Mode1 values of the selected sung note give the curve of Mode2 that the resampler
+    // receives from the pre-utterance of li on, the bend from la included, in one step. la
+    // keeps its values, and the selected rest after li gets none.
+    void the_pitch_of_the_selection_converts_to_mode1() {
+        auto project = bentNotes();
+        kit::Note rest;
+        rest.lyric = QStringLiteral("R");
+        rest.length = 480;
+        rest.noteNum = 60;
+        project.tracks[0].notes.push_back(rest);
+        kit::Vibrato vibrato;
+        vibrato.length = 80;
+        vibrato.period = 100;
+        vibrato.amplitude = 40;
+        project.tracks[0].notes[1].vibrato = vibrato;
+        kit::VoiceSample sample;
+        sample.path = std::filesystem::path("li.wav");
+        sample.fileName = QStringLiteral("li.wav");
+        sample.alias = QStringLiteral("li");
+        sample.preUtterance = 100;
+        sample.hasEntry = true;
+        const auto bank = std::make_shared<const kit::VoiceBank>(std::filesystem::path("bank"),
+                                                                 QList<kit::VoiceBankDirectory>{{}},
+                                                                 QList<kit::VoiceSample>{sample});
+        kit::ProjectSession session(project);
+        PianoRoll roll(&session);
+        roll.setVoiceBank(bank);
+        show(roll);
+
+        roll.setSelectedIndices({1, 2});
+        kit::DiagnosticList diagnostics;
+        QVERIFY(roll.convertPitchToMode1(diagnostics));
+        QCOMPARE(session.currentStep(), 1);
+        QCOMPARE(session.undoMessage(), PianoRoll::tr("Convert Mode2 Pitch to Mode1"));
+
+        const auto before = project.tracks[0].notes;
+        const auto after = session.snapshot().tracks[0].notes;
+        QCOMPARE(after[0].pitchBend, before[0].pitchBend);
+        QCOMPARE(after[2].pitchBend, std::nullopt);
+        QVERIFY(after[1].pitchBend);
+        const auto timings = kit::SampleTiming::of(before, kit::TempoMap::of(project), bank.get());
+        kit::PitchCurve::Timing timing;
+        timing.preUtterance = timings[1].preUtterance;
+        timing.startPoint = timings[1].startPoint;
+        timing.nextPreUtterance = timings[2].preUtterance;
+        timing.nextOverlap = timings[2].voiceOverlap;
+        QVERIFY(timing.preUtterance > 50);
+        QVERIFY(after[1].pitchBend->start < -50);
+        const auto expected = kit::PitchCurve(before, 1, 120).values(timing);
+        QVERIFY(expected.first() != 0);
+        QCOMPARE(kit::PitchCurve(after, 1, 120).mode1Values(timing), expected);
+        QCOMPARE(after[1].portamento, before[1].portamento);
     }
 
     // The parameter area and the roll scroll together.

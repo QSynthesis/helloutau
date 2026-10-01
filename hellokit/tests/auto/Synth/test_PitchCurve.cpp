@@ -122,33 +122,47 @@ private Q_SLOTS:
     }
 
     // The index of the first note whose values differ from those the resampler receives, or -1
-    qsizetype firstDifference(const VoiceBank &voices, const QList<Note> &notes, double tempo) {
+    static Project projectOf(const QList<Note> &notes, double tempo) {
         Project project;
         project.settings.tempo = tempo;
         Track track;
         track.notes = notes;
         project.tracks.push_back(track);
+        return project;
+    }
 
+    // The plan of \a project, one step for each note
+    std::optional<SynthPlan> planOf(const VoiceBank &voices, const Project &project) {
         SynthPlan::Options options;
         options.cacheDirectory = root() / "cache";
         options.outputFile = root() / "out.wav";
         DiagnosticList diagnostics;
-        const auto plan = SynthPlan::make(project, voices, options, diagnostics);
+        return SynthPlan::make(project, voices, options, diagnostics);
+    }
+
+    // The timing of step \a i of \a steps
+    static PitchCurve::Timing timingOf(const QList<SynthStep> &steps, qsizetype i) {
+        PitchCurve::Timing timing;
+        timing.preUtterance = steps[i].preUtterance;
+        timing.startPoint = steps[i].startPoint;
+        if (i + 1 < steps.size()) {
+            timing.nextPreUtterance = steps[i + 1].preUtterance;
+            timing.nextOverlap = steps[i + 1].voiceOverlap;
+        }
+        return timing;
+    }
+
+    qsizetype firstDifference(const VoiceBank &voices, const QList<Note> &notes, double tempo) {
+        const auto project = projectOf(notes, tempo);
+        const auto plan = planOf(voices, project);
         if (!plan) {
             return 0;
         }
-
-        const auto tempos = TempoMap::of(project);
         const auto &steps = plan->steps();
+        const auto tempos = TempoMap::of(project);
         for (qsizetype i = 0; i < steps.size(); ++i) {
-            PitchCurve::Timing timing;
-            timing.preUtterance = steps[i].preUtterance;
-            timing.startPoint = steps[i].startPoint;
-            if (i + 1 < steps.size()) {
-                timing.nextPreUtterance = steps[i + 1].preUtterance;
-                timing.nextOverlap = steps[i + 1].voiceOverlap;
-            }
-            if (PitchCurve(notes, i, tempos.tempo(int(i))).values(timing) != steps[i].pitch) {
+            if (PitchCurve(notes, i, tempos.tempo(int(i))).values(timingOf(steps, i)) !=
+                steps[i].pitch) {
                 return i;
             }
         }
@@ -164,6 +178,37 @@ private Q_SLOTS:
                 firstDifference(*voices, randomNotes(seed), seed % 2 ? 120 : 133);
             if (difference >= 0) {
                 QFAIL(qPrintable(QStringLiteral("seed %1, note %2").arg(seed).arg(difference)));
+            }
+        }
+    }
+
+    // The Mode1 values of toMode1() give the curve of Mode2 value by value, the contributions of
+    // the neighbours included, after every note is converted.
+    void the_curve_of_mode2_converts_to_mode1() {
+        const auto voices = bank();
+        QVERIFY(voices);
+        for (quint32 seed = 1; seed <= 20; ++seed) {
+            const double tempo = seed % 2 ? 120 : 133;
+            const auto notes = randomNotes(seed);
+            const auto project = projectOf(notes, tempo);
+            const auto plan = planOf(*voices, project);
+            QVERIFY(plan);
+            const auto &steps = plan->steps();
+            const auto tempos = TempoMap::of(project);
+            auto converted = notes;
+            for (qsizetype i = 0; i < notes.size(); ++i) {
+                if (!notes[i].isRest()) {
+                    converted[i].pitchBend =
+                        PitchCurve(notes, i, tempos.tempo(int(i))).toMode1(timingOf(steps, i));
+                }
+            }
+            for (qsizetype i = 0; i < notes.size(); ++i) {
+                const auto timing = timingOf(steps, i);
+                const double t = tempos.tempo(int(i));
+                if (!notes[i].isRest() && PitchCurve(converted, i, t).mode1Values(timing) !=
+                                              PitchCurve(notes, i, t).values(timing)) {
+                    QFAIL(qPrintable(QStringLiteral("seed %1, note %2").arg(seed).arg(i)));
+                }
             }
         }
     }

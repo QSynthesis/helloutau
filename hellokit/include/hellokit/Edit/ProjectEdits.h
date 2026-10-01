@@ -171,6 +171,12 @@ namespace hello::kit {
                                               const QList<double> &values,
                                               DiagnosticList &diagnostics);
 
+        /// Replaces the Mode1 values of \a note with \a bend, or removes them if \a bend is
+        /// empty. Makes no step if they are equal.
+        Q_INVOKABLE static bool setPitchBend(const NoteRef &note,
+                                             const std::optional<PitchBend> &bend,
+                                             DiagnosticList &diagnostics);
+
         /// Turns Mode2 of the project of \a settings on or off: which of the Mode2 points and
         /// vibratos, or the Mode1 values, the synthesis uses, as UTAU does. The other is kept.
         Q_INVOKABLE static bool setMode2(const SettingsRef &settings, bool mode2,

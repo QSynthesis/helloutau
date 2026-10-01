@@ -83,6 +83,13 @@ namespace hello::kit {
         /// The values of the curve of Mode1 at the ticks of values(), each rounded.
         QList<int> mode1Values(const Timing &timing) const;
 
+        /// Returns the Mode1 values whose curve gives values() at its ticks, which span the
+        /// sample of the note from its pre-utterance to the overlap of the next note: \c PBStart
+        /// at the first reading, rounded down to a thousandth of a millisecond as UTAU writes
+        /// it, and one whole value for each reading. The curve of Mode1 of the note then equals
+        /// the curve of Mode2 under \a timing, the contributions of the neighbours included.
+        PitchBend toMode1(const Timing &timing) const;
+
         /// The ticks, counted from the start of the note, at which values() and mode1Values()
         /// read the curve.
         QList<double> readingTicks(const Timing &timing) const;

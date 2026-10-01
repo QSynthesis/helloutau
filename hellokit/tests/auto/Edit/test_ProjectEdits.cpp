@@ -554,6 +554,34 @@ private Q_SLOTS:
         QCOMPARE(session.snapshot().toJson(), project.toJson());
     }
 
+    // Mode1 values replace those of a note whole and are removed by an empty value; equal
+    // values make no step.
+    void mode1_values_are_replaced_and_removed() {
+        auto project = bentNotes();
+        project.tracks[0].notes[1].pitchBend = PitchBend{
+            -20, {10, 20, 30}
+        };
+        ProjectSession session(project);
+        const auto notes = notesOf(session);
+
+        DiagnosticList diagnostics;
+        const PitchBend bend{
+            -40.5, {1, 2}
+        };
+        QVERIFY(ProjectEdits::setPitchBend(notes.at(1), bend, diagnostics));
+        QCOMPARE(bendOf(session, 1), std::optional(bend));
+        QCOMPARE(session.undoMessage(), ProjectEdits::tr("Change Pitch"));
+        QVERIFY(ProjectEdits::setPitchBend(notes.at(1), bend, diagnostics));
+        QCOMPARE(session.currentStep(), 1);
+        QVERIFY(ProjectEdits::setPitchBend(notes.at(1), std::nullopt, diagnostics));
+        QCOMPARE(bendOf(session, 1), std::nullopt);
+        QCOMPARE(session.currentStep(), 2);
+        while (session.canUndo()) {
+            session.undo();
+        }
+        QCOMPARE(session.snapshot().toJson(), project.toJson());
+    }
+
     // The properties set change on every note in one step, a cleared one goes back to the
     // default, and the others stay; none that differs makes no step.
     void the_note_properties_change_in_one_step() {
