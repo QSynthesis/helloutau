@@ -9,6 +9,7 @@
 #include <QtTest/QTest>
 
 #include <hellokit/Synth/SynthPlan.h>
+#include <hellokit/Synth/SynthRunner.h>
 
 using namespace hello::kit;
 
@@ -93,6 +94,51 @@ private Q_SLOTS:
         for (int i = 0; i < 3; ++i) {
             QCOMPARE(plan->steps().at(i).noteIndex, i);
         }
+    }
+
+    // The observer receives the progress in notes of the range, and a cancellation ends the
+    // plan without a reason.
+    void the_progress_is_reported_and_the_plan_cancelled() {
+        const auto voices = bank();
+        QVERIFY(voices.has_value());
+
+        // Records the progress, and reports cancellation once more than cancelAt reports came
+        class Recorder : public SynthObserver {
+        public:
+            QList<std::pair<int, int>> reports;
+            int cancelAt = -1;
+
+            void progressed(int done, int total) override {
+                reports.push_back({done, total});
+            }
+
+            bool cancelled() override {
+                return cancelAt >= 0 && reports.size() > cancelAt;
+            }
+        };
+
+        const auto project = projectOf(
+            {note(QStringLiteral("a")), note(QStringLiteral("ka")), note(QStringLiteral("ki"))});
+        auto o = options();
+        o.range = std::make_pair(1, 2);
+        DiagnosticList diagnostics;
+        Recorder recorder;
+        QVERIFY(SynthPlan::make(project, *voices, o, diagnostics, &recorder).has_value());
+        QCOMPARE(recorder.reports, (QList<std::pair<int, int>>{
+                                       {0, 2},
+                                       {1, 2},
+                                       {2, 2}
+        }));
+
+        // Cancelled after the first note
+        Recorder cancelling;
+        cancelling.cancelAt = 1;
+        QVERIFY(!SynthPlan::make(project, *voices, o, diagnostics, &cancelling).has_value());
+        QVERIFY(diagnostics.isEmpty());
+        QCOMPARE(cancelling.reports, (QList<std::pair<int, int>>{
+                                         {0, 2},
+                                         {1, 2}
+        }));
     }
 
     // The purpose of this class: a lyric resolves to a sample through the voice bank, and the

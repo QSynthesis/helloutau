@@ -17,6 +17,10 @@
 #include <hellokit/Synth/HelloKitSynthGlobal.h>
 
 namespace hello::kit {
+    class SynthObserver;
+}
+
+namespace hello::kit {
 
     /// The engine calls of one note, with all paths resolved and all arguments determined.
     struct SynthStep {
@@ -82,10 +86,15 @@ namespace hello::kit {
             std::optional<std::pair<int, int>> range;
         };
 
+        /// Determines the engine calls of the notes of \a options of the only track of
+        /// \a project. \a observer, if given, receives the progress in notes and is queried
+        /// between notes for cancellation.
+        ///
         /// \return the plan, or \c std::nullopt if there is nothing to render, with the reason
-        ///         in \a diagnostics
+        ///         in \a diagnostics, or if \a observer reported cancellation, without a reason
         static std::optional<SynthPlan> make(const Project &project, const VoiceBank &bank,
-                                             const Options &options, DiagnosticList &diagnostics);
+                                             const Options &options, DiagnosticList &diagnostics,
+                                             SynthObserver *observer = nullptr);
 
         /// The steps in track order.
         inline const QList<SynthStep> &steps() const {

@@ -10,6 +10,7 @@
 #include <stdutau/utautils.h>
 
 #include <hellokit/Document/TempoMap.h>
+#include <hellokit/Synth/SynthRunner.h>
 
 #include "PitchCurve.h"
 
@@ -181,8 +182,8 @@ namespace hello::kit {
     }
 
     std::optional<SynthPlan> SynthPlan::make(const Project &project, const VoiceBank &bank,
-                                             const Options &requested,
-                                             DiagnosticList &diagnostics) {
+                                             const Options &requested, DiagnosticList &diagnostics,
+                                             SynthObserver *observer) {
         // The paths in the preferred separators of the system. The rendering script and the
         // engines receive them as text, and the copy command of Windows rejects a path written
         // with forward slashes, which a file dialog of Qt returns.
@@ -254,6 +255,11 @@ namespace hello::kit {
             return entry;
         };
 
+        // calc() reports nothing, so the progress starts after it, one step per note.
+        const int total = range.second - range.first + 1;
+        if (observer) {
+            observer->progressed(0, total);
+        }
         const auto params =
             utau::Synth::calc(limits, range, project.settings.tempo, utf8(project.settings.flags),
                               noteGetter, otoEntryGetter);
@@ -267,6 +273,9 @@ namespace hello::kit {
                            (params.empty() ? 0 : params.front().first.correctPreUttr);
 
         for (size_t i = 0; i < params.size(); ++i) {
+            if (observer && observer->cancelled()) {
+                return std::nullopt;
+            }
             auto [resampler, wavtool] = params[i];
             const int noteIndex = range.first + int(i);
 
@@ -320,6 +329,9 @@ namespace hello::kit {
             step.pitch = QList<int>(resampler.pitchCurves.begin(), resampler.pitchCurves.end());
 
             plan.m_steps.push_back(std::move(step));
+            if (observer) {
+                observer->progressed(int(i) + 1, total);
+            }
         }
         return plan;
     }
