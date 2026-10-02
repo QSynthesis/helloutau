@@ -171,6 +171,19 @@ private Q_SLOTS:
         QVERIFY(!session.canUndo());
     }
 
+    // A Windows text-mode plugin can write an extra carriage return before every newline.
+    void a_windows_text_mode_result_is_accepted() {
+        kit::ProjectSession session(probe());
+        const auto notes = kit::ProjectRef(&session).tracks().at(0).notes();
+        kit::DiagnosticList diagnostics;
+        const auto outcome = ClassicPluginExchange::apply(
+            pluginOf(QStringLiteral("UTF-8")), notes, 2, 1,
+            "[#0002]\r\r\nLyric=merged\r\r\n", diagnostics);
+        QCOMPARE(outcome, ClassicPluginExchange::Applied);
+        QCOMPARE(session.snapshot().tracks.first().notes.at(2).lyric,
+                 QStringLiteral("merged"));
+    }
+
     // The probe R1: the sections are applied in order of appearance regardless of their numbers.
     void the_numbers_do_not_matter() {
         kit::ProjectSession session(probe());

@@ -83,6 +83,16 @@ namespace hello::daw {
             return keys;
         }
 
+        // https://github.com/SineStriker/UTAU-Note-Combiner/blob/11f9951846243c3b84f36542a08054b0343c3b0a/SimpleFC/Combiner.h#L109-L121
+        // The legacy writer emits "\r\n" through a Windows text-mode stream. The CRT expands
+        // the newline once more, producing "\r\r\n". UTAU accepts that output; normalize it
+        // before feeding the result to stdutau so those plugins behave the same here.
+        QByteArray normalizedResult(QByteArrayView result) {
+            auto text = QByteArray(result.data(), qsizetype(result.size()));
+            text.replace("\r\r\n", "\r\n");
+            return text;
+        }
+
         // Sets each property of \a ref whose entry \a section contains to the value in \a note ,
         // the conversion of the section. A property whose entry is empty in the section is
         // blank in \a note , and setting it removes the property.
@@ -254,7 +264,8 @@ namespace hello::daw {
                                                                 QByteArrayView result,
                                                                 kit::DiagnosticList &diagnostics) {
         utau::PluginResult file;
-        file.read(std::string_view(result.data(), size_t(result.size())));
+        const auto normalized = normalizedResult(result);
+        file.read(std::string_view(normalized.constData(), size_t(normalized.size())));
         if (file.isCancelled()) {
             return Cancelled;
         }
