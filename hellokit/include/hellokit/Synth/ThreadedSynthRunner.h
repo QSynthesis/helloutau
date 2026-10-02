@@ -35,7 +35,8 @@ namespace hello::kit {
         ///       calls run sequentially regardless of this setting.
         int threadCount = 0;
 
-        /// Directory in which the non-executed temp.bat and temp_helper.bat are written.
+        /// Directory in which the non-executed rendering scripts are written. Non-Windows
+        /// systems receive both the native shell pair and a batch pair for moresampler.
         std::filesystem::path scriptDirectory;
 
         SynthOutcome render(const SynthPlan &plan, const SynthEngines &engines,

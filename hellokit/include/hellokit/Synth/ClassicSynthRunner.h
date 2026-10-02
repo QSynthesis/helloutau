@@ -89,13 +89,14 @@ namespace hello::kit {
         SynthOutcome render(const SynthPlan &plan, const SynthEngines &engines,
                             SynthObserver *observer, DiagnosticList &diagnostics) const override;
 
-        /// Returns the scripts generated from \a plan and \a engines , without writing or
-        /// executing anything.
+        /// Returns the scripts generated from \a plan and \a engines for the selected shell,
+        /// without writing or executing anything.
         ///
         /// Used by the tests, and for showing a user exactly what will be executed.
         ///
-        /// \return the contents of \c temp.bat and \c temp_helper.bat , or \c std::nullopt if a
-        ///         value cannot be written safely, with the reason in \a diagnostics
+        /// \return the contents of the selected script and helper files, or \c std::nullopt if a
+        ///         value cannot be written safely, with the reason in \a diagnostics. Rendering
+        ///         on non-Windows systems also generates a batch pair as a moresampler placeholder.
         std::optional<std::pair<QString, QString>> scripts(const SynthPlan &plan,
                                                            const SynthEngines &engines,
                                                            DiagnosticList &diagnostics) const;

@@ -190,6 +190,15 @@ private:
         };
     }
 
+    /// A wavtool that writes the completed track directly, as moresampler does in this role.
+    static StandIn::Behaviour writesTrack(const std::filesystem::path &track) {
+        return [track](const QStringList &) {
+            std::ofstream out(track, std::ios::binary | std::ios::trunc);
+            out << "RIFF direct output";
+            return bool(out);
+        };
+    }
+
     /// Writes a fragment for every note of \a plan into the cache. The cache is then in the state
     /// that an earlier render leaves.
     static void fillCache(const SynthPlan &plan) {
@@ -261,6 +270,25 @@ private Q_SLOTS:
         QVERIFY(!std::filesystem::exists(withSuffix(p->outputFile(), ".whd")));
         QVERIFY(!std::filesystem::exists(withSuffix(p->outputFile(), ".dat")));
         QCOMPARE(sizeOf(p->outputFile()), 44 + 100);
+    }
+
+    void a_wavtool_that_writes_the_track_directly_is_accepted() {
+        const auto p = plan();
+        QVERIFY(p.has_value());
+
+        EngineLog log;
+        const auto engines = somewhere();
+        StubbedRunner runner(&log, engines, rendersTo(p->steps().at(0).cacheFile),
+                             writesTrack(p->outputFile()));
+
+        DiagnosticList diagnostics;
+        const auto outcome = runner.render(*p, engines, nullptr, diagnostics);
+
+        QVERIFY(outcome.rendered);
+        QVERIFY(!hasError(diagnostics));
+        QCOMPARE(sizeOf(p->outputFile()), qint64(19));
+        QVERIFY(!std::filesystem::exists(withSuffix(p->outputFile(), ".whd")));
+        QVERIFY(!std::filesystem::exists(withSuffix(p->outputFile(), ".dat")));
     }
 
     // The wavtool appends, so a render must remove both files before it starts. Otherwise its
@@ -395,7 +423,12 @@ private Q_SLOTS:
         QVERIFY(runner.render(*p, engines, &recorder, diagnostics).rendered);
 
         QCOMPARE(log.resampled(), 0);
-        const QList<std::pair<int, int>> expected{{3, 6}, {4, 6}, {5, 6}, {6, 6}};
+        const QList<std::pair<int, int>> expected{
+            {3, 6},
+            {4, 6},
+            {5, 6},
+            {6, 6}
+        };
         QCOMPARE(recorder.reports, expected);
     }
 

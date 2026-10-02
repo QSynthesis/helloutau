@@ -221,6 +221,14 @@ namespace hello::kit {
         if (!written) {
             return outcome;
         }
+#ifndef _WIN32
+        auto batchSelf = self;
+        batchSelf.shell = ScriptShell::Batch;
+        const auto batch = batchSelf.scripts(plan, engines, diagnostics);
+        if (!batch) {
+            return outcome;
+        }
+#endif
 
         std::error_code error;
         fs::create_directories(directory, error);
@@ -259,7 +267,12 @@ namespace hello::kit {
             return bool(out);
         };
 
-        if (!put(scriptPath, written->first) || !put(helperPath, written->second)) {
+        if (!put(scriptPath, written->first) || !put(helperPath, written->second)
+#ifndef _WIN32
+            || !put(directory / "temp.bat", batch->first) ||
+            !put(directory / "temp_helper.bat", batch->second)
+#endif
+        ) {
             fail(diagnostics, tr("The rendering script could not be written to \"%1\".")
                                   .arg(displayed(directory)));
             return outcome;

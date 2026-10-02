@@ -107,11 +107,36 @@ namespace hello::kit {
             }
             std::error_code scriptError;
             fs::create_directories(scriptDirectory, scriptError);
-            if (scriptError || !writeScript(scriptDirectory / "temp.bat", scripts->first) ||
+            if (scriptError) {
+                fail(diagnostics, tr("The rendering scripts could not be written."));
+                return outcome;
+            }
+#ifdef _WIN32
+            if (!writeScript(scriptDirectory / "temp.bat", scripts->first) ||
                 !writeScript(scriptDirectory / "temp_helper.bat", scripts->second)) {
                 fail(diagnostics, tr("The rendering scripts could not be written."));
                 return outcome;
             }
+#else
+            if (!writeScript(scriptDirectory / "temp.sh", scripts->first) ||
+                !writeScript(scriptDirectory / "temp_helper.sh", scripts->second)) {
+                fail(diagnostics, tr("The rendering scripts could not be written."));
+                return outcome;
+            }
+            {
+                ClassicSynthRunner batchWriter;
+                batchWriter.shell = ClassicSynthRunner::ScriptShell::Batch;
+                batchWriter.scriptDirectory = scriptDirectory;
+                DiagnosticList batchDiagnostics;
+                const auto batch = batchWriter.scripts(plan, engines, batchDiagnostics);
+                diagnostics.append(batchDiagnostics);
+                if (!batch || !writeScript(scriptDirectory / "temp.bat", batch->first) ||
+                    !writeScript(scriptDirectory / "temp_helper.bat", batch->second)) {
+                    fail(diagnostics, tr("The rendering scripts could not be written."));
+                    return outcome;
+                }
+            }
+#endif
         }
 
         std::error_code error;
@@ -270,6 +295,14 @@ namespace hello::kit {
                 }
             }
             report(1);
+        }
+
+        // Some engines used as wavtools write the final track directly instead of producing the
+        // two files used by the standard UTAU wavtool protocol. The temp.bat protocol accepts
+        // that result and skips its concatenation step.
+        if (fs::exists(output)) {
+            outcome.rendered = true;
+            return outcome;
         }
 
         if (!fs::exists(header) || !fs::exists(data)) {
