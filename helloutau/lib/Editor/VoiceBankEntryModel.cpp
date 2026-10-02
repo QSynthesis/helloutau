@@ -423,8 +423,7 @@ namespace hello::daw {
         }
         // The folder is where the file is, and an unlisted row is the file itself.
         const auto kind = impl.rows.at(index.row()).kind;
-        if (index.column() == DirectoryColumn ||
-            (index.column() == FileColumn && kind == UnlistedAudioRow)) {
+        if (index.column() == DirectoryColumn || index.column() == FileColumn) {
             return flags;
         }
         return flags | Qt::ItemIsEditable;

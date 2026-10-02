@@ -13,6 +13,7 @@
 #include <QtCore/QTimer>
 #include <QtGui/QAction>
 #include <QtGui/QCloseEvent>
+#include <QtGui/QKeyEvent>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QComboBox>
 #include <QtWidgets/QFileDialog>
@@ -118,6 +119,26 @@ namespace hello::daw {
                     }
                 }
                 return false;
+            }
+        };
+
+        // QAbstractItemView handles a key before a window action can see it. Preview shortcuts
+        // must still work while the entry table has focus.
+        // ## TODO: Replace this temporary forwarding workaround with a QActionKit focus routing
+        // mechanism, so action shortcuts are handled before item-view navigation.
+        class VoiceBankEntryTable : public QTableView {
+        public:
+            using QTableView::QTableView;
+
+            std::function<bool(QKeyEvent *)> shortcutHandler;
+
+        protected:
+            void keyPressEvent(QKeyEvent *event) override {
+                if (shortcutHandler && shortcutHandler(event)) {
+                    event->accept();
+                    return;
+                }
+                QTableView::keyPressEvent(event);
             }
         };
 
@@ -440,7 +461,26 @@ namespace hello::daw {
             proxy->setSortRole(VoiceBankEntryModel::SortRole);
             proxy->setSortCaseSensitivity(Qt::CaseInsensitive);
 
-            table = new QTableView();
+            auto entryTable = new VoiceBankEntryTable();
+            table = entryTable;
+            entryTable->shortcutHandler = [this](QKeyEvent *event) {
+                for (const auto &id : {QStringLiteral("helloutau.voiceBank.playAudio"),
+                                       QStringLiteral("helloutau.voiceBank.playSpan")}) {
+                    const auto action = actions.value(id);
+                    for (const auto &shortcut : action->shortcuts()) {
+                        if (shortcut.count() != 1) {
+                            continue;
+                        }
+                        const auto key = shortcut[0];
+                        if (key.key() == event->key() &&
+                            key.keyboardModifiers() == event->modifiers()) {
+                            action->trigger();
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            };
             table->setModel(proxy);
             table->setSortingEnabled(true);
             table->sortByColumn(-1, Qt::AscendingOrder);

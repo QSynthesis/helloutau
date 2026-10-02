@@ -625,7 +625,8 @@ private Q_SLOTS:
         QCOMPARE(commands.size(), 12);
         QCOMPARE(commands[0].id,
                  QStringLiteral("project:") +
-                     QString::fromStdU16String(pathIn(m_dir, "f11.usth").u16string()));
+                     QDir::toNativeSeparators(
+                         QString::fromStdU16String(pathIn(m_dir, "f11.usth").u16string())));
         QCOMPARE(commands[0].label, QStringLiteral("f11.usth"));
         QCOMPARE(commands[0].description, QDir::toNativeSeparators(m_dir.path()));
         // The latest first, also while the user types
@@ -1632,9 +1633,9 @@ private Q_SLOTS:
         QVERIFY(e->voiceBankWindows().isEmpty());
     }
 
-    // Every cell of an entry edits it as one undo step; an unlisted file is included by editing
-    // its alias. A value that is not a number, and an alias that another entry of the file
-    // has, are refused with a message.
+    // Every editable cell of an entry edits it as one undo step; an unlisted file is included by
+    // editing its alias. A value that is not a number, and an alias that another entry of the
+    // file has, are refused with a message.
     void the_entry_table_edits_the_entries() {
         QTemporaryDir dir;
         const auto bank = voiceBank(dir);
@@ -1649,10 +1650,25 @@ private Q_SLOTS:
         QCOMPARE(model->rowCount(), 3);
         QVERIFY(!(model->flags(model->index(0, VoiceBankEntryModel::DirectoryColumn)) &
                   Qt::ItemIsEditable));
-        QVERIFY(model->flags(model->index(0, VoiceBankEntryModel::FileColumn)) &
-                Qt::ItemIsEditable);
+        QVERIFY(!(model->flags(model->index(0, VoiceBankEntryModel::FileColumn)) &
+                  Qt::ItemIsEditable));
         QVERIFY(
             !(model->flags(model->index(2, VoiceBankEntryModel::FileColumn)) & Qt::ItemIsEditable));
+
+        const auto play = actionNamed(window, QStringLiteral("&Play Audio File"));
+        const auto playSpan = actionNamed(window, QStringLiteral("Play from &Offset to Cutoff"));
+        QVERIFY(play);
+        QVERIFY(playSpan);
+        QSignalSpy playTriggered(play, &QAction::triggered);
+        QSignalSpy playSpanTriggered(playSpan, &QAction::triggered);
+        window->entryTable()->setFocus();
+        QTest::keyClick(window->entryTable(), Qt::Key_Space);
+        QTest::keyClick(window->entryTable(), Qt::Key_Space, Qt::ShiftModifier);
+        QCOMPARE(playTriggered.size(), 1);
+        QCOMPARE(playSpanTriggered.size(), 1);
+        play->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_Space));
+        QTest::keyClick(window->entryTable(), Qt::Key_Space, Qt::ControlModifier);
+        QCOMPARE(playTriggered.size(), 2);
 
         // The alias and a value, each one step; the edited row stays current.
         window->setCurrentRow(0);

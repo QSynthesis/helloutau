@@ -28,9 +28,9 @@ namespace hello::daw {
     /// follows the changes of the session, once control returns to the event loop: a change that
     /// keeps the number of rows updates them in place, which keeps the selection of a view.
     ///
-    /// Every cell of an entry but its folder is editable, each edit one undo step. Editing the
-    /// alias or a value of an audio file without an entry includes the file with that value, in
-    /// the same step.
+    /// Every cell of an entry but its folder and file name is editable, each edit one undo step.
+    /// Editing the alias or a value of an audio file without an entry includes the file with that
+    /// value, in the same step.
     class HELLOUTAU_EDITOR_EXPORT VoiceBankEntryModel : public QAbstractTableModel {
         Q_OBJECT
     public:
