@@ -1,4 +1,5 @@
 project(helloutau
+    VERSION ${HELLO_VERSION}
     DESCRIPTION "HelloUtau Editor"
     LANGUAGES CXX
 )

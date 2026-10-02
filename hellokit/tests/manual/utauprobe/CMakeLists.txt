@@ -1,4 +1,5 @@
 project(utauprobe
+    VERSION ${HELLO_VERSION}
     DESCRIPTION "UTAU Probe Project Writer"
     LANGUAGES CXX
 )

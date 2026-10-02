@@ -1,4 +1,5 @@
 project(voicedit
+    VERSION ${HELLO_VERSION}
     DESCRIPTION "HelloUtau Command-Line Voice Bank Editor"
     LANGUAGES CXX
 )

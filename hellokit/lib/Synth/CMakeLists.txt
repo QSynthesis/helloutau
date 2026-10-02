@@ -1,5 +1,5 @@
 project(HelloKitSynth
-    VERSION ${HELLOKIT_VERSION}
+    VERSION ${HELLO_VERSION}
     LANGUAGES CXX
 )
 

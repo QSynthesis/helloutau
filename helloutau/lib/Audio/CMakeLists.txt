@@ -1,5 +1,5 @@
 project(HelloUtauAudio
-    VERSION ${HELLOUTAU_VERSION}
+    VERSION ${HELLO_VERSION}
     LANGUAGES CXX
 )
 

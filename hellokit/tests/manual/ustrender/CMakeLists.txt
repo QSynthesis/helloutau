@@ -1,4 +1,5 @@
 project(ustrender
+    VERSION ${HELLO_VERSION}
     DESCRIPTION "HelloUtau Command-Line Renderer"
     LANGUAGES CXX
 )

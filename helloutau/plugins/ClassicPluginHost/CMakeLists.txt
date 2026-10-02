@@ -1,4 +1,5 @@
 project(ClassicPluginHostPlugin
+    VERSION ${HELLO_VERSION}
     DESCRIPTION "HelloUtau Classic Plugin Host Plugin"
     LANGUAGES CXX
 )

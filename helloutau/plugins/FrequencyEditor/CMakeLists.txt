@@ -1,4 +1,5 @@
 project(FrequencyEditorPlugin
+    VERSION ${HELLO_VERSION}
     DESCRIPTION "HelloUtau Frequency Editor Plugin"
     LANGUAGES CXX
 )

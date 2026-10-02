@@ -1,4 +1,5 @@
 project(ustedit
+    VERSION ${HELLO_VERSION}
     DESCRIPTION "HelloUtau Command-Line Project Editor"
     LANGUAGES CXX
 )

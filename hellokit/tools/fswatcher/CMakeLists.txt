@@ -1,4 +1,5 @@
 project(hello-fswatcher
+    VERSION ${HELLO_VERSION}
     DESCRIPTION "HelloUtau File System Watcher"
     LANGUAGES CXX
 )

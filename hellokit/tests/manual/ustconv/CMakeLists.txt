@@ -1,4 +1,5 @@
 project(ustconv
+    VERSION ${HELLO_VERSION}
     DESCRIPTION "HelloUtau Format Converter"
     LANGUAGES CXX
 )

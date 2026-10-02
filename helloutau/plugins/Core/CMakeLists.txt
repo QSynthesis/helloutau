@@ -1,4 +1,5 @@
 project(CorePlugin
+    VERSION ${HELLO_VERSION}
     DESCRIPTION "HelloUtau Core Plugin"
     LANGUAGES CXX
 )

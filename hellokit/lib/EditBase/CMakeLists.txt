@@ -1,5 +1,5 @@
 project(HelloKitEditBase
-    VERSION ${HELLOKIT_VERSION}
+    VERSION ${HELLO_VERSION}
     LANGUAGES CXX
 )
 

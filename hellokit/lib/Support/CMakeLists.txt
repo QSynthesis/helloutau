@@ -1,5 +1,5 @@
 project(HelloKitSupport
-    VERSION ${HELLOKIT_VERSION}
+    VERSION ${HELLO_VERSION}
     LANGUAGES CXX
 )
 

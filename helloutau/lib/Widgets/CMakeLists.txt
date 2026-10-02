@@ -1,5 +1,5 @@
 project(HelloUtauWidgets
-    VERSION ${HELLOUTAU_VERSION}
+    VERSION ${HELLO_VERSION}
     LANGUAGES CXX
 )
 

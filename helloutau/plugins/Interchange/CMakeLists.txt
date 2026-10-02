@@ -1,4 +1,5 @@
 project(InterchangePlugin
+    VERSION ${HELLO_VERSION}
     DESCRIPTION "HelloUtau Interchange Plugin"
     LANGUAGES CXX
 )
