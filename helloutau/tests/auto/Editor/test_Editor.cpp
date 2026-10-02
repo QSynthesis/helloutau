@@ -219,23 +219,28 @@ private Q_SLOTS:
         QVERIFY(!window->isWindowModified());
     }
 
-    // An unmodified new project is replaced; any other window keeps its project.
-    void a_file_opens_in_an_unused_window_or_a_new_one() {
+    // Opening replaces the current project; a second window is opened explicitly with New.
+    void a_file_opens_in_the_current_window() {
         const auto e = editor();
         const auto first = e->newWindow();
         const auto a = savedProject(m_dir, "a.usth");
         const auto b = savedProject(m_dir, "b.usth");
+        const auto c = savedProject(m_dir, "c.usth");
 
         QCOMPARE(e->openFile(a, first), first);
         QCOMPARE(first->windowTitle(), QStringLiteral("a.usth[*] - HelloUtau"));
         QVERIFY(!first->isUnused());
 
         const auto second = e->openFile(b, first);
-        QVERIFY(second && second != first);
+        QCOMPARE(second, first);
+        QCOMPARE(e->windows().size(), 1);
+
+        const auto newWindow = e->newWindow();
+        QCOMPARE(e->openFile(c, newWindow), newWindow);
         QCOMPARE(e->windows().size(), 2);
 
         // A file that is already open is not opened twice.
-        QCOMPARE(e->openFile(a, second), first);
+        QCOMPARE(e->openFile(b, newWindow), first);
         QCOMPARE(e->windows().size(), 2);
     }
 
@@ -313,9 +318,26 @@ private Q_SLOTS:
         QCOMPARE(e->windows().size(), 0);
     }
 
-    // A file dropped on a window opens as by Open: in the window if it shows an unmodified new
-    // project, in a window of its own otherwise, and the window that shows it already is
-    // activated. Nothing asks whether to save.
+    void opening_over_a_modified_project_asks_to_save() {
+        const auto e = editor();
+        const auto window = e->newWindow();
+        const auto first = savedProject(m_dir, "open1.usth");
+        const auto second = savedProject(m_dir, "open2.usth");
+        QCOMPARE(e->openFile(first, window), window);
+        edit(window);
+
+        answerMessageBox(QMessageBox::Cancel);
+        QCOMPARE(e->openFile(second, window), nullptr);
+        QCOMPARE(window->document()->sourcePath(), first);
+        QVERIFY(window->isWindowModified());
+
+        answerMessageBox(QMessageBox::Discard);
+        QCOMPARE(e->openFile(second, window), window);
+        QCOMPARE(window->document()->sourcePath(), second);
+    }
+
+    // A file dropped on a window opens as by Open and asks whether modified changes may be
+    // discarded or saved.
     void a_dropped_file_opens_as_by_open() {
         const auto e = editor();
         const auto first = savedProject(m_dir, "drop1.usth");
@@ -360,16 +382,17 @@ private Q_SLOTS:
         QVERIFY(shows(window, first));
 
         edit(window);
-        QVERIFY(!drop(window, second));
-        QCOMPARE(e->windows().size(), 2);
+        QVERIFY(drop(window, second, QMessageBox::Cancel));
+        QCOMPARE(e->windows().size(), 1);
         QVERIFY(shows(window, first));
         QVERIFY(window->isWindowModified());
-        const auto other = e->windows().at(1);
-        QVERIFY(shows(other, second));
+        QVERIFY(drop(window, second, QMessageBox::Discard));
+        QCOMPARE(e->windows().size(), 1);
+        QVERIFY(shows(window, second));
 
         QVERIFY(!drop(window, second));
-        QCOMPARE(e->windows().size(), 2);
-        QVERIFY(shows(window, first));
+        QCOMPARE(e->windows().size(), 1);
+        QVERIFY(shows(window, second));
     }
 
     void saving_a_project_with_its_file_needs_no_dialog() {

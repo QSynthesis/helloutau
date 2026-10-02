@@ -72,6 +72,8 @@ namespace hello::daw {
         /// @{
         bool save();
         bool saveAs();
+        /// Asks whether modified changes may be discarded or saved before replacing the project.
+        bool maybeSave();
         bool exportUst();
         /// @}
 

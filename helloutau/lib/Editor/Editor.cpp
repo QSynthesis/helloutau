@@ -369,14 +369,16 @@ namespace hello::daw {
             DiagnosticBox::show(from, title, diagnostics);
             return nullptr;
         }
-        impl.settings->addRecentFile(path);
-
         ProjectWindow *window = from;
-        if (window && window->isUnused()) {
+        if (window) {
+            if (!window->maybeSave()) {
+                return nullptr;
+            }
             window->setDocument(std::move(document));
         } else {
             window = impl.createWindow(this, std::move(document));
         }
+        impl.settings->addRecentFile(path);
         // Shown after the window, so that the user sees which project they concern, and before
         // the voice bank is read, which may ask more.
         DiagnosticBox::show(window, title, diagnostics);

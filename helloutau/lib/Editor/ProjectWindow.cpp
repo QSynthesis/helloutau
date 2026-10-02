@@ -1895,6 +1895,11 @@ namespace hello::daw {
         return saved;
     }
 
+    bool ProjectWindow::maybeSave() {
+        stdc_impl_t;
+        return impl.maybeSave();
+    }
+
     bool ProjectWindow::exportUst() {
         stdc_impl_t;
         const auto &settings = impl.editor->settings();
