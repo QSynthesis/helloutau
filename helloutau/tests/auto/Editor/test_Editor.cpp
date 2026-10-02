@@ -825,7 +825,11 @@ private Q_SLOTS:
         b.lyric = QStringLiteral("ka");
         b.tempo = 150;
         using F = NotePropertiesDialog;
-        NotePropertiesDialog dialog({a, b});
+        NotePropertiesDialog::Defaults defaults;
+        defaults.tempo = {120, 150};
+        defaults.preUtterance = {12, 12};
+        defaults.voiceOverlap = {3, 3};
+        NotePropertiesDialog dialog({a, b}, defaults);
         QVERIFY(dialog.changes().isEmpty());
         QCOMPARE(dialog.field(F::Lyric)->text(), QString());
         QCOMPARE(dialog.field(F::Lyric)->placeholderText(), QStringLiteral("(various)"));
@@ -833,6 +837,8 @@ private Q_SLOTS:
         QCOMPARE(dialog.field(F::Intensity)->text(), QStringLiteral("80"));
         QCOMPARE(dialog.field(F::Tempo)->placeholderText(), QStringLiteral("(various)"));
         QCOMPARE(dialog.field(F::Modulation)->placeholderText(), QStringLiteral("(default: 100)"));
+        QCOMPARE(dialog.field(F::PreUtterance)->placeholderText(),
+                 QStringLiteral("(default: 12)"));
         QCOMPARE(dialog.field(F::Flags)->text(), QStringLiteral("g-2"));
 
         QTest::keyClicks(dialog.field(F::Tempo), QStringLiteral("140"));

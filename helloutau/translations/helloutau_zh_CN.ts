@@ -832,6 +832,10 @@
         <translation>（默认值：%1）</translation>
     </message>
     <message>
+        <source>(default: voice bank)</source>
+        <translation>（默认值：音源库）</translation>
+    </message>
+    <message>
         <source>&amp;Lyric:</source>
         <translation>歌词(&amp;L)：</translation>
     </message>

@@ -41,7 +41,14 @@ namespace hello::daw {
             Flags,
         };
 
-        explicit NotePropertiesDialog(const QList<kit::Note> &notes, QWidget *parent = nullptr);
+        struct Defaults {
+            QList<double> tempo;
+            QList<double> preUtterance;
+            QList<double> voiceOverlap;
+        };
+
+        explicit NotePropertiesDialog(const QList<kit::Note> &notes, Defaults defaults = {},
+                                      QWidget *parent = nullptr);
         ~NotePropertiesDialog();
 
         /// The fields edited, for ProjectEdits::setNoteProperties(). A number that does not read
