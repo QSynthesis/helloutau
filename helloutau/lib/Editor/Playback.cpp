@@ -186,6 +186,7 @@ namespace hello::daw {
         Decl *_decl;
         std::shared_ptr<Recipient> recipient;
         State state = Stopped;
+        std::shared_ptr<kit::EngineOutputLog> outputLog;
         std::shared_ptr<const kit::SynthRunner> runner =
             std::make_shared<kit::ClassicSynthRunner>();
         AudioOutput *output = nullptr;
@@ -261,7 +262,9 @@ namespace hello::daw {
             if (!synth || synthEngines.resampler != engines.resampler ||
                 synthThreads != threadCount) {
                 endPreview();
-                synth = std::make_unique<kit::RealtimeSynth>(engines, threadCount);
+                synth = std::make_unique<kit::RealtimeSynth>(
+                    engines, threadCount,
+                    [log = outputLog] { return std::make_unique<kit::EngineProcess>(log); });
                 synthEngines = engines;
                 synthThreads = threadCount;
             }
@@ -606,8 +609,17 @@ namespace hello::daw {
         }
     };
 
-    Playback::Playback(QObject *parent) : QObject(parent), _impl(std::make_unique<Impl>(this)) {
+    Playback::Playback(QObject *parent)
+        : Playback(std::make_shared<kit::EngineOutputLog>(), parent) {
+    }
+
+    Playback::Playback(std::shared_ptr<kit::EngineOutputLog> outputLog, QObject *parent)
+        : QObject(parent), _impl(std::make_unique<Impl>(this)) {
         stdc_impl_t;
+        impl.outputLog = outputLog ? std::move(outputLog) : std::make_shared<kit::EngineOutputLog>();
+        impl.outputLog->setMode(kit::EngineOutputLog::Accumulated);
+        impl.outputLog->setLimit(1024 * 1024);
+        impl.runner->setOutputLog(impl.outputLog);
         impl.output = new AudioOutput(this);
         connect(impl.output, &AudioOutput::finished, this, [this] {
             stdc_impl_t;
@@ -630,7 +642,11 @@ namespace hello::daw {
 
     void Playback::setRunner(std::shared_ptr<const kit::SynthRunner> runner) {
         stdc_impl_t;
+        const auto old = impl.runner;
         impl.runner = std::move(runner);
+        if (impl.runner != old) {
+            impl.runner->setOutputLog(impl.outputLog);
+        }
         impl.kept.reset();
     }
 

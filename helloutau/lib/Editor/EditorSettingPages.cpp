@@ -1,11 +1,13 @@
 #include "EditorSettingPages_p.h"
 
 #include <algorithm>
+#include <cmath>
 #include <limits>
 #include <thread>
 
 #include <QtCore/QDir>
 #include <QtGui/QIntValidator>
+#include <QtCore/QRegularExpression>
 #include <QtWidgets/QComboBox>
 #include <QtWidgets/QFileDialog>
 #include <QtWidgets/QFormLayout>
@@ -58,6 +60,35 @@ namespace hello::daw {
             auto label = new QLabel(text);
             label->setWordWrap(true);
             return label;
+        }
+
+        std::optional<int> renderLogBytes(const QString &text) {
+            static const QRegularExpression pattern(
+                QStringLiteral(R"(^\s*(\d+(?:\.\d+)?)\s*(B|KiB|MiB|GiB)?\s*$)"),
+                QRegularExpression::CaseInsensitiveOption);
+            const auto match = pattern.match(text);
+            if (!match.hasMatch()) {
+                return std::nullopt;
+            }
+            bool ok = false;
+            const double number = match.captured(1).toDouble(&ok);
+            if (!ok) {
+                return std::nullopt;
+            }
+            const auto suffix = match.captured(2).toLower();
+            const double multiplier = suffix == QLatin1String("kib")
+                                          ? 1024.0
+                                          : suffix == QLatin1String("mib")
+                                                ? 1024.0 * 1024
+                                                : suffix == QLatin1String("gib")
+                                                      ? 1024.0 * 1024 * 1024
+                                                      : 1.0;
+            const double bytes = number * multiplier;
+            if (bytes < 1024 || bytes > 1024.0 * 1024 * 1024 ||
+                bytes != std::floor(bytes)) {
+                return std::nullopt;
+            }
+            return int(bytes);
         }
 
     }
@@ -266,12 +297,45 @@ namespace hello::daw {
         };
         updateThreads();
 
+        m_renderLogMode = new QComboBox();
+        m_renderLogMode->addItem(tr("Keep the latest run only"), false);
+        m_renderLogMode->addItem(tr("Accumulate runs"), true);
+        m_renderLogMode->setCurrentIndex(
+            m_renderLogMode->findData(m_settings.isRenderLogAccumulated()));
+        form->addRow(tr("Render &log:"), m_renderLogMode);
+
+        m_renderLogLimit = new QComboBox();
+        m_renderLogLimit->setEditable(true);
+        m_renderLogLimit->setInsertPolicy(QComboBox::InsertAtBottom);
+        const QList<QPair<QString, int>> limits{{QStringLiteral("256 KiB"), 256 * 1024},
+                                                {QStringLiteral("1 MiB"), 1024 * 1024},
+                                                {QStringLiteral("4 MiB"), 4 * 1024 * 1024},
+                                                {QStringLiteral("16 MiB"), 16 * 1024 * 1024}};
+        for (const auto &[label, bytes] : limits) {
+            m_renderLogLimit->addItem(label, bytes);
+        }
+        const int logLimit = m_settings.renderLogLimit();
+        if (const int index = m_renderLogLimit->findData(logLimit); index >= 0) {
+            m_renderLogLimit->setCurrentIndex(index);
+        } else {
+            m_renderLogLimit->setEditText(QString::number(logLimit));
+        }
+        form->addRow(tr("Render log &size:"), m_renderLogLimit);
+        form->addRow(note(tr("Captured output is shared by realtime and threaded rendering. "
+                             "Enter a number with B, KiB, MiB or GiB, or choose a preset.")));
+
         connect(m_resampler, &QLineEdit::textChanged, this, &SettingPage::modifiedChanged);
         connect(m_wavtool, &QLineEdit::textChanged, this, &SettingPage::modifiedChanged);
         connect(m_playbackMode, &QComboBox::currentIndexChanged, this, updateThreads);
         connect(m_playbackMode, &QComboBox::currentIndexChanged, this,
                 &SettingPage::modifiedChanged);
         connect(m_threads, &QComboBox::currentTextChanged, this, &SettingPage::modifiedChanged);
+        connect(m_renderLogMode, &QComboBox::currentIndexChanged, this,
+                &SettingPage::modifiedChanged);
+        connect(m_renderLogLimit, &QComboBox::currentTextChanged, this,
+                &SettingPage::modifiedChanged);
+        connect(m_renderLogLimit, &QComboBox::editTextChanged, this,
+                &SettingPage::modifiedChanged);
         return widget;
     }
 
@@ -288,14 +352,26 @@ namespace hello::daw {
         return count;
     }
 
+    std::optional<int> RenderingSettingPage::renderLogLimit() const {
+        const int index = m_renderLogLimit->findText(m_renderLogLimit->currentText(),
+                                                     Qt::MatchExactly);
+        if (index >= 0 && m_renderLogLimit->itemData(index).isValid()) {
+            return m_renderLogLimit->itemData(index).toInt();
+        }
+        return renderLogBytes(m_renderLogLimit->currentText());
+    }
+
     bool RenderingSettingPage::isModified() const {
-        if (!m_resampler || !m_wavtool || !m_playbackMode || !m_threads) {
+        if (!m_resampler || !m_wavtool || !m_playbackMode || !m_threads ||
+            !m_renderLogMode || !m_renderLogLimit) {
             return false;
         }
         return pathText(m_resampler) != QDir::fromNativeSeparators(m_settings.resampler()) ||
                pathText(m_wavtool) != QDir::fromNativeSeparators(m_settings.wavtool()) ||
                m_playbackMode->currentData().toInt() != m_settings.playbackMode() ||
-               threadCount() != m_settings.renderThreadCount();
+               threadCount() != m_settings.renderThreadCount() ||
+               m_renderLogMode->currentData().toBool() != m_settings.isRenderLogAccumulated() ||
+               renderLogLimit() != m_settings.renderLogLimit();
     }
 
     bool RenderingSettingPage::apply(QString *error) {
@@ -307,11 +383,20 @@ namespace hello::daw {
             }
             return false;
         }
+        const auto logLimit = renderLogLimit();
+        if (!logLimit) {
+            if (error) {
+                *error = tr("The render log size must be between 1024 bytes and 1 GiB.");
+            }
+            return false;
+        }
         m_settings.setResampler(pathText(m_resampler));
         m_settings.setWavtool(pathText(m_wavtool));
         m_settings.setPlaybackMode(
             AppSettings::PlaybackMode(m_playbackMode->currentData().toInt()));
         m_settings.setRenderThreadCount(*threads);
+        m_settings.setRenderLogAccumulated(m_renderLogMode->currentData().toBool());
+        m_settings.setRenderLogLimit(*logLimit);
         Q_EMIT modifiedChanged();
         return true;
     }

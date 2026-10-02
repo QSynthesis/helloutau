@@ -18,6 +18,8 @@ namespace hello::daw {
         constexpr char KeyUtauDirectory[] = "engines/utauDirectory";
         constexpr char KeyResampler[] = "engines/resampler";
         constexpr char KeyWavtool[] = "engines/wavtool";
+        constexpr char KeyRenderLogAccumulated[] = "renderLog/accumulated";
+        constexpr char KeyRenderLogLimit[] = "renderLog/limit";
         constexpr char KeyAudioOutputDevice[] = "audio/outputDevice";
         constexpr char KeyPlaybackMode[] = "playback/mode";
         constexpr char PrerenderValue[] = "prerender";
@@ -132,6 +134,26 @@ namespace hello::daw {
     void AppSettings::setWavtool(const QString &path) {
         stdc_impl_t;
         impl.setValue(KeyWavtool, path.toStdString());
+    }
+
+    bool AppSettings::isRenderLogAccumulated() const {
+        stdc_impl_t;
+        return impl.value(KeyRenderLogAccumulated).toBool(true);
+    }
+
+    void AppSettings::setRenderLogAccumulated(bool accumulated) {
+        stdc_impl_t;
+        impl.setValue(KeyRenderLogAccumulated, accumulated);
+    }
+
+    int AppSettings::renderLogLimit() const {
+        stdc_impl_t;
+        return std::max(1024, int(impl.value(KeyRenderLogLimit).toInt(1024 * 1024)));
+    }
+
+    void AppSettings::setRenderLogLimit(int bytes) {
+        stdc_impl_t;
+        impl.setValue(KeyRenderLogLimit, int64_t(std::max(1024, bytes)));
     }
 
     QByteArray AppSettings::audioOutputDevice() const {

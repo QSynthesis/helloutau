@@ -56,6 +56,14 @@ namespace hello::daw {
         QString wavtool() const;
         void setWavtool(const QString &path);
 
+        /// Whether the render log keeps all captured engine output, or only the latest run.
+        bool isRenderLogAccumulated() const;
+        void setRenderLogAccumulated(bool accumulated);
+
+        /// Maximum size of the captured render log in bytes. The default is 1 MiB.
+        int renderLogLimit() const;
+        void setRenderLogLimit(int bytes);
+
         QByteArray audioOutputDevice() const;
         void setAudioOutputDevice(const QByteArray &id);
 

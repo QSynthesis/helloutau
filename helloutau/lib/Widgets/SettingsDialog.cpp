@@ -2,6 +2,7 @@
 
 #include <QtWidgets/QAbstractButton>
 #include <QtWidgets/QDialogButtonBox>
+#include <QtGui/QPalette>
 #include <QtWidgets/QGroupBox>
 #include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QLabel>
@@ -89,6 +90,9 @@ namespace hello::daw {
         m_description->setWordWrap(true);
         m_message = new QLabel();
         m_message->setWordWrap(true);
+        auto messagePalette = m_message->palette();
+        messagePalette.setColor(QPalette::WindowText, QColor(Qt::red));
+        m_message->setPalette(messagePalette);
         m_message->hide();
         m_stack = new QStackedWidget();
 

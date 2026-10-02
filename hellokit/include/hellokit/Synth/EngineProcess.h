@@ -3,6 +3,8 @@
 
 #include <filesystem>
 #include <functional>
+#include <memory>
+#include <mutex>
 
 #include <QtCore/QCoreApplication>
 #include <QtCore/QString>
@@ -13,6 +15,33 @@
 #include <hellokit/Synth/HelloKitSynthGlobal.h>
 
 namespace hello::kit {
+
+    /// Thread-safe output retained by the engines of one playback owner.
+    class HELLOKIT_SYNTH_EXPORT EngineOutputLog {
+    public:
+        enum Mode {
+            Latest,
+            Accumulated,
+        };
+
+        EngineOutputLog();
+        ~EngineOutputLog();
+
+        QString text() const;
+        void clear();
+        void setMode(Mode mode);
+        void setLimit(qsizetype bytes);
+        void record(const std::filesystem::path &program, const QString &output);
+
+    private:
+        void trim();
+
+        mutable std::mutex m_mutex;
+        QString m_outputs;
+        qsizetype m_limit = 1024 * 1024;
+        Mode m_mode = Accumulated;
+        bool m_runStarted = false;
+    };
 
     /// The result of one engine invocation.
     struct EngineRun {
@@ -62,7 +91,7 @@ namespace hello::kit {
     class HELLOKIT_SYNTH_EXPORT EngineProcess {
         Q_DECLARE_TR_FUNCTIONS(hello::kit::EngineProcess)
     public:
-        EngineProcess();
+        explicit EngineProcess(std::shared_ptr<EngineOutputLog> outputLog = {});
 
         /// Virtual, as are the two functions below, so that a runner can be given a substitute
         /// that starts engines. The engines are third-party programs outside this repository,
@@ -88,6 +117,9 @@ namespace hello::kit {
         virtual EngineRun run(const std::filesystem::path &program, const QStringList &arguments,
                               DiagnosticList &diagnostics) const;
 
+        /// Returns the timestamped output collected by this process's log.
+        QString outputLog() const;
+
         /// Executes \a script with the command processor, in a visible console.
         ///
         /// The only function in this library that executes a command line, because a batch file
@@ -109,6 +141,9 @@ namespace hello::kit {
         virtual EngineRun runScript(const std::filesystem::path &script,
                                     DiagnosticList &diagnostics,
                                     const std::function<bool()> &cancelled = {}) const;
+
+    private:
+        std::shared_ptr<EngineOutputLog> m_outputLog;
     };
 
 }

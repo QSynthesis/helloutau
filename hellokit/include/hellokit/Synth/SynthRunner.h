@@ -109,6 +109,8 @@ namespace hello::kit {
         virtual SynthOutcome render(const SynthPlan &plan, const SynthEngines &engines,
                                     SynthObserver *observer, DiagnosticList &diagnostics) const = 0;
 
+        void setOutputLog(std::shared_ptr<EngineOutputLog> outputLog) const;
+
     protected:
         /// Creates the object that starts one engine.
         ///
@@ -137,6 +139,9 @@ namespace hello::kit {
         ///
         /// \return the number of removed fragments
         int forgetSuperseded(const SynthPlan &plan, DiagnosticList &diagnostics) const;
+
+    private:
+        mutable std::shared_ptr<EngineOutputLog> m_outputLog;
     };
 
 }

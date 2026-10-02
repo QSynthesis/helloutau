@@ -37,14 +37,21 @@ namespace hello::kit {
         return false;
     }
 
-    SynthRunner::SynthRunner() = default;
+    SynthRunner::SynthRunner() : m_outputLog(std::make_shared<EngineOutputLog>()) {
+    }
 
     SynthRunner::~SynthRunner() = default;
 
     std::unique_ptr<EngineProcess> SynthRunner::makeEngineProcess() const {
-        auto engine = std::make_unique<EngineProcess>();
+        auto engine = std::make_unique<EngineProcess>(m_outputLog);
         engine->timeout = timeout;
         return engine;
+    }
+
+    void SynthRunner::setOutputLog(std::shared_ptr<EngineOutputLog> outputLog) const {
+        if (outputLog) {
+            m_outputLog = std::move(outputLog);
+        }
     }
 
     int SynthRunner::forgetSuperseded(const SynthPlan &plan, DiagnosticList &diagnostics) const {

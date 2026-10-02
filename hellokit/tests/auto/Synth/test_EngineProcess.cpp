@@ -15,6 +15,7 @@
 #include <QtCore/QFile>
 #include <QtCore/QStringList>
 #include <QtCore/QTemporaryDir>
+#include <QtCore/QRegularExpression>
 #include <QtTest/QTest>
 
 #include <hellokit/Synth/EngineProcess.h>
@@ -66,6 +67,26 @@ private Q_SLOTS:
         QVERIFY(result.succeeded());
         QVERIFY(diagnostics.isEmpty());
         QCOMPARE(result.output.trimmed(), QStringLiteral("hello"));
+    }
+
+    void it_records_timestamped_output_with_the_selected_retention() {
+        const auto log = std::make_shared<EngineOutputLog>();
+        log->setMode(EngineOutputLog::Latest);
+        log->setLimit(1024 * 1024);
+        EngineProcess engine(log);
+        DiagnosticList diagnostics;
+        QVERIFY(engine.run(self(), {QLatin1String(echoArguments), QStringLiteral("first")},
+                           diagnostics)
+                    .succeeded());
+        log->clear();
+        QVERIFY(engine.run(self(), {QLatin1String(echoArguments), QStringLiteral("second")},
+                           diagnostics)
+                    .succeeded());
+        const auto text = log->text();
+        QVERIFY(!text.contains(QStringLiteral("first")));
+        QVERIFY(text.contains(QStringLiteral("second")));
+        QVERIFY(text.contains(QRegularExpression(QStringLiteral(
+            R"(\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3})"))));
     }
 
     // The reason this class exists. UTAU renders by writing a batch file, so a sample path or

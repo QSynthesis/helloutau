@@ -10,10 +10,12 @@
 #include <algorithm>
 #include <chrono>
 #include <string>
+#include <mutex>
 #include <utility>
 #include <vector>
 
 #include <QtCore/QCoreApplication>
+#include <QtCore/QDateTime>
 
 #include <stdcorelib/support/popen.h>
 
@@ -98,9 +100,63 @@ namespace hello::kit {
 
     }
 
-    EngineProcess::EngineProcess() = default;
+    EngineOutputLog::EngineOutputLog() = default;
+
+    EngineOutputLog::~EngineOutputLog() = default;
+
+    QString EngineOutputLog::text() const {
+        const std::lock_guard lock(m_mutex);
+        return m_outputs;
+    }
+
+    void EngineOutputLog::clear() {
+        const std::lock_guard lock(m_mutex);
+        m_outputs.clear();
+        m_runStarted = false;
+    }
+
+    void EngineOutputLog::setMode(Mode mode) {
+        const std::lock_guard lock(m_mutex);
+        m_mode = mode;
+        m_runStarted = false;
+    }
+
+    void EngineOutputLog::setLimit(qsizetype bytes) {
+        const std::lock_guard lock(m_mutex);
+        m_limit = std::max<qsizetype>(1024, bytes);
+        trim();
+    }
+
+    void EngineOutputLog::trim() {
+        const auto bytes = m_outputs.toUtf8();
+        if (bytes.size() > m_limit) {
+            m_outputs = QString::fromUtf8(bytes.right(m_limit));
+        }
+    }
+
+    void EngineOutputLog::record(const std::filesystem::path &program, const QString &output) {
+        const auto name = QString::fromStdU16String(program.u16string());
+        const auto time = QDateTime::currentDateTime().toString(Qt::ISODateWithMs);
+        const auto body = output.isEmpty() ? QStringLiteral("(no output)") : output;
+        const auto entry = QStringLiteral("[%1] %2\n%3\n").arg(time, name, body);
+        const std::lock_guard lock(m_mutex);
+        if (m_mode == Latest && !m_runStarted) {
+            m_outputs.clear();
+        }
+        m_runStarted = true;
+        m_outputs += entry;
+        trim();
+    }
+
+    EngineProcess::EngineProcess(std::shared_ptr<EngineOutputLog> outputLog)
+        : m_outputLog(outputLog ? std::move(outputLog) : std::make_shared<EngineOutputLog>()) {
+    }
 
     EngineProcess::~EngineProcess() = default;
+
+    QString EngineProcess::outputLog() const {
+        return m_outputLog->text();
+    }
 
     EngineRun EngineProcess::run(const std::filesystem::path &program, const QStringList &arguments,
                                  DiagnosticList &diagnostics) const {
@@ -141,6 +197,7 @@ namespace hello::kit {
         // writer, so draining the streams sequentially deadlocks with a verbose engine.
         const auto [out, err] = process.communicate({}, timeout);
         result.output = printed(out) + printed(err);
+        m_outputLog->record(program, result.output);
 
         // Not the exit code: communicate() kills a child that exceeds the time limit, so the
         // child is reaped and has an exit code in either case. The error indicates that the

@@ -178,6 +178,7 @@
                 shortcut="Ctrl+G" />
         <!-- Deletes the fragments and the track file of the render cache of the project -->
         <action id="helloutau.tools.clearCache" text="&amp;Clear Render Cache" category="Tools" />
+        <action id="helloutau.tools.viewRenderLog" text="View Render &amp;Log..." category="Tools" />
         <action id="helloutau.tools.settings" text="&amp;Settings..." category="Tools" />
         <action id="helloutau.help.about" text="About &amp;${APP_NAME}" category="Help" />
         <action id="helloutau.help.aboutQt" text="About &amp;Qt" category="Help" />
@@ -290,6 +291,7 @@
             <menu id="helloutau.tools">
                 <action id="helloutau.tools.editVoiceBank" />
                 <action id="helloutau.tools.clearCache" />
+                <action id="helloutau.tools.viewRenderLog" />
                 <separator />
                 <action id="helloutau.tools.settings" />
             </menu>

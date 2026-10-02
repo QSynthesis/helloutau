@@ -55,6 +55,7 @@ namespace hello::daw {
         Q_ENUM(State)
 
         explicit Playback(QObject *parent = nullptr);
+        Playback(std::shared_ptr<kit::EngineOutputLog> outputLog, QObject *parent);
         ~Playback() override;
 
         /// Replaces the runner, for tests. The default is a kit::ClassicSynthRunner.

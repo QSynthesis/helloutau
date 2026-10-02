@@ -90,6 +90,7 @@ namespace hello::daw {
         /// \c std::nullopt if the text typed in is not a positive count. There is no upper
         /// limit, as there is none for the jobs of ninja and make.
         std::optional<int> threadCount() const;
+        std::optional<int> renderLogLimit() const;
 
     protected:
         QWidget *createWidget() override;
@@ -100,6 +101,8 @@ namespace hello::daw {
         QPointer<QLineEdit> m_wavtool;
         QPointer<QComboBox> m_playbackMode;
         QPointer<QComboBox> m_threads;
+        QPointer<QComboBox> m_renderLogMode;
+        QPointer<QComboBox> m_renderLogLimit;
     };
 
     /// Adds the pages of the editor to \a catalog: Appearance & Behavior with System Settings in

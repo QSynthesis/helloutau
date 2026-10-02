@@ -29,8 +29,11 @@
 #include <QtWidgets/QProgressBar>
 #include <QtWidgets/QProgressDialog>
 #include <QtWidgets/QPushButton>
+#include <QtWidgets/QPlainTextEdit>
+#include <QtWidgets/QDialogButtonBox>
 #include <QtWidgets/QStatusBar>
 #include <QtWidgets/QToolBar>
+#include <QtWidgets/QVBoxLayout>
 
 #include <stdcorelib/pimpl.h>
 
@@ -43,6 +46,7 @@
 #include <hellokit/Edit/ProjectRefs.h>
 #include <hellokit/Edit/TrackTimeline.h>
 #include <hellokit/Synth/ClassicSynthRunner.h>
+#include <hellokit/Synth/EngineProcess.h>
 #include <hellokit/Synth/ThreadedSynthRunner.h>
 
 #include <helloutau/Theme/ThemeManager.h>
@@ -167,6 +171,8 @@ namespace hello::daw {
         PianoRoll::Parameters pastedParameters = PianoRoll::AllParameters;
 
         Playback *playback = nullptr;
+        std::shared_ptr<kit::EngineOutputLog> renderLog =
+            std::make_shared<kit::EngineOutputLog>();
         QLabel *renderLabel = nullptr;
         QProgressBar *renderProgress = nullptr;
         QPushButton *renderCancel = nullptr;
@@ -197,7 +203,7 @@ namespace hello::daw {
         // The render progress in the status bar, and the playhead that follows playback
         void initPlayback() {
             stdc_decl_t;
-            playback = new Playback(&decl);
+            playback = new Playback(renderLog, &decl);
             renderLabel = new QLabel();
             renderProgress = new QProgressBar();
             renderProgress->setMaximumWidth(200);
@@ -498,6 +504,28 @@ namespace hello::daw {
             updateBackground();
         }
 
+        void showRenderLog() {
+            stdc_decl_t;
+            QDialog dialog(&decl);
+            dialog.setWindowTitle(tr("Render Log"));
+            dialog.resize(720, 480);
+            auto layout = new QVBoxLayout(&dialog);
+            auto text = new QPlainTextEdit(&dialog);
+            text->setReadOnly(true);
+            text->setLineWrapMode(QPlainTextEdit::NoWrap);
+            text->setPlainText(renderLog->text());
+            layout->addWidget(text);
+            auto buttons = new QDialogButtonBox(QDialogButtonBox::Close, &dialog);
+            auto clear = buttons->addButton(tr("Clear"), QDialogButtonBox::DestructiveRole);
+            QObject::connect(clear, &QPushButton::clicked, &dialog, [this, text] {
+                renderLog->clear();
+                text->clear();
+            });
+            QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+            layout->addWidget(buttons);
+            dialog.exec();
+        }
+
         // How far each note is rendered, on the ruler: as the background renders them, or by
         // the fragments in the cache (the render states in docs/Widgets.md)
         // The status of a plan made in the background, which counts notes as UTAU does while
@@ -614,6 +642,9 @@ namespace hello::daw {
         // same.
         void playRange(std::pair<int, int> range) {
             stdc_decl_t;
+            if (!editor->settings().isRenderLogAccumulated()) {
+                renderLog->clear();
+            }
             lastRange = range;
             kit::DiagnosticList diagnostics;
             if (!playback->play(*document, range, engines(), diagnostics)) {
@@ -730,6 +761,9 @@ namespace hello::daw {
             if (file.isEmpty()) {
                 return;
             }
+            if (!editor->settings().isRenderLogAccumulated()) {
+                renderLog->clear();
+            }
             std::optional<std::filesystem::path> written;
             const auto connection =
                 QObject::connect(playback, &Playback::trackRendered, &decl,
@@ -801,6 +835,9 @@ namespace hello::daw {
                 return;
             }
             const auto at = playback->position();
+            if (!editor->settings().isRenderLogAccumulated()) {
+                renderLog->clear();
+            }
             kit::DiagnosticList diagnostics;
             previewing = playback->preview(*document, at, engines(), diagnostics);
             if (!previewing) {
@@ -827,6 +864,9 @@ namespace hello::daw {
         // Plays from the playhead at rest as the track is rendered.
         void startPreview() {
             stdc_decl_t;
+            if (!editor->settings().isRenderLogAccumulated()) {
+                renderLog->clear();
+            }
             kit::DiagnosticList diagnostics;
             previewing = playback->preview(*document, cursorTime(), engines(), diagnostics);
             if (!previewing) {
@@ -1328,6 +1368,7 @@ namespace hello::daw {
                        [this] { saveLastPlayed(); });
             addCommand(QStringLiteral("helloutau.playback.renderTrack"), [this] { renderTrack(); });
             addCommand(QStringLiteral("helloutau.tools.clearCache"), [this] { clearCache(); });
+            addCommand(QStringLiteral("helloutau.tools.viewRenderLog"), [this] { showRenderLog(); });
             addCommand(QStringLiteral("helloutau.tools.settings"), [this] {
                 stdc_decl_t;
                 editor->showSettings(&decl);
@@ -1920,6 +1961,13 @@ namespace hello::daw {
 
     void ProjectWindow::applySettings() {
         stdc_impl_t;
+        impl.renderLog->setMode(impl.editor->settings().isRenderLogAccumulated()
+                                    ? kit::EngineOutputLog::Accumulated
+                                    : kit::EngineOutputLog::Latest);
+        impl.renderLog->setLimit(impl.editor->settings().renderLogLimit());
+        if (!impl.editor->settings().isRenderLogAccumulated()) {
+            impl.renderLog->clear();
+        }
         // What plays in the other mode stops.
         const auto state = impl.playback->state();
         if (impl.realtime() ? state == Playback::Rendering : impl.previewing) {

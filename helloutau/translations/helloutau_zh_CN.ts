@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE TS>
 <TS version="2.1" language="zh_CN">
 <context>
@@ -300,6 +300,10 @@
     <message>
         <source>Select &amp;All</source>
         <translation>全选(&amp;A)</translation>
+    </message>
+    <message>
+        <source>View Render &amp;Log...</source>
+        <translation>查看渲染日志(&amp;L)...</translation>
     </message>
     <message>
         <source>&amp;Select</source>
@@ -1254,6 +1258,10 @@ Trust and run it?</source>
         <translation>曲速</translation>
     </message>
     <message>
+        <source>Render Log</source>
+        <translation>渲染日志</translation>
+    </message>
+    <message>
         <source>Project Tempo</source>
         <translation>工程曲速</translation>
     </message>
@@ -1302,6 +1310,10 @@ Trust and run it?</source>
         <translation>
             <numerusform>已从渲染缓存中删除%n个文件。</numerusform>
         </translation>
+    </message>
+    <message>
+        <source>Clear</source>
+        <translation>清除</translation>
     </message>
     <message>
         <source>Preparing notes (%1/%2)</source>
@@ -1565,6 +1577,30 @@ Trust and run it?</source>
     <message>
         <source>Rendering &amp;threads:</source>
         <translation>渲染线程数(&amp;T)：</translation>
+    </message>
+    <message>
+        <source>Keep the latest run only</source>
+        <translation>仅保留最近一次运行</translation>
+    </message>
+    <message>
+        <source>Accumulate runs</source>
+        <translation>累计运行记录</translation>
+    </message>
+    <message>
+        <source>Render &amp;log:</source>
+        <translation>渲染日志：</translation>
+    </message>
+    <message>
+        <source>Render log &amp;size:</source>
+        <translation>渲染日志大小(&amp;S)：</translation>
+    </message>
+    <message>
+        <source>Captured output is shared by realtime and threaded rendering. Enter a number with B, KiB, MiB or GiB, or choose a preset.</source>
+        <translation>实时渲染和多线程渲染共用捕获的输出。请输入带 B、KiB、MiB 或 GiB 的数值，或选择预设值。</translation>
+    </message>
+    <message>
+        <source>The render log size must be between 1024 bytes and 1 GiB.</source>
+        <translation>渲染日志大小必须介于 1024 字节和 1 GiB 之间。</translation>
     </message>
     <message>
         <source>The number of rendering threads is a positive whole number, or Automatic.</source>
