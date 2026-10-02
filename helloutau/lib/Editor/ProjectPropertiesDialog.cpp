@@ -66,12 +66,12 @@ namespace hello::daw {
         m_tempo->setValue(settings.tempo);
         connect(m_tempo, &QDoubleSpinBox::valueChanged, this, [this] { m_tempoEdited = true; });
         m_flags = new QLineEdit(settings.flags);
-        m_outputFile = new QLineEdit(settings.outputFile);
-        m_voiceDir =
-            new QLineEdit(project.tracks.isEmpty() ? QString() : project.tracks.first().voiceDir);
+        m_outputFile = new QLineEdit(QDir::toNativeSeparators(settings.outputFile));
+        m_voiceDir = new QLineEdit(QDir::toNativeSeparators(
+            project.tracks.isEmpty() ? QString() : project.tracks.first().voiceDir));
         m_voiceDir->setEnabled(!project.tracks.isEmpty());
-        m_wavtool = new QLineEdit(settings.wavtool);
-        m_resampler = new QLineEdit(settings.resampler);
+        m_wavtool = new QLineEdit(QDir::toNativeSeparators(settings.wavtool));
+        m_resampler = new QLineEdit(QDir::toNativeSeparators(settings.resampler));
         m_mode2 = new QCheckBox(tr("Mode&2 pitch"));
         m_mode2->setChecked(settings.mode2);
 
@@ -95,9 +95,10 @@ namespace hello::daw {
             if (!m_appSettings) {
                 return;
             }
-            m_wavtool->setText(m_appSettings->wavtool());
-            m_resampler->setText(m_appSettings->resampler());
+            m_wavtool->setText(QDir::toNativeSeparators(m_appSettings->wavtool()));
+            m_resampler->setText(QDir::toNativeSeparators(m_appSettings->resampler()));
         });
+        reset->setObjectName(QStringLiteral("resetProjectEngines"));
         reset->setEnabled(m_appSettings);
         form->addRow(reset);
         auto trust = new QPushButton(tr("Trust project engines"));
@@ -260,18 +261,22 @@ namespace hello::daw {
         const auto text = [](const QLineEdit *edit, const QString &was) {
             return edit->text() != was ? std::optional(edit->text()) : std::nullopt;
         };
+        const auto pathText = [](const QLineEdit *edit, const QString &was) {
+            const auto value = QDir::fromNativeSeparators(edit->text());
+            return value != QDir::fromNativeSeparators(was) ? std::optional(value) : std::nullopt;
+        };
         kit::ProjectPropertyChanges changes;
         changes.name = text(m_name, settings.name);
         if (m_tempoEdited && m_tempo->value() != settings.tempo) {
             changes.tempo = m_tempo->value();
         }
         changes.flags = text(m_flags, settings.flags);
-        changes.outputFile = text(m_outputFile, settings.outputFile);
+        changes.outputFile = pathText(m_outputFile, settings.outputFile);
         if (!m_project.tracks.isEmpty()) {
-            changes.voiceDir = text(m_voiceDir, m_project.tracks.first().voiceDir);
+            changes.voiceDir = pathText(m_voiceDir, m_project.tracks.first().voiceDir);
         }
-        changes.wavtool = text(m_wavtool, settings.wavtool);
-        changes.resampler = text(m_resampler, settings.resampler);
+        changes.wavtool = pathText(m_wavtool, settings.wavtool);
+        changes.resampler = pathText(m_resampler, settings.resampler);
         if (m_mode2->isChecked() != settings.mode2) {
             changes.mode2 = m_mode2->isChecked();
         }

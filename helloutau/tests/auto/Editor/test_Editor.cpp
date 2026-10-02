@@ -800,6 +800,19 @@ private Q_SLOTS:
         QCOMPARE(dialog.changes().tempo, std::optional(90.0));
     }
 
+    void resetting_project_engines_uses_native_separators() {
+        AppSettings settings(m_dir.filePath(QStringLiteral("settings.json")));
+        settings.setWavtool(QStringLiteral("C:/UTAU/tools/wavtool.exe"));
+        settings.setResampler(QStringLiteral("C:/UTAU/tools/resampler.exe"));
+        ProjectPropertiesDialog dialog(kit::Project(), settings);
+        const auto reset = dialog.findChild<QPushButton *>(QStringLiteral("resetProjectEngines"));
+        QVERIFY(reset);
+
+        reset->click();
+        QCOMPARE(dialog.wavtoolEdit()->text(), QDir::toNativeSeparators(settings.wavtool()));
+        QCOMPARE(dialog.resamplerEdit()->text(), QDir::toNativeSeparators(settings.resampler()));
+    }
+
     // The dialog shows what the notes share, "(various)" where they differ, and gives only the
     // fields edited: an emptied number back to the default, one that does not read left out.
     void the_note_properties_dialog_gives_what_was_edited() {
@@ -858,8 +871,10 @@ private Q_SLOTS:
 
         box->setCurrentIndex(box->findData(60));
         QCOMPARE(roll->quantization(), 60);
+        QCOMPARE(e->settings().quantization(), 60);
         roll->setQuantization(240);
         QCOMPARE(box->currentData().toInt(), 240);
+        QCOMPARE(e->settings().quantization(), 240);
 
         // Finer steps down to off and coarser steps up to a quarter note, and neither goes further.
         const auto finer = actionNamed(window, QStringLiteral("&Decrease Quantization Interval"));

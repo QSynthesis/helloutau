@@ -248,7 +248,8 @@ namespace hello::daw {
             info.id = QString::fromStdString(spec->id());
             info.displayName = QString::fromStdString(spec->displayName());
             info.version = QString::fromStdString(spec->version().toString());
-            info.filePath = QString::fromStdU16String(spec->filePath().u16string());
+            info.filePath =
+                QDir::toNativeSeparators(QString::fromStdU16String(spec->filePath().u16string()));
             for (const auto &dependency : spec->dependencies()) {
                 info.dependencies.push_back(
                     {QString::fromStdString(dependency.id()),

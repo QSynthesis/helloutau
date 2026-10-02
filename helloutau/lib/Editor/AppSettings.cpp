@@ -24,6 +24,7 @@ namespace hello::daw {
         constexpr char ThreadedValue[] = "threaded";
         constexpr char RealtimeValue[] = "realtime";
         constexpr char KeyRenderThreads[] = "playback/threads";
+        constexpr char KeyQuantization[] = "view/quantization";
         constexpr char KeyUstExportCharset[] = "files/ustExportCharset";
         constexpr char KeyLanguage[] = "appearance/language";
         constexpr char KeyPitchVisible[] = "view/showPitch";
@@ -172,6 +173,16 @@ namespace hello::daw {
         stdc_impl_t;
         // The default is not written, so that the file keeps no value that was never chosen.
         impl.setValue(KeyRenderThreads, count > 0 ? json::Value(int64_t(count)) : json::Value());
+    }
+
+    int AppSettings::quantization() const {
+        stdc_impl_t;
+        return int(impl.value(KeyQuantization).toInt(120));
+    }
+
+    void AppSettings::setQuantization(int ticks) {
+        stdc_impl_t;
+        impl.setValue(KeyQuantization, int64_t(std::max(0, ticks)));
     }
 
     bool AppSettings::isPitchVisible() const {

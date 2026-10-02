@@ -84,6 +84,10 @@ namespace hello::daw {
         int renderThreadCount() const;
         void setRenderThreadCount(int count);
 
+        /// The editing grid in ticks, or zero for no grid. The default is 120.
+        int quantization() const;
+        void setQuantization(int ticks);
+
         /// Whether the piano roll shows the pitch curves (View > Show Pitch). The default is
         /// true.
         bool isPitchVisible() const;

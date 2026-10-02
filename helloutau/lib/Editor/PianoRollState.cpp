@@ -875,6 +875,7 @@ namespace hello::daw {
         }
         anchor = refs.at(index).id();
         setSelection({anchor});
+        decl.showNote(index);
         return true;
     }
 

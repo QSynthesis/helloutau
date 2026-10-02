@@ -703,8 +703,8 @@
         <translation>工程的编辑与导出方式。</translation>
     </message>
     <message>
-        <source>UST &amp;export encoding:</source>
-        <translation>UST导出编码(&amp;E)：</translation>
+        <source>Default UST &amp;export encoding:</source>
+        <translation>默认 UST 导出编码(&amp;E)：</translation>
     </message>
 </context>
 <context>

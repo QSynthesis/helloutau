@@ -136,7 +136,7 @@ namespace hello::daw {
         m_ustExportCharset->addItems(ExportUstDialog::charsets());
         const int index = m_ustExportCharset->findText(m_settings.ustExportCharset());
         m_ustExportCharset->setCurrentIndex(index >= 0 ? index : 0);
-        form->addRow(tr("UST &export encoding:"), m_ustExportCharset);
+        form->addRow(tr("Default UST &export encoding:"), m_ustExportCharset);
         connect(m_ustExportCharset, &QComboBox::currentTextChanged, this,
                 &SettingPage::modifiedChanged);
         return widget;

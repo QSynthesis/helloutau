@@ -634,7 +634,7 @@ namespace hello::daw {
             proposed = proposed.empty() ? std::filesystem::path(u"untitled.wav")
                                         : proposed.replace_extension(u".wav");
             const auto chosen = QFileDialog::getSaveFileName(
-                &decl, tr("Save Last Played"), QString::fromStdU16String(proposed.u16string()),
+                &decl, tr("Save Last Played"), textOf(proposed),
                 tr("WAV files (*.wav)"));
             if (chosen.isEmpty()) {
                 return;
@@ -1452,7 +1452,8 @@ namespace hello::daw {
             // Replaces the piano roll of the previous document, which is deleted with it. The
             // tool, the quantization and whether the pitch is shown belong to the window and
             // carry over.
-            const auto quantization = roll ? roll->quantization() : -1;
+            const auto quantization =
+                roll ? roll->quantization() : editor->settings().quantization();
             roll = new PianoRoll(document->session());
             roll->setVoiceBank(document->voiceBank());
             QObject::connect(roll, &PianoRoll::voiceBankRequested, &decl,
@@ -1462,8 +1463,10 @@ namespace hello::daw {
             }
             showQuantization(roll->quantization());
             showTempo(kit::ProjectRef(document->session()).settings().tempo());
-            QObject::connect(roll, &PianoRoll::quantizationChanged, &decl,
-                             [this](int ticks) { showQuantization(ticks); });
+            QObject::connect(roll, &PianoRoll::quantizationChanged, &decl, [this](int ticks) {
+                editor->settings().setQuantization(ticks);
+                showQuantization(ticks);
+            });
             if (actions.value(QStringLiteral("helloutau.select.penTool"))->isChecked()) {
                 roll->setTool(PianoRoll::PenTool);
             } else if (actions.value(QStringLiteral("helloutau.select.pitchTool"))->isChecked()) {

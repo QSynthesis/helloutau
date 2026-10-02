@@ -5,6 +5,7 @@
 #include <cmath>
 
 #include <QtCore/QCoreApplication>
+#include <QtCore/QDir>
 #include <QtCore/QPointer>
 #include <QtCore/QTemporaryDir>
 #include <QtCore/QThread>
@@ -90,7 +91,8 @@ namespace hello::daw {
             if (!result.started) {
                 fail(job.diagnostics,
                      SamplePreview::tr("The resampler \"%1\" could not be started.")
-                         .arg(QString::fromStdU16String(job.resampler.u16string())));
+                         .arg(QDir::toNativeSeparators(
+                             QString::fromStdU16String(job.resampler.u16string()))));
                 return;
             }
             kit::DiagnosticList reading;

@@ -7,6 +7,7 @@
 #include <functional>
 
 #include <QtCore/QCoreApplication>
+#include <QtCore/QDir>
 #include <QtCore/QPointer>
 #include <QtCore/QTemporaryDir>
 #include <QtCore/QThread>
@@ -907,7 +908,8 @@ namespace hello::daw {
             } else {
                 diagnostics.push_back({kit::DiagnosticSeverity::Warning,
                                        tr("\"%1\" could not be deleted.")
-                                           .arg(QString::fromStdU16String(it->path().u16string())),
+                                           .arg(QDir::toNativeSeparators(
+                                               QString::fromStdU16String(it->path().u16string()))),
                                        std::nullopt});
             }
         }

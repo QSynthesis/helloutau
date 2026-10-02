@@ -28,6 +28,7 @@ private Q_SLOTS:
         QVERIFY(settings.areEnvelopesVisible());
         QVERIFY(!settings.areParametersVisible());
         QCOMPARE(settings.renderThreadCount(), 0);
+        QCOMPARE(settings.quantization(), 120);
     }
 
     // The three playback modes and the thread count persist. The automatic thread count is not
@@ -52,6 +53,16 @@ private Q_SLOTS:
             QVERIFY(settings.value(QStringLiteral("playback/threads")).isUndefined());
         }
         QCOMPARE(AppSettings(file).renderThreadCount(), 0);
+    }
+
+    void quantization_persists() {
+        QTemporaryDir dir;
+        const auto file = dir.filePath(QStringLiteral("settings.json"));
+        {
+            AppSettings settings(file);
+            settings.setQuantization(60);
+        }
+        QCOMPARE(AppSettings(file).quantization(), 60);
     }
 
     // Recent files are stored most recent first, without duplicates, at most recentFileCount,
