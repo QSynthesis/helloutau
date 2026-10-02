@@ -1543,8 +1543,8 @@ Trust and run it?</source>
         <translation>播放(&amp;P)：</translation>
     </message>
     <message>
-        <source>Realtime playback joins the notes by the rules of the external wavtool and does not run the wavtool chosen above. Rendering a whole track uses an external console in the classic mode and several threads otherwise.</source>
-        <translation>实时播放按外部合成器的规则拼接音符，不运行上方选择的合成器。渲染整个音轨时，经典模式使用外部控制台，其他模式使用多个线程。</translation>
+        <source>Realtime playback joins the notes by the rules of the project wavtool without running the wavtool process. Rendering a whole track uses an external console in the classic mode and several threads otherwise.</source>
+        <translation>实时播放按工程合成器的规则拼接音符，但不会运行合成器进程。渲染整个音轨时，经典模式使用外部控制台，其他模式使用多个线程。</translation>
     </message>
     <message>
         <source>Automatic (%1)</source>

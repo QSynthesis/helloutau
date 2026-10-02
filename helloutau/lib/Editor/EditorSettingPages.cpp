@@ -236,8 +236,8 @@ namespace hello::daw {
                                 AppSettings::Realtime);
         m_playbackMode->setCurrentIndex(m_playbackMode->findData(m_settings.playbackMode()));
         form->addRow(tr("&Playback:"), m_playbackMode);
-        form->addRow(note(tr("Realtime playback joins the notes by the rules of the external "
-                             "wavtool and does not run the wavtool chosen above. Rendering a "
+        form->addRow(note(tr("Realtime playback joins the notes by the rules of the project "
+                             "wavtool without running the wavtool process. Rendering a "
                              "whole track uses an external console in the classic mode and "
                              "several threads otherwise.")));
 
