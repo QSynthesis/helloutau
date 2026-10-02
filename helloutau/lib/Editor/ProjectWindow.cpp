@@ -189,6 +189,7 @@ namespace hello::daw {
         // The notes last rendered, which Replay renders again
         std::optional<std::pair<int, int>> lastRange;
         bool restartPending = false;
+        bool trustDenied = false;
 
         // The render progress in the status bar, and the playhead that follows playback
         void initPlayback() {
@@ -457,55 +458,42 @@ namespace hello::daw {
             return editor->settings().playbackMode() == AppSettings::Realtime;
         }
 
-        kit::SynthEngines engines() {
-            kit::SynthEngines engines;
-            auto &appSettings = editor->settings();
-            engines.resampler = pathOf(appSettings.resampler());
-            engines.wavtool = pathOf(appSettings.wavtool());
+        kit::SynthEngines engines(bool askForTrust = true) {
+            trustDenied = false;
+            auto &settings = editor->settings();
             const auto project = kit::ProjectRef(document->session()).settings();
-            const auto utau = appSettings.utauDirectory();
-            const auto projectWavtool = std::filesystem::path(project.wavtool().toStdU16String());
-            const auto projectResampler =
-                std::filesystem::path(project.resampler().toStdU16String());
-            if (realtime()) {
-                const bool resamplerValid = !projectResampler.is_absolute() &&
-                                            EngineTrust::exists(project.resampler(), utau);
-                const bool resamplerTrusted =
-                    resamplerValid &&
-                    (EngineTrust::samePath(project.resampler(), appSettings.resampler(), utau) ||
-                     EngineTrust::ask(_decl, appSettings, project.resampler(), utau,
-                                      EngineTrust::Kind::Resampler));
-                if (resamplerTrusted) {
-                    engines.resampler = EngineTrust::resolved(project.resampler(), utau);
-                } else {
-                    engines.resampler.clear();
+            const auto utau = settings.utauDirectory();
+            const auto allowed = [&](const QString &value, const QString &defaultValue,
+                                     EngineTrust::Kind kind) {
+                const auto path = std::filesystem::path(value.toStdU16String());
+                if (path.empty() || !EngineTrust::exists(value, utau)) {
+                    return false;
                 }
-                return engines;
+                if (EngineTrust::samePath(value, defaultValue, utau) ||
+                    EngineTrust::isTrusted(settings, value, utau, kind)) {
+                    return true;
+                }
+                if (!askForTrust) {
+                    return false;
+                }
+                if (EngineTrust::ask(_decl, settings, value, utau, kind)) {
+                    return true;
+                }
+                trustDenied = true;
+                return false;
+            };
+            kit::SynthEngines result;
+            if (!allowed(project.resampler(), settings.resampler(), EngineTrust::Kind::Resampler)) {
+                return result;
             }
-            const bool wavtoolValid = !projectWavtool.is_absolute() &&
-                                      EngineTrust::exists(project.wavtool(), utau);
-            const bool wavtoolTrusted =
-                wavtoolValid &&
-                (EngineTrust::samePath(project.wavtool(), appSettings.wavtool(), utau) ||
-                 EngineTrust::ask(_decl, appSettings, project.wavtool(), utau,
-                                  EngineTrust::Kind::Wavtool));
-            const bool resamplerValid = !projectResampler.is_absolute() &&
-                                        EngineTrust::exists(project.resampler(), utau);
-            const bool resamplerTrusted =
-                resamplerValid &&
-                (EngineTrust::samePath(project.resampler(), appSettings.resampler(), utau) ||
-                 EngineTrust::ask(_decl, appSettings, project.resampler(), utau,
-                                  EngineTrust::Kind::Resampler));
-            if (wavtoolTrusted && resamplerTrusted) {
-                engines.wavtool = EngineTrust::resolved(project.wavtool(), utau);
-                engines.resampler = EngineTrust::resolved(project.resampler(), utau);
-            } else {
-                engines.wavtool.clear();
-                engines.resampler.clear();
+            if (!realtime() &&
+                !allowed(project.wavtool(), settings.wavtool(), EngineTrust::Kind::Wavtool)) {
+                return result;
             }
-            return engines;
+            result.resampler = EngineTrust::resolved(project.resampler(), utau);
+            result.wavtool = EngineTrust::resolved(project.wavtool(), utau);
+            return result;
         }
-
         // The time of the playhead at rest, in milliseconds
         double cursorTime() const {
             return roll->timeline()->tempoMap().timeOf(roll->cursorPosition());
@@ -520,7 +508,6 @@ namespace hello::daw {
         // pauses and resumes instead.
         void togglePlayback() {
             stdc_decl_t;
-
             switch (playback->state()) {
                 case Playback::Rendering:
                     playback->stop();
@@ -562,6 +549,9 @@ namespace hello::daw {
             lastRange = range;
             kit::DiagnosticList diagnostics;
             if (!playback->play(*document, range, engines(), diagnostics)) {
+                if (trustDenied) {
+                    return;
+                }
                 DiagnosticBox::show(&decl, tr("Play"), diagnostics);
                 return;
             }
@@ -684,6 +674,9 @@ namespace hello::daw {
             }
             QObject::disconnect(connection);
             if (!started) {
+                if (trustDenied) {
+                    return;
+                }
                 DiagnosticBox::show(&decl, tr("Render Track"), diagnostics);
                 return;
             }
@@ -743,6 +736,9 @@ namespace hello::daw {
             kit::DiagnosticList diagnostics;
             previewing = playback->preview(*document, at, engines(), diagnostics);
             if (!previewing) {
+                if (trustDenied) {
+                    return;
+                }
                 DiagnosticBox::show(&decl, tr("Play"), diagnostics);
             }
         }
@@ -766,6 +762,9 @@ namespace hello::daw {
             kit::DiagnosticList diagnostics;
             previewing = playback->preview(*document, cursorTime(), engines(), diagnostics);
             if (!previewing) {
+                if (trustDenied) {
+                    return;
+                }
                 DiagnosticBox::show(&decl, tr("Play"), diagnostics);
             }
         }
@@ -785,7 +784,7 @@ namespace hello::daw {
                 return;
             }
             kit::DiagnosticList diagnostics;
-            playback->prepare(*document, cursorTime(), engines(), diagnostics);
+            playback->prepare(*document, cursorTime(), engines(false), diagnostics);
             statusTimer.start();
         }
 
@@ -909,7 +908,7 @@ namespace hello::daw {
                         box->setFixedHeight(quantizationBoxes.first()->sizeHint().height());
                     }
                     box->setValue(document ? kit::ProjectRef(document->session()).settings().tempo()
-                                             : 120);
+                                           : 120);
                     QObject::connect(
                         box, &QDoubleSpinBox::valueChanged, box, [this, &decl](double tempo) {
                             if (!document) {
@@ -1460,10 +1459,9 @@ namespace hello::daw {
                 roll->setVoiceBank(document->voiceBank());
                 updateBackground();
             });
-            QObject::connect(document->session(), &kit::edit::EditSession::changed, &decl,
-                             [this] {
-                                 showTempo(kit::ProjectRef(document->session()).settings().tempo());
-                             });
+            QObject::connect(document->session(), &kit::edit::EditSession::changed, &decl, [this] {
+                showTempo(kit::ProjectRef(document->session()).settings().tempo());
+            });
             QObject::connect(roll, &PianoRoll::selectionChanged, &decl, [this] {
                 updateEditActions();
                 updateFindResult();

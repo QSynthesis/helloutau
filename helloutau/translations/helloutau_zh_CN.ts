@@ -2,6 +2,17 @@
 <!DOCTYPE TS>
 <TS version="2.1" language="zh_CN">
 <context>
+    <name>AboutDialog</name>
+    <message>
+        <source>About %1</source>
+        <translation>关于 %1</translation>
+    </message>
+    <message>
+        <source>&lt;h2&gt;%1&lt;/h2&gt;&lt;p&gt;A cross-platform editor for UTAU projects and voice banks.&lt;/p&gt;&lt;p&gt;Licensed under the Apache License, Version 2.0. &lt;a href=&quot;https://www.apache.org/licenses/LICENSE-2.0&quot;&gt;License&lt;/a&gt;.&lt;/p&gt;&lt;h3&gt;Build Information&lt;/h3&gt;&lt;p&gt;Version: %2&lt;br&gt;Branch: %3&lt;br&gt;Commit: %4&lt;br&gt;Build date: %5&lt;br&gt;Toolchain: %6 %7 %8&lt;br&gt;Built with Qt %9.&lt;/p&gt;</source>
+        <translation>&lt;h2&gt;%1&lt;/h2&gt;&lt;p&gt;用于编辑 UTAU 工程和音源的跨平台编辑器。&lt;/p&gt;&lt;p&gt;遵循 Apache License 2.0 许可。&lt;a href=&quot;https://www.apache.org/licenses/LICENSE-2.0&quot;&gt;许可证&lt;/a&gt;。&lt;/p&gt;&lt;h3&gt;构建信息&lt;/h3&gt;&lt;p&gt;版本：%2&lt;br&gt;分支：%3&lt;br&gt;提交：%4&lt;br&gt;构建时间：%5&lt;br&gt;工具链：%6 %7 %8&lt;br&gt;使用 Qt %9 构建。&lt;/p&gt;</translation>
+    </message>
+</context>
+<context>
     <name>hello::daw::ActionCategory</name>
     <message>
         <source>File</source>
@@ -431,6 +442,10 @@
         <translation>量化</translation>
     </message>
     <message>
+        <source>Project Tempo</source>
+        <translation>工程曲速</translation>
+    </message>
+    <message>
         <source>&amp;Decrease Quantization Interval</source>
         <translation>减小量化间隔(&amp;D)</translation>
     </message>
@@ -535,18 +550,65 @@
     </message>
 </context>
 <context>
-    <name>hello::daw::AudioOutput</name>
+    <name>hello::daw::AudioEngine</name>
     <message>
-        <source>There is no audio output device.</source>
-        <translation>没有音频输出设备。</translation>
+        <source>The audio output device stopped unexpectedly.</source>
+        <translation>音频输出设备意外停止。</translation>
     </message>
     <message>
-        <source>The audio output device &quot;%1&quot; does not accept floating-point samples.</source>
-        <translation>音频输出设备「%1」不支持浮点采样。</translation>
+        <source>The audio output device changed. Start playback again.</source>
+        <translation>音频输出设备已改变，请重新开始播放。</translation>
     </message>
     <message>
-        <source>The audio output device &quot;%1&quot; could not be started.</source>
-        <translation>无法启动音频输出设备「%1」。</translation>
+        <source>There is no audio source.</source>
+        <translation>没有可播放的音频源。</translation>
+    </message>
+    <message>
+        <source>The selected audio output device is unavailable.</source>
+        <translation>所选音频输出设备不可用。</translation>
+    </message>
+    <message>
+        <source>The audio sample rate changed. Start playback again.</source>
+        <translation>音频采样率已改变，请重新开始播放。</translation>
+    </message>
+    <message>
+        <source>The audio output device does not support floating-point samples.</source>
+        <translation>音频输出设备不支持浮点采样。</translation>
+    </message>
+    <message>
+        <source>The audio output device could not be started.</source>
+        <translation>无法启动音频输出设备。</translation>
+    </message>
+    <message>
+        <source>Too many audio sources are playing.</source>
+        <translation>同时播放的音频源过多。</translation>
+    </message>
+</context>
+<context>
+    <name>hello::daw::AudioSettingPage</name>
+    <message>
+        <source>Audio</source>
+        <translation>音频</translation>
+    </message>
+    <message>
+        <source>The output device used for playback.</source>
+        <translation>用于播放的音频输出设备。</translation>
+    </message>
+    <message>
+        <source>System default</source>
+        <translation>系统默认</translation>
+    </message>
+    <message>
+        <source>&amp;Output device:</source>
+        <translation>输出设备(&amp;O)：</translation>
+    </message>
+    <message>
+        <source>Test</source>
+        <translation>测试</translation>
+    </message>
+    <message>
+        <source>The test plays a short sine wave on the selected device.</source>
+        <translation>测试将在当前已应用的设备上播放一段短正弦波。更换设备后，请先点击“应用”。</translation>
     </message>
 </context>
 <context>
@@ -899,6 +961,10 @@
         <translation>移除标签</translation>
     </message>
     <message>
+        <source>Open Project Properties</source>
+        <translation>打开工程属性</translation>
+    </message>
+    <message>
         <source>Remove Region</source>
         <translation>移除区间</translation>
     </message>
@@ -1105,24 +1171,12 @@
         <translation>重采样器（Tool2）(&amp;R)：</translation>
     </message>
     <message>
-        <source>The engines are only recorded in the project. HelloUtau renders with the engines of its settings.</source>
-        <translation>引擎仅记录在工程中。HelloUtau渲染时使用其设置中指定的引擎。</translation>
-    </message>
-    <message>
         <source>Reset to settings defaults</source>
         <translation>重置为设置中的默认工具</translation>
     </message>
     <message>
         <source>Trust project engines</source>
         <translation>信任工程中的工具</translation>
-    </message>
-    <message>
-        <source>Warning: project engines are untrusted. Playback uses the settings engines until both project engines are trusted.</source>
-        <translation>警告：工程中的工具尚未信任。在两个工具都获得信任前，播放使用设置中的工具。</translation>
-    </message>
-    <message>
-        <source>Both project engines are trusted.</source>
-        <translation>工程中的两个工具都已信任。</translation>
     </message>
     <message>
         <source>Using the default %1 from Settings.</source>
@@ -1141,16 +1195,24 @@
         <translation>合成器</translation>
     </message>
     <message>
+        <source>Warning: project engines are untrusted. Playback does not render until the required project engines are trusted.</source>
+        <translation>警告：工程中的工具尚未信任。信任所需的工程工具后才能进行渲染。</translation>
+    </message>
+    <message>
         <source>resampler</source>
         <translation>重采样器</translation>
     </message>
     <message>
-        <source>Project engines are untrusted. Playback uses the engines from Settings.</source>
-        <translation>工程中的工具尚未信任。播放使用设置中的工具。</translation>
-    </message>
-    <message>
-        <source>The project requests this %1:&#10;&#10;%2&#10;&#10;Trust and run it?</source>
-        <translation>工程请求使用以下%1：&#10;&#10;%2&#10;&#10;是否信任并运行？</translation>
+        <source>The project requests this %1:
+
+%2
+
+Trust and run it?</source>
+        <translation>工程请求使用以下%1：
+
+%2
+
+是否信任并运行？</translation>
     </message>
     <message>
         <source>Trust Project Engine</source>
@@ -1286,6 +1348,10 @@
     <message>
         <source>Quantization</source>
         <translation>量化</translation>
+    </message>
+    <message>
+        <source> BPM</source>
+        <translation> BPM</translation>
     </message>
     <message>
         <source>Open Voice Bank</source>
@@ -3658,17 +3724,6 @@ Write them again without these chunks? The audio stays the same. The files are w
     <message>
         <source>A %1 is not created from a value.</source>
         <translation>%1不能由值创建。</translation>
-    </message>
-</context>
-<context>
-    <name>AboutDialog</name>
-    <message>
-        <source>About %1</source>
-        <translation>关于 %1</translation>
-    </message>
-    <message>
-        <source>&lt;h2&gt;%1&lt;/h2&gt;&lt;p&gt;A cross-platform editor for UTAU projects and voice banks.&lt;/p&gt;&lt;p&gt;Licensed under the Apache License, Version 2.0. &lt;a href="https://www.apache.org/licenses/LICENSE-2.0"&gt;License&lt;/a&gt;.&lt;/p&gt;&lt;h3&gt;Build Information&lt;/h3&gt;&lt;p&gt;Version: %2&lt;br&gt;Branch: %3&lt;br&gt;Commit: %4&lt;br&gt;Build date: %5&lt;br&gt;Toolchain: %6 %7 %8&lt;br&gt;Built with Qt %9.&lt;/p&gt;</source>
-        <translation>&lt;h2&gt;%1&lt;/h2&gt;&lt;p&gt;用于编辑 UTAU 工程和音源的跨平台编辑器。&lt;/p&gt;&lt;p&gt;遵循 Apache License 2.0 许可。&lt;a href="https://www.apache.org/licenses/LICENSE-2.0"&gt;许可证&lt;/a&gt;。&lt;/p&gt;&lt;h3&gt;构建信息&lt;/h3&gt;&lt;p&gt;版本：%2&lt;br&gt;分支：%3&lt;br&gt;提交：%4&lt;br&gt;构建时间：%5&lt;br&gt;工具链：%6 %7 %8&lt;br&gt;使用 Qt %9 构建。&lt;/p&gt;</translation>
     </message>
 </context>
 </TS>

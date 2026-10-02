@@ -36,6 +36,14 @@ private Q_SLOTS:
         Translations::install(QStringLiteral("zh_CN"));
         QCOMPARE(QLocale().language(), QLocale::Chinese);
         QCOMPARE(newText(), QStringLiteral("新建(&N)"));
+        QCOMPARE(QCoreApplication::translate("hello::daw::AudioSettingPage", "Audio"),
+                 QStringLiteral("音频"));
+        QCOMPARE(QCoreApplication::translate("hello::daw::AudioSettingPage", "System default"),
+                 QStringLiteral("系统默认"));
+        QCOMPARE(QCoreApplication::translate("hello::daw::ProjectPropertiesDialog", "wavtool"),
+                 QStringLiteral("合成器"));
+        QCOMPARE(QCoreApplication::translate("hello::daw::ProjectPropertiesDialog", "resampler"),
+                 QStringLiteral("重采样器"));
         QVERIFY(!Translations::load(QStringLiteral("Core"),
                                     QStringLiteral(":/helloutau/plugins/Core/translations")));
     }

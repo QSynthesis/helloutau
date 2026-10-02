@@ -1,9 +1,7 @@
 #include "EngineTrust_p.h"
 
-#include <QtCore/QCryptographicHash>
 #include <QtCore/QCoreApplication>
 #include <QtCore/QDir>
-#include <QtCore/QFile>
 #include <QtCore/QJsonArray>
 #include <QtCore/QJsonObject>
 #include <QtWidgets/QMessageBox>
@@ -23,17 +21,7 @@ namespace hello::daw::EngineTrust {
         }
 
         QString kindText(Kind kind) {
-            return kind == Kind::Wavtool ? QStringLiteral("wavtool")
-                                         : QStringLiteral("resampler");
-        }
-
-        QString fingerprintOf(const std::filesystem::path &path) {
-            QFile file(textOf(path));
-            QCryptographicHash hash(QCryptographicHash::Sha256);
-            if (file.open(QIODevice::ReadOnly)) {
-                hash.addData(&file);
-            }
-            return QString::fromLatin1(hash.result().toHex());
+            return kind == Kind::Wavtool ? Messages::tr("wavtool") : Messages::tr("resampler");
         }
 
         QJsonArray entries(const AppSettings &settings) {
@@ -59,8 +47,7 @@ namespace hello::daw::EngineTrust {
         return !path.empty() && std::filesystem::is_regular_file(path, error);
     }
 
-    bool samePath(const QString &first, const QString &second,
-                  const std::filesystem::path &utau) {
+    bool samePath(const QString &first, const QString &second, const std::filesystem::path &utau) {
         std::error_code firstError;
         std::error_code secondError;
         const auto a = std::filesystem::weakly_canonical(pathOf(first, utau), firstError);
@@ -70,24 +57,17 @@ namespace hello::daw::EngineTrust {
 
     bool isTrusted(const AppSettings &settings, const QString &value,
                    const std::filesystem::path &utau, Kind kind) {
-        if (utau.empty()) {
-            return false;
-        }
+        Q_UNUSED(kind);
         const auto path = pathOf(value, utau);
         if (path.empty() || !exists(value, utau)) {
             return false;
         }
         std::error_code error;
         const auto absolute = std::filesystem::weakly_canonical(path, error);
-        const auto folder = textOf(utau);
-        const auto relative = textOf(std::filesystem::relative(absolute, utau, error));
-        const auto fingerprint = fingerprintOf(absolute);
+        const auto filePath = textOf(absolute);
         for (const auto &item : entries(settings)) {
             const auto object = item.toObject();
-            if (object.value(QStringLiteral("folder")).toString() == folder &&
-                object.value(QStringLiteral("relativePath")).toString() == relative &&
-                object.value(QStringLiteral("kind")).toString() == kindText(kind) &&
-                object.value(QStringLiteral("sha256")).toString() == fingerprint) {
+            if (object.value(QStringLiteral("filePath")).toString() == filePath) {
                 return true;
             }
         }
@@ -103,17 +83,22 @@ namespace hello::daw::EngineTrust {
             return;
         }
         auto array = entries(settings);
-        array.push_back(QJsonObject{{QStringLiteral("folder"), textOf(utau)},
-                                    {QStringLiteral("relativePath"),
-                                     textOf(std::filesystem::relative(absolute, utau))},
-                                    {QStringLiteral("kind"), kindText(kind)},
-                                    {QStringLiteral("sha256"), fingerprintOf(absolute)}});
+        Q_UNUSED(kind);
+        const auto filePath = textOf(absolute);
+        for (const auto &item : array) {
+            if (item.toObject().value(QStringLiteral("filePath")).toString() == filePath) {
+                return;
+            }
+        }
+        array.push_back(QJsonObject{
+            {QStringLiteral("filePath"), filePath}
+        });
         settings.setValue(QLatin1String(Key), array);
     }
 
     bool ask(QWidget *parent, AppSettings &settings, const QString &value,
              const std::filesystem::path &utau, Kind kind) {
-        if (utau.empty() || !exists(value, utau) || isTrusted(settings, value, utau, kind)) {
+        if (!exists(value, utau) || isTrusted(settings, value, utau, kind)) {
             return isTrusted(settings, value, utau, kind);
         }
         const auto path = pathOf(value, utau);

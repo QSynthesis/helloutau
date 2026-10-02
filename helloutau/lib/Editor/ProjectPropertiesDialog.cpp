@@ -45,11 +45,13 @@ namespace hello::daw {
     }
 
     ProjectPropertiesDialog::ProjectPropertiesDialog(const kit::Project &project, QWidget *parent)
-        : ProjectPropertiesDialog(project, nullptr, parent) {}
+        : ProjectPropertiesDialog(project, nullptr, parent) {
+    }
 
     ProjectPropertiesDialog::ProjectPropertiesDialog(const kit::Project &project,
                                                      AppSettings &appSettings, QWidget *parent)
-        : ProjectPropertiesDialog(project, &appSettings, parent) {}
+        : ProjectPropertiesDialog(project, &appSettings, parent) {
+    }
 
     ProjectPropertiesDialog::ProjectPropertiesDialog(const kit::Project &project,
                                                      AppSettings *appSettings, QWidget *parent)
@@ -116,18 +118,18 @@ namespace hello::daw {
                 if (EngineTrust::samePath(edit->text(), defaultPath, utau)) {
                     text = tr("Using the default %1 from Settings.")
                                .arg(kind == EngineTrust::Kind::Wavtool ? tr("wavtool")
-                                                                      : tr("resampler"));
+                                                                       : tr("resampler"));
                     return qMakePair(text, false);
                 }
                 if (EngineTrust::isTrusted(*m_appSettings, edit->text(), utau, kind)) {
                     text = tr("Project %1 is trusted.")
                                .arg(kind == EngineTrust::Kind::Wavtool ? tr("wavtool")
-                                                                      : tr("resampler"));
+                                                                       : tr("resampler"));
                     return qMakePair(text, false);
                 }
-                text = tr("Project %1 is untrusted.")
-                           .arg(kind == EngineTrust::Kind::Wavtool ? tr("wavtool")
-                                                                  : tr("resampler"));
+                text =
+                    tr("Project %1 is untrusted.")
+                        .arg(kind == EngineTrust::Kind::Wavtool ? tr("wavtool") : tr("resampler"));
                 return qMakePair(text, true);
             };
             const auto wavtool =
@@ -183,7 +185,8 @@ namespace hello::daw {
                         const auto root = std::filesystem::weakly_canonical(utau, error);
                         const auto absolute = std::filesystem::weakly_canonical(path, error);
                         const auto relative = std::filesystem::relative(absolute, root, error);
-                        const bool outside = !relative.empty() && relative.begin() != relative.end() &&
+                        const bool outside = !relative.empty() &&
+                                             relative.begin() != relative.end() &&
                                              *relative.begin() == std::filesystem::path("..");
                         if (!error && outside) {
                             edit->setText(QDir::toNativeSeparators(
