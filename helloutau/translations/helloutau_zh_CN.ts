@@ -70,6 +70,10 @@
 <context>
     <name>hello::daw::ActionText</name>
     <message>
+        <source>Plugins</source>
+        <translation>插件</translation>
+    </message>
+    <message>
         <source>&amp;New</source>
         <translation>新建(&amp;N)</translation>
     </message>
@@ -1539,6 +1543,18 @@ Trust and run it?</source>
         <translation>用于音频渲染的引擎，以及播放时的音频渲染方式。</translation>
     </message>
     <message>
+        <source>Engines</source>
+        <translation>引擎</translation>
+    </message>
+    <message>
+        <source>Playback</source>
+        <translation>播放</translation>
+    </message>
+    <message>
+        <source>Render Log</source>
+        <translation>渲染日志</translation>
+    </message>
+    <message>
         <source>&amp;Wavtool:</source>
         <translation>合成器(&amp;W)：</translation>
     </message>
@@ -1726,6 +1742,14 @@ Trust and run it?</source>
     <message>
         <source>The language of the interface, and where UTAU is.</source>
         <translation>界面语言与 UTAU 的位置。</translation>
+    </message>
+    <message>
+        <source>Interface</source>
+        <translation>界面</translation>
+    </message>
+    <message>
+        <source>UTAU</source>
+        <translation>UTAU</translation>
     </message>
     <message>
         <source>&amp;Language:</source>
@@ -3119,6 +3143,10 @@ Write them again without these chunks? The audio stays the same. The files are w
     <message>
         <source>There is nothing to render.</source>
         <translation>没有可渲染的内容。</translation>
+    </message>
+    <message>
+        <source>The rendering scripts could not be written.</source>
+        <translation>无法写入渲染脚本。</translation>
     </message>
     <message>
         <source>The cache folder &quot;%1&quot; could not be created.</source>

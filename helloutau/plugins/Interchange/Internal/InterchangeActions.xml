@@ -7,6 +7,7 @@
     <id>org.helloutau.interchange</id>
 
     <configuration>
+        <defaultCatalog>helloutau.catalog.plugins</defaultCatalog>
         <translationContext
             text="hello::daw::ActionText"
             category="hello::daw::ActionCategory"
@@ -15,6 +16,7 @@
     </configuration>
 
     <items>
+        <phony id="helloutau.catalog.plugins" text="Plugins" />
         <action id="helloutau.file.import" text="&amp;Import..." category="File" />
         <!-- Other Formats... in the Export menu, and Export Other Formats... in the command
              palette -->

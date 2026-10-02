@@ -11,6 +11,10 @@
 <context>
     <name>hello::daw::ActionText</name>
     <message>
+        <source>Plugins</source>
+        <translation>插件</translation>
+    </message>
+    <message>
         <source>&amp;Import...</source>
         <translation>导入(&amp;I)...</translation>
     </message>

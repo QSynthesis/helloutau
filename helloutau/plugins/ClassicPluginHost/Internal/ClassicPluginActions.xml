@@ -4,7 +4,17 @@
     <version>1.0</version>
     <id>org.helloutau.classicpluginhost</id>
 
+    <configuration>
+        <defaultCatalog>helloutau.catalog.plugins</defaultCatalog>
+        <translationContext
+            text="hello::daw::ActionText"
+            category="hello::daw::ActionCategory"
+            description="hello::daw::ActionDescription"
+        />
+    </configuration>
+
     <items>
+        <phony id="helloutau.catalog.plugins" text="Plugins" />
         <!-- Filled with the UTAU plugins by this plugin each time the menu opens -->
         <action id="helloutau.tools.classicPlugins" text="Classic &amp;Plugins" category="Tools"
                 external="true" />

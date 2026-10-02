@@ -2,14 +2,18 @@
 <!DOCTYPE TS>
 <TS version="2.1" language="zh_CN">
 <context>
-    <name>QActionKit::ActionCategory</name>
+    <name>hello::daw::ActionCategory</name>
     <message>
         <source>Tools</source>
         <translation>工具</translation>
     </message>
 </context>
 <context>
-    <name>QActionKit::ActionText</name>
+    <name>hello::daw::ActionText</name>
+    <message>
+        <source>Plugins</source>
+        <translation>插件</translation>
+    </message>
     <message>
         <source>Classic &amp;Plugins</source>
         <translation>经典插件(&amp;P)</translation>

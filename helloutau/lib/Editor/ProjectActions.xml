@@ -20,6 +20,7 @@
     </configuration>
 
     <items>
+        <phony id="helloutau.catalog.plugins" text="Plugins" />
         <action id="helloutau.file.new" text="&amp;New" category="File" shortcut="Ctrl+N" />
         <action id="helloutau.file.open" text="&amp;Open..." category="File" shortcut="Ctrl+O" />
         <!-- A folder, opened in a voice bank window (docs/VoiceBankEditor.md) -->

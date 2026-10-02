@@ -12,9 +12,11 @@
 #include <QtWidgets/QFileDialog>
 #include <QtWidgets/QFormLayout>
 #include <QtWidgets/QHBoxLayout>
+#include <QtWidgets/QGroupBox>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QLineEdit>
 #include <QtWidgets/QPushButton>
+#include <QtWidgets/QVBoxLayout>
 
 #include "AppSettings.h"
 #include "EditorSettingPageIds.h"
@@ -104,22 +106,30 @@ namespace hello::daw {
 
     QWidget *SystemSettingsPage::createWidget() {
         auto widget = new QWidget();
-        auto form = new QFormLayout(widget);
+        auto layout = new QVBoxLayout(widget);
+        auto interfaceGroup = new QGroupBox(tr("Interface"), widget);
+        auto interfaceForm = new QFormLayout(interfaceGroup);
         m_language = new QComboBox(widget);
         m_language->setObjectName(QStringLiteral("language"));
         for (const auto &[language, name] : Translations::languages()) {
             m_language->addItem(name, language);
         }
         m_language->setCurrentIndex(std::max(0, m_language->findData(m_settings.language())));
-        form->addRow(tr("&Language:"), m_language);
-        form->addRow(note(tr("Takes effect after a restart.")));
+        interfaceForm->addRow(tr("&Language:"), m_language);
+        interfaceForm->addRow(note(tr("Takes effect after a restart.")));
         connect(m_language, &QComboBox::currentIndexChanged, this, &SettingPage::modifiedChanged);
+        layout->addWidget(interfaceGroup);
+
+        auto utauGroup = new QGroupBox(tr("UTAU"), widget);
+        auto utauForm = new QFormLayout(utauGroup);
         m_utauDirectory =
-            addPathRow(form, widget, tr("&UTAU folder:"),
+            addPathRow(utauForm, widget, tr("&UTAU folder:"),
                        QString::fromStdU16String(m_settings.utauDirectory().u16string()), true);
-        form->addRow(note(tr("Resolves the voice banks of projects that name them relative to "
-                             "UTAU, such as %VOICE%.")));
+        utauForm->addRow(note(tr("Resolves the voice banks of projects that name them relative to "
+                                "UTAU, such as %VOICE%.")));
         connect(m_utauDirectory, &QLineEdit::textChanged, this, &SettingPage::modifiedChanged);
+        layout->addWidget(utauGroup);
+        layout->addStretch();
         return widget;
     }
 
@@ -253,11 +263,16 @@ namespace hello::daw {
 
     QWidget *RenderingSettingPage::createWidget() {
         auto widget = new QWidget();
-        auto form = new QFormLayout(widget);
-        m_wavtool = addPathRow(form, widget, tr("&Wavtool:"), m_settings.wavtool(), false);
-        m_resampler = addPathRow(form, widget, tr("&Resampler:"), m_settings.resampler(), false);
-        form->addRow(note(tr("A project renders with these engines, not with those it names.")));
+        auto layout = new QVBoxLayout(widget);
+        auto enginesGroup = new QGroupBox(tr("Engines"), widget);
+        auto enginesForm = new QFormLayout(enginesGroup);
+        m_wavtool = addPathRow(enginesForm, widget, tr("&Wavtool:"), m_settings.wavtool(), false);
+        m_resampler = addPathRow(enginesForm, widget, tr("&Resampler:"), m_settings.resampler(), false);
+        enginesForm->addRow(note(tr("A project renders with these engines, not with those it names.")));
+        layout->addWidget(enginesGroup);
 
+        auto playbackGroup = new QGroupBox(tr("Playback"), widget);
+        auto playbackForm = new QFormLayout(playbackGroup);
         m_playbackMode = new QComboBox();
         m_playbackMode->addItem(tr("Classic prerender, in an external console as UTAU does"),
                                 AppSettings::Prerender);
@@ -266,11 +281,11 @@ namespace hello::daw {
         m_playbackMode->addItem(tr("Realtime, rendered in the background from the playhead"),
                                 AppSettings::Realtime);
         m_playbackMode->setCurrentIndex(m_playbackMode->findData(m_settings.playbackMode()));
-        form->addRow(tr("&Playback:"), m_playbackMode);
-        form->addRow(note(tr("Realtime playback joins the notes by the rules of the project "
-                             "wavtool without running the wavtool process. Rendering a "
-                             "whole track uses an external console in the classic mode and "
-                             "several threads otherwise.")));
+        playbackForm->addRow(tr("&Playback:"), m_playbackMode);
+        playbackForm->addRow(note(tr("Realtime playback joins the notes by the rules of the project "
+                                     "wavtool without running the wavtool process. Rendering a "
+                                     "whole track uses an external console in the classic mode and "
+                                     "several threads otherwise.")));
 
         // Zero stands for one thread per hardware thread. The list offers the powers of two below
         // the number of hardware threads and that number, and any other count can be typed in.
@@ -291,18 +306,21 @@ namespace hello::daw {
         } else {
             m_threads->setEditText(QString::number(current));
         }
-        form->addRow(tr("Rendering &threads:"), m_threads);
+        playbackForm->addRow(tr("Rendering &threads:"), m_threads);
         const auto updateThreads = [this] {
             m_threads->setEnabled(m_playbackMode->currentData().toInt() != AppSettings::Prerender);
         };
         updateThreads();
 
+        layout->addWidget(playbackGroup);
+        auto logGroup = new QGroupBox(tr("Render Log"), widget);
+        auto logForm = new QFormLayout(logGroup);
         m_renderLogMode = new QComboBox();
         m_renderLogMode->addItem(tr("Keep the latest run only"), false);
         m_renderLogMode->addItem(tr("Accumulate runs"), true);
         m_renderLogMode->setCurrentIndex(
             m_renderLogMode->findData(m_settings.isRenderLogAccumulated()));
-        form->addRow(tr("Render &log:"), m_renderLogMode);
+        logForm->addRow(tr("Render &log:"), m_renderLogMode);
 
         m_renderLogLimit = new QComboBox();
         m_renderLogLimit->setEditable(true);
@@ -320,9 +338,11 @@ namespace hello::daw {
         } else {
             m_renderLogLimit->setEditText(QString::number(logLimit));
         }
-        form->addRow(tr("Render log &size:"), m_renderLogLimit);
-        form->addRow(note(tr("Captured output is shared by realtime and threaded rendering. "
-                             "Enter a number with B, KiB, MiB or GiB, or choose a preset.")));
+        logForm->addRow(tr("Render log &size:"), m_renderLogLimit);
+        logForm->addRow(note(tr("Captured output is shared by realtime and threaded rendering. "
+                                "Enter a number with B, KiB, MiB or GiB, or choose a preset.")));
+        layout->addWidget(logGroup);
+        layout->addStretch();
 
         connect(m_resampler, &QLineEdit::textChanged, this, &SettingPage::modifiedChanged);
         connect(m_wavtool, &QLineEdit::textChanged, this, &SettingPage::modifiedChanged);
