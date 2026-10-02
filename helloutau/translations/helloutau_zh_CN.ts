@@ -828,6 +828,10 @@
         <translation>（默认值）</translation>
     </message>
     <message>
+        <source>(default: %1)</source>
+        <translation>（默认值：%1）</translation>
+    </message>
+    <message>
         <source>&amp;Lyric:</source>
         <translation>歌词(&amp;L)：</translation>
     </message>

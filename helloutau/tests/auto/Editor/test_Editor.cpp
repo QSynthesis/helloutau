@@ -832,7 +832,7 @@ private Q_SLOTS:
         QCOMPARE(dialog.field(F::Length)->text(), QStringLiteral("480"));
         QCOMPARE(dialog.field(F::Intensity)->text(), QStringLiteral("80"));
         QCOMPARE(dialog.field(F::Tempo)->placeholderText(), QStringLiteral("(various)"));
-        QCOMPARE(dialog.field(F::Modulation)->placeholderText(), QStringLiteral("(default)"));
+        QCOMPARE(dialog.field(F::Modulation)->placeholderText(), QStringLiteral("(default: 100)"));
         QCOMPARE(dialog.field(F::Flags)->text(), QStringLiteral("g-2"));
 
         QTest::keyClicks(dialog.field(F::Tempo), QStringLiteral("140"));

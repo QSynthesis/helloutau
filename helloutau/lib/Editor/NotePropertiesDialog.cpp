@@ -12,6 +12,8 @@
 #include <QtWidgets/QLineEdit>
 #include <QtWidgets/QVBoxLayout>
 
+#include <stdutau/utaconst.h>
+
 namespace hello::daw {
 
     namespace {
@@ -89,7 +91,9 @@ namespace hello::daw {
                 add(label, edit);
             };
 
-        const auto defaulted = tr("(default)");
+        const auto defaulted = [&](double value) {
+            return tr("(default: %1)").arg(numberText(value));
+        };
         text(tr("&Lyric:"), [](const kit::Note &note) { return note.lyric; });
         {
             const auto length =
@@ -103,17 +107,17 @@ namespace hello::daw {
         }
         optional(tr("&Tempo:"), tr("(follows the tempo before)"),
                  [](const kit::Note &note) { return note.tempo; });
-        optional(tr("&Intensity:"), defaulted,
+        optional(tr("&Intensity:"), defaulted(utau::DEFAULT_VALUE_INTENSITY),
                  [](const kit::Note &note) { return note.intensity; });
-        optional(tr("&Modulation:"), defaulted,
+        optional(tr("&Modulation:"), defaulted(utau::DEFAULT_VALUE_MODULATION),
                  [](const kit::Note &note) { return note.modulation; });
-        optional(tr("Consonant &velocity:"), defaulted,
+        optional(tr("Consonant &velocity:"), defaulted(utau::DEFAULT_VALUE_VELOCITY),
                  [](const kit::Note &note) { return note.velocity; });
-        optional(tr("&Pre-utterance:"), defaulted,
+        optional(tr("&Pre-utterance:"), defaulted(utau::DEFAULT_VALUE_PRE_UTTERANCE),
                  [](const kit::Note &note) { return note.preUtterance; });
-        optional(tr("&Overlap:"), defaulted,
+        optional(tr("&Overlap:"), defaulted(utau::DEFAULT_VALUE_VOICE_OVERLAP),
                  [](const kit::Note &note) { return note.voiceOverlap; });
-        optional(tr("&Start point:"), defaulted,
+        optional(tr("&Start point:"), defaulted(utau::DEFAULT_VALUE_START_POINT),
                  [](const kit::Note &note) { return note.startPoint; });
         text(tr("&Flags:"), [](const kit::Note &note) { return note.flags; });
 
