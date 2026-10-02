@@ -31,6 +31,7 @@ namespace hello::kit {
         void clear();
         void setMode(Mode mode);
         void setLimit(qsizetype bytes);
+        void setFileName(const QString &fileName);
         void record(const std::filesystem::path &program, const QString &output);
 
     private:
@@ -41,6 +42,10 @@ namespace hello::kit {
         qsizetype m_limit = 1024 * 1024;
         Mode m_mode = Accumulated;
         bool m_runStarted = false;
+        QString m_fileName;
+
+        void writeFile();
+        void loadFile();
     };
 
     /// The result of one engine invocation.

@@ -219,7 +219,7 @@ private Q_SLOTS:
         QVERIFY(playback.lastRenderFile().empty());
         QTRY_COMPARE_WITH_TIMEOUT(states.size(), 3, 5000);
         // The track file of the render, which Save Last Played copies
-        QCOMPARE(playback.lastRenderFile(), playback.cacheDirectoryFor(*document) / "playback.wav");
+        QCOMPARE(playback.lastRenderFile(), playback.cacheDirectoryFor(*document) / "temp.wav");
         QCOMPARE(failures.size(), 0);
         QCOMPARE(states.at(1).at(0).value<Playback::State>(), Playback::Playing);
         QCOMPARE(states.at(2).at(0).value<Playback::State>(), Playback::Stopped);
@@ -233,7 +233,7 @@ private Q_SLOTS:
         QCOMPARE(planProgress.last(), (QList<QVariant>{1, 1}));
         QCOMPARE(runner->stepCounts, QList<int>{1});
         QCOMPARE(runner->caches, QList<fs::path>{playback.cacheDirectoryFor(*document)});
-        QVERIFY(fs::is_regular_file(playback.cacheDirectoryFor(*document) / "playback.wav"));
+        QVERIFY(fs::is_regular_file(playback.cacheDirectoryFor(*document) / "temp.wav"));
     }
 
     // The whole track is rendered into a file of the caller's choice, without playing it and

@@ -12,6 +12,7 @@
 #include <QtCore/QThreadPool>
 
 #include "EngineProcess.h"
+#include "ClassicSynthRunner.h"
 
 namespace hello::kit {
 
@@ -66,6 +67,20 @@ namespace hello::kit {
             bool started = false;
         };
 
+        bool writeScript(const fs::path &path, const QString &text) {
+            std::ofstream out(path, std::ios::binary | std::ios::trunc);
+            if (!out) {
+                return false;
+            }
+#ifdef _WIN32
+            const auto bytes = text.toLocal8Bit();
+#else
+            const auto bytes = text.toUtf8();
+#endif
+            out.write(bytes.constData(), bytes.size());
+            return out.good();
+        }
+
     }
 
     ThreadedSynthRunner::ThreadedSynthRunner() = default;
@@ -79,6 +94,24 @@ namespace hello::kit {
         if (plan.steps().isEmpty()) {
             fail(diagnostics, tr("There is nothing to render."));
             return outcome;
+        }
+
+        if (!scriptDirectory.empty()) {
+            ClassicSynthRunner writer;
+            writer.scriptDirectory = scriptDirectory;
+            DiagnosticList scriptDiagnostics;
+            const auto scripts = writer.scripts(plan, engines, scriptDiagnostics);
+            diagnostics.append(scriptDiagnostics);
+            if (!scripts) {
+                return outcome;
+            }
+            std::error_code scriptError;
+            fs::create_directories(scriptDirectory, scriptError);
+            if (scriptError || !writeScript(scriptDirectory / "temp.bat", scripts->first) ||
+                !writeScript(scriptDirectory / "temp_helper.bat", scripts->second)) {
+                fail(diagnostics, tr("The rendering scripts could not be written."));
+                return outcome;
+            }
         }
 
         std::error_code error;
@@ -133,6 +166,9 @@ namespace hello::kit {
         // Shared by all threads and by the subsequent wavtool calls, which is why it must be
         // safe for concurrent use.
         const auto engine = makeEngineProcess();
+        if (!scriptDirectory.empty()) {
+            engine->workingDirectory = scriptDirectory;
+        }
 
         // The resampler calls are mutually independent and dominate render time. The wavtool
         // calls below append to a single file and always run in track order.

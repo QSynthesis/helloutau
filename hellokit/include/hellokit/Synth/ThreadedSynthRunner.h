@@ -3,6 +3,8 @@
 
 #include <QtCore/QCoreApplication>
 
+#include <filesystem>
+
 #include <hellokit/Synth/HelloKitSynthGlobal.h>
 #include <hellokit/Synth/SynthRunner.h>
 
@@ -32,6 +34,9 @@ namespace hello::kit {
         /// \note Only resampling is parallelized. The wavtool appends to a single file, so its
         ///       calls run sequentially regardless of this setting.
         int threadCount = 0;
+
+        /// Directory in which the non-executed temp.bat and temp_helper.bat are written.
+        std::filesystem::path scriptDirectory;
 
         SynthOutcome render(const SynthPlan &plan, const SynthEngines &engines,
                             SynthObserver *observer, DiagnosticList &diagnostics) const override;

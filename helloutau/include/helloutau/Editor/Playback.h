@@ -40,7 +40,7 @@ namespace hello::daw {
     ///
     /// The render cache of a document is the directory beside its \c .usth, or beside the UST it
     /// was imported from, as UTAU uses it; a document without a file renders into a temporary
-    /// directory that lives as long as this object.
+    /// directory supplied by the owning project window.
     class HELLOUTAU_EDITOR_EXPORT Playback : public QObject {
         Q_OBJECT
     public:
@@ -56,10 +56,16 @@ namespace hello::daw {
 
         explicit Playback(QObject *parent = nullptr);
         Playback(std::shared_ptr<kit::EngineOutputLog> outputLog, QObject *parent);
+        Playback(std::shared_ptr<kit::EngineOutputLog> outputLog,
+                 std::filesystem::path temporaryDirectory, QObject *parent);
         ~Playback() override;
 
         /// Replaces the runner, for tests. The default is a kit::ClassicSynthRunner.
         void setRunner(std::shared_ptr<const kit::SynthRunner> runner);
+
+        /// Sets the directory owned by the project window for renders, scripts, and logs.
+        /// Playback never creates or removes this directory.
+        void setTemporaryDirectory(std::filesystem::path temporaryDirectory);
 
         /// Sets the number of threads of the realtime synthesis, zero for one per hardware
         /// thread, the default. A change takes effect with the next preview or prepare().

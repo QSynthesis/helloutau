@@ -16,6 +16,7 @@
 
 #include <QtCore/QCoreApplication>
 #include <QtCore/QDateTime>
+#include <QtCore/QFile>
 
 #include <stdcorelib/support/popen.h>
 
@@ -106,6 +107,12 @@ namespace hello::kit {
 
     QString EngineOutputLog::text() const {
         const std::lock_guard lock(m_mutex);
+        if (!m_fileName.isEmpty()) {
+            QFile file(m_fileName);
+            if (file.open(QIODevice::ReadOnly)) {
+                return QString::fromUtf8(file.readAll());
+            }
+        }
         return m_outputs;
     }
 
@@ -113,6 +120,7 @@ namespace hello::kit {
         const std::lock_guard lock(m_mutex);
         m_outputs.clear();
         m_runStarted = false;
+        writeFile();
     }
 
     void EngineOutputLog::setMode(Mode mode) {
@@ -123,8 +131,19 @@ namespace hello::kit {
 
     void EngineOutputLog::setLimit(qsizetype bytes) {
         const std::lock_guard lock(m_mutex);
+        loadFile();
         m_limit = std::max<qsizetype>(1024, bytes);
         trim();
+        writeFile();
+        if (!m_fileName.isEmpty()) {
+            m_outputs.clear();
+        }
+    }
+
+    void EngineOutputLog::setFileName(const QString &fileName) {
+        const std::lock_guard lock(m_mutex);
+        m_fileName = fileName;
+        writeFile();
     }
 
     void EngineOutputLog::trim() {
@@ -140,12 +159,39 @@ namespace hello::kit {
         const auto body = output.isEmpty() ? QStringLiteral("(no output)") : output;
         const auto entry = QStringLiteral("[%1] %2\n%3\n").arg(time, name, body);
         const std::lock_guard lock(m_mutex);
+        loadFile();
         if (m_mode == Latest && !m_runStarted) {
             m_outputs.clear();
         }
         m_runStarted = true;
         m_outputs += entry;
         trim();
+        writeFile();
+        if (!m_fileName.isEmpty()) {
+            m_outputs.clear();
+        }
+    }
+
+    void EngineOutputLog::writeFile() {
+        if (m_fileName.isEmpty()) {
+            return;
+        }
+        QFile file(m_fileName);
+        if (file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+            file.write(m_outputs.toUtf8());
+        }
+    }
+
+    void EngineOutputLog::loadFile() {
+        if (m_fileName.isEmpty()) {
+            return;
+        }
+        QFile file(m_fileName);
+        if (file.open(QIODevice::ReadOnly)) {
+            m_outputs = QString::fromUtf8(file.readAll());
+        } else {
+            m_outputs.clear();
+        }
     }
 
     EngineProcess::EngineProcess(std::shared_ptr<EngineOutputLog> outputLog)

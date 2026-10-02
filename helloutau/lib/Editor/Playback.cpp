@@ -9,7 +9,6 @@
 #include <QtCore/QCoreApplication>
 #include <QtCore/QDir>
 #include <QtCore/QPointer>
-#include <QtCore/QTemporaryDir>
 #include <QtCore/QThread>
 
 #include <stdcorelib/pimpl.h>
@@ -17,6 +16,7 @@
 #include <hellokit/Document/Project.h>
 #include <hellokit/Edit/ProjectDocument.h>
 #include <hellokit/Synth/ClassicSynthRunner.h>
+#include <hellokit/Synth/ThreadedSynthRunner.h>
 #include <hellokit/Synth/RealtimeSynth.h>
 #include <hellokit/Synth/SynthPlan.h>
 #include <hellokit/Synth/WaveAudio.h>
@@ -33,7 +33,7 @@ namespace hello::daw {
 
         // The track file of a render, in the cache directory. Its name does not begin with a
         // note number, so that no render takes it for a fragment of a note.
-        constexpr char OutputFileName[] = "playback.wav";
+        constexpr char OutputFileName[] = "temp.wav";
 
         void fail(kit::DiagnosticList &diagnostics, const QString &message) {
             diagnostics.push_back({kit::DiagnosticSeverity::Error, message, std::nullopt});
@@ -190,7 +190,7 @@ namespace hello::daw {
         std::shared_ptr<const kit::SynthRunner> runner =
             std::make_shared<kit::ClassicSynthRunner>();
         AudioOutput *output = nullptr;
-        std::unique_ptr<QTemporaryDir> temporary;
+        std::filesystem::path temporaryDirectory;
 
         // The render in progress, and the workers that have not yet finished, including those
         // of cancelled renders
@@ -253,7 +253,9 @@ namespace hello::daw {
             }
             PlanInput input{document.session()->snapshot(), bank, {}};
             input.options.cacheDirectory = decl.cacheDirectoryFor(document);
-            input.options.outputFile = input.options.cacheDirectory / OutputFileName;
+            input.options.outputFile = temporaryDirectory.empty()
+                                           ? decl.cacheDirectoryFor(document) / OutputFileName
+                                           : temporaryDirectory / OutputFileName;
             return input;
         }
 
@@ -610,12 +612,18 @@ namespace hello::daw {
     };
 
     Playback::Playback(QObject *parent)
-        : Playback(std::make_shared<kit::EngineOutputLog>(), parent) {
+        : Playback(std::make_shared<kit::EngineOutputLog>(), {}, parent) {
     }
 
     Playback::Playback(std::shared_ptr<kit::EngineOutputLog> outputLog, QObject *parent)
+        : Playback(std::move(outputLog), {}, parent) {
+    }
+
+    Playback::Playback(std::shared_ptr<kit::EngineOutputLog> outputLog,
+                       std::filesystem::path temporaryDirectory, QObject *parent)
         : QObject(parent), _impl(std::make_unique<Impl>(this)) {
         stdc_impl_t;
+        impl.temporaryDirectory = std::move(temporaryDirectory);
         impl.outputLog = outputLog ? std::move(outputLog) : std::make_shared<kit::EngineOutputLog>();
         impl.outputLog->setMode(kit::EngineOutputLog::Accumulated);
         impl.outputLog->setLimit(1024 * 1024);
@@ -628,6 +636,7 @@ namespace hello::daw {
                 impl.setState(Stopped);
             }
         });
+        setTemporaryDirectory(impl.temporaryDirectory);
     }
 
     Playback::~Playback() {
@@ -646,8 +655,42 @@ namespace hello::daw {
         impl.runner = std::move(runner);
         if (impl.runner != old) {
             impl.runner->setOutputLog(impl.outputLog);
+            if (const auto classic =
+                    std::dynamic_pointer_cast<const kit::ClassicSynthRunner>(impl.runner)) {
+                const auto mutableClassic = std::const_pointer_cast<kit::ClassicSynthRunner>(classic);
+                mutableClassic->scriptDirectory = impl.temporaryDirectory;
+                mutableClassic->keepScripts = !impl.temporaryDirectory.empty();
+            }
+            if (const auto threaded =
+                    std::dynamic_pointer_cast<const kit::ThreadedSynthRunner>(impl.runner)) {
+                const auto mutableThreaded = std::const_pointer_cast<kit::ThreadedSynthRunner>(threaded);
+                mutableThreaded->scriptDirectory = impl.temporaryDirectory;
+            }
         }
         impl.kept.reset();
+    }
+
+    void Playback::setTemporaryDirectory(std::filesystem::path temporaryDirectory) {
+        stdc_impl_t;
+        stop();
+        impl.temporaryDirectory = std::move(temporaryDirectory);
+        const auto logFile = impl.temporaryDirectory.empty()
+                                 ? QString()
+                                 : QString::fromStdU16String(
+                                       (impl.temporaryDirectory / "render.log").u16string());
+        impl.outputLog->setFileName(logFile);
+        impl.outputLog->clear();
+        if (const auto classic =
+                std::dynamic_pointer_cast<const kit::ClassicSynthRunner>(impl.runner)) {
+            const auto mutableClassic = std::const_pointer_cast<kit::ClassicSynthRunner>(classic);
+            mutableClassic->scriptDirectory = impl.temporaryDirectory;
+            mutableClassic->keepScripts = !impl.temporaryDirectory.empty();
+        }
+        if (const auto threaded =
+                std::dynamic_pointer_cast<const kit::ThreadedSynthRunner>(impl.runner)) {
+            const auto mutableThreaded = std::const_pointer_cast<kit::ThreadedSynthRunner>(threaded);
+            mutableThreaded->scriptDirectory = impl.temporaryDirectory;
+        }
     }
 
     void Playback::setThreadCount(int count) {
@@ -687,7 +730,9 @@ namespace hello::daw {
         auto job = std::make_shared<Job>();
         job->input = {document.session()->snapshot(), bank, {}};
         job->input.options.cacheDirectory = cacheDirectoryFor(document);
-        job->input.options.outputFile = job->input.options.cacheDirectory / OutputFileName;
+        job->input.options.outputFile = impl.temporaryDirectory.empty()
+                                           ? cacheDirectoryFor(document) / OutputFileName
+                                           : impl.temporaryDirectory / OutputFileName;
         job->input.options.range = range;
         // The same notes as the last render play again without the engines.
         job->keptKey = impl.kept ? impl.kept->key : QString();
@@ -939,10 +984,10 @@ namespace hello::daw {
         if (!file.empty()) {
             return kit::Project::cacheDirectoryOf(file);
         }
-        if (!impl.temporary) {
-            impl.temporary = std::make_unique<QTemporaryDir>();
+        if (!impl.temporaryDirectory.empty()) {
+            return impl.temporaryDirectory / "cache";
         }
-        return std::filesystem::path(impl.temporary->path().toStdU16String());
+        return kit::Project::cacheDirectoryOf(file);
     }
 
 }

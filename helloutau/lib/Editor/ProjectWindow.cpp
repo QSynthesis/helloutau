@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <filesystem>
+#include <optional>
 
 #include <QtCore/QDir>
 #include <QtCore/QHash>
@@ -11,6 +12,7 @@
 #include <QtCore/QSignalBlocker>
 #include <QtCore/QStandardPaths>
 #include <QtCore/QTimer>
+#include <QtCore/QTemporaryDir>
 #include <QtGui/QAction>
 #include <QtGui/QActionGroup>
 #include <QtGui/QClipboard>
@@ -31,6 +33,7 @@
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QPlainTextEdit>
 #include <QtWidgets/QDialogButtonBox>
+#include <QtWidgets/QScrollBar>
 #include <QtWidgets/QStatusBar>
 #include <QtWidgets/QToolBar>
 #include <QtWidgets/QVBoxLayout>
@@ -171,6 +174,8 @@ namespace hello::daw {
         PianoRoll::Parameters pastedParameters = PianoRoll::AllParameters;
 
         Playback *playback = nullptr;
+        // Owns all per-window render artifacts. Playback only uses the path.
+        std::optional<QTemporaryDir> temporaryDirectory;
         std::shared_ptr<kit::EngineOutputLog> renderLog =
             std::make_shared<kit::EngineOutputLog>();
         QLabel *renderLabel = nullptr;
@@ -203,7 +208,10 @@ namespace hello::daw {
         // The render progress in the status bar, and the playhead that follows playback
         void initPlayback() {
             stdc_decl_t;
-            playback = new Playback(renderLog, &decl);
+            temporaryDirectory.emplace();
+            playback = new Playback(
+                renderLog,
+                std::filesystem::path(temporaryDirectory->path().toStdU16String()), &decl);
             renderLabel = new QLabel();
             renderProgress = new QProgressBar();
             renderProgress->setMaximumWidth(200);
@@ -514,6 +522,8 @@ namespace hello::daw {
             text->setReadOnly(true);
             text->setLineWrapMode(QPlainTextEdit::NoWrap);
             text->setPlainText(renderLog->text());
+            text->moveCursor(QTextCursor::End);
+            text->verticalScrollBar()->setValue(text->verticalScrollBar()->maximum());
             layout->addWidget(text);
             auto buttons = new QDialogButtonBox(QDialogButtonBox::Close, &dialog);
             auto clear = buttons->addButton(tr("Clear"), QDialogButtonBox::DestructiveRole);
@@ -1951,6 +1961,9 @@ namespace hello::daw {
     void ProjectWindow::setDocument(std::unique_ptr<kit::ProjectDocument> document) {
         stdc_impl_t;
         impl.playback->stop();
+        impl.temporaryDirectory.emplace();
+        impl.playback->setTemporaryDirectory(
+            std::filesystem::path(impl.temporaryDirectory->path().toStdU16String()));
         impl.voiceBankRoot.clear();
         impl.voiceBankReloadPending = false;
         auto previous = std::move(impl.document);
