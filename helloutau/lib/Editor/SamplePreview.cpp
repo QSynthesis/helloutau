@@ -15,6 +15,7 @@
 #include <hellokit/Synth/SynthPlan.h>
 
 #include <helloutau/Audio/AudioOutput.h>
+#include <helloutau/Audio/BufferSource.h>
 
 namespace hello::daw {
 

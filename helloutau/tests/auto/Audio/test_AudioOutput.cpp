@@ -5,6 +5,8 @@
 #include <QtTest/QTest>
 
 #include <helloutau/Audio/AudioOutput.h>
+#include <helloutau/Audio/BufferSource.h>
+#include <helloutau/Audio/StreamSource.h>
 
 using namespace hello::daw;
 

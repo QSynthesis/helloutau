@@ -148,8 +148,6 @@ namespace hello::daw {
         /// Scrolls to the start of the track and to the middle of the keys its notes use.
         void scrollToNotes();
 
-        /// Stops the short sound played by the piano keyboard, if any.
-        void stopKeyboardPreview();
 
         /// Scrolls the view to note \a index of the timeline if the note is outside it.
         void showNote(int index);

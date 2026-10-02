@@ -1,1 +1,3 @@
 add_auto_test(test_AudioOutput.cpp HelloUtauAudio)
+add_auto_test(test_AudioMixer.cpp HelloUtauAudio)
+add_auto_test(test_AudioEngine.cpp HelloUtauAudio)

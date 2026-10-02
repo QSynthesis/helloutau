@@ -38,7 +38,7 @@ private Q_SLOTS:
         const auto catalog = e.settingCatalog();
         QCOMPARE(idsOf(catalog->pages()),
                  (QStringList{"editor.AppearanceAndBehavior", "core.Keymap", "editor.Editor",
-                              "editor.Rendering"}));
+                              "editor.Audio", "editor.Rendering"}));
         QCOMPARE(idsOf(catalog->page(QStringLiteral("editor.AppearanceAndBehavior"))->pages()),
                  (QStringList{"core.MenusAndToolbars", "editor.SystemSettings"}));
 
@@ -49,7 +49,7 @@ private Q_SLOTS:
         addCoreSettingPages(&other, &loader);
         QCOMPARE(idsOf(other.settingCatalog()->pages()),
                  (QStringList{"editor.AppearanceAndBehavior", "core.Keymap", "editor.Editor",
-                              "core.Plugins", "editor.Rendering"}));
+                              "editor.Audio", "core.Plugins", "editor.Rendering"}));
     }
 };
 

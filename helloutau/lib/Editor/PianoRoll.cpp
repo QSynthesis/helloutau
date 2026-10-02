@@ -103,7 +103,6 @@ namespace hello::daw {
         }
 
         Decl *_decl;
-        AudioOutput *keyOutput = nullptr;
     };
 
     PianoRoll::PianoRoll(kit::ProjectSession *session, QWidget *parent)
@@ -115,15 +114,16 @@ namespace hello::daw {
         impl.view->setKeyRange(LowestPianoKey, HighestPianoKey);
         impl.ruler = new TimelineRuler(impl.view);
         impl.keyboard = new PianoKeyboard(impl.view);
-        impl.keyOutput = new AudioOutput(this);
-        connect(impl.keyboard, &PianoKeyboard::keyPressed, this, [keyOutput = impl.keyOutput](int key) {
+        auto keyOutput = new AudioOutput(this);
+        connect(impl.keyboard, &PianoKeyboard::keyPressed, this, [keyOutput](int key) {
             const int rate = AudioOutput::deviceSampleRate();
             if (rate <= 0) {
                 return;
             }
             constexpr double duration = 0.35;
             const double frequency = 440 * std::pow(2.0, (key - 69) / 12.0);
-            keyOutput->start(std::make_shared<SineWaveSource>(rate, frequency, duration));
+            keyOutput->start(std::make_shared<SineWaveSource>(rate, frequency, duration), nullptr,
+                             rate);
         });
         impl.voiceBankButton = new QToolButton();
         impl.voiceBankButton->setAutoRaise(true);
@@ -309,13 +309,6 @@ namespace hello::daw {
         });
         impl.refresh();
         scrollToNotes();
-    }
-
-    void PianoRoll::stopKeyboardPreview() {
-        stdc_impl_t;
-        if (impl.keyOutput) {
-            impl.keyOutput->stop();
-        }
     }
 
     PianoRoll::~PianoRoll() = default;

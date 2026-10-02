@@ -3,7 +3,7 @@
 
 #include <atomic>
 
-#include <helloutau/Audio/AudioOutput.h>
+#include <helloutau/Audio/AudioSource.h>
 #include <helloutau/Audio/HelloUtauAudioGlobal.h>
 
 namespace hello::daw {

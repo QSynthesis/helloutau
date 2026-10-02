@@ -185,10 +185,7 @@ namespace hello::daw {
         auto test = new QPushButton(tr("Test"), widget);
         form->addRow({}, test);
         form->addRow(note(tr("The test plays a short sine wave on the selected device.")));
-        connect(m_output, &QComboBox::currentIndexChanged, this, [this] {
-            AudioOutput::setOutputDeviceId(m_output->currentData().toByteArray());
-            Q_EMIT modifiedChanged();
-        });
+        connect(m_output, &QComboBox::currentIndexChanged, this, &SettingPage::modifiedChanged);
         connect(test, &QPushButton::clicked, widget, [this, widget] {
             const int rate = AudioOutput::deviceSampleRate();
             if (rate <= 0) {

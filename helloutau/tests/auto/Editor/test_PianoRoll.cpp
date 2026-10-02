@@ -942,7 +942,8 @@ private Q_SLOTS:
         while (tick < 720 && pointOf(roll, tick, 60).y() - onLi(tick).y() < 3) {
             ++tick;
         }
-        QVERIFY(pointOf(roll, tick, 60).y() - onLi(tick).y() < roll.curveGrip());
+        // Coordinates are rounded to device pixels before the mouse event is sent.
+        QVERIFY(pointOf(roll, tick, 60).y() - onLi(tick).y() <= roll.curveGrip() + 1);
         QTest::mouseDClick(viewport, Qt::LeftButton, {}, onLi(tick).toPoint());
         QCOMPARE(pointsOf(1).size(), 2);
         QCOMPARE(pointsOf(2).size(), 3);

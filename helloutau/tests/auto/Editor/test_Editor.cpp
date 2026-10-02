@@ -183,8 +183,9 @@ private Q_SLOTS:
             menus.push_back(action->text());
         }
         QCOMPARE(menus, (QStringList{QStringLiteral("&File"), QStringLiteral("&Edit"),
-                                     QStringLiteral("&View"), QStringLiteral("&Playback"),
-                                     QStringLiteral("&Tools")}));
+                                     QStringLiteral("&Select"), QStringLiteral("&View"),
+                                     QStringLiteral("&Playback"), QStringLiteral("&Tools"),
+                                     QStringLiteral("&Help")}));
         const auto save = actionNamed(window, QStringLiteral("&Save"));
         QVERIFY(save);
         QCOMPARE(save->shortcut(), QKeySequence(QStringLiteral("Ctrl+S")));
@@ -907,7 +908,7 @@ private Q_SLOTS:
         }
         // Keymap and Menus and Toolbars are pages of the core plugin, see test_CoreSettingPages.
         QCOMPARE(topLevel, (QStringList{"editor.AppearanceAndBehavior", "editor.Editor",
-                                        "editor.Rendering"}));
+                                        "editor.Audio", "editor.Rendering"}));
         const auto system = e->settingCatalog()->page(QStringLiteral("editor.SystemSettings"));
         QVERIFY(system);
         QCOMPARE(system->parentPage()->id(), QStringLiteral("editor.AppearanceAndBehavior"));
@@ -1485,7 +1486,7 @@ private Q_SLOTS:
         }
         QCOMPARE(menus, (QStringList{QStringLiteral("&File"), QStringLiteral("&Edit"),
                                      QStringLiteral("&View"), QStringLiteral("&Playback"),
-                                     QStringLiteral("&Tools")}));
+                                     QStringLiteral("&Tools"), QStringLiteral("&Help")}));
 
         // All folders at first: a, b missing, c unlisted, and x and y in sub
         const auto tree = window->directoryTree();

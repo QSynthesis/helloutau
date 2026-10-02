@@ -23,6 +23,8 @@
 #include <hellokit/VoiceBank/VoiceBank.h>
 
 #include <helloutau/Audio/AudioOutput.h>
+#include <helloutau/Audio/BufferSource.h>
+#include <helloutau/Audio/StreamSource.h>
 
 namespace hello::daw {
 
