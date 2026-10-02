@@ -137,29 +137,21 @@ namespace hello::daw {
             }
             const auto utau = m_appSettings->utauDirectory();
             const auto status = [this, &utau](QLineEdit *edit, const QString &defaultPath,
-                                              EngineTrust::Kind kind) {
+                                              const QString &role) {
                 QString text;
                 if (EngineTrust::samePath(edit->text(), defaultPath, utau)) {
-                    text = tr("Using the default %1 from Settings.")
-                               .arg(kind == EngineTrust::Kind::Wavtool ? tr("wavtool")
-                                                                       : tr("resampler"));
+                    text = tr("Using the default %1 from Settings.").arg(role);
                     return qMakePair(text, false);
                 }
-                if (EngineTrust::isTrusted(*m_appSettings, edit->text(), utau, kind)) {
-                    text = tr("Project %1 is trusted.")
-                               .arg(kind == EngineTrust::Kind::Wavtool ? tr("wavtool")
-                                                                       : tr("resampler"));
+                if (EngineTrust::isTrusted(*m_appSettings, edit->text(), utau)) {
+                    text = tr("Project %1 is trusted.").arg(role);
                     return qMakePair(text, false);
                 }
-                text =
-                    tr("Project %1 is untrusted.")
-                        .arg(kind == EngineTrust::Kind::Wavtool ? tr("wavtool") : tr("resampler"));
+                text = tr("Project %1 is untrusted.").arg(role);
                 return qMakePair(text, true);
             };
-            const auto wavtool =
-                status(m_wavtool, m_appSettings->wavtool(), EngineTrust::Kind::Wavtool);
-            const auto resampler =
-                status(m_resampler, m_appSettings->resampler(), EngineTrust::Kind::Resampler);
+            const auto wavtool = status(m_wavtool, m_appSettings->wavtool(), tr("wavtool"));
+            const auto resampler = status(m_resampler, m_appSettings->resampler(), tr("resampler"));
             const auto line = [](const QPair<QString, bool> &value) {
                 return QStringLiteral("<span style=\"color:%1; font-weight:bold;\">%2</span>")
                     .arg(value.second ? QStringLiteral("#b00020") : QStringLiteral("#176b2c"),
@@ -180,13 +172,14 @@ namespace hello::daw {
                 return;
             }
             const auto utau = m_appSettings->utauDirectory();
+            const auto sameTool =
+                EngineTrust::samePath(m_wavtool->text(), m_resampler->text(), utau);
             if (!EngineTrust::samePath(m_wavtool->text(), m_appSettings->wavtool(), utau)) {
-                EngineTrust::ask(this, *m_appSettings, m_wavtool->text(), utau,
-                                 EngineTrust::Kind::Wavtool);
+                EngineTrust::ask(this, *m_appSettings, m_wavtool->text(), utau);
             }
-            if (!EngineTrust::samePath(m_resampler->text(), m_appSettings->resampler(), utau)) {
-                EngineTrust::ask(this, *m_appSettings, m_resampler->text(), utau,
-                                 EngineTrust::Kind::Resampler);
+            if (!sameTool &&
+                !EngineTrust::samePath(m_resampler->text(), m_appSettings->resampler(), utau)) {
+                EngineTrust::ask(this, *m_appSettings, m_resampler->text(), utau);
             }
             updateTrust();
         });

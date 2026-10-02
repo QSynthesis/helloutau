@@ -20,10 +20,6 @@ namespace hello::daw::EngineTrust {
             return QDir::toNativeSeparators(QString::fromStdU16String(path.u16string()));
         }
 
-        QString kindText(Kind kind) {
-            return kind == Kind::Wavtool ? Messages::tr("wavtool") : Messages::tr("resampler");
-        }
-
         QJsonArray entries(const AppSettings &settings) {
             return settings.value(QLatin1String(Key)).toArray();
         }
@@ -56,8 +52,7 @@ namespace hello::daw::EngineTrust {
     }
 
     bool isTrusted(const AppSettings &settings, const QString &value,
-                   const std::filesystem::path &utau, Kind kind) {
-        Q_UNUSED(kind);
+                   const std::filesystem::path &utau) {
         const auto path = pathOf(value, utau);
         if (path.empty() || !exists(value, utau)) {
             return false;
@@ -74,8 +69,7 @@ namespace hello::daw::EngineTrust {
         return false;
     }
 
-    void trust(AppSettings &settings, const QString &value, const std::filesystem::path &utau,
-               Kind kind) {
+    void trust(AppSettings &settings, const QString &value, const std::filesystem::path &utau) {
         const auto path = pathOf(value, utau);
         std::error_code error;
         const auto absolute = std::filesystem::weakly_canonical(path, error);
@@ -83,7 +77,6 @@ namespace hello::daw::EngineTrust {
             return;
         }
         auto array = entries(settings);
-        Q_UNUSED(kind);
         const auto filePath = textOf(absolute);
         for (const auto &item : array) {
             if (item.toObject().value(QStringLiteral("filePath")).toString() == filePath) {
@@ -97,20 +90,20 @@ namespace hello::daw::EngineTrust {
     }
 
     bool ask(QWidget *parent, AppSettings &settings, const QString &value,
-             const std::filesystem::path &utau, Kind kind) {
-        if (!exists(value, utau) || isTrusted(settings, value, utau, kind)) {
-            return isTrusted(settings, value, utau, kind);
+             const std::filesystem::path &utau) {
+        if (!exists(value, utau) || isTrusted(settings, value, utau)) {
+            return isTrusted(settings, value, utau);
         }
         const auto path = pathOf(value, utau);
         const auto answer = QMessageBox::question(
             parent, Messages::tr("Trust Project Engine"),
-            Messages::tr("The project requests this %1:\n\n%2\n\nTrust and run it?")
-                .arg(kindText(kind), textOf(path)),
+            Messages::tr("The project requests this rendering tool:\n\n%1\n\nTrust and run it?")
+                .arg(textOf(path)),
             QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
         if (answer != QMessageBox::Yes) {
             return false;
         }
-        trust(settings, value, utau, kind);
+        trust(settings, value, utau);
         return true;
     }
 }

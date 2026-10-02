@@ -580,31 +580,30 @@ namespace hello::daw {
             auto &settings = editor->settings();
             const auto project = kit::ProjectRef(document->session()).settings();
             const auto utau = settings.utauDirectory();
-            const auto allowed = [&](const QString &value, const QString &defaultValue,
-                                     EngineTrust::Kind kind) {
+            const auto allowed = [&](const QString &value, const QString &defaultValue) {
                 const auto path = std::filesystem::path(value.toStdU16String());
                 if (path.empty() || !EngineTrust::exists(value, utau)) {
                     return false;
                 }
                 if (EngineTrust::samePath(value, defaultValue, utau) ||
-                    EngineTrust::isTrusted(settings, value, utau, kind)) {
+                    EngineTrust::isTrusted(settings, value, utau)) {
                     return true;
                 }
                 if (!askForTrust) {
                     return false;
                 }
-                if (EngineTrust::ask(_decl, settings, value, utau, kind)) {
+                if (EngineTrust::ask(_decl, settings, value, utau)) {
                     return true;
                 }
                 trustDenied = true;
                 return false;
             };
             kit::SynthEngines result;
-            if (!allowed(project.resampler(), settings.resampler(), EngineTrust::Kind::Resampler)) {
+            if (!allowed(project.resampler(), settings.resampler())) {
                 return result;
             }
             if (!realtime() &&
-                !allowed(project.wavtool(), settings.wavtool(), EngineTrust::Kind::Wavtool)) {
+                !allowed(project.wavtool(), settings.wavtool())) {
                 return result;
             }
             result.resampler = EngineTrust::resolved(project.resampler(), utau);

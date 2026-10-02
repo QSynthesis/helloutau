@@ -1231,14 +1231,14 @@
         <translation>重采样器</translation>
     </message>
     <message>
-        <source>The project requests this %1:
+        <source>The project requests this rendering tool:
 
-%2
+%1
 
 Trust and run it?</source>
-        <translation>工程请求使用以下 %1：
+        <translation>工程请求使用以下渲染工具：
 
-%2
+%1
 
 是否信任并运行？</translation>
     </message>
