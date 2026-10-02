@@ -291,7 +291,7 @@
     </message>
     <message>
         <source>Export &amp;UST...</source>
-        <translation>导出UST(&amp;U)...</translation>
+        <translation>导出 UST(&amp;U)...</translation>
     </message>
     <message>
         <source>Project &amp;Properties...</source>
@@ -355,7 +355,7 @@
     </message>
     <message>
         <source>Mode&amp;2 Pitch</source>
-        <translation>Mode2音高(&amp;2)</translation>
+        <translation>Mode2 音高(&amp;2)</translation>
     </message>
     <message>
         <source>Add or Remove P&amp;ortamento</source>
@@ -375,7 +375,7 @@
     </message>
     <message>
         <source>Convert Mode2 Pitch to Mode&amp;1</source>
-        <translation>将Mode2音高转换为Mode1(&amp;1)</translation>
+        <translation>将 Mode2 音高转换为 Mode1(&amp;1)</translation>
     </message>
     <message>
         <source>Crossfade (p&amp;2, p3)</source>
@@ -503,7 +503,7 @@
     </message>
     <message>
         <source>Render &amp;Track to WAV...</source>
-        <translation>将音轨渲染为WAV(&amp;T)...</translation>
+        <translation>将音轨渲染为 WAV(&amp;T)...</translation>
     </message>
     <message>
         <source>Edit &amp;Voice Bank</source>
@@ -646,7 +646,7 @@
     <name>hello::daw::DiagnosticBox</name>
     <message>
         <source>Note %1: %2</source>
-        <translation>音符%1：%2</translation>
+        <translation>音符 %1：%2</translation>
     </message>
 </context>
 <context>
@@ -657,7 +657,7 @@
     </message>
     <message>
         <source>%1 no longer exists.</source>
-        <translation>%1已不存在。</translation>
+        <translation>%1 已不存在。</translation>
     </message>
     <message>
         <source>Select a recent project to open</source>
@@ -669,7 +669,7 @@
     </message>
     <message>
         <source>Open %1</source>
-        <translation>打开%1</translation>
+        <translation>打开 %1</translation>
     </message>
     <message>
         <source>No Recent Files</source>
@@ -723,7 +723,7 @@
     <name>hello::daw::ExportUstDialog</name>
     <message>
         <source>Export UST</source>
-        <translation>导出UST</translation>
+        <translation>导出 UST</translation>
     </message>
     <message>
         <source>&amp;Browse...</source>
@@ -739,7 +739,7 @@
     </message>
     <message>
         <source>UTAU projects (*.ust)</source>
-        <translation>UTAU工程 (*.ust)</translation>
+        <translation>UTAU 工程 (*.ust)</translation>
     </message>
 </context>
 <context>
@@ -798,7 +798,7 @@
     </message>
     <message>
         <source>%1 of %2</source>
-        <translation>第%1项，共%2项</translation>
+        <translation>第 %1 项，共 %2 项</translation>
     </message>
     <message>
         <source>Invalid</source>
@@ -998,7 +998,7 @@
     </message>
     <message>
         <source>Convert Mode2 Pitch to Mode1</source>
-        <translation>将Mode2音高转换为Mode1</translation>
+        <translation>将 Mode2 音高转换为 Mode1</translation>
     </message>
     <message>
         <source>Paste</source>
@@ -1030,7 +1030,7 @@
     </message>
     <message>
         <source>S-Curve</source>
-        <translation>S型曲线</translation>
+        <translation>S 型曲线</translation>
     </message>
     <message>
         <source>Linear</source>
@@ -1038,11 +1038,11 @@
     </message>
     <message>
         <source>R-Curve</source>
-        <translation>R型曲线</translation>
+        <translation>R 型曲线</translation>
     </message>
     <message>
         <source>J-Curve</source>
-        <translation>J型曲线</translation>
+        <translation>J 型曲线</translation>
     </message>
     <message>
         <source>Change Pitch Point</source>
@@ -1140,7 +1140,7 @@
     </message>
     <message>
         <source>Mode&amp;2 pitch</source>
-        <translation>Mode2音高(&amp;2)</translation>
+        <translation>Mode2 音高(&amp;2)</translation>
     </message>
     <message>
         <source>&amp;Name:</source>
@@ -1172,7 +1172,7 @@
     </message>
     <message>
         <source>Wave files (*.wav)</source>
-        <translation>WAV文件 (*.wav)</translation>
+        <translation>WAV 文件 (*.wav)</translation>
     </message>
     <message>
         <source>Wav&amp;tool (Tool1):</source>
@@ -1192,15 +1192,15 @@
     </message>
     <message>
         <source>Using the default %1 from Settings.</source>
-        <translation>使用设置中的默认%1。</translation>
+        <translation>使用设置中的默认 %1。</translation>
     </message>
     <message>
         <source>Project %1 is trusted.</source>
-        <translation>工程中的%1已信任。</translation>
+        <translation>工程中的 %1 已信任。</translation>
     </message>
     <message>
         <source>Project %1 is untrusted.</source>
-        <translation>工程中的%1未信任。</translation>
+        <translation>工程中的 %1 未信任。</translation>
     </message>
     <message>
         <source>wavtool</source>
@@ -1220,7 +1220,7 @@
 %2
 
 Trust and run it?</source>
-        <translation>工程请求使用以下%1：
+        <translation>工程请求使用以下 %1：
 
 %2
 
@@ -1308,7 +1308,7 @@ Trust and run it?</source>
     <message numerus="yes">
         <source>%n file(s) deleted from the render cache.</source>
         <translation>
-            <numerusform>已从渲染缓存中删除%n个文件。</numerusform>
+            <numerusform>已从渲染缓存中删除 %n 个文件。</numerusform>
         </translation>
     </message>
     <message>
@@ -1333,11 +1333,11 @@ Trust and run it?</source>
     </message>
     <message>
         <source>WAV files (*.wav)</source>
-        <translation>WAV文件 (*.wav)</translation>
+        <translation>WAV 文件 (*.wav)</translation>
     </message>
     <message>
         <source>%1 could not be written.</source>
-        <translation>无法写入%1。</translation>
+        <translation>无法写入 %1。</translation>
     </message>
     <message>
         <source>Render Track</source>
@@ -1345,24 +1345,24 @@ Trust and run it?</source>
     </message>
     <message>
         <source>The track has been saved to %1.</source>
-        <translation>音轨已保存至%1。</translation>
+        <translation>音轨已保存至 %1。</translation>
     </message>
     <message numerus="yes">
         <source>%n note(s) could not be rendered, and were silent.</source>
         <translation>
-            <numerusform>%n个音符无法渲染，已作静音处理。</numerusform>
+            <numerusform>%n 个音符无法渲染，已作静音处理。</numerusform>
         </translation>
     </message>
     <message numerus="yes">
         <source>Buffering, %n note(s) to render</source>
         <translation>
-            <numerusform>正在缓冲，待渲染%n个音符</numerusform>
+            <numerusform>正在缓冲，待渲染 %n 个音符</numerusform>
         </translation>
     </message>
     <message numerus="yes">
         <source>%n note(s) to render</source>
         <translation>
-            <numerusform>待渲染%n个音符</numerusform>
+            <numerusform>待渲染 %n 个音符</numerusform>
         </translation>
     </message>
     <message>
@@ -1415,7 +1415,7 @@ Trust and run it?</source>
     </message>
     <message>
         <source>Convert Mode2 Pitch to Mode1</source>
-        <translation>将Mode2音高转换为Mode1</translation>
+        <translation>将 Mode2 音高转换为 Mode1</translation>
     </message>
     <message>
         <source>Reset</source>
@@ -1440,7 +1440,7 @@ Trust and run it?</source>
     <message numerus="yes">
         <source>%n lyric(s) replaced.</source>
         <translation>
-            <numerusform>已替换%n个歌词。</numerusform>
+            <numerusform>已替换 %n 个歌词。</numerusform>
         </translation>
     </message>
     <message>
@@ -1461,11 +1461,11 @@ Trust and run it?</source>
     </message>
     <message>
         <source>A note of one tick cannot be split.</source>
-        <translation>长度仅为一个tick的音符无法拆分。</translation>
+        <translation>长度仅为一个 tick 的音符无法拆分。</translation>
     </message>
     <message>
         <source>Length of the first part in ticks, of %1:</source>
-        <translation>前段的长度（tick，总长%1）：</translation>
+        <translation>前段的长度（tick，总长 %1）：</translation>
     </message>
     <message>
         <source>Open</source>
@@ -1473,7 +1473,7 @@ Trust and run it?</source>
     </message>
     <message>
         <source>Projects (*.usth *.ust);;HelloUtau projects (*.usth);;UTAU projects (*.ust);;All files (*)</source>
-        <translation>工程 (*.usth *.ust);;HelloUtau工程 (*.usth);;UTAU工程 (*.ust);;所有文件 (*)</translation>
+        <translation>工程 (*.usth *.ust);;HelloUtau 工程 (*.usth);;UTAU 工程 (*.ust);;所有文件 (*)</translation>
     </message>
     <message>
         <source>Edit Voice Bank</source>
@@ -1485,7 +1485,7 @@ Trust and run it?</source>
     </message>
     <message>
         <source>The voice bank &quot;%1&quot; is in the UTAU folder, which is not set in the settings.</source>
-        <translation>音源「%1」位于UTAU文件夹中，但设置中未指定UTAU文件夹。</translation>
+        <translation>音源「%1」位于 UTAU 文件夹中，但设置中未指定 UTAU 文件夹。</translation>
     </message>
     <message>
         <source>A rest has no entry.</source>
@@ -1493,7 +1493,7 @@ Trust and run it?</source>
     </message>
     <message>
         <source>The voice bank has no entry for &quot;%1&quot; at %2.</source>
-        <translation>音源中没有「%1」在%2的条目。</translation>
+        <translation>音源中没有「%1」在 %2 的条目。</translation>
     </message>
     <message>
         <source>HelloUtau</source>
@@ -1501,7 +1501,7 @@ Trust and run it?</source>
     </message>
     <message>
         <source>Save the changes to %1?</source>
-        <translation>是否保存对%1的修改？</translation>
+        <translation>是否保存对 %1 的修改？</translation>
     </message>
     <message>
         <source>Voice Bank</source>
@@ -1517,15 +1517,15 @@ Trust and run it?</source>
     </message>
     <message>
         <source>HelloUtau projects (*.usth)</source>
-        <translation>HelloUtau工程 (*.usth)</translation>
+        <translation>HelloUtau 工程 (*.usth)</translation>
     </message>
     <message>
         <source>Export UST</source>
-        <translation>导出UST</translation>
+        <translation>导出 UST</translation>
     </message>
     <message>
         <source>%1 already exists. Replace it?</source>
-        <translation>%1已存在。是否替换？</translation>
+        <translation>%1 已存在。是否替换？</translation>
     </message>
 </context>
 <context>
@@ -1552,7 +1552,7 @@ Trust and run it?</source>
     </message>
     <message>
         <source>Classic prerender, in an external console as UTAU does</source>
-        <translation>经典预渲染，与UTAU相同，在外部控制台中进行</translation>
+        <translation>经典预渲染，与 UTAU 相同，在外部控制台中进行</translation>
     </message>
     <message>
         <source>Threaded prerender, rendered by several threads</source>
@@ -1630,7 +1630,7 @@ Trust and run it?</source>
     <name>hello::daw::Restarter</name>
     <message>
         <source>The changes take effect after %1 restarts. Restart now?</source>
-        <translation>修改将在%1重启后生效。是否立即重启？</translation>
+        <translation>修改将在 %1 重启后生效。是否立即重启？</translation>
     </message>
 </context>
 <context>
@@ -1645,7 +1645,7 @@ Trust and run it?</source>
     </message>
     <message>
         <source>The resampler wrote no audio (exit code %1). %2</source>
-        <translation>重采样器未输出音频（退出码%1）。%2</translation>
+        <translation>重采样器未输出音频（退出码 %1）。%2</translation>
     </message>
     <message>
         <source>The audio file does not read.</source>
@@ -1725,7 +1725,7 @@ Trust and run it?</source>
     </message>
     <message>
         <source>The language of the interface, and where UTAU is.</source>
-        <translation>界面语言与UTAU的位置。</translation>
+        <translation>界面语言与 UTAU 的位置。</translation>
     </message>
     <message>
         <source>&amp;Language:</source>
@@ -1737,11 +1737,11 @@ Trust and run it?</source>
     </message>
     <message>
         <source>&amp;UTAU folder:</source>
-        <translation>UTAU文件夹(&amp;U)：</translation>
+        <translation>UTAU 文件夹(&amp;U)：</translation>
     </message>
     <message>
         <source>Resolves the voice banks of projects that name them relative to UTAU, such as %VOICE%.</source>
-        <translation>工程以相对于UTAU的路径（如%VOICE%）指定音源时，据此解析音源的位置。</translation>
+        <translation>工程以相对于 UTAU 的路径（如 %VOICE%）指定音源时，据此解析音源的位置。</translation>
     </message>
 </context>
 <context>
@@ -1797,7 +1797,7 @@ Trust and run it?</source>
     </message>
     <message>
         <source>A color function must be rgb, hsv or hsl with three components, or rgba, hsva or hsla with four components.</source>
-        <translation>颜色函数必须是带三个分量的rgb、hsv或hsl，或带四个分量的rgba、hsva或hsla。</translation>
+        <translation>颜色函数必须是带三个分量的 rgb、hsv 或 hsl，或带四个分量的 rgba、hsva 或 hsla。</translation>
     </message>
     <message>
         <source>A color component must be a number or a percentage.</source>
@@ -1817,7 +1817,7 @@ Trust and run it?</source>
     </message>
     <message>
         <source>A boolean value (true or false) was expected.</source>
-        <translation>此处应为布尔值（true或false）。</translation>
+        <translation>此处应为布尔值（true 或 false）。</translation>
     </message>
     <message>
         <source>A string was expected.</source>
@@ -2062,7 +2062,7 @@ Lyrics:
     <message numerus="yes">
         <source>The voice bank &quot;%1&quot; does not state the encoding of %n folder(s). Choose the encoding in which their text reads correctly: it is set for the folders selected, all of them at first. Uncheck a folder to leave it out. The choices are recorded in the folders.</source>
         <translation>
-            <numerusform>音源「%1」中有%n个文件夹未声明编码。请选择能正确显示其文本的编码：所选编码将应用于勾选的文件夹，初始时全部勾选。取消勾选可跳过对应的文件夹。所选编码将记录在各文件夹中。</numerusform>
+            <numerusform>音源「%1」中有 %n 个文件夹未声明编码。请选择能正确显示其文本的编码：所选编码将应用于勾选的文件夹，初始时全部勾选。取消勾选可跳过对应的文件夹。所选编码将记录在各文件夹中。</numerusform>
         </translation>
     </message>
     <message>
@@ -2072,13 +2072,13 @@ Lyrics:
     <message numerus="yes">
         <source>(%n invalid)</source>
         <translation>
-            <numerusform>（%n处无效）</numerusform>
+            <numerusform>（%n 处无效）</numerusform>
         </translation>
     </message>
     <message numerus="yes">
         <source>%1 (%n invalid)</source>
         <translation>
-            <numerusform>%1（%n处无效）</numerusform>
+            <numerusform>%1（%n 处无效）</numerusform>
         </translation>
     </message>
 </context>
@@ -2086,7 +2086,7 @@ Lyrics:
     <name>hello::daw::VoiceBankEntryModel</name>
     <message>
         <source>The table has no row %1.</source>
-        <translation>表格中没有第%1行。</translation>
+        <translation>表格中没有第 %1 行。</translation>
     </message>
     <message>
         <source>The entry was changed meanwhile.</source>
@@ -2102,7 +2102,7 @@ Lyrics:
     </message>
     <message>
         <source>Another entry of this audio file has the same alias. UTAU uses only one of them, and an edit that adds such an alias is refused.</source>
-        <translation>此音频文件的另一条目具有相同的别名。UTAU只使用其中一个，因此添加此类别名的编辑将被拒绝。</translation>
+        <translation>此音频文件的另一条目具有相同的别名。UTAU 只使用其中一个，因此添加此类别名的编辑将被拒绝。</translation>
     </message>
     <message>
         <source>The audio file of this entry does not exist.</source>
@@ -2189,7 +2189,7 @@ Lyrics:
     </message>
     <message>
         <source>The voice bank has no prefix.map. Editing a cell creates it.</source>
-        <translation>音源没有prefix.map。编辑任一单元格将创建该文件。</translation>
+        <translation>音源没有 prefix.map。编辑任一单元格将创建该文件。</translation>
     </message>
     <message>
         <source>Note</source>
@@ -2232,7 +2232,7 @@ Lyrics:
     </message>
     <message>
         <source>Projects (*.usth *.ust);;HelloUtau projects (*.usth);;UTAU projects (*.ust);;All files (*)</source>
-        <translation>工程 (*.usth *.ust);;HelloUtau工程 (*.usth);;UTAU工程 (*.ust);;所有文件 (*)</translation>
+        <translation>工程 (*.usth *.ust);;HelloUtau 工程 (*.usth);;UTAU 工程 (*.ust);;所有文件 (*)</translation>
     </message>
     <message>
         <source>Search file names and aliases</source>
@@ -2309,7 +2309,7 @@ Read them again? What you did not save in them is replaced, and Undo brings it b
     <message numerus="yes">
         <source>%n alias(es) replaced.</source>
         <translation>
-            <numerusform>已替换%n个别名。</numerusform>
+            <numerusform>已替换 %n 个别名。</numerusform>
         </translation>
     </message>
     <message>
@@ -2318,11 +2318,11 @@ Read them again? What you did not save in them is replaced, and Undo brings it b
     </message>
     <message>
         <source>Read the files of %1 again in the encoding (the text changes, and Undo brings it back):</source>
-        <translation>以下列编码重新读取%1的文件（文本将改变，可通过撤销恢复）：</translation>
+        <translation>以下列编码重新读取 %1 的文件（文本将改变，可通过撤销恢复）：</translation>
     </message>
     <message>
         <source>Save the files of %1 in the encoding (the text stays the same):</source>
-        <translation>以下列编码保存%1的文件（文本保持不变）：</translation>
+        <translation>以下列编码保存 %1 的文件（文本保持不变）：</translation>
     </message>
     <message>
         <source>Read Again in Encoding</source>
@@ -2346,11 +2346,11 @@ Read them again? What you did not save in them is replaced, and Undo brings it b
     </message>
     <message>
         <source>%1 at %2 ms</source>
-        <translation>%1位于%2毫秒</translation>
+        <translation>%1 位于 %2 毫秒</translation>
     </message>
     <message>
         <source>%1 ms</source>
-        <translation>%1毫秒</translation>
+        <translation>%1 毫秒</translation>
     </message>
     <message>
         <source>&amp;Pitch:</source>
@@ -2394,7 +2394,7 @@ Read them again? What you did not save in them is replaced, and Undo brings it b
     </message>
     <message>
         <source>Save the changes to %1?</source>
-        <translation>是否保存对%1的修改？</translation>
+        <translation>是否保存对 %1 的修改？</translation>
     </message>
     <message>
         <source>Insert Entry</source>
@@ -2402,7 +2402,7 @@ Read them again? What you did not save in them is replaced, and Undo brings it b
     </message>
     <message>
         <source>Audio file of the folder %1:</source>
-        <translation>文件夹%1中的音频文件：</translation>
+        <translation>文件夹 %1 中的音频文件：</translation>
     </message>
     <message>
         <source>Duplicate Oto Entries</source>
@@ -2427,7 +2427,7 @@ Read them again? What you did not save in them is replaced, and Undo brings it b
     <message numerus="yes">
         <source>%n bytes after the last chunk</source>
         <translation>
-            <numerusform>最后一个数据块之后的%n字节</numerusform>
+            <numerusform>最后一个数据块之后的 %n 字节</numerusform>
         </translation>
     </message>
     <message>
@@ -2443,7 +2443,7 @@ Read them again? What you did not save in them is replaced, and Undo brings it b
 
 Write them again without these chunks? The audio stays the same. The files are written at once, and Undo does not bring the chunks back.</source>
         <translation>
-            <numerusform>%n个音频文件除格式与音频数据外还含有其他数据块，例如录音程序写入的标签。
+            <numerusform>%n 个音频文件除格式与音频数据外还含有其他数据块，例如录音程序写入的标签。
 
 是否去除这些数据块并重新写入？音频内容不变。文件会立即写入，撤销无法恢复这些数据块。</numerusform>
         </translation>
@@ -2451,7 +2451,7 @@ Write them again without these chunks? The audio stays the same. The files are w
     <message numerus="yes">
         <source>The metadata of %n audio files was removed.</source>
         <translation>
-            <numerusform>已移除%n个音频文件的元数据。</numerusform>
+            <numerusform>已移除 %n 个音频文件的元数据。</numerusform>
         </translation>
     </message>
     <message>
@@ -2475,7 +2475,7 @@ Write them again without these chunks? The audio stays the same. The files are w
     <name>hello::kit::AutomaticSelector</name>
     <message>
         <source>%1 was set to its default value, %2.</source>
-        <translation>%1已设为默认值%2。</translation>
+        <translation>%1 已设为默认值 %2。</translation>
     </message>
     <message>
         <source>The file contains nothing that can be imported.</source>
@@ -2483,7 +2483,7 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>The file contains %1 parts, and the first %2 were imported.</source>
-        <translation>该文件包含%1个部分，已导入前%2个。</translation>
+        <translation>该文件包含 %1 个部分，已导入前 %2 个。</translation>
     </message>
 </context>
 <context>
@@ -2532,7 +2532,7 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>The engine &quot;%1&quot; did not finish within %2 seconds and was stopped.</source>
-        <translation>引擎「%1」未在%2秒内完成，已被终止。</translation>
+        <translation>引擎「%1」未在 %2 秒内完成，已被终止。</translation>
     </message>
     <message>
         <source>The rendering script &quot;%1&quot; could not be started.</source>
@@ -2540,7 +2540,7 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>The rendering script did not finish within %1 seconds and was stopped.</source>
-        <translation>渲染脚本未在%1秒内完成，已被终止。</translation>
+        <translation>渲染脚本未在 %1 秒内完成，已被终止。</translation>
     </message>
 </context>
 <context>
@@ -2590,11 +2590,11 @@ Write them again without these chunks? The audio stays the same. The files are w
     <name>hello::kit::MidiReader</name>
     <message>
         <source>%1 notes had no note-off event and were extended to the end of the track.</source>
-        <translation>%1个音符没有note-off事件，已延长至音轨末尾。</translation>
+        <translation>%1 个音符没有 note-off 事件，已延长至音轨末尾。</translation>
     </message>
     <message>
         <source>Standard MIDI File</source>
-        <translation>标准MIDI文件</translation>
+        <translation>标准 MIDI 文件</translation>
     </message>
     <message>
         <source>Encoding</source>
@@ -2606,11 +2606,11 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>This is not a MIDI file.</source>
-        <translation>这不是MIDI文件。</translation>
+        <translation>这不是 MIDI 文件。</translation>
     </message>
     <message>
         <source>This MIDI file uses SMPTE time division, which cannot be converted into bars and beats.</source>
-        <translation>此MIDI文件使用SMPTE时基，无法换算为小节和拍。</translation>
+        <translation>此 MIDI 文件使用 SMPTE 时基，无法换算为小节和拍。</translation>
     </message>
     <message>
         <source>No track was selected.</source>
@@ -2618,7 +2618,7 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>This MIDI file does not specify a time division.</source>
-        <translation>此MIDI文件未指定时基。</translation>
+        <translation>此 MIDI 文件未指定时基。</translation>
     </message>
     <message>
         <source>A project contains one track, so only the first selected track was imported.</source>
@@ -2630,38 +2630,38 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>%1 notes started at the same time as another note and were omitted, because a track is monophonic.</source>
-        <translation>%1个音符与其他音符同时开始，已省略，因为音轨是单音的。</translation>
+        <translation>%1 个音符与其他音符同时开始，已省略，因为音轨是单音的。</translation>
     </message>
     <message>
         <source>%1 notes were shortened because the next note started before they ended.</source>
-        <translation>%1个音符因下一个音符在其结束前开始，已被缩短。</translation>
+        <translation>%1 个音符因下一个音符在其结束前开始，已被缩短。</translation>
     </message>
     <message>
         <source>%1 notes were too short and were omitted.</source>
-        <translation>%1个音符过短，已省略。</translation>
+        <translation>%1 个音符过短，已省略。</translation>
     </message>
     <message>
         <source>%1 notes were outside the keyboard range and were moved to the nearest end of the range.</source>
-        <translation>%1个音符超出键盘音域，已移至音域中最近的一端。</translation>
+        <translation>%1 个音符超出键盘音域，已移至音域中最近的一端。</translation>
     </message>
     <message>
         <source>%1 lyrics did not coincide with any note and were omitted.</source>
-        <translation>%1条歌词的位置与任何音符都不重合，已省略。</translation>
+        <translation>%1 条歌词的位置与任何音符都不重合，已省略。</translation>
     </message>
     <message>
         <source>%1 tempo changes did not coincide with a note and were moved to the next note.</source>
-        <translation>%1处曲速变化的位置与音符不重合，已移至下一个音符。</translation>
+        <translation>%1 处曲速变化的位置与音符不重合，已移至下一个音符。</translation>
     </message>
     <message>
         <source>%1 text items are not valid %2 and were omitted. This usually indicates that the selected encoding does not match the file.</source>
-        <translation>%1个文本项不是有效的%2，已省略。这通常表示所选编码与文件不符。</translation>
+        <translation>%1 个文本项不是有效的 %2，已省略。这通常表示所选编码与文件不符。</translation>
     </message>
 </context>
 <context>
     <name>hello::kit::MidiWriter</name>
     <message>
         <source>Standard MIDI File</source>
-        <translation>标准MIDI文件</translation>
+        <translation>标准 MIDI 文件</translation>
     </message>
     <message>
         <source>Encoding</source>
@@ -2669,7 +2669,7 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>A MIDI file is exported from exactly one track, but this project contains %1.</source>
-        <translation>MIDI文件只能从一条音轨导出，但此工程包含%1条。</translation>
+        <translation>MIDI 文件只能从一条音轨导出，但此工程包含 %1 条。</translation>
     </message>
     <message>
         <source>The selected encoding is not available.</source>
@@ -2677,15 +2677,15 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>A MIDI file contains only notes and lyrics. The envelope, vibrato, pitch curve, flags and per-note parameters were omitted.</source>
-        <translation>MIDI文件只包含音符与歌词。包络、颤音、音高曲线、Flags与逐音符参数已省略。</translation>
+        <translation>MIDI 文件只包含音符与歌词。包络、颤音、音高曲线、Flags 与逐音符参数已省略。</translation>
     </message>
     <message>
         <source>%1 lyrics cannot be represented in %2 and were written as question marks.</source>
-        <translation>%1条歌词无法用%2表示，已写为问号。</translation>
+        <translation>%1 条歌词无法用 %2 表示，已写为问号。</translation>
     </message>
     <message>
         <source>%1 notes were outside the MIDI note range and were moved to the nearest end of the range.</source>
-        <translation>%1个音符超出MIDI音域，已移至音域中最近的一端。</translation>
+        <translation>%1 个音符超出 MIDI 音域，已移至音域中最近的一端。</translation>
     </message>
     <message>
         <source>This file could not be written.</source>
@@ -2729,7 +2729,7 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>This version of HelloUtau supports one track per project, but this project contains %1.</source>
-        <translation>此版本的HelloUtau每个工程只支持一条音轨，但此工程包含%1条。</translation>
+        <translation>此版本的 HelloUtau 每个工程只支持一条音轨，但此工程包含 %1 条。</translation>
     </message>
     <message>
         <source>This file could not be written.</source>
@@ -2737,11 +2737,11 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>This file is not valid JSON: %1</source>
-        <translation>此文件不是有效的JSON：%1</translation>
+        <translation>此文件不是有效的 JSON：%1</translation>
     </message>
     <message>
         <source>This file is not a HelloUtau project.</source>
-        <translation>此文件不是HelloUtau工程。</translation>
+        <translation>此文件不是 HelloUtau 工程。</translation>
     </message>
     <message>
         <source>This project does not specify its format version.</source>
@@ -2749,7 +2749,7 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>This project was saved by a newer version of HelloUtau and cannot be opened by this version.</source>
-        <translation>此工程由更新版本的HelloUtau保存，此版本无法打开。</translation>
+        <translation>此工程由更新版本的 HelloUtau 保存，此版本无法打开。</translation>
     </message>
     <message>
         <source>This project contains no tracks.</source>
@@ -2757,7 +2757,7 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>This project contains %1 tracks, but this version of HelloUtau supports only one.</source>
-        <translation>此工程包含%1条音轨，但此版本的HelloUtau只支持一条。</translation>
+        <translation>此工程包含 %1 条音轨，但此版本的 HelloUtau 只支持一条。</translation>
     </message>
 </context>
 <context>
@@ -2772,11 +2772,11 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>The path %1 does not denote a note.</source>
-        <translation>路径%1指向的不是音符。</translation>
+        <translation>路径 %1 指向的不是音符。</translation>
     </message>
     <message>
         <source>The path %1 does not denote a list of notes.</source>
-        <translation>路径%1指向的不是音符列表。</translation>
+        <translation>路径 %1 指向的不是音符列表。</translation>
     </message>
     <message>
         <source>number of semitones</source>
@@ -2788,11 +2788,11 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>ticks</source>
-        <translation>tick数</translation>
+        <translation>tick 数</translation>
     </message>
     <message>
         <source>The track has %1 notes, not a note %2.</source>
-        <translation>音轨有%1个音符，没有索引为%2的音符。</translation>
+        <translation>音轨有 %1 个音符，没有索引为 %2 的音符。</translation>
     </message>
     <message>
         <source>The note must be an object.</source>
@@ -2820,7 +2820,7 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>The vibrato must be an object or null.</source>
-        <translation>颤音必须是对象或null。</translation>
+        <translation>颤音必须是对象或 null。</translation>
     </message>
     <message>
         <source>An envelope has four or five anchors.</source>
@@ -2828,7 +2828,7 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>The envelope must be an object or null.</source>
-        <translation>包络必须是对象或null。</translation>
+        <translation>包络必须是对象或 null。</translation>
     </message>
     <message>
         <source>portamento factor</source>
@@ -2840,7 +2840,7 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>%1 is not intensity, modulation or velocity.</source>
-        <translation>%1不是intensity、modulation或velocity。</translation>
+        <translation>%1 不是 intensity、modulation 或 velocity。</translation>
     </message>
     <message>
         <source>value</source>
@@ -2856,11 +2856,11 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>The Mode1 values must be an object or null.</source>
-        <translation>Mode1音高必须是对象或null。</translation>
+        <translation>Mode1 音高必须是对象或 null。</translation>
     </message>
     <message>
         <source>Mode2 is true or false.</source>
-        <translation>Mode2只能是true或false。</translation>
+        <translation>Mode2 只能是 true 或 false。</translation>
     </message>
     <message>
         <source>The properties must be an object.</source>
@@ -2868,27 +2868,27 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>%1 must be a string.</source>
-        <translation>%1必须是字符串。</translation>
+        <translation>%1 必须是字符串。</translation>
     </message>
     <message>
         <source>tempo must be a number.</source>
-        <translation>tempo必须是数字。</translation>
+        <translation>tempo 必须是数字。</translation>
     </message>
     <message>
         <source>%1 is not a property of the project.</source>
-        <translation>%1不是工程的属性。</translation>
+        <translation>%1 不是工程的属性。</translation>
     </message>
     <message>
         <source>%1 must be a number or null.</source>
-        <translation>%1必须是数字或null。</translation>
+        <translation>%1 必须是数字或 null。</translation>
     </message>
     <message>
         <source>length must be a whole number.</source>
-        <translation>length必须是整数。</translation>
+        <translation>length 必须是整数。</translation>
     </message>
     <message>
         <source>%1 is not a property of a note.</source>
-        <translation>%1不是音符的属性。</translation>
+        <translation>%1 不是音符的属性。</translation>
     </message>
     <message>
         <source>label</source>
@@ -2904,11 +2904,11 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>The command %1 requires a verb: %2.</source>
-        <translation>命令%1需要一个动词：%2。</translation>
+        <translation>命令 %1 需要一个动词：%2。</translation>
     </message>
     <message>
         <source>%1 %2 is not a command.</source>
-        <translation>%1 %2不是命令。</translation>
+        <translation>%1 %2 不是命令。</translation>
     </message>
     <message>
         <source>A query begins with its name.</source>
@@ -2923,11 +2923,11 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>This file is neither a HelloUtau project nor a UST.</source>
-        <translation>此文件既不是HelloUtau工程，也不是UST。</translation>
+        <translation>此文件既不是 HelloUtau 工程，也不是 UST。</translation>
     </message>
     <message>
         <source>The voice bank &quot;%1&quot; is in the UTAU folder, which is not set.</source>
-        <translation>音源「%1」位于UTAU文件夹中，但未设置UTAU文件夹。</translation>
+        <translation>音源「%1」位于 UTAU 文件夹中，但未设置 UTAU 文件夹。</translation>
     </message>
     <message>
         <source>The chosen encoding could not be recorded in &quot;%1&quot;, so it will be asked again next time.</source>
@@ -2942,7 +2942,7 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>A note of %1 ticks cannot be split after %2 ticks.</source>
-        <translation>长度为%1 tick的音符无法在%2 tick处拆分。</translation>
+        <translation>长度为 %1 tick 的音符无法在 %2 tick 处拆分。</translation>
     </message>
     <message>
         <source>Split Note</source>
@@ -2950,7 +2950,7 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>A track of %1 notes has no position %2 for a new note.</source>
-        <translation>包含%1个音符的音轨没有可插入新音符的位置%2。</translation>
+        <translation>包含 %1 个音符的音轨没有可插入新音符的位置 %2。</translation>
     </message>
     <message>
         <source>Insert Note</source>
@@ -2966,7 +2966,7 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>The track has %1 notes, not a note %2.</source>
-        <translation>音轨有%1个音符，没有索引为%2的音符。</translation>
+        <translation>音轨有 %1 个音符，没有索引为 %2 的音符。</translation>
     </message>
     <message>
         <source>Delete Notes</source>
@@ -2978,7 +2978,7 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>A track of %1 notes cannot move %2 notes from position %3 to %4.</source>
-        <translation>包含%1个音符的音轨无法将%2个音符从位置%3移动到%4。</translation>
+        <translation>包含 %1 个音符的音轨无法将 %2 个音符从位置 %3 移动到 %4。</translation>
     </message>
     <message>
         <source>Move Notes</source>
@@ -2998,7 +2998,7 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>The pitch cannot be scaled by a negative factor, %1 or %2.</source>
-        <translation>音高不能按负系数缩放（%1或%2）。</translation>
+        <translation>音高不能按负系数缩放（%1 或 %2）。</translation>
     </message>
     <message>
         <source>Scale Pitch</source>
@@ -3046,11 +3046,11 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>The track has %1 notes, not notes %2 to %3.</source>
-        <translation>音轨有%1个音符，没有索引为%2到%3的音符。</translation>
+        <translation>音轨有 %1 个音符，没有索引为 %2 到 %3 的音符。</translation>
     </message>
     <message>
         <source>Note %1 sets a tempo, which merging would lose, and the notes after it would move.</source>
-        <translation>音符%1设置了曲速，合并会丢失该曲速，且其后的音符会移动位置。</translation>
+        <translation>音符 %1 设置了曲速，合并会丢失该曲速，且其后的音符会移动位置。</translation>
     </message>
     <message>
         <source>Merge Notes</source>
@@ -3058,26 +3058,26 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>Turn Mode2 On</source>
-        <translation>开启Mode2</translation>
+        <translation>开启 Mode2</translation>
     </message>
     <message>
         <source>Turn Mode2 Off</source>
-        <translation>关闭Mode2</translation>
+        <translation>关闭 Mode2</translation>
     </message>
 </context>
 <context>
     <name>hello::kit::ProjectSession</name>
     <message>
         <source>A project contains exactly one track, not %1.</source>
-        <translation>工程必须恰好包含一条音轨，而不是%1条。</translation>
+        <translation>工程必须恰好包含一条音轨，而不是 %1 条。</translation>
     </message>
     <message>
         <source>The envelope anchor %1 is %2 ms before the preceding anchor.</source>
-        <translation>包络点%1比前一个包络点早%2毫秒。</translation>
+        <translation>包络点 %1 比前一个包络点早 %2 毫秒。</translation>
     </message>
     <message>
         <source>The portamento point %1 is %2 ms before the preceding point.</source>
-        <translation>音高控制点%1比前一个控制点早%2毫秒。</translation>
+        <translation>音高控制点 %1 比前一个控制点早 %2 毫秒。</translation>
     </message>
 </context>
 <context>
@@ -3095,7 +3095,7 @@ Write them again without these chunks? The audio stays the same. The files are w
     <name>hello::kit::SynthPlan</name>
     <message>
         <source>Rendering requires exactly one track, but this project contains %1.</source>
-        <translation>渲染需要恰好一条音轨，但此工程包含%1条。</translation>
+        <translation>渲染需要恰好一条音轨，但此工程包含 %1 条。</translation>
     </message>
     <message>
         <source>This track contains no notes.</source>
@@ -3153,7 +3153,7 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>This file is not valid in the %1 encoding.</source>
-        <translation>此文件不是有效的%1编码。</translation>
+        <translation>此文件不是有效的 %1 编码。</translation>
     </message>
     <message>
         <source>This file could not be written.</source>
@@ -3161,11 +3161,11 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>A UST contains exactly one track, but this project contains %1.</source>
-        <translation>UST只能包含一条音轨，但此工程包含%1条。</translation>
+        <translation>UST 只能包含一条音轨，但此工程包含 %1 条。</translation>
     </message>
     <message>
         <source>This UST specifies no rendering engine, so UTAU cannot render it until an engine is configured.</source>
-        <translation>此UST未指定渲染引擎，在配置引擎之前UTAU无法渲染该文件。</translation>
+        <translation>此 UST 未指定渲染引擎，在配置引擎之前 UTAU 无法渲染该文件。</translation>
     </message>
 </context>
 <context>
@@ -3191,7 +3191,7 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>The path %1 does not denote %2.</source>
-        <translation>路径%1指向的不是%2。</translation>
+        <translation>路径 %1 指向的不是 %2。</translation>
     </message>
     <message>
         <source>a folder</source>
@@ -3219,7 +3219,7 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>The prefix must be a %1.</source>
-        <translation>前缀必须是%1。</translation>
+        <translation>前缀必须是 %1。</translation>
     </message>
     <message>
         <source>A character must be an object.</source>
@@ -3239,11 +3239,11 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>The command %1 requires a verb.</source>
-        <translation>命令%1需要一个动词。</translation>
+        <translation>命令 %1 需要一个动词。</translation>
     </message>
     <message>
         <source>%1 %2 is not a command.</source>
-        <translation>%1 %2不是命令。</translation>
+        <translation>%1 %2 不是命令。</translation>
     </message>
     <message>
         <source>A query begins with its name.</source>
@@ -3262,11 +3262,11 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>This file is not valid JSON: %1</source>
-        <translation>此文件不是有效的JSON：%1</translation>
+        <translation>此文件不是有效的 JSON：%1</translation>
     </message>
     <message>
         <source>This file is not a HelloUtau voice bank configuration.</source>
-        <translation>此文件不是HelloUtau音源配置。</translation>
+        <translation>此文件不是 HelloUtau 音源配置。</translation>
     </message>
 </context>
 <context>
@@ -3293,7 +3293,7 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>The folder has %1 oto entries, not an entry %2.</source>
-        <translation>文件夹有%1个条目，没有索引为%2的条目。</translation>
+        <translation>文件夹有 %1 个条目，没有索引为 %2 的条目。</translation>
     </message>
     <message>
         <source>Remove Oto Entries</source>
@@ -3305,7 +3305,7 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>The prefix map has no key %1.</source>
-        <translation>前缀映射表中没有键%1。</translation>
+        <translation>前缀映射表中没有键 %1。</translation>
     </message>
     <message>
         <source>Remove Prefix</source>
@@ -3332,7 +3332,7 @@ Write them again without these chunks? The audio stays the same. The files are w
     <name>hello::kit::VoiceBankFields</name>
     <message>
         <source>An oto entry requires the field %1.</source>
-        <translation>条目必须包含字段%1。</translation>
+        <translation>条目必须包含字段 %1。</translation>
     </message>
 </context>
 <context>
@@ -3347,12 +3347,12 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>The oto.ini in &quot;%1&quot; declares the encoding UTF-8, so the directory is read in UTF-8 rather than in %2.</source>
-        <translation>「%1」中的oto.ini声明了UTF-8编码，因此该目录按UTF-8而非%2读取。</translation>
+        <translation>「%1」中的 oto.ini 声明了 UTF-8编码，因此该目录按 UTF-8而非 %2 读取。</translation>
     </message>
     <message numerus="yes">
         <source>%n byte sequence(s) in &quot;%1&quot; are not valid %2 and were read as U+FFFD. The file cannot be saved with changes while its text contains U+FFFD.</source>
         <translation>
-            <numerusform>「%1」中有%n个字节序列不是有效的%2，已读取为U+FFFD。文本含有U+FFFD时，修改后的文件无法保存。</numerusform>
+            <numerusform>「%1」中有 %n 个字节序列不是有效的 %2，已读取为 U+FFFD。文本含有 U+FFFD 时，修改后的文件无法保存。</numerusform>
         </translation>
     </message>
     <message>
@@ -3365,11 +3365,11 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>&quot;%1&quot; in &quot;%2&quot; contains U+FFFD, which stands for bytes that could not be read, and writing it would lose them.</source>
-        <translation>「%2」中的「%1」含有U+FFFD，它代表无法读取的字节，写入会丢失这些字节。</translation>
+        <translation>「%2」中的「%1」含有 U+FFFD，它代表无法读取的字节，写入会丢失这些字节。</translation>
     </message>
     <message>
         <source>&quot;%1&quot; in &quot;%2&quot; cannot be written in %3.</source>
-        <translation>「%2」中的「%1」无法以%3写入。</translation>
+        <translation>「%2」中的「%1」无法以 %3 写入。</translation>
     </message>
     <message>
         <source>Saving does not remove &quot;%1&quot;.</source>
@@ -3377,11 +3377,11 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>Part of &quot;%1&quot; is U+FFFD, which stands for bytes that could not be read, and writing it would lose them.</source>
-        <translation>「%1」中含有U+FFFD，它代表无法读取的字节，写入会丢失这些字节。</translation>
+        <translation>「%1」中含有 U+FFFD，它代表无法读取的字节，写入会丢失这些字节。</translation>
     </message>
     <message>
         <source>Part of &quot;%1&quot; cannot be represented in %2.</source>
-        <translation>「%1」中有部分内容无法用%2表示。</translation>
+        <translation>「%1」中有部分内容无法用 %2 表示。</translation>
     </message>
     <message>
         <source>This folder contains no samples.</source>
@@ -3393,7 +3393,7 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>The oto.ini in &quot;%1&quot; declares the encoding UTF-8, so the directory is read in UTF-8 only.</source>
-        <translation>「%1」中的oto.ini声明了UTF-8编码，因此该目录只按UTF-8读取。</translation>
+        <translation>「%1」中的 oto.ini 声明了 UTF-8编码，因此该目录只按 UTF-8读取。</translation>
     </message>
     <message>
         <source>&quot;%1&quot; does not belong to any directory of this voice bank.</source>
@@ -3409,7 +3409,7 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>The HelloUtau configuration &quot;%1&quot; cannot be written.</source>
-        <translation>无法写入HelloUtau配置「%1」。</translation>
+        <translation>无法写入 HelloUtau 配置「%1」。</translation>
     </message>
     <message>
         <source>&quot;%1&quot; has been modified since it was read, so it is not replaced. Reopen the voice bank to load its current contents.</source>
@@ -3452,7 +3452,7 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>Read Again in %1</source>
-        <translation>以%1重新读取</translation>
+        <translation>以 %1 重新读取</translation>
     </message>
     <message>
         <source>The folder of the voice bank was not read again, because no encoding was selected for a text file in it, so the voice bank on disk is incomplete. The contents read before are kept, and saving writes them back.</source>
@@ -3468,7 +3468,7 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>The prefix map has the key &quot;%1&quot;, which is not a note number from %2 to %3.</source>
-        <translation>前缀映射表含有键「%1」，它不是%2到%3之间的音阶。</translation>
+        <translation>前缀映射表含有键「%1」，它不是 %2 到 %3 之间的音阶。</translation>
     </message>
 </context>
 <context>
@@ -3479,7 +3479,7 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>The HelloUtau configuration in &quot;%1&quot; could not be read, so its encoding must be selected again.</source>
-        <translation>无法读取「%1」中的HelloUtau配置，因此需要重新选择其编码。</translation>
+        <translation>无法读取「%1」中的 HelloUtau 配置，因此需要重新选择其编码。</translation>
     </message>
     <message>
         <source>The contents of &quot;%1&quot; could not be listed, so the directory was left out.</source>
@@ -3502,7 +3502,7 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>This is not a WAVE file.</source>
-        <translation>这不是WAVE文件。</translation>
+        <translation>这不是 WAVE 文件。</translation>
     </message>
     <message>
         <source>The audio file ends before its audio data does, and is read up to its end.</source>
@@ -3510,30 +3510,30 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>The WAVE file has no format.</source>
-        <translation>WAVE文件没有格式信息。</translation>
+        <translation>WAVE 文件没有格式信息。</translation>
     </message>
     <message>
         <source>The WAVE file has no audio data.</source>
-        <translation>WAVE文件没有音频数据。</translation>
+        <translation>WAVE 文件没有音频数据。</translation>
     </message>
     <message>
         <source>The WAVE format %1 with %2 bits per sample is not supported.</source>
-        <translation>不支持每样本%2位的WAVE格式%1。</translation>
+        <translation>不支持每样本 %2 位的 WAVE 格式 %1。</translation>
     </message>
     <message>
         <source>The WAVE format is inconsistent.</source>
-        <translation>WAVE格式不一致。</translation>
+        <translation>WAVE 格式不一致。</translation>
     </message>
 </context>
 <context>
     <name>hello::kit::WaveMetadata</name>
     <message>
         <source>The file is no RIFF WAVE file.</source>
-        <translation>该文件不是RIFF WAVE文件。</translation>
+        <translation>该文件不是 RIFF WAVE 文件。</translation>
     </message>
     <message>
         <source>The file has no %1 chunk.</source>
-        <translation>该文件没有%1块。</translation>
+        <translation>该文件没有 %1 块。</translation>
     </message>
     <message>
         <source>&quot;%1&quot; could not be read.</source>
@@ -3548,42 +3548,42 @@ Write them again without these chunks? The audio stays the same. The files are w
     <name>hello::kit::edit::CommandSyntax</name>
     <message>
         <source>The verbatim string at position %1 is not closed.</source>
-        <translation>位置%1处的原样字符串未闭合。</translation>
+        <translation>位置 %1 处的原样字符串未闭合。</translation>
     </message>
     <message>
         <source>The string at position %1 is not a valid JSON string.</source>
-        <translation>位置%1处的字符串不是有效的JSON字符串。</translation>
+        <translation>位置 %1 处的字符串不是有效的 JSON 字符串。</translation>
     </message>
     <message>
         <source>The value at position %1 is not a valid JSON object or array.</source>
-        <translation>位置%1处的值不是有效的JSON对象或数组。</translation>
+        <translation>位置 %1 处的值不是有效的 JSON 对象或数组。</translation>
     </message>
     <message>
         <source>The word at position %1 contains a double quote. Quote the whole argument as a JSON string.</source>
-        <translation>位置%1处的单词包含双引号。应将整个参数写为JSON字符串。</translation>
+        <translation>位置 %1 处的单词包含双引号。应将整个参数写为 JSON 字符串。</translation>
     </message>
     <message>
         <source>The argument at position %1 is followed by text without whitespace.</source>
-        <translation>位置%1处的参数之后紧跟文本，中间没有空白。</translation>
+        <translation>位置 %1 处的参数之后紧跟文本，中间没有空白。</translation>
     </message>
 </context>
 <context>
     <name>hello::kit::edit::EditSession</name>
     <message>
         <source>The %1 %2 is %3.</source>
-        <translation>%1的值%2%3。</translation>
+        <translation>%1 的值 %2%3。</translation>
     </message>
     <message>
         <source>not greater than %1</source>
-        <translation>不大于%1</translation>
+        <translation>不大于 %1</translation>
     </message>
     <message>
         <source>less than %1</source>
-        <translation>小于%1</translation>
+        <translation>小于 %1</translation>
     </message>
     <message>
         <source>outside the range from %1 to %2</source>
-        <translation>超出%1到%2的范围</translation>
+        <translation>超出 %1 到 %2 的范围</translation>
     </message>
     <message>
         <source>The modification was not applied because one of its steps was cancelled.</source>
@@ -3594,7 +3594,7 @@ Write them again without these chunks? The audio stays the same. The files are w
     <name>hello::kit::edit::NodeCommands</name>
     <message>
         <source>The %1 is absent.</source>
-        <translation>%1不存在。</translation>
+        <translation>%1 不存在。</translation>
     </message>
     <message>
         <source>Usage: %1</source>
@@ -3626,47 +3626,47 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>The %1 must be a %2 or null.</source>
-        <translation>%1必须为%2或null。</translation>
+        <translation>%1 必须为 %2 或 null。</translation>
     </message>
     <message>
         <source>The %1 must be a %2.</source>
-        <translation>%1必须为%2。</translation>
+        <translation>%1 必须为 %2。</translation>
     </message>
     <message>
         <source>The member %1 of the %2 is not valid.</source>
-        <translation>%2的成员%1无效。</translation>
+        <translation>%2 的成员 %1 无效。</translation>
     </message>
     <message>
         <source>The member %1 of the %2 must be a %3.</source>
-        <translation>%2的成员%1必须为%3。</translation>
+        <translation>%2 的成员 %1 必须为 %3。</translation>
     </message>
     <message>
         <source>The %1 has no member %2.</source>
-        <translation>%1没有成员%2。</translation>
+        <translation>%1 没有成员 %2。</translation>
     </message>
     <message>
         <source>The %1 has no field %2.</source>
-        <translation>%1没有字段%2。</translation>
+        <translation>%1 没有字段 %2。</translation>
     </message>
     <message>
         <source>The %1 must be an object.</source>
-        <translation>%1必须为对象。</translation>
+        <translation>%1 必须为对象。</translation>
     </message>
     <message>
         <source>The %1 must be an array.</source>
-        <translation>%1必须为数组。</translation>
+        <translation>%1 必须为数组。</translation>
     </message>
     <message>
         <source>The items of the %1 must be objects.</source>
-        <translation>%1的项必须为对象。</translation>
+        <translation>%1 的项必须为对象。</translation>
     </message>
     <message>
         <source>The values of the %1 must be %2s.</source>
-        <translation>%1的值必须为%2。</translation>
+        <translation>%1 的值必须为 %2。</translation>
     </message>
     <message>
         <source>The elements of the %1 must be %2s.</source>
-        <translation>%1的元素必须为%2。</translation>
+        <translation>%1 的元素必须为 %2。</translation>
     </message>
     <message>
         <source>The count must be at least 1.</source>
@@ -3674,27 +3674,27 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>The %1 has %2 items, not an item %3 to %4.</source>
-        <translation>%1有%2项，不存在第%3至%4项。</translation>
+        <translation>%1 有 %2 项，不存在第 %3 至 %4 项。</translation>
     </message>
     <message>
         <source>The %1 has %2 items, therefore %3 is not a position.</source>
-        <translation>%1有%2项，因此%3不是有效的位置。</translation>
+        <translation>%1 有 %2 项，因此 %3 不是有效的位置。</translation>
     </message>
     <message>
         <source>A %1 is not set as a whole. Set its fields instead.</source>
-        <translation>%1不能整体设置，应改为设置其字段。</translation>
+        <translation>%1 不能整体设置，应改为设置其字段。</translation>
     </message>
     <message>
         <source>The %1 is empty. Set it as a whole.</source>
-        <translation>%1为空，须整体设置。</translation>
+        <translation>%1 为空，须整体设置。</translation>
     </message>
     <message>
         <source>The %1 is not set as a whole. Set its fields instead.</source>
-        <translation>%1不能整体设置，应改为设置其字段。</translation>
+        <translation>%1 不能整体设置，应改为设置其字段。</translation>
     </message>
     <message>
         <source>The %1 must be an object or null.</source>
-        <translation>%1必须为对象或null。</translation>
+        <translation>%1 必须为对象或 null。</translation>
     </message>
     <message>
         <source>key</source>
@@ -3702,11 +3702,11 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>The %1 is not set as a whole. Insert, remove or move its items.</source>
-        <translation>%1不能整体设置，应插入、删除或移动其中的项。</translation>
+        <translation>%1 不能整体设置，应插入、删除或移动其中的项。</translation>
     </message>
     <message>
         <source>Only a list or an array accepts insert.</source>
-        <translation>只有列表或数组支持insert。</translation>
+        <translation>只有列表或数组支持 insert。</translation>
     </message>
     <message>
         <source>index</source>
@@ -3714,11 +3714,11 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>The %1 has no entry %2.</source>
-        <translation>%1没有条目%2。</translation>
+        <translation>%1 没有条目 %2。</translation>
     </message>
     <message>
         <source>Only a list, an array or a mapping accepts remove.</source>
-        <translation>只有列表、数组或映射支持remove。</translation>
+        <translation>只有列表、数组或映射支持 remove。</translation>
     </message>
     <message>
         <source>count</source>
@@ -3726,7 +3726,7 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>Only a list accepts move.</source>
-        <translation>只有列表支持move。</translation>
+        <translation>只有列表支持 move。</translation>
     </message>
     <message>
         <source>destination</source>
@@ -3734,31 +3734,31 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>The %1 has %2 items, therefore %3 items cannot start at %4.</source>
-        <translation>%1有%2项，因此%3项无法从%4开始。</translation>
+        <translation>%1 有 %2 项，因此 %3 项无法从 %4 开始。</translation>
     </message>
     <message>
         <source>Only an array accepts replace.</source>
-        <translation>只有数组支持replace。</translation>
+        <translation>只有数组支持 replace。</translation>
     </message>
     <message>
         <source>The path %1 does not begin with a slash.</source>
-        <translation>路径%1不以斜杠开头。</translation>
+        <translation>路径 %1 不以斜杠开头。</translation>
     </message>
     <message>
         <source>The %1 is empty.</source>
-        <translation>%1为空。</translation>
+        <translation>%1 为空。</translation>
     </message>
     <message>
         <source>The %1 has %2 items, not an item %3.</source>
-        <translation>%1有%2项，不存在项%3。</translation>
+        <translation>%1 有 %2 项，不存在项 %3。</translation>
     </message>
     <message>
         <source>The path %1 continues after the %2, which has no fields. A key of a mapping is an argument of the command.</source>
-        <translation>路径%1在没有字段的%2之后仍有后续部分。映射的键是命令的参数。</translation>
+        <translation>路径 %1 在没有字段的 %2 之后仍有后续部分。映射的键是命令的参数。</translation>
     </message>
     <message>
         <source>The command %1 requires a path.</source>
-        <translation>命令%1需要路径。</translation>
+        <translation>命令 %1 需要路径。</translation>
     </message>
     <message>
         <source>path</source>
@@ -3766,35 +3766,35 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>The %1 is read-only.</source>
-        <translation>%1为只读。</translation>
+        <translation>%1 为只读。</translation>
     </message>
     <message>
         <source>%1 is a query, which reads the document and is not executed as a command.</source>
-        <translation>%1是查询，用于读取文档，不作为命令执行。</translation>
+        <translation>%1 是查询，用于读取文档，不作为命令执行。</translation>
     </message>
     <message>
         <source>%1 is not a command.</source>
-        <translation>%1不是命令。</translation>
+        <translation>%1 不是命令。</translation>
     </message>
     <message>
         <source>%1 is not a query.</source>
-        <translation>%1不是查询。</translation>
+        <translation>%1 不是查询。</translation>
     </message>
     <message>
         <source>The %1 must be an integer.</source>
-        <translation>%1必须为整数。</translation>
+        <translation>%1 必须为整数。</translation>
     </message>
     <message>
         <source>The %1 must be a number.</source>
-        <translation>%1必须为数值。</translation>
+        <translation>%1 必须为数值。</translation>
     </message>
     <message>
         <source>The %1 must be a string.</source>
-        <translation>%1必须为字符串。</translation>
+        <translation>%1 必须为字符串。</translation>
     </message>
     <message>
         <source>A %1 is not created from a value.</source>
-        <translation>%1不能由值创建。</translation>
+        <translation>%1 不能由值创建。</translation>
     </message>
 </context>
 </TS>
