@@ -1211,6 +1211,10 @@
         <translation>使用设置中的默认 %1。</translation>
     </message>
     <message>
+        <source>Using the Settings %1 as the project %2.</source>
+        <translation>将设置中的 %1 用作工程 %2。</translation>
+    </message>
+    <message>
         <source>Project %1 is trusted.</source>
         <translation>工程中的 %1 已信任。</translation>
     </message>

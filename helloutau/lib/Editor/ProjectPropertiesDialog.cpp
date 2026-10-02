@@ -136,11 +136,16 @@ namespace hello::daw {
                 return;
             }
             const auto utau = m_appSettings->utauDirectory();
-            const auto status = [this, &utau](QLineEdit *edit, const QString &role) {
+            const auto status = [this, &utau](QLineEdit *edit, const QString &role,
+                                              const QString &defaultPath, const QString &otherPath,
+                                              const QString &otherRole) {
                 QString text;
-                if (EngineTrust::samePath(edit->text(), m_appSettings->resampler(), utau) ||
-                    EngineTrust::samePath(edit->text(), m_appSettings->wavtool(), utau)) {
+                if (EngineTrust::samePath(edit->text(), defaultPath, utau)) {
                     text = tr("Using the default %1 from Settings.").arg(role);
+                    return qMakePair(text, false);
+                }
+                if (EngineTrust::samePath(edit->text(), otherPath, utau)) {
+                    text = tr("Using the Settings %1 as the project %2.").arg(otherRole, role);
                     return qMakePair(text, false);
                 }
                 if (EngineTrust::isTrusted(*m_appSettings, edit->text(), utau)) {
@@ -150,8 +155,10 @@ namespace hello::daw {
                 text = tr("Project %1 is untrusted.").arg(role);
                 return qMakePair(text, true);
             };
-            const auto wavtool = status(m_wavtool, tr("wavtool"));
-            const auto resampler = status(m_resampler, tr("resampler"));
+            const auto wavtool = status(m_wavtool, tr("wavtool"), m_appSettings->wavtool(),
+                                        m_appSettings->resampler(), tr("resampler"));
+            const auto resampler = status(m_resampler, tr("resampler"), m_appSettings->resampler(),
+                                          m_appSettings->wavtool(), tr("wavtool"));
             const auto line = [](const QPair<QString, bool> &value) {
                 return QStringLiteral("<span style=\"color:%1; font-weight:bold;\">%2</span>")
                     .arg(value.second ? QStringLiteral("#b00020") : QStringLiteral("#176b2c"),
