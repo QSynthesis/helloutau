@@ -9,8 +9,9 @@
 #include <QtGui/QAction>
 #include <QtTest/QTest>
 #include <QtWidgets/QApplication>
+#include <QtWidgets/QDialog>
 #include <QtWidgets/QDialogButtonBox>
-#include <QtWidgets/QListWidget>
+#include <QtWidgets/QTreeView>
 #include <QtWidgets/QMenu>
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QTreeView>
@@ -100,13 +101,27 @@ private Q_SLOTS:
         QTimer::singleShot(0, [] {
             const auto dialog = QApplication::activeModalWidget();
             QVERIFY(dialog);
-            const auto list = dialog->findChild<QListWidget *>(QStringLiteral("actions"));
-            for (int i = 0; i < list->count(); ++i) {
-                if (list->item(i)->data(Qt::UserRole).toString() ==
-                    QStringLiteral("helloutau.playback.renderTrack")) {
-                    list->setCurrentRow(i);
+            const auto tree = dialog->findChild<QTreeView *>(QStringLiteral("actions"));
+            QVERIFY(tree);
+            std::function<QModelIndex(const QModelIndex &)> find = [&](const QModelIndex &parent) {
+                for (int row = 0; row < tree->model()->rowCount(parent); ++row) {
+                    const auto index = tree->model()->index(row, 0, parent);
+                    if (index.data(Qt::UserRole).toString() ==
+                        QStringLiteral("helloutau.playback.renderTrack")) {
+                        return index;
+                    }
+                    if (const auto child = find(index); child.isValid()) {
+                        return child;
+                    }
                 }
+                return QModelIndex();
+            };
+            const auto item = find({});
+            if (!item.isValid()) {
+                qobject_cast<QDialog *>(dialog)->reject();
+                return;
             }
+            tree->setCurrentIndex(item);
             dialog->findChild<QDialogButtonBox *>()->button(QDialogButtonBox::Ok)->click();
         });
         button("add")->click();

@@ -1,11 +1,11 @@
 #include "MenusSettingPage.h"
 
 #include <QtCore/QIdentityProxyModel>
+#include <QtCore/QSortFilterProxyModel>
 #include <QtWidgets/QDialog>
 #include <QtWidgets/QDialogButtonBox>
 #include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QLineEdit>
-#include <QtWidgets/QListWidget>
 #include <QtWidgets/QMessageBox>
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QTabWidget>
@@ -13,6 +13,7 @@
 #include <QtWidgets/QVBoxLayout>
 
 #include <QAKCore/actionlayoutsmodel.h>
+#include <QAKCore/actioncatalogmodel.h>
 #include <QAKCore/actionregistry.h>
 
 namespace hello::daw {
@@ -131,6 +132,54 @@ namespace hello::daw {
     private:
         QAK::ActionRegistry *m_registry;
         Editor::WindowKind m_kind;
+    };
+
+    class CatalogNamesModel : public QAK::ActionCatalogModel {
+    public:
+        CatalogNamesModel(QAK::ActionRegistry *registry, QObject *parent)
+            : QAK::ActionCatalogModel(parent), m_registry(registry) {
+        }
+
+        QVariant data(const QModelIndex &index, int role) const override {
+            if (role == Qt::UserRole) {
+                return QAK::ActionCatalogModel::data(index, Qt::DisplayRole);
+            }
+            if (role != Qt::DisplayRole && role != Qt::DecorationRole) {
+                return QAK::ActionCatalogModel::data(index, role);
+            }
+            const auto id = QAK::ActionCatalogModel::data(index, Qt::DisplayRole).toString();
+            const auto info = m_registry->actionInfo(id);
+            if (role == Qt::DecorationRole) {
+                if (!info) {
+                    return {};
+                }
+                const auto icon = m_registry->actionIcon(QString(), id, info->icon());
+                return icon ? QVariant(icon->icon()) : QVariant();
+            }
+            return info ? info->shortText().withoutMnemonic() : id;
+        }
+
+    private:
+        QAK::ActionRegistry *m_registry;
+    };
+
+    class CatalogFilterModel : public QSortFilterProxyModel {
+    protected:
+        bool filterAcceptsRow(int row, const QModelIndex &parent) const override {
+            const auto source = sourceModel()->index(row, 0, parent);
+            if (!source.isValid()) {
+                return false;
+            }
+            if (filterRegularExpression().match(source.data().toString()).hasMatch()) {
+                return true;
+            }
+            for (int i = 0; i < sourceModel()->rowCount(source); ++i) {
+                if (filterAcceptsRow(i, source)) {
+                    return true;
+                }
+            }
+            return filterRegularExpression().pattern().isEmpty();
+        }
     };
 
     MenusSettingPage::MenusSettingPage(Editor *editor, QObject *parent)
@@ -298,45 +347,46 @@ namespace hello::daw {
         auto search = new QLineEdit();
         search->setPlaceholderText(tr("Search"));
         search->setClearButtonEnabled(true);
-        auto list = new QListWidget();
-        list->setObjectName(QStringLiteral("actions"));
-        for (const auto &id : actions->actionIds()) {
-            const auto info = actions->actionInfo(id);
-            if (!info || info->type() != QAK::ActionItemInfo::Action) {
-                continue;
-            }
-            const auto category = info->category().withoutMnemonic();
-            const auto text = info->text().withoutMnemonic();
-            auto item =
-                new QListWidgetItem(category.isEmpty() ? text : category + u": " + text, list);
-            item->setData(Qt::UserRole, id);
-            if (const auto icon = actions->actionIcon(QString(), id, info->icon())) {
-                item->setIcon(icon->icon());
-            }
-        }
-        list->sortItems();
-        list->setCurrentRow(0);
+        auto catalog = new CatalogNamesModel(actions, &dialog);
+        catalog->setCatalog(actions->catalog());
+        auto filter = new CatalogFilterModel;
+        filter->setSourceModel(catalog);
+        filter->setRecursiveFilteringEnabled(true);
+        filter->setFilterCaseSensitivity(Qt::CaseInsensitive);
+        filter->setFilterKeyColumn(0);
+        auto tree = new QTreeView();
+        tree->setObjectName(QStringLiteral("actions"));
+        tree->setModel(filter);
+        tree->setHeaderHidden(true);
+        tree->setEditTriggers(QAbstractItemView::NoEditTriggers);
+        tree->expandAll();
         auto buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
         auto layout = new QVBoxLayout(&dialog);
         layout->addWidget(search);
-        layout->addWidget(list);
+        layout->addWidget(tree);
         layout->addWidget(buttons);
-        connect(search, &QLineEdit::textChanged, &dialog, [list](const QString &text) {
-            for (int i = 0; i < list->count(); ++i) {
-                list->item(i)->setHidden(
-                    !list->item(i)->text().contains(text, Qt::CaseInsensitive));
-            }
+        connect(search, &QLineEdit::textChanged, &dialog, [filter, tree](const QString &text) {
+            filter->setFilterFixedString(text);
+            tree->expandAll();
         });
-        connect(list, &QListWidget::itemDoubleClicked, &dialog, &QDialog::accept);
-        connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+        const auto acceptAction = [&] {
+            const auto index = filter->mapToSource(tree->currentIndex());
+            const auto id = index.data(Qt::UserRole).toString();
+            const auto info = actions->actionInfo(id);
+            if (info && info->type() == QAK::ActionItemInfo::Action) {
+                dialog.accept();
+            }
+        };
+        connect(tree, &QTreeView::doubleClicked, &dialog, [acceptAction] { acceptAction(); });
+        connect(buttons, &QDialogButtonBox::accepted, &dialog, [acceptAction] { acceptAction(); });
         connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
-        if (dialog.exec() != QDialog::Accepted || !list->currentItem()) {
+        if (dialog.exec() != QDialog::Accepted) {
             return;
         }
-        const auto id = list->currentItem()->data(Qt::UserRole).toString();
+        const auto id = filter->mapToSource(tree->currentIndex()).data(Qt::UserRole).toString();
         if (!addEntry(Entry(id, Entry::Action))) {
-            QMessageBox::warning(m_tabs->window(), tr("Add Action"),
-                                 tr("%1 cannot be added here.").arg(list->currentItem()->text()));
+            QMessageBox::warning(m_tabs->window(), tr("Add Action"), tr("%1 cannot be added here.")
+                                                                  .arg(tree->currentIndex().data().toString()));
         }
     }
 
