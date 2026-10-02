@@ -3,6 +3,7 @@
 
 #include <algorithm>
 
+#include <QtCore/QDir>
 #include <QtCore/QStandardPaths>
 
 #include <stdcorelib/pimpl.h>
@@ -47,6 +48,18 @@ namespace hello::daw {
             return QString::fromStdU16String(path.u16string());
         }
 
+        QString recentTextOf(const std::filesystem::path &path) {
+            return QDir::toNativeSeparators(
+                QString::fromStdU16String(path.lexically_normal().u16string()));
+        }
+
+        QString normalizedPathText(const QString &text) {
+            if (text.isEmpty()) {
+                return {};
+            }
+            return recentTextOf(std::filesystem::path(text.toStdU16String()));
+        }
+
         QStringList stringsOf(const json::Value &value) {
             QStringList strings;
             for (const auto &item : value.toArray()) {
@@ -62,6 +75,17 @@ namespace hello::daw {
                 array.emplace_back(string.toStdString());
             }
             return json::Value(std::move(array));
+        }
+
+        QStringList recentTexts(const json::Value &value) {
+            QStringList result;
+            for (const auto &text : stringsOf(value)) {
+                const auto normalized = recentTextOf(std::filesystem::path(text.toStdU16String()));
+                if (!normalized.isEmpty() && !result.contains(normalized)) {
+                    result.push_back(normalized);
+                }
+            }
+            return result;
         }
 
     }
@@ -83,6 +107,25 @@ namespace hello::daw {
     }
 
     AppSettings::AppSettings(const QString &fileName) : _impl(std::make_unique<Impl>(fileName)) {
+        const auto normalizeRecent = [this](std::string_view key) {
+            const auto old = stringsOf(_impl->value(key));
+            const auto normalized = recentTexts(_impl->value(key));
+            if (old != normalized) {
+                _impl->setValue(key, arrayOf(normalized));
+            }
+        };
+        normalizeRecent(KeyRecentFiles);
+        normalizeRecent(KeyRecentVoiceBanks);
+        const auto normalizePath = [this](std::string_view key) {
+            const auto old = textOf(_impl->value(key).toString());
+            const auto normalized = normalizedPathText(old);
+            if (old != normalized) {
+                _impl->setValue(key, normalized.toStdString());
+            }
+        };
+        normalizePath(KeyUtauDirectory);
+        normalizePath(KeyResampler);
+        normalizePath(KeyWavtool);
     }
 
     AppSettings::~AppSettings() = default;
@@ -113,7 +156,7 @@ namespace hello::daw {
 
     void AppSettings::setUtauDirectory(const std::filesystem::path &directory) {
         stdc_impl_t;
-        impl.setValue(KeyUtauDirectory, textOf(directory).toStdString());
+        impl.setValue(KeyUtauDirectory, recentTextOf(directory).toStdString());
     }
 
     QString AppSettings::resampler() const {
@@ -123,7 +166,7 @@ namespace hello::daw {
 
     void AppSettings::setResampler(const QString &path) {
         stdc_impl_t;
-        impl.setValue(KeyResampler, path.toStdString());
+        impl.setValue(KeyResampler, normalizedPathText(path).toStdString());
     }
 
     QString AppSettings::wavtool() const {
@@ -133,7 +176,7 @@ namespace hello::daw {
 
     void AppSettings::setWavtool(const QString &path) {
         stdc_impl_t;
-        impl.setValue(KeyWavtool, path.toStdString());
+        impl.setValue(KeyWavtool, normalizedPathText(path).toStdString());
     }
 
     bool AppSettings::isRenderLogAccumulated() const {
@@ -295,7 +338,8 @@ namespace hello::daw {
     QList<std::filesystem::path> AppSettings::recentFiles() const {
         stdc_impl_t;
         QList<std::filesystem::path> paths;
-        for (const auto &text : stringsOf(impl.value(KeyRecentFiles))) {
+        auto texts = recentTexts(impl.value(KeyRecentFiles));
+        for (const auto &text : texts) {
             paths.push_back(std::filesystem::path(text.toStdU16String()));
         }
         return paths;
@@ -303,16 +347,17 @@ namespace hello::daw {
 
     void AppSettings::addRecentFile(const std::filesystem::path &path) {
         stdc_impl_t;
-        auto texts = stringsOf(impl.value(KeyRecentFiles));
-        texts.removeAll(textOf(path));
-        texts.prepend(textOf(path));
+        auto texts = recentTexts(impl.value(KeyRecentFiles));
+        const auto normalized = recentTextOf(path);
+        texts.removeAll(normalized);
+        texts.prepend(normalized);
         impl.setValue(KeyRecentFiles, arrayOf(texts.mid(0, recentFileCount)));
     }
 
     void AppSettings::removeRecentFile(const std::filesystem::path &path) {
         stdc_impl_t;
-        auto texts = stringsOf(impl.value(KeyRecentFiles));
-        texts.removeAll(textOf(path));
+        auto texts = recentTexts(impl.value(KeyRecentFiles));
+        texts.removeAll(recentTextOf(path));
         impl.setValue(KeyRecentFiles, arrayOf(texts));
     }
 
@@ -324,7 +369,8 @@ namespace hello::daw {
     QList<std::filesystem::path> AppSettings::recentVoiceBanks() const {
         stdc_impl_t;
         QList<std::filesystem::path> paths;
-        for (const auto &text : stringsOf(impl.value(KeyRecentVoiceBanks))) {
+        auto texts = recentTexts(impl.value(KeyRecentVoiceBanks));
+        for (const auto &text : texts) {
             paths.push_back(std::filesystem::path(text.toStdU16String()));
         }
         return paths;
@@ -332,16 +378,17 @@ namespace hello::daw {
 
     void AppSettings::addRecentVoiceBank(const std::filesystem::path &root) {
         stdc_impl_t;
-        auto texts = stringsOf(impl.value(KeyRecentVoiceBanks));
-        texts.removeAll(textOf(root));
-        texts.prepend(textOf(root));
+        auto texts = recentTexts(impl.value(KeyRecentVoiceBanks));
+        const auto normalized = recentTextOf(root);
+        texts.removeAll(normalized);
+        texts.prepend(normalized);
         impl.setValue(KeyRecentVoiceBanks, arrayOf(texts.mid(0, recentFileCount)));
     }
 
     void AppSettings::removeRecentVoiceBank(const std::filesystem::path &root) {
         stdc_impl_t;
-        auto texts = stringsOf(impl.value(KeyRecentVoiceBanks));
-        texts.removeAll(textOf(root));
+        auto texts = recentTexts(impl.value(KeyRecentVoiceBanks));
+        texts.removeAll(recentTextOf(root));
         impl.setValue(KeyRecentVoiceBanks, arrayOf(texts));
     }
 
@@ -361,6 +408,17 @@ namespace hello::daw {
 
     void AppSettings::setValue(const QString &key, const QJsonValue &value) {
         stdc_impl_t;
+        if (key == QLatin1String(KeyRecentFiles) ||
+            key == QLatin1String(KeyRecentVoiceBanks)) {
+            impl.setValue(key.toStdString(), arrayOf(recentTexts(SettingsJson::stdcOf(value))));
+            return;
+        }
+        if (key == QLatin1String(KeyUtauDirectory) || key == QLatin1String(KeyResampler) ||
+            key == QLatin1String(KeyWavtool)) {
+            impl.setValue(key.toStdString(),
+                         normalizedPathText(value.toString()).toStdString());
+            return;
+        }
         impl.setValue(key.toStdString(), SettingsJson::stdcOf(value));
     }
 

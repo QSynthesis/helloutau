@@ -237,8 +237,10 @@ private Q_SLOTS:
 
         const auto again = parsed(project.toJson());
         QVERIFY(again.has_value());
-        QCOMPARE(again->settings.wavtool, QStringLiteral("C:/evil/wavtool.exe"));
-        QCOMPARE(again->settings.resampler, QStringLiteral("C:/evil/resampler.exe"));
+        QCOMPARE(again->settings.wavtool,
+                 QDir::toNativeSeparators(QStringLiteral("C:/evil/wavtool.exe")));
+        QCOMPARE(again->settings.resampler,
+                 QDir::toNativeSeparators(QStringLiteral("C:/evil/resampler.exe")));
     }
 
     void the_mode1_pitch_curve_survives_a_round_trip() {

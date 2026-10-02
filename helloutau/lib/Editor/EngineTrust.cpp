@@ -1,7 +1,9 @@
 #include "EngineTrust_p.h"
 
 #include <QtCore/QCoreApplication>
+#include <QtCore/QCryptographicHash>
 #include <QtCore/QDir>
+#include <QtCore/QFile>
 #include <QtCore/QJsonArray>
 #include <QtCore/QJsonObject>
 #include <QtWidgets/QMessageBox>
@@ -18,6 +20,15 @@ namespace hello::daw::EngineTrust {
 
         QString textOf(const std::filesystem::path &path) {
             return QDir::toNativeSeparators(QString::fromStdU16String(path.u16string()));
+        }
+
+        QString sha256Of(const std::filesystem::path &path) {
+            QFile file(textOf(path));
+            QCryptographicHash hash(QCryptographicHash::Sha256);
+            if (!file.open(QIODevice::ReadOnly) || !hash.addData(&file)) {
+                return {};
+            }
+            return QString::fromLatin1(hash.result().toHex());
         }
 
         QJsonArray entries(const AppSettings &settings) {
@@ -59,10 +70,18 @@ namespace hello::daw::EngineTrust {
         }
         std::error_code error;
         const auto absolute = std::filesystem::weakly_canonical(path, error);
+        if (error || absolute.empty()) {
+            return false;
+        }
         const auto filePath = textOf(absolute);
+        const auto sha256 = sha256Of(absolute);
+        if (sha256.isEmpty()) {
+            return false;
+        }
         for (const auto &item : entries(settings)) {
             const auto object = item.toObject();
-            if (object.value(QStringLiteral("filePath")).toString() == filePath) {
+            if (object.value(QStringLiteral("filePath")).toString() == filePath &&
+                object.value(QStringLiteral("sha256")).toString() == sha256) {
                 return true;
             }
         }
@@ -76,15 +95,20 @@ namespace hello::daw::EngineTrust {
         if (error || absolute.empty() || !exists(value, utau)) {
             return;
         }
-        auto array = entries(settings);
         const auto filePath = textOf(absolute);
-        for (const auto &item : array) {
-            if (item.toObject().value(QStringLiteral("filePath")).toString() == filePath) {
-                return;
+        const auto sha256 = sha256Of(absolute);
+        if (sha256.isEmpty()) {
+            return;
+        }
+        auto array = entries(settings);
+        for (qsizetype i = array.size(); i-- > 0;) {
+            if (array.at(i).toObject().value(QStringLiteral("filePath")).toString() == filePath) {
+                array.removeAt(i);
             }
         }
         array.push_back(QJsonObject{
-            {QStringLiteral("filePath"), filePath}
+            {QStringLiteral("filePath"), filePath},
+            {QStringLiteral("sha256"), sha256}
         });
         settings.setValue(QLatin1String(Key), array);
     }

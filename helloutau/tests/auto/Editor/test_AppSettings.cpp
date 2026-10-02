@@ -2,6 +2,7 @@
 #include <QtCore/QJsonArray>
 #include <QtCore/QJsonDocument>
 #include <QtCore/QJsonObject>
+#include <QtCore/QDir>
 #include <QtCore/QRegularExpression>
 #include <QtCore/QTemporaryDir>
 #include <QtTest/QTest>
@@ -109,6 +110,16 @@ private Q_SLOTS:
         QVERIFY(settings.recentFiles().isEmpty());
     }
 
+    void existing_recent_file_duplicates_are_hidden() {
+        QTemporaryDir dir;
+        AppSettings settings(dir.filePath(QStringLiteral("settings.json")));
+        settings.setValue(QStringLiteral("files/recent"),
+                          QJsonArray{QStringLiteral("C:/songs/a.usth"),
+                                     QStringLiteral("C:/songs/a.usth")});
+        QCOMPARE(settings.recentFiles(),
+                 (QList<std::filesystem::path>{std::filesystem::path(u"C:/songs/a.usth")}));
+    }
+
     // The voice banks form a separate list, stored in the same manner as the files.
     void recent_voice_banks_are_kept_apart() {
         QTemporaryDir dir;
@@ -153,8 +164,8 @@ private Q_SLOTS:
         QVERIFY(!settings.areEnvelopesVisible());
         QVERIFY(settings.areParametersVisible());
         QCOMPARE(settings.utauDirectory(), utau);
-        QCOMPARE(settings.resampler(), QStringLiteral("C:/UTAU/resampler.exe"));
-        QCOMPARE(settings.wavtool(), QStringLiteral("C:/UTAU/wavtool.exe"));
+        QCOMPARE(settings.resampler(), QDir::toNativeSeparators(QStringLiteral("C:/UTAU/resampler.exe")));
+        QCOMPARE(settings.wavtool(), QDir::toNativeSeparators(QStringLiteral("C:/UTAU/wavtool.exe")));
         QCOMPARE(settings.ustExportCharset(), QStringLiteral("Shift_JIS"));
         QCOMPARE(settings.playbackMode(), AppSettings::Realtime);
     }
@@ -178,7 +189,7 @@ private Q_SLOTS:
         QCOMPARE(root.value(QStringLiteral("playback")).toObject().value(QStringLiteral("mode")),
                  QJsonValue(QStringLiteral("realtime")));
         QCOMPARE(root.value(QStringLiteral("files")).toObject().value(QStringLiteral("recent")),
-                 QJsonValue(QJsonArray({QStringLiteral("C:/a.usth")})));
+                 QJsonValue(QJsonArray{QDir::toNativeSeparators(QStringLiteral("C:/a.usth"))}));
 
         AppSettings settings(file);
         settings.clearRecentFiles();
