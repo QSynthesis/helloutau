@@ -214,9 +214,9 @@ namespace hello::daw {
     RenderingSettingPage::RenderingSettingPage(AppSettings &settings, QObject *parent)
         : SettingPage(QLatin1String(EditorSettingPageIds::rendering), parent),
           m_settings(settings) {
-        setTitle(tr("Rendering"));
-        setDescription(tr("The engines that render, and how playback renders."));
-        setKeywords({QStringLiteral("Rendering"), QStringLiteral("resampler"),
+        setTitle(tr("Audio Rendering"));
+        setDescription(tr("The engines used for audio rendering, and how playback renders audio."));
+        setKeywords({QStringLiteral("Audio Rendering"), QStringLiteral("resampler"),
                      QStringLiteral("wavtool"), QStringLiteral("playback")});
     }
 

@@ -71,7 +71,8 @@ namespace hello::daw {
         QPointer<QComboBox> m_output;
     };
 
-    /// The engines that render, the playback mode, and the number of rendering threads.
+    /// The engines used for audio rendering, the playback mode, and the number of rendering
+    /// threads.
     class RenderingSettingPage : public SettingPage {
         Q_OBJECT
     public:

@@ -1507,12 +1507,12 @@ Trust and run it?</source>
 <context>
     <name>hello::daw::RenderingSettingPage</name>
     <message>
-        <source>Rendering</source>
-        <translation>渲染</translation>
+        <source>Audio Rendering</source>
+        <translation>音频渲染</translation>
     </message>
     <message>
-        <source>The engines that render, and how playback renders.</source>
-        <translation>用于渲染的引擎，以及播放时的渲染方式。</translation>
+        <source>The engines used for audio rendering, and how playback renders audio.</source>
+        <translation>用于音频渲染的引擎，以及播放时的音频渲染方式。</translation>
     </message>
     <message>
         <source>&amp;Wavtool:</source>
