@@ -1255,8 +1255,8 @@ Trust and run it?</source>
         <translation>工程路径无效</translation>
     </message>
     <message>
-        <source>The voice folder, wavtool, and resampler must exist.</source>
-        <translation>音源文件夹、合成器与重采样器必须存在。</translation>
+        <source>The voice folder, wavtool, and resampler must be valid.</source>
+        <translation>音源文件夹、合成器与重采样器必须合法。</translation>
     </message>
 </context>
 <context>

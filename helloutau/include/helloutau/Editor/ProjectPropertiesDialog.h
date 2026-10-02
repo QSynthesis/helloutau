@@ -9,6 +9,7 @@
 #include <helloutau/Editor/HelloUtauEditorGlobal.h>
 
 class QCheckBox;
+class QComboBox;
 class QDoubleSpinBox;
 class QLabel;
 class QLineEdit;
@@ -48,6 +49,8 @@ namespace hello::daw {
         ProjectPropertiesDialog(const kit::Project &project, AppSettings *settings,
                                 QWidget *parent);
 
+        QString voiceDirText() const;
+
         kit::Project m_project;
         AppSettings *m_appSettings = nullptr;
         QLineEdit *m_name;
@@ -55,7 +58,7 @@ namespace hello::daw {
         bool m_tempoEdited = false;
         QLineEdit *m_flags;
         QLineEdit *m_outputFile;
-        QLineEdit *m_voiceDir;
+        QComboBox *m_voiceDir;
         QLineEdit *m_wavtool;
         QLineEdit *m_resampler;
         QLabel *m_engineWarning;

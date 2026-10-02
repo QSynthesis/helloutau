@@ -32,6 +32,8 @@ namespace hello::kit {
 
         /// The prefix of \c voiceDir that denotes the \c voice directory of the UTAU
         /// installation.
+        ///
+        /// TODO: Move UTAU-specific path expansion and serialization to a compatibility class.
         static constexpr QStringView voicePrefix = u"%VOICE%";
 
         /// Returns the voice bank directory that \c voiceDir denotes, resolved as UTAU resolves

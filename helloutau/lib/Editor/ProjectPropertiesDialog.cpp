@@ -5,6 +5,7 @@
 
 #include <QtCore/QDir>
 #include <QtWidgets/QCheckBox>
+#include <QtWidgets/QComboBox>
 #include <QtWidgets/QDialogButtonBox>
 #include <QtWidgets/QDoubleSpinBox>
 #include <QtWidgets/QFileDialog>
@@ -42,6 +43,21 @@ namespace hello::daw {
             return layout;
         }
 
+        QHBoxLayout *withBrowse(QComboBox *box, QWidget *parent,
+                                std::function<QString(const QString &)> browse) {
+            auto button = new QPushButton(ProjectPropertiesDialog::tr("Browse..."));
+            QObject::connect(button, &QPushButton::clicked, parent, [box, browse] {
+                const auto chosen = browse(box->currentText());
+                if (!chosen.isEmpty()) {
+                    box->setEditText(QDir::toNativeSeparators(chosen));
+                }
+            });
+            auto layout = new QHBoxLayout();
+            layout->addWidget(box, 1);
+            layout->addWidget(button);
+            return layout;
+        }
+
     }
 
     ProjectPropertiesDialog::ProjectPropertiesDialog(const kit::Project &project, QWidget *parent)
@@ -67,8 +83,23 @@ namespace hello::daw {
         connect(m_tempo, &QDoubleSpinBox::valueChanged, this, [this] { m_tempoEdited = true; });
         m_flags = new QLineEdit(settings.flags);
         m_outputFile = new QLineEdit(QDir::toNativeSeparators(settings.outputFile));
-        m_voiceDir = new QLineEdit(QDir::toNativeSeparators(
-            project.tracks.isEmpty() ? QString() : project.tracks.first().voiceDir));
+        m_voiceDir = new QComboBox();
+        m_voiceDir->setEditable(true);
+        m_voiceDir->setInsertPolicy(QComboBox::NoInsert);
+        const auto voiceValue = QDir::toNativeSeparators(
+            project.tracks.isEmpty() ? QString() : project.tracks.first().voiceDir);
+        m_voiceDir->setEditText(voiceValue);
+        if (m_appSettings) {
+            const auto voiceRoot = m_appSettings->utauDirectory() / u"voice";
+            const auto rootText = QString::fromStdU16String(voiceRoot.u16string());
+            const auto folders =
+                QDir(rootText).entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+            for (const auto &folder : folders) {
+                const auto relative = folder.fileName();
+                m_voiceDir->addItem(relative, QStringLiteral("%VOICE%") + relative);
+            }
+            m_voiceDir->setEditText(voiceValue);
+        }
         m_voiceDir->setEnabled(!project.tracks.isEmpty());
         m_wavtool = new QLineEdit(QDir::toNativeSeparators(settings.wavtool));
         m_resampler = new QLineEdit(QDir::toNativeSeparators(settings.resampler));
@@ -117,18 +148,20 @@ namespace hello::daw {
                 std::error_code error;
                 const auto path = EngineTrust::resolved(edit->text(), utau);
                 edit->setStyleSheet(!path.empty() && std::filesystem::is_regular_file(path, error)
-                                         ? QString()
-                                         : QStringLiteral("background: #ffd6d6;"));
+                                        ? QString()
+                                        : QStringLiteral("background: #ffd6d6;"));
             };
             markFile(m_wavtool);
             markFile(m_resampler);
             if (!m_project.tracks.isEmpty()) {
                 std::error_code error;
-                const auto root = m_project.tracks.first().voiceDirectory(utau);
-                m_voiceDir->setStyleSheet(
-                    !root.empty() && std::filesystem::is_directory(root, error)
-                        ? QString()
-                        : QStringLiteral("background: #ffd6d6;"));
+                auto track = m_project.tracks.first();
+                track.voiceDir = voiceDirText();
+                const auto root = track.voiceDirectory(utau);
+                m_voiceDir->setStyleSheet(!root.empty() &&
+                                                  std::filesystem::is_directory(root, error)
+                                              ? QString()
+                                              : QStringLiteral("background: #ffd6d6;"));
             }
         };
         const auto updateTrust = [this] {
@@ -167,7 +200,8 @@ namespace hello::daw {
             m_engineWarning->setText(line(wavtool) + QStringLiteral("<br>") + line(resampler));
             m_engineWarning->setTextFormat(Qt::RichText);
         };
-        connect(m_voiceDir, &QLineEdit::textChanged, this, updatePathValidity);
+        connect(m_voiceDir->lineEdit(), &QLineEdit::textChanged, this, updatePathValidity);
+        connect(m_voiceDir, &QComboBox::currentIndexChanged, this, updatePathValidity);
         connect(m_wavtool, &QLineEdit::textChanged, this, updatePathValidity);
         connect(m_resampler, &QLineEdit::textChanged, this, updatePathValidity);
         connect(m_wavtool, &QLineEdit::textChanged, this, updateTrust);
@@ -197,10 +231,10 @@ namespace hello::daw {
 
         auto buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
         connect(buttons, &QDialogButtonBox::accepted, this, [this] {
-            auto invalid = [](QLineEdit *edit) {
+            auto invalid = [](QWidget *edit) {
                 edit->setStyleSheet(QStringLiteral("background: #ffd6d6;"));
             };
-            auto valid = [](QLineEdit *edit) { edit->setStyleSheet(QString()); };
+            auto valid = [](QWidget *edit) { edit->setStyleSheet(QString()); };
             bool ok = true;
             if (m_appSettings) {
                 const auto utau = m_appSettings->utauDirectory();
@@ -231,8 +265,10 @@ namespace hello::daw {
                 };
                 ok = normalize(m_wavtool) && normalize(m_resampler);
                 if (!m_project.tracks.isEmpty()) {
+                    kit::Track track = m_project.tracks.first();
+                    track.voiceDir = voiceDirText();
                     std::error_code error;
-                    const auto root = m_project.tracks.first().voiceDirectory(utau);
+                    const auto root = track.voiceDirectory(utau);
                     if (root.empty() || !std::filesystem::is_directory(root, error)) {
                         invalid(m_voiceDir);
                         ok = false;
@@ -245,7 +281,7 @@ namespace hello::daw {
                 accept();
             } else {
                 QMessageBox::warning(this, tr("Invalid Project Path"),
-                                     tr("The voice folder, wavtool, and resampler must exist."));
+                                     tr("The voice folder, wavtool, and resampler must be valid."));
             }
         });
         connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
@@ -257,6 +293,15 @@ namespace hello::daw {
     }
 
     ProjectPropertiesDialog::~ProjectPropertiesDialog() = default;
+
+    QString ProjectPropertiesDialog::voiceDirText() const {
+        const auto *edit = m_voiceDir->lineEdit();
+        const int index = m_voiceDir->currentIndex();
+        if (index >= 0 && edit->text() == m_voiceDir->itemText(index)) {
+            return m_voiceDir->itemData(index).toString();
+        }
+        return edit->text();
+    }
 
     kit::ProjectPropertyChanges ProjectPropertiesDialog::changes() const {
         const auto &settings = m_project.settings;
@@ -275,7 +320,10 @@ namespace hello::daw {
         changes.flags = text(m_flags, settings.flags);
         changes.outputFile = pathText(m_outputFile, settings.outputFile);
         if (!m_project.tracks.isEmpty()) {
-            changes.voiceDir = pathText(m_voiceDir, m_project.tracks.first().voiceDir);
+            const auto voice = voiceDirText();
+            if (voice != m_project.tracks.first().voiceDir) {
+                changes.voiceDir = voice;
+            }
         }
         changes.wavtool = pathText(m_wavtool, settings.wavtool);
         changes.resampler = pathText(m_resampler, settings.resampler);
@@ -302,7 +350,7 @@ namespace hello::daw {
     }
 
     QLineEdit *ProjectPropertiesDialog::voiceDirEdit() const {
-        return m_voiceDir;
+        return m_voiceDir->lineEdit();
     }
 
     QLineEdit *ProjectPropertiesDialog::wavtoolEdit() const {
