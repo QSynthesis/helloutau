@@ -36,6 +36,10 @@ namespace hello::daw {
             painter.setPen(QPen(decl->envelopeColor(), 1.5));
             painter.setBrush(fill);
             painter.drawPolygon(outline);
+            if (!PianoRollState::isValidEnvelope(m_state->envelopeOf(i),
+                                                 m_state->fragmentOf(i).second)) {
+                continue;
+            }
             painter.setBrush(decl->whiteRowColor());
             // The anchors, without the ends of the fragment
             for (qsizetype k = 1; k + 1 < outline.size(); ++k) {
@@ -54,6 +58,10 @@ namespace hello::daw {
         const auto [begin, end] = visibleNotes(QRect(position.toPoint(), QSize(1, 1)));
         for (int i = begin; i < end; ++i) {
             if (m_state->timeline->note(i).rest) {
+                continue;
+            }
+            if (!PianoRollState::isValidEnvelope(m_state->envelopeOf(i),
+                                                 m_state->fragmentOf(i).second)) {
                 continue;
             }
             const auto outline = outlineOf(i);
@@ -88,6 +96,9 @@ namespace hello::daw {
                 continue;
             }
             auto envelope = m_state->envelopeOf(i);
+            if (!PianoRollState::isValidEnvelope(envelope, m_state->fragmentOf(i).second)) {
+                continue;
+            }
             if (envelope.hasMiddle) {
                 continue;
             }

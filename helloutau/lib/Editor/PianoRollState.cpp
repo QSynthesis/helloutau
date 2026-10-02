@@ -418,6 +418,19 @@ namespace hello::daw {
         return times;
     }
 
+    bool PianoRollState::isValidEnvelope(const kit::Envelope &envelope, double length) {
+        const auto times = anchorTimes(envelope, length);
+        if (times.isEmpty() || times.first() < 0 || times.last() > length) {
+            return false;
+        }
+        for (qsizetype i = 1; i < times.size(); ++i) {
+            if (times[i] < times[i - 1]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     QPointF PianoRollState::envelopePointOf(int index, double milliseconds, double volume) {
         const double start = fragmentOf(index).first;
         return {parameters->timeAxis().toX(timeline->tempoMap().tickOf(start + milliseconds)),

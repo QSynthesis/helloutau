@@ -24,6 +24,7 @@ namespace hello::daw {
             {"helloutau.view.showParameters",      "helloutau/showParameters.svg"   },
             {"helloutau.edit.crossfadeP2P3",       "helloutau/crossfadeP2P3.svg"    },
             {"helloutau.edit.crossfadeP1P4",       "helloutau/crossfadeP1P4.svg"    },
+            {"helloutau.edit.resetEnvelopes",      "helloutau/resetEnvelope.svg"     },
             {"helloutau.edit.find",                "intellij/search.svg"            },
             {"helloutau.playback.play",            "intellij/run.svg"               },
             {"helloutau.playback.pause",           "intellij/pause.svg"             },

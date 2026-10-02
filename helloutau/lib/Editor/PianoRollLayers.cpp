@@ -209,9 +209,24 @@ namespace hello::daw {
             painter.setPen(QPen(decl->envelopeColor(), 1));
             painter.setBrush(fill);
             painter.drawPolygon(outline);
+            const double intensityBaseline =
+                outline.first().y() - view()->keyAxis().pixelsPerKey - 2;
+            const QPointF intensityPosition(outline.first().x() + 2, intensityBaseline);
             painter.setPen(decl->envelopeColor());
-            painter.drawText(outline.first() + QPointF(2, -view()->keyAxis().pixelsPerKey - 2),
+            painter.drawText(intensityPosition,
                              QString::number(refs.at(i).intensity().value_or(100)));
+            if (!PianoRollState::isValidEnvelope(m_state->envelopeOf(i),
+                                                 m_state->fragmentOf(i).second)) {
+                const QFontMetrics metrics(decl->font());
+                const double height = metrics.height();
+                const double warningBottom = intensityBaseline - metrics.ascent() - 3;
+                const QRectF warning(outline.first().x() + 2,
+                                     warningBottom - height, 10, height);
+                painter.setPen(Qt::red);
+                painter.setBrush(decl->whiteRowColor());
+                painter.drawRect(warning);
+                painter.drawText(warning, Qt::AlignCenter, QStringLiteral("!"));
+            }
         }
     }
 

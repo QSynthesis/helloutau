@@ -103,7 +103,8 @@
                 shortcut="Ctrl+Shift+V" />
         <action id="helloutau.edit.resetPortamento" text="&amp;Pitch Points" category="Reset" />
         <action id="helloutau.edit.resetVibratos" text="&amp;Vibratos" category="Reset" />
-        <action id="helloutau.edit.resetEnvelopes" text="&amp;Envelopes" category="Reset" />
+        <action id="helloutau.edit.resetEnvelopes" text="Reset &amp;Envelopes"
+                shortText="&amp;Envelopes" category="Reset" />
         <action id="helloutau.edit.resetAll" text="&amp;All" category="Reset" />
         <action id="helloutau.edit.editLyric" text="Edit &amp;Lyric" category="Edit"
                 shortcut="F2" />
@@ -320,6 +321,7 @@
             <separator />
             <action id="helloutau.edit.crossfadeP2P3" />
             <action id="helloutau.edit.crossfadeP1P4" />
+            <action id="helloutau.edit.resetEnvelopes" />
             <separator />
             <action id="helloutau.select.quantization" />
             <action id="helloutau.project.tempo" />

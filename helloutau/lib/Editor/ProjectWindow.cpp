@@ -1684,6 +1684,8 @@ namespace hello::daw {
                   "helloutau.edit.editVibrato", "helloutau.edit.scalePitch",
                   "helloutau.edit.convertPitchToMode1", "helloutau.edit.crossfadeP2P3",
                   "helloutau.edit.crossfadeP1P4", "helloutau.edit.copy",
+                  "helloutau.edit.resetPortamento", "helloutau.edit.resetVibratos",
+                  "helloutau.edit.resetEnvelopes", "helloutau.edit.resetAll",
                   "helloutau.edit.transposeUp", "helloutau.edit.transposeDown",
                   "helloutau.edit.octaveUp", "helloutau.edit.octaveDown", "helloutau.edit.setTempo",
                   "helloutau.edit.noteProperties", "helloutau.edit.replaceLyrics"}) {

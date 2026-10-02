@@ -2,6 +2,7 @@
     <qresource prefix="/helloutau/icons">
         <file>helloutau/crossfadeP1P4.svg</file>
         <file>helloutau/crossfadeP2P3.svg</file>
+        <file>helloutau/resetEnvelope.svg</file>
         <file>helloutau/mode2.svg</file>
         <file>helloutau/pitchTool.svg</file>
         <file>helloutau/selectTool.svg</file>

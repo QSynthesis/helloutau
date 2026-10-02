@@ -403,6 +403,10 @@ namespace hello::daw {
         /// as the wavtool places them (WavtoolMixer::layOut)
         static QList<double> anchorTimes(const kit::Envelope &envelope, double length);
 
+        /// Whether every envelope anchor lies in the fragment and follows the preceding anchor.
+        /// Invalid envelopes can be loaded from UST files written by third-party plugins.
+        static bool isValidEnvelope(const kit::Envelope &envelope, double length);
+
         /// Where the parameter area draws the volume at milliseconds into the fragment of note
         /// index
         QPointF envelopePointOf(int index, double milliseconds, double volume);

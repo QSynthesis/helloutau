@@ -410,6 +410,10 @@
         <translation>颤音(&amp;V)</translation>
     </message>
     <message>
+        <source>Reset &amp;Envelopes</source>
+        <translation>重置包络(&amp;E)</translation>
+    </message>
+    <message>
         <source>&amp;Envelopes</source>
         <translation>包络(&amp;E)</translation>
     </message>

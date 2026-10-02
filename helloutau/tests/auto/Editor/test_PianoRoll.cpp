@@ -1881,6 +1881,27 @@ private Q_SLOTS:
         QCOMPARE(anchors[0].y, 100.0);
     }
 
+    // A third-party UTAU plugin can write anchors out of order.  Keep the data visible with a
+    // warning, but do not start a gesture that would immediately be rejected on release.
+    void an_invalid_envelope_is_not_editable() {
+        auto project = envelopedNote();
+        project.tracks[0].notes[1].envelope = kit::Envelope::fromTimeOrder({
+            {0,  0  },
+            {-10, 100},
+            {35, 100},
+            {0,  0  }
+        });
+        kit::ProjectSession session(project);
+        PianoRoll roll(&session);
+        showExactly(roll);
+        const auto viewport = roll.parameterView()->viewport();
+        QTest::mousePress(viewport, Qt::LeftButton, {}, envelopePoint(roll, 440, 100));
+        QTest::mouseMove(viewport, envelopePoint(roll, 460, 120));
+        QTest::mouseRelease(viewport, Qt::LeftButton, {}, envelopePoint(roll, 460, 120));
+        QVERIFY(!session.canUndo());
+        QCOMPARE(envelopeOfLa(session).anchorsInTimeOrder()[1].x, -10.0);
+    }
+
     // A double click on the envelope between the attack and the release inserts the middle
     // anchor, and one on an anchor removes it. Of four, the end of the attack at 5 ms gives way
     // to one halfway between the start and the start of the release at 140 ms.
