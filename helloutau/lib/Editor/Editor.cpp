@@ -1,11 +1,14 @@
 #include "Editor.h"
 
+#include <algorithm>
 #include <iterator>
 #include <memory>
 #include <utility>
 
 #include <QtCore/QDir>
 #include <QtCore/QPointer>
+#include <QtGui/QGuiApplication>
+#include <QtGui/QScreen>
 #include <QtWidgets/QMenu>
 #include <QtWidgets/QMessageBox>
 #include <QtWidgets/QPushButton>
@@ -62,6 +65,27 @@ namespace hello::daw {
             }
             std::error_code error;
             return std::filesystem::equivalent(a, b, error);
+        }
+
+        void placeNewWindow(QWidget *window, QWidget *previous) {
+            if (!previous) {
+                return;
+            }
+            constexpr int CascadeStep = 32;
+            const auto wanted = previous->frameGeometry().topLeft() + QPoint(CascadeStep, CascadeStep);
+            const auto screen = QGuiApplication::screenAt(wanted);
+            if (!screen) {
+                window->move(wanted);
+                return;
+            }
+            const auto available = screen->availableGeometry();
+            const int right = std::max(available.left(),
+                                       available.right() - window->frameGeometry().width() + 1);
+            const int bottom = std::max(available.top(),
+                                        available.bottom() - window->frameGeometry().height() + 1);
+            const int x = std::clamp(wanted.x(), available.left(), right);
+            const int y = std::clamp(wanted.y(), available.top(), bottom);
+            window->move(x, y);
         }
 
     }
@@ -255,10 +279,18 @@ namespace hello::daw {
         }
 
         ProjectWindow *createWindow(Editor *editor, std::unique_ptr<kit::ProjectDocument> document) {
+            ProjectWindow *previous = nullptr;
+            for (auto it = windows.crbegin(); it != windows.crend(); ++it) {
+                if (*it) {
+                    previous = *it;
+                    break;
+                }
+            }
             auto window = new ProjectWindow(editor, std::move(document));
             window->setAttribute(Qt::WA_DeleteOnClose);
             windows.removeAll(nullptr);
             windows.push_back(window);
+            placeNewWindow(window, previous);
             window->show();
             return window;
         }
@@ -419,6 +451,16 @@ namespace hello::daw {
         }
         impl.settings->addRecentVoiceBank(root);
 
+        QWidget *previous = nullptr;
+        for (auto it = impl.voiceBankWindows.crbegin(); it != impl.voiceBankWindows.crend(); ++it) {
+            if (*it) {
+                previous = *it;
+                break;
+            }
+        }
+        if (!previous) {
+            previous = from;
+        }
         auto window = new VoiceBankWindow(this, std::move(document));
         window->setAttribute(Qt::WA_DeleteOnClose);
         // The projects that sing the voice bank take it as saved (docs/Editing.md).
@@ -437,6 +479,7 @@ namespace hello::daw {
         });
         impl.voiceBankWindows.removeAll(nullptr);
         impl.voiceBankWindows.push_back(window);
+        placeNewWindow(window, previous);
         window->show();
         DiagnosticBox::show(window, title, diagnostics);
         return window;
