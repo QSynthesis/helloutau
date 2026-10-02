@@ -169,7 +169,9 @@ namespace hello::daw {
         const auto times = anchorTimes(m_original, m_length);
         const int last = int(times.size()) - 1;
         const int k = m_anchor;
-        double delta = std::round((timeAt(position) - timeAt(m_origin)) * 10) / 10;
+        double delta = modifiers & Qt::ShiftModifier
+                           ? 0
+                           : std::round((timeAt(position) - timeAt(m_origin)) * 10) / 10;
         delta = std::clamp(delta, (k > 0 ? times[k - 1] : 0) - times[k],
                            (k < last ? times[k + 1] : m_length) - times[k]);
 
@@ -234,7 +236,6 @@ namespace hello::daw {
         PianoRollState::EnvelopeLayer::press(const SceneHit &hit, QPointF position,
                                              Qt::MouseButton button,
                                              Qt::KeyboardModifiers modifiers) {
-        Q_UNUSED(modifiers);
         if (hit.part != PianoRoll::EnvelopePoint) {
             return nullptr;
         }

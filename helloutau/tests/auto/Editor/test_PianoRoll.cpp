@@ -1910,6 +1910,19 @@ private Q_SLOTS:
         QCOMPARE(anchors[2].x, 10.0);
         QCOMPARE(anchors[3].y, 0.0);
 
+        // Shift locks the anchor to its starting time, so only its volume changes.
+        anchors = edited([&](PianoRoll &roll) {
+            const auto viewport = roll.parameterView()->viewport();
+            const auto from = envelopePoint(roll, 455, 100);
+            const auto to = envelopePoint(roll, 475, 130);
+            QTest::mousePress(viewport, Qt::LeftButton, Qt::ShiftModifier, from);
+            QTest::mouseMove(viewport, (from + to) / 2);
+            QTest::mouseMove(viewport, to);
+            QTest::mouseRelease(viewport, Qt::LeftButton, Qt::ShiftModifier, to);
+        });
+        QCOMPARE(anchors[1].x, 5.0);
+        QVERIFY(qAbs(anchors[1].y - 130) <= 2);
+
         anchors = edited([&](PianoRoll &roll) {
             QTest::mouseClick(roll.parameterView()->viewport(), Qt::RightButton, {},
                               envelopePoint(roll, 450, 0));
