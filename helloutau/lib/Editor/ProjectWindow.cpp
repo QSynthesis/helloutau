@@ -1,4 +1,4 @@
-#include "ProjectWindow.h"
+﻿#include "ProjectWindow.h"
 
 #include <algorithm>
 #include <filesystem>
@@ -7,6 +7,7 @@
 #include <QtCore/QHash>
 #include <QtCore/QMetaObject>
 #include <QtCore/QMimeData>
+#include <QtCore/QRegularExpression>
 #include <QtCore/QSignalBlocker>
 #include <QtCore/QStandardPaths>
 #include <QtCore/QTimer>
@@ -57,6 +58,7 @@
 #include "DiagnosticBox_p.h"
 #include "Editor.h"
 #include "EngineTrust_p.h"
+#include "ReplaceLyricsDialog_p.h"
 #include "ExportUstDialog.h"
 #include "FindSupport_p.h"
 #include "PianoRoll.h"
@@ -333,6 +335,48 @@ namespace hello::daw {
             kit::DiagnosticList diagnostics;
             kit::ProjectEdits::setLabel(notes.at(index), label, diagnostics);
             DiagnosticBox::show(&decl, tr("Set Label"), diagnostics);
+        }
+
+        void replaceLyrics() {
+            stdc_decl_t;
+            const auto indices = roll->selectedIndices();
+            if (indices.isEmpty() || roll->lyricEditor()->isVisible()) {
+                return;
+            }
+            const auto notes = kit::ProjectRef(document->session()).tracks().at(0).notes();
+            QStringList initial;
+            for (const int index : indices) {
+                initial.push_back(notes.at(index).lyric());
+            }
+            ReplaceLyricsDialog dialog(&decl);
+            dialog.setLyrics(initial.join(u' '));
+            if (dialog.exec() != QDialog::Accepted) {
+                return;
+            }
+            QStringList lyrics;
+            if (dialog.splitCharacters()) {
+                for (const auto character : dialog.lyrics()) {
+                    if (!character.isSpace()) {
+                        lyrics.push_back(QString(character));
+                    }
+                }
+            } else {
+                lyrics = dialog.lyrics().split(QRegularExpression(QStringLiteral("\\s+")),
+                                               Qt::SkipEmptyParts);
+            }
+            if (lyrics.isEmpty()) {
+                return;
+            }
+            QList<std::pair<int, QString>> changes;
+            for (int i = 0; i < indices.size(); ++i) {
+                if (!dialog.repeat() && i >= lyrics.size()) {
+                    break;
+                }
+                changes.push_back({indices.at(i), lyrics.at(i % lyrics.size())});
+            }
+            if (!changes.isEmpty() && setLyrics(changes, tr("Replace Lyrics"))) {
+                roll->setSelectedIndices(indices);
+            }
         }
 
         // The name of the region of the notes from first to last, entered by the user; an empty
@@ -1047,6 +1091,7 @@ namespace hello::daw {
                     editTempo(selected.first());
                 }
             });
+            addCommand(QStringLiteral("helloutau.edit.replaceLyrics"), [this] { replaceLyrics(); });
             addCommand(QStringLiteral("helloutau.edit.noteProperties"),
                        [this] { editNoteProperties(); });
             addCommand(QStringLiteral("helloutau.edit.setLabel"), [this] {
@@ -1590,7 +1635,7 @@ namespace hello::daw {
                   "helloutau.edit.crossfadeP1P4", "helloutau.edit.copy",
                   "helloutau.edit.transposeUp", "helloutau.edit.transposeDown",
                   "helloutau.edit.octaveUp", "helloutau.edit.octaveDown", "helloutau.edit.setTempo",
-                  "helloutau.edit.noteProperties"}) {
+                  "helloutau.edit.noteProperties", "helloutau.edit.replaceLyrics"}) {
                 actions.value(QLatin1String(id))->setEnabled(selected > 0);
             }
             actions.value(QStringLiteral("helloutau.edit.splitNote"))->setEnabled(selected == 1);

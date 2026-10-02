@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+﻿<?xml version="1.0" encoding="UTF-8"?>
 <!-- The menus, the tool bar and the commands of the project window, registered with the action
      registry of the project windows. The commands that the voice bank window has as well are
      declared again in VoiceBankActions.xml, since each kind of window has a registry of its own
@@ -74,6 +74,8 @@
                 shortcut="Ctrl+U" />
         <!-- The tempo of the first selected note, from which it applies -->
         <action id="helloutau.edit.setTempo" text="Set Te&amp;mpo..." category="Edit" />
+        <action id="helloutau.edit.replaceLyrics" text="Replace &amp;Lyrics..." category="Edit"
+                shortcut="Ctrl+L" />
         <!-- The label of a note and the name of a region, as UTAU shows them on the timeline -->
         <action id="helloutau.edit.setLabel" text="Set La&amp;bel..." category="Edit" />
         <action id="helloutau.edit.nameRegion" text="Name Re&amp;gion..." category="Edit" />
@@ -193,6 +195,7 @@
         <menu id="helloutau.edit.transpose" text="&amp;Transpose" />
         <menu id="helloutau.edit.envelope" text="E&amp;nvelope" />
         <menu id="helloutau.edit.reset" text="Rese&amp;t" />
+        <menu id="helloutau.edit.timeline" text="&amp;Timeline" />
 
         <!-- The tool bar, which the window places -->
         <menu id="helloutau.mainToolBar" text="Main Toolbar" topLevel="true" />
@@ -234,11 +237,14 @@
                 <action id="helloutau.edit.splitNote" />
                 <action id="helloutau.edit.mergeNotes" />
                 <action id="helloutau.edit.editLyric" />
+                <action id="helloutau.edit.replaceLyrics" />
                 <action id="helloutau.edit.setTempo" />
-                <action id="helloutau.edit.setLabel" />
-                <action id="helloutau.edit.nameRegion" />
-                <action id="helloutau.edit.removeLabel" />
-                <action id="helloutau.edit.removeRegion" />
+                <menu id="helloutau.edit.timeline">
+                    <action id="helloutau.edit.setLabel" />
+                    <action id="helloutau.edit.nameRegion" />
+                    <action id="helloutau.edit.removeLabel" />
+                    <action id="helloutau.edit.removeRegion" />
+                </menu>
                 <action id="helloutau.edit.noteProperties" />
                 <separator />
                 <action id="helloutau.edit.mode2" />

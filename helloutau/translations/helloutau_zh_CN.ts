@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE TS>
 <TS version="2.1" language="zh_CN">
 <context>
@@ -326,6 +326,10 @@
         <translation>设置曲速(&amp;M)...</translation>
     </message>
     <message>
+        <source>Replace &amp;Lyrics...</source>
+        <translation>替换歌词(&amp;L)...</translation>
+    </message>
+    <message>
         <source>Set La&amp;bel...</source>
         <translation>设置标签(&amp;B)...</translation>
     </message>
@@ -524,6 +528,10 @@
     <message>
         <source>Rese&amp;t</source>
         <translation>重置(&amp;T)</translation>
+    </message>
+    <message>
+        <source>&amp;Timeline</source>
+        <translation>时间轴(&amp;T)</translation>
     </message>
     <message>
         <source>Main Toolbar</source>
@@ -1274,6 +1282,10 @@ Trust and run it?</source>
         <translation>名称(&amp;N)：</translation>
     </message>
     <message>
+        <source>Replace Lyrics</source>
+        <translation>替换歌词</translation>
+    </message>
+    <message>
         <source>Note Properties</source>
         <translation>音符属性</translation>
     </message>
@@ -1557,6 +1569,25 @@ Trust and run it?</source>
     <message>
         <source>The number of rendering threads is a positive whole number, or Automatic.</source>
         <translation>渲染线程数必须为正整数或「自动」。</translation>
+    </message>
+</context>
+<context>
+    <name>hello::daw::ReplaceLyricsDialog</name>
+    <message>
+        <source>Replace Lyrics</source>
+        <translation>替换歌词</translation>
+    </message>
+    <message>
+        <source>Lyrics (separated by spaces):</source>
+        <translation>歌词（用空格分隔）：</translation>
+    </message>
+    <message>
+        <source>Repeat to fill the selected notes</source>
+        <translation>循环填充所选音符</translation>
+    </message>
+    <message>
+        <source>Split by character</source>
+        <translation>按字符拆分</translation>
     </message>
 </context>
 <context>
