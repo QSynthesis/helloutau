@@ -191,6 +191,7 @@
             </menu>
             <menu id="helloutau.voiceBank.help">
                 <action id="helloutau.view.commandPalette" />
+                <separator />
                 <action id="helloutau.help.about" />
                 <action id="helloutau.help.aboutQt" />
             </menu>

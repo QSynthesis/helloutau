@@ -289,6 +289,7 @@
             </menu>
             <menu id="helloutau.help">
                 <action id="helloutau.view.commandPalette" />
+                <separator />
                 <action id="helloutau.help.about" />
                 <action id="helloutau.help.aboutQt" />
             </menu>
