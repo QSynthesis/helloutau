@@ -1839,7 +1839,7 @@ namespace hello::daw {
         impl.updateTitle();
         impl.updateUndoActions();
         editor->themeManager()->install(this, {QStringLiteral("VoiceBankWindow")});
-        resize(960, 640);
+        resize(1200, 800);
     }
 
     VoiceBankWindow::~VoiceBankWindow() {

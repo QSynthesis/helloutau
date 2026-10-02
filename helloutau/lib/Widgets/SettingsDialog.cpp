@@ -129,7 +129,7 @@ namespace hello::daw {
             m_tree->setCurrentItem(m_tree->topLevelItem(0));
         }
         updateModified();
-        resize(820, 560);
+        resize(1000, 680);
     }
 
     SettingsDialog::~SettingsDialog() {

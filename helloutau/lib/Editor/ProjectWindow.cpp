@@ -1915,7 +1915,7 @@ namespace hello::daw {
         // Files dropped on the window open, see dropEvent(). QMainWindow accepts drops already,
         // for its dock widgets, which the window does not rely on.
         setAcceptDrops(true);
-        resize(960, 640);
+        resize(1200, 800);
     }
 
     ProjectWindow::~ProjectWindow() {
