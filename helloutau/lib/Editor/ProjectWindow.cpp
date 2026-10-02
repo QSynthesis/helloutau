@@ -916,7 +916,16 @@ namespace hello::daw {
                         roll->setQuantization(box->currentData().toInt());
                     }
                 });
+                quantizationBoxes.removeAll(nullptr);
                 quantizationBoxes.push_back(box);
+                // The user may reorder toolbar items, so the tempo widget can be created before
+                // this one. Keep both controls at the same height regardless of that order.
+                const auto height = box->sizeHint().height();
+                for (const auto &tempo : std::as_const(tempoBoxes)) {
+                    if (tempo) {
+                        tempo->setFixedHeight(height);
+                    }
+                }
                 return box;
             });
             context->addWidgetFactory(
@@ -928,9 +937,11 @@ namespace hello::daw {
                     box->setDecimals(2);
                     box->setRange(10, 512);
                     box->setSuffix(tr(" BPM"));
-                    if (!quantizationBoxes.isEmpty()) {
-                        box->setFixedHeight(quantizationBoxes.first()->sizeHint().height());
-                    }
+                    quantizationBoxes.removeAll(nullptr);
+                    const auto height = quantizationBoxes.isEmpty()
+                                            ? box->sizeHint().height()
+                                            : quantizationBoxes.first()->sizeHint().height();
+                    box->setFixedHeight(height);
                     box->setValue(document ? kit::ProjectRef(document->session()).settings().tempo()
                                            : 120);
                     QObject::connect(

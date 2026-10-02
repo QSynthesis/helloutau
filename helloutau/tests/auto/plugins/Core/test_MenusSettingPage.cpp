@@ -138,6 +138,53 @@ private Q_SLOTS:
         QVERIFY(!menu.contains(QStringLiteral("Render &Track to WAV...")));
     }
 
+    // Reapplying an adjacent File menu reorder must remain safe when the settings page is opened
+    // again. This is the sequence that previously crashed in the settings dialog.
+    void adjacent_file_actions_can_be_reordered_twice() {
+        QTemporaryDir dir;
+        const auto settingsFile = dir.filePath(QStringLiteral("settings.json"));
+        const auto e = std::make_unique<Editor>(std::make_unique<AppSettings>(settingsFile));
+        e->setWatchesDisk(false);
+        e->newWindow();
+        const auto move = [](MenusSettingPage &page, const QString &entry, bool up) {
+            const auto tree = page.tree(Editor::ProjectWindowKind);
+            const auto model = tree->model();
+            QModelIndex file;
+            for (int row = 0; row < model->rowCount(model->index(0, 0)); ++row) {
+                const auto index = model->index(row, 0, model->index(0, 0));
+                if (index.data().toString() == QStringLiteral("File")) {
+                    file = index;
+                    break;
+                }
+            }
+            QVERIFY(file.isValid());
+            QModelIndex item;
+            for (int row = 0; row < model->rowCount(file); ++row) {
+                const auto index = model->index(row, 0, file);
+                if (index.data().toString() == entry) {
+                    item = index;
+                    break;
+                }
+            }
+            QVERIFY(item.isValid());
+            tree->setCurrentIndex(item);
+            page.widget()->findChild<QPushButton *>(up ? "moveUp" : "moveDown")->click();
+        };
+        QString error;
+        {
+            MenusSettingPage page(e.get());
+            QVERIFY(page.widget());
+            move(page, QStringLiteral("New"), false);
+            QVERIFY(page.apply(&error));
+        }
+        {
+            MenusSettingPage page(e.get());
+            QVERIFY(page.widget());
+            move(page, QStringLiteral("Open..."), true);
+            QVERIFY(page.apply(&error));
+        }
+    }
+
     // Each kind of window has a tab of its own, whose edits change the layouts of its registry
     // alone, and actionLayouts.json has a section for each kind.
     void each_kind_of_window_has_its_own_layouts() {
