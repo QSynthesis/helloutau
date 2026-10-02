@@ -148,7 +148,7 @@
         <!-- Filled by the window with the regions of the project, each of which it loads -->
         <action id="helloutau.view.loadRegion" text="&amp;Load Region" category="View"
                 external="true" />
-        <action id="helloutau.view.commandPalette" text="&amp;Command Palette..." category="View"
+        <action id="helloutau.view.commandPalette" text="&amp;Command Palette..." category="Help"
                 shortcuts="Ctrl+Shift+P;F1" />
 
         <!-- Plays, pauses what plays, or goes on from where it was paused -->
@@ -271,7 +271,6 @@
                 <separator />
                 <action id="helloutau.view.loadRegion" />
                 <separator />
-                <action id="helloutau.view.commandPalette" />
             </menu>
             <menu id="helloutau.playback">
                 <action id="helloutau.playback.play" />
@@ -289,6 +288,7 @@
                 <action id="helloutau.tools.settings" />
             </menu>
             <menu id="helloutau.help">
+                <action id="helloutau.view.commandPalette" />
                 <action id="helloutau.help.about" />
                 <action id="helloutau.help.aboutQt" />
             </menu>

@@ -51,7 +51,7 @@
                 shortcut="F3" />
         <action id="helloutau.edit.findPrevious" text="Find Pre&amp;vious" category="Edit"
                 shortcut="Shift+F3" />
-        <action id="helloutau.view.commandPalette" text="&amp;Command Palette..." category="View"
+        <action id="helloutau.view.commandPalette" text="&amp;Command Palette..." category="Help"
                 shortcuts="Ctrl+Shift+P;F1" />
         <action id="helloutau.playback.stop" text="&amp;Stop" category="Playback" shortcut="F7" />
         <action id="helloutau.tools.settings" text="&amp;Settings..." category="Tools" />
@@ -175,8 +175,6 @@
             <menu id="helloutau.voiceBank.view">
                 <action id="helloutau.voiceBank.showSpectrogram" />
                 <action id="helloutau.voiceBank.showInfo" />
-                <separator />
-                <action id="helloutau.view.commandPalette" />
             </menu>
             <menu id="helloutau.voiceBank.playback">
                 <action id="helloutau.voiceBank.playAudio" />
@@ -192,6 +190,7 @@
                 <action id="helloutau.tools.settings" />
             </menu>
             <menu id="helloutau.voiceBank.help">
+                <action id="helloutau.view.commandPalette" />
                 <action id="helloutau.help.about" />
                 <action id="helloutau.help.aboutQt" />
             </menu>
