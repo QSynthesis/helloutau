@@ -1151,6 +1151,32 @@ private Q_SLOTS:
         QCOMPARE(session->currentStep(), 1);
     }
 
+    void opening_a_project_with_a_missing_engine_opens_properties() {
+        const auto e = editor();
+        kit::Project project;
+        project.settings.resampler = QStringLiteral("missing-resampler.exe");
+        kit::Track track;
+        kit::Note note;
+        note.length = 480;
+        note.noteNum = 60;
+        track.notes.push_back(note);
+        project.tracks.push_back(track);
+        const auto path = pathIn(m_dir, "missing-engine.usth");
+        kit::DiagnosticList diagnostics;
+        QVERIFY(project.save(path, diagnostics));
+
+        QTimer::singleShot(0, [] {
+            const auto dialog =
+                qobject_cast<ProjectPropertiesDialog *>(QApplication::activeModalWidget());
+            QVERIFY(dialog);
+            QVERIFY(dialog->resamplerEdit()->styleSheet().contains(QStringLiteral("#ffd6d6")));
+            dialog->reject();
+        });
+        const auto window = e->openFile(path);
+        QVERIFY(window);
+        QCOMPARE(window->document()->sourcePath(), path);
+    }
+
     void the_edit_commands_follow_the_selection() {
         const auto e = editor();
         const auto window = e->openFile(savedProject(m_dir, "d.usth"));

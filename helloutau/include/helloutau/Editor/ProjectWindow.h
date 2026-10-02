@@ -62,6 +62,9 @@ namespace hello::daw {
         /// \return whether a voice bank was read
         bool loadVoiceBank();
 
+        /// Opens Project Properties when a configured voice folder or engine path is missing.
+        void showPropertiesIfPathsAreInvalid();
+
         /// Applies the playback mode and the engines of the settings after a change. Playback in
         /// the other mode stops. In the realtime mode, the track is rendered in the background.
         void applySettings();

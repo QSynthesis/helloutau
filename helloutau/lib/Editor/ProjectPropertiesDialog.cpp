@@ -107,6 +107,29 @@ namespace hello::daw {
             tr("Warning: project engines are untrusted. Playback does not render until the "
                "required project engines are trusted."));
         m_engineWarning->setWordWrap(true);
+        const auto updatePathValidity = [this] {
+            if (!m_appSettings) {
+                return;
+            }
+            const auto utau = m_appSettings->utauDirectory();
+            const auto markFile = [&utau](QLineEdit *edit) {
+                std::error_code error;
+                const auto path = EngineTrust::resolved(edit->text(), utau);
+                edit->setStyleSheet(!path.empty() && std::filesystem::is_regular_file(path, error)
+                                         ? QString()
+                                         : QStringLiteral("background: #ffd6d6;"));
+            };
+            markFile(m_wavtool);
+            markFile(m_resampler);
+            if (!m_project.tracks.isEmpty()) {
+                std::error_code error;
+                const auto root = m_project.tracks.first().voiceDirectory(utau);
+                m_voiceDir->setStyleSheet(
+                    !root.empty() && std::filesystem::is_directory(root, error)
+                        ? QString()
+                        : QStringLiteral("background: #ffd6d6;"));
+            }
+        };
         const auto updateTrust = [this] {
             if (!m_appSettings) {
                 return;
@@ -144,8 +167,12 @@ namespace hello::daw {
             m_engineWarning->setText(line(wavtool) + QStringLiteral("<br>") + line(resampler));
             m_engineWarning->setTextFormat(Qt::RichText);
         };
+        connect(m_voiceDir, &QLineEdit::textChanged, this, updatePathValidity);
+        connect(m_wavtool, &QLineEdit::textChanged, this, updatePathValidity);
+        connect(m_resampler, &QLineEdit::textChanged, this, updatePathValidity);
         connect(m_wavtool, &QLineEdit::textChanged, this, updateTrust);
         connect(m_resampler, &QLineEdit::textChanged, this, updateTrust);
+        updatePathValidity();
         updateTrust();
         connect(trust, &QPushButton::clicked, this, [this, updateTrust] {
             if (!m_appSettings) {

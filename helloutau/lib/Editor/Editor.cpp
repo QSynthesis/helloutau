@@ -360,6 +360,10 @@ namespace hello::daw {
             }
         }
 
+        if (from && !from->maybeSave()) {
+            return nullptr;
+        }
+
         UstCharsetDialog selector(from);
         kit::DiagnosticList diagnostics;
         auto document = kit::ProjectDocument::open(path, &selector, diagnostics);
@@ -371,9 +375,6 @@ namespace hello::daw {
         }
         ProjectWindow *window = from;
         if (window) {
-            if (!window->maybeSave()) {
-                return nullptr;
-            }
             window->setDocument(std::move(document));
         } else {
             window = impl.createWindow(this, std::move(document));
@@ -383,6 +384,7 @@ namespace hello::daw {
         // the voice bank is read, which may ask more.
         DiagnosticBox::show(window, title, diagnostics);
         window->loadVoiceBank();
+        window->showPropertiesIfPathsAreInvalid();
         return window;
     }
 

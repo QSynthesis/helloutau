@@ -1,6 +1,7 @@
 #include "ProjectWindow.h"
 
 #include <algorithm>
+#include <filesystem>
 
 #include <QtCore/QDir>
 #include <QtCore/QHash>
@@ -413,6 +414,29 @@ namespace hello::daw {
             kit::Track track;
             track.voiceDir = tracks.at(0).voiceDir();
             return track.voiceDirectory(editor->settings().utauDirectory());
+        }
+
+        bool projectPathsValid() const {
+            const auto project = document->session()->snapshot();
+            const auto utau = editor->settings().utauDirectory();
+            const auto exists = [&utau](const QString &value) {
+                if (value.isEmpty()) {
+                    return true;
+                }
+                std::error_code error;
+                return std::filesystem::is_regular_file(EngineTrust::resolved(value, utau), error);
+            };
+            if (!exists(project.settings.wavtool) || !exists(project.settings.resampler)) {
+                return false;
+            }
+            if (!project.tracks.isEmpty() && !project.tracks.first().voiceDir.isEmpty()) {
+                const auto root = project.tracks.first().voiceDirectory(utau);
+                std::error_code error;
+                if (root.empty() || !std::filesystem::is_directory(root, error)) {
+                    return false;
+                }
+            }
+            return true;
         }
 
         // Deletes the render cache of the project; the realtime mode renders it anew.
@@ -1852,6 +1876,9 @@ namespace hello::daw {
 
     bool ProjectWindow::loadVoiceBank() {
         stdc_impl_t;
+        if (!impl.projectPathsValid()) {
+            return false;
+        }
         const auto document = impl.document.get();
         const auto utau = impl.editor->settings().utauDirectory();
         impl.voiceBankRoot = impl.voiceRoot();
@@ -1861,6 +1888,13 @@ namespace hello::daw {
         const bool loaded = document->loadVoiceBank(utau, &selector, diagnostics);
         DiagnosticBox::show(this, tr("Voice Bank"), diagnostics);
         return loaded;
+    }
+
+    void ProjectWindow::showPropertiesIfPathsAreInvalid() {
+        stdc_impl_t;
+        if (!impl.projectPathsValid()) {
+            impl.editProperties();
+        }
     }
 
     bool ProjectWindow::save() {
