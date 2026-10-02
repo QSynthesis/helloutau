@@ -215,7 +215,10 @@ namespace hello::daw {
 
     PianoRollState::BandGesture::BandGesture(PianoRollState *state, QPointF position,
                                              Qt::KeyboardModifiers modifiers)
-        : m_state(state), m_origin(position), m_previous(state->selection),
+        : m_state(state),
+          m_origin(state->view->timeAxis().toTick(position.x()),
+                   state->view->keyAxis().toKey(position.y())),
+          m_previous(state->selection),
           m_previousPoints(state->selectedPoints) {
         if (modifiers & Qt::ControlModifier) {
             m_base = state->selection;
@@ -227,7 +230,9 @@ namespace hello::daw {
 
     void PianoRollState::BandGesture::move(QPointF position, Qt::KeyboardModifiers modifiers) {
         Q_UNUSED(modifiers);
-        const auto rect = QRectF(m_origin, position).normalized();
+        const auto origin = QPointF(m_state->view->timeAxis().toX(m_origin.x()),
+                                    m_state->view->keyAxis().toY(m_origin.y()));
+        const auto rect = QRectF(origin, position).normalized();
         const auto timeline = m_state->timeline;
         const auto &time = m_state->view->timeAxis();
         const auto [begin, end] =
@@ -285,7 +290,8 @@ namespace hello::daw {
 
     PianoRollState::SpanGesture::SpanGesture(PianoRollState *state, QPointF position,
                                              Qt::KeyboardModifiers modifiers)
-        : m_state(state), m_origin(position.x()), m_previous(state->selection),
+        : m_state(state), m_origin(state->view->timeAxis().toTick(position.x())),
+          m_previous(state->selection),
           m_previousPoints(state->selectedPoints) {
         if (modifiers & Qt::ControlModifier) {
             m_base = state->selection;
@@ -296,9 +302,10 @@ namespace hello::daw {
 
     void PianoRollState::SpanGesture::move(QPointF position, Qt::KeyboardModifiers modifiers) {
         Q_UNUSED(modifiers);
-        const double left = std::min(m_origin, position.x());
-        const double right = std::max(m_origin, position.x());
         const auto &time = m_state->view->timeAxis();
+        const double origin = time.toX(m_origin);
+        const double left = std::min(origin, position.x());
+        const double right = std::max(origin, position.x());
         const auto timeline = m_state->timeline;
         const auto [begin, end] = timeline->notesBetween(time.toTick(left), time.toTick(right));
         auto ids = m_base;

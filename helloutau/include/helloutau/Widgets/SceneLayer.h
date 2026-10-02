@@ -58,6 +58,9 @@ namespace hello::daw {
 
         /// The interaction was abandoned, on Escape or when the view lost the pointer.
         virtual void cancel() = 0;
+
+        /// Whether the view should scroll horizontally while the pointer is near an edge.
+        virtual bool wantsAutoScroll() const { return false; }
     };
 
     /// One layer of a scene view, which draws the part of the scene that is visible and reports

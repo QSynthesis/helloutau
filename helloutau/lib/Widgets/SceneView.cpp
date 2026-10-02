@@ -28,6 +28,15 @@ namespace hello::daw {
         viewport()->setMouseTracking(true);
         setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
         setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
+        m_autoScrollTimer.setInterval(16);
+        connect(&m_autoScrollTimer, &QTimer::timeout, this, &SceneView::autoScroll);
+        const auto updateGesture = [this] {
+            if (m_gesture && m_gesture->wantsAutoScroll()) {
+                m_gesture->move(m_pointerPosition, m_pointerModifiers);
+            }
+        };
+        connect(this, &SceneView::timeAxisChanged, this, updateGesture);
+        connect(this, &SceneView::keyAxisChanged, this, updateGesture);
         updateScrollBars();
     }
 
@@ -175,6 +184,8 @@ namespace hello::daw {
         const auto delta = event->angleDelta();
         const auto modifiers = event->modifiers();
         const auto position = event->position();
+        m_pointerPosition = position;
+        m_pointerModifiers = modifiers;
         const double notches = (delta.y() != 0 ? delta.y() : delta.x()) / NotchAngle;
 
         if (modifiers & Qt::ControlModifier) {
@@ -201,15 +212,23 @@ namespace hello::daw {
         setFocus(Qt::MouseFocusReason);
         cancelGesture();
         const auto position = event->position();
+        m_pointerPosition = position;
+        m_pointerModifiers = event->modifiers();
         if (const auto hit = hitAt(position)) {
             m_gesture = m_layers[size_t(hit->layer)]->press(*hit, position, event->button(),
                                                             event->modifiers());
+        }
+        if (m_gesture && m_gesture->wantsAutoScroll()) {
+            m_autoScrollTimer.start();
         }
         event->accept();
     }
 
     void SceneView::mouseMoveEvent(QMouseEvent *event) {
+        m_pointerPosition = event->position();
+        m_pointerModifiers = event->modifiers();
         if (m_gesture) {
+            autoScroll();
             m_gesture->move(event->position(), event->modifiers());
         } else {
             updateHover(event->position());
@@ -219,6 +238,7 @@ namespace hello::daw {
 
     void SceneView::mouseReleaseEvent(QMouseEvent *event) {
         if (m_gesture) {
+            m_autoScrollTimer.stop();
             // Released before release() runs, which may change what the view shows.
             auto gesture = std::move(m_gesture);
             gesture->release(event->position(), event->modifiers());
@@ -314,8 +334,34 @@ namespace hello::daw {
 
     void SceneView::cancelGesture() {
         if (m_gesture) {
+            m_autoScrollTimer.stop();
             auto gesture = std::move(m_gesture);
             gesture->cancel();
+        }
+    }
+
+    void SceneView::autoScroll() {
+        if (!m_gesture || !m_gesture->wantsAutoScroll()) {
+            m_autoScrollTimer.stop();
+            return;
+        }
+        constexpr double edge = 32;
+        constexpr double maximum = 12;
+        const auto speed = [](double position, double extent) {
+            if (position < edge) {
+                const double amount = (edge - position) / edge;
+                return -std::lround(amount * amount * maximum);
+            }
+            if (position > extent - edge) {
+                const double amount = (position - (extent - edge)) / edge;
+                return std::lround(amount * amount * maximum);
+            }
+            return 0L;
+        };
+        const int delta = int(speed(m_pointerPosition.x(), viewport()->width()));
+        if (delta != 0) {
+            horizontalScrollBar()->setValue(horizontalScrollBar()->value() + delta);
+            m_gesture->move(m_pointerPosition, m_pointerModifiers);
         }
     }
 

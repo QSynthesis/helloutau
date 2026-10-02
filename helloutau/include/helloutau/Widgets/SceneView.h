@@ -5,6 +5,8 @@
 #include <optional>
 #include <vector>
 
+#include <QtCore/QPointF>
+#include <QtCore/QTimer>
 #include <QtWidgets/QAbstractScrollArea>
 
 #include <helloutau/Widgets/HelloUtauWidgetsGlobal.h>
@@ -103,11 +105,15 @@ namespace hello::daw {
         std::optional<SceneHit> m_hovered;
         std::unique_ptr<SceneGesture> m_gesture;
         bool m_updatingScrollBars = false;
+        QPointF m_pointerPosition;
+        Qt::KeyboardModifiers m_pointerModifiers = Qt::NoModifier;
+        QTimer m_autoScrollTimer;
 
         TimeAxis clamped(TimeAxis axis) const;
         KeyAxis clamped(KeyAxis axis) const;
         void updateScrollBars();
         void updateHover(QPointF position);
+        void autoScroll();
         void cancelGesture();
     };
 

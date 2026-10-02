@@ -86,6 +86,8 @@ namespace hello::daw {
 
         void cancel() override;
 
+        bool wantsAutoScroll() const override { return true; }
+
     private:
         PianoRollState *m_state;
         QPointF m_origin;
@@ -107,6 +109,8 @@ namespace hello::daw {
         void release(QPointF position, Qt::KeyboardModifiers modifiers) override;
 
         void cancel() override;
+
+        bool wantsAutoScroll() const override { return true; }
 
     private:
         PianoRollState *m_state;
