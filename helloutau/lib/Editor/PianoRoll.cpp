@@ -10,6 +10,7 @@
 #include <QtCore/QJsonObject>
 #include <QtCore/QMimeData>
 #include <QtCore/QSet>
+#include <QtCore/QStringList>
 #include <QtGui/QClipboard>
 #include <QtGui/QGuiApplication>
 #include <QtGui/QKeyEvent>
@@ -51,6 +52,16 @@ namespace hello::daw {
 
         constexpr int LowestPianoKey = 24;   // C1
         constexpr int HighestPianoKey = 107; // B7
+
+        QStringList regionNames(const QString &value) {
+            return value.split(u'|', Qt::SkipEmptyParts);
+        }
+
+        QString removeRegionName(const QString &value, const QString &name) {
+            auto names = regionNames(value);
+            names.removeAll(name);
+            return names.join(u'|');
+        }
 
         // Calls a function with each event of an object
         class EventWatcher : public QObject {
@@ -477,15 +488,16 @@ namespace hello::daw {
         const int count = impl.timeline->noteCount();
         QList<Region> result;
         for (int i = 0; i < count; ++i) {
-            const auto name = refs.at(i).region();
-            if (name.isEmpty()) {
-                continue;
+            for (const auto &name : regionNames(refs.at(i).region())) {
+                int last = count - 1;
+                for (int candidate = i; candidate < count; ++candidate) {
+                    if (regionNames(refs.at(candidate).regionEnd()).contains(name)) {
+                        last = candidate;
+                        break;
+                    }
+                }
+                result.push_back({name, i, last});
             }
-            int last = i;
-            while (last + 1 < count && refs.at(last).regionEnd().isEmpty()) {
-                ++last;
-            }
-            result.push_back({name, i, last});
         }
         return result;
     }
@@ -519,8 +531,11 @@ namespace hello::daw {
             return true;
         }
         auto transaction = impl.session->transaction(tr("Remove Region"));
-        kit::ProjectEdits::nameRegion(impl.notes(), region->first, region->last - region->first + 1,
-                                      QString(), diagnostics);
+        const auto notes = impl.notes();
+        const auto first = notes.at(region->first);
+        const auto last = notes.at(region->last);
+        first.setRegion(removeRegionName(first.region(), region->name));
+        last.setRegionEnd(removeRegionName(last.regionEnd(), region->name));
         return transaction.commit(diagnostics);
     }
 

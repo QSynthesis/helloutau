@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <cmath>
 
+#include <QtCore/QStringList>
+
 #include <hellokit/Document/DocumentConstants.h>
 #include <hellokit/Document/TempoMap.h>
 
@@ -16,6 +18,18 @@ namespace hello::kit {
             diagnostic.message = message;
             diagnostics.push_back(diagnostic);
             return false;
+        }
+
+        QStringList regionNames(const QString &value) {
+            return value.split(u'|', Qt::SkipEmptyParts);
+        }
+
+        QString addRegionName(const QString &value, const QString &name) {
+            auto names = regionNames(value);
+            if (!names.contains(name)) {
+                names.push_back(name);
+            }
+            return names.join(u'|');
         }
 
     }
@@ -400,14 +414,24 @@ namespace hello::kit {
                                          .arg(index)
                                          .arg(index + count - 1));
         }
+        if (name.contains(u'|')) {
+            return fail(diagnostics, tr("A region name cannot contain the vertical bar (|)."));
+        }
         auto transaction = notes.session()->transaction(tr("Name Region"));
         const auto first = notes.at(index);
         const auto last = notes.at(index + count - 1);
-        if (first.region() != name) {
-            first.setRegion(name);
-        }
-        if (last.regionEnd() != name) {
-            last.setRegionEnd(name);
+        if (name.isEmpty()) {
+            first.setRegion(QString());
+            last.setRegionEnd(QString());
+        } else {
+            const auto start = addRegionName(first.region(), name);
+            const auto end = addRegionName(last.regionEnd(), name);
+            if (first.region() != start) {
+                first.setRegion(start);
+            }
+            if (last.regionEnd() != end) {
+                last.setRegionEnd(end);
+            }
         }
         return transaction.commit(diagnostics);
     }

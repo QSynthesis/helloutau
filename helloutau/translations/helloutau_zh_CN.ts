@@ -2966,6 +2966,10 @@ Write them again without these chunks? The audio stays the same. The files are w
         <translation>设置标签</translation>
     </message>
     <message>
+        <source>A region name cannot contain the vertical bar (|).</source>
+        <translation>区间名称不能包含竖线（|）。</translation>
+    </message>
+    <message>
         <source>Name Region</source>
         <translation>命名区间</translation>
     </message>

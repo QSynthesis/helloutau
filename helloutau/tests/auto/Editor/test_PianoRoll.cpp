@@ -806,6 +806,37 @@ private Q_SLOTS:
         QCOMPARE(roll.regions().size(), 1);
     }
 
+    void regions_sharing_an_end_are_shown_separately_and_removed_separately() {
+        kit::Project project;
+        project.tracks.push_back({});
+        for (int i = 0; i < 3; ++i) {
+            kit::Note note;
+            note.length = 480;
+            note.noteNum = 60;
+            project.tracks[0].notes.push_back(note);
+        }
+        project.tracks[0].notes[0].region = QStringLiteral("A");
+        project.tracks[0].notes[1].region = QStringLiteral("B");
+        project.tracks[0].notes[2].regionEnd = QStringLiteral("A|B");
+        kit::ProjectSession session(project);
+        PianoRoll roll(&session);
+
+        const auto regions = roll.regions();
+        QCOMPARE(regions.size(), 2);
+        QCOMPARE(regions[0].name, QStringLiteral("A"));
+        QCOMPARE(regions[0].first, 0);
+        QCOMPARE(regions[0].last, 2);
+        QCOMPARE(regions[1].name, QStringLiteral("B"));
+        QCOMPARE(regions[1].first, 1);
+        QCOMPARE(regions[1].last, 2);
+
+        kit::DiagnosticList diagnostics;
+        QVERIFY(roll.removeRegion(0, diagnostics));
+        QCOMPARE(session.snapshot().tracks[0].notes[2].regionEnd, QStringLiteral("B"));
+        QCOMPARE(roll.regions().size(), 1);
+        QCOMPARE(roll.regions().first().name, QStringLiteral("B"));
+    }
+
     // Whether a pixel of \a color lies within two pixels of (tick, cents from key)
     static bool drawnNear(const PianoRoll &roll, double tick, int key, double cents, QColor color) {
         const auto image = roll.view()->viewport()->grab().toImage();
