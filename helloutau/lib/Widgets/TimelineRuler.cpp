@@ -232,7 +232,6 @@ namespace hello::daw {
         const int half = (height() - timelineTop) / 2;
 
         const double barTicks = double(m_ticksPerBeat) * m_beatsPerBar;
-        const double beatWidth = m_ticksPerBeat * axis.pixelsPerTick;
         const double barWidth = barTicks * axis.pixelsPerTick;
         const int interval = labelInterval(
             barWidth,
@@ -243,6 +242,21 @@ namespace hello::daw {
         const auto firstBar = qint64(std::floor(firstTick / barTicks));
         const auto lastBar = qint64(std::ceil(lastTick / barTicks));
 
+        const int subdivisions[] = {m_ticksPerBeat,
+                                    std::max(1, m_ticksPerBeat / 2),
+                                    std::max(1, m_ticksPerBeat / 4),
+                                    std::max(1, m_ticksPerBeat / 8)};
+        int step = subdivisions[0];
+        bool drawSubdivisions = false;
+        for (const int candidate : subdivisions) {
+            if (candidate * axis.pixelsPerTick >= MinimumBeatSpacing) {
+                step = candidate;
+                drawSubdivisions = true;
+            }
+        }
+        auto subdivisionColor = markColor();
+        subdivisionColor.setAlphaF(subdivisionColor.alphaF() * 0.55);
+
         painter.setPen(lineColor());
         for (auto bar = firstBar; bar <= lastBar; ++bar) {
             const double barX = offset + axis.toX(double(bar) * barTicks);
@@ -252,11 +266,14 @@ namespace hello::daw {
                     QRectF(barX + LabelPadding, timelineTop, barWidth * interval, half),
                     Qt::AlignLeft | Qt::AlignVCenter, QString::number(bar + 1));
             }
-            if (beatWidth >= MinimumBeatSpacing) {
-                for (int beat = 1; beat < m_beatsPerBar; ++beat) {
-                    const double beatX = barX + beat * beatWidth;
-                    painter.drawLine(QPointF(beatX, height() - half / 2), QPointF(beatX, height()));
+            for (int tick = step; tick < barTicks; tick += step) {
+                if (!drawSubdivisions && step == subdivisions[0]) {
+                    break;
                 }
+                const bool beat = tick % m_ticksPerBeat == 0;
+                painter.setPen(beat ? markColor() : subdivisionColor);
+                const double tickX = barX + tick * axis.pixelsPerTick;
+                painter.drawLine(QPointF(tickX, height() - half / 2), QPointF(tickX, height()));
             }
         }
         // The spans above the bottom line

@@ -36,16 +36,32 @@ namespace hello::daw {
 
         const double firstTick = std::max(0.0, time.toTick(exposed.left()));
         const double lastTick = time.toTick(exposed.right() + 1);
-        const double beatWidth = kit::ticksPerQuarter * time.pixelsPerTick;
-        const auto firstBeat = qint64(std::floor(firstTick / kit::ticksPerQuarter));
-        const auto lastBeat = qint64(std::ceil(lastTick / kit::ticksPerQuarter));
-        for (auto beat = firstBeat; beat <= lastBeat; ++beat) {
-            const bool bar = beat % BeatsPerBar == 0;
-            if (!bar && beatWidth < MinimumBeatSpacing) {
+        const int subdivisions[] = {kit::ticksPerQuarter,
+                                    kit::ticksPerQuarter / 2,
+                                    kit::ticksPerQuarter / 4,
+                                    kit::ticksPerQuarter / 8};
+        int step = subdivisions[0];
+        bool drawSubdivisions = false;
+        for (const int candidate : subdivisions) {
+            if (candidate * time.pixelsPerTick >= MinimumBeatSpacing) {
+                step = candidate;
+                drawSubdivisions = true;
+            }
+        }
+        const auto firstGrid = qint64(std::floor(firstTick / step));
+        const auto lastGrid = qint64(std::ceil(lastTick / step));
+        auto subdivisionColor = decl->lineColor();
+        subdivisionColor.setAlphaF(subdivisionColor.alphaF() * 0.55);
+        for (auto grid = firstGrid; grid <= lastGrid; ++grid) {
+            const auto tick = grid * step;
+            const bool bar = tick % BarTicks == 0;
+            if (!bar && !drawSubdivisions && step == subdivisions[0]) {
                 continue;
             }
-            painter.setPen(bar ? decl->barLineColor() : decl->lineColor());
-            const double x = time.toX(double(beat) * kit::ticksPerQuarter);
+            const bool beat = tick % kit::ticksPerQuarter == 0;
+            painter.setPen(bar ? decl->barLineColor()
+                               : (beat ? decl->lineColor() : subdivisionColor));
+            const double x = time.toX(double(tick));
             painter.drawLine(QPointF(x, exposed.top()), QPointF(x, exposed.bottom() + 1));
         }
     }
