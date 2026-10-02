@@ -36,7 +36,7 @@
 #include <hellokit/VoiceBank/VoiceBank.h>
 
 #include <helloutau/Audio/AudioOutput.h>
-#include <helloutau/Audio/SineWaveSource.h>
+#include <helloutau/Audio/PianoToneSource.h>
 #include <helloutau/Widgets/PianoKeyboard.h>
 #include <helloutau/Widgets/SceneView.h>
 #include <helloutau/Widgets/TimelineRuler.h>
@@ -133,7 +133,7 @@ namespace hello::daw {
             }
             constexpr double duration = 0.35;
             const double frequency = 440 * std::pow(2.0, (key - 69) / 12.0);
-            keyOutput->start(std::make_shared<SineWaveSource>(rate, frequency, duration), nullptr,
+            keyOutput->start(std::make_shared<PianoToneSource>(rate, frequency, duration), nullptr,
                              rate);
         });
         impl.voiceBankButton = new QToolButton();
