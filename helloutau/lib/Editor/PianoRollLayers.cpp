@@ -803,7 +803,7 @@ namespace hello::daw {
         }
         if (hit.part == PianoRoll::NoteEnd) {
             m_state->selectOnly(index);
-            return std::make_unique<LengthGesture>(m_state, index);
+            return std::make_unique<LengthGesture>(m_state, index, modifiers);
         }
         if (modifiers & Qt::ControlModifier) {
             auto ids = m_state->selection;

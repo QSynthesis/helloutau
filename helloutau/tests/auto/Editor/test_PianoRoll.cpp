@@ -348,21 +348,57 @@ private Q_SLOTS:
         QVERIFY(!session.canUndo());
     }
 
-    // The right edge changes the length, snapped to the quantization.
+    // Shift keeps the old editor behavior: changing the length moves all following notes.
     void the_right_edge_changes_the_length() {
         kit::ProjectSession session(threeNotes());
         PianoRoll roll(&session);
         show(roll);
         QCOMPARE(roll.quantization(), 120);
 
-        drag(roll, {470, 60}, {700, 60});
+        drag(roll, {470, 60}, {700, 60}, Qt::ShiftModifier);
         QCOMPARE(session.snapshot().tracks[0].notes[0].length, 720);
         QCOMPARE(session.undoMessage(), kit::ProjectEdits::tr("Change Length"));
 
         // Without quantization the length follows the pointer.
         roll.setQuantization(0);
-        drag(roll, {710, 60}, {800, 60});
+        drag(roll, {710, 60}, {800, 60}, Qt::ShiftModifier);
         QCOMPARE(session.snapshot().tracks[0].notes[0].length, 800);
+    }
+
+    // An unmodified shortening keeps the total span by extending the following rest.
+    void the_utau_edge_drag_fills_the_following_rest() {
+        kit::ProjectSession session(threeNotes());
+        PianoRoll roll(&session);
+        show(roll);
+
+        drag(roll, {470, 60}, {350, 60});
+        const auto notes = session.snapshot().tracks[0].notes;
+        QCOMPARE(notes[0].length, 360);
+        QCOMPARE(notes[1].length, 1080);
+        QCOMPARE(notes[1].noteNum, 60);
+    }
+
+    void ctrl_edge_drag_moves_following_notes_and_takes_from_the_next_note() {
+        kit::ProjectSession session(threeNotes());
+        PianoRoll roll(&session);
+        show(roll);
+
+        drag(roll, {470, 60}, {1190, 60}, Qt::ControlModifier);
+        auto notes = session.snapshot().tracks[0].notes;
+        QCOMPARE(notes.size(), 3);
+        QCOMPARE(notes[0].length, 1200);
+        QCOMPARE(notes[1].length, 240);
+        QCOMPARE(notes[2].length, 480);
+
+        kit::ProjectSession shortened(threeNotes());
+        PianoRoll shortenedRoll(&shortened);
+        show(shortenedRoll);
+        drag(shortenedRoll, {470, 60}, {230, 60}, Qt::ControlModifier);
+        notes = shortened.snapshot().tracks[0].notes;
+        QCOMPARE(notes.size(), 3);
+        QCOMPARE(notes[0].length, 240);
+        QCOMPARE(notes[1].length, 1200);
+        QCOMPARE(notes[2].length, 480);
     }
 
     // The pen draws a note after the last one, and fills the gap before it with a rest.

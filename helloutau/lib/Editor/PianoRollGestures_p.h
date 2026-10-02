@@ -51,9 +51,10 @@ namespace hello::daw {
     /// A drag of the right edge of a note, which changes its length
     class PianoRollState::LengthGesture : public SceneGesture {
     public:
-        LengthGesture(PianoRollState *state, int index)
+        LengthGesture(PianoRollState *state, int index, Qt::KeyboardModifiers modifiers)
             : m_state(state), m_index(index), m_start(state->timeline->note(index).start),
-              m_original(state->timeline->note(index).length), m_length(m_original) {
+              m_original(state->timeline->note(index).length), m_length(m_original),
+              m_modifiers(modifiers & (Qt::ShiftModifier | Qt::ControlModifier)) {
         }
 
         void move(QPointF position, Qt::KeyboardModifiers modifiers) override;
@@ -68,6 +69,9 @@ namespace hello::daw {
         qint64 m_start;
         int m_original;
         int m_length;
+        Qt::KeyboardModifiers m_modifiers;
+
+        int lengthAt(QPointF position, Qt::KeyboardModifiers modifiers) const;
     };
 
     /// A drag on the background that selects the notes in a rectangle, added to the selection

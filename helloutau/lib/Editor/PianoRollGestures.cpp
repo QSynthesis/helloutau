@@ -110,30 +110,102 @@ namespace hello::daw {
         m_destination = m_first;
     }
 
-    void PianoRollState::LengthGesture::move(QPointF position, Qt::KeyboardModifiers modifiers) {
+    int PianoRollState::LengthGesture::lengthAt(QPointF position,
+                                                Qt::KeyboardModifiers modifiers) const {
+        modifiers |= m_modifiers;
         const double tick = m_state->view->timeAxis().toTick(position.x());
         qint64 length = m_state->snapped(tick, modifiers) - m_start;
-        if (length <= 0) {
-            // The first grid line after the start, or one tick
-            length = m_state->snaps(modifiers) ? m_state->snappedDown(double(m_start), modifiers) +
-                                                     m_state->quantization - m_start
-                                               : 1;
+        const int minimum = m_state->quantization > 0 ? m_state->quantization : 1;
+        const bool special = modifiers & (Qt::ShiftModifier | Qt::ControlModifier);
+        if (special) {
+            length = std::max<qint64>(minimum, length);
+        } else {
+            // UTAU's unmodified drag can only shorten an ordinary note, and cannot shorten a
+            // note that is already shorter than one quantization.
+            if (length >= m_original) {
+                length = m_original;
+            } else if (m_original < minimum) {
+                length = m_original;
+            } else {
+                length = std::max<qint64>(minimum, length);
+            }
         }
-        m_length = int(length);
-        m_state->placements = m_state->layOut(m_state->identityOrder(), {
-                                                                            {m_index, m_length}
-        });
+        if (modifiers & Qt::ControlModifier) {
+            const int next = m_index + 1;
+            if (next < m_state->timeline->noteCount()) {
+                length = std::min<qint64>(length,
+                                          m_original + m_state->timeline->note(next).length);
+            } else {
+                length = m_original;
+            }
+        }
+        return int(length);
+    }
+
+    void PianoRollState::LengthGesture::move(QPointF position, Qt::KeyboardModifiers modifiers) {
+        m_length = lengthAt(position, modifiers);
+        QHash<int, int> changes{{m_index, m_length}};
+        const auto effectiveModifiers = modifiers | m_modifiers;
+        const int delta = m_original - m_length;
+        const int next = m_index + 1;
+        if (effectiveModifiers & Qt::ControlModifier) {
+            if (next < m_state->timeline->noteCount()) {
+                changes.insert(next, m_state->timeline->note(next).length + delta);
+            }
+        } else if (!(effectiveModifiers & Qt::ShiftModifier) && delta > 0 &&
+                   next < m_state->timeline->noteCount() && m_state->timeline->note(next).rest) {
+            changes.insert(next, m_state->timeline->note(next).length + delta);
+        }
+        m_state->placements = m_state->layOut(m_state->identityOrder(), changes);
+        if (!(effectiveModifiers & (Qt::ShiftModifier | Qt::ControlModifier)) && delta > 0 &&
+            next < m_state->timeline->noteCount() && !m_state->timeline->note(next).rest) {
+            // A rest will be inserted between the two notes on release. Keep the following
+            // notes at their original positions while showing that gap during the drag.
+            for (auto &placement : m_state->placements) {
+                if (placement.index >= next) {
+                    placement.start += delta;
+                }
+            }
+        }
         m_state->view->viewport()->update();
     }
 
     void PianoRollState::LengthGesture::release(QPointF position, Qt::KeyboardModifiers modifiers) {
+        modifiers |= m_modifiers;
         move(position, modifiers);
         m_state->clearPreview();
         if (m_length == m_original) {
             return;
         }
         kit::DiagnosticList diagnostics;
-        kit::ProjectEdits::setLength(m_state->notes().at(m_index), m_length, diagnostics);
+        const auto notes = m_state->notes();
+        const auto next = m_index + 1;
+        const int delta = m_original - m_length;
+        const bool shift = modifiers & Qt::ShiftModifier;
+        const bool control = modifiers & Qt::ControlModifier;
+        auto transaction = m_state->session->transaction(PianoRoll::tr("Change Length"));
+        kit::ProjectEdits::setLength(notes.at(m_index), m_length, diagnostics);
+        if (!shift && !control && delta > 0 && next < notes.size()) {
+            if (m_state->timeline->note(next).rest) {
+                kit::ProjectEdits::setLength(notes.at(next),
+                                             m_state->timeline->note(next).length + delta,
+                                             diagnostics);
+            } else {
+                kit::Note rest;
+                rest.lyric = QString::fromLatin1(kit::restLyric);
+                rest.length = delta;
+                rest.noteNum = m_state->timeline->note(m_index).key;
+                kit::ProjectEdits::insertNotes(notes, next, {rest}, diagnostics);
+            }
+        } else if (control && next < notes.size()) {
+            const int nextLength = m_state->timeline->note(next).length + delta;
+            if (nextLength <= 0) {
+                kit::ProjectEdits::removeNotes(notes, {next}, diagnostics);
+            } else {
+                kit::ProjectEdits::setLength(notes.at(next), nextLength, diagnostics);
+            }
+        }
+        transaction.commit(diagnostics);
         m_state->report(diagnostics);
     }
 
