@@ -19,8 +19,8 @@
         <translation>经典插件(&amp;P)</translation>
     </message>
     <message>
-        <source>Classic Plugins at P&amp;ointer</source>
-        <translation>指针处的经典插件(&amp;O)</translation>
+        <source>Open Classic Plugins at Mouse P&amp;ointer</source>
+        <translation>在鼠标指针处打开经典插件列表(&amp;O)</translation>
     </message>
 </context>
 <context>

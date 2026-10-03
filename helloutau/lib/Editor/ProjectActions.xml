@@ -87,11 +87,8 @@
                 shortcut="Ctrl+E" />
         <!-- Checked while the project turns Mode2 on -->
         <action id="helloutau.edit.mode2" text="Mode&amp;2 Pitch" category="Edit" />
-        <action id="helloutau.edit.togglePortamento" text="Add or Remove P&amp;ortamento"
-                category="Edit" />
-        <action id="helloutau.edit.toggleVibrato" text="Add or Remove &amp;Vibrato"
-                category="Edit" />
-        <action id="helloutau.edit.editVibrato" text="Vibra&amp;to..." category="Edit" />
+        <action id="helloutau.edit.pitchControl" text="Pitch &amp;Control..." category="Edit"
+                shortcut="Ctrl+T" />
         <action id="helloutau.edit.scalePitch" text="Scale Pitc&amp;h..." category="Edit" />
         <action id="helloutau.edit.convertPitchToMode1" text="Convert Mode2 Pitch to Mode&amp;1"
                 category="Edit" />
@@ -251,11 +248,9 @@
                 <action id="helloutau.edit.noteProperties" />
                 <separator />
                 <action id="helloutau.edit.mode2" />
-                <action id="helloutau.edit.togglePortamento" />
-                <action id="helloutau.edit.toggleVibrato" />
-                <action id="helloutau.edit.editVibrato" />
-                <action id="helloutau.edit.scalePitch" />
                 <action id="helloutau.edit.convertPitchToMode1" />
+                <action id="helloutau.edit.pitchControl" />
+                <action id="helloutau.edit.scalePitch" />
                 <menu id="helloutau.edit.reset" />
                 <menu id="helloutau.edit.envelope" />
                 <menu id="helloutau.edit.transpose" />

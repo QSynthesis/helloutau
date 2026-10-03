@@ -21,7 +21,7 @@
         <!-- Shows the same menu at the mouse pointer. The key N shows the plugin menu of UTAU in
              the same way. The command is in no menu, only in the command palette. -->
         <action id="helloutau.tools.classicPluginsAtPointer"
-                text="Classic Plugins at P&amp;ointer" category="Tools" shortcut="N" />
+                text="Open Classic Plugins at Mouse P&amp;ointer" category="Tools" shortcut="N" />
     </items>
 
     <insertions>

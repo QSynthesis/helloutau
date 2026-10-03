@@ -362,18 +362,6 @@
         <translation>Mode2 音高(&amp;2)</translation>
     </message>
     <message>
-        <source>Add or Remove P&amp;ortamento</source>
-        <translation>添加或移除滑音(&amp;O)</translation>
-    </message>
-    <message>
-        <source>Add or Remove &amp;Vibrato</source>
-        <translation>添加或移除颤音(&amp;V)</translation>
-    </message>
-    <message>
-        <source>Vibra&amp;to...</source>
-        <translation>颤音(&amp;T)...</translation>
-    </message>
-    <message>
         <source>Scale Pitc&amp;h...</source>
         <translation>缩放音高(&amp;H)...</translation>
     </message>
@@ -420,6 +408,10 @@
     <message>
         <source>&amp;All</source>
         <translation>全部(&amp;A)</translation>
+    </message>
+    <message>
+        <source>Pitch &amp;Control...</source>
+        <translation>音高控制(&amp;C)...</translation>
     </message>
     <message>
         <source>Edit &amp;Lyric</source>
@@ -1029,6 +1021,10 @@
         <translation>移调</translation>
     </message>
     <message>
+        <source>Change Length</source>
+        <translation>修改长度</translation>
+    </message>
+    <message>
         <source>Insert Note</source>
         <translation>插入音符</translation>
     </message>
@@ -1114,6 +1110,57 @@
     </message>
 </context>
 <context>
+    <name>hello::daw::PitchControlDialog</name>
+    <message>
+        <source>Pitch Control (Mode2)</source>
+        <translation>音高控制（Mode2）</translation>
+    </message>
+    <message>
+        <source>&amp;Portamento</source>
+        <translation>滑音(&amp;P)</translation>
+    </message>
+    <message>
+        <source>&amp;Vibrato</source>
+        <translation>颤音(&amp;V)</translation>
+    </message>
+    <message>
+        <source>&amp;Length:</source>
+        <translation>长度(&amp;L)：</translation>
+    </message>
+    <message>
+        <source>&amp;Period:</source>
+        <translation>周期(&amp;P)：</translation>
+    </message>
+    <message>
+        <source>&amp;Depth:</source>
+        <translation>深度(&amp;D)：</translation>
+    </message>
+    <message>
+        <source> cents</source>
+        <translation> 音分</translation>
+    </message>
+    <message>
+        <source>Fade &amp;in:</source>
+        <translation>淡入(&amp;I)：</translation>
+    </message>
+    <message>
+        <source>Fade &amp;out:</source>
+        <translation>淡出(&amp;O)：</translation>
+    </message>
+    <message>
+        <source>P&amp;hase:</source>
+        <translation>相位(&amp;H)：</translation>
+    </message>
+    <message>
+        <source>&amp;Height:</source>
+        <translation>高度(&amp;H)：</translation>
+    </message>
+    <message>
+        <source>Strength:</source>
+        <translation>强弱：</translation>
+    </message>
+</context>
+<context>
     <name>hello::daw::Playback</name>
     <message>
         <source>The project has no voice bank to sing with.</source>
@@ -1153,6 +1200,10 @@
     <message>
         <source>Project Properties</source>
         <translation>工程属性</translation>
+    </message>
+    <message>
+        <source>The path is invalid.</source>
+        <translation>路径无效。</translation>
     </message>
     <message>
         <source>Mode&amp;2 pitch</source>
@@ -1418,14 +1469,6 @@ Trust and run it?</source>
         <translation>合并音符</translation>
     </message>
     <message>
-        <source>Portamento</source>
-        <translation>滑音</translation>
-    </message>
-    <message>
-        <source>Vibrato</source>
-        <translation>颤音</translation>
-    </message>
-    <message>
         <source>Envelope</source>
         <translation>包络</translation>
     </message>
@@ -1474,6 +1517,10 @@ Trust and run it?</source>
     <message>
         <source>Scale Pitch</source>
         <translation>缩放音高</translation>
+    </message>
+    <message>
+        <source>Pitch Control</source>
+        <translation>音高控制</translation>
     </message>
     <message>
         <source>Split Note</source>
@@ -1965,45 +2012,6 @@ Lyrics:
     <message>
         <source>Choose Encoding - %1</source>
         <translation>选择编码 - %1</translation>
-    </message>
-</context>
-<context>
-    <name>hello::daw::VibratoDialog</name>
-    <message>
-        <source>Vibrato</source>
-        <translation>颤音</translation>
-    </message>
-    <message>
-        <source>&amp;Length:</source>
-        <translation>长度(&amp;L)：</translation>
-    </message>
-    <message>
-        <source>&amp;Period:</source>
-        <translation>周期(&amp;P)：</translation>
-    </message>
-    <message>
-        <source>&amp;Depth:</source>
-        <translation>深度(&amp;D)：</translation>
-    </message>
-    <message>
-        <source> cents</source>
-        <translation> 音分</translation>
-    </message>
-    <message>
-        <source>Fade &amp;in:</source>
-        <translation>淡入(&amp;I)：</translation>
-    </message>
-    <message>
-        <source>Fade &amp;out:</source>
-        <translation>淡出(&amp;O)：</translation>
-    </message>
-    <message>
-        <source>P&amp;hase:</source>
-        <translation>相位(&amp;H)：</translation>
-    </message>
-    <message>
-        <source>&amp;Height:</source>
-        <translation>高度(&amp;H)：</translation>
     </message>
 </context>
 <context>

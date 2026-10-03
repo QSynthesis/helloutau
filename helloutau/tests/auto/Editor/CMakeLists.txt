@@ -1,4 +1,4 @@
-add_auto_test(test_AppSettings.cpp HelloUtauEditor)
+﻿add_auto_test(test_AppSettings.cpp HelloUtauEditor)
 add_auto_test(test_Editor.cpp HelloUtauEditor)
 add_auto_test(test_OtoWaveformView.cpp HelloUtauEditor)
 add_auto_test(test_PianoRoll.cpp HelloUtauEditor)
@@ -8,7 +8,7 @@ add_auto_test(test_UstCharsetDialog.cpp HelloUtauEditor)
 add_auto_test(test_VoiceBankCharsetDialog.cpp HelloUtauEditor)
 add_auto_test(test_Playback.cpp HelloUtauEditor)
 add_auto_test(test_SamplePreview.cpp HelloUtauEditor)
-add_auto_test(test_VibratoDialog.cpp HelloUtauEditor)
+add_auto_test(test_PitchControlDialog.cpp HelloUtauEditor)
 add_auto_test(test_VoiceAliasRuleDialog.cpp HelloUtauEditor)
 
 # The contribution of the test, with a manifest of its own for each kind of window

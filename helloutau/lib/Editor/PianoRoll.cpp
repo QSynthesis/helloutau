@@ -1,4 +1,4 @@
-#include "PianoRoll.h"
+﻿#include "PianoRoll.h"
 
 #include <algorithm>
 #include <cmath>
@@ -44,7 +44,7 @@
 #include "PianoRollLayers_p.h"
 #include "PianoRollParameterLayers_p.h"
 #include "PianoRollState_p.h"
-#include "VibratoDialog.h"
+#include "PitchControlDialog.h"
 
 namespace hello::daw {
 
@@ -643,23 +643,42 @@ namespace hello::daw {
         return kit::ProjectEdits::removeNotes(impl.notes(), indices, diagnostics);
     }
 
-    bool PianoRoll::togglePortamento(kit::DiagnosticList &diagnostics) {
+    std::optional<bool> PianoRoll::selectedPortamento() const {
         stdc_impl_t;
-        QList<int> sung;
-        bool lacking = false;
+        std::optional<bool> result;
         for (const int index : selectedIndices()) {
-            if (impl.timeline->note(index).rest) {
+            if (impl.timeline->note(index).rest)
                 continue;
-            }
-            sung.push_back(index);
-            lacking = lacking || impl.pointsOf(index).isEmpty();
+            const bool present = !impl.pointsOf(index).isEmpty();
+            if (result && *result != present)
+                return std::nullopt;
+            result = present;
         }
-        if (sung.isEmpty()) {
-            return true;
+        return result;
+    }
+
+    std::optional<bool> PianoRoll::selectedVibrato() const {
+        stdc_impl_t;
+        std::optional<bool> result;
+        const auto refs = impl.notes();
+        for (const int index : selectedIndices()) {
+            if (impl.timeline->note(index).rest)
+                continue;
+            const bool present = refs.at(index).vibrato().has_value();
+            if (result && *result != present)
+                return std::nullopt;
+            result = present;
         }
+        return result;
+    }
+
+    bool PianoRoll::setPortamentoEnabled(bool enabled, kit::DiagnosticList &diagnostics) {
+        stdc_impl_t;
         QHash<int, QList<kit::PortamentoPoint>> points;
-        for (const int index : std::as_const(sung)) {
-            if (!lacking) {
+        for (const int index : selectedIndices()) {
+            if (impl.timeline->note(index).rest)
+                continue;
+            if (!enabled) {
                 points.insert(index, {});
             } else if (impl.pointsOf(index).isEmpty()) {
                 kit::PortamentoPoint before;
@@ -669,35 +688,46 @@ namespace hello::daw {
                 points.insert(index, {before, after});
             }
         }
-        return impl.writePoints(lacking ? tr("Add Portamento") : tr("Remove Portamento"), points,
+        if (points.isEmpty())
+            return true;
+        return impl.writePoints(enabled ? tr("Add Portamento") : tr("Remove Portamento"), points,
                                 diagnostics);
     }
 
-    bool PianoRoll::toggleVibrato(kit::DiagnosticList &diagnostics) {
+    bool PianoRoll::setVibratoEnabled(bool enabled, kit::DiagnosticList &diagnostics) {
         stdc_impl_t;
         const auto refs = impl.notes();
         QList<kit::NoteRef> sung;
-        QList<kit::NoteRef> lacking;
         for (const int index : selectedIndices()) {
-            if (impl.timeline->note(index).rest) {
+            if (impl.timeline->note(index).rest)
                 continue;
-            }
             sung.push_back(refs.at(index));
-            if (!sung.last().vibrato()) {
-                lacking.push_back(sung.last());
-            }
         }
-        if (sung.isEmpty()) {
+        if (sung.isEmpty())
             return true;
-        }
         auto transaction =
-            impl.session->transaction(lacking.isEmpty() ? tr("Remove Vibrato") : tr("Add Vibrato"));
-        if (lacking.isEmpty()) {
-            kit::ProjectEdits::setVibrato(sung, std::nullopt, diagnostics);
+            impl.session->transaction(enabled ? tr("Add Vibrato") : tr("Remove Vibrato"));
+        if (enabled) {
+            QList<kit::NoteRef> lacking;
+            for (const auto &note : sung) {
+                if (!note.vibrato())
+                    lacking.push_back(note);
+            }
+            if (!lacking.isEmpty())
+                kit::ProjectEdits::setVibrato(lacking, PitchControlDialog::defaultVibrato(),
+                                              diagnostics);
         } else {
-            kit::ProjectEdits::setVibrato(lacking, VibratoDialog::defaultVibrato(), diagnostics);
+            kit::ProjectEdits::setVibrato(sung, std::nullopt, diagnostics);
         }
         return transaction.commit(diagnostics);
+    }
+
+    bool PianoRoll::togglePortamento(kit::DiagnosticList &diagnostics) {
+        return setPortamentoEnabled(!selectedPortamento().value_or(false), diagnostics);
+    }
+
+    bool PianoRoll::toggleVibrato(kit::DiagnosticList &diagnostics) {
+        return setVibratoEnabled(!selectedVibrato().value_or(false), diagnostics);
     }
 
     bool PianoRoll::crossfadeEnvelopes(Crossfade crossfade, kit::DiagnosticList &diagnostics) {

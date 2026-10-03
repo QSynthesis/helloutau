@@ -75,7 +75,7 @@
 #include "PasteParametersDialog.h"
 #include "ScalePitchDialog.h"
 #include "ToolBarPalette_p.h"
-#include "VibratoDialog.h"
+#include "PitchControlDialog.h"
 #include "VoiceBankCharsetDialog.h"
 #include "VoiceBankWindow.h"
 
@@ -176,8 +176,7 @@ namespace hello::daw {
         Playback *playback = nullptr;
         // Owns all per-window render artifacts. Playback only uses the path.
         std::optional<QTemporaryDir> temporaryDirectory;
-        std::shared_ptr<kit::EngineOutputLog> renderLog =
-            std::make_shared<kit::EngineOutputLog>();
+        std::shared_ptr<kit::EngineOutputLog> renderLog = std::make_shared<kit::EngineOutputLog>();
         QLabel *renderLabel = nullptr;
         QProgressBar *renderProgress = nullptr;
         QPushButton *renderCancel = nullptr;
@@ -210,8 +209,8 @@ namespace hello::daw {
             stdc_decl_t;
             temporaryDirectory.emplace();
             playback = new Playback(
-                renderLog,
-                std::filesystem::path(temporaryDirectory->path().toStdU16String()), &decl);
+                renderLog, std::filesystem::path(temporaryDirectory->path().toStdU16String()),
+                &decl);
             renderLabel = new QLabel();
             renderProgress = new QProgressBar();
             renderProgress->setMaximumWidth(200);
@@ -434,8 +433,8 @@ namespace hello::daw {
             for (int i = 0; i < indices.size(); ++i) {
                 const int index = indices.at(i);
                 defaults.tempo.push_back(tempoMap.tempo(index));
-                const auto *sample = bank ? bank->find(notes.at(i).noteNum, notes.at(i).lyric)
-                                          : nullptr;
+                const auto *sample =
+                    bank ? bank->find(notes.at(i).noteNum, notes.at(i).lyric) : nullptr;
                 defaults.preUtterance.push_back(sample ? sample->preUtterance : 0);
                 defaults.voiceOverlap.push_back(sample ? sample->voiceOverlap : 0);
             }
@@ -729,8 +728,7 @@ namespace hello::daw {
             proposed = proposed.empty() ? std::filesystem::path(u"untitled.wav")
                                         : proposed.replace_extension(u".wav");
             const auto chosen = QFileDialog::getSaveFileName(
-                &decl, tr("Save Last Played"), textOf(proposed),
-                tr("WAV files (*.wav)"));
+                &decl, tr("Save Last Played"), textOf(proposed), tr("WAV files (*.wav)"));
             if (chosen.isEmpty()) {
                 return;
             }
@@ -1226,17 +1224,8 @@ namespace hello::daw {
                 });
             });
             addCommand(QStringLiteral("helloutau.edit.splitNote"), [this] { splitNote(); });
-            addCommand(QStringLiteral("helloutau.edit.togglePortamento"), [this] {
-                edit(tr("Portamento"), [this](kit::DiagnosticList &diagnostics) {
-                    return roll->togglePortamento(diagnostics);
-                });
-            });
-            addCommand(QStringLiteral("helloutau.edit.toggleVibrato"), [this] {
-                edit(tr("Vibrato"), [this](kit::DiagnosticList &diagnostics) {
-                    return roll->toggleVibrato(diagnostics);
-                });
-            });
-            addCommand(QStringLiteral("helloutau.edit.editVibrato"), [this] { editVibrato(); });
+            addCommand(QStringLiteral("helloutau.edit.pitchControl"),
+                       [this] { editPitchControl(); });
             const std::pair<const char *, PianoRoll::Crossfade> crossfades[] = {
                 {"helloutau.edit.crossfadeP2P3", PianoRoll::CrossfadeP2P3},
                 {"helloutau.edit.crossfadeP1P4", PianoRoll::CrossfadeP1P4},
@@ -1388,7 +1377,8 @@ namespace hello::daw {
                        [this] { saveLastPlayed(); });
             addCommand(QStringLiteral("helloutau.playback.renderTrack"), [this] { renderTrack(); });
             addCommand(QStringLiteral("helloutau.tools.clearCache"), [this] { clearCache(); });
-            addCommand(QStringLiteral("helloutau.tools.viewRenderLog"), [this] { showRenderLog(); });
+            addCommand(QStringLiteral("helloutau.tools.viewRenderLog"),
+                       [this] { showRenderLog(); });
             addCommand(QStringLiteral("helloutau.tools.settings"), [this] {
                 stdc_decl_t;
                 editor->showSettings(&decl);
@@ -1690,8 +1680,7 @@ namespace hello::daw {
             const int selected = int(roll->selectedIndices().size());
             for (const auto id :
                  {"helloutau.edit.delete", "helloutau.edit.editLyric",
-                  "helloutau.edit.togglePortamento", "helloutau.edit.toggleVibrato",
-                  "helloutau.edit.editVibrato", "helloutau.edit.scalePitch",
+                  "helloutau.edit.pitchControl", "helloutau.edit.scalePitch",
                   "helloutau.edit.convertPitchToMode1", "helloutau.edit.crossfadeP2P3",
                   "helloutau.edit.crossfadeP1P4", "helloutau.edit.copy",
                   "helloutau.edit.resetPortamento", "helloutau.edit.resetVibratos",
@@ -1769,9 +1758,9 @@ namespace hello::daw {
             DiagnosticBox::show(&decl, tr("Scale Pitch"), diagnostics);
         }
 
-        // Sets the vibrato of the selected sung notes to one that the user enters, starting from
-        // that of the first of them, or the default.
-        void editVibrato() {
+        // Edits the portamento and vibrato of the selected sung notes, starting from the first
+        // vibrato or the default.
+        void editPitchControl() {
             stdc_decl_t;
             if (roll->lyricEditor()->isVisible()) {
                 return;
@@ -1786,14 +1775,26 @@ namespace hello::daw {
             if (sung.isEmpty()) {
                 return;
             }
-            VibratoDialog dialog(sung.first().vibrato().value_or(VibratoDialog::defaultVibrato()),
-                                 &decl);
+            const auto portamento = roll->selectedPortamento();
+            const auto vibratoState = roll->selectedVibrato();
+            PitchControlDialog dialog(
+                portamento, vibratoState,
+                sung.first().vibrato().value_or(PitchControlDialog::defaultVibrato()), &decl);
             if (dialog.exec() != QDialog::Accepted) {
                 return;
             }
             kit::DiagnosticList diagnostics;
-            kit::ProjectEdits::setVibrato(sung, dialog.vibrato(), diagnostics);
-            DiagnosticBox::show(&decl, tr("Vibrato"), diagnostics);
+            if (dialog.portamentoState() != Qt::PartiallyChecked &&
+                (!portamento || *portamento != (dialog.portamentoState() == Qt::Checked))) {
+                roll->setPortamentoEnabled(dialog.portamentoState() == Qt::Checked, diagnostics);
+            }
+            if (dialog.vibratoState() != Qt::PartiallyChecked &&
+                (!vibratoState || *vibratoState != (dialog.vibratoState() == Qt::Checked))) {
+                roll->setVibratoEnabled(dialog.vibratoState() == Qt::Checked, diagnostics);
+            }
+            if (dialog.vibratoState() != Qt::Unchecked && dialog.vibratoEdited())
+                kit::ProjectEdits::setVibrato(sung, dialog.vibrato(), diagnostics);
+            DiagnosticBox::show(&decl, tr("Pitch Control"), diagnostics);
         }
 
         // Splits the selected note after a length that the user enters.

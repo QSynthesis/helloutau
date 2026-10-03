@@ -247,12 +247,16 @@ namespace hello::daw {
         bool removeSelected(kit::DiagnosticList &diagnostics);
         bool transposeSelected(int semitones, kit::DiagnosticList &diagnostics);
 
-        /// Gives each selected sung note without Mode2 points the default two, 15 ms before
-        /// and after its start at its own pitch; if every such note has points, removes them.
+        /// Returns whether selected sung notes all have, all lack, or differ in portamento.
+        std::optional<bool> selectedPortamento() const;
+        /// Returns whether selected sung notes all have, all lack, or differ in vibrato.
+        std::optional<bool> selectedVibrato() const;
+        /// Gives or removes portamento on every selected sung note.
+        bool setPortamentoEnabled(bool enabled, kit::DiagnosticList &diagnostics);
+        /// Gives or removes vibrato on every selected sung note.
+        bool setVibratoEnabled(bool enabled, kit::DiagnosticList &diagnostics);
+        // Compatibility helpers for non-menu callers; the editor uses Pitch Control.
         bool togglePortamento(kit::DiagnosticList &diagnostics);
-
-        /// Gives each selected sung note without a vibrato the default one of
-        /// VibratoDialog::defaultVibrato(); if every such note has one, removes them.
         bool toggleVibrato(kit::DiagnosticList &diagnostics);
 
         /// The two crossfades of the envelopes over the overlaps of the notes (QSynthesis).

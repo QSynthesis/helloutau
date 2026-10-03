@@ -406,14 +406,14 @@ private Q_SLOTS:
 
     // The commands on the selection are enabled by it, and the tool and the quantization stay
     // with the window when it shows another project.
-    // The vibrato command opens the dialog with that of the first selected note, or the
+    // The pitch-control command opens the dialog with that of the first selected note, or the
     // default, and gives what it accepts to every selected note.
     void the_vibrato_of_the_selected_notes_is_edited() {
         const auto e = editor();
         const auto window = e->openFile(savedProject(m_dir, "v.usth"));
         QVERIFY(window);
         auto roll = qobject_cast<PianoRoll *>(window->centralWidget());
-        const auto edit = actionNamed(window, QStringLiteral("Vibra&to..."));
+        const auto edit = actionNamed(window, QStringLiteral("Pitch &Control..."));
         QVERIFY(edit);
         QVERIFY(!edit->isEnabled());
 

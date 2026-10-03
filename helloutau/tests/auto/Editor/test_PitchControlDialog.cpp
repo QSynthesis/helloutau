@@ -1,16 +1,22 @@
-#include <QtTest/QTest>
+﻿#include <QtTest/QTest>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QDoubleSpinBox>
 
-#include <helloutau/Editor/VibratoDialog.h>
+#include <helloutau/Editor/PitchControlDialog.h>
 
 using namespace hello;
 using namespace hello::daw;
 
-class test_VibratoDialog : public QObject {
+class test_PitchControlDialog : public QObject {
     Q_OBJECT
 
 private Q_SLOTS:
+    void mixed_controls_are_shown_as_partial() {
+        PitchControlDialog dialog(std::nullopt, std::nullopt, PitchControlDialog::defaultVibrato());
+        QCOMPARE(dialog.portamentoState(), Qt::PartiallyChecked);
+        QCOMPARE(dialog.vibratoState(), Qt::PartiallyChecked);
+    }
+
     // The values are shown in the order of VBR, and those left alone keep every decimal, the
     // eighth value included.
     void only_the_changed_values_are_written() {
@@ -24,7 +30,7 @@ private Q_SLOTS:
         vibrato.offset = -12;
         vibrato.intensity = 7;
 
-        VibratoDialog dialog(vibrato);
+        PitchControlDialog dialog(true, true, vibrato);
         QCOMPARE(dialog.field(0)->value(), 65.13);
         QCOMPARE(dialog.field(6)->value(), -12.0);
         QCOMPARE(dialog.vibrato(), vibrato);
@@ -36,7 +42,7 @@ private Q_SLOTS:
     }
 
     void the_default_is_that_of_utau() {
-        const auto vibrato = VibratoDialog::defaultVibrato();
+        const auto vibrato = PitchControlDialog::defaultVibrato();
         QCOMPARE(vibrato.length, 65.0);
         QCOMPARE(vibrato.period, 180.0);
         QCOMPARE(vibrato.amplitude, 35.0);
@@ -51,8 +57,8 @@ int main(int argc, char *argv[]) {
     // Runs without a display
     qputenv("QT_QPA_PLATFORM", "offscreen");
     QApplication app(argc, argv);
-    test_VibratoDialog test;
+    test_PitchControlDialog test;
     return QTest::qExec(&test, argc, argv);
 }
 
-#include "test_VibratoDialog.moc"
+#include "test_PitchControlDialog.moc"
