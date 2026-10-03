@@ -829,6 +829,26 @@ private Q_SLOTS:
         QVERIFY(!dialog.changes().voiceDir.has_value());
     }
 
+    void project_properties_keep_an_absolute_voice_bank() {
+        const auto utau = pathIn(m_dir, "utau");
+        const auto bank = utau / "voice" / "bank";
+        fs::create_directories(bank);
+        fs::create_directories(utau / "voice" / "other");
+        AppSettings settings(m_dir.filePath(QStringLiteral("settings.json")));
+        settings.setUtauDirectory(utau);
+        kit::Project project;
+        project.tracks.push_back({});
+        project.tracks.first().voiceDir =
+            QDir::toNativeSeparators(QString::fromStdU16String(bank.u16string()));
+        ProjectPropertiesDialog dialog(project, settings);
+
+        QCOMPARE(dialog.voiceDirEdit()->text(), QStringLiteral("bank"));
+        QVERIFY(!dialog.changes().voiceDir.has_value());
+
+        dialog.voiceDirEdit()->setText(QStringLiteral("other"));
+        QCOMPARE(dialog.changes().voiceDir, std::optional(QStringLiteral("%VOICE%other")));
+    }
+
     // The dialog shows what the notes share, "(various)" where they differ, and gives only the
     // fields edited: an emptied number back to the default, one that does not read left out.
     void the_note_properties_dialog_gives_what_was_edited() {

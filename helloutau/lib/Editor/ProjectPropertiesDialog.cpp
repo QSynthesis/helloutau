@@ -99,7 +99,8 @@ namespace hello::daw {
             project.tracks.isEmpty() ? QString() : project.tracks.first().voiceDir);
         m_voiceDir->setEditText(voiceValue);
         if (m_appSettings) {
-            const auto voiceRoot = m_appSettings->utauDirectory() / u"voice";
+            const auto utau = m_appSettings->utauDirectory();
+            const auto voiceRoot = utau / u"voice";
             const auto rootText = QString::fromStdU16String(voiceRoot.u16string());
             const auto folders =
                 QDir(rootText).entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
@@ -107,11 +108,28 @@ namespace hello::daw {
                 const auto relative = folder.fileName();
                 m_voiceDir->addItem(relative, QStringLiteral("%VOICE%") + relative);
             }
-            const auto index = m_voiceDir->findData(voiceValue);
-            m_voiceDir->setEditText(index >= 0 ? m_voiceDir->itemText(index) : voiceValue);
+            auto comboValue = voiceValue;
+            auto displayValue = voiceValue;
+            if (!voiceValue.isEmpty() && !utau.empty()) {
+                kit::Track track;
+                track.voiceDir = voiceValue;
+                const auto directory = track.voiceDirectory(utau);
+                if (!directory.empty()) {
+                    comboValue = kit::Track::voiceDirOf(directory, utau);
+                    if (comboValue.startsWith(kit::Track::voicePrefix)) {
+                        displayValue = comboValue.mid(kit::Track::voicePrefix.size());
+                    }
+                }
+            }
+            int index = m_voiceDir->findData(comboValue);
+            if (index < 0 && comboValue != voiceValue && !displayValue.isEmpty()) {
+                m_voiceDir->addItem(displayValue, comboValue);
+                index = m_voiceDir->count() - 1;
+            }
             {
                 const QSignalBlocker blocker(m_voiceDir);
                 m_voiceDir->setCurrentIndex(index);
+                m_voiceDir->setEditText(index >= 0 ? m_voiceDir->itemText(index) : displayValue);
             }
         }
         m_voiceDir->setEnabled(!project.tracks.isEmpty());
@@ -345,7 +363,21 @@ namespace hello::daw {
         changes.outputFile = pathText(m_outputFile, settings.outputFile);
         if (!m_project.tracks.isEmpty()) {
             const auto voice = voiceDirText();
-            if (voice != m_project.tracks.first().voiceDir) {
+            auto sameDirectory = voice == m_project.tracks.first().voiceDir;
+            if (!sameDirectory && m_appSettings) {
+                kit::Track before;
+                before.voiceDir = m_project.tracks.first().voiceDir;
+                kit::Track after;
+                after.voiceDir = voice;
+                const auto utau = m_appSettings->utauDirectory();
+                std::error_code error;
+                const auto beforePath = before.voiceDirectory(utau);
+                const auto afterPath = after.voiceDirectory(utau);
+                sameDirectory = !beforePath.empty() && !afterPath.empty() &&
+                                std::filesystem::weakly_canonical(beforePath, error) ==
+                                    std::filesystem::weakly_canonical(afterPath, error) && !error;
+            }
+            if (!sameDirectory) {
                 changes.voiceDir = voice;
             }
         }
