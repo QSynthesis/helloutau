@@ -88,6 +88,7 @@ namespace hello::daw {
         void keyPressEvent(QKeyEvent *event) override;
         void leaveEvent(QEvent *event) override;
         void focusOutEvent(QFocusEvent *event) override;
+        bool eventFilter(QObject *watched, QEvent *event) override;
 
     private:
         TimeAxis m_timeAxis;
@@ -108,6 +109,8 @@ namespace hello::daw {
         QPointF m_pointerPosition;
         Qt::KeyboardModifiers m_pointerModifiers = Qt::NoModifier;
         QTimer m_autoScrollTimer;
+        bool m_suppressContextMenu = false;
+        bool m_contextFilterInstalled = false;
 
         TimeAxis clamped(TimeAxis axis) const;
         KeyAxis clamped(KeyAxis axis) const;
@@ -115,6 +118,7 @@ namespace hello::daw {
         void updateHover(QPointF position);
         void autoScroll();
         void cancelGesture();
+        void releaseMouseIfGrabbed();
     };
 
 }
