@@ -85,9 +85,11 @@ namespace hello::daw {
         m_portamentoStartSlider->setRange(-200, 200);
         m_portamentoStartSlider->setValue(m_portamentoStart->value());
         m_portamentoCount = new QComboBox();
-        for (int i = 2; i <= 6; ++i)
+        const int maximumPortamentoCount = std::max(6, int(m_existingPortamento.size()));
+        for (int i = 2; i <= maximumPortamentoCount; ++i)
             m_portamentoCount->addItem(QString::number(i));
-        m_portamentoCount->setCurrentIndex(std::clamp(portamentoCount - 2, 0, 4));
+        m_portamentoCount->setCurrentIndex(
+            std::clamp(portamentoCount - 2, 0, maximumPortamentoCount - 2));
         m_averagePoints = new QCheckBox(tr("&Evenly distribute"));
         m_averagePoints->setChecked(averagePoints);
         m_vibratoPreset = new QComboBox();
@@ -234,6 +236,13 @@ namespace hello::daw {
         connect(m_portamentoStart, &QSpinBox::valueChanged, this, updatePortamentoBounds);
         updatePortamentoBounds();
         updatePortamentoMode();
+        m_initialPortamentoState = m_portamento->checkState();
+        m_initialPortamentoPreset = m_portamentoPreset->currentIndex();
+        m_initialPortamentoMode = this->portamentoMode();
+        m_initialPortamentoLength = m_portamentoLength->value();
+        m_initialPortamentoStart = m_portamentoStart->value();
+        m_initialPortamentoCount = this->portamentoCount();
+        m_initialAveragePoints = m_averagePoints->isChecked();
         connect(m_vibratoPreset, &QComboBox::currentIndexChanged, this, [this](int index) {
             const std::array<std::array<double, 3>, 3> values = {
                 {{{65, 180, 35}}, {{65, 210, 55}}, {{65, 165, 20}}}
@@ -288,6 +297,16 @@ namespace hello::daw {
                 return true;
         }
         return false;
+    }
+
+    bool PitchControlDialog::portamentoEdited() const {
+        return m_portamento->checkState() != m_initialPortamentoState ||
+               m_portamentoPreset->currentIndex() != m_initialPortamentoPreset ||
+               portamentoMode() != m_initialPortamentoMode ||
+               m_portamentoLength->value() != m_initialPortamentoLength ||
+               m_portamentoStart->value() != m_initialPortamentoStart ||
+               portamentoCount() != m_initialPortamentoCount ||
+               m_averagePoints->isChecked() != m_initialAveragePoints;
     }
 
     int PitchControlDialog::portamentoPreset() const {

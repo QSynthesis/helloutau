@@ -39,6 +39,7 @@ namespace hello::daw {
         Qt::CheckState vibratoState() const;
         kit::Vibrato vibrato() const;
         bool vibratoEdited() const;
+        bool portamentoEdited() const;
         int portamentoPreset() const;
         int vibratoPreset() const;
         int portamentoMode() const;
@@ -80,6 +81,13 @@ namespace hello::daw {
         // What each field showed at first, by which an unchanged field is recognized
         std::array<double, 7> m_shown{};
         QList<kit::PortamentoPoint> m_existingPortamento;
+        Qt::CheckState m_initialPortamentoState = Qt::Unchecked;
+        int m_initialPortamentoPreset = 0;
+        int m_initialPortamentoMode = 0;
+        int m_initialPortamentoLength = 59;
+        int m_initialPortamentoStart = -30;
+        int m_initialPortamentoCount = 2;
+        bool m_initialAveragePoints = true;
         double m_noteDuration = 480;
         double m_previousNoteDuration = 100000;
     };

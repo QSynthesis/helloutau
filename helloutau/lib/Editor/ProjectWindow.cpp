@@ -1974,9 +1974,12 @@ namespace hello::daw {
                 return;
             }
             kit::DiagnosticList diagnostics;
-            if (dialog.portamentoState() == Qt::Checked) {
+            const bool portamentoEdited = dialog.portamentoEdited();
+            if (dialog.portamentoState() == Qt::Checked &&
+                (portamentoEdited || !portamento || !*portamento)) {
                 roll->setPortamentoEnabled(true, diagnostics, dialog.portamentoPoints());
-            } else if (dialog.portamentoState() == Qt::Unchecked && (!portamento || *portamento)) {
+            } else if (dialog.portamentoState() == Qt::Unchecked && portamentoEdited &&
+                       (!portamento || *portamento)) {
                 roll->setPortamentoEnabled(false, diagnostics);
             }
             if (dialog.vibratoState() != Qt::PartiallyChecked &&

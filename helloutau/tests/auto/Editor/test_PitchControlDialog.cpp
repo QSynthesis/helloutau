@@ -104,6 +104,17 @@ private Q_SLOTS:
                                   -30, 3, false, existing, 160);
         QCOMPARE(dialog.portamentoPoints(), existing);
     }
+
+    void existing_seven_points_are_retained_without_portamento_edits() {
+        QList<kit::PortamentoPoint> existing;
+        for (int i = 0; i < 7; ++i) {
+            existing.push_back({double(i * 20), double(i), kit::PortamentoPoint::S});
+        }
+        PitchControlDialog dialog(true, true, PitchControlDialog::defaultVibrato(), 0, 0, 2, 59,
+                                  -30, 7, true, existing, 120);
+        QCOMPARE(dialog.portamentoCount(), 7);
+        QVERIFY(!dialog.portamentoEdited());
+    }
 };
 
 int main(int argc, char *argv[]) {
