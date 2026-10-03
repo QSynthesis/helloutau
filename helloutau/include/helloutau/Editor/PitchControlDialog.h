@@ -30,7 +30,7 @@ namespace hello::daw {
                            int portamentoLength = 59, int portamentoStart = -30,
                            int portamentoCount = 2, bool averagePoints = true,
                            const QList<kit::PortamentoPoint> &existingPortamento = {},
-                           int noteLength = 480,
+                           double noteDuration = 480, double previousNoteDuration = 100000,
                            QWidget *parent = nullptr);
         explicit PitchControlDialog(const kit::Vibrato &values, QWidget *parent = nullptr);
         ~PitchControlDialog();
@@ -46,9 +46,11 @@ namespace hello::daw {
         int portamentoStart() const;
         int portamentoCount() const;
         bool averagePoints() const;
-        void setPortamentoContext(const QList<kit::PortamentoPoint> &points, int noteLength);
+        void setPortamentoContext(const QList<kit::PortamentoPoint> &points, double noteDuration,
+                                  double previousNoteDuration = 100000);
         QList<kit::PortamentoPoint> portamentoPoints() const;
-        QPushButton *defaultButton() const;
+        QPushButton *portamentoDefaultButton() const;
+        QPushButton *vibratoDefaultButton() const;
 
         /// The field of a value, in the order of \c VBR: length, period, depth, fade in, fade
         /// out, phase, height.
@@ -71,12 +73,15 @@ namespace hello::daw {
         QSlider *m_portamentoStartSlider;
         QComboBox *m_portamentoCount;
         QCheckBox *m_averagePoints;
-        QPushButton *m_default;
+        QPushButton *m_portamentoDefault;
+        QPushButton *m_vibratoDefault;
+        std::array<QSlider *, 3> m_vibratoSliders{};
         std::array<QDoubleSpinBox *, 7> m_fields{};
         // What each field showed at first, by which an unchanged field is recognized
         std::array<double, 7> m_shown{};
         QList<kit::PortamentoPoint> m_existingPortamento;
-        int m_noteLength = 480;
+        double m_noteDuration = 480;
+        double m_previousNoteDuration = 100000;
     };
 
 }

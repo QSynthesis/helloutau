@@ -645,31 +645,45 @@ namespace hello::daw {
 
     std::optional<bool> PianoRoll::selectedPortamento() const {
         stdc_impl_t;
-        std::optional<bool> result;
+        std::optional<QList<kit::PortamentoPoint>> first;
         for (const int index : selectedIndices()) {
             if (impl.timeline->note(index).rest)
                 continue;
-            const bool present = !impl.pointsOf(index).isEmpty();
-            if (result && *result != present)
+            const auto points = impl.pointsOf(index);
+            if (first && *first != points)
                 return std::nullopt;
-            result = present;
+            first = points;
         }
-        return result;
+        if (!first)
+            return std::nullopt;
+        return !first->isEmpty();
     }
 
     std::optional<bool> PianoRoll::selectedVibrato() const {
         stdc_impl_t;
-        std::optional<bool> result;
+        std::optional<kit::Vibrato> first;
+        std::optional<bool> present;
         const auto refs = impl.notes();
         for (const int index : selectedIndices()) {
             if (impl.timeline->note(index).rest)
                 continue;
-            const bool present = refs.at(index).vibrato().has_value();
-            if (result && *result != present)
+            const auto vibrato = refs.at(index).vibrato();
+            if (present && *present != vibrato.has_value())
                 return std::nullopt;
-            result = present;
+            present = vibrato.has_value();
+            if (!vibrato)
+                continue;
+            if (!first) {
+                first = *vibrato;
+                continue;
+            }
+            if (first->length != vibrato->length || first->period != vibrato->period ||
+                first->amplitude != vibrato->amplitude || first->attack != vibrato->attack ||
+                first->release != vibrato->release || first->phase != vibrato->phase ||
+                first->offset != vibrato->offset || first->intensity != vibrato->intensity)
+                return std::nullopt;
         }
-        return result;
+        return present ? *present : std::optional<bool>{};
     }
 
     bool PianoRoll::setPortamentoEnabled(bool enabled, kit::DiagnosticList &diagnostics,
@@ -732,11 +746,26 @@ namespace hello::daw {
     }
 
     bool PianoRoll::togglePortamento(kit::DiagnosticList &diagnostics) {
-        return setPortamentoEnabled(!selectedPortamento().value_or(false), diagnostics);
+        stdc_impl_t;
+        bool allPresent = true;
+        for (const int index : selectedIndices()) {
+            if (impl.timeline->note(index).rest)
+                continue;
+            allPresent = allPresent && !impl.pointsOf(index).isEmpty();
+        }
+        return setPortamentoEnabled(!allPresent, diagnostics);
     }
 
     bool PianoRoll::toggleVibrato(kit::DiagnosticList &diagnostics) {
-        return setVibratoEnabled(!selectedVibrato().value_or(false), diagnostics);
+        stdc_impl_t;
+        bool allPresent = true;
+        const auto refs = impl.notes();
+        for (const int index : selectedIndices()) {
+            if (impl.timeline->note(index).rest)
+                continue;
+            allPresent = allPresent && refs.at(index).vibrato().has_value();
+        }
+        return setVibratoEnabled(!allPresent, diagnostics);
     }
 
     bool PianoRoll::crossfadeEnvelopes(Crossfade crossfade, kit::DiagnosticList &diagnostics) {

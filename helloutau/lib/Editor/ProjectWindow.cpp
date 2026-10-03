@@ -179,15 +179,15 @@ namespace hello::daw {
         }
 
         int pitchControlDefaultPortamentoLength(const AppSettings &settings) {
-            return std::max(
-                1,
-                settings.value(QStringLiteral("pitchControl/defaultPortamentoLength")).toInt(59));
+            return std::clamp(
+                settings.value(QStringLiteral("pitchControl/defaultPortamentoLength")).toInt(59), 0,
+                100000);
         }
 
         int pitchControlDefaultPortamentoStart(const AppSettings &settings) {
-            return std::min(
-                0,
-                settings.value(QStringLiteral("pitchControl/defaultPortamentoStart")).toInt(-30));
+            return std::clamp(
+                settings.value(QStringLiteral("pitchControl/defaultPortamentoStart")).toInt(-30),
+                -100000, 100000);
         }
 
         int pitchControlDefaultPortamentoCount(const AppSettings &settings) {
@@ -200,10 +200,8 @@ namespace hello::daw {
             return settings.value(QStringLiteral("pitchControl/defaultAveragePoints")).toBool(true);
         }
 
-        void savePitchControlDefaults(AppSettings &settings, const kit::Vibrato &vibrato,
-                                      int portamentoPreset, int vibratoPreset, int portamentoMode,
-                                      int portamentoLength, int portamentoStart,
-                                      int portamentoCount, bool averagePoints) {
+        void savePitchControlVibratoDefault(AppSettings &settings, const kit::Vibrato &vibrato,
+                                            int preset) {
             settings.setValue(QStringLiteral("pitchControl/defaultVibrato"),
                               QJsonObject{
                                   {QStringLiteral("length"),    vibrato.length   },
@@ -214,16 +212,7 @@ namespace hello::daw {
                                   {QStringLiteral("phase"),     vibrato.phase    },
                                   {QStringLiteral("offset"),    vibrato.offset   },
             });
-            settings.setValue(QStringLiteral("pitchControl/defaultPortamento"), portamentoPreset);
-            settings.setValue(QStringLiteral("pitchControl/defaultVibratoPreset"), vibratoPreset);
-            settings.setValue(QStringLiteral("pitchControl/defaultPortamentoMode"), portamentoMode);
-            settings.setValue(QStringLiteral("pitchControl/defaultPortamentoLength"),
-                              portamentoLength);
-            settings.setValue(QStringLiteral("pitchControl/defaultPortamentoStart"),
-                              portamentoStart);
-            settings.setValue(QStringLiteral("pitchControl/defaultPortamentoCount"),
-                              portamentoCount);
-            settings.setValue(QStringLiteral("pitchControl/defaultAveragePoints"), averagePoints);
+            settings.setValue(QStringLiteral("pitchControl/defaultVibratoPreset"), preset);
         }
 
     }
@@ -1869,7 +1858,9 @@ namespace hello::daw {
             int portamentoLength = pitchControlDefaultPortamentoLength(editor->settings());
             int portamentoStart = pitchControlDefaultPortamentoStart(editor->settings());
             int portamentoCount = pitchControlDefaultPortamentoCount(editor->settings());
-            if (existingPortamento.size() == 2) {
+            if (existingPortamento.isEmpty()) {
+                portamentoMode = 1;
+            } else if (existingPortamento.size() == 2) {
                 portamentoMode = 1;
                 portamentoStart = int(std::lround(existingPortamento.first().x));
                 portamentoLength =
@@ -1878,18 +1869,31 @@ namespace hello::daw {
                 portamentoMode = 2;
                 portamentoCount = existingPortamento.size();
             }
+            const auto durationInMilliseconds = [this](int index) {
+                const double tempo = roll->timeline()->tempoMap().tempo(index);
+                return tempo > 0 ? double(roll->timeline()->note(index).length) * 60000.0 /
+                                       (tempo * 480.0)
+                                 : 0.0;
+            };
+            const double noteDuration =
+                firstSungIndex >= 0 ? durationInMilliseconds(firstSungIndex) : 0.0;
+            const double previousNoteDuration =
+                firstSungIndex > 0 ? durationInMilliseconds(firstSungIndex - 1) : 100000.0;
             PitchControlDialog dialog(
                 portamento, vibratoState, sung.first().vibrato().value_or(defaultVibrato),
                 pitchControlDefaultPortamento(editor->settings()),
                 pitchControlDefaultVibratoPreset(editor->settings()), portamentoMode,
                 portamentoLength, portamentoStart, portamentoCount,
                 pitchControlDefaultAveragePoints(editor->settings()), existingPortamento,
-                firstSungIndex >= 0 ? roll->timeline()->note(firstSungIndex).length : 480, &decl);
-            connect(dialog.defaultButton(), &QPushButton::clicked, &dialog, [this, &dialog] {
-                savePitchControlDefaults(
-                    editor->settings(), dialog.vibrato(), dialog.portamentoPreset(),
-                    dialog.vibratoPreset(), dialog.portamentoMode(), dialog.portamentoLength(),
-                    dialog.portamentoStart(), dialog.portamentoCount(), dialog.averagePoints());
+                noteDuration, previousNoteDuration, &decl);
+            connect(
+                dialog.portamentoDefaultButton(), &QPushButton::clicked, &dialog, [this, &dialog] {
+                    editor->settings().setValue(QStringLiteral("pitchControl/defaultPortamento"),
+                                                dialog.portamentoPreset());
+                });
+            connect(dialog.vibratoDefaultButton(), &QPushButton::clicked, &dialog, [this, &dialog] {
+                savePitchControlVibratoDefault(editor->settings(), dialog.vibrato(),
+                                               dialog.vibratoPreset());
             });
             if (dialog.exec() != QDialog::Accepted) {
                 return;
