@@ -137,6 +137,39 @@ private Q_SLOTS:
         QCOMPARE(sample->voiceOverlap, 5.0);
     }
 
+    void an_explicit_alias_beats_a_file_name_fallback() {
+        write(QStringLiteral("oto.ini"), "hao2.wav=hao,1,2,3,4,5\n");
+        write(QStringLiteral("hao.wav"), "RIFF");
+        write(QStringLiteral("hao2.wav"), "RIFF");
+
+        FixedCharsetSelector selector(QStringLiteral("UTF-8"));
+        DiagnosticList diagnostics;
+        auto opened = VoiceBankFileSystemState::open(root(), &selector, diagnostics);
+        QVERIFY(opened.has_value());
+
+        const auto *sample = opened->bank.find(60, QStringLiteral("hao"));
+        QVERIFY(sample);
+        QCOMPARE(sample->fileName, QStringLiteral("hao2.wav"));
+        QCOMPARE(sample->offset, 1.0);
+    }
+
+    void an_explicit_alias_beats_an_empty_alias_entry() {
+        write(QStringLiteral("oto.ini"), "hao.wav=,0,0,0,0,0\n"
+                                         "hao2.wav=hao,1,2,3,4,5\n");
+        write(QStringLiteral("hao.wav"), "RIFF");
+        write(QStringLiteral("hao2.wav"), "RIFF");
+
+        FixedCharsetSelector selector(QStringLiteral("UTF-8"));
+        DiagnosticList diagnostics;
+        auto opened = VoiceBankFileSystemState::open(root(), &selector, diagnostics);
+        QVERIFY(opened.has_value());
+
+        const auto *sample = opened->bank.find(60, QStringLiteral("hao"));
+        QVERIFY(sample);
+        QCOMPARE(sample->fileName, QStringLiteral("hao2.wav"));
+        QCOMPARE(sample->offset, 1.0);
+    }
+
     // The prefix map selects different samples for one lyric at different keys, which is why
     // find() takes a note number.
     void the_prefix_map_selects_the_sample_for_each_key() {

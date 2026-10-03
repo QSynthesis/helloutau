@@ -536,7 +536,16 @@ namespace hello::daw {
             }
             // A folder that failed to load before is read again once the dialog confirms it.
             const auto root = voiceRoot();
-            if (newFolder || (!document->voiceBank() && !root.empty() && root == voiceBankRoot)) {
+            const auto bankNeedsCharset = [&] {
+                const auto bank = document->voiceBank();
+                if (!bank) {
+                    return false;
+                }
+                return std::any_of(bank->directories().cbegin(), bank->directories().cend(),
+                                   [](const auto &directory) { return directory.leftOut; });
+            };
+            if (newFolder || bankNeedsCharset() ||
+                (!document->voiceBank() && !root.empty() && root == voiceBankRoot)) {
                 decl.loadVoiceBank();
             }
         }

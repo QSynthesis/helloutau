@@ -15,6 +15,7 @@
 #include <QtGui/QGuiApplication>
 #include <QtGui/QKeyEvent>
 #include <QtGui/QMouseEvent>
+#include <QtGui/QPainter>
 #include <QtGui/QPixmap>
 #include <QtWidgets/QButtonGroup>
 #include <QtWidgets/QComboBox>
@@ -415,11 +416,21 @@ namespace hello::daw {
                 std::filesystem::path(impl.voiceBank->character().image.toStdU16String());
             image.load(QString::fromStdU16String(path.u16string()));
         }
-        if (image.isNull()) {
-            impl.voiceBankButton->setIcon(style()->standardIcon(QStyle::SP_FileIcon));
-        } else {
-            impl.voiceBankButton->setIcon(QIcon(image));
+        auto icon = image.isNull() ? style()->standardIcon(QStyle::SP_FileIcon) : QIcon(image);
+        const bool leftOut = impl.voiceBank && std::any_of(
+                                               impl.voiceBank->directories().cbegin(),
+                                               impl.voiceBank->directories().cend(),
+                                               [](const auto &directory) { return directory.leftOut; });
+        if (leftOut) {
+            const auto size = icon.actualSize(QSize(24, 24));
+            auto pixmap = icon.pixmap(size);
+            QPainter painter(&pixmap);
+            painter.drawPixmap(size.width() / 2, size.height() / 2,
+                               style()->standardIcon(QStyle::SP_MessageBoxWarning).pixmap(
+                                   size.width() / 2, size.height() / 2));
+            icon = QIcon(pixmap);
         }
+        impl.voiceBankButton->setIcon(icon);
         impl.timingsStale = true;
         impl.view->viewport()->update();
         impl.parameters->viewport()->update();

@@ -90,18 +90,22 @@ namespace hello::kit {
             }
         }
 
+        // Explicit aliases take precedence over the fallback aliases of entries whose alias is
+        // empty, regardless of the file name order in oto.ini.
+        for (int index = 0; index < m_samples.size(); ++index) {
+            const auto &sample = m_samples.at(index);
+            if (sample.hasEntry && !sample.alias.isEmpty() && !m_byAlias.contains(sample.alias)) {
+                m_byAlias.insert(sample.alias, index);
+            }
+        }
         for (int index = 0; index < m_samples.size(); ++index) {
             const auto &sample = m_samples.at(index);
             const auto stem = stemOf(sample.fileName);
-
             // An entry without an alias is found by its file name, which is how UTAU writes the
             // first entry of a sample. The alias of the sample remains empty, because the file
             // specifies it as empty and it is saved as empty.
-            if (sample.hasEntry) {
-                const auto alias = sample.alias.isEmpty() ? stem : sample.alias;
-                if (!m_byAlias.contains(alias)) {
-                    m_byAlias.insert(alias, index);
-                }
+            if (sample.hasEntry && sample.alias.isEmpty() && !m_byAlias.contains(stem)) {
+                m_byAlias.insert(stem, index);
             }
 
             // UTAU also treats the file name of a sample as an alias, which is why voice bank
