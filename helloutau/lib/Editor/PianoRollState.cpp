@@ -160,6 +160,7 @@ namespace hello::daw {
             selectedPoints.clear();
         }
         view->viewport()->update();
+        parameters->viewport()->update();
         updateRulerSelection();
         Q_EMIT decl.selectionChanged();
     }
@@ -209,6 +210,7 @@ namespace hello::daw {
             selection.clear();
         }
         view->viewport()->update();
+        parameters->viewport()->update();
         Q_EMIT decl.selectionChanged();
     }
 
