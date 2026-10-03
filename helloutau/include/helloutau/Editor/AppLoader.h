@@ -63,6 +63,7 @@ namespace hello::daw {
 
             QString id;
             QString displayName;
+            QString description;
             QString version;
             /// Path of the library of the plugin.
             QString filePath;

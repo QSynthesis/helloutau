@@ -8,7 +8,7 @@
 set(VCPKG_APPLOCAL_DEPS OFF)
 
 # helloutau_add_native_plugin(<target>
-#     ID <id> DISPLAY_NAME <name> CATEGORY <directory>
+#     ID <id> DISPLAY_NAME <name> DESCRIPTION <description> CATEGORY <directory>
 #     [DEPENDENCIES <id>[;<id>...]]
 #     [DIRECTORY <plugins directory>]
 #     [arguments of helloutau_add_plugin()...]
@@ -30,7 +30,7 @@ set(VCPKG_APPLOCAL_DEPS OFF)
 # and not installed.
 function(helloutau_add_native_plugin _target)
     set(options)
-    set(oneValueArgs ID DISPLAY_NAME CATEGORY DIRECTORY DEPENDENCIES)
+    set(oneValueArgs ID DISPLAY_NAME DESCRIPTION CATEGORY DIRECTORY DEPENDENCIES)
     set(multiValueArgs)
     cmake_parse_arguments(FUNC "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
@@ -71,6 +71,7 @@ function(helloutau_add_native_plugin _target)
         "    \"name\": \"$<TARGET_FILE_BASE_NAME:${_target}>\",\n"
         "    \"id\": \"${FUNC_ID}\",\n"
         "    \"displayName\": \"${FUNC_DISPLAY_NAME}\",\n"
+        "    \"description\": \"${FUNC_DESCRIPTION}\",\n"
         "    \"version\": \"${HELLOUTAU_VERSION}\",\n"
         "    \"dependencies\": [${_dependencies}]\n"
         "}\n"

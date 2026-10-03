@@ -31,7 +31,7 @@ stdcorelib.plugin 的交接记录（其仓库 `.cache/codex/2026-08-21-1722-stdc
 ### stdcorelib.plugin 提供的部分
 
 - `stdc::plugin`：插件是某个 IID 接口的实现，以 `STDC_EXPORT_PLUGIN` 导出，IID 与元数据嵌在库中；`PluginFactory` 按目录发现。
-- `stdc::pluginsystem::PluginSystem`：只接收一个 IID；元数据保留 `id`、`displayName`、`version`、`compatVersion`、`enabledByDefault`、`dependencies`，其余字段归宿主；依赖解析、按依赖顺序载入并调用 `initialize()`、逆序调用 `pluginsInitialized()` 与 `aboutToShutdown()` 并卸载；全局与用户两份启用设置；宿主的载入判定（`setPluginLoadPredicate()`）；Flat、Bundle 与自定义三种目录布局。
+- `stdc::pluginsystem::PluginSystem`：只接收一个 IID；元数据保留 `id`、`displayName`、`description`、`version`、`compatVersion`、`enabledByDefault`、`dependencies`，其余字段归宿主；依赖解析、按依赖顺序载入并调用 `initialize()`、逆序调用 `pluginsInitialized()` 与 `aboutToShutdown()` 并卸载；全局与用户两份启用设置；宿主的载入判定（`setPluginLoadPredicate()`）；Flat、Bundle 与自定义三种目录布局。
 - 插件实现 `stdc::pluginsystem::IPlugin` 的三个钩子：`initialize()`、`pluginsInitialized()`、`aboutToShutdown()`。
 - stdcorelib 另有 `stdc::DynamicRegistry`：运行时增删、线程安全、每个进程一份（stdcorelib 是动态库时），可监听条目的增删。
 
@@ -91,7 +91,7 @@ lib/plugins/helloutau/
 
 macOS 的 bundle 中为 `HelloUtau.app/Contents/MacOS`（程序）与 `HelloUtau.app/Contents/Plugins/<插件>`。
 
-- 目录布局（stdcorelib.plugin 的 `Bundle`）：每个插件占搜索目录下的一个子目录，其中有插件的库与一个元数据 JSON：根字段 `name` 给出库的平台无关名（`name` 为 `vs4ufrq` 时可对应 `vs4ufrq.dll`、`libvs4ufrq.so`、`libvs4ufrq.dylib`），其余为 `id`、`displayName`、`version`、`dependencies` 与宿主字段。IID 仍以 `stdc_add_plugin_metadata()` 嵌在库中。插件的其他文件（翻译、图标、数据）放在同一子目录中。
+- 目录布局（stdcorelib.plugin 的 `Bundle`）：每个插件占搜索目录下的一个子目录，其中有插件的库与一个元数据 JSON：根字段 `name` 给出库的平台无关名（`name` 为 `vs4ufrq` 时可对应 `vs4ufrq.dll`、`libvs4ufrq.so`、`libvs4ufrq.dylib`），其余为 `id`、`displayName`、`description`、`version`、`dependencies` 与宿主字段。IID 仍以 `stdc_add_plugin_metadata()` 嵌在库中。插件的其他文件（翻译、图标、数据）放在同一子目录中。
 - 内置插件的搜索目录（`AppLoader::builtinPluginPath()`）为程序所在目录上一级的 `lib/plugins/helloutau`；macOS 打包为 bundle 时沿用 qmsetup 的布局，程序在 `Contents/MacOS`，插件在 `Contents/Plugins`。这一相对路径不写在 C++ 中，由 HelloUtauEditor 的 CMake 从 qmsetup 的运行目录与插件目录算出，并核对构建目录与安装目录一致。目前尚未打包为 bundle，测试程序也不在 bundle 中。用户安装插件的目录将来在「Plugins」页一并加入，都与 UTAU 插件的目录分开。
 - 本仓库的插件以 `helloutau_add_native_plugin()`（`helloutau/plugins/CMakeLists.txt`）构建：输出到各自的子目录，嵌入 IID，并在构建时写出 `plugin.json`（`DEPENDENCIES` 写入必需依赖）。只供测试的插件以 `DIRECTORY` 构建到测试自己的目录，不安装。
 - **翻译**（作者 2026-10-01 定）：各库（两个模块的全部子库，含动作清单经 AEC 生成的文字）共用一份 `helloutau/translations/helloutau_<语言>.ts`，嵌入 HelloUtauEditor 的资源 `:/helloutau/translations`；每个插件一份 `plugins/<插件>/translations/<插件>_<语言>.ts`，嵌入插件自身的资源 `:/helloutau/plugins/<插件>/translations`。`.ts` 纳入版本库，`qt_add_translations()` 在构建时生成 `.qm`；`update_translations` 目标以 lupdate 从源文件（含 AEC 生成的源文件，须先构建）更新 `.ts`。以后改为外部文件时，库的译文放 `share/helloutau`，插件的放各自目录。命名空间作用域中名为 `tr` 的辅助函数会让 lupdate 记错上下文，须改用 `QT_TRANSLATE_NOOP` 标记（见 `ThemeTypes.cpp`）。

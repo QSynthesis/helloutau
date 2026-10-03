@@ -247,6 +247,7 @@ namespace hello::daw {
             PluginInfo info;
             info.id = QString::fromStdString(spec->id());
             info.displayName = QString::fromStdString(spec->displayName());
+            info.description = QString::fromStdString(spec->description());
             info.version = QString::fromStdString(spec->version().toString());
             info.filePath =
                 QDir::toNativeSeparators(QString::fromStdU16String(spec->filePath().u16string()));

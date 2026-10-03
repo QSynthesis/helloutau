@@ -18,6 +18,7 @@ qm_find_qt(Core Gui Widgets)
 helloutau_add_native_plugin(${PROJECT_NAME}
     ID org.helloutau.interchange
     DISPLAY_NAME Interchange
+    DESCRIPTION "Imports and exports project file formats."
     CATEGORY Interchange
     DEPENDENCIES org.helloutau.core
     QT_AUTOGEN

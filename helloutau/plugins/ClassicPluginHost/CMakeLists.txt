@@ -17,6 +17,7 @@ qm_find_qt(Core Gui Widgets)
 helloutau_add_native_plugin(${PROJECT_NAME}
     ID org.helloutau.classicpluginhost
     DISPLAY_NAME "Classic Plugin Host"
+    DESCRIPTION "Runs classic UTAU plugins."
     CATEGORY ClassicPluginHost
     DEPENDENCIES org.helloutau.core
     QT_AUTOGEN

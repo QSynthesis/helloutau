@@ -230,6 +230,10 @@
         <translation>ID：%1</translation>
     </message>
     <message>
+        <source>Description: %1</source>
+        <translation>介绍：%1</translation>
+    </message>
+    <message>
         <source>Library: %1</source>
         <translation>库：%1</translation>
     </message>

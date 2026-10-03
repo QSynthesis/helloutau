@@ -236,6 +236,7 @@ namespace hello::daw {
 
         QStringList lines = {
             tr("ID: %1").arg(info.id),
+            tr("Description: %1").arg(info.description.isEmpty() ? tr("None") : info.description),
             tr("Library: %1").arg(QDir::toNativeSeparators(info.filePath)),
             tr("Depends on: %1").arg(listOf(dependsOn)),
             tr("Required by: %1").arg(listOf(requiredBy)),

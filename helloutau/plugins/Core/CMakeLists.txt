@@ -11,6 +11,7 @@ qm_find_qt(Core Widgets)
 helloutau_add_native_plugin(${PROJECT_NAME}
     ID org.helloutau.core
     DISPLAY_NAME Core
+    DESCRIPTION "Provides the built-in HelloUtau editor features."
     CATEGORY Core
     QT_AUTOGEN
     SOURCES ${_src}

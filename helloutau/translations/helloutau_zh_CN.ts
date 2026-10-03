@@ -470,6 +470,10 @@
         <translation>设置拍号...</translation>
     </message>
     <message>
+        <source>Time Signature</source>
+        <translation>拍号</translation>
+    </message>
+    <message>
         <source>Show &amp;Pitch</source>
         <translation>显示音高(&amp;P)</translation>
     </message>
@@ -818,10 +822,6 @@
     <message>
         <source>(various)</source>
         <translation>（多个值）</translation>
-    </message>
-    <message>
-        <source>(default)</source>
-        <translation>（默认值）</translation>
     </message>
     <message>
         <source>(default: %1)</source>
@@ -1238,10 +1238,6 @@
     <message>
         <source>Count:</source>
         <translation>数量：</translation>
-    </message>
-    <message>
-        <source>Portamento preset:</source>
-        <translation>滑音预设：</translation>
     </message>
     <message>
         <source>Vibrato preset:</source>

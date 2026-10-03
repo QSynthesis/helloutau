@@ -14,6 +14,7 @@ set(VCPKG_APPLOCAL_DEPS OFF)
 helloutau_add_native_plugin(TestActionPlugin
     ID org.helloutau.test.action
     DISPLAY_NAME TestAction
+    DESCRIPTION "Provides test actions for the editor plugin tests."
     CATEGORY TestAction
     DEPENDENCIES org.helloutau.core
     DIRECTORY ${_plugins_dir}

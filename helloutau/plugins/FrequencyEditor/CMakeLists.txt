@@ -11,6 +11,7 @@ qm_find_qt(Core)
 helloutau_add_native_plugin(${PROJECT_NAME}
     ID org.helloutau.frequencyeditor
     DISPLAY_NAME "Frequency Editor"
+    DESCRIPTION "Edits frequency tables for voice banks."
     CATEGORY FrequencyEditor
     DEPENDENCIES org.helloutau.core
     SOURCES ${_src}

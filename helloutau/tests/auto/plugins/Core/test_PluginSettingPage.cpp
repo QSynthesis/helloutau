@@ -5,6 +5,7 @@
 #include <QtTest/QTest>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QLabel>
+#include <QtWidgets/QPlainTextEdit>
 #include <QtWidgets/QTreeWidget>
 
 #include <helloutau/Editor/AppLoader.h>
@@ -47,11 +48,17 @@ private Q_SLOTS:
             }
         }
         QVERIFY(core >= 0 && other >= 0);
+        QVERIFY(!plugins[core].description.isEmpty());
         const auto coreItem = tree->topLevelItem(core);
+        tree->setCurrentItem(coreItem);
         QCOMPARE(coreItem->checkState(0), Qt::Checked);
         QVERIFY(!(coreItem->flags() & Qt::ItemIsUserCheckable));
         QVERIFY(restart->isHidden());
         QVERIFY(!page.isModified());
+
+        const auto details = page.widget()->findChild<QPlainTextEdit *>();
+        QVERIFY(details);
+        QVERIFY(details->toPlainText().contains(plugins[core].description));
 
         const auto item = tree->topLevelItem(other);
         const auto id = plugins[other].id;
