@@ -8,6 +8,7 @@
 
 #include <helloutau/Editor/HelloUtauEditorGlobal.h>
 
+class QAction;
 class QCheckBox;
 class QComboBox;
 class QDoubleSpinBox;
@@ -50,6 +51,8 @@ namespace hello::daw {
                                 QWidget *parent);
 
         QString voiceDirText() const;
+        void setVoiceDirInvalid(bool invalid);
+        void setPathInvalid(QLineEdit *edit, bool invalid);
 
         kit::Project m_project;
         AppSettings *m_appSettings = nullptr;
@@ -59,6 +62,9 @@ namespace hello::daw {
         QLineEdit *m_flags;
         QLineEdit *m_outputFile;
         QComboBox *m_voiceDir;
+        QAction *m_voiceDirInvalid;
+        QAction *m_wavtoolInvalid;
+        QAction *m_resamplerInvalid;
         QLineEdit *m_wavtool;
         QLineEdit *m_resampler;
         QLabel *m_engineWarning;

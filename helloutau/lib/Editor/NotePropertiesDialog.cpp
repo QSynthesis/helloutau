@@ -56,6 +56,7 @@ namespace hello::daw {
 
         auto form = new QFormLayout();
         const auto add = [&](const QString &label, QLineEdit *edit) {
+            edit->setClearButtonEnabled(true);
             const int index = int(m_fields.size());
             m_fields.push_back(edit);
             m_edited.push_back(false);
