@@ -292,6 +292,7 @@
             </menu>
             <menu id="helloutau.tools">
                 <action id="helloutau.tools.editVoiceBank" />
+                <separator />
                 <action id="helloutau.tools.clearCache" />
                 <action id="helloutau.tools.viewRenderLog" />
                 <separator />

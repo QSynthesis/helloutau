@@ -25,7 +25,8 @@
     </items>
 
     <insertions>
-        <insertion target="helloutau.tools" anchor="after" relativeTo="helloutau.tools.clearCache">
+        <insertion target="helloutau.tools" anchor="after" relativeTo="helloutau.tools.viewRenderLog">
+            <separator />
             <action id="helloutau.tools.classicPlugins" />
         </insertion>
     </insertions>
