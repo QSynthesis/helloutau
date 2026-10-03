@@ -30,6 +30,8 @@ private Q_SLOTS:
         QVERIFY(!settings.areParametersVisible());
         QCOMPARE(settings.renderThreadCount(), 0);
         QCOMPARE(settings.quantization(), 120);
+        QCOMPARE(settings.timeSignatureNumerator(), 4);
+        QCOMPARE(settings.timeSignatureDenominator(), 4);
         QVERIFY(settings.isRenderLogAccumulated());
         QCOMPARE(settings.renderLogLimit(), 1024 * 1024);
     }
@@ -66,6 +68,19 @@ private Q_SLOTS:
             settings.setQuantization(60);
         }
         QCOMPARE(AppSettings(file).quantization(), 60);
+    }
+
+    void time_signature_persists() {
+        QTemporaryDir dir;
+        const auto file = dir.filePath(QStringLiteral("settings.json"));
+        {
+            AppSettings settings(file);
+            settings.setTimeSignatureNumerator(3);
+            settings.setTimeSignatureDenominator(8);
+        }
+        const AppSettings settings(file);
+        QCOMPARE(settings.timeSignatureNumerator(), 3);
+        QCOMPARE(settings.timeSignatureDenominator(), 8);
     }
 
     void render_log_settings_persist() {

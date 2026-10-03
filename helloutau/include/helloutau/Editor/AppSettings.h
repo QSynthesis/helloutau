@@ -96,6 +96,11 @@ namespace hello::daw {
         int quantization() const;
         void setQuantization(int ticks);
 
+        int timeSignatureNumerator() const;
+        void setTimeSignatureNumerator(int value);
+        int timeSignatureDenominator() const;
+        void setTimeSignatureDenominator(int value);
+
         /// Whether the piano roll shows the pitch curves (View > Show Pitch). The default is
         /// true.
         bool isPitchVisible() const;

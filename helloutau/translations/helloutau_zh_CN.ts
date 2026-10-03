@@ -466,6 +466,10 @@
         <translation>显示工具栏(&amp;T)</translation>
     </message>
     <message>
+        <source>Time Signature...</source>
+        <translation>设置拍号...</translation>
+    </message>
+    <message>
         <source>Show &amp;Pitch</source>
         <translation>显示音高(&amp;P)</translation>
     </message>
@@ -1427,6 +1431,18 @@ Trust and run it?</source>
     <message>
         <source>Project Tempo</source>
         <translation>工程曲速</translation>
+    </message>
+    <message>
+        <source>Time Signature</source>
+        <translation>拍号</translation>
+    </message>
+    <message>
+        <source>Beats per bar:</source>
+        <translation>每小节拍数：</translation>
+    </message>
+    <message>
+        <source>Beat unit:</source>
+        <translation>拍号单位：</translation>
     </message>
     <message>
         <source>Set Label</source>

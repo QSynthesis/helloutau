@@ -120,8 +120,8 @@
                 shortcut="F" />
         <!-- The grid to which drags snap, a box in the tool bar. The two commands step through
              its choices, from a quarter note to a sixty-fourth and off. -->
-        <action id="helloutau.select.quantization" text="Quantization" category="Select" />
-        <action id="helloutau.project.tempo" text="Project Tempo" category="Project" />
+        <action id="helloutau.select.quantizationWidget" text="Quantization" category="Select" />
+        <action id="helloutau.edit.projectTempoWidget" text="Project Tempo" category="Project" />
         <action id="helloutau.select.decreaseQuantizationInterval"
                 text="&amp;Decrease Quantization Interval"
                 category="Select" shortcut="Ctrl+[" />
@@ -133,6 +133,8 @@
 
         <!-- The tool bar of the project window, shown or hidden as the settings store it -->
         <action id="helloutau.view.showToolBar" text="Show &amp;Toolbar" category="View" />
+        <action id="helloutau.view.timeSignature" text="Time Signature..." category="View" />
+        <action id="helloutau.view.timeSignatureWidget" text="Time Signature" category="View" />
         <!-- X as in UTAU -->
         <action id="helloutau.view.showPitch" text="Show &amp;Pitch" category="View"
                 shortcut="X" />
@@ -268,6 +270,8 @@
             <menu id="helloutau.view">
                 <action id="helloutau.view.showToolBar" />
                 <separator />
+                <action id="helloutau.view.timeSignature" />
+                <separator />
                 <action id="helloutau.view.showPitch" />
                 <action id="helloutau.view.showRenderedPitch" />
                 <action id="helloutau.view.showEnvelopes" />
@@ -319,8 +323,11 @@
             <action id="helloutau.edit.crossfadeP1P4" />
             <action id="helloutau.edit.resetEnvelopes" />
             <separator />
-            <action id="helloutau.select.quantization" />
-            <action id="helloutau.project.tempo" />
+            <action id="helloutau.select.quantizationWidget" />
+            <separator />
+            <action id="helloutau.edit.projectTempoWidget" />
+            <separator />
+            <action id="helloutau.view.timeSignatureWidget" />
             <separator />
             <action id="helloutau.playback.play" />
             <action id="helloutau.playback.stop" />

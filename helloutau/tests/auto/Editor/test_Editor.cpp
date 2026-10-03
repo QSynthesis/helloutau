@@ -975,6 +975,8 @@ private Q_SLOTS:
         const auto palette = window->findChild<CommandPalette *>();
         QVERIFY(palette);
         QVERIFY(!palette->shownIds().contains(QStringLiteral("helloutau.select.quantization")));
+        QVERIFY(!palette->shownIds().contains(
+            QStringLiteral("helloutau.select.quantizationWidget")));
         palette->hide();
     }
 

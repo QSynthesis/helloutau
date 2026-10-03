@@ -35,9 +35,12 @@
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QPlainTextEdit>
 #include <QtWidgets/QDialogButtonBox>
+#include <QtWidgets/QFormLayout>
 #include <QtWidgets/QScrollBar>
+#include <QtWidgets/QSpinBox>
 #include <QtWidgets/QStatusBar>
 #include <QtWidgets/QToolBar>
+#include <QtWidgets/QToolButton>
 #include <QtWidgets/QVBoxLayout>
 
 #include <stdcorelib/pimpl.h>
@@ -59,6 +62,7 @@
 #include <helloutau/Widgets/FindBar.h>
 #include <helloutau/Widgets/PianoKeyboard.h>
 #include <helloutau/Widgets/SceneView.h>
+#include <helloutau/Widgets/TimelineRuler.h>
 
 #include "ActionRegistrations_p.h"
 #include "AboutDialog_p.h"
@@ -237,6 +241,7 @@ namespace hello::daw {
         // The boxes of the quantization in the tool bars, which follow the piano roll
         QList<QPointer<QComboBox>> quantizationBoxes;
         QList<QPointer<QDoubleSpinBox>> tempoBoxes;
+        QList<QPointer<QToolButton>> timeSignatureButtons;
         QMenu *recentMenu = nullptr;
         QMenu *regionMenu = nullptr;
         // What Paste Parameters pasted last
@@ -1076,7 +1081,7 @@ namespace hello::daw {
             toolBar->setVisible(editor->settings().isToolBarVisible());
             decl.addToolBar(toolBar);
             context->addToolBar(QStringLiteral("helloutau.mainToolBar"), toolBar);
-            const auto id = QStringLiteral("helloutau.select.quantization");
+            const auto id = QStringLiteral("helloutau.select.quantizationWidget");
             context->addWidgetFactory(id, [this](QWidget *parent) -> QWidget * {
                 auto box = new QComboBox(parent);
                 box->setObjectName(QStringLiteral("quantization"));
@@ -1109,7 +1114,7 @@ namespace hello::daw {
                 return box;
             });
             context->addWidgetFactory(
-                QStringLiteral("helloutau.project.tempo"),
+                QStringLiteral("helloutau.edit.projectTempoWidget"),
                 [this, &decl](QWidget *parent) -> QWidget * {
                     auto box = new QDoubleSpinBox(parent);
                     box->setObjectName(QStringLiteral("tempo"));
@@ -1139,6 +1144,63 @@ namespace hello::daw {
                     tempoBoxes.push_back(box);
                     return box;
                 });
+            context->addWidgetFactory(
+                QStringLiteral("helloutau.view.timeSignatureWidget"), [this](QWidget *parent) {
+                    auto button = new QToolButton(parent);
+                    button->setObjectName(QStringLiteral("timeSignature"));
+                    button->setToolButtonStyle(Qt::ToolButtonTextOnly);
+                    button->setAutoRaise(true);
+                    button->setToolTip(tr("Time Signature"));
+                    QObject::connect(button, &QToolButton::clicked, button,
+                                     [this] { editTimeSignature(); });
+                    timeSignatureButtons.removeAll(nullptr);
+                    timeSignatureButtons.push_back(button);
+                    showTimeSignature(editor->settings().timeSignatureNumerator(),
+                                      editor->settings().timeSignatureDenominator());
+                    return button;
+                });
+        }
+
+        void showTimeSignature(int numerator, int denominator) {
+            timeSignatureButtons.removeAll(nullptr);
+            const auto text = QStringLiteral("%1/%2").arg(numerator).arg(denominator);
+            for (const auto &button : std::as_const(timeSignatureButtons)) {
+                button->setText(text);
+            }
+            if (roll) {
+                roll->ruler()->setTicksPerBeat(kit::ticksPerQuarter * 4 / denominator);
+                roll->ruler()->setBeatsPerBar(numerator);
+            }
+        }
+
+        void editTimeSignature() {
+            stdc_decl_t;
+            QDialog dialog(&decl);
+            dialog.setWindowTitle(tr("Time Signature"));
+            auto numerator = new QSpinBox(&dialog);
+            numerator->setRange(1, 32);
+            numerator->setValue(editor->settings().timeSignatureNumerator());
+            auto denominator = new QComboBox(&dialog);
+            for (const int value : {2, 4, 8, 16, 32}) {
+                denominator->addItem(QString::number(value), value);
+            }
+            denominator->setCurrentIndex(
+                denominator->findData(editor->settings().timeSignatureDenominator()));
+            auto form = new QFormLayout(&dialog);
+            form->addRow(tr("Beats per bar:"), numerator);
+            form->addRow(tr("Beat unit:"), denominator);
+            auto buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel,
+                                                &dialog);
+            form->addRow(buttons);
+            QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+            QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+            if (dialog.exec() != QDialog::Accepted) {
+                return;
+            }
+            editor->settings().setTimeSignatureNumerator(numerator->value());
+            editor->settings().setTimeSignatureDenominator(denominator->currentData().toInt());
+            showTimeSignature(editor->settings().timeSignatureNumerator(),
+                              editor->settings().timeSignatureDenominator());
         }
 
         // Shows ticks in the boxes of the quantization, as the piano roll has it.
@@ -1438,6 +1500,8 @@ namespace hello::daw {
                 });
             showToolBar->setCheckable(true);
             showToolBar->setChecked(editor->settings().isToolBarVisible());
+            addCommand(QStringLiteral("helloutau.view.timeSignature"),
+                       [this] { editTimeSignature(); });
             addCommand(QStringLiteral("helloutau.select.decreaseQuantizationInterval"),
                        [this] { stepQuantization(true); });
             addCommand(QStringLiteral("helloutau.select.increaseQuantizationInterval"),
@@ -1641,6 +1705,8 @@ namespace hello::daw {
                 roll ? roll->quantization() : editor->settings().quantization();
             roll = new PianoRoll(document->session());
             roll->setVoiceBank(document->voiceBank());
+            showTimeSignature(editor->settings().timeSignatureNumerator(),
+                              editor->settings().timeSignatureDenominator());
             QObject::connect(roll, &PianoRoll::voiceBankRequested, &decl,
                              [this] { editProperties(); });
             if (quantization >= 0) {

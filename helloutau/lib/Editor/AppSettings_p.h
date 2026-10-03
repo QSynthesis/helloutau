@@ -18,7 +18,8 @@ namespace hello::daw {
     ///      "playback": {"mode": ..., "threads": ...},
     ///      "appearance": {"language": ...},
     ///      "view": {"showPitch": ..., "showRenderedPitch": ..., "showEnvelopes": ...,
-    ///               "showParameters": ..., "showToolBar": ..., "quantization": ...},
+    ///               "showParameters": ..., "showToolBar": ..., "quantization": ...,
+    ///               "timeSignatureNumerator": ..., "timeSignatureDenominator": ...},
     ///      "files": {"ustExportCharset": ..., "recent": [...], "recentVoiceBanks": [...]},
     ///      "commandPalette": {"recent": [...]}}
     class AppSettings::Impl {

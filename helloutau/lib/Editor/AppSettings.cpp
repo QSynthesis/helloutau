@@ -28,6 +28,8 @@ namespace hello::daw {
         constexpr char RealtimeValue[] = "realtime";
         constexpr char KeyRenderThreads[] = "playback/threads";
         constexpr char KeyQuantization[] = "view/quantization";
+        constexpr char KeyTimeSignatureNumerator[] = "view/timeSignatureNumerator";
+        constexpr char KeyTimeSignatureDenominator[] = "view/timeSignatureDenominator";
         constexpr char KeyUstExportCharset[] = "files/ustExportCharset";
         constexpr char KeyLanguage[] = "appearance/language";
         constexpr char KeyPitchVisible[] = "view/showPitch";
@@ -248,6 +250,32 @@ namespace hello::daw {
     void AppSettings::setQuantization(int ticks) {
         stdc_impl_t;
         impl.setValue(KeyQuantization, int64_t(std::max(0, ticks)));
+    }
+
+    int AppSettings::timeSignatureNumerator() const {
+        stdc_impl_t;
+        return std::clamp(int(impl.value(KeyTimeSignatureNumerator).toInt(4)), 1, 32);
+    }
+
+    void AppSettings::setTimeSignatureNumerator(int value) {
+        stdc_impl_t;
+        impl.setValue(KeyTimeSignatureNumerator, int64_t(std::clamp(value, 1, 32)));
+    }
+
+    int AppSettings::timeSignatureDenominator() const {
+        stdc_impl_t;
+        const auto value = int(impl.value(KeyTimeSignatureDenominator).toInt(4));
+        return value == 2 || value == 4 || value == 8 || value == 16 || value == 32
+                   ? value
+                   : 4;
+    }
+
+    void AppSettings::setTimeSignatureDenominator(int value) {
+        stdc_impl_t;
+        if (value != 2 && value != 4 && value != 8 && value != 16 && value != 32) {
+            value = 4;
+        }
+        impl.setValue(KeyTimeSignatureDenominator, int64_t(value));
     }
 
     bool AppSettings::isPitchVisible() const {
