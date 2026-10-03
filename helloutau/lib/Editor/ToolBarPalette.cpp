@@ -17,6 +17,9 @@ namespace hello::daw {
         // and draws its text in the color for text on the accent. A ThemeIcon has its own colors,
         // so the checked colors must be set on the icon as well.
         void update(QToolButton *button) {
+            if (!button->isCheckable()) {
+                return;
+            }
             auto palette = button->palette();
             for (const auto group : {QPalette::Active, QPalette::Inactive}) {
                 // A checked button has white text on the accent background.
