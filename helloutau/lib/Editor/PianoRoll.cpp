@@ -422,12 +422,14 @@ namespace hello::daw {
                                                impl.voiceBank->directories().cend(),
                                                [](const auto &directory) { return directory.leftOut; });
         if (leftOut) {
-            const auto size = icon.actualSize(QSize(24, 24));
+            const auto size = impl.voiceBankButton->iconSize();
             auto pixmap = icon.pixmap(size);
             QPainter painter(&pixmap);
-            painter.drawPixmap(size.width() / 2, size.height() / 2,
+            const auto warningSize = QSize(size.width() / 2, size.height() / 2);
+            painter.drawPixmap(size.width() - warningSize.width(),
+                               size.height() - warningSize.height(),
                                style()->standardIcon(QStyle::SP_MessageBoxWarning).pixmap(
-                                   size.width() / 2, size.height() / 2));
+                                   warningSize));
             icon = QIcon(pixmap);
         }
         impl.voiceBankButton->setIcon(icon);
