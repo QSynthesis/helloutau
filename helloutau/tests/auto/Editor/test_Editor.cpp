@@ -814,6 +814,21 @@ private Q_SLOTS:
         QCOMPARE(dialog.resamplerEdit()->text(), QDir::toNativeSeparators(settings.resampler()));
     }
 
+    void project_properties_keep_the_initial_voice_bank() {
+        const auto utau = pathIn(m_dir, "utau");
+        fs::create_directories(utau / "voice" / "bank");
+        AppSettings settings(m_dir.filePath(QStringLiteral("settings.json")));
+        settings.setUtauDirectory(utau);
+
+        kit::Project project;
+        project.tracks.push_back({});
+        project.tracks.first().voiceDir = QStringLiteral("%VOICE%bank");
+        ProjectPropertiesDialog dialog(project, settings);
+
+        QCOMPARE(dialog.voiceDirEdit()->text(), QStringLiteral("bank"));
+        QVERIFY(!dialog.changes().voiceDir.has_value());
+    }
+
     // The dialog shows what the notes share, "(various)" where they differ, and gives only the
     // fields edited: an emptied number back to the default, one that does not read left out.
     void the_note_properties_dialog_gives_what_was_edited() {

@@ -4,6 +4,7 @@
 #include <system_error>
 
 #include <QtCore/QDir>
+#include <QtCore/QSignalBlocker>
 #include <QtWidgets/QCheckBox>
 #include <QtWidgets/QComboBox>
 #include <QtWidgets/QDialogButtonBox>
@@ -108,6 +109,10 @@ namespace hello::daw {
             }
             const auto index = m_voiceDir->findData(voiceValue);
             m_voiceDir->setEditText(index >= 0 ? m_voiceDir->itemText(index) : voiceValue);
+            {
+                const QSignalBlocker blocker(m_voiceDir);
+                m_voiceDir->setCurrentIndex(index);
+            }
         }
         m_voiceDir->setEnabled(!project.tracks.isEmpty());
         m_wavtool = new QLineEdit(QDir::toNativeSeparators(settings.wavtool));
@@ -305,9 +310,10 @@ namespace hello::daw {
 
     QString ProjectPropertiesDialog::voiceDirText() const {
         const auto *edit = m_voiceDir->lineEdit();
-        const int index = m_voiceDir->currentIndex();
-        if (index >= 0 && edit->text() == m_voiceDir->itemText(index)) {
-            return m_voiceDir->itemData(index).toString();
+        for (int index = 0; index < m_voiceDir->count(); ++index) {
+            if (edit->text() == m_voiceDir->itemText(index)) {
+                return m_voiceDir->itemData(index).toString();
+            }
         }
         return edit->text();
     }
