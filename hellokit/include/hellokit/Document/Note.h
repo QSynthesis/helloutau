@@ -335,10 +335,12 @@ namespace hello::kit {
             return isRestLyric(lyric);
         }
 
-        /// Returns whether a note with \a lyric is a rest: an empty lyric, \c R or \c r.
+        /// Returns whether a note with \a lyric is a rest: an empty or whitespace-only lyric, or
+        /// \c R or \c r.
         static inline bool isRestLyric(QStringView lyric) {
-            return lyric.isEmpty() ||
-                   lyric.compare(QLatin1String(restLyric), Qt::CaseInsensitive) == 0;
+            const auto trimmed = lyric.trimmed();
+            return trimmed.isEmpty() ||
+                   trimmed.compare(QLatin1String(restLyric), Qt::CaseInsensitive) == 0;
         }
 
         /// Returns the note as written in \c .usth. Empty fields are omitted.

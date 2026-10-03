@@ -11,6 +11,15 @@ class test_Note : public QObject {
     Q_OBJECT
 
 private Q_SLOTS:
+    void whitespace_lyrics_are_rests() {
+        QVERIFY(Note::isRestLyric(QStringLiteral("")));
+        QVERIFY(Note::isRestLyric(QStringLiteral("   \t\n")));
+        QVERIFY(Note::isRestLyric(QStringLiteral("R")));
+        QVERIFY(Note::isRestLyric(QStringLiteral("  r  ")));
+        QVERIFY(!Note::isRestLyric(QStringLiteral("Ra")));
+        QVERIFY(!Note::isRestLyric(QStringLiteral(" a ")));
+    }
+
     // Without the middle anchor, the four anchors in time order occupy indices 0, 1, 3 and 4, so
     // that each index keeps its role.
     void four_anchors_keep_their_roles() {
