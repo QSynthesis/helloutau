@@ -51,6 +51,59 @@ private Q_SLOTS:
         QCOMPARE(vibrato.phase, 0.0);
         QCOMPARE(vibrato.offset, 0.0);
     }
+
+    void portamento_modes_and_values_are_retained() {
+        PitchControlDialog dialog(true, true, PitchControlDialog::defaultVibrato(), 4, 2, 2, 80,
+                                  -40, 5, false);
+        QCOMPARE(dialog.portamentoPreset(), 4);
+        QCOMPARE(dialog.vibratoPreset(), 2);
+        QCOMPARE(dialog.portamentoMode(), 2);
+        QCOMPARE(dialog.portamentoLength(), 80);
+        QCOMPARE(dialog.portamentoStart(), -40);
+        QCOMPARE(dialog.portamentoCount(), 5);
+        QCOMPARE(dialog.averagePoints(), false);
+
+        const auto points = dialog.portamentoPoints();
+        QCOMPARE(points.size(), 5);
+        QCOMPARE(points.first().x, -100.0);
+        QCOMPARE(points.last().x, 0.0);
+    }
+
+    void custom_portamento_uses_length_and_start() {
+        PitchControlDialog dialog(true, true, PitchControlDialog::defaultVibrato(), 0, 0, 1, 72,
+                                  -18, 2, true);
+        const auto points = dialog.portamentoPoints();
+        QCOMPARE(points.size(), 2);
+        QCOMPARE(points.first().x, -18.0);
+        QCOMPARE(points.last().x, 54.0);
+    }
+
+    void averaged_points_cover_the_note_after_the_first_point() {
+        const QList<kit::PortamentoPoint> existing = {
+            {-40, -100, kit::PortamentoPoint::S},
+            {40,  100,  kit::PortamentoPoint::S},
+        };
+        PitchControlDialog dialog(true, true, PitchControlDialog::defaultVibrato(), 0, 0, 2, 59,
+                                  -30, 3, true, existing, 160);
+        const auto points = dialog.portamentoPoints();
+        QCOMPARE(points.size(), 3);
+        QCOMPARE(points[0].x, -40.0);
+        QCOMPARE(points[1].x, 60.0);
+        QCOMPARE(points[2].x, 160.0);
+        QCOMPARE(points[1].y, 100.0);
+        QCOMPARE(points[2].y, 100.0);
+    }
+
+    void non_averaged_existing_points_are_not_replaced() {
+        const QList<kit::PortamentoPoint> existing = {
+            {-40, -100, kit::PortamentoPoint::S     },
+            {0,   40,   kit::PortamentoPoint::Linear},
+            {80,  0,    kit::PortamentoPoint::S     },
+        };
+        PitchControlDialog dialog(true, true, PitchControlDialog::defaultVibrato(), 0, 0, 2, 59,
+                                  -30, 3, false, existing, 160);
+        QCOMPARE(dialog.portamentoPoints(), existing);
+    }
 };
 
 int main(int argc, char *argv[]) {

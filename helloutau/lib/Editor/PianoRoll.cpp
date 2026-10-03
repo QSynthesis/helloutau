@@ -672,7 +672,8 @@ namespace hello::daw {
         return result;
     }
 
-    bool PianoRoll::setPortamentoEnabled(bool enabled, kit::DiagnosticList &diagnostics) {
+    bool PianoRoll::setPortamentoEnabled(bool enabled, kit::DiagnosticList &diagnostics,
+                                         const QList<kit::PortamentoPoint> &defaultPoints) {
         stdc_impl_t;
         QHash<int, QList<kit::PortamentoPoint>> points;
         for (const int index : selectedIndices()) {
@@ -680,12 +681,18 @@ namespace hello::daw {
                 continue;
             if (!enabled) {
                 points.insert(index, {});
+            } else if (!defaultPoints.isEmpty()) {
+                points.insert(index, defaultPoints);
             } else if (impl.pointsOf(index).isEmpty()) {
-                kit::PortamentoPoint before;
-                before.x = -PianoRollState::DefaultPortamento;
-                kit::PortamentoPoint after;
-                after.x = PianoRollState::DefaultPortamento;
-                points.insert(index, {before, after});
+                if (defaultPoints.isEmpty()) {
+                    kit::PortamentoPoint before;
+                    before.x = -PianoRollState::DefaultPortamento;
+                    kit::PortamentoPoint after;
+                    after.x = PianoRollState::DefaultPortamento;
+                    points.insert(index, {before, after});
+                } else {
+                    points.insert(index, defaultPoints);
+                }
             }
         }
         if (points.isEmpty())
@@ -694,7 +701,8 @@ namespace hello::daw {
                                 diagnostics);
     }
 
-    bool PianoRoll::setVibratoEnabled(bool enabled, kit::DiagnosticList &diagnostics) {
+    bool PianoRoll::setVibratoEnabled(bool enabled, kit::DiagnosticList &diagnostics,
+                                      std::optional<kit::Vibrato> defaultVibrato) {
         stdc_impl_t;
         const auto refs = impl.notes();
         QList<kit::NoteRef> sung;
@@ -714,8 +722,9 @@ namespace hello::daw {
                     lacking.push_back(note);
             }
             if (!lacking.isEmpty())
-                kit::ProjectEdits::setVibrato(lacking, PitchControlDialog::defaultVibrato(),
-                                              diagnostics);
+                kit::ProjectEdits::setVibrato(
+                    lacking, defaultVibrato.value_or(PitchControlDialog::defaultVibrato()),
+                    diagnostics);
         } else {
             kit::ProjectEdits::setVibrato(sung, std::nullopt, diagnostics);
         }

@@ -1124,6 +1124,74 @@
         <translation>颤音(&amp;V)</translation>
     </message>
     <message>
+        <source>Center - 50 ms</source>
+        <translation>中间 - 50 毫秒</translation>
+    </message>
+    <message>
+        <source>Left - 50 ms</source>
+        <translation>左侧 - 50 毫秒</translation>
+    </message>
+    <message>
+        <source>Right - 50 ms</source>
+        <translation>右侧 - 50 毫秒</translation>
+    </message>
+    <message>
+        <source>Center - 100 ms</source>
+        <translation>中间 - 100 毫秒</translation>
+    </message>
+    <message>
+        <source>Left - 100 ms</source>
+        <translation>左侧 - 100 毫秒</translation>
+    </message>
+    <message>
+        <source>Right - 100 ms</source>
+        <translation>右侧 - 100 毫秒</translation>
+    </message>
+    <message>
+        <source>Center - 200 ms</source>
+        <translation>中间 - 200 毫秒</translation>
+    </message>
+    <message>
+        <source>Left - 200 ms</source>
+        <translation>左侧 - 200 毫秒</translation>
+    </message>
+    <message>
+        <source>Right - 200 ms</source>
+        <translation>右侧 - 200 毫秒</translation>
+    </message>
+    <message>
+        <source>&amp;Preset</source>
+        <translation>预设(&amp;P)</translation>
+    </message>
+    <message>
+        <source>&amp;Custom</source>
+        <translation>自定义(&amp;C)</translation>
+    </message>
+    <message>
+        <source>Add control &amp;points</source>
+        <translation>增加控制点(&amp;P)</translation>
+    </message>
+    <message>
+        <source> ms</source>
+        <translation> 毫秒</translation>
+    </message>
+    <message>
+        <source>&amp;Evenly distribute</source>
+        <translation>平均分布(&amp;E)</translation>
+    </message>
+    <message>
+        <source>Default (65, 180, 35)</source>
+        <translation>默认（65、180、35）</translation>
+    </message>
+    <message>
+        <source>Deep (65, 210, 55)</source>
+        <translation>较深（65、210、55）</translation>
+    </message>
+    <message>
+        <source>Light (65, 165, 20)</source>
+        <translation>较浅（65、165、20）</translation>
+    </message>
+    <message>
         <source>&amp;Length:</source>
         <translation>长度(&amp;L)：</translation>
     </message>
@@ -1156,8 +1224,32 @@
         <translation>高度(&amp;H)：</translation>
     </message>
     <message>
+        <source>Length:</source>
+        <translation>长度：</translation>
+    </message>
+    <message>
+        <source>Start:</source>
+        <translation>开始：</translation>
+    </message>
+    <message>
+        <source>Count:</source>
+        <translation>数量：</translation>
+    </message>
+    <message>
+        <source>Portamento preset:</source>
+        <translation>滑音预设：</translation>
+    </message>
+    <message>
+        <source>Vibrato preset:</source>
+        <translation>颤音预设：</translation>
+    </message>
+    <message>
         <source>Strength:</source>
         <translation>强弱：</translation>
+    </message>
+    <message>
+        <source>Set as Default</source>
+        <translation>设为默认</translation>
     </message>
 </context>
 <context>
