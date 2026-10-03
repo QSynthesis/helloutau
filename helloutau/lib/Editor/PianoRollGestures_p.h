@@ -17,6 +17,25 @@
 
 namespace hello::daw {
 
+    /// A Ctrl+Alt drag that zooms one axis around the point where it began.
+    class PianoRollState::ZoomGesture : public SceneGesture {
+    public:
+        ZoomGesture(PianoRollState *state, QPointF position, bool lockAxis)
+            : m_state(state), m_origin(position), m_last(position), m_lockAxis(lockAxis) {
+        }
+
+        void move(QPointF position, Qt::KeyboardModifiers modifiers) override;
+        void release(QPointF position, Qt::KeyboardModifiers modifiers) override;
+        void cancel() override;
+
+    private:
+        PianoRollState *m_state;
+        QPointF m_origin;
+        QPointF m_last;
+        bool m_lockAxis;
+        std::optional<Qt::Orientation> m_orientation;
+    };
+
     /// A drag of the selected notes: vertically transposes them, horizontally moves them in the
     /// sequence to the boundary between notes nearest to where they are dragged. A selection with
     /// gaps is first extended to the run of notes it spans, see step 4 in docs/Widgets.md.
@@ -86,7 +105,9 @@ namespace hello::daw {
 
         void cancel() override;
 
-        bool wantsAutoScroll() const override { return true; }
+        bool wantsAutoScroll() const override {
+            return true;
+        }
 
     private:
         PianoRollState *m_state;
@@ -110,7 +131,9 @@ namespace hello::daw {
 
         void cancel() override;
 
-        bool wantsAutoScroll() const override { return true; }
+        bool wantsAutoScroll() const override {
+            return true;
+        }
 
     private:
         PianoRollState *m_state;

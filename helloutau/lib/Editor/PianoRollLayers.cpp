@@ -36,10 +36,8 @@ namespace hello::daw {
 
         const double firstTick = std::max(0.0, time.toTick(exposed.left()));
         const double lastTick = time.toTick(exposed.right() + 1);
-        const int subdivisions[] = {kit::ticksPerQuarter,
-                                    kit::ticksPerQuarter / 2,
-                                    kit::ticksPerQuarter / 4,
-                                    kit::ticksPerQuarter / 8};
+        const int subdivisions[] = {kit::ticksPerQuarter, kit::ticksPerQuarter / 2,
+                                    kit::ticksPerQuarter / 4, kit::ticksPerQuarter / 8};
         int step = subdivisions[0];
         bool drawSubdivisions = false;
         for (const int candidate : subdivisions) {
@@ -236,8 +234,7 @@ namespace hello::daw {
                 const QFontMetrics metrics(decl->font());
                 const double height = metrics.height();
                 const double warningBottom = intensityBaseline - metrics.ascent() - 3;
-                const QRectF warning(outline.first().x() + 2,
-                                     warningBottom - height, 10, height);
+                const QRectF warning(outline.first().x() + 2, warningBottom - height, 10, height);
                 painter.setPen(Qt::red);
                 painter.setBrush(decl->whiteRowColor());
                 painter.drawRect(warning);
@@ -736,6 +733,9 @@ namespace hello::daw {
     std::unique_ptr<SceneGesture>
         PianoRollState::PitchLayer::press(const SceneHit &hit, QPointF position,
                                           Qt::MouseButton button, Qt::KeyboardModifiers modifiers) {
+        if (button == Qt::LeftButton && (modifiers & (Qt::ControlModifier | Qt::AltModifier)) ==
+                                            (Qt::ControlModifier | Qt::AltModifier))
+            return std::make_unique<ZoomGesture>(m_state, position, modifiers & Qt::ShiftModifier);
         m_state->finishEditing(true);
         const int index = m_state->indexOf(hit.node);
         if (index < 0) {
@@ -780,6 +780,9 @@ namespace hello::daw {
         PianoRollState::GridLayer::press(const SceneHit &hit, QPointF position,
                                          Qt::MouseButton button, Qt::KeyboardModifiers modifiers) {
         Q_UNUSED(hit);
+        if (button == Qt::LeftButton && (modifiers & (Qt::ControlModifier | Qt::AltModifier)) ==
+                                            (Qt::ControlModifier | Qt::AltModifier))
+            return std::make_unique<ZoomGesture>(m_state, position, modifiers & Qt::ShiftModifier);
         if (m_state->drawsBend(button)) {
             return m_state->bendGesture(position, button);
         }
@@ -801,6 +804,9 @@ namespace hello::daw {
     std::unique_ptr<SceneGesture>
         PianoRollState::NoteLayer::press(const SceneHit &hit, QPointF position,
                                          Qt::MouseButton button, Qt::KeyboardModifiers modifiers) {
+        if (button == Qt::LeftButton && (modifiers & (Qt::ControlModifier | Qt::AltModifier)) ==
+                                            (Qt::ControlModifier | Qt::AltModifier))
+            return std::make_unique<ZoomGesture>(m_state, position, modifiers & Qt::ShiftModifier);
         if (m_state->drawsBend(button)) {
             return m_state->bendGesture(position, button);
         }

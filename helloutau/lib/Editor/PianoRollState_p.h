@@ -173,6 +173,7 @@ namespace hello::daw {
         class PointGesture;
         class VibratoGesture;
         class BendGesture;
+        class ZoomGesture;
 
         kit::ProjectSession *session = nullptr;
         kit::TrackTimeline *timeline = nullptr;

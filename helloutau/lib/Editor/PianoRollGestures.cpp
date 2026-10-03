@@ -10,6 +10,43 @@
 
 namespace hello::daw {
 
+    void PianoRollState::ZoomGesture::move(QPointF position, Qt::KeyboardModifiers modifiers) {
+        Q_UNUSED(modifiers);
+        if (m_lockAxis && !m_orientation) {
+            const QPointF distance = position - m_origin;
+            if (distance.manhattanLength() < QApplication::startDragDistance()) {
+                return;
+            }
+            m_orientation =
+                std::abs(distance.x()) >= std::abs(distance.y()) ? Qt::Horizontal : Qt::Vertical;
+        }
+        const double horizontal = position.x() - m_last.x();
+        const double vertical = position.y() - m_last.y();
+        m_last = position;
+        if (m_lockAxis) {
+            const double delta = *m_orientation == Qt::Horizontal ? horizontal : vertical;
+            if (delta == 0)
+                return;
+            const double factor = std::pow(1.01, delta);
+            if (*m_orientation == Qt::Horizontal)
+                m_state->view->zoomTime(factor, m_origin.x());
+            else
+                m_state->view->zoomKeys(factor, m_origin.y());
+        } else {
+            if (horizontal != 0)
+                m_state->view->zoomTime(std::pow(1.01, horizontal), m_origin.x());
+            if (vertical != 0)
+                m_state->view->zoomKeys(std::pow(1.01, vertical), m_origin.y());
+        }
+    }
+
+    void PianoRollState::ZoomGesture::release(QPointF position, Qt::KeyboardModifiers modifiers) {
+        move(position, modifiers);
+    }
+
+    void PianoRollState::ZoomGesture::cancel() {
+    }
+
     void PianoRollState::MoveGesture::move(QPointF position, Qt::KeyboardModifiers modifiers) {
         Q_UNUSED(modifiers);
         if (!m_dragging) {
@@ -133,8 +170,8 @@ namespace hello::daw {
         if (modifiers & Qt::ControlModifier) {
             const int next = m_index + 1;
             if (next < m_state->timeline->noteCount()) {
-                length = std::min<qint64>(length,
-                                          m_original + m_state->timeline->note(next).length);
+                length =
+                    std::min<qint64>(length, m_original + m_state->timeline->note(next).length);
             } else {
                 length = m_original;
             }
@@ -144,7 +181,9 @@ namespace hello::daw {
 
     void PianoRollState::LengthGesture::move(QPointF position, Qt::KeyboardModifiers modifiers) {
         m_length = lengthAt(position, modifiers);
-        QHash<int, int> changes{{m_index, m_length}};
+        QHash<int, int> changes{
+            {m_index, m_length}
+        };
         const auto effectiveModifiers = modifiers | m_modifiers;
         const int delta = m_original - m_length;
         const int next = m_index + 1;
@@ -187,9 +226,8 @@ namespace hello::daw {
         kit::ProjectEdits::setLength(notes.at(m_index), m_length, diagnostics);
         if (!shift && !control && delta > 0 && next < notes.size()) {
             if (m_state->timeline->note(next).rest) {
-                kit::ProjectEdits::setLength(notes.at(next),
-                                             m_state->timeline->note(next).length + delta,
-                                             diagnostics);
+                kit::ProjectEdits::setLength(
+                    notes.at(next), m_state->timeline->note(next).length + delta, diagnostics);
             } else {
                 kit::Note rest;
                 rest.lyric = QString::fromLatin1(kit::restLyric);
@@ -215,11 +253,9 @@ namespace hello::daw {
 
     PianoRollState::BandGesture::BandGesture(PianoRollState *state, QPointF position,
                                              Qt::KeyboardModifiers modifiers)
-        : m_state(state),
-          m_origin(state->view->timeAxis().toTick(position.x()),
-                   state->view->keyAxis().toKey(position.y())),
-          m_previous(state->selection),
-          m_previousPoints(state->selectedPoints) {
+        : m_state(state), m_origin(state->view->timeAxis().toTick(position.x()),
+                                   state->view->keyAxis().toKey(position.y())),
+          m_previous(state->selection), m_previousPoints(state->selectedPoints) {
         if (modifiers & Qt::ControlModifier) {
             m_base = state->selection;
             m_basePoints = state->selectedPoints;
@@ -291,8 +327,7 @@ namespace hello::daw {
     PianoRollState::SpanGesture::SpanGesture(PianoRollState *state, QPointF position,
                                              Qt::KeyboardModifiers modifiers)
         : m_state(state), m_origin(state->view->timeAxis().toTick(position.x())),
-          m_previous(state->selection),
-          m_previousPoints(state->selectedPoints) {
+          m_previous(state->selection), m_previousPoints(state->selectedPoints) {
         if (modifiers & Qt::ControlModifier) {
             m_base = state->selection;
         }
