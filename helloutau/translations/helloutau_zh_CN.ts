@@ -1425,6 +1425,14 @@ Trust and run it?</source>
         <translation>渲染日志</translation>
     </message>
     <message>
+        <source>Duration of one quarter note at the current tempo</source>
+        <translation>当前曲速下每拍（四分音符）的时长</translation>
+    </message>
+    <message>
+        <source>Duration of the selected notes</source>
+        <translation>所选音符的时长</translation>
+    </message>
+    <message>
         <source>Project Tempo</source>
         <translation>工程曲速</translation>
     </message>

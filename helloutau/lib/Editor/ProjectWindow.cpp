@@ -254,6 +254,8 @@ namespace hello::daw {
         QLabel *renderLabel = nullptr;
         QProgressBar *renderProgress = nullptr;
         QPushButton *renderCancel = nullptr;
+        QLabel *beatDurationLabel = nullptr;
+        QLabel *selectionDurationLabel = nullptr;
         QTimer playheadTimer;
         // The notes still to render in the background, in the realtime mode
         QTimer statusTimer;
@@ -295,6 +297,14 @@ namespace hello::daw {
                 decl.statusBar()->addPermanentWidget(widget);
                 widget->hide();
             }
+            beatDurationLabel = new QLabel();
+            selectionDurationLabel = new QLabel();
+            beatDurationLabel->setMargin(4);
+            selectionDurationLabel->setMargin(4);
+            beatDurationLabel->setToolTip(tr("Duration of one quarter note at the current tempo"));
+            selectionDurationLabel->setToolTip(tr("Duration of the selected notes"));
+            decl.statusBar()->addPermanentWidget(beatDurationLabel);
+            decl.statusBar()->addPermanentWidget(selectionDurationLabel);
             QObject::connect(renderCancel, &QPushButton::clicked, playback, &Playback::stop);
 
             QObject::connect(
@@ -695,6 +705,39 @@ namespace hello::daw {
         // The time of the playhead at rest, in milliseconds
         double cursorTime() const {
             return roll->timeline()->tempoMap().timeOf(roll->cursorPosition());
+        }
+
+        void updateTimeStatus() {
+            if (!beatDurationLabel || !selectionDurationLabel || !roll || !document) {
+                return;
+            }
+            const auto timeline = roll->timeline();
+            const auto &map = timeline->tempoMap();
+            const auto projectTempo = kit::ProjectRef(document->session()).settings().tempo();
+            const auto selected = roll->selectedIndices();
+            const double tempo = !selected.isEmpty() ? map.tempo(selected.first()) : projectTempo;
+            const auto seconds = [](double milliseconds) {
+                auto value = QString::number(milliseconds / 1000.0, 'f', 6);
+                while (value.endsWith(QLatin1Char('0'))) {
+                    value.chop(1);
+                }
+                if (value.endsWith(QLatin1Char('.'))) {
+                    value.chop(1);
+                }
+                return value + QStringLiteral(" sec");
+            };
+            const double beat = tempo > 0 ? 60000.0 / tempo : 0;
+            beatDurationLabel->setText(seconds(beat));
+
+            double selection = 0;
+            if (!selected.isEmpty()) {
+                const auto first = selected.first();
+                const auto last = selected.last();
+                const auto start = timeline->note(first).start;
+                const auto end = timeline->note(last).start + timeline->note(last).length;
+                selection = map.timeOf(end) - map.timeOf(start);
+            }
+            selectionDurationLabel->setText(seconds(selection));
         }
 
         // Plays in the playback mode of the settings (docs/Widgets.md), or stops what is playing
@@ -1739,17 +1782,22 @@ namespace hello::daw {
             });
             QObject::connect(document->session(), &kit::edit::EditSession::changed, &decl, [this] {
                 showTempo(kit::ProjectRef(document->session()).settings().tempo());
+                updateTimeStatus();
             });
             QObject::connect(roll, &PianoRoll::selectionChanged, &decl, [this] {
                 updateEditActions();
                 updateFindResult();
+                updateTimeStatus();
             });
             findBar->setAnchor(roll->view());
             QObject::connect(findBar, &FindBar::closed, roll,
                              [this] { roll->setLyricSearch(kit::TextSearch()); });
             // In the status bar, so that a refused drag does not stop the work with a dialog.
             // A dialog remains an alternative, see the open questions in docs/Tuning.md.
-            QObject::connect(roll, &PianoRoll::cursorMoved, &decl, [this] { cursorMoved(); });
+            QObject::connect(roll, &PianoRoll::cursorMoved, &decl, [this] {
+                cursorMoved();
+                updateTimeStatus();
+            });
             QObject::connect(roll, &PianoRoll::tempoRequested, &decl,
                              [this](int index) { editTempo(index); });
             QObject::connect(roll, &PianoRoll::labelRequested, &decl,
@@ -1761,6 +1809,7 @@ namespace hello::daw {
                 decl.statusBar()->showMessage(message, StatusMessageTimeout);
             });
             updateEditActions();
+            updateTimeStatus();
             QObject::connect(document.get(), &kit::ProjectDocument::modifiedChanged, &decl,
                              [this] { updateTitle(); });
             QObject::connect(document.get(), &kit::ProjectDocument::filePathChanged, &decl, [this] {
