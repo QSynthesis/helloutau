@@ -23,6 +23,8 @@ class QLineEdit;
 class QPushButton;
 class QTreeWidget;
 class QTreeWidgetItem;
+class QTabWidget;
+class QScrollArea;
 
 namespace QAK {
     class ActionRegistry;
@@ -34,10 +36,10 @@ namespace hello::daw {
     /// keymap in the settings dialog in docs/Widgets.md.
     ///
     /// Each kind of window has an action registry of its own, see Editor::actionRegistry(). The
-    /// tree lists the kinds of window, and under each the commands of its registry in the menus
-    /// of its menu bar, and its commands in no menu under Other. The page edits a copy of the
-    /// shortcuts. apply() gives them to the registries, updates every window and writes them with
-    /// Editor::saveKeymap().
+    /// The page has one tab for each kind of window. Each tab lists the commands of its registry
+    /// in the menus of its menu bar, and its commands in no menu under Other. The page edits a
+    /// copy of the shortcuts. apply() gives them to the registries, updates every window and
+    /// writes them with Editor::saveKeymap().
     ///
     /// A command is identified by the kind of window and its id, so that a command that two kinds
     /// of window have, such as Undo, has shortcuts in each apart from the other. A shortcut
@@ -81,7 +83,7 @@ namespace hello::daw {
         /// Restores the shortcuts of every command from their manifests.
         void resetAll();
 
-        /// The tree of commands, while the widget exists.
+        /// The tree of commands in the current window-kind tab, while the widget exists.
         QTreeWidget *tree() const;
 
         /// Returns the current command of the tree, or \c std::nullopt if the current item is no
@@ -100,6 +102,9 @@ namespace hello::daw {
         QHash<QString, QList<QKeySequence>> m_shortcuts[std::size(Editor::windowKinds)];
 
         QPointer<QTreeWidget> m_tree;
+        QPointer<QTabWidget> m_tabs;
+        QPointer<QScrollArea> m_modifierScroll;
+        QTreeWidget *m_trees[std::size(Editor::windowKinds)] = {};
         QPointer<QLineEdit> m_search;
         QPointer<QKeySequenceEdit> m_keySearch;
         QPointer<QPushButton> m_add;

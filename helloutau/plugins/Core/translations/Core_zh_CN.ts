@@ -156,8 +156,20 @@
         <translation>恢复默认值(&amp;D)</translation>
     </message>
     <message>
-        <source>View Modifiers</source>
-        <translation>视图修饰键</translation>
+        <source>Project Window Modifiers</source>
+        <translation>工程窗口修饰键</translation>
+    </message>
+    <message>
+        <source>Wheel</source>
+        <translation>滚轮</translation>
+    </message>
+    <message>
+        <source>Note Editing</source>
+        <translation>音符编辑</translation>
+    </message>
+    <message>
+        <source>Parameter Editing</source>
+        <translation>参数编辑</translation>
     </message>
     <message>
         <source>Remove %1</source>

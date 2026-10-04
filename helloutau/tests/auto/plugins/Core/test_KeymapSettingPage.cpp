@@ -15,6 +15,7 @@
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QMessageBox>
 #include <QtWidgets/QPushButton>
+#include <QtWidgets/QTabWidget>
 #include <QtWidgets/QTreeWidget>
 #include <QtWidgets/QTreeWidgetItemIterator>
 
@@ -61,10 +62,10 @@ private Q_SLOTS:
         const auto window = e->newWindow();
         KeymapSettingPage page(e.get());
         QCOMPARE(page.id(), QStringLiteral("core.Keymap"));
-        const auto tree = page.widget()->findChild<QTreeWidget *>(QStringLiteral("commands"));
+        const auto tabs = page.widget()->findChild<QTabWidget *>(QStringLiteral("windows"));
+        QVERIFY(tabs);
+        const auto tree = qobject_cast<QTreeWidget *>(tabs->widget(0));
         QVERIFY(tree);
-        QCOMPARE(tree->topLevelItem(0)->text(0), QStringLiteral("Project Window"));
-        QCOMPARE(tree->topLevelItem(1)->text(0), QStringLiteral("Voice Bank Window"));
         const auto itemOf = [tree](const QString &id) -> QTreeWidgetItem * {
             for (QTreeWidgetItemIterator it(tree); *it; ++it) {
                 if ((*it)->data(0, Qt::UserRole).toString() == id) {
@@ -139,9 +140,9 @@ private Q_SLOTS:
                  QList<QKeySequence>{QKeySequence(Qt::Key_Insert)});
     }
 
-    // The tree has the kinds of window at the top, each with an Other of its commands in no
-    // menu. A command of both kinds, Undo, has shortcuts in each apart from the other, a
-    // shortcut conflicts within one kind alone, and keymap.json has a section for each kind.
+    // Each window kind has its own tab and an Other group for commands in no menu. A command of
+    // both kinds, Undo, has shortcuts in each apart from the other, a shortcut conflicts within
+    // one kind alone, and keymap.json has a section for each kind.
     void each_kind_of_window_has_its_own_keymap() {
         using Command = KeymapSettingPage::Command;
         QTemporaryDir dir;
@@ -149,11 +150,12 @@ private Q_SLOTS:
         const auto e = std::make_unique<Editor>(std::make_unique<AppSettings>(settingsFile));
         e->setWatchesDisk(false);
         KeymapSettingPage page(e.get());
-        const auto tree = page.widget()->findChild<QTreeWidget *>(QStringLiteral("commands"));
-        QCOMPARE(tree->topLevelItemCount(), 2);
+        const auto tabs = page.widget()->findChild<QTabWidget *>(QStringLiteral("windows"));
+        QVERIFY(tabs);
         for (int i = 0; i < 2; ++i) {
-            const auto window = tree->topLevelItem(i);
-            const auto other = window->child(window->childCount() - 1);
+            const auto tree = qobject_cast<QTreeWidget *>(tabs->widget(i));
+            QVERIFY(tree);
+            const auto other = tree->topLevelItem(tree->topLevelItemCount() - 1);
             QCOMPARE(other->text(0), QStringLiteral("Other"));
             QStringList ids;
             for (int j = 0; j < other->childCount(); ++j) {

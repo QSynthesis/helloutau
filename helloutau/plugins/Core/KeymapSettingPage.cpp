@@ -1,6 +1,7 @@
 #include "KeymapSettingPage.h"
 
 #include <functional>
+#include <initializer_list>
 
 #include <QtCore/QSet>
 #include <QtCore/QSignalBlocker>
@@ -19,6 +20,9 @@
 #include <QtWidgets/QMessageBox>
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QGroupBox>
+#include <QtWidgets/QScrollArea>
+#include <QtWidgets/QSplitter>
+#include <QtWidgets/QTabWidget>
 #include <QtWidgets/QTreeWidget>
 #include <QtWidgets/QTreeWidgetItemIterator>
 #include <QtWidgets/QVBoxLayout>
@@ -62,7 +66,9 @@ namespace hello::daw {
             Qt::ControlModifier,
             Qt::AltModifier,
             Qt::ShiftModifier,
+#ifndef Q_OS_WIN
             Qt::MetaModifier,
+#endif
             Qt::ControlModifier | Qt::AltModifier,
             Qt::ControlModifier | Qt::ShiftModifier,
             Qt::AltModifier | Qt::ShiftModifier,
@@ -74,7 +80,9 @@ namespace hello::daw {
             QT_TRANSLATE_NOOP("hello::daw::KeymapSettingPage", "Ctrl"),
             QT_TRANSLATE_NOOP("hello::daw::KeymapSettingPage", "Alt"),
             QT_TRANSLATE_NOOP("hello::daw::KeymapSettingPage", "Shift"),
+#ifndef Q_OS_WIN
             QT_TRANSLATE_NOOP("hello::daw::KeymapSettingPage", "Meta"),
+#endif
             QT_TRANSLATE_NOOP("hello::daw::KeymapSettingPage", "Ctrl+Alt"),
             QT_TRANSLATE_NOOP("hello::daw::KeymapSettingPage", "Ctrl+Shift"),
             QT_TRANSLATE_NOOP("hello::daw::KeymapSettingPage", "Alt+Shift"),
@@ -339,14 +347,17 @@ namespace hello::daw {
     }
 
     void KeymapSettingPage::fillTree() {
-        m_tree->clear();
-        for (const auto &window : windowLayouts) {
+        for (int windowIndex = 0; windowIndex < int(std::size(windowLayouts)); ++windowIndex) {
+            const auto &window = windowLayouts[windowIndex];
+            auto *tree = m_trees[windowIndex];
+            tree->clear();
             const auto kind = window.kind;
             const auto actions = registry(kind);
             const auto layouts = actions->layouts().adjacencyMap();
             QSet<QString> listed;
             const auto leaf = [&](QTreeWidgetItem *parent, const QString &id) {
-                auto item = new QTreeWidgetItem(parent, {nameOf({kind, id})});
+                auto item = parent ? new QTreeWidgetItem(parent, {nameOf({kind, id})})
+                                   : new QTreeWidgetItem(tree, {nameOf({kind, id})});
                 item->setData(0, IdRole, id);
                 item->setData(0, KindRole, int(kind));
                 const auto info = actions->actionInfo(id);
@@ -373,7 +384,8 @@ namespace hello::daw {
                         } else if (entry.type() == QAK::ActionLayoutEntry::Group) {
                             fill(parent, id);
                         } else if (entry.type() == QAK::ActionLayoutEntry::Menu) {
-                            auto menu = new QTreeWidgetItem(parent, {nameOf({kind, id})});
+                            auto menu = parent ? new QTreeWidgetItem(parent, {nameOf({kind, id})})
+                                               : new QTreeWidgetItem(tree, {nameOf({kind, id})});
                             fill(menu, id);
                             if (menu->childCount() == 0) {
                                 delete menu;
@@ -382,10 +394,9 @@ namespace hello::daw {
                     }
                     visited.remove(container);
                 };
-            auto item = new QTreeWidgetItem(m_tree, {tr(window.name)});
-            fill(item, QLatin1String(window.menuBar));
+            fill(nullptr, QLatin1String(window.menuBar));
             // The commands of this kind of window in no menu of its menu bar
-            auto other = new QTreeWidgetItem(item, {tr("Other")});
+            auto other = new QTreeWidgetItem(tree, {tr("Other")});
             for (const auto &id : std::as_const(m_commands[kind])) {
                 if (!listed.contains(id)) {
                     leaf(other, id);
@@ -397,7 +408,9 @@ namespace hello::daw {
             }
         }
         updateItems();
-        m_tree->expandToDepth(0);
+        for (auto *tree : m_trees) {
+            tree->expandToDepth(0);
+        }
     }
 
     void KeymapSettingPage::updateItems() {
@@ -407,16 +420,18 @@ namespace hello::daw {
         // The commands whose shortcuts differ from their manifests are drawn in the color of links,
         // as JetBrains IDEs mark them.
         const auto modified = m_tree->palette().color(QPalette::Link);
-        for (QTreeWidgetItemIterator it(m_tree); *it; ++it) {
-            const auto command = commandOf(*it);
-            if (!command) {
-                continue;
+        for (auto *tree : m_trees) {
+            for (QTreeWidgetItemIterator it(tree); *it; ++it) {
+                const auto command = commandOf(*it);
+                if (!command) {
+                    continue;
+                }
+                const auto keys = shortcuts(*command);
+                (*it)->setText(1, textOf(keys));
+                const auto brush = keys == defaultsOf(*command) ? QBrush() : QBrush(modified);
+                (*it)->setForeground(0, brush);
+                (*it)->setForeground(1, brush);
             }
-            const auto keys = shortcuts(*command);
-            (*it)->setText(1, textOf(keys));
-            const auto brush = keys == defaultsOf(*command) ? QBrush() : QBrush(modified);
-            (*it)->setForeground(0, brush);
-            (*it)->setForeground(1, brush);
         }
         filter();
         updateButtons();
@@ -450,8 +465,10 @@ namespace hello::daw {
             item->setHidden(!shown);
             return shown;
         };
-        for (int i = 0; i < m_tree->topLevelItemCount(); ++i) {
-            show(m_tree->topLevelItem(i));
+        for (auto *tree : m_trees) {
+            for (int i = 0; i < tree->topLevelItemCount(); ++i) {
+                show(tree->topLevelItem(i));
+            }
         }
     }
 
@@ -545,13 +562,20 @@ namespace hello::daw {
         searchRow->addWidget(new QLabel(tr("Shortcut:")));
         searchRow->addWidget(m_keySearch, 1);
 
-        m_tree = new QTreeWidget();
-        m_tree->setObjectName(QStringLiteral("commands"));
-        m_tree->setHeaderLabels({tr("Command"), tr("Shortcuts")});
-        m_tree->header()->setSectionResizeMode(0, QHeaderView::Stretch);
-        m_tree->header()->setStretchLastSection(false);
-        m_tree->header()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
-        m_tree->setContextMenuPolicy(Qt::CustomContextMenu);
+        m_tabs = new QTabWidget();
+        m_tabs->setObjectName(QStringLiteral("windows"));
+        for (int i = 0; i < int(std::size(windowLayouts)); ++i) {
+            auto *tree = new QTreeWidget();
+            tree->setObjectName(QStringLiteral("commands"));
+            tree->setHeaderLabels({tr("Command"), tr("Shortcuts")});
+            tree->header()->setSectionResizeMode(0, QHeaderView::Stretch);
+            tree->header()->setStretchLastSection(false);
+            tree->header()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
+            tree->setContextMenuPolicy(Qt::CustomContextMenu);
+            m_trees[i] = tree;
+            m_tabs->addTab(tree, tr(windowLayouts[i].name));
+        }
+        m_tree = m_trees[0];
 
         m_add = new QPushButton(tr("&Add Shortcut..."));
         m_add->setObjectName(QStringLiteral("add"));
@@ -561,39 +585,80 @@ namespace hello::daw {
         m_reset->setObjectName(QStringLiteral("reset"));
         auto resetAllButton = new QPushButton(tr("Restore &Defaults"));
         resetAllButton->setObjectName(QStringLiteral("resetAll"));
-        auto buttonRow = new QHBoxLayout();
-        buttonRow->addWidget(m_add);
-        buttonRow->addWidget(m_remove);
-        buttonRow->addWidget(m_reset);
-        buttonRow->addStretch();
-        buttonRow->addWidget(resetAllButton);
+        auto buttonColumn = new QVBoxLayout();
+        buttonColumn->addWidget(m_add);
+        buttonColumn->addWidget(m_remove);
+        buttonColumn->addWidget(m_reset);
+        buttonColumn->addStretch();
+        buttonColumn->addWidget(resetAllButton);
 
         auto layout = new QVBoxLayout(widget);
         layout->setContentsMargins(0, 0, 0, 0);
         layout->addLayout(searchRow);
-        layout->addWidget(m_tree, 1);
-        m_modifierGroup = new QGroupBox(tr("View Modifiers"));
-        auto modifierLayout = new QFormLayout(m_modifierGroup);
+
+        auto upper = new QWidget();
+        auto upperLayout = new QVBoxLayout(upper);
+        upperLayout->setContentsMargins(0, 0, 0, 0);
+        upperLayout->addWidget(m_tabs, 1);
+
+        m_modifierGroup = new QGroupBox(tr("Project Window Modifiers"));
+        auto modifierLayout = new QVBoxLayout(m_modifierGroup);
+        const auto addModifierGroup = [&](const QString &title, std::initializer_list<int> indices) {
+            auto *group = new QGroupBox(title, m_modifierGroup);
+            auto *form = new QFormLayout(group);
+            for (const auto i : indices) {
+                form->addRow(tr(modifierNames[i]), m_modifierBoxes[i]);
+            }
+            modifierLayout->addWidget(group);
+        };
         for (int i = 0; i < int(std::size(m_modifierBoxes)); ++i) {
             m_modifierBoxes[i] = new QComboBox(m_modifierGroup);
             m_modifierBoxes[i]->setObjectName(QStringLiteral("modifier_%1").arg(i));
             for (const auto *name : modifierOptionNames) {
                 m_modifierBoxes[i]->addItem(tr(name));
             }
-            modifierLayout->addRow(tr(modifierNames[i]), m_modifierBoxes[i]);
             connect(m_modifierBoxes[i], qOverload<int>(&QComboBox::currentIndexChanged), this,
                     [this, i](int option) { modifierChanged(i, option); });
         }
-        layout->addWidget(m_modifierGroup);
-        layout->addLayout(buttonRow);
+        addModifierGroup(tr("Wheel"), {0, 1, 2});
+        addModifierGroup(tr("Drag Zoom"), {3, 4});
+        addModifierGroup(tr("Note Editing"), {5});
+        addModifierGroup(tr("Parameter Editing"), {6, 7});
+        m_modifierScroll = new QScrollArea();
+        m_modifierScroll->setObjectName(QStringLiteral("modifierScroll"));
+        m_modifierScroll->setWidgetResizable(true);
+        m_modifierScroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+        m_modifierScroll->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+        m_modifierScroll->setWidget(m_modifierGroup);
+
+        auto verticalSplitter = new QSplitter(Qt::Vertical);
+        verticalSplitter->setObjectName(QStringLiteral("keymapSplitter"));
+        verticalSplitter->addWidget(upper);
+        verticalSplitter->addWidget(m_modifierScroll);
+        verticalSplitter->setStretchFactor(0, 3);
+        verticalSplitter->setStretchFactor(1, 2);
+        verticalSplitter->setSizes({400, 220});
+
+        auto content = new QHBoxLayout();
+        content->setContentsMargins(0, 0, 0, 0);
+        content->addWidget(verticalSplitter, 1);
+        content->addLayout(buttonColumn);
+        layout->addLayout(content, 1);
 
         fillTree();
         updateModifierWidgets();
 
         connect(m_search, &QLineEdit::textChanged, this, [this] { filter(); });
         connect(m_keySearch, &QKeySequenceEdit::keySequenceChanged, this, [this] { filter(); });
-        connect(m_tree, &QTreeWidget::currentItemChanged, this, [this] { updateButtons(); });
-        connect(m_tree, &QTreeWidget::itemDoubleClicked, this, [this] { askShortcut(); });
+        connect(m_tabs, &QTabWidget::currentChanged, this, [this](int index) {
+            m_tree = m_trees[index];
+            m_modifierScroll->setVisible(index == int(Editor::ProjectWindowKind));
+            updateItems();
+        });
+        for (auto *tree : m_trees) {
+            connect(tree, &QTreeWidget::currentItemChanged, this, [this] { updateButtons(); });
+            connect(tree, &QTreeWidget::itemDoubleClicked, this, [this] { askShortcut(); });
+        }
         connect(m_add, &QPushButton::clicked, this, [this] { askShortcut(); });
         connect(resetAllButton, &QPushButton::clicked, this, [this] { resetAll(); });
         connect(m_reset, &QPushButton::clicked, this, [this] {
@@ -624,7 +689,9 @@ namespace hello::daw {
         connect(m_remove, &QPushButton::clicked, this, [this, removeFrom] {
             removeFrom(m_remove->mapToGlobal(QPoint(0, m_remove->height())));
         });
-        connect(m_tree, &QWidget::customContextMenuRequested, this, [this](const QPoint &at) {
+        for (auto *tree : m_trees) {
+            connect(tree, &QWidget::customContextMenuRequested, this, [this, tree](const QPoint &at) {
+            m_tree = tree;
             const auto command = currentCommand();
             if (!command) {
                 return;
@@ -642,7 +709,8 @@ namespace hello::daw {
             connect(reset, &QAction::triggered, this,
                     [this, command] { resetShortcuts(*command); });
             menu.exec(m_tree->viewport()->mapToGlobal(at));
-        });
+            });
+        }
         return widget;
     }
 

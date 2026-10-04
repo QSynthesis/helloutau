@@ -7,11 +7,10 @@
 
 #include <QtCore/QPointF>
 #include <QtCore/QTimer>
-#include <QtWidgets/QAbstractScrollArea>
-
 #include <helloutau/Widgets/HelloUtauWidgetsGlobal.h>
 #include <helloutau/Widgets/SceneAxis.h>
 #include <helloutau/Widgets/SceneLayer.h>
+#include <helloutau/Widgets/ScrollAreaBase.h>
 
 namespace hello::daw {
 
@@ -27,7 +26,7 @@ namespace hello::daw {
     /// The wheel scrolls up and down; with Shift it scrolls across, with Ctrl it zooms the time
     /// axis and with Ctrl and Shift the key axis, keeping the position under the pointer in
     /// place.
-    class HELLOUTAU_WIDGETS_EXPORT SceneView : public QAbstractScrollArea {
+    class HELLOUTAU_WIDGETS_EXPORT SceneView : public ScrollAreaBase {
         Q_OBJECT
     public:
         explicit SceneView(QWidget *parent = nullptr);

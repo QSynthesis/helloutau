@@ -32,14 +32,14 @@
              commands are in no menu, only in the command palette, like the "More" items of Open
              Recent. -->
         <action id="helloutau.file.openRecentProject" text="Open Recent &amp;Project..."
-                category="File" />
+                category="File" catalog="helloutau.file" />
         <action id="helloutau.file.openRecentVoiceBank" text="Open Recent &amp;Voice Bank..."
-                category="File" />
+                category="File" catalog="helloutau.file" />
         <!-- Forgets every recent project and voice bank after a confirmation, as "Clear
              Recently Opened..." of VS Code. The command is in no menu, and Open Recent has an
              item of its own. -->
         <action id="helloutau.file.clearRecent" text="&amp;Clear Recently Opened..."
-                category="File" />
+                category="File" catalog="helloutau.file" />
         <action id="helloutau.file.save" text="&amp;Save" category="File" shortcut="Ctrl+S" />
         <action id="helloutau.file.saveAs" text="Save &amp;As..." category="File"
                 shortcut="Ctrl+Shift+S" />

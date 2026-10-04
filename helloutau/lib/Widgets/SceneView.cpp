@@ -24,7 +24,7 @@ namespace hello::daw {
 
     }
 
-    SceneView::SceneView(QWidget *parent) : QAbstractScrollArea(parent) {
+    SceneView::SceneView(QWidget *parent) : ScrollAreaBase(parent) {
         setFocusPolicy(Qt::StrongFocus);
         viewport()->setMouseTracking(true);
         setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
@@ -223,6 +223,7 @@ namespace hello::daw {
         m_horizontalScrollModifiers = horizontalScroll;
         m_timeZoomModifiers = timeZoom;
         m_keyZoomModifiers = keyZoom;
+        setWheelModifierCombinations({horizontalScroll, timeZoom, keyZoom});
     }
 
     void SceneView::mousePressEvent(QMouseEvent *event) {

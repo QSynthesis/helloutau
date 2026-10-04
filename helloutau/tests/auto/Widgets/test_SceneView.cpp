@@ -73,8 +73,10 @@ namespace {
         QApplication::sendEvent(view.viewport(), &event);
     }
 
-    void wheel(SceneView &view, int notches, Qt::KeyboardModifiers modifiers, QPointF at) {
-        QWheelEvent event(at, view.viewport()->mapToGlobal(at), QPoint(), QPoint(0, notches * 120),
+    void wheel(SceneView &view, int notches, Qt::KeyboardModifiers modifiers, QPointF at,
+               int horizontalNotches = 0) {
+        QWheelEvent event(at, view.viewport()->mapToGlobal(at), QPoint(),
+                          QPoint(horizontalNotches * 120, notches * 120),
                           Qt::NoButton, modifiers, Qt::NoScrollPhase, false);
         QApplication::sendEvent(view.viewport(), &event);
     }
@@ -174,6 +176,16 @@ private Q_SLOTS:
         QCOMPARE(view->timeAxis().pixelsPerTick, 0.125 * 1.25);
         wheel(*view, 1, Qt::AltModifier | Qt::MetaModifier, {10, 10});
         QCOMPARE(view->keyAxis().pixelsPerKey, 24 * 1.25);
+    }
+
+    void alt_does_not_scroll_unless_configured() {
+        const auto view = shownView();
+        view->setTimeAxis({0.125, 960});
+        view->setKeyAxis({24, 90});
+
+        wheel(*view, 1, Qt::AltModifier, {10, 10}, 1);
+        QCOMPARE(view->timeAxis().left, 960.0);
+        QCOMPARE(view->keyAxis().top, 90.0);
     }
 
     // The layer added last is drawn on top and hit first.
