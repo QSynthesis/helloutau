@@ -1,6 +1,7 @@
 #include "Editor.h"
 
 #include <algorithm>
+#include <filesystem>
 #include <iterator>
 #include <memory>
 #include <utility>
@@ -65,6 +66,16 @@ namespace hello::daw {
             }
             std::error_code error;
             return std::filesystem::equivalent(a, b, error);
+        }
+
+        QString normalizedPathText(const std::filesystem::path &path) {
+            std::error_code error;
+            auto normalized = std::filesystem::weakly_canonical(path, error);
+            if (error) {
+                error.clear();
+                normalized = std::filesystem::absolute(path, error);
+            }
+            return QDir::toNativeSeparators(textOf(normalized.empty() ? path : normalized));
         }
 
         void placeNewWindow(QWidget *window, QWidget *previous) {
@@ -399,9 +410,12 @@ namespace hello::daw {
         UstCharsetDialog selector(from);
         kit::DiagnosticList diagnostics;
         auto document = kit::ProjectDocument::open(path, &selector, diagnostics);
-        const auto title =
-            tr("Open %1").arg(QString::fromStdU16String(path.filename().u16string()));
+        const auto title = tr("Open");
+        const auto pathDiagnostic =
+            kit::Diagnostic{kit::DiagnosticSeverity::Note,
+                            tr("File: %1").arg(normalizedPathText(path)), std::nullopt};
         if (!document) {
+            diagnostics.prepend(pathDiagnostic);
             DiagnosticBox::show(from, title, diagnostics);
             return nullptr;
         }
@@ -414,6 +428,9 @@ namespace hello::daw {
         impl.settings->addRecentFile(path);
         // Shown after the window, so that the user sees which project they concern, and before
         // the voice bank is read, which may ask more.
+        if (!diagnostics.isEmpty()) {
+            diagnostics.prepend(pathDiagnostic);
+        }
         DiagnosticBox::show(window, title, diagnostics);
         window->loadVoiceBank();
         window->showPropertiesIfPathsAreInvalid();

@@ -708,6 +708,14 @@
         <translation>选择要打开的最近音源</translation>
     </message>
     <message>
+        <source>Open</source>
+        <translation>打开</translation>
+    </message>
+    <message>
+        <source>File: %1</source>
+        <translation>文件：%1</translation>
+    </message>
+    <message>
         <source>Open %1</source>
         <translation>打开 %1</translation>
     </message>
