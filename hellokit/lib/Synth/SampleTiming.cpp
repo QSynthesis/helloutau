@@ -28,7 +28,7 @@ namespace hello::kit {
         bool previousIsRest = false;
         for (qsizetype i = 0; i < notes.size(); ++i) {
             const auto &note = notes[i];
-            const auto *sample = bank ? bank->find(note.noteNum, note.lyric) : nullptr;
+            const auto sample = bank ? bank->find(note.noteNum, note.lyric) : nullptr;
             double preUtterance = note.preUtterance.value_or(sample ? sample->preUtterance : 0);
             double overlap = note.voiceOverlap.value_or(sample ? sample->voiceOverlap : 0);
             const double startPoint = note.startPoint.value_or(utau::DEFAULT_VALUE_START_POINT);

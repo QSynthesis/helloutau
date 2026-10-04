@@ -134,7 +134,7 @@ namespace hello::kit {
             if (!process) {
                 return;
             }
-            auto *dying = process;
+            auto dying = process;
             process = nullptr;
             QObject::disconnect(dying, nullptr, &decl, nullptr);
             if (dying->state() != QProcess::NotRunning) {
@@ -163,7 +163,7 @@ namespace hello::kit {
 
         void died() {
             stdc_decl_t;
-            auto *dead = process;
+            auto dead = process;
             process = nullptr;
             if (dead) {
                 dead->deleteLater();
@@ -184,7 +184,7 @@ namespace hello::kit {
         void giveUp() {
             stdc_decl_t;
             if (process) {
-                auto *dead = process;
+                auto dead = process;
                 process = nullptr;
                 QObject::disconnect(dead, nullptr, &decl, nullptr);
                 dead->kill();

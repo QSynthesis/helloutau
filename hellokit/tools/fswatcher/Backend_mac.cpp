@@ -146,8 +146,8 @@ namespace fswatcher {
 
         static void callback(ConstFSEventStreamRef, void *info, size_t count, void *paths,
                              const FSEventStreamEventFlags flags[], const FSEventStreamEventId[]) {
-            auto *impl = static_cast<Impl *>(info);
-            const auto *const *names = static_cast<const char *const *>(paths);
+            auto impl = static_cast<Impl *>(info);
+            auto names = static_cast<const char *const *>(paths);
             for (size_t i = 0; i < count; ++i) {
                 impl->handle(names[i], flags[i]);
             }

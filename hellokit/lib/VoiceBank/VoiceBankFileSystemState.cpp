@@ -492,7 +492,7 @@ namespace hello::kit {
                     if (codec->isUtf8()) {
                         oto.charset = "UTF-8";
                     }
-                    for (const auto *sample : entries) {
+                    for (const auto sample : entries) {
                         utau::OtoEntry entry;
                         entry.fileName = encode(sample->fileName, VoiceBankDirectorySource::Oto,
                                                 *codec, encoded);

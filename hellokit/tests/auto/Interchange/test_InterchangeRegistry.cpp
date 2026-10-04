@@ -132,7 +132,7 @@ private Q_SLOTS:
         const auto first = writer("first", {QStringLiteral("mid")});
         const auto second = writer("second", {QStringLiteral("mid")});
 
-        const auto *found = registry.writerForSuffix("mid");
+        const auto found = registry.writerForSuffix("mid");
         QVERIFY(found != nullptr);
         QCOMPARE(found->id(), QStringLiteral("first"));
     }

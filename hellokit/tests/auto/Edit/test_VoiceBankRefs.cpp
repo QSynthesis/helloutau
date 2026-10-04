@@ -178,7 +178,7 @@ private Q_SLOTS:
         QCOMPARE(rootDirectory.prefixMap->keys(), QList<int>({60, 61}));
         QCOMPARE(rootDirectory.prefixMap->value(61).suffix, QStringLiteral("y"));
 
-        const auto *sample = bank.find(70, QStringLiteral("c"));
+        const auto sample = bank.find(70, QStringLiteral("c"));
         QVERIFY(sample);
         QVERIFY(sample->hasEntry);
         QCOMPARE(sample->fileName, QStringLiteral("c.wav"));

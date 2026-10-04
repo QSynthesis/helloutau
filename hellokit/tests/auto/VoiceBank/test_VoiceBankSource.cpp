@@ -66,7 +66,7 @@ private Q_SLOTS:
         QVERIFY(source.has_value());
         QVERIFY(!hasError(diagnostics));
 
-        const auto *directory = at(*source, {});
+        const auto directory = at(*source, {});
         QVERIFY(directory);
         QVERIFY(directory->oto.has_value());
         QVERIFY(directory->prefixMap.has_value());

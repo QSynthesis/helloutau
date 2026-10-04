@@ -347,7 +347,7 @@ namespace fswatcher {
                         break;
                     }
                     for (char *at = buffer; at < buffer + size;) {
-                        const auto *event = reinterpret_cast<const inotify_event *>(at);
+                        const auto event = reinterpret_cast<const inotify_event *>(at);
                         handle(*event);
                         at += sizeof(inotify_event) + event->len;
                     }

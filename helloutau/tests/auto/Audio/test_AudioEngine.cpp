@@ -14,7 +14,7 @@ private Q_SLOTS:
     }
 
     void keeps_the_selected_device_id_without_opening_a_stream() {
-        auto *engine = AudioEngine::instance();
+        auto engine = AudioEngine::instance();
         const auto before = engine->streamGeneration();
         engine->setDeviceId(QByteArrayLiteral("test-device"));
         QCOMPARE(engine->deviceId(), QByteArrayLiteral("test-device"));
@@ -23,7 +23,7 @@ private Q_SLOTS:
     }
 
     void reports_empty_sources_as_finished() {
-        auto *engine = AudioEngine::instance();
+        auto engine = AudioEngine::instance();
         QVERIFY(engine->isFinished(0));
         QVERIFY(!engine->clock(0));
         QCOMPARE(engine->bufferedMilliseconds(), 0);

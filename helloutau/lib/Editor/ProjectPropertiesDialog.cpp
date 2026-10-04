@@ -327,7 +327,7 @@ namespace hello::daw {
     ProjectPropertiesDialog::~ProjectPropertiesDialog() = default;
 
     QString ProjectPropertiesDialog::voiceDirText() const {
-        const auto *edit = m_voiceDir->lineEdit();
+        const auto edit = m_voiceDir->lineEdit();
         for (int index = 0; index < m_voiceDir->count(); ++index) {
             if (edit->text() == m_voiceDir->itemText(index)) {
                 return m_voiceDir->itemData(index).toString();

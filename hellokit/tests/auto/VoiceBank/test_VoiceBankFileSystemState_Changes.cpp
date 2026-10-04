@@ -113,7 +113,7 @@ private Q_SLOTS:
         DiagnosticList diagnostics;
         files.reloadFromDisk(bank, found, &selector, diagnostics);
         QVERIFY(!bank.find(60, QStringLiteral("old")));
-        const auto *sample = bank.find(60, QStringLiteral("newer"));
+        const auto sample = bank.find(60, QStringLiteral("newer"));
         QVERIFY(sample);
         QCOMPARE(sample->offset, 10.0);
         QVERIFY(files.checkDisk().isEmpty());
@@ -165,7 +165,7 @@ private Q_SLOTS:
         const auto found = takeIn(bank, files, &selector);
         QVERIFY(found.changed.isEmpty());
         QCOMPARE(found.audio, QList<fs::path>{fs::path()});
-        const auto *edited = bank.find(60, QStringLiteral("a"));
+        const auto edited = bank.find(60, QStringLiteral("a"));
         QVERIFY(edited);
         QCOMPARE(edited->offset, 7.0);
         QVERIFY(bank.find(60, QStringLiteral("ka")));
@@ -196,7 +196,7 @@ private Q_SLOTS:
         QVERIFY(QFile::remove(pathOf(QStringLiteral("a.wav"))));
         QVERIFY(QFile::remove(pathOf(QStringLiteral("ki.wav"))));
         QCOMPARE(takeIn(bank, files, &selector).audio, QList<fs::path>{fs::path()});
-        const auto *entry = bank.find(60, QStringLiteral("a"));
+        const auto entry = bank.find(60, QStringLiteral("a"));
         QVERIFY(entry);
         QVERIFY(entry->hasEntry);
         QVERIFY(!bank.find(60, QStringLiteral("ki")));
@@ -389,7 +389,7 @@ private Q_SLOTS:
         const auto done = files.reloadFromDisk(bank, files.checkDisk(), &selector, diagnostics);
         QCOMPARE(done.added, (QList<fs::path>{fs::path("new"), fs::path("new/deeper")}));
 
-        const auto *sample = bank.find(60, kA);
+        const auto sample = bank.find(60, kA);
         QVERIFY(sample);
         QCOMPARE(directoryOf(bank, *sample).path, fs::path("new/deeper"));
         QVERIFY(files.checkDisk().isEmpty());
@@ -412,7 +412,7 @@ private Q_SLOTS:
         QCOMPARE(takeIn(bank, files, &selector).removed, QList<fs::path>{fs::path("one")});
         QVERIFY(!bank.find(60, QStringLiteral("one")));
 
-        const auto *sample = bank.find(60, QStringLiteral("two"));
+        const auto sample = bank.find(60, QStringLiteral("two"));
         QVERIFY(sample);
         QCOMPARE(directoryOf(bank, *sample).path, fs::path("two"));
         QCOMPARE(sample->offset, 2.0);

@@ -201,7 +201,7 @@ private Q_SLOTS:
     // Every ANSI code page must be available, so that the system encoding of any Windows
     // machine is supported, on every system rather than only on Windows.
     void every_ansi_code_page_is_reachable_by_name() {
-        for (const auto *name :
+        for (const auto name :
              {"windows-874", "windows-1250", "windows-1251", "windows-1252", "windows-1253",
               "windows-1254", "windows-1255", "windows-1256", "windows-1257", "windows-1258"}) {
             const TextCodec codec{QLatin1String(name)};

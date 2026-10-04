@@ -143,7 +143,7 @@ namespace fswatcher {
                                        MAX_PATH + 1)) {
                 return false;
             }
-            for (const auto *name : {L"NTFS", L"FAT", L"FAT32", L"exFAT", L"ReFS"}) {
+            for (const auto name : {L"NTFS", L"FAT", L"FAT32", L"exFAT", L"ReFS"}) {
                 if (_wcsicmp(system, name) == 0) {
                     return true;
                 }
@@ -307,7 +307,7 @@ namespace fswatcher {
                     continue;
                 }
 
-                const auto *at = reinterpret_cast<const BYTE *>(buffer.data());
+                auto at = reinterpret_cast<const BYTE *>(buffer.data());
                 while (true) {
                     const auto &info = *reinterpret_cast<const FILE_NOTIFY_INFORMATION *>(at);
                     report(drive, info);

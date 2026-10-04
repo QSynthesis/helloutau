@@ -523,7 +523,7 @@ namespace hello::daw {
             for (int i = 0; i < indices.size(); ++i) {
                 const int index = indices.at(i);
                 defaults.tempo.push_back(tempoMap.tempo(index));
-                const auto *sample =
+                const auto sample =
                     bank ? bank->find(notes.at(i).noteNum, notes.at(i).lyric) : nullptr;
                 defaults.preUtterance.push_back(sample ? sample->preUtterance : 0);
                 defaults.voiceOverlap.push_back(sample ? sample->voiceOverlap : 0);
@@ -1327,12 +1327,12 @@ namespace hello::daw {
         }
 
         void zoomTime(double factor) {
-            auto *view = roll->view();
+            auto view = roll->view();
             view->zoomTime(factor, view->viewport()->width() / 2.0);
         }
 
         void zoomKeys(double factor) {
-            auto *view = roll->view();
+            auto view = roll->view();
             view->zoomKeys(factor, view->viewport()->height() / 2.0);
         }
 

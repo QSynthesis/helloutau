@@ -438,7 +438,7 @@ private Q_SLOTS:
         QVERIFY(files.reread(bank, bank.directories().at(0).path, QStringLiteral("Shift_JIS"),
                              diagnostics));
         QVERIFY(!bank.directories().at(0).leftOut);
-        const auto *sample = bank.find(60, kA);
+        const auto sample = bank.find(60, kA);
         QVERIFY(sample);
         QVERIFY(sample->hasEntry);
         QCOMPARE(bank.samples().size(), 1);
@@ -713,7 +713,7 @@ private Q_SLOTS:
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
         auto &files = opened->files;
-        const auto *before = bank.find(60, QStringLiteral("same"));
+        const auto before = bank.find(60, QStringLiteral("same"));
         QVERIFY(before);
         const auto winner = before->fileName;
         int index = -1;
@@ -727,7 +727,7 @@ private Q_SLOTS:
         DiagnosticList diagnostics;
         QVERIFY(files.reread(bank, bank.directories().at(index).path, QStringLiteral("UTF-8"),
                              diagnostics));
-        const auto *after = bank.find(60, QStringLiteral("same"));
+        const auto after = bank.find(60, QStringLiteral("same"));
         QVERIFY(after);
         QCOMPARE(after->fileName, winner);
     }

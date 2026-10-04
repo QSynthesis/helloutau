@@ -11,7 +11,7 @@ namespace hello::daw {
 
     bool ScrollAreaBase::viewportEvent(QEvent *event) {
         if (event->type() == QEvent::Wheel) {
-            auto *wheel = static_cast<QWheelEvent *>(event);
+            auto wheel = static_cast<QWheelEvent *>(event);
             if (wheel->modifiers() & Qt::AltModifier) {
                 constexpr auto standardModifiers = Qt::ControlModifier | Qt::AltModifier |
                                                    Qt::ShiftModifier | Qt::MetaModifier;

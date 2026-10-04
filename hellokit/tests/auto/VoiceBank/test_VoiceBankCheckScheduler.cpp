@@ -76,7 +76,7 @@ private:
             out->files = std::move(opened->files);
         }
         out->schedule = scheduler();
-        auto *followed = out.get();
+        auto followed = out.get();
         connect(out->schedule.get(), &VoiceBankCheckScheduler::checkNeeded, this,
                 [followed](const QStringList &places) {
                     QList<fs::path> paths;
@@ -137,7 +137,7 @@ private Q_SLOTS:
         QVERIFY(QDir().rename(root() + QStringLiteral("/old"), root() + QStringLiteral("/new")));
         QTRY_VERIFY_WITH_TIMEOUT(
             [&] {
-                const auto *sample = followed->bank->find(60, QStringLiteral("ka"));
+                const auto sample = followed->bank->find(60, QStringLiteral("ka"));
                 return sample && directoryOf(*followed->bank, *sample) == QStringLiteral("new");
             }(),
             5000);

@@ -93,7 +93,7 @@ namespace hello::kit {
         }
 
         QString canonical;
-        if (const auto *page = findCodePage(requested)) {
+        if (const auto page = findCodePage(requested)) {
             canonical = QLatin1String(page->canonical);
             if (winacp::codePageFromNumber(page->number)) {
                 m_path = Path::AnsiCodePage;

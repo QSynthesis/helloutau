@@ -149,7 +149,7 @@ namespace hello::daw {
         }
         // A note being drawn has no index, and is a sung note with the default lyric.
         const bool drawn = placement.index < 0;
-        const auto *note = drawn ? nullptr : &m_state->timeline->note(placement.index);
+        const auto note = drawn ? nullptr : &m_state->timeline->note(placement.index);
         const bool rest = note && note->rest;
         const bool unsampled = note && decl->lacksSample(placement.index);
         const bool selected = drawn || m_state->selection.contains(note->id);

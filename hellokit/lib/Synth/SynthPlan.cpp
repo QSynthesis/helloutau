@@ -236,7 +236,7 @@ namespace hello::kit {
         // The sample for a note, the only input here determined by the voice bank.
         const auto otoEntryGetter = [&bank](const utau::Note &note) -> utau::OtoEntry {
             const auto lyric = QString::fromUtf8(note.lyric.data(), qsizetype(note.lyric.size()));
-            const auto *sample = bank.find(note.noteNum, lyric);
+            const auto sample = bank.find(note.noteNum, lyric);
             if (!sample) {
                 return {};
             }

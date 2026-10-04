@@ -126,7 +126,7 @@ private Q_SLOTS:
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
 
-        const auto *sample = bank.find(60, QString::fromUtf8("\xe3\x81\x82"));
+        const auto sample = bank.find(60, QString::fromUtf8("\xe3\x81\x82"));
         QVERIFY(sample);
         QCOMPARE(sample->path, root() / "a.wav");
         QVERIFY(sample->hasEntry);
@@ -147,7 +147,7 @@ private Q_SLOTS:
         auto opened = VoiceBankFileSystemState::open(root(), &selector, diagnostics);
         QVERIFY(opened.has_value());
 
-        const auto *sample = opened->bank.find(60, QStringLiteral("hao"));
+        const auto sample = opened->bank.find(60, QStringLiteral("hao"));
         QVERIFY(sample);
         QCOMPARE(sample->fileName, QStringLiteral("hao2.wav"));
         QCOMPARE(sample->offset, 1.0);
@@ -164,7 +164,7 @@ private Q_SLOTS:
         auto opened = VoiceBankFileSystemState::open(root(), &selector, diagnostics);
         QVERIFY(opened.has_value());
 
-        const auto *sample = opened->bank.find(60, QStringLiteral("hao"));
+        const auto sample = opened->bank.find(60, QStringLiteral("hao"));
         QVERIFY(sample);
         QCOMPARE(sample->fileName, QStringLiteral("hao2.wav"));
         QCOMPARE(sample->offset, 1.0);
@@ -187,11 +187,11 @@ private Q_SLOTS:
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
 
-        const auto *plain = bank.find(60, QStringLiteral("a"));
+        const auto plain = bank.find(60, QStringLiteral("a"));
         QVERIFY(plain);
         QCOMPARE(plain->path, root() / "a.wav");
 
-        const auto *high = bank.find(72, QStringLiteral("a"));
+        const auto high = bank.find(72, QStringLiteral("a"));
         QVERIFY(high);
         QCOMPARE(high->path, root() / "a_high.wav");
     }
@@ -206,7 +206,7 @@ private Q_SLOTS:
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
 
-        const auto *sample = bank.find(60, QStringLiteral("ka"));
+        const auto sample = bank.find(60, QStringLiteral("ka"));
         QVERIFY(sample);
         QCOMPARE(sample->path, root() / "ka.wav");
         QVERIFY(!sample->hasEntry);
@@ -225,7 +225,7 @@ private Q_SLOTS:
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
 
-        const auto *sample = bank.find(60, QStringLiteral("ka"));
+        const auto sample = bank.find(60, QStringLiteral("ka"));
         QVERIFY(sample);
         QCOMPARE(sample->path, root() / "ka.wav");
         QVERIFY(sample->hasEntry);
@@ -245,7 +245,7 @@ private Q_SLOTS:
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
 
-        const auto *sample = bank.find(60, QStringLiteral("ka"));
+        const auto sample = bank.find(60, QStringLiteral("ka"));
         QVERIFY(sample);
         QCOMPARE(sample->path, root() / "one.wav");
     }
@@ -311,7 +311,7 @@ private Q_SLOTS:
         QVERIFY(!diagnostics.isEmpty());
 
         // The sample remains reachable by name, because a file name requires no encoding.
-        const auto *sample = bank.find(60, QStringLiteral("a"));
+        const auto sample = bank.find(60, QStringLiteral("a"));
         QVERIFY(sample);
         QVERIFY(!sample->hasEntry);
     }
@@ -327,7 +327,7 @@ private Q_SLOTS:
         auto &bank = opened->bank;
         QVERIFY(!diagnostics.isEmpty());
 
-        const auto *sample = bank.find(60, QStringLiteral("a"));
+        const auto sample = bank.find(60, QStringLiteral("a"));
         QVERIFY(sample);
         QVERIFY(!sample->hasEntry);
     }
@@ -353,13 +353,13 @@ private Q_SLOTS:
         auto &bank = opened->bank;
         auto &files = opened->files;
         QCOMPARE(bank.character().name, QStringLiteral("outer"));
-        const auto *text = directoryAt(bank, "text");
+        const auto text = directoryAt(bank, "text");
         QVERIFY(text);
         QVERIFY(text->charset.isEmpty());
         QVERIFY(!text->leftOut);
         QVERIFY(!text->character.has_value());
 
-        const auto *inner = directoryAt(bank, "inner");
+        const auto inner = directoryAt(bank, "inner");
         QVERIFY(inner);
         QVERIFY(!inner->character.has_value());
         QVERIFY(!inner->prefixMap.has_value());
@@ -395,8 +395,8 @@ private Q_SLOTS:
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
 
-        const auto *jp = directoryAt(bank, "jp");
-        const auto *cn = directoryAt(bank, "cn");
+        const auto jp = directoryAt(bank, "jp");
+        const auto cn = directoryAt(bank, "cn");
         QVERIFY(jp && cn);
         QCOMPARE(jp->charset, TextCodec(QStringLiteral("Shift_JIS")).name());
         QCOMPARE(cn->charset, TextCodec(QStringLiteral("GBK")).name());
@@ -414,7 +414,7 @@ private Q_SLOTS:
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
 
-        const auto *top = directoryAt(bank, "");
+        const auto top = directoryAt(bank, "");
         QVERIFY(top);
         QVERIFY(top->leftOut);
         QVERIFY(top->charset.isEmpty());
@@ -433,13 +433,13 @@ private Q_SLOTS:
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
 
-        const auto *entry = bank.find(60, QString::fromUtf8("\xe3\x81\x82"));
+        const auto entry = bank.find(60, QString::fromUtf8("\xe3\x81\x82"));
         QVERIFY(entry);
         QCOMPARE(bank.directories().at(entry->directory).path, std::filesystem::path("sub"));
         QCOMPARE(entry->fileName, QStringLiteral("ka.wav"));
         QCOMPARE(entry->spellings.at(0), std::optional<std::string>("41.0"));
 
-        const auto *bare = bank.find(60, QStringLiteral("ki"));
+        const auto bare = bank.find(60, QStringLiteral("ki"));
         QVERIFY(bare);
         QVERIFY(!bare->hasEntry);
         QCOMPARE(bank.directories().at(bare->directory).path, std::filesystem::path("sub"));
@@ -458,7 +458,7 @@ private Q_SLOTS:
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
 
-        const auto *sample = bank.find(60, QStringLiteral("ka"));
+        const auto sample = bank.find(60, QStringLiteral("ka"));
         QVERIFY(sample);
         QVERIFY(sample->hasEntry);
         QVERIFY(sample->alias.isEmpty());
@@ -491,7 +491,7 @@ private Q_SLOTS:
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
 
-        const auto *sample = bank.find(60, QStringLiteral("a"));
+        const auto sample = bank.find(60, QStringLiteral("a"));
         QVERIFY(sample);
         QCOMPARE(sample->path, root() / std::filesystem::path(u"\u3042.wav"));
 
