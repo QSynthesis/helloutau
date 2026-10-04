@@ -301,9 +301,75 @@ namespace hello::daw {
             window->setAttribute(Qt::WA_DeleteOnClose);
             windows.removeAll(nullptr);
             windows.push_back(window);
+            QObject::connect(window, &QObject::destroyed, editor, [this] {
+                for (const auto project : std::as_const(windows)) {
+                    if (project) {
+                        project->refreshTitle();
+                    }
+                }
+            });
             placeNewWindow(window, previous);
             window->show();
+            for (const auto project : std::as_const(windows)) {
+                if (project) {
+                    project->refreshTitle();
+                }
+            }
             return window;
+        }
+
+        QString projectDisplayName(const ProjectWindow *target) const {
+            const auto source = target->document()->sourcePath();
+            if (source.empty()) {
+                int number = 0;
+                for (const auto project : std::as_const(windows)) {
+                    if (!project || !project->document()->sourcePath().empty()) {
+                        continue;
+                    }
+                    ++number;
+                    if (project == target) {
+                        return Editor::tr("Untitled %1").arg(number);
+                    }
+                }
+                return Editor::tr("Untitled");
+            }
+
+            const auto normalized = normalizedPathText(source);
+            const auto parts = QDir::fromNativeSeparators(normalized).split(
+                QLatin1Char('/'), Qt::SkipEmptyParts);
+            const auto fileName = parts.isEmpty() ? normalized : parts.last();
+            QList<const ProjectWindow *> duplicates;
+            for (const auto project : std::as_const(windows)) {
+                if (project && !project->document()->sourcePath().empty() &&
+                    project->document()->displayName() == fileName) {
+                    duplicates.push_back(project);
+                }
+            }
+            if (duplicates.size() <= 1) {
+                return fileName;
+            }
+
+            for (int depth = 2; depth <= parts.size(); ++depth) {
+                const auto suffix = parts.mid(parts.size() - depth).join(QLatin1Char('/'));
+                bool unique = true;
+                for (const auto project : duplicates) {
+                    if (project == target) {
+                        continue;
+                    }
+                    const auto other = QDir::fromNativeSeparators(
+                                           normalizedPathText(project->document()->sourcePath()))
+                                           .split(QLatin1Char('/'), Qt::SkipEmptyParts);
+                    if (other.size() >= depth &&
+                        other.mid(other.size() - depth).join(QLatin1Char('/')) == suffix) {
+                        unique = false;
+                        break;
+                    }
+                }
+                if (unique) {
+                    return QDir::toNativeSeparators(suffix);
+                }
+            }
+            return normalized;
         }
     };
 
@@ -323,6 +389,11 @@ namespace hello::daw {
     kit::FrequencyFormatRegistry &Editor::frequencyFormats() const {
         stdc_impl_t;
         return *impl.frequencyFormats;
+    }
+
+    QString Editor::projectDisplayName(const ProjectWindow *window) const {
+        stdc_impl_t;
+        return impl.projectDisplayName(window);
     }
 
     SettingCatalog *Editor::settingCatalog() const {
@@ -424,6 +495,11 @@ namespace hello::daw {
             window->setDocument(std::move(document));
         } else {
             window = impl.createWindow(this, std::move(document));
+        }
+        for (const auto project : std::as_const(impl.windows)) {
+            if (project) {
+                project->refreshTitle();
+            }
         }
         impl.settings->addRecentFile(path);
         // Shown after the window, so that the user sees which project they concern, and before

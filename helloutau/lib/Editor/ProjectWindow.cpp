@@ -6,6 +6,7 @@
 #include <optional>
 
 #include <QtCore/QDir>
+#include <QtCore/QCoreApplication>
 #include <QtCore/QHash>
 #include <QtCore/QJsonObject>
 #include <QtCore/QMetaObject>
@@ -143,13 +144,19 @@ namespace hello::daw {
         // The file a document is saved or exported as by default: its own file, or else the file
         // it came from, with \a extension, or else a new file in the documents directory.
         std::filesystem::path proposedPath(const kit::ProjectDocument &document,
-                                           const char16_t *extension) {
+                                           const char16_t *extension,
+                                           const QString &fallback) {
             auto path = document.sourcePath();
             if (path.empty()) {
                 path = pathOf(QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation));
-                path /= u"Untitled";
+                path /= std::filesystem::path(fallback.toStdU16String());
             }
             return path.replace_extension(extension);
+        }
+
+        std::filesystem::path audioPathOf(const QString &baseName) {
+            auto path = std::filesystem::path(baseName.toStdU16String());
+            return path.replace_extension(u".wav");
         }
 
         kit::Vibrato pitchControlDefaultVibrato(const AppSettings &settings) {
@@ -851,8 +858,9 @@ namespace hello::daw {
                 return;
             }
             auto proposed = document->sourcePath();
-            proposed = proposed.empty() ? std::filesystem::path(u"untitled.wav")
-                                        : proposed.replace_extension(u".wav");
+            proposed = proposed.empty()
+                           ? audioPathOf(projectAudioBaseName())
+                           : proposed.replace_extension(u".wav");
             const auto chosen = QFileDialog::getSaveFileName(
                 &decl, tr("Save Last Played"), textOf(proposed), tr("WAV files (*.wav)"));
             if (chosen.isEmpty()) {
@@ -949,10 +957,28 @@ namespace hello::daw {
                     kit::ProjectRef(document->session()).settings().outputFile())
                     .toStdU16String());
             if (output.empty()) {
-                output = source.empty() ? std::filesystem::path(u"untitled.wav")
+                output = source.empty() ? audioPathOf(projectAudioBaseName())
                                         : source.filename().replace_extension(u".wav");
             }
             return output.is_absolute() ? output : folder / output;
+        }
+
+        QString projectAudioBaseName() const {
+            const auto name = kit::ProjectRef(document->session()).settings().name().trimmed();
+            return name.isEmpty()
+                       ? QCoreApplication::translate("hello::daw::ProjectWindow", "Untitled")
+                       : name;
+        }
+
+        QString projectFileBaseName() const {
+            const auto name = editor->projectDisplayName(_decl);
+            if (!document->sourcePath().empty()) {
+                return name;
+            }
+            const auto space = name.lastIndexOf(QLatin1Char(' '));
+            bool ok = false;
+            const auto number = name.mid(space + 1).toInt(&ok);
+            return ok ? name.left(space) + QLatin1Char('-') + QString::number(number) : name;
         }
 
         // Save Last Played applies to the prerender mode, after a render.
@@ -1909,9 +1935,8 @@ namespace hello::daw {
 
         void updateTitle() {
             stdc_decl_t;
-            const auto name = document->displayName();
             decl.setWindowTitle(
-                QStringLiteral("%1[*] - HelloUtau").arg(name.isEmpty() ? tr("Untitled") : name));
+                QStringLiteral("%1[*] - HelloUtau").arg(editor->projectDisplayName(&decl)));
             decl.setWindowModified(document->isModified());
         }
 
@@ -2193,10 +2218,9 @@ namespace hello::daw {
             if (!document->isModified()) {
                 return true;
             }
-            const auto name = document->displayName();
             const auto answer = QMessageBox::warning(
                 &decl, tr("HelloUtau"),
-                tr("Save the changes to %1?").arg(name.isEmpty() ? tr("Untitled") : name),
+                tr("Save the changes to %1?").arg(editor->projectDisplayName(_decl)),
                 QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel);
             if (answer == QMessageBox::Save) {
                 return decl.save();
@@ -2238,6 +2262,11 @@ namespace hello::daw {
     kit::ProjectDocument *ProjectWindow::document() const {
         stdc_impl_t;
         return impl.document.get();
+    }
+
+    void ProjectWindow::refreshTitle() {
+        stdc_impl_t;
+        impl.updateTitle();
     }
 
     QAK::WidgetActionContext *ProjectWindow::actionContext() const {
@@ -2335,7 +2364,8 @@ namespace hello::daw {
     bool ProjectWindow::saveAs() {
         stdc_impl_t;
         const auto file = QFileDialog::getSaveFileName(
-            this, tr("Save As"), textOf(proposedPath(*impl.document, u".usth")),
+            this, tr("Save As"),
+            textOf(proposedPath(*impl.document, u".usth", impl.projectFileBaseName())),
             tr("HelloUtau projects (*.usth)"));
         if (file.isEmpty()) {
             return false;
@@ -2361,8 +2391,9 @@ namespace hello::daw {
     bool ProjectWindow::exportUst() {
         stdc_impl_t;
         const auto &settings = impl.editor->settings();
-        ExportUstDialog dialog(proposedPath(*impl.document, u".ust"), settings.ustExportCharset(),
-                               this);
+        ExportUstDialog dialog(
+            proposedPath(*impl.document, u".ust", impl.projectFileBaseName()),
+            settings.ustExportCharset(), this);
         if (dialog.exec() != QDialog::Accepted) {
             return false;
         }

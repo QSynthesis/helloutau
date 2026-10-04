@@ -36,6 +36,9 @@ namespace hello::daw {
 
         kit::ProjectDocument *document() const;
 
+        /// Refreshes the title after another project window changes the names that need showing.
+        void refreshTitle();
+
         /// Returns the action context of the window, keyed by the IDs of the action extensions,
         /// including the extensions of plugins. See ActionContribution.
         QAK::WidgetActionContext *actionContext() const;

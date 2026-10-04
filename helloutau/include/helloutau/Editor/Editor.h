@@ -6,6 +6,7 @@
 
 #include <QtCore/QList>
 #include <QtCore/QObject>
+#include <QtCore/QString>
 
 #include <helloutau/Editor/HelloUtauEditorGlobal.h>
 
@@ -55,6 +56,10 @@ namespace hello::daw {
         static constexpr WindowKind windowKinds[] = {ProjectWindowKind, VoiceBankWindowKind};
 
         AppSettings &settings() const;
+
+        /// Returns the title of a window's project, disambiguated against the other project
+        /// windows.
+        QString projectDisplayName(const ProjectWindow *window) const;
 
         /// Returns the action registry of the windows of \a kind, with the menus, the tool bars,
         /// the commands and the shortcuts of that kind. Each window of the kind is a context of
