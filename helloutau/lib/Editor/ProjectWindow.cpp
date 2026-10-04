@@ -903,6 +903,21 @@ namespace hello::daw {
         void renderTrack() {
             stdc_decl_t;
             playback->stop();
+            const auto renderEngines = engines();
+            if (renderEngines.resampler.empty() || (!realtime() && renderEngines.wavtool.empty())) {
+                if (trustDenied) {
+                    return;
+                }
+                kit::DiagnosticList diagnostics;
+                diagnostics.push_back(
+                    {kit::DiagnosticSeverity::Error,
+                     realtime() ? Playback::tr("Set the resampler in the settings first.")
+                                 : Playback::tr(
+                                       "Set the resampler and the wavtool in the settings first."),
+                     std::nullopt});
+                DiagnosticBox::show(&decl, tr("Render Track"), diagnostics);
+                return;
+            }
             const auto file = QFileDialog::getSaveFileName(
                 &decl, tr("Render Track"),
                 QString::fromStdU16String(defaultTrackFile().u16string()), tr("WAV files (*.wav)"));
@@ -918,7 +933,7 @@ namespace hello::daw {
                                  [&written](const std::filesystem::path &path) { written = path; });
             kit::DiagnosticList diagnostics;
             const bool started = playback->renderTrack(
-                *document, std::filesystem::path(file.toStdU16String()), engines(), diagnostics);
+                *document, std::filesystem::path(file.toStdU16String()), renderEngines, diagnostics);
             if (started) {
                 waitForRender(tr("Render Track"));
             }
