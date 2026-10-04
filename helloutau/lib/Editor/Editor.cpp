@@ -4,9 +4,11 @@
 #include <filesystem>
 #include <iterator>
 #include <memory>
+#include <set>
 #include <utility>
 
 #include <QtCore/QDir>
+#include <QtCore/QHash>
 #include <QtCore/QPointer>
 #include <QtCore/QTimer>
 #include <QtGui/QGuiApplication>
@@ -211,6 +213,18 @@ namespace hello::daw {
         bool watchesDisk = true;
         QList<QPointer<ProjectWindow>> windows;
         QList<QPointer<VoiceBankWindow>> voiceBankWindows;
+        mutable std::set<int> untitledNumbers;
+        mutable std::set<int> reusableUntitledNumbers;
+        mutable QHash<const ProjectWindow *, int> untitledNumberOf;
+
+        int nextUntitledNumber() const {
+            if (!reusableUntitledNumbers.empty()) {
+                const auto number = *reusableUntitledNumbers.begin();
+                reusableUntitledNumbers.erase(reusableUntitledNumbers.begin());
+                return number;
+            }
+            return untitledNumbers.empty() ? 1 : *untitledNumbers.rbegin() + 1;
+        }
 
         // Opens a recent project, or voice bank if bank, over from, or forgets it if it is gone
         void openRecent(Editor *editor, const std::filesystem::path &path, bool bank,
@@ -302,7 +316,17 @@ namespace hello::daw {
             window->setAttribute(Qt::WA_DeleteOnClose);
             windows.removeAll(nullptr);
             windows.push_back(window);
-            QObject::connect(window, &QObject::destroyed, editor, [this, editor] {
+            if (!untitledNumberOf.contains(window)) {
+                const auto number = nextUntitledNumber();
+                untitledNumbers.insert(number);
+                untitledNumberOf.insert(window, number);
+            }
+            QObject::connect(window, &QObject::destroyed, editor, [this, editor, window] {
+                if (const auto it = untitledNumberOf.find(window); it != untitledNumberOf.end()) {
+                    untitledNumbers.erase(it.value());
+                    reusableUntitledNumbers.insert(it.value());
+                    untitledNumberOf.erase(it);
+                }
                 QTimer::singleShot(0, editor, [this] {
                     for (const auto project : std::as_const(windows)) {
                         if (project) {
@@ -324,17 +348,19 @@ namespace hello::daw {
         QString projectDisplayName(const ProjectWindow *target) const {
             const auto source = target->document()->sourcePath();
             if (source.empty()) {
-                int number = 0;
-                for (const auto project : std::as_const(windows)) {
-                    if (!project || !project->document()->sourcePath().empty()) {
-                        continue;
-                    }
-                    ++number;
-                    if (project == target) {
-                        return Editor::tr("Untitled-%1").arg(number);
-                    }
+                if (!untitledNumberOf.contains(target)) {
+                    const auto number = nextUntitledNumber();
+                    untitledNumbers.insert(number);
+                    untitledNumberOf.insert(target, number);
                 }
-                return Editor::tr("Untitled");
+                const auto number = untitledNumberOf.value(target);
+                return number == 1 ? Editor::tr("Untitled")
+                                   : Editor::tr("Untitled-%1").arg(number);
+            }
+            if (const auto it = untitledNumberOf.find(target); it != untitledNumberOf.end()) {
+                untitledNumbers.erase(it.value());
+                reusableUntitledNumbers.insert(it.value());
+                untitledNumberOf.erase(it);
             }
 
             const auto normalized = normalizedPathText(source);

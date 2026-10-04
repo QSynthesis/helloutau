@@ -203,6 +203,23 @@ private Q_SLOTS:
         QCOMPARE(exportMenu->actions().first()->text(), QStringLiteral("&UST..."));
     }
 
+    void untitled_window_numbers_are_reserved_until_close() {
+        const auto e = editor();
+        const auto first = e->newWindow();
+        const auto second = e->newWindow();
+        QCOMPARE(first->windowTitle(), QStringLiteral("Untitled[*] - HelloUtau"));
+        QCOMPARE(second->windowTitle(), QStringLiteral("Untitled-2[*] - HelloUtau"));
+
+        first->close();
+        QCoreApplication::processEvents();
+        QCOMPARE(second->windowTitle(), QStringLiteral("Untitled-2[*] - HelloUtau"));
+
+        const auto third = e->newWindow();
+        const auto fourth = e->newWindow();
+        QCOMPARE(third->windowTitle(), QStringLiteral("Untitled[*] - HelloUtau"));
+        QCOMPARE(fourth->windowTitle(), QStringLiteral("Untitled-3[*] - HelloUtau"));
+    }
+
     void undo_and_the_modified_mark_follow_the_project() {
         const auto e = editor();
         const auto window = e->newWindow();
