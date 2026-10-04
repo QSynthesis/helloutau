@@ -148,6 +148,18 @@
              as in UTAU -->
         <action id="helloutau.view.showParameters" text="Show P&amp;arameters" category="View"
                 shortcut="Z" />
+        <action id="helloutau.view.goToStart" text="Go to &amp;Start" category="View"
+                shortcut="Ctrl+Home" />
+        <action id="helloutau.view.goToEnd" text="Go to &amp;End" category="View"
+                shortcut="Ctrl+End" />
+        <action id="helloutau.view.goToFirstNote" text="Go to &amp;First Note" category="View"
+                shortcut="Home" />
+        <action id="helloutau.view.goToLastNote" text="Go to &amp;Last Note" category="View"
+                shortcut="End" />
+        <action id="helloutau.view.zoomInTime" text="Zoom In &amp;Horizontally" category="View" />
+        <action id="helloutau.view.zoomOutTime" text="Zoom Out Horizontall&amp;y" category="View" />
+        <action id="helloutau.view.zoomInKeys" text="Zoom In &amp;Vertically" category="View" />
+        <action id="helloutau.view.zoomOutKeys" text="Zoom Out Verticall&amp;y" category="View" />
         <!-- Filled by the window with the regions of the project, each of which it loads -->
         <action id="helloutau.view.loadRegion" text="&amp;Load Region" category="View"
                 external="true" />
@@ -276,6 +288,16 @@
                 <action id="helloutau.view.showRenderedPitch" />
                 <action id="helloutau.view.showEnvelopes" />
                 <action id="helloutau.view.showParameters" />
+                <separator />
+                <action id="helloutau.view.goToStart" />
+                <action id="helloutau.view.goToEnd" />
+                <action id="helloutau.view.goToFirstNote" />
+                <action id="helloutau.view.goToLastNote" />
+                <separator />
+                <action id="helloutau.view.zoomInTime" />
+                <action id="helloutau.view.zoomOutTime" />
+                <action id="helloutau.view.zoomInKeys" />
+                <action id="helloutau.view.zoomOutKeys" />
                 <separator />
                 <action id="helloutau.view.loadRegion" />
                 <separator />

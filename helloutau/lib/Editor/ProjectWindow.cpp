@@ -1273,6 +1273,39 @@ namespace hello::daw {
             roll->setQuantization(choices[next]);
         }
 
+        void goToStart() {
+            roll->view()->horizontalScrollBar()->setValue(
+                roll->view()->horizontalScrollBar()->minimum());
+        }
+
+        void goToEnd() {
+            roll->view()->horizontalScrollBar()->setValue(
+                roll->view()->horizontalScrollBar()->maximum());
+        }
+
+        void goToFirstNote() {
+            if (roll->timeline()->noteCount() > 0) {
+                roll->showNote(0);
+            }
+        }
+
+        void goToLastNote() {
+            const int count = roll->timeline()->noteCount();
+            if (count > 0) {
+                roll->showNote(count - 1);
+            }
+        }
+
+        void zoomTime(double factor) {
+            auto *view = roll->view();
+            view->zoomTime(factor, view->viewport()->width() / 2.0);
+        }
+
+        void zoomKeys(double factor) {
+            auto *view = roll->view();
+            view->zoomKeys(factor, view->viewport()->height() / 2.0);
+        }
+
         void initActions() {
             stdc_decl_t;
             context = new QAK::WidgetActionContext(&decl);
@@ -1381,6 +1414,20 @@ namespace hello::daw {
                 });
             });
             addCommand(QStringLiteral("helloutau.select.selectAll"), [this] { roll->selectAll(); });
+            addCommand(QStringLiteral("helloutau.view.goToStart"), [this] { goToStart(); });
+            addCommand(QStringLiteral("helloutau.view.goToEnd"), [this] { goToEnd(); });
+            addCommand(QStringLiteral("helloutau.view.goToFirstNote"),
+                       [this] { goToFirstNote(); });
+            addCommand(QStringLiteral("helloutau.view.goToLastNote"),
+                       [this] { goToLastNote(); });
+            addCommand(QStringLiteral("helloutau.view.zoomInTime"),
+                       [this] { zoomTime(1.25); });
+            addCommand(QStringLiteral("helloutau.view.zoomOutTime"),
+                       [this] { zoomTime(1.0 / 1.25); });
+            addCommand(QStringLiteral("helloutau.view.zoomInKeys"),
+                       [this] { zoomKeys(1.25); });
+            addCommand(QStringLiteral("helloutau.view.zoomOutKeys"),
+                       [this] { zoomKeys(1.0 / 1.25); });
             addCommand(QStringLiteral("helloutau.edit.find"), [this] {
                 findBar->showFind();
                 updateFindResult();

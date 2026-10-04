@@ -490,6 +490,38 @@
         <translation>显示参数(&amp;A)</translation>
     </message>
     <message>
+        <source>Go to &amp;Start</source>
+        <translation>跳转到开始(&amp;S)</translation>
+    </message>
+    <message>
+        <source>Go to &amp;End</source>
+        <translation>跳转到结束(&amp;E)</translation>
+    </message>
+    <message>
+        <source>Go to &amp;First Note</source>
+        <translation>跳转到第一个音符(&amp;F)</translation>
+    </message>
+    <message>
+        <source>Go to &amp;Last Note</source>
+        <translation>跳转到最后一个音符(&amp;L)</translation>
+    </message>
+    <message>
+        <source>Zoom In &amp;Horizontally</source>
+        <translation>横向放大(&amp;H)</translation>
+    </message>
+    <message>
+        <source>Zoom Out Horizontall&amp;y</source>
+        <translation>横向缩小(&amp;O)</translation>
+    </message>
+    <message>
+        <source>Zoom In &amp;Vertically</source>
+        <translation>纵向放大(&amp;V)</translation>
+    </message>
+    <message>
+        <source>Zoom Out Verticall&amp;y</source>
+        <translation>纵向缩小(&amp;U)</translation>
+    </message>
+    <message>
         <source>&amp;Load Region</source>
         <translation>载入区间(&amp;L)</translation>
     </message>
