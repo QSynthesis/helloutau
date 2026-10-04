@@ -6,7 +6,6 @@
 #include <optional>
 
 #include <QtCore/QDir>
-#include <QtCore/QCoreApplication>
 #include <QtCore/QHash>
 #include <QtCore/QJsonObject>
 #include <QtCore/QMetaObject>
@@ -857,10 +856,7 @@ namespace hello::daw {
                                             "was last cleared."));
                 return;
             }
-            auto proposed = document->sourcePath();
-            proposed = proposed.empty()
-                           ? audioPathOf(projectAudioBaseName())
-                           : proposed.replace_extension(u".wav");
+            const auto proposed = audioPathOf(QStringLiteral("temp"));
             const auto chosen = QFileDialog::getSaveFileName(
                 &decl, tr("Save Last Played"), textOf(proposed), tr("WAV files (*.wav)"));
             if (chosen.isEmpty()) {
@@ -966,19 +962,12 @@ namespace hello::daw {
         QString projectAudioBaseName() const {
             const auto name = kit::ProjectRef(document->session()).settings().name().trimmed();
             return name.isEmpty()
-                       ? QCoreApplication::translate("hello::daw::ProjectWindow", "Untitled")
+                       ? editor->projectDisplayName(_decl)
                        : name;
         }
 
         QString projectFileBaseName() const {
-            const auto name = editor->projectDisplayName(_decl);
-            if (!document->sourcePath().empty()) {
-                return name;
-            }
-            const auto space = name.lastIndexOf(QLatin1Char(' '));
-            bool ok = false;
-            const auto number = name.mid(space + 1).toInt(&ok);
-            return ok ? name.left(space) + QLatin1Char('-') + QString::number(number) : name;
+            return editor->projectDisplayName(_decl);
         }
 
         // Save Last Played applies to the prerender mode, after a render.

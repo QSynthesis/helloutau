@@ -708,8 +708,8 @@
         <translation>选择要打开的最近音源</translation>
     </message>
     <message>
-        <source>Untitled %1</source>
-        <translation>未命名 %1</translation>
+        <source>Untitled-%1</source>
+        <translation>未命名-%1</translation>
     </message>
     <message>
         <source>Untitled</source>

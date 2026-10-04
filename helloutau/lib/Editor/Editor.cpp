@@ -328,7 +328,7 @@ namespace hello::daw {
                     }
                     ++number;
                     if (project == target) {
-                        return Editor::tr("Untitled %1").arg(number);
+                        return Editor::tr("Untitled-%1").arg(number);
                     }
                 }
                 return Editor::tr("Untitled");
