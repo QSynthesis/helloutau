@@ -9,6 +9,7 @@
 #include <QtCore/QString>
 
 #include <helloutau/Editor/HelloUtauEditorGlobal.h>
+#include <helloutau/Editor/EditorModifierBindings.h>
 
 class QMenu;
 class QWidget;
@@ -61,6 +62,13 @@ namespace hello::daw {
         /// windows.
         QString projectDisplayName(const ProjectWindow *window) const;
 
+        EditorModifierBindings modifierBindings() const;
+        void setModifierBindings(const EditorModifierBindings &bindings);
+
+    Q_SIGNALS:
+        void modifierBindingsChanged();
+
+    public:
         /// Returns the action registry of the windows of \a kind, with the menus, the tool bars,
         /// the commands and the shortcuts of that kind. Each window of the kind is a context of
         /// the registry. The shortcuts and the changes to the menus of one kind do not affect

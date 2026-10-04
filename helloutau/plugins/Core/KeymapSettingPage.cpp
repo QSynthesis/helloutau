@@ -3,10 +3,13 @@
 #include <functional>
 
 #include <QtCore/QSet>
+#include <QtCore/QSignalBlocker>
 #include <QtGui/QAction>
 #include <QtWidgets/QApplication>
+#include <QtWidgets/QComboBox>
 #include <QtWidgets/QDialog>
 #include <QtWidgets/QDialogButtonBox>
+#include <QtWidgets/QFormLayout>
 #include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QHeaderView>
 #include <QtWidgets/QKeySequenceEdit>
@@ -15,6 +18,7 @@
 #include <QtWidgets/QMenu>
 #include <QtWidgets/QMessageBox>
 #include <QtWidgets/QPushButton>
+#include <QtWidgets/QGroupBox>
 #include <QtWidgets/QTreeWidget>
 #include <QtWidgets/QTreeWidgetItemIterator>
 #include <QtWidgets/QVBoxLayout>
@@ -51,6 +55,107 @@ namespace hello::daw {
                 texts.push_back(key.toString(QKeySequence::NativeText));
             }
             return texts.join(QStringLiteral(", "));
+        }
+
+        const Qt::KeyboardModifiers modifierOptions[] = {
+            Qt::NoModifier,
+            Qt::ControlModifier,
+            Qt::AltModifier,
+            Qt::ShiftModifier,
+            Qt::MetaModifier,
+            Qt::ControlModifier | Qt::AltModifier,
+            Qt::ControlModifier | Qt::ShiftModifier,
+            Qt::AltModifier | Qt::ShiftModifier,
+            Qt::ControlModifier | Qt::AltModifier | Qt::ShiftModifier,
+        };
+
+        const char *modifierOptionNames[] = {
+            QT_TRANSLATE_NOOP("hello::daw::KeymapSettingPage", "None"),
+            QT_TRANSLATE_NOOP("hello::daw::KeymapSettingPage", "Ctrl"),
+            QT_TRANSLATE_NOOP("hello::daw::KeymapSettingPage", "Alt"),
+            QT_TRANSLATE_NOOP("hello::daw::KeymapSettingPage", "Shift"),
+            QT_TRANSLATE_NOOP("hello::daw::KeymapSettingPage", "Meta"),
+            QT_TRANSLATE_NOOP("hello::daw::KeymapSettingPage", "Ctrl+Alt"),
+            QT_TRANSLATE_NOOP("hello::daw::KeymapSettingPage", "Ctrl+Shift"),
+            QT_TRANSLATE_NOOP("hello::daw::KeymapSettingPage", "Alt+Shift"),
+            QT_TRANSLATE_NOOP("hello::daw::KeymapSettingPage", "Ctrl+Alt+Shift"),
+        };
+
+        const char *modifierNames[] = {
+            QT_TRANSLATE_NOOP("hello::daw::KeymapSettingPage", "Horizontal Scroll"),
+            QT_TRANSLATE_NOOP("hello::daw::KeymapSettingPage", "Time Zoom"),
+            QT_TRANSLATE_NOOP("hello::daw::KeymapSettingPage", "Key Zoom"),
+            QT_TRANSLATE_NOOP("hello::daw::KeymapSettingPage", "Drag Zoom"),
+            QT_TRANSLATE_NOOP("hello::daw::KeymapSettingPage", "Drag Zoom Axis Lock"),
+            QT_TRANSLATE_NOOP("hello::daw::KeymapSettingPage", "Disable Note Snap"),
+            QT_TRANSLATE_NOOP("hello::daw::KeymapSettingPage", "Lock Parameter Time"),
+            QT_TRANSLATE_NOOP("hello::daw::KeymapSettingPage", "Snap Parameter Value"),
+        };
+
+        Qt::KeyboardModifiers modifierAt(const EditorModifierBindings &bindings, int index) {
+            switch (index) {
+            case 0:
+                return bindings.horizontalScroll;
+            case 1:
+                return bindings.timeZoom;
+            case 2:
+                return bindings.keyZoom;
+            case 3:
+                return bindings.dragZoom;
+            case 4:
+                return bindings.dragZoomAxisLock;
+            case 5:
+                return bindings.disableNoteSnap;
+            case 6:
+                return bindings.lockParameterTime;
+            default:
+                return bindings.snapParameterValue;
+            }
+        }
+
+        void setModifierAt(EditorModifierBindings &bindings, int index,
+                           Qt::KeyboardModifiers modifiers) {
+            switch (index) {
+            case 0:
+                bindings.horizontalScroll = modifiers;
+                break;
+            case 1:
+                bindings.timeZoom = modifiers;
+                break;
+            case 2:
+                bindings.keyZoom = modifiers;
+                break;
+            case 3:
+                bindings.dragZoom = modifiers;
+                break;
+            case 4:
+                bindings.dragZoomAxisLock = modifiers;
+                break;
+            case 5:
+                bindings.disableNoteSnap = modifiers;
+                break;
+            case 6:
+                bindings.lockParameterTime = modifiers;
+                break;
+            default:
+                bindings.snapParameterValue = modifiers;
+                break;
+            }
+        }
+
+        bool validModifiers(const EditorModifierBindings &bindings) {
+            const auto wheel = {bindings.horizontalScroll, bindings.timeZoom, bindings.keyZoom};
+            for (auto it = wheel.begin(); it != wheel.end(); ++it) {
+                if (*it == Qt::NoModifier) {
+                    continue;
+                }
+                for (auto other = std::next(it); other != wheel.end(); ++other) {
+                    if (*it == *other) {
+                        return false;
+                    }
+                }
+            }
+            return (bindings.dragZoom & bindings.dragZoomAxisLock) == Qt::NoModifier;
         }
 
         // Returns the command of item, or std::nullopt for a window or a menu.
@@ -123,7 +228,9 @@ namespace hello::daw {
                 m_shortcuts[kind][id] = defaultsOf({kind, id});
             }
         }
+        m_modifiers = {};
         updateItems();
+        updateModifierWidgets();
         Q_EMIT modifiedChanged();
     }
 
@@ -146,10 +253,16 @@ namespace hello::daw {
                 }
             }
         }
-        return false;
+        return m_modifiers != m_editor->modifierBindings();
     }
 
     bool KeymapSettingPage::apply(QString *error) {
+        if (!validModifiers(m_modifiers)) {
+            if (error) {
+                *error = tr("Modifier bindings conflict with each other.");
+            }
+            return false;
+        }
         for (const auto kind : Editor::windowKinds) {
             // The overrides of commands that are not registered now, such as those of a plugin
             // turned off, stay.
@@ -166,6 +279,7 @@ namespace hello::daw {
             actions->setShortcutsFamily(family);
             actions->updateContext(QAK::AE_Keymap);
         }
+        m_editor->setModifierBindings(m_modifiers);
         if (!m_editor->saveKeymap(error)) {
             return false;
         }
@@ -185,6 +299,7 @@ namespace hello::daw {
     }
 
     void KeymapSettingPage::load() {
+        m_modifiers = m_editor->modifierBindings();
         for (const auto kind : Editor::windowKinds) {
             m_commands[kind].clear();
             m_shortcuts[kind].clear();
@@ -197,6 +312,30 @@ namespace hello::daw {
                 }
             }
         }
+    }
+
+    void KeymapSettingPage::updateModifierWidgets() {
+        for (int i = 0; i < int(std::size(m_modifierBoxes)); ++i) {
+            if (!m_modifierBoxes[i]) {
+                continue;
+            }
+            const auto modifiers = modifierAt(m_modifiers, i);
+            int option = 0;
+            while (option < int(std::size(modifierOptions)) && modifierOptions[option] != modifiers) {
+                ++option;
+            }
+            const QSignalBlocker blocker(m_modifierBoxes[i]);
+            m_modifierBoxes[i]->setCurrentIndex(option < int(std::size(modifierOptions)) ? option : 0);
+        }
+    }
+
+    void KeymapSettingPage::modifierChanged(int index, int option) {
+        if (index < 0 || index >= int(std::size(m_modifierBoxes)) ||
+            option < 0 || option >= int(std::size(modifierOptions))) {
+            return;
+        }
+        setModifierAt(m_modifiers, index, modifierOptions[option]);
+        Q_EMIT modifiedChanged();
     }
 
     void KeymapSettingPage::fillTree() {
@@ -433,9 +572,23 @@ namespace hello::daw {
         layout->setContentsMargins(0, 0, 0, 0);
         layout->addLayout(searchRow);
         layout->addWidget(m_tree, 1);
+        m_modifierGroup = new QGroupBox(tr("View Modifiers"));
+        auto modifierLayout = new QFormLayout(m_modifierGroup);
+        for (int i = 0; i < int(std::size(m_modifierBoxes)); ++i) {
+            m_modifierBoxes[i] = new QComboBox(m_modifierGroup);
+            m_modifierBoxes[i]->setObjectName(QStringLiteral("modifier_%1").arg(i));
+            for (const auto *name : modifierOptionNames) {
+                m_modifierBoxes[i]->addItem(tr(name));
+            }
+            modifierLayout->addRow(tr(modifierNames[i]), m_modifierBoxes[i]);
+            connect(m_modifierBoxes[i], qOverload<int>(&QComboBox::currentIndexChanged), this,
+                    [this, i](int option) { modifierChanged(i, option); });
+        }
+        layout->addWidget(m_modifierGroup);
         layout->addLayout(buttonRow);
 
         fillTree();
+        updateModifierWidgets();
 
         connect(m_search, &QLineEdit::textChanged, this, [this] { filter(); });
         connect(m_keySearch, &QKeySequenceEdit::keySequenceChanged, this, [this] { filter(); });

@@ -193,14 +193,18 @@ namespace hello::daw {
         m_pointerModifiers = modifiers;
         const double notches = (delta.y() != 0 ? delta.y() : delta.x()) / NotchAngle;
 
-        if (modifiers & Qt::ControlModifier) {
+        constexpr auto standardModifiers = Qt::ControlModifier | Qt::AltModifier |
+                                            Qt::ShiftModifier | Qt::MetaModifier;
+        const auto matches = [modifiers, standardModifiers](Qt::KeyboardModifiers expected) {
+            return (modifiers & standardModifiers) == expected;
+        };
+        if (matches(m_keyZoomModifiers)) {
             const double factor = std::pow(ZoomStep, notches);
-            if (modifiers & Qt::ShiftModifier) {
-                zoomKeys(factor, position.y());
-            } else {
-                zoomTime(factor, position.x());
-            }
-        } else if ((modifiers & Qt::ShiftModifier) || delta.y() == 0) {
+            zoomKeys(factor, position.y());
+        } else if (matches(m_timeZoomModifiers)) {
+            const double factor = std::pow(ZoomStep, notches);
+            zoomTime(factor, position.x());
+        } else if (matches(m_horizontalScrollModifiers) || delta.y() == 0) {
             TimeAxis axis = m_timeAxis;
             axis.left -= notches * WidthPerNotch * viewport()->width() / axis.pixelsPerTick;
             setTimeAxis(axis);
@@ -211,6 +215,14 @@ namespace hello::daw {
         }
         updateHover(position);
         event->accept();
+    }
+
+    void SceneView::setWheelModifiers(Qt::KeyboardModifiers horizontalScroll,
+                                      Qt::KeyboardModifiers timeZoom,
+                                      Qt::KeyboardModifiers keyZoom) {
+        m_horizontalScrollModifiers = horizontalScroll;
+        m_timeZoomModifiers = timeZoom;
+        m_keyZoomModifiers = keyZoom;
     }
 
     void SceneView::mousePressEvent(QMouseEvent *event) {

@@ -186,6 +186,7 @@ namespace hello::daw {
         std::shared_ptr<const kit::VoiceBank> voiceBank;
         PianoRoll::Tool tool = PianoRoll::SelectTool;
         int quantization = DefaultQuantization;
+        EditorModifierBindings modifierBindings;
 
         QSet<kit::edit::NodeId> selection;
         /// The selected Mode2 points, by the identifiers of their nodes
@@ -461,6 +462,16 @@ namespace hello::daw {
         void selectRange(int first, int last);
 
         bool snaps(Qt::KeyboardModifiers modifiers) const;
+
+        bool matchesModifier(Qt::KeyboardModifiers actual,
+                             Qt::KeyboardModifiers expected) const {
+            constexpr auto standard = Qt::ControlModifier | Qt::AltModifier |
+                                      Qt::ShiftModifier | Qt::MetaModifier;
+            if (expected == Qt::NoModifier) {
+                return (actual & standard) == Qt::NoModifier;
+            }
+            return (actual & expected) == expected;
+        }
 
         /// The nearest grid line to tick, or tick itself without snapping
         qint64 snapped(double tick, Qt::KeyboardModifiers modifiers) const;

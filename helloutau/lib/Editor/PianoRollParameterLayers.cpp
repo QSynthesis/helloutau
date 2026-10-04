@@ -169,7 +169,7 @@ namespace hello::daw {
         const auto times = anchorTimes(m_original, m_length);
         const int last = int(times.size()) - 1;
         const int k = m_anchor;
-        double delta = modifiers & Qt::ShiftModifier
+        double delta = m_state->matchesModifier(modifiers, m_state->modifierBindings.lockParameterTime)
                            ? 0
                            : std::round((timeAt(position) - timeAt(m_origin)) * 10) / 10;
         delta = std::clamp(delta, (k > 0 ? times[k - 1] : 0) - times[k],
@@ -194,7 +194,7 @@ namespace hello::daw {
         }
         double volume = m_original.anchorsInTimeOrder()[k].y + view->keyAxis().toKey(position.y()) -
                         view->keyAxis().toKey(m_origin.y());
-        if (modifiers & Qt::ControlModifier) {
+        if (m_state->matchesModifier(modifiers, m_state->modifierBindings.snapParameterValue)) {
             volume = quarterNearest(PianoRoll::EnvelopeLane, volume);
         }
         anchors[k].y = std::clamp(std::round(volume), 0.0, EnvelopeRange);
@@ -340,7 +340,7 @@ namespace hello::daw {
         double key =
             std::clamp(keyOf(lane, m_start) + keys.toKey(position.y()) - keys.toKey(m_origin.y()),
                        range.minimum, range.maximum);
-        if (modifiers & Qt::ControlModifier) {
+        if (m_state->matchesModifier(modifiers, m_state->modifierBindings.snapParameterValue)) {
             key = quarterNearest(lane, key);
         }
         const double value = std::round(valueAt(lane, key));

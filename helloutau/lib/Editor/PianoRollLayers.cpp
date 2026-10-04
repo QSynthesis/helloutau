@@ -733,9 +733,11 @@ namespace hello::daw {
     std::unique_ptr<SceneGesture>
         PianoRollState::PitchLayer::press(const SceneHit &hit, QPointF position,
                                           Qt::MouseButton button, Qt::KeyboardModifiers modifiers) {
-        if (button == Qt::LeftButton && (modifiers & (Qt::ControlModifier | Qt::AltModifier)) ==
-                                            (Qt::ControlModifier | Qt::AltModifier))
-            return std::make_unique<ZoomGesture>(m_state, position, modifiers & Qt::ShiftModifier);
+        if (button == Qt::LeftButton &&
+            m_state->matchesModifier(modifiers, m_state->modifierBindings.dragZoom))
+            return std::make_unique<ZoomGesture>(
+                m_state, position,
+                m_state->matchesModifier(modifiers, m_state->modifierBindings.dragZoomAxisLock));
         m_state->finishEditing(true);
         const int index = m_state->indexOf(hit.node);
         if (index < 0) {
@@ -780,9 +782,11 @@ namespace hello::daw {
         PianoRollState::GridLayer::press(const SceneHit &hit, QPointF position,
                                          Qt::MouseButton button, Qt::KeyboardModifiers modifiers) {
         Q_UNUSED(hit);
-        if (button == Qt::LeftButton && (modifiers & (Qt::ControlModifier | Qt::AltModifier)) ==
-                                            (Qt::ControlModifier | Qt::AltModifier))
-            return std::make_unique<ZoomGesture>(m_state, position, modifiers & Qt::ShiftModifier);
+        if (button == Qt::LeftButton &&
+            m_state->matchesModifier(modifiers, m_state->modifierBindings.dragZoom))
+            return std::make_unique<ZoomGesture>(
+                m_state, position,
+                m_state->matchesModifier(modifiers, m_state->modifierBindings.dragZoomAxisLock));
         if (m_state->drawsBend(button)) {
             return m_state->bendGesture(position, button);
         }
@@ -804,9 +808,11 @@ namespace hello::daw {
     std::unique_ptr<SceneGesture>
         PianoRollState::NoteLayer::press(const SceneHit &hit, QPointF position,
                                          Qt::MouseButton button, Qt::KeyboardModifiers modifiers) {
-        if (button == Qt::LeftButton && (modifiers & (Qt::ControlModifier | Qt::AltModifier)) ==
-                                            (Qt::ControlModifier | Qt::AltModifier))
-            return std::make_unique<ZoomGesture>(m_state, position, modifiers & Qt::ShiftModifier);
+        if (button == Qt::LeftButton &&
+            m_state->matchesModifier(modifiers, m_state->modifierBindings.dragZoom))
+            return std::make_unique<ZoomGesture>(
+                m_state, position,
+                m_state->matchesModifier(modifiers, m_state->modifierBindings.dragZoomAxisLock));
         if (m_state->drawsBend(button)) {
             return m_state->bendGesture(position, button);
         }

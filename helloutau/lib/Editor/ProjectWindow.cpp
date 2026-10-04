@@ -1824,6 +1824,9 @@ namespace hello::daw {
             const auto quantization =
                 roll ? roll->quantization() : editor->settings().quantization();
             roll = new PianoRoll(document->session());
+            roll->setModifierBindings(editor->modifierBindings());
+            QObject::connect(editor, &Editor::modifierBindingsChanged, roll,
+                             [this] { roll->setModifierBindings(editor->modifierBindings()); });
             roll->setVoiceBank(document->voiceBank());
             showTimeSignature(editor->settings().timeSignatureNumerator(),
                               editor->settings().timeSignatureDenominator());

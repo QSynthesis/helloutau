@@ -330,6 +330,15 @@ namespace hello::daw {
         return impl.view;
     }
 
+    void PianoRoll::setModifierBindings(const EditorModifierBindings &bindings) {
+        stdc_impl_t;
+        impl.modifierBindings = bindings;
+        impl.view->setWheelModifiers(bindings.horizontalScroll, bindings.timeZoom,
+                                     bindings.keyZoom);
+        impl.parameters->setWheelModifiers(bindings.horizontalScroll, bindings.timeZoom,
+                                            bindings.keyZoom);
+    }
+
     SceneView *PianoRoll::parameterView() const {
         stdc_impl_t;
         return impl.parameters;

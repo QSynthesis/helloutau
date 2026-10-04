@@ -161,6 +161,21 @@ private Q_SLOTS:
         QCOMPARE(view->keyAxis().pixelsPerKey, 24 * 1.25);
     }
 
+    void the_wheel_uses_configured_modifiers() {
+        const auto view = shownView();
+        view->setTimeAxis({0.125, 960});
+        view->setKeyAxis({24, 90});
+        view->setWheelModifiers(Qt::AltModifier, Qt::MetaModifier,
+                                Qt::AltModifier | Qt::MetaModifier);
+
+        wheel(*view, -1, Qt::AltModifier, {10, 10});
+        QVERIFY(view->timeAxis().left > 960);
+        wheel(*view, 1, Qt::MetaModifier, {10, 10});
+        QCOMPARE(view->timeAxis().pixelsPerTick, 0.125 * 1.25);
+        wheel(*view, 1, Qt::AltModifier | Qt::MetaModifier, {10, 10});
+        QCOMPARE(view->keyAxis().pixelsPerKey, 24 * 1.25);
+    }
+
     // The layer added last is drawn on top and hit first.
     void hits_come_from_the_top_layer() {
         const auto view = shownView();

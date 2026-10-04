@@ -40,6 +40,12 @@ namespace hello::daw {
 
         const KeyAxis &keyAxis() const;
 
+        /// Sets the modifier combinations used by the wheel for horizontal scrolling and the
+        /// two zoom axes. The default combinations are Shift, Ctrl and Ctrl+Shift.
+        void setWheelModifiers(Qt::KeyboardModifiers horizontalScroll,
+                               Qt::KeyboardModifiers timeZoom,
+                               Qt::KeyboardModifiers keyZoom);
+
         /// Sets the key axis, with its top edge moved into the range of the scene if needed.
         void setKeyAxis(const KeyAxis &axis);
 
@@ -108,6 +114,9 @@ namespace hello::daw {
         bool m_updatingScrollBars = false;
         QPointF m_pointerPosition;
         Qt::KeyboardModifiers m_pointerModifiers = Qt::NoModifier;
+        Qt::KeyboardModifiers m_horizontalScrollModifiers = Qt::ShiftModifier;
+        Qt::KeyboardModifiers m_timeZoomModifiers = Qt::ControlModifier;
+        Qt::KeyboardModifiers m_keyZoomModifiers = Qt::ControlModifier | Qt::ShiftModifier;
         QTimer m_autoScrollTimer;
         bool m_suppressContextMenu = false;
         bool m_contextFilterInstalled = false;

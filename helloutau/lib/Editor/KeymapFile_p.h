@@ -6,6 +6,8 @@
 #include <QtCore/QList>
 #include <QtCore/QString>
 
+#include <helloutau/Editor/EditorModifierBindings.h>
+
 namespace QAK {
     class ActionRegistry;
 }
@@ -33,12 +35,14 @@ namespace hello::daw {
         /// Gives the registry of each of \a sections the shortcuts that its section of
         /// \a fileName assigns. A missing file or section assigns none. A file or a section that
         /// does not read as a keymap is ignored with a warning, so that the defaults apply.
-        static void read(const Sections &sections, const QString &fileName);
+        static void read(const Sections &sections, const QString &fileName,
+                         EditorModifierBindings *modifiers = nullptr);
 
         /// Writes the shortcuts that the registry of each of \a sections overrides to its
         /// section of \a fileName, replacing the file at once. Returns whether the file is
         /// written, with the reason in \a error otherwise.
-        static bool write(const Sections &sections, const QString &fileName, QString *error);
+        static bool write(const Sections &sections, const QString &fileName, QString *error,
+                          const EditorModifierBindings *modifiers = nullptr);
     };
 
 }

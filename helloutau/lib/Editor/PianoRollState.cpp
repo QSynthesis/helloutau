@@ -565,7 +565,7 @@ namespace hello::daw {
     }
 
     bool PianoRollState::snaps(Qt::KeyboardModifiers modifiers) const {
-        return quantization > 0 && !(modifiers & Qt::AltModifier);
+        return quantization > 0 && !matchesModifier(modifiers, modifierBindings.disableNoteSnap);
     }
 
     qint64 PianoRollState::snapped(double tick, Qt::KeyboardModifiers modifiers) const {

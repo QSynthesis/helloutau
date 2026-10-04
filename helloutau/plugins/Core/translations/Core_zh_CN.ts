@@ -12,12 +12,84 @@
         <translation>音源窗口</translation>
     </message>
     <message>
+        <source>None</source>
+        <translation>无</translation>
+    </message>
+    <message>
+        <source>Ctrl</source>
+        <translation>Ctrl</translation>
+    </message>
+    <message>
+        <source>Alt</source>
+        <translation>Alt</translation>
+    </message>
+    <message>
+        <source>Shift</source>
+        <translation>Shift</translation>
+    </message>
+    <message>
+        <source>Meta</source>
+        <translation>Meta</translation>
+    </message>
+    <message>
+        <source>Ctrl+Alt</source>
+        <translation>Ctrl+Alt</translation>
+    </message>
+    <message>
+        <source>Ctrl+Shift</source>
+        <translation>Ctrl+Shift</translation>
+    </message>
+    <message>
+        <source>Alt+Shift</source>
+        <translation>Alt+Shift</translation>
+    </message>
+    <message>
+        <source>Ctrl+Alt+Shift</source>
+        <translation>Ctrl+Alt+Shift</translation>
+    </message>
+    <message>
+        <source>Horizontal Scroll</source>
+        <translation>横向滚动</translation>
+    </message>
+    <message>
+        <source>Time Zoom</source>
+        <translation>横向缩放</translation>
+    </message>
+    <message>
+        <source>Key Zoom</source>
+        <translation>纵向缩放</translation>
+    </message>
+    <message>
+        <source>Drag Zoom</source>
+        <translation>拖动缩放</translation>
+    </message>
+    <message>
+        <source>Drag Zoom Axis Lock</source>
+        <translation>拖动缩放方向锁定</translation>
+    </message>
+    <message>
+        <source>Disable Note Snap</source>
+        <translation>关闭音符吸附</translation>
+    </message>
+    <message>
+        <source>Lock Parameter Time</source>
+        <translation>锁定参数时间</translation>
+    </message>
+    <message>
+        <source>Snap Parameter Value</source>
+        <translation>参数值吸附</translation>
+    </message>
+    <message>
         <source>Keymap</source>
         <translation>键位映射</translation>
     </message>
     <message>
         <source>The shortcuts of the commands.</source>
         <translation>命令的快捷键。</translation>
+    </message>
+    <message>
+        <source>Modifier bindings conflict with each other.</source>
+        <translation>修饰键配置相互冲突。</translation>
     </message>
     <message>
         <source>Other</source>
@@ -82,6 +154,10 @@
     <message>
         <source>Restore &amp;Defaults</source>
         <translation>恢复默认值(&amp;D)</translation>
+    </message>
+    <message>
+        <source>View Modifiers</source>
+        <translation>视图修饰键</translation>
     </message>
     <message>
         <source>Remove %1</source>

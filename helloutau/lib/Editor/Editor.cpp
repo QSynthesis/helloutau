@@ -8,6 +8,7 @@
 
 #include <QtCore/QDir>
 #include <QtCore/QPointer>
+#include <QtCore/QTimer>
 #include <QtGui/QGuiApplication>
 #include <QtGui/QScreen>
 #include <QtWidgets/QMenu>
@@ -129,7 +130,7 @@ namespace hello::daw {
             // The shortcuts that the user assigned and the changes to the menus and tool bars,
             // each in a file of its own beside the settings with a section for each kind
             keymapFile = KeymapFile::fileNameFor(settings->fileName());
-            KeymapFile::read(sections(), keymapFile);
+            KeymapFile::read(sections(), keymapFile, &modifierBindings);
             actionLayoutsFile = ActionLayoutsFile::fileNameFor(settings->fileName());
             ActionLayoutsFile::read(sections(), actionLayoutsFile);
             themes = new ThemeManager(decl);
@@ -301,12 +302,14 @@ namespace hello::daw {
             window->setAttribute(Qt::WA_DeleteOnClose);
             windows.removeAll(nullptr);
             windows.push_back(window);
-            QObject::connect(window, &QObject::destroyed, editor, [this] {
-                for (const auto project : std::as_const(windows)) {
-                    if (project) {
-                        project->refreshTitle();
+            QObject::connect(window, &QObject::destroyed, editor, [this, editor] {
+                QTimer::singleShot(0, editor, [this] {
+                    for (const auto project : std::as_const(windows)) {
+                        if (project) {
+                            project->refreshTitle();
+                        }
                     }
-                }
+                });
             });
             placeNewWindow(window, previous);
             window->show();
@@ -371,6 +374,8 @@ namespace hello::daw {
             }
             return normalized;
         }
+
+        EditorModifierBindings modifierBindings;
     };
 
     Editor::Editor(QObject *parent) : Editor(std::make_unique<AppSettings>(), parent) {
@@ -396,6 +401,20 @@ namespace hello::daw {
         return impl.projectDisplayName(window);
     }
 
+    EditorModifierBindings Editor::modifierBindings() const {
+        stdc_impl_t;
+        return impl.modifierBindings;
+    }
+
+    void Editor::setModifierBindings(const EditorModifierBindings &bindings) {
+        stdc_impl_t;
+        if (impl.modifierBindings == bindings) {
+            return;
+        }
+        impl.modifierBindings = bindings;
+        Q_EMIT modifierBindingsChanged();
+    }
+
     SettingCatalog *Editor::settingCatalog() const {
         stdc_impl_t;
         return impl.catalog;
@@ -403,7 +422,7 @@ namespace hello::daw {
 
     bool Editor::saveKeymap(QString *error) const {
         stdc_impl_t;
-        return KeymapFile::write(impl.sections(), impl.keymapFile, error);
+        return KeymapFile::write(impl.sections(), impl.keymapFile, error, &impl.modifierBindings);
     }
 
     bool Editor::saveActionLayouts(QString *error) const {

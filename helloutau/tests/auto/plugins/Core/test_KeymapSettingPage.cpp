@@ -9,6 +9,7 @@
 #include <QtGui/QAction>
 #include <QtTest/QTest>
 #include <QtWidgets/QApplication>
+#include <QtWidgets/QComboBox>
 #include <QtWidgets/QDialogButtonBox>
 #include <QtWidgets/QKeySequenceEdit>
 #include <QtWidgets/QLabel>
@@ -109,6 +110,13 @@ private Q_SLOTS:
         QString error;
         QVERIFY(page.apply(&error));
         QVERIFY(!page.isModified());
+        const auto horizontalScroll =
+            page.widget()->findChild<QComboBox *>(QStringLiteral("modifier_0"));
+        QVERIFY(horizontalScroll);
+        horizontalScroll->setCurrentIndex(2);
+        QVERIFY(page.isModified());
+        QVERIFY(page.apply(&error));
+        QCOMPARE(e->modifierBindings().horizontalScroll, Qt::AltModifier);
         QCOMPARE(actionNamed(window, QStringLiteral("Mer&ge Notes"))->shortcuts(),
                  (QList<QKeySequence>{QKeySequence(Qt::CTRL | Qt::Key_U),
                                       QKeySequence(Qt::Key_Insert)}));
@@ -121,6 +129,7 @@ private Q_SLOTS:
         again->setWatchesDisk(false);
         const auto other = again->newWindow();
         QVERIFY(actionNamed(other, QStringLiteral("&Insert Note"))->shortcuts().isEmpty());
+        QCOMPARE(again->modifierBindings().horizontalScroll, Qt::AltModifier);
 
         // Restoring the defaults gives Insert Note its key again.
         KeymapSettingPage keymap(again.get());

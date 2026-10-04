@@ -14,7 +14,11 @@
 
 #include <Core/CorePluginGlobal.h>
 
+#include <helloutau/Editor/EditorModifierBindings.h>
+
 class QKeySequenceEdit;
+class QComboBox;
+class QGroupBox;
 class QLineEdit;
 class QPushButton;
 class QTreeWidget;
@@ -101,6 +105,9 @@ namespace hello::daw {
         QPointer<QPushButton> m_add;
         QPointer<QPushButton> m_remove;
         QPointer<QPushButton> m_reset;
+        EditorModifierBindings m_modifiers;
+        QPointer<QGroupBox> m_modifierGroup;
+        QComboBox *m_modifierBoxes[8] = {};
 
         void load();
         void fillTree();
@@ -111,6 +118,8 @@ namespace hello::daw {
         QAK::ActionRegistry *registry(Editor::WindowKind kind) const;
         QString nameOf(const Command &command) const;
         QList<QKeySequence> defaultsOf(const Command &command) const;
+        void updateModifierWidgets();
+        void modifierChanged(int index, int option);
     };
 
 }

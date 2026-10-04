@@ -334,6 +334,8 @@
 - 冲突只在同一种窗口的命令之间判断，即同一个 registry 之内，与菜单布局无关。两种窗口各自使用的键（如空格、Ins）因此不算冲突。
 - 页面只改动副本，「Apply」与「OK」时交给两个 registry，更新所有窗口，并写入 `keymap.json`。
 - **存储**：`settings.json` 同目录下单独的 `keymap.json`（作者要求不与设置、插件设置放在一起），每种窗口一节，只记与清单不同的命令，形如 `{"projectWindow": {"shortcuts": [{"id": ..., "keys": [...]}]}, "voiceBankWindow": {...}}`，空列表表示该命令没有快捷键。分节之前的文件（顶层即 `shortcuts`）不再读取。启动时读入，文件无法读作快捷键表时忽略并警告，按清单的快捷键运行。未载入的插件的命令所记的快捷键保留在文件中。
+- 命令树下方的「View Modifiers」单独配置视图交互的修饰键：横向滚动、横向缩放、纵向缩放、`Ctrl+Alt` 拖动缩放、拖动缩放方向锁定、关闭音符吸附、锁定参数时间与参数值吸附。选项可以是无修饰键、单个修饰键或常用组合键。滚轮配置不能使用相同的非空组合，拖动缩放与方向锁定也不能共用同一个修饰键；冲突时 Apply 会被拒绝。
+- 修饰键与快捷键保存在同一个 `keymap.json` 分节中，例如：`{"projectWindow": {"shortcuts": [...], "modifiers": {"horizontalScroll": ["Shift"], "timeZoom": ["Ctrl"], "keyZoom": ["Ctrl", "Shift"]}}}`。缺少 `modifiers` 时使用默认行为。应用后会立即同步所有已打开的工程窗口，取消设置不会改变当前窗口。
 - **以后**（作者 2026-10-01 提出）：快捷键的数据改为一个 item model，类似 QActionKit 的 `ActionLayoutsModel`，页面只负责显示与操作。放在本仓库还是 QActionKit 待定，冲突的判断按窗口进行，属于本仓库的规则。QActionKit 中空的 `keymapsettingswidget` 与 `layoutssettingswidget` 无法通用化，以后删除。
 
 **Menus and Toolbars 页**（作者 2026-10-01 定，仿 JetBrains IDE 的 Menus and Toolbars，位于 Appearance & Behavior 下）：
