@@ -1,6 +1,7 @@
 #include "EditorIcons_p.h"
 
 #include <QtCore/QUrl>
+#include <QtGui/QColor>
 
 #include <QAKCore/actionregistry.h>
 
@@ -40,6 +41,12 @@ namespace hello::daw {
             ThemeIcon icon;
             icon.files =
                 ThemeStates<QString>(QStringLiteral(":/helloutau/icons/") + QLatin1String(file));
+            // TODO: Move per-icon colors to the shared style sheet or theme configuration.
+            if (QLatin1String(id) == QLatin1String("helloutau.edit.convertPitchToMode1")) {
+                const auto color = QColor(QStringLiteral("#3574F0"));
+                icon.colors.setValue(ThemeButtonState::Up, color);
+                icon.colors.setValue(ThemeButtonState::Over, color);
+            }
             // QActionKit passes a local file to QIcon, which selects the engine of ThemeIcon by
             // the suffix of the encoded name.
             registry->addIcon(QString(), QLatin1String(id),
