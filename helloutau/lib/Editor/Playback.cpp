@@ -714,7 +714,8 @@ namespace hello::daw {
             return false;
         }
         if (engines.resampler.empty() || engines.wavtool.empty()) {
-            fail(diagnostics, tr("Set the resampler and the wavtool in the settings first."));
+            fail(diagnostics,
+                 tr("Set the resampler and the wavtool in the project properties first."));
             return false;
         }
         const auto bank = document.voiceBank();
@@ -754,7 +755,8 @@ namespace hello::daw {
             return false;
         }
         if (engines.resampler.empty() || engines.wavtool.empty()) {
-            fail(diagnostics, tr("Set the resampler and the wavtool in the settings first."));
+            fail(diagnostics,
+                 tr("Set the resampler and the wavtool in the project properties first."));
             return false;
         }
         const auto bank = document.voiceBank();
@@ -778,7 +780,7 @@ namespace hello::daw {
         stdc_impl_t;
         stop();
         if (engines.resampler.empty()) {
-            fail(diagnostics, tr("Set the resampler in the settings first."));
+            fail(diagnostics, tr("Set the resampler in the project properties first."));
             return false;
         }
         const int deviceRate = AudioOutput::deviceSampleRate();
@@ -811,7 +813,7 @@ namespace hello::daw {
             return true;
         }
         if (engines.resampler.empty()) {
-            fail(diagnostics, tr("Set the resampler in the settings first."));
+            fail(diagnostics, tr("Set the resampler in the project properties first."));
             return false;
         }
         auto input = impl.previewInput(document, diagnostics);

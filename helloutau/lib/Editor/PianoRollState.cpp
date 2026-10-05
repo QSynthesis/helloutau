@@ -69,7 +69,16 @@ namespace hello::daw {
         auto &decl = *widget;
         const int count = timeline->noteCount();
         const int index = count == 0 ? -1 : std::clamp(timeline->noteAt(tick), 0, count - 1);
+        const int noteIndex = timeline->noteAt(tick);
+        if (noteIndex >= 0 && noteIndex < count) {
+            const auto &note = timeline->note(noteIndex);
+            ruler->setMenuRange(std::pair{double(note.start), double(note.start + note.length)});
+        } else {
+            ruler->setMenuRange(std::nullopt);
+        }
         QMenu menu(&decl);
+        QObject::connect(&menu, &QMenu::aboutToHide, &decl,
+                         [this] { ruler->setMenuRange(std::nullopt); });
         const auto set = menu.addAction(PianoRoll::tr("Set Tempo &Here..."));
         set->setEnabled(index >= 0);
         QObject::connect(set, &QAction::triggered, &decl,
@@ -113,6 +122,7 @@ namespace hello::daw {
         const auto load = menu.addMenu(PianoRoll::tr("L&oad Region"));
         decl.fillRegionMenu(load);
         menu.exec(globalPosition);
+        ruler->setMenuRange(std::nullopt);
     }
 
     kit::NoteListRef PianoRollState::notes() const {
@@ -178,6 +188,14 @@ namespace hello::daw {
             }
         }
         ruler->setSections(sections);
+        if (const auto range = widget->selectedRange()) {
+            const auto &first = timeline->note(range->first);
+            const auto &last = timeline->note(range->second);
+            ruler->setSelectionRange(
+                std::pair{double(first.start), double(last.start + last.length)});
+        } else {
+            ruler->setSelectionRange(std::nullopt);
+        }
     }
 
     void PianoRollState::hover(std::optional<QPointF> position) {
@@ -211,6 +229,7 @@ namespace hello::daw {
         }
         view->viewport()->update();
         parameters->viewport()->update();
+        updateRulerSelection();
         Q_EMIT decl.selectionChanged();
     }
 

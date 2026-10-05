@@ -68,6 +68,16 @@ namespace hello::daw {
         update();
     }
 
+    void TimelineRuler::setSelectionRange(std::optional<std::pair<double, double>> range) {
+        m_selectionRange = range;
+        update();
+    }
+
+    void TimelineRuler::setMenuRange(std::optional<std::pair<double, double>> range) {
+        m_menuRange = range;
+        update();
+    }
+
     QList<TimelineRuler::Section> TimelineRuler::sections() const {
         return m_sections;
     }
@@ -242,8 +252,32 @@ namespace hello::daw {
         const auto firstBar = qint64(std::floor(firstTick / barTicks));
         const auto lastBar = qint64(std::ceil(lastTick / barTicks));
 
-        const int subdivisions[] = {m_ticksPerBeat,
-                                    std::max(1, m_ticksPerBeat / 2),
+        auto drawRange = [&](const std::optional<std::pair<double, double>> &range,
+                             const QColor &color, Qt::PenStyle penStyle, double y,
+                             double rangeHeight) {
+            if (!range) {
+                return;
+            }
+            const double left = std::max(0.0, offset + axis.toX(range->first));
+            const double right = std::min(double(width()), offset + axis.toX(range->second));
+            if (right <= left) {
+                return;
+            }
+            auto fill = color;
+            fill.setAlphaF(0.12);
+            painter.fillRect(QRectF(left, y, right - left, rangeHeight), fill);
+            auto penColor = color;
+            penColor.setAlphaF(0.7);
+            QPen pen(penColor);
+            pen.setStyle(penStyle);
+            painter.setPen(pen);
+            painter.setBrush(Qt::NoBrush);
+            painter.drawRect(QRectF(left + 0.5, y + 0.5, right - left - 1, rangeHeight - 1));
+        };
+
+        drawRange(m_menuRange, markColor(), Qt::DashLine, 0, top);
+
+        const int subdivisions[] = {m_ticksPerBeat, std::max(1, m_ticksPerBeat / 2),
                                     std::max(1, m_ticksPerBeat / 4),
                                     std::max(1, m_ticksPerBeat / 8)};
         int step = subdivisions[0];
@@ -322,6 +356,7 @@ namespace hello::daw {
                              metrics.elidedText(section.text, Qt::ElideRight,
                                                 int(box.width()) - 2 * LabelPadding));
         }
+        drawRange(m_selectionRange, palette().color(QPalette::Highlight), Qt::SolidLine, top, top);
     }
 
 }

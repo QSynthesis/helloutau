@@ -1,6 +1,9 @@
 #ifndef HELLOUTAU_WIDGETS_TIMELINERULER_H
 #define HELLOUTAU_WIDGETS_TIMELINERULER_H
 
+#include <optional>
+#include <utility>
+
 #include <QtCore/QList>
 #include <QtCore/QPointer>
 #include <QtGui/QColor>
@@ -66,6 +69,12 @@ namespace hello::daw {
         QList<Span> spans() const;
         void setSpans(const QList<Span> &spans);
 
+        /// Sets the selected note range drawn in the lower section row.
+        void setSelectionRange(std::optional<std::pair<double, double>> range);
+
+        /// Sets the temporary range drawn while the ruler context menu is open.
+        void setMenuRange(std::optional<std::pair<double, double>> range);
+
         QList<Section> sections() const;
         void setSections(const QList<Section> &sections);
 
@@ -115,6 +124,8 @@ namespace hello::daw {
         int m_beatsPerBar = 4;
         QList<Mark> m_marks;
         QList<Span> m_spans;
+        std::optional<std::pair<double, double>> m_selectionRange;
+        std::optional<std::pair<double, double>> m_menuRange;
         QList<Section> m_sections;
         QColor m_lineColor;
         QColor m_markColor;

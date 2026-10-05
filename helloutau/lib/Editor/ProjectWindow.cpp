@@ -911,9 +911,11 @@ namespace hello::daw {
                 kit::DiagnosticList diagnostics;
                 diagnostics.push_back(
                     {kit::DiagnosticSeverity::Error,
-                     realtime() ? Playback::tr("Set the resampler in the settings first.")
+                    realtime() ? Playback::tr(
+                                      "Set the resampler in the project properties first.")
                                  : Playback::tr(
-                                       "Set the resampler and the wavtool in the settings first."),
+                                       "Set the resampler and the wavtool in the project properties "
+                                       "first."),
                      std::nullopt});
                 DiagnosticBox::show(&decl, tr("Render Track"), diagnostics);
                 return;

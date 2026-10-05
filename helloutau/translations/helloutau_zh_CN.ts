@@ -1311,16 +1311,16 @@
         <translation>上一次渲染尚未结束。关闭其控制台窗口即可停止渲染。</translation>
     </message>
     <message>
-        <source>Set the resampler and the wavtool in the settings first.</source>
-        <translation>请先在设置中指定重采样器与合成器。</translation>
+        <source>Set the resampler and the wavtool in the project properties first.</source>
+        <translation>请先在工程属性中指定重采样器与合成器。</translation>
     </message>
     <message>
         <source>There is no audio output device.</source>
         <translation>没有音频输出设备。</translation>
     </message>
     <message>
-        <source>Set the resampler in the settings first.</source>
-        <translation>请先在设置中指定重采样器。</translation>
+        <source>Set the resampler in the project properties first.</source>
+        <translation>请先在工程属性中指定重采样器。</translation>
     </message>
     <message>
         <source>A render has not ended yet. Closing its console window stops it.</source>
