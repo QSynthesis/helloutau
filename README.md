@@ -6,23 +6,34 @@ A cross-platform editor for UTAU projects and voice banks, for Windows, macOS an
 
 HelloUtau aims at functional parity with UTAU 0.4.19, while its interface, its handling of text encodings and its extension mechanism are designed anew.
 
-For the end-user workflow, see the [user guide](docs/UserGuide.md). Set the UTAU folder before opening projects so that voice banks and plugins can be located. Set the default resampler and wavtool in Rendering before playback. Project engine paths are preserved and are executed only after validity and trust checks.
+For the end-user workflow, see the [user guide](docs/UserGuide.md). To get started:
+
+1. Set the UTAU folder so that voice banks and plugins can be located.
+2. Set the default wavtool and resampler in Audio Rendering.
+3. Choose a playback mode and configure render logs as needed.
 
 ## Status
 
-Early development. The editor is usable but incomplete, and its interface is under review. The libraries in `hellokit` are tested on all three systems. Implemented:
+The editor offers a comprehensive set of features for UTAU project editing, rendering, and voice-bank editing. Compatibility and usability continue to improve. Features include:
 
-- Projects: reading and writing of `.ust` and of `.usth`, the native project format. A piano roll edits notes, lyrics, pitch curves in Mode1 and Mode2, vibratos, envelopes and note parameters, with undo, redo, find and replace of lyrics, project tempo editing, and piano-key sine-wave preview.
-- Playback: prerendering through the rendering script of UTAU or on several threads, realtime playback, and rendering of a whole track into a WAV file
+- Projects: reading and writing of `.ust` and `.usth`, the native project format. A piano roll edits notes, lyrics, labels, regions, Mode1 and Mode2 pitch, pitch control, vibrato, envelopes and note parameters, with undo and redo, lyric find and replace, project tempo and time-signature views, quantization, and piano-like keyboard preview.
+- Playback and rendering: classic or multithreaded prerendering, realtime playback, whole-track WAV export, configurable render logs, and trust checks for project engines
 - Voice banks: a window that edits `oto.ini`, `prefix.map`, `character.txt` and `readme.txt` in the encoding of each directory, sets the values of an entry on its waveform, previews samples, displays the current voice-bank image above the piano keyboard, and detects changes on disk
-- Plugins: native plugins of HelloUtau, and the plugins of UTAU
-- Import and export: MIDI
+- Plugins: HelloUtau plugins and UTAU classic plugins, with command discovery through the command palette
+- Import and export: MIDI, UST, and USTH
+- Workspace: separate command settings for project and voice-bank windows, configurable project editor modifiers, recent projects and voice banks, and separate voice-bank encoding choices
 
 ## Compatibility
 
-Data and protocols match UTAU: the file formats, the command-line conventions of engines, the temporary files of plugins, and the audio rendered from the same project. The parameters passed to the engines are compared with those of UTAU by the tools in `hellokit/tests/manual`. The interface, the interaction and the internal structure are not bound to UTAU.
+HelloUtau supports UTAU projects, voice banks, resamplers, wavtools, and classic plugins. It aims to preserve project content and rendering behavior when exchanging projects with UTAU, while offering its own editing interface.
 
-Engine paths recorded in a project file are preserved, but never executed without the confirmation of the user.
+- Engine paths recorded in a project file are preserved.
+- The application checks that paths are valid and asks for trust before running project-specific tools.
+- Project tools pointing to the same files as the default tools are considered trusted.
+
+## User documentation
+
+The [user guide](docs/UserGuide.md) covers setup, UTAU compatibility, note and pitch editing, selection, playback, rendering logs, voice banks, plugins, shortcuts, and configurable editor modifiers.
 
 ## Building
 
