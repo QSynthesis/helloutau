@@ -1833,9 +1833,11 @@ namespace hello::daw {
             if (!document->isModified()) {
                 return true;
             }
-            const auto answer = QMessageBox::warning(
-                &decl, tr("HelloUtau"), tr("Save the changes to %1?").arg(document->displayName()),
-                QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel);
+            QMessageBox box(QMessageBox::Warning, tr("HelloUtau"),
+                            tr("Save the changes to %1?").arg(document->displayName()),
+                            QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel, &decl);
+            box.button(QMessageBox::Discard)->setText(tr("Do not save"));
+            const auto answer = box.exec();
             if (answer == QMessageBox::Save) {
                 return decl.save();
             }

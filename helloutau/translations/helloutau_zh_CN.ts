@@ -1735,6 +1735,10 @@ Trust and run it?</source>
         <translation>是否保存对 %1 的修改？</translation>
     </message>
     <message>
+        <source>Do not save</source>
+        <translation>不保存</translation>
+    </message>
+    <message>
         <source>Voice Bank</source>
         <translation>音源</translation>
     </message>
@@ -2607,6 +2611,10 @@ Read them again? What you did not save in them is replaced, and Undo brings it b
     <message>
         <source>Save the changes to %1?</source>
         <translation>是否保存对 %1 的修改？</translation>
+    </message>
+    <message>
+        <source>Do not save</source>
+        <translation>不保存</translation>
     </message>
     <message>
         <source>Insert Entry</source>
