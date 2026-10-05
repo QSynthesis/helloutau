@@ -730,7 +730,7 @@ namespace hello::daw {
                 if (value.endsWith(QLatin1Char('.'))) {
                     value.chop(1);
                 }
-                return value + QStringLiteral(" sec");
+                return ProjectWindow::tr("%1 sec").arg(value);
             };
             const double beat = tempo > 0 ? 60000.0 / tempo : 0;
             beatDurationLabel->setText(seconds(beat));

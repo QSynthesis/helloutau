@@ -1481,6 +1481,10 @@ Trust and run it?</source>
         <translation>所选音符的时长</translation>
     </message>
     <message>
+        <source>%1 sec</source>
+        <translation>%1 秒</translation>
+    </message>
+    <message>
         <source>Project Tempo</source>
         <translation>工程曲速</translation>
     </message>
