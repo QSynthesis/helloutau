@@ -333,7 +333,12 @@ namespace hello::daw {
                 return m_voiceDir->itemData(index).toString();
             }
         }
-        return edit->text();
+        const auto text = edit->text();
+        if (m_appSettings && !text.isEmpty() && !text.startsWith(kit::Track::voicePrefix) &&
+            !QDir::isAbsolutePath(text)) {
+            return kit::Track::voicePrefix.toString() + QDir::toNativeSeparators(text);
+        }
+        return text;
     }
 
     void ProjectPropertiesDialog::setVoiceDirInvalid(bool invalid) {

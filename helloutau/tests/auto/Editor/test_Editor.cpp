@@ -846,6 +846,26 @@ private Q_SLOTS:
         QVERIFY(!dialog.changes().voiceDir.has_value());
     }
 
+    void project_properties_keep_a_voice_bank_subdirectory() {
+        const auto utau = pathIn(m_dir, "utau");
+        fs::create_directories(utau / "voice" / "bank" / "mid");
+        AppSettings settings(m_dir.filePath(QStringLiteral("settings.json")));
+        settings.setUtauDirectory(utau);
+        kit::Project project;
+        project.tracks.push_back({});
+        project.tracks.first().voiceDir =
+            QDir::toNativeSeparators(QStringLiteral("%VOICE%bank/mid"));
+        ProjectPropertiesDialog dialog(project, settings);
+
+        QCOMPARE(dialog.voiceDirEdit()->text(),
+                 QDir::toNativeSeparators(QStringLiteral("bank/mid")));
+        dialog.voiceDirEdit()->setText(QDir::toNativeSeparators(QStringLiteral("bank/mid")));
+        QVERIFY(!dialog.changes().voiceDir.has_value());
+        QVERIFY(!dialog.voiceDirEdit()->actions().isEmpty());
+        QVERIFY(!dialog.voiceDirEdit()->actions().constFirst()->isVisible());
+
+    }
+
     void project_properties_keep_an_absolute_voice_bank() {
         const auto utau = pathIn(m_dir, "utau");
         const auto bank = utau / "voice" / "bank";
