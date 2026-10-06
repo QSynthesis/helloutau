@@ -23,8 +23,9 @@ namespace hello::daw {
     /// name, the tempo, the flags of every note, the output file, the voice folder of the first
     /// track, the two engines, and Mode2.
     ///
-    /// Project engines are used only after both programs have been trusted in the application
-    /// settings. Otherwise rendering uses the configured defaults.
+    /// Rendering uses the two engines of the project, each of which must be an engine of the
+    /// application settings or be trusted. Reset to Settings Defaults copies the engines of the
+    /// settings into the fields.
     class HELLOUTAU_EDITOR_EXPORT ProjectPropertiesDialog : public QDialog {
         Q_OBJECT
     public:

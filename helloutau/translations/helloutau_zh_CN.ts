@@ -1783,6 +1783,10 @@ Trust and use them for rendering?</source>
         <translation>引擎</translation>
     </message>
     <message>
+        <source>Project Properties resets the engines of a project to these. The voice bank editor previews entries with this resampler.</source>
+        <translation>工程属性将工程的引擎重置为此处的引擎。音源编辑器以此处的重采样器试合成条目。</translation>
+    </message>
+    <message>
         <source>Playback</source>
         <translation>播放</translation>
     </message>
@@ -1797,10 +1801,6 @@ Trust and use them for rendering?</source>
     <message>
         <source>&amp;Resampler:</source>
         <translation>重采样器(&amp;R)：</translation>
-    </message>
-    <message>
-        <source>A project renders with these engines, not with those it names.</source>
-        <translation>工程使用此处的引擎渲染，而不使用工程中指定的引擎。</translation>
     </message>
     <message>
         <source>Classic prerender, in an external console as UTAU does</source>

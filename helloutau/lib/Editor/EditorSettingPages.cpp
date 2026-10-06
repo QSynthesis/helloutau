@@ -268,7 +268,9 @@ namespace hello::daw {
         auto enginesForm = new QFormLayout(enginesGroup);
         m_wavtool = addPathRow(enginesForm, widget, tr("&Wavtool:"), m_settings.wavtool(), false);
         m_resampler = addPathRow(enginesForm, widget, tr("&Resampler:"), m_settings.resampler(), false);
-        enginesForm->addRow(note(tr("A project renders with these engines, not with those it names.")));
+        enginesForm->addRow(
+            note(tr("Project Properties resets the engines of a project to these. "
+                    "The voice bank editor previews entries with this resampler.")));
         layout->addWidget(enginesGroup);
 
         auto playbackGroup = new QGroupBox(tr("Playback"), widget);
