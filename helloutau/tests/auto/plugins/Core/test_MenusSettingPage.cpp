@@ -31,7 +31,7 @@ using namespace hello::daw;
 
 namespace {
 
-    // The ids of the actions of the Tools menu of window
+    // Returns the ids of the actions of the Tools menu of window.
     QStringList toolsOf(const Editor &editor, ProjectWindow *window) {
         const auto menu = declaredMenuOf(editor, window, QStringLiteral("helloutau.tools"));
         return menu ? actionIdsIn(editor, window, menu) : QStringList();

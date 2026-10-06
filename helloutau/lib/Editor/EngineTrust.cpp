@@ -131,7 +131,8 @@ namespace hello::daw {
 
     bool EngineTrust::ask(QWidget *parent, AppSettings &settings, const QStringList &values,
                           const std::filesystem::path &utau) {
-        // One entry for each file, since the two engines may be the same program
+        // The list holds one entry for each file, because the two engines may be the same
+        // program.
         QStringList asked;
         for (const auto &value : values) {
             if (!exists(value, utau)) {
@@ -150,8 +151,8 @@ namespace hello::daw {
         if (asked.isEmpty()) {
             return true;
         }
-        // The canonical path is shown, so that the user sees the program that a relative path
-        // such as resampler.exe\..\..\x.exe runs.
+        // The canonical path is shown, so that the user sees the program to which a relative
+        // path such as resampler.exe\..\..\x.exe resolves.
         QStringList paths;
         for (const auto &value : asked) {
             std::error_code error;

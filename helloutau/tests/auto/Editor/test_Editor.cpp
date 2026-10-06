@@ -198,7 +198,7 @@ private Q_SLOTS:
 
     // Every action that the manifest of a kind of window declares has an action or a widget of
     // the window. An id renamed in the manifest or in the window alone leaves the declared
-    // action without one.
+    // action without a handler.
     void every_declared_action_has_a_handler() {
         QTemporaryDir dir;
         const auto e = editor();

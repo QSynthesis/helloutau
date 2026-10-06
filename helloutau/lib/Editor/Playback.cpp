@@ -779,7 +779,7 @@ namespace hello::daw {
                            const kit::SynthEngines &engines, kit::DiagnosticList &diagnostics) {
         stdc_impl_t;
         stop();
-        // The preview runs no wavtool, but needs the engines that Render Track needs.
+        // The preview runs no wavtool, but requires both engines, as Render Track does.
         if (engines.resampler.empty() || engines.wavtool.empty()) {
             fail(diagnostics,
                  tr("Set the wavtool and the resampler in the project properties first."));
@@ -814,7 +814,7 @@ namespace hello::daw {
             updatePlan(document);
             return true;
         }
-        // The preview runs no wavtool, but needs the engines that Render Track needs.
+        // The preview runs no wavtool, but requires both engines, as Render Track does.
         if (engines.resampler.empty() || engines.wavtool.empty()) {
             fail(diagnostics,
                  tr("Set the wavtool and the resampler in the project properties first."));

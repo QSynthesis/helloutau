@@ -284,8 +284,8 @@ namespace hello::daw {
         // The notes last rendered, which Replay renders again
         std::optional<std::pair<int, int>> lastRange;
         bool restartPending = false;
-        // The engines of the project, the wavtool and the resampler, when the background render
-        // was last updated, see updateBackground()
+        // The engines of the project, the wavtool and the resampler, as updateBackground() last
+        // recorded them
         QStringList backgroundEngines;
 
         // The render progress in the status bar, and the playhead that follows playback
@@ -1071,7 +1071,8 @@ namespace hello::daw {
             scheduleRenderStates();
             updateSaveLastPlayed();
             backgroundEngines = engineTexts();
-            // The background render needs the engines that playback needs, and asks for nothing.
+            // The background render requires the engines that playback requires. No message box
+            // is shown for it.
             const auto engines = realtime() ? projectEngines() : std::nullopt;
             if (!engines) {
                 playback->release();
@@ -1930,8 +1931,8 @@ namespace hello::daw {
                         },
                         Qt::QueuedConnection);
                 }
-                // A change of the engines, by Project Properties or by an undo, stops at once what
-                // renders with the engines before it. The background render then starts again
+                // If Project Properties or an undo has changed the engines, the render with the
+                // previous engines is stopped at once. The background render then starts again
                 // with the new engines if they may run.
                 if (engineTexts() != backgroundEngines) {
                     playback->release();
