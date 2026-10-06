@@ -162,7 +162,7 @@ namespace hello::kit {
         }
 
         auto written = settings;
-        written.cacheDir = cacheDirOf(path);
+        written.cacheDir = cacheDirTextOf(path);
         const auto bytes = jsonOf(*this, written, format);
 
         // Written in binary mode, so that the line feeds of the indented form are not converted
@@ -272,12 +272,12 @@ namespace hello::kit {
         return jsonOf(*this, settings, format);
     }
 
-    QString Project::cacheDirOf(const std::filesystem::path &file) {
+    QString Project::cacheDirTextOf(const std::filesystem::path &file) {
         return QString::fromStdU16String(file.stem().u16string()) + QStringLiteral(".cache");
     }
 
     std::filesystem::path Project::cacheDirectoryOf(const std::filesystem::path &file) {
-        return file.parent_path() / cacheDirOf(file).toStdU16String();
+        return file.parent_path() / cacheDirTextOf(file).toStdU16String();
     }
 
     QString Project::savedPathText(const QString &text) {

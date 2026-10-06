@@ -27,7 +27,7 @@
 | 保存时改写 `CacheDir` | [`note.md`](note.md) 规定随文件名改写，代码只原样复制 | 保存与另存为时一律写为 `<文件名去掉扩展名>.cache`；缓存目录不取自文件，而是 UST 旁边的这一目录 | 第 1 步 |
 | 编辑所需的领域函数 | 只有 `transpose`、`splitNote`、`insertNote`、`setTempo` | 删除、改变长度、重排等，重排的语义见第 4 步 | 第 4 步 |
 
-**前三项已经实现**：速度表为 `TempoMap`（`TempoMap.h`）；`VoiceDir` 的解析与写法为 `Track::voiceDirectory()` 与 `Track::voiceDirOf()`；缓存目录为 `Project::cacheDirOf()` 与 `Project::cacheDirectoryOf()`，`Project::save()` 与指定了 `ExportOptions::file` 的 UST 导出按此写入 `CacheDir`。第四项的领域函数为 `removeNotes`、`setLength`、`moveNotes`，见 [`Editing.md`](Editing.md) 的「领域函数」。
+**前三项已经实现**：速度表为 `TempoMap`（`TempoMap.h`）；`VoiceDir` 的解析与写法为 `Track::voiceDirectory()` 与 `Track::voiceDirOf()`；缓存目录为 `Project::cacheDirTextOf()` 与 `Project::cacheDirectoryOf()`，`Project::save()` 与指定了 `ExportOptions::file` 的 UST 导出按此写入 `CacheDir`。第四项的领域函数为 `removeNotes`、`setLength`、`moveNotes`，见 [`Editing.md`](Editing.md) 的「领域函数」。
 
 调查中另发现音高控制点的约定与文档不一致，已经处理：`x` 统一为距音符起点的毫秒数，`y` 改为音分，读写 UST 时换算，见 [`UsthFormat.md`](UsthFormat.md)。
 

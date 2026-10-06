@@ -320,9 +320,9 @@ private Q_SLOTS:
     // whatever the file said before.
     void the_cache_dir_follows_the_file_name() {
         const auto dir = fs::temp_directory_path();
-        QCOMPARE(Project::cacheDirOf(dir / u"song.ust"), QStringLiteral("song.cache"));
-        QCOMPARE(Project::cacheDirOf(dir / u"a.b.usth"), QStringLiteral("a.b.cache"));
-        QCOMPARE(Project::cacheDirOf(dir / u"歌.ust"), QString::fromUtf8("歌.cache"));
+        QCOMPARE(Project::cacheDirTextOf(dir / u"song.ust"), QStringLiteral("song.cache"));
+        QCOMPARE(Project::cacheDirTextOf(dir / u"a.b.usth"), QStringLiteral("a.b.cache"));
+        QCOMPARE(Project::cacheDirTextOf(dir / u"歌.ust"), QString::fromUtf8("歌.cache"));
         QCOMPARE(textOf(Project::cacheDirectoryOf(dir / u"song.ust")), textOf(dir / u"song.cache"));
 
         auto project = oneNote();

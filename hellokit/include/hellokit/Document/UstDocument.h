@@ -59,7 +59,7 @@ namespace hello::kit {
             QString resampler;
 
             /// The file the UST will be saved as. If not empty, \c CacheDir is written as UTAU
-            /// writes it on save, Project::cacheDirOf() this file, instead of the value in the
+            /// writes it on save, Project::cacheDirTextOf() this file, instead of the value in the
             /// project.
             std::filesystem::path file;
         };

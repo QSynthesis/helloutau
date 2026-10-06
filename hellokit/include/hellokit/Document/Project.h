@@ -68,7 +68,7 @@ namespace hello::kit {
         /// The directory for cached render fragments, as the file writes it.
         ///
         /// UTAU does not use this value: the cache is always the directory named by
-        /// Project::cacheDirOf() beside the project file, and saving writes that name here.
+        /// Project::cacheDirTextOf() beside the project file, and saving writes that name here.
         /// HelloUtau does the same, see Project::cacheDirectoryOf().
         QString cacheDir;
 
@@ -123,7 +123,7 @@ namespace hello::kit {
                                            DiagnosticList &diagnostics);
 
         /// Writes the project to \a path, with \c ProjectSettings::cacheDir replaced by
-        /// cacheDirOf() \a path, as UTAU does on save. \a format \c Indented writes a file that
+        /// cacheDirTextOf() \a path, as UTAU does on save. \a format \c Indented writes a file that
         /// is easier to read and to compare, several times larger.
         bool save(const std::filesystem::path &path, DiagnosticList &diagnostics,
                   QJsonDocument::JsonFormat format = QJsonDocument::Compact) const;
@@ -131,10 +131,10 @@ namespace hello::kit {
         /// Returns the value of \c ProjectSettings::cacheDir for a project saved as \a file, as
         /// UTAU writes it on save: the file name without its extension, followed by \c .cache.
         /// See docs/claude/utau-voicedir-cachedir.md.
-        static QString cacheDirOf(const std::filesystem::path &file);
+        static QString cacheDirTextOf(const std::filesystem::path &file);
 
         /// Returns the directory of the render cache for a project saved as \a file: the
-        /// directory named cacheDirOf() beside \a file. UTAU uses this directory whatever the
+        /// directory named cacheDirTextOf() beside \a file. UTAU uses this directory whatever the
         /// file specifies.
         static std::filesystem::path cacheDirectoryOf(const std::filesystem::path &file);
 
