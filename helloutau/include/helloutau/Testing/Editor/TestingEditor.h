@@ -53,6 +53,14 @@ namespace hello::daw {
                                                             VoiceBankWindow *window,
                                                             const QMenu *menu);
 
+    /// Returns the ids of the actions that the registry of \a window declares and that \a window
+    /// provides neither an action nor a widget for. An id renamed in the manifest or in the
+    /// window alone leaves a declared action without either.
+    HELLOUTAU_TESTING_EDITOR_EXPORT QStringList unhandledActionsOf(const Editor &editor,
+                                                                   ProjectWindow *window);
+    HELLOUTAU_TESTING_EDITOR_EXPORT QStringList unhandledActionsOf(const Editor &editor,
+                                                                   VoiceBankWindow *window);
+
 }
 
 #endif // HELLOUTAU_TESTING_EDITOR_TESTINGEDITOR_H

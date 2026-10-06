@@ -196,6 +196,20 @@ private Q_SLOTS:
         QCOMPARE(exportMenu->actions().first()->text(), QStringLiteral("&UST..."));
     }
 
+    // Every action that the manifest of a kind of window declares has an action or a widget of
+    // the window. An id renamed in the manifest or in the window alone leaves the declared
+    // action without one.
+    void every_declared_action_has_a_handler() {
+        QTemporaryDir dir;
+        const auto e = editor();
+        const auto unhandled = unhandledActionsOf(*e, e->newWindow());
+        QVERIFY2(unhandled.isEmpty(), qPrintable(unhandled.join(QStringLiteral(", "))));
+        const auto bankWindow = e->openVoiceBank(voiceBank(dir));
+        QVERIFY(bankWindow);
+        const auto bankUnhandled = unhandledActionsOf(*e, bankWindow);
+        QVERIFY2(bankUnhandled.isEmpty(), qPrintable(bankUnhandled.join(QStringLiteral(", "))));
+    }
+
     void untitled_window_numbers_are_reserved_until_close() {
         const auto e = editor();
         const auto first = e->newWindow();

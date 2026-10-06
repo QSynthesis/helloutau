@@ -58,6 +58,26 @@ namespace hello::daw {
             return result;
         }
 
+        // QActionKit creates the action of a declared id that the window provides no action for
+        // with the context as its parent, so that the item still appears in the layouts.
+        QStringList unhandledIn(const Editor &editor, Editor::WindowKind kind,
+                                const QAK::WidgetActionContext *context) {
+            const auto registry = editor.actionRegistry(kind);
+            QStringList result;
+            for (const auto &id : registry->actionIds()) {
+                const auto info = registry->actionInfo(id);
+                if (!info || info->type() != QAK::ActionItemInfo::Action) {
+                    continue;
+                }
+                const auto action = context->action(id);
+                if ((action && action->parent() != context) || !context->widgets(id).isEmpty()) {
+                    continue;
+                }
+                result.push_back(id);
+            }
+            return result;
+        }
+
     }
 
     bool isDeclared(const Editor &editor, Editor::WindowKind kind, const QString &id,
@@ -92,6 +112,14 @@ namespace hello::daw {
 
     QStringList actionIdsIn(const Editor &editor, VoiceBankWindow *window, const QMenu *menu) {
         return idsIn(editor, Editor::VoiceBankWindowKind, window->actionContext(), menu);
+    }
+
+    QStringList unhandledActionsOf(const Editor &editor, ProjectWindow *window) {
+        return unhandledIn(editor, Editor::ProjectWindowKind, window->actionContext());
+    }
+
+    QStringList unhandledActionsOf(const Editor &editor, VoiceBankWindow *window) {
+        return unhandledIn(editor, Editor::VoiceBankWindowKind, window->actionContext());
     }
 
 }
