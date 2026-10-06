@@ -308,6 +308,10 @@ namespace hello::daw {
 
         bool isSelected(int index) const;
 
+        /// Returns whether the notes of a section exist, which they may not between an edit and
+        /// the refresh() that rebuilds the sections.
+        bool isCurrent(const SectionNotes &notes) const;
+
         /// Selects the notes ids; selecting a note clears the selected points.
         void setSelection(const QSet<kit::edit::NodeId> &ids);
         void updateRulerSelection();

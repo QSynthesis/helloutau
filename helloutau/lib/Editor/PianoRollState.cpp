@@ -159,6 +159,10 @@ namespace hello::daw {
         return selection.contains(timeline->note(index).id);
     }
 
+    bool PianoRollState::isCurrent(const SectionNotes &notes) const {
+        return notes.first >= 0 && notes.first <= notes.last && notes.last < timeline->noteCount();
+    }
+
     void PianoRollState::setSelection(const QSet<kit::edit::NodeId> &ids) {
         auto &decl = *widget;
         const bool clearsPoints = !ids.isEmpty() && !selectedPoints.isEmpty();
@@ -179,6 +183,12 @@ namespace hello::daw {
         auto sections = ruler->sections();
         for (int i = 0; i < sections.size() && i < sectionNotes.size(); ++i) {
             const auto &range = sectionNotes.at(i);
+            // The sections are rebuilt by refresh(), which runs after an edit has changed the
+            // notes, so a section may refer to notes that no longer exist until then.
+            if (!isCurrent(range)) {
+                sections[i].selected = false;
+                continue;
+            }
             sections[i].selected = true;
             for (int note = range.first; note <= range.last; ++note) {
                 if (!isSelected(note)) {

@@ -156,7 +156,8 @@ namespace hello::daw {
         });
         connect(impl.ruler, &TimelineRuler::sectionDoubleClicked, this, [this](int section) {
             stdc_impl_t;
-            if (section < 0 || section >= impl.sectionNotes.size()) {
+            if (section < 0 || section >= impl.sectionNotes.size() ||
+                !impl.isCurrent(impl.sectionNotes[section])) {
                 return;
             }
             const auto notes = impl.sectionNotes[section];
@@ -168,7 +169,8 @@ namespace hello::daw {
         });
         connect(impl.ruler, &TimelineRuler::sectionClicked, this, [this](int section) {
             stdc_impl_t;
-            if (section >= 0 && section < impl.sectionNotes.size()) {
+            if (section >= 0 && section < impl.sectionNotes.size() &&
+                impl.isCurrent(impl.sectionNotes.at(section))) {
                 const auto notes = impl.sectionNotes.at(section);
                 impl.selectRange(notes.first, notes.last);
             }
