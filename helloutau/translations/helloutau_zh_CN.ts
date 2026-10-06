@@ -2381,6 +2381,10 @@ Lyrics:
         <translation>无法读取图像。</translation>
     </message>
     <message>
+        <source>The image must be a file in the voice bank folder.</source>
+        <translation>图像必须是音源文件夹中的文件。</translation>
+    </message>
+    <message>
         <source>&amp;Name:</source>
         <translation>名称(&amp;N)：</translation>
     </message>

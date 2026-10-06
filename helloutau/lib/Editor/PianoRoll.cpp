@@ -419,11 +419,11 @@ namespace hello::daw {
         stdc_impl_t;
         impl.voiceBank = std::move(bank);
         QPixmap image;
-        if (impl.voiceBank && !impl.voiceBank->character().image.isEmpty()) {
-            const auto path =
-                impl.voiceBank->root() /
-                std::filesystem::path(impl.voiceBank->character().image.toStdU16String());
-            image.load(QString::fromStdU16String(path.u16string()));
+        if (impl.voiceBank) {
+            if (const auto path = kit::VoiceBank::imagePathOf(impl.voiceBank->root(),
+                                                              impl.voiceBank->character().image)) {
+                image.load(QString::fromStdU16String(path->u16string()));
+            }
         }
         auto icon = image.isNull() ? style()->standardIcon(QStyle::SP_FileIcon) : QIcon(image);
         const bool leftOut = impl.voiceBank && std::any_of(

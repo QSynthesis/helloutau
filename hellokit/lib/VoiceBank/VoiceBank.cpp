@@ -1,5 +1,7 @@
 #include "VoiceBank.h"
 
+#include <algorithm>
+
 #include "VoiceBankFileSystemState.h"
 
 namespace hello::kit {
@@ -40,6 +42,40 @@ namespace hello::kit {
             return std::nullopt;
         }
         return std::move(opened->bank);
+    }
+
+    std::optional<fs::path> VoiceBank::imagePathOf(const fs::path &root, const QString &image) {
+        if (image.isEmpty() || root.empty()) {
+            return std::nullopt;
+        }
+        // character.txt is a file of UTAU, which writes backslashes.
+        auto text = image;
+        text.replace(u'\\', u'/');
+        const fs::path relative(text.toStdU16String());
+        // An absolute path is rejected before the file system is accessed, so that a UNC path
+        // such as \\host\share\a.bmp does not make the system connect to the host.
+        if (relative.has_root_name() || relative.has_root_directory()) {
+            return std::nullopt;
+        }
+        std::error_code rootError;
+        std::error_code pathError;
+        auto base = fs::weakly_canonical(root, rootError);
+        const auto path = fs::weakly_canonical(root / relative, pathError);
+        if (rootError || pathError) {
+            return std::nullopt;
+        }
+        // A trailing separator would leave an empty last component.
+        if (!base.has_filename() && base.has_relative_path()) {
+            base = base.parent_path();
+        }
+        // The paths are compared by components, because a string prefix would accept a sibling
+        // directory such as bank2 beside bank.
+        const auto [inBase, inPath] =
+            std::mismatch(base.begin(), base.end(), path.begin(), path.end());
+        if (inBase != base.end()) {
+            return std::nullopt;
+        }
+        return path;
     }
 
     int VoiceBank::indexOf(const fs::path &directory) const {

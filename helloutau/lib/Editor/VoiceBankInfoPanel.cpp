@@ -23,6 +23,7 @@
 #include <hellokit/Edit/VoiceBankEdits.h>
 #include <hellokit/Edit/VoiceBankRefs.h>
 #include <hellokit/Edit/VoiceBankSession.h>
+#include <hellokit/VoiceBank/VoiceBank.h>
 
 namespace hello::daw {
 
@@ -198,16 +199,19 @@ namespace hello::daw {
 
         void showPreview() {
             const auto file = image->text();
+            const auto path = kit::VoiceBank::imagePathOf(root, file);
             QPixmap pixmap;
-            if (!file.isEmpty() && !root.empty()) {
-                pixmap.load(QString::fromStdU16String(
-                    (root / std::filesystem::path(file.toStdU16String())).u16string()));
+            if (path) {
+                pixmap.load(QString::fromStdU16String(path->u16string()));
             }
             if (pixmap.isNull()) {
                 preview->setPixmap({});
-                preview->setText(file.isEmpty()
-                                     ? VoiceBankInfoPanel::tr("No image")
-                                     : VoiceBankInfoPanel::tr("The image does not read."));
+                preview->setText(
+                    file.isEmpty()
+                        ? VoiceBankInfoPanel::tr("No image")
+                        : (path ? VoiceBankInfoPanel::tr("The image does not read.")
+                                : VoiceBankInfoPanel::tr(
+                                      "The image must be a file in the voice bank folder.")));
             } else {
                 preview->setPixmap(pixmap.scaled(ImageSize, ImageSize, Qt::KeepAspectRatio,
                                                  Qt::SmoothTransformation));

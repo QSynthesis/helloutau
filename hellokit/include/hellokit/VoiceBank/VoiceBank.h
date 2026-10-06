@@ -318,6 +318,12 @@ namespace hello::kit {
             return m_character;
         }
 
+        /// Returns the file that the \c image entry \a image of a \c character.txt names in the
+        /// voice bank at \a root, or \c std::nullopt if \a image is empty or absolute or resolves
+        /// outside \a root, so that a voice bank cannot make the editor read another file.
+        static std::optional<std::filesystem::path> imagePathOf(const std::filesystem::path &root,
+                                                                const QString &image);
+
         /// \c readme.txt , or empty if the voice bank has none.
         inline const QString &readme() const {
             return m_readme;
