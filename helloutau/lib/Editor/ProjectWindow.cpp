@@ -49,6 +49,7 @@
 #include <QAKCore/actionregistry.h>
 #include <QAKWidgets/widgetactioncontext.h>
 
+#include <hellokit/Document/Project.h>
 #include <hellokit/Edit/ProjectDocument.h>
 #include <hellokit/Edit/ProjectEdits.h>
 #include <hellokit/Edit/ProjectRefs.h>
@@ -970,10 +971,8 @@ namespace hello::daw {
                                      QStandardPaths::writableLocation(QStandardPaths::MusicLocation)
                                          .toStdU16String())
                                : source.parent_path();
-            auto output = std::filesystem::path(
-                QDir::fromNativeSeparators(
-                    kit::ProjectRef(document->session()).settings().outputFile())
-                    .toStdU16String());
+            auto output =
+                kit::Project::pathOf(kit::ProjectRef(document->session()).settings().outputFile());
             if (output.empty()) {
                 output = source.empty() ? audioPathOf(projectAudioBaseName())
                                         : source.filename().replace_extension(u".wav");

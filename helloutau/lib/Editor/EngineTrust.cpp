@@ -10,6 +10,8 @@
 #include <QtCore/QJsonObject>
 #include <QtWidgets/QMessageBox>
 
+#include <hellokit/Document/Project.h>
+
 #include "AppSettings.h"
 
 namespace hello::daw {
@@ -39,7 +41,7 @@ namespace hello::daw {
         }
 
         std::filesystem::path pathOf(const QString &value, const std::filesystem::path &utau) {
-            const std::filesystem::path path(value.toStdU16String());
+            const auto path = kit::Project::pathOf(value);
             if (path.empty()) {
                 return {};
             }

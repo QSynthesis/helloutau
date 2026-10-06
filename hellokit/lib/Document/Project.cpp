@@ -57,13 +57,6 @@ namespace hello::kit {
             return settings;
         }
 
-        // A path in a project file uses the Windows separator, which std::filesystem recognizes
-        // only on Windows.
-        std::filesystem::path pathOf(QString text) {
-            text.replace(u'\\', u'/');
-            return std::filesystem::path(text.toStdU16String());
-        }
-
         // The settings are a parameter, so that save() can write its own value of the cache
         // directory without copying the notes.
         QByteArray jsonOf(const Project &project, const ProjectSettings &settings,
@@ -114,9 +107,9 @@ namespace hello::kit {
             while (rest.startsWith(u'\\') || rest.startsWith(u'/')) {
                 rest.remove(0, 1);
             }
-            return utauDirectory / u"voice" / pathOf(rest);
+            return utauDirectory / u"voice" / Project::pathOf(rest);
         }
-        const auto path = pathOf(voiceDir);
+        const auto path = Project::pathOf(voiceDir);
         if (path.is_absolute()) {
             return path;
         }
@@ -288,6 +281,13 @@ namespace hello::kit {
             result.replace(u'/', u'\\');
         }
         return result;
+    }
+
+    std::filesystem::path Project::pathOf(const QString &text) {
+        // std::filesystem reads a backslash as a separator only on Windows.
+        auto slashed = text;
+        slashed.replace(u'\\', u'/');
+        return std::filesystem::path(slashed.toStdU16String());
     }
 
 }

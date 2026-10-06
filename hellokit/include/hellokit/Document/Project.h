@@ -143,6 +143,10 @@ namespace hello::kit {
         /// any other path. Nothing else changes, so that \c .. and \c %VOICE% keep their meaning.
         static QString savedPathText(const QString &text);
 
+        /// Returns the path that the path text \a text of a project specifies, with backslashes
+        /// read as separators on every platform, because UTAU writes them.
+        static std::filesystem::path pathOf(const QString &text);
+
         /// \overload
         static std::optional<Project> fromJson(QByteArrayView json, DiagnosticList &diagnostics);
 
