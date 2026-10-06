@@ -715,7 +715,7 @@ namespace hello::daw {
         }
         if (engines.resampler.empty() || engines.wavtool.empty()) {
             fail(diagnostics,
-                 tr("Set the resampler and the wavtool in the project properties first."));
+                 tr("Set the wavtool and the resampler in the project properties first."));
             return false;
         }
         const auto bank = document.voiceBank();
@@ -756,7 +756,7 @@ namespace hello::daw {
         }
         if (engines.resampler.empty() || engines.wavtool.empty()) {
             fail(diagnostics,
-                 tr("Set the resampler and the wavtool in the project properties first."));
+                 tr("Set the wavtool and the resampler in the project properties first."));
             return false;
         }
         const auto bank = document.voiceBank();
@@ -779,8 +779,10 @@ namespace hello::daw {
                            const kit::SynthEngines &engines, kit::DiagnosticList &diagnostics) {
         stdc_impl_t;
         stop();
-        if (engines.resampler.empty()) {
-            fail(diagnostics, tr("Set the resampler in the project properties first."));
+        // The preview runs no wavtool, but needs the engines that Render Track needs.
+        if (engines.resampler.empty() || engines.wavtool.empty()) {
+            fail(diagnostics,
+                 tr("Set the wavtool and the resampler in the project properties first."));
             return false;
         }
         const int deviceRate = AudioOutput::deviceSampleRate();
@@ -812,8 +814,10 @@ namespace hello::daw {
             updatePlan(document);
             return true;
         }
-        if (engines.resampler.empty()) {
-            fail(diagnostics, tr("Set the resampler in the project properties first."));
+        // The preview runs no wavtool, but needs the engines that Render Track needs.
+        if (engines.resampler.empty() || engines.wavtool.empty()) {
+            fail(diagnostics,
+                 tr("Set the wavtool and the resampler in the project properties first."));
             return false;
         }
         auto input = impl.previewInput(document, diagnostics);

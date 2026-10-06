@@ -104,6 +104,9 @@ namespace hello::daw {
         /// yet rendered, playback waits: isBuffering() holds and position() stands still. An edit
         /// takes effect through updatePlan().
         ///
+        /// \a engines must name both engines, although the preview runs no wavtool, so that
+        /// every playback mode requires the engines that Render Track requires.
+        ///
         /// The state is Rendering until the plan of the track is made, and Playing from then
         /// on. A plan that cannot be made is reported by failed().
         ///
@@ -114,9 +117,10 @@ namespace hello::daw {
         /// Renders the track of \a document in the background, the notes after \a fromTime
         /// first, so that preview() from there plays at once: the realtime mode. Called again
         /// after the playhead moves, it renders from there first. While a preview plays, only
-        /// the notes are replaced, as by updatePlan().
+        /// the notes are replaced, as by updatePlan(). \a engines must name both engines, as for
+        /// preview().
         ///
-        /// \return whether rendering started; the reason is in \a diagnostics otherwise
+        /// \return whether rendering started. The reason is in \a diagnostics otherwise.
         bool prepare(const kit::ProjectDocument &document, std::optional<double> fromTime,
                      const kit::SynthEngines &engines, kit::DiagnosticList &diagnostics);
 

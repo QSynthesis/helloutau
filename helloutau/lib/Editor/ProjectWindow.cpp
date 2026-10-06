@@ -284,7 +284,9 @@ namespace hello::daw {
         // The notes last rendered, which Replay renders again
         std::optional<std::pair<int, int>> lastRange;
         bool restartPending = false;
-        bool trustDenied = false;
+        // The engines of the project, the wavtool and the resampler, when the background render
+        // was last updated, see updateBackground()
+        QStringList backgroundEngines;
 
         // The render progress in the status bar, and the playhead that follows playback
         void initPlayback() {
@@ -569,6 +571,9 @@ namespace hello::daw {
                 (!document->voiceBank() && !root.empty() && root == voiceBankRoot)) {
                 decl.loadVoiceBank();
             }
+            // The engines may have been trusted in the dialog without a change of the project,
+            // which lets the background render start.
+            updateBackground();
         }
 
         // Returns the voice bank folder that the project names, resolved against the UTAU
@@ -673,41 +678,55 @@ namespace hello::daw {
             return editor->settings().playbackMode() == AppSettings::Realtime;
         }
 
-        kit::SynthEngines engines(bool askForTrust = true) {
-            trustDenied = false;
+        // Returns the texts of the engines of the project, Tool1 and Tool2.
+        QStringList engineTexts() const {
+            const auto project = kit::ProjectRef(document->session()).settings();
+            return {project.wavtool(), project.resampler()};
+        }
+
+        // Returns the engines of the project, the wavtool and the resampler, if both exist and
+        // may run, in every playback mode: the realtime preview runs no wavtool, but Render
+        // Track does. Returns std::nullopt otherwise. If title is given, reports an engine that
+        // does not exist in a message box with that title and asks the user to trust the
+        // engines that are not trusted. Without a title, asks and reports nothing, as for the
+        // render in the background.
+        std::optional<kit::SynthEngines> projectEngines(const QString &title = {}) {
+            stdc_decl_t;
             auto &settings = editor->settings();
             const auto project = kit::ProjectRef(document->session()).settings();
             const auto utau = settings.utauDirectory();
-            const auto allowed = [&](const QString &value) {
-                const auto path = std::filesystem::path(value.toStdU16String());
-                if (path.empty() || !EngineTrust::exists(value, utau)) {
-                    return false;
+            const auto values = engineTexts();
+            const bool exist =
+                std::all_of(values.cbegin(), values.cend(),
+                            [&](const QString &value) { return EngineTrust::exists(value, utau); });
+            if (!exist) {
+                if (!title.isEmpty()) {
+                    kit::DiagnosticList diagnostics;
+                    diagnostics.push_back({kit::DiagnosticSeverity::Error,
+                                           ProjectWindow::tr("Set an existing wavtool and "
+                                                             "resampler in the project properties "
+                                                             "first."),
+                                           std::nullopt});
+                    DiagnosticBox::show(&decl, title, diagnostics);
                 }
-                if (EngineTrust::samePath(value, settings.resampler(), utau) ||
-                    EngineTrust::samePath(value, settings.wavtool(), utau) ||
-                    EngineTrust::isTrusted(settings, value, utau)) {
-                    return true;
-                }
-                if (!askForTrust) {
-                    return false;
-                }
-                if (EngineTrust::ask(_decl, settings, value, utau)) {
-                    return true;
-                }
-                trustDenied = true;
-                return false;
-            };
+                return std::nullopt;
+            }
+            const bool allowed =
+                title.isEmpty()
+                    ? std::all_of(values.cbegin(), values.cend(),
+                                  [&](const QString &value) {
+                                      return EngineTrust::isAllowed(settings, value, utau);
+                                  })
+                    : EngineTrust::ask(&decl, settings, values, utau);
+            if (!allowed) {
+                return std::nullopt;
+            }
             kit::SynthEngines result;
-            if (!allowed(project.resampler())) {
-                return result;
-            }
-            if (!realtime() && !allowed(project.wavtool())) {
-                return result;
-            }
             result.resampler = EngineTrust::resolved(project.resampler(), utau);
             result.wavtool = EngineTrust::resolved(project.wavtool(), utau);
             return result;
         }
+
         // The time of the playhead at rest, in milliseconds
         double cursorTime() const {
             return roll->timeline()->tempoMap().timeOf(roll->cursorPosition());
@@ -797,11 +816,12 @@ namespace hello::daw {
                 renderLog->clear();
             }
             lastRange = range;
+            const auto engines = projectEngines(tr("Play"));
+            if (!engines) {
+                return;
+            }
             kit::DiagnosticList diagnostics;
-            if (!playback->play(*document, range, engines(), diagnostics)) {
-                if (trustDenied) {
-                    return;
-                }
+            if (!playback->play(*document, range, *engines, diagnostics)) {
                 DiagnosticBox::show(&decl, tr("Play"), diagnostics);
                 return;
             }
@@ -903,21 +923,8 @@ namespace hello::daw {
         void renderTrack() {
             stdc_decl_t;
             playback->stop();
-            const auto renderEngines = engines();
-            if (renderEngines.resampler.empty() || (!realtime() && renderEngines.wavtool.empty())) {
-                if (trustDenied) {
-                    return;
-                }
-                kit::DiagnosticList diagnostics;
-                diagnostics.push_back(
-                    {kit::DiagnosticSeverity::Error,
-                    realtime() ? Playback::tr(
-                                      "Set the resampler in the project properties first.")
-                                 : Playback::tr(
-                                       "Set the resampler and the wavtool in the project properties "
-                                       "first."),
-                     std::nullopt});
-                DiagnosticBox::show(&decl, tr("Render Track"), diagnostics);
+            const auto renderEngines = projectEngines(tr("Render Track"));
+            if (!renderEngines) {
                 return;
             }
             const auto file = QFileDialog::getSaveFileName(
@@ -934,16 +941,14 @@ namespace hello::daw {
                 QObject::connect(playback, &Playback::trackRendered, &decl,
                                  [&written](const std::filesystem::path &path) { written = path; });
             kit::DiagnosticList diagnostics;
-            const bool started = playback->renderTrack(
-                *document, std::filesystem::path(file.toStdU16String()), renderEngines, diagnostics);
+            const bool started =
+                playback->renderTrack(*document, std::filesystem::path(file.toStdU16String()),
+                                      *renderEngines, diagnostics);
             if (started) {
                 waitForRender(tr("Render Track"));
             }
             QObject::disconnect(connection);
             if (!started) {
-                if (trustDenied) {
-                    return;
-                }
                 DiagnosticBox::show(&decl, tr("Render Track"), diagnostics);
                 return;
             }
@@ -1011,15 +1016,17 @@ namespace hello::daw {
                 return;
             }
             const auto at = playback->position();
+            const auto engines = projectEngines(tr("Play"));
+            if (!engines) {
+                previewing = false;
+                return;
+            }
             if (!editor->settings().isRenderLogAccumulated()) {
                 renderLog->clear();
             }
             kit::DiagnosticList diagnostics;
-            previewing = playback->preview(*document, at, engines(), diagnostics);
+            previewing = playback->preview(*document, at, *engines, diagnostics);
             if (!previewing) {
-                if (trustDenied) {
-                    return;
-                }
                 DiagnosticBox::show(&decl, tr("Play"), diagnostics);
             }
         }
@@ -1040,15 +1047,17 @@ namespace hello::daw {
         // Plays from the playhead at rest as the track is rendered.
         void startPreview() {
             stdc_decl_t;
+            const auto engines = projectEngines(tr("Play"));
+            if (!engines) {
+                previewing = false;
+                return;
+            }
             if (!editor->settings().isRenderLogAccumulated()) {
                 renderLog->clear();
             }
             kit::DiagnosticList diagnostics;
-            previewing = playback->preview(*document, cursorTime(), engines(), diagnostics);
+            previewing = playback->preview(*document, cursorTime(), *engines, diagnostics);
             if (!previewing) {
-                if (trustDenied) {
-                    return;
-                }
                 DiagnosticBox::show(&decl, tr("Play"), diagnostics);
             }
         }
@@ -1061,14 +1070,17 @@ namespace hello::daw {
             roll->setCursorEnabled(realtime());
             scheduleRenderStates();
             updateSaveLastPlayed();
-            if (!realtime()) {
+            backgroundEngines = engineTexts();
+            // The background render needs the engines that playback needs, and asks for nothing.
+            const auto engines = realtime() ? projectEngines() : std::nullopt;
+            if (!engines) {
                 playback->release();
                 statusTimer.stop();
                 updatePreviewStatus();
                 return;
             }
             kit::DiagnosticList diagnostics;
-            playback->prepare(*document, cursorTime(), engines(false), diagnostics);
+            playback->prepare(*document, cursorTime(), *engines, diagnostics);
             statusTimer.start();
         }
 
@@ -1917,6 +1929,13 @@ namespace hello::daw {
                             }
                         },
                         Qt::QueuedConnection);
+                }
+                // A change of the engines, by Project Properties or by an undo, stops at once what
+                // renders with the engines before it. The background render then starts again
+                // with the new engines if they may run.
+                if (engineTexts() != backgroundEngines) {
+                    playback->release();
+                    updateBackground();
                 }
                 // A preview plays, and the background renders, the notes as they now are.
                 playback->updatePlan(*document);

@@ -246,18 +246,15 @@ namespace hello::daw {
             if (!m_appSettings) {
                 return;
             }
+            // An engine that does not exist is marked invalid and is not asked about.
             const auto utau = m_appSettings->utauDirectory();
-            const auto sameTool =
-                EngineTrust::samePath(m_wavtool->text(), m_resampler->text(), utau);
-            if (!EngineTrust::samePath(m_wavtool->text(), m_appSettings->wavtool(), utau) &&
-                !EngineTrust::samePath(m_wavtool->text(), m_appSettings->resampler(), utau)) {
-                EngineTrust::ask(this, *m_appSettings, m_wavtool->text(), utau);
+            QStringList values;
+            for (const auto edit : {m_wavtool, m_resampler}) {
+                if (EngineTrust::exists(edit->text(), utau)) {
+                    values.push_back(edit->text());
+                }
             }
-            if (!sameTool &&
-                !EngineTrust::samePath(m_resampler->text(), m_appSettings->resampler(), utau) &&
-                !EngineTrust::samePath(m_resampler->text(), m_appSettings->wavtool(), utau)) {
-                EngineTrust::ask(this, *m_appSettings, m_resampler->text(), utau);
-            }
+            EngineTrust::ask(this, *m_appSettings, values, utau);
             updateTrust();
         });
         form->addRow(m_engineWarning);

@@ -396,6 +396,7 @@ private Q_SLOTS:
         QSignalSpy states(&playback, &Playback::stateChanged);
         kit::SynthEngines engines;
         engines.resampler = fs::path(dir.path().toStdU16String()) / "missing.exe";
+        engines.wavtool = fs::path(dir.path().toStdU16String()) / "missing-wavtool.exe";
         QVERIFY(playback.preview(*document, 750.0, engines, diagnostics));
         // Rendering until the plan of the track is made
         QCOMPARE(playback.state(), Playback::Rendering);
@@ -487,6 +488,7 @@ private Q_SLOTS:
         fs::create_directories(cache / "kept");
         kit::SynthEngines engines;
         engines.resampler = fs::path(dir.path().toStdU16String()) / "missing.exe";
+        engines.wavtool = fs::path(dir.path().toStdU16String()) / "missing-wavtool.exe";
         kit::DiagnosticList diagnostics;
         QVERIFY(playback.prepare(*document, std::nullopt, engines, diagnostics));
         QTRY_COMPARE(playback.noteStates(), (QList<S::NoteState>{S::Ready, S::Ready}));
@@ -570,6 +572,7 @@ private Q_SLOTS:
         QSignalSpy states(&playback, &Playback::stateChanged);
         kit::SynthEngines engines;
         engines.resampler = fs::path(dir.path().toStdU16String()) / "missing.exe";
+        engines.wavtool = fs::path(dir.path().toStdU16String()) / "missing-wavtool.exe";
         diagnostics.clear();
         QVERIFY(playback.prepare(*document, 750.0, engines, diagnostics));
         // The plan is made on a worker thread, and the synth takes the fragments from the cache.

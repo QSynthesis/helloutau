@@ -776,6 +776,27 @@
     </message>
 </context>
 <context>
+    <name>hello::daw::EngineTrust</name>
+    <message>
+        <source>Trust Project Engines</source>
+        <translation>信任工程引擎</translation>
+    </message>
+    <message numerus="yes">
+        <source>The project specifies %n rendering tool(s) that are not trusted:
+
+%1
+
+Trust and use them for rendering?</source>
+        <translation>
+            <numerusform>工程指定了 %n 个未受信任的渲染工具：
+
+%1
+
+是否信任并用于渲染？</numerusform>
+        </translation>
+    </message>
+</context>
+<context>
     <name>hello::daw::ExportUstDialog</name>
     <message>
         <source>Export UST</source>
@@ -1311,16 +1332,12 @@
         <translation>上一次渲染尚未结束。关闭其控制台窗口即可停止渲染。</translation>
     </message>
     <message>
-        <source>Set the resampler and the wavtool in the project properties first.</source>
-        <translation>请先在工程属性中指定重采样器与合成器。</translation>
+        <source>Set the wavtool and the resampler in the project properties first.</source>
+        <translation>请先在工程属性中指定合成器与重采样器。</translation>
     </message>
     <message>
         <source>There is no audio output device.</source>
         <translation>没有音频输出设备。</translation>
-    </message>
-    <message>
-        <source>Set the resampler in the project properties first.</source>
-        <translation>请先在工程属性中指定重采样器。</translation>
     </message>
     <message>
         <source>A render has not ended yet. Closing its console window stops it.</source>
@@ -1424,22 +1441,6 @@
     <message>
         <source>resampler</source>
         <translation>重采样器</translation>
-    </message>
-    <message>
-        <source>The project requests this rendering tool:
-
-%1
-
-Trust and run it?</source>
-        <translation>工程请求使用以下渲染工具：
-
-%1
-
-是否信任并运行？</translation>
-    </message>
-    <message>
-        <source>Trust Project Engine</source>
-        <translation>信任工程工具</translation>
     </message>
     <message>
         <source>Invalid Project Path</source>
@@ -1553,6 +1554,10 @@ Trust and run it?</source>
     <message>
         <source>Preparing notes (%1/%2)</source>
         <translation>正在准备音符（%1/%2）</translation>
+    </message>
+    <message>
+        <source>Set an existing wavtool and resampler in the project properties first.</source>
+        <translation>请先在工程属性中指定存在的合成器与重采样器。</translation>
     </message>
     <message>
         <source>Select the notes to render first.</source>

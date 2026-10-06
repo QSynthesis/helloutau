@@ -4,6 +4,7 @@
 #include <filesystem>
 
 #include <QtCore/QString>
+#include <QtCore/QStringList>
 
 #include <helloutau/Editor/HelloUtauEditorGlobal.h>
 
@@ -13,7 +14,7 @@ namespace hello::daw {
 
     class AppSettings;
 
-    /// Trust of the rendering engines that a project specifies, the resampler and the wavtool.
+    /// Trust of the rendering engines that a project specifies, the wavtool and the resampler.
     ///
     /// A project file is untrusted input, and an engine path that it specifies runs only after
     /// the user has trusted the engine. A trust record holds the canonical path of the engine
@@ -39,9 +40,16 @@ namespace hello::daw {
         static bool isTrusted(const AppSettings &settings, const QString &value,
                               const std::filesystem::path &utau);
 
-        /// Asks the user whether to trust the engine \a value, unless it is trusted already, and
-        /// records the trust if the user agrees. Returns whether the engine is trusted.
-        static bool ask(QWidget *parent, AppSettings &settings, const QString &value,
+        /// Returns whether the engine \a value may run: it exists, and it is an engine of
+        /// \a settings or \a settings records trust in it.
+        static bool isAllowed(const AppSettings &settings, const QString &value,
+                              const std::filesystem::path &utau);
+
+        /// Asks the user in one message box whether to trust those of the engines \a values
+        /// that exist and are not allowed, and records the trust if the user agrees. Returns
+        /// whether every engine of \a values is allowed afterwards. Returns \c false without
+        /// asking if an engine does not exist.
+        static bool ask(QWidget *parent, AppSettings &settings, const QStringList &values,
                         const std::filesystem::path &utau);
 
         /// Records trust in the engine \a value with the current content of its file. Records

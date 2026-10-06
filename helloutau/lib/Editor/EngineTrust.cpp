@@ -1,5 +1,7 @@
 #include "EngineTrust.h"
 
+#include <algorithm>
+
 #include <QtCore/QCoreApplication>
 #include <QtCore/QCryptographicHash>
 #include <QtCore/QDir>
@@ -15,7 +17,7 @@ namespace hello::daw {
     namespace {
 
         class Messages {
-            Q_DECLARE_TR_FUNCTIONS(hello::daw::ProjectPropertiesDialog)
+            Q_DECLARE_TR_FUNCTIONS(hello::daw::EngineTrust)
         };
         constexpr char Key[] = "engineTrust/approved";
 
@@ -118,21 +120,57 @@ namespace hello::daw {
         settings.setValue(QLatin1String(Key), array);
     }
 
-    bool EngineTrust::ask(QWidget *parent, AppSettings &settings, const QString &value,
-                          const std::filesystem::path &utau) {
-        if (!exists(value, utau) || isTrusted(settings, value, utau)) {
-            return isTrusted(settings, value, utau);
+    bool EngineTrust::isAllowed(const AppSettings &settings, const QString &value,
+                                const std::filesystem::path &utau) {
+        if (!exists(value, utau)) {
+            return false;
         }
-        const auto path = pathOf(value, utau);
+        return samePath(value, settings.resampler(), utau) ||
+               samePath(value, settings.wavtool(), utau) || isTrusted(settings, value, utau);
+    }
+
+    bool EngineTrust::ask(QWidget *parent, AppSettings &settings, const QStringList &values,
+                          const std::filesystem::path &utau) {
+        // One entry for each file, since the two engines may be the same program
+        QStringList asked;
+        for (const auto &value : values) {
+            if (!exists(value, utau)) {
+                return false;
+            }
+            if (isAllowed(settings, value, utau)) {
+                continue;
+            }
+            const bool listed =
+                std::any_of(asked.cbegin(), asked.cend(),
+                            [&](const QString &other) { return samePath(other, value, utau); });
+            if (!listed) {
+                asked.push_back(value);
+            }
+        }
+        if (asked.isEmpty()) {
+            return true;
+        }
+        // The canonical path is shown, so that the user sees the program that a relative path
+        // such as resampler.exe\..\..\x.exe runs.
+        QStringList paths;
+        for (const auto &value : asked) {
+            std::error_code error;
+            const auto path = std::filesystem::weakly_canonical(pathOf(value, utau), error);
+            paths.push_back(textOf(error ? pathOf(value, utau) : path));
+        }
         const auto answer = QMessageBox::question(
-            parent, Messages::tr("Trust Project Engine"),
-            Messages::tr("The project requests this rendering tool:\n\n%1\n\nTrust and run it?")
-                .arg(textOf(path)),
+            parent, Messages::tr("Trust Project Engines"),
+            Messages::tr("The project specifies %n rendering tool(s) that are not trusted:\n\n"
+                         "%1\n\nTrust and use them for rendering?",
+                         nullptr, int(asked.size()))
+                .arg(paths.join(QLatin1Char('\n'))),
             QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
         if (answer != QMessageBox::Yes) {
             return false;
         }
-        trust(settings, value, utau);
+        for (const auto &value : asked) {
+            trust(settings, value, utau);
+        }
         return true;
     }
 
