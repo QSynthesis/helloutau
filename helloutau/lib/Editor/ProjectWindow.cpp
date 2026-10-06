@@ -70,7 +70,7 @@
 #include "CommandEntries_p.h"
 #include "DiagnosticBox_p.h"
 #include "Editor.h"
-#include "EngineTrust_p.h"
+#include "EngineTrust.h"
 #include "ReplaceLyricsDialog_p.h"
 #include "ExportUstDialog.h"
 #include "FindSupport_p.h"

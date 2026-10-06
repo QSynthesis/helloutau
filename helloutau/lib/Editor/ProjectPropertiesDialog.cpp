@@ -21,7 +21,7 @@
 #include <QtWidgets/QVBoxLayout>
 
 #include "AppSettings.h"
-#include "EngineTrust_p.h"
+#include "EngineTrust.h"
 
 namespace hello::daw {
 

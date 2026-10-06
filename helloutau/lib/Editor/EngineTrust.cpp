@@ -1,4 +1,4 @@
-#include "EngineTrust_p.h"
+#include "EngineTrust.h"
 
 #include <QtCore/QCoreApplication>
 #include <QtCore/QCryptographicHash>
@@ -10,9 +10,10 @@
 
 #include "AppSettings.h"
 
-namespace hello::daw::EngineTrust {
+namespace hello::daw {
 
     namespace {
+
         class Messages {
             Q_DECLARE_TR_FUNCTIONS(hello::daw::ProjectPropertiesDialog)
         };
@@ -42,19 +43,22 @@ namespace hello::daw::EngineTrust {
             }
             return path.is_absolute() || utau.empty() ? path : utau / path;
         }
+
     }
 
-    std::filesystem::path resolved(const QString &value, const std::filesystem::path &utau) {
+    std::filesystem::path EngineTrust::resolved(const QString &value,
+                                                const std::filesystem::path &utau) {
         return pathOf(value, utau);
     }
 
-    bool exists(const QString &value, const std::filesystem::path &utau) {
+    bool EngineTrust::exists(const QString &value, const std::filesystem::path &utau) {
         std::error_code error;
         const auto path = pathOf(value, utau);
         return !path.empty() && std::filesystem::is_regular_file(path, error);
     }
 
-    bool samePath(const QString &first, const QString &second, const std::filesystem::path &utau) {
+    bool EngineTrust::samePath(const QString &first, const QString &second,
+                               const std::filesystem::path &utau) {
         std::error_code firstError;
         std::error_code secondError;
         const auto a = std::filesystem::weakly_canonical(pathOf(first, utau), firstError);
@@ -62,8 +66,8 @@ namespace hello::daw::EngineTrust {
         return !firstError && !secondError && !a.empty() && a == b;
     }
 
-    bool isTrusted(const AppSettings &settings, const QString &value,
-                   const std::filesystem::path &utau) {
+    bool EngineTrust::isTrusted(const AppSettings &settings, const QString &value,
+                                const std::filesystem::path &utau) {
         const auto path = pathOf(value, utau);
         if (path.empty() || !exists(value, utau)) {
             return false;
@@ -88,7 +92,8 @@ namespace hello::daw::EngineTrust {
         return false;
     }
 
-    void trust(AppSettings &settings, const QString &value, const std::filesystem::path &utau) {
+    void EngineTrust::trust(AppSettings &settings, const QString &value,
+                            const std::filesystem::path &utau) {
         const auto path = pathOf(value, utau);
         std::error_code error;
         const auto absolute = std::filesystem::weakly_canonical(path, error);
@@ -113,8 +118,8 @@ namespace hello::daw::EngineTrust {
         settings.setValue(QLatin1String(Key), array);
     }
 
-    bool ask(QWidget *parent, AppSettings &settings, const QString &value,
-             const std::filesystem::path &utau) {
+    bool EngineTrust::ask(QWidget *parent, AppSettings &settings, const QString &value,
+                          const std::filesystem::path &utau) {
         if (!exists(value, utau) || isTrusted(settings, value, utau)) {
             return isTrusted(settings, value, utau);
         }
@@ -130,4 +135,5 @@ namespace hello::daw::EngineTrust {
         trust(settings, value, utau);
         return true;
     }
+
 }
