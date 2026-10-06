@@ -138,6 +138,11 @@ namespace hello::kit {
         /// file specifies.
         static std::filesystem::path cacheDirectoryOf(const std::filesystem::path &file);
 
+        /// Returns the path \a text with the separators that a saved project uses, whatever the
+        /// platform: slashes in an absolute Unix path, and backslashes, as UTAU writes them, in
+        /// any other path. Nothing else changes, so that \c .. and \c %VOICE% keep their meaning.
+        static QString savedPathText(const QString &text);
+
         /// \overload
         static std::optional<Project> fromJson(QByteArrayView json, DiagnosticList &diagnostics);
 

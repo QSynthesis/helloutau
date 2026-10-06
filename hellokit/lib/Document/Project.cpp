@@ -24,26 +24,16 @@ namespace hello::kit {
 
         constexpr char FormatName[] = "usth";
 
-        QString normalizedPathText(const QString &text) {
-            if (text.isEmpty()) {
-                return {};
-            }
-            auto pathText = text;
-            pathText.replace(u'\\', u'/');
-            const auto path = std::filesystem::path(pathText.toStdU16String()).lexically_normal();
-            return QDir::toNativeSeparators(QString::fromStdU16String(path.u16string()));
-        }
-
         QJsonObject settingsToJson(const ProjectSettings &settings) {
             return QJsonObject{
-                {QLatin1String("name"),       settings.name      },
-                {QLatin1String("tempo"),      settings.tempo     },
-                {QLatin1String("flags"),      settings.flags     },
-                {QLatin1String("outputFile"), normalizedPathText(settings.outputFile)},
-                {QLatin1String("cacheDir"),   normalizedPathText(settings.cacheDir)  },
-                {QLatin1String("wavtool"),    normalizedPathText(settings.wavtool)   },
-                {QLatin1String("resampler"),  normalizedPathText(settings.resampler) },
-                {QLatin1String("mode2"),      settings.mode2     },
+                {QLatin1String("name"),       settings.name                              },
+                {QLatin1String("tempo"),      settings.tempo                             },
+                {QLatin1String("flags"),      settings.flags                             },
+                {QLatin1String("outputFile"), Project::savedPathText(settings.outputFile)},
+                {QLatin1String("cacheDir"),   Project::savedPathText(settings.cacheDir)  },
+                {QLatin1String("wavtool"),    Project::savedPathText(settings.wavtool)   },
+                {QLatin1String("resampler"),  Project::savedPathText(settings.resampler) },
+                {QLatin1String("mode2"),      settings.mode2                             },
             };
         }
 
@@ -93,9 +83,9 @@ namespace hello::kit {
                     notes.append(note.toJson());
                 }
                 trackArray.append(QJsonObject{
-                    {QLatin1String("name"),     track.name    },
-                    {QLatin1String("voiceDir"), normalizedPathText(track.voiceDir)},
-                    {QLatin1String("notes"),    notes         },
+                    {QLatin1String("name"),     track.name                            },
+                    {QLatin1String("voiceDir"), Project::savedPathText(track.voiceDir)},
+                    {QLatin1String("notes"),    notes                                 },
                 });
             }
             root.insert(QLatin1String(KeyTracks), trackArray);
@@ -288,6 +278,16 @@ namespace hello::kit {
 
     std::filesystem::path Project::cacheDirectoryOf(const std::filesystem::path &file) {
         return file.parent_path() / cacheDirOf(file).toStdU16String();
+    }
+
+    QString Project::savedPathText(const QString &text) {
+        auto result = text;
+        if (text.startsWith(u'/')) {
+            result.replace(u'\\', u'/');
+        } else {
+            result.replace(u'/', u'\\');
+        }
+        return result;
     }
 
 }

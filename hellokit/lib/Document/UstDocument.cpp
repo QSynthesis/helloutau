@@ -1,7 +1,6 @@
 #include "UstDocument.h"
 
 #include <QtCore/QCoreApplication>
-#include <QtCore/QDir>
 #include <QtCore/QJsonDocument>
 #include <QtCore/QJsonObject>
 
@@ -36,16 +35,6 @@ namespace hello::kit {
 
         std::string stdOf(QByteArrayView b) {
             return std::string(b.data(), size_t(b.size()));
-        }
-
-        QString normalizedPathText(const QString &text) {
-            if (text.isEmpty()) {
-                return {};
-            }
-            auto pathText = text;
-            pathText.replace(u'\\', u'/');
-            const auto path = std::filesystem::path(pathText.toStdU16String()).lexically_normal();
-            return QDir::toNativeSeparators(QString::fromStdU16String(path.u16string()));
         }
 
         /// The entry name of the control note as a map key, constructed once.
@@ -424,11 +413,10 @@ namespace hello::kit {
         file.settings.tempo = settings.tempo;
         file.settings.projectName = out(settings.name);
         file.settings.flags = out(settings.flags);
-        file.settings.outputFileName = out(normalizedPathText(settings.outputFile));
-        file.settings.cacheDir =
-            out(normalizedPathText(options.file.empty() ? settings.cacheDir
-                                                        : Project::cacheDirOf(options.file)));
-        file.settings.voiceDir = out(normalizedPathText(project.tracks.first().voiceDir));
+        file.settings.outputFileName = out(Project::savedPathText(settings.outputFile));
+        file.settings.cacheDir = out(Project::savedPathText(
+            options.file.empty() ? settings.cacheDir : Project::cacheDirOf(options.file)));
+        file.settings.voiceDir = out(Project::savedPathText(project.tracks.first().voiceDir));
         file.settings.isMode2 = settings.mode2;
 
         // The engines specified by the project are written unchanged. If it specifies none, the
@@ -437,8 +425,8 @@ namespace hello::kit {
         const QString wavtool = settings.wavtool.isEmpty() ? options.wavtool : settings.wavtool;
         const QString resampler =
             settings.resampler.isEmpty() ? options.resampler : settings.resampler;
-        file.settings.wavtoolPath = out(normalizedPathText(wavtool));
-        file.settings.resamplerPath = out(normalizedPathText(resampler));
+        file.settings.wavtoolPath = out(Project::savedPathText(wavtool));
+        file.settings.resamplerPath = out(Project::savedPathText(resampler));
         if (wavtool.isEmpty() || resampler.isEmpty()) {
             complain(diagnostics, tr("This UST specifies no rendering engine, so UTAU cannot "
                                      "render it until an engine is configured."));
