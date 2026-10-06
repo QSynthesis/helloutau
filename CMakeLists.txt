@@ -18,6 +18,10 @@ option(HELLO_INSTALL "Install the project" ON)
 # Installs what building on the libraries and plugins needs besides the programs: the import and
 # static libraries, the headers, the CMake packages, and the debug symbols (PDB on Windows).
 option(HELLO_DEVEL "Install the files for development" OFF)
+# Installs the helper libraries of the tests, which the tests of projects that build on HelloUtau
+# link, as LLVM_INSTALL_GTEST of LLVM. Their headers are installed with HELLO_DEVEL. An
+# installation for users carries neither these libraries nor Qt Test.
+option(HELLO_INSTALL_TESTING "Install the helper libraries of the tests" OFF)
 option(HELLO_INSTALL_MSVC_RUNTIME "Install MSVC runtime" OFF)
 
 # ----------------------------------

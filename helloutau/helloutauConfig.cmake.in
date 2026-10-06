@@ -5,4 +5,10 @@ include(CMakeFindDependencyMacro)
 find_dependency(hellokit CONFIG REQUIRED)
 find_dependency(Qt6 CONFIG REQUIRED COMPONENTS Core Gui Widgets)
 
+# The helper libraries of the tests link Qt Test and QActionKit publicly.
+if(@HELLO_INSTALL_TESTING@)
+    find_dependency(Qt6 CONFIG REQUIRED COMPONENTS Test)
+    find_dependency(QActionKit CONFIG REQUIRED COMPONENTS Widgets)
+endif()
+
 include("${CMAKE_CURRENT_LIST_DIR}/helloutauTargets.cmake")

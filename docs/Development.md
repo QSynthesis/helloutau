@@ -31,8 +31,11 @@
 | `HelloUtauWidgets` | 通用的控件基础设施，与 UTAU 和 hellokit 无关，类似对 qtbase 的补充 |
 | `HelloUtauTheme` | 主题系统，见 [`Theme.md`](Theme.md) |
 | `HelloUtauAudio` | 音频设备的输出，见 [`Widgets.md`](Widgets.md) |
+| `HelloUtauTesting<子库>` | 测试的辅助库，供本仓库与下游项目的测试链接 |
 
 `HelloUtauTheme` 在第一次有内容时建立。
+
+**测试的辅助库参照 LLVM 的 `llvm/lib/Testing`。** `include/helloutau/Testing/` 与 `lib/Testing/` 下按所服务的子库分目录，文件名为 `Testing` 加所服务的头文件名：`<helloutau/Testing/Editor/TestingEditor.h>` 服务于 `<helloutau/Editor/Editor.h>`，构建为 `HelloUtauTestingEditor`。文件名不与所服务的头文件同名，因此辅助库自身的测试 `test_TestingEditor.cpp` 与 `test_Editor.cpp` 不会重名，源文件的引用也不会被解析到所服务的头文件。LLVM 以目录为单位构建测试程序，同名的测试文件因此分属 `ADTTests` 与 `TestingADTTests`。本仓库以文件为单位构建测试程序，因此以文件名区分。只有头文件的目录不建库，与 LLVM 的 `Testing/ADT` 相同。命名空间与所服务的代码相同，不另设一层。这些库为动态库，只在 `HELLO_BUILD_TESTS` 或 `HELLO_INSTALL_TESTING` 打开时构建，只在后者打开时安装，因此面向用户的安装不包含这些库和 Qt Test。头文件随 `HELLO_DEVEL` 安装。
 
 ## 目录与文件
 
@@ -123,6 +126,7 @@ PImpl 采用 stdcorelib 的写法（`<stdcorelib/pimpl.h>`），使用 PImpl 的
 | `HELLO_BUILD_APPLICATION` | ON | 构建编辑器（`helloutau` 模块），关闭时只构建 `hellokit` |
 | `HELLO_INSTALL` | ON | 安装 |
 | `HELLO_DEVEL` | OFF | 另外安装开发所需的文件：导入库与静态库、头文件、CMake 包、调试符号 |
+| `HELLO_INSTALL_TESTING` | OFF | 构建并安装测试的辅助库，供下游项目的测试链接，对应 LLVM 的 `LLVM_INSTALL_GTEST` |
 
 - `HELLO_DEVEL` 关闭时只安装运行所需的文件：程序、动态库、插件及其 `plugin.json`。两个模块把它传给 qmsetup 的 `<模块>_DEVEL`（导入库、头文件、CMake 包）与 `<模块>_INSTALL_PDB`（调试符号）；插件的公开头文件同样只在 `HELLOUTAU_DEVEL` 下安装。
 - 调试符号：qmsetup 原先只以 CMake 的 `MSVC` 判断是否安装 PDB。GNU 前端的 clang 面向 MSVC ABI 时（`CMAKE_CXX_SIMULATE_ID` 为 `MSVC`，链接器为 lld-link，生成 PDB）不算 `MSVC`，会被当作 ELF 处理：装出以 `objcopy` 抽取的 `.debug` 而不是 `.pdb`，并对装出的程序与动态库执行 `strip`。qmsetup 已改为同时认模拟的 `MSVC`（2026-09-30），所用的 qmsetup 更新之前，这种工具链下仍是旧的行为。
