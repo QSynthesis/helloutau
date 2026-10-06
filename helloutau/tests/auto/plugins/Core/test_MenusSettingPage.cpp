@@ -11,11 +11,11 @@
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QDialog>
 #include <QtWidgets/QDialogButtonBox>
-#include <QtWidgets/QTreeView>
 #include <QtWidgets/QMenu>
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QTreeView>
 
+#include <QAKCore/actionextension.h>
 #include <QAKCore/actionregistry.h>
 
 #include <helloutau/Editor/AppSettings.h>
@@ -25,26 +25,28 @@
 
 #include <Core/MenusSettingPage.h>
 
+#include <helloutau/Testing/Editor/TestingEditor.h>
+
 using namespace hello::daw;
 
 namespace {
 
-    QAction *actionNamed(QWidget *window, const QString &text) {
-        for (const auto action : window->findChildren<QAction *>()) {
-            if (action->text() == text) {
-                return action;
-            }
-        }
-        return nullptr;
+    // The ids of the actions of the Tools menu of window
+    QStringList toolsOf(const Editor &editor, ProjectWindow *window) {
+        const auto menu = declaredMenuOf(editor, window, QStringLiteral("helloutau.tools"));
+        return menu ? actionIdsIn(editor, window, menu) : QStringList();
     }
 
-    // The texts of the Tools menu of window
-    QStringList toolsOf(QWidget *window) {
-        QStringList list;
-        for (const auto action : actionNamed(window, QStringLiteral("&Tools"))->menu()->actions()) {
-            list.push_back(action->text());
+    // Returns the child of parent in model whose layout entry has the id, or an invalid index.
+    QModelIndex childWithId(const QAbstractItemModel *model, const QModelIndex &parent,
+                            const QString &id) {
+        for (int row = 0; row < model->rowCount(parent); ++row) {
+            const auto index = model->index(row, 0, parent);
+            if (index.data(Qt::UserRole).value<QAK::ActionLayoutEntry>().id() == id) {
+                return index;
+            }
         }
-        return list;
+        return {};
     }
 
 }
@@ -73,29 +75,29 @@ private Q_SLOTS:
         const auto tree = page.tree(Editor::ProjectWindowKind);
         QVERIFY(tree);
         const auto model = tree->model();
-        QCOMPARE(model->index(0, 0).data().toString(), QStringLiteral("Main Menu"));
-        QCOMPARE(model->index(1, 0).data().toString(), QStringLiteral("Main Toolbar"));
-        const auto childNamed = [model](const QModelIndex &parent, const QString &text) {
-            for (int row = 0; row < model->rowCount(parent); ++row) {
-                if (model->index(row, 0, parent).data().toString() == text) {
-                    return model->index(row, 0, parent);
-                }
-            }
-            return QModelIndex();
-        };
+        const auto mainMenu = childWithId(model, {}, QStringLiteral("helloutau.mainMenu"));
+        QVERIFY(mainMenu.isValid());
+        QVERIFY(childWithId(model, {}, QStringLiteral("helloutau.mainToolBar")).isValid());
         const auto button = [&page](const char *name) {
             return page.widget()->findChild<QPushButton *>(QLatin1String(name));
         };
-        const auto tools = [&] { return childNamed(model->index(0, 0), QStringLiteral("Tools")); };
+        const auto tools = [&] {
+            return childWithId(model, mainMenu, QStringLiteral("helloutau.tools"));
+        };
         QVERIFY(tools().isValid());
+        const auto editVoiceBank = QStringLiteral("helloutau.tools.editVoiceBank");
+        const auto clearCache = QStringLiteral("helloutau.tools.clearCache");
+        const auto renderTrack = QStringLiteral("helloutau.playback.renderTrack");
+        QVERIFY(isDeclared(*e, Editor::ProjectWindowKind, clearCache));
+        QVERIFY(isDeclared(*e, Editor::ProjectWindowKind, renderTrack));
 
-        tree->setCurrentIndex(childNamed(tools(), QStringLiteral("Edit Voice Bank")));
+        tree->setCurrentIndex(childWithId(model, tools(), editVoiceBank));
         QVERIFY(!button("moveUp")->isEnabled());
         button("moveDown")->click();
-        QCOMPARE(model->index(1, 0, tools()).data().toString(), QStringLiteral("Edit Voice Bank"));
-        tree->setCurrentIndex(childNamed(tools(), QStringLiteral("Clear Render Cache")));
+        QCOMPARE(childWithId(model, tools(), editVoiceBank).row(), 1);
+        tree->setCurrentIndex(childWithId(model, tools(), clearCache));
         button("remove")->click();
-        QVERIFY(!childNamed(tools(), QStringLiteral("Clear Render Cache")).isValid());
+        QVERIFY(!childWithId(model, tools(), clearCache).isValid());
 
         tree->setCurrentIndex(tools());
         QTimer::singleShot(0, [] {
@@ -119,21 +121,21 @@ private Q_SLOTS:
             const auto item = find({});
             if (!item.isValid()) {
                 qobject_cast<QDialog *>(dialog)->reject();
-                return;
+                QFAIL("The dialog does not offer helloutau.playback.renderTrack.");
             }
             tree->setCurrentIndex(item);
             dialog->findChild<QDialogButtonBox *>()->button(QDialogButtonBox::Ok)->click();
         });
         button("add")->click();
-        QVERIFY(childNamed(tools(), QStringLiteral("Render Track to WAV...")).isValid());
+        QVERIFY(childWithId(model, tools(), renderTrack).isValid());
         QVERIFY(page.isModified());
 
         QString error;
         QVERIFY(page.apply(&error));
         QVERIFY(!page.isModified());
-        auto menu = toolsOf(window);
-        QVERIFY(!menu.contains(QStringLiteral("&Clear Render Cache")));
-        QVERIFY(menu.contains(QStringLiteral("Render &Track to WAV...")));
+        auto menu = toolsOf(*e, window);
+        QVERIFY(!menu.contains(clearCache));
+        QVERIFY(menu.contains(renderTrack));
         QVERIFY(QFile::exists(dir.filePath(QStringLiteral("actionLayouts.json"))));
 
         // A new editor reads the file.
@@ -141,16 +143,16 @@ private Q_SLOTS:
         const auto again = std::make_unique<Editor>(std::make_unique<AppSettings>(settingsFile));
         again->setWatchesDisk(false);
         const auto other = again->newWindow();
-        menu = toolsOf(other);
-        QVERIFY(!menu.contains(QStringLiteral("&Clear Render Cache")));
-        QVERIFY(menu.contains(QStringLiteral("Render &Track to WAV...")));
+        menu = toolsOf(*again, other);
+        QVERIFY(!menu.contains(clearCache));
+        QVERIFY(menu.contains(renderTrack));
 
         MenusSettingPage layouts(again.get());
         layouts.widget()->findChild<QPushButton *>(QStringLiteral("restoreDefaults"))->click();
         QVERIFY(layouts.apply(&error));
-        menu = toolsOf(other);
-        QVERIFY(menu.contains(QStringLiteral("&Clear Render Cache")));
-        QVERIFY(!menu.contains(QStringLiteral("Render &Track to WAV...")));
+        menu = toolsOf(*again, other);
+        QVERIFY(menu.contains(clearCache));
+        QVERIFY(!menu.contains(renderTrack));
     }
 
     // Reapplying an adjacent File menu reorder must remain safe when the settings page is opened
@@ -164,23 +166,11 @@ private Q_SLOTS:
         const auto move = [](MenusSettingPage &page, const QString &entry, bool up) {
             const auto tree = page.tree(Editor::ProjectWindowKind);
             const auto model = tree->model();
-            QModelIndex file;
-            for (int row = 0; row < model->rowCount(model->index(0, 0)); ++row) {
-                const auto index = model->index(row, 0, model->index(0, 0));
-                if (index.data().toString() == QStringLiteral("File")) {
-                    file = index;
-                    break;
-                }
-            }
+            const auto file =
+                childWithId(model, childWithId(model, {}, QStringLiteral("helloutau.mainMenu")),
+                            QStringLiteral("helloutau.file"));
             QVERIFY(file.isValid());
-            QModelIndex item;
-            for (int row = 0; row < model->rowCount(file); ++row) {
-                const auto index = model->index(row, 0, file);
-                if (index.data().toString() == entry) {
-                    item = index;
-                    break;
-                }
-            }
+            const auto item = childWithId(model, file, entry);
             QVERIFY(item.isValid());
             tree->setCurrentIndex(item);
             page.widget()->findChild<QPushButton *>(up ? "moveUp" : "moveDown")->click();
@@ -189,13 +179,13 @@ private Q_SLOTS:
         {
             MenusSettingPage page(e.get());
             QVERIFY(page.widget());
-            move(page, QStringLiteral("New"), false);
+            move(page, QStringLiteral("helloutau.file.new"), false);
             QVERIFY(page.apply(&error));
         }
         {
             MenusSettingPage page(e.get());
             QVERIFY(page.widget());
-            move(page, QStringLiteral("Open..."), true);
+            move(page, QStringLiteral("helloutau.file.open"), true);
             QVERIFY(page.apply(&error));
         }
     }
@@ -213,19 +203,18 @@ private Q_SLOTS:
         QCOMPARE(page.currentKind(), Editor::VoiceBankWindowKind);
         const auto tree = page.tree(Editor::VoiceBankWindowKind);
         const auto model = tree->model();
-        QCOMPARE(model->index(0, 0).data().toString(), QStringLiteral("Main Menu"));
-        QCOMPARE(model->index(1, 0).data().toString(), QStringLiteral("Sample Toolbar"));
-        QModelIndex tools;
-        for (int row = 0; row < model->rowCount(model->index(0, 0)); ++row) {
-            const auto index = model->index(row, 0, model->index(0, 0));
-            if (index.data().toString() == QStringLiteral("Tools")) {
-                tools = index;
-            }
-        }
+        const auto mainMenu = childWithId(model, {}, QStringLiteral("helloutau.voiceBankMenu"));
+        QVERIFY(mainMenu.isValid());
+        QVERIFY(
+            childWithId(model, {}, QStringLiteral("helloutau.voiceBank.sampleToolBar")).isValid());
+        const auto tools =
+            childWithId(model, mainMenu, QStringLiteral("helloutau.voiceBank.tools"));
         QVERIFY(tools.isValid());
-        QCOMPARE(model->index(0, 0, tools).data().toString(),
-                 QStringLiteral("Remove Audio Metadata..."));
-        tree->setCurrentIndex(model->index(0, 0, tools));
+        const auto removeMetadata = QStringLiteral("helloutau.voiceBank.removeMetadata");
+        QVERIFY(isDeclared(*e, Editor::VoiceBankWindowKind, removeMetadata));
+        const auto entry = childWithId(model, tools, removeMetadata);
+        QVERIFY(entry.isValid());
+        tree->setCurrentIndex(entry);
         page.removeCurrent();
         QString error;
         QVERIFY(page.apply(&error));
@@ -239,7 +228,7 @@ private Q_SLOTS:
             return ids;
         };
         QVERIFY(!toolsOf(Editor::VoiceBankWindowKind, "helloutau.voiceBank.tools")
-                     .contains(QStringLiteral("helloutau.voiceBank.removeMetadata")));
+                     .contains(removeMetadata));
         QVERIFY(toolsOf(Editor::ProjectWindowKind, "helloutau.tools")
                     .contains(QStringLiteral("helloutau.tools.clearCache")));
         QVERIFY(e->actionRegistry(Editor::ProjectWindowKind)->layoutChanges().isEmpty());

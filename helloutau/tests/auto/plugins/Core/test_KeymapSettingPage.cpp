@@ -28,20 +28,9 @@
 
 #include <Core/KeymapSettingPage.h>
 
+#include <helloutau/Testing/Editor/TestingEditor.h>
+
 using namespace hello::daw;
-
-namespace {
-
-    QAction *actionNamed(QWidget *window, const QString &text) {
-        for (const auto action : window->findChildren<QAction *>()) {
-            if (action->text() == text) {
-                return action;
-            }
-        }
-        return nullptr;
-    }
-
-}
 
 class test_KeymapSettingPage : public QObject {
     Q_OBJECT
@@ -118,10 +107,13 @@ private Q_SLOTS:
         QVERIFY(page.isModified());
         QVERIFY(page.apply(&error));
         QCOMPARE(e->modifierBindings().horizontalScroll, Qt::AltModifier);
-        QCOMPARE(actionNamed(window, QStringLiteral("Mer&ge Notes"))->shortcuts(),
-                 (QList<QKeySequence>{QKeySequence(Qt::CTRL | Qt::Key_U),
-                                      QKeySequence(Qt::Key_Insert)}));
-        QVERIFY(actionNamed(window, QStringLiteral("&Insert Note"))->shortcuts().isEmpty());
+        QCOMPARE(
+            declaredActionOf(*e, window, QStringLiteral("helloutau.edit.mergeNotes"))->shortcuts(),
+            (QList<QKeySequence>{QKeySequence(Qt::CTRL | Qt::Key_U),
+                                 QKeySequence(Qt::Key_Insert)}));
+        QVERIFY(declaredActionOf(*e, window, QStringLiteral("helloutau.edit.insertNote"))
+                    ->shortcuts()
+                    .isEmpty());
         QVERIFY(QFile::exists(dir.filePath(QStringLiteral("keymap.json"))));
 
         // A new editor reads the file.
@@ -129,14 +121,17 @@ private Q_SLOTS:
         const auto again = std::make_unique<Editor>(std::make_unique<AppSettings>(settingsFile));
         again->setWatchesDisk(false);
         const auto other = again->newWindow();
-        QVERIFY(actionNamed(other, QStringLiteral("&Insert Note"))->shortcuts().isEmpty());
+        QVERIFY(declaredActionOf(*again, other, QStringLiteral("helloutau.edit.insertNote"))
+                    ->shortcuts()
+                    .isEmpty());
         QCOMPARE(again->modifierBindings().horizontalScroll, Qt::AltModifier);
 
         // Restoring the defaults gives Insert Note its key again.
         KeymapSettingPage keymap(again.get());
         keymap.widget()->findChild<QPushButton *>(QStringLiteral("resetAll"))->click();
         QVERIFY(keymap.apply(&error));
-        QCOMPARE(actionNamed(other, QStringLiteral("&Insert Note"))->shortcuts(),
+        QCOMPARE(declaredActionOf(*again, other, QStringLiteral("helloutau.edit.insertNote"))
+                     ->shortcuts(),
                  QList<QKeySequence>{QKeySequence(Qt::Key_Insert)});
     }
 
@@ -168,6 +163,7 @@ private Q_SLOTS:
                                   QStringLiteral("helloutau.voiceBank.insertEntry")};
         const Command mergeNotes{Editor::ProjectWindowKind,
                                  QStringLiteral("helloutau.edit.mergeNotes")};
+        QVERIFY(isDeclared(*e, insertEntry.kind, insertEntry.id));
         QVERIFY(page.conflicts(insertEntry, QKeySequence(Qt::Key_Insert)).isEmpty());
         QCOMPARE(page.conflicts(insertEntry, QKeySequence(Qt::CTRL | Qt::Key_D)),
                  (QList<Command>{

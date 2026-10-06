@@ -70,6 +70,8 @@
 #include <helloutau/Editor/VoiceBankInfoPanel.h>
 #include <helloutau/Editor/VoiceBankWindow.h>
 
+#include <helloutau/Testing/Editor/TestingEditor.h>
+
 using namespace hello;
 using namespace hello::daw;
 namespace fs = std::filesystem;
@@ -131,15 +133,6 @@ namespace {
         tx.commit();
     }
 
-    QAction *actionNamed(QWidget *window, const QString &text) {
-        for (const auto action : window->findChildren<QAction *>()) {
-            if (action->text() == text) {
-                return action;
-            }
-        }
-        return nullptr;
-    }
-
     // Answers the next message box with \a button once it appears.
     void answerMessageBox(QMessageBox::StandardButton button) {
         QTimer::singleShot(0, [button] {
@@ -186,7 +179,7 @@ private Q_SLOTS:
                                      QStringLiteral("&Select"), QStringLiteral("&View"),
                                      QStringLiteral("&Playback"), QStringLiteral("&Tools"),
                                      QStringLiteral("&Help")}));
-        const auto save = actionNamed(window, QStringLiteral("&Save"));
+        const auto save = declaredActionOf(*e, window, QStringLiteral("helloutau.file.save"));
         QVERIFY(save);
         QCOMPARE(save->shortcut(), QKeySequence(QStringLiteral("Ctrl+S")));
 
@@ -223,7 +216,7 @@ private Q_SLOTS:
     void undo_and_the_modified_mark_follow_the_project() {
         const auto e = editor();
         const auto window = e->newWindow();
-        const auto undo = actionNamed(window, QStringLiteral("&Undo"));
+        const auto undo = declaredActionOf(*e, window, QStringLiteral("helloutau.edit.undo"));
         QVERIFY(undo);
         QVERIFY(!undo->isEnabled());
 
@@ -266,7 +259,8 @@ private Q_SLOTS:
     void the_command_palette_offers_the_enabled_commands() {
         const auto e = editor();
         const auto window = e->newWindow();
-        const auto open = actionNamed(window, QStringLiteral("&Command Palette..."));
+        const auto open =
+            declaredActionOf(*e, window, QStringLiteral("helloutau.view.commandPalette"));
         QVERIFY(open);
         QCOMPARE(open->shortcuts(),
                  (QList<QKeySequence>{QKeySequence(QStringLiteral("Ctrl+Shift+P")),
@@ -277,6 +271,7 @@ private Q_SLOTS:
         QVERIFY(palette && palette->isVisible());
         const auto ids = palette->shownIds();
         QVERIFY(ids.contains(QStringLiteral("helloutau.file.save")));
+        QVERIFY(isDeclared(*e, Editor::ProjectWindowKind, QStringLiteral("helloutau.edit.undo")));
         QVERIFY(!ids.contains(QStringLiteral("helloutau.edit.undo")));
         QVERIFY(ids.contains(QStringLiteral("helloutau.view.commandPalette")));
         bool exportFound = false;
@@ -430,7 +425,8 @@ private Q_SLOTS:
         const auto window = e->openFile(savedProject(m_dir, "v.usth"));
         QVERIFY(window);
         auto roll = qobject_cast<PianoRoll *>(window->centralWidget());
-        const auto edit = actionNamed(window, QStringLiteral("Pitch &Control..."));
+        const auto edit =
+            declaredActionOf(*e, window, QStringLiteral("helloutau.edit.pitchControl"));
         QVERIFY(edit);
         QVERIFY(!edit->isEnabled());
 
@@ -463,9 +459,10 @@ private Q_SLOTS:
         const auto roll = window->pianoRoll();
         const auto bar = window->findChild<FindBar *>();
         QVERIFY(bar);
-        const auto find = actionNamed(window, QStringLiteral("&Find"));
-        const auto next = actionNamed(window, QStringLiteral("Find &Next"));
-        const auto previous = actionNamed(window, QStringLiteral("Find Pre&vious"));
+        const auto find = declaredActionOf(*e, window, QStringLiteral("helloutau.edit.find"));
+        const auto next = declaredActionOf(*e, window, QStringLiteral("helloutau.edit.findNext"));
+        const auto previous =
+            declaredActionOf(*e, window, QStringLiteral("helloutau.edit.findPrevious"));
         QVERIFY(find && next && previous);
 
         find->trigger();
@@ -503,7 +500,7 @@ private Q_SLOTS:
         QCOMPARE(roll->selectedIndices(), QList<int>{2});
         const auto session = window->document()->session();
         const int step = session->currentStep();
-        actionNamed(window, QStringLiteral("Rep&lace"))->trigger();
+        declaredActionOf(*e, window, QStringLiteral("helloutau.edit.replace"))->trigger();
         QVERIFY(bar->isReplaceShown());
         bar->setReplacement(QStringLiteral("$1o"));
         QTest::keyClick(bar->replaceField(), Qt::Key_Return);
@@ -534,8 +531,10 @@ private Q_SLOTS:
         QVERIFY(window);
         auto roll = qobject_cast<PianoRoll *>(window->centralWidget());
         QGuiApplication::clipboard()->clear();
-        const auto paste = actionNamed(window, QStringLiteral("Paste Para&meters..."));
-        const auto pasteNotes = actionNamed(window, QStringLiteral("&Paste"));
+        const auto paste =
+            declaredActionOf(*e, window, QStringLiteral("helloutau.edit.pasteParameters"));
+        const auto pasteNotes =
+            declaredActionOf(*e, window, QStringLiteral("helloutau.edit.paste"));
         QVERIFY(paste && pasteNotes);
 
         roll->selectAll();
@@ -543,7 +542,7 @@ private Q_SLOTS:
         QVERIFY(!pasteNotes->isEnabled());
         kit::DiagnosticList diagnostics;
         roll->toggleVibrato(diagnostics);
-        actionNamed(window, QStringLiteral("&Copy"))->trigger();
+        declaredActionOf(*e, window, QStringLiteral("helloutau.edit.copy"))->trigger();
         QVERIFY(paste->isEnabled());
         QVERIFY(pasteNotes->isEnabled());
         // Notes are pasted after the last note without a selection, parameters onto none.
@@ -572,7 +571,8 @@ private Q_SLOTS:
         const auto window = e->openFile(savedProject(m_dir, "s.usth"));
         QVERIFY(window);
         auto roll = qobject_cast<PianoRoll *>(window->centralWidget());
-        const auto scale = actionNamed(window, QStringLiteral("Scale Pitc&h..."));
+        const auto scale =
+            declaredActionOf(*e, window, QStringLiteral("helloutau.edit.scalePitch"));
         QVERIFY(scale);
         QVERIFY(!scale->isEnabled());
 
@@ -620,7 +620,8 @@ private Q_SLOTS:
         e->settings().addRecentVoiceBank(pathIn(m_dir, "bank0"));
         e->settings().addRecentVoiceBank(pathIn(m_dir, "bank1"));
         const auto window = e->newWindow();
-        const auto recent = actionNamed(window, QStringLiteral("Open &Recent"));
+        const auto recent =
+            declaredActionOf(*e, window, QStringLiteral("helloutau.file.openRecent"));
         QVERIFY(recent && recent->menu());
         Q_EMIT recent->menu()->aboutToShow();
         auto items = recent->menu()->actions();
@@ -653,7 +654,8 @@ private Q_SLOTS:
         palette->hide();
 
         // The command in no menu lists the voice banks.
-        const auto command = actionNamed(window, QStringLiteral("Open Recent &Voice Bank..."));
+        const auto command =
+            declaredActionOf(*e, window, QStringLiteral("helloutau.file.openRecentVoiceBank"));
         QVERIFY(command);
         command->trigger();
         commands = palette->commands();
@@ -740,7 +742,8 @@ private Q_SLOTS:
         palette->hide();
 
         // The menu of the external action, filled when it opens
-        const auto recent = actionNamed(window, QStringLiteral("Open &Recent"));
+        const auto recent =
+            declaredActionOf(*e, window, QStringLiteral("helloutau.file.openRecent"));
         QVERIFY(recent && recent->menu());
         Q_EMIT recent->menu()->aboutToShow();
         const auto items = recent->menu()->actions();
@@ -774,7 +777,7 @@ private Q_SLOTS:
         const auto e = editor();
         QCOMPARE(e->settings().playbackMode(), AppSettings::Prerender);
         const auto window = e->newWindow();
-        actionNamed(window, QStringLiteral("&Play or Pause"))->trigger();
+        declaredActionOf(*e, window, QStringLiteral("helloutau.playback.play"))->trigger();
         QCOMPARE(window->statusBar()->currentMessage(),
                  QStringLiteral("Select the notes to render first."));
 
@@ -956,8 +959,10 @@ private Q_SLOTS:
         QCOMPARE(e->settings().quantization(), 240);
 
         // Finer steps down to off and coarser steps up to a quarter note, and neither goes further.
-        const auto finer = actionNamed(window, QStringLiteral("&Decrease Quantization Interval"));
-        const auto coarser = actionNamed(window, QStringLiteral("&Increase Quantization Interval"));
+        const auto finer = declaredActionOf(
+            *e, window, QStringLiteral("helloutau.select.decreaseQuantizationInterval"));
+        const auto coarser = declaredActionOf(
+            *e, window, QStringLiteral("helloutau.select.increaseQuantizationInterval"));
         QVERIFY(finer && coarser);
         QCOMPARE(finer->shortcut(), QKeySequence(QStringLiteral("Ctrl+[")));
         for (int i = 0; i < 10; ++i) {
@@ -970,7 +975,8 @@ private Q_SLOTS:
         }
         QCOMPARE(roll->quantization(), PianoRoll::quantizations().first());
 
-        const auto show = actionNamed(window, QStringLiteral("Show &Toolbar"));
+        const auto show =
+            declaredActionOf(*e, window, QStringLiteral("helloutau.view.showToolBar"));
         QVERIFY(show && show->isChecked());
         show->trigger();
         QVERIFY(toolBar->isHidden());
@@ -978,10 +984,12 @@ private Q_SLOTS:
         show->trigger();
         QVERIFY(e->settings().isToolBarVisible());
 
-        QVERIFY(!actionNamed(window, QStringLiteral("&Undo"))->icon().isNull());
+        QVERIFY(
+            !declaredActionOf(*e, window, QStringLiteral("helloutau.edit.undo"))->icon().isNull());
 
         // The icon has visible pixels in the checked, disabled and hover states.
-        const auto icon = actionNamed(window, QStringLiteral("Show &Pitch"))->icon();
+        const auto icon =
+            declaredActionOf(*e, window, QStringLiteral("helloutau.view.showPitch"))->icon();
         for (const auto &[mode, state] : {
                  std::pair{QIcon::Normal,   QIcon::On },
                  std::pair{QIcon::Disabled, QIcon::Off},
@@ -1008,12 +1016,12 @@ private Q_SLOTS:
         QCOMPARE(colors.color(QPalette::Active, QPalette::ButtonText), QColor(Qt::white));
 
         // The box is no command of the palette, since the context has no action for a box.
-        actionNamed(window, QStringLiteral("&Command Palette..."))->trigger();
+        declaredActionOf(*e, window, QStringLiteral("helloutau.view.commandPalette"))->trigger();
         const auto palette = window->findChild<CommandPalette *>();
         QVERIFY(palette);
-        QVERIFY(!palette->shownIds().contains(QStringLiteral("helloutau.select.quantization")));
-        QVERIFY(!palette->shownIds().contains(
-            QStringLiteral("helloutau.select.quantizationWidget")));
+        const auto boxId = QStringLiteral("helloutau.select.quantizationWidget");
+        QVERIFY(isDeclared(*e, Editor::ProjectWindowKind, boxId));
+        QVERIFY(!palette->shownIds().contains(boxId));
         palette->hide();
     }
 
@@ -1157,24 +1165,24 @@ private Q_SLOTS:
         const auto e = editor();
         const auto window = e->newWindow();
         const QList<std::pair<QString, QString>> expected{
-            {QStringLiteral("&Play or Pause"),      QStringLiteral("Space; F5")     },
-            {QStringLiteral("Pa&use or Resume"),    QStringLiteral("F6")            },
-            {QStringLiteral("&Stop"),               QStringLiteral("F7")            },
-            {QStringLiteral("&Replay"),             QStringLiteral("Shift+F5")      },
-            {QStringLiteral("&Delete"),             QStringLiteral("Del; Shift+Del")},
-            {QStringLiteral("Show &Pitch"),         QStringLiteral("X")             },
-            {QStringLiteral("Show P&arameters"),    QStringLiteral("Z")             },
-            {QStringLiteral("Edit &Voice Bank"),    QStringLiteral("Ctrl+G")        },
-            {QStringLiteral("Note Propert&ies..."), QStringLiteral("Ctrl+E")        },
-            {QStringLiteral("Insert &Rest"),        QStringLiteral("Ctrl+R")        },
-            {QStringLiteral("Mer&ge Notes"),        QStringLiteral("Ctrl+U")        },
-            {QStringLiteral("&Save"),               QStringLiteral("Ctrl+S")        },
-            {QStringLiteral("&Undo"),               QStringLiteral("Ctrl+Z")        },
-            {QStringLiteral("Select &All"),         QStringLiteral("Ctrl+A")        },
+            {QStringLiteral("helloutau.playback.play"),       QStringLiteral("Space; F5")     },
+            {QStringLiteral("helloutau.playback.pause"),      QStringLiteral("F6")            },
+            {QStringLiteral("helloutau.playback.stop"),       QStringLiteral("F7")            },
+            {QStringLiteral("helloutau.playback.replay"),     QStringLiteral("Shift+F5")      },
+            {QStringLiteral("helloutau.edit.delete"),         QStringLiteral("Del; Shift+Del")},
+            {QStringLiteral("helloutau.view.showPitch"),      QStringLiteral("X")             },
+            {QStringLiteral("helloutau.view.showParameters"), QStringLiteral("Z")             },
+            {QStringLiteral("helloutau.tools.editVoiceBank"), QStringLiteral("Ctrl+G")        },
+            {QStringLiteral("helloutau.edit.noteProperties"), QStringLiteral("Ctrl+E")        },
+            {QStringLiteral("helloutau.edit.insertRest"),     QStringLiteral("Ctrl+R")        },
+            {QStringLiteral("helloutau.edit.mergeNotes"),     QStringLiteral("Ctrl+U")        },
+            {QStringLiteral("helloutau.file.save"),           QStringLiteral("Ctrl+S")        },
+            {QStringLiteral("helloutau.edit.undo"),           QStringLiteral("Ctrl+Z")        },
+            {QStringLiteral("helloutau.select.selectAll"),    QStringLiteral("Ctrl+A")        },
         };
-        for (const auto &[text, keys] : expected) {
-            const auto action = actionNamed(window, text);
-            QVERIFY2(action, qPrintable(text));
+        for (const auto &[id, keys] : expected) {
+            const auto action = declaredActionOf(*e, window, id);
+            QVERIFY2(action, qPrintable(id));
             QCOMPARE(QKeySequence::listToString(action->shortcuts()), keys);
         }
 
@@ -1196,8 +1204,10 @@ private Q_SLOTS:
         const auto window = e->openFile(savedProject(m_dir, "t.usth"));
         QVERIFY(window);
         auto roll = qobject_cast<PianoRoll *>(window->centralWidget());
-        const auto setTempo = actionNamed(window, QStringLiteral("Set Te&mpo..."));
-        const auto properties = actionNamed(window, QStringLiteral("Note Propert&ies..."));
+        const auto setTempo =
+            declaredActionOf(*e, window, QStringLiteral("helloutau.edit.setTempo"));
+        const auto properties =
+            declaredActionOf(*e, window, QStringLiteral("helloutau.edit.noteProperties"));
         QVERIFY(setTempo && properties);
         QVERIFY(!setTempo->isEnabled());
         QCOMPARE(properties->shortcut(), QKeySequence(QStringLiteral("Ctrl+E")));
@@ -1230,7 +1240,8 @@ private Q_SLOTS:
     void the_project_properties_are_edited_from_the_menu() {
         const auto e = editor();
         const auto window = e->newWindow();
-        const auto properties = actionNamed(window, QStringLiteral("Project &Properties..."));
+        const auto properties =
+            declaredActionOf(*e, window, QStringLiteral("helloutau.file.properties"));
         QVERIFY(properties);
         QTimer::singleShot(0, [] {
             const auto dialog =
@@ -1278,8 +1289,8 @@ private Q_SLOTS:
         const auto window = e->openFile(savedProject(m_dir, "d.usth"));
         QVERIFY(window);
         auto roll = qobject_cast<PianoRoll *>(window->centralWidget());
-        const auto remove = actionNamed(window, QStringLiteral("&Delete"));
-        const auto split = actionNamed(window, QStringLiteral("S&plit Note..."));
+        const auto remove = declaredActionOf(*e, window, QStringLiteral("helloutau.edit.delete"));
+        const auto split = declaredActionOf(*e, window, QStringLiteral("helloutau.edit.splitNote"));
         QVERIFY(remove && split);
         QVERIFY(!remove->isEnabled());
         QVERIFY(!split->isEnabled());
@@ -1310,7 +1321,7 @@ private Q_SLOTS:
         QVERIFY(window->document()->session()->snapshot().tracks[0].notes.isEmpty());
         QVERIFY(!remove->isEnabled());
 
-        actionNamed(window, QStringLiteral("P&en Tool"))->trigger();
+        declaredActionOf(*e, window, QStringLiteral("helloutau.select.penTool"))->trigger();
         QCOMPARE(roll->tool(), PianoRoll::PenTool);
         roll->setQuantization(60);
         window->setDocument(std::make_unique<kit::ProjectDocument>());
@@ -1343,9 +1354,11 @@ private Q_SLOTS:
         const auto window = e->newWindow();
         const auto roll = qobject_cast<PianoRoll *>(window->centralWidget());
         const auto session = window->document()->session();
-        const auto mode2 = actionNamed(window, QStringLiteral("Mode&2 Pitch"));
-        const auto pitchTool = actionNamed(window, QStringLiteral("&Freehand Pitch Tool"));
-        const auto showPitch = actionNamed(window, QStringLiteral("Show &Pitch"));
+        const auto mode2 = declaredActionOf(*e, window, QStringLiteral("helloutau.edit.mode2"));
+        const auto pitchTool =
+            declaredActionOf(*e, window, QStringLiteral("helloutau.select.pitchTool"));
+        const auto showPitch =
+            declaredActionOf(*e, window, QStringLiteral("helloutau.view.showPitch"));
         QVERIFY(mode2 && pitchTool && showPitch);
         QVERIFY(mode2->isChecked());
         QVERIFY(!pitchTool->isEnabled());
@@ -1365,7 +1378,7 @@ private Q_SLOTS:
         pitchTool->trigger();
         QCOMPARE(roll->tool(), PianoRoll::PitchTool);
 
-        actionNamed(window, QStringLiteral("&Undo"))->trigger();
+        declaredActionOf(*e, window, QStringLiteral("helloutau.edit.undo"))->trigger();
         QVERIFY(mode2->isChecked());
         QVERIFY(session->snapshot().settings.mode2);
         QCOMPARE(roll->tool(), PianoRoll::SelectTool);
@@ -1681,7 +1694,7 @@ private Q_SLOTS:
         };
         rename(QStringLiteral("renamed"));
         QVERIFY(window->isWindowModified());
-        QVERIFY(actionNamed(window, QStringLiteral("&Undo"))->isEnabled());
+        QVERIFY(declaredActionOf(*e, window, QStringLiteral("helloutau.edit.undo"))->isEnabled());
         QCoreApplication::processEvents();
         QCOMPARE(window->entryModel()->index(0, VoiceBankEntryModel::AliasColumn).data().toString(),
                  QStringLiteral("renamed"));
@@ -1729,8 +1742,10 @@ private Q_SLOTS:
         QVERIFY(
             !(model->flags(model->index(2, VoiceBankEntryModel::FileColumn)) & Qt::ItemIsEditable));
 
-        const auto play = actionNamed(window, QStringLiteral("&Play Audio File"));
-        const auto playSpan = actionNamed(window, QStringLiteral("Play from &Offset to Cutoff"));
+        const auto play =
+            declaredActionOf(*e, window, QStringLiteral("helloutau.voiceBank.playAudio"));
+        const auto playSpan =
+            declaredActionOf(*e, window, QStringLiteral("helloutau.voiceBank.playSpan"));
         QVERIFY(play);
         QVERIFY(playSpan);
         QSignalSpy playTriggered(play, &QAction::triggered);
@@ -1815,9 +1830,11 @@ private Q_SLOTS:
             }
             return list;
         };
-        const auto duplicate = actionNamed(window, QStringLiteral("D&uplicate Entries"));
-        const auto include = actionNamed(window, QStringLiteral("Include Audio &Files"));
-        const auto remove = actionNamed(window, QStringLiteral("&Delete"));
+        const auto duplicate =
+            declaredActionOf(*e, window, QStringLiteral("helloutau.voiceBank.duplicateEntries"));
+        const auto include =
+            declaredActionOf(*e, window, QStringLiteral("helloutau.voiceBank.includeAudio"));
+        const auto remove = declaredActionOf(*e, window, QStringLiteral("helloutau.edit.delete"));
         QVERIFY(duplicate && include && remove);
 
         // Only an entry is duplicated or removed, and only an unlisted file included.
@@ -1913,7 +1930,7 @@ private Q_SLOTS:
             return table->viewport()->grab(rect).toImage();
         };
         const auto bar = window->findChild<FindBar *>();
-        actionNamed(window, QStringLiteral("&Find"))->trigger();
+        declaredActionOf(*e, window, QStringLiteral("helloutau.edit.find"))->trigger();
 
         bar->setText(QStringLiteral("a"));
         QCOMPARE(window->currentRow(), 0);
@@ -1973,7 +1990,7 @@ private Q_SLOTS:
         const auto model = window->entryModel();
         const auto bar = window->findChild<FindBar *>();
         QVERIFY(bar);
-        actionNamed(window, QStringLiteral("&Find"))->trigger();
+        declaredActionOf(*e, window, QStringLiteral("helloutau.edit.find"))->trigger();
         QCOMPARE(bar->scopes().size(), 2);
 
         bar->setText(QStringLiteral("b"));
@@ -2111,8 +2128,9 @@ private Q_SLOTS:
         const auto tree = window->directoryTree();
         tree->setCurrentItem(tree->topLevelItem(1));
         window->setCurrentRow(0);
-        const auto play = actionNamed(window, QStringLiteral("&Play Audio File"));
-        const auto stop = actionNamed(window, QStringLiteral("&Stop"));
+        const auto play =
+            declaredActionOf(*e, window, QStringLiteral("helloutau.voiceBank.playAudio"));
+        const auto stop = declaredActionOf(*e, window, QStringLiteral("helloutau.playback.stop"));
         QVERIFY(play && stop);
         QVERIFY(!stop->isEnabled());
         play->trigger();
@@ -2236,7 +2254,8 @@ private Q_SLOTS:
         QCOMPARE(box->itemText(box->findData(QStringLiteral("frq"))),
                  QStringLiteral("frq (resampler.exe) (none)"));
 
-        const auto spectrogram = actionNamed(window, QStringLiteral("Show &Spectrogram"));
+        const auto spectrogram =
+            declaredActionOf(*e, window, QStringLiteral("helloutau.voiceBank.showSpectrogram"));
         QVERIFY(spectrogram && !spectrogram->isChecked());
         QVERIFY(!view->spectrogram());
         spectrogram->trigger();
@@ -2487,7 +2506,7 @@ private Q_SLOTS:
             kit::ProjectRef(session).tracks().at(0).setVoiceDir(QStringLiteral("%VOICE%bank"));
             QVERIFY(transaction.commit());
         }
-        actionNamed(window, QStringLiteral("Edit &Voice Bank"))->trigger();
+        declaredActionOf(*e, window, QStringLiteral("helloutau.tools.editVoiceBank"))->trigger();
         QCOMPARE(e->voiceBankWindows().size(), 1);
         const auto bankWindow = e->voiceBankWindows().first();
         QVERIFY(isSame(bankWindow->document()->rootPath(), bank));
@@ -2510,9 +2529,9 @@ private Q_SLOTS:
         }
         const auto roll = qobject_cast<PianoRoll *>(window->centralWidget());
         // With a selection, Edit Voice Bank goes to the entry of the first selected note.
-        const auto go = actionNamed(window, QStringLiteral("Edit &Voice Bank"));
+        const auto go =
+            declaredActionOf(*e, window, QStringLiteral("helloutau.tools.editVoiceBank"));
         QVERIFY(go);
-        QVERIFY(!actionNamed(window, QStringLiteral("Go to Voice Bank &Entry")));
         const auto current = [bankWindow](int column) {
             return bankWindow->entryTable()
                 ->currentIndex()
