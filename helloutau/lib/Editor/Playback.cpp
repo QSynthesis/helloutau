@@ -9,6 +9,7 @@
 #include <QtCore/QCoreApplication>
 #include <QtCore/QDir>
 #include <QtCore/QPointer>
+#include <QtCore/QTemporaryDir>
 #include <QtCore/QThread>
 
 #include <stdcorelib/pimpl.h>
@@ -191,6 +192,9 @@ namespace hello::daw {
             std::make_shared<kit::ClassicSynthRunner>();
         AudioOutput *output = nullptr;
         std::filesystem::path temporaryDirectory;
+        // The cache of a project without a file if no temporary directory was given, created
+        // when first required
+        std::unique_ptr<QTemporaryDir> ownTemporaryDirectory;
 
         // The render in progress, and the workers that have not yet finished, including those
         // of cancelled renders
@@ -251,11 +255,15 @@ namespace hello::daw {
                 fail(diagnostics, Playback::tr("The project has no voice bank to sing with."));
                 return std::nullopt;
             }
+            const auto cache = decl.cacheDirectoryFor(document);
+            if (!cache) {
+                fail(diagnostics, Playback::tr("No folder can be created for the render cache."));
+                return std::nullopt;
+            }
             PlanInput input{document.session()->snapshot(), bank, {}};
-            input.options.cacheDirectory = decl.cacheDirectoryFor(document);
-            input.options.outputFile = temporaryDirectory.empty()
-                                           ? decl.cacheDirectoryFor(document) / OutputFileName
-                                           : temporaryDirectory / OutputFileName;
+            input.options.cacheDirectory = *cache;
+            input.options.outputFile =
+                (temporaryDirectory.empty() ? *cache : temporaryDirectory) / OutputFileName;
             return input;
         }
 
@@ -728,12 +736,16 @@ namespace hello::daw {
             fail(diagnostics, tr("There is no audio output device."));
             return false;
         }
+        const auto cache = cacheDirectoryFor(document);
+        if (!cache) {
+            fail(diagnostics, tr("No folder can be created for the render cache."));
+            return false;
+        }
         auto job = std::make_shared<Job>();
         job->input = {document.session()->snapshot(), bank, {}};
-        job->input.options.cacheDirectory = cacheDirectoryFor(document);
-        job->input.options.outputFile = impl.temporaryDirectory.empty()
-                                           ? cacheDirectoryFor(document) / OutputFileName
-                                           : impl.temporaryDirectory / OutputFileName;
+        job->input.options.cacheDirectory = *cache;
+        job->input.options.outputFile =
+            (impl.temporaryDirectory.empty() ? *cache : impl.temporaryDirectory) / OutputFileName;
         job->input.options.range = range;
         // The same notes as the last render play again without the engines.
         job->keptKey = impl.kept ? impl.kept->key : QString();
@@ -764,9 +776,14 @@ namespace hello::daw {
             fail(diagnostics, tr("The project has no voice bank to sing with."));
             return false;
         }
+        const auto cache = cacheDirectoryFor(document);
+        if (!cache) {
+            fail(diagnostics, tr("No folder can be created for the render cache."));
+            return false;
+        }
         auto job = std::make_shared<Job>();
         job->input = {document.session()->snapshot(), bank, {}};
-        job->input.options.cacheDirectory = cacheDirectoryFor(document);
+        job->input.options.cacheDirectory = *cache;
         job->input.options.outputFile = file;
         job->engines = engines;
         job->runner = impl.runner;
@@ -961,9 +978,12 @@ namespace hello::daw {
 
         namespace fs = std::filesystem;
         const auto directory = cacheDirectoryFor(document);
+        if (!directory) {
+            return 0;
+        }
         int deleted = 0;
         std::error_code error;
-        for (fs::directory_iterator it(directory, error), end; !error && it != end;
+        for (fs::directory_iterator it(*directory, error), end; !error && it != end;
              it.increment(error)) {
             std::error_code status;
             if (!it->is_regular_file(status)) {
@@ -983,17 +1003,26 @@ namespace hello::daw {
         return deleted;
     }
 
-    std::filesystem::path Playback::cacheDirectoryFor(const kit::ProjectDocument &document) {
+    std::optional<std::filesystem::path>
+        Playback::cacheDirectoryFor(const kit::ProjectDocument &document) {
         stdc_impl_t;
         // The .usth, or else the UST imported, whose cache UTAU uses as well
         const auto file = document.filePath().empty() ? document.sourcePath() : document.filePath();
         if (!file.empty()) {
             return kit::Project::cacheDirectoryOf(file);
         }
+        // A project without a file has no folder of its own. A relative path in its place would
+        // be a folder of the working directory, whose files clearCache() deletes.
         if (!impl.temporaryDirectory.empty()) {
             return impl.temporaryDirectory / "cache";
         }
-        return kit::Project::cacheDirectoryOf(file);
+        if (!impl.ownTemporaryDirectory) {
+            impl.ownTemporaryDirectory = std::make_unique<QTemporaryDir>();
+        }
+        if (!impl.ownTemporaryDirectory->isValid()) {
+            return std::nullopt;
+        }
+        return std::filesystem::path(impl.ownTemporaryDirectory->path().toStdU16String());
     }
 
 }

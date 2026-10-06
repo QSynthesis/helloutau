@@ -289,13 +289,20 @@ namespace hello::daw {
         // recorded them
         QStringList backgroundEngines;
 
+        // Replaces the temporary directory of the window and returns its path, or an empty path
+        // if it cannot be created, so that Playback creates a directory of its own.
+        std::filesystem::path newTemporaryDirectory() {
+            temporaryDirectory.emplace();
+            if (!temporaryDirectory->isValid()) {
+                return {};
+            }
+            return std::filesystem::path(temporaryDirectory->path().toStdU16String());
+        }
+
         // The render progress in the status bar, and the playhead that follows playback
         void initPlayback() {
             stdc_decl_t;
-            temporaryDirectory.emplace();
-            playback = new Playback(
-                renderLog, std::filesystem::path(temporaryDirectory->path().toStdU16String()),
-                &decl);
+            playback = new Playback(renderLog, newTemporaryDirectory(), &decl);
             renderLabel = new QLabel();
             renderProgress = new QProgressBar();
             renderProgress->setMaximumWidth(200);
@@ -2323,9 +2330,7 @@ namespace hello::daw {
     void ProjectWindow::setDocument(std::unique_ptr<kit::ProjectDocument> document) {
         stdc_impl_t;
         impl.playback->stop();
-        impl.temporaryDirectory.emplace();
-        impl.playback->setTemporaryDirectory(
-            std::filesystem::path(impl.temporaryDirectory->path().toStdU16String()));
+        impl.playback->setTemporaryDirectory(impl.newTemporaryDirectory());
         impl.voiceBankRoot.clear();
         impl.voiceBankReloadPending = false;
         auto previous = std::move(impl.document);

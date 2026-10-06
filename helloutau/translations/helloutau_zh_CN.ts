@@ -1328,6 +1328,10 @@ Trust and use them for rendering?</source>
         <translation>工程未设置用于演唱的音源。</translation>
     </message>
     <message>
+        <source>No folder can be created for the render cache.</source>
+        <translation>无法为渲染缓存创建文件夹。</translation>
+    </message>
+    <message>
         <source>The previous render has not ended yet. Closing its console window stops it.</source>
         <translation>上一次渲染尚未结束。关闭其控制台窗口即可停止渲染。</translation>
     </message>

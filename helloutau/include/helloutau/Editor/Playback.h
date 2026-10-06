@@ -180,8 +180,11 @@ namespace hello::daw {
         /// render cache until the next render or until the cache is cleared.
         std::filesystem::path lastRenderFile() const;
 
-        /// The directory of the render cache of \a document.
-        std::filesystem::path cacheDirectoryFor(const kit::ProjectDocument &document);
+        /// Returns the directory of the render cache of \a document: beside its file, or in a
+        /// temporary directory if it has no file. Returns \c std::nullopt if no temporary
+        /// directory can be created.
+        std::optional<std::filesystem::path>
+            cacheDirectoryFor(const kit::ProjectDocument &document);
 
         /// Stops playing, forgets the fragments held in memory, and deletes the files of the
         /// render cache of \a document: the files directly in the directory, which the engines

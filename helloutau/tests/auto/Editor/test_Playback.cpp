@@ -123,7 +123,7 @@ namespace {
     // resampler needs to run.
     bool writeFragments(Playback &playback, const kit::ProjectDocument &document) {
         kit::SynthPlan::Options options;
-        options.cacheDirectory = playback.cacheDirectoryFor(document);
+        options.cacheDirectory = *playback.cacheDirectoryFor(document);
         options.outputFile = options.cacheDirectory / "playback.wav";
         kit::DiagnosticList diagnostics;
         const auto plan = kit::SynthPlan::make(document.session()->snapshot(),
@@ -158,12 +158,12 @@ private Q_SLOTS:
 
         kit::ProjectDocument unsaved;
         const auto temporary = playback.cacheDirectoryFor(unsaved);
-        QVERIFY(fs::is_directory(temporary));
-        QCOMPARE(playback.cacheDirectoryFor(unsaved), temporary);
+        QVERIFY(temporary && fs::is_directory(*temporary));
+        QCOMPARE(*playback.cacheDirectoryFor(unsaved), *temporary);
 
         const auto document = singingDocument(dir);
         QVERIFY(document);
-        QCOMPARE(playback.cacheDirectoryFor(*document),
+        QCOMPARE(*playback.cacheDirectoryFor(*document),
                  fs::path(dir.path().toStdU16String()) / "song.cache");
 
         // A UST that states its encoding opens without asking.
@@ -175,7 +175,7 @@ private Q_SLOTS:
         const auto imported = kit::ProjectDocument::open(ust, nullptr, diagnostics);
         QVERIFY(imported);
         QVERIFY(imported->filePath().empty());
-        QCOMPARE(playback.cacheDirectoryFor(*imported),
+        QCOMPARE(*playback.cacheDirectoryFor(*imported),
                  fs::path(dir.path().toStdU16String()) / "imported.cache");
     }
 
@@ -219,7 +219,7 @@ private Q_SLOTS:
         QVERIFY(playback.lastRenderFile().empty());
         QTRY_COMPARE_WITH_TIMEOUT(states.size(), 3, 5000);
         // The track file of the render, which Save Last Played copies
-        QCOMPARE(playback.lastRenderFile(), playback.cacheDirectoryFor(*document) / "temp.wav");
+        QCOMPARE(playback.lastRenderFile(), *playback.cacheDirectoryFor(*document) / "temp.wav");
         QCOMPARE(failures.size(), 0);
         QCOMPARE(states.at(1).at(0).value<Playback::State>(), Playback::Playing);
         QCOMPARE(states.at(2).at(0).value<Playback::State>(), Playback::Stopped);
@@ -232,8 +232,8 @@ private Q_SLOTS:
         QCOMPARE(planProgress.first(), (QList<QVariant>{0, 1}));
         QCOMPARE(planProgress.last(), (QList<QVariant>{1, 1}));
         QCOMPARE(runner->stepCounts, QList<int>{1});
-        QCOMPARE(runner->caches, QList<fs::path>{playback.cacheDirectoryFor(*document)});
-        QVERIFY(fs::is_regular_file(playback.cacheDirectoryFor(*document) / "temp.wav"));
+        QCOMPARE(runner->caches, QList<fs::path>{*playback.cacheDirectoryFor(*document)});
+        QVERIFY(fs::is_regular_file(*playback.cacheDirectoryFor(*document) / "temp.wav"));
     }
 
     // The whole track is rendered into a file of the caller's choice, without playing it and
@@ -484,7 +484,7 @@ private Q_SLOTS:
         QVERIFY(document);
         Playback playback;
         QVERIFY(writeFragments(playback, *document));
-        const auto cache = playback.cacheDirectoryFor(*document);
+        const auto cache = *playback.cacheDirectoryFor(*document);
         fs::create_directories(cache / "kept");
         kit::SynthEngines engines;
         engines.resampler = fs::path(dir.path().toStdU16String()) / "missing.exe";
