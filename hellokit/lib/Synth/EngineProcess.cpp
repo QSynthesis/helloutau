@@ -11,6 +11,7 @@
 #include <chrono>
 #include <string>
 #include <mutex>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -241,14 +242,21 @@ namespace hello::kit {
 
         // Both streams are read by communicate() rather than manually. A full pipe blocks its
         // writer, so draining the streams sequentially deadlocks with a verbose engine.
-        const auto [out, err] = process.communicate({}, timeout);
-        result.output = printed(out) + printed(err);
+        auto exchanged = process.communicate({}, timeout);
+        const bool timedOut = !exchanged && process.errorCode() == std::errc::timed_out;
+        if (timedOut) {
+            // communicate() leaves the engine running at the time limit. The kill closes its end
+            // of the pipe, and the next call returns the output written before the kill.
+            std::ignore = process.kill();
+            exchanged = process.communicate();
+        }
+        if (exchanged) {
+            const auto &[out, err] = *exchanged;
+            result.output = printed(out) + printed(err);
+        }
         m_outputLog->record(program, result.output);
 
-        // Not the exit code: communicate() kills a child that exceeds the time limit, so the
-        // child is reaped and has an exit code in either case. The error indicates that the
-        // engine was stopped rather than finished.
-        if (process.errorCode() == std::errc::timed_out) {
+        if (timedOut) {
             result.timedOut = true;
             fail(diagnostics, tr("The engine \"%1\" did not finish within %2 seconds and was "
                                  "stopped.")
