@@ -67,20 +67,6 @@ namespace hello::kit {
             bool started = false;
         };
 
-        bool writeScript(const fs::path &path, const QString &text) {
-            std::ofstream out(path, std::ios::binary | std::ios::trunc);
-            if (!out) {
-                return false;
-            }
-#ifdef _WIN32
-            const auto bytes = text.toLocal8Bit();
-#else
-            const auto bytes = text.toUtf8();
-#endif
-            out.write(bytes.constData(), bytes.size());
-            return out.good();
-        }
-
     }
 
     ThreadedSynthRunner::ThreadedSynthRunner() = default;
@@ -96,47 +82,24 @@ namespace hello::kit {
             return outcome;
         }
 
+        // The scripts are generated even if no directory is given, so that a plan that the
+        // classic strategy refuses is refused here as well. They are written only into a given
+        // directory, for the engines that read them.
+        std::error_code temporaryError;
+        const auto directory =
+            scriptDirectory.empty() ? fs::temp_directory_path(temporaryError) : scriptDirectory;
+        const auto scripts =
+            ClassicSynthRunner().scriptFiles(directory, plan, engines, diagnostics);
+        if (!scripts) {
+            return outcome;
+        }
         if (!scriptDirectory.empty()) {
-            ClassicSynthRunner writer;
-            writer.scriptDirectory = scriptDirectory;
-            DiagnosticList scriptDiagnostics;
-            const auto scripts = writer.scripts(plan, engines, scriptDiagnostics);
-            diagnostics.append(scriptDiagnostics);
-            if (!scripts) {
-                return outcome;
-            }
             std::error_code scriptError;
             fs::create_directories(scriptDirectory, scriptError);
-            if (scriptError) {
+            if (scriptError || !ClassicSynthRunner::writeScriptFiles(*scripts)) {
                 fail(diagnostics, tr("The rendering scripts could not be written."));
                 return outcome;
             }
-#ifdef _WIN32
-            if (!writeScript(scriptDirectory / "temp.bat", scripts->first) ||
-                !writeScript(scriptDirectory / "temp_helper.bat", scripts->second)) {
-                fail(diagnostics, tr("The rendering scripts could not be written."));
-                return outcome;
-            }
-#else
-            if (!writeScript(scriptDirectory / "temp.sh", scripts->first) ||
-                !writeScript(scriptDirectory / "temp_helper.sh", scripts->second)) {
-                fail(diagnostics, tr("The rendering scripts could not be written."));
-                return outcome;
-            }
-            {
-                ClassicSynthRunner batchWriter;
-                batchWriter.shell = ClassicSynthRunner::ScriptShell::Batch;
-                batchWriter.scriptDirectory = scriptDirectory;
-                DiagnosticList batchDiagnostics;
-                const auto batch = batchWriter.scripts(plan, engines, batchDiagnostics);
-                diagnostics.append(batchDiagnostics);
-                if (!batch || !writeScript(scriptDirectory / "temp.bat", batch->first) ||
-                    !writeScript(scriptDirectory / "temp_helper.bat", batch->second)) {
-                    fail(diagnostics, tr("The rendering scripts could not be written."));
-                    return outcome;
-                }
-            }
-#endif
         }
 
         std::error_code error;

@@ -8,6 +8,8 @@
 #include <QtCore/QCoreApplication>
 #include <QtCore/QDateTime>
 
+#include <hellokit/Support/TextCodec.h>
+
 #include "EngineProcess.h"
 #include "ShellSyntax_p.h"
 
@@ -24,6 +26,21 @@ namespace hello::kit {
 
         QString displayed(const fs::path &path) {
             return QString::fromStdU16String(path.u16string());
+        }
+
+        // Returns the first character of text that codec cannot represent. A surrogate pair counts
+        // as one character.
+        QString firstUnrepresentable(const TextCodec &codec, const QString &text) {
+            for (qsizetype i = 0; i < text.size();) {
+                const qsizetype length =
+                    text.at(i).isHighSurrogate() && i + 1 < text.size() ? 2 : 1;
+                const auto character = text.mid(i, length);
+                if (!codec.canEncode(character)) {
+                    return character;
+                }
+                i += length;
+            }
+            return {};
         }
 
         /// The two files to which the wavtool appends, joined by the footer into the track file.
@@ -201,6 +218,66 @@ namespace hello::kit {
         return std::make_pair(script.text(), helperScript.text());
     }
 
+    std::optional<QList<ClassicSynthRunner::ScriptFile>>
+        ClassicSynthRunner::scriptFiles(const fs::path &directory, const SynthPlan &plan,
+                                        const SynthEngines &engines,
+                                        DiagnosticList &diagnostics) const {
+        // The scripts refer to the helper by its path in the directory.
+        auto self = *this;
+        self.scriptDirectory = directory;
+        const ShellSyntax syntax(shell, quoting);
+        const auto written = self.scripts(plan, engines, diagnostics);
+        if (!written) {
+            return std::nullopt;
+        }
+        QList<std::pair<fs::path, QString>> texts{
+            {directory / syntax.scriptName(), written->first },
+            {directory / syntax.helperName(), written->second},
+        };
+#ifndef _WIN32
+        // An engine run through Wine, such as moresampler, reads temp.bat in its working
+        // directory, which is this directory.
+        auto batchSelf = self;
+        batchSelf.shell = ScriptShell::Batch;
+        const auto batch = batchSelf.scripts(plan, engines, diagnostics);
+        if (!batch) {
+            return std::nullopt;
+        }
+        texts.push_back({directory / "temp.bat", batch->first});
+        texts.push_back({directory / "temp_helper.bat", batch->second});
+#endif
+
+        // The system code page, in which the command processor reads a batch file. A script
+        // with a character outside it is refused. UTAU writes a question mark in its place, which
+        // makes the file name invalid and the note silent without a report.
+        const TextCodec codec;
+        QList<ScriptFile> files;
+        for (const auto &[path, text] : texts) {
+            if (!codec.canEncode(text)) {
+                fail(diagnostics, tr("The rendering script cannot contain \"%1\", which the "
+                                     "system code page cannot represent.")
+                                      .arg(firstUnrepresentable(codec, text)));
+                return std::nullopt;
+            }
+            files.push_back({path, codec.encode(text)});
+        }
+        return files;
+    }
+
+    bool ClassicSynthRunner::writeScriptFiles(const QList<ScriptFile> &files) {
+        for (const auto &[path, bytes] : files) {
+            std::ofstream out(path, std::ios::binary | std::ios::trunc);
+            if (!out) {
+                return false;
+            }
+            out.write(bytes.constData(), bytes.size());
+            if (!out) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     SynthOutcome ClassicSynthRunner::render(const SynthPlan &plan, const SynthEngines &engines,
                                             SynthObserver *observer,
                                             DiagnosticList &diagnostics) const {
@@ -214,21 +291,10 @@ namespace hello::kit {
                 ("hellokit-" + QString::number(QDateTime::currentMSecsSinceEpoch()).toStdString());
         }
 
-        // Written with the actual directory, which the caller may have left unspecified.
-        auto self = *this;
-        self.scriptDirectory = directory;
-        const auto written = self.scripts(plan, engines, diagnostics);
-        if (!written) {
+        const auto files = scriptFiles(directory, plan, engines, diagnostics);
+        if (!files) {
             return outcome;
         }
-#ifndef _WIN32
-        auto batchSelf = self;
-        batchSelf.shell = ScriptShell::Batch;
-        const auto batch = batchSelf.scripts(plan, engines, diagnostics);
-        if (!batch) {
-            return outcome;
-        }
-#endif
 
         std::error_code error;
         fs::create_directories(directory, error);
@@ -254,25 +320,7 @@ namespace hello::kit {
         const auto scriptPath = directory / syntax.scriptName();
         const auto helperPath = directory / syntax.helperName();
 
-        const auto put = [&](const fs::path &path, const QString &text) {
-            // The ANSI code page, not UTF-8. The command processor reads a batch file in the
-            // system encoding, and a path unrepresentable in it could not be referenced by the
-            // script in any case.
-            const auto bytes = text.toLocal8Bit();
-            std::ofstream out(path, std::ios::binary | std::ios::trunc);
-            if (!out) {
-                return false;
-            }
-            out.write(bytes.constData(), bytes.size());
-            return bool(out);
-        };
-
-        if (!put(scriptPath, written->first) || !put(helperPath, written->second)
-#ifndef _WIN32
-            || !put(directory / "temp.bat", batch->first) ||
-            !put(directory / "temp_helper.bat", batch->second)
-#endif
-        ) {
+        if (!writeScriptFiles(*files)) {
             fail(diagnostics, tr("The rendering script could not be written to \"%1\".")
                                   .arg(displayed(directory)));
             return outcome;

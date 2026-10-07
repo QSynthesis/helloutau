@@ -2734,6 +2734,10 @@ Write them again without these chunks? The audio stays the same. The files are w
         <translation>此音符的参数无法写入渲染脚本。</translation>
     </message>
     <message>
+        <source>The rendering script cannot contain &quot;%1&quot;, which the system code page cannot represent.</source>
+        <translation>渲染脚本不能包含系统代码页无法表示的「%1」。</translation>
+    </message>
+    <message>
         <source>The folder &quot;%1&quot; could not be created.</source>
         <translation>无法创建文件夹「%1」。</translation>
     </message>

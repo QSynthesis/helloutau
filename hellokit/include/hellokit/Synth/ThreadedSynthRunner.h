@@ -35,8 +35,9 @@ namespace hello::kit {
         ///       calls run sequentially regardless of this setting.
         int threadCount = 0;
 
-        /// Directory in which the non-executed rendering scripts are written. Non-Windows
-        /// systems receive both the native shell pair and a batch pair for moresampler.
+        /// Directory into which the scripts of ClassicSynthRunner::scriptFiles() are written
+        /// without being executed, for the engines that read them, and the working directory of
+        /// the engines. The scripts are generated and checked even if it is empty.
         std::filesystem::path scriptDirectory;
 
         SynthOutcome render(const SynthPlan &plan, const SynthEngines &engines,

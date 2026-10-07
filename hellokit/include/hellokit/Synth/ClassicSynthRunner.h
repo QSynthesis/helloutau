@@ -95,11 +95,24 @@ namespace hello::kit {
         /// Used by the tests, and for showing a user exactly what will be executed.
         ///
         /// \return the contents of the selected script and helper files, or \c std::nullopt if a
-        ///         value cannot be written safely, with the reason in \a diagnostics. Rendering
-        ///         on non-Windows systems also generates a batch pair as a moresampler placeholder.
+        ///         value cannot be written safely, with the reason in \a diagnostics
         std::optional<std::pair<QString, QString>> scripts(const SynthPlan &plan,
                                                            const SynthEngines &engines,
                                                            DiagnosticList &diagnostics) const;
+
+        /// A file of the scripts and its content in the system code page
+        using ScriptFile = std::pair<std::filesystem::path, QByteArray>;
+
+        /// Returns the files that render() writes into \a directory, or \c std::nullopt with the
+        /// reason in \a diagnostics if a value cannot be written safely or represented. The list
+        /// includes a batch pair for the engines that read temp.bat on systems other than Windows.
+        std::optional<QList<ScriptFile>> scriptFiles(const std::filesystem::path &directory,
+                                                     const SynthPlan &plan,
+                                                     const SynthEngines &engines,
+                                                     DiagnosticList &diagnostics) const;
+
+        /// Writes \a files and returns whether every file is written.
+        static bool writeScriptFiles(const QList<ScriptFile> &files);
     };
 
 }
