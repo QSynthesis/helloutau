@@ -1,6 +1,5 @@
 #include "KeymapSettingPage.h"
 
-#include <algorithm>
 #include <functional>
 #include <iterator>
 
@@ -198,7 +197,7 @@ namespace hello::daw {
     bool KeymapSettingPage::apply(QString *error) {
         for (const auto &list : m_modifiers) {
             for (const auto &bindings : list) {
-                if (!bindings.conflicts().isEmpty()) {
+                if (!bindings.isValid()) {
                     if (error) {
                         *error = tr("Modifier bindings conflict with each other.");
                     }
@@ -263,11 +262,8 @@ namespace hello::daw {
                 continue;
             }
             const auto modifiers = m_modifiers[item.kind].at(item.scheme).modifiers(item.role);
-            const auto option = std::find(std::begin(modifierOptions), std::end(modifierOptions),
-                                          modifiers) -
-                                std::begin(modifierOptions);
             const QSignalBlocker blocker(item.box);
-            item.box->setCurrentIndex(option < int(std::size(modifierOptions)) ? int(option) : 0);
+            item.box->setCurrentIndex(item.box->findData(modifiers.toInt()));
         }
     }
 
@@ -284,15 +280,20 @@ namespace hello::daw {
                 auto box = new QComboBox();
                 box->setObjectName(QStringLiteral("%1/%2/%3").arg(
                     Editor::nameOf(kind), bindings.scheme().key(), QLatin1String(role.key)));
-                for (const auto name : modifierOptionNames) {
-                    box->addItem(tr(name));
+                for (int i = 0; i < int(std::size(modifierOptions)); ++i) {
+                    // A role with Exact requires modifiers.
+                    if (modifierOptions[i] != Qt::NoModifier ||
+                        role.match != ModifierScheme::Exact) {
+                        box->addItem(tr(modifierOptionNames[i]), modifierOptions[i].toInt());
+                    }
                 }
                 connect(box, qOverload<int>(&QComboBox::currentIndexChanged), this,
-                        [this, kind, scheme, id = role.id](int option) {
-                            if (option < 0 || option >= int(std::size(modifierOptions))) {
+                        [this, kind, scheme, id = role.id, box](int option) {
+                            if (option < 0) {
                                 return;
                             }
-                            m_modifiers[kind][scheme].setModifiers(id, modifierOptions[option]);
+                            m_modifiers[kind][scheme].setModifiers(
+                                id, Qt::KeyboardModifiers::fromInt(box->itemData(option).toInt()));
                             Q_EMIT modifiedChanged();
                         });
                 m_modifierBoxes.push_back({kind, scheme, role.id, box});

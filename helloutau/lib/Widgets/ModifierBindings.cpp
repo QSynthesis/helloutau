@@ -1,5 +1,7 @@
 #include "ModifierBindings.h"
 
+#include <algorithm>
+#include <iterator>
 #include <utility>
 
 #include <QtCore/QCoreApplication>
@@ -30,16 +32,21 @@ namespace hello::daw {
             return result;
         }
 
-        Qt::KeyboardModifiers modifiersFromJson(const QJsonArray &array) {
+        // The modifiers named in array, and whether every element names one
+        std::pair<Qt::KeyboardModifiers, bool> modifiersFromJson(const QJsonArray &array) {
             Qt::KeyboardModifiers result;
+            bool known = true;
             for (const auto &part : array) {
-                for (const auto &[modifier, name] : modifierNames) {
-                    if (part.toString() == QLatin1String(name)) {
-                        result |= modifier;
-                    }
+                const auto it = std::find_if(
+                    std::begin(modifierNames), std::end(modifierNames),
+                    [&part](const auto &entry) { return part.toString() == QLatin1String(entry.second); });
+                if (it == std::end(modifierNames)) {
+                    known = false;
+                } else {
+                    result |= it->first;
                 }
             }
-            return result;
+            return {result, known};
         }
 
     }
@@ -89,14 +96,11 @@ namespace hello::daw {
     bool ModifierBindings::matches(int role, Qt::KeyboardModifiers actual) const {
         const auto pressed = actual & standardModifiers;
         const auto bound = m_modifiers.at(role);
-        if (bound == Qt::NoModifier) {
-            return pressed == Qt::NoModifier;
-        }
         switch (m_scheme->roles().at(role).match) {
             case ModifierScheme::Exact:
                 return pressed == bound;
             case ModifierScheme::Contains:
-                return (pressed & bound) == bound;
+                return bound != Qt::NoModifier && (pressed & bound) == bound;
         }
         return false;
     }
@@ -113,7 +117,7 @@ namespace hello::daw {
                 const auto first = m_modifiers.at(i);
                 const auto second = m_modifiers.at(j);
                 const bool conflict = roles.at(i).match == ModifierScheme::Exact
-                                          ? first != Qt::NoModifier && first == second
+                                          ? first == second
                                           : (first & second) != Qt::NoModifier;
                 if (conflict) {
                     result.push_back({i, j});
@@ -121,6 +125,21 @@ namespace hello::daw {
             }
         }
         return result;
+    }
+
+    QList<int> ModifierBindings::unboundRoles() const {
+        QList<int> result;
+        const auto &roles = m_scheme->roles();
+        for (int i = 0; i < roles.size(); ++i) {
+            if (roles.at(i).match == ModifierScheme::Exact && m_modifiers.at(i) == Qt::NoModifier) {
+                result.push_back(i);
+            }
+        }
+        return result;
+    }
+
+    bool ModifierBindings::isValid() const {
+        return conflicts().isEmpty() && unboundRoles().isEmpty();
     }
 
     QJsonObject ModifierBindings::toJson() const {
@@ -134,14 +153,25 @@ namespace hello::daw {
         return result;
     }
 
-    void ModifierBindings::readJson(const QJsonObject &object) {
+    bool ModifierBindings::readJson(const QJsonObject &object) {
         const auto &roles = m_scheme->roles();
+        bool complete = true;
+        int known = 0;
         for (int i = 0; i < roles.size(); ++i) {
             const auto value = object.value(QLatin1String(roles.at(i).key));
-            if (value.isArray()) {
-                m_modifiers[i] = modifiersFromJson(value.toArray());
+            if (value.isUndefined()) {
+                continue;
             }
+            ++known;
+            if (!value.isArray()) {
+                complete = false;
+                continue;
+            }
+            const auto [modifiers, named] = modifiersFromJson(value.toArray());
+            m_modifiers[i] = modifiers;
+            complete = complete && named;
         }
+        return complete && known == object.size();
     }
 
     bool ModifierBindings::operator==(const ModifierBindings &other) const {

@@ -102,7 +102,7 @@ private Q_SLOTS:
         const auto horizontalScroll = page.widget()->findChild<QComboBox *>(
             QStringLiteral("projectWindow/noteView/horizontalScroll"));
         QVERIFY(horizontalScroll);
-        horizontalScroll->setCurrentIndex(2);
+        horizontalScroll->setCurrentIndex(horizontalScroll->findData(int(Qt::AltModifier)));
         QVERIFY(page.isModified());
         QVERIFY(page.apply(&error));
         QCOMPARE(e->modifierBindings(Editor::ProjectWindowKind, NoteViewModifiers::scheme())

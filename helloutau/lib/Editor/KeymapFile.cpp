@@ -54,7 +54,18 @@ namespace hello::daw {
                 QAK::ActionFamily::shortcutsFamilyFromJson(shortcuts.toArray()));
             const auto modifiers = value.toObject().value(QLatin1String(ModifiersKey)).toObject();
             for (auto &bindings : section.modifiers) {
-                bindings.readJson(modifiers.value(bindings.scheme().key()).toObject());
+                const auto key = bindings.scheme().key();
+                if (!bindings.readJson(modifiers.value(key).toObject())) {
+                    qWarning("Keymap: the modifiers %s of the section %s of %s hold unknown "
+                             "roles or modifiers, which are ignored.",
+                             qPrintable(key), qPrintable(section.key), qPrintable(fileName));
+                }
+                if (!bindings.isValid()) {
+                    qWarning("Keymap: the modifiers %s of the section %s of %s conflict or leave "
+                             "a role without modifiers, and the defaults apply.",
+                             qPrintable(key), qPrintable(section.key), qPrintable(fileName));
+                    bindings = ModifierBindings(bindings.scheme());
+                }
             }
         }
     }

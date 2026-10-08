@@ -4,6 +4,15 @@
 
 namespace hello::daw {
 
+    namespace {
+
+        // The conflict sets of the roles
+        enum ConflictSet : quint32 {
+            DragSet = 1 << 0,
+        };
+
+    }
+
     const ModifierScheme &ParameterViewModifiers::scheme() {
         static const ModifierScheme scheme(
             "parameterView", "hello::daw::ParameterViewModifiers",
@@ -11,10 +20,10 @@ namespace hello::daw {
             {
                 {LockTime, "lockTime",
                  QT_TRANSLATE_NOOP("hello::daw::ParameterViewModifiers", "Lock Time"),
-                 ModifierScheme::Contains, 0, Qt::ShiftModifier},
+                 ModifierScheme::Contains, DragSet, Qt::ShiftModifier},
                 {SnapValue, "snapValue",
                  QT_TRANSLATE_NOOP("hello::daw::ParameterViewModifiers", "Snap Value"),
-                 ModifierScheme::Contains, 0, Qt::ControlModifier},
+                 ModifierScheme::Contains, DragSet, Qt::ControlModifier},
             });
         return scheme;
     }

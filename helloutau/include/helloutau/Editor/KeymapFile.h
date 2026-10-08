@@ -47,7 +47,10 @@ namespace hello::daw {
         /// Gives the registry of each of \a sections the shortcuts that its section of
         /// \a fileName assigns, and sets the modifiers of its bindings that the section assigns.
         /// A missing file or section assigns none. A file or a section that does not read as a
-        /// keymap is ignored with a warning, so that the defaults apply.
+        /// keymap is ignored with a warning, so that the defaults apply. Unknown roles and
+        /// modifiers are ignored with a warning. Bindings that are not valid after reading
+        /// (ModifierBindings::isValid()) are replaced by the defaults of their scheme with a
+        /// warning.
         static void read(Sections &sections, const QString &fileName);
 
         /// Writes the shortcuts that the registry of each of \a sections overrides and the

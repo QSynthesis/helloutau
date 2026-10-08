@@ -20,14 +20,16 @@ namespace hello::daw {
     class HELLOUTAU_WIDGETS_EXPORT ModifierScheme {
     public:
         /// The way in which the modifiers of an event match the modifiers of a role. Only Ctrl,
-        /// Alt, Shift and Meta count. A role without modifiers matches an event without any.
+        /// Alt, Shift and Meta count.
         enum Match {
             /// The modifiers of the event are exactly those of the role, for a role that selects
-            /// the action of a press or a wheel step.
+            /// the action of a press or a wheel step. The role requires modifiers, because the
+            /// event without modifiers has an action of its own.
             Exact,
 
             /// The modifiers of the event include those of the role, for a role that changes a
-            /// drag while its modifiers are held.
+            /// drag while its modifiers are held. The role without modifiers matches no event,
+            /// which turns its action off.
             Contains,
         };
 
@@ -45,9 +47,9 @@ namespace hello::daw {
             Match match = Exact;
 
             /// The conflict sets of the role, one bit each. Two roles conflict only if they share
-            /// a set: two roles with Exact must not have the same modifiers unless both have
-            /// none, and two roles with Contains must not share a modifier. A role with Exact and
-            /// a role with Contains do not conflict.
+            /// a set: two roles with Exact must not have the same modifiers, and two roles with
+            /// Contains must not share a modifier. A role with Exact and a role with Contains do
+            /// not conflict.
             quint32 conflictSets = 0;
 
             Qt::KeyboardModifiers defaults;
@@ -101,13 +103,20 @@ namespace hello::daw {
         /// Returns the pairs of roles that conflict, the lower id first.
         QList<Conflict> conflicts() const;
 
+        /// Returns the roles with ModifierScheme::Exact that have no modifiers.
+        QList<int> unboundRoles() const;
+
+        /// Returns whether no roles conflict and no roles are unbound.
+        bool isValid() const;
+
         /// Returns the modifiers of the roles that differ from their defaults, keyed by the keys
         /// of the roles, each an array of \c Ctrl, \c Alt, \c Shift and \c Meta.
         QJsonObject toJson() const;
 
-        /// Sets the modifiers of the roles in \a object, which has the form of toJson(). Unknown
-        /// keys, values that are not arrays and unknown modifier names are ignored.
-        void readJson(const QJsonObject &object);
+        /// Sets the modifiers of the roles in \a object, which has the form of toJson(), and
+        /// ignores unknown keys, values that are not arrays and unknown modifier names.
+        /// \return \c true if \a object holds nothing that is ignored, \c false otherwise.
+        bool readJson(const QJsonObject &object);
 
         bool operator==(const ModifierBindings &other) const;
         bool operator!=(const ModifierBindings &other) const;

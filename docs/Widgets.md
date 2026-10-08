@@ -338,8 +338,10 @@
 - 页面只改动副本，「Apply」与「OK」时交给两个 registry，更新所有窗口，并写入 `keymap.json`。
 - **存储**：`settings.json` 同目录下单独的 `keymap.json`（作者要求不与设置、插件设置放在一起），每种窗口一节，只记与清单不同的命令，形如 `{"projectWindow": {"shortcuts": [{"id": ..., "keys": [...]}]}, "voiceBankWindow": {...}}`，空列表表示该命令没有快捷键。分节之前的文件（顶层即 `shortcuts`）不再读取。启动时读入，文件无法读作快捷键表时忽略并警告，按清单的快捷键运行。未载入的插件的命令所记的快捷键保留在文件中。
 - **修饰键**（作者 2026-10-08 决定结构）：命令树下方按当前标签页的窗口种类，为该种窗口的每个修饰键方案（`ModifierScheme`，HelloUtauWidgets）显示一组，每个角色一个下拉框。方案以面板划分，各由一个描述类声明：工程窗口有音符区（`NoteViewModifiers`：横向滚动、横向缩放、纵向缩放、拖动缩放、拖动缩放方向锁定、关闭音符吸附）与参数区（`ParameterViewModifiers`：锁定时间、数值吸附）。参数区的滚轮沿用音符区的三个滚轮角色，时间轴拖动播放头时沿用音符区的「关闭音符吸附」，二者都在描述类中注明，不另设角色。
-  - 不同方案的角色互不相干，修饰键可以相同；不同窗口种类的配置也各自独立。冲突只在同一方案内、同一冲突集合内判断（`ModifierBindings::conflicts()`）：匹配方式为 `Exact` 的角色不得使用相同的非空组合，为 `Contains` 的角色不得共用修饰键。冲突时 Apply 被拒绝。
+  - 不同方案的角色互不相干，修饰键可以相同；不同窗口种类的配置也各自独立。冲突只在同一方案内、同一冲突集合内判断（`ModifierBindings::conflicts()`）：匹配方式为 `Exact` 的角色不得使用相同的组合，为 `Contains` 的角色不得共用修饰键。音符区的滚轮三项为一个集合，拖动缩放与方向锁定为一个集合；参数区的锁定时间与数值吸附为一个集合。冲突时 Apply 被拒绝。
   - 匹配方式由角色表的 `ModifierScheme::Match` 规定，判断统一由 `ModifierBindings::matches()` 进行：`Exact` 要求修饰键完全相同（按下或滚轮时选择操作），`Contains` 要求包含所配的键（拖动中按住时改变拖动）。以后需要其他匹配方式时增加一个值。
+  - **「无」**（审查清单 P0-9）：`Exact` 的角色不能为无，因为不按修饰键的滚轮或单击另有操作，其下拉框不提供该项。`Contains` 的角色为无即关闭该功能，不匹配任何事件，例如拖动缩放设为无后左键不再进入缩放。
+  - 读入 `keymap.json` 时，未知的角色名与修饰键名忽略并警告；某个方案读入后有冲突或有 `Exact` 角色为无（`ModifierBindings::isValid()`）时，警告并整个方案改用默认值。
 - 修饰键与快捷键保存在同一个 `keymap.json` 分节中，按方案的键分开，只记与默认不同的角色，例如：`{"projectWindow": {"shortcuts": [...], "modifiers": {"noteView": {"timeZoom": ["Alt"]}, "parameterView": {"snapValue": ["Shift"]}}}}`。此前把角色直接写在 `modifiers` 下的文件不再读取。应用后立即同步所有已打开的该种窗口，取消设置不改变当前窗口。
 - **以后**（作者 2026-10-01 提出）：快捷键的数据改为一个 item model，类似 QActionKit 的 `ActionLayoutsModel`，页面只负责显示与操作。放在本仓库还是 QActionKit 待定，冲突的判断按窗口进行，属于本仓库的规则。QActionKit 中空的 `keymapsettingswidget` 与 `layoutssettingswidget` 无法通用化，以后删除。
 
