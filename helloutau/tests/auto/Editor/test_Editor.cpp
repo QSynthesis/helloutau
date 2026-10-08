@@ -1074,8 +1074,8 @@ private Q_SLOTS:
             topLevel.push_back(page->id());
         }
         QCOMPARE(topLevel,
-                 (QStringList{"editor.AppearanceAndBehavior", "editor.Editor", "editor.Audio",
-                              "test.top", "editor.Rendering", "test.orphan"}));
+                 (QStringList{"editor.AppearanceAndBehavior", "editor.Editor", "editor.Utau",
+                              "editor.Audio", "test.top", "editor.Rendering", "test.orphan"}));
         const auto parent = catalog->page(QStringLiteral("editor.AppearanceAndBehavior"));
         QCOMPARE(parent->pages().first()->id(), QStringLiteral("test.child"));
         QVERIFY(!catalog->page(QStringLiteral("test.other")));
@@ -1097,7 +1097,7 @@ private Q_SLOTS:
         }
         // Keymap and Menus and Toolbars are pages of the core plugin, see test_CoreSettingPages.
         QCOMPARE(topLevel, (QStringList{"editor.AppearanceAndBehavior", "editor.Editor",
-                                        "editor.Audio", "editor.Rendering"}));
+                                        "editor.Utau", "editor.Audio", "editor.Rendering"}));
         const auto system = e->settingCatalog()->page(QStringLiteral("editor.SystemSettings"));
         QVERIFY(system);
         QCOMPARE(system->parentPage()->id(), QStringLiteral("editor.AppearanceAndBehavior"));

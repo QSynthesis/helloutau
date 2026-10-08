@@ -100,9 +100,8 @@ namespace hello::daw {
         : SettingPage(QLatin1String(EditorSettingPageIds::systemSettings), parent),
           m_settings(settings) {
         setTitle(tr("System Settings"));
-        setDescription(tr("The language of the interface, and where UTAU is."));
-        setKeywords({QStringLiteral("System Settings"), QStringLiteral("Language"),
-                     QStringLiteral("UTAU")});
+        setDescription(tr("The language of the interface."));
+        setKeywords({QStringLiteral("System Settings"), QStringLiteral("Language")});
     }
 
     QWidget *SystemSettingsPage::createWidget() {
@@ -120,8 +119,43 @@ namespace hello::daw {
         interfaceForm->addRow(note(tr("Takes effect after a restart.")));
         connect(m_language, &QComboBox::currentIndexChanged, this, &SettingPage::modifiedChanged);
         layout->addWidget(interfaceGroup);
+        layout->addStretch();
+        return widget;
+    }
 
-        auto utauGroup = new QGroupBox(tr("UTAU"), widget);
+    bool SystemSettingsPage::isModified() const {
+        if (!m_language) {
+            return false;
+        }
+        return m_language->currentData().toString() != m_settings.language();
+    }
+
+    bool SystemSettingsPage::apply(QString *error) {
+        Q_UNUSED(error);
+        const auto language = m_language->currentData().toString();
+        if (language != m_settings.language()) {
+            m_settings.setLanguage(language);
+            Restarter::markNeeded();
+        }
+        Q_EMIT modifiedChanged();
+        return true;
+    }
+
+    QComboBox *SystemSettingsPage::languageBox() const {
+        return m_language;
+    }
+
+    UtauSettingPage::UtauSettingPage(AppSettings &settings, QObject *parent)
+        : SettingPage(QLatin1String(EditorSettingPageIds::utau), parent), m_settings(settings) {
+        setTitle(QStringLiteral("UTAU"));
+        setDescription(tr("Where UTAU is, and how a project finds its voice bank and tools."));
+        setKeywords({QStringLiteral("UTAU"), QStringLiteral("voice"), QStringLiteral("tools")});
+    }
+
+    QWidget *UtauSettingPage::createWidget() {
+        auto widget = new QWidget();
+        auto layout = new QVBoxLayout(widget);
+        auto utauGroup = new QGroupBox(tr("Folder"), widget);
         auto utauForm = new QFormLayout(utauGroup);
         m_utauDirectory =
             addPathRow(utauForm, widget, tr("&UTAU folder:"),
@@ -140,25 +174,23 @@ namespace hello::daw {
         utauForm->addRow(m_voiceFolders);
         showVoiceFolders();
         connect(m_utauDirectory, &QLineEdit::textChanged, this, &SettingPage::modifiedChanged);
-        connect(m_utauDirectory, &QLineEdit::textChanged, this,
-                &SystemSettingsPage::showVoiceFolders);
+        connect(m_utauDirectory, &QLineEdit::textChanged, this, &UtauSettingPage::showVoiceFolders);
         connect(m_relativeVoiceDirInUtau, &QCheckBox::toggled, this, &SettingPage::modifiedChanged);
         layout->addWidget(utauGroup);
         layout->addStretch();
         return widget;
     }
 
-    bool SystemSettingsPage::isModified() const {
+    bool UtauSettingPage::isModified() const {
         if (!m_utauDirectory) {
             return false;
         }
-        return m_language->currentData().toString() != m_settings.language() ||
-               pathText(m_utauDirectory) != QDir::fromNativeSeparators(QString::fromStdU16String(
+        return pathText(m_utauDirectory) != QDir::fromNativeSeparators(QString::fromStdU16String(
                                                 m_settings.utauDirectory().u16string())) ||
                m_relativeVoiceDirInUtau->isChecked() != m_settings.isRelativeVoiceDirInUtau();
     }
 
-    void SystemSettingsPage::showVoiceFolders() {
+    void UtauSettingPage::showVoiceFolders() {
         // As voiceLocations() lists them for the UTAU folder being edited
         QStringList lines{tr("The voice folders that %VOICE% denotes, in decreasing priority:")};
         lines.push_back(QDir::toNativeSeparators(
@@ -170,13 +202,8 @@ namespace hello::daw {
         m_voiceFolders->setText(lines.join(QLatin1Char('\n')));
     }
 
-    bool SystemSettingsPage::apply(QString *error) {
+    bool UtauSettingPage::apply(QString *error) {
         Q_UNUSED(error);
-        const auto language = m_language->currentData().toString();
-        if (language != m_settings.language()) {
-            m_settings.setLanguage(language);
-            Restarter::markNeeded();
-        }
         m_settings.setUtauDirectory(
             std::filesystem::path(pathText(m_utauDirectory).toStdU16String()));
         m_settings.setRelativeVoiceDirInUtau(m_relativeVoiceDirInUtau->isChecked());
@@ -184,16 +211,12 @@ namespace hello::daw {
         return true;
     }
 
-    QLineEdit *SystemSettingsPage::utauDirectoryEdit() const {
+    QLineEdit *UtauSettingPage::utauDirectoryEdit() const {
         return m_utauDirectory;
     }
 
-    QCheckBox *SystemSettingsPage::relativeVoiceDirInUtauBox() const {
+    QCheckBox *UtauSettingPage::relativeVoiceDirInUtauBox() const {
         return m_relativeVoiceDirInUtau;
-    }
-
-    QComboBox *SystemSettingsPage::languageBox() const {
-        return m_language;
     }
 
     EditorSettingPage::EditorSettingPage(AppSettings &settings, QObject *parent)
@@ -481,6 +504,7 @@ namespace hello::daw {
         appearance->addPage(new SystemSettingsPage(settings));
         catalog->addPage(appearance);
         catalog->addPage(new EditorSettingPage(settings));
+        catalog->addPage(new UtauSettingPage(settings));
         catalog->addPage(new AudioSettingPage(settings));
         catalog->addPage(new RenderingSettingPage(settings));
     }

@@ -16,9 +16,9 @@ namespace hello::daw {
 
     class AppSettings;
 
-    /// The language of the interface and the UTAU folder, under Appearance & Behavior as the
-    /// system settings of JetBrains IDEs. A changed language takes effect at the next start, so
-    /// applying it marks a restart as needed (Restarter::markNeeded()).
+    /// The language of the interface, under Appearance & Behavior as the system settings of
+    /// JetBrains IDEs. A changed language takes effect at the next start, so applying it marks a
+    /// restart as needed (Restarter::markNeeded()).
     class SystemSettingsPage : public SettingPage {
         Q_OBJECT
     public:
@@ -27,9 +27,28 @@ namespace hello::daw {
         bool isModified() const override;
         bool apply(QString *error) override;
 
+        QComboBox *languageBox() const;
+
+    protected:
+        QWidget *createWidget() override;
+
+    private:
+        AppSettings &m_settings;
+        QPointer<QComboBox> m_language;
+    };
+
+    /// The UTAU folder, and how a relative voice bank path is resolved. The pages of UTAU
+    /// compatibility, such as that of the ClassicPluginHost plugin, are its child pages.
+    class UtauSettingPage : public SettingPage {
+        Q_OBJECT
+    public:
+        explicit UtauSettingPage(AppSettings &settings, QObject *parent = nullptr);
+
+        bool isModified() const override;
+        bool apply(QString *error) override;
+
         QLineEdit *utauDirectoryEdit() const;
         QCheckBox *relativeVoiceDirInUtauBox() const;
-        QComboBox *languageBox() const;
 
     protected:
         QWidget *createWidget() override;
@@ -41,7 +60,6 @@ namespace hello::daw {
         QPointer<QLineEdit> m_utauDirectory;
         QPointer<QCheckBox> m_relativeVoiceDirInUtau;
         QPointer<QLabel> m_voiceFolders;
-        QPointer<QComboBox> m_language;
     };
 
     /// The encoding in which a UST is exported, and later the other settings of editing.

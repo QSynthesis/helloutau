@@ -44,12 +44,12 @@ namespace hello::daw {
             }
             return false;
         }
-        // The page follows the Plugins page of the core plugin, which also precedes Rendering.
+        // The page is a child page of the UTAU page of the editor.
         m_settingPage = SettingPageRegistry::AddFactory(
             editor->settingPages(), ClassicPluginSettingPage::pageId, {}, [editor] {
                 return SettingPagePlacement{
-                    std::make_unique<ClassicPluginSettingPage>(editor->settings()), QString(),
-                    QLatin1String(EditorSettingPageIds::rendering)};
+                    std::make_unique<ClassicPluginSettingPage>(editor->settings()),
+                    QLatin1String(EditorSettingPageIds::utau), QString()};
             });
         if (!m_settingPage.entry()) {
             if (errorMessage) {

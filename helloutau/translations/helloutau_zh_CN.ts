@@ -2000,16 +2000,12 @@ Trust and use them for rendering?</source>
         <translation>系统设置</translation>
     </message>
     <message>
-        <source>The language of the interface, and where UTAU is.</source>
-        <translation>界面语言与 UTAU 的位置。</translation>
-    </message>
-    <message>
         <source>Interface</source>
         <translation>界面</translation>
     </message>
     <message>
-        <source>UTAU</source>
-        <translation>UTAU</translation>
+        <source>The language of the interface.</source>
+        <translation>界面语言。</translation>
     </message>
     <message>
         <source>&amp;Language:</source>
@@ -2018,26 +2014,6 @@ Trust and use them for rendering?</source>
     <message>
         <source>Takes effect after a restart.</source>
         <translation>重启后生效。</translation>
-    </message>
-    <message>
-        <source>&amp;UTAU folder:</source>
-        <translation>UTAU 文件夹(&amp;U)：</translation>
-    </message>
-    <message>
-        <source>The folder that contains utau.exe. A tool that a project names by a relative path is resolved against it, and its voice and plugins folders are used as well.</source>
-        <translation>utau.exe 所在的文件夹。工程以相对路径指定的工具据此解析，其中的 voice 与 plugins 文件夹也会被使用。</translation>
-    </message>
-    <message>
-        <source>Resolve a &amp;relative voice bank path against the UTAU folder</source>
-        <translation>相对路径的音源按 UTAU 文件夹解析(&amp;R)</translation>
-    </message>
-    <message>
-        <source>UTAU resolves a relative voice bank path against its own folder. If this option is cleared, or if the UTAU folder does not exist, the path is resolved against the folder of HelloUtau.</source>
-        <translation>UTAU 按自身所在的文件夹解析相对路径的音源。取消此选项，或 UTAU 文件夹不存在时，按 HelloUtau 所在的文件夹解析。</translation>
-    </message>
-    <message>
-        <source>The voice folders that %VOICE% denotes, in decreasing priority:</source>
-        <translation>%VOICE% 所指的音源文件夹，按优先级从高到低：</translation>
     </message>
 </context>
 <context>
@@ -2221,6 +2197,37 @@ Lyrics:
     <message>
         <source>Choose Encoding - %1</source>
         <translation>选择编码 - %1</translation>
+    </message>
+</context>
+<context>
+    <name>hello::daw::UtauSettingPage</name>
+    <message>
+        <source>Where UTAU is, and how a project finds its voice bank and tools.</source>
+        <translation>UTAU 的位置，以及工程如何找到其音源与工具。</translation>
+    </message>
+    <message>
+        <source>Folder</source>
+        <translation>文件夹</translation>
+    </message>
+    <message>
+        <source>&amp;UTAU folder:</source>
+        <translation>UTAU 文件夹(&amp;U)：</translation>
+    </message>
+    <message>
+        <source>The folder that contains utau.exe. A tool that a project names by a relative path is resolved against it, and its voice and plugins folders are used as well.</source>
+        <translation>utau.exe 所在的文件夹。工程以相对路径指定的工具据此解析，其中的 voice 与 plugins 文件夹也会被使用。</translation>
+    </message>
+    <message>
+        <source>Resolve a &amp;relative voice bank path against the UTAU folder</source>
+        <translation>相对路径的音源按 UTAU 文件夹解析(&amp;R)</translation>
+    </message>
+    <message>
+        <source>UTAU resolves a relative voice bank path against its own folder. If this option is cleared, or if the UTAU folder does not exist, the path is resolved against the folder of HelloUtau.</source>
+        <translation>UTAU 按自身所在的文件夹解析相对路径的音源。取消此选项，或 UTAU 文件夹不存在时，按 HelloUtau 所在的文件夹解析。</translation>
+    </message>
+    <message>
+        <source>The voice folders that %VOICE% denotes, in decreasing priority:</source>
+        <translation>%VOICE% 所指的音源文件夹，按优先级从高到低：</translation>
     </message>
 </context>
 <context>
