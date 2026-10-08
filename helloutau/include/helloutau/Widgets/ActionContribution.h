@@ -46,6 +46,11 @@ namespace hello::daw {
         /// \a window, whose content the contribution maintains. In this case the host deletes
         /// the menu, which deletes the action.
         virtual void addActions(QWidget *window, QAK::WidgetActionContext *context);
+
+        /// Removes the actions of the items of \a extension from \a context and deletes them. A
+        /// host calls this function for each window when a contribution is removed.
+        static void removeActions(const QAK::ActionExtension *extension,
+                                  QAK::WidgetActionContext *context);
     };
 
 }

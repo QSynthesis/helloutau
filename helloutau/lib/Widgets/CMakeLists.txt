@@ -11,7 +11,7 @@ qm_find_qt(Core Gui Widgets)
 helloutau_add_library(${PROJECT_NAME} SHARED
     QT_AUTOGEN
     SOURCES ${_src} ${_hdr}
-    LINKS HelloUtauTheme
+    LINKS HelloUtauTheme stdcorelib::stdcorelib
     LINKS_PRIVATE QActionKit::Widgets
     QT_LINKS Core Gui Widgets
     INCLUDE_PRIVATE ../../include/** **

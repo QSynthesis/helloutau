@@ -6,9 +6,10 @@
 
 #include <stdcorelib/pluginsystem/iplugin.h>
 
+#include <helloutau/Widgets/ActionContributionRegistry.h>
+
 namespace hello::daw {
 
-    class ActionRegistration;
     class SettingPageRegistration;
 
     /// The plugin that runs UTAU plugins on the selection of a project window from the submenu
@@ -22,7 +23,7 @@ namespace hello::daw {
         void aboutToShutdown() override;
 
     private:
-        std::unique_ptr<ActionRegistration> m_registration;
+        ActionContributionRegistry::AddFactory m_registration;
         std::unique_ptr<SettingPageRegistration> m_settingPage;
     };
 

@@ -6,6 +6,8 @@
 
 #include <stdcorelib/pluginsystem/iplugin.h>
 
+#include <helloutau/Widgets/ActionContributionRegistry.h>
+
 namespace hello::kit {
     class BuiltinInterchangeDrivers;
     class InterchangeRegistry;
@@ -13,7 +15,6 @@ namespace hello::kit {
 
 namespace hello::daw {
 
-    class ActionRegistration;
     class InterchangeStepRegistration;
 
     /// The format conversion plugin. Registers the MIDI drivers and the MIDI encoding page, and
@@ -31,7 +32,7 @@ namespace hello::daw {
         std::unique_ptr<kit::BuiltinInterchangeDrivers> m_drivers;
         std::unique_ptr<kit::InterchangeRegistry> m_registry;
         std::unique_ptr<InterchangeStepRegistration> m_midiEncoding;
-        std::unique_ptr<ActionRegistration> m_actions;
+        ActionContributionRegistry::AddFactory m_actions;
     };
 
 }

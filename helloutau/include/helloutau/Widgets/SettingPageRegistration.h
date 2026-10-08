@@ -23,8 +23,8 @@ namespace hello::daw {
     ///
     /// A plugin obtains the registry from the editor of AppLoader::editor(), creates its
     /// registrations in initialize() and destroys them in aboutToShutdown(), before its library
-    /// is unloaded, as with ActionRegistration. A registration whose registry has been destroyed
-    /// removes nothing. Registrations are used only on the application thread.
+    /// is unloaded. A registration whose registry has been destroyed removes nothing.
+    /// Registrations are used only on the application thread.
     class HELLOUTAU_WIDGETS_EXPORT SettingPageRegistration {
     public:
         /// Creates the page for \a host, the object that owns the catalog, such as an Editor. A

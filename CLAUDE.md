@@ -55,7 +55,7 @@ Qt 6 + CMake + C++17。构建脚本的组织方式参照 synthrt：`find_package
 
 **采样率转换使用 r8brain-free-src 6.5**（MIT 许可），由 DiffScope 仓库的 vcpkg 端口（`scripts/vcpkg/ports/r8brain-free-src`）构建为静态库，传入 `-Dunofficial-r8brain-free-src_DIR=<prefix>/share/unofficial-r8brain-free-src`，是 `HelloUtauAudio` 的**私有依赖**。其头文件会引入 `windows.h`，因此该子库定义 `NOMINMAX`。
 
-**菜单、工具栏与快捷键由 QActionKit 提供**（`stdware/qactionkit` 的 `next` 分支，只使用 Core 与 Widgets 两个模块）。动作写在动作扩展清单中，由 AEC 在构建时编译（`qak_add_action_extension()`），用户对菜单的自定义以改动记录保存。清单格式见 qactionkit 仓库的 `docs/action-extension-spec.md`。编辑器的清单与插件的清单都经 `ActionRegistration` 登记，见 [`docs/Plugins.md`](docs/Plugins.md)「编辑界面扩展：动作与命令」。
+**菜单、工具栏与快捷键由 QActionKit 提供**（`stdware/qactionkit` 的 `next` 分支，只使用 Core 与 Widgets 两个模块）。动作写在动作扩展清单中，由 AEC 在构建时编译（`qak_add_action_extension()`），用户对菜单的自定义以改动记录保存。清单格式见 qactionkit 仓库的 `docs/action-extension-spec.md`。编辑器的清单与插件的清单都登记到 `Editor::actionContributions()`，见 [`docs/Plugins.md`](docs/Plugins.md)「编辑界面扩展：动作与命令」。
 
 **stdcorelib 与 stdcorelib.plugin 可以出现在公开头文件中**（作者 2026-10-08 决定），不为隐藏它们而封装其类型：插件系统的 `PluginSpec`、`stdc::DynamicRegistry` 等直接出现在接口中。公开头文件用到它们的子库以 `LINKS` 公开链接，并在包配置文件中 `find_dependency`；只在实现中使用它们的子库仍以 `LINKS_PRIVATE` 链接。导出宏仍使用 `<QtCore/QtGlobal>` 的 `Q_DECL_EXPORT` / `Q_DECL_IMPORT`，不要使用 `STDC_DECL_EXPORT`：两个模块本就依赖 Qt，使用 Qt 的宏不增加额外依赖。应用设置的值仍以 `QJsonValue` 提供（`AppSettings::value()`），便于界面层的 Qt 代码使用；插件设置直接使用 stdcorelib.plugin 的 `PluginSettings` 与 `stdc::json`。
 

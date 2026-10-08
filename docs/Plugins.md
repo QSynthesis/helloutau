@@ -33,7 +33,7 @@ stdcorelib.plugin 的交接记录（其仓库 `.cache/codex/2026-08-21-1722-stdc
 - `stdc::plugin`：插件是某个 IID 接口的实现，以 `STDC_EXPORT_PLUGIN` 导出，IID 与元数据嵌在库中；`PluginFactory` 按目录发现。
 - `stdc::pluginsystem::PluginSystem`：只接收一个 IID；元数据保留 `id`、`displayName`、`description`、`version`、`compatVersion`、`enabledByDefault`、`dependencies`，其余字段归宿主；依赖解析、按依赖顺序载入并调用 `initialize()`、逆序调用 `pluginsInitialized()` 与 `aboutToShutdown()` 并卸载；全局与用户两份启用设置；宿主的载入判定（`setPluginLoadPredicate()`）；Flat、Bundle 与自定义三种目录布局。
 - 插件实现 `stdc::pluginsystem::IPlugin` 的三个钩子：`initialize()`、`pluginsInitialized()`、`aboutToShutdown()`。
-- stdcorelib 另有 `stdc::DynamicRegistry`：运行时增删、线程安全、可监听条目的增删，由使用方创建并持有（stdcorelib `1c45501` 起，此前为每个进程一份）；以 `std::map` 或 `stdc::linked_map` 保存，后者保持登记顺序；`DynamicRegistry::Registration` 在其生命周期内登记一项。
+- stdcorelib 另有 `stdc::DynamicRegistry`：运行时增删、线程安全、可监听条目的增删，由使用方创建并持有（stdcorelib `1c45501` 起，此前为每个进程一份）；以 `std::map` 或 `stdc::linked_map` 保存，后者保持登记顺序；名称必须唯一，重名的登记失败。登记对象有两种，与 `StaticRegistry` 对应（stdcorelib `d49d34d`）：`DynamicRegistry::AddFactory` 以一个可带捕获的工厂登记一项，`DynamicRegistry::Add<V>` 以默认构造的类型 `V` 登记一项；两者都在生命周期内登记，以 `entry()` 是否为空表示登记是否成功，赋一个空对象即提前注销。
 
 ## 设计
 
@@ -52,16 +52,16 @@ stdcorelib.plugin 的交接记录（其仓库 `.cache/codex/2026-08-21-1722-stdc
 
   | 部分 | 动作（HelloUtauWidgets） | 设置页（HelloUtauWidgets） | 频率表格式（HelloKitVoiceBank） | 格式转换驱动（HelloKitInterchange） |
   |---|---|---|---|---|
-  | 被登记的对象 | `ActionContribution` | 创建页面的函数 `Factory`（`SettingPage *(QObject *host)`）与页面的位置 | `FrequencyFormat` | `InterchangeReader` 或 `InterchangeWriter` |
-  | 登记对象 | `ActionRegistration(ActionContributionRegistry *, std::unique_ptr<ActionContribution>)`，`contribution()` | `SettingPageRegistration(SettingPageRegistry *, Factory, parent, before)`，`addTo()` | `FrequencyFormatRegistration(std::unique_ptr<FrequencyFormat>)`，`format()` | `InterchangeRegistration`，两个构造函数，`reader()` / `writer()` |
-  | 登记所在的列表 | `ActionContributionRegistry`（公开，`Editor` 创建并持有） | `SettingPageRegistry`（公开，`Editor` 创建并持有） | `FrequencyFormatRegistrations_p.h`（进程级，私有） | `InterchangeRegistrations_p.h`（进程级，私有） |
-  | 使用方 | 持有列表的 `Editor`，经列表的信号得知变化 | 同左 | 每个 `FrequencyFormatRegistry` 监听列表 | 每个 `InterchangeRegistry` 监听列表 |
+  | 被登记的对象 | 创建 `ActionContribution` 的工厂，名称为插件 ID | 创建页面的函数 `Factory`（`SettingPage *(QObject *host)`）与页面的位置 | `FrequencyFormat` | `InterchangeReader` 或 `InterchangeWriter` |
+  | 登记对象 | `ActionContributionRegistry::AddFactory(registry, 插件 ID, 描述, 工厂)`，`entry()` | `SettingPageRegistration(SettingPageRegistry *, Factory, parent, before)`，`addTo()` | `FrequencyFormatRegistration(std::unique_ptr<FrequencyFormat>)`，`format()` | `InterchangeRegistration`，两个构造函数，`reader()` / `writer()` |
+  | 登记所在的列表 | `ActionContributionRegistry`，即 `stdc::DynamicRegistry<ActionContribution, …, stdc::linked_map>`（公开，`Editor` 创建并持有，`Editor::actionContributions()`） | `SettingPageRegistry`（公开，`Editor` 创建并持有） | `FrequencyFormatRegistrations_p.h`（进程级，私有） | `InterchangeRegistrations_p.h`（进程级，私有） |
+  | 使用方 | 持有列表的 `Editor`，经 `kit::RegistryInstanceList` 监听列表，为每个条目创建一个实例 | 持有列表的 `Editor`，经列表的信号得知变化 | 每个 `FrequencyFormatRegistry` 监听列表 | 每个 `InterchangeRegistry` 监听列表 |
   | 内置的登记 | `BuiltinActions`（Core 为其编辑器创建，是编辑器的子对象） | 无，编辑器与 Core 的页面直接加入目录 | `BuiltinFrequencyFormats`（FrequencyEditor 持有） | `BuiltinInterchangeDrivers`（Interchange 持有） |
 
-- **动作与设置页的列表由 `Editor` 持有，不是进程级的**（作者 2026-10-08 决定）：没有全局状态，测试直接构造编辑器或列表即可。Core 插件创建编辑器后以 `AppLoader::setEditor()` 交给加载器，关闭时清除；其他插件依赖 Core，在 `initialize()` 中经 `AppLoader::editor()` 取得编辑器，再向其列表登记，取不到时初始化失败。登记对象以 `QPointer` 指向列表，编辑器先销毁时登记的析构不做任何事；编辑器析构时先删除两个列表，此后的注销不再通知编辑器。频率表格式与格式转换驱动仍是进程级列表，两种形状留待抽出注册表模板时统一。
+- **动作与设置页的列表由 `Editor` 持有，不是进程级的**（作者 2026-10-08 决定）：没有全局状态，测试直接构造编辑器或列表即可。Core 插件创建编辑器后以 `AppLoader::setEditor()` 交给加载器，关闭时清除；其他插件依赖 Core，在 `initialize()` 中经 `AppLoader::editor()` 取得编辑器，再向其列表登记，取不到时初始化失败。列表先于登记对象销毁时，登记对象的析构不做任何事：动作的 `AddFactory` 由 `stdc::DynamicRegistry` 保证这一点，设置页的登记对象以 `QPointer` 指向列表，编辑器析构时先删除设置页的列表。频率表格式与格式转换驱动仍是进程级列表，各扩展点正逐个迁移到 `stdc::DynamicRegistry`（作者 2026-10-08 决定）。
 - **设置页登记的是创建页面的函数而非页面**（作者 2026-10-08 同意）：页面属于某个 `Editor` 的设置目录，每个 `Editor` 须有自己的一份。`Editor` 随登记创建页面，随注销以 `SettingCatalog::removePage()` 删除；页面执行插件库中的代码，必须在插件库卸载之前删除。`parent` 为空或找不到时页面放在顶层，`before` 同 `SettingCatalog::addPage()`。工厂收到的 `host` 是持有目录的对象，即 `Editor`；需要 `AppSettings` 的页面以 `qobject_cast<Editor *>` 取得编辑器。
 
-- 登记对象持有被登记的对象，构造时加入列表，析构时移除。列表按登记顺序保存，只在应用的线程上使用，不用 `stdc::DynamicRegistry`：后者按名称排序，表达不了登记顺序。进程级的列表在所属的子库中，子库是动态库，因此每个进程只有一份。
+- 动作以外的登记对象持有被登记的对象，构造时加入列表，析构时移除。这些列表按登记顺序保存，只在应用的线程上使用。进程级的列表在所属的子库中，子库是动态库，因此每个进程只有一份。动作的列表是 `stdc::linked_map` 保存的 `stdc::DynamicRegistry`，同样保持登记顺序。
 - 插件把登记对象作为自己的成员，在 `initialize()` 中创建，在 `aboutToShutdown()` 中销毁。不能等插件实例析构：实例是插件库中的静态对象，随库卸载才析构，那时 `Editor` 已销毁，且析构发生在卸载库的过程中。
 - 内置的格式与驱动经同一途径登记，与插件不分主次，保持 `InterchangeRegistry` 与 `FrequencyFormatRegistry` 已有的原则。
 - 应用与测试持有的注册表（`FrequencyFormatRegistry` 等）**仍然不是全局单例**，内容来自进程级列表。测试只登记自己需要的内容，登记对象随测试结束而销毁。
@@ -123,7 +123,7 @@ macOS 的 bundle 中为 `HelloUtau.app/Contents/MacOS`（程序）与 `HelloUtau
 
 - **qactionkit 已有的部分**：多份清单合并，插件的清单以 `<insertions>` 插入宿主的菜单（`anchor`、`priority`）。为插件卸载补充了 `ActionRegistry::removeExtension()`（qactionkit `46bce9b`），移除后立即重新计算，registry 中不再有指向该清单的视图。
 - **`ActionContribution`**（HelloUtauWidgets）：每种窗口至多一份 AEC 编译的清单，由 `extension(const QString &windowKind)` 给出，编辑器把它登记到该种窗口的 registry（每种窗口一个 registry，见 [`Widgets.md`](Widgets.md)「Keymap 页」），加上为窗口创建动作的 `addActions(QWidget *, context)`。窗口种类以宿主定义的名称区分，编辑器的为 `Editor::projectWindowName` 与 `Editor::voiceBankWindowName`，与快捷键、布局文件的分节名相同；需要某种窗口接口的贡献自行 `qobject_cast`，忽略其他种类（作者 2026-10-08 决定：动作与设置页的登记属于通用层，移入 HelloUtauWidgets，接口不含编辑器的类型，HelloUtauWidgets 因此私有链接 QActionKit）。登记所在的列表 `ActionContributionRegistry` 是公开的，由 `Editor` 持有，见「注册接口」。动作以窗口为父对象，贡献移除时由编辑器从 context 移除并删除。插进某种窗口菜单的条目若没有该窗口的动作，context 显示一个不做任何事的占位项。
-- **`ActionRegistration`**：登记对象，登记到某个 `Editor` 的 `ActionContributionRegistry`。编辑器随登记加入清单与各窗口的动作，随注销移除，然后刷新各窗口的菜单、文字、快捷键与图标。用户的快捷键与菜单改动在编辑器构造时读入，QActionKit 保存这些改动并在每次加入清单后重新应用，因此晚于读入登记的清单同样得到用户的设置。窗口创建时加入已有贡献的动作。命令面板取 registry 与 context 的交集，插件的命令自动出现在其中。
+- **`ActionContributionRegistry::AddFactory`**：登记对象，以插件 ID 为名称，把创建贡献的工厂登记到某个 `Editor` 的 `ActionContributionRegistry`；名称已被占用时 `entry()` 为空，插件应使初始化失败。编辑器随登记创建一个贡献的实例，加入清单与各窗口的动作，随注销移除并销毁实例，然后刷新各窗口的菜单、文字、快捷键与图标。用户的快捷键与菜单改动在编辑器构造时读入，QActionKit 保存这些改动并在每次加入清单后重新应用，因此晚于读入登记的清单同样得到用户的设置。窗口创建时加入已有贡献的动作。命令面板取 registry 与 context 的交集，插件的命令自动出现在其中。
 - **编辑器自己的清单也经此登记**（作者 2026-09-30，方案 1 加 3；2026-10-01 改为每种窗口一份）：`ProjectActions.xml` 与 `VoiceBankActions.xml` 各含一种窗口的全部命令、菜单栏与工具栏，布局写全，不用插入；两种窗口共有的命令在两份中各声明一次。两份由 `BuiltinActions` 分别登记到两种窗口的 registry；它是编辑器的子对象，Core 插件为其编辑器创建一个，不经 Core 构造 `Editor` 的测试同样为每个编辑器创建一个。处理函数仍在窗口中，窗口自己创建这些动作。
 - **最终目标**（作者 2026-09-30）：清单与处理函数都由 Core 插件提供，窗口只提供能力。这需要窗口公开相应的操作，届时另行设计。
 - **现状的两条路径**：内置命令的处理函数在窗口私有的实现中，由窗口在 `initActions()` 中自己创建动作，`BuiltinActions` 的贡献不创建动作；插件的动作由其贡献的 `addActions()` 创建并连接。插件能连接自己的处理函数，但处理函数只能使用窗口的公开接口，目前很少。内置命令移入贡献之后只剩一条路径。

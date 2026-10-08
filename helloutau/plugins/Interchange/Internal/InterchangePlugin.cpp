@@ -8,7 +8,6 @@
 #include <helloutau/Editor/AppLoader.h>
 #include <helloutau/Editor/Editor.h>
 #include <helloutau/Editor/Translations.h>
-#include <helloutau/Widgets/ActionRegistration.h>
 
 #include <Interchange/InterchangeStepRegistration.h>
 
@@ -16,6 +15,12 @@
 #include "MidiEncodingPage.h"
 
 namespace hello::daw {
+
+    namespace {
+
+        const char pluginId[] = "org.helloutau.interchange";
+
+    }
 
     InterchangePlugin::InterchangePlugin() = default;
 
@@ -37,15 +42,22 @@ namespace hello::daw {
         m_registry = std::make_unique<kit::InterchangeRegistry>();
         m_midiEncoding = std::make_unique<InterchangeStepRegistration>(
             QString::fromLatin1(MidiEncodingPage::stepId), [] { return new MidiEncodingPage(); });
-        m_actions = std::make_unique<ActionRegistration>(
-            editor->actionContributionRegistry(),
-            std::make_unique<InterchangeContribution>(m_registry.get()));
+        m_actions = ActionContributionRegistry::AddFactory(
+            editor->actionContributions(), pluginId, {}, [registry = m_registry.get()] {
+                return std::make_unique<InterchangeContribution>(registry);
+            });
+        if (!m_actions.entry()) {
+            if (errorMessage) {
+                *errorMessage = "The actions of the plugin are already registered.";
+            }
+            return false;
+        }
         return true;
     }
 
     // The actions are destroyed first because they reference the registry.
     void InterchangePlugin::aboutToShutdown() {
-        m_actions.reset();
+        m_actions = {};
         m_midiEncoding.reset();
         m_registry.reset();
         m_drivers.reset();

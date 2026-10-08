@@ -12,8 +12,7 @@
 #include <QAKCore/actionregistry.h>
 #include <QAKWidgets/widgetactioncontext.h>
 
-#include <helloutau/Widgets/ActionContribution.h>
-#include <helloutau/Widgets/ActionRegistration.h>
+#include <helloutau/Widgets/ActionContributionRegistry.h>
 #include <helloutau/Editor/AppSettings.h>
 #include <helloutau/Editor/BuiltinActions.h>
 #include <helloutau/Editor/Editor.h>
@@ -63,9 +62,10 @@ namespace {
         int *m_triggered;
     };
 
-    std::unique_ptr<ActionRegistration> registration(Editor *editor, int *triggered) {
-        return std::make_unique<ActionRegistration>(editor->actionContributionRegistry(),
-                                                    std::make_unique<TestContribution>(triggered));
+    ActionContributionRegistry::AddFactory registration(Editor *editor, int *triggered) {
+        return ActionContributionRegistry::AddFactory(
+            editor->actionContributions(), "test.contribution", {},
+            [triggered] { return std::make_unique<TestContribution>(triggered); });
     }
 
     // Returns the item texts of the menu titled \a title in the menu bar of \a window.
@@ -133,7 +133,7 @@ private Q_SLOTS:
         first->actionContext()->action(HelloId)->trigger();
         QCOMPARE(triggered, 1);
 
-        reg.reset();
+        reg = {};
         QVERIFY(!e->actionRegistry(Editor::ProjectWindowKind)->actionInfo(HelloId));
         for (const auto window : {first, second}) {
             QVERIFY(!window->actionContext()->action(HelloId));
@@ -158,7 +158,7 @@ private Q_SLOTS:
         QCOMPARE(menu->menuAction(), action);
         QCOMPARE(menu->parent(), window);
 
-        reg.reset();
+        reg = {};
         QVERIFY(menu.isNull());
         QVERIFY(!window->actionContext()->action(MenuId));
     }
@@ -190,13 +190,13 @@ private Q_SLOTS:
     // nothing.
     void a_registration_outlives_an_editor() {
         int triggered = 0;
-        std::unique_ptr<ActionRegistration> reg;
+        ActionContributionRegistry::AddFactory reg;
         {
             const auto e = editor();
             reg = registration(e.get(), &triggered);
             e->newWindow();
         }
-        reg.reset();
+        reg = {};
 
         // Another editor has no action of the contribution.
         const auto e = editor();

@@ -24,6 +24,7 @@
 
 #include <hellokit/Edit/ProjectDocument.h>
 #include <hellokit/Edit/VoiceBankDocument.h>
+#include <hellokit/Support/RegistryInstanceList.h>
 #include <hellokit/VoiceBank/FrequencyFormatRegistry.h>
 #include <hellokit/VoiceBank/VoiceBank.h>
 
@@ -32,7 +33,6 @@
 #include <helloutau/Widgets/CommandPalette.h>
 #include <helloutau/Widgets/SettingPage.h>
 #include <helloutau/Widgets/SettingsDialog.h>
-#include <helloutau/Widgets/ActionContributionRegistry.h>
 #include <helloutau/Widgets/SettingPageRegistration.h>
 #include <helloutau/Widgets/SettingPageRegistry.h>
 
@@ -119,15 +119,6 @@ namespace hello::daw {
         void init(Editor *decl) {
             AudioOutput::setOutputDeviceId(settings->audioOutputDevice());
             editor = decl;
-            // The registries of the contributions are created empty. The extensions of the
-            // editor itself come as a contribution too, see BuiltinActions.
-            contributions = new ActionContributionRegistry(decl);
-            QObject::connect(
-                contributions, &ActionContributionRegistry::contributionAdded, decl,
-                [this](ActionContribution *contribution) { contributionAdded(contribution); });
-            QObject::connect(
-                contributions, &ActionContributionRegistry::contributionRemoved, decl,
-                [this](ActionContribution *contribution) { contributionRemoved(contribution); });
             pageRegistry = new SettingPageRegistry(decl);
             QObject::connect(pageRegistry, &SettingPageRegistry::registrationAdded, decl,
                              [this](const SettingPageRegistration *registration) {
@@ -153,6 +144,18 @@ namespace hello::daw {
             themes->addSearchPath(QStringLiteral(":/helloutau/themes"));
             catalog = new SettingCatalog(decl);
             addEditorSettingPages(catalog, *settings);
+            // The registry of the contributions is empty at this point. The extensions of the
+            // editor itself are a contribution too, see BuiltinActions.
+            contributions = std::make_unique<Contributions>(
+                *contributionRegistry,
+                [this](Contributions::Item &item) {
+                    if (!item.instance) {
+                        return false;
+                    }
+                    contributionAdded(item.instance.get());
+                    return true;
+                },
+                [this](Contributions::Item &item) { contributionRemoved(item.instance.get()); });
         }
 
         void registrationAdded(const SettingPageRegistration *registration) {
@@ -193,8 +196,7 @@ namespace hello::daw {
                     contribution->extension(QLatin1String(Editor::projectWindowName))) {
                 for (const auto &window : std::as_const(windows)) {
                     if (window) {
-                        ActionContributionRegistry::removeActions(extension,
-                                                                  window->actionContext());
+                        ActionContribution::removeActions(extension, window->actionContext());
                     }
                 }
                 registries[Editor::ProjectWindowKind]->removeExtension(extension);
@@ -203,8 +205,7 @@ namespace hello::daw {
                     contribution->extension(QLatin1String(Editor::voiceBankWindowName))) {
                 for (const auto &window : std::as_const(voiceBankWindows)) {
                     if (window) {
-                        ActionContributionRegistry::removeActions(extension,
-                                                                  window->actionContext());
+                        ActionContribution::removeActions(extension, window->actionContext());
                     }
                 }
                 registries[Editor::VoiceBankWindowKind]->removeExtension(extension);
@@ -240,7 +241,11 @@ namespace hello::daw {
         ThemeManager *themes = nullptr;
         SettingCatalog *catalog = nullptr;
         Editor *editor = nullptr;
-        ActionContributionRegistry *contributions = nullptr;
+        // The contributions are declared after their registry, so that they are destroyed first.
+        using Contributions = kit::RegistryInstanceList<ActionContributionRegistry>;
+        std::unique_ptr<ActionContributionRegistry> contributionRegistry =
+            std::make_unique<ActionContributionRegistry>();
+        std::unique_ptr<Contributions> contributions;
         SettingPageRegistry *pageRegistry = nullptr;
         // The page that each registration added to the catalog. A page deleted with its parent
         // page is null here.
@@ -483,9 +488,16 @@ namespace hello::daw {
         return impl.catalog;
     }
 
-    ActionContributionRegistry *Editor::actionContributionRegistry() const {
+    ActionContributionRegistry &Editor::actionContributions() const {
         stdc_impl_t;
-        return impl.contributions;
+        return *impl.contributionRegistry;
+    }
+
+    void Editor::addContributedActions(QWidget *window, QAK::WidgetActionContext *context) const {
+        stdc_impl_t;
+        for (const auto &item : impl.contributions->items()) {
+            item.instance->addActions(window, context);
+        }
     }
 
     SettingPageRegistry *Editor::settingPageRegistry() const {
@@ -517,7 +529,6 @@ namespace hello::daw {
         stdc_impl_t;
         // The registries go first, so that a registration destroyed later removes nothing and
         // no notification reaches the implementation, which the windows outlive by little.
-        delete impl.contributions;
         delete impl.pageRegistry;
         // The windows refer to the registries and the settings, so they go first.
         for (const auto &window : std::as_const(impl.windows)) {

@@ -8,6 +8,8 @@
 #include <QtCore/QObject>
 #include <QtCore/QString>
 
+#include <helloutau/Widgets/ActionContributionRegistry.h>
+
 #include <helloutau/Editor/HelloUtauEditorGlobal.h>
 #include <helloutau/Editor/EditorModifierBindings.h>
 
@@ -16,6 +18,7 @@ class QWidget;
 
 namespace QAK {
     class ActionRegistry;
+    class WidgetActionContext;
 }
 
 namespace hello::kit {
@@ -24,7 +27,6 @@ namespace hello::kit {
 
 namespace hello::daw {
 
-    class ActionContributionRegistry;
     class AppSettings;
     class ProjectWindow;
     class SettingCatalog;
@@ -104,9 +106,14 @@ namespace hello::daw {
         SettingCatalog *settingCatalog() const;
 
         /// Returns the registry of the action contributions that the windows of this editor
-        /// apply. A plugin registers its contribution with an ActionRegistration on this
-        /// registry, and BuiltinActions registers the extensions of the editor itself.
-        ActionContributionRegistry *actionContributionRegistry() const;
+        /// apply. The editor creates one instance of each contribution. A plugin registers its
+        /// contribution in this registry, and BuiltinActions registers the extensions of the
+        /// editor itself.
+        ActionContributionRegistry &actionContributions() const;
+
+        /// Adds the actions of every contribution to \a context of \a window. A window calls this
+        /// function when it is created.
+        void addContributedActions(QWidget *window, QAK::WidgetActionContext *context) const;
 
         /// Returns the registry of the setting pages that this editor adds to settingCatalog().
         /// A plugin registers its page with a SettingPageRegistration on this registry.
