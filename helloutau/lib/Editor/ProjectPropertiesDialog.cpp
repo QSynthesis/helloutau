@@ -157,8 +157,21 @@ namespace hello::daw {
                          return QFileDialog::getSaveFileName(this, tr("Choose Output File"),
                                                              current, tr("Wave files (*.wav)"));
                      }));
-        form->addRow(tr("Wav&tool (Tool1):"), m_wavtool);
-        form->addRow(tr("&Resampler (Tool2):"), m_resampler);
+        // A relative engine path is relative to the UTAU directory, which is therefore where the
+        // file dialog starts.
+        const auto engineBrowser = [this](const QString &title) {
+            return [this, title](const QString &current) {
+                const auto utau =
+                    m_appSettings ? m_appSettings->utauDirectory() : std::filesystem::path();
+                const auto start = EngineTrust::resolved(current, utau);
+                return QFileDialog::getOpenFileName(this, title,
+                                                    QString::fromStdU16String(start.u16string()));
+            };
+        };
+        form->addRow(tr("Wav&tool (Tool1):"),
+                     withBrowse(m_wavtool, this, engineBrowser(tr("Choose Wavtool"))));
+        form->addRow(tr("&Resampler (Tool2):"),
+                     withBrowse(m_resampler, this, engineBrowser(tr("Choose Resampler"))));
         auto reset = new QPushButton(tr("Reset to settings defaults"));
         connect(reset, &QPushButton::clicked, this, [this] {
             if (!m_appSettings) {
@@ -377,7 +390,8 @@ namespace hello::daw {
                 const auto afterPath = after.voiceDirectory(utau);
                 sameDirectory = !beforePath.empty() && !afterPath.empty() &&
                                 std::filesystem::weakly_canonical(beforePath, error) ==
-                                    std::filesystem::weakly_canonical(afterPath, error) && !error;
+                                    std::filesystem::weakly_canonical(afterPath, error) &&
+                                !error;
             }
             if (!sameDirectory) {
                 changes.voiceDir = voice;

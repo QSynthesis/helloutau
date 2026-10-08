@@ -1403,8 +1403,16 @@ Trust and use them for rendering?</source>
         <translation>WAV 文件 (*.wav)</translation>
     </message>
     <message>
+        <source>Choose Wavtool</source>
+        <translation>选择合成器</translation>
+    </message>
+    <message>
         <source>Wav&amp;tool (Tool1):</source>
         <translation>合成器（Tool1）(&amp;T)：</translation>
+    </message>
+    <message>
+        <source>Choose Resampler</source>
+        <translation>选择重采样器</translation>
     </message>
     <message>
         <source>&amp;Resampler (Tool2):</source>
