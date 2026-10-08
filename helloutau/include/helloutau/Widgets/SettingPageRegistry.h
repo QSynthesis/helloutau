@@ -1,44 +1,50 @@
 #ifndef HELLOUTAU_WIDGETS_SETTINGPAGEREGISTRY_H
 #define HELLOUTAU_WIDGETS_SETTINGPAGEREGISTRY_H
 
-#include <QtCore/QList>
-#include <QtCore/QObject>
+#include <memory>
 
-#include <helloutau/Widgets/HelloUtauWidgetsGlobal.h>
+#include <QtCore/QString>
+
+#include <stdcorelib/adt/linked_map.h>
+#include <stdcorelib/support/dynamicregistry.h>
+
+#include <helloutau/Widgets/SettingPage.h>
 
 namespace hello::daw {
 
-    class SettingPageRegistration;
+    /// A page created by a factory of a SettingPageRegistry, with its position in the catalog.
+    struct SettingPagePlacement {
+        std::unique_ptr<SettingPage> page;
 
-    /// The setting page registrations of a host, such as an editor, in the order of
-    /// registration.
-    ///
-    /// The host creates and holds the registry, adds a page to its setting catalog for each
-    /// registration, and follows the changes through registrationAdded() and
-    /// registrationRemoved(). A SettingPageRegistration adds itself on construction and removes
-    /// itself on destruction. The registry is used only on the application thread.
-    class HELLOUTAU_WIDGETS_EXPORT SettingPageRegistry : public QObject {
-        Q_OBJECT
-    public:
-        explicit SettingPageRegistry(QObject *parent = nullptr);
-        ~SettingPageRegistry() override;
+        /// The id of the page under which the page is placed, or empty for the top level. The
+        /// page is placed at the top level if no page has this id.
+        QString parent;
 
-        QList<const SettingPageRegistration *> registrations() const;
-
-        /// Appends \a registration and emits registrationAdded().
-        void add(const SettingPageRegistration *registration);
-
-        /// Removes \a registration and emits registrationRemoved(). Does nothing if the registry
-        /// does not contain \a registration.
-        void remove(const SettingPageRegistration *registration);
-
-    Q_SIGNALS:
-        void registrationAdded(const hello::daw::SettingPageRegistration *registration);
-        void registrationRemoved(const hello::daw::SettingPageRegistration *registration);
-
-    private:
-        QList<const SettingPageRegistration *> m_registrations;
+        /// The id of the sibling before which the page is placed, or empty to place the page
+        /// last, as in SettingCatalog::addPage().
+        QString before;
     };
+
+    /// The traits of SettingPageRegistry, whose factories return a SettingPagePlacement.
+    struct SettingPageRegistryTraits {
+        using result_type = SettingPagePlacement;
+
+        static result_type empty() {
+            return {};
+        }
+    };
+
+    /// The setting pages of a host, such as an editor, in the order of registration. See the
+    /// registration interfaces in docs/Plugins.md.
+    ///
+    /// The host creates and holds the registry, creates the page of each entry once, and adds it
+    /// to its setting catalog. The name of an entry is the id of its page. The host rejects a
+    /// page whose id differs from the name. A plugin registers a page with an \c AddFactory
+    /// object, creates the object in initialize() and destroys it in aboutToShutdown(), before
+    /// its library is unloaded, because the page runs code of the library. The registry is used
+    /// only on the application thread.
+    using SettingPageRegistry =
+        stdc::DynamicRegistry<SettingPage, SettingPageRegistryTraits, stdc::linked_map>;
 
 }
 

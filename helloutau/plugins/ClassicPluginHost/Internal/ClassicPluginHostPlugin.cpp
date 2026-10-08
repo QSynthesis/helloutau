@@ -6,7 +6,6 @@
 #include <helloutau/Editor/Editor.h>
 #include <helloutau/Editor/EditorSettingPageIds.h>
 #include <helloutau/Editor/Translations.h>
-#include <helloutau/Widgets/SettingPageRegistration.h>
 
 #include "ClassicPluginContribution.h"
 #include "ClassicPluginSettingPage.h"
@@ -46,18 +45,23 @@ namespace hello::daw {
             return false;
         }
         // The page follows the Plugins page of the core plugin, which also precedes Rendering.
-        m_settingPage = std::make_unique<SettingPageRegistration>(
-            editor->settingPageRegistry(),
-            [](QObject *host) -> SettingPage * {
-                const auto editor = qobject_cast<Editor *>(host);
-                return editor ? new ClassicPluginSettingPage(editor->settings()) : nullptr;
-            },
-            QString(), QLatin1String(EditorSettingPageIds::rendering));
+        m_settingPage = SettingPageRegistry::AddFactory(
+            editor->settingPages(), ClassicPluginSettingPage::pageId, {}, [editor] {
+                return SettingPagePlacement{
+                    std::make_unique<ClassicPluginSettingPage>(editor->settings()), QString(),
+                    QLatin1String(EditorSettingPageIds::rendering)};
+            });
+        if (!m_settingPage.entry()) {
+            if (errorMessage) {
+                *errorMessage = "The setting page of the plugin is already registered.";
+            }
+            return false;
+        }
         return true;
     }
 
     void ClassicPluginHostPlugin::aboutToShutdown() {
-        m_settingPage.reset();
+        m_settingPage = {};
         m_registration = {};
     }
 

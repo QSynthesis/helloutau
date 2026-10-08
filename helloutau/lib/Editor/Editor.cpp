@@ -33,7 +33,6 @@
 #include <helloutau/Widgets/CommandPalette.h>
 #include <helloutau/Widgets/SettingPage.h>
 #include <helloutau/Widgets/SettingsDialog.h>
-#include <helloutau/Widgets/SettingPageRegistration.h>
 #include <helloutau/Widgets/SettingPageRegistry.h>
 
 #include "AppSettings.h"
@@ -109,6 +108,8 @@ namespace hello::daw {
     class Editor::Impl {
     public:
         using Decl = Editor;
+        using Contributions = kit::RegistryInstanceList<ActionContributionRegistry>;
+        using Pages = kit::RegistryInstanceList<SettingPageRegistry>;
 
         // The settings of \a owned, or else \a settings, which another object owns
         Impl(std::unique_ptr<AppSettings> owned, AppSettings *settings)
@@ -119,15 +120,6 @@ namespace hello::daw {
         void init(Editor *decl) {
             AudioOutput::setOutputDeviceId(settings->audioOutputDevice());
             editor = decl;
-            pageRegistry = new SettingPageRegistry(decl);
-            QObject::connect(pageRegistry, &SettingPageRegistry::registrationAdded, decl,
-                             [this](const SettingPageRegistration *registration) {
-                                 registrationAdded(registration);
-                             });
-            QObject::connect(pageRegistry, &SettingPageRegistry::registrationRemoved, decl,
-                             [this](const SettingPageRegistration *registration) {
-                                 registrationRemoved(registration);
-                             });
             // An action registry for each kind of window
             for (const auto kind : Editor::windowKinds) {
                 const auto registry = new QAK::ActionRegistry(decl);
@@ -144,6 +136,9 @@ namespace hello::daw {
             themes->addSearchPath(QStringLiteral(":/helloutau/themes"));
             catalog = new SettingCatalog(decl);
             addEditorSettingPages(catalog, *settings);
+            pages = std::make_unique<Pages>(
+                *pageRegistry, [this](Pages::Item &item) { return pageAdded(item); },
+                [this](Pages::Item &item) { pageRemoved(item); });
             // The registry of the contributions is empty at this point. The extensions of the
             // editor itself are a contribution too, see BuiltinActions.
             contributions = std::make_unique<Contributions>(
@@ -158,14 +153,32 @@ namespace hello::daw {
                 [this](Contributions::Item &item) { contributionRemoved(item.instance.get()); });
         }
 
-        void registrationAdded(const SettingPageRegistration *registration) {
-            if (const auto page = registration->addTo(catalog, editor)) {
-                registeredPages.insert(registration, page);
+        // Adds the page of a registered entry to the catalog, which then owns the page. Rejects a
+        // page whose id differs from the name of its entry.
+        bool pageAdded(Pages::Item &item) {
+            auto &placement = item.instance;
+            if (!placement.page) {
+                return false;
             }
+            const auto name = QString::fromStdString(item.entry->name());
+            if (placement.page->id() != name) {
+                qWarning("The setting page \"%s\" is registered under the name \"%s\".",
+                         qUtf8Printable(placement.page->id()), qUtf8Printable(name));
+                return false;
+            }
+            const auto page = placement.page.release();
+            if (const auto parent =
+                    placement.parent.isEmpty() ? nullptr : catalog->page(placement.parent)) {
+                parent->addPage(page, placement.before);
+            } else {
+                catalog->addPage(page, placement.before);
+            }
+            registeredPages.insert(item.entry.get(), page);
+            return true;
         }
 
-        void registrationRemoved(const SettingPageRegistration *registration) {
-            if (const auto page = registeredPages.take(registration)) {
+        void pageRemoved(Pages::Item &item) {
+            if (const auto page = registeredPages.take(item.entry.get())) {
                 catalog->removePage(page);
             }
         }
@@ -241,15 +254,15 @@ namespace hello::daw {
         ThemeManager *themes = nullptr;
         SettingCatalog *catalog = nullptr;
         Editor *editor = nullptr;
-        // The contributions are declared after their registry, so that they are destroyed first.
-        using Contributions = kit::RegistryInstanceList<ActionContributionRegistry>;
+        // The instances are declared after their registries, so that they are destroyed first.
         std::unique_ptr<ActionContributionRegistry> contributionRegistry =
             std::make_unique<ActionContributionRegistry>();
         std::unique_ptr<Contributions> contributions;
-        SettingPageRegistry *pageRegistry = nullptr;
-        // The page that each registration added to the catalog. A page deleted with its parent
-        // page is null here.
-        QHash<const SettingPageRegistration *, QPointer<SettingPage>> registeredPages;
+        std::unique_ptr<SettingPageRegistry> pageRegistry = std::make_unique<SettingPageRegistry>();
+        std::unique_ptr<Pages> pages;
+        // The page of each entry in the catalog. A page deleted with its parent page is null
+        // here.
+        QHash<const SettingPageRegistry::Entry *, QPointer<SettingPage>> registeredPages;
         std::unique_ptr<kit::FrequencyFormatRegistry> frequencyFormats =
             std::make_unique<kit::FrequencyFormatRegistry>();
         bool watchesDisk = true;
@@ -500,9 +513,9 @@ namespace hello::daw {
         }
     }
 
-    SettingPageRegistry *Editor::settingPageRegistry() const {
+    SettingPageRegistry &Editor::settingPages() const {
         stdc_impl_t;
-        return impl.pageRegistry;
+        return *impl.pageRegistry;
     }
 
     bool Editor::saveKeymap(QString *error) const {
@@ -527,9 +540,6 @@ namespace hello::daw {
 
     Editor::~Editor() {
         stdc_impl_t;
-        // The registries go first, so that a registration destroyed later removes nothing and
-        // no notification reaches the implementation, which the windows outlive by little.
-        delete impl.pageRegistry;
         // The windows refer to the registries and the settings, so they go first.
         for (const auto &window : std::as_const(impl.windows)) {
             delete window.data();

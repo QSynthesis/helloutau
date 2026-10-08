@@ -1,16 +1,14 @@
 #ifndef HELLOUTAU_CLASSICPLUGINHOST_CLASSICPLUGINHOSTPLUGIN_H
 #define HELLOUTAU_CLASSICPLUGINHOST_CLASSICPLUGINHOSTPLUGIN_H
 
-#include <memory>
 #include <string>
 
 #include <stdcorelib/pluginsystem/iplugin.h>
 
 #include <helloutau/Widgets/ActionContributionRegistry.h>
+#include <helloutau/Widgets/SettingPageRegistry.h>
 
 namespace hello::daw {
-
-    class SettingPageRegistration;
 
     /// The plugin that runs UTAU plugins on the selection of a project window from the submenu
     /// Plugins of the Tools menu. See docs/ClassicPluginHost.md.
@@ -24,7 +22,7 @@ namespace hello::daw {
 
     private:
         ActionContributionRegistry::AddFactory m_registration;
-        std::unique_ptr<SettingPageRegistration> m_settingPage;
+        SettingPageRegistry::AddFactory m_settingPage;
     };
 
 }

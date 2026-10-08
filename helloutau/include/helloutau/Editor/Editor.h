@@ -9,6 +9,7 @@
 #include <QtCore/QString>
 
 #include <helloutau/Widgets/ActionContributionRegistry.h>
+#include <helloutau/Widgets/SettingPageRegistry.h>
 
 #include <helloutau/Editor/HelloUtauEditorGlobal.h>
 #include <helloutau/Editor/EditorModifierBindings.h>
@@ -30,7 +31,6 @@ namespace hello::daw {
     class AppSettings;
     class ProjectWindow;
     class SettingCatalog;
-    class SettingPageRegistry;
     class ThemeManager;
     class VoiceBankWindow;
 
@@ -116,8 +116,9 @@ namespace hello::daw {
         void addContributedActions(QWidget *window, QAK::WidgetActionContext *context) const;
 
         /// Returns the registry of the setting pages that this editor adds to settingCatalog().
-        /// A plugin registers its page with a SettingPageRegistration on this registry.
-        SettingPageRegistry *settingPageRegistry() const;
+        /// The editor creates the page of each entry once and deletes it when the entry is
+        /// removed. A plugin registers its page in this registry.
+        SettingPageRegistry &settingPages() const;
 
         /// Writes the shortcuts that the action registries override to \c keymap.json beside the
         /// settings, a section for each kind of window, which the next editor reads at start.

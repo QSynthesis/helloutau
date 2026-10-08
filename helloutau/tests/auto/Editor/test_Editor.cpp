@@ -51,6 +51,7 @@
 #include <helloutau/Widgets/CommandPalette.h>
 #include <helloutau/Widgets/FindBar.h>
 #include <helloutau/Widgets/SettingPage.h>
+#include <helloutau/Widgets/SettingPageRegistry.h>
 #include <helloutau/Widgets/SettingsDialog.h>
 
 #include <helloutau/Editor/AppSettings.h>
@@ -1040,6 +1041,47 @@ private Q_SLOTS:
         QVERIFY(isDeclared(*e, Editor::ProjectWindowKind, boxId));
         QVERIFY(!palette->shownIds().contains(boxId));
         palette->hide();
+    }
+
+    // A registered page is placed under its parent and before its sibling, at the top level if
+    // the parent does not exist, and removed when its registration is destroyed. A page whose id
+    // differs from the name of its entry is rejected. The registration may outlive the editor.
+    void registered_setting_pages_are_placed_and_removed() {
+        const auto pageOf = [](const char *id, const char *parent, const char *before) {
+            return [id, parent, before] {
+                return SettingPagePlacement{std::make_unique<SettingPage>(QLatin1String(id)),
+                                            QLatin1String(parent), QLatin1String(before)};
+            };
+        };
+        auto e = editor();
+        const auto catalog = e->settingCatalog();
+        SettingPageRegistry::AddFactory top(e->settingPages(), "test.top", {},
+                                            pageOf("test.top", "", "editor.Rendering"));
+        SettingPageRegistry::AddFactory child(
+            e->settingPages(), "test.child", {},
+            pageOf("test.child", "editor.AppearanceAndBehavior", "editor.SystemSettings"));
+        SettingPageRegistry::AddFactory orphan(e->settingPages(), "test.orphan", {},
+                                               pageOf("test.orphan", "test.none", ""));
+        SettingPageRegistry::AddFactory renamed(e->settingPages(), "test.renamed", {},
+                                                pageOf("test.other", "", ""));
+        QVERIFY(top.entry() && child.entry() && orphan.entry() && renamed.entry());
+
+        QStringList topLevel;
+        for (const auto page : catalog->pages()) {
+            topLevel.push_back(page->id());
+        }
+        QCOMPARE(topLevel,
+                 (QStringList{"editor.AppearanceAndBehavior", "editor.Editor", "editor.Audio",
+                              "test.top", "editor.Rendering", "test.orphan"}));
+        const auto parent = catalog->page(QStringLiteral("editor.AppearanceAndBehavior"));
+        QCOMPARE(parent->pages().first()->id(), QStringLiteral("test.child"));
+        QVERIFY(!catalog->page(QStringLiteral("test.other")));
+
+        child = {};
+        QVERIFY(!catalog->page(QStringLiteral("test.child")));
+        QVERIFY(catalog->page(QStringLiteral("test.top")));
+        e.reset();
+        top = {};
     }
 
     // The settings are pages of the catalog of the editor, in the order of the settings of
