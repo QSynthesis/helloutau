@@ -35,9 +35,6 @@ using namespace hello::daw;
 class test_KeymapSettingPage : public QObject {
     Q_OBJECT
 
-private:
-    BuiltinActions m_actions;
-
 private Q_SLOTS:
     // The keymap lists the commands of each window under their menus. A shortcut conflicts with
     // a command of the same window only, and the user may remove it from that command. The page
@@ -47,6 +44,7 @@ private Q_SLOTS:
         QTemporaryDir dir;
         const auto settingsFile = dir.filePath(QStringLiteral("settings.json"));
         auto e = std::make_unique<Editor>(std::make_unique<AppSettings>(settingsFile));
+        new BuiltinActions(e.get());
         e->setWatchesDisk(false);
         const auto window = e->newWindow();
         KeymapSettingPage page(e.get());
@@ -119,6 +117,7 @@ private Q_SLOTS:
         // A new editor reads the file.
         e.reset();
         const auto again = std::make_unique<Editor>(std::make_unique<AppSettings>(settingsFile));
+        new BuiltinActions(again.get());
         again->setWatchesDisk(false);
         const auto other = again->newWindow();
         QVERIFY(declaredActionOf(*again, other, QStringLiteral("helloutau.edit.insertNote"))
@@ -143,6 +142,7 @@ private Q_SLOTS:
         QTemporaryDir dir;
         const auto settingsFile = dir.filePath(QStringLiteral("settings.json"));
         const auto e = std::make_unique<Editor>(std::make_unique<AppSettings>(settingsFile));
+        new BuiltinActions(e.get());
         e->setWatchesDisk(false);
         KeymapSettingPage page(e.get());
         const auto tabs = page.widget()->findChild<QTabWidget *>(QStringLiteral("windows"));

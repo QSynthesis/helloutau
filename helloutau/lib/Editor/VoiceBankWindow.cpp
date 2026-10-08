@@ -57,7 +57,7 @@
 #include <helloutau/Theme/ThemeManager.h>
 #include <helloutau/Widgets/CommandPalette.h>
 #include <helloutau/Widgets/FindBar.h>
-#include <helloutau/Widgets/private/ActionRegistrations_p.h>
+#include <helloutau/Widgets/ActionContributionRegistry.h>
 
 #include "AboutDialog_p.h"
 #include "VoiceAliasRuleDialog.h"
@@ -413,7 +413,7 @@ namespace hello::daw {
                 stdc_decl_t;
                 QMessageBox::aboutQt(&decl);
             });
-            ActionRegistrations::instance().addActions(&decl, context);
+            editor->actionContributionRegistry()->addActions(&decl, context);
 
             const auto registry = editor->actionRegistry(Editor::VoiceBankWindowKind);
             registry->addContext(context);

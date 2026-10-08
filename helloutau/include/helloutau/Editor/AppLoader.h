@@ -15,6 +15,7 @@
 namespace hello::daw {
 
     class AppSettings;
+    class Editor;
 
     /// Application loader. Loads the native plugins and runs the event loop. The core plugin
     /// creates the editor and opens its windows. The program performs no other work. See
@@ -127,6 +128,14 @@ namespace hello::daw {
         /// Returns the settings of the application in \c settings.json, which the core plugin
         /// passes to the editor.
         AppSettings &settings() const;
+
+        /// Returns the editor that the core plugin created, or \c nullptr before the core plugin
+        /// initializes and after it shuts down. A plugin, which depends on the core plugin,
+        /// registers its actions and setting pages with this editor in initialize().
+        Editor *editor() const;
+
+        /// Records the editor of the core plugin, or \c nullptr as the editor is destroyed.
+        void setEditor(Editor *editor);
 
         /// Writes the pending changes of both files immediately. Otherwise the changes are
         /// written once the event loop runs, or at the destruction of the loader.

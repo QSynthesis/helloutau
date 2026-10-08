@@ -18,15 +18,13 @@ using namespace hello::daw;
 class test_CoreSettingPages : public QObject {
     Q_OBJECT
 
-private:
-    BuiltinActions m_actions;
-
 private Q_SLOTS:
     // The pages of the core plugin take their places among those of the editor, in the order of
     // the settings of JetBrains IDEs.
     void the_pages_follow_the_order_of_jetbrains_ides() {
         QTemporaryDir dir;
         Editor e(std::make_unique<AppSettings>(dir.filePath(QStringLiteral("settings.json"))));
+        new BuiltinActions(&e);
         addCoreSettingPages(&e);
         const auto idsOf = [](const QList<SettingPage *> &pages) {
             QStringList ids;
@@ -46,6 +44,7 @@ private Q_SLOTS:
         AppLoader loader(
             {QStringLiteral("helloutau"), QLatin1String(AppLoader::settingsOption), dir.path()});
         Editor other(std::make_unique<AppSettings>(dir.filePath(QStringLiteral("other.json"))));
+        new BuiltinActions(&other);
         addCoreSettingPages(&other, &loader);
         QCOMPARE(idsOf(other.settingCatalog()->pages()),
                  (QStringList{"editor.AppearanceAndBehavior", "core.Keymap", "editor.Editor",

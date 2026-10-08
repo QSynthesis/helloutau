@@ -29,9 +29,10 @@ namespace hello::daw {
 
     }
 
-    BuiltinActions::BuiltinActions()
-        : m_registration(
-              std::make_unique<ActionRegistration>(std::make_unique<WindowsContribution>())) {
+    BuiltinActions::BuiltinActions(Editor *editor)
+        : QObject(editor),
+          m_registration(std::make_unique<ActionRegistration>(
+              editor->actionContributionRegistry(), std::make_unique<WindowsContribution>())) {
     }
 
     BuiltinActions::~BuiltinActions() = default;

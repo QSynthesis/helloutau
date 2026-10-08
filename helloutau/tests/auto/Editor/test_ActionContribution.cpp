@@ -63,8 +63,9 @@ namespace {
         int *m_triggered;
     };
 
-    std::unique_ptr<ActionRegistration> registration(int *triggered) {
-        return std::make_unique<ActionRegistration>(std::make_unique<TestContribution>(triggered));
+    std::unique_ptr<ActionRegistration> registration(Editor *editor, int *triggered) {
+        return std::make_unique<ActionRegistration>(editor->actionContributionRegistry(),
+                                                    std::make_unique<TestContribution>(triggered));
     }
 
     // Returns the item texts of the menu titled \a title in the menu bar of \a window.
@@ -86,13 +87,13 @@ class test_ActionContribution : public QObject {
     Q_OBJECT
 
     QTemporaryDir m_dir;
-    // Registers the menus of the editor, into which the contributions insert their items
-    BuiltinActions m_actions;
 
+    // An editor with its own menus registered, into which the contributions insert their items
     std::unique_ptr<Editor> editor() const {
         auto e = std::make_unique<Editor>(
             std::make_unique<AppSettings>(m_dir.filePath(QStringLiteral("settings.json"))));
         e->setWatchesDisk(false);
+        new BuiltinActions(e.get());
         return e;
     }
 
@@ -115,7 +116,7 @@ private Q_SLOTS:
         QVERIFY(!e->actionRegistry(Editor::ProjectWindowKind)->actionInfo(HelloId));
 
         int triggered = 0;
-        auto reg = registration(&triggered);
+        auto reg = registration(e.get(), &triggered);
         const auto second = e->newWindow();
         const auto info = e->actionRegistry(Editor::ProjectWindowKind)->actionInfo(HelloId);
         QVERIFY(info);
@@ -148,7 +149,7 @@ private Q_SLOTS:
     void an_external_menu_goes_with_its_registration() {
         const auto e = editor();
         int triggered = 0;
-        auto reg = registration(&triggered);
+        auto reg = registration(e.get(), &triggered);
         const auto window = e->newWindow();
         const auto action = window->actionContext()->action(MenuId);
         QVERIFY(action);
@@ -162,13 +163,12 @@ private Q_SLOTS:
         QVERIFY(!window->actionContext()->action(MenuId));
     }
 
-    // An editor created after the registration applies the registration. A voice bank window
-    // receives its own actions, and each extension is in the registry of its kind of window
-    // alone.
-    void an_editor_takes_the_registrations_before_it() {
-        int triggered = 0;
-        const auto reg = registration(&triggered);
+    // A voice bank window receives its own actions, and each extension is in the registry of
+    // its kind of window alone.
+    void each_kind_of_window_receives_its_own_extension() {
         const auto e = editor();
+        int triggered = 0;
+        const auto reg = registration(e.get(), &triggered);
         QVERIFY(e->actionRegistry(Editor::ProjectWindowKind)->actionInfo(HelloId));
         QVERIFY(!e->actionRegistry(Editor::ProjectWindowKind)->actionInfo(BankId));
         QVERIFY(e->actionRegistry(Editor::VoiceBankWindowKind)->actionInfo(BankId));
@@ -186,17 +186,19 @@ private Q_SLOTS:
         QVERIFY(menuTexts(bank, QStringLiteral("&Tools")).contains(QStringLiteral("Bank Hello")));
     }
 
-    // A registration may outlive the editor.
+    // A registration may outlive the editor of its registry, and its destruction then removes
+    // nothing.
     void a_registration_outlives_an_editor() {
         int triggered = 0;
-        auto reg = registration(&triggered);
+        std::unique_ptr<ActionRegistration> reg;
         {
             const auto e = editor();
+            reg = registration(e.get(), &triggered);
             e->newWindow();
         }
         reg.reset();
 
-        // An editor created later has no action of the contribution.
+        // Another editor has no action of the contribution.
         const auto e = editor();
         QVERIFY(!e->actionRegistry(Editor::ProjectWindowKind)->actionInfo(HelloId));
     }

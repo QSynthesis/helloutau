@@ -1,87 +1,25 @@
 #include "ActionRegistration.h"
-#include "ActionRegistrations_p.h"
 
-#include <QtCore/QPointer>
-#include <QtGui/QAction>
-#include <QtWidgets/QMenu>
-
-#include <QAKCore/actionextension.h>
-#include <QAKWidgets/widgetactioncontext.h>
+#include <utility>
 
 namespace hello::daw {
 
-    ActionRegistration::ActionRegistration(std::unique_ptr<ActionContribution> contribution)
-        : m_contribution(std::move(contribution)) {
-        ActionRegistrations::instance().add(m_contribution.get());
+    ActionRegistration::ActionRegistration(ActionContributionRegistry *registry,
+                                           std::unique_ptr<ActionContribution> contribution)
+        : m_registry(registry), m_contribution(std::move(contribution)) {
+        if (m_registry) {
+            m_registry->add(m_contribution.get());
+        }
     }
 
     ActionRegistration::~ActionRegistration() {
-        ActionRegistrations::instance().remove(m_contribution.get());
+        if (m_registry) {
+            m_registry->remove(m_contribution.get());
+        }
     }
 
     ActionContribution *ActionRegistration::contribution() const {
         return m_contribution.get();
-    }
-
-    ActionRegistrations &ActionRegistrations::instance() {
-        static ActionRegistrations registrations;
-        return registrations;
-    }
-
-    QList<ActionContribution *> ActionRegistrations::contributions() const {
-        return m_contributions;
-    }
-
-    void ActionRegistrations::add(ActionContribution *contribution) {
-        m_contributions.push_back(contribution);
-        // Iterates over a copy because a listener may remove itself
-        for (const auto listener : QList<Listener *>(m_listeners)) {
-            listener->contributionAdded(contribution);
-        }
-    }
-
-    void ActionRegistrations::remove(ActionContribution *contribution) {
-        if (!m_contributions.removeOne(contribution)) {
-            return;
-        }
-        for (const auto listener : QList<Listener *>(m_listeners)) {
-            listener->contributionRemoved(contribution);
-        }
-    }
-
-    void ActionRegistrations::addListener(Listener *listener) {
-        m_listeners.push_back(listener);
-    }
-
-    void ActionRegistrations::removeListener(Listener *listener) {
-        m_listeners.removeOne(listener);
-    }
-
-    void ActionRegistrations::addActions(QWidget *window, QAK::WidgetActionContext *context) const {
-        for (const auto contribution : m_contributions) {
-            contribution->addActions(window, context);
-        }
-    }
-
-    void ActionRegistrations::removeActions(const QAK::ActionExtension *extension,
-                                            QAK::WidgetActionContext *context) {
-        for (int i = 0; i < extension->itemCount(); ++i) {
-            const auto id = extension->item(i).id();
-            // A context deletes an owned action on removal.
-            const QPointer<QAction> action = context->action(id);
-            if (!action) {
-                continue;
-            }
-            context->remove(id);
-            // The action of an external item is the menuAction() of its menu and is owned by the
-            // menu. Deleting the menu deletes the action.
-            const auto menu = qobject_cast<QMenu *>(action->parent());
-            if (menu && menu->menuAction() == action) {
-                delete menu;
-            } else {
-                delete action.data();
-            }
-        }
     }
 
 }

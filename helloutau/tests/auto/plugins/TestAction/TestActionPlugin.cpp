@@ -8,6 +8,7 @@
 
 #include <QAKWidgets/widgetactioncontext.h>
 
+#include <helloutau/Editor/AppLoader.h>
 #include <helloutau/Editor/Editor.h>
 #include <helloutau/Editor/ProjectWindow.h>
 #include <helloutau/Widgets/ActionContribution.h>
@@ -48,9 +49,16 @@ namespace {
     class TestActionPlugin : public stdc::pluginsystem::IPlugin {
     public:
         bool initialize(std::string *errorMessage) override {
-            Q_UNUSED(errorMessage);
-            m_registration =
-                std::make_unique<ActionRegistration>(std::make_unique<TestActionContribution>());
+            const auto loader = AppLoader::instance();
+            const auto editor = loader ? loader->editor() : nullptr;
+            if (!editor) {
+                if (errorMessage) {
+                    *errorMessage = "The editor of the core plugin does not exist.";
+                }
+                return false;
+            }
+            m_registration = std::make_unique<ActionRegistration>(
+                editor->actionContributionRegistry(), std::make_unique<TestActionContribution>());
             return true;
         }
 

@@ -32,8 +32,9 @@
 #include <helloutau/Widgets/CommandPalette.h>
 #include <helloutau/Widgets/SettingPage.h>
 #include <helloutau/Widgets/SettingsDialog.h>
-#include <helloutau/Widgets/private/ActionRegistrations_p.h>
-#include <helloutau/Widgets/private/SettingPageRegistrations_p.h>
+#include <helloutau/Widgets/ActionContributionRegistry.h>
+#include <helloutau/Widgets/SettingPageRegistration.h>
+#include <helloutau/Widgets/SettingPageRegistry.h>
 
 #include "AppSettings.h"
 #include "DiagnosticBox_p.h"
@@ -105,8 +106,7 @@ namespace hello::daw {
 
     }
 
-    class Editor::Impl : public ActionRegistrations::Listener,
-                         public SettingPageRegistrations::Listener {
+    class Editor::Impl {
     public:
         using Decl = Editor;
 
@@ -118,19 +118,31 @@ namespace hello::daw {
 
         void init(Editor *decl) {
             AudioOutput::setOutputDeviceId(settings->audioOutputDevice());
-            // A registry for each kind of window. The extensions of the editor itself come as
-            // contributions too, see BuiltinActions.
+            editor = decl;
+            // The registries of the contributions are created empty. The extensions of the
+            // editor itself come as a contribution too, see BuiltinActions.
+            contributions = new ActionContributionRegistry(decl);
+            QObject::connect(
+                contributions, &ActionContributionRegistry::contributionAdded, decl,
+                [this](ActionContribution *contribution) { contributionAdded(contribution); });
+            QObject::connect(
+                contributions, &ActionContributionRegistry::contributionRemoved, decl,
+                [this](ActionContribution *contribution) { contributionRemoved(contribution); });
+            pageRegistry = new SettingPageRegistry(decl);
+            QObject::connect(pageRegistry, &SettingPageRegistry::registrationAdded, decl,
+                             [this](const SettingPageRegistration *registration) {
+                                 registrationAdded(registration);
+                             });
+            QObject::connect(pageRegistry, &SettingPageRegistry::registrationRemoved, decl,
+                             [this](const SettingPageRegistration *registration) {
+                                 registrationRemoved(registration);
+                             });
+            // An action registry for each kind of window
             for (const auto kind : Editor::windowKinds) {
                 const auto registry = new QAK::ActionRegistry(decl);
                 registries[kind] = registry;
-                for (const auto contribution : ActionRegistrations::instance().contributions()) {
-                    if (const auto extension = contribution->extension(Editor::nameOf(kind))) {
-                        registry->addExtension(extension);
-                    }
-                }
                 addEditorIcons(registry);
             }
-            ActionRegistrations::instance().addListener(this);
             // The shortcuts that the user assigned and the changes to the menus and tool bars,
             // each in a file of its own beside the settings with a section for each kind
             keymapFile = KeymapFile::fileNameFor(settings->fileName());
@@ -141,20 +153,15 @@ namespace hello::daw {
             themes->addSearchPath(QStringLiteral(":/helloutau/themes"));
             catalog = new SettingCatalog(decl);
             addEditorSettingPages(catalog, *settings);
-            editor = decl;
-            for (const auto registration : SettingPageRegistrations::instance().registrations()) {
-                registrationAdded(registration);
-            }
-            SettingPageRegistrations::instance().addListener(this);
         }
 
-        void registrationAdded(const SettingPageRegistration *registration) override {
+        void registrationAdded(const SettingPageRegistration *registration) {
             if (const auto page = registration->addTo(catalog, editor)) {
                 registeredPages.insert(registration, page);
             }
         }
 
-        void registrationRemoved(const SettingPageRegistration *registration) override {
+        void registrationRemoved(const SettingPageRegistration *registration) {
             if (const auto page = registeredPages.take(registration)) {
                 catalog->removePage(page);
             }
@@ -162,7 +169,7 @@ namespace hello::daw {
 
         // The windows take the actions of a contribution as it comes, and the menus and
         // shortcuts are rebuilt with the extension of the contribution
-        void contributionAdded(ActionContribution *contribution) override {
+        void contributionAdded(ActionContribution *contribution) {
             for (const auto kind : Editor::windowKinds) {
                 if (const auto extension = contribution->extension(Editor::nameOf(kind))) {
                     registries[kind]->addExtension(extension);
@@ -181,12 +188,13 @@ namespace hello::daw {
             updateContexts();
         }
 
-        void contributionRemoved(ActionContribution *contribution) override {
+        void contributionRemoved(ActionContribution *contribution) {
             if (const auto extension =
                     contribution->extension(QLatin1String(Editor::projectWindowName))) {
                 for (const auto &window : std::as_const(windows)) {
                     if (window) {
-                        ActionRegistrations::removeActions(extension, window->actionContext());
+                        ActionContributionRegistry::removeActions(extension,
+                                                                  window->actionContext());
                     }
                 }
                 registries[Editor::ProjectWindowKind]->removeExtension(extension);
@@ -195,7 +203,8 @@ namespace hello::daw {
                     contribution->extension(QLatin1String(Editor::voiceBankWindowName))) {
                 for (const auto &window : std::as_const(voiceBankWindows)) {
                     if (window) {
-                        ActionRegistrations::removeActions(extension, window->actionContext());
+                        ActionContributionRegistry::removeActions(extension,
+                                                                  window->actionContext());
                     }
                 }
                 registries[Editor::VoiceBankWindowKind]->removeExtension(extension);
@@ -231,6 +240,8 @@ namespace hello::daw {
         ThemeManager *themes = nullptr;
         SettingCatalog *catalog = nullptr;
         Editor *editor = nullptr;
+        ActionContributionRegistry *contributions = nullptr;
+        SettingPageRegistry *pageRegistry = nullptr;
         // The page that each registration added to the catalog. A page deleted with its parent
         // page is null here.
         QHash<const SettingPageRegistration *, QPointer<SettingPage>> registeredPages;
@@ -472,6 +483,16 @@ namespace hello::daw {
         return impl.catalog;
     }
 
+    ActionContributionRegistry *Editor::actionContributionRegistry() const {
+        stdc_impl_t;
+        return impl.contributions;
+    }
+
+    SettingPageRegistry *Editor::settingPageRegistry() const {
+        stdc_impl_t;
+        return impl.pageRegistry;
+    }
+
     bool Editor::saveKeymap(QString *error) const {
         stdc_impl_t;
         return KeymapFile::write(impl.sections(), impl.keymapFile, error, &impl.modifierBindings);
@@ -494,8 +515,10 @@ namespace hello::daw {
 
     Editor::~Editor() {
         stdc_impl_t;
-        ActionRegistrations::instance().removeListener(&impl);
-        SettingPageRegistrations::instance().removeListener(&impl);
+        // The registries go first, so that a registration destroyed later removes nothing and
+        // no notification reaches the implementation, which the windows outlive by little.
+        delete impl.contributions;
+        delete impl.pageRegistry;
         // The windows refer to the registries and the settings, so they go first.
         for (const auto &window : std::as_const(impl.windows)) {
             delete window.data();

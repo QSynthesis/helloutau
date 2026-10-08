@@ -6,6 +6,7 @@
 
 #include <QtCore/QDir>
 #include <QtCore/QFileInfo>
+#include <QtCore/QPointer>
 #include <QtCore/QtDebug>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QMessageBox>
@@ -15,6 +16,7 @@
 #include <stdcorelib/system.h>
 
 #include "AppSettings.h"
+#include "Editor.h"
 #include "Restarter.h"
 #include "SettingsJson_p.h"
 #include "Translations.h"
@@ -42,6 +44,7 @@ namespace hello::daw {
         // the pending changes
         std::unique_ptr<SettingsFile> pluginFile;
         bool loaded = false;
+        QPointer<Editor> editor;
 
         // Settings rejected by the library are reported and ignored. Every plugin then follows
         // its metadata until the next change replaces the settings.
@@ -196,6 +199,16 @@ namespace hello::daw {
     AppSettings &AppLoader::settings() const {
         stdc_impl_t;
         return *impl.settings;
+    }
+
+    Editor *AppLoader::editor() const {
+        stdc_impl_t;
+        return impl.editor;
+    }
+
+    void AppLoader::setEditor(Editor *editor) {
+        stdc_impl_t;
+        impl.editor = editor;
     }
 
     bool AppLoader::load(QString *error) {

@@ -19,14 +19,19 @@ namespace hello::daw {
         Q_UNUSED(errorMessage);
         Translations::load(QStringLiteral("Core"),
                            QStringLiteral(":/helloutau/plugins/Core/translations"));
-        m_actions = std::make_unique<BuiltinActions>();
         // The editor uses the settings of the loader, which outlive the editor, or the settings
         // of the user if no loader loaded this plugin.
         const auto loader = AppLoader::instance();
         m_editor =
             loader ? std::make_unique<Editor>(loader->settings()) : std::make_unique<Editor>();
-        // The Plugins page exists only with a loader.
+        // A child of the editor, destroyed with it
+        new BuiltinActions(m_editor.get());
+        // The Plugins page exists only with a loader. The other plugins, which depend on this
+        // plugin and initialize after it, obtain the editor from the loader.
         addCoreSettingPages(m_editor.get(), loader);
+        if (loader) {
+            loader->setEditor(m_editor.get());
+        }
         return true;
     }
 
@@ -46,8 +51,10 @@ namespace hello::daw {
     // Destroys the editor and its windows while every library is still loaded. This instance is
     // a static object of the library and is destroyed only when the library is unloaded.
     void CorePlugin::aboutToShutdown() {
+        if (const auto loader = AppLoader::instance()) {
+            loader->setEditor(nullptr);
+        }
         m_editor.reset();
-        m_actions.reset();
     }
 
 }

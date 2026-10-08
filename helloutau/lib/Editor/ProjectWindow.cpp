@@ -64,7 +64,7 @@
 #include <helloutau/Widgets/PianoKeyboard.h>
 #include <helloutau/Widgets/SceneView.h>
 #include <helloutau/Widgets/TimelineRuler.h>
-#include <helloutau/Widgets/private/ActionRegistrations_p.h>
+#include <helloutau/Widgets/ActionContributionRegistry.h>
 
 #include "AboutDialog_p.h"
 #include "AppSettings.h"
@@ -1675,7 +1675,7 @@ namespace hello::daw {
                 stdc_decl_t;
                 QMessageBox::aboutQt(&decl);
             });
-            ActionRegistrations::instance().addActions(&decl, context);
+            editor->actionContributionRegistry()->addActions(&decl, context);
 
             const auto registry = editor->actionRegistry(Editor::ProjectWindowKind);
             registry->addContext(context);

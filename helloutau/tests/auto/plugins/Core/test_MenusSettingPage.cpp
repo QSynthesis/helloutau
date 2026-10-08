@@ -54,9 +54,6 @@ namespace {
 class test_MenusSettingPage : public QObject {
     Q_OBJECT
 
-private:
-    BuiltinActions m_actions;
-
 private Q_SLOTS:
     // The page edits the menus of the windows: an entry moved down, an entry removed, and an
     // action added to a menu. It applies the layouts to every window and writes
@@ -66,6 +63,7 @@ private Q_SLOTS:
         QTemporaryDir dir;
         const auto settingsFile = dir.filePath(QStringLiteral("settings.json"));
         auto e = std::make_unique<Editor>(std::make_unique<AppSettings>(settingsFile));
+        new BuiltinActions(e.get());
         e->setWatchesDisk(false);
         const auto window = e->newWindow();
         MenusSettingPage page(e.get());
@@ -141,6 +139,7 @@ private Q_SLOTS:
         // A new editor reads the file.
         e.reset();
         const auto again = std::make_unique<Editor>(std::make_unique<AppSettings>(settingsFile));
+        new BuiltinActions(again.get());
         again->setWatchesDisk(false);
         const auto other = again->newWindow();
         menu = toolsOf(*again, other);
@@ -161,6 +160,7 @@ private Q_SLOTS:
         QTemporaryDir dir;
         const auto settingsFile = dir.filePath(QStringLiteral("settings.json"));
         const auto e = std::make_unique<Editor>(std::make_unique<AppSettings>(settingsFile));
+        new BuiltinActions(e.get());
         e->setWatchesDisk(false);
         e->newWindow();
         const auto move = [](MenusSettingPage &page, const QString &entry, bool up) {
@@ -196,6 +196,7 @@ private Q_SLOTS:
         QTemporaryDir dir;
         const auto settingsFile = dir.filePath(QStringLiteral("settings.json"));
         const auto e = std::make_unique<Editor>(std::make_unique<AppSettings>(settingsFile));
+        new BuiltinActions(e.get());
         e->setWatchesDisk(false);
         MenusSettingPage page(e.get());
         QVERIFY(page.widget());

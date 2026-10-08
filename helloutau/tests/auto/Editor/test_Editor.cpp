@@ -149,18 +149,18 @@ class test_Editor : public QObject {
 
 private:
     QTemporaryDir m_dir;
-    // The menus and commands of the editor, which the core plugin registers in the application
-    BuiltinActions m_actions;
     // The formats of frequency tables, which the plugin FrequencyEditor registers in the
     // application
     kit::BuiltinFrequencyFormats m_formats;
 
-    // An editor whose voice bank windows do not follow the disk on their own, which would ask
-    // at any moment; a test calls VoiceBankWindow::checkDisk() instead.
+    // An editor with the menus and commands that the core plugin registers, whose voice bank
+    // windows do not follow the disk on their own, which would ask at any moment; a test calls
+    // VoiceBankWindow::checkDisk() instead.
     std::unique_ptr<Editor> editor() const {
         auto e = std::make_unique<Editor>(
             std::make_unique<AppSettings>(m_dir.filePath(QStringLiteral("settings.json"))));
         e->setWatchesDisk(false);
+        new BuiltinActions(e.get());
         return e;
     }
 

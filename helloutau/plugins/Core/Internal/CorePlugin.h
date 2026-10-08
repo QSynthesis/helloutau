@@ -8,11 +8,11 @@
 
 namespace hello::daw {
 
-    class BuiltinActions;
     class Editor;
 
-    /// The core plugin, which the application requires in order to start. The plugin registers
-    /// the action extensions of the editor and creates the editor. After every plugin is
+    /// The core plugin, which the application requires in order to start. The plugin creates the
+    /// editor, registers the action extensions of the editor with it, and records it in the
+    /// loader for the other plugins (AppLoader::editor()). After every plugin is
     /// initialized, it opens the files of the command line, or a new project if no window is
     /// open. See docs/Plugins.md.
     class CorePlugin : public stdc::pluginsystem::IPlugin {
@@ -25,7 +25,6 @@ namespace hello::daw {
         void aboutToShutdown() override;
 
     private:
-        std::unique_ptr<BuiltinActions> m_actions;
         std::unique_ptr<Editor> m_editor;
     };
 

@@ -24,9 +24,11 @@ namespace hello::kit {
 
 namespace hello::daw {
 
+    class ActionContributionRegistry;
     class AppSettings;
     class ProjectWindow;
     class SettingCatalog;
+    class SettingPageRegistry;
     class ThemeManager;
     class VoiceBankWindow;
 
@@ -100,6 +102,15 @@ namespace hello::daw {
         /// editor registered at start, whose ids are in EditorSettingPageIds. See the settings
         /// dialog in docs/Widgets.md.
         SettingCatalog *settingCatalog() const;
+
+        /// Returns the registry of the action contributions that the windows of this editor
+        /// apply. A plugin registers its contribution with an ActionRegistration on this
+        /// registry, and BuiltinActions registers the extensions of the editor itself.
+        ActionContributionRegistry *actionContributionRegistry() const;
+
+        /// Returns the registry of the setting pages that this editor adds to settingCatalog().
+        /// A plugin registers its page with a SettingPageRegistration on this registry.
+        SettingPageRegistry *settingPageRegistry() const;
 
         /// Writes the shortcuts that the action registries override to \c keymap.json beside the
         /// settings, a section for each kind of window, which the next editor reads at start.
