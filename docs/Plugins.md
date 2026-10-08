@@ -33,7 +33,7 @@ stdcorelib.plugin 的交接记录（其仓库 `.cache/codex/2026-08-21-1722-stdc
 - `stdc::plugin`：插件是某个 IID 接口的实现，以 `STDC_EXPORT_PLUGIN` 导出，IID 与元数据嵌在库中；`PluginFactory` 按目录发现。
 - `stdc::pluginsystem::PluginSystem`：只接收一个 IID；元数据保留 `id`、`displayName`、`description`、`version`、`compatVersion`、`enabledByDefault`、`dependencies`，其余字段归宿主；依赖解析、按依赖顺序载入并调用 `initialize()`、逆序调用 `pluginsInitialized()` 与 `aboutToShutdown()` 并卸载；全局与用户两份启用设置；宿主的载入判定（`setPluginLoadPredicate()`）；Flat、Bundle 与自定义三种目录布局。
 - 插件实现 `stdc::pluginsystem::IPlugin` 的三个钩子：`initialize()`、`pluginsInitialized()`、`aboutToShutdown()`。
-- stdcorelib 另有 `stdc::DynamicRegistry`：运行时增删、线程安全、每个进程一份（stdcorelib 是动态库时），可监听条目的增删。
+- stdcorelib 另有 `stdc::DynamicRegistry`：运行时增删、线程安全、可监听条目的增删，由使用方创建并持有（stdcorelib `1c45501` 起，此前为每个进程一份）；以 `std::map` 或 `stdc::linked_map` 保存，后者保持登记顺序；`DynamicRegistry::Registration` 在其生命周期内登记一项。
 
 ## 设计
 
@@ -99,7 +99,7 @@ macOS 的 bundle 中为 `HelloUtau.app/Contents/MacOS`（程序）与 `HelloUtau
 - 本仓库的插件以 `helloutau_add_native_plugin()`（`helloutau/plugins/CMakeLists.txt`）构建：输出到各自的子目录，嵌入 IID，并在构建时写出 `plugin.json`（`DEPENDENCIES` 写入必需依赖）。只供测试的插件以 `DIRECTORY` 构建到测试自己的目录，不安装。
 - **翻译**（作者 2026-10-01 定）：各库（两个模块的全部子库，含动作清单经 AEC 生成的文字）共用一份 `helloutau/translations/helloutau_<语言>.ts`，嵌入 HelloUtauEditor 的资源 `:/helloutau/translations`；每个插件一份 `plugins/<插件>/translations/<插件>_<语言>.ts`，嵌入插件自身的资源 `:/helloutau/plugins/<插件>/translations`。`.ts` 纳入版本库，`qt_add_translations()` 在构建时生成 `.qm`；`update_translations` 目标以 lupdate 从源文件（含 AEC 生成的源文件，须先构建）更新 `.ts`。以后改为外部文件时，库的译文放 `share/helloutau`，插件的放各自目录。命名空间作用域中名为 `tr` 的辅助函数会让 lupdate 记错上下文，须改用 `QT_TRANSLATE_NOOP` 标记（见 `ThemeTypes.cpp`）。
 - **插件同时是库**（作者 2026-09-30 要求）：与子库一样导出目标并安装头文件，供其他插件在它之上构建。公开头文件与源文件同在 `helloutau/plugins/<插件目录>/`，插件目标以 `helloutau/plugins` 为公开的包含目录，以 `<插件目录>/<头文件>` 引用；安装到 `include/helloutau/plugins/<插件目录>/`，安装后的包含目录指向 `include/helloutau/plugins`。导出宏头文件为 `<目标名>Global.h`，有公开的类时才添加。
-- **插件类不导出**（作者 2026-09-30，同 DiffScope 的 `coreplugin/internal`）：插件类与其余实现放在插件目录的 `Internal` 中，不导出，不安装。stdcorelib.plugin 因此仍是私有依赖。
+- **插件类不导出**（作者 2026-09-30，同 DiffScope 的 `coreplugin/internal`）：插件类与其余实现放在插件目录的 `Internal` 中，不导出，不安装。
 - **插件的测试**位于 `helloutau/tests/auto/plugins/<插件>/`，只为插件中库一级的内容（工具类等）而写，不为菜单布局之类会随时调整的东西写测试（作者 2026-09-30）。只供测试的插件（如 TestAction）也放在那里。
 - 插件目录关闭 vcpkg 的 applocal：插件链接的库在载入插件前已由程序载入，applocal 只会把 vcpkg 安装树中的库复制到插件旁，其中包括与程序所用版本不同的 stdcorelib（实际发生过）。
 - 元数据文件名：沿用该库默认的 `plugin.json`，以 `PluginSystem(iid, PluginSystem::Bundle)` 直接构造（作者 2026-09-30 决定）。它与 UTAU 插件文件夹的 `plugin.json` 同名，但两种目录不会互相搜索，库中的 IID 也能区分原生插件，不会误读。
@@ -146,7 +146,7 @@ stdcorelib.plugin 的生命周期是同步的，不依赖事件循环。HelloUta
 
 ## 实施步骤
 
-1. ~~**依赖**~~：stdcorelib.plugin 与 stdcorelib 一样单独构建安装（动态库），`third-party/Dependencies.cmake` 以 `-Dstdcorelib-plugin_DIR=` 引入，作为私有依赖，Windows 上其 DLL 复制到运行输出目录。README、CLAUDE.md 与 Status.md 已补充。
+1. ~~**依赖**~~：stdcorelib.plugin 与 stdcorelib 一样单独构建安装（动态库），`third-party/Dependencies.cmake` 以 `-Dstdcorelib-plugin_DIR=` 引入（2026-10-08 起可出现在公开头文件中），Windows 上其 DLL 复制到运行输出目录。README、CLAUDE.md 与 Status.md 已补充。
 2. ~~**note.md**~~：已按作者的决定改写插件一节（一种原生插件、五个扩展点、UTAU 插件由一个原生插件支持），CLAUDE.md、Roadmap.md、Status.md、Interchange.md、FrequencyTables.md 的相应说法一并更新。
 3. ~~**加载器与 Core 插件**~~：`AppLoader`、Core 插件、`helloutau_add_native_plugin()`，程序只剩加载器。`test_AppLoader` 以测试插件覆盖参数、Core 插件的必需与三种失败、生命周期，并载入真正的 Core 插件打开窗口。
    - ~~**插件作为库与动作的扩展**~~：插件导出目标、安装头文件；`ActionContribution` / `ActionRegistration`；编辑器的清单拆为两份，经 `BuiltinActions` 由 Core 登记；TestAction 测试插件。见「编辑界面扩展：动作与命令」。

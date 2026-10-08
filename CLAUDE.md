@@ -57,9 +57,9 @@ Qt 6 + CMake + C++17。构建脚本的组织方式参照 synthrt：`find_package
 
 **菜单、工具栏与快捷键由 QActionKit 提供**（`stdware/qactionkit` 的 `next` 分支，只使用 Core 与 Widgets 两个模块）。动作写在动作扩展清单中，由 AEC 在构建时编译（`qak_add_action_extension()`），用户对菜单的自定义以改动记录保存。清单格式见 qactionkit 仓库的 `docs/action-extension-spec.md`。编辑器的清单与插件的清单都经 `ActionRegistration` 登记，见 [`docs/Plugins.md`](docs/Plugins.md)「编辑界面扩展：动作与命令」。
 
-**stdcorelib 仅作为私有依赖，不出现在公开头文件中。** 子库使用 `LINKS_PRIVATE stdcorelib::stdcorelib`，导出宏使用 `<QtCore/QtGlobal>` 的 `Q_DECL_EXPORT` / `Q_DECL_IMPORT`，不要使用 `STDC_DECL_EXPORT`。两个模块本就依赖 Qt，使用 Qt 的宏不增加额外依赖，而要求下游为一个宏安装 stdcorelib 是不合理的。
+**stdcorelib 与 stdcorelib.plugin 可以出现在公开头文件中**（作者 2026-10-08 决定），不为隐藏它们而封装其类型：插件系统的 `PluginSpec`、`stdc::DynamicRegistry` 等直接出现在接口中。公开头文件用到它们的子库以 `LINKS` 公开链接，并在包配置文件中 `find_dependency`；只在实现中使用它们的子库仍以 `LINKS_PRIVATE` 链接。导出宏仍使用 `<QtCore/QtGlobal>` 的 `Q_DECL_EXPORT` / `Q_DECL_IMPORT`，不要使用 `STDC_DECL_EXPORT`：两个模块本就依赖 Qt，使用 Qt 的宏不增加额外依赖。应用设置的值仍以 `QJsonValue` 提供（`AppSettings::value()`），便于界面层的 Qt 代码使用；插件设置直接使用 stdcorelib.plugin 的 `PluginSettings` 与 `stdc::json`。
 
-**原生插件由 stdcorelib.plugin 载入**（`stdware/stdcorelib.plugin`，构建为动态库，`D:\GitHub\stdcorelib.plugin`），与 stdcorelib 一样是**私有依赖**，插件也不例外：插件类放在插件的 `Internal` 中，不导出、不安装。本仓库不定义插件的基类或接口类，只提供各扩展点的注册接口，见 [`docs/Plugins.md`](docs/Plugins.md)。该库发现不足时直接修改它，改动单独提交到该仓库，遵守其 `AGENTS.md`。
+**原生插件由 stdcorelib.plugin 载入**（`stdware/stdcorelib.plugin`，构建为动态库，`D:\GitHub\stdcorelib.plugin`），插件类放在插件的 `Internal` 中，不导出、不安装。本仓库不定义插件的基类或接口类，只提供各扩展点的注册接口，见 [`docs/Plugins.md`](docs/Plugins.md)。该库发现不足时直接修改它，改动单独提交到该仓库，遵守其 `AGENTS.md`。
 
 这些库稳定之后再考虑改为子模块。stdutau 改为子模块时，URL 须写为两级的 `../../diffscope/stdutau.git`：helloutau 位于 `QSynthesis` 组织而 stdutau 位于 `diffscope` 组织，一级的 `../stdutau` 会被解析为 `QSynthesis/stdutau`。
 

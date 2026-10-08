@@ -10,8 +10,10 @@
 
 | 模块 | 命名空间 | 产出 | 依赖 |
 |---|---|---|---|
-| `hellokit/` | `hello::kit` | `HelloKitDocument`、今后的 `HelloKitCore` 等 | Qt Core、stdutau、stdcorelib（私有）、substate（私有，仅 `HelloKitEditBase` 与 `HelloKitEdit`） |
-| `helloutau/` | `hello::daw` | `HelloUtauEditor` 等、随应用提供的原生插件，以及 `helloutau` 可执行文件 | Qt Widgets、hellokit、QActionKit、stdcorelib.plugin（私有） |
+| `hellokit/` | `hello::kit` | `HelloKitDocument`、今后的 `HelloKitCore` 等 | Qt Core、stdutau、stdcorelib、substate（私有，仅 `HelloKitEditBase` 与 `HelloKitEdit`） |
+| `helloutau/` | `hello::daw` | `HelloUtauEditor` 等、随应用提供的原生插件，以及 `helloutau` 可执行文件 | Qt Widgets、hellokit、QActionKit、stdcorelib.plugin |
+
+stdcorelib 与 stdcorelib.plugin 可以出现在公开头文件中（作者 2026-10-08 决定），见 CLAUDE.md。公开头文件用到它们的子库以 `LINKS` 公开链接，其余子库以 `LINKS_PRIVATE` 链接。
 
 `hello` 仅作为外层命名空间，代码一律位于第二层。不要在 `hello` 中直接声明内容，也不要再增加第三层。
 
@@ -91,7 +93,7 @@ helloutau/tools/driver/main.cpp                  ← 目标 helloutau
 
 ## PImpl
 
-PImpl 采用 stdcorelib 的写法（`<stdcorelib/pimpl.h>`），使用 PImpl 的子库以 `LINKS_PRIVATE` 链接 `stdcorelib::stdcorelib`。
+PImpl 采用 stdcorelib 的写法（`<stdcorelib/pimpl.h>`）。只在实现中使用 stdcorelib 的子库以 `LINKS_PRIVATE` 链接 `stdcorelib::stdcorelib`。
 
 - 声明类在头文件中声明嵌套类 `class Impl;` 与成员 `std::unique_ptr<Impl> _impl;`。
 - 实现类声明 `using Decl = <声明类>;`。需要访问声明对象时，持有成员 `Decl *_decl;`，由构造函数的参数 `Decl *decl` 初始化。
@@ -116,7 +118,7 @@ PImpl 采用 stdcorelib 的写法（`<stdcorelib/pimpl.h>`），使用 PImpl 的
 
 子库的导出宏前缀由 `hellokit_add_library(... MACRO_PREFIX HELLOKIT_DOCUMENT)` 显式指定，否则默认值将根据目标名生成为 `HELLOKITDOCUMENT_`。
 
-`<目标名>Global.h` 引用 `<QtCore/QtGlobal>`，导出宏展开为 `Q_DECL_EXPORT` / `Q_DECL_IMPORT`。两个模块都依赖 Qt，而 stdcorelib 是私有依赖，不出现在公开头文件中。
+`<目标名>Global.h` 引用 `<QtCore/QtGlobal>`，导出宏展开为 `Q_DECL_EXPORT` / `Q_DECL_IMPORT`。两个模块都依赖 Qt，使用 Qt 的宏不增加额外依赖；只为一个宏而公开链接 stdcorelib 没有必要。
 
 ## 构建与安装选项
 
