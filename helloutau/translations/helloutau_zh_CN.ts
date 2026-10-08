@@ -1700,10 +1700,6 @@ Trust and use them for rendering?</source>
         </translation>
     </message>
     <message>
-        <source>Untitled</source>
-        <translation>未命名</translation>
-    </message>
-    <message>
         <source>Paste Parameters</source>
         <translation>粘贴参数</translation>
     </message>
