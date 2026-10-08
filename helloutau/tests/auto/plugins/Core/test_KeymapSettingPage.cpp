@@ -24,6 +24,7 @@
 #include <helloutau/Editor/AppSettings.h>
 #include <helloutau/Editor/BuiltinActions.h>
 #include <helloutau/Editor/Editor.h>
+#include <helloutau/Editor/NoteViewModifiers.h>
 #include <helloutau/Editor/ProjectWindow.h>
 
 #include <Core/KeymapSettingPage.h>
@@ -98,13 +99,15 @@ private Q_SLOTS:
         QString error;
         QVERIFY(page.apply(&error));
         QVERIFY(!page.isModified());
-        const auto horizontalScroll =
-            page.widget()->findChild<QComboBox *>(QStringLiteral("modifier_0"));
+        const auto horizontalScroll = page.widget()->findChild<QComboBox *>(
+            QStringLiteral("projectWindow/noteView/horizontalScroll"));
         QVERIFY(horizontalScroll);
         horizontalScroll->setCurrentIndex(2);
         QVERIFY(page.isModified());
         QVERIFY(page.apply(&error));
-        QCOMPARE(e->modifierBindings().horizontalScroll, Qt::AltModifier);
+        QCOMPARE(e->modifierBindings(Editor::ProjectWindowKind, NoteViewModifiers::scheme())
+                     .modifiers(NoteViewModifiers::HorizontalScroll),
+                 Qt::AltModifier);
         QCOMPARE(
             declaredActionOf(*e, window, QStringLiteral("helloutau.edit.mergeNotes"))->shortcuts(),
             (QList<QKeySequence>{QKeySequence(Qt::CTRL | Qt::Key_U),
@@ -123,7 +126,9 @@ private Q_SLOTS:
         QVERIFY(declaredActionOf(*again, other, QStringLiteral("helloutau.edit.insertNote"))
                     ->shortcuts()
                     .isEmpty());
-        QCOMPARE(again->modifierBindings().horizontalScroll, Qt::AltModifier);
+        QCOMPARE(again->modifierBindings(Editor::ProjectWindowKind, NoteViewModifiers::scheme())
+                     .modifiers(NoteViewModifiers::HorizontalScroll),
+                 Qt::AltModifier);
 
         // Restoring the defaults gives Insert Note its key again.
         KeymapSettingPage keymap(again.get());

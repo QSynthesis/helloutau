@@ -15,7 +15,7 @@
 #include <hellokit/Support/TextSearch.h>
 
 #include <helloutau/Editor/HelloUtauEditorGlobal.h>
-#include <helloutau/Editor/EditorModifierBindings.h>
+#include <helloutau/Widgets/ModifierBindings.h>
 
 class QComboBox;
 class QLineEdit;
@@ -134,7 +134,9 @@ namespace hello::daw {
 
         SceneView *view() const;
 
-        void setModifierBindings(const EditorModifierBindings &bindings);
+        /// Sets the bindings of the scheme of \a bindings, which is NoteViewModifiers or
+        /// ParameterViewModifiers.
+        void setModifierBindings(const ModifierBindings &bindings);
 
         /// The parameter area below the roll, which shares its time axis, and where the
         /// envelopes of the notes are drawn and edited (step 4 in docs/Tuning.md), or one value

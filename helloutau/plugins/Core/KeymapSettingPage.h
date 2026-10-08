@@ -8,13 +8,12 @@
 #include <QtCore/QPointer>
 #include <QtGui/QKeySequence>
 
+#include <helloutau/Widgets/ModifierBindings.h>
 #include <helloutau/Widgets/SettingPage.h>
 
 #include <helloutau/Editor/Editor.h>
 
 #include <Core/CorePluginGlobal.h>
-
-#include <helloutau/Editor/EditorModifierBindings.h>
 
 class QKeySequenceEdit;
 class QComboBox;
@@ -110,9 +109,20 @@ namespace hello::daw {
         QPointer<QPushButton> m_add;
         QPointer<QPushButton> m_remove;
         QPointer<QPushButton> m_reset;
-        EditorModifierBindings m_modifiers;
-        QPointer<QGroupBox> m_modifierGroup;
-        QComboBox *m_modifierBoxes[8] = {};
+        // For each kind of window: its modifier bindings as the page has them, and the panel of
+        // their boxes
+        QList<ModifierBindings> m_modifiers[std::size(Editor::windowKinds)];
+        QPointer<QWidget> m_modifierPanels[std::size(Editor::windowKinds)];
+
+        // The box of one role, by the kind of window, the index of the scheme in
+        // Editor::modifierSchemes() and the role
+        struct ModifierBox {
+            Editor::WindowKind kind;
+            int scheme;
+            int role;
+            QPointer<QComboBox> box;
+        };
+        QList<ModifierBox> m_modifierBoxes;
 
         void load();
         void fillTree();
@@ -124,7 +134,7 @@ namespace hello::daw {
         QString nameOf(const Command &command) const;
         QList<QKeySequence> defaultsOf(const Command &command) const;
         void updateModifierWidgets();
-        void modifierChanged(int index, int option);
+        QWidget *createModifierPanel(Editor::WindowKind kind);
     };
 
 }

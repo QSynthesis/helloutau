@@ -734,10 +734,10 @@ namespace hello::daw {
         PianoRollState::PitchLayer::press(const SceneHit &hit, QPointF position,
                                           Qt::MouseButton button, Qt::KeyboardModifiers modifiers) {
         if (button == Qt::LeftButton &&
-            m_state->matchesModifier(modifiers, m_state->modifierBindings.dragZoom))
+            m_state->noteModifiers.matches(NoteViewModifiers::DragZoom, modifiers))
             return std::make_unique<ZoomGesture>(
                 m_state, position,
-                m_state->matchesModifier(modifiers, m_state->modifierBindings.dragZoomAxisLock));
+                m_state->noteModifiers.matches(NoteViewModifiers::DragZoomAxisLock, modifiers));
         m_state->finishEditing(true);
         const int index = m_state->indexOf(hit.node);
         if (index < 0) {
@@ -783,10 +783,10 @@ namespace hello::daw {
                                          Qt::MouseButton button, Qt::KeyboardModifiers modifiers) {
         Q_UNUSED(hit);
         if (button == Qt::LeftButton &&
-            m_state->matchesModifier(modifiers, m_state->modifierBindings.dragZoom))
+            m_state->noteModifiers.matches(NoteViewModifiers::DragZoom, modifiers))
             return std::make_unique<ZoomGesture>(
                 m_state, position,
-                m_state->matchesModifier(modifiers, m_state->modifierBindings.dragZoomAxisLock));
+                m_state->noteModifiers.matches(NoteViewModifiers::DragZoomAxisLock, modifiers));
         if (m_state->drawsBend(button)) {
             return m_state->bendGesture(position, button);
         }
@@ -809,10 +809,10 @@ namespace hello::daw {
         PianoRollState::NoteLayer::press(const SceneHit &hit, QPointF position,
                                          Qt::MouseButton button, Qt::KeyboardModifiers modifiers) {
         if (button == Qt::LeftButton &&
-            m_state->matchesModifier(modifiers, m_state->modifierBindings.dragZoom))
+            m_state->noteModifiers.matches(NoteViewModifiers::DragZoom, modifiers))
             return std::make_unique<ZoomGesture>(
                 m_state, position,
-                m_state->matchesModifier(modifiers, m_state->modifierBindings.dragZoomAxisLock));
+                m_state->noteModifiers.matches(NoteViewModifiers::DragZoomAxisLock, modifiers));
         if (m_state->drawsBend(button)) {
             return m_state->bendGesture(position, button);
         }

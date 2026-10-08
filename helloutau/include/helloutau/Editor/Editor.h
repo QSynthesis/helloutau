@@ -9,10 +9,10 @@
 #include <QtCore/QString>
 
 #include <helloutau/Widgets/ActionContributionRegistry.h>
+#include <helloutau/Widgets/ModifierBindings.h>
 #include <helloutau/Widgets/SettingPageRegistry.h>
 
 #include <helloutau/Editor/HelloUtauEditorGlobal.h>
-#include <helloutau/Editor/EditorModifierBindings.h>
 
 class QMenu;
 class QWidget;
@@ -78,11 +78,24 @@ namespace hello::daw {
         /// windows.
         QString projectDisplayName(const ProjectWindow *window) const;
 
-        EditorModifierBindings modifierBindings() const;
-        void setModifierBindings(const EditorModifierBindings &bindings);
+        /// Returns the modifier schemes of the views in the windows of \a kind, in the order in
+        /// which the settings list them.
+        static QList<const ModifierScheme *> modifierSchemes(WindowKind kind);
+
+        /// Returns the modifier bindings of the windows of \a kind, one for each of
+        /// modifierSchemes() in its order. The bindings of one kind do not affect the other.
+        QList<ModifierBindings> modifierBindings(WindowKind kind) const;
+
+        /// Returns the bindings of \a scheme, which is one of modifierSchemes(), in the windows
+        /// of \a kind.
+        ModifierBindings modifierBindings(WindowKind kind, const ModifierScheme &scheme) const;
+
+        /// Replaces the bindings of the windows of \a kind, one for each of modifierSchemes() in
+        /// its order. The windows receive them through modifierBindingsChanged().
+        void setModifierBindings(WindowKind kind, const QList<ModifierBindings> &bindings);
 
     Q_SIGNALS:
-        void modifierBindingsChanged();
+        void modifierBindingsChanged(hello::daw::Editor::WindowKind kind);
 
     public:
         /// Returns the action registry of the windows of \a kind, with the menus, the tool bars,

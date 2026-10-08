@@ -48,38 +48,6 @@
         <translation>Ctrl+Alt+Shift</translation>
     </message>
     <message>
-        <source>Horizontal Scroll</source>
-        <translation>横向滚动</translation>
-    </message>
-    <message>
-        <source>Time Zoom</source>
-        <translation>横向缩放</translation>
-    </message>
-    <message>
-        <source>Key Zoom</source>
-        <translation>纵向缩放</translation>
-    </message>
-    <message>
-        <source>Drag Zoom</source>
-        <translation>拖动缩放</translation>
-    </message>
-    <message>
-        <source>Drag Zoom Axis Lock</source>
-        <translation>拖动缩放方向锁定</translation>
-    </message>
-    <message>
-        <source>Disable Note Snap</source>
-        <translation>关闭音符吸附</translation>
-    </message>
-    <message>
-        <source>Lock Parameter Time</source>
-        <translation>锁定参数时间</translation>
-    </message>
-    <message>
-        <source>Snap Parameter Value</source>
-        <translation>参数值吸附</translation>
-    </message>
-    <message>
         <source>Keymap</source>
         <translation>键位映射</translation>
     </message>
@@ -154,22 +122,6 @@
     <message>
         <source>Restore &amp;Defaults</source>
         <translation>恢复默认值(&amp;D)</translation>
-    </message>
-    <message>
-        <source>Project Window Modifiers</source>
-        <translation>工程窗口修饰键</translation>
-    </message>
-    <message>
-        <source>Wheel</source>
-        <translation>滚轮</translation>
-    </message>
-    <message>
-        <source>Note Editing</source>
-        <translation>音符编辑</translation>
-    </message>
-    <message>
-        <source>Parameter Editing</source>
-        <translation>参数编辑</translation>
     </message>
     <message>
         <source>Remove %1</source>

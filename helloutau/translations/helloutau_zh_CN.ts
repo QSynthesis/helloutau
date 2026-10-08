@@ -950,6 +950,37 @@ Trust and use them for rendering?</source>
     </message>
 </context>
 <context>
+    <name>hello::daw::NoteViewModifiers</name>
+    <message>
+        <source>Note Area</source>
+        <translation>音符区</translation>
+    </message>
+    <message>
+        <source>Horizontal Scroll</source>
+        <translation>横向滚动</translation>
+    </message>
+    <message>
+        <source>Time Zoom</source>
+        <translation>横向缩放</translation>
+    </message>
+    <message>
+        <source>Key Zoom</source>
+        <translation>纵向缩放</translation>
+    </message>
+    <message>
+        <source>Drag Zoom</source>
+        <translation>拖动缩放</translation>
+    </message>
+    <message>
+        <source>Drag Zoom Axis Lock</source>
+        <translation>拖动缩放方向锁定</translation>
+    </message>
+    <message>
+        <source>Disable Note Snap</source>
+        <translation>关闭音符吸附</translation>
+    </message>
+</context>
+<context>
     <name>hello::daw::OtoWaveformView</name>
     <message>
         <source>Offset</source>
@@ -974,6 +1005,21 @@ Trust and use them for rendering?</source>
     <message>
         <source>No audio</source>
         <translation>无音频</translation>
+    </message>
+</context>
+<context>
+    <name>hello::daw::ParameterViewModifiers</name>
+    <message>
+        <source>Parameter Area</source>
+        <translation>参数区</translation>
+    </message>
+    <message>
+        <source>Lock Time</source>
+        <translation>锁定时间</translation>
+    </message>
+    <message>
+        <source>Snap Value</source>
+        <translation>数值吸附</translation>
     </message>
 </context>
 <context>

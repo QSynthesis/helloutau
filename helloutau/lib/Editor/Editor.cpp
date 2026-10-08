@@ -41,6 +41,8 @@
 #include "EditorIcons_p.h"
 #include "EditorSettingPages_p.h"
 #include "KeymapFile.h"
+#include "NoteViewModifiers.h"
+#include "ParameterViewModifiers.h"
 #include "ProjectWindow.h"
 #include "Restarter.h"
 #include "UstCharsetDialog.h"
@@ -129,7 +131,16 @@ namespace hello::daw {
             // The shortcuts that the user assigned and the changes to the menus and tool bars,
             // each in a file of its own beside the settings with a section for each kind
             keymapFile = KeymapFile::fileNameFor(settings->fileName());
-            KeymapFile::read(sections(), keymapFile, &modifierBindings);
+            for (const auto kind : Editor::windowKinds) {
+                for (const auto scheme : Editor::modifierSchemes(kind)) {
+                    modifierBindings[kind].push_back(ModifierBindings(*scheme));
+                }
+            }
+            auto keymap = keymapSections();
+            KeymapFile::read(keymap, keymapFile);
+            for (const auto kind : Editor::windowKinds) {
+                modifierBindings[kind] = keymap.at(kind).modifiers;
+            }
             actionLayoutsFile = ActionLayoutsFile::fileNameFor(settings->fileName());
             ActionLayoutsFile::read(sections(), actionLayoutsFile);
             themes = new ThemeManager(decl);
@@ -242,6 +253,16 @@ namespace hello::daw {
                 {Editor::nameOf(Editor::VoiceBankWindowKind),
                  registries[Editor::VoiceBankWindowKind]                                           },
             };
+        }
+
+        // The sections of the keymap file in the order of the kinds of window, with the
+        // modifier bindings of each kind
+        KeymapFile::Sections keymapSections() const {
+            KeymapFile::Sections result;
+            for (const auto kind : Editor::windowKinds) {
+                result.push_back({Editor::nameOf(kind), registries[kind], modifierBindings[kind]});
+            }
+            return result;
         }
 
         std::unique_ptr<AppSettings> ownedSettings;
@@ -456,7 +477,8 @@ namespace hello::daw {
             return normalized;
         }
 
-        EditorModifierBindings modifierBindings;
+        // The modifier bindings of each kind of window, one for each of its modifier schemes
+        QList<ModifierBindings> modifierBindings[std::size(Editor::windowKinds)];
     };
 
     Editor::Editor(QObject *parent) : Editor(std::make_unique<AppSettings>(), parent) {
@@ -482,18 +504,38 @@ namespace hello::daw {
         return impl.projectDisplayName(window);
     }
 
-    EditorModifierBindings Editor::modifierBindings() const {
-        stdc_impl_t;
-        return impl.modifierBindings;
+    QList<const ModifierScheme *> Editor::modifierSchemes(WindowKind kind) {
+        if (kind == ProjectWindowKind) {
+            return {&NoteViewModifiers::scheme(), &ParameterViewModifiers::scheme()};
+        }
+        return {};
     }
 
-    void Editor::setModifierBindings(const EditorModifierBindings &bindings) {
+    QList<ModifierBindings> Editor::modifierBindings(WindowKind kind) const {
         stdc_impl_t;
-        if (impl.modifierBindings == bindings) {
+        return impl.modifierBindings[kind];
+    }
+
+    ModifierBindings Editor::modifierBindings(WindowKind kind,
+                                              const ModifierScheme &scheme) const {
+        stdc_impl_t;
+        for (const auto &bindings : impl.modifierBindings[kind]) {
+            if (&bindings.scheme() == &scheme) {
+                return bindings;
+            }
+        }
+        Q_ASSERT(false);
+        return ModifierBindings(scheme);
+    }
+
+    void Editor::setModifierBindings(WindowKind kind, const QList<ModifierBindings> &bindings) {
+        stdc_impl_t;
+        Q_ASSERT(bindings.size() == impl.modifierBindings[kind].size());
+        if (impl.modifierBindings[kind] == bindings) {
             return;
         }
-        impl.modifierBindings = bindings;
-        Q_EMIT modifierBindingsChanged();
+        impl.modifierBindings[kind] = bindings;
+        Q_EMIT modifierBindingsChanged(kind);
     }
 
     SettingCatalog *Editor::settingCatalog() const {
@@ -520,7 +562,7 @@ namespace hello::daw {
 
     bool Editor::saveKeymap(QString *error) const {
         stdc_impl_t;
-        return KeymapFile::write(impl.sections(), impl.keymapFile, error, &impl.modifierBindings);
+        return KeymapFile::write(impl.keymapSections(), impl.keymapFile, error);
     }
 
     bool Editor::saveActionLayouts(QString *error) const {

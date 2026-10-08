@@ -322,13 +322,20 @@ namespace hello::daw {
         return impl.view;
     }
 
-    void PianoRoll::setModifierBindings(const EditorModifierBindings &bindings) {
+    void PianoRoll::setModifierBindings(const ModifierBindings &bindings) {
         stdc_impl_t;
-        impl.modifierBindings = bindings;
-        impl.view->setWheelModifiers(bindings.horizontalScroll, bindings.timeZoom,
-                                     bindings.keyZoom);
-        impl.parameters->setWheelModifiers(bindings.horizontalScroll, bindings.timeZoom,
-                                            bindings.keyZoom);
+        if (&bindings.scheme() == &ParameterViewModifiers::scheme()) {
+            impl.parameterModifiers = bindings;
+            return;
+        }
+        Q_ASSERT(&bindings.scheme() == &NoteViewModifiers::scheme());
+        impl.noteModifiers = bindings;
+        // The parameter area scrolls and zooms with the wheel roles of the note area.
+        const auto scroll = bindings.modifiers(NoteViewModifiers::HorizontalScroll);
+        const auto timeZoom = bindings.modifiers(NoteViewModifiers::TimeZoom);
+        const auto keyZoom = bindings.modifiers(NoteViewModifiers::KeyZoom);
+        impl.view->setWheelModifiers(scroll, timeZoom, keyZoom);
+        impl.parameters->setWheelModifiers(scroll, timeZoom, keyZoom);
     }
 
     SceneView *PianoRoll::parameterView() const {
