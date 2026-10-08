@@ -62,7 +62,9 @@ namespace hello::daw {
                  std::filesystem::path temporaryDirectory, QObject *parent);
         ~Playback() override;
 
-        /// Replaces the runner, for tests. The default is a kit::ClassicSynthRunner.
+        /// Replaces the runner and forgets the kept render. The default is a
+        /// kit::ClassicSynthRunner without a script directory. The owner configures the script
+        /// directory of the runner, normally the temporary directory, before passing it.
         void setRunner(std::shared_ptr<const kit::SynthRunner> runner);
 
         /// Sets the directory owned by the project window for renders, scripts, and logs, and

@@ -16,7 +16,6 @@
 #include <hellokit/Document/Project.h>
 #include <hellokit/Edit/ProjectDocument.h>
 #include <hellokit/Synth/ClassicSynthRunner.h>
-#include <hellokit/Synth/ThreadedSynthRunner.h>
 #include <hellokit/Synth/RealtimeSynth.h>
 #include <hellokit/Synth/SynthPlan.h>
 #include <hellokit/Synth/WaveAudio.h>
@@ -704,17 +703,6 @@ namespace hello::daw {
         impl.runner = std::move(runner);
         if (impl.runner != old) {
             impl.runner->setOutputLog(impl.outputLog);
-            if (const auto classic =
-                    std::dynamic_pointer_cast<const kit::ClassicSynthRunner>(impl.runner)) {
-                const auto mutableClassic = std::const_pointer_cast<kit::ClassicSynthRunner>(classic);
-                mutableClassic->scriptDirectory = impl.temporaryDirectory;
-                mutableClassic->keepScripts = !impl.temporaryDirectory.empty();
-            }
-            if (const auto threaded =
-                    std::dynamic_pointer_cast<const kit::ThreadedSynthRunner>(impl.runner)) {
-                const auto mutableThreaded = std::const_pointer_cast<kit::ThreadedSynthRunner>(threaded);
-                mutableThreaded->scriptDirectory = impl.temporaryDirectory;
-            }
         }
         impl.kept.reset();
     }
@@ -730,17 +718,6 @@ namespace hello::daw {
                                        (impl.temporaryDirectory / "render.log").u16string());
         impl.outputLog->setFileName(logFile);
         impl.outputLog->clear();
-        if (const auto classic =
-                std::dynamic_pointer_cast<const kit::ClassicSynthRunner>(impl.runner)) {
-            const auto mutableClassic = std::const_pointer_cast<kit::ClassicSynthRunner>(classic);
-            mutableClassic->scriptDirectory = impl.temporaryDirectory;
-            mutableClassic->keepScripts = !impl.temporaryDirectory.empty();
-        }
-        if (const auto threaded =
-                std::dynamic_pointer_cast<const kit::ThreadedSynthRunner>(impl.runner)) {
-            const auto mutableThreaded = std::const_pointer_cast<kit::ThreadedSynthRunner>(threaded);
-            mutableThreaded->scriptDirectory = impl.temporaryDirectory;
-        }
     }
 
     void Playback::setThreadCount(int count) {

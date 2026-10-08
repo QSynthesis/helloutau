@@ -278,9 +278,11 @@ namespace hello::daw {
         // separately.
         std::filesystem::path voiceBankRoot;
         bool voiceBankReloadPending = false;
-        // The kind of the runner of the playback, and its thread count, see updateRunner()
+        // The kind of the runner of the playback, its thread count and its script directory, see
+        // updateRunner()
         std::optional<bool> runnerClassic;
         int runnerThreads = 0;
+        std::filesystem::path runnerDirectory;
         // The notes last rendered, which Replay renders again
         std::optional<std::pair<int, int>> lastRange;
         bool restartPending = false;
@@ -292,7 +294,13 @@ namespace hello::daw {
         // if it cannot be created, in which case Playback refuses to render.
         std::filesystem::path newTemporaryDirectory() {
             temporaryDirectory.emplace();
-            if (!temporaryDirectory->isValid()) {
+            return temporaryPath();
+        }
+
+        // Returns the path of the temporary directory of the window, or an empty path if it
+        // could not be created.
+        std::filesystem::path temporaryPath() const {
+            if (!temporaryDirectory || !temporaryDirectory->isValid()) {
                 return {};
             }
             return std::filesystem::path(temporaryDirectory->path().toStdU16String());
@@ -903,25 +911,34 @@ namespace hello::daw {
 
         // The runner of the playback mode: temp.bat in a console for the classic prerender, and
         // several threads otherwise, which also render a whole track in the realtime mode. The
-        // runner is replaced only when the mode or the thread count changed, because a new
-        // runner discards the kept render.
+        // scripts are written into the temporary directory of the window, and the classic runner
+        // keeps them there for inspection. The runner is replaced only when the mode, the thread
+        // count or the temporary directory changed, because a new runner discards the kept
+        // render.
         void updateRunner() {
             const auto &settings = editor->settings();
             const bool classic = settings.playbackMode() == AppSettings::Prerender;
             const int threads = settings.renderThreadCount();
+            const auto directory = temporaryPath();
             playback->setThreadCount(threads);
-            if (runnerClassic == classic && (classic || runnerThreads == threads)) {
+            if (runnerClassic == classic && (classic || runnerThreads == threads) &&
+                runnerDirectory == directory) {
                 return;
             }
             if (classic) {
-                playback->setRunner(std::make_shared<kit::ClassicSynthRunner>());
+                auto runner = std::make_shared<kit::ClassicSynthRunner>();
+                runner->scriptDirectory = directory;
+                runner->keepScripts = !directory.empty();
+                playback->setRunner(runner);
             } else {
                 auto runner = std::make_shared<kit::ThreadedSynthRunner>();
                 runner->threadCount = threads;
+                runner->scriptDirectory = directory;
                 playback->setRunner(runner);
             }
             runnerClassic = classic;
             runnerThreads = threads;
+            runnerDirectory = directory;
         }
 
         // Renders the whole track into a WAV file that the user chooses, by default the output
