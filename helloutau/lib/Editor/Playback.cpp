@@ -9,7 +9,6 @@
 #include <QtCore/QCoreApplication>
 #include <QtCore/QDir>
 #include <QtCore/QPointer>
-#include <QtCore/QTemporaryDir>
 #include <QtCore/QThread>
 
 #include <stdcorelib/pimpl.h>
@@ -192,9 +191,6 @@ namespace hello::daw {
             std::make_shared<kit::ClassicSynthRunner>();
         AudioOutput *output = nullptr;
         std::filesystem::path temporaryDirectory;
-        // The cache of a project without a file if no temporary directory was given, created
-        // when first required
-        std::unique_ptr<QTemporaryDir> ownTemporaryDirectory;
 
         // The render in progress, and the workers that have not yet finished, including those
         // of cancelled renders
@@ -250,6 +246,9 @@ namespace hello::daw {
         std::optional<PlanInput> previewInput(const kit::ProjectDocument &document,
                                               kit::DiagnosticList &diagnostics) {
             stdc_decl_t;
+            if (!hasTemporaryDirectory(diagnostics)) {
+                return std::nullopt;
+            }
             const auto bank = document.voiceBank();
             if (!bank) {
                 fail(diagnostics, Playback::tr("The project has no voice bank to sing with."));
@@ -262,9 +261,18 @@ namespace hello::daw {
             }
             PlanInput input{document.session()->snapshot(), bank, {}};
             input.options.cacheDirectory = *cache;
-            input.options.outputFile =
-                (temporaryDirectory.empty() ? *cache : temporaryDirectory) / OutputFileName;
+            input.options.outputFile = temporaryDirectory / OutputFileName;
             return input;
+        }
+
+        // Returns whether the temporary directory is set, which every render requires for its
+        // track file, its scripts and its log. Reports the failure in diagnostics otherwise.
+        bool hasTemporaryDirectory(kit::DiagnosticList &diagnostics) const {
+            if (!temporaryDirectory.empty()) {
+                return true;
+            }
+            fail(diagnostics, Playback::tr("No temporary folder is available for rendering."));
+            return false;
         }
 
         // Makes the synth, or makes it anew for other engines or another thread count.
@@ -726,6 +734,9 @@ namespace hello::daw {
                  tr("Set the wavtool and the resampler in the project properties first."));
             return false;
         }
+        if (!impl.hasTemporaryDirectory(diagnostics)) {
+            return false;
+        }
         const auto bank = document.voiceBank();
         if (!bank) {
             fail(diagnostics, tr("The project has no voice bank to sing with."));
@@ -744,8 +755,7 @@ namespace hello::daw {
         auto job = std::make_shared<Job>();
         job->input = {document.session()->snapshot(), bank, {}};
         job->input.options.cacheDirectory = *cache;
-        job->input.options.outputFile =
-            (impl.temporaryDirectory.empty() ? *cache : impl.temporaryDirectory) / OutputFileName;
+        job->input.options.outputFile = impl.temporaryDirectory / OutputFileName;
         job->input.options.range = range;
         // The same notes as the last render play again without the engines.
         job->keptKey = impl.kept ? impl.kept->key : QString();
@@ -769,6 +779,9 @@ namespace hello::daw {
         if (engines.resampler.empty() || engines.wavtool.empty()) {
             fail(diagnostics,
                  tr("Set the wavtool and the resampler in the project properties first."));
+            return false;
+        }
+        if (!impl.hasTemporaryDirectory(diagnostics)) {
             return false;
         }
         const auto bank = document.voiceBank();
@@ -1013,16 +1026,10 @@ namespace hello::daw {
         }
         // A project without a file has no folder of its own. A relative path in its place would
         // be a folder of the working directory, whose files clearCache() deletes.
-        if (!impl.temporaryDirectory.empty()) {
-            return impl.temporaryDirectory / "cache";
-        }
-        if (!impl.ownTemporaryDirectory) {
-            impl.ownTemporaryDirectory = std::make_unique<QTemporaryDir>();
-        }
-        if (!impl.ownTemporaryDirectory->isValid()) {
+        if (impl.temporaryDirectory.empty()) {
             return std::nullopt;
         }
-        return std::filesystem::path(impl.ownTemporaryDirectory->path().toStdU16String());
+        return impl.temporaryDirectory / "cache";
     }
 
 }

@@ -1332,6 +1332,10 @@ Trust and use them for rendering?</source>
         <translation>无法为渲染缓存创建文件夹。</translation>
     </message>
     <message>
+        <source>No temporary folder is available for rendering.</source>
+        <translation>没有可供渲染使用的临时文件夹。</translation>
+    </message>
+    <message>
         <source>The previous render has not ended yet. Closing its console window stops it.</source>
         <translation>上一次渲染尚未结束。关闭其控制台窗口即可停止渲染。</translation>
     </message>

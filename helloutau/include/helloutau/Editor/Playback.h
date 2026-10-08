@@ -39,8 +39,10 @@ namespace hello::daw {
     /// noteStates(). A failure found in the plan of a render is reported by failed().
     ///
     /// The render cache of a document is the directory beside its \c .usth, or beside the UST it
-    /// was imported from, as UTAU uses it; a document without a file renders into a temporary
-    /// directory supplied by the owning project window.
+    /// was imported from, as UTAU uses it. Every render also requires the temporary directory of
+    /// setTemporaryDirectory(), which the owning project window supplies: it holds the track
+    /// file of play(), the scripts and the log, and the render cache of a document without a
+    /// file. Without it, play(), renderTrack(), preview() and prepare() fail.
     class HELLOUTAU_EDITOR_EXPORT Playback : public QObject {
         Q_OBJECT
     public:
@@ -180,9 +182,9 @@ namespace hello::daw {
         /// render cache until the next render or until the cache is cleared.
         std::filesystem::path lastRenderFile() const;
 
-        /// Returns the directory of the render cache of \a document: beside its file, or in a
-        /// temporary directory if it has no file. Returns \c std::nullopt if no temporary
-        /// directory can be created.
+        /// Returns the directory of the render cache of \a document: beside its file, or in the
+        /// temporary directory if it has no file. Returns \c std::nullopt if the document has no
+        /// file and no temporary directory is set.
         std::optional<std::filesystem::path>
             cacheDirectoryFor(const kit::ProjectDocument &document);
 

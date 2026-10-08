@@ -289,7 +289,7 @@ namespace hello::daw {
         QStringList backgroundEngines;
 
         // Replaces the temporary directory of the window and returns its path, or an empty path
-        // if it cannot be created, so that Playback creates a directory of its own.
+        // if it cannot be created, in which case Playback refuses to render.
         std::filesystem::path newTemporaryDirectory() {
             temporaryDirectory.emplace();
             if (!temporaryDirectory->isValid()) {

@@ -138,6 +138,13 @@ namespace {
         return true;
     }
 
+    // The temporary directory of a playback inside \a dir, as the project window supplies one
+    fs::path temporaryOf(const QTemporaryDir &dir) {
+        const auto path = fs::path(dir.path().toStdU16String()) / "temporary";
+        fs::create_directories(path);
+        return path;
+    }
+
     kit::SynthEngines someEngines() {
         kit::SynthEngines engines;
         engines.resampler = "resampler.exe";
@@ -151,15 +158,17 @@ class test_Playback : public QObject {
     Q_OBJECT
 
 private Q_SLOTS:
-    // Beside the .usth, beside the UST it came from, or else a temporary directory.
+    // Beside the .usth, beside the UST it came from, or else in the temporary directory, and
+    // nowhere without one.
     void the_cache_is_where_utau_keeps_it() {
         QTemporaryDir dir;
-        Playback playback;
+        Playback playback(nullptr, temporaryOf(dir), nullptr);
 
         kit::ProjectDocument unsaved;
-        const auto temporary = playback.cacheDirectoryFor(unsaved);
-        QVERIFY(temporary && fs::is_directory(*temporary));
-        QCOMPARE(*playback.cacheDirectoryFor(unsaved), *temporary);
+        QCOMPARE(playback.cacheDirectoryFor(unsaved),
+                 std::optional<fs::path>(temporaryOf(dir) / "cache"));
+        Playback without;
+        QVERIFY(!without.cacheDirectoryFor(unsaved));
 
         const auto document = singingDocument(dir);
         QVERIFY(document);
@@ -179,15 +188,25 @@ private Q_SLOTS:
                  fs::path(dir.path().toStdU16String()) / "imported.cache");
     }
 
+    // Playing requires engines, a voice bank and the temporary directory.
     void playing_needs_engines_and_a_voice_bank() {
         QTemporaryDir dir;
-        Playback playback;
+        Playback playback(nullptr, temporaryOf(dir), nullptr);
         kit::DiagnosticList diagnostics;
 
         const auto document = singingDocument(dir);
         QVERIFY(document);
         QVERIFY(!playback.play(*document, std::nullopt, {}, diagnostics));
         QVERIFY(kit::hasError(diagnostics));
+
+        diagnostics.clear();
+        Playback without;
+        QVERIFY(!without.play(*document, std::nullopt, someEngines(), diagnostics));
+        QVERIFY(!without.renderTrack(*document, temporaryOf(dir) / "out.wav", someEngines(),
+                                     diagnostics));
+        QVERIFY(!without.preview(*document, std::nullopt, someEngines(), diagnostics));
+        QVERIFY(!without.prepare(*document, std::nullopt, someEngines(), diagnostics));
+        QCOMPARE(diagnostics.size(), 4);
 
         diagnostics.clear();
         kit::ProjectDocument silent;
@@ -204,7 +223,7 @@ private Q_SLOTS:
         QTemporaryDir dir;
         const auto document = singingDocument(dir);
         QVERIFY(document);
-        Playback playback;
+        Playback playback(nullptr, temporaryOf(dir), nullptr);
         const auto runner = std::make_shared<SilentRunner>();
         playback.setRunner(runner);
         QSignalSpy states(&playback, &Playback::stateChanged);
@@ -219,7 +238,7 @@ private Q_SLOTS:
         QVERIFY(playback.lastRenderFile().empty());
         QTRY_COMPARE_WITH_TIMEOUT(states.size(), 3, 5000);
         // The track file of the render, which Save Last Played copies
-        QCOMPARE(playback.lastRenderFile(), *playback.cacheDirectoryFor(*document) / "temp.wav");
+        QCOMPARE(playback.lastRenderFile(), temporaryOf(dir) / "temp.wav");
         QCOMPARE(failures.size(), 0);
         QCOMPARE(states.at(1).at(0).value<Playback::State>(), Playback::Playing);
         QCOMPARE(states.at(2).at(0).value<Playback::State>(), Playback::Stopped);
@@ -233,7 +252,7 @@ private Q_SLOTS:
         QCOMPARE(planProgress.last(), (QList<QVariant>{1, 1}));
         QCOMPARE(runner->stepCounts, QList<int>{1});
         QCOMPARE(runner->caches, QList<fs::path>{*playback.cacheDirectoryFor(*document)});
-        QVERIFY(fs::is_regular_file(*playback.cacheDirectoryFor(*document) / "temp.wav"));
+        QVERIFY(fs::is_regular_file(temporaryOf(dir) / "temp.wav"));
     }
 
     // The whole track is rendered into a file of the caller's choice, without playing it and
@@ -242,7 +261,7 @@ private Q_SLOTS:
         QTemporaryDir dir;
         const auto document = singingDocument(dir);
         QVERIFY(document);
-        Playback playback;
+        Playback playback(nullptr, temporaryOf(dir), nullptr);
         const auto runner = std::make_shared<SilentRunner>();
         playback.setRunner(runner);
         QSignalSpy rendered(&playback, &Playback::trackRendered);
@@ -270,7 +289,7 @@ private Q_SLOTS:
         QTemporaryDir dir;
         const auto document = singingDocument(dir);
         QVERIFY(document);
-        Playback playback;
+        Playback playback(nullptr, temporaryOf(dir), nullptr);
         const auto runner = std::make_shared<SilentRunner>();
         runner->frames = 44100;
         playback.setRunner(runner);
@@ -298,7 +317,7 @@ private Q_SLOTS:
         QTemporaryDir dir;
         const auto document = singingDocument(dir);
         QVERIFY(document);
-        Playback playback;
+        Playback playback(nullptr, temporaryOf(dir), nullptr);
         const auto runner = std::make_shared<SilentRunner>();
         playback.setRunner(runner);
 
@@ -344,7 +363,7 @@ private Q_SLOTS:
         QTemporaryDir dir;
         const auto document = singingDocument(dir);
         QVERIFY(document);
-        Playback playback;
+        Playback playback(nullptr, temporaryOf(dir), nullptr);
         const auto runner = std::make_shared<SilentRunner>();
         runner->frames = 44100;
         playback.setRunner(runner);
@@ -388,7 +407,7 @@ private Q_SLOTS:
         QTemporaryDir dir;
         const auto document = singingDocument(dir);
         QVERIFY(document);
-        Playback playback;
+        Playback playback(nullptr, temporaryOf(dir), nullptr);
 
         QVERIFY(writeFragments(playback, *document));
 
@@ -419,7 +438,7 @@ private Q_SLOTS:
         QTemporaryDir dir;
         const auto document = singingDocument(dir);
         QVERIFY(document);
-        Playback playback;
+        Playback playback(nullptr, temporaryOf(dir), nullptr);
         kit::DiagnosticList diagnostics;
         QVERIFY(!playback.preview(*document, std::nullopt, {}, diagnostics));
         QVERIFY(kit::hasError(diagnostics));
@@ -432,7 +451,7 @@ private Q_SLOTS:
         QTemporaryDir dir;
         const auto document = singingDocument(dir);
         QVERIFY(document);
-        Playback playback;
+        Playback playback(nullptr, temporaryOf(dir), nullptr);
         const auto runner = std::make_shared<SilentRunner>();
         runner->waitForCancel = true;
         playback.setRunner(runner);
@@ -458,7 +477,7 @@ private Q_SLOTS:
         QTemporaryDir dir;
         const auto document = singingDocument(dir);
         QVERIFY(document);
-        Playback playback;
+        Playback playback(nullptr, temporaryOf(dir), nullptr);
         const auto runner = std::make_shared<SilentRunner>();
         playback.setRunner(runner);
         QSignalSpy failures(&playback, &Playback::failed);
@@ -482,7 +501,7 @@ private Q_SLOTS:
         QTemporaryDir dir;
         const auto document = singingDocument(dir);
         QVERIFY(document);
-        Playback playback;
+        Playback playback(nullptr, temporaryOf(dir), nullptr);
         QVERIFY(writeFragments(playback, *document));
         const auto cache = *playback.cacheDirectoryFor(*document);
         fs::create_directories(cache / "kept");
@@ -518,7 +537,7 @@ private Q_SLOTS:
         QTemporaryDir dir;
         const auto document = singingDocument(dir);
         QVERIFY(document);
-        Playback playback;
+        Playback playback(nullptr, temporaryOf(dir), nullptr);
         const auto runner = std::make_shared<SilentRunner>();
         runner->hold = true;
         playback.setRunner(runner);
@@ -552,7 +571,7 @@ private Q_SLOTS:
         QTemporaryDir dir;
         const auto document = singingDocument(dir);
         QVERIFY(document);
-        Playback playback;
+        Playback playback(nullptr, temporaryOf(dir), nullptr);
         kit::DiagnosticList diagnostics;
         QVERIFY(!playback.prepare(*document, std::nullopt, {}, diagnostics));
         QVERIFY(kit::hasError(diagnostics));
