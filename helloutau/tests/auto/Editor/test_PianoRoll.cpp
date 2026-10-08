@@ -799,15 +799,14 @@ private Q_SLOTS:
         QVERIFY(!roll.ruler()->sections().at(1).selected);
 
         QSignalSpy label(&roll, &PianoRoll::labelRequested);
-        QSignalSpy region(&roll, &PianoRoll::regionRequested);
+        QSignalSpy region(&roll, &PianoRoll::regionEditRequested);
         QTest::mouseDClick(roll.ruler(), Qt::LeftButton, {}, onRuler(240));
         QCOMPARE(label.size(), 1);
         QCOMPARE(label[0][0].toInt(), 0);
         QTest::mouseDClick(roll.ruler(), Qt::LeftButton, {},
                            onRuler(1200, roll.ruler()->height() / 4 + 3));
         QCOMPARE(region.size(), 1);
-        QCOMPARE(region[0][0].toInt(), 1);
-        QCOMPARE(region[0][1].toInt(), 2);
+        QVERIFY(region[0][0].value<kit::Region>() == (kit::Region{QStringLiteral("V"), 1, 2}));
 
         roll.setSelectedIndices({0, 2});
         QCOMPARE(roll.selectedRange(), std::nullopt);

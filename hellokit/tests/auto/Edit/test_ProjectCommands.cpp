@@ -677,6 +677,8 @@ private Q_SLOTS:
                                                         QStringLiteral("note merge"),
                                                         QStringLiteral("note label"),
                                                         QStringLiteral("note region"),
+                                                        QStringLiteral("note renameregion"),
+                                                        QStringLiteral("note removeregion"),
                                                         QStringLiteral("settings mode2"),
                                                         QStringLiteral("settings properties")}));
     }

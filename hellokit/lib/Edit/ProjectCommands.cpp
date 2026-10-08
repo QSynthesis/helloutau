@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <utility>
 
 #include <QtCore/QJsonArray>
 #include <QtCore/QJsonObject>
@@ -595,6 +596,52 @@ namespace hello::kit {
             return ProjectEdits::nameRegion(*notes, *index, *count, *name, diagnostics);
         }
 
+        // The notes and the region of the arguments <notes> <first> <last> <name>
+        std::optional<std::pair<NoteListRef, Region>> regionOf(ProjectSession &session,
+                                                               const Arguments &arguments,
+                                                               DiagnosticList &diagnostics) {
+            const auto notes = notesAt(session, arguments[0], diagnostics);
+            const auto first = edit::NodeCommands::integerOf(
+                arguments[1], ProjectCommands::tr("first"), diagnostics);
+            const auto last = edit::NodeCommands::integerOf(
+                arguments[2], ProjectCommands::tr("last"), diagnostics);
+            const auto name = edit::NodeCommands::stringOf(
+                arguments[3], ProjectCommands::tr("name"), diagnostics);
+            if (!notes || !first || !last || !name) {
+                return std::nullopt;
+            }
+            return std::pair{
+                *notes, Region{*name, *first, *last}
+            };
+        }
+
+        bool renameRegionCommand(ProjectSession &session, const Arguments &arguments,
+                                 DiagnosticList &diagnostics) {
+            if (arguments.size() != 5) {
+                return usage(diagnostics,
+                             "note renameregion <notes> <first> <last> <name> <new name>");
+            }
+            const auto region = regionOf(session, arguments, diagnostics);
+            const auto name = edit::NodeCommands::stringOf(
+                arguments[4], ProjectCommands::tr("new name"), diagnostics);
+            if (!region || !name) {
+                return false;
+            }
+            return ProjectEdits::renameRegion(region->first, region->second, *name, diagnostics);
+        }
+
+        bool removeRegionCommand(ProjectSession &session, const Arguments &arguments,
+                                 DiagnosticList &diagnostics) {
+            if (arguments.size() != 4) {
+                return usage(diagnostics, "note removeregion <notes> <first> <last> <name>");
+            }
+            const auto region = regionOf(session, arguments, diagnostics);
+            if (!region) {
+                return false;
+            }
+            return ProjectEdits::removeRegion(region->first, region->second, diagnostics);
+        }
+
         using DomainCommand = bool (*)(ProjectSession &, const Arguments &, DiagnosticList &);
 
         // The domain commands, each with the function of ProjectEdits that it calls.
@@ -606,26 +653,28 @@ namespace hello::kit {
         };
 
         constexpr DomainCommandInfo domainCommands[] = {
-            {"note",     "transpose",  transposeCommand,      "transpose"        },
-            {"note",     "split",      splitCommand,          "splitNote"        },
-            {"note",     "insert",     insertCommand,         "insertNotes"      },
-            {"note",     "tempo",      tempoCommand,          "setTempo"         },
-            {"note",     "remove",     removeCommand,         "removeNotes"      },
-            {"note",     "length",     lengthCommand,         "setLength"        },
-            {"note",     "move",       moveCommand,           "moveNotes"        },
-            {"note",     "portamento", portamentoCommand,     "setPortamento"    },
-            {"note",     "vibrato",    vibratoCommand,        "setVibrato"       },
-            {"note",     "envelope",   envelopeCommand,       "setEnvelope"      },
-            {"note",     "scale",      scaleCommand,          "scalePitch"       },
-            {"note",     "parameter",  parameterCommand,      "setParameter"     },
-            {"note",     "bend",       bendCommand,           "drawPitchBend"    },
-            {"note",     "pitchbend",  pitchBendCommand,      "setPitchBend"     },
-            {"note",     "properties", notePropertiesCommand, "setNoteProperties"},
-            {"note",     "merge",      mergeCommand,          "mergeNotes"       },
-            {"note",     "label",      labelCommand,          "setLabel"         },
-            {"note",     "region",     regionCommand,         "nameRegion"       },
-            {"settings", "mode2",      mode2Command,          "setMode2"         },
-            {"settings", "properties", propertiesCommand,     "setProperties"    },
+            {"note",     "transpose",    transposeCommand,      "transpose"        },
+            {"note",     "split",        splitCommand,          "splitNote"        },
+            {"note",     "insert",       insertCommand,         "insertNotes"      },
+            {"note",     "tempo",        tempoCommand,          "setTempo"         },
+            {"note",     "remove",       removeCommand,         "removeNotes"      },
+            {"note",     "length",       lengthCommand,         "setLength"        },
+            {"note",     "move",         moveCommand,           "moveNotes"        },
+            {"note",     "portamento",   portamentoCommand,     "setPortamento"    },
+            {"note",     "vibrato",      vibratoCommand,        "setVibrato"       },
+            {"note",     "envelope",     envelopeCommand,       "setEnvelope"      },
+            {"note",     "scale",        scaleCommand,          "scalePitch"       },
+            {"note",     "parameter",    parameterCommand,      "setParameter"     },
+            {"note",     "bend",         bendCommand,           "drawPitchBend"    },
+            {"note",     "pitchbend",    pitchBendCommand,      "setPitchBend"     },
+            {"note",     "properties",   notePropertiesCommand, "setNoteProperties"},
+            {"note",     "merge",        mergeCommand,          "mergeNotes"       },
+            {"note",     "label",        labelCommand,          "setLabel"         },
+            {"note",     "region",       regionCommand,         "nameRegion"       },
+            {"note",     "renameregion", renameRegionCommand,   "renameRegion"     },
+            {"note",     "removeregion", removeRegionCommand,   "removeRegion"     },
+            {"settings", "mode2",        mode2Command,          "setMode2"         },
+            {"settings", "properties",   propertiesCommand,     "setProperties"    },
         };
 
         bool run(ProjectSession &session, const Arguments &arguments, DiagnosticList &diagnostics) {

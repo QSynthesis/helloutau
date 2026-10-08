@@ -1058,10 +1058,6 @@ Trust and use them for rendering?</source>
         <translation>打开工程属性</translation>
     </message>
     <message>
-        <source>Remove Region</source>
-        <translation>移除区间</translation>
-    </message>
-    <message>
         <source>Add Vibrato</source>
         <translation>添加颤音</translation>
     </message>
@@ -1552,6 +1548,10 @@ Trust and use them for rendering?</source>
     <message>
         <source>Replace Lyrics</source>
         <translation>替换歌词</translation>
+    </message>
+    <message>
+        <source>Rename Region</source>
+        <translation>重命名区间</translation>
     </message>
     <message>
         <source>Note Properties</source>
@@ -3175,6 +3175,18 @@ Write them again without these chunks? The audio stays the same. The files are w
         <translation>名称</translation>
     </message>
     <message>
+        <source>first</source>
+        <translation>起始索引</translation>
+    </message>
+    <message>
+        <source>last</source>
+        <translation>结束索引</translation>
+    </message>
+    <message>
+        <source>new name</source>
+        <translation>新名称</translation>
+    </message>
+    <message>
         <source>A command begins with its name.</source>
         <translation>命令须以命令名开头。</translation>
     </message>
@@ -3323,6 +3335,26 @@ Write them again without these chunks? The audio stays the same. The files are w
     <message>
         <source>The track has %1 notes, not notes %2 to %3.</source>
         <translation>音轨有 %1 个音符，没有索引为 %2 到 %3 的音符。</translation>
+    </message>
+    <message>
+        <source>A region requires a name.</source>
+        <translation>区间需要名称。</translation>
+    </message>
+    <message>
+        <source>The track has no region &quot;%1&quot; from note %2 to note %3.</source>
+        <translation>音轨中没有从音符 %2 到音符 %3 的区间“%1”。</translation>
+    </message>
+    <message>
+        <source>Another region named &quot;%1&quot; starts or ends at the same note.</source>
+        <translation>另一个名为“%1”的区间在同一音符开始或结束。</translation>
+    </message>
+    <message>
+        <source>Rename Region</source>
+        <translation>重命名区间</translation>
+    </message>
+    <message>
+        <source>Remove Region</source>
+        <translation>移除区间</translation>
     </message>
     <message>
         <source>Note %1 sets a tempo, which merging would lose, and the notes after it would move.</source>

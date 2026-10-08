@@ -40,6 +40,28 @@ namespace hello::kit {
         bool operator!=(const VoiceLocations &other) const;
     };
 
+    /// A named stretch of the notes of a track, as UTAU names one: from the note whose
+    /// Note::regions holds the name to the first note from there whose Note::regionEnds holds
+    /// it, or to the last note of the track if no note does.
+    struct HELLOKIT_DOCUMENT_EXPORT Region {
+        QString name;
+        int first = 0;
+        int last = 0;
+
+        inline bool operator==(const Region &other) const {
+            return name == other.name && first == other.first && last == other.last;
+        }
+
+        inline bool operator!=(const Region &other) const {
+            return !(*this == other);
+        }
+
+        /// Returns the regions of the notes whose Note::regions are \a starts and whose
+        /// Note::regionEnds are \a ends, both indexed by note, in the order of their first notes
+        /// and, for the regions of one note, in the order of its names.
+        static QList<Region> of(const QList<QStringList> &starts, const QList<QStringList> &ends);
+    };
+
     /// One voice part. A UST contains exactly one.
     struct HELLOKIT_DOCUMENT_EXPORT Track {
         /// Not representable in UST, and therefore dropped on export to \c .ust.
@@ -80,6 +102,9 @@ namespace hello::kit {
         /// \param directory an absolute path
         static QString voiceDirOf(const std::filesystem::path &directory,
                                   const VoiceLocations &locations);
+
+        /// Returns the regions of the notes, see Region::of().
+        QList<Region> regions() const;
     };
 
     /// Project-wide settings.

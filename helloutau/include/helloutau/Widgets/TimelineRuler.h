@@ -141,7 +141,7 @@ namespace hello::daw {
         // The index of the mark whose text is at position, or -1
         int markAt(const QPointF &position) const;
 
-        // The index of the section at position, a label before a region, or -1
+        // The index of the section at position, the last there, which is drawn on top, or -1
         int sectionAt(const QPointF &position) const;
 
         void updateSectionHover(const QPointF &position);

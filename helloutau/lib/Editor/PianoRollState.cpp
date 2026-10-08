@@ -685,7 +685,7 @@ namespace hello::daw {
                 {double(timeline->note(region.first).start),
                  double(timeline->note(region.last).start + timeline->note(region.last).length),
                  region.name, false});
-            sectionNotes.push_back({region.first, region.last, false});
+            sectionNotes.push_back({region.first, region.last, false, region.name});
         }
         const auto refs = notes();
         for (int i = 0; i < timeline->noteCount(); ++i) {

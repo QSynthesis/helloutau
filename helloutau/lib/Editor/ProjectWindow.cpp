@@ -499,8 +499,7 @@ namespace hello::daw {
             }
         }
 
-        // The name of the region of the notes from first to last, entered by the user; an empty
-        // name removes the region
+        // A new region of the notes from first to last, named by the user
         void nameRegion(int first, int last) {
             stdc_decl_t;
             const auto notes = kit::ProjectRef(document->session()).tracks().at(0).notes();
@@ -508,15 +507,34 @@ namespace hello::daw {
                 return;
             }
             bool ok = false;
-            const auto name =
-                QInputDialog::getText(&decl, tr("Name Region"), tr("&Name:"), QLineEdit::Normal,
-                                      notes.at(first).regions().join(u'|'), &ok);
+            const auto name = QInputDialog::getText(&decl, tr("Name Region"), tr("&Name:"),
+                                                    QLineEdit::Normal, QString(), &ok);
             if (!ok) {
                 return;
             }
             kit::DiagnosticList diagnostics;
             kit::ProjectEdits::nameRegion(notes, first, last - first + 1, name, diagnostics);
             DiagnosticBox::show(&decl, tr("Name Region"), diagnostics);
+        }
+
+        // Renames region to the name entered by the user, or removes it if the name is empty.
+        // The other regions at its notes are kept.
+        void editRegion(const kit::Region &region) {
+            stdc_decl_t;
+            const auto notes = kit::ProjectRef(document->session()).tracks().at(0).notes();
+            bool ok = false;
+            const auto name = QInputDialog::getText(&decl, tr("Rename Region"), tr("&Name:"),
+                                                    QLineEdit::Normal, region.name, &ok);
+            if (!ok) {
+                return;
+            }
+            kit::DiagnosticList diagnostics;
+            if (name.isEmpty()) {
+                kit::ProjectEdits::removeRegion(notes, region, diagnostics);
+            } else {
+                kit::ProjectEdits::renameRegion(notes, region, name, diagnostics);
+            }
+            DiagnosticBox::show(&decl, tr("Rename Region"), diagnostics);
         }
 
         // The properties of the selected notes in their dialog, changed in one step
@@ -1922,6 +1940,8 @@ namespace hello::daw {
                              [this](int index) { editLabel(index); });
             QObject::connect(roll, &PianoRoll::regionRequested, &decl,
                              [this](int first, int last) { nameRegion(first, last); });
+            QObject::connect(roll, &PianoRoll::regionEditRequested, &decl,
+                             [this](const kit::Region &region) { editRegion(region); });
             QObject::connect(roll, &PianoRoll::editRefused, &decl, [this](const QString &message) {
                 stdc_decl_t;
                 decl.statusBar()->showMessage(message, StatusMessageTimeout);

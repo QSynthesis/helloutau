@@ -195,13 +195,15 @@ note.userData().remove(QStringLiteral("$Custom"));
 | `drawPitchBend` | 把一串值画进一个音符的 Mode1 值：第一个值在距音符起点若干 tick 处，其后每 5 tick 一个，按该音符的速度换算（`PitchBend::drawn()`）。没有值的音符从该处开始（`PBStart` 取到千分之一毫秒）；已有值的音符保持起点，位置取最近的格点，值向前或向后延伸，画出的值与原有的值之间按原来的曲线补齐（取整），使没画到的地方听起来不变。用于 [`Tuning.md`](Tuning.md) 第 5 步 |
 | `setPitchBend` | 以给定的值整体替换一个音符的 Mode1 值，空值即删除；与原值相同时不产生步骤。用于「Convert Mode2 Pitch to Mode1」（[`Tuning.md`](Tuning.md)） |
 | `setLabel` | 设置一个音符的标签（UST 的 `Label`），空文字即删除 |
-| `nameRegion` | 为一段连续的音符命名区间：第一个音符的 `regions` 与最后一个音符的 `regionEnds`（UST 的 `$region` 与 `$region_end`）各加入区间名；多个区间共用同一端点时各占数组的一项，区间名本身不允许含 `|`，因为 UST 以它分隔；空名即删除两端字段；范围为空或超出音符时拒绝 |
+| `nameRegion` | 为一段连续的音符命名区间：第一个音符的 `regions` 与最后一个音符的 `regionEnds`（UST 的 `$region` 与 `$region_end`）各加入区间名；多个区间共用同一端点时各占数组的一项，两端已有的其他区间名保留；空名与含 `|` 的名称拒绝（UST 以 `|` 分隔名称）；范围为空或超出音符时拒绝 |
+| `renameRegion` | 把一个区间（`Region`：名称、首音符、末音符，由 `Track::regions()` 或 `NoteListRef::regions()` 解析）改名：在首音符的 `regions` 与末音符的 `regionEnds` 中原位替换，未结束的区间只改首音符；两端其他区间的名称保留。区间不存在、新名称为空或含 `|`、新名称已是同一端点上另一区间的名称时拒绝（作者 2026-10-08 决定，审查清单 P0-8） |
+| `removeRegion` | 删除一个区间：从首音符的 `regions` 与末音符的 `regionEnds` 中只删去它的名称，同一端点上其他区间的名称保留；区间不存在时拒绝 |
 | `setMode2` | 打开或关闭工程的 Mode2，即合成用控制点与颤音还是用 Mode1 值；另一种数据保留。用于 [`Tuning.md`](Tuning.md) 第 5 步 |
 | `mergeNotes` | 把一段连续的音符合并到第一个音符（同 UTAU 的「音符合并」）：长度为它们之和，其他属性取第一个音符的，一个撤销步骤「Merge Notes」。少于两个音符时拒绝；第一个之后的音符设了曲速时拒绝，因为合并会丢掉这个曲速，其后所有音符的时刻都会改变（作者 2026-09-29 要求） |
 | `setNoteProperties` | 改音符的属性（`NotePropertyChanges`）：歌词、长度、曲速、力度、调制、辅音速度、先行发声、重叠、STP、flags，只改给出的字段，对每个音符相同，一个撤销步骤「Change Note Properties」；能留给默认值的字段设为空即清除。用于音符属性对话框与曲速（作者 2026-09-29 要求） |
 | `setProperties` | 改工程的属性（`ProjectPropertyChanges`）：名称、速度、flags、输出文件、第一条音轨的音源目录、两个引擎、Mode2，只改给出的字段，一个撤销步骤「Change Project Properties」；没有任何变化时不产生步骤。两个引擎只记录，不执行。用于工程属性对话框（作者 2026-09-29 要求） |
 
-卷帘的「Remove Label」与「Remove Region」是界面操作，不新增领域函数：前者对选中的音符分别调用 `setLabel` 清空标签，后者对第一个选中音符所在的区间调用 `nameRegion` 清空两端字段。每项操作在外层合并为一个事务，因此各占一个撤销步骤。
+卷帘的「Remove Label」是界面操作，不新增领域函数：对选中的音符分别调用 `setLabel` 清空标签，在外层合并为一个事务，因此占一个撤销步骤。「Remove Region」调用 `removeRegion` 删除第一个选中音符所在的区间。
 
 ## 六种变更形状
 
@@ -287,7 +289,7 @@ note insert /tracks/0/notes 12 {"lyric": "a", "length": 480, "noteNum": 60}
 | `move <路径> <下标> <数量> <目标位置>` | 列表 | 目标位置是移动后第一项的下标 |
 | `insert` / `replace <路径> <下标> <数值>…` | 数组 | 插入或覆盖，覆盖可越过末尾 |
 
-**领域命令**（`ProjectCommands.h`）每个领域函数一条，形式为 `<名词> <动词> [参数…]`：`note transpose <半音数> <音符路径>…`、`note split <音符列表路径> <下标> <tick>`、`note insert <音符列表路径> <下标> <音符>…`、`note tempo <音符路径> <速度>`、`note remove <音符列表路径> <下标>…`、`note length <音符路径> <tick>`、`note move <音符列表路径> <下标> <个数> <目标下标>`、`note portamento <音符路径> <控制点数组>`、`note vibrato <颤音或 null> <音符路径>…`、`note envelope <包络或 null> <音符路径>…`、`note scale <控制点倍数> <颤音倍数> <音符路径>…`、`note parameter <intensity、modulation 或 velocity> <值或 null> <音符路径>…`、`note bend <音符列表路径> <下标> <tick> <值数组>`、`note pitchbend <Mode1 值或 null> <音符路径>`（对象的键为 `start`、`values`）、`note merge <音符列表路径> <下标> <个数>`、`note label <文字> <音符路径>`、`note region <音符列表路径> <下标> <个数> <名称>`、`note properties <对象> <音符路径>…`（键为 `lyric`、`length`、`tempo`、`intensity`、`modulation`、`velocity`、`preUtterance`、`voiceOverlap`、`startPoint`、`flags`，数值键可为 `null` 表示清除）、`settings mode2 <true 或 false>`、`settings properties <对象>`（键为 `name`、`tempo`、`flags`、`outputFile`、`voiceDir`、`wavtool`、`resampler`、`mode2`，只含要改的键）。音源的领域命令（`VoiceBankCommands.h`）：`entry set <条目路径> <条目>`、`entry insert <目录路径> <条目>…`、`entry include <目录路径> <文件名>…`、`entry remove <目录路径> <下标>…`、`prefix set <音高> <前缀>`、`prefix remove <音高>`、`character set <character.txt 的对象>`、`readme set <文本>`、`directory charset <目录路径> <编码名>`。插入的条目按文件名排入，不由命令指定位置。
+**领域命令**（`ProjectCommands.h`）每个领域函数一条，形式为 `<名词> <动词> [参数…]`：`note transpose <半音数> <音符路径>…`、`note split <音符列表路径> <下标> <tick>`、`note insert <音符列表路径> <下标> <音符>…`、`note tempo <音符路径> <速度>`、`note remove <音符列表路径> <下标>…`、`note length <音符路径> <tick>`、`note move <音符列表路径> <下标> <个数> <目标下标>`、`note portamento <音符路径> <控制点数组>`、`note vibrato <颤音或 null> <音符路径>…`、`note envelope <包络或 null> <音符路径>…`、`note scale <控制点倍数> <颤音倍数> <音符路径>…`、`note parameter <intensity、modulation 或 velocity> <值或 null> <音符路径>…`、`note bend <音符列表路径> <下标> <tick> <值数组>`、`note pitchbend <Mode1 值或 null> <音符路径>`（对象的键为 `start`、`values`）、`note merge <音符列表路径> <下标> <个数>`、`note label <文字> <音符路径>`、`note region <音符列表路径> <下标> <个数> <名称>`、`note renameregion <音符列表路径> <首音符> <末音符> <名称> <新名称>`、`note removeregion <音符列表路径> <首音符> <末音符> <名称>`、`note properties <对象> <音符路径>…`（键为 `lyric`、`length`、`tempo`、`intensity`、`modulation`、`velocity`、`preUtterance`、`voiceOverlap`、`startPoint`、`flags`，数值键可为 `null` 表示清除）、`settings mode2 <true 或 false>`、`settings properties <对象>`（键为 `name`、`tempo`、`flags`、`outputFile`、`voiceDir`、`wavtool`、`resampler`、`mode2`，只含要改的键）。音源的领域命令（`VoiceBankCommands.h`）：`entry set <条目路径> <条目>`、`entry insert <目录路径> <条目>…`、`entry include <目录路径> <文件名>…`、`entry remove <目录路径> <下标>…`、`prefix set <音高> <前缀>`、`prefix remove <音高>`、`character set <character.txt 的对象>`、`readme set <文本>`、`directory charset <目录路径> <编码名>`。插入的条目按文件名排入，不由命令指定位置。
 
 **查询只读取文档，不修改文档。** 目前只有一个：`get <路径>`，返回路径所指内容的 JSON，写法与命令的参数、变更日志相同：记录按其文档的写法（如音符、oto 条目），文档未定义写法的记录（如工程的根、音源的目录）写成各字段组成的对象；列表是数组，项在数组中的位置就是命令所用的下标；映射是对象，数组是数字的数组；空的值、缺席的记录或映射写作 `null`。不公开的字段既不能寻址，也不输出。查询不开事务，不产生撤销步骤，由 `ProjectCommands::query()` 与 `VoiceBankCommands::query()` 执行；交给 `execute()` 时被拒绝。例如 `entry remove` 所需的下标由 `get /directories/1/otoEntries` 查得。
 

@@ -20,6 +20,31 @@ namespace hello::kit {
             return false;
         }
 
+        // Returns whether name can name a region, and reports why not otherwise.
+        bool isRegionName(const QString &name, DiagnosticList &diagnostics) {
+            if (name.isEmpty()) {
+                return fail(diagnostics, ProjectEdits::tr("A region requires a name."));
+            }
+            if (name.contains(u'|')) {
+                return fail(diagnostics,
+                            ProjectEdits::tr("A region name cannot contain the vertical bar (|)."));
+            }
+            return true;
+        }
+
+        // Returns whether notes has region, and reports otherwise.
+        bool hasRegion(const NoteListRef &notes, const Region &region,
+                       DiagnosticList &diagnostics) {
+            if (notes.regions().contains(region)) {
+                return true;
+            }
+            return fail(diagnostics, ProjectEdits::tr("The track has no region \"%1\" from note %2 "
+                                                      "to note %3.")
+                                         .arg(region.name)
+                                         .arg(region.first)
+                                         .arg(region.last));
+        }
+
     }
 
     bool ProjectEdits::transpose(const QList<NoteRef> &notes, int semitones,
@@ -402,22 +427,62 @@ namespace hello::kit {
                                          .arg(index)
                                          .arg(index + count - 1));
         }
-        if (name.contains(u'|')) {
-            return fail(diagnostics, tr("A region name cannot contain the vertical bar (|)."));
+        if (!isRegionName(name, diagnostics)) {
+            return false;
         }
         auto transaction = notes.session()->transaction(tr("Name Region"));
         const auto first = notes.at(index);
         const auto last = notes.at(index + count - 1);
-        if (name.isEmpty()) {
-            first.setRegions({});
-            last.setRegionEnds({});
-        } else {
-            if (const auto starts = first.regions(); !starts.contains(name)) {
-                first.setRegions(starts + QStringList{name});
-            }
-            if (const auto ends = last.regionEnds(); !ends.contains(name)) {
-                last.setRegionEnds(ends + QStringList{name});
-            }
+        if (const auto starts = first.regions(); !starts.contains(name)) {
+            first.setRegions(starts + QStringList{name});
+        }
+        if (const auto ends = last.regionEnds(); !ends.contains(name)) {
+            last.setRegionEnds(ends + QStringList{name});
+        }
+        return transaction.commit(diagnostics);
+    }
+
+    bool ProjectEdits::renameRegion(const NoteListRef &notes, const Region &region,
+                                    const QString &name, DiagnosticList &diagnostics) {
+        if (!hasRegion(notes, region, diagnostics) || !isRegionName(name, diagnostics)) {
+            return false;
+        }
+        if (name == region.name) {
+            return true;
+        }
+        const auto first = notes.at(region.first);
+        const auto last = notes.at(region.last);
+        auto starts = first.regions();
+        auto ends = last.regionEnds();
+        const bool ended = ends.contains(region.name);
+        if (starts.contains(name) || (ended && ends.contains(name))) {
+            return fail(diagnostics, tr("Another region named \"%1\" starts or ends at the same "
+                                        "note.")
+                                         .arg(name));
+        }
+        auto transaction = notes.session()->transaction(tr("Rename Region"));
+        starts.replace(starts.indexOf(region.name), name);
+        first.setRegions(starts);
+        if (ended) {
+            ends.replace(ends.indexOf(region.name), name);
+            last.setRegionEnds(ends);
+        }
+        return transaction.commit(diagnostics);
+    }
+
+    bool ProjectEdits::removeRegion(const NoteListRef &notes, const Region &region,
+                                    DiagnosticList &diagnostics) {
+        if (!hasRegion(notes, region, diagnostics)) {
+            return false;
+        }
+        auto transaction = notes.session()->transaction(tr("Remove Region"));
+        const auto first = notes.at(region.first);
+        const auto last = notes.at(region.last);
+        auto starts = first.regions();
+        starts.removeOne(region.name);
+        first.setRegions(starts);
+        if (auto ends = last.regionEnds(); ends.removeOne(region.name)) {
+            last.setRegionEnds(ends);
         }
         return transaction.commit(diagnostics);
     }

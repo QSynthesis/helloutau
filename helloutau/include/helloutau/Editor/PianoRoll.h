@@ -10,6 +10,7 @@
 #include <QtWidgets/QWidget>
 
 #include <hellokit/Document/Note.h>
+#include <hellokit/Document/Project.h>
 #include <hellokit/Support/Diagnostic.h>
 #include <hellokit/Support/TextSearch.h>
 
@@ -208,26 +209,20 @@ namespace hello::daw {
         /// \name Labels and regions
         /// @{
 
-        /// A named stretch of notes, as UTAU names one: from a note whose \c $region names it to
-        /// the first note from there whose \c $region_end is not empty, or to the last note.
-        struct Region {
-            QString name;
-            int first = 0;
-            int last = 0;
-        };
-
-        /// Returns the regions of the track in the order of their first notes.
-        QList<Region> regions() const;
+        /// Returns the regions of the track in the order of their first notes, see
+        /// kit::Track::regions().
+        QList<kit::Region> regions() const;
 
         /// Returns the region that contains note \a index, the last to start at or before it if
-        /// several do, or \c std::nullopt if none does.
-        std::optional<Region> regionAt(int index) const;
+        /// several do, which the ruler draws on top, or \c std::nullopt if none does.
+        std::optional<kit::Region> regionAt(int index) const;
 
         /// Removes the labels of the notes \a indices, in one step.
         bool removeLabels(const QList<int> &indices, kit::DiagnosticList &diagnostics);
 
-        /// Removes the region that contains note \a index (regionAt()), in one step: its
-        /// \c $region and \c $region_end.
+        /// Removes the region that contains note \a index (regionAt()) with
+        /// kit::ProjectEdits::removeRegion(), in one step. The other regions at its notes are
+        /// kept.
         bool removeRegion(int index, kit::DiagnosticList &diagnostics);
 
         /// Selects the notes from \a first to \a last and scrolls to them, the first a tenth of
@@ -525,10 +520,13 @@ namespace hello::daw {
         /// the note.
         void labelRequested(int index);
 
-        /// The region of the notes from \a first to \a last is to be named: its name on the
-        /// ruler was double-clicked, or "Name Region..." chosen in the menu of the ruler, for
-        /// the selected notes if they are unbroken, otherwise for the note at that time.
+        /// A new region of the notes from \a first to \a last is to be named: "Name Region..."
+        /// was chosen in the menu of the ruler, for the selected notes if they are unbroken,
+        /// otherwise for the note at that time.
         void regionRequested(int first, int last);
+
+        /// \a region is to be renamed or removed: its name on the ruler was double-clicked.
+        void regionEditRequested(const hello::kit::Region &region);
 
     protected:
         void keyPressEvent(QKeyEvent *event) override;

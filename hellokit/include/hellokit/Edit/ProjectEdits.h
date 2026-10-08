@@ -8,6 +8,7 @@
 #include <QtCore/QString>
 
 #include <hellokit/Document/Note.h>
+#include <hellokit/Document/Project.h>
 #include <hellokit/Support/Diagnostic.h>
 
 #include <hellokit/Edit/HelloKitEditGlobal.h>
@@ -182,12 +183,26 @@ namespace hello::kit {
         Q_INVOKABLE static bool setLabel(const NoteRef &note, const QString &label,
                                          DiagnosticList &diagnostics);
 
-        /// Names the region of the \a count notes of \a notes from \a index: Note::regions of the
-        /// first and Note::regionEnds of the last receive \a name, or are cleared if \a name is
-        /// empty. A name is refused if it contains \c |, which separates names in the UST.
-        /// Refused for an empty range or one beyond the notes.
+        /// Names a new region of the \a count notes of \a notes from \a index: Note::regions of
+        /// the first and Note::regionEnds of the last receive \a name. The names of the other
+        /// regions at these notes are kept. Refused for an empty name, a name that contains
+        /// \c |, which separates names in the UST, and an empty range or one beyond the notes.
         Q_INVOKABLE static bool nameRegion(const NoteListRef &notes, int index, int count,
                                            const QString &name, DiagnosticList &diagnostics);
+
+        /// Renames \a region of \a notes to \a name at its first note and, if the region ends
+        /// there, at its last note, in the place of its old name. The names of the other regions
+        /// at these notes are kept. Refused for a region that \a notes does not have, an empty
+        /// name, a name that contains \c |, and a name that another region already has at
+        /// either note.
+        Q_INVOKABLE static bool renameRegion(const NoteListRef &notes, const Region &region,
+                                             const QString &name, DiagnosticList &diagnostics);
+
+        /// Removes \a region of \a notes: its name from its first note and, if the region ends
+        /// there, from its last note. The names of the other regions at these notes are kept.
+        /// Refused for a region that \a notes does not have.
+        Q_INVOKABLE static bool removeRegion(const NoteListRef &notes, const Region &region,
+                                             DiagnosticList &diagnostics);
 
         /// Turns Mode2 of the project of \a settings on or off: which of the Mode2 points and
         /// vibratos, or the Mode1 values, the synthesis uses, as UTAU does. The other is kept.

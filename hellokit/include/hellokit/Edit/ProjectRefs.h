@@ -217,6 +217,9 @@ namespace hello::kit {
         void insert(int index, const QList<Note> &notes) const;
         void remove(int index, int count) const;
         void move(int index, int count, int destination) const;
+
+        /// Returns the regions of the notes, as Track::regions() does.
+        QList<Region> regions() const;
     };
 
     class HELLOKIT_EDIT_EXPORT TrackRef : public ProjectNodeRef {

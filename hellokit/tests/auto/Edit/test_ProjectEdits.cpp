@@ -577,9 +577,13 @@ private Q_SLOTS:
         QCOMPARE(session.undoMessage(), ProjectEdits::tr("Name Region"));
         const int step = session.currentStep();
 
-        QVERIFY(ProjectEdits::nameRegion(notes, 0, 2, QString(), diagnostics));
+        // An empty name is refused, and removing the region keeps the other region of the
+        // first note.
+        QVERIFY(!ProjectEdits::nameRegion(notes, 0, 2, QString(), diagnostics));
+        QVERIFY(
+            ProjectEdits::removeRegion(notes, Region{QStringLiteral("Verse"), 0, 1}, diagnostics));
         snapshot = session.snapshot().tracks[0].notes;
-        QVERIFY(snapshot[0].regions.isEmpty());
+        QCOMPARE(snapshot[0].regions, project.tracks[0].notes[0].regions);
         QVERIFY(snapshot[1].regionEnds.isEmpty());
 
         QVERIFY(

@@ -1,5 +1,6 @@
 #include "Project.h"
 
+#include <algorithm>
 #include <fstream>
 
 #include <QtCore/QCoreApplication>
@@ -166,6 +167,34 @@ namespace hello::kit {
             }
         }
         return QDir::toNativeSeparators(QString::fromStdU16String(bank.u16string()));
+    }
+
+    QList<Region> Track::regions() const {
+        QList<QStringList> starts;
+        QList<QStringList> ends;
+        for (const auto &note : notes) {
+            starts.push_back(note.regions);
+            ends.push_back(note.regionEnds);
+        }
+        return Region::of(starts, ends);
+    }
+
+    QList<Region> Region::of(const QList<QStringList> &starts, const QList<QStringList> &ends) {
+        const auto count = std::min(starts.size(), ends.size());
+        QList<Region> result;
+        for (qsizetype first = 0; first < count; ++first) {
+            for (const auto &name : starts[first]) {
+                auto last = count - 1;
+                for (auto candidate = first; candidate < count; ++candidate) {
+                    if (ends[candidate].contains(name)) {
+                        last = candidate;
+                        break;
+                    }
+                }
+                result.push_back({name, int(first), int(last)});
+            }
+        }
+        return result;
     }
 
     std::optional<Project> Project::open(const std::filesystem::path &path,

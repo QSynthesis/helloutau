@@ -191,6 +191,17 @@ namespace hello::kit {
         edit::NodeAccess::move(*this, index, count, destination);
     }
 
+    QList<Region> NoteListRef::regions() const {
+        QList<QStringList> starts;
+        QList<QStringList> ends;
+        for (int i = 0; i < size(); ++i) {
+            const auto note = at(i);
+            starts.push_back(note.regions());
+            ends.push_back(note.regionEnds());
+        }
+        return Region::of(starts, ends);
+    }
+
     // NoteRef
 
     QString NoteRef::lyric() const {

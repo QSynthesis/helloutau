@@ -164,10 +164,11 @@ namespace hello::daw {
         }
         const bool labelRow = position.y() < sectionRowHeight();
         const double tick = m_view->timeAxis().toTick(position.x() - offset());
-        for (int i = 0; i < m_sections.size(); ++i) {
+        // The sections are drawn in their order, so that the last one there is on top.
+        for (auto i = m_sections.size() - 1; i >= 0; --i) {
             const auto &section = m_sections[i];
             if (section.filled == labelRow && tick >= section.first && tick < section.last) {
-                return i;
+                return int(i);
             }
         }
         return -1;

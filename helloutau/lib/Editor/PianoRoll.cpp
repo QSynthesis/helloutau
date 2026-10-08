@@ -154,7 +154,7 @@ namespace hello::daw {
             if (notes.label) {
                 Q_EMIT labelRequested(notes.first);
             } else {
-                Q_EMIT regionRequested(notes.first, notes.last);
+                Q_EMIT regionEditRequested(kit::Region{notes.name, notes.first, notes.last});
             }
         });
         connect(impl.ruler, &TimelineRuler::sectionClicked, this, [this](int section) {
@@ -496,28 +496,18 @@ namespace hello::daw {
         return std::pair{indices.first(), indices.last()};
     }
 
-    QList<PianoRoll::Region> PianoRoll::regions() const {
+    QList<kit::Region> PianoRoll::regions() const {
         stdc_impl_t;
-        const auto refs = impl.notes();
+        // The notes of the timeline, which a refresh after an edit updates, so that a region
+        // never refers to a note that the timeline does not have yet.
         const int count = impl.timeline->noteCount();
-        QList<Region> result;
-        for (int i = 0; i < count; ++i) {
-            for (const auto &name : refs.at(i).regions()) {
-                int last = count - 1;
-                for (int candidate = i; candidate < count; ++candidate) {
-                    if (refs.at(candidate).regionEnds().contains(name)) {
-                        last = candidate;
-                        break;
-                    }
-                }
-                result.push_back({name, i, last});
-            }
-        }
+        auto result = impl.notes().regions();
+        result.removeIf([count](const kit::Region &region) { return region.last >= count; });
         return result;
     }
 
-    std::optional<PianoRoll::Region> PianoRoll::regionAt(int index) const {
-        std::optional<Region> found;
+    std::optional<kit::Region> PianoRoll::regionAt(int index) const {
+        std::optional<kit::Region> found;
         for (const auto &region : regions()) {
             if (region.first <= index && index <= region.last) {
                 found = region;
@@ -544,17 +534,7 @@ namespace hello::daw {
         if (!region) {
             return true;
         }
-        auto transaction = impl.session->transaction(tr("Remove Region"));
-        const auto notes = impl.notes();
-        const auto first = notes.at(region->first);
-        const auto last = notes.at(region->last);
-        auto starts = first.regions();
-        starts.removeAll(region->name);
-        first.setRegions(starts);
-        auto ends = last.regionEnds();
-        ends.removeAll(region->name);
-        last.setRegionEnds(ends);
-        return transaction.commit(diagnostics);
+        return kit::ProjectEdits::removeRegion(impl.notes(), *region, diagnostics);
     }
 
     void PianoRoll::loadRegion(int first, int last) {

@@ -256,6 +256,8 @@ namespace hello::daw {
             int first = 0;
             int last = 0;
             bool label = false;
+            // The name of a region, empty for a label
+            QString name;
         };
         QList<SectionNotes> sectionNotes;
 
