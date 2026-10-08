@@ -119,8 +119,8 @@ namespace hello::kit {
             edit::valueField(NoteSlots::Label),
             edit::valueField(NoteSlots::Direct),
             edit::valueField(NoteSlots::Patch),
-            edit::valueField(NoteSlots::Region),
-            edit::valueField(NoteSlots::RegionEnd),
+            edit::valueField(NoteSlots::Regions),
+            edit::valueField(NoteSlots::RegionEnds),
             edit::mappingField(NoteSlots::UserData, edit::ValueFormats::string),
         };
 

@@ -20,18 +20,6 @@ namespace hello::kit {
             return false;
         }
 
-        QStringList regionNames(const QString &value) {
-            return value.split(u'|', Qt::SkipEmptyParts);
-        }
-
-        QString addRegionName(const QString &value, const QString &name) {
-            auto names = regionNames(value);
-            if (!names.contains(name)) {
-                names.push_back(name);
-            }
-            return names.join(u'|');
-        }
-
     }
 
     bool ProjectEdits::transpose(const QList<NoteRef> &notes, int semitones,
@@ -421,16 +409,14 @@ namespace hello::kit {
         const auto first = notes.at(index);
         const auto last = notes.at(index + count - 1);
         if (name.isEmpty()) {
-            first.setRegion(QString());
-            last.setRegionEnd(QString());
+            first.setRegions({});
+            last.setRegionEnds({});
         } else {
-            const auto start = addRegionName(first.region(), name);
-            const auto end = addRegionName(last.regionEnd(), name);
-            if (first.region() != start) {
-                first.setRegion(start);
+            if (const auto starts = first.regions(); !starts.contains(name)) {
+                first.setRegions(starts + QStringList{name});
             }
-            if (last.regionEnd() != end) {
-                last.setRegionEnd(end);
+            if (const auto ends = last.regionEnds(); !ends.contains(name)) {
+                last.setRegionEnds(ends + QStringList{name});
             }
         }
         return transaction.commit(diagnostics);

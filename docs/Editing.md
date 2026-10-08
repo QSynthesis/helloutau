@@ -195,7 +195,7 @@ note.userData().remove(QStringLiteral("$Custom"));
 | `drawPitchBend` | 把一串值画进一个音符的 Mode1 值：第一个值在距音符起点若干 tick 处，其后每 5 tick 一个，按该音符的速度换算（`PitchBend::drawn()`）。没有值的音符从该处开始（`PBStart` 取到千分之一毫秒）；已有值的音符保持起点，位置取最近的格点，值向前或向后延伸，画出的值与原有的值之间按原来的曲线补齐（取整），使没画到的地方听起来不变。用于 [`Tuning.md`](Tuning.md) 第 5 步 |
 | `setPitchBend` | 以给定的值整体替换一个音符的 Mode1 值，空值即删除；与原值相同时不产生步骤。用于「Convert Mode2 Pitch to Mode1」（[`Tuning.md`](Tuning.md)） |
 | `setLabel` | 设置一个音符的标签（UST 的 `Label`），空文字即删除 |
-| `nameRegion` | 为一段连续的音符命名区间：第一个音符的 `$region` 与最后一个音符的 `$region_end` 记录区间名；多个区间共用同一端点时以 `|` 分隔，区间名本身不允许含 `|`；空名即删除两端字段；范围为空或超出音符时拒绝 |
+| `nameRegion` | 为一段连续的音符命名区间：第一个音符的 `regions` 与最后一个音符的 `regionEnds`（UST 的 `$region` 与 `$region_end`）各加入区间名；多个区间共用同一端点时各占数组的一项，区间名本身不允许含 `|`，因为 UST 以它分隔；空名即删除两端字段；范围为空或超出音符时拒绝 |
 | `setMode2` | 打开或关闭工程的 Mode2，即合成用控制点与颤音还是用 Mode1 值；另一种数据保留。用于 [`Tuning.md`](Tuning.md) 第 5 步 |
 | `mergeNotes` | 把一段连续的音符合并到第一个音符（同 UTAU 的「音符合并」）：长度为它们之和，其他属性取第一个音符的，一个撤销步骤「Merge Notes」。少于两个音符时拒绝；第一个之后的音符设了曲速时拒绝，因为合并会丢掉这个曲速，其后所有音符的时刻都会改变（作者 2026-09-29 要求） |
 | `setNoteProperties` | 改音符的属性（`NotePropertyChanges`）：歌词、长度、曲速、力度、调制、辅音速度、先行发声、重叠、STP、flags，只改给出的字段，对每个音符相同，一个撤销步骤「Change Note Properties」；能留给默认值的字段设为空即清除。用于音符属性对话框与曲速（作者 2026-09-29 要求） |

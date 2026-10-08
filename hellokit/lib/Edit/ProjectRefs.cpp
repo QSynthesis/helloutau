@@ -333,20 +333,20 @@ namespace hello::kit {
         edit::NodeAccess::setValue(*this, NoteSlots::Patch, patch);
     }
 
-    QString NoteRef::region() const {
-        return edit::NodeAccess::value(*this, NoteSlots::Region);
+    QStringList NoteRef::regions() const {
+        return edit::NodeAccess::value(*this, NoteSlots::Regions);
     }
 
-    void NoteRef::setRegion(const QString &region) const {
-        edit::NodeAccess::setValue(*this, NoteSlots::Region, region);
+    void NoteRef::setRegions(const QStringList &regions) const {
+        edit::NodeAccess::setValue(*this, NoteSlots::Regions, regions);
     }
 
-    QString NoteRef::regionEnd() const {
-        return edit::NodeAccess::value(*this, NoteSlots::RegionEnd);
+    QStringList NoteRef::regionEnds() const {
+        return edit::NodeAccess::value(*this, NoteSlots::RegionEnds);
     }
 
-    void NoteRef::setRegionEnd(const QString &regionEnd) const {
-        edit::NodeAccess::setValue(*this, NoteSlots::RegionEnd, regionEnd);
+    void NoteRef::setRegionEnds(const QStringList &regionEnds) const {
+        edit::NodeAccess::setValue(*this, NoteSlots::RegionEnds, regionEnds);
     }
 
     UserDataRef NoteRef::userData() const {

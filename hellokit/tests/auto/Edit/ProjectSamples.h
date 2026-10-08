@@ -58,8 +58,8 @@ namespace hello::kit {
         first.label = QStringLiteral("verse");
         first.direct = QStringLiteral("direct");
         first.patch = QStringLiteral("C:/tools/patch.exe");
-        first.region = QStringLiteral("A");
-        first.regionEnd = QStringLiteral("B");
+        first.regions = {QStringLiteral("A")};
+        first.regionEnds = {QStringLiteral("B")};
         first.userData.insert(QStringLiteral("$custom"), QStringLiteral("kept"));
         first.userData.insert(QStringLiteral("Unknown"), QString());
 
@@ -155,7 +155,9 @@ namespace hello::kit {
                 note.pitchBend = pitchBend;
             }
             note.label = maybeText(random, "label");
-            note.region = maybeText(random, "A");
+            if (const auto region = maybeText(random, "A"); !region.isEmpty()) {
+                note.regions = {region};
+            }
             for (int j = random.bounded(3); j > 0; --j) {
                 note.userData.insert(QStringLiteral("$key%1").arg(j), QString::number(j));
             }

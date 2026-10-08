@@ -10,6 +10,7 @@
 #include <QtCore/QList>
 #include <QtCore/QMap>
 #include <QtCore/QString>
+#include <QtCore/QStringList>
 #include <QtCore/QStringView>
 
 #include <hellokit/Support/Diagnostic.h>
@@ -320,8 +321,19 @@ namespace hello::kit {
         ///          CLAUDE.md.
         QString patch;
 
-        QString region;
-        QString regionEnd;
+        /// The names of the regions that start at this note, and of those that end at it, in the
+        /// order of the UST, which writes each as \c $region and \c $region_end joined with
+        /// \c |. A name is never empty and never contains \c |.
+        QStringList regions;
+        QStringList regionEnds;
+
+        /// Returns the region names of \a value, a \c $region or \c $region_end of the UST:
+        /// the parts between \c | that are not empty. An illegal value, such as one with an
+        /// empty part, therefore does not survive a conversion unchanged.
+        static QStringList regionNamesFromUst(const QString &value);
+
+        /// Returns \a names joined with \c | for \c $region or \c $region_end of the UST.
+        static QString regionNamesToUst(const QStringList &names);
 
         /// Every entry of the UST note without a corresponding field, keyed by its UST name
         /// including any \c $ prefix.

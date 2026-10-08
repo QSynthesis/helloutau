@@ -182,10 +182,10 @@ namespace hello::kit {
         Q_INVOKABLE static bool setLabel(const NoteRef &note, const QString &label,
                                          DiagnosticList &diagnostics);
 
-        /// Names the region of the \a count notes of \a notes from \a index: \c $region of the
-        /// first and \c $region_end of the last take \a name, or are removed if \a name is
-        /// empty. Names sharing an endpoint are joined with \c |; the separator is refused in
-        /// a name. Refused for an empty range or one beyond the notes.
+        /// Names the region of the \a count notes of \a notes from \a index: Note::regions of the
+        /// first and Note::regionEnds of the last receive \a name, or are cleared if \a name is
+        /// empty. A name is refused if it contains \c |, which separates names in the UST.
+        /// Refused for an empty range or one beyond the notes.
         Q_INVOKABLE static bool nameRegion(const NoteListRef &notes, int index, int count,
                                            const QString &name, DiagnosticList &diagnostics);
 

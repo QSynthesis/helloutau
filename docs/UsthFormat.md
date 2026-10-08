@@ -105,8 +105,8 @@ HelloUtau 的工程文件格式：JSON，UTF-8，**不带 BOM**。默认写成�
   "label": "",
   "direct": "",
   "patch": "",
-  "region": "",
-  "regionEnd": "",
+  "regions": [ ],
+  "regionEnds": [ ],
 
   "userData": { }
 }
@@ -194,9 +194,11 @@ UST 中为空的值读取后为 0，不区分「此处无值」。stdutau 按此
 | `label` | string | `Label` |
 | `direct` | string | `$direct` |
 | `patch` | string | `$patch` |
-| `region` / `regionEnd` | string | `$region` / `$region_end` |
+| `regions` / `regionEnds` | string array | `$region` / `$region_end` |
 
 `patch` 是来自工程文件的路径，**视为不可信输入**，见 `CLAUDE.md` 的安全底线。
+
+`regions` 是从该音符开始的区间名，`regionEnds` 是在该音符结束的区间名，按 UST 中的顺序。UST 以 `|` 连接同一音符上的多个名字（UTAU 在两个区间共用端点时如此写出，见 `.cache/utau-probe/unverified/` 探针 6），本格式改为数组（作者 2026-10-08 决定），`|` 只出现在 UST 的读写中。区间名不能为空，也不能含 `|`，因为导出 UST 时它会被当作分隔符。UST 中的空段（如 `A||B`、`|A`）属于非法写法，读取时略去，导出为 `A|B`，不保证与原文件一致。
 
 ### `userData`
 

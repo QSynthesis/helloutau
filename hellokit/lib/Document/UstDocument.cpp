@@ -142,8 +142,8 @@ namespace hello::kit {
             note.label = reader.text(from.label);
             note.direct = reader.text(from.direct);
             note.patch = reader.text(from.patch);
-            note.region = reader.text(from.region);
-            note.regionEnd = reader.text(from.regionEnd);
+            note.regions = Note::regionNamesFromUst(reader.text(from.region));
+            note.regionEnds = Note::regionNamesFromUst(reader.text(from.regionEnd));
 
             if (from.envelope) {
                 // stdutau lists the four or five anchors in time order.
@@ -210,8 +210,8 @@ namespace hello::kit {
             note.label = out(from.label);
             note.direct = out(from.direct);
             note.patch = out(from.patch);
-            note.region = out(from.region);
-            note.regionEnd = out(from.regionEnd);
+            note.region = out(Note::regionNamesToUst(from.regions));
+            note.regionEnd = out(Note::regionNamesToUst(from.regionEnds));
 
             if (from.envelope) {
                 // stdutau takes the anchors in time order. Without a middle anchor, index four

@@ -4,8 +4,10 @@
 #include <optional>
 
 #include <QtCore/QCoreApplication>
+#include <QtCore/QJsonArray>
 #include <QtCore/QJsonObject>
 #include <QtCore/QString>
+#include <QtCore/QStringList>
 
 #include <hellokit/Support/Diagnostic.h>
 
@@ -42,6 +44,20 @@ namespace hello::kit {
 
         static inline QString readString(const QJsonObject &object, const char *key) {
             return object.value(QLatin1String(key)).toString();
+        }
+
+        /// Returns the names in the array of the field \a key, such as the names of regions.
+        /// Elements that are not strings, empty strings and strings that contain \c | are
+        /// omitted, because a name of the UST cannot hold them.
+        static inline QStringList readNames(const QJsonObject &object, const char *key) {
+            QStringList names;
+            for (const auto &value : object.value(QLatin1String(key)).toArray()) {
+                const auto name = value.toString();
+                if (!name.isEmpty() && !name.contains(u'|')) {
+                    names.push_back(name);
+                }
+            }
+            return names;
         }
 
         /// Writes \a value into the field \a key, or omits the field if \a value is empty. The

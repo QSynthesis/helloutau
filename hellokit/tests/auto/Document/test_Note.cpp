@@ -205,8 +205,8 @@ private Q_SLOTS:
         note.label = QStringLiteral("verse");
         note.direct = QStringLiteral("direct.wav");
         note.patch = QStringLiteral("resampler.exe");
-        note.region = QStringLiteral("A");
-        note.regionEnd = QStringLiteral("B");
+        note.regions = {QStringLiteral("A"), QStringLiteral("B")};
+        note.regionEnds = {QStringLiteral("B")};
         note.userData.insert(QStringLiteral("$whatever"), QStringLiteral("kept"));
 
         DiagnosticList diagnostics;
@@ -236,8 +236,8 @@ private Q_SLOTS:
         QCOMPARE(back->label, note.label);
         QCOMPARE(back->direct, note.direct);
         QCOMPARE(back->patch, note.patch);
-        QCOMPARE(back->region, note.region);
-        QCOMPARE(back->regionEnd, note.regionEnd);
+        QCOMPARE(back->regions, note.regions);
+        QCOMPARE(back->regionEnds, note.regionEnds);
         QCOMPARE(back->userData, note.userData);
     }
 

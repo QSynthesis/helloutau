@@ -13,24 +13,6 @@ namespace hello::kit {
             Q_DECLARE_TR_FUNCTIONS(hello::kit::VoiceBankFields)
         };
 
-        QJsonValue stringListToJson(const QVariant &value) {
-            return QJsonArray::fromStringList(edit::SlotValue<QStringList>::fromVariant(value));
-        }
-
-        std::optional<QVariant> stringListFromJson(const QJsonValue &json) {
-            if (!json.isArray()) {
-                return std::nullopt;
-            }
-            QStringList list;
-            for (const auto item : json.toArray()) {
-                if (!item.isString()) {
-                    return std::nullopt;
-                }
-                list.push_back(item.toString());
-            }
-            return edit::SlotValue<QStringList>::toVariant(list);
-        }
-
         QJsonValue prefixToJson(const QVariant &value) {
             const auto prefix = edit::SlotValue<VoicePrefix>::fromVariant(value);
             return QJsonObject{
@@ -85,17 +67,10 @@ namespace hello::kit {
             return edit::SlotValue<OtoSpellings>::toVariant(spellings);
         }
 
-        constexpr edit::ValueFormat stringListFormat{"string list", stringListToJson,
-                                                     stringListFromJson};
         constexpr edit::ValueFormat prefixFormat{"prefix", prefixToJson, prefixFromJson};
         constexpr edit::ValueFormat spellingsFormat{"spellings", spellingsToJson,
                                                     spellingsFromJson};
 
-    }
-
-    template <>
-    constexpr const edit::ValueFormat &edit::formatOf<QStringList>() {
-        return stringListFormat;
     }
 
     template <>

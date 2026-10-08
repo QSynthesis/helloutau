@@ -133,10 +133,10 @@ namespace hello::daw {
                 ref.setPatch(note.patch);
             }
             if (has(utau::KEY_NAME_REGION_START)) {
-                ref.setRegion(note.region);
+                ref.setRegions(note.regions);
             }
             if (has(utau::KEY_NAME_REGION_END)) {
-                ref.setRegionEnd(note.regionEnd);
+                ref.setRegionEnds(note.regionEnds);
             }
             if (has(utau::KEY_NAME_ENVELOPE)) {
                 ref.setEnvelope(note.envelope);

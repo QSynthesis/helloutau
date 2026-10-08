@@ -570,17 +570,17 @@ private Q_SLOTS:
 
         QVERIFY(ProjectEdits::nameRegion(notes, 0, 2, QStringLiteral("Verse"), diagnostics));
         auto snapshot = session.snapshot().tracks[0].notes;
-        QCOMPARE(snapshot[0].region, QStringLiteral("A|Verse"));
-        QCOMPARE(snapshot[0].regionEnd, project.tracks[0].notes[0].regionEnd);
-        QCOMPARE(snapshot[1].regionEnd, QStringLiteral("Verse"));
-        QCOMPARE(snapshot[1].region, project.tracks[0].notes[1].region);
+        QCOMPARE(snapshot[0].regions, (QStringList{"A", "Verse"}));
+        QCOMPARE(snapshot[0].regionEnds, project.tracks[0].notes[0].regionEnds);
+        QCOMPARE(snapshot[1].regionEnds, QStringList{"Verse"});
+        QCOMPARE(snapshot[1].regions, project.tracks[0].notes[1].regions);
         QCOMPARE(session.undoMessage(), ProjectEdits::tr("Name Region"));
         const int step = session.currentStep();
 
         QVERIFY(ProjectEdits::nameRegion(notes, 0, 2, QString(), diagnostics));
         snapshot = session.snapshot().tracks[0].notes;
-        QVERIFY(snapshot[0].region.isEmpty());
-        QVERIFY(snapshot[1].regionEnd.isEmpty());
+        QVERIFY(snapshot[0].regions.isEmpty());
+        QVERIFY(snapshot[1].regionEnds.isEmpty());
 
         QVERIFY(
             !ProjectEdits::nameRegion(notes, 1, notes.size(), QStringLiteral("X"), diagnostics));
@@ -604,13 +604,13 @@ private Q_SLOTS:
         QVERIFY(ProjectEdits::nameRegion(notes, 0, 3, QStringLiteral("A"), diagnostics));
         QVERIFY(ProjectEdits::nameRegion(notes, 1, 2, QStringLiteral("B"), diagnostics));
         auto snapshot = session.snapshot().tracks[0].notes;
-        QCOMPARE(snapshot[0].region, QStringLiteral("A"));
-        QCOMPARE(snapshot[1].region, QStringLiteral("B"));
-        QCOMPARE(snapshot[2].regionEnd, QStringLiteral("A|B"));
+        QCOMPARE(snapshot[0].regions, QStringList{"A"});
+        QCOMPARE(snapshot[1].regions, QStringList{"B"});
+        QCOMPARE(snapshot[2].regionEnds, (QStringList{"A", "B"}));
 
         QVERIFY(!ProjectEdits::nameRegion(notes, 0, 1, QStringLiteral("A|B"), diagnostics));
         QVERIFY(!diagnostics.isEmpty());
-        QCOMPARE(session.snapshot().tracks[0].notes[0].region, QStringLiteral("A"));
+        QCOMPARE(session.snapshot().tracks[0].notes[0].regions, QStringList{"A"});
     }
 
     // Mode1 values replace those of a note whole and are removed by an empty value; equal

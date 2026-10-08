@@ -404,8 +404,8 @@ private Q_SLOTS:
         QVERIFY(run(session, QStringLiteral("note label \"A\" /tracks/0/notes/0")));
         QCOMPARE(noteAt(session, 0).label, QStringLiteral("A"));
         QVERIFY(run(session, QStringLiteral("note region /tracks/0/notes 0 2 \"Verse\"")));
-        QCOMPARE(noteAt(session, 0).region, QStringLiteral("A|Verse"));
-        QCOMPARE(noteAt(session, 1).regionEnd, QStringLiteral("Verse"));
+        QCOMPARE(noteAt(session, 0).regions, (QStringList{"A", "Verse"}));
+        QCOMPARE(noteAt(session, 1).regionEnds, QStringList{"Verse"});
         verifyRefused(session, QStringLiteral("note label \"A\""));
         verifyRefused(session, QStringLiteral("note region /tracks/0/notes 0 99 \"X\""));
         verifyRefused(session, QStringLiteral("note region /tracks/0/notes 0 1 7"));

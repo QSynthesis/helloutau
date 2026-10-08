@@ -181,8 +181,8 @@ namespace hello::kit {
         put(*node, NoteSlots::Label, note.label);
         put(*node, NoteSlots::Direct, note.direct);
         put(*node, NoteSlots::Patch, note.patch);
-        put(*node, NoteSlots::Region, note.region);
-        put(*node, NoteSlots::RegionEnd, note.regionEnd);
+        put(*node, NoteSlots::Regions, note.regions);
+        put(*node, NoteSlots::RegionEnds, note.regionEnds);
         put(*node, NoteSlots::UserData, userDataTree(note.userData));
         return node;
     }
@@ -211,8 +211,8 @@ namespace hello::kit {
         note.label = get(record, NoteSlots::Label);
         note.direct = get(record, NoteSlots::Direct);
         note.patch = get(record, NoteSlots::Patch);
-        note.region = get(record, NoteSlots::Region);
-        note.regionEnd = get(record, NoteSlots::RegionEnd);
+        note.regions = get(record, NoteSlots::Regions);
+        note.regionEnds = get(record, NoteSlots::RegionEnds);
         note.userData = userDataOf(record.child(NoteSlots::UserData.index));
         return note;
     }

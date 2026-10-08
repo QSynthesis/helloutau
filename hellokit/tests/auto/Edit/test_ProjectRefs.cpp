@@ -52,8 +52,8 @@ private Q_SLOTS:
         QCOMPARE(noteRef.label(), note.label);
         QCOMPARE(noteRef.direct(), note.direct);
         QCOMPARE(noteRef.patch(), note.patch);
-        QCOMPARE(noteRef.region(), note.region);
-        QCOMPARE(noteRef.regionEnd(), note.regionEnd);
+        QCOMPARE(noteRef.regions(), note.regions);
+        QCOMPARE(noteRef.regionEnds(), note.regionEnds);
 
         const auto portamento = noteRef.portamento();
         QCOMPARE(portamento.size(), int(note.portamento.size()));
@@ -130,8 +130,8 @@ private Q_SLOTS:
             note.setLabel(note.label());
             note.setDirect(note.direct());
             note.setPatch(note.patch());
-            note.setRegion(note.region());
-            note.setRegionEnd(note.regionEnd());
+            note.setRegions(note.regions());
+            note.setRegionEnds(note.regionEnds());
 
             const auto portamento = note.portamento();
             for (int j = 0; j < portamento.size(); ++j) {
@@ -238,8 +238,8 @@ private Q_SLOTS:
         noteRef.setLabel(QStringLiteral("chorus"));
         noteRef.setDirect(QString());
         noteRef.setPatch(QStringLiteral("p.exe"));
-        noteRef.setRegion(QStringLiteral("C"));
-        noteRef.setRegionEnd(QStringLiteral("D"));
+        noteRef.setRegions({QStringLiteral("C")});
+        noteRef.setRegionEnds({QStringLiteral("D")});
         pointRef.setX(11);
         pointRef.setY(12);
         pointRef.setType(PortamentoPoint::J);
@@ -284,8 +284,8 @@ private Q_SLOTS:
         note.label = QStringLiteral("chorus");
         note.direct = QString();
         note.patch = QStringLiteral("p.exe");
-        note.region = QStringLiteral("C");
-        note.regionEnd = QStringLiteral("D");
+        note.regions = {QStringLiteral("C")};
+        note.regionEnds = {QStringLiteral("D")};
         note.portamento[1] = {11, 12, PortamentoPoint::J};
         note.pitchBend->start = std::nullopt;
         note.pitchBend->values = {1, 0, 7, 8}; // {0, 10.5, -20, 0}, then replace, insert, remove

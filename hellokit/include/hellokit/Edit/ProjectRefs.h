@@ -195,11 +195,13 @@ namespace hello::kit {
         QString patch() const;
         void setPatch(const QString &patch) const;
 
-        QString region() const;
-        void setRegion(const QString &region) const;
+        /// \sa Note::regions
+        QStringList regions() const;
+        void setRegions(const QStringList &regions) const;
 
-        QString regionEnd() const;
-        void setRegionEnd(const QString &regionEnd) const;
+        /// \sa Note::regionEnds
+        QStringList regionEnds() const;
+        void setRegionEnds(const QStringList &regionEnds) const;
 
         UserDataRef userData() const;
 

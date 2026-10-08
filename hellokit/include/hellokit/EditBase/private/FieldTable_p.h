@@ -6,9 +6,11 @@
 #include <memory>
 #include <optional>
 
+#include <QtCore/QJsonArray>
 #include <QtCore/QJsonObject>
 #include <QtCore/QJsonValue>
 #include <QtCore/QString>
+#include <QtCore/QStringList>
 #include <QtCore/QStringView>
 #include <QtCore/QVariant>
 
@@ -45,6 +47,24 @@ namespace hello::kit::edit {
                 return std::nullopt;
             }
             return SlotValue<QString>::toVariant(json.toString());
+        }
+
+        static inline QJsonValue stringListToJson(const QVariant &value) {
+            return QJsonArray::fromStringList(SlotValue<QStringList>::fromVariant(value));
+        }
+
+        static inline std::optional<QVariant> stringListFromJson(const QJsonValue &json) {
+            if (!json.isArray()) {
+                return std::nullopt;
+            }
+            QStringList strings;
+            for (const auto &element : json.toArray()) {
+                if (!element.isString()) {
+                    return std::nullopt;
+                }
+                strings.push_back(element.toString());
+            }
+            return SlotValue<QStringList>::toVariant(strings);
         }
 
         static inline QJsonValue integerToJson(const QVariant &value) {
@@ -102,6 +122,10 @@ namespace hello::kit::edit {
         static constexpr ValueFormat string{"string", ValueConversions::stringToJson,
                                             ValueConversions::stringFromJson};
 
+        /// An array of strings.
+        static constexpr ValueFormat stringList{"string list", ValueConversions::stringListToJson,
+                                                ValueConversions::stringListFromJson};
+
         /// A number without a fractional part within the range of \c int.
         static constexpr ValueFormat integer{"integer", ValueConversions::integerToJson,
                                              ValueConversions::integerFromJson};
@@ -125,6 +149,11 @@ namespace hello::kit::edit {
     template <>
     inline constexpr const ValueFormat &formatOf<QString>() {
         return ValueFormats::string;
+    }
+
+    template <>
+    inline constexpr const ValueFormat &formatOf<QStringList>() {
+        return ValueFormats::stringList;
     }
 
     template <>

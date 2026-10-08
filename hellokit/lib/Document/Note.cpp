@@ -275,6 +275,14 @@ namespace hello::kit {
         return result;
     }
 
+    QStringList Note::regionNamesFromUst(const QString &value) {
+        return value.split(u'|', Qt::SkipEmptyParts);
+    }
+
+    QString Note::regionNamesToUst(const QStringList &names) {
+        return names.join(u'|');
+    }
+
     QJsonObject Note::toJson() const {
         QJsonObject object{
             {QLatin1String("lyric"),   lyric  },
@@ -310,18 +318,25 @@ namespace hello::kit {
             object.insert(QLatin1String("pitchBend"), pitchBend->toJson());
         }
 
-        // By reference. Pairing each field with its name by value would copy five strings
-        // per note unnecessarily.
+        // By reference. Pairing each field with its name by value would copy the strings of every
+        // note unnecessarily.
         const std::pair<const char *, const QString &> texts[] = {
-            {"label",     label    },
-            {"direct",    direct   },
-            {"patch",     patch    },
-            {"region",    region   },
-            {"regionEnd", regionEnd},
+            {"label",  label },
+            {"direct", direct},
+            {"patch",  patch },
         };
         for (const auto &[key, value] : texts) {
             if (!value.isEmpty()) {
                 object.insert(QLatin1String(key), value);
+            }
+        }
+        const std::pair<const char *, const QStringList &> lists[] = {
+            {"regions",    regions   },
+            {"regionEnds", regionEnds},
+        };
+        for (const auto &[key, value] : lists) {
+            if (!value.isEmpty()) {
+                object.insert(QLatin1String(key), QJsonArray::fromStringList(value));
             }
         }
 
@@ -380,8 +395,8 @@ namespace hello::kit {
         note.label = JsonFields::readString(object, "label");
         note.direct = JsonFields::readString(object, "direct");
         note.patch = JsonFields::readString(object, "patch");
-        note.region = JsonFields::readString(object, "region");
-        note.regionEnd = JsonFields::readString(object, "regionEnd");
+        note.regions = JsonFields::readNames(object, "regions");
+        note.regionEnds = JsonFields::readNames(object, "regionEnds");
 
         const auto entries = object.value(QLatin1String("userData")).toObject();
         for (auto it = entries.begin(); it != entries.end(); ++it) {

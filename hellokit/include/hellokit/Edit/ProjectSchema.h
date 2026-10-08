@@ -95,8 +95,8 @@ namespace hello::kit {
         inline constexpr edit::Slot<QString> Label{15, "label"};
         inline constexpr edit::Slot<QString> Direct{16, "direct"};
         inline constexpr edit::Slot<QString> Patch{17, "patch"};
-        inline constexpr edit::Slot<QString> Region{18, "region"};
-        inline constexpr edit::Slot<QString> RegionEnd{19, "regionEnd"};
+        inline constexpr edit::Slot<QStringList> Regions{18, "regions"};
+        inline constexpr edit::Slot<QStringList> RegionEnds{19, "regionEnds"};
 
         /// A mapping of the entries without a corresponding field. Each value holds a \c QString.
         inline constexpr edit::ChildSlot UserData{20, "userData"};

@@ -54,16 +54,6 @@ namespace hello::daw {
         constexpr int LowestPianoKey = 24;   // C1
         constexpr int HighestPianoKey = 107; // B7
 
-        QStringList regionNames(const QString &value) {
-            return value.split(u'|', Qt::SkipEmptyParts);
-        }
-
-        QString removeRegionName(const QString &value, const QString &name) {
-            auto names = regionNames(value);
-            names.removeAll(name);
-            return names.join(u'|');
-        }
-
         // Calls a function with each event of an object
         class EventWatcher : public QObject {
         public:
@@ -512,10 +502,10 @@ namespace hello::daw {
         const int count = impl.timeline->noteCount();
         QList<Region> result;
         for (int i = 0; i < count; ++i) {
-            for (const auto &name : regionNames(refs.at(i).region())) {
+            for (const auto &name : refs.at(i).regions()) {
                 int last = count - 1;
                 for (int candidate = i; candidate < count; ++candidate) {
-                    if (regionNames(refs.at(candidate).regionEnd()).contains(name)) {
+                    if (refs.at(candidate).regionEnds().contains(name)) {
                         last = candidate;
                         break;
                     }
@@ -558,8 +548,12 @@ namespace hello::daw {
         const auto notes = impl.notes();
         const auto first = notes.at(region->first);
         const auto last = notes.at(region->last);
-        first.setRegion(removeRegionName(first.region(), region->name));
-        last.setRegionEnd(removeRegionName(last.regionEnd(), region->name));
+        auto starts = first.regions();
+        starts.removeAll(region->name);
+        first.setRegions(starts);
+        auto ends = last.regionEnds();
+        ends.removeAll(region->name);
+        last.setRegionEnds(ends);
         return transaction.commit(diagnostics);
     }
 

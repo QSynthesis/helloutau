@@ -510,7 +510,7 @@ namespace hello::daw {
             bool ok = false;
             const auto name =
                 QInputDialog::getText(&decl, tr("Name Region"), tr("&Name:"), QLineEdit::Normal,
-                                      notes.at(first).region(), &ok);
+                                      notes.at(first).regions().join(u'|'), &ok);
             if (!ok) {
                 return;
             }

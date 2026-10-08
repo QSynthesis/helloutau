@@ -760,8 +760,8 @@ private Q_SLOTS:
             project.tracks[0].notes.push_back(note);
         }
         project.tracks[0].notes[0].label = QStringLiteral("A");
-        project.tracks[0].notes[1].region = QStringLiteral("V");
-        project.tracks[0].notes[2].regionEnd = QStringLiteral("V");
+        project.tracks[0].notes[1].regions = {QStringLiteral("V")};
+        project.tracks[0].notes[2].regionEnds = {QStringLiteral("V")};
         kit::ProjectSession session(project);
         PianoRoll roll(&session);
         show(roll);
@@ -835,7 +835,7 @@ private Q_SLOTS:
         QCOMPARE(session.undoMessage(), PianoRoll::tr("Remove Region"));
         const auto notes = session.snapshot().tracks[0].notes;
         QVERIFY(notes[0].label.isEmpty() && notes[3].label.isEmpty());
-        QVERIFY(notes[1].region.isEmpty() && notes[2].regionEnd.isEmpty());
+        QVERIFY(notes[1].regions.isEmpty() && notes[2].regionEnds.isEmpty());
         QVERIFY(roll.regions().isEmpty());
         QTRY_COMPARE(roll.ruler()->sections().size(), 0);
         session.undo();
@@ -851,9 +851,9 @@ private Q_SLOTS:
             note.noteNum = 60;
             project.tracks[0].notes.push_back(note);
         }
-        project.tracks[0].notes[0].region = QStringLiteral("A");
-        project.tracks[0].notes[1].region = QStringLiteral("B");
-        project.tracks[0].notes[2].regionEnd = QStringLiteral("A|B");
+        project.tracks[0].notes[0].regions = {QStringLiteral("A")};
+        project.tracks[0].notes[1].regions = {QStringLiteral("B")};
+        project.tracks[0].notes[2].regionEnds = {QStringLiteral("A"), QStringLiteral("B")};
         kit::ProjectSession session(project);
         PianoRoll roll(&session);
 
@@ -868,7 +868,7 @@ private Q_SLOTS:
 
         kit::DiagnosticList diagnostics;
         QVERIFY(roll.removeRegion(0, diagnostics));
-        QCOMPARE(session.snapshot().tracks[0].notes[2].regionEnd, QStringLiteral("B"));
+        QCOMPARE(session.snapshot().tracks[0].notes[2].regionEnds, QStringList{"B"});
         QCOMPARE(roll.regions().size(), 1);
         QCOMPARE(roll.regions().first().name, QStringLiteral("B"));
     }
