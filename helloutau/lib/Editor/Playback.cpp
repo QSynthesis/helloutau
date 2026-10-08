@@ -89,8 +89,8 @@ namespace hello::daw {
         }
 
         // The playback that renders report to, read and written on the main thread only, and
-        // null once the playback is gone. A cancelled render ends on its worker thread after
-        // the playback, which does not wait for it when its window closes.
+        // null once the playback is gone. The playback waits for its workers on destruction,
+        // but a report that a worker queued before reaches the event loop afterwards.
         struct Recipient {
             Playback *playback = nullptr;
         };
@@ -165,14 +165,6 @@ namespace hello::daw {
             std::chrono::steady_clock::time_point m_last;
         };
 
-        // Runs \a function on a thread of its own, which deletes itself once it ends.
-        template <class Function>
-        void detach(Function function) {
-            const auto thread = QThread::create(std::move(function));
-            QObject::connect(thread, &QThread::finished, thread, &QObject::deleteLater);
-            thread->start();
-        }
-
     }
 
     class Playback::Impl {
@@ -196,6 +188,9 @@ namespace hello::daw {
         // of cancelled renders
         std::shared_ptr<Job> job;
         QList<QPointer<QThread>> workers;
+        // The threads of the plans and of the scans of the cache that have not yet finished,
+        // which stopAndWait() waits for
+        QList<QPointer<QThread>> planners;
         // The last render, kept to be played again while it sounds the same, and paused in
         struct Rendered {
             QString key;
@@ -263,6 +258,43 @@ namespace hello::daw {
             input.options.cacheDirectory = *cache;
             input.options.outputFile = temporaryDirectory / OutputFileName;
             return input;
+        }
+
+        // Runs \a function on a thread of its own, which deletes itself once it ends.
+        template <class Function>
+        void detach(Function function) {
+            const auto thread = QThread::create(std::move(function));
+            QObject::connect(thread, &QThread::finished, thread, &QObject::deleteLater);
+            planners.removeAll(nullptr);
+            planners.push_back(thread);
+            thread->start();
+        }
+
+        // Returns whether a render, a plan, a scan or the synth is under way, any of which
+        // writes into or reads from the temporary directory.
+        bool isBusy() {
+            planners.removeAll(nullptr);
+            return job || synth || rendersStill() ||
+                   std::any_of(planners.cbegin(), planners.cend(),
+                               [](const QPointer<QThread> &thread) {
+                                   return thread && thread->isRunning();
+                               });
+        }
+
+        // Ends the plans, the scans and the synth, which kills its engine calls, and waits for
+        // every worker thread. The preview and the render are to be ended first.
+        void endWorkers() {
+            stopPlanning();
+            synth.reset();
+            for (const auto &list : {workers, planners}) {
+                for (const auto &thread : list) {
+                    if (thread) {
+                        thread->wait();
+                    }
+                }
+            }
+            workers.clear();
+            planners.clear();
         }
 
         // Returns whether the temporary directory is set, which every render requires for its
@@ -657,11 +689,12 @@ namespace hello::daw {
 
     Playback::~Playback() {
         stdc_impl_t;
+        // As stopAndWait(), without the signals of stop(), which would reach an owner that is being
+        // destroyed
         impl.output->stop();
         impl.endPreview();
         impl.cancelRender();
-        impl.stopPlanning();
-        // The workers are not waited for. A cancelled render ends on its own within moments.
+        impl.endWorkers();
         impl.recipient->playback = nullptr;
     }
 
@@ -688,8 +721,9 @@ namespace hello::daw {
 
     void Playback::setTemporaryDirectory(std::filesystem::path temporaryDirectory) {
         stdc_impl_t;
-        stop();
+        Q_ASSERT(!impl.isBusy());
         impl.temporaryDirectory = std::move(temporaryDirectory);
+        impl.kept.reset();
         const auto logFile = impl.temporaryDirectory.empty()
                                  ? QString()
                                  : QString::fromStdU16String(
@@ -948,6 +982,12 @@ namespace hello::daw {
         impl.output->stop();
         impl.endPreview();
         impl.setState(Stopped);
+    }
+
+    void Playback::stopAndWait() {
+        stdc_impl_t;
+        stop();
+        impl.endWorkers();
     }
 
     std::filesystem::path Playback::lastRenderFile() const {

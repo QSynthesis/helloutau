@@ -2285,8 +2285,9 @@ namespace hello::daw {
     ProjectWindow::~ProjectWindow() {
         stdc_impl_t;
         // Stopping updates the piano roll, which refers to the session of the document, which
-        // goes with _impl.
-        impl.playback->stop();
+        // goes with _impl. The playback ends its workers before the temporary directory goes
+        // with _impl as well.
+        impl.playback->stopAndWait();
         delete impl.roll;
     }
 
@@ -2329,8 +2330,10 @@ namespace hello::daw {
 
     void ProjectWindow::setDocument(std::unique_ptr<kit::ProjectDocument> document) {
         stdc_impl_t;
-        impl.playback->stop();
-        impl.playback->setTemporaryDirectory(impl.newTemporaryDirectory());
+        // The workers end before the previous temporary directory is removed.
+        impl.playback->stopAndWait();
+        const auto temporaryDirectory = impl.newTemporaryDirectory();
+        impl.playback->setTemporaryDirectory(temporaryDirectory);
         impl.voiceBankRoot.clear();
         impl.voiceBankReloadPending = false;
         auto previous = std::move(impl.document);
@@ -2456,6 +2459,7 @@ namespace hello::daw {
             event->ignore();
             return;
         }
+        impl.playback->stopAndWait();
         QMainWindow::closeEvent(event);
     }
 

@@ -65,8 +65,13 @@ namespace hello::daw {
         /// Replaces the runner, for tests. The default is a kit::ClassicSynthRunner.
         void setRunner(std::shared_ptr<const kit::SynthRunner> runner);
 
-        /// Sets the directory owned by the project window for renders, scripts, and logs.
+        /// Sets the directory owned by the project window for renders, scripts, and logs, and
+        /// forgets the kept render and clears the log, which belong to the previous directory.
         /// Playback never creates or removes this directory.
+        ///
+        /// \note No render, plan, scan or preview may be under way, because each of them writes
+        ///       into or reads from the previous directory. The caller calls stopAndWait() first.
+        ///       The function asserts the condition.
         void setTemporaryDirectory(std::filesystem::path temporaryDirectory);
 
         /// Sets the number of threads of the realtime synthesis, zero for one per hardware
@@ -172,6 +177,13 @@ namespace hello::daw {
 
         /// Cancels rendering, or stops playing or being paused.
         void stop();
+
+        /// Stops as stop() does, ends the preview, the plans and the scans of the render cache,
+        /// kills the engines that they started, and waits until every worker thread has ended,
+        /// so that nothing writes into the temporary directory afterwards. Unlike stop(), the
+        /// function blocks, and the fragments held in memory are released. The owner calls it
+        /// before the temporary directory is replaced or removed.
+        void stopAndWait();
 
         /// The position heard, in milliseconds from the start of the track, while playing, or
         /// where playback was paused.
