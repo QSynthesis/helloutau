@@ -23,7 +23,7 @@ namespace QAK {
 }
 
 namespace hello::kit {
-    class FrequencyFormatRegistry;
+    class FrequencyFormats;
 }
 
 namespace hello::daw {
@@ -95,10 +95,10 @@ namespace hello::daw {
         /// \c :/helloutau/themes.
         ThemeManager *themeManager() const;
 
-        /// Returns the registry of the frequency table formats that the voice bank windows read.
-        /// The formats are registered by FrequencyFormatRegistration, the built-in formats by
-        /// the plugin FrequencyEditor. See docs/FrequencyTables.md.
-        kit::FrequencyFormatRegistry &frequencyFormats() const;
+        /// Returns the frequency table formats that the voice bank windows read. The formats are
+        /// registered in its registry(), the built-in formats by the plugin FrequencyEditor. See
+        /// docs/FrequencyTables.md.
+        kit::FrequencyFormats &frequencyFormats() const;
 
         /// Returns the catalog of the pages of the settings dialog, including the pages of the
         /// editor registered at start, whose ids are in EditorSettingPageIds. See the settings

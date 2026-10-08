@@ -8,8 +8,8 @@
 #include <QtTest/QTest>
 
 #include <hellokit/VoiceBank/BuiltinFrequencyFormats.h>
-#include <hellokit/VoiceBank/FrequencyFormatRegistration.h>
 #include <hellokit/VoiceBank/FrequencyFormatRegistry.h>
+#include <hellokit/VoiceBank/FrequencyFormats.h>
 
 using namespace hello::kit;
 namespace fs = std::filesystem;
@@ -80,15 +80,16 @@ namespace {
         QStringList m_patterns;
     };
 
-    std::unique_ptr<FrequencyFormatRegistration> registration(const char *id,
-                                                              QStringList patterns = {}) {
-        return std::make_unique<FrequencyFormatRegistration>(
-            std::make_unique<Fixed>(QString::fromLatin1(id), std::move(patterns)));
+    FrequencyFormatRegistry::AddFactory registration(FrequencyFormats &formats, const char *id,
+                                                     QStringList patterns = {}) {
+        return FrequencyFormatRegistry::AddFactory(formats.registry(), id, {}, [id, patterns] {
+            return std::make_unique<Fixed>(QString::fromLatin1(id), patterns);
+        });
     }
 
-    QStringList idsOf(const FrequencyFormatRegistry &registry) {
+    QStringList idsOf(const FrequencyFormats &formats) {
         QStringList ids;
-        for (const auto format : registry.formats()) {
+        for (const auto format : formats.formats()) {
             ids.push_back(format->id());
         }
         return ids;
@@ -96,7 +97,7 @@ namespace {
 
 }
 
-class test_FrequencyFormatRegistry : public QObject {
+class test_FrequencyFormats : public QObject {
     Q_OBJECT
 
 private:
@@ -109,12 +110,12 @@ private:
 private Q_SLOTS:
     // The format of a resampler depends on its file name only, with frq as the fallback.
     void a_format_is_chosen_by_the_resampler() {
-        FrequencyFormatRegistry registry;
-        QVERIFY(!registry.formatForResampler("resampler.exe"));
-        const BuiltinFrequencyFormats builtins;
-        QCOMPARE(idsOf(registry), QStringList({"frq", "dio", "mrq"}));
-        const auto idOf = [&registry](const char *resampler) {
-            const auto format = registry.formatForResampler(fs::path(resampler));
+        FrequencyFormats formats;
+        QVERIFY(!formats.formatForResampler("resampler.exe"));
+        const BuiltinFrequencyFormats builtins(formats.registry());
+        QCOMPARE(idsOf(formats), QStringList({"frq", "dio", "mrq"}));
+        const auto idOf = [&formats](const char *resampler) {
+            const auto format = formats.formatForResampler(fs::path(resampler));
             return format ? format->id() : QString();
         };
         QCOMPARE(idOf("C:/UTAU/resampler.exe"), QStringLiteral("frq"));
@@ -126,45 +127,54 @@ private Q_SLOTS:
         QCOMPARE(idOf(""), QStringLiteral("frq"));
     }
 
-    // A registry lists registrations made before and after its construction, in the order of
-    // registration. Of two formats with one ID, the first is used until its registration is
-    // destroyed. Of two formats for one resampler, the later registered is used.
-    void registries_follow_the_registrations() {
-        const auto sc = registration("sc", {QStringLiteral("straycat*")});
-        FrequencyFormatRegistry registry;
-        QSignalSpy changed(&registry, &FrequencyFormatRegistry::formatsChanged);
-        QCOMPARE(idsOf(registry), QStringList({"sc"}));
+    // The formats follow the registry in the order of registration, and formatsChanged() is
+    // emitted after each change. A second format with a taken ID is not registered, and a
+    // format whose ID differs from its name is rejected. Of two formats for one resampler, the
+    // later registered is used. Each object has a registry of its own.
+    void the_formats_follow_the_registry() {
+        FrequencyFormats formats;
+        QSignalSpy changed(&formats, &FrequencyFormats::formatsChanged);
+        QList<QStringList> seen;
+        connect(&formats, &FrequencyFormats::formatsChanged,
+                [&] { seen.push_back(idsOf(formats)); });
+        auto sc = registration(formats, "sc", {QStringLiteral("straycat*")});
+        QCOMPARE(idsOf(formats), QStringList({"sc"}));
+        QCOMPARE(seen, QList<QStringList>({{"sc"}}));
 
-        auto builtins = std::make_unique<BuiltinFrequencyFormats>();
-        QCOMPARE(changed.size(), 3);
-        QCOMPARE(idsOf(registry), QStringList({"sc", "frq", "dio", "mrq"}));
-        QCOMPARE(registry.formatForResampler("straycat.exe")->id(), QStringLiteral("sc"));
-
-        const auto frq = registration("frq");
+        auto builtins = std::make_unique<BuiltinFrequencyFormats>(formats.registry());
         QCOMPARE(changed.size(), 4);
-        QCOMPARE(idsOf(registry), QStringList({"sc", "frq", "dio", "mrq"}));
-        QCOMPARE(registry.format(QStringLiteral("frq"))->name(),
+        QCOMPARE(idsOf(formats), QStringList({"sc", "frq", "dio", "mrq"}));
+        QCOMPARE(formats.formatForResampler("straycat.exe")->id(), QStringLiteral("sc"));
+
+        const auto frq = registration(formats, "frq");
+        QVERIFY(!frq.entry());
+        FrequencyFormatRegistry::AddFactory renamed(formats.registry(), "renamed", {}, [] {
+            return std::make_unique<Fixed>(QStringLiteral("other"));
+        });
+        QVERIFY(renamed.entry());
+        QCOMPARE(changed.size(), 4);
+        QCOMPARE(idsOf(formats), QStringList({"sc", "frq", "dio", "mrq"}));
+        QCOMPARE(formats.format(QStringLiteral("frq"))->name(),
                  QStringLiteral("frq (resampler.exe)"));
 
-        auto more = registration("more", {QStringLiteral("moresampler*.exe")});
-        QCOMPARE(registry.formatForResampler("moresampler.exe")->id(), QStringLiteral("more"));
-        const FrequencyFormatRegistry later;
-        QCOMPARE(idsOf(later), QStringList({"sc", "frq", "dio", "mrq", "more"}));
+        auto more = registration(formats, "more", {QStringLiteral("moresampler*.exe")});
+        QCOMPARE(formats.formatForResampler("moresampler.exe")->id(), QStringLiteral("more"));
+        const FrequencyFormats other;
+        QVERIFY(other.formats().isEmpty());
 
-        more.reset();
-        QCOMPARE(registry.formatForResampler("moresampler.exe")->id(), QStringLiteral("mrq"));
+        more = {};
+        QCOMPARE(formats.formatForResampler("moresampler.exe")->id(), QStringLiteral("mrq"));
         builtins.reset();
         QCOMPARE(changed.size(), 9);
-        QCOMPARE(idsOf(registry), QStringList({"sc", "frq"}));
-        QCOMPARE(registry.format(QStringLiteral("frq")), frq->format());
-        QCOMPARE(registry.formatForResampler("resampler.exe"), frq->format());
+        QCOMPARE(seen.last(), QStringList({"sc"}));
+        QVERIFY(!formats.formatForResampler("resampler.exe"));
     }
 
     // a_wav.frq: frames every hop samples of the rate of the audio file
     void a_frq_reads() {
-        const BuiltinFrequencyFormats builtins;
-        FrequencyFormatRegistry registry;
-        const auto frq = registry.format(QStringLiteral("frq"));
+        FrequencyFormats formats;
+        const BuiltinFrequencyFormats builtins(formats.registry());
+        const auto frq = formats.format(QStringLiteral("frq"));
         const auto wav = pathOf("a.wav");
         QVERIFY(!frq->exists(wav));
         DiagnosticList diagnostics;
@@ -198,9 +208,9 @@ private Q_SLOTS:
 
     // b.dio: the time of each frame as written, in seconds
     void a_dio_reads() {
-        const BuiltinFrequencyFormats builtins;
-        FrequencyFormatRegistry registry;
-        const auto dio = registry.format(QStringLiteral("dio"));
+        FrequencyFormats formats;
+        const BuiltinFrequencyFormats builtins(formats.registry());
+        const auto dio = formats.format(QStringLiteral("dio"));
         QByteArray bytes("wrld-dio");
         bytes += bytesOf<qint32>(1000) + bytesOf<qint32>(44100) + bytesOf<qint32>(2);
         bytes += bytesOf(0.0) + bytesOf(0.0) + bytesOf(0.005) + bytesOf(261.6);
@@ -220,9 +230,9 @@ private Q_SLOTS:
     // An entry of desc.mrq, found by case-insensitive name after a deleted entry
     void an_mrq_entry_reads() {
         QDir(m_dir.path()).mkdir(QStringLiteral("m"));
-        const BuiltinFrequencyFormats builtins;
-        FrequencyFormatRegistry registry;
-        const auto mrq = registry.format(QStringLiteral("mrq"));
+        FrequencyFormats formats;
+        const BuiltinFrequencyFormats builtins(formats.registry());
+        const auto mrq = formats.format(QStringLiteral("mrq"));
         const auto wav = pathOf("m") / fs::path(u"い.wav");
         QVERIFY(!mrq->exists(wav));
         QByteArray bytes("mrq ");
@@ -244,6 +254,6 @@ private Q_SLOTS:
     }
 };
 
-QTEST_GUILESS_MAIN(test_FrequencyFormatRegistry)
+QTEST_GUILESS_MAIN(test_FrequencyFormats)
 
-#include "test_FrequencyFormatRegistry.moc"
+#include "test_FrequencyFormats.moc"

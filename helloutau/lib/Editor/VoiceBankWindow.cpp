@@ -49,7 +49,7 @@
 #include <hellokit/Support/TextCodec.h>
 #include <hellokit/Synth/Spectrogram.h>
 #include <hellokit/Synth/WaveAudio.h>
-#include <hellokit/VoiceBank/FrequencyFormatRegistry.h>
+#include <hellokit/VoiceBank/FrequencyFormats.h>
 #include <hellokit/VoiceBank/VoiceAliasRule.h>
 #include <hellokit/VoiceBank/VoiceBankCheckScheduler.h>
 #include <hellokit/VoiceBank/WaveMetadata.h>
@@ -1642,8 +1642,8 @@ namespace hello::daw {
                                               });
                                           return labelled(parent, tr("&F0:"), box);
                                       });
-            QObject::connect(&editor->frequencyFormats(),
-                             &kit::FrequencyFormatRegistry::formatsChanged, &decl, [this] {
+            QObject::connect(&editor->frequencyFormats(), &kit::FrequencyFormats::formatsChanged,
+                             &decl, [this] {
                                  frequencyFormat = currentFrequencyFormat();
                                  fillFrequencyBox();
                                  frequencyShown = {};

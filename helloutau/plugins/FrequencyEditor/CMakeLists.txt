@@ -6,7 +6,7 @@ project(FrequencyEditorPlugin
 
 file(GLOB_RECURSE _src "*.cpp" "*.h")
 
-qm_find_qt(Core)
+qm_find_qt(Core Gui Widgets)
 
 helloutau_add_native_plugin(${PROJECT_NAME}
     ID org.helloutau.frequencyeditor
@@ -15,7 +15,7 @@ helloutau_add_native_plugin(${PROJECT_NAME}
     CATEGORY FrequencyEditor
     DEPENDENCIES org.helloutau.core
     SOURCES ${_src}
-    LINKS HelloKitVoiceBank
-    QT_LINKS Core
+    LINKS HelloUtauEditor HelloKitVoiceBank
+    QT_LINKS Core Gui Widgets
     INCLUDE_PRIVATE Internal
 )

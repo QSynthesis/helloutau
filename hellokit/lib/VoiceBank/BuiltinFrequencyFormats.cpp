@@ -7,7 +7,6 @@
 #include <QtCore/QtEndian>
 
 #include "FrequencyFormat.h"
-#include "FrequencyFormatRegistration.h"
 
 namespace hello::kit {
 
@@ -319,13 +318,10 @@ namespace hello::kit {
     }
 
     // frq, dio and mrq in this order of registration
-    BuiltinFrequencyFormats::BuiltinFrequencyFormats() {
-        m_registrations.push_back(
-            std::make_unique<FrequencyFormatRegistration>(std::make_unique<Frq>()));
-        m_registrations.push_back(
-            std::make_unique<FrequencyFormatRegistration>(std::make_unique<Dio>()));
-        m_registrations.push_back(
-            std::make_unique<FrequencyFormatRegistration>(std::make_unique<Mrq>()));
+    BuiltinFrequencyFormats::BuiltinFrequencyFormats(FrequencyFormatRegistry &registry) {
+        m_registrations.push_back(FrequencyFormatRegistry::Add<Frq>(registry, "frq", {}));
+        m_registrations.push_back(FrequencyFormatRegistry::Add<Dio>(registry, "dio", {}));
+        m_registrations.push_back(FrequencyFormatRegistry::Add<Mrq>(registry, "mrq", {}));
     }
 
     BuiltinFrequencyFormats::~BuiltinFrequencyFormats() = default;

@@ -122,7 +122,7 @@ qfrqeditor 的 `Core` 按本仓库规范重写后移入 hellokit 的新子库（
 - 格式层（`HelloKitVoiceBank`）：
   - `kit::FrequencyTable`：各格式的公共部分，每帧的时间（毫秒）、频率（赫兹，0 为无声）与可选的振幅，以及可选的平均频率。
   - `kit::FrequencyFormat`：格式驱动，目前只有标识、名称、重采样器文件名的通配符、`exists()` 与 `read()`；写、删除与生成到后面的步骤再加。
-  - `kit::FrequencyFormatRegistry`：内置格式与插件格式同一途径登记（`kit::FrequencyFormatRegistration`），ID 不得重复；`formatForResampler()` 按重采样器的文件名（整名匹配、不分大小写）取匹配的格式，都不匹配时为 frq。不执行任何程序。原先先注册者优先、以 `kit::FrequencyFormatPlugin` 加入插件格式，插件机制改定后改为后登记者优先，见 [`Plugins.md`](Plugins.md) 实施步骤 4。
+  - `kit::FrequencyFormats`：一个宿主（编辑器）的格式，为 `registry()`（`kit::FrequencyFormatRegistry`，即 `stdc::DynamicRegistry`）中的每个条目创建一个实例；内置格式与插件格式同一途径登记（`Add<V>` 或 `AddFactory`），条目名称即格式 ID，ID 重复的登记失败，实例的 `id()` 与名称不同时被拒绝；`formatForResampler()` 按重采样器的文件名（整名匹配、不分大小写）取匹配的格式，都不匹配时为 frq。不执行任何程序。原先先注册者优先、以 `kit::FrequencyFormatPlugin` 加入插件格式，插件机制改定后改为后登记者优先，见 [`Plugins.md`](Plugins.md) 实施步骤 4。
   - 内置三种有公开资料的格式，注释引用的都是公开资料：
     - frq（`resampler*.exe`）：`a_wav.frq`，布局按 OpenUtau 0.1.565 的 `Frq.cs`；帧时间由帧间隔与 wav 的采样率算出。
     - dio（`w4u*.exe`、`world4utau*.exe`）：`a.dio`，布局按 world4utau 的源码；每帧自带时间。

@@ -76,16 +76,25 @@ private Q_SLOTS:
         QCOMPARE(tagsOf(instances), (std::vector<int>{2}));
     }
 
-    // A rejected item is not kept, and its removal does not reach the release function.
+    // The take function sees the new item in the list. A rejected item is not kept, and its
+    // removal does not reach the release function.
     void a_rejected_item_is_not_kept() {
         WidgetRegistry registry;
         int released = 0;
+        std::vector<std::vector<int>> seen;
+        Instances *pointer = nullptr;
         Instances instances(
-            registry, [](Instances::Item &item) { return item.instance->tag != 1; },
+            registry,
+            [&](Instances::Item &item) {
+                seen.push_back(tagsOf(*pointer));
+                return item.instance->tag != 1;
+            },
             [&released](Instances::Item &) { ++released; });
+        pointer = &instances;
         WidgetRegistry::AddFactory a(registry, "a", {}, factoryOf(1));
         WidgetRegistry::AddFactory b(registry, "b", {}, factoryOf(2));
         QCOMPARE(tagsOf(instances), (std::vector<int>{2}));
+        QVERIFY(seen == (std::vector<std::vector<int>>{{1}, {2}}));
 
         a = {};
         QCOMPARE(released, 0);

@@ -17,7 +17,7 @@ namespace hello::kit {
 
     /// Driver of a frequency table format. A frequency table is the analysis file that a
     /// resampler generates for an audio file. Built-in formats and plugin formats are both
-    /// registered in FrequencyFormatRegistry. See docs/FrequencyTables.md.
+    /// registered in a FrequencyFormatRegistry. See docs/FrequencyTables.md.
     ///
     /// The interface is read-only. It neither writes tables nor executes resamplers.
     class HELLOKIT_VOICEBANK_EXPORT FrequencyFormat {
@@ -36,7 +36,7 @@ namespace hello::kit {
         /// configured resampler by these patterns. Empty if the format is selected only
         /// manually.
         ///
-        /// \sa FrequencyFormatRegistry::formatForResampler()
+        /// \sa FrequencyFormats::formatForResampler()
         virtual QStringList resamplerPatterns() const = 0;
 
         /// Returns whether the audio file \a wav has a table of this format.

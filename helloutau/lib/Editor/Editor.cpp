@@ -25,7 +25,7 @@
 #include <hellokit/Edit/ProjectDocument.h>
 #include <hellokit/Edit/VoiceBankDocument.h>
 #include <hellokit/Support/RegistryInstanceList.h>
-#include <hellokit/VoiceBank/FrequencyFormatRegistry.h>
+#include <hellokit/VoiceBank/FrequencyFormats.h>
 #include <hellokit/VoiceBank/VoiceBank.h>
 
 #include <helloutau/Theme/ThemeManager.h>
@@ -263,8 +263,8 @@ namespace hello::daw {
         // The page of each entry in the catalog. A page deleted with its parent page is null
         // here.
         QHash<const SettingPageRegistry::Entry *, QPointer<SettingPage>> registeredPages;
-        std::unique_ptr<kit::FrequencyFormatRegistry> frequencyFormats =
-            std::make_unique<kit::FrequencyFormatRegistry>();
+        std::unique_ptr<kit::FrequencyFormats> frequencyFormats =
+            std::make_unique<kit::FrequencyFormats>();
         bool watchesDisk = true;
         QList<QPointer<ProjectWindow>> windows;
         QList<QPointer<VoiceBankWindow>> voiceBankWindows;
@@ -472,7 +472,7 @@ namespace hello::daw {
         _impl->init(this);
     }
 
-    kit::FrequencyFormatRegistry &Editor::frequencyFormats() const {
+    kit::FrequencyFormats &Editor::frequencyFormats() const {
         stdc_impl_t;
         return *impl.frequencyFormats;
     }

@@ -45,7 +45,7 @@
 #include <hellokit/Edit/VoiceBankDocument.h>
 #include <hellokit/Edit/VoiceBankRefs.h>
 #include <hellokit/VoiceBank/BuiltinFrequencyFormats.h>
-#include <hellokit/VoiceBank/FrequencyFormatRegistration.h>
+#include <hellokit/VoiceBank/FrequencyFormats.h>
 
 #include <helloutau/Audio/AudioOutput.h>
 #include <helloutau/Widgets/CommandPalette.h>
@@ -150,18 +150,21 @@ class test_Editor : public QObject {
 
 private:
     QTemporaryDir m_dir;
-    // The formats of frequency tables, which the plugin FrequencyEditor registers in the
-    // application
-    kit::BuiltinFrequencyFormats m_formats;
+    // The formats of frequency tables that the plugin FrequencyEditor registers, one object for
+    // each editor that editor() created. An object that outlives its editor removes nothing.
+    mutable std::vector<std::unique_ptr<kit::BuiltinFrequencyFormats>> m_formats;
 
-    // An editor with the menus and commands that the core plugin registers, whose voice bank
-    // windows do not follow the disk on their own, which would ask at any moment; a test calls
-    // VoiceBankWindow::checkDisk() instead.
+    // An editor with the menus, the commands and the frequency table formats that the core
+    // plugin and the plugin FrequencyEditor register, whose voice bank windows do not follow the
+    // disk on their own, which would ask at any moment; a test calls VoiceBankWindow::checkDisk()
+    // instead.
     std::unique_ptr<Editor> editor() const {
         auto e = std::make_unique<Editor>(
             std::make_unique<AppSettings>(m_dir.filePath(QStringLiteral("settings.json"))));
         e->setWatchesDisk(false);
         new BuiltinActions(e.get());
+        m_formats.push_back(
+            std::make_unique<kit::BuiltinFrequencyFormats>(e->frequencyFormats().registry()));
         return e;
     }
 
@@ -2356,12 +2359,13 @@ private Q_SLOTS:
                 return std::nullopt;
             }
         };
-        auto extra = std::make_unique<kit::FrequencyFormatRegistration>(std::make_unique<Extra>());
+        auto extra =
+            kit::FrequencyFormatRegistry::Add<Extra>(e->frequencyFormats().registry(), "extra", {});
         QVERIFY(box->findData(QStringLiteral("extra")) > 0);
         QCOMPARE(box->currentData().toString(), QStringLiteral("frq"));
 
         box->setCurrentIndex(box->findData(QStringLiteral("extra")));
-        extra.reset();
+        extra = {};
         QCOMPARE(box->findData(QStringLiteral("extra")), -1);
         QCOMPARE(box->currentData().toString(), QStringLiteral("mrq"));
     }

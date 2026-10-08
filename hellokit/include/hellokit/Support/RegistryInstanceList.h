@@ -28,8 +28,8 @@ namespace hello::kit {
             Instance instance;
         };
 
-        /// Called with each new item. Returns whether the host keeps the item. A rejected item is
-        /// destroyed at once.
+        /// Called with each new item, which items() already includes. Returns whether the host
+        /// keeps the item. A rejected item is removed and destroyed at once.
         using Take = std::function<bool(Item &item)>;
 
         /// Called with an item after its entry was removed, before the item is destroyed.
@@ -57,9 +57,9 @@ namespace hello::kit {
 
     private:
         void entry_added(const EntryPointer &entry) override {
-            Item item{entry, entry->instantiate()};
-            if (!m_take || m_take(item)) {
-                m_items.push_back(std::move(item));
+            m_items.push_back({entry, entry->instantiate()});
+            if (m_take && !m_take(m_items.back())) {
+                m_items.pop_back();
             }
         }
 
