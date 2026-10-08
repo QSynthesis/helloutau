@@ -18,11 +18,13 @@
 namespace hello::daw {
 
     namespace {
+
         constexpr double kit::Vibrato::*Values[] = {
             &kit::Vibrato::length, &kit::Vibrato::period,  &kit::Vibrato::amplitude,
             &kit::Vibrato::attack, &kit::Vibrato::release, &kit::Vibrato::phase,
             &kit::Vibrato::offset,
         };
+
     }
 
     PitchControlDialog::PitchControlDialog(

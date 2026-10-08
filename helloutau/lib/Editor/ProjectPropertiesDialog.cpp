@@ -91,6 +91,7 @@ namespace hello::daw {
             const auto secondCanonical = fs::weakly_canonical(secondPath, secondError);
             return !firstError && !secondError && firstCanonical == secondCanonical;
         }
+
     }
 
     ProjectPropertiesDialog::ProjectPropertiesDialog(const kit::Project &project,

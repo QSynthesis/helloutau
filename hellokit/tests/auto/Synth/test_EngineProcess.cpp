@@ -36,6 +36,7 @@ namespace {
     /// The argument that makes it write the first file that follows at once and the second a
     /// second later, for the case of an engine started by a script.
     constexpr char writeLater[] = "--write-later";
+
 }
 
 class test_EngineProcess : public QObject {

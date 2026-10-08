@@ -14,6 +14,7 @@
 namespace hello::daw {
 
     namespace {
+
 #if QT_VERSION < QT_VERSION_CHECK(6, 11, 0) || defined(HELLOUTAU_AUDIO_PULL)
 #  define HELLOUTAU_AUDIO_PULL_DEVICE
         // Retains partial frame bytes across QIODevice reads, including unaligned requests.
@@ -59,6 +60,7 @@ namespace hello::daw {
             qint64 m_remaining = 0;
         };
 #endif
+
     }
 
     class AudioEngine::Impl {
