@@ -9,6 +9,7 @@
 namespace hello::daw {
 
     class ActionRegistration;
+    class SettingPageRegistration;
 
     /// The plugin that runs UTAU plugins on the selection of a project window from the submenu
     /// Plugins of the Tools menu. See docs/ClassicPluginHost.md.
@@ -22,6 +23,7 @@ namespace hello::daw {
 
     private:
         std::unique_ptr<ActionRegistration> m_registration;
+        std::unique_ptr<SettingPageRegistration> m_settingPage;
     };
 
 }

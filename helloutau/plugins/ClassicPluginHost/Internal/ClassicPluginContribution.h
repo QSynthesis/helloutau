@@ -15,6 +15,8 @@ class QMenu;
 
 namespace hello::daw {
 
+    class AppSettings;
+
     /// The submenu Classic Plugins of the Tools menu of the project windows, as the plugin menu
     /// of UTAU: the discovered UTAU plugins, followed by Refresh and the commands that open the
     /// plugin folders. The command Classic Plugins at Pointer (key N, as in UTAU) shows the same
@@ -35,6 +37,13 @@ namespace hello::daw {
         /// Returns the folder of the UTAU plugins that the user installs for HelloUtau, separate
         /// from the \c plugins folder of UTAU and from the native plugins.
         static std::filesystem::path userDirectory();
+
+        /// Returns the plugin folders in the order of discovery: userDirectory(), and then the
+        /// \c plugins folder of the UTAU folder of \a settings if that is set.
+        static QList<std::filesystem::path> pluginFolders(const AppSettings &settings);
+
+        /// Opens \a folder in the file manager, and creates the folder if necessary.
+        static void openFolder(const std::filesystem::path &folder);
 
     private:
         void fill(QMenu *menu, ProjectWindow *window);

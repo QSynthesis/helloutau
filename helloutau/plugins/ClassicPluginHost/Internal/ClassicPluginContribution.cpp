@@ -29,14 +29,24 @@ namespace hello::daw {
             return utauDirectory.empty() ? std::filesystem::path() : utauDirectory / u"plugins";
         }
 
-        // Opens \a directory in the file manager, and creates it if necessary.
-        void open(const std::filesystem::path &directory) {
-            std::error_code error;
-            std::filesystem::create_directories(directory, error);
-            QDesktopServices::openUrl(
-                QUrl::fromLocalFile(QString::fromStdU16String(directory.u16string())));
-        }
+    }
 
+    QList<std::filesystem::path>
+        ClassicPluginContribution::pluginFolders(const AppSettings &settings) {
+        // The plugin folder of HelloUtau precedes the plugins folder of UTAU, as with the voice
+        // folders of AppSettings::voiceLocations().
+        QList<std::filesystem::path> folders{userDirectory()};
+        if (const auto utauPlugins = pluginsOf(settings.utauDirectory()); !utauPlugins.empty()) {
+            folders.push_back(utauPlugins);
+        }
+        return folders;
+    }
+
+    void ClassicPluginContribution::openFolder(const std::filesystem::path &folder) {
+        std::error_code error;
+        std::filesystem::create_directories(folder, error);
+        QDesktopServices::openUrl(
+            QUrl::fromLocalFile(QString::fromStdU16String(folder.u16string())));
     }
 
     ClassicPluginContribution::ClassicPluginContribution() = default;
@@ -105,28 +115,21 @@ namespace hello::daw {
         QObject::connect(menu->addAction(tr("&Refresh")), &QAction::triggered, window,
                          [this, window] { refresh(window); });
         QObject::connect(menu->addAction(tr("&Open Plugin Folder")), &QAction::triggered, window,
-                         [] { open(userDirectory()); });
+                         [] { openFolder(userDirectory()); });
         const auto utauPlugins = pluginsOf(window->editor()->settings().utauDirectory());
         if (!utauPlugins.empty()) {
             QObject::connect(menu->addAction(tr("Open &UTAU Plugin Folder")), &QAction::triggered,
-                             window, [utauPlugins] { open(utauPlugins); });
+                             window, [utauPlugins] { openFolder(utauPlugins); });
         }
     }
 
     void ClassicPluginContribution::refresh(ProjectWindow *window) {
-        // The plugin folder of HelloUtau first and the plugins folder of UTAU second, as the
-        // voice folders of AppSettings::voiceLocations(). A folder that does not exist yields no
-        // plugins.
-        const auto utauDirectory = window->editor()->settings().utauDirectory();
-        QList<std::filesystem::path> directories{userDirectory()};
-        if (const auto utauPlugins = pluginsOf(utauDirectory); !utauPlugins.empty()) {
-            directories.push_back(utauPlugins);
-        }
-
-        // A folder whose plugin.txt cannot be read is skipped, as in UTAU.
+        const auto &settings = window->editor()->settings();
+        // A folder that does not exist yields no plugins, and a folder whose plugin.txt cannot
+        // be read is skipped, as in UTAU.
         kit::DiagnosticList diagnostics;
-        m_plugins = ClassicPlugin::discover(directories, diagnostics);
-        m_utauDirectory = utauDirectory;
+        m_plugins = ClassicPlugin::discover(pluginFolders(settings), diagnostics);
+        m_utauDirectory = settings.utauDirectory();
     }
 
 }
