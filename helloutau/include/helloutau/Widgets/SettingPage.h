@@ -43,6 +43,11 @@ namespace hello::daw {
         /// Adds \a page as a child, which this page then owns: before the child of the id
         /// \a before, or last if \a before is empty or names no child.
         void addPage(SettingPage *page, const QString &before = {});
+
+        /// Removes the child \a page and deletes it with its own children. Does nothing if
+        /// \a page is not a child of this page.
+        void removePage(SettingPage *page);
+
         QList<SettingPage *> pages() const;
         SettingPage *parentPage() const;
 
@@ -94,6 +99,12 @@ namespace hello::daw {
         /// that adds its page after the pages of the editor places it with \a before in the order
         /// of the settings of JetBrains IDEs.
         void addPage(SettingPage *page, const QString &before = {});
+
+        /// Removes \a page from any level and deletes it with its children. Does nothing if
+        /// \a page is not in the catalog. A plugin that added a page removes it before its
+        /// library is unloaded, because the page runs code of the library.
+        void removePage(SettingPage *page);
+
         QList<SettingPage *> pages() const;
 
         /// The page of \a id at any level, or null. Ids are to be unique.

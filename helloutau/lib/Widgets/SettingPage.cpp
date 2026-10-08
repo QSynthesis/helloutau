@@ -48,6 +48,12 @@ namespace hello::daw {
         m_pages.insert(at, page);
     }
 
+    void SettingPage::removePage(SettingPage *page) {
+        if (m_pages.removeOne(page)) {
+            delete page;
+        }
+    }
+
     QList<SettingPage *> SettingPage::pages() const {
         return m_pages;
     }
@@ -102,6 +108,16 @@ namespace hello::daw {
             return !before.isEmpty() && p->id() == before;
         });
         m_pages.insert(at, page);
+    }
+
+    void SettingCatalog::removePage(SettingPage *page) {
+        if (m_pages.removeOne(page)) {
+            delete page;
+            return;
+        }
+        if (allPages().contains(page)) {
+            page->parentPage()->removePage(page);
+        }
     }
 
     QList<SettingPage *> SettingCatalog::pages() const {

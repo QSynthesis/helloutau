@@ -50,15 +50,17 @@ stdcorelib.plugin 的交接记录（其仓库 `.cache/codex/2026-08-21-1722-stdc
 
 - 各扩展点的登记形状一致（作者 2026-09-30 要求统一）：
 
-  | 部分 | 动作（HelloUtauEditor） | 频率表格式（HelloKitVoiceBank） | 格式转换驱动（HelloKitInterchange） |
-  |---|---|---|---|
-  | 被登记的对象 | `ActionContribution` | `FrequencyFormat` | `InterchangeReader` 或 `InterchangeWriter` |
-  | 登记对象 | `ActionRegistration(std::unique_ptr<ActionContribution>)`，`contribution()` | `FrequencyFormatRegistration(std::unique_ptr<FrequencyFormat>)`，`format()` | `InterchangeRegistration`，两个构造函数，`reader()` / `writer()` |
-  | 进程级列表（私有） | `ActionRegistrations_p.h` | `FrequencyFormatRegistrations_p.h` | `InterchangeRegistrations_p.h` |
-  | 使用方 | 每个 `Editor` 监听列表 | 每个 `FrequencyFormatRegistry` 监听列表 | 每个 `InterchangeRegistry` 监听列表 |
-  | 内置的登记 | `BuiltinActions`（Core 持有） | `BuiltinFrequencyFormats`（FrequencyEditor 持有） | `BuiltinInterchangeDrivers`（Interchange 持有） |
+  | 部分 | 动作（HelloUtauEditor） | 设置页（HelloUtauEditor） | 频率表格式（HelloKitVoiceBank） | 格式转换驱动（HelloKitInterchange） |
+  |---|---|---|---|---|
+  | 被登记的对象 | `ActionContribution` | 创建页面的函数 `Factory`（`SettingPage *(Editor *)`）与页面的位置 | `FrequencyFormat` | `InterchangeReader` 或 `InterchangeWriter` |
+  | 登记对象 | `ActionRegistration(std::unique_ptr<ActionContribution>)`，`contribution()` | `SettingPageRegistration(Factory, parent, before)`，`addTo()` | `FrequencyFormatRegistration(std::unique_ptr<FrequencyFormat>)`，`format()` | `InterchangeRegistration`，两个构造函数，`reader()` / `writer()` |
+  | 进程级列表（私有） | `ActionRegistrations_p.h` | `SettingPageRegistrations_p.h` | `FrequencyFormatRegistrations_p.h` | `InterchangeRegistrations_p.h` |
+  | 使用方 | 每个 `Editor` 监听列表 | 每个 `Editor` 监听列表 | 每个 `FrequencyFormatRegistry` 监听列表 | 每个 `InterchangeRegistry` 监听列表 |
+  | 内置的登记 | `BuiltinActions`（Core 持有） | 无，编辑器与 Core 的页面直接加入目录 | `BuiltinFrequencyFormats`（FrequencyEditor 持有） | `BuiltinInterchangeDrivers`（Interchange 持有） |
 
-- 登记对象持有被登记的对象，构造时加入进程级列表，析构时移除；所有使用方共用这一个对象。列表按登记顺序保存，只在应用的线程上使用，不用 `stdc::DynamicRegistry`：后者按名称排序，表达不了登记顺序。列表在所属的子库中，子库是动态库，因此每个进程只有一份。
+- **设置页登记的是创建页面的函数而非页面**（作者 2026-10-08 同意）：页面属于某个 `Editor` 的设置目录，每个 `Editor` 须有自己的一份，因此不能由所有使用方共用一个对象。`Editor` 构造时为已有的登记各创建一页，之后随登记创建，随注销以 `SettingCatalog::removePage()` 删除；页面执行插件库中的代码，必须在插件库卸载之前删除。`parent` 为空或找不到时页面放在顶层，`before` 同 `SettingCatalog::addPage()`。
+
+- 登记对象持有被登记的对象，构造时加入进程级列表，析构时移除；除设置页外，所有使用方共用这一个对象。列表按登记顺序保存，只在应用的线程上使用，不用 `stdc::DynamicRegistry`：后者按名称排序，表达不了登记顺序。列表在所属的子库中，子库是动态库，因此每个进程只有一份。
 - 插件把登记对象作为自己的成员，在 `initialize()` 中创建，在 `aboutToShutdown()` 中销毁。不能等插件实例析构：实例是插件库中的静态对象，随库卸载才析构，那时 `Editor` 已销毁，且析构发生在卸载库的过程中。
 - 内置的格式与驱动经同一途径登记，与插件不分主次，保持 `InterchangeRegistry` 与 `FrequencyFormatRegistry` 已有的原则。
 - 应用与测试持有的注册表（`FrequencyFormatRegistry` 等）**仍然不是全局单例**，内容来自进程级列表。测试只登记自己需要的内容，登记对象随测试结束而销毁。

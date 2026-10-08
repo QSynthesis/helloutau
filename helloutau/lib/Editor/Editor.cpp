@@ -42,6 +42,7 @@
 #include "ActionLayoutsFile_p.h"
 #include "ProjectWindow.h"
 #include "Restarter.h"
+#include "SettingPageRegistrations_p.h"
 #include "UstCharsetDialog.h"
 #include "VoiceBankCharsetDialog.h"
 #include "VoiceBankWindow.h"
@@ -104,7 +105,8 @@ namespace hello::daw {
 
     }
 
-    class Editor::Impl : public ActionRegistrations::Listener {
+    class Editor::Impl : public ActionRegistrations::Listener,
+                         public SettingPageRegistrations::Listener {
     public:
         using Decl = Editor;
 
@@ -139,6 +141,23 @@ namespace hello::daw {
             themes->addSearchPath(QStringLiteral(":/helloutau/themes"));
             catalog = new SettingCatalog(decl);
             addEditorSettingPages(catalog, *settings);
+            editor = decl;
+            for (const auto registration : SettingPageRegistrations::instance().registrations()) {
+                registrationAdded(registration);
+            }
+            SettingPageRegistrations::instance().addListener(this);
+        }
+
+        void registrationAdded(const SettingPageRegistration *registration) override {
+            if (const auto page = registration->addTo(editor)) {
+                registeredPages.insert(registration, page);
+            }
+        }
+
+        void registrationRemoved(const SettingPageRegistration *registration) override {
+            if (const auto page = registeredPages.take(registration)) {
+                catalog->removePage(page);
+            }
         }
 
         // The windows take the actions of a contribution as it comes, and the menus and
@@ -208,6 +227,10 @@ namespace hello::daw {
         QString actionLayoutsFile;
         ThemeManager *themes = nullptr;
         SettingCatalog *catalog = nullptr;
+        Editor *editor = nullptr;
+        // The page that each registration added to the catalog. A page deleted with its parent
+        // page is null here.
+        QHash<const SettingPageRegistration *, QPointer<SettingPage>> registeredPages;
         std::unique_ptr<kit::FrequencyFormatRegistry> frequencyFormats =
             std::make_unique<kit::FrequencyFormatRegistry>();
         bool watchesDisk = true;
@@ -469,6 +492,7 @@ namespace hello::daw {
     Editor::~Editor() {
         stdc_impl_t;
         ActionRegistrations::instance().removeListener(&impl);
+        SettingPageRegistrations::instance().removeListener(&impl);
         // The windows refer to the registries and the settings, so they go first.
         for (const auto &window : std::as_const(impl.windows)) {
             delete window.data();
