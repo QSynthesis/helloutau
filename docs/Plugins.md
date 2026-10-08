@@ -106,13 +106,13 @@ macOS 的 bundle 中为 `HelloUtau.app/Contents/MacOS`（程序）与 `HelloUtau
 - 兼容性：C++ 插件须与宿主以同一编译器、同一 Qt 与 hellokit 版本构建。元数据加一个宿主字段（如 `helloutau` 的版本范围），由载入判定检查；判定也用于平台限制（如只在 Windows 可用的 vs4ufrq 格式插件）。
 - 设置：应用数据目录中的两个 JSON 文件（作者 2026-09-30 定；Windows 上为 `%APPDATA%\OpenVPI\HelloUtau\`，组织名 `OpenVPI`），应用与插件分开，一方写坏不牵连另一方，插件一份也与将来随安装提供的全局一份同格式：
   - `settings.json`：应用的设置（`AppSettings`），分组存放 `engines`、`playback`、`files`、`commandPalette`，也可经 `value()` / `setValue()` 以 `a/b/c` 形式的键读写任意一层。Core 插件把 `AppLoader` 的这一份交给 `Editor`。
-  - `plugins.json`：严格为 stdcorelib.plugin `PluginSettings` 的格式：用户启用或停用的插件 `enabledPlugins` / `disabledPlugins`，以及各插件自己的值 `userData/<插件 ID>`。`AppLoader` 读写它，载入插件前把它交给 `PluginSystem` 的用户一级；插件经 `AppLoader::pluginValue(id, key)` / `setPluginValue()` 以相对于自己那一组的 `a/b/c` 键读写。
+  - `plugins.json`：严格为 stdcorelib.plugin `PluginSettings` 的格式：用户启用或停用的插件 `enabledPlugins` / `disabledPlugins`，以及各插件自己的值 `userData/<插件 ID>`。`AppLoader` 读写它，载入插件前把它交给 `PluginSystem` 的用户一级；插件经 `AppLoader::pluginSettings()` 读取，经 `changePluginSettings()` 修改（AppLoader 随后安排写盘），自己的值以 `kit::JsonInterop::valueAt()` / `insertAt()` 按以自己 ID 开头的 `ID/a/b` 路径读写（作者 2026-10-08 决定直接使用 stdcorelib.plugin 的 `PluginSettings` 与 `stdc::json`，不再转换为 `QJsonValue`）。
   - `AppLoader` 的 `--settings <目录>` 另指定两者所在的目录，测试用它。内部存储用 stdcorelib 的 JSON（值可就地修改），按路径读写及与 Qt JSON 的转换由 hellokit 的 `JsonInterop` 完成；`AppSettings` 的接口用 `QJsonValue`。修改后等事件循环运行时重写整个文件（`SettingsFile`，同一轮循环的修改合为一次写），`AppSettings::sync()`、`AppLoader::syncSettings()` 与析构时立即写出未写的修改；多开时后写的覆盖先写的，以后再做独占。
   - 随安装提供的全局一份尚未实现。
 - **Core 插件的设置页**：「Keymap」「Menus and Toolbars」（`core.Keymap`、`core.MenusAndToolbars`，作者 2026-10-01 同意）与「Plugins」（`core.Plugins`，作者 2026-09-30 同意的方案）。Core 插件在创建 `Editor` 后经 `addCoreSettingPages()` 加入，位置见 [`Widgets.md`](Widgets.md)「页面的归属」。三页与该函数都在插件根目录导出（`COREPLUGIN_EXPORT`），供 `tests/auto/plugins/Core` 测试，插件类仍在 `Internal` 中（作者 2026-10-01 要求三页放在一起）。Plugins 页只在经加载器启动时加入，排在 Rendering 之前，测试中直接构造的 `Editor` 没有它。
-  - 数据来自 `AppLoader::plugins()`：每个找到的插件一项 `PluginInfo`（ID、显示名、版本、库文件、依赖及是否可选、本次运行的状态「运行中 / 已停用 / 出错 / 未载入」、错误、元数据是否启用、本次是否启用），公开接口不含 stdcorelib 的类型。`errors()` 由它筛出。
+  - 数据来自 `AppLoader::pluginSystem().plugins()`，即 stdcorelib.plugin 的 `PluginSpec`（ID、显示名、版本、库文件、依赖及是否可选、错误、元数据是否启用、本次是否启用）。页面把状态归为「运行中 / 已停用 / 出错 / 未载入」。`AppLoader::errors()` 同样由 `PluginSpec` 筛出。
   - 列表为「名称（勾选框）、版本、状态」三列，出错的插件在状态列带警告图标，提示为错误全文；选中一项时下方显示 ID、库文件、所依赖的插件与依赖它的插件（标出可选依赖）、错误。
-  - 勾选表示下次启动是否启用，经 `AppLoader::pluginEnabled()` / `setPluginEnabled()` 写入 `plugins.json` 的 `enabledPlugins` / `disabledPlugins`，本次运行的插件不变；与元数据相同的选择不写入，文件中只留用户改过的插件。有插件的勾选与本次运行不同时，页首提示重启。
+  - 勾选表示下次启动是否启用，经 `AppLoader::changePluginSettings()` 以 `PluginSettings::setPluginEnabled()` 写入 `plugins.json` 的 `enabledPlugins` / `disabledPlugins`，本次运行的插件不变；与元数据相同的选择不写入，文件中只留用户改过的插件。有插件的勾选与本次运行不同时，页首提示重启。
   - Core 插件的勾选框不能取消。停用被依赖的插件不加阻止，依赖它的插件在下次启动时显示依赖错误。
 - **关闭顺序**：插件登记的对象，代码都在插件的库中，必须在卸载前销毁。Core 插件在 `aboutToShutdown()` 中销毁 `Editor`，依赖 Core 的插件的 `aboutToShutdown()` 在它之前调用，各库都在此后才卸载。插件的实例是库中的静态对象，随库卸载而析构，因此窗口等 Qt 对象不能留到那时。
 - **插件交给宿主的数据不能指向插件库的静态存储**：`QStringLiteral` 的文本就在库中，库卸载后仍被宿主持有的这类字符串即成悬空（`test_AppLoader` 的测试插件遇到过）。交给宿主、可能在卸载后仍被使用的字符串须是分配的副本。

@@ -15,8 +15,6 @@
 #include <stdcorelib/pluginsystem/pluginsystem.h>
 #include <stdcorelib/system.h>
 
-#include <hellokit/Support/JsonInterop.h>
-
 #include "AppSettings.h"
 #include "Editor.h"
 #include "Restarter.h"
@@ -169,33 +167,15 @@ namespace hello::daw {
         return impl.settingsDirectory;
     }
 
-    QJsonValue AppLoader::pluginValue(const QString &id, const QString &key) const {
+    const stdc::pluginsystem::PluginSettings &AppLoader::pluginSettings() const {
         stdc_impl_t;
-        const auto &value = kit::JsonInterop::valueAt(impl.pluginSettings.userData(),
-                                                      (id + QLatin1Char('/') + key).toStdString());
-        return value.isNull() ? QJsonValue(QJsonValue::Undefined)
-                              : kit::JsonInterop::toQtJson(value);
+        return impl.pluginSettings;
     }
 
-    void AppLoader::setPluginValue(const QString &id, const QString &key, const QJsonValue &value) {
+    void AppLoader::changePluginSettings(
+        const std::function<void(stdc::pluginsystem::PluginSettings &settings)> &change) {
         stdc_impl_t;
-        kit::JsonInterop::insertAt(impl.pluginSettings.userData(),
-                                   (id + QLatin1Char('/') + key).toStdString(),
-                                   kit::JsonInterop::fromQtJson(value));
-        impl.pluginFile->changed();
-    }
-
-    std::optional<bool> AppLoader::pluginEnabled(const QString &id) const {
-        stdc_impl_t;
-        return impl.pluginSettings.pluginEnabled(id.toStdString());
-    }
-
-    void AppLoader::setPluginEnabled(const QString &id, std::optional<bool> enabled) {
-        stdc_impl_t;
-        if (impl.pluginSettings.pluginEnabled(id.toStdString()) == enabled) {
-            return;
-        }
-        impl.pluginSettings.setPluginEnabled(id.toStdString(), enabled);
+        change(impl.pluginSettings);
         impl.pluginFile->changed();
     }
 
@@ -255,49 +235,23 @@ namespace hello::daw {
         return true;
     }
 
-    QList<AppLoader::PluginInfo> AppLoader::plugins() const {
+    const stdc::pluginsystem::PluginSystem &AppLoader::pluginSystem() const {
         stdc_impl_t;
-        using Spec = stdc::pluginsystem::PluginSpec;
-        QList<PluginInfo> result;
-        for (const auto spec : impl.system.plugins()) {
-            PluginInfo info;
-            info.id = QString::fromStdString(spec->id());
-            info.displayName = QString::fromStdString(spec->displayName());
-            info.description = QString::fromStdString(spec->description());
-            info.version = QString::fromStdString(spec->version().toString());
-            info.filePath =
-                QDir::toNativeSeparators(QString::fromStdU16String(spec->filePath().u16string()));
-            for (const auto &dependency : spec->dependencies()) {
-                info.dependencies.push_back(
-                    {QString::fromStdString(dependency.id()),
-                     dependency.type() == stdc::pluginsystem::PluginDependency::Optional});
-            }
-            if (spec->hasError()) {
-                info.state = PluginInfo::Failed;
-                info.error = QString::fromStdString(spec->errorMessage());
-            } else if (!spec->isEnabled()) {
-                info.state = PluginInfo::Disabled;
-            } else if (spec->state() == Spec::Running) {
-                info.state = PluginInfo::Running;
-            }
-            info.enabledByDefault = spec->enabledByGlobalSettings();
-            info.enabled = spec->isEnabled();
-            result.push_back(info);
-        }
-        return result;
+        return impl.system;
     }
 
     QStringList AppLoader::errors() const {
+        stdc_impl_t;
         QStringList result;
         bool coreSeen = false;
-        for (const auto &info : plugins()) {
+        for (const auto spec : impl.system.plugins()) {
             // load() reports the first core plugin. Another plugin with the same ID is an error.
-            if (info.id == QLatin1String(corePluginId) && !coreSeen) {
+            if (spec->id() == corePluginId && !coreSeen) {
                 coreSeen = true;
                 continue;
             }
-            if (info.state == PluginInfo::Failed) {
-                result.push_back(info.id + QStringLiteral(": ") + info.error);
+            if (spec->hasError()) {
+                result.push_back(QString::fromStdString(spec->id() + ": " + spec->errorMessage()));
             }
         }
         return result;

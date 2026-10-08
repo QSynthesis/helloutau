@@ -1,11 +1,11 @@
 #include "ClassicPluginRun.h"
 
+#include <algorithm>
+
 #include <QtCore/QCoreApplication>
 #include <QtCore/QCryptographicHash>
 #include <QtCore/QDir>
 #include <QtCore/QFile>
-#include <QtCore/QJsonArray>
-#include <QtCore/QJsonObject>
 #include <QtWidgets/QDialog>
 #include <QtWidgets/QDialogButtonBox>
 #include <QtWidgets/QLabel>
@@ -17,6 +17,7 @@
 #include <hellokit/Edit/ProjectDocument.h>
 #include <hellokit/Edit/ProjectRefs.h>
 #include <hellokit/Edit/ProjectSession.h>
+#include <hellokit/Support/JsonInterop.h>
 
 #include <helloutau/Editor/AppLoader.h>
 #include <helloutau/Editor/AppSettings.h>
@@ -41,16 +42,14 @@ namespace hello::daw {
             return QDir::toNativeSeparators(QString::fromStdU16String(path.u16string()));
         }
 
-        // The ID of this plugin, the key of its values in the plugin settings
-        const char pluginId[] = "org.helloutau.classicpluginhost";
-
-        // The programs approved by the user. Each entry records the plugin folder, the path of
-        // the program relative to the folder for human readers, and the fingerprint of the
+        // The programs approved by the user, in the values of this plugin in the plugin settings,
+        // which are under the ID of this plugin. Each entry records the plugin folder, the path
+        // of the program relative to the folder for human readers, and the fingerprint of the
         // program. Only the fingerprint is compared.
         //
         //     "approved": [{"folder": "C:\\UTAU\\plugins\\Foo", "relativePath": "foo.exe",
         //                   "sha256": "<SHA-256>"}]
-        const char approvedKey[] = "approved";
+        const char approvedPath[] = "org.helloutau.classicpluginhost/approved";
         const char folderKey[] = "folder";
         const char relativePathKey[] = "relativePath";
         const char sha256Key[] = "sha256";
@@ -78,27 +77,24 @@ namespace hello::daw {
         // last run, and returns whether the program is approved. Without a loader, which stores
         // the answers, the user is asked each time.
         bool approve(QWidget *parent, const ClassicPlugin &plugin) {
+            namespace json = stdc::json;
             const auto loader = AppLoader::instance();
-            auto approved =
-                loader ? loader->pluginValue(QLatin1String(pluginId), QLatin1String(approvedKey))
-                             .toArray()
-                       : QJsonArray();
-            const auto folder = textOf(plugin.folder);
-            const auto fingerprint = fingerprintOf(plugin);
-            qsizetype index = -1;
-            for (qsizetype i = 0; i < approved.size(); ++i) {
-                if (approved[i].toObject().value(QLatin1String(folderKey)).toString() == folder) {
-                    index = i;
-                    break;
-                }
-            }
-            if (index >= 0 &&
-                approved[index].toObject().value(QLatin1String(sha256Key)).toString() ==
-                    fingerprint) {
+            auto approved = loader ? kit::JsonInterop::valueAt(loader->pluginSettings().userData(),
+                                                               approvedPath)
+                                         .toArray(json::Array())
+                                   : json::Array();
+            const auto folder = textOf(plugin.folder).toStdString();
+            const auto fingerprint = fingerprintOf(plugin).toStdString();
+            const auto found =
+                std::find_if(approved.begin(), approved.end(), [&](const json::Value &entry) {
+                    return entry[folderKey].toString(std::string()) == folder;
+                });
+            if (found != approved.end() &&
+                (*found)[sha256Key].toString(std::string()) == fingerprint) {
                 return true;
             }
             const auto question =
-                index >= 0
+                found != approved.end()
                     ? ClassicPluginRun::tr("The program of the plugin \"%1\" has changed since its "
                                            "last run. The plugin runs the following program:")
                     : ClassicPluginRun::tr("The plugin \"%1\" has not run before. The plugin runs "
@@ -112,19 +108,21 @@ namespace hello::daw {
             if (answer != QMessageBox::Yes) {
                 return false;
             }
-            const QJsonObject entry{
-                {QLatin1String(folderKey),       folder                         },
-                {QLatin1String(relativePathKey), textOf(programInFolder(plugin))},
-                {QLatin1String(sha256Key),       fingerprint                    }
-            };
-            if (index >= 0) {
-                approved[index] = entry;
+            json::Object entry;
+            entry.emplace(folderKey, json::Value(folder));
+            entry.emplace(relativePathKey,
+                          json::Value(textOf(programInFolder(plugin)).toStdString()));
+            entry.emplace(sha256Key, json::Value(fingerprint));
+            if (found != approved.end()) {
+                *found = json::Value(std::move(entry));
             } else {
-                approved.push_back(entry);
+                approved.push_back(json::Value(std::move(entry)));
             }
             if (loader) {
-                loader->setPluginValue(QLatin1String(pluginId), QLatin1String(approvedKey),
-                                       approved);
+                loader->changePluginSettings([&](stdc::pluginsystem::PluginSettings &settings) {
+                    kit::JsonInterop::insertAt(settings.userData(), approvedPath,
+                                               json::Value(std::move(approved)));
+                });
             }
             return true;
         }

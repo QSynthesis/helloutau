@@ -60,8 +60,8 @@ _hello_find_external(stdcorelib
     "Build https://github.com/stdware/stdcorelib and pass -Dstdcorelib_DIR=<prefix>/lib/cmake/stdcorelib."
     stdcorelib::stdcorelib)
 
-# The loading and lifecycle of the native plugins, a private dependency like stdcorelib, which it
-# requires. HelloUtau defines no plugin class of its own. See docs/Plugins.md.
+# The loading and lifecycle of the native plugins. It requires stdcorelib, and the interface of
+# AppLoader uses its types. HelloUtau defines no plugin class of its own. See docs/Plugins.md.
 _hello_find_external(stdcorelib-plugin
     "Build https://github.com/stdware/stdcorelib.plugin as a shared library and pass -Dstdcorelib-plugin_DIR=<prefix>/lib/cmake/stdcorelib-plugin."
     stdcorelib::plugin)

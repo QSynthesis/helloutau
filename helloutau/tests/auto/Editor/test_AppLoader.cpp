@@ -10,13 +10,53 @@
 #include <QtTest/QTest>
 #include <QtWidgets/QApplication>
 
+#include <hellokit/Support/JsonInterop.h>
+
 #include <helloutau/Editor/AppLoader.h>
 #include <helloutau/Editor/AppSettings.h>
 #include <helloutau/Editor/ProjectWindow.h>
 
+using namespace hello;
 using namespace hello::daw;
 
 namespace {
+
+    namespace json = stdc::json;
+    using Spec = stdc::pluginsystem::PluginSpec;
+    using Dependency = stdc::pluginsystem::PluginDependency;
+
+    QString textOf(const std::string &text) {
+        return QString::fromStdString(text);
+    }
+
+    /// Returns the plugin \a id that \a loader found, or null.
+    const Spec *specOf(const AppLoader &loader, const std::string &id) {
+        for (const auto spec : loader.pluginSystem().plugins()) {
+            if (spec->id() == id) {
+                return spec;
+            }
+        }
+        return nullptr;
+    }
+
+    /// Returns the value at \a path in the values of the plugins, as a plugin reads it.
+    const json::Value &pluginValue(const AppLoader &loader, std::string_view path) {
+        return kit::JsonInterop::valueAt(loader.pluginSettings().userData(), path);
+    }
+
+    /// Replaces the value at \a path in the values of the plugins, as a plugin writes it.
+    void setPluginValue(AppLoader &loader, std::string_view path, json::Value value) {
+        loader.changePluginSettings([&](stdc::pluginsystem::PluginSettings &settings) {
+            kit::JsonInterop::insertAt(settings.userData(), path, std::move(value));
+        });
+    }
+
+    /// Records the choice of the user for the plugin \a id, as the Plugins page does.
+    void setPluginEnabled(AppLoader &loader, const std::string &id, std::optional<bool> enabled) {
+        loader.changePluginSettings([&](stdc::pluginsystem::PluginSettings &settings) {
+            settings.setPluginEnabled(id, enabled);
+        });
+    }
 
     /// Copies the plugin library \a library into the subdirectory \a name of \a root, together
     /// with a plugin.json that specifies the ID \a id and the additional fields \a fields, as the
@@ -209,43 +249,42 @@ private Q_SLOTS:
         QTest::ignoreMessage(QtWarningMsg, "Plugin org.test.failing: intentional failure");
         QVERIFY2(loader.load(&error), qPrintable(error));
 
-        QHash<QString, AppLoader::PluginInfo> plugins;
-        for (const auto &info : loader.plugins()) {
-            plugins.insert(info.id, info);
-        }
-        QCOMPARE(plugins.size(), 3);
+        QCOMPARE(loader.pluginSystem().plugins().size(), size_t(3));
 
-        const auto core = plugins.value(QLatin1String(AppLoader::corePluginId));
-        QCOMPARE(core.state, AppLoader::PluginInfo::Running);
-        QCOMPARE(core.displayName, QStringLiteral("Core"));
-        QCOMPARE(core.version, QStringLiteral("1.0"));
-        QCOMPARE(QFileInfo(core.filePath).absoluteDir(),
+        const auto core = specOf(loader, AppLoader::corePluginId);
+        QVERIFY(core);
+        QCOMPARE(core->state(), Spec::Running);
+        QCOMPARE(textOf(core->displayName()), QStringLiteral("Core"));
+        QCOMPARE(textOf(core->version().toString()), QStringLiteral("1.0"));
+        QCOMPARE(QFileInfo(QString::fromStdU16String(core->filePath().u16string())).absoluteDir(),
                  QDir(QDir(root.path()).filePath(QStringLiteral("Core"))));
-        QVERIFY(core.dependencies.isEmpty());
-        QVERIFY(core.error.isEmpty());
-        QVERIFY(core.enabledByDefault);
-        QVERIFY(core.enabled);
+        QVERIFY(core->dependencies().empty());
+        QVERIFY(!core->hasError());
+        QVERIFY(core->enabledByGlobalSettings());
+        QVERIFY(core->isEnabled());
 
-        const auto off = plugins.value(QStringLiteral("org.test.off"));
-        QCOMPARE(off.state, AppLoader::PluginInfo::Disabled);
-        QVERIFY(!off.enabledByDefault);
-        QVERIFY(!off.enabled);
+        const auto off = specOf(loader, "org.test.off");
+        QVERIFY(off);
+        QVERIFY(!off->hasError());
+        QVERIFY(!off->enabledByGlobalSettings());
+        QVERIFY(!off->isEnabled());
 
-        const auto failing = plugins.value(QStringLiteral("org.test.failing"));
-        QCOMPARE(failing.state, AppLoader::PluginInfo::Failed);
-        QCOMPARE(failing.error, QStringLiteral("intentional failure"));
-        QCOMPARE(failing.dependencies.size(), 2);
-        QCOMPARE(failing.dependencies[0].id, QLatin1String(AppLoader::corePluginId));
-        QVERIFY(!failing.dependencies[0].optional);
-        QCOMPARE(failing.dependencies[1].id, QStringLiteral("org.test.off"));
-        QVERIFY(failing.dependencies[1].optional);
+        const auto failing = specOf(loader, "org.test.failing");
+        QVERIFY(failing);
+        QVERIFY(failing->hasError());
+        QCOMPARE(textOf(failing->errorMessage()), QStringLiteral("intentional failure"));
+        QCOMPARE(failing->dependencies().size(), size_t(2));
+        QCOMPARE(textOf(failing->dependencies()[0].id()), QLatin1String(AppLoader::corePluginId));
+        QVERIFY(failing->dependencies()[0].type() != Dependency::Optional);
+        QCOMPARE(textOf(failing->dependencies()[1].id()), QStringLiteral("org.test.off"));
+        QVERIFY(failing->dependencies()[1].type() == Dependency::Optional);
         // A disabled plugin is not an error.
         QCOMPARE(loader.errors(),
                  QStringList({QStringLiteral("org.test.failing: intentional failure")}));
 
         loader.shutdown();
-        for (const auto &info : loader.plugins()) {
-            QVERIFY(info.state != AppLoader::PluginInfo::Running);
+        for (const auto spec : loader.pluginSystem().plugins()) {
+            QVERIFY(spec->state() != Spec::Running);
         }
     }
 
@@ -271,16 +310,13 @@ private Q_SLOTS:
             AppLoader loader(command);
             loader.setPluginPaths({root.path()});
             QVERIFY2(loader.load(&error), qPrintable(error));
-            QCOMPARE(loader.pluginEnabled(QStringLiteral("org.test.off")), std::nullopt);
-            loader.setPluginEnabled(QStringLiteral("org.test.off"), true);
-            loader.setPluginEnabled(QStringLiteral("org.test.other"), false);
-            QCOMPARE(loader.pluginEnabled(QStringLiteral("org.test.off")), true);
-            QCOMPARE(loader.pluginEnabled(QStringLiteral("org.test.other")), false);
-            for (const auto &info : loader.plugins()) {
-                if (info.id == QStringLiteral("org.test.off")) {
-                    QCOMPARE(info.state, AppLoader::PluginInfo::Disabled);
-                }
-            }
+            QCOMPARE(loader.pluginSettings().pluginEnabled("org.test.off"), std::nullopt);
+            setPluginEnabled(loader, "org.test.off", true);
+            setPluginEnabled(loader, "org.test.other", false);
+            QCOMPARE(loader.pluginSettings().pluginEnabled("org.test.off"), true);
+            QCOMPARE(loader.pluginSettings().pluginEnabled("org.test.other"), false);
+            // The running plugins are unaffected.
+            QVERIFY(!specOf(loader, "org.test.off")->isEnabled());
             loader.syncSettings();
             QCOMPARE(written().value(QStringLiteral("enabledPlugins")),
                      QJsonValue(QJsonArray({QStringLiteral("org.test.off")})));
@@ -291,18 +327,13 @@ private Q_SLOTS:
             AppLoader loader(command);
             loader.setPluginPaths({root.path()});
             QVERIFY2(loader.load(&error), qPrintable(error));
-            bool found = false;
-            for (const auto &info : loader.plugins()) {
-                if (info.id == QStringLiteral("org.test.off")) {
-                    found = true;
-                    QCOMPARE(info.state, AppLoader::PluginInfo::Running);
-                    QVERIFY(!info.enabledByDefault);
-                    QVERIFY(info.enabled);
-                }
-            }
-            QVERIFY(found);
-            loader.setPluginEnabled(QStringLiteral("org.test.off"), std::nullopt);
-            QCOMPARE(loader.pluginEnabled(QStringLiteral("org.test.off")), std::nullopt);
+            const auto off = specOf(loader, "org.test.off");
+            QVERIFY(off);
+            QCOMPARE(off->state(), Spec::Running);
+            QVERIFY(!off->enabledByGlobalSettings());
+            QVERIFY(off->isEnabled());
+            setPluginEnabled(loader, "org.test.off", std::nullopt);
+            QCOMPARE(loader.pluginSettings().pluginEnabled("org.test.off"), std::nullopt);
         }
         QCOMPARE(written().value(QStringLiteral("enabledPlugins")), QJsonValue(QJsonArray()));
     }
@@ -390,19 +421,17 @@ private Q_SLOTS:
                                      directory.path()};
         {
             AppLoader loader(command);
-            QVERIFY(loader.pluginValue(QStringLiteral("org.test.p"), QStringLiteral("a/b"))
-                        .isUndefined());
-            loader.setPluginValue(QStringLiteral("org.test.p"), QStringLiteral("a/b"), 7);
-            loader.setPluginValue(QStringLiteral("org.test.q"), QStringLiteral("c"),
-                                  QJsonArray({QStringLiteral("x")}));
+            QVERIFY(pluginValue(loader, "org.test.p/a/b").isNull());
+            setPluginValue(loader, "org.test.p/a/b", json::Value(int64_t(7)));
+            setPluginValue(loader, "org.test.q/c",
+                           json::Value(json::Array{json::Value(std::string("x"))}));
         }
         {
             AppLoader loader(command);
-            QCOMPARE(loader.pluginValue(QStringLiteral("org.test.p"), QStringLiteral("a/b")),
-                     QJsonValue(7));
-            QCOMPARE(loader.pluginValue(QStringLiteral("org.test.q"), QStringLiteral("c")),
+            QCOMPARE(pluginValue(loader, "org.test.p/a/b").toInt(), int64_t(7));
+            QCOMPARE(kit::JsonInterop::toQtJson(pluginValue(loader, "org.test.q/c")),
                      QJsonValue(QJsonArray({QStringLiteral("x")})));
-            loader.setPluginValue(QStringLiteral("org.test.q"), QStringLiteral("c"), QJsonValue());
+            setPluginValue(loader, "org.test.q/c", json::Value());
         }
 
         QFile in(file);
@@ -426,7 +455,7 @@ private Q_SLOTS:
         const auto settings = directory.filePath(QStringLiteral("settings.json"));
         AppLoader loader(
             {QStringLiteral("helloutau"), QStringLiteral("--settings"), directory.path()});
-        loader.setPluginValue(QStringLiteral("org.test.p"), QStringLiteral("a"), 1);
+        setPluginValue(loader, "org.test.p/a", json::Value(int64_t(1)));
         loader.settings().setResampler(QStringLiteral("r.exe"));
         QVERIFY(!QFile::exists(plugins));
         QVERIFY(!QFile::exists(settings));
@@ -435,7 +464,7 @@ private Q_SLOTS:
         QVERIFY(QFile::exists(settings));
 
         QVERIFY(QFile::remove(plugins));
-        loader.setPluginValue(QStringLiteral("org.test.p"), QStringLiteral("a"), 2);
+        setPluginValue(loader, "org.test.p/a", json::Value(int64_t(2)));
         QTRY_VERIFY(QFile::exists(plugins));
     }
 

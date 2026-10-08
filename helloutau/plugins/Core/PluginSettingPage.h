@@ -1,6 +1,8 @@
 #ifndef HELLOUTAU_CORE_PLUGINSETTINGPAGE_H
 #define HELLOUTAU_CORE_PLUGINSETTINGPAGE_H
 
+#include <vector>
+
 #include <QtCore/QPointer>
 
 #include <helloutau/Editor/AppLoader.h>
@@ -34,8 +36,8 @@ namespace hello::daw {
 
     private:
         AppLoader &m_loader;
-        // Snapshot of the plugins at the creation of the widget, in row order
-        QList<AppLoader::PluginInfo> m_plugins;
+        // The plugins at the creation of the widget, in row order
+        std::vector<stdc::pluginsystem::PluginSpec *> m_plugins;
         QPointer<QTreeWidget> m_tree;
         QPointer<QLabel> m_restart;
         QPointer<QPlainTextEdit> m_details;

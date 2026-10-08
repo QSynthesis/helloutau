@@ -3,6 +3,8 @@
 include(CMakeFindDependencyMacro)
 
 find_dependency(hellokit CONFIG REQUIRED)
+# The interface of AppLoader uses the types of stdcorelib.plugin.
+find_dependency(stdcorelib-plugin CONFIG REQUIRED)
 find_dependency(Qt6 CONFIG REQUIRED COMPONENTS Core Gui Widgets)
 
 # The helper libraries of the tests link Qt Test and QActionKit publicly.

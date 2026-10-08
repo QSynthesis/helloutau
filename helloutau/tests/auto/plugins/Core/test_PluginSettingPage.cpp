@@ -28,27 +28,29 @@ private Q_SLOTS:
         loader.setPluginPaths({AppLoader::builtinPluginPath()});
         QString error;
         QVERIFY2(loader.load(&error), qPrintable(error));
-        const auto plugins = loader.plugins();
+        const auto plugins = loader.pluginSystem().plugins();
 
         PluginSettingPage page(loader);
         QCOMPARE(page.id(), QStringLiteral("core.Plugins"));
         const auto tree = page.widget()->findChild<QTreeWidget *>(QStringLiteral("plugins"));
         const auto restart = page.widget()->findChild<QLabel *>(QStringLiteral("restart"));
         QVERIFY(tree && restart);
-        QCOMPARE(tree->topLevelItemCount(), plugins.size());
+        QCOMPARE(size_t(tree->topLevelItemCount()), plugins.size());
 
         int core = -1;
         int other = -1;
-        for (int row = 0; row < plugins.size(); ++row) {
-            if (plugins[row].id == QLatin1String(AppLoader::corePluginId)) {
+        for (int row = 0; row < int(plugins.size()); ++row) {
+            const auto spec = plugins[size_t(row)];
+            if (spec->id() == AppLoader::corePluginId) {
                 core = row;
-            } else if (other < 0 && plugins[row].state == AppLoader::PluginInfo::Running &&
-                       plugins[row].enabledByDefault) {
+            } else if (other < 0 && spec->state() == stdc::pluginsystem::PluginSpec::Running &&
+                       spec->enabledByGlobalSettings()) {
                 other = row;
             }
         }
         QVERIFY(core >= 0 && other >= 0);
-        QVERIFY(!plugins[core].description.isEmpty());
+        const auto description = QString::fromStdString(plugins[size_t(core)]->description());
+        QVERIFY(!description.isEmpty());
         const auto coreItem = tree->topLevelItem(core);
         tree->setCurrentItem(coreItem);
         QCOMPARE(coreItem->checkState(0), Qt::Checked);
@@ -58,22 +60,22 @@ private Q_SLOTS:
 
         const auto details = page.widget()->findChild<QPlainTextEdit *>();
         QVERIFY(details);
-        QVERIFY(details->toPlainText().contains(plugins[core].description));
+        QVERIFY(details->toPlainText().contains(description));
 
         const auto item = tree->topLevelItem(other);
-        const auto id = plugins[other].id;
+        const auto id = plugins[size_t(other)]->id();
         item->setCheckState(0, Qt::Unchecked);
         QVERIFY(page.isModified());
         QVERIFY(!restart->isHidden());
         QVERIFY(page.apply(&error));
         QVERIFY(!page.isModified());
-        QCOMPARE(loader.pluginEnabled(id), std::optional<bool>(false));
+        QCOMPARE(loader.pluginSettings().pluginEnabled(id), std::optional<bool>(false));
         // The plugin still runs until the next start.
         QVERIFY(!restart->isHidden());
 
         item->setCheckState(0, Qt::Checked);
         QVERIFY(page.apply(&error));
-        QCOMPARE(loader.pluginEnabled(id), std::optional<bool>());
+        QCOMPARE(loader.pluginSettings().pluginEnabled(id), std::optional<bool>());
         QVERIFY(restart->isHidden());
 
         loader.shutdown();

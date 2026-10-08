@@ -21,24 +21,32 @@ namespace hello::daw {
             StateColumn,
         };
 
-        bool isCore(const AppLoader::PluginInfo &info) {
-            return info.id == QLatin1String(AppLoader::corePluginId);
+        using Spec = stdc::pluginsystem::PluginSpec;
+
+        QString textOf(const std::string &text) {
+            return QString::fromStdString(text);
         }
 
-        QString nameOf(const AppLoader::PluginInfo &info) {
-            return info.displayName.isEmpty() ? info.id : info.displayName;
+        bool isCore(const Spec *spec) {
+            return spec->id() == AppLoader::corePluginId;
         }
 
-        QString stateText(const AppLoader::PluginInfo &info) {
-            switch (info.state) {
-                case AppLoader::PluginInfo::Running:
-                    return PluginSettingPage::tr("Running");
-                case AppLoader::PluginInfo::Disabled:
-                    return PluginSettingPage::tr("Disabled");
-                case AppLoader::PluginInfo::Failed:
-                    return PluginSettingPage::tr("Error");
-                case AppLoader::PluginInfo::NotLoaded:
-                    break;
+        QString nameOf(const Spec *spec) {
+            return textOf(spec->displayName().empty() ? spec->id() : spec->displayName());
+        }
+
+        // The state of the plugin in this run: an error of reading, resolution, loading or
+        // initialization, disabled by its metadata or by the settings, running, or none of
+        // these, for example after the shutdown of the plugins
+        QString stateText(const Spec *spec) {
+            if (spec->hasError()) {
+                return PluginSettingPage::tr("Error");
+            }
+            if (!spec->isEnabled()) {
+                return PluginSettingPage::tr("Disabled");
+            }
+            if (spec->state() == Spec::Running) {
+                return PluginSettingPage::tr("Running");
             }
             return PluginSettingPage::tr("Not loaded");
         }
@@ -79,7 +87,7 @@ namespace hello::daw {
     }
 
     QWidget *PluginSettingPage::createWidget() {
-        m_plugins = m_loader.plugins();
+        m_plugins = m_loader.pluginSystem().plugins();
 
         auto widget = new QWidget();
         auto layout = new QVBoxLayout(widget);
@@ -101,28 +109,28 @@ namespace hello::daw {
         m_tree->header()->setMinimumSectionSize(40);
         m_tree->setItemDelegateForColumn(NameColumn, new LockedCheckDelegate(m_tree));
         const auto warning = widget->style()->standardIcon(QStyle::SP_MessageBoxWarning);
-        for (int row = 0; row < m_plugins.size(); ++row) {
-            const auto &info = m_plugins[row];
+        for (int row = 0; row < int(m_plugins.size()); ++row) {
+            const auto spec = m_plugins[size_t(row)];
             auto item = new QTreeWidgetItem(m_tree);
-            item->setText(NameColumn, nameOf(info));
-            item->setText(VersionColumn, info.version);
-            item->setText(StateColumn, stateText(info));
+            item->setText(NameColumn, nameOf(spec));
+            item->setText(VersionColumn, textOf(spec->version().toString()));
+            item->setText(StateColumn, stateText(spec));
             item->setCheckState(NameColumn, enabledAtNextStart(row) ? Qt::Checked : Qt::Unchecked);
-            if (isCore(info)) {
+            if (isCore(spec)) {
                 // Checked and not user-checkable, its check box drawn as disabled
                 item->setFlags(item->flags() & ~Qt::ItemIsUserCheckable);
                 item->setToolTip(NameColumn,
                                  tr("The application requires the core plugin to start."));
             }
-            if (info.state == AppLoader::PluginInfo::Failed) {
+            if (spec->hasError()) {
                 item->setIcon(StateColumn, warning);
-                item->setToolTip(StateColumn, info.error);
+                item->setToolTip(StateColumn, textOf(spec->errorMessage()));
             }
         }
         const QFontMetrics metrics(m_tree->font());
         int nameWidth = 180;
-        for (const auto &info : std::as_const(m_plugins)) {
-            nameWidth = std::max(nameWidth, metrics.horizontalAdvance(nameOf(info)) + 44);
+        for (const auto spec : m_plugins) {
+            nameWidth = std::max(nameWidth, metrics.horizontalAdvance(nameOf(spec)) + 44);
         }
         m_tree->header()->resizeSection(NameColumn, std::min(nameWidth, 360));
         m_tree->header()->resizeSection(VersionColumn, 110);
@@ -162,8 +170,8 @@ namespace hello::daw {
         if (!m_tree) {
             return false;
         }
-        for (int row = 0; row < m_plugins.size(); ++row) {
-            if (!isCore(m_plugins[row]) && isChecked(row) != enabledAtNextStart(row)) {
+        for (int row = 0; row < int(m_plugins.size()); ++row) {
+            if (!isCore(m_plugins[size_t(row)]) && isChecked(row) != enabledAtNextStart(row)) {
                 return true;
             }
         }
@@ -174,24 +182,28 @@ namespace hello::daw {
     // plugins.json records only the plugins that the user changed.
     bool PluginSettingPage::apply(QString *error) {
         Q_UNUSED(error);
-        for (int row = 0; row < m_plugins.size(); ++row) {
-            const auto &info = m_plugins[row];
-            if (isCore(info)) {
-                continue;
+        m_loader.changePluginSettings([this](stdc::pluginsystem::PluginSettings &settings) {
+            for (int row = 0; row < int(m_plugins.size()); ++row) {
+                const auto spec = m_plugins[size_t(row)];
+                if (isCore(spec)) {
+                    continue;
+                }
+                const bool checked = isChecked(row);
+                settings.setPluginEnabled(spec->id(), checked == spec->enabledByGlobalSettings()
+                                                          ? std::nullopt
+                                                          : std::optional<bool>(checked));
             }
-            const bool checked = isChecked(row);
-            m_loader.setPluginEnabled(info.id, checked == info.enabledByDefault
-                                                   ? std::nullopt
-                                                   : std::optional<bool>(checked));
-        }
+        });
         updateRestart();
         Q_EMIT modifiedChanged();
         return true;
     }
 
     bool PluginSettingPage::enabledAtNextStart(int row) const {
-        const auto &info = m_plugins[row];
-        return m_loader.pluginEnabled(info.id).value_or(info.enabledByDefault);
+        const auto spec = m_plugins[size_t(row)];
+        return m_loader.pluginSettings()
+            .pluginEnabled(spec->id())
+            .value_or(spec->enabledByGlobalSettings());
     }
 
     bool PluginSettingPage::isChecked(int row) const {
@@ -202,8 +214,8 @@ namespace hello::daw {
     // state in this run, whether the change is applied or not.
     void PluginSettingPage::updateRestart() {
         bool differs = false;
-        for (int row = 0; row < m_plugins.size(); ++row) {
-            differs = differs || isChecked(row) != m_plugins[row].enabled;
+        for (int row = 0; row < int(m_plugins.size()); ++row) {
+            differs = differs || isChecked(row) != m_plugins[size_t(row)]->isEnabled();
         }
         m_restart->setVisible(differs);
     }
@@ -214,19 +226,22 @@ namespace hello::daw {
             m_details->clear();
             return;
         }
-        const auto &info = m_plugins[m_tree->indexOfTopLevelItem(item)];
+        const auto spec = m_plugins[size_t(m_tree->indexOfTopLevelItem(item))];
 
+        using Dependency = stdc::pluginsystem::PluginDependency;
+        const auto entryOf = [](const std::string &id, const Dependency &dependency) {
+            return dependency.type() == Dependency::Optional ? tr("%1 (optional)").arg(textOf(id))
+                                                             : textOf(id);
+        };
         QStringList dependsOn;
-        for (const auto &dependency : info.dependencies) {
-            dependsOn.push_back(dependency.optional ? tr("%1 (optional)").arg(dependency.id)
-                                                    : dependency.id);
+        for (const auto &dependency : spec->dependencies()) {
+            dependsOn.push_back(entryOf(dependency.id(), dependency));
         }
         QStringList requiredBy;
-        for (const auto &other : std::as_const(m_plugins)) {
-            for (const auto &dependency : other.dependencies) {
-                if (dependency.id == info.id) {
-                    requiredBy.push_back(dependency.optional ? tr("%1 (optional)").arg(other.id)
-                                                             : other.id);
+        for (const auto other : m_plugins) {
+            for (const auto &dependency : other->dependencies()) {
+                if (dependency.id() == spec->id()) {
+                    requiredBy.push_back(entryOf(other->id(), dependency));
                 }
             }
         }
@@ -235,14 +250,17 @@ namespace hello::daw {
         };
 
         QStringList lines = {
-            tr("ID: %1").arg(info.id),
-            tr("Description: %1").arg(info.description.isEmpty() ? tr("None") : info.description),
-            tr("Library: %1").arg(QDir::toNativeSeparators(info.filePath)),
+            tr("ID: %1").arg(textOf(spec->id())),
+            tr("Description: %1")
+                .arg(spec->description().empty() ? tr("None") : textOf(spec->description())),
+            tr("Library: %1")
+                .arg(QDir::toNativeSeparators(
+                    QString::fromStdU16String(spec->filePath().u16string()))),
             tr("Depends on: %1").arg(listOf(dependsOn)),
             tr("Required by: %1").arg(listOf(requiredBy)),
         };
-        if (!info.error.isEmpty()) {
-            lines.push_back(tr("Error: %1").arg(info.error));
+        if (spec->hasError()) {
+            lines.push_back(tr("Error: %1").arg(textOf(spec->errorMessage())));
         }
         m_details->setPlainText(lines.join(QLatin1Char('\n')));
     }
