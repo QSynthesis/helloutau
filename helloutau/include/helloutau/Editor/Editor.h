@@ -56,6 +56,18 @@ namespace hello::daw {
         /// The kinds of window in the order in which the settings list them
         static constexpr WindowKind windowKinds[] = {ProjectWindowKind, VoiceBankWindowKind};
 
+        /// \name Names of the kinds of window
+        ///
+        /// The names by which an ActionContribution identifies the kinds of window, which are
+        /// also the keys of their sections in the keymap and layout files.
+        /// @{
+        static constexpr char projectWindowName[] = "projectWindow";
+        static constexpr char voiceBankWindowName[] = "voiceBankWindow";
+        /// @}
+
+        /// Returns the name of \a kind.
+        static QString nameOf(WindowKind kind);
+
         AppSettings &settings() const;
 
         /// Returns the title of a window's project, disambiguated against the other project

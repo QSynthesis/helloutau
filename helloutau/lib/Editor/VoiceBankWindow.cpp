@@ -57,8 +57,8 @@
 #include <helloutau/Theme/ThemeManager.h>
 #include <helloutau/Widgets/CommandPalette.h>
 #include <helloutau/Widgets/FindBar.h>
+#include <helloutau/Widgets/private/ActionRegistrations_p.h>
 
-#include "ActionRegistrations_p.h"
 #include "AboutDialog_p.h"
 #include "VoiceAliasRuleDialog.h"
 #include "AppSettings.h"

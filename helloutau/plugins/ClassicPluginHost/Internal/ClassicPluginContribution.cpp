@@ -56,12 +56,16 @@ namespace hello::daw {
     // The plugins of UTAU edit the notes of a project, so the commands are in the project window
     // alone.
     const QAK::ActionExtension *
-        ClassicPluginContribution::extension(Editor::WindowKind kind) const {
-        return kind == Editor::ProjectWindowKind ? classicPluginActions() : nullptr;
+        ClassicPluginContribution::extension(const QString &windowKind) const {
+        return windowKind == QLatin1String(Editor::projectWindowName) ? classicPluginActions()
+                                                                      : nullptr;
     }
 
-    void ClassicPluginContribution::addActions(ProjectWindow *window,
-                                               QAK::WidgetActionContext *context) {
+    void ClassicPluginContribution::addActions(QWidget *widget, QAK::WidgetActionContext *context) {
+        const auto window = qobject_cast<ProjectWindow *>(widget);
+        if (!window) {
+            return;
+        }
         // An external action. This plugin fills its menu each time the menu opens.
         const auto menu = new QMenu(window);
         menu->setToolTipsVisible(true);

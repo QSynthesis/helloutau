@@ -1,15 +1,17 @@
-#ifndef HELLOUTAU_EDITOR_SETTINGPAGEREGISTRATIONS_P_H
-#define HELLOUTAU_EDITOR_SETTINGPAGEREGISTRATIONS_P_H
+#ifndef HELLOUTAU_WIDGETS_SETTINGPAGEREGISTRATIONS_P_H
+#define HELLOUTAU_WIDGETS_SETTINGPAGEREGISTRATIONS_P_H
 
 #include <QtCore/QList>
 
-#include <helloutau/Editor/SettingPageRegistration.h>
+#include <helloutau/Widgets/HelloUtauWidgetsGlobal.h>
+#include <helloutau/Widgets/SettingPageRegistration.h>
 
 namespace hello::daw {
 
     /// Registry of the setting page registrations of the process, in the order of registration,
-    /// and of the editors that apply them.
-    class SettingPageRegistrations {
+    /// and of the hosts that apply them. The interface for a host, such as the editor, and not
+    /// for a plugin, which uses SettingPageRegistration.
+    class HELLOUTAU_WIDGETS_EXPORT SettingPageRegistrations {
     public:
         /// Receives a notification of each registration made or destroyed after the listener
         /// was added.
@@ -38,4 +40,4 @@ namespace hello::daw {
 
 }
 
-#endif // HELLOUTAU_EDITOR_SETTINGPAGEREGISTRATIONS_P_H
+#endif // HELLOUTAU_WIDGETS_SETTINGPAGEREGISTRATIONS_P_H

@@ -3,9 +3,7 @@
 
 #include <utility>
 
-#include <helloutau/Widgets/SettingPage.h>
-
-#include "Editor.h"
+#include "SettingPage.h"
 
 namespace hello::daw {
 
@@ -19,12 +17,11 @@ namespace hello::daw {
         SettingPageRegistrations::instance().remove(this);
     }
 
-    SettingPage *SettingPageRegistration::addTo(Editor *editor) const {
-        const auto page = m_factory(editor);
+    SettingPage *SettingPageRegistration::addTo(SettingCatalog *catalog, QObject *host) const {
+        const auto page = m_factory(host);
         if (!page) {
             return nullptr;
         }
-        const auto catalog = editor->settingCatalog();
         if (const auto parent = m_parent.isEmpty() ? nullptr : catalog->page(m_parent)) {
             parent->addPage(page, m_before);
         } else {

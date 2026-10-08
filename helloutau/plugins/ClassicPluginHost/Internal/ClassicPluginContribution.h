@@ -7,7 +7,7 @@
 #include <QtCore/QCoreApplication>
 #include <QtCore/QList>
 
-#include <helloutau/Editor/ActionContribution.h>
+#include <helloutau/Widgets/ActionContribution.h>
 
 #include <ClassicPluginHost/ClassicPlugin.h>
 
@@ -16,6 +16,7 @@ class QMenu;
 namespace hello::daw {
 
     class AppSettings;
+    class ProjectWindow;
 
     /// The submenu Classic Plugins of the Tools menu of the project windows, as the plugin menu
     /// of UTAU: the discovered UTAU plugins, followed by Refresh and the commands that open the
@@ -31,8 +32,8 @@ namespace hello::daw {
         ClassicPluginContribution();
         ~ClassicPluginContribution();
 
-        const QAK::ActionExtension *extension(Editor::WindowKind kind) const override;
-        void addActions(ProjectWindow *window, QAK::WidgetActionContext *context) override;
+        const QAK::ActionExtension *extension(const QString &windowKind) const override;
+        void addActions(QWidget *widget, QAK::WidgetActionContext *context) override;
 
         /// Returns the folder of the UTAU plugins that the user installs for HelloUtau, separate
         /// from the \c plugins folder of UTAU and from the native plugins.

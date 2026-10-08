@@ -1,7 +1,7 @@
 #ifndef HELLOUTAU_INTERCHANGE_INTERCHANGECONTRIBUTION_H
 #define HELLOUTAU_INTERCHANGE_INTERCHANGECONTRIBUTION_H
 
-#include <helloutau/Editor/ActionContribution.h>
+#include <helloutau/Widgets/ActionContribution.h>
 
 namespace hello::kit {
     class InterchangeRegistry;
@@ -16,8 +16,8 @@ namespace hello::daw {
         explicit InterchangeContribution(kit::InterchangeRegistry *registry);
         ~InterchangeContribution();
 
-        const QAK::ActionExtension *extension(Editor::WindowKind kind) const override;
-        void addActions(ProjectWindow *window, QAK::WidgetActionContext *context) override;
+        const QAK::ActionExtension *extension(const QString &windowKind) const override;
+        void addActions(QWidget *widget, QAK::WidgetActionContext *context) override;
 
     private:
         kit::InterchangeRegistry *m_registry;

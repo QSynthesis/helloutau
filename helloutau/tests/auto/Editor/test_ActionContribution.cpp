@@ -12,8 +12,8 @@
 #include <QAKCore/actionregistry.h>
 #include <QAKWidgets/widgetactioncontext.h>
 
-#include <helloutau/Editor/ActionContribution.h>
-#include <helloutau/Editor/ActionRegistration.h>
+#include <helloutau/Widgets/ActionContribution.h>
+#include <helloutau/Widgets/ActionRegistration.h>
 #include <helloutau/Editor/AppSettings.h>
 #include <helloutau/Editor/BuiltinActions.h>
 #include <helloutau/Editor/Editor.h>
@@ -41,21 +41,22 @@ namespace {
         explicit TestContribution(int *triggered) : m_triggered(triggered) {
         }
 
-        const QAK::ActionExtension *extension(Editor::WindowKind kind) const override {
-            return kind == Editor::ProjectWindowKind ? test::testContribution()
-                                                     : test::testBankContribution();
+        const QAK::ActionExtension *extension(const QString &windowKind) const override {
+            return windowKind == QLatin1String(Editor::projectWindowName)
+                       ? test::testContribution()
+                       : test::testBankContribution();
         }
 
-        void addActions(ProjectWindow *window, QAK::WidgetActionContext *context) override {
+        void addActions(QWidget *window, QAK::WidgetActionContext *context) override {
+            if (qobject_cast<VoiceBankWindow *>(window)) {
+                context->addAction(BankId, new QAction(window));
+                return;
+            }
             const auto action = new QAction(window);
             QObject::connect(action, &QAction::triggered, [this] { ++*m_triggered; });
             context->addAction(HelloId, action);
             // An external item, whose action is the menu action owned by the menu
             context->addAction(MenuId, (new QMenu(window))->menuAction());
-        }
-
-        void addActions(VoiceBankWindow *window, QAK::WidgetActionContext *context) override {
-            context->addAction(BankId, new QAction(window));
         }
 
     private:

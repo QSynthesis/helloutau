@@ -1,9 +1,10 @@
-#ifndef HELLOUTAU_EDITOR_ACTIONREGISTRATIONS_P_H
-#define HELLOUTAU_EDITOR_ACTIONREGISTRATIONS_P_H
+#ifndef HELLOUTAU_WIDGETS_ACTIONREGISTRATIONS_P_H
+#define HELLOUTAU_WIDGETS_ACTIONREGISTRATIONS_P_H
 
 #include <QtCore/QList>
 
-#include <helloutau/Editor/ActionContribution.h>
+#include <helloutau/Widgets/ActionContribution.h>
+#include <helloutau/Widgets/HelloUtauWidgetsGlobal.h>
 
 namespace QAK {
     class ActionExtension;
@@ -13,8 +14,9 @@ namespace QAK {
 namespace hello::daw {
 
     /// Registry of the action contributions of the process, in the order of registration, and of
-    /// the editors that apply them.
-    class ActionRegistrations {
+    /// the hosts that apply them. The interface for a host, such as the editor, and not for a
+    /// plugin, which uses ActionRegistration.
+    class HELLOUTAU_WIDGETS_EXPORT ActionRegistrations {
     public:
         /// Receives a notification of each contribution registered or unregistered after the
         /// listener was added.
@@ -38,12 +40,7 @@ namespace hello::daw {
 
         /// Adds the actions of every contribution to \a context of \a window. A window calls this
         /// function when it is created.
-        template <class Window>
-        void addActions(Window *window, QAK::WidgetActionContext *context) const {
-            for (const auto contribution : m_contributions) {
-                contribution->addActions(window, context);
-            }
-        }
+        void addActions(QWidget *window, QAK::WidgetActionContext *context) const;
 
         /// Removes the actions of the items of \a extension from \a context and deletes them.
         static void removeActions(const QAK::ActionExtension *extension,
@@ -56,4 +53,4 @@ namespace hello::daw {
 
 }
 
-#endif // HELLOUTAU_EDITOR_ACTIONREGISTRATIONS_P_H
+#endif // HELLOUTAU_WIDGETS_ACTIONREGISTRATIONS_P_H

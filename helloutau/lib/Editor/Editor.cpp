@@ -32,8 +32,9 @@
 #include <helloutau/Widgets/CommandPalette.h>
 #include <helloutau/Widgets/SettingPage.h>
 #include <helloutau/Widgets/SettingsDialog.h>
+#include <helloutau/Widgets/private/ActionRegistrations_p.h>
+#include <helloutau/Widgets/private/SettingPageRegistrations_p.h>
 
-#include "ActionRegistrations_p.h"
 #include "AppSettings.h"
 #include "DiagnosticBox_p.h"
 #include "EditorIcons_p.h"
@@ -42,7 +43,6 @@
 #include "ActionLayoutsFile_p.h"
 #include "ProjectWindow.h"
 #include "Restarter.h"
-#include "SettingPageRegistrations_p.h"
 #include "UstCharsetDialog.h"
 #include "VoiceBankCharsetDialog.h"
 #include "VoiceBankWindow.h"
@@ -124,7 +124,7 @@ namespace hello::daw {
                 const auto registry = new QAK::ActionRegistry(decl);
                 registries[kind] = registry;
                 for (const auto contribution : ActionRegistrations::instance().contributions()) {
-                    if (const auto extension = contribution->extension(kind)) {
+                    if (const auto extension = contribution->extension(Editor::nameOf(kind))) {
                         registry->addExtension(extension);
                     }
                 }
@@ -149,7 +149,7 @@ namespace hello::daw {
         }
 
         void registrationAdded(const SettingPageRegistration *registration) override {
-            if (const auto page = registration->addTo(editor)) {
+            if (const auto page = registration->addTo(catalog, editor)) {
                 registeredPages.insert(registration, page);
             }
         }
@@ -164,7 +164,7 @@ namespace hello::daw {
         // shortcuts are rebuilt with the extension of the contribution
         void contributionAdded(ActionContribution *contribution) override {
             for (const auto kind : Editor::windowKinds) {
-                if (const auto extension = contribution->extension(kind)) {
+                if (const auto extension = contribution->extension(Editor::nameOf(kind))) {
                     registries[kind]->addExtension(extension);
                 }
             }
@@ -182,7 +182,8 @@ namespace hello::daw {
         }
 
         void contributionRemoved(ActionContribution *contribution) override {
-            if (const auto extension = contribution->extension(Editor::ProjectWindowKind)) {
+            if (const auto extension =
+                    contribution->extension(QLatin1String(Editor::projectWindowName))) {
                 for (const auto &window : std::as_const(windows)) {
                     if (window) {
                         ActionRegistrations::removeActions(extension, window->actionContext());
@@ -190,7 +191,8 @@ namespace hello::daw {
                 }
                 registries[Editor::ProjectWindowKind]->removeExtension(extension);
             }
-            if (const auto extension = contribution->extension(Editor::VoiceBankWindowKind)) {
+            if (const auto extension =
+                    contribution->extension(QLatin1String(Editor::voiceBankWindowName))) {
                 for (const auto &window : std::as_const(voiceBankWindows)) {
                     if (window) {
                         ActionRegistrations::removeActions(extension, window->actionContext());
@@ -213,8 +215,9 @@ namespace hello::daw {
         // The registries with the keys of their sections in the keymap and layout files
         QList<std::pair<QString, QAK::ActionRegistry *>> sections() const {
             return {
-                {QStringLiteral("projectWindow"),   registries[Editor::ProjectWindowKind]  },
-                {QStringLiteral("voiceBankWindow"), registries[Editor::VoiceBankWindowKind]},
+                {Editor::nameOf(Editor::ProjectWindowKind),   registries[Editor::ProjectWindowKind]},
+                {Editor::nameOf(Editor::VoiceBankWindowKind),
+                 registries[Editor::VoiceBankWindowKind]                                           },
             };
         }
 
@@ -510,6 +513,10 @@ namespace hello::daw {
     QAK::ActionRegistry *Editor::actionRegistry(WindowKind kind) const {
         stdc_impl_t;
         return impl.registries[kind];
+    }
+
+    QString Editor::nameOf(WindowKind kind) {
+        return QLatin1String(kind == VoiceBankWindowKind ? voiceBankWindowName : projectWindowName);
     }
 
     ThemeManager *Editor::themeManager() const {

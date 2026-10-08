@@ -5,8 +5,8 @@
 #include <hellokit/Interchange/BuiltinInterchangeDrivers.h>
 #include <hellokit/Interchange/InterchangeRegistry.h>
 
-#include <helloutau/Editor/ActionRegistration.h>
 #include <helloutau/Editor/Translations.h>
+#include <helloutau/Widgets/ActionRegistration.h>
 
 #include <Interchange/InterchangeStepRegistration.h>
 

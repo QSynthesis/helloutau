@@ -64,8 +64,8 @@
 #include <helloutau/Widgets/PianoKeyboard.h>
 #include <helloutau/Widgets/SceneView.h>
 #include <helloutau/Widgets/TimelineRuler.h>
+#include <helloutau/Widgets/private/ActionRegistrations_p.h>
 
-#include "ActionRegistrations_p.h"
 #include "AboutDialog_p.h"
 #include "AppSettings.h"
 #include "CommandEntries_p.h"

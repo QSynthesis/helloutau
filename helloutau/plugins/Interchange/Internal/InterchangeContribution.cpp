@@ -4,6 +4,7 @@
 
 #include <QAKWidgets/widgetactioncontext.h>
 
+#include <helloutau/Editor/Editor.h>
 #include <helloutau/Editor/ProjectWindow.h>
 
 #include "ExportWizard.h"
@@ -21,12 +22,17 @@ namespace hello::daw {
     InterchangeContribution::~InterchangeContribution() = default;
 
     // Projects are imported and exported from the project window alone.
-    const QAK::ActionExtension *InterchangeContribution::extension(Editor::WindowKind kind) const {
-        return kind == Editor::ProjectWindowKind ? interchangeActions() : nullptr;
+    const QAK::ActionExtension *
+        InterchangeContribution::extension(const QString &windowKind) const {
+        return windowKind == QLatin1String(Editor::projectWindowName) ? interchangeActions()
+                                                                      : nullptr;
     }
 
-    void InterchangeContribution::addActions(ProjectWindow *window,
-                                             QAK::WidgetActionContext *context) {
+    void InterchangeContribution::addActions(QWidget *widget, QAK::WidgetActionContext *context) {
+        const auto window = qobject_cast<ProjectWindow *>(widget);
+        if (!window) {
+            return;
+        }
         const auto registry = m_registry;
         const auto importAction = new QAction(window);
         QObject::connect(importAction, &QAction::triggered, window, [window, registry] {
@@ -43,5 +49,4 @@ namespace hello::daw {
         context->addAction(QString::fromUtf8("helloutau.file.import"), importAction);
         context->addAction(QString::fromUtf8("helloutau.file.exportOther"), exportAction);
     }
-
 }

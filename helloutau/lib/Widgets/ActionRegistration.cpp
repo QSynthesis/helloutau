@@ -57,6 +57,12 @@ namespace hello::daw {
         m_listeners.removeOne(listener);
     }
 
+    void ActionRegistrations::addActions(QWidget *window, QAK::WidgetActionContext *context) const {
+        for (const auto contribution : m_contributions) {
+            contribution->addActions(window, context);
+        }
+    }
+
     void ActionRegistrations::removeActions(const QAK::ActionExtension *extension,
                                             QAK::WidgetActionContext *context) {
         for (int i = 0; i < extension->itemCount(); ++i) {
