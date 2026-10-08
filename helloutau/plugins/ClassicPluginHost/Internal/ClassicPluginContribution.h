@@ -21,8 +21,8 @@ namespace hello::daw {
     /// menu at the mouse pointer. That command is in no menu.
     ///
     /// The plugins are discovered when the menu first opens, on Refresh, and after the UTAU
-    /// folder in the settings has changed. The discovery covers the \c plugins folder of UTAU
-    /// and the HelloUtau folder for UTAU plugins, userDirectory().
+    /// folder in the settings has changed. The discovery covers the HelloUtau folder for UTAU
+    /// plugins, userDirectory(), and then the \c plugins folder of UTAU.
     class ClassicPluginContribution : public ActionContribution {
         Q_DECLARE_TR_FUNCTIONS(hello::daw::ClassicPluginContribution)
     public:

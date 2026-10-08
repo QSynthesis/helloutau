@@ -114,12 +114,14 @@ namespace hello::daw {
     }
 
     void ClassicPluginContribution::refresh(ProjectWindow *window) {
+        // The plugin folder of HelloUtau first and the plugins folder of UTAU second, as the
+        // voice folders of AppSettings::voiceLocations(). A folder that does not exist yields no
+        // plugins.
         const auto utauDirectory = window->editor()->settings().utauDirectory();
-        QList<std::filesystem::path> directories;
+        QList<std::filesystem::path> directories{userDirectory()};
         if (const auto utauPlugins = pluginsOf(utauDirectory); !utauPlugins.empty()) {
             directories.push_back(utauPlugins);
         }
-        directories.push_back(userDirectory());
 
         // A folder whose plugin.txt cannot be read is skipped, as in UTAU.
         kit::DiagnosticList diagnostics;
