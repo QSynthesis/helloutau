@@ -121,6 +121,10 @@ namespace hello::daw {
         });
         const auto load = menu.addMenu(PianoRoll::tr("L&oad Region"));
         decl.fillRegionMenu(load);
+        const auto regions = menu.addAction(PianoRoll::tr("&Edit Regions..."));
+        QObject::connect(regions, &QAction::triggered, &decl, [this, index] {
+            Q_EMIT widget->regionsRequested(index >= 0 ? widget->regionAt(index) : std::nullopt);
+        });
         menu.exec(globalPosition);
         ruler->setMenuRange(std::nullopt);
     }

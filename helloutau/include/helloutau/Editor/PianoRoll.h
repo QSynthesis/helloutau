@@ -528,6 +528,11 @@ namespace hello::daw {
         /// \a region is to be renamed or removed: its name on the ruler was double-clicked.
         void regionEditRequested(const hello::kit::Region &region);
 
+        /// The regions are to be listed: "Edit Regions..." was chosen in the menu of the ruler.
+        /// \a current is the region on top at the note at that time (regionAt()), or
+        /// \c std::nullopt if none.
+        void regionsRequested(const std::optional<hello::kit::Region> &current);
+
     protected:
         void keyPressEvent(QKeyEvent *event) override;
 

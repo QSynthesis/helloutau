@@ -79,6 +79,7 @@
 #include "ProjectPropertiesDialog.h"
 #include "Playback.h"
 #include "PasteParametersDialog.h"
+#include "RegionDialog.h"
 #include "ScalePitchDialog.h"
 #include "ToolBarPalette_p.h"
 #include "PitchControlDialog.h"
@@ -535,6 +536,31 @@ namespace hello::daw {
                 kit::ProjectEdits::renameRegion(notes, region, name, diagnostics);
             }
             DiagnosticBox::show(&decl, tr("Rename Region"), diagnostics);
+        }
+
+        // Lists the regions of the track in their dialog with current selected if given. Each
+        // removal is one undo step.
+        void editRegions(const std::optional<kit::Region> &current) {
+            stdc_decl_t;
+            RegionDialog dialog(&decl);
+            dialog.setRegions(roll->regions());
+            if (current) {
+                dialog.setCurrentRegion(*current);
+            }
+            QObject::connect(&dialog, &RegionDialog::goToRequested, &decl,
+                             [this](const kit::Region &region) {
+                                 roll->loadRegion(region.first, region.last);
+                             });
+            QObject::connect(&dialog, &RegionDialog::removeRequested, &decl,
+                             [this, &dialog](const kit::Region &region) {
+                                 const auto notes =
+                                     kit::ProjectRef(document->session()).tracks().at(0).notes();
+                                 kit::DiagnosticList diagnostics;
+                                 kit::ProjectEdits::removeRegion(notes, region, diagnostics);
+                                 DiagnosticBox::show(&dialog, tr("Remove Region"), diagnostics);
+                                 dialog.setRegions(roll->regions());
+                             });
+            dialog.exec();
         }
 
         // The properties of the selected notes in their dialog, changed in one step
@@ -1942,6 +1968,9 @@ namespace hello::daw {
                              [this](int first, int last) { nameRegion(first, last); });
             QObject::connect(roll, &PianoRoll::regionEditRequested, &decl,
                              [this](const kit::Region &region) { editRegion(region); });
+            QObject::connect(
+                roll, &PianoRoll::regionsRequested, &decl,
+                [this](const std::optional<kit::Region> &current) { editRegions(current); });
             QObject::connect(roll, &PianoRoll::editRefused, &decl, [this](const QString &message) {
                 stdc_decl_t;
                 decl.statusBar()->showMessage(message, StatusMessageTimeout);

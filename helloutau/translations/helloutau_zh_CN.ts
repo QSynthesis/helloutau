@@ -1166,6 +1166,10 @@ Trust and use them for rendering?</source>
         <translation>载入区间(&amp;O)</translation>
     </message>
     <message>
+        <source>&amp;Edit Regions...</source>
+        <translation>编辑区间(&amp;E)...</translation>
+    </message>
+    <message>
         <source>Delete Pitch Points</source>
         <translation>删除音高控制点</translation>
     </message>
@@ -1786,6 +1790,33 @@ Trust and use them for rendering?</source>
     <message>
         <source>%1 already exists. Replace it?</source>
         <translation>%1 已存在。是否替换？</translation>
+    </message>
+</context>
+<context>
+    <name>hello::daw::RegionDialog</name>
+    <message>
+        <source>Regions</source>
+        <translation>区间</translation>
+    </message>
+    <message>
+        <source>Name</source>
+        <translation>名称</translation>
+    </message>
+    <message>
+        <source>Notes</source>
+        <translation>音符</translation>
+    </message>
+    <message>
+        <source>&amp;Go To</source>
+        <translation>跳转(&amp;G)</translation>
+    </message>
+    <message>
+        <source>&amp;Remove</source>
+        <translation>移除(&amp;R)</translation>
+    </message>
+    <message>
+        <source>%1–%2</source>
+        <translation>%1–%2</translation>
     </message>
 </context>
 <context>
