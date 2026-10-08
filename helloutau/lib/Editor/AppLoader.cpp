@@ -15,10 +15,12 @@
 #include <stdcorelib/pluginsystem/pluginsystem.h>
 #include <stdcorelib/system.h>
 
+#include <hellokit/Support/JsonInterop.h>
+
 #include "AppSettings.h"
 #include "Editor.h"
 #include "Restarter.h"
-#include "SettingsJson_p.h"
+#include "SettingsFile_p.h"
 #include "Translations.h"
 
 namespace hello::daw {
@@ -54,7 +56,7 @@ namespace hello::daw {
                                                         [this] { return pluginSettings.toJson(); });
             std::string error;
             auto read = stdc::pluginsystem::PluginSettings::fromJson(
-                stdc::json::Value(SettingsJson::read(fileName)), &error);
+                stdc::json::Value(SettingsFile::read(fileName)), &error);
             if (!read) {
                 qWarning().noquote() << "The settings of the plugins in" << fileName
                                      << "are ignored:" << QString::fromStdString(error);
@@ -169,16 +171,17 @@ namespace hello::daw {
 
     QJsonValue AppLoader::pluginValue(const QString &id, const QString &key) const {
         stdc_impl_t;
-        const auto &value = SettingsJson::valueAt(impl.pluginSettings.userData(),
-                                                  (id + QLatin1Char('/') + key).toStdString());
-        return value.isNull() ? QJsonValue(QJsonValue::Undefined) : SettingsJson::qtOf(value);
+        const auto &value = kit::JsonInterop::valueAt(impl.pluginSettings.userData(),
+                                                      (id + QLatin1Char('/') + key).toStdString());
+        return value.isNull() ? QJsonValue(QJsonValue::Undefined)
+                              : kit::JsonInterop::toQtJson(value);
     }
 
     void AppLoader::setPluginValue(const QString &id, const QString &key, const QJsonValue &value) {
         stdc_impl_t;
-        SettingsJson::insertAt(impl.pluginSettings.userData(),
-                               (id + QLatin1Char('/') + key).toStdString(),
-                               SettingsJson::stdcOf(value));
+        kit::JsonInterop::insertAt(impl.pluginSettings.userData(),
+                                   (id + QLatin1Char('/') + key).toStdString(),
+                                   kit::JsonInterop::fromQtJson(value));
         impl.pluginFile->changed();
     }
 

@@ -10,7 +10,9 @@
 
 #include <stdcorelib/pimpl.h>
 
-#include "SettingsJson_p.h"
+#include <hellokit/Support/JsonInterop.h>
+
+#include "SettingsFile_p.h"
 
 namespace hello::daw {
 
@@ -96,15 +98,15 @@ namespace hello::daw {
     }
 
     AppSettings::Impl::Impl(const QString &fileName)
-        : root(SettingsJson::read(fileName)), file(fileName, [this] { return json::Value(root); }) {
+        : root(SettingsFile::read(fileName)), file(fileName, [this] { return json::Value(root); }) {
     }
 
     const json::Value &AppSettings::Impl::value(std::string_view key) const {
-        return SettingsJson::valueAt(root, key);
+        return kit::JsonInterop::valueAt(root, key);
     }
 
     void AppSettings::Impl::setValue(std::string_view key, json::Value value) {
-        SettingsJson::insertAt(root, key, std::move(value));
+        kit::JsonInterop::insertAt(root, key, std::move(value));
         file.changed();
     }
 
@@ -465,14 +467,16 @@ namespace hello::daw {
         const auto &value = impl.value(path);
         // An absent value reads as null and is indistinguishable from a stored null. setValue()
         // never stores null.
-        return value.isNull() ? QJsonValue(QJsonValue::Undefined) : SettingsJson::qtOf(value);
+        return value.isNull() ? QJsonValue(QJsonValue::Undefined)
+                              : kit::JsonInterop::toQtJson(value);
     }
 
     void AppSettings::setValue(const QString &key, const QJsonValue &value) {
         stdc_impl_t;
         if (key == QLatin1String(KeyRecentFiles) ||
             key == QLatin1String(KeyRecentVoiceBanks)) {
-            impl.setValue(key.toStdString(), arrayOf(recentTexts(SettingsJson::stdcOf(value))));
+            impl.setValue(key.toStdString(),
+                          arrayOf(recentTexts(kit::JsonInterop::fromQtJson(value))));
             return;
         }
         if (key == QLatin1String(KeyUtauDirectory) || key == QLatin1String(KeyResampler) ||
@@ -481,7 +485,7 @@ namespace hello::daw {
                          normalizedPathText(value.toString()).toStdString());
             return;
         }
-        impl.setValue(key.toStdString(), SettingsJson::stdcOf(value));
+        impl.setValue(key.toStdString(), kit::JsonInterop::fromQtJson(value));
     }
 
 }
