@@ -48,25 +48,25 @@ stdcorelib.plugin 的交接记录（其仓库 `.cache/codex/2026-08-21-1722-stdc
 
 ### 注册接口
 
-- 各扩展点的登记形状一致（作者 2026-09-30 要求统一）：
+- 各扩展点的登记形状一致（作者 2026-09-30 要求统一，2026-10-08 决定统一到 `stdc::DynamicRegistry`）。宿主一侧是**注册表**，即以 `stdc::linked_map` 保存、保持登记顺序的 `stdc::DynamicRegistry` 的类型别名，由宿主创建并持有。贡献者一侧是**登记对象**，即该注册表的 `AddFactory`（登记一个可带捕获的工厂）或 `Add<V>`（登记默认构造的类型 `V`）。名称在一个注册表内唯一，重名的登记失败，此时 `entry()` 为空，随应用提供的插件据此使初始化失败。条目是工厂，宿主经 `kit::RegistryInstanceList` 监听注册表，为每个条目创建一个实例，条目移除时销毁该实例。
 
-  | 部分 | 动作（HelloUtauWidgets） | 设置页（HelloUtauWidgets） | 频率表格式（HelloKitVoiceBank） | 格式转换驱动（HelloKitInterchange） |
+  | 扩展点 | 注册表 | 条目名称 | 宿主 | 内置的登记 |
   |---|---|---|---|---|
-  | 被登记的对象 | 创建 `ActionContribution` 的工厂，名称为插件 ID | 创建页面的工厂，返回 `SettingPagePlacement`（页面与其位置），名称为页面 id | 创建 `FrequencyFormat` 的工厂，名称为格式 ID | `InterchangeReader` 或 `InterchangeWriter` |
-  | 登记对象 | `ActionContributionRegistry::AddFactory(registry, 插件 ID, 描述, 工厂)`，`entry()` | `SettingPageRegistry::AddFactory(registry, 页面 id, 描述, 工厂)`，`entry()` | `FrequencyFormatRegistry::Add<V>(registry, 格式 ID, 描述)` 或 `AddFactory`，`entry()` | `InterchangeRegistration`，两个构造函数，`reader()` / `writer()` |
-  | 登记所在的列表 | `ActionContributionRegistry`，即 `stdc::DynamicRegistry<ActionContribution, …, stdc::linked_map>`（公开，`Editor` 创建并持有，`Editor::actionContributions()`） | `SettingPageRegistry`，即 `stdc::DynamicRegistry<SettingPage, SettingPageRegistryTraits, stdc::linked_map>`（公开，`Editor` 创建并持有，`Editor::settingPages()`） | `kit::FrequencyFormatRegistry`，即 `stdc::DynamicRegistry<FrequencyFormat, …, stdc::linked_map>`（公开，`kit::FrequencyFormats` 创建并持有，编辑器的为 `Editor::frequencyFormats().registry()`） | `InterchangeRegistrations_p.h`（进程级，私有） |
-  | 使用方 | 持有列表的 `Editor`，经 `kit::RegistryInstanceList` 监听列表，为每个条目创建一个实例 | 持有列表的 `Editor`，经 `kit::RegistryInstanceList` 监听列表，为每个条目创建一次页面并加入目录 | `kit::FrequencyFormats` 经 `kit::RegistryInstanceList` 监听列表，为每个条目创建一个实例 | 每个 `InterchangeRegistry` 监听列表 |
-  | 内置的登记 | `BuiltinActions`（Core 为其编辑器创建，是编辑器的子对象） | 无，编辑器与 Core 的页面直接加入目录 | `BuiltinFrequencyFormats`（FrequencyEditor 为编辑器的注册表创建并持有） | `BuiltinInterchangeDrivers`（Interchange 持有） |
+  | 动作 | `ActionContributionRegistry`（HelloUtauWidgets） | 插件 ID | `Editor`，`Editor::actionContributions()` | `BuiltinActions`（Core 为其编辑器创建，是编辑器的子对象） |
+  | 设置页 | `SettingPageRegistry`（HelloUtauWidgets），工厂返回 `SettingPagePlacement` | 页面 id | `Editor`，`Editor::settingPages()` | 无，编辑器与 Core 的页面直接加入目录 |
+  | 频率表格式 | `kit::FrequencyFormatRegistry`（HelloKitVoiceBank） | 格式 ID | `kit::FrequencyFormats`，编辑器的为 `Editor::frequencyFormats()` | `BuiltinFrequencyFormats`（FrequencyEditor 持有） |
+  | 导入驱动、导出驱动 | `kit::InterchangeReaderRegistry`、`kit::InterchangeWriterRegistry`（HelloKitInterchange） | 驱动 ID | `kit::InterchangeDrivers`，Interchange 插件的为 `InterchangeService::drivers()` | `BuiltinInterchangeDrivers`（Interchange 持有） |
+  | 导入向导的步骤页 | `InterchangeStepRegistry`（Interchange 插件），以 `std::map` 保存 | 驱动的 `customStepId()` | `InterchangeService::stepPages()` | Interchange 登记 MIDI 的编码页 |
 
-- **动作与设置页的列表由 `Editor` 持有，不是进程级的**（作者 2026-10-08 决定）：没有全局状态，测试直接构造编辑器即可。Core 插件创建编辑器后以 `AppLoader::setEditor()` 交给加载器，关闭时清除；其他插件依赖 Core，在 `initialize()` 中经 `AppLoader::editor()` 取得编辑器，再向其列表登记，取不到时初始化失败。两个列表都是 `stdc::DynamicRegistry`，列表先于登记对象销毁时，`AddFactory` 的析构不做任何事。频率表格式的列表由编辑器的 `kit::FrequencyFormats` 持有，FrequencyEditor 插件同样经 `AppLoader::editor()` 登记。格式转换驱动仍是进程级列表，各扩展点正逐个迁移到 `stdc::DynamicRegistry`（作者 2026-10-08 决定）。
-- **设置页登记的是创建页面的工厂而非页面**（作者 2026-10-08 同意）：页面属于某个 `Editor` 的设置目录，每个 `Editor` 须有自己的一份。`Editor` 随登记创建页面，随注销以 `SettingCatalog::removePage()` 删除；页面执行插件库中的代码，必须在插件库卸载之前删除。工厂返回的 `SettingPagePlacement` 含页面与其位置：`parent` 为空或找不到时页面放在顶层，`before` 同 `SettingCatalog::addPage()`。页面 id 与条目名称不同时 `Editor` 拒绝该页面。工厂没有参数，需要 `AppSettings` 的页面在工厂中捕获插件取得的编辑器。
-
-- 格式转换驱动的登记对象持有被登记的对象，构造时加入列表，析构时移除。该列表按登记顺序保存，只在应用的线程上使用。进程级的列表在所属的子库中，子库是动态库，因此每个进程只有一份。动作、设置页与频率表格式的列表是 `stdc::linked_map` 保存的 `stdc::DynamicRegistry`，同样保持登记顺序。
-- 插件把登记对象作为自己的成员，在 `initialize()` 中创建，在 `aboutToShutdown()` 中销毁。不能等插件实例析构：实例是插件库中的静态对象，随库卸载才析构，那时 `Editor` 已销毁，且析构发生在卸载库的过程中。
-- 内置的格式与驱动经同一途径登记，与插件不分主次，保持 `InterchangeRegistry` 与 `FrequencyFormats` 已有的原则。
-- 应用与测试持有的注册表（`FrequencyFormats`、`InterchangeRegistry`）**仍然不是全局单例**，前者的内容来自它自己的 `stdc::DynamicRegistry`，后者来自进程级列表。测试只登记自己需要的内容，登记对象随测试结束而销毁。
-- 注册表监听列表的增删，因此插件在运行中才登记或注销也能反映到界面，例如音源窗口的「F0」下拉框。
-- 登记对象在 `initialize()` 中创建（作者 2026-09-30 决定）：生命周期明确，可带运行时参数，例如 UTAU 插件支持插件按发现结果登记的各项。未采用的做法是以静态对象在插件载入时自动登记：名称须是字面量、登记不加锁，且公开头文件中会出现 stdcorelib 的类型。
+- **条目名称与对象自带的 ID 必须相同**：格式与驱动的 `id()`、设置页的 `id()` 与条目名称不同时，宿主拒绝该实例并输出警告。
+- **注册表不是进程级的**（作者 2026-10-08 决定）：没有全局状态，测试直接构造宿主即可。注册表也不全放在 `Editor` 或 `AppLoader` 中，否则每出现一个扩展点，二者都要增加一项（作者 2026-10-08）。Core 插件创建编辑器后以 `AppLoader::setEditor()` 交给加载器，关闭时清除；其他插件依赖 Core，在 `initialize()` 中经 `AppLoader::editor()` 取得编辑器，取不到时初始化失败。
+- **插件的接口对象**：Interchange 插件的两种注册表由它导出的 `InterchangeService` 持有（作者 2026-10-08 定名）。导出的是接口对象而非插件实例，作用同 Qt Creator 的 `ICore`。插件在 `initialize()` 中创建服务，在 `aboutToShutdown()` 中销毁；提供格式的插件依赖 Interchange，经静态的 `InterchangeService::instance()` 取得服务。最先构造的服务成为 `instance()`，测试可以自行构造服务。以后其他插件提供扩展点时，同样导出各自的接口对象。
+- **生命周期**：注册表先于登记对象销毁时，`AddFactory` 的析构不做任何事，因此 `Editor` 可以先于插件的登记对象销毁。插件把登记对象作为自己的成员，在 `initialize()` 中创建，在 `aboutToShutdown()` 中销毁（赋一个空对象），因为工厂与实例都是插件库中的代码。不能等插件实例析构：实例是插件库中的静态对象，随库卸载才析构，那时 `Editor` 已销毁，且析构发生在卸载库的过程中。
+- **设置页登记的是创建页面的工厂而非页面**（作者 2026-10-08 同意）：页面属于某个 `Editor` 的设置目录，每个 `Editor` 须有自己的一份。`Editor` 随登记创建页面，随注销以 `SettingCatalog::removePage()` 删除；页面执行插件库中的代码，必须在插件库卸载之前删除。工厂返回的 `SettingPagePlacement` 含页面与其位置：`parent` 为空或找不到时页面放在顶层，`before` 同 `SettingCatalog::addPage()`。工厂没有参数，需要 `AppSettings` 的页面在工厂中捕获插件取得的编辑器。
+- **步骤页按次创建**：其他注册表的条目由宿主各实例化一次，步骤页则由导入向导在每次导入时从注册表创建一页，并由向导持有。
+- 内置的格式与驱动经同一途径登记，与插件不分主次。注册表保持登记顺序，因此同一扩展名由先登记的驱动处理，同一重采样器由后登记的格式处理（见 [`Interchange.md`](Interchange.md) 与 [`FrequencyTables.md`](FrequencyTables.md)）。
+- 宿主监听注册表的增删，因此插件在运行中才登记或注销也能反映到界面，例如音源窗口的「F0」下拉框。回调在登记所在的线程上执行，本仓库只在应用的线程上登记。
+- 登记对象在 `initialize()` 中创建（作者 2026-09-30 决定）：生命周期明确，可带运行时参数，例如 UTAU 插件支持插件按发现结果登记的各项。未采用的做法是以静态对象（`stdc::StaticRegistry`）在插件载入时自动登记：名称须是字面量，登记不加锁。
 
 ### 加载器与 Core 插件
 
@@ -160,8 +160,9 @@ stdcorelib.plugin 的生命周期是同步的，不依赖事件循环。HelloUta
 5. **设置**：~~用户的启用设置文件~~（`plugins.json`，见上文「设置」），~~设置对话框的「Plugins」页~~（见上文），随安装提供的全局设置（未做）。
 6. ~~**格式转换驱动**~~：`InterchangeRegistration`（HelloKitInterchange，一个导入或导出驱动）、进程级列表 `InterchangeRegistrations_p.h`、`InterchangeRegistry` 成为监听列表的 `QObject`（`driversChanged()`），`BuiltinInterchangeDrivers` 登记 MIDI 的读与写，由新的 Interchange 插件（ID `org.helloutau.interchange`，依赖 Core，作者 2026-09-30 定）持有；删除 `InterchangePlugin`。规则见 [`Interchange.md`](Interchange.md)「注册表」。
 7. **ClassicPluginHost 插件**（计划见 [`ClassicPluginHost.md`](ClassicPluginHost.md)）：随 HelloUtau 提供的原生插件，把 UTAU 插件作为命令加入「工具 → Classic Plugins」菜单，运行后把结果作为一个撤销步骤应用到选区。选区编辑的注册接口暂不建。验收同 Roadmap 第五阶段：若干社区常用的原版插件能够正常执行并写回结果。
-8. **其余扩展点**：编辑界面扩展、音源批量操作，随各自功能的实现加入。
+8. **其余扩展点**：编辑界面扩展、音源批量操作，随各自功能的实现加入。新的扩展点按「注册接口」的形状建立，注册表由提供该扩展点的宿主持有。
 9. ~~**stdcorelib.plugin 的 `loadOrder()`**~~：已实现（该仓库 `e1f7ad6`），测试覆盖依赖链与可选依赖、同层按发现顺序、停用与未选中与无效插件的排除、失败插件的保留、载入中的重入查询。「Plugins」页须列出停用的插件，而 `loadOrder()` 不含停用的插件，因此该页按发现顺序列出（`plugins()`），不使用 `loadOrder()`。
+10. ~~**登记统一到 `stdc::DynamicRegistry`**~~（作者 2026-10-08 决定）：动作、设置页、频率表格式、格式转换驱动与步骤页的进程级列表和 QObject 列表全部改为宿主持有的 `stdc::DynamicRegistry`，登记对象改为 `AddFactory` / `Add<V>`，宿主经 `kit::RegistryInstanceList` 实例化条目；Interchange 插件导出 `InterchangeService`。上面第 3、4、6 步中的 `ActionRegistration`、`FrequencyFormatRegistration`、`InterchangeRegistration` 与进程级列表均已删除。见「注册接口」。
 
 ## 作者的决定（2026-09-30）
 

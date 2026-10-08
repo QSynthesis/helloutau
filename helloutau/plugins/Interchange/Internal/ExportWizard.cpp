@@ -14,7 +14,7 @@
 
 #include <hellokit/Edit/ProjectDocument.h>
 #include <hellokit/Edit/ProjectSession.h>
-#include <hellokit/Interchange/InterchangeRegistry.h>
+#include <hellokit/Interchange/InterchangeDrivers.h>
 #include <hellokit/Interchange/InterchangeWriter.h>
 
 #include <helloutau/Editor/ProjectWindow.h>
@@ -38,7 +38,7 @@ namespace hello::daw {
                 setSubTitle(tr("The file to write, and its format."));
 
                 m_format = new QComboBox();
-                for (const auto writer : m_state.registry->writers()) {
+                for (const auto writer : m_state.drivers->writers()) {
                     m_format->addItem(writer->name(), writer->id());
                 }
 
@@ -74,7 +74,7 @@ namespace hello::daw {
             }
 
             kit::InterchangeWriter *writer() const {
-                return m_state.registry->writerForId(m_format->currentData().toString());
+                return m_state.drivers->writerForId(m_format->currentData().toString());
             }
 
             bool isComplete() const override {
@@ -197,12 +197,12 @@ namespace hello::daw {
 
     }
 
-    ExportWizard::ExportWizard(ProjectWindow *window, kit::InterchangeRegistry *registry)
+    ExportWizard::ExportWizard(ProjectWindow *window, kit::InterchangeDrivers *drivers)
         : QWizard(window) {
         setWindowTitle(tr("Export"));
         setOption(QWizard::NoCancelButtonOnLastPage);
         m_state.window = window;
-        m_state.registry = registry;
+        m_state.drivers = drivers;
         setPage(FilePage, new FileWizardPage(m_state));
         setPage(OptionsPage, new OptionsWizardPage(m_state));
         setPage(ResultPage, new ResultWizardPage(m_state));

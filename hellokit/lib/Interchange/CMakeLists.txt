@@ -9,8 +9,8 @@ qm_find_qt(Core)
 
 hellokit_add_library(${PROJECT_NAME} SHARED
     SOURCES ${_src}
-    LINKS HelloKitDocument
-    LINKS_PRIVATE stdcorelib::stdcorelib wolf-midi::wolf-midi
+    LINKS HelloKitDocument stdcorelib::stdcorelib
+    LINKS_PRIVATE wolf-midi::wolf-midi
     QT_LINKS Core
     QT_AUTOGEN
     INCLUDE_PRIVATE ../../include/hellokit/Interchange/** **

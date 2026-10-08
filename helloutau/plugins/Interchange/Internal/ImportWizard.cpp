@@ -20,14 +20,14 @@
 #include <hellokit/Edit/ProjectRefs.h>
 #include <hellokit/Edit/ProjectSession.h>
 #include <hellokit/Interchange/InterchangeReader.h>
-#include <hellokit/Interchange/InterchangeRegistry.h>
+#include <hellokit/Interchange/InterchangeDrivers.h>
 #include <hellokit/Support/TextCodec.h>
 
 #include <helloutau/Editor/PianoRoll.h>
 #include <helloutau/Editor/ProjectWindow.h>
 
 #include <Interchange/InterchangeStepPage.h>
-#include <Interchange/InterchangeStepRegistry.h>
+#include <Interchange/InterchangeService.h>
 #include <Interchange/PresetSelector.h>
 
 #include "InterchangeOptionForm.h"
@@ -66,7 +66,7 @@ namespace hello::daw {
 
                 m_format = new QComboBox();
                 m_format->addItem(tr("By the file extension"));
-                for (const auto reader : m_state.registry->readers()) {
+                for (const auto reader : m_state.drivers->readers()) {
                     m_format->addItem(reader->name(), reader->id());
                 }
 
@@ -97,10 +97,10 @@ namespace hello::daw {
             kit::InterchangeReader *reader() const {
                 const auto id = m_format->currentData().toString();
                 if (!id.isEmpty()) {
-                    return m_state.registry->readerForId(id);
+                    return m_state.drivers->readerForId(id);
                 }
                 const auto path = Support::pathOf(m_path->text());
-                return m_state.registry->readerForSuffix(
+                return m_state.drivers->readerForSuffix(
                     QString::fromStdU16String(path.extension().u16string()));
             }
 
@@ -147,7 +147,7 @@ namespace hello::daw {
             QLabel *m_message;
 
             void browse() {
-                const auto readers = m_state.registry->readers();
+                const auto readers = m_state.drivers->readers();
                 QStringList all;
                 QStringList filters;
                 for (const auto reader : readers) {
@@ -191,7 +191,7 @@ namespace hello::daw {
                 const auto &reader = *m_state.reader;
                 const auto stepId = reader.customStepId();
                 if (!stepId.isEmpty()) {
-                    m_step = InterchangeStepRegistry::create(stepId);
+                    m_step = m_state.stepPages->instantiate(stepId.toStdString()).release();
                     if (!m_step) {
                         m_state.diagnostics.push_back(
                             {kit::DiagnosticSeverity::Note,
@@ -402,12 +402,13 @@ namespace hello::daw {
 
     }
 
-    ImportWizard::ImportWizard(ProjectWindow *window, kit::InterchangeRegistry *registry)
+    ImportWizard::ImportWizard(ProjectWindow *window, InterchangeService *service)
         : QWizard(window) {
         setWindowTitle(tr("Import"));
         setOption(QWizard::NoCancelButtonOnLastPage);
         m_state.window = window;
-        m_state.registry = registry;
+        m_state.drivers = &service->drivers();
+        m_state.stepPages = &service->stepPages();
 
         // The selection in the UTAU sense: the range from the first to the last selected note
         const auto selected = window->pianoRoll()->selectedIndices();

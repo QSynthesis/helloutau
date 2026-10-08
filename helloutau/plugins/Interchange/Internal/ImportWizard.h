@@ -10,14 +10,16 @@
 #include <hellokit/Interchange/InterchangeRequest.h>
 
 #include <Interchange/ImportMerge.h>
+#include <Interchange/InterchangeStepRegistry.h>
 
 namespace hello::kit {
     class InterchangeReader;
-    class InterchangeRegistry;
+    class InterchangeDrivers;
 }
 
 namespace hello::daw {
 
+    class InterchangeService;
     class ProjectWindow;
 
     /// Wizard that imports a file in a registered format into the project of a window. Pages:
@@ -34,13 +36,14 @@ namespace hello::daw {
             ResultPage,
         };
 
-        ImportWizard(ProjectWindow *window, kit::InterchangeRegistry *registry);
+        ImportWizard(ProjectWindow *window, InterchangeService *service);
         ~ImportWizard() override;
 
         /// The choices collected by the pages, in page order.
         struct State {
             ProjectWindow *window = nullptr;
-            kit::InterchangeRegistry *registry = nullptr;
+            kit::InterchangeDrivers *drivers = nullptr;
+            InterchangeStepRegistry *stepPages = nullptr;
             std::filesystem::path path;
             kit::InterchangeReader *reader = nullptr;
             std::optional<kit::InterchangeSource> source;

@@ -9,7 +9,7 @@
 
 ## UST 的处理
 
-- `.usth` 与 `.ust` 属于 `HelloKitDocument`，不是格式转换驱动，不登记到 `InterchangeRegistry`（Interchange.md「职责边界」）。
+- `.usth` 与 `.ust` 属于 `HelloKitDocument`，不是格式转换驱动，不登记到 `InterchangeDrivers`（Interchange.md「职责边界」）。
 - UST 的打开仍为「文件 → 打开」。该流程有专用的编码对话框（`UstCharsetDialog`），文档记录来源文件，保存时以同名的 `.usth` 为默认文件名。
 - UST 的导出仍为 Editor 的「文件 → 导出 → UST…」。导出时写入本机设置中的引擎，并按目标文件写入 `CacheDir`。二者取自应用设置，无法表示为驱动的选项。
 - Interchange 插件的导出命令插入同一「导出」子菜单，位于 UST 之后。停用 Interchange 插件只移除其他格式，不影响 UST。
@@ -27,12 +27,12 @@
 
 全部位于 Interchange 插件中（作者 2026-09-30 决定格式转换的界面归属该插件）。
 
-- 插件持有一个 `InterchangeRegistry`。它不是单例，插件是唯一的使用方。向导中的格式列表与文件对话框的过滤器由它生成。
+- 插件持有一个 `InterchangeService`，其中有驱动表 `InterchangeDrivers` 与步骤页的注册表 `InterchangeStepRegistry`。向导中的格式列表与文件对话框的过滤器由驱动表生成。其他插件经 `InterchangeService::instance()` 登记驱动与步骤页（见 Plugins.md「注册接口」）。
 - 插件的公开头文件（`helloutau/plugins/Interchange/`）提供库一级的类，在 `tests/auto/plugins/Interchange/` 中测试：
   - `ImportMerge`：应用层的插入逻辑（Interchange.md「应用层的导入流程」），无界面。以 `ProjectRef` / `NoteRef` 的公开接口在一个事务中修改工程，与 ClassicPluginHost 应用结果的方式相同。库中不需要新增接口。
   - `PresetSelector`：返回向导预先收集的请求的选择器，见下文「向导与选择器」。
   - `SourcePreview`：以指定编码解码探查结果中的文本，供编码页预览，并给出默认选中的编码。
-- `InterchangeStepPage` 与 `InterchangeStepRegistry` 原定放在 HelloUtauEditor 或 Widgets（Interchange.md「自定义选择步骤」），改为放在插件的公开头文件中，登记形状同 Plugins.md「注册接口」：`InterchangeStepRegistration(id, 工厂)`。提供新格式的插件依赖 Interchange 插件并以此登记自定义页。MIDI 的编码页由 Interchange 插件登记。
+- `InterchangeStepPage` 与 `InterchangeStepRegistry` 原定放在 HelloUtauEditor 或 Widgets（Interchange.md「自定义选择步骤」），改为放在插件的公开头文件中，登记形状同 Plugins.md「注册接口」：`InterchangeStepRegistry::AddFactory(service.stepPages(), id, 描述, 工厂)`。提供新格式的插件依赖 Interchange 插件并以此登记自定义页。MIDI 的编码页由 Interchange 插件登记。
 
 ### 向导与选择器
 

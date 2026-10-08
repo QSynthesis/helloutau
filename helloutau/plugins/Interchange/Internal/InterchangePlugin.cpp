@@ -3,13 +3,13 @@
 #include <QtCore/QtGlobal>
 
 #include <hellokit/Interchange/BuiltinInterchangeDrivers.h>
-#include <hellokit/Interchange/InterchangeRegistry.h>
+#include <hellokit/Interchange/InterchangeDrivers.h>
 
 #include <helloutau/Editor/AppLoader.h>
 #include <helloutau/Editor/Editor.h>
 #include <helloutau/Editor/Translations.h>
 
-#include <Interchange/InterchangeStepRegistration.h>
+#include <Interchange/InterchangeService.h>
 
 #include "InterchangeContribution.h"
 #include "MidiEncodingPage.h"
@@ -38,13 +38,16 @@ namespace hello::daw {
             }
             return false;
         }
-        m_drivers = std::make_unique<kit::BuiltinInterchangeDrivers>();
-        m_registry = std::make_unique<kit::InterchangeRegistry>();
-        m_midiEncoding = std::make_unique<InterchangeStepRegistration>(
-            QString::fromLatin1(MidiEncodingPage::stepId), [] { return new MidiEncodingPage(); });
+        m_service = std::make_unique<InterchangeService>();
+        const auto &drivers = m_service->drivers();
+        m_drivers = std::make_unique<kit::BuiltinInterchangeDrivers>(drivers.readerRegistry(),
+                                                                     drivers.writerRegistry());
+        m_midiEncoding = InterchangeStepRegistry::AddFactory(
+            m_service->stepPages(), MidiEncodingPage::stepId, {},
+            [] { return std::make_unique<MidiEncodingPage>(); });
         m_actions = ActionContributionRegistry::AddFactory(
-            editor->actionContributions(), pluginId, {}, [registry = m_registry.get()] {
-                return std::make_unique<InterchangeContribution>(registry);
+            editor->actionContributions(), pluginId, {}, [service = m_service.get()] {
+                return std::make_unique<InterchangeContribution>(service);
             });
         if (!m_actions.entry()) {
             if (errorMessage) {
@@ -55,12 +58,13 @@ namespace hello::daw {
         return true;
     }
 
-    // The actions are destroyed first because they reference the registry.
+    // The registrations are destroyed before the service, because the actions reference it and
+    // the registries of the others belong to it.
     void InterchangePlugin::aboutToShutdown() {
         m_actions = {};
-        m_midiEncoding.reset();
-        m_registry.reset();
+        m_midiEncoding = {};
         m_drivers.reset();
+        m_service.reset();
     }
 
 }

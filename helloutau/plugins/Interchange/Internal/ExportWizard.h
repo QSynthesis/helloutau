@@ -9,7 +9,7 @@
 
 namespace hello::kit {
     class InterchangeWriter;
-    class InterchangeRegistry;
+    class InterchangeDrivers;
 }
 
 namespace hello::daw {
@@ -27,13 +27,13 @@ namespace hello::daw {
             ResultPage,
         };
 
-        ExportWizard(ProjectWindow *window, kit::InterchangeRegistry *registry);
+        ExportWizard(ProjectWindow *window, kit::InterchangeDrivers *drivers);
         ~ExportWizard() override;
 
         /// The choices collected by the pages, in page order.
         struct State {
             ProjectWindow *window = nullptr;
-            kit::InterchangeRegistry *registry = nullptr;
+            kit::InterchangeDrivers *drivers = nullptr;
             std::filesystem::path path;
             kit::InterchangeWriter *writer = nullptr;
             kit::ExportRequest request;

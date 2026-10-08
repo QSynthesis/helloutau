@@ -195,15 +195,13 @@ struct ImportResult {
 
 ### 注册表
 
-`InterchangeRegistry` 是一张表，**内置格式与插件使用同一注册途径**，不区分主次。文件对话框的过滤器、按扩展名查找驱动、「导入为…」菜单均由该表生成。
+`InterchangeDrivers` 是一个宿主的驱动表，**内置格式与插件使用同一注册途径**，不区分主次。文件对话框的过滤器、按扩展名查找驱动、「导入为…」菜单均由该表生成。
 
-- 驱动经 `InterchangeRegistration` 登记（形状见 [`Plugins.md`](Plugins.md)「注册接口」）：一个登记对象持有一个导入驱动或一个导出驱动，两种各有一个构造函数，`reader()` / `writer()` 中另一个为空；同时支持两个方向的驱动登记两次。登记对象存在期间，驱动出现在进程中的每个注册表里，析构即移除。
-- 注册表是 `QObject`，内容来自进程级的登记列表（私有的 `InterchangeRegistrations_p.h`），按登记顺序；登记与注销时发出 `driversChanged()`。不再有 `addReader()` / `addWriter()`。
-- 同一 ID 的多个驱动只取先登记的，它注销后由下一个接替；同一扩展名由先登记的驱动处理。两条规则都使插件不能接管内置格式。
-- 内置驱动（MIDI 的读与写）由 `BuiltinInterchangeDrivers` 登记，Interchange 插件（ID `org.helloutau.interchange`，目录 `Interchange`，依赖 Core，作者 2026-09-30 定）持有它。需要这些驱动的测试持有自己的实例。
-- 注册表的使用方是 Interchange 插件的导入与导出向导，见 [`ImportExport.md`](ImportExport.md)。
-
-stdcorelib 的 `StaticRegistry` / `DynamicRegistry` 正适用于此，但**它是私有依赖，不得出现在公开头文件中**。`InterchangeRegistry` 是 hellokit 自身的类型，需要使用 stdcorelib 时仅在 `.cpp` 中使用。
+- 驱动登记在 `InterchangeDrivers` 持有的两个注册表中（形状见 [`Plugins.md`](Plugins.md)「注册接口」）：导入驱动登记到 `readerRegistry()`（`InterchangeReaderRegistry`），导出驱动登记到 `writerRegistry()`（`InterchangeWriterRegistry`），二者都是 `stdc::DynamicRegistry`。条目名称即驱动 ID，同时支持两个方向的驱动以同一 ID 在两个注册表中各登记一次。登记对象存在期间，驱动出现在该 `InterchangeDrivers` 中，析构即移除。
+- `InterchangeDrivers` 是 `QObject`，为每个条目创建一个驱动实例，按登记顺序；登记与注销时发出 `driversChanged()`。不再有 `addReader()` / `addWriter()`。
+- 同一 ID 的第二次登记失败，实例的 `id()` 与条目名称不同时被拒绝；同一扩展名由先登记的驱动处理。两条规则都使插件不能接管内置格式。
+- 内置驱动（MIDI 的读与写）由 `BuiltinInterchangeDrivers` 登记，Interchange 插件（ID `org.helloutau.interchange`，目录 `Interchange`，依赖 Core，作者 2026-09-30 定）为其 `InterchangeService` 的驱动表持有它。需要这些驱动的测试构造自己的 `InterchangeDrivers` 与 `BuiltinInterchangeDrivers`。
+- 驱动表的使用方是 Interchange 插件的导入与导出向导，见 [`ImportExport.md`](ImportExport.md)。提供格式的插件依赖 Interchange，经 `InterchangeService::instance()->drivers()` 登记。
 
 ### 命名
 
@@ -222,7 +220,7 @@ stdcorelib 的 `StaticRegistry` / `DynamicRegistry` 正适用于此，但**它�
 | `InterchangeReader::customStepId()` | `HelloKitInterchange` | 声明需要自定义界面页，并给出 ID |
 | `InterchangeStepPage` 的实现 | Interchange 插件，或依赖它的插件 | 界面页本身 |
 
-界面页的基类与登记接口在 Interchange 插件的公开头文件中（`helloutau/plugins/Interchange/`，见 [`ImportExport.md`](ImportExport.md)），原定的 HelloUtauEditor 与 Widgets 中不设这些类型：
+界面页的基类与其注册表在 Interchange 插件的公开头文件中（`helloutau/plugins/Interchange/`，见 [`ImportExport.md`](ImportExport.md)），原定的 HelloUtauEditor 与 Widgets 中不设这些类型：
 
 ```cpp
 class INTERCHANGEPLUGIN_EXPORT InterchangeStepPage : public QWidget {
@@ -241,22 +239,11 @@ Q_SIGNALS:
     void completeChanged();
 };
 
-/// 登记对象，形状同 Plugins.md「注册接口」：存在期间，该 ID 的页可由 InterchangeStepRegistry 创建。
-class INTERCHANGEPLUGIN_EXPORT InterchangeStepRegistration {
-public:
-    using Factory = std::function<InterchangeStepPage *()>;
-    InterchangeStepRegistration(const QString &id, Factory factory);
-};
-
-class INTERCHANGEPLUGIN_EXPORT InterchangeStepRegistry {
-public:
-    static bool contains(const QString &id);
-    /// 同一 ID 取先登记的；未登记时返回 null。
-    static InterchangeStepPage *create(const QString &id, QWidget *parent = nullptr);
-};
+/// 以步骤 ID 为名称的界面页工厂，由 InterchangeService::stepPages() 持有。
+using InterchangeStepRegistry = stdc::DynamicRegistry<InterchangeStepPage>;
 ```
 
-`reset()` 另接收驱动本身，页面据此读取 `optionSchema()` 中的候选值与默认值。注册表不持有状态，每次调用时读取进程级的登记列表，因此不需要监听。
+`reset()` 另接收驱动本身，页面据此读取 `optionSchema()` 中的候选值与默认值。插件以 `InterchangeStepRegistry::AddFactory` 登记界面页，同一 ID 的第二次登记失败。导入向导每次导入时以 `instantiate()` 创建一页，因此不需要监听注册表。
 
 规则如下：
 
@@ -347,4 +334,4 @@ MIDI 的和弦与重叠音符进入 UST 时必须简化，因为 **UST 无法表
 
 ## 插件分类
 
-格式转换是原生插件的一个**扩展点**，[`docs/note.md`](note.md) 列为「格式转换」：插件在初始化时以 `InterchangeRegistration` 登记格式驱动（见上文「注册表」）。原来的 `InterchangePlugin` 接口已删除（[`Plugins.md`](Plugins.md) 实施步骤 6）。
+格式转换是原生插件的一个**扩展点**，[`docs/note.md`](note.md) 列为「格式转换」：插件在初始化时经 `InterchangeService` 登记格式驱动（见上文「注册表」）。原来的 `InterchangePlugin` 接口已删除（[`Plugins.md`](Plugins.md) 实施步骤 6）。

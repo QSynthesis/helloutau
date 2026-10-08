@@ -7,6 +7,8 @@
 #include <helloutau/Editor/Editor.h>
 #include <helloutau/Editor/ProjectWindow.h>
 
+#include <Interchange/InterchangeService.h>
+
 #include "ExportWizard.h"
 #include "ImportWizard.h"
 
@@ -15,8 +17,8 @@
 
 namespace hello::daw {
 
-    InterchangeContribution::InterchangeContribution(kit::InterchangeRegistry *registry)
-        : m_registry(registry) {
+    InterchangeContribution::InterchangeContribution(InterchangeService *service)
+        : m_service(service) {
     }
 
     InterchangeContribution::~InterchangeContribution() = default;
@@ -33,15 +35,15 @@ namespace hello::daw {
         if (!window) {
             return;
         }
-        const auto registry = m_registry;
+        const auto service = m_service;
         const auto importAction = new QAction(window);
-        QObject::connect(importAction, &QAction::triggered, window, [window, registry] {
-            ImportWizard wizard(window, registry);
+        QObject::connect(importAction, &QAction::triggered, window, [window, service] {
+            ImportWizard wizard(window, service);
             wizard.exec();
         });
         const auto exportAction = new QAction(window);
-        QObject::connect(exportAction, &QAction::triggered, window, [window, registry] {
-            ExportWizard wizard(window, registry);
+        QObject::connect(exportAction, &QAction::triggered, window, [window, service] {
+            ExportWizard wizard(window, &service->drivers());
             wizard.exec();
         });
         // Allocated copies rather than literals, because the text of a literal is unloaded with
