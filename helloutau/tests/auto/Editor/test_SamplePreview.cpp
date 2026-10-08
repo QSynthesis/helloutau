@@ -52,7 +52,7 @@ namespace {
         bool writes = true;
 
         kit::EngineRun run(const std::filesystem::path &program, const QStringList &arguments,
-                           kit::DiagnosticList &) const override {
+                           kit::DiagnosticList &, const std::function<bool()> &) const override {
             {
                 const std::lock_guard lock(m_mutex);
                 m_program = program;

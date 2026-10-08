@@ -23,6 +23,11 @@ namespace hello::kit {
     /// The console remains visible, as in UTAU. The output of a batch plugin is intended to
     /// be read.
     ///
+    /// A cancellation or the time limit kills the script with the engines that it started.
+    /// Because the script reports nothing about its progress, the fragment that a killed
+    /// resampler may have written partially cannot be identified exactly. The last fragment
+    /// that the run created or rewrote is removed instead.
+    ///
     /// The layout follows UTAU: a header of \c @set assignments, one block per note that sets
     /// the values of the note and calls \c temp_helper.bat , and a footer that joins the two
     /// fragments written by the wavtool into the track file. The **values** are computed by

@@ -3,7 +3,9 @@
 #include <algorithm>
 #include <fstream>
 #include <limits>
+#include <optional>
 #include <system_error>
+#include <vector>
 
 #include <QtCore/QCoreApplication>
 #include <QtCore/QDateTime>
@@ -349,8 +351,38 @@ namespace hello::kit {
             int(std::min<qint64>(std::numeric_limits<int>::max(),
                                  qint64(engine->timeout) * 2 * qint64(plan.steps().size())));
 
+        // The write time of each fragment before the script runs, or nothing if the fragment does
+        // not exist yet
+        std::vector<std::optional<fs::file_time_type>> writtenBefore(plan.steps().size());
+        for (int i = 0; i < int(plan.steps().size()); ++i) {
+            std::error_code timeError;
+            const auto written = fs::last_write_time(plan.steps().at(i).cacheFile, timeError);
+            if (!plan.steps().at(i).silent && !timeError) {
+                writtenBefore[size_t(i)] = written;
+            }
+        }
+
         const auto run = engine->runScript(
             scriptPath, diagnostics, [observer] { return observer && observer->cancelled(); });
+
+        // The script was killed during one of its engine calls, and the resampler of that call
+        // may have written part of its fragment. The script runs the notes in track order. That
+        // fragment is therefore the last fragment that this run created or rewrote, and it is
+        // removed. If the kill occurred during a wavtool call or before the resampler created its
+        // file, the removed fragment is complete, and the next render resamples one note again.
+        if (run.cancelled || run.timedOut) {
+            for (int i = int(plan.steps().size()) - 1; i >= 0; --i) {
+                const auto &step = plan.steps().at(i);
+                std::error_code timeError;
+                const auto written = fs::last_write_time(step.cacheFile, timeError);
+                if (step.silent || timeError || writtenBefore[size_t(i)] == written) {
+                    continue;
+                }
+                fs::remove(step.cacheFile, error);
+                break;
+            }
+        }
+
         if (run.cancelled) {
             outcome.cancelled = true;
             return outcome;

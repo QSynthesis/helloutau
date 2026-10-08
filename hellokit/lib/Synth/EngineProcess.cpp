@@ -11,6 +11,7 @@
 #include <chrono>
 #include <string>
 #include <mutex>
+#include <optional>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -31,8 +32,9 @@ namespace hello::kit {
             diagnostics.push_back({DiagnosticSeverity::Error, message});
         }
 
-        // The interval in milliseconds at which a running script is checked for cancellation
-        constexpr int ScriptPollInterval = 100;
+        // The interval in milliseconds at which a running engine or script is checked for
+        // cancellation and for its time limit
+        constexpr int PollInterval = 100;
 
         // Kills the script of process and the engines it started, which a kill of the script
         // alone would leave running. On Windows these are the descendants of the command
@@ -206,7 +208,8 @@ namespace hello::kit {
     }
 
     EngineRun EngineProcess::run(const std::filesystem::path &program, const QStringList &arguments,
-                                 DiagnosticList &diagnostics) const {
+                                 DiagnosticList &diagnostics,
+                                 const std::function<bool()> &cancelled) const {
         EngineRun result;
 
         // args[0] is the name passed to the program, and executable() is the file executed. They
@@ -241,12 +244,37 @@ namespace hello::kit {
         result.started = true;
 
         // Both streams are read by communicate() rather than manually. A full pipe blocks its
-        // writer, so draining the streams sequentially deadlocks with a verbose engine.
-        auto exchanged = process.communicate({}, timeout);
-        const bool timedOut = !exchanged && process.errorCode() == std::errc::timed_out;
-        if (timedOut) {
-            // communicate() leaves the engine running at the time limit. The kill closes its end
-            // of the pipe, and the next call returns the output written before the kill.
+        // writer, so draining the streams sequentially deadlocks with a verbose engine. Each
+        // call is limited to the poll interval, and the next call resumes the exchange.
+        const auto deadline =
+            std::chrono::steady_clock::now() + std::chrono::milliseconds(std::max(0, timeout));
+        std::optional<std::tuple<std::string, std::string>> exchanged;
+        bool timedOut = false;
+        bool stopped = false;
+        for (;;) {
+            int slice = PollInterval;
+            if (timeout >= 0) {
+                const auto remaining = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                           deadline - std::chrono::steady_clock::now())
+                                           .count();
+                if (remaining <= 0) {
+                    timedOut = true;
+                    break;
+                }
+                slice = int(std::min<qint64>(slice, remaining));
+            }
+            exchanged = process.communicate({}, slice);
+            if (exchanged || process.errorCode() != std::errc::timed_out) {
+                break;
+            }
+            if (cancelled && cancelled()) {
+                stopped = true;
+                break;
+            }
+        }
+        if (timedOut || stopped) {
+            // communicate() leaves the engine running. The kill closes its end of the pipe, and
+            // the next call returns the output written before the kill.
             std::ignore = process.kill();
             exchanged = process.communicate();
         }
@@ -256,6 +284,10 @@ namespace hello::kit {
         }
         m_outputLog->record(program, result.output);
 
+        if (stopped) {
+            result.cancelled = true;
+            return result;
+        }
         if (timedOut) {
             result.timedOut = true;
             fail(diagnostics, tr("The engine \"%1\" did not finish within %2 seconds and was "
@@ -305,7 +337,7 @@ namespace hello::kit {
 
         const auto deadline =
             std::chrono::steady_clock::now() + std::chrono::milliseconds(std::max(0, timeout));
-        while (!process.wait(ScriptPollInterval)) {
+        while (!process.wait(PollInterval)) {
             if (cancelled && cancelled()) {
                 killTree(process);
                 result.cancelled = true;

@@ -67,8 +67,8 @@ namespace hello::kit {
         /// Whether the engine was killed because it exceeded the time limit.
         bool timedOut = false;
 
-        /// Whether the script was killed, with the processes it started, because the caller
-        /// cancelled it.
+        /// Whether the engine or the script was killed because the caller cancelled it. A script
+        /// is killed with the processes that it started.
         bool cancelled = false;
 
         /// All output of the engine on both streams, for the diagnostic on failure.
@@ -119,8 +119,16 @@ namespace hello::kit {
         ///
         /// \a program is used as given rather than searched for along \c PATH, so that the
         /// selected engine runs and not a program of the same name in an earlier directory.
+        ///
+        /// \a cancelled, if given, is queried about every 100 milliseconds while the engine
+        /// runs. Once it returns true, the engine is killed and \c EngineRun::cancelled is set.
+        /// The output written before the kill is retained in \c EngineRun::output.
+        ///
+        /// \warning A killed or timed-out engine may leave a partially written output file. The
+        ///          caller removes the file, because the next render would otherwise reuse it.
         virtual EngineRun run(const std::filesystem::path &program, const QStringList &arguments,
-                              DiagnosticList &diagnostics) const;
+                              DiagnosticList &diagnostics,
+                              const std::function<bool()> &cancelled = {}) const;
 
         /// Returns the timestamped output collected by this process's log.
         QString outputLog() const;

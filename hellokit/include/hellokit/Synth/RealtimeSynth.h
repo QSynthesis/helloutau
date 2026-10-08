@@ -29,8 +29,8 @@ namespace hello::kit {
     /// file, whose name stands for every input of the note, so a note that did not change keeps
     /// its fragment and a changed one is rendered anew without further analysis.
     ///
-    /// Every function may be called from any thread. A running engine call is never stopped,
-    /// since that would leave a partial fragment in the cache; destruction waits for them.
+    /// Every function may be called from any thread. Destruction kills the running engine calls,
+    /// removes the fragments that they may have written partially, and waits for the workers.
     class HELLOKIT_SYNTH_EXPORT RealtimeSynth {
         Q_DECLARE_TR_FUNCTIONS(hello::kit::RealtimeSynth)
     public:

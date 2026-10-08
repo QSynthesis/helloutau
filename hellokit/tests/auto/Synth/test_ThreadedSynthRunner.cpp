@@ -61,7 +61,7 @@ namespace {
         }
 
         EngineRun run(const std::filesystem::path &program, const QStringList &arguments,
-                      DiagnosticList &) const override {
+                      DiagnosticList &, const std::function<bool()> &) const override {
             EngineRun out;
             const Behaviour *what = nullptr;
             {

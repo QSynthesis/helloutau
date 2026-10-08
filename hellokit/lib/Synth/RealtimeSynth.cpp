@@ -1,5 +1,6 @@
 #include "RealtimeSynth.h"
 
+#include <atomic>
 #include <condition_variable>
 #include <limits>
 #include <map>
@@ -60,7 +61,9 @@ namespace hello::kit {
         mutable std::mutex mutex;
         std::condition_variable work;
         mutable std::condition_variable changed;
-        bool stopping = false;
+        // Written under the lock. The flag is atomic because each engine call reads it without
+        // the lock to determine whether to kill the engine.
+        std::atomic_bool stopping{false};
 
         // From the current plan
         QList<SynthStep> steps;
@@ -135,7 +138,20 @@ namespace hello::kit {
                 std::error_code error;
                 if (!fs::exists(step.cacheFile, error)) {
                     fs::create_directories(directory, error);
-                    engine->run(engines.resampler, step.resamplerArguments, engineDiagnostics);
+                    const auto run =
+                        engine->run(engines.resampler, step.resamplerArguments, engineDiagnostics,
+                                    [this] { return stopping.load(); });
+                    // A killed resampler may have written part of the fragment, which the next
+                    // render would reuse as complete.
+                    if (run.cancelled || run.timedOut) {
+                        fs::remove(step.cacheFile, error);
+                    }
+                    if (run.cancelled) {
+                        lock.lock();
+                        fragments[step.cacheFile].state = Waiting;
+                        changed.notify_all();
+                        continue;
+                    }
                 }
                 auto samples = readFragment(step.cacheFile);
 

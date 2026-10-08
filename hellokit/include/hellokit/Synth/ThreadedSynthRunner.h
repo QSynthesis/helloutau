@@ -20,7 +20,8 @@ namespace hello::kit {
     /// Progress is reported in two steps per note: its resampling and its append to the track.
     /// The first step of a silent note, or of a note whose fragment is reused, is complete before
     /// any engine runs. A render from a full cache therefore reports progress for each append. A
-    /// cancellation takes effect between the resampler calls and between the wavtool calls.
+    /// cancellation kills the running engine calls and removes the fragments that the killed
+    /// resampler calls may have written partially.
     ///
     /// \sa docs/Synth.md
     class HELLOKIT_SYNTH_EXPORT ThreadedSynthRunner : public SynthRunner {

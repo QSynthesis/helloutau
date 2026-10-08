@@ -136,7 +136,11 @@ namespace hello::kit {
         // at a time regardless of the worker thread. Each note counts as two steps, its
         // resampling and its append.
         QMutex lock;
+        // stopped prevents further notes from starting. aborted also kills the running calls,
+        // and only a cancellation sets it, because a failure under stopOnFirstFailure leaves the
+        // other notes intact.
         std::atomic_bool stopped{false};
+        std::atomic_bool aborted{false};
         int done = 0;
 
         const auto report = [&](int count) {
@@ -182,10 +186,18 @@ namespace hello::kit {
                         return;
                     }
                     auto &result = outcomes[i];
-                    const auto run = engine->run(engines.resampler, steps.at(i).resamplerArguments,
-                                                 result.diagnostics);
+                    const auto run =
+                        engine->run(engines.resampler, steps.at(i).resamplerArguments,
+                                    result.diagnostics, [&] { return aborted.load(); });
                     result.started = run.started;
                     result.engineOutput = run.output.trimmed();
+
+                    // A killed resampler may have written part of the fragment, which the next
+                    // render would reuse as complete.
+                    if (run.cancelled || run.timedOut) {
+                        std::error_code removeError;
+                        fs::remove(steps.at(i).cacheFile, removeError);
+                    }
 
                     // Success is determined by the existence of the fragment, not by the exit
                     // code, because engines report inconsistently and some report nothing.
@@ -196,12 +208,12 @@ namespace hello::kit {
                 });
             }
 
-            // Queried while the pool runs, so that a cancelled render starts no further notes.
-            // Running calls are allowed to finish, because killing an engine midway would leave
-            // a partially written fragment in the cache that the next render would reuse.
+            // Queried while the pool runs, so that a cancelled render starts no further notes and
+            // kills the running calls.
             while (!pool.waitForDone(50)) {
                 if (cancelled()) {
                     stopped.store(true);
+                    aborted.store(true);
                 }
             }
         }
@@ -252,7 +264,14 @@ namespace hello::kit {
                 return outcome;
             }
             if (step.silent || fs::exists(step.cacheFile)) {
-                const auto run = engine->run(engines.wavtool, step.wavtoolArguments, diagnostics);
+                const auto run =
+                    engine->run(engines.wavtool, step.wavtoolArguments, diagnostics, cancelled);
+                if (run.cancelled) {
+                    fs::remove(header, error);
+                    fs::remove(data, error);
+                    outcome.cancelled = true;
+                    return outcome;
+                }
                 if (!run.started) {
                     return outcome;
                 }

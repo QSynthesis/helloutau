@@ -65,7 +65,7 @@ namespace {
         }
 
         EngineRun run(const fs::path &program, const QStringList &arguments,
-                      DiagnosticList &diagnostics) const override {
+                      DiagnosticList &diagnostics, const std::function<bool()> &) const override {
             Q_UNUSED(program);
             Q_UNUSED(diagnostics);
             while (m_record.held.load()) {
