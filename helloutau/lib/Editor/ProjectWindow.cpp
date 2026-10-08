@@ -593,7 +593,7 @@ namespace hello::daw {
             }
             kit::Track track;
             track.voiceDir = tracks.at(0).voiceDir();
-            return track.voiceDirectory(editor->settings().utauDirectory());
+            return track.voiceDirectory(editor->settings().voiceLocations());
         }
 
         bool projectPathsValid() const {
@@ -610,7 +610,8 @@ namespace hello::daw {
                 return false;
             }
             if (!project.tracks.isEmpty() && !project.tracks.first().voiceDir.isEmpty()) {
-                const auto root = project.tracks.first().voiceDirectory(utau);
+                const auto root =
+                    project.tracks.first().voiceDirectory(editor->settings().voiceLocations());
                 std::error_code error;
                 if (root.empty() || !std::filesystem::is_directory(root, error)) {
                     return false;
@@ -2207,14 +2208,14 @@ namespace hello::daw {
         VoiceBankWindow *editVoiceBank() {
             stdc_decl_t;
             const auto track = document->session()->snapshot().tracks.value(0);
-            const auto root = track.voiceDirectory(editor->settings().utauDirectory());
+            const auto root = track.voiceDirectory(editor->settings().voiceLocations());
             if (track.voiceDir.isEmpty() || root.empty()) {
                 QMessageBox::information(
                     &decl, tr("Edit Voice Bank"),
                     track.voiceDir.isEmpty()
                         ? tr("The project names no voice bank.")
-                        : tr("The voice bank \"%1\" is in the UTAU folder, which is not set in the "
-                             "settings.")
+                        : tr("The voice bank \"%1\" cannot be located, because no folder against "
+                             "which it is resolved exists.")
                               .arg(track.voiceDir));
                 return nullptr;
             }
@@ -2367,12 +2368,12 @@ namespace hello::daw {
             return false;
         }
         const auto document = impl.document.get();
-        const auto utau = impl.editor->settings().utauDirectory();
         impl.voiceBankRoot = impl.voiceRoot();
         VoiceBankCharsetDialog selector(this);
         selector.setRoot(impl.voiceBankRoot);
         kit::DiagnosticList diagnostics;
-        const bool loaded = document->loadVoiceBank(utau, &selector, diagnostics);
+        const bool loaded = document->loadVoiceBank(impl.editor->settings().voiceLocations(),
+                                                    &selector, diagnostics);
         DiagnosticBox::show(this, tr("Voice Bank"), diagnostics);
         return loaded;
     }

@@ -49,6 +49,6 @@ Mode2=True
 
 ## 对 HelloUtau 的影响
 
-- HelloUtau 不在 UTAU 的安装目录中运行，因此须由用户在设置中指定 UTAU 的安装目录，用于解析 `%VOICE%` 与相对路径。未指定时，这两种写法无法解析，须由用户为工程选择音源。
+- HelloUtau 不在 UTAU 的安装目录中运行，因此 `%VOICE%` 与相对路径改由设置中的音源文件夹与 UTAU 文件夹解析，规则见 [`../note.md`](../note.md)「音源文件夹」。
 - 保存时 `CacheDir` 按上述规则改写。
 - 将来调用原版 UTAU 插件时，临时文件须按上述写法生成，`VoiceDir` 与 `CacheDir` 写成解析后的绝对路径。

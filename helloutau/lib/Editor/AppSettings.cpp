@@ -3,7 +3,9 @@
 
 #include <algorithm>
 
+#include <QtCore/QCoreApplication>
 #include <QtCore/QDir>
+#include <QtCore/QFileInfo>
 #include <QtCore/QStandardPaths>
 
 #include <stdcorelib/pimpl.h>
@@ -17,6 +19,7 @@ namespace hello::daw {
     namespace {
 
         constexpr char KeyUtauDirectory[] = "engines/utauDirectory";
+        constexpr char KeyRelativeVoiceDirInUtau[] = "voiceBanks/relativeToUtau";
         constexpr char KeyResampler[] = "engines/resampler";
         constexpr char KeyWavtool[] = "engines/wavtool";
         constexpr char KeyRenderLogAccumulated[] = "renderLog/accumulated";
@@ -179,6 +182,37 @@ namespace hello::daw {
     void AppSettings::setWavtool(const QString &path) {
         stdc_impl_t;
         impl.setValue(KeyWavtool, normalizedPathText(path).toStdString());
+    }
+
+    std::filesystem::path AppSettings::voiceFolder() const {
+        const auto directory = QFileInfo(fileName()).absolutePath();
+        return std::filesystem::path(directory.toStdU16String()) / u"voice";
+    }
+
+    bool AppSettings::isRelativeVoiceDirInUtau() const {
+        stdc_impl_t;
+        return impl.value(KeyRelativeVoiceDirInUtau).toBool(true);
+    }
+
+    void AppSettings::setRelativeVoiceDirInUtau(bool inUtau) {
+        stdc_impl_t;
+        impl.setValue(KeyRelativeVoiceDirInUtau, inUtau);
+    }
+
+    kit::VoiceLocations AppSettings::voiceLocations() const {
+        kit::VoiceLocations locations;
+        locations.voiceFolders.push_back(voiceFolder());
+        const auto utau = utauDirectory();
+        std::error_code error;
+        const bool utauExists = !utau.empty() && std::filesystem::is_directory(utau, error);
+        if (utauExists) {
+            locations.voiceFolders.push_back(utau / u"voice");
+        }
+        locations.relativeBase =
+            utauExists && isRelativeVoiceDirInUtau()
+                ? utau
+                : std::filesystem::path(QCoreApplication::applicationDirPath().toStdU16String());
+        return locations;
     }
 
     bool AppSettings::isRenderLogAccumulated() const {

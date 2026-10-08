@@ -1740,8 +1740,8 @@ Trust and use them for rendering?</source>
         <translation>工程未指定音源。</translation>
     </message>
     <message>
-        <source>The voice bank &quot;%1&quot; is in the UTAU folder, which is not set in the settings.</source>
-        <translation>音源「%1」位于 UTAU 文件夹中，但设置中未指定 UTAU 文件夹。</translation>
+        <source>The voice bank &quot;%1&quot; cannot be located, because no folder against which it is resolved exists.</source>
+        <translation>无法确定音源「%1」的位置，因为用于解析它的文件夹均不存在。</translation>
     </message>
     <message>
         <source>A rest has no entry.</source>
@@ -2020,8 +2020,20 @@ Trust and use them for rendering?</source>
         <translation>UTAU 文件夹(&amp;U)：</translation>
     </message>
     <message>
-        <source>Resolves the voice banks of projects that name them relative to UTAU, such as %VOICE%.</source>
-        <translation>工程以相对于 UTAU 的路径（如 %VOICE%）指定音源时，据此解析音源的位置。</translation>
+        <source>The folder that contains utau.exe. A tool that a project names by a relative path is resolved against it, and its voice and plugins folders are used as well.</source>
+        <translation>utau.exe 所在的文件夹。工程以相对路径指定的工具据此解析，其中的 voice 与 plugins 文件夹也会被使用。</translation>
+    </message>
+    <message>
+        <source>Resolve a &amp;relative voice bank path against the UTAU folder</source>
+        <translation>相对路径的音源按 UTAU 文件夹解析(&amp;R)</translation>
+    </message>
+    <message>
+        <source>UTAU resolves a relative voice bank path against its own folder. If this option is cleared, or if the UTAU folder does not exist, the path is resolved against the folder of HelloUtau.</source>
+        <translation>UTAU 按自身所在的文件夹解析相对路径的音源。取消此选项，或 UTAU 文件夹不存在时，按 HelloUtau 所在的文件夹解析。</translation>
+    </message>
+    <message>
+        <source>The voice folders that %VOICE% denotes, in decreasing priority:</source>
+        <translation>%VOICE% 所指的音源文件夹，按优先级从高到低：</translation>
     </message>
 </context>
 <context>
@@ -3179,8 +3191,8 @@ Write them again without these chunks? The audio stays the same. The files are w
         <translation>此文件既不是 HelloUtau 工程，也不是 UST。</translation>
     </message>
     <message>
-        <source>The voice bank &quot;%1&quot; is in the UTAU folder, which is not set.</source>
-        <translation>音源「%1」位于 UTAU 文件夹中，但未设置 UTAU 文件夹。</translation>
+        <source>The voice bank &quot;%1&quot; cannot be located, because no folder against which it is resolved exists.</source>
+        <translation>无法确定音源「%1」的位置，因为用于解析它的文件夹均不存在。</translation>
     </message>
     <message>
         <source>The chosen encoding could not be recorded in &quot;%1&quot;, so it will be asked again next time.</source>

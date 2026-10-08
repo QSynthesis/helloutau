@@ -193,7 +193,7 @@ namespace hello::daw {
         ClassicPluginExchange::Paths paths;
         paths.project = document->filePath();
         paths.voiceDirectory =
-            project.tracks.first().voiceDirectory(window->editor()->settings().utauDirectory());
+            project.tracks.first().voiceDirectory(window->editor()->settings().voiceLocations());
         if (!paths.project.empty()) {
             paths.cacheDirectory = kit::Project::cacheDirectoryOf(paths.project);
         }

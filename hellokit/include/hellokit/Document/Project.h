@@ -3,6 +3,7 @@
 
 #include <filesystem>
 #include <optional>
+#include <vector>
 
 #include <QtCore/QCoreApplication>
 #include <QtCore/QByteArray>
@@ -20,6 +21,25 @@
 
 namespace hello::kit {
 
+    /// The directories against which the \c VoiceDir of a track is resolved.
+    struct HELLOKIT_DOCUMENT_EXPORT VoiceLocations {
+        /// The voice folders that the \c %VOICE% prefix denotes, in decreasing priority. A
+        /// folder that does not exist is skipped.
+        std::vector<std::filesystem::path> voiceFolders;
+
+        /// The directory against which a relative \c VoiceDir without the prefix is resolved,
+        /// or an empty path if none.
+        std::filesystem::path relativeBase;
+
+        /// Returns the locations as UTAU uses them: \c %VOICE% denotes the \c voice directory
+        /// in \a utauDirectory, and a relative path is relative to \a utauDirectory. Both are
+        /// empty if \a utauDirectory is empty.
+        static VoiceLocations ofUtau(const std::filesystem::path &utauDirectory);
+
+        bool operator==(const VoiceLocations &other) const;
+        bool operator!=(const VoiceLocations &other) const;
+    };
+
     /// One voice part. A UST contains exactly one.
     struct HELLOKIT_DOCUMENT_EXPORT Track {
         /// Not representable in UST, and therefore dropped on export to \c .ust.
@@ -30,32 +50,36 @@ namespace hello::kit {
 
         QList<Note> notes;
 
-        /// The prefix of \c voiceDir that denotes the \c voice directory of the UTAU
-        /// installation.
+        /// The prefix of \c voiceDir that denotes a voice folder.
         ///
         /// TODO: Move UTAU-specific path expansion and serialization to a compatibility class.
         static constexpr QStringView voicePrefix = u"%VOICE%";
 
-        /// Returns the voice bank directory that \c voiceDir denotes, resolved as UTAU resolves
-        /// it: a \c %VOICE% prefix denotes the \c voice directory in \a utauDirectory, and a
-        /// relative path is relative to \a utauDirectory, not to the project file. See
-        /// docs/claude/utau-voicedir-cachedir.md.
+        /// Returns the voice bank directory that \c voiceDir denotes.
         ///
-        /// \param utauDirectory the directory that contains \c utau.exe, or an empty path if
-        ///                      unknown
-        /// \return an empty path if \c voiceDir is empty, or if it requires \a utauDirectory and
-        ///         that is empty
-        std::filesystem::path voiceDirectory(const std::filesystem::path &utauDirectory) const;
+        /// A \c %VOICE% prefix denotes the first voice folder of \a locations that contains the
+        /// remainder of the path. A relative path is relative to the \c relativeBase of
+        /// \a locations, not to the project file. UTAU resolves both against the directory of
+        /// \c utau.exe, see docs/claude/utau-voicedir-cachedir.md.
+        ///
+        /// \return the directory, which exists unless no voice folder contains it. If no voice
+        ///         folder contains a \c %VOICE% path, the path in the first existing voice folder
+        ///         is returned. An empty path is returned if \c voiceDir is empty, if no voice
+        ///         folder exists for a \c %VOICE% path, or if \c relativeBase is empty for a
+        ///         relative path.
+        std::filesystem::path voiceDirectory(const VoiceLocations &locations) const;
 
         /// Returns the value of \c voiceDir for the voice bank in \a directory, as UTAU writes it
-        /// on save: with the \c %VOICE% prefix if \a directory is inside the \c voice directory
-        /// of \a utauDirectory, otherwise the absolute path.
+        /// on save: with the \c %VOICE% prefix if \a directory is inside a voice folder of
+        /// \a locations, and otherwise the absolute path.
+        ///
+        /// The prefix is used only if it resolves to \a directory again. A folder of the same
+        /// name in a voice folder of higher priority would otherwise take its place, and the
+        /// absolute path is written instead.
         ///
         /// \param directory an absolute path
-        /// \param utauDirectory the directory that contains \c utau.exe, or an empty path if
-        ///                      unknown
         static QString voiceDirOf(const std::filesystem::path &directory,
-                                  const std::filesystem::path &utauDirectory);
+                                  const VoiceLocations &locations);
     };
 
     /// Project-wide settings.

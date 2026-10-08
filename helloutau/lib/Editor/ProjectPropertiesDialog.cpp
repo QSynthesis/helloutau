@@ -74,13 +74,14 @@ namespace hello::daw {
         }
 
         // Returns whether two voiceDir values resolve to the same directory
-        bool sameVoiceDirectory(const QString &first, const QString &second, const fs::path &utau) {
+        bool sameVoiceDirectory(const QString &first, const QString &second,
+                                const kit::VoiceLocations &locations) {
             kit::Track firstTrack;
             firstTrack.voiceDir = first;
             kit::Track secondTrack;
             secondTrack.voiceDir = second;
-            const auto firstPath = firstTrack.voiceDirectory(utau);
-            const auto secondPath = secondTrack.voiceDirectory(utau);
+            const auto firstPath = firstTrack.voiceDirectory(locations);
+            const auto secondPath = secondTrack.voiceDirectory(locations);
             if (firstPath.empty() || secondPath.empty()) {
                 return false;
             }
@@ -90,7 +91,6 @@ namespace hello::daw {
             const auto secondCanonical = fs::weakly_canonical(secondPath, secondError);
             return !firstError && !secondError && firstCanonical == secondCanonical;
         }
-
     }
 
     ProjectPropertiesDialog::ProjectPropertiesDialog(const kit::Project &project,
@@ -109,18 +109,21 @@ namespace hello::daw {
         m_flags = new QLineEdit(values.flags);
         m_outputFile = new QLineEdit(QDir::toNativeSeparators(values.outputFile));
 
-        // The folders of the voice folder of UTAU are listed by name, and each item holds the
-        // %VOICE% value of its folder.
+        // The folders in the voice folders are listed by name, and each item holds the %VOICE%
+        // value of its folder. A name in a voice folder of higher priority hides the same name
+        // in a voice folder of lower priority, as the prefix resolves.
         m_voiceDir = new QComboBox();
         m_voiceDir->setEditable(true);
         m_voiceDir->setInsertPolicy(QComboBox::NoInsert);
         m_voiceDirInvalid = addInvalidMark(m_voiceDir->lineEdit(), warningIcon);
-        if (const auto root = voiceRoot(); !root.empty()) {
+        for (const auto &root : m_settings.voiceLocations().voiceFolders) {
             const auto folders =
                 QDir(textOf(root)).entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
             for (const auto &folder : folders) {
-                m_voiceDir->addItem(folder.fileName(),
-                                    kit::Track::voicePrefix.toString() + folder.fileName());
+                const auto value = kit::Track::voicePrefix.toString() + folder.fileName();
+                if (m_voiceDir->findData(value) < 0) {
+                    m_voiceDir->addItem(folder.fileName(), value);
+                }
             }
         }
         showVoiceDir(project.tracks.isEmpty()
@@ -223,28 +226,22 @@ namespace hello::daw {
 
     ProjectPropertiesDialog::~ProjectPropertiesDialog() = default;
 
-    fs::path ProjectPropertiesDialog::voiceRoot() const {
-        const auto utau = m_settings.utauDirectory();
-        return utau.empty() ? fs::path() : utau / u"voice";
-    }
-
     void ProjectPropertiesDialog::showVoiceDir(const QString &voiceDir) {
-        // A value that resolves into the voice folder is shown by its name in that folder.
+        // A value that resolves into a voice folder is shown by its name in that folder, as an
+        // item that holds the %VOICE% value. Any other value is shown as written.
+        const auto locations = m_settings.voiceLocations();
         auto value = voiceDir;
         auto display = voiceDir;
-        const auto utau = m_settings.utauDirectory();
-        if (!voiceDir.isEmpty() && !utau.empty()) {
-            kit::Track track;
-            track.voiceDir = voiceDir;
-            if (const auto directory = track.voiceDirectory(utau); !directory.empty()) {
-                value = kit::Track::voiceDirOf(directory, utau);
-                if (value.startsWith(kit::Track::voicePrefix)) {
-                    display = value.mid(kit::Track::voicePrefix.size());
-                }
+        kit::Track track;
+        track.voiceDir = voiceDir;
+        if (const auto directory = track.voiceDirectory(locations); !directory.empty()) {
+            value = kit::Track::voiceDirOf(directory, locations);
+            if (value.startsWith(kit::Track::voicePrefix)) {
+                display = value.mid(kit::Track::voicePrefix.size());
             }
         }
         auto index = m_voiceDir->findData(value);
-        if (index < 0 && value != voiceDir && !display.isEmpty()) {
+        if (index < 0 && value.startsWith(kit::Track::voicePrefix) && value != display) {
             m_voiceDir->addItem(display, value);
             index = m_voiceDir->count() - 1;
         }
@@ -253,16 +250,14 @@ namespace hello::daw {
     }
 
     QString ProjectPropertiesDialog::voiceDirText() const {
+        // The name of an item stands for its %VOICE% value. Any other text is the value itself,
+        // so that a relative path is relative to the relativeBase of the voice locations, as in
+        // the project file.
         const auto text = m_voiceDir->lineEdit()->text();
         for (int index = 0; index < m_voiceDir->count(); ++index) {
             if (text == m_voiceDir->itemText(index)) {
                 return m_voiceDir->itemData(index).toString();
             }
-        }
-        // A relative name is a folder in the voice folder, as the names of the items are.
-        if (!text.isEmpty() && !text.startsWith(kit::Track::voicePrefix) &&
-            !QDir::isAbsolutePath(text)) {
-            return kit::Track::voicePrefix.toString() + QDir::toNativeSeparators(text);
         }
         return text;
     }
@@ -270,25 +265,31 @@ namespace hello::daw {
     fs::path ProjectPropertiesDialog::voiceDirectory() const {
         kit::Track track;
         track.voiceDir = voiceDirText();
-        return track.voiceDirectory(m_settings.utauDirectory());
+        return track.voiceDirectory(m_settings.voiceLocations());
     }
 
     void ProjectPropertiesDialog::browseVoiceDir() {
-        // The file dialog starts in the current voice bank, or else in the voice folder of
-        // UTAU, or else in the folder of this program.
+        // The file dialog starts in the current voice bank, or else in the first voice folder
+        // that exists, or else in the folder of this program.
+        const auto locations = m_settings.voiceLocations();
         std::error_code error;
         auto start = voiceDirectory();
         if (start.empty() || !fs::is_directory(start, error)) {
-            start = voiceRoot();
+            start.clear();
+            for (const auto &folder : locations.voiceFolders) {
+                if (fs::is_directory(folder, error)) {
+                    start = folder;
+                    break;
+                }
+            }
         }
-        if (start.empty() || !fs::is_directory(start, error)) {
+        if (start.empty()) {
             start = fs::path(QCoreApplication::applicationDirPath().toStdU16String());
         }
         const auto chosen =
             QFileDialog::getExistingDirectory(this, tr("Choose Voice Folder"), textOf(start));
         if (!chosen.isEmpty()) {
-            showVoiceDir(kit::Track::voiceDirOf(fs::path(chosen.toStdU16String()),
-                                                m_settings.utauDirectory()));
+            showVoiceDir(kit::Track::voiceDirOf(fs::path(chosen.toStdU16String()), locations));
         }
     }
 
@@ -386,7 +387,8 @@ namespace hello::daw {
         if (!m_project.tracks.isEmpty()) {
             const auto &before = m_project.tracks.first().voiceDir;
             const auto voice = voiceDirText();
-            if (voice != before && !sameVoiceDirectory(before, voice, utau)) {
+            if (voice != before &&
+                !sameVoiceDirectory(before, voice, m_settings.voiceLocations())) {
                 changes.voiceDir = voice;
             }
         }

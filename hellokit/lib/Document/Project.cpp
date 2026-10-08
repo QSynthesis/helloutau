@@ -94,39 +94,75 @@ namespace hello::kit {
 
     }
 
-    std::filesystem::path Track::voiceDirectory(const std::filesystem::path &utauDirectory) const {
+    VoiceLocations VoiceLocations::ofUtau(const std::filesystem::path &utauDirectory) {
+        if (utauDirectory.empty()) {
+            return {};
+        }
+        return {{utauDirectory / u"voice"}, utauDirectory};
+    }
+
+    bool VoiceLocations::operator==(const VoiceLocations &other) const {
+        return voiceFolders == other.voiceFolders && relativeBase == other.relativeBase;
+    }
+
+    bool VoiceLocations::operator!=(const VoiceLocations &other) const {
+        return !(*this == other);
+    }
+
+    std::filesystem::path Track::voiceDirectory(const VoiceLocations &locations) const {
         if (voiceDir.isEmpty()) {
             return {};
         }
         if (voiceDir.startsWith(voicePrefix)) {
-            if (utauDirectory.empty()) {
-                return {};
-            }
             // A separator after the prefix would otherwise make the rest an absolute path.
             auto rest = voiceDir.mid(voicePrefix.size());
             while (rest.startsWith(u'\\') || rest.startsWith(u'/')) {
                 rest.remove(0, 1);
             }
-            return utauDirectory / u"voice" / Project::pathOf(rest);
+            const auto relative = Project::pathOf(rest);
+            std::filesystem::path fallback;
+            for (const auto &folder : locations.voiceFolders) {
+                std::error_code error;
+                if (folder.empty() || !std::filesystem::is_directory(folder, error)) {
+                    continue;
+                }
+                const auto candidate = folder / relative;
+                if (std::filesystem::is_directory(candidate, error)) {
+                    return candidate;
+                }
+                if (fallback.empty()) {
+                    fallback = candidate;
+                }
+            }
+            return fallback;
         }
         const auto path = Project::pathOf(voiceDir);
         if (path.is_absolute()) {
             return path;
         }
-        if (utauDirectory.empty()) {
+        if (locations.relativeBase.empty()) {
             return {};
         }
-        return utauDirectory / path;
+        return locations.relativeBase / path;
     }
 
     QString Track::voiceDirOf(const std::filesystem::path &directory,
-                              const std::filesystem::path &utauDirectory) {
+                              const VoiceLocations &locations) {
         const auto bank = directoryOf(directory);
-        if (!utauDirectory.empty()) {
-            const auto relative = bank.lexically_relative(directoryOf(utauDirectory / u"voice"));
-            if (!relative.empty() && relative != u"." && *relative.begin() != u"..") {
-                return voicePrefix.toString() +
-                       QDir::toNativeSeparators(QString::fromStdU16String(relative.u16string()));
+        for (const auto &folder : locations.voiceFolders) {
+            if (folder.empty()) {
+                continue;
+            }
+            const auto relative = bank.lexically_relative(directoryOf(folder));
+            if (relative.empty() || relative == u"." || *relative.begin() == u"..") {
+                continue;
+            }
+            Track track;
+            track.voiceDir =
+                voicePrefix.toString() +
+                QDir::toNativeSeparators(QString::fromStdU16String(relative.u16string()));
+            if (directoryOf(track.voiceDirectory(locations)) == bank) {
+                return track.voiceDir;
             }
         }
         return QDir::toNativeSeparators(QString::fromStdU16String(bank.u16string()));

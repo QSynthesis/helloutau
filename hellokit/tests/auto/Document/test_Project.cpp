@@ -3,6 +3,7 @@
 #include <QtCore/QByteArray>
 #include <QtCore/QDir>
 #include <QtCore/QFile>
+#include <QtCore/QTemporaryDir>
 #include <QtTest/QTest>
 
 #include <hellokit/Document/Project.h>
@@ -49,7 +50,7 @@ private:
     static QString resolved(QStringView voiceDir, const fs::path &utauDirectory) {
         Track track;
         track.voiceDir = voiceDir.toString();
-        const auto path = track.voiceDirectory(utauDirectory);
+        const auto path = track.voiceDirectory(VoiceLocations::ofUtau(utauDirectory));
         return path.empty() ? QString() : textOf(path);
     }
 
@@ -300,7 +301,10 @@ private Q_SLOTS:
     // Measured in UTAU: a relative path is relative to the directory of utau.exe, not to the
     // project file or the voice directory. See docs/claude/utau-voicedir-cachedir.md.
     void a_voice_dir_resolves_as_utau_resolves_it() {
-        const auto utau = fs::temp_directory_path() / u"utau";
+        // A voice folder that does not exist is skipped, so this one must exist.
+        QTemporaryDir dir;
+        const auto utau = fs::path(dir.path().toStdU16String()) / u"utau";
+        fs::create_directories(utau / u"voice");
         const auto bank = fs::temp_directory_path() / u"bank";
 
         QCOMPARE(resolved(u"%VOICE%uta", utau), textOf(utau / u"voice" / u"uta"));
@@ -339,18 +343,22 @@ private Q_SLOTS:
 
     // Measured in UTAU: an absolute path inside the voice directory is saved with the prefix.
     void a_voice_dir_is_written_as_utau_writes_it() {
-        const auto utau = fs::temp_directory_path() / u"utau";
+        QTemporaryDir dir;
+        const auto utau = fs::path(dir.path().toStdU16String()) / u"utau";
         const auto voice = utau / u"voice";
+        fs::create_directories(voice);
         const auto bank = fs::temp_directory_path() / u"bank";
         const QString separator = QDir::separator();
+        const auto locations = VoiceLocations::ofUtau(utau);
 
-        QCOMPARE(Track::voiceDirOf(voice / u"hp_abs", utau), QStringLiteral("%VOICE%hp_abs"));
-        QCOMPARE(Track::voiceDirOf(voice / u"hp_abs" / u"", utau), QStringLiteral("%VOICE%hp_abs"));
-        QCOMPARE(Track::voiceDirOf(voice / u"sub" / u"uta", utau),
+        QCOMPARE(Track::voiceDirOf(voice / u"hp_abs", locations), QStringLiteral("%VOICE%hp_abs"));
+        QCOMPARE(Track::voiceDirOf(voice / u"hp_abs" / u"", locations),
+                 QStringLiteral("%VOICE%hp_abs"));
+        QCOMPARE(Track::voiceDirOf(voice / u"sub" / u"uta", locations),
                  QStringLiteral("%VOICE%sub") + separator + QStringLiteral("uta"));
-        QCOMPARE(Track::voiceDirOf(bank, utau), nativeOf(bank));
-        QCOMPARE(Track::voiceDirOf(voice, utau), nativeOf(voice));
-        QCOMPARE(Track::voiceDirOf(utau / u"voices" / u"uta", utau),
+        QCOMPARE(Track::voiceDirOf(bank, locations), nativeOf(bank));
+        QCOMPARE(Track::voiceDirOf(voice, locations), nativeOf(voice));
+        QCOMPARE(Track::voiceDirOf(utau / u"voices" / u"uta", locations),
                  nativeOf(utau / u"voices" / u"uta"));
         QCOMPARE(Track::voiceDirOf(voice / u"hp_abs", {}), nativeOf(voice / u"hp_abs"));
     }

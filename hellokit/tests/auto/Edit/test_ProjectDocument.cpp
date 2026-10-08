@@ -332,7 +332,7 @@ private Q_SLOTS:
         QSignalSpy spy(document.get(), &ProjectDocument::voiceBankChanged);
         FixedVoiceBankSelector selector(QStringLiteral("Shift_JIS"));
         DiagnosticList diagnostics;
-        QVERIFY(document->loadVoiceBank(utau, &selector, diagnostics));
+        QVERIFY(document->loadVoiceBank(VoiceLocations::ofUtau(utau), &selector, diagnostics));
         QVERIFY(diagnostics.empty());
         QCOMPARE(selector.asked, QList<fs::path>{fs::path()});
         QCOMPARE(spy.count(), 1);
@@ -345,7 +345,7 @@ private Q_SLOTS:
         QCOMPARE(readBytes(folder / "oto.ini"), unstatedOto);
 
         FixedVoiceBankSelector again(QStringLiteral("GBK"));
-        QVERIFY(document->loadVoiceBank(utau, &again, diagnostics));
+        QVERIFY(document->loadVoiceBank(VoiceLocations::ofUtau(utau), &again, diagnostics));
         QVERIFY(again.asked.isEmpty());
         QVERIFY(document->voiceBank()->find(60, QString::fromUtf8("あ")));
         QCOMPARE(spy.count(), 2);
@@ -360,7 +360,7 @@ private Q_SLOTS:
 
         FixedVoiceBankSelector selector(std::nullopt);
         DiagnosticList diagnostics;
-        QVERIFY(document->loadVoiceBank(utau, &selector, diagnostics));
+        QVERIFY(document->loadVoiceBank(VoiceLocations::ofUtau(utau), &selector, diagnostics));
         QVERIFY(!document->voiceBank()->find(60, QString::fromUtf8("あ")));
         QVERIFY(!fs::exists(utau / "voice" / "bank" / "hello-config.json"));
     }
@@ -375,7 +375,7 @@ private Q_SLOTS:
 
         FixedVoiceBankSelector selector(QStringLiteral("Shift_JIS"));
         DiagnosticList diagnostics;
-        QVERIFY(document->loadVoiceBank(utau, &selector, diagnostics));
+        QVERIFY(document->loadVoiceBank(VoiceLocations::ofUtau(utau), &selector, diagnostics));
         QVERIFY(document->voiceBank()->find(60, QString::fromUtf8("あ")));
         QVERIFY(!diagnostics.empty());
         QVERIFY(!hasError(diagnostics));
@@ -397,7 +397,7 @@ private Q_SLOTS:
         diagnostics.clear();
         document = singingWith(dir, QStringLiteral("%VOICE%missing"));
         QVERIFY(document);
-        QVERIFY(!document->loadVoiceBank(utau, &selector, diagnostics));
+        QVERIFY(!document->loadVoiceBank(VoiceLocations::ofUtau(utau), &selector, diagnostics));
         QVERIFY(!document->voiceBank());
         QVERIFY(hasError(diagnostics));
 
@@ -405,7 +405,7 @@ private Q_SLOTS:
         diagnostics.clear();
         document = singingWith(dir, QString());
         QVERIFY(document);
-        QVERIFY(!document->loadVoiceBank(utau, &selector, diagnostics));
+        QVERIFY(!document->loadVoiceBank(VoiceLocations::ofUtau(utau), &selector, diagnostics));
         QVERIFY(diagnostics.empty());
         QVERIFY(selector.asked.isEmpty());
     }

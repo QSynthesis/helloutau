@@ -693,15 +693,15 @@ namespace hello::daw {
 
     void Editor::showSettings(QWidget *from, const QString &page) {
         stdc_impl_t;
-        auto utau = settings().utauDirectory();
+        auto locations = settings().voiceLocations();
         SettingsDialog dialog(impl.catalog, from);
         if (!page.isEmpty()) {
             dialog.selectPage(page);
         }
-        connect(&dialog, &SettingsDialog::applied, this, [this, &utau] {
-            // Every voice bank named relative to UTAU is now elsewhere.
-            const bool moved = settings().utauDirectory() != utau;
-            utau = settings().utauDirectory();
+        connect(&dialog, &SettingsDialog::applied, this, [this, &locations] {
+            // A voice bank named by %VOICE% or by a relative path may now be elsewhere.
+            const bool moved = settings().voiceLocations() != locations;
+            locations = settings().voiceLocations();
             for (const auto window : windows()) {
                 if (moved) {
                     window->loadVoiceBank();

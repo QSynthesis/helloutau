@@ -7,7 +7,9 @@
 
 #include <helloutau/Widgets/SettingPage.h>
 
+class QCheckBox;
 class QComboBox;
+class QLabel;
 class QLineEdit;
 
 namespace hello::daw {
@@ -26,14 +28,19 @@ namespace hello::daw {
         bool apply(QString *error) override;
 
         QLineEdit *utauDirectoryEdit() const;
+        QCheckBox *relativeVoiceDirInUtauBox() const;
         QComboBox *languageBox() const;
 
     protected:
         QWidget *createWidget() override;
 
     private:
+        void showVoiceFolders();
+
         AppSettings &m_settings;
         QPointer<QLineEdit> m_utauDirectory;
+        QPointer<QCheckBox> m_relativeVoiceDirInUtau;
+        QPointer<QLabel> m_voiceFolders;
         QPointer<QComboBox> m_language;
     };
 

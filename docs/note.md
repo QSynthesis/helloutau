@@ -138,6 +138,16 @@ UST 自身的 `Charset` 只有两种取值：空，或 `UTF-8`。它表示的是
 
 **音源与插件压缩包的条目路径不可信。** `.uar` / `.zip` 中的条目名可以是绝对路径或 `../../..`，官方 UTAU 按此路径写入文件，因此可以向任意位置释放文件（CVE-2024-32944）。HelloUtau 遇到绝对路径、盘符、`..` 路径分量或符号链接条目时，拒绝整个压缩包并告知用户，而不是静默过滤。
 
+## 音源文件夹
+
+工程的 `VoiceDir` 按以下规则解析（作者 2026-10-08 决定）。UTAU 自身的规则见 [`claude/utau-voicedir-cachedir.md`](claude/utau-voicedir-cachedir.md)：`%VOICE%` 与相对路径都以 `utau.exe` 所在目录为基准。
+
+- **`%VOICE%` 前缀依次表示以下音源文件夹**，取第一个包含该音源的文件夹：一、HelloUtau 自己的音源文件夹，即设置文件旁的 `voice` 目录（Windows 上位于 `%APPDATA%` 下）；二、设置中 UTAU 文件夹的 `voice` 目录，仅在设置了 UTAU 文件夹时存在。不存在的音源文件夹视同未列出。
+- **不带前缀的相对路径**：设置中的 UTAU 文件夹存在时，由用户选择按 UTAU 文件夹还是按 HelloUtau 程序所在目录解析，默认按 UTAU 文件夹，与 UTAU 一致；UTAU 文件夹未设置或不存在时，按 HelloUtau 程序所在目录解析。
+- **保存时**，位于某个音源文件夹内的绝对路径写为 `%VOICE%` 形式，但仅当该写法解析回同一目录时；被优先级更高的音源文件夹中的同名文件夹遮蔽时写绝对路径。HelloUtau 音源文件夹中的音源因此也写为 `%VOICE%名称`，用 UTAU 打开该工程时找不到，这一代价已经作者接受。
+
+**UTAU 文件夹的用途**：解析以相对路径出现的 `Tool1`、`Tool2`；在上述选项下解析以相对路径出现的音源；其 `voice` 目录作为第二个音源文件夹，其 `plugins` 目录作为 UTAU 插件的来源。
+
 ## 缓存
 
 与 UTAU 保持一致，缓存目录位于工程文件旁边。UTAU 不使用文件中的 `CacheDir`，缓存目录总是 UST 旁边的 `<文件名去掉扩展名>.cache`，保存与另存为时也将 `CacheDir` 写为这一名称，HelloUtau 采取相同做法。实测见 [`claude/utau-voicedir-cachedir.md`](claude/utau-voicedir-cachedir.md)。

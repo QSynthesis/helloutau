@@ -53,7 +53,6 @@ namespace hello::daw {
         QCheckBox *mode2Box() const;
 
     private:
-        std::filesystem::path voiceRoot() const;
         void showVoiceDir(const QString &voiceDir);
         QString voiceDirText() const;
         std::filesystem::path voiceDirectory() const;

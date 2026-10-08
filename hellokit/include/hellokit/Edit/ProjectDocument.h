@@ -95,7 +95,7 @@ namespace hello::kit {
         std::shared_ptr<const VoiceBank> voiceBank() const;
 
         /// Reads the voice bank that the \c voiceDir of the track denotes, resolved against
-        /// \a utauDirectory as by Track::voiceDirectory(), and makes it voiceBank().
+        /// \a locations as by Track::voiceDirectory(), and makes it voiceBank().
         ///
         /// A directory whose encoding nothing on disk determines is read in the encoding that
         /// \a selector returns, and that encoding is recorded in the directory at once, so that
@@ -107,8 +107,8 @@ namespace hello::kit {
         ///        VoiceBank::open()
         /// \return whether a voice bank was read. voiceBank() is \c nullptr otherwise, and
         ///         \a diagnostics holds the reason unless the track names no voice bank.
-        bool loadVoiceBank(const std::filesystem::path &utauDirectory,
-                           VoiceBankCharsetSelector *selector, DiagnosticList &diagnostics);
+        bool loadVoiceBank(const VoiceLocations &locations, VoiceBankCharsetSelector *selector,
+                           DiagnosticList &diagnostics);
 
         /// Makes \a bank voiceBank() without reading the disk: the snapshot of the voice bank as
         /// an editor saved it. Neither an edit of the project nor a change of its saved state,

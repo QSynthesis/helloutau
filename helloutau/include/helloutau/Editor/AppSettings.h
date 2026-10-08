@@ -10,6 +10,8 @@
 #include <QtCore/QString>
 #include <QtCore/QStringList>
 
+#include <hellokit/Document/Project.h>
+
 #include <helloutau/Editor/HelloUtauEditorGlobal.h>
 
 namespace hello::daw {
@@ -42,11 +44,30 @@ namespace hello::daw {
         /// Writes the pending changes immediately.
         void sync();
 
-        /// Directory that contains \c utau.exe. The \c %VOICE% prefix and relative paths in
-        /// \c VoiceDir are resolved against this directory, see Track::voiceDirectory(). The
-        /// path is empty if not set.
+        /// Directory that contains \c utau.exe, or an empty path if not set.
+        ///
+        /// The directory serves four purposes. A relative \c Tool1 or \c Tool2 is resolved
+        /// against it. A relative \c VoiceDir is resolved against it if
+        /// isRelativeVoiceDirInUtau() is true. Its \c voice directory is the second voice folder
+        /// of voiceLocations(), and its \c plugins directory holds the plugins of UTAU.
         std::filesystem::path utauDirectory() const;
         void setUtauDirectory(const std::filesystem::path &directory);
+
+        /// Returns the voice folder of HelloUtau, the \c voice directory beside the settings
+        /// file. The folder is the first voice folder of voiceLocations(), and it is not created
+        /// by this class.
+        std::filesystem::path voiceFolder() const;
+
+        /// Whether a relative \c VoiceDir is resolved against utauDirectory(), as UTAU resolves
+        /// it, rather than against the directory of HelloUtau. The setting applies only if
+        /// utauDirectory() exists. The default is true.
+        bool isRelativeVoiceDirInUtau() const;
+        void setRelativeVoiceDirInUtau(bool inUtau);
+
+        /// Returns the locations against which a \c VoiceDir is resolved. The \c %VOICE% prefix
+        /// denotes voiceFolder() and then the \c voice directory of utauDirectory(), and a
+        /// relative path is resolved as isRelativeVoiceDirInUtau() specifies.
+        kit::VoiceLocations voiceLocations() const;
 
         /// Engines used for rendering and written to an exported UST that specifies no engine.
         /// The engines specified by a project are never used without confirmation by the user,

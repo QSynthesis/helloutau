@@ -230,7 +230,7 @@ namespace hello::kit {
         }
     }
 
-    bool ProjectDocument::loadVoiceBank(const std::filesystem::path &utauDirectory,
+    bool ProjectDocument::loadVoiceBank(const VoiceLocations &locations,
                                         VoiceBankCharsetSelector *selector,
                                         DiagnosticList &diagnostics) {
         stdc_impl_t;
@@ -243,9 +243,10 @@ namespace hello::kit {
             set(nullptr);
             return false;
         }
-        const auto root = track.voiceDirectory(utauDirectory);
+        const auto root = track.voiceDirectory(locations);
         if (root.empty()) {
-            warn(diagnostics, tr("The voice bank \"%1\" is in the UTAU folder, which is not set.")
+            warn(diagnostics, tr("The voice bank \"%1\" cannot be located, because no folder "
+                                 "against which it is resolved exists.")
                                   .arg(track.voiceDir));
             set(nullptr);
             return false;
@@ -282,5 +283,4 @@ namespace hello::kit {
         set(std::make_shared<const VoiceBank>(std::move(opened->bank)));
         return true;
     }
-
 }
