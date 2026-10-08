@@ -2,9 +2,10 @@
 
 #include <functional>
 #include <system_error>
+#include <utility>
 
+#include <QtCore/QCoreApplication>
 #include <QtCore/QDir>
-#include <QtCore/QSignalBlocker>
 #include <QtWidgets/QCheckBox>
 #include <QtWidgets/QComboBox>
 #include <QtWidgets/QDialogButtonBox>
@@ -14,9 +15,8 @@
 #include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QLineEdit>
-#include <QtWidgets/QListView>
-#include <QtWidgets/QPushButton>
 #include <QtWidgets/QMessageBox>
+#include <QtWidgets/QPushButton>
 #include <QtWidgets/QStyle>
 #include <QtWidgets/QVBoxLayout>
 
@@ -25,307 +25,194 @@
 
 namespace hello::daw {
 
+    namespace fs = std::filesystem;
+
     namespace {
 
         constexpr double MinimumTempo = 10;
         constexpr double MaximumTempo = 512;
 
-        // A line edit with a button beside it that browses for its value
-        QHBoxLayout *withBrowse(QLineEdit *edit, QWidget *parent,
-                                std::function<QString(const QString &)> browse) {
+        QString textOf(const fs::path &path) {
+            return QDir::toNativeSeparators(QString::fromStdU16String(path.u16string()));
+        }
+
+        // A field with a button beside it that opens a file dialog for the value
+        QHBoxLayout *withBrowse(QWidget *field, QWidget *parent, std::function<void()> browse) {
             auto button = new QPushButton(ProjectPropertiesDialog::tr("Browse..."));
-            QObject::connect(button, &QPushButton::clicked, parent, [edit, browse] {
-                const auto chosen = browse(edit->text());
-                if (!chosen.isEmpty()) {
-                    edit->setText(QDir::toNativeSeparators(chosen));
-                }
-            });
+            QObject::connect(button, &QPushButton::clicked, parent, std::move(browse));
             auto layout = new QHBoxLayout();
-            layout->addWidget(edit, 1);
+            layout->addWidget(field, 1);
             layout->addWidget(button);
             return layout;
         }
 
-        QHBoxLayout *withBrowse(QComboBox *box, QWidget *parent,
-                                std::function<QString(const QString &)> browse) {
-            auto button = new QPushButton(ProjectPropertiesDialog::tr("Browse..."));
-            QObject::connect(button, &QPushButton::clicked, parent, [box, browse] {
-                const auto chosen = browse(box->currentText());
-                if (!chosen.isEmpty()) {
-                    box->setEditText(QDir::toNativeSeparators(chosen));
-                }
-            });
-            auto layout = new QHBoxLayout();
-            layout->addWidget(box, 1);
-            layout->addWidget(button);
-            return layout;
+        // A warning icon at the end of edit, shown while the path in edit is invalid
+        QAction *addInvalidMark(QLineEdit *edit, const QIcon &icon) {
+            const auto action = edit->addAction(icon, QLineEdit::TrailingPosition);
+            action->setToolTip(ProjectPropertiesDialog::tr("The path is invalid."));
+            action->setVisible(false);
+            return action;
+        }
+
+        // Returns the engine value relative to utau if the engine is inside utau, or else as an
+        // absolute path. A value that does not name an existing engine is returned unchanged.
+        QString normalizedEngine(const QString &value, const fs::path &utau) {
+            if (utau.empty() || !EngineTrust::exists(value, utau)) {
+                return value;
+            }
+            std::error_code rootError;
+            std::error_code engineError;
+            const auto root = fs::weakly_canonical(utau, rootError);
+            const auto engine =
+                fs::weakly_canonical(EngineTrust::resolved(value, utau), engineError);
+            if (rootError || engineError) {
+                return value;
+            }
+            const auto relative = engine.lexically_relative(root);
+            const bool inside = !relative.empty() && *relative.begin() != u"..";
+            return textOf(inside ? relative : engine);
+        }
+
+        // Returns whether two voiceDir values resolve to the same directory
+        bool sameVoiceDirectory(const QString &first, const QString &second, const fs::path &utau) {
+            kit::Track firstTrack;
+            firstTrack.voiceDir = first;
+            kit::Track secondTrack;
+            secondTrack.voiceDir = second;
+            const auto firstPath = firstTrack.voiceDirectory(utau);
+            const auto secondPath = secondTrack.voiceDirectory(utau);
+            if (firstPath.empty() || secondPath.empty()) {
+                return false;
+            }
+            std::error_code firstError;
+            std::error_code secondError;
+            const auto firstCanonical = fs::weakly_canonical(firstPath, firstError);
+            const auto secondCanonical = fs::weakly_canonical(secondPath, secondError);
+            return !firstError && !secondError && firstCanonical == secondCanonical;
         }
 
     }
 
-    ProjectPropertiesDialog::ProjectPropertiesDialog(const kit::Project &project, QWidget *parent)
-        : ProjectPropertiesDialog(project, nullptr, parent) {
-    }
-
     ProjectPropertiesDialog::ProjectPropertiesDialog(const kit::Project &project,
-                                                     AppSettings &appSettings, QWidget *parent)
-        : ProjectPropertiesDialog(project, &appSettings, parent) {
-    }
-
-    ProjectPropertiesDialog::ProjectPropertiesDialog(const kit::Project &project,
-                                                     AppSettings *appSettings, QWidget *parent)
-        : QDialog(parent), m_project(project), m_appSettings(appSettings) {
+                                                     AppSettings &settings, QWidget *parent)
+        : QDialog(parent), m_project(project), m_settings(settings) {
         setWindowTitle(tr("Project Properties"));
-        const auto &settings = project.settings;
+        const auto &values = project.settings;
+        const auto warningIcon = style()->standardIcon(QStyle::SP_MessageBoxWarning);
 
-        m_name = new QLineEdit(settings.name);
+        m_name = new QLineEdit(values.name);
         m_tempo = new QDoubleSpinBox();
         m_tempo->setDecimals(2);
         m_tempo->setRange(MinimumTempo, MaximumTempo);
-        m_tempo->setValue(settings.tempo);
+        m_tempo->setValue(values.tempo);
         connect(m_tempo, &QDoubleSpinBox::valueChanged, this, [this] { m_tempoEdited = true; });
-        m_flags = new QLineEdit(settings.flags);
-        m_outputFile = new QLineEdit(QDir::toNativeSeparators(settings.outputFile));
+        m_flags = new QLineEdit(values.flags);
+        m_outputFile = new QLineEdit(QDir::toNativeSeparators(values.outputFile));
+
+        // The folders of the voice folder of UTAU are listed by name, and each item holds the
+        // %VOICE% value of its folder.
         m_voiceDir = new QComboBox();
         m_voiceDir->setEditable(true);
-        m_voiceDir->setLineEdit(new QLineEdit());
         m_voiceDir->setInsertPolicy(QComboBox::NoInsert);
-        const auto warningIcon = style()->standardIcon(QStyle::SP_MessageBoxWarning);
-        m_voiceDirInvalid =
-            m_voiceDir->lineEdit()->addAction(warningIcon, QLineEdit::TrailingPosition);
-        m_voiceDirInvalid->setToolTip(tr("The path is invalid."));
-        m_voiceDirInvalid->setVisible(false);
-        const auto voiceValue = QDir::toNativeSeparators(
-            project.tracks.isEmpty() ? QString() : project.tracks.first().voiceDir);
-        m_voiceDir->setEditText(voiceValue);
-        if (m_appSettings) {
-            const auto utau = m_appSettings->utauDirectory();
-            const auto voiceRoot = utau / u"voice";
-            const auto rootText = QString::fromStdU16String(voiceRoot.u16string());
+        m_voiceDirInvalid = addInvalidMark(m_voiceDir->lineEdit(), warningIcon);
+        if (const auto root = voiceRoot(); !root.empty()) {
             const auto folders =
-                QDir(rootText).entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+                QDir(textOf(root)).entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
             for (const auto &folder : folders) {
-                const auto relative = folder.fileName();
-                m_voiceDir->addItem(relative, QStringLiteral("%VOICE%") + relative);
-            }
-            auto comboValue = voiceValue;
-            auto displayValue = voiceValue;
-            if (!voiceValue.isEmpty() && !utau.empty()) {
-                kit::Track track;
-                track.voiceDir = voiceValue;
-                const auto directory = track.voiceDirectory(utau);
-                if (!directory.empty()) {
-                    comboValue = kit::Track::voiceDirOf(directory, utau);
-                    if (comboValue.startsWith(kit::Track::voicePrefix)) {
-                        displayValue = comboValue.mid(kit::Track::voicePrefix.size());
-                    }
-                }
-            }
-            int index = m_voiceDir->findData(comboValue);
-            if (index < 0 && comboValue != voiceValue && !displayValue.isEmpty()) {
-                m_voiceDir->addItem(displayValue, comboValue);
-                index = m_voiceDir->count() - 1;
-            }
-            {
-                const QSignalBlocker blocker(m_voiceDir);
-                m_voiceDir->setCurrentIndex(index);
-                m_voiceDir->setEditText(index >= 0 ? m_voiceDir->itemText(index) : displayValue);
+                m_voiceDir->addItem(folder.fileName(),
+                                    kit::Track::voicePrefix.toString() + folder.fileName());
             }
         }
+        showVoiceDir(project.tracks.isEmpty()
+                         ? QString()
+                         : QDir::toNativeSeparators(project.tracks.first().voiceDir));
         m_voiceDir->setEnabled(!project.tracks.isEmpty());
-        m_wavtool = new QLineEdit(QDir::toNativeSeparators(settings.wavtool));
-        m_resampler = new QLineEdit(QDir::toNativeSeparators(settings.resampler));
-        m_wavtoolInvalid = m_wavtool->addAction(warningIcon, QLineEdit::TrailingPosition);
-        m_resamplerInvalid = m_resampler->addAction(warningIcon, QLineEdit::TrailingPosition);
-        m_wavtoolInvalid->setToolTip(tr("The path is invalid."));
-        m_resamplerInvalid->setToolTip(tr("The path is invalid."));
-        m_wavtoolInvalid->setVisible(false);
-        m_resamplerInvalid->setVisible(false);
+
+        m_wavtool = new QLineEdit(QDir::toNativeSeparators(values.wavtool));
+        m_wavtoolInvalid = addInvalidMark(m_wavtool, warningIcon);
+        m_resampler = new QLineEdit(QDir::toNativeSeparators(values.resampler));
+        m_resamplerInvalid = addInvalidMark(m_resampler, warningIcon);
         m_mode2 = new QCheckBox(tr("Mode&2 pitch"));
-        m_mode2->setChecked(settings.mode2);
+        m_mode2->setChecked(values.mode2);
+
+        // A relative engine path is relative to the UTAU directory, which is therefore where the
+        // file dialog starts.
+        const auto engineBrowser = [this](QLineEdit *edit, const QString &title) {
+            return [this, edit, title] {
+                const auto start = EngineTrust::resolved(edit->text(), m_settings.utauDirectory());
+                const auto chosen = QFileDialog::getOpenFileName(this, title, textOf(start));
+                if (!chosen.isEmpty()) {
+                    edit->setText(QDir::toNativeSeparators(chosen));
+                }
+            };
+        };
+
+        auto reset = new QPushButton(tr("Reset to settings defaults"));
+        reset->setObjectName(QStringLiteral("resetProjectEngines"));
+        connect(reset, &QPushButton::clicked, this, [this] {
+            m_wavtool->setText(QDir::toNativeSeparators(m_settings.wavtool()));
+            m_resampler->setText(QDir::toNativeSeparators(m_settings.resampler()));
+        });
+        auto trust = new QPushButton(tr("Trust project engines"));
+        connect(trust, &QPushButton::clicked, this, &ProjectPropertiesDialog::trustEngines);
+
+        m_wavtoolTrust = new QLabel();
+        m_wavtoolTrust->setWordWrap(true);
+        m_resamplerTrust = new QLabel();
+        m_resamplerTrust->setWordWrap(true);
+        m_untrustedNote = new QWidget();
+        {
+            const auto size = style()->pixelMetric(QStyle::PM_SmallIconSize);
+            auto icon = new QLabel();
+            icon->setPixmap(warningIcon.pixmap(size, size));
+            auto text = new QLabel(
+                tr("Warning: project engines are untrusted. Playback does not render until the "
+                   "required project engines are trusted."));
+            text->setWordWrap(true);
+            auto layout = new QHBoxLayout(m_untrustedNote);
+            layout->setContentsMargins({});
+            layout->addWidget(icon, 0, Qt::AlignTop);
+            layout->addWidget(text, 1);
+        }
 
         auto form = new QFormLayout();
         form->addRow(tr("&Name:"), m_name);
         form->addRow(tr("&Tempo:"), m_tempo);
         form->addRow(tr("&Flags:"), m_flags);
-        form->addRow(
-            tr("&Voice folder:"), withBrowse(m_voiceDir, this, [this](const QString &current) {
-                return QFileDialog::getExistingDirectory(this, tr("Choose Voice Folder"), current);
-            }));
-        form->addRow(tr("&Output file:"),
-                     withBrowse(m_outputFile, this, [this](const QString &current) {
-                         return QFileDialog::getSaveFileName(this, tr("Choose Output File"),
-                                                             current, tr("Wave files (*.wav)"));
+        form->addRow(tr("&Voice folder:"),
+                     withBrowse(m_voiceDir, this, [this] { browseVoiceDir(); }));
+        form->addRow(tr("&Output file:"), withBrowse(m_outputFile, this, [this] {
+                         const auto chosen = QFileDialog::getSaveFileName(
+                             this, tr("Choose Output File"), m_outputFile->text(),
+                             tr("Wave files (*.wav)"));
+                         if (!chosen.isEmpty()) {
+                             m_outputFile->setText(QDir::toNativeSeparators(chosen));
+                         }
                      }));
-        // A relative engine path is relative to the UTAU directory, which is therefore where the
-        // file dialog starts.
-        const auto engineBrowser = [this](const QString &title) {
-            return [this, title](const QString &current) {
-                const auto utau =
-                    m_appSettings ? m_appSettings->utauDirectory() : std::filesystem::path();
-                const auto start = EngineTrust::resolved(current, utau);
-                return QFileDialog::getOpenFileName(this, title,
-                                                    QString::fromStdU16String(start.u16string()));
-            };
-        };
         form->addRow(tr("Wav&tool (Tool1):"),
-                     withBrowse(m_wavtool, this, engineBrowser(tr("Choose Wavtool"))));
-        form->addRow(tr("&Resampler (Tool2):"),
-                     withBrowse(m_resampler, this, engineBrowser(tr("Choose Resampler"))));
-        auto reset = new QPushButton(tr("Reset to settings defaults"));
-        connect(reset, &QPushButton::clicked, this, [this] {
-            if (!m_appSettings) {
-                return;
-            }
-            m_wavtool->setText(QDir::toNativeSeparators(m_appSettings->wavtool()));
-            m_resampler->setText(QDir::toNativeSeparators(m_appSettings->resampler()));
-        });
-        reset->setObjectName(QStringLiteral("resetProjectEngines"));
-        reset->setEnabled(m_appSettings);
+                     withBrowse(m_wavtool, this, engineBrowser(m_wavtool, tr("Choose Wavtool"))));
+        form->addRow(
+            tr("&Resampler (Tool2):"),
+            withBrowse(m_resampler, this, engineBrowser(m_resampler, tr("Choose Resampler"))));
         form->addRow(reset);
-        auto trust = new QPushButton(tr("Trust project engines"));
-        trust->setEnabled(m_appSettings);
         form->addRow(trust);
-        m_engineWarning = new QLabel(
-            tr("Warning: project engines are untrusted. Playback does not render until the "
-               "required project engines are trusted."));
-        m_engineWarning->setWordWrap(true);
-        const auto updatePathValidity = [this] {
-            if (!m_appSettings) {
-                return;
-            }
-            const auto utau = m_appSettings->utauDirectory();
-            const auto markFile = [this, &utau](QLineEdit *edit) {
-                std::error_code error;
-                const auto path = EngineTrust::resolved(edit->text(), utau);
-                setPathInvalid(edit,
-                               path.empty() || !std::filesystem::is_regular_file(path, error));
-            };
-            markFile(m_wavtool);
-            markFile(m_resampler);
-            if (!m_project.tracks.isEmpty()) {
-                std::error_code error;
-                auto track = m_project.tracks.first();
-                track.voiceDir = voiceDirText();
-                const auto root = track.voiceDirectory(utau);
-                setVoiceDirInvalid(root.empty() || !std::filesystem::is_directory(root, error));
-            }
-        };
-        const auto updateTrust = [this] {
-            if (!m_appSettings) {
-                return;
-            }
-            const auto utau = m_appSettings->utauDirectory();
-            const auto status = [this, &utau](QLineEdit *edit, const QString &role,
-                                              const QString &defaultPath, const QString &otherPath,
-                                              const QString &otherRole) {
-                QString text;
-                if (EngineTrust::samePath(edit->text(), defaultPath, utau)) {
-                    text = tr("Using the default %1 from Settings.").arg(role);
-                    return qMakePair(text, false);
-                }
-                if (EngineTrust::samePath(edit->text(), otherPath, utau)) {
-                    text = tr("Using the Settings %1 as the project %2.").arg(otherRole, role);
-                    return qMakePair(text, false);
-                }
-                if (EngineTrust::isTrusted(*m_appSettings, edit->text(), utau)) {
-                    text = tr("Project %1 is trusted.").arg(role);
-                    return qMakePair(text, false);
-                }
-                text = tr("Project %1 is untrusted.").arg(role);
-                return qMakePair(text, true);
-            };
-            const auto wavtool = status(m_wavtool, tr("wavtool"), m_appSettings->wavtool(),
-                                        m_appSettings->resampler(), tr("resampler"));
-            const auto resampler = status(m_resampler, tr("resampler"), m_appSettings->resampler(),
-                                          m_appSettings->wavtool(), tr("wavtool"));
-            const auto line = [](const QPair<QString, bool> &value) {
-                return QStringLiteral("<span style=\"color:%1; font-weight:bold;\">%2</span>")
-                    .arg(value.second ? QStringLiteral("#b00020") : QStringLiteral("#176b2c"),
-                         value.first.toHtmlEscaped());
-            };
-            m_engineWarning->setText(line(wavtool) + QStringLiteral("<br>") + line(resampler));
-            m_engineWarning->setTextFormat(Qt::RichText);
-        };
-        connect(m_voiceDir->lineEdit(), &QLineEdit::textChanged, this, updatePathValidity);
-        connect(m_voiceDir, &QComboBox::currentIndexChanged, this, updatePathValidity);
-        connect(m_wavtool, &QLineEdit::textChanged, this, updatePathValidity);
-        connect(m_resampler, &QLineEdit::textChanged, this, updatePathValidity);
-        connect(m_wavtool, &QLineEdit::textChanged, this, updateTrust);
-        connect(m_resampler, &QLineEdit::textChanged, this, updateTrust);
-        updatePathValidity();
-        updateTrust();
-        connect(trust, &QPushButton::clicked, this, [this, updateTrust] {
-            if (!m_appSettings) {
-                return;
-            }
-            // An engine that does not exist is marked invalid and is not asked about.
-            const auto utau = m_appSettings->utauDirectory();
-            QStringList values;
-            for (const auto edit : {m_wavtool, m_resampler}) {
-                if (EngineTrust::exists(edit->text(), utau)) {
-                    values.push_back(edit->text());
-                }
-            }
-            EngineTrust::ask(this, *m_appSettings, values, utau);
-            updateTrust();
-        });
-        form->addRow(m_engineWarning);
+        form->addRow(m_wavtoolTrust);
+        form->addRow(m_resamplerTrust);
+        form->addRow(m_untrustedNote);
         form->addRow(m_mode2);
 
+        connect(m_voiceDir->lineEdit(), &QLineEdit::textChanged, this,
+                &ProjectPropertiesDialog::checkPaths);
+        for (const auto edit : {m_wavtool, m_resampler}) {
+            connect(edit, &QLineEdit::textChanged, this, &ProjectPropertiesDialog::checkPaths);
+            connect(edit, &QLineEdit::textChanged, this, &ProjectPropertiesDialog::updateTrust);
+        }
+        checkPaths();
+        updateTrust();
+
         auto buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
-        connect(buttons, &QDialogButtonBox::accepted, this, [this] {
-            auto invalid = [this](QLineEdit *edit) { setPathInvalid(edit, true); };
-            auto valid = [this](QLineEdit *edit) { setPathInvalid(edit, false); };
-            bool ok = true;
-            if (m_appSettings) {
-                const auto utau = m_appSettings->utauDirectory();
-                const auto normalize = [&](QLineEdit *edit) {
-                    const auto path = EngineTrust::resolved(edit->text(), utau);
-                    std::error_code error;
-                    if (path.empty() || !std::filesystem::is_regular_file(path, error)) {
-                        invalid(edit);
-                        return false;
-                    }
-                    if (!utau.empty()) {
-                        const auto root = std::filesystem::weakly_canonical(utau, error);
-                        const auto absolute = std::filesystem::weakly_canonical(path, error);
-                        const auto relative = std::filesystem::relative(absolute, root, error);
-                        const bool outside = !relative.empty() &&
-                                             relative.begin() != relative.end() &&
-                                             *relative.begin() == std::filesystem::path("..");
-                        if (!error && outside) {
-                            edit->setText(QDir::toNativeSeparators(
-                                QString::fromStdU16String(absolute.u16string())));
-                        } else if (!error && !relative.empty()) {
-                            edit->setText(QDir::toNativeSeparators(
-                                QString::fromStdU16String(relative.u16string())));
-                        }
-                    }
-                    valid(edit);
-                    return true;
-                };
-                ok = normalize(m_wavtool) && normalize(m_resampler);
-                if (!m_project.tracks.isEmpty()) {
-                    kit::Track track = m_project.tracks.first();
-                    track.voiceDir = voiceDirText();
-                    std::error_code error;
-                    const auto root = track.voiceDirectory(utau);
-                    if (root.empty() || !std::filesystem::is_directory(root, error)) {
-                        setVoiceDirInvalid(true);
-                        ok = false;
-                    } else {
-                        setVoiceDirInvalid(false);
-                    }
-                }
-            }
-            if (ok) {
-                accept();
-            } else {
-                QMessageBox::warning(this, tr("Invalid Project Path"),
-                                     tr("The voice folder, wavtool, and resampler must be valid."));
-            }
-        });
+        connect(buttons, &QDialogButtonBox::accepted, this,
+                &ProjectPropertiesDialog::acceptIfValid);
         connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
 
         auto layout = new QVBoxLayout(this);
@@ -336,70 +223,176 @@ namespace hello::daw {
 
     ProjectPropertiesDialog::~ProjectPropertiesDialog() = default;
 
+    fs::path ProjectPropertiesDialog::voiceRoot() const {
+        const auto utau = m_settings.utauDirectory();
+        return utau.empty() ? fs::path() : utau / u"voice";
+    }
+
+    void ProjectPropertiesDialog::showVoiceDir(const QString &voiceDir) {
+        // A value that resolves into the voice folder is shown by its name in that folder.
+        auto value = voiceDir;
+        auto display = voiceDir;
+        const auto utau = m_settings.utauDirectory();
+        if (!voiceDir.isEmpty() && !utau.empty()) {
+            kit::Track track;
+            track.voiceDir = voiceDir;
+            if (const auto directory = track.voiceDirectory(utau); !directory.empty()) {
+                value = kit::Track::voiceDirOf(directory, utau);
+                if (value.startsWith(kit::Track::voicePrefix)) {
+                    display = value.mid(kit::Track::voicePrefix.size());
+                }
+            }
+        }
+        auto index = m_voiceDir->findData(value);
+        if (index < 0 && value != voiceDir && !display.isEmpty()) {
+            m_voiceDir->addItem(display, value);
+            index = m_voiceDir->count() - 1;
+        }
+        m_voiceDir->setCurrentIndex(index);
+        m_voiceDir->setEditText(index >= 0 ? m_voiceDir->itemText(index) : display);
+    }
+
     QString ProjectPropertiesDialog::voiceDirText() const {
-        const auto edit = m_voiceDir->lineEdit();
+        const auto text = m_voiceDir->lineEdit()->text();
         for (int index = 0; index < m_voiceDir->count(); ++index) {
-            if (edit->text() == m_voiceDir->itemText(index)) {
+            if (text == m_voiceDir->itemText(index)) {
                 return m_voiceDir->itemData(index).toString();
             }
         }
-        const auto text = edit->text();
-        if (m_appSettings && !text.isEmpty() && !text.startsWith(kit::Track::voicePrefix) &&
+        // A relative name is a folder in the voice folder, as the names of the items are.
+        if (!text.isEmpty() && !text.startsWith(kit::Track::voicePrefix) &&
             !QDir::isAbsolutePath(text)) {
             return kit::Track::voicePrefix.toString() + QDir::toNativeSeparators(text);
         }
         return text;
     }
 
-    void ProjectPropertiesDialog::setVoiceDirInvalid(bool invalid) {
-        m_voiceDirInvalid->setVisible(invalid);
+    fs::path ProjectPropertiesDialog::voiceDirectory() const {
+        kit::Track track;
+        track.voiceDir = voiceDirText();
+        return track.voiceDirectory(m_settings.utauDirectory());
     }
 
-    void ProjectPropertiesDialog::setPathInvalid(QLineEdit *edit, bool invalid) {
-        const auto action = edit == m_wavtool ? m_wavtoolInvalid : m_resamplerInvalid;
-        action->setVisible(invalid);
+    void ProjectPropertiesDialog::browseVoiceDir() {
+        // The file dialog starts in the current voice bank, or else in the voice folder of
+        // UTAU, or else in the folder of this program.
+        std::error_code error;
+        auto start = voiceDirectory();
+        if (start.empty() || !fs::is_directory(start, error)) {
+            start = voiceRoot();
+        }
+        if (start.empty() || !fs::is_directory(start, error)) {
+            start = fs::path(QCoreApplication::applicationDirPath().toStdU16String());
+        }
+        const auto chosen =
+            QFileDialog::getExistingDirectory(this, tr("Choose Voice Folder"), textOf(start));
+        if (!chosen.isEmpty()) {
+            showVoiceDir(kit::Track::voiceDirOf(fs::path(chosen.toStdU16String()),
+                                                m_settings.utauDirectory()));
+        }
+    }
+
+    bool ProjectPropertiesDialog::checkPaths() {
+        const auto utau = m_settings.utauDirectory();
+        const bool wavtool = EngineTrust::exists(m_wavtool->text(), utau);
+        const bool resampler = EngineTrust::exists(m_resampler->text(), utau);
+        bool voice = true;
+        if (!m_project.tracks.isEmpty()) {
+            std::error_code error;
+            const auto directory = voiceDirectory();
+            voice = !directory.empty() && fs::is_directory(directory, error);
+        }
+        m_wavtoolInvalid->setVisible(!wavtool);
+        m_resamplerInvalid->setVisible(!resampler);
+        m_voiceDirInvalid->setVisible(!voice);
+        return wavtool && resampler && voice;
+    }
+
+    void ProjectPropertiesDialog::updateTrust() {
+        // One complete sentence for each engine and state, so that a translation is not
+        // assembled from fragments
+        struct Texts {
+            QString same;
+            QString swapped;
+            QString trusted;
+            QString untrusted;
+        };
+        const auto utau = m_settings.utauDirectory();
+        bool untrusted = false;
+        const auto describe = [&](QLabel *label, const QString &value, const QString &own,
+                                  const QString &other, const Texts &texts) {
+            if (EngineTrust::samePath(value, own, utau)) {
+                label->setText(texts.same);
+            } else if (EngineTrust::samePath(value, other, utau)) {
+                label->setText(texts.swapped);
+            } else if (EngineTrust::isTrusted(m_settings, value, utau)) {
+                label->setText(texts.trusted);
+            } else {
+                label->setText(texts.untrusted);
+                untrusted = true;
+            }
+        };
+        describe(m_wavtoolTrust, m_wavtool->text(), m_settings.wavtool(), m_settings.resampler(),
+                 {tr("The project uses the wavtool from the settings."),
+                  tr("The project uses the resampler from the settings as its wavtool."),
+                  tr("The project wavtool is trusted."), tr("The project wavtool is untrusted.")});
+        describe(
+            m_resamplerTrust, m_resampler->text(), m_settings.resampler(), m_settings.wavtool(),
+            {tr("The project uses the resampler from the settings."),
+             tr("The project uses the wavtool from the settings as its resampler."),
+             tr("The project resampler is trusted."), tr("The project resampler is untrusted.")});
+        m_untrustedNote->setVisible(untrusted);
+    }
+
+    void ProjectPropertiesDialog::trustEngines() {
+        // An engine that does not exist is marked invalid and is not asked about.
+        const auto utau = m_settings.utauDirectory();
+        QStringList values;
+        for (const auto edit : {m_wavtool, m_resampler}) {
+            if (EngineTrust::exists(edit->text(), utau)) {
+                values.push_back(edit->text());
+            }
+        }
+        EngineTrust::ask(this, m_settings, values, utau);
+        updateTrust();
+    }
+
+    void ProjectPropertiesDialog::acceptIfValid() {
+        if (checkPaths()) {
+            accept();
+            return;
+        }
+        QMessageBox::warning(this, tr("Invalid Project Path"),
+                             tr("The voice folder, wavtool, and resampler must be valid."));
     }
 
     kit::ProjectPropertyChanges ProjectPropertiesDialog::changes() const {
-        const auto &settings = m_project.settings;
+        const auto &values = m_project.settings;
+        const auto utau = m_settings.utauDirectory();
         const auto text = [](const QLineEdit *edit, const QString &was) {
             return edit->text() != was ? std::optional(edit->text()) : std::nullopt;
         };
-        const auto pathText = [](const QLineEdit *edit, const QString &was) {
-            const auto value = QDir::fromNativeSeparators(edit->text());
+        const auto pathText = [](const QString &edited, const QString &was) {
+            const auto value = QDir::fromNativeSeparators(edited);
             return value != QDir::fromNativeSeparators(was) ? std::optional(value) : std::nullopt;
         };
         kit::ProjectPropertyChanges changes;
-        changes.name = text(m_name, settings.name);
-        if (m_tempoEdited && m_tempo->value() != settings.tempo) {
+        changes.name = text(m_name, values.name);
+        if (m_tempoEdited && m_tempo->value() != values.tempo) {
             changes.tempo = m_tempo->value();
         }
-        changes.flags = text(m_flags, settings.flags);
-        changes.outputFile = pathText(m_outputFile, settings.outputFile);
+        changes.flags = text(m_flags, values.flags);
+        changes.outputFile = pathText(m_outputFile->text(), values.outputFile);
         if (!m_project.tracks.isEmpty()) {
+            const auto &before = m_project.tracks.first().voiceDir;
             const auto voice = voiceDirText();
-            auto sameDirectory = voice == m_project.tracks.first().voiceDir;
-            if (!sameDirectory && m_appSettings) {
-                kit::Track before;
-                before.voiceDir = m_project.tracks.first().voiceDir;
-                kit::Track after;
-                after.voiceDir = voice;
-                const auto utau = m_appSettings->utauDirectory();
-                std::error_code error;
-                const auto beforePath = before.voiceDirectory(utau);
-                const auto afterPath = after.voiceDirectory(utau);
-                sameDirectory = !beforePath.empty() && !afterPath.empty() &&
-                                std::filesystem::weakly_canonical(beforePath, error) ==
-                                    std::filesystem::weakly_canonical(afterPath, error) &&
-                                !error;
-            }
-            if (!sameDirectory) {
+            if (voice != before && !sameVoiceDirectory(before, voice, utau)) {
                 changes.voiceDir = voice;
             }
         }
-        changes.wavtool = pathText(m_wavtool, settings.wavtool);
-        changes.resampler = pathText(m_resampler, settings.resampler);
-        if (m_mode2->isChecked() != settings.mode2) {
+        changes.wavtool = pathText(normalizedEngine(m_wavtool->text(), utau), values.wavtool);
+        changes.resampler = pathText(normalizedEngine(m_resampler->text(), utau), values.resampler);
+        if (m_mode2->isChecked() != values.mode2) {
             changes.mode2 = m_mode2->isChecked();
         }
         return changes;

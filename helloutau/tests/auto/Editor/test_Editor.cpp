@@ -817,7 +817,10 @@ private Q_SLOTS:
         project.tracks.push_back({});
         project.tracks[0].voiceDir = QStringLiteral("%VOICE%bank");
 
-        ProjectPropertiesDialog dialog(project);
+        // Settings without a UTAU directory, in which no %VOICE% value resolves
+        QTemporaryDir dir;
+        AppSettings settings(dir.filePath(QStringLiteral("settings.json")));
+        ProjectPropertiesDialog dialog(project, settings);
         QVERIFY(dialog.changes().isEmpty());
         QCOMPARE(dialog.voiceDirEdit()->text(), QStringLiteral("%VOICE%bank"));
 
@@ -1290,7 +1293,7 @@ private Q_SLOTS:
             const auto dialog =
                 qobject_cast<ProjectPropertiesDialog *>(QApplication::activeModalWidget());
             QVERIFY(dialog);
-            QVERIFY(dialog->resamplerEdit()->styleSheet().contains(QStringLiteral("#ffd6d6")));
+            QVERIFY(dialog->resamplerEdit()->actions().constFirst()->isVisible());
             dialog->reject();
         });
         const auto window = e->openFile(path);

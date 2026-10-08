@@ -40,10 +40,12 @@ private Q_SLOTS:
                  QStringLiteral("音频"));
         QCOMPARE(QCoreApplication::translate("hello::daw::AudioSettingPage", "System default"),
                  QStringLiteral("系统默认"));
-        QCOMPARE(QCoreApplication::translate("hello::daw::ProjectPropertiesDialog", "wavtool"),
-                 QStringLiteral("合成器"));
-        QCOMPARE(QCoreApplication::translate("hello::daw::ProjectPropertiesDialog", "resampler"),
-                 QStringLiteral("重采样器"));
+        QCOMPARE(QCoreApplication::translate("hello::daw::ProjectPropertiesDialog",
+                                             "The project wavtool is trusted."),
+                 QStringLiteral("工程中的合成器已信任。"));
+        QCOMPARE(QCoreApplication::translate("hello::daw::ProjectPropertiesDialog",
+                                             "The project resampler is trusted."),
+                 QStringLiteral("工程中的重采样器已信任。"));
         QVERIFY(!Translations::load(QStringLiteral("Core"),
                                     QStringLiteral(":/helloutau/plugins/Core/translations")));
     }

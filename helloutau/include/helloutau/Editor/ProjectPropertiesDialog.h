@@ -1,6 +1,8 @@
 #ifndef HELLOUTAU_EDITOR_PROJECTPROPERTIESDIALOG_H
 #define HELLOUTAU_EDITOR_PROJECTPROPERTIESDIALOG_H
 
+#include <filesystem>
+
 #include <QtWidgets/QDialog>
 
 #include <hellokit/Document/Project.h>
@@ -29,13 +31,16 @@ namespace hello::daw {
     class HELLOUTAU_EDITOR_EXPORT ProjectPropertiesDialog : public QDialog {
         Q_OBJECT
     public:
-        explicit ProjectPropertiesDialog(const kit::Project &project, QWidget *parent = nullptr);
+        /// \a settings provides the UTAU directory, the engines of the settings and the trust
+        /// records, and records the trust that the user grants in the dialog.
         ProjectPropertiesDialog(const kit::Project &project, AppSettings &settings,
                                 QWidget *parent = nullptr);
         ~ProjectPropertiesDialog();
 
         /// The fields that differ from the project, for ProjectEdits::setProperties(). The tempo
-        /// counts only once it was edited, so that a value the box rounds is not changed.
+        /// counts only once it was edited, so that a value the box rounds is not changed. An
+        /// engine inside the UTAU directory is given relative to that directory, and any other
+        /// engine as an absolute path.
         kit::ProjectPropertyChanges changes() const;
 
         QLineEdit *nameEdit() const;
@@ -48,15 +53,18 @@ namespace hello::daw {
         QCheckBox *mode2Box() const;
 
     private:
-        ProjectPropertiesDialog(const kit::Project &project, AppSettings *settings,
-                                QWidget *parent);
-
+        std::filesystem::path voiceRoot() const;
+        void showVoiceDir(const QString &voiceDir);
         QString voiceDirText() const;
-        void setVoiceDirInvalid(bool invalid);
-        void setPathInvalid(QLineEdit *edit, bool invalid);
+        std::filesystem::path voiceDirectory() const;
+        void browseVoiceDir();
+        bool checkPaths();
+        void updateTrust();
+        void trustEngines();
+        void acceptIfValid();
 
         kit::Project m_project;
-        AppSettings *m_appSettings = nullptr;
+        AppSettings &m_settings;
         QLineEdit *m_name;
         QDoubleSpinBox *m_tempo;
         bool m_tempoEdited = false;
@@ -64,11 +72,13 @@ namespace hello::daw {
         QLineEdit *m_outputFile;
         QComboBox *m_voiceDir;
         QAction *m_voiceDirInvalid;
-        QAction *m_wavtoolInvalid;
-        QAction *m_resamplerInvalid;
         QLineEdit *m_wavtool;
+        QAction *m_wavtoolInvalid;
         QLineEdit *m_resampler;
-        QLabel *m_engineWarning;
+        QAction *m_resamplerInvalid;
+        QLabel *m_wavtoolTrust;
+        QLabel *m_resamplerTrust;
+        QWidget *m_untrustedNote;
         QCheckBox *m_mode2;
     };
 

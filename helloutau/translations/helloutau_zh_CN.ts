@@ -1427,32 +1427,40 @@ Trust and use them for rendering?</source>
         <translation>信任工程中的工具</translation>
     </message>
     <message>
-        <source>Using the default %1 from Settings.</source>
-        <translation>使用设置中的默认 %1。</translation>
-    </message>
-    <message>
-        <source>Using the Settings %1 as the project %2.</source>
-        <translation>将设置中的 %1 用作工程 %2。</translation>
-    </message>
-    <message>
-        <source>Project %1 is trusted.</source>
-        <translation>工程中的 %1 已信任。</translation>
-    </message>
-    <message>
-        <source>Project %1 is untrusted.</source>
-        <translation>工程中的 %1 未信任。</translation>
-    </message>
-    <message>
-        <source>wavtool</source>
-        <translation>合成器</translation>
-    </message>
-    <message>
         <source>Warning: project engines are untrusted. Playback does not render until the required project engines are trusted.</source>
         <translation>警告：工程中的工具尚未信任。信任所需的工程工具后才能进行渲染。</translation>
     </message>
     <message>
-        <source>resampler</source>
-        <translation>重采样器</translation>
+        <source>The project uses the wavtool from the settings.</source>
+        <translation>工程使用设置中的合成器。</translation>
+    </message>
+    <message>
+        <source>The project uses the resampler from the settings as its wavtool.</source>
+        <translation>工程将设置中的重采样器用作合成器。</translation>
+    </message>
+    <message>
+        <source>The project wavtool is trusted.</source>
+        <translation>工程中的合成器已信任。</translation>
+    </message>
+    <message>
+        <source>The project wavtool is untrusted.</source>
+        <translation>工程中的合成器未信任。</translation>
+    </message>
+    <message>
+        <source>The project uses the resampler from the settings.</source>
+        <translation>工程使用设置中的重采样器。</translation>
+    </message>
+    <message>
+        <source>The project uses the wavtool from the settings as its resampler.</source>
+        <translation>工程将设置中的合成器用作重采样器。</translation>
+    </message>
+    <message>
+        <source>The project resampler is trusted.</source>
+        <translation>工程中的重采样器已信任。</translation>
+    </message>
+    <message>
+        <source>The project resampler is untrusted.</source>
+        <translation>工程中的重采样器未信任。</translation>
     </message>
     <message>
         <source>Invalid Project Path</source>
