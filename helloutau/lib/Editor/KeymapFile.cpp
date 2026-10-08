@@ -1,4 +1,4 @@
-#include "KeymapFile_p.h"
+#include "KeymapFile.h"
 
 #include <QtCore/QDir>
 #include <QtCore/QFile>

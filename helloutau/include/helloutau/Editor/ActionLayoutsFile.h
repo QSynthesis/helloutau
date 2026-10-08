@@ -1,10 +1,12 @@
-#ifndef HELLOUTAU_EDITOR_ACTIONLAYOUTSFILE_P_H
-#define HELLOUTAU_EDITOR_ACTIONLAYOUTSFILE_P_H
+#ifndef HELLOUTAU_EDITOR_ACTIONLAYOUTSFILE_H
+#define HELLOUTAU_EDITOR_ACTIONLAYOUTSFILE_H
 
 #include <utility>
 
 #include <QtCore/QList>
 #include <QtCore/QString>
+
+#include <helloutau/Editor/HelloUtauEditorGlobal.h>
 
 namespace QAK {
     class ActionRegistry;
@@ -24,7 +26,7 @@ namespace hello::daw {
     /// The registry replays the changes on the layouts of the extensions registered at any
     /// time, so that a plugin registered later finds them applied. See the menus and tool bars
     /// in the settings dialog in docs/Widgets.md.
-    class ActionLayoutsFile {
+    class HELLOUTAU_EDITOR_EXPORT ActionLayoutsFile {
     public:
         /// The key of a section and the registry whose changes it holds
         using Sections = QList<std::pair<QString, QAK::ActionRegistry *>>;
@@ -46,4 +48,4 @@ namespace hello::daw {
 
 }
 
-#endif // HELLOUTAU_EDITOR_ACTIONLAYOUTSFILE_P_H
+#endif // HELLOUTAU_EDITOR_ACTIONLAYOUTSFILE_H

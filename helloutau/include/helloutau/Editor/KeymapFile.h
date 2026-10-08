@@ -1,5 +1,5 @@
-#ifndef HELLOUTAU_EDITOR_KEYMAPFILE_P_H
-#define HELLOUTAU_EDITOR_KEYMAPFILE_P_H
+#ifndef HELLOUTAU_EDITOR_KEYMAPFILE_H
+#define HELLOUTAU_EDITOR_KEYMAPFILE_H
 
 #include <utility>
 
@@ -7,6 +7,7 @@
 #include <QtCore/QString>
 
 #include <helloutau/Editor/EditorModifierBindings.h>
+#include <helloutau/Editor/HelloUtauEditorGlobal.h>
 
 namespace QAK {
     class ActionRegistry;
@@ -24,7 +25,7 @@ namespace hello::daw {
     ///
     /// An empty list of keys leaves the command without a shortcut. See the keymap in the
     /// settings dialog in docs/Widgets.md.
-    class KeymapFile {
+    class HELLOUTAU_EDITOR_EXPORT KeymapFile {
     public:
         /// The key of a section and the registry whose shortcuts it holds
         using Sections = QList<std::pair<QString, QAK::ActionRegistry *>>;
@@ -47,4 +48,4 @@ namespace hello::daw {
 
 }
 
-#endif // HELLOUTAU_EDITOR_KEYMAPFILE_P_H
+#endif // HELLOUTAU_EDITOR_KEYMAPFILE_H

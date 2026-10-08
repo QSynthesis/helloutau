@@ -1,4 +1,4 @@
-#include "ActionLayoutsFile_p.h"
+#include "ActionLayoutsFile.h"
 
 #include <QtCore/QDir>
 #include <QtCore/QFile>

@@ -35,12 +35,12 @@
 #include <helloutau/Widgets/SettingsDialog.h>
 #include <helloutau/Widgets/SettingPageRegistry.h>
 
+#include "ActionLayoutsFile.h"
 #include "AppSettings.h"
 #include "DiagnosticBox_p.h"
 #include "EditorIcons_p.h"
 #include "EditorSettingPages_p.h"
-#include "KeymapFile_p.h"
-#include "ActionLayoutsFile_p.h"
+#include "KeymapFile.h"
 #include "ProjectWindow.h"
 #include "Restarter.h"
 #include "UstCharsetDialog.h"
