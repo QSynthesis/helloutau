@@ -1299,6 +1299,8 @@ namespace hello::daw {
                     box->setDecimals(2);
                     box->setRange(utau::VALUE_TEMPO_MIN, utau::VALUE_TEMPO_MAX);
                     box->setSuffix(tr(" BPM"));
+                    // Without it, typing 140 sets 14 and then 140, in two undo steps.
+                    box->setKeyboardTracking(false);
                     quantizationBoxes.removeAll(nullptr);
                     const auto height = quantizationBoxes.isEmpty()
                                             ? box->sizeHint().height()
