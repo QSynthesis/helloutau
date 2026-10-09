@@ -62,6 +62,16 @@ namespace hello::daw {
                 icon.colors.setValue(ThemeButtonState::Up, color);
                 icon.colors.setValue(ThemeButtonState::Over, color);
             }
+            // The pause icon is red, lighter than the #DB3B4B of stop.svg. Only pause.svg draws in
+            // currentColor, and ThemeIcon::checkedLook() keeps the colors of the unchecked
+            // states, so the colors are assigned to those states.
+            if (QLatin1String(id) == QLatin1String("helloutau.playback.play")) {
+                const auto color = QColor(QStringLiteral("#E5636E"));
+                for (const auto state :
+                     {ThemeButtonState::Up, ThemeButtonState::Over, ThemeButtonState::Down}) {
+                    icon.colors.setValue(state, color);
+                }
+            }
             // QActionKit passes a local file to QIcon, which selects the engine of ThemeIcon by
             // the suffix of the encoded name.
             registry->addIcon(QString(), QLatin1String(id),
