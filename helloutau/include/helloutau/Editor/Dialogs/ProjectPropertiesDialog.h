@@ -3,6 +3,7 @@
 
 #include <filesystem>
 
+#include <QtGui/QColor>
 #include <QtWidgets/QDialog>
 
 #include <hellokit/Document/Project.h>
@@ -30,6 +31,8 @@ namespace hello::daw {
     /// settings into the fields.
     class HELLOUTAU_EDITOR_EXPORT ProjectPropertiesDialog : public QDialog {
         Q_OBJECT
+        Q_PROPERTY(QColor trustedColor READ trustedColor WRITE setTrustedColor)
+        Q_PROPERTY(QColor untrustedColor READ untrustedColor WRITE setUntrustedColor)
     public:
         /// \a settings provides the UTAU directory, the engines of the settings and the trust
         /// records, and records the trust that the user grants in the dialog.
@@ -51,6 +54,16 @@ namespace hello::daw {
         QLineEdit *wavtoolEdit() const;
         QLineEdit *resamplerEdit() const;
         QCheckBox *mode2Box() const;
+
+        /// The color of the state of an engine that renders, by default dark green. A theme sets
+        /// it with \c qproperty-trustedColor.
+        QColor trustedColor() const;
+        void setTrustedColor(const QColor &color);
+
+        /// The color of the state of an untrusted engine and of the warning about it, by default
+        /// dark red. A theme sets it with \c qproperty-untrustedColor.
+        QColor untrustedColor() const;
+        void setUntrustedColor(const QColor &color);
 
     private:
         void showVoiceDir(const QString &voiceDir);
@@ -78,7 +91,10 @@ namespace hello::daw {
         QLabel *m_wavtoolTrust;
         QLabel *m_resamplerTrust;
         QWidget *m_untrustedNote;
+        QLabel *m_untrustedText;
         QCheckBox *m_mode2;
+        QColor m_trustedColor = QColor(0x17, 0x6b, 0x2c);
+        QColor m_untrustedColor = QColor(0xb0, 0x00, 0x20);
     };
 
 }

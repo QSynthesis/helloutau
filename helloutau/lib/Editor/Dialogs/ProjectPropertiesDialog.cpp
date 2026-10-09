@@ -36,6 +36,13 @@ namespace hello::daw {
             return QDir::toNativeSeparators(QString::fromStdU16String(path.u16string()));
         }
 
+        // The rich text of a label that shows text in color, in bold if bold is true
+        QString colored(const QString &text, const QColor &color, bool bold) {
+            return QStringLiteral("<span style=\"color:%1;%2\">%3</span>")
+                .arg(color.name(), bold ? QStringLiteral(" font-weight:bold;") : QString(),
+                     text.toHtmlEscaped());
+        }
+
         // A field with a button beside it that opens a file dialog for the value
         QHBoxLayout *withBrowse(QWidget *field, QWidget *parent, std::function<void()> browse) {
             auto button = new QPushButton(ProjectPropertiesDialog::tr("Browse..."));
@@ -162,21 +169,22 @@ namespace hello::daw {
 
         m_wavtoolTrust = new QLabel();
         m_wavtoolTrust->setWordWrap(true);
+        m_wavtoolTrust->setTextFormat(Qt::RichText);
         m_resamplerTrust = new QLabel();
         m_resamplerTrust->setWordWrap(true);
+        m_resamplerTrust->setTextFormat(Qt::RichText);
         m_untrustedNote = new QWidget();
         {
             const auto size = style()->pixelMetric(QStyle::PM_SmallIconSize);
             auto icon = new QLabel();
             icon->setPixmap(warningIcon.pixmap(size, size));
-            auto text = new QLabel(
-                tr("Warning: project engines are untrusted. Playback does not render until the "
-                   "required project engines are trusted."));
-            text->setWordWrap(true);
+            m_untrustedText = new QLabel();
+            m_untrustedText->setWordWrap(true);
+            m_untrustedText->setTextFormat(Qt::RichText);
             auto layout = new QHBoxLayout(m_untrustedNote);
             layout->setContentsMargins({});
             layout->addWidget(icon, 0, Qt::AlignTop);
-            layout->addWidget(text, 1);
+            layout->addWidget(m_untrustedText, 1);
         }
 
         auto form = new QFormLayout();
@@ -324,13 +332,13 @@ namespace hello::daw {
         const auto describe = [&](QLabel *label, const QString &value, const QString &own,
                                   const QString &other, const Texts &texts) {
             if (EngineTrust::samePath(value, own, utau)) {
-                label->setText(texts.same);
+                label->setText(colored(texts.same, m_trustedColor, true));
             } else if (EngineTrust::samePath(value, other, utau)) {
-                label->setText(texts.swapped);
+                label->setText(colored(texts.swapped, m_trustedColor, true));
             } else if (EngineTrust::isTrusted(m_settings, value, utau)) {
-                label->setText(texts.trusted);
+                label->setText(colored(texts.trusted, m_trustedColor, true));
             } else {
-                label->setText(texts.untrusted);
+                label->setText(colored(texts.untrusted, m_untrustedColor, true));
                 untrusted = true;
             }
         };
@@ -343,7 +351,29 @@ namespace hello::daw {
             {tr("The project uses the resampler from the settings."),
              tr("The project uses the wavtool from the settings as its resampler."),
              tr("The project resampler is trusted."), tr("The project resampler is untrusted.")});
+        m_untrustedText->setText(
+            colored(tr("Warning: project engines are untrusted. Playback does not render until "
+                       "the required project engines are trusted."),
+                    m_untrustedColor, false));
         m_untrustedNote->setVisible(untrusted);
+    }
+
+    QColor ProjectPropertiesDialog::trustedColor() const {
+        return m_trustedColor;
+    }
+
+    void ProjectPropertiesDialog::setTrustedColor(const QColor &color) {
+        m_trustedColor = color;
+        updateTrust();
+    }
+
+    QColor ProjectPropertiesDialog::untrustedColor() const {
+        return m_untrustedColor;
+    }
+
+    void ProjectPropertiesDialog::setUntrustedColor(const QColor &color) {
+        m_untrustedColor = color;
+        updateTrust();
     }
 
     void ProjectPropertiesDialog::trustEngines() {
