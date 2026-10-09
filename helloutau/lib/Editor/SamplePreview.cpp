@@ -189,6 +189,13 @@ namespace hello::daw {
                 impl.setState(Stopped);
             }
         });
+        // The output stops before it reports the loss of the device, so that the preview has
+        // stopped by then.
+        connect(impl.output, &AudioOutput::failed, this, [this](const QString &reason) {
+            kit::DiagnosticList diagnostics;
+            fail(diagnostics, reason);
+            Q_EMIT failed(diagnostics);
+        });
     }
 
     SamplePreview::~SamplePreview() {
