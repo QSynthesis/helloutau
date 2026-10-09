@@ -1967,6 +1967,7 @@ namespace hello::daw {
             // carry over.
             const auto quantization =
                 roll ? roll->quantization() : editor->settings().quantization();
+            const QPointer<PianoRoll> previousRoll = roll;
             roll = new PianoRoll(document->session());
             const auto updateModifiers = [this] {
                 for (const auto &bindings : editor->modifierBindings(Editor::ProjectWindowKind)) {
@@ -2008,6 +2009,11 @@ namespace hello::daw {
             roll->setParametersVisible(
                 actions.value(QStringLiteral("helloutau.view.showParameters"))->isChecked());
             decl.setCentralWidget(roll);
+            // setCentralWidget() only schedules the deletion of the previous piano roll, which a
+            // nested event loop, such as that of a message box, does not carry out. The piano roll
+            // is deleted before its document, so that no event of it reaches a session that is
+            // gone.
+            delete previousRoll;
 
             QObject::connect(document.get(), &kit::ProjectDocument::voiceBankChanged, roll, [this] {
                 roll->setVoiceBank(document->voiceBank());
