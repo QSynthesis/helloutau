@@ -382,6 +382,9 @@ namespace hello::kit {
 
             if (step.resamples()) {
                 step.resamplerArguments = listOf(resampler.arguments());
+            }
+            // A silent step keeps the curve that calc() determines. A direct step is not pitched.
+            if (!step.direct) {
                 step.pitch = QList<int>(resampler.pitchCurves.begin(), resampler.pitchCurves.end());
             }
             step.wavtoolArguments = listOf(wavtool.arguments());
