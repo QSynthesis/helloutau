@@ -7,6 +7,19 @@
 # plugin, including versions of stdcorelib other than the version that the application uses.
 set(VCPKG_APPLOCAL_DEPS OFF)
 
+# _helloutau_json_string(<out> <value>)
+#
+# Sets <out> to <value> as a quoted JSON string, with backslashes, quotes and the control
+# characters that a CMake argument can contain escaped.
+function(_helloutau_json_string _out _value)
+    string(REPLACE "\\" "\\\\" _value "${_value}")
+    string(REPLACE "\"" "\\\"" _value "${_value}")
+    string(REPLACE "\n" "\\n" _value "${_value}")
+    string(REPLACE "\r" "\\r" _value "${_value}")
+    string(REPLACE "\t" "\\t" _value "${_value}")
+    set(${_out} "\"${_value}\"" PARENT_SCOPE)
+endfunction()
+
 # helloutau_add_native_plugin(<target>
 #     ID <id> DISPLAY_NAME <name> DESCRIPTION <description> CATEGORY <directory>
 #     [DEPENDENCIES <id>[;<id>...]]
@@ -60,23 +73,29 @@ function(helloutau_add_native_plugin _target)
     )
     stdc_add_plugin_metadata(TARGET ${_target} IID ${HELLOUTAU_PLUGIN_IID})
 
+    _helloutau_json_string(_id "${FUNC_ID}")
+    _helloutau_json_string(_display_name "${FUNC_DISPLAY_NAME}")
+    _helloutau_json_string(_description "${FUNC_DESCRIPTION}")
+    _helloutau_json_string(_version "${HELLOUTAU_VERSION}")
+
     set(_dependencies)
     foreach(_dependency IN LISTS FUNC_DEPENDENCIES)
-        list(APPEND _dependencies "{\"id\": \"${_dependency}\", \"version\": \"${HELLOUTAU_VERSION}\", \"type\": \"required\"}")
+        _helloutau_json_string(_dependency_id "${_dependency}")
+        list(APPEND _dependencies "{\"id\": ${_dependency_id}, \"version\": ${_version}, \"type\": \"required\"}")
     endforeach()
     list(JOIN _dependencies ", " _dependencies)
 
-    # The base name includes the configuration postfix, if any.
-    set(_metadata "{\n"
+    # The base name includes the configuration postfix, if any. CONCAT keeps a semicolon of a
+    # value, which the expansion of a list would remove.
+    string(CONCAT _metadata "{\n"
         "    \"name\": \"$<TARGET_FILE_BASE_NAME:${_target}>\",\n"
-        "    \"id\": \"${FUNC_ID}\",\n"
-        "    \"displayName\": \"${FUNC_DISPLAY_NAME}\",\n"
-        "    \"description\": \"${FUNC_DESCRIPTION}\",\n"
-        "    \"version\": \"${HELLOUTAU_VERSION}\",\n"
+        "    \"id\": ${_id},\n"
+        "    \"displayName\": ${_display_name},\n"
+        "    \"description\": ${_description},\n"
+        "    \"version\": ${_version},\n"
         "    \"dependencies\": [${_dependencies}]\n"
         "}\n"
     )
-    string(JOIN "" _metadata ${_metadata})
     set(_metadata_file ${_plugins_dir}/${FUNC_CATEGORY}/plugin.json)
     file(GENERATE OUTPUT ${_metadata_file} CONTENT "${_metadata}")
 
