@@ -598,8 +598,9 @@ namespace hello::daw {
             DiagnosticBox::show(&decl, tr("Note Properties"), diagnostics);
         }
 
-        // The properties of the project in their dialog, changed in one step; a new voice
-        // folder is read at once.
+        // Edits the properties of the project in their dialog in one step. A voice folder that
+        // denotes another directory is read at once. A voice folder that is only written
+        // differently is not read again.
         void editProperties() {
             stdc_decl_t;
             ProjectPropertiesDialog dialog(document->session()->snapshot(), editor->settings(),
@@ -614,7 +615,8 @@ namespace hello::daw {
                 const bool changed = kit::ProjectEdits::setProperties(
                     kit::ProjectRef(document->session()), changes, diagnostics);
                 DiagnosticBox::show(&decl, tr("Project Properties"), diagnostics);
-                newFolder = changed && changes.voiceDir.has_value();
+                newFolder = changed && changes.voiceDir.has_value() &&
+                            !sameVoiceRoot(voiceRoot(), voiceBankRoot);
             }
             // A folder that failed to load before is read again once the dialog confirms it.
             const auto root = voiceRoot();
@@ -671,6 +673,22 @@ namespace hello::daw {
                 return std::filesystem::is_regular_file(EngineTrust::resolved(value, utau), error);
             };
             return exists(project.settings.wavtool) && exists(project.settings.resampler);
+        }
+
+        // Returns whether two voice bank directories are the same directory.
+        static bool sameVoiceRoot(const std::filesystem::path &first,
+                                  const std::filesystem::path &second) {
+            if (first.empty() || second.empty()) {
+                return first.empty() && second.empty();
+            }
+            std::error_code firstError;
+            std::error_code secondError;
+            const auto firstCanonical = std::filesystem::weakly_canonical(first, firstError);
+            const auto secondCanonical = std::filesystem::weakly_canonical(second, secondError);
+            if (firstError || secondError) {
+                return first == second;
+            }
+            return firstCanonical == secondCanonical;
         }
 
         // Deletes the render cache of the project; the realtime mode renders it anew.
@@ -2000,15 +2018,17 @@ namespace hello::daw {
                 updateUndoActions();
                 updatePitchActions();
                 updateFindResult();
-                // An undo or redo that changes the voice folder reads the folder again. The read
-                // is queued so that it does not run inside the notification of the step.
-                if (!voiceBankReloadPending && voiceRoot() != voiceBankRoot) {
+                // The voice folder is read again after an undo or redo that changes it to another
+                // directory. The read is queued so that it does not run inside the notification
+                // of the step.
+                if (!voiceBankReloadPending && voiceRoot() != voiceBankRoot &&
+                    !sameVoiceRoot(voiceRoot(), voiceBankRoot)) {
                     voiceBankReloadPending = true;
                     QMetaObject::invokeMethod(
                         _decl,
                         [this] {
                             voiceBankReloadPending = false;
-                            if (voiceRoot() != voiceBankRoot) {
+                            if (!sameVoiceRoot(voiceRoot(), voiceBankRoot)) {
                                 _decl->loadVoiceBank();
                             }
                         },

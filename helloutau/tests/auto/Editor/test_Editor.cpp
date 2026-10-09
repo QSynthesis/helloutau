@@ -833,7 +833,7 @@ private Q_SLOTS:
         dialog.mode2Box()->setChecked(!project.settings.mode2);
         auto changes = dialog.changes();
         QCOMPARE(changes.name, std::optional(QStringLiteral("other")));
-        QCOMPARE(changes.voiceDir, std::optional(QStringLiteral("C:/voice/other")));
+        QCOMPARE(changes.voiceDir, std::optional(QStringLiteral("C:\\voice\\other")));
         QCOMPARE(changes.mode2, std::optional(!project.settings.mode2));
         QVERIFY(!changes.tempo && !changes.flags && !changes.wavtool && !changes.resampler &&
                 !changes.outputFile);
@@ -866,7 +866,7 @@ private Q_SLOTS:
         project.tracks.first().voiceDir = QStringLiteral("%VOICE%bank");
         ProjectPropertiesDialog dialog(project, settings);
 
-        QCOMPARE(dialog.voiceDirEdit()->text(), QStringLiteral("bank"));
+        QCOMPARE(dialog.voiceDirEdit()->text(), QStringLiteral("%VOICE%bank"));
         QVERIFY(!dialog.changes().voiceDir.has_value());
     }
 
@@ -882,8 +882,8 @@ private Q_SLOTS:
         ProjectPropertiesDialog dialog(project, settings);
 
         QCOMPARE(dialog.voiceDirEdit()->text(),
-                 QDir::toNativeSeparators(QStringLiteral("bank/mid")));
-        dialog.voiceDirEdit()->setText(QDir::toNativeSeparators(QStringLiteral("bank/mid")));
+                 QDir::toNativeSeparators(QStringLiteral("%VOICE%bank/mid")));
+        dialog.voiceDirEdit()->setText(QDir::toNativeSeparators(QStringLiteral("%VOICE%bank/mid")));
         QVERIFY(!dialog.changes().voiceDir.has_value());
         QVERIFY(!dialog.voiceDirEdit()->actions().isEmpty());
         QVERIFY(!dialog.voiceDirEdit()->actions().constFirst()->isVisible());
@@ -903,10 +903,11 @@ private Q_SLOTS:
             QDir::toNativeSeparators(QString::fromStdU16String(bank.u16string()));
         ProjectPropertiesDialog dialog(project, settings);
 
-        QCOMPARE(dialog.voiceDirEdit()->text(), QStringLiteral("bank"));
+        QCOMPARE(dialog.voiceDirEdit()->text(),
+                 QDir::toNativeSeparators(QString::fromStdU16String(bank.u16string())));
         QVERIFY(!dialog.changes().voiceDir.has_value());
 
-        dialog.voiceDirEdit()->setText(QStringLiteral("other"));
+        dialog.voiceDirEdit()->setText(QStringLiteral("%VOICE%other"));
         QCOMPARE(dialog.changes().voiceDir, std::optional(QStringLiteral("%VOICE%other")));
     }
 

@@ -412,9 +412,9 @@ set /tracks/0/notes/12/intensity null
 
 编码不按文件分别记录。某个文件实际使用的编码与目录不同时，其中不合法的字节读作 U+FFFD，打开后即可看出，由用户处理。
 
-### UTAU 音源路径语义待做事项
+### UTAU 音源路径的两种相对写法
 
-UTAU 对未带 `%VOICE%` 前缀的相对音源路径与带前缀的路径采用不同解析基准：`%VOICE%bank` 指向 UTAU 安装目录下 `voice\bank`，而 `bank` 指向 `utau.exe` 所在目录下的 `bank`。当前实现暂不修改这一行为。后续应在工程属性、工程加载、路径规范化和音源校验中完整保留这两种语义，并补充覆盖两种路径的测试。
+UTAU 对带 `%VOICE%` 前缀的音源路径与不带前缀的相对路径采用不同的解析基准：`%VOICE%bank` 指向 UTAU 安装目录下的 `voice\bank`，而 `bank` 指向 `utau.exe` 所在目录下的 `bank`（实测见 [`claude/utau-voicedir-cachedir.md`](claude/utau-voicedir-cachedir.md)）。`Track::voiceDirectory()` 分别以音源文件夹与 `VoiceLocations::relativeBase` 解析这两种写法。工程属性的音源目录框显示 `VoiceDir` 的原值，因此两种写法不会混同，规范化规则见 [`Widgets.md`](Widgets.md)「工程属性」。
 
 ### 文件名编码错解的兼容计划（尚未实现）
 

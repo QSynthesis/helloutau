@@ -1577,6 +1577,10 @@ Trust and use them for rendering?</source>
         <translation>工程使用设置中的合成器。</translation>
     </message>
     <message>
+        <source>Resolves to %1</source>
+        <translation>指向 %1</translation>
+    </message>
+    <message>
         <source>The project uses the resampler from the settings as its wavtool.</source>
         <translation>工程将设置中的重采样器用作合成器。</translation>
     </message>

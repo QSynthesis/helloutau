@@ -8,6 +8,7 @@
 #include <QtCore/QDir>
 #include <QtWidgets/QCheckBox>
 #include <QtWidgets/QComboBox>
+#include <QtWidgets/QCompleter>
 #include <QtWidgets/QDialogButtonBox>
 #include <QtWidgets/QDoubleSpinBox>
 #include <QtWidgets/QFileDialog>
@@ -80,23 +81,15 @@ namespace hello::daw {
             return textOf(inside ? relative : engine);
         }
 
-        // Returns whether two voiceDir values resolve to the same directory
-        bool sameVoiceDirectory(const QString &first, const QString &second,
-                                const kit::VoiceLocations &locations) {
-            kit::Track firstTrack;
-            firstTrack.voiceDir = first;
-            kit::Track secondTrack;
-            secondTrack.voiceDir = second;
-            const auto firstPath = firstTrack.voiceDirectory(locations);
-            const auto secondPath = secondTrack.voiceDirectory(locations);
-            if (firstPath.empty() || secondPath.empty()) {
-                return false;
+        // Returns the voiceDir value as UTAU writes it on save. An absolute path inside a voice
+        // folder of locations becomes a %VOICE% value. A %VOICE% value and a relative path are
+        // returned unchanged, see docs/claude/utau-voicedir-cachedir.md.
+        QString normalizedVoiceDir(const QString &value, const kit::VoiceLocations &locations) {
+            const auto path = kit::Project::pathOf(value);
+            if (value.startsWith(kit::Track::voicePrefix) || !path.is_absolute()) {
+                return value;
             }
-            std::error_code firstError;
-            std::error_code secondError;
-            const auto firstCanonical = fs::weakly_canonical(firstPath, firstError);
-            const auto secondCanonical = fs::weakly_canonical(secondPath, secondError);
-            return !firstError && !secondError && firstCanonical == secondCanonical;
+            return kit::Track::voiceDirOf(path, locations);
         }
 
     }
@@ -117,23 +110,34 @@ namespace hello::daw {
         m_flags = new QLineEdit(values.flags);
         m_outputFile = new QLineEdit(QDir::toNativeSeparators(values.outputFile));
 
-        // The folders in the voice folders are listed by name, and each item holds the %VOICE%
-        // value of its folder. A name in a voice folder of higher priority hides the same name
-        // in a voice folder of lower priority, as the prefix resolves.
+        // The box holds the voiceDir value itself, so that a relative path and a %VOICE% value
+        // of the same name are distinct. The folders in the voice folders are listed by the
+        // value that UTAU writes for them. A folder hidden by a folder of the same name in a
+        // voice folder of higher priority is therefore listed by its absolute path. The
+        // completer matches any part of an item, so that a voice bank is found by its name.
         m_voiceDir = new QComboBox();
         m_voiceDir->setEditable(true);
         m_voiceDir->setInsertPolicy(QComboBox::NoInsert);
         m_voiceDirInvalid = addInvalidMark(m_voiceDir->lineEdit(), warningIcon);
-        for (const auto &root : m_settings.voiceLocations().voiceFolders) {
+        const auto locations = m_settings.voiceLocations();
+        for (const auto &root : locations.voiceFolders) {
             const auto folders =
                 QDir(textOf(root)).entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
             for (const auto &folder : folders) {
-                const auto value = kit::Track::voicePrefix.toString() + folder.fileName();
-                if (m_voiceDir->findData(value) < 0) {
-                    m_voiceDir->addItem(folder.fileName(), value);
+                const auto value = kit::Track::voiceDirOf(
+                    fs::path(folder.absoluteFilePath().toStdU16String()), locations);
+                if (m_voiceDir->findText(value) < 0) {
+                    m_voiceDir->addItem(value);
                 }
             }
         }
+        const auto completer = m_voiceDir->completer();
+        completer->setCompletionMode(QCompleter::PopupCompletion);
+        completer->setFilterMode(Qt::MatchContains);
+        completer->setCaseSensitivity(Qt::CaseInsensitive);
+        m_voiceDirResolved = new QLabel();
+        m_voiceDirResolved->setWordWrap(true);
+        m_voiceDirResolved->setTextInteractionFlags(Qt::TextSelectableByMouse);
         showVoiceDir(project.tracks.isEmpty()
                          ? QString()
                          : QDir::toNativeSeparators(project.tracks.first().voiceDir));
@@ -193,6 +197,7 @@ namespace hello::daw {
         form->addRow(tr("&Flags:"), m_flags);
         form->addRow(tr("&Voice folder:"),
                      withBrowse(m_voiceDir, this, [this] { browseVoiceDir(); }));
+        form->addRow(QString(), m_voiceDirResolved);
         form->addRow(tr("&Output file:"), withBrowse(m_outputFile, this, [this] {
                          const auto chosen = QFileDialog::getSaveFileName(
                              this, tr("Choose Output File"), m_outputFile->text(),
@@ -215,11 +220,14 @@ namespace hello::daw {
 
         connect(m_voiceDir->lineEdit(), &QLineEdit::textChanged, this,
                 &ProjectPropertiesDialog::checkPaths);
+        connect(m_voiceDir->lineEdit(), &QLineEdit::textChanged, this,
+                &ProjectPropertiesDialog::updateVoiceDirResolved);
         for (const auto edit : {m_wavtool, m_resampler}) {
             connect(edit, &QLineEdit::textChanged, this, &ProjectPropertiesDialog::checkPaths);
             connect(edit, &QLineEdit::textChanged, this, &ProjectPropertiesDialog::updateTrust);
         }
         checkPaths();
+        updateVoiceDirResolved();
         updateTrust();
 
         auto buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
@@ -236,45 +244,22 @@ namespace hello::daw {
     ProjectPropertiesDialog::~ProjectPropertiesDialog() = default;
 
     void ProjectPropertiesDialog::showVoiceDir(const QString &voiceDir) {
-        // A value that resolves into a voice folder is shown by its name in that folder, as an
-        // item that holds the %VOICE% value. Any other value is shown as written.
-        const auto locations = m_settings.voiceLocations();
-        auto value = voiceDir;
-        auto display = voiceDir;
-        kit::Track track;
-        track.voiceDir = voiceDir;
-        if (const auto directory = track.voiceDirectory(locations); !directory.empty()) {
-            value = kit::Track::voiceDirOf(directory, locations);
-            if (value.startsWith(kit::Track::voicePrefix)) {
-                display = value.mid(kit::Track::voicePrefix.size());
-            }
-        }
-        auto index = m_voiceDir->findData(value);
-        if (index < 0 && value.startsWith(kit::Track::voicePrefix) && value != display) {
-            m_voiceDir->addItem(display, value);
-            index = m_voiceDir->count() - 1;
-        }
+        const auto index = m_voiceDir->findText(voiceDir);
         m_voiceDir->setCurrentIndex(index);
-        m_voiceDir->setEditText(index >= 0 ? m_voiceDir->itemText(index) : display);
-    }
-
-    QString ProjectPropertiesDialog::voiceDirText() const {
-        // The name of an item stands for its %VOICE% value. Any other text is the value itself,
-        // so that a relative path is relative to the relativeBase of the voice locations, as in
-        // the project file.
-        const auto text = m_voiceDir->lineEdit()->text();
-        for (int index = 0; index < m_voiceDir->count(); ++index) {
-            if (text == m_voiceDir->itemText(index)) {
-                return m_voiceDir->itemData(index).toString();
-            }
-        }
-        return text;
+        m_voiceDir->setEditText(voiceDir);
     }
 
     fs::path ProjectPropertiesDialog::voiceDirectory() const {
         kit::Track track;
-        track.voiceDir = voiceDirText();
+        track.voiceDir = m_voiceDir->lineEdit()->text();
         return track.voiceDirectory(m_settings.voiceLocations());
+    }
+
+    void ProjectPropertiesDialog::updateVoiceDirResolved() {
+        const auto directory = voiceDirectory();
+        m_voiceDirResolved->setText(
+            directory.empty() ? QString() : tr("Resolves to %1").arg(textOf(directory)));
+        m_voiceDirResolved->setVisible(!directory.empty());
     }
 
     void ProjectPropertiesDialog::browseVoiceDir() {
@@ -390,7 +375,9 @@ namespace hello::daw {
     }
 
     void ProjectPropertiesDialog::acceptIfValid() {
-        if (checkPaths()) {
+        // Without changes, the dialog is accepted even if a path is invalid, and the project is
+        // not modified. Any change requires all paths to be valid.
+        if (changes().isEmpty() || checkPaths()) {
             accept();
             return;
         }
@@ -408,6 +395,9 @@ namespace hello::daw {
             const auto value = QDir::fromNativeSeparators(edited);
             return value != QDir::fromNativeSeparators(was) ? std::optional(value) : std::nullopt;
         };
+        const bool hasTrack = !m_project.tracks.isEmpty();
+        const auto voiceBefore = hasTrack ? m_project.tracks.first().voiceDir : QString();
+        const auto voice = m_voiceDir->lineEdit()->text();
         kit::ProjectPropertyChanges changes;
         changes.name = text(m_name, values.name);
         if (m_tempoEdited && m_tempo->value() != values.tempo) {
@@ -415,19 +405,30 @@ namespace hello::daw {
         }
         changes.flags = text(m_flags, values.flags);
         changes.outputFile = pathText(m_outputFile->text(), values.outputFile);
-        if (!m_project.tracks.isEmpty()) {
-            const auto &before = m_project.tracks.first().voiceDir;
-            const auto voice = voiceDirText();
-            if (voice != before &&
-                !sameVoiceDirectory(before, voice, m_settings.voiceLocations())) {
-                changes.voiceDir = voice;
-            }
+        if (hasTrack) {
+            changes.voiceDir = pathText(voice, voiceBefore);
         }
-        changes.wavtool = pathText(normalizedEngine(m_wavtool->text(), utau), values.wavtool);
-        changes.resampler = pathText(normalizedEngine(m_resampler->text(), utau), values.resampler);
+        changes.wavtool = pathText(m_wavtool->text(), values.wavtool);
+        changes.resampler = pathText(m_resampler->text(), values.resampler);
         if (m_mode2->isChecked() != values.mode2) {
             changes.mode2 = m_mode2->isChecked();
         }
+        if (changes.isEmpty()) {
+            return changes;
+        }
+        // The normalized values use the separators of a saved project, so that the project
+        // holds what the file will contain.
+        const auto normalized = [](const QString &value, const QString &was) {
+            const auto saved = kit::Project::savedPathText(value);
+            return saved != was ? std::optional(saved) : std::nullopt;
+        };
+        if (hasTrack) {
+            changes.voiceDir =
+                normalized(normalizedVoiceDir(voice, m_settings.voiceLocations()), voiceBefore);
+        }
+        changes.wavtool = normalized(normalizedEngine(m_wavtool->text(), utau), values.wavtool);
+        changes.resampler =
+            normalized(normalizedEngine(m_resampler->text(), utau), values.resampler);
         return changes;
     }
 

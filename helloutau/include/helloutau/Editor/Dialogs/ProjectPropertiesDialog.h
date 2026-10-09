@@ -40,10 +40,16 @@ namespace hello::daw {
                                 QWidget *parent = nullptr);
         ~ProjectPropertiesDialog();
 
-        /// The fields that differ from the project, for ProjectEdits::setProperties(). The tempo
-        /// counts only once it was edited, so that a value the box rounds is not changed. An
-        /// engine inside the UTAU directory is given relative to that directory, and any other
-        /// engine as an absolute path.
+        /// Returns the fields that differ from the project, for ProjectEdits::setProperties().
+        /// The tempo counts only once it was edited, so that a value the box rounds is not
+        /// changed.
+        ///
+        /// If any field differs, the voice folder and the two engines are normalized as well and
+        /// are returned if their normalized values differ. An absolute voice folder inside a
+        /// voice folder of the settings becomes a \c %VOICE% value, as UTAU writes it. An engine
+        /// inside the UTAU directory becomes relative to that directory, and any other engine
+        /// becomes an absolute path. All three use the separators of kit::Project::savedPathText().
+        /// If no field differs, nothing is normalized and the changes are empty.
         kit::ProjectPropertyChanges changes() const;
 
         QLineEdit *nameEdit() const;
@@ -67,8 +73,8 @@ namespace hello::daw {
 
     private:
         void showVoiceDir(const QString &voiceDir);
-        QString voiceDirText() const;
         std::filesystem::path voiceDirectory() const;
+        void updateVoiceDirResolved();
         void browseVoiceDir();
         bool checkPaths();
         void updateTrust();
@@ -84,6 +90,7 @@ namespace hello::daw {
         QLineEdit *m_outputFile;
         QComboBox *m_voiceDir;
         QAction *m_voiceDirInvalid;
+        QLabel *m_voiceDirResolved;
         QLineEdit *m_wavtool;
         QAction *m_wavtoolInvalid;
         QLineEdit *m_resampler;
