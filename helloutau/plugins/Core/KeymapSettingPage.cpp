@@ -281,8 +281,9 @@ namespace hello::daw {
             auto form = new QFormLayout(group);
             for (const auto &role : bindings.scheme().roles()) {
                 auto box = new QComboBox();
-                box->setObjectName(QStringLiteral("%1/%2/%3").arg(
-                    Editor::nameOf(kind), bindings.scheme().key(), QLatin1String(role.key)));
+                box->setObjectName(QStringLiteral("%1/%2/%3")
+                                       .arg(Editor::nameOf(kind), bindings.scheme().key(),
+                                            QLatin1String(role.key)));
                 box->addItem(tr("Off"), offData);
                 // Only a role that starts an operation acts without modifiers.
                 const bool none = bindings.scheme().isStart(role.id);
@@ -648,26 +649,28 @@ namespace hello::daw {
             removeFrom(m_remove->mapToGlobal(QPoint(0, m_remove->height())));
         });
         for (auto tree : m_trees) {
-            connect(tree, &QWidget::customContextMenuRequested, this, [this, tree](const QPoint &at) {
-            m_tree = tree;
-            const auto command = currentCommand();
-            if (!command) {
-                return;
-            }
-            QMenu menu(m_tree);
-            connect(menu.addAction(tr("&Add Keyboard Shortcut...")), &QAction::triggered, this,
-                    [this] { askShortcut(); });
-            for (const auto &key : shortcuts(*command)) {
-                connect(menu.addAction(tr("Remove %1").arg(key.toString(QKeySequence::NativeText))),
-                        &QAction::triggered, this,
-                        [this, command, key] { removeShortcut(*command, key); });
-            }
-            const auto reset = menu.addAction(tr("Re&set Shortcuts"));
-            reset->setEnabled(shortcuts(*command) != defaultsOf(*command));
-            connect(reset, &QAction::triggered, this,
-                    [this, command] { resetShortcuts(*command); });
-            menu.exec(m_tree->viewport()->mapToGlobal(at));
-            });
+            connect(
+                tree, &QWidget::customContextMenuRequested, this, [this, tree](const QPoint &at) {
+                    m_tree = tree;
+                    const auto command = currentCommand();
+                    if (!command) {
+                        return;
+                    }
+                    QMenu menu(m_tree);
+                    connect(menu.addAction(tr("&Add Keyboard Shortcut...")), &QAction::triggered,
+                            this, [this] { askShortcut(); });
+                    for (const auto &key : shortcuts(*command)) {
+                        connect(menu.addAction(
+                                    tr("Remove %1").arg(key.toString(QKeySequence::NativeText))),
+                                &QAction::triggered, this,
+                                [this, command, key] { removeShortcut(*command, key); });
+                    }
+                    const auto reset = menu.addAction(tr("Re&set Shortcuts"));
+                    reset->setEnabled(shortcuts(*command) != defaultsOf(*command));
+                    connect(reset, &QAction::triggered, this,
+                            [this, command] { resetShortcuts(*command); });
+                    menu.exec(m_tree->viewport()->mapToGlobal(at));
+                });
         }
         return widget;
     }

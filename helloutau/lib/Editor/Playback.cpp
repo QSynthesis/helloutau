@@ -311,9 +311,10 @@ namespace hello::daw {
             if (!synth || synthEngines.resampler != engines.resampler ||
                 synthThreads != threadCount) {
                 endPreview();
-                synth = std::make_unique<kit::RealtimeSynth>(
-                    engines, threadCount,
-                    [log = outputLog] { return std::make_unique<kit::EngineProcess>(log); });
+                synth =
+                    std::make_unique<kit::RealtimeSynth>(engines, threadCount, [log = outputLog] {
+                        return std::make_unique<kit::EngineProcess>(log);
+                    });
                 synthEngines = engines;
                 synthThreads = threadCount;
             }
@@ -671,7 +672,8 @@ namespace hello::daw {
         : QObject(parent), _impl(std::make_unique<Impl>(this)) {
         stdc_impl_t;
         impl.temporaryDirectory = std::move(temporaryDirectory);
-        impl.outputLog = outputLog ? std::move(outputLog) : std::make_shared<kit::EngineOutputLog>();
+        impl.outputLog =
+            outputLog ? std::move(outputLog) : std::make_shared<kit::EngineOutputLog>();
         impl.outputLog->setMode(kit::EngineOutputLog::Accumulated);
         impl.outputLog->setLimit(1024 * 1024);
         impl.runner->setOutputLog(impl.outputLog);
@@ -719,10 +721,10 @@ namespace hello::daw {
         Q_ASSERT(!impl.isBusy());
         impl.temporaryDirectory = std::move(temporaryDirectory);
         impl.kept.reset();
-        const auto logFile = impl.temporaryDirectory.empty()
-                                 ? QString()
-                                 : QString::fromStdU16String(
-                                       (impl.temporaryDirectory / "render.log").u16string());
+        const auto logFile =
+            impl.temporaryDirectory.empty()
+                ? QString()
+                : QString::fromStdU16String((impl.temporaryDirectory / "render.log").u16string());
         impl.outputLog->setFileName(logFile);
         impl.outputLog->clear();
     }

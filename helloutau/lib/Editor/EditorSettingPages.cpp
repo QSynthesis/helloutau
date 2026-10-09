@@ -80,16 +80,12 @@ namespace hello::daw {
                 return std::nullopt;
             }
             const auto suffix = match.captured(2).toLower();
-            const double multiplier = suffix == QLatin1String("kib")
-                                          ? 1024.0
-                                          : suffix == QLatin1String("mib")
-                                                ? 1024.0 * 1024
-                                                : suffix == QLatin1String("gib")
-                                                      ? 1024.0 * 1024 * 1024
-                                                      : 1.0;
+            const double multiplier = suffix == QLatin1String("kib")   ? 1024.0
+                                      : suffix == QLatin1String("mib") ? 1024.0 * 1024
+                                      : suffix == QLatin1String("gib") ? 1024.0 * 1024 * 1024
+                                                                       : 1.0;
             const double bytes = number * multiplier;
-            if (bytes < 1024 || bytes > 1024.0 * 1024 * 1024 ||
-                bytes != std::floor(bytes)) {
+            if (bytes < 1024 || bytes > 1024.0 * 1024 * 1024 || bytes != std::floor(bytes)) {
                 return std::nullopt;
             }
             return int(bytes);
@@ -331,7 +327,8 @@ namespace hello::daw {
         auto enginesGroup = new QGroupBox(tr("Engines"), widget);
         auto enginesForm = new QFormLayout(enginesGroup);
         m_wavtool = addPathRow(enginesForm, widget, tr("&Wavtool:"), m_settings.wavtool(), false);
-        m_resampler = addPathRow(enginesForm, widget, tr("&Resampler:"), m_settings.resampler(), false);
+        m_resampler =
+            addPathRow(enginesForm, widget, tr("&Resampler:"), m_settings.resampler(), false);
         enginesForm->addRow(
             note(tr("Project Properties resets the engines of a project to these. "
                     "The voice bank editor previews entries with this resampler.")));
@@ -348,10 +345,11 @@ namespace hello::daw {
                                 AppSettings::Realtime);
         m_playbackMode->setCurrentIndex(m_playbackMode->findData(m_settings.playbackMode()));
         playbackForm->addRow(tr("&Playback:"), m_playbackMode);
-        playbackForm->addRow(note(tr("Realtime playback joins the notes by the rules of the project "
-                                     "wavtool without running the wavtool process. Rendering a "
-                                     "whole track uses an external console in the classic mode and "
-                                     "several threads otherwise.")));
+        playbackForm->addRow(
+            note(tr("Realtime playback joins the notes by the rules of the project "
+                    "wavtool without running the wavtool process. Rendering a "
+                    "whole track uses an external console in the classic mode and "
+                    "several threads otherwise.")));
 
         // Zero stands for one thread per hardware thread. The list offers the powers of two below
         // the number of hardware threads and that number, and any other count can be typed in.
@@ -391,10 +389,12 @@ namespace hello::daw {
         m_renderLogLimit = new QComboBox();
         m_renderLogLimit->setEditable(true);
         m_renderLogLimit->setInsertPolicy(QComboBox::InsertAtBottom);
-        const QList<QPair<QString, int>> limits{{QStringLiteral("256 KiB"), 256 * 1024},
-                                                {QStringLiteral("1 MiB"), 1024 * 1024},
-                                                {QStringLiteral("4 MiB"), 4 * 1024 * 1024},
-                                                {QStringLiteral("16 MiB"), 16 * 1024 * 1024}};
+        const QList<QPair<QString, int>> limits{
+            {QStringLiteral("256 KiB"), 256 * 1024      },
+            {QStringLiteral("1 MiB"),   1024 * 1024     },
+            {QStringLiteral("4 MiB"),   4 * 1024 * 1024 },
+            {QStringLiteral("16 MiB"),  16 * 1024 * 1024}
+        };
         for (const auto &[label, bytes] : limits) {
             m_renderLogLimit->addItem(label, bytes);
         }
@@ -420,8 +420,7 @@ namespace hello::daw {
                 &SettingPage::modifiedChanged);
         connect(m_renderLogLimit, &QComboBox::currentTextChanged, this,
                 &SettingPage::modifiedChanged);
-        connect(m_renderLogLimit, &QComboBox::editTextChanged, this,
-                &SettingPage::modifiedChanged);
+        connect(m_renderLogLimit, &QComboBox::editTextChanged, this, &SettingPage::modifiedChanged);
         return widget;
     }
 
@@ -439,8 +438,8 @@ namespace hello::daw {
     }
 
     std::optional<int> RenderingSettingPage::renderLogLimit() const {
-        const int index = m_renderLogLimit->findText(m_renderLogLimit->currentText(),
-                                                     Qt::MatchExactly);
+        const int index =
+            m_renderLogLimit->findText(m_renderLogLimit->currentText(), Qt::MatchExactly);
         if (index >= 0 && m_renderLogLimit->itemData(index).isValid()) {
             return m_renderLogLimit->itemData(index).toInt();
         }
@@ -448,8 +447,8 @@ namespace hello::daw {
     }
 
     bool RenderingSettingPage::isModified() const {
-        if (!m_resampler || !m_wavtool || !m_playbackMode || !m_threads ||
-            !m_renderLogMode || !m_renderLogLimit) {
+        if (!m_resampler || !m_wavtool || !m_playbackMode || !m_threads || !m_renderLogMode ||
+            !m_renderLogLimit) {
             return false;
         }
         return pathText(m_resampler) != QDir::fromNativeSeparators(m_settings.resampler()) ||

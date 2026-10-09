@@ -74,46 +74,45 @@ namespace hello::daw {
 
         // A property that a note may leave to the default: the shared value, "(default)" where
         // all leave it, or "(various)"
-        const auto optional =
-            [&](const QString &label, const QString &unset,
-                const std::function<std::optional<double>(const kit::Note &)> &of,
-                const QList<double> &inherited = QList<double>()) {
-                const auto value = shared<std::optional<double>>(notes, of);
-                auto edit = new QLineEdit();
-                edit->setValidator(number);
-                const auto inheritedText = [&] {
-                    if (inherited.size() == notes.size() && !inherited.isEmpty()) {
-                        const auto first = inherited.first();
-                        bool same = true;
-                        for (const auto item : inherited) {
-                            same = same && item == first;
-                        }
-                        if (same) {
-                            return tr("(default: %1)").arg(numberText(first));
-                        }
+        const auto optional = [&](const QString &label, const QString &unset,
+                                  const std::function<std::optional<double>(const kit::Note &)> &of,
+                                  const QList<double> &inherited = QList<double>()) {
+            const auto value = shared<std::optional<double>>(notes, of);
+            auto edit = new QLineEdit();
+            edit->setValidator(number);
+            const auto inheritedText = [&] {
+                if (inherited.size() == notes.size() && !inherited.isEmpty()) {
+                    const auto first = inherited.first();
+                    bool same = true;
+                    for (const auto item : inherited) {
+                        same = same && item == first;
                     }
-                    return various;
-                };
-                if (!value) {
-                    bool allUnset = true;
-                    for (const auto &note : notes) {
-                        if (of(note)) {
-                            allUnset = false;
-                            break;
-                        }
+                    if (same) {
+                        return tr("(default: %1)").arg(numberText(first));
                     }
-                    if (allUnset && inherited.size() == notes.size() && !inherited.isEmpty()) {
-                        edit->setPlaceholderText(inheritedText());
-                    } else {
-                        edit->setPlaceholderText(various);
-                    }
-                } else if (*value) {
-                    edit->setText(numberText(**value));
-                } else {
-                    edit->setPlaceholderText(inherited.isEmpty() ? unset : inheritedText());
                 }
-                add(label, edit);
+                return various;
             };
+            if (!value) {
+                bool allUnset = true;
+                for (const auto &note : notes) {
+                    if (of(note)) {
+                        allUnset = false;
+                        break;
+                    }
+                }
+                if (allUnset && inherited.size() == notes.size() && !inherited.isEmpty()) {
+                    edit->setPlaceholderText(inheritedText());
+                } else {
+                    edit->setPlaceholderText(various);
+                }
+            } else if (*value) {
+                edit->setText(numberText(**value));
+            } else {
+                edit->setPlaceholderText(inherited.isEmpty() ? unset : inheritedText());
+            }
+            add(label, edit);
+        };
 
         const auto defaulted = [&](double value) {
             return tr("(default: %1)").arg(numberText(value));
@@ -130,18 +129,21 @@ namespace hello::daw {
             }
             add(tr("Len&gth (ticks):"), edit);
         }
-        optional(tr("&Tempo:"), tr("(follows the tempo before)"),
-                 [](const kit::Note &note) { return note.tempo; }, defaults.tempo);
+        optional(
+            tr("&Tempo:"), tr("(follows the tempo before)"),
+            [](const kit::Note &note) { return note.tempo; }, defaults.tempo);
         optional(tr("&Intensity:"), defaulted(utau::DEFAULT_VALUE_INTENSITY),
                  [](const kit::Note &note) { return note.intensity; });
         optional(tr("&Modulation:"), defaulted(utau::DEFAULT_VALUE_MODULATION),
                  [](const kit::Note &note) { return note.modulation; });
         optional(tr("Consonant &velocity:"), defaulted(utau::DEFAULT_VALUE_VELOCITY),
                  [](const kit::Note &note) { return note.velocity; });
-        optional(tr("&Pre-utterance:"), voiceBankDefault,
-                 [](const kit::Note &note) { return note.preUtterance; }, defaults.preUtterance);
-        optional(tr("&Overlap:"), voiceBankDefault,
-                 [](const kit::Note &note) { return note.voiceOverlap; }, defaults.voiceOverlap);
+        optional(
+            tr("&Pre-utterance:"), voiceBankDefault,
+            [](const kit::Note &note) { return note.preUtterance; }, defaults.preUtterance);
+        optional(
+            tr("&Overlap:"), voiceBankDefault,
+            [](const kit::Note &note) { return note.voiceOverlap; }, defaults.voiceOverlap);
         optional(tr("&Start point:"), defaulted(utau::DEFAULT_VALUE_START_POINT),
                  [](const kit::Note &note) { return note.startPoint; });
         text(tr("&Flags:"), [](const kit::Note &note) { return note.flags; });
