@@ -878,13 +878,10 @@ namespace hello::daw {
             selectionDurationLabel->setText(seconds(selection));
         }
 
-        // Plays in the playback mode of the settings (docs/Widgets.md), or stops what is playing
-        // or rendering: renders the selected notes, from the first to the last, and plays
-        // them; or plays from the playhead as the track is rendered.
-        //
-        // In the prerender mode, as in UTAU, the key stops what plays, and at rest it renders
-        // the current selection again. A paused render counts as at rest. The realtime mode
-        // pauses and resumes instead.
+        // Plays in the playback mode of the settings (docs/Widgets.md), pauses what plays,
+        // resumes what is paused, or cancels a render. At rest, renders the selected notes, from
+        // the first to the last, and plays them, or plays from the playhead as the track is
+        // rendered.
         void togglePlayback() {
             stdc_decl_t;
             switch (playback->state()) {
@@ -892,19 +889,11 @@ namespace hello::daw {
                     playback->stop();
                     return;
                 case Playback::Playing:
-                    if (realtime()) {
-                        playback->pause();
-                    } else {
-                        playback->stop();
-                    }
+                    playback->pause();
                     return;
                 case Playback::Paused:
-                    if (realtime()) {
-                        resumePlayback();
-                        return;
-                    }
-                    playback->stop();
-                    break;
+                    resumePlayback();
+                    return;
                 default:
                     break;
             }
@@ -2091,6 +2080,12 @@ namespace hello::daw {
                 if (synthToolTexts() != backgroundSynthTools) {
                     playback->release();
                     updateBackground();
+                }
+                // A prerender plays the notes as they were rendered, so an edit stops it, and the
+                // next play renders the notes again.
+                if (!realtime() && (playback->state() == Playback::Playing ||
+                                    playback->state() == Playback::Paused)) {
+                    playback->stop();
                 }
                 // A preview plays, and the background renders, the notes as they now are.
                 playback->updatePlan(*document);
