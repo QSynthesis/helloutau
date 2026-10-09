@@ -242,11 +242,11 @@ namespace hello::kit {
         /// The curve of Mode1 of a note with \a bend at \a tick, counted from the start of the
         /// note, as UTAU passes it to the resampler (docs/Synth.md, "Mode1 的音高"): value k lies
         /// 5 k ticks after the start, and between two values the curve is their linear
-        /// interpolation. The interval after the last value holds it, and from there on the
-        /// curve is 0. Before the first value it is 0, but before the start of the note, where
-        /// the values of \a previous reach with the interval after them, those values moved by
-        /// the offset of \a previous. The starts of both convert to ticks at \a tempo, the tempo
-        /// of the note.
+        /// interpolation. The interval after the last value holds it. Elsewhere the curve is 0,
+        /// but before the start of the note, where the values of \a previous reach with the
+        /// interval after them, it is those values moved by the offset of \a previous. This
+        /// holds before the first value and also after the values end before the start of the
+        /// note. The starts of both convert to ticks at \a tempo, the tempo of the note.
         static double curveAt(const std::optional<PitchBend> &bend, const PreviousBend &previous,
                               double tick, double tempo);
 

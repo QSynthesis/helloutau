@@ -191,10 +191,10 @@ namespace hello::kit {
             return ticks / ticksPerQuarter * 1000 * 60 / tempo;
         }
 
-        // The value of bend at tick, or none before its first value, or none from the end of
-        // the interval after its last value on unless beyond is true, which gives 0 there
+        // The value of bend at tick, or none before its first value and from the end of the
+        // interval after its last value on
         std::optional<double> valueAt(const std::optional<PitchBend> &bend, double tick,
-                                      double tempo, bool beyond) {
+                                      double tempo) {
             if (!bend || bend->values.isEmpty()) {
                 return std::nullopt;
             }
@@ -205,7 +205,7 @@ namespace hello::kit {
             const auto &values = bend->values;
             const auto k = qsizetype(std::floor(position));
             if (k >= values.size()) {
-                return beyond ? std::optional<double>(0) : std::nullopt;
+                return std::nullopt;
             }
             const double next = values[std::min(k + 1, values.size() - 1)];
             return values[k] + (next - values[k]) * (position - double(k));
@@ -225,11 +225,12 @@ namespace hello::kit {
 
     double PitchBend::curveAt(const std::optional<PitchBend> &bend, const PreviousBend &previous,
                               double tick, double tempo) {
-        if (const auto own = valueAt(bend, tick, tempo, true)) {
+        if (const auto own = valueAt(bend, tick, tempo)) {
             return *own;
         }
+        // Before the start of the note, also after its own values end
         if (tick < 0) {
-            if (const auto before = valueAt(previous.bend, tick + previous.length, tempo, false)) {
+            if (const auto before = valueAt(previous.bend, tick + previous.length, tempo)) {
                 return *before + previous.offset;
             }
         }
