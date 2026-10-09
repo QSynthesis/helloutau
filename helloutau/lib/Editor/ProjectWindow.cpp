@@ -45,6 +45,8 @@
 
 #include <stdcorelib/pimpl.h>
 
+#include <stdutau/utaconst.h>
+
 #include <QAKCore/actionextension.h>
 #include <QAKCore/actionregistry.h>
 #include <QAKWidgets/widgetactioncontext.h>
@@ -1295,7 +1297,7 @@ namespace hello::daw {
                     box->setObjectName(QStringLiteral("tempo"));
                     box->setToolTip(tr("Project Tempo"));
                     box->setDecimals(2);
-                    box->setRange(10, 512);
+                    box->setRange(utau::VALUE_TEMPO_MIN, utau::VALUE_TEMPO_MAX);
                     box->setSuffix(tr(" BPM"));
                     quantizationBoxes.removeAll(nullptr);
                     const auto height = quantizationBoxes.isEmpty()

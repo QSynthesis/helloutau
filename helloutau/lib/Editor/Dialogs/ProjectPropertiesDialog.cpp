@@ -21,6 +21,8 @@
 #include <QtWidgets/QStyle>
 #include <QtWidgets/QVBoxLayout>
 
+#include <stdutau/utaconst.h>
+
 #include "AppSettings.h"
 #include "EngineTrust.h"
 
@@ -29,9 +31,6 @@ namespace hello::daw {
     namespace fs = std::filesystem;
 
     namespace {
-
-        constexpr double MinimumTempo = 10;
-        constexpr double MaximumTempo = 512;
 
         QString textOf(const fs::path &path) {
             return QDir::toNativeSeparators(QString::fromStdU16String(path.u16string()));
@@ -104,7 +103,7 @@ namespace hello::daw {
         m_name = new QLineEdit(values.name);
         m_tempo = new QDoubleSpinBox();
         m_tempo->setDecimals(2);
-        m_tempo->setRange(MinimumTempo, MaximumTempo);
+        m_tempo->setRange(utau::VALUE_TEMPO_MIN, utau::VALUE_TEMPO_MAX);
         m_tempo->setValue(values.tempo);
         connect(m_tempo, &QDoubleSpinBox::valueChanged, this, [this] { m_tempoEdited = true; });
         m_flags = new QLineEdit(values.flags);
