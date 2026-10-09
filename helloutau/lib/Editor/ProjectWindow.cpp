@@ -2311,13 +2311,15 @@ namespace hello::daw {
                        (!portamento || *portamento)) {
                 roll->setPortamentoEnabled(false, diagnostics);
             }
-            if (dialog.vibratoState() != Qt::PartiallyChecked &&
-                (!vibratoState || *vibratoState != (dialog.vibratoState() == Qt::Checked))) {
-                roll->setVibratoEnabled(dialog.vibratoState() == Qt::Checked, diagnostics,
-                                        defaultVibrato);
-            }
-            if (dialog.vibratoState() != Qt::Unchecked && dialog.vibratoEdited())
+            // As in UTAU, a change gives every note the vibrato of the dialog, also if their
+            // vibratos differ. A vibrato that every note shares stays unless a field is edited.
+            if (dialog.vibratoState() == Qt::Checked &&
+                (vibratoState != std::optional(true) || dialog.vibratoEdited())) {
                 kit::ProjectEdits::setVibrato(sung, dialog.vibrato(), diagnostics);
+            } else if (dialog.vibratoState() == Qt::Unchecked &&
+                       vibratoState != std::optional(false)) {
+                kit::ProjectEdits::setVibrato(sung, std::nullopt, diagnostics);
+            }
             transaction.commit(diagnostics);
             DiagnosticBox::show(&decl, tr("Pitch Control"), diagnostics);
         }
