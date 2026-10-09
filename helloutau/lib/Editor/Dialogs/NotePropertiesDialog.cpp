@@ -213,7 +213,7 @@ namespace hello::daw {
     }
 
     TempoDialog::TempoDialog(std::optional<double> tempo, double current, QWidget *parent)
-        : QDialog(parent) {
+        : QDialog(parent), m_original(tempo) {
         setWindowTitle(tr("Tempo"));
 
         m_tempo = new QDoubleSpinBox();
@@ -221,6 +221,7 @@ namespace hello::daw {
         m_tempo->setRange(utau::VALUE_TEMPO_MIN, utau::VALUE_TEMPO_MAX);
         m_tempo->setValue(tempo.value_or(current));
         m_tempo->setSuffix(tr(" BPM"));
+        connect(m_tempo, &QDoubleSpinBox::valueChanged, this, [this] { m_tempoEdited = true; });
         m_follow = new QCheckBox(tr("&Follow the tempo before"));
         m_follow->setChecked(!tempo);
         m_tempo->setEnabled(bool(tempo));
@@ -242,7 +243,13 @@ namespace hello::daw {
     TempoDialog::~TempoDialog() = default;
 
     std::optional<double> TempoDialog::tempo() const {
-        return m_follow->isChecked() ? std::nullopt : std::optional(m_tempo->value());
+        if (m_follow->isChecked()) {
+            return std::nullopt;
+        }
+        if (!m_tempoEdited && m_original) {
+            return m_original;
+        }
+        return m_tempo->value();
     }
 
     QDoubleSpinBox *TempoDialog::tempoBox() const {

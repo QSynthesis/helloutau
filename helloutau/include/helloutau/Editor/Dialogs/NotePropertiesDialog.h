@@ -71,12 +71,18 @@ namespace hello::daw {
         TempoDialog(std::optional<double> tempo, double current, QWidget *parent = nullptr);
         ~TempoDialog();
 
+        /// Returns the tempo that the note is to set, or \c std::nullopt if the note follows the
+        /// tempo before. Unless the tempo was edited, the tempo of the note is returned
+        /// unchanged, even if the box cannot show it, so that a tempo out of the range of UTAU is
+        /// not changed by confirming the dialog.
         std::optional<double> tempo() const;
 
         QDoubleSpinBox *tempoBox() const;
         QCheckBox *followBox() const;
 
     private:
+        std::optional<double> m_original;
+        bool m_tempoEdited = false;
         QDoubleSpinBox *m_tempo;
         QCheckBox *m_follow;
     };
