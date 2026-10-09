@@ -7,6 +7,7 @@
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QLineEdit>
 #include <QtGui/QContextMenuEvent>
+#include <QtGui/QMouseEvent>
 #include <QtWidgets/QMenu>
 #include <QtWidgets/QToolButton>
 
@@ -76,6 +77,15 @@ private:
                           pointOf(roll, tick, key));
     }
 
+    // Moves the pointer to \a position with \a button and \a modifiers held. QTest::mouseMove()
+    // sends no modifiers, and a drag reads its operation from the modifiers of its first move.
+    static void move(QWidget *widget, QPoint position, Qt::MouseButton button,
+                     Qt::KeyboardModifiers modifiers) {
+        QMouseEvent event(QEvent::MouseMove, position, widget->mapToGlobal(position), Qt::NoButton,
+                          button, modifiers);
+        QApplication::sendEvent(widget, &event);
+    }
+
     // Drags from (tick, key) \a from to \a to, through a point on the way so that the drag
     // passes the start distance.
     static void drag(PianoRoll &roll, std::pair<double, int> from, std::pair<double, int> to,
@@ -85,8 +95,8 @@ private:
         const auto start = pointOf(roll, from.first, from.second);
         const auto end = pointOf(roll, to.first, to.second);
         QTest::mousePress(viewport, button, modifiers, start);
-        QTest::mouseMove(viewport, (start + end) / 2);
-        QTest::mouseMove(viewport, end);
+        move(viewport, (start + end) / 2, button, modifiers);
+        move(viewport, end, button, modifiers);
         QTest::mouseRelease(viewport, button, modifiers, end);
     }
 
@@ -1705,8 +1715,8 @@ private Q_SLOTS:
         const auto band = [&roll](QPoint from, QPoint to, Qt::KeyboardModifiers modifiers = {}) {
             const auto viewport = roll.view()->viewport();
             QTest::mousePress(viewport, Qt::LeftButton, modifiers, from);
-            QTest::mouseMove(viewport, (from + to) / 2);
-            QTest::mouseMove(viewport, to);
+            move(viewport, (from + to) / 2, Qt::LeftButton, modifiers);
+            move(viewport, to, Qt::LeftButton, modifiers);
             QTest::mouseRelease(viewport, Qt::LeftButton, modifiers, to);
         };
 

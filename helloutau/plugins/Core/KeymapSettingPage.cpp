@@ -75,6 +75,9 @@ namespace hello::daw {
             Qt::ControlModifier | Qt::AltModifier | Qt::ShiftModifier,
         };
 
+        // The data of the option that turns a role off, which no combination of modifiers has
+        constexpr int offData = -1;
+
         const char *modifierOptionNames[] = {
             QT_TRANSLATE_NOOP("hello::daw::KeymapSettingPage", "None"),
             QT_TRANSLATE_NOOP("hello::daw::KeymapSettingPage", "Ctrl"),
@@ -263,7 +266,7 @@ namespace hello::daw {
             }
             const auto modifiers = m_modifiers[item.kind].at(item.scheme).modifiers(item.role);
             const QSignalBlocker blocker(item.box);
-            item.box->setCurrentIndex(item.box->findData(modifiers.toInt()));
+            item.box->setCurrentIndex(item.box->findData(modifiers ? modifiers->toInt() : offData));
         }
     }
 
@@ -280,10 +283,11 @@ namespace hello::daw {
                 auto box = new QComboBox();
                 box->setObjectName(QStringLiteral("%1/%2/%3").arg(
                     Editor::nameOf(kind), bindings.scheme().key(), QLatin1String(role.key)));
+                box->addItem(tr("Off"), offData);
+                // Only a role that starts an operation acts without modifiers.
+                const bool none = bindings.scheme().isStart(role.id);
                 for (int i = 0; i < int(std::size(modifierOptions)); ++i) {
-                    // A role with Exact requires modifiers.
-                    if (modifierOptions[i] != Qt::NoModifier ||
-                        role.match != ModifierScheme::Exact) {
+                    if (modifierOptions[i] != Qt::NoModifier || none) {
                         box->addItem(tr(modifierOptionNames[i]), modifierOptions[i].toInt());
                     }
                 }
@@ -292,8 +296,11 @@ namespace hello::daw {
                             if (option < 0) {
                                 return;
                             }
+                            const int data = box->itemData(option).toInt();
                             m_modifiers[kind][scheme].setModifiers(
-                                id, Qt::KeyboardModifiers::fromInt(box->itemData(option).toInt()));
+                                id, data == offData
+                                        ? std::nullopt
+                                        : std::optional(Qt::KeyboardModifiers::fromInt(data)));
                             Q_EMIT modifiedChanged();
                         });
                 m_modifierBoxes.push_back({kind, scheme, role.id, box});

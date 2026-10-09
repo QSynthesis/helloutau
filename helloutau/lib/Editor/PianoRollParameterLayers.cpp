@@ -12,6 +12,29 @@
 
 namespace hello::daw {
 
+    namespace {
+
+        // A left press in the parameter area at position. Its drag runs the gesture that make
+        // returns for the operation of the DragScene of ParameterViewModifiers, and its click
+        // does nothing.
+        template <class Make>
+        std::unique_ptr<SceneGesture> parameterPress(PianoRollState *state, QPointF position,
+                                                     Make make) {
+            return std::make_unique<PressGesture>(
+                position,
+                [state, make](Qt::KeyboardModifiers modifiers) -> std::unique_ptr<SceneGesture> {
+                    const auto activation = state->parameterModifiers.activate(
+                        ParameterViewModifiers::DragScene, modifiers);
+                    if (!activation) {
+                        return nullptr;
+                    }
+                    return make(*activation);
+                },
+                nullptr);
+        }
+
+    }
+
     void PianoRollState::EnvelopeLayer::paint(QPainter &painter, const QRect &exposed) {
         const auto decl = m_state->widget;
         const auto &keys = view()->keyAxis();
@@ -154,13 +177,15 @@ namespace hello::daw {
     }
 
     PianoRollState::EnvelopeGesture::EnvelopeGesture(PianoRollState *state, int index, int anchor,
-                                                     QPointF position)
+                                                     QPointF position,
+                                                     const ModifierBindings::Activation &activation)
         : m_state(state), m_index(index), m_anchor(anchor), m_origin(position),
-          m_original(state->envelopeOf(index)) {
+          m_activation(activation), m_original(state->envelopeOf(index)) {
         m_length = state->fragmentOf(index).second;
     }
 
     void PianoRollState::EnvelopeGesture::move(QPointF position, Qt::KeyboardModifiers modifiers) {
+        m_state->parameterModifiers.updateToggles(m_activation, modifiers);
         const auto view = m_state->parameters;
         const auto &map = m_state->timeline->tempoMap();
         const auto timeAt = [&](QPointF point) {
@@ -169,7 +194,7 @@ namespace hello::daw {
         const auto times = anchorTimes(m_original, m_length);
         const int last = int(times.size()) - 1;
         const int k = m_anchor;
-        double delta = m_state->parameterModifiers.matches(ParameterViewModifiers::LockTime, modifiers)
+        double delta = m_activation.isOn(ParameterViewModifiers::LockTime)
                            ? 0
                            : std::round((timeAt(position) - timeAt(m_origin)) * 10) / 10;
         delta = std::clamp(delta, (k > 0 ? times[k - 1] : 0) - times[k],
@@ -194,7 +219,7 @@ namespace hello::daw {
         }
         double volume = m_original.anchorsInTimeOrder()[k].y + view->keyAxis().toKey(position.y()) -
                         view->keyAxis().toKey(m_origin.y());
-        if (m_state->parameterModifiers.matches(ParameterViewModifiers::SnapValue, modifiers)) {
+        if (m_activation.isOn(ParameterViewModifiers::SnapValue)) {
             volume = quarterNearest(PianoRoll::EnvelopeLane, volume);
         }
         anchors[k].y = std::clamp(std::round(volume), 0.0, EnvelopeRange);
@@ -255,7 +280,13 @@ namespace hello::daw {
         if (button != Qt::LeftButton) {
             return nullptr;
         }
-        return std::make_unique<EnvelopeGesture>(m_state, index, hit.index, position);
+        return parameterPress(
+            m_state, position,
+            [state = m_state, index, anchor = hit.index,
+             position](const ModifierBindings::Activation &activation) {
+                return std::make_unique<EnvelopeGesture>(state, index, anchor, position,
+                                                         activation);
+            });
     }
 
     void PianoRollState::ValueLayer::paint(QPainter &painter, const QRect &exposed) {
@@ -333,6 +364,7 @@ namespace hello::daw {
     }
 
     void PianoRollState::ValueGesture::move(QPointF position, Qt::KeyboardModifiers modifiers) {
+        m_state->parameterModifiers.updateToggles(m_activation, modifiers);
         const auto view = m_state->parameters;
         const auto &keys = view->keyAxis();
         const auto lane = m_state->lane;
@@ -340,7 +372,7 @@ namespace hello::daw {
         double key =
             std::clamp(keyOf(lane, m_start) + keys.toKey(position.y()) - keys.toKey(m_origin.y()),
                        range.minimum, range.maximum);
-        if (m_state->parameterModifiers.matches(ParameterViewModifiers::SnapValue, modifiers)) {
+        if (m_activation.isOn(ParameterViewModifiers::SnapValue)) {
             key = quarterNearest(lane, key);
         }
         const double value = std::round(valueAt(lane, key));
@@ -417,7 +449,11 @@ namespace hello::daw {
         if (button != Qt::LeftButton) {
             return nullptr;
         }
-        return std::make_unique<ValueGesture>(m_state, index, position);
+        return parameterPress(
+            m_state, position,
+            [state = m_state, index, position](const ModifierBindings::Activation &activation) {
+                return std::make_unique<ValueGesture>(state, index, position, activation);
+            });
     }
 
 }

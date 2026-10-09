@@ -733,11 +733,6 @@ namespace hello::daw {
     std::unique_ptr<SceneGesture>
         PianoRollState::PitchLayer::press(const SceneHit &hit, QPointF position,
                                           Qt::MouseButton button, Qt::KeyboardModifiers modifiers) {
-        if (button == Qt::LeftButton &&
-            m_state->noteModifiers.matches(NoteViewModifiers::DragZoom, modifiers))
-            return std::make_unique<ZoomGesture>(
-                m_state, position,
-                m_state->noteModifiers.matches(NoteViewModifiers::DragZoomAxisLock, modifiers));
         m_state->finishEditing(true);
         const int index = m_state->indexOf(hit.node);
         if (index < 0) {
@@ -747,7 +742,23 @@ namespace hello::daw {
             if (button != Qt::LeftButton) {
                 return nullptr;
             }
-            return std::make_unique<VibratoGesture>(m_state, index, hit.part, position);
+            const auto state = m_state;
+            const int part = hit.part;
+            return std::make_unique<PressGesture>(
+                position,
+                [state, index, part, position](
+                    Qt::KeyboardModifiers modifiers) -> std::unique_ptr<SceneGesture> {
+                    const auto activation =
+                        state->activate(NoteViewModifiers::VibratoDragScene, modifiers);
+                    if (!activation) {
+                        return nullptr;
+                    }
+                    if (activation->operation == NoteViewModifiers::DragZoom) {
+                        return std::make_unique<ZoomGesture>(state, position, *activation);
+                    }
+                    return std::make_unique<VibratoGesture>(state, index, part, position);
+                },
+                nullptr);
         }
         const auto list = m_state->notes().at(index).portamento();
         if (hit.index < 0 || hit.index >= list.size()) {
@@ -764,61 +775,123 @@ namespace hello::daw {
         if (button != Qt::LeftButton) {
             return nullptr;
         }
-        if (modifiers & Qt::ControlModifier) {
-            auto ids = m_state->selectedPoints;
-            if (!ids.remove(id)) {
-                ids.insert(id);
-            }
-            m_state->selectPoints(ids);
-            return nullptr;
+        const auto state = m_state;
+        // A press that clicks to select the point selects it at once.
+        const auto click = state->activate(NoteViewModifiers::PointClickScene, modifiers);
+        if (click && click->operation == NoteViewModifiers::SelectPoint &&
+            !state->selectedPoints.contains(id)) {
+            state->selectPoints({id});
         }
-        if (!m_state->selectedPoints.contains(id)) {
-            m_state->selectPoints({id});
-        }
-        return std::make_unique<PointGesture>(m_state, index, hit.index, position);
+        const int point = hit.index;
+        return std::make_unique<PressGesture>(
+            position,
+            [state, index, point, id, position](
+                Qt::KeyboardModifiers modifiers) -> std::unique_ptr<SceneGesture> {
+                const auto activation =
+                    state->activate(NoteViewModifiers::PointDragScene, modifiers);
+                if (!activation) {
+                    return nullptr;
+                }
+                if (activation->operation == NoteViewModifiers::DragZoom) {
+                    return std::make_unique<ZoomGesture>(state, position, *activation);
+                }
+                if (!state->selectedPoints.contains(id)) {
+                    state->selectPoints({id});
+                }
+                return std::make_unique<PointGesture>(state, index, point, position, *activation);
+            },
+            [state, id](Qt::KeyboardModifiers modifiers) {
+                const auto activation =
+                    state->activate(NoteViewModifiers::PointClickScene, modifiers);
+                if (!activation) {
+                    return;
+                }
+                if (activation->operation == NoteViewModifiers::SelectPoint) {
+                    state->selectPoints({id});
+                } else if (activation->operation == NoteViewModifiers::TogglePoint) {
+                    auto ids = state->selectedPoints;
+                    if (!ids.remove(id)) {
+                        ids.insert(id);
+                    }
+                    state->selectPoints(ids);
+                }
+            });
     }
 
     std::unique_ptr<SceneGesture>
         PianoRollState::GridLayer::press(const SceneHit &hit, QPointF position,
                                          Qt::MouseButton button, Qt::KeyboardModifiers modifiers) {
         Q_UNUSED(hit);
-        if (button == Qt::LeftButton &&
-            m_state->noteModifiers.matches(NoteViewModifiers::DragZoom, modifiers))
-            return std::make_unique<ZoomGesture>(
-                m_state, position,
-                m_state->noteModifiers.matches(NoteViewModifiers::DragZoomAxisLock, modifiers));
+        Q_UNUSED(modifiers);
         if (m_state->drawsBend(button)) {
-            return m_state->bendGesture(position, button);
+            return m_state->bendPress(position, button);
         }
         if (button == Qt::RightButton) {
             m_state->finishEditing(true);
-            return std::make_unique<SpanGesture>(m_state, position, modifiers);
+            return m_state->spanPress(position);
         }
         if (button != Qt::LeftButton) {
             return nullptr;
         }
         m_state->finishEditing(true);
-        if (m_state->tool == PianoRoll::PenTool) {
-            m_state->selectPoints({});
-            return std::make_unique<DrawGesture>(m_state, position, modifiers);
+        const auto state = m_state;
+        if (state->tool == PianoRoll::PenTool) {
+            state->selectPoints({});
+            return std::make_unique<PressGesture>(
+                position,
+                [state, position](Qt::KeyboardModifiers modifiers)
+                    -> std::unique_ptr<SceneGesture> {
+                    const auto activation =
+                        state->activate(NoteViewModifiers::DrawDragScene, modifiers);
+                    if (!activation) {
+                        return nullptr;
+                    }
+                    if (activation->operation == NoteViewModifiers::DragZoom) {
+                        return std::make_unique<ZoomGesture>(state, position, *activation);
+                    }
+                    return std::make_unique<DrawGesture>(state, position, *activation);
+                },
+                // A click draws a note as a drag that does not move.
+                [state, position](Qt::KeyboardModifiers modifiers) {
+                    if (const auto activation =
+                            state->activate(NoteViewModifiers::DrawClickScene, modifiers)) {
+                        DrawGesture(state, position, *activation).release(position, modifiers);
+                    }
+                });
         }
-        return std::make_unique<BandGesture>(m_state, position, modifiers);
+        return std::make_unique<PressGesture>(
+            position,
+            [state, position](Qt::KeyboardModifiers modifiers) -> std::unique_ptr<SceneGesture> {
+                const auto activation =
+                    state->activate(NoteViewModifiers::BandDragScene, modifiers);
+                if (!activation) {
+                    return nullptr;
+                }
+                if (activation->operation == NoteViewModifiers::DragZoom) {
+                    return std::make_unique<ZoomGesture>(state, position, *activation);
+                }
+                return std::make_unique<BandGesture>(
+                    state, position, NoteViewModifiers::Role(activation->operation));
+            },
+            [state](Qt::KeyboardModifiers modifiers) {
+                const auto activation =
+                    state->activate(NoteViewModifiers::BlankClickScene, modifiers);
+                if (activation && activation->operation == NoteViewModifiers::ClearSelection) {
+                    state->setSelection({});
+                    state->selectPoints({});
+                }
+            });
     }
 
     std::unique_ptr<SceneGesture>
         PianoRollState::NoteLayer::press(const SceneHit &hit, QPointF position,
                                          Qt::MouseButton button, Qt::KeyboardModifiers modifiers) {
-        if (button == Qt::LeftButton &&
-            m_state->noteModifiers.matches(NoteViewModifiers::DragZoom, modifiers))
-            return std::make_unique<ZoomGesture>(
-                m_state, position,
-                m_state->noteModifiers.matches(NoteViewModifiers::DragZoomAxisLock, modifiers));
         if (m_state->drawsBend(button)) {
-            return m_state->bendGesture(position, button);
+            return m_state->bendPress(position, button);
         }
         if (button == Qt::RightButton) {
             m_state->finishEditing(true);
-            return std::make_unique<SpanGesture>(m_state, position, modifiers);
+            return m_state->spanPress(position);
         }
         if (button != Qt::LeftButton) {
             return nullptr;
@@ -829,30 +902,58 @@ namespace hello::daw {
         if (index < 0) {
             return nullptr;
         }
-        if (hit.part == PianoRoll::NoteEnd) {
-            m_state->selectOnly(index);
-            return std::make_unique<LengthGesture>(m_state, index, modifiers);
+        const auto state = m_state;
+        const bool end = hit.part == PianoRoll::NoteEnd;
+        const bool wasSelected = state->isSelected(index);
+        // A press that clicks to select the note selects it at once.
+        const auto click = state->activate(NoteViewModifiers::NoteClickScene, modifiers);
+        if (click && click->operation == NoteViewModifiers::SelectNote && !wasSelected) {
+            state->selectOnly(index);
         }
-        if (modifiers & Qt::ControlModifier) {
-            auto ids = m_state->selection;
-            const auto id = m_state->timeline->note(index).id;
-            if (!ids.remove(id)) {
-                ids.insert(id);
-            }
-            m_state->anchor = id;
-            m_state->setSelection(ids);
-            return nullptr;
-        }
-        if (modifiers & Qt::ShiftModifier) {
-            const int anchor = m_state->indexOf(m_state->anchor);
-            m_state->selectRange(anchor < 0 ? index : anchor, index);
-            return nullptr;
-        }
-        const bool wasSelected = m_state->isSelected(index);
-        if (!wasSelected) {
-            m_state->selectOnly(index);
-        }
-        return std::make_unique<MoveGesture>(m_state, index, position, wasSelected);
+        return std::make_unique<PressGesture>(
+            position,
+            [state, index, end, wasSelected, position](
+                Qt::KeyboardModifiers modifiers) -> std::unique_ptr<SceneGesture> {
+                const auto activation = state->activate(
+                    end ? NoteViewModifiers::NoteEndDragScene : NoteViewModifiers::NoteDragScene,
+                    modifiers);
+                if (!activation) {
+                    return nullptr;
+                }
+                if (activation->operation == NoteViewModifiers::DragZoom) {
+                    return std::make_unique<ZoomGesture>(state, position, *activation);
+                }
+                if (end) {
+                    state->selectOnly(index);
+                    return std::make_unique<LengthGesture>(state, index, *activation);
+                }
+                if (!state->isSelected(index)) {
+                    state->selectOnly(index);
+                }
+                return std::make_unique<MoveGesture>(state, index, position, wasSelected);
+            },
+            [state, index](Qt::KeyboardModifiers modifiers) {
+                const auto activation =
+                    state->activate(NoteViewModifiers::NoteClickScene, modifiers);
+                if (!activation) {
+                    return;
+                }
+                const auto id = state->timeline->note(index).id;
+                if (activation->operation == NoteViewModifiers::SelectNote) {
+                    // Also a click on one of several selected notes selects it alone.
+                    state->selectOnly(index);
+                } else if (activation->operation == NoteViewModifiers::ToggleNote) {
+                    auto ids = state->selection;
+                    if (!ids.remove(id)) {
+                        ids.insert(id);
+                    }
+                    state->anchor = id;
+                    state->setSelection(ids);
+                } else if (activation->operation == NoteViewModifiers::ExtendNotes) {
+                    const int anchor = state->indexOf(state->anchor);
+                    state->selectRange(anchor < 0 ? index : anchor, index);
+                }
+            });
     }
 
 }

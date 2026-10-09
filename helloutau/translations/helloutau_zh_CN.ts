@@ -956,28 +956,116 @@ Trust and use them for rendering?</source>
         <translation>音符区</translation>
     </message>
     <message>
-        <source>Horizontal Scroll</source>
-        <translation>横向滚动</translation>
+        <source>Wheel: Scroll Vertically</source>
+        <translation>滚轮：纵向滚动</translation>
     </message>
     <message>
-        <source>Time Zoom</source>
-        <translation>横向缩放</translation>
+        <source>Wheel: Scroll Horizontally</source>
+        <translation>滚轮：横向滚动</translation>
     </message>
     <message>
-        <source>Key Zoom</source>
-        <translation>纵向缩放</translation>
+        <source>Wheel: Zoom Time</source>
+        <translation>滚轮：横向缩放</translation>
     </message>
     <message>
-        <source>Drag Zoom</source>
-        <translation>拖动缩放</translation>
+        <source>Wheel: Zoom Keys</source>
+        <translation>滚轮：纵向缩放</translation>
     </message>
     <message>
-        <source>Drag Zoom Axis Lock</source>
-        <translation>拖动缩放方向锁定</translation>
+        <source>Click Note: Select</source>
+        <translation>单击音符：选中</translation>
     </message>
     <message>
-        <source>Disable Note Snap</source>
-        <translation>关闭音符吸附</translation>
+        <source>Click Note: Toggle</source>
+        <translation>单击音符：切换选中</translation>
+    </message>
+    <message>
+        <source>Click Note: Extend</source>
+        <translation>单击音符：连选</translation>
+    </message>
+    <message>
+        <source>Drag Note: Move</source>
+        <translation>拖动音符：移动</translation>
+    </message>
+    <message>
+        <source>Drag Note End: Fill with Rest</source>
+        <translation>拖动音符末端：补休止符</translation>
+    </message>
+    <message>
+        <source>Drag Note End: Move Next Notes</source>
+        <translation>拖动音符末端：后续音符跟随</translation>
+    </message>
+    <message>
+        <source>Drag Note End: Take from Next Note</source>
+        <translation>拖动音符末端：借下一个音符</translation>
+    </message>
+    <message>
+        <source>Click Point: Select</source>
+        <translation>单击音高点：选中</translation>
+    </message>
+    <message>
+        <source>Click Point: Toggle</source>
+        <translation>单击音高点：切换选中</translation>
+    </message>
+    <message>
+        <source>Drag Point: Move</source>
+        <translation>拖动音高点：移动</translation>
+    </message>
+    <message>
+        <source>Click Blank: Clear Selection</source>
+        <translation>单击空白处：清除选区</translation>
+    </message>
+    <message>
+        <source>Band: Select</source>
+        <translation>框选：选中</translation>
+    </message>
+    <message>
+        <source>Band: Add</source>
+        <translation>框选：加入</translation>
+    </message>
+    <message>
+        <source>Band: Toggle</source>
+        <translation>框选：切换</translation>
+    </message>
+    <message>
+        <source>Pen: Draw</source>
+        <translation>画笔：画音符</translation>
+    </message>
+    <message>
+        <source>Pen: Draw Filling with Rest</source>
+        <translation>画笔：画音符并填入休止符</translation>
+    </message>
+    <message>
+        <source>Pitch Tool: Draw</source>
+        <translation>手绘音高：绘制</translation>
+    </message>
+    <message>
+        <source>Pitch Tool: Erase</source>
+        <translation>手绘音高：清零</translation>
+    </message>
+    <message>
+        <source>Drag Vibrato: Edit</source>
+        <translation>拖动颤音：编辑</translation>
+    </message>
+    <message>
+        <source>Drag: Zoom</source>
+        <translation>拖动：缩放</translation>
+    </message>
+    <message>
+        <source>Zoom: Lock Direction</source>
+        <translation>缩放：锁定方向</translation>
+    </message>
+    <message>
+        <source>Toggle: Disable Note Snap</source>
+        <translation>开关：关闭音符吸附</translation>
+    </message>
+    <message>
+        <source>Drag Point: Snap to Other Points</source>
+        <translation>拖动音高点：吸附到其他点</translation>
+    </message>
+    <message>
+        <source>Drag Point: Snap Pitch</source>
+        <translation>拖动音高点：音高吸附</translation>
     </message>
 </context>
 <context>
@@ -1014,12 +1102,16 @@ Trust and use them for rendering?</source>
         <translation>参数区</translation>
     </message>
     <message>
-        <source>Lock Time</source>
-        <translation>锁定时间</translation>
+        <source>Drag: Edit</source>
+        <translation>拖动：编辑</translation>
     </message>
     <message>
-        <source>Snap Value</source>
-        <translation>数值吸附</translation>
+        <source>Drag: Lock Time</source>
+        <translation>拖动：锁定时间</translation>
+    </message>
+    <message>
+        <source>Drag: Snap Value</source>
+        <translation>拖动：数值吸附</translation>
     </message>
 </context>
 <context>

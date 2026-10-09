@@ -306,8 +306,18 @@ namespace hello::daw {
         /// either button; the right button selects a span of time with the other tools
         bool drawsBend(Qt::MouseButton button) const;
 
-        /// A stroke of the Mode1 pitch from position, see BendGesture
-        std::unique_ptr<SceneGesture> bendGesture(QPointF position, Qt::MouseButton button);
+        /// A press at position whose drag strokes the Mode1 pitch (BendGesture), as the
+        /// PitchDrawScene or the PitchEraseScene of NoteViewModifiers selects
+        std::unique_ptr<SceneGesture> bendPress(QPointF position, Qt::MouseButton button);
+
+        /// The operation of scene of NoteViewModifiers that modifiers select, see
+        /// ModifierBindings::activate()
+        std::optional<ModifierBindings::Activation> activate(NoteViewModifiers::Scene scene,
+                                                             Qt::KeyboardModifiers modifiers) const;
+
+        /// A right press at position, whose click and drag select a span of time as the
+        /// SpanScene of NoteViewModifiers selects
+        std::unique_ptr<SceneGesture> spanPress(QPointF position);
 
         int indexOf(kit::edit::NodeId id) const;
 
@@ -470,13 +480,15 @@ namespace hello::daw {
 
         void selectRange(int first, int last);
 
-        bool snaps(Qt::KeyboardModifiers modifiers) const;
+        /// Whether positions snap to the quantization, which \a disabled, such as by the toggle
+        /// DisableNoteSnap, turns off
+        bool snaps(bool disabled) const;
 
         /// The nearest grid line to tick, or tick itself without snapping
-        qint64 snapped(double tick, Qt::KeyboardModifiers modifiers) const;
+        qint64 snapped(double tick, bool disabled) const;
 
         /// The last grid line at or before tick
-        qint64 snappedDown(double tick, Qt::KeyboardModifiers modifiers) const;
+        qint64 snappedDown(double tick, bool disabled) const;
 
         QRectF rectOf(qint64 start, int length, int key) const;
 

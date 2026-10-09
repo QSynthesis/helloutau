@@ -167,8 +167,18 @@ private Q_SLOTS:
         const auto view = shownView();
         view->setTimeAxis({0.125, 960});
         view->setKeyAxis({24, 90});
-        view->setWheelModifiers(Qt::AltModifier, Qt::MetaModifier,
-                                Qt::AltModifier | Qt::MetaModifier);
+        view->setWheelActions([](Qt::KeyboardModifiers modifiers) {
+            if (modifiers == (Qt::AltModifier | Qt::MetaModifier)) {
+                return SceneView::KeyZoom;
+            }
+            if (modifiers == Qt::MetaModifier) {
+                return SceneView::TimeZoom;
+            }
+            if (modifiers == Qt::AltModifier) {
+                return SceneView::HorizontalScroll;
+            }
+            return SceneView::VerticalScroll;
+        });
 
         wheel(*view, -1, Qt::AltModifier, {10, 10});
         QVERIFY(view->timeAxis().left > 960);

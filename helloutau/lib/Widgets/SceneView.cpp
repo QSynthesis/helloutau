@@ -10,6 +10,8 @@
 #include <QtGui/QWheelEvent>
 #include <QtWidgets/QScrollBar>
 
+#include "PlatformWheel.h"
+
 namespace hello::daw {
 
     namespace {
@@ -22,9 +24,27 @@ namespace hello::daw {
         constexpr double RowsPerNotch = 3;
         constexpr double WidthPerNotch = 0.125;
 
+        std::optional<SceneView::WheelAction> defaultWheelAction(Qt::KeyboardModifiers modifiers) {
+            const auto pressed = modifiers & (Qt::ControlModifier | Qt::AltModifier |
+                                              Qt::ShiftModifier | Qt::MetaModifier);
+            if (pressed == (Qt::ControlModifier | Qt::ShiftModifier)) {
+                return SceneView::KeyZoom;
+            }
+            if (pressed == Qt::ControlModifier) {
+                return SceneView::TimeZoom;
+            }
+            if (pressed == Qt::ShiftModifier) {
+                return SceneView::HorizontalScroll;
+            }
+            if (pressed == Qt::NoModifier) {
+                return SceneView::VerticalScroll;
+            }
+            return std::nullopt;
+        }
+
     }
 
-    SceneView::SceneView(QWidget *parent) : ScrollAreaBase(parent) {
+    SceneView::SceneView(QWidget *parent) : QAbstractScrollArea(parent) {
         setFocusPolicy(Qt::StrongFocus);
         viewport()->setMouseTracking(true);
         setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
@@ -186,25 +206,26 @@ namespace hello::daw {
     }
 
     void SceneView::wheelEvent(QWheelEvent *event) {
-        const auto delta = event->angleDelta();
+        const auto delta = PlatformWheel::angleDelta(*event);
         const auto modifiers = event->modifiers();
         const auto position = event->position();
         m_pointerPosition = position;
         m_pointerModifiers = modifiers;
         const double notches = (delta.y() != 0 ? delta.y() : delta.x()) / NotchAngle;
 
-        constexpr auto standardModifiers = Qt::ControlModifier | Qt::AltModifier |
-                                            Qt::ShiftModifier | Qt::MetaModifier;
-        const auto matches = [modifiers, standardModifiers](Qt::KeyboardModifiers expected) {
-            return (modifiers & standardModifiers) == expected;
-        };
-        if (matches(m_keyZoomModifiers)) {
+        const auto action =
+            m_wheelActions ? m_wheelActions(modifiers) : defaultWheelAction(modifiers);
+        if (!action) {
+            event->accept();
+            return;
+        }
+        if (action == KeyZoom) {
             const double factor = std::pow(ZoomStep, notches);
             zoomKeys(factor, position.y());
-        } else if (matches(m_timeZoomModifiers)) {
+        } else if (action == TimeZoom) {
             const double factor = std::pow(ZoomStep, notches);
             zoomTime(factor, position.x());
-        } else if (matches(m_horizontalScrollModifiers) || delta.y() == 0) {
+        } else if (action == HorizontalScroll || delta.y() == 0) {
             TimeAxis axis = m_timeAxis;
             axis.left -= notches * WidthPerNotch * viewport()->width() / axis.pixelsPerTick;
             setTimeAxis(axis);
@@ -217,13 +238,9 @@ namespace hello::daw {
         event->accept();
     }
 
-    void SceneView::setWheelModifiers(Qt::KeyboardModifiers horizontalScroll,
-                                      Qt::KeyboardModifiers timeZoom,
-                                      Qt::KeyboardModifiers keyZoom) {
-        m_horizontalScrollModifiers = horizontalScroll;
-        m_timeZoomModifiers = timeZoom;
-        m_keyZoomModifiers = keyZoom;
-        setWheelModifierCombinations({horizontalScroll, timeZoom, keyZoom});
+    void SceneView::setWheelActions(
+        std::function<std::optional<WheelAction>(Qt::KeyboardModifiers)> actionOf) {
+        m_wheelActions = std::move(actionOf);
     }
 
     void SceneView::mousePressEvent(QMouseEvent *event) {
@@ -259,6 +276,10 @@ namespace hello::daw {
         if (m_gesture) {
             autoScroll();
             m_gesture->move(event->position(), event->modifiers());
+            // A press may become a drag that scrolls at the edges only after it moves.
+            if (m_gesture && m_gesture->wantsAutoScroll() && !m_autoScrollTimer.isActive()) {
+                m_autoScrollTimer.start();
+            }
         } else {
             updateHover(event->position());
         }

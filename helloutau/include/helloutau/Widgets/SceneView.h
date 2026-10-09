@@ -1,16 +1,18 @@
 #ifndef HELLOUTAU_WIDGETS_SCENEVIEW_H
 #define HELLOUTAU_WIDGETS_SCENEVIEW_H
 
+#include <functional>
 #include <memory>
 #include <optional>
 #include <vector>
 
 #include <QtCore/QPointF>
 #include <QtCore/QTimer>
+#include <QtWidgets/QAbstractScrollArea>
+
 #include <helloutau/Widgets/HelloUtauWidgetsGlobal.h>
 #include <helloutau/Widgets/SceneAxis.h>
 #include <helloutau/Widgets/SceneLayer.h>
-#include <helloutau/Widgets/ScrollAreaBase.h>
 
 namespace hello::daw {
 
@@ -23,10 +25,9 @@ namespace hello::daw {
     /// hit start a gesture, which then receives the moves and the release, and Escape cancels
     /// it. See the section on the piano roll in docs/Widgets.md.
     ///
-    /// The wheel scrolls up and down; with Shift it scrolls across, with Ctrl it zooms the time
-    /// axis and with Ctrl and Shift the key axis, keeping the position under the pointer in
-    /// place.
-    class HELLOUTAU_WIDGETS_EXPORT SceneView : public ScrollAreaBase {
+    /// The wheel scrolls or zooms as setWheelActions() selects. A zoom keeps the position under
+    /// the pointer in place.
+    class HELLOUTAU_WIDGETS_EXPORT SceneView : public QAbstractScrollArea {
         Q_OBJECT
     public:
         explicit SceneView(QWidget *parent = nullptr);
@@ -39,11 +40,21 @@ namespace hello::daw {
 
         const KeyAxis &keyAxis() const;
 
-        /// Sets the modifier combinations used by the wheel for horizontal scrolling and the
-        /// two zoom axes. The default combinations are Shift, Ctrl and Ctrl+Shift.
-        void setWheelModifiers(Qt::KeyboardModifiers horizontalScroll,
-                               Qt::KeyboardModifiers timeZoom,
-                               Qt::KeyboardModifiers keyZoom);
+        /// The action of a wheel step
+        enum WheelAction {
+            VerticalScroll,
+            HorizontalScroll,
+            TimeZoom,
+            KeyZoom,
+        };
+
+        /// Sets the function that returns the action of a wheel step with the given modifiers,
+        /// or \c std::nullopt for a step that does nothing. By default no modifiers scroll up
+        /// and down, Shift scrolls across, Ctrl zooms the time axis, Ctrl and Shift zoom the key
+        /// axis, and other modifiers do nothing. A step that only scrolls across scrolls across
+        /// instead of up and down. The delta of a step is read with PlatformWheel.
+        void setWheelActions(
+            std::function<std::optional<WheelAction>(Qt::KeyboardModifiers)> actionOf);
 
         /// Sets the key axis, with its top edge moved into the range of the scene if needed.
         void setKeyAxis(const KeyAxis &axis);
@@ -113,9 +124,7 @@ namespace hello::daw {
         bool m_updatingScrollBars = false;
         QPointF m_pointerPosition;
         Qt::KeyboardModifiers m_pointerModifiers = Qt::NoModifier;
-        Qt::KeyboardModifiers m_horizontalScrollModifiers = Qt::ShiftModifier;
-        Qt::KeyboardModifiers m_timeZoomModifiers = Qt::ControlModifier;
-        Qt::KeyboardModifiers m_keyZoomModifiers = Qt::ControlModifier | Qt::ShiftModifier;
+        std::function<std::optional<WheelAction>(Qt::KeyboardModifiers)> m_wheelActions;
         QTimer m_autoScrollTimer;
         bool m_suppressContextMenu = false;
         bool m_contextFilterInstalled = false;

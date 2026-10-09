@@ -11,12 +11,17 @@ namespace hello::daw {
     class HELLOUTAU_EDITOR_EXPORT ParameterViewModifiers {
     public:
         enum Role {
+            DragValue,
             LockTime,
             SnapValue,
         };
-        // Not declared: the wheel of the parameter area scrolls and zooms with HorizontalScroll,
-        // TimeZoom and KeyZoom of NoteViewModifiers, because the parameter area follows the time
-        // axis of the note area.
+        // Not declared: the wheel of the parameter area scrolls and zooms with the WheelScene of
+        // NoteViewModifiers, because the parameter area follows the time axis of the note area.
+
+        enum Scene {
+            /// A left drag of an envelope point or a value
+            DragScene,
+        };
 
         static const ModifierScheme &scheme();
     };

@@ -597,19 +597,19 @@ namespace hello::daw {
         setSelection(ids);
     }
 
-    bool PianoRollState::snaps(Qt::KeyboardModifiers modifiers) const {
-        return quantization > 0 && !noteModifiers.matches(NoteViewModifiers::DisableNoteSnap, modifiers);
+    bool PianoRollState::snaps(bool disabled) const {
+        return quantization > 0 && !disabled;
     }
 
-    qint64 PianoRollState::snapped(double tick, Qt::KeyboardModifiers modifiers) const {
-        if (!snaps(modifiers)) {
+    qint64 PianoRollState::snapped(double tick, bool disabled) const {
+        if (!snaps(disabled)) {
             return qint64(std::llround(tick));
         }
         return qint64(std::llround(tick / quantization)) * quantization;
     }
 
-    qint64 PianoRollState::snappedDown(double tick, Qt::KeyboardModifiers modifiers) const {
-        if (!snaps(modifiers)) {
+    qint64 PianoRollState::snappedDown(double tick, bool disabled) const {
+        if (!snaps(disabled)) {
             return qint64(std::floor(tick));
         }
         return qint64(std::floor(tick / quantization)) * quantization;
@@ -815,10 +815,53 @@ namespace hello::daw {
         }
     }
 
-    std::unique_ptr<SceneGesture> PianoRollState::bendGesture(QPointF position,
-                                                              Qt::MouseButton button) {
+    std::unique_ptr<SceneGesture> PianoRollState::bendPress(QPointF position,
+                                                            Qt::MouseButton button) {
         finishEditing(true);
-        return std::make_unique<BendGesture>(this, position, button == Qt::RightButton);
+        const bool erases = button == Qt::RightButton;
+        // No click: the stroke follows the first move, and a click strokes one place.
+        return std::make_unique<PressGesture>(
+            position,
+            [this, position, erases](Qt::KeyboardModifiers modifiers)
+                -> std::unique_ptr<SceneGesture> {
+                const auto activation = activate(erases ? NoteViewModifiers::PitchEraseScene
+                                                        : NoteViewModifiers::PitchDrawScene,
+                                                 modifiers);
+                if (!activation) {
+                    return nullptr;
+                }
+                if (activation->operation == NoteViewModifiers::DragZoom) {
+                    return std::make_unique<ZoomGesture>(this, position, *activation);
+                }
+                return std::make_unique<BendGesture>(this, position, erases);
+            },
+            nullptr);
+    }
+
+    std::optional<ModifierBindings::Activation>
+        PianoRollState::activate(NoteViewModifiers::Scene scene,
+                                 Qt::KeyboardModifiers modifiers) const {
+        return noteModifiers.activate(scene, modifiers);
+    }
+
+    std::unique_ptr<SceneGesture> PianoRollState::spanPress(QPointF position) {
+        const auto drag = [this, position](Qt::KeyboardModifiers modifiers)
+            -> std::unique_ptr<SceneGesture> {
+            const auto activation = activate(NoteViewModifiers::SpanScene, modifiers);
+            if (!activation) {
+                return nullptr;
+            }
+            return std::make_unique<SpanGesture>(
+                this, position, NoteViewModifiers::Role(activation->operation));
+        };
+        // A click selects the span of no width at the press, the notes at that time.
+        const auto click = [this, position](Qt::KeyboardModifiers modifiers) {
+            if (const auto activation = activate(NoteViewModifiers::SpanScene, modifiers)) {
+                SpanGesture(this, position, NoteViewModifiers::Role(activation->operation))
+                    .release(position, modifiers);
+            }
+        };
+        return std::make_unique<PressGesture>(position, drag, click);
     }
 
     std::optional<std::pair<int, double>> PianoRollState::portamentoNear(QPointF position) const {

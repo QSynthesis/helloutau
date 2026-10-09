@@ -60,6 +60,10 @@
         <translation>修饰键配置相互冲突。</translation>
     </message>
     <message>
+        <source>Off</source>
+        <translation>关闭</translation>
+    </message>
+    <message>
         <source>Other</source>
         <translation>其他</translation>
     </message>

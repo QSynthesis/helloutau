@@ -17,11 +17,14 @@
 
 namespace hello::daw {
 
-    /// A Ctrl+Alt drag that zooms one axis around the point where it began.
+    /// A drag that zooms both axes around the point where it began (DragZoom of
+    /// NoteViewModifiers). While DragZoomAxisLock is on, it zooms one axis only, the axis along
+    /// which the pointer moves first after the lock turns on.
     class PianoRollState::ZoomGesture : public SceneGesture {
     public:
-        ZoomGesture(PianoRollState *state, QPointF position, bool lockAxis)
-            : m_state(state), m_origin(position), m_last(position), m_lockAxis(lockAxis) {
+        ZoomGesture(PianoRollState *state, QPointF position,
+                    const ModifierBindings::Activation &activation)
+            : m_state(state), m_origin(position), m_last(position), m_activation(activation) {
         }
 
         void move(QPointF position, Qt::KeyboardModifiers modifiers) override;
@@ -32,7 +35,9 @@ namespace hello::daw {
         PianoRollState *m_state;
         QPointF m_origin;
         QPointF m_last;
-        bool m_lockAxis;
+        ModifierBindings::Activation m_activation;
+        // Where the lock turned on, and the axis it keeps once the pointer moved far enough
+        std::optional<QPointF> m_lockOrigin;
         std::optional<Qt::Orientation> m_orientation;
     };
 
@@ -67,13 +72,16 @@ namespace hello::daw {
         void start();
     };
 
-    /// A drag of the right edge of a note, which changes its length
+    /// A drag of the right edge of a note, which changes its length in the mode of
+    /// \a activation: PlainLength, FreeLength or TakeFromNextNote of NoteViewModifiers. Snapping
+    /// follows the toggle DisableNoteSnap.
     class PianoRollState::LengthGesture : public SceneGesture {
     public:
-        LengthGesture(PianoRollState *state, int index, Qt::KeyboardModifiers modifiers)
+        LengthGesture(PianoRollState *state, int index,
+                      const ModifierBindings::Activation &activation)
             : m_state(state), m_index(index), m_start(state->timeline->note(index).start),
               m_original(state->timeline->note(index).length), m_length(m_original),
-              m_modifiers(modifiers & (Qt::ShiftModifier | Qt::ControlModifier)) {
+              m_activation(activation) {
         }
 
         void move(QPointF position, Qt::KeyboardModifiers modifiers) override;
@@ -88,16 +96,17 @@ namespace hello::daw {
         qint64 m_start;
         int m_original;
         int m_length;
-        Qt::KeyboardModifiers m_modifiers;
+        ModifierBindings::Activation m_activation;
 
-        int lengthAt(QPointF position, Qt::KeyboardModifiers modifiers) const;
+        int lengthAt(QPointF position) const;
     };
 
-    /// A drag on the background that selects the notes in a rectangle, added to the selection
-    /// with Ctrl
+    /// A drag on the background that selects the notes in a rectangle in \a mode, ReplaceBand,
+    /// AddToBand or ToggleBand of NoteViewModifiers. ToggleBand inverts the selection of each
+    /// note or point in the rectangle.
     class PianoRollState::BandGesture : public SceneGesture {
     public:
-        BandGesture(PianoRollState *state, QPointF position, Qt::KeyboardModifiers modifiers);
+        BandGesture(PianoRollState *state, QPointF position, NoteViewModifiers::Role mode);
 
         void move(QPointF position, Qt::KeyboardModifiers modifiers) override;
 
@@ -116,14 +125,15 @@ namespace hello::daw {
         QSet<kit::edit::NodeId> m_previous;
         QSet<kit::edit::NodeId> m_basePoints;
         QSet<kit::edit::NodeId> m_previousPoints;
+        bool m_toggles = false;
     };
 
     /// A drag with the right button, which selects every note in the time it spans whatever its
-    /// key, as a drag selects in UTAU and a right drag in QSynthesis; with Ctrl held, in
-    /// addition to the notes selected before.
+    /// key, as a drag selects in UTAU and a right drag in QSynthesis, in \a mode as a
+    /// BandGesture.
     class PianoRollState::SpanGesture : public SceneGesture {
     public:
-        SpanGesture(PianoRollState *state, QPointF position, Qt::KeyboardModifiers modifiers);
+        SpanGesture(PianoRollState *state, QPointF position, NoteViewModifiers::Role mode);
 
         void move(QPointF position, Qt::KeyboardModifiers modifiers) override;
 
@@ -141,19 +151,21 @@ namespace hello::daw {
         QSet<kit::edit::NodeId> m_base;
         QSet<kit::edit::NodeId> m_previous;
         QSet<kit::edit::NodeId> m_previousPoints;
+        bool m_toggles = false;
     };
 
     /// A drag of the pen on the background, which draws a note (step 4 in docs/Widgets.md). The
     /// note goes before the note at the pointer, or after the last note, and starts where the note
-    /// before it ends; the notes after it start later by its length. With Shift held on the press,
-    /// a rest fills the gap from there to the pointer and the note starts at the pointer; within
-    /// a rest, the two take its place, and the notes after it start later only as far as the note
-    /// passes its end. The drag sets the length, snapped to the quantization. The first note
-    /// inserted where a note that sets a tempo started takes that tempo, so that the tempo there
-    /// stays.
+    /// before it ends; the notes after it start later by its length. With FillDraw of
+    /// NoteViewModifiers, a rest fills the gap from there to the pointer and the note starts at
+    /// the pointer; within a rest, the two take its place, and the notes after it start later
+    /// only as far as the note passes its end. The drag sets the length, snapped to the
+    /// quantization unless the toggle DisableNoteSnap is on. The first note inserted where a note
+    /// that sets a tempo started takes that tempo, so that the tempo there stays.
     class PianoRollState::DrawGesture : public SceneGesture {
     public:
-        DrawGesture(PianoRollState *state, QPointF position, Qt::KeyboardModifiers modifiers);
+        DrawGesture(PianoRollState *state, QPointF position,
+                    const ModifierBindings::Activation &activation);
 
         void move(QPointF position, Qt::KeyboardModifiers modifiers) override;
 
@@ -163,6 +175,7 @@ namespace hello::daw {
 
     private:
         PianoRollState *m_state;
+        ModifierBindings::Activation m_activation;
         // The note before which the note goes, or the number of notes, and where it starts
         int m_index = 0;
         qint64 m_from = 0;
@@ -179,12 +192,15 @@ namespace hello::daw {
 
     /// A drag of the selected points, all by the same time and height. The points of a note are
     /// kept in time order, a moving point passing the others, and the heights that are fixed stay
-    /// (heightFixed(), by the place of a point before the drag). Shift snaps the
-    /// pressed point to the time of another point of its note, Ctrl its height to PitchSnap.
+    /// (heightFixed(), by the place of a point before the drag). The toggle PointSnapTime of
+    /// NoteViewModifiers snaps the pressed point to the time of another point of its note,
+    /// PointSnapPitch its height to PitchSnap.
     class PianoRollState::PointGesture : public SceneGesture {
     public:
-        PointGesture(PianoRollState *state, int index, int point, QPointF position)
-            : m_state(state), m_index(index), m_point(point), m_origin(position) {
+        PointGesture(PianoRollState *state, int index, int point, QPointF position,
+                     const ModifierBindings::Activation &activation)
+            : m_state(state), m_index(index), m_point(point), m_origin(position),
+              m_activation(activation) {
         }
 
         void move(QPointF position, Qt::KeyboardModifiers modifiers) override;
@@ -198,6 +214,7 @@ namespace hello::daw {
         int m_index;
         int m_point;
         QPointF m_origin;
+        ModifierBindings::Activation m_activation;
         bool m_dragging = false;
         // The points that move, by note index, and the points of those notes before the drag
         QHash<int, QSet<int>> m_moving;

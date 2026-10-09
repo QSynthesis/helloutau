@@ -10,10 +10,32 @@
 
 namespace hello::daw {
 
+    namespace {
+
+        // Adds id, found in a band, to ids, which start as base. If the band toggles, removes id
+        // instead if base holds it.
+        void addToBand(QSet<kit::edit::NodeId> &ids, const QSet<kit::edit::NodeId> &base,
+                       kit::edit::NodeId id, bool toggles) {
+            if (toggles && base.contains(id)) {
+                ids.remove(id);
+            } else {
+                ids.insert(id);
+            }
+        }
+
+    }
+
     void PianoRollState::ZoomGesture::move(QPointF position, Qt::KeyboardModifiers modifiers) {
-        Q_UNUSED(modifiers);
-        if (m_lockAxis && !m_orientation) {
-            const QPointF distance = position - m_origin;
+        m_state->noteModifiers.updateToggles(m_activation, modifiers);
+        const bool locked = m_activation.isOn(NoteViewModifiers::DragZoomAxisLock);
+        if (!locked) {
+            m_lockOrigin.reset();
+            m_orientation.reset();
+        } else if (!m_lockOrigin) {
+            m_lockOrigin = m_last;
+        }
+        if (locked && !m_orientation) {
+            const QPointF distance = position - *m_lockOrigin;
             if (distance.manhattanLength() < QApplication::startDragDistance()) {
                 return;
             }
@@ -23,7 +45,7 @@ namespace hello::daw {
         const double horizontal = position.x() - m_last.x();
         const double vertical = position.y() - m_last.y();
         m_last = position;
-        if (m_lockAxis) {
+        if (locked) {
             const double delta = *m_orientation == Qt::Horizontal ? horizontal : vertical;
             if (delta == 0)
                 return;
@@ -147,14 +169,14 @@ namespace hello::daw {
         m_destination = m_first;
     }
 
-    int PianoRollState::LengthGesture::lengthAt(QPointF position,
-                                                Qt::KeyboardModifiers modifiers) const {
-        modifiers |= m_modifiers;
+    int PianoRollState::LengthGesture::lengthAt(QPointF position) const {
+        const int mode = m_activation.operation;
         const double tick = m_state->view->timeAxis().toTick(position.x());
-        qint64 length = m_state->snapped(tick, modifiers) - m_start;
+        qint64 length =
+            m_state->snapped(tick, m_activation.isOn(NoteViewModifiers::DisableNoteSnap)) -
+            m_start;
         const int minimum = m_state->quantization > 0 ? m_state->quantization : 1;
-        const bool special = modifiers & (Qt::ShiftModifier | Qt::ControlModifier);
-        if (special) {
+        if (mode != NoteViewModifiers::PlainLength) {
             length = std::max<qint64>(minimum, length);
         } else {
             // UTAU's unmodified drag can only shorten an ordinary note, and cannot shorten a
@@ -167,7 +189,7 @@ namespace hello::daw {
                 length = std::max<qint64>(minimum, length);
             }
         }
-        if (modifiers & Qt::ControlModifier) {
+        if (mode == NoteViewModifiers::TakeFromNextNote) {
             const int next = m_index + 1;
             if (next < m_state->timeline->noteCount()) {
                 length =
@@ -180,23 +202,24 @@ namespace hello::daw {
     }
 
     void PianoRollState::LengthGesture::move(QPointF position, Qt::KeyboardModifiers modifiers) {
-        m_length = lengthAt(position, modifiers);
+        m_state->noteModifiers.updateToggles(m_activation, modifiers);
+        m_length = lengthAt(position);
         QHash<int, int> changes{
             {m_index, m_length}
         };
-        const auto effectiveModifiers = modifiers | m_modifiers;
+        const int mode = m_activation.operation;
         const int delta = m_original - m_length;
         const int next = m_index + 1;
-        if (effectiveModifiers & Qt::ControlModifier) {
+        if (mode == NoteViewModifiers::TakeFromNextNote) {
             if (next < m_state->timeline->noteCount()) {
                 changes.insert(next, m_state->timeline->note(next).length + delta);
             }
-        } else if (!(effectiveModifiers & Qt::ShiftModifier) && delta > 0 &&
+        } else if (mode == NoteViewModifiers::PlainLength && delta > 0 &&
                    next < m_state->timeline->noteCount() && m_state->timeline->note(next).rest) {
             changes.insert(next, m_state->timeline->note(next).length + delta);
         }
         m_state->placements = m_state->layOut(m_state->identityOrder(), changes);
-        if (!(effectiveModifiers & (Qt::ShiftModifier | Qt::ControlModifier)) && delta > 0 &&
+        if (mode == NoteViewModifiers::PlainLength && delta > 0 &&
             next < m_state->timeline->noteCount() && !m_state->timeline->note(next).rest) {
             // A rest will be inserted between the two notes on release. Keep the following
             // notes at their original positions while showing that gap during the drag.
@@ -210,7 +233,6 @@ namespace hello::daw {
     }
 
     void PianoRollState::LengthGesture::release(QPointF position, Qt::KeyboardModifiers modifiers) {
-        modifiers |= m_modifiers;
         move(position, modifiers);
         m_state->clearPreview();
         if (m_length == m_original) {
@@ -220,11 +242,10 @@ namespace hello::daw {
         const auto notes = m_state->notes();
         const auto next = m_index + 1;
         const int delta = m_original - m_length;
-        const bool shift = modifiers & Qt::ShiftModifier;
-        const bool control = modifiers & Qt::ControlModifier;
+        const int mode = m_activation.operation;
         auto transaction = m_state->session->transaction(PianoRoll::tr("Change Length"));
         kit::ProjectEdits::setLength(notes.at(m_index), m_length, diagnostics);
-        if (!shift && !control && delta > 0 && next < notes.size()) {
+        if (mode == NoteViewModifiers::PlainLength && delta > 0 && next < notes.size()) {
             if (m_state->timeline->note(next).rest) {
                 kit::ProjectEdits::setLength(
                     notes.at(next), m_state->timeline->note(next).length + delta, diagnostics);
@@ -235,7 +256,7 @@ namespace hello::daw {
                 rest.noteNum = m_state->timeline->note(m_index).key;
                 kit::ProjectEdits::insertNotes(notes, next, {rest}, diagnostics);
             }
-        } else if (control && next < notes.size()) {
+        } else if (mode == NoteViewModifiers::TakeFromNextNote && next < notes.size()) {
             const int nextLength = m_state->timeline->note(next).length + delta;
             if (nextLength <= 0) {
                 kit::ProjectEdits::removeNotes(notes, {next}, diagnostics);
@@ -252,11 +273,12 @@ namespace hello::daw {
     }
 
     PianoRollState::BandGesture::BandGesture(PianoRollState *state, QPointF position,
-                                             Qt::KeyboardModifiers modifiers)
+                                             NoteViewModifiers::Role mode)
         : m_state(state), m_origin(state->view->timeAxis().toTick(position.x()),
                                    state->view->keyAxis().toKey(position.y())),
-          m_previous(state->selection), m_previousPoints(state->selectedPoints) {
-        if (modifiers & Qt::ControlModifier) {
+          m_previous(state->selection), m_previousPoints(state->selectedPoints),
+          m_toggles(mode == NoteViewModifiers::ToggleBand) {
+        if (mode != NoteViewModifiers::ReplaceBand) {
             m_base = state->selection;
             m_basePoints = state->selectedPoints;
         }
@@ -291,7 +313,7 @@ namespace hello::daw {
                 const auto list = refs.at(i).portamento();
                 for (int j = 0; j < values.size() && j < list.size(); ++j) {
                     if (rect.contains(m_state->positionOf(i, j, values[j]))) {
-                        points.insert(list.at(j).id());
+                        addToBand(points, m_basePoints, list.at(j).id(), m_toggles);
                         found = true;
                     }
                 }
@@ -306,7 +328,7 @@ namespace hello::daw {
         for (int i = begin; i < end; ++i) {
             const auto &note = timeline->note(i);
             if (m_state->rectOf(note.start, note.length, note.key).intersects(rect)) {
-                ids.insert(note.id);
+                addToBand(ids, m_base, note.id, m_toggles);
             }
         }
         m_state->selectPoints({});
@@ -325,14 +347,15 @@ namespace hello::daw {
     }
 
     PianoRollState::SpanGesture::SpanGesture(PianoRollState *state, QPointF position,
-                                             Qt::KeyboardModifiers modifiers)
+                                             NoteViewModifiers::Role mode)
         : m_state(state), m_origin(state->view->timeAxis().toTick(position.x())),
-          m_previous(state->selection), m_previousPoints(state->selectedPoints) {
-        if (modifiers & Qt::ControlModifier) {
+          m_previous(state->selection), m_previousPoints(state->selectedPoints),
+          m_toggles(mode == NoteViewModifiers::ToggleBand) {
+        if (mode != NoteViewModifiers::ReplaceBand) {
             m_base = state->selection;
         }
         state->selectPoints({});
-        move(position, modifiers);
+        move(position, Qt::NoModifier);
     }
 
     void PianoRollState::SpanGesture::move(QPointF position, Qt::KeyboardModifiers modifiers) {
@@ -345,7 +368,7 @@ namespace hello::daw {
         const auto [begin, end] = timeline->notesBetween(time.toTick(left), time.toTick(right));
         auto ids = m_base;
         for (int i = begin; i < end; ++i) {
-            ids.insert(timeline->note(i).id);
+            addToBand(ids, m_base, timeline->note(i).id, m_toggles);
         }
         m_state->setSelection(ids);
         // Over the whole height, its top and bottom edges out of sight
@@ -366,8 +389,8 @@ namespace hello::daw {
     }
 
     PianoRollState::DrawGesture::DrawGesture(PianoRollState *state, QPointF position,
-                                             Qt::KeyboardModifiers modifiers)
-        : m_state(state) {
+                                             const ModifierBindings::Activation &activation)
+        : m_state(state), m_activation(activation) {
         const auto timeline = state->timeline;
         const auto &keys = state->view->keyAxis();
         m_key = std::clamp(keys.keyAt(position.y()), kit::lowestNoteNum, kit::highestNoteNum);
@@ -375,17 +398,20 @@ namespace hello::daw {
         const int count = timeline->noteCount();
         m_index = std::clamp(timeline->noteAt(tick), 0, count);
         m_from = m_index < count ? timeline->note(m_index).start : timeline->length();
-        m_fills = modifiers & Qt::ShiftModifier;
+        m_fills = activation.operation == NoteViewModifiers::FillDraw;
         m_splits = m_fills && m_index < count && timeline->note(m_index).rest;
-        m_start = m_fills ? std::max(m_from, state->snappedDown(tick, modifiers)) : m_from;
-        const qint64 reach = state->snapped(tick, modifiers) - m_start;
+        const bool disabled = activation.isOn(NoteViewModifiers::DisableNoteSnap);
+        m_start = m_fills ? std::max(m_from, state->snappedDown(tick, disabled)) : m_from;
+        const qint64 reach = state->snapped(tick, disabled) - m_start;
         update(!m_fills && reach > 0 ? int(reach) : state->widget->quantizedLength());
     }
 
     void PianoRollState::DrawGesture::move(QPointF position, Qt::KeyboardModifiers modifiers) {
+        m_state->noteModifiers.updateToggles(m_activation, modifiers);
+        const bool disabled = m_activation.isOn(NoteViewModifiers::DisableNoteSnap);
         const double tick = m_state->view->timeAxis().toTick(position.x());
-        const qint64 length = m_state->snapped(tick, modifiers) - m_start;
-        update(length > 0 ? int(length) : (m_state->snaps(modifiers) ? m_state->quantization : 1));
+        const qint64 length = m_state->snapped(tick, disabled) - m_start;
+        update(length > 0 ? int(length) : (m_state->snaps(disabled) ? m_state->quantization : 1));
     }
 
     void PianoRollState::DrawGesture::release(QPointF position, Qt::KeyboardModifiers modifiers) {
@@ -494,6 +520,7 @@ namespace hello::daw {
             }
             start();
         }
+        m_state->noteModifiers.updateToggles(m_activation, modifiers);
         const auto &time = m_state->view->timeAxis();
         const auto &keys = m_state->view->keyAxis();
         double ticks = time.toTick(position.x()) - time.toTick(m_origin.x());
@@ -501,7 +528,7 @@ namespace hello::daw {
 
         const auto &pressedNote = m_original[m_index];
         const auto &pressed = pressedNote[m_point];
-        if (modifiers & Qt::ShiftModifier) {
+        if (m_activation.isOn(NoteViewModifiers::PointSnapTime)) {
             const double at = m_state->ticksOf(pressed.x, m_index);
             std::optional<double> nearest;
             for (int j = 0; j < pressedNote.size(); ++j) {
@@ -515,7 +542,7 @@ namespace hello::daw {
                 ticks = *nearest - at;
             }
         }
-        if (modifiers & Qt::ControlModifier) {
+        if (m_activation.isOn(NoteViewModifiers::PointSnapPitch)) {
             cents = std::round((pressed.y + cents) / PitchSnap) * PitchSnap - pressed.y;
         }
 

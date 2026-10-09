@@ -176,7 +176,9 @@ namespace hello::daw {
                     if (!impl.cursorEnabled) {
                         return;
                     }
-                    const double at = std::max<double>(0, double(impl.snapped(tick, modifiers)));
+                    const bool disabled = impl.noteModifiers.isHeld(
+                        NoteViewModifiers::DisableNoteSnap, modifiers);
+                    const double at = std::max<double>(0, double(impl.snapped(tick, disabled)));
                     const bool moved = at != impl.cursor;
                     setCursorPosition(at);
                     if (moved) {
@@ -199,6 +201,29 @@ namespace hello::daw {
         // The parameter area: the time axis of the roll, and volumes in percent for keys, all
         // of them in view
         impl.parameters = new SceneView();
+        // The parameter area scrolls and zooms with the wheel of the note area.
+        const auto wheelActions =
+            [this](Qt::KeyboardModifiers modifiers) -> std::optional<SceneView::WheelAction> {
+            stdc_impl_t;
+            const auto activation = impl.activate(NoteViewModifiers::WheelScene, modifiers);
+            if (!activation) {
+                return std::nullopt;
+            }
+            switch (activation->operation) {
+                case NoteViewModifiers::VerticalScroll:
+                    return SceneView::VerticalScroll;
+                case NoteViewModifiers::HorizontalScroll:
+                    return SceneView::HorizontalScroll;
+                case NoteViewModifiers::TimeZoom:
+                    return SceneView::TimeZoom;
+                case NoteViewModifiers::KeyZoom:
+                    return SceneView::KeyZoom;
+                default:
+                    return std::nullopt;
+            }
+        };
+        impl.view->setWheelActions(wheelActions);
+        impl.parameters->setWheelActions(wheelActions);
         impl.parameters->setFixedHeight(PianoRollState::ParameterHeight);
         impl.parameters->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
         impl.parameters->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
@@ -330,12 +355,6 @@ namespace hello::daw {
         }
         Q_ASSERT(&bindings.scheme() == &NoteViewModifiers::scheme());
         impl.noteModifiers = bindings;
-        // The parameter area scrolls and zooms with the wheel roles of the note area.
-        const auto scroll = bindings.modifiers(NoteViewModifiers::HorizontalScroll);
-        const auto timeZoom = bindings.modifiers(NoteViewModifiers::TimeZoom);
-        const auto keyZoom = bindings.modifiers(NoteViewModifiers::KeyZoom);
-        impl.view->setWheelModifiers(scroll, timeZoom, keyZoom);
-        impl.parameters->setWheelModifiers(scroll, timeZoom, keyZoom);
     }
 
     SceneView *PianoRoll::parameterView() const {
