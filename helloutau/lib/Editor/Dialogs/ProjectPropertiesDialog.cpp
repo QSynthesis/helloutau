@@ -195,9 +195,12 @@ namespace hello::daw {
         form->addRow(tr("&Name:"), m_name);
         form->addRow(tr("&Tempo:"), m_tempo);
         form->addRow(tr("&Flags:"), m_flags);
-        form->addRow(tr("&Voice folder:"),
-                     withBrowse(m_voiceDir, this, [this] { browseVoiceDir(); }));
-        form->addRow(QString(), m_voiceDirResolved);
+        // The resolved path shares the cell of the voice folder, without the spacing of a row.
+        auto voiceField = new QVBoxLayout();
+        voiceField->setSpacing(2);
+        voiceField->addLayout(withBrowse(m_voiceDir, this, [this] { browseVoiceDir(); }));
+        voiceField->addWidget(m_voiceDirResolved);
+        form->addRow(tr("&Voice folder:"), voiceField);
         form->addRow(tr("&Output file:"), withBrowse(m_outputFile, this, [this] {
                          const auto chosen = QFileDialog::getSaveFileName(
                              this, tr("Choose Output File"), m_outputFile->text(),
