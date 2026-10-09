@@ -159,6 +159,8 @@ helloutau_add_library(${PROJECT_NAME} SHARED
 
 qwindowkit 没有这个问题，因为它的头文件与源文件位于同一目录。synthrt 也没有，因为它不使用 Qt。本仓库两个条件都不满足，因此必须显式处理。
 
+**Qt 提供了宏或工具的，使用 Qt 的写法**（作者 2026-10-10 决定），不手写等价的代码。例如禁止拷贝写 `Q_DISABLE_COPY(Type)`，同时禁止移动写 `Q_DISABLE_COPY_MOVE(Type)`，放在类的 private 段末尾，不写成两行 `= delete`。Qt 没有对应宏的情况照常手写，例如保留移动构造而只删除移动赋值。stdutau 不依赖 Qt，不适用此规则。
+
 ## 格式与内联
 
 所有改动过的 C++ 文件在提交前使用仓库的 `.clang-format` 格式化。不要手工制造与格式化配置相冲突的对齐或换行。

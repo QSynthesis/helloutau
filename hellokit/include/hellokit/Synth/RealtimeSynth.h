@@ -44,9 +44,6 @@ namespace hello::kit {
                                SynthToolFactory synthToolFactory = {});
         ~RealtimeSynth();
 
-        RealtimeSynth(const RealtimeSynth &) = delete;
-        RealtimeSynth &operator=(const RealtimeSynth &) = delete;
-
         /// Replaces the plan, which must cover the whole track. Only its resampler arguments,
         /// cache files and wavtool arguments are used; its track file is never written.
         void setPlan(const SynthPlan &plan);
@@ -104,6 +101,8 @@ namespace hello::kit {
     private:
         class Impl;
         std::unique_ptr<Impl> _impl;
+
+        Q_DISABLE_COPY(RealtimeSynth)
     };
 
 }

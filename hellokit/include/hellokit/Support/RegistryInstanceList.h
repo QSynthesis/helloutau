@@ -6,6 +6,8 @@
 #include <utility>
 #include <vector>
 
+#include <QtCore/QtGlobal>
+
 #include <stdcorelib/support/dynamicregistry.h>
 
 namespace hello::kit {
@@ -82,8 +84,7 @@ namespace hello::kit {
         Release m_release;
         std::vector<Item> m_items;
 
-        RegistryInstanceList(const RegistryInstanceList &) = delete;
-        RegistryInstanceList &operator=(const RegistryInstanceList &) = delete;
+        Q_DISABLE_COPY(RegistryInstanceList)
     };
 
 }
