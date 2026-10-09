@@ -161,11 +161,21 @@ namespace hello::daw {
         ProjectWindow *newWindow();
 
         /// Opens \a path. If a window already shows the file, that window is activated instead.
-        /// Otherwise the file opens in \a from if \a from shows an unmodified new project, and in
-        /// a new window if not. Errors are shown to the user.
+        /// Otherwise the file replaces the project of \a from, after the user is asked whether to
+        /// save that project, or opens in a new window if \a from is \c nullptr. Errors are shown
+        /// to the user.
         ///
-        /// \return the window that shows the file, or \c nullptr if the file was not opened
+        /// \return the window that shows the file, or \c nullptr if the file was not opened or
+        ///         the user cancelled the question to save
         ProjectWindow *openFile(const std::filesystem::path &path, ProjectWindow *from = nullptr);
+
+        /// Opens \a paths, the first as openFile() does with \a from and the others in windows of
+        /// their own. The user is asked once, before any file opens, whether to save the project
+        /// of \a from. If the user cancels, no file opens.
+        ///
+        /// \return the windows that show the files that were opened
+        QList<ProjectWindow *> openFiles(const QList<std::filesystem::path> &paths,
+                                         ProjectWindow *from);
 
         /// Returns the open voice bank windows, in the order of opening.
         QList<VoiceBankWindow *> voiceBankWindows() const;
@@ -215,6 +225,9 @@ namespace hello::daw {
         bool closeAll();
 
     private:
+        ProjectWindow *openFile(const std::filesystem::path &path, ProjectWindow *from,
+                                bool askToSave);
+
         class Impl;
         std::unique_ptr<Impl> _impl;
 

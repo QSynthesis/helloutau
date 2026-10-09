@@ -627,6 +627,25 @@ namespace hello::daw {
     }
 
     ProjectWindow *Editor::openFile(const std::filesystem::path &path, ProjectWindow *from) {
+        return openFile(path, from, true);
+    }
+
+    QList<ProjectWindow *> Editor::openFiles(const QList<std::filesystem::path> &paths,
+                                             ProjectWindow *from) {
+        QList<ProjectWindow *> opened;
+        if (paths.isEmpty() || (from && !from->maybeSave())) {
+            return opened;
+        }
+        for (qsizetype i = 0; i < paths.size(); ++i) {
+            if (const auto window = openFile(paths.at(i), i == 0 ? from : nullptr, false)) {
+                opened.push_back(window);
+            }
+        }
+        return opened;
+    }
+
+    ProjectWindow *Editor::openFile(const std::filesystem::path &path, ProjectWindow *from,
+                                    bool askToSave) {
         stdc_impl_t;
         for (const auto window : windows()) {
             if (isSameFile(window->document()->sourcePath(), path)) {
@@ -636,7 +655,7 @@ namespace hello::daw {
             }
         }
 
-        if (from && !from->maybeSave()) {
+        if (from && askToSave && !from->maybeSave()) {
             return nullptr;
         }
 

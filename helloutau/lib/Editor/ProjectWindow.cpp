@@ -2616,9 +2616,7 @@ namespace hello::daw {
         // Later, so that the dialogs that opening may show run after the drag has ended
         QTimer::singleShot(0, this, [this, files] {
             stdc_impl_t;
-            for (const auto &file : files) {
-                impl.editor->openFile(file, this);
-            }
+            impl.editor->openFiles(files, this);
         });
     }
 
