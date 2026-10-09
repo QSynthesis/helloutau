@@ -14,7 +14,7 @@
 | `HelloKitEditBase` | 编辑层的通用部分，命名空间 `hello::kit::edit`：`EditSession`（事务、撤销、变更通知、提交时校验）、`NodeRef`、`Change`、槽位、命令语法，以及扩展接口（字段表、按路径的命令、变更日志） |
 | `HelloKitEdit` | 编辑层的文档部分。工程：`ProjectDocument`（打开、导入、保存、是否已修改）、`TrackTimeline`（音符的位置）、`ProjectSession`、句柄 `ProjectRefs`、领域函数 `ProjectEdits`、命令 `ProjectCommands`。音源：`VoiceBankSession`（含保存与从磁盘重新读取）、句柄 `VoiceBankRefs`、领域函数 `VoiceBankEdits`、命令 `VoiceBankCommands` |
 | `HelloUtauWidgets` | 通用的控件基础设施：命令面板 `CommandPalette` 与其模糊匹配 `CommandMatcher`；查找栏 `FindBar`；场景接口 `SceneView`、`SceneLayer`、`SceneGesture`，以及随其坐标轴的 `TimelineRuler` 与 `PianoKeyboard` |
-| `HelloUtauAudio` | 设备输出 `AudioOutput`（`QAudioSink` 回调接口）、`AudioSource` / `BufferSource` / `StreamSource`（流式，环形缓冲）、采样率转换 `resampled()`（r8brain-free-src）|
+| `HelloUtauAudio` | 进程内唯一的设备流 `AudioEngine` 与混音器 `AudioMixer`，每个用途一个句柄 `AudioOutput`、`AudioSource` / `BufferSource` / `StreamSource`（流式，环形缓冲）、采样率转换 `resampled()`（r8brain-free-src），见 [`Audio.md`](Audio.md) |
 | `HelloUtauEditor` | 窗口骨架：QActionKit 清单生成的菜单、工程的打开（UST 编码选择）、保存、另存为与导出 UST、撤销与重做、未保存标记、设置、命令面板（`Ctrl+Shift+P`）；工程在卷帘 `PianoRoll` 中显示与编辑（选区、拖动移调与重排、改长度、笔工具、插入、删除、拆分、歌词就地编辑、量化）；打开工程后读取其音源（按目录选择编码），卷帘标出找不到样本的音符；空格按设置中的播放方式播放（`Playback`）：预渲染以 `temp.bat` 在控制台中渲染选中的音符后播放，实时方式在后台渲染整轨、从播放头直接播放；状态栏显示进度，卷帘显示播放线；「Open Recent」列出最近打开的文件；「显示音高」绘制每个音符的滑音与颤音曲线，并在其上编辑 Mode2 控制点与颤音；Mode2 可在菜单中关闭，此时卷帘显示 Mode1 的曲线并以画笔工具手绘；卷帘下方的参数区编辑包络、力度、调制与速度；复制与粘贴音符、粘贴参数、恢复默认、缩放音高、包络交叉淡化。见 [`Widgets.md`](Widgets.md) 第 1–6 步与 [`Tuning.md`](Tuning.md) 第 1–7 步。音源窗口 `VoiceBankWindow`：条目表的编辑、波形区 `OtoWaveformView` 上拖动与按键设定五个值、试听与以重采样器试合成（`SamplePreview`）、清除音频元数据，见 [`VoiceBankEditor.md`](VoiceBankEditor.md) 第 1–4 步。插件的基础设施：加载器 `AppLoader`（载入原生插件、`--plugin-path` 与 `--settings`、插件列表与启用设置）、设置文件 `settings.json`（`AppSettings`）与 `plugins.json`（`PluginSettings` 格式），动作的登记 `ActionContribution` / `ActionContributionRegistry` / `BuiltinActions`，见 [`Plugins.md`](Plugins.md) |
 | `helloutau` | 加载器程序：`main.cpp` 只构造 `AppLoader` 并运行 |
 | Core 插件 | 创建 `Editor`，登记编辑器的动作清单（`BuiltinActions`），打开命令行中的文件；设置的「Plugins」页 |
@@ -57,8 +57,8 @@
 ## 依赖来源
 
 - **stdcorelib、stdutau**：**均不取自 vcpkg，也均不作为子模块**，二者都与本仓库同步开发。分别构建并安装，配置时传入 `-Dstdcorelib_DIR=` 和 `-Dstdutau_DIR=`，指向 `<prefix>/lib/cmake/<名称>`。`third-party/Dependencies.cmake` 统一执行 `find_package`，由根目录的 `CMakeLists.txt` 通过 `include()` 引入。在 Windows 上，该文件还会将动态库复制到运行输出目录（目标 `hello_deploy_<包名>`，属于 ALL），vcpkg 的 applocal 不再负责这两个库。stdutau 可构建为静态库或动态库，为动态库时其 DLL 只在完整构建时复制。
-- **stdcorelib 仅作为私有依赖**：子库使用 `LINKS_PRIVATE`，公开头文件中的导出宏使用 `<QtCore/QtGlobal>` 的 `Q_DECL_EXPORT` / `Q_DECL_IMPORT`。
-- **stdcorelib.plugin**：原生插件的载入与生命周期（`stdware/stdcorelib.plugin`），构建为动态库，同样是私有依赖。与 stdcorelib 相同，自行构建安装后通过 `-Dstdcorelib-plugin_DIR=` 指定，DLL 由 `third-party/Dependencies.cmake` 复制到运行输出目录。本机安装在 `D:/GitHub/stdcorelib.plugin/build/install`，Debug 与 Release 并存。见 [`Plugins.md`](Plugins.md)。
+- **stdcorelib 与 stdcorelib.plugin 可以出现在公开头文件中**（作者 2026-10-08 决定）：公开头文件用到它们的子库以 `LINKS` 公开链接，只在实现中使用的子库仍以 `LINKS_PRIVATE` 链接。导出宏仍使用 `<QtCore/QtGlobal>` 的 `Q_DECL_EXPORT` / `Q_DECL_IMPORT`，见 `CLAUDE.md`「技术栈」。
+- **stdcorelib.plugin**：原生插件的载入与生命周期（`stdware/stdcorelib.plugin`），构建为动态库。与 stdcorelib 相同，自行构建安装后通过 `-Dstdcorelib-plugin_DIR=` 指定，DLL 由 `third-party/Dependencies.cmake` 复制到运行输出目录。本机安装在 `D:/GitHub/stdcorelib.plugin/build/install`，Debug 与 Release 并存。见 [`Plugins.md`](Plugins.md)。
 - **winacp**：Windows 全部 ANSI 代码页的转换表，由 Windows 的 `MultiByteToWideChar` / `WideCharToMultiByte` 生成，在三个平台上逐字节一致。`TextCodec` 的 Shift_JIS、GBK、Big5、EUC-KR 以及 `windows-874`、`windows-1250`–`1258` 均由其转换。需自行构建安装，配置时传入 `-Dwinacp_DIR=`。采用它的原因是 macOS 版 Qt 不包含 ICU，原有实现在 macOS 上无法打开任何 Shift_JIS 文件。
 - **wolf-midi**：MIDI 的解析与写出，是去除 Qt 依赖的 `QMidiFile`。来自 `E:/GitHub/ds-editor-lite/vcpkg`，同样通过 `-Dwolf-midi_DIR=` 指定。其 `MidiFile.cpp` 使用 `std::log2` 却未包含 `<cmath>`，GCC 下须以 `-DCMAKE_CXX_FLAGS="-include cmath"` 构建。
 - **substate**：`HelloKitEditBase` 与 `HelloKitEdit` 的节点树、事务与撤销历史（`stdware/substate`，含 `substate` 与 `qsubstate` 两个库），**仅作为私有依赖**，`ss::` 类型不出现在公开头文件中。与 stdutau 相同，不取自 vcpkg，也不作为子模块，自行构建安装后通过 `-Dsubstate_DIR=` 指定。默认构建为动态库。
@@ -111,14 +111,13 @@
 ## 待定事项
 
 - stdutau 转为子模块的时机。
-- 音频设置页的界面翻译尚未补齐。
-- Audio 模块已改为单一 `QAudioSink` 与内部混音器。已补充 `AudioMixer` 的左右声道、并发声源和独立移除测试，Windows 耳机插拔与并发播放仍待手工验收。
+- Audio 模块已改为单一 `QAudioSink` 与内部混音器。已补充 `AudioMixer` 的左右声道、并发声源和独立移除测试，Windows 耳机插拔与并发播放仍待手工验收。设置页的「Test」在下拉框所选的设备上播放（2026-10-09），在另一设备上测试后回到工程播放与钢琴键，同样待手工验收。
+- 写死的颜色（`EditorIcons.cpp` 的图标颜色、`ToolBarPalette.cpp` 的白色）与 Codex 留下的 4 条 TODO，作者 2026-10-09 决定之后再处理。
+- 音符属性对话框中 UTAU 的 Others 栏（手写 `$patch`、`$direct` 等条目）日后以官方插件提供，现在不做（作者 2026-10-09 决定）。
 - 待定：非实时渲染模式播放期间，如果工程发生编辑，应立即停止播放。当前暂不处理。
 
 ## 已知问题
 
 均记录在 [`../CLAUDE.md`](../CLAUDE.md) 的「已知问题」一节，开始工作前应先阅读。
-- 菜单项配置存在稳定崩溃。复现步骤：打开“设置 > 菜单项配置”，选择“工程窗口”，将“文件 > 新建”下移到“打开”之后，点击“应用”；再次打开同一页面，将“文件 > 打开”下移回原位置，点击“应用”，应用程序崩溃。
-- 菜单项配置的另一条稳定复现路径：恢复默认布局后点击“应用”，应用程序崩溃。
-- 上述崩溃发生在菜单项配置应用阶段，尚未定位具体释放或布局更新路径。
+- 菜单与工具栏设置页应用改动时曾稳定崩溃（移动菜单项后应用、恢复默认后应用）。`8306f0b` 之后作者没有再遇到（2026-10-09），原因未定位，该提交只去掉了空指针。
 - 有一次应用设置后出现工具栏高度异常增大的情况，工具栏挤压下面的钢琴卷帘，Tempo 控件被垂直拉伸到很高，且无法通过手柄恢复。当前尚未找到稳定复现步骤。
