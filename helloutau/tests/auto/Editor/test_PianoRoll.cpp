@@ -23,7 +23,7 @@
 #include <helloutau/Widgets/TimelineRuler.h>
 
 #include <helloutau/Editor/PianoRoll.h>
-#include <helloutau/Editor/VibratoDialog.h>
+#include <helloutau/Editor/Dialogs/VibratoDialog.h>
 
 using namespace hello;
 using namespace hello::daw;

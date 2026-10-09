@@ -2,7 +2,7 @@
 #include <QtTest/QTest>
 #include <QtWidgets/QApplication>
 
-#include <helloutau/Editor/VoiceBankCharsetDialog.h>
+#include <helloutau/Editor/Dialogs/VoiceBankCharsetDialog.h>
 
 using namespace hello;
 using namespace hello::daw;

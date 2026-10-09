@@ -1,0 +1,4 @@
+add_auto_test(test_PitchControlDialog.cpp HelloUtauEditor)
+add_auto_test(test_UstCharsetDialog.cpp HelloUtauEditor)
+add_auto_test(test_VoiceAliasRuleDialog.cpp HelloUtauEditor)
+add_auto_test(test_VoiceBankCharsetDialog.cpp HelloUtauEditor)

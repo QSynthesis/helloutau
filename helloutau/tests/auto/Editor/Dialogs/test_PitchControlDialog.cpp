@@ -2,7 +2,7 @@
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QDoubleSpinBox>
 
-#include <helloutau/Editor/PitchControlDialog.h>
+#include <helloutau/Editor/Dialogs/PitchControlDialog.h>
 
 using namespace hello;
 using namespace hello::daw;

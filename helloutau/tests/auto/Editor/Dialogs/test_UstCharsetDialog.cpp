@@ -5,8 +5,8 @@
 #include <QtTest/QTest>
 #include <QtWidgets/QApplication>
 
-#include <helloutau/Editor/ExportUstDialog.h>
-#include <helloutau/Editor/UstCharsetDialog.h>
+#include <helloutau/Editor/Dialogs/ExportUstDialog.h>
+#include <helloutau/Editor/Dialogs/UstCharsetDialog.h>
 
 using namespace hello;
 using namespace hello::daw;

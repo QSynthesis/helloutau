@@ -4,12 +4,10 @@ add_auto_test(test_OtoWaveformView.cpp HelloUtauEditor)
 add_auto_test(test_PianoRoll.cpp HelloUtauEditor)
 add_auto_test(test_Restarter.cpp HelloUtauEditor)
 add_auto_test(test_Translations.cpp HelloUtauEditor)
-add_auto_test(test_UstCharsetDialog.cpp HelloUtauEditor)
-add_auto_test(test_VoiceBankCharsetDialog.cpp HelloUtauEditor)
 add_auto_test(test_Playback.cpp HelloUtauEditor)
 add_auto_test(test_SamplePreview.cpp HelloUtauEditor)
-add_auto_test(test_PitchControlDialog.cpp HelloUtauEditor)
-add_auto_test(test_VoiceAliasRuleDialog.cpp HelloUtauEditor)
+
+add_subdirectory(Dialogs)
 
 # The contribution of the test, with a manifest of its own for each kind of window
 qak_add_action_extension(_contribution_src TestContribution.xml

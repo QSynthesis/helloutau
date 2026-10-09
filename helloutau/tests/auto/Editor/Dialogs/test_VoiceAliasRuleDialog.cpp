@@ -5,7 +5,7 @@
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QTreeWidget>
 
-#include <helloutau/Editor/VoiceAliasRuleDialog.h>
+#include <helloutau/Editor/Dialogs/VoiceAliasRuleDialog.h>
 
 using namespace hello;
 using namespace hello::daw;
