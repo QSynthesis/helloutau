@@ -28,7 +28,6 @@ namespace hello::daw {
             {"helloutau.edit.resetEnvelopes",      "helloutau/resetEnvelope.svg"     },
             {"helloutau.edit.find",                "intellij/search.svg"            },
             {"helloutau.playback.play",            "intellij/run.svg"               },
-            {"helloutau.playback.pause",           "intellij/pause.svg"             },
             {"helloutau.playback.stop",            "intellij/stop.svg"              },
             {"helloutau.playback.replay",          "intellij/rerun.svg"             },
             {"helloutau.voiceBank.playAudio",      "intellij/run.svg"               },

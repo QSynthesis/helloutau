@@ -530,10 +530,6 @@
         <translation>播放或暂停(&amp;P)</translation>
     </message>
     <message>
-        <source>Pa&amp;use or Resume</source>
-        <translation>暂停或继续(&amp;U)</translation>
-    </message>
-    <message>
         <source>&amp;Replay</source>
         <translation>重播(&amp;R)</translation>
     </message>

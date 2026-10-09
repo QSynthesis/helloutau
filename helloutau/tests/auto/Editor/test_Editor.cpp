@@ -1230,7 +1230,6 @@ private Q_SLOTS:
         const auto window = e->newWindow();
         const QList<std::pair<QString, QString>> expected{
             {QStringLiteral("helloutau.playback.play"),       QStringLiteral("Space; F5")     },
-            {QStringLiteral("helloutau.playback.pause"),      QStringLiteral("F6")            },
             {QStringLiteral("helloutau.playback.stop"),       QStringLiteral("F7")            },
             {QStringLiteral("helloutau.playback.replay"),     QStringLiteral("Shift+F5")      },
             {QStringLiteral("helloutau.edit.delete"),         QStringLiteral("Del; Shift+Del")},

@@ -1114,15 +1114,6 @@ namespace hello::daw {
                              !playback->lastRenderFile().empty());
         }
 
-        // Pauses what plays, or goes on with what was paused.
-        void pauseOrResume() {
-            if (playback->state() == Playback::Playing) {
-                playback->pause();
-            } else if (playback->state() == Playback::Paused) {
-                resumePlayback();
-            }
-        }
-
         // A paused render goes on from where it was, a paused preview previews from there.
         void resumePlayback() {
             stdc_decl_t;
@@ -1768,7 +1759,6 @@ namespace hello::daw {
                 palette->popup();
             });
             addCommand(QStringLiteral("helloutau.playback.play"), [this] { togglePlayback(); });
-            addCommand(QStringLiteral("helloutau.playback.pause"), [this] { pauseOrResume(); });
             addCommand(QStringLiteral("helloutau.playback.stop"), [this] { playback->stop(); });
             addCommand(QStringLiteral("helloutau.playback.replay"), [this] { replay(); });
             addCommand(QStringLiteral("helloutau.playback.saveLastPlayed"),

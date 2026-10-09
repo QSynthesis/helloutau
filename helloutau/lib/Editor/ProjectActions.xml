@@ -169,8 +169,6 @@
         <!-- Plays, pauses what plays, or goes on from where it was paused -->
         <action id="helloutau.playback.play" text="&amp;Play or Pause" category="Playback"
                 shortcuts="Space;F5" />
-        <action id="helloutau.playback.pause" text="Pa&amp;use or Resume" category="Playback"
-                shortcut="F6" />
         <action id="helloutau.playback.stop" text="&amp;Stop" category="Playback" shortcut="F7" />
         <!-- Plays the last playback again from its start, the last render without the synth tools
              while its notes stay the same -->
@@ -304,7 +302,6 @@
             </menu>
             <menu id="helloutau.playback">
                 <action id="helloutau.playback.play" />
-                <action id="helloutau.playback.pause" />
                 <action id="helloutau.playback.stop" />
                 <action id="helloutau.playback.replay" />
                 <separator />
