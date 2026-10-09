@@ -2231,6 +2231,8 @@ namespace hello::daw {
                 return;
             }
             kit::DiagnosticList diagnostics;
+            // The portamento, the vibrato switch and the vibrato change in one undo step.
+            auto transaction = document->session()->transaction(tr("Pitch Control"));
             const bool portamentoEdited = dialog.portamentoEdited();
             if (dialog.portamentoState() == Qt::Checked &&
                 (portamentoEdited || !portamento || !*portamento)) {
@@ -2246,6 +2248,7 @@ namespace hello::daw {
             }
             if (dialog.vibratoState() != Qt::Unchecked && dialog.vibratoEdited())
                 kit::ProjectEdits::setVibrato(sung, dialog.vibrato(), diagnostics);
+            transaction.commit(diagnostics);
             DiagnosticBox::show(&decl, tr("Pitch Control"), diagnostics);
         }
 
