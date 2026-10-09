@@ -1195,8 +1195,13 @@ namespace hello::daw {
             updateSaveLastPlayed();
             backgroundEngines = engineTexts();
             // The background render requires the engines that playback requires. No message box
-            // is shown for it.
-            const auto engines = realtime() ? projectEngines() : std::nullopt;
+            // is shown for it. The states of the notes in the prerender mode depend on the
+            // engines as well.
+            const auto allowed = projectEngines();
+            if (allowed) {
+                playback->setEngines(*allowed);
+            }
+            const auto engines = realtime() ? allowed : std::nullopt;
             if (!engines) {
                 playback->release();
                 statusTimer.stop();

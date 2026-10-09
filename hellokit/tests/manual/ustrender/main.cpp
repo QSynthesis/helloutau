@@ -325,6 +325,7 @@ namespace {
         options.cacheDirectory = output.parent_path() / output.stem();
         options.cacheDirectory += ".cache";
         options.projectDirectory = input.parent_path();
+        options.resampler = pathOf(option(result, "--resampler"));
 
         diagnostics.clear();
         const auto plan = SynthPlan::make(*project, *bank, options, diagnostics);

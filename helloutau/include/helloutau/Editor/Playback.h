@@ -159,6 +159,11 @@ namespace hello::daw {
         /// render cache is scanned on a worker thread.
         void refreshNoteStates(const kit::ProjectDocument &document);
 
+        /// Sets the engines whose resampler names the fragments that refreshNoteStates() looks
+        /// for, because a fragment of another resampler is not reused. Rendering sets them from
+        /// its own engines as well.
+        void setEngines(const kit::SynthEngines &engines);
+
         /// Replaces the notes that the preview plays, or that prepare() renders, with those of
         /// \a document once their plan is made, after an edit. Does nothing unless either is
         /// under way.

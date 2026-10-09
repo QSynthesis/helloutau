@@ -218,6 +218,10 @@ namespace hello::daw {
         // stream refers to the synthesis and goes first.
         std::unique_ptr<kit::RealtimeSynth> synth;
         kit::SynthEngines synthEngines;
+        // The engines last given, whose resampler names the fragments of every plan, see
+        // kit::SynthPlan::Options::resampler. A change of the engines therefore renders the
+        // notes anew instead of reusing the fragments of the previous resampler.
+        kit::SynthEngines engines;
         // The thread count set, and that of the synthesis, zero for one per hardware thread
         int threadCount = 0;
         int synthThreads = 0;
@@ -263,6 +267,7 @@ namespace hello::daw {
             PlanInput input{document.session()->snapshot(), bank, {}};
             input.options.cacheDirectory = *cache;
             input.options.projectDirectory = projectDirectoryOf(document);
+            input.options.resampler = engines.resampler;
             input.options.outputFile = temporaryDirectory / OutputFileName;
             return input;
         }
@@ -786,6 +791,8 @@ namespace hello::daw {
         job->input = {document.session()->snapshot(), bank, {}};
         job->input.options.cacheDirectory = *cache;
         job->input.options.projectDirectory = projectDirectoryOf(document);
+        job->input.options.resampler = engines.resampler;
+        impl.engines = engines;
         job->input.options.outputFile = impl.temporaryDirectory / OutputFileName;
         job->input.options.range = range;
         // The same notes as the last render play again without the engines.
@@ -829,6 +836,8 @@ namespace hello::daw {
         job->input = {document.session()->snapshot(), bank, {}};
         job->input.options.cacheDirectory = *cache;
         job->input.options.projectDirectory = projectDirectoryOf(document);
+        job->input.options.resampler = engines.resampler;
+        impl.engines = engines;
         job->input.options.outputFile = file;
         job->engines = engines;
         job->runner = impl.runner;
@@ -852,6 +861,7 @@ namespace hello::daw {
             fail(diagnostics, tr("There is no audio output device."));
             return false;
         }
+        impl.engines = engines;
         auto input = impl.previewInput(document, diagnostics);
         if (!input) {
             return false;
@@ -882,6 +892,7 @@ namespace hello::daw {
                  tr("Set the wavtool and the resampler in the project properties first."));
             return false;
         }
+        impl.engines = engines;
         auto input = impl.previewInput(document, diagnostics);
         if (!input) {
             return false;
@@ -923,6 +934,11 @@ namespace hello::daw {
             return;
         }
         impl.scanCache(document);
+    }
+
+    void Playback::setEngines(const kit::SynthEngines &engines) {
+        stdc_impl_t;
+        impl.engines = engines;
     }
 
     void Playback::updatePlan(const kit::ProjectDocument &document) {

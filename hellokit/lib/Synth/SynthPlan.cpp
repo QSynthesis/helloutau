@@ -54,14 +54,14 @@ namespace hello::kit {
             return out;
         }
 
-        /// An identifier of the current state of the sample, as far as it can be determined.
-        QString sampleState(const fs::path &sample) {
+        /// An identifier of the current state of a file, as far as it can be determined.
+        QString fileState(const fs::path &file) {
             std::error_code error;
-            const auto size = fs::file_size(sample, error);
+            const auto size = fs::file_size(file, error);
             if (error) {
                 return QStringLiteral("notfound");
             }
-            const auto when = fs::last_write_time(sample, error).time_since_epoch().count();
+            const auto when = fs::last_write_time(file, error).time_since_epoch().count();
             return QStringLiteral("%1/%2").arg(qulonglong(size)).arg(qlonglong(when));
         }
 
@@ -75,8 +75,10 @@ namespace hello::kit {
         /// envelope, intensity or modulation left them unchanged as well. Reuse based on that
         /// name renders the note with its previous flags.
         ///
-        /// The last field is therefore a digest of all resampler arguments and of the current
-        /// state of the sample on disk. The wavtool arguments are deliberately excluded: the
+        /// The last field is therefore a digest of all resampler arguments, of the current state
+        /// of the sample on disk, and of the resampler, by its path and the state of its file,
+        /// because a fragment of one resampler sounds different from that of another. The
+        /// wavtool arguments are deliberately excluded: the
         /// envelope and the start point are applied when the fragment is appended, not when it
         /// is rendered, so two notes that differ only in these share a fragment correctly.
         ///
@@ -85,7 +87,8 @@ namespace hello::kit {
         /// and removes characters that are invalid in file names from the lyric, which is why
         /// it is reused rather than reimplemented here.
         fs::path cacheFileFor(const std::string &utauName, const utau::ResamplerArguments &wanted,
-                              const fs::path &sample, const fs::path &directory) {
+                              const fs::path &sample, const fs::path &resampler,
+                              const fs::path &directory) {
             auto forDigest = wanted;
             forDigest.outFile.clear(); // or the name would stand for itself
             QByteArray subject;
@@ -93,7 +96,13 @@ namespace hello::kit {
                 subject += QByteArray(argument.data(), qsizetype(argument.size()));
                 subject += '\n';
             }
-            subject += sampleState(sample).toUtf8();
+            subject += fileState(sample).toUtf8();
+            if (!resampler.empty()) {
+                subject += '\n';
+                subject += QString::fromStdU16String(resampler.u16string()).toUtf8();
+                subject += '\n';
+                subject += fileState(resampler).toUtf8();
+            }
 
             const QString name = QString::fromUtf8(utauName.data(), qsizetype(utauName.size()));
             const QString stem = name.left(name.lastIndexOf(QLatin1Char('.')));
@@ -352,8 +361,8 @@ namespace hello::kit {
             // file entirely to the caller. The last field of the name is computed here, not by
             // calc(). See cacheFileFor().
             if (!step.direct) {
-                step.cacheFile =
-                    cacheFileFor(resampler.outFile, resampler, step.sample, options.cacheDirectory);
+                step.cacheFile = cacheFileFor(resampler.outFile, resampler, step.sample,
+                                              options.resampler, options.cacheDirectory);
                 resampler.outFile = utf8(step.cacheFile);
             }
             // A silent note passes R.wav of the voice bank, as UTAU does (docs/Synth.md). The

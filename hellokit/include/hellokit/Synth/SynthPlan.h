@@ -94,6 +94,13 @@ namespace hello::kit {
             /// path for a project without a file, whose notes with \c $patch are silent.
             std::filesystem::path projectDirectory;
 
+            /// The resampler that renders the fragments. Its path, and the size and the time of
+            /// last modification of its file, count toward the names of the fragments, so that a
+            /// fragment of another resampler, or of another version of it, is not reused. Empty
+            /// for a plan whose fragments no resampler renders, such as a plan that is only
+            /// inspected.
+            std::filesystem::path resampler;
+
             /// The notes to render, as a closed range of track indices, or \c std::nullopt for
             /// all notes.
             ///

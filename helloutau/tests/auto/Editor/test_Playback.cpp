@@ -120,10 +120,13 @@ namespace {
     }
 
     // Puts the fragment of every note of \a document in the cache of \a playback, so that no
-    // resampler needs to run.
-    bool writeFragments(Playback &playback, const kit::ProjectDocument &document) {
+    // resampler needs to run. The fragments are named for \a resampler, as a render with it
+    // names them.
+    bool writeFragments(Playback &playback, const kit::ProjectDocument &document,
+                        const fs::path &resampler) {
         kit::SynthPlan::Options options;
         options.cacheDirectory = *playback.cacheDirectoryFor(document);
+        options.resampler = resampler;
         options.outputFile = options.cacheDirectory / "playback.wav";
         kit::DiagnosticList diagnostics;
         const auto plan = kit::SynthPlan::make(document.session()->snapshot(),
@@ -409,7 +412,8 @@ private Q_SLOTS:
         QVERIFY(document);
         Playback playback(nullptr, temporaryOf(dir), nullptr);
 
-        QVERIFY(writeFragments(playback, *document));
+        QVERIFY(writeFragments(playback, *document,
+                               fs::path(dir.path().toStdU16String()) / "missing.exe"));
 
         kit::DiagnosticList diagnostics;
         QSignalSpy states(&playback, &Playback::stateChanged);
@@ -502,7 +506,8 @@ private Q_SLOTS:
         const auto document = singingDocument(dir);
         QVERIFY(document);
         Playback playback(nullptr, temporaryOf(dir), nullptr);
-        QVERIFY(writeFragments(playback, *document));
+        QVERIFY(writeFragments(playback, *document,
+                               fs::path(dir.path().toStdU16String()) / "missing.exe"));
         const auto cache = *playback.cacheDirectoryFor(*document);
         fs::create_directories(cache / "kept");
         kit::SynthEngines engines;
@@ -577,21 +582,23 @@ private Q_SLOTS:
         QVERIFY(kit::hasError(diagnostics));
 
         // Without the synth, by the cache scanned on a worker thread: nothing there yet, then
-        // the fragments
+        // the fragments of the resampler of the engines set
         using S = kit::RealtimeSynth;
+        kit::SynthEngines engines;
+        engines.resampler = fs::path(dir.path().toStdU16String()) / "missing.exe";
+        engines.wavtool = fs::path(dir.path().toStdU16String()) / "missing-wavtool.exe";
+        playback.setEngines(engines);
         QSignalSpy changes(&playback, &Playback::noteStatesChanged);
         QVERIFY(playback.noteStates().isEmpty());
         playback.refreshNoteStates(*document);
         QVERIFY(playback.noteStates().isEmpty());
         QTRY_COMPARE(changes.size(), 1);
         QCOMPARE(playback.noteStates(), (QList<S::NoteState>{S::Waiting, S::Waiting}));
-        QVERIFY(writeFragments(playback, *document));
+        QVERIFY(writeFragments(playback, *document,
+                               fs::path(dir.path().toStdU16String()) / "missing.exe"));
         playback.refreshNoteStates(*document);
         QTRY_COMPARE(playback.noteStates(), (QList<S::NoteState>{S::Ready, S::Ready}));
         QSignalSpy states(&playback, &Playback::stateChanged);
-        kit::SynthEngines engines;
-        engines.resampler = fs::path(dir.path().toStdU16String()) / "missing.exe";
-        engines.wavtool = fs::path(dir.path().toStdU16String()) / "missing-wavtool.exe";
         diagnostics.clear();
         QVERIFY(playback.prepare(*document, 750.0, engines, diagnostics));
         // The plan is made on a worker thread, and the synth takes the fragments from the cache.
