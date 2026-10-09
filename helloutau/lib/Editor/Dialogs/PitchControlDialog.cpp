@@ -15,6 +15,8 @@
 #include <QtWidgets/QRadioButton>
 #include <QtWidgets/QVBoxLayout>
 
+#include <hellokit/Document/PortamentoSettings.h>
+
 namespace hello::daw {
 
     namespace {
@@ -348,62 +350,16 @@ namespace hello::daw {
     }
 
     QList<kit::PortamentoPoint> PitchControlDialog::portamentoPoints() const {
-        if (m_portamentoCustom->isChecked()) {
-            const double first = m_portamentoStart->value();
-            const double firstY =
-                m_existingPortamento.size() == 2 ? m_existingPortamento.first().y : 0;
-            const double secondY =
-                m_existingPortamento.size() == 2 ? m_existingPortamento.last().y : 0;
-            return {
-                kit::PortamentoPoint{first,                               firstY,  kit::PortamentoPoint::S},
-                kit::PortamentoPoint{first + m_portamentoLength->value(), secondY,
-                                     kit::PortamentoPoint::S                                              }
-            };
-        }
-        const int preset = portamentoPreset();
-        const double distance = preset / 3 == 0 ? 50 : preset / 3 == 1 ? 100 : 200;
-        const int side = preset % 3;
-        const double first = side == 2 ? 0 : -distance;
-        const double second = side == 1 ? 0 : distance;
-        if (!m_portamentoAddPoints->isChecked())
-            return {
-                kit::PortamentoPoint{first,  0, kit::PortamentoPoint::S},
-                kit::PortamentoPoint{second, 0, kit::PortamentoPoint::S}
-            };
-        const int count = m_portamentoCount->currentText().toInt();
-        QList<kit::PortamentoPoint> points;
-        points.reserve(count);
-        if (!m_averagePoints->isChecked() && count == m_existingPortamento.size() &&
-            !m_existingPortamento.isEmpty()) {
-            return m_existingPortamento;
-        }
-        if (!m_existingPortamento.isEmpty()) {
-            const double first = m_existingPortamento.first().x;
-            const double last = m_averagePoints->isChecked()
-                                    ? std::max(first, m_noteDuration)
-                                    : std::max(first, m_existingPortamento.last().x);
-            for (int i = 0; i < count; ++i) {
-                const double x = first + (last - first) * double(i) / double(count - 1);
-                double y = m_existingPortamento.last().y;
-                for (int j = 1; j < m_existingPortamento.size(); ++j) {
-                    const auto &left = m_existingPortamento.at(j - 1);
-                    const auto &right = m_existingPortamento.at(j);
-                    if (x <= right.x) {
-                        const double span = right.x - left.x;
-                        const double fraction = span == 0 ? 0 : (x - left.x) / span;
-                        y = left.y + (right.y - left.y) * fraction;
-                        break;
-                    }
-                }
-                points.push_back({x, y, kit::PortamentoPoint::S});
-            }
-            return points;
-        }
-        for (int i = 0; i < count; ++i) {
-            const double fraction = double(i) / double(count - 1);
-            points.push_back({first + (second - first) * fraction, 0, kit::PortamentoPoint::S});
-        }
-        return points;
+        // The presets are listed by length, each at the three positions.
+        kit::PortamentoSettings settings;
+        settings.mode = kit::PortamentoSettings::Mode(portamentoMode());
+        settings.position = kit::PortamentoSettings::Position(portamentoPreset() % 3);
+        settings.presetLength = kit::PortamentoSettings::presetLengths[portamentoPreset() / 3];
+        settings.start = m_portamentoStart->value();
+        settings.length = m_portamentoLength->value();
+        settings.count = portamentoCount();
+        settings.evenlyDistributed = m_averagePoints->isChecked();
+        return settings.pointsFor(m_existingPortamento, m_noteDuration);
     }
 
     QPushButton *PitchControlDialog::portamentoDefaultButton() const {

@@ -214,6 +214,14 @@ namespace hello::kit {
         /// Converts a height in cents to tenths of a semitone, as \c PBS and \c PBY write it.
         static double tenthsFromCents(double cents);
 
+        /// Returns the height in cents of the curve of \a points at \a x milliseconds, with the
+        /// segment that ends at each point drawn in the type of that point: the height of the
+        /// first point before it, and of the last point after it. Unlike the curve that UTAU
+        /// passes to the resampler, the value is not truncated to whole cents.
+        ///
+        /// \return 0 if \a points is empty.
+        static double heightAt(const QList<PortamentoPoint> &points, double x);
+
         /// Returns the name of \a type in \c .usth, which is the name of the enumerator.
         static QString typeName(Type type);
 
