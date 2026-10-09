@@ -3595,6 +3595,14 @@ Write them again without these chunks? The audio stays the same. The files are w
         <translation>所请求的范围内没有音符。</translation>
     </message>
     <message>
+        <source>The project has no file, against whose folder the $patch of the note is resolved, so the note is silent.</source>
+        <translation>工程还没有文件，无法确定解析该音符 $patch 所依据的文件夹，因此该音符为静音。</translation>
+    </message>
+    <message>
+        <source>The file &quot;%1&quot; of the $patch of the note does not exist, so the note is silent.</source>
+        <translation>该音符的 $patch 所指的文件「%1」不存在，因此该音符为静音。</translation>
+    </message>
+    <message>
         <source>This voice bank has no sample for &quot;%1&quot;, so the note is silent.</source>
         <translation>此音源没有「%1」的采样，因此该音符静音。</translation>
     </message>
