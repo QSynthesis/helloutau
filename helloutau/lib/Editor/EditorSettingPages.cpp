@@ -16,6 +16,7 @@
 #include <QtWidgets/QGroupBox>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QLineEdit>
+#include <QtWidgets/QMessageBox>
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QVBoxLayout>
 
@@ -283,14 +284,21 @@ namespace hello::daw {
         form->addRow({}, test);
         form->addRow(note(tr("The test plays a short sine wave on the selected device.")));
         connect(m_output, &QComboBox::currentIndexChanged, this, &SettingPage::modifiedChanged);
+        // The tone plays on the device selected in the box, which need not be applied yet.
         connect(test, &QPushButton::clicked, widget, [this, widget] {
-            const int rate = AudioOutput::deviceSampleRate();
-            if (rate <= 0) {
-                return;
+            const auto id = m_output->currentData().toByteArray();
+            const int rate = AudioOutput::deviceSampleRate(id);
+            QString error = tr("There is no audio output device.");
+            if (rate > 0) {
+                auto output = new AudioOutput(widget);
+                connect(output, &AudioOutput::finished, output, &QObject::deleteLater);
+                if (output->start(std::make_shared<SineWaveSource>(rate, 440.0, 0.5), id, rate,
+                                  &error)) {
+                    return;
+                }
+                delete output;
             }
-            auto output = new AudioOutput(widget);
-            output->start(std::make_shared<SineWaveSource>(rate, 440.0, 0.5), rate);
-            connect(output, &AudioOutput::finished, output, &QObject::deleteLater);
+            QMessageBox::warning(widget, tr("Test"), error);
         });
         return widget;
     }

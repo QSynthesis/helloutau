@@ -620,6 +620,10 @@
         <translation>所选音频输出设备不可用。</translation>
     </message>
     <message>
+        <source>Another audio output device is playing. Try again after it stops.</source>
+        <translation>另一个音频输出设备正在播放。请在其停止后重试。</translation>
+    </message>
+    <message>
         <source>The audio sample rate changed. Start playback again.</source>
         <translation>音频采样率已改变，请重新开始播放。</translation>
     </message>
@@ -661,6 +665,10 @@
     <message>
         <source>The test plays a short sine wave on the selected device.</source>
         <translation>测试将在当前已应用的设备上播放一段短正弦波。更换设备后，请先点击“应用”。</translation>
+    </message>
+    <message>
+        <source>There is no audio output device.</source>
+        <translation>没有音频输出设备。</translation>
     </message>
 </context>
 <context>

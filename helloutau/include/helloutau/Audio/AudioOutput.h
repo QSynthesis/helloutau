@@ -72,6 +72,10 @@ namespace hello::daw {
         /// AudioEngine::sampleRate().
         static int deviceSampleRate();
 
+        /// Returns the sample rate to which a source for the device with \a id must be
+        /// converted, see AudioEngine::sampleRate(const QByteArray &).
+        static int deviceSampleRate(const QByteArray &id);
+
         static QList<QByteArray> outputDeviceIds();
         static QString outputDeviceDescription(const QByteArray &id);
         static QByteArray outputDeviceId();
@@ -83,6 +87,14 @@ namespace hello::daw {
         ///
         /// \return whether the device started, with the reason in \a error otherwise
         bool start(std::shared_ptr<AudioSource> source, int sampleRate, QString *error = nullptr);
+
+        /// Replaces this handle's source with \a source on the device with \a id instead of the
+        /// selected device, see AudioEngine::start(). The source is rejected while a source plays
+        /// on another device.
+        ///
+        /// \return whether the device started, with the reason in \a error otherwise
+        bool start(std::shared_ptr<AudioSource> source, const QByteArray &id, int sampleRate,
+                   QString *error = nullptr);
 
         /// Stops playing. Emits finished() if something played.
         void stop();

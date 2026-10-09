@@ -8,6 +8,13 @@
 
 namespace hello::daw {
 
+    namespace {
+
+        // The last id of a source in any mixer. Mixers are used on the control thread only.
+        AudioMixer::SourceId lastId = 0;
+
+    }
+
     class AudioMixer::Impl {
     public:
         using Decl = AudioMixer;
@@ -28,7 +35,6 @@ namespace hello::daw {
         }
         int rate;
         int channels;
-        SourceId next = 0;
         std::array<Slot, capacity> slotList;
         std::vector<float> scratch;
     };
@@ -49,7 +55,7 @@ namespace hello::daw {
             if (slot.state.load(std::memory_order_acquire) != Impl::Empty) {
                 continue;
             }
-            slot.id = ++impl.next;
+            slot.id = ++lastId;
             slot.source = std::move(source);
             slot.clock = std::make_shared<DeviceClock>(impl.rate);
             slot.state.store(Impl::Ready, std::memory_order_release);
@@ -84,6 +90,15 @@ namespace hello::daw {
             }
         }
         return true;
+    }
+
+    bool AudioMixer::isIdle() const {
+        stdc_impl_t;
+        return std::all_of(impl.slotList.cbegin(), impl.slotList.cend(),
+                           [](const Impl::Slot &slot) {
+                               const auto state = slot.state.load(std::memory_order_acquire);
+                               return state == Impl::Empty || state == Impl::Finished;
+                           });
     }
 
     std::shared_ptr<DeviceClock> AudioMixer::clock(SourceId id) const {

@@ -8,6 +8,11 @@ namespace hello::daw {
 
     /// Owns the process-wide output stream. Control methods run on the application thread.
     /// Sources are registered at the selected device rate. Device changes invalidate sources.
+    ///
+    /// The process never opens more than one stream, because one channel of a device has been
+    /// observed to go silent on Windows while two streams play on it (see docs/Audio.md). A source
+    /// for a device other than that of the open stream reopens the stream on that device only while
+    /// no source plays.
     class HELLOUTAU_AUDIO_EXPORT AudioEngine : public QObject {
         Q_OBJECT
     public:
@@ -15,16 +20,35 @@ namespace hello::daw {
         ~AudioEngine();
 
         QByteArray deviceId() const;
+
+        /// Returns the selected device, or the default device if none is selected or the
+        /// selected device is absent.
         QAudioDevice device() const;
 
-        /// Returns the sample rate of the open device stream, or the preferred sample rate of
-        /// the selected device if no stream is open. Returns 0 if no output device exists.
+        /// Returns the device with \a id, or the default device if \a id is empty or absent.
+        static QAudioDevice device(const QByteArray &id);
+
+        /// Returns the sample rate of the open device stream if it is on the selected device, or
+        /// else the preferred sample rate of the selected device. Returns 0 if no output device
+        /// exists.
         int sampleRate() const;
+
+        /// Returns sampleRate() for the device with \a id, see device(const QByteArray &).
+        int sampleRate(const QByteArray &id) const;
 
         /// Changes the device after stopping all registered sources. Empty selects the default.
         void setDeviceId(const QByteArray &id);
+
+        /// Plays \a source, whose samples are at \a sampleRate, on the selected device.
         std::optional<AudioMixer::SourceId> start(std::shared_ptr<AudioSource> source,
                                                   int sampleRate, QString *error = nullptr);
+
+        /// Plays \a source, whose samples are at \a sampleRate, on the device with \a id. If the
+        /// stream is open on another device, it is reopened on this device if no source plays,
+        /// and the source is rejected otherwise.
+        std::optional<AudioMixer::SourceId> start(std::shared_ptr<AudioSource> source,
+                                                  const QByteArray &id, int sampleRate,
+                                                  QString *error = nullptr);
         void stop(AudioMixer::SourceId id);
         bool isFinished(AudioMixer::SourceId id) const;
         std::shared_ptr<DeviceClock> clock(AudioMixer::SourceId id) const;

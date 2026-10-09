@@ -123,11 +123,15 @@ namespace hello::daw {
 
     QAudioDevice AudioEngine::device() const {
         stdc_impl_t;
-        if (impl.id.isEmpty()) {
+        return device(impl.id);
+    }
+
+    QAudioDevice AudioEngine::device(const QByteArray &id) {
+        if (id.isEmpty()) {
             return QMediaDevices::defaultAudioOutput();
         }
         for (const auto &device : QMediaDevices::audioOutputs()) {
-            if (device.id() == impl.id) {
+            if (device.id() == id) {
                 return device;
             }
         }
@@ -136,11 +140,19 @@ namespace hello::daw {
 
     int AudioEngine::sampleRate() const {
         stdc_impl_t;
-        if (impl.sink) {
+        return sampleRate(impl.id);
+    }
+
+    int AudioEngine::sampleRate(const QByteArray &id) const {
+        stdc_impl_t;
+        const auto selected = device(id);
+        if (selected.isNull()) {
+            return 0;
+        }
+        if (impl.sink && impl.opened == selected) {
             return impl.sink->format().sampleRate();
         }
-        const auto selected = device();
-        return selected.isNull() ? 0 : selected.preferredFormat().sampleRate();
+        return selected.preferredFormat().sampleRate();
     }
 
     void AudioEngine::setDeviceId(const QByteArray &id) {
@@ -170,6 +182,13 @@ namespace hello::daw {
     std::optional<AudioMixer::SourceId> AudioEngine::start(std::shared_ptr<AudioSource> source,
                                                            int rate, QString *error) {
         stdc_impl_t;
+        return start(std::move(source), impl.id, rate, error);
+    }
+
+    std::optional<AudioMixer::SourceId> AudioEngine::start(std::shared_ptr<AudioSource> source,
+                                                           const QByteArray &id, int rate,
+                                                           QString *error) {
+        stdc_impl_t;
         const auto fail = [error](const QString &message) -> std::optional<AudioMixer::SourceId> {
             if (error) {
                 *error = message;
@@ -179,9 +198,16 @@ namespace hello::daw {
         if (!source) {
             return fail(tr("There is no audio source."));
         }
-        const auto selected = device();
+        const auto selected = device(id);
         if (selected.isNull()) {
             return fail(tr("The selected audio output device is unavailable."));
+        }
+        if (impl.sink && impl.opened != selected) {
+            if (!impl.mixer->isIdle()) {
+                return fail(tr("Another audio output device is playing. Try again after it "
+                               "stops."));
+            }
+            close();
         }
         auto format = selected.preferredFormat();
         format.setSampleFormat(QAudioFormat::Float);
@@ -212,11 +238,11 @@ namespace hello::daw {
             ++impl.generation;
             impl.poll.start();
         }
-        const auto id = impl.mixer->add(std::move(source));
-        if (!id) {
+        const auto added = impl.mixer->add(std::move(source));
+        if (!added) {
             return fail(tr("Too many audio sources are playing."));
         }
-        return id;
+        return added;
     }
 
     void AudioEngine::stop(AudioMixer::SourceId id) {

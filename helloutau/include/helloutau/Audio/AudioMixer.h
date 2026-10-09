@@ -17,10 +17,15 @@ namespace hello::daw {
         ~AudioMixer();
 
         /// Registers a source at the mixer sample rate. Returns no id if full or source is null.
+        /// The id is unique in the process, so that an id of a closed mixer never names a source
+        /// of a later mixer.
         std::optional<SourceId> add(std::shared_ptr<AudioSource> source);
         /// Removes only this source. An in-progress read may finish before removal takes effect.
         void remove(SourceId id);
         bool isFinished(SourceId id) const;
+
+        /// Returns whether no source is playing.
+        bool isIdle() const;
         std::shared_ptr<DeviceClock> clock(SourceId id) const;
         /// Releases completed sources on the control thread.
         void collect();

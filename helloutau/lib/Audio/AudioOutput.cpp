@@ -94,10 +94,19 @@ namespace hello::daw {
         AudioEngine::instance()->setDeviceId(id);
     }
 
+    int AudioOutput::deviceSampleRate(const QByteArray &id) {
+        return AudioEngine::instance()->sampleRate(id);
+    }
+
     bool AudioOutput::start(std::shared_ptr<AudioSource> source, int sampleRate, QString *error) {
+        return start(std::move(source), AudioEngine::instance()->deviceId(), sampleRate, error);
+    }
+
+    bool AudioOutput::start(std::shared_ptr<AudioSource> source, const QByteArray &id,
+                            int sampleRate, QString *error) {
         stdc_impl_t;
         stop();
-        impl.id = impl.engine->start(std::move(source), sampleRate, error);
+        impl.id = impl.engine->start(std::move(source), id, sampleRate, error);
         if (!impl.id) {
             return false;
         }
