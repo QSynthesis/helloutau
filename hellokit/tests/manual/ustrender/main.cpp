@@ -2,7 +2,7 @@
 /// Renders a project to a WAV file from the command line. The second roadmap stage is measured
 /// by this program.
 ///
-/// It requires resources unavailable to automated tests: a real voice bank and the two engines.
+/// It requires resources unavailable to automated tests: a real voice bank and the two synth tools.
 /// These are specified on the command line rather than taken from the project, which is the
 /// fundamental rule of the synthesis layer.
 ///
@@ -233,9 +233,10 @@ namespace {
 
     /// Renders \a plan as realtime playback does, from its start, and writes the whole track as a
     /// 16-bit WAV file, which only the wavtool of UTAU writes otherwise.
-    int renderRealtime(const SynthPlan &plan, const SynthEngines &engines, const fs::path &output) {
+    int renderRealtime(const SynthPlan &plan, const SynthTools &synthTools,
+                       const fs::path &output) {
         const auto started = std::chrono::steady_clock::now();
-        RealtimeSynth synth(engines);
+        RealtimeSynth synth(synthTools);
         synth.setPlan(plan);
         const qint64 length = synth.length();
 
@@ -336,7 +337,7 @@ namespace {
         stdc::u8printf("plan: %d notes\n", int(plan->steps().size()));
 
         if (result.option("--plan")) {
-            // The arguments of each engine call, one per line, so that an incorrect argument is
+            // The arguments of each synth tool call, one per line, so that an incorrect argument is
             // visible without executing anything.
             for (const auto &step : plan->steps()) {
                 stdc::u8printf("note %d%s\n", step.noteIndex + 1, step.silent ? " (silent)" : "");
@@ -354,18 +355,18 @@ namespace {
             return comparePitch(*project, *plan);
         }
 
-        SynthEngines engines;
-        engines.resampler = pathOf(option(result, "--resampler"));
-        engines.wavtool = pathOf(option(result, "--wavtool"));
-        if (engines.resampler.empty() || engines.wavtool.empty()) {
+        SynthTools synthTools;
+        synthTools.resampler = pathOf(option(result, "--resampler"));
+        synthTools.wavtool = pathOf(option(result, "--wavtool"));
+        if (synthTools.resampler.empty() || synthTools.wavtool.empty()) {
             stdc::console::u8fputs("error: --resampler and --wavtool are required and specify the "
-                                   "engines. Engines are never taken from the project.\n",
+                                   "synth tools. Synth tools are never taken from the project.\n",
                                    stderr);
             return 1;
         }
 
         if (result.option("--realtime")) {
-            return renderRealtime(*plan, engines, output);
+            return renderRealtime(*plan, synthTools, output);
         }
 
         // The runner is a compatibility setting, not an implementation detail. See
@@ -378,7 +379,7 @@ namespace {
                 stdc::console::u8fputs(
                     "warning: --verbatim writes project text into a shell script unescaped, "
                     "which allows the project file to execute commands. It exists only for "
-                    "engines that require the exact script text of UTAU.\n",
+                    "synth tools that require the exact script text of UTAU.\n",
                     stderr);
                 classic->quoting = ClassicSynthRunner::Quoting::Verbatim;
             }
@@ -388,7 +389,7 @@ namespace {
         }
 
         diagnostics.clear();
-        const auto outcome = runner->render(*plan, engines, nullptr, diagnostics);
+        const auto outcome = runner->render(*plan, synthTools, nullptr, diagnostics);
         report(diagnostics);
 
         stdc::u8printf("resampled %d, reused %d, direct %d, silent %d, failed %d\n",
@@ -416,7 +417,7 @@ namespace {
         return out;
     }
 
-    // The scripts that run the engines of a render one call after another, for comparing
+    // The scripts that run the synth tools of a render one call after another, for comparing
     // environments. See docs/claude/render-comparison.md.
     int script(const stdc::cli::ParseResult &result) {
         const fs::path input = pathOf(*result.value(0));
@@ -517,7 +518,8 @@ int main(int argc, char *argv[]) {
                 cli::Option({"--resampler"}, "The resampler to run").arg(cli::Argument("path")))
             .addOption(cli::Option({"--wavtool"}, "The wavtool to run").arg(cli::Argument("path")))
             .addOption(cli::Option(
-                {"--plan"}, "Print the arguments of each engine call without executing anything"))
+                {"--plan"},
+                "Print the arguments of each synth tool call without executing anything"))
             .addOption(cli::Option({"--classic"},
                                    "Render through temp.bat in a console window, as UTAU does"))
             .addOption(
@@ -537,7 +539,7 @@ int main(int argc, char *argv[]) {
             .addCommand(
                 cli::Command("script",
                              "Write the scripts of a render, a call at a time, with a manifest, "
-                             "for comparing the engines in two environments")
+                             "for comparing the synth tools in two environments")
                     .addArgument(cli::Argument("input", "The .ust or .usth to render"))
                     .addArgument(
                         cli::Argument("output", "The track file, as the script refers to it"))
@@ -562,7 +564,7 @@ int main(int argc, char *argv[]) {
                                    .arg(cli::Argument("folder")))
                     .addOption(cli::Option({"--script-dir"},
                                            "The folder of the scripts and the working folder of "
-                                           "the engines, as the script refers to it")
+                                           "the synth tools, as the script refers to it")
                                    .arg(cli::Argument("folder")))
                     .addOption(cli::Option({"--emit-dir"},
                                            "Where to write the files, if not the script folder")
@@ -584,12 +586,13 @@ int main(int argc, char *argv[]) {
                             .addArgument(cli::Argument("first", "A manifest.json"))
                             .addArgument(cli::Argument("second", "Another manifest.json"))
                             .setHandler(compare))
-            .addCommand(cli::Command("copy-voice",
-                                     "Copy a voice bank without the files engines derive from its "
-                                     "samples, keeping the modification times")
-                            .addArgument(cli::Argument("from", "The voice bank folder"))
-                            .addArgument(cli::Argument("to", "A new folder"))
-                            .setHandler(copy))
+            .addCommand(
+                cli::Command("copy-voice",
+                             "Copy a voice bank without the files synth tools derive from its "
+                             "samples, keeping the modification times")
+                    .addArgument(cli::Argument("from", "The voice bank folder"))
+                    .addArgument(cli::Argument("to", "A new folder"))
+                    .setHandler(copy))
             .addHelpOption(true)
             .addVersionOption("0.0.1"));
 

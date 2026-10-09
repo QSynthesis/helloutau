@@ -121,9 +121,9 @@ namespace hello::kit {
         /// HelloUtau does the same, see Project::cacheDirectoryOf().
         QString cacheDir;
 
-        /// The engines specified by the project file, \c Tool1 and \c Tool2 in UST.
+        /// The synth tools specified by the project file, \c Tool1 and \c Tool2 in UST.
         ///
-        /// \warning Untrusted, like \c Note::patch. Stored verbatim, because per-project engine
+        /// \warning Untrusted, like \c Note::patch. Stored verbatim, because per-project synth tool
         ///          configuration is common UTAU practice and discarding it would delete user
         ///          settings. What is forbidden is executing them without confirmation, not
         ///          storing them. See the security section of CLAUDE.md.

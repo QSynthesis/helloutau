@@ -60,7 +60,7 @@ namespace hello::daw {
             PlanInput input;
             // The key of the render kept when the job started
             QString keptKey;
-            kit::SynthEngines engines;
+            kit::SynthTools synthTools;
             std::shared_ptr<const kit::SynthRunner> runner;
             int deviceRate = 0;
             // Whether the render only writes its track file, for renderTrack()
@@ -78,13 +78,13 @@ namespace hello::daw {
             double startTime = 0;
         };
 
-        // What a render depends on: every argument of every engine call, among them the names
-        // of the fragments, which stand for the state of the samples, the engines, and the rate
+        // What a render depends on: every argument of every synth tool call, among them the names
+        // of the fragments, which stand for the state of the samples, the synth tools, and the rate
         // it is played at. A render of the same key sounds the same.
-        QString keyOf(const kit::SynthPlan &plan, const kit::SynthEngines &engines,
+        QString keyOf(const kit::SynthPlan &plan, const kit::SynthTools &synthTools,
                       int deviceRate) {
-            QStringList parts{QString::fromStdU16String(engines.resampler.u16string()),
-                              QString::fromStdU16String(engines.wavtool.u16string()),
+            QStringList parts{QString::fromStdU16String(synthTools.resampler.u16string()),
+                              QString::fromStdU16String(synthTools.wavtool.u16string()),
                               QString::fromStdU16String(plan.outputFile().u16string()),
                               QString::number(deviceRate)};
             for (const auto &step : plan.steps()) {
@@ -184,7 +184,7 @@ namespace hello::daw {
         Decl *_decl;
         std::shared_ptr<Recipient> recipient;
         State state = Stopped;
-        std::shared_ptr<kit::EngineOutputLog> outputLog;
+        std::shared_ptr<kit::SynthToolOutputLog> outputLog;
         std::shared_ptr<const kit::SynthRunner> runner =
             std::make_shared<kit::ClassicSynthRunner>();
         AudioOutput *output = nullptr;
@@ -217,11 +217,11 @@ namespace hello::daw {
         // stream it feeds, and the sample of the track file at which the stream began. The
         // stream refers to the synthesis and goes first.
         std::unique_ptr<kit::RealtimeSynth> synth;
-        kit::SynthEngines synthEngines;
-        // The engines last given, whose resampler names the fragments of every plan, see
-        // kit::SynthPlan::Options::resampler. A change of the engines therefore renders the
+        kit::SynthTools previewSynthTools;
+        // The synth tools last given, whose resampler names the fragments of every plan, see
+        // kit::SynthPlan::Options::resampler. A change of the synth tools therefore renders the
         // notes anew instead of reusing the fragments of the previous resampler.
-        kit::SynthEngines engines;
+        kit::SynthTools synthTools;
         // The thread count set, and that of the synthesis, zero for one per hardware thread
         int threadCount = 0;
         int synthThreads = 0;
@@ -267,7 +267,7 @@ namespace hello::daw {
             PlanInput input{document.session()->snapshot(), bank, {}};
             input.options.cacheDirectory = *cache;
             input.options.projectDirectory = projectDirectoryOf(document);
-            input.options.resampler = engines.resampler;
+            input.options.resampler = synthTools.resampler;
             input.options.outputFile = temporaryDirectory / OutputFileName;
             return input;
         }
@@ -293,7 +293,7 @@ namespace hello::daw {
                                });
         }
 
-        // Ends the plans, the scans and the synth, which kills its engine calls, and waits for
+        // Ends the plans, the scans and the synth, which kills its synth tool calls, and waits for
         // every worker thread. The preview and the render are to be ended first.
         void endWorkers() {
             stopPlanning();
@@ -319,16 +319,15 @@ namespace hello::daw {
             return false;
         }
 
-        // Makes the synth, or makes it anew for other engines or another thread count.
-        void ensureSynth(const kit::SynthEngines &engines) {
-            if (!synth || synthEngines.resampler != engines.resampler ||
+        // Makes the synth, or makes it anew for other synth tools or another thread count.
+        void ensureSynth(const kit::SynthTools &synthTools) {
+            if (!synth || previewSynthTools.resampler != synthTools.resampler ||
                 synthThreads != threadCount) {
                 endPreview();
-                synth =
-                    std::make_unique<kit::RealtimeSynth>(engines, threadCount, [log = outputLog] {
-                        return std::make_unique<kit::EngineProcess>(log);
-                    });
-                synthEngines = engines;
+                synth = std::make_unique<kit::RealtimeSynth>(
+                    synthTools, threadCount,
+                    [log = outputLog] { return std::make_unique<kit::SynthToolProcess>(log); });
+                previewSynthTools = synthTools;
                 synthThreads = threadCount;
             }
         }
@@ -547,7 +546,7 @@ namespace hello::daw {
             }
             const auto &plan = *job->plan;
             if (!job->fileOnly) {
-                job->key = keyOf(plan, job->engines, job->deviceRate);
+                job->key = keyOf(plan, job->synthTools, job->deviceRate);
                 if (job->key == job->keptKey) {
                     job->sameAsKept = true;
                     return;
@@ -560,7 +559,7 @@ namespace hello::daw {
             // classic runner does only once its script has ended.
             observer.progressed(0, 0);
             const auto outcome =
-                job->runner->render(plan, job->engines, &observer, job->diagnostics);
+                job->runner->render(plan, job->synthTools, &observer, job->diagnostics);
             if (!outcome.rendered || outcome.cancelled || job->cancel.load()) {
                 return;
             }
@@ -594,8 +593,8 @@ namespace hello::daw {
             setState(Rendering);
         }
 
-        // Whether a render cancelled before has yet to end: the engine calls under way, or a
-        // script, which ends within moments with the engines it started.
+        // Whether a render cancelled before has yet to end: the synth tool calls under way, or a
+        // script, which ends within moments with the synth tools it started.
         bool rendersStill() {
             workers.removeAll(nullptr);
             return std::any_of(
@@ -675,21 +674,21 @@ namespace hello::daw {
     };
 
     Playback::Playback(QObject *parent)
-        : Playback(std::make_shared<kit::EngineOutputLog>(), {}, parent) {
+        : Playback(std::make_shared<kit::SynthToolOutputLog>(), {}, parent) {
     }
 
-    Playback::Playback(std::shared_ptr<kit::EngineOutputLog> outputLog, QObject *parent)
+    Playback::Playback(std::shared_ptr<kit::SynthToolOutputLog> outputLog, QObject *parent)
         : Playback(std::move(outputLog), {}, parent) {
     }
 
-    Playback::Playback(std::shared_ptr<kit::EngineOutputLog> outputLog,
+    Playback::Playback(std::shared_ptr<kit::SynthToolOutputLog> outputLog,
                        std::filesystem::path temporaryDirectory, QObject *parent)
         : QObject(parent), _impl(std::make_unique<Impl>(this)) {
         stdc_impl_t;
         impl.temporaryDirectory = std::move(temporaryDirectory);
         impl.outputLog =
-            outputLog ? std::move(outputLog) : std::make_shared<kit::EngineOutputLog>();
-        impl.outputLog->setMode(kit::EngineOutputLog::Accumulated);
+            outputLog ? std::move(outputLog) : std::make_shared<kit::SynthToolOutputLog>();
+        impl.outputLog->setMode(kit::SynthToolOutputLog::Accumulated);
         impl.outputLog->setLimit(1024 * 1024);
         impl.runner->setOutputLog(impl.outputLog);
         impl.output = new AudioOutput(this);
@@ -755,7 +754,7 @@ namespace hello::daw {
     }
 
     bool Playback::play(const kit::ProjectDocument &document,
-                        std::optional<std::pair<int, int>> range, const kit::SynthEngines &engines,
+                        std::optional<std::pair<int, int>> range, const kit::SynthTools &synthTools,
                         kit::DiagnosticList &diagnostics) {
         stdc_impl_t;
         stop();
@@ -764,7 +763,7 @@ namespace hello::daw {
                                  "window stops it."));
             return false;
         }
-        if (engines.resampler.empty() || engines.wavtool.empty()) {
+        if (synthTools.resampler.empty() || synthTools.wavtool.empty()) {
             fail(diagnostics,
                  tr("Set the wavtool and the resampler in the project properties first."));
             return false;
@@ -791,13 +790,13 @@ namespace hello::daw {
         job->input = {document.session()->snapshot(), bank, {}};
         job->input.options.cacheDirectory = *cache;
         job->input.options.projectDirectory = projectDirectoryOf(document);
-        job->input.options.resampler = engines.resampler;
-        impl.engines = engines;
+        job->input.options.resampler = synthTools.resampler;
+        impl.synthTools = synthTools;
         job->input.options.outputFile = impl.temporaryDirectory / OutputFileName;
         job->input.options.range = range;
-        // The same notes as the last render play again without the engines.
+        // The same notes as the last render play again without the synth tools.
         job->keptKey = impl.kept ? impl.kept->key : QString();
-        job->engines = engines;
+        job->synthTools = synthTools;
         job->runner = impl.runner;
         job->deviceRate = deviceRate;
         impl.start(job);
@@ -805,7 +804,7 @@ namespace hello::daw {
     }
 
     bool Playback::renderTrack(const kit::ProjectDocument &document,
-                               const std::filesystem::path &file, const kit::SynthEngines &engines,
+                               const std::filesystem::path &file, const kit::SynthTools &synthTools,
                                kit::DiagnosticList &diagnostics) {
         stdc_impl_t;
         stop();
@@ -814,7 +813,7 @@ namespace hello::daw {
                                  "window stops it."));
             return false;
         }
-        if (engines.resampler.empty() || engines.wavtool.empty()) {
+        if (synthTools.resampler.empty() || synthTools.wavtool.empty()) {
             fail(diagnostics,
                  tr("Set the wavtool and the resampler in the project properties first."));
             return false;
@@ -836,10 +835,10 @@ namespace hello::daw {
         job->input = {document.session()->snapshot(), bank, {}};
         job->input.options.cacheDirectory = *cache;
         job->input.options.projectDirectory = projectDirectoryOf(document);
-        job->input.options.resampler = engines.resampler;
-        impl.engines = engines;
+        job->input.options.resampler = synthTools.resampler;
+        impl.synthTools = synthTools;
         job->input.options.outputFile = file;
-        job->engines = engines;
+        job->synthTools = synthTools;
         job->runner = impl.runner;
         job->fileOnly = true;
         impl.start(job);
@@ -847,11 +846,11 @@ namespace hello::daw {
     }
 
     bool Playback::preview(const kit::ProjectDocument &document, std::optional<double> fromTime,
-                           const kit::SynthEngines &engines, kit::DiagnosticList &diagnostics) {
+                           const kit::SynthTools &synthTools, kit::DiagnosticList &diagnostics) {
         stdc_impl_t;
         stop();
-        // The preview runs no wavtool, but requires both engines, as Render Track does.
-        if (engines.resampler.empty() || engines.wavtool.empty()) {
+        // The preview runs no wavtool, but requires both synth tools, as Render Track does.
+        if (synthTools.resampler.empty() || synthTools.wavtool.empty()) {
             fail(diagnostics,
                  tr("Set the wavtool and the resampler in the project properties first."));
             return false;
@@ -861,12 +860,12 @@ namespace hello::daw {
             fail(diagnostics, tr("There is no audio output device."));
             return false;
         }
-        impl.engines = engines;
+        impl.synthTools = synthTools;
         auto input = impl.previewInput(document, diagnostics);
         if (!input) {
             return false;
         }
-        impl.ensureSynth(engines);
+        impl.ensureSynth(synthTools);
         impl.plannedFrom = fromTime;
         impl.waitingPreview = deviceRate;
         impl.requestPlan(std::move(*input));
@@ -880,24 +879,24 @@ namespace hello::daw {
     }
 
     bool Playback::prepare(const kit::ProjectDocument &document, std::optional<double> fromTime,
-                           const kit::SynthEngines &engines, kit::DiagnosticList &diagnostics) {
+                           const kit::SynthTools &synthTools, kit::DiagnosticList &diagnostics) {
         stdc_impl_t;
         if (impl.stream) {
             updatePlan(document);
             return true;
         }
-        // The preview runs no wavtool, but requires both engines, as Render Track does.
-        if (engines.resampler.empty() || engines.wavtool.empty()) {
+        // The preview runs no wavtool, but requires both synth tools, as Render Track does.
+        if (synthTools.resampler.empty() || synthTools.wavtool.empty()) {
             fail(diagnostics,
                  tr("Set the wavtool and the resampler in the project properties first."));
             return false;
         }
-        impl.engines = engines;
+        impl.synthTools = synthTools;
         auto input = impl.previewInput(document, diagnostics);
         if (!input) {
             return false;
         }
-        impl.ensureSynth(engines);
+        impl.ensureSynth(synthTools);
         impl.plannedFrom = fromTime;
         impl.requestPlan(std::move(*input));
         return true;
@@ -936,9 +935,9 @@ namespace hello::daw {
         impl.scanCache(document);
     }
 
-    void Playback::setEngines(const kit::SynthEngines &engines) {
+    void Playback::setSynthTools(const kit::SynthTools &synthTools) {
         stdc_impl_t;
-        impl.engines = engines;
+        impl.synthTools = synthTools;
     }
 
     void Playback::updatePlan(const kit::ProjectDocument &document) {
@@ -1036,7 +1035,7 @@ namespace hello::daw {
                                  "it."));
             return std::nullopt;
         }
-        // The synth waits for the engine calls under way, which would write into the cache.
+        // The synth waits for the synth tool calls under way, which would write into the cache.
         stop();
         impl.stopPlanning();
         impl.synth.reset();

@@ -55,7 +55,7 @@ namespace {
         return bytes;
     }
 
-    // Writes silence as the track file instead of running engines, and records the plans.
+    // Writes silence as the track file instead of running synth tools, and records the plans.
     class SilentRunner : public kit::SynthRunner {
     public:
         mutable QList<int> stepCounts;
@@ -67,10 +67,10 @@ namespace {
         // The frames of the track file
         quint32 frames = 4410;
 
-        kit::SynthOutcome render(const kit::SynthPlan &plan, const kit::SynthEngines &engines,
+        kit::SynthOutcome render(const kit::SynthPlan &plan, const kit::SynthTools &synthTools,
                                  kit::SynthObserver *observer,
                                  kit::DiagnosticList &diagnostics) const override {
-            Q_UNUSED(engines);
+            Q_UNUSED(synthTools);
             Q_UNUSED(diagnostics);
             caches.push_back(plan.cacheDirectory());
             stepCounts.push_back(int(plan.steps().size()));
@@ -148,11 +148,11 @@ namespace {
         return path;
     }
 
-    kit::SynthEngines someEngines() {
-        kit::SynthEngines engines;
-        engines.resampler = "resampler.exe";
-        engines.wavtool = "wavtool.exe";
-        return engines;
+    kit::SynthTools someSynthTools() {
+        kit::SynthTools synthTools;
+        synthTools.resampler = "resampler.exe";
+        synthTools.wavtool = "wavtool.exe";
+        return synthTools;
     }
 
 }
@@ -191,8 +191,8 @@ private Q_SLOTS:
                  fs::path(dir.path().toStdU16String()) / "imported.cache");
     }
 
-    // Playing requires engines, a voice bank and the temporary directory.
-    void playing_needs_engines_and_a_voice_bank() {
+    // Playing requires synth tools, a voice bank and the temporary directory.
+    void playing_needs_synth_tools_and_a_voice_bank() {
         QTemporaryDir dir;
         Playback playback(nullptr, temporaryOf(dir), nullptr);
         kit::DiagnosticList diagnostics;
@@ -204,16 +204,16 @@ private Q_SLOTS:
 
         diagnostics.clear();
         Playback without;
-        QVERIFY(!without.play(*document, std::nullopt, someEngines(), diagnostics));
-        QVERIFY(!without.renderTrack(*document, temporaryOf(dir) / "out.wav", someEngines(),
+        QVERIFY(!without.play(*document, std::nullopt, someSynthTools(), diagnostics));
+        QVERIFY(!without.renderTrack(*document, temporaryOf(dir) / "out.wav", someSynthTools(),
                                      diagnostics));
-        QVERIFY(!without.preview(*document, std::nullopt, someEngines(), diagnostics));
-        QVERIFY(!without.prepare(*document, std::nullopt, someEngines(), diagnostics));
+        QVERIFY(!without.preview(*document, std::nullopt, someSynthTools(), diagnostics));
+        QVERIFY(!without.prepare(*document, std::nullopt, someSynthTools(), diagnostics));
         QCOMPARE(diagnostics.size(), 4);
 
         diagnostics.clear();
         kit::ProjectDocument silent;
-        QVERIFY(!playback.play(silent, std::nullopt, someEngines(), diagnostics));
+        QVERIFY(!playback.play(silent, std::nullopt, someSynthTools(), diagnostics));
         QVERIFY(kit::hasError(diagnostics));
         QCOMPARE(playback.state(), Playback::Stopped);
     }
@@ -236,7 +236,7 @@ private Q_SLOTS:
 
         kit::DiagnosticList diagnostics;
         QVERIFY(playback.lastRenderFile().empty());
-        QVERIFY(playback.play(*document, std::make_pair(1, 1), someEngines(), diagnostics));
+        QVERIFY(playback.play(*document, std::make_pair(1, 1), someSynthTools(), diagnostics));
         QCOMPARE(playback.state(), Playback::Rendering);
         QVERIFY(playback.lastRenderFile().empty());
         QTRY_COMPARE_WITH_TIMEOUT(states.size(), 3, 5000);
@@ -273,7 +273,7 @@ private Q_SLOTS:
         const auto file = fs::path(dir.path().toStdU16String()) / "out" / "song.wav";
         fs::create_directories(file.parent_path());
         kit::DiagnosticList diagnostics;
-        QVERIFY(playback.renderTrack(*document, file, someEngines(), diagnostics));
+        QVERIFY(playback.renderTrack(*document, file, someSynthTools(), diagnostics));
         QCOMPARE(playback.state(), Playback::Rendering);
         QTRY_COMPARE_WITH_TIMEOUT(rendered.size(), 1, 5000);
         QCOMPARE(failures.size(), 0);
@@ -298,7 +298,7 @@ private Q_SLOTS:
         playback.setRunner(runner);
 
         kit::DiagnosticList diagnostics;
-        QVERIFY(playback.play(*document, std::nullopt, someEngines(), diagnostics));
+        QVERIFY(playback.play(*document, std::nullopt, someSynthTools(), diagnostics));
         QTRY_COMPARE_WITH_TIMEOUT(playback.state(), Playback::Playing, 5000);
         const auto first = playback.position();
         QVERIFY(first);
@@ -311,7 +311,7 @@ private Q_SLOTS:
         playback.stop();
     }
 
-    // A render plays again without the engines while its notes stay the same, and is rendered
+    // A render plays again without the synth tools while its notes stay the same, and is rendered
     // anew once they change.
     void a_render_plays_again_while_its_notes_stay() {
         if (AudioOutput::deviceSampleRate() <= 0) {
@@ -325,16 +325,16 @@ private Q_SLOTS:
         playback.setRunner(runner);
 
         kit::DiagnosticList diagnostics;
-        QVERIFY(playback.play(*document, std::nullopt, someEngines(), diagnostics));
+        QVERIFY(playback.play(*document, std::nullopt, someSynthTools(), diagnostics));
         QTRY_COMPARE_WITH_TIMEOUT(playback.state(), Playback::Playing, 5000);
         playback.stop();
-        QVERIFY(playback.play(*document, std::nullopt, someEngines(), diagnostics));
+        QVERIFY(playback.play(*document, std::nullopt, someSynthTools(), diagnostics));
         QTRY_COMPARE_WITH_TIMEOUT(playback.state(), Playback::Playing, 5000);
         QCOMPARE(runner->started.load(), 1);
         playback.stop();
 
         // Another range, or an edit, renders anew.
-        QVERIFY(playback.play(*document, std::make_pair(1, 1), someEngines(), diagnostics));
+        QVERIFY(playback.play(*document, std::make_pair(1, 1), someSynthTools(), diagnostics));
         QCOMPARE(playback.state(), Playback::Rendering);
         QTRY_COMPARE_WITH_TIMEOUT(playback.state(), Playback::Playing, 5000);
         playback.stop();
@@ -344,7 +344,7 @@ private Q_SLOTS:
             kit::ProjectRef(session).tracks().at(0).notes().at(1).setNoteNum(62);
             tx.commit();
         }
-        QVERIFY(playback.play(*document, std::make_pair(1, 1), someEngines(), diagnostics));
+        QVERIFY(playback.play(*document, std::make_pair(1, 1), someSynthTools(), diagnostics));
         QCOMPARE(playback.state(), Playback::Rendering);
         QTRY_COMPARE_WITH_TIMEOUT(runner->started.load(), 3, 5000);
         QTRY_COMPARE_WITH_TIMEOUT(playback.state(), Playback::Playing, 5000);
@@ -353,7 +353,7 @@ private Q_SLOTS:
         // So does a sample recorded again, which names its fragment anew.
         writeBytes(fs::path(dir.path().toStdU16String()) / "bank" / "a.wav", "RIFF");
         QVERIFY(document->loadVoiceBank({}, nullptr, diagnostics));
-        QVERIFY(playback.play(*document, std::make_pair(1, 1), someEngines(), diagnostics));
+        QVERIFY(playback.play(*document, std::make_pair(1, 1), someSynthTools(), diagnostics));
         QCOMPARE(playback.state(), Playback::Rendering);
         playback.stop();
     }
@@ -373,7 +373,7 @@ private Q_SLOTS:
         QVERIFY(!playback.pause());
 
         kit::DiagnosticList diagnostics;
-        QVERIFY(playback.play(*document, std::nullopt, someEngines(), diagnostics));
+        QVERIFY(playback.play(*document, std::nullopt, someSynthTools(), diagnostics));
         QTRY_COMPARE_WITH_TIMEOUT(playback.state(), Playback::Playing, 5000);
         QTest::qWait(300);
         QSignalSpy states(&playback, &Playback::stateChanged);
@@ -417,10 +417,10 @@ private Q_SLOTS:
 
         kit::DiagnosticList diagnostics;
         QSignalSpy states(&playback, &Playback::stateChanged);
-        kit::SynthEngines engines;
-        engines.resampler = fs::path(dir.path().toStdU16String()) / "missing.exe";
-        engines.wavtool = fs::path(dir.path().toStdU16String()) / "missing-wavtool.exe";
-        QVERIFY(playback.preview(*document, 750.0, engines, diagnostics));
+        kit::SynthTools synthTools;
+        synthTools.resampler = fs::path(dir.path().toStdU16String()) / "missing.exe";
+        synthTools.wavtool = fs::path(dir.path().toStdU16String()) / "missing-wavtool.exe";
+        QVERIFY(playback.preview(*document, 750.0, synthTools, diagnostics));
         // Rendering until the plan of the track is made
         QCOMPARE(playback.state(), Playback::Rendering);
         QVERIFY(playback.planProgress());
@@ -463,7 +463,7 @@ private Q_SLOTS:
         QSignalSpy failures(&playback, &Playback::failed);
 
         kit::DiagnosticList diagnostics;
-        if (!playback.play(*document, std::nullopt, someEngines(), diagnostics)) {
+        if (!playback.play(*document, std::nullopt, someSynthTools(), diagnostics)) {
             QSKIP("This machine has no audio output device.");
         }
         QTRY_COMPARE(runner->started.load(), 1);
@@ -487,7 +487,7 @@ private Q_SLOTS:
         QSignalSpy failures(&playback, &Playback::failed);
 
         kit::DiagnosticList diagnostics;
-        if (!playback.play(*document, std::make_pair(5, 9), someEngines(), diagnostics)) {
+        if (!playback.play(*document, std::make_pair(5, 9), someSynthTools(), diagnostics)) {
             QSKIP("This machine has no audio output device.");
         }
         QVERIFY(diagnostics.isEmpty());
@@ -510,11 +510,11 @@ private Q_SLOTS:
                                fs::path(dir.path().toStdU16String()) / "missing.exe"));
         const auto cache = *playback.cacheDirectoryFor(*document);
         fs::create_directories(cache / "kept");
-        kit::SynthEngines engines;
-        engines.resampler = fs::path(dir.path().toStdU16String()) / "missing.exe";
-        engines.wavtool = fs::path(dir.path().toStdU16String()) / "missing-wavtool.exe";
+        kit::SynthTools synthTools;
+        synthTools.resampler = fs::path(dir.path().toStdU16String()) / "missing.exe";
+        synthTools.wavtool = fs::path(dir.path().toStdU16String()) / "missing-wavtool.exe";
         kit::DiagnosticList diagnostics;
-        QVERIFY(playback.prepare(*document, std::nullopt, engines, diagnostics));
+        QVERIFY(playback.prepare(*document, std::nullopt, synthTools, diagnostics));
         QTRY_COMPARE(playback.noteStates(), (QList<S::NoteState>{S::Ready, S::Ready}));
 
         QCOMPARE(playback.clearCache(*document, diagnostics), std::optional<int>(2));
@@ -526,7 +526,7 @@ private Q_SLOTS:
         const auto runner = std::make_shared<SilentRunner>();
         runner->hold = true;
         playback.setRunner(runner);
-        if (!playback.play(*document, std::nullopt, someEngines(), diagnostics)) {
+        if (!playback.play(*document, std::nullopt, someSynthTools(), diagnostics)) {
             return;
         }
         QTRY_COMPARE(runner->started.load(), 1);
@@ -548,12 +548,12 @@ private Q_SLOTS:
         playback.setRunner(runner);
 
         kit::DiagnosticList diagnostics;
-        if (!playback.play(*document, std::nullopt, someEngines(), diagnostics)) {
+        if (!playback.play(*document, std::nullopt, someSynthTools(), diagnostics)) {
             QSKIP("This machine has no audio output device.");
         }
         QTRY_COMPARE(runner->started.load(), 1);
         playback.stop();
-        QVERIFY(!playback.play(*document, std::nullopt, someEngines(), diagnostics));
+        QVERIFY(!playback.play(*document, std::nullopt, someSynthTools(), diagnostics));
         QVERIFY(kit::hasError(diagnostics));
         QCOMPARE(runner->started.load(), 1);
 
@@ -561,7 +561,7 @@ private Q_SLOTS:
         bool started = false;
         for (int attempts = 0; attempts < 500 && !started; ++attempts) {
             diagnostics.clear();
-            started = playback.play(*document, std::nullopt, someEngines(), diagnostics);
+            started = playback.play(*document, std::nullopt, someSynthTools(), diagnostics);
             if (!started) {
                 QTest::qWait(10);
             }
@@ -582,12 +582,12 @@ private Q_SLOTS:
         QVERIFY(kit::hasError(diagnostics));
 
         // Without the synth, by the cache scanned on a worker thread: nothing there yet, then
-        // the fragments of the resampler of the engines set
+        // the fragments of the resampler of the synth tools set
         using S = kit::RealtimeSynth;
-        kit::SynthEngines engines;
-        engines.resampler = fs::path(dir.path().toStdU16String()) / "missing.exe";
-        engines.wavtool = fs::path(dir.path().toStdU16String()) / "missing-wavtool.exe";
-        playback.setEngines(engines);
+        kit::SynthTools synthTools;
+        synthTools.resampler = fs::path(dir.path().toStdU16String()) / "missing.exe";
+        synthTools.wavtool = fs::path(dir.path().toStdU16String()) / "missing-wavtool.exe";
+        playback.setSynthTools(synthTools);
         QSignalSpy changes(&playback, &Playback::noteStatesChanged);
         QVERIFY(playback.noteStates().isEmpty());
         playback.refreshNoteStates(*document);
@@ -600,7 +600,7 @@ private Q_SLOTS:
         QTRY_COMPARE(playback.noteStates(), (QList<S::NoteState>{S::Ready, S::Ready}));
         QSignalSpy states(&playback, &Playback::stateChanged);
         diagnostics.clear();
-        QVERIFY(playback.prepare(*document, 750.0, engines, diagnostics));
+        QVERIFY(playback.prepare(*document, 750.0, synthTools, diagnostics));
         // The plan is made on a worker thread, and the synth takes the fragments from the cache.
         QVERIFY(playback.planProgress());
         QTRY_VERIFY(!playback.planProgress());

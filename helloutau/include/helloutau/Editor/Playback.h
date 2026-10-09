@@ -26,12 +26,12 @@ namespace hello::daw {
     /// notes and plays the result, or renders the track in the background and plays it as it is
     /// rendered.
     ///
-    /// A render runs on a worker thread with the engines of the settings, never those the
+    /// A render runs on a worker thread with the synth tools of the settings, never those the
     /// project names, by \c temp.bat in a console as UTAU renders, or by several threads.
-    /// Cancelling it kills the script with the engines it started, see
-    /// kit::EngineProcess::runScript(), or lets the running engine calls end. The track file is
-    /// then read, converted to the sample rate of the output device, and played. position()
-    /// maps what is heard to the track, see kit::SynthPlan::startTime().
+    /// Cancelling it kills the script with the synth tools it started, see
+    /// kit::SynthToolProcess::runScript(), or lets the running synth tool calls end. The track file
+    /// is then read, converted to the sample rate of the output device, and played. position() maps
+    /// what is heard to the track, see kit::SynthPlan::startTime().
     ///
     /// Every plan is made on a worker thread from a snapshot of the document, because a plan of
     /// a track of many notes takes long enough to stall the window: that of a render before it
@@ -57,8 +57,8 @@ namespace hello::daw {
         Q_ENUM(State)
 
         explicit Playback(QObject *parent = nullptr);
-        Playback(std::shared_ptr<kit::EngineOutputLog> outputLog, QObject *parent);
-        Playback(std::shared_ptr<kit::EngineOutputLog> outputLog,
+        Playback(std::shared_ptr<kit::SynthToolOutputLog> outputLog, QObject *parent);
+        Playback(std::shared_ptr<kit::SynthToolOutputLog> outputLog,
                  std::filesystem::path temporaryDirectory, QObject *parent);
         ~Playback() override;
 
@@ -85,15 +85,15 @@ namespace hello::daw {
         /// Starts rendering notes \a range of the first track of \a document, or all of them, and
         /// plays the result once it is rendered. Stops what played or rendered before.
         ///
-        /// The last render is kept: while every engine call of the notes would be the same, it
-        /// plays again at once, without the engines.
+        /// The last render is kept: while every synth tool call of the notes would be the same, it
+        /// plays again at once, without the synth tools.
         ///
         /// \return whether rendering started. The reason is in \a diagnostics otherwise, such as
-        ///         a document without a voice bank, engines that are not set, or a render
+        ///         a document without a voice bank, synth tools that are not set, or a render
         ///         cancelled before that has not ended. The reasons found in the plan, such as
         ///         a range without notes, are reported by failed().
         bool play(const kit::ProjectDocument &document, std::optional<std::pair<int, int>> range,
-                  const kit::SynthEngines &engines, kit::DiagnosticList &diagnostics);
+                  const kit::SynthTools &synthTools, kit::DiagnosticList &diagnostics);
 
         /// Starts rendering the whole track of \a document into \a file with the runner of
         /// setRunner(), and emits trackRendered() once the file is written. Nothing is played,
@@ -102,7 +102,7 @@ namespace hello::daw {
         ///
         /// \return whether rendering started; the reason is in \a diagnostics otherwise
         bool renderTrack(const kit::ProjectDocument &document, const std::filesystem::path &file,
-                         const kit::SynthEngines &engines, kit::DiagnosticList &diagnostics);
+                         const kit::SynthTools &synthTools, kit::DiagnosticList &diagnostics);
 
         /// Plays the track as it is rendered, from \a fromTime in milliseconds from the start of
         /// the track, or from the start: the realtime mode of docs/Widgets.md. The notes that
@@ -113,25 +113,25 @@ namespace hello::daw {
         /// yet rendered, playback waits: isBuffering() holds and position() stands still. An edit
         /// takes effect through updatePlan().
         ///
-        /// \a engines must name both engines, although the preview runs no wavtool, so that
-        /// every playback mode requires the engines that Render Track requires.
+        /// \a synth tools must name both synth tools, although the preview runs no wavtool, so that
+        /// every playback mode requires the synth tools that Render Track requires.
         ///
         /// The state is Rendering until the plan of the track is made, and Playing from then
         /// on. A plan that cannot be made is reported by failed().
         ///
         /// \return whether the preview started. The reason is in \a diagnostics otherwise.
         bool preview(const kit::ProjectDocument &document, std::optional<double> fromTime,
-                     const kit::SynthEngines &engines, kit::DiagnosticList &diagnostics);
+                     const kit::SynthTools &synthTools, kit::DiagnosticList &diagnostics);
 
         /// Renders the track of \a document in the background, the notes after \a fromTime
         /// first, so that preview() from there plays at once: the realtime mode. Called again
         /// after the playhead moves, it renders from there first. While a preview plays, only
-        /// the notes are replaced, as by updatePlan(). \a engines must name both engines, as for
-        /// preview().
+        /// the notes are replaced, as by updatePlan(). \a synth tools must name both synth tools,
+        /// as for preview().
         ///
         /// \return whether rendering started. The reason is in \a diagnostics otherwise.
         bool prepare(const kit::ProjectDocument &document, std::optional<double> fromTime,
-                     const kit::SynthEngines &engines, kit::DiagnosticList &diagnostics);
+                     const kit::SynthTools &synthTools, kit::DiagnosticList &diagnostics);
 
         /// Stops the preview and the rendering in the background, and forgets the fragments
         /// held in memory: the prerender mode.
@@ -159,10 +159,10 @@ namespace hello::daw {
         /// render cache is scanned on a worker thread.
         void refreshNoteStates(const kit::ProjectDocument &document);
 
-        /// Sets the engines whose resampler names the fragments that refreshNoteStates() looks
+        /// Sets the synth tools whose resampler names the fragments that refreshNoteStates() looks
         /// for, because a fragment of another resampler is not reused. Rendering sets them from
-        /// its own engines as well.
-        void setEngines(const kit::SynthEngines &engines);
+        /// its own synth tools as well.
+        void setSynthTools(const kit::SynthTools &synthTools);
 
         /// Replaces the notes that the preview plays, or that prepare() renders, with those of
         /// \a document once their plan is made, after an edit. Does nothing unless either is
@@ -186,7 +186,7 @@ namespace hello::daw {
         void stop();
 
         /// Stops as stop() does, ends the preview, the plans and the scans of the render cache,
-        /// kills the engines that they started, and waits until every worker thread has ended,
+        /// kills the synth tools that they started, and waits until every worker thread has ended,
         /// so that nothing writes into the temporary directory afterwards. Unlike stop(), the
         /// function blocks, and the fragments held in memory are released. The owner calls it
         /// before the temporary directory is replaced or removed.
@@ -208,7 +208,7 @@ namespace hello::daw {
             cacheDirectoryFor(const kit::ProjectDocument &document);
 
         /// Stops playing, forgets the fragments held in memory, and deletes the files of the
-        /// render cache of \a document: the files directly in the directory, which the engines
+        /// render cache of \a document: the files directly in the directory, which the synth tools
         /// and the renders wrote, and not the folders in it.
         ///
         /// \return the number of files deleted, or \c std::nullopt if a render has not ended,

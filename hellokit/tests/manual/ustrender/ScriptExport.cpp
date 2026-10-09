@@ -32,7 +32,7 @@ namespace {
         return fs::path(text.toStdU16String());
     }
 
-    // One engine call, or the joining of the two files of the wavtool, as the manifest lists it
+    // One synth tool call, or the joining of the two files of the wavtool, as the manifest lists it
     struct Step {
         int index = 0;
         QString kind;
@@ -642,7 +642,7 @@ int compareManifests(const fs::path &first, const fs::path &second) {
 
 namespace {
 
-    // The files an engine derives from the samples of a voice bank: the frequency tables of
+    // The files a synth tool derives from the samples of a voice bank: the frequency tables of
     // the resamplers and the models and database of moresampler. Everything else is kept.
     bool isDerived(const fs::path &file) {
         auto name = QString::fromStdU16String(file.filename().u16string()).toLower();

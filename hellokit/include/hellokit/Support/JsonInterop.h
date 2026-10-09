@@ -18,7 +18,7 @@ namespace hello::kit {
     /// memory and changed by path, such as a settings file. Qt code uses the values of Qt.
     ///
     /// A path names a value in the groups of an object, with the names joined by slashes, such
-    /// as <tt>engines/resampler</tt>.
+    /// as <tt>synthTools/resampler</tt>.
     class HELLOKIT_SUPPORT_EXPORT JsonInterop {
     public:
         /// Converts \a value to a stdcorelib value. A number without a fractional part that

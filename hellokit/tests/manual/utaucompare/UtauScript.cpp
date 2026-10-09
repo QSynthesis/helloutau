@@ -15,7 +15,7 @@ namespace utaucompare {
 
         using hello::kit::TextCodec;
 
-        enum class Engine {
+        enum class SynthTool {
             None,
             Resampler,
             Wavtool,
@@ -107,19 +107,19 @@ namespace utaucompare {
             return out;
         }
 
-        /// The engine that a line calls, by the variable it calls through before expansion.
+        /// The synth tool that a line calls, by the variable it calls through before expansion.
         ///
         /// The expanded path cannot tell them apart when one program serves as both, as
         /// moresampler does.
-        Engine engineNamed(const QString &line) {
+        SynthTool synthToolNamed(const QString &line) {
             const QString program = split(line).value(0);
             if (program == QLatin1String("%resamp%")) {
-                return Engine::Resampler;
+                return SynthTool::Resampler;
             }
             if (program == QLatin1String("%tool%")) {
-                return Engine::Wavtool;
+                return SynthTool::Wavtool;
             }
-            return Engine::None;
+            return SynthTool::None;
         }
 
         QString unquote(const QString &token) {
@@ -157,12 +157,12 @@ namespace utaucompare {
             return std::nullopt;
         }
 
-        // The helper contains the two engine command lines. They are read as templates, so that
+        // The helper contains the two synth tool command lines. They are read as templates, so that
         // the argument order is taken from UTAU rather than duplicated here.
         const auto helper = script.parent_path() / "temp_helper.bat";
         if (!std::filesystem::exists(helper)) {
             *error = QStringLiteral("temp_helper.bat is not in the directory of %1. It contains "
-                                    "the engine command lines and must be copied as well")
+                                    "the synth tool command lines and must be copied as well")
                          .arg(QString::fromStdU16String(script.u16string()));
             return std::nullopt;
         }
@@ -180,12 +180,12 @@ namespace utaucompare {
 
         // By the variable the line calls through, or else by the program, for a script that
         // writes the path itself
-        const auto engineOf = [&variables](const QString &line, const QStringList &arguments) {
-            if (const auto named = engineNamed(line); named != Engine::None) {
+        const auto synthToolOf = [&variables](const QString &line, const QStringList &arguments) {
+            if (const auto named = synthToolNamed(line); named != SynthTool::None) {
                 return named;
             }
             if (arguments.isEmpty()) {
-                return Engine::None;
+                return SynthTool::None;
             }
             const QString program = QFileInfo(arguments.first()).absoluteFilePath();
             const auto same = [&program, &variables](const char *name) {
@@ -193,12 +193,12 @@ namespace utaucompare {
                 return !value.isEmpty() && QFileInfo(value).absoluteFilePath() == program;
             };
             if (same("resamp")) {
-                return Engine::Resampler;
+                return SynthTool::Resampler;
             }
             if (same("tool")) {
-                return Engine::Wavtool;
+                return SynthTool::Wavtool;
             }
-            return Engine::None;
+            return SynthTool::None;
         };
 
         const auto runHelper = [&](const QStringList &positional) {
@@ -211,14 +211,14 @@ namespace utaucompare {
             for (const QString &helperLine : helperLines) {
                 const QStringList arguments =
                     split(expand(body(helperLine), variables, positional));
-                switch (engineOf(body(helperLine), arguments)) {
-                    case Engine::Resampler:
+                switch (synthToolOf(body(helperLine), arguments)) {
+                    case SynthTool::Resampler:
                         call.resamplerArguments = arguments.mid(1);
                         break;
-                    case Engine::Wavtool:
+                    case SynthTool::Wavtool:
                         call.wavtoolArguments = arguments.mid(1);
                         break;
-                    case Engine::None:
+                    case SynthTool::None:
                         break;
                 }
             }
@@ -254,7 +254,7 @@ namespace utaucompare {
             // A note rendered without the helper, as for a rest: no resampler, and one wavtool
             // call that supplies the duration of the silence.
             const QStringList arguments = split(expand(statement, variables, QStringList()));
-            if (engineOf(statement, arguments) == Engine::Wavtool) {
+            if (synthToolOf(statement, arguments) == SynthTool::Wavtool) {
                 ScriptCall call;
                 call.wavtoolArguments = arguments.mid(1);
                 calls += call;
@@ -262,9 +262,10 @@ namespace utaucompare {
         }
 
         if (calls.isEmpty()) {
-            *error = QStringLiteral(
-                         "%1 contains no engine calls and is probably not a script written by UTAU")
-                         .arg(QString::fromStdU16String(script.u16string()));
+            *error =
+                QStringLiteral(
+                    "%1 contains no synth tool calls and is probably not a script written by UTAU")
+                    .arg(QString::fromStdU16String(script.u16string()));
             return std::nullopt;
         }
         return calls;

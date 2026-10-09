@@ -98,7 +98,7 @@ namespace hello::kit {
         }
 
         /// One assignment in the form UTAU writes, set name=value without quotes, for a
-        /// value that an engine reads from the script text.
+        /// value that a synth tool reads from the script text.
         ///
         /// moresampler reads temp.bat to determine whether the current call is the last one
         /// (the Wavtool page cited in docs/Synth.md), so the fragment is written as UTAU
@@ -131,7 +131,7 @@ namespace hello::kit {
         /// One argument as written onto a command line in the script.
         ///
         /// Quoted only if necessary. UTAU quotes paths and leaves numbers unquoted, and
-        /// several engines parse the command line themselves rather than through a C
+        /// several synth tools parse the command line themselves rather than through a C
         /// runtime, so a quoted number is not guaranteed to be parsed as a number.
         ///
         /// A percent sign is doubled in a batch file, inside quotes as well, because variable
@@ -211,7 +211,7 @@ namespace hello::kit {
                            : helper + QLatin1Char(' ') + arguments;
         }
 
-        /// Direct invocation of one engine, as required for a rest.
+        /// Direct invocation of one synth tool, as required for a rest.
         QString run(const char *tool, const QString &arguments) const {
             return QLatin1String(quiet()) + QLatin1Char('"') + expand(tool) + QLatin1String("\" ") +
                    arguments;

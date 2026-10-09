@@ -371,10 +371,10 @@ private Q_SLOTS:
         }
     }
 
-    // The engine paths of the project take precedence, and the local ones are used only if the
+    // The synth tool paths of the project take precedence, and the local ones are used only if the
     // project specifies none.
-    void the_engines_come_from_the_project_first() {
-        TempUst file("engines");
+    void the_synth_tools_come_from_the_project_first() {
+        TempUst file("synthTools");
         auto project = oneNote();
         project.settings.resampler = QStringLiteral("own_resampler.exe");
 

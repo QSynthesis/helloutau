@@ -62,14 +62,14 @@ namespace hello::kit {
             Samples samples;
         };
 
-        SynthEngines engines;
-        EngineFactory engineFactory;
+        SynthTools synthTools;
+        SynthToolFactory synthToolFactory;
 
         mutable std::mutex mutex;
         std::condition_variable work;
         mutable std::condition_variable changed;
-        // Written under the lock. The flag is atomic because each engine call reads it without
-        // the lock to determine whether to kill the engine.
+        // Written under the lock. The flag is atomic because each synth tool call reads it without
+        // the lock to determine whether to kill the synth tool.
         std::atomic_bool stopping{false};
 
         // From the current plan
@@ -127,7 +127,7 @@ namespace hello::kit {
         }
 
         void runWorker() {
-            const auto engine = engineFactory();
+            const auto synthTool = synthToolFactory();
             std::unique_lock lock(mutex);
             while (!stopping) {
                 const int index = next();
@@ -141,14 +141,14 @@ namespace hello::kit {
                 lock.unlock();
 
                 // The fragment of an earlier render is taken as it is, as the other runners do. A
-                // direct step reads its file, which no engine writes.
-                DiagnosticList engineDiagnostics;
+                // direct step reads its file, which no synth tool writes.
+                DiagnosticList synthToolDiagnostics;
                 std::error_code error;
                 if (step.resamples() && !fs::exists(step.cacheFile, error)) {
                     fs::create_directories(directory, error);
                     const auto run =
-                        engine->run(engines.resampler, step.resamplerArguments, engineDiagnostics,
-                                    [this] { return stopping.load(); });
+                        synthTool->run(synthTools.resampler, step.resamplerArguments,
+                                       synthToolDiagnostics, [this] { return stopping.load(); });
                     // A killed resampler may have written part of the fragment, which the next
                     // render would reuse as complete.
                     if (run.cancelled || run.timedOut) {
@@ -170,7 +170,7 @@ namespace hello::kit {
                     fragment.samples = std::move(samples);
                 } else {
                     fragment.state = Failed;
-                    diagnostics.append(engineDiagnostics);
+                    diagnostics.append(synthToolDiagnostics);
                     diagnostics.push_back({DiagnosticSeverity::Warning,
                                            tr("This note could not be rendered, and is silent."),
                                            step.noteIndex});
@@ -180,12 +180,14 @@ namespace hello::kit {
         }
     };
 
-    RealtimeSynth::RealtimeSynth(SynthEngines engines, int threadCount, EngineFactory engineFactory)
+    RealtimeSynth::RealtimeSynth(SynthTools synthTools, int threadCount,
+                                 SynthToolFactory synthToolFactory)
         : _impl(std::make_unique<Impl>()) {
         stdc_impl_t;
-        impl.engines = std::move(engines);
-        impl.engineFactory = engineFactory ? std::move(engineFactory)
-                                           : [] { return std::make_unique<EngineProcess>(); };
+        impl.synthTools = std::move(synthTools);
+        impl.synthToolFactory = synthToolFactory ? std::move(synthToolFactory) : [] {
+            return std::make_unique<SynthToolProcess>();
+        };
         const int count = threadCount > 0 ? threadCount : std::max(1, QThread::idealThreadCount());
         for (int i = 0; i < count; ++i) {
             impl.workers.emplace_back([this] {

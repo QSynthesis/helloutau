@@ -1,5 +1,5 @@
-#ifndef HELLOKIT_SYNTH_ENGINEPROCESS_H
-#define HELLOKIT_SYNTH_ENGINEPROCESS_H
+#ifndef HELLOKIT_SYNTH_SYNTHTOOLPROCESS_H
+#define HELLOKIT_SYNTH_SYNTHTOOLPROCESS_H
 
 #include <filesystem>
 #include <functional>
@@ -17,21 +17,21 @@
 
 namespace hello::kit {
 
-    /// Thread-safe output retained by the engines of one playback owner, in a file if a file
+    /// Thread-safe output retained by the synth tools of one playback owner, in a file if a file
     /// name is set and in memory otherwise.
     ///
     /// Entries are appended. If the log exceeds its limit, the oldest lines are dropped until at
     /// most half of the limit remains, so that the cost of a record does not grow with the size
     /// of the log. The log is cut at the start of a line, which never splits a UTF-8 sequence.
-    class HELLOKIT_SYNTH_EXPORT EngineOutputLog {
+    class HELLOKIT_SYNTH_EXPORT SynthToolOutputLog {
     public:
         enum Mode {
             Latest,
             Accumulated,
         };
 
-        EngineOutputLog();
-        ~EngineOutputLog();
+        SynthToolOutputLog();
+        ~SynthToolOutputLog();
 
         QString text() const;
         void clear();
@@ -59,30 +59,30 @@ namespace hello::kit {
         QString m_fileName;
     };
 
-    /// The result of one engine invocation.
-    struct EngineRun {
+    /// The result of one synth tool invocation.
+    struct SynthToolRun {
         /// Whether the program was started.
         ///
         /// Distinct from success, and the two require different messages to the user: a start
-        /// failure indicates that the engine is not at the configured location, whereas a
-        /// nonzero result indicates that the engine rejected its input.
+        /// failure indicates that the synth tool is not at the configured location, whereas a
+        /// nonzero result indicates that the synth tool rejected its input.
         bool started = false;
 
-        /// The exit code of the engine, meaningful only if it started.
+        /// The exit code of the synth tool, meaningful only if it started.
         ///
-        /// \note Engines are inconsistent in this respect. Some report nothing and some report
+        /// \note Synth Tools are inconsistent in this respect. Some report nothing and some report
         ///       success regardless, so a caller that must know whether a render occurred checks
         ///       whether the output file appeared.
         int exitCode = 0;
 
-        /// Whether the engine was killed because it exceeded the time limit.
+        /// Whether the synth tool was killed because it exceeded the time limit.
         bool timedOut = false;
 
-        /// Whether the engine or the script was killed because the caller cancelled it. A script
-        /// is killed with the processes that it started.
+        /// Whether the synth tool or the script was killed because the caller cancelled it. A
+        /// script is killed with the processes that it started.
         bool cancelled = false;
 
-        /// All output of the engine on both streams, for the diagnostic on failure.
+        /// All output of the synth tool on both streams, for the diagnostic on failure.
         QString output;
 
         inline bool succeeded() const {
@@ -90,7 +90,7 @@ namespace hello::kit {
         }
     };
 
-    /// Runs one of the engines that a render consists of.
+    /// Runs one of the synth tools that a render consists of.
     ///
     /// **Arguments are passed as a vector and are never joined into a command line.** UTAU
     /// renders by writing and executing a batch file, which is a shell script: a sample path, an
@@ -98,28 +98,28 @@ namespace hello::kit {
     /// mechanism of CVE-2024-28886, and the reason there is deliberately no overload that takes
     /// a complete command line.
     ///
-    /// \warning \a program is always the engine configured by the host, never one specified by
-    ///          the project. A UST stores engine paths in \c Tool1 and \c Tool2 , and executing
+    /// \warning \a program is always the synth tool configured by the host, never one specified by
+    ///          the project. A UST stores synth tool paths in \c Tool1 and \c Tool2 , and executing
     ///          them without confirmation lets the file choose which program runs. Storing them
     ///          is permitted. Executing them is not.
     ///
     /// See CLAUDE.md for both rules and the reason they are separate rules.
-    class HELLOKIT_SYNTH_EXPORT EngineProcess {
-        Q_DECLARE_TR_FUNCTIONS(hello::kit::EngineProcess)
+    class HELLOKIT_SYNTH_EXPORT SynthToolProcess {
+        Q_DECLARE_TR_FUNCTIONS(hello::kit::SynthToolProcess)
     public:
-        explicit EngineProcess(std::shared_ptr<EngineOutputLog> outputLog = {});
+        explicit SynthToolProcess(std::shared_ptr<SynthToolOutputLog> outputLog = {});
 
         /// Virtual, as are the two functions below, so that a runner can be given a substitute
-        /// that starts engines. The engines are third-party programs outside this repository,
-        /// and without a substitute, no behavior of a runner after the arguments are passed can
-        /// be tested.
+        /// that starts synth tools. The synth tools are third-party programs outside this
+        /// repository, and without a substitute, no behavior of a runner after the arguments are
+        /// passed can be tested.
         ///
-        /// \sa SynthRunner::makeEngineProcess()
-        virtual ~EngineProcess();
+        /// \sa SynthRunner::makeSynthToolProcess()
+        virtual ~SynthToolProcess();
 
-        /// The time limit of one call, in milliseconds, after which the engine is killed.
+        /// The time limit of one call, in milliseconds, after which the synth tool is killed.
         ///
-        /// Otherwise an engine that never returns would halt the render indefinitely, as it
+        /// Otherwise a synth tool that never returns would halt the render indefinitely, as it
         /// does in UTAU.
         int timeout = 30000;
 
@@ -129,17 +129,17 @@ namespace hello::kit {
         /// Runs \a program with \a arguments and waits for it to finish.
         ///
         /// \a program is used as given rather than searched for along \c PATH, so that the
-        /// selected engine runs and not a program of the same name in an earlier directory.
+        /// selected synth tool runs and not a program of the same name in an earlier directory.
         ///
-        /// \a cancelled, if given, is queried about every 100 milliseconds while the engine
-        /// runs. Once it returns true, the engine is killed and \c EngineRun::cancelled is set.
-        /// The output written before the kill is retained in \c EngineRun::output.
+        /// \a cancelled, if given, is queried about every 100 milliseconds while the synth tool
+        /// runs. Once it returns true, the synth tool is killed and \c SynthToolRun::cancelled is
+        /// set. The output written before the kill is retained in \c SynthToolRun::output.
         ///
-        /// \warning A killed or timed-out engine may leave a partially written output file. The
+        /// \warning A killed or timed-out synth tool may leave a partially written output file. The
         ///          caller removes the file, because the next render would otherwise reuse it.
-        virtual EngineRun run(const std::filesystem::path &program, const QStringList &arguments,
-                              DiagnosticList &diagnostics,
-                              const std::function<bool()> &cancelled = {}) const;
+        virtual SynthToolRun run(const std::filesystem::path &program, const QStringList &arguments,
+                                 DiagnosticList &diagnostics,
+                                 const std::function<bool()> &cancelled = {}) const;
 
         /// Returns the timestamped output collected by this process's log.
         QString outputLog() const;
@@ -153,23 +153,23 @@ namespace hello::kit {
         ///
         /// \a cancelled, if given, is queried about every 100 milliseconds while the script
         /// runs. Once it returns true, the script and every process it started are killed,
-        /// and \c EngineRun::cancelled is set. The time limit kills them all as well.
+        /// and \c SynthToolRun::cancelled is set. The time limit kills them all as well.
         ///
         /// \note The visible console matches UTAU behavior and is intentional: the output of
         ///       the script is meant to be read by the user. Nothing is captured, so
-        ///       \c EngineRun::output is empty.
+        ///       \c SynthToolRun::output is empty.
         ///
         /// \warning **The script writer is responsible for its content.** A batch file is a
         ///          shell script, so a lyric or a flags string written into it unescaped appends
         ///          commands. See \c ClassicSynthRunner, the only caller.
-        virtual EngineRun runScript(const std::filesystem::path &script,
-                                    DiagnosticList &diagnostics,
-                                    const std::function<bool()> &cancelled = {}) const;
+        virtual SynthToolRun runScript(const std::filesystem::path &script,
+                                       DiagnosticList &diagnostics,
+                                       const std::function<bool()> &cancelled = {}) const;
 
     private:
-        std::shared_ptr<EngineOutputLog> m_outputLog;
+        std::shared_ptr<SynthToolOutputLog> m_outputLog;
     };
 
 }
 
-#endif // HELLOKIT_SYNTH_ENGINEPROCESS_H
+#endif // HELLOKIT_SYNTH_SYNTHTOOLPROCESS_H

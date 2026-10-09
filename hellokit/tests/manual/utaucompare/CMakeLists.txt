@@ -1,6 +1,6 @@
 project(utaucompare
     VERSION ${HELLO_VERSION}
-    DESCRIPTION "HelloUtau and UTAU Engine Call Comparison"
+    DESCRIPTION "HelloUtau and UTAU Synth Tool Call Comparison"
     LANGUAGES CXX
 )
 

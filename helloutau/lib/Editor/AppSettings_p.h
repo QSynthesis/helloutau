@@ -14,7 +14,8 @@ namespace hello::daw {
 
     /// Content of the file, organized in groups:
     ///
-    ///     {"engines": {"utauDirectory": ..., "resampler": ..., "wavtool": ...},
+    ///     {"utau": {"directory": ...},
+    ///      "synthTools": {"resampler": ..., "wavtool": ...},
     ///      "playback": {"mode": ..., "threads": ...},
     ///      "appearance": {"language": ...},
     ///      "view": {"showPitch": ..., "showRenderedPitch": ..., "showEnvelopes": ...,

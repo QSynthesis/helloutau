@@ -57,7 +57,7 @@
 #include <hellokit/Edit/ProjectRefs.h>
 #include <hellokit/Edit/TrackTimeline.h>
 #include <hellokit/Synth/ClassicSynthRunner.h>
-#include <hellokit/Synth/EngineProcess.h>
+#include <hellokit/Synth/SynthToolProcess.h>
 #include <hellokit/Synth/ThreadedSynthRunner.h>
 
 #include <helloutau/Theme/ThemeManager.h>
@@ -72,7 +72,7 @@
 #include "CommandEntries_p.h"
 #include "DiagnosticBox_p.h"
 #include "Editor.h"
-#include "EngineTrust.h"
+#include "SynthToolTrust.h"
 #include "ReplaceLyricsDialog_p.h"
 #include "ExportUstDialog.h"
 #include "FindSupport_p.h"
@@ -277,7 +277,8 @@ namespace hello::daw {
         Playback *playback = nullptr;
         // Owns all per-window render artifacts. Playback only uses the path.
         std::optional<QTemporaryDir> temporaryDirectory;
-        std::shared_ptr<kit::EngineOutputLog> renderLog = std::make_shared<kit::EngineOutputLog>();
+        std::shared_ptr<kit::SynthToolOutputLog> renderLog =
+            std::make_shared<kit::SynthToolOutputLog>();
         QLabel *renderLabel = nullptr;
         QProgressBar *renderProgress = nullptr;
         QPushButton *renderCancel = nullptr;
@@ -307,9 +308,9 @@ namespace hello::daw {
         // The notes last rendered, which Replay renders again
         std::optional<std::pair<int, int>> lastRange;
         bool restartPending = false;
-        // The engines of the project, the wavtool and the resampler, as updateBackground() last
+        // The synth tools of the project, the wavtool and the resampler, as updateBackground() last
         // recorded them
-        QStringList backgroundEngines;
+        QStringList backgroundSynthTools;
 
         // Replaces the temporary directory of the window and returns its path, or an empty path
         // if it cannot be created, in which case Playback refuses to render.
@@ -662,7 +663,7 @@ namespace hello::daw {
                 (!document->voiceBank() && !root.empty() && root == voiceBankRoot)) {
                 decl.loadVoiceBank();
             }
-            // The engines may have been trusted in the dialog without a change of the project,
+            // The synth tools may have been trusted in the dialog without a change of the project,
             // which lets the background render start.
             updateBackground();
         }
@@ -691,8 +692,8 @@ namespace hello::daw {
             return !root.empty() && std::filesystem::is_directory(root, error);
         }
 
-        // Returns whether each engine of the project is empty or an existing file.
-        bool enginePathsValid() const {
+        // Returns whether each synth tool of the project is empty or an existing file.
+        bool synthToolPathsValid() const {
             const auto project = document->session()->snapshot();
             const auto utau = editor->settings().utauDirectory();
             const auto exists = [&utau](const QString &value) {
@@ -700,7 +701,8 @@ namespace hello::daw {
                     return true;
                 }
                 std::error_code error;
-                return std::filesystem::is_regular_file(EngineTrust::resolved(value, utau), error);
+                return std::filesystem::is_regular_file(SynthToolTrust::resolved(value, utau),
+                                                        error);
             };
             return exists(project.settings.wavtool) && exists(project.settings.resampler);
         }
@@ -788,27 +790,28 @@ namespace hello::daw {
             return editor->settings().playbackMode() == AppSettings::Realtime;
         }
 
-        // Returns the texts of the engines of the project, Tool1 and Tool2.
-        QStringList engineTexts() const {
+        // Returns the texts of the synth tools of the project, Tool1 and Tool2.
+        QStringList synthToolTexts() const {
             const auto project = kit::ProjectRef(document->session()).settings();
             return {project.wavtool(), project.resampler()};
         }
 
-        // Returns the engines of the project, the wavtool and the resampler, if both exist and
+        // Returns the synth tools of the project, the wavtool and the resampler, if both exist and
         // may run, in every playback mode: the realtime preview runs no wavtool, but Render
-        // Track does. Returns std::nullopt otherwise. If title is given, reports an engine that
+        // Track does. Returns std::nullopt otherwise. If title is given, reports a synth tool that
         // does not exist in a message box with that title and asks the user to trust the
-        // engines that are not trusted. Without a title, asks and reports nothing, as for the
+        // synth tools that are not trusted. Without a title, asks and reports nothing, as for the
         // render in the background.
-        std::optional<kit::SynthEngines> projectEngines(const QString &title = {}) {
+        std::optional<kit::SynthTools> projectSynthTools(const QString &title = {}) {
             stdc_decl_t;
             auto &settings = editor->settings();
             const auto project = kit::ProjectRef(document->session()).settings();
             const auto utau = settings.utauDirectory();
-            const auto values = engineTexts();
+            const auto values = synthToolTexts();
             const bool exist =
-                std::all_of(values.cbegin(), values.cend(),
-                            [&](const QString &value) { return EngineTrust::exists(value, utau); });
+                std::all_of(values.cbegin(), values.cend(), [&](const QString &value) {
+                    return SynthToolTrust::exists(value, utau);
+                });
             if (!exist) {
                 if (!title.isEmpty()) {
                     kit::DiagnosticList diagnostics;
@@ -825,15 +828,15 @@ namespace hello::daw {
                 title.isEmpty()
                     ? std::all_of(values.cbegin(), values.cend(),
                                   [&](const QString &value) {
-                                      return EngineTrust::isAllowed(settings, value, utau);
+                                      return SynthToolTrust::isAllowed(settings, value, utau);
                                   })
-                    : EngineTrust::ask(&decl, settings, values, utau);
+                    : SynthToolTrust::ask(&decl, settings, values, utau);
             if (!allowed) {
                 return std::nullopt;
             }
-            kit::SynthEngines result;
-            result.resampler = EngineTrust::resolved(project.resampler(), utau);
-            result.wavtool = EngineTrust::resolved(project.wavtool(), utau);
+            kit::SynthTools result;
+            result.resampler = SynthToolTrust::resolved(project.resampler(), utau);
+            result.wavtool = SynthToolTrust::resolved(project.wavtool(), utau);
             return result;
         }
 
@@ -926,12 +929,12 @@ namespace hello::daw {
                 renderLog->clear();
             }
             lastRange = range;
-            const auto engines = projectEngines(tr("Play"));
-            if (!engines) {
+            const auto synthTools = projectSynthTools(tr("Play"));
+            if (!synthTools) {
                 return;
             }
             kit::DiagnosticList diagnostics;
-            if (!playback->play(*document, range, *engines, diagnostics)) {
+            if (!playback->play(*document, range, *synthTools, diagnostics)) {
                 DiagnosticBox::show(&decl, tr("Play"), diagnostics);
                 return;
             }
@@ -1042,8 +1045,8 @@ namespace hello::daw {
         void renderTrack() {
             stdc_decl_t;
             playback->stop();
-            const auto renderEngines = projectEngines(tr("Render Track"));
-            if (!renderEngines) {
+            const auto renderSynthTools = projectSynthTools(tr("Render Track"));
+            if (!renderSynthTools) {
                 return;
             }
             const auto file = QFileDialog::getSaveFileName(
@@ -1062,7 +1065,7 @@ namespace hello::daw {
             kit::DiagnosticList diagnostics;
             const bool started =
                 playback->renderTrack(*document, std::filesystem::path(file.toStdU16String()),
-                                      *renderEngines, diagnostics);
+                                      *renderSynthTools, diagnostics);
             if (started) {
                 waitForRender(tr("Render Track"));
             }
@@ -1139,8 +1142,8 @@ namespace hello::daw {
                 return;
             }
             const auto at = playback->position();
-            const auto engines = projectEngines(tr("Play"));
-            if (!engines) {
+            const auto synthTools = projectSynthTools(tr("Play"));
+            if (!synthTools) {
                 previewing = false;
                 return;
             }
@@ -1148,7 +1151,7 @@ namespace hello::daw {
                 renderLog->clear();
             }
             kit::DiagnosticList diagnostics;
-            previewing = playback->preview(*document, at, *engines, diagnostics);
+            previewing = playback->preview(*document, at, *synthTools, diagnostics);
             if (!previewing) {
                 DiagnosticBox::show(&decl, tr("Play"), diagnostics);
             }
@@ -1170,8 +1173,8 @@ namespace hello::daw {
         // Plays from the playhead at rest as the track is rendered.
         void startPreview() {
             stdc_decl_t;
-            const auto engines = projectEngines(tr("Play"));
-            if (!engines) {
+            const auto synthTools = projectSynthTools(tr("Play"));
+            if (!synthTools) {
                 previewing = false;
                 return;
             }
@@ -1179,7 +1182,7 @@ namespace hello::daw {
                 renderLog->clear();
             }
             kit::DiagnosticList diagnostics;
-            previewing = playback->preview(*document, cursorTime(), *engines, diagnostics);
+            previewing = playback->preview(*document, cursorTime(), *synthTools, diagnostics);
             if (!previewing) {
                 DiagnosticBox::show(&decl, tr("Play"), diagnostics);
             }
@@ -1193,23 +1196,23 @@ namespace hello::daw {
             roll->setCursorEnabled(realtime());
             scheduleRenderStates();
             updateSaveLastPlayed();
-            backgroundEngines = engineTexts();
-            // The background render requires the engines that playback requires. No message box
+            backgroundSynthTools = synthToolTexts();
+            // The background render requires the synth tools that playback requires. No message box
             // is shown for it. The states of the notes in the prerender mode depend on the
-            // engines as well.
-            const auto allowed = projectEngines();
+            // synth tools as well.
+            const auto allowed = projectSynthTools();
             if (allowed) {
-                playback->setEngines(*allowed);
+                playback->setSynthTools(*allowed);
             }
-            const auto engines = realtime() ? allowed : std::nullopt;
-            if (!engines) {
+            const auto synthTools = realtime() ? allowed : std::nullopt;
+            if (!synthTools) {
                 playback->release();
                 statusTimer.stop();
                 updatePreviewStatus();
                 return;
             }
             kit::DiagnosticList diagnostics;
-            playback->prepare(*document, cursorTime(), *engines, diagnostics);
+            playback->prepare(*document, cursorTime(), *synthTools, diagnostics);
             statusTimer.start();
         }
 
@@ -2082,10 +2085,10 @@ namespace hello::daw {
                         },
                         Qt::QueuedConnection);
                 }
-                // If Project Properties or an undo has changed the engines, the render with the
-                // previous engines is stopped at once. The background render then starts again
-                // with the new engines if they may run.
-                if (engineTexts() != backgroundEngines) {
+                // If Project Properties or an undo has changed the synth tools, the render with the
+                // previous synth tools is stopped at once. The background render then starts again
+                // with the new synth tools if they may run.
+                if (synthToolTexts() != backgroundSynthTools) {
                     playback->release();
                     updateBackground();
                 }
@@ -2493,8 +2496,8 @@ namespace hello::daw {
     void ProjectWindow::applySettings() {
         stdc_impl_t;
         impl.renderLog->setMode(impl.editor->settings().isRenderLogAccumulated()
-                                    ? kit::EngineOutputLog::Accumulated
-                                    : kit::EngineOutputLog::Latest);
+                                    ? kit::SynthToolOutputLog::Accumulated
+                                    : kit::SynthToolOutputLog::Latest);
         impl.renderLog->setLimit(impl.editor->settings().renderLogLimit());
         if (!impl.editor->settings().isRenderLogAccumulated()) {
             impl.renderLog->clear();
@@ -2530,7 +2533,7 @@ namespace hello::daw {
 
     void ProjectWindow::showPropertiesIfPathsAreInvalid() {
         stdc_impl_t;
-        if (!impl.voicePathValid() || !impl.enginePathsValid()) {
+        if (!impl.voicePathValid() || !impl.synthToolPathsValid()) {
             impl.editProperties();
         }
     }

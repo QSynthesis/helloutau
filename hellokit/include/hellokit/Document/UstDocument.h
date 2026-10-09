@@ -50,11 +50,11 @@ namespace hello::kit {
             /// in every case.
             QString charset = QStringLiteral("UTF-8");
 
-            /// Engines to write if the project specifies none.
+            /// Synth tools to write if the project specifies none.
             ///
-            /// A UST without engines cannot be rendered when opened in UTAU, so the engines from
-            /// the local settings are written instead. Engines specified by the project are
-            /// written unchanged.
+            /// A UST without synth tools cannot be rendered when opened in UTAU, so the synth tools
+            /// from the local settings are written instead. Synth tools specified by the project
+            /// are written unchanged.
             QString wavtool;
             QString resampler;
 

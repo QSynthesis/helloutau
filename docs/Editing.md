@@ -201,7 +201,7 @@ note.userData().remove(QStringLiteral("$Custom"));
 | `setMode2` | 打开或关闭工程的 Mode2，即合成用控制点与颤音还是用 Mode1 值；另一种数据保留。用于 [`Tuning.md`](Tuning.md) 第 5 步 |
 | `mergeNotes` | 把一段连续的音符合并到第一个音符（同 UTAU 的「音符合并」）：长度为它们之和，其他属性取第一个音符的，一个撤销步骤「Merge Notes」。少于两个音符时拒绝；第一个之后的音符设了曲速时拒绝，因为合并会丢掉这个曲速，其后所有音符的时刻都会改变（作者 2026-09-29 要求） |
 | `setNoteProperties` | 改音符的属性（`NotePropertyChanges`）：歌词、长度、曲速、力度、调制、辅音速度、先行发声、重叠、STP、flags，只改给出的字段，对每个音符相同，一个撤销步骤「Change Note Properties」；能留给默认值的字段设为空即清除。用于音符属性对话框与曲速（作者 2026-09-29 要求） |
-| `setProperties` | 改工程的属性（`ProjectPropertyChanges`）：名称、速度、flags、输出文件、第一条音轨的音源目录、两个引擎、Mode2，只改给出的字段，一个撤销步骤「Change Project Properties」；没有任何变化时不产生步骤。两个引擎只记录，不执行。用于工程属性对话框（作者 2026-09-29 要求） |
+| `setProperties` | 改工程的属性（`ProjectPropertyChanges`）：名称、速度、flags、输出文件、第一条音轨的音源目录、两个合成工具、Mode2，只改给出的字段，一个撤销步骤「Change Project Properties」；没有任何变化时不产生步骤。两个合成工具只记录，不执行。用于工程属性对话框（作者 2026-09-29 要求） |
 
 卷帘的「Remove Label」是界面操作，不新增领域函数：对选中的音符分别调用 `setLabel` 清空标签，在外层合并为一个事务，因此占一个撤销步骤。「Remove Region」调用 `removeRegion` 删除第一个选中音符所在的区间。
 
@@ -599,9 +599,9 @@ oto 的五个时间参数不设范围：`cutoff` 为负表示从偏移量起算�
 
 ## 节点树的实现
 
-节点树、事务与撤销历史由 substate 实现。节点的所有权、动作、事务与存储引擎的设计见 substate 仓库的 `docs/Design.md`。
+节点树、事务与撤销历史由 substate 实现。节点的所有权、动作、事务与存储合成工具的设计见 substate 仓库的 `docs/Design.md`。
 
-**substate 是 `HelloKitEditBase` 与 `HelloKitEdit` 的私有依赖，`ss::` 类型不出现在任何公开头文件中**，只出现在 `HelloKitEditBase` 的扩展接口（`private/` 下的头文件）中。 编辑层以 `NodeId` 引用节点，以本文档所述的类型化槽位和领域函数修改树，并将 substate 的变更通知转换为自己的信号，不使用 qsubstate 的 Qt 信号适配器。substate 的接口变动因此只影响编辑层的实现，「音符是什么、函数的含义是什么」这些困难且有价值的内容不随之变动。这与 `SynthRunner::makeEngineProcess()` 采用的是同一种隔离手法。
+**substate 是 `HelloKitEditBase` 与 `HelloKitEdit` 的私有依赖，`ss::` 类型不出现在任何公开头文件中**，只出现在 `HelloKitEditBase` 的扩展接口（`private/` 下的头文件）中。 编辑层以 `NodeId` 引用节点，以本文档所述的类型化槽位和领域函数修改树，并将 substate 的变更通知转换为自己的信号，不使用 qsubstate 的 Qt 信号适配器。substate 的接口变动因此只影响编辑层的实现，「音符是什么、函数的含义是什么」这些困难且有价值的内容不随之变动。这与 `SynthRunner::makeSynthToolProcess()` 采用的是同一种隔离手法。
 
 ### 通用层与文档层
 
@@ -631,15 +631,15 @@ oto 的五个时间参数不设范围：`cutoff` 为负表示从偏移量起算�
 - 句柄保持相同的继承关系（`XTrackRef : TrackRef`）。元素类型为基类的列表，`at()` 返回基类句柄，另提供按节点类型编号判断的向下转换，方式与 `Change::as()` 相同，不使用 `dynamic_cast`。
 - 文档的值类型具有对应的继承关系，插入与 `fromTree` 按实际类型分派。
 
-撤销历史由 substate 的存储引擎保存。第一阶段使用 `MemoryStorageEngine`，即内存中的撤销栈。substate 在第二阶段实现预写式日志引擎后，更换存储引擎即可获得崩溃恢复，编辑层的接口不变。
+撤销历史由 substate 的存储合成工具保存。第一阶段使用 `MemoryStorageSynthTool`，即内存中的撤销栈。substate 在第二阶段实现预写式日志合成工具后，更换存储合成工具即可获得崩溃恢复，编辑层的接口不变。
 
 ### 恢复
 
-恢复由 substate 的日志引擎发起：读取检查点与日志，重建树与撤销历史，再交给模型，见 substate `docs/Design.md` 的「持久化接口」。日志引擎尚未实现，恢复的界面流程在其完成后另行规定。
+恢复由 substate 的日志合成工具发起：读取检查点与日志，重建树与撤销历史，再交给模型，见 substate `docs/Design.md` 的「持久化接口」。日志合成工具尚未实现，恢复的界面流程在其完成后另行规定。
 
 ## 参考：dini
 
-[dini](https://github.com/diffscope/dini)（副本位于 `.cache/dini`，读取时为 `ec400da`）是 DiffScope 的实验性内存文档引擎，与 substate 解决同一类问题：事务、语义变更集、撤销与重做、快照与变更集重放。它采用关系模型（表、按关联值分组的有序列表、父子组合与级联删除、多态变体、标量列、计算列与索引），而非节点树。**只作为设计参考，不作为代码来源**：仓库中没有许可证文件，库本身要求 C++20。
+[dini](https://github.com/diffscope/dini)（副本位于 `.cache/dini`，读取时为 `ec400da`）是 DiffScope 的实验性内存文档合成工具，与 substate 解决同一类问题：事务、语义变更集、撤销与重做、快照与变更集重放。它采用关系模型（表、按关联值分组的有序列表、父子组合与级联删除、多态变体、标量列、计算列与索引），而非节点树。**只作为设计参考，不作为代码来源**：仓库中没有许可证文件，库本身要求 C++20。
 
 ### 待定事项
 
@@ -649,7 +649,7 @@ oto 的五个时间参数不设范围：`cutoff` 为负表示从偏移量起算�
 |---|---|---|---|
 | 按事务的合并通知 | 事件分两个阶段：每次写入后发出 AfterApply，提交时发出 AfterCommit，后者携带 `ChangeSet::merge` 的结果。同一项同一列的多次修改折叠为一条，保留第一次的旧值与最后一次的新值，其他操作按原顺序保留 | **已确定：不增加。** 拖动等持续的操作在进行中不修改树，结束时以一个事务写入最终结果，见「变更通知」 | 第三阶段的界面开始之前（已确定） |
 | 不进入撤销栈的修改 | `TransactionOptions{undoable = false}` 的事务照常提交与通知，但不产生撤销步骤。撤销历史保持不变，因此撤销其前一个步骤时写回的是该步骤之前的值，**不可撤销的修改被静默覆盖**（测试 `UndoRedoWithNonUndoableBetween`） | **已确定：不采用不可撤销的修改。** 音源编辑中从磁盘重新读取一个目录，作为一个可撤销的步骤，见「磁盘变化的处理」 | 第 5 步（已确定） |
-| 恢复数据的结构兼容 | `EngineSchema::serializeStructure()` 与 `matchesSerializedStructure()` 比较快照所用的结构与当前结构 | 检查点与日志须记录字段表的指纹，程序升级后遇到结构不同的日志时拒绝重放，而非错误地应用 | substate 日志引擎与恢复流程的设计 |
+| 恢复数据的结构兼容 | `SynthToolSchema::serializeStructure()` 与 `matchesSerializedStructure()` 比较快照所用的结构与当前结构 | 检查点与日志须记录字段表的指纹，程序升级后遇到结构不同的日志时拒绝重放，而非错误地应用 | substate 日志合成工具与恢复流程的设计 |
 
 ### 与现有设计一致之处
 

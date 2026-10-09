@@ -24,17 +24,17 @@ namespace hello::daw {
 
     /// Edits the properties of a project, the fields of the dialog of UTAU and the tempo: the
     /// name, the tempo, the flags of every note, the output file, the voice folder of the first
-    /// track, the two engines, and Mode2.
+    /// track, the two synth tools, and Mode2.
     ///
-    /// Rendering uses the two engines of the project, each of which must be an engine of the
-    /// application settings or be trusted. Reset to Settings Defaults copies the engines of the
+    /// Rendering uses the two synth tools of the project, each of which must be a synth tool of the
+    /// application settings or be trusted. Reset to Settings Defaults copies the synth tools of the
     /// settings into the fields.
     class HELLOUTAU_EDITOR_EXPORT ProjectPropertiesDialog : public QDialog {
         Q_OBJECT
         Q_PROPERTY(QColor trustedColor READ trustedColor WRITE setTrustedColor)
         Q_PROPERTY(QColor untrustedColor READ untrustedColor WRITE setUntrustedColor)
     public:
-        /// \a settings provides the UTAU directory, the engines of the settings and the trust
+        /// \a settings provides the UTAU directory, the synth tools of the settings and the trust
         /// records, and records the trust that the user grants in the dialog.
         ProjectPropertiesDialog(const kit::Project &project, AppSettings &settings,
                                 QWidget *parent = nullptr);
@@ -44,10 +44,10 @@ namespace hello::daw {
         /// The tempo counts only once it was edited, so that a value the box rounds is not
         /// changed.
         ///
-        /// If any field differs, the voice folder and the two engines are normalized as well and
-        /// are returned if their normalized values differ. An absolute voice folder inside a
-        /// voice folder of the settings becomes a \c %VOICE% value, as UTAU writes it. An engine
-        /// inside the UTAU directory becomes relative to that directory, and any other engine
+        /// If any field differs, the voice folder and the two synth tools are normalized as well
+        /// and are returned if their normalized values differ. An absolute voice folder inside a
+        /// voice folder of the settings becomes a \c %VOICE% value, as UTAU writes it. A synth tool
+        /// inside the UTAU directory becomes relative to that directory, and any other synth tool
         /// becomes an absolute path. All three use the separators of kit::Project::savedPathText().
         /// If no field differs, nothing is normalized and the changes are empty.
         kit::ProjectPropertyChanges changes() const;
@@ -61,13 +61,13 @@ namespace hello::daw {
         QLineEdit *resamplerEdit() const;
         QCheckBox *mode2Box() const;
 
-        /// The color of the state of an engine that renders, by default dark green. It is set in
+        /// The color of the state of a synth tool that renders, by default dark green. It is set in
         /// a theme with \c qproperty-trustedColor.
         QColor trustedColor() const;
         void setTrustedColor(const QColor &color);
 
-        /// The color of the state of an untrusted engine and of the warning about it, by default
-        /// dark red. It is set in a theme with \c qproperty-untrustedColor.
+        /// The color of the state of an untrusted synth tool and of the warning about it, by
+        /// default dark red. It is set in a theme with \c qproperty-untrustedColor.
         QColor untrustedColor() const;
         void setUntrustedColor(const QColor &color);
 
@@ -78,7 +78,7 @@ namespace hello::daw {
         void browseVoiceDir();
         bool checkPaths();
         void updateTrust();
-        void trustEngines();
+        void trustSynthTools();
         void acceptIfValid();
 
         kit::Project m_project;

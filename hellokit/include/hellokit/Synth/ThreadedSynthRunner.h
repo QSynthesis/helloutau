@@ -19,8 +19,8 @@ namespace hello::kit {
     ///
     /// Progress is reported in two steps per note: its resampling and its append to the track.
     /// The first step of a silent note, or of a note whose fragment is reused, is complete before
-    /// any engine runs. A render from a full cache therefore reports progress for each append. A
-    /// cancellation kills the running engine calls and removes the fragments that the killed
+    /// any synth tool runs. A render from a full cache therefore reports progress for each append.
+    /// A cancellation kills the running synth tool calls and removes the fragments that the killed
     /// resampler calls may have written partially.
     ///
     /// \sa docs/Synth.md
@@ -37,11 +37,11 @@ namespace hello::kit {
         int threadCount = 0;
 
         /// Directory into which the scripts of ClassicSynthRunner::scriptFiles() are written
-        /// without being executed, for the engines that read them, and the working directory of
-        /// the engines. The scripts are generated and checked even if it is empty.
+        /// without being executed, for the synth tools that read them, and the working directory of
+        /// the synth tools. The scripts are generated and checked even if it is empty.
         std::filesystem::path scriptDirectory;
 
-        SynthOutcome render(const SynthPlan &plan, const SynthEngines &engines,
+        SynthOutcome render(const SynthPlan &plan, const SynthTools &synthTools,
                             SynthObserver *observer, DiagnosticList &diagnostics) const override;
     };
 

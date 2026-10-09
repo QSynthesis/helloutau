@@ -52,11 +52,11 @@ HelloUtau 的工程文件格式：JSON，UTF-8，**不带 BOM**。默认写成�
 | `resampler` | string | `Tool2` | 见下文 |
 | `mode2` | bool | `Mode2` | 音高使用 Mode2 曲线还是 Mode1 值数组 |
 
-### 引擎路径的保存与信任
+### 合成工具路径的保存与信任
 
 `wavtool` 和 `resampler` 在 UTAU 中可逐工程配置，不同工程使用不同的重采样器是实际存在的用法。**因此它们被原样保存并原样写回**，丢弃它们等于主动删除用户的设置。唯一的例外是分隔符，见 [`note.md`](note.md)「往返保证」。
 
-危险不在于保存，而在于未经询问即执行。规则见 [`note.md`](note.md) 的「安全行为」，此处复述如下：渲染时使用工程自带的引擎，**引擎须是本地设置中的引擎，或经用户在明确的提示中选择信任**，否则不渲染。空字符串表示工程未指定引擎，此时同样不渲染，用户可在工程属性中以本地设置中的引擎重置。
+危险不在于保存，而在于未经询问即执行。规则见 [`note.md`](note.md) 的「安全行为」，此处复述如下：渲染时使用工程自带的合成工具，**合成工具须是本地设置中的合成工具，或经用户在明确的提示中选择信任**，否则不渲染。空字符串表示工程未指定合成工具，此时同样不渲染，用户可在工程属性中以本地设置中的合成工具重置。
 
 `patch` 和 `userData` 同理：来自文件的内容原样保存，是否执行是另一回事。
 
@@ -245,7 +245,7 @@ UST 中的 `Charset` 只有两种取值：空，或 `UTF-8`。它表示的是「
 ### 导出
 
 1. 写出 `[#VERSION]`：`UST Version1.2`，导出为 UTF-8 时另加 `Charset=UTF-8`。
-2. 写出 `[#SETTING]`：`Tempo`、`Tracks=1`、`ProjectName`、`VoiceDir`、`OutFile`、`CacheDir`、`Tool1`、`Tool2`、`Mode2`、`Flags`，均取工程中的值。`wavtool` 和 `resampler` 为空时写入本地配置的引擎路径，否则 UTAU 打开该 UST 时将找不到引擎。
+2. 写出 `[#SETTING]`：`Tempo`、`Tracks=1`、`ProjectName`、`VoiceDir`、`OutFile`、`CacheDir`、`Tool1`、`Tool2`、`Mode2`、`Flags`，均取工程中的值。`wavtool` 和 `resampler` 为空时写入本地配置的合成工具路径，否则 UTAU 打开该 UST 时将找不到合成工具。
 3. 写出控制音符 `[#0000]`，见下文。
 4. 依次写出每个音符。
 5. 写出 `[#TRACKEND]`。

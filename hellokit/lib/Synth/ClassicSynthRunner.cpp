@@ -12,7 +12,7 @@
 
 #include <hellokit/Support/TextCodec.h>
 
-#include "EngineProcess.h"
+#include "SynthToolProcess.h"
 #include "ShellSyntax_p.h"
 
 namespace hello::kit {
@@ -138,7 +138,7 @@ namespace hello::kit {
     }
 
     std::optional<std::pair<QString, QString>>
-        ClassicSynthRunner::scripts(const SynthPlan &plan, const SynthEngines &engines,
+        ClassicSynthRunner::scripts(const SynthPlan &plan, const SynthTools &synthTools,
                                     DiagnosticList &diagnostics) const {
         if (plan.steps().isEmpty()) {
             fail(diagnostics, tr("There is nothing to render."));
@@ -156,8 +156,8 @@ namespace hello::kit {
         // body then references. A resampler that reads the script finds them at the usual location.
         script.lines(syntax.prologue());
         script.set("loadmodule", QString());
-        script.set("tool", displayed(engines.wavtool));
-        script.set("resamp", displayed(engines.resampler));
+        script.set("tool", displayed(synthTools.wavtool));
+        script.set("resamp", displayed(synthTools.resampler));
         script.set("output", displayed(plan.outputFile()));
         script.set("helper", displayed(helper));
         script.set("cachedir", displayed(plan.cacheDirectory()));
@@ -192,7 +192,7 @@ namespace hello::kit {
                 continue;
             }
 
-            // The positions are the engines' own. The resampler reads
+            // The positions are the synth tools' own. The resampler reads
             //     <sample> <cache> <tone> <velocity> <flags> <offset> <length> <consonant>
             //     <blank> <intensity> <modulation> <tempo> <pitch>
             // and the wavtool reads
@@ -213,7 +213,7 @@ namespace hello::kit {
             script.set("env", joined(w.mid(4)), step.noteIndex);
             script.set("stp", w.at(2), step.noteIndex);
             script.set("vel", r.at(3), step.noteIndex);
-            // As UTAU writes it, for the engines that read the script
+            // As UTAU writes it, for the synth tools that read the script
             script.set("temp", r.at(1), step.noteIndex, true);
             script.line(syntax.echo(ShellSyntax::progress(done, total)));
             script.line(syntax.callHelper(
@@ -234,13 +234,13 @@ namespace hello::kit {
 
     std::optional<QList<ClassicSynthRunner::ScriptFile>>
         ClassicSynthRunner::scriptFiles(const fs::path &directory, const SynthPlan &plan,
-                                        const SynthEngines &engines,
+                                        const SynthTools &synthTools,
                                         DiagnosticList &diagnostics) const {
         // The scripts refer to the helper by its path in the directory.
         auto self = *this;
         self.scriptDirectory = directory;
         const ShellSyntax syntax(shell, quoting);
-        const auto written = self.scripts(plan, engines, diagnostics);
+        const auto written = self.scripts(plan, synthTools, diagnostics);
         if (!written) {
             return std::nullopt;
         }
@@ -249,11 +249,11 @@ namespace hello::kit {
             {directory / syntax.helperName(), written->second},
         };
 #ifndef _WIN32
-        // An engine run through Wine, such as moresampler, reads temp.bat in its working
+        // A synth tool run through Wine, such as moresampler, reads temp.bat in its working
         // directory, which is this directory.
         auto batchSelf = self;
         batchSelf.shell = ScriptShell::Batch;
-        const auto batch = batchSelf.scripts(plan, engines, diagnostics);
+        const auto batch = batchSelf.scripts(plan, synthTools, diagnostics);
         if (!batch) {
             return std::nullopt;
         }
@@ -292,7 +292,7 @@ namespace hello::kit {
         return true;
     }
 
-    SynthOutcome ClassicSynthRunner::render(const SynthPlan &plan, const SynthEngines &engines,
+    SynthOutcome ClassicSynthRunner::render(const SynthPlan &plan, const SynthTools &synthTools,
                                             SynthObserver *observer,
                                             DiagnosticList &diagnostics) const {
         SynthOutcome outcome;
@@ -305,7 +305,7 @@ namespace hello::kit {
                 ("hellokit-" + QString::number(QDateTime::currentMSecsSinceEpoch()).toStdString());
         }
 
-        const auto files = scriptFiles(directory, plan, engines, diagnostics);
+        const auto files = scriptFiles(directory, plan, synthTools, diagnostics);
         if (!files) {
             return outcome;
         }
@@ -354,15 +354,15 @@ namespace hello::kit {
         // would leave the file of the previous render, to be taken for the result.
         fs::remove(plan.outputFile(), error);
 
-        const auto engine = makeEngineProcess();
+        const auto synthTool = makeSynthToolProcess();
         // The script references everything by absolute path, so nothing depends on this. It is
-        // set so that an engine writing to its working directory writes beside the script.
-        engine->workingDirectory = directory;
-        // The limit of one engine call for each call the script makes, a resampler and a
+        // set so that a synth tool writing to its working directory writes beside the script.
+        synthTool->workingDirectory = directory;
+        // The limit of one synth tool call for each call the script makes, a resampler and a
         // wavtool call per note, rather than one call's limit for the whole track.
-        engine->timeout =
+        synthTool->timeout =
             int(std::min<qint64>(std::numeric_limits<int>::max(),
-                                 qint64(engine->timeout) * 2 * qint64(plan.steps().size())));
+                                 qint64(synthTool->timeout) * 2 * qint64(plan.steps().size())));
 
         // The write time of each fragment before the script runs, or nothing if the fragment does
         // not exist yet
@@ -375,10 +375,10 @@ namespace hello::kit {
             }
         }
 
-        const auto run = engine->runScript(
+        const auto run = synthTool->runScript(
             scriptPath, diagnostics, [observer] { return observer && observer->cancelled(); });
 
-        // The script was killed during one of its engine calls, and the resampler of that call
+        // The script was killed during one of its synth tool calls, and the resampler of that call
         // may have written part of its fragment. The script runs the notes in track order. That
         // fragment is therefore the last fragment that this run created or rewrote, and it is
         // removed. If the kill occurred during a wavtool call or before the resampler created its

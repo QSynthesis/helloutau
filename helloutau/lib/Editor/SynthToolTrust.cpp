@@ -1,4 +1,4 @@
-#include "EngineTrust.h"
+#include "SynthToolTrust.h"
 
 #include <algorithm>
 
@@ -19,9 +19,9 @@ namespace hello::daw {
     namespace {
 
         class Messages {
-            Q_DECLARE_TR_FUNCTIONS(hello::daw::EngineTrust)
+            Q_DECLARE_TR_FUNCTIONS(hello::daw::SynthToolTrust)
         };
-        constexpr char Key[] = "engineTrust/approved";
+        constexpr char Key[] = "synthToolTrust/approved";
 
         QString textOf(const std::filesystem::path &path) {
             return QDir::toNativeSeparators(QString::fromStdU16String(path.u16string()));
@@ -50,19 +50,19 @@ namespace hello::daw {
 
     }
 
-    std::filesystem::path EngineTrust::resolved(const QString &value,
-                                                const std::filesystem::path &utau) {
+    std::filesystem::path SynthToolTrust::resolved(const QString &value,
+                                                   const std::filesystem::path &utau) {
         return pathOf(value, utau);
     }
 
-    bool EngineTrust::exists(const QString &value, const std::filesystem::path &utau) {
+    bool SynthToolTrust::exists(const QString &value, const std::filesystem::path &utau) {
         std::error_code error;
         const auto path = pathOf(value, utau);
         return !path.empty() && std::filesystem::is_regular_file(path, error);
     }
 
-    bool EngineTrust::samePath(const QString &first, const QString &second,
-                               const std::filesystem::path &utau) {
+    bool SynthToolTrust::samePath(const QString &first, const QString &second,
+                                  const std::filesystem::path &utau) {
         std::error_code firstError;
         std::error_code secondError;
         const auto a = std::filesystem::weakly_canonical(pathOf(first, utau), firstError);
@@ -70,8 +70,8 @@ namespace hello::daw {
         return !firstError && !secondError && !a.empty() && a == b;
     }
 
-    bool EngineTrust::isTrusted(const AppSettings &settings, const QString &value,
-                                const std::filesystem::path &utau) {
+    bool SynthToolTrust::isTrusted(const AppSettings &settings, const QString &value,
+                                   const std::filesystem::path &utau) {
         const auto path = pathOf(value, utau);
         if (path.empty() || !exists(value, utau)) {
             return false;
@@ -96,8 +96,8 @@ namespace hello::daw {
         return false;
     }
 
-    void EngineTrust::trust(AppSettings &settings, const QString &value,
-                            const std::filesystem::path &utau) {
+    void SynthToolTrust::trust(AppSettings &settings, const QString &value,
+                               const std::filesystem::path &utau) {
         const auto path = pathOf(value, utau);
         std::error_code error;
         const auto absolute = std::filesystem::weakly_canonical(path, error);
@@ -122,8 +122,8 @@ namespace hello::daw {
         settings.setValue(QLatin1String(Key), array);
     }
 
-    bool EngineTrust::isAllowed(const AppSettings &settings, const QString &value,
-                                const std::filesystem::path &utau) {
+    bool SynthToolTrust::isAllowed(const AppSettings &settings, const QString &value,
+                                   const std::filesystem::path &utau) {
         if (!exists(value, utau)) {
             return false;
         }
@@ -131,9 +131,9 @@ namespace hello::daw {
                samePath(value, settings.wavtool(), utau) || isTrusted(settings, value, utau);
     }
 
-    bool EngineTrust::ask(QWidget *parent, AppSettings &settings, const QStringList &values,
-                          const std::filesystem::path &utau) {
-        // The list holds one entry for each file, because the two engines may be the same
+    bool SynthToolTrust::ask(QWidget *parent, AppSettings &settings, const QStringList &values,
+                             const std::filesystem::path &utau) {
+        // The list holds one entry for each file, because the two synth tools may be the same
         // program.
         QStringList asked;
         for (const auto &value : values) {
@@ -162,7 +162,7 @@ namespace hello::daw {
             paths.push_back(textOf(error ? pathOf(value, utau) : path));
         }
         const auto answer = QMessageBox::question(
-            parent, Messages::tr("Trust Project Engines"),
+            parent, Messages::tr("Trust Project Synth Tools"),
             Messages::tr("The project specifies %n rendering tool(s) that are not trusted:\n\n"
                          "%1\n\nTrust and use them for rendering?",
                          nullptr, int(asked.size()))

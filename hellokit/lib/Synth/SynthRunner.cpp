@@ -37,18 +37,18 @@ namespace hello::kit {
         return false;
     }
 
-    SynthRunner::SynthRunner() : m_outputLog(std::make_shared<EngineOutputLog>()) {
+    SynthRunner::SynthRunner() : m_outputLog(std::make_shared<SynthToolOutputLog>()) {
     }
 
     SynthRunner::~SynthRunner() = default;
 
-    std::unique_ptr<EngineProcess> SynthRunner::makeEngineProcess() const {
-        auto engine = std::make_unique<EngineProcess>(m_outputLog);
-        engine->timeout = timeout;
-        return engine;
+    std::unique_ptr<SynthToolProcess> SynthRunner::makeSynthToolProcess() const {
+        auto synthTool = std::make_unique<SynthToolProcess>(m_outputLog);
+        synthTool->timeout = timeout;
+        return synthTool;
     }
 
-    void SynthRunner::setOutputLog(std::shared_ptr<EngineOutputLog> outputLog) const {
+    void SynthRunner::setOutputLog(std::shared_ptr<SynthToolOutputLog> outputLog) const {
         if (outputLog) {
             m_outputLog = std::move(outputLog);
         }

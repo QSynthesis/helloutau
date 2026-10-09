@@ -9,7 +9,7 @@
 
 #include <hellokit/Support/Diagnostic.h>
 
-#include <hellokit/Synth/EngineProcess.h>
+#include <hellokit/Synth/SynthToolProcess.h>
 #include <hellokit/Synth/HelloKitSynthGlobal.h>
 #include <hellokit/Synth/SynthPlan.h>
 #include <hellokit/Synth/SynthRunner.h>
@@ -29,18 +29,19 @@ namespace hello::kit {
     /// file, whose name stands for every input of the note, so a note that did not change keeps
     /// its fragment and a changed one is rendered anew without further analysis.
     ///
-    /// Every function may be called from any thread. Destruction kills the running engine calls,
-    /// removes the fragments that they may have written partially, and waits for the workers.
+    /// Every function may be called from any thread. Destruction kills the running synth tool
+    /// calls, removes the fragments that they may have written partially, and waits for the
+    /// workers.
     class HELLOKIT_SYNTH_EXPORT RealtimeSynth {
         Q_DECLARE_TR_FUNCTIONS(hello::kit::RealtimeSynth)
     public:
-        using EngineFactory = std::function<std::unique_ptr<EngineProcess>()>;
+        using SynthToolFactory = std::function<std::unique_ptr<SynthToolProcess>()>;
 
         /// \param threadCount the number of worker threads, or zero for one per hardware thread
-        /// \param engineFactory creates the object that starts the resampler, which tests
-        ///        replace; by default an EngineProcess
-        explicit RealtimeSynth(SynthEngines engines, int threadCount = 0,
-                               EngineFactory engineFactory = {});
+        /// \param synthToolFactory creates the object that starts the resampler, which tests
+        ///        replace; by default an SynthToolProcess
+        explicit RealtimeSynth(SynthTools synthTools, int threadCount = 0,
+                               SynthToolFactory synthToolFactory = {});
         ~RealtimeSynth();
 
         RealtimeSynth(const RealtimeSynth &) = delete;

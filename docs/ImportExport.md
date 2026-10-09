@@ -11,7 +11,7 @@
 
 - `.usth` 与 `.ust` 属于 `HelloKitDocument`，不是格式转换驱动，不登记到 `InterchangeDrivers`（Interchange.md「职责边界」）。
 - UST 的打开仍为「文件 → 打开」。该流程有专用的编码对话框（`UstCharsetDialog`），文档记录来源文件，保存时以同名的 `.usth` 为默认文件名。
-- UST 的导出仍为 Editor 的「文件 → 导出 → UST…」。导出时写入本机设置中的引擎，并按目标文件写入 `CacheDir`。二者取自应用设置，无法表示为驱动的选项。
+- UST 的导出仍为 Editor 的「文件 → 导出 → UST…」。导出时写入本机设置中的合成工具，并按目标文件写入 `CacheDir`。二者取自应用设置，无法表示为驱动的选项。
 - Interchange 插件的导出命令插入同一「导出」子菜单，位于 UST 之后。停用 Interchange 插件只移除其他格式，不影响 UST。
 - 编辑器组件化（[`Plugins.md`](Plugins.md)「最终目标」）时，UST 的导出随其余内置命令移入 Core，不属于本文范围。
 

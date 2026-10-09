@@ -1,5 +1,5 @@
 /// \file
-/// Compares the engine arguments of HelloUtau with those UTAU passed for the same project.
+/// Compares the synth tool arguments of HelloUtau with those UTAU passed for the same project.
 ///
 /// This is the most demanding check of the project. All other tests verify that the code
 /// implements its specification. This one verifies that the specification matches UTAU, which
@@ -9,7 +9,7 @@
 /// with a pitch difference of one cent produces entirely different sample values after a few
 /// cycles while sounding identical, so a sample-by-sample comparison would report a severe
 /// difference where none is audible. The comparison requires agreement of the arguments passed
-/// to each engine and of the pitch curve shape in cents.
+/// to each synth tool and of the pitch curve shape in cents.
 ///
 /// Obtaining the UTAU side: render the project in UTAU and, **before closing UTAU**, copy
 /// \c temp.bat and \c temp_helper.bat from \c %%TEMP%%\\utauN . UTAU clears that folder on
@@ -343,7 +343,7 @@ int main(int argc, char *argv[]) {
     using namespace stdc;
 
     cli::Parser parser(
-        cli::Command("utaucompare", "Compare the engine calls of HelloUtau with those of UTAU")
+        cli::Command("utaucompare", "Compare the synth tool calls of HelloUtau with those of UTAU")
             .addArgument(cli::Argument("input", "The .ust or .usth rendered by both sides"))
             .addOption(
                 cli::Option({"--voice"}, "The voice bank folder").arg(cli::Argument("folder")))

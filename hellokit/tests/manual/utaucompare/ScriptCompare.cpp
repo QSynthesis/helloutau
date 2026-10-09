@@ -111,11 +111,11 @@ namespace utaucompare {
             return true;
         }
 
-        QString nameAt(const char *const *names, int count, int position, const char *engine) {
+        QString nameAt(const char *const *names, int count, int position, const char *synthTool) {
             if (position < count) {
                 return QString::fromLatin1(names[position]);
             }
-            return QStringLiteral("%1 argument %2").arg(QLatin1String(engine)).arg(position + 1);
+            return QStringLiteral("%1 argument %2").arg(QLatin1String(synthTool)).arg(position + 1);
         }
 
         /// The arguments from \a from onward, as one string. The envelope and the pitch each
@@ -129,11 +129,11 @@ namespace utaucompare {
         }
 
         void compareRange(int noteIndex, const QStringList &ours, const QStringList &theirs,
-                          const char *const *names, int nameCount, int upTo, const char *engine,
+                          const char *const *names, int nameCount, int upTo, const char *synthTool,
                           Comparison &out) {
             const int count = int(std::max(ours.size(), theirs.size()));
             for (int i = 0; i < std::min(count, upTo); ++i) {
-                const QString what = nameAt(names, nameCount, i, engine);
+                const QString what = nameAt(names, nameCount, i, synthTool);
                 const QString a = ours.value(i);
                 const QString b = theirs.value(i);
                 if (a == b) {

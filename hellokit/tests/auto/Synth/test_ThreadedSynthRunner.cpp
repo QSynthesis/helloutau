@@ -1,13 +1,13 @@
 /// \file
-/// Covers the behavior of a render after the arguments are passed to the engines.
+/// Covers the behavior of a render after the arguments are passed to the synth tools.
 ///
-/// The engines are third-party programs outside this repository.
-/// \c SynthRunner::makeEngineProcess() is the test seam that makes this behavior testable:
-/// \c StandIn below is a substitute engine that behaves as the test specifies and records its
+/// The synth tools are third-party programs outside this repository.
+/// \c SynthRunner::makeSynthToolProcess() is the test seam that makes this behavior testable:
+/// \c StandIn below is a substitute synth tool that behaves as the test specifies and records its
 /// invocations.
 ///
 /// A substitute cannot verify whether the arguments are *correct*, which requires the real
-/// engines. That is covered by \c tests/manual/utaucompare , which compares against the UTAU
+/// synth tools. That is covered by \c tests/manual/utaucompare , which compares against the UTAU
 /// render of the same project.
 
 #include <fstream>
@@ -28,8 +28,8 @@ using namespace hello::kit;
 
 namespace {
 
-    /// The invocations of the substitute engine, stored so that they outlive the engine.
-    struct EngineLog {
+    /// The invocations of the substitute synth tool, stored so that they outlive the synth tool.
+    struct SynthToolLog {
         mutable QMutex lock;
         int resamplerCalls = 0;
         int wavtoolCalls = 0;
@@ -45,24 +45,24 @@ namespace {
         }
     };
 
-    /// A substitute engine that behaves as the test specifies.
+    /// A substitute synth tool that behaves as the test specifies.
     ///
     /// \note One instance is shared by all threads of the runner, so its state is protected by
     ///       the lock of the log.
-    class StandIn : public EngineProcess {
+    class StandIn : public SynthToolProcess {
     public:
-        /// Called with the engine arguments. Returning false simulates an engine that fails to
-        /// start.
+        /// Called with the synth tool arguments. Returning false simulates a synth tool that fails
+        /// to start.
         using Behaviour = std::function<bool(const QStringList &)>;
 
-        StandIn(EngineLog *log, const SynthEngines &which, Behaviour resampler, Behaviour wavtool)
+        StandIn(SynthToolLog *log, const SynthTools &which, Behaviour resampler, Behaviour wavtool)
             : m_log(log), m_which(which), m_resampler(std::move(resampler)),
               m_wavtool(std::move(wavtool)) {
         }
 
-        EngineRun run(const std::filesystem::path &program, const QStringList &arguments,
-                      DiagnosticList &, const std::function<bool()> &) const override {
-            EngineRun out;
+        SynthToolRun run(const std::filesystem::path &program, const QStringList &arguments,
+                         DiagnosticList &, const std::function<bool()> &) const override {
+            SynthToolRun out;
             const Behaviour *what = nullptr;
             {
                 const QMutexLocker locked(&m_log->lock);
@@ -81,8 +81,8 @@ namespace {
         }
 
     private:
-        EngineLog *m_log;
-        SynthEngines m_which;
+        SynthToolLog *m_log;
+        SynthTools m_which;
         Behaviour m_resampler;
         Behaviour m_wavtool;
     };
@@ -105,23 +105,23 @@ namespace {
         }
     };
 
-    /// A runner that starts the substitute engine supplied by the test.
+    /// A runner that starts the substitute synth tool supplied by the test.
     class StubbedRunner : public ThreadedSynthRunner {
     public:
-        StubbedRunner(EngineLog *log, SynthEngines which, StandIn::Behaviour resampler,
+        StubbedRunner(SynthToolLog *log, SynthTools which, StandIn::Behaviour resampler,
                       StandIn::Behaviour wavtool)
             : m_log(log), m_which(std::move(which)), m_resampler(std::move(resampler)),
               m_wavtool(std::move(wavtool)) {
         }
 
     protected:
-        std::unique_ptr<EngineProcess> makeEngineProcess() const override {
+        std::unique_ptr<SynthToolProcess> makeSynthToolProcess() const override {
             return std::make_unique<StandIn>(m_log, m_which, m_resampler, m_wavtool);
         }
 
     private:
-        EngineLog *m_log;
-        SynthEngines m_which;
+        SynthToolLog *m_log;
+        SynthTools m_which;
         StandIn::Behaviour m_resampler;
         StandIn::Behaviour m_wavtool;
     };
@@ -156,12 +156,12 @@ private:
         return error ? -1 : qint64(size);
     }
 
-    /// Nonexistent engine paths, because the substitute handles the calls.
-    SynthEngines somewhere() const {
-        SynthEngines engines;
-        engines.resampler = root() / "nowhere" / "resampler";
-        engines.wavtool = root() / "nowhere" / "wavtool";
-        return engines;
+    /// Nonexistent synth tool paths, because the substitute handles the calls.
+    SynthTools somewhere() const {
+        SynthTools synthTools;
+        synthTools.resampler = root() / "nowhere" / "resampler";
+        synthTools.wavtool = root() / "nowhere" / "wavtool";
+        return synthTools;
     }
 
     /// A resampler that writes the requested fragment.
@@ -255,13 +255,13 @@ private Q_SLOTS:
         const auto p = plan();
         QVERIFY(p.has_value());
 
-        EngineLog log;
-        const auto engines = somewhere();
-        StubbedRunner runner(&log, engines, rendersTo(p->steps().at(0).cacheFile),
+        SynthToolLog log;
+        const auto synthTools = somewhere();
+        StubbedRunner runner(&log, synthTools, rendersTo(p->steps().at(0).cacheFile),
                              appends(p->outputFile()));
 
         DiagnosticList diagnostics;
-        const auto outcome = runner.render(*p, engines, nullptr, diagnostics);
+        const auto outcome = runner.render(*p, synthTools, nullptr, diagnostics);
 
         QCOMPARE(log.resampled(), 1);
         QCOMPARE(log.appended(), 1);
@@ -276,13 +276,13 @@ private Q_SLOTS:
         const auto p = plan();
         QVERIFY(p.has_value());
 
-        EngineLog log;
-        const auto engines = somewhere();
-        StubbedRunner runner(&log, engines, rendersTo(p->steps().at(0).cacheFile),
+        SynthToolLog log;
+        const auto synthTools = somewhere();
+        StubbedRunner runner(&log, synthTools, rendersTo(p->steps().at(0).cacheFile),
                              writesTrack(p->outputFile()));
 
         DiagnosticList diagnostics;
-        const auto outcome = runner.render(*p, engines, nullptr, diagnostics);
+        const auto outcome = runner.render(*p, synthTools, nullptr, diagnostics);
 
         QVERIFY(outcome.rendered);
         QVERIFY(!hasError(diagnostics));
@@ -305,13 +305,13 @@ private Q_SLOTS:
         write(QStringLiteral("out.wav.whd"), QByteArray(44, 'X'));
         write(QStringLiteral("out.wav.dat"), QByteArray(999, 'X'));
 
-        EngineLog log;
-        const auto engines = somewhere();
-        StubbedRunner runner(&log, engines, rendersTo(p->steps().at(0).cacheFile),
+        SynthToolLog log;
+        const auto synthTools = somewhere();
+        StubbedRunner runner(&log, synthTools, rendersTo(p->steps().at(0).cacheFile),
                              appends(p->outputFile()));
 
         DiagnosticList diagnostics;
-        QVERIFY(runner.render(*p, engines, nullptr, diagnostics).rendered);
+        QVERIFY(runner.render(*p, synthTools, nullptr, diagnostics).rendered);
         QCOMPARE(sizeOf(p->outputFile()), 44 + 100);
     }
 
@@ -321,16 +321,16 @@ private Q_SLOTS:
         const auto p = plan();
         QVERIFY(p.has_value());
 
-        EngineLog log;
-        const auto engines = somewhere();
-        StubbedRunner runner(&log, engines, rendersTo(p->steps().at(0).cacheFile),
+        SynthToolLog log;
+        const auto synthTools = somewhere();
+        StubbedRunner runner(&log, synthTools, rendersTo(p->steps().at(0).cacheFile),
                              appends(p->outputFile()));
 
         DiagnosticList diagnostics;
-        QVERIFY(runner.render(*p, engines, nullptr, diagnostics).rendered);
+        QVERIFY(runner.render(*p, synthTools, nullptr, diagnostics).rendered);
         const auto first = sizeOf(p->outputFile());
 
-        QVERIFY(runner.render(*p, engines, nullptr, diagnostics).rendered);
+        QVERIFY(runner.render(*p, synthTools, nullptr, diagnostics).rendered);
         QCOMPARE(sizeOf(p->outputFile()), first);
 
         // The second render did not render the note again, because the note is unchanged.
@@ -338,19 +338,19 @@ private Q_SLOTS:
         QCOMPARE(log.appended(), 2);
     }
 
-    // An engine that starts, reports nothing and writes nothing is the most common render
+    // A synth tool that starts, reports nothing and writes nothing is the most common render
     // failure, caused for example by an unreadable sample or an unknown flag. Exit codes are
     // unreliable, so success is determined by the existence of the fragment.
     void a_note_whose_piece_never_appeared_is_reported() {
         const auto p = plan();
         QVERIFY(p.has_value());
 
-        EngineLog log;
-        const auto engines = somewhere();
-        StubbedRunner runner(&log, engines, writesNothing(), appends(p->outputFile()));
+        SynthToolLog log;
+        const auto synthTools = somewhere();
+        StubbedRunner runner(&log, synthTools, writesNothing(), appends(p->outputFile()));
 
         DiagnosticList diagnostics;
-        const auto outcome = runner.render(*p, engines, nullptr, diagnostics);
+        const auto outcome = runner.render(*p, synthTools, nullptr, diagnostics);
 
         QCOMPARE(log.resampled(), 1);
         QCOMPARE(outcome.resampled, 0);
@@ -366,13 +366,13 @@ private Q_SLOTS:
         QVERIFY(p.has_value());
         QCOMPARE(p->steps().size(), 3);
 
-        EngineLog log;
-        const auto engines = somewhere();
-        StubbedRunner runner(&log, engines, writesNothing(), appends(p->outputFile()));
+        SynthToolLog log;
+        const auto synthTools = somewhere();
+        StubbedRunner runner(&log, synthTools, writesNothing(), appends(p->outputFile()));
         runner.stopOnFirstFailure = true;
 
         DiagnosticList diagnostics;
-        const auto outcome = runner.render(*p, engines, nullptr, diagnostics);
+        const auto outcome = runner.render(*p, synthTools, nullptr, diagnostics);
 
         QCOMPARE(outcome.failed, 1);
         QCOMPARE(log.appended(), 0);
@@ -380,8 +380,8 @@ private Q_SLOTS:
         QVERIFY(!std::filesystem::exists(p->outputFile()));
     }
 
-    // Reuse is the only part of rendering observable without an engine, because a reused note
-    // starts no engine. The engine paths here are nonexistent, so a note reported as reused
+    // Reuse is the only part of rendering observable without a synth tool, because a reused note
+    // starts no synth tool. The synth tool paths here are nonexistent, so a note reported as reused
     // cannot have been rendered.
     void a_piece_already_there_is_not_rendered_again() {
         const auto p = plan();
@@ -393,13 +393,13 @@ private Q_SLOTS:
                   QString::fromStdU16String(p->steps().at(0).cacheFile.filename().u16string()),
               "RIFF already rendered");
 
-        SynthEngines engines;
-        engines.resampler = root() / "nowhere" / "resampler.exe";
-        engines.wavtool = root() / "nowhere" / "wavtool.exe";
+        SynthTools synthTools;
+        synthTools.resampler = root() / "nowhere" / "resampler.exe";
+        synthTools.wavtool = root() / "nowhere" / "wavtool.exe";
 
         DiagnosticList diagnostics;
         const ThreadedSynthRunner runner;
-        const auto outcome = runner.render(*p, engines, nullptr, diagnostics);
+        const auto outcome = runner.render(*p, synthTools, nullptr, diagnostics);
 
         QCOMPARE(outcome.reused, 1);
         QCOMPARE(outcome.resampled, 0);
@@ -414,13 +414,13 @@ private Q_SLOTS:
         QVERIFY(p.has_value());
         fillCache(*p);
 
-        EngineLog log;
-        const auto engines = somewhere();
-        StubbedRunner runner(&log, engines, writesNothing(), appends(p->outputFile()));
+        SynthToolLog log;
+        const auto synthTools = somewhere();
+        StubbedRunner runner(&log, synthTools, writesNothing(), appends(p->outputFile()));
         Recorder recorder;
 
         DiagnosticList diagnostics;
-        QVERIFY(runner.render(*p, engines, &recorder, diagnostics).rendered);
+        QVERIFY(runner.render(*p, synthTools, &recorder, diagnostics).rendered);
 
         QCOMPARE(log.resampled(), 0);
         const QList<std::pair<int, int>> expected{
@@ -440,14 +440,14 @@ private Q_SLOTS:
         QVERIFY(p.has_value());
         fillCache(*p);
 
-        EngineLog log;
-        const auto engines = somewhere();
-        StubbedRunner runner(&log, engines, writesNothing(), appends(p->outputFile()));
+        SynthToolLog log;
+        const auto synthTools = somewhere();
+        StubbedRunner runner(&log, synthTools, writesNothing(), appends(p->outputFile()));
         Recorder recorder;
         recorder.cancelAt = 4;
 
         DiagnosticList diagnostics;
-        const auto outcome = runner.render(*p, engines, &recorder, diagnostics);
+        const auto outcome = runner.render(*p, synthTools, &recorder, diagnostics);
 
         QVERIFY(outcome.cancelled);
         QVERIFY(!outcome.rendered);
@@ -457,7 +457,7 @@ private Q_SLOTS:
         QVERIFY(!std::filesystem::exists(withSuffix(p->outputFile(), ".dat")));
     }
 
-    // The override for the case in which the engine itself has changed.
+    // The override for the case in which the synth tool itself has changed.
     void turning_reuse_off_renders_it_again() {
         const auto p = plan();
         QVERIFY(p.has_value());
@@ -467,14 +467,14 @@ private Q_SLOTS:
                   QString::fromStdU16String(p->steps().at(0).cacheFile.filename().u16string()),
               "RIFF already rendered");
 
-        SynthEngines engines;
-        engines.resampler = root() / "nowhere" / "resampler.exe";
-        engines.wavtool = root() / "nowhere" / "wavtool.exe";
+        SynthTools synthTools;
+        synthTools.resampler = root() / "nowhere" / "resampler.exe";
+        synthTools.wavtool = root() / "nowhere" / "wavtool.exe";
 
         DiagnosticList diagnostics;
         ThreadedSynthRunner runner;
         runner.reuseCache = false;
-        const auto outcome = runner.render(*p, engines, nullptr, diagnostics);
+        const auto outcome = runner.render(*p, synthTools, nullptr, diagnostics);
 
         QCOMPARE(outcome.reused, 0);
     }
@@ -493,13 +493,13 @@ private Q_SLOTS:
         write(cache + QStringLiteral("notes.txt"), "not a piece at all");
         write(cache + wanted, "RIFF already rendered");
 
-        SynthEngines engines;
-        engines.resampler = root() / "nowhere" / "resampler.exe";
-        engines.wavtool = root() / "nowhere" / "wavtool.exe";
+        SynthTools synthTools;
+        synthTools.resampler = root() / "nowhere" / "resampler.exe";
+        synthTools.wavtool = root() / "nowhere" / "wavtool.exe";
 
         DiagnosticList diagnostics;
         const ThreadedSynthRunner runner;
-        runner.render(*p, engines, nullptr, diagnostics);
+        runner.render(*p, synthTools, nullptr, diagnostics);
 
         const auto there = [&](const QString &name) {
             return std::filesystem::exists(p->cacheDirectory() /
@@ -511,19 +511,19 @@ private Q_SLOTS:
         QVERIFY(there(wanted));
     }
 
-    // An engine missing from its configured location must be reported. Rendering nothing
+    // A synth tool missing from its configured location must be reported. Rendering nothing
     // without a report is a failure that is costly for the user to diagnose.
-    void engines_that_are_not_there_are_reported() {
+    void synth_tools_that_are_not_there_are_reported() {
         const auto p = plan();
         QVERIFY(p.has_value());
 
-        SynthEngines engines;
-        engines.resampler = root() / "nowhere" / "resampler.exe";
-        engines.wavtool = root() / "nowhere" / "wavtool.exe";
+        SynthTools synthTools;
+        synthTools.resampler = root() / "nowhere" / "resampler.exe";
+        synthTools.wavtool = root() / "nowhere" / "wavtool.exe";
 
         DiagnosticList diagnostics;
         const ThreadedSynthRunner runner;
-        const auto outcome = runner.render(*p, engines, nullptr, diagnostics);
+        const auto outcome = runner.render(*p, synthTools, nullptr, diagnostics);
 
         QVERIFY(!outcome.rendered);
         QCOMPARE(outcome.resampled, 0);
@@ -532,20 +532,20 @@ private Q_SLOTS:
         QVERIFY(!std::filesystem::exists(p->outputFile()));
     }
 
-    // The engines write into the directory, so it must exist before they run. They do not
-    // create it, and their diagnostic for a nonexistent path is engine-specific.
+    // The synth tools write into the directory, so it must exist before they run. They do not
+    // create it, and their diagnostic for a nonexistent path is synth tool-specific.
     void the_cache_folder_is_created() {
         const auto p = plan();
         QVERIFY(p.has_value());
         QVERIFY(!std::filesystem::exists(p->cacheDirectory()));
 
-        SynthEngines engines;
-        engines.resampler = root() / "nowhere" / "resampler.exe";
-        engines.wavtool = root() / "nowhere" / "wavtool.exe";
+        SynthTools synthTools;
+        synthTools.resampler = root() / "nowhere" / "resampler.exe";
+        synthTools.wavtool = root() / "nowhere" / "wavtool.exe";
 
         DiagnosticList diagnostics;
         const ThreadedSynthRunner runner;
-        runner.render(*p, engines, nullptr, diagnostics);
+        runner.render(*p, synthTools, nullptr, diagnostics);
 
         QVERIFY(std::filesystem::is_directory(p->cacheDirectory()));
     }

@@ -249,8 +249,8 @@ namespace {
             return 1;
         }
 
-        // The engines and the file are left unset. Substituting local engines and renaming the
-        // cache directory apply when a user saves a project, and here they would appear as the
+        // The synth tools and the file are left unset. Substituting local synth tools and renaming
+        // the cache directory apply when a user saves a project, and here they would appear as the
         // round trip changing settings of the file.
         UstDocument::ExportOptions options;
         options.charset = *charset;

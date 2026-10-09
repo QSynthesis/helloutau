@@ -842,12 +842,13 @@ private Q_SLOTS:
         QCOMPARE(dialog.changes().tempo, std::optional(90.0));
     }
 
-    void resetting_project_engines_uses_native_separators() {
+    void resetting_project_synth_tools_uses_native_separators() {
         AppSettings settings(m_dir.filePath(QStringLiteral("settings.json")));
         settings.setWavtool(QStringLiteral("C:/UTAU/tools/wavtool.exe"));
         settings.setResampler(QStringLiteral("C:/UTAU/tools/resampler.exe"));
         ProjectPropertiesDialog dialog(kit::Project(), settings);
-        const auto reset = dialog.findChild<QPushButton *>(QStringLiteral("resetProjectEngines"));
+        const auto reset =
+            dialog.findChild<QPushButton *>(QStringLiteral("resetProjectSynthTools"));
         QVERIFY(reset);
 
         reset->click();
@@ -1321,7 +1322,7 @@ private Q_SLOTS:
         QCOMPARE(session->currentStep(), 1);
     }
 
-    void opening_a_project_with_a_missing_engine_opens_properties() {
+    void opening_a_project_with_a_missing_synth_tool_opens_properties() {
         const auto e = editor();
         kit::Project project;
         project.settings.resampler = QStringLiteral("missing-resampler.exe");
@@ -1331,7 +1332,7 @@ private Q_SLOTS:
         note.noteNum = 60;
         track.notes.push_back(note);
         project.tracks.push_back(track);
-        const auto path = pathIn(m_dir, "missing-engine.usth");
+        const auto path = pathIn(m_dir, "missing-synth-tool.usth");
         kit::DiagnosticList diagnostics;
         QVERIFY(project.save(path, diagnostics));
 
@@ -2289,7 +2290,7 @@ private Q_SLOTS:
         writeFile(bank / "desc.mrq", mrq.constData(), mrq.size());
 
         const auto e = editor();
-        e->settings().setResampler(QStringLiteral("C:/engines/moresampler.exe"));
+        e->settings().setResampler(QStringLiteral("C:/synthTools/moresampler.exe"));
         const auto window = e->openVoiceBank(bank);
         QVERIFY(window);
         const auto tree = window->directoryTree();
@@ -2334,7 +2335,7 @@ private Q_SLOTS:
     void the_frequency_box_follows_the_registrations() {
         QTemporaryDir dir;
         const auto e = editor();
-        e->settings().setResampler(QStringLiteral("C:/engines/moresampler.exe"));
+        e->settings().setResampler(QStringLiteral("C:/synthTools/moresampler.exe"));
         const auto window = e->openVoiceBank(voiceBank(dir));
         QVERIFY(window);
         const auto box = window->frequencyFormatBox();

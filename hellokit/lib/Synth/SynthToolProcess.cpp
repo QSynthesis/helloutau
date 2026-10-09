@@ -1,4 +1,4 @@
-#include "EngineProcess.h"
+#include "SynthToolProcess.h"
 
 #ifdef _WIN32
 #  include <QtCore/qt_windows.h>
@@ -32,11 +32,11 @@ namespace hello::kit {
             diagnostics.push_back({DiagnosticSeverity::Error, message});
         }
 
-        // The interval in milliseconds at which a running engine or script is checked for
+        // The interval in milliseconds at which a running synth tool or script is checked for
         // cancellation and for its time limit
         constexpr int PollInterval = 100;
 
-        // Kills the script of process and the engines it started, which a kill of the script
+        // Kills the script of process and the synth tools it started, which a kill of the script
         // alone would leave running. On Windows these are the descendants of the command
         // processor, found by the process ID of the parent that Windows records for each
         // process and keeps after the parent ends. Elsewhere they are the process group of the
@@ -89,7 +89,7 @@ namespace hello::kit {
             return std::string(bytes.constData(), size_t(bytes.size()));
         }
 
-        /// The output of an engine, which on Windows is in the ANSI code page rather than UTF-8.
+        /// The output of a synth tool, which on Windows is in the ANSI code page rather than UTF-8.
         ///
         /// Invalid bytes are interpreted as Latin-1 rather than dropped. The output is a message
         /// for a person diagnosing a failure, so an imperfect rendering is preferable to none.
@@ -121,28 +121,28 @@ namespace hello::kit {
 
     }
 
-    EngineOutputLog::EngineOutputLog() = default;
+    SynthToolOutputLog::SynthToolOutputLog() = default;
 
-    EngineOutputLog::~EngineOutputLog() = default;
+    SynthToolOutputLog::~SynthToolOutputLog() = default;
 
-    QString EngineOutputLog::text() const {
+    QString SynthToolOutputLog::text() const {
         const std::lock_guard lock(m_mutex);
         return QString::fromUtf8(read());
     }
 
-    void EngineOutputLog::clear() {
+    void SynthToolOutputLog::clear() {
         const std::lock_guard lock(m_mutex);
         m_runStarted = false;
         write({});
     }
 
-    void EngineOutputLog::setMode(Mode mode) {
+    void SynthToolOutputLog::setMode(Mode mode) {
         const std::lock_guard lock(m_mutex);
         m_mode = mode;
         m_runStarted = false;
     }
 
-    void EngineOutputLog::setLimit(qsizetype bytes) {
+    void SynthToolOutputLog::setLimit(qsizetype bytes) {
         const std::lock_guard lock(m_mutex);
         m_limit = std::max<qsizetype>(1024, bytes);
         if (const auto data = read(); data.size() > m_limit) {
@@ -150,7 +150,7 @@ namespace hello::kit {
         }
     }
 
-    void EngineOutputLog::setFileName(const QString &fileName) {
+    void SynthToolOutputLog::setFileName(const QString &fileName) {
         const std::lock_guard lock(m_mutex);
         const auto data = read();
         m_outputs.clear();
@@ -158,7 +158,7 @@ namespace hello::kit {
         write(data);
     }
 
-    void EngineOutputLog::record(const std::filesystem::path &program, const QString &output) {
+    void SynthToolOutputLog::record(const std::filesystem::path &program, const QString &output) {
         const auto name = QString::fromStdU16String(program.u16string());
         const auto time = QDateTime::currentDateTime().toString(Qt::ISODateWithMs);
         const auto body = output.isEmpty() ? QStringLiteral("(no output)") : output;
@@ -171,7 +171,7 @@ namespace hello::kit {
         append(entry);
     }
 
-    QByteArray EngineOutputLog::read() const {
+    QByteArray SynthToolOutputLog::read() const {
         if (m_fileName.isEmpty()) {
             return m_outputs;
         }
@@ -179,7 +179,7 @@ namespace hello::kit {
         return file.open(QIODevice::ReadOnly) ? file.readAll() : QByteArray();
     }
 
-    void EngineOutputLog::write(const QByteArray &data) {
+    void SynthToolOutputLog::write(const QByteArray &data) {
         if (m_fileName.isEmpty()) {
             m_outputs = data;
             return;
@@ -190,7 +190,7 @@ namespace hello::kit {
         }
     }
 
-    void EngineOutputLog::append(const QByteArray &entry) {
+    void SynthToolOutputLog::append(const QByteArray &entry) {
         qint64 size = 0;
         if (m_fileName.isEmpty()) {
             m_outputs += entry;
@@ -209,20 +209,20 @@ namespace hello::kit {
         }
     }
 
-    EngineProcess::EngineProcess(std::shared_ptr<EngineOutputLog> outputLog)
-        : m_outputLog(outputLog ? std::move(outputLog) : std::make_shared<EngineOutputLog>()) {
+    SynthToolProcess::SynthToolProcess(std::shared_ptr<SynthToolOutputLog> outputLog)
+        : m_outputLog(outputLog ? std::move(outputLog) : std::make_shared<SynthToolOutputLog>()) {
     }
 
-    EngineProcess::~EngineProcess() = default;
+    SynthToolProcess::~SynthToolProcess() = default;
 
-    QString EngineProcess::outputLog() const {
+    QString SynthToolProcess::outputLog() const {
         return m_outputLog->text();
     }
 
-    EngineRun EngineProcess::run(const std::filesystem::path &program, const QStringList &arguments,
-                                 DiagnosticList &diagnostics,
-                                 const std::function<bool()> &cancelled) const {
-        EngineRun result;
+    SynthToolRun SynthToolProcess::run(const std::filesystem::path &program,
+                                       const QStringList &arguments, DiagnosticList &diagnostics,
+                                       const std::function<bool()> &cancelled) const {
+        SynthToolRun result;
 
         // args[0] is the name passed to the program, and executable() is the file executed. They
         // are set separately on purpose, because using args[0] as the file name as well would
@@ -243,20 +243,20 @@ namespace hello::kit {
             process.cwd(workingDirectory);
         }
 #ifdef _WIN32
-        // Engines are console programs. Started from a program without a console, as the
+        // Synth tools are console programs. Started from a program without a console, as the
         // editor is, each would open a console window of its own, two for every note.
         process.creationFlags(CREATE_NO_WINDOW);
 #endif
 
         if (!process.start()) {
             fail(diagnostics,
-                 tr("The engine \"%1\" could not be started.").arg(displayed(program)));
+                 tr("The synth tool \"%1\" could not be started.").arg(displayed(program)));
             return result;
         }
         result.started = true;
 
         // Both streams are read by communicate() rather than manually. A full pipe blocks its
-        // writer, so draining the streams sequentially deadlocks with a verbose engine. Each
+        // writer, so draining the streams sequentially deadlocks with a verbose synth tool. Each
         // call is limited to the poll interval, and the next call resumes the exchange.
         const auto deadline =
             std::chrono::steady_clock::now() + std::chrono::milliseconds(std::max(0, timeout));
@@ -285,7 +285,7 @@ namespace hello::kit {
             }
         }
         if (timedOut || stopped) {
-            // communicate() leaves the engine running. The kill closes its end of the pipe, and
+            // communicate() leaves the synth tool running. The kill closes its end of the pipe, and
             // the next call returns the output written before the kill.
             std::ignore = process.kill();
             exchanged = process.communicate();
@@ -302,7 +302,7 @@ namespace hello::kit {
         }
         if (timedOut) {
             result.timedOut = true;
-            fail(diagnostics, tr("The engine \"%1\" did not finish within %2 seconds and was "
+            fail(diagnostics, tr("The synth tool \"%1\" did not finish within %2 seconds and was "
                                  "stopped.")
                                   .arg(displayed(program))
                                   .arg(timeout / 1000));
@@ -313,10 +313,10 @@ namespace hello::kit {
         return result;
     }
 
-    EngineRun EngineProcess::runScript(const std::filesystem::path &script,
-                                       DiagnosticList &diagnostics,
-                                       const std::function<bool()> &cancelled) const {
-        EngineRun result;
+    SynthToolRun SynthToolProcess::runScript(const std::filesystem::path &script,
+                                             DiagnosticList &diagnostics,
+                                             const std::function<bool()> &cancelled) const {
+        SynthToolRun result;
 
         stdc::Popen process;
         // The argument vector applies here as well. shell() quotes each element for the
@@ -336,7 +336,7 @@ namespace hello::kit {
         info.wShowWindow = SW_SHOWNORMAL;
         process.startupInfo(info);
 #else
-        // A process group of its own, which killTree() kills with the engines in it
+        // A process group of its own, which killTree() kills with the synth tools in it
         process.processGroup(0);
 #endif
 

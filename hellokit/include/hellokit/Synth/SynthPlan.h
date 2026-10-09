@@ -22,7 +22,7 @@ namespace hello::kit {
 
 namespace hello::kit {
 
-    /// The engine calls of one note, with all paths resolved and all arguments determined.
+    /// The synth tool calls of one note, with all paths resolved and all arguments determined.
     struct SynthStep {
         /// The position of the note in the track, by which a runner processing several notes
         /// concurrently matches a finished job to its note.
@@ -72,11 +72,11 @@ namespace hello::kit {
 
     /// The components of a render, determined without executing anything.
     ///
-    /// Separated from execution so that the parts worth testing can be tested without an engine
+    /// Separated from execution so that the parts worth testing can be tested without a synth tool
     /// on disk: which sample a lyric resolves to, the timing between adjacent notes, and the
-    /// exact arguments passed to each engine.
+    /// exact arguments passed to each synth tool.
     ///
-    /// \note Every string passed to an engine is UTF-8, as \c EngineProcess requires. stdutau
+    /// \note Every string passed to a synth tool is UTF-8, as \c SynthToolProcess requires. stdutau
     ///       treats these strings as raw bytes because a UST may use any encoding, but no data
     ///       here comes from a UST: the project is already decoded text, so a single encoding
     ///       applies and no conversion is involved.
@@ -110,7 +110,7 @@ namespace hello::kit {
             std::optional<std::pair<int, int>> range;
         };
 
-        /// Determines the engine calls of the notes of \a options of the only track of
+        /// Determines the synth tool calls of the notes of \a options of the only track of
         /// \a project. \a observer, if given, receives the progress in notes and is queried
         /// between notes for cancellation.
         ///

@@ -23,7 +23,7 @@ namespace hello::kit {
     /// The console remains visible, as in UTAU. The output of a batch plugin is intended to
     /// be read.
     ///
-    /// A cancellation or the time limit kills the script with the engines that it started.
+    /// A cancellation or the time limit kills the script with the synth tools that it started.
     /// Because the script reports nothing about its progress, the fragment that a killed
     /// resampler may have written partially cannot be identified exactly. The last fragment
     /// that the run created or rewrote is removed instead.
@@ -31,7 +31,7 @@ namespace hello::kit {
     /// The layout follows UTAU: a header of \c @set assignments, one block per note that sets
     /// the values of the note and calls \c temp_helper.bat , and a footer that joins the two
     /// fragments written by the wavtool into the track file. The **values** are computed by
-    /// \c SynthPlan and placed exactly where the engines read them.
+    /// \c SynthPlan and placed exactly where the synth tools read them.
     ///
     /// \sa docs/Synth.md
     class HELLOKIT_SYNTH_EXPORT ClassicSynthRunner : public SynthRunner {
@@ -52,7 +52,7 @@ namespace hello::kit {
 
             /// Written exactly as UTAU writes it, without escaping.
             ///
-            /// Only for an engine that requires the script text to match UTAU exactly, which is
+            /// Only for a synth tool that requires the script text to match UTAU exactly, which is
             /// so far a hypothetical case with no known instance. **This lets the project file
             /// execute commands.** Never select it on behalf of the user. It must be selected by
             /// the user, in a prompt that explains the consequence.
@@ -84,17 +84,17 @@ namespace hello::kit {
         /// The directory for \c temp.bat and \c temp_helper.bat , or empty for a directory of
         /// this program under the system temporary directory.
         ///
-        /// \note The two files keep their UTAU names, because an engine that searches for
+        /// \note The two files keep their UTAU names, because a synth tool that searches for
         ///       \c temp.bat must find it.
         std::filesystem::path scriptDirectory;
 
         /// Whether the scripts are kept after the render, for inspection after a failure.
         bool keepScripts = false;
 
-        SynthOutcome render(const SynthPlan &plan, const SynthEngines &engines,
+        SynthOutcome render(const SynthPlan &plan, const SynthTools &synthTools,
                             SynthObserver *observer, DiagnosticList &diagnostics) const override;
 
-        /// Returns the scripts generated from \a plan and \a engines for the selected shell,
+        /// Returns the scripts generated from \a plan and \a synth tools for the selected shell,
         /// without writing or executing anything.
         ///
         /// Used by the tests, and for showing a user exactly what will be executed.
@@ -102,7 +102,7 @@ namespace hello::kit {
         /// \return the contents of the selected script and helper files, or \c std::nullopt if a
         ///         value cannot be written safely, with the reason in \a diagnostics
         std::optional<std::pair<QString, QString>> scripts(const SynthPlan &plan,
-                                                           const SynthEngines &engines,
+                                                           const SynthTools &synthTools,
                                                            DiagnosticList &diagnostics) const;
 
         /// A file of the scripts and its content in the system code page
@@ -110,10 +110,11 @@ namespace hello::kit {
 
         /// Returns the files that render() writes into \a directory, or \c std::nullopt with the
         /// reason in \a diagnostics if a value cannot be written safely or represented. The list
-        /// includes a batch pair for the engines that read temp.bat on systems other than Windows.
+        /// includes a batch pair for the synth tools that read temp.bat on systems other than
+        /// Windows.
         std::optional<QList<ScriptFile>> scriptFiles(const std::filesystem::path &directory,
                                                      const SynthPlan &plan,
-                                                     const SynthEngines &engines,
+                                                     const SynthTools &synthTools,
                                                      DiagnosticList &diagnostics) const;
 
         /// Writes \a files and returns whether every file is written.

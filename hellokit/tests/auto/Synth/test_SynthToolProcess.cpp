@@ -18,13 +18,13 @@
 #include <QtCore/QRegularExpression>
 #include <QtTest/QTest>
 
-#include <hellokit/Synth/EngineProcess.h>
+#include <hellokit/Synth/SynthToolProcess.h>
 
 using namespace hello::kit;
 
 namespace {
 
-    /// The argument that makes this binary act as the engine under test.
+    /// The argument that makes this binary act as the synth tool under test.
     constexpr char echoArguments[] = "--echo-arguments";
 
     /// The argument that makes it hang, for the time limit case.
@@ -34,16 +34,16 @@ namespace {
     constexpr char failWith[] = "--fail-with";
 
     /// The argument that makes it write the first file that follows at once and the second a
-    /// second later, for the case of an engine started by a script.
+    /// second later, for the case of a synth tool started by a script.
     constexpr char writeLater[] = "--write-later";
 
 }
 
-class test_EngineProcess : public QObject {
+class test_SynthToolProcess : public QObject {
     Q_OBJECT
 
 private:
-    /// This binary, acting as a substitute engine.
+    /// This binary, acting as a substitute synth tool.
     ///
     /// The substitute only needs to report its arguments, and the one program certain to exist
     /// during a test is the test itself. A separate helper program would only add maintenance.
@@ -51,11 +51,11 @@ private:
         return std::filesystem::path(QCoreApplication::applicationFilePath().toStdU16String());
     }
 
-    static EngineRun run(const QStringList &arguments, DiagnosticList &diagnostics,
-                         int timeout = 30000) {
-        EngineProcess engine;
-        engine.timeout = timeout;
-        return engine.run(self(), arguments, diagnostics);
+    static SynthToolRun run(const QStringList &arguments, DiagnosticList &diagnostics,
+                            int timeout = 30000) {
+        SynthToolProcess synthTool;
+        synthTool.timeout = timeout;
+        return synthTool.run(self(), arguments, diagnostics);
     }
 
 private Q_SLOTS:
@@ -71,18 +71,20 @@ private Q_SLOTS:
     }
 
     void it_records_timestamped_output_with_the_selected_retention() {
-        const auto log = std::make_shared<EngineOutputLog>();
-        log->setMode(EngineOutputLog::Latest);
+        const auto log = std::make_shared<SynthToolOutputLog>();
+        log->setMode(SynthToolOutputLog::Latest);
         log->setLimit(1024 * 1024);
-        EngineProcess engine(log);
+        SynthToolProcess synthTool(log);
         DiagnosticList diagnostics;
-        QVERIFY(engine.run(self(), {QLatin1String(echoArguments), QStringLiteral("first")},
-                           diagnostics)
-                    .succeeded());
+        QVERIFY(
+            synthTool
+                .run(self(), {QLatin1String(echoArguments), QStringLiteral("first")}, diagnostics)
+                .succeeded());
         log->clear();
-        QVERIFY(engine.run(self(), {QLatin1String(echoArguments), QStringLiteral("second")},
-                           diagnostics)
-                    .succeeded());
+        QVERIFY(
+            synthTool
+                .run(self(), {QLatin1String(echoArguments), QStringLiteral("second")}, diagnostics)
+                .succeeded());
         const auto text = log->text();
         QVERIFY(!text.contains(QStringLiteral("first")));
         QVERIFY(text.contains(QStringLiteral("second")));
@@ -130,21 +132,21 @@ private Q_SLOTS:
                                 diagnostics);
 
         QVERIFY(result.started);
-        // The empty argument counts, because an engine reads its arguments by position.
+        // The empty argument counts, because a synth tool reads its arguments by position.
         QCOMPARE(result.output, QStringLiteral("one\ntwo three\n\nfour\n"));
     }
 
     void a_program_that_is_not_there_is_reported_rather_than_run() {
         DiagnosticList diagnostics;
-        EngineProcess engine;
-        const auto result = engine.run("nowhere/resampler.exe", {}, diagnostics);
+        SynthToolProcess synthTool;
+        const auto result = synthTool.run("nowhere/resampler.exe", {}, diagnostics);
 
         QVERIFY(!result.started);
         QVERIFY(!result.succeeded());
         QVERIFY(hasError(diagnostics));
     }
 
-    void a_failing_engine_reports_its_exit_code() {
+    void a_failing_synth_tool_reports_its_exit_code() {
         DiagnosticList diagnostics;
         const auto result = run({QLatin1String(failWith), QStringLiteral("3")}, diagnostics);
 
@@ -153,8 +155,8 @@ private Q_SLOTS:
         QVERIFY(!result.succeeded());
     }
 
-    // Otherwise an engine that never returns would halt the render indefinitely, as in UTAU.
-    void an_engine_that_hangs_is_stopped() {
+    // Otherwise a synth tool that never returns would halt the render indefinitely, as in UTAU.
+    void an_synth_tool_that_hangs_is_stopped() {
         DiagnosticList diagnostics;
         const auto result = run({QLatin1String(sleepForever)}, diagnostics, 500);
 
@@ -164,11 +166,11 @@ private Q_SLOTS:
         QVERIFY(hasError(diagnostics));
     }
 
-    // A cancelled script ends at once with the engine it started, which would otherwise write
-    // its second file a second later. A kill of the script alone leaves the engine running, as
-    // Popen.kill() of Python does. The script is cancelled once the engine runs, which writes
+    // A cancelled script ends at once with the synth tool it started, which would otherwise write
+    // its second file a second later. A kill of the script alone leaves the synth tool running, as
+    // Popen.kill() of Python does. The script is cancelled once the synth tool runs, which writes
     // its first file. The console of the script shows briefly.
-    void a_cancelled_script_ends_with_its_engines() {
+    void a_cancelled_script_ends_with_its_synth_tools() {
         QTemporaryDir dir;
         const auto started = dir.filePath(QStringLiteral("started"));
         const auto marker = dir.filePath(QStringLiteral("written"));
@@ -187,13 +189,13 @@ private Q_SLOTS:
         }
         QFile::setPermissions(script, QFile::permissions(script) | QFile::ExeOwner);
 
-        // Cancelled once the engine runs, or after five seconds without it
+        // Cancelled once the synth tool runs, or after five seconds without it
         QElapsedTimer elapsed;
         elapsed.start();
         qint64 cancelledAt = -1;
-        EngineProcess engine;
+        SynthToolProcess synthTool;
         DiagnosticList diagnostics;
-        const auto result = engine.runScript(
+        const auto result = synthTool.runScript(
             std::filesystem::path(script.toStdU16String()), diagnostics,
             [&elapsed, &cancelledAt, &started] {
                 if (cancelledAt < 0 && (QFile::exists(started) || elapsed.elapsed() > 5000)) {
@@ -212,7 +214,7 @@ private Q_SLOTS:
 };
 
 int main(int argc, char *argv[]) {
-    // Entry point when acting as the engine under test. This code does not use Qt, so it does
+    // Entry point when acting as the synth tool under test. This code does not use Qt, so it does
     // not interfere with the measured behavior.
     if (argc >= 2) {
         const std::string mode = argv[1];
@@ -246,8 +248,8 @@ int main(int argc, char *argv[]) {
     }
 
     QCoreApplication app(argc, argv);
-    test_EngineProcess object;
+    test_SynthToolProcess object;
     return QTest::qExec(&object, argc, argv);
 }
 
-#include "test_EngineProcess.moc"
+#include "test_SynthToolProcess.moc"

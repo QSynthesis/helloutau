@@ -419,17 +419,17 @@ namespace hello::kit {
         file.settings.voiceDir = out(Project::savedPathText(project.tracks.first().voiceDir));
         file.settings.isMode2 = settings.mode2;
 
-        // The engines specified by the project are written unchanged. If it specifies none, the
-        // locally configured engines are written instead, because UTAU cannot render a UST
-        // without engines.
+        // The synth tools specified by the project are written unchanged. If it specifies none, the
+        // locally configured synth tools are written instead, because UTAU cannot render a UST
+        // without synth tools.
         const QString wavtool = settings.wavtool.isEmpty() ? options.wavtool : settings.wavtool;
         const QString resampler =
             settings.resampler.isEmpty() ? options.resampler : settings.resampler;
         file.settings.wavtoolPath = out(Project::savedPathText(wavtool));
         file.settings.resamplerPath = out(Project::savedPathText(resampler));
         if (wavtool.isEmpty() || resampler.isEmpty()) {
-            complain(diagnostics, tr("This UST specifies no rendering engine, so UTAU cannot "
-                                     "render it until an engine is configured."));
+            complain(diagnostics, tr("This UST specifies no synth tool, so UTAU cannot "
+                                     "render it until a synth tool is configured."));
         }
 
         QJsonObject payload;

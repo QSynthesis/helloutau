@@ -11,7 +11,7 @@
 #include <QtCore/QThread>
 #include <QtCore/QThreadPool>
 
-#include "EngineProcess.h"
+#include "SynthToolProcess.h"
 #include "ClassicSynthRunner.h"
 
 namespace hello::kit {
@@ -63,7 +63,7 @@ namespace hello::kit {
         /// order, because a list ordered by thread completion is not comprehensible to a user.
         struct ResampleOutcome {
             DiagnosticList diagnostics;
-            QString engineOutput;
+            QString synthToolOutput;
             bool started = false;
         };
 
@@ -73,7 +73,7 @@ namespace hello::kit {
 
     ThreadedSynthRunner::~ThreadedSynthRunner() = default;
 
-    SynthOutcome ThreadedSynthRunner::render(const SynthPlan &plan, const SynthEngines &engines,
+    SynthOutcome ThreadedSynthRunner::render(const SynthPlan &plan, const SynthTools &synthTools,
                                              SynthObserver *observer,
                                              DiagnosticList &diagnostics) const {
         SynthOutcome outcome;
@@ -84,12 +84,12 @@ namespace hello::kit {
 
         // The scripts are generated even if no directory is given, so that a plan that the
         // classic strategy refuses is refused here as well. They are written only into a given
-        // directory, for the engines that read them.
+        // directory, for the synth tools that read them.
         std::error_code temporaryError;
         const auto directory =
             scriptDirectory.empty() ? fs::temp_directory_path(temporaryError) : scriptDirectory;
         const auto scripts =
-            ClassicSynthRunner().scriptFiles(directory, plan, engines, diagnostics);
+            ClassicSynthRunner().scriptFiles(directory, plan, synthTools, diagnostics);
         if (!scripts) {
             return outcome;
         }
@@ -112,7 +112,7 @@ namespace hello::kit {
 
         forgetSuperseded(plan, diagnostics);
 
-        // Determined before any engine runs, because the resampler creates these files.
+        // Determined before any synth tool runs, because the resampler creates these files.
         QList<bool> alreadyThere(int(plan.steps().size()), false);
         if (reuseCache) {
             for (int i = 0; i < int(plan.steps().size()); ++i) {
@@ -157,9 +157,9 @@ namespace hello::kit {
 
         // Shared by all threads and by the subsequent wavtool calls, which is why it must be
         // safe for concurrent use.
-        const auto engine = makeEngineProcess();
+        const auto synthTool = makeSynthToolProcess();
         if (!scriptDirectory.empty()) {
-            engine->workingDirectory = scriptDirectory;
+            synthTool->workingDirectory = scriptDirectory;
         }
 
         // The resampler calls are mutually independent and dominate render time. The wavtool
@@ -187,10 +187,10 @@ namespace hello::kit {
                     }
                     auto &result = outcomes[i];
                     const auto run =
-                        engine->run(engines.resampler, steps.at(i).resamplerArguments,
-                                    result.diagnostics, [&] { return aborted.load(); });
+                        synthTool->run(synthTools.resampler, steps.at(i).resamplerArguments,
+                                       result.diagnostics, [&] { return aborted.load(); });
                     result.started = run.started;
-                    result.engineOutput = run.output.trimmed();
+                    result.synthToolOutput = run.output.trimmed();
 
                     // A killed resampler may have written part of the fragment, which the next
                     // render would reuse as complete.
@@ -200,7 +200,7 @@ namespace hello::kit {
                     }
 
                     // Success is determined by the existence of the fragment, not by the exit
-                    // code, because engines report inconsistently and some report nothing.
+                    // code, because synth tools report inconsistently and some report nothing.
                     if (stopOnFirstFailure && !fs::exists(steps.at(i).cacheFile)) {
                         stopped.store(true);
                     }
@@ -249,9 +249,9 @@ namespace hello::kit {
             ++outcome.failed;
             complain(diagnostics,
                      tr("This note could not be rendered: %1")
-                         .arg(outcomes.at(i).engineOutput.isEmpty()
+                         .arg(outcomes.at(i).synthToolOutput.isEmpty()
                                   ? tr("the resampler produced no output.")
-                                  : outcomes.at(i).engineOutput),
+                                  : outcomes.at(i).synthToolOutput),
                      step.noteIndex);
             if (stopOnFirstFailure) {
                 return outcome;
@@ -268,8 +268,8 @@ namespace hello::kit {
                 return outcome;
             }
             if (!step.resamples() || fs::exists(step.cacheFile)) {
-                const auto run =
-                    engine->run(engines.wavtool, step.wavtoolArguments, diagnostics, cancelled);
+                const auto run = synthTool->run(synthTools.wavtool, step.wavtoolArguments,
+                                                diagnostics, cancelled);
                 if (run.cancelled) {
                     fs::remove(header, error);
                     fs::remove(data, error);
@@ -283,7 +283,7 @@ namespace hello::kit {
             report(1);
         }
 
-        // Some engines used as wavtools write the final track directly instead of producing the
+        // Some synth tools used as wavtools write the final track directly instead of producing the
         // two files used by the standard UTAU wavtool protocol. The temp.bat protocol accepts
         // that result and skips its concatenation step.
         if (fs::exists(output)) {

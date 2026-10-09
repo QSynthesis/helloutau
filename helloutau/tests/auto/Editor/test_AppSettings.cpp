@@ -185,7 +185,7 @@ private Q_SLOTS:
         QCOMPARE(settings.playbackMode(), AppSettings::Realtime);
     }
 
-    // The file stores the settings of the application in the groups engines, playback, files
+    // The file stores the settings of the application in the groups synth tools, playback, files
     // and commandPalette. A group is removed together with its last value.
     void the_file_keeps_its_groups() {
         QTemporaryDir dir;
@@ -199,7 +199,7 @@ private Q_SLOTS:
         }
         const auto root = readFile(file);
         QCOMPARE(
-            root.value(QStringLiteral("engines")).toObject().value(QStringLiteral("resampler")),
+            root.value(QStringLiteral("synthTools")).toObject().value(QStringLiteral("resampler")),
             QJsonValue(QStringLiteral("r.exe")));
         QCOMPARE(root.value(QStringLiteral("playback")).toObject().value(QStringLiteral("mode")),
                  QJsonValue(QStringLiteral("realtime")));
@@ -210,7 +210,7 @@ private Q_SLOTS:
         settings.clearRecentFiles();
         settings.sync();
         QVERIFY(!readFile(file).contains(QStringLiteral("files")));
-        QCOMPARE(settings.value(QStringLiteral("engines/wavtool")),
+        QCOMPARE(settings.value(QStringLiteral("synthTools/wavtool")),
                  QJsonValue(QStringLiteral("w.exe")));
     }
 
@@ -255,14 +255,15 @@ private Q_SLOTS:
         settings.setWavtool(QStringLiteral("w.exe"));
         QVERIFY(!QFile::exists(file));
         QTRY_VERIFY(QFile::exists(file));
-        const auto engines = readFile(file).value(QStringLiteral("engines")).toObject();
-        QCOMPARE(engines.value(QStringLiteral("resampler")), QJsonValue(QStringLiteral("r.exe")));
-        QCOMPARE(engines.value(QStringLiteral("wavtool")), QJsonValue(QStringLiteral("w.exe")));
+        const auto synthTools = readFile(file).value(QStringLiteral("synthTools")).toObject();
+        QCOMPARE(synthTools.value(QStringLiteral("resampler")),
+                 QJsonValue(QStringLiteral("r.exe")));
+        QCOMPARE(synthTools.value(QStringLiteral("wavtool")), QJsonValue(QStringLiteral("w.exe")));
 
         settings.setResampler(QStringLiteral("s.exe"));
         settings.sync();
         QCOMPARE(readFile(file)
-                     .value(QStringLiteral("engines"))
+                     .value(QStringLiteral("synthTools"))
                      .toObject()
                      .value(QStringLiteral("resampler")),
                  QJsonValue(QStringLiteral("s.exe")));

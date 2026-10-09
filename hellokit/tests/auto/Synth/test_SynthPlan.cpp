@@ -142,7 +142,7 @@ private Q_SLOTS:
     }
 
     // The purpose of this class: a lyric resolves to a sample through the voice bank, and the
-    // engine receives the full path, not the name in the oto.ini.
+    // synth tool receives the full path, not the name in the oto.ini.
     void a_lyric_becomes_the_sample_the_bank_resolves_it_to() {
         const auto voices = bank();
         QVERIFY(voices.has_value());
@@ -156,11 +156,11 @@ private Q_SLOTS:
         QVERIFY(!step.silent);
         QCOMPARE(step.sample, root() / "bank" / "ka.wav");
 
-        // The engine receives the path of that sample as resolved by the voice bank.
+        // The synth tool receives the path of that sample as resolved by the voice bank.
         QCOMPARE(step.resamplerArguments.at(0), QString::fromStdU16String(step.sample.u16string()));
     }
 
-    // The timing parameters belong to the sample and must reach the engine in the order in
+    // The timing parameters belong to the sample and must reach the synth tool in the order in
     // which it reads its arguments. An error here still renders, but incorrectly.
     void the_oto_entry_reaches_the_resampler() {
         const auto voices = bank();
@@ -258,7 +258,7 @@ private Q_SLOTS:
                  QString::fromStdU16String(step.cacheFile.u16string()));
 
         // The wavtool appends the same fragment to the track, with the track first, because the
-        // engine reads its arguments as <outfile> <infile>.
+        // synth tool reads its arguments as <outfile> <infile>.
         const auto &wavtool = step.wavtoolArguments;
         QCOMPARE(wavtool.at(0),
                  QString::fromStdU16String((root() / "out.wav").make_preferred().u16string()));
@@ -425,7 +425,7 @@ private Q_SLOTS:
         QVERIFY(hasError(diagnostics));
     }
 
-    // Every argument remains a single argument regardless of its content. The engines are
+    // Every argument remains a single argument regardless of its content. The synth tools are
     // started from a vector, never from a command line, because the content of a lyric or a
     // flags string cannot be trusted.
     void nothing_in_a_note_can_split_an_argument() {

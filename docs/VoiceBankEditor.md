@@ -16,7 +16,7 @@
 | 数据与编辑层 | 已完成：`VoiceBankSession`（事务、撤销、检查磁盘、重新读取、重新解读、保存、另存为、`isIncomplete()`）、句柄 `VoiceBankRefs`、领域函数 `VoiceBankEdits`（修改、插入、删除条目，收录未收录的 wav，写入与删除 `prefix.map` 的一项，转换编码）与命令；`voicedit` 以命令编辑真实音源 |
 | 编码 | 打开工程时逐目录询问编码的 `VoiceBankCharsetDialog` 已有，可复用 |
 | 音频 | `WaveAudio` 读取 wav；`HelloUtauAudio` 的 `AudioOutput` 与 `BufferSource` 可播放一段采样 |
-| 合成 | `SynthPlan` / `EngineProcess` 可对单个条目调用重采样器，用于试听 |
+| 合成 | `SynthPlan` / `SynthToolProcess` 可对单个条目调用重采样器，用于试听 |
 | 频率表 | 读写与生成的参考实现 qfrqeditor 已完成（[`claude/frqeditor-reference.md`](claude/frqeditor-reference.md)），尚未移入本仓库 |
 | 界面 | 音源窗口 `VoiceBankWindow`：目录树、条目表的编辑、波形区与五个值的拖动、试听与试合成、音频元数据的清除（第 1–4 步，见各步的进度） |
 

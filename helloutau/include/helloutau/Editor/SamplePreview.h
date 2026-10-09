@@ -9,7 +9,7 @@
 #include <QtCore/QObject>
 
 #include <hellokit/Support/Diagnostic.h>
-#include <hellokit/Synth/EngineProcess.h>
+#include <hellokit/Synth/SynthToolProcess.h>
 #include <hellokit/Synth/WaveAudio.h>
 #include <hellokit/VoiceBank/VoiceBank.h>
 
@@ -40,7 +40,7 @@ namespace hello::daw {
         ~SamplePreview() override;
 
         /// Replaces the object that starts the resampler, for tests.
-        void setEngineProcess(std::shared_ptr<kit::EngineProcess> process);
+        void setSynthToolProcess(std::shared_ptr<kit::SynthToolProcess> process);
 
         State state() const;
 

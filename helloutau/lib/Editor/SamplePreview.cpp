@@ -38,7 +38,7 @@ namespace hello::daw {
             int length = 480;
             std::filesystem::path resampler;
             std::shared_ptr<QTemporaryDir> directory;
-            std::shared_ptr<kit::EngineProcess> process;
+            std::shared_ptr<kit::SynthToolProcess> process;
             int deviceRate = 0;
 
             bool rendered = false;
@@ -126,7 +126,7 @@ namespace hello::daw {
         std::shared_ptr<Recipient> recipient;
         State state = Stopped;
         AudioOutput *output = nullptr;
-        std::shared_ptr<kit::EngineProcess> process;
+        std::shared_ptr<kit::SynthToolProcess> process;
         std::shared_ptr<QTemporaryDir> directory;
         std::shared_ptr<Job> job;
         std::shared_ptr<const kit::WaveAudio> synthesized;
@@ -181,7 +181,7 @@ namespace hello::daw {
         : QObject(parent), _impl(std::make_unique<Impl>(this)) {
         stdc_impl_t;
         impl.output = new AudioOutput(this);
-        impl.process = std::make_shared<kit::EngineProcess>();
+        impl.process = std::make_shared<kit::SynthToolProcess>();
         connect(impl.output, &AudioOutput::finished, this, [this] {
             stdc_impl_t;
             if (impl.state == Playing) {
@@ -205,7 +205,7 @@ namespace hello::daw {
         impl.recipient->preview = nullptr;
     }
 
-    void SamplePreview::setEngineProcess(std::shared_ptr<kit::EngineProcess> process) {
+    void SamplePreview::setSynthToolProcess(std::shared_ptr<kit::SynthToolProcess> process) {
         stdc_impl_t;
         impl.process = std::move(process);
     }

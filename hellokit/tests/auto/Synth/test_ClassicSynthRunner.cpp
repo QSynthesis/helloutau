@@ -1,5 +1,5 @@
 /// \file
-/// Script execution is not covered here, because it requires the engines, which are not part of
+/// Script execution is not covered here, because it requires the synth tools, which are not part of
 /// this repository. Covered is **the content written into the script**, which is where the risk
 /// lies. See test_ThreadedSynthRunner.cpp for the remaining coverage gap.
 
@@ -13,7 +13,7 @@
 #include <QtTest/QTest>
 
 #include <hellokit/Synth/ClassicSynthRunner.h>
-#include <hellokit/Synth/EngineProcess.h>
+#include <hellokit/Synth/SynthToolProcess.h>
 #include <hellokit/Synth/private/ShellSyntax_p.h>
 
 using namespace hello::kit;
@@ -68,15 +68,15 @@ private:
     }
 
     /// Runs no script, and records the time limit it was given.
-    class StandIn : public EngineProcess {
+    class StandIn : public SynthToolProcess {
     public:
         explicit StandIn(int *timeout) : m_timeout(timeout) {
         }
 
-        EngineRun runScript(const std::filesystem::path &, DiagnosticList &,
-                            const std::function<bool()> &) const override {
+        SynthToolRun runScript(const std::filesystem::path &, DiagnosticList &,
+                               const std::function<bool()> &) const override {
             *m_timeout = timeout;
-            EngineRun run;
+            SynthToolRun run;
             run.started = true;
             return run;
         }
@@ -90,7 +90,7 @@ private:
     public:
         mutable int timeout = 0;
 
-        std::unique_ptr<EngineProcess> makeEngineProcess() const override {
+        std::unique_ptr<SynthToolProcess> makeSynthToolProcess() const override {
             return std::make_unique<StandIn>(&timeout);
         }
     };
@@ -98,10 +98,10 @@ private:
     /// Two nonexistent paths that are never executed.
     ///
     /// Only the stubbed runner calls render(). scripts() only builds the text of the two files, so
-    /// an engine path is a string assigned to a script variable and verified there. A real path
+    /// a synth tool path is a string assigned to a script variable and verified there. A real path
     /// would verify nothing more and would make the test machine-dependent.
-    static SynthEngines engines() {
-        SynthEngines e;
+    static SynthTools synthTools() {
+        SynthTools e;
         e.resampler = "C:/UTAU/resampler.exe";
         e.wavtool = "C:/UTAU/wavtool.exe";
         return e;
@@ -117,7 +117,7 @@ private Q_SLOTS:
         m_dir.reset();
     }
 
-    // The layout expected by an engine that reads the script.
+    // The layout expected by a synth tool that reads the script.
     void the_script_has_the_shape_utau_writes() {
         const auto plan = planFor(QStringLiteral("a"), QString());
         QVERIFY(plan.has_value());
@@ -125,7 +125,7 @@ private Q_SLOTS:
         ClassicSynthRunner runner;
         runner.shell = ClassicSynthRunner::ScriptShell::Batch;
         DiagnosticList diagnostics;
-        const auto written = runner.scripts(*plan, engines(), diagnostics);
+        const auto written = runner.scripts(*plan, synthTools(), diagnostics);
         QVERIFY(written.has_value());
 
         const auto &bat = written->first;
@@ -172,7 +172,7 @@ private Q_SLOTS:
         ClassicSynthRunner runner;
         runner.shell = ClassicSynthRunner::ScriptShell::Batch;
         DiagnosticList diagnostics;
-        const auto written = runner.scripts(*plan, engines(), diagnostics);
+        const auto written = runner.scripts(*plan, synthTools(), diagnostics);
         QVERIFY(written.has_value());
 
         // The value is inside set "name=value", where cmd does not parse operators, and every
@@ -234,7 +234,7 @@ private Q_SLOTS:
         ClassicSynthRunner runner;
         runner.shell = ClassicSynthRunner::ScriptShell::Batch;
         DiagnosticList diagnostics;
-        const auto written = runner.scripts(*plan, engines(), diagnostics);
+        const auto written = runner.scripts(*plan, synthTools(), diagnostics);
         QVERIFY(written.has_value());
 
         QString line;
@@ -266,7 +266,7 @@ private Q_SLOTS:
         QCOMPARE(value, plan->steps().first().resamplerArguments.at(1));
     }
 
-    // The mode for an engine that requires the script text to match UTAU exactly. It is unsafe,
+    // The mode for a synth tool that requires the script text to match UTAU exactly. It is unsafe,
     // and the test asserts this explicitly.
     void the_verbatim_mode_writes_what_it_was_given() {
         const auto plan = planFor(QStringLiteral("a"), QStringLiteral("g-5&whoami"));
@@ -277,7 +277,7 @@ private Q_SLOTS:
         runner.quoting = ClassicSynthRunner::Quoting::Verbatim;
 
         DiagnosticList diagnostics;
-        const auto written = runner.scripts(*plan, engines(), diagnostics);
+        const auto written = runner.scripts(*plan, synthTools(), diagnostics);
         QVERIFY(written.has_value());
 
         QVERIFY(written->first.contains(QLatin1String("@set flag=g-5&whoami")));
@@ -292,7 +292,7 @@ private Q_SLOTS:
         ClassicSynthRunner runner;
         runner.shell = ClassicSynthRunner::ScriptShell::Batch;
         DiagnosticList diagnostics;
-        QVERIFY(!runner.scripts(*plan, engines(), diagnostics).has_value());
+        QVERIFY(!runner.scripts(*plan, synthTools(), diagnostics).has_value());
         QVERIFY(hasError(diagnostics));
     }
 
@@ -324,14 +324,14 @@ private Q_SLOTS:
 
         ClassicSynthRunner runner;
         runner.shell = ClassicSynthRunner::ScriptShell::Batch;
-        const auto written = runner.scripts(*plan, engines(), diagnostics);
+        const auto written = runner.scripts(*plan, synthTools(), diagnostics);
         QVERIFY(written.has_value());
 
         QVERIFY(written->first.contains(QLatin1String("@\"%tool%\" ")));
         QVERIFY(!written->first.contains(QLatin1String("@call")));
     }
 
-    // Every path passed to an engine must tolerate a space in a folder name. The default voice
+    // Every path passed to a synth tool must tolerate a space in a folder name. The default voice
     // folder of UTAU is under Program Files, so this is the common case rather than an edge
     // case.
     void a_path_with_a_space_is_quoted() {
@@ -366,7 +366,7 @@ private Q_SLOTS:
 
         ClassicSynthRunner runner;
         runner.shell = ClassicSynthRunner::ScriptShell::Batch;
-        const auto written = runner.scripts(*plan, engines(), diagnostics);
+        const auto written = runner.scripts(*plan, synthTools(), diagnostics);
         QVERIFY(written.has_value());
 
         // The number of arguments the line actually passes, counted as a command processor
@@ -448,7 +448,7 @@ private Q_SLOTS:
         ClassicSynthRunner runner;
         runner.shell =
             batch ? ClassicSynthRunner::ScriptShell::Batch : ClassicSynthRunner::ScriptShell::Posix;
-        const auto written = runner.scripts(*plan, engines(), diagnostics);
+        const auto written = runner.scripts(*plan, synthTools(), diagnostics);
         QVERIFY(written.has_value());
 
         const QString call =
@@ -511,7 +511,7 @@ private Q_SLOTS:
         QCOMPARE(batch.argument(QStringLiteral("it's")), QStringLiteral("it's"));
     }
 
-    // On other systems the UTAU engines run under Wine, and the script that starts them is a
+    // On other systems the UTAU synth tools run under Wine, and the script that starts them is a
     // shell script. The layout is the same and the syntax differs. The script is generated and
     // verified here, so that its content is not first observed when a user runs it.
     void the_shell_script_has_the_same_shape() {
@@ -522,7 +522,7 @@ private Q_SLOTS:
         runner.shell = ClassicSynthRunner::ScriptShell::Posix;
 
         DiagnosticList diagnostics;
-        const auto written = runner.scripts(*plan, engines(), diagnostics);
+        const auto written = runner.scripts(*plan, synthTools(), diagnostics);
         QVERIFY(written.has_value());
 
         const auto &script = written->first;
@@ -569,7 +569,7 @@ private Q_SLOTS:
         runner.shell = ClassicSynthRunner::ScriptShell::Posix;
 
         DiagnosticList diagnostics;
-        const auto written = runner.scripts(*plan, engines(), diagnostics);
+        const auto written = runner.scripts(*plan, synthTools(), diagnostics);
         QVERIFY(written.has_value());
 
         QString line;
@@ -615,12 +615,12 @@ private Q_SLOTS:
         const auto plan = SynthPlan::make(project, *bank, options, diagnostics);
         QVERIFY(plan.has_value());
 
-        // Nonexistent engines still produce a script, because writing a script executes
+        // Nonexistent synth tools still produce a script, because writing a script executes
         // nothing.
         ClassicSynthRunner runner;
         runner.shell = ClassicSynthRunner::ScriptShell::Batch;
         diagnostics.clear();
-        QVERIFY(runner.scripts(*plan, engines(), diagnostics).has_value());
+        QVERIFY(runner.scripts(*plan, synthTools(), diagnostics).has_value());
         QVERIFY(diagnostics.isEmpty());
     }
 
@@ -637,7 +637,7 @@ private Q_SLOTS:
     }
 
     // A script that writes nothing fails, though the track file of an earlier render is there,
-    // and the script of a track is allowed the time of each of its engine calls.
+    // and the script of a track is allowed the time of each of its synth tool calls.
     void a_script_is_judged_by_what_it_writes_in_its_time() {
         const auto plan = planFor(QStringLiteral("a"), QString());
         QVERIFY(plan.has_value());
@@ -646,12 +646,12 @@ private Q_SLOTS:
         StubbedRunner runner;
         runner.scriptDirectory = root() / "script";
         DiagnosticList diagnostics;
-        const auto outcome = runner.render(*plan, engines(), nullptr, diagnostics);
+        const auto outcome = runner.render(*plan, synthTools(), nullptr, diagnostics);
         QVERIFY(!outcome.rendered);
         QVERIFY(!QFile::exists(m_dir->path() + QStringLiteral("/out.wav")));
         QCOMPARE(diagnostics.size(), 1);
 
-        QCOMPARE(runner.timeout, EngineProcess().timeout * 2 * int(plan->steps().size()));
+        QCOMPARE(runner.timeout, SynthToolProcess().timeout * 2 * int(plan->steps().size()));
     }
 };
 

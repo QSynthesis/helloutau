@@ -17,8 +17,8 @@ namespace hello::kit {
     /// The audio of a WAVE file, as floating-point samples.
     ///
     /// Read to play a rendered track: the wavtool writes 16-bit PCM at 44100 Hz, and other
-    /// engines may write other sample formats. The formats read are integer PCM of 8, 16, 24 and
-    /// 32 bits, IEEE floating point of 32 and 64 bits, and either as the subformat of
+    /// synth tools may write other sample formats. The formats read are integer PCM of 8, 16, 24
+    /// and 32 bits, IEEE floating point of 32 and 64 bits, and either as the subformat of
     /// \c WAVE_FORMAT_EXTENSIBLE, as the Microsoft documentation of the WAVE format defines them
     /// (https://learn.microsoft.com/en-us/windows/win32/multimedia/waveformatex and
     /// https://learn.microsoft.com/en-us/windows/win32/api/mmreg/ns-mmreg-waveformatextensible).
@@ -41,7 +41,7 @@ namespace hello::kit {
         /// Reads the WAVE file at \a path.
         ///
         /// A data chunk that claims more bytes than the file holds is read up to the end of the
-        /// file, with a warning, since an engine that stopped early leaves such a file and the
+        /// file, with a warning, since a synth tool that stopped early leaves such a file and the
         /// audio before that point is intact.
         ///
         /// \return the audio, or \c std::nullopt with the reason in \a diagnostics

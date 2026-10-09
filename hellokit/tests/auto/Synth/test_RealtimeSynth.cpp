@@ -59,13 +59,14 @@ namespace {
 
     // Writes a fragment whose level identifies the note, taken from the number at the start of
     // the fragment name, instead of running a resampler.
-    class StandIn : public EngineProcess {
+    class StandIn : public SynthToolProcess {
     public:
         explicit StandIn(Record &record) : m_record(record) {
         }
 
-        EngineRun run(const fs::path &program, const QStringList &arguments,
-                      DiagnosticList &diagnostics, const std::function<bool()> &) const override {
+        SynthToolRun run(const fs::path &program, const QStringList &arguments,
+                         DiagnosticList &diagnostics,
+                         const std::function<bool()> &) const override {
             Q_UNUSED(program);
             Q_UNUSED(diagnostics);
             while (m_record.held.load()) {
@@ -86,7 +87,7 @@ namespace {
             if (file.open(QIODevice::WriteOnly)) {
                 file.write(fragment(qint16(1000 * (note + 1))));
             }
-            EngineRun run;
+            SynthToolRun run;
             run.started = true;
             return run;
         }
@@ -167,7 +168,7 @@ private:
 
     std::unique_ptr<RealtimeSynth> synth(int threads = 1) {
         return std::make_unique<RealtimeSynth>(
-            SynthEngines{"resampler.exe", "wavtool.exe"}, threads,
+            SynthTools{"resampler.exe", "wavtool.exe"}, threads,
             [this] { return std::make_unique<StandIn>(m_record); });
     }
 

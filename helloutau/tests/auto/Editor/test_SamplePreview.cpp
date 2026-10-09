@@ -47,12 +47,12 @@ namespace {
     }
 
     // A resampler that copies its input to its output, or writes nothing
-    class FakeResampler : public kit::EngineProcess {
+    class FakeResampler : public kit::SynthToolProcess {
     public:
         bool writes = true;
 
-        kit::EngineRun run(const std::filesystem::path &program, const QStringList &arguments,
-                           kit::DiagnosticList &, const std::function<bool()> &) const override {
+        kit::SynthToolRun run(const std::filesystem::path &program, const QStringList &arguments,
+                              kit::DiagnosticList &, const std::function<bool()> &) const override {
             {
                 const std::lock_guard lock(m_mutex);
                 m_program = program;
@@ -64,7 +64,7 @@ namespace {
                               fs::path(arguments.at(1).toStdU16String()),
                               fs::copy_options::overwrite_existing, error);
             }
-            kit::EngineRun run;
+            kit::SynthToolRun run;
             run.started = true;
             run.output = QStringLiteral("resampler output");
             return run;
@@ -133,8 +133,8 @@ private Q_SLOTS:
         QTemporaryDir dir;
         const auto sample = sampleIn(dir);
         SamplePreview preview;
-        const auto engine = std::make_shared<FakeResampler>();
-        preview.setEngineProcess(engine);
+        const auto synthTool = std::make_shared<FakeResampler>();
+        preview.setSynthToolProcess(synthTool);
         QSignalSpy failed(&preview, &SamplePreview::failed);
 
         kit::DiagnosticList diagnostics;
@@ -143,7 +143,7 @@ private Q_SLOTS:
         QTRY_VERIFY(preview.state() != SamplePreview::Synthesizing);
         QVERIFY(preview.synthesized());
         QCOMPARE(preview.synthesized()->sampleRate, 1000);
-        const auto arguments = engine->arguments();
+        const auto arguments = synthTool->arguments();
         QCOMPARE(fs::path(arguments.at(0).toStdU16String()), sample.path);
         QCOMPARE(arguments.at(2), QStringLiteral("D4"));
         preview.stop();
@@ -154,9 +154,9 @@ private Q_SLOTS:
         QTemporaryDir dir;
         const auto sample = sampleIn(dir);
         SamplePreview preview;
-        const auto engine = std::make_shared<FakeResampler>();
-        engine->writes = false;
-        preview.setEngineProcess(engine);
+        const auto synthTool = std::make_shared<FakeResampler>();
+        synthTool->writes = false;
+        preview.setSynthToolProcess(synthTool);
         QSignalSpy failed(&preview, &SamplePreview::failed);
 
         kit::DiagnosticList diagnostics;

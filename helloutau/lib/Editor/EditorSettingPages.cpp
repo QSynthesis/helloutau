@@ -145,7 +145,8 @@ namespace hello::daw {
     UtauSettingPage::UtauSettingPage(AppSettings &settings, QObject *parent)
         : SettingPage(QLatin1String(EditorSettingPageIds::utau), parent), m_settings(settings) {
         setTitle(QStringLiteral("UTAU"));
-        setDescription(tr("Where UTAU is, and how a project finds its voice bank and tools."));
+        setDescription(
+            tr("Where UTAU is, and how a project finds its voice bank and synth tools."));
         setKeywords({QStringLiteral("UTAU"), QStringLiteral("voice"), QStringLiteral("tools")});
     }
 
@@ -157,9 +158,10 @@ namespace hello::daw {
         m_utauDirectory =
             addPathRow(utauForm, widget, tr("&UTAU folder:"),
                        QString::fromStdU16String(m_settings.utauDirectory().u16string()), true);
-        utauForm->addRow(note(tr("The folder that contains utau.exe. A tool that a project names "
-                                 "by a relative path is resolved against it, and its voice and "
-                                 "plugins folders are used as well.")));
+        utauForm->addRow(
+            note(tr("The folder that contains utau.exe. A synth tool that a project "
+                    "names by a relative path is resolved against it, and its voice and "
+                    "plugins folders are used as well.")));
         m_relativeVoiceDirInUtau = new QCheckBox(
             tr("Resolve a &relative voice bank path against the UTAU folder"), widget);
         m_relativeVoiceDirInUtau->setChecked(m_settings.isRelativeVoiceDirInUtau());
@@ -316,7 +318,8 @@ namespace hello::daw {
         : SettingPage(QLatin1String(EditorSettingPageIds::rendering), parent),
           m_settings(settings) {
         setTitle(tr("Audio Rendering"));
-        setDescription(tr("The engines used for audio rendering, and how playback renders audio."));
+        setDescription(
+            tr("The synth tools used for audio rendering, and how playback renders audio."));
         setKeywords({QStringLiteral("Audio Rendering"), QStringLiteral("resampler"),
                      QStringLiteral("wavtool"), QStringLiteral("playback")});
     }
@@ -324,15 +327,16 @@ namespace hello::daw {
     QWidget *RenderingSettingPage::createWidget() {
         auto widget = new QWidget();
         auto layout = new QVBoxLayout(widget);
-        auto enginesGroup = new QGroupBox(tr("Engines"), widget);
-        auto enginesForm = new QFormLayout(enginesGroup);
-        m_wavtool = addPathRow(enginesForm, widget, tr("&Wavtool:"), m_settings.wavtool(), false);
+        auto synthToolsGroup = new QGroupBox(tr("Synth tools"), widget);
+        auto synthToolsForm = new QFormLayout(synthToolsGroup);
+        m_wavtool =
+            addPathRow(synthToolsForm, widget, tr("&Wavtool:"), m_settings.wavtool(), false);
         m_resampler =
-            addPathRow(enginesForm, widget, tr("&Resampler:"), m_settings.resampler(), false);
-        enginesForm->addRow(
-            note(tr("Project Properties resets the engines of a project to these. "
+            addPathRow(synthToolsForm, widget, tr("&Resampler:"), m_settings.resampler(), false);
+        synthToolsForm->addRow(
+            note(tr("Project Properties resets the synth tools of a project to these. "
                     "The voice bank editor previews entries with this resampler.")));
-        layout->addWidget(enginesGroup);
+        layout->addWidget(synthToolsGroup);
 
         auto playbackGroup = new QGroupBox(tr("Playback"), widget);
         auto playbackForm = new QFormLayout(playbackGroup);

@@ -24,7 +24,7 @@
 #include <stdutau/utaconst.h>
 
 #include "AppSettings.h"
-#include "EngineTrust.h"
+#include "SynthToolTrust.h"
 
 namespace hello::daw {
 
@@ -61,23 +61,24 @@ namespace hello::daw {
             return action;
         }
 
-        // Returns the engine value relative to utau if the engine is inside utau, or else as an
-        // absolute path. A value that does not name an existing engine is returned unchanged.
-        QString normalizedEngine(const QString &value, const fs::path &utau) {
-            if (utau.empty() || !EngineTrust::exists(value, utau)) {
+        // Returns the synth tool value relative to utau if the synth tool is inside utau, or else
+        // as an absolute path. A value that does not name an existing synth tool is returned
+        // unchanged.
+        QString normalizedSynthTool(const QString &value, const fs::path &utau) {
+            if (utau.empty() || !SynthToolTrust::exists(value, utau)) {
                 return value;
             }
             std::error_code rootError;
-            std::error_code engineError;
+            std::error_code synthToolError;
             const auto root = fs::weakly_canonical(utau, rootError);
-            const auto engine =
-                fs::weakly_canonical(EngineTrust::resolved(value, utau), engineError);
-            if (rootError || engineError) {
+            const auto synthTool =
+                fs::weakly_canonical(SynthToolTrust::resolved(value, utau), synthToolError);
+            if (rootError || synthToolError) {
                 return value;
             }
-            const auto relative = engine.lexically_relative(root);
+            const auto relative = synthTool.lexically_relative(root);
             const bool inside = !relative.empty() && *relative.begin() != u"..";
-            return textOf(inside ? relative : engine);
+            return textOf(inside ? relative : synthTool);
         }
 
         // Returns the voiceDir value as UTAU writes it on save. An absolute path inside a voice
@@ -149,11 +150,12 @@ namespace hello::daw {
         m_mode2 = new QCheckBox(tr("Mode&2 pitch"));
         m_mode2->setChecked(values.mode2);
 
-        // A relative engine path is relative to the UTAU directory, which is therefore where the
-        // file dialog starts.
-        const auto engineBrowser = [this](QLineEdit *edit, const QString &title) {
+        // A relative synth tool path is relative to the UTAU directory, which is therefore where
+        // the file dialog starts.
+        const auto synthToolBrowser = [this](QLineEdit *edit, const QString &title) {
             return [this, edit, title] {
-                const auto start = EngineTrust::resolved(edit->text(), m_settings.utauDirectory());
+                const auto start =
+                    SynthToolTrust::resolved(edit->text(), m_settings.utauDirectory());
                 const auto chosen = QFileDialog::getOpenFileName(this, title, textOf(start));
                 if (!chosen.isEmpty()) {
                     edit->setText(QDir::toNativeSeparators(chosen));
@@ -162,13 +164,13 @@ namespace hello::daw {
         };
 
         auto reset = new QPushButton(tr("Reset to settings defaults"));
-        reset->setObjectName(QStringLiteral("resetProjectEngines"));
+        reset->setObjectName(QStringLiteral("resetProjectSynthTools"));
         connect(reset, &QPushButton::clicked, this, [this] {
             m_wavtool->setText(QDir::toNativeSeparators(m_settings.wavtool()));
             m_resampler->setText(QDir::toNativeSeparators(m_settings.resampler()));
         });
-        auto trust = new QPushButton(tr("Trust project engines"));
-        connect(trust, &QPushButton::clicked, this, &ProjectPropertiesDialog::trustEngines);
+        auto trust = new QPushButton(tr("Trust project synth tools"));
+        connect(trust, &QPushButton::clicked, this, &ProjectPropertiesDialog::trustSynthTools);
 
         m_wavtoolTrust = new QLabel();
         m_wavtoolTrust->setWordWrap(true);
@@ -208,11 +210,12 @@ namespace hello::daw {
                              m_outputFile->setText(QDir::toNativeSeparators(chosen));
                          }
                      }));
-        form->addRow(tr("Wav&tool (Tool1):"),
-                     withBrowse(m_wavtool, this, engineBrowser(m_wavtool, tr("Choose Wavtool"))));
+        form->addRow(
+            tr("Wav&tool (Tool1):"),
+            withBrowse(m_wavtool, this, synthToolBrowser(m_wavtool, tr("Choose Wavtool"))));
         form->addRow(
             tr("&Resampler (Tool2):"),
-            withBrowse(m_resampler, this, engineBrowser(m_resampler, tr("Choose Resampler"))));
+            withBrowse(m_resampler, this, synthToolBrowser(m_resampler, tr("Choose Resampler"))));
         form->addRow(reset);
         form->addRow(trust);
         form->addRow(m_wavtoolTrust);
@@ -291,8 +294,8 @@ namespace hello::daw {
 
     bool ProjectPropertiesDialog::checkPaths() {
         const auto utau = m_settings.utauDirectory();
-        const bool wavtool = EngineTrust::exists(m_wavtool->text(), utau);
-        const bool resampler = EngineTrust::exists(m_resampler->text(), utau);
+        const bool wavtool = SynthToolTrust::exists(m_wavtool->text(), utau);
+        const bool resampler = SynthToolTrust::exists(m_resampler->text(), utau);
         bool voice = true;
         if (!m_project.tracks.isEmpty()) {
             std::error_code error;
@@ -306,7 +309,7 @@ namespace hello::daw {
     }
 
     void ProjectPropertiesDialog::updateTrust() {
-        // One complete sentence for each engine and state, so that a translation is not
+        // One complete sentence for each synth tool and state, so that a translation is not
         // assembled from fragments
         struct Texts {
             QString same;
@@ -318,11 +321,11 @@ namespace hello::daw {
         bool untrusted = false;
         const auto describe = [&](QLabel *label, const QString &value, const QString &own,
                                   const QString &other, const Texts &texts) {
-            if (EngineTrust::samePath(value, own, utau)) {
+            if (SynthToolTrust::samePath(value, own, utau)) {
                 label->setText(colored(texts.same, m_trustedColor, true));
-            } else if (EngineTrust::samePath(value, other, utau)) {
+            } else if (SynthToolTrust::samePath(value, other, utau)) {
                 label->setText(colored(texts.swapped, m_trustedColor, true));
-            } else if (EngineTrust::isTrusted(m_settings, value, utau)) {
+            } else if (SynthToolTrust::isTrusted(m_settings, value, utau)) {
                 label->setText(colored(texts.trusted, m_trustedColor, true));
             } else {
                 label->setText(colored(texts.untrusted, m_untrustedColor, true));
@@ -339,8 +342,8 @@ namespace hello::daw {
              tr("The project uses the wavtool from the settings as its resampler."),
              tr("The project resampler is trusted."), tr("The project resampler is untrusted.")});
         m_untrustedText->setText(
-            colored(tr("Warning: project engines are untrusted. Playback does not render until "
-                       "the required project engines are trusted."),
+            colored(tr("Warning: project synth tools are untrusted. Playback does not render until "
+                       "the required project synth tools are trusted."),
                     m_untrustedColor, false));
         m_untrustedNote->setVisible(untrusted);
     }
@@ -363,16 +366,16 @@ namespace hello::daw {
         updateTrust();
     }
 
-    void ProjectPropertiesDialog::trustEngines() {
-        // An engine that does not exist is marked invalid and is not asked about.
+    void ProjectPropertiesDialog::trustSynthTools() {
+        // A synth tool that does not exist is marked invalid and is not asked about.
         const auto utau = m_settings.utauDirectory();
         QStringList values;
         for (const auto edit : {m_wavtool, m_resampler}) {
-            if (EngineTrust::exists(edit->text(), utau)) {
+            if (SynthToolTrust::exists(edit->text(), utau)) {
                 values.push_back(edit->text());
             }
         }
-        EngineTrust::ask(this, m_settings, values, utau);
+        SynthToolTrust::ask(this, m_settings, values, utau);
         updateTrust();
     }
 
@@ -428,9 +431,9 @@ namespace hello::daw {
             changes.voiceDir =
                 normalized(normalizedVoiceDir(voice, m_settings.voiceLocations()), voiceBefore);
         }
-        changes.wavtool = normalized(normalizedEngine(m_wavtool->text(), utau), values.wavtool);
+        changes.wavtool = normalized(normalizedSynthTool(m_wavtool->text(), utau), values.wavtool);
         changes.resampler =
-            normalized(normalizedEngine(m_resampler->text(), utau), values.resampler);
+            normalized(normalizedSynthTool(m_resampler->text(), utau), values.resampler);
         return changes;
     }
 

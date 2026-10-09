@@ -105,7 +105,7 @@ macOS 的 bundle 中为 `HelloUtau.app/Contents/MacOS`（程序）与 `HelloUtau
 - 元数据文件名：沿用该库默认的 `plugin.json`，以 `PluginSystem(iid, PluginSystem::Bundle)` 直接构造（作者 2026-09-30 决定）。它与 UTAU 插件文件夹的 `plugin.json` 同名，但两种目录不会互相搜索，库中的 IID 也能区分原生插件，不会误读。
 - 兼容性：C++ 插件须与宿主以同一编译器、同一 Qt 与 hellokit 版本构建。元数据加一个宿主字段（如 `helloutau` 的版本范围），由载入判定检查；判定也用于平台限制（如只在 Windows 可用的 vs4ufrq 格式插件）。
 - 设置：应用数据目录中的两个 JSON 文件（作者 2026-09-30 定；Windows 上为 `%APPDATA%\OpenVPI\HelloUtau\`，组织名 `OpenVPI`），应用与插件分开，一方写坏不牵连另一方，插件一份也与将来随安装提供的全局一份同格式：
-  - `settings.json`：应用的设置（`AppSettings`），分组存放 `engines`、`playback`、`files`、`commandPalette`，也可经 `value()` / `setValue()` 以 `a/b/c` 形式的键读写任意一层。Core 插件把 `AppLoader` 的这一份交给 `Editor`。
+  - `settings.json`：应用的设置（`AppSettings`），分组存放 `synth tools`、`playback`、`files`、`commandPalette`，也可经 `value()` / `setValue()` 以 `a/b/c` 形式的键读写任意一层。Core 插件把 `AppLoader` 的这一份交给 `Editor`。
   - `plugins.json`：严格为 stdcorelib.plugin `PluginSettings` 的格式：用户启用或停用的插件 `enabledPlugins` / `disabledPlugins`，以及各插件自己的值 `userData/<插件 ID>`。`AppLoader` 读写它，载入插件前把它交给 `PluginSystem` 的用户一级；插件经 `AppLoader::pluginSettings()` 读取，经 `changePluginSettings()` 修改（AppLoader 随后安排写盘），自己的值以 `kit::JsonInterop::valueAt()` / `insertAt()` 按以自己 ID 开头的 `ID/a/b` 路径读写（作者 2026-10-08 决定直接使用 stdcorelib.plugin 的 `PluginSettings` 与 `stdc::json`，不再转换为 `QJsonValue`）。
   - `AppLoader` 的 `--settings <目录>` 另指定两者所在的目录，测试用它。内部存储用 stdcorelib 的 JSON（值可就地修改），按路径读写及与 Qt JSON 的转换由 hellokit 的 `JsonInterop` 完成；`AppSettings` 的接口用 `QJsonValue`。修改后等事件循环运行时重写整个文件（`SettingsFile`，同一轮循环的修改合为一次写），`AppSettings::sync()`、`AppLoader::syncSettings()` 与析构时立即写出未写的修改；多开时后写的覆盖先写的，以后再做独占。
   - 随安装提供的全局一份尚未实现。

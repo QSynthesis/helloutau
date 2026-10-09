@@ -6,7 +6,7 @@
 
 #include <hellokit/Support/Diagnostic.h>
 
-#include <hellokit/Synth/EngineProcess.h>
+#include <hellokit/Synth/SynthToolProcess.h>
 #include <hellokit/Synth/HelloKitSynthGlobal.h>
 #include <hellokit/Synth/SynthPlan.h>
 
@@ -14,11 +14,11 @@ namespace hello::kit {
 
     /// The rendering programs.
     ///
-    /// \warning Always the engines configured by the host, never those specified by the
+    /// \warning Always the synth tools configured by the host, never those specified by the
     ///          project. \c Tool1 and \c Tool2 are paths chosen by a file, and executing them
     ///          without confirmation lets the file choose which program runs.
     /// \sa CLAUDE.md
-    struct SynthEngines {
+    struct SynthTools {
         std::filesystem::path resampler;
         std::filesystem::path wavtool;
     };
@@ -71,7 +71,7 @@ namespace hello::kit {
     ///
     /// The three implementations are not implementation details of one another. The choice
     /// among them is a compatibility setting made by the user, and they differ in how and in
-    /// what environment the engines are started, not in their output.
+    /// what environment the synth tools are started, not in their output.
     ///
     /// - \c ClassicSynthRunner writes the UTAU \c temp.bat and runs it in a visible console.
     ///   Some resamplers require the script to exist and read its contents.
@@ -86,7 +86,7 @@ namespace hello::kit {
         SynthRunner();
         virtual ~SynthRunner();
 
-        /// The time limit of one engine call, in milliseconds.
+        /// The time limit of one synth tool call, in milliseconds.
         int timeout = 30000;
 
         /// Whether a note whose fragment already exists in the cache directory is skipped.
@@ -96,28 +96,28 @@ namespace hello::kit {
         /// every input that determines its content: a changed note has a different name, so no
         /// stale fragment can be reused.
         ///
-        /// Disable to render everything again, for example after the engine has changed or is
+        /// Disable to render everything again, for example after the synth tool has changed or is
         /// suspected of faulty output.
         ///
         /// \sa SynthPlan
         bool reuseCache = true;
 
-        /// Whether a note that the engines fail to render stops the entire track.
+        /// Whether a note that the synth tools fail to render stops the entire track.
         ///
         /// Disabled by default, because a voice bank with one defective sample should still
         /// allow the remainder to be heard, and the diagnostics identify the lost notes.
         bool stopOnFirstFailure = false;
 
         /// \param observer may be null, as passed by the command-line tools and the tests
-        virtual SynthOutcome render(const SynthPlan &plan, const SynthEngines &engines,
+        virtual SynthOutcome render(const SynthPlan &plan, const SynthTools &synthTools,
                                     SynthObserver *observer, DiagnosticList &diagnostics) const = 0;
 
-        void setOutputLog(std::shared_ptr<EngineOutputLog> outputLog) const;
+        void setOutputLog(std::shared_ptr<SynthToolOutputLog> outputLog) const;
 
     protected:
-        /// Creates the object that starts one engine.
+        /// Creates the object that starts one synth tool.
         ///
-        /// The test seam. A test substitutes its own engine by overriding this function, which
+        /// The test seam. A test substitutes its own synth tool by overriding this function, which
         /// is the only way to cover the behavior of a runner after the arguments are passed:
         /// joining the two fragments the wavtool writes, clearing the remains of a previous
         /// render, counting a note whose fragment never appeared, and stopping on failure.
@@ -125,7 +125,7 @@ namespace hello::kit {
         /// \note One instance is shared by all threads of a runner, so the returned object must
         ///       be safe to call concurrently. The default implementation is, because it keeps
         ///       no state between calls.
-        virtual std::unique_ptr<EngineProcess> makeEngineProcess() const;
+        virtual std::unique_ptr<SynthToolProcess> makeSynthToolProcess() const;
 
         /// Removes the fragments in the cache directory that these notes rendered before their
         /// inputs changed.
@@ -144,7 +144,7 @@ namespace hello::kit {
         int forgetSuperseded(const SynthPlan &plan, DiagnosticList &diagnostics) const;
 
     private:
-        mutable std::shared_ptr<EngineOutputLog> m_outputLog;
+        mutable std::shared_ptr<SynthToolOutputLog> m_outputLog;
     };
 
 }

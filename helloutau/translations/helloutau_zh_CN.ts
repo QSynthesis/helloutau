@@ -784,27 +784,6 @@
     </message>
 </context>
 <context>
-    <name>hello::daw::EngineTrust</name>
-    <message>
-        <source>Trust Project Engines</source>
-        <translation>信任工程引擎</translation>
-    </message>
-    <message numerus="yes">
-        <source>The project specifies %n rendering tool(s) that are not trusted:
-
-%1
-
-Trust and use them for rendering?</source>
-        <translation>
-            <numerusform>工程指定了 %n 个未受信任的渲染工具：
-
-%1
-
-是否信任并用于渲染？</numerusform>
-        </translation>
-    </message>
-</context>
-<context>
     <name>hello::daw::ExportUstDialog</name>
     <message>
         <source>Export UST</source>
@@ -1570,15 +1549,15 @@ Trust and use them for rendering?</source>
     </message>
     <message>
         <source>Reset to settings defaults</source>
-        <translation>重置为设置中的默认工具</translation>
+        <translation>重置为设置中的默认合成工具</translation>
     </message>
     <message>
-        <source>Trust project engines</source>
-        <translation>信任工程中的工具</translation>
+        <source>Trust project synth tools</source>
+        <translation>信任工程中的合成工具</translation>
     </message>
     <message>
-        <source>Warning: project engines are untrusted. Playback does not render until the required project engines are trusted.</source>
-        <translation>警告：工程中的工具尚未信任。信任所需的工程工具后才能进行渲染。</translation>
+        <source>Warning: project synth tools are untrusted. Playback does not render until the required project synth tools are trusted.</source>
+        <translation>警告：工程中的合成工具尚未信任。信任所需的工程合成工具后才能进行渲染。</translation>
     </message>
     <message>
         <source>The project uses the wavtool from the settings.</source>
@@ -1976,16 +1955,16 @@ Trust and use them for rendering?</source>
         <translation>音频渲染</translation>
     </message>
     <message>
-        <source>The engines used for audio rendering, and how playback renders audio.</source>
-        <translation>用于音频渲染的引擎，以及播放时的音频渲染方式。</translation>
+        <source>The synth tools used for audio rendering, and how playback renders audio.</source>
+        <translation>用于音频渲染的合成工具，以及播放时的音频渲染方式。</translation>
     </message>
     <message>
-        <source>Engines</source>
-        <translation>引擎</translation>
+        <source>Synth tools</source>
+        <translation>合成工具</translation>
     </message>
     <message>
-        <source>Project Properties resets the engines of a project to these. The voice bank editor previews entries with this resampler.</source>
-        <translation>工程属性将工程的引擎重置为此处的引擎。音源编辑器以此处的重采样器试合成条目。</translation>
+        <source>Project Properties resets the synth tools of a project to these. The voice bank editor previews entries with this resampler.</source>
+        <translation>工程属性将工程的合成工具重置为此处的合成工具。音源编辑器以此处的重采样器试合成条目。</translation>
     </message>
     <message>
         <source>Playback</source>
@@ -2168,6 +2147,27 @@ Trust and use them for rendering?</source>
     <message>
         <source>No matching settings</source>
         <translation>没有匹配的设置</translation>
+    </message>
+</context>
+<context>
+    <name>hello::daw::SynthToolTrust</name>
+    <message>
+        <source>Trust Project Synth Tools</source>
+        <translation>信任工程中的合成工具</translation>
+    </message>
+    <message numerus="yes">
+        <source>The project specifies %n rendering tool(s) that are not trusted:
+
+%1
+
+Trust and use them for rendering?</source>
+        <translation>
+            <numerusform>工程指定了 %n 个未受信任的渲染工具：
+
+%1
+
+是否信任并用于渲染？</numerusform>
+        </translation>
     </message>
 </context>
 <context>
@@ -2379,8 +2379,8 @@ Lyrics:
 <context>
     <name>hello::daw::UtauSettingPage</name>
     <message>
-        <source>Where UTAU is, and how a project finds its voice bank and tools.</source>
-        <translation>UTAU 的位置，以及工程如何找到其音源与工具。</translation>
+        <source>Where UTAU is, and how a project finds its voice bank and synth tools.</source>
+        <translation>UTAU 的位置，以及工程如何找到其音源与合成工具。</translation>
     </message>
     <message>
         <source>Folder</source>
@@ -2391,8 +2391,8 @@ Lyrics:
         <translation>UTAU 文件夹(&amp;U)：</translation>
     </message>
     <message>
-        <source>The folder that contains utau.exe. A tool that a project names by a relative path is resolved against it, and its voice and plugins folders are used as well.</source>
-        <translation>utau.exe 所在的文件夹。工程以相对路径指定的工具据此解析，其中的 voice 与 plugins 文件夹也会被使用。</translation>
+        <source>The folder that contains utau.exe. A synth tool that a project names by a relative path is resolved against it, and its voice and plugins folders are used as well.</source>
+        <translation>utau.exe 所在的文件夹。工程以相对路径指定的合成工具据此解析，其中的 voice 与 plugins 文件夹也会被使用。</translation>
     </message>
     <message>
         <source>Resolve a &amp;relative voice bank path against the UTAU folder</source>
@@ -2975,25 +2975,6 @@ Write them again without these chunks? The audio stays the same. The files are w
     <message>
         <source>dio (world4utau)</source>
         <translation>dio (world4utau)</translation>
-    </message>
-</context>
-<context>
-    <name>hello::kit::EngineProcess</name>
-    <message>
-        <source>The engine &quot;%1&quot; could not be started.</source>
-        <translation>无法启动引擎「%1」。</translation>
-    </message>
-    <message>
-        <source>The engine &quot;%1&quot; did not finish within %2 seconds and was stopped.</source>
-        <translation>引擎「%1」未在 %2 秒内完成，已被终止。</translation>
-    </message>
-    <message>
-        <source>The rendering script &quot;%1&quot; could not be started.</source>
-        <translation>无法启动渲染脚本「%1」。</translation>
-    </message>
-    <message>
-        <source>The rendering script did not finish within %1 seconds and was stopped.</source>
-        <translation>渲染脚本未在 %1 秒内完成，已被终止。</translation>
     </message>
 </context>
 <context>
@@ -3608,6 +3589,25 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
 </context>
 <context>
+    <name>hello::kit::SynthToolProcess</name>
+    <message>
+        <source>The synth tool &quot;%1&quot; could not be started.</source>
+        <translation>无法启动合成工具「%1」。</translation>
+    </message>
+    <message>
+        <source>The synth tool &quot;%1&quot; did not finish within %2 seconds and was stopped.</source>
+        <translation>合成工具「%1」未在 %2 秒内完成，已被终止。</translation>
+    </message>
+    <message>
+        <source>The rendering script &quot;%1&quot; could not be started.</source>
+        <translation>无法启动渲染脚本「%1」。</translation>
+    </message>
+    <message>
+        <source>The rendering script did not finish within %1 seconds and was stopped.</source>
+        <translation>渲染脚本未在 %1 秒内完成，已被终止。</translation>
+    </message>
+</context>
+<context>
     <name>hello::kit::ThreadedSynthRunner</name>
     <message>
         <source>There is nothing to render.</source>
@@ -3661,8 +3661,8 @@ Write them again without these chunks? The audio stays the same. The files are w
         <translation>UST 只能包含一条音轨，但此工程包含 %1 条。</translation>
     </message>
     <message>
-        <source>This UST specifies no rendering engine, so UTAU cannot render it until an engine is configured.</source>
-        <translation>此 UST 未指定渲染引擎，在配置引擎之前 UTAU 无法渲染该文件。</translation>
+        <source>This UST specifies no synth tool, so UTAU cannot render it until a synth tool is configured.</source>
+        <translation>此 UST 未指定合成工具，在配置合成工具之前 UTAU 无法渲染该文件。</translation>
     </message>
 </context>
 <context>

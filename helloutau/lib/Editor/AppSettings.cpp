@@ -20,10 +20,10 @@ namespace hello::daw {
 
     namespace {
 
-        constexpr char KeyUtauDirectory[] = "engines/utauDirectory";
+        constexpr char KeyUtauDirectory[] = "utau/directory";
         constexpr char KeyRelativeVoiceDirInUtau[] = "voiceBanks/relativeToUtau";
-        constexpr char KeyResampler[] = "engines/resampler";
-        constexpr char KeyWavtool[] = "engines/wavtool";
+        constexpr char KeyResampler[] = "synthTools/resampler";
+        constexpr char KeyWavtool[] = "synthTools/wavtool";
         constexpr char KeyRenderLogAccumulated[] = "renderLog/accumulated";
         constexpr char KeyRenderLogLimit[] = "renderLog/limit";
         constexpr char KeyAudioOutputDevice[] = "audio/outputDevice";

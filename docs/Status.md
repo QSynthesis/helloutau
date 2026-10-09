@@ -9,7 +9,7 @@
 | `HelloKitSupport` | `Diagnostic`、`TextCodec`（编码名解析、转义与还原）、`FileSystemWatcher`（磁盘变化提示，由 `hello-fswatcher` 进程实现）、`TextSearch`（查找栏的匹配与替换规则） |
 | `HelloKitDocument` | `PayloadCodec`、`Project` / `Track` / `Note` 模型、`.usth` 读写、`UstDocument` |
 | `HelloKitVoiceBank` | `VoiceBankConfig`、`VoiceBankSource`（原始扫描）、`VoiceBank`（解码后的内容与查询，纯值）、`VoiceBankFileSystemState`（磁盘状态：写回、与磁盘核对、重新读取）、`VoiceBankCheckScheduler`、`WaveMetadata`（wav 中 `fmt ` 与 `data` 以外的块的查找与去除）、频率表的只读格式层 `FrequencyFormat` / `FrequencyFormatRegistry` / `FrequencyFormats`（内置 frq、dio、mrq 由 `BuiltinFrequencyFormats` 登记到编辑器的注册表，FrequencyEditor 插件持有） |
-| `HelloKitSynth` | `EngineProcess`、`SynthPlan`（仅计算，含轨道文件在轨道中的起始时刻）、`WaveAudio`（读取 wav）、`Spectrogram`（显示用的频谱）、`WavtoolMixer`（进程内拼接）、`RealtimeSynth`（实时试听的调度与混合）、`PitchCurve`（音符的滑音与颤音曲线，与交给重采样器的曲线逐值相同）、`SampleTiming`（修正后的先行发声、重叠与 STP，与合成相同）、`SynthRunner` 及其实现 `ClassicSynthRunner`、`ThreadedSynthRunner` |
+| `HelloKitSynth` | `SynthToolProcess`、`SynthPlan`（仅计算，含轨道文件在轨道中的起始时刻）、`WaveAudio`（读取 wav）、`Spectrogram`（显示用的频谱）、`WavtoolMixer`（进程内拼接）、`RealtimeSynth`（实时试听的调度与混合）、`PitchCurve`（音符的滑音与颤音曲线，与交给重采样器的曲线逐值相同）、`SampleTiming`（修正后的先行发声、重叠与 STP，与合成相同）、`SynthRunner` 及其实现 `ClassicSynthRunner`、`ThreadedSynthRunner` |
 | `HelloKitInterchange` | 接口、驱动表 `InterchangeDrivers` 与其注册表 `InterchangeReaderRegistry` / `InterchangeWriterRegistry`、`Formats/MidiConvert`（导入与导出，由 `BuiltinInterchangeDrivers` 登记，Interchange 插件持有） |
 | `HelloKitEditBase` | 编辑层的通用部分，命名空间 `hello::kit::edit`：`EditSession`（事务、撤销、变更通知、提交时校验）、`NodeRef`、`Change`、槽位、命令语法，以及扩展接口（字段表、按路径的命令、变更日志） |
 | `HelloKitEdit` | 编辑层的文档部分。工程：`ProjectDocument`（打开、导入、保存、是否已修改）、`TrackTimeline`（音符的位置）、`ProjectSession`、句柄 `ProjectRefs`、领域函数 `ProjectEdits`、命令 `ProjectCommands`。音源：`VoiceBankSession`（含保存与从磁盘重新读取）、句柄 `VoiceBankRefs`、领域函数 `VoiceBankEdits`、命令 `VoiceBankCommands` |
@@ -34,13 +34,13 @@
 
 **音源编辑界面打开期间，磁盘上的任何变化都会被检测到。** 监视由独立进程 `hello-fswatcher` 执行。在 Windows 上，它按 JetBrains 的做法只持有**驱动器根目录**的一个句柄，因此音源中的任何目录（包括音源根目录）都可以删除或重命名；进程崩溃后会重启，并在重启后进行全量核对；Debug 构建中也不会弹出阻塞的对话框。监视结果仅作为提示：`VoiceBankFileSystemState::checkDisk()` 使用目录指纹进行核对（只列目录、不读文件，对修改时间过于接近取指纹时刻的文件比较内容），**只检测、不修改**，检测到的变化在 `reloadFromDisk()` 之前每次都会重复报告。`VoiceBankCheckScheduler` 整合了监视提示、定时全量核对、监视失效后的轮询和手动触发；`reloadAllFromDisk()` 忽略指纹，重新读取全部内容。三个平台均有后端实现：Windows 使用 `ReadDirectoryChangesW`，macOS 使用 FSEvents（逐文件事件，不持有任何句柄），Linux 使用 inotify（每个目录单独注册；新目录先注册监视再报告整棵子树；根目录的每一级上级目录也受监视，以便在上级目录重命名时检测到根目录消失）。`hello-fswatcher` 另有 Python 编写的协议测试 `test_fswatcher`（通过 ctest 运行，需要 `Python3`；在 Windows 上用 `Python3_EXECUTABLE` 避开应用商店的占位 `python`）：两个音源并列，覆盖 15 种操作，已在三个平台上运行。在 Linux（Ubuntu 22.04、GCC 11.4、Qt 6.11.2）与 macOS（macOS 26.6.2、arm64、Apple Clang、Qt 6.10.1）上均已完成完整构建，21 项测试全部通过。GB18030 不是 ANSI 代码页，winacp 不提供，在 Windows 上由代码页函数转换，在其他系统上只有 Qt 带 ICU 时可用。macOS 版 Qt 不带 ICU，因此 GB18030 在 macOS 上不可用，`TextCodec` 将其报告为无效编码。
 
-`HelloKitSynth` 已能输出音频，分为三层。`EngineProcess` 启动引擎，**参数以向量传递，不提供接受完整命令行的重载**，这是 CVE-2024-28886 相关安全底线在代码中的体现。`SynthPlan` 只计算不执行，将 `VoiceBank::find` 与 `utau::Synth::calc` 衔接，为每个音符生成两条已解析的参数向量。`SynthRunner` 执行计划，现有两种实现：`ClassicSynthRunner` 写出并执行 UTAU 式的渲染脚本，`ThreadedSynthRunner` 以多线程执行重采样器调用。在这一层中，「原始字节」即 UTF-8：`EngineProcess` 接收 UTF-8，工程本身已是文本，整个过程不涉及转码。
+`HelloKitSynth` 已能输出音频，分为三层。`SynthToolProcess` 启动合成工具，**参数以向量传递，不提供接受完整命令行的重载**，这是 CVE-2024-28886 相关安全底线在代码中的体现。`SynthPlan` 只计算不执行，将 `VoiceBank::find` 与 `utau::Synth::calc` 衔接，为每个音符生成两条已解析的参数向量。`SynthRunner` 执行计划，现有两种实现：`ClassicSynthRunner` 写出并执行 UTAU 式的渲染脚本，`ThreadedSynthRunner` 以多线程执行重采样器调用。在这一层中，「原始字节」即 UTF-8：`SynthToolProcess` 接收 UTF-8，工程本身已是文本，整个过程不涉及转码。
 
 **`wavtool.exe` 不直接写出 wav 文件。** 它向 `<out>.whd`（44 字节文件头）和 `<out>.dat`（PCM 数据）追加内容，二者拼接后才是 wav 文件；官方 UTAU 批处理文件末尾的 `copy /B` 即执行此拼接。渲染开始前必须清除这两个残留文件，否则第二次渲染的输出会追加在第一次之后。
 
-运行器的测试通过 `SynthRunner::makeEngineProcess()` 这一测试接缝注入替身引擎，覆盖参数交付之后的行为，见 [`test_ThreadedSynthRunner.cpp`](../hellokit/tests/auto/Synth/test_ThreadedSynthRunner.cpp) 的文件头注释。
+运行器的测试通过 `SynthRunner::makeSynthToolProcess()` 这一测试接缝注入替身合成工具，覆盖参数交付之后的行为，见 [`test_ThreadedSynthRunner.cpp`](../hellokit/tests/auto/Synth/test_ThreadedSynthRunner.cpp) 的文件头注释。
 
-`hellokit/tests/manual/ustrender/` 使用真实音源和真实引擎进行渲染，`--plan` 只打印参数而不执行任何程序。引擎路径必须显式指定，工程中的 `Tool1` / `Tool2` 一律不使用。
+`hellokit/tests/manual/ustrender/` 使用真实音源和真实合成工具进行渲染，`--plan` 只打印参数而不执行任何程序。合成工具路径必须显式指定，工程中的 `Tool1` / `Tool2` 一律不使用。
 
 `hellokit/tests/manual/ustconv/` 是手动运行的命令行工具，用于集成上述各部分：`.ust` / `.usth` / `.mid` 三种格式两两互转，参数解析使用 `stdc::cli`。它不纳入 ctest，其作用是验证各部分组合后能否正常工作，这是各自的自动测试无法覆盖的。
 
@@ -73,7 +73,7 @@
 
 阶段划分、各阶段的验收标准以及从 QSynthesis 沿用的内容，均见 [`Roadmap.md`](Roadmap.md)。**第一阶段「数据层」的四项验收标准均已达成**：转义往返、MIDI 无界面导入、UST 读写语义一致（`ustconv --check`）、真实音源的目录扫描（一份 GBK 编码的中文音源，903 个 oto 条目，`character.txt` 中的作者名和 `Version:1.0` 等非条目行均未丢失）。
 
-**第二阶段「合成」的两项验收标准也已达成。** 第一项「命令行能将 `.ust` 渲染为 wav」：使用真实引擎和真实音源（GBK 编码的中文音源），输出为合法的 44.1 kHz 单声道 16 位 wav 文件。第二项「与 UTAU 渲染同一工程并比较」：所用装置为 `tests/manual/utauprobe` 和 `tests/manual/utaucompare`，在作者亲自调校的一首歌曲上，引擎参数逐项一致，音高曲线 8673 个值的中位偏差为 0，最大偏差为 15 音分。具体数据与判据见 [`Synth.md`](Synth.md)。
+**第二阶段「合成」的两项验收标准也已达成。** 第一项「命令行能将 `.ust` 渲染为 wav」：使用真实合成工具和真实音源（GBK 编码的中文音源），输出为合法的 44.1 kHz 单声道 16 位 wav 文件。第二项「与 UTAU 渲染同一工程并比较」：所用装置为 `tests/manual/utauprobe` 和 `tests/manual/utaucompare`，在作者亲自调校的一首歌曲上，合成工具参数逐项一致，音高曲线 8673 个值的中位偏差为 0，最大偏差为 15 音分。具体数据与判据见 [`Synth.md`](Synth.md)。
 
 缓存管理也已完成：已渲染的音频片段不会重复渲染；缓存文件名是其内容的摘要，因此修改过的音符会自动得到新文件名并重新渲染。见 [`Synth.md`](Synth.md) 的「缓存」一节。
 

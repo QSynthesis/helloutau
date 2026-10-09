@@ -27,7 +27,7 @@ namespace utaucompare {
     ///
     /// This script is the only external input of the comparison, so it is parsed rather than
     /// assumed: variables are expanded and lines are split into arguments as a command
-    /// processor does, and the two engine command lines are taken from the UTAU helper script
+    /// processor does, and the two synth tool command lines are taken from the UTAU helper script
     /// rather than defined here. The arguments therefore reflect exactly what UTAU wrote, in
     /// the order it wrote them, and a change in UTAU appears as a different argument rather than
     /// as a parser that silently reads the wrong field.

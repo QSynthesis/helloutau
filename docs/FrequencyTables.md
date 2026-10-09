@@ -68,7 +68,7 @@ HelloUtau 的方案：
 
 ### 生成与检查
 
-- 生成：对每个 wav 以设置中的重采样器运行 `"<wav>" nul 100 100 GN 0 50`，丢弃输出，利用重采样器缺少频率表时自动生成的行为（qfrqeditor 的 `docs/20260928-resampler-invocation.md`「生成」）。多个 wav 并行，数目默认为处理器数，可取消。参数以向量交给 `EngineProcess`，不拼接命令行。
+- 生成：对每个 wav 以设置中的重采样器运行 `"<wav>" nul 100 100 GN 0 50`，丢弃输出，利用重采样器缺少频率表时自动生成的行为（qfrqeditor 的 `docs/20260928-resampler-invocation.md`「生成」）。多个 wav 并行，数目默认为处理器数，可取消。参数以向量交给 `SynthToolProcess`，不拼接命令行。
 - 检查与修正：qfrqeditor 以进程内的实现代替 `checkfrq.dll`，与原 DLL 逐帧比较约 486 万帧结果一致，可直接移入。
 - 试听：第 4 步的试合成已以设置中的重采样器合成一个音符，编辑频率表后再试合成即可听到效果，不另做 frqeditor 的试听。
 

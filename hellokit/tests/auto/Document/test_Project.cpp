@@ -229,9 +229,9 @@ private Q_SLOTS:
         QCOMPARE(back.userData.value(QStringLiteral("$whatever")), QStringLiteral("kept"));
     }
 
-    // Per-project engine paths are a commonly used setting, so discarding them would delete
+    // Per-project synth tool paths are a commonly used setting, so discarding them would delete
     // user data in the name of safety. Not executing them is a separate matter.
-    void the_engine_paths_are_kept() {
+    void the_synth_tool_paths_are_kept() {
         auto project = oneNote();
         project.settings.wavtool = QStringLiteral("C:/evil/wavtool.exe");
         project.settings.resampler = QStringLiteral("C:/evil/resampler.exe");

@@ -17,7 +17,7 @@ For the end-user workflow, see the [user guide](docs/UserGuide.md). To get start
 The editor offers a comprehensive set of features for UTAU project editing, rendering, and voice-bank editing. Compatibility and usability continue to improve. Features include:
 
 - Projects: reading and writing of `.ust` and `.usth`, the native project format. A piano roll edits notes, lyrics, labels, regions, Mode1 and Mode2 pitch, pitch control, vibrato, envelopes and note parameters, with undo and redo, lyric find and replace, project tempo and time-signature views, quantization, and piano-like keyboard preview.
-- Playback and rendering: classic or multithreaded prerendering, realtime playback, whole-track WAV export, configurable render logs, and trust checks for project engines
+- Playback and rendering: classic or multithreaded prerendering, realtime playback, whole-track WAV export, configurable render logs, and trust checks for project synth tools
 - Voice banks: a window that edits `oto.ini`, `prefix.map`, `character.txt` and `readme.txt` in the encoding of each directory, sets the values of an entry on its waveform, previews samples, displays the current voice-bank image above the piano keyboard, and detects changes on disk
 - Plugins: HelloUtau plugins and UTAU classic plugins, with command discovery through the command palette
 - Import and export: MIDI, UST, and USTH
@@ -27,7 +27,7 @@ The editor offers a comprehensive set of features for UTAU project editing, rend
 
 HelloUtau supports UTAU projects, voice banks, resamplers, wavtools, and classic plugins. It aims to preserve project content and rendering behavior when exchanging projects with UTAU, while offering its own editing interface.
 
-- Engine paths recorded in a project file are preserved.
+- Synth Tool paths recorded in a project file are preserved.
 - The application checks that paths are valid and asks for trust before running project-specific tools.
 - Project tools pointing to the same files as the default tools are considered trusted.
 

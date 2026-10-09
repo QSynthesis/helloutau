@@ -69,15 +69,15 @@ namespace hello::daw {
         /// relative path is resolved as isRelativeVoiceDirInUtau() specifies.
         kit::VoiceLocations voiceLocations() const;
 
-        /// Engines used for rendering and written to an exported UST that specifies no engine.
-        /// The engines specified by a project are never used without confirmation by the user,
-        /// see CLAUDE.md.
+        /// Synth tools used for rendering and written to an exported UST that specifies no synth
+        /// tool. The synth tools specified by a project are never used without confirmation by the
+        /// user, see CLAUDE.md.
         QString resampler() const;
         void setResampler(const QString &path);
         QString wavtool() const;
         void setWavtool(const QString &path);
 
-        /// Whether the render log keeps all captured engine output, or only the latest run.
+        /// Whether the render log keeps all captured synth tool output, or only the latest run.
         bool isRenderLogAccumulated() const;
         void setRenderLogAccumulated(bool accumulated);
 
@@ -194,7 +194,7 @@ namespace hello::daw {
         ///
         /// Access to any value of the file by its key. A key consists of the names of the
         /// enclosing groups and the name of the value, joined by slashes, such as
-        /// \c engines/resampler. The functions above use these functions for the values of the
+        /// \c synthTools/resampler. The functions above use these functions for the values of the
         /// application.
         /// @{
 

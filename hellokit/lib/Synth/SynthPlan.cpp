@@ -33,7 +33,7 @@ namespace hello::kit {
             return std::string(bytes.constData(), size_t(bytes.size()));
         }
 
-        /// A path in the form passed to the engines, which is UTF-8 like every other argument.
+        /// A path in the form passed to the synth tools, which is UTF-8 like every other argument.
         std::string utf8(const fs::path &path) {
             return path.u8string();
         }
@@ -141,7 +141,7 @@ namespace hello::kit {
         /// The note in the form read by the synthesis calculation.
         ///
         /// Contains only the fields that \c Synth::calc reads. The other fields of a note, such
-        /// as its label, its patch and any data stored by a host, do not affect the engine
+        /// as its label, its patch and any data stored by a host, do not affect the synth tool
         /// calls, and copying them would falsely suggest otherwise.
         utau::Note synthNote(const Note &from) {
             utau::Note note;
@@ -209,7 +209,7 @@ namespace hello::kit {
                                              const Options &requested, DiagnosticList &diagnostics,
                                              SynthObserver *observer) {
         // The paths in the preferred separators of the system. The rendering script and the
-        // engines receive them as text, and the copy command of Windows rejects a path written
+        // synth tools receive them as text, and the copy command of Windows rejects a path written
         // with forward slashes, which a file dialog of Qt returns.
         auto options = requested;
         options.outputFile.make_preferred();
@@ -268,7 +268,7 @@ namespace hello::kit {
             utau::OtoEntry entry;
             // The full path, not the name in the oto.ini. A voice bank distributes its samples
             // over subdirectories, so the name alone does not identify the file once it reaches
-            // an engine.
+            // a synth tool.
             entry.fileName = utf8(sample->path);
             entry.alias = utf8(sample->alias);
             entry.offset = sample->offset;

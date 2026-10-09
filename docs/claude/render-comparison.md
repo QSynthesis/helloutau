@@ -10,7 +10,7 @@
 ustrender copy-voice <音源目录> <新目录>
 ```
 
-按原目录结构复制，**不复制**引擎由样本派生的文件。按文件名结尾判断，不区分大小写：
+按原目录结构复制，**不复制**合成工具由样本派生的文件。按文件名结尾判断，不区分大小写：
 
 - 频率表：`.frq`、`.frt`、`.frc`、`.pmk`、`.gfrq`、`.dio`、`.vs4ufrq`、`.spec`、`.star`、`.platinum`、`.uspec`；
 - moresampler 的模型与数据库：`.llsm`、`.llsm.tmp`、`.mrq`（含 `desc.mrq`）。
@@ -46,7 +46,7 @@ ustrender script <工程> <输出文件> --target windows|linux
 | `--voice-as` | 脚本中代替 `--voice` 的目录，Linux 一侧填 WSL 中的路径 |
 | `-c` | UST 未声明编码时必填。本工程为 `GBK` |
 | `--cache` | 工程 `CacheDir` 的替代 |
-| `--script-dir` | 脚本所在目录，也是引擎的工作目录，按脚本中的写法 |
+| `--script-dir` | 脚本所在目录，也是合成工具的工作目录，按脚本中的写法 |
 | `--emit-dir` | 本机写出文件的位置，省略时为 `--script-dir`。Linux 一侧填本机目录，再由 moreloader 一侧复制过去 |
 | `--snapshots` | 快照目录，省略时不复制 |
 | `--resampler-command`、`--wavtool-command` | 参数向量的前缀，到下一个选项为止：Windows 为 exe 的路径，Linux 为 `moreloader` 与 exe 两项 |
@@ -111,7 +111,7 @@ ustrender compare-manifests <清单一> <清单二>
 | `target` | `windows` 或 `linux` |
 | `project` | 工程路径，按命令行 |
 | `voice`、`cache`、`output`、`scriptDirectory`、`snapshotDirectory`、`log` | 按脚本中的写法。无快照时 `snapshotDirectory` 为 `null` |
-| `resamplerCommand`、`wavtoolCommand` | 引擎命令前缀 |
+| `resamplerCommand`、`wavtoolCommand` | 合成工具命令前缀 |
 | `lastNote` | 是否使用 `LAST_NOTE` |
 | `steps` | 见下 |
 | `finalSnapshots` | 全部步骤之后的复制：`[{source, snapshot}]` |
@@ -123,7 +123,7 @@ ustrender compare-manifests <清单一> <清单二>
 | `index` | 步骤序号，从 1 起，与快照文件名、日志一致 |
 | `kind` | `resampler`、`wavtool` 或 `concatenate` |
 | `note` | 音符在轨道中的下标，从 0 起。拼接为 `null` |
-| `arguments` | 传给引擎的参数向量，不含命令前缀，原样。拼接为空 |
+| `arguments` | 传给合成工具的参数向量，不含命令前缀，原样。拼接为空 |
 | `outputs` | 本步骤的产物路径 |
 | `snapshots` | 与 `outputs` 一一对应的快照路径；无快照时为空 |
 
@@ -211,7 +211,7 @@ wavtool 的索引以 UTF-16LE 内嵌绝对路径，各以 NUL 结尾（Windows �
 - **UTAU 与 helloutau 渲染出的音频不逐字节相同**：这是 [`../Synth.md`](../Synth.md)「与 UTAU 的偏差」中已记录的曲线偏差，以及 UTAU 删除曲线末尾零值所致。两侧 moresampler 对音源的分析逐字节相同，helloutau 的脚本重复运行结果也逐字节相同。
   - moreloader 的比较两侧都使用本工具的脚本，不受此影响。
 - **`utaucompare` 的解析问题（已修正）**：
-  - **原因**：`utaucompare` 原先按展开后的程序路径判断一行调用的是哪个引擎。本次 Tool1 与 Tool2 是同一个 moresampler，wavtool 一行因此被当作 resampler 一行。
+  - **原因**：`utaucompare` 原先按展开后的程序路径判断一行调用的是哪个合成工具。本次 Tool1 与 Tool2 是同一个 moresampler，wavtool 一行因此被当作 resampler 一行。
   - **修正**：改为按原文所调用的变量（`%resamp%`、`%tool%`）判断；路径字段也不再因分隔符不同而报差异。
   - **修正后的结果**：与 Synth.md 的记录一致，8673 个读数，均值 0.437 音分，最大 15 音分，17 个音符逐点相同。参数上只剩两处有意的差异：缓存名，以及第 25 号音符的 `0Q134`。
 

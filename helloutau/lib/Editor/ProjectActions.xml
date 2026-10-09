@@ -46,7 +46,7 @@
         <!-- UST... in the Export menu, and Export UST... in the command palette -->
         <action id="helloutau.file.exportUst" text="Export &amp;UST..." shortText="&amp;UST..."
                 category="File" />
-        <!-- The name, tempo, flags, output file, voice folder, engines and Mode2 of the project -->
+        <!-- The name, tempo, flags, output file, voice folder, synth tools and Mode2 of the project -->
         <action id="helloutau.file.properties" text="Project &amp;Properties..." category="File" />
         <action id="helloutau.file.close" text="&amp;Close" category="File" shortcut="Ctrl+W" />
         <action id="helloutau.file.quit" text="&amp;Quit" category="File" shortcut="Ctrl+Q" />
@@ -172,7 +172,7 @@
         <action id="helloutau.playback.pause" text="Pa&amp;use or Resume" category="Playback"
                 shortcut="F6" />
         <action id="helloutau.playback.stop" text="&amp;Stop" category="Playback" shortcut="F7" />
-        <!-- Plays the last playback again from its start, the last render without the engines
+        <!-- Plays the last playback again from its start, the last render without the synth tools
              while its notes stay the same -->
         <action id="helloutau.playback.replay" text="&amp;Replay" category="Playback"
                 shortcut="Shift+F5" />

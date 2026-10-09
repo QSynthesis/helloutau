@@ -9,7 +9,7 @@
 
 namespace utaucompare {
 
-    /// The pitch curve passed to an engine: one value every five ticks, in cents.
+    /// The pitch curve passed to a synth tool: one value every five ticks, in cents.
     ///
     /// \note The decoding is reimplemented here rather than taken from stdutau. stdutau is under
     ///       test, and a comparison that encodes and decodes with the code under test always
@@ -24,9 +24,9 @@ namespace utaucompare {
     ///
     /// \note This is established, not assumed. UTAU omits trailing zeros, and in a real tuned
     ///       project it does so for half of the notes: one note sends fifteen values of -500
-    ///       and ends, while the note continues for another twenty-four. An engine that held
+    ///       and ends, while the note continues for another twenty-four. A synth tool that held
     ///       the last value would sing that note five semitones flat until its end, so no
-    ///       engine holds it, and the omitted values are the trimmed zeros.
+    ///       synth tool holds it, and the omitted values are the trimmed zeros.
     struct CurveDeviation {
         int readings = 0; ///< the number of compared values, the length of the longer curve
         int peak = 0;     ///< the largest single deviation, in cents

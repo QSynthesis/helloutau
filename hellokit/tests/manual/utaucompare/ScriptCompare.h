@@ -46,7 +46,7 @@ namespace utaucompare {
         QList<CurveDifference> curves; ///< every note with a curve on either side
     };
 
-    /// Compares the engine arguments of HelloUtau with those UTAU passed.
+    /// Compares the synth tool arguments of HelloUtau with those UTAU passed.
     ///
     /// Arguments are identified by name rather than by position, so that a report states
     /// \c flags rather than "resampler argument 5". The pitch curve is excluded from the
