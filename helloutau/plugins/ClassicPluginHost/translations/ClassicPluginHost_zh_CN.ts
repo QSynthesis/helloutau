@@ -27,7 +27,7 @@
     <name>hello::daw::ClassicPlugin</name>
     <message>
         <source>Its plugin.txt specifies no program.</source>
-        <translation>其plugin.txt未指定程序。</translation>
+        <translation>其 plugin.txt 未指定程序。</translation>
     </message>
     <message>
         <source>Its program &quot;%1&quot; is outside its folder.</source>
@@ -43,7 +43,7 @@
     </message>
     <message>
         <source>Its plugin.json specifies the unknown value &quot;%1&quot; for notes.</source>
-        <translation>其plugin.json为notes指定了未知值「%1」。</translation>
+        <translation>其 plugin.json 为 notes 指定了未知值「%1」。</translation>
     </message>
     <message>
         <source>Its encoding &quot;%1&quot; is not available.</source>
@@ -51,11 +51,11 @@
     </message>
     <message>
         <source>plugin.txt cannot be opened.</source>
-        <translation>无法打开plugin.txt。</translation>
+        <translation>无法打开 plugin.txt。</translation>
     </message>
     <message>
         <source>It runs on Windows only.</source>
-        <translation>该插件仅能在Windows上运行。</translation>
+        <translation>该插件仅能在 Windows 上运行。</translation>
     </message>
 </context>
 <context>
@@ -74,7 +74,7 @@
     </message>
     <message>
         <source>Open &amp;UTAU Plugin Folder</source>
-        <translation>打开UTAU插件文件夹(&amp;U)</translation>
+        <translation>打开 UTAU 插件文件夹(&amp;U)</translation>
     </message>
 </context>
 <context>

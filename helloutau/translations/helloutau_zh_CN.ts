@@ -2254,7 +2254,7 @@ Trust and use them for rendering?</source>
     </message>
     <message>
         <source>A length in pixels, such as 2px, was expected.</source>
-        <translation>此处应为以像素为单位的长度，如2px。</translation>
+        <translation>此处应为以像素为单位的长度，如 2px。</translation>
     </message>
     <message>
         <source>A number was expected.</source>
@@ -3836,7 +3836,7 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>The oto.ini in &quot;%1&quot; declares the encoding UTF-8, so the directory is read in UTF-8 rather than in %2.</source>
-        <translation>「%1」中的 oto.ini 声明了 UTF-8编码，因此该目录按 UTF-8而非 %2 读取。</translation>
+        <translation>「%1」中的 oto.ini 声明了 UTF-8 编码，因此该目录按 UTF-8 而非 %2 读取。</translation>
     </message>
     <message numerus="yes">
         <source>%n byte sequence(s) in &quot;%1&quot; are not valid %2 and were read as U+FFFD. The file cannot be saved with changes while its text contains U+FFFD.</source>
@@ -3882,7 +3882,7 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>The oto.ini in &quot;%1&quot; declares the encoding UTF-8, so the directory is read in UTF-8 only.</source>
-        <translation>「%1」中的 oto.ini 声明了 UTF-8编码，因此该目录只按 UTF-8读取。</translation>
+        <translation>「%1」中的 oto.ini 声明了 UTF-8 编码，因此该目录只按 UTF-8 读取。</translation>
     </message>
     <message>
         <source>&quot;%1&quot; does not belong to any directory of this voice bank.</source>
@@ -4159,7 +4159,7 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
     <message>
         <source>The count must be at least 1.</source>
-        <translation>数量必须至少为1。</translation>
+        <translation>数量必须至少为 1。</translation>
     </message>
     <message>
         <source>The %1 has %2 items, not an item %3 to %4.</source>

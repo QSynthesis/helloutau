@@ -118,11 +118,11 @@
     </message>
     <message>
         <source>The Mode1 pitch of the imported notes was removed because this project uses Mode2.</source>
-        <translation>由于本工程使用Mode2，已移除导入音符的Mode1音高。</translation>
+        <translation>由于本工程使用 Mode2，已移除导入音符的 Mode1 音高。</translation>
     </message>
     <message>
         <source>The Mode2 pitch of the imported notes was removed because this project uses Mode1.</source>
-        <translation>由于本工程使用Mode1，已移除导入音符的Mode2音高。</translation>
+        <translation>由于本工程使用 Mode1，已移除导入音符的 Mode2 音高。</translation>
     </message>
     <message>
         <source>The selection lies outside the track.</source>
@@ -281,7 +281,7 @@
     <name>hello::daw::MidiEncodingPage</name>
     <message>
         <source>MIDI does not specify the encoding of its text. Select the encoding in which the text is displayed correctly.</source>
-        <translation>MIDI不记录其文本的编码。选择能使文本正确显示的编码。</translation>
+        <translation>MIDI 不记录其文本的编码。选择能使文本正确显示的编码。</translation>
     </message>
 </context>
 <context>
