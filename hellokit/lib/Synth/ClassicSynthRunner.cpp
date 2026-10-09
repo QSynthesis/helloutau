@@ -174,8 +174,20 @@ namespace hello::kit {
         for (const auto &step : plan.steps()) {
             ++done;
 
-            // A rest requires no resampling and is passed directly to the wavtool, as in UTAU.
-            if (step.silent) {
+            // A rest, and a note with $patch or $direct, requires no resampling and is passed
+            // directly to the wavtool, as in UTAU.
+            if (!step.resamples()) {
+                // The file of $patch is named by the project. A value that cannot be quoted is
+                // refused rather than written.
+                for (const auto &argument : step.wavtoolArguments) {
+                    if (!isWritable(argument)) {
+                        fail(diagnostics,
+                             tr("The arguments of this note cannot be written into a rendering "
+                                "script."),
+                             step.noteIndex);
+                        return std::nullopt;
+                    }
+                }
                 script.line(syntax.run("tool", joined(quotedAll(syntax, step.wavtoolArguments))));
                 continue;
             }
@@ -309,7 +321,7 @@ namespace hello::kit {
         if (reuseCache) {
             for (int i = 0; i < int(plan.steps().size()); ++i) {
                 const auto &step = plan.steps().at(i);
-                alreadyThere[i] = !step.silent && fs::exists(step.cacheFile);
+                alreadyThere[i] = step.resamples() && fs::exists(step.cacheFile);
             }
         }
         if (error) {
@@ -330,6 +342,7 @@ namespace hello::kit {
 
         for (const auto &step : plan.steps()) {
             outcome.silent += step.silent ? 1 : 0;
+            outcome.direct += step.direct ? 1 : 0;
         }
 
         if (observer && observer->cancelled()) {
@@ -357,7 +370,7 @@ namespace hello::kit {
         for (int i = 0; i < int(plan.steps().size()); ++i) {
             std::error_code timeError;
             const auto written = fs::last_write_time(plan.steps().at(i).cacheFile, timeError);
-            if (!plan.steps().at(i).silent && !timeError) {
+            if (plan.steps().at(i).resamples() && !timeError) {
                 writtenBefore[size_t(i)] = written;
             }
         }
@@ -375,7 +388,7 @@ namespace hello::kit {
                 const auto &step = plan.steps().at(i);
                 std::error_code timeError;
                 const auto written = fs::last_write_time(step.cacheFile, timeError);
-                if (step.silent || timeError || writtenBefore[size_t(i)] == written) {
+                if (!step.resamples() || timeError || writtenBefore[size_t(i)] == written) {
                     continue;
                 }
                 fs::remove(step.cacheFile, error);
@@ -395,7 +408,7 @@ namespace hello::kit {
 
         for (int i = 0; i < int(plan.steps().size()); ++i) {
             const auto &step = plan.steps().at(i);
-            if (step.silent) {
+            if (!step.resamples()) {
                 continue;
             }
             if (alreadyThere.at(i)) {

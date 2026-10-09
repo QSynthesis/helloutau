@@ -117,7 +117,7 @@ namespace hello::kit {
         if (reuseCache) {
             for (int i = 0; i < int(plan.steps().size()); ++i) {
                 alreadyThere[i] =
-                    !plan.steps().at(i).silent && fs::exists(plan.steps().at(i).cacheFile);
+                    plan.steps().at(i).resamples() && fs::exists(plan.steps().at(i).cacheFile);
             }
         }
 
@@ -169,7 +169,7 @@ namespace hello::kit {
         // resampler calls start.
         int skipped = 0;
         for (int i = 0; i < total; ++i) {
-            skipped += steps.at(i).silent || alreadyThere.at(i) ? 1 : 0;
+            skipped += !steps.at(i).resamples() || alreadyThere.at(i) ? 1 : 0;
         }
         report(skipped);
         {
@@ -178,7 +178,7 @@ namespace hello::kit {
                                                    : std::max(1, QThread::idealThreadCount()));
 
             for (int i = 0; i < total; ++i) {
-                if (steps.at(i).silent || alreadyThere.at(i)) {
+                if (!steps.at(i).resamples() || alreadyThere.at(i)) {
                     continue;
                 }
                 pool.start([&, i] {
@@ -234,6 +234,10 @@ namespace hello::kit {
                 ++outcome.silent;
                 continue;
             }
+            if (step.direct) {
+                ++outcome.direct;
+                continue;
+            }
             if (alreadyThere.at(i)) {
                 ++outcome.reused;
                 continue;
@@ -263,7 +267,7 @@ namespace hello::kit {
                 outcome.cancelled = true;
                 return outcome;
             }
-            if (step.silent || fs::exists(step.cacheFile)) {
+            if (!step.resamples() || fs::exists(step.cacheFile)) {
                 const auto run =
                     engine->run(engines.wavtool, step.wavtoolArguments, diagnostics, cancelled);
                 if (run.cancelled) {

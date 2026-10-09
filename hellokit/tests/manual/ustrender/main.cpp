@@ -324,6 +324,7 @@ namespace {
         options.outputFile = output;
         options.cacheDirectory = output.parent_path() / output.stem();
         options.cacheDirectory += ".cache";
+        options.projectDirectory = input.parent_path();
 
         diagnostics.clear();
         const auto plan = SynthPlan::make(*project, *bank, options, diagnostics);
@@ -389,8 +390,9 @@ namespace {
         const auto outcome = runner->render(*plan, engines, nullptr, diagnostics);
         report(diagnostics);
 
-        stdc::u8printf("resampled %d, reused %d, silent %d, failed %d\n", outcome.resampled,
-                       outcome.reused, outcome.silent, outcome.failed);
+        stdc::u8printf("resampled %d, reused %d, direct %d, silent %d, failed %d\n",
+                       outcome.resampled, outcome.reused, outcome.direct, outcome.silent,
+                       outcome.failed);
         if (!outcome.rendered) {
             return 1;
         }
@@ -470,6 +472,7 @@ namespace {
         options.cacheDirectory =
             cache.empty() ? fs::path((output + QStringLiteral(".cache")).toStdU16String())
                           : fs::path(fromStd(cache).toStdU16String());
+        options.projectDirectory = input.parent_path();
         diagnostics.clear();
         const auto plan = SynthPlan::make(*project, *bank, options, diagnostics);
         report(diagnostics);

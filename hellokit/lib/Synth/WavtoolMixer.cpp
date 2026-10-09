@@ -25,7 +25,8 @@ namespace hello::kit {
     }
 
     std::optional<WavtoolCall> WavtoolCall::parse(const QStringList &arguments) {
-        // <out> <in> <stp> <length>@<tempo>[+-]<correction> [envelope]
+        // <out> <in> <stp> <length>@<tempo>[+-]<correction> [envelope]. UTAU writes the length
+        // of a note with $patch or $direct in milliseconds instead.
         if (arguments.size() < 4) {
             return std::nullopt;
         }
@@ -33,20 +34,28 @@ namespace hello::kit {
             QStringLiteral(R"(^([0-9.]+)@([0-9.]+)([+-][0-9.]+)?$)"));
         const auto match = lengthPattern.match(arguments[3]);
         const auto stp = numberOf(arguments[2]);
-        if (!match.hasMatch() || !stp) {
+        if (!stp) {
             return std::nullopt;
         }
-        const auto ticks = numberOf(match.captured(1));
-        const auto tempo = numberOf(match.captured(2));
-        const auto correction =
-            match.captured(3).isEmpty() ? std::optional<double>(0) : numberOf(match.captured(3));
-        if (!ticks || !tempo || !correction || *tempo <= 0) {
+        std::optional<double> length;
+        if (match.hasMatch()) {
+            const auto ticks = numberOf(match.captured(1));
+            const auto tempo = numberOf(match.captured(2));
+            const auto correction = match.captured(3).isEmpty() ? std::optional<double>(0)
+                                                                : numberOf(match.captured(3));
+            if (ticks && tempo && correction && *tempo > 0) {
+                length = TempoMap::duration(*ticks, *tempo) + *correction;
+            }
+        } else {
+            length = numberOf(arguments[3]);
+        }
+        if (!length) {
             return std::nullopt;
         }
 
         WavtoolCall call;
         call.startPoint = *stp;
-        call.length = TempoMap::duration(*ticks, *tempo) + *correction;
+        call.length = *length;
 
         // A rest passes two zeros instead of an envelope.
         const auto envelope = arguments.mid(4);

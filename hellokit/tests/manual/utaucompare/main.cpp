@@ -281,6 +281,7 @@ namespace {
         }
 
         diagnostics.clear();
+        options.projectDirectory = input.parent_path();
         const auto plan = SynthPlan::make(*project, *bank, options, diagnostics);
         report(diagnostics);
         if (!plan) {

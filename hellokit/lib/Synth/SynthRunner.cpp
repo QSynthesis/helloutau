@@ -61,7 +61,9 @@ namespace hello::kit {
         std::set<fs::path> keeping;
         for (const auto &step : plan.steps()) {
             rendering.insert(step.noteIndex);
-            keeping.insert(step.cacheFile);
+            if (!step.cacheFile.empty()) {
+                keeping.insert(step.cacheFile);
+            }
         }
 
         std::error_code error;

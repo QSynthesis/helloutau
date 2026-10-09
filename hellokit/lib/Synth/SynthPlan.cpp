@@ -105,6 +105,21 @@ namespace hello::kit {
                    fs::u8path((kept + QLatin1Char('_') + digest).toStdString() + ".wav");
         }
 
+        // Returns the file of the $patch value of a note, the value relative to the folder of the
+        // project file, as UTAU resolves it. The path is not normalized, so that ..\ is followed
+        // as in UTAU. An absolute value, which UTAU appends to the folder as well and therefore
+        // never finds, and a project without a folder give an empty path.
+        fs::path patchFile(const QString &value, const fs::path &projectDirectory) {
+            const auto relative = Project::pathOf(value);
+            if (projectDirectory.empty() || relative.empty() || relative.has_root_name() ||
+                relative.has_root_directory()) {
+                return {};
+            }
+            auto file = projectDirectory / relative;
+            file.make_preferred();
+            return file;
+        }
+
         QStringList listOf(const std::vector<std::string> &arguments) {
             QStringList list;
             list.reserve(qsizetype(arguments.size()));
@@ -300,33 +315,76 @@ namespace hello::kit {
             step.sample = fs::u8path(resampler.inFile);
             step.silent = resampler.inFile.empty();
 
-            if (step.silent && !notes.at(noteIndex).isRest()) {
+            // $patch takes precedence over $direct, and $direct applies with any value but an
+            // empty one, as in UTAU (docs/Synth.md). A rest stays a rest.
+            const auto &note = notes.at(noteIndex);
+            const bool patched = !note.isRest() && !note.patch.isEmpty();
+            if (patched) {
+                const auto file = patchFile(note.patch, options.projectDirectory);
+                std::error_code error;
+                step.direct = !file.empty() && fs::is_regular_file(file, error);
+                step.silent = !step.direct;
+                step.sample = step.direct ? file : fs::path();
+                if (options.projectDirectory.empty()) {
+                    complain(diagnostics,
+                             tr("The project has no file, against whose folder the $patch of "
+                                "the note is resolved, so the note is silent."),
+                             noteIndex);
+                } else if (!step.direct) {
+                    complain(diagnostics,
+                             tr("The file \"%1\" of the $patch of the note does not exist, so the "
+                                "note is silent.")
+                                 .arg(note.patch),
+                             noteIndex);
+                }
+            } else if (!step.silent && !note.direct.isEmpty()) {
+                step.direct = true;
+            }
+
+            if (step.silent && !patched && !note.isRest()) {
                 complain(diagnostics,
                          tr("This voice bank has no sample for \"%1\", so the note is silent.")
-                             .arg(notes.at(noteIndex).lyric),
+                             .arg(note.lyric),
                          noteIndex);
             }
 
             // calc() determines the cache file name but not its directory, and leaves the track
             // file entirely to the caller. The last field of the name is computed here, not by
             // calc(). See cacheFileFor().
-            step.cacheFile =
-                cacheFileFor(resampler.outFile, resampler, step.sample, options.cacheDirectory);
-
-            resampler.outFile = utf8(step.cacheFile);
+            if (!step.direct) {
+                step.cacheFile =
+                    cacheFileFor(resampler.outFile, resampler, step.sample, options.cacheDirectory);
+                resampler.outFile = utf8(step.cacheFile);
+            }
             // A silent note passes R.wav of the voice bank, as UTAU does (docs/Synth.md). The
-            // file does not exist, and the wavtool appends silence for it.
-            wavtool.inFile = utf8(step.silent ? bank.root() / "R.wav" : step.cacheFile);
+            // file does not exist, and the wavtool appends silence for it. A direct note passes
+            // its file, and with $direct the start point counts from the offset of the sample.
+            if (step.silent) {
+                wavtool.inFile = utf8(bank.root() / "R.wav");
+            } else if (step.direct) {
+                wavtool.inFile = utf8(step.sample);
+                if (!patched) {
+                    wavtool.startPoint += resampler.offset;
+                }
+            } else {
+                wavtool.inFile = utf8(step.cacheFile);
+            }
             wavtool.outFile = utf8(options.outputFile);
 
-            if (!step.silent) {
+            if (step.resamples()) {
                 step.resamplerArguments = listOf(resampler.arguments());
+                step.pitch = QList<int>(resampler.pitchCurves.begin(), resampler.pitchCurves.end());
             }
             step.wavtoolArguments = listOf(wavtool.arguments());
+            // UTAU writes the length of a note with $patch or $direct in milliseconds rather than
+            // as ticks at a tempo with a correction, a missing file of $patch included.
+            if (patched || step.direct) {
+                step.wavtoolArguments[3] = QString::fromStdString(utau::to_string(
+                    TempoMap::duration(wavtool.length, wavtool.tempo) + wavtool.correction));
+            }
             step.preUtterance = resampler.correctPreUttr;
             step.voiceOverlap = resampler.correctOverlap;
             step.startPoint = resampler.correctStp;
-            step.pitch = QList<int>(resampler.pitchCurves.begin(), resampler.pitchCurves.end());
 
             plan.m_steps.push_back(std::move(step));
             if (observer) {

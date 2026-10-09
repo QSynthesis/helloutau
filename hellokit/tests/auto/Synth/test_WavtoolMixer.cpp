@@ -71,8 +71,14 @@ private Q_SLOTS:
         QVERIFY(!rest.hasEnvelope);
         QCOMPARE(rest.length, 459.0);
 
+        // UTAU writes the length of a note with $patch or $direct in milliseconds.
+        const auto direct = WavtoolCall::parse({QStringLiteral("out.wav"), QStringLiteral("in.wav"),
+                                                QStringLiteral("0"), QStringLiteral("503.0")});
+        QVERIFY(direct);
+        QCOMPARE(direct->length, 503.0);
+
         QVERIFY(!WavtoolCall::parse({QStringLiteral("out.wav"), QStringLiteral("in.wav"),
-                                     QStringLiteral("0"), QStringLiteral("480")}));
+                                     QStringLiteral("0"), QStringLiteral("480@")}));
         QVERIFY(!WavtoolCall::parse({QStringLiteral("out.wav")}));
     }
 

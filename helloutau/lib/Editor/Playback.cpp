@@ -38,6 +38,13 @@ namespace hello::daw {
             diagnostics.push_back({kit::DiagnosticSeverity::Error, message, std::nullopt});
         }
 
+        // Returns the folder of the file of document, against which $patch is resolved, or an
+        // empty path for a document without a file.
+        std::filesystem::path projectDirectoryOf(const kit::ProjectDocument &document) {
+            const auto source = document.sourcePath();
+            return source.empty() ? std::filesystem::path() : source.parent_path();
+        }
+
         // The inputs of a plan, taken on the main thread, where the document lives. The plan is
         // made on a worker thread, because it takes long enough for a track of many notes to
         // stall the window.
@@ -255,6 +262,7 @@ namespace hello::daw {
             }
             PlanInput input{document.session()->snapshot(), bank, {}};
             input.options.cacheDirectory = *cache;
+            input.options.projectDirectory = projectDirectoryOf(document);
             input.options.outputFile = temporaryDirectory / OutputFileName;
             return input;
         }
@@ -489,7 +497,9 @@ namespace hello::daw {
                     if (step.noteIndex >= states.size()) {
                         states.resize(step.noteIndex + 1, State::Silent);
                     }
-                    if (!step.silent) {
+                    if (step.direct) {
+                        states[step.noteIndex] = State::Ready;
+                    } else if (!step.silent) {
                         std::error_code error;
                         states[step.noteIndex] = std::filesystem::exists(step.cacheFile, error)
                                                      ? State::Ready
@@ -775,6 +785,7 @@ namespace hello::daw {
         auto job = std::make_shared<Job>();
         job->input = {document.session()->snapshot(), bank, {}};
         job->input.options.cacheDirectory = *cache;
+        job->input.options.projectDirectory = projectDirectoryOf(document);
         job->input.options.outputFile = impl.temporaryDirectory / OutputFileName;
         job->input.options.range = range;
         // The same notes as the last render play again without the engines.
@@ -817,6 +828,7 @@ namespace hello::daw {
         auto job = std::make_shared<Job>();
         job->input = {document.session()->snapshot(), bank, {}};
         job->input.options.cacheDirectory = *cache;
+        job->input.options.projectDirectory = projectDirectoryOf(document);
         job->input.options.outputFile = file;
         job->engines = engines;
         job->runner = impl.runner;

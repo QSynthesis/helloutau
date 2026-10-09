@@ -311,14 +311,16 @@ namespace hello::kit {
         std::optional<PitchBend> pitchBend; ///< Mode1
 
         QString label;
+
+        /// \c $direct of UTAU. With any value but an empty one, the wavtool appends the sample
+        /// of the voice bank itself, without the resampler. See docs/Synth.md.
         QString direct;
 
-        /// A resampler specified by the project file.
+        /// \c $patch of UTAU, the name of a wav file relative to the folder of the project file,
+        /// which the wavtool appends in place of the sample, without the resampler. The note is
+        /// silent if the file is missing. See docs/Synth.md.
         ///
-        /// \warning Untrusted. Stored verbatim, because per-project engine configuration is
-        ///          common UTAU practice and discarding it would delete user settings, but never
-        ///          executed without explicit user consent. See the security section of
-        ///          CLAUDE.md.
+        /// \warning Untrusted, like every path of a project file. The file is only read.
         QString patch;
 
         /// The names of the regions that start at this note, and of those that end at it, in the

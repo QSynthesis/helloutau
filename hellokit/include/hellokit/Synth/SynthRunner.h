@@ -39,6 +39,9 @@ namespace hello::kit {
         int reused = 0;
         int silent = 0;
         int failed = 0;
+
+        /// Notes appended from a file without the resampler, for \c $patch or \c $direct.
+        int direct = 0;
         /// @}
     };
 

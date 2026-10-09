@@ -108,9 +108,9 @@ resampler / wavtool 的命令行参数由 `utau::ResamplerArguments::arguments()
 - **「经由 shell 执行」与「拼接命令行」是两回事，不可混淆。** 非 exe 插件是必须支持的功能，通过 `stdc::Popen::shell(true)` 执行：它保持参数向量的语义，对每个元素进行 `^` 转义并加引号，再包装为 `cmd /d /v:off /s /c`，比 Python 的 `shell=True` 严格得多。禁止的是自行拼接字符串，而非这个开关。
 - **`plugin.txt` 的 `shell=use` 对应 `ShellExecuteEx`，而非命令处理器。** [官方规格](https://w.atwiki.jp/utaou/pages/64.html)原文为「通常はCreateProcessでプラグインが起動されますが、shell=useを指定した場合はShellExecuteExで起動されます。これにより、exeファイル以外を実行することができます(jar、html、htaなど)」。即实际运行的是系统为该扩展名注册的处理程序，`plugin.txt` 中并未指定该程序；`.bat` 恰好由 `cmd.exe` 处理，不要将这一巧合当作定义。**HelloUtau 在 Windows 上照 UTAU 沿用 `ShellExecuteEx`**（作者 2026-09-30 决定，见 [`docs/ClassicPluginHost.md`](docs/ClassicPluginHost.md)），不按扩展名自行分派；处理程序不返回进程句柄时，由用户在插件完成后手动确认。
 - **工程中的引擎路径须经信任才执行。** `Tool1`、`Tool2` 是写在工程中的路径，直接执行等于让工程决定运行哪个程序。渲染一律使用工程的 `Tool1`、`Tool2`，二者必须是本地设置中的引擎，或经用户在明确的提示中选择信任，否则不渲染，也不改用本地设置中的引擎（作者 2026-10-06 决定，见 `docs/note.md`）。这是「执行任意程序」，与上一条的「注入任意命令」不同，两者都必须防范。
-- **音符上的 `$patch` 不是引擎。** 它是相对于 ust 所在文件夹的 wav 文件名，UTAU 不经重采样器、直接交给 wavtool 拼接，文件不存在时按休止符处理（[插件规格](https://w.atwiki.jp/utaou/pages/64.html)，2026-10-06 实测一致）。HelloUtau 目前不使用它渲染。将来使用时按本节最后一条检查路径，不得超出工程目录。
+- **音符上的 `$patch` 不是引擎。** 它是相对于 ust 所在文件夹的 wav 文件名，UTAU 不经重采样器、直接交给 wavtool 拼接，文件不存在时按休止符处理（[插件规格](https://w.atwiki.jp/utaou/pages/64.html)，2026-10-06 实测一致）。HelloUtau 照 UTAU 渲染（作者 2026-10-09 决定，见 `docs/Synth.md`「`$patch` 与 `$direct`」）：以工程文件所在的文件夹为基准，`..\` 照常采用，不限定在工程目录之内，因为这个文件只被读取，不被执行。绝对路径与 UTAU 一样按文件不存在处理，因此不会读取网络路径。
 - **但必须原样保存。** 逐工程配置引擎是 UTAU 的正常用法，不保存等于删除用户的设置，那是以安全为借口破坏数据。**需要防范的是未经询问即执行，而非保存。** 这一规则同样适用于 `$patch` 和 `userData`。
-- `.ust` 中的所有路径在使用前解析为绝对路径并进行检查，相对路径不得超出工程目录。
+- `.ust` 中的所有路径在使用前解析为绝对路径并进行检查，相对路径不得超出工程目录。`$patch` 是唯一的例外，见上。
 
 **二、解包音源和插件时，压缩包中每个条目的路径都是不可信输入。**
 

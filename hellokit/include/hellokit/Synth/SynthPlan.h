@@ -28,17 +28,25 @@ namespace hello::kit {
         /// concurrently matches a finished job to its note.
         int noteIndex = 0;
 
-        /// Whether the note is silent, because it is a rest or because the voice bank has no
-        /// sample for it. The resampler is not run for a silent note.
+        /// Whether the note is silent, because it is a rest, because the voice bank has no
+        /// sample for it, or because the file of its \c $patch is missing. The resampler is not
+        /// run for a silent note.
         bool silent = false;
 
-        /// The sample to read. Empty if \a silent.
+        /// Whether the wavtool appends \a sample itself, without the resampler, as UTAU does for
+        /// a note with \c $patch or \c $direct. \a sample is then the file of \c $patch or the
+        /// sample of the voice bank, which a runner neither writes nor removes, and the note
+        /// has no cache file.
+        bool direct = false;
+
+        /// The sample to read, or the file that the wavtool appends if \a direct. Empty if
+        /// \a silent.
         std::filesystem::path sample;
 
-        /// The rendered fragment this note produces.
+        /// The rendered fragment this note produces. Empty if \a direct.
         std::filesystem::path cacheFile;
 
-        /// The resampler arguments. Empty if \a silent.
+        /// The resampler arguments. Empty if \a silent or \a direct.
         QStringList resamplerArguments;
 
         /// The wavtool arguments. The wavtool runs for every note, including silent ones,
@@ -55,6 +63,11 @@ namespace hello::kit {
         /// The pitch curve in the resampler arguments, in cents, as PitchCurve::values() gives
         /// it.
         QList<int> pitch;
+
+        /// Returns whether the resampler renders \a cacheFile for this note.
+        inline bool resamples() const {
+            return !silent && !direct;
+        }
     };
 
     /// The components of a render, determined without executing anything.
@@ -76,6 +89,10 @@ namespace hello::kit {
 
             /// The track file assembled by the wavtool.
             std::filesystem::path outputFile;
+
+            /// The folder of the project file, against which \c $patch is resolved, or an empty
+            /// path for a project without a file, whose notes with \c $patch are silent.
+            std::filesystem::path projectDirectory;
 
             /// The notes to render, as a closed range of track indices, or \c std::nullopt for
             /// all notes.

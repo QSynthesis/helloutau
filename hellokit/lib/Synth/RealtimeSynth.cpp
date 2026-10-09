@@ -22,8 +22,15 @@ namespace hello::kit {
 
         using Samples = std::shared_ptr<const std::vector<qint16>>;
 
-        // A fragment read from a file of the resampler, whose samples are 16-bit at 44100 Hz.
-        // Of several channels the first is taken.
+        // Returns the file of the fragment of step: the cache file that the resampler writes, or
+        // the file that the wavtool appends for a direct step.
+        const fs::path &fragmentFile(const SynthStep &step) {
+            return step.direct ? step.sample : step.cacheFile;
+        }
+
+        // A fragment read from a file of the resampler, or from the file of a direct step, whose
+        // samples are taken as 16-bit at 44100 Hz, as the wavtool takes them. Of several
+        // channels the first is taken.
         Samples readFragment(const fs::path &path) {
             std::error_code error;
             if (!fs::exists(path, error)) {
@@ -133,10 +140,11 @@ namespace hello::kit {
                 fragmentOf[size_t(index)]->state = Running;
                 lock.unlock();
 
-                // The fragment of an earlier render is taken as it is, as the other runners do.
+                // The fragment of an earlier render is taken as it is, as the other runners do. A
+                // direct step reads its file, which no engine writes.
                 DiagnosticList engineDiagnostics;
                 std::error_code error;
-                if (!fs::exists(step.cacheFile, error)) {
+                if (step.resamples() && !fs::exists(step.cacheFile, error)) {
                     fs::create_directories(directory, error);
                     const auto run =
                         engine->run(engines.resampler, step.resamplerArguments, engineDiagnostics,
@@ -153,10 +161,10 @@ namespace hello::kit {
                         continue;
                     }
                 }
-                auto samples = readFragment(step.cacheFile);
+                auto samples = readFragment(fragmentFile(step));
 
                 lock.lock();
-                auto &fragment = fragments[step.cacheFile];
+                auto &fragment = fragments[fragmentFile(step)];
                 if (samples) {
                     fragment.state = Ready;
                     fragment.samples = std::move(samples);
@@ -232,8 +240,8 @@ namespace hello::kit {
                 if (step.silent) {
                     continue;
                 }
-                const auto found = impl.fragments.find(step.cacheFile);
-                kept[step.cacheFile] =
+                const auto found = impl.fragments.find(fragmentFile(step));
+                kept[fragmentFile(step)] =
                     found != impl.fragments.end() ? found->second : Impl::Fragment();
             }
             for (const auto &[path, fragment] : impl.fragments) {
@@ -246,7 +254,7 @@ namespace hello::kit {
             for (int i = 0; i < impl.steps.size(); ++i) {
                 const auto &step = impl.steps[i];
                 if (!step.silent && !impl.segments[i].silent) {
-                    impl.fragmentOf[size_t(i)] = &impl.fragments.at(step.cacheFile);
+                    impl.fragmentOf[size_t(i)] = &impl.fragments.at(fragmentFile(step));
                 }
             }
         }
