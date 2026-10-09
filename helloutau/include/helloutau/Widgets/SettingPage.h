@@ -68,6 +68,11 @@ namespace hello::daw {
         /// \a error otherwise. Called only while the widget exists. True by default.
         virtual bool apply(QString *error);
 
+        /// Updates the widget after the dialog has applied the pages, so that a widget that shows
+        /// values of other pages shows them as applied. Called only while the widget exists.
+        /// Does nothing by default.
+        virtual void settingsApplied();
+
     Q_SIGNALS:
         /// isModified() may have changed.
         void modifiedChanged();

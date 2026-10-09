@@ -93,6 +93,9 @@ namespace hello::daw {
         return true;
     }
 
+    void SettingPage::settingsApplied() {
+    }
+
     QWidget *SettingPage::createWidget() {
         return nullptr;
     }

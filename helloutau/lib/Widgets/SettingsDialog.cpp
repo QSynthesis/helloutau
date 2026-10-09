@@ -163,6 +163,11 @@ namespace hello::daw {
                 return false;
             }
         }
+        for (const auto page : m_catalog->allPages()) {
+            if (page->hasWidget()) {
+                page->settingsApplied();
+            }
+        }
         m_message->hide();
         updateModified();
         Q_EMIT applied();

@@ -138,8 +138,8 @@
         <translation>插件文件夹</translation>
     </message>
     <message>
-        <source>The plugins are discovered in these folders, in this order. A folder that does not exist is skipped. The second folder is the plugins folder of the UTAU folder in System Settings.</source>
-        <translation>按以下顺序在这些文件夹中查找插件，不存在的文件夹会被跳过。第二个文件夹是系统设置中 UTAU 文件夹下的 plugins 文件夹。</translation>
+        <source>The plugins are discovered in these folders, in this order. A folder that does not exist is skipped. The second folder is the plugins folder of the UTAU folder on the UTAU page.</source>
+        <translation>按以下顺序在这些文件夹中查找插件，不存在的文件夹会被跳过。第二个文件夹是「UTAU」页中 UTAU 文件夹下的 plugins 文件夹。</translation>
     </message>
     <message>
         <source>Open</source>

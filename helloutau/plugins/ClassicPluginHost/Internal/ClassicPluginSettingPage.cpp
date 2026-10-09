@@ -27,25 +27,43 @@ namespace hello::daw {
         auto groupLayout = new QVBoxLayout(group);
         auto note = new QLabel(tr("The plugins are discovered in these folders, in this order. A "
                                   "folder that does not exist is skipped. The second folder is "
-                                  "the plugins folder of the UTAU folder in System Settings."),
+                                  "the plugins folder of the UTAU folder on the UTAU page."),
                                group);
         note->setWordWrap(true);
         groupLayout->addWidget(note);
-        for (const auto &folder : ClassicPluginContribution::pluginFolders(m_settings)) {
-            auto path = new QLineEdit(
-                QDir::toNativeSeparators(QString::fromStdU16String(folder.u16string())), group);
-            path->setReadOnly(true);
-            auto open = new QPushButton(tr("Open"), group);
-            connect(open, &QPushButton::clicked, group,
-                    [folder] { ClassicPluginContribution::openFolder(folder); });
-            auto row = new QHBoxLayout();
-            row->addWidget(path, 1);
-            row->addWidget(open);
-            groupLayout->addLayout(row);
-        }
+        m_folders = new QWidget(group);
+        auto foldersLayout = new QVBoxLayout(m_folders);
+        foldersLayout->setContentsMargins(0, 0, 0, 0);
+        groupLayout->addWidget(m_folders);
+        fillFolders();
         layout->addWidget(group);
         layout->addStretch();
         return widget;
+    }
+
+    void ClassicPluginSettingPage::settingsApplied() {
+        fillFolders();
+    }
+
+    void ClassicPluginSettingPage::fillFolders() {
+        if (!m_folders) {
+            return;
+        }
+        qDeleteAll(m_folders->findChildren<QWidget *>(QString(), Qt::FindDirectChildrenOnly));
+        for (const auto &folder : ClassicPluginContribution::pluginFolders(m_settings)) {
+            auto row = new QWidget(m_folders);
+            auto rowLayout = new QHBoxLayout(row);
+            rowLayout->setContentsMargins(0, 0, 0, 0);
+            auto path = new QLineEdit(
+                QDir::toNativeSeparators(QString::fromStdU16String(folder.u16string())), row);
+            path->setReadOnly(true);
+            auto open = new QPushButton(tr("Open"), row);
+            connect(open, &QPushButton::clicked, row,
+                    [folder] { ClassicPluginContribution::openFolder(folder); });
+            rowLayout->addWidget(path, 1);
+            rowLayout->addWidget(open);
+            m_folders->layout()->addWidget(row);
+        }
     }
 
 }
