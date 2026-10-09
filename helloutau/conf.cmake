@@ -72,6 +72,9 @@ set(HELLOUTAU_POST_CONFIGURE_COMMANDS _helloutau_common_configure_target)
 set(HELLOUTAU_BUILD_INFO_HEADER_PATH helloutau/BuildInfo.h)
 set(HELLOUTAU_BUILD_INFO_HEADER_PREFIX HELLOUTAU)
 
+# Emit the definitions of qm_add_definition() in helloutau/CMakeLists.txt.
+set(HELLOUTAU_CONFIG_HEADER_PATH helloutau/Config.h)
+
 # ----------------------------------
 # Include Build Helpers
 # ----------------------------------

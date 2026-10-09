@@ -15,6 +15,13 @@ include("conf.cmake")
 
 helloutau_init_buildsystem(HELLOUTAU)
 
+# The definitions of helloutau/Config.h, which helloutau_finish_buildsystem() generates. The
+# program sets them as the name, the version and the organization of the application, because
+# QCoreApplication finds a version by itself only on Windows and in a macOS bundle.
+qm_add_definition(HELLOUTAU_APPLICATION_NAME "HelloUtau" STRING_LITERAL)
+qm_add_definition(HELLOUTAU_APPLICATION_VERSION ${PROJECT_VERSION} STRING_LITERAL)
+qm_add_definition(HELLOUTAU_ORGANIZATION_NAME "OpenVPI" STRING_LITERAL)
+
 find_package(Qt6 REQUIRED COMPONENTS LinguistTools)
 
 add_subdirectory(lib)
