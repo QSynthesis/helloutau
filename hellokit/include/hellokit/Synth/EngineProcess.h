@@ -6,6 +6,7 @@
 #include <memory>
 #include <mutex>
 
+#include <QtCore/QByteArray>
 #include <QtCore/QCoreApplication>
 #include <QtCore/QString>
 #include <QtCore/QStringList>
@@ -16,7 +17,12 @@
 
 namespace hello::kit {
 
-    /// Thread-safe output retained by the engines of one playback owner.
+    /// Thread-safe output retained by the engines of one playback owner, in a file if a file
+    /// name is set and in memory otherwise.
+    ///
+    /// Entries are appended. If the log exceeds its limit, the oldest lines are dropped until at
+    /// most half of the limit remains, so that the cost of a record does not grow with the size
+    /// of the log. The log is cut at the start of a line, which never splits a UTF-8 sequence.
     class HELLOKIT_SYNTH_EXPORT EngineOutputLog {
     public:
         enum Mode {
@@ -30,22 +36,27 @@ namespace hello::kit {
         QString text() const;
         void clear();
         void setMode(Mode mode);
+
+        /// Sets the size in bytes that the log never exceeds, at least 1024.
         void setLimit(qsizetype bytes);
+
+        /// Moves the log to the file \a fileName, replacing its contents, or into memory if
+        /// \a fileName is empty.
         void setFileName(const QString &fileName);
+
         void record(const std::filesystem::path &program, const QString &output);
 
     private:
-        void trim();
+        QByteArray read() const;
+        void write(const QByteArray &data);
+        void append(const QByteArray &entry);
 
         mutable std::mutex m_mutex;
-        QString m_outputs;
+        QByteArray m_outputs;
         qsizetype m_limit = 1024 * 1024;
         Mode m_mode = Accumulated;
         bool m_runStarted = false;
         QString m_fileName;
-
-        void writeFile();
-        void loadFile();
     };
 
     /// The result of one engine invocation.

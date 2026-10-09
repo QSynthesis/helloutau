@@ -102,6 +102,23 @@ namespace hello::kit {
             return QString::fromLatin1(view);
         }
 
+        // Returns the offset in data of a tail of at most bytes: the start of the first line in
+        // it, or else the start of the first UTF-8 sequence in it.
+        qsizetype tailStart(const QByteArray &data, qsizetype bytes) {
+            auto start = std::max<qsizetype>(0, data.size() - bytes);
+            if (start == 0) {
+                return 0;
+            }
+            if (const auto newline = data.indexOf('\n', start - 1);
+                newline >= 0 && newline + 1 < data.size()) {
+                return newline + 1;
+            }
+            while (start < data.size() && (uchar(data.at(start)) & 0xC0) == 0x80) {
+                ++start;
+            }
+            return start;
+        }
+
     }
 
     EngineOutputLog::EngineOutputLog() = default;
@@ -110,20 +127,13 @@ namespace hello::kit {
 
     QString EngineOutputLog::text() const {
         const std::lock_guard lock(m_mutex);
-        if (!m_fileName.isEmpty()) {
-            QFile file(m_fileName);
-            if (file.open(QIODevice::ReadOnly)) {
-                return QString::fromUtf8(file.readAll());
-            }
-        }
-        return m_outputs;
+        return QString::fromUtf8(read());
     }
 
     void EngineOutputLog::clear() {
         const std::lock_guard lock(m_mutex);
-        m_outputs.clear();
         m_runStarted = false;
-        writeFile();
+        write({});
     }
 
     void EngineOutputLog::setMode(Mode mode) {
@@ -134,66 +144,68 @@ namespace hello::kit {
 
     void EngineOutputLog::setLimit(qsizetype bytes) {
         const std::lock_guard lock(m_mutex);
-        loadFile();
         m_limit = std::max<qsizetype>(1024, bytes);
-        trim();
-        writeFile();
-        if (!m_fileName.isEmpty()) {
-            m_outputs.clear();
+        if (const auto data = read(); data.size() > m_limit) {
+            write(data.mid(tailStart(data, m_limit / 2)));
         }
     }
 
     void EngineOutputLog::setFileName(const QString &fileName) {
         const std::lock_guard lock(m_mutex);
+        const auto data = read();
+        m_outputs.clear();
         m_fileName = fileName;
-        writeFile();
-    }
-
-    void EngineOutputLog::trim() {
-        const auto bytes = m_outputs.toUtf8();
-        if (bytes.size() > m_limit) {
-            m_outputs = QString::fromUtf8(bytes.right(m_limit));
-        }
+        write(data);
     }
 
     void EngineOutputLog::record(const std::filesystem::path &program, const QString &output) {
         const auto name = QString::fromStdU16String(program.u16string());
         const auto time = QDateTime::currentDateTime().toString(Qt::ISODateWithMs);
         const auto body = output.isEmpty() ? QStringLiteral("(no output)") : output;
-        const auto entry = QStringLiteral("[%1] %2\n%3\n").arg(time, name, body);
+        const auto entry = QStringLiteral("[%1] %2\n%3\n").arg(time, name, body).toUtf8();
         const std::lock_guard lock(m_mutex);
-        loadFile();
         if (m_mode == Latest && !m_runStarted) {
-            m_outputs.clear();
+            write({});
         }
         m_runStarted = true;
-        m_outputs += entry;
-        trim();
-        writeFile();
-        if (!m_fileName.isEmpty()) {
-            m_outputs.clear();
-        }
+        append(entry);
     }
 
-    void EngineOutputLog::writeFile() {
+    QByteArray EngineOutputLog::read() const {
         if (m_fileName.isEmpty()) {
+            return m_outputs;
+        }
+        QFile file(m_fileName);
+        return file.open(QIODevice::ReadOnly) ? file.readAll() : QByteArray();
+    }
+
+    void EngineOutputLog::write(const QByteArray &data) {
+        if (m_fileName.isEmpty()) {
+            m_outputs = data;
             return;
         }
         QFile file(m_fileName);
         if (file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
-            file.write(m_outputs.toUtf8());
+            file.write(data);
         }
     }
 
-    void EngineOutputLog::loadFile() {
+    void EngineOutputLog::append(const QByteArray &entry) {
+        qint64 size = 0;
         if (m_fileName.isEmpty()) {
-            return;
-        }
-        QFile file(m_fileName);
-        if (file.open(QIODevice::ReadOnly)) {
-            m_outputs = QString::fromUtf8(file.readAll());
+            m_outputs += entry;
+            size = m_outputs.size();
         } else {
-            m_outputs.clear();
+            QFile file(m_fileName);
+            if (!file.open(QIODevice::WriteOnly | QIODevice::Append)) {
+                return;
+            }
+            file.write(entry);
+            size = file.size();
+        }
+        if (size > m_limit) {
+            const auto data = read();
+            write(data.mid(tailStart(data, m_limit / 2)));
         }
     }
 
