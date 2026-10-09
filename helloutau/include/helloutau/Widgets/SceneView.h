@@ -16,6 +16,8 @@
 
 namespace hello::daw {
 
+    class MouseGrabGuard;
+
     /// A view of a scene laid out in ticks across and keys up and down, such as a piano roll,
     /// drawn by layers and scrolled and zoomed by the axes.
     ///
@@ -104,7 +106,6 @@ namespace hello::daw {
         void keyPressEvent(QKeyEvent *event) override;
         void leaveEvent(QEvent *event) override;
         void focusOutEvent(QFocusEvent *event) override;
-        bool eventFilter(QObject *watched, QEvent *event) override;
 
     private:
         TimeAxis m_timeAxis;
@@ -126,8 +127,8 @@ namespace hello::daw {
         Qt::KeyboardModifiers m_pointerModifiers = Qt::NoModifier;
         std::function<std::optional<WheelAction>(Qt::KeyboardModifiers)> m_wheelActions;
         QTimer m_autoScrollTimer;
-        bool m_suppressContextMenu = false;
-        bool m_contextFilterInstalled = false;
+        // The mouse grab of the gesture, which exists while m_gesture does
+        std::unique_ptr<MouseGrabGuard> m_grab;
 
         TimeAxis clamped(TimeAxis axis) const;
         KeyAxis clamped(KeyAxis axis) const;

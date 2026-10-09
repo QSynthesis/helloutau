@@ -10,6 +10,7 @@
 #include <QtGui/QWheelEvent>
 #include <QtWidgets/QScrollBar>
 
+#include "MouseGrabGuard.h"
 #include "PlatformWheel.h"
 
 namespace hello::daw {
@@ -62,8 +63,7 @@ namespace hello::daw {
     }
 
     SceneView::~SceneView() {
-        if (m_contextFilterInstalled)
-            QCoreApplication::instance()->removeEventFilter(this);
+        m_grab.reset();
         releaseMouseIfGrabbed();
     }
 
@@ -256,16 +256,15 @@ namespace hello::daw {
         if (m_gesture && m_gesture->wantsAutoScroll()) {
             m_autoScrollTimer.start();
         }
-        // TODO: Move the gesture mouse grab and temporary context-menu suppression into a
-        // dedicated RAII helper (for example, an optional guard whose construction and
-        // destruction acquire and release the grab).
         if (m_gesture) {
+            // Released first, because the release of a previous grab would end the new one.
+            m_grab.reset();
+            // The right button causes a context menu event, which no widget receives meanwhile.
+            QList<QEvent::Type> suppressed;
             if (event->button() == Qt::RightButton) {
-                m_suppressContextMenu = true;
-                QCoreApplication::instance()->installEventFilter(this);
-                m_contextFilterInstalled = true;
+                suppressed.push_back(QEvent::ContextMenu);
             }
-            viewport()->grabMouse();
+            m_grab = std::make_unique<MouseGrabGuard>(viewport(), suppressed);
         }
         event->accept();
     }
@@ -289,16 +288,7 @@ namespace hello::daw {
     void SceneView::mouseReleaseEvent(QMouseEvent *event) {
         if (m_gesture) {
             m_autoScrollTimer.stop();
-            releaseMouseIfGrabbed();
-            if (event->button() == Qt::RightButton) {
-                QTimer::singleShot(0, this, [this] {
-                    m_suppressContextMenu = false;
-                    if (m_contextFilterInstalled) {
-                        QCoreApplication::instance()->removeEventFilter(this);
-                        m_contextFilterInstalled = false;
-                    }
-                });
-            }
+            m_grab.reset();
             // Released before release() runs, which may change what the view shows.
             auto gesture = std::move(m_gesture);
             gesture->release(event->position(), event->modifiers());
@@ -398,12 +388,7 @@ namespace hello::daw {
     void SceneView::cancelGesture() {
         if (m_gesture) {
             m_autoScrollTimer.stop();
-            releaseMouseIfGrabbed();
-            m_suppressContextMenu = false;
-            if (m_contextFilterInstalled) {
-                QCoreApplication::instance()->removeEventFilter(this);
-                m_contextFilterInstalled = false;
-            }
+            m_grab.reset();
             auto gesture = std::move(m_gesture);
             gesture->cancel();
         }
@@ -415,15 +400,6 @@ namespace hello::daw {
         } else if (QWidget::mouseGrabber() == this) {
             releaseMouse();
         }
-    }
-
-    bool SceneView::eventFilter(QObject *watched, QEvent *event) {
-        Q_UNUSED(watched);
-        if (m_suppressContextMenu && event->type() == QEvent::ContextMenu) {
-            event->accept();
-            return true;
-        }
-        return QAbstractScrollArea::eventFilter(watched, event);
     }
 
     void SceneView::autoScroll() {
