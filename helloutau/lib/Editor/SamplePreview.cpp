@@ -143,14 +143,16 @@ namespace hello::daw {
             }
         }
 
-        bool start(std::vector<float> samples, int channels, kit::DiagnosticList &diagnostics) {
+        bool start(std::vector<float> samples, int channels, int rate,
+                   kit::DiagnosticList &diagnostics) {
             QString error;
-            if (!output->start(std::make_shared<BufferSource>(std::move(samples), channels),
+            if (!output->start(std::make_shared<BufferSource>(std::move(samples), channels), rate,
                                &error)) {
                 fail(diagnostics, error);
                 setState(Stopped);
                 return false;
             }
+            deviceRate = rate;
             setState(Playing);
             return true;
         }
@@ -168,7 +170,8 @@ namespace hello::daw {
             }
             synthesized = done->audio;
             kit::DiagnosticList diagnostics;
-            if (!start(std::move(done->samples), done->audio->channels, diagnostics)) {
+            if (!start(std::move(done->samples), done->audio->channels, done->deviceRate,
+                       diagnostics)) {
                 Q_EMIT decl.failed(diagnostics);
             }
         }
@@ -232,12 +235,11 @@ namespace hello::daw {
         const int channels = audio->channels;
         const std::vector<float> span(audio->samples.begin() + first * channels,
                                       audio->samples.begin() + last * channels);
-        if (!impl.start(resampled(span, channels, audio->sampleRate, rate), channels,
+        if (!impl.start(resampled(span, channels, audio->sampleRate, rate), channels, rate,
                         diagnostics)) {
             return false;
         }
         impl.playedFrom = double(first) * 1000 / audio->sampleRate;
-        impl.deviceRate = rate;
         return true;
     }
 

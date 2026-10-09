@@ -429,7 +429,7 @@ namespace hello::daw {
             stream->start();
 
             QString error;
-            if (!output->start(stream, &error)) {
+            if (!output->start(stream, deviceRate, &error)) {
                 endPreview();
                 setState(Stopped);
                 kit::DiagnosticList diagnostics;
@@ -647,7 +647,7 @@ namespace hello::daw {
             stdc_decl_t;
             QString error;
             if (!output->start(std::make_shared<BufferSource>(kept->samples, kept->channels, first),
-                               &error)) {
+                               kept->deviceRate, &error)) {
                 setState(Stopped);
                 kit::DiagnosticList diagnostics;
                 fail(diagnostics, error);

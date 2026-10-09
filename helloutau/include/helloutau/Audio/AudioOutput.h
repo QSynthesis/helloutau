@@ -68,8 +68,8 @@ namespace hello::daw {
         explicit AudioOutput(QObject *parent = nullptr);
         ~AudioOutput() override;
 
-        /// The sample rate of the default device, to which a source must be converted, or 0 if
-        /// the system has no output device.
+        /// Returns the sample rate to which a source must be converted, see
+        /// AudioEngine::sampleRate().
         static int deviceSampleRate();
 
         static QList<QByteArray> outputDeviceIds();
@@ -77,12 +77,12 @@ namespace hello::daw {
         static QByteArray outputDeviceId();
         static void setOutputDeviceId(const QByteArray &id);
 
-        /// Replaces this handle's source. A positive \a sampleRate validates the source rate
-        /// against the current device, rejecting data prepared before a device rate change.
+        /// Replaces this handle's source, whose samples are at \a sampleRate. The source is
+        /// rejected if \a sampleRate differs from the rate of the device stream, as for samples
+        /// converted before the device or its rate changed.
         ///
         /// \return whether the device started, with the reason in \a error otherwise
-        bool start(std::shared_ptr<AudioSource> source, QString *error = nullptr,
-                   int sampleRate = 0);
+        bool start(std::shared_ptr<AudioSource> source, int sampleRate, QString *error = nullptr);
 
         /// Stops playing. Emits finished() if something played.
         void stop();

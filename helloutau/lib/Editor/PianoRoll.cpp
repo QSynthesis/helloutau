@@ -124,8 +124,7 @@ namespace hello::daw {
             }
             constexpr double duration = 0.35;
             const double frequency = 440 * std::pow(2.0, (key - 69) / 12.0);
-            keyOutput->start(std::make_shared<PianoToneSource>(rate, frequency, duration), nullptr,
-                             rate);
+            keyOutput->start(std::make_shared<PianoToneSource>(rate, frequency, duration), rate);
         });
         impl.voiceBankButton = new QToolButton();
         impl.voiceBankButton->setAutoRaise(true);

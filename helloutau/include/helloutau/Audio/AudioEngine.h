@@ -16,7 +16,11 @@ namespace hello::daw {
 
         QByteArray deviceId() const;
         QAudioDevice device() const;
+
+        /// Returns the sample rate of the open device stream, or the preferred sample rate of
+        /// the selected device if no stream is open. Returns 0 if no output device exists.
         int sampleRate() const;
+
         /// Changes the device after stopping all registered sources. Empty selects the default.
         void setDeviceId(const QByteArray &id);
         std::optional<AudioMixer::SourceId> start(std::shared_ptr<AudioSource> source,

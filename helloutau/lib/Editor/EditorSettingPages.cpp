@@ -289,7 +289,7 @@ namespace hello::daw {
                 return;
             }
             auto output = new AudioOutput(widget);
-            output->start(std::make_shared<SineWaveSource>(rate, 440.0, 0.5));
+            output->start(std::make_shared<SineWaveSource>(rate, 440.0, 0.5), rate);
             connect(output, &AudioOutput::finished, output, &QObject::deleteLater);
         });
         return widget;

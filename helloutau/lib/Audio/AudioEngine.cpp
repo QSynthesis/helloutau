@@ -135,6 +135,10 @@ namespace hello::daw {
     }
 
     int AudioEngine::sampleRate() const {
+        stdc_impl_t;
+        if (impl.sink) {
+            return impl.sink->format().sampleRate();
+        }
         const auto selected = device();
         return selected.isNull() ? 0 : selected.preferredFormat().sampleRate();
     }
@@ -181,7 +185,9 @@ namespace hello::daw {
         }
         auto format = selected.preferredFormat();
         format.setSampleFormat(QAudioFormat::Float);
-        if (rate != format.sampleRate()) {
+        // The mixer of an open stream runs at the rate of that stream, which may differ from the
+        // preferred format of the device after the system settings change.
+        if (rate != (impl.sink ? impl.sink->format().sampleRate() : format.sampleRate())) {
             return fail(tr("The audio sample rate changed. Start playback again."));
         }
         if (!selected.isFormatSupported(format)) {
