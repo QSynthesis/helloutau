@@ -1,4 +1,4 @@
-﻿#include "ReplaceLyricsDialog_p.h"
+#include "ReplaceLyricsDialog_p.h"
 
 #include <QtWidgets/QCheckBox>
 #include <QtWidgets/QDialogButtonBox>

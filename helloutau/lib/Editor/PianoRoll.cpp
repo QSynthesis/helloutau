@@ -1,4 +1,4 @@
-﻿#include "PianoRoll.h"
+#include "PianoRoll.h"
 
 #include <algorithm>
 #include <cmath>

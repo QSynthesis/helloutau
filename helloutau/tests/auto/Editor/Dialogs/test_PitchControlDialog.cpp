@@ -1,4 +1,4 @@
-﻿#include <QtTest/QTest>
+#include <QtTest/QTest>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QDoubleSpinBox>
 
