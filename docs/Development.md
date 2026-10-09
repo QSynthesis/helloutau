@@ -112,7 +112,16 @@ PImpl 采用 stdcorelib 的写法（`<stdcorelib/pimpl.h>`）。只在实现中�
 | 模块级 CMake 变量 | `HELLOKIT_` / `HELLOUTAU_` | `HELLOKIT_DEVEL` |
 | 模块级 CMake 函数 | `hellokit_` / `helloutau_` | `hellokit_add_library` |
 | 子库导出宏 | `HELLOKIT_DOCUMENT_` 等 | `HELLOKIT_DOCUMENT_EXPORT` |
-| 头文件保护 | 按 include 路径 | `HELLOKIT_DOCUMENT_PAYLOADCODEC_H` |
+| 头文件保护 | 按路径，见下文 | `HELLOKIT_DOCUMENT_PAYLOADCODEC_H` |
+
+**头文件保护**取头文件的路径，全部大写，路径分隔符与扩展名前的点换为下划线，中间各级目录都保留，与 LLVM 编码规范的 Header Guard 一节（`llvm/docs/CodingStandards.rst`）相同。`#endif` 后的注释与保护名一致。
+
+- 公开头文件取 include 路径：`hellokit/include/hellokit/Document/PayloadCodec.h` 为 `HELLOKIT_DOCUMENT_PAYLOADCODEC_H`，`helloutau/include/helloutau/Editor/Dialogs/RegionDialog.h` 为 `HELLOUTAU_EDITOR_DIALOGS_REGIONDIALOG_H`。
+- 库内私有头文件取模块名与 `lib/` 之后的路径，文件名保留 `_P`：`helloutau/lib/Editor/Dialogs/AboutDialog_p.h` 为 `HELLOUTAU_EDITOR_DIALOGS_ABOUTDIALOG_P_H`。
+- 名为 `private` 的目录不计入，视同其上级目录（作者 2026-10-09 决定）：`hellokit/include/hellokit/Synth/private/ShellSyntax_p.h` 为 `HELLOKIT_SYNTH_SHELLSYNTAX_P_H`。
+- 插件的头文件取 `HELLOUTAU_` 与 `plugins/` 之后的路径，`Internal` 计入：`helloutau/plugins/Core/KeymapSettingPage.h` 为 `HELLOUTAU_CORE_KEYMAPSETTINGPAGE_H`，`helloutau/plugins/Core/Internal/CorePlugin.h` 为 `HELLOUTAU_CORE_INTERNAL_COREPLUGIN_H`。
+- 测试的辅助头文件取模块名、`TESTS` 与 `tests/auto/` 之后的路径：`hellokit/tests/auto/EditBase/TestSession.h` 为 `HELLOKIT_TESTS_EDITBASE_TESTSESSION_H`。
+- 独立程序（`tools/` 与 `tests/manual/` 下的各个程序）的头文件以程序目录名开头，取其后的路径：`hellokit/tools/fswatcher/Backend.h` 为 `FSWATCHER_BACKEND_H`。
 
 模块级函数由 `qm_setup_build_repo_helpers(hellokit)` 生成，**必须显式指定前缀**，因为其默认值为 `PROJECT_NAME`，而子目录中的 `PROJECT_NAME` 已是 `HelloKitDocument`。变量前缀由 `hellokit_init_buildsystem(HELLOKIT)` 显式指定。
 

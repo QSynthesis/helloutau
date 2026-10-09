@@ -1,5 +1,5 @@
-#ifndef HELLOUTAU_CORE_COREPLUGIN_H
-#define HELLOUTAU_CORE_COREPLUGIN_H
+#ifndef HELLOUTAU_CORE_INTERNAL_COREPLUGIN_H
+#define HELLOUTAU_CORE_INTERNAL_COREPLUGIN_H
 
 #include <memory>
 #include <string>
@@ -30,4 +30,4 @@ namespace hello::daw {
 
 }
 
-#endif // HELLOUTAU_CORE_COREPLUGIN_H
+#endif // HELLOUTAU_CORE_INTERNAL_COREPLUGIN_H
