@@ -1381,8 +1381,7 @@ namespace hello::daw {
                 button->setText(text);
             }
             if (roll) {
-                roll->ruler()->setTicksPerBeat(kit::ticksPerQuarter * 4 / denominator);
-                roll->ruler()->setBeatsPerBar(numerator);
+                roll->setTimeSignature(numerator, denominator);
             }
         }
 

@@ -664,9 +664,9 @@ namespace hello::daw {
     void PianoRollState::refresh() {
         refreshPending = false;
         const auto bars =
-            std::max<qint64>(MinimumBars, timeline->length() / BarTicks + 1 + TrailingBars);
-        view->setTickRange(0, double(bars * BarTicks));
-        parameters->setTickRange(0, double(bars * BarTicks));
+            std::max<qint64>(MinimumBars, timeline->length() / barTicks + 1 + TrailingBars);
+        view->setTickRange(0, double(bars * barTicks));
+        parameters->setTickRange(0, double(bars * barTicks));
 
         // The tempo at the start, and wherever a note sets one
         const auto &map = timeline->tempoMap();

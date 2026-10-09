@@ -36,12 +36,14 @@ namespace hello::daw {
 
         const double firstTick = std::max(0.0, time.toTick(exposed.left()));
         const double lastTick = time.toTick(exposed.right() + 1);
-        const int subdivisions[] = {kit::ticksPerQuarter, kit::ticksPerQuarter / 2,
-                                    kit::ticksPerQuarter / 4, kit::ticksPerQuarter / 8};
+        const int beatTicks = m_state->beatTicks;
+        const int subdivisions[] = {beatTicks, beatTicks / 2, beatTicks / 4, beatTicks / 8};
         int step = subdivisions[0];
         bool drawSubdivisions = false;
         for (const int candidate : subdivisions) {
-            if (candidate * time.pixelsPerTick >= MinimumBeatSpacing) {
+            // A subdivision that does not divide the beat would drift from the beat lines.
+            if (candidate > 0 && beatTicks % candidate == 0 &&
+                candidate * time.pixelsPerTick >= MinimumBeatSpacing) {
                 step = candidate;
                 drawSubdivisions = true;
             }
@@ -52,11 +54,11 @@ namespace hello::daw {
         subdivisionColor.setAlphaF(subdivisionColor.alphaF() * 0.55);
         for (auto grid = firstGrid; grid <= lastGrid; ++grid) {
             const auto tick = grid * step;
-            const bool bar = tick % BarTicks == 0;
+            const bool bar = tick % m_state->barTicks == 0;
             if (!bar && !drawSubdivisions && step == subdivisions[0]) {
                 continue;
             }
-            const bool beat = tick % kit::ticksPerQuarter == 0;
+            const bool beat = tick % beatTicks == 0;
             painter.setPen(bar ? decl->barLineColor()
                                : (beat ? decl->lineColor() : subdivisionColor));
             const double x = time.toX(double(tick));

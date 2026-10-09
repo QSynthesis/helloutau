@@ -135,8 +135,8 @@ namespace hello::daw {
         impl.voiceBankButton->setToolTip(tr("Open Project Properties"));
         connect(impl.voiceBankButton, &QToolButton::clicked, this,
                 [this] { Q_EMIT voiceBankRequested(); });
-        impl.ruler->setTicksPerBeat(kit::ticksPerQuarter);
-        impl.ruler->setBeatsPerBar(PianoRollState::BeatsPerBar);
+        impl.ruler->setTicksPerBeat(impl.beatTicks);
+        impl.ruler->setBeatsPerBar(impl.barTicks / impl.beatTicks);
         connect(impl.ruler, &TimelineRuler::markDoubleClicked, this, [this](int mark) {
             stdc_impl_t;
             if (mark >= 0 && mark < impl.markNotes.size()) {
@@ -499,13 +499,24 @@ namespace hello::daw {
     }
 
     QString PianoRoll::quantizationName(int ticks) {
-        return ticks > 0 ? QStringLiteral("1/%1").arg(PianoRollState::BarTicks / ticks) : tr("Off");
+        return ticks > 0 ? QStringLiteral("1/%1").arg(PianoRollState::WholeNoteTicks / ticks)
+                         : tr("Off");
     }
 
     QList<int> PianoRoll::quantizations() {
-        return {PianoRollState::BarTicks / 4,  PianoRollState::BarTicks / 8,
-                PianoRollState::BarTicks / 16, PianoRollState::BarTicks / 32,
-                PianoRollState::BarTicks / 64, 0};
+        return {PianoRollState::WholeNoteTicks / 4,  PianoRollState::WholeNoteTicks / 8,
+                PianoRollState::WholeNoteTicks / 16, PianoRollState::WholeNoteTicks / 32,
+                PianoRollState::WholeNoteTicks / 64, 0};
+    }
+
+    void PianoRoll::setTimeSignature(int numerator, int denominator) {
+        stdc_impl_t;
+        impl.beatTicks = PianoRollState::WholeNoteTicks / std::max(1, denominator);
+        impl.barTicks = impl.beatTicks * std::max(1, numerator);
+        impl.ruler->setTicksPerBeat(impl.beatTicks);
+        impl.ruler->setBeatsPerBar(std::max(1, numerator));
+        impl.scheduleRefresh();
+        impl.view->viewport()->update();
     }
 
     int PianoRoll::quantizedLength() const {

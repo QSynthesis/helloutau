@@ -170,6 +170,11 @@ namespace hello::daw {
         Tool tool() const;
         void setTool(Tool tool);
 
+        /// Sets the time signature of the bar and beat lines of the ruler and the grid, by
+        /// default 4/4. The project is not changed, because UST has no time signature. The
+        /// quantizations are note values and do not depend on it.
+        void setTimeSignature(int numerator, int denominator);
+
         /// \name Quantization
         ///
         /// The grid in ticks to which drags snap, or 0 for none. Holding Alt during a drag

@@ -47,9 +47,8 @@ namespace hello::daw {
     /// PianoRollLayers_p.h, PianoRollParameterLayers_p.h and PianoRollGestures_p.h.
     class PianoRollState {
     public:
-        /// UST has no time signature, and UTAU shows 4/4.
-        static constexpr int BeatsPerBar = 4;
-        static constexpr int BarTicks = kit::ticksPerQuarter * BeatsPerBar;
+        /// The length of a whole note, of which the quantizations are fractions
+        static constexpr int WholeNoteTicks = kit::ticksPerQuarter * 4;
 
         /// The scene extends this many bars past the last note, and has at least this many.
         static constexpr int TrailingBars = 8;
@@ -188,6 +187,12 @@ namespace hello::daw {
         std::shared_ptr<const kit::VoiceBank> voiceBank;
         PianoRoll::Tool tool = PianoRoll::SelectTool;
         int quantization = DefaultQuantization;
+
+        /// The beat and the bar of the time signature, see PianoRoll::setTimeSignature(). UST has
+        /// no time signature, and UTAU shows 4/4.
+        int beatTicks = kit::ticksPerQuarter;
+        int barTicks = kit::ticksPerQuarter * 4;
+
         ModifierBindings noteModifiers{NoteViewModifiers::scheme()};
         ModifierBindings parameterModifiers{ParameterViewModifiers::scheme()};
 
