@@ -1326,7 +1326,7 @@ namespace hello::daw {
             });
             context->addWidgetFactory(
                 QStringLiteral("helloutau.edit.projectTempoWidget"),
-                [this, &decl](QWidget *parent) -> QWidget * {
+                [this](QWidget *parent) -> QWidget * {
                     auto box = new QDoubleSpinBox(parent);
                     box->setObjectName(QStringLiteral("tempo"));
                     box->setToolTip(tr("Project Tempo"));
@@ -1343,7 +1343,7 @@ namespace hello::daw {
                     box->setValue(document ? kit::ProjectRef(document->session()).settings().tempo()
                                            : 120);
                     QObject::connect(
-                        box, &QDoubleSpinBox::valueChanged, box, [this, &decl](double tempo) {
+                        box, &QDoubleSpinBox::valueChanged, box, [this](double tempo) {
                             if (!document) {
                                 return;
                             }
@@ -1352,7 +1352,7 @@ namespace hello::daw {
                             kit::DiagnosticList diagnostics;
                             kit::ProjectEdits::setProperties(kit::ProjectRef(document->session()),
                                                              changes, diagnostics);
-                            DiagnosticBox::show(&decl, tr("Project Tempo"), diagnostics);
+                            DiagnosticBox::show(_decl, tr("Project Tempo"), diagnostics);
                         });
                     tempoBoxes.push_back(box);
                     return box;
