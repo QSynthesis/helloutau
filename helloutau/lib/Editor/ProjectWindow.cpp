@@ -156,9 +156,27 @@ namespace hello::daw {
             return path.replace_extension(extension);
         }
 
+        // Returns the file name of a wav file named after baseName. The characters that a file name
+        // cannot contain on Windows, the path separators among them, become underscores, so that
+        // a project name such as Song v1.2 or ..\x remains a single file name. The extension is
+        // appended rather than replaced, because a dot in a name does not start an extension.
         std::filesystem::path audioPathOf(const QString &baseName) {
-            auto path = std::filesystem::path(baseName.toStdU16String());
-            return path.replace_extension(u".wav");
+            QString name;
+            for (const auto c : baseName) {
+                const bool invalid = c < QChar(u' ') || QStringView(u"\\/:*?\"<>|").contains(c);
+                name += invalid ? QChar(u'_') : c;
+            }
+            // Windows removes trailing dots and spaces from a file name.
+            while (name.endsWith(u'.') || name.endsWith(u' ')) {
+                name.chop(1);
+            }
+            if (name.isEmpty()) {
+                name = QStringLiteral("track");
+            }
+            if (!name.endsWith(u".wav", Qt::CaseInsensitive)) {
+                name += u".wav";
+            }
+            return std::filesystem::path(name.toStdU16String());
         }
 
         kit::Vibrato pitchControlDefaultVibrato(const AppSettings &settings) {
@@ -958,7 +976,7 @@ namespace hello::daw {
                                             "was last cleared."));
                 return;
             }
-            const auto proposed = audioPathOf(QStringLiteral("temp"));
+            const auto proposed = audioFolder() / audioPathOf(QStringLiteral("temp"));
             const auto chosen = QFileDialog::getSaveFileName(
                 &decl, tr("Save Last Played"), textOf(proposed), tr("WAV files (*.wav)"));
             if (chosen.isEmpty()) {
@@ -1056,11 +1074,7 @@ namespace hello::daw {
         // an output file proposes its name with the extension .wav.
         std::filesystem::path defaultTrackFile() const {
             const auto source = document->sourcePath();
-            const auto folder =
-                source.empty() ? std::filesystem::path(
-                                     QStandardPaths::writableLocation(QStandardPaths::MusicLocation)
-                                         .toStdU16String())
-                               : source.parent_path();
+            const auto folder = audioFolder();
             auto output =
                 kit::Project::pathOf(kit::ProjectRef(document->session()).settings().outputFile());
             if (output.empty()) {
@@ -1068,6 +1082,16 @@ namespace hello::daw {
                                         : source.filename().replace_extension(u".wav");
             }
             return output.is_absolute() ? output : folder / output;
+        }
+
+        // Returns the folder in which an audio file of the project is proposed: the folder of the
+        // project file, or the music folder of the user for a project without a file.
+        std::filesystem::path audioFolder() const {
+            const auto source = document->sourcePath();
+            return source.empty() ? std::filesystem::path(QStandardPaths::writableLocation(
+                                                              QStandardPaths::MusicLocation)
+                                                              .toStdU16String())
+                                  : source.parent_path();
         }
 
         QString projectAudioBaseName() const {
