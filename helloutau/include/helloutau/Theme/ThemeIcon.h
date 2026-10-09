@@ -64,6 +64,12 @@ namespace hello::daw {
         static QIcon forState(const QIcon &icon, ThemeButtonState state,
                               const QColor &text = QColor());
 
+        /// Returns \a icon with the files of its checked states in the corresponding unchecked
+        /// states, so that a control that is not checked draws the checked files. The colors
+        /// remain. Returns \a icon unchanged if its engine is not the icon engine of this
+        /// library.
+        static QIcon checkedLook(const QIcon &icon);
+
         /// Clears the cached file contents and rendered images, so that subsequent drawing reads
         /// the current files.
         static void clearCache();

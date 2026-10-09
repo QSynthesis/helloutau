@@ -1,5 +1,7 @@
 #include "ThemeIcon.h"
 
+#include <utility>
+
 #include <QtCore/QFile>
 #include <QtCore/QHash>
 #include <QtCore/QMutex>
@@ -136,6 +138,20 @@ namespace hello::daw {
             return icon;
         }
         return QIcon(new ThemeIconEngine(*themeIcon, state, text));
+    }
+
+    QIcon ThemeIcon::checkedLook(const QIcon &icon) {
+        auto themeIcon = of(icon);
+        if (!themeIcon) {
+            return icon;
+        }
+        using S = ThemeButtonState;
+        for (const auto &[unchecked, checked] :
+             {std::pair(S::Up, S::CheckedUp), std::pair(S::Over, S::CheckedOver),
+              std::pair(S::Down, S::CheckedDown), std::pair(S::Disabled, S::CheckedDisabled)}) {
+            themeIcon->files.setValue(unchecked, themeIcon->files.value(checked));
+        }
+        return themeIcon->icon();
     }
 
     void ThemeIcon::clearCache() {
