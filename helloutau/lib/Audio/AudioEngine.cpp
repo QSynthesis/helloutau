@@ -1,6 +1,8 @@
 #include "AudioEngine.h"
 
+#include <algorithm>
 #include <cstring>
+#include <vector>
 
 #include <QtCore/QCoreApplication>
 #include <QtCore/QPointer>
@@ -17,11 +19,15 @@ namespace hello::daw {
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 11, 0) || defined(HELLOUTAU_AUDIO_PULL)
 #  define HELLOUTAU_AUDIO_PULL_DEVICE
-        // Retains partial frame bytes across QIODevice reads, including unaligned requests.
+        // Renders each request of the sink in one call of AudioMixer::render(), at most
+        // maximumFrames at a time, so that DeviceClock records whole pulls rather than single
+        // frames. The bytes of a frame beyond the request remain for the next read, which
+        // handles requests that are not a whole number of frames.
         class MixerDevice : public QIODevice {
         public:
             MixerDevice(AudioMixer &mixer, int channels)
-                : m_mixer(mixer), m_frame(size_t(channels)) {
+                : m_mixer(mixer), m_channels(channels),
+                  m_buffer(size_t(maximumFrames) * size_t(channels)) {
                 open(QIODevice::ReadOnly | QIODevice::Unbuffered);
             }
             bool isSequential() const override {
@@ -33,16 +39,19 @@ namespace hello::daw {
 
         protected:
             qint64 readData(char *out, qint64 size) override {
+                const auto frameBytes = qint64(m_channels) * qint64(sizeof(float));
                 qint64 copied = 0;
-                const auto bytes = qint64(m_frame.size() * sizeof(float));
                 while (copied < size) {
                     if (m_remaining == 0) {
-                        m_mixer.render(m_frame.data(), qsizetype(m_frame.size()));
-                        m_remaining = bytes;
+                        const auto frames = std::min<qint64>(
+                            (size - copied + frameBytes - 1) / frameBytes, maximumFrames);
+                        m_mixer.render(m_buffer.data(), qsizetype(frames * m_channels));
+                        m_rendered = frames * frameBytes;
+                        m_remaining = m_rendered;
                     }
                     const auto count = std::min(size - copied, m_remaining);
                     std::memcpy(out + copied,
-                                reinterpret_cast<const char *>(m_frame.data()) + bytes -
+                                reinterpret_cast<const char *>(m_buffer.data()) + m_rendered -
                                     m_remaining,
                                 size_t(count));
                     m_remaining -= count;
@@ -55,8 +64,14 @@ namespace hello::daw {
             }
 
         private:
+            // Allocated once, because readData() runs on the audio thread
+            static constexpr qint64 maximumFrames = 4096;
+
             AudioMixer &m_mixer;
-            std::vector<float> m_frame;
+            int m_channels;
+            std::vector<float> m_buffer;
+            // The bytes rendered by the last call, and those of them not yet read
+            qint64 m_rendered = 0;
             qint64 m_remaining = 0;
         };
 #endif
