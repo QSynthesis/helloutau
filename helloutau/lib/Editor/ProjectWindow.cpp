@@ -601,13 +601,23 @@ namespace hello::daw {
             NotePropertiesDialog::Defaults defaults;
             const auto bank = document->voiceBank();
             const auto &tempoMap = roll->timeline()->tempoMap();
+            bool sampled = true;
             for (int i = 0; i < indices.size(); ++i) {
                 const int index = indices.at(i);
                 defaults.tempo.push_back(tempoMap.tempo(index));
                 const auto sample =
                     bank ? bank->find(notes.at(i).noteNum, notes.at(i).lyric) : nullptr;
-                defaults.preUtterance.push_back(sample ? sample->preUtterance : 0);
-                defaults.voiceOverlap.push_back(sample ? sample->voiceOverlap : 0);
+                sampled = sampled && sample;
+                if (sample) {
+                    defaults.preUtterance.push_back(sample->preUtterance);
+                    defaults.voiceOverlap.push_back(sample->voiceOverlap);
+                }
+            }
+            // Without a sample for every note, the dialog shows the voice bank as the default
+            // instead of a number.
+            if (!sampled) {
+                defaults.preUtterance.clear();
+                defaults.voiceOverlap.clear();
             }
             NotePropertiesDialog dialog(notes, defaults, &decl);
             if (dialog.exec() != QDialog::Accepted) {
