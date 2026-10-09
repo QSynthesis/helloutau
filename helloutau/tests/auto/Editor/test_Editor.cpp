@@ -65,7 +65,7 @@
 #include <helloutau/Editor/PianoRoll.h>
 #include <helloutau/Editor/Dialogs/PasteParametersDialog.h>
 #include <helloutau/Editor/Dialogs/ScalePitchDialog.h>
-#include <helloutau/Editor/Dialogs/VibratoDialog.h>
+#include <helloutau/Editor/Dialogs/PitchControlDialog.h>
 #include <helloutau/Editor/Dialogs/VoiceBankCharsetDialog.h>
 #include <helloutau/Editor/VoiceBankEntryModel.h>
 #include <helloutau/Editor/VoiceBankInfoPanel.h>
@@ -452,7 +452,8 @@ private Q_SLOTS:
         QVERIFY(edit->isEnabled());
         double shown = 0;
         QTimer::singleShot(0, [&shown] {
-            const auto dialog = qobject_cast<VibratoDialog *>(QApplication::activeModalWidget());
+            const auto dialog =
+                qobject_cast<PitchControlDialog *>(QApplication::activeModalWidget());
             QVERIFY(dialog);
             shown = dialog->field(1)->value();
             dialog->field(1)->setValue(240);
