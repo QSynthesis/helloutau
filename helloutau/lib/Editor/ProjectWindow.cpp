@@ -647,7 +647,20 @@ namespace hello::daw {
             return track.voiceDirectory(editor->settings().voiceLocations());
         }
 
-        bool projectPathsValid() const {
+        // Returns whether the voice folder of the project is empty or an existing directory.
+        bool voicePathValid() const {
+            const auto project = document->session()->snapshot();
+            if (project.tracks.isEmpty() || project.tracks.first().voiceDir.isEmpty()) {
+                return true;
+            }
+            const auto root =
+                project.tracks.first().voiceDirectory(editor->settings().voiceLocations());
+            std::error_code error;
+            return !root.empty() && std::filesystem::is_directory(root, error);
+        }
+
+        // Returns whether each engine of the project is empty or an existing file.
+        bool enginePathsValid() const {
             const auto project = document->session()->snapshot();
             const auto utau = editor->settings().utauDirectory();
             const auto exists = [&utau](const QString &value) {
@@ -657,18 +670,7 @@ namespace hello::daw {
                 std::error_code error;
                 return std::filesystem::is_regular_file(EngineTrust::resolved(value, utau), error);
             };
-            if (!exists(project.settings.wavtool) || !exists(project.settings.resampler)) {
-                return false;
-            }
-            if (!project.tracks.isEmpty() && !project.tracks.first().voiceDir.isEmpty()) {
-                const auto root =
-                    project.tracks.first().voiceDirectory(editor->settings().voiceLocations());
-                std::error_code error;
-                if (root.empty() || !std::filesystem::is_directory(root, error)) {
-                    return false;
-                }
-            }
-            return true;
+            return exists(project.settings.wavtool) && exists(project.settings.resampler);
         }
 
         // Deletes the render cache of the project; the realtime mode renders it anew.
@@ -2441,7 +2443,7 @@ namespace hello::daw {
 
     bool ProjectWindow::loadVoiceBank() {
         stdc_impl_t;
-        if (!impl.projectPathsValid()) {
+        if (!impl.voicePathValid()) {
             return false;
         }
         const auto document = impl.document.get();
@@ -2457,7 +2459,7 @@ namespace hello::daw {
 
     void ProjectWindow::showPropertiesIfPathsAreInvalid() {
         stdc_impl_t;
-        if (!impl.projectPathsValid()) {
+        if (!impl.voicePathValid() || !impl.enginePathsValid()) {
             impl.editProperties();
         }
     }
