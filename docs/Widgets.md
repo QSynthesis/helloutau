@@ -340,7 +340,7 @@
 **Keymap 页**（作者 2026-10-01 定，仿 JetBrains IDE 的 Keymap）：
 
 - **每种窗口一个 action registry**（作者 2026-10-01 定）：QActionKit 默认一个应用只有一种窗口，这种窗口对应一个 registry，它的每个实例是一个 context。HelloUtau 有两种窗口，因此 `Editor::actionRegistry(WindowKind)` 为工程窗口与音源窗口各给一个 registry，各有自己的清单（`ProjectActions.xml`、`VoiceBankActions.xml`）、布局、快捷键与用户改动。两种窗口共有的命令（新建、打开、撤销、查找、设置等）在两份清单中各声明一次，其快捷键因此各自独立（作者决定）。插件的 `ActionContribution::extension()` 按窗口种类的名称（`Editor::projectWindowName`、`Editor::voiceBankWindowName`）为每种窗口给出各自的扩展，ClassicPluginHost 与 Interchange 只给工程窗口。
-- 命令树的顶层是两种窗口「Project Window」「Voice Bank Window」，各窗口下按其菜单栏逐级列出命令，组（group）的命令直接列在其菜单下，最后是该窗口自己的「Other」，列出它不在菜单中的命令（如工程窗口的 Classic Plugins at Pointer，N 键）。两种窗口共有的命令在两边各出现一次，分别设定。每行为命令名与快捷键，快捷键与清单不同的命令以链接色标出。
+- 两种窗口「Project Window」「Voice Bank Window」各占一个标签页（作者 2026-10-10 接受），每个标签页是该窗口的一棵命令树。搜索栏在标签页之上，两种窗口共用，右侧的按钮作用于当前标签页的命令。命令树按该窗口的菜单栏逐级列出命令，组（group）的命令直接列在其菜单下，最后是该窗口自己的「Other」，列出它不在菜单中的命令（如工程窗口的 Classic Plugins at Pointer，N 键）。两种窗口共有的命令在两边各出现一次，分别设定。每行为命令名与快捷键，快捷键与清单不同的命令以链接色标出。
 - 顶部可按名称搜索（译文与英文原文都参与匹配），也可在「Shortcut」框中按下快捷键，只留有该快捷键的命令。
 - 「Add Shortcut...」（双击也可）打开录键对话框，按下的键已分给其他命令时当场列出它们，确定后询问「Remove」从它们移除或「Leave」保留二者。「Remove Shortcut」删除快捷键，有多个时从菜单中选。「Reset」恢复该命令清单中的快捷键，「Restore Defaults」恢复全部命令。右键菜单有同样的操作。
 - 冲突只在同一种窗口的命令之间判断，即同一个 registry 之内，与菜单布局无关。两种窗口各自使用的键（如空格、Ins）因此不算冲突。
