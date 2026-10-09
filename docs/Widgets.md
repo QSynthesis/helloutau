@@ -255,7 +255,7 @@
 - 时间轴右键菜单在「Set Tempo Here...」等之后有「Set Label Here...」（该处的音符）、「Name Region...」（连续的选区，否则该处的音符）、「Remove Label」、「Remove Region」、「Load Region」子菜单与「Edit Regions...」。双击时间轴上的标签即编辑之。双击区间则打开预填该区间名称的对话框，确认即改名（`renameRegion`），清空名称即只删除这一个区间（`removeRegion`），同一端点上的其他区间保留（作者 2026-10-08 决定）。区间互相嵌套时画在同一行，后开始的画在上面，单击与双击都取画在最上面的区间，与 `PianoRoll::regionAt()` 一致。
 - 「Edit Regions...」打开区间对话框（`RegionDialog`，作者 2026-10-08 要求），按首音符的先后从上到下列出整条音轨的区间，每行为名称与音符范围（从 1 起编号），预先选中右键处画在最上面的区间（`regionAt()`）。「Go To」或双击一行即按「Load Region」选中并显示该区间，对话框不关闭。「Remove」只删除该区间（`removeRegion`），每次删除为一个撤销步骤，列表随即更新，并选中原位置的下一个区间。对话框目前只做到可用，以后再改进外观。
 
-**工程属性**（作者 2026-09-29 要求）：「文件 → Project Properties...」编辑工程名、速度、flags、音源目录、输出文件、两个合成工具（Tool1、Tool2）与 Mode2，对应 UTAU 的工程属性对话框另加速度。确认后只把改动了的字段交给 `ProjectEdits::setProperties()`，作为一个撤销步骤。速度只有编辑过才算改动，以免数值框的舍入改掉原值。
+**工程属性**（作者 2026-09-29 要求）：「文件 → Project Properties...」编辑工程名、flags、音源目录、输出文件、两个合成工具（Tool1、Tool2）与 Mode2，对应 UTAU 的工程属性对话框。工程曲速只在工具栏中编辑，对话框中不设（作者 2026-10-10 决定）。对话框初始宽度为 600。确认后只把改动了的字段交给 `ProjectEdits::setProperties()`，作为一个撤销步骤。
 
 - **确认的前提**（作者 2026-10-09 决定）：没有任何改动时，确定不修改工程，路径无效也不阻止。有改动时，音源目录与两个合成工具中任一路径无效即拒绝确定。
 - **路径的规范化**（作者 2026-10-09 决定，与 UTAU 相同）：有任何改动时，`VoiceDir`、`Tool1`、`Tool2` 都规范化，规范化后与原值不同的也作为改动。音源文件夹内的绝对路径改为 `%VOICE%` 形式，`%VOICE%` 形式与相对路径不变，与 UTAU 保存时的写回相同（[`claude/utau-voicedir-cachedir.md`](claude/utau-voicedir-cachedir.md)）。UTAU 文件夹内的合成工具改为相对于该文件夹的路径，其余合成工具改为绝对路径。三者的分隔符按 [`note.md`](note.md)「往返保证」写成保存时的形式（`Project::savedPathText()`）。没有改动时不规范化。

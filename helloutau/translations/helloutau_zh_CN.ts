@@ -1500,10 +1500,6 @@
         <translation>名称(&amp;N)：</translation>
     </message>
     <message>
-        <source>&amp;Tempo:</source>
-        <translation>曲速(&amp;T)：</translation>
-    </message>
-    <message>
         <source>&amp;Flags:</source>
         <translation>Flags(&amp;F)：</translation>
     </message>

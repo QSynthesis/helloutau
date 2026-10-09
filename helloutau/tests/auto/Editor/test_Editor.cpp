@@ -812,8 +812,7 @@ private Q_SLOTS:
         QVERIFY(!roll->isCursorEnabled());
     }
 
-    // The dialog gives the fields that differ from the project, the tempo only once edited, so
-    // that a tempo the box rounds stays as it is.
+    // The dialog gives the fields that differ from the project.
     void the_properties_dialog_gives_what_differs() {
         kit::Project project;
         project.settings.name = QStringLiteral("song");
@@ -838,9 +837,6 @@ private Q_SLOTS:
         QCOMPARE(changes.mode2, std::optional(!project.settings.mode2));
         QVERIFY(!changes.tempo && !changes.flags && !changes.wavtool && !changes.resampler &&
                 !changes.outputFile);
-
-        dialog.tempoBox()->setValue(90);
-        QCOMPARE(dialog.changes().tempo, std::optional(90.0));
     }
 
     void resetting_project_synth_tools_uses_native_separators() {

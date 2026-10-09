@@ -10,7 +10,6 @@
 #include <QtWidgets/QComboBox>
 #include <QtWidgets/QCompleter>
 #include <QtWidgets/QDialogButtonBox>
-#include <QtWidgets/QDoubleSpinBox>
 #include <QtWidgets/QFileDialog>
 #include <QtWidgets/QFormLayout>
 #include <QtWidgets/QHBoxLayout>
@@ -20,8 +19,6 @@
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QStyle>
 #include <QtWidgets/QVBoxLayout>
-
-#include <stdutau/utaconst.h>
 
 #include "AppSettings.h"
 #include "SynthToolTrust.h"
@@ -102,11 +99,6 @@ namespace hello::daw {
         const auto warningIcon = style()->standardIcon(QStyle::SP_MessageBoxWarning);
 
         m_name = new QLineEdit(values.name);
-        m_tempo = new QDoubleSpinBox();
-        m_tempo->setDecimals(2);
-        m_tempo->setRange(utau::VALUE_TEMPO_MIN, utau::VALUE_TEMPO_MAX);
-        m_tempo->setValue(values.tempo);
-        connect(m_tempo, &QDoubleSpinBox::valueChanged, this, [this] { m_tempoEdited = true; });
         m_flags = new QLineEdit(values.flags);
         m_outputFile = new QLineEdit(QDir::toNativeSeparators(values.outputFile));
 
@@ -194,7 +186,6 @@ namespace hello::daw {
 
         auto form = new QFormLayout();
         form->addRow(tr("&Name:"), m_name);
-        form->addRow(tr("&Tempo:"), m_tempo);
         form->addRow(tr("&Flags:"), m_flags);
         // The resolved path shares the cell of the voice folder, without the spacing of a row.
         auto voiceField = new QVBoxLayout();
@@ -243,7 +234,7 @@ namespace hello::daw {
         auto layout = new QVBoxLayout(this);
         layout->addLayout(form);
         layout->addWidget(buttons);
-        resize(560, 0);
+        resize(600, 0);
     }
 
     ProjectPropertiesDialog::~ProjectPropertiesDialog() = default;
@@ -405,9 +396,6 @@ namespace hello::daw {
         const auto voice = m_voiceDir->lineEdit()->text();
         kit::ProjectPropertyChanges changes;
         changes.name = text(m_name, values.name);
-        if (m_tempoEdited && m_tempo->value() != values.tempo) {
-            changes.tempo = m_tempo->value();
-        }
         changes.flags = text(m_flags, values.flags);
         changes.outputFile = pathText(m_outputFile->text(), values.outputFile);
         if (hasTrack) {
@@ -439,10 +427,6 @@ namespace hello::daw {
 
     QLineEdit *ProjectPropertiesDialog::nameEdit() const {
         return m_name;
-    }
-
-    QDoubleSpinBox *ProjectPropertiesDialog::tempoBox() const {
-        return m_tempo;
     }
 
     QLineEdit *ProjectPropertiesDialog::flagsEdit() const {

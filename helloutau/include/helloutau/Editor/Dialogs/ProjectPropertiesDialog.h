@@ -14,7 +14,6 @@
 class QAction;
 class QCheckBox;
 class QComboBox;
-class QDoubleSpinBox;
 class QLabel;
 class QLineEdit;
 
@@ -22,9 +21,9 @@ namespace hello::daw {
 
     class AppSettings;
 
-    /// Edits the properties of a project, the fields of the dialog of UTAU and the tempo: the
-    /// name, the tempo, the flags of every note, the output file, the voice folder of the first
-    /// track, the two synth tools, and Mode2.
+    /// Edits the properties of a project, the fields of the dialog of UTAU without the tempo: the
+    /// name, the flags of every note, the output file, the voice folder of the first track, the
+    /// two synth tools, and Mode2. The project tempo is edited in the tool bar.
     ///
     /// Rendering uses the two synth tools of the project, each of which must be a synth tool of the
     /// application settings or be trusted. Reset to Settings Defaults copies the synth tools of the
@@ -41,8 +40,6 @@ namespace hello::daw {
         ~ProjectPropertiesDialog();
 
         /// Returns the fields that differ from the project, for ProjectEdits::setProperties().
-        /// The tempo counts only once it was edited, so that a value the box rounds is not
-        /// changed.
         ///
         /// If any field differs, the voice folder and the two synth tools are normalized as well
         /// and are returned if their normalized values differ. An absolute voice folder inside a
@@ -53,7 +50,6 @@ namespace hello::daw {
         kit::ProjectPropertyChanges changes() const;
 
         QLineEdit *nameEdit() const;
-        QDoubleSpinBox *tempoBox() const;
         QLineEdit *flagsEdit() const;
         QLineEdit *outputFileEdit() const;
         QLineEdit *voiceDirEdit() const;
@@ -84,8 +80,6 @@ namespace hello::daw {
         kit::Project m_project;
         AppSettings &m_settings;
         QLineEdit *m_name;
-        QDoubleSpinBox *m_tempo;
-        bool m_tempoEdited = false;
         QLineEdit *m_flags;
         QLineEdit *m_outputFile;
         QComboBox *m_voiceDir;
