@@ -60,7 +60,8 @@ namespace hello::daw {
         /// The interaction was abandoned, on Escape or when the view lost the pointer.
         virtual void cancel() = 0;
 
-        /// Whether the view should scroll horizontally while the pointer is near an edge.
+        /// Whether the view scrolls while the pointer is near an edge: across near the left and
+        /// right edges, up and down near the top and bottom edges.
         virtual bool wantsAutoScroll() const { return false; }
     };
 

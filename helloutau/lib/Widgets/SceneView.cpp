@@ -444,9 +444,16 @@ namespace hello::daw {
             }
             return 0L;
         };
-        const int delta = int(speed(m_pointerPosition.x(), viewport()->width()));
-        if (delta != 0) {
-            horizontalScrollBar()->setValue(horizontalScrollBar()->value() + delta);
+        const int across = int(speed(m_pointerPosition.x(), viewport()->width()));
+        // The vertical scroll bar grows downward, as the y coordinate does.
+        const int down = int(speed(m_pointerPosition.y(), viewport()->height()));
+        if (across != 0) {
+            horizontalScrollBar()->setValue(horizontalScrollBar()->value() + across);
+        }
+        if (down != 0) {
+            verticalScrollBar()->setValue(verticalScrollBar()->value() + down);
+        }
+        if (across != 0 || down != 0) {
             m_gesture->move(m_pointerPosition, m_pointerModifiers);
         }
     }
