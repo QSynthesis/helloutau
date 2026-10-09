@@ -15,6 +15,7 @@ namespace hello::daw {
     namespace {
 
         constexpr char ChangesKey[] = "changes";
+        constexpr char VersionKey[] = "version";
 
     }
 
@@ -38,6 +39,13 @@ namespace hello::daw {
             return;
         }
         const auto root = document.object();
+        if (const auto found = root.value(QLatin1String(VersionKey)); found.toInt(-1) != version) {
+            const auto text =
+                found.isDouble() ? QString::number(found.toDouble()) : QStringLiteral("none");
+            qWarning("Layouts: %s has the version %s instead of %d and is ignored.",
+                     qPrintable(fileName), qPrintable(text), version);
+            return;
+        }
         for (const auto &[key, registry] : sections) {
             const auto section = root.value(key);
             if (section.isUndefined()) {
@@ -65,6 +73,7 @@ namespace hello::daw {
     bool ActionLayoutsFile::write(const Sections &sections, const QString &fileName,
                                   QString *error) {
         QJsonObject object;
+        object.insert(QLatin1String(VersionKey), version);
         for (const auto &[key, registry] : sections) {
             QJsonArray changes;
             for (const auto &change : registry->layoutChanges()) {
