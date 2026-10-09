@@ -34,12 +34,28 @@ namespace hello::daw {
             {"helloutau.voiceBank.playSpan",       "intellij/runToCursor.svg"       },
             {"helloutau.voiceBank.synthesize",     "intellij/lightning.svg"         },
         };
+        // The file of the checked states, if it differs. The project window shows the checked
+        // states of the play command while it plays or renders.
+        static const std::pair<const char *, const char *> checkedIcons[] = {
+            {"helloutau.playback.play", "intellij/pause.svg"},
+        };
+        const auto pathOf = [](const char *file) {
+            return QStringLiteral(":/helloutau/icons/") + QLatin1String(file);
+        };
         for (const auto &[id, file] : icons) {
             // The constructor assigns the file to every state. setValue() assigns one state, and
             // the icon engine has no file for the other states.
             ThemeIcon icon;
-            icon.files =
-                ThemeStates<QString>(QStringLiteral(":/helloutau/icons/") + QLatin1String(file));
+            icon.files = ThemeStates<QString>(pathOf(file));
+            for (const auto &[checkedId, checkedFile] : checkedIcons) {
+                if (QLatin1String(id) == QLatin1String(checkedId)) {
+                    for (const auto state :
+                         {ThemeButtonState::CheckedUp, ThemeButtonState::CheckedOver,
+                          ThemeButtonState::CheckedDown, ThemeButtonState::CheckedDisabled}) {
+                        icon.files.setValue(state, pathOf(checkedFile));
+                    }
+                }
+            }
             // TODO: Move per-icon colors to the shared style sheet or theme configuration.
             if (QLatin1String(id) == QLatin1String("helloutau.edit.convertPitchToMode1")) {
                 const auto color = QColor(QStringLiteral("#3574F0"));

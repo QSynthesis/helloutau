@@ -9,7 +9,7 @@
 | `edit.svg` | `general/edit.svg` | 画笔工具 |
 | `search.svg` | `general/search.svg` | 查找 |
 | `run.svg` | `run/run.svg` | 播放 |
-| `pause.svg` | `run/pause.svg` | 暂停 |
+| `pause.svg` | `run/pause.svg` | 播放（播放与渲染中） |
 | `stop.svg` | `run/stop.svg` | 停止 |
 | `rerun.svg` | `run/rerun.svg` | 重播 |
 | `freeze.svg` | `debugger/freeze.svg` | Mode2 转为 Mode1 |

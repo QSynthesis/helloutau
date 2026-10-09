@@ -60,6 +60,7 @@
 #include <hellokit/Synth/SynthToolProcess.h>
 #include <hellokit/Synth/ThreadedSynthRunner.h>
 
+#include <helloutau/Theme/ThemeIcon.h>
 #include <helloutau/Theme/ThemeManager.h>
 #include <helloutau/Widgets/CommandPalette.h>
 #include <helloutau/Widgets/FindBar.h>
@@ -261,6 +262,11 @@ namespace hello::daw {
         PianoRoll *roll = nullptr;
         QAK::WidgetActionContext *context = nullptr;
         QHash<QString, QAction *> actions;
+        // The icon that QActionKit assigns to the play command, and the cache key of the icon
+        // last shown on it
+        QIcon playIcon;
+        qint64 shownPlayIconKey = 0;
+        bool showingPlayIcon = false;
         QActionGroup *tools = nullptr;
         CommandPalette *palette = nullptr;
         FindBar *findBar = nullptr;
@@ -356,6 +362,7 @@ namespace hello::daw {
                 playback, &Playback::stateChanged, &decl, [this](Playback::State state) {
                     scheduleRenderStates();
                     updateSaveLastPlayed();
+                    updatePlayIcon();
                     const bool rendering = state == Playback::Rendering;
                     renderLabel->setVisible(rendering);
                     renderProgress->setVisible(rendering);
@@ -876,6 +883,38 @@ namespace hello::daw {
                 selection = map.timeOf(end) - map.timeOf(start);
             }
             selectionDurationLabel->setText(seconds(selection));
+        }
+
+        // Shows the checked states of the icon of the play command while a press of it pauses or
+        // cancels, so that the icon shows pause instead of play. The command is not checkable,
+        // since a menu would draw a check mark beside it.
+        void updatePlayIcon() {
+            const auto play = actions.value(QStringLiteral("helloutau.playback.play"));
+            if (!play || showingPlayIcon) {
+                return;
+            }
+            // QActionKit has assigned the icon again, after an update of the icons or layouts.
+            if (play->icon().cacheKey() != shownPlayIconKey) {
+                playIcon = play->icon();
+            }
+            const auto state = playback ? playback->state() : Playback::Stopped;
+            const bool active = state == Playback::Playing || state == Playback::Rendering;
+            auto icon = playIcon;
+            if (const auto theme = ThemeIcon::of(playIcon); active && theme) {
+                auto checked = *theme;
+                using S = ThemeButtonState;
+                for (const auto &[unchecked, from] :
+                     {std::pair(S::Up, S::CheckedUp), std::pair(S::Over, S::CheckedOver),
+                      std::pair(S::Down, S::CheckedDown),
+                      std::pair(S::Disabled, S::CheckedDisabled)}) {
+                    checked.files.setValue(unchecked, theme->files.value(from));
+                }
+                icon = checked.icon();
+            }
+            showingPlayIcon = true;
+            play->setIcon(icon);
+            showingPlayIcon = false;
+            shownPlayIconKey = play->icon().cacheKey();
         }
 
         // Plays in the playback mode of the settings (docs/Widgets.md), pauses what plays,
@@ -1758,7 +1797,9 @@ namespace hello::daw {
                 palette->setRecentIds(editor->settings().recentCommands());
                 palette->popup();
             });
-            addCommand(QStringLiteral("helloutau.playback.play"), [this] { togglePlayback(); });
+            const auto play =
+                addCommand(QStringLiteral("helloutau.playback.play"), [this] { togglePlayback(); });
+            QObject::connect(play, &QAction::changed, &decl, [this] { updatePlayIcon(); });
             addCommand(QStringLiteral("helloutau.playback.stop"), [this] { playback->stop(); });
             addCommand(QStringLiteral("helloutau.playback.replay"), [this] { replay(); });
             addCommand(QStringLiteral("helloutau.playback.saveLastPlayed"),
