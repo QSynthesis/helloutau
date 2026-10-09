@@ -6,6 +6,8 @@
 
 #include <QtCore/QJsonArray>
 
+#include <stdutau/note.h>
+
 #include <hellokit/Document/DocumentConstants.h>
 
 #include "JsonFields_p.h"
@@ -98,6 +100,20 @@ namespace hello::kit {
         vibrato.phase = object.value(QLatin1String("phase")).toDouble();
         vibrato.offset = object.value(QLatin1String("offset")).toDouble();
         vibrato.intensity = object.value(QLatin1String("intensity")).toDouble();
+        return vibrato;
+    }
+
+    Vibrato Vibrato::utauDefault() {
+        const utau::Vibrato utauVibrato;
+        Vibrato vibrato;
+        vibrato.length = utauVibrato.length;
+        vibrato.period = utauVibrato.period;
+        vibrato.amplitude = utauVibrato.amplitude;
+        vibrato.attack = utauVibrato.attack;
+        vibrato.release = utauVibrato.release;
+        vibrato.phase = utauVibrato.phase;
+        vibrato.offset = utauVibrato.offset;
+        vibrato.intensity = utauVibrato.intensity;
         return vibrato;
     }
 

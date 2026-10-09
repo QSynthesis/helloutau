@@ -33,6 +33,9 @@ namespace hello::daw {
         constexpr char RealtimeValue[] = "realtime";
         constexpr char KeyRenderThreads[] = "playback/threads";
         constexpr char KeyQuantization[] = "view/quantization";
+        constexpr char KeyPitchControlPortamento[] = "pitchControl/portamento";
+        constexpr char KeyPitchControlVibrato[] = "pitchControl/vibrato";
+        constexpr char KeyPitchControlVibratoPreset[] = "pitchControl/vibratoPreset";
         constexpr char KeyUstExportCharset[] = "files/ustExportCharset";
         constexpr char KeyLanguage[] = "appearance/language";
         constexpr char KeyPitchVisible[] = "view/showPitch";
@@ -284,6 +287,33 @@ namespace hello::daw {
     void AppSettings::setQuantization(int ticks) {
         stdc_impl_t;
         impl.setValue(KeyQuantization, int64_t(std::max(0, ticks)));
+    }
+
+    kit::PortamentoSettings AppSettings::pitchControlPortamento() const {
+        return kit::PortamentoSettings::fromJson(
+            value(QLatin1String(KeyPitchControlPortamento)).toObject());
+    }
+
+    void AppSettings::setPitchControlPortamento(const kit::PortamentoSettings &settings) {
+        setValue(QLatin1String(KeyPitchControlPortamento), settings.toJson());
+    }
+
+    kit::Vibrato AppSettings::pitchControlVibrato() const {
+        const auto stored = value(QLatin1String(KeyPitchControlVibrato));
+        return stored.isObject() ? kit::Vibrato::fromJson(stored.toObject())
+                                 : kit::Vibrato::utauDefault();
+    }
+
+    void AppSettings::setPitchControlVibrato(const kit::Vibrato &vibrato) {
+        setValue(QLatin1String(KeyPitchControlVibrato), vibrato.toJson());
+    }
+
+    int AppSettings::pitchControlVibratoPreset() const {
+        return std::max(0, value(QLatin1String(KeyPitchControlVibratoPreset)).toInt(0));
+    }
+
+    void AppSettings::setPitchControlVibratoPreset(int index) {
+        setValue(QLatin1String(KeyPitchControlVibratoPreset), std::max(0, index));
     }
 
     bool AppSettings::isPitchVisible() const {

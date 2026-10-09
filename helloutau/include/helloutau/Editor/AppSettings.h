@@ -10,6 +10,7 @@
 #include <QtCore/QString>
 #include <QtCore/QStringList>
 
+#include <hellokit/Document/PortamentoSettings.h>
 #include <hellokit/Document/Project.h>
 
 #include <helloutau/Editor/HelloUtauEditorGlobal.h>
@@ -116,6 +117,19 @@ namespace hello::daw {
         /// The editing grid in ticks, or zero for no grid. The default is 120.
         int quantization() const;
         void setQuantization(int ticks);
+
+        /// The settings of the portamento group of Pitch Control, written as a whole by its Set
+        /// as Default. The default is that of kit::PortamentoSettings.
+        kit::PortamentoSettings pitchControlPortamento() const;
+        void setPitchControlPortamento(const kit::PortamentoSettings &settings);
+
+        /// The vibrato of Pitch Control for notes without one, and the index of its vibrato
+        /// preset, written by its Set as Default. The defaults are kit::Vibrato::utauDefault()
+        /// and the first preset.
+        kit::Vibrato pitchControlVibrato() const;
+        void setPitchControlVibrato(const kit::Vibrato &vibrato);
+        int pitchControlVibratoPreset() const;
+        void setPitchControlVibratoPreset(int index);
 
         /// Whether the piano roll shows the pitch curves (View > Show Pitch). The default is
         /// true.

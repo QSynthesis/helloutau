@@ -21,7 +21,8 @@ namespace hello::daw {
     ///      "view": {"showPitch": ..., "showRenderedPitch": ..., "showEnvelopes": ...,
     ///               "showParameters": ..., "showToolBar": ..., "quantization": ...},
     ///      "files": {"ustExportCharset": ..., "recent": [...], "recentVoiceBanks": [...]},
-    ///      "commandPalette": {"recent": [...]}}
+    ///      "commandPalette": {"recent": [...]},
+    ///      "pitchControl": {"portamento": {...}, "vibrato": {...}, "vibratoPreset": ...}}
     class AppSettings::Impl {
     public:
         explicit Impl(const QString &fileName);

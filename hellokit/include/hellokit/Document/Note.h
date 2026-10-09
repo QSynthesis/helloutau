@@ -139,6 +139,9 @@ namespace hello::kit {
 
         /// Returns the vibrato written as in \c .usth. An absent parameter is read as zero.
         static Vibrato fromJson(const QJsonObject &object);
+
+        /// Returns the vibrato that UTAU gives a note, that of \c utau::Vibrato.
+        static Vibrato utauDefault();
     };
 
     // The stream operators of the values stored as a whole in the edit history. They are

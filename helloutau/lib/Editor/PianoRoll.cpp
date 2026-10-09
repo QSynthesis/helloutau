@@ -45,7 +45,6 @@
 #include "PianoRollLayers_p.h"
 #include "PianoRollParameterLayers_p.h"
 #include "PianoRollState_p.h"
-#include "PitchControlDialog.h"
 
 namespace hello::daw {
 
@@ -771,8 +770,7 @@ namespace hello::daw {
             }
             if (!lacking.isEmpty())
                 kit::ProjectEdits::setVibrato(
-                    lacking, defaultVibrato.value_or(PitchControlDialog::defaultVibrato()),
-                    diagnostics);
+                    lacking, defaultVibrato.value_or(kit::Vibrato::utauDefault()), diagnostics);
         } else {
             kit::ProjectEdits::setVibrato(sung, std::nullopt, diagnostics);
         }

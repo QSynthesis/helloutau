@@ -23,7 +23,6 @@
 #include <helloutau/Widgets/TimelineRuler.h>
 
 #include <helloutau/Editor/PianoRoll.h>
-#include <helloutau/Editor/Dialogs/PitchControlDialog.h>
 
 using namespace hello;
 using namespace hello::daw;
@@ -1776,11 +1775,9 @@ private Q_SLOTS:
         kit::DiagnosticList diagnostics;
         QVERIFY(roll.toggleVibrato(diagnostics));
         auto notes = session.snapshot().tracks[0].notes;
-        QCOMPARE(notes[0].vibrato,
-                 std::optional<kit::Vibrato>(PitchControlDialog::defaultVibrato()));
+        QCOMPARE(notes[0].vibrato, std::optional<kit::Vibrato>(kit::Vibrato::utauDefault()));
         QVERIFY(!notes[1].vibrato);
-        QCOMPARE(notes[2].vibrato,
-                 std::optional<kit::Vibrato>(PitchControlDialog::defaultVibrato()));
+        QCOMPARE(notes[2].vibrato, std::optional<kit::Vibrato>(kit::Vibrato::utauDefault()));
         QCOMPARE(session.undoMessage(), PianoRoll::tr("Add Vibrato"));
 
         QVERIFY(roll.toggleVibrato(diagnostics));
@@ -1800,7 +1797,7 @@ private Q_SLOTS:
             la.lyric = QStringLiteral("la");
             la.length = 480;
             la.noteNum = 60;
-            la.vibrato = PitchControlDialog::defaultVibrato();
+            la.vibrato = kit::Vibrato::utauDefault();
             la.vibrato->phase = phase;
             kit::Project project;
             project.settings.tempo = 120;
@@ -1825,7 +1822,7 @@ private Q_SLOTS:
         // At a phase of half a period the box spans 265 px to 445 px, and grows with the period.
         QCOMPARE(dragged({445, 306}, {475, 306}, 50).period, 200.0);
         // Nothing else changes.
-        auto expected = PitchControlDialog::defaultVibrato();
+        auto expected = kit::Vibrato::utauDefault();
         expected.phase = 20;
         QCOMPARE(dragged({265, 306}, {301, 306}), expected);
     }
@@ -2075,7 +2072,7 @@ private Q_SLOTS:
         kit::PortamentoPoint last;
         last.x = 20;
         notes[0].portamento = {first, last};
-        notes[0].vibrato = PitchControlDialog::defaultVibrato();
+        notes[0].vibrato = kit::Vibrato::utauDefault();
         notes[0].envelope = kit::Envelope::fromTimeOrder({
             {0,  0  },
             {10, 100},
@@ -2341,7 +2338,7 @@ private Q_SLOTS:
     // The depth of the vibrato of the selected notes is scaled, and the other notes keep theirs.
     void the_pitch_of_the_selection_is_scaled() {
         auto project = parameterSource();
-        project.tracks[0].notes[1].vibrato = PitchControlDialog::defaultVibrato();
+        project.tracks[0].notes[1].vibrato = kit::Vibrato::utauDefault();
         kit::ProjectSession session(project);
         PianoRoll roll(&session);
         show(roll);
@@ -2350,7 +2347,7 @@ private Q_SLOTS:
         kit::DiagnosticList diagnostics;
         QVERIFY(roll.scalePitch(1, 2, diagnostics));
         const auto notes = session.snapshot().tracks[0].notes;
-        const double depth = PitchControlDialog::defaultVibrato().amplitude;
+        const double depth = kit::Vibrato::utauDefault().amplitude;
         QCOMPARE(notes[0].vibrato->amplitude, depth * 2);
         QCOMPARE(notes[1].vibrato->amplitude, depth);
         QCOMPARE(session.undoMessage(), kit::ProjectEdits::tr("Scale Pitch"));

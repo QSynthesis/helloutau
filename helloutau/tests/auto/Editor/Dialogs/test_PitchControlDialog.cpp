@@ -7,12 +7,29 @@
 using namespace hello;
 using namespace hello::daw;
 
+namespace {
+
+    // A selection whose notes all have portamento and vibrato, the first of 480 milliseconds
+    PitchControlDialog::Selection selectionOf(const kit::PortamentoSettings &settings,
+                                              const QList<kit::PortamentoPoint> &points = {},
+                                              double duration = 480) {
+        PitchControlDialog::Selection selection;
+        selection.portamento = true;
+        selection.vibrato = true;
+        selection.portamentoSettings = settings;
+        selection.points = points;
+        selection.duration = duration;
+        return selection;
+    }
+
+}
+
 class test_PitchControlDialog : public QObject {
     Q_OBJECT
 
 private Q_SLOTS:
     void mixed_controls_are_shown_as_partial() {
-        PitchControlDialog dialog(std::nullopt, std::nullopt, PitchControlDialog::defaultVibrato());
+        PitchControlDialog dialog(PitchControlDialog::Selection{});
         QCOMPARE(dialog.portamentoState(), Qt::PartiallyChecked);
         QCOMPARE(dialog.vibratoState(), Qt::PartiallyChecked);
     }
@@ -30,7 +47,9 @@ private Q_SLOTS:
         vibrato.offset = -12;
         vibrato.intensity = 7;
 
-        PitchControlDialog dialog(true, true, vibrato);
+        auto selection = selectionOf({});
+        selection.vibratoValues = vibrato;
+        PitchControlDialog dialog(selection);
         QCOMPARE(dialog.field(0)->value(), 65.13);
         QCOMPARE(dialog.field(6)->value(), -12.0);
         QCOMPARE(dialog.vibrato(), vibrato);
@@ -42,7 +61,7 @@ private Q_SLOTS:
     }
 
     void the_default_is_that_of_utau() {
-        const auto vibrato = PitchControlDialog::defaultVibrato();
+        const auto vibrato = kit::Vibrato::utauDefault();
         QCOMPARE(vibrato.length, 65.0);
         QCOMPARE(vibrato.period, 180.0);
         QCOMPARE(vibrato.amplitude, 35.0);
@@ -53,15 +72,19 @@ private Q_SLOTS:
     }
 
     void portamento_modes_and_values_are_retained() {
-        PitchControlDialog dialog(true, true, PitchControlDialog::defaultVibrato(), 4, 2, 2, 80,
-                                  -40, 5, false);
-        QCOMPARE(dialog.portamentoPreset(), 4);
+        kit::PortamentoSettings settings;
+        settings.mode = kit::PortamentoSettings::AddPoints;
+        settings.position = kit::PortamentoSettings::Left;
+        settings.presetLength = 100;
+        settings.length = 80;
+        settings.start = -40;
+        settings.count = 5;
+        settings.evenlyDistributed = false;
+        auto selection = selectionOf(settings);
+        selection.vibratoPreset = 2;
+        PitchControlDialog dialog(selection);
+        QCOMPARE(dialog.portamentoSettings(), settings);
         QCOMPARE(dialog.vibratoPreset(), 2);
-        QCOMPARE(dialog.portamentoMode(), 2);
-        QCOMPARE(dialog.portamentoLength(), 80);
-        QCOMPARE(dialog.portamentoStart(), -40);
-        QCOMPARE(dialog.portamentoCount(), 5);
-        QCOMPARE(dialog.averagePoints(), false);
 
         const auto points = dialog.portamentoPoints();
         QCOMPARE(points.size(), 5);
@@ -70,8 +93,11 @@ private Q_SLOTS:
     }
 
     void custom_portamento_uses_length_and_start() {
-        PitchControlDialog dialog(true, true, PitchControlDialog::defaultVibrato(), 0, 0, 1, 72,
-                                  -18, 2, true);
+        kit::PortamentoSettings settings;
+        settings.mode = kit::PortamentoSettings::Custom;
+        settings.length = 72;
+        settings.start = -18;
+        PitchControlDialog dialog(selectionOf(settings));
         const auto points = dialog.portamentoPoints();
         QCOMPARE(points.size(), 2);
         QCOMPARE(points.first().x, -18.0);
@@ -83,8 +109,10 @@ private Q_SLOTS:
             {-40, -100, kit::PortamentoPoint::S},
             {40,  100,  kit::PortamentoPoint::S},
         };
-        PitchControlDialog dialog(true, true, PitchControlDialog::defaultVibrato(), 0, 0, 2, 59,
-                                  -30, 3, true, existing, 160);
+        kit::PortamentoSettings settings;
+        settings.mode = kit::PortamentoSettings::AddPoints;
+        settings.count = 3;
+        PitchControlDialog dialog(selectionOf(settings, existing, 160));
         const auto points = dialog.portamentoPoints();
         QCOMPARE(points.size(), 3);
         QCOMPARE(points[0].x, -40.0);
@@ -100,8 +128,11 @@ private Q_SLOTS:
             {0,   40,   kit::PortamentoPoint::Linear},
             {80,  0,    kit::PortamentoPoint::S     },
         };
-        PitchControlDialog dialog(true, true, PitchControlDialog::defaultVibrato(), 0, 0, 2, 59,
-                                  -30, 3, false, existing, 160);
+        kit::PortamentoSettings settings;
+        settings.mode = kit::PortamentoSettings::AddPoints;
+        settings.count = 3;
+        settings.evenlyDistributed = false;
+        PitchControlDialog dialog(selectionOf(settings, existing, 160));
         QCOMPARE(dialog.portamentoPoints(), existing);
     }
 
@@ -110,9 +141,11 @@ private Q_SLOTS:
         for (int i = 0; i < 7; ++i) {
             existing.push_back({double(i * 20), double(i), kit::PortamentoPoint::S});
         }
-        PitchControlDialog dialog(true, true, PitchControlDialog::defaultVibrato(), 0, 0, 2, 59,
-                                  -30, 7, true, existing, 120);
-        QCOMPARE(dialog.portamentoCount(), 7);
+        kit::PortamentoSettings settings;
+        settings.mode = kit::PortamentoSettings::AddPoints;
+        settings.count = 7;
+        PitchControlDialog dialog(selectionOf(settings, existing, 120));
+        QCOMPARE(dialog.portamentoSettings().count, 7);
         QVERIFY(!dialog.portamentoEdited());
     }
 };

@@ -180,73 +180,6 @@ namespace hello::daw {
             return std::filesystem::path(name.toStdU16String());
         }
 
-        kit::Vibrato pitchControlDefaultVibrato(const AppSettings &settings) {
-            auto result = PitchControlDialog::defaultVibrato();
-            const auto object =
-                settings.value(QStringLiteral("pitchControl/defaultVibrato")).toObject();
-            result.length = object.value(QStringLiteral("length")).toDouble(result.length);
-            result.period = object.value(QStringLiteral("period")).toDouble(result.period);
-            result.amplitude = object.value(QStringLiteral("amplitude")).toDouble(result.amplitude);
-            result.attack = object.value(QStringLiteral("attack")).toDouble(result.attack);
-            result.release = object.value(QStringLiteral("release")).toDouble(result.release);
-            result.phase = object.value(QStringLiteral("phase")).toDouble(result.phase);
-            result.offset = object.value(QStringLiteral("offset")).toDouble(result.offset);
-            return result;
-        }
-
-        int pitchControlDefaultPortamento(const AppSettings &settings) {
-            return std::clamp(
-                settings.value(QStringLiteral("pitchControl/defaultPortamento")).toInt(0), 0, 8);
-        }
-
-        int pitchControlDefaultVibratoPreset(const AppSettings &settings) {
-            return std::clamp(
-                settings.value(QStringLiteral("pitchControl/defaultVibratoPreset")).toInt(0), 0, 2);
-        }
-
-        int pitchControlDefaultPortamentoMode(const AppSettings &settings) {
-            return std::clamp(
-                settings.value(QStringLiteral("pitchControl/defaultPortamentoMode")).toInt(0), 0,
-                2);
-        }
-
-        int pitchControlDefaultPortamentoLength(const AppSettings &settings) {
-            return std::clamp(
-                settings.value(QStringLiteral("pitchControl/defaultPortamentoLength")).toInt(59), 0,
-                100000);
-        }
-
-        int pitchControlDefaultPortamentoStart(const AppSettings &settings) {
-            return std::clamp(
-                settings.value(QStringLiteral("pitchControl/defaultPortamentoStart")).toInt(-30),
-                -100000, 100000);
-        }
-
-        int pitchControlDefaultPortamentoCount(const AppSettings &settings) {
-            return std::clamp(
-                settings.value(QStringLiteral("pitchControl/defaultPortamentoCount")).toInt(2), 2,
-                6);
-        }
-
-        bool pitchControlDefaultAveragePoints(const AppSettings &settings) {
-            return settings.value(QStringLiteral("pitchControl/defaultAveragePoints")).toBool(true);
-        }
-
-        void savePitchControlVibratoDefault(AppSettings &settings, const kit::Vibrato &vibrato,
-                                            int preset) {
-            settings.setValue(QStringLiteral("pitchControl/defaultVibrato"),
-                              QJsonObject{
-                                  {QStringLiteral("length"),    vibrato.length   },
-                                  {QStringLiteral("period"),    vibrato.period   },
-                                  {QStringLiteral("amplitude"), vibrato.amplitude},
-                                  {QStringLiteral("attack"),    vibrato.attack   },
-                                  {QStringLiteral("release"),   vibrato.release  },
-                                  {QStringLiteral("phase"),     vibrato.phase    },
-                                  {QStringLiteral("offset"),    vibrato.offset   },
-            });
-            settings.setValue(QStringLiteral("pitchControl/defaultVibratoPreset"), preset);
-        }
-
     }
 
     class ProjectWindow::Impl {
@@ -2238,12 +2171,11 @@ namespace hello::daw {
             }
             const auto refs = kit::ProjectRef(document->session()).tracks().at(0).notes();
             QList<kit::NoteRef> sung;
-            int firstSungIndex = -1;
+            QList<int> selected;
             for (const int index : roll->selectedIndices()) {
                 if (!roll->timeline()->note(index).rest) {
                     sung.push_back(refs.at(index));
-                    if (firstSungIndex < 0)
-                        firstSungIndex = index;
+                    selected.push_back(index);
                 }
             }
             if (sung.isEmpty()) {
@@ -2251,51 +2183,49 @@ namespace hello::daw {
             }
             const auto portamento = roll->selectedPortamento();
             const auto vibratoState = roll->selectedVibrato();
-            const auto defaultVibrato = pitchControlDefaultVibrato(editor->settings());
-            const auto existingPortamentoRef = sung.first().portamento();
-            QList<kit::PortamentoPoint> existingPortamento;
-            for (int i = 0; i < existingPortamentoRef.size(); ++i)
-                existingPortamento.push_back(existingPortamentoRef.at(i).toPortamentoPoint());
-            int portamentoMode = pitchControlDefaultPortamentoMode(editor->settings());
-            int portamentoLength = pitchControlDefaultPortamentoLength(editor->settings());
-            int portamentoStart = pitchControlDefaultPortamentoStart(editor->settings());
-            int portamentoCount = pitchControlDefaultPortamentoCount(editor->settings());
-            if (existingPortamento.isEmpty()) {
-                portamentoMode = 1;
-            } else if (existingPortamento.size() == 2) {
-                portamentoMode = 1;
-                portamentoStart = int(std::lround(existingPortamento.first().x));
-                portamentoLength =
-                    int(std::lround(existingPortamento.last().x - existingPortamento.first().x));
-            } else if (existingPortamento.size() > 2) {
-                portamentoMode = 2;
-                portamentoCount = existingPortamento.size();
+            const auto &settings = editor->settings();
+            // The dialog starts from the first note: its points, and its vibrato or the default.
+            PitchControlDialog::Selection selection;
+            selection.portamento = portamento;
+            selection.vibrato = vibratoState;
+            selection.vibratoValues =
+                sung.first().vibrato().value_or(settings.pitchControlVibrato());
+            selection.vibratoPreset = settings.pitchControlVibratoPreset();
+            const auto pointRefs = sung.first().portamento();
+            for (int i = 0; i < pointRefs.size(); ++i) {
+                selection.points.push_back(pointRefs.at(i).toPortamentoPoint());
             }
-            const auto durationInMilliseconds = [this](int index) {
-                const double tempo = roll->timeline()->tempoMap().tempo(index);
-                return tempo > 0 ? double(roll->timeline()->note(index).length) * 60000.0 /
-                                       (tempo * 480.0)
-                                 : 0.0;
+            // The settings of the default, changed to show the points of the first note
+            auto &shown = selection.portamentoSettings;
+            shown = settings.pitchControlPortamento();
+            if (selection.points.size() == 2) {
+                shown.mode = kit::PortamentoSettings::Custom;
+                shown.start = int(std::lround(selection.points.first().x));
+                shown.length =
+                    int(std::lround(selection.points.last().x - selection.points.first().x));
+            } else if (selection.points.size() > 2) {
+                shown.mode = kit::PortamentoSettings::AddPoints;
+                shown.count = int(selection.points.size());
+            }
+            const auto &timeline = *roll->timeline();
+            const auto durationOf = [&timeline](int index) {
+                const auto &note = timeline.note(index);
+                const auto &tempoMap = timeline.tempoMap();
+                return tempoMap.timeOf(note.start + note.length) - tempoMap.timeOf(note.start);
             };
-            const double noteDuration =
-                firstSungIndex >= 0 ? durationInMilliseconds(firstSungIndex) : 0.0;
-            const double previousNoteDuration =
-                firstSungIndex > 0 ? durationInMilliseconds(firstSungIndex - 1) : 100000.0;
-            PitchControlDialog dialog(
-                portamento, vibratoState, sung.first().vibrato().value_or(defaultVibrato),
-                pitchControlDefaultPortamento(editor->settings()),
-                pitchControlDefaultVibratoPreset(editor->settings()), portamentoMode,
-                portamentoLength, portamentoStart, portamentoCount,
-                pitchControlDefaultAveragePoints(editor->settings()), existingPortamento,
-                noteDuration, previousNoteDuration, &decl);
-            connect(
-                dialog.portamentoDefaultButton(), &QPushButton::clicked, &dialog, [this, &dialog] {
-                    editor->settings().setValue(QStringLiteral("pitchControl/defaultPortamento"),
-                                                dialog.portamentoPreset());
-                });
+            const int first = selected.first();
+            selection.duration = durationOf(first);
+            if (first > 0) {
+                selection.previousDuration = durationOf(first - 1);
+            }
+            PitchControlDialog dialog(selection, &decl);
+            connect(dialog.portamentoDefaultButton(), &QPushButton::clicked, &dialog,
+                    [this, &dialog] {
+                        editor->settings().setPitchControlPortamento(dialog.portamentoSettings());
+                    });
             connect(dialog.vibratoDefaultButton(), &QPushButton::clicked, &dialog, [this, &dialog] {
-                savePitchControlVibratoDefault(editor->settings(), dialog.vibrato(),
-                                               dialog.vibratoPreset());
+                editor->settings().setPitchControlVibrato(dialog.vibrato());
+                editor->settings().setPitchControlVibratoPreset(dialog.vibratoPreset());
             });
             if (dialog.exec() != QDialog::Accepted) {
                 return;
