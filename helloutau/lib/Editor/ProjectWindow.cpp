@@ -272,6 +272,9 @@ namespace hello::daw {
         QList<QPointer<QComboBox>> quantizationBoxes;
         QList<QPointer<QDoubleSpinBox>> tempoBoxes;
         QList<QPointer<QToolButton>> timeSignatureButtons;
+        // The piano roll that last received the time signature, and that time signature
+        QPointer<PianoRoll> timeSignatureRoll;
+        kit::TimeSignature rollTimeSignature;
         QMenu *recentMenu = nullptr;
         QMenu *regionMenu = nullptr;
         // What Paste Parameters pasted last
@@ -1362,20 +1365,31 @@ namespace hello::daw {
                                      [this] { editTimeSignature(); });
                     timeSignatureButtons.removeAll(nullptr);
                     timeSignatureButtons.push_back(button);
-                    showTimeSignature(editor->settings().timeSignatureNumerator(),
-                                      editor->settings().timeSignatureDenominator());
+                    showTimeSignature();
                     return button;
                 });
         }
 
-        void showTimeSignature(int numerator, int denominator) {
+        // The time signature of the project, 4/4 without a project
+        kit::TimeSignature timeSignature() const {
+            return document ? kit::ProjectRef(document->session()).settings().timeSignature()
+                            : kit::TimeSignature();
+        }
+
+        // Shows the time signature of the project in the tool bars and the piano roll. The piano
+        // roll is updated only if the time signature differs from the one it shows, because the
+        // update refreshes the whole scene.
+        void showTimeSignature() {
+            const auto shown = timeSignature();
             timeSignatureButtons.removeAll(nullptr);
-            const auto text = QStringLiteral("%1/%2").arg(numerator).arg(denominator);
+            const auto text = QStringLiteral("%1/%2").arg(shown.numerator).arg(shown.denominator);
             for (const auto &button : std::as_const(timeSignatureButtons)) {
                 button->setText(text);
             }
-            if (roll) {
-                roll->setTimeSignature(numerator, denominator);
+            if (roll && (roll != timeSignatureRoll || shown != rollTimeSignature)) {
+                roll->setTimeSignature(shown.numerator, shown.denominator);
+                timeSignatureRoll = roll;
+                rollTimeSignature = shown;
             }
         }
 
@@ -1383,15 +1397,15 @@ namespace hello::daw {
             stdc_decl_t;
             QDialog dialog(&decl);
             dialog.setWindowTitle(tr("Time Signature"));
+            const auto current = timeSignature();
             auto numerator = new QSpinBox(&dialog);
-            numerator->setRange(1, 32);
-            numerator->setValue(editor->settings().timeSignatureNumerator());
+            numerator->setRange(1, kit::TimeSignature::maximumNumerator);
+            numerator->setValue(current.numerator);
             auto denominator = new QComboBox(&dialog);
-            for (const int value : {2, 4, 8, 16, 32}) {
+            for (const int value : kit::TimeSignature::denominators) {
                 denominator->addItem(QString::number(value), value);
             }
-            denominator->setCurrentIndex(
-                denominator->findData(editor->settings().timeSignatureDenominator()));
+            denominator->setCurrentIndex(denominator->findData(current.denominator));
             auto form = new QFormLayout(&dialog);
             form->addRow(tr("Beats per bar:"), numerator);
             form->addRow(tr("Beat unit:"), denominator);
@@ -1403,10 +1417,17 @@ namespace hello::daw {
             if (dialog.exec() != QDialog::Accepted) {
                 return;
             }
-            editor->settings().setTimeSignatureNumerator(numerator->value());
-            editor->settings().setTimeSignatureDenominator(denominator->currentData().toInt());
-            showTimeSignature(editor->settings().timeSignatureNumerator(),
-                              editor->settings().timeSignatureDenominator());
+            kit::ProjectPropertyChanges changes;
+            changes.timeSignature =
+                kit::TimeSignature{numerator->value(), denominator->currentData().toInt()};
+            if (*changes.timeSignature == current) {
+                return;
+            }
+            // The step of the edit shows the time signature.
+            kit::DiagnosticList diagnostics;
+            kit::ProjectEdits::setProperties(kit::ProjectRef(document->session()), changes,
+                                             diagnostics);
+            DiagnosticBox::show(&decl, tr("Time Signature"), diagnostics);
         }
 
         // Shows ticks in the boxes of the quantization, as the piano roll has it.
@@ -1972,8 +1993,7 @@ namespace hello::daw {
                                  }
                              });
             roll->setVoiceBank(document->voiceBank());
-            showTimeSignature(editor->settings().timeSignatureNumerator(),
-                              editor->settings().timeSignatureDenominator());
+            showTimeSignature();
             QObject::connect(roll, &PianoRoll::voiceBankRequested, &decl,
                              [this] { editProperties(); });
             if (quantization >= 0) {
@@ -2056,6 +2076,7 @@ namespace hello::daw {
                 updateUndoActions();
                 updatePitchActions();
                 updateFindResult();
+                showTimeSignature();
                 // The voice folder is read again after an undo or redo that changes it to another
                 // directory. The read is queued so that it does not run inside the notification
                 // of the step.

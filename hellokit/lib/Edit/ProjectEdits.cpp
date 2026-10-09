@@ -336,6 +336,12 @@ namespace hello::kit {
     bool ProjectEdits::setProperties(const ProjectRef &project,
                                      const ProjectPropertyChanges &changes,
                                      DiagnosticList &diagnostics) {
+        if (changes.timeSignature && !TimeSignature::isValid(changes.timeSignature->numerator,
+                                                             changes.timeSignature->denominator)) {
+            diagnostics.push_back(
+                {DiagnosticSeverity::Error, tr("The time signature is not valid.")});
+            return false;
+        }
         // A transaction that changes nothing makes no step.
         const auto settings = project.settings();
         const auto tracks = project.tracks();
@@ -363,6 +369,9 @@ namespace hello::kit {
         }
         if (changes.mode2) {
             settings.setMode2(*changes.mode2);
+        }
+        if (changes.timeSignature) {
+            settings.setTimeSignature(*changes.timeSignature);
         }
         return transaction.commit(diagnostics);
     }

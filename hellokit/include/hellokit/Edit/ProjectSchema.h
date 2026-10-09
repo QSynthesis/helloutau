@@ -6,6 +6,7 @@
 #include <QtCore/QString>
 
 #include <hellokit/Document/Note.h>
+#include <hellokit/Document/Project.h>
 
 #include <hellokit/EditBase/Slot.h>
 
@@ -42,7 +43,9 @@ namespace hello::kit {
         inline constexpr edit::Slot<QString> Resampler{6, "resampler"};
         inline constexpr edit::Slot<bool> Mode2{7, "mode2"};
 
-        inline constexpr int count = 8;
+        inline constexpr edit::Slot<hello::kit::TimeSignature> TimeSignature{8, "timeSignature"};
+
+        inline constexpr int count = 9;
 
     }
 

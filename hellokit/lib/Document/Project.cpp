@@ -27,14 +27,15 @@ namespace hello::kit {
 
         QJsonObject settingsToJson(const ProjectSettings &settings) {
             return QJsonObject{
-                {QLatin1String("name"),       settings.name                              },
-                {QLatin1String("tempo"),      settings.tempo                             },
-                {QLatin1String("flags"),      settings.flags                             },
-                {QLatin1String("outputFile"), Project::savedPathText(settings.outputFile)},
-                {QLatin1String("cacheDir"),   Project::savedPathText(settings.cacheDir)  },
-                {QLatin1String("wavtool"),    Project::savedPathText(settings.wavtool)   },
-                {QLatin1String("resampler"),  Project::savedPathText(settings.resampler) },
-                {QLatin1String("mode2"),      settings.mode2                             },
+                {QLatin1String("name"),          settings.name                              },
+                {QLatin1String("tempo"),         settings.tempo                             },
+                {QLatin1String("flags"),         settings.flags                             },
+                {QLatin1String("outputFile"),    Project::savedPathText(settings.outputFile)},
+                {QLatin1String("cacheDir"),      Project::savedPathText(settings.cacheDir)  },
+                {QLatin1String("wavtool"),       Project::savedPathText(settings.wavtool)   },
+                {QLatin1String("resampler"),     Project::savedPathText(settings.resampler) },
+                {QLatin1String("mode2"),         settings.mode2                             },
+                {QLatin1String("timeSignature"), settings.timeSignature.toJson()            },
             };
         }
 
@@ -55,6 +56,17 @@ namespace hello::kit {
 
             const auto mode2 = object.value(QLatin1String("mode2"));
             settings.mode2 = mode2.isBool() ? mode2.toBool() : true;
+
+            if (const auto value = object.value(QLatin1String("timeSignature"));
+                !value.isUndefined()) {
+                if (const auto timeSignature = TimeSignature::fromJson(value.toObject())) {
+                    settings.timeSignature = *timeSignature;
+                } else {
+                    JsonFields::complain(diagnostics,
+                                         Project::tr("The time signature of the project is not "
+                                                     "valid and was reset to the default."));
+                }
+            }
             return settings;
         }
 
@@ -108,6 +120,32 @@ namespace hello::kit {
 
     bool VoiceLocations::operator!=(const VoiceLocations &other) const {
         return !(*this == other);
+    }
+
+    bool TimeSignature::isValid(int numerator, int denominator) {
+        return numerator >= 1 && numerator <= maximumNumerator &&
+               std::find(std::begin(denominators), std::end(denominators), denominator) !=
+                   std::end(denominators);
+    }
+
+    QJsonObject TimeSignature::toJson() const {
+        return QJsonObject{
+            {QLatin1String("numerator"),   numerator  },
+            {QLatin1String("denominator"), denominator},
+        };
+    }
+
+    std::optional<TimeSignature> TimeSignature::fromJson(const QJsonObject &object) {
+        const auto numerator = object.value(QLatin1String("numerator"));
+        const auto denominator = object.value(QLatin1String("denominator"));
+        // A fractional number is not an integer, whereas toInt() would truncate it.
+        if (!numerator.isDouble() || !denominator.isDouble() ||
+            numerator.toDouble() != numerator.toInt() ||
+            denominator.toDouble() != denominator.toInt() ||
+            !isValid(numerator.toInt(), denominator.toInt())) {
+            return std::nullopt;
+        }
+        return TimeSignature{numerator.toInt(), denominator.toInt()};
     }
 
     std::filesystem::path Track::voiceDirectory(const VoiceLocations &locations) const {

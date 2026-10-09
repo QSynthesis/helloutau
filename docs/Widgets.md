@@ -306,7 +306,7 @@
 
 作者 2026-10-01 要求，由 QActionKit 管理（清单中 `topLevel` 的 menu，窗口以 `addToolBar()` 登记）。
 
-- **工程窗口**（`helloutau.mainToolBar`）：撤销与重做，选择、笔、手绘音高三个工具，Mode2 与显示音高、显示包络、显示参数，两种包络淡化，量化、曲速与拍号，播放或暂停、停止与重播，查找。各组之间以分隔线隔开。「视图 → 显示工具栏」显示或隐藏，状态存入设置（`view/showToolBar`，默认显示）。拍号可通过「视图 → 设置拍号」或工具栏中的拍号按钮修改，分子可设为 1 至 32，分母可选 2、4、8、16 或 32。常见示例有 4/4、3/4 和 6/8。拍号属于编辑器视图设置，不会写入 UST 工程。
+- **工程窗口**（`helloutau.mainToolBar`）：撤销与重做，选择、笔、手绘音高三个工具，Mode2 与显示音高、显示包络、显示参数，两种包络淡化，量化、曲速与拍号，播放或暂停、停止与重播，查找。各组之间以分隔线隔开。「视图 → 显示工具栏」显示或隐藏，状态存入设置（`view/showToolBar`，默认显示）。拍号可通过「视图 → 设置拍号」或工具栏中的拍号按钮修改，分子可设为 1 至 32，分母可选 2、4、8、16 或 32。常见示例有 4/4、3/4 和 6/8。拍号是工程的属性（作者 2026-10-10 决定），存于 `.usth` 的 `settings.timeSignature`，导出 UST 时存于控制音符的载荷，见 [`UsthFormat.md`](UsthFormat.md)。修改经 `ProjectEdits::setProperties()`，可以撤销。
 - **量化**：原来在钢琴键上方的下拉框移到工具栏（作者决定去掉原处），由 QActionKit 的控件工厂创建，与卷帘双向同步，换文档后保留。工具栏隐藏时以「选择 → Decrease Quantization Interval」（Ctrl+[）与「Increase Quantization Interval」（Ctrl+]）逐档切换，「Off」算最细的一档，到两端为止。
 - **音源窗口**（`helloutau.voiceBank.sampleToolBar`）：波形上方采样区的一行改为工具栏：播放音频、从偏移播放到 cutoff、试合成与停止，试合成的音高与长度，F0 的格式。三个下拉框由控件工厂创建，QActionKit 重建工具栏时会重新创建，因此其值由窗口保存。
 - **图标**：取自 IntelliJ Community 的新界面图标（Apache 2.0，来源与改动见 `lib/Editor/icons/intellij/README.md`），由 `ThemeIcon` 按控件的文字颜色绘制，同一文件适用于深浅两种主题。IntelliJ 中没有对应图标的命令（选择工具、手绘音高、Mode2、三个显示开关、两种包络淡化、从偏移播放到 cutoff、试合成）暂用形状相近的 IntelliJ 图标，以后可能更换。图标也显示在菜单中。

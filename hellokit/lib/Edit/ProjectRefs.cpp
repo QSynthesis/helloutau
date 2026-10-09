@@ -117,6 +117,14 @@ namespace hello::kit {
         edit::NodeAccess::setValue(*this, SettingsSlots::Mode2, mode2);
     }
 
+    TimeSignature SettingsRef::timeSignature() const {
+        return edit::NodeAccess::value(*this, SettingsSlots::TimeSignature);
+    }
+
+    void SettingsRef::setTimeSignature(const TimeSignature &timeSignature) const {
+        edit::NodeAccess::setValue(*this, SettingsSlots::TimeSignature, timeSignature);
+    }
+
     ProjectSettings SettingsRef::toProjectSettings() const {
         return edit::NodeAccess::toValue<ProjectSettings>(*this);
     }

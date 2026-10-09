@@ -466,6 +466,15 @@ namespace hello::kit {
                         return fail(diagnostics, ProjectCommands::tr("Mode2 is true or false."));
                     }
                     changes.mode2 = value.toBool();
+                } else if (key == QLatin1String("timeSignature")) {
+                    const auto timeSignature =
+                        value.isObject() ? TimeSignature::fromJson(value.toObject()) : std::nullopt;
+                    if (!timeSignature) {
+                        return fail(diagnostics,
+                                    ProjectCommands::tr("timeSignature must be an object of a "
+                                                        "valid numerator and denominator."));
+                    }
+                    changes.timeSignature = timeSignature;
                 } else {
                     return fail(
                         diagnostics,

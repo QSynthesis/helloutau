@@ -3154,6 +3154,10 @@ Write them again without these chunks? The audio stays the same. The files are w
 <context>
     <name>hello::kit::Project</name>
     <message>
+        <source>The time signature of the project is not valid and was reset to the default.</source>
+        <translation>工程的拍号不合法，已恢复默认。</translation>
+    </message>
+    <message>
         <source>This file could not be opened.</source>
         <translation>无法打开此文件。</translation>
     </message>
@@ -3303,6 +3307,10 @@ Write them again without these chunks? The audio stays the same. The files are w
     <message>
         <source>tempo must be a number.</source>
         <translation>tempo 必须是数字。</translation>
+    </message>
+    <message>
+        <source>timeSignature must be an object of a valid numerator and denominator.</source>
+        <translation>timeSignature 必须是由合法的分子与分母组成的对象。</translation>
     </message>
     <message>
         <source>%1 is not a property of the project.</source>
@@ -3461,6 +3469,10 @@ Write them again without these chunks? The audio stays the same. The files are w
     <message>
         <source>Draw Pitch</source>
         <translation>绘制音高</translation>
+    </message>
+    <message>
+        <source>The time signature is not valid.</source>
+        <translation>拍号不合法。</translation>
     </message>
     <message>
         <source>Change Project Properties</source>
@@ -3647,6 +3659,10 @@ Write them again without these chunks? The audio stays the same. The files are w
     <message>
         <source>This file is not valid in the %1 encoding.</source>
         <translation>此文件不是有效的 %1 编码。</translation>
+    </message>
+    <message>
+        <source>The time signature of the project is not valid and was reset to the default.</source>
+        <translation>工程的拍号不合法，已恢复默认。</translation>
     </message>
     <message>
         <source>This file could not be written.</source>

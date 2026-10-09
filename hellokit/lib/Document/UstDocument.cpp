@@ -363,6 +363,16 @@ namespace hello::kit {
         for (const auto &note : file.notes) {
             if (!eaten && isControlNote(note)) {
                 eaten = true;
+                const auto value = payloadOf(note).value(QLatin1String("timeSignature"));
+                if (value.isUndefined()) {
+                    continue;
+                }
+                if (const auto timeSignature = TimeSignature::fromJson(value.toObject())) {
+                    project.settings.timeSignature = *timeSignature;
+                } else {
+                    complain(diagnostics, tr("The time signature of the project is not valid and "
+                                             "was reset to the default."));
+                }
                 continue;
             }
             track.notes.push_back(noteFrom(note, reader));
@@ -435,6 +445,7 @@ namespace hello::kit {
         QJsonObject payload;
         payload.insert(QLatin1String("version"), controlNotePayloadVersion);
         payload.insert(QLatin1String("ustCharset"), codec.name());
+        payload.insert(QLatin1String("timeSignature"), settings.timeSignature.toJson());
 
         utau::Note control;
         control.lyric = controlNoteLyric;

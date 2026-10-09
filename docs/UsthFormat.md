@@ -37,7 +37,8 @@ HelloUtau 的工程文件格式：JSON，UTF-8，**不带 BOM**。默认写成�
   "cacheDir": "",
   "wavtool": "",
   "resampler": "",
-  "mode2": true
+  "mode2": true,
+  "timeSignature": {"numerator": 4, "denominator": 4}
 }
 ```
 
@@ -51,6 +52,7 @@ HelloUtau 的工程文件格式：JSON，UTF-8，**不带 BOM**。默认写成�
 | `wavtool` | string | `Tool1` | 见下文 |
 | `resampler` | string | `Tool2` | 见下文 |
 | `mode2` | bool | `Mode2` | 音高使用 Mode2 曲线还是 Mode1 值数组 |
+| `timeSignature` | object | 无，存于控制音符 | 拍号，只用于编辑器的标尺与网格。`numerator` 为 1 至 32 的整数，`denominator` 为 2、4、8、16、32 之一。缺省时为 4/4，不合法时警告并按 4/4 读取 |
 
 ### 合成工具路径的保存与信任
 
@@ -269,7 +271,8 @@ $usth=<base64url>
 ```json
 {
   "version": 1,
-  "ustCharset": "Shift_JIS"
+  "ustCharset": "Shift_JIS",
+  "timeSignature": {"numerator": 4, "denominator": 4}
 }
 ```
 
@@ -277,6 +280,7 @@ $usth=<base64url>
 |---|---|---|
 | `version` | int | 载荷版本，当前为 1 |
 | `ustCharset` | string | 该 UST 实际使用的编码，即 `Charset` 无法表达的信息 |
+| `timeSignature` | object | 工程的拍号，与 `.usth` 的 `settings.timeSignature` 相同。UST 没有拍号，缺省时为 4/4 |
 
 未知的载荷字段**原样保留并写回**，因此将来添加内容时无需修改 `version`。逐工程的插件状态预计将存放于此，但**在确定具体存储内容之前不纳入规格**。
 

@@ -45,9 +45,12 @@ namespace hello::kit {
 
         std::optional<bool> mode2;
 
+        /// Refused unless TimeSignature::isValid() holds.
+        std::optional<TimeSignature> timeSignature;
+
         inline bool isEmpty() const {
             return !name && !tempo && !flags && !outputFile && !voiceDir && !wavtool &&
-                   !resampler && !mode2;
+                   !resampler && !mode2 && !timeSignature;
         }
     };
 

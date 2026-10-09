@@ -43,11 +43,31 @@ namespace hello::kit {
             return edit::SlotValue<PortamentoPoint::Type>::toVariant(*type);
         }
 
+        QJsonValue timeSignatureToJson(const QVariant &value) {
+            return edit::SlotValue<TimeSignature>::fromVariant(value).toJson();
+        }
+
+        std::optional<QVariant> timeSignatureFromJson(const QJsonValue &json) {
+            const auto timeSignature =
+                json.isObject() ? TimeSignature::fromJson(json.toObject()) : std::nullopt;
+            if (!timeSignature) {
+                return std::nullopt;
+            }
+            return edit::SlotValue<TimeSignature>::toVariant(*timeSignature);
+        }
+
+        constexpr edit::ValueFormat timeSignatureFormat{"time signature", timeSignatureToJson,
+                                                        timeSignatureFromJson};
         constexpr edit::ValueFormat envelopeFormat{"envelope", envelopeToJson, envelopeFromJson};
         constexpr edit::ValueFormat vibratoFormat{"vibrato", vibratoToJson, vibratoFromJson};
         constexpr edit::ValueFormat portamentoTypeFormat{"portamento type", portamentoTypeToJson,
                                                          portamentoTypeFromJson};
 
+    }
+
+    template <>
+    constexpr const edit::ValueFormat &edit::formatOf<TimeSignature>() {
+        return timeSignatureFormat;
     }
 
     template <>
@@ -148,10 +168,15 @@ namespace hello::kit {
         constexpr edit::RecordInfo trackRecord{"track", TrackType, trackFields};
 
         constexpr edit::FieldInfo settingsFields[] = {
-            edit::valueField(SettingsSlots::Name),      edit::valueField(SettingsSlots::Tempo),
-            edit::valueField(SettingsSlots::Flags),     edit::valueField(SettingsSlots::OutputFile),
-            edit::valueField(SettingsSlots::CacheDir),  edit::valueField(SettingsSlots::Wavtool),
-            edit::valueField(SettingsSlots::Resampler), edit::valueField(SettingsSlots::Mode2),
+            edit::valueField(SettingsSlots::Name),
+            edit::valueField(SettingsSlots::Tempo),
+            edit::valueField(SettingsSlots::Flags),
+            edit::valueField(SettingsSlots::OutputFile),
+            edit::valueField(SettingsSlots::CacheDir),
+            edit::valueField(SettingsSlots::Wavtool),
+            edit::valueField(SettingsSlots::Resampler),
+            edit::valueField(SettingsSlots::Mode2),
+            edit::valueField(SettingsSlots::TimeSignature),
         };
 
         constexpr edit::RecordInfo settingsRecord{"settings", SettingsType, settingsFields};

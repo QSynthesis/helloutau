@@ -8,6 +8,7 @@
 #include <QtCore/QCoreApplication>
 #include <QtCore/QByteArray>
 #include <QtCore/QByteArrayView>
+#include <QtCore/QDataStream>
 #include <QtCore/QJsonDocument>
 #include <QtCore/QJsonObject>
 #include <QtCore/QList>
@@ -107,6 +108,54 @@ namespace hello::kit {
         QList<Region> regions() const;
     };
 
+    /// The time signature of a project, which only the editor uses, for the bars and beats of
+    /// the ruler and the grid. UST has no time signature, and the control note carries it, see
+    /// docs/UsthFormat.md.
+    struct HELLOKIT_DOCUMENT_EXPORT TimeSignature {
+        /// The largest number of beats per bar.
+        static constexpr int maximumNumerator = 32;
+
+        /// The beat units, as the denominator writes them.
+        static constexpr int denominators[] = {2, 4, 8, 16, 32};
+
+        int numerator = 4;
+        int denominator = 4;
+
+        /// Returns whether \a numerator is from 1 to maximumNumerator and \a denominator is one
+        /// of denominators.
+        static bool isValid(int numerator, int denominator);
+
+        inline bool operator==(const TimeSignature &RHS) const {
+            return numerator == RHS.numerator && denominator == RHS.denominator;
+        }
+
+        inline bool operator!=(const TimeSignature &RHS) const {
+            return !(*this == RHS);
+        }
+
+        /// Returns the time signature as written in \c .usth and in the control note.
+        QJsonObject toJson() const;
+
+        /// Returns the time signature written as in \c .usth, or \c std::nullopt unless
+        /// \a object holds a valid numerator and denominator.
+        static std::optional<TimeSignature> fromJson(const QJsonObject &object);
+    };
+
+    // The stream operators of a value stored as a whole in the edit history, see the operators
+    // of Envelope in Note.h. The format is part of the history format and must not change.
+
+    inline QDataStream &operator<<(QDataStream &out, const TimeSignature &timeSignature) {
+        return out << qint32(timeSignature.numerator) << qint32(timeSignature.denominator);
+    }
+
+    inline QDataStream &operator>>(QDataStream &in, TimeSignature &timeSignature) {
+        qint32 numerator = 0;
+        qint32 denominator = 0;
+        in >> numerator >> denominator;
+        timeSignature = {numerator, denominator};
+        return in;
+    }
+
     /// Project-wide settings.
     struct ProjectSettings {
         QString name;
@@ -133,6 +182,9 @@ namespace hello::kit {
         /// Whether pitch uses the Mode2 curve rather than the Mode1 value array. A project uses
         /// exactly one mode, so \c Note::portamento and \c Note::pitchBend are never both set.
         bool mode2 = true;
+
+        /// 4/4 if the file records none.
+        TimeSignature timeSignature;
     };
 
     /// An in-memory project, the common representation of \c .usth, \c .ust and every imported

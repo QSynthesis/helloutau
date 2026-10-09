@@ -123,6 +123,7 @@ namespace hello::kit {
         put(*node, SettingsSlots::Wavtool, settings.wavtool);
         put(*node, SettingsSlots::Resampler, settings.resampler);
         put(*node, SettingsSlots::Mode2, settings.mode2);
+        put(*node, SettingsSlots::TimeSignature, settings.timeSignature);
         return node;
     }
 
@@ -138,6 +139,7 @@ namespace hello::kit {
         settings.wavtool = get(record, SettingsSlots::Wavtool);
         settings.resampler = get(record, SettingsSlots::Resampler);
         settings.mode2 = get(record, SettingsSlots::Mode2);
+        settings.timeSignature = get(record, SettingsSlots::TimeSignature);
         return settings;
     }
 
@@ -275,6 +277,7 @@ namespace hello::kit {
 
         qRegisterMetaType<Envelope>();
         qRegisterMetaType<Vibrato>();
+        qRegisterMetaType<TimeSignature>();
     }
 
 }

@@ -77,6 +77,9 @@ namespace hello::kit {
         bool mode2() const;
         void setMode2(bool mode2) const;
 
+        TimeSignature timeSignature() const;
+        void setTimeSignature(const TimeSignature &timeSignature) const;
+
         ProjectSettings toProjectSettings() const;
     };
 
