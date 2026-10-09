@@ -819,7 +819,7 @@ namespace hello::daw {
                                                             Qt::MouseButton button) {
         finishEditing(true);
         const bool erases = button == Qt::RightButton;
-        // No click: the stroke follows the first move, and a click strokes one place.
+        // Without a click function the stroke starts with the first move, and a release without a move strokes one place.
         return std::make_unique<PressGesture>(
             position,
             [this, position, erases](Qt::KeyboardModifiers modifiers)

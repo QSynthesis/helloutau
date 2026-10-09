@@ -397,9 +397,9 @@ private Q_SLOTS:
         QCOMPARE(PitchCurve({la, li}, 1, 120).mode1Values(timing).first(), 30);
     }
 
-    // Where the values of a note end before its start, the curve takes the previous note there
-    // as far as its values reach, and from the start on it is 0, as probe 4 measured in UTAU
-    // (docs/Synth.md).
+    // If the values of a note end before its start, the curve between their end and the start
+    // equals that of the previous note as far as its values reach, and after the start it is 0,
+    // as probe 4 measured in UTAU (docs/Synth.md).
     void mode1_takes_the_previous_note_where_the_values_end_before_the_start() {
         auto a = bent(QList<double>(96, 100), 0);
         auto b = bent({50, 50}, -60 * 125.0 / 120);

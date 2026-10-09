@@ -15,8 +15,9 @@ namespace hello::daw {
             LockTime,
             SnapValue,
         };
-        // Not declared: the wheel of the parameter area scrolls and zooms with the WheelScene of
-        // NoteViewModifiers, because the parameter area follows the time axis of the note area.
+        // This scheme declares no wheel roles. The wheel of the parameter area scrolls and zooms
+        // with the WheelScene of NoteViewModifiers, because the parameter area follows the time
+        // axis of the note area.
 
         enum Scene {
             /// A left drag of an envelope point or a value

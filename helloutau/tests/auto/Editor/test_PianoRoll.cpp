@@ -78,7 +78,7 @@ private:
     }
 
     // Moves the pointer to \a position with \a button and \a modifiers held. QTest::mouseMove()
-    // sends no modifiers, and a drag reads its operation from the modifiers of its first move.
+    // sends no modifiers, and the operation of a drag follows the modifiers of its first move.
     static void move(QWidget *widget, QPoint position, Qt::MouseButton button,
                      Qt::KeyboardModifiers modifiers) {
         QMouseEvent event(QEvent::MouseMove, position, widget->mapToGlobal(position), Qt::NoButton,

@@ -9,7 +9,7 @@ namespace hello::daw {
         constexpr auto alt = Qt::AltModifier;
         constexpr auto shift = Qt::ShiftModifier;
         constexpr auto none = Qt::NoModifier;
-        // The drag that zooms, which every left drag offers
+        // The drag that zooms, an operation of every left drag scene
         const ModifierScheme::Operation zoom{DragZoom, {DragZoomAxisLock}};
         static const ModifierScheme scheme(
             "noteView", "hello::daw::NoteViewModifiers",

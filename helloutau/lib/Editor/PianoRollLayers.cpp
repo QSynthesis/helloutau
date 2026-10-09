@@ -776,7 +776,7 @@ namespace hello::daw {
             return nullptr;
         }
         const auto state = m_state;
-        // A press that clicks to select the point selects it at once.
+        // If the modifiers of the press select the point with a click, the point is selected at once.
         const auto click = state->activate(NoteViewModifiers::PointClickScene, modifiers);
         if (click && click->operation == NoteViewModifiers::SelectPoint &&
             !state->selectedPoints.contains(id)) {
@@ -905,7 +905,7 @@ namespace hello::daw {
         const auto state = m_state;
         const bool end = hit.part == PianoRoll::NoteEnd;
         const bool wasSelected = state->isSelected(index);
-        // A press that clicks to select the note selects it at once.
+        // If the modifiers of the press select the note with a click, the note is selected at once.
         const auto click = state->activate(NoteViewModifiers::NoteClickScene, modifiers);
         if (click && click->operation == NoteViewModifiers::SelectNote && !wasSelected) {
             state->selectOnly(index);

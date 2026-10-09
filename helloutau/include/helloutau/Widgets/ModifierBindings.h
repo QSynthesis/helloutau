@@ -23,8 +23,9 @@ namespace hello::daw {
     /// its toggles turn on and off with the modifiers held.
     ///
     /// A class of its own describes each scheme: it declares the roles and the scenes as plain
-    /// enumerations numbered from 0 and returns the scheme, see NoteViewModifiers. A view that
-    /// uses roles of another scheme instead of declaring them states so under that enumeration.
+    /// enumerations numbered from 0 and returns the scheme, see NoteViewModifiers. If a view uses
+    /// roles of another scheme instead of declaring them, a comment under that enumeration
+    /// names them.
     ///
     /// Only Ctrl, Alt, Shift and Meta count as modifiers. A role may be off, which differs from
     /// a role without modifiers.
@@ -155,7 +156,7 @@ namespace hello::daw {
         void updateToggles(Activation &activation, Qt::KeyboardModifiers actual) const;
 
         /// Returns whether \a actual is exactly the modifiers of \a role, which is on and has
-        /// modifiers. For a view that uses a toggle of another view outside any operation.
+        /// modifiers. A view uses it for a toggle of another view outside any operation.
         bool isHeld(int role, Qt::KeyboardModifiers actual) const;
 
         QList<Conflict> conflicts() const;

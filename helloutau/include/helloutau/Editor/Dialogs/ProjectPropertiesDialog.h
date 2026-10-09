@@ -55,13 +55,13 @@ namespace hello::daw {
         QLineEdit *resamplerEdit() const;
         QCheckBox *mode2Box() const;
 
-        /// The color of the state of an engine that renders, by default dark green. A theme sets
-        /// it with \c qproperty-trustedColor.
+        /// The color of the state of an engine that renders, by default dark green. It is set in
+        /// a theme with \c qproperty-trustedColor.
         QColor trustedColor() const;
         void setTrustedColor(const QColor &color);
 
         /// The color of the state of an untrusted engine and of the warning about it, by default
-        /// dark red. A theme sets it with \c qproperty-untrustedColor.
+        /// dark red. It is set in a theme with \c qproperty-untrustedColor.
         QColor untrustedColor() const;
         void setUntrustedColor(const QColor &color);
 

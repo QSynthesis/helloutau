@@ -36,7 +36,8 @@ namespace hello::daw {
         QPointF m_origin;
         QPointF m_last;
         ModifierBindings::Activation m_activation;
-        // Where the lock turned on, and the axis it keeps once the pointer moved far enough
+        // Where the lock turned on, and the axis that the lock zooms once the pointer has moved
+        // far enough from there
         std::optional<QPointF> m_lockOrigin;
         std::optional<Qt::Orientation> m_orientation;
     };
@@ -156,12 +157,12 @@ namespace hello::daw {
 
     /// A drag of the pen on the background, which draws a note (step 4 in docs/Widgets.md). The
     /// note goes before the note at the pointer, or after the last note, and starts where the note
-    /// before it ends; the notes after it start later by its length. With FillDraw of
+    /// before it ends. The notes after it start later by its length. With FillDraw of
     /// NoteViewModifiers, a rest fills the gap from there to the pointer and the note starts at
-    /// the pointer; within a rest, the two take its place, and the notes after it start later
+    /// the pointer. Within a rest, the two replace the rest, and the notes after it start later
     /// only as far as the note passes its end. The drag sets the length, snapped to the
     /// quantization unless the toggle DisableNoteSnap is on. The first note inserted where a note
-    /// that sets a tempo started takes that tempo, so that the tempo there stays.
+    /// that sets a tempo started is given that tempo, so that the tempo there stays.
     class PianoRollState::DrawGesture : public SceneGesture {
     public:
         DrawGesture(PianoRollState *state, QPointF position,

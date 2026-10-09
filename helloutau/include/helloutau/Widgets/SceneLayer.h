@@ -66,11 +66,11 @@ namespace hello::daw {
 
     /// A press that becomes a click or a drag. A move farther than
     /// QApplication::startDragDistance() from the press starts the drag: the drag function
-    /// receives the modifiers held then and returns the gesture of the drag, which receives the
-    /// move and everything after it. A release before that is a click: the click function
-    /// receives the modifiers held then. Either function may decline, by returning no gesture
-    /// or doing nothing. Without a click function, the first move starts the drag, and a release
-    /// before any move ends a drag that does not move.
+    /// receives the modifiers held then and returns the gesture of the drag, which receives
+    /// that move, the later moves and the release. A release before that is a click: the click
+    /// function receives the modifiers held then. The drag function may return no gesture, and
+    /// the click function may do nothing. Without a click function, the first move starts the
+    /// drag, and a release before any move ends a drag that does not move.
     class HELLOUTAU_WIDGETS_EXPORT PressGesture : public SceneGesture {
     public:
         using DragFunction = std::function<std::unique_ptr<SceneGesture>(Qt::KeyboardModifiers)>;
@@ -89,7 +89,7 @@ namespace hello::daw {
         DragFunction m_drag;
         ClickFunction m_click;
         bool m_started = false;
-        // The gesture of the drag, if the drag started and a gesture took it
+        // The gesture of the drag, if the drag started and the drag function returned one
         std::unique_ptr<SceneGesture> m_gesture;
     };
 

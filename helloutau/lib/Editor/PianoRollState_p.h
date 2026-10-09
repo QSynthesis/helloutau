@@ -306,16 +306,16 @@ namespace hello::daw {
         /// either button; the right button selects a span of time with the other tools
         bool drawsBend(Qt::MouseButton button) const;
 
-        /// A press at position whose drag strokes the Mode1 pitch (BendGesture), as the
+        /// Returns a press at position whose drag strokes the Mode1 pitch (BendGesture), as the
         /// PitchDrawScene or the PitchEraseScene of NoteViewModifiers selects
         std::unique_ptr<SceneGesture> bendPress(QPointF position, Qt::MouseButton button);
 
-        /// The operation of scene of NoteViewModifiers that modifiers select, see
+        /// Returns the operation of scene of NoteViewModifiers that modifiers select, see
         /// ModifierBindings::activate()
         std::optional<ModifierBindings::Activation> activate(NoteViewModifiers::Scene scene,
                                                              Qt::KeyboardModifiers modifiers) const;
 
-        /// A right press at position, whose click and drag select a span of time as the
+        /// Returns a right press at position, whose click and drag select a span of time as the
         /// SpanScene of NoteViewModifiers selects
         std::unique_ptr<SceneGesture> spanPress(QPointF position);
 
@@ -480,8 +480,8 @@ namespace hello::daw {
 
         void selectRange(int first, int last);
 
-        /// Whether positions snap to the quantization, which \a disabled, such as by the toggle
-        /// DisableNoteSnap, turns off
+        /// Returns whether positions snap to the quantization. \a disabled, which the toggle
+        /// DisableNoteSnap sets, turns snapping off.
         bool snaps(bool disabled) const;
 
         /// The nearest grid line to tick, or tick itself without snapping
