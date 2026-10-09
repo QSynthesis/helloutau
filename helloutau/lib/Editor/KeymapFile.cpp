@@ -16,6 +16,7 @@ namespace hello::daw {
 
         constexpr char ShortcutsKey[] = "shortcuts";
         constexpr char ModifiersKey[] = "modifiers";
+        constexpr char VersionKey[] = "version";
 
     }
 
@@ -39,6 +40,13 @@ namespace hello::daw {
             return;
         }
         const auto root = document.object();
+        if (const auto found = root.value(QLatin1String(VersionKey)); found.toInt(-1) != version) {
+            const auto text =
+                found.isDouble() ? QString::number(found.toDouble()) : QStringLiteral("none");
+            qWarning("Keymap: %s has the version %s instead of %d and is ignored.",
+                     qPrintable(fileName), qPrintable(text), version);
+            return;
+        }
         for (auto &section : sections) {
             const auto value = root.value(section.key);
             if (value.isUndefined()) {
@@ -72,6 +80,7 @@ namespace hello::daw {
 
     bool KeymapFile::write(const Sections &sections, const QString &fileName, QString *error) {
         QJsonObject object;
+        object.insert(QLatin1String(VersionKey), version);
         for (const auto &section : sections) {
             // Only the commands that the user has assigned are written.
             QAK::ActionFamily::ShortcutsFamily assigned;

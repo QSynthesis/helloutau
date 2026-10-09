@@ -18,9 +18,11 @@ namespace hello::daw {
     /// \c keymap.json beside \c settings.json, apart from the settings and the plugin settings.
     /// It has a section for each kind of window. A section holds the commands of the action
     /// registry of that kind whose shortcuts differ from those of their manifests, and for each
-    /// modifier scheme of that kind the roles whose modifiers differ from their defaults:
+    /// modifier scheme of that kind the roles whose modifiers differ from their defaults. The
+    /// file also records the version of its format:
     ///
-    ///     {"projectWindow": {"shortcuts": [{"id": "helloutau.edit.undo", "keys": ["Ctrl+Z"]}],
+    ///     {"version": 1,
+    ///      "projectWindow": {"shortcuts": [{"id": "helloutau.edit.undo", "keys": ["Ctrl+Z"]}],
     ///                        "modifiers": {"noteView": {"timeZoom": ["Alt"]}}},
     ///      "voiceBankWindow": {"shortcuts": [...]}}
     ///
@@ -28,6 +30,12 @@ namespace hello::daw {
     /// settings dialog in docs/Widgets.md.
     class HELLOUTAU_EDITOR_EXPORT KeymapFile {
     public:
+        /// The version of the format that this program reads and writes. It increases whenever
+        /// the recorded shortcuts or modifiers no longer apply as written, for example after
+        /// actions or roles are renamed. A file of another version, or without a version, is not
+        /// read.
+        static constexpr int version = 1;
+
         /// A section of the file
         struct Section {
             QString key;
@@ -46,8 +54,9 @@ namespace hello::daw {
 
         /// Gives the registry of each of \a sections the shortcuts that its section of
         /// \a fileName records, and sets the modifiers of its bindings that the section records.
-        /// A missing file or section records none. A file or a section that is not a valid
-        /// keymap is ignored with a warning, so that the defaults apply. Unknown roles and
+        /// A missing file or section records none. A file of another version, or a file or a
+        /// section that is not a valid keymap, is ignored with a warning, so that the defaults
+        /// apply. Unknown roles and
         /// modifiers are ignored with a warning. Bindings that are not valid after reading
         /// (ModifierBindings::isValid()) are replaced by the defaults of their scheme with a
         /// warning.
