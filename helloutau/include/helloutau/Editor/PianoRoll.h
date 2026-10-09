@@ -262,7 +262,9 @@ namespace hello::daw {
         /// Gives or removes vibrato on every selected sung note.
         bool setVibratoEnabled(bool enabled, kit::DiagnosticList &diagnostics,
                                std::optional<kit::Vibrato> defaultVibrato = std::nullopt);
-        // Compatibility helpers for non-menu callers; the editor uses Pitch Control.
+        /// Removes the portamento, or the vibrato, of every selected sung note if all of them
+        /// have it, and otherwise gives it to every selected sung note. The editor sets both
+        /// through Pitch Control instead.
         bool togglePortamento(kit::DiagnosticList &diagnostics);
         bool toggleVibrato(kit::DiagnosticList &diagnostics);
 
