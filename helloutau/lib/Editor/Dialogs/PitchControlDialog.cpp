@@ -264,6 +264,8 @@ namespace hello::daw {
             m_portamentoPreset->setEnabled(enabled && m_portamentoPresetMode->isChecked());
             m_portamentoLength->setEnabled(enabled && custom);
             m_portamentoStart->setEnabled(enabled && custom);
+            m_portamentoLengthSlider->setEnabled(enabled && custom);
+            m_portamentoStartSlider->setEnabled(enabled && custom);
             m_portamentoCount->setEnabled(enabled && add);
             m_averagePoints->setEnabled(enabled && add);
         };
