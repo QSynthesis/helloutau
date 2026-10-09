@@ -2128,6 +2128,15 @@ namespace hello::daw {
                 actions.value(QStringLiteral("helloutau.select.selectTool"))->setChecked(true);
                 roll->setTool(PianoRoll::SelectTool);
             }
+            updatePitchControlAction();
+        }
+
+        // Pitch Control edits the Mode2 points and the vibrato of the selected notes, and is
+        // available only in Mode2.
+        void updatePitchControlAction() {
+            actions.value(QStringLiteral("helloutau.edit.pitchControl"))
+                ->setEnabled(kit::ProjectRef(document->session()).settings().mode2() &&
+                             !roll->selectedIndices().isEmpty());
         }
 
         void updateTitle() {
@@ -2141,8 +2150,7 @@ namespace hello::daw {
         void updateEditActions() {
             const int selected = int(roll->selectedIndices().size());
             for (const auto id :
-                 {"helloutau.edit.delete", "helloutau.edit.editLyric",
-                  "helloutau.edit.pitchControl", "helloutau.edit.scalePitch",
+                 {"helloutau.edit.delete", "helloutau.edit.editLyric", "helloutau.edit.scalePitch",
                   "helloutau.edit.convertPitchToMode1", "helloutau.edit.crossfadeP2P3",
                   "helloutau.edit.crossfadeP1P4", "helloutau.edit.copy",
                   "helloutau.edit.resetPortamento", "helloutau.edit.resetVibratos",
@@ -2152,6 +2160,7 @@ namespace hello::daw {
                   "helloutau.edit.noteProperties", "helloutau.edit.replaceLyrics"}) {
                 actions.value(QLatin1String(id))->setEnabled(selected > 0);
             }
+            updatePitchControlAction();
             actions.value(QStringLiteral("helloutau.edit.splitNote"))->setEnabled(selected == 1);
             actions.value(QStringLiteral("helloutau.edit.setLabel"))->setEnabled(selected > 0);
             actions.value(QStringLiteral("helloutau.edit.nameRegion"))
