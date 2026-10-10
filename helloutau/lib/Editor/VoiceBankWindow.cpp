@@ -57,6 +57,7 @@
 #include <helloutau/Theme/ThemeManager.h>
 #include <helloutau/Widgets/CommandPalette.h>
 #include <helloutau/Widgets/FindBar.h>
+#include <helloutau/Widgets/ToolBarPalette.h>
 
 #include "AboutDialog.h"
 #include "VoiceAliasRuleDialog.h"
@@ -67,7 +68,6 @@
 #include "FindSupport_p.h"
 #include "OtoWaveformView.h"
 #include "SamplePreview.h"
-#include "ToolBarPalette_p.h"
 #include "VoiceBankCharsetDialog.h"
 #include "VoiceBankEntryModel.h"
 #include "VoiceBankInfoPanel.h"

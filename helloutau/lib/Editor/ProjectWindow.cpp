@@ -67,6 +67,7 @@
 #include <helloutau/Widgets/PianoKeyboard.h>
 #include <helloutau/Widgets/SceneView.h>
 #include <helloutau/Widgets/TimelineRuler.h>
+#include <helloutau/Widgets/ToolBarPalette.h>
 
 #include "AboutDialog.h"
 #include "AppSettings.h"
@@ -84,7 +85,6 @@
 #include "PasteParametersDialog.h"
 #include "RegionDialog.h"
 #include "ScalePitchDialog.h"
-#include "ToolBarPalette_p.h"
 #include "PitchControlDialog.h"
 #include "VoiceBankCharsetDialog.h"
 #include "VoiceBankWindow.h"

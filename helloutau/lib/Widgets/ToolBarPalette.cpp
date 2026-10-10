@@ -1,4 +1,4 @@
-#include "ToolBarPalette_p.h"
+#include "ToolBarPalette.h"
 
 #include <QtCore/QEvent>
 #include <QtGui/QGuiApplication>
