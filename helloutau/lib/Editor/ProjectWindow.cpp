@@ -68,7 +68,7 @@
 #include <helloutau/Widgets/SceneView.h>
 #include <helloutau/Widgets/TimelineRuler.h>
 
-#include "AboutDialog_p.h"
+#include "AboutDialog.h"
 #include "AppSettings.h"
 #include "CommandEntries_p.h"
 #include "DiagnosticBox_p.h"
@@ -1728,7 +1728,8 @@ namespace hello::daw {
             });
             addCommand(QStringLiteral("helloutau.help.about"), [this] {
                 stdc_decl_t;
-                showAboutHelloUtau(&decl);
+                AboutDialog dialog(&decl);
+                dialog.exec();
             });
             addCommand(QStringLiteral("helloutau.help.aboutQt"), [this] {
                 stdc_decl_t;

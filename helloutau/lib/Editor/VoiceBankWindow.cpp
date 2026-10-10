@@ -58,7 +58,7 @@
 #include <helloutau/Widgets/CommandPalette.h>
 #include <helloutau/Widgets/FindBar.h>
 
-#include "AboutDialog_p.h"
+#include "AboutDialog.h"
 #include "VoiceAliasRuleDialog.h"
 #include "AppSettings.h"
 #include "CommandEntries_p.h"
@@ -406,7 +406,8 @@ namespace hello::daw {
             });
             addCommand(QStringLiteral("helloutau.help.about"), [this] {
                 stdc_decl_t;
-                showAboutHelloUtau(&decl);
+                AboutDialog dialog(&decl);
+                dialog.exec();
             });
             addCommand(QStringLiteral("helloutau.help.aboutQt"), [this] {
                 stdc_decl_t;

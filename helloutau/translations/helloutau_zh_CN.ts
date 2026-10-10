@@ -2,7 +2,7 @@
 <!DOCTYPE TS>
 <TS version="2.1" language="zh_CN">
 <context>
-    <name>AboutDialog</name>
+    <name>hello::daw::AboutDialog</name>
     <message>
         <source>About %1</source>
         <translation>关于 %1</translation>
