@@ -13,6 +13,7 @@
 #include <fstream>
 #include <functional>
 #include <memory>
+#include <string_view>
 
 #include <QtCore/QByteArray>
 #include <QtCore/QDir>
@@ -190,11 +191,14 @@ private:
         };
     }
 
+    /// The content that writesTrack() writes.
+    static constexpr std::string_view directTrack = "RIFF direct output";
+
     /// A wavtool that writes the completed track directly, as moresampler does in this role.
     static StandIn::Behaviour writesTrack(const std::filesystem::path &track) {
         return [track](const QStringList &) {
             std::ofstream out(track, std::ios::binary | std::ios::trunc);
-            out << "RIFF direct output";
+            out << directTrack;
             return bool(out);
         };
     }
@@ -286,7 +290,7 @@ private Q_SLOTS:
 
         QVERIFY(outcome.rendered);
         QVERIFY(!hasError(diagnostics));
-        QCOMPARE(sizeOf(p->outputFile()), qint64(19));
+        QCOMPARE(sizeOf(p->outputFile()), qint64(directTrack.size()));
         QVERIFY(!std::filesystem::exists(withSuffix(p->outputFile(), ".whd")));
         QVERIFY(!std::filesystem::exists(withSuffix(p->outputFile(), ".dat")));
     }
