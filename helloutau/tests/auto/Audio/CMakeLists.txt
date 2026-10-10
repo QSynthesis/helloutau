@@ -1,3 +1,7 @@
-add_auto_test(test_AudioOutput.cpp HelloUtauAudio)
+add_auto_test(test_BufferSource.cpp HelloUtauAudio)
+add_auto_test(test_DeviceClock.cpp HelloUtauAudio)
+add_auto_test(test_PianoToneSource.cpp HelloUtauAudio)
+add_auto_test(test_SampleRateConversion.cpp HelloUtauAudio)
+add_auto_test(test_StreamSource.cpp HelloUtauAudio)
 add_auto_test(test_AudioMixer.cpp HelloUtauAudio)
 add_auto_test(test_AudioEngine.cpp HelloUtauAudio)
