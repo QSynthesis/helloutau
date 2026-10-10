@@ -80,8 +80,8 @@
         <!-- The label of a note and the name of a region, as UTAU shows them on the timeline -->
         <action id="helloutau.edit.setLabel" text="Set La&amp;bel..." category="Edit" />
         <action id="helloutau.edit.nameRegion" text="Name Re&amp;gion..." category="Edit" />
-        <action id="helloutau.edit.removeLabel" text="Remove Label" category="Edit" />
-        <action id="helloutau.edit.removeRegion" text="Remove Region" category="Edit" />
+        <action id="helloutau.edit.removeLabel" text="Remove &amp;Label" category="Edit" />
+        <action id="helloutau.edit.removeRegion" text="&amp;Remove Region" category="Edit" />
         <!-- The properties of the selected notes, as the note property dialog of UTAU -->
         <action id="helloutau.edit.noteProperties" text="Note Propert&amp;ies..." category="Edit"
                 shortcut="Ctrl+E" />
@@ -133,7 +133,7 @@
 
         <!-- The tool bar of the project window, shown or hidden as the settings store it -->
         <action id="helloutau.view.showToolBar" text="Show &amp;Toolbar" category="View" />
-        <action id="helloutau.view.timeSignature" text="Time Signature..." category="View" />
+        <action id="helloutau.view.timeSignature" text="Time Si&amp;gnature..." category="View" />
         <action id="helloutau.view.timeSignatureWidget" text="Time Signature" category="View" />
         <!-- X as in UTAU -->
         <action id="helloutau.view.showPitch" text="Show &amp;Pitch" category="View"

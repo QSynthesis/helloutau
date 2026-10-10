@@ -346,12 +346,12 @@
         <translation>命名区间(&amp;G)...</translation>
     </message>
     <message>
-        <source>Remove Label</source>
-        <translation>移除标签</translation>
+        <source>Remove &amp;Label</source>
+        <translation>移除标签(&amp;L)</translation>
     </message>
     <message>
-        <source>Remove Region</source>
-        <translation>移除区间</translation>
+        <source>&amp;Remove Region</source>
+        <translation>移除区间(&amp;R)</translation>
     </message>
     <message>
         <source>Note Propert&amp;ies...</source>
@@ -466,8 +466,8 @@
         <translation>显示工具栏(&amp;T)</translation>
     </message>
     <message>
-        <source>Time Signature...</source>
-        <translation>设置拍号...</translation>
+        <source>Time Si&amp;gnature...</source>
+        <translation>设置拍号(&amp;G)...</translation>
     </message>
     <message>
         <source>Time Signature</source>
