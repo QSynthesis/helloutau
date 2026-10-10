@@ -3,6 +3,12 @@ name: Sync release to Gitee
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: GitHub Release tag to synchronize
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -11,10 +17,27 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
+      - name: Resolve GitHub release metadata
+        id: github-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.tag_name }}
+        run: |
+          set -euo pipefail
+          release=$(gh release view "$TAG_NAME" --repo "$GITHUB_REPOSITORY" --json name,body)
+          {
+            echo 'name<<GITHUB_RELEASE_NAME'
+            jq -r .name <<<"$release"
+            echo 'GITHUB_RELEASE_NAME'
+            echo 'body<<GITHUB_RELEASE_BODY'
+            jq -r .body <<<"$release"
+            echo 'GITHUB_RELEASE_BODY'
+          } >> "$GITHUB_OUTPUT"
+
       - name: Download GitHub release assets
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG_NAME: ${{ github.event.release.tag_name }}
+          TAG_NAME: ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.tag_name }}
         run: |
           mkdir -p release-assets
           gh release download "$TAG_NAME" \
@@ -26,9 +49,9 @@ jobs:
         env:
           GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
           GITEE_REPOSITORY: ${{ secrets.GITEE_REPOSITORY }}
-          TAG_NAME: ${{ github.event.release.tag_name }}
-          RELEASE_NAME: ${{ github.event.release.name }}
-          RELEASE_BODY: ${{ github.event.release.body }}
+          TAG_NAME: ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.tag_name }}
+          RELEASE_NAME: ${{ steps.github-release.outputs.name }}
+          RELEASE_BODY: ${{ steps.github-release.outputs.body }}
         run: |
           set -euo pipefail
 
