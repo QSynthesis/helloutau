@@ -153,6 +153,8 @@ namespace hello::daw {
                 }
             }
         }
+        // Hard clipping rather than a limiter, so that playback keeps the loudness of the
+        // rendered file, see docs/Audio.md
         for (qsizetype i = 0; i < samples; ++i) {
             out[i] = std::isfinite(out[i]) ? std::clamp(out[i], -1.0f, 1.0f) : 0.0f;
         }
