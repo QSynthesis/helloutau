@@ -141,11 +141,32 @@ namespace {
         tx.commit();
     }
 
+    // Passes the active modal dialog of type T to handle once the event loop runs, which is
+    // within the dialog that the code under test shows. If no dialog of type T is active, the
+    // active dialog is rejected and the test fails. A dialog that handle leaves open, as after a
+    // failed check, is rejected. Either way the test does not block on the dialog.
+    template <class T>
+    void handleNextDialog(std::function<void(T *)> handle) {
+        QTimer::singleShot(0, [handle = std::move(handle)] {
+            const auto widget = QApplication::activeModalWidget();
+            if (const auto dialog = qobject_cast<T *>(widget)) {
+                handle(dialog);
+                if (dialog->isVisible()) {
+                    dialog->reject();
+                }
+                return;
+            }
+            if (const auto other = qobject_cast<QDialog *>(widget)) {
+                other->reject();
+            }
+            QTest::qFail("The expected dialog is not shown.", __FILE__, __LINE__);
+        });
+    }
+
     // Answers the next message box with \a button once it appears.
     void answerMessageBox(QMessageBox::StandardButton button) {
-        QTimer::singleShot(0, [button] {
-            const auto box = qobject_cast<QMessageBox *>(QApplication::activeModalWidget());
-            QVERIFY(box);
+        handleNextDialog<QMessageBox>([button](QMessageBox *box) {
+            QVERIFY(box->button(button));
             box->button(button)->click();
         });
     }
@@ -520,10 +541,7 @@ private Q_SLOTS:
         roll->selectAll();
         QVERIFY(edit->isEnabled());
         double shown = 0;
-        QTimer::singleShot(0, [&shown] {
-            const auto dialog =
-                qobject_cast<PitchControlDialog *>(QApplication::activeModalWidget());
-            QVERIFY(dialog);
+        handleNextDialog<PitchControlDialog>([&shown](PitchControlDialog *dialog) {
             shown = dialog->field(1)->value();
             // The notes have no vibrato, and the fields are enabled only while the group is
             // checked.
@@ -650,10 +668,7 @@ private Q_SLOTS:
 
         roll->toggleVibrato(diagnostics);
         QVERIFY(!window->document()->session()->snapshot().tracks[0].notes[0].vibrato);
-        QTimer::singleShot(0, [] {
-            const auto dialog =
-                qobject_cast<PasteParametersDialog *>(QApplication::activeModalWidget());
-            QVERIFY(dialog);
+        handleNextDialog<PasteParametersDialog>([](PasteParametersDialog *dialog) {
             dialog->box(PianoRoll::PortamentoParameter)->setChecked(false);
             dialog->box(PianoRoll::EnvelopeParameter)->setChecked(false);
             dialog->accept();
@@ -681,9 +696,7 @@ private Q_SLOTS:
             return window->document()->session()->snapshot().tracks[0].notes[0].vibrato->amplitude;
         };
         const double before = depth();
-        QTimer::singleShot(0, [] {
-            const auto dialog = qobject_cast<ScalePitchDialog *>(QApplication::activeModalWidget());
-            QVERIFY(dialog);
+        handleNextDialog<ScalePitchDialog>([](ScalePitchDialog *dialog) {
             QCOMPARE(dialog->vibratoBox()->value(), 100.0);
             dialog->vibratoBox()->setValue(200);
             dialog->accept();
@@ -795,9 +808,7 @@ private Q_SLOTS:
 
         // Clearing asks first, and Cancel keeps both kinds.
         const auto answer = [](bool clear) {
-            QTimer::singleShot(0, [clear] {
-                const auto box = qobject_cast<QMessageBox *>(QApplication::activeModalWidget());
-                QVERIFY(box);
+            handleNextDialog<QMessageBox>([clear](QMessageBox *box) {
                 for (const auto button : box->buttons()) {
                     if ((box->buttonRole(button) == QMessageBox::DestructiveRole) == clear) {
                         button->click();
@@ -1037,9 +1048,7 @@ private Q_SLOTS:
         const auto roll = qobject_cast<PianoRoll *>(window->centralWidget());
         QVERIFY(roll && !roll->isCursorEnabled());
 
-        QTimer::singleShot(0, [] {
-            const auto dialog = qobject_cast<SettingsDialog *>(QApplication::activeModalWidget());
-            QVERIFY(dialog);
+        handleNextDialog<SettingsDialog>([](SettingsDialog *dialog) {
             QCOMPARE(dialog->currentPage()->id(), QStringLiteral("editor.Rendering"));
             const auto mode = dialog->currentPage()->widget()->findChild<QComboBox *>();
             QVERIFY(mode);
@@ -1074,18 +1083,14 @@ private Q_SLOTS:
 
         const auto window = e->newWindow();
         bool asked = false;
-        QTimer::singleShot(0, [&asked] {
-            const auto dialog = qobject_cast<SettingsDialog *>(QApplication::activeModalWidget());
-            QVERIFY(dialog);
+        handleNextDialog<SettingsDialog>([&asked](SettingsDialog *dialog) {
             const auto language =
                 dialog->currentPage()->widget()->findChild<QComboBox *>(QStringLiteral("language"));
             QVERIFY(language);
             language->setCurrentIndex(language->findData(QStringLiteral("zh_CN")));
             QVERIFY(dialog->applyButton()->isEnabled());
             // The question comes once the dialog has closed.
-            QTimer::singleShot(0, [&asked] {
-                const auto box = qobject_cast<QMessageBox *>(QApplication::activeModalWidget());
-                QVERIFY(box);
+            handleNextDialog<QMessageBox>([&asked](QMessageBox *box) {
                 asked = true;
                 box->button(QMessageBox::No)->click();
             });
@@ -1206,9 +1211,7 @@ private Q_SLOTS:
         QCOMPARE(properties->shortcut(), QKeySequence(QStringLiteral("Ctrl+E")));
         roll->selectAll();
 
-        QTimer::singleShot(0, [] {
-            const auto dialog = qobject_cast<TempoDialog *>(QApplication::activeModalWidget());
-            QVERIFY(dialog);
+        handleNextDialog<TempoDialog>([](TempoDialog *dialog) {
             dialog->followBox()->setChecked(false);
             dialog->tempoBox()->setValue(150);
             dialog->accept();
@@ -1217,10 +1220,7 @@ private Q_SLOTS:
         const auto session = window->document()->session();
         QCOMPARE(session->snapshot().tracks[0].notes[0].tempo, std::optional(150.0));
 
-        QTimer::singleShot(0, [] {
-            const auto dialog =
-                qobject_cast<NotePropertiesDialog *>(QApplication::activeModalWidget());
-            QVERIFY(dialog);
+        handleNextDialog<NotePropertiesDialog>([](NotePropertiesDialog *dialog) {
             QTest::keyClicks(dialog->field(NotePropertiesDialog::Lyric), QStringLiteral("ka"));
             dialog->accept();
         });
@@ -1236,10 +1236,7 @@ private Q_SLOTS:
         const auto properties =
             declaredActionOf(*e, window, QStringLiteral("helloutau.file.properties"));
         QVERIFY(properties);
-        QTimer::singleShot(0, [] {
-            const auto dialog =
-                qobject_cast<ProjectPropertiesDialog *>(QApplication::activeModalWidget());
-            QVERIFY(dialog);
+        handleNextDialog<ProjectPropertiesDialog>([](ProjectPropertiesDialog *dialog) {
             dialog->nameEdit()->setText(QStringLiteral("renamed"));
             dialog->flagsEdit()->setText(QStringLiteral("B0"));
             dialog->accept();
@@ -1269,17 +1266,13 @@ private Q_SLOTS:
         // dialog open.
         bool opened = false;
         bool marked = false;
-        QTimer::singleShot(0, [&opened, &marked] {
-            const auto dialog =
-                qobject_cast<ProjectPropertiesDialog *>(QApplication::activeModalWidget());
-            if (!dialog) {
-                return;
-            }
-            opened = true;
-            const auto actions = dialog->resamplerEdit()->actions();
-            marked = !actions.isEmpty() && actions.constFirst()->isVisible();
-            dialog->reject();
-        });
+        handleNextDialog<ProjectPropertiesDialog>(
+            [&opened, &marked](ProjectPropertiesDialog *dialog) {
+                opened = true;
+                const auto actions = dialog->resamplerEdit()->actions();
+                marked = !actions.isEmpty() && actions.constFirst()->isVisible();
+                dialog->reject();
+            });
         const auto window = e->openFile(path);
         QVERIFY(opened);
         QVERIFY(marked);
@@ -1304,9 +1297,7 @@ private Q_SLOTS:
 
         // Splitting proposes half the note on the grid, and asks for the first part.
         int proposed = 0;
-        QTimer::singleShot(0, [&proposed] {
-            const auto dialog = qobject_cast<QInputDialog *>(QApplication::activeModalWidget());
-            QVERIFY(dialog);
+        handleNextDialog<QInputDialog>([&proposed](QInputDialog *dialog) {
             proposed = dialog->intValue();
             dialog->setIntValue(120);
             dialog->accept();
@@ -1419,10 +1410,7 @@ private Q_SLOTS:
         const auto e = editor();
         e->settings().setUtauDirectory(utau);
         QStringList asked;
-        QTimer::singleShot(0, [&asked] {
-            const auto dialog =
-                qobject_cast<VoiceBankCharsetDialog *>(QApplication::activeModalWidget());
-            QVERIFY(dialog);
+        handleNextDialog<VoiceBankCharsetDialog>([&asked](VoiceBankCharsetDialog *dialog) {
             asked.push_back(dialog->windowTitle());
             dialog->setSelectedCharset(QStringLiteral("Shift_JIS"));
             dialog->accept();
@@ -1551,9 +1539,7 @@ private Q_SLOTS:
                   "#Charset:UTF-8\r\na.wav=a,10,20,-30,40,5\r\nb.wav=,1,2,3,4,5\r\n"
                   "c.wav=c,1,2,3,4,5\r\n");
         bool asked = false;
-        QTimer::singleShot(0, [&asked] {
-            const auto box = qobject_cast<QMessageBox *>(QApplication::activeModalWidget());
-            QVERIFY(box);
+        handleNextDialog<QMessageBox>([&asked](QMessageBox *box) {
             asked = true;
             box->button(QMessageBox::Yes)->click();
         });
@@ -1568,9 +1554,7 @@ private Q_SLOTS:
         // Declined, then checked again without a question, then changed again
         writeFile(bank / "sub" / "oto.ini", "#Charset:UTF-8\r\nx.wav=x,9.0,2,3,4,5\r\n");
         asked = false;
-        QTimer::singleShot(0, [&asked] {
-            const auto box = qobject_cast<QMessageBox *>(QApplication::activeModalWidget());
-            QVERIFY(box);
+        handleNextDialog<QMessageBox>([&asked](QMessageBox *box) {
             asked = true;
             box->button(QMessageBox::No)->click();
         });
@@ -1584,9 +1568,7 @@ private Q_SLOTS:
 
         writeFile(bank / "sub" / "oto.ini", "#Charset:UTF-8\r\nx.wav=z,9.0,2,3,4,5\r\n");
         asked = false;
-        QTimer::singleShot(0, [&asked] {
-            const auto box = qobject_cast<QMessageBox *>(QApplication::activeModalWidget());
-            QVERIFY(box);
+        handleNextDialog<QMessageBox>([&asked](QMessageBox *box) {
             asked = true;
             box->button(QMessageBox::No)->click();
         });
@@ -1711,11 +1693,9 @@ private Q_SLOTS:
 
         rename(QStringLiteral("again"));
         bool asked = false;
-        QTimer::singleShot(0, [&asked] {
-            if (const auto box = qobject_cast<QMessageBox *>(QApplication::activeModalWidget())) {
-                asked = true;
-                box->button(QMessageBox::Discard)->click();
-            }
+        handleNextDialog<QMessageBox>([&asked](QMessageBox *box) {
+            asked = true;
+            box->button(QMessageBox::Discard)->click();
         });
         QVERIFY(window->close());
         QVERIFY(asked);
@@ -1880,9 +1860,7 @@ private Q_SLOTS:
 
         // An entry for a.wav, whose stem is taken: a3
         window->setCurrentRow(0);
-        QTimer::singleShot(0, [] {
-            const auto input = qobject_cast<QInputDialog *>(QApplication::activeModalWidget());
-            QVERIFY(input);
+        handleNextDialog<QInputDialog>([](QInputDialog *input) {
             QCOMPARE(input->textValue(), QStringLiteral("a.wav"));
             input->accept();
         });
@@ -1894,9 +1872,7 @@ private Q_SLOTS:
 
         // An entry for c.wav, whose stem is free: an empty alias
         window->setCurrentRow(3);
-        QTimer::singleShot(0, [] {
-            const auto input = qobject_cast<QInputDialog *>(QApplication::activeModalWidget());
-            QVERIFY(input);
+        handleNextDialog<QInputDialog>([](QInputDialog *input) {
             input->setTextValue(QStringLiteral("d.wav"));
             input->accept();
         });
@@ -2711,12 +2687,7 @@ private Q_SLOTS:
         QVERIFY(properties);
         QString preUtterance;
         QString overlap;
-        QTimer::singleShot(0, [&] {
-            const auto dialog =
-                qobject_cast<NotePropertiesDialog *>(QApplication::activeModalWidget());
-            if (!dialog) {
-                return;
-            }
+        handleNextDialog<NotePropertiesDialog>([&](NotePropertiesDialog *dialog) {
             preUtterance = dialog->field(NotePropertiesDialog::PreUtterance)->placeholderText();
             overlap = dialog->field(NotePropertiesDialog::VoiceOverlap)->placeholderText();
             dialog->reject();
@@ -2752,12 +2723,7 @@ private Q_SLOTS:
         QVERIFY(before.portamento.isEmpty());
         const auto steps = session->currentStep();
         bool opened = false;
-        QTimer::singleShot(0, [&opened] {
-            const auto dialog =
-                qobject_cast<PitchControlDialog *>(QApplication::activeModalWidget());
-            if (!dialog) {
-                return;
-            }
+        handleNextDialog<PitchControlDialog>([&opened](PitchControlDialog *dialog) {
             opened = true;
             for (const auto box : dialog->findChildren<QCheckBox *>()) {
                 if (box->text() == QStringLiteral("&Vibrato") ||
@@ -2835,11 +2801,7 @@ private Q_SLOTS:
             }
         });
         boxes.start();
-        QTimer::singleShot(0, [&] {
-            const auto dialog = qobject_cast<RegionDialog *>(QApplication::activeModalWidget());
-            if (!dialog) {
-                return;
-            }
+        handleNextDialog<RegionDialog>([&](RegionDialog *dialog) {
             current = dialog->currentRegion() ? dialog->currentRegion()->name : QString();
             dialog->removeButton()->click();
             listedAfterRemoval = int(dialog->regions().size());
@@ -2865,11 +2827,7 @@ private Q_SLOTS:
         const auto button = window->findChild<QToolButton *>(QStringLiteral("timeSignature"));
         QVERIFY(button);
         const auto session = window->document()->session();
-        QTimer::singleShot(0, [] {
-            const auto dialog = qobject_cast<QDialog *>(QApplication::activeModalWidget());
-            if (!dialog) {
-                return;
-            }
+        handleNextDialog<QDialog>([](QDialog *dialog) {
             const auto numerator = dialog->findChild<QSpinBox *>();
             const auto denominator = dialog->findChild<QComboBox *>();
             if (numerator && denominator) {
@@ -2919,14 +2877,10 @@ private Q_SLOTS:
         std::optional<kit::PortamentoSettings> shownPortamento;
         std::optional<kit::Vibrato> shownVibrato;
         const auto open = [&] {
-            QTimer::singleShot(0, [&] {
-                const auto dialog =
-                    qobject_cast<PitchControlDialog *>(QApplication::activeModalWidget());
-                if (dialog) {
-                    shownPortamento = dialog->portamentoSettings();
-                    shownVibrato = dialog->vibrato();
-                    dialog->reject();
-                }
+            handleNextDialog<PitchControlDialog>([&](PitchControlDialog *dialog) {
+                shownPortamento = dialog->portamentoSettings();
+                shownVibrato = dialog->vibrato();
+                dialog->reject();
             });
             edit->trigger();
         };
