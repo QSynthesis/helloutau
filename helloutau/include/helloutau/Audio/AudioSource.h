@@ -7,9 +7,9 @@ namespace hello::daw {
 
     /// Samples that an AudioOutput plays, pulled as the device needs them.
     ///
-    /// \warning read() is called on the audio thread of the device, and must neither block,
-    ///          lock nor allocate, as the Qt documentation of the callback interface of
-    ///          \c QAudioSink requires.
+    /// \warning read() and position() are called on the audio thread of the device, and must
+    ///          neither block, lock nor allocate, as the Qt documentation of the callback
+    ///          interface of \c QAudioSink requires.
     class HELLOUTAU_AUDIO_EXPORT AudioSource {
     public:
         virtual ~AudioSource();
@@ -18,8 +18,8 @@ namespace hello::daw {
         /// returns the number written. Fewer than requested marks the end of the source.
         virtual qsizetype read(float *out, qsizetype frames, int channels) noexcept = 0;
 
-        /// How far the source has been read, in its own frames, which any thread may query.
-        virtual qint64 position() const = 0;
+        /// Returns how far the source has been read, in its own frames. Any thread may call it.
+        virtual qint64 position() const noexcept = 0;
     };
 
 }

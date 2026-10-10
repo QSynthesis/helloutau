@@ -41,7 +41,7 @@ namespace hello::daw {
         return count;
     }
 
-    qint64 SineWaveSource::position() const {
+    qint64 SineWaveSource::position() const noexcept {
         return m_position.load(std::memory_order_relaxed);
     }
 

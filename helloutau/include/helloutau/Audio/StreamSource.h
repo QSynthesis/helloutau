@@ -25,7 +25,7 @@ namespace hello::daw {
         void start();
         void stop();
         qsizetype read(float *out, qsizetype frames, int channels) noexcept override;
-        qint64 position() const override;
+        qint64 position() const noexcept override;
         bool isStarved() const;
 
     private:

@@ -189,7 +189,7 @@ namespace hello::daw {
         return frames;
     }
 
-    qint64 StreamSource::position() const {
+    qint64 StreamSource::position() const noexcept {
         stdc_impl_t;
         const auto played = double(impl.consumed.load(std::memory_order_relaxed));
         return qint64(std::llround(played * impl.sourceRate / impl.deviceRate));

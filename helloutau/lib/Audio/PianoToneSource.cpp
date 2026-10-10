@@ -94,7 +94,7 @@ namespace hello::daw {
         return count;
     }
 
-    qint64 PianoToneSource::position() const {
+    qint64 PianoToneSource::position() const noexcept {
         return m_position.load(std::memory_order_relaxed);
     }
 

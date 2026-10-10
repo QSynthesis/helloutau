@@ -53,7 +53,7 @@ namespace hello::daw {
         return qsizetype(impl.samples->size()) / impl.channels;
     }
 
-    qint64 BufferSource::position() const {
+    qint64 BufferSource::position() const noexcept {
         stdc_impl_t;
         return impl.position.load(std::memory_order_relaxed);
     }

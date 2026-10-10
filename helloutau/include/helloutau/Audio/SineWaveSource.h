@@ -14,7 +14,7 @@ namespace hello::daw {
         ~SineWaveSource() override;
 
         qsizetype read(float *out, qsizetype frames, int channels) noexcept override;
-        qint64 position() const override;
+        qint64 position() const noexcept override;
 
     private:
         int m_sampleRate;
