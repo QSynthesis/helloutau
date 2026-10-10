@@ -1244,14 +1244,24 @@ private Q_SLOTS:
         kit::DiagnosticList diagnostics;
         QVERIFY(project.save(path, diagnostics));
 
-        QTimer::singleShot(0, [] {
+        // The dialog is closed before any check, so that a failed check does not leave the modal
+        // dialog open.
+        bool opened = false;
+        bool marked = false;
+        QTimer::singleShot(0, [&opened, &marked] {
             const auto dialog =
                 qobject_cast<ProjectPropertiesDialog *>(QApplication::activeModalWidget());
-            QVERIFY(dialog);
-            QVERIFY(dialog->resamplerEdit()->actions().constFirst()->isVisible());
+            if (!dialog) {
+                return;
+            }
+            opened = true;
+            const auto actions = dialog->resamplerEdit()->actions();
+            marked = !actions.isEmpty() && actions.constFirst()->isVisible();
             dialog->reject();
         });
         const auto window = e->openFile(path);
+        QVERIFY(opened);
+        QVERIFY(marked);
         QVERIFY(window);
         QCOMPARE(window->document()->sourcePath(), path);
     }
