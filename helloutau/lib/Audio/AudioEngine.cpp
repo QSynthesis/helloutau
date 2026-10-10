@@ -7,7 +7,6 @@
 #include <QtCore/QCoreApplication>
 #include <QtCore/QPointer>
 #include <QtCore/QThread>
-#include <QtCore/QTimer>
 #include <QtMultimedia/QAudioSink>
 #include <QtMultimedia/QMediaDevices>
 
@@ -89,7 +88,6 @@ namespace hello::daw {
 #endif
         std::unique_ptr<QAudioSink> sink;
         QMediaDevices devices;
-        QTimer poll;
     };
 
     AudioEngine *AudioEngine::instance() {
@@ -104,18 +102,6 @@ namespace hello::daw {
 
     AudioEngine::AudioEngine(QObject *parent) : QObject(parent), _impl(std::make_unique<Impl>()) {
         stdc_impl_t;
-        impl.poll.setInterval(20);
-        connect(&impl.poll, &QTimer::timeout, this, [this] {
-            stdc_impl_t;
-            if (impl.sink && impl.sink->error() != QtAudio::NoError &&
-                impl.sink->state() == QtAudio::StoppedState) {
-                close();
-                Q_EMIT invalidated(tr("The audio output device stopped unexpectedly."));
-            }
-            if (impl.mixer) {
-                impl.mixer->collect();
-            }
-        });
         connect(&impl.devices, &QMediaDevices::audioOutputsChanged, this, [this] {
             stdc_impl_t;
             if (impl.sink && device() != impl.opened) {
@@ -181,7 +167,6 @@ namespace hello::daw {
 
     void AudioEngine::close() {
         stdc_impl_t;
-        impl.poll.stop();
         if (impl.sink) {
             impl.sink->reset();
             impl.sink.reset();
@@ -237,6 +222,19 @@ namespace hello::daw {
             impl.mixer = std::make_unique<AudioMixer>(rate, format.channelCount());
             impl.sink = std::make_unique<QAudioSink>(selected, format);
             impl.opened = selected;
+            // Queued, because close() destroys the sink that emits the signal. The sink is
+            // compared by address, so that a signal of a closed sink is ignored.
+            connect(
+                impl.sink.get(), &QAudioSink::stateChanged, this,
+                [this, sink = impl.sink.get()](QtAudio::State state) {
+                    stdc_impl_t;
+                    if (impl.sink.get() == sink && state == QtAudio::StoppedState &&
+                        sink->error() != QtAudio::NoError) {
+                        close();
+                        Q_EMIT invalidated(tr("The audio output device stopped unexpectedly."));
+                    }
+                },
+                Qt::QueuedConnection);
             auto mixer = impl.mixer.get();
 #ifdef HELLOUTAU_AUDIO_PULL_DEVICE
             impl.device = std::make_unique<MixerDevice>(*mixer, format.channelCount());
@@ -249,7 +247,6 @@ namespace hello::daw {
                 close();
                 return fail(tr("The audio output device could not be started."));
             }
-            impl.poll.start();
         }
         const auto added = impl.mixer->add(std::move(source));
         if (!added) {
@@ -262,6 +259,7 @@ namespace hello::daw {
         stdc_impl_t;
         if (impl.mixer) {
             impl.mixer->remove(id);
+            impl.mixer->collect();
         }
     }
 
