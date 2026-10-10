@@ -2949,6 +2949,80 @@ private Q_SLOTS:
         QCOMPARE(shownPortamento->start, -40);
         QCOMPARE(shownPortamento->length, 100);
     }
+
+    // Two files dropped on a modified window ask once whether the changes may be discarded. If
+    // cancelled, neither opens. If discarded, the first opens in the window and the second in a
+    // new window. A first file that does not open leaves the second to open.
+    void dropped_files_ask_once_and_open_in_order() {
+        const auto e = editor();
+        const auto first = savedProject(m_dir, "dropped1.usth");
+        const auto second = savedProject(m_dir, "dropped2.usth");
+        const auto window = e->openFile(savedProject(m_dir, "dropped0.usth"));
+        QVERIFY(window);
+        // Drops paths on window and answers a question whether to save with answer, closing any
+        // other message box. Returns the number of questions and of other message boxes.
+        const auto drop = [window](const QList<fs::path> &paths,
+                                   QMessageBox::StandardButton answer) {
+            QList<QUrl> urls;
+            for (const auto &path : paths) {
+                urls.push_back(QUrl::fromLocalFile(QString::fromStdU16String(path.u16string())));
+            }
+            QMimeData data;
+            data.setUrls(urls);
+            int questions = 0;
+            int messages = 0;
+            QTimer timer;
+            timer.setInterval(10);
+            QObject::connect(&timer, &QTimer::timeout, [&] {
+                const auto box = qobject_cast<QMessageBox *>(QApplication::activeModalWidget());
+                if (!box) {
+                    return;
+                }
+                if (box->button(QMessageBox::Discard)) {
+                    ++questions;
+                    box->button(answer)->click();
+                } else {
+                    ++messages;
+                    box->reject();
+                }
+            });
+            timer.start();
+            QDragEnterEvent enter(QPoint(10, 10), Qt::CopyAction, &data, Qt::LeftButton,
+                                  Qt::NoModifier);
+            QCoreApplication::sendEvent(window, &enter);
+            QDropEvent event(QPointF(10, 10), Qt::CopyAction, &data, Qt::LeftButton,
+                             Qt::NoModifier);
+            QCoreApplication::sendEvent(window, &event);
+            QTest::qWait(100);
+            return std::pair{questions, messages};
+        };
+        const auto shows = [](ProjectWindow *target, const fs::path &path) {
+            std::error_code error;
+            return fs::equivalent(target->document()->sourcePath(), path, error);
+        };
+
+        edit(window);
+        QCOMPARE(drop({first, second}, QMessageBox::Cancel), (std::pair{1, 0}));
+        QCOMPARE(e->windows().size(), 1);
+        QVERIFY(window->isWindowModified());
+
+        QCOMPARE(drop({first, second}, QMessageBox::Discard), (std::pair{1, 0}));
+        QCOMPARE(e->windows().size(), 2);
+        QVERIFY(shows(window, first));
+        const auto other = e->windows().constLast();
+        QVERIFY(other != window);
+        QVERIFY(shows(other, second));
+        other->close();
+        QCoreApplication::processEvents();
+        QCOMPARE(e->windows().size(), 1);
+
+        const auto missing = pathIn(m_dir, "dropped-missing.usth");
+        const auto third = savedProject(m_dir, "dropped3.usth");
+        QCOMPARE(drop({missing, third}, QMessageBox::Discard).second, 1);
+        const auto windows = e->windows();
+        QVERIFY(std::any_of(windows.cbegin(), windows.cend(),
+                            [&](ProjectWindow *target) { return shows(target, third); }));
+    }
 };
 
 int main(int argc, char *argv[]) {
