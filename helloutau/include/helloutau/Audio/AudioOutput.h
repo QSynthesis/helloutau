@@ -56,8 +56,8 @@ namespace hello::daw {
 
         bool isPlaying() const;
 
-        /// The AudioSource::position() of the source that the device plays now, see
-        /// DeviceClock, or none before the device has pulled from it.
+        /// Returns the AudioSource::position() of the source that the device plays now, see
+        /// DeviceClock, or \c std::nullopt before the device has pulled from the source.
         std::optional<double> heardPosition() const;
 
     Q_SIGNALS:

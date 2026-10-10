@@ -15,7 +15,7 @@ namespace hello::daw {
             m_initial.store(before, std::memory_order_relaxed);
         }
         m_frames += frames;
-        auto &pull = m_pulls[size_t(count % Kept)];
+        auto &pull = m_pulls[size_t(count % keptPulls)];
         pull.end.store(m_frames, std::memory_order_relaxed);
         pull.after.store(after, std::memory_order_relaxed);
         m_count.store(count + 1, std::memory_order_release);
@@ -31,15 +31,15 @@ namespace hello::daw {
         const double played =
             std::chrono::duration<double>(now - start).count() * double(m_sampleRate);
         // Newest first, short of the oldest pulls, which the audio thread may be replacing
-        const qint64 oldest = std::max<qint64>(0, count - (Kept - 2));
+        const qint64 oldest = std::max<qint64>(0, count - (keptPulls - 2));
         for (qint64 i = count - 1; i >= oldest; --i) {
-            const auto &pull = m_pulls[size_t(i % Kept)];
+            const auto &pull = m_pulls[size_t(i % keptPulls)];
             const auto end = double(pull.end.load(std::memory_order_relaxed));
             const auto after = pull.after.load(std::memory_order_relaxed);
             if (played >= end) {
                 return after;
             }
-            const auto &previous = m_pulls[size_t((i + Kept - 1) % Kept)];
+            const auto &previous = m_pulls[size_t((i + keptPulls - 1) % keptPulls)];
             const double begin = i == 0 ? 0 : double(previous.end.load(std::memory_order_relaxed));
             const double before = i == 0 ? m_initial.load(std::memory_order_relaxed)
                                          : previous.after.load(std::memory_order_relaxed);

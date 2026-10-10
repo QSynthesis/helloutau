@@ -10,18 +10,18 @@
 
 namespace hello::daw {
 
-    /// Finds what a device plays at a moment from what it has pulled: the frames of each pull and
-    /// the AudioSource::position() after it.
+    /// The position of a source that a device plays at a given moment, computed from the pulls of
+    /// the device: the frames of each pull and the AudioSource::position() after it.
     ///
-    /// A device pulls ahead of what it plays by what its buffers hold, some 45 ms with WASAPI
-    /// (measured, see the section on audio output in docs/Widgets.md), and plays as time passes
-    /// from its first pull. The position that
-    /// the device plays at a moment is therefore the position after the pull that holds the
-    /// frame played then, found as far into the pull as that frame is. While the source is
-    /// starved, its position stands still across the pull, and so does the one found.
+    /// A device pulls frames ahead of playing them by the length of its buffers, 41 to 50 ms with
+    /// WASAPI (measured, see the section on audio output in docs/Widgets.md). The first pulled
+    /// frame is taken to play at the time of the first pull, and every later frame at the sample
+    /// rate. The position at a moment is therefore interpolated within the pull that holds the
+    /// frame played at that moment. While the source is starved, its position is constant across
+    /// the pull, and so is the result.
     ///
-    /// Written on the audio thread, which neither locks nor allocates here, and read on any
-    /// other. The last pulls are kept, far more than a device holds.
+    /// The audio thread writes the clock without locking or allocating, and any other thread
+    /// reads it. The last keptPulls pulls are kept, which span many times the buffers of a device.
     class HELLOUTAU_AUDIO_EXPORT DeviceClock {
     public:
         using Clock = std::chrono::steady_clock;
@@ -32,12 +32,12 @@ namespace hello::daw {
         /// \a after after it. The first pull starts the clock.
         void pulled(qsizetype frames, double before, double after, Clock::time_point now) noexcept;
 
-        /// The position of the source that the device plays at \a now, or none before the first
-        /// pull.
+        /// Returns the position of the source that the device plays at \a now, or
+        /// \c std::nullopt before the first pull.
         std::optional<double> heard(Clock::time_point now) const;
 
     private:
-        static constexpr int Kept = 64;
+        static constexpr int keptPulls = 64;
 
         struct Pull {
             std::atomic<qint64> end{0};
@@ -45,7 +45,7 @@ namespace hello::daw {
         };
 
         int m_sampleRate;
-        std::array<Pull, Kept> m_pulls;
+        std::array<Pull, keptPulls> m_pulls;
         std::atomic<qint64> m_count{0};
         std::atomic<Clock::rep> m_start{0};
         std::atomic<double> m_initial{0};

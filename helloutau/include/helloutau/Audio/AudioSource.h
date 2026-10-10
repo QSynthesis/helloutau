@@ -5,7 +5,8 @@
 
 namespace hello::daw {
 
-    /// Samples that an AudioOutput plays, pulled as the device needs them.
+    /// A source of samples, which AudioMixer reads on the audio thread as the device requires
+    /// them.
     ///
     /// \warning read() and position() are called on the audio thread of the device, and must
     ///          neither block, lock nor allocate, as the Qt documentation of the callback
@@ -24,4 +25,4 @@ namespace hello::daw {
 
 }
 
-#endif
+#endif // HELLOUTAU_AUDIO_AUDIOSOURCE_H

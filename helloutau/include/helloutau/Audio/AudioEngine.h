@@ -1,8 +1,16 @@
 #ifndef HELLOUTAU_AUDIO_AUDIOENGINE_H
 #define HELLOUTAU_AUDIO_AUDIOENGINE_H
 
+#include <memory>
+#include <optional>
+
+#include <QtCore/QByteArray>
+#include <QtCore/QObject>
+#include <QtCore/QString>
 #include <QtMultimedia/QAudioDevice>
+
 #include <helloutau/Audio/AudioMixer.h>
+#include <helloutau/Audio/DeviceClock.h>
 
 namespace hello::daw {
 
@@ -69,4 +77,4 @@ namespace hello::daw {
 
 }
 
-#endif
+#endif // HELLOUTAU_AUDIO_AUDIOENGINE_H

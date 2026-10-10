@@ -1,7 +1,4 @@
 #include "AudioOutput.h"
-#include "AudioEngine.h"
-
-#include <atomic>
 
 #include <QtCore/QPointer>
 #include <QtCore/QTimer>
@@ -10,12 +7,15 @@
 
 #include <stdcorelib/pimpl.h>
 
+#include "AudioEngine.h"
+#include "DeviceClock.h"
+
 namespace hello::daw {
 
     namespace {
 
         // How often the end of a source is looked for, in milliseconds
-        constexpr int PollInterval = 20;
+        constexpr int pollInterval = 20;
 
     }
 
@@ -32,14 +32,14 @@ namespace hello::daw {
     AudioOutput::AudioOutput(QObject *parent) : QObject(parent), _impl(std::make_unique<Impl>()) {
         stdc_impl_t;
         impl.engine = AudioEngine::instance();
-        impl.poll.setInterval(PollInterval);
+        impl.poll.setInterval(pollInterval);
         impl.drain.setSingleShot(true);
         connect(&impl.drain, &QTimer::timeout, this, &AudioOutput::stop);
         connect(&impl.poll, &QTimer::timeout, this, [this] {
             stdc_impl_t;
             if (impl.id && impl.engine && impl.engine->isFinished(*impl.id)) {
                 impl.poll.stop();
-                impl.drain.start(impl.engine->bufferedMilliseconds() + PollInterval);
+                impl.drain.start(impl.engine->bufferedMilliseconds() + pollInterval);
             }
         });
         connect(impl.engine, &AudioEngine::invalidated, this, [this](const QString &reason) {

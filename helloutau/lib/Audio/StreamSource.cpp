@@ -13,10 +13,10 @@ namespace hello::daw {
     namespace {
 
         // The samples pulled from the generator at a time
-        constexpr qsizetype Block = 1024;
+        constexpr qsizetype generatorBlock = 1024;
 
         // The smallest ring buffer, in samples at the rate of the device
-        constexpr qsizetype MinimumCapacity = 8192;
+        constexpr qsizetype minimumCapacity = 8192;
 
     }
 
@@ -28,8 +28,8 @@ namespace hello::daw {
         int sourceRate = 0;
         int deviceRate = 0;
 
-        // Mono samples at the rate of the device. The producer advances written, the audio
-        // thread advances consumed; each index only grows.
+        // Mono samples at the rate of the device. The producer advances written and the audio
+        // thread advances consumed. Neither index decreases.
         std::vector<float> ring;
         std::atomic<qint64> written = 0;
         std::atomic<qint64> consumed = 0;
@@ -48,7 +48,8 @@ namespace hello::daw {
                                           consumed.load(std::memory_order_acquire));
         }
 
-        // Writes \a count samples, waiting for room as the device plays; false if stopped.
+        // Writes \a count samples, waiting for space as the device plays. Returns false if
+        // stopped.
         bool push(const double *samples, qsizetype count) {
             while (count > 0) {
                 const qsizetype room = std::min(space(), count);
@@ -71,12 +72,12 @@ namespace hello::daw {
         }
 
         void produce() {
-            std::vector<float> input(static_cast<size_t>(Block));
-            std::vector<double> converted(static_cast<size_t>(Block));
+            std::vector<float> input(static_cast<size_t>(generatorBlock));
+            std::vector<double> converted(static_cast<size_t>(generatorBlock));
             std::unique_ptr<r8b::CDSPResampler24> resampler;
             if (sourceRate != deviceRate) {
-                resampler =
-                    std::make_unique<r8b::CDSPResampler24>(sourceRate, deviceRate, int(Block));
+                resampler = std::make_unique<r8b::CDSPResampler24>(sourceRate, deviceRate,
+                                                                   int(generatorBlock));
             }
             qint64 pulled = 0;
             qint64 produced = 0;
@@ -98,7 +99,7 @@ namespace hello::daw {
             };
 
             while (!stopping.load()) {
-                const qsizetype n = generator(input.data(), Block);
+                const qsizetype n = generator(input.data(), generatorBlock);
                 if (n < 0) {
                     break;
                 }
@@ -119,7 +120,7 @@ namespace hello::daw {
                     qint64(std::llround(double(pulled) * deviceRate / sourceRate));
                 std::fill(converted.begin(), converted.end(), 0.0);
                 while (produced < expected && !stopping.load()) {
-                    if (!convert(Block, expected)) {
+                    if (!convert(generatorBlock, expected)) {
                         return;
                     }
                 }
@@ -135,7 +136,7 @@ namespace hello::daw {
         impl.sourceRate = sourceRate;
         impl.deviceRate = deviceRate;
         impl.ring.resize(
-            size_t(std::max<qsizetype>(MinimumCapacity, qsizetype(buffer * deviceRate))));
+            size_t(std::max<qsizetype>(minimumCapacity, qsizetype(buffer * deviceRate))));
     }
 
     StreamSource::~StreamSource() {
@@ -162,8 +163,8 @@ namespace hello::daw {
 
     qsizetype StreamSource::read(float *out, qsizetype frames, int channels) noexcept {
         stdc_impl_t;
-        // Read before the index, so that a producer that ends meanwhile is not taken for one
-        // with nothing more to give.
+        // Loaded before the indices, so that a producer that ends after they are loaded is
+        // not mistaken for one that has no samples left.
         const bool ended = impl.ended.load(std::memory_order_acquire);
         const qint64 from = impl.consumed.load(std::memory_order_relaxed);
         const qint64 available = impl.written.load(std::memory_order_acquire) - from;
@@ -179,7 +180,8 @@ namespace hello::daw {
             impl.starved.store(false);
             return frames;
         }
-        // The ring ran dry: at the end if the producer had finished before it was read.
+        // The ring buffer is empty. The source ends if the producer had ended before the
+        // indices were loaded.
         std::fill(out, out + (frames - count) * channels, 0.0f);
         if (ended) {
             impl.starved.store(false);
