@@ -191,9 +191,14 @@ namespace hello::daw {
                 impl.setState(Stopped);
             }
         });
-        // The output stops before it reports the loss of the device, so that the preview has
-        // stopped by then.
+        // The loss of the device ends the preview without finished(). The preview has stopped
+        // by the time the loss is reported.
         connect(impl.output, &AudioOutput::failed, this, [this](const QString &reason) {
+            stdc_impl_t;
+            if (impl.state == Playing) {
+                impl.playedFrom.reset();
+                impl.setState(Stopped);
+            }
             kit::DiagnosticList diagnostics;
             fail(diagnostics, reason);
             Q_EMIT failed(diagnostics);

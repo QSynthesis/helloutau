@@ -49,8 +49,10 @@ namespace hello::daw {
     Q_SIGNALS:
         /// Playing ended, at the end of the source or on stop().
         void finished();
-        /// Reports device loss or an output error after stopping this source.
-        void failed(const QString &reason);
+        /// Reports device loss or an output error after stopping this source, without
+        /// finished(). \a heardPosition is heardPosition() at the moment of the loss, so that the
+        /// receiver can go on from there.
+        void failed(const QString &reason, std::optional<double> heardPosition);
 
     private:
         class Impl;

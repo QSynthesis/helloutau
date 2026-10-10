@@ -621,6 +621,17 @@ namespace hello::daw {
             stream.reset();
         }
 
+        // Returns the position in milliseconds from the start of the track of the frame heard of
+        // the stream or of the kept render, whichever plays.
+        std::optional<double> positionAt(double heard) const {
+            if (stream) {
+                const auto sample = double(streamStart) + heard;
+                return synth->startTime() + sample * 1000 / kit::WavtoolMixer::sampleRate;
+            }
+            return kept ? kept->startTime + heard * 1000 / std::max(1, kept->deviceRate)
+                        : std::optional<double>();
+        }
+
         void setState(State value) {
             stdc_decl_t;
             if (state != value) {
@@ -709,13 +720,22 @@ namespace hello::daw {
                 impl.setState(Stopped);
             }
         });
-        // The output stops before it reports the loss of the device, so that playback has
-        // stopped by then.
-        connect(impl.output, &AudioOutput::failed, this, [this](const QString &reason) {
-            kit::DiagnosticList diagnostics;
-            fail(diagnostics, reason);
-            Q_EMIT failed(diagnostics);
-        });
+        // The loss of the device pauses playback where the device stopped, without finished(),
+        // so that playing again goes on from there on the device now selected. Playback is
+        // paused by the time the loss is reported.
+        connect(impl.output, &AudioOutput::failed, this,
+                [this](const QString &reason, std::optional<double> heard) {
+                    stdc_impl_t;
+                    if (impl.state == Playing) {
+                        impl.pausedAt = impl.positionAt(heard.value_or(0));
+                        impl.pausedPreview = bool(impl.stream);
+                        impl.setState(Paused);
+                        impl.endPreview();
+                    }
+                    kit::DiagnosticList diagnostics;
+                    fail(diagnostics, reason);
+                    Q_EMIT failed(diagnostics);
+                });
         setTemporaryDirectory(impl.temporaryDirectory);
     }
 
@@ -995,7 +1015,15 @@ namespace hello::daw {
         if (impl.state != Paused || impl.pausedPreview || !impl.kept || !impl.pausedAt) {
             return false;
         }
-        const auto &rendered = *impl.kept;
+        auto &rendered = *impl.kept;
+        // The device may have changed while paused, as after the loss of the device.
+        const int deviceRate = AudioEngine::instance()->sampleRate();
+        if (deviceRate > 0 && deviceRate != rendered.deviceRate) {
+            rendered.samples =
+                std::make_shared<const std::vector<float>>(SampleRateConversion::converted(
+                    *rendered.samples, rendered.channels, rendered.deviceRate, deviceRate));
+            rendered.deviceRate = deviceRate;
+        }
         const auto first =
             std::llround((*impl.pausedAt - rendered.startTime) * rendered.deviceRate / 1000);
         impl.playRendered(qsizetype(first));
@@ -1033,13 +1061,7 @@ namespace hello::daw {
         }
         // What the device plays, which it pulled some time before, from the start until it
         // has pulled
-        const double heard = impl.output->heardPosition().value_or(0);
-        if (impl.stream) {
-            const auto sample = double(impl.streamStart) + heard;
-            return impl.synth->startTime() + sample * 1000 / kit::WavtoolMixer::sampleRate;
-        }
-        return impl.kept ? impl.kept->startTime + heard * 1000 / std::max(1, impl.kept->deviceRate)
-                         : std::optional<double>();
+        return impl.positionAt(impl.output->heardPosition().value_or(0));
     }
 
     std::optional<int> Playback::clearCache(const kit::ProjectDocument &document,

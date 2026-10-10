@@ -25,6 +25,21 @@ namespace hello::daw {
         std::shared_ptr<DeviceClock> clock;
         QTimer poll;
         QTimer drain;
+
+        // Stops the source. Returns whether a source was playing.
+        bool release() {
+            poll.stop();
+            drain.stop();
+            if (!id) {
+                return false;
+            }
+            if (engine) {
+                engine->stop(*id);
+            }
+            id.reset();
+            clock.reset();
+            return true;
+        }
     };
 
     AudioOutput::AudioOutput(QObject *parent) : QObject(parent), _impl(std::make_unique<Impl>()) {
@@ -43,8 +58,9 @@ namespace hello::daw {
         connect(impl.engine, &AudioEngine::invalidated, this, [this](const QString &reason) {
             stdc_impl_t;
             if (impl.id) {
-                stop();
-                Q_EMIT failed(reason);
+                const auto heard = heardPosition();
+                impl.release();
+                Q_EMIT failed(reason, heard);
             }
         });
     }
@@ -75,17 +91,9 @@ namespace hello::daw {
 
     void AudioOutput::stop() {
         stdc_impl_t;
-        impl.poll.stop();
-        impl.drain.stop();
-        if (!impl.id) {
-            return;
+        if (impl.release()) {
+            Q_EMIT finished();
         }
-        if (impl.engine) {
-            impl.engine->stop(*impl.id);
-        }
-        impl.id.reset();
-        impl.clock.reset();
-        Q_EMIT finished();
     }
 
     bool AudioOutput::isPlaying() const {
