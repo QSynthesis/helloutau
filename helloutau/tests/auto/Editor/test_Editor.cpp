@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
+#include <functional>
 #include <optional>
 #include <thread>
 
@@ -145,6 +146,34 @@ namespace {
         });
     }
 
+    // Calls trigger, and closes every modal dialog that is shown meanwhile: a message box with No
+    // if it has that button, or else with its escape button, and another dialog by rejecting it.
+    // Returns, in order, Question for a message box with No, Message for another message box, and
+    // the class name of any other dialog.
+    QStringList dialogsDuring(const std::function<void()> &trigger) {
+        QStringList dialogs;
+        QTimer timer;
+        timer.setInterval(10);
+        QObject::connect(&timer, &QTimer::timeout, [&dialogs] {
+            const auto widget = QApplication::activeModalWidget();
+            if (const auto box = qobject_cast<QMessageBox *>(widget)) {
+                if (const auto no = box->button(QMessageBox::No)) {
+                    dialogs.push_back(QStringLiteral("Question"));
+                    no->click();
+                } else {
+                    dialogs.push_back(QStringLiteral("Message"));
+                    box->button(QMessageBox::Ok) ? box->button(QMessageBox::Ok)->click()
+                                                 : box->reject();
+                }
+            } else if (const auto dialog = qobject_cast<QDialog *>(widget)) {
+                dialogs.push_back(QString::fromLatin1(dialog->metaObject()->className()));
+                dialog->reject();
+            }
+        });
+        timer.start();
+        trigger();
+        return dialogs;
+    }
 }
 
 class test_Editor : public QObject {
@@ -2607,6 +2636,53 @@ private Q_SLOTS:
                  inMusic("track.wav"));
         e->settings().setWavtool({});
         e->settings().setResampler({});
+    }
+
+    // Playing in either mode and Render Track report missing project synth tools, and ask about
+    // untrusted ones. Nothing is rendered unless both exist and are trusted.
+    void rendering_requires_existing_and_trusted_synth_tools() {
+        const auto e = editor();
+        const auto window = e->openFile(savedProject(m_dir, "untrusted.usth"));
+        QVERIFY(window);
+        const auto roll = qobject_cast<PianoRoll *>(window->centralWidget());
+        roll->selectAll();
+        const auto play = declaredActionOf(*e, window, QStringLiteral("helloutau.playback.play"));
+        const auto renderTrack =
+            declaredActionOf(*e, window, QStringLiteral("helloutau.playback.renderTrack"));
+        QVERIFY(play && renderTrack);
+        const auto setSynthTools = [&](const QString &wavtool, const QString &resampler) {
+            const auto session = window->document()->session();
+            auto tx = session->transaction(QStringLiteral("synth tools"));
+            const auto settings = kit::ProjectRef(session).settings();
+            settings.setWavtool(wavtool);
+            settings.setResampler(resampler);
+            tx.commit();
+        };
+        const auto playInMode = [&](AppSettings::PlaybackMode mode) {
+            e->settings().setPlaybackMode(mode);
+            window->applySettings();
+            return dialogsDuring([&] { play->trigger(); });
+        };
+
+        setSynthTools(QStringLiteral("missing-wavtool.exe"),
+                      QStringLiteral("missing-resampler.exe"));
+        QCOMPARE(playInMode(AppSettings::Prerender), QStringList{QStringLiteral("Message")});
+        QCOMPARE(playInMode(AppSettings::Realtime), QStringList{QStringLiteral("Message")});
+        QCOMPARE(dialogsDuring([&] { renderTrack->trigger(); }),
+                 QStringList{QStringLiteral("Message")});
+
+        const auto wavtool = pathIn(m_dir, "untrusted-wavtool.exe");
+        const auto resampler = pathIn(m_dir, "untrusted-resampler.exe");
+        for (const auto &tool : {wavtool, resampler}) {
+            std::ofstream(tool, std::ios::binary) << "tool";
+        }
+        setSynthTools(QString::fromStdU16String(wavtool.u16string()),
+                      QString::fromStdU16String(resampler.u16string()));
+        QCOMPARE(playInMode(AppSettings::Prerender), QStringList{QStringLiteral("Question")});
+        QCOMPARE(playInMode(AppSettings::Realtime), QStringList{QStringLiteral("Question")});
+        QCOMPARE(dialogsDuring([&] { renderTrack->trigger(); }),
+                 QStringList{QStringLiteral("Question")});
+        e->settings().setPlaybackMode(AppSettings::Prerender);
     }
 };
 
