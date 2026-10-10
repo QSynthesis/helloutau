@@ -189,6 +189,29 @@ private Q_SLOTS:
         ThemeIcon::clearCache();
         QCOMPARE(leftOf(imageOf(icon->icon())), QColor(0, 255, 0));
     }
+
+    // The checked look draws the files of the checked states in the unchecked states, in the
+    // same colors. An icon of another engine is returned unchanged.
+    void the_checked_look_draws_the_checked_files() {
+        const auto icon =
+            read(QStringLiteral("(\"a.svg\", over=\"o.svg\", up2=\"b.svg\", over2=\"p.svg\"), "
+                                "(#FF0000, over=#00FF00)"));
+        QVERIFY(icon);
+        const auto look = ThemeIcon::of(ThemeIcon::checkedLook(icon->icon()));
+        QVERIFY(look);
+        using S = ThemeButtonState;
+        QCOMPARE(look->files.value(S::Up), QStringLiteral("b.svg"));
+        QCOMPARE(look->files.value(S::Over), QStringLiteral("p.svg"));
+        QCOMPARE(look->files.value(S::Down), icon->files.value(S::CheckedDown));
+        QCOMPARE(look->files.value(S::Disabled), icon->files.value(S::CheckedDisabled));
+        QCOMPARE(look->files.value(S::CheckedUp), QStringLiteral("b.svg"));
+        for (const auto state : {S::Up, S::Over, S::Down, S::Disabled, S::CheckedUp}) {
+            QCOMPARE(look->colors.value(state), icon->colors.value(state));
+        }
+
+        const QIcon other(icons() + QStringLiteral("/square.svg"));
+        QCOMPARE(ThemeIcon::checkedLook(other).cacheKey(), other.cacheKey());
+    }
 };
 
 int main(int argc, char *argv[]) {
