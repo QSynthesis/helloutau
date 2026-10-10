@@ -500,6 +500,68 @@ private Q_SLOTS:
         QCOMPARE(bank.samples().size(), 1);
     }
 
+
+    // The image of character.txt is untrusted: it names a file inside the voice bank, and
+    // anything that leads outside, by an absolute path, a drive, a UNC path, .. or a symbolic
+    // link, is rejected, so that a voice bank cannot make the editor read another file.
+    void an_image_outside_the_voice_bank_is_rejected() {
+        QTemporaryDir dir;
+        const auto root = std::filesystem::path(dir.path().toStdU16String());
+        const auto bank = root / "bank";
+        std::filesystem::create_directories(bank / "img");
+        std::filesystem::create_directories(root / "bank2");
+
+        const auto inside = [&](const QString &image, const std::filesystem::path &expected) {
+            const auto path = VoiceBank::imagePathOf(bank, image);
+            return path && path->lexically_normal() ==
+                               std::filesystem::weakly_canonical(expected).lexically_normal();
+        };
+        QVERIFY(inside(QStringLiteral("icon.bmp"), bank / "icon.bmp"));
+        QVERIFY(inside(QStringLiteral("img\\icon.bmp"), bank / "img" / "icon.bmp"));
+        QVERIFY(inside(QStringLiteral("img/icon.bmp"), bank / "img" / "icon.bmp"));
+        QVERIFY(inside(QStringLiteral("img\\..\\icon.bmp"), bank / "icon.bmp"));
+
+        const QStringList outside{
+            QString(),
+            QStringLiteral("\\x.bmp"),
+            QStringLiteral("/x.bmp"),
+            QStringLiteral("\\\\host\\share\\a.bmp"),
+            QStringLiteral("//host/share/a.bmp"),
+            QStringLiteral("..\\x.bmp"),
+            QStringLiteral("img\\..\\..\\x.bmp"),
+            QStringLiteral("..\\bank2\\x.bmp"),
+#ifdef Q_OS_WINDOWS
+            QStringLiteral("C:\\x.bmp"),
+            QStringLiteral("C:x.bmp"),
+#endif
+        };
+        for (const auto &image : outside) {
+            QVERIFY2(!VoiceBank::imagePathOf(bank, image), qPrintable(image));
+        }
+
+        // A root with a trailing separator gives the same results.
+        const auto trailing = std::filesystem::path(bank) +=
+            std::filesystem::path::preferred_separator;
+        QVERIFY(VoiceBank::imagePathOf(trailing, QStringLiteral("icon.bmp")));
+        QVERIFY(!VoiceBank::imagePathOf(trailing, QStringLiteral("..\\bank2\\x.bmp")));
+    }
+
+    // A symbolic link inside the voice bank that points outside it is followed and rejected.
+    void an_image_behind_a_link_out_of_the_voice_bank_is_rejected() {
+        QTemporaryDir dir;
+        const auto root = std::filesystem::path(dir.path().toStdU16String());
+        const auto bank = root / "bank";
+        std::filesystem::create_directories(bank);
+        std::filesystem::create_directories(root / "elsewhere");
+        std::error_code error;
+        std::filesystem::create_directory_symlink(root / "elsewhere", bank / "link", error);
+        if (error) {
+            QSKIP("Symbolic links cannot be created here.");
+        }
+        QVERIFY(!VoiceBank::imagePathOf(bank, QStringLiteral("link\\x.bmp")));
+        std::filesystem::remove(bank / "link", error);
+    }
+
 private:
     static const VoiceBankDirectory *directoryAt(const VoiceBank &bank, const char *relative) {
         for (const auto &directory : bank.directories()) {
