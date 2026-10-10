@@ -25,6 +25,10 @@ jobs:
         run: |
           set -euo pipefail
           release=$(gh release view "$TAG_NAME" --repo "$GITHUB_REPOSITORY" --json name,body)
+          # Gitee requires the commit of a new release. The mirrored tag points to the same
+          # commit as the GitHub tag.
+          commit=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${TAG_NAME}" --jq '.sha')
+          echo "commit=${commit}" >> "$GITHUB_OUTPUT"
           {
             echo 'name<<GITHUB_RELEASE_NAME'
             jq -r '.name // ""' <<<"$release"
@@ -52,6 +56,7 @@ jobs:
           TAG_NAME: ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.tag_name }}
           RELEASE_NAME: ${{ steps.github-release.outputs.name }}
           RELEASE_BODY: ${{ steps.github-release.outputs.body }}
+          RELEASE_COMMIT: ${{ steps.github-release.outputs.commit }}
         run: |
           set -euo pipefail
           api="https://gitee.com/api/v5/repos/${GITEE_REPOSITORY}"
@@ -97,7 +102,8 @@ jobs:
             --arg tag "$TAG_NAME" \
             --arg name "$release_name" \
             --arg body "$release_body" \
-            '{tag_name: $tag, name: $name, body: $body}')
+            --arg commit "$RELEASE_COMMIT" \
+            '{tag_name: $tag, name: $name, body: $body, target_commitish: $commit}')
 
           # The release is looked up again before every creation, so that a creation whose
           # response was lost is not repeated.
