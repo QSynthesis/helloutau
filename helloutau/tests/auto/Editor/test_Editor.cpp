@@ -3026,6 +3026,67 @@ private Q_SLOTS:
         QVERIFY(std::any_of(windows.cbegin(), windows.cend(),
                             [&](ProjectWindow *target) { return shows(target, third); }));
     }
+
+    // The voice bank is read although the synth tools are missing. Another spelling of the same
+    // voice folder, and its undo, do not read it again. Another folder does.
+    void the_voice_bank_is_read_again_only_for_another_folder() {
+        const auto e = editor();
+        const auto voice = fs::path(e->settings().voiceFolder());
+        for (const auto name : {"read-once", "read-other"}) {
+            fs::create_directories(voice / name);
+            std::ofstream(voice / name / "oto.ini", std::ios::binary)
+                << "#Charset:UTF-8\r\na.wav=a,0,0,0,0,0\r\n";
+        }
+        kit::Track track;
+        kit::Note note;
+        note.lyric = QStringLiteral("a");
+        note.length = 480;
+        note.noteNum = 60;
+        track.notes.push_back(note);
+        track.voiceDir = QString::fromStdU16String((voice / "read-once").u16string());
+        kit::Project project;
+        project.settings.wavtool = QStringLiteral("missing-wavtool.exe");
+        project.settings.resampler = QStringLiteral("missing-resampler.exe");
+        project.tracks.push_back(track);
+        const auto path = pathIn(m_dir, "read-once.usth");
+        kit::DiagnosticList diagnostics;
+        QVERIFY(project.save(path, diagnostics));
+
+        // The missing synth tools open Project Properties, which is cancelled.
+        QTimer timer;
+        timer.setInterval(10);
+        QObject::connect(&timer, &QTimer::timeout, [] {
+            if (const auto dialog = qobject_cast<QDialog *>(QApplication::activeModalWidget())) {
+                dialog->reject();
+            }
+        });
+        timer.start();
+        const auto window = e->openFile(path);
+        timer.stop();
+        QVERIFY(window);
+        const auto bank = window->document()->voiceBank();
+        QVERIFY(bank);
+
+        const auto session = window->document()->session();
+        const auto setVoiceDir = [session](const QString &voiceDir) {
+            auto tx = session->transaction(QStringLiteral("voice"));
+            kit::ProjectRef(session).tracks().at(0).setVoiceDir(voiceDir);
+            tx.commit();
+            QCoreApplication::processEvents();
+        };
+        setVoiceDir(
+            QString::fromStdU16String((voice / "read-other" / ".." / "read-once").u16string()));
+        QCOMPARE(window->document()->voiceBank(), bank);
+        setVoiceDir(QStringLiteral("%VOICE%read-once"));
+        QCOMPARE(window->document()->voiceBank(), bank);
+        session->undo();
+        QCoreApplication::processEvents();
+        QCOMPARE(window->document()->voiceBank(), bank);
+
+        setVoiceDir(QStringLiteral("%VOICE%read-other"));
+        QTRY_VERIFY(window->document()->voiceBank() != bank);
+        QVERIFY(window->document()->voiceBank());
+    }
 };
 
 int main(int argc, char *argv[]) {
