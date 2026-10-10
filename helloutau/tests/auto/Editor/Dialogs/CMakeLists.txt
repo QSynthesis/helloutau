@@ -1,6 +1,7 @@
 add_auto_test(test_AboutDialog.cpp HelloUtauEditor)
 add_auto_test(test_DiagnosticBox.cpp HelloUtauEditor)
 add_auto_test(test_PitchControlDialog.cpp HelloUtauEditor)
+add_auto_test(test_ProjectPropertiesDialog.cpp HelloUtauEditor)
 add_auto_test(test_RegionDialog.cpp HelloUtauEditor)
 add_auto_test(test_ReplaceLyricsDialog.cpp HelloUtauEditor)
 add_auto_test(test_UstCharsetDialog.cpp HelloUtauEditor)
