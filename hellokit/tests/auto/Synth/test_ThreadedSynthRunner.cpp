@@ -10,10 +10,13 @@
 /// synth tools. That is covered by \c tests/manual/utaucompare , which compares against the UTAU
 /// render of the same project.
 
+#include <atomic>
+#include <chrono>
 #include <fstream>
 #include <functional>
 #include <memory>
 #include <string_view>
+#include <thread>
 
 #include <QtCore/QByteArray>
 #include <QtCore/QDir>
@@ -126,6 +129,59 @@ namespace {
         StandIn::Behaviour m_resampler;
         StandIn::Behaviour m_wavtool;
     };
+
+    /// A substitute synth tool whose behaviour receives the cancellation query and returns the
+    /// whole result, for the cases of a cancelled or timed-out call. The behaviour runs on the
+    /// threads of the runner.
+    class PollingStandIn : public SynthToolProcess {
+    public:
+        using Behaviour = std::function<SynthToolRun(const std::filesystem::path &program,
+                                                     const QStringList &arguments,
+                                                     const std::function<bool()> &cancelled)>;
+
+        explicit PollingStandIn(Behaviour behaviour) : m_behaviour(std::move(behaviour)) {
+        }
+
+        SynthToolRun run(const std::filesystem::path &program, const QStringList &arguments,
+                         DiagnosticList &, const std::function<bool()> &cancelled) const override {
+            return m_behaviour(program, arguments, cancelled);
+        }
+
+    private:
+        Behaviour m_behaviour;
+    };
+
+    class PollingRunner : public ThreadedSynthRunner {
+    public:
+        explicit PollingRunner(PollingStandIn::Behaviour behaviour)
+            : m_behaviour(std::move(behaviour)) {
+        }
+
+    protected:
+        std::unique_ptr<SynthToolProcess> makeSynthToolProcess() const override {
+            return std::make_unique<PollingStandIn>(m_behaviour);
+        }
+
+    private:
+        PollingStandIn::Behaviour m_behaviour;
+    };
+
+    /// Returns the fragment that the resampler arguments \a arguments request.
+    std::filesystem::path fragmentOf(const QStringList &arguments) {
+        return std::filesystem::path(arguments.at(1).toStdU16String());
+    }
+
+    /// Waits until \a cancelled returns true, for at most five seconds, and returns whether it
+    /// did.
+    bool waitForCancellation(const std::function<bool()> &cancelled) {
+        for (int i = 0; i < 500; ++i) {
+            if (cancelled && cancelled()) {
+                return true;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+        return false;
+    }
 
 }
 
@@ -552,6 +608,141 @@ private Q_SLOTS:
         runner.render(*p, synthTools, nullptr, diagnostics);
 
         QVERIFY(std::filesystem::is_directory(p->cacheDirectory()));
+    }
+
+    // A resampler killed by a cancellation may have written part of its fragment, which the next
+    // render would otherwise reuse as complete.
+    void a_cancelled_resampler_call_leaves_no_fragment() {
+        const auto p = plan(2);
+        QVERIFY(p.has_value());
+        const auto synthTools = somewhere();
+        std::atomic_int calls{0};
+        PollingRunner runner([&](const std::filesystem::path &program, const QStringList &arguments,
+                                 const std::function<bool()> &cancelled) {
+            SynthToolRun run;
+            run.started = true;
+            if (program == synthTools.resampler) {
+                ++calls;
+                std::ofstream(fragmentOf(arguments), std::ios::binary) << "RIFF half";
+                run.cancelled = waitForCancellation(cancelled);
+            }
+            return run;
+        });
+        Recorder recorder;
+        recorder.cancelAt = 0;
+
+        DiagnosticList diagnostics;
+        const auto outcome = runner.render(*p, synthTools, &recorder, diagnostics);
+
+        QVERIFY(outcome.cancelled);
+        QVERIFY(calls.load() >= 1);
+        for (const auto &step : p->steps()) {
+            QVERIFY(!std::filesystem::exists(step.cacheFile));
+        }
+    }
+
+    // A resampler killed at its time limit counts as failed, and its fragment is removed.
+    void a_timed_out_resampler_call_leaves_no_fragment_and_fails() {
+        const auto p = plan(2);
+        QVERIFY(p.has_value());
+        const auto synthTools = somewhere();
+        PollingRunner runner([&](const std::filesystem::path &program, const QStringList &arguments,
+                                 const std::function<bool()> &) {
+            SynthToolRun run;
+            run.started = true;
+            if (program == synthTools.resampler) {
+                std::ofstream(fragmentOf(arguments), std::ios::binary) << "RIFF half";
+                run.timedOut = true;
+            }
+            return run;
+        });
+
+        DiagnosticList diagnostics;
+        const auto outcome = runner.render(*p, synthTools, nullptr, diagnostics);
+
+        QVERIFY(!outcome.cancelled);
+        QCOMPARE(outcome.failed, 2);
+        for (const auto &step : p->steps()) {
+            QVERIFY(!std::filesystem::exists(step.cacheFile));
+        }
+    }
+
+    // A wavtool cancelled in the middle of the track leaves neither of its two files.
+    void a_cancelled_wavtool_call_removes_its_two_files() {
+        const auto p = plan(3);
+        QVERIFY(p.has_value());
+        const auto synthTools = somewhere();
+        const auto track = p->outputFile();
+        std::atomic_int appends{0};
+        PollingRunner runner([&](const std::filesystem::path &program, const QStringList &arguments,
+                                 const std::function<bool()> &) {
+            SynthToolRun run;
+            run.started = true;
+            if (program == synthTools.resampler) {
+                std::ofstream(fragmentOf(arguments), std::ios::binary) << "RIFF piece";
+            } else if (appends++ == 0) {
+                std::ofstream(withSuffix(track, ".whd"), std::ios::binary) << std::string(44, 'H');
+                std::ofstream(withSuffix(track, ".dat"), std::ios::binary) << std::string(100, 'D');
+            } else {
+                run.cancelled = true;
+            }
+            return run;
+        });
+
+        DiagnosticList diagnostics;
+        const auto outcome = runner.render(*p, synthTools, nullptr, diagnostics);
+
+        QVERIFY(outcome.cancelled);
+        QVERIFY(!outcome.rendered);
+        QCOMPARE(appends.load(), 2);
+        QVERIFY(!std::filesystem::exists(withSuffix(track, ".whd")));
+        QVERIFY(!std::filesystem::exists(withSuffix(track, ".dat")));
+    }
+
+    // A failure under stopOnFirstFailure starts no further notes, but the calls that run already
+    // are not killed, unlike those of a cancellation.
+    void a_failure_does_not_kill_the_running_calls() {
+        const auto p = plan(3);
+        QVERIFY(p.has_value());
+        const auto synthTools = somewhere();
+        std::atomic_int calls{0};
+        std::atomic_bool killed{false};
+        PollingRunner runner([&](const std::filesystem::path &program, const QStringList &arguments,
+                                 const std::function<bool()> &cancelled) {
+            SynthToolRun run;
+            run.started = true;
+            if (program != synthTools.resampler) {
+                return run;
+            }
+            if (calls++ == 0) {
+                // Fails after the other calls have started
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                return run;
+            }
+            for (int i = 0; i < 30; ++i) {
+                if (cancelled()) {
+                    killed = true;
+                }
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            }
+            std::ofstream(fragmentOf(arguments), std::ios::binary) << "RIFF piece";
+            return run;
+        });
+        runner.stopOnFirstFailure = true;
+        runner.threadCount = 3;
+
+        DiagnosticList diagnostics;
+        const auto outcome = runner.render(*p, synthTools, nullptr, diagnostics);
+
+        QCOMPARE(calls.load(), 3);
+        QVERIFY(!killed.load());
+        QVERIFY(!outcome.cancelled);
+        QCOMPARE(outcome.failed, 1);
+        int fragments = 0;
+        for (const auto &step : p->steps()) {
+            fragments += std::filesystem::exists(step.cacheFile) ? 1 : 0;
+        }
+        QCOMPARE(fragments, 2);
     }
 };
 
