@@ -61,9 +61,9 @@
 2. **ClassicPluginHost 插件**：
    - 名称（作者 2026-09-30 定）：目录与工程 `ClassicPluginHost`，插件类 `ClassicPluginHostPlugin`（`Internal`，不导出），ID `org.helloutau.classicpluginhost`，显示名 Classic Plugin Host。
    - 库一级的三个类（公开、有测试）：`ClassicPlugin`（读 `plugin.txt`、发现、`execute` 路径校验、平台是否可用）；`ClassicPluginExchange`（`input()` 写出临时文件，`apply()` 在一个 `EditSession::Transaction` 中按段落顺序合并结果，整个结果为**一个撤销步骤**）；`ClassicPluginRunner`（临时文件、启动、等待或取消、读回）。首次运行确认的记录由另一个公开类 `ClassicPluginApproval` 比较与更新。OpenUtau 同样分为 `PluginLoader` 与 `PluginRunner`。
-   - 内部：`ClassicPluginContribution` 以一个 `ActionContribution` 向工程窗口加入「工具 → Classic Plugins」子菜单（同 UTAU，在「清除渲染缓存」之后）：清单中是一个 external 动作，登记其 `QMenu` 的 `menuAction()`，每次打开时填入发现的 UTAU 插件（不可用的显示为灰色，提示原因），其后是「刷新」「打开插件目录」与「打开 UTAU 插件目录」。菜单名为 Classic Plugins，以免与原生插件混淆（作者 2026-09-30 定）。同 UTAU 在卷帘中按 N 于鼠标处弹出插件菜单，命令 Classic Plugins at Pointer（快捷键 N）在鼠标处弹出同一菜单。该命令不在任何菜单中，只能以快捷键或命令面板执行（作者 2026-09-30 定）。焦点在文字输入框中时 N 仍为输入。`runClassicPlugin()` 取选区、确认、写出、运行（模态对话框，「取消」，结束无法观察时另有「完成」）、合并并报告。
+   - 内部：`ClassicPluginContribution` 以一个 `ActionContribution` 向工程窗口加入「工具 → Classic Plugins」子菜单（同 UTAU，在「清除渲染缓存」之后）：清单中是一个不可触发的动作（`triggerable="false"`），登记其 `QMenu` 的 `menuAction()`，每次打开时填入发现的 UTAU 插件（不可用的显示为灰色，提示原因），其后是「刷新」「打开插件目录」与「打开 UTAU 插件目录」。菜单名为 Classic Plugins，以免与原生插件混淆（作者 2026-09-30 定）。同 UTAU 在卷帘中按 N 于鼠标处弹出插件菜单，命令 Classic Plugins at Pointer（快捷键 N）在鼠标处弹出同一菜单。该命令不在任何菜单中，只能以快捷键或命令面板执行（作者 2026-09-30 定）。焦点在文字输入框中时 N 仍为输入。`runClassicPlugin()` 取选区、确认、写出、运行（模态对话框，「取消」，结束无法观察时另有「完成」）、合并并报告。
    - 运行不另开线程：进程本身即为异步，等待由事件循环中的通知完成（Windows 为进程句柄的 `QWinEventNotifier`，其他平台为 `QProcess`）。
-3. **HelloUtauEditor**：仅补充插件所需的能力，不新开模块。`ProjectWindow` 公开其卷帘（`pianoRoll()`）与 `editor()`（用于读取设置中的 UTAU 文件夹），符合 Plugins.md「编辑器的组件化」中「窗口公开能力」的方向。UTAU 的选区是连续的一段，卷帘的选区不一定连续，插件取第一个到最后一个所选音符的范围。编辑器移除贡献的动作时，external 条目的动作是其菜单的 `menuAction()`，归菜单所有，因此删除菜单而不是单独删除动作。
+3. **HelloUtauEditor**：仅补充插件所需的能力，不新开模块。`ProjectWindow` 公开其卷帘（`pianoRoll()`）与 `editor()`（用于读取设置中的 UTAU 文件夹），符合 Plugins.md「编辑器的组件化」中「窗口公开能力」的方向。UTAU 的选区是连续的一段，卷帘的选区不一定连续，插件取第一个到最后一个所选音符的范围。编辑器移除贡献的动作时，代表菜单的不可触发条目，其动作是菜单的 `menuAction()`，归菜单所有，因此删除菜单而不是单独删除动作。
 
 ### 已按规格或约定确定的做法（作者可推翻）
 

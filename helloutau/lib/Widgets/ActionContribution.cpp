@@ -27,8 +27,8 @@ namespace hello::daw {
                 continue;
             }
             context->remove(id);
-            // The action of an external item is the menuAction() of its menu and is owned by the
-            // menu. Deleting the menu deletes the action.
+            // The action of an item that stands for a menu is the menuAction() of the menu and is
+            // owned by the menu. Deleting the menu deletes the action.
             const auto menu = qobject_cast<QMenu *>(action->parent());
             if (menu && menu->menuAction() == action) {
                 delete menu;

@@ -26,7 +26,7 @@
         <action id="helloutau.file.open" text="&amp;Open..." category="File" shortcut="Ctrl+O" />
         <action id="helloutau.file.openVoiceBank" text="Open &amp;Voice Bank..." category="File" />
         <action id="helloutau.file.openRecent" text="Open &amp;Recent" category="File"
-                external="true" />
+                triggerable="false" />
         <action id="helloutau.file.openRecentProject" text="Open Recent &amp;Project..."
                 category="File" />
         <action id="helloutau.file.openRecentVoiceBank" text="Open Recent &amp;Voice Bank..."

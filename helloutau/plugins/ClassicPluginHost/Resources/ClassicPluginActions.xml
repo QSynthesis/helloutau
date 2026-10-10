@@ -17,7 +17,7 @@
         <phony id="helloutau.catalog.plugins" text="Plugins" />
         <!-- Filled with the UTAU plugins by this plugin each time the menu opens -->
         <action id="helloutau.tools.classicPlugins" text="Classic &amp;Plugins" category="Tools"
-                external="true" />
+                triggerable="false" />
         <!-- Shows the same menu at the mouse pointer. The key N shows the plugin menu of UTAU in
              the same way. The command is in no menu, only in the command palette. -->
         <action id="helloutau.tools.classicPluginsAtPointer"

@@ -1439,7 +1439,8 @@ namespace hello::daw {
                     showEntry();
                 }
             });
-            // An external action: its menu is ours to fill, each time it opens.
+            // An action that is not triggerable. The window fills its menu each time the menu
+            // opens.
             recentMenu = new QMenu(&decl);
             QObject::connect(recentMenu, &QMenu::aboutToShow, &decl, [this] { fillRecentMenu(); });
             context->addAction(QStringLiteral("helloutau.file.openRecent"),
@@ -1503,7 +1504,8 @@ namespace hello::daw {
                     return roll->removeRegion(selected.first(), diagnostics);
                 });
             });
-            // An external action: its menu is ours to fill, each time it opens.
+            // An action that is not triggerable. The window fills its menu each time the menu
+            // opens.
             regionMenu = new QMenu(&decl);
             QObject::connect(regionMenu, &QMenu::aboutToShow, &decl,
                              [this] { roll->fillRegionMenu(regionMenu); });

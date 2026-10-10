@@ -7,7 +7,7 @@
     <items>
         <action id="test.contribution.hello" text="Hello" category="Test" />
         <!-- A menu that the contribution fills -->
-        <action id="test.contribution.menu" text="Hello Menu" category="Test" external="true" />
+        <action id="test.contribution.menu" text="Hello Menu" category="Test" triggerable="false" />
     </items>
 
     <!-- Into the Tools menu of the project window -->

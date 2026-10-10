@@ -42,9 +42,9 @@ namespace hello::daw {
         /// For an item without an action in a menu of the window, the context shows a
         /// placeholder that has no effect.
         ///
-        /// The action of an external item is the \c menuAction() of a menu parented to
-        /// \a window, whose content the contribution maintains. In this case the host deletes
-        /// the menu, which deletes the action.
+        /// The action of an item that is not triggerable and stands for a menu is the
+        /// \c menuAction() of a menu parented to \a window, whose content the contribution
+        /// maintains. In this case the host deletes the menu, which deletes the action.
         virtual void addActions(QWidget *window, QAK::WidgetActionContext *context);
 
         /// Removes the actions of the items of \a extension from \a context and deletes them. A

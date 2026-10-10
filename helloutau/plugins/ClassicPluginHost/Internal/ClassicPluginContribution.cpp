@@ -66,7 +66,7 @@ namespace hello::daw {
         if (!window) {
             return;
         }
-        // An external action. This plugin fills its menu each time the menu opens.
+        // An action that is not triggerable. This plugin fills its menu each time the menu opens.
         const auto menu = new QMenu(window);
         menu->setToolTipsVisible(true);
         QObject::connect(menu, &QMenu::aboutToShow, menu,

@@ -27,7 +27,7 @@
         <action id="helloutau.file.openVoiceBank" text="Open &amp;Voice Bank..." category="File" />
         <!-- Filled by the window with the files last opened -->
         <action id="helloutau.file.openRecent" text="Open &amp;Recent" category="File"
-                external="true" />
+                triggerable="false" />
         <!-- Every recent project, or every recent voice bank, in a command palette. These
              commands are in no menu, only in the command palette, like the "More" items of Open
              Recent. -->
@@ -162,7 +162,7 @@
         <action id="helloutau.view.zoomOutKeys" text="Zoom Out Verticall&amp;y" category="View" />
         <!-- Filled by the window with the regions of the project, each of which it loads -->
         <action id="helloutau.view.loadRegion" text="&amp;Load Region" category="View"
-                external="true" />
+                triggerable="false" />
         <action id="helloutau.view.commandPalette" text="&amp;Command Palette..." category="Help"
                 shortcuts="Ctrl+Shift+P;F1" />
 
