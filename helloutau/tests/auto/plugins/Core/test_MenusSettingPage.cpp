@@ -1,9 +1,11 @@
 #include <memory>
 
+#include <QtCore/QAbstractProxyModel>
 #include <QtCore/QFile>
 #include <QtCore/QJsonArray>
 #include <QtCore/QJsonDocument>
 #include <QtCore/QJsonObject>
+#include <QtCore/QPointer>
 #include <QtCore/QTemporaryDir>
 #include <QtCore/QTimer>
 #include <QtGui/QAction>
@@ -247,6 +249,47 @@ private Q_SLOTS:
                      .value(QStringLiteral("changes"))
                      .toArray()
                      .isEmpty());
+    }
+
+    // The models of the Add Action dialog belong to the dialog and are destroyed with it.
+    void the_add_action_models_are_destroyed_with_the_dialog() {
+        QTemporaryDir dir;
+        const auto e = std::make_unique<Editor>(
+            std::make_unique<AppSettings>(dir.filePath(QStringLiteral("settings.json"))));
+        new BuiltinActions(e.get());
+        e->setWatchesDisk(false);
+        MenusSettingPage page(e.get());
+        QVERIFY(page.widget());
+        const auto tree = page.tree(Editor::ProjectWindowKind);
+        tree->setCurrentIndex(childWithId(tree->model(), {}, QStringLiteral("helloutau.mainMenu")));
+        const auto add = page.widget()->findChild<QPushButton *>(QStringLiteral("add"));
+        QVERIFY(add && add->isEnabled());
+
+        bool opened = false;
+        QPointer<QAbstractItemModel> filter;
+        QPointer<QAbstractItemModel> catalog;
+        QTimer timer;
+        timer.setSingleShot(true);
+        connect(&timer, &QTimer::timeout, this, [&] {
+            const auto dialog = qobject_cast<QDialog *>(QApplication::activeModalWidget());
+            if (!dialog) {
+                return;
+            }
+            const auto actions = dialog->findChild<QTreeView *>(QStringLiteral("actions"));
+            if (actions) {
+                opened = true;
+                filter = actions->model();
+                if (const auto proxy = qobject_cast<QAbstractProxyModel *>(filter.data())) {
+                    catalog = proxy->sourceModel();
+                }
+            }
+            dialog->reject();
+        });
+        timer.start(0);
+        add->click();
+        QVERIFY(opened);
+        QVERIFY(!filter);
+        QVERIFY(!catalog);
     }
 };
 
