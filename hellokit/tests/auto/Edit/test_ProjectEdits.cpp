@@ -44,6 +44,24 @@ private:
         return lyrics.join(u' ');
     }
 
+    // Notes 0 to 3, where A runs from note 0 to note 2 between other names, and U starts at note
+    // 1 and is not ended
+    static Project regionNotes() {
+        Project project;
+        project.tracks.push_back({});
+        for (int i = 0; i < 4; ++i) {
+            Note note;
+            note.length = 480;
+            note.noteNum = 60;
+            project.tracks[0].notes.push_back(note);
+        }
+        auto &notes = project.tracks[0].notes;
+        notes[0].regions = {QStringLiteral("P"), QStringLiteral("A"), QStringLiteral("Q")};
+        notes[1].regions = {QStringLiteral("U")};
+        notes[2].regionEnds = {QStringLiteral("R"), QStringLiteral("A")};
+        return project;
+    }
+
 private Q_SLOTS:
     // Rests are transposed as well, and the whole operation is one undo step.
     void transposition_includes_rests_and_is_one_step() {
@@ -790,6 +808,90 @@ private Q_SLOTS:
         QCOMPARE(session.currentStep(), 1);
         session.undo();
         QCOMPARE(session.snapshot().toJson(), project.toJson());
+    }
+
+    // The name is replaced in its place at the first and at the last note, and the other names
+    // and their order stay.
+    void a_region_is_renamed_in_place() {
+        ProjectSession session(regionNotes());
+        const auto notes = notesOf(session);
+        DiagnosticList diagnostics;
+
+        QVERIFY(ProjectEdits::renameRegion(notes, Region{QStringLiteral("A"), 0, 2},
+                                           QStringLiteral("Z"), diagnostics));
+        auto snapshot = session.snapshot().tracks[0].notes;
+        QCOMPARE(snapshot[0].regions, (QStringList{"P", "Z", "Q"}));
+        QCOMPARE(snapshot[2].regionEnds, (QStringList{"R", "Z"}));
+        QCOMPARE(session.currentStep(), 1);
+        QCOMPARE(session.undoMessage(), ProjectEdits::tr("Rename Region"));
+
+        // A region that is not ended changes at its first note only.
+        QVERIFY(ProjectEdits::renameRegion(notes, Region{QStringLiteral("U"), 1, 3},
+                                           QStringLiteral("V"), diagnostics));
+        snapshot = session.snapshot().tracks[0].notes;
+        QCOMPARE(snapshot[1].regions, QStringList{"V"});
+        QVERIFY(snapshot[3].regionEnds.isEmpty());
+        QCOMPARE(session.currentStep(), 2);
+    }
+
+    void a_rename_that_would_lose_a_name_is_refused() {
+        ProjectSession session(regionNotes());
+        const auto notes = notesOf(session);
+        const Region a{QStringLiteral("A"), 0, 2};
+        const auto refused = [&](const Region &region, const QString &name) {
+            DiagnosticList diagnostics;
+            const bool done = ProjectEdits::renameRegion(notes, region, name, diagnostics);
+            return !done && hasError(diagnostics);
+        };
+
+        QVERIFY(refused(a, QString()));
+        QVERIFY(refused(a, QStringLiteral("x|y")));
+        // Another region starts or ends at the same note under the new name.
+        QVERIFY(refused(a, QStringLiteral("P")));
+        QVERIFY(refused(a, QStringLiteral("R")));
+        QVERIFY(refused(Region{QStringLiteral("none"), 0, 2}, QStringLiteral("N")));
+        QVERIFY(refused(Region{QStringLiteral("A"), 0, 3}, QStringLiteral("N")));
+        QCOMPARE(session.currentStep(), 0);
+
+        // The old name again is no change.
+        DiagnosticList diagnostics;
+        QVERIFY(ProjectEdits::renameRegion(notes, a, QStringLiteral("A"), diagnostics));
+        QCOMPARE(session.currentStep(), 0);
+    }
+
+    void removing_a_region_that_is_not_ended_changes_its_first_note_only() {
+        const auto project = regionNotes();
+        ProjectSession session(project);
+        DiagnosticList diagnostics;
+        QVERIFY(ProjectEdits::removeRegion(notesOf(session), Region{QStringLiteral("U"), 1, 3},
+                                           diagnostics));
+        const auto snapshot = session.snapshot().tracks[0].notes;
+        QVERIFY(snapshot[1].regions.isEmpty());
+        QCOMPARE(snapshot[2].regionEnds, project.tracks[0].notes[2].regionEnds);
+        QCOMPARE(snapshot[3].regionEnds, project.tracks[0].notes[3].regionEnds);
+    }
+
+    void the_time_signature_changes_as_one_step() {
+        const auto project = richProject();
+        ProjectSession session(project);
+        const auto ref = ProjectRef(&session);
+        DiagnosticList diagnostics;
+
+        ProjectPropertyChanges changes;
+        changes.timeSignature = TimeSignature{3, 4};
+        QVERIFY(ProjectEdits::setProperties(ref, changes, diagnostics));
+        QCOMPARE(session.snapshot().settings.timeSignature, (TimeSignature{3, 4}));
+        QCOMPARE(session.currentStep(), 1);
+
+        ProjectPropertyChanges invalid;
+        invalid.timeSignature = TimeSignature{0, 4};
+        QVERIFY(!ProjectEdits::setProperties(ref, invalid, diagnostics));
+        QVERIFY(hasError(diagnostics));
+        QCOMPARE(session.snapshot().settings.timeSignature, (TimeSignature{3, 4}));
+        QCOMPARE(session.currentStep(), 1);
+
+        session.undo();
+        QCOMPARE(session.snapshot().settings.timeSignature, project.settings.timeSignature);
     }
 };
 
