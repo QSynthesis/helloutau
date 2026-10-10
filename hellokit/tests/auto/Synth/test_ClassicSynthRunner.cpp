@@ -853,6 +853,39 @@ private Q_SLOTS:
         DiagnosticList diagnostics;
         QVERIFY(runner.scriptFiles(root() / "scripts", *plan, synthTools(), diagnostics));
     }
+
+    // A note with $direct calls the wavtool with its sample, without the helper that runs the
+    // resampler, as UTAU writes it.
+    void a_direct_note_calls_the_wavtool_with_its_sample() {
+        auto plan = planFor(QStringLiteral("a"), QString());
+        QVERIFY(plan.has_value());
+        Note note;
+        note.lyric = QStringLiteral("a");
+        note.noteNum = 60;
+        note.length = 480;
+        note.direct = QStringLiteral("True");
+        Project project;
+        project.tracks.push_back({});
+        project.tracks[0].notes.push_back(note);
+        FixedCharsetSelector selector(QStringLiteral("UTF-8"));
+        DiagnosticList diagnostics;
+        const auto bank = VoiceBank::open(root() / "bank", &selector, diagnostics);
+        QVERIFY(bank.has_value());
+        SynthPlan::Options options;
+        options.cacheDirectory = root() / "cache";
+        options.outputFile = root() / "out.wav";
+        plan = SynthPlan::make(project, *bank, options, diagnostics);
+        QVERIFY(plan.has_value());
+        QVERIFY(plan->steps().at(0).direct);
+
+        ClassicSynthRunner runner;
+        runner.shell = ClassicSynthRunner::ScriptShell::Batch;
+        const auto written = runner.scripts(*plan, synthTools(), diagnostics);
+        QVERIFY(written.has_value());
+        QVERIFY(written->first.contains(QLatin1String("@\"%tool%\" ")));
+        QVERIFY(!written->first.contains(QLatin1String("@call")));
+        QVERIFY(written->first.contains(QLatin1String("a.wav")));
+    }
 };
 
 QTEST_APPLESS_MAIN(test_ClassicSynthRunner)
