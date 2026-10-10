@@ -17,6 +17,10 @@ namespace hello::daw {
     /// waits instead of skipping. See the section on realtime rendering in docs/Synth.md.
     class HELLOUTAU_AUDIO_EXPORT StreamSource : public AudioSource {
     public:
+        /// Writes up to \a frames mono samples at the source rate to \a out, called on the thread
+        /// of the source. Returns the number written, 0 if no samples are available yet, or a
+        /// negative number at the end. A generator must wait for samples for a short time before
+        /// it returns 0, because the thread calls it again immediately.
         using Generator = std::function<qsizetype(float *out, qsizetype frames)>;
 
         /// Constructs a source of the samples of \a generator, which are at \a sourceRate, for a
