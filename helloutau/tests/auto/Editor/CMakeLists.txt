@@ -1,4 +1,5 @@
 add_auto_test(test_AppSettings.cpp HelloUtauEditor)
+add_auto_test(test_KeymapFile.cpp HelloUtauEditor QActionKit::Core)
 add_auto_test(test_Editor.cpp HelloUtauTestingEditor)
 add_auto_test(test_OtoWaveformView.cpp HelloUtauEditor)
 add_auto_test(test_PianoRoll.cpp HelloUtauEditor)
