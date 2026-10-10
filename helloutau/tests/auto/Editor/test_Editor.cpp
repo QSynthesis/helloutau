@@ -174,6 +174,7 @@ namespace {
         trigger();
         return dialogs;
     }
+
 }
 
 class test_Editor : public QObject {
