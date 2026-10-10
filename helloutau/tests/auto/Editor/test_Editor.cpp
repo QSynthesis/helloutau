@@ -32,6 +32,7 @@
 #include <QtWidgets/QMenuBar>
 #include <QtWidgets/QMessageBox>
 #include <QtWidgets/QPushButton>
+#include <QtWidgets/QSpinBox>
 #include <QtWidgets/QStatusBar>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QPlainTextEdit>
@@ -76,6 +77,7 @@
 #include <helloutau/Editor/VoiceBankWindow.h>
 
 #include <helloutau/Testing/Editor/TestingEditor.h>
+#include <helloutau/Widgets/TimelineRuler.h>
 
 using namespace hello;
 using namespace hello::daw;
@@ -2847,6 +2849,44 @@ private Q_SLOTS:
         QCOMPARE(regionNamesOf(roll), QStringList{QStringLiteral("A")});
         QCOMPARE(session->currentStep(), steps + 1);
         QCOMPARE(roll->selectedIndices(), (QList<int>{0, 1, 2, 3}));
+    }
+
+    // The time signature button edits the time signature of the project in one step, which the
+    // ruler follows and undo restores. Another window keeps its own.
+    void the_time_signature_is_edited_from_the_tool_bar() {
+        const auto e = editor();
+        const auto window = e->openFile(savedProject(m_dir, "meter.usth"));
+        const auto other = e->newWindow();
+        QVERIFY(window && other);
+        const auto button = window->findChild<QToolButton *>(QStringLiteral("timeSignature"));
+        QVERIFY(button);
+        const auto session = window->document()->session();
+        QTimer::singleShot(0, [] {
+            const auto dialog = qobject_cast<QDialog *>(QApplication::activeModalWidget());
+            if (!dialog) {
+                return;
+            }
+            const auto numerator = dialog->findChild<QSpinBox *>();
+            const auto denominator = dialog->findChild<QComboBox *>();
+            if (numerator && denominator) {
+                numerator->setValue(6);
+                denominator->setCurrentIndex(denominator->findData(8));
+                dialog->accept();
+            } else {
+                dialog->reject();
+            }
+        });
+        button->click();
+        QCOMPARE(session->snapshot().settings.timeSignature, (kit::TimeSignature{6, 8}));
+        QVERIFY(window->isWindowModified());
+        QTRY_COMPARE(window->pianoRoll()->ruler()->beatsPerBar(), 6);
+        QCOMPARE(window->pianoRoll()->ruler()->ticksPerBeat(), 240);
+        QCOMPARE(other->pianoRoll()->ruler()->beatsPerBar(), 4);
+
+        session->undo();
+        QCOMPARE(session->snapshot().settings.timeSignature, (kit::TimeSignature{4, 4}));
+        QTRY_COMPARE(window->pianoRoll()->ruler()->beatsPerBar(), 4);
+        QCOMPARE(window->pianoRoll()->ruler()->ticksPerBeat(), 480);
     }
 };
 
