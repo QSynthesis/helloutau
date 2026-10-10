@@ -743,6 +743,34 @@ private Q_SLOTS:
         playback.refreshNoteStates(*document);
         QTRY_COMPARE(playback.noteStates(), (QList<S::NoteState>{S::Waiting, S::Waiting}));
     }
+
+    // The loss of the device pauses playback where the device stopped and reports the loss.
+    // Playing again goes on from there.
+    void the_loss_of_the_device_pauses() {
+        if (AudioEngine::instance()->sampleRate() <= 0) {
+            QSKIP("This machine has no audio output device.");
+        }
+        QTemporaryDir dir;
+        const auto document = singingDocument(dir);
+        QVERIFY(document);
+        Playback playback(nullptr, temporaryOf(dir), nullptr);
+        const auto runner = std::make_shared<SilentRunner>();
+        runner->frames = 44100 * 10;
+        playback.setRunner(runner);
+        QSignalSpy failures(&playback, &Playback::failed);
+        kit::DiagnosticList diagnostics;
+        QVERIFY(playback.play(*document, std::nullopt, someSynthTools(), diagnostics));
+        QTRY_COMPARE_WITH_TIMEOUT(playback.state(), Playback::Playing, 5000);
+
+        Q_EMIT AudioEngine::instance()->invalidated(QStringLiteral("The device is gone."));
+        QCOMPARE(playback.state(), Playback::Paused);
+        QCOMPARE(failures.size(), 1);
+        QVERIFY(playback.position());
+        QVERIFY(playback.resume());
+        QCOMPARE(playback.state(), Playback::Playing);
+        QCOMPARE(runner->started.load(), 1);
+        playback.stop();
+    }
 };
 
 int main(int argc, char *argv[]) {
