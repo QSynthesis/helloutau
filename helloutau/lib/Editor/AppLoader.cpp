@@ -15,10 +15,11 @@
 #include <stdcorelib/pluginsystem/pluginsystem.h>
 #include <stdcorelib/system.h>
 
+#include <hellokit/Support/SettingsFile.h>
+
 #include "AppSettings.h"
 #include "Editor.h"
 #include "Restarter.h"
-#include "SettingsFile_p.h"
 #include "Translations.h"
 
 namespace hello::daw {
@@ -42,7 +43,7 @@ namespace hello::daw {
         stdc::pluginsystem::PluginSettings pluginSettings;
         // Declared after the settings of the plugins, so that it is destroyed first and writes
         // the pending changes
-        std::unique_ptr<SettingsFile> pluginFile;
+        std::unique_ptr<kit::SettingsFile> pluginFile;
         bool loaded = false;
         QPointer<Editor> editor;
 
@@ -50,11 +51,11 @@ namespace hello::daw {
         // its metadata until the next change replaces the settings.
         void readPluginSettings() {
             const auto fileName = settingsDirectory + QStringLiteral("/plugins.json");
-            pluginFile = std::make_unique<SettingsFile>(fileName,
-                                                        [this] { return pluginSettings.toJson(); });
+            pluginFile = std::make_unique<kit::SettingsFile>(
+                fileName, [this] { return pluginSettings.toJson(); });
             std::string error;
             auto read = stdc::pluginsystem::PluginSettings::fromJson(
-                stdc::json::Value(SettingsFile::read(fileName)), &error);
+                stdc::json::Value(kit::SettingsFile::read(fileName)), &error);
             if (!read) {
                 qWarning().noquote() << "The settings of the plugins in" << fileName
                                      << "are ignored:" << QString::fromStdString(error);

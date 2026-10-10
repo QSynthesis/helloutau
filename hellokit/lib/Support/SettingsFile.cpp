@@ -1,4 +1,4 @@
-#include "SettingsFile_p.h"
+#include "SettingsFile.h"
 
 #include <QtCore/QCoreApplication>
 #include <QtCore/QDir>
@@ -7,7 +7,7 @@
 #include <QtCore/QSaveFile>
 #include <QtCore/QtDebug>
 
-namespace hello::daw {
+namespace hello::kit {
 
     namespace json = stdc::json;
 

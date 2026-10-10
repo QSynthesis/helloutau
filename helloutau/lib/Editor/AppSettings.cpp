@@ -11,8 +11,8 @@
 #include <stdcorelib/pimpl.h>
 
 #include <hellokit/Support/JsonInterop.h>
+#include <hellokit/Support/SettingsFile.h>
 
-#include "SettingsFile_p.h"
 
 namespace hello::daw {
 
@@ -99,7 +99,8 @@ namespace hello::daw {
     }
 
     AppSettings::Impl::Impl(const QString &fileName)
-        : root(SettingsFile::read(fileName)), file(fileName, [this] { return json::Value(root); }) {
+        : root(kit::SettingsFile::read(fileName)),
+          file(fileName, [this] { return json::Value(root); }) {
     }
 
     const json::Value &AppSettings::Impl::value(std::string_view key) const {

@@ -7,8 +7,9 @@
 
 #include <stdcorelib/support/json.h>
 
+#include <hellokit/Support/SettingsFile.h>
+
 #include "AppSettings.h"
-#include "SettingsFile_p.h"
 
 namespace hello::daw {
 
@@ -38,7 +39,7 @@ namespace hello::daw {
 
         // Declared after the content, so that it is destroyed first and writes the pending
         // changes while the content still exists
-        SettingsFile file;
+        kit::SettingsFile file;
     };
 
 }

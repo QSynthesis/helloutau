@@ -1,5 +1,5 @@
-#ifndef HELLOUTAU_EDITOR_SETTINGSFILE_P_H
-#define HELLOUTAU_EDITOR_SETTINGSFILE_P_H
+#ifndef HELLOKIT_SUPPORT_SETTINGSFILE_H
+#define HELLOKIT_SUPPORT_SETTINGSFILE_H
 
 #include <functional>
 
@@ -8,14 +8,16 @@
 
 #include <stdcorelib/support/json.h>
 
-namespace hello::daw {
+#include <hellokit/Support/HelloKitSupportGlobal.h>
+
+namespace hello::kit {
 
     /// A JSON file of settings, the settings of the application or the settings of the plugins,
     /// that is written once the event loop runs after its changes, so that the changes of one
     /// pass of the loop result in one write. sync() and the destructor write the pending
     /// changes. The content is held in the JSON types of stdcorelib, whose values are mutable in
-    /// place. JsonPath addresses a value by its path.
-    class SettingsFile {
+    /// place. JsonInterop addresses a value by its path.
+    class HELLOKIT_SUPPORT_EXPORT SettingsFile {
     public:
         /// Returns the object in \a fileName, or an empty object if the file does not exist. A
         /// file that does not contain a JSON object is reported and read as empty. The next
@@ -53,4 +55,4 @@ namespace hello::daw {
 
 }
 
-#endif // HELLOUTAU_EDITOR_SETTINGSFILE_P_H
+#endif // HELLOKIT_SUPPORT_SETTINGSFILE_H
