@@ -16,20 +16,22 @@ permissions:
 jobs:
   sync:
     runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+      GITEE_REPOSITORY: ${{ secrets.GITEE_REPOSITORY }}
+      TAG_NAME: ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.tag_name }}
     steps:
       - name: Resolve GitHub release metadata
         id: github-release
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TAG_NAME: ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.tag_name }}
         run: |
           set -euo pipefail
           release=$(gh release view "$TAG_NAME" --repo "$GITHUB_REPOSITORY" --json name,body)
           # Gitee requires the commit of a new release. The mirrored tag points to the same
           # commit as the GitHub tag.
           commit=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${TAG_NAME}" --jq '.sha')
-          echo "commit=${commit}" >> "$GITHUB_OUTPUT"
           {
+            echo "commit=${commit}"
             echo 'name<<GITHUB_RELEASE_NAME'
             jq -r '.name // ""' <<<"$release"
             echo 'GITHUB_RELEASE_NAME'
@@ -39,31 +41,26 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Download GitHub release assets
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TAG_NAME: ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.tag_name }}
         run: |
           mkdir -p release-assets
           gh release download "$TAG_NAME" \
             --repo "$GITHUB_REPOSITORY" \
             --dir release-assets
 
-      - name: Create Gitee release
-        id: gitee-release
+      - name: Sync release to Gitee
         env:
-          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
-          GITEE_REPOSITORY: ${{ secrets.GITEE_REPOSITORY }}
-          TAG_NAME: ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.tag_name }}
           RELEASE_NAME: ${{ steps.github-release.outputs.name }}
           RELEASE_BODY: ${{ steps.github-release.outputs.body }}
           RELEASE_COMMIT: ${{ steps.github-release.outputs.commit }}
         run: |
           set -euo pipefail
+          shopt -s nullglob
           api="https://gitee.com/api/v5/repos/${GITEE_REPOSITORY}"
           response_file=$(mktemp)
 
           # Resolving gitee.com from the runner times out now and then, so every request may be
-          # repeated. Prints the HTTP status, or 000 if the request did not complete.
+          # repeated. Prints the HTTP status, or 000 if the request did not complete. A request
+          # takes at most two minutes unless its arguments raise the limit.
           request() {
             curl --silent --show-error --connect-timeout 30 --max-time 120 \
               --output "$response_file" --write-out '%{http_code}' "$@" || true
@@ -127,47 +124,21 @@ jobs:
             fi
             check_retryable "$status" "Gitee release creation (attempt ${attempt}/6)"
           done
-
           if [ -z "$release_id" ]; then
             echo "Gitee release creation failed." >&2
             exit 1
           fi
-          echo "release_id=$release_id" >> "$GITHUB_OUTPUT"
+          echo "Gitee release ${release_id} is ready."
 
-      - name: Upload release assets to Gitee
-        env:
-          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
-          GITEE_REPOSITORY: ${{ secrets.GITEE_REPOSITORY }}
-          RELEASE_ID: ${{ steps.gitee-release.outputs.release_id }}
-        run: |
-          set -euo pipefail
-          shopt -s nullglob
-          attachments="https://gitee.com/api/v5/repos/${GITEE_REPOSITORY}/releases/${RELEASE_ID}/attach_files?access_token=${GITEE_TOKEN}"
-          response_file=$(mktemp)
-
-          # As in the previous step, every request may be repeated. An upload may take long.
-          request() {
-            curl --silent --show-error --connect-timeout 30 --max-time 1800 \
-              --output "$response_file" --write-out '%{http_code}' "$@" || true
-          }
-          check_retryable() {
-            local status=$1 what=$2
-            echo "${what} failed (HTTP ${status})." >&2
-            cat "$response_file" >&2 || true
-            echo >&2
-            if [[ "$status" != 000 && "$status" != 429 && "$status" != 5* ]]; then
-              exit 1
-            fi
-            sleep 15
-          }
+          # The attachments are listed again before every upload, so that an upload whose
+          # response was lost is not repeated.
+          attachments="${api}/releases/${release_id}/attach_files?access_token=${GITEE_TOKEN}"
 
           for file in release-assets/*; do
             name=$(basename "$file")
             uploaded=false
-            # The attachments are listed again before every upload, so that an upload whose
-            # response was lost is not repeated.
             for attempt in $(seq 1 6); do
-              status=$(request "$attachments")
+              status=$(request --max-time 1800 "$attachments")
               if [[ "$status" != 2* ]]; then
                 check_retryable "$status" "Listing the Gitee assets (attempt ${attempt}/6)"
                 continue
@@ -178,7 +149,7 @@ jobs:
                 uploaded=true
                 break
               fi
-              status=$(request -X POST -F "file=@${file}" "$attachments")
+              status=$(request --max-time 1800 -X POST -F "file=@${file}" "$attachments")
               if [[ "$status" == 2* ]]; then
                 echo "${name} was uploaded to Gitee."
                 uploaded=true
