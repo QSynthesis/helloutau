@@ -26,6 +26,11 @@ namespace {
 
         QString value = QStringLiteral("start");
         QPointer<QLineEdit> edit;
+        int settingsAppliedCalls = 0;
+
+        void settingsApplied() override {
+            ++settingsAppliedCalls;
+        }
 
         bool isModified() const override {
             return edit && edit->text() != value;
@@ -240,6 +245,28 @@ private Q_SLOTS:
         SettingsDialog dialog(&pages.catalog);
         dialog.selectPage(QStringLiteral("audio.export"));
         QCOMPARE(pages.exporting->edit->text(), QStringLiteral("start"));
+    }
+
+    // After every page has applied its settings, settingsApplied() is called once for each page
+    // with a widget, so that a widget that shows values of other pages shows them as applied. It
+    // is called for no page if a page fails to apply.
+    void settings_applied_is_called_for_each_page_with_a_widget() {
+        Pages pages;
+        SettingsDialog dialog(&pages.catalog);
+        dialog.selectPage(QStringLiteral("audio.export"));
+        dialog.selectPage(QStringLiteral("audio.output"));
+        QVERIFY(!pages.appearance->hasWidget());
+
+        pages.output->edit->setText(QStringLiteral("512"));
+        dialog.applyButton()->click();
+        QCOMPARE(pages.output->settingsAppliedCalls, 1);
+        QCOMPARE(pages.exporting->settingsAppliedCalls, 1);
+        QCOMPARE(pages.appearance->settingsAppliedCalls, 0);
+
+        pages.output->edit->clear();
+        dialog.applyButton()->click();
+        QCOMPARE(pages.output->settingsAppliedCalls, 1);
+        QCOMPARE(pages.exporting->settingsAppliedCalls, 1);
     }
 };
 
