@@ -7,6 +7,7 @@
 
 #include <helloutau/Audio/AudioOutput.h>
 #include <helloutau/Audio/BufferSource.h>
+#include <helloutau/Audio/DeviceClock.h>
 #include <helloutau/Audio/PianoToneSource.h>
 #include <helloutau/Audio/StreamSource.h>
 

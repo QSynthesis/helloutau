@@ -1,8 +1,11 @@
 #ifndef HELLOUTAU_AUDIO_AUDIOMIXER_H
 #define HELLOUTAU_AUDIO_AUDIOMIXER_H
 
-#include <helloutau/Audio/AudioOutput.h>
+#include <memory>
+#include <optional>
+
 #include <helloutau/Audio/AudioSource.h>
+#include <helloutau/Audio/DeviceClock.h>
 
 namespace hello::daw {
 
