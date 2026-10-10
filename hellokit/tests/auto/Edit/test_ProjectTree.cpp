@@ -77,6 +77,15 @@ private Q_SLOTS:
         QVERIFY(!bytes.empty());
         QVERIFY(!decoded(ss::QCodec(), bytes));
     }
+
+    // The time signature is stored as a value whose stream operators are part of the history
+    // format.
+    void a_time_signature_survives_encoding() {
+        auto project = richProject();
+        project.settings.timeSignature = {6, 8};
+        verifyCodecRoundTrip(project);
+        QVERIFY(QMetaType::fromName("hello::kit::TimeSignature").isValid());
+    }
 };
 
 QTEST_APPLESS_MAIN(test_ProjectTree)

@@ -217,6 +217,20 @@ private Q_SLOTS:
         QVERIFY(!recordOf(SettingsType).treeFromJson);
         QVERIFY(!recordOf(ProjectType).treeFromJson);
     }
+
+    // The time signature is stored as a whole value, which a command sets as an object and which
+    // is refused unless TimeSignature::isValid() holds.
+    void the_time_signature_is_read_as_a_whole_value() {
+        const auto &format = *recordOf(SettingsType).field(u"timeSignature")->format;
+        verifyRoundTrip(format, (TimeSignature{6, 8}).toJson());
+        QVERIFY(!format
+                     .fromJson(QJsonObject{
+                         {QStringLiteral("numerator"),   3},
+                         {QStringLiteral("denominator"), 5}
+        })
+                     .has_value());
+        QVERIFY(!format.fromJson(3).has_value());
+    }
 };
 
 QTEST_APPLESS_MAIN(test_ProjectFields)
