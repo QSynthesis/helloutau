@@ -37,7 +37,8 @@ namespace hello::daw {
         s_installed.clear();
         QLocale::setDefault(localeOf(language));
         // Qt has no file for English, and the file of another language is installed only if Qt
-        // ships it, so that the standard buttons and dialogs match the rest.
+        // ships it, so that the standard buttons and dialogs match the rest. The install rule of
+        // helloutau/CMakeLists.txt puts the files of Qt under share/Qt/translations beside bin.
         const auto packaged = QDir(QCoreApplication::applicationDirPath()).filePath(
             QStringLiteral("../share/Qt/translations"));
         const auto system = QLibraryInfo::path(QLibraryInfo::TranslationsPath);

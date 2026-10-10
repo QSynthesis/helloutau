@@ -32,15 +32,32 @@ add_subdirectory(plugins)
 # for each language, embedded in HelloUtauEditor under :/helloutau/translations. Each plugin has
 # its own (docs/Plugins.md). The update_translations target extracts the texts into the .ts
 # files, from the sources that AEC generates as well, so those are built first.
+#
+# The languages besides English, the same as Translations::languages().
+set(HELLOUTAU_LANGUAGES zh_CN)
+list(TRANSFORM HELLOUTAU_LANGUAGES
+    REPLACE "^(.+)$" "lib/Editor/Resources/translations/helloutau_\\1.ts"
+    OUTPUT_VARIABLE _ts_files
+)
 qt_add_translations(
     TARGETS HelloUtauEditor
     SOURCE_TARGETS
         HelloKitDocument HelloKitEdit HelloKitEditBase HelloKitInterchange HelloKitSynth
         HelloKitVoiceBank HelloUtauAudio HelloUtauEditor HelloUtauTheme HelloUtauWidgets
-    TS_FILES lib/Editor/Resources/translations/helloutau_zh_CN.ts
+    TS_FILES ${_ts_files}
     RESOURCE_PREFIX /helloutau/translations
     LUPDATE_OPTIONS -locations none -no-obsolete
 )
+
+# The translations of the standard buttons and dialogs of Qt in each language, which
+# Translations::install() loads from share/Qt/translations beside the bin directory.
+if(HELLO_INSTALL)
+    foreach(_language IN LISTS HELLOUTAU_LANGUAGES)
+        install(FILES "${QT6_INSTALL_PREFIX}/${QT6_INSTALL_TRANSLATIONS}/qtbase_${_language}.qm"
+            DESTINATION ${CMAKE_INSTALL_DATADIR}/Qt/translations
+        )
+    endforeach()
+endif()
 
 add_subdirectory(tools)
 
