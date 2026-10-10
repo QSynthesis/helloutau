@@ -2565,6 +2565,37 @@ private Q_SLOTS:
         QCOMPARE(requested[1][0].value<kit::Region>().name, QStringLiteral("A"));
         QCOMPARE(requested[2][0].value<kit::Region>().name, QStringLiteral("A"));
     }
+
+    // A selection set after an edit, before the refresh, does not reach the sections of the notes
+    // removed. After the refresh, the sections follow the remaining notes.
+    void a_selection_before_the_refresh_ignores_removed_notes() {
+        kit::Project project;
+        project.settings.tempo = 120;
+        project.tracks.push_back({});
+        for (int i = 0; i < 4; ++i) {
+            kit::Note note;
+            note.lyric = QStringLiteral("la");
+            note.length = 480;
+            note.noteNum = 60;
+            project.tracks[0].notes.push_back(note);
+        }
+        project.tracks[0].notes[2].regions = {QStringLiteral("V")};
+        project.tracks[0].notes[3].regionEnds = {QStringLiteral("V")};
+        project.tracks[0].notes[3].label = QStringLiteral("L");
+        kit::ProjectSession session(project);
+        PianoRoll roll(&session);
+        show(roll);
+        QTRY_COMPARE(roll.ruler()->sections().size(), 2);
+
+        kit::DiagnosticList diagnostics;
+        QVERIFY(kit::ProjectEdits::removeNotes(kit::ProjectRef(&session).tracks().at(0).notes(),
+                                               {2, 3}, diagnostics));
+        roll.setSelectedIndices({0, 1});
+        QCOMPARE(roll.selectedIndices(), (QList<int>{0, 1}));
+        QTRY_COMPARE(roll.ruler()->sections().size(), 0);
+        QVERIFY(roll.regions().isEmpty());
+        QCOMPARE(roll.selectedIndices(), (QList<int>{0, 1}));
+    }
 };
 
 int main(int argc, char *argv[]) {
