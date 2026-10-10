@@ -1836,14 +1836,26 @@ private Q_SLOTS:
         QVERIFY(playSpan);
         QSignalSpy playTriggered(play, &QAction::triggered);
         QSignalSpy playSpanTriggered(playSpan, &QAction::triggered);
-        window->entryTable()->setFocus();
-        QTest::keyClick(window->entryTable(), Qt::Key_Space);
-        QTest::keyClick(window->entryTable(), Qt::Key_Space, Qt::ShiftModifier);
+        // The shortcuts of the window apply only while it is active.
+        window->activateWindow();
+        QVERIFY(QTest::qWaitForWindowActive(window));
+        const auto table = window->entryTable();
+        table->setFocus();
+        QTest::keyClick(table, Qt::Key_Space);
+        QTest::keyClick(table, Qt::Key_Space, Qt::ShiftModifier);
         QCOMPARE(playTriggered.size(), 1);
         QCOMPARE(playSpanTriggered.size(), 1);
         play->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_Space));
-        QTest::keyClick(window->entryTable(), Qt::Key_Space, Qt::ControlModifier);
+        QTest::keyClick(table, Qt::Key_Space, Qt::ControlModifier);
         QCOMPARE(playTriggered.size(), 2);
+        // A sequence of two keys, and a key of the keypad for the same key of the main keyboard
+        play->setShortcut(QKeySequence(QStringLiteral("Ctrl+K, Ctrl+L")));
+        QTest::keyClick(table, Qt::Key_K, Qt::ControlModifier);
+        QTest::keyClick(table, Qt::Key_L, Qt::ControlModifier);
+        QCOMPARE(playTriggered.size(), 3);
+        play->setShortcut(QKeySequence(Qt::Key_7));
+        QTest::keyClick(table, Qt::Key_7, Qt::KeypadModifier);
+        QCOMPARE(playTriggered.size(), 4);
 
         // The alias and a value, each one step; the edited row stays current.
         window->setCurrentRow(0);
