@@ -738,11 +738,18 @@ private Q_SLOTS:
         QCOMPARE(combined[1].lyric, QStringLiteral("ta"));
         QCOMPARE(session.undoMessage(), ProjectEdits::tr("Combine Notes"));
 
+        // The note that sets a tempo is identified by its index, and a range past the track is
+        // reported with the notes numbered from 1.
         QVERIFY(!ProjectEdits::combineNotes(notes, 0, 2, diagnostics));
         QVERIFY(hasError(diagnostics));
+        QCOMPARE(diagnostics.last().noteIndex, std::optional(1));
         diagnostics.clear();
         QVERIFY(!ProjectEdits::combineNotes(notes, 0, 1, diagnostics));
         QVERIFY(!ProjectEdits::combineNotes(notes, 1, 2, diagnostics));
+        QCOMPARE(
+            diagnostics.last().message,
+            ProjectEdits::tr("The track has %1 notes, not notes %2 to %3.").arg(2).arg(2).arg(3));
+        QVERIFY(!diagnostics.last().noteIndex);
         QCOMPARE(session.currentStep(), 1);
 
         session.undo();

@@ -12,10 +12,12 @@ namespace hello::kit {
 
     namespace {
 
-        bool fail(DiagnosticList &diagnostics, const QString &message) {
+        bool fail(DiagnosticList &diagnostics, const QString &message,
+                  std::optional<int> noteIndex = std::nullopt) {
             Diagnostic diagnostic;
             diagnostic.severity = DiagnosticSeverity::Error;
             diagnostic.message = message;
+            diagnostic.noteIndex = noteIndex;
             diagnostics.push_back(diagnostic);
             return false;
         }
@@ -501,19 +503,22 @@ namespace hello::kit {
         if (count < 2) {
             return fail(diagnostics, tr("Combining takes at least two notes."));
         }
+        // The notes are numbered from 1 in the text. The note that sets a tempo is identified by
+        // Diagnostic::noteIndex instead, which the displays number.
         if (index < 0 || index + count > notes.size()) {
             return fail(diagnostics, tr("The track has %1 notes, not notes %2 to %3.")
                                          .arg(notes.size())
-                                         .arg(index)
-                                         .arg(index + count - 1));
+                                         .arg(index + 1)
+                                         .arg(index + count));
         }
         int length = 0;
         for (int i = index; i < index + count; ++i) {
             const auto note = notes.at(i);
             if (i > index && note.tempo()) {
-                return fail(diagnostics, tr("Note %1 sets a tempo, which combining would lose, "
-                                            "and the notes after it would move.")
-                                             .arg(i));
+                return fail(diagnostics,
+                            tr("The note sets a tempo, which combining would lose, and the notes "
+                               "after it would move."),
+                            i);
             }
             length += note.length();
         }

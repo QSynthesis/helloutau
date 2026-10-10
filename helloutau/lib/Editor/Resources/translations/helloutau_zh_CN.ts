@@ -3519,8 +3519,8 @@ Write them again without these chunks? The audio stays the same. The files are w
         <translation>移除区间</translation>
     </message>
     <message>
-        <source>Note %1 sets a tempo, which combining would lose, and the notes after it would move.</source>
-        <translation>音符 %1 设置了曲速，合并会丢失该曲速，且其后的音符会移动位置。</translation>
+        <source>The note sets a tempo, which combining would lose, and the notes after it would move.</source>
+        <translation>该音符设置了曲速，合并会丢失该曲速，且其后的音符会移动位置。</translation>
     </message>
     <message>
         <source>Combine Notes</source>
