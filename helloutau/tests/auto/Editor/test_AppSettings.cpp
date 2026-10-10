@@ -1,3 +1,4 @@
+#include <QtCore/QCoreApplication>
 #include <QtCore/QFile>
 #include <QtCore/QJsonArray>
 #include <QtCore/QJsonDocument>
@@ -270,6 +271,36 @@ private Q_SLOTS:
         settings.setResampler(QStringLiteral("r.exe"));
         settings.sync();
         QCOMPARE(AppSettings(file).resampler(), QStringLiteral("r.exe"));
+    }
+
+
+    // The voice folder of HelloUtau comes first, then the voice directory of UTAU if the UTAU
+    // folder exists. A relative VoiceDir is resolved against the UTAU folder only if it exists
+    // and the setting says so, and against the directory of the program otherwise.
+    void the_voice_locations_follow_the_utau_folder() {
+        QTemporaryDir dir;
+        AppSettings settings(dir.filePath(QStringLiteral("settings.json")));
+        const auto program =
+            std::filesystem::path(QCoreApplication::applicationDirPath().toStdU16String());
+        const auto voice = std::filesystem::path(dir.path().toStdU16String()) / u"voice";
+        QCOMPARE(settings.voiceFolder(), voice);
+
+        auto locations = settings.voiceLocations();
+        QCOMPARE(locations.voiceFolders, std::vector<std::filesystem::path>{voice});
+        QCOMPARE(locations.relativeBase, program);
+
+        const auto utau = std::filesystem::path(dir.path().toStdU16String()) / u"utau";
+        settings.setUtauDirectory(utau);
+        QCOMPARE(settings.voiceLocations().voiceFolders.size(), size_t(1));
+
+        std::filesystem::create_directories(utau);
+        locations = settings.voiceLocations();
+        QCOMPARE(locations.voiceFolders,
+                 (std::vector<std::filesystem::path>{voice, utau / u"voice"}));
+        QCOMPARE(locations.relativeBase, utau);
+
+        settings.setRelativeVoiceDirInUtau(false);
+        QCOMPARE(settings.voiceLocations().relativeBase, program);
     }
 
 private:
