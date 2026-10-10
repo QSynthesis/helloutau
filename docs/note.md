@@ -142,7 +142,7 @@ UST 自身的 `Charset` 只有两种取值：空，或 `UTF-8`。它表示的是
 
 工程的 `VoiceDir` 按以下规则解析（作者 2026-10-08 决定）。UTAU 自身的规则见 [`claude/utau-voicedir-cachedir.md`](claude/utau-voicedir-cachedir.md)：`%VOICE%` 与相对路径都以 `utau.exe` 所在目录为基准。
 
-- **`%VOICE%` 前缀依次表示以下音源文件夹**，取第一个包含该音源的文件夹：一、HelloUtau 自己的音源文件夹，即设置文件旁的 `voice` 目录（Windows 上位于 `%APPDATA%` 下）；二、设置中 UTAU 文件夹的 `voice` 目录，仅在设置了 UTAU 文件夹时存在。不存在的音源文件夹视同未列出。
+- **`%VOICE%` 前缀依次表示以下音源文件夹**，取第一个包含该音源的文件夹：一、HelloUtau 自己的音源文件夹，即文档目录下的 `OpenVPI/HelloUtau/Singers`（作者 2026-10-11 决定，见 [`Distribution.md`](Distribution.md)「用户目录」）；二、设置中 UTAU 文件夹的 `voice` 目录，仅在设置了 UTAU 文件夹时存在。不存在的音源文件夹视同未列出。
 - **不带前缀的相对路径**：设置中的 UTAU 文件夹存在时，由用户选择按 UTAU 文件夹还是按 HelloUtau 程序所在目录解析，默认按 UTAU 文件夹，与 UTAU 一致；UTAU 文件夹未设置或不存在时，按 HelloUtau 程序所在目录解析。
 - **保存时**，位于某个音源文件夹内的绝对路径写为 `%VOICE%` 形式，但仅当该写法解析回同一目录时；被优先级更高的音源文件夹中的同名文件夹遮蔽时写绝对路径。HelloUtau 音源文件夹中的音源因此也写为 `%VOICE%名称`，用 UTAU 打开该工程时找不到，这一代价已经作者接受。
 

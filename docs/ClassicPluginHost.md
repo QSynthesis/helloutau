@@ -73,10 +73,10 @@
 - 合并按条目：省略的条目不变；空值（如 `Intensity=`）按规格恢复默认。
 - 文件内容未变，或所有段落都省略，视为取消，不产生撤销步骤。
 - `ustversion` 省略时按 1.20 写出，与实测一致。`notes` 只要出现即传入全部音符（规格「指定した場合」，同 stdutau）。
-- 临时文件每次运行唯一，位于系统临时目录下的一个子目录，读回后删除；名称同 UTAU 为 `tmpXXXX.tmp`。
+- 临时文件每次运行唯一，位于临时目录管理器分配的子目录（`Distribution.md`「临时目录管理器」），读回后删除；名称同 UTAU 为 `tmpXXXX.tmp`。
 - `execute` 是不可信路径：拒绝绝对路径、`..` 与解析后落在插件文件夹以外的路径；临时文件路径只作为参数数组的一项传入，不拼接命令行（CLAUDE.md）。工作目录为插件文件夹。
 - 启动：Windows 上以 `CreateProcess` 挂起启动、放入作业对象后再恢复，插件启动的进程都在作业中，「取消」以 `TerminateJobObject` 结束整棵进程树；`shell=use` 以 `ShellExecuteEx`，其进程同样放入作业。控制台窗口可见，同 UTAU。批处理（`.bat`、`.cmd`）以 `cmd.exe /d /s /c ""程序" "文件""` 启动：直接交给 `CreateProcess` 时 Windows 以 `cmd /c` 执行整行，会去除首尾引号而破坏路径；路径含 `%` 时拒绝运行，因为引号内 cmd 仍会展开变量。其他平台以 `QProcess` 在独立的进程组中启动，「取消」结束整个进程组。
-- 插件的用户目录为应用数据目录下的 `ClassicPlugins`（Windows 上为 `%APPDATA%\OpenVPI\HelloUtau\ClassicPlugins`，Qt 依次附加组织名与应用名），与原生插件的目录分开。**插件文件夹依次为该用户目录与设置中 UTAU 文件夹的 `plugins` 目录**（作者 2026-10-08 决定，与 note.md「音源文件夹」的顺序相同），不存在的文件夹视同未列出；两处的插件都列在菜单中，按文件夹的顺序排列。设置中的「Classic Plugins」页按同一顺序列出这两个文件夹，各带一个打开按钮；文件夹由 System Settings 的 UTAU 文件夹决定，该页不编辑。插件在菜单第一次打开、「刷新」与设置中的 UTAU 文件夹改变后重新发现。
+- 插件的用户目录为文档目录下的 `OpenVPI/HelloUtau/ClassicPlugins`（作者 2026-10-11 决定，见 `Distribution.md`「用户目录」），与原生插件的目录分开。**插件文件夹依次为该用户目录与设置中 UTAU 文件夹的 `plugins` 目录**（作者 2026-10-08 决定，与 note.md「音源文件夹」的顺序相同），不存在的文件夹视同未列出；两处的插件都列在菜单中，按文件夹的顺序排列。设置中的「Classic Plugins」页按同一顺序列出这两个文件夹，各带一个打开按钮；文件夹由 System Settings 的 UTAU 文件夹决定，该页不编辑。插件在菜单第一次打开、「刷新」与设置中的 UTAU 文件夹改变后重新发现。
 - 首次运行的确认记在插件设置 `plugins.json` 中本插件的值（以 `kit::JsonInterop` 按路径读写 `AppLoader::pluginSettings()` 的 `userData`）：`userData/org.helloutau.classicpluginhost/approved` 为数组，每项是插件文件夹 `folder`、程序在插件文件夹中的相对路径 `relativePath`（仅供阅读）与程序内容的 SHA-256 `sha256`；仅比较 `sha256`，程序改变后再次询问。记录的比较与更新由 `ClassicPluginApproval` 实现，询问对话框与 `AppLoader` 的读写在插件内部。
 - 选区为空时提示先选择音符（`notes` 插件除外）；读回的文件与写出的相同时视为取消。
 - 编码按 note.md「插件」：`plugin.json` 的 `charset` 声明 UTF-8 时，临时文件写成 UTF-8、结果按 UTF-8 读回（作者 2026-09-30 定，比 UTAU 稳妥）；否则与 UTAU 兼容，Windows 上为系统 ANSI 代码页、其他平台为 CP932，音符条目中无法表示的字符按 note.md 转义；`[#SETTING]` 的路径与 `@` 条目只读，不转义，路径用系统的分隔符，同 UTAU。写出与读回用同一编码。`plugin.json` 的格式见 note.md「插件」，有它时不再读 `plugin.txt`。
