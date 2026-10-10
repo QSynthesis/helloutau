@@ -382,6 +382,33 @@ private Q_SLOTS:
             QVERIFY(!fs::exists(step.cacheFile));
         }
     }
+
+    // A note with $direct runs no resampler, and its sample is read as its fragment.
+    void a_direct_note_is_read_from_its_sample() {
+        QVERIFY(bank());
+        write(QStringLiteral("bank/a.wav"), fragment(7000));
+        auto project = fiveNotes();
+        project.tracks[0].notes = {project.tracks[0].notes[0]};
+        project.tracks[0].notes[0].direct = QStringLiteral("True");
+        const auto plan = planOf(project);
+        QVERIFY(plan);
+        QVERIFY(plan->steps().at(0).direct);
+
+        const auto rt = synth();
+        rt->setPlan(*plan);
+        QVERIFY(rt->waitReady(0, rt->length(), std::chrono::seconds(10)));
+        QVERIFY(rendered().isEmpty());
+
+        const auto segments = segmentsOf(*plan);
+        const std::vector<qint16> level(44100, 7000);
+        std::vector<qint16> expected(size_t(rt->length()));
+        WavtoolMixer::mix(
+            segments, [&level](int) { return &level; }, 0, qint64(expected.size()),
+            expected.data());
+        std::vector<qint16> whole(expected.size());
+        QVERIFY(rt->mix(0, qint64(whole.size()), whole.data()));
+        QCOMPARE(whole, expected);
+    }
 };
 
 QTEST_GUILESS_MAIN(test_RealtimeSynth)
