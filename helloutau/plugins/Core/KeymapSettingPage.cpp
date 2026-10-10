@@ -316,7 +316,7 @@ namespace hello::daw {
     void KeymapSettingPage::fillTree() {
         for (int windowIndex = 0; windowIndex < int(std::size(windowLayouts)); ++windowIndex) {
             const auto &window = windowLayouts[windowIndex];
-            auto tree = m_trees[windowIndex];
+            QTreeWidget *tree = m_trees[windowIndex];
             tree->clear();
             const auto kind = window.kind;
             const auto actions = registry(kind);
@@ -375,7 +375,7 @@ namespace hello::daw {
             }
         }
         updateItems();
-        for (auto tree : m_trees) {
+        for (QTreeWidget *tree : m_trees) {
             tree->expandToDepth(0);
         }
     }
@@ -387,7 +387,7 @@ namespace hello::daw {
         // The commands whose shortcuts differ from their manifests are drawn in the color of links,
         // as JetBrains IDEs mark them.
         const auto modified = m_tree->palette().color(QPalette::Link);
-        for (auto tree : m_trees) {
+        for (QTreeWidget *tree : m_trees) {
             for (QTreeWidgetItemIterator it(tree); *it; ++it) {
                 const auto command = commandOf(*it);
                 if (!command) {
@@ -432,7 +432,7 @@ namespace hello::daw {
             item->setHidden(!shown);
             return shown;
         };
-        for (auto tree : m_trees) {
+        for (QTreeWidget *tree : m_trees) {
             for (int i = 0; i < tree->topLevelItemCount(); ++i) {
                 show(tree->topLevelItem(i));
             }
@@ -614,7 +614,7 @@ namespace hello::daw {
             showModifiers(index);
             updateItems();
         });
-        for (auto tree : m_trees) {
+        for (QTreeWidget *tree : m_trees) {
             connect(tree, &QTreeWidget::currentItemChanged, this, [this] { updateButtons(); });
             connect(tree, &QTreeWidget::itemDoubleClicked, this, [this] { askShortcut(); });
         }
@@ -648,7 +648,7 @@ namespace hello::daw {
         connect(m_remove, &QPushButton::clicked, this, [this, removeFrom] {
             removeFrom(m_remove->mapToGlobal(QPoint(0, m_remove->height())));
         });
-        for (auto tree : m_trees) {
+        for (QTreeWidget *tree : m_trees) {
             connect(
                 tree, &QWidget::customContextMenuRequested, this, [this, tree](const QPoint &at) {
                     m_tree = tree;

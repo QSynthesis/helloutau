@@ -103,7 +103,8 @@ namespace hello::daw {
         QPointer<QTreeWidget> m_tree;
         QPointer<QTabWidget> m_tabs;
         QPointer<QScrollArea> m_modifierScroll;
-        QTreeWidget *m_trees[std::size(Editor::windowKinds)] = {};
+        // The tree of each kind of window, deleted with the widget
+        QPointer<QTreeWidget> m_trees[std::size(Editor::windowKinds)];
         QPointer<QLineEdit> m_search;
         QPointer<QKeySequenceEdit> m_keySearch;
         QPointer<QPushButton> m_add;
