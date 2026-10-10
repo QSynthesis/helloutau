@@ -126,6 +126,8 @@ namespace hello::daw {
         QPointF m_pointerPosition;
         Qt::KeyboardModifiers m_pointerModifiers = Qt::NoModifier;
         std::function<std::optional<WheelAction>(Qt::KeyboardModifiers)> m_wheelActions;
+        // Scrolls at the edges only on its ticks, so that the speed does not depend on the rate of
+        // the mouse events
         QTimer m_autoScrollTimer;
         // The mouse grab of the gesture, which exists while m_gesture does
         std::unique_ptr<MouseGrabGuard> m_grab;

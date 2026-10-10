@@ -1,6 +1,7 @@
 #include <QtGui/QContextMenuEvent>
 #include <QtGui/QFocusEvent>
 #include <QtGui/QWheelEvent>
+#include <QtTest/QSignalSpy>
 #include <QtTest/QTest>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QScrollBar>
@@ -330,7 +331,8 @@ private Q_SLOTS:
     }
 
     // A gesture that scrolls near the edges scrolls the keys as well as the time, faster nearer
-    // the edge, and a gesture that does not scroll leaves the view where it is.
+    // the edge, and a gesture that does not scroll leaves the view where it is. The view scrolls
+    // on the ticks of a timer, not on the mouse events.
     void a_gesture_near_the_top_or_bottom_edge_scrolls_the_keys() {
         const auto view = shownView();
         view->setKeyAxis({24, 90});
@@ -338,13 +340,30 @@ private Q_SLOTS:
             view->addLayer(std::make_unique<RectLayer>(QRectF(0, 0, 600, 400), 1)));
         layer->autoScroll = true;
         const int height = view->viewport()->height();
+        // Sent directly, so that no timer runs in between
+        const auto moveTo = [&](int y) {
+            const QPointF position(300, y);
+            QMouseEvent event(QEvent::MouseMove, position, view->viewport()->mapToGlobal(position),
+                              Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+            QApplication::sendEvent(view->viewport(), &event);
+        };
+        // Returns the scrolling of the first tick after the pointer moves to y.
         const auto scrolledBy = [&](int y) {
+            moveTo(y);
             const auto before = view->verticalScrollBar()->value();
-            QTest::mouseMove(view->viewport(), QPoint(300, y));
+            QSignalSpy scrolled(view.get(), &SceneView::keyAxisChanged);
+            if (!scrolled.wait(100)) {
+                return 0;
+            }
             return view->verticalScrollBar()->value() - before;
         };
 
         QTest::mousePress(view->viewport(), Qt::LeftButton, {}, QPoint(300, 200));
+        const auto before = view->verticalScrollBar()->value();
+        for (int i = 0; i < 10; ++i) {
+            moveTo(2);
+        }
+        QCOMPARE(view->verticalScrollBar()->value(), before);
         QCOMPARE(scrolledBy(200), 0);
         const int nearTop = scrolledBy(2);
         const int belowTop = scrolledBy(20);

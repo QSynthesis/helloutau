@@ -273,7 +273,6 @@ namespace hello::daw {
         m_pointerPosition = event->position();
         m_pointerModifiers = event->modifiers();
         if (m_gesture) {
-            autoScroll();
             m_gesture->move(event->position(), event->modifiers());
             // A press may become a drag that scrolls at the edges only after it moves.
             if (m_gesture && m_gesture->wantsAutoScroll() && !m_autoScrollTimer.isActive()) {
@@ -423,14 +422,12 @@ namespace hello::daw {
         const int across = int(speed(m_pointerPosition.x(), viewport()->width()));
         // The vertical scroll bar grows downward, as the y coordinate does.
         const int down = int(speed(m_pointerPosition.y(), viewport()->height()));
+        // The changed axes move the gesture to the scrolled position.
         if (across != 0) {
             horizontalScrollBar()->setValue(horizontalScrollBar()->value() + across);
         }
         if (down != 0) {
             verticalScrollBar()->setValue(verticalScrollBar()->value() + down);
-        }
-        if (across != 0 || down != 0) {
-            m_gesture->move(m_pointerPosition, m_pointerModifiers);
         }
     }
 
