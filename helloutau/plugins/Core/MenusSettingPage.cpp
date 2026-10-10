@@ -164,6 +164,9 @@ namespace hello::daw {
     };
 
     class CatalogFilterModel : public QSortFilterProxyModel {
+    public:
+        using QSortFilterProxyModel::QSortFilterProxyModel;
+
     protected:
         bool filterAcceptsRow(int row, const QModelIndex &parent) const override {
             const auto source = sourceModel()->index(row, 0, parent);
@@ -349,7 +352,7 @@ namespace hello::daw {
         search->setClearButtonEnabled(true);
         auto catalog = new CatalogNamesModel(actions, &dialog);
         catalog->setCatalog(actions->catalog());
-        auto filter = new CatalogFilterModel;
+        auto filter = new CatalogFilterModel(&dialog);
         filter->setSourceModel(catalog);
         filter->setRecursiveFilteringEnabled(true);
         filter->setFilterCaseSensitivity(Qt::CaseInsensitive);
