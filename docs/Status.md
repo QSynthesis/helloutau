@@ -115,6 +115,7 @@
 - 写死的颜色（`EditorIcons.cpp` 的图标颜色、`ToolBarPalette.cpp` 的白色）与 Codex 留下的 4 条 TODO，作者 2026-10-09 决定之后再处理。
 - 音源文件名编码错解的兼容（`hello-config.json` 的 `fileNameEncoding`）：方向按 `Editing.md`「文件名编码错解的兼容计划」，作者 2026-10-09 认可，待实现，实现时把格式写入 `note.md`。
 - 音符属性对话框中 UTAU 的 Others 栏（手写 `$patch`、`$direct` 等条目）日后以官方插件提供，现在不做（作者 2026-10-09 决定）。
+- 库的翻译 `helloutau_<语言>.ts` 覆盖两个模块的全部子库，因嵌入 HelloUtauEditor 而暂放 `helloutau/lib/Editor/Resources/translations/`（作者 2026-10-10 决定）。它不属于 Editor 一个库，以后另行迁移。可参考的做法：Qt 框架的各模块翻译集中在 `qttranslations` 仓库的 `translations/`，Qt Creator 的翻译放在仓库根目录的 `share/qtcreator/translations/`，与安装布局一致。`Plugins.md` 已规定改为外部文件时库的译文放 `share/helloutau`。
 - 待定：非实时渲染模式播放期间，如果工程发生编辑，应立即停止播放。当前暂不处理。
 
 ## 已知问题

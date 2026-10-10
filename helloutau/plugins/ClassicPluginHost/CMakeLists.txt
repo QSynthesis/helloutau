@@ -7,7 +7,7 @@ project(ClassicPluginHostPlugin
 file(GLOB_RECURSE _src "*.cpp" "*.h")
 
 # The submenu Plugins of the Tools menu, compiled by AEC into ClassicPluginActions.qak.h
-qak_add_action_extension(_actions_src Internal/ClassicPluginActions.xml
+qak_add_action_extension(_actions_src Resources/ClassicPluginActions.xml
     FUNCTION classicPluginActions
     NAMESPACE hello::daw
 )
@@ -36,7 +36,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 qt_add_translations(
     TARGETS ${PROJECT_NAME}
     SOURCE_TARGETS ${PROJECT_NAME}
-    TS_FILES translations/ClassicPluginHost_zh_CN.ts
+    TS_FILES Resources/translations/ClassicPluginHost_zh_CN.ts
     RESOURCE_PREFIX /helloutau/plugins/ClassicPluginHost/translations
     LUPDATE_OPTIONS -locations none -no-obsolete
 )

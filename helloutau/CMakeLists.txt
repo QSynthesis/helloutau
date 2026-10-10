@@ -37,7 +37,7 @@ qt_add_translations(
     SOURCE_TARGETS
         HelloKitDocument HelloKitEdit HelloKitEditBase HelloKitInterchange HelloKitSynth
         HelloKitVoiceBank HelloUtauAudio HelloUtauEditor HelloUtauTheme HelloUtauWidgets
-    TS_FILES translations/helloutau_zh_CN.ts
+    TS_FILES lib/Editor/Resources/translations/helloutau_zh_CN.ts
     RESOURCE_PREFIX /helloutau/translations
     LUPDATE_OPTIONS -locations none -no-obsolete
 )

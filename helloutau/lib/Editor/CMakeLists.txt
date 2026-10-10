@@ -11,11 +11,11 @@ qm_find_qt(Core Gui Widgets)
 # The menus, the tool bars and the commands of each kind of window, compiled by AEC into
 # ProjectActions.qak.h, VoiceBankActions.qak.h and their sources. BuiltinActions registers each
 # with the action registry of its kind of window.
-qak_add_action_extension(_project_actions_src ProjectActions.xml
+qak_add_action_extension(_project_actions_src Resources/ProjectActions.xml
     FUNCTION projectActions
     NAMESPACE hello::daw
 )
-qak_add_action_extension(_actions_src VoiceBankActions.xml
+qak_add_action_extension(_actions_src Resources/VoiceBankActions.xml
     FUNCTION voiceBankActions
     NAMESPACE hello::daw
 )
@@ -23,8 +23,8 @@ list(APPEND _actions_src ${_project_actions_src})
 
 # The built-in theme, under :/helloutau/themes, and the icons of the commands, under
 # :/helloutau/icons
-set(_themes_qrc themes/Themes.qrc)
-set(_icons_qrc icons/Icons.qrc)
+set(_themes_qrc Resources/themes/Themes.qrc)
+set(_icons_qrc Resources/icons/Icons.qrc)
 
 helloutau_add_library(${PROJECT_NAME} SHARED
     QT_AUTOGEN

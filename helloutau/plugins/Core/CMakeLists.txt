@@ -26,7 +26,7 @@ helloutau_add_native_plugin(${PROJECT_NAME}
 qt_add_translations(
     TARGETS ${PROJECT_NAME}
     SOURCE_TARGETS ${PROJECT_NAME}
-    TS_FILES translations/Core_zh_CN.ts
+    TS_FILES Resources/translations/Core_zh_CN.ts
     RESOURCE_PREFIX /helloutau/plugins/Core/translations
     LUPDATE_OPTIONS -locations none -no-obsolete
 )
