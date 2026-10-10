@@ -85,10 +85,9 @@ namespace hello::daw {
                           std::sin(m_angularFrequencies[mode] * frame);
             }
             const auto hammer = hammerLevel * hammerNoise(frame) * std::exp(-time / hammerTime);
-            sample = m_amplitude * envelope * (sample / modeAmplitudeSum + hammer);
+            const auto value = float(m_amplitude * envelope * (sample / modeAmplitudeSum + hammer));
             for (int channel = 0; channel < channels; ++channel) {
-                const auto stereo = channels > 1 ? (channel == 0 ? 0.985 : 1.015) : 1.0;
-                out[i * channels + channel] = float(sample * stereo);
+                out[i * channels + channel] = value;
             }
         }
         m_position.store(position + count, std::memory_order_relaxed);

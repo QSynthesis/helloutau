@@ -16,9 +16,8 @@ class test_AudioOutput : public QObject {
     Q_OBJECT
 
 private Q_SLOTS:
-    // The procedural piano source is finite, audible, and gives stereo devices a small natural
-    // channel difference without loading a sample.
-    void a_piano_tone_is_finite_and_stereo() {
+    // The procedural piano source is finite, audible, and mono on every channel.
+    void a_piano_tone_is_finite_and_mono() {
         PianoToneSource source(48000, 440, 0.1);
         std::vector<float> out(480 * 2);
         QCOMPARE(source.read(out.data(), 480, 2), 480);
@@ -26,7 +25,7 @@ private Q_SLOTS:
         QVERIFY(std::any_of(out.cbegin(), out.cend(), [](float sample) {
             return std::abs(sample) > 1e-4f;
         }));
-        QVERIFY(out[100] != out[101]);
+        QCOMPARE(out[100], out[101]);
         std::vector<float> rest(48000 * 2);
         while (source.read(rest.data(), 48000, 2) > 0) {
         }

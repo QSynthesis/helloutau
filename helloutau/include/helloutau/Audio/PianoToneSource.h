@@ -11,7 +11,7 @@ namespace hello::daw {
     /// A short piano-like tone made from damped inharmonic modes and a hammer transient.
     ///
     /// The tone is synthesized without a piano sample, for the piano keyboard rather than for
-    /// rendering.
+    /// rendering. It is mono and written alike to every channel, see docs/Audio.md.
     class HELLOUTAU_AUDIO_EXPORT PianoToneSource : public AudioSource {
     public:
         PianoToneSource(int sampleRate, double frequency, double duration = 0.8,
