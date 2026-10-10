@@ -1,3 +1,4 @@
+add_auto_test(test_JsonInterop.cpp HelloKitSupport)
 add_auto_test(test_TextCodec.cpp HelloKitSupport)
 add_auto_test(test_TextSearch.cpp HelloKitSupport)
 add_auto_test(test_RegistryInstanceList.cpp HelloKitSupport)
