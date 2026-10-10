@@ -6,6 +6,7 @@
 #include <thread>
 
 #include <QtCore/QMimeData>
+#include <QtCore/QScopeGuard>
 #include <QtCore/QStandardPaths>
 #include <QtCore/QTemporaryDir>
 #include <QtCore/QTimer>
@@ -2887,6 +2888,66 @@ private Q_SLOTS:
         QCOMPARE(session->snapshot().settings.timeSignature, (kit::TimeSignature{4, 4}));
         QTRY_COMPARE(window->pianoRoll()->ruler()->beatsPerBar(), 4);
         QCOMPARE(window->pianoRoll()->ruler()->ticksPerBeat(), 480);
+    }
+
+    // Pitch Control opens with the defaults of the settings for a note without portamento and
+    // vibrato, and with the points of a note of two points as a custom portamento.
+    void pitch_control_opens_with_the_defaults_of_the_settings() {
+        const auto e = editor();
+        kit::PortamentoSettings portamento;
+        portamento.position = kit::PortamentoSettings::Right;
+        portamento.presetLength = 200;
+        auto vibrato = kit::Vibrato::utauDefault();
+        vibrato.period = 300;
+        e->settings().setPitchControlPortamento(portamento);
+        e->settings().setPitchControlVibrato(vibrato);
+        // The settings file is shared by the cases.
+        const auto restore = qScopeGuard([&e] {
+            e->settings().setPitchControlPortamento({});
+            e->settings().setPitchControlVibrato(kit::Vibrato::utauDefault());
+        });
+        const auto window = e->openFile(savedProject(m_dir, "pitch-defaults.usth"));
+        QVERIFY(window);
+        window->pianoRoll()->selectAll();
+        const auto edit =
+            declaredActionOf(*e, window, QStringLiteral("helloutau.edit.pitchControl"));
+        QVERIFY(edit && edit->isEnabled());
+
+        std::optional<kit::PortamentoSettings> shownPortamento;
+        std::optional<kit::Vibrato> shownVibrato;
+        const auto open = [&] {
+            QTimer::singleShot(0, [&] {
+                const auto dialog =
+                    qobject_cast<PitchControlDialog *>(QApplication::activeModalWidget());
+                if (dialog) {
+                    shownPortamento = dialog->portamentoSettings();
+                    shownVibrato = dialog->vibrato();
+                    dialog->reject();
+                }
+            });
+            edit->trigger();
+        };
+        open();
+        QCOMPARE(shownPortamento, std::optional(portamento));
+        QVERIFY(shownVibrato);
+        QCOMPARE(shownVibrato->period, 300.0);
+
+        const auto session = window->document()->session();
+        {
+            auto tx = session->transaction(QStringLiteral("points"));
+            kit::PortamentoPoint first;
+            first.x = -40;
+            kit::PortamentoPoint second;
+            second.x = 60;
+            const auto note = kit::ProjectRef(session).tracks().at(0).notes().at(0);
+            note.portamento().insert(0, {first, second});
+            tx.commit();
+        }
+        open();
+        QVERIFY(shownPortamento);
+        QCOMPARE(shownPortamento->mode, kit::PortamentoSettings::Custom);
+        QCOMPARE(shownPortamento->start, -40);
+        QCOMPARE(shownPortamento->length, 100);
     }
 };
 
