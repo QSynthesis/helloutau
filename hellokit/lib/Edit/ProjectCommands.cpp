@@ -557,10 +557,10 @@ namespace hello::kit {
             return ProjectEdits::setNoteProperties(notes, changes, diagnostics);
         }
 
-        bool mergeCommand(ProjectSession &session, const Arguments &arguments,
-                          DiagnosticList &diagnostics) {
+        bool combineCommand(ProjectSession &session, const Arguments &arguments,
+                            DiagnosticList &diagnostics) {
             if (arguments.size() != 3) {
-                return usage(diagnostics, "note merge <notes> <index> <count>");
+                return usage(diagnostics, "note combine <notes> <index> <count>");
             }
             const auto notes = notesAt(session, arguments[0], diagnostics);
             const auto index = edit::NodeCommands::integerOf(
@@ -570,7 +570,7 @@ namespace hello::kit {
             if (!notes || !index || !count) {
                 return false;
             }
-            return ProjectEdits::mergeNotes(*notes, *index, *count, diagnostics);
+            return ProjectEdits::combineNotes(*notes, *index, *count, diagnostics);
         }
 
         bool labelCommand(ProjectSession &session, const Arguments &arguments,
@@ -677,7 +677,7 @@ namespace hello::kit {
             {"note",     "bend",         bendCommand,           "drawPitchBend"    },
             {"note",     "pitchbend",    pitchBendCommand,      "setPitchBend"     },
             {"note",     "properties",   notePropertiesCommand, "setNoteProperties"},
-            {"note",     "merge",        mergeCommand,          "mergeNotes"       },
+            {"note",     "combine",      combineCommand,        "combineNotes"     },
             {"note",     "label",        labelCommand,          "setLabel"         },
             {"note",     "region",       regionCommand,         "nameRegion"       },
             {"note",     "renameregion", renameRegionCommand,   "renameRegion"     },

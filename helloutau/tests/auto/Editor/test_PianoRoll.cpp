@@ -630,7 +630,7 @@ private Q_SLOTS:
 
     // A rest goes before the first selected note, and the notes from the first selected to the
     // last merge into the first; each is selected after.
-    void a_rest_is_inserted_and_notes_merged() {
+    void a_rest_is_inserted_and_notes_combined() {
         kit::ProjectSession session(threeNotes());
         PianoRoll roll(&session);
         show(roll);
@@ -647,7 +647,7 @@ private Q_SLOTS:
         // The two rests of 120 ticks, and la after them
         drag(roll, {10, 70}, {300, 70}, {}, Qt::RightButton);
         QCOMPARE(roll.selectedIndices(), (QList<int>{0, 1, 2}));
-        QVERIFY(roll.mergeSelected(diagnostics));
+        QVERIFY(roll.combineSelected(diagnostics));
         QCOMPARE(lyricsOf(session), QStringLiteral("R R li"));
         QCOMPARE(session.snapshot().tracks[0].notes[0].length, 2 * roll.quantizedLength() + 480);
         QCOMPARE(roll.selectedIndices(), QList<int>{0});
@@ -655,7 +655,7 @@ private Q_SLOTS:
         // Past the rest that sets a tempo, refused
         drag(roll, {10, 70}, {1000, 70}, {}, Qt::RightButton);
         QCOMPARE(roll.selectedIndices(), (QList<int>{0, 1}));
-        QVERIFY(!roll.mergeSelected(diagnostics));
+        QVERIFY(!roll.combineSelected(diagnostics));
         QVERIFY(kit::hasError(diagnostics));
         QCOMPARE(lyricsOf(session), QStringLiteral("R R li"));
     }

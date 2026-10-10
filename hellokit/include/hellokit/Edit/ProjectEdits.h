@@ -224,12 +224,12 @@ namespace hello::kit {
                                                   const NotePropertyChanges &changes,
                                                   DiagnosticList &diagnostics);
 
-        /// Merges \a count notes of \a notes from \a index into the first of them, as UTAU
-        /// merges notes: its length becomes the sum of theirs, and it keeps its other
+        /// Combines \a count notes of \a notes from \a index into the first of them, as UTAU
+        /// combines notes: its length becomes the sum of theirs, and it keeps its other
         /// properties. Refused for fewer than two notes, and where a note after the first sets
         /// a tempo, which would change the time of every note after them.
-        Q_INVOKABLE static bool mergeNotes(const NoteListRef &notes, int index, int count,
-                                           DiagnosticList &diagnostics);
+        Q_INVOKABLE static bool combineNotes(const NoteListRef &notes, int index, int count,
+                                             DiagnosticList &diagnostics);
     };
 
 }

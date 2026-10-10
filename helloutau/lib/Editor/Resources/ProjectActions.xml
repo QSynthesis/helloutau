@@ -70,8 +70,8 @@
         <!-- A rest before the first selected note, as UTAU inserts one -->
         <action id="helloutau.edit.insertRest" text="Insert &amp;Rest" category="Edit"
                 shortcut="Ctrl+R" />
-        <!-- The selected notes into the first, their lengths summed, as UTAU merges them -->
-        <action id="helloutau.edit.mergeNotes" text="Mer&amp;ge Notes" category="Edit"
+        <!-- The selected notes into the first, their lengths summed, as UTAU combines them -->
+        <action id="helloutau.edit.combineNotes" text="Com&amp;bine Notes" category="Edit"
                 shortcut="Ctrl+U" />
         <!-- The tempo of the first selected note, from which it applies -->
         <action id="helloutau.edit.setTempo" text="Set Te&amp;mpo..." category="Edit" />
@@ -247,7 +247,7 @@
                 <action id="helloutau.edit.insertNote" />
                 <action id="helloutau.edit.insertRest" />
                 <action id="helloutau.edit.splitNote" />
-                <action id="helloutau.edit.mergeNotes" />
+                <action id="helloutau.edit.combineNotes" />
                 <action id="helloutau.edit.editLyric" />
                 <action id="helloutau.edit.replaceLyrics" />
                 <action id="helloutau.edit.setTempo" />

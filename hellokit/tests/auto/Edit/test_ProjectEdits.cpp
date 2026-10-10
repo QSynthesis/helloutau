@@ -711,9 +711,9 @@ private Q_SLOTS:
         QCOMPARE(session.snapshot().toJson(), project.toJson());
     }
 
-    // Merged notes become the first of them, as long as all of them; not fewer than two, nor
+    // Combined notes become the first of them, as long as all of them; not fewer than two, nor
     // past a note that sets a tempo.
-    void notes_are_merged_into_the_first() {
+    void notes_are_combined_into_the_first() {
         Project project;
         Track track;
         for (const auto lyric : {"a", "ka", "sa", "ta"}) {
@@ -730,19 +730,19 @@ private Q_SLOTS:
         const auto notes = ProjectRef(&session).tracks().at(0).notes();
 
         DiagnosticList diagnostics;
-        QVERIFY(ProjectEdits::mergeNotes(notes, 0, 3, diagnostics));
-        auto merged = session.snapshot().tracks[0].notes;
-        QCOMPARE(merged.size(), 2);
-        QCOMPARE(merged[0].lyric, QStringLiteral("a"));
-        QCOMPARE(merged[0].length, 960);
-        QCOMPARE(merged[1].lyric, QStringLiteral("ta"));
-        QCOMPARE(session.undoMessage(), ProjectEdits::tr("Merge Notes"));
+        QVERIFY(ProjectEdits::combineNotes(notes, 0, 3, diagnostics));
+        auto combined = session.snapshot().tracks[0].notes;
+        QCOMPARE(combined.size(), 2);
+        QCOMPARE(combined[0].lyric, QStringLiteral("a"));
+        QCOMPARE(combined[0].length, 960);
+        QCOMPARE(combined[1].lyric, QStringLiteral("ta"));
+        QCOMPARE(session.undoMessage(), ProjectEdits::tr("Combine Notes"));
 
-        QVERIFY(!ProjectEdits::mergeNotes(notes, 0, 2, diagnostics));
+        QVERIFY(!ProjectEdits::combineNotes(notes, 0, 2, diagnostics));
         QVERIFY(hasError(diagnostics));
         diagnostics.clear();
-        QVERIFY(!ProjectEdits::mergeNotes(notes, 0, 1, diagnostics));
-        QVERIFY(!ProjectEdits::mergeNotes(notes, 1, 2, diagnostics));
+        QVERIFY(!ProjectEdits::combineNotes(notes, 0, 1, diagnostics));
+        QVERIFY(!ProjectEdits::combineNotes(notes, 1, 2, diagnostics));
         QCOMPARE(session.currentStep(), 1);
 
         session.undo();

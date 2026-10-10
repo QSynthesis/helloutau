@@ -496,10 +496,10 @@ namespace hello::kit {
         return transaction.commit(diagnostics);
     }
 
-    bool ProjectEdits::mergeNotes(const NoteListRef &notes, int index, int count,
-                                  DiagnosticList &diagnostics) {
+    bool ProjectEdits::combineNotes(const NoteListRef &notes, int index, int count,
+                                    DiagnosticList &diagnostics) {
         if (count < 2) {
-            return fail(diagnostics, tr("Merging takes at least two notes."));
+            return fail(diagnostics, tr("Combining takes at least two notes."));
         }
         if (index < 0 || index + count > notes.size()) {
             return fail(diagnostics, tr("The track has %1 notes, not notes %2 to %3.")
@@ -511,13 +511,13 @@ namespace hello::kit {
         for (int i = index; i < index + count; ++i) {
             const auto note = notes.at(i);
             if (i > index && note.tempo()) {
-                return fail(diagnostics, tr("Note %1 sets a tempo, which merging would lose, "
+                return fail(diagnostics, tr("Note %1 sets a tempo, which combining would lose, "
                                             "and the notes after it would move.")
                                              .arg(i));
             }
             length += note.length();
         }
-        auto transaction = notes.session()->transaction(tr("Merge Notes"));
+        auto transaction = notes.session()->transaction(tr("Combine Notes"));
         notes.at(index).setLength(length);
         notes.remove(index + 1, count - 1);
         return transaction.commit(diagnostics);

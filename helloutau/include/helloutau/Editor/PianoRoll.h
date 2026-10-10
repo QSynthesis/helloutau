@@ -330,9 +330,9 @@ namespace hello::daw {
         /// selects it.
         bool insertRest(kit::DiagnosticList &diagnostics);
 
-        /// Merges the notes from the first selected to the last into the first, as UTAU merges
-        /// notes (Ctrl+U), see ProjectEdits::mergeNotes(), and selects it.
-        bool mergeSelected(kit::DiagnosticList &diagnostics);
+        /// Combines the notes from the first selected to the last into the first, as UTAU
+        /// combines notes (Ctrl+U), see ProjectEdits::combineNotes(), and selects it.
+        bool combineSelected(kit::DiagnosticList &diagnostics);
 
         /// Inserts the copied notes as they are, before the first selected note or after the
         /// last note if nothing is selected, and selects them.

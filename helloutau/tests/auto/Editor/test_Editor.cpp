@@ -1173,7 +1173,7 @@ private Q_SLOTS:
             {QStringLiteral("helloutau.tools.editVoiceBank"), QStringLiteral("Ctrl+G")        },
             {QStringLiteral("helloutau.edit.noteProperties"), QStringLiteral("Ctrl+E")        },
             {QStringLiteral("helloutau.edit.insertRest"),     QStringLiteral("Ctrl+R")        },
-            {QStringLiteral("helloutau.edit.mergeNotes"),     QStringLiteral("Ctrl+U")        },
+            {QStringLiteral("helloutau.edit.combineNotes"),   QStringLiteral("Ctrl+U")        },
             {QStringLiteral("helloutau.file.save"),           QStringLiteral("Ctrl+S")        },
             {QStringLiteral("helloutau.edit.undo"),           QStringLiteral("Ctrl+Z")        },
             {QStringLiteral("helloutau.select.selectAll"),    QStringLiteral("Ctrl+A")        },

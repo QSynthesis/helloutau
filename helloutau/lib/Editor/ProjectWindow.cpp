@@ -1558,9 +1558,9 @@ namespace hello::daw {
                     return roll->insertRest(diagnostics);
                 });
             });
-            addCommand(QStringLiteral("helloutau.edit.mergeNotes"), [this] {
-                edit(tr("Merge Notes"), [this](kit::DiagnosticList &diagnostics) {
-                    return roll->mergeSelected(diagnostics);
+            addCommand(QStringLiteral("helloutau.edit.combineNotes"), [this] {
+                edit(tr("Combine Notes"), [this](kit::DiagnosticList &diagnostics) {
+                    return roll->combineSelected(diagnostics);
                 });
             });
             addCommand(QStringLiteral("helloutau.edit.splitNote"), [this] { splitNote(); });
@@ -2101,7 +2101,7 @@ namespace hello::daw {
             actions.value(QStringLiteral("helloutau.edit.removeLabel"))->setEnabled(labeled);
             actions.value(QStringLiteral("helloutau.edit.removeRegion"))
                 ->setEnabled(!indices.isEmpty() && roll->regionAt(indices.first()).has_value());
-            actions.value(QStringLiteral("helloutau.edit.mergeNotes"))->setEnabled(selected > 1);
+            actions.value(QStringLiteral("helloutau.edit.combineNotes"))->setEnabled(selected > 1);
             const bool copied = !PianoRoll::copiedNotes().isEmpty();
             actions.value(QStringLiteral("helloutau.edit.paste"))->setEnabled(copied);
             actions.value(QStringLiteral("helloutau.edit.pasteParameters"))

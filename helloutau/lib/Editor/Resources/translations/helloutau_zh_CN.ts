@@ -326,8 +326,8 @@
         <translation>插入休止符(&amp;R)</translation>
     </message>
     <message>
-        <source>Mer&amp;ge Notes</source>
-        <translation>合并音符(&amp;G)</translation>
+        <source>Com&amp;bine Notes</source>
+        <translation>合并音符(&amp;B)</translation>
     </message>
     <message>
         <source>Set Te&amp;mpo...</source>
@@ -1783,7 +1783,7 @@
         <translation>插入休止符</translation>
     </message>
     <message>
-        <source>Merge Notes</source>
+        <source>Combine Notes</source>
         <translation>合并音符</translation>
     </message>
     <message>
@@ -3491,7 +3491,7 @@ Write them again without these chunks? The audio stays the same. The files are w
         <translation>命名区间</translation>
     </message>
     <message>
-        <source>Merging takes at least two notes.</source>
+        <source>Combining takes at least two notes.</source>
         <translation>合并至少需要两个音符。</translation>
     </message>
     <message>
@@ -3519,11 +3519,11 @@ Write them again without these chunks? The audio stays the same. The files are w
         <translation>移除区间</translation>
     </message>
     <message>
-        <source>Note %1 sets a tempo, which merging would lose, and the notes after it would move.</source>
+        <source>Note %1 sets a tempo, which combining would lose, and the notes after it would move.</source>
         <translation>音符 %1 设置了曲速，合并会丢失该曲速，且其后的音符会移动位置。</translation>
     </message>
     <message>
-        <source>Merge Notes</source>
+        <source>Combine Notes</source>
         <translation>合并音符</translation>
     </message>
     <message>

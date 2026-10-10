@@ -1030,7 +1030,7 @@ namespace hello::daw {
         return impl.insert(QStringLiteral("R"), diagnostics);
     }
 
-    bool PianoRoll::mergeSelected(kit::DiagnosticList &diagnostics) {
+    bool PianoRoll::combineSelected(kit::DiagnosticList &diagnostics) {
         stdc_impl_t;
         const auto indices = selectedIndices();
         if (indices.size() < 2) {
@@ -1038,7 +1038,8 @@ namespace hello::daw {
         }
         const auto notes = impl.notes();
         const int first = indices.first();
-        if (!kit::ProjectEdits::mergeNotes(notes, first, indices.last() - first + 1, diagnostics)) {
+        if (!kit::ProjectEdits::combineNotes(notes, first, indices.last() - first + 1,
+                                             diagnostics)) {
             return false;
         }
         impl.anchor = notes.at(first).id();

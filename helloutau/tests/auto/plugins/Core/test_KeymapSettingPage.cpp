@@ -62,13 +62,13 @@ private Q_SLOTS:
             }
             return nullptr;
         };
-        const auto merge = itemOf(QStringLiteral("helloutau.edit.mergeNotes"));
-        QVERIFY(merge);
-        QCOMPARE(merge->parent()->text(0), QStringLiteral("Edit"));
+        const auto combine = itemOf(QStringLiteral("helloutau.edit.combineNotes"));
+        QVERIFY(combine);
+        QCOMPARE(combine->parent()->text(0), QStringLiteral("Edit"));
 
         // Ins conflicts with Insert Note of the project window, and not with Insert Entry of the
         // voice bank window. The conflict is removed.
-        tree->setCurrentItem(merge);
+        tree->setCurrentItem(combine);
         QString conflicts;
         QTimer::singleShot(0, [&conflicts] {
             const auto dialog = QApplication::activeModalWidget();
@@ -91,7 +91,7 @@ private Q_SLOTS:
         page.widget()->findChild<QPushButton *>(QStringLiteral("add"))->click();
         QVERIFY(conflicts.contains(QStringLiteral("Insert Note")));
         QVERIFY(!conflicts.contains(QStringLiteral("Insert Entry")));
-        QVERIFY(merge->text(1).contains(
+        QVERIFY(combine->text(1).contains(
             QKeySequence(Qt::Key_Insert).toString(QKeySequence::NativeText)));
         QVERIFY(itemOf(QStringLiteral("helloutau.edit.insertNote"))->text(1).isEmpty());
         QVERIFY(page.isModified());
@@ -108,10 +108,10 @@ private Q_SLOTS:
         QCOMPARE(e->modifierBindings(Editor::ProjectWindowKind, NoteViewModifiers::scheme())
                      .modifiers(NoteViewModifiers::HorizontalScroll),
                  Qt::AltModifier);
-        QCOMPARE(
-            declaredActionOf(*e, window, QStringLiteral("helloutau.edit.mergeNotes"))->shortcuts(),
-            (QList<QKeySequence>{QKeySequence(Qt::CTRL | Qt::Key_U),
-                                 QKeySequence(Qt::Key_Insert)}));
+        QCOMPARE(declaredActionOf(*e, window, QStringLiteral("helloutau.edit.combineNotes"))
+                     ->shortcuts(),
+                 (QList<QKeySequence>{QKeySequence(Qt::CTRL | Qt::Key_U),
+                                      QKeySequence(Qt::Key_Insert)}));
         QVERIFY(declaredActionOf(*e, window, QStringLiteral("helloutau.edit.insertNote"))
                     ->shortcuts()
                     .isEmpty());
@@ -166,8 +166,8 @@ private Q_SLOTS:
 
         const Command insertEntry{Editor::VoiceBankWindowKind,
                                   QStringLiteral("helloutau.voiceBank.insertEntry")};
-        const Command mergeNotes{Editor::ProjectWindowKind,
-                                 QStringLiteral("helloutau.edit.mergeNotes")};
+        const Command combineNotes{Editor::ProjectWindowKind,
+                                   QStringLiteral("helloutau.edit.combineNotes")};
         QVERIFY(isDeclared(*e, insertEntry.kind, insertEntry.id));
         QVERIFY(page.conflicts(insertEntry, QKeySequence(Qt::Key_Insert)).isEmpty());
         QCOMPARE(page.conflicts(insertEntry, QKeySequence(Qt::CTRL | Qt::Key_D)),
@@ -175,7 +175,7 @@ private Q_SLOTS:
                      {Editor::VoiceBankWindowKind,
                       QStringLiteral("helloutau.voiceBank.duplicateEntries")}
         }));
-        QCOMPARE(page.conflicts(mergeNotes, QKeySequence(Qt::Key_Insert)),
+        QCOMPARE(page.conflicts(combineNotes, QKeySequence(Qt::Key_Insert)),
                  (QList<Command>{
                      {Editor::ProjectWindowKind, QStringLiteral("helloutau.edit.insertNote")}
         }));
