@@ -1,0 +1,84 @@
+name: Sync release to Gitee
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download GitHub release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ github.event.release.tag_name }}
+        run: |
+          mkdir -p release-assets
+          gh release download "$TAG_NAME" \
+            --repo "$GITHUB_REPOSITORY" \
+            --dir release-assets
+
+      - name: Create Gitee release
+        id: gitee-release
+        env:
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+          GITEE_REPOSITORY: ${{ secrets.GITEE_REPOSITORY }}
+          TAG_NAME: ${{ github.event.release.tag_name }}
+          RELEASE_NAME: ${{ github.event.release.name }}
+          RELEASE_BODY: ${{ github.event.release.body }}
+        run: |
+          set -euo pipefail
+
+          release_id=""
+          for attempt in $(seq 1 12); do
+            releases=$(curl --silent --show-error --fail \
+              "https://gitee.com/api/v5/repos/${GITEE_REPOSITORY}/releases?access_token=${GITEE_TOKEN}&per_page=100" \
+              2>/dev/null || printf '[]')
+            release_id=$(jq -r --arg tag "$TAG_NAME" \
+              'if type == "array" then .[] | select(.tag_name == $tag) | .id else empty end' \
+              <<<"$releases" | head -n 1)
+            if [ -n "$release_id" ]; then
+              break
+            fi
+
+            payload=$(jq -n \
+              --arg tag "$TAG_NAME" \
+              --arg name "$RELEASE_NAME" \
+              --arg body "$RELEASE_BODY" \
+              '{tag_name: $tag, name: $name, body: $body}')
+            response=$(curl --silent --show-error --fail \
+              -X POST \
+              -H "Content-Type: application/json" \
+              "https://gitee.com/api/v5/repos/${GITEE_REPOSITORY}/releases?access_token=${GITEE_TOKEN}" \
+              --data "$payload" 2>/tmp/gitee-release-error) && {
+                release_id=$(jq -er '.id' <<<"$response")
+                break
+              }
+            if [ "$attempt" -eq 12 ]; then
+              cat /tmp/gitee-release-error >&2
+              exit 1
+            fi
+            sleep 10
+          done
+
+          test -n "$release_id"
+          echo "release_id=$release_id" >> "$GITHUB_OUTPUT"
+
+      - name: Upload release assets to Gitee
+        env:
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+          GITEE_REPOSITORY: ${{ secrets.GITEE_REPOSITORY }}
+          RELEASE_ID: ${{ steps.gitee-release.outputs.release_id }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          for file in release-assets/*; do
+            curl --silent --show-error --fail \
+              -X POST \
+              "https://gitee.com/api/v5/repos/${GITEE_REPOSITORY}/releases/${RELEASE_ID}/attach_files?access_token=${GITEE_TOKEN}" \
+              -F "file=@${file}" \
+              >/dev/null
+          done
