@@ -78,19 +78,20 @@ namespace hello::daw {
         // The data of the option that turns a role off, which no combination of modifiers has
         constexpr int offData = -1;
 
-        const char *modifierOptionNames[] = {
-            QT_TRANSLATE_NOOP("hello::daw::KeymapSettingPage", "None"),
-            QT_TRANSLATE_NOOP("hello::daw::KeymapSettingPage", "Ctrl"),
-            QT_TRANSLATE_NOOP("hello::daw::KeymapSettingPage", "Alt"),
-            QT_TRANSLATE_NOOP("hello::daw::KeymapSettingPage", "Shift"),
-#ifndef Q_OS_WIN
-            QT_TRANSLATE_NOOP("hello::daw::KeymapSettingPage", "Meta"),
-#endif
-            QT_TRANSLATE_NOOP("hello::daw::KeymapSettingPage", "Ctrl+Alt"),
-            QT_TRANSLATE_NOOP("hello::daw::KeymapSettingPage", "Ctrl+Shift"),
-            QT_TRANSLATE_NOOP("hello::daw::KeymapSettingPage", "Alt+Shift"),
-            QT_TRANSLATE_NOOP("hello::daw::KeymapSettingPage", "Ctrl+Alt+Shift"),
-        };
+        // Returns the name of an option of modifiers as the platform writes it, such as Ctrl+Alt,
+        // or the symbols of the keys on macOS, where Qt::ControlModifier is the Command key.
+        QString modifierText(Qt::KeyboardModifiers modifiers) {
+            if (modifiers == Qt::NoModifier) {
+                return KeymapSettingPage::tr("None");
+            }
+            // Without a key, the text ends with the separator on the platforms that write one.
+            auto text = QKeySequence(QKeyCombination(modifiers, Qt::Key(0)))
+                            .toString(QKeySequence::NativeText);
+            if (text.endsWith(QLatin1Char('+'))) {
+                text.chop(1);
+            }
+            return text;
+        }
 
         // Returns the command of item, or std::nullopt for a window or a menu.
         std::optional<KeymapSettingPage::Command> commandOf(const QTreeWidgetItem *item) {
@@ -289,7 +290,7 @@ namespace hello::daw {
                 const bool none = bindings.scheme().isStart(role.id);
                 for (int i = 0; i < int(std::size(modifierOptions)); ++i) {
                     if (modifierOptions[i] != Qt::NoModifier || none) {
-                        box->addItem(tr(modifierOptionNames[i]), modifierOptions[i].toInt());
+                        box->addItem(modifierText(modifierOptions[i]), modifierOptions[i].toInt());
                     }
                 }
                 connect(box, qOverload<int>(&QComboBox::currentIndexChanged), this,

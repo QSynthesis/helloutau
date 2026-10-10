@@ -205,6 +205,34 @@ private Q_SLOTS:
                     .toArray()
                     .isEmpty());
     }
+
+    // An option of modifiers is named as the platform writes the modifiers of a shortcut.
+    void the_modifier_options_are_named_as_shortcuts_are() {
+        QTemporaryDir dir;
+        const auto e = std::make_unique<Editor>(
+            std::make_unique<AppSettings>(dir.filePath(QStringLiteral("settings.json"))));
+        new BuiltinActions(e.get());
+        e->setWatchesDisk(false);
+        KeymapSettingPage page(e.get());
+        int named = 0;
+        for (const auto box : page.widget()->findChildren<QComboBox *>()) {
+            for (int i = 0; i < box->count(); ++i) {
+                const int data = box->itemData(i).toInt();
+                if (data <= 0) {
+                    continue;
+                }
+                const auto text = box->itemText(i);
+                const auto shortcut =
+                    QKeySequence(QKeyCombination(Qt::KeyboardModifiers(data), Qt::Key_A))
+                        .toString(QKeySequence::NativeText);
+                QVERIFY2(!text.isEmpty() && !text.endsWith(QLatin1Char('+')), qPrintable(text));
+                QVERIFY2(shortcut.startsWith(text),
+                         qPrintable(text + QStringLiteral(" ") + shortcut));
+                ++named;
+            }
+        }
+        QVERIFY(named > 0);
+    }
 };
 
 int main(int argc, char *argv[]) {

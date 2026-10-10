@@ -16,38 +16,6 @@
         <translation>无</translation>
     </message>
     <message>
-        <source>Ctrl</source>
-        <translation>Ctrl</translation>
-    </message>
-    <message>
-        <source>Alt</source>
-        <translation>Alt</translation>
-    </message>
-    <message>
-        <source>Shift</source>
-        <translation>Shift</translation>
-    </message>
-    <message>
-        <source>Meta</source>
-        <translation>Meta</translation>
-    </message>
-    <message>
-        <source>Ctrl+Alt</source>
-        <translation>Ctrl+Alt</translation>
-    </message>
-    <message>
-        <source>Ctrl+Shift</source>
-        <translation>Ctrl+Shift</translation>
-    </message>
-    <message>
-        <source>Alt+Shift</source>
-        <translation>Alt+Shift</translation>
-    </message>
-    <message>
-        <source>Ctrl+Alt+Shift</source>
-        <translation>Ctrl+Alt+Shift</translation>
-    </message>
-    <message>
         <source>Keymap</source>
         <translation>键位映射</translation>
     </message>
