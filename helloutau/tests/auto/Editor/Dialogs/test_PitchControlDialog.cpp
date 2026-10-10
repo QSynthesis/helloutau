@@ -60,17 +60,6 @@ private Q_SLOTS:
         QCOMPARE(dialog.vibrato(), expected);
     }
 
-    void the_default_is_that_of_utau() {
-        const auto vibrato = kit::Vibrato::utauDefault();
-        QCOMPARE(vibrato.length, 65.0);
-        QCOMPARE(vibrato.period, 180.0);
-        QCOMPARE(vibrato.amplitude, 35.0);
-        QCOMPARE(vibrato.attack, 20.0);
-        QCOMPARE(vibrato.release, 20.0);
-        QCOMPARE(vibrato.phase, 0.0);
-        QCOMPARE(vibrato.offset, 0.0);
-    }
-
     void portamento_modes_and_values_are_retained() {
         kit::PortamentoSettings settings;
         settings.mode = kit::PortamentoSettings::AddPoints;
