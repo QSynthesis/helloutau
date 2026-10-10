@@ -205,6 +205,7 @@ private Q_SLOTS:
             {QStringLiteral("position"),     7                      },
             {QStringLiteral("presetLength"), 75                     },
             {QStringLiteral("start"),        QStringLiteral("x")    },
+            {QStringLiteral("length"),       -5                     },
             {QStringLiteral("count"),        1                      },
         };
         QCOMPARE(PortamentoSettings::fromJson(object), PortamentoSettings());

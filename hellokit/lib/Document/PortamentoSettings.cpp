@@ -150,8 +150,14 @@ namespace hello::kit {
             settings.presetLength = presetLength;
         }
         settings.start = object.value(QLatin1String("start")).toInt(settings.start);
-        settings.length = std::max(0, object.value(QLatin1String("length")).toInt(settings.length));
-        settings.count = std::max(2, object.value(QLatin1String("count")).toInt(settings.count));
+        const int length = object.value(QLatin1String("length")).toInt(settings.length);
+        if (length >= 0) {
+            settings.length = length;
+        }
+        const int count = object.value(QLatin1String("count")).toInt(settings.count);
+        if (count >= 2) {
+            settings.count = count;
+        }
         settings.evenlyDistributed =
             object.value(QLatin1String("evenlyDistributed")).toBool(settings.evenlyDistributed);
         return settings;
