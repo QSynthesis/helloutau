@@ -89,12 +89,20 @@ jobs:
               --arg name "$release_name" \
               --arg body "$release_body" \
               '{tag_name: $tag, name: $name, body: $body}')
-            response=$(curl --silent --show-error --fail \
+            response_file=$(mktemp)
+            response_status=$(curl --silent --show-error \
               --connect-timeout 10 --max-time 60 \
               -X POST \
               -H "Content-Type: application/json" \
               "https://gitee.com/api/v5/repos/${GITEE_REPOSITORY}/releases?access_token=${GITEE_TOKEN}" \
-              --data "$payload")
+              --data "$payload" \
+              --output "$response_file" --write-out '%{http_code}' || true)
+            if [[ "$response_status" != 2* ]]; then
+              echo "Gitee release creation failed (HTTP ${response_status})." >&2
+              cat "$response_file" >&2
+              exit 1
+            fi
+            response=$(cat "$response_file")
             release_id=$(jq -er '.id' <<<"$response")
           fi
 
@@ -110,9 +118,15 @@ jobs:
           set -euo pipefail
           shopt -s nullglob
           for file in release-assets/*; do
-            curl --silent --show-error --fail \
+            response_file=$(mktemp)
+            response_status=$(curl --silent --show-error \
               -X POST \
               "https://gitee.com/api/v5/repos/${GITEE_REPOSITORY}/releases/${RELEASE_ID}/attach_files?access_token=${GITEE_TOKEN}" \
               -F "file=@${file}" \
-              >/dev/null
+              --output "$response_file" --write-out '%{http_code}' || true)
+            if [[ "$response_status" != 2* ]]; then
+              echo "Gitee asset upload failed for ${file} (HTTP ${response_status})." >&2
+              cat "$response_file" >&2
+              exit 1
+            fi
           done
