@@ -2,6 +2,7 @@
 #include <mutex>
 
 #include <QtCore/QDir>
+#include <QtCore/QElapsedTimer>
 #include <QtCore/QFile>
 #include <QtCore/QFileInfo>
 #include <QtCore/QSet>
@@ -94,6 +95,40 @@ namespace {
 
     private:
         Record &m_record;
+    };
+
+    // Writes part of a fragment and then blocks until the call is cancelled, as a resampler that
+    // is killed while it writes. Records whether a cancellation ended the call.
+    class BlockingStandIn : public SynthToolProcess {
+    public:
+        explicit BlockingStandIn(std::atomic<int> &cancelledCalls, std::atomic<bool> &started)
+            : m_cancelledCalls(cancelledCalls), m_started(started) {
+        }
+
+        SynthToolRun run(const fs::path &, const QStringList &arguments, DiagnosticList &,
+                         const std::function<bool()> &cancelled) const override {
+            QFile file(arguments.at(1));
+            if (file.open(QIODevice::WriteOnly)) {
+                file.write("RIFF part");
+            }
+            file.close();
+            m_started = true;
+            SynthToolRun run;
+            run.started = true;
+            for (int i = 0; i < 1000; ++i) {
+                if (cancelled()) {
+                    ++m_cancelledCalls;
+                    run.cancelled = true;
+                    return run;
+                }
+                QThread::msleep(10);
+            }
+            return run;
+        }
+
+    private:
+        std::atomic<int> &m_cancelledCalls;
+        std::atomic<bool> &m_started;
     };
 
 }
@@ -322,6 +357,30 @@ private Q_SLOTS:
         const qint64 middle = segments[1].start + segments[1].length / 2;
         QVERIFY(rt->mix(middle, 100, out.data()));
         QCOMPARE(out.front(), qint16(0));
+    }
+
+    // The destructor kills the running resampler instead of waiting for it, and removes the part
+    // of the fragment that it wrote, which a later render would otherwise reuse as complete.
+    void destruction_kills_the_running_resampler() {
+        const auto plan = planOf(fiveNotes());
+        QVERIFY(plan);
+        std::atomic<int> cancelledCalls{0};
+        std::atomic<bool> started{false};
+        auto rt =
+            std::make_unique<RealtimeSynth>(SynthTools{"resampler.exe", "wavtool.exe"}, 1, [&] {
+                return std::make_unique<BlockingStandIn>(cancelledCalls, started);
+            });
+        rt->setPlan(*plan);
+        QTRY_VERIFY_WITH_TIMEOUT(started.load(), 5000);
+
+        QElapsedTimer elapsed;
+        elapsed.start();
+        rt.reset();
+        QVERIFY2(elapsed.elapsed() < 2000, qPrintable(QString::number(elapsed.elapsed())));
+        QCOMPARE(cancelledCalls.load(), 1);
+        for (const auto &step : plan->steps()) {
+            QVERIFY(!fs::exists(step.cacheFile));
+        }
     }
 };
 
