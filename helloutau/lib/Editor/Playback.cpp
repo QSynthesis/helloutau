@@ -427,8 +427,15 @@ namespace hello::daw {
                     return -1;
                 }
                 std::vector<qint16> block(static_cast<size_t>(count));
-                if (!synth->waitReady(from, count, std::chrono::milliseconds(50)) ||
-                    !synth->mix(from, count, block.data())) {
+                constexpr auto wait = std::chrono::milliseconds(50);
+                if (!synth->waitReady(from, count, wait)) {
+                    return 0;
+                }
+                // mix() fails if the plan changed after waitReady() returned. The generator then
+                // waits once more instead of returning 0 at once, see StreamSource::Generator.
+                if (!synth->mix(from, count, block.data()) &&
+                    (!synth->waitReady(from, count, wait) ||
+                     !synth->mix(from, count, block.data()))) {
                     return 0;
                 }
                 for (qint64 i = 0; i < count; ++i) {
