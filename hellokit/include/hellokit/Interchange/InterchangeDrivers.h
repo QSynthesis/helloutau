@@ -8,10 +8,9 @@
 #include <QtCore/QString>
 
 #include <hellokit/Interchange/HelloKitInterchangeGlobal.h>
+#include <hellokit/Interchange/InterchangeConvertRegistry.h>
 #include <hellokit/Interchange/InterchangeReader.h>
-#include <hellokit/Interchange/InterchangeReaderRegistry.h>
 #include <hellokit/Interchange/InterchangeWriter.h>
-#include <hellokit/Interchange/InterchangeWriterRegistry.h>
 
 namespace hello::kit {
 

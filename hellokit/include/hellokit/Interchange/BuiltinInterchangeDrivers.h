@@ -4,8 +4,7 @@
 #include <QtCore/QtGlobal>
 
 #include <hellokit/Interchange/HelloKitInterchangeGlobal.h>
-#include <hellokit/Interchange/InterchangeReaderRegistry.h>
-#include <hellokit/Interchange/InterchangeWriterRegistry.h>
+#include <hellokit/Interchange/InterchangeConvertRegistry.h>
 
 namespace hello::kit {
 

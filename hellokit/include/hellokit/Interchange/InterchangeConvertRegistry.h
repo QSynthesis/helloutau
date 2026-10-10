@@ -1,10 +1,11 @@
-#ifndef HELLOKIT_INTERCHANGE_INTERCHANGEREADERREGISTRY_H
-#define HELLOKIT_INTERCHANGE_INTERCHANGEREADERREGISTRY_H
+#ifndef HELLOKIT_INTERCHANGE_INTERCHANGECONVERTREGISTRY_H
+#define HELLOKIT_INTERCHANGE_INTERCHANGECONVERTREGISTRY_H
 
 #include <stdcorelib/adt/linked_map.h>
 #include <stdcorelib/support/dynamicregistry.h>
 
 #include <hellokit/Interchange/InterchangeReader.h>
+#include <hellokit/Interchange/InterchangeWriter.h>
 
 namespace hello::kit {
 
@@ -21,6 +22,13 @@ namespace hello::kit {
         stdc::DynamicRegistry<InterchangeReader, stdc::dynamic_registry_traits<InterchangeReader>,
                               stdc::linked_map>;
 
+    /// The export drivers registered in a host, in the order of registration, as
+    /// InterchangeReaderRegistry for the import drivers. A driver that supports both directions
+    /// is registered in both registries under the same ID.
+    using InterchangeWriterRegistry =
+        stdc::DynamicRegistry<InterchangeWriter, stdc::dynamic_registry_traits<InterchangeWriter>,
+                              stdc::linked_map>;
+
 }
 
-#endif // HELLOKIT_INTERCHANGE_INTERCHANGEREADERREGISTRY_H
+#endif // HELLOKIT_INTERCHANGE_INTERCHANGECONVERTREGISTRY_H

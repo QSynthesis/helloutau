@@ -197,7 +197,7 @@ struct ImportResult {
 
 `InterchangeDrivers` 是一个宿主的驱动表，**内置格式与插件使用同一注册途径**，不区分主次。文件对话框的过滤器、按扩展名查找驱动、「导入为…」菜单均由该表生成。
 
-- 驱动登记在 `InterchangeDrivers` 持有的两个注册表中（形状见 [`Plugins.md`](Plugins.md)「注册接口」）：导入驱动登记到 `readerRegistry()`（`InterchangeReaderRegistry`），导出驱动登记到 `writerRegistry()`（`InterchangeWriterRegistry`），二者都是 `stdc::DynamicRegistry`。条目名称即驱动 ID，同时支持两个方向的驱动以同一 ID 在两个注册表中各登记一次。登记对象存在期间，驱动出现在该 `InterchangeDrivers` 中，析构即移除。
+- 驱动登记在 `InterchangeDrivers` 持有的两个注册表中（形状见 [`Plugins.md`](Plugins.md)「注册接口」）：导入驱动登记到 `readerRegistry()`（`InterchangeReaderRegistry`），导出驱动登记到 `writerRegistry()`（`InterchangeWriterRegistry`），二者都是 `stdc::DynamicRegistry`，定义于 `InterchangeConvertRegistry.h`。条目名称即驱动 ID，同时支持两个方向的驱动以同一 ID 在两个注册表中各登记一次。登记对象存在期间，驱动出现在该 `InterchangeDrivers` 中，析构即移除。
 - `InterchangeDrivers` 是 `QObject`，为每个条目创建一个驱动实例，按登记顺序；登记与注销时发出 `driversChanged()`。不再有 `addReader()` / `addWriter()`。
 - 同一 ID 的第二次登记失败，实例的 `id()` 与条目名称不同时被拒绝；同一扩展名由先登记的驱动处理。两条规则都使插件不能接管内置格式。
 - 内置驱动（MIDI 的读与写）由 `BuiltinInterchangeDrivers` 登记，Interchange 插件（ID `org.helloutau.interchange`，目录 `Interchange`，依赖 Core，作者 2026-09-30 定）为其 `InterchangeService` 的驱动表持有它。需要这些驱动的测试构造自己的 `InterchangeDrivers` 与 `BuiltinInterchangeDrivers`。
