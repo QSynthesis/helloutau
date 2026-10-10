@@ -4,13 +4,16 @@
 #include <QtCore/QDir>
 #include <QtCore/QRegularExpression>
 #include <QtCore/QTemporaryDir>
+#include <QtCore/QTimer>
 #include <QtCore/QTranslator>
 #include <QtGui/QAction>
 #include <QtTest/QTest>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QCheckBox>
+#include <QtWidgets/QDialogButtonBox>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QLineEdit>
+#include <QtWidgets/QMessageBox>
 #include <QtWidgets/QPushButton>
 
 #include <helloutau/Editor/AppSettings.h>
@@ -97,6 +100,35 @@ namespace {
         return tools;
     }
 
+    // Creates the voice bank bank in the voice folder of settings, and resampler.exe and
+    // tools\wavtool.exe in a UTAU directory, which settings uses. Returns the UTAU directory.
+    fs::path utauWithSynthToolsIn(const QTemporaryDir &dir, AppSettings &settings) {
+        fs::create_directories(settings.voiceFolder() / "bank");
+        const auto utau = pathIn(dir, "utau");
+        fs::create_directories(utau / "tools");
+        writeFile(utau / "resampler.exe");
+        writeFile(utau / "tools" / "wavtool.exe");
+        settings.setUtauDirectory(utau);
+        return utau;
+    }
+
+    // Clicks the OK button of dialog. Returns whether a message box was shown, after closing the
+    // message box.
+    bool warnsOnOk(QDialog &dialog) {
+        bool warned = false;
+        QTimer timer;
+        timer.setSingleShot(true);
+        QObject::connect(&timer, &QTimer::timeout, [&warned] {
+            const auto box = qobject_cast<QMessageBox *>(QApplication::activeModalWidget());
+            if (box) {
+                warned = true;
+                box->button(QMessageBox::Ok)->click();
+            }
+        });
+        timer.start(0);
+        dialog.findChild<QDialogButtonBox *>()->button(QDialogButtonBox::Ok)->click();
+        return warned;
+    }
 
 }
 
@@ -294,6 +326,118 @@ private Q_SLOTS:
             }
         }
         QCOMPARE(spans, 3);
+    }
+
+    // Without a change, the changes are empty even if the voice folder and the synth tools are
+    // not normalized.
+    void unchanged_fields_are_not_normalized() {
+        QTemporaryDir dir;
+        AppSettings settings(dir.filePath(QStringLiteral("settings.json")));
+        const auto utau = utauWithSynthToolsIn(dir, settings);
+        kit::Project project;
+        project.tracks.push_back({});
+        project.tracks[0].voiceDir = textOf(settings.voiceFolder() / "bank");
+        project.settings.wavtool = textOf(utau / "tools" / ".." / "tools" / "wavtool.exe");
+        project.settings.resampler = textOf(utau / "resampler.exe");
+        ProjectPropertiesDialog dialog(project, settings);
+        QVERIFY(dialog.changes().isEmpty());
+    }
+
+    // A change of another field normalizes the voice folder and the synth tools as well.
+    void a_change_normalizes_the_voice_folder_and_the_synth_tools() {
+        QTemporaryDir dir;
+        AppSettings settings(dir.filePath(QStringLiteral("settings.json")));
+        const auto utau = utauWithSynthToolsIn(dir, settings);
+        kit::Project project;
+        project.tracks.push_back({});
+        project.tracks[0].voiceDir = textOf(settings.voiceFolder() / "bank");
+        project.settings.wavtool = textOf(utau / "tools" / ".." / "tools" / "wavtool.exe");
+        project.settings.resampler = textOf(utau / "resampler.exe");
+        ProjectPropertiesDialog dialog(project, settings);
+
+        dialog.nameEdit()->setText(QStringLiteral("other"));
+        const auto changes = dialog.changes();
+        QCOMPARE(changes.name, std::optional(QStringLiteral("other")));
+        QCOMPARE(changes.voiceDir, std::optional(QStringLiteral("%VOICE%bank")));
+        QCOMPARE(changes.wavtool, std::optional(QStringLiteral("tools\\wavtool.exe")));
+        QCOMPARE(changes.resampler, std::optional(QStringLiteral("resampler.exe")));
+        QVERIFY(!changes.tempo && !changes.flags && !changes.outputFile && !changes.mode2);
+    }
+
+    // A field whose normalized value equals the value of the project is left out of the changes.
+    // A %VOICE% value, a relative voice folder, a synth tool relative to the UTAU directory and
+    // an absolute synth tool outside the UTAU directory are normalized.
+    void normalized_values_are_left_out_of_the_changes() {
+        QTemporaryDir dir;
+        AppSettings settings(dir.filePath(QStringLiteral("settings.json")));
+        utauWithSynthToolsIn(dir, settings);
+        const auto outside = pathIn(dir, "resampler.exe");
+        writeFile(outside);
+        kit::Project project;
+        project.tracks.push_back({});
+        project.settings.wavtool = QStringLiteral("tools\\wavtool.exe");
+        project.settings.resampler = textOf(outside);
+        for (const auto &voiceDir : {QStringLiteral("%VOICE%bank"), QStringLiteral("bank")}) {
+            project.tracks[0].voiceDir = voiceDir;
+            ProjectPropertiesDialog dialog(project, settings);
+            dialog.nameEdit()->setText(QStringLiteral("other"));
+            const auto changes = dialog.changes();
+            QVERIFY(changes.name);
+            QVERIFY(!changes.voiceDir);
+            QVERIFY(!changes.wavtool);
+            QVERIFY(!changes.resampler);
+        }
+    }
+
+    // The normalized paths use slashes if they begin with a slash, or else backslashes.
+    void normalized_paths_use_the_separators_of_a_saved_project() {
+        QTemporaryDir dir;
+        AppSettings settings(dir.filePath(QStringLiteral("settings.json")));
+        kit::Project project;
+        project.tracks.push_back({});
+        ProjectPropertiesDialog dialog(project, settings);
+
+        dialog.voiceDirEdit()->setText(QStringLiteral("/voice\\bank"));
+        dialog.wavtoolEdit()->setText(QStringLiteral("/tools\\wavtool.exe"));
+        dialog.resamplerEdit()->setText(QStringLiteral("tools/resampler.exe"));
+        const auto changes = dialog.changes();
+        QCOMPARE(changes.voiceDir, std::optional(QStringLiteral("/voice/bank")));
+        QCOMPARE(changes.wavtool, std::optional(QStringLiteral("/tools/wavtool.exe")));
+        QCOMPARE(changes.resampler, std::optional(QStringLiteral("tools\\resampler.exe")));
+    }
+
+    // Without a change, the dialog is accepted even if a path is invalid. A change requires the
+    // voice folder and the synth tools to be valid.
+    void a_change_requires_valid_paths() {
+        QTemporaryDir dir;
+        AppSettings settings(dir.filePath(QStringLiteral("settings.json")));
+        utauWithSynthToolsIn(dir, settings);
+        kit::Project project;
+        project.tracks.push_back({});
+        project.tracks[0].voiceDir = QStringLiteral("%VOICE%missing");
+        project.settings.wavtool = QStringLiteral("missing.exe");
+        project.settings.resampler = QStringLiteral("missing.exe");
+        {
+            ProjectPropertiesDialog dialog(project, settings);
+            QVERIFY(!warnsOnOk(dialog));
+            QCOMPARE(dialog.result(), int(QDialog::Accepted));
+        }
+
+        project.tracks[0].voiceDir = QStringLiteral("%VOICE%bank");
+        project.settings.wavtool = QStringLiteral("tools\\wavtool.exe");
+        project.settings.resampler = QStringLiteral("resampler.exe");
+        ProjectPropertiesDialog dialog(project, settings);
+        dialog.nameEdit()->setText(QStringLiteral("other"));
+        for (const auto edit :
+             {dialog.voiceDirEdit(), dialog.wavtoolEdit(), dialog.resamplerEdit()}) {
+            const auto valid = edit->text();
+            edit->setText(QStringLiteral("missing"));
+            QVERIFY(warnsOnOk(dialog));
+            QCOMPARE(dialog.result(), int(QDialog::Rejected));
+            edit->setText(valid);
+        }
+        QVERIFY(!warnsOnOk(dialog));
+        QCOMPARE(dialog.result(), int(QDialog::Accepted));
     }
 };
 
