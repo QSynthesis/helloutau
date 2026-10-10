@@ -6,6 +6,8 @@
 #include <QtWidgets/QDoubleSpinBox>
 #include <QtWidgets/QLineEdit>
 
+#include <stdutau/utaconst.h>
+
 #include <helloutau/Editor/Dialogs/NotePropertiesDialog.h>
 
 using namespace hello;
@@ -60,6 +62,51 @@ private Q_SLOTS:
         tempo.followBox()->setChecked(false);
         tempo.tempoBox()->setValue(96);
         QCOMPARE(tempo.tempo(), std::optional(96.0));
+    }
+
+    // A default is shown as a number if every note has it and all are equal, and as (various)
+    // if the notes differ. A pre-utterance or an overlap without a sample is left to the voice
+    // bank. Without defaults, the defaults are unknown.
+    void the_defaults_of_the_notes_are_shown() {
+        kit::Note note;
+        note.lyric = QStringLiteral("a");
+        note.length = 480;
+        using F = NotePropertiesDialog;
+        const auto placeholder = [note](const QList<F::Defaults> &defaults, F::Field field) {
+            NotePropertiesDialog dialog({note, note}, defaults);
+            return dialog.field(field)->placeholderText();
+        };
+        const QList<F::Defaults> same = {
+            {120, 12, 3},
+            {120, 12, 3},
+        };
+        QCOMPARE(placeholder(same, F::Tempo), QStringLiteral("(default: 120)"));
+        QCOMPARE(placeholder(same, F::PreUtterance), QStringLiteral("(default: 12)"));
+        QCOMPARE(placeholder(same, F::VoiceOverlap), QStringLiteral("(default: 3)"));
+
+        const QList<F::Defaults> unsampled = {
+            {120, 12,           3           },
+            {150, std::nullopt, std::nullopt},
+        };
+        QCOMPARE(placeholder(unsampled, F::Tempo), QStringLiteral("(various)"));
+        QCOMPARE(placeholder(unsampled, F::PreUtterance), QStringLiteral("(default: voice bank)"));
+        QCOMPARE(placeholder(unsampled, F::VoiceOverlap), QStringLiteral("(default: voice bank)"));
+
+        QCOMPARE(placeholder({}, F::Tempo), QStringLiteral("(follows the tempo before)"));
+        QCOMPARE(placeholder({}, F::PreUtterance), QStringLiteral("(default: voice bank)"));
+    }
+
+    // The tempo of the note is kept unless it is edited, even if it is out of the range of the
+    // box, which is the range of UTAU.
+    void the_tempo_dialog_keeps_an_unedited_tempo() {
+        TempoDialog dialog(600.0, 120);
+        QCOMPARE(dialog.tempoBox()->minimum(), utau::VALUE_TEMPO_MIN);
+        QCOMPARE(dialog.tempoBox()->maximum(), utau::VALUE_TEMPO_MAX);
+        QVERIFY(!dialog.followBox()->isChecked());
+        QCOMPARE(dialog.tempo(), std::optional(600.0));
+
+        dialog.tempoBox()->setValue(140);
+        QCOMPARE(dialog.tempo(), std::optional(140.0));
     }
 };
 
