@@ -14,6 +14,7 @@
 #include <QtCore/QThread>
 #include <QtTest/QTest>
 
+#include <hellokit/Support/TextCodec.h>
 #include <hellokit/Synth/ClassicSynthRunner.h>
 #include <hellokit/Synth/SynthToolProcess.h>
 #include <hellokit/Synth/private/ShellSyntax_p.h>
@@ -190,6 +191,18 @@ private:
             result.push_back(std::filesystem::exists(step.cacheFile));
         }
         return result;
+    }
+
+    /// Returns the first of \a candidates that the system code page represents if
+    /// \a representable, or cannot represent otherwise, or an empty string if none.
+    static QString systemCandidate(bool representable, const QStringList &candidates) {
+        const TextCodec codec;
+        for (const auto &candidate : candidates) {
+            if (codec.canEncode(candidate) == representable) {
+                return candidate;
+            }
+        }
+        return {};
     }
 
 private Q_SLOTS:
@@ -787,6 +800,58 @@ private Q_SLOTS:
         DiagnosticList diagnostics;
         runner.render(*p, synthTools(), nullptr, diagnostics);
         QCOMPARE(existing(*p), (QList<bool>{true, true, true}));
+    }
+
+    // The command processor reads a batch file in the system code page. A character outside it
+    // is refused, with the character in the message, rather than written as a question mark as
+    // UTAU does, which leaves the note silent without a report.
+    void a_character_outside_the_system_code_page_is_refused() {
+        const TextCodec codec;
+        if (codec.isUtf8()) {
+            QSKIP("The system code page is UTF-8, which represents every character.");
+        }
+        const auto outside = systemCandidate(false, {QString::fromUtf8("\xF0\xA0\xAE\xB7"),
+                                                     QString::fromUtf8("\xE4\xBD\xA0"),
+                                                     QString::fromUtf8("\xE6\xAD\x8C")});
+        QVERIFY(!outside.isEmpty());
+        const auto plan = planFor(outside, QString());
+        QVERIFY(plan.has_value());
+
+        ClassicSynthRunner runner;
+        DiagnosticList diagnostics;
+        QVERIFY(!runner.scriptFiles(root() / "scripts", *plan, synthTools(), diagnostics));
+        QVERIFY(hasError(diagnostics));
+        QVERIFY2(diagnostics.last().message.contains(outside),
+                 qPrintable(diagnostics.last().message));
+    }
+
+    // A character inside the system code page is written in it, through TextCodec.
+    void a_script_is_written_in_the_system_code_page() {
+        const TextCodec codec;
+        const auto inside = systemCandidate(
+            true, {QString::fromUtf8("\xE6\xAD\x8C"), QString::fromUtf8("\xC3\xA9")});
+        if (inside.isEmpty()) {
+            QSKIP("The system code page represents no candidate.");
+        }
+        const auto plan = planFor(inside, QString());
+        QVERIFY(plan.has_value());
+
+        ClassicSynthRunner runner;
+        DiagnosticList diagnostics;
+        const auto files = runner.scriptFiles(root() / "scripts", *plan, synthTools(), diagnostics);
+        QVERIFY(files.has_value());
+        const auto text = codec.decode(files->first().second);
+        QVERIFY(text.has_value());
+        QVERIFY(text->contains(inside));
+    }
+
+    // A quote in the flags is removed by stdutau, so that it does not refuse the script.
+    void a_quote_in_the_flags_does_not_refuse_the_script() {
+        const auto plan = planFor(QStringLiteral("a"), QStringLiteral("g\"5"));
+        QVERIFY(plan.has_value());
+        ClassicSynthRunner runner;
+        DiagnosticList diagnostics;
+        QVERIFY(runner.scriptFiles(root() / "scripts", *plan, synthTools(), diagnostics));
     }
 };
 
