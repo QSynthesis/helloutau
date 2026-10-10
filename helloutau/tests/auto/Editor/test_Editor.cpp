@@ -2593,15 +2593,21 @@ private Q_SLOTS:
             settings.setWavtool(wavtoolText);
             settings.setResampler(resamplerText);
             tx.commit();
+            // A message box instead of the file dialog is closed, so that it does not block.
             QString proposal;
-            QTimer::singleShot(0, [&proposal] {
-                const auto dialog = qobject_cast<QFileDialog *>(QApplication::activeModalWidget());
-                if (dialog) {
+            QTimer timer;
+            timer.setInterval(10);
+            QObject::connect(&timer, &QTimer::timeout, [&proposal] {
+                const auto widget = QApplication::activeModalWidget();
+                if (const auto dialog = qobject_cast<QFileDialog *>(widget)) {
                     const auto files = dialog->selectedFiles();
                     proposal = files.isEmpty() ? QString() : files.constFirst();
                     dialog->reject();
+                } else if (const auto box = qobject_cast<QMessageBox *>(widget)) {
+                    box->reject();
                 }
             });
+            timer.start();
             renderTrack->trigger();
             return proposal;
         };
