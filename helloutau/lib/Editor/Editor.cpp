@@ -29,7 +29,7 @@
 #include <hellokit/VoiceBank/VoiceBank.h>
 
 #include <helloutau/Theme/ThemeManager.h>
-#include <helloutau/Audio/AudioOutput.h>
+#include <helloutau/Audio/AudioEngine.h>
 #include <helloutau/Widgets/CommandPalette.h>
 #include <helloutau/Widgets/SettingPage.h>
 #include <helloutau/Widgets/SettingsDialog.h>
@@ -120,7 +120,7 @@ namespace hello::daw {
         }
 
         void init(Editor *decl) {
-            AudioOutput::setOutputDeviceId(settings->audioOutputDevice());
+            AudioEngine::instance()->setDeviceId(settings->audioOutputDevice());
             editor = decl;
             // An action registry for each kind of window
             for (const auto kind : Editor::windowKinds) {

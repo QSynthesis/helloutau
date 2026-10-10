@@ -138,6 +138,23 @@ namespace hello::daw {
         return QMediaDevices::defaultAudioOutput();
     }
 
+    QList<QByteArray> AudioEngine::deviceIds() {
+        QList<QByteArray> ids;
+        for (const auto &device : QMediaDevices::audioOutputs()) {
+            ids.push_back(device.id());
+        }
+        return ids;
+    }
+
+    QString AudioEngine::deviceDescription(const QByteArray &id) {
+        for (const auto &device : QMediaDevices::audioOutputs()) {
+            if (device.id() == id) {
+                return device.description();
+            }
+        }
+        return {};
+    }
+
     int AudioEngine::sampleRate() const {
         stdc_impl_t;
         return sampleRate(impl.id);

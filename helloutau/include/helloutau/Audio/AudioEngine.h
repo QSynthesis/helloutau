@@ -5,6 +5,7 @@
 #include <optional>
 
 #include <QtCore/QByteArray>
+#include <QtCore/QList>
 #include <QtCore/QObject>
 #include <QtCore/QString>
 #include <QtMultimedia/QAudioDevice>
@@ -35,6 +36,13 @@ namespace hello::daw {
 
         /// Returns the device with \a id, or the default device if \a id is empty or absent.
         static QAudioDevice device(const QByteArray &id);
+
+        /// Returns the IDs of the output devices.
+        static QList<QByteArray> deviceIds();
+
+        /// Returns the description of the output device with \a id, or an empty string if the
+        /// device is absent.
+        static QString deviceDescription(const QByteArray &id);
 
         /// Returns the sample rate of the open device stream if it is on the selected device, or
         /// else the preferred sample rate of the selected device. Returns 0 if no output device

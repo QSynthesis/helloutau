@@ -2,8 +2,6 @@
 
 #include <QtCore/QPointer>
 #include <QtCore/QTimer>
-#include <QtMultimedia/QMediaDevices>
-#include <QtMultimedia/QAudioDevice>
 
 #include <stdcorelib/pimpl.h>
 
@@ -56,39 +54,6 @@ namespace hello::daw {
         if (impl.id && impl.engine) {
             impl.engine->stop(*impl.id);
         }
-    }
-
-    int AudioOutput::deviceSampleRate() {
-        return AudioEngine::instance()->sampleRate();
-    }
-
-    QList<QByteArray> AudioOutput::outputDeviceIds() {
-        QList<QByteArray> ids;
-        for (const auto &device : QMediaDevices::audioOutputs()) {
-            ids.push_back(device.id());
-        }
-        return ids;
-    }
-
-    QString AudioOutput::outputDeviceDescription(const QByteArray &id) {
-        for (const auto &device : QMediaDevices::audioOutputs()) {
-            if (device.id() == id) {
-                return device.description();
-            }
-        }
-        return {};
-    }
-
-    QByteArray AudioOutput::outputDeviceId() {
-        return AudioEngine::instance()->deviceId();
-    }
-
-    void AudioOutput::setOutputDeviceId(const QByteArray &id) {
-        AudioEngine::instance()->setDeviceId(id);
-    }
-
-    int AudioOutput::deviceSampleRate(const QByteArray &id) {
-        return AudioEngine::instance()->sampleRate(id);
     }
 
     bool AudioOutput::start(std::shared_ptr<AudioSource> source, int sampleRate, QString *error) {

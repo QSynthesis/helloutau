@@ -6,7 +6,6 @@
 
 #include <QtCore/QObject>
 #include <QtCore/QByteArray>
-#include <QtCore/QList>
 #include <QtCore/QString>
 
 #include <helloutau/Audio/HelloUtauAudioGlobal.h>
@@ -22,19 +21,6 @@ namespace hello::daw {
     public:
         explicit AudioOutput(QObject *parent = nullptr);
         ~AudioOutput() override;
-
-        /// Returns the sample rate to which a source must be converted, see
-        /// AudioEngine::sampleRate().
-        static int deviceSampleRate();
-
-        /// Returns the sample rate to which a source for the device with \a id must be
-        /// converted, see AudioEngine::sampleRate(const QByteArray &).
-        static int deviceSampleRate(const QByteArray &id);
-
-        static QList<QByteArray> outputDeviceIds();
-        static QString outputDeviceDescription(const QByteArray &id);
-        static QByteArray outputDeviceId();
-        static void setOutputDeviceId(const QByteArray &id);
 
         /// Replaces this handle's source, whose samples are at \a sampleRate. The source is
         /// rejected if \a sampleRate differs from the rate of the device stream, as for samples

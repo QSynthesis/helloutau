@@ -36,6 +36,7 @@
 #include <hellokit/Synth/PitchCurve.h>
 #include <hellokit/VoiceBank/VoiceBank.h>
 
+#include <helloutau/Audio/AudioEngine.h>
 #include <helloutau/Audio/AudioOutput.h>
 #include <helloutau/Audio/PianoToneSource.h>
 #include <helloutau/Widgets/PianoKeyboard.h>
@@ -117,7 +118,7 @@ namespace hello::daw {
         impl.keyboard = new PianoKeyboard(impl.view);
         auto keyOutput = new AudioOutput(this);
         connect(impl.keyboard, &PianoKeyboard::keyPressed, this, [keyOutput](int key) {
-            const int rate = AudioOutput::deviceSampleRate();
+            const int rate = AudioEngine::instance()->sampleRate();
             if (rate <= 0) {
                 return;
             }

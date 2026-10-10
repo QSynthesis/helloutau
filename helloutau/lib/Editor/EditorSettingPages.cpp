@@ -26,6 +26,7 @@
 #include "Restarter.h"
 #include "Translations.h"
 
+#include <helloutau/Audio/AudioEngine.h>
 #include <helloutau/Audio/AudioOutput.h>
 #include <helloutau/Audio/SineWaveSource.h>
 
@@ -269,8 +270,8 @@ namespace hello::daw {
         const auto selected = m_settings.audioOutputDevice();
         int selectedIndex = 0;
         int index = 1;
-        for (const auto &id : AudioOutput::outputDeviceIds()) {
-            m_output->addItem(AudioOutput::outputDeviceDescription(id), id);
+        for (const auto &id : AudioEngine::deviceIds()) {
+            m_output->addItem(AudioEngine::deviceDescription(id), id);
             if (id == selected) {
                 selectedIndex = index;
             }
@@ -285,7 +286,7 @@ namespace hello::daw {
         // The tone plays on the device selected in the box, which need not be applied yet.
         connect(test, &QPushButton::clicked, widget, [this, widget] {
             const auto id = m_output->currentData().toByteArray();
-            const int rate = AudioOutput::deviceSampleRate(id);
+            const int rate = AudioEngine::instance()->sampleRate(id);
             QString error = tr("There is no audio output device.");
             if (rate > 0) {
                 auto output = new AudioOutput(widget);
@@ -309,7 +310,7 @@ namespace hello::daw {
         Q_UNUSED(error);
         const auto id = m_output->currentData().toByteArray();
         m_settings.setAudioOutputDevice(id);
-        AudioOutput::setOutputDeviceId(id);
+        AudioEngine::instance()->setDeviceId(id);
         Q_EMIT modifiedChanged();
         return true;
     }

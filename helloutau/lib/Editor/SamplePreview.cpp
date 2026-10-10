@@ -15,6 +15,7 @@
 #include <hellokit/Document/Project.h>
 #include <hellokit/Synth/SynthPlan.h>
 
+#include <helloutau/Audio/AudioEngine.h>
 #include <helloutau/Audio/AudioOutput.h>
 #include <helloutau/Audio/BufferSource.h>
 #include <helloutau/Audio/SampleRateConversion.h>
@@ -224,7 +225,7 @@ namespace hello::daw {
             fail(diagnostics, tr("The audio file does not read."));
             return false;
         }
-        const int rate = AudioOutput::deviceSampleRate();
+        const int rate = AudioEngine::instance()->sampleRate();
         if (rate <= 0) {
             fail(diagnostics, tr("There is no audio output device."));
             return false;
@@ -272,7 +273,7 @@ namespace hello::daw {
         job->process = impl.process;
         job->process->workingDirectory =
             std::filesystem::path(impl.directory->path().toStdU16String());
-        job->deviceRate = AudioOutput::deviceSampleRate();
+        job->deviceRate = AudioEngine::instance()->sampleRate();
         impl.job = job;
 
         const auto worker = QThread::create([recipient = impl.recipient, job] {

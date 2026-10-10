@@ -47,7 +47,7 @@
 #include <hellokit/VoiceBank/BuiltinFrequencyFormats.h>
 #include <hellokit/VoiceBank/FrequencyFormats.h>
 
-#include <helloutau/Audio/AudioOutput.h>
+#include <helloutau/Audio/AudioEngine.h>
 #include <helloutau/Widgets/CommandPalette.h>
 #include <helloutau/Widgets/FindBar.h>
 #include <helloutau/Widgets/SettingPage.h>
@@ -2176,7 +2176,7 @@ private Q_SLOTS:
 
     // Play Audio File plays the audio of the current entry, and again stops it.
     void the_audio_file_of_the_current_entry_plays() {
-        if (AudioOutput::deviceSampleRate() <= 0) {
+        if (AudioEngine::instance()->sampleRate() <= 0) {
             QSKIP("This machine has no audio output device.");
         }
         QTemporaryDir dir;

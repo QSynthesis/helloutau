@@ -22,6 +22,7 @@
 #include <hellokit/Synth/WavtoolMixer.h>
 #include <hellokit/VoiceBank/VoiceBank.h>
 
+#include <helloutau/Audio/AudioEngine.h>
 #include <helloutau/Audio/AudioOutput.h>
 #include <helloutau/Audio/BufferSource.h>
 #include <helloutau/Audio/SampleRateConversion.h>
@@ -778,7 +779,7 @@ namespace hello::daw {
             fail(diagnostics, tr("The project has no voice bank to sing with."));
             return false;
         }
-        const int deviceRate = AudioOutput::deviceSampleRate();
+        const int deviceRate = AudioEngine::instance()->sampleRate();
         if (deviceRate <= 0) {
             fail(diagnostics, tr("There is no audio output device."));
             return false;
@@ -857,7 +858,7 @@ namespace hello::daw {
                  tr("Set the wavtool and the resampler in the project properties first."));
             return false;
         }
-        const int deviceRate = AudioOutput::deviceSampleRate();
+        const int deviceRate = AudioEngine::instance()->sampleRate();
         if (deviceRate <= 0) {
             fail(diagnostics, tr("There is no audio output device."));
             return false;

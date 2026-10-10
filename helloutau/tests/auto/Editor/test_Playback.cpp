@@ -12,7 +12,7 @@
 #include <hellokit/Edit/ProjectRefs.h>
 #include <hellokit/Synth/SynthPlan.h>
 
-#include <helloutau/Audio/AudioOutput.h>
+#include <helloutau/Audio/AudioEngine.h>
 
 #include <helloutau/Editor/Playback.h>
 
@@ -220,7 +220,7 @@ private Q_SLOTS:
 
     // The selection is rendered, into the cache of the document, then played to its end.
     void a_render_is_played_to_its_end() {
-        if (AudioOutput::deviceSampleRate() <= 0) {
+        if (AudioEngine::instance()->sampleRate() <= 0) {
             QSKIP("This machine has no audio output device.");
         }
         QTemporaryDir dir;
@@ -286,7 +286,7 @@ private Q_SLOTS:
     // While a render plays, the playhead moves with what the device plays, from where the track
     // file starts.
     void the_playhead_follows_a_render_as_it_plays() {
-        if (AudioOutput::deviceSampleRate() <= 0) {
+        if (AudioEngine::instance()->sampleRate() <= 0) {
             QSKIP("This machine has no audio output device.");
         }
         QTemporaryDir dir;
@@ -314,7 +314,7 @@ private Q_SLOTS:
     // A render plays again without the synth tools while its notes stay the same, and is rendered
     // anew once they change.
     void a_render_plays_again_while_its_notes_stay() {
-        if (AudioOutput::deviceSampleRate() <= 0) {
+        if (AudioEngine::instance()->sampleRate() <= 0) {
             QSKIP("This machine has no audio output device.");
         }
         QTemporaryDir dir;
@@ -360,7 +360,7 @@ private Q_SLOTS:
 
     // A paused render keeps where it was, and goes on from there.
     void a_render_pauses_and_goes_on() {
-        if (AudioOutput::deviceSampleRate() <= 0) {
+        if (AudioEngine::instance()->sampleRate() <= 0) {
             QSKIP("This machine has no audio output device.");
         }
         QTemporaryDir dir;
@@ -404,7 +404,7 @@ private Q_SLOTS:
     // A preview plays from the time asked for to the end, here within the second note, reading
     // the fragments in the cache rather than running the resampler, which here does not exist.
     void a_preview_plays_from_a_time_to_the_end() {
-        if (AudioOutput::deviceSampleRate() <= 0) {
+        if (AudioEngine::instance()->sampleRate() <= 0) {
             QSKIP("This machine has no audio output device.");
         }
         QTemporaryDir dir;
