@@ -1803,7 +1803,7 @@ namespace hello::daw {
             const auto search = FindSupport::searchOf(findBar);
             const auto matches = lyricMatches(search);
             const auto selected = roll->selectedIndices();
-            const auto at = FindSupport::adjacentMatch(
+            const auto at = FindMatches::adjacentMatch(
                 matches, selected.isEmpty() ? -1 : selected.first(), forward, inclusive);
             if (at) {
                 const int index = matches[*at];

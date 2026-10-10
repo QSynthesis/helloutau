@@ -179,9 +179,9 @@ namespace hello::daw {
         const auto lyric = drawn ? QString::fromLatin1(kit::defaultLyric) : note->lyric;
         QList<QRectF> matches;
         if (note && m_state->lyricSearch.isValid()) {
-            matches = FindSupport::matchRects(QFontMetricsF(painter.font()), textRect,
-                                              Qt::AlignLeft | Qt::AlignVCenter, lyric,
-                                              m_state->lyricSearch.matchesIn(lyric));
+            matches = FindMatches::matchRects(
+                QFontMetricsF(painter.font()), textRect, Qt::AlignLeft | Qt::AlignVCenter, lyric,
+                FindSupport::rangesOf(m_state->lyricSearch.matchesIn(lyric)));
         }
         for (const auto &match : std::as_const(matches)) {
             painter.fillRect(match & textRect, decl->findMatchColor());

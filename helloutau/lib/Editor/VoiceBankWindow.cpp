@@ -159,7 +159,8 @@ namespace hello::daw {
                 }
                 auto item = option;
                 initStyleOption(&item, index);
-                FindSupport::drawItemMatches(painter, item, matches, FindSupport::matchColor());
+                FindMatches::drawItemMatches(painter, item, FindSupport::rangesOf(matches),
+                                             FindMatches::matchColor());
             }
         };
 
@@ -1059,7 +1060,7 @@ namespace hello::daw {
             const auto search = FindSupport::searchOf(findBar);
             const auto matches = entryMatches(search);
             if (const auto at =
-                    FindSupport::adjacentMatch(matches, currentShownRow(), forward, inclusive)) {
+                    FindMatches::adjacentMatch(matches, currentShownRow(), forward, inclusive)) {
                 selectRows({sourceRowOf(matches[*at])});
             }
             updateFindResult();
