@@ -323,6 +323,32 @@ private:
         return SynthPlan::make(project, *bank, options, diagnostics);
     }
 
+    /// A plan of two notes, of which the first has \c $direct and passes its sample directly.
+    std::optional<SynthPlan> directPlan() {
+        write(QStringLiteral("bank/oto.ini"), "a.wav=a,10,20,30,40,5\n");
+        write(QStringLiteral("bank/a.wav"), "RIFF");
+        FixedCharsetSelector selector(QStringLiteral("UTF-8"));
+        DiagnosticList diagnostics;
+        const auto bank = VoiceBank::open(root() / "bank", &selector, diagnostics);
+        if (!bank) {
+            return std::nullopt;
+        }
+        Project project;
+        project.tracks.push_back({});
+        for (int i = 0; i < 2; ++i) {
+            Note note;
+            note.lyric = QStringLiteral("a");
+            note.noteNum = 60 + i;
+            note.length = 480;
+            project.tracks[0].notes.push_back(note);
+        }
+        project.tracks[0].notes[0].direct = QStringLiteral("True");
+        SynthPlan::Options options;
+        options.cacheDirectory = root() / "cache";
+        options.outputFile = root() / "out.wav";
+        return SynthPlan::make(project, *bank, options, diagnostics);
+    }
+
 private Q_SLOTS:
     void init() {
         m_dir = std::make_unique<QTemporaryDir>();
@@ -820,6 +846,31 @@ private Q_SLOTS:
             QVERIFY2(file.open(QIODevice::ReadOnly), qPrintable(file.fileName()));
             QCOMPARE(file.readAll(), bytes);
         }
+    }
+
+    // A note with $direct passes its sample to the wavtool. No resampler runs for it, and the
+    // file is never removed as a fragment, also not by a cancelled render.
+    void a_direct_note_runs_no_resampler_and_keeps_its_file() {
+        const auto p = directPlan();
+        QVERIFY(p.has_value());
+        QVERIFY(p->steps().at(0).direct);
+        const auto sample = p->steps().at(0).sample;
+
+        SynthToolLog log;
+        const auto synthTools = somewhere();
+        StubbedRunner runner(&log, synthTools, rendersTo(p->steps().at(1).cacheFile),
+                             appends(p->outputFile()));
+        DiagnosticList diagnostics;
+        const auto outcome = runner.render(*p, synthTools, nullptr, diagnostics);
+        QVERIFY(outcome.rendered);
+        QCOMPARE(outcome.direct, 1);
+        QCOMPARE(log.resampled(), 1);
+        QVERIFY(std::filesystem::exists(sample));
+
+        Recorder recorder;
+        recorder.cancelAt = 0;
+        runner.render(*p, synthTools, &recorder, diagnostics);
+        QVERIFY(std::filesystem::exists(sample));
     }
 };
 
