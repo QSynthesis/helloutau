@@ -1,7 +1,8 @@
 #include <QtTest/QTest>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QCheckBox>
-#include <QtWidgets/QTextEdit>
+#include <QtWidgets/QLabel>
+#include <QtWidgets/QPlainTextEdit>
 
 #include <helloutau/Editor/Dialogs/ReplaceLyricsDialog.h>
 
@@ -29,7 +30,7 @@ private Q_SLOTS:
         ReplaceLyricsDialog dialog;
         dialog.setLyrics(QStringLiteral("a i  u"));
         QCOMPARE(dialog.lyrics(), QStringLiteral("a i  u"));
-        const auto edit = dialog.findChild<QTextEdit *>();
+        const auto edit = dialog.findChild<QPlainTextEdit *>();
         QVERIFY(edit);
         QVERIFY(edit->textCursor().hasSelection());
         QCOMPARE(edit->textCursor().selectedText(), QStringLiteral("a i  u"));
@@ -48,6 +49,19 @@ private Q_SLOTS:
         QVERIFY(!dialog.splitCharacters());
         split->setChecked(true);
         QVERIFY(dialog.splitCharacters());
+    }
+
+    // The label of the lyrics describes the separation that the option selects.
+    void the_label_follows_the_split_option() {
+        ReplaceLyricsDialog dialog;
+        const auto label = dialog.findChild<QLabel *>();
+        const auto split = checkBoxOf(dialog, QStringLiteral("Split by character"));
+        QVERIFY(label && split);
+        const auto bySpaces = label->text();
+        split->setChecked(true);
+        QVERIFY(label->text() != bySpaces);
+        split->setChecked(false);
+        QCOMPARE(label->text(), bySpaces);
     }
 };
 

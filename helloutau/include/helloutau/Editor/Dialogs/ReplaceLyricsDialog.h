@@ -6,13 +6,13 @@
 #include <helloutau/Editor/HelloUtauEditorGlobal.h>
 
 class QCheckBox;
-class QTextEdit;
+class QPlainTextEdit;
 
 namespace hello::daw {
 
-    /// Asks the lyrics with which to replace those of the selected notes, separated by spaces,
-    /// and whether they repeat to fill the selection and are split by character. The caller
-    /// assigns the lyrics to the notes.
+    /// Dialog for the lyrics that replace those of the selected notes, separated by spaces or one
+    /// per character, and for whether they repeat to fill the selection. The caller assigns the
+    /// lyrics to the notes.
     class HELLOUTAU_EDITOR_EXPORT ReplaceLyricsDialog : public QDialog {
         Q_OBJECT
     public:
@@ -32,7 +32,7 @@ namespace hello::daw {
         void setLyrics(const QString &lyrics);
 
     private:
-        QTextEdit *m_lyrics = nullptr;
+        QPlainTextEdit *m_lyrics = nullptr;
         QCheckBox *m_repeat = nullptr;
         QCheckBox *m_splitCharacters = nullptr;
     };

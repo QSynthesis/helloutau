@@ -2042,6 +2042,10 @@
         <translation>歌词（用空格分隔）：</translation>
     </message>
     <message>
+        <source>Lyrics (one per character, spaces ignored):</source>
+        <translation>歌词（每个字符一个，忽略空格）：</translation>
+    </message>
+    <message>
         <source>Repeat to fill the selected notes</source>
         <translation>循环填充所选音符</translation>
     </message>

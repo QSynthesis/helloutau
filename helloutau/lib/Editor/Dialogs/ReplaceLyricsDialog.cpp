@@ -4,7 +4,7 @@
 #include <QtWidgets/QDialogButtonBox>
 #include <QtWidgets/QFormLayout>
 #include <QtWidgets/QLabel>
-#include <QtWidgets/QTextEdit>
+#include <QtWidgets/QPlainTextEdit>
 #include <QtWidgets/QVBoxLayout>
 
 namespace hello::daw {
@@ -14,17 +14,22 @@ namespace hello::daw {
         resize(480, 360);
 
         auto layout = new QVBoxLayout(this);
-        auto title = new QLabel(tr("Lyrics (separated by spaces):"), this);
+        auto title = new QLabel(this);
         layout->addWidget(title);
-        m_lyrics = new QTextEdit(this);
-        m_lyrics->setAcceptRichText(false);
-        m_lyrics->setTabChangesFocus(false);
+        m_lyrics = new QPlainTextEdit(this);
         layout->addWidget(m_lyrics, 1);
 
         m_repeat = new QCheckBox(tr("Repeat to fill the selected notes"), this);
         m_splitCharacters = new QCheckBox(tr("Split by character"), this);
         layout->addWidget(m_repeat);
         layout->addWidget(m_splitCharacters);
+        const auto updateTitle = [this, title] {
+            title->setText(m_splitCharacters->isChecked()
+                               ? tr("Lyrics (one per character, spaces ignored):")
+                               : tr("Lyrics (separated by spaces):"));
+        };
+        connect(m_splitCharacters, &QCheckBox::toggled, this, updateTitle);
+        updateTitle();
 
         auto buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
         connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
