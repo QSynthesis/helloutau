@@ -284,14 +284,13 @@ namespace hello::kit {
         }
 
         // Some synth tools used as wavtools write the final track directly instead of producing the
-        // two files used by the standard UTAU wavtool protocol. The temp.bat protocol accepts
-        // that result and skips its concatenation step.
-        if (fs::exists(output)) {
-            outcome.rendered = true;
-            return outcome;
-        }
-
+        // two files used by the standard UTAU wavtool protocol. As in temp.bat, the two files
+        // replace that track if both exist, and the track is kept otherwise.
         if (!fs::exists(header) || !fs::exists(data)) {
+            if (fs::exists(output)) {
+                outcome.rendered = true;
+                return outcome;
+            }
             fail(diagnostics, tr("The wavtool produced no output for \"%1\". The configured "
                                  "wavtool may not accept these arguments.")
                                   .arg(displayed(output)));

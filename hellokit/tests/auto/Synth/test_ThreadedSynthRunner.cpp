@@ -402,6 +402,29 @@ private Q_SLOTS:
         QVERIFY(!std::filesystem::exists(withSuffix(p->outputFile(), ".dat")));
     }
 
+    // As in temp.bat, the header and the sample data replace a track that the wavtool also
+    // writes directly.
+    void the_header_and_the_data_replace_a_track_written_directly() {
+        const auto p = plan();
+        QVERIFY(p.has_value());
+
+        SynthToolLog log;
+        const auto synthTools = somewhere();
+        const auto track = writesTrack(p->outputFile());
+        const auto parts = appends(p->outputFile());
+        StubbedRunner runner(&log, synthTools, rendersTo(p->steps().at(0).cacheFile),
+                             [track, parts](const QStringList &arguments) {
+                                 return track(arguments) && parts(arguments);
+                             });
+
+        DiagnosticList diagnostics;
+        QVERIFY(runner.render(*p, synthTools, nullptr, diagnostics).rendered);
+        QVERIFY(!hasError(diagnostics));
+        QCOMPARE(sizeOf(p->outputFile()), 44 + 100);
+        QVERIFY(!std::filesystem::exists(withSuffix(p->outputFile(), ".whd")));
+        QVERIFY(!std::filesystem::exists(withSuffix(p->outputFile(), ".dat")));
+    }
+
     // The wavtool appends, so a render must remove both files before it starts. Otherwise its
     // output is appended to existing content. A completed render removes the files itself, so
     // leftover files originate only from an interrupted render, which this test recreates.
