@@ -5,6 +5,7 @@
 #include <thread>
 
 #include <QtCore/QMimeData>
+#include <QtCore/QStandardPaths>
 #include <QtCore/QTemporaryDir>
 #include <QtCore/QTimer>
 #include <QtCore/QUrl>
@@ -21,6 +22,7 @@
 #include <QtWidgets/QComboBox>
 #include <QtWidgets/QDialogButtonBox>
 #include <QtWidgets/QDoubleSpinBox>
+#include <QtWidgets/QFileDialog>
 #include <QtWidgets/QGraphicsDropShadowEffect>
 #include <QtWidgets/QInputDialog>
 #include <QtWidgets/QLineEdit>
@@ -2548,6 +2550,63 @@ private Q_SLOTS:
         QCOMPARE(current(VoiceBankEntryModel::FileColumn), QStringLiteral("x.wav"));
         QCOMPARE(current(VoiceBankEntryModel::AliasColumn), QStringLiteral("y"));
         e->settings().setUtauDirectory({});
+    }
+
+    // Render Track proposes the project name as a single file name with the extension .wav, in
+    // the music folder for a project without a file.
+    void render_track_proposes_the_project_name_as_a_file_name() {
+        const auto e = editor();
+        const auto wavtool = pathIn(m_dir, "proposal-wavtool.exe");
+        const auto resampler = pathIn(m_dir, "proposal-resampler.exe");
+        for (const auto &tool : {wavtool, resampler}) {
+            std::ofstream(tool, std::ios::binary) << "tool";
+        }
+        const auto wavtoolText = QString::fromStdU16String(wavtool.u16string());
+        const auto resamplerText = QString::fromStdU16String(resampler.u16string());
+        e->settings().setWavtool(wavtoolText);
+        e->settings().setResampler(resamplerText);
+        const auto window = e->newWindow();
+        const auto session = window->document()->session();
+        const auto renderTrack =
+            declaredActionOf(*e, window, QStringLiteral("helloutau.playback.renderTrack"));
+        QVERIFY(renderTrack);
+        const auto music = QStandardPaths::writableLocation(QStandardPaths::MusicLocation);
+
+        // Returns the file name that the file dialog proposes for the project name.
+        const auto proposalFor = [&](const QString &name) {
+            auto tx = session->transaction(QStringLiteral("rename"));
+            const auto settings = kit::ProjectRef(session).settings();
+            settings.setName(name);
+            settings.setWavtool(wavtoolText);
+            settings.setResampler(resamplerText);
+            tx.commit();
+            QString proposal;
+            QTimer::singleShot(0, [&proposal] {
+                const auto dialog = qobject_cast<QFileDialog *>(QApplication::activeModalWidget());
+                if (dialog) {
+                    const auto files = dialog->selectedFiles();
+                    proposal = files.isEmpty() ? QString() : files.constFirst();
+                    dialog->reject();
+                }
+            });
+            renderTrack->trigger();
+            return proposal;
+        };
+        const auto inMusic = [&music](const char *name) {
+            return QDir(music).filePath(QLatin1String(name));
+        };
+        QCOMPARE(QDir::fromNativeSeparators(proposalFor(QStringLiteral("Song v1.2"))),
+                 inMusic("Song v1.2.wav"));
+        QCOMPARE(QDir::fromNativeSeparators(proposalFor(QStringLiteral("..\\x"))),
+                 inMusic(".._x.wav"));
+        QCOMPARE(QDir::fromNativeSeparators(proposalFor(QStringLiteral("a:b*c?"))),
+                 inMusic("a_b_c_.wav"));
+        QCOMPARE(QDir::fromNativeSeparators(proposalFor(QStringLiteral("take.wav"))),
+                 inMusic("take.wav"));
+        QCOMPARE(QDir::fromNativeSeparators(proposalFor(QStringLiteral(". ."))),
+                 inMusic("track.wav"));
+        e->settings().setWavtool({});
+        e->settings().setResampler({});
     }
 };
 
