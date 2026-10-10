@@ -4,7 +4,6 @@
 #include <atomic>
 
 #include <helloutau/Audio/AudioSource.h>
-#include <helloutau/Audio/HelloUtauAudioGlobal.h>
 
 namespace hello::daw {
 
@@ -19,7 +18,7 @@ namespace hello::daw {
 
     private:
         int m_sampleRate;
-        double m_frequency;
+        double m_angularFrequency;
         double m_amplitude;
         qsizetype m_frames;
         std::atomic<qsizetype> m_position = 0;

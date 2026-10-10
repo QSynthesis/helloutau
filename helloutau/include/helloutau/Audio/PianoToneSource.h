@@ -5,14 +5,13 @@
 #include <atomic>
 
 #include <helloutau/Audio/AudioSource.h>
-#include <helloutau/Audio/HelloUtauAudioGlobal.h>
 
 namespace hello::daw {
 
     /// A short piano-like tone made from damped inharmonic modes and a hammer transient.
     ///
-    /// This is deliberately a small procedural preview instrument. It does not use a piano
-    /// sample, and is intended for the piano keyboard rather than for final rendering.
+    /// The tone is synthesized without a piano sample, for the piano keyboard rather than for
+    /// rendering.
     class HELLOUTAU_AUDIO_EXPORT PianoToneSource : public AudioSource {
     public:
         PianoToneSource(int sampleRate, double frequency, double duration = 0.8,
@@ -24,7 +23,6 @@ namespace hello::daw {
 
     private:
         int m_sampleRate;
-        double m_frequency;
         double m_amplitude;
         qsizetype m_frames;
         std::array<double, 10> m_angularFrequencies;
