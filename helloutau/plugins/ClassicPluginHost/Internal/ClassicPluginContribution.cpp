@@ -92,7 +92,7 @@ namespace hello::daw {
         return std::filesystem::path(
                    QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)
                        .toStdU16String()) /
-               u"UtauPlugins";
+               u"ClassicPlugins";
     }
 
     void ClassicPluginContribution::fill(QMenu *menu, ProjectWindow *window) {
