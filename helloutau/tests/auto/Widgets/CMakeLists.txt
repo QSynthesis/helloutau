@@ -1,5 +1,6 @@
 add_auto_test(test_CommandMatcher.cpp HelloUtauWidgets)
 add_auto_test(test_CommandPalette.cpp HelloUtauWidgets)
 add_auto_test(test_FindBar.cpp HelloUtauWidgets)
+add_auto_test(test_FindMatches.cpp HelloUtauWidgets)
 add_auto_test(test_SceneView.cpp HelloUtauWidgets)
 add_auto_test(test_SettingsDialog.cpp HelloUtauWidgets)
