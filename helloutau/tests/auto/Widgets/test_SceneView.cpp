@@ -423,7 +423,8 @@ private Q_SLOTS:
         view->addLayer(std::make_unique<RectLayer>(QRectF(0, 0, 100, 100), 1));
         ContextMenuCounter other;
         const auto sendContextMenu = [&other] {
-            QContextMenuEvent event(QContextMenuEvent::Mouse, QPoint(1, 1));
+            QContextMenuEvent event(QContextMenuEvent::Mouse, QPoint(1, 1),
+                                    other.mapToGlobal(QPoint(1, 1)));
             QApplication::sendEvent(&other, &event);
         };
 
