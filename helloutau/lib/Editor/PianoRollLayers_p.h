@@ -75,11 +75,6 @@ namespace hello::daw {
 
     private:
         PianoRollState *m_state;
-
-        // The start of the fragment of note index on the top of its row, its anchors in time
-        // order, and the end of the fragment
-        QPolygonF outlineOf(int index) const;
-
     };
 
     /// The parameters of each sung note below its bar, as UTAU shows them: the modulation, as

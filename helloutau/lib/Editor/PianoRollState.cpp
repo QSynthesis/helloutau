@@ -233,6 +233,32 @@ namespace hello::daw {
         }
     }
 
+    QPolygonF PianoRollState::envelopeOutlineOf(int index) {
+        const auto &note = timeline->note(index);
+        const double base = rectOf(note.start, note.length, note.key).top();
+        const double row = view->keyAxis().pixelsPerKey;
+        const auto fragment = fragmentOf(index);
+        const double start = fragment.first;
+        const double length = fragment.second;
+        const auto envelope = envelopeOf(index);
+        const auto times = anchorTimes(envelope, length);
+        const auto anchors = envelope.anchorsInTimeOrder();
+        const auto &map = timeline->tempoMap();
+        // A volume of 100 at an intensity of 100 is one key high. The intensity scales the
+        // height, as in UTAU.
+        const double intensity = std::max(0.0, notes().at(index).intensity().value_or(100)) / 100;
+        const auto pointAt = [&](double milliseconds, double volume) {
+            return QPointF(view->timeAxis().toX(map.tickOf(start + milliseconds)),
+                           base - volume / 100 * intensity * row);
+        };
+        QPolygonF outline{pointAt(0, 0)};
+        for (qsizetype k = 0; k < times.size(); ++k) {
+            outline.push_back(pointAt(times[k], anchors[k].y));
+        }
+        outline.push_back(pointAt(length, 0));
+        return outline;
+    }
+
     void PianoRollState::selectPoints(const QSet<kit::edit::NodeId> &ids) {
         auto &decl = *widget;
         const bool clearsNotes = !ids.isEmpty() && !selection.isEmpty();

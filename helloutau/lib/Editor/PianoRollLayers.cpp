@@ -221,7 +221,7 @@ namespace hello::daw {
             if (note.rest) {
                 continue;
             }
-            const auto outline = outlineOf(i);
+            const auto outline = m_state->envelopeOutlineOf(i);
             painter.setPen(QPen(decl->envelopeColor(), 1));
             painter.setBrush(fill);
             painter.drawPolygon(outline);
@@ -248,33 +248,6 @@ namespace hello::daw {
     std::optional<SceneHit> PianoRollState::NoteEnvelopeLayer::hitTest(QPointF position) const {
         Q_UNUSED(position);
         return std::nullopt;
-    }
-
-    QPolygonF PianoRollState::NoteEnvelopeLayer::outlineOf(int index) const {
-        const auto &note = m_state->timeline->note(index);
-        const double base = m_state->rectOf(note.start, note.length, note.key).top();
-        const double row = view()->keyAxis().pixelsPerKey;
-        const auto fragment = m_state->fragmentOf(index);
-        const double start = fragment.first;
-        const double length = fragment.second;
-        const auto envelope = m_state->envelopeOf(index);
-        const auto times = anchorTimes(envelope, length);
-        const auto anchors = envelope.anchorsInTimeOrder();
-        const auto &map = m_state->timeline->tempoMap();
-        // A volume of 100 at an intensity of 100 is one key high. The intensity scales the
-        // height, as in UTAU.
-        const double intensity =
-            std::max(0.0, m_state->notes().at(index).intensity().value_or(100)) / 100;
-        const auto pointAt = [&](double milliseconds, double volume) {
-            return QPointF(view()->timeAxis().toX(map.tickOf(start + milliseconds)),
-                           base - volume / 100 * intensity * row);
-        };
-        QPolygonF outline{pointAt(0, 0)};
-        for (qsizetype k = 0; k < times.size(); ++k) {
-            outline.push_back(pointAt(times[k], anchors[k].y));
-        }
-        outline.push_back(pointAt(length, 0));
-        return outline;
     }
 
     void PianoRollState::NoteParameterLayer::paint(QPainter &painter, const QRect &exposed) {

@@ -13,6 +13,7 @@
 #include <QtCore/QSet>
 #include <QtCore/QString>
 #include <QtGui/QColor>
+#include <QtGui/QPolygonF>
 #include <QtWidgets/QLineEdit>
 
 #include <hellokit/Document/DocumentConstants.h>
@@ -428,6 +429,11 @@ namespace hello::daw {
         /// of length: p1, p2 and p5 count forward from the start, p3 and p4 back from the end,
         /// as the wavtool places them (WavtoolMixer::layOut)
         static QList<double> anchorTimes(const kit::Envelope &envelope, double length);
+
+        /// Returns the outline of the envelope of note \a index in the note area: the start of
+        /// its fragment on the top of its row, its anchors in time order, and the end of the
+        /// fragment.
+        QPolygonF envelopeOutlineOf(int index);
 
         /// Whether every envelope anchor lies in the fragment and follows the preceding anchor.
         /// Invalid envelopes can be loaded from UST files written by third-party plugins.
