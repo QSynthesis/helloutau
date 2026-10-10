@@ -51,6 +51,7 @@
 #include <hellokit/VoiceBank/FrequencyFormats.h>
 
 #include <helloutau/Audio/AudioEngine.h>
+#include <helloutau/Editor/Dialogs/RegionDialog.h>
 #include <helloutau/Widgets/CommandPalette.h>
 #include <helloutau/Widgets/FindBar.h>
 #include <helloutau/Widgets/SettingPage.h>
@@ -173,6 +174,36 @@ namespace {
         timer.start();
         trigger();
         return dialogs;
+    }
+
+    // A project of four notes in the region A, whose middle two are in the region B
+    fs::path savedRegions(const QTemporaryDir &dir, const char *name) {
+        kit::Track track;
+        for (int i = 0; i < 4; ++i) {
+            kit::Note note;
+            note.lyric = QStringLiteral("la");
+            note.length = 480;
+            note.noteNum = 60;
+            track.notes.push_back(note);
+        }
+        track.notes[0].regions = {QStringLiteral("A")};
+        track.notes[1].regions = {QStringLiteral("B")};
+        track.notes[2].regionEnds = {QStringLiteral("B")};
+        track.notes[3].regionEnds = {QStringLiteral("A")};
+        kit::Project project;
+        project.tracks.push_back(track);
+        const auto path = pathIn(dir, name);
+        kit::DiagnosticList diagnostics;
+        project.save(path, diagnostics);
+        return path;
+    }
+
+    QStringList regionNamesOf(const PianoRoll *roll) {
+        QStringList names;
+        for (const auto &region : roll->regions()) {
+            names.push_back(region.name);
+        }
+        return names;
     }
 
 }
@@ -2735,6 +2766,81 @@ private Q_SLOTS:
         const auto undone = session->snapshot().tracks[0].notes[0];
         QVERIFY(!undone.vibrato);
         QVERIFY(undone.portamento.isEmpty());
+    }
+
+    // A region to edit opens the rename dialog with its name. A new name renames the region, and
+    // an empty name removes only that region.
+    void a_region_is_renamed_or_removed_by_its_name() {
+        const auto e = editor();
+        const auto window = e->openFile(savedRegions(m_dir, "renamed-regions.usth"));
+        QVERIFY(window);
+        const auto roll = window->pianoRoll();
+        // Requests to edit region, answers the rename dialog with name, and closes any message box
+        // that follows. Returns the name that the dialog showed.
+        const auto rename = [roll](const kit::Region &region, const QString &name) {
+            QString shown;
+            QTimer timer;
+            timer.setInterval(10);
+            QObject::connect(&timer, &QTimer::timeout, [&shown, &name] {
+                const auto widget = QApplication::activeModalWidget();
+                if (const auto dialog = qobject_cast<QInputDialog *>(widget)) {
+                    shown = dialog->textValue();
+                    dialog->setTextValue(name);
+                    dialog->accept();
+                } else if (const auto box = qobject_cast<QMessageBox *>(widget)) {
+                    box->reject();
+                }
+            });
+            timer.start();
+            Q_EMIT roll->regionEditRequested(region);
+            return shown;
+        };
+        QCOMPARE(rename(kit::Region{QStringLiteral("B"), 1, 2}, QStringLiteral("C")),
+                 QStringLiteral("B"));
+        QCOMPARE(regionNamesOf(roll), (QStringList{QStringLiteral("A"), QStringLiteral("C")}));
+
+        QCOMPARE(rename(kit::Region{QStringLiteral("C"), 1, 2}, QString()), QStringLiteral("C"));
+        QCOMPARE(regionNamesOf(roll), QStringList{QStringLiteral("A")});
+    }
+
+    // The regions dialog selects the region given. Remove removes that region in one undo step
+    // and updates the list, and Go To selects the notes of the current region.
+    void the_regions_are_edited_in_their_dialog() {
+        const auto e = editor();
+        const auto window = e->openFile(savedRegions(m_dir, "listed-regions.usth"));
+        QVERIFY(window);
+        const auto roll = window->pianoRoll();
+        const auto session = window->document()->session();
+        const auto steps = session->currentStep();
+        QString current;
+        int listedAfterRemoval = -1;
+        // A message box about a failed removal would otherwise block the click of Remove.
+        QTimer boxes;
+        boxes.setInterval(10);
+        QObject::connect(&boxes, &QTimer::timeout, [] {
+            if (const auto box = qobject_cast<QMessageBox *>(QApplication::activeModalWidget())) {
+                box->reject();
+            }
+        });
+        boxes.start();
+        QTimer::singleShot(0, [&] {
+            const auto dialog = qobject_cast<RegionDialog *>(QApplication::activeModalWidget());
+            if (!dialog) {
+                return;
+            }
+            current = dialog->currentRegion() ? dialog->currentRegion()->name : QString();
+            dialog->removeButton()->click();
+            listedAfterRemoval = int(dialog->regions().size());
+            dialog->setCurrentRegion(kit::Region{QStringLiteral("A"), 0, 3});
+            dialog->goToButton()->click();
+            dialog->reject();
+        });
+        Q_EMIT roll->regionsRequested(kit::Region{QStringLiteral("B"), 1, 2});
+        QCOMPARE(current, QStringLiteral("B"));
+        QCOMPARE(listedAfterRemoval, 1);
+        QCOMPARE(regionNamesOf(roll), QStringList{QStringLiteral("A")});
+        QCOMPARE(session->currentStep(), steps + 1);
+        QCOMPARE(roll->selectedIndices(), (QList<int>{0, 1, 2, 3}));
     }
 };
 
