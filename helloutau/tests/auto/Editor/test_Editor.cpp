@@ -49,6 +49,9 @@
 #include <QtWidgets/QTreeWidget>
 #include <QtCore/QFile>
 
+#include <QAKCore/actionregistry.h>
+#include <QAKWidgets/widgetactioncontext.h>
+
 #include <hellokit/Edit/ProjectDocument.h>
 #include <hellokit/Edit/ProjectEdits.h>
 #include <hellokit/Edit/ProjectRefs.h>
@@ -1090,6 +1093,19 @@ private Q_SLOTS:
         QVERIFY(isDeclared(*e, Editor::ProjectWindowKind, boxId));
         QVERIFY(!palette->shownIds().contains(boxId));
         palette->hide();
+
+        // No item that the tool bar shows as a widget is a command, so that no shortcut can be
+        // bound to it.
+        const auto registry = e->actionRegistry(Editor::ProjectWindowKind);
+        int widgets = 0;
+        for (const auto &id : registry->actionIds()) {
+            if (window->actionContext()->widgets(id).isEmpty()) {
+                continue;
+            }
+            ++widgets;
+            QVERIFY2(!registry->actionInfo(id)->isCommand(), qPrintable(id));
+        }
+        QVERIFY(widgets > 0);
     }
 
     // A registered page is placed under its parent and before its sibling, at the top level if

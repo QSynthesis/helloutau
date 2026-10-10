@@ -120,8 +120,10 @@
                 shortcut="F" />
         <!-- The grid to which drags snap, a box in the tool bar. The two commands step through
              its choices, from a quarter note to a sixty-fourth and off. -->
-        <action id="helloutau.select.quantizationWidget" text="Quantization" category="Select" />
-        <action id="helloutau.edit.projectTempoWidget" text="Project Tempo" category="Project" />
+        <action id="helloutau.select.quantizationWidget" text="Quantization" category="Select"
+                triggerable="false" />
+        <action id="helloutau.edit.projectTempoWidget" text="Project Tempo" category="Project"
+                triggerable="false" />
         <action id="helloutau.select.decreaseQuantizationInterval"
                 text="&amp;Decrease Quantization Interval"
                 category="Select" shortcut="Ctrl+[" />
@@ -134,7 +136,8 @@
         <!-- The tool bar of the project window, shown or hidden as the settings store it -->
         <action id="helloutau.view.showToolBar" text="Show &amp;Toolbar" category="View" />
         <action id="helloutau.view.timeSignature" text="Time Si&amp;gnature..." category="View" />
-        <action id="helloutau.view.timeSignatureWidget" text="Time Signature" category="View" />
+        <action id="helloutau.view.timeSignatureWidget" text="Time Signature" category="View"
+                triggerable="false" />
         <!-- X as in UTAU -->
         <action id="helloutau.view.showPitch" text="Show &amp;Pitch" category="View"
                 shortcut="X" />
