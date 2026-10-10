@@ -303,6 +303,35 @@ private Q_SLOTS:
         QCOMPARE(settings.voiceLocations().relativeBase, program);
     }
 
+    // The portamento settings of Pitch Control are stored as a whole, and the vibrato with its
+    // preset.
+    void the_pitch_control_defaults_persist() {
+        QTemporaryDir dir;
+        const auto file = dir.filePath(QStringLiteral("settings.json"));
+        {
+            const AppSettings settings(file);
+            QCOMPARE(settings.pitchControlPortamento(), hello::kit::PortamentoSettings());
+            QVERIFY(settings.pitchControlVibrato() == hello::kit::Vibrato::utauDefault());
+            QCOMPARE(settings.pitchControlVibratoPreset(), 0);
+        }
+        hello::kit::PortamentoSettings portamento;
+        portamento.mode = hello::kit::PortamentoSettings::AddPoints;
+        portamento.count = 4;
+        portamento.evenlyDistributed = false;
+        auto vibrato = hello::kit::Vibrato::utauDefault();
+        vibrato.period = 150;
+        {
+            AppSettings settings(file);
+            settings.setPitchControlPortamento(portamento);
+            settings.setPitchControlVibrato(vibrato);
+            settings.setPitchControlVibratoPreset(2);
+        }
+        const AppSettings settings(file);
+        QCOMPARE(settings.pitchControlPortamento(), portamento);
+        QVERIFY(settings.pitchControlVibrato() == vibrato);
+        QCOMPARE(settings.pitchControlVibratoPreset(), 2);
+    }
+
 private:
     static QJsonObject readFile(const QString &file) {
         QFile in(file);
