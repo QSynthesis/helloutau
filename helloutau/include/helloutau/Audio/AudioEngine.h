@@ -22,6 +22,9 @@ namespace hello::daw {
     /// observed to go silent on Windows while two streams play on it (see docs/Audio.md). A source
     /// for a device other than that of the open stream reopens the stream on that device only while
     /// no source plays.
+    ///
+    /// The stream is closed when the last source stops, so that a source is normally the first
+    /// one of its stream, as DeviceClock requires. The next source opens the stream again.
     class HELLOUTAU_AUDIO_EXPORT AudioEngine : public QObject {
         Q_OBJECT
     public:

@@ -20,6 +20,12 @@ namespace hello::daw {
     /// frame played at that moment. While the source is starved, its position is constant across
     /// the pull, and so is the result.
     ///
+    /// The first pull of a source is the first pull of the stream only if the source opened the
+    /// stream, which AudioEngine closes when no source plays. A source that joins a playing
+    /// stream is heard later than the clock reports, by up to the buffers of the device. A clock
+    /// that counted from the opening of the stream instead would drift from the device over a
+    /// long session, because the stream would stay open.
+    ///
     /// The audio thread writes the clock without locking or allocating, and any other thread
     /// reads it. The last keptPulls pulls are kept, which span many times the buffers of a device.
     class HELLOUTAU_AUDIO_EXPORT DeviceClock {

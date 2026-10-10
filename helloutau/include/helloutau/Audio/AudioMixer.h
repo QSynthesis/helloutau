@@ -27,7 +27,8 @@ namespace hello::daw {
         void remove(SourceId id);
         bool isFinished(SourceId id) const;
 
-        /// Returns whether no source is playing.
+        /// Returns whether no source is playing. A source whose removal is pending is not
+        /// playing.
         bool isIdle() const;
         std::shared_ptr<DeviceClock> clock(SourceId id) const;
         /// Releases completed sources on the control thread.

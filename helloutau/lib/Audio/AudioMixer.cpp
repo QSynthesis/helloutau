@@ -95,11 +95,11 @@ namespace hello::daw {
 
     bool AudioMixer::isIdle() const {
         stdc_impl_t;
-        return std::all_of(impl.slotList.cbegin(), impl.slotList.cend(),
-                           [](const Impl::Slot &slot) {
-                               const auto state = slot.state.load(std::memory_order_acquire);
-                               return state == Impl::Empty || state == Impl::Finished;
-                           });
+        return std::all_of(
+            impl.slotList.cbegin(), impl.slotList.cend(), [](const Impl::Slot &slot) {
+                const auto state = slot.state.load(std::memory_order_acquire);
+                return state == Impl::Empty || state == Impl::Finished || state == Impl::Removing;
+            });
     }
 
     std::shared_ptr<DeviceClock> AudioMixer::clock(SourceId id) const {

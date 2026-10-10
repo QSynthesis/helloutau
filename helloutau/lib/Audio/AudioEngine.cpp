@@ -282,6 +282,9 @@ namespace hello::daw {
         if (impl.mixer) {
             impl.mixer->remove(id);
             impl.mixer->collect();
+            if (impl.mixer->isIdle()) {
+                close();
+            }
         }
     }
 
