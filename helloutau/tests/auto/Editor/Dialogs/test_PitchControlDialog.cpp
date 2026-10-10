@@ -1,6 +1,11 @@
 #include <QtTest/QTest>
 #include <QtWidgets/QApplication>
+#include <QtWidgets/QCheckBox>
+#include <QtWidgets/QComboBox>
 #include <QtWidgets/QDoubleSpinBox>
+#include <QtWidgets/QPushButton>
+#include <QtWidgets/QRadioButton>
+#include <QtWidgets/QSlider>
 
 #include <helloutau/Editor/Dialogs/PitchControlDialog.h>
 
@@ -26,6 +31,38 @@ namespace {
 
 class test_PitchControlDialog : public QObject {
     Q_OBJECT
+
+    template <class T>
+    static T *childWithText(const QDialog &dialog, const QString &text) {
+        for (const auto child : dialog.findChildren<T *>()) {
+            if (child->text() == text) {
+                return child;
+            }
+        }
+        return nullptr;
+    }
+
+    // The two sliders of the portamento, found by their ranges, and the sliders of the vibrato
+    static QList<QSlider *> slidersOf(const QDialog &dialog, bool portamento) {
+        QList<QSlider *> result;
+        for (const auto slider : dialog.findChildren<QSlider *>()) {
+            const bool ofPortamento = (slider->minimum() == 20 && slider->maximum() == 320) ||
+                                      (slider->minimum() == -200 && slider->maximum() == 200);
+            if (ofPortamento == portamento) {
+                result.push_back(slider);
+            }
+        }
+        return result;
+    }
+
+    static QComboBox *comboWithItem(const QDialog &dialog, const QString &item) {
+        for (const auto combo : dialog.findChildren<QComboBox *>()) {
+            if (combo->findText(item) >= 0) {
+                return combo;
+            }
+        }
+        return nullptr;
+    }
 
 private Q_SLOTS:
     void mixed_controls_are_shown_as_partial() {
@@ -136,6 +173,75 @@ private Q_SLOTS:
         PitchControlDialog dialog(selectionOf(settings, existing, 120));
         QCOMPARE(dialog.portamentoSettings().count, 7);
         QVERIFY(!dialog.portamentoEdited());
+    }
+
+    // While the portamento is not checked, or checked partially, none of its controls is
+    // enabled. Checked, only the controls of the selected way are enabled.
+    void the_portamento_controls_follow_the_check_box_and_the_way() {
+        for (const std::optional<bool> state :
+             {std::optional<bool>(false), std::optional<bool>()}) {
+            // The custom way, whose sliders are enabled while the portamento is checked
+            kit::PortamentoSettings custom;
+            custom.mode = kit::PortamentoSettings::Custom;
+            auto selection = selectionOf(custom);
+            selection.portamento = state;
+            PitchControlDialog dialog(selection);
+            QVERIFY(!childWithText<QRadioButton>(dialog, QStringLiteral("&Custom"))->isEnabled());
+            QVERIFY(!comboWithItem(dialog, QStringLiteral("Center - 50 ms"))->isEnabled());
+            QVERIFY(!dialog.portamentoDefaultButton()->isEnabled());
+            for (const auto slider : slidersOf(dialog, true)) {
+                QVERIFY(!slider->isEnabled());
+            }
+        }
+
+        PitchControlDialog dialog(selectionOf(kit::PortamentoSettings()));
+        const auto preset = comboWithItem(dialog, QStringLiteral("Center - 50 ms"));
+        const auto count = comboWithItem(dialog, QStringLiteral("6"));
+        const auto even = childWithText<QCheckBox>(dialog, QStringLiteral("&Evenly distribute"));
+        QVERIFY(preset && count && even);
+        QCOMPARE(slidersOf(dialog, true).size(), 2);
+        QVERIFY(preset->isEnabled());
+        QVERIFY(!count->isEnabled());
+        for (const auto slider : slidersOf(dialog, true)) {
+            QVERIFY(!slider->isEnabled());
+        }
+
+        childWithText<QRadioButton>(dialog, QStringLiteral("&Custom"))->setChecked(true);
+        QVERIFY(!preset->isEnabled());
+        for (const auto slider : slidersOf(dialog, true)) {
+            QVERIFY(slider->isEnabled());
+        }
+
+        childWithText<QRadioButton>(dialog, QStringLiteral("Add control &points"))
+            ->setChecked(true);
+        QVERIFY(count->isEnabled());
+        QVERIFY(even->isEnabled());
+        for (const auto slider : slidersOf(dialog, true)) {
+            QVERIFY(!slider->isEnabled());
+        }
+    }
+
+    // The fields, the sliders and the preset of the vibrato are enabled only while it is
+    // checked.
+    void the_vibrato_controls_follow_the_check_box() {
+        for (const std::optional<bool> state :
+             {std::optional<bool>(false), std::optional<bool>()}) {
+            auto selection = selectionOf(kit::PortamentoSettings());
+            selection.vibrato = state;
+            PitchControlDialog dialog(selection);
+            QVERIFY(!dialog.field(0)->isEnabled());
+            QVERIFY(!dialog.vibratoDefaultButton()->isEnabled());
+            QCOMPARE(slidersOf(dialog, false).size(), 3);
+            for (const auto slider : slidersOf(dialog, false)) {
+                QVERIFY(!slider->isEnabled());
+            }
+            childWithText<QCheckBox>(dialog, QStringLiteral("&Vibrato"))->setChecked(true);
+            QVERIFY(dialog.field(0)->isEnabled());
+            QVERIFY(dialog.vibratoDefaultButton()->isEnabled());
+            for (const auto slider : slidersOf(dialog, false)) {
+                QVERIFY(slider->isEnabled());
+            }
+        }
     }
 };
 
