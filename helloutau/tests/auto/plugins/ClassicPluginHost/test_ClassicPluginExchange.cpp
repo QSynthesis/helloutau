@@ -283,6 +283,54 @@ private Q_SLOTS:
         QCOMPARE(session.snapshot().tracks.first().notes[2].lyric,
                  QString(QChar(0x597d)) + QLatin1Char('\\'));
     }
+
+    // A result with only carriage returns or only line feeds applies as the result with both.
+    void every_line_ending_applies_alike() {
+        const QByteArray crlf =
+            "[#INSERT]\r\nLyric=N\r\n[#0002]\r\nLyric=X\r\nLength=240\r\n[#0003]\r\n"
+            "Lyric=Y\r\n[#NEXT]\r\nLyric=Q\r\n";
+        // Returns the lyric and the length of each note of the probe after applying result, or
+        // nothing if it is not applied.
+        const auto applied = [](const QByteArray &result) {
+            kit::ProjectSession session(probe());
+            const auto notes = kit::ProjectRef(&session).tracks().at(0).notes();
+            kit::DiagnosticList diagnostics;
+            const auto outcome = ClassicPluginExchange::apply(pluginOf(QStringLiteral("UTF-8")),
+                                                              notes, 2, 2, result, diagnostics);
+            QStringList summary;
+            const auto project = session.snapshot();
+            if (outcome == ClassicPluginExchange::Applied) {
+                for (const auto &note : project.tracks.first().notes) {
+                    summary.push_back(note.lyric + u':' + QString::number(note.length));
+                }
+            }
+            return summary;
+        };
+        const auto expected = applied(crlf);
+        QCOMPARE(expected, (QStringList{"R:480", "a:480", "N:480", "X:240", "Y:240", "Q:480",
+                                        "e:480", "o:960"}));
+        auto lf = crlf;
+        lf.replace("\r\n", "\n");
+        auto cr = crlf;
+        cr.replace("\r\n", "\r");
+        QCOMPARE(applied(lf), expected);
+        QCOMPARE(applied(cr), expected);
+    }
+
+    // The names of the regions of a result are split at the vertical bar.
+    void the_regions_of_a_result_are_split() {
+        kit::ProjectSession session(probe());
+        const auto notes = kit::ProjectRef(&session).tracks().at(0).notes();
+        kit::DiagnosticList diagnostics;
+        const auto outcome = ClassicPluginExchange::apply(
+            pluginOf(QStringLiteral("UTF-8")), notes, 2, 2,
+            "[#0002]\r\n$region=A|B\r\n[#0003]\r\n$region_end=A||B\r\n", diagnostics);
+        QCOMPARE(outcome, ClassicPluginExchange::Applied);
+        const auto project = session.snapshot();
+        const auto &result = project.tracks.first().notes;
+        QCOMPARE(result[2].regions, (QStringList{QStringLiteral("A"), QStringLiteral("B")}));
+        QCOMPARE(result[3].regionEnds, (QStringList{QStringLiteral("A"), QStringLiteral("B")}));
+    }
 };
 
 QTEST_GUILESS_MAIN(test_ClassicPluginExchange)
