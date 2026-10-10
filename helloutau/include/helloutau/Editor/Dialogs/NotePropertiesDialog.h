@@ -41,13 +41,19 @@ namespace hello::daw {
             Flags,
         };
 
+        /// The values that a note takes for the properties it leaves to the default: the tempo
+        /// in effect before it, and the pre-utterance and the overlap of its sample, or
+        /// \c std::nullopt without a sample.
         struct Defaults {
-            QList<double> tempo;
-            QList<double> preUtterance;
-            QList<double> voiceOverlap;
+            double tempo = 0;
+            std::optional<double> preUtterance;
+            std::optional<double> voiceOverlap;
         };
 
-        explicit NotePropertiesDialog(const QList<kit::Note> &notes, Defaults defaults = {},
+        /// \a defaults has one element for each of \a notes, or is empty if the defaults are
+        /// unknown. A default is shown as a number only if every note has it and all are equal.
+        explicit NotePropertiesDialog(const QList<kit::Note> &notes,
+                                      const QList<Defaults> &defaults = {},
                                       QWidget *parent = nullptr);
         ~NotePropertiesDialog();
 

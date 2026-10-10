@@ -921,10 +921,10 @@ private Q_SLOTS:
         b.lyric = QStringLiteral("ka");
         b.tempo = 150;
         using F = NotePropertiesDialog;
-        NotePropertiesDialog::Defaults defaults;
-        defaults.tempo = {120, 150};
-        defaults.preUtterance = {12, 12};
-        defaults.voiceOverlap = {3, 3};
+        const QList<NotePropertiesDialog::Defaults> defaults = {
+            {120, 12, 3},
+            {150, 12, 3},
+        };
         NotePropertiesDialog dialog({a, b}, defaults);
         QVERIFY(dialog.changes().isEmpty());
         QCOMPARE(dialog.field(F::Lyric)->text(), QString());

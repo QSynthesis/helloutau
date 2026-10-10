@@ -40,8 +40,8 @@ namespace hello::daw {
 
     }
 
-    NotePropertiesDialog::NotePropertiesDialog(const QList<kit::Note> &notes, Defaults defaults,
-                                               QWidget *parent)
+    NotePropertiesDialog::NotePropertiesDialog(const QList<kit::Note> &notes,
+                                               const QList<Defaults> &defaults, QWidget *parent)
         : QDialog(parent) {
         setWindowTitle(tr("Note Properties"));
 
@@ -114,6 +114,22 @@ namespace hello::daw {
             add(label, edit);
         };
 
+        // The defaults of one property, one for each note, or none unless every note has one
+        const auto defaultsOf =
+            [&](const std::function<std::optional<double>(const Defaults &)> &of) {
+                QList<double> values;
+                if (defaults.size() != notes.size()) {
+                    return values;
+                }
+                for (const auto &item : defaults) {
+                    const auto value = of(item);
+                    if (!value) {
+                        return QList<double>();
+                    }
+                    values.push_back(*value);
+                }
+                return values;
+            };
         const auto defaulted = [&](double value) {
             return tr("(default: %1)").arg(numberText(value));
         };
@@ -131,7 +147,8 @@ namespace hello::daw {
         }
         optional(
             tr("&Tempo:"), tr("(follows the tempo before)"),
-            [](const kit::Note &note) { return note.tempo; }, defaults.tempo);
+            [](const kit::Note &note) { return note.tempo; },
+            defaultsOf([](const Defaults &item) { return std::optional(item.tempo); }));
         optional(tr("&Intensity:"), defaulted(utau::DEFAULT_VALUE_INTENSITY),
                  [](const kit::Note &note) { return note.intensity; });
         optional(tr("&Modulation:"), defaulted(utau::DEFAULT_VALUE_MODULATION),
@@ -140,10 +157,12 @@ namespace hello::daw {
                  [](const kit::Note &note) { return note.velocity; });
         optional(
             tr("&Pre-utterance:"), voiceBankDefault,
-            [](const kit::Note &note) { return note.preUtterance; }, defaults.preUtterance);
+            [](const kit::Note &note) { return note.preUtterance; },
+            defaultsOf([](const Defaults &item) { return item.preUtterance; }));
         optional(
             tr("&Overlap:"), voiceBankDefault,
-            [](const kit::Note &note) { return note.voiceOverlap; }, defaults.voiceOverlap);
+            [](const kit::Note &note) { return note.voiceOverlap; },
+            defaultsOf([](const Defaults &item) { return item.voiceOverlap; }));
         optional(tr("&Start point:"), defaulted(utau::DEFAULT_VALUE_START_POINT),
                  [](const kit::Note &note) { return note.startPoint; });
         text(tr("&Flags:"), [](const kit::Note &note) { return note.flags; });

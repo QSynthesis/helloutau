@@ -541,26 +541,19 @@ namespace hello::daw {
                 notes.push_back(project.tracks[0].notes[index]);
                 selected.push_back(refs.at(index));
             }
-            NotePropertiesDialog::Defaults defaults;
+            QList<NotePropertiesDialog::Defaults> defaults;
             const auto bank = document->voiceBank();
             const auto &tempoMap = roll->timeline()->tempoMap();
-            bool sampled = true;
             for (int i = 0; i < indices.size(); ++i) {
-                const int index = indices.at(i);
-                defaults.tempo.push_back(tempoMap.tempo(index));
+                NotePropertiesDialog::Defaults item;
+                item.tempo = tempoMap.tempo(indices.at(i));
                 const auto sample =
                     bank ? bank->find(notes.at(i).noteNum, notes.at(i).lyric) : nullptr;
-                sampled = sampled && sample;
                 if (sample) {
-                    defaults.preUtterance.push_back(sample->preUtterance);
-                    defaults.voiceOverlap.push_back(sample->voiceOverlap);
+                    item.preUtterance = sample->preUtterance;
+                    item.voiceOverlap = sample->voiceOverlap;
                 }
-            }
-            // Without a sample for every note, the dialog shows the voice bank as the default
-            // instead of a number.
-            if (!sampled) {
-                defaults.preUtterance.clear();
-                defaults.voiceOverlap.clear();
+                defaults.push_back(item);
             }
             NotePropertiesDialog dialog(notes, defaults, &decl);
             if (dialog.exec() != QDialog::Accepted) {
