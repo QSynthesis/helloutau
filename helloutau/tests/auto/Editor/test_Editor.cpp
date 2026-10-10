@@ -1,14 +1,18 @@
 #include <algorithm>
+#include <atomic>
 #include <filesystem>
 #include <fstream>
 #include <functional>
+#include <future>
 #include <optional>
 #include <thread>
 
+#include <QtCore/QElapsedTimer>
 #include <QtCore/QMimeData>
 #include <QtCore/QScopeGuard>
 #include <QtCore/QStandardPaths>
 #include <QtCore/QTemporaryDir>
+#include <QtCore/QThread>
 #include <QtCore/QTimer>
 #include <QtCore/QUrl>
 #include <QtCore/QtEndian>
@@ -32,6 +36,7 @@
 #include <QtWidgets/QMenu>
 #include <QtWidgets/QMenuBar>
 #include <QtWidgets/QMessageBox>
+#include <QtWidgets/QProgressDialog>
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QSpinBox>
 #include <QtWidgets/QStatusBar>
@@ -49,11 +54,15 @@
 #include <hellokit/Edit/ProjectRefs.h>
 #include <hellokit/Edit/VoiceBankDocument.h>
 #include <hellokit/Edit/VoiceBankRefs.h>
+#include <hellokit/Synth/ClassicSynthRunner.h>
+#include <hellokit/Synth/SynthPlan.h>
+#include <hellokit/Synth/ThreadedSynthRunner.h>
 #include <hellokit/VoiceBank/BuiltinFrequencyFormats.h>
 #include <hellokit/VoiceBank/FrequencyFormats.h>
 
 #include <helloutau/Audio/AudioEngine.h>
 #include <helloutau/Editor/Dialogs/RegionDialog.h>
+#include <helloutau/Editor/Playback.h>
 #include <helloutau/Widgets/CommandPalette.h>
 #include <helloutau/Widgets/FindBar.h>
 #include <helloutau/Widgets/SettingPage.h>
@@ -228,6 +237,100 @@ namespace {
             names.push_back(region.name);
         }
         return names;
+    }
+
+    // Writes frames frames of 16-bit mono silence at 44100 Hz as a WAV file at path.
+    void writeSilence(const fs::path &path, quint32 frames) {
+        const quint32 data = frames * 2;
+        QByteArray bytes("RIFF");
+        const auto u32 = [&bytes](quint32 value) {
+            for (int i = 0; i < 4; ++i) {
+                bytes.append(char((value >> (8 * i)) & 0xff));
+            }
+        };
+        const auto u16 = [&bytes](quint16 value) {
+            bytes.append(char(value & 0xff));
+            bytes.append(char(value >> 8));
+        };
+        u32(36 + data);
+        bytes.append("WAVEfmt ");
+        u32(16);
+        u16(1);
+        u16(1);
+        u32(44100);
+        u32(44100 * 2);
+        u16(2);
+        u16(16);
+        bytes.append("data");
+        u32(data);
+        bytes.append(QByteArray(int(data), '\0'));
+        std::ofstream(path, std::ios::binary | std::ios::trunc)
+            .write(bytes.constData(), bytes.size());
+    }
+
+    // Writes silence as the track file instead of running synth tools, once hold is released.
+    // Records the directory of the track file and whether the directory still existed when the
+    // render ended.
+    class SilentRunner : public kit::SynthRunner {
+    public:
+        mutable std::atomic<bool> hold = false;
+        mutable std::atomic<int> started = 0;
+        mutable std::atomic<bool> directoryExisted = false;
+        mutable fs::path directory;
+        quint32 frames = 4410;
+
+        kit::SynthOutcome render(const kit::SynthPlan &plan, const kit::SynthTools &synthTools,
+                                 kit::SynthObserver *observer,
+                                 kit::DiagnosticList &diagnostics) const override {
+            Q_UNUSED(synthTools)
+            Q_UNUSED(diagnostics)
+            directory = plan.outputFile().parent_path();
+            ++started;
+            while (hold.load()) {
+                QThread::msleep(5);
+            }
+            std::error_code error;
+            directoryExisted = fs::is_directory(directory, error);
+            kit::SynthOutcome outcome;
+            if (observer->cancelled()) {
+                outcome.cancelled = true;
+                return outcome;
+            }
+            writeSilence(plan.outputFile(), frames);
+            outcome.rendered = true;
+            return outcome;
+        }
+    };
+
+    // Saves a project of two notes a beside a voice bank that sings them. The synth tools of the
+    // project are files beside it, which become the synth tools of settings.
+    fs::path singingProject(const QTemporaryDir &dir, const char *name, AppSettings &settings) {
+        const auto root = fs::path(dir.path().toStdU16String());
+        fs::create_directories(root / "bank");
+        std::ofstream(root / "bank" / "oto.ini", std::ios::binary)
+            << "#Charset:UTF-8\r\na.wav=a,0,0,0,0,0\r\n";
+        writeSilence(root / "bank" / "a.wav", 4410);
+        for (const auto tool : {"wavtool.exe", "resampler.exe"}) {
+            std::ofstream(root / tool, std::ios::binary) << "tool";
+        }
+        settings.setWavtool(QString::fromStdU16String((root / "wavtool.exe").u16string()));
+        settings.setResampler(QString::fromStdU16String((root / "resampler.exe").u16string()));
+
+        kit::Note note;
+        note.lyric = QStringLiteral("a");
+        note.length = 480;
+        note.noteNum = 60;
+        kit::Track track;
+        track.voiceDir = QString::fromStdU16String((root / "bank").u16string());
+        track.notes = {note, note};
+        kit::Project project;
+        project.settings.wavtool = settings.wavtool();
+        project.settings.resampler = settings.resampler();
+        project.tracks.push_back(track);
+        const auto path = root / name;
+        kit::DiagnosticList diagnostics;
+        project.save(path, diagnostics);
+        return path;
     }
 
 }
@@ -3153,6 +3256,142 @@ private Q_SLOTS:
         QVERIFY(panel->imagePreview()->pixmap().isNull());
         QCOMPARE(panel->imagePreview()->text(),
                  VoiceBankInfoPanel::tr("The image must be a file in the voice bank folder."));
+    }
+
+    // The runner of either playback mode writes its scripts into the temporary directory of the
+    // window, and the classic runner keeps them. Another project in the window has another
+    // temporary directory, which the runner then uses.
+    void the_runner_writes_into_the_temporary_directory_of_the_window() {
+        const auto e = editor();
+        const auto restore =
+            qScopeGuard([&e] { e->settings().setPlaybackMode(AppSettings::Prerender); });
+        const auto window = e->newWindow();
+        const auto playback = window->findChild<Playback *>();
+        QVERIFY(playback);
+        // The render cache of a project without a file is in the temporary directory.
+        const auto temporaryOf = [playback, window] {
+            const auto cache = playback->cacheDirectoryFor(*window->document());
+            return cache ? cache->parent_path() : fs::path();
+        };
+        const auto temporary = temporaryOf();
+        QVERIFY(!temporary.empty());
+        const auto classic =
+            std::dynamic_pointer_cast<const kit::ClassicSynthRunner>(playback->runner());
+        QVERIFY(classic);
+        QCOMPARE(classic->scriptDirectory, temporary);
+        QVERIFY(classic->keepScripts);
+
+        e->settings().setPlaybackMode(AppSettings::Realtime);
+        window->applySettings();
+        const auto threaded =
+            std::dynamic_pointer_cast<const kit::ThreadedSynthRunner>(playback->runner());
+        QVERIFY(threaded);
+        QCOMPARE(threaded->scriptDirectory, temporary);
+
+        window->setDocument(std::make_unique<kit::ProjectDocument>());
+        const auto other = temporaryOf();
+        QVERIFY(!other.empty());
+        QVERIFY(other != temporary);
+        QVERIFY(!fs::exists(temporary));
+        const auto replaced =
+            std::dynamic_pointer_cast<const kit::ThreadedSynthRunner>(playback->runner());
+        QVERIFY(replaced);
+        QCOMPARE(replaced->scriptDirectory, other);
+    }
+
+    // Another project opened in the window while a render runs replaces the temporary directory
+    // only after the render has ended, because the render writes into it.
+    void another_project_keeps_the_temporary_directory_until_the_render_ends() {
+        if (AudioEngine::instance()->sampleRate() <= 0) {
+            QSKIP("This machine has no audio output device.");
+        }
+        QTemporaryDir dir;
+        const auto e = editor();
+        const auto restore = qScopeGuard([&e] {
+            e->settings().setWavtool({});
+            e->settings().setResampler({});
+        });
+        const auto window = e->openFile(singingProject(dir, "kept.usth", e->settings()));
+        QVERIFY(window);
+        const auto playback = window->findChild<Playback *>();
+        QVERIFY(playback);
+        const auto runner = std::make_shared<SilentRunner>();
+        runner->hold = true;
+        playback->setRunner(runner);
+        window->pianoRoll()->selectAll();
+        const auto play = declaredActionOf(*e, window, QStringLiteral("helloutau.playback.play"));
+        QVERIFY(play);
+
+        // While the window waits for the render, another project replaces the document, and the
+        // render is released a moment later.
+        bool replaced = false;
+        handleNextDialog<QProgressDialog>([&](QProgressDialog *) {
+            QElapsedTimer waited;
+            waited.start();
+            while (runner->started.load() == 0 && waited.elapsed() < 5000) {
+                QCoreApplication::processEvents();
+                QThread::msleep(5);
+            }
+            QCOMPARE(runner->started.load(), 1);
+            const auto release = std::async(std::launch::async, [&runner] {
+                QThread::msleep(100);
+                runner->hold = false;
+            });
+            window->setDocument(std::make_unique<kit::ProjectDocument>());
+            replaced = true;
+        });
+        play->trigger();
+        runner->hold = false;
+        QVERIFY(replaced);
+        QVERIFY(runner->directoryExisted.load());
+        QVERIFY(!runner->directory.empty());
+        QVERIFY(!fs::exists(runner->directory));
+    }
+
+    // In the prerender mode, playing again pauses, and once more goes on from there without a
+    // render, even after the selection has changed. An edit stops playback, and the next play
+    // renders again.
+    void a_prerender_pauses_and_goes_on_without_a_render() {
+        if (AudioEngine::instance()->sampleRate() <= 0) {
+            QSKIP("This machine has no audio output device.");
+        }
+        QTemporaryDir dir;
+        const auto e = editor();
+        const auto restore = qScopeGuard([&e] {
+            e->settings().setWavtool({});
+            e->settings().setResampler({});
+        });
+        const auto window = e->openFile(singingProject(dir, "paused.usth", e->settings()));
+        QVERIFY(window);
+        const auto playback = window->findChild<Playback *>();
+        QVERIFY(playback);
+        const auto stop = qScopeGuard([playback] { playback->stop(); });
+        const auto runner = std::make_shared<SilentRunner>();
+        runner->frames = 44100 * 10;
+        playback->setRunner(runner);
+        window->pianoRoll()->selectAll();
+        const auto play = declaredActionOf(*e, window, QStringLiteral("helloutau.playback.play"));
+        QVERIFY(play);
+
+        play->trigger();
+        QTRY_COMPARE(playback->state(), Playback::Playing);
+        play->trigger();
+        QCOMPARE(playback->state(), Playback::Paused);
+        window->pianoRoll()->setSelectedIndices({0});
+        play->trigger();
+        QCOMPARE(playback->state(), Playback::Playing);
+        QCOMPARE(runner->started.load(), 1);
+
+        const auto session = window->document()->session();
+        {
+            auto tx = session->transaction(QStringLiteral("lyric"));
+            kit::ProjectRef(session).tracks().at(0).notes().at(1).setLyric(QStringLiteral("i"));
+            tx.commit();
+        }
+        QCOMPARE(playback->state(), Playback::Stopped);
+        play->trigger();
+        QTRY_COMPARE(playback->state(), Playback::Playing);
+        QCOMPARE(runner->started.load(), 2);
     }
 };
 
