@@ -2,6 +2,8 @@
 #include <QtCore/QJsonObject>
 #include <QtTest/QTest>
 
+#include <stdutau/utautils.h>
+
 #include <hellokit/Document/Note.h>
 
 using namespace hello::kit;
@@ -162,6 +164,25 @@ private Q_SLOTS:
         const auto json = note.toJson();
         QCOMPARE(json.value(QStringLiteral("regions")).toArray(), QJsonArray{QStringLiteral("A")});
         QVERIFY(!json.contains(QStringLiteral("regionEnds")));
+    }
+
+    // The nine lyrics of probe 1, which UTAU all renders as rests, give the same result here and
+    // in stdutau, whose function the synth plan uses.
+    void the_rests_of_probe_one_are_rests_here_and_in_stdutau() {
+        const QString space = QString(QChar(0x3000));
+        const QStringList rests{
+            QStringLiteral(" "),         space,     QStringLiteral("  "), QStringLiteral("R"),
+            QStringLiteral("r"),         QString(), QStringLiteral(" R"), QStringLiteral("R "),
+            space + QStringLiteral("R"),
+        };
+        for (const auto &lyric : rests) {
+            QVERIFY2(Note::isRestLyric(lyric), qPrintable(lyric));
+            QVERIFY2(utau::isRestLyric(lyric.toStdString()), qPrintable(lyric));
+        }
+        for (const auto &lyric : {QStringLiteral("ai"), space + QStringLiteral("a")}) {
+            QVERIFY(!Note::isRestLyric(lyric));
+            QVERIFY(!utau::isRestLyric(lyric.toStdString()));
+        }
     }
 };
 
