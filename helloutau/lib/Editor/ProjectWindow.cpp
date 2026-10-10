@@ -71,7 +71,7 @@
 #include "AboutDialog.h"
 #include "AppSettings.h"
 #include "CommandEntries_p.h"
-#include "DiagnosticBox_p.h"
+#include "DiagnosticBox.h"
 #include "Editor.h"
 #include "SynthToolTrust.h"
 #include "ReplaceLyricsDialog.h"
@@ -340,7 +340,7 @@ namespace hello::daw {
             QObject::connect(playback, &Playback::failed, &decl,
                              [this](const kit::DiagnosticList &diagnostics) {
                                  stdc_decl_t;
-                                 DiagnosticBox::show(&decl, tr("Play"), diagnostics);
+                                 DiagnosticBox::report(&decl, tr("Play"), diagnostics);
                              });
 
             playheadTimer.setInterval(PlayheadInterval);
@@ -399,7 +399,7 @@ namespace hello::daw {
             changes.tempo = dialog.tempo();
             kit::DiagnosticList diagnostics;
             kit::ProjectEdits::setNoteProperties({notes.at(index)}, changes, diagnostics);
-            DiagnosticBox::show(&decl, tr("Tempo"), diagnostics);
+            DiagnosticBox::report(&decl, tr("Tempo"), diagnostics);
         }
 
         // The label of note index, entered by the user; an empty text removes it
@@ -418,7 +418,7 @@ namespace hello::daw {
             }
             kit::DiagnosticList diagnostics;
             kit::ProjectEdits::setLabel(notes.at(index), label, diagnostics);
-            DiagnosticBox::show(&decl, tr("Set Label"), diagnostics);
+            DiagnosticBox::report(&decl, tr("Set Label"), diagnostics);
         }
 
         void replaceLyrics() {
@@ -478,7 +478,7 @@ namespace hello::daw {
             }
             kit::DiagnosticList diagnostics;
             kit::ProjectEdits::nameRegion(notes, first, last - first + 1, name, diagnostics);
-            DiagnosticBox::show(&decl, tr("Name Region"), diagnostics);
+            DiagnosticBox::report(&decl, tr("Name Region"), diagnostics);
         }
 
         // Renames region to the name entered by the user, or removes it if the name is empty.
@@ -498,7 +498,7 @@ namespace hello::daw {
             } else {
                 kit::ProjectEdits::renameRegion(notes, region, name, diagnostics);
             }
-            DiagnosticBox::show(&decl, tr("Rename Region"), diagnostics);
+            DiagnosticBox::report(&decl, tr("Rename Region"), diagnostics);
         }
 
         // Lists the regions of the track in their dialog with current selected if given. Each
@@ -520,7 +520,7 @@ namespace hello::daw {
                                      kit::ProjectRef(document->session()).tracks().at(0).notes();
                                  kit::DiagnosticList diagnostics;
                                  kit::ProjectEdits::removeRegion(notes, region, diagnostics);
-                                 DiagnosticBox::show(&dialog, tr("Remove Region"), diagnostics);
+                                 DiagnosticBox::report(&dialog, tr("Remove Region"), diagnostics);
                                  dialog.setRegions(roll->regions());
                              });
             dialog.exec();
@@ -561,7 +561,7 @@ namespace hello::daw {
             }
             kit::DiagnosticList diagnostics;
             kit::ProjectEdits::setNoteProperties(selected, dialog.changes(), diagnostics);
-            DiagnosticBox::show(&decl, tr("Note Properties"), diagnostics);
+            DiagnosticBox::report(&decl, tr("Note Properties"), diagnostics);
         }
 
         // Edits the properties of the project in their dialog in one step. A voice folder that
@@ -580,7 +580,7 @@ namespace hello::daw {
                 kit::DiagnosticList diagnostics;
                 const bool changed = kit::ProjectEdits::setProperties(
                     kit::ProjectRef(document->session()), changes, diagnostics);
-                DiagnosticBox::show(&decl, tr("Project Properties"), diagnostics);
+                DiagnosticBox::report(&decl, tr("Project Properties"), diagnostics);
                 newFolder = changed && changes.voiceDir.has_value() &&
                             !sameVoiceRoot(voiceRoot(), voiceBankRoot);
             }
@@ -663,7 +663,7 @@ namespace hello::daw {
             stdc_decl_t;
             kit::DiagnosticList diagnostics;
             const auto deleted = playback->clearCache(*document, diagnostics);
-            DiagnosticBox::show(&decl, tr("Clear Render Cache"), diagnostics);
+            DiagnosticBox::report(&decl, tr("Clear Render Cache"), diagnostics);
             if (!deleted) {
                 return;
             }
@@ -755,7 +755,7 @@ namespace hello::daw {
                                                              "resampler in the project properties "
                                                              "first."),
                                            std::nullopt});
-                    DiagnosticBox::show(&decl, title, diagnostics);
+                    DiagnosticBox::report(&decl, title, diagnostics);
                 }
                 return std::nullopt;
             }
@@ -859,7 +859,7 @@ namespace hello::daw {
             }
             kit::DiagnosticList diagnostics;
             if (!playback->play(*document, range, *synthTools, diagnostics)) {
-                DiagnosticBox::show(&decl, tr("Play"), diagnostics);
+                DiagnosticBox::report(&decl, tr("Play"), diagnostics);
                 return;
             }
             waitForRender(tr("Play"));
@@ -995,7 +995,7 @@ namespace hello::daw {
             }
             QObject::disconnect(connection);
             if (!started) {
-                DiagnosticBox::show(&decl, tr("Render Track"), diagnostics);
+                DiagnosticBox::report(&decl, tr("Render Track"), diagnostics);
                 return;
             }
             if (written) {
@@ -1068,7 +1068,7 @@ namespace hello::daw {
             kit::DiagnosticList diagnostics;
             previewing = playback->preview(*document, at, *synthTools, diagnostics);
             if (!previewing) {
-                DiagnosticBox::show(&decl, tr("Play"), diagnostics);
+                DiagnosticBox::report(&decl, tr("Play"), diagnostics);
             }
         }
 
@@ -1099,7 +1099,7 @@ namespace hello::daw {
             kit::DiagnosticList diagnostics;
             previewing = playback->preview(*document, cursorTime(), *synthTools, diagnostics);
             if (!previewing) {
-                DiagnosticBox::show(&decl, tr("Play"), diagnostics);
+                DiagnosticBox::report(&decl, tr("Play"), diagnostics);
             }
         }
 
@@ -1275,7 +1275,7 @@ namespace hello::daw {
                             kit::DiagnosticList diagnostics;
                             kit::ProjectEdits::setProperties(kit::ProjectRef(document->session()),
                                                              changes, diagnostics);
-                            DiagnosticBox::show(_decl, tr("Project Tempo"), diagnostics);
+                            DiagnosticBox::report(_decl, tr("Project Tempo"), diagnostics);
                         });
                     tempoBoxes.push_back(box);
                     return box;
@@ -1353,7 +1353,7 @@ namespace hello::daw {
             kit::DiagnosticList diagnostics;
             kit::ProjectEdits::setProperties(kit::ProjectRef(document->session()), changes,
                                              diagnostics);
-            DiagnosticBox::show(&decl, tr("Time Signature"), diagnostics);
+            DiagnosticBox::report(&decl, tr("Time Signature"), diagnostics);
         }
 
         // Shows ticks in the boxes of the quantization, as the piano roll has it.
@@ -1885,12 +1885,12 @@ namespace hello::daw {
                 changes.lyric = lyric;
                 if (!kit::ProjectEdits::setNoteProperties({notes.at(index)}, changes,
                                                           diagnostics)) {
-                    DiagnosticBox::show(&decl, title, diagnostics);
+                    DiagnosticBox::report(&decl, title, diagnostics);
                     return false;
                 }
             }
             const bool committed = transaction.commit(diagnostics);
-            DiagnosticBox::show(&decl, title, diagnostics);
+            DiagnosticBox::report(&decl, title, diagnostics);
             return committed;
         }
 
@@ -2121,7 +2121,7 @@ namespace hello::daw {
             }
             kit::DiagnosticList diagnostics;
             run(diagnostics);
-            DiagnosticBox::show(&decl, title, diagnostics);
+            DiagnosticBox::report(&decl, title, diagnostics);
         }
 
         // Pastes the parameters of the copied notes that the user chooses, those chosen last
@@ -2138,7 +2138,7 @@ namespace hello::daw {
             pastedParameters = dialog.parameters();
             kit::DiagnosticList diagnostics;
             roll->pasteParameters(pastedParameters, diagnostics);
-            DiagnosticBox::show(&decl, tr("Paste Parameters"), diagnostics);
+            DiagnosticBox::report(&decl, tr("Paste Parameters"), diagnostics);
         }
 
         // Scales the pitch of the selected sung notes by the factors that the user enters.
@@ -2153,7 +2153,7 @@ namespace hello::daw {
             }
             kit::DiagnosticList diagnostics;
             roll->scalePitch(dialog.portamento(), dialog.vibrato(), diagnostics);
-            DiagnosticBox::show(&decl, tr("Scale Pitch"), diagnostics);
+            DiagnosticBox::report(&decl, tr("Scale Pitch"), diagnostics);
         }
 
         // Edits the portamento and vibrato of the selected sung notes, starting from the first
@@ -2245,7 +2245,7 @@ namespace hello::daw {
                 kit::ProjectEdits::setVibrato(sung, std::nullopt, diagnostics);
             }
             transaction.commit(diagnostics);
-            DiagnosticBox::show(&decl, tr("Pitch Control"), diagnostics);
+            DiagnosticBox::report(&decl, tr("Pitch Control"), diagnostics);
         }
 
         // Splits the selected note after a length that the user enters.
@@ -2476,7 +2476,7 @@ namespace hello::daw {
         kit::DiagnosticList diagnostics;
         const bool loaded = document->loadVoiceBank(impl.editor->settings().voiceLocations(),
                                                     &selector, diagnostics);
-        DiagnosticBox::show(this, tr("Voice Bank"), diagnostics);
+        DiagnosticBox::report(this, tr("Voice Bank"), diagnostics);
         return loaded;
     }
 
@@ -2494,7 +2494,7 @@ namespace hello::daw {
         }
         kit::DiagnosticList diagnostics;
         const bool saved = impl.document->save(diagnostics);
-        DiagnosticBox::show(this, tr("Save"), diagnostics);
+        DiagnosticBox::report(this, tr("Save"), diagnostics);
         return saved;
     }
 
@@ -2513,7 +2513,7 @@ namespace hello::daw {
         }
         kit::DiagnosticList diagnostics;
         const bool saved = impl.document->saveAs(path, diagnostics);
-        DiagnosticBox::show(this, tr("Save As"), diagnostics);
+        DiagnosticBox::report(this, tr("Save As"), diagnostics);
         if (saved) {
             impl.editor->settings().addRecentFile(path);
         }
@@ -2549,7 +2549,7 @@ namespace hello::daw {
         options.resampler = settings.resampler();
         kit::DiagnosticList diagnostics;
         const bool exported = impl.document->exportUst(path, options, diagnostics);
-        DiagnosticBox::show(this, tr("Export UST"), diagnostics);
+        DiagnosticBox::report(this, tr("Export UST"), diagnostics);
         return exported;
     }
 

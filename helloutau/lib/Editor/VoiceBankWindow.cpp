@@ -62,7 +62,7 @@
 #include "VoiceAliasRuleDialog.h"
 #include "AppSettings.h"
 #include "CommandEntries_p.h"
-#include "DiagnosticBox_p.h"
+#include "DiagnosticBox.h"
 #include "Editor.h"
 #include "FindSupport_p.h"
 #include "OtoWaveformView.h"
@@ -588,7 +588,8 @@ namespace hello::daw {
                                  // Once the box that lost the focus has settled
                                  QTimer::singleShot(0, &decl, [this, diagnostics] {
                                      stdc_decl_t;
-                                     DiagnosticBox::show(&decl, tr("Voice Bank Info"), diagnostics);
+                                     DiagnosticBox::report(&decl, tr("Voice Bank Info"),
+                                                           diagnostics);
                                  });
                              });
 
@@ -667,7 +668,7 @@ namespace hello::daw {
             selector.setRoot(document->rootPath());
             kit::DiagnosticList diagnostics;
             document->reloadFromDisk(changes, &selector, diagnostics);
-            DiagnosticBox::show(&decl, tr("Read from Disk"), diagnostics);
+            DiagnosticBox::report(&decl, tr("Read from Disk"), diagnostics);
             for (const auto &directory : changes.changed) {
                 declined.erase(directory);
             }
@@ -900,7 +901,7 @@ namespace hello::daw {
                         value.alias = change.to;
                         if (!kit::VoiceBankEdits::setEntry(list.at(change.index), value,
                                                            diagnostics)) {
-                            DiagnosticBox::show(&decl, title, diagnostics);
+                            DiagnosticBox::report(&decl, title, diagnostics);
                             return false;
                         }
                     } else {
@@ -911,12 +912,12 @@ namespace hello::daw {
                 }
                 if (!copies.isEmpty() &&
                     !kit::VoiceBankEdits::insertEntries(*directory, copies, diagnostics)) {
-                    DiagnosticBox::show(&decl, title, diagnostics);
+                    DiagnosticBox::report(&decl, title, diagnostics);
                     return false;
                 }
             }
             const bool committed = transaction.commit(diagnostics);
-            DiagnosticBox::show(&decl, title, diagnostics);
+            DiagnosticBox::report(&decl, title, diagnostics);
             if (!committed) {
                 return false;
             }
@@ -1128,7 +1129,7 @@ namespace hello::daw {
                 }
             }
             if (!problems.isEmpty()) {
-                DiagnosticBox::show(&decl, title, problems);
+                DiagnosticBox::report(&decl, title, problems);
                 return false;
             }
             auto transaction = document->session()->transaction(title);
@@ -1145,14 +1146,14 @@ namespace hello::daw {
                     value.alias = change.to;
                     if (!kit::VoiceBankEdits::setEntry(entries.at(change.index), value,
                                                        diagnostics)) {
-                        DiagnosticBox::show(&decl, title, diagnostics);
+                        DiagnosticBox::report(&decl, title, diagnostics);
                         return false;
                     }
                     made.push_back({path, value.fileName, value.alias});
                 }
             }
             const bool committed = transaction.commit(diagnostics);
-            DiagnosticBox::show(&decl, title, diagnostics);
+            DiagnosticBox::report(&decl, title, diagnostics);
             if (!committed) {
                 return false;
             }
@@ -1311,7 +1312,7 @@ namespace hello::daw {
                                  // Once the editor of the cell has closed
                                  QTimer::singleShot(0, &decl, [this, diagnostics] {
                                      stdc_decl_t;
-                                     DiagnosticBox::show(&decl, tr("Edit Entry"), diagnostics);
+                                     DiagnosticBox::report(&decl, tr("Edit Entry"), diagnostics);
                                  });
                              });
 
@@ -1565,7 +1566,7 @@ namespace hello::daw {
                                  const int row = decl.currentRow();
                                  kit::DiagnosticList diagnostics;
                                  if (row < 0 || !model->setEntry(row, entry, diagnostics)) {
-                                     DiagnosticBox::show(&decl, tr("Edit Entry"), diagnostics);
+                                     DiagnosticBox::report(&decl, tr("Edit Entry"), diagnostics);
                                  }
                                  model->refresh();
                                  showCurrentEntry();
@@ -1675,7 +1676,7 @@ namespace hello::daw {
             QObject::connect(preview, &SamplePreview::failed, &decl,
                              [this](const kit::DiagnosticList &diagnostics) {
                                  stdc_decl_t;
-                                 DiagnosticBox::show(&decl, tr("Preview"), diagnostics);
+                                 DiagnosticBox::report(&decl, tr("Preview"), diagnostics);
                              });
             actions.value(QStringLiteral("helloutau.playback.stop"))->setEnabled(false);
         }
@@ -1687,7 +1688,7 @@ namespace hello::daw {
             }
             kit::DiagnosticList diagnostics;
             preview->play(waveform->audio(), from, to, diagnostics);
-            DiagnosticBox::show(&decl, tr("Play"), diagnostics);
+            DiagnosticBox::report(&decl, tr("Play"), diagnostics);
         }
 
         void synthesize() {
@@ -1709,7 +1710,7 @@ namespace hello::daw {
             kit::DiagnosticList diagnostics;
             preview->synthesize(sample, synthesizedPitch, synthesizedLength,
                                 pathOf(editor->settings().resampler()), diagnostics);
-            DiagnosticBox::show(&decl, tr("Synthesize"), diagnostics);
+            DiagnosticBox::report(&decl, tr("Synthesize"), diagnostics);
         }
 
         // Sets the pitch of the synthesized note to that of the folder of the current entry,
@@ -1943,7 +1944,7 @@ namespace hello::daw {
         kit::DiagnosticList diagnostics;
         const bool converted =
             ref && kit::VoiceBankEdits::convertCharset(*ref, charset, diagnostics);
-        DiagnosticBox::show(this, tr("Convert Encoding"), diagnostics);
+        DiagnosticBox::report(this, tr("Convert Encoding"), diagnostics);
         return converted;
     }
 
@@ -1952,7 +1953,7 @@ namespace hello::daw {
         stdc_impl_t;
         kit::DiagnosticList diagnostics;
         const bool read = impl.document->session()->reread(directory, charset, diagnostics);
-        DiagnosticBox::show(this, tr("Read Again in Encoding"), diagnostics);
+        DiagnosticBox::report(this, tr("Read Again in Encoding"), diagnostics);
         if (read) {
             impl.model->refresh();
         }
@@ -2002,7 +2003,7 @@ namespace hello::daw {
         }
         kit::DiagnosticList diagnostics;
         const bool inserted = kit::VoiceBankEdits::insertEntries(*directory, {entry}, diagnostics);
-        DiagnosticBox::show(this, tr("Insert Entry"), diagnostics);
+        DiagnosticBox::report(this, tr("Insert Entry"), diagnostics);
         if (!inserted) {
             return false;
         }
@@ -2051,12 +2052,12 @@ namespace hello::daw {
         for (const auto &[path, entries] : copies) {
             if (!kit::VoiceBankEdits::insertEntries(*impl.directoryRef(path), entries,
                                                     diagnostics)) {
-                DiagnosticBox::show(this, tr("Duplicate Entries"), diagnostics);
+                DiagnosticBox::report(this, tr("Duplicate Entries"), diagnostics);
                 return false;
             }
         }
         const bool committed = transaction.commit(diagnostics);
-        DiagnosticBox::show(this, tr("Duplicate Entries"), diagnostics);
+        DiagnosticBox::report(this, tr("Duplicate Entries"), diagnostics);
         if (!committed) {
             return false;
         }
@@ -2094,12 +2095,12 @@ namespace hello::daw {
         for (const auto &[path, names] : files) {
             const auto directory = impl.directoryRef(path);
             if (!directory || !kit::VoiceBankEdits::includeAudio(*directory, names, diagnostics)) {
-                DiagnosticBox::show(this, tr("Include Audio Files"), diagnostics);
+                DiagnosticBox::report(this, tr("Include Audio Files"), diagnostics);
                 return false;
             }
         }
         const bool committed = transaction.commit(diagnostics);
-        DiagnosticBox::show(this, tr("Include Audio Files"), diagnostics);
+        DiagnosticBox::report(this, tr("Include Audio Files"), diagnostics);
         if (!committed) {
             return false;
         }
@@ -2129,12 +2130,12 @@ namespace hello::daw {
         for (const auto &[path, list] : indices) {
             const auto directory = impl.directoryRef(path);
             if (!directory || !kit::VoiceBankEdits::removeEntries(*directory, list, diagnostics)) {
-                DiagnosticBox::show(this, tr("Remove Entries"), diagnostics);
+                DiagnosticBox::report(this, tr("Remove Entries"), diagnostics);
                 return false;
             }
         }
         const bool committed = transaction.commit(diagnostics);
-        DiagnosticBox::show(this, tr("Remove Entries"), diagnostics);
+        DiagnosticBox::report(this, tr("Remove Entries"), diagnostics);
         if (committed) {
             impl.model->refresh();
         }
@@ -2196,7 +2197,7 @@ namespace hello::daw {
         for (const auto &[path, report] : std::as_const(found)) {
             written += kit::WaveMetadata::strip(path, diagnostics) ? 1 : 0;
         }
-        DiagnosticBox::show(this, tr("Remove Audio Metadata"), diagnostics);
+        DiagnosticBox::report(this, tr("Remove Audio Metadata"), diagnostics);
         statusBar()->showMessage(
             tr("The metadata of %n audio files was removed.", nullptr, written));
         impl.readAudio.clear();
@@ -2255,7 +2256,7 @@ namespace hello::daw {
         kit::DiagnosticList diagnostics;
         impl.info->commit();
         const bool saved = impl.document->save(diagnostics);
-        DiagnosticBox::show(this, tr("Save"), diagnostics);
+        DiagnosticBox::report(this, tr("Save"), diagnostics);
         return saved;
     }
 
@@ -2275,7 +2276,7 @@ namespace hello::daw {
         selector.setRoot(impl.document->rootPath());
         kit::DiagnosticList diagnostics;
         impl.document->reloadAllFromDisk(&selector, diagnostics);
-        DiagnosticBox::show(this, tr("Read All from Disk"), diagnostics);
+        DiagnosticBox::report(this, tr("Read All from Disk"), diagnostics);
         impl.declined.clear();
         impl.check({});
         return !kit::hasError(diagnostics);
@@ -2304,7 +2305,7 @@ namespace hello::daw {
         if (saved) {
             impl.editor->settings().addRecentVoiceBank(impl.document->rootPath());
         }
-        DiagnosticBox::show(this, tr("Save As"), diagnostics);
+        DiagnosticBox::report(this, tr("Save As"), diagnostics);
         return saved;
     }
 

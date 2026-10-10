@@ -37,7 +37,7 @@
 
 #include "ActionLayoutsFile.h"
 #include "AppSettings.h"
-#include "DiagnosticBox_p.h"
+#include "DiagnosticBox.h"
 #include "EditorIcons_p.h"
 #include "EditorSettingPages_p.h"
 #include "KeymapFile.h"
@@ -668,7 +668,7 @@ namespace hello::daw {
                             tr("File: %1").arg(normalizedPathText(path)), std::nullopt};
         if (!document) {
             diagnostics.prepend(pathDiagnostic);
-            DiagnosticBox::show(from, title, diagnostics);
+            DiagnosticBox::report(from, title, diagnostics);
             return nullptr;
         }
         ProjectWindow *window = from;
@@ -688,7 +688,7 @@ namespace hello::daw {
         if (!diagnostics.isEmpty()) {
             diagnostics.prepend(pathDiagnostic);
         }
-        DiagnosticBox::show(window, title, diagnostics);
+        DiagnosticBox::report(window, title, diagnostics);
         window->loadVoiceBank();
         window->showPropertiesIfPathsAreInvalid();
         return window;
@@ -720,7 +720,7 @@ namespace hello::daw {
         auto document = kit::VoiceBankDocument::open(root, &selector, diagnostics);
         const auto title = tr("Open %1").arg(QDir::toNativeSeparators(textOf(root)));
         if (!document) {
-            DiagnosticBox::show(from, title, diagnostics);
+            DiagnosticBox::report(from, title, diagnostics);
             return nullptr;
         }
         impl.settings->addRecentVoiceBank(root);
@@ -755,7 +755,7 @@ namespace hello::daw {
         impl.voiceBankWindows.push_back(window);
         placeNewWindow(window, previous);
         window->show();
-        DiagnosticBox::show(window, title, diagnostics);
+        DiagnosticBox::report(window, title, diagnostics);
         return window;
     }
 

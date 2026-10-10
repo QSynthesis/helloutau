@@ -1,34 +1,52 @@
-#include "DiagnosticBox_p.h"
+#include "DiagnosticBox.h"
 
 #include <algorithm>
 
-#include <QtCore/QCoreApplication>
 #include <QtCore/QStringList>
-#include <QtWidgets/QMessageBox>
 
 namespace hello::daw {
 
-    void DiagnosticBox::show(QWidget *parent, const QString &title,
-                             const kit::DiagnosticList &diagnostics) {
+    namespace {
+
+        // The icon of the most severe of diagnostics
+        QMessageBox::Icon iconOf(const kit::DiagnosticList &diagnostics) {
+            auto severity = kit::DiagnosticSeverity::Note;
+            for (const auto &diagnostic : diagnostics) {
+                severity = std::max(severity, diagnostic.severity);
+            }
+            switch (severity) {
+                case kit::DiagnosticSeverity::Error:
+                    return QMessageBox::Critical;
+                case kit::DiagnosticSeverity::Warning:
+                    return QMessageBox::Warning;
+                default:
+                    return QMessageBox::Information;
+            }
+        }
+
+    }
+
+    DiagnosticBox::DiagnosticBox(const QString &title, const kit::DiagnosticList &diagnostics,
+                                 QWidget *parent)
+        : QMessageBox(iconOf(diagnostics), title, QString(), QMessageBox::Ok, parent) {
+        QStringList lines;
+        for (const auto &diagnostic : diagnostics) {
+            lines.push_back(
+                diagnostic.noteIndex
+                    ? tr("Note %1: %2").arg(*diagnostic.noteIndex).arg(diagnostic.message)
+                    : diagnostic.message);
+        }
+        setText(lines.join(u'\n'));
+    }
+
+    DiagnosticBox::~DiagnosticBox() = default;
+
+    void DiagnosticBox::report(QWidget *parent, const QString &title,
+                               const kit::DiagnosticList &diagnostics) {
         if (diagnostics.isEmpty()) {
             return;
         }
-
-        auto severity = kit::DiagnosticSeverity::Note;
-        QStringList lines;
-        for (const auto &diagnostic : diagnostics) {
-            severity = std::max(severity, diagnostic.severity);
-            lines.push_back(diagnostic.noteIndex ? QCoreApplication::translate(
-                                                       "hello::daw::DiagnosticBox", "Note %1: %2")
-                                                       .arg(*diagnostic.noteIndex)
-                                                       .arg(diagnostic.message)
-                                                 : diagnostic.message);
-        }
-
-        const auto icon = severity == kit::DiagnosticSeverity::Error     ? QMessageBox::Critical
-                          : severity == kit::DiagnosticSeverity::Warning ? QMessageBox::Warning
-                                                                         : QMessageBox::Information;
-        QMessageBox box(icon, title, lines.join(u'\n'), QMessageBox::Ok, parent);
+        DiagnosticBox box(title, diagnostics, parent);
         box.exec();
     }
 
