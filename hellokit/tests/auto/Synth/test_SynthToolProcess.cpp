@@ -37,6 +37,13 @@ namespace {
     /// second later, for the case of a synth tool started by a script.
     constexpr char writeLater[] = "--write-later";
 
+    /// The argument that makes it print the argument that follows and then hang, for the case of
+    /// a cancelled synth tool.
+    constexpr char printThenSleep[] = "--print-then-sleep";
+
+    /// The argument that makes it sleep for the number of milliseconds that follows and succeed.
+    constexpr char sleepFor[] = "--sleep-for";
+
 }
 
 class test_SynthToolProcess : public QObject {
@@ -56,6 +63,20 @@ private:
         SynthToolProcess synthTool;
         synthTool.timeout = timeout;
         return synthTool.run(self(), arguments, diagnostics);
+    }
+
+    /// A body of the log of about a hundred bytes, distinct for each \a index.
+    static QString bodyOf(int index) {
+        return QStringLiteral("body-%1-").arg(index, 2, 10, QLatin1Char('0')) +
+               QString(90, QLatin1Char('x'));
+    }
+
+    static QStringList bodies() {
+        QStringList result;
+        for (int i = 0; i < 30; ++i) {
+            result.push_back(bodyOf(i));
+        }
+        return result;
     }
 
 private Q_SLOTS:
@@ -211,6 +232,134 @@ private Q_SLOTS:
         QTest::qWait(1500);
         QVERIFY(!QFile::exists(marker));
     }
+
+    // A cancelled synth tool is killed within about one poll interval. The output written before
+    // the kill is kept, in the result and in the log, and the cancellation is no error.
+    void a_cancelled_synth_tool_is_killed_and_keeps_its_output() {
+        QElapsedTimer elapsed;
+        elapsed.start();
+        qint64 cancelledAt = -1;
+        SynthToolProcess synthTool;
+        DiagnosticList diagnostics;
+        const auto result = synthTool.run(
+            self(), {QLatin1String(printThenSleep), QStringLiteral("partial")}, diagnostics, [&] {
+                if (cancelledAt < 0 && elapsed.elapsed() > 300) {
+                    cancelledAt = elapsed.elapsed();
+                }
+                return cancelledAt >= 0;
+            });
+        QVERIFY(result.started);
+        QVERIFY(result.cancelled);
+        QVERIFY(!result.timedOut);
+        QVERIFY(diagnostics.isEmpty());
+        QVERIFY2(elapsed.elapsed() - cancelledAt < 500,
+                 qPrintable(QString::number(elapsed.elapsed() - cancelledAt)));
+        QCOMPARE(result.output.trimmed(), QStringLiteral("partial"));
+        QVERIFY(synthTool.outputLog().contains(QStringLiteral("partial")));
+    }
+
+    // A negative time limit is no limit.
+    void a_negative_time_limit_lets_the_synth_tool_finish() {
+        DiagnosticList diagnostics;
+        const auto result = run({QLatin1String(sleepFor), QStringLiteral("700")}, diagnostics, -1);
+        QVERIFY(result.succeeded());
+        QVERIFY(!result.timedOut);
+        QVERIFY(diagnostics.isEmpty());
+    }
+
+    // Past its limit, the log keeps at most half of the limit, from the start of a line, in a
+    // file as in memory.
+    void a_log_past_its_limit_keeps_half_from_the_start_of_a_line() {
+        QTemporaryDir dir;
+        for (const bool inFile : {false, true}) {
+            SynthToolOutputLog log;
+            if (inFile) {
+                log.setFileName(dir.filePath(QStringLiteral("log.txt")));
+            }
+            log.setLimit(1024);
+            int cuts = 0;
+            qsizetype previous = 0;
+            QString text;
+            for (int i = 0; i < 30; ++i) {
+                log.record("resampler.exe", bodyOf(i));
+                const auto size = log.text().toUtf8().size();
+                QVERIFY(size <= 1024);
+                // The record made the log shorter, therefore it was cut.
+                if (size < previous) {
+                    ++cuts;
+                    QVERIFY(size <= 512);
+                    text = log.text();
+                    // The newest record is kept.
+                    QVERIFY(text.contains(bodyOf(i)));
+                }
+                previous = size;
+            }
+            QVERIFY(cuts > 0);
+            // Every line is whole: a record header or a body as recorded.
+            const auto lines = text.split(u'\n', Qt::SkipEmptyParts);
+            QVERIFY(!lines.isEmpty());
+            for (const auto &line : lines) {
+                QVERIFY2(line.startsWith(u'[') || bodies().contains(line), qPrintable(line));
+            }
+        }
+    }
+
+    // Content without a line feed is cut at the start of a UTF-8 sequence.
+    void a_long_line_is_cut_at_the_start_of_a_character() {
+        SynthToolOutputLog log;
+        log.setLimit(1024);
+        log.record("resampler.exe", QString(1000, QChar(0x6B4C)));
+        const auto bytes = log.text().toUtf8();
+        QVERIFY(bytes.size() <= 512);
+        QVERIFY(!bytes.isEmpty());
+        const auto text = QString::fromUtf8(bytes);
+        QVERIFY(!text.contains(QChar::ReplacementCharacter));
+        QCOMPARE(text.toUtf8(), bytes);
+    }
+
+    void a_log_within_its_limit_only_appends() {
+        SynthToolOutputLog log;
+        log.record("resampler.exe", QStringLiteral("first"));
+        const auto before = log.text();
+        log.record("wavtool.exe", QStringLiteral("second"));
+        QVERIFY(log.text().startsWith(before));
+        QVERIFY(log.text().contains(QStringLiteral("second")));
+    }
+
+    void a_lower_limit_cuts_the_log_at_once() {
+        SynthToolOutputLog log;
+        for (int i = 0; i < 30; ++i) {
+            log.record("resampler.exe", bodyOf(i));
+        }
+        QVERIFY(log.text().toUtf8().size() > 1024);
+        log.setLimit(1024);
+        QVERIFY(log.text().toUtf8().size() <= 512);
+    }
+
+    void the_log_moves_with_its_file_name() {
+        QTemporaryDir dir;
+        const auto fileName = dir.filePath(QStringLiteral("log.txt"));
+        SynthToolOutputLog log;
+        log.record("resampler.exe", QStringLiteral("kept"));
+        const auto text = log.text();
+        log.setFileName(fileName);
+        QCOMPARE(log.text(), text);
+        QFile file(fileName);
+        QVERIFY(file.open(QIODevice::ReadOnly));
+        QCOMPARE(QString::fromUtf8(file.readAll()), text);
+    }
+
+    // In the Latest mode, the first record after clear() or setMode() replaces the log.
+    void the_latest_mode_keeps_one_run() {
+        SynthToolOutputLog log;
+        log.record("resampler.exe", QStringLiteral("old"));
+        log.setMode(SynthToolOutputLog::Latest);
+        log.record("resampler.exe", QStringLiteral("new"));
+        log.record("wavtool.exe", QStringLiteral("same run"));
+        QVERIFY(!log.text().contains(QStringLiteral("old")));
+        QVERIFY(log.text().contains(QStringLiteral("new")));
+        QVERIFY(log.text().contains(QStringLiteral("same run")));
+    }
 };
 
 int main(int argc, char *argv[]) {
@@ -244,6 +393,18 @@ int main(int argc, char *argv[]) {
             for (;;) {
                 QTest::qSleep(1000);
             }
+        }
+        if (mode == printThenSleep && argc >= 3) {
+            std::fputs(argv[2], stdout);
+            std::fputc('\n', stdout);
+            std::fflush(stdout);
+            for (;;) {
+                QTest::qSleep(1000);
+            }
+        }
+        if (mode == sleepFor && argc >= 3) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(std::atoi(argv[2])));
+            return 0;
         }
     }
 
