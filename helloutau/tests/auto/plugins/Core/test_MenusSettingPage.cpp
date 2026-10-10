@@ -349,6 +349,55 @@ private Q_SLOTS:
             QVERIFY2(empty.isEmpty(), qPrintable(empty.join(QStringLiteral(", "))));
         }
     }
+
+    // The Add Action dialog also adds a menu or a group, in the form that its manifest declares.
+    void a_menu_or_a_group_is_added_in_its_declared_form() {
+        QTemporaryDir dir;
+        const auto e = editorIn(dir);
+        MenusSettingPage page(e.get());
+        QVERIFY(page.widget());
+        const auto add = page.widget()->findChild<QPushButton *>(QStringLiteral("add"));
+        QVERIFY(add);
+        const auto tree = page.tree(Editor::ProjectWindowKind);
+        const auto model = tree->model();
+        const auto toolBarId = QStringLiteral("helloutau.mainToolBar");
+        tree->setCurrentIndex(childWithId(model, {}, toolBarId));
+        QVERIFY(tree->currentIndex().isValid());
+        const auto registry = e->actionRegistry(Editor::ProjectWindowKind);
+
+        QString chosen;
+        QTimer::singleShot(0, this, [&] {
+            const auto dialog = qobject_cast<QDialog *>(QApplication::activeModalWidget());
+            if (!dialog) {
+                return;
+            }
+            const auto actions = dialog->findChild<QTreeView *>(QStringLiteral("actions"));
+            for (const auto &index : actions ? allRows(actions->model()) : QModelIndexList()) {
+                const auto info = registry->actionInfo(index.data(Qt::UserRole).toString());
+                if (info && !info->topLevel() &&
+                    (info->type() == QAK::ActionItemInfo::Menu ||
+                     info->type() == QAK::ActionItemInfo::Group)) {
+                    chosen = info->id();
+                    actions->setCurrentIndex(index);
+                    dialog->findChild<QDialogButtonBox *>()->button(QDialogButtonBox::Ok)->click();
+                    // Closed if the item is refused, so that the check below fails
+                    if (dialog->isVisible()) {
+                        dialog->reject();
+                    }
+                    return;
+                }
+            }
+            dialog->reject();
+        });
+        add->click();
+        QVERIFY(!chosen.isEmpty());
+        const auto added = childWithId(model, childWithId(model, {}, toolBarId), chosen);
+        QVERIFY(added.isValid());
+        const auto declared = registry->actionInfo(chosen)->type();
+        QCOMPARE(added.data(Qt::UserRole).value<QAK::ActionLayoutEntry>().type(),
+                 declared == QAK::ActionItemInfo::Menu ? QAK::ActionLayoutEntry::Menu
+                                                       : QAK::ActionLayoutEntry::Group);
+    }
 };
 
 int main(int argc, char *argv[]) {

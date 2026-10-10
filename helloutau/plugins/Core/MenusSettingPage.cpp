@@ -1,5 +1,7 @@
 #include "MenusSettingPage.h"
 
+#include <optional>
+
 #include <QtCore/QIdentityProxyModel>
 #include <QtCore/QSortFilterProxyModel>
 #include <QtWidgets/QDialog>
@@ -342,8 +344,8 @@ namespace hello::daw {
         m_down->setEnabled(entry && at.row() + 1 < panel.model->rowCount(at.parent()));
     }
 
-    // Asks for an action of the registry of the current tab in a list that the user filters by
-    // its text, and adds it.
+    // Asks for an action, a menu or a group of the registry of the current tab in a list that the
+    // user filters by its text, and adds it in its declared form.
     void MenusSettingPage::askAction() {
         const auto actions = registry(currentKind());
         QDialog dialog(m_tabs->window());
@@ -372,11 +374,28 @@ namespace hello::daw {
             filter->setFilterFixedString(text);
             tree->expandAll();
         });
-        const auto acceptAction = [&] {
-            const auto index = filter->mapToSource(tree->currentIndex());
-            const auto id = index.data(Qt::UserRole).toString();
+        // Returns the layout entry of the current item in its declared form, or std::nullopt for
+        // a directory of the catalog.
+        const auto currentEntry = [&]() -> std::optional<Entry> {
+            const auto id = filter->mapToSource(tree->currentIndex()).data(Qt::UserRole).toString();
             const auto info = actions->actionInfo(id);
-            if (info && info->type() == QAK::ActionItemInfo::Action) {
+            if (!info) {
+                return std::nullopt;
+            }
+            switch (info->type()) {
+                case QAK::ActionItemInfo::Action:
+                    return Entry(id, Entry::Action);
+                case QAK::ActionItemInfo::Menu:
+                    return Entry(id, Entry::Menu);
+                case QAK::ActionItemInfo::Group:
+                    return Entry(id, Entry::Group);
+                case QAK::ActionItemInfo::Phony:
+                    break;
+            }
+            return std::nullopt;
+        };
+        const auto acceptAction = [&] {
+            if (currentEntry()) {
                 dialog.accept();
             }
         };
@@ -386,8 +405,7 @@ namespace hello::daw {
         if (dialog.exec() != QDialog::Accepted) {
             return;
         }
-        const auto id = filter->mapToSource(tree->currentIndex()).data(Qt::UserRole).toString();
-        if (!addEntry(Entry(id, Entry::Action))) {
+        if (!addEntry(*currentEntry())) {
             QMessageBox::warning(m_tabs->window(), tr("Add Action"), tr("%1 cannot be added here.")
                                                                   .arg(tree->currentIndex().data().toString()));
         }
