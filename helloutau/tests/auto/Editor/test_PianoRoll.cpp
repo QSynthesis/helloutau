@@ -1,5 +1,6 @@
 #include <cmath>
 
+#include <QtCore/QScopeGuard>
 #include <QtCore/QTimer>
 #include <QtGui/QPalette>
 #include <QtTest/QSignalSpy>
@@ -2615,6 +2616,29 @@ private Q_SLOTS:
         click(roll, 240, 60, Qt::ControlModifier | Qt::ShiftModifier);
         QCOMPARE(roll.selectedIndices(), (QList<int>{0, 2}));
         QCOMPARE(session.currentStep(), 0);
+    }
+
+    // A rectangle with the pointer near the top edge of the view scrolls the keys up, and one
+    // near the bottom edge scrolls them down.
+    void a_rectangle_at_an_edge_scrolls_the_keys() {
+        kit::ProjectSession session(threeNotes());
+        PianoRoll roll(&session);
+        show(roll);
+        const auto viewport = roll.view()->viewport();
+        const auto start = pointOf(roll, 240, 70);
+        const auto top = roll.view()->keyAxis().top;
+
+        QTest::mousePress(viewport, Qt::LeftButton, {}, start);
+        // The rectangle ends before the roll is destroyed, also if a check fails.
+        const auto release = qScopeGuard([viewport, start] {
+            QTest::mouseRelease(viewport, Qt::LeftButton, {}, start + QPoint(40, 0));
+        });
+        move(viewport, start + QPoint(40, 0), Qt::LeftButton, {});
+        move(viewport, QPoint(start.x() + 40, 4), Qt::LeftButton, {});
+        QTRY_VERIFY(roll.view()->keyAxis().top > top);
+        const auto raised = roll.view()->keyAxis().top;
+        move(viewport, QPoint(start.x() + 40, viewport->height() - 4), Qt::LeftButton, {});
+        QTRY_VERIFY(roll.view()->keyAxis().top < raised);
     }
 };
 
