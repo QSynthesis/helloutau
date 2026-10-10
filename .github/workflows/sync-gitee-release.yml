@@ -54,21 +54,36 @@ jobs:
           RELEASE_BODY: ${{ steps.github-release.outputs.body }}
         run: |
           set -euo pipefail
+          api="https://gitee.com/api/v5/repos/${GITEE_REPOSITORY}"
+          response_file=$(mktemp)
 
-          release_id=""
+          # Resolving gitee.com from the runner times out now and then, so every request may be
+          # repeated. Prints the HTTP status, or 000 if the request did not complete.
+          request() {
+            curl --silent --show-error --connect-timeout 30 --max-time 120 \
+              --output "$response_file" --write-out '%{http_code}' "$@" || true
+          }
+          # A failed request is repeated after a pause if it may succeed later: no response,
+          # too many requests, or a server error. Any other failure ends the job.
+          check_retryable() {
+            local status=$1 what=$2
+            echo "${what} failed (HTTP ${status})." >&2
+            cat "$response_file" >&2 || true
+            echo >&2
+            if [[ "$status" != 000 && "$status" != 429 && "$status" != 5* ]]; then
+              exit 1
+            fi
+            sleep 15
+          }
+
           for attempt in $(seq 1 18); do
-            tags=$(curl --silent --show-error --fail \
-              --connect-timeout 10 --max-time 30 \
-              "https://gitee.com/api/v5/repos/${GITEE_REPOSITORY}/tags?access_token=${GITEE_TOKEN}&per_page=100" \
-              2>/dev/null || printf '[]')
-            tag_found=$(jq -r --arg tag "$TAG_NAME" \
-              'if type == "array" then any(.[]; .name == $tag) else false end' \
-              <<<"$tags")
-            if [ "$tag_found" = "true" ]; then
+            status=$(request "${api}/tags?access_token=${GITEE_TOKEN}&per_page=100")
+            if [[ "$status" == 2* ]] && jq -e --arg tag "$TAG_NAME" \
+              'type == "array" and any(.[]; .name == $tag)' "$response_file" >/dev/null; then
               echo "Gitee tag ${TAG_NAME} is available."
               break
             fi
-            echo "Waiting for Gitee tag ${TAG_NAME} (attempt ${attempt}/18)."
+            echo "Waiting for Gitee tag ${TAG_NAME} (attempt ${attempt}/18, HTTP ${status})."
             if [ "$attempt" -eq 18 ]; then
               echo "Gitee did not receive the mirrored tag in time." >&2
               exit 1
@@ -76,37 +91,41 @@ jobs:
             sleep 10
           done
 
-          existing=$(curl --silent --show-error --fail \
-            --connect-timeout 10 --max-time 30 \
-            "https://gitee.com/api/v5/repos/${GITEE_REPOSITORY}/releases/tags/${TAG_NAME}?access_token=${GITEE_TOKEN}" \
-            2>/dev/null || printf '{}')
-          release_id=$(jq -r '.id // empty' <<<"$existing")
-          if [ -z "$release_id" ]; then
-            release_name="${RELEASE_NAME:-$TAG_NAME}"
-            release_body="${RELEASE_BODY:-$release_name}"
-            payload=$(jq -n \
-              --arg tag "$TAG_NAME" \
-              --arg name "$release_name" \
-              --arg body "$release_body" \
-              '{tag_name: $tag, name: $name, body: $body}')
-            response_file=$(mktemp)
-            response_status=$(curl --silent --show-error \
-              --connect-timeout 10 --max-time 60 \
-              -X POST \
-              -H "Content-Type: application/json" \
-              "https://gitee.com/api/v5/repos/${GITEE_REPOSITORY}/releases?access_token=${GITEE_TOKEN}" \
-              --data "$payload" \
-              --output "$response_file" --write-out '%{http_code}' || true)
-            if [[ "$response_status" != 2* ]]; then
-              echo "Gitee release creation failed (HTTP ${response_status})." >&2
-              cat "$response_file" >&2
-              exit 1
-            fi
-            response=$(cat "$response_file")
-            release_id=$(jq -er '.id' <<<"$response")
-          fi
+          release_name="${RELEASE_NAME:-$TAG_NAME}"
+          release_body="${RELEASE_BODY:-$release_name}"
+          payload=$(jq -n \
+            --arg tag "$TAG_NAME" \
+            --arg name "$release_name" \
+            --arg body "$release_body" \
+            '{tag_name: $tag, name: $name, body: $body}')
 
-          test -n "$release_id"
+          # The release is looked up again before every creation, so that a creation whose
+          # response was lost is not repeated.
+          release_id=""
+          for attempt in $(seq 1 6); do
+            status=$(request "${api}/releases/tags/${TAG_NAME}?access_token=${GITEE_TOKEN}")
+            if [[ "$status" == 2* ]]; then
+              release_id=$(jq -r '.id // empty' "$response_file" 2>/dev/null || true)
+            elif [ "$status" != 404 ]; then
+              check_retryable "$status" "Gitee release lookup (attempt ${attempt}/6)"
+              continue
+            fi
+            if [ -n "$release_id" ]; then
+              break
+            fi
+            status=$(request -X POST -H "Content-Type: application/json" --data "$payload" \
+              "${api}/releases?access_token=${GITEE_TOKEN}")
+            if [[ "$status" == 2* ]]; then
+              release_id=$(jq -er '.id' "$response_file")
+              break
+            fi
+            check_retryable "$status" "Gitee release creation (attempt ${attempt}/6)"
+          done
+
+          if [ -z "$release_id" ]; then
+            echo "Gitee release creation failed." >&2
+            exit 1
+          fi
           echo "release_id=$release_id" >> "$GITHUB_OUTPUT"
 
       - name: Upload release assets to Gitee
@@ -117,16 +136,52 @@ jobs:
         run: |
           set -euo pipefail
           shopt -s nullglob
+          attachments="https://gitee.com/api/v5/repos/${GITEE_REPOSITORY}/releases/${RELEASE_ID}/attach_files?access_token=${GITEE_TOKEN}"
+          response_file=$(mktemp)
+
+          # As in the previous step, every request may be repeated. An upload may take long.
+          request() {
+            curl --silent --show-error --connect-timeout 30 --max-time 1800 \
+              --output "$response_file" --write-out '%{http_code}' "$@" || true
+          }
+          check_retryable() {
+            local status=$1 what=$2
+            echo "${what} failed (HTTP ${status})." >&2
+            cat "$response_file" >&2 || true
+            echo >&2
+            if [[ "$status" != 000 && "$status" != 429 && "$status" != 5* ]]; then
+              exit 1
+            fi
+            sleep 15
+          }
+
           for file in release-assets/*; do
-            response_file=$(mktemp)
-            response_status=$(curl --silent --show-error \
-              -X POST \
-              "https://gitee.com/api/v5/repos/${GITEE_REPOSITORY}/releases/${RELEASE_ID}/attach_files?access_token=${GITEE_TOKEN}" \
-              -F "file=@${file}" \
-              --output "$response_file" --write-out '%{http_code}' || true)
-            if [[ "$response_status" != 2* ]]; then
-              echo "Gitee asset upload failed for ${file} (HTTP ${response_status})." >&2
-              cat "$response_file" >&2
+            name=$(basename "$file")
+            uploaded=false
+            # The attachments are listed again before every upload, so that an upload whose
+            # response was lost is not repeated.
+            for attempt in $(seq 1 6); do
+              status=$(request "$attachments")
+              if [[ "$status" != 2* ]]; then
+                check_retryable "$status" "Listing the Gitee assets (attempt ${attempt}/6)"
+                continue
+              fi
+              if jq -e --arg name "$name" 'type == "array" and any(.[]; .name == $name)' \
+                "$response_file" >/dev/null; then
+                echo "${name} is on Gitee."
+                uploaded=true
+                break
+              fi
+              status=$(request -X POST -F "file=@${file}" "$attachments")
+              if [[ "$status" == 2* ]]; then
+                echo "${name} was uploaded to Gitee."
+                uploaded=true
+                break
+              fi
+              check_retryable "$status" "Uploading ${name} to Gitee (attempt ${attempt}/6)"
+            done
+            if [ "$uploaded" != true ]; then
+              echo "Gitee asset upload failed for ${name}." >&2
               exit 1
             fi
           done
