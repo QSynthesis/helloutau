@@ -1,4 +1,4 @@
-#include "ReplaceLyricsDialog_p.h"
+#include "ReplaceLyricsDialog.h"
 
 #include <QtWidgets/QCheckBox>
 #include <QtWidgets/QDialogButtonBox>
@@ -31,6 +31,8 @@ namespace hello::daw {
         connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
         layout->addWidget(buttons);
     }
+
+    ReplaceLyricsDialog::~ReplaceLyricsDialog() = default;
 
     QString ReplaceLyricsDialog::lyrics() const {
         return m_lyrics->toPlainText();

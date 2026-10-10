@@ -74,7 +74,7 @@
 #include "DiagnosticBox_p.h"
 #include "Editor.h"
 #include "SynthToolTrust.h"
-#include "ReplaceLyricsDialog_p.h"
+#include "ReplaceLyricsDialog.h"
 #include "ExportUstDialog.h"
 #include "FindSupport_p.h"
 #include "PianoRoll.h"
