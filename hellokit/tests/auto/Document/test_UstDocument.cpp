@@ -6,6 +6,7 @@
 #include <QtTest/QTest>
 
 #include <hellokit/Document/DocumentConstants.h>
+#include <hellokit/Document/PayloadCodec.h>
 #include <hellokit/Document/UstDocument.h>
 #include <hellokit/Support/TextCodec.h>
 
@@ -422,6 +423,112 @@ private Q_SLOTS:
         if (project) {
             QVERIFY(project->tracks.first().notes.isEmpty());
         }
+    }
+
+    // The path fields of an exported UST use the separators of UTAU, as in a saved project, and
+    // a voice directory with .. comes back unchanged.
+    void the_path_fields_are_exported_with_the_separators_of_utau() {
+        TempUst file("paths");
+        auto project = oneNote();
+        project.settings.outputFile = QStringLiteral("out/song.wav");
+        project.settings.cacheDir = QStringLiteral("song.cache/sub");
+        project.settings.wavtool = QStringLiteral("tools/wavtool.exe");
+        project.settings.resampler = QStringLiteral("/opt/tools\\resampler");
+        project.tracks[0].voiceDir = QStringLiteral("%VOICE%uta/../other");
+
+        DiagnosticList diagnostics;
+        QVERIFY(writeTo(project, file, {}, diagnostics));
+        const auto written = file.readBytes();
+        QVERIFY(written.contains("\r\nOutFile=out\\song.wav\r\n"));
+        QVERIFY(written.contains("\r\nCacheDir=song.cache\\sub\r\n"));
+        QVERIFY(written.contains("\r\nTool1=tools\\wavtool.exe\r\n"));
+        QVERIFY(written.contains("\r\nTool2=/opt/tools/resampler\r\n"));
+        QVERIFY(written.contains("\r\nVoiceDir=%VOICE%uta\\..\\other\r\n"));
+
+        const auto again = readAs(file, QStringLiteral("UTF-8"));
+        QVERIFY(again.has_value());
+        QCOMPARE(again->tracks[0].voiceDir, QStringLiteral("%VOICE%uta\\..\\other"));
+    }
+
+    // UST joins the names of the regions that start or end at a note with |, which cannot be part
+    // of a name. Empty names are dropped.
+    void region_names_are_split_and_joined_at_the_bar() {
+        const auto read = [](const QByteArray &region, const QByteArray &regionEnd) {
+            TempUst file("regions");
+            file.writeBytes("[#VERSION]\r\nUST Version1.2\r\nCharset=UTF-8\r\n[#SETTING]\r\n"
+                            "Tempo=120.00\r\nTracks=1\r\nMode2=True\r\n[#0000]\r\nLength=480\r\n"
+                            "Lyric=a\r\nNoteNum=60\r\n$region=" +
+                            region + "\r\n$region_end=" + regionEnd + "\r\n[#TRACKEND]\r\n");
+            const auto project = readAs(file, QStringLiteral("UTF-8"));
+            return project ? project->tracks[0].notes[0] : Note();
+        };
+        const auto exported = [](const Note &note) {
+            TempUst file("regions_out");
+            auto project = oneNote();
+            project.tracks[0].notes[0] = note;
+            DiagnosticList diagnostics;
+            writeTo(project, file, {}, diagnostics);
+            return file.readBytes();
+        };
+        const auto a = QStringLiteral("A");
+        const auto b = QStringLiteral("B");
+
+        const auto both = read("A|B", "A|B");
+        QCOMPARE(both.regions, (QStringList{a, b}));
+        QCOMPARE(both.regionEnds, (QStringList{a, b}));
+        const auto written = exported(both);
+        QVERIFY(written.contains("\r\n$region=A|B\r\n"));
+        QVERIFY(written.contains("\r\n$region_end=A|B\r\n"));
+
+        const auto doubled = read("A||B", "|A");
+        QCOMPARE(doubled.regions, (QStringList{a, b}));
+        QCOMPARE(doubled.regionEnds, (QStringList{a}));
+        QVERIFY(exported(doubled).contains("\r\n$region=A|B\r\n"));
+        QVERIFY(exported(doubled).contains("\r\n$region_end=A\r\n"));
+
+        const auto trailing = read("A|", "B");
+        QCOMPARE(trailing.regions, (QStringList{a}));
+        QVERIFY(exported(trailing).contains("\r\n$region=A\r\n"));
+    }
+
+    // UST has no time signature, so the control note carries it.
+    void the_time_signature_travels_in_the_control_note() {
+        TempUst file("timesignature");
+        auto project = oneNote();
+        project.settings.timeSignature = {3, 4};
+        DiagnosticList diagnostics;
+        QVERIFY(writeTo(project, file, {}, diagnostics));
+        const auto again = readAs(file, QStringLiteral("UTF-8"));
+        QVERIFY(again.has_value());
+        QCOMPARE(again->settings.timeSignature, (TimeSignature{3, 4}));
+    }
+
+    void a_control_note_without_a_valid_time_signature_gives_four_four() {
+        const auto readWithPayload = [](const QByteArray &payload, DiagnosticList &diagnostics) {
+            TempUst file("payload");
+            file.writeBytes(
+                "[#VERSION]\r\nUST Version1.2\r\nCharset=UTF-8\r\n[#SETTING]\r\n"
+                "Tempo=120.00\r\nTracks=1\r\nMode2=True\r\n[#0000]\r\nLength=480\r\n"
+                "Lyric=_USTH_\r\nNoteNum=60\r\n$usth=" +
+                PayloadCodec::encode(payload) +
+                "\r\n[#0001]\r\nLength=480\r\nLyric=a\r\nNoteNum=60\r\n[#TRACKEND]\r\n");
+            return readAs(file, QStringLiteral("UTF-8"), &diagnostics);
+        };
+
+        DiagnosticList diagnostics;
+        const auto absent = readWithPayload(R"({"version":1,"ustCharset":"UTF-8"})", diagnostics);
+        QVERIFY(absent.has_value());
+        QCOMPARE(absent->tracks[0].notes.size(), 1);
+        QCOMPARE(absent->settings.timeSignature, (TimeSignature{4, 4}));
+        QVERIFY(diagnostics.isEmpty());
+
+        const auto invalid = readWithPayload(
+            R"({"version":1,"ustCharset":"UTF-8","timeSignature":{"numerator":3,"denominator":5}})",
+            diagnostics);
+        QVERIFY(invalid.has_value());
+        QCOMPARE(invalid->settings.timeSignature, (TimeSignature{4, 4}));
+        QCOMPARE(diagnostics.size(), 1);
+        QCOMPARE(diagnostics.at(0).severity, DiagnosticSeverity::Warning);
     }
 };
 
