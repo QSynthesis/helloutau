@@ -57,15 +57,18 @@ jobs:
 
           release_id=""
           for attempt in $(seq 1 18); do
-            tag_status=$(curl --silent --output /dev/null --write-out '%{http_code}' \
+            tags=$(curl --silent --show-error --fail \
               --connect-timeout 10 --max-time 30 \
-              "https://gitee.com/api/v5/repos/${GITEE_REPOSITORY}/tags/${TAG_NAME}?access_token=${GITEE_TOKEN}" \
-              || printf '000')
-            if [ "$tag_status" = "200" ]; then
+              "https://gitee.com/api/v5/repos/${GITEE_REPOSITORY}/tags?access_token=${GITEE_TOKEN}&per_page=100" \
+              2>/dev/null || printf '[]')
+            tag_found=$(jq -r --arg tag "$TAG_NAME" \
+              'if type == "array" then any(.[]; .name == $tag) else false end' \
+              <<<"$tags")
+            if [ "$tag_found" = "true" ]; then
               echo "Gitee tag ${TAG_NAME} is available."
               break
             fi
-            echo "Waiting for Gitee tag ${TAG_NAME} (HTTP ${tag_status}, attempt ${attempt}/18)."
+            echo "Waiting for Gitee tag ${TAG_NAME} (attempt ${attempt}/18)."
             if [ "$attempt" -eq 18 ]; then
               echo "Gitee did not receive the mirrored tag in time." >&2
               exit 1
