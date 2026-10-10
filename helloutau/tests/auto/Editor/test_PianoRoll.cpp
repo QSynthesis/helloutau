@@ -2596,6 +2596,26 @@ private Q_SLOTS:
         QVERIFY(roll.regions().isEmpty());
         QCOMPARE(roll.selectedIndices(), (QList<int>{0, 1}));
     }
+
+    // A rectangle with Shift adds the notes it touches to the selection, whereas Ctrl toggles
+    // them. A click on a note with Ctrl and Shift does nothing.
+    void shift_adds_with_a_rectangle_and_ctrl_shift_clicks_do_nothing() {
+        kit::ProjectSession session(threeNotes());
+        PianoRoll roll(&session);
+        show(roll);
+
+        click(roll, 240, 60);
+        drag(roll, {10, 61}, {100, 60}, Qt::ShiftModifier);
+        QCOMPARE(roll.selectedIndices(), QList<int>{0});
+        drag(roll, {1500, 65}, {1600, 64}, Qt::ShiftModifier);
+        QCOMPARE(roll.selectedIndices(), (QList<int>{0, 2}));
+
+        click(roll, 960, 60, Qt::ControlModifier | Qt::ShiftModifier);
+        QCOMPARE(roll.selectedIndices(), (QList<int>{0, 2}));
+        click(roll, 240, 60, Qt::ControlModifier | Qt::ShiftModifier);
+        QCOMPARE(roll.selectedIndices(), (QList<int>{0, 2}));
+        QCOMPARE(session.currentStep(), 0);
+    }
 };
 
 int main(int argc, char *argv[]) {
