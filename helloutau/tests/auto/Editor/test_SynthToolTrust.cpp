@@ -142,6 +142,16 @@ private Q_SLOTS:
         QCoreApplication::processEvents();
         QVERIFY(!shown);
     }
+
+    // A relative path written with backslashes, as UTAU writes it, names a file in a folder of
+    // the UTAU directory on every platform.
+    void a_relative_path_with_backslashes_is_found_in_the_utau_directory() {
+        writeFile(pathIn("utau/tools/resampler.exe"), "resampler");
+        const auto value = QStringLiteral("tools\\resampler.exe");
+        QVERIFY(SynthToolTrust::exists(value, m_utau));
+        QCOMPARE(SynthToolTrust::resolved(value, m_utau), m_utau / "tools" / "resampler.exe");
+        QVERIFY(SynthToolTrust::samePath(value, pathIn("utau/tools/resampler.exe"), m_utau));
+    }
 };
 
 QTEST_MAIN(test_SynthToolTrust)
