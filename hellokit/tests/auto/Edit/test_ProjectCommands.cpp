@@ -682,6 +682,53 @@ private Q_SLOTS:
                                                         QStringLiteral("settings mode2"),
                                                         QStringLiteral("settings properties")}));
     }
+
+    // The names of the regions are a list of strings, which a command sets as a JSON array.
+    void the_region_names_are_set_as_a_string_list() {
+        ProjectSession session(richProject());
+        QVERIFY(run(session, QStringLiteral("set /tracks/0/notes/0/regions [\"A\", \"B\"]")));
+        QCOMPARE(noteAt(session, 0).regions, (QStringList{"A", "B"}));
+        verifyRefused(session, QStringLiteral("set /tracks/0/notes/0/regions \"A\""),
+                      QStringLiteral("string list"));
+        verifyRefused(session, QStringLiteral("set /tracks/0/notes/0/regions [\"A\", 1]"),
+                      QStringLiteral("string list"));
+    }
+
+    void note_renameregion_and_removeregion_edit_a_region() {
+        ProjectSession session(richProject());
+        QVERIFY(run(session, QStringLiteral("note region /tracks/0/notes 0 2 \"Verse\"")));
+        QVERIFY(run(session,
+                    QStringLiteral("note renameregion /tracks/0/notes 0 1 \"Verse\" \"Chorus\"")));
+        QVERIFY(noteAt(session, 0).regions.contains(QStringLiteral("Chorus")));
+        QCOMPARE(noteAt(session, 1).regionEnds, QStringList{"Chorus"});
+        verifyRefused(session,
+                      QStringLiteral("note renameregion /tracks/0/notes 0 1 \"Verse\" \"X\""));
+        verifyRefused(session, QStringLiteral("note renameregion /tracks/0/notes 0 1 \"Chorus\""));
+
+        QVERIFY(run(session, QStringLiteral("note removeregion /tracks/0/notes 0 1 \"Chorus\"")));
+        QVERIFY(!noteAt(session, 0).regions.contains(QStringLiteral("Chorus")));
+        QVERIFY(noteAt(session, 1).regionEnds.isEmpty());
+        verifyRefused(session, QStringLiteral("note removeregion /tracks/0/notes 0 1 \"Chorus\""));
+        verifyRefused(session, QStringLiteral("note removeregion /tracks/0/notes 0 1"));
+    }
+
+    // The time signature is changed by the properties command and by a node command, and a value
+    // that TimeSignature::isValid() rejects is refused by both.
+    void the_time_signature_is_set_by_commands() {
+        ProjectSession session(richProject());
+        QVERIFY(run(session, QStringLiteral("settings properties {\"timeSignature\": "
+                                            "{\"numerator\": 3, \"denominator\": 4}}")));
+        QCOMPARE(session.snapshot().settings.timeSignature, (TimeSignature{3, 4}));
+        QVERIFY(run(session, QStringLiteral("set /settings/timeSignature "
+                                            "{\"numerator\": 6, \"denominator\": 8}")));
+        QCOMPARE(session.snapshot().settings.timeSignature, (TimeSignature{6, 8}));
+
+        verifyRefused(session, QStringLiteral("settings properties {\"timeSignature\": "
+                                              "{\"numerator\": 0, \"denominator\": 4}}"));
+        verifyRefused(session, QStringLiteral("settings properties {\"timeSignature\": 1}"));
+        verifyRefused(session, QStringLiteral("set /settings/timeSignature "
+                                              "{\"numerator\": 3, \"denominator\": 5}"));
+    }
 };
 
 QTEST_APPLESS_MAIN(test_ProjectCommands)
