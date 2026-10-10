@@ -40,22 +40,13 @@ jobs:
             echo 'GITHUB_RELEASE_BODY'
           } >> "$GITHUB_OUTPUT"
 
-      - name: Download GitHub release assets
-        run: |
-          mkdir -p release-assets
-          gh release download "$TAG_NAME" \
-            --repo "$GITHUB_REPOSITORY" \
-            --dir release-assets
-          ls -l release-assets
-
-      - name: Sync release to Gitee
+      - name: Create Gitee release
         env:
           RELEASE_NAME: ${{ steps.github-release.outputs.name }}
           RELEASE_BODY: ${{ steps.github-release.outputs.body }}
           RELEASE_COMMIT: ${{ steps.github-release.outputs.commit }}
         run: |
           set -euo pipefail
-          shopt -s nullglob
           api="https://gitee.com/api/v5/repos/${GITEE_REPOSITORY}"
           response_file=$(mktemp)
 
@@ -130,69 +121,3 @@ jobs:
             exit 1
           fi
           echo "Gitee release ${release_id} is ready."
-
-          # The attachments are listed again before every upload, so that an upload whose
-          # response was lost is not repeated. An upload may take up to an hour, and is
-          # abandoned and repeated if it stays below 10 KB/s for two minutes.
-          attachments="${api}/releases/${release_id}/attach_files?access_token=${GITEE_TOKEN}"
-
-          # Uploads the file $1 and prints the HTTP status. curl redraws its progress meter in
-          # place with carriage returns, which the log shows poorly, so that the latest line of
-          # the meter is printed every ten seconds instead.
-          upload() {
-            local progress status_file pid
-            progress=$(mktemp)
-            status_file=$(mktemp)
-            curl --show-error --connect-timeout 30 --max-time 3600 \
-              --speed-limit 10240 --speed-time 120 \
-              --output "$response_file" --write-out '%{http_code}' \
-              -X POST -F "file=@$1" "$attachments" >"$status_file" 2>"$progress" &
-            pid=$!
-            local header=false
-            while kill -0 "$pid" 2>/dev/null; do
-              sleep 10
-              # The final state is printed after the loop.
-              kill -0 "$pid" 2>/dev/null || break
-              # The meter starts with two lines of column titles.
-              if [ "$header" = false ] && [ "$(wc -l <"$progress")" -ge 2 ]; then
-                head -n 2 "$progress" >&2
-                header=true
-              fi
-              tr '\r' '\n' <"$progress" | grep -v '^ *$' | tail -n 1 >&2 || true
-            done
-            wait "$pid" || true
-            # The last line is the final state of the meter, or the error of curl.
-            tr '\r' '\n' <"$progress" | grep -v '^ *$' | tail -n 1 >&2 || true
-            cat "$status_file"
-          }
-          for file in release-assets/*; do
-            name=$(basename "$file")
-            uploaded=false
-            for attempt in $(seq 1 6); do
-              status=$(request "$attachments")
-              if [[ "$status" != 2* ]]; then
-                check_retryable "$status" "Listing the Gitee assets (attempt ${attempt}/6)"
-                continue
-              fi
-              if jq -e --arg name "$name" 'type == "array" and any(.[]; .name == $name)' \
-                "$response_file" >/dev/null; then
-                echo "${name} is on Gitee."
-                uploaded=true
-                break
-              fi
-              echo "Uploading ${name} ($(du -h "$file" | cut -f1), attempt ${attempt}/6)."
-              started=$SECONDS
-              status=$(upload "$file")
-              elapsed=$((SECONDS - started))
-              if [[ "$status" == 2* ]]; then
-                echo "Uploaded ${name} in ${elapsed} s."
-                uploaded=true
-                break
-              fi
-              check_retryable "$status" "Uploading ${name} after ${elapsed} s (attempt ${attempt}/6)"
-            done
-            if [ "$uploaded" != true ]; then
-              echo "Gitee asset upload failed for ${name}." >&2
-              exit 1
-            fi
-          done
