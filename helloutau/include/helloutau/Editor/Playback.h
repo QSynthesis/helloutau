@@ -66,6 +66,7 @@ namespace hello::daw {
         /// kit::ClassicSynthRunner without a script directory. The owner configures the script
         /// directory of the runner, normally the temporary directory, before passing it.
         void setRunner(std::shared_ptr<const kit::SynthRunner> runner);
+        std::shared_ptr<const kit::SynthRunner> runner() const;
 
         /// Sets the directory owned by the project window for renders, scripts, and logs, and
         /// forgets the kept render and clears the log, which belong to the previous directory.

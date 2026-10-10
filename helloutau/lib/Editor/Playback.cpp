@@ -740,6 +740,11 @@ namespace hello::daw {
         impl.kept.reset();
     }
 
+    std::shared_ptr<const kit::SynthRunner> Playback::runner() const {
+        stdc_impl_t;
+        return impl.runner;
+    }
+
     void Playback::setTemporaryDirectory(std::filesystem::path temporaryDirectory) {
         stdc_impl_t;
         Q_ASSERT(!impl.isBusy());
