@@ -1,3 +1,5 @@
+#include <QtGui/QContextMenuEvent>
+#include <QtGui/QFocusEvent>
 #include <QtGui/QWheelEvent>
 #include <QtTest/QTest>
 #include <QtWidgets/QApplication>
@@ -16,6 +18,13 @@ namespace {
 
     class RecordingGesture : public SceneGesture {
     public:
+        explicit RecordingGesture(bool autoScroll = false) : m_autoScroll(autoScroll) {
+        }
+
+        bool wantsAutoScroll() const override {
+            return m_autoScroll;
+        }
+
         void move(QPointF position, Qt::KeyboardModifiers) override {
             g_log.push_back(QStringLiteral("move %1").arg(position.x()));
         }
@@ -24,6 +33,21 @@ namespace {
         }
         void cancel() override {
             g_log.push_back(QStringLiteral("cancel"));
+        }
+
+    private:
+        bool m_autoScroll;
+    };
+
+    // Counts the context menu events that reach it.
+    class ContextMenuCounter : public QWidget {
+    public:
+        int count = 0;
+
+    protected:
+        void contextMenuEvent(QContextMenuEvent *event) override {
+            ++count;
+            event->accept();
         }
     };
 
@@ -49,7 +73,7 @@ namespace {
         std::unique_ptr<SceneGesture> press(const SceneHit &, QPointF position, Qt::MouseButton,
                                             Qt::KeyboardModifiers) override {
             g_log.push_back(QStringLiteral("press %1").arg(position.x()));
-            return std::make_unique<RecordingGesture>();
+            return std::make_unique<RecordingGesture>(autoScroll);
         }
 
         bool doubleClick(const SceneHit &, QPointF position) override {
@@ -61,6 +85,9 @@ namespace {
         }
 
         bool respondsToDoubleClick = false;
+
+        // Whether the gestures of the layer scroll near the edges
+        bool autoScroll = false;
 
     private:
         QRectF m_area;
@@ -300,6 +327,118 @@ private Q_SLOTS:
         view->zoomTime(4, 0);
         QVERIFY(!ruler.grab().isNull());
         QVERIFY(!keyboard.grab().isNull());
+    }
+
+    // A gesture that scrolls near the edges scrolls the keys as well as the time, faster nearer
+    // the edge, and a gesture that does not scroll leaves the view where it is.
+    void a_gesture_near_the_top_or_bottom_edge_scrolls_the_keys() {
+        const auto view = shownView();
+        view->setKeyAxis({24, 90});
+        const auto layer = static_cast<RectLayer *>(
+            view->addLayer(std::make_unique<RectLayer>(QRectF(0, 0, 600, 400), 1)));
+        layer->autoScroll = true;
+        const int height = view->viewport()->height();
+        const auto scrolledBy = [&](int y) {
+            const auto before = view->verticalScrollBar()->value();
+            QTest::mouseMove(view->viewport(), QPoint(300, y));
+            return view->verticalScrollBar()->value() - before;
+        };
+
+        QTest::mousePress(view->viewport(), Qt::LeftButton, {}, QPoint(300, 200));
+        QCOMPARE(scrolledBy(200), 0);
+        const int nearTop = scrolledBy(2);
+        const int belowTop = scrolledBy(20);
+        QVERIFY(nearTop < belowTop && belowTop < 0);
+        QVERIFY(scrolledBy(height - 2) > 0);
+        QTest::mouseRelease(view->viewport(), Qt::LeftButton, {}, QPoint(300, 200));
+
+        layer->autoScroll = false;
+        QTest::mousePress(view->viewport(), Qt::LeftButton, {}, QPoint(300, 200));
+        QCOMPARE(scrolledBy(2), 0);
+        QTest::mouseRelease(view->viewport(), Qt::LeftButton, {}, QPoint(300, 200));
+    }
+
+    // The viewport holds the mouse while a gesture runs, and lets it go on the release, on
+    // Escape, when the view loses the focus and when the view is destroyed.
+    void a_gesture_holds_the_mouse_until_it_ends() {
+        auto view = shownView();
+        view->addLayer(std::make_unique<RectLayer>(QRectF(0, 0, 100, 100), 1));
+
+        QTest::mousePress(view->viewport(), Qt::LeftButton, {}, QPoint(20, 20));
+        QCOMPARE(QWidget::mouseGrabber(), view->viewport());
+        QTest::mouseRelease(view->viewport(), Qt::LeftButton, {}, QPoint(20, 20));
+        QCOMPARE(QWidget::mouseGrabber(), nullptr);
+
+        QTest::mousePress(view->viewport(), Qt::LeftButton, {}, QPoint(20, 20));
+        QTest::keyClick(view.get(), Qt::Key_Escape);
+        QCOMPARE(QWidget::mouseGrabber(), nullptr);
+
+        QTest::mousePress(view->viewport(), Qt::LeftButton, {}, QPoint(20, 20));
+        QFocusEvent focusOut(QEvent::FocusOut, Qt::ActiveWindowFocusReason);
+        QApplication::sendEvent(view.get(), &focusOut);
+        QVERIFY(!view->hasGesture());
+        QCOMPARE(QWidget::mouseGrabber(), nullptr);
+
+        QTest::mousePress(view->viewport(), Qt::LeftButton, {}, QPoint(20, 20));
+        view.reset();
+        QCOMPARE(QWidget::mouseGrabber(), nullptr);
+    }
+
+    // The grab of the press that a double click repeats is not ended by the release of the grab
+    // of the first press.
+    void a_double_click_keeps_the_grab() {
+        const auto view = shownView();
+        view->addLayer(std::make_unique<RectLayer>(QRectF(0, 0, 100, 100), 1));
+        QTest::mousePress(view->viewport(), Qt::LeftButton, {}, QPoint(20, 20));
+        doubleClick(*view, QPointF(20, 20));
+        QVERIFY(view->hasGesture());
+        QCOMPARE(QWidget::mouseGrabber(), view->viewport());
+        QTest::mouseRelease(view->viewport(), Qt::LeftButton, {}, QPoint(20, 20));
+        QCOMPARE(QWidget::mouseGrabber(), nullptr);
+    }
+
+    // A gesture of the right button keeps its context menu event from every widget, until the
+    // event loop runs after the release. A gesture of the left button does not.
+    void a_right_button_gesture_suppresses_context_menus() {
+        const auto view = shownView();
+        view->addLayer(std::make_unique<RectLayer>(QRectF(0, 0, 100, 100), 1));
+        ContextMenuCounter other;
+        const auto sendContextMenu = [&other] {
+            QContextMenuEvent event(QContextMenuEvent::Mouse, QPoint(1, 1));
+            QApplication::sendEvent(&other, &event);
+        };
+
+        QTest::mousePress(view->viewport(), Qt::RightButton, {}, QPoint(20, 20));
+        sendContextMenu();
+        QTest::mouseRelease(view->viewport(), Qt::RightButton, {}, QPoint(20, 20));
+        sendContextMenu();
+        QCOMPARE(other.count, 0);
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        sendContextMenu();
+        QCOMPARE(other.count, 1);
+
+        QTest::mousePress(view->viewport(), Qt::LeftButton, {}, QPoint(20, 20));
+        sendContextMenu();
+        QCOMPARE(other.count, 2);
+        QTest::mouseRelease(view->viewport(), Qt::LeftButton, {}, QPoint(20, 20));
+    }
+
+    // The default wheel acts on no modifiers, Shift, Ctrl and Ctrl+Shift only.
+    void the_default_wheel_ignores_other_modifiers() {
+        const auto view = shownView();
+        view->setTimeAxis({0.125, 960});
+        view->setKeyAxis({24, 90});
+        for (const auto modifiers :
+             {Qt::KeyboardModifiers(Qt::MetaModifier),
+              Qt::KeyboardModifiers(Qt::ControlModifier | Qt::AltModifier),
+              Qt::KeyboardModifiers(Qt::ShiftModifier | Qt::AltModifier),
+              Qt::KeyboardModifiers(Qt::ControlModifier | Qt::MetaModifier)}) {
+            wheel(*view, 1, modifiers, {10, 10});
+            QCOMPARE(view->timeAxis().left, 960.0);
+            QCOMPARE(view->timeAxis().pixelsPerTick, 0.125);
+            QCOMPARE(view->keyAxis().top, 90.0);
+            QCOMPARE(view->keyAxis().pixelsPerKey, 24.0);
+        }
     }
 };
 
