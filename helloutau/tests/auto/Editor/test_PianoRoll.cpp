@@ -2505,6 +2505,25 @@ private Q_SLOTS:
         QCOMPARE(lyricsOf(session), QStringLiteral("ka R ki"));
         QCOMPARE(session.undoMessage(), PianoRoll::tr("Change Lyric"));
     }
+
+    // The time signature sets the beats and the bars of the ruler. The quantization is a note
+    // value and does not change.
+    void the_time_signature_sets_the_beats_and_the_bars() {
+        kit::ProjectSession session(threeNotes());
+        PianoRoll roll(&session);
+        roll.setQuantization(120);
+        const auto ruler = roll.ruler();
+        QCOMPARE(ruler->ticksPerBeat(), 480);
+        QCOMPARE(ruler->beatsPerBar(), 4);
+
+        roll.setTimeSignature(3, 4);
+        QCOMPARE(ruler->ticksPerBeat(), 480);
+        QCOMPARE(ruler->beatsPerBar(), 3);
+        roll.setTimeSignature(6, 8);
+        QCOMPARE(ruler->ticksPerBeat(), 240);
+        QCOMPARE(ruler->beatsPerBar(), 6);
+        QCOMPARE(roll.quantization(), 120);
+    }
 };
 
 int main(int argc, char *argv[]) {
