@@ -3,7 +3,6 @@
 
 #include <memory>
 #include <optional>
-#include <vector>
 
 #include <QtCore/QObject>
 #include <QtCore/QByteArray>
@@ -71,12 +70,6 @@ namespace hello::daw {
         class Impl;
         std::unique_ptr<Impl> _impl;
     };
-
-    /// Converts \a samples, interleaved by \a channels, from \a sourceRate to \a targetRate with
-    /// r8brain-free-src, each channel separately. The result has the same duration, rounded to
-    /// whole frames.
-    HELLOUTAU_AUDIO_EXPORT std::vector<float>
-        resampled(const std::vector<float> &samples, int channels, int sourceRate, int targetRate);
 
 }
 

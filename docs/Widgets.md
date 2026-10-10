@@ -198,7 +198,7 @@
 **进度**：已实现，待作者验收。
 
 - hellokit：`WaveAudio` 读取 wav（8、16、24、32 位整数与 32、64 位浮点，含 `WAVE_FORMAT_EXTENSIBLE`；数据块比文件长时读到文件末尾并警告）；`SynthPlan::startTime()` 给出轨道文件开头在轨道中的时刻，即第一个渲染音符的起点减去其修正后的先行发声。wavtool 每次追加的长度带有「本音符先行发声 − 下一音符先行发声 + 下一音符重叠」的修正，因此这一偏移对文件中每个音符都成立。
-- `HelloUtauAudio`：`AudioOutput`（默认设备，32 位浮点，`QAudioSink` 回调接口；源结束后等设备缓冲播完再停止）、`AudioSource` 与 `BufferSource`（单声道放到每个声道）、`resampled()`（r8brain `CDSPResampler24` 的 `oneshot()`，逐声道）。回调中不加锁、不分配。
+- `HelloUtauAudio`：`AudioOutput`（默认设备，32 位浮点，`QAudioSink` 回调接口；源结束后等设备缓冲播完再停止）、`AudioSource` 与 `BufferSource`（单声道放到每个声道）、`SampleRateConversion::converted()`（r8brain `CDSPResampler24` 的 `oneshot()`，逐声道）。回调中不加锁、不分配。
 - `HelloUtauEditor`：`Playback` 在工作线程上渲染（使用工程的合成工具，须经信任检查，见 note.md 的「安全行为」）、读取、转换采样率后播放；取消时不等待正在运行的合成工具调用返回，析构时才等待。主窗口的「播放」菜单（空格）、状态栏的渲染进度与取消按钮、卷帘上的播放线（`playheadColor`），播放线离开视图时视图翻到它左侧 10% 处。
 - 本步把渲染结果整体转换采样率后放入内存再播放；第 6 步的实时渲染改为由生产线程填充环形缓冲的 `AudioSource`，`AudioOutput` 不变。
 

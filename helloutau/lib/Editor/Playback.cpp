@@ -24,6 +24,7 @@
 
 #include <helloutau/Audio/AudioOutput.h>
 #include <helloutau/Audio/BufferSource.h>
+#include <helloutau/Audio/SampleRateConversion.h>
 #include <helloutau/Audio/StreamSource.h>
 
 namespace hello::daw {
@@ -571,8 +572,9 @@ namespace hello::daw {
             if (!audio) {
                 return;
             }
-            job->samples = std::make_shared<const std::vector<float>>(
-                resampled(audio->samples, audio->channels, audio->sampleRate, job->deviceRate));
+            job->samples =
+                std::make_shared<const std::vector<float>>(SampleRateConversion::converted(
+                    audio->samples, audio->channels, audio->sampleRate, job->deviceRate));
             job->channels = audio->channels;
             job->startTime = plan.startTime();
             job->rendered = true;

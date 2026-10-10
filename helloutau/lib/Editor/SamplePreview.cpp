@@ -17,6 +17,7 @@
 
 #include <helloutau/Audio/AudioOutput.h>
 #include <helloutau/Audio/BufferSource.h>
+#include <helloutau/Audio/SampleRateConversion.h>
 
 namespace hello::daw {
 
@@ -105,8 +106,8 @@ namespace hello::daw {
                 return;
             }
             if (job.deviceRate > 0) {
-                job.samples =
-                    resampled(audio->samples, audio->channels, audio->sampleRate, job.deviceRate);
+                job.samples = SampleRateConversion::converted(audio->samples, audio->channels,
+                                                              audio->sampleRate, job.deviceRate);
             }
             job.audio = std::make_shared<const kit::WaveAudio>(std::move(*audio));
             job.rendered = true;
@@ -242,8 +243,8 @@ namespace hello::daw {
         const int channels = audio->channels;
         const std::vector<float> span(audio->samples.begin() + first * channels,
                                       audio->samples.begin() + last * channels);
-        if (!impl.start(resampled(span, channels, audio->sampleRate, rate), channels, rate,
-                        diagnostics)) {
+        if (!impl.start(SampleRateConversion::converted(span, channels, audio->sampleRate, rate),
+                        channels, rate, diagnostics)) {
             return false;
         }
         impl.playedFrom = double(first) * 1000 / audio->sampleRate;

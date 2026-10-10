@@ -9,6 +9,7 @@
 #include <helloutau/Audio/BufferSource.h>
 #include <helloutau/Audio/DeviceClock.h>
 #include <helloutau/Audio/PianoToneSource.h>
+#include <helloutau/Audio/SampleRateConversion.h>
 #include <helloutau/Audio/StreamSource.h>
 
 using namespace hello::daw;
@@ -85,7 +86,7 @@ private Q_SLOTS:
             tone[i] = float(0.5 * std::sin(2 * pi * frequency * double(i) / from));
         }
 
-        const auto converted = resampled(tone, 1, from, to);
+        const auto converted = SampleRateConversion::converted(tone, 1, from, to);
         QCOMPARE(qsizetype(converted.size()), qsizetype(to));
         // Away from the edges, where the filter has no neighbors, the result is the same tone.
         double error = 0;
@@ -96,8 +97,8 @@ private Q_SLOTS:
         QVERIFY2(error < 1e-3, qPrintable(QString::number(error)));
 
         // The same rate, or nothing, passes through.
-        QCOMPARE(resampled(tone, 1, from, from), tone);
-        QVERIFY(resampled({}, 1, from, to).empty());
+        QCOMPARE(SampleRateConversion::converted(tone, 1, from, from), tone);
+        QVERIFY(SampleRateConversion::converted({}, 1, from, to).empty());
     }
 
     // Streamed through the ring, the tone arrives as the conversion of the whole would give it.
@@ -136,7 +137,7 @@ private Q_SLOTS:
             QCOMPARE(frame[0], frame[1]);
             heard.push_back(frame[0]);
         }
-        const auto whole = resampled(tone, 1, 44100, 48000);
+        const auto whole = SampleRateConversion::converted(tone, 1, 44100, 48000);
         QCOMPARE(heard.size(), whole.size());
         double error = 0;
         for (size_t i = 0; i < heard.size(); ++i) {
@@ -273,7 +274,7 @@ private Q_SLOTS:
             stereo.push_back(0.25f);
             stereo.push_back(-0.5f);
         }
-        const auto converted = resampled(stereo, 2, 44100, 22050);
+        const auto converted = SampleRateConversion::converted(stereo, 2, 44100, 22050);
         QCOMPARE(qsizetype(converted.size()), qsizetype(2 * 2205));
         QVERIFY(std::abs(converted[2 * 1000] - 0.25f) < 1e-3);
         QVERIFY(std::abs(converted[2 * 1000 + 1] + 0.5f) < 1e-3);
