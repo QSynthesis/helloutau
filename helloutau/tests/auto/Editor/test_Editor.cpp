@@ -3087,6 +3087,49 @@ private Q_SLOTS:
         QTRY_VERIFY(window->document()->voiceBank() != bank);
         QVERIFY(window->document()->voiceBank());
     }
+
+    // The UTAU page lists the voice folders for the UTAU folder being typed, and applies the
+    // folder and the resolution of a relative voice folder.
+    void the_utau_page_follows_the_utau_folder() {
+        const auto e = editor();
+        const auto restore = qScopeGuard([&e] {
+            e->settings().setUtauDirectory({});
+            e->settings().setRelativeVoiceDirInUtau(true);
+        });
+        const auto page = e->settingCatalog()->page(QStringLiteral("editor.Utau"));
+        QVERIFY(page && page->widget());
+        const auto folder = page->widget()->findChild<QLineEdit *>();
+        const auto relative = page->widget()->findChild<QCheckBox *>();
+        QVERIFY(folder && relative);
+        QVERIFY(relative->isChecked());
+        QVERIFY(!page->isModified());
+        const auto voiceFoldersShown = [&page] {
+            for (const auto label : page->widget()->findChildren<QLabel *>()) {
+                if (label->text().contains(QStringLiteral("%VOICE%"))) {
+                    return label->text();
+                }
+            }
+            return QString();
+        };
+        const auto utau = pathIn(m_dir, "utau-page");
+        const auto utauText = QString::fromStdU16String(utau.u16string());
+        QVERIFY(!voiceFoldersShown().contains(QDir::toNativeSeparators(utauText)));
+        relative->setChecked(false);
+        QVERIFY(page->isModified());
+        relative->setChecked(true);
+        QVERIFY(!page->isModified());
+
+        folder->setText(utauText);
+        QVERIFY(page->isModified());
+        QVERIFY(voiceFoldersShown().contains(
+            QDir::toNativeSeparators(QString::fromStdU16String((utau / "voice").u16string()))));
+        relative->setChecked(false);
+        QString error;
+        QVERIFY(page->apply(&error));
+        QCOMPARE(e->settings().utauDirectory(), utau);
+        QVERIFY(!e->settings().isRelativeVoiceDirInUtau());
+        QVERIFY(!page->isModified());
+    }
 };
 
 int main(int argc, char *argv[]) {
