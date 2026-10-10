@@ -82,6 +82,9 @@ namespace hello::daw {
         using Decl = AudioEngine;
         QByteArray id;
         QAudioDevice opened;
+        // The device ID with which the stream was opened, empty for the default device. A
+        // change of the devices closes the stream only if this ID now denotes another device.
+        QByteArray openedId;
         std::unique_ptr<AudioMixer> mixer;
 #ifdef HELLOUTAU_AUDIO_PULL_DEVICE
         std::unique_ptr<MixerDevice> device;
@@ -104,7 +107,7 @@ namespace hello::daw {
         stdc_impl_t;
         connect(&impl.devices, &QMediaDevices::audioOutputsChanged, this, [this] {
             stdc_impl_t;
-            if (impl.sink && device() != impl.opened) {
+            if (impl.sink && device(impl.openedId) != impl.opened) {
                 close();
                 Q_EMIT invalidated(tr("The audio output device changed. Start playback again."));
             }
@@ -193,6 +196,7 @@ namespace hello::daw {
 #endif
         impl.mixer.reset();
         impl.opened = {};
+        impl.openedId.clear();
     }
 
     std::optional<AudioMixer::SourceId> AudioEngine::start(std::shared_ptr<AudioSource> source,
@@ -239,6 +243,7 @@ namespace hello::daw {
             impl.mixer = std::make_unique<AudioMixer>(rate, format.channelCount());
             impl.sink = std::make_unique<QAudioSink>(selected, format);
             impl.opened = selected;
+            impl.openedId = id;
             // Queued, because close() destroys the sink that emits the signal. The sink is
             // compared by address, so that a signal of a closed sink is ignored.
             connect(
