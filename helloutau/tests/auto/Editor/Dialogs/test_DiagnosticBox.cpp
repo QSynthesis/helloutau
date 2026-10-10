@@ -48,12 +48,13 @@ private Q_SLOTS:
                  QMessageBox::Critical);
     }
 
-    // One diagnostic per line, a diagnostic of a note prefixed with the index of the note.
+    // One diagnostic per line, a diagnostic of a note prefixed with the number of the note,
+    // counted from 1.
     void each_diagnostic_is_a_line() {
         const DiagnosticBox box(QStringLiteral("Title"),
                                 {diagnosticOf(kit::DiagnosticSeverity::Warning, "first", 3),
                                  diagnosticOf(kit::DiagnosticSeverity::Warning, "second")});
-        QCOMPARE(box.text(), QStringLiteral("Note 3: first\nsecond"));
+        QCOMPARE(box.text(), QStringLiteral("Note 4: first\nsecond"));
         QCOMPARE(box.windowTitle(), QStringLiteral("Title"));
     }
 

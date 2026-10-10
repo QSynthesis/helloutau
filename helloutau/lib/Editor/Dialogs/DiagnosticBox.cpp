@@ -30,10 +30,11 @@ namespace hello::daw {
                                  QWidget *parent)
         : QMessageBox(iconOf(diagnostics), title, QString(), QMessageBox::Ok, parent) {
         QStringList lines;
+        // Notes are numbered from 1, as the region dialog and the import wizard number them.
         for (const auto &diagnostic : diagnostics) {
             lines.push_back(
                 diagnostic.noteIndex
-                    ? tr("Note %1: %2").arg(*diagnostic.noteIndex).arg(diagnostic.message)
+                    ? tr("Note %1: %2").arg(*diagnostic.noteIndex + 1).arg(diagnostic.message)
                     : diagnostic.message);
         }
         setText(lines.join(u'\n'));
