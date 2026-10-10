@@ -2636,6 +2636,51 @@ private Q_SLOTS:
                  QStringList{QStringLiteral("Question")});
         e->settings().setPlaybackMode(AppSettings::Prerender);
     }
+
+    // Typing a tempo into the tool bar changes the project once, on Return.
+    void typing_a_tempo_in_the_tool_bar_is_one_step() {
+        const auto e = editor();
+        const auto window = e->openFile(savedProject(m_dir, "typed-tempo.usth"));
+        QVERIFY(window);
+        const auto box = window->findChild<QDoubleSpinBox *>(QStringLiteral("tempo"));
+        QVERIFY(box);
+        const auto session = window->document()->session();
+        const auto steps = session->currentStep();
+
+        box->selectAll();
+        QTest::keyClicks(box, QStringLiteral("140"));
+        QCOMPARE(session->currentStep(), steps);
+        QTest::keyClick(box, Qt::Key_Return);
+        QCOMPARE(session->currentStep(), steps + 1);
+        QCOMPARE(session->snapshot().settings.tempo, 140.0);
+    }
+
+    // Without a voice bank, the pre-utterance and the overlap of a note are left to the voice
+    // bank rather than shown as 0.
+    void note_properties_without_samples_leave_the_defaults_to_the_voice_bank() {
+        const auto e = editor();
+        const auto window = e->openFile(savedProject(m_dir, "unsampled.usth"));
+        QVERIFY(window);
+        qobject_cast<PianoRoll *>(window->centralWidget())->selectAll();
+        const auto properties =
+            declaredActionOf(*e, window, QStringLiteral("helloutau.edit.noteProperties"));
+        QVERIFY(properties);
+        QString preUtterance;
+        QString overlap;
+        QTimer::singleShot(0, [&] {
+            const auto dialog =
+                qobject_cast<NotePropertiesDialog *>(QApplication::activeModalWidget());
+            if (!dialog) {
+                return;
+            }
+            preUtterance = dialog->field(NotePropertiesDialog::PreUtterance)->placeholderText();
+            overlap = dialog->field(NotePropertiesDialog::VoiceOverlap)->placeholderText();
+            dialog->reject();
+        });
+        properties->trigger();
+        QCOMPARE(preUtterance, QStringLiteral("(default: voice bank)"));
+        QCOMPARE(overlap, QStringLiteral("(default: voice bank)"));
+    }
 };
 
 int main(int argc, char *argv[]) {
