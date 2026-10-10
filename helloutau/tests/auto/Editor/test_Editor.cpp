@@ -2681,6 +2681,60 @@ private Q_SLOTS:
         QCOMPARE(preUtterance, QStringLiteral("(default: voice bank)"));
         QCOMPARE(overlap, QStringLiteral("(default: voice bank)"));
     }
+
+    // Pitch Control is available only in Mode2. Accepting a change of the portamento and the
+    // vibrato is one undo step, and undoing it restores both.
+    void pitch_control_is_one_step_in_mode2() {
+        const auto e = editor();
+        const auto window = e->openFile(savedProject(m_dir, "mode2.usth"));
+        QVERIFY(window);
+        qobject_cast<PianoRoll *>(window->centralWidget())->selectAll();
+        const auto edit =
+            declaredActionOf(*e, window, QStringLiteral("helloutau.edit.pitchControl"));
+        QVERIFY(edit);
+        const auto session = window->document()->session();
+        const auto setMode2 = [session](bool mode2) {
+            auto tx = session->transaction(QStringLiteral("mode"));
+            kit::ProjectRef(session).settings().setMode2(mode2);
+            tx.commit();
+        };
+        setMode2(false);
+        QVERIFY(!edit->isEnabled());
+        setMode2(true);
+        QVERIFY(edit->isEnabled());
+
+        const auto before = session->snapshot().tracks[0].notes[0];
+        QVERIFY(!before.vibrato);
+        QVERIFY(before.portamento.isEmpty());
+        const auto steps = session->currentStep();
+        bool opened = false;
+        QTimer::singleShot(0, [&opened] {
+            const auto dialog =
+                qobject_cast<PitchControlDialog *>(QApplication::activeModalWidget());
+            if (!dialog) {
+                return;
+            }
+            opened = true;
+            for (const auto box : dialog->findChildren<QCheckBox *>()) {
+                if (box->text() == QStringLiteral("&Vibrato") ||
+                    box->text() == QStringLiteral("&Portamento")) {
+                    box->setChecked(true);
+                }
+            }
+            dialog->accept();
+        });
+        edit->trigger();
+        QVERIFY(opened);
+        QCOMPARE(session->currentStep(), steps + 1);
+        const auto after = session->snapshot().tracks[0].notes[0];
+        QVERIFY(after.vibrato);
+        QVERIFY(!after.portamento.isEmpty());
+
+        session->undo();
+        const auto undone = session->snapshot().tracks[0].notes[0];
+        QVERIFY(!undone.vibrato);
+        QVERIFY(undone.portamento.isEmpty());
+    }
 };
 
 int main(int argc, char *argv[]) {
