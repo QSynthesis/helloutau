@@ -3,6 +3,8 @@
 #include <QtCore/QByteArray>
 #include <QtCore/QDir>
 #include <QtCore/QFile>
+#include <QtCore/QJsonDocument>
+#include <QtCore/QJsonObject>
 #include <QtCore/QTemporaryDir>
 #include <QtTest/QTest>
 
@@ -361,6 +363,243 @@ private Q_SLOTS:
         QCOMPARE(Track::voiceDirOf(utau / u"voices" / u"uta", locations),
                  nativeOf(utau / u"voices" / u"uta"));
         QCOMPARE(Track::voiceDirOf(voice / u"hp_abs", {}), nativeOf(voice / u"hp_abs"));
+    }
+
+    // A saved project writes backslashes, as UTAU does, except in an absolute Unix path. Nothing
+    // else changes, so that .. and %VOICE% keep their meaning.
+    void a_saved_path_uses_the_separators_of_utau() {
+        QCOMPARE(Project::savedPathText(QStringLiteral("C:/x/y")), QStringLiteral("C:\\x\\y"));
+        QCOMPARE(Project::savedPathText(QStringLiteral("C:\\x/y")), QStringLiteral("C:\\x\\y"));
+        QCOMPARE(Project::savedPathText(QStringLiteral("/Users/x\\y")),
+                 QStringLiteral("/Users/x/y"));
+        QCOMPARE(Project::savedPathText(QStringLiteral("%VOICE%uta/sub")),
+                 QStringLiteral("%VOICE%uta\\sub"));
+        QCOMPARE(Project::savedPathText(QStringLiteral("%VOICE%uta\\..\\other")),
+                 QStringLiteral("%VOICE%uta\\..\\other"));
+        QCOMPARE(Project::savedPathText(QString()), QString());
+    }
+
+    // The five path fields are saved by the same rule, and a voice directory with .. still names
+    // the same voice bank after a round trip.
+    void the_path_fields_are_saved_with_the_separators_of_utau() {
+        auto project = oneNote();
+        project.settings.outputFile = QStringLiteral("out/song.wav");
+        project.settings.cacheDir = QStringLiteral("song.cache/sub");
+        project.settings.wavtool = QStringLiteral("tools/wavtool.exe");
+        project.settings.resampler = QStringLiteral("/opt/tools\\resampler");
+        project.tracks[0].voiceDir = QStringLiteral("%VOICE%uta/../other");
+
+        const auto again = parsed(project.toJson());
+        QVERIFY(again.has_value());
+        QCOMPARE(again->settings.outputFile, QStringLiteral("out\\song.wav"));
+        QCOMPARE(again->settings.cacheDir, QStringLiteral("song.cache\\sub"));
+        QCOMPARE(again->settings.wavtool, QStringLiteral("tools\\wavtool.exe"));
+        QCOMPARE(again->settings.resampler, QStringLiteral("/opt/tools/resampler"));
+        QCOMPARE(again->tracks[0].voiceDir, QStringLiteral("%VOICE%uta\\..\\other"));
+
+        QTemporaryDir dir;
+        const auto utau = fs::path(dir.path().toStdU16String()) / u"utau";
+        fs::create_directories(utau / u"voice" / u"other");
+        const auto locations = VoiceLocations::ofUtau(utau);
+        QCOMPARE(textOf(again->tracks[0].voiceDirectory(locations)),
+                 textOf(project.tracks[0].voiceDirectory(locations)));
+        QCOMPARE(textOf(again->tracks[0].voiceDirectory(locations)),
+                 textOf(utau / u"voice" / u"other"));
+    }
+
+    // UTAU writes backslashes, which std::filesystem reads as separators only on Windows.
+    void a_path_text_reads_backslashes_on_every_platform() {
+        const auto tool = Project::pathOf(QStringLiteral("tools\\resampler.exe"));
+        QCOMPARE(std::distance(tool.begin(), tool.end()), 2);
+        QCOMPARE(QString::fromStdU16String(tool.filename().u16string()),
+                 QStringLiteral("resampler.exe"));
+
+        const auto output = Project::pathOf(QStringLiteral("out\\song.wav"));
+        QCOMPARE(std::distance(output.begin(), output.end()), 2);
+        QVERIFY(output.is_relative());
+#ifdef Q_OS_WINDOWS
+        QVERIFY(Project::pathOf(QStringLiteral("C:\\x")).is_absolute());
+#endif
+    }
+
+    // %VOICE% denotes the first voice folder that contains the voice bank, a missing voice folder
+    // is skipped, and a relative path is relative to relativeBase.
+    void a_voice_dir_resolves_against_several_voice_folders() {
+        QTemporaryDir dir;
+        const auto root = fs::path(dir.path().toStdU16String());
+        const auto first = root / u"first";
+        const auto second = root / u"second";
+        const auto missing = root / u"missing";
+        fs::create_directories(first / u"bank");
+        fs::create_directories(second / u"bank");
+        fs::create_directories(second / u"only");
+        const auto resolvedIn = [](QStringView voiceDir, const VoiceLocations &locations) {
+            Track track;
+            track.voiceDir = voiceDir.toString();
+            const auto path = track.voiceDirectory(locations);
+            return path.empty() ? QString() : textOf(path);
+        };
+
+        const VoiceLocations both{
+            {first, second},
+            root
+        };
+        QCOMPARE(resolvedIn(u"%VOICE%bank", both), textOf(first / u"bank"));
+        QCOMPARE(resolvedIn(u"%VOICE%only", both), textOf(second / u"only"));
+        // In no voice folder: the path in the first existing one
+        QCOMPARE(resolvedIn(u"%VOICE%none", both), textOf(first / u"none"));
+
+        const VoiceLocations missingFirst{
+            {missing, second},
+            root
+        };
+        QCOMPARE(resolvedIn(u"%VOICE%none", missingFirst), textOf(second / u"none"));
+        const VoiceLocations noneExists{{missing}, root};
+        QCOMPARE(resolvedIn(u"%VOICE%bank", noneExists), QString());
+
+        QCOMPARE(resolvedIn(u"rel", both), textOf(root / u"rel"));
+        const VoiceLocations noBase{
+            {first, second},
+            {}
+        };
+        QCOMPARE(resolvedIn(u"rel", noBase), QString());
+
+        // A folder of the same name in the first voice folder hides that of the second, which is
+        // therefore written as an absolute path.
+        QCOMPARE(Track::voiceDirOf(second / u"bank", both), nativeOf(second / u"bank"));
+        QCOMPARE(Track::voiceDirOf(second / u"only", both), QStringLiteral("%VOICE%only"));
+        QCOMPARE(Track::voiceDirOf(first / u"bank", both), QStringLiteral("%VOICE%bank"));
+    }
+
+    // Each start is paired with the first end of the same name from its note on, or with the last
+    // note if none follows.
+    void regions_pair_each_start_with_the_next_end() {
+        const auto regionsOf = [](const QList<QStringList> &starts,
+                                  const QList<QStringList> &ends) {
+            return Region::of(starts, ends);
+        };
+        const QStringList none;
+        const auto a = QStringLiteral("A");
+        const auto b = QStringLiteral("B");
+
+        // Two regions from one note, in the order of its names, with a shared end
+        QCOMPARE(regionsOf(
+                     {
+                         {a, b},
+                         none, none
+        },
+                     {none, none, {a, b}}),
+                 (QList<Region>{{a, 0, 2}, {b, 0, 2}}));
+        // Nested
+        QCOMPARE(regionsOf(
+                     {
+                         {a},
+                         {b},
+                         none, none
+        },
+                     {none, none, {b}, {a}}),
+                 (QList<Region>{{a, 0, 3}, {b, 1, 2}}));
+        // Not ended: to the last note
+        QCOMPARE(regionsOf(
+                     {
+                         none, {a},
+                          none
+        },
+                     {none, none, none}),
+                 (QList<Region>{{a, 1, 2}}));
+        // A name used twice is paired twice
+        QCOMPARE(regionsOf(
+                     {
+                         {a},
+                         none, {a},
+                         none
+        },
+                     {none, {a}, none, {a}}),
+                 (QList<Region>{{a, 0, 1}, {a, 2, 3}}));
+        // An end before the start does not count
+        QCOMPARE(regionsOf(
+                     {
+                         none, {a},
+                          none
+        },
+                     {{a}, none, none}),
+                 (QList<Region>{{a, 1, 2}}));
+        // Lists of different lengths: the shorter one counts
+        QCOMPARE(regionsOf(
+                     {
+                         {a},
+                         none, {b}
+        },
+                     {none, none}),
+                 (QList<Region>{{a, 0, 1}}));
+    }
+
+    void a_time_signature_is_valid_within_its_bounds() {
+        QVERIFY(TimeSignature::isValid(1, 4));
+        QVERIFY(TimeSignature::isValid(TimeSignature::maximumNumerator, 4));
+        QVERIFY(!TimeSignature::isValid(TimeSignature::maximumNumerator + 1, 4));
+        QVERIFY(!TimeSignature::isValid(0, 4));
+        for (const int denominator : {2, 4, 8, 16, 32}) {
+            QVERIFY2(TimeSignature::isValid(3, denominator),
+                     qPrintable(QString::number(denominator)));
+        }
+        for (const int denominator : {0, 1, 3, 64}) {
+            QVERIFY2(!TimeSignature::isValid(3, denominator),
+                     qPrintable(QString::number(denominator)));
+        }
+    }
+
+    void a_time_signature_reads_only_valid_integers() {
+        const auto objectOf = [](const QJsonValue &numerator, const QJsonValue &denominator) {
+            QJsonObject object;
+            if (!numerator.isUndefined()) {
+                object.insert(QStringLiteral("numerator"), numerator);
+            }
+            if (!denominator.isUndefined()) {
+                object.insert(QStringLiteral("denominator"), denominator);
+            }
+            return object;
+        };
+        const auto read = TimeSignature::fromJson(objectOf(6, 8));
+        QVERIFY(read.has_value());
+        QCOMPARE(*read, (TimeSignature{6, 8}));
+        QCOMPARE(TimeSignature::fromJson(read->toJson()), read);
+
+        QVERIFY(!TimeSignature::fromJson(objectOf(3.5, 4)).has_value());
+        QVERIFY(!TimeSignature::fromJson(objectOf(QStringLiteral("3"), 4)).has_value());
+        QVERIFY(!TimeSignature::fromJson(objectOf(3, QJsonValue::Undefined)).has_value());
+        QVERIFY(!TimeSignature::fromJson(objectOf(QJsonValue::Undefined, 4)).has_value());
+        QVERIFY(!TimeSignature::fromJson(objectOf(3, 6)).has_value());
+    }
+
+    // The time signature is written in settings.timeSignature, 4/4 if the file records none, and
+    // 4/4 with a warning if the file records an invalid one.
+    void the_time_signature_is_saved_with_the_project() {
+        auto project = oneNote();
+        project.settings.timeSignature = {3, 4};
+        const auto json = project.toJson();
+        const auto settings =
+            QJsonDocument::fromJson(json).object().value(QStringLiteral("settings"));
+        QCOMPARE(settings.toObject().value(QStringLiteral("timeSignature")).toObject(),
+                 (TimeSignature{3, 4}).toJson());
+        const auto again = parsed(json);
+        QVERIFY(again.has_value());
+        QCOMPARE(again->settings.timeSignature, (TimeSignature{3, 4}));
+
+        DiagnosticList diagnostics;
+        const auto absent = Project::fromJson(minimal(), diagnostics);
+        QVERIFY(absent.has_value());
+        QVERIFY(diagnostics.isEmpty());
+        QCOMPARE(absent->settings.timeSignature, (TimeSignature{4, 4}));
+
+        const QByteArray invalid =
+            R"({"$format":"usth","version":1,"settings":{"timeSignature":{"numerator":0,)"
+            R"("denominator":4}},"tracks":[{"notes":[]}]})";
+        const auto reset = Project::fromJson(invalid, diagnostics);
+        QVERIFY(reset.has_value());
+        QCOMPARE(reset->settings.timeSignature, (TimeSignature{4, 4}));
+        QCOMPARE(diagnostics.size(), 1);
+        QCOMPARE(diagnostics.at(0).severity, DiagnosticSeverity::Warning);
     }
 };
 
