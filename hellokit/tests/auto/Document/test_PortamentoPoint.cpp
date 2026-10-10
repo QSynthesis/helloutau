@@ -1,4 +1,7 @@
+#include <cmath>
+
 #include <QtCore/QJsonObject>
+#include <QtCore/QtMath>
 #include <QtTest/QTest>
 
 #include <hellokit/Document/PortamentoPoint.h>
@@ -36,6 +39,51 @@ private Q_SLOTS:
         QCOMPARE(point.type, PortamentoPoint::S);
         QCOMPARE(diagnostics.size(), 1);
         QCOMPARE(diagnostics.at(0).severity, DiagnosticSeverity::Warning);
+    }
+
+    // Each segment is drawn in the type of the point that ends it, with the shapes of
+    // PitchCurve, and the value is not truncated to whole cents.
+    void the_height_follows_the_shape_of_each_segment() {
+        const auto heightAt = [](PortamentoPoint::Type type, double x) {
+            return PortamentoPoint::heightAt(
+                {
+                    {0,   0,   PortamentoPoint::S},
+                    {100, 100, type              }
+            },
+                x);
+        };
+        const auto near = [](double actual, double expected) {
+            return std::abs(actual - expected) < 1e-9;
+        };
+        for (const auto type : {PortamentoPoint::S, PortamentoPoint::Linear, PortamentoPoint::R,
+                                PortamentoPoint::J}) {
+            QVERIFY(near(heightAt(type, 0), 0));
+            QVERIFY(near(heightAt(type, 100), 100));
+        }
+        QVERIFY(near(heightAt(PortamentoPoint::Linear, 25), 25));
+        QVERIFY(near(heightAt(PortamentoPoint::S, 50), 50));
+        QVERIFY(near(heightAt(PortamentoPoint::S, 25), 50 - 50 * M_SQRT1_2));
+        QVERIFY(near(heightAt(PortamentoPoint::J, 50), 100 - 100 * M_SQRT1_2));
+        QVERIFY(near(heightAt(PortamentoPoint::R, 50), 100 * M_SQRT1_2));
+    }
+
+    void the_height_outside_the_points_is_that_of_the_nearest_point() {
+        const QList<PortamentoPoint> points{
+            {-20, -50, PortamentoPoint::S     },
+            {30,  10,  PortamentoPoint::Linear}
+        };
+        QCOMPARE(PortamentoPoint::heightAt(points, -100), -50.0);
+        QCOMPARE(PortamentoPoint::heightAt(points, 500), 10.0);
+        QCOMPARE(PortamentoPoint::heightAt({}, 0), 0.0);
+        // A segment of no length
+        QCOMPARE(PortamentoPoint::heightAt(
+                     {
+                         {0,  0,  PortamentoPoint::S},
+                         {0,  40, PortamentoPoint::S},
+                         {10, 40, PortamentoPoint::S}
+        },
+                     0),
+                 0.0);
     }
 };
 
