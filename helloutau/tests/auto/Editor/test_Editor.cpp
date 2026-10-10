@@ -454,17 +454,20 @@ private Q_SLOTS:
             QDropEvent event(QPointF(10, 10), Qt::CopyAction, &data, Qt::LeftButton,
                              Qt::NoModifier);
             QCoreApplication::sendEvent(target, &event);
-            // The file opens once the drop has returned, which may ask whether to save.
+            // The file opens once the drop has returned, which may ask whether to save. Every
+            // message box is answered, so that an unexpected one does not block.
             bool asked = false;
-            QTimer::singleShot(0, [&asked, answer] {
+            QTimer timer;
+            timer.setInterval(10);
+            QObject::connect(&timer, &QTimer::timeout, [&asked, answer] {
                 if (const auto box =
                         qobject_cast<QMessageBox *>(QApplication::activeModalWidget())) {
                     asked = true;
-                    box->button(answer)->click();
+                    box->button(answer) ? box->button(answer)->click() : box->reject();
                 }
             });
-            QCoreApplication::processEvents();
-            QCoreApplication::processEvents();
+            timer.start();
+            QTest::qWait(100);
             return asked;
         };
         const auto shows = [](ProjectWindow *target, const fs::path &path) {
