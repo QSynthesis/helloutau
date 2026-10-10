@@ -1,6 +1,7 @@
 #include <atomic>
 #include <filesystem>
 #include <fstream>
+#include <future>
 
 #include <QtCore/QTemporaryDir>
 #include <QtCore/QThread>
@@ -60,6 +61,8 @@ namespace {
     public:
         mutable QList<int> stepCounts;
         mutable std::atomic<int> started = 0;
+        // The number of renders that have returned
+        mutable std::atomic<int> ended = 0;
         mutable QList<fs::path> caches;
         mutable std::atomic<bool> waitForCancel = false;
         // Runs on until released, cancelled or not, as a script does
@@ -82,6 +85,7 @@ namespace {
             while (waitForCancel.load()) {
                 if (observer->cancelled()) {
                     outcome.cancelled = true;
+                    ++ended;
                     return outcome;
                 }
                 QThread::msleep(5);
@@ -89,6 +93,7 @@ namespace {
             observer->progressed(int(plan.steps().size()), int(plan.steps().size()));
             writeBytes(plan.outputFile(), silence(frames));
             outcome.rendered = true;
+            ++ended;
             return outcome;
         }
     };
@@ -637,6 +642,82 @@ private Q_SLOTS:
         playback.updatePlan(*document);
         QTest::qWait(200);
         QVERIFY(playback.takePreviewDiagnostics().isEmpty());
+    }
+
+    // stopAndWait() returns after the render has ended, also a render that runs on after it was
+    // cancelled, so that the temporary directory can be replaced afterwards.
+    void stop_and_wait_waits_for_the_render() {
+        QTemporaryDir dir;
+        const auto document = singingDocument(dir);
+        QVERIFY(document);
+        Playback playback(nullptr, temporaryOf(dir), nullptr);
+        const auto runner = std::make_shared<SilentRunner>();
+        runner->hold = true;
+        playback.setRunner(runner);
+        kit::DiagnosticList diagnostics;
+        if (!playback.play(*document, std::nullopt, someSynthTools(), diagnostics)) {
+            QSKIP("This machine has no audio output device.");
+        }
+        QTRY_COMPARE(runner->started.load(), 1);
+        // The future waits for the release in its destructor.
+        const auto release = std::async(std::launch::async, [&runner] {
+            QThread::msleep(50);
+            runner->hold = false;
+        });
+        playback.stopAndWait();
+        QCOMPARE(runner->ended.load(), 1);
+        QCOMPARE(playback.state(), Playback::Stopped);
+        playback.setTemporaryDirectory(temporaryOf(dir) / "other");
+    }
+
+    // The destructor waits for a render that runs on after it was cancelled.
+    void the_destructor_waits_for_the_render() {
+        QTemporaryDir dir;
+        const auto document = singingDocument(dir);
+        QVERIFY(document);
+        auto playback = std::make_unique<Playback>(nullptr, temporaryOf(dir), nullptr);
+        const auto runner = std::make_shared<SilentRunner>();
+        runner->hold = true;
+        playback->setRunner(runner);
+        kit::DiagnosticList diagnostics;
+        if (!playback->play(*document, std::nullopt, someSynthTools(), diagnostics)) {
+            runner->hold = false;
+            QSKIP("This machine has no audio output device.");
+        }
+        QTRY_COMPARE(runner->started.load(), 1);
+        const auto release = std::async(std::launch::async, [&runner] {
+            QThread::msleep(50);
+            runner->hold = false;
+        });
+        playback.reset();
+        QCOMPARE(runner->ended.load(), 1);
+    }
+
+    // A new temporary directory forgets the kept render, which the next play() renders again.
+    void a_new_temporary_directory_forgets_the_kept_render() {
+        if (AudioEngine::instance()->sampleRate() <= 0) {
+            QSKIP("This machine has no audio output device.");
+        }
+        QTemporaryDir dir;
+        const auto document = singingDocument(dir);
+        QVERIFY(document);
+        Playback playback(nullptr, temporaryOf(dir), nullptr);
+        const auto runner = std::make_shared<SilentRunner>();
+        playback.setRunner(runner);
+        kit::DiagnosticList diagnostics;
+        QVERIFY(playback.play(*document, std::nullopt, someSynthTools(), diagnostics));
+        QTRY_COMPARE_WITH_TIMEOUT(playback.state(), Playback::Stopped, 5000);
+        QVERIFY(!playback.lastRenderFile().empty());
+
+        playback.stopAndWait();
+        const auto other = temporaryOf(dir) / "other";
+        fs::create_directories(other);
+        playback.setTemporaryDirectory(other);
+        QVERIFY(playback.lastRenderFile().empty());
+        QVERIFY(playback.play(*document, std::nullopt, someSynthTools(), diagnostics));
+        QTRY_COMPARE_WITH_TIMEOUT(playback.state(), Playback::Stopped, 5000);
+        QCOMPARE(runner->started.load(), 2);
+        QCOMPARE(playback.lastRenderFile(), other / "temp.wav");
     }
 };
 
