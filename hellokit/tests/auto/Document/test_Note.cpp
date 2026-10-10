@@ -1,3 +1,4 @@
+#include <QtCore/QJsonArray>
 #include <QtCore/QJsonObject>
 #include <QtTest/QTest>
 
@@ -132,6 +133,35 @@ private Q_SLOTS:
         QVERIFY(!note->intensity.has_value());
         QCOMPARE(diagnostics.size(), 1);
         QCOMPARE(diagnostics.at(0).severity, DiagnosticSeverity::Warning);
+    }
+
+    // A name of a region must be writable to UST, which joins the names with | and drops empty
+    // ones. Elements that are not such names are therefore omitted on reading.
+    void region_names_that_ust_cannot_hold_are_omitted() {
+        const QJsonObject object{
+            {QStringLiteral("lyric"),      QStringLiteral("a")                                                                       },
+            {QStringLiteral("length"),     480                                                                                       },
+            {QStringLiteral("noteNum"),    60                                                                                        },
+            {QStringLiteral("regions"),    QJsonArray{QStringLiteral("A"), 1, QString(),
+                                                   QStringLiteral("B|C"), QStringLiteral("D")}},
+            {QStringLiteral("regionEnds"), QJsonArray{true, QStringLiteral("A")}                                                     },
+        };
+        DiagnosticList diagnostics;
+        const auto note = Note::fromJson(object, diagnostics);
+        QVERIFY(note.has_value());
+        QCOMPARE(note->regions, (QStringList{QStringLiteral("A"), QStringLiteral("D")}));
+        QCOMPARE(note->regionEnds, QStringList{QStringLiteral("A")});
+    }
+
+    void empty_region_lists_are_not_written() {
+        Note note;
+        note.lyric = QStringLiteral("la");
+        note.length = 480;
+        note.noteNum = 60;
+        note.regions = {QStringLiteral("A")};
+        const auto json = note.toJson();
+        QCOMPARE(json.value(QStringLiteral("regions")).toArray(), QJsonArray{QStringLiteral("A")});
+        QVERIFY(!json.contains(QStringLiteral("regionEnds")));
     }
 };
 
