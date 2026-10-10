@@ -136,16 +136,14 @@ namespace hello::kit {
     }
 
     std::optional<TimeSignature> TimeSignature::fromJson(const QJsonObject &object) {
-        const auto numerator = object.value(QLatin1String("numerator"));
-        const auto denominator = object.value(QLatin1String("denominator"));
-        // A fractional number is not an integer, whereas toInt() would truncate it.
-        if (!numerator.isDouble() || !denominator.isDouble() ||
-            numerator.toDouble() != numerator.toInt() ||
-            denominator.toDouble() != denominator.toInt() ||
-            !isValid(numerator.toInt(), denominator.toInt())) {
+        // toInt() returns 0 for a missing field, a string and a fractional number, and
+        // isValid() rejects 0.
+        const auto numerator = object.value(QLatin1String("numerator")).toInt();
+        const auto denominator = object.value(QLatin1String("denominator")).toInt();
+        if (!isValid(numerator, denominator)) {
             return std::nullopt;
         }
-        return TimeSignature{numerator.toInt(), denominator.toInt()};
+        return TimeSignature{numerator, denominator};
     }
 
     std::filesystem::path Track::voiceDirectory(const VoiceLocations &locations) const {
