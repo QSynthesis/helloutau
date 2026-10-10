@@ -227,8 +227,23 @@ namespace hello::daw {
                 note = near->first;
             }
         }
-        if (note != hovered) {
+        // The envelope drawn last is on top. A fragment reaches before its note and after the
+        // next note starts.
+        int envelope = -1;
+        if (position && envelopesVisible && placements.isEmpty()) {
+            const auto tick = view->timeAxis().toTick(position->x());
+            const auto [first, last] = timeline->notesBetween(tick, tick);
+            const int end = std::min(timeline->noteCount(), last + 1);
+            for (int i = std::max(0, first - 1); i < end; ++i) {
+                if (!timeline->note(i).rest &&
+                    envelopeOutlineOf(i).containsPoint(*position, Qt::OddEvenFill)) {
+                    envelope = i;
+                }
+            }
+        }
+        if (note != hovered || envelope != hoveredEnvelope) {
             hovered = note;
+            hoveredEnvelope = envelope;
             view->viewport()->update();
         }
     }

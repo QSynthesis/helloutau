@@ -1175,6 +1175,7 @@ namespace hello::daw {
     void PianoRoll::setEnvelopesVisible(bool visible) {
         stdc_impl_t;
         impl.envelopesVisible = visible;
+        impl.hoveredEnvelope = -1;
         impl.view->viewport()->update();
     }
 
@@ -1390,6 +1391,31 @@ namespace hello::daw {
         stdc_impl_t;
         impl.envelopeColor = color;
         impl.parameters->viewport()->update();
+    }
+
+    QColor PianoRoll::intensityBackgroundColor() const {
+        stdc_impl_t;
+        return impl.intensityBackgroundColor.isValid() ? impl.intensityBackgroundColor
+                                                       : whiteRowColor();
+    }
+
+    void PianoRoll::setIntensityBackgroundColor(const QColor &color) {
+        stdc_impl_t;
+        impl.intensityBackgroundColor = color;
+        impl.view->viewport()->update();
+    }
+
+    QColor PianoRoll::intensityBorderColor() const {
+        stdc_impl_t;
+        return impl.intensityBorderColor.isValid()
+                   ? impl.intensityBorderColor
+                   : palette().color(QPalette::Active, QPalette::Dark);
+    }
+
+    void PianoRoll::setIntensityBorderColor(const QColor &color) {
+        stdc_impl_t;
+        impl.intensityBorderColor = color;
+        impl.view->viewport()->update();
     }
 
     QColor PianoRoll::faintPointColor() const {

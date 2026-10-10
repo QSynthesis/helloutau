@@ -2640,6 +2640,24 @@ private Q_SLOTS:
         move(viewport, QPoint(start.x() + 40, viewport->height() - 4), Qt::LeftButton, {});
         QTRY_VERIFY(roll.view()->keyAxis().top < raised);
     }
+
+    // The background of the intensity under the pointer defaults to the color of the white rows,
+    // and its border to the dark color of the palette. Both can be set.
+    void the_colors_of_the_intensity_follow_the_palette_until_set() {
+        kit::ProjectSession session(threeNotes());
+        PianoRoll roll(&session);
+        roll.setWhiteRowColor(QColor(1, 2, 3));
+        auto palette = roll.palette();
+        palette.setColor(QPalette::Active, QPalette::Dark, QColor(4, 5, 6));
+        roll.setPalette(palette);
+        QCOMPARE(roll.intensityBackgroundColor(), QColor(1, 2, 3));
+        QCOMPARE(roll.intensityBorderColor(), QColor(4, 5, 6));
+
+        roll.setIntensityBackgroundColor(QColor(7, 8, 9));
+        roll.setIntensityBorderColor(QColor(10, 11, 12));
+        QCOMPARE(roll.intensityBackgroundColor(), QColor(7, 8, 9));
+        QCOMPARE(roll.intensityBorderColor(), QColor(10, 11, 12));
+    }
 };
 
 int main(int argc, char *argv[]) {

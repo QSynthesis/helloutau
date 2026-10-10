@@ -67,6 +67,10 @@ namespace hello::daw {
         Q_PROPERTY(QColor vibratoColor READ vibratoColor WRITE setVibratoColor)
         Q_PROPERTY(QColor faintPointColor READ faintPointColor WRITE setFaintPointColor)
         Q_PROPERTY(QColor envelopeColor READ envelopeColor WRITE setEnvelopeColor)
+        Q_PROPERTY(QColor intensityBackgroundColor READ intensityBackgroundColor WRITE
+                       setIntensityBackgroundColor)
+        Q_PROPERTY(
+            QColor intensityBorderColor READ intensityBorderColor WRITE setIntensityBorderColor)
         Q_PROPERTY(QColor parameterColor READ parameterColor WRITE setParameterColor)
         Q_PROPERTY(double pointGrip READ pointGrip WRITE setPointGrip)
         Q_PROPERTY(double curveGrip READ curveGrip WRITE setCurveGrip)
@@ -477,6 +481,13 @@ namespace hello::daw {
         void setFaintPointColor(const QColor &color);
         QColor envelopeColor() const;
         void setEnvelopeColor(const QColor &color);
+        /// The background and the border of the intensity of the envelope under the pointer, by
+        /// default the color of the white rows and the dark color of the palette. A theme sets
+        /// them with \c qproperty-intensityBackgroundColor and \c qproperty-intensityBorderColor.
+        QColor intensityBackgroundColor() const;
+        void setIntensityBackgroundColor(const QColor &color);
+        QColor intensityBorderColor() const;
+        void setIntensityBorderColor(const QColor &color);
         /// The color of the handles of the values in the parameter area
         QColor parameterColor() const;
         void setParameterColor(const QColor &color);

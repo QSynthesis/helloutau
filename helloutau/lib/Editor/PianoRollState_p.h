@@ -215,6 +215,8 @@ namespace hello::daw {
         QButtonGroup *laneButtons = nullptr;
         QWidget *laneBar = nullptr;
         QColor envelopeColor;
+        QColor intensityBackgroundColor;
+        QColor intensityBorderColor;
         QColor parameterColor;
         /// What a gesture shows instead of the value of some notes, by note index
         QHash<int, double> valuePreview;
@@ -341,9 +343,13 @@ namespace hello::daw {
         /// portamento or point is under the pointer, or -1
         int hovered = -1;
 
+        /// The note whose envelope is under the pointer while the envelopes are shown, or -1.
+        /// Its intensity is drawn on a background.
+        int hoveredEnvelope = -1;
+
         /// Follows the pointer: the note of the point under it, or else the note whose
-        /// portamento it is on. A gesture keeps the note it began on, so that no other note
-        /// stands out while it lasts.
+        /// portamento it is on, and the note whose envelope it is on. A gesture keeps the notes
+        /// it began on, so that no other note stands out while it lasts.
         void hover(std::optional<QPointF> position);
 
         /// Selects the points ids; selecting a point clears the selected notes.

@@ -216,6 +216,29 @@ namespace hello::daw {
         auto fill = decl->envelopeColor();
         fill.setAlphaF(fill.alphaF() * 0.15f);
         const auto refs = m_state->notes();
+        // The intensity is written one row above the start of the fragment.
+        const auto intensityPositionOf = [this](const QPolygonF &outline) {
+            return QPointF(outline.first().x() + 2,
+                           outline.first().y() - view()->keyAxis().pixelsPerKey - 2);
+        };
+        const auto intensityOf = [&refs](int index) {
+            return QString::number(refs.at(index).intensity().value_or(100));
+        };
+        // TODO: The intensity is drawn in the color of the envelope over the envelope of the
+        // previous note, and is legible only on the background shown while the pointer is on
+        // its envelope. A presentation that is legible without the pointer is to be found.
+        // The background lies under every envelope, so that it hides none of their lines.
+        if (const int hovered = m_state->hoveredEnvelope;
+            hovered >= begin && hovered < end && !timeline->note(hovered).rest) {
+            const auto position = intensityPositionOf(m_state->envelopeOutlineOf(hovered));
+            const QFontMetricsF metrics(painter.font());
+            const QRectF box(position.x() - 2, position.y() - metrics.ascent() - 1,
+                             metrics.horizontalAdvance(intensityOf(hovered)) + 4,
+                             metrics.height() + 2);
+            painter.setPen(QPen(decl->intensityBorderColor(), 1));
+            painter.setBrush(decl->intensityBackgroundColor());
+            painter.drawRoundedRect(box.adjusted(0.5, 0.5, -0.5, -0.5), 2, 2);
+        }
         for (int i = begin; i < end; ++i) {
             const auto &note = timeline->note(i);
             if (note.rest) {
@@ -225,12 +248,10 @@ namespace hello::daw {
             painter.setPen(QPen(decl->envelopeColor(), 1));
             painter.setBrush(fill);
             painter.drawPolygon(outline);
-            const double intensityBaseline =
-                outline.first().y() - view()->keyAxis().pixelsPerKey - 2;
-            const QPointF intensityPosition(outline.first().x() + 2, intensityBaseline);
+            const auto intensityPosition = intensityPositionOf(outline);
+            const double intensityBaseline = intensityPosition.y();
             painter.setPen(decl->envelopeColor());
-            painter.drawText(intensityPosition,
-                             QString::number(refs.at(i).intensity().value_or(100)));
+            painter.drawText(intensityPosition, intensityOf(i));
             if (!PianoRollState::isValidEnvelope(m_state->envelopeOf(i),
                                                  m_state->fragmentOf(i).second)) {
                 const QFontMetrics metrics(decl->font());
