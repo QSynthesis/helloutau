@@ -26,6 +26,8 @@
 #include <QtCore/QTemporaryDir>
 #include <QtTest/QTest>
 
+#include <hellokit/Support/TextCodec.h>
+#include <hellokit/Synth/ClassicSynthRunner.h>
 #include <hellokit/Synth/ThreadedSynthRunner.h>
 
 using namespace hello::kit;
@@ -294,6 +296,29 @@ private:
 
         SynthPlan::Options options;
         options.cacheDirectory = root() / "cache";
+        options.outputFile = root() / "out.wav";
+        return SynthPlan::make(project, *bank, options, diagnostics);
+    }
+
+    /// A plan of one note whose fragment lies in the cache directory \a cacheName.
+    std::optional<SynthPlan> planWithCache(const QString &cacheName) {
+        write(QStringLiteral("bank/oto.ini"), "a.wav=a,10,20,30,40,5\n");
+        write(QStringLiteral("bank/a.wav"), "RIFF");
+        FixedCharsetSelector selector(QStringLiteral("UTF-8"));
+        DiagnosticList diagnostics;
+        const auto bank = VoiceBank::open(root() / "bank", &selector, diagnostics);
+        if (!bank) {
+            return std::nullopt;
+        }
+        Note note;
+        note.lyric = QStringLiteral("a");
+        note.noteNum = 60;
+        note.length = 480;
+        Project project;
+        project.tracks.push_back({});
+        project.tracks[0].notes.push_back(note);
+        SynthPlan::Options options;
+        options.cacheDirectory = root() / cacheName.toStdU16String();
         options.outputFile = root() / "out.wav";
         return SynthPlan::make(project, *bank, options, diagnostics);
     }
@@ -743,6 +768,58 @@ private Q_SLOTS:
             fragments += std::filesystem::exists(step.cacheFile) ? 1 : 0;
         }
         QCOMPARE(fragments, 2);
+    }
+
+    // A plan that the classic runner refuses for its scripts is refused here as well, before any
+    // synth tool runs or any file is written.
+    void a_plan_the_scripts_cannot_carry_is_refused_as_in_the_classic_runner() {
+        const TextCodec codec;
+        if (codec.isUtf8()) {
+            QSKIP("The system code page is UTF-8, which represents every character.");
+        }
+        const auto outside = QString::fromUtf8("\xF0\xA0\xAE\xB7");
+        if (codec.canEncode(outside)) {
+            QSKIP("The system code page represents the character.");
+        }
+        const auto p = planWithCache(QStringLiteral("cache") + outside);
+        QVERIFY(p.has_value());
+        DiagnosticList classic;
+        QVERIFY(!ClassicSynthRunner().scriptFiles(root() / "scripts", *p, somewhere(), classic));
+
+        SynthToolLog log;
+        const auto synthTools = somewhere();
+        StubbedRunner runner(&log, synthTools, rendersTo(p->steps().at(0).cacheFile),
+                             appends(p->outputFile()));
+        DiagnosticList diagnostics;
+        const auto outcome = runner.render(*p, synthTools, nullptr, diagnostics);
+        QVERIFY(!outcome.rendered);
+        QVERIFY(hasError(diagnostics));
+        QCOMPARE(log.resampled(), 0);
+        QVERIFY(!std::filesystem::exists(p->cacheDirectory()));
+    }
+
+    // With a script directory, the scripts that the classic runner would write are written
+    // there, for the synth tools that read them.
+    void the_scripts_of_the_classic_runner_are_written_to_the_script_directory() {
+        const auto p = plan();
+        QVERIFY(p.has_value());
+        const auto directory = root() / "scripts";
+        DiagnosticList classic;
+        const auto expected = ClassicSynthRunner().scriptFiles(directory, *p, somewhere(), classic);
+        QVERIFY(expected.has_value());
+
+        SynthToolLog log;
+        const auto synthTools = somewhere();
+        StubbedRunner runner(&log, synthTools, rendersTo(p->steps().at(0).cacheFile),
+                             appends(p->outputFile()));
+        runner.scriptDirectory = directory;
+        DiagnosticList diagnostics;
+        QVERIFY(runner.render(*p, synthTools, nullptr, diagnostics).rendered);
+        for (const auto &[path, bytes] : *expected) {
+            QFile file(QString::fromStdU16String(path.u16string()));
+            QVERIFY2(file.open(QIODevice::ReadOnly), qPrintable(file.fileName()));
+            QCOMPARE(file.readAll(), bytes);
+        }
     }
 };
 
