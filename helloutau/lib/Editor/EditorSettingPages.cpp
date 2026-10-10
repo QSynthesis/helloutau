@@ -8,6 +8,7 @@
 #include <QtCore/QDir>
 #include <QtGui/QIntValidator>
 #include <QtCore/QRegularExpression>
+#include <QtCore/QSignalBlocker>
 #include <QtWidgets/QCheckBox>
 #include <QtWidgets/QComboBox>
 #include <QtWidgets/QFileDialog>
@@ -266,23 +267,18 @@ namespace hello::daw {
         auto widget = new QWidget();
         auto form = new QFormLayout(widget);
         m_output = new QComboBox(widget);
-        m_output->addItem(tr("System default"), QByteArray());
-        const auto selected = m_settings.audioOutputDevice();
-        int selectedIndex = 0;
-        int index = 1;
-        for (const auto &id : AudioEngine::deviceIds()) {
-            m_output->addItem(AudioEngine::deviceDescription(id), id);
-            if (id == selected) {
-                selectedIndex = index;
-            }
-            ++index;
-        }
-        m_output->setCurrentIndex(selectedIndex);
+        fillDevices(m_settings.audioOutputDevice());
         form->addRow(tr("&Output device:"), m_output);
         auto test = new QPushButton(tr("Test"), widget);
         form->addRow({}, test);
         form->addRow(note(tr("The test plays a short sine wave on the selected device.")));
         connect(m_output, &QComboBox::currentIndexChanged, this, &SettingPage::modifiedChanged);
+        // The list follows the devices while the page is open, and keeps the device in the box
+        // if it is still present.
+        connect(AudioEngine::instance(), &AudioEngine::devicesChanged, widget, [this] {
+            fillDevices(m_output->currentData().toByteArray());
+            Q_EMIT modifiedChanged();
+        });
         // The tone plays on the device selected in the box, which need not be applied yet.
         connect(test, &QPushButton::clicked, widget, [this, widget] {
             const auto id = m_output->currentData().toByteArray();
@@ -300,6 +296,16 @@ namespace hello::daw {
             QMessageBox::warning(widget, tr("Test"), error);
         });
         return widget;
+    }
+
+    void AudioSettingPage::fillDevices(const QByteArray &current) {
+        const QSignalBlocker blocker(m_output);
+        m_output->clear();
+        m_output->addItem(tr("System default"), QByteArray());
+        for (const auto &id : AudioEngine::deviceIds()) {
+            m_output->addItem(AudioEngine::deviceDescription(id), id);
+        }
+        m_output->setCurrentIndex(std::max(0, m_output->findData(current)));
     }
 
     bool AudioSettingPage::isModified() const {

@@ -92,6 +92,10 @@ namespace hello::daw {
         QWidget *createWidget() override;
 
     private:
+        // Fills the box with System default and the output devices, and selects \a current, or
+        // System default if \a current is absent
+        void fillDevices(const QByteArray &current);
+
         AppSettings &m_settings;
         QPointer<QComboBox> m_output;
     };
