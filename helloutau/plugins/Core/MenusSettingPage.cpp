@@ -3,6 +3,7 @@
 #include <optional>
 
 #include <QtCore/QIdentityProxyModel>
+#include <QtCore/QItemSelectionModel>
 #include <QtCore/QSortFilterProxyModel>
 #include <QtWidgets/QDialog>
 #include <QtWidgets/QDialogButtonBox>
@@ -399,6 +400,12 @@ namespace hello::daw {
                 dialog.accept();
             }
         };
+        // OK is enabled only while the current item can be added.
+        const auto ok = buttons->button(QDialogButtonBox::Ok);
+        const auto updateOk = [&] { ok->setEnabled(currentEntry().has_value()); };
+        connect(tree->selectionModel(), &QItemSelectionModel::currentChanged, &dialog, updateOk);
+        connect(search, &QLineEdit::textChanged, &dialog, updateOk);
+        updateOk();
         connect(tree, &QTreeView::doubleClicked, &dialog, [acceptAction] { acceptAction(); });
         connect(buttons, &QDialogButtonBox::accepted, &dialog, [acceptAction] { acceptAction(); });
         connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);

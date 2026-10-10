@@ -350,6 +350,41 @@ private Q_SLOTS:
         }
     }
 
+    // OK of the Add Action dialog is enabled only while the current item can be added.
+    void the_add_action_dialog_enables_ok_for_an_item() {
+        QTemporaryDir dir;
+        const auto e = editorIn(dir);
+        MenusSettingPage page(e.get());
+        QVERIFY(page.widget());
+        const auto tree = page.tree(Editor::ProjectWindowKind);
+        tree->setCurrentIndex(tree->model()->index(0, 0));
+        const auto registry = e->actionRegistry(Editor::ProjectWindowKind);
+
+        QList<bool> enabled;
+        QTimer::singleShot(0, this, [&] {
+            const auto dialog = qobject_cast<QDialog *>(QApplication::activeModalWidget());
+            if (!dialog) {
+                return;
+            }
+            const auto actions = dialog->findChild<QTreeView *>(QStringLiteral("actions"));
+            const auto ok = dialog->findChild<QDialogButtonBox *>()->button(QDialogButtonBox::Ok);
+            enabled.push_back(ok->isEnabled());
+            for (const auto &index : actions ? allRows(actions->model()) : QModelIndexList()) {
+                const auto info = registry->actionInfo(index.data(Qt::UserRole).toString());
+                if (info && info->type() == QAK::ActionItemInfo::Action) {
+                    actions->setCurrentIndex(index);
+                    enabled.push_back(ok->isEnabled());
+                    break;
+                }
+            }
+            actions->setCurrentIndex({});
+            enabled.push_back(ok->isEnabled());
+            dialog->reject();
+        });
+        page.widget()->findChild<QPushButton *>(QStringLiteral("add"))->click();
+        QCOMPARE(enabled, (QList<bool>{false, true, false}));
+    }
+
     // The Add Action dialog also adds a menu or a group, in the form that its manifest declares.
     void a_menu_or_a_group_is_added_in_its_declared_form() {
         QTemporaryDir dir;
