@@ -1,3 +1,4 @@
+#include <chrono>
 #include <functional>
 #include <memory>
 
@@ -5,6 +6,7 @@
 #include <QtCore/QDir>
 #include <QtCore/QFile>
 #include <QtCore/QFileInfo>
+#include <QtCore/QRegularExpression>
 #include <QtCore/QTemporaryDir>
 #include <QtTest/QTest>
 
@@ -67,6 +69,29 @@ private:
         o.cacheDirectory = root() / "cache";
         o.outputFile = root() / "out.wav";
         return o;
+    }
+
+    /// Returns the length in milliseconds that the wavtool argument \a text gives, written either
+    /// as <tt>ticks\@tempo+correction</tt> or in milliseconds.
+    static double millisecondsOf(const QString &text) {
+        const auto at = text.indexOf(u'@');
+        if (at < 0) {
+            return text.toDouble();
+        }
+        const auto sign = text.indexOf(QRegularExpression(QStringLiteral("[+-]")), at);
+        const double ticks = text.left(at).toDouble();
+        const double tempo = text.mid(at + 1, sign < 0 ? -1 : sign - at - 1).toDouble();
+        const double correction = sign < 0 ? 0 : text.mid(sign).toDouble();
+        return ticks * 60000 / (480 * tempo) + correction;
+    }
+
+    /// Returns the step of the single note \a n of a project in the folder \a projectDirectory.
+    SynthStep stepOf(const VoiceBank &voices, const Note &n,
+                     const std::filesystem::path &projectDirectory, DiagnosticList &diagnostics) {
+        auto o = options();
+        o.projectDirectory = projectDirectory;
+        const auto plan = SynthPlan::make(projectOf({n}), voices, o, diagnostics);
+        return plan ? plan->steps().at(0) : SynthStep();
     }
 
 private Q_SLOTS:
@@ -443,6 +468,157 @@ private Q_SLOTS:
         const auto &arguments = plan->steps().at(0).resamplerArguments;
         QVERIFY(arguments.at(4).contains(QLatin1Char('&')));
         QCOMPARE(arguments.at(4), QStringLiteral("B50 & whoami"));
+    }
+
+    // $direct applies with any value but an empty one. The wavtool then appends the sample of
+    // the voice bank itself, from the offset of its entry plus the start point, and the length
+    // is written in milliseconds.
+    void a_note_with_direct_passes_its_sample_to_the_wavtool() {
+        const auto voices = bank();
+        QVERIFY(voices.has_value());
+        DiagnosticList diagnostics;
+        const auto plain = stepOf(*voices, note(QStringLiteral("a")), {}, diagnostics);
+
+        for (const auto value : {"True", "False"}) {
+            auto n = note(QStringLiteral("a"));
+            n.direct = QString::fromLatin1(value);
+            const auto step = stepOf(*voices, n, {}, diagnostics);
+            QVERIFY2(step.direct, value);
+            QVERIFY(!step.silent);
+            QVERIFY(!step.resamples());
+            QVERIFY(step.cacheFile.empty());
+            QVERIFY(step.resamplerArguments.isEmpty());
+            QCOMPARE(std::filesystem::path(step.wavtoolArguments.at(1).toStdU16String()),
+                     step.sample);
+            QCOMPARE(step.sample.filename(), std::filesystem::path("a.wav"));
+            // The offset of the entry of a is 10.
+            QCOMPARE(step.wavtoolArguments.at(2).toDouble(),
+                     plain.wavtoolArguments.at(2).toDouble() + 10);
+            QVERIFY(!step.wavtoolArguments.at(3).contains(u'@'));
+            QCOMPARE(millisecondsOf(step.wavtoolArguments.at(3)),
+                     millisecondsOf(plain.wavtoolArguments.at(3)));
+        }
+
+        auto empty = note(QStringLiteral("a"));
+        empty.direct = QString();
+        QVERIFY(!stepOf(*voices, empty, {}, diagnostics).direct);
+    }
+
+    // $patch names a file relative to the folder of the project file, without normalization,
+    // so that ..\ is followed. The start point is that of the note.
+    void a_note_with_patch_passes_its_file_to_the_wavtool() {
+        const auto voices = bank();
+        QVERIFY(voices.has_value());
+        write(QStringLiteral("project/sub/patch.wav"), "RIFF");
+        write(QStringLiteral("up.wav"), "RIFF");
+        const auto project = root() / "project";
+        DiagnosticList diagnostics;
+        const auto plain = stepOf(*voices, note(QStringLiteral("a")), project, diagnostics);
+
+        auto n = note(QStringLiteral("a"));
+        n.patch = QStringLiteral("sub\\patch.wav");
+        const auto step = stepOf(*voices, n, project, diagnostics);
+        QVERIFY(step.direct);
+        QVERIFY(step.cacheFile.empty());
+        QCOMPARE(step.sample.lexically_normal(),
+                 (project / "sub" / "patch.wav").lexically_normal());
+        QCOMPARE(step.wavtoolArguments.at(2).toDouble(), plain.wavtoolArguments.at(2).toDouble());
+        QVERIFY(!step.wavtoolArguments.at(3).contains(u'@'));
+
+        n.patch = QStringLiteral("..\\up.wav");
+        const auto up = stepOf(*voices, n, project, diagnostics);
+        QVERIFY(up.direct);
+        QCOMPARE(up.sample.lexically_normal(), (root() / "up.wav").lexically_normal());
+
+        // $patch takes precedence over $direct.
+        n.patch = QStringLiteral("sub\\patch.wav");
+        n.direct = QStringLiteral("True");
+        const auto both = stepOf(*voices, n, project, diagnostics);
+        QCOMPARE(both.sample.lexically_normal(),
+                 (project / "sub" / "patch.wav").lexically_normal());
+        QCOMPARE(both.wavtoolArguments.at(2).toDouble(), plain.wavtoolArguments.at(2).toDouble());
+        QVERIFY(diagnostics.isEmpty());
+    }
+
+    // A file of $patch that cannot be found makes the note silent with a diagnostic: a missing
+    // file, an absolute path, which UTAU appends to the folder as well, and a project without a
+    // file. The length is still written in milliseconds.
+    void a_patch_that_cannot_be_found_is_silent() {
+        const auto voices = bank();
+        QVERIFY(voices.has_value());
+        write(QStringLiteral("project/patch.wav"), "RIFF");
+        const auto project = root() / "project";
+        const auto absolute = QString::fromStdU16String((project / "patch.wav").u16string());
+
+        const QList<std::pair<QString, std::filesystem::path>> cases{
+            {QStringLiteral("missing.wav"), project},
+            {absolute,                      project},
+            {QStringLiteral("patch.wav"),   {}     },
+        };
+        for (const auto &[value, folder] : cases) {
+            auto n = note(QStringLiteral("a"));
+            n.patch = value;
+            DiagnosticList diagnostics;
+            const auto step = stepOf(*voices, n, folder, diagnostics);
+            QVERIFY2(step.silent, qPrintable(value));
+            QVERIFY(!step.direct);
+            QVERIFY(!step.resamples());
+            QCOMPARE(diagnostics.size(), 1);
+            QVERIFY(!step.wavtoolArguments.at(3).contains(u'@'));
+        }
+    }
+
+    void patch_and_direct_do_nothing_on_a_rest() {
+        const auto voices = bank();
+        QVERIFY(voices.has_value());
+        write(QStringLiteral("project/patch.wav"), "RIFF");
+        auto rest = note(QStringLiteral("R"));
+        rest.patch = QStringLiteral("patch.wav");
+        rest.direct = QStringLiteral("True");
+        DiagnosticList diagnostics;
+        const auto step = stepOf(*voices, rest, root() / "project", diagnostics);
+        QVERIFY(step.silent);
+        QVERIFY(!step.direct);
+        QVERIFY(diagnostics.isEmpty());
+    }
+
+    // The resampler counts toward the name of a fragment: its path and the size and the time of
+    // last modification of its file, so that a fragment of another resampler, or of another
+    // version of it, is not reused.
+    void the_resampler_counts_toward_the_name_of_a_fragment() {
+        const auto voices = bank();
+        QVERIFY(voices.has_value());
+        write(QStringLiteral("tools/one.exe"), "one");
+        write(QStringLiteral("tools/two.exe"), "two");
+        const auto one = root() / "tools" / "one.exe";
+        const auto nameWith = [&](const std::filesystem::path &resampler) {
+            auto o = options();
+            o.resampler = resampler;
+            DiagnosticList diagnostics;
+            const auto plan =
+                SynthPlan::make(projectOf({note(QStringLiteral("a"))}), *voices, o, diagnostics);
+            return plan ? QString::fromStdU16String(plan->steps().at(0).cacheFile.u16string())
+                        : QString();
+        };
+
+        const auto none = nameWith({});
+        QVERIFY(!none.isEmpty());
+        QCOMPARE(nameWith({}), none);
+        const auto first = nameWith(one);
+        QVERIFY(first != none);
+        QCOMPARE(nameWith(one), first);
+        QVERIFY(nameWith(root() / "tools" / "two.exe") != first);
+
+        const auto time = std::filesystem::last_write_time(one);
+        write(QStringLiteral("tools/one.exe"), "a longer one");
+        std::filesystem::last_write_time(one, time);
+        QVERIFY(nameWith(one) != first);
+
+        write(QStringLiteral("tools/one.exe"), "one");
+        std::filesystem::last_write_time(one, time + std::chrono::seconds(10));
+        QVERIFY(nameWith(one) != first);
+        std::filesystem::last_write_time(one, time);
+        QCOMPARE(nameWith(one), first);
     }
 };
 
