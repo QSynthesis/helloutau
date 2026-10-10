@@ -68,10 +68,12 @@ namespace hello::daw {
     void PianoRollState::showRulerMenu(double tick, const QPoint &globalPosition) {
         auto &decl = *widget;
         const int count = timeline->noteCount();
-        const int index = count == 0 ? -1 : std::clamp(timeline->noteAt(tick), 0, count - 1);
-        const int noteIndex = timeline->noteAt(tick);
-        if (noteIndex >= 0 && noteIndex < count) {
-            const auto &note = timeline->note(noteIndex);
+        // The note at the position, or none after the last note, where the commands of a note
+        // are disabled rather than applied to another note
+        const int at = timeline->noteAt(tick);
+        const int index = at >= 0 && at < count ? at : -1;
+        if (index >= 0) {
+            const auto &note = timeline->note(index);
             ruler->setMenuRange(std::pair{double(note.start), double(note.start + note.length)});
         } else {
             ruler->setMenuRange(std::nullopt);
@@ -101,7 +103,7 @@ namespace hello::daw {
         // The selected notes if unbroken, otherwise the note at the position
         const auto range = decl.selectedRange().value_or(std::pair{index, index});
         const auto region = menu.addAction(PianoRoll::tr("&Name Region..."));
-        region->setEnabled(index >= 0);
+        region->setEnabled(range.first >= 0);
         QObject::connect(region, &QAction::triggered, &decl, [this, range] {
             Q_EMIT widget->regionRequested(range.first, range.second);
         });
