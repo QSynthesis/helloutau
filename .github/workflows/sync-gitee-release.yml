@@ -33,36 +33,42 @@ jobs:
           set -euo pipefail
 
           release_id=""
-          for attempt in $(seq 1 12); do
-            releases=$(curl --silent --show-error --fail \
-              "https://gitee.com/api/v5/repos/${GITEE_REPOSITORY}/releases?access_token=${GITEE_TOKEN}&per_page=100" \
-              2>/dev/null || printf '[]')
-            release_id=$(jq -r --arg tag "$TAG_NAME" \
-              'if type == "array" then .[] | select(.tag_name == $tag) | .id else empty end' \
-              <<<"$releases" | head -n 1)
-            if [ -n "$release_id" ]; then
+          for attempt in $(seq 1 18); do
+            tag_status=$(curl --silent --output /dev/null --write-out '%{http_code}' \
+              --connect-timeout 10 --max-time 30 \
+              "https://gitee.com/api/v5/repos/${GITEE_REPOSITORY}/tags/${TAG_NAME}?access_token=${GITEE_TOKEN}" \
+              || printf '000')
+            if [ "$tag_status" = "200" ]; then
+              echo "Gitee tag ${TAG_NAME} is available."
               break
             fi
+            echo "Waiting for Gitee tag ${TAG_NAME} (HTTP ${tag_status}, attempt ${attempt}/18)."
+            if [ "$attempt" -eq 18 ]; then
+              echo "Gitee did not receive the mirrored tag in time." >&2
+              exit 1
+            fi
+            sleep 10
+          done
 
+          existing=$(curl --silent --show-error --fail \
+            --connect-timeout 10 --max-time 30 \
+            "https://gitee.com/api/v5/repos/${GITEE_REPOSITORY}/releases/tags/${TAG_NAME}?access_token=${GITEE_TOKEN}" \
+            2>/dev/null || printf '{}')
+          release_id=$(jq -r '.id // empty' <<<"$existing")
+          if [ -z "$release_id" ]; then
             payload=$(jq -n \
               --arg tag "$TAG_NAME" \
               --arg name "$RELEASE_NAME" \
               --arg body "$RELEASE_BODY" \
               '{tag_name: $tag, name: $name, body: $body}')
             response=$(curl --silent --show-error --fail \
+              --connect-timeout 10 --max-time 60 \
               -X POST \
               -H "Content-Type: application/json" \
               "https://gitee.com/api/v5/repos/${GITEE_REPOSITORY}/releases?access_token=${GITEE_TOKEN}" \
-              --data "$payload" 2>/tmp/gitee-release-error) && {
-                release_id=$(jq -er '.id' <<<"$response")
-                break
-              }
-            if [ "$attempt" -eq 12 ]; then
-              cat /tmp/gitee-release-error >&2
-              exit 1
-            fi
-            sleep 10
-          done
+              --data "$payload")
+            release_id=$(jq -er '.id' <<<"$response")
+          fi
 
           test -n "$release_id"
           echo "release_id=$release_id" >> "$GITHUB_OUTPUT"
