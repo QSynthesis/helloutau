@@ -276,6 +276,9 @@ namespace hello::daw {
         // The list follows the devices while the page is open, and keeps the device in the box
         // if it is still present.
         connect(AudioEngine::instance(), &AudioEngine::devicesChanged, widget, [this] {
+            // An open list keeps the size of the items it was opened with, so that it would show
+            // blank rows or a scroll bar. The user opens the list again.
+            m_output->hidePopup();
             fillDevices(m_output->currentData().toByteArray());
             Q_EMIT modifiedChanged();
         });
