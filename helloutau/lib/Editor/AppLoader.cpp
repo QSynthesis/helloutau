@@ -90,8 +90,13 @@ namespace hello::daw {
             }
             impl.files.push_back(arguments[i]);
         }
-        impl.settings = std::make_unique<AppSettings>(impl.settingsDirectory +
-                                                      QStringLiteral("/settings.json"));
+        // A settings directory given by the option also holds the voice banks and the plugins of
+        // the user, so that it is self-contained.
+        const auto settingsFile = impl.settingsDirectory + QStringLiteral("/settings.json");
+        impl.settings =
+            impl.settingsDirectory == AppSettings::defaultDirectory()
+                ? std::make_unique<AppSettings>(settingsFile, AppSettings::defaultUserDirectory())
+                : std::make_unique<AppSettings>(settingsFile);
         impl.readPluginSettings();
         Translations::install(impl.settings->language());
     }

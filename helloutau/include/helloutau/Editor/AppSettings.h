@@ -25,11 +25,18 @@ namespace hello::daw {
     /// also write the file. If two applications change the file, the last write prevails.
     class HELLOUTAU_EDITOR_EXPORT AppSettings {
     public:
-        /// Constructs the settings of the current user, stored in defaultFileName().
+        /// Constructs the settings of the current user, stored in defaultFileName(), with
+        /// defaultUserDirectory() as the user directory.
         AppSettings();
 
-        /// Constructs the settings stored in \a fileName.
+        /// Constructs the settings stored in \a fileName, with the directory of \a fileName as
+        /// the user directory, so that a settings directory other than the default one, such as
+        /// that of a test, holds the voice banks and plugins of the user as well.
         explicit AppSettings(const QString &fileName);
+
+        /// Constructs the settings stored in \a fileName with \a userDirectory as the user
+        /// directory.
+        AppSettings(const QString &fileName, const QString &userDirectory);
 
         ~AppSettings();
 
@@ -40,7 +47,16 @@ namespace hello::daw {
         /// Returns the path of \c settings.json in defaultDirectory().
         static QString defaultFileName();
 
+        /// Returns the user directory of the current user: \c OpenVPI/HelloUtau, after the
+        /// organization and application names of \c QCoreApplication, in the documents
+        /// directory. See the user directories in docs/Distribution.md.
+        static QString defaultUserDirectory();
+
         QString fileName() const;
+
+        /// Returns the directory of the files that the user adds and manages, the voice banks
+        /// and the plugins. The directory is not created by this class.
+        std::filesystem::path userDirectory() const;
 
         /// Writes the pending changes immediately.
         void sync();
@@ -54,9 +70,9 @@ namespace hello::daw {
         std::filesystem::path utauDirectory() const;
         void setUtauDirectory(const std::filesystem::path &directory);
 
-        /// Returns the voice folder of HelloUtau, the \c voice directory beside the settings
-        /// file. The folder is the first voice folder of voiceLocations(), and it is not created
-        /// by this class.
+        /// Returns the voice folder of HelloUtau, the \c Singers directory of userDirectory().
+        /// The folder is the first voice folder of voiceLocations(), and it is not created by
+        /// this class.
         std::filesystem::path voiceFolder() const;
 
         /// Whether a relative \c VoiceDir is resolved against utauDirectory(), as UTAU resolves

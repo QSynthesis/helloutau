@@ -4,10 +4,10 @@
 
 ## 实现状态
 
-均未实现。现行代码与本文的出入如下，实现时按本文修改，不迁移旧位置中的内容（作者 2026-10-11 决定）：
+「用户目录」已实现（`AppSettings::userDirectory()`），不迁移旧位置中的内容（作者 2026-10-11 决定）。以 `--settings` 指定设置目录时，用户目录即该设置目录，使该目录自成一体，测试同样以此与真实的文档目录隔开。
 
-- HelloUtau 自己的音源文件夹在代码中仍为设置文件旁的 `voice` 目录，`note.md`「`%VOICE%` 前缀」已改为文档目录下的 `Singers`。
-- UTAU 插件的用户目录在代码中仍为应用数据目录下的 `ClassicPlugins`，`ClassicPluginHost.md` 已改为文档目录下的 `ClassicPlugins`。
+其余均未实现，现行代码与本文的出入如下：
+
 - 临时目录现由各处自行分配：工程窗口与试合成使用 `QTemporaryDir`，`ClassicPluginRunner` 使用系统临时目录下的 `HelloUtau-XXXXXX`，`ClassicSynthRunner` 与 `ThreadedSynthRunner` 在未指定脚本目录时使用系统临时目录下的 `hellokit-<毫秒数>`。本文改为由临时目录管理器统一分配。
 - 发布物的打包脚本不在仓库中（`.cache/claude/tools/package_windows.ps1`），也没有安装包。
 

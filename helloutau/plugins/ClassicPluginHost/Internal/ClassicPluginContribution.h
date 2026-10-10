@@ -35,9 +35,10 @@ namespace hello::daw {
         const QAK::ActionExtension *extension(const QString &windowKind) const override;
         void addActions(QWidget *widget, QAK::WidgetActionContext *context) override;
 
-        /// Returns the folder of the UTAU plugins that the user installs for HelloUtau, separate
-        /// from the \c plugins folder of UTAU and from the native plugins.
-        static std::filesystem::path userDirectory();
+        /// Returns the folder of the UTAU plugins that the user installs for HelloUtau, the
+        /// \c ClassicPlugins directory of the user directory of \a settings. It is separate from
+        /// the \c plugins folder of UTAU and from the native plugins.
+        static std::filesystem::path userDirectory(const AppSettings &settings);
 
         /// Returns the plugin folders in the order of discovery: userDirectory(), and then the
         /// \c plugins folder of the UTAU folder of \a settings if that is set.

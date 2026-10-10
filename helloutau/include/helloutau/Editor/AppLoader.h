@@ -37,7 +37,8 @@ namespace hello::daw {
         static constexpr char pluginPathOption[] = "--plugin-path";
 
         /// Command-line option that specifies the following directory as the settings directory
-        /// in place of the directory of the user.
+        /// in place of the directory of the user. The directory also serves as the user directory
+        /// of the settings (AppSettings::userDirectory()).
         static constexpr char settingsOption[] = "--settings";
 
         /// Creates a loader for the command-line \a arguments, whose first element is the

@@ -3,7 +3,6 @@
 #include <system_error>
 
 #include <QtCore/QPointer>
-#include <QtCore/QStandardPaths>
 #include <QtCore/QUrl>
 #include <QtGui/QAction>
 #include <QtGui/QCursor>
@@ -35,7 +34,7 @@ namespace hello::daw {
         ClassicPluginContribution::pluginFolders(const AppSettings &settings) {
         // The plugin folder of HelloUtau precedes the plugins folder of UTAU, as with the voice
         // folders of AppSettings::voiceLocations().
-        QList<std::filesystem::path> folders{userDirectory()};
+        QList<std::filesystem::path> folders{userDirectory(settings)};
         if (const auto utauPlugins = pluginsOf(settings.utauDirectory()); !utauPlugins.empty()) {
             folders.push_back(utauPlugins);
         }
@@ -88,11 +87,8 @@ namespace hello::daw {
         context->addAction(QString::fromUtf8("helloutau.tools.classicPluginsAtPointer"), atPointer);
     }
 
-    std::filesystem::path ClassicPluginContribution::userDirectory() {
-        return std::filesystem::path(
-                   QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)
-                       .toStdU16String()) /
-               u"ClassicPlugins";
+    std::filesystem::path ClassicPluginContribution::userDirectory(const AppSettings &settings) {
+        return settings.userDirectory() / u"ClassicPlugins";
     }
 
     void ClassicPluginContribution::fill(QMenu *menu, ProjectWindow *window) {
@@ -118,9 +114,10 @@ namespace hello::daw {
         menu->addSeparator();
         QObject::connect(menu->addAction(tr("&Refresh")), &QAction::triggered, window,
                          [this, window] { refresh(window); });
+        const auto &settings = window->editor()->settings();
         QObject::connect(menu->addAction(tr("&Open Plugin Folder")), &QAction::triggered, window,
-                         [] { openFolder(userDirectory()); });
-        const auto utauPlugins = pluginsOf(window->editor()->settings().utauDirectory());
+                         [folder = userDirectory(settings)] { openFolder(folder); });
+        const auto utauPlugins = pluginsOf(settings.utauDirectory());
         if (!utauPlugins.empty()) {
             QObject::connect(menu->addAction(tr("Open &UTAU Plugin Folder")), &QAction::triggered,
                              window, [utauPlugins] { openFolder(utauPlugins); });

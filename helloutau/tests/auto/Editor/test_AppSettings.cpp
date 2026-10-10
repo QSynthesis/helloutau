@@ -274,6 +274,20 @@ private Q_SLOTS:
     }
 
 
+    // The user directory is the directory of the settings file unless it is given, and holds the
+    // voice folder of HelloUtau.
+    void the_user_directory_holds_the_voice_folder() {
+        QTemporaryDir dir;
+        const auto settingsFile = dir.filePath(QStringLiteral("settings.json"));
+        const auto directory = std::filesystem::path(dir.path().toStdU16String());
+        QCOMPARE(AppSettings(settingsFile).userDirectory(), directory);
+
+        const auto user = directory / u"user";
+        const AppSettings settings(settingsFile, QString::fromStdU16String(user.u16string()));
+        QCOMPARE(settings.userDirectory(), user);
+        QCOMPARE(settings.voiceFolder(), user / u"Singers");
+    }
+
     // The voice folder of HelloUtau comes first, then the voice directory of UTAU if the UTAU
     // folder exists. A relative VoiceDir is resolved against the UTAU folder only if it exists
     // and the setting says so, and against the directory of the program otherwise.
@@ -282,7 +296,7 @@ private Q_SLOTS:
         AppSettings settings(dir.filePath(QStringLiteral("settings.json")));
         const auto program =
             std::filesystem::path(QCoreApplication::applicationDirPath().toStdU16String());
-        const auto voice = std::filesystem::path(dir.path().toStdU16String()) / u"voice";
+        const auto voice = std::filesystem::path(dir.path().toStdU16String()) / u"Singers";
         QCOMPARE(settings.voiceFolder(), voice);
 
         auto locations = settings.voiceLocations();

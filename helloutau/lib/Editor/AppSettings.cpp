@@ -112,10 +112,16 @@ namespace hello::daw {
         file.syncLater();
     }
 
-    AppSettings::AppSettings() : AppSettings(defaultFileName()) {
+    AppSettings::AppSettings() : AppSettings(defaultFileName(), defaultUserDirectory()) {
     }
 
-    AppSettings::AppSettings(const QString &fileName) : _impl(std::make_unique<Impl>(fileName)) {
+    AppSettings::AppSettings(const QString &fileName)
+        : AppSettings(fileName, QFileInfo(fileName).absolutePath()) {
+    }
+
+    AppSettings::AppSettings(const QString &fileName, const QString &userDirectory)
+        : _impl(std::make_unique<Impl>(fileName)) {
+        _impl->userDirectory = std::filesystem::path(userDirectory.toStdU16String());
         const auto normalizeRecent = [this](std::string_view key) {
             const auto old = stringsOf(_impl->value(key));
             const auto normalized = recentTexts(_impl->value(key));
@@ -147,9 +153,20 @@ namespace hello::daw {
         return defaultDirectory() + QStringLiteral("/settings.json");
     }
 
+    QString AppSettings::defaultUserDirectory() {
+        return QDir::cleanPath(QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation) +
+                               QLatin1Char('/') + QCoreApplication::organizationName() +
+                               QLatin1Char('/') + QCoreApplication::applicationName());
+    }
+
     QString AppSettings::fileName() const {
         stdc_impl_t;
         return impl.file.fileName();
+    }
+
+    std::filesystem::path AppSettings::userDirectory() const {
+        stdc_impl_t;
+        return impl.userDirectory;
     }
 
     void AppSettings::sync() {
@@ -189,8 +206,7 @@ namespace hello::daw {
     }
 
     std::filesystem::path AppSettings::voiceFolder() const {
-        const auto directory = QFileInfo(fileName()).absolutePath();
-        return std::filesystem::path(directory.toStdU16String()) / u"voice";
+        return userDirectory() / u"Singers";
     }
 
     bool AppSettings::isRelativeVoiceDirInUtau() const {

@@ -37,6 +37,8 @@ namespace hello::daw {
 
         stdc::json::Object root;
 
+        std::filesystem::path userDirectory;
+
         // Declared after the content, so that it is destroyed first and writes the pending
         // changes while the content still exists
         kit::SettingsFile file;
