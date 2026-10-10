@@ -3179,6 +3179,27 @@ private Q_SLOTS:
         renderTrack->trigger();
         QCOMPARE(fs::path(proposal.toStdU16String()), pathIn(m_dir, "out") / "song.wav");
     }
+
+    // An image outside the voice bank folder is not loaded, although the file exists, and the
+    // preview reports that the image must be in the folder.
+    void an_image_outside_the_voice_bank_is_not_loaded() {
+        QTemporaryDir dir;
+        const auto bank = voiceBank(dir);
+        QImage icon(10, 10, QImage::Format_RGB32);
+        icon.fill(Qt::red);
+        QVERIFY(icon.save(QString::fromStdU16String(pathIn(dir, "outside.png").u16string())));
+        const auto e = editor();
+        const auto window = e->openVoiceBank(bank);
+        QVERIFY(window);
+        const auto panel = window->infoPanel();
+        QVERIFY(panel);
+
+        panel->imageEdit()->setText(QStringLiteral("..\\outside.png"));
+        Q_EMIT panel->imageEdit()->editingFinished();
+        QVERIFY(panel->imagePreview()->pixmap().isNull());
+        QCOMPARE(panel->imagePreview()->text(),
+                 VoiceBankInfoPanel::tr("The image must be a file in the voice bank folder."));
+    }
 };
 
 int main(int argc, char *argv[]) {
