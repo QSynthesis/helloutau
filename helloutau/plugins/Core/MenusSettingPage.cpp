@@ -163,26 +163,27 @@ namespace hello::daw {
         QAK::ActionRegistry *m_registry;
     };
 
+    // Accepts the items that can be added and match the search. A phony item is only a directory
+    // of the catalog, which the recursive filtering shows if it holds an accepted item.
     class CatalogFilterModel : public QSortFilterProxyModel {
     public:
-        using QSortFilterProxyModel::QSortFilterProxyModel;
+        CatalogFilterModel(QAK::ActionRegistry *registry, QObject *parent)
+            : QSortFilterProxyModel(parent), m_registry(registry) {
+            setRecursiveFilteringEnabled(true);
+        }
 
     protected:
         bool filterAcceptsRow(int row, const QModelIndex &parent) const override {
             const auto source = sourceModel()->index(row, 0, parent);
-            if (!source.isValid()) {
+            const auto info = m_registry->actionInfo(source.data(Qt::UserRole).toString());
+            if (info && info->type() == QAK::ActionItemInfo::Phony) {
                 return false;
             }
-            if (filterRegularExpression().match(source.data().toString()).hasMatch()) {
-                return true;
-            }
-            for (int i = 0; i < sourceModel()->rowCount(source); ++i) {
-                if (filterAcceptsRow(i, source)) {
-                    return true;
-                }
-            }
-            return filterRegularExpression().pattern().isEmpty();
+            return filterRegularExpression().match(source.data().toString()).hasMatch();
         }
+
+    private:
+        QAK::ActionRegistry *m_registry;
     };
 
     MenusSettingPage::MenusSettingPage(Editor *editor, QObject *parent)
@@ -352,9 +353,8 @@ namespace hello::daw {
         search->setClearButtonEnabled(true);
         auto catalog = new CatalogNamesModel(actions, &dialog);
         catalog->setCatalog(actions->catalog());
-        auto filter = new CatalogFilterModel(&dialog);
+        auto filter = new CatalogFilterModel(actions, &dialog);
         filter->setSourceModel(catalog);
-        filter->setRecursiveFilteringEnabled(true);
         filter->setFilterCaseSensitivity(Qt::CaseInsensitive);
         filter->setFilterKeyColumn(0);
         auto tree = new QTreeView();

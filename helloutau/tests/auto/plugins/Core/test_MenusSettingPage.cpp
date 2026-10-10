@@ -51,6 +51,25 @@ namespace {
         return {};
     }
 
+    // Returns the index of every row of model under parent, each before its children.
+    QModelIndexList allRows(const QAbstractItemModel *model, const QModelIndex &parent = {}) {
+        QModelIndexList rows;
+        for (int row = 0; row < model->rowCount(parent); ++row) {
+            const auto index = model->index(row, 0, parent);
+            rows.push_back(index);
+            rows += allRows(model, index);
+        }
+        return rows;
+    }
+
+    std::unique_ptr<Editor> editorIn(const QTemporaryDir &dir) {
+        auto e = std::make_unique<Editor>(
+            std::make_unique<AppSettings>(dir.filePath(QStringLiteral("settings.json"))));
+        new BuiltinActions(e.get());
+        e->setWatchesDisk(false);
+        return e;
+    }
+
 }
 
 class test_MenusSettingPage : public QObject {
@@ -290,6 +309,45 @@ private Q_SLOTS:
         QVERIFY(opened);
         QVERIFY(!filter);
         QVERIFY(!catalog);
+    }
+
+    // The Add Action dialog of every kind of window shows a directory of the catalog only if the
+    // directory holds an item that can be added.
+    void the_add_action_dialog_hides_empty_directories() {
+        QTemporaryDir dir;
+        const auto e = editorIn(dir);
+        MenusSettingPage page(e.get());
+        QVERIFY(page.widget());
+        const auto add = page.widget()->findChild<QPushButton *>(QStringLiteral("add"));
+        QVERIFY(add);
+        for (const auto kind : Editor::windowKinds) {
+            page.setCurrentKind(kind);
+            const auto tree = page.tree(kind);
+            tree->setCurrentIndex(tree->model()->index(0, 0));
+            const auto registry = e->actionRegistry(kind);
+            bool opened = false;
+            QStringList empty;
+            QTimer::singleShot(0, this, [&] {
+                const auto dialog = qobject_cast<QDialog *>(QApplication::activeModalWidget());
+                if (!dialog) {
+                    return;
+                }
+                const auto actions = dialog->findChild<QTreeView *>(QStringLiteral("actions"));
+                opened = actions;
+                for (const auto &index : actions ? allRows(actions->model()) : QModelIndexList()) {
+                    const auto id = index.data(Qt::UserRole).toString();
+                    const auto info = registry->actionInfo(id);
+                    if (info && info->type() == QAK::ActionItemInfo::Phony &&
+                        actions->model()->rowCount(index) == 0) {
+                        empty.push_back(id);
+                    }
+                }
+                dialog->reject();
+            });
+            add->click();
+            QVERIFY(opened);
+            QVERIFY2(empty.isEmpty(), qPrintable(empty.join(QStringLiteral(", "))));
+        }
     }
 };
 
