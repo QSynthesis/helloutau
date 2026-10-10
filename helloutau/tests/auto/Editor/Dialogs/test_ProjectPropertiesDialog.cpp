@@ -10,6 +10,8 @@
 #include <QtTest/QTest>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QCheckBox>
+#include <QtWidgets/QComboBox>
+#include <QtWidgets/QCompleter>
 #include <QtWidgets/QDialogButtonBox>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QLineEdit>
@@ -128,6 +130,30 @@ namespace {
         timer.start(0);
         dialog.findChild<QDialogButtonBox *>()->button(QDialogButtonBox::Ok)->click();
         return warned;
+    }
+
+    // Creates Alpha and shared in the voice folder of settings, and beta and shared in the voice
+    // folder of a UTAU directory, which settings uses. Returns the UTAU directory.
+    fs::path voiceFoldersIn(const QTemporaryDir &dir, AppSettings &settings) {
+        const auto utau = pathIn(dir, "utau");
+        for (const auto &folder :
+             {settings.voiceFolder() / "Alpha", settings.voiceFolder() / "shared",
+              utau / "voice" / "beta", utau / "voice" / "shared"}) {
+            fs::create_directories(folder);
+        }
+        settings.setUtauDirectory(utau);
+        return utau;
+    }
+
+    // Returns the label of dialog that shows the resolved voice folder, the only label whose text
+    // is selectable.
+    QLabel *resolvedLabelOf(const QDialog &dialog) {
+        for (const auto label : dialog.findChildren<QLabel *>()) {
+            if (label->textInteractionFlags().testFlag(Qt::TextSelectableByMouse)) {
+                return label;
+            }
+        }
+        return nullptr;
     }
 
 }
@@ -438,6 +464,79 @@ private Q_SLOTS:
         }
         QVERIFY(!warnsOnOk(dialog));
         QCOMPARE(dialog.result(), int(QDialog::Accepted));
+    }
+
+    // The items are the values that UTAU writes for the folders of the voice folders. A folder
+    // hidden by a folder of the same name in a voice folder of higher priority is an absolute
+    // path.
+    void the_voice_folder_items_are_the_values_that_utau_writes() {
+        QTemporaryDir dir;
+        AppSettings settings(dir.filePath(QStringLiteral("settings.json")));
+        const auto utau = voiceFoldersIn(dir, settings);
+        kit::Project project;
+        project.tracks.push_back({});
+        ProjectPropertiesDialog dialog(project, settings);
+        const auto box = dialog.findChild<QComboBox *>();
+        QVERIFY(box);
+        QStringList items;
+        for (int i = 0; i < box->count(); ++i) {
+            items.push_back(box->itemText(i));
+        }
+        QCOMPARE(items,
+                 (QStringList{QStringLiteral("%VOICE%Alpha"), QStringLiteral("%VOICE%shared"),
+                              QStringLiteral("%VOICE%beta"), textOf(utau / "voice" / "shared")}));
+    }
+
+    // A typed name is a relative voice folder, not a %VOICE% value.
+    void a_typed_name_is_a_relative_voice_folder() {
+        QTemporaryDir dir;
+        AppSettings settings(dir.filePath(QStringLiteral("settings.json")));
+        voiceFoldersIn(dir, settings);
+        kit::Project project;
+        project.tracks.push_back({});
+        project.tracks[0].voiceDir = QStringLiteral("%VOICE%beta");
+        ProjectPropertiesDialog dialog(project, settings);
+
+        dialog.voiceDirEdit()->setText(QStringLiteral("Alpha"));
+        QCOMPARE(dialog.changes().voiceDir, std::optional(QStringLiteral("Alpha")));
+    }
+
+    void the_voice_folder_completion_matches_any_part_ignoring_case() {
+        QTemporaryDir dir;
+        AppSettings settings(dir.filePath(QStringLiteral("settings.json")));
+        voiceFoldersIn(dir, settings);
+        kit::Project project;
+        project.tracks.push_back({});
+        ProjectPropertiesDialog dialog(project, settings);
+        const auto completer = dialog.findChild<QComboBox *>()->completer();
+        QVERIFY(completer);
+
+        completer->setCompletionPrefix(QStringLiteral("LPH"));
+        QCOMPARE(completer->completionCount(), 1);
+        QCOMPARE(completer->currentCompletion(), QStringLiteral("%VOICE%Alpha"));
+    }
+
+    // The resolved voice folder is shown below the box, and is hidden if the voice folder does
+    // not resolve.
+    void the_resolved_voice_folder_is_shown_if_resolved() {
+        QTemporaryDir dir;
+        AppSettings settings(dir.filePath(QStringLiteral("settings.json")));
+        voiceFoldersIn(dir, settings);
+        kit::Project project;
+        project.tracks.push_back({});
+        project.tracks[0].voiceDir = QStringLiteral("%VOICE%shared");
+        ProjectPropertiesDialog dialog(project, settings);
+        const auto label = resolvedLabelOf(dialog);
+        QVERIFY(label);
+        QVERIFY(label->isVisibleTo(&dialog));
+        QVERIFY(label->text().endsWith(textOf(settings.voiceFolder() / "shared")));
+
+        dialog.voiceDirEdit()->setText(QStringLiteral("%VOICE%beta"));
+        QVERIFY(label->isVisibleTo(&dialog));
+        QVERIFY(label->text().endsWith(textOf(pathIn(dir, "utau") / "voice" / "beta")));
+
+        dialog.voiceDirEdit()->clear();
+        QVERIFY(!label->isVisibleTo(&dialog));
     }
 };
 
