@@ -456,6 +456,15 @@ private Q_SLOTS:
                 qobject_cast<PitchControlDialog *>(QApplication::activeModalWidget());
             QVERIFY(dialog);
             shown = dialog->field(1)->value();
+            // The notes have no vibrato, and the fields are enabled only while the group is
+            // checked.
+            QVERIFY(!dialog->field(1)->isEnabled());
+            for (const auto box : dialog->findChildren<QCheckBox *>()) {
+                if (box->text() == QStringLiteral("&Vibrato")) {
+                    box->setChecked(true);
+                }
+            }
+            QVERIFY(dialog->field(1)->isEnabled());
             dialog->field(1)->setValue(240);
             dialog->accept();
         });
