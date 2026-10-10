@@ -719,6 +719,30 @@ private Q_SLOTS:
         QCOMPARE(runner->started.load(), 2);
         QCOMPARE(playback.lastRenderFile(), other / "temp.wav");
     }
+
+    // The fragments of the cache are named for the resampler, and therefore the notes rendered
+    // with one resampler are not rendered for another.
+    void the_render_states_follow_the_resampler() {
+        using S = kit::RealtimeSynth;
+        QTemporaryDir dir;
+        const auto document = singingDocument(dir);
+        QVERIFY(document);
+        Playback playback(nullptr, temporaryOf(dir), nullptr);
+        const auto root = fs::path(dir.path().toStdU16String());
+        QVERIFY(writeFragments(playback, *document, root / "first.exe"));
+
+        kit::SynthTools synthTools;
+        synthTools.wavtool = root / "wavtool.exe";
+        synthTools.resampler = root / "first.exe";
+        playback.setSynthTools(synthTools);
+        playback.refreshNoteStates(*document);
+        QTRY_COMPARE(playback.noteStates(), (QList<S::NoteState>{S::Ready, S::Ready}));
+
+        synthTools.resampler = root / "second.exe";
+        playback.setSynthTools(synthTools);
+        playback.refreshNoteStates(*document);
+        QTRY_COMPARE(playback.noteStates(), (QList<S::NoteState>{S::Waiting, S::Waiting}));
+    }
 };
 
 int main(int argc, char *argv[]) {
