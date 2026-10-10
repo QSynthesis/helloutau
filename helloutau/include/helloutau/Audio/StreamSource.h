@@ -24,7 +24,8 @@ namespace hello::daw {
         using Generator = std::function<qsizetype(float *out, qsizetype frames)>;
 
         /// Constructs a source of the samples of \a generator, which are at \a sourceRate, for a
-        /// device at \a deviceRate. \a buffer is the length of the ring buffer in seconds.
+        /// device at \a deviceRate. \a buffer is the length of the ring buffer in seconds. Both
+        /// rates must be positive.
         StreamSource(Generator generator, int sourceRate, int deviceRate, double buffer = 0.5);
         ~StreamSource() override;
 

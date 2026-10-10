@@ -16,6 +16,7 @@ namespace hello::daw {
     std::vector<float> SampleRateConversion::converted(const std::vector<float> &samples,
                                                        int channels, int sourceRate,
                                                        int targetRate) {
+        Q_ASSERT(sourceRate > 0 && targetRate > 0);
         if (sourceRate == targetRate || channels < 1 || samples.empty()) {
             return samples;
         }

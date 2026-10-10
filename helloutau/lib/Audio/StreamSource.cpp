@@ -131,6 +131,7 @@ namespace hello::daw {
 
     StreamSource::StreamSource(Generator generator, int sourceRate, int deviceRate, double buffer)
         : _impl(std::make_unique<Impl>()) {
+        Q_ASSERT(sourceRate > 0 && deviceRate > 0);
         stdc_impl_t;
         impl.generator = std::move(generator);
         impl.sourceRate = sourceRate;

@@ -12,6 +12,7 @@ namespace hello::daw {
     public:
         /// Converts \a samples, interleaved by \a channels, from \a sourceRate to \a targetRate,
         /// each channel separately. The result has the same duration, rounded to whole frames.
+        /// Both rates must be positive.
         static std::vector<float> converted(const std::vector<float> &samples, int channels,
                                             int sourceRate, int targetRate);
     };
