@@ -2524,6 +2524,47 @@ private Q_SLOTS:
         QCOMPARE(ruler->beatsPerBar(), 6);
         QCOMPARE(roll.quantization(), 120);
     }
+
+    // A region nested in another is drawn above it and is hit where it lies. The outer region is
+    // hit only where the inner one does not cover it.
+    void a_nested_region_is_hit_above_the_outer_region() {
+        kit::Project project;
+        project.settings.tempo = 120;
+        project.tracks.push_back({});
+        for (int i = 0; i < 4; ++i) {
+            kit::Note note;
+            note.lyric = QStringLiteral("la");
+            note.length = 480;
+            note.noteNum = 60;
+            project.tracks[0].notes.push_back(note);
+        }
+        project.tracks[0].notes[0].regions = {QStringLiteral("A")};
+        project.tracks[0].notes[1].regions = {QStringLiteral("B")};
+        project.tracks[0].notes[2].regionEnds = {QStringLiteral("B")};
+        project.tracks[0].notes[3].regionEnds = {QStringLiteral("A")};
+        kit::ProjectSession session(project);
+        PianoRoll roll(&session);
+        show(roll);
+        QTRY_COMPARE(roll.ruler()->sections().size(), 2);
+
+        const auto onRegions = [&roll](double tick) {
+            const auto ruler = roll.ruler();
+            return QPoint(
+                ruler
+                    ->mapFrom(&roll, roll.view()->viewport()->mapTo(
+                                         &roll, QPoint(int(roll.view()->timeAxis().toX(tick)), 0)))
+                    .x(),
+                ruler->height() / 4 + 3);
+        };
+        QSignalSpy requested(&roll, &PianoRoll::regionEditRequested);
+        QTest::mouseDClick(roll.ruler(), Qt::LeftButton, {}, onRegions(720));
+        QTest::mouseDClick(roll.ruler(), Qt::LeftButton, {}, onRegions(240));
+        QTest::mouseDClick(roll.ruler(), Qt::LeftButton, {}, onRegions(1680));
+        QCOMPARE(requested.size(), 3);
+        QCOMPARE(requested[0][0].value<kit::Region>().name, QStringLiteral("B"));
+        QCOMPARE(requested[1][0].value<kit::Region>().name, QStringLiteral("A"));
+        QCOMPARE(requested[2][0].value<kit::Region>().name, QStringLiteral("A"));
+    }
 };
 
 int main(int argc, char *argv[]) {
