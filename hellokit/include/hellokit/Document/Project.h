@@ -142,7 +142,7 @@ namespace hello::kit {
     };
 
     // The stream operators of a value stored as a whole in the edit history, see the operators
-    // of Envelope in Note.h. The format is part of the history format and must not change.
+    // of Envelope in Envelope.h. The format is part of the history format and must not change.
 
     inline QDataStream &operator<<(QDataStream &out, const TimeSignature &timeSignature) {
         return out << qint32(timeSignature.numerator) << qint32(timeSignature.denominator);

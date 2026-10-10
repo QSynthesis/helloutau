@@ -19,7 +19,7 @@
 
 | 方面 | 现状 |
 |---|---|
-| 数据模型 | 已有类型化字段（`Note.h`）：`Envelope`（五个锚点按角色存放，`hasMiddle` 表示 p5）、`Vibrato`（七个值与 UTAU 忽略的第八个）、`PortamentoPoint`（`x` 为距音符起点的毫秒，`y` 为音分，类型 S / Linear / R / J）、Mode1 的 `PitchBend`（`PBStart` 与每 5 tick 一个的值）；工程设置 `ProjectSettings::mode2`；未知的键保存在 `userData` |
+| 数据模型 | 已有类型化字段（`hellokit/Document/` 下的 `Note.h`、`Envelope.h`、`Vibrato.h`、`PortamentoPoint.h`、`PitchBend.h`）：`Envelope`（五个锚点按角色存放，`hasMiddle` 表示 p5）、`Vibrato`（七个值与 UTAU 忽略的第八个）、`PortamentoPoint`（`x` 为距音符起点的毫秒，`y` 为音分，类型 S / Linear / R / J）、Mode1 的 `PitchBend`（`PBStart` 与每 5 tick 一个的值）；工程设置 `ProjectSettings::mode2`；未知的键保存在 `userData` |
 | 编辑层 | 节点树中 `Envelope` 与 `Vibrato` 是整值，`Portamento` 是结构的向量，`PitchBend` 的值是数组；句柄可以逐点改写。**尚无任何调音的领域函数** |
 | 约束 | 已有：包络的间隔不为负；音高控制点自第二点起的间隔不为负（第一点即 `PBS` 可为负） |
 | 音高曲线的计算 | 在 stdutau `synth.cpp` 内部（`find_impact`、`convert_from_vector_point`，均为 `static`），只能经 `utau::Synth::calc` 得到编码后的重采样器参数，且须音源的先行发声。**界面没有可调用的接口** |
