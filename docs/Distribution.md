@@ -13,7 +13,7 @@
 
 ## 发布物
 
-每个版本在 GitHub 与 Gitee 各有一个 release，tag 为 `HELLO_VERSION` 的值，例如 `0.1.6.0`，不加 `v` 前缀。
+每个版本在 GitHub 与 Gitee 各有一个 release，tag 为 `v` 加 `HELLO_VERSION` 的值，例如 `v0.1.6.0`（作者 2026-10-11 决定，带 `v` 前缀的写法更常见）。附件文件名中的 `<version>` 不带 `v`。
 
 附件的文件名：
 
@@ -110,7 +110,7 @@ Windows 的安装包以 Inno Setup 6 生成，脚本参照 diffscope 的 `dist/i
 ### 检查与下载
 
 1. 以所选源的公开接口取得最新的 release：GitHub 为 `GET /repos/{owner}/{repo}/releases/latest`，Gitee 为 `GET /api/v5/repos/{owner}/{repo}/releases/latest`。公开仓库无须令牌。
-2. 以 tag 为版本号，与 `HELLO_VERSION` 逐段比较，较新且附件齐全（见「发布物」）时提示，显示 release 的说明。
+2. 去掉 tag 的 `v` 前缀作为版本号，与 `HELLO_VERSION` 逐段比较，不以 `v` 开头的 tag 不视为版本，较新且附件齐全（见「发布物」）时提示，显示 release 的说明。
 3. 用户确认后下载附件与 `SHA256SUMS` 到临时目录管理器分配的目录，显示进度。只接受 HTTPS，拒绝重定向到 HTTP。
 4. 以 `SHA256SUMS` 校验附件，不符时删除并报告，不安装。
 
