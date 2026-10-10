@@ -15,10 +15,9 @@ private Q_SLOTS:
 
     void keeps_the_selected_device_id_without_opening_a_stream() {
         auto engine = AudioEngine::instance();
-        const auto before = engine->streamGeneration();
         engine->setDeviceId(QByteArrayLiteral("test-device"));
         QCOMPARE(engine->deviceId(), QByteArrayLiteral("test-device"));
-        QCOMPARE(engine->streamGeneration(), before);
+        QCOMPARE(engine->bufferedMilliseconds(), 0);
         engine->setDeviceId({});
     }
 

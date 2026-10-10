@@ -90,7 +90,6 @@ namespace hello::daw {
         std::unique_ptr<QAudioSink> sink;
         QMediaDevices devices;
         QTimer poll;
-        quint64 generation = 0;
     };
 
     AudioEngine *AudioEngine::instance() {
@@ -250,7 +249,6 @@ namespace hello::daw {
                 close();
                 return fail(tr("The audio output device could not be started."));
             }
-            ++impl.generation;
             impl.poll.start();
         }
         const auto added = impl.mixer->add(std::move(source));
@@ -283,11 +281,6 @@ namespace hello::daw {
                                    qint32(impl.sink->bufferFrameCount())) /
                                1000)
                          : 0;
-    }
-
-    quint64 AudioEngine::streamGeneration() const {
-        stdc_impl_t;
-        return impl.generation;
     }
 
 }

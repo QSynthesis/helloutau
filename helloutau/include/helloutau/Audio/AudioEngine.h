@@ -61,8 +61,6 @@ namespace hello::daw {
         bool isFinished(AudioMixer::SourceId id) const;
         std::shared_ptr<DeviceClock> clock(AudioMixer::SourceId id) const;
         int bufferedMilliseconds() const;
-        /// Returns the number of successful device stream openings, for diagnostics.
-        quint64 streamGeneration() const;
 
     Q_SIGNALS:
         void invalidated(const QString &reason);
