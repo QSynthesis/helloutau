@@ -3,6 +3,7 @@
 /// this repository. Covered is **the content written into the script**, which is where the risk
 /// lies. See test_ThreadedSynthRunner.cpp for the remaining coverage gap.
 
+#include <fstream>
 #include <memory>
 
 #include <QtCore/QByteArray>
@@ -10,6 +11,7 @@
 #include <QtCore/QFile>
 #include <QtCore/QFileInfo>
 #include <QtCore/QTemporaryDir>
+#include <QtCore/QThread>
 #include <QtTest/QTest>
 
 #include <hellokit/Synth/ClassicSynthRunner.h>
@@ -105,6 +107,89 @@ private:
         e.resampler = "C:/UTAU/resampler.exe";
         e.wavtool = "C:/UTAU/wavtool.exe";
         return e;
+    }
+
+    /// A plan for \a count notes, each with its own fragment.
+    std::optional<SynthPlan> planOfNotes(int count) {
+        write(QStringLiteral("bank/oto.ini"), "a.wav=a,10,20,30,40,5\n");
+        write(QStringLiteral("bank/a.wav"), "RIFF");
+        FixedCharsetSelector selector(QStringLiteral("UTF-8"));
+        DiagnosticList diagnostics;
+        const auto bank = VoiceBank::open(root() / "bank", &selector, diagnostics);
+        if (!bank) {
+            return std::nullopt;
+        }
+        Track track;
+        for (int i = 0; i < count; ++i) {
+            Note note;
+            note.lyric = QStringLiteral("a");
+            note.noteNum = 60 + i;
+            note.length = 480;
+            track.notes.push_back(note);
+        }
+        Project project;
+        project.tracks.push_back(track);
+        SynthPlan::Options options;
+        options.cacheDirectory = root() / "cache";
+        options.outputFile = root() / "out.wav";
+        return SynthPlan::make(project, *bank, options, diagnostics);
+    }
+
+    /// A script that writes the fragments of \a written, in this order, and then ends as
+    /// \a ending specifies.
+    class ScriptStandIn : public SynthToolProcess {
+    public:
+        ScriptStandIn(QList<std::filesystem::path> written, SynthToolRun ending)
+            : m_written(std::move(written)), m_ending(std::move(ending)) {
+        }
+
+        SynthToolRun runScript(const std::filesystem::path &, DiagnosticList &,
+                               const std::function<bool()> &) const override {
+            for (const auto &path : m_written) {
+                std::ofstream(path, std::ios::binary | std::ios::trunc) << "RIFF piece";
+            }
+            return m_ending;
+        }
+
+    private:
+        QList<std::filesystem::path> m_written;
+        SynthToolRun m_ending;
+    };
+
+    class ScriptRunner : public ClassicSynthRunner {
+    public:
+        QList<std::filesystem::path> written;
+        SynthToolRun ending;
+
+        std::unique_ptr<SynthToolProcess> makeSynthToolProcess() const override {
+            return std::make_unique<ScriptStandIn>(written, ending);
+        }
+    };
+
+    static SynthToolRun killedBy(bool cancelled) {
+        SynthToolRun run;
+        run.started = true;
+        run.cancelled = cancelled;
+        run.timedOut = !cancelled;
+        return run;
+    }
+
+    /// Writes every fragment of \a plan, as an earlier render leaves them, and waits until a
+    /// later write has a different time.
+    static void fillCache(const SynthPlan &plan) {
+        std::filesystem::create_directories(plan.cacheDirectory());
+        for (const auto &step : plan.steps()) {
+            std::ofstream(step.cacheFile, std::ios::binary) << "RIFF earlier";
+        }
+        QThread::msleep(50);
+    }
+
+    static QList<bool> existing(const SynthPlan &plan) {
+        QList<bool> result;
+        for (const auto &step : plan.steps()) {
+            result.push_back(std::filesystem::exists(step.cacheFile));
+        }
+        return result;
     }
 
 private Q_SLOTS:
@@ -652,6 +737,56 @@ private Q_SLOTS:
         QCOMPARE(diagnostics.size(), 1);
 
         QCOMPARE(runner.timeout, SynthToolProcess().timeout * 2 * int(plan->steps().size()));
+    }
+
+    // A killed script may have killed a resampler in the middle of its fragment. The notes run
+    // in track order, so the fragment in doubt is the last one that the script created or
+    // rewrote, which is removed, whether the script was cancelled or timed out.
+    void the_last_fragment_written_by_a_killed_script_is_removed() {
+        for (const bool cancelled : {true, false}) {
+            const auto p = planOfNotes(3);
+            QVERIFY(p.has_value());
+            std::filesystem::create_directories(p->cacheDirectory());
+            ScriptRunner runner;
+            runner.written = {p->steps().at(0).cacheFile, p->steps().at(1).cacheFile};
+            runner.ending = killedBy(cancelled);
+
+            DiagnosticList diagnostics;
+            const auto outcome = runner.render(*p, synthTools(), nullptr, diagnostics);
+            QCOMPARE(outcome.cancelled, cancelled);
+            QCOMPARE(existing(*p), (QList<bool>{true, false, false}));
+            for (const auto &step : p->steps()) {
+                std::filesystem::remove(step.cacheFile);
+            }
+        }
+    }
+
+    // Fragments that existed before the script and that it did not rewrite are kept, also if
+    // reuse is turned off.
+    void a_fragment_the_killed_script_did_not_write_is_kept() {
+        const auto p = planOfNotes(3);
+        QVERIFY(p.has_value());
+        fillCache(*p);
+        ScriptRunner runner;
+        runner.reuseCache = false;
+        runner.written = {p->steps().at(0).cacheFile, p->steps().at(1).cacheFile};
+        runner.ending = killedBy(true);
+
+        DiagnosticList diagnostics;
+        runner.render(*p, synthTools(), nullptr, diagnostics);
+        QCOMPARE(existing(*p), (QList<bool>{true, false, true}));
+    }
+
+    void a_killed_script_that_wrote_nothing_removes_nothing() {
+        const auto p = planOfNotes(3);
+        QVERIFY(p.has_value());
+        fillCache(*p);
+        ScriptRunner runner;
+        runner.ending = killedBy(false);
+
+        DiagnosticList diagnostics;
+        runner.render(*p, synthTools(), nullptr, diagnostics);
+        QCOMPARE(existing(*p), (QList<bool>{true, true, true}));
     }
 };
 
