@@ -55,7 +55,14 @@ namespace hello::daw {
         for (size_t i = 0; i < m_angularFrequencies.size(); ++i) {
             const auto mode = double(i + 1);
             const auto frequencyRatio = mode * (1.0 + inharmonicity * mode * mode);
-            m_angularFrequencies[i] = 2.0 * M_PI * fundamental * frequencyRatio / m_sampleRate;
+            const auto angularFrequency = 2.0 * M_PI * fundamental * frequencyRatio / m_sampleRate;
+            // A mode at or above the Nyquist frequency would alias to an inharmonic tone. The
+            // frequency increases with the index, and therefore every later mode is above it too.
+            if (angularFrequency >= M_PI) {
+                break;
+            }
+            m_angularFrequencies[i] = angularFrequency;
+            ++m_modeCount;
         }
     }
 
@@ -72,7 +79,7 @@ namespace hello::daw {
                 std::min(1.0, double(m_frames - frame) / (m_sampleRate * releaseTime));
             const auto envelope = attack * release;
             double sample = 0;
-            for (size_t mode = 0; mode < m_angularFrequencies.size(); ++mode) {
+            for (size_t mode = 0; mode < m_modeCount; ++mode) {
                 const auto decay = baseDecay + double(mode) * decayStep;
                 sample += modeAmplitudes[mode] * std::exp(-decay * time) *
                           std::sin(m_angularFrequencies[mode] * frame);

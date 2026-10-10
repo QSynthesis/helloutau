@@ -26,6 +26,9 @@ namespace hello::daw {
         double m_amplitude;
         qsizetype m_frames;
         std::array<double, 10> m_angularFrequencies;
+        // The number of modes below the Nyquist frequency, which are the first ones of
+        // m_angularFrequencies
+        size_t m_modeCount = 0;
         std::atomic<qsizetype> m_position = 0;
     };
 
