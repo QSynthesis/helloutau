@@ -4,6 +4,8 @@
 #include <cmath>
 #include <thread>
 
+#include <stdcorelib/pimpl.h>
+
 #include <r8brain-free-src/CDSPResampler.h>
 
 namespace hello::daw {
@@ -20,6 +22,8 @@ namespace hello::daw {
 
     class StreamSource::Impl {
     public:
+        using Decl = StreamSource;
+
         Generator generator;
         int sourceRate = 0;
         int deviceRate = 0;
@@ -126,10 +130,11 @@ namespace hello::daw {
 
     StreamSource::StreamSource(Generator generator, int sourceRate, int deviceRate, double buffer)
         : _impl(std::make_unique<Impl>()) {
-        _impl->generator = std::move(generator);
-        _impl->sourceRate = sourceRate;
-        _impl->deviceRate = deviceRate;
-        _impl->ring.resize(
+        stdc_impl_t;
+        impl.generator = std::move(generator);
+        impl.sourceRate = sourceRate;
+        impl.deviceRate = deviceRate;
+        impl.ring.resize(
             size_t(std::max<qsizetype>(MinimumCapacity, qsizetype(buffer * deviceRate))));
     }
 
@@ -138,20 +143,25 @@ namespace hello::daw {
     }
 
     void StreamSource::stop() {
-        _impl->stopping.store(true);
-        if (_impl->producer.joinable()) {
-            _impl->producer.join();
+        stdc_impl_t;
+        impl.stopping.store(true);
+        if (impl.producer.joinable()) {
+            impl.producer.join();
         }
     }
 
     void StreamSource::start() {
-        if (!_impl->producer.joinable()) {
-            _impl->producer = std::thread([this] { _impl->produce(); });
+        stdc_impl_t;
+        if (!impl.producer.joinable()) {
+            impl.producer = std::thread([this] {
+                stdc_impl_t;
+                impl.produce();
+            });
         }
     }
 
     qsizetype StreamSource::read(float *out, qsizetype frames, int channels) noexcept {
-        auto &impl = *_impl;
+        stdc_impl_t;
         // Read before the index, so that a producer that ends meanwhile is not taken for one
         // with nothing more to give.
         const bool ended = impl.ended.load(std::memory_order_acquire);
@@ -180,12 +190,14 @@ namespace hello::daw {
     }
 
     qint64 StreamSource::position() const {
-        const auto played = double(_impl->consumed.load(std::memory_order_relaxed));
-        return qint64(std::llround(played * _impl->sourceRate / _impl->deviceRate));
+        stdc_impl_t;
+        const auto played = double(impl.consumed.load(std::memory_order_relaxed));
+        return qint64(std::llround(played * impl.sourceRate / impl.deviceRate));
     }
 
     bool StreamSource::isStarved() const {
-        return _impl->starved.load();
+        stdc_impl_t;
+        return impl.starved.load();
     }
 
 }
