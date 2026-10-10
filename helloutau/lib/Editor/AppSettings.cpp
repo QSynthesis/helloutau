@@ -109,7 +109,7 @@ namespace hello::daw {
 
     void AppSettings::Impl::setValue(std::string_view key, json::Value value) {
         kit::JsonInterop::insertAt(root, key, std::move(value));
-        file.changed();
+        file.syncLater();
     }
 
     AppSettings::AppSettings() : AppSettings(defaultFileName()) {

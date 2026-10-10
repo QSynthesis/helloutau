@@ -177,7 +177,7 @@ namespace hello::daw {
         const std::function<void(stdc::pluginsystem::PluginSettings &settings)> &change) {
         stdc_impl_t;
         change(impl.pluginSettings);
-        impl.pluginFile->changed();
+        impl.pluginFile->syncLater();
     }
 
     AppSettings &AppLoader::settings() const {

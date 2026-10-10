@@ -39,7 +39,7 @@ namespace hello::kit {
         sync();
     }
 
-    void SettingsFile::changed() {
+    void SettingsFile::syncLater() {
         if (m_pending) {
             return;
         }

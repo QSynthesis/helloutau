@@ -36,7 +36,7 @@ namespace hello::kit {
         }
 
         /// Writes the file once the event loop runs, unless a write is already pending.
-        void changed();
+        void syncLater();
 
         /// Writes the pending changes immediately.
         void sync();
