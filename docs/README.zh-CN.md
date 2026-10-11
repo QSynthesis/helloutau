@@ -54,6 +54,8 @@ HelloUtau 支持 UTAU 工程、音源、重采样器、合成器和经典插件�
 | winacp | [QSynthesis/winacp](https://github.com/QSynthesis/winacp) | `winacp_DIR=<前缀>/lib/cmake/winacp` |
 | wolf-midi | [wolfgitpr/wolf-midi](https://github.com/wolfgitpr/wolf-midi) | `wolf-midi_DIR=<前缀>/lib/cmake/wolf-midi` |
 | r8brain-free-src 6.5 | [avaneev/r8brain-free-src](https://github.com/avaneev/r8brain-free-src)，由 [diffscope/diffscope-project](https://github.com/diffscope/diffscope-project) 中的 vcpkg port（`scripts/vcpkg/ports/r8brain-free-src`）构建 | `unofficial-r8brain-free-src_DIR=<前缀>/share/unofficial-r8brain-free-src` |
+| libzip | [nih-at/libzip](https://github.com/nih-at/libzip)，例如取自 vcpkg | `libzip_DIR=<前缀>/share/libzip` |
+| zlib（仅 Windows） | 构建 libzip 时使用的 zlib，其 DLL 复制到程序旁 | `ZLIB_DIR=<前缀>/share/zlib` |
 
 应用程序另需 Qt Multimedia 与 Qt SVG 模块。
 
@@ -62,7 +64,7 @@ cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug \
     -DCMAKE_PREFIX_PATH=<Qt> \
     -DQActionKit_DIR=... -Dqmsetup_DIR=... -Dstdcorelib_DIR=... -Dstdcorelib-plugin_DIR=... \
     -Dstdutau_DIR=... -Dsubstate_DIR=... -Dwinacp_DIR=... -Dwolf-midi_DIR=... \
-    -Dunofficial-r8brain-free-src_DIR=...
+    -Dunofficial-r8brain-free-src_DIR=... -Dlibzip_DIR=... -DZLIB_DIR=...
 cmake --build build
 ctest --test-dir build
 ```

@@ -10,7 +10,7 @@ qm_find_qt(Core)
 hellokit_add_library(${PROJECT_NAME} SHARED
     SOURCES ${_src}
     LINKS stdcorelib::stdcorelib
-    LINKS_PRIVATE winacp::winacp
+    LINKS_PRIVATE winacp::winacp libzip::zip
     QT_LINKS Core
     QT_AUTOGEN
     INCLUDE_PRIVATE ../../include/hellokit/Support/** **

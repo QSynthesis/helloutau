@@ -54,6 +54,8 @@ Requirements:
 | winacp | [QSynthesis/winacp](https://github.com/QSynthesis/winacp) | `winacp_DIR=<prefix>/lib/cmake/winacp` |
 | wolf-midi | [wolfgitpr/wolf-midi](https://github.com/wolfgitpr/wolf-midi) | `wolf-midi_DIR=<prefix>/lib/cmake/wolf-midi` |
 | r8brain-free-src 6.5 | [avaneev/r8brain-free-src](https://github.com/avaneev/r8brain-free-src), built by the vcpkg port in [diffscope/diffscope-project](https://github.com/diffscope/diffscope-project) (`scripts/vcpkg/ports/r8brain-free-src`) | `unofficial-r8brain-free-src_DIR=<prefix>/share/unofficial-r8brain-free-src` |
+| libzip | [nih-at/libzip](https://github.com/nih-at/libzip), for example from vcpkg | `libzip_DIR=<prefix>/share/libzip` |
+| zlib (Windows only) | The zlib against which libzip was built, whose DLL is copied beside the application | `ZLIB_DIR=<prefix>/share/zlib` |
 
 The application also requires the Qt Multimedia and Qt SVG modules.
 
@@ -62,7 +64,7 @@ cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug \
     -DCMAKE_PREFIX_PATH=<Qt> \
     -DQActionKit_DIR=... -Dqmsetup_DIR=... -Dstdcorelib_DIR=... -Dstdcorelib-plugin_DIR=... \
     -Dstdutau_DIR=... -Dsubstate_DIR=... -Dwinacp_DIR=... -Dwolf-midi_DIR=... \
-    -Dunofficial-r8brain-free-src_DIR=...
+    -Dunofficial-r8brain-free-src_DIR=... -Dlibzip_DIR=... -DZLIB_DIR=...
 cmake --build build
 ctest --test-dir build
 ```

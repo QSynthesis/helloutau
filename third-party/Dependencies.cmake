@@ -8,6 +8,8 @@
 #     -Dsubstate_DIR=<prefix>/lib/cmake/substate
 #     -DQActionKit_DIR=<prefix>/lib/cmake/QActionKit
 #     -Dunofficial-r8brain-free-src_DIR=<prefix>/share/unofficial-r8brain-free-src
+#     -Dlibzip_DIR=<prefix>/share/libzip
+#     -DZLIB_DIR=<prefix>/share/zlib (Windows only)
 #
 # stdcorelib, stdcorelib.plugin, stdutau, substate and QActionKit are developed alongside this
 # repository, so none is taken from a vcpkg release. Each must be built and installed separately.
@@ -105,3 +107,19 @@ _hello_find_external(QActionKit
 _hello_find_external(unofficial-r8brain-free-src
     "Install r8brain-free-src 6.5, for example with the vcpkg port of DiffScope, and pass -Dunofficial-r8brain-free-src_DIR=<prefix>/share/unofficial-r8brain-free-src."
     unofficial::r8brain-free-src::r8bsrc)
+
+# The reader of zip archives under the BSD license, which gives the raw bytes of the names of the
+# entries, so that a name in a code page of Windows is decoded by the rules of this repository.
+# See docs/Distribution.md.
+_hello_find_external(libzip
+    "Install libzip, for example with vcpkg, and pass -Dlibzip_DIR=<prefix>/share/libzip."
+    libzip::zip)
+
+# The DLL of zlib, which the DLL of libzip loads. The package configuration of a shared libzip does
+# not find zlib, so its DLL is deployed only if found here. On other systems the dynamic loader
+# finds zlib among the shared libraries of the system.
+if(WIN32)
+    _hello_find_external(ZLIB
+        "Pass -DZLIB_DIR=<prefix>/share/zlib, the zlib against which libzip was built."
+        ZLIB::ZLIB)
+endif()
