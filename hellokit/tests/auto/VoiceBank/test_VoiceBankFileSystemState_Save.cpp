@@ -240,6 +240,68 @@ private Q_SLOTS:
         QCOMPARE(read(QStringLiteral("oto.ini")), theirs);
     }
 
+    // The checks follow git: the size and the modification time decide, and the content only
+    // if the time is too close to the stamp to tell a later write apart. A file written an hour
+    // before it is read is not racy.
+    void a_file_with_other_attributes_is_refused_without_reading_it() {
+        write(QStringLiteral("oto.ini"), "a.wav=a,1,2,3,4,5\r\n");
+        write(QStringLiteral("a.wav"), "RIFF");
+        const auto oto = root() / "oto.ini";
+        const auto past = fs::last_write_time(oto) - std::chrono::hours(1);
+        fs::last_write_time(oto, past);
+
+        auto opened = open(root(), QStringLiteral("UTF-8"));
+        QVERIFY(opened.has_value());
+        edit(opened->bank, QStringLiteral("a"), [](VoiceSample &sample) { sample.offset = 100; });
+
+        // The same bytes with another time are taken as modified.
+        fs::last_write_time(oto, past + std::chrono::seconds(10));
+        DiagnosticList diagnostics;
+        QVERIFY(!opened->files.save(opened->bank, diagnostics));
+        QCOMPARE(read(QStringLiteral("oto.ini")), QByteArray("a.wav=a,1,2,3,4,5\r\n"));
+    }
+
+    // The known limit of comparing attributes: a write that keeps both the size and the time of
+    // a file that is not racy goes unnoticed.
+    void a_file_with_the_same_attributes_is_taken_as_unchanged() {
+        write(QStringLiteral("oto.ini"), "a.wav=a,1,2,3,4,5\r\n");
+        write(QStringLiteral("a.wav"), "RIFF");
+        const auto oto = root() / "oto.ini";
+        const auto past = fs::last_write_time(oto) - std::chrono::hours(1);
+        fs::last_write_time(oto, past);
+
+        auto opened = open(root(), QStringLiteral("UTF-8"));
+        QVERIFY(opened.has_value());
+        edit(opened->bank, QStringLiteral("a"), [](VoiceSample &sample) { sample.offset = 100; });
+
+        write(QStringLiteral("oto.ini"), "a.wav=a,9,2,3,4,5\r\n");
+        fs::last_write_time(oto, past);
+        DiagnosticList diagnostics;
+        QVERIFY(opened->files.save(opened->bank, diagnostics));
+        QCOMPARE(read(QStringLiteral("oto.ini")),
+                 QByteArray("#Charset:UTF-8\r\na.wav=a,100,2,3,4,5\r\n"));
+    }
+
+    // A file written just before it was read is racy, so a write that keeps its size and time
+    // is found by content.
+    void a_racy_file_is_compared_by_content() {
+        write(QStringLiteral("oto.ini"), "a.wav=a,1,2,3,4,5\r\n");
+        write(QStringLiteral("a.wav"), "RIFF");
+        const auto oto = root() / "oto.ini";
+        const auto time = fs::last_write_time(oto);
+
+        auto opened = open(root(), QStringLiteral("UTF-8"));
+        QVERIFY(opened.has_value());
+        edit(opened->bank, QStringLiteral("a"), [](VoiceSample &sample) { sample.offset = 100; });
+
+        const QByteArray theirs = "a.wav=a,9,2,3,4,5\r\n";
+        write(QStringLiteral("oto.ini"), theirs);
+        fs::last_write_time(oto, time);
+        DiagnosticList diagnostics;
+        QVERIFY(!opened->files.save(opened->bank, diagnostics));
+        QCOMPARE(read(QStringLiteral("oto.ini")), theirs);
+    }
+
     // The same for a file that did not exist when the voice bank was read.
     void a_file_that_appeared_since_is_not_replaced() {
         write(QStringLiteral("a.wav"), "RIFF");

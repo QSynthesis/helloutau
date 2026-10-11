@@ -1467,12 +1467,29 @@ namespace hello::kit {
                 continue;
             }
 
+            // Compared as git compares the working tree with its index: by the size and the
+            // modification time in the stamp, and by content only if the time is too close to the
+            // stamp to tell a later write apart, see docs/Editing.md. A file whose attributes
+            // differ is taken as modified without reading it.
             bool same;
             if (record == book.files.end()) {
                 same = !findFolded(absolute, VoiceBankDirectorySource::fileName(write.file));
             } else {
-                const auto bytes = readWhole(write.path);
-                same = bytes && digestOf(*bytes) == record->second.digest;
+                const auto &entries = book.stamp.entries;
+                const auto entry =
+                    std::find_if(entries.begin(), entries.end(), [&record](const auto &item) {
+                        return item.name == record->second.name;
+                    });
+                std::error_code sizeError;
+                std::error_code timeError;
+                const auto size = fs::file_size(write.path, sizeError);
+                const auto time = fs::last_write_time(write.path, timeError);
+                same = entry != entries.end() && !sizeError && !timeError && size == entry->size &&
+                       time == entry->time;
+                if (same && book.stamp.isRacy(*entry)) {
+                    const auto bytes = readWhole(write.path);
+                    same = bytes && digestOf(*bytes) == record->second.digest;
+                }
             }
             if (!same) {
                 fail(diagnostics,

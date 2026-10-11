@@ -120,7 +120,9 @@ namespace hello::kit {
         ///   when read. Writing it would lose them. An unchanged file is not written and is not
         ///   refused.
         /// - **A file that changed on disk since it was read**, because it contains changes made
-        ///   elsewhere. The voice bank must be reopened.
+        ///   elsewhere. The voice bank must be reopened. A file whose size or modification time
+        ///   differs from the stamp is taken as changed, and only a racy file is compared by
+        ///   content, as git compares the working tree with its index.
         /// - **A directory whose files were not read.**
         ///
         /// A directory of \a bank without state here, for example one that a reload removed
