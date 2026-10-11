@@ -61,9 +61,10 @@
 
 moresampler 的诊断器由 FrequencyEditor 插件注册（作者 2026-10-11 决定），该插件已经注册了 moresampler 的频率表格式：
 
-- **重采样器为 moresampler，`resampler-compatibility off`，而拼接不由 moresampler 完成。** 识别方式：合成器对某个音符失败（多线程模式），或实时模式无法读取分片，而该音符的分片以 moresampler 的那段文字开头。依据见下文实测。解决办法：把 moresampler 目录中 `moreconfig.txt` 的 `resampler-compatibility` 改为 `on`，或把合成器也设为 moresampler。实时模式以内置的拼接读取分片，无论合成器是什么都无法读取这样的分片，因此只能改为 `on`。
-- **合成器为 moresampler，而重采样器不是 moresampler。** moresampler 作为合成器只读取 moresampler 生成的 `.llsm`（教程「兼容性」一节：「作为工具1时，Moresampler不能与其他的重采样引擎一起使用，因为输入Moresampler的只能是LLSM文件而不能用其他重采样引擎所输出的波形文件」）。
+- **重采样器为 moresampler，`moreconfig.txt` 中 `resampler-compatibility off`，而拼接不由 moresampler 完成**（`MoresamplerDiagnoser`）。识别方式：合成器对某个音符失败（多线程模式），或实时模式无法读取分片，而该音符的分片以 moresampler 的那段占位文字开头。依据见下文实测。解决办法：把 moresampler 目录中 `moreconfig.txt` 的 `resampler-compatibility` 改为 `on`，或把合成器也设为 moresampler，修改后清除渲染缓存，因为已写出的分片仍是占位文件。实时模式以内置的拼接读取分片，无论合成器是什么都无法读取这样的分片，因此不提供改合成器的办法。若 `moreconfig.txt` 已为 `on` 或不存在，moresampler 写出的是 wav，这些占位分片来自修改之前的渲染，此时只提供清除缓存的办法。
 - **`.llsm` 文件的版本比 moresampler 新且不兼容。** 教程「兼容性」一节记载 moresampler 此时停止工作并报错。识别这种情况需要该错误的输出原文，尚未取得，实现前须实测。
+
+教程「兼容性」一节还记载 moresampler 作为合成器（工具 1）时不能搭配其他重采样器，因为它只读取 LLSM 文件。这一点在 0.8.4 上不成立，见下文实测，因此不设这个诊断器。
 
 ## 实测
 
@@ -72,6 +73,10 @@ moresampler 的诊断器由 FrequencyEditor 插件注册（作者 2026-10-11 决
 - `off`：退出码 0。输出路径上的文件为 180 字节的文本，全文为「This is a dummy file created just to fool UTAU's cache mechanism and you really shouldn't expect to see anything here. The vocals are stored in llsm files, if nothing went wrong.」，旁边另写出 `<输出>.llsm.tmp`（开头为 `\x04data`）。
 - `on`：退出码 0。输出为 RIFF/WAVE（44100 Hz，16 位，单声道），旁边同样写出 `<输出>.llsm.tmp`。
 - 改在程序目录中的设置生效，而工作目录不是程序目录，因此 moresampler 读取的是程序旁的 `moreconfig.txt`。教程「配置」一节记载音源目录中的 `moreconfig.txt` 只支持分析类与合成类的选项，`resampler-compatibility` 属于输出类，因此只看程序旁的文件。
+
+**moresampler 0.8.4 旁边没有 `moreconfig.txt`**（2026-10-11，`.cache/claude/tools/work/moresampler_noconfig_probe.py`）。moresampler 输出「load_config: configuration file not found.」，写出的是 RIFF/WAVE，旁边同样写出 `.llsm.tmp`。因此写出占位文字的条件是 `moreconfig.txt` 存在且 `resampler-compatibility off`。
+
+**moresampler 0.8.4 作为合成器拼接其他重采样器写出的 wav**（2026-10-11，`.cache/claude/tools/work/moresampler_wavtool_probe.py`）。以 UTAU 的参数格式拼接一个没有 `.llsm.tmp` 的 wav 分片：退出码 0，输出「data index appended」。末尾带 `LAST_NOTE` 时写出 RIFF/WAVE 的音轨，样本峰值 17013，与分片的 17014 一致，说明分片被正常拼接。
 
 **UTAU 的 `wavtool.exe` 读取上述分片**（2026-10-11，`.cache/claude/tools/work/wavtool_dummy_probe.py`，UTAU 附带的 `wavtool.exe`，2010-02-19）。以 UTAU 的参数格式拼接一个分片：
 

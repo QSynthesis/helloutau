@@ -3,5 +3,6 @@
 
 add_subdirectory(ClassicPluginHost)
 add_subdirectory(Core)
+add_subdirectory(FrequencyEditor)
 add_subdirectory(Interchange)
 add_subdirectory(TestAction)
