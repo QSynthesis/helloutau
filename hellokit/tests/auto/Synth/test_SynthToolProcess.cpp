@@ -44,6 +44,9 @@ namespace {
     /// The argument that makes it sleep for the number of milliseconds that follows and succeed.
     constexpr char sleepFor[] = "--sleep-for";
 
+    /// The argument that makes it print argv[0].
+    constexpr char echoProgram[] = "--echo-program";
+
 }
 
 class test_SynthToolProcess : public QObject {
@@ -89,6 +92,15 @@ private Q_SLOTS:
         QVERIFY(result.succeeded());
         QVERIFY(diagnostics.isEmpty());
         QCOMPARE(result.output.trimmed(), QStringLiteral("hello"));
+    }
+
+    // The program receives its full path as argv[0], as from UTAU, because moresampler reads its
+    // configuration beside that path.
+    void the_program_receives_its_full_path() {
+        DiagnosticList diagnostics;
+        const auto result = run({QLatin1String(echoProgram)}, diagnostics);
+        QVERIFY(result.succeeded());
+        QCOMPARE(result.output, QString::fromStdU16String(self().u16string()));
     }
 
     void it_records_timestamped_output_with_the_selected_retention() {
@@ -404,6 +416,11 @@ int main(int argc, char *argv[]) {
         }
         if (mode == sleepFor && argc >= 3) {
             std::this_thread::sleep_for(std::chrono::milliseconds(std::atoi(argv[2])));
+            return 0;
+        }
+        if (mode == echoProgram) {
+            std::fputs(argv[0], stdout);
+            std::fflush(stdout);
             return 0;
         }
     }

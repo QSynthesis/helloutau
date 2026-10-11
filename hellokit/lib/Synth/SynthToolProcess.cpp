@@ -224,12 +224,13 @@ namespace hello::kit {
                                        const std::function<bool()> &cancelled) const {
         SynthToolRun result;
 
-        // args[0] is the name passed to the program, and executable() is the file executed. They
-        // are set separately on purpose, because using args[0] as the file name as well would
-        // subject it to a PATH lookup.
+        // args[0] is the full path, as UTAU passes it, because a synth tool may locate its
+        // configuration from args[0]. Moresampler reads moreconfig.txt beside the path in args[0],
+        // and a bare file name makes it render with its defaults. executable() is the file
+        // executed, set separately, so that args[0] is not subject to a PATH lookup.
         std::vector<std::string> args;
         args.reserve(size_t(arguments.size()) + 1);
-        args.push_back(program.filename().u8string());
+        args.push_back(program.u8string());
         for (const auto &argument : arguments) {
             args.push_back(utf8(argument));
         }
