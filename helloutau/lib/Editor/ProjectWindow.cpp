@@ -614,7 +614,7 @@ namespace hello::daw {
             }
             kit::Track track;
             track.voiceDir = tracks.at(0).voiceDir();
-            return track.voiceDirectory(editor->settings().voiceLocations());
+            return track.voiceDirectory(editor->settings().voiceBanks().locations());
         }
 
         // Returns whether the voice folder of the project is empty or an existing directory.
@@ -624,7 +624,7 @@ namespace hello::daw {
                 return true;
             }
             const auto root =
-                project.tracks.first().voiceDirectory(editor->settings().voiceLocations());
+                project.tracks.first().voiceDirectory(editor->settings().voiceBanks().locations());
             std::error_code error;
             return !root.empty() && std::filesystem::is_directory(root, error);
         }
@@ -632,7 +632,7 @@ namespace hello::daw {
         // Returns whether each synth tool of the project is empty or an existing file.
         bool synthToolPathsValid() const {
             const auto project = document->session()->snapshot();
-            const auto utau = editor->settings().utauDirectory();
+            const auto utau = editor->settings().utau().directory();
             const auto exists = [&utau](const QString &value) {
                 if (value.isEmpty()) {
                     return true;
@@ -724,7 +724,7 @@ namespace hello::daw {
         }
 
         bool realtime() const {
-            return editor->settings().playbackMode() == AppSettings::Realtime;
+            return editor->settings().rendering().playbackMode() == RenderingSettings::Realtime;
         }
 
         // Returns the texts of the synth tools of the project, Tool1 and Tool2.
@@ -743,7 +743,7 @@ namespace hello::daw {
             stdc_decl_t;
             auto &settings = editor->settings();
             const auto project = kit::ProjectRef(document->session()).settings();
-            const auto utau = settings.utauDirectory();
+            const auto utau = settings.utau().directory();
             const auto values = synthToolTexts();
             const bool exist =
                 std::all_of(values.cbegin(), values.cend(), [&](const QString &value) {
@@ -851,7 +851,7 @@ namespace hello::daw {
         // same.
         void playRange(std::pair<int, int> range) {
             stdc_decl_t;
-            if (!editor->settings().isRenderLogAccumulated()) {
+            if (!editor->settings().rendering().isLogAccumulated()) {
                 renderLog->clear();
             }
             lastRange = range;
@@ -940,8 +940,9 @@ namespace hello::daw {
         // render.
         void updateRunner() {
             const auto &settings = editor->settings();
-            const bool classic = settings.playbackMode() == AppSettings::Prerender;
-            const int threads = settings.renderThreadCount();
+            const bool classic =
+                settings.rendering().playbackMode() == RenderingSettings::Prerender;
+            const int threads = settings.rendering().threadCount();
             const auto directory = temporaryPath();
             playback->setThreadCount(threads);
             if (runnerClassic == classic && (classic || runnerThreads == threads) &&
@@ -981,7 +982,7 @@ namespace hello::daw {
             if (file.isEmpty()) {
                 return;
             }
-            if (!editor->settings().isRenderLogAccumulated()) {
+            if (!editor->settings().rendering().isLogAccumulated()) {
                 renderLog->clear();
             }
             std::optional<std::filesystem::path> written;
@@ -1064,7 +1065,7 @@ namespace hello::daw {
                 previewing = false;
                 return;
             }
-            if (!editor->settings().isRenderLogAccumulated()) {
+            if (!editor->settings().rendering().isLogAccumulated()) {
                 renderLog->clear();
             }
             kit::DiagnosticList diagnostics;
@@ -1095,7 +1096,7 @@ namespace hello::daw {
                 previewing = false;
                 return;
             }
-            if (!editor->settings().isRenderLogAccumulated()) {
+            if (!editor->settings().rendering().isLogAccumulated()) {
                 renderLog->clear();
             }
             kit::DiagnosticList diagnostics;
@@ -1214,7 +1215,7 @@ namespace hello::daw {
             toolBar->setObjectName(QStringLiteral("mainToolBar"));
             toolBar->setMovable(false);
             followToolBarPalette(toolBar);
-            toolBar->setVisible(editor->settings().isToolBarVisible());
+            toolBar->setVisible(editor->settings().view().isToolBarVisible());
             decl.addToolBar(toolBar);
             context->addToolBar(QStringLiteral("helloutau.mainToolBar"), toolBar);
             const auto id = QStringLiteral("helloutau.select.quantizationWidget");
@@ -1661,49 +1662,49 @@ namespace hello::daw {
             const auto showPitch = addCommand(QStringLiteral("helloutau.view.showPitch"), [this] {
                 const bool visible =
                     actions.value(QStringLiteral("helloutau.view.showPitch"))->isChecked();
-                editor->settings().setPitchVisible(visible);
+                editor->settings().view().setPitchVisible(visible);
                 roll->setPitchVisible(visible);
                 updatePitchActions();
             });
             showPitch->setCheckable(true);
-            showPitch->setChecked(editor->settings().isPitchVisible());
+            showPitch->setChecked(editor->settings().view().isPitchVisible());
             const auto showRenderedPitch =
                 addCommand(QStringLiteral("helloutau.view.showRenderedPitch"), [this] {
                     const bool visible =
                         actions.value(QStringLiteral("helloutau.view.showRenderedPitch"))
                             ->isChecked();
-                    editor->settings().setRenderedPitchVisible(visible);
+                    editor->settings().view().setRenderedPitchVisible(visible);
                     roll->setRenderedPitchVisible(visible);
                 });
             showRenderedPitch->setCheckable(true);
-            showRenderedPitch->setChecked(editor->settings().isRenderedPitchVisible());
+            showRenderedPitch->setChecked(editor->settings().view().isRenderedPitchVisible());
             const auto showEnvelopes =
                 addCommand(QStringLiteral("helloutau.view.showEnvelopes"), [this] {
                     const bool visible =
                         actions.value(QStringLiteral("helloutau.view.showEnvelopes"))->isChecked();
-                    editor->settings().setEnvelopesVisible(visible);
+                    editor->settings().view().setEnvelopesVisible(visible);
                     roll->setEnvelopesVisible(visible);
                 });
             showEnvelopes->setCheckable(true);
-            showEnvelopes->setChecked(editor->settings().areEnvelopesVisible());
+            showEnvelopes->setChecked(editor->settings().view().areEnvelopesVisible());
             const auto showParameters =
                 addCommand(QStringLiteral("helloutau.view.showParameters"), [this] {
                     const bool visible =
                         actions.value(QStringLiteral("helloutau.view.showParameters"))->isChecked();
-                    editor->settings().setParametersVisible(visible);
+                    editor->settings().view().setParametersVisible(visible);
                     roll->setParametersVisible(visible);
                 });
             showParameters->setCheckable(true);
-            showParameters->setChecked(editor->settings().areParametersVisible());
+            showParameters->setChecked(editor->settings().view().areParametersVisible());
             const auto showToolBar =
                 addCommand(QStringLiteral("helloutau.view.showToolBar"), [this] {
                     const bool visible =
                         actions.value(QStringLiteral("helloutau.view.showToolBar"))->isChecked();
-                    editor->settings().setToolBarVisible(visible);
+                    editor->settings().view().setToolBarVisible(visible);
                     toolBar->setVisible(visible);
                 });
             showToolBar->setCheckable(true);
-            showToolBar->setChecked(editor->settings().isToolBarVisible());
+            showToolBar->setChecked(editor->settings().view().isToolBarVisible());
             addCommand(QStringLiteral("helloutau.view.timeSignature"),
                        [this] { editTimeSignature(); });
             addCommand(QStringLiteral("helloutau.select.decreaseQuantizationInterval"),
@@ -1712,7 +1713,7 @@ namespace hello::daw {
                        [this] { stepQuantization(false); });
             addCommand(QStringLiteral("helloutau.view.commandPalette"), [this] {
                 palette->setCommands(commandEntries());
-                palette->setRecentIds(editor->settings().recentCommands());
+                palette->setRecentIds(editor->settings().commandPalette().recentCommands());
                 palette->popup();
             });
             const auto play =
@@ -1756,7 +1757,7 @@ namespace hello::daw {
             QObject::connect(palette, &CommandPalette::commandActivated, &decl,
                              [this](const QString &id) {
                                  stdc_decl_t;
-                                 editor->settings().addRecentCommand(id);
+                                 editor->settings().commandPalette().addRecentCommand(id);
                                  // Run once the key press that chose it is over, since the command
                                  // may open a dialog. It may have been disabled in between.
                                  QTimer::singleShot(0, &decl, [this, id] {
@@ -1912,7 +1913,7 @@ namespace hello::daw {
             // tool, the quantization and whether the pitch is shown belong to the window and
             // carry over.
             const auto quantization =
-                roll ? roll->quantization() : editor->settings().quantization();
+                roll ? roll->quantization() : editor->settings().view().quantization();
             const QPointer<PianoRoll> previousRoll = roll;
             roll = new PianoRoll(document->session());
             const auto updateModifiers = [this] {
@@ -1937,7 +1938,7 @@ namespace hello::daw {
             showQuantization(roll->quantization());
             showTempo(kit::ProjectRef(document->session()).settings().tempo());
             QObject::connect(roll, &PianoRoll::quantizationChanged, &decl, [this](int ticks) {
-                editor->settings().setQuantization(ticks);
+                editor->settings().view().setQuantization(ticks);
                 showQuantization(ticks);
             });
             if (actions.value(QStringLiteral("helloutau.select.penTool"))->isChecked()) {
@@ -2191,15 +2192,15 @@ namespace hello::daw {
             selection.portamento = portamento;
             selection.vibrato = vibratoState;
             selection.vibratoValues =
-                sung.first().vibrato().value_or(settings.pitchControlVibrato());
-            selection.vibratoPreset = settings.pitchControlVibratoPreset();
+                sung.first().vibrato().value_or(settings.pitchControl().vibrato());
+            selection.vibratoPreset = settings.pitchControl().vibratoPreset();
             const auto pointRefs = sung.first().portamento();
             for (int i = 0; i < pointRefs.size(); ++i) {
                 selection.points.push_back(pointRefs.at(i).toPortamentoPoint());
             }
             // The settings of the default, changed to show the points of the first note
             auto &shown = selection.portamentoSettings;
-            shown = settings.pitchControlPortamento();
+            shown = settings.pitchControl().portamento();
             if (selection.points.size() == 2) {
                 shown.mode = kit::PortamentoSettings::Custom;
                 shown.start = int(std::lround(selection.points.first().x));
@@ -2221,13 +2222,13 @@ namespace hello::daw {
                 selection.previousDuration = durationOf(first - 1);
             }
             PitchControlDialog dialog(selection, &decl);
-            connect(dialog.portamentoDefaultButton(), &QPushButton::clicked, &dialog,
-                    [this, &dialog] {
-                        editor->settings().setPitchControlPortamento(dialog.portamentoSettings());
-                    });
+            connect(
+                dialog.portamentoDefaultButton(), &QPushButton::clicked, &dialog, [this, &dialog] {
+                    editor->settings().pitchControl().setPortamento(dialog.portamentoSettings());
+                });
             connect(dialog.vibratoDefaultButton(), &QPushButton::clicked, &dialog, [this, &dialog] {
-                editor->settings().setPitchControlVibrato(dialog.vibrato());
-                editor->settings().setPitchControlVibratoPreset(dialog.vibratoPreset());
+                editor->settings().pitchControl().setVibrato(dialog.vibrato());
+                editor->settings().pitchControl().setVibratoPreset(dialog.vibratoPreset());
             });
             if (dialog.exec() != QDialog::Accepted) {
                 return;
@@ -2315,7 +2316,7 @@ namespace hello::daw {
         VoiceBankWindow *editVoiceBank() {
             stdc_decl_t;
             const auto track = document->session()->snapshot().tracks.value(0);
-            const auto root = track.voiceDirectory(editor->settings().voiceLocations());
+            const auto root = track.voiceDirectory(editor->settings().voiceBanks().locations());
             if (track.voiceDir.isEmpty() || root.empty()) {
                 QMessageBox::information(
                     &decl, tr("Edit Voice Bank"),
@@ -2452,11 +2453,11 @@ namespace hello::daw {
 
     void ProjectWindow::applySettings() {
         stdc_impl_t;
-        impl.renderLog->setMode(impl.editor->settings().isRenderLogAccumulated()
+        impl.renderLog->setMode(impl.editor->settings().rendering().isLogAccumulated()
                                     ? kit::SynthToolOutputLog::Accumulated
                                     : kit::SynthToolOutputLog::Latest);
-        impl.renderLog->setLimit(impl.editor->settings().renderLogLimit());
-        if (!impl.editor->settings().isRenderLogAccumulated()) {
+        impl.renderLog->setLimit(impl.editor->settings().rendering().logLimit());
+        if (!impl.editor->settings().rendering().isLogAccumulated()) {
             impl.renderLog->clear();
         }
         // What plays in the other mode stops.
@@ -2482,8 +2483,8 @@ namespace hello::daw {
         VoiceBankCharsetDialog selector(this);
         selector.setRoot(impl.voiceBankRoot);
         kit::DiagnosticList diagnostics;
-        const bool loaded = document->loadVoiceBank(impl.editor->settings().voiceLocations(),
-                                                    &selector, diagnostics);
+        const bool loaded = document->loadVoiceBank(
+            impl.editor->settings().voiceBanks().locations(), &selector, diagnostics);
         DiagnosticBox::report(this, tr("Voice Bank"), diagnostics);
         return loaded;
     }
@@ -2523,7 +2524,7 @@ namespace hello::daw {
         const bool saved = impl.document->saveAs(path, diagnostics);
         DiagnosticBox::report(this, tr("Save As"), diagnostics);
         if (saved) {
-            impl.editor->settings().addRecentFile(path);
+            impl.editor->settings().files().addRecentFile(path);
         }
         return saved;
     }
@@ -2536,9 +2537,8 @@ namespace hello::daw {
     bool ProjectWindow::exportUst() {
         stdc_impl_t;
         const auto &settings = impl.editor->settings();
-        ExportUstDialog dialog(
-            proposedPath(*impl.document, u".ust", impl.projectFileBaseName()),
-            settings.ustExportCharset(), this);
+        ExportUstDialog dialog(proposedPath(*impl.document, u".ust", impl.projectFileBaseName()),
+                               settings.files().ustExportCharset(), this);
         if (dialog.exec() != QDialog::Accepted) {
             return false;
         }
@@ -2553,8 +2553,8 @@ namespace hello::daw {
 
         kit::UstDocument::ExportOptions options;
         options.charset = dialog.charset();
-        options.wavtool = settings.wavtool();
-        options.resampler = settings.resampler();
+        options.wavtool = settings.rendering().wavtool();
+        options.resampler = settings.rendering().resampler();
         kit::DiagnosticList diagnostics;
         const bool exported = impl.document->exportUst(path, options, diagnostics);
         DiagnosticBox::report(this, tr("Export UST"), diagnostics);

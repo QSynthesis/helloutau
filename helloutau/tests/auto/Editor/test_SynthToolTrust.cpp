@@ -58,8 +58,8 @@ private Q_SLOTS:
         writeFile(pathIn("utau/resampler.exe"), "resampler");
         writeFile(pathIn("utau/wavtool.exe"), "wavtool");
         writeFile(pathIn("evil/tool.exe"), "evil");
-        m_settings->setResampler(pathIn("utau/resampler.exe"));
-        m_settings->setWavtool(pathIn("utau/wavtool.exe"));
+        m_settings->rendering().setResampler(pathIn("utau/resampler.exe"));
+        m_settings->rendering().setWavtool(pathIn("utau/wavtool.exe"));
     }
 
     void cleanup() {
@@ -76,7 +76,7 @@ private Q_SLOTS:
         QVERIFY(!SynthToolTrust::isAllowed(*m_settings, QString(), m_utau));
 
         // Also if the settings name the same missing file
-        m_settings->setResampler(missing);
+        m_settings->rendering().setResampler(missing);
         QVERIFY(!SynthToolTrust::isAllowed(*m_settings, missing, m_utau));
     }
 

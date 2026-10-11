@@ -148,7 +148,7 @@ namespace hello::daw {
                 report(tr("Cannot check for updates: %1").arg(query->errorString()));
                 return;
             }
-            settings.setLastUpdateCheck(QDateTime::currentDateTimeUtc());
+            settings.updates().setLastCheck(QDateTime::currentDateTimeUtc());
             const auto current = currentVersion();
             const auto asset = UpdateChecker::assetName(
                 configuration->assetPrefix, release->version, QStringLiteral(HELLOUTAU_TRIPLET),
@@ -167,12 +167,12 @@ namespace hello::daw {
             // Copied, because another check may replace the release of the query in the event
             // loop of the dialog
             const auto offered = *release;
-            if (!manual && settings.updateMode() == AppSettings::AutomaticUpdate) {
+            if (!manual && settings.updates().mode() == UpdateSettings::Automatic) {
                 startDownload(offered, asset, false);
                 Q_EMIT decl->finished();
                 return;
             }
-            if (!manual && version == settings.skippedUpdateVersion()) {
+            if (!manual && version == settings.updates().skippedVersion()) {
                 Q_EMIT decl->finished();
                 return;
             }
@@ -183,7 +183,7 @@ namespace hello::daw {
                     startDownload(offered, asset, true);
                     break;
                 case UpdateDialog::Skip:
-                    settings.setSkippedUpdateVersion(version);
+                    settings.updates().setSkippedVersion(version);
                     break;
                 case UpdateDialog::Later:
                     break;
@@ -418,15 +418,15 @@ namespace hello::daw {
 
     void UpdateChecker::checkAtStartup(QWidget *parent) {
         stdc_impl_t;
-        if (impl.settings.updateMode() == AppSettings::ManualUpdate || impl.query->isRunning() ||
+        if (impl.settings.updates().mode() == UpdateSettings::Manual || impl.query->isRunning() ||
             impl.download->isRunning()) {
             return;
         }
-        const auto last = impl.settings.lastUpdateCheck();
+        const auto last = impl.settings.updates().lastCheck();
         if (last.isValid() && last.secsTo(QDateTime::currentDateTimeUtc()) < startupCheckInterval) {
             return;
         }
-        impl.start(parent, impl.settings.updateSource(), false);
+        impl.start(parent, impl.settings.updates().source(), false);
     }
 
     void UpdateChecker::checkNow(QWidget *parent, const QString &source) {

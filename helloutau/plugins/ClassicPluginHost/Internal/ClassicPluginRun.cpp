@@ -141,8 +141,8 @@ namespace hello::daw {
 
         ClassicPluginExchange::Paths paths;
         paths.project = document->filePath();
-        paths.voiceDirectory =
-            project.tracks.first().voiceDirectory(window->editor()->settings().voiceLocations());
+        paths.voiceDirectory = project.tracks.first().voiceDirectory(
+            window->editor()->settings().voiceBanks().locations());
         if (!paths.project.empty()) {
             paths.cacheDirectory = kit::Project::cacheDirectoryOf(paths.project);
         }

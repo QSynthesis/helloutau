@@ -123,7 +123,7 @@ namespace hello::daw {
         impl.readPluginSettings();
 
         impl.translations = std::make_unique<kit::TranslationLoader>(
-            AppSettings::localeOf(impl.settings->language()));
+            AppearanceSettings::localeOf(impl.settings->appearance().language()));
         // The translation of Qt, so that the standard buttons and dialogs match the rest: that
         // of the installation, see helloutau/CMakeLists.txt, or else that of Qt itself.
         const auto packaged = QDir::cleanPath(QCoreApplication::applicationDirPath() +

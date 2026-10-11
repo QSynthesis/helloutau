@@ -58,6 +58,7 @@ private Q_SLOTS:
         // in English, so that the menus do not depend on the language of the system
         QTemporaryDir settings;
         AppSettings(settings.filePath(QStringLiteral("settings.json")))
+            .appearance()
             .setLanguage(QStringLiteral("en"));
         AppLoader loader({QStringLiteral("helloutau"), QLatin1String(AppLoader::settingsOption),
                           settings.path()});

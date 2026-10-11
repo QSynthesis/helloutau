@@ -306,7 +306,7 @@ namespace hello::daw {
             addCommand(QStringLiteral("helloutau.view.commandPalette"), [this] {
                 palette->setCommands(
                     commandEntriesOf(editor->actionRegistry(Editor::VoiceBankWindowKind), context));
-                palette->setRecentIds(editor->settings().recentCommands());
+                palette->setRecentIds(editor->settings().commandPalette().recentCommands());
                 palette->popup();
             });
             addCommand(QStringLiteral("helloutau.voiceBank.reloadAll"), [this] {
@@ -410,7 +410,7 @@ namespace hello::daw {
             QObject::connect(palette, &CommandPalette::commandActivated, &decl,
                              [this](const QString &id) {
                                  stdc_decl_t;
-                                 editor->settings().addRecentCommand(id);
+                                 editor->settings().commandPalette().addRecentCommand(id);
                                  // Run once the key press that chose it is over, since the command
                                  // may open a dialog. It may have been disabled in between.
                                  QTimer::singleShot(0, &decl, [this, id] {
@@ -1443,7 +1443,8 @@ namespace hello::daw {
                 (frequencyFormat->isEmpty() || formats.format(*frequencyFormat))) {
                 return *frequencyFormat;
             }
-            const auto format = formats.formatForResampler(pathOf(editor->settings().resampler()));
+            const auto format =
+                formats.formatForResampler(pathOf(editor->settings().rendering().resampler()));
             return format ? format->id() : QString();
         }
 
@@ -1674,7 +1675,7 @@ namespace hello::daw {
             sample.voiceOverlap = entry.voiceOverlap;
             kit::DiagnosticList diagnostics;
             preview->synthesize(sample, synthesizedPitch, synthesizedLength,
-                                pathOf(editor->settings().resampler()), diagnostics);
+                                pathOf(editor->settings().rendering().resampler()), diagnostics);
             DiagnosticBox::report(&decl, tr("Synthesize"), diagnostics);
         }
 
@@ -2268,7 +2269,7 @@ namespace hello::daw {
         const bool saved =
             impl.document->saveAs(pathOf(folder), kit::VoiceBankSession::AllFiles, diagnostics);
         if (saved) {
-            impl.editor->settings().addRecentVoiceBank(impl.document->rootPath());
+            impl.editor->settings().files().addRecentVoiceBank(impl.document->rootPath());
         }
         DiagnosticBox::report(this, tr("Save As"), diagnostics);
         return saved;

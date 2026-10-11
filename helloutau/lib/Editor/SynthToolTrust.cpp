@@ -127,8 +127,9 @@ namespace hello::daw {
         if (!exists(value, utau)) {
             return false;
         }
-        return samePath(value, settings.resampler(), utau) ||
-               samePath(value, settings.wavtool(), utau) || isTrusted(settings, value, utau);
+        return samePath(value, settings.rendering().resampler(), utau) ||
+               samePath(value, settings.rendering().wavtool(), utau) ||
+               isTrusted(settings, value, utau);
     }
 
     bool SynthToolTrust::ask(QWidget *parent, AppSettings &settings, const QStringList &values,

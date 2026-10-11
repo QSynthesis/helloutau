@@ -1,8 +1,6 @@
 #include "AppSettings.h"
 #include "AppSettings_p.h"
 
-#include <algorithm>
-
 #include <QtCore/QCoreApplication>
 #include <QtCore/QDir>
 #include <QtCore/QFileInfo>
@@ -14,94 +12,11 @@
 #include <hellokit/Support/JsonInterop.h>
 #include <hellokit/Support/SettingsFile.h>
 
-
 namespace hello::daw {
 
     namespace json = stdc::json;
 
     namespace {
-
-        constexpr char KeyUtauDirectory[] = "utau/directory";
-        constexpr char KeyRelativeVoiceDirInUtau[] = "voiceBanks/relativeToUtau";
-        constexpr char KeyResampler[] = "synthTools/resampler";
-        constexpr char KeyWavtool[] = "synthTools/wavtool";
-        constexpr char KeyRenderLogAccumulated[] = "renderLog/accumulated";
-        constexpr char KeyRenderLogLimit[] = "renderLog/limit";
-        constexpr char KeyAudioOutputDevice[] = "audio/outputDevice";
-        constexpr char KeyPlaybackMode[] = "playback/mode";
-        constexpr char PrerenderValue[] = "prerender";
-        constexpr char ThreadedValue[] = "threaded";
-        constexpr char RealtimeValue[] = "realtime";
-        constexpr char KeyRenderThreads[] = "playback/threads";
-        constexpr char KeyQuantization[] = "view/quantization";
-        constexpr char KeyPitchControlPortamento[] = "pitchControl/portamento";
-        constexpr char KeyPitchControlVibrato[] = "pitchControl/vibrato";
-        constexpr char KeyPitchControlVibratoPreset[] = "pitchControl/vibratoPreset";
-        constexpr char KeyUstExportCharset[] = "files/ustExportCharset";
-        constexpr char KeyUpdateSource[] = "updates/source";
-        constexpr char KeyUpdateMode[] = "updates/mode";
-        constexpr char ManualUpdateValue[] = "manual";
-        constexpr char AutomaticUpdateValue[] = "automatic";
-        constexpr char KeyLastUpdateCheck[] = "updates/lastCheck";
-        constexpr char KeySkippedUpdateVersion[] = "updates/skippedVersion";
-        constexpr char KeyLanguage[] = "appearance/language";
-        constexpr char KeyPitchVisible[] = "view/showPitch";
-        constexpr char KeyRenderedPitchVisible[] = "view/showRenderedPitch";
-        constexpr char KeyEnvelopesVisible[] = "view/showEnvelopes";
-        constexpr char KeyParametersVisible[] = "view/showParameters";
-        constexpr char KeyToolBarVisible[] = "view/showToolBar";
-        constexpr char KeyRecentCommands[] = "commandPalette/recent";
-        constexpr char KeyRecentFiles[] = "files/recent";
-        constexpr char KeyRecentVoiceBanks[] = "files/recentVoiceBanks";
-
-        QString textOf(const std::string &utf8) {
-            return QString::fromStdString(utf8);
-        }
-
-        // A path in the form stored in the settings, converted without loss
-        QString textOf(const std::filesystem::path &path) {
-            return QString::fromStdU16String(path.u16string());
-        }
-
-        QString recentTextOf(const std::filesystem::path &path) {
-            return QDir::toNativeSeparators(
-                QString::fromStdU16String(path.lexically_normal().u16string()));
-        }
-
-        QString normalizedPathText(const QString &text) {
-            if (text.isEmpty()) {
-                return {};
-            }
-            return recentTextOf(std::filesystem::path(text.toStdU16String()));
-        }
-
-        QStringList stringsOf(const json::Value &value) {
-            QStringList strings;
-            for (const auto &item : value.toArray()) {
-                strings.push_back(textOf(item.toString()));
-            }
-            return strings;
-        }
-
-        json::Value arrayOf(const QStringList &strings) {
-            json::Array array;
-            array.reserve(size_t(strings.size()));
-            for (const auto &string : strings) {
-                array.emplace_back(string.toStdString());
-            }
-            return json::Value(std::move(array));
-        }
-
-        QStringList recentTexts(const json::Value &value) {
-            QStringList result;
-            for (const auto &text : stringsOf(value)) {
-                const auto normalized = recentTextOf(std::filesystem::path(text.toStdU16String()));
-                if (!normalized.isEmpty() && !result.contains(normalized)) {
-                    result.push_back(normalized);
-                }
-            }
-            return result;
-        }
 
         // Returns the settings in fileName, or no settings if the file cannot be read.
         json::Object readSettings(const QString &fileName) {
@@ -115,19 +30,87 @@ namespace hello::daw {
             return object ? std::move(*object) : json::Object();
         }
 
+        bool isRecentListKey(std::string_view key) {
+            return key == AppSettingsKeys::recentFiles || key == AppSettingsKeys::recentVoiceBanks;
+        }
+
+        bool isPathKey(std::string_view key) {
+            return key == AppSettingsKeys::utauDirectory || key == AppSettingsKeys::resampler ||
+                   key == AppSettingsKeys::wavtool;
+        }
+
     }
 
-    AppSettings::Impl::Impl(const QString &fileName)
+    AppSettingsStore::AppSettingsStore(const QString &fileName)
         : root(readSettings(fileName)), file(fileName, [this] { return json::Value(root); }) {
+        for (const std::string_view key :
+             {AppSettingsKeys::recentFiles, AppSettingsKeys::recentVoiceBanks}) {
+            const auto normalized = recentTextsOf(value(key));
+            if (stringsOf(value(key)) != normalized) {
+                setValue(key, arrayOf(normalized));
+            }
+        }
+        for (const std::string_view key : {AppSettingsKeys::utauDirectory,
+                                           AppSettingsKeys::resampler, AppSettingsKeys::wavtool}) {
+            const auto old = text(key);
+            const auto normalized = normalizedPathText(old);
+            if (old != normalized) {
+                setValue(key, normalized.toStdString());
+            }
+        }
     }
 
-    const json::Value &AppSettings::Impl::value(std::string_view key) const {
+    const json::Value &AppSettingsStore::value(std::string_view key) const {
         return kit::JsonInterop::valueAt(root, key);
     }
 
-    void AppSettings::Impl::setValue(std::string_view key, json::Value value) {
+    void AppSettingsStore::setValue(std::string_view key, json::Value value) {
         kit::JsonInterop::insertAt(root, key, std::move(value));
         file.syncLater();
+    }
+
+    QString AppSettingsStore::text(std::string_view key) const {
+        return QString::fromStdString(value(key).toString());
+    }
+
+    QString AppSettingsStore::pathText(const std::filesystem::path &path) {
+        return QDir::toNativeSeparators(
+            QString::fromStdU16String(path.lexically_normal().u16string()));
+    }
+
+    QString AppSettingsStore::normalizedPathText(const QString &text) {
+        if (text.isEmpty()) {
+            return {};
+        }
+        return pathText(std::filesystem::path(text.toStdU16String()));
+    }
+
+    QStringList AppSettingsStore::stringsOf(const json::Value &value) {
+        QStringList strings;
+        for (const auto &item : value.toArray()) {
+            strings.push_back(QString::fromStdString(item.toString()));
+        }
+        return strings;
+    }
+
+    json::Value AppSettingsStore::arrayOf(const QStringList &strings) {
+        json::Array array;
+        array.reserve(size_t(strings.size()));
+        for (const auto &string : strings) {
+            array.emplace_back(string.toStdString());
+        }
+        return json::Value(std::move(array));
+    }
+
+    QStringList AppSettingsStore::recentTextsOf(const json::Value &value) {
+        QStringList result;
+        for (const auto &text : stringsOf(value)) {
+            const auto normalized = pathText(std::filesystem::path(text.toStdU16String()));
+            if (!normalized.isEmpty() && !result.contains(normalized)) {
+                result.push_back(normalized);
+            }
+        }
+        return result;
     }
 
     AppSettings::AppSettings() : AppSettings(defaultFileName(), defaultUserDirectory()) {
@@ -139,26 +122,19 @@ namespace hello::daw {
 
     AppSettings::AppSettings(const QString &fileName, const QString &userDirectory)
         : _impl(std::make_unique<Impl>(fileName)) {
-        _impl->userDirectory = std::filesystem::path(userDirectory.toStdU16String());
-        const auto normalizeRecent = [this](std::string_view key) {
-            const auto old = stringsOf(_impl->value(key));
-            const auto normalized = recentTexts(_impl->value(key));
-            if (old != normalized) {
-                _impl->setValue(key, arrayOf(normalized));
-            }
-        };
-        normalizeRecent(KeyRecentFiles);
-        normalizeRecent(KeyRecentVoiceBanks);
-        const auto normalizePath = [this](std::string_view key) {
-            const auto old = textOf(_impl->value(key).toString());
-            const auto normalized = normalizedPathText(old);
-            if (old != normalized) {
-                _impl->setValue(key, normalized.toStdString());
-            }
-        };
-        normalizePath(KeyUtauDirectory);
-        normalizePath(KeyResampler);
-        normalizePath(KeyWavtool);
+        stdc_impl_t;
+        impl.userDirectory = std::filesystem::path(userDirectory.toStdU16String());
+        // The constructors of the groups are private, and only this class constructs them.
+        impl.utau.reset(new UtauSettings(impl.store));
+        impl.voiceBanks.reset(new VoiceBankSettings(*this, impl.store));
+        impl.rendering.reset(new RenderingSettings(impl.store));
+        impl.audio.reset(new AudioSettings(impl.store));
+        impl.appearance.reset(new AppearanceSettings(impl.store));
+        impl.view.reset(new ViewSettings(impl.store));
+        impl.pitchControl.reset(new PitchControlSettings(impl.store));
+        impl.files.reset(new FileSettings(impl.store));
+        impl.commandPalette.reset(new CommandPaletteSettings(impl.store));
+        impl.updates.reset(new UpdateSettings(impl.store));
     }
 
     AppSettings::~AppSettings() = default;
@@ -179,7 +155,7 @@ namespace hello::daw {
 
     QString AppSettings::fileName() const {
         stdc_impl_t;
-        return impl.file.fileName();
+        return impl.store.file.fileName();
     }
 
     std::filesystem::path AppSettings::userDirectory() const {
@@ -189,387 +165,113 @@ namespace hello::daw {
 
     void AppSettings::sync() {
         stdc_impl_t;
-        impl.file.sync();
+        impl.store.file.sync();
     }
 
-    std::filesystem::path AppSettings::utauDirectory() const {
+    UtauSettings &AppSettings::utau() {
         stdc_impl_t;
-        return std::filesystem::path(
-            textOf(impl.value(KeyUtauDirectory).toString()).toStdU16String());
+        return *impl.utau;
     }
 
-    void AppSettings::setUtauDirectory(const std::filesystem::path &directory) {
+    const UtauSettings &AppSettings::utau() const {
         stdc_impl_t;
-        impl.setValue(KeyUtauDirectory, recentTextOf(directory).toStdString());
+        return *impl.utau;
     }
 
-    QString AppSettings::resampler() const {
+    VoiceBankSettings &AppSettings::voiceBanks() {
         stdc_impl_t;
-        return textOf(impl.value(KeyResampler).toString());
+        return *impl.voiceBanks;
     }
 
-    void AppSettings::setResampler(const QString &path) {
+    const VoiceBankSettings &AppSettings::voiceBanks() const {
         stdc_impl_t;
-        impl.setValue(KeyResampler, normalizedPathText(path).toStdString());
+        return *impl.voiceBanks;
     }
 
-    QString AppSettings::wavtool() const {
+    RenderingSettings &AppSettings::rendering() {
         stdc_impl_t;
-        return textOf(impl.value(KeyWavtool).toString());
+        return *impl.rendering;
     }
 
-    void AppSettings::setWavtool(const QString &path) {
+    const RenderingSettings &AppSettings::rendering() const {
         stdc_impl_t;
-        impl.setValue(KeyWavtool, normalizedPathText(path).toStdString());
+        return *impl.rendering;
     }
 
-    std::filesystem::path AppSettings::voiceFolder() const {
-        return userDirectory() / u"Singers";
-    }
-
-    bool AppSettings::isRelativeVoiceDirInUtau() const {
+    AudioSettings &AppSettings::audio() {
         stdc_impl_t;
-        return impl.value(KeyRelativeVoiceDirInUtau).toBool(true);
+        return *impl.audio;
     }
 
-    void AppSettings::setRelativeVoiceDirInUtau(bool inUtau) {
+    const AudioSettings &AppSettings::audio() const {
         stdc_impl_t;
-        impl.setValue(KeyRelativeVoiceDirInUtau, inUtau);
+        return *impl.audio;
     }
 
-    kit::VoiceLocations AppSettings::voiceLocations() const {
-        kit::VoiceLocations locations;
-        locations.voiceFolders.push_back(voiceFolder());
-        const auto utau = utauDirectory();
-        std::error_code error;
-        const bool utauExists = !utau.empty() && std::filesystem::is_directory(utau, error);
-        if (utauExists) {
-            locations.voiceFolders.push_back(utau / u"voice");
-        }
-        locations.relativeBase =
-            utauExists && isRelativeVoiceDirInUtau()
-                ? utau
-                : std::filesystem::path(QCoreApplication::applicationDirPath().toStdU16String());
-        return locations;
-    }
-
-    bool AppSettings::isRenderLogAccumulated() const {
+    AppearanceSettings &AppSettings::appearance() {
         stdc_impl_t;
-        return impl.value(KeyRenderLogAccumulated).toBool(true);
+        return *impl.appearance;
     }
 
-    void AppSettings::setRenderLogAccumulated(bool accumulated) {
+    const AppearanceSettings &AppSettings::appearance() const {
         stdc_impl_t;
-        impl.setValue(KeyRenderLogAccumulated, accumulated);
+        return *impl.appearance;
     }
 
-    int AppSettings::renderLogLimit() const {
+    ViewSettings &AppSettings::view() {
         stdc_impl_t;
-        return std::max(1024, int(impl.value(KeyRenderLogLimit).toInt(1024 * 1024)));
+        return *impl.view;
     }
 
-    void AppSettings::setRenderLogLimit(int bytes) {
+    const ViewSettings &AppSettings::view() const {
         stdc_impl_t;
-        impl.setValue(KeyRenderLogLimit, int64_t(std::max(1024, bytes)));
+        return *impl.view;
     }
 
-    QByteArray AppSettings::audioOutputDevice() const {
+    PitchControlSettings &AppSettings::pitchControl() {
         stdc_impl_t;
-        return QByteArray::fromBase64(QByteArray::fromStdString(impl.value(KeyAudioOutputDevice).toString()));
+        return *impl.pitchControl;
     }
 
-    void AppSettings::setAudioOutputDevice(const QByteArray &id) {
+    const PitchControlSettings &AppSettings::pitchControl() const {
         stdc_impl_t;
-        impl.setValue(KeyAudioOutputDevice, id.toBase64().toStdString());
+        return *impl.pitchControl;
     }
 
-    AppSettings::PlaybackMode AppSettings::playbackMode() const {
+    FileSettings &AppSettings::files() {
         stdc_impl_t;
-        const auto value = impl.value(KeyPlaybackMode).toString();
-        if (value == RealtimeValue) {
-            return Realtime;
-        }
-        return value == ThreadedValue ? ThreadedPrerender : Prerender;
+        return *impl.files;
     }
 
-    void AppSettings::setPlaybackMode(PlaybackMode mode) {
+    const FileSettings &AppSettings::files() const {
         stdc_impl_t;
-        const char *value = PrerenderValue;
-        if (mode == ThreadedPrerender) {
-            value = ThreadedValue;
-        } else if (mode == Realtime) {
-            value = RealtimeValue;
-        }
-        impl.setValue(KeyPlaybackMode, std::string(value));
+        return *impl.files;
     }
 
-    int AppSettings::renderThreadCount() const {
+    CommandPaletteSettings &AppSettings::commandPalette() {
         stdc_impl_t;
-        return std::max(0, int(impl.value(KeyRenderThreads).toInt(0)));
+        return *impl.commandPalette;
     }
 
-    void AppSettings::setRenderThreadCount(int count) {
+    const CommandPaletteSettings &AppSettings::commandPalette() const {
         stdc_impl_t;
-        // The default is not written, so that the file keeps no value that was never chosen.
-        impl.setValue(KeyRenderThreads, count > 0 ? json::Value(int64_t(count)) : json::Value());
+        return *impl.commandPalette;
     }
 
-    int AppSettings::quantization() const {
+    UpdateSettings &AppSettings::updates() {
         stdc_impl_t;
-        return int(impl.value(KeyQuantization).toInt(120));
+        return *impl.updates;
     }
 
-    void AppSettings::setQuantization(int ticks) {
+    const UpdateSettings &AppSettings::updates() const {
         stdc_impl_t;
-        impl.setValue(KeyQuantization, int64_t(std::max(0, ticks)));
-    }
-
-    kit::PortamentoSettings AppSettings::pitchControlPortamento() const {
-        return kit::PortamentoSettings::fromJson(
-            value(QLatin1String(KeyPitchControlPortamento)).toObject());
-    }
-
-    void AppSettings::setPitchControlPortamento(const kit::PortamentoSettings &settings) {
-        setValue(QLatin1String(KeyPitchControlPortamento), settings.toJson());
-    }
-
-    kit::Vibrato AppSettings::pitchControlVibrato() const {
-        const auto stored = value(QLatin1String(KeyPitchControlVibrato));
-        return stored.isObject() ? kit::Vibrato::fromJson(stored.toObject())
-                                 : kit::Vibrato::utauDefault();
-    }
-
-    void AppSettings::setPitchControlVibrato(const kit::Vibrato &vibrato) {
-        setValue(QLatin1String(KeyPitchControlVibrato), vibrato.toJson());
-    }
-
-    int AppSettings::pitchControlVibratoPreset() const {
-        return std::max(0, value(QLatin1String(KeyPitchControlVibratoPreset)).toInt(0));
-    }
-
-    void AppSettings::setPitchControlVibratoPreset(int index) {
-        setValue(QLatin1String(KeyPitchControlVibratoPreset), std::max(0, index));
-    }
-
-    bool AppSettings::isPitchVisible() const {
-        stdc_impl_t;
-        return impl.value(KeyPitchVisible).toBool(true);
-    }
-
-    void AppSettings::setPitchVisible(bool visible) {
-        stdc_impl_t;
-        impl.setValue(KeyPitchVisible, visible);
-    }
-
-    bool AppSettings::isRenderedPitchVisible() const {
-        stdc_impl_t;
-        return impl.value(KeyRenderedPitchVisible).toBool(true);
-    }
-
-    void AppSettings::setRenderedPitchVisible(bool visible) {
-        stdc_impl_t;
-        impl.setValue(KeyRenderedPitchVisible, visible);
-    }
-
-    bool AppSettings::areEnvelopesVisible() const {
-        stdc_impl_t;
-        return impl.value(KeyEnvelopesVisible).toBool(true);
-    }
-
-    void AppSettings::setEnvelopesVisible(bool visible) {
-        stdc_impl_t;
-        impl.setValue(KeyEnvelopesVisible, visible);
-    }
-
-    bool AppSettings::areParametersVisible() const {
-        stdc_impl_t;
-        return impl.value(KeyParametersVisible).toBool(false);
-    }
-
-    void AppSettings::setParametersVisible(bool visible) {
-        stdc_impl_t;
-        impl.setValue(KeyParametersVisible, visible);
-    }
-
-    bool AppSettings::isToolBarVisible() const {
-        stdc_impl_t;
-        return impl.value(KeyToolBarVisible).toBool(true);
-    }
-
-    void AppSettings::setToolBarVisible(bool visible) {
-        stdc_impl_t;
-        impl.setValue(KeyToolBarVisible, visible);
-    }
-
-    QString AppSettings::language() const {
-        stdc_impl_t;
-        const auto language = impl.value(KeyLanguage).asString();
-        return language ? textOf(*language) : QString();
-    }
-
-    void AppSettings::setLanguage(const QString &language) {
-        stdc_impl_t;
-        impl.setValue(KeyLanguage, language.toStdString());
-    }
-
-    QList<std::pair<QString, QString>> AppSettings::languages() {
-        return {
-            {QString(),               tr("System Default")      },
-            {QStringLiteral("en"),    QStringLiteral("English") },
-            {QStringLiteral("zh_CN"), QStringLiteral("简体中文")},
-        };
-    }
-
-    QLocale AppSettings::localeOf(const QString &language) {
-        return language.isEmpty() ? QLocale::system() : QLocale(language);
-    }
-
-    QString AppSettings::ustExportCharset() const {
-        stdc_impl_t;
-        const auto charset = impl.value(KeyUstExportCharset).asString();
-        return charset ? textOf(*charset) : QStringLiteral("UTF-8");
-    }
-
-    void AppSettings::setUstExportCharset(const QString &charset) {
-        stdc_impl_t;
-        impl.setValue(KeyUstExportCharset, charset.toStdString());
-    }
-
-    QString AppSettings::updateSource() const {
-        stdc_impl_t;
-        return textOf(impl.value(KeyUpdateSource).toString());
-    }
-
-    void AppSettings::setUpdateSource(const QString &source) {
-        stdc_impl_t;
-        impl.setValue(KeyUpdateSource,
-                      source.isEmpty() ? json::Value() : json::Value(source.toStdString()));
-    }
-
-    AppSettings::UpdateMode AppSettings::updateMode() const {
-        stdc_impl_t;
-        const auto value = impl.value(KeyUpdateMode).toString();
-        if (value == ManualUpdateValue) {
-            return ManualUpdate;
-        }
-        return value == AutomaticUpdateValue ? AutomaticUpdate : NotifiedUpdate;
-    }
-
-    void AppSettings::setUpdateMode(UpdateMode mode) {
-        stdc_impl_t;
-        // The default is not written.
-        json::Value value;
-        if (mode == ManualUpdate) {
-            value = std::string(ManualUpdateValue);
-        } else if (mode == AutomaticUpdate) {
-            value = std::string(AutomaticUpdateValue);
-        }
-        impl.setValue(KeyUpdateMode, std::move(value));
-    }
-
-    QDateTime AppSettings::lastUpdateCheck() const {
-        stdc_impl_t;
-        return QDateTime::fromString(textOf(impl.value(KeyLastUpdateCheck).toString()),
-                                     Qt::ISODate);
-    }
-
-    void AppSettings::setLastUpdateCheck(const QDateTime &time) {
-        stdc_impl_t;
-        impl.setValue(KeyLastUpdateCheck,
-                      time.isValid() ? json::Value(time.toUTC().toString(Qt::ISODate).toStdString())
-                                     : json::Value());
-    }
-
-    QString AppSettings::skippedUpdateVersion() const {
-        stdc_impl_t;
-        return textOf(impl.value(KeySkippedUpdateVersion).toString());
-    }
-
-    void AppSettings::setSkippedUpdateVersion(const QString &version) {
-        stdc_impl_t;
-        impl.setValue(KeySkippedUpdateVersion,
-                      version.isEmpty() ? json::Value() : json::Value(version.toStdString()));
-    }
-
-    QStringList AppSettings::recentCommands() const {
-        stdc_impl_t;
-        return stringsOf(impl.value(KeyRecentCommands));
-    }
-
-    void AppSettings::addRecentCommand(const QString &id) {
-        stdc_impl_t;
-        auto ids = recentCommands();
-        ids.removeAll(id);
-        ids.prepend(id);
-        impl.setValue(KeyRecentCommands, arrayOf(ids.mid(0, recentCommandCount)));
-    }
-
-    QList<std::filesystem::path> AppSettings::recentFiles() const {
-        stdc_impl_t;
-        QList<std::filesystem::path> paths;
-        auto texts = recentTexts(impl.value(KeyRecentFiles));
-        for (const auto &text : texts) {
-            paths.push_back(std::filesystem::path(text.toStdU16String()));
-        }
-        return paths;
-    }
-
-    void AppSettings::addRecentFile(const std::filesystem::path &path) {
-        stdc_impl_t;
-        auto texts = recentTexts(impl.value(KeyRecentFiles));
-        const auto normalized = recentTextOf(path);
-        texts.removeAll(normalized);
-        texts.prepend(normalized);
-        impl.setValue(KeyRecentFiles, arrayOf(texts.mid(0, recentFileCount)));
-    }
-
-    void AppSettings::removeRecentFile(const std::filesystem::path &path) {
-        stdc_impl_t;
-        auto texts = recentTexts(impl.value(KeyRecentFiles));
-        texts.removeAll(recentTextOf(path));
-        impl.setValue(KeyRecentFiles, arrayOf(texts));
-    }
-
-    void AppSettings::clearRecentFiles() {
-        stdc_impl_t;
-        impl.setValue(KeyRecentFiles, {});
-    }
-
-    QList<std::filesystem::path> AppSettings::recentVoiceBanks() const {
-        stdc_impl_t;
-        QList<std::filesystem::path> paths;
-        auto texts = recentTexts(impl.value(KeyRecentVoiceBanks));
-        for (const auto &text : texts) {
-            paths.push_back(std::filesystem::path(text.toStdU16String()));
-        }
-        return paths;
-    }
-
-    void AppSettings::addRecentVoiceBank(const std::filesystem::path &root) {
-        stdc_impl_t;
-        auto texts = recentTexts(impl.value(KeyRecentVoiceBanks));
-        const auto normalized = recentTextOf(root);
-        texts.removeAll(normalized);
-        texts.prepend(normalized);
-        impl.setValue(KeyRecentVoiceBanks, arrayOf(texts.mid(0, recentFileCount)));
-    }
-
-    void AppSettings::removeRecentVoiceBank(const std::filesystem::path &root) {
-        stdc_impl_t;
-        auto texts = recentTexts(impl.value(KeyRecentVoiceBanks));
-        texts.removeAll(recentTextOf(root));
-        impl.setValue(KeyRecentVoiceBanks, arrayOf(texts));
-    }
-
-    void AppSettings::clearRecentVoiceBanks() {
-        stdc_impl_t;
-        impl.setValue(KeyRecentVoiceBanks, {});
+        return *impl.updates;
     }
 
     QJsonValue AppSettings::value(const QString &key) const {
         stdc_impl_t;
         const auto path = key.toStdString();
-        const auto &value = impl.value(path);
+        const auto &value = impl.store.value(path);
         // An absent value reads as null and is indistinguishable from a stored null. setValue()
         // never stores null.
         return value.isNull() ? QJsonValue(QJsonValue::Undefined)
@@ -578,19 +280,18 @@ namespace hello::daw {
 
     void AppSettings::setValue(const QString &key, const QJsonValue &value) {
         stdc_impl_t;
-        if (key == QLatin1String(KeyRecentFiles) ||
-            key == QLatin1String(KeyRecentVoiceBanks)) {
-            impl.setValue(key.toStdString(),
-                          arrayOf(recentTexts(kit::JsonInterop::fromQtJson(value))));
+        const auto path = key.toStdString();
+        if (isRecentListKey(path)) {
+            impl.store.setValue(path, AppSettingsStore::arrayOf(AppSettingsStore::recentTextsOf(
+                                          kit::JsonInterop::fromQtJson(value))));
             return;
         }
-        if (key == QLatin1String(KeyUtauDirectory) || key == QLatin1String(KeyResampler) ||
-            key == QLatin1String(KeyWavtool)) {
-            impl.setValue(key.toStdString(),
-                         normalizedPathText(value.toString()).toStdString());
+        if (isPathKey(path)) {
+            impl.store.setValue(
+                path, AppSettingsStore::normalizedPathText(value.toString()).toStdString());
             return;
         }
-        impl.setValue(key.toStdString(), kit::JsonInterop::fromQtJson(value));
+        impl.store.setValue(path, kit::JsonInterop::fromQtJson(value));
     }
 
 }

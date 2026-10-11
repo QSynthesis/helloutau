@@ -96,21 +96,21 @@ namespace {
         tools.resampler = textOf(tools.utau / "resampler.exe");
         tools.first = textOf(tools.utau / "first.exe");
         tools.second = textOf(tools.utau / "second.exe");
-        settings.setUtauDirectory(tools.utau);
-        settings.setWavtool(tools.wavtool);
-        settings.setResampler(tools.resampler);
+        settings.utau().setDirectory(tools.utau);
+        settings.rendering().setWavtool(tools.wavtool);
+        settings.rendering().setResampler(tools.resampler);
         return tools;
     }
 
     // Creates the voice bank bank in the voice folder of settings, and resampler.exe and
     // tools\wavtool.exe in a UTAU directory, which settings uses. Returns the UTAU directory.
     fs::path utauWithSynthToolsIn(const QTemporaryDir &dir, AppSettings &settings) {
-        fs::create_directories(settings.voiceFolder() / "bank");
+        fs::create_directories(settings.voiceBanks().folder() / "bank");
         const auto utau = pathIn(dir, "utau");
         fs::create_directories(utau / "tools");
         writeFile(utau / "resampler.exe");
         writeFile(utau / "tools" / "wavtool.exe");
-        settings.setUtauDirectory(utau);
+        settings.utau().setDirectory(utau);
         return utau;
     }
 
@@ -137,11 +137,11 @@ namespace {
     fs::path voiceFoldersIn(const QTemporaryDir &dir, AppSettings &settings) {
         const auto utau = pathIn(dir, "utau");
         for (const auto &folder :
-             {settings.voiceFolder() / "Alpha", settings.voiceFolder() / "shared",
+             {settings.voiceBanks().folder() / "Alpha", settings.voiceBanks().folder() / "shared",
               utau / "voice" / "beta", utau / "voice" / "shared"}) {
             fs::create_directories(folder);
         }
-        settings.setUtauDirectory(utau);
+        settings.utau().setDirectory(utau);
         return utau;
     }
 
@@ -194,23 +194,25 @@ private Q_SLOTS:
 
     void resetting_project_synth_tools_uses_native_separators() {
         AppSettings settings(m_dir.filePath(QStringLiteral("settings.json")));
-        settings.setWavtool(QStringLiteral("C:/UTAU/tools/wavtool.exe"));
-        settings.setResampler(QStringLiteral("C:/UTAU/tools/resampler.exe"));
+        settings.rendering().setWavtool(QStringLiteral("C:/UTAU/tools/wavtool.exe"));
+        settings.rendering().setResampler(QStringLiteral("C:/UTAU/tools/resampler.exe"));
         ProjectPropertiesDialog dialog(kit::Project(), settings);
         const auto reset =
             dialog.findChild<QPushButton *>(QStringLiteral("resetProjectSynthTools"));
         QVERIFY(reset);
 
         reset->click();
-        QCOMPARE(dialog.wavtoolEdit()->text(), QDir::toNativeSeparators(settings.wavtool()));
-        QCOMPARE(dialog.resamplerEdit()->text(), QDir::toNativeSeparators(settings.resampler()));
+        QCOMPARE(dialog.wavtoolEdit()->text(),
+                 QDir::toNativeSeparators(settings.rendering().wavtool()));
+        QCOMPARE(dialog.resamplerEdit()->text(),
+                 QDir::toNativeSeparators(settings.rendering().resampler()));
     }
 
     void project_properties_keep_the_initial_voice_bank() {
         const auto utau = pathIn(m_dir, "utau");
         fs::create_directories(utau / "voice" / "bank");
         AppSettings settings(m_dir.filePath(QStringLiteral("settings.json")));
-        settings.setUtauDirectory(utau);
+        settings.utau().setDirectory(utau);
 
         kit::Project project;
         project.tracks.push_back({});
@@ -225,7 +227,7 @@ private Q_SLOTS:
         const auto utau = pathIn(m_dir, "utau");
         fs::create_directories(utau / "voice" / "bank" / "mid");
         AppSettings settings(m_dir.filePath(QStringLiteral("settings.json")));
-        settings.setUtauDirectory(utau);
+        settings.utau().setDirectory(utau);
         kit::Project project;
         project.tracks.push_back({});
         project.tracks.first().voiceDir =
@@ -246,7 +248,7 @@ private Q_SLOTS:
         fs::create_directories(bank);
         fs::create_directories(utau / "voice" / "other");
         AppSettings settings(m_dir.filePath(QStringLiteral("settings.json")));
-        settings.setUtauDirectory(utau);
+        settings.utau().setDirectory(utau);
         kit::Project project;
         project.tracks.push_back({});
         project.tracks.first().voiceDir =
@@ -362,7 +364,7 @@ private Q_SLOTS:
         const auto utau = utauWithSynthToolsIn(dir, settings);
         kit::Project project;
         project.tracks.push_back({});
-        project.tracks[0].voiceDir = textOf(settings.voiceFolder() / "bank");
+        project.tracks[0].voiceDir = textOf(settings.voiceBanks().folder() / "bank");
         project.settings.wavtool = textOf(utau / "tools" / ".." / "tools" / "wavtool.exe");
         project.settings.resampler = textOf(utau / "resampler.exe");
         ProjectPropertiesDialog dialog(project, settings);
@@ -376,7 +378,7 @@ private Q_SLOTS:
         const auto utau = utauWithSynthToolsIn(dir, settings);
         kit::Project project;
         project.tracks.push_back({});
-        project.tracks[0].voiceDir = textOf(settings.voiceFolder() / "bank");
+        project.tracks[0].voiceDir = textOf(settings.voiceBanks().folder() / "bank");
         project.settings.wavtool = textOf(utau / "tools" / ".." / "tools" / "wavtool.exe");
         project.settings.resampler = textOf(utau / "resampler.exe");
         ProjectPropertiesDialog dialog(project, settings);
@@ -529,7 +531,7 @@ private Q_SLOTS:
         const auto label = resolvedLabelOf(dialog);
         QVERIFY(label);
         QVERIFY(label->isVisibleTo(&dialog));
-        QVERIFY(label->text().endsWith(textOf(settings.voiceFolder() / "shared")));
+        QVERIFY(label->text().endsWith(textOf(settings.voiceBanks().folder() / "shared")));
 
         dialog.voiceDirEdit()->setText(QStringLiteral("%VOICE%beta"));
         QVERIFY(label->isVisibleTo(&dialog));

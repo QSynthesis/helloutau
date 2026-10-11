@@ -65,10 +65,10 @@ namespace hello::daw {
         auto layout = new QVBoxLayout(widget);
         auto synthToolsGroup = new QGroupBox(tr("Synth tools"), widget);
         auto synthToolsForm = new QFormLayout(synthToolsGroup);
-        m_wavtool =
-            addPathRow(synthToolsForm, widget, tr("&Wavtool:"), m_settings.wavtool(), false);
-        m_resampler =
-            addPathRow(synthToolsForm, widget, tr("&Resampler:"), m_settings.resampler(), false);
+        m_wavtool = addPathRow(synthToolsForm, widget, tr("&Wavtool:"),
+                               m_settings.rendering().wavtool(), false);
+        m_resampler = addPathRow(synthToolsForm, widget, tr("&Resampler:"),
+                                 m_settings.rendering().resampler(), false);
         synthToolsForm->addRow(
             note(tr("Project Properties resets the synth tools of a project to these. "
                     "The voice bank editor previews entries with this resampler.")));
@@ -78,12 +78,13 @@ namespace hello::daw {
         auto playbackForm = new QFormLayout(playbackGroup);
         m_playbackMode = new QComboBox();
         m_playbackMode->addItem(tr("Classic prerender, in an external console as UTAU does"),
-                                AppSettings::Prerender);
+                                RenderingSettings::Prerender);
         m_playbackMode->addItem(tr("Threaded prerender, rendered by several threads"),
-                                AppSettings::ThreadedPrerender);
+                                RenderingSettings::ThreadedPrerender);
         m_playbackMode->addItem(tr("Realtime, rendered in the background from the playhead"),
-                                AppSettings::Realtime);
-        m_playbackMode->setCurrentIndex(m_playbackMode->findData(m_settings.playbackMode()));
+                                RenderingSettings::Realtime);
+        m_playbackMode->setCurrentIndex(
+            m_playbackMode->findData(m_settings.rendering().playbackMode()));
         playbackForm->addRow(tr("&Playback:"), m_playbackMode);
         playbackForm->addRow(
             note(tr("Realtime playback joins the notes by the rules of the project "
@@ -104,7 +105,7 @@ namespace hello::daw {
             m_threads->addItem(QString::number(count), count);
         }
         m_threads->addItem(QString::number(hardware), hardware);
-        const int current = m_settings.renderThreadCount();
+        const int current = m_settings.rendering().threadCount();
         if (const int index = m_threads->findData(current); index >= 0) {
             m_threads->setCurrentIndex(index);
         } else {
@@ -112,7 +113,8 @@ namespace hello::daw {
         }
         playbackForm->addRow(tr("Rendering &threads:"), m_threads);
         const auto updateThreads = [this] {
-            m_threads->setEnabled(m_playbackMode->currentData().toInt() != AppSettings::Prerender);
+            m_threads->setEnabled(m_playbackMode->currentData().toInt() !=
+                                  RenderingSettings::Prerender);
         };
         updateThreads();
 
@@ -123,7 +125,7 @@ namespace hello::daw {
         m_renderLogMode->addItem(tr("Keep the latest run only"), false);
         m_renderLogMode->addItem(tr("Accumulate runs"), true);
         m_renderLogMode->setCurrentIndex(
-            m_renderLogMode->findData(m_settings.isRenderLogAccumulated()));
+            m_renderLogMode->findData(m_settings.rendering().isLogAccumulated()));
         logForm->addRow(tr("Render &log:"), m_renderLogMode);
 
         m_renderLogLimit = new QComboBox();
@@ -138,7 +140,7 @@ namespace hello::daw {
         for (const auto &[label, bytes] : limits) {
             m_renderLogLimit->addItem(label, bytes);
         }
-        const int logLimit = m_settings.renderLogLimit();
+        const int logLimit = m_settings.rendering().logLimit();
         if (const int index = m_renderLogLimit->findData(logLimit); index >= 0) {
             m_renderLogLimit->setCurrentIndex(index);
         } else {
@@ -191,12 +193,15 @@ namespace hello::daw {
             !m_renderLogLimit) {
             return false;
         }
-        return pathText(m_resampler) != QDir::fromNativeSeparators(m_settings.resampler()) ||
-               pathText(m_wavtool) != QDir::fromNativeSeparators(m_settings.wavtool()) ||
-               m_playbackMode->currentData().toInt() != m_settings.playbackMode() ||
-               threadCount() != m_settings.renderThreadCount() ||
-               m_renderLogMode->currentData().toBool() != m_settings.isRenderLogAccumulated() ||
-               renderLogLimit() != m_settings.renderLogLimit();
+        return pathText(m_resampler) !=
+                   QDir::fromNativeSeparators(m_settings.rendering().resampler()) ||
+               pathText(m_wavtool) !=
+                   QDir::fromNativeSeparators(m_settings.rendering().wavtool()) ||
+               m_playbackMode->currentData().toInt() != m_settings.rendering().playbackMode() ||
+               threadCount() != m_settings.rendering().threadCount() ||
+               m_renderLogMode->currentData().toBool() !=
+                   m_settings.rendering().isLogAccumulated() ||
+               renderLogLimit() != m_settings.rendering().logLimit();
     }
 
     bool RenderingSettingPage::apply(QString *error) {
@@ -215,13 +220,13 @@ namespace hello::daw {
             }
             return false;
         }
-        m_settings.setResampler(pathText(m_resampler));
-        m_settings.setWavtool(pathText(m_wavtool));
-        m_settings.setPlaybackMode(
-            AppSettings::PlaybackMode(m_playbackMode->currentData().toInt()));
-        m_settings.setRenderThreadCount(*threads);
-        m_settings.setRenderLogAccumulated(m_renderLogMode->currentData().toBool());
-        m_settings.setRenderLogLimit(*logLimit);
+        m_settings.rendering().setResampler(pathText(m_resampler));
+        m_settings.rendering().setWavtool(pathText(m_wavtool));
+        m_settings.rendering().setPlaybackMode(
+            RenderingSettings::PlaybackMode(m_playbackMode->currentData().toInt()));
+        m_settings.rendering().setThreadCount(*threads);
+        m_settings.rendering().setLogAccumulated(m_renderLogMode->currentData().toBool());
+        m_settings.rendering().setLogLimit(*logLimit);
         Q_EMIT modifiedChanged();
         return true;
     }

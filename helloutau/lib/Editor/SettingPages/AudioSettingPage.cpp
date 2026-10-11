@@ -31,7 +31,7 @@ namespace hello::daw {
         auto widget = new QWidget();
         auto form = new QFormLayout(widget);
         m_output = new QComboBox(widget);
-        fillDevices(m_settings.audioOutputDevice());
+        fillDevices(m_settings.audio().outputDevice());
         form->addRow(tr("&Output device:"), m_output);
         auto test = new QPushButton(tr("Test"), widget);
         form->addRow({}, test);
@@ -76,13 +76,14 @@ namespace hello::daw {
     }
 
     bool AudioSettingPage::isModified() const {
-        return m_output && m_output->currentData().toByteArray() != m_settings.audioOutputDevice();
+        return m_output &&
+               m_output->currentData().toByteArray() != m_settings.audio().outputDevice();
     }
 
     bool AudioSettingPage::apply(QString *error) {
         Q_UNUSED(error);
         const auto id = m_output->currentData().toByteArray();
-        m_settings.setAudioOutputDevice(id);
+        m_settings.audio().setOutputDevice(id);
         AudioEngine::instance()->setDeviceId(id);
         Q_EMIT modifiedChanged();
         return true;

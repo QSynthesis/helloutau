@@ -85,7 +85,9 @@ namespace {
     // Returns \a directory, with settings in it that choose English, so that the messages do not
     // depend on the language of the system
     QString inEnglish(const QString &directory) {
-        AppSettings(directory + QStringLiteral("/settings.json")).setLanguage(QStringLiteral("en"));
+        AppSettings(directory + QStringLiteral("/settings.json"))
+            .appearance()
+            .setLanguage(QStringLiteral("en"));
         return directory;
     }
 
@@ -126,6 +128,7 @@ private Q_SLOTS:
         };
         QTemporaryDir directory;
         AppSettings(directory.filePath(QStringLiteral("settings.json")))
+            .appearance()
             .setLanguage(QStringLiteral("zh_CN"));
         {
             const AppLoader loader({QStringLiteral("helloutau"),
@@ -482,7 +485,7 @@ private Q_SLOTS:
         AppLoader loader(
             {QStringLiteral("helloutau"), QStringLiteral("--settings"), directory.path()});
         setPluginValue(loader, "org.test.p/a", json::Value(int64_t(1)));
-        loader.settings().setResampler(QStringLiteral("r.exe"));
+        loader.settings().rendering().setResampler(QStringLiteral("r.exe"));
         QVERIFY(!QFile::exists(plugins));
         QVERIFY(!QFile::exists(settings));
         loader.syncSettings();

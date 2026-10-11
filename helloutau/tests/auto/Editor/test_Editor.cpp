@@ -316,8 +316,10 @@ namespace {
         for (const auto tool : {"wavtool.exe", "resampler.exe"}) {
             std::ofstream(root / tool, std::ios::binary) << "tool";
         }
-        settings.setWavtool(QString::fromStdU16String((root / "wavtool.exe").u16string()));
-        settings.setResampler(QString::fromStdU16String((root / "resampler.exe").u16string()));
+        settings.rendering().setWavtool(
+            QString::fromStdU16String((root / "wavtool.exe").u16string()));
+        settings.rendering().setResampler(
+            QString::fromStdU16String((root / "resampler.exe").u16string()));
 
         kit::Note note;
         note.lyric = QStringLiteral("a");
@@ -327,8 +329,8 @@ namespace {
         track.voiceDir = QString::fromStdU16String((root / "bank").u16string());
         track.notes = {note, note};
         kit::Project project;
-        project.settings.wavtool = settings.wavtool();
-        project.settings.resampler = settings.resampler();
+        project.settings.wavtool = settings.rendering().wavtool();
+        project.settings.resampler = settings.rendering().resampler();
         project.tracks.push_back(track);
         const auto path = root / name;
         kit::DiagnosticList diagnostics;
@@ -509,7 +511,8 @@ private Q_SLOTS:
 
         // The command runs once the key press is over, and is remembered as recently used.
         QTRY_VERIFY(!window->document()->isModified());
-        QCOMPARE(e->settings().recentCommands().first(), QStringLiteral("helloutau.edit.undo"));
+        QCOMPARE(e->settings().commandPalette().recentCommands().first(),
+                 QStringLiteral("helloutau.edit.undo"));
     }
 
     // The shadow of the palette comes from the built-in theme, which applies to every window.
@@ -827,14 +830,14 @@ private Q_SLOTS:
     // every item of its kind in a palette. "Clear Recent" forgets both kinds.
     void open_recent_lists_projects_then_voice_banks() {
         const auto e = editor();
-        e->settings().clearRecentFiles();
-        e->settings().clearRecentVoiceBanks();
+        e->settings().files().clearRecentFiles();
+        e->settings().files().clearRecentVoiceBanks();
         for (int i = 0; i < 12; ++i) {
-            e->settings().addRecentFile(
+            e->settings().files().addRecentFile(
                 pathIn(m_dir, qPrintable(QStringLiteral("f%1.usth").arg(i))));
         }
-        e->settings().addRecentVoiceBank(pathIn(m_dir, "bank0"));
-        e->settings().addRecentVoiceBank(pathIn(m_dir, "bank1"));
+        e->settings().files().addRecentVoiceBank(pathIn(m_dir, "bank0"));
+        e->settings().files().addRecentVoiceBank(pathIn(m_dir, "bank1"));
         const auto window = e->newWindow();
         const auto recent =
             declaredActionOf(*e, window, QStringLiteral("helloutau.file.openRecent"));
@@ -886,14 +889,14 @@ private Q_SLOTS:
                                                              list->fontMetrics());
         QTest::mouseClick(list->viewport(), Qt::LeftButton, {}, button.center());
         QCOMPARE(palette->commands().size(), 1);
-        QCOMPARE(e->settings().recentVoiceBanks(), QList<fs::path>{pathIn(m_dir, "bank1")});
+        QCOMPARE(e->settings().files().recentVoiceBanks(), QList<fs::path>{pathIn(m_dir, "bank1")});
         QVERIFY(palette->isVisible());
         palette->hide();
-        e->settings().addRecentVoiceBank(pathIn(m_dir, "bank0"));
+        e->settings().files().addRecentVoiceBank(pathIn(m_dir, "bank0"));
 
         // Ten voice banks end their section with a "More" item as well.
         for (int i = 2; i < 10; ++i) {
-            e->settings().addRecentVoiceBank(
+            e->settings().files().addRecentVoiceBank(
                 pathIn(m_dir, qPrintable(QStringLiteral("bank%1").arg(i))));
         }
         Q_EMIT recent->menu()->aboutToShow();
@@ -902,7 +905,7 @@ private Q_SLOTS:
 
         // Nine projects end their section without one.
         for (int i = 0; i < 3; ++i) {
-            e->settings().removeRecentFile(
+            e->settings().files().removeRecentFile(
                 pathIn(m_dir, qPrintable(QStringLiteral("f%1.usth").arg(i))));
         }
         Q_EMIT recent->menu()->aboutToShow();
@@ -925,11 +928,11 @@ private Q_SLOTS:
         };
         answer(false);
         items.last()->trigger();
-        QVERIFY(!e->settings().recentFiles().isEmpty());
+        QVERIFY(!e->settings().files().recentFiles().isEmpty());
         answer(true);
         items.last()->trigger();
-        QVERIFY(e->settings().recentFiles().isEmpty());
-        QVERIFY(e->settings().recentVoiceBanks().isEmpty());
+        QVERIFY(e->settings().files().recentFiles().isEmpty());
+        QVERIFY(e->settings().files().recentVoiceBanks().isEmpty());
         Q_EMIT recent->menu()->aboutToShow();
         items = recent->menu()->actions();
         QCOMPARE(items.size(), 1);
@@ -938,14 +941,15 @@ private Q_SLOTS:
 
     void recent_files_open_from_their_menu() {
         const auto e = editor();
-        e->settings().clearRecentFiles();
-        e->settings().clearRecentVoiceBanks();
+        e->settings().files().clearRecentFiles();
+        e->settings().files().clearRecentVoiceBanks();
         const auto first = savedProject(m_dir, "r1.usth");
         const auto second = savedProject(m_dir, "r2.usth");
         e->openFile(first);
         const auto window = e->openFile(second);
         QVERIFY(window);
-        QCOMPARE(e->settings().recentFiles(), (QList<std::filesystem::path>{second, first}));
+        QCOMPARE(e->settings().files().recentFiles(),
+                 (QList<std::filesystem::path>{second, first}));
 
         // The palette of a window lists the project of the window as well.
         e->showRecent(Editor::RecentProjects, window);
@@ -971,7 +975,7 @@ private Q_SLOTS:
         std::filesystem::remove(first);
         answerMessageBox(QMessageBox::Ok);
         items.at(1)->trigger();
-        QCOMPARE(e->settings().recentFiles(), (QList<std::filesystem::path>{second}));
+        QCOMPARE(e->settings().files().recentFiles(), (QList<std::filesystem::path>{second}));
     }
 
     // Why an edit in the piano roll was refused appears in the status bar.
@@ -989,7 +993,7 @@ private Q_SLOTS:
     // nothing.
     void prerendering_needs_notes_selected() {
         const auto e = editor();
-        QCOMPARE(e->settings().playbackMode(), AppSettings::Prerender);
+        QCOMPARE(e->settings().rendering().playbackMode(), RenderingSettings::Prerender);
         const auto window = e->newWindow();
         declaredActionOf(*e, window, QStringLiteral("helloutau.playback.play"))->trigger();
         QCOMPARE(window->statusBar()->currentMessage(),
@@ -999,10 +1003,10 @@ private Q_SLOTS:
         const auto roll = qobject_cast<PianoRoll *>(window->centralWidget());
         QVERIFY(roll);
         QVERIFY(!roll->isCursorEnabled());
-        e->settings().setPlaybackMode(AppSettings::Realtime);
+        e->settings().rendering().setPlaybackMode(RenderingSettings::Realtime);
         window->applySettings();
         QVERIFY(roll->isCursorEnabled());
-        e->settings().setPlaybackMode(AppSettings::Prerender);
+        e->settings().rendering().setPlaybackMode(RenderingSettings::Prerender);
         window->applySettings();
         QVERIFY(!roll->isCursorEnabled());
     }
@@ -1023,10 +1027,10 @@ private Q_SLOTS:
 
         box->setCurrentIndex(box->findData(60));
         QCOMPARE(roll->quantization(), 60);
-        QCOMPARE(e->settings().quantization(), 60);
+        QCOMPARE(e->settings().view().quantization(), 60);
         roll->setQuantization(240);
         QCOMPARE(box->currentData().toInt(), 240);
-        QCOMPARE(e->settings().quantization(), 240);
+        QCOMPARE(e->settings().view().quantization(), 240);
 
         // Finer steps down to off and coarser steps up to a quarter note, and neither goes further.
         const auto finer = declaredActionOf(
@@ -1050,9 +1054,9 @@ private Q_SLOTS:
         QVERIFY(show && show->isChecked());
         show->trigger();
         QVERIFY(toolBar->isHidden());
-        QVERIFY(!e->settings().isToolBarVisible());
+        QVERIFY(!e->settings().view().isToolBarVisible());
         show->trigger();
-        QVERIFY(e->settings().isToolBarVisible());
+        QVERIFY(e->settings().view().isToolBarVisible());
 
         QVERIFY(
             !declaredActionOf(*e, window, QStringLiteral("helloutau.edit.undo"))->icon().isNull());
@@ -1171,14 +1175,14 @@ private Q_SLOTS:
             QCOMPARE(dialog->currentPage()->id(), QStringLiteral("editor.Rendering"));
             const auto mode = dialog->currentPage()->widget()->findChild<QComboBox *>();
             QVERIFY(mode);
-            mode->setCurrentIndex(mode->findData(AppSettings::Realtime));
+            mode->setCurrentIndex(mode->findData(RenderingSettings::Realtime));
             QVERIFY(dialog->applyButton()->isEnabled());
             dialog->accept();
         });
         e->showSettings(window, QStringLiteral("editor.Rendering"));
-        QCOMPARE(e->settings().playbackMode(), AppSettings::Realtime);
+        QCOMPARE(e->settings().rendering().playbackMode(), RenderingSettings::Realtime);
         QVERIFY(roll->isCursorEnabled());
-        e->settings().setPlaybackMode(AppSettings::Prerender);
+        e->settings().rendering().setPlaybackMode(RenderingSettings::Prerender);
     }
 
     // The language is chosen on System Settings from the system default, English and Simplified
@@ -1186,7 +1190,7 @@ private Q_SLOTS:
     // restart is offered; declined, nothing restarts.
     void the_language_is_chosen_for_the_next_start() {
         const auto e = editor();
-        e->settings().setLanguage(QString());
+        e->settings().appearance().setLanguage(QString());
         const auto page = e->settingCatalog()->page(QStringLiteral("editor.SystemSettings"));
         QVERIFY(page);
         const auto box = page->widget()->findChild<QComboBox *>(QStringLiteral("language"));
@@ -1217,11 +1221,11 @@ private Q_SLOTS:
         });
         e->showSettings(window, QStringLiteral("editor.SystemSettings"));
         QVERIFY(asked);
-        QCOMPARE(e->settings().language(), QStringLiteral("zh_CN"));
+        QCOMPARE(e->settings().appearance().language(), QStringLiteral("zh_CN"));
         QVERIFY(!kit::RestartScheduler::isRestartRequired());
         QVERIFY(!kit::RestartScheduler::isRestartScheduled());
         QVERIFY(window->isVisible());
-        e->settings().setLanguage(QString());
+        e->settings().appearance().setLanguage(QString());
     }
 
     // Without a setting that needs it, no restart is offered. Accepted, the restart closes the
@@ -1255,7 +1259,7 @@ private Q_SLOTS:
     // that is not a positive count is not applied.
     void the_thread_count_is_chosen_or_typed() {
         const auto e = editor();
-        e->settings().setRenderThreadCount(0);
+        e->settings().rendering().setThreadCount(0);
         const auto page = e->settingCatalog()->page(QStringLiteral("editor.Rendering"));
         QVERIFY(page);
         const auto box = page->widget()->findChild<QComboBox *>(QStringLiteral("threads"));
@@ -1280,27 +1284,27 @@ private Q_SLOTS:
         box->setCurrentIndex(1);
         QVERIFY(page->isModified());
         QVERIFY(page->apply(&error));
-        QCOMPARE(e->settings().renderThreadCount(), 1);
+        QCOMPARE(e->settings().rendering().threadCount(), 1);
 
         box->setEditText(QStringLiteral("1000"));
         QVERIFY(page->apply(&error));
-        QCOMPARE(e->settings().renderThreadCount(), 1000);
+        QCOMPARE(e->settings().rendering().threadCount(), 1000);
 
         box->setEditText(QStringLiteral("0"));
         QVERIFY(!page->apply(&error));
         QVERIFY(!error.isEmpty());
-        QCOMPARE(e->settings().renderThreadCount(), 1000);
+        QCOMPARE(e->settings().rendering().threadCount(), 1000);
 
         // A count not in the list is shown as typed.
         const auto again = editor();
-        again->settings().setRenderThreadCount(6);
+        again->settings().rendering().setThreadCount(6);
         const auto shown = again->settingCatalog()
                                ->page(QStringLiteral("editor.Rendering"))
                                ->widget()
                                ->findChild<QComboBox *>(QStringLiteral("threads"));
         QCOMPARE(shown->currentText(), QStringLiteral("6"));
-        again->settings().setRenderThreadCount(0);
-        e->settings().setRenderThreadCount(0);
+        again->settings().rendering().setThreadCount(0);
+        e->settings().rendering().setThreadCount(0);
     }
 
     // The shortcuts of UTAU (its menu resource) where they do not clash with ours, and no key
@@ -1553,7 +1557,7 @@ private Q_SLOTS:
         QVERIFY(project.save(path, diagnostics));
 
         const auto e = editor();
-        e->settings().setUtauDirectory(utau);
+        e->settings().utau().setDirectory(utau);
         QStringList asked;
         handleNextDialog<VoiceBankCharsetDialog>([&asked](VoiceBankCharsetDialog *dialog) {
             asked.push_back(dialog->windowTitle());
@@ -1561,7 +1565,7 @@ private Q_SLOTS:
             dialog->accept();
         });
         const auto window = e->openFile(path);
-        e->settings().setUtauDirectory({});
+        e->settings().utau().setDirectory({});
         QVERIFY(window);
         QCOMPARE(asked, QStringList{QStringLiteral("Choose Encoding - bank")});
         QVERIFY(fs::is_regular_file(bank / "hello-config.json"));
@@ -1765,7 +1769,7 @@ private Q_SLOTS:
         const auto window = e->openVoiceBank(bank);
         QVERIFY(window);
         QCOMPARE(e->voiceBankWindows(), QList<VoiceBankWindow *>{window});
-        QCOMPARE(e->settings().recentVoiceBanks().value(0), bank);
+        QCOMPARE(e->settings().files().recentVoiceBanks().value(0), bank);
         QCOMPARE(window->windowTitle(), QStringLiteral("bank[*] - HelloUtau"));
         QVERIFY(!window->isWindowModified());
         QStringList menus;
@@ -2362,7 +2366,7 @@ private Q_SLOTS:
         writeFile(bank / "desc.mrq", mrq.constData(), mrq.size());
 
         const auto e = editor();
-        e->settings().setResampler(QStringLiteral("C:/synthTools/moresampler.exe"));
+        e->settings().rendering().setResampler(QStringLiteral("C:/synthTools/moresampler.exe"));
         const auto window = e->openVoiceBank(bank);
         QVERIFY(window);
         const auto tree = window->directoryTree();
@@ -2407,7 +2411,7 @@ private Q_SLOTS:
     void the_frequency_box_follows_the_registrations() {
         QTemporaryDir dir;
         const auto e = editor();
-        e->settings().setResampler(QStringLiteral("C:/synthTools/moresampler.exe"));
+        e->settings().rendering().setResampler(QStringLiteral("C:/synthTools/moresampler.exe"));
         const auto window = e->openVoiceBank(voiceBank(dir));
         QVERIFY(window);
         const auto box = window->frequencyFormatBox();
@@ -2567,7 +2571,7 @@ private Q_SLOTS:
         fs::create_directories(utau / "voice");
         const auto bank = voiceBank(dir, "utau/voice/bank");
         const auto e = editor();
-        e->settings().setUtauDirectory(utau);
+        e->settings().utau().setDirectory(utau);
         const auto window = e->newWindow();
         const auto session = window->document()->session();
         {
@@ -2625,7 +2629,7 @@ private Q_SLOTS:
                                                kit::VoiceBankSession::TextFiles, diagnostics));
         QVERIFY(window->document()->voiceBank()->find(60, QStringLiteral("zzz")));
         QVERIFY(!window->document()->voiceBank()->find(60, QStringLiteral("yyy")));
-        e->settings().setUtauDirectory({});
+        e->settings().utau().setDirectory({});
     }
 
     // The project window opens the voice bank of the project in its window.
@@ -2635,7 +2639,7 @@ private Q_SLOTS:
         fs::create_directories(utau / "voice");
         const auto bank = voiceBank(dir, "utau/voice/bank");
         const auto e = editor();
-        e->settings().setUtauDirectory(utau);
+        e->settings().utau().setDirectory(utau);
         const auto window = e->newWindow();
         {
             const auto session = window->document()->session();
@@ -2701,7 +2705,7 @@ private Q_SLOTS:
         go->trigger();
         QCOMPARE(current(VoiceBankEntryModel::FileColumn), QStringLiteral("x.wav"));
         QCOMPARE(current(VoiceBankEntryModel::AliasColumn), QStringLiteral("y"));
-        e->settings().setUtauDirectory({});
+        e->settings().utau().setDirectory({});
     }
 
     // Render Track proposes the project name as a single file name with the extension .wav, in
@@ -2715,8 +2719,8 @@ private Q_SLOTS:
         }
         const auto wavtoolText = QString::fromStdU16String(wavtool.u16string());
         const auto resamplerText = QString::fromStdU16String(resampler.u16string());
-        e->settings().setWavtool(wavtoolText);
-        e->settings().setResampler(resamplerText);
+        e->settings().rendering().setWavtool(wavtoolText);
+        e->settings().rendering().setResampler(resamplerText);
         const auto window = e->newWindow();
         const auto session = window->document()->session();
         const auto renderTrack =
@@ -2763,8 +2767,8 @@ private Q_SLOTS:
                  inMusic("take.wav"));
         QCOMPARE(QDir::fromNativeSeparators(proposalFor(QStringLiteral(". ."))),
                  inMusic("track.wav"));
-        e->settings().setWavtool({});
-        e->settings().setResampler({});
+        e->settings().rendering().setWavtool({});
+        e->settings().rendering().setResampler({});
     }
 
     // Playing in either mode and Render Track report missing project synth tools, and ask about
@@ -2787,16 +2791,16 @@ private Q_SLOTS:
             settings.setResampler(resampler);
             tx.commit();
         };
-        const auto playInMode = [&](AppSettings::PlaybackMode mode) {
-            e->settings().setPlaybackMode(mode);
+        const auto playInMode = [&](RenderingSettings::PlaybackMode mode) {
+            e->settings().rendering().setPlaybackMode(mode);
             window->applySettings();
             return dialogsDuring([&] { play->trigger(); });
         };
 
         setSynthTools(QStringLiteral("missing-wavtool.exe"),
                       QStringLiteral("missing-resampler.exe"));
-        QCOMPARE(playInMode(AppSettings::Prerender), QStringList{QStringLiteral("Message")});
-        QCOMPARE(playInMode(AppSettings::Realtime), QStringList{QStringLiteral("Message")});
+        QCOMPARE(playInMode(RenderingSettings::Prerender), QStringList{QStringLiteral("Message")});
+        QCOMPARE(playInMode(RenderingSettings::Realtime), QStringList{QStringLiteral("Message")});
         QCOMPARE(dialogsDuring([&] { renderTrack->trigger(); }),
                  QStringList{QStringLiteral("Message")});
 
@@ -2807,11 +2811,11 @@ private Q_SLOTS:
         }
         setSynthTools(QString::fromStdU16String(wavtool.u16string()),
                       QString::fromStdU16String(resampler.u16string()));
-        QCOMPARE(playInMode(AppSettings::Prerender), QStringList{QStringLiteral("Question")});
-        QCOMPARE(playInMode(AppSettings::Realtime), QStringList{QStringLiteral("Question")});
+        QCOMPARE(playInMode(RenderingSettings::Prerender), QStringList{QStringLiteral("Question")});
+        QCOMPARE(playInMode(RenderingSettings::Realtime), QStringList{QStringLiteral("Question")});
         QCOMPARE(dialogsDuring([&] { renderTrack->trigger(); }),
                  QStringList{QStringLiteral("Question")});
-        e->settings().setPlaybackMode(AppSettings::Prerender);
+        e->settings().rendering().setPlaybackMode(RenderingSettings::Prerender);
     }
 
     // Typing a tempo into the tool bar changes the project once, on Return.
@@ -3017,12 +3021,12 @@ private Q_SLOTS:
         portamento.presetLength = 200;
         auto vibrato = kit::Vibrato::utauDefault();
         vibrato.period = 300;
-        e->settings().setPitchControlPortamento(portamento);
-        e->settings().setPitchControlVibrato(vibrato);
+        e->settings().pitchControl().setPortamento(portamento);
+        e->settings().pitchControl().setVibrato(vibrato);
         // The settings file is shared by the cases.
         const auto restore = qScopeGuard([&e] {
-            e->settings().setPitchControlPortamento({});
-            e->settings().setPitchControlVibrato(kit::Vibrato::utauDefault());
+            e->settings().pitchControl().setPortamento({});
+            e->settings().pitchControl().setVibrato(kit::Vibrato::utauDefault());
         });
         const auto window = e->openFile(savedProject(m_dir, "pitch-defaults.usth"));
         QVERIFY(window);
@@ -3142,7 +3146,7 @@ private Q_SLOTS:
     // voice folder, and its undo, do not read it again. Another folder does.
     void the_voice_bank_is_read_again_only_for_another_folder() {
         const auto e = editor();
-        const auto voice = fs::path(e->settings().voiceFolder());
+        const auto voice = fs::path(e->settings().voiceBanks().folder());
         for (const auto name : {"read-once", "read-other"}) {
             fs::create_directories(voice / name);
             std::ofstream(voice / name / "oto.ini", std::ios::binary)
@@ -3204,8 +3208,8 @@ private Q_SLOTS:
     void the_utau_page_follows_the_utau_folder() {
         const auto e = editor();
         const auto restore = qScopeGuard([&e] {
-            e->settings().setUtauDirectory({});
-            e->settings().setRelativeVoiceDirInUtau(true);
+            e->settings().utau().setDirectory({});
+            e->settings().voiceBanks().setRelativeToUtau(true);
         });
         const auto page = e->settingCatalog()->page(QStringLiteral("editor.Utau"));
         QVERIFY(page && page->widget());
@@ -3237,8 +3241,8 @@ private Q_SLOTS:
         relative->setChecked(false);
         QString error;
         QVERIFY(page->apply(&error));
-        QCOMPARE(e->settings().utauDirectory(), utau);
-        QVERIFY(!e->settings().isRelativeVoiceDirInUtau());
+        QCOMPARE(e->settings().utau().directory(), utau);
+        QVERIFY(!e->settings().voiceBanks().isRelativeToUtau());
         QVERIFY(!page->isModified());
     }
 
@@ -3251,18 +3255,18 @@ private Q_SLOTS:
         for (const auto &tool : {wavtool, resampler}) {
             std::ofstream(tool, std::ios::binary) << "tool";
         }
-        e->settings().setWavtool(QString::fromStdU16String(wavtool.u16string()));
-        e->settings().setResampler(QString::fromStdU16String(resampler.u16string()));
+        e->settings().rendering().setWavtool(QString::fromStdU16String(wavtool.u16string()));
+        e->settings().rendering().setResampler(QString::fromStdU16String(resampler.u16string()));
         const auto restore = qScopeGuard([&e] {
-            e->settings().setWavtool({});
-            e->settings().setResampler({});
+            e->settings().rendering().setWavtool({});
+            e->settings().rendering().setResampler({});
         });
         kit::Project project;
         // The file dialog shows the proposal only in a folder that exists.
         fs::create_directories(pathIn(m_dir, "out"));
         project.settings.outputFile = QStringLiteral("out\\song.wav");
-        project.settings.wavtool = e->settings().wavtool();
-        project.settings.resampler = e->settings().resampler();
+        project.settings.wavtool = e->settings().rendering().wavtool();
+        project.settings.resampler = e->settings().rendering().resampler();
         project.tracks.push_back({});
         const auto path = pathIn(m_dir, "output-file.usth");
         kit::DiagnosticList diagnostics;
@@ -3317,8 +3321,8 @@ private Q_SLOTS:
     // temporary directory, which the runner then uses.
     void the_runner_writes_into_the_temporary_directory_of_the_window() {
         const auto e = editor();
-        const auto restore =
-            qScopeGuard([&e] { e->settings().setPlaybackMode(AppSettings::Prerender); });
+        const auto restore = qScopeGuard(
+            [&e] { e->settings().rendering().setPlaybackMode(RenderingSettings::Prerender); });
         const auto window = e->newWindow();
         const auto playback = window->findChild<Playback *>();
         QVERIFY(playback);
@@ -3335,7 +3339,7 @@ private Q_SLOTS:
         QCOMPARE(classic->scriptDirectory, temporary);
         QVERIFY(classic->keepScripts);
 
-        e->settings().setPlaybackMode(AppSettings::Realtime);
+        e->settings().rendering().setPlaybackMode(RenderingSettings::Realtime);
         window->applySettings();
         const auto threaded =
             std::dynamic_pointer_cast<const kit::ThreadedSynthRunner>(playback->runner());
@@ -3362,8 +3366,8 @@ private Q_SLOTS:
         QTemporaryDir dir;
         const auto e = editor();
         const auto restore = qScopeGuard([&e] {
-            e->settings().setWavtool({});
-            e->settings().setResampler({});
+            e->settings().rendering().setWavtool({});
+            e->settings().rendering().setResampler({});
         });
         const auto window = e->openFile(singingProject(dir, "kept.usth", e->settings()));
         QVERIFY(window);
@@ -3412,8 +3416,8 @@ private Q_SLOTS:
         QTemporaryDir dir;
         const auto e = editor();
         const auto restore = qScopeGuard([&e] {
-            e->settings().setWavtool({});
-            e->settings().setResampler({});
+            e->settings().rendering().setWavtool({});
+            e->settings().rendering().setResampler({});
         });
         const auto window = e->openFile(singingProject(dir, "paused.usth", e->settings()));
         QVERIFY(window);

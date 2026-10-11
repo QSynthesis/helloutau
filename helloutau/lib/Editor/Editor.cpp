@@ -121,7 +121,7 @@ namespace hello::daw {
         }
 
         void init(Editor *decl) {
-            AudioEngine::instance()->setDeviceId(settings->audioOutputDevice());
+            AudioEngine::instance()->setDeviceId(settings->audio().outputDevice());
             editor = decl;
             // An action registry for each kind of window
             for (const auto kind : Editor::windowKinds) {
@@ -316,9 +316,9 @@ namespace hello::daw {
                     from, Editor::tr("Open Recent"),
                     Editor::tr("%1 no longer exists.").arg(QDir::toNativeSeparators(textOf(path))));
                 if (bank) {
-                    settings->removeRecentVoiceBank(path);
+                    settings->files().removeRecentVoiceBank(path);
                 } else {
-                    settings->removeRecentFile(path);
+                    settings->files().removeRecentFile(path);
                 }
                 return;
             }
@@ -352,9 +352,9 @@ namespace hello::daw {
                                  [this, pathOf](const QString &id) {
                                      const auto [path, bank] = pathOf(id);
                                      if (bank) {
-                                         settings->removeRecentVoiceBank(path);
+                                         settings->files().removeRecentVoiceBank(path);
                                      } else {
-                                         settings->removeRecentFile(path);
+                                         settings->files().removeRecentFile(path);
                                      }
                                  });
             }
@@ -371,11 +371,11 @@ namespace hello::daw {
                 entries.push_back(e);
             };
             if (kind == RecentProjects) {
-                for (const auto &path : settings->recentFiles()) {
+                for (const auto &path : settings->files().recentFiles()) {
                     add(ProjectPrefix, path);
                 }
             } else {
-                for (const auto &path : settings->recentVoiceBanks()) {
+                for (const auto &path : settings->files().recentVoiceBanks()) {
                     add(VoiceBankPrefix, path);
                 }
             }
@@ -686,7 +686,7 @@ namespace hello::daw {
                 project->refreshTitle();
             }
         }
-        impl.settings->addRecentFile(path);
+        impl.settings->files().addRecentFile(path);
         // Shown after the window, so that the user sees which project they concern, and before
         // the voice bank is read, which may ask more.
         if (!diagnostics.isEmpty()) {
@@ -727,7 +727,7 @@ namespace hello::daw {
             DiagnosticBox::report(from, title, diagnostics);
             return nullptr;
         }
-        impl.settings->addRecentVoiceBank(root);
+        impl.settings->files().addRecentVoiceBank(root);
 
         QWidget *previous = nullptr;
         for (auto it = impl.voiceBankWindows.crbegin(); it != impl.voiceBankWindows.crend(); ++it) {
@@ -766,8 +766,8 @@ namespace hello::daw {
     void Editor::fillRecentMenu(QMenu *menu, QWidget *from) {
         stdc_impl_t;
         menu->clear();
-        const auto files = impl.settings->recentFiles();
-        const auto banks = impl.settings->recentVoiceBanks();
+        const auto files = impl.settings->files().recentFiles();
+        const auto banks = impl.settings->files().recentVoiceBanks();
         if (files.isEmpty() && banks.isEmpty()) {
             menu->addAction(tr("No Recent Files"))->setEnabled(false);
             return;
@@ -821,8 +821,8 @@ namespace hello::daw {
         if (box.clickedButton() != clear) {
             return false;
         }
-        impl.settings->clearRecentFiles();
-        impl.settings->clearRecentVoiceBanks();
+        impl.settings->files().clearRecentFiles();
+        impl.settings->files().clearRecentVoiceBanks();
         return true;
     }
 
@@ -833,15 +833,15 @@ namespace hello::daw {
 
     void Editor::showSettings(QWidget *from, const QString &page) {
         stdc_impl_t;
-        auto locations = settings().voiceLocations();
+        auto locations = settings().voiceBanks().locations();
         SettingsDialog dialog(impl.catalog, from);
         if (!page.isEmpty()) {
             dialog.selectPage(page);
         }
         connect(&dialog, &SettingsDialog::applied, this, [this, &locations] {
             // A voice bank named by %VOICE% or by a relative path may now be elsewhere.
-            const bool moved = settings().voiceLocations() != locations;
-            locations = settings().voiceLocations();
+            const bool moved = settings().voiceBanks().locations() != locations;
+            locations = settings().voiceBanks().locations();
             for (const auto window : windows()) {
                 if (moved) {
                     window->loadVoiceBank();
@@ -878,7 +878,7 @@ namespace hello::daw {
 
     void Editor::checkForUpdates(QWidget *from) {
         stdc_impl_t;
-        impl.updateChecker->checkNow(from, settings().updateSource());
+        impl.updateChecker->checkNow(from, settings().updates().source());
     }
 
     void Editor::checkForUpdatesAtStartup() {

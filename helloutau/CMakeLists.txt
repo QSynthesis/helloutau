@@ -46,7 +46,7 @@ add_subdirectory(plugins)
 # its own (docs/Plugins.md). The update_translations target extracts the texts into the .ts
 # files, from the sources that AEC generates as well, so those are built first.
 #
-# The languages besides English, the same as AppSettings::languages().
+# The languages besides English, the same as AppearanceSettings::languages().
 set(HELLOUTAU_LANGUAGES zh_CN)
 list(TRANSFORM HELLOUTAU_LANGUAGES
     REPLACE "^(.+)$" "lib/Editor/Resources/translations/helloutau_\\1.ts"

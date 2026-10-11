@@ -21,7 +21,7 @@ namespace hello::daw {
         auto form = new QFormLayout(widget);
         m_ustExportCharset = new QComboBox();
         m_ustExportCharset->addItems(ExportUstDialog::charsets());
-        const int index = m_ustExportCharset->findText(m_settings.ustExportCharset());
+        const int index = m_ustExportCharset->findText(m_settings.files().ustExportCharset());
         m_ustExportCharset->setCurrentIndex(index >= 0 ? index : 0);
         form->addRow(tr("Default UST &export encoding:"), m_ustExportCharset);
         connect(m_ustExportCharset, &QComboBox::currentTextChanged, this,
@@ -31,12 +31,12 @@ namespace hello::daw {
 
     bool EditorSettingPage::isModified() const {
         return m_ustExportCharset &&
-               m_ustExportCharset->currentText() != m_settings.ustExportCharset();
+               m_ustExportCharset->currentText() != m_settings.files().ustExportCharset();
     }
 
     bool EditorSettingPage::apply(QString *error) {
         Q_UNUSED(error);
-        m_settings.setUstExportCharset(m_ustExportCharset->currentText());
+        m_settings.files().setUstExportCharset(m_ustExportCharset->currentText());
         Q_EMIT modifiedChanged();
         return true;
     }

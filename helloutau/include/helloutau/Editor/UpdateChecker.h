@@ -105,10 +105,10 @@ namespace hello::daw {
         bool isRunning() const;
 
         /// Checks the releases from the source of the settings, unless the update mode of the
-        /// settings is AppSettings::ManualUpdate or the last check is less than a day old. In
-        /// the mode AppSettings::NotifiedUpdate, a newer release that the user has not skipped
+        /// settings is UpdateSettings::Manual or the last check is less than a day old. In
+        /// the mode UpdateSettings::Notified, a newer release that the user has not skipped
         /// is offered over \a parent, or over the active window if \a parent no longer exists.
-        /// In the mode AppSettings::AutomaticUpdate, a newer release is downloaded without a
+        /// In the mode UpdateSettings::Automatic, a newer release is downloaded without a
         /// question. A failure is only logged.
         void checkAtStartup(QWidget *parent);
 

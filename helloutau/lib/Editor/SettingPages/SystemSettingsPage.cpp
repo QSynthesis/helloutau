@@ -31,10 +31,11 @@ namespace hello::daw {
         auto interfaceForm = new QFormLayout(interfaceGroup);
         m_language = new QComboBox(widget);
         m_language->setObjectName(QStringLiteral("language"));
-        for (const auto &[language, name] : AppSettings::languages()) {
+        for (const auto &[language, name] : AppearanceSettings::languages()) {
             m_language->addItem(name, language);
         }
-        m_language->setCurrentIndex(std::max(0, m_language->findData(m_settings.language())));
+        m_language->setCurrentIndex(
+            std::max(0, m_language->findData(m_settings.appearance().language())));
         interfaceForm->addRow(tr("&Language:"), m_language);
         interfaceForm->addRow(note(tr("Takes effect after a restart.")));
         connect(m_language, &QComboBox::currentIndexChanged, this, &SettingPage::modifiedChanged);
@@ -47,14 +48,14 @@ namespace hello::daw {
         if (!m_language) {
             return false;
         }
-        return m_language->currentData().toString() != m_settings.language();
+        return m_language->currentData().toString() != m_settings.appearance().language();
     }
 
     bool SystemSettingsPage::apply(QString *error) {
         Q_UNUSED(error);
         const auto language = m_language->currentData().toString();
-        if (language != m_settings.language()) {
-            m_settings.setLanguage(language);
+        if (language != m_settings.appearance().language()) {
+            m_settings.appearance().setLanguage(language);
             kit::RestartScheduler::requireRestart();
         }
         Q_EMIT modifiedChanged();

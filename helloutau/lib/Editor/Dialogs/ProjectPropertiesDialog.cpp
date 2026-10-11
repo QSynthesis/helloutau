@@ -111,7 +111,7 @@ namespace hello::daw {
         m_voiceDir->setEditable(true);
         m_voiceDir->setInsertPolicy(QComboBox::NoInsert);
         m_voiceDirInvalid = addInvalidMark(m_voiceDir->lineEdit(), warningIcon);
-        const auto locations = m_settings.voiceLocations();
+        const auto locations = m_settings.voiceBanks().locations();
         for (const auto &root : locations.voiceFolders) {
             const auto folders =
                 QDir(textOf(root)).entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
@@ -147,7 +147,7 @@ namespace hello::daw {
         const auto synthToolBrowser = [this](QLineEdit *edit, const QString &title) {
             return [this, edit, title] {
                 const auto start =
-                    SynthToolTrust::resolved(edit->text(), m_settings.utauDirectory());
+                    SynthToolTrust::resolved(edit->text(), m_settings.utau().directory());
                 const auto chosen = QFileDialog::getOpenFileName(this, title, textOf(start));
                 if (!chosen.isEmpty()) {
                     edit->setText(QDir::toNativeSeparators(chosen));
@@ -158,8 +158,8 @@ namespace hello::daw {
         auto reset = new QPushButton(tr("Reset to settings defaults"));
         reset->setObjectName(QStringLiteral("resetProjectSynthTools"));
         connect(reset, &QPushButton::clicked, this, [this] {
-            m_wavtool->setText(QDir::toNativeSeparators(m_settings.wavtool()));
-            m_resampler->setText(QDir::toNativeSeparators(m_settings.resampler()));
+            m_wavtool->setText(QDir::toNativeSeparators(m_settings.rendering().wavtool()));
+            m_resampler->setText(QDir::toNativeSeparators(m_settings.rendering().resampler()));
         });
         auto trust = new QPushButton(tr("Trust project synth tools"));
         connect(trust, &QPushButton::clicked, this, &ProjectPropertiesDialog::trustSynthTools);
@@ -248,7 +248,7 @@ namespace hello::daw {
     fs::path ProjectPropertiesDialog::voiceDirectory() const {
         kit::Track track;
         track.voiceDir = m_voiceDir->lineEdit()->text();
-        return track.voiceDirectory(m_settings.voiceLocations());
+        return track.voiceDirectory(m_settings.voiceBanks().locations());
     }
 
     void ProjectPropertiesDialog::updateVoiceDirResolved() {
@@ -261,7 +261,7 @@ namespace hello::daw {
     void ProjectPropertiesDialog::browseVoiceDir() {
         // The file dialog starts in the current voice bank, or else in the first voice folder
         // that exists, or else in the folder of this program.
-        const auto locations = m_settings.voiceLocations();
+        const auto locations = m_settings.voiceBanks().locations();
         std::error_code error;
         auto start = voiceDirectory();
         if (start.empty() || !fs::is_directory(start, error)) {
@@ -284,7 +284,7 @@ namespace hello::daw {
     }
 
     bool ProjectPropertiesDialog::checkPaths() {
-        const auto utau = m_settings.utauDirectory();
+        const auto utau = m_settings.utau().directory();
         const bool wavtool = SynthToolTrust::exists(m_wavtool->text(), utau);
         const bool resampler = SynthToolTrust::exists(m_resampler->text(), utau);
         bool voice = true;
@@ -308,7 +308,7 @@ namespace hello::daw {
             QString trusted;
             QString untrusted;
         };
-        const auto utau = m_settings.utauDirectory();
+        const auto utau = m_settings.utau().directory();
         bool untrusted = false;
         const auto describe = [&](QLabel *label, const QString &value, const QString &own,
                                   const QString &other, const Texts &texts) {
@@ -323,15 +323,17 @@ namespace hello::daw {
                 untrusted = true;
             }
         };
-        describe(m_wavtoolTrust, m_wavtool->text(), m_settings.wavtool(), m_settings.resampler(),
+        describe(m_wavtoolTrust, m_wavtool->text(), m_settings.rendering().wavtool(),
+                 m_settings.rendering().resampler(),
                  {tr("The project uses the wavtool from the settings."),
                   tr("The project uses the resampler from the settings as its wavtool."),
                   tr("The project wavtool is trusted."), tr("The project wavtool is untrusted.")});
-        describe(
-            m_resamplerTrust, m_resampler->text(), m_settings.resampler(), m_settings.wavtool(),
-            {tr("The project uses the resampler from the settings."),
-             tr("The project uses the wavtool from the settings as its resampler."),
-             tr("The project resampler is trusted."), tr("The project resampler is untrusted.")});
+        describe(m_resamplerTrust, m_resampler->text(), m_settings.rendering().resampler(),
+                 m_settings.rendering().wavtool(),
+                 {tr("The project uses the resampler from the settings."),
+                  tr("The project uses the wavtool from the settings as its resampler."),
+                  tr("The project resampler is trusted."),
+                  tr("The project resampler is untrusted.")});
         m_untrustedText->setText(
             colored(tr("Warning: project synth tools are untrusted. Playback does not render until "
                        "the required project synth tools are trusted."),
@@ -359,7 +361,7 @@ namespace hello::daw {
 
     void ProjectPropertiesDialog::trustSynthTools() {
         // A synth tool that does not exist is marked invalid and is not asked about.
-        const auto utau = m_settings.utauDirectory();
+        const auto utau = m_settings.utau().directory();
         QStringList values;
         for (const auto edit : {m_wavtool, m_resampler}) {
             if (SynthToolTrust::exists(edit->text(), utau)) {
@@ -383,7 +385,7 @@ namespace hello::daw {
 
     kit::ProjectPropertyChanges ProjectPropertiesDialog::changes() const {
         const auto &values = m_project.settings;
-        const auto utau = m_settings.utauDirectory();
+        const auto utau = m_settings.utau().directory();
         const auto text = [](const QLineEdit *edit, const QString &was) {
             return edit->text() != was ? std::optional(edit->text()) : std::nullopt;
         };
@@ -416,8 +418,8 @@ namespace hello::daw {
             return saved != was ? std::optional(saved) : std::nullopt;
         };
         if (hasTrack) {
-            changes.voiceDir =
-                normalized(normalizedVoiceDir(voice, m_settings.voiceLocations()), voiceBefore);
+            changes.voiceDir = normalized(
+                normalizedVoiceDir(voice, m_settings.voiceBanks().locations()), voiceBefore);
         }
         changes.wavtool = normalized(normalizedSynthTool(m_wavtool->text(), utau), values.wavtool);
         changes.resampler =

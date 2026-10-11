@@ -29,14 +29,14 @@ namespace hello::daw {
         auto utauForm = new QFormLayout(utauGroup);
         m_utauDirectory =
             addPathRow(utauForm, widget, tr("&UTAU folder:"),
-                       QString::fromStdU16String(m_settings.utauDirectory().u16string()), true);
+                       QString::fromStdU16String(m_settings.utau().directory().u16string()), true);
         utauForm->addRow(
             note(tr("The folder that contains utau.exe. A synth tool that a project "
                     "names by a relative path is resolved against it, and its voice and "
                     "plugins folders are used as well.")));
         m_relativeVoiceDirInUtau = new QCheckBox(
             tr("Resolve a &relative voice bank path against the UTAU folder"), widget);
-        m_relativeVoiceDirInUtau->setChecked(m_settings.isRelativeVoiceDirInUtau());
+        m_relativeVoiceDirInUtau->setChecked(m_settings.voiceBanks().isRelativeToUtau());
         utauForm->addRow(m_relativeVoiceDirInUtau);
         utauForm->addRow(note(tr("UTAU resolves a relative voice bank path against its own folder. "
                                  "If this option is cleared, or if the UTAU folder does not exist, "
@@ -57,15 +57,15 @@ namespace hello::daw {
             return false;
         }
         return pathText(m_utauDirectory) != QDir::fromNativeSeparators(QString::fromStdU16String(
-                                                m_settings.utauDirectory().u16string())) ||
-               m_relativeVoiceDirInUtau->isChecked() != m_settings.isRelativeVoiceDirInUtau();
+                                                m_settings.utau().directory().u16string())) ||
+               m_relativeVoiceDirInUtau->isChecked() != m_settings.voiceBanks().isRelativeToUtau();
     }
 
     void UtauSettingPage::showVoiceFolders() {
-        // As voiceLocations() lists them for the UTAU folder being edited
+        // As VoiceBankSettings::locations() lists them for the UTAU folder being edited
         QStringList lines{tr("The voice folders that %VOICE% denotes, in decreasing priority:")};
         lines.push_back(QDir::toNativeSeparators(
-            QString::fromStdU16String(m_settings.voiceFolder().u16string())));
+            QString::fromStdU16String(m_settings.voiceBanks().folder().u16string())));
         const auto utau = pathText(m_utauDirectory);
         if (!utau.isEmpty()) {
             lines.push_back(QDir::toNativeSeparators(utau + QStringLiteral("/voice")));
@@ -75,9 +75,9 @@ namespace hello::daw {
 
     bool UtauSettingPage::apply(QString *error) {
         Q_UNUSED(error);
-        m_settings.setUtauDirectory(
+        m_settings.utau().setDirectory(
             std::filesystem::path(pathText(m_utauDirectory).toStdU16String()));
-        m_settings.setRelativeVoiceDirInUtau(m_relativeVoiceDirInUtau->isChecked());
+        m_settings.voiceBanks().setRelativeToUtau(m_relativeVoiceDirInUtau->isChecked());
         Q_EMIT modifiedChanged();
         return true;
     }

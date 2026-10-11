@@ -602,7 +602,7 @@
     </message>
 </context>
 <context>
-    <name>hello::daw::AppSettings</name>
+    <name>hello::daw::AppearanceSettings</name>
     <message>
         <source>System Default</source>
         <translation>跟随系统</translation>

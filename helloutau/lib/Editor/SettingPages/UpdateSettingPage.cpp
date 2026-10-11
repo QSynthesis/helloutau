@@ -34,10 +34,10 @@ namespace hello::daw {
         auto group = new QGroupBox(tr("Updates"), widget);
         auto form = new QFormLayout(group);
         m_mode = new QComboBox(widget);
-        m_mode->addItem(tr("Manual"), AppSettings::ManualUpdate);
-        m_mode->addItem(tr("Check and notify"), AppSettings::NotifiedUpdate);
-        m_mode->addItem(tr("Automatic"), AppSettings::AutomaticUpdate);
-        m_mode->setCurrentIndex(std::max(0, m_mode->findData(m_settings.updateMode())));
+        m_mode->addItem(tr("Manual"), UpdateSettings::Manual);
+        m_mode->addItem(tr("Check and notify"), UpdateSettings::Notified);
+        m_mode->addItem(tr("Automatic"), UpdateSettings::Automatic);
+        m_mode->setCurrentIndex(std::max(0, m_mode->findData(m_settings.updates().mode())));
         form->addRow(tr("Update &mode:"), m_mode);
         form->addRow(note(tr("Manual: updates are checked only from Help > Check for Updates.\n"
                              "Check and notify: updates are checked at startup, at most once a "
@@ -79,14 +79,14 @@ namespace hello::daw {
         if (!m_mode) {
             return false;
         }
-        return m_mode->currentData().toInt() != m_settings.updateMode() ||
+        return m_mode->currentData().toInt() != m_settings.updates().mode() ||
                m_source->currentData().toString() != storedSource();
     }
 
     bool UpdateSettingPage::apply(QString *error) {
         Q_UNUSED(error);
-        m_settings.setUpdateMode(AppSettings::UpdateMode(m_mode->currentData().toInt()));
-        m_settings.setUpdateSource(m_source->currentData().toString());
+        m_settings.updates().setMode(UpdateSettings::Mode(m_mode->currentData().toInt()));
+        m_settings.updates().setSource(m_source->currentData().toString());
         Q_EMIT modifiedChanged();
         return true;
     }
@@ -100,13 +100,13 @@ namespace hello::daw {
     }
 
     QString UpdateSettingPage::storedSource() const {
-        const auto source = m_settings.updateSource();
+        const auto source = m_settings.updates().source();
         const auto &configuration = m_checker.configuration();
         return configuration && configuration->hasSource(source) ? source : QString();
     }
 
     void UpdateSettingPage::showLastCheck() {
-        const auto last = m_settings.lastUpdateCheck();
+        const auto last = m_settings.updates().lastCheck();
         m_lastCheck->setText(
             tr("Current version: %1. Last checked: %2.")
                 .arg(QCoreApplication::applicationVersion(),
