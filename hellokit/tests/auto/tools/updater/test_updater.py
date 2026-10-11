@@ -16,8 +16,8 @@ import time
 UPDATER = os.path.abspath(sys.argv[1])
 WINDOWS = sys.platform == "win32"
 
-# The longest time a run may take. The rename of a directory in use fails for 10 seconds before
-# the program gives up.
+# The longest time a run may take. The rename of a directory in use is retried for 10 seconds
+# before the run fails.
 RUN_LIMIT = 60
 
 # A Python without a console window on Windows, so that a started program shows no window

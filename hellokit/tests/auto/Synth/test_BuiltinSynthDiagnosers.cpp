@@ -91,7 +91,8 @@ private Q_SLOTS:
 #ifndef Q_OS_WINDOWS
         QSKIP("The code page is that of Windows.");
 #endif
-        // A character that the code page of this system cannot represent, whichever it is
+        // A character that the code page of this system cannot represent, the first of
+        // several candidates
         const TextCodec codec(TextCodec::systemName());
         QString character;
         for (const auto candidate : {u'\u0e01', u'\u05d0', u'\u0915', u'\u4f60', u'\u3042'}) {
@@ -124,8 +125,8 @@ private Q_SLOTS:
         QVERIFY(diagnoses.at(0).cause.contains(QStringLiteral("260")));
     }
 
-    // Realtime playback records a wave file that it cannot read, which is not the case of a
-    // file that is not a wave file.
+    // A wave file that realtime playback cannot read is distinguished from a file that is not
+    // a wave file.
     void a_wave_file_that_cannot_be_read_is_told_apart() {
         auto notWave = failureOf(SynthFailure::Fragment, runOf(true));
         notWave.fileHead = "This is a dummy file";

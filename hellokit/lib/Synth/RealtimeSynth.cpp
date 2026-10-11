@@ -166,8 +166,8 @@ namespace hello::kit {
                 }
                 auto samples = readFragment(fragmentFile(step));
 
-                // WavtoolMixer reads the fragment whatever the wavtool is, so that a fragment that
-                // it cannot read is recorded even if the wavtool is the resampler.
+                // WavtoolMixer reads the fragment regardless of the wavtool, so that a fragment
+                // that it cannot read is recorded even if the wavtool is the resampler.
                 SynthFailure failure;
                 if (!samples && step.resamples()) {
                     failure.noteIndex = step.noteIndex;

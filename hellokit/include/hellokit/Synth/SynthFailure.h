@@ -14,9 +14,9 @@
 namespace hello::kit {
 
     /// The record of a synth tool call whose failure was observed, kept for the diagnosis. A
-    /// render records only failures that it observes, and never judges the format of a
-    /// fragment by itself, because a resampler may write an intermediate format that its own
-    /// wavtool joins. See docs/SynthDiagnostics.md.
+    /// render records only the failures that it observes. The format of a fragment is never
+    /// examined, because a resampler may write an intermediate format that its own wavtool
+    /// joins. See docs/SynthDiagnostics.md.
     struct HELLOKIT_SYNTH_EXPORT SynthFailure {
         enum Stage {
             /// The resampler wrote no fragment.

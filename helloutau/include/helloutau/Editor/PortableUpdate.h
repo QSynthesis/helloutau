@@ -102,7 +102,7 @@ namespace hello::daw {
         QString m_installDirectory;
         std::unique_ptr<kit::ZipExtractor> m_extractor;
         std::unique_ptr<QThread> m_thread;
-        // Counts the extractions, so that the queued end of a stopped one is ignored
+        // Counts the extractions, so that the queued end of a stopped extraction is ignored
         int m_generation = 0;
         std::atomic<bool> m_canceled = false;
         // Written on the thread of the extraction, and read after it ends

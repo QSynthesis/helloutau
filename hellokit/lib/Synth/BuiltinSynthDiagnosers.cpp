@@ -93,8 +93,8 @@ namespace hello::kit {
                     { Text::tr("A path contains characters that the code page of the system "
                                "cannot represent."),
                      Text::tr("A synth tool that reads its arguments in the code page of the "
-                               "system receives question marks for these characters and cannot "
-                               "find the file. The path is %1.")
+                               "system receives question marks in place of these characters and "
+                               "therefore cannot open the file. The path is %1.")
                           .arg(example),
                      {Text::tr("Move the voice bank, the project or the cache folder to a path "
                                 "without these characters."),
@@ -178,7 +178,7 @@ namespace hello::kit {
                                 .arg(program),
                             Text::tr("Windows ended the synth tool with the status 0xC0000135, "
                                      "STATUS_DLL_NOT_FOUND."),
-                            {Text::tr("Place the DLLs that came with the synth tool in its "
+                            {Text::tr("Place the DLLs supplied with the synth tool in its "
                                       "folder."),
                                Text::tr("Install the runtime that the synth tool requires, such as "
                                       "the Microsoft Visual C++ Redistributable.")},
@@ -204,7 +204,7 @@ namespace hello::kit {
                                      "this input, or it is defective."),
                             {Text::tr("Check the samples of these notes in the voice bank "
                                       "editor."),
-                               Text::tr("Try another release of the synth tool.")},
+                               Text::tr("Use another release of the synth tool.")},
                             failures,
                         });
                     }
@@ -238,8 +238,8 @@ namespace hello::kit {
                     result.push_back({
                         Text::tr("The synth tool %1 did not finish within the time limit.")
                             .arg(displayed(program)),
-                        Text::tr("The synth tool was stopped. It may wait for input, show a "
-                                 "window, or take long for a long note."),
+                        Text::tr("The synth tool was stopped. It may be waiting for input or "
+                                 "showing a window, or require a long time for a long note."),
                         {Text::tr("Run the synth tool once from a console, and check whether it "
                                   "waits for input or shows a message.")},
                         failures,
@@ -344,6 +344,11 @@ namespace hello::kit {
                     const auto &first = context.failures.at(failures.first());
                     const auto program = displayed(key.second);
                     const auto output = first.run ? first.run->output.trimmed() : QString();
+                    // The remedies of a resampler that wrote no fragment
+                    const QStringList resamplerRemedies{
+                        Text::tr("Check the samples of these notes in the voice bank editor."),
+                        Text::tr("Use another resampler."),
+                    };
                     switch (key.first) {
                         case NotWave:
                             result.push_back({
@@ -377,8 +382,7 @@ namespace hello::kit {
                             break;
                         case WavtoolNote: {
                             auto explanation =
-                                !first.run
-                                    ? Text::tr("The wavtool appended nothing to the track.")
+                                !first.run ? Text::tr("The wavtool appended nothing to the track.")
                                 : output.isEmpty()
                                     ? Text::tr("The wavtool reported the exit code %1 and "
                                                "appended nothing to the track.")
@@ -398,7 +402,7 @@ namespace hello::kit {
                                 Text::tr("The wavtool %1 failed for these notes.").arg(program),
                                 explanation,
                                 {Text::tr("Check that the resampler writes wave files that this "
-                                          "wavtool reads, or use the wavtool that comes with the "
+                                          "wavtool reads, or use the wavtool supplied with the "
                                           "resampler.")},
                                 failures,
                             });
@@ -423,9 +427,7 @@ namespace hello::kit {
                                 output.isEmpty()
                                     ? Text::tr("The resampler produced no output.")
                                     : Text::tr("The output of the resampler is: %1").arg(output),
-                                {Text::tr("Check the samples of these notes in the voice bank "
-                                          "editor."),
-                                                                                             Text::tr("Try another resampler.")},
+                                resamplerRemedies,
                                 failures,
                             });
                             break;
@@ -435,9 +437,7 @@ namespace hello::kit {
                                 output.isEmpty()
                                     ? Text::tr("The resampler produced no output.")
                                     : Text::tr("The output of the resampler is: %1").arg(output),
-                                {Text::tr("Check the samples of these notes in the voice bank "
-                                          "editor."),
-                                                                                             Text::tr("Try another resampler.")},
+                                resamplerRemedies,
                                 failures,
                             });
                             break;

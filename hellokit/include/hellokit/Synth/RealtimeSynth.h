@@ -100,8 +100,8 @@ namespace hello::kit {
         DiagnosticList takeDiagnostics();
 
         /// Returns the records of the notes that failed since the last call, for the diagnosis,
-        /// and forgets them. A fragment that WavtoolMixer cannot read is recorded whatever the
-        /// wavtool is. See docs/SynthDiagnostics.md.
+        /// and forgets them. A fragment that WavtoolMixer cannot read is recorded regardless of
+        /// the wavtool. See docs/SynthDiagnostics.md.
         QList<SynthFailure> takeFailures();
 
     private:

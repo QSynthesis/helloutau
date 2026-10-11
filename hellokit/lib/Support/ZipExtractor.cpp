@@ -144,7 +144,7 @@ namespace hello::kit {
             zip_error_t error;
             zip_error_init(&error);
 #ifdef Q_OS_WIN
-            // zip_open() takes a narrow path, which cannot hold every path on Windows.
+            // zip_open() accepts only a narrow path, which cannot represent every path on Windows.
             const auto source = zip_source_win32w_create(path.c_str(), 0, -1, &error);
 #else
             const auto source = zip_source_file_create(path.c_str(), 0, -1, &error);
