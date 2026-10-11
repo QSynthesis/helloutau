@@ -414,6 +414,47 @@ private Q_SLOTS:
         QCOMPARE(indexOf("left"), -1);
     }
 
+    // Several directories read again in their encodings form one undo step.
+    void several_directories_are_read_again_as_one_step() {
+        write(QStringLiteral("sub/oto.ini"), "x.wav=" + kGbkGePing + ",1,2,3,4,5\r\n");
+        QCOMPARE(reload().changed, QList<fs::path>{fs::path("sub")});
+        const auto step = m_session->currentStep();
+        const auto alias = [this](const fs::path &directory) {
+            return directories().at(indexOf(directory)).otoEntries().at(0).alias();
+        };
+        const auto before = alias("sub");
+
+        DiagnosticList diagnostics;
+        QVERIFY(m_session->reread(
+            {
+                {fs::path(),      QStringLiteral("Shift_JIS")},
+                {fs::path("sub"), QStringLiteral("GBK")      },
+        },
+            diagnostics));
+        QCOMPARE(m_session->currentStep(), step + 1);
+        QCOMPARE(m_session->undoMessage(), QStringLiteral("Read Again in Encodings"));
+        QCOMPARE(directories().at(0).charset(), QStringLiteral("Shift_JIS"));
+        QCOMPARE(alias("sub"), QString::fromUtf8("\xe8\x91\x9b\xe5\xb9\xb3"));
+
+        m_session->undo();
+        QCOMPARE(directories().at(0).charset(), QStringLiteral("GBK"));
+        QCOMPARE(alias("sub"), before);
+    }
+
+    // A directory that cannot be read again is reported, and the others are read regardless.
+    void a_directory_not_read_again_leaves_the_others_read() {
+        DiagnosticList diagnostics;
+        QVERIFY(!m_session->reread(
+            {
+                {fs::path("none"), QStringLiteral("GBK")},
+                {fs::path("sub"),  QStringLiteral("GBK")},
+        },
+            diagnostics));
+        QVERIFY(hasError(diagnostics));
+        QCOMPARE(directories().at(indexOf("sub")).charset(), QStringLiteral("GBK"));
+        QCOMPARE(m_session->currentStep(), 1);
+    }
+
     // A directory read again in an encoding in which some bytes are invalid stays in the tree,
     // with U+FFFD in their place. Undoing it restores the text read before.
     void a_directory_read_in_a_wrong_encoding_stays_in_the_tree() {

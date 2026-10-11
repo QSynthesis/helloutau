@@ -174,6 +174,7 @@ namespace hello::daw {
                     .arg(textOf(m_root)));
         }
 
+        m_current.clear();
         const QSignalBlocker blocker(m_folders);
         m_folders->clear();
         for (int i = 0; i < directories.size(); ++i) {
@@ -185,6 +186,49 @@ namespace hello::daw {
         m_folders->selectAll();
         updateFolders();
         showCurrent();
+    }
+
+    void VoiceBankCharsetDialog::setCurrentCharsets(const QStringList &charsets) {
+        m_current = charsets;
+        for (int i = 0; i < m_choices.size() && i < charsets.size(); ++i) {
+            m_choices[i] = charsets[i];
+        }
+        // An encoding outside the candidates is selectable for the folder read in it.
+        for (const auto &charset : charsets) {
+            if (!charset.isEmpty() && m_charsets->findItems(charset, Qt::MatchExactly).isEmpty()) {
+                m_charsets->insertItem(0, charset);
+            }
+        }
+
+        const auto bank = QString::fromStdU16String(m_root.filename().u16string());
+        setWindowTitle(tr("Read Folders Again in Encodings - %1").arg(bank));
+        m_message->setText(
+            tr("Choose the encoding of each folder of the voice bank \"%1\". A folder whose "
+               "encoding is changed is read again from disk in the new encoding: its text "
+               "changes, and its unsaved changes are discarded. Undo restores the folders. The "
+               "encodings are recorded in the folders when the voice bank is saved.")
+                .arg(textOf(m_root)));
+        m_skip->setText(tr("Cancel"));
+        m_skip->setToolTip({});
+
+        const QSignalBlocker blocker(m_folders);
+        for (int i = 0; i < m_folders->count(); ++i) {
+            const auto item = m_folders->item(i);
+            item->setFlags(item->flags() & ~Qt::ItemIsUserCheckable);
+            item->setData(Qt::CheckStateRole, {});
+        }
+        updateFolders();
+        showCurrent();
+    }
+
+    QList<int> VoiceBankCharsetDialog::changedFolders() const {
+        QList<int> changed;
+        for (int i = 0; i < m_choices.size() && i < m_current.size(); ++i) {
+            if (m_choices[i] != m_current[i]) {
+                changed.push_back(i);
+            }
+        }
+        return changed;
     }
 
     QString VoiceBankCharsetDialog::selectedCharset() const {
@@ -272,6 +316,9 @@ namespace hello::daw {
             const auto name = path.empty() ? tr("%1 (the voice bank)").arg(bank) : textOf(path);
             const auto invalid = invalidIn(textsOf(*m_directories[i]), m_choices[i]);
             auto text = QStringLiteral("%1  -  %2").arg(name, m_choices[i]);
+            if (i < m_current.size() && m_choices[i] != m_current[i]) {
+                text += QLatin1String("  ") + tr("(currently %1)").arg(m_current[i]);
+            }
             if (invalid > 0) {
                 text += QLatin1String("  ") + tr("(%n invalid)", nullptr, int(invalid));
             }

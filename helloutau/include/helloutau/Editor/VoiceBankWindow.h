@@ -143,6 +143,16 @@ namespace hello::daw {
         /// and the text changes. A folder that was not read, for want of an encoding, is read.
         bool rereadCharset(const std::filesystem::path &directory, const QString &charset);
 
+        /// Opens VoiceBankCharsetDialog for the folders in the tree and reads each folder whose
+        /// encoding the user changes again in the new encoding, as one undo step. Folders without
+        /// text files and folders whose \c oto.ini declares UTF-8 are not listed, and a message
+        /// box replaces the dialog if no folder remains. Returns false if no folder remains, the
+        /// dialog is cancelled, no encoding is changed or a folder is not read.
+        bool rereadCharsets();
+
+        /// \overload for the folders and encodings of \a charsets , without the dialog.
+        bool rereadCharsets(const QList<std::pair<std::filesystem::path, QString>> &charsets);
+
         /// Lists the audio files of the folders that carry metadata, see kit::WaveMetadata, and
         /// asks whether to write them again without it. The files are written at once, which
         /// no undo reverts.

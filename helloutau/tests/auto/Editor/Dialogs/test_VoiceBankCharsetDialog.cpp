@@ -96,6 +96,30 @@ private Q_SLOTS:
         QVERIFY(dialog.previewText(0).contains(QChar(0xfffd)));
     }
 
+    // For reading the folders again, the initial encoding of each folder is the encoding it was
+    // read in, and the folders whose encoding is changed are reported separately.
+    void reading_again_starts_with_the_current_encodings() {
+        const auto jp = shiftJisFolder();
+        const auto cn = gbkFolder();
+        VoiceBankCharsetDialog dialog;
+        dialog.setRoot("bank");
+        dialog.setDirectories({&jp, &cn});
+        dialog.setCurrentCharsets({QStringLiteral("EUC-KR"), QStringLiteral("GBK")});
+        QCOMPARE(dialog.windowTitle(), QStringLiteral("Read Folders Again in Encodings - bank"));
+        QCOMPARE(dialog.charsetOf(0), QStringLiteral("EUC-KR"));
+        QCOMPARE(dialog.charsetOf(1), QStringLiteral("GBK"));
+        QVERIFY(dialog.changedFolders().isEmpty());
+        // An encoding outside the candidates is listed for the folder read in it.
+        QVERIFY(dialog.isGrey(QStringLiteral("EUC-KR")));
+
+        dialog.selectFolders({0});
+        dialog.setCurrentFolder(0);
+        dialog.setSelectedCharset(QStringLiteral("Shift_JIS"));
+        QCOMPARE(dialog.changedFolders(), QList<int>{0});
+        QCOMPARE(dialog.folderText(0), QStringLiteral("jp  -  Shift_JIS  (currently EUC-KR)"));
+        QCOMPARE(dialog.folderText(1), QStringLiteral("cn  -  GBK"));
+    }
+
     void the_answer_is_the_selected_encoding_or_none() {
         const auto source = shiftJisFolder();
         VoiceBankCharsetDialog dialog;

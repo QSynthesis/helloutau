@@ -29,6 +29,8 @@ namespace hello::daw {
     /// are grey. A folder left unchecked, or all of them when the dialog is declined, is left
     /// out, and its samples are then found by file name only. See the section on choosing the
     /// encoding in docs/Editing.md.
+    ///
+    /// \sa setCurrentCharsets() for reading the folders of an open voice bank again.
     class HELLOUTAU_EDITOR_EXPORT VoiceBankCharsetDialog : public QDialog,
                                                            public kit::VoiceBankCharsetSelector {
         Q_OBJECT
@@ -53,6 +55,15 @@ namespace hello::daw {
 
         /// Prepares the dialog for \a directories without showing it.
         void setDirectories(const QList<const kit::VoiceBankDirectorySource *> &directories);
+
+        /// Prepares the dialog for reading the folders of setDirectories() again, which were read
+        /// in \a charsets . The initial encoding of each folder is its encoding in \a charsets ,
+        /// no folder can be left out, and changedFolders() returns the folders whose encoding the
+        /// user changes.
+        void setCurrentCharsets(const QStringList &charsets);
+
+        /// The folders whose encoding differs from the encoding given to setCurrentCharsets().
+        QList<int> changedFolders() const;
 
         /// The encoding of the current folder.
         QString selectedCharset() const;
@@ -86,6 +97,8 @@ namespace hello::daw {
         std::filesystem::path m_root;
         QList<const kit::VoiceBankDirectorySource *> m_directories;
         QStringList m_choices;
+        // The encodings of setCurrentCharsets(), empty for choosing the encodings at opening
+        QStringList m_current;
         QLabel *m_message;
         QListWidget *m_folders;
         QListWidget *m_charsets;

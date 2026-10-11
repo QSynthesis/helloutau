@@ -115,6 +115,10 @@
                 category="Edit" />
         <action id="helloutau.voiceBank.rereadCharset" text="Read Again in &amp;Encoding..."
                 category="Edit" />
+        <!-- The folders of the tree, each read again in the encoding chosen for it, in one
+             dialog -->
+        <action id="helloutau.voiceBank.rereadCharsets"
+                text="Read Folders Again in Enc&amp;odings..." category="Edit" />
         <!-- The chunks of the audio files besides the format and the audio, written away after
              a confirmation -->
         <action id="helloutau.voiceBank.removeMetadata" text="Remove Audio &amp;Metadata..."
@@ -174,6 +178,7 @@
                 <separator />
                 <action id="helloutau.voiceBank.convertCharset" />
                 <action id="helloutau.voiceBank.rereadCharset" />
+                <action id="helloutau.voiceBank.rereadCharsets" />
             </menu>
             <menu id="helloutau.voiceBank.view">
                 <action id="helloutau.voiceBank.showSpectrogram" />

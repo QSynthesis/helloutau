@@ -2565,6 +2565,58 @@ private Q_SLOTS:
         QVERIFY(text.find("image=icon.png") != std::string::npos);
     }
 
+    // The folders are read again in the encodings chosen in one dialog, the changed folders only,
+    // as one undo step. A folder whose oto.ini declares UTF-8 is not listed.
+    void the_folders_are_read_again_in_encodings() {
+        QTemporaryDir dir;
+        const auto e = editor();
+        const auto declared = e->openVoiceBank(voiceBank(dir, "declared"));
+        QVERIFY(declared);
+        answerMessageBox(QMessageBox::Ok);
+        QVERIFY(!declared->rereadCharsets());
+
+        const auto bank = voiceBank(dir);
+        writeFile(bank / "sub" / "oto.ini", "x.wav=x,1,2,3,4,5\r\n");
+        writeFile(bank / "sub" / "hello-config.json",
+                  R"({"$format":"hello-voicebank","charset":"UTF-8"})");
+        const auto window = e->openVoiceBank(bank);
+        QVERIFY(window);
+        const auto session = window->document()->session();
+        const int step = session->currentStep();
+
+        handleNextDialog<VoiceBankCharsetDialog>([](VoiceBankCharsetDialog *dialog) {
+            QCOMPARE(dialog->folderText(0), QStringLiteral("sub  -  UTF-8"));
+            QVERIFY(dialog->folderText(1).isEmpty());
+            dialog->accept();
+        });
+        QVERIFY(!window->rereadCharsets());
+        QCOMPARE(session->currentStep(), step);
+
+        // The folder is selected by name, so that a folder listed in error is not read again,
+        // which would show a message box.
+        handleNextDialog<VoiceBankCharsetDialog>([](VoiceBankCharsetDialog *dialog) {
+            for (int i = 0; !dialog->folderText(i).isEmpty(); ++i) {
+                if (dialog->folderText(i).startsWith(QStringLiteral("sub  -  "))) {
+                    dialog->selectFolders({i});
+                    dialog->setCurrentFolder(i);
+                    dialog->setSelectedCharset(QStringLiteral("GBK"));
+                }
+            }
+            dialog->accept();
+        });
+        QVERIFY(window->rereadCharsets());
+        QCOMPARE(session->currentStep(), step + 1);
+        QCOMPARE(session->undoMessage(), QStringLiteral("Read Again in GBK"));
+        QCOMPARE(kit::VoiceBankRef(session).directories().at(1).charset(), QStringLiteral("GBK"));
+
+        // A folder that cannot be read again is reported.
+        answerMessageBox(QMessageBox::Ok);
+        QVERIFY(!window->rereadCharsets({
+            {"none", QStringLiteral("GBK")}
+        }));
+        QCOMPARE(session->currentStep(), step + 1);
+    }
+
     // Saved in its window, a voice bank reaches the projects that sing it, without an edit of
     // them; unsaved edits do not.
     void a_saved_voice_bank_reaches_its_projects() {

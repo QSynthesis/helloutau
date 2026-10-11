@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <memory>
 #include <optional>
+#include <utility>
 
 #include <QtCore/QJsonObject>
 #include <QtCore/QList>
@@ -156,6 +157,15 @@ namespace hello::kit {
         ///
         /// \sa VoiceBankFileSystemState::reread(), reloadFromDisk()
         bool reread(const std::filesystem::path &directory, const QString &charset,
+                    DiagnosticList &diagnostics);
+
+        /// Reads each directory of \a charsets again in its encoding, as one undo step.
+        ///
+        /// A directory that cannot be read again is reported in \a diagnostics , and the others
+        /// are read regardless.
+        ///
+        /// \return whether every directory was read again
+        bool reread(const QList<std::pair<std::filesystem::path, QString>> &charsets,
                     DiagnosticList &diagnostics);
 
         /// @}

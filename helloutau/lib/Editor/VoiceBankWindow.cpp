@@ -367,6 +367,10 @@ namespace hello::daw {
                        [this] { askCharset(false); });
             addCommand(QStringLiteral("helloutau.voiceBank.rereadCharset"),
                        [this] { askCharset(true); });
+            addCommand(QStringLiteral("helloutau.voiceBank.rereadCharsets"), [this] {
+                stdc_decl_t;
+                decl.rereadCharsets();
+            });
             addCommand(QStringLiteral("helloutau.voiceBank.removeMetadata"), [this] {
                 stdc_decl_t;
                 decl.removeAudioMetadata();
@@ -563,7 +567,14 @@ namespace hello::daw {
                 tree, &QWidget::customContextMenuRequested, &decl, [this](const QPoint &position) {
                     stdc_decl_t;
                     const auto item = tree->itemAt(position);
-                    if (!item || item->data(0, AllRole).toBool()) {
+                    if (!item) {
+                        return;
+                    }
+                    if (item->data(0, AllRole).toBool()) {
+                        QMenu menu(&decl);
+                        menu.addAction(
+                            actions.value(QStringLiteral("helloutau.voiceBank.rereadCharsets")));
+                        menu.exec(tree->viewport()->mapToGlobal(position));
                         return;
                     }
                     // The folder under the pointer, even one not read
@@ -1923,6 +1934,60 @@ namespace hello::daw {
         if (read) {
             impl.model->refresh();
         }
+        return read;
+    }
+
+    bool VoiceBankWindow::rereadCharsets() {
+        stdc_impl_t;
+        // The dialog shows the bytes on disk, which reading again decodes.
+        kit::DiagnosticList diagnostics;
+        std::vector<kit::VoiceBankDirectorySource> sources;
+        QStringList charsets;
+        const auto list = kit::VoiceBankRef(impl.document->session()).directories();
+        for (int i = 0; i < list.size(); ++i) {
+            const auto directory = list.at(i);
+            auto source = kit::VoiceBankSource::readDirectory(impl.document->rootPath(),
+                                                              directory.path(), diagnostics);
+            if (!source || source->textFiles().empty() || source->otoDeclaresUtf8()) {
+                continue;
+            }
+            sources.push_back(std::move(*source));
+            charsets.push_back(directory.charset());
+        }
+        DiagnosticBox::report(this, tr("Read Folders Again in Encodings"), diagnostics);
+        if (sources.empty()) {
+            QMessageBox::information(this, tr("Read Folders Again in Encodings"),
+                                     tr("No folder of the voice bank can be read in another "
+                                        "encoding. Each folder has either no text files or an "
+                                        "oto.ini that declares UTF-8."));
+            return false;
+        }
+
+        QList<const kit::VoiceBankDirectorySource *> pointers;
+        for (const auto &source : sources) {
+            pointers.push_back(&source);
+        }
+        VoiceBankCharsetDialog dialog(this);
+        dialog.setRoot(impl.document->rootPath());
+        dialog.setDirectories(pointers);
+        dialog.setCurrentCharsets(charsets);
+        if (dialog.exec() != QDialog::Accepted) {
+            return false;
+        }
+        QList<std::pair<std::filesystem::path, QString>> changed;
+        for (const int index : dialog.changedFolders()) {
+            changed.push_back({sources[index].path, dialog.charsetOf(index)});
+        }
+        return !changed.isEmpty() && rereadCharsets(changed);
+    }
+
+    bool VoiceBankWindow::rereadCharsets(
+        const QList<std::pair<std::filesystem::path, QString>> &charsets) {
+        stdc_impl_t;
+        kit::DiagnosticList diagnostics;
+        const bool read = impl.document->session()->reread(charsets, diagnostics);
+        DiagnosticBox::report(this, tr("Read Folders Again in Encodings"), diagnostics);
+        impl.model->refresh();
         return read;
     }
 

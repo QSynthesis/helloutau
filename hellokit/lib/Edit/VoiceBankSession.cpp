@@ -183,11 +183,29 @@ namespace hello::kit {
 
     bool VoiceBankSession::reread(const std::filesystem::path &directory, const QString &charset,
                                   DiagnosticList &diagnostics) {
+        return reread(
+            {
+                {directory, charset}
+        },
+            diagnostics);
+    }
+
+    bool VoiceBankSession::reread(const QList<std::pair<std::filesystem::path, QString>> &charsets,
+                                  DiagnosticList &diagnostics) {
         auto bank = fullBank();
-        if (!m_files.reread(bank, directory, charset, diagnostics)) {
+        QList<std::filesystem::path> replaced;
+        for (const auto &[directory, charset] : charsets) {
+            if (m_files.reread(bank, directory, charset, diagnostics)) {
+                replaced.push_back(directory);
+            }
+        }
+        if (replaced.isEmpty()) {
             return false;
         }
-        return takeFrom(bank, {directory}, tr("Read Again in %1").arg(charset), diagnostics);
+        const auto message = charsets.size() == 1
+                                 ? tr("Read Again in %1").arg(charsets.first().second)
+                                 : tr("Read Again in Encodings");
+        return takeFrom(bank, replaced, message, diagnostics) && replaced.size() == charsets.size();
     }
 
     bool VoiceBankSession::takeFrom(const VoiceBank &bank,
