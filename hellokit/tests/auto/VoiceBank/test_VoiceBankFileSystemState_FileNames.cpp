@@ -87,6 +87,42 @@ private:
         return VoiceBankFileSystemState::open(root, &selector, diagnostics);
     }
 
+    static std::optional<VoiceBankConfig::FileNameEncoding>
+        recordOf(const VoiceBankFileSystemState::Opened &opened, const fs::path &directory) {
+        const int index = opened.bank.indexOf(directory);
+        return index >= 0 ? opened.bank.directories().at(index).fileNameEncoding : std::nullopt;
+    }
+
+    static QStringList audioFilesOf(const VoiceBankFileSystemState::Opened &opened,
+                                    const fs::path &directory = {}) {
+        return opened.files.audioFiles(directory, recordOf(opened, directory));
+    }
+
+    static fs::path audioPathOf(const VoiceBankFileSystemState::Opened &opened,
+                                const fs::path &directory, const QString &fileName) {
+        return opened.files.audioPathOf(directory, recordOf(opened, directory), fileName);
+    }
+
+    static QStringList undeterminedOf(const VoiceBankFileSystemState::Opened &opened,
+                                      const fs::path &directory = {}) {
+        return opened.files.undeterminedNames(directory, recordOf(opened, directory));
+    }
+
+    /// Replaces the record of the directory at \a directory of \a opened with \a record .
+    static void setRecord(VoiceBankFileSystemState::Opened &opened, const fs::path &directory,
+                          const std::optional<VoiceBankConfig::FileNameEncoding> &record) {
+        const int index = opened.bank.indexOf(directory);
+        QVERIFY(index >= 0);
+        auto changed = opened.bank.directories().at(index);
+        changed.fileNameEncoding = record;
+        opened.bank.setDirectory(index, changed);
+    }
+
+    std::optional<VoiceBankConfig> configAt(const QString &relative) const {
+        DiagnosticList ignored;
+        return VoiceBankConfig::open(root() / pathOf(relative) / "hello-config.json", ignored);
+    }
+
     static const VoiceSample *sampleNamed(const VoiceBank &bank, const QString &fileName) {
         for (const auto &sample : bank.samples()) {
             if (sample.fileName == fileName) {
@@ -115,7 +151,7 @@ private Q_SLOTS:
         QVERIFY(sample);
         QVERIFY(sample->hasEntry);
         QCOMPARE(sample->path, root() / pathOf(kMisdecodedA + QStringLiteral(".wav")));
-        QVERIFY(!opened->files.audioFiles({}).contains(kMisdecodedA + QStringLiteral(".wav")));
+        QVERIFY(!audioFilesOf(*opened).contains(kMisdecodedA + QStringLiteral(".wav")));
     }
 
     void a_misdecoded_file_without_an_entry_is_listed_under_its_restored_name() {
@@ -125,8 +161,8 @@ private Q_SLOTS:
         QVERIFY(opened.has_value());
         const auto restored = QString::fromUtf8("い.wav");
         const auto physical = root() / pathOf(kMisdecodedI + QStringLiteral(".wav"));
-        QVERIFY(opened->files.audioFiles({}).contains(restored));
-        QCOMPARE(opened->files.audioPathOf({}, restored), physical);
+        QVERIFY(audioFilesOf(*opened).contains(restored));
+        QCOMPARE(audioPathOf(*opened, {}, restored), physical);
         const auto sample = sampleNamed(opened->bank, restored);
         QVERIFY(sample);
         QVERIFY(!sample->hasEntry);
@@ -139,7 +175,7 @@ private Q_SLOTS:
         DiagnosticList diagnostics;
         const auto opened = open(root(), diagnostics);
         QVERIFY(opened.has_value());
-        const auto files = opened->files.audioFiles({});
+        const auto files = audioFilesOf(*opened);
         QVERIFY(files.contains(QString::fromUtf8("が.wav")));
         QVERIFY(!files.contains(QString::fromUtf8("､ｬ.wav")));
     }
@@ -149,13 +185,13 @@ private Q_SLOTS:
         DiagnosticList diagnostics;
         const auto opened = open(root(), diagnostics);
         QVERIFY(opened.has_value());
-        QCOMPARE(opened->files.undeterminedNames({}),
+        QCOMPARE(undeterminedOf(*opened),
                  (QStringList{QString::fromUtf8("新.wav"), QString::fromUtf8("未")}));
-        QVERIFY(opened->files.audioFiles({}).contains(QString::fromUtf8("新.wav")));
-        QCOMPARE(opened->files.logicalPathOf(pathOf(QString::fromUtf8("未"))),
+        QVERIFY(audioFilesOf(*opened).contains(QString::fromUtf8("新.wav")));
+        QCOMPARE(opened->bank.logicalPathOf(pathOf(QString::fromUtf8("未"))),
                  pathOf(QString::fromUtf8("未")));
         // The subdirectories have no record.
-        QVERIFY(opened->files.undeterminedNames(pathOf(kMisdecodedU)).isEmpty());
+        QVERIFY(undeterminedOf(*opened, pathOf(kMisdecodedU)).isEmpty());
     }
 
     // A name on disk is looked up in the lists in Normalization Form C, as on macOS a file
@@ -168,7 +204,7 @@ private Q_SLOTS:
         DiagnosticList diagnostics;
         const auto opened = open(root(), diagnostics);
         QVERIFY(opened.has_value());
-        QVERIFY(opened->files.undeterminedNames({}).isEmpty());
+        QVERIFY(undeterminedOf(*opened).isEmpty());
     }
 
     void a_subdirectory_is_named_by_the_record_of_its_parent() {
@@ -176,8 +212,7 @@ private Q_SLOTS:
         DiagnosticList diagnostics;
         const auto opened = open(root(), diagnostics);
         QVERIFY(opened.has_value());
-        QCOMPARE(opened->files.logicalPathOf(pathOf(kMisdecodedU)),
-                 pathOf(QString::fromUtf8("う")));
+        QCOMPARE(opened->bank.logicalPathOf(pathOf(kMisdecodedU)), pathOf(QString::fromUtf8("う")));
         const auto sample = sampleNamed(opened->bank, QStringLiteral("b.wav"));
         QVERIFY(sample);
         QCOMPARE(sample->path, root() / pathOf(kMisdecodedU) / "b.wav");
@@ -189,8 +224,8 @@ private Q_SLOTS:
         DiagnosticList diagnostics;
         const auto opened = open(root(), diagnostics);
         QVERIFY(opened.has_value());
-        QCOMPARE(opened->files.audioFiles({}), QStringList{kMisdecodedI + QStringLiteral(".wav")});
-        QVERIFY(opened->files.undeterminedNames({}).isEmpty());
+        QCOMPARE(audioFilesOf(*opened), QStringList{kMisdecodedI + QStringLiteral(".wav")});
+        QVERIFY(undeterminedOf(*opened).isEmpty());
     }
 
     void a_restored_name_that_another_file_has_is_used_as_it_is() {
@@ -203,11 +238,11 @@ private Q_SLOTS:
         DiagnosticList diagnostics;
         const auto opened = open(root(), diagnostics);
         QVERIFY(opened.has_value());
-        const auto files = opened->files.audioFiles({});
+        const auto files = audioFilesOf(*opened);
         QCOMPARE(files.size(), 2);
         QVERIFY(files.contains(kMisdecodedA + QStringLiteral(".wav")));
         QVERIFY(files.contains(QString::fromUtf8("あ.wav")));
-        QCOMPARE(opened->files.audioPathOf({}, QString::fromUtf8("あ.wav")),
+        QCOMPARE(audioPathOf(*opened, {}, QString::fromUtf8("あ.wav")),
                  root() / pathOf(QString::fromUtf8("あ.wav")));
         QVERIFY(!diagnostics.isEmpty());
     }
@@ -221,20 +256,20 @@ private Q_SLOTS:
         DiagnosticList diagnostics;
         const auto opened = open(root(), diagnostics);
         QVERIFY(opened.has_value());
-        QCOMPARE(opened->files.audioFiles({}), QStringList{QString::fromUtf8("你.wav")});
+        QCOMPARE(audioFilesOf(*opened), QStringList{QString::fromUtf8("你.wav")});
         QVERIFY(!diagnostics.isEmpty());
         QVERIFY(!hasError(diagnostics));
     }
 
-    // A configuration modified elsewhere is not read again, see docs/Editing.md.
-    void rereading_keeps_the_record_that_the_directory_was_read_with() {
+    // The record is part of the contents, which a reread keeps as it keeps the encoding.
+    void rereading_keeps_the_record_of_the_contents() {
         writeBank();
         DiagnosticList diagnostics;
         auto opened = open(root(), diagnostics);
         QVERIFY(opened.has_value());
         writeConfig(QString(), japaneseOnChinese());
         QVERIFY(opened->files.reread(opened->bank, {}, QStringLiteral("Shift_JIS"), diagnostics));
-        QVERIFY(opened->files.audioFiles({}).contains(QString::fromUtf8("い.wav")));
+        QVERIFY(audioFilesOf(*opened).contains(QString::fromUtf8("い.wav")));
         QVERIFY(sampleNamed(opened->bank, QString::fromUtf8("い.wav")));
     }
 
@@ -247,12 +282,78 @@ private Q_SLOTS:
         const auto changes = opened->files.checkDisk();
         QCOMPARE(changes.audio, QList<fs::path>{fs::path()});
         opened->files.reloadFromDisk(opened->bank, changes, nullptr, diagnostics);
-        const auto files = opened->files.audioFiles({});
+        const auto files = audioFilesOf(*opened);
         QVERIFY(files.contains(QStringLiteral("d.wav")));
         QVERIFY(files.contains(QString::fromUtf8("い.wav")));
         const auto sample = sampleNamed(opened->bank, QString::fromUtf8("い.wav"));
         QVERIFY(sample);
         QCOMPARE(sample->path, root() / pathOf(kMisdecodedI + QStringLiteral(".wav")));
+    }
+
+    void the_names_follow_the_record_given() {
+        writeBank();
+        DiagnosticList diagnostics;
+        const auto opened = open(root(), diagnostics);
+        QVERIFY(opened.has_value());
+        QVERIFY(audioFilesOf(*opened).contains(QString::fromUtf8("い.wav")));
+        const auto physical = opened->files.audioFiles({}, std::nullopt);
+        QVERIFY(physical.contains(kMisdecodedI + QStringLiteral(".wav")));
+        QVERIFY(!physical.contains(QString::fromUtf8("い.wav")));
+        QVERIFY(opened->files.undeterminedNames({}, std::nullopt).isEmpty());
+    }
+
+    void a_changed_record_is_saved() {
+        writeBank();
+        DiagnosticList diagnostics;
+        auto opened = open(root(), diagnostics);
+        QVERIFY(opened.has_value());
+        QVERIFY(!opened->files.isModified(opened->bank, {}));
+
+        auto record = *recordOf(*opened, {});
+        record.correct.push_back(QString::fromUtf8("新.wav"));
+        setRecord(*opened, {}, record);
+        QVERIFY(opened->files.isModified(opened->bank, {}));
+        QVERIFY(opened->files.save(opened->bank, diagnostics));
+        QVERIFY(!opened->files.isModified(opened->bank, {}));
+        const auto config = configAt(QString());
+        QVERIFY(config.has_value());
+        QCOMPARE(config->fileNameEncoding, std::optional(record));
+        QCOMPARE(config->charset, TextCodec(QStringLiteral("Shift_JIS")).name());
+    }
+
+    void a_removed_record_is_removed_from_the_configuration() {
+        writeBank();
+        DiagnosticList diagnostics;
+        auto opened = open(root(), diagnostics);
+        QVERIFY(opened.has_value());
+        setRecord(*opened, {}, std::nullopt);
+        QVERIFY(opened->files.save(opened->bank, diagnostics));
+        const auto config = configAt(QString());
+        QVERIFY(config.has_value());
+        QVERIFY(!config->fileNameEncoding.has_value());
+        QVERIFY(!opened->files.isModified(opened->bank, {}));
+    }
+
+    // A directory of audio files alone has no encoding, and its configuration names none.
+    void a_directory_without_text_files_saves_its_record() {
+        writeBank();
+        DiagnosticList diagnostics;
+        auto opened = open(root(), diagnostics);
+        QVERIFY(opened.has_value());
+        auto record = japaneseOnChinese();
+        record.correct = QStringList{QStringLiteral("b.wav")};
+        setRecord(*opened, pathOf(kMisdecodedU), record);
+        QVERIFY(opened->files.save(opened->bank, diagnostics));
+        const auto config = configAt(kMisdecodedU);
+        QVERIFY(config.has_value());
+        QCOMPARE(config->fileNameEncoding, std::optional(record));
+
+        const auto again = open(root(), diagnostics);
+        QVERIFY(again.has_value());
+        QCOMPARE(recordOf(*again, pathOf(kMisdecodedU)), std::optional(record));
+        QVERIFY(again->bank.directories()
+                    .at(again->bank.indexOf(pathOf(kMisdecodedU)))
+                    .charset.isEmpty());
     }
 };
 

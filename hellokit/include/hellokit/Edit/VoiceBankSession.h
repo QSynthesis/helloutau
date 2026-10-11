@@ -57,29 +57,30 @@ namespace hello::kit {
         /// \sa reread(), VoiceBankDirectory::leftOut
         QList<VoiceBankDirectory> excludedDirectories() const;
 
-        /// Returns the names of the audio files of the directory at \a directory, with and without
-        /// an entry.
+        /// \name The names of the files
+        ///
+        /// Each function applies the record of misdecoded file names of the directory in the
+        /// tree, or of the excluded directory. See the section on misdecoded file names in
+        /// docs/Editing.md.
+        /// @{
+
+        /// Returns the logical names of the audio files of the directory at \a directory, with
+        /// and without an entry.
         ///
         /// \sa VoiceBankFileSystemState::audioFiles()
-        inline QStringList audioFiles(const std::filesystem::path &directory) const {
-            return m_files.audioFiles(directory);
-        }
+        QStringList audioFiles(const std::filesystem::path &directory) const;
 
         /// \sa VoiceBankFileSystemState::audioPathOf()
-        inline std::filesystem::path audioPathOf(const std::filesystem::path &directory,
-                                                 const QString &fileName) const {
-            return m_files.audioPathOf(directory, fileName);
-        }
+        std::filesystem::path audioPathOf(const std::filesystem::path &directory,
+                                          const QString &fileName) const;
 
         /// \sa VoiceBankFileSystemState::undeterminedNames()
-        inline QStringList undeterminedNames(const std::filesystem::path &directory) const {
-            return m_files.undeterminedNames(directory);
-        }
+        QStringList undeterminedNames(const std::filesystem::path &directory) const;
 
-        /// \sa VoiceBankFileSystemState::logicalPathOf()
-        inline std::filesystem::path logicalPathOf(const std::filesystem::path &directory) const {
-            return m_files.logicalPathOf(directory);
-        }
+        /// \sa VoiceBank::logicalPathOf()
+        std::filesystem::path logicalPathOf(const std::filesystem::path &directory) const;
+
+        /// @}
 
         /// Returns the voice bank in its current state.
         VoiceBank snapshot() const;
@@ -188,6 +189,11 @@ namespace hello::kit {
 
     private:
         VoiceBankSession(VoiceBankFileSystemState::Opened opened, QObject *parent);
+
+        /// Returns the record of misdecoded file names of the directory at \a directory in the
+        /// tree or among the excluded directories.
+        std::optional<VoiceBankConfig::FileNameEncoding>
+            fileNameEncodingOf(const std::filesystem::path &directory) const;
 
         /// Returns the snapshot together with the excluded directories, which the file system state
         /// works on.

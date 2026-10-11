@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <map>
 #include <optional>
+#include <vector>
 
 #include <QtCore/QByteArray>
 #include <QtCore/QCoreApplication>
@@ -67,28 +68,30 @@ namespace hello::kit {
         /// Intended for a holder of the contents that keeps the entries only, such as the tree of
         /// an editing session: the samples without an entry are the files that no entry names.
         ///
-        /// The names are logical names: a name that the record of misdecoded file names of the
-        /// directory lists as misdecoded is restored. See the section on misdecoded file names in
-        /// docs/Editing.md.
+        /// The names are logical names under \a record , the record of misdecoded file names of
+        /// the directory in the contents: a name that \a record lists as misdecoded is restored.
+        /// See the section on misdecoded file names in docs/Editing.md.
         ///
-        /// \sa audioPathOf()
-        QStringList audioFiles(const std::filesystem::path &directory) const;
+        /// \sa audioPathOf(), VoiceBankDirectory::fileNameEncoding
+        QStringList
+            audioFiles(const std::filesystem::path &directory,
+                       const std::optional<VoiceBankConfig::FileNameEncoding> &record) const;
 
-        /// Returns the absolute path of the audio file with the logical name \a fileName in the
-        /// directory at \a directory , under its name on disk. A name of no audio file is joined
-        /// as it is.
-        std::filesystem::path audioPathOf(const std::filesystem::path &directory,
-                                          const QString &fileName) const;
+        /// Returns the absolute path of the audio file with the logical name \a fileName under
+        /// \a record in the directory at \a directory , under its name on disk. A name of no
+        /// audio file is joined as it is.
+        std::filesystem::path
+            audioPathOf(const std::filesystem::path &directory,
+                        const std::optional<VoiceBankConfig::FileNameEncoding> &record,
+                        const QString &fileName) const;
 
         /// Returns the names on disk of the audio files and the subdirectories of the directory at
-        /// \a directory that are not ASCII and that its record of misdecoded file names lists in
-        /// neither list, or an empty list if the directory has no record. These names are used as
-        /// they are until the user determines their state.
-        QStringList undeterminedNames(const std::filesystem::path &directory) const;
-
-        /// Returns \a directory , a path relative to the root, with each name restored by the
-        /// record of misdecoded file names of its parent directory, for display.
-        std::filesystem::path logicalPathOf(const std::filesystem::path &directory) const;
+        /// \a directory that are not ASCII and that \a record lists in neither list, or an empty
+        /// list without \a record . These names are used as they are until the user determines
+        /// their state.
+        QStringList
+            undeterminedNames(const std::filesystem::path &directory,
+                              const std::optional<VoiceBankConfig::FileNameEncoding> &record) const;
 
         /// Makes the next save() record the encoding of the directory at \a directory , even if
         /// nothing else in it changed.
@@ -126,8 +129,9 @@ namespace hello::kit {
         /// already there was not read and is refused as a file that changed on disk.
         ///
         /// For each directory in which a file is written, and for each directory whose encoding
-        /// differs from the one it was read in, the encoding is recorded beside it in
-        /// \c hello-config.json , because saving is an explicit request to write files there.
+        /// or record of misdecoded file names differs from the one it was read with, the encoding
+        /// and the record are recorded beside it in \c hello-config.json , because saving is an
+        /// explicit request to write files there.
         /// The configuration belongs to HelloUtau and is exempt from the second refusal above:
         /// in a directory that had one when read or has one now, it is written whenever the file
         /// on disk does not hold the encoding and the fields read with it, whether another program
@@ -176,7 +180,7 @@ namespace hello::kit {
         ///          read anew.
         ///
         /// The encoding is recorded by the next save() , even if some bytes are invalid in it,
-        /// because the user chose it.
+        /// because the user chose it. The record of misdecoded file names of \a bank is kept.
         bool reread(VoiceBank &bank, const std::filesystem::path &directory, const QString &charset,
                     DiagnosticList &diagnostics);
 
@@ -218,8 +222,8 @@ namespace hello::kit {
         /// dropped.
         ///
         /// A previously read directory keeps its encoding without querying the selector again,
-        /// whatever its configuration now records. Only a directory whose encoding is not known
-        /// takes the one its configuration records.
+        /// and its record of misdecoded file names, whatever its configuration now records. Only
+        /// a directory whose encoding is not known takes the one its configuration records.
         ///
         /// \param selector queried only for a new directory, or for one that previously needed
         ///        no encoding and now does
@@ -242,6 +246,18 @@ namespace hello::kit {
     private:
         VoiceBankFileSystemState() = default;
 
+        /// The audio files of one directory under the names that a record of misdecoded file
+        /// names determines.
+        struct Names {
+            std::optional<VoiceBankConfig::FileNameEncoding> record;
+            /// The logical names in listing order.
+            QStringList audioFiles;
+            /// The name on disk of each audio file whose logical name differs.
+            std::map<QString, std::filesystem::path> diskNames;
+            /// \sa undeterminedNames()
+            QStringList undetermined;
+        };
+
         /// The state of one directory.
         struct Book {
             /// The state of each file on disk when it was read or last written.
@@ -251,8 +267,9 @@ namespace hello::kit {
             std::map<VoiceBankDirectorySource::File, QByteArray> baseline;
             /// The contents of \c hello-config.json when read, if present, whose fields not
             /// recognized by this version every save writes back. The encodings are those of the
-            /// VoiceBank at each save instead. Its record of misdecoded file names is the one with
-            /// which the directory is read, and a reread keeps it.
+            /// VoiceBank at each save instead. Its record of misdecoded file names is the record
+            /// read or last saved, and a different record in the VoiceBank is recorded by the
+            /// next save.
             std::optional<VoiceBankConfig> config;
             /// The canonical encoding the directory was read or last saved in. A different
             /// encoding in the VoiceBank is recorded by the next save.
@@ -261,15 +278,26 @@ namespace hello::kit {
             bool remember = false;
             /// The directory state when last read, or when last checked without differences.
             VoiceBankDirectoryStamp stamp;
-            /// The logical names of the audio files when last read or refreshed.
-            /// \sa audioFiles()
-            QStringList audioFiles;
-            /// The name on disk of each audio file whose logical name differs.
-            /// \sa audioPathOf()
-            std::map<QString, std::filesystem::path> diskNames;
-            /// \sa undeterminedNames()
-            QStringList undetermined;
+            /// The names on disk of the audio files when last read or refreshed, in the order in
+            /// which they were listed.
+            std::vector<std::filesystem::path> audio;
+            /// The names under the record last queried, computed on demand.
+            mutable std::optional<Names> names;
         };
+
+        /// Returns the names of \a audio , the audio files of a directory whose listing is
+        /// \a stamp , under \a record . A name that does not restore, and a restored name that
+        /// equals another name of the directory, is used as it is and reported in
+        /// \a diagnostics if not null.
+        static Names namesOf(const std::vector<std::filesystem::path> &audio,
+                             const VoiceBankDirectoryStamp &stamp,
+                             const std::optional<VoiceBankConfig::FileNameEncoding> &record,
+                             DiagnosticList *diagnostics);
+
+        /// Returns the names of the directory at \a directory under \a record , from the cache
+        /// of its state if the record is the same.
+        const Names &namesOf(const std::filesystem::path &directory,
+                             const std::optional<VoiceBankConfig::FileNameEncoding> &record) const;
 
         /// Returns the state of a directory as read from \a source and decoded into \a decoded .
         static Book bookOf(const VoiceBankDirectorySource &source,

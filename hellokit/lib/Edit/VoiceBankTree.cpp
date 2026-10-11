@@ -90,6 +90,7 @@ namespace hello::kit {
         put(*node, VoiceDirectorySlots::Path, pathText(directory.path));
         put(*node, VoiceDirectorySlots::Charset, directory.charset);
         put(*node, VoiceDirectorySlots::OtoEntries, std::move(entries));
+        put(*node, VoiceDirectorySlots::FileNameEncoding, directory.fileNameEncoding);
         return node;
     }
 
@@ -106,6 +107,11 @@ namespace hello::kit {
     fs::path directoryPathOf(const ss::Node *node) {
         return pathFromText(
             get(recordOf<VoiceDirectoryNode>(node, VoiceDirectoryType), VoiceDirectorySlots::Path));
+    }
+
+    std::optional<VoiceBankConfig::FileNameEncoding> fileNameEncodingOf(const ss::Node *node) {
+        return get(recordOf<VoiceDirectoryNode>(node, VoiceDirectoryType),
+                   VoiceDirectorySlots::FileNameEncoding);
     }
 
     std::unique_ptr<ss::Node> treeOf(const VoiceBank &bank) {
@@ -139,6 +145,8 @@ namespace hello::kit {
             VoiceBankDirectory directory;
             directory.path = pathFromText(get(node, VoiceDirectorySlots::Path));
             directory.charset = get(node, VoiceDirectorySlots::Charset);
+            directory.fileNameEncoding = get(node, VoiceDirectorySlots::FileNameEncoding);
+            const auto &names = directory.fileNameEncoding;
             if (directory.path.empty()) {
                 if (const auto character = record.child(VoiceBankSlots::Character.index)) {
                     directory.character = edit::fromTree<VoiceCharacter>(character);
@@ -157,14 +165,14 @@ namespace hello::kit {
                 const auto entry = edit::fromTree<VoiceOtoEntry>(entries.at(j));
                 named.insert(entry.fileName);
                 samples.push_back(
-                    sampleOf(entry, i, files.audioPathOf(directory.path, entry.fileName)));
+                    sampleOf(entry, i, files.audioPathOf(directory.path, names, entry.fileName)));
             }
-            for (const auto &name : files.audioFiles(directory.path)) {
+            for (const auto &name : files.audioFiles(directory.path, names)) {
                 if (named.contains(name)) {
                     continue;
                 }
                 VoiceSample sample;
-                sample.path = files.audioPathOf(directory.path, name);
+                sample.path = files.audioPathOf(directory.path, names, name);
                 sample.directory = i;
                 sample.fileName = name;
                 samples.push_back(sample);

@@ -73,6 +73,49 @@ namespace hello::kit {
 
     }
 
+    std::optional<VoiceBankConfig::FileNameEncoding>
+        VoiceBankSession::fileNameEncodingOf(const std::filesystem::path &directory) const {
+        const auto &directories = directoriesOf(*this);
+        const int index = indexIn(directories, directory);
+        if (index >= 0) {
+            return kit::fileNameEncodingOf(directories.at(index));
+        }
+        for (const auto &excluded : m_excluded) {
+            if (excluded.path == directory) {
+                return excluded.fileNameEncoding;
+            }
+        }
+        return std::nullopt;
+    }
+
+    QStringList VoiceBankSession::audioFiles(const std::filesystem::path &directory) const {
+        return m_files.audioFiles(directory, fileNameEncodingOf(directory));
+    }
+
+    std::filesystem::path VoiceBankSession::audioPathOf(const std::filesystem::path &directory,
+                                                        const QString &fileName) const {
+        return m_files.audioPathOf(directory, fileNameEncodingOf(directory), fileName);
+    }
+
+    QStringList VoiceBankSession::undeterminedNames(const std::filesystem::path &directory) const {
+        return m_files.undeterminedNames(directory, fileNameEncodingOf(directory));
+    }
+
+    std::filesystem::path
+        VoiceBankSession::logicalPathOf(const std::filesystem::path &directory) const {
+        std::filesystem::path logical;
+        std::filesystem::path parent;
+        for (const auto &component : directory) {
+            auto name = QString::fromStdU16String(component.u16string());
+            if (const auto record = fileNameEncodingOf(parent)) {
+                name = record->logicalNameOf(name);
+            }
+            logical /= std::filesystem::path(name.toStdU16String());
+            parent /= component;
+        }
+        return logical;
+    }
+
     QList<VoiceBankDirectory> VoiceBankSession::excludedDirectories() const {
         // An undo can restore a directory that a later reading excluded, which the tree then
         // holds again.

@@ -8,6 +8,7 @@
 #include <QtCore/QString>
 #include <QtCore/QStringList>
 #include <QtCore/QVariantList>
+#include <QtCore/QVariantMap>
 
 #include <hellokit/VoiceBank/VoiceBank.h>
 
@@ -81,7 +82,13 @@ namespace hello::kit {
         /// state distinguishes the two, and a missing file is created only for an entry.
         inline constexpr edit::ChildSlot OtoEntries{2, "otoEntries"};
 
-        inline constexpr int count = 3;
+        /// The record of misdecoded file names, or empty if the names are used as they are.
+        ///
+        /// \sa VoiceBankDirectory::fileNameEncoding
+        inline constexpr edit::Slot<std::optional<VoiceBankConfig::FileNameEncoding>>
+            FileNameEncoding{3, "fileNameEncoding"};
+
+        inline constexpr int count = 4;
 
     }
 
@@ -110,6 +117,30 @@ namespace hello::kit {
         inline constexpr int count = 8;
 
     }
+
+    /// Stores a record of misdecoded file names as a map of its four fields, which requires no
+    /// registration with the Qt meta-type system.
+    template <>
+    struct edit::SlotValue<VoiceBankConfig::FileNameEncoding> {
+        static inline QVariant toVariant(const VoiceBankConfig::FileNameEncoding &record) {
+            return QVariantMap{
+                {QStringLiteral("original"),     record.original    },
+                {QStringLiteral("misdecodedAs"), record.misdecodedAs},
+                {QStringLiteral("misdecoded"),   record.misdecoded  },
+                {QStringLiteral("correct"),      record.correct     },
+            };
+        }
+
+        static inline VoiceBankConfig::FileNameEncoding fromVariant(const QVariant &variant) {
+            const auto map = variant.toMap();
+            VoiceBankConfig::FileNameEncoding record;
+            record.original = map.value(QStringLiteral("original")).toString();
+            record.misdecodedAs = map.value(QStringLiteral("misdecodedAs")).toString();
+            record.misdecoded = map.value(QStringLiteral("misdecoded")).toStringList();
+            record.correct = map.value(QStringLiteral("correct")).toStringList();
+            return record;
+        }
+    };
 
     /// Stores the spellings as a list of five byte arrays, with an invalid value for a number
     /// that was not read, which requires no registration with the Qt meta-type system.

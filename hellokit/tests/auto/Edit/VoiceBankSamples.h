@@ -133,6 +133,7 @@ namespace hello::kit {
             QVERIFY(a.character == e.character);
             QCOMPARE(a.prefixMap, e.prefixMap);
             QCOMPARE(a.readme, e.readme);
+            QVERIFY(a.fileNameEncoding == e.fileNameEncoding);
         }
         QCOMPARE(actual.samples().size(), expected.samples().size());
         for (int i = 0; i < expected.samples().size(); ++i) {

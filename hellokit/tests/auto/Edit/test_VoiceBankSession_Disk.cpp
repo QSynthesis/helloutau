@@ -105,13 +105,17 @@ private Q_SLOTS:
         VoiceBankConfig::FileNameEncoding record;
         record.original = QStringLiteral("Shift_JIS");
         record.misdecodedAs = QStringLiteral("GBK");
-        record.misdecoded = QStringList{a, i};
+        const auto u = QString::fromUtf8("偆");
+        record.misdecoded = QStringList{a, i, u};
+        record.correct = QStringList{QString::fromUtf8("が.wav")};
         config.fileNameEncoding = record;
         QVERIFY(writeSampleFile(dir.path(), QStringLiteral("hello-config.json"), config.toJson()));
         QVERIFY(writeSampleFile(dir.path(), QStringLiteral("oto.ini"),
                                 QByteArray("\x82\xa0.wav=a,1,2,3,4,5\r\n")));
         QVERIFY(writeSampleFile(dir.path(), a, "RIFF"));
         QVERIFY(writeSampleFile(dir.path(), i, "RIFF"));
+        QVERIFY(writeSampleFile(dir.path(), u + QStringLiteral("/b.wav"), "RIFF"));
+        QVERIFY(writeSampleFile(dir.path(), QString::fromUtf8("新.wav"), "RIFF"));
 
         const fs::path root(dir.path().toStdU16String());
         DiagnosticList diagnostics;
@@ -120,11 +124,17 @@ private Q_SLOTS:
         const auto session = VoiceBankSession::create(std::move(*opened), diagnostics);
         QVERIFY(session);
         const auto bank = session->snapshot();
-        QCOMPARE(bank.samples().size(), 2);
+        QCOMPARE(bank.samples().size(), 4);
         QCOMPARE(bank.samples().at(0).fileName, QString::fromUtf8("あ.wav"));
         QCOMPARE(bank.samples().at(0).path, root / a.toStdU16String());
         QCOMPARE(bank.samples().at(1).fileName, QString::fromUtf8("い.wav"));
         QCOMPARE(bank.samples().at(1).path, root / i.toStdU16String());
+
+        // The names that the session gives follow the records of its tree.
+        QVERIFY(session->audioFiles({}).contains(QString::fromUtf8("い.wav")));
+        QCOMPARE(session->audioPathOf({}, QString::fromUtf8("い.wav")), root / i.toStdU16String());
+        QCOMPARE(session->undeterminedNames({}), QStringList{QString::fromUtf8("新.wav")});
+        QCOMPARE(session->logicalPathOf(u.toStdU16String()), fs::path(u"う"));
     }
 
     // Acceptance criterion 6 of docs/Editing.md at the level of a session: after one entry is

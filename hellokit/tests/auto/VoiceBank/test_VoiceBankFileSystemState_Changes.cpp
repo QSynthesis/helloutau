@@ -215,12 +215,13 @@ private Q_SLOTS:
         auto &bank = opened->bank;
         auto &files = opened->files;
         const auto sorted = [&files](const fs::path &directory) {
-            auto names = files.audioFiles(directory);
+            auto names = files.audioFiles(directory, std::nullopt);
             names.sort();
             return names;
         };
         QCOMPARE(sorted({}), QStringList({QStringLiteral("a.wav"), QStringLiteral("ka.wav")}));
-        QVERIFY(files.audioFiles(QStringLiteral("missing").toStdU16String()).isEmpty());
+        QVERIFY(
+            files.audioFiles(QStringLiteral("missing").toStdU16String(), std::nullopt).isEmpty());
 
         QVERIFY(QFile::remove(pathOf(QStringLiteral("ka.wav"))));
         write(QStringLiteral("ki.wav"), "RIFF");

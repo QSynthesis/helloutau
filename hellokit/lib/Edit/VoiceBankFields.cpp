@@ -67,15 +67,55 @@ namespace hello::kit {
             return edit::SlotValue<OtoSpellings>::toVariant(spellings);
         }
 
+        using FileNameEncoding = VoiceBankConfig::FileNameEncoding;
+
+        // The record as in hello-config.json, see docs/note.md.
+        QJsonValue fileNameEncodingToJson(const QVariant &value) {
+            const auto record = edit::SlotValue<FileNameEncoding>::fromVariant(value);
+            return QJsonObject{
+                {QStringLiteral("original"),     record.original                              },
+                {QStringLiteral("misdecodedAs"), record.misdecodedAs                          },
+                {QStringLiteral("misdecoded"),   QJsonArray::fromStringList(record.misdecoded)},
+                {QStringLiteral("correct"),      QJsonArray::fromStringList(record.correct)   },
+            };
+        }
+
+        std::optional<QVariant> fileNameEncodingFromJson(const QJsonValue &json) {
+            const auto object = json.toObject();
+            const auto original = object.value(QStringLiteral("original"));
+            const auto misdecodedAs = object.value(QStringLiteral("misdecodedAs"));
+            const auto misdecoded = edit::ValueConversions::stringListFromJson(
+                object.value(QStringLiteral("misdecoded")));
+            const auto correct =
+                edit::ValueConversions::stringListFromJson(object.value(QStringLiteral("correct")));
+            if (!json.isObject() || object.size() != 4 || !original.isString() ||
+                !misdecodedAs.isString() || !misdecoded || !correct) {
+                return std::nullopt;
+            }
+            FileNameEncoding record;
+            record.original = original.toString();
+            record.misdecodedAs = misdecodedAs.toString();
+            record.misdecoded = misdecoded->toStringList();
+            record.correct = correct->toStringList();
+            return edit::SlotValue<FileNameEncoding>::toVariant(record);
+        }
+
         constexpr edit::ValueFormat prefixFormat{"prefix", prefixToJson, prefixFromJson};
         constexpr edit::ValueFormat spellingsFormat{"spellings", spellingsToJson,
                                                     spellingsFromJson};
+        constexpr edit::ValueFormat fileNameEncodingFormat{
+            "file name encoding", fileNameEncodingToJson, fileNameEncodingFromJson};
 
     }
 
     template <>
     constexpr const edit::ValueFormat &edit::formatOf<OtoSpellings>() {
         return spellingsFormat;
+    }
+
+    template <>
+    constexpr const edit::ValueFormat &edit::formatOf<VoiceBankConfig::FileNameEncoding>() {
+        return fileNameEncodingFormat;
     }
 
     namespace {
@@ -173,6 +213,7 @@ namespace hello::kit {
             edit::readOnlyField(edit::valueField(VoiceDirectorySlots::Path)),
             edit::readOnlyField(edit::valueField(VoiceDirectorySlots::Charset)),
             edit::listField(VoiceDirectorySlots::OtoEntries, otoEntryRecord),
+            edit::readOnlyField(edit::valueField(VoiceDirectorySlots::FileNameEncoding)),
         };
 
         // A directory is not created from JSON, because only reading from disk adds one.

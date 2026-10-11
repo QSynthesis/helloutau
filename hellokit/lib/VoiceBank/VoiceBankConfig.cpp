@@ -116,6 +116,15 @@ namespace hello::kit {
         return restored;
     }
 
+    QString VoiceBankConfig::FileNameEncoding::logicalNameOf(const QString &physical) const {
+        const auto name = physical.normalized(QString::NormalizationForm_C);
+        const bool listed =
+            std::any_of(misdecoded.begin(), misdecoded.end(), [&name](const QString &item) {
+                return item.normalized(QString::NormalizationForm_C) == name;
+            });
+        return listed ? restore(physical).value_or(physical) : physical;
+    }
+
     std::optional<VoiceBankConfig> VoiceBankConfig::open(const std::filesystem::path &path,
                                                          DiagnosticList &diagnostics) {
         std::ifstream in(path, std::ios::binary);

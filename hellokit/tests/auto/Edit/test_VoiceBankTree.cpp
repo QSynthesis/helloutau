@@ -196,6 +196,33 @@ private Q_SLOTS:
         QCOMPARE(found, 1);
     }
 
+    // The record is stored as a map of plain values, which needs no registered type.
+    void the_record_of_file_names_survives_the_tree_and_encoding() {
+        auto opened = openRichBank();
+        QVERIFY(opened.has_value());
+        auto &bank = opened->bank;
+        VoiceBankConfig::FileNameEncoding record;
+        record.original = QStringLiteral("Shift_JIS");
+        record.misdecodedAs = QStringLiteral("GBK");
+        record.misdecoded = QStringList{QString::fromUtf8("偁.wav")};
+        record.correct = QStringList{QString::fromUtf8("が.wav"), QString::fromUtf8("新")};
+        auto root = bank.directories().at(0);
+        root.fileNameEncoding = record;
+        bank.setDirectory(0, root);
+
+        const auto back = voiceBankOf(treeOf(bank).get(), opened->files);
+        QCOMPARE(back.directories().at(0).fileNameEncoding, std::optional(record));
+        QVERIFY(!back.directories().at(1).fileNameEncoding.has_value());
+
+        ss::QCodec codec;
+        registerVoiceBankTypes(codec);
+        const auto bytes = encoded(treeOf(bank).get());
+        QVERIFY(!bytes.empty());
+        const auto decodedTree = decoded(codec, bytes);
+        QVERIFY(decodedTree);
+        verifyEqual(voiceBankOf(decodedTree.get(), opened->files), back);
+    }
+
     // The default types of the struct nodes do not determine their size, so decoding requires
     // the registered node types.
     void decoding_requires_the_registered_node_types() {

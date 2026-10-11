@@ -122,6 +122,14 @@ namespace hello::kit {
         ///          saving would overwrite them with empty content.
         bool leftOut = false;
 
+        /// The record of the misdecoded names of the audio files and the subdirectories of the
+        /// directory, or \c std::nullopt if the names are used as they are. See the section on
+        /// misdecoded file names in docs/Editing.md.
+        ///
+        /// Changed through VoiceBank::setDirectory() , and recorded in \c hello-config.json by
+        /// the next save if it differs from the record read.
+        std::optional<VoiceBankConfig::FileNameEncoding> fileNameEncoding;
+
         /// \name Files of the root only
         ///
         /// Absent or empty in a subdirectory, whose files of these names are neither read nor
@@ -311,6 +319,12 @@ namespace hello::kit {
         /// Returns the index into directories() of the directory at \a directory relative to the
         /// root, or -1 if there is none.
         int indexOf(const std::filesystem::path &directory) const;
+
+        /// Returns \a directory , a path relative to the root, with each name restored by the
+        /// record of misdecoded file names of its parent directory, for display.
+        ///
+        /// \sa VoiceBankDirectory::fileNameEncoding
+        std::filesystem::path logicalPathOf(const std::filesystem::path &directory) const;
 
         /// The name and display information of the voice bank: the root's \c character.txt ,
         /// with the folder name as the default name.

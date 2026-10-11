@@ -68,6 +68,19 @@ namespace hello::kit {
             ///         \a original , or the result equals \a physical or contains a path separator
             ///         or a control character
             std::optional<QString> restore(const QString &physical) const;
+
+            /// Returns the name under which a voice bank uses \a physical , a name on disk: the
+            /// restored name if \a misdecoded lists \a physical in any normalization form and it
+            /// restores, otherwise \a physical .
+            QString logicalNameOf(const QString &physical) const;
+
+            inline bool operator==(const FileNameEncoding &RHS) const {
+                return original == RHS.original && misdecodedAs == RHS.misdecodedAs &&
+                       misdecoded == RHS.misdecoded && correct == RHS.correct;
+            }
+            inline bool operator!=(const FileNameEncoding &RHS) const {
+                return !(*this == RHS);
+            }
         };
 
         /// The record of misdecoded file names, or \c std::nullopt if the names of the directory

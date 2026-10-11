@@ -87,6 +87,23 @@ namespace hello::kit {
         return -1;
     }
 
+    fs::path VoiceBank::logicalPathOf(const fs::path &directory) const {
+        fs::path logical;
+        fs::path parent;
+        for (const auto &component : directory) {
+            auto name = QString::fromStdU16String(component.u16string());
+            const int index = indexOf(parent);
+            if (index >= 0) {
+                if (const auto &record = m_directories.at(index).fileNameEncoding) {
+                    name = record->logicalNameOf(name);
+                }
+            }
+            logical /= fs::path(name.toStdU16String());
+            parent /= component;
+        }
+        return logical;
+    }
+
     void VoiceBank::setSamples(QList<VoiceSample> samples) {
         m_samples = std::move(samples);
         reindex();
