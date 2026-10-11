@@ -4405,6 +4405,14 @@ Write them again without these chunks? The audio stays the same. The files are w
         <translation>未指定「%1」的编码，因此已跳过该目录。</translation>
     </message>
     <message>
+        <source>The file name &quot;%1&quot; does not restore in the encodings that its folder records, so the name is used as it is.</source>
+        <translation>文件名「%1」无法按其文件夹记录的编码还原，因此按原样使用该名字。</translation>
+    </message>
+    <message>
+        <source>The file name &quot;%1&quot; restores to &quot;%2&quot;, which another file of its folder has as well, so the name is used as it is.</source>
+        <translation>文件名「%1」还原后为「%2」，与同一文件夹中的另一个文件同名，因此按原样使用该名字。</translation>
+    </message>
+    <message>
         <source>The oto.ini in &quot;%1&quot; declares the encoding UTF-8, so the directory is read in UTF-8 rather than in %2.</source>
         <translation>「%1」中的 oto.ini 声明了 UTF-8 编码，因此该目录按 UTF-8 而非 %2 读取。</translation>
     </message>
