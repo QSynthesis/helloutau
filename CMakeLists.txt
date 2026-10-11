@@ -98,3 +98,8 @@ add_subdirectory(hellokit)
 if(HELLO_BUILD_APPLICATION)
     add_subdirectory(helloutau)
 endif()
+
+# ----------------------------------
+# Distribution
+# ----------------------------------
+add_subdirectory(dist)

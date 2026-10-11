@@ -10,7 +10,7 @@
 
 其余均未实现，现行代码与本文的出入如下：
 
-- 发布物的打包脚本不在仓库中（`.cache/claude/tools/package_windows.ps1`），也没有安装包。
+- 打包脚本与安装包的脚本位于 `dist/installer/windows/`（见「安装包」），尚未实现静默更新所需的 `/UPDATE` 参数与等待程序退出。
 
 ## 发布物
 
@@ -25,7 +25,7 @@
 | 校验文件 | `SHA256SUMS` |
 
 - `<version>` 为 `HELLO_VERSION` 的四段版本号。
-- `<triplet>` 为 `<架构>-<系统>-<编译器>`：架构为 `x64` 或 `arm64`，系统为 `windows`、`linux` 或 `osx`，编译器为 `msvc`、`gcc` 或 `clang`，例如 `x64-windows-msvc`。架构与系统的写法沿用 vcpkg 的 triplet。编译器必须写出，因为不同编译器构建的插件与主程序的 ABI 不兼容，用户以某一编译器构建的版本只能更新到同一编译器构建的版本。
+- `<triplet>` 为 `<架构>-<系统>-<ABI>`：架构为 `x64` 或 `arm64`，系统为 `windows`、`linux` 或 `osx`，ABI 为 `msvc`、`mingw` 或 `gcc`，例如 `x64-windows-msvc`。架构与系统的写法沿用 vcpkg 的 triplet。ABI 必须写出，因为 ABI 不同的构建之间插件无法载入，用户的版本只能更新到 ABI 相同的版本。写出的是 ABI 而不是编译器（作者 2026-10-11 决定）：clang 以 MSVC 的 ABI 构建时，与 MSVC 的构建互相兼容，同为 `msvc`。CMake 的 `cmake/DetectTriplet.cmake` 求出它，记入变量 `HELLO_TRIPLET`。
 - 程序编译时由 CMake 写入自己的 triplet，更新时按它挑选附件，不在运行时推断。
 - `SHA256SUMS` 每行为一个附件的 SHA-256 摘要与文件名，格式同 `sha256sum` 的输出。更新前必须以它校验下载的附件。
 - 附件由本地脚本上传到 Gitee（`.cache/claude/tools/sync_gitee_assets.py`），可能晚于 release 本身出现。客户端只在当前 triplet 的附件与 `SHA256SUMS` 都已存在时，才认为该源上有新版本。
@@ -65,7 +65,9 @@
 
 ## 安装包
 
-Windows 的安装包以 Inno Setup 6 生成，脚本参照 diffscope 的 `dist/installer/windows/setup.iss.in`，由 CMake 以 `configure_file()` 填入版本号、路径与名称。
+Windows 的安装包以 Inno Setup 7 生成，界面语言为英语、简体中文、繁体中文与日语（7.0.2 起两种中文均为官方翻译）。脚本为 `dist/installer/windows/setup.iss`，是可以直接用 Inno Setup 打开和编译的普通脚本，提示文字与卸载页分别在同目录的 `messages.iss` 与 `uninstall.iss` 中。版本号、源目录与输出文件名由命令行的 `/D` 传入，不经 `configure_file()`（作者 2026-10-11 决定）。
+
+同目录的 `package.ps1` 打包一个已完成的 Release 构建：`cmake --install`，补上构建时复制到程序旁的依赖 DLL，以 windeployqt 部署 Qt，删除只供开发者使用的文件，复制 C++ 运行库，生成 zip、安装包与 `SHA256SUMS`。它从构建目录中的 `package.txt` 读取版本号与 triplet，该文件由 `dist/CMakeLists.txt` 写出。脚本不负责构建，因为构建需要编译器的环境。
 
 ### 标识与安装模式
 
