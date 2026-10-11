@@ -148,6 +148,13 @@ private Q_SLOTS:
     }
 };
 
-QTEST_MAIN(test_FindBar)
+int main(int argc, char *argv[]) {
+    // The offscreen platform keeps the activation and the focus within this process. On a
+    // display, a window of another process can take the activation, and the waits for it fail.
+    qputenv("QT_QPA_PLATFORM", "offscreen");
+    QApplication app(argc, argv);
+    test_FindBar test;
+    return QTest::qExec(&test, argc, argv);
+}
 
 #include "test_FindBar.moc"
