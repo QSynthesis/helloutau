@@ -710,6 +710,10 @@
         <source>Note %1: %2</source>
         <translation>音符 %1：%2</translation>
     </message>
+    <message>
+        <source>Probable causes:</source>
+        <translation>可能的原因：</translation>
+    </message>
 </context>
 <context>
     <name>hello::daw::Editor</name>
@@ -1497,6 +1501,17 @@
     <message>
         <source>&quot;%1&quot; could not be deleted.</source>
         <translation>无法删除「%1」。</translation>
+    </message>
+</context>
+<context>
+    <name>hello::daw::PortableUpdate</name>
+    <message>
+        <source>The folder %1 cannot be removed.</source>
+        <translation>无法删除文件夹 %1。</translation>
+    </message>
+    <message>
+        <source>The archive %1 does not contain the program %2.</source>
+        <translation>压缩包 %1 中没有程序 %2。</translation>
     </message>
 </context>
 <context>
@@ -3124,6 +3139,197 @@ Write them again without these chunks? The audio stays the same. The files are w
     <message>
         <source>The file contains %1 parts, and the first %2 were imported.</source>
         <translation>该文件包含 %1 个部分，已导入前 %2 个。</translation>
+    </message>
+</context>
+<context>
+    <name>hello::kit::BuiltinSynthDiagnosers</name>
+    <message>
+        <source>A path contains characters that the code page of the system cannot represent.</source>
+        <translation>路径中含有系统代码页无法表示的字符。</translation>
+    </message>
+    <message>
+        <source>A synth tool that reads its arguments in the code page of the system receives question marks in place of these characters and therefore cannot open the file. The path is %1.</source>
+        <translation>以系统代码页读取参数的合成工具收到的参数中，这些字符会变成问号，因而无法打开文件。该路径为 %1。</translation>
+    </message>
+    <message>
+        <source>Move the voice bank, the project or the cache folder to a path without these characters.</source>
+        <translation>把音源、工程或缓存文件夹移到不含这些字符的路径。</translation>
+    </message>
+    <message>
+        <source>Change the language for non-Unicode programs of Windows to the language of the path.</source>
+        <translation>把 Windows 的「非 Unicode 程序的语言」改为该路径所用的语言。</translation>
+    </message>
+    <message>
+        <source>The synth tool %1 could not be started.</source>
+        <translation>无法启动合成工具 %1。</translation>
+    </message>
+    <message>
+        <source>The file does not exist, is not a program, or is blocked by the system or by an antivirus program.</source>
+        <translation>该文件不存在、不是程序，或者被系统或杀毒软件阻止。</translation>
+    </message>
+    <message>
+        <source>Check that the file exists, and select the synth tool again in the rendering settings.</source>
+        <translation>确认该文件存在，并在渲染设置中重新选择合成工具。</translation>
+    </message>
+    <message>
+        <source>The synth tool %1 requires a DLL that cannot be found.</source>
+        <translation>合成工具 %1 需要的 DLL 找不到。</translation>
+    </message>
+    <message>
+        <source>Windows ended the synth tool with the status 0xC0000135, STATUS_DLL_NOT_FOUND.</source>
+        <translation>Windows 以状态 0xC0000135（STATUS_DLL_NOT_FOUND）结束了该合成工具。</translation>
+    </message>
+    <message>
+        <source>Place the DLLs supplied with the synth tool in its folder.</source>
+        <translation>把合成工具附带的 DLL 放到它所在的文件夹中。</translation>
+    </message>
+    <message>
+        <source>Install the runtime that the synth tool requires, such as the Microsoft Visual C++ Redistributable.</source>
+        <translation>安装合成工具所需的运行库，例如 Microsoft Visual C++ Redistributable。</translation>
+    </message>
+    <message>
+        <source>The synth tool %1 or a DLL that it loads has the wrong image format.</source>
+        <translation>合成工具 %1 或它加载的 DLL 映像格式不正确。</translation>
+    </message>
+    <message>
+        <source>Windows ended the synth tool with the status 0xC000007B, STATUS_INVALID_IMAGE_FORMAT. A 32-bit DLL in a 64-bit program, or the reverse, causes it.</source>
+        <translation>Windows 以状态 0xC000007B（STATUS_INVALID_IMAGE_FORMAT）结束了该合成工具。64 位程序加载了 32 位的 DLL 或者相反时会出现这种情况。</translation>
+    </message>
+    <message>
+        <source>Replace the DLLs in the folder of the synth tool with those of the same release.</source>
+        <translation>用同一版本的 DLL 替换合成工具文件夹中的 DLL。</translation>
+    </message>
+    <message>
+        <source>The synth tool %1 crashed.</source>
+        <translation>合成工具 %1 已崩溃。</translation>
+    </message>
+    <message>
+        <source>Windows ended the synth tool with the status 0xC0000005, STATUS_ACCESS_VIOLATION. The synth tool cannot process this input, or it is defective.</source>
+        <translation>Windows 以状态 0xC0000005（STATUS_ACCESS_VIOLATION）结束了该合成工具。该合成工具无法处理这些输入，或者本身有缺陷。</translation>
+    </message>
+    <message>
+        <source>Check the samples of these notes in the voice bank editor.</source>
+        <translation>在音源编辑器中检查这些音符的样本。</translation>
+    </message>
+    <message>
+        <source>Use another release of the synth tool.</source>
+        <translation>换用该合成工具的其他版本。</translation>
+    </message>
+    <message>
+        <source>The synth tool %1 did not finish within the time limit.</source>
+        <translation>合成工具 %1 没有在时间限制内结束。</translation>
+    </message>
+    <message>
+        <source>The synth tool was stopped. It may be waiting for input or showing a window, or require a long time for a long note.</source>
+        <translation>该合成工具已被终止。该合成工具可能正在等待输入或显示窗口，也可能处理长音符所需的时间较长。</translation>
+    </message>
+    <message>
+        <source>Run the synth tool once from a console, and check whether it waits for input or shows a message.</source>
+        <translation>在控制台中运行一次该合成工具，查看它是否在等待输入或显示了消息。</translation>
+    </message>
+    <message>
+        <source>A path is longer than 260 characters.</source>
+        <translation>路径超过 260 个字符。</translation>
+    </message>
+    <message>
+        <source>A synth tool without support for long paths cannot open it. The path is %1.</source>
+        <translation>不支持长路径的合成工具无法打开它。该路径为 %1。</translation>
+    </message>
+    <message>
+        <source>Move the voice bank, the project or the cache folder to a shorter path.</source>
+        <translation>把音源、工程或缓存文件夹移到较短的路径。</translation>
+    </message>
+    <message>
+        <source>Realtime playback cannot read the fragments of the resampler %1, which are not wave files.</source>
+        <translation>实时播放无法读取重采样器 %1 的分片，这些分片不是 wav 文件。</translation>
+    </message>
+    <message>
+        <source>Realtime playback joins the fragments itself and reads only wave files, so that these notes are silent. The file %1 begins with &quot;%2&quot;.</source>
+        <translation>实时播放自行拼接分片，只能读取 wav 文件，因此这些音符无声。文件 %1 以「%2」开头。</translation>
+    </message>
+    <message>
+        <source>Check the settings of the resampler for an option that changes the format of its output.</source>
+        <translation>在重采样器的设置中查找改变输出格式的选项。</translation>
+    </message>
+    <message>
+        <source>Play in a prerender mode, in which the wavtool joins the fragments.</source>
+        <translation>改用预渲染模式播放，由合成器拼接分片。</translation>
+    </message>
+    <message>
+        <source>The resampler %1 wrote wave files that cannot be read.</source>
+        <translation>重采样器 %1 写出的 wav 文件无法读取。</translation>
+    </message>
+    <message>
+        <source>These notes are silent. The file %1 is a wave file whose format or content cannot be read.</source>
+        <translation>这些音符无声。文件 %1 是 wav 文件，但其格式或内容无法读取。</translation>
+    </message>
+    <message>
+        <source>Check the settings of the resampler for its output format, such as the bit depth.</source>
+        <translation>检查重采样器的输出格式设置，例如位深。</translation>
+    </message>
+    <message>
+        <source>Render the project again after clearing the cache, in case the file is incomplete.</source>
+        <translation>清除渲染缓存后重新渲染，以防文件不完整。</translation>
+    </message>
+    <message>
+        <source>The wavtool appended nothing to the track.</source>
+        <translation>合成器没有向音轨追加任何数据。</translation>
+    </message>
+    <message>
+        <source>The wavtool reported the exit code %1 and appended nothing to the track.</source>
+        <translation>合成器报告退出码 %1，没有向音轨追加任何数据。</translation>
+    </message>
+    <message>
+        <source>The wavtool reported the exit code %1 and appended nothing to the track. Its output is: %2</source>
+        <translation>合成器报告退出码 %1，没有向音轨追加任何数据。其输出为：%2</translation>
+    </message>
+    <message>
+        <source>The fragment %1 is not a wave file. It begins with &quot;%2&quot;.</source>
+        <translation>分片 %1 不是 wav 文件，它以「%2」开头。</translation>
+    </message>
+    <message>
+        <source>The wavtool %1 failed for these notes.</source>
+        <translation>合成器 %1 处理这些音符时失败。</translation>
+    </message>
+    <message>
+        <source>Check that the resampler writes wave files that this wavtool reads, or use the wavtool supplied with the resampler.</source>
+        <translation>确认重采样器写出的是该合成器能读取的 wav 文件，或者使用重采样器配套的合成器。</translation>
+    </message>
+    <message>
+        <source>The wavtool %1 wrote no track.</source>
+        <translation>合成器 %1 没有写出音轨。</translation>
+    </message>
+    <message>
+        <source>The wavtool produced no output.</source>
+        <translation>合成器没有输出。</translation>
+    </message>
+    <message>
+        <source>The output of the wavtool is: %1</source>
+        <translation>合成器的输出为：%1</translation>
+    </message>
+    <message>
+        <source>Check that the wavtool accepts the arguments of the wavtool of UTAU.</source>
+        <translation>确认该合成器接受 UTAU 合成器的参数。</translation>
+    </message>
+    <message>
+        <source>The resampler %1 ended with the exit code %2.</source>
+        <translation>重采样器 %1 以退出码 %2 结束。</translation>
+    </message>
+    <message>
+        <source>The resampler produced no output.</source>
+        <translation>重采样器没有输出。</translation>
+    </message>
+    <message>
+        <source>The output of the resampler is: %1</source>
+        <translation>重采样器的输出为：%1</translation>
+    </message>
+    <message>
+        <source>Use another resampler.</source>
+        <translation>换用其他重采样器。</translation>
+    </message>
+    <message>
+        <source>The resampler %1 wrote no fragment.</source>
+        <translation>重采样器 %1 没有写出分片。</translation>
     </message>
 </context>
 <context>
