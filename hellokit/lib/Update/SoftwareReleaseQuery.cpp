@@ -1,37 +1,16 @@
 #include "SoftwareReleaseQuery.h"
 
-#include <QtCore/QCoreApplication>
 #include <QtCore/QJsonDocument>
 #include <QtCore/QJsonObject>
 #include <QtNetwork/QNetworkAccessManager>
-#include <QtNetwork/QNetworkProxyFactory>
 #include <QtNetwork/QNetworkReply>
-#include <QtNetwork/QNetworkRequest>
+
+#include "UpdateNetwork_p.h"
 
 namespace hello::kit {
 
-    namespace {
-
-        // A request that receives no data for this long fails.
-        constexpr int transferTimeout = 30000;
-
-        // The proxy of the system for the requests of one manager. The global
-        // QNetworkProxyFactory::setUseSystemConfiguration() would apply to every manager of the
-        // application.
-        class SystemProxyFactory : public QNetworkProxyFactory {
-        public:
-            QList<QNetworkProxy> queryProxy(const QNetworkProxyQuery &query) override {
-                return systemProxyForQuery(query);
-            }
-        };
-
-    }
-
     SoftwareReleaseQuery::SoftwareReleaseQuery(QObject *parent)
-        : QObject(parent), m_manager(new QNetworkAccessManager(this)) {
-        m_manager->setProxyFactory(new SystemProxyFactory());
-        m_manager->setRedirectPolicy(QNetworkRequest::NoLessSafeRedirectPolicy);
-        m_manager->setTransferTimeout(transferTimeout);
+        : QObject(parent), m_manager(UpdateNetwork::createManager(this)) {
     }
 
     SoftwareReleaseQuery::~SoftwareReleaseQuery() {
@@ -43,17 +22,12 @@ namespace hello::kit {
         m_pageTemplate = pageTemplate;
         m_release.reset();
         m_errorString.clear();
-        if (!url.isValid() || url.scheme() != QLatin1String("https")) {
+        if (!UpdateNetwork::isHttps(url)) {
             m_errorString = tr("The address %1 is not an HTTPS address.").arg(url.toString());
             return false;
         }
 
-        QNetworkRequest request(url);
-        // GitHub rejects a request without a user agent.
-        request.setHeader(QNetworkRequest::UserAgentHeader,
-                          QCoreApplication::applicationName() + QLatin1Char('/') +
-                              QCoreApplication::applicationVersion());
-        m_reply = m_manager->get(request);
+        m_reply = m_manager->get(UpdateNetwork::requestOf(url));
         connect(m_reply, &QNetworkReply::finished, this, &SoftwareReleaseQuery::readReply);
         return true;
     }
