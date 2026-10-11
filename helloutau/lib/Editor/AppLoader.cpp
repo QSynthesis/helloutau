@@ -58,9 +58,19 @@ namespace hello::daw {
             const auto fileName = settingsDirectory + QStringLiteral("/plugins.json");
             pluginFile = std::make_unique<kit::SettingsFile>(
                 fileName, [this] { return pluginSettings.toJson(); });
+            kit::DiagnosticList diagnostics;
+            auto object = kit::SettingsFile::read(fileName, diagnostics);
+            // TODO: Show the diagnostics in a list of the errors of the application, which does
+            // not exist yet.
+            for (const auto &diagnostic : std::as_const(diagnostics)) {
+                qWarning().noquote() << diagnostic.message;
+            }
+            if (!object) {
+                return;
+            }
             std::string error;
             auto read = stdc::pluginsystem::PluginSettings::fromJson(
-                stdc::json::Value(kit::SettingsFile::read(fileName)), &error);
+                stdc::json::Value(std::move(*object)), &error);
             if (!read) {
                 qWarning().noquote() << "The settings of the plugins in" << fileName
                                      << "are ignored:" << QString::fromStdString(error);

@@ -7,6 +7,7 @@
 #include <QtCore/QDir>
 #include <QtCore/QFileInfo>
 #include <QtCore/QStandardPaths>
+#include <QtCore/QtDebug>
 
 #include <stdcorelib/pimpl.h>
 
@@ -96,11 +97,22 @@ namespace hello::daw {
             return result;
         }
 
+        // Returns the settings in fileName, or no settings if the file cannot be read.
+        json::Object readSettings(const QString &fileName) {
+            kit::DiagnosticList diagnostics;
+            auto object = kit::SettingsFile::read(fileName, diagnostics);
+            // TODO: Show the diagnostics in a list of the errors of the application, which does
+            // not exist yet.
+            for (const auto &diagnostic : std::as_const(diagnostics)) {
+                qWarning().noquote() << diagnostic.message;
+            }
+            return object ? std::move(*object) : json::Object();
+        }
+
     }
 
     AppSettings::Impl::Impl(const QString &fileName)
-        : root(kit::SettingsFile::read(fileName)),
-          file(fileName, [this] { return json::Value(root); }) {
+        : root(readSettings(fileName)), file(fileName, [this] { return json::Value(root); }) {
     }
 
     const json::Value &AppSettings::Impl::value(std::string_view key) const {

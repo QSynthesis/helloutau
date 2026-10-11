@@ -11,10 +11,23 @@ namespace hello::kit {
 
     namespace json = stdc::json;
 
-    json::Object SettingsFile::read(const QString &fileName) {
+    std::optional<json::Object> SettingsFile::read(const QString &fileName,
+                                                   DiagnosticList &diagnostics) {
         QFile file(fileName);
+        if (!file.exists()) {
+            return json::Object();
+        }
+        const auto fail = [&](const QString &reason) {
+            diagnostics.push_back(
+                {DiagnosticSeverity::Error,
+                 tr("The settings in \"%1\" could not be read (%2). The default settings apply, "
+                    "and the next change of a setting replaces the file.")
+                     .arg(QDir::toNativeSeparators(fileName), reason),
+                 std::nullopt});
+            return std::nullopt;
+        };
         if (!file.open(QIODevice::ReadOnly)) {
-            return {};
+            return fail(file.errorString());
         }
         const auto text = file.readAll();
         json::ParseError error;
@@ -23,9 +36,8 @@ namespace hello::kit {
         if (const auto object = document.asObject()) {
             return std::move(*object);
         }
-        qWarning().noquote() << "The settings in" << fileName
-                             << "cannot be read:" << QString::fromStdString(error.message());
-        return {};
+        return fail(error.message().empty() ? tr("The file does not contain a JSON object.")
+                                            : QString::fromStdString(error.message()));
     }
 
     SettingsFile::SettingsFile(QString fileName, std::function<json::Value()> content)

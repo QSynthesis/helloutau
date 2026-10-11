@@ -42,8 +42,9 @@ list(TRANSFORM HELLOUTAU_LANGUAGES
 qt_add_translations(
     TARGETS HelloUtauEditor
     SOURCE_TARGETS
-        HelloKitDocument HelloKitEdit HelloKitEditBase HelloKitInterchange HelloKitSynth
-        HelloKitVoiceBank HelloUtauAudio HelloUtauEditor HelloUtauTheme HelloUtauWidgets
+        HelloKitDocument HelloKitEdit HelloKitEditBase HelloKitInterchange HelloKitSupport
+        HelloKitSynth HelloKitVoiceBank HelloUtauAudio HelloUtauEditor HelloUtauTheme
+        HelloUtauWidgets
     TS_FILES ${_ts_files}
     RESOURCE_PREFIX /helloutau/translations
     LUPDATE_OPTIONS -locations none -no-obsolete

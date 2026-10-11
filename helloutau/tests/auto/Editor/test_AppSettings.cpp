@@ -265,7 +265,7 @@ private Q_SLOTS:
             QVERIFY(out.open(QIODevice::WriteOnly));
             out.write("[#VERSION]");
         }
-        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(QStringLiteral("cannot be read")));
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(QStringLiteral("could not be read")));
         AppSettings settings(file);
         QVERIFY(settings.resampler().isEmpty());
         settings.setResampler(QStringLiteral("r.exe"));

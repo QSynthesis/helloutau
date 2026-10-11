@@ -2,12 +2,15 @@
 #define HELLOKIT_SUPPORT_SETTINGSFILE_H
 
 #include <functional>
+#include <optional>
 
+#include <QtCore/QCoreApplication>
 #include <QtCore/QString>
 #include <QtCore/QTimer>
 
 #include <stdcorelib/support/json.h>
 
+#include <hellokit/Support/Diagnostic.h>
 #include <hellokit/Support/HelloKitSupportGlobal.h>
 
 namespace hello::kit {
@@ -18,11 +21,15 @@ namespace hello::kit {
     /// changes. The content is held in the JSON types of stdcorelib, whose values are mutable in
     /// place. JsonInterop addresses a value by its path.
     class HELLOKIT_SUPPORT_EXPORT SettingsFile {
+        Q_DECLARE_TR_FUNCTIONS(hello::kit::SettingsFile)
     public:
-        /// Returns the object in \a fileName, or an empty object if the file does not exist. A
-        /// file that does not contain a JSON object is reported and read as empty. The next
-        /// change replaces the file.
-        static stdc::json::Object read(const QString &fileName);
+        /// Reads the object in \a fileName.
+        ///
+        /// \return the object, an empty object if the file does not exist, or \c std::nullopt
+        ///         with an error in \a diagnostics if the file cannot be opened or does not
+        ///         contain a JSON object. The next change replaces such a file.
+        static std::optional<stdc::json::Object> read(const QString &fileName,
+                                                      DiagnosticList &diagnostics);
 
         /// Constructs the settings file \a fileName. \a content returns the content at each
         /// write.

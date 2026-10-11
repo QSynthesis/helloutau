@@ -24,7 +24,8 @@ namespace {
 
     // Returns the entry "value" of the settings in \a fileName, or -1 if absent.
     int valueIn(const QString &fileName) {
-        const auto object = SettingsFile::read(fileName);
+        DiagnosticList diagnostics;
+        const auto object = SettingsFile::read(fileName, diagnostics).value_or(json::Object());
         const auto it = object.find("value");
         return it == object.end() ? -1 : int(it->second.toInt());
     }
@@ -47,19 +48,24 @@ private Q_SLOTS:
     }
 
     void a_missing_file_reads_as_an_empty_object() {
-        QVERIFY(SettingsFile::read(m_dir->filePath(QStringLiteral("absent.json"))).empty());
+        DiagnosticList diagnostics;
+        const auto object =
+            SettingsFile::read(m_dir->filePath(QStringLiteral("absent.json")), diagnostics);
+        QVERIFY(object && object->empty());
+        QVERIFY(diagnostics.isEmpty());
     }
 
-    void a_file_without_a_json_object_is_reported_and_read_as_empty() {
-        const auto array = m_dir->filePath(QStringLiteral("array.json"));
-        writeText(array, "[1, 2]");
-        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(QStringLiteral("cannot be read")));
-        QVERIFY(SettingsFile::read(array).empty());
-
-        const auto broken = m_dir->filePath(QStringLiteral("broken.json"));
-        writeText(broken, "{\"a\": ");
-        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(QStringLiteral("cannot be read")));
-        QVERIFY(SettingsFile::read(broken).empty());
+    // A file without a JSON object is not read, and an error reports it.
+    void a_file_without_a_json_object_is_reported() {
+        for (const auto &text : {QByteArray("[1, 2]"), QByteArray("{\"a\": ")}) {
+            const auto fileName = m_dir->filePath(QStringLiteral("settings.json"));
+            writeText(fileName, text);
+            DiagnosticList diagnostics;
+            QVERIFY(!SettingsFile::read(fileName, diagnostics));
+            QCOMPARE(diagnostics.size(), 1);
+            QCOMPARE(diagnostics.first().severity, DiagnosticSeverity::Error);
+            QVERIFY(diagnostics.first().message.contains(QDir::toNativeSeparators(fileName)));
+        }
     }
 
     // The changes of one pass of the event loop result in one write, of the content at the time

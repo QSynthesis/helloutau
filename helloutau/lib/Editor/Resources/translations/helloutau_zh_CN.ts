@@ -3563,6 +3563,17 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
 </context>
 <context>
+    <name>hello::kit::SettingsFile</name>
+    <message>
+        <source>The settings in &quot;%1&quot; could not be read (%2). The default settings apply, and the next change of a setting replaces the file.</source>
+        <translation>无法读取「%1」中的设置（%2）。现改用默认设置，下次修改设置时将覆盖该文件。</translation>
+    </message>
+    <message>
+        <source>The file does not contain a JSON object.</source>
+        <translation>文件中没有 JSON 对象。</translation>
+    </message>
+</context>
+<context>
     <name>hello::kit::SynthPlan</name>
     <message>
         <source>Rendering requires exactly one track, but this project contains %1.</source>
