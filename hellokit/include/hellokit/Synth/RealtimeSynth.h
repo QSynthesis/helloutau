@@ -9,6 +9,7 @@
 
 #include <hellokit/Support/Diagnostic.h>
 
+#include <hellokit/Synth/SynthFailure.h>
 #include <hellokit/Synth/SynthToolProcess.h>
 #include <hellokit/Synth/HelloKitSynthGlobal.h>
 #include <hellokit/Synth/SynthPlan.h>
@@ -97,6 +98,11 @@ namespace hello::kit {
 
         /// Returns the warnings of the notes that failed since the last call, and forgets them.
         DiagnosticList takeDiagnostics();
+
+        /// Returns the records of the notes that failed since the last call, for the diagnosis,
+        /// and forgets them. A fragment that WavtoolMixer cannot read is recorded whatever the
+        /// wavtool is. See docs/SynthDiagnostics.md.
+        QList<SynthFailure> takeFailures();
 
     private:
         class Impl;

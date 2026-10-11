@@ -3,9 +3,13 @@
 
 #include <filesystem>
 #include <memory>
+#include <optional>
+
+#include <QtCore/QList>
 
 #include <hellokit/Support/Diagnostic.h>
 
+#include <hellokit/Synth/SynthFailure.h>
 #include <hellokit/Synth/SynthToolProcess.h>
 #include <hellokit/Synth/HelloKitSynthGlobal.h>
 #include <hellokit/Synth/SynthPlan.h>
@@ -43,6 +47,10 @@ namespace hello::kit {
         /// Notes appended from a file without the resampler, for \c $patch or \c $direct.
         int direct = 0;
         /// @}
+
+        /// The failed calls and the fragments that are not wave files, in track order, for the
+        /// diagnosis. Fragments are checked by their header only. See docs/SynthDiagnostics.md.
+        QList<SynthFailure> failures;
     };
 
     /// Receives render progress and indicates whether the render continues.
@@ -142,6 +150,20 @@ namespace hello::kit {
         ///
         /// \return the number of removed fragments
         int forgetSuperseded(const SynthPlan &plan, DiagnosticList &diagnostics) const;
+
+        /// Returns the record of the resampler call of \a step for the diagnosis, with \a run if
+        /// known: SynthFailure::Resampler if the fragment does not exist, and
+        /// SynthFailure::Fragment if the fragment is not a RIFF/WAVE file and the wavtool is
+        /// another program than the resampler.
+        ///
+        /// Only the header of the fragment is read. A wavtool that is the same program as the
+        /// resampler may join an intermediate format of its own, as moresampler does.
+        ///
+        /// \return the record, or \c std::nullopt if the fragment is a wave file or may be read
+        ///         by the wavtool
+        static std::optional<SynthFailure> resamplerFailure(const SynthStep &step,
+                                                            const SynthTools &synthTools,
+                                                            std::optional<SynthToolRun> run);
 
     private:
         mutable std::shared_ptr<SynthToolOutputLog> m_outputLog;

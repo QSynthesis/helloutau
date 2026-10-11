@@ -54,6 +54,30 @@ namespace hello::kit {
         }
     }
 
+    std::optional<SynthFailure> SynthRunner::resamplerFailure(const SynthStep &step,
+                                                              const SynthTools &synthTools,
+                                                              std::optional<SynthToolRun> run) {
+        SynthFailure failure;
+        failure.noteIndex = step.noteIndex;
+        failure.program = synthTools.resampler;
+        failure.arguments = step.resamplerArguments;
+        failure.run = std::move(run);
+        failure.outputFile = step.cacheFile;
+        failure.readOutput();
+        if (failure.outputSize < 0) {
+            failure.stage = SynthFailure::Resampler;
+            return failure;
+        }
+        std::error_code error;
+        const bool sameProgram = synthTools.resampler == synthTools.wavtool ||
+                                 fs::equivalent(synthTools.resampler, synthTools.wavtool, error);
+        if (sameProgram || SynthFailure::isWave(failure.outputHead)) {
+            return std::nullopt;
+        }
+        failure.stage = SynthFailure::Fragment;
+        return failure;
+    }
+
     int SynthRunner::forgetSuperseded(const SynthPlan &plan, DiagnosticList &diagnostics) const {
         Q_UNUSED(diagnostics)
 

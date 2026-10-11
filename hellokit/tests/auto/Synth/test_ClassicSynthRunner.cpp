@@ -147,7 +147,8 @@ private:
         SynthToolRun runScript(const std::filesystem::path &, DiagnosticList &,
                                const std::function<bool()> &) const override {
             for (const auto &path : m_written) {
-                std::ofstream(path, std::ios::binary | std::ios::trunc) << "RIFF piece";
+                std::ofstream(path, std::ios::binary | std::ios::trunc)
+                    << std::string("RIFF\0\0\0\0WAVE piece", 18);
             }
             return m_ending;
         }
@@ -788,6 +789,48 @@ private Q_SLOTS:
         DiagnosticList diagnostics;
         runner.render(*p, synthTools(), nullptr, diagnostics);
         QCOMPARE(existing(*p), (QList<bool>{true, false, true}));
+    }
+
+    // The script reports no result of the individual calls, so that the records have none.
+    void the_failures_of_a_script_are_recorded_without_the_calls() {
+        const auto p = planOfNotes(3);
+        QVERIFY(p.has_value());
+        std::filesystem::create_directories(p->cacheDirectory());
+        ScriptRunner runner;
+        runner.written = {p->steps().at(0).cacheFile};
+        runner.ending.started = true;
+
+        DiagnosticList diagnostics;
+        const auto outcome = runner.render(*p, synthTools(), nullptr, diagnostics);
+        QVERIFY(!outcome.rendered);
+        QCOMPARE(outcome.failures.size(), 3);
+        for (int i = 0; i < 2; ++i) {
+            const auto &failure = outcome.failures.at(i);
+            QCOMPARE(failure.stage, SynthFailure::Resampler);
+            QCOMPARE(failure.noteIndex, p->steps().at(i + 1).noteIndex);
+            QCOMPARE(failure.program, synthTools().resampler);
+            QVERIFY(!failure.run);
+        }
+        const auto &track = outcome.failures.at(2);
+        QCOMPARE(track.stage, SynthFailure::Wavtool);
+        QCOMPARE(track.program, synthTools().wavtool);
+        QVERIFY(!track.run);
+    }
+
+    // The script, not the wavtool, is the program that did not start.
+    void a_script_that_does_not_start_is_recorded_as_the_program() {
+        const auto p = planOfNotes(1);
+        QVERIFY(p.has_value());
+        ScriptRunner runner;
+        runner.ending.started = false;
+
+        DiagnosticList diagnostics;
+        const auto outcome = runner.render(*p, synthTools(), nullptr, diagnostics);
+        QVERIFY(!outcome.failures.isEmpty());
+        const auto &failure = outcome.failures.last();
+        QCOMPARE(failure.stage, SynthFailure::Wavtool);
+        QVERIFY(failure.program != synthTools().wavtool);
+        QVERIFY(failure.run && !failure.run->started);
     }
 
     void a_killed_script_that_wrote_nothing_removes_nothing() {

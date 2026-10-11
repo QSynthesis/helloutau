@@ -124,6 +124,20 @@ private Q_SLOTS:
         QVERIFY(diagnoses.at(0).cause.contains(QStringLiteral("260")));
     }
 
+    // Realtime playback records a wave file that it cannot read, which is not the case of a
+    // file that is not a wave file.
+    void a_wave_file_that_cannot_be_read_is_told_apart() {
+        auto notWave = failureOf(SynthFailure::Fragment, runOf(true));
+        notWave.outputHead = "This is a dummy file";
+        auto unreadable = failureOf(SynthFailure::Fragment, runOf(true));
+        unreadable.outputHead = QByteArray("RIFF\0\0\0\0WAVEfmt ", 16);
+        const auto diagnoses = diagnose({notWave, unreadable});
+        QCOMPARE(diagnoses.size(), 2);
+        QCOMPARE(diagnoses.at(0).failures, QList<int>{0});
+        QCOMPARE(diagnoses.at(1).failures, QList<int>{1});
+        QVERIFY(diagnoses.at(0).cause != diagnoses.at(1).cause);
+    }
+
     void the_remaining_failures_are_grouped_by_kind() {
         auto notWave = failureOf(SynthFailure::Fragment, runOf(true));
         notWave.outputHead = "This is a dummy file\x01";

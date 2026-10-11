@@ -85,6 +85,7 @@ namespace hello::kit {
         // the main thread waiting for the lock while the workers look for the next step.
         std::vector<Fragment *> fragmentOf;
         DiagnosticList diagnostics;
+        QList<SynthFailure> failures;
         std::vector<std::thread> workers;
 
         // Whether step \a index sounds and still needs its fragment
@@ -143,12 +144,14 @@ namespace hello::kit {
                 // The fragment of an earlier render is taken as it is, as the other runners do. A
                 // direct step reads its file, which no synth tool writes.
                 DiagnosticList synthToolDiagnostics;
+                std::optional<SynthToolRun> resamplerRun;
                 std::error_code error;
                 if (step.resamples() && !fs::exists(step.cacheFile, error)) {
                     fs::create_directories(directory, error);
                     const auto run =
                         synthTool->run(synthTools.resampler, step.resamplerArguments,
                                        synthToolDiagnostics, [this] { return stopping.load(); });
+                    resamplerRun = run;
                     // A killed resampler may have written part of the fragment, which the next
                     // render would reuse as complete.
                     if (run.cancelled || run.timedOut) {
@@ -163,6 +166,20 @@ namespace hello::kit {
                 }
                 auto samples = readFragment(fragmentFile(step));
 
+                // WavtoolMixer reads the fragment whatever the wavtool is, so that a fragment that
+                // it cannot read is recorded even if the wavtool is the resampler.
+                SynthFailure failure;
+                if (!samples && step.resamples()) {
+                    failure.noteIndex = step.noteIndex;
+                    failure.program = synthTools.resampler;
+                    failure.arguments = step.resamplerArguments;
+                    failure.run = resamplerRun;
+                    failure.outputFile = step.cacheFile;
+                    failure.readOutput();
+                    failure.stage =
+                        failure.outputSize < 0 ? SynthFailure::Resampler : SynthFailure::Fragment;
+                }
+
                 lock.lock();
                 auto &fragment = fragments[fragmentFile(step)];
                 if (samples) {
@@ -174,6 +191,9 @@ namespace hello::kit {
                     diagnostics.push_back({DiagnosticSeverity::Warning,
                                            tr("This note could not be rendered, and is silent."),
                                            step.noteIndex});
+                    if (step.resamples()) {
+                        failures.push_back(std::move(failure));
+                    }
                 }
                 changed.notify_all();
             }
@@ -365,6 +385,12 @@ namespace hello::kit {
         stdc_impl_t;
         const std::lock_guard lock(impl.mutex);
         return std::exchange(impl.diagnostics, {});
+    }
+
+    QList<SynthFailure> RealtimeSynth::takeFailures() {
+        stdc_impl_t;
+        const std::lock_guard lock(impl.mutex);
+        return std::exchange(impl.failures, {});
     }
 
 }

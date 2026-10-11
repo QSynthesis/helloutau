@@ -55,6 +55,7 @@ namespace {
         std::mutex mutex;
         QList<int> rendered;           // note numbers in the order rendered
         QSet<int> failing;             // note numbers that produce nothing
+        QSet<int> dummies;             // note numbers that produce a file that is not a wave
         std::atomic<bool> held{false}; // while set, every call waits
     };
 
@@ -86,7 +87,9 @@ namespace {
             }
             QFile file(QString::fromStdU16String(output.u16string()));
             if (file.open(QIODevice::WriteOnly)) {
-                file.write(fragment(qint16(1000 * (note + 1))));
+                const std::lock_guard lock(m_record.mutex);
+                file.write(m_record.dummies.contains(note) ? QByteArray("This is a dummy file")
+                                                           : fragment(qint16(1000 * (note + 1))));
             }
             SynthToolRun run;
             run.started = true;
@@ -201,10 +204,10 @@ private:
         return SynthPlan::make(project, *voices, options, diagnostics);
     }
 
-    std::unique_ptr<RealtimeSynth> synth(int threads = 1) {
+    std::unique_ptr<RealtimeSynth> synth(int threads = 1,
+                                         SynthTools synthTools = {"resampler.exe", "wavtool.exe"}) {
         return std::make_unique<RealtimeSynth>(
-            SynthTools{"resampler.exe", "wavtool.exe"}, threads,
-            [this] { return std::make_unique<StandIn>(m_record); });
+            std::move(synthTools), threads, [this] { return std::make_unique<StandIn>(m_record); });
     }
 
     static QList<WavtoolMixer::Segment> segmentsOf(const SynthPlan &plan) {
@@ -226,6 +229,7 @@ private Q_SLOTS:
         const std::lock_guard lock(m_record.mutex);
         m_record.rendered.clear();
         m_record.failing.clear();
+        m_record.dummies.clear();
         m_record.held = false;
     }
 
@@ -339,6 +343,23 @@ private Q_SLOTS:
 
     // A note the resampler cannot render is silent, with a warning, and does not hold back
     // playback.
+    // The mixer reads every fragment, so that a fragment that is not a wave file is recorded
+    // even if the wavtool is the resampler.
+    void a_fragment_that_is_not_a_wave_file_is_recorded() {
+        const auto plan = planOf(fiveNotes());
+        QVERIFY(plan);
+        m_record.dummies.insert(2);
+        const auto rt = synth(1, {"moresampler.exe", "moresampler.exe"});
+        rt->setPlan(*plan);
+        QVERIFY(rt->waitReady(0, rt->length(), std::chrono::seconds(10)));
+        const auto failures = rt->takeFailures();
+        QCOMPARE(failures.size(), 1);
+        QCOMPARE(failures.front().stage, SynthFailure::Fragment);
+        QCOMPARE(failures.front().noteIndex, std::optional<int>(2));
+        QCOMPARE(failures.front().outputHead, QByteArray("This is a dummy file"));
+        QCOMPARE(failures.front().program, fs::path("moresampler.exe"));
+    }
+
     void a_failed_note_is_silent() {
         const auto plan = planOf(fiveNotes());
         QVERIFY(plan);
@@ -351,6 +372,12 @@ private Q_SLOTS:
         QCOMPARE(diagnostics.front().severity, DiagnosticSeverity::Warning);
         QCOMPARE(diagnostics.front().noteIndex, std::optional<int>(1));
         QVERIFY(rt->takeDiagnostics().isEmpty());
+        const auto failures = rt->takeFailures();
+        QCOMPARE(failures.size(), 1);
+        QCOMPARE(failures.front().stage, SynthFailure::Resampler);
+        QCOMPARE(failures.front().noteIndex, std::optional<int>(1));
+        QVERIFY(failures.front().run && failures.front().run->exitCode == 1);
+        QVERIFY(rt->takeFailures().isEmpty());
 
         const auto segments = segmentsOf(*plan);
         std::vector<qint16> out(100);

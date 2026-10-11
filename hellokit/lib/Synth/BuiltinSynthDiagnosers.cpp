@@ -320,14 +320,17 @@ namespace hello::kit {
             }
 
             QList<SynthDiagnosis> diagnose(const SynthDiagnosisContext &context) const override {
-                enum Kind { NotWave, NoFragment, ExitCode, NoTrack };
+                enum Kind { NotWave, UnreadableWave, NoFragment, ExitCode, NoTrack };
                 using Key = std::pair<int, fs::path>;
                 QList<SynthDiagnosis> result;
                 for (const auto &[key, failures] :
                      groups<Key>(context.failures, [](const SynthFailure &failure) {
                          switch (failure.stage) {
                              case SynthFailure::Fragment:
-                                 return std::optional<Key>(Key{NotWave, failure.program});
+                                 return std::optional<Key>(
+                                     Key{SynthFailure::isWave(failure.outputHead) ? UnreadableWave
+                                                                                  : NotWave,
+                                         failure.program});
                              case SynthFailure::Wavtool:
                                  return std::optional<Key>(Key{NoTrack, failure.program});
                              case SynthFailure::Resampler:
@@ -354,6 +357,20 @@ namespace hello::kit {
                                          printableStart(first.outputHead)),
                                 {Text::tr("Check the settings of the resampler for an option "
                                           "that changes the format of its output.")},
+                                failures,
+                            });
+                            break;
+                        case UnreadableWave:
+                            result.push_back({
+                                Text::tr("The resampler %1 wrote wave files that cannot be read.")
+                                    .arg(program),
+                                Text::tr("These notes are silent. The file %1 is a wave file "
+                                         "whose format or content cannot be read.")
+                                    .arg(displayed(first.outputFile)),
+                                {Text::tr("Check the settings of the resampler for its output "
+                                          "format, such as the bit depth."),
+                                                                  Text::tr("Render the project again after clearing the cache, in "
+                                          "case the file is incomplete.")},
                                 failures,
                             });
                             break;

@@ -419,10 +419,16 @@ namespace hello::kit {
             }
             if (alreadyThere.at(i)) {
                 ++outcome.reused;
-            } else if (fs::exists(step.cacheFile)) {
+                continue;
+            }
+            if (fs::exists(step.cacheFile)) {
                 ++outcome.resampled;
             } else {
                 ++outcome.failed;
+            }
+            // The script reports no result of the individual calls.
+            if (auto failure = resamplerFailure(step, synthTools, std::nullopt)) {
+                outcome.failures.push_back(std::move(*failure));
             }
         }
 
@@ -431,6 +437,18 @@ namespace hello::kit {
                                   ? tr("The rendering script ran but produced no output at \"%1\".")
                                         .arg(displayed(plan.outputFile()))
                                   : tr("The rendering script could not be run."));
+            SynthFailure failure;
+            failure.stage = SynthFailure::Wavtool;
+            failure.outputFile = plan.outputFile();
+            if (run.started) {
+                failure.program = synthTools.wavtool;
+                failure.arguments = plan.steps().back().wavtoolArguments;
+            } else {
+                // The script, not the wavtool, failed to start.
+                failure.program = scriptPath;
+                failure.run = run;
+            }
+            outcome.failures.push_back(std::move(failure));
             return outcome;
         }
 

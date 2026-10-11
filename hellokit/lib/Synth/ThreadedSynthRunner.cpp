@@ -65,8 +65,8 @@ namespace hello::kit {
         /// order, because a list ordered by thread completion is not comprehensible to a user.
         struct ResampleOutcome {
             DiagnosticList diagnostics;
-            QString synthToolOutput;
-            bool started = false;
+            // std::nullopt if the call did not start because the render stopped first
+            std::optional<SynthToolRun> run;
         };
 
     }
@@ -191,8 +191,7 @@ namespace hello::kit {
                     const auto run =
                         synthTool->run(synthTools.resampler, steps.at(i).resamplerArguments,
                                        result.diagnostics, [&] { return aborted.load(); });
-                    result.started = run.started;
-                    result.synthToolOutput = run.output.trimmed();
+                    result.run = run;
 
                     // A killed resampler may have written part of the fragment, which the next
                     // render would reuse as complete.
@@ -244,21 +243,45 @@ namespace hello::kit {
                 ++outcome.reused;
                 continue;
             }
+            const auto &run = outcomes.at(i).run;
             if (fs::exists(step.cacheFile)) {
                 ++outcome.resampled;
+                if (auto failure = resamplerFailure(step, synthTools, run)) {
+                    outcome.failures.push_back(std::move(*failure));
+                }
                 continue;
             }
             ++outcome.failed;
+            if (run) {
+                if (auto failure = resamplerFailure(step, synthTools, run)) {
+                    outcome.failures.push_back(std::move(*failure));
+                }
+            }
+            const auto synthToolOutput = run ? run->output.trimmed() : QString();
             complain(diagnostics,
                      tr("This note could not be rendered: %1")
-                         .arg(outcomes.at(i).synthToolOutput.isEmpty()
-                                  ? tr("the resampler produced no output.")
-                                  : outcomes.at(i).synthToolOutput),
+                         .arg(synthToolOutput.isEmpty() ? tr("the resampler produced no output.")
+                                                        : synthToolOutput),
                      step.noteIndex);
             if (stopOnFirstFailure) {
                 return outcome;
             }
         }
+
+        const auto wavtoolFailure = [&](const QStringList &arguments,
+                                        std::optional<SynthToolRun> run) {
+            SynthFailure failure;
+            failure.stage = SynthFailure::Wavtool;
+            failure.program = synthTools.wavtool;
+            failure.arguments = arguments;
+            failure.run = std::move(run);
+            failure.outputFile = output;
+            failure.readOutput();
+            return failure;
+        };
+        // The last wavtool call, for the diagnosis if the track is missing
+        QStringList lastArguments;
+        std::optional<SynthToolRun> lastRun;
 
         // These calls append to a single file and therefore run sequentially on one thread. The
         // header and the data of a cancelled render are removed.
@@ -279,8 +302,11 @@ namespace hello::kit {
                     return outcome;
                 }
                 if (!run.started) {
+                    outcome.failures.push_back(wavtoolFailure(step.wavtoolArguments, run));
                     return outcome;
                 }
+                lastArguments = step.wavtoolArguments;
+                lastRun = run;
             }
             report(1);
         }
@@ -296,6 +322,11 @@ namespace hello::kit {
             fail(diagnostics, tr("The wavtool produced no output for \"%1\". The configured "
                                  "wavtool may not accept these arguments.")
                                   .arg(displayed(output)));
+            // Without a wavtool call the track is missing because every resampler call failed,
+            // which the records of those calls explain.
+            if (lastRun) {
+                outcome.failures.push_back(wavtoolFailure(lastArguments, lastRun));
+            }
             return outcome;
         }
 
