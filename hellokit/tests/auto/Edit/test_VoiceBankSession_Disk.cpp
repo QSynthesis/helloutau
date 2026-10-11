@@ -1,3 +1,5 @@
+#include <functional>
+#include <map>
 #include <memory>
 
 #include <QtCore/QDateTime>
@@ -76,6 +78,47 @@ private:
         return -1;
     }
 
+    using Times = std::map<QString, fs::file_time_type>;
+
+    /// The modification times of the text files of the fixture, by which a test finds the files
+    /// that a save wrote. A missing file has the default time.
+    Times times() const {
+        Times out;
+        for (const auto relative :
+             {"oto.ini", "sub/oto.ini", "hello-config.json", "sub/hello-config.json",
+              "character.txt", "prefix.map", "readme.txt"}) {
+            const auto name = QString::fromLatin1(relative);
+            std::error_code error;
+            const auto time = fs::last_write_time(fs::path(pathOf(name).toStdU16String()), error);
+            out[name] = error ? fs::file_time_type() : time;
+        }
+        return out;
+    }
+
+    /// Returns the files of times() whose modification time differs from \a before .
+    QStringList writtenSince(const Times &before) const {
+        QStringList written;
+        for (const auto &[name, time] : times()) {
+            if (before.at(name) != time) {
+                written.push_back(name);
+            }
+        }
+        return written;
+    }
+
+    /// Sets the offset of the first entry of the directory at \a path in one step.
+    void editFirstEntry(const fs::path &path, double offset) {
+        auto transaction = m_session->transaction(QStringLiteral("Edit"));
+        directories().at(indexOf(path)).otoEntries().at(0).setOffset(offset);
+        QVERIFY(transaction.commit());
+    }
+
+    void save() {
+        DiagnosticList diagnostics;
+        QVERIFY2(m_session->save(diagnostics),
+                 diagnostics.isEmpty() ? "" : qPrintable(diagnostics.first().message));
+    }
+
     VoiceBankChanges reload() {
         DiagnosticList diagnostics;
         return m_session->reloadFromDisk(m_session->checkDisk(), nullptr, diagnostics);
@@ -151,6 +194,115 @@ private Q_SLOTS:
         QCOMPARE(read(QStringLiteral("oto.ini")),
                  QByteArray("a.wav=a,41.0,2,3,4,5\r\nb.wav=b,7,2,3,4,5\r\n"));
         QCOMPARE(read(QStringLiteral("sub/oto.ini")), QByteArray("x.wav=x,1,2,3,4,5\r\n"));
+    }
+
+    // The files that a save writes follow the undo history, without comparing contents. See the
+    // section on the files a save writes in docs/Editing.md.
+    void saving_without_edits_writes_nothing() {
+        const auto before = times();
+        save();
+        QCOMPARE(writtenSince(before), QStringList());
+    }
+
+    void undoing_to_the_saved_step_writes_nothing() {
+        editFirstEntry({}, 7);
+        save();
+        editFirstEntry({}, 8);
+        m_session->undo();
+        const auto before = times();
+        save();
+        QCOMPARE(writtenSince(before), QStringList());
+    }
+
+    void an_edit_undone_before_another_is_not_written() {
+        editFirstEntry({}, 7);
+        m_session->undo();
+        editFirstEntry("sub", 7);
+        const auto before = times();
+        save();
+        QCOMPARE(writtenSince(before), QStringList{QStringLiteral("sub/oto.ini")});
+    }
+
+    // The saved step left the history, so the file written at it is written again with the
+    // contents of the current step.
+    void a_truncated_history_writes_the_files_of_the_discarded_steps() {
+        editFirstEntry({}, 7);
+        save();
+        m_session->undo();
+        editFirstEntry("sub", 7);
+        const auto before = times();
+        save();
+        QCOMPARE(writtenSince(before),
+                 (QStringList{QStringLiteral("oto.ini"), QStringLiteral("sub/oto.ini")}));
+        QCOMPARE(read(QStringLiteral("oto.ini")),
+                 QByteArray("a.wav=a,41.0,2,3,4,5\r\nb.wav=b,1,2,3,4,5\r\n"));
+    }
+
+    // A reload makes the directory hold what is on disk, and undoing it writes the former
+    // contents back.
+    void undoing_a_reload_writes_the_directory_back() {
+        write(QStringLiteral("sub/oto.ini"), "x.wav=theirs,1,2,3,4,5\r\n");
+        QCOMPARE(reload().changed, QList<fs::path>{fs::path("sub")});
+        auto before = times();
+        save();
+        QCOMPARE(writtenSince(before), QStringList());
+
+        m_session->undo();
+        before = times();
+        save();
+        QCOMPARE(writtenSince(before), QStringList{QStringLiteral("sub/oto.ini")});
+        QVERIFY(read(QStringLiteral("sub/oto.ini")).contains("x.wav=x,"));
+    }
+
+    // The files of the root belong to the voice bank as a whole, and each is written by its own
+    // edits: a value of the root, a record replaced in the root, and a value in that record.
+    void the_files_of_the_root_are_written_by_their_edits() {
+        const VoiceBankRef bank(m_session.get());
+        const auto edited = [this](const std::function<void()> &edit) -> QStringList {
+            auto transaction = m_session->transaction(QStringLiteral("Edit"));
+            edit();
+            if (!transaction.commit()) {
+                return {QStringLiteral("<not committed>")};
+            }
+            const auto before = times();
+            save();
+            return writtenSince(before);
+        };
+        QCOMPARE(edited([&bank] { bank.setReadme(QStringLiteral("about")); }),
+                 QStringList{QStringLiteral("readme.txt")});
+        VoiceCharacter character;
+        character.name = QStringLiteral("n");
+        QCOMPARE(edited([&] { bank.setCharacter(character); }),
+                 QStringList{QStringLiteral("character.txt")});
+        QCOMPARE(edited([&bank] { bank.character().setName(QStringLiteral("m")); }),
+                 QStringList{QStringLiteral("character.txt")});
+        QMap<int, VoicePrefix> map;
+        map.insert(60, VoicePrefix{QString(), QStringLiteral("_B")});
+        QCOMPARE(edited([&] { bank.setPrefixMap(map); }),
+                 QStringList{QStringLiteral("prefix.map")});
+        QCOMPARE(edited([&bank] {
+                     bank.prefixMap().setValue(62, VoicePrefix{QString(), QStringLiteral("_C")});
+                 }),
+                 QStringList{QStringLiteral("prefix.map")});
+    }
+
+    void converting_writes_the_files_of_the_directory_and_its_configuration() {
+        DiagnosticList diagnostics;
+        QVERIFY(VoiceBankEdits::convertCharset(directories().at(indexOf({})),
+                                               QStringLiteral("UTF-8"), diagnostics));
+        const auto before = times();
+        save();
+        QCOMPARE(writtenSince(before),
+                 (QStringList{QStringLiteral("hello-config.json"), QStringLiteral("oto.ini")}));
+    }
+
+    void a_remembered_encoding_writes_the_configuration_only() {
+        m_session->rememberCharset("sub");
+        QVERIFY(m_session->hasUnrecordedCharsets());
+        const auto before = times();
+        save();
+        QCOMPARE(writtenSince(before), QStringList{QStringLiteral("sub/hello-config.json")});
+        QVERIFY(!m_session->hasUnrecordedCharsets());
     }
 
     // An encoding selected by reading a directory again is recorded by the next save, although

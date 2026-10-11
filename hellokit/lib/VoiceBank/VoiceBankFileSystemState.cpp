@@ -466,21 +466,11 @@ namespace hello::kit {
             QStringList problems;
         };
 
-        /// The digest by which an encoded file is compared with its baseline. The problems are
-        /// part of it, so that a change that only removes or adds a problem is a change.
-        QByteArray digestOf(const EncodedFile &file) {
-            if (file.problems.isEmpty()) {
-                return digestOf(file.bytes);
-            }
-            return digestOf(file.bytes + '\0' + file.problems.join(QLatin1Char('\n')).toUtf8());
-        }
-
-        /// Encodes the UTAU files of one directory. The result is what save() writes and what
-        /// open() records as the baseline for comparison.
+        /// Encodes the UTAU files of one directory, which save() writes.
         ///
         /// A file that cannot be written is included with its problems, rather than failing the
         /// directory, because a file that is not written is not a failure: an unchanged file
-        /// containing U+FFFD is not written, and its problems are those of the baseline.
+        /// containing U+FFFD is not written.
         std::map<VoiceBankDirectorySource::File, EncodedFile> encodeDirectory(
             const VoiceBankDirectory &directory, int index, const QList<VoiceSample> &samples,
             const std::map<VoiceBankDirectorySource::File, VoiceBankFileRecord> &files) {
@@ -681,9 +671,6 @@ namespace hello::kit {
         }
 
         bank.reindex();
-        for (int i = 0; i < bank.m_directories.size(); ++i) {
-            takeBaseline(bank, i, files.m_books[bank.m_directories.at(i).path]);
-        }
 
         if (bank.m_samples.isEmpty()) {
             complain(diagnostics, tr("This folder contains no samples."));
@@ -717,40 +704,8 @@ namespace hello::kit {
             return false;
         }
         replaceDirectory(bank, index, *source, codec.name(), diagnostics);
-
-        // Recorded even if some bytes are invalid in it, because the user chose it.
-        m_books[directory].remember = true;
-
         bank.reindex();
-        takeBaseline(bank, index, m_books[directory]);
         return true;
-    }
-
-    bool VoiceBankFileSystemState::isModified(const VoiceBank &bank,
-                                              const fs::path &directory) const {
-        const int index = bank.indexOf(directory);
-        const auto it = m_books.find(directory);
-        if (index < 0 || it == m_books.end()) {
-            return index >= 0;
-        }
-        const auto &decoded = bank.m_directories.at(index);
-        const auto &book = it->second;
-        if (book.remember ||
-            (!decoded.charset.isEmpty() && canonicalOf(decoded.charset) != book.charset) ||
-            decoded.fileNameEncoding != recordOf(book.config)) {
-            return true;
-        }
-        const auto encoded = encodeDirectory(decoded, index, bank.m_samples, book.files);
-        if (encoded.size() != book.baseline.size()) {
-            return true;
-        }
-        for (const auto &[file, result] : encoded) {
-            const auto base = book.baseline.find(file);
-            if (base == book.baseline.end() || base->second != digestOf(result)) {
-                return true;
-            }
-        }
-        return false;
     }
 
     QList<fs::path> VoiceBankFileSystemState::directories() const {
@@ -1114,12 +1069,6 @@ namespace hello::kit {
         if (!done.changed.isEmpty() || !done.audio.isEmpty() || !done.removed.isEmpty() ||
             !done.added.isEmpty()) {
             bank.reindex();
-            for (int i = 0; i < bank.m_directories.size(); ++i) {
-                const auto &path = bank.m_directories.at(i).path;
-                if (done.changed.contains(path) || done.added.contains(path)) {
-                    takeBaseline(bank, i, m_books[path]);
-                }
-            }
         }
         return done;
     }
@@ -1171,7 +1120,7 @@ namespace hello::kit {
         }
         bank.m_samples = std::move(samples);
         bank.m_directories[index] = decoded.directory;
-        auto book = bookOf(source, decoded.directory);
+        auto book = bookOf(source);
         book.names = std::move(names);
         m_books[source.path] = std::move(book);
     }
@@ -1188,7 +1137,7 @@ namespace hello::kit {
         decoded.directory.fileNameEncoding = record;
         bank.m_samples += decoded.samples;
         bank.m_directories.push_back(decoded.directory);
-        auto book = bookOf(source, decoded.directory);
+        auto book = bookOf(source);
         book.names = std::move(names);
         m_books[source.path] = std::move(book);
     }
@@ -1291,19 +1240,8 @@ namespace hello::kit {
         bank.m_directories.removeAt(index);
     }
 
-    void VoiceBankFileSystemState::rememberCharset(const fs::path &directory) {
-        const auto it = m_books.find(directory);
-        if (it != m_books.end()) {
-            it->second.remember = true;
-        }
-    }
-
-    bool VoiceBankFileSystemState::hasUnrecordedCharsets() const {
-        return std::any_of(m_books.begin(), m_books.end(),
-                           [](const auto &item) { return item.second.remember; });
-    }
-
-    bool VoiceBankFileSystemState::save(const VoiceBank &bank, DiagnosticList &diagnostics) {
+    bool VoiceBankFileSystemState::save(const VoiceBank &bank, const Files &files,
+                                        DiagnosticList &diagnostics) {
         struct Write {
             fs::path directory;
             VoiceBankDirectorySource::File file;
@@ -1311,12 +1249,6 @@ namespace hello::kit {
             QByteArray bytes;
         };
         std::vector<Write> writes;
-        // The directories whose encoding is recorded on disk once the writes succeed, with the
-        // canonical name of that encoding.
-        std::vector<std::pair<fs::path, QString>> recorded;
-        // The configuration that each directory has on disk once the writes succeed, whose record
-        // of misdecoded file names is then the record read.
-        std::vector<std::pair<fs::path, VoiceBankConfig>> configured;
         bool ok = true;
 
         const auto &directories = bank.m_directories;
@@ -1380,13 +1312,17 @@ namespace hello::kit {
                 continue;
             }
 
-            // A file that did not change is not written, even if it could not be: an unchanged
-            // file containing U+FFFD keeps its original bytes on disk.
+            // Only the files that the caller names are written, and every file of a directory
+            // without state. A file that is not written is not checked, so that an unchanged file
+            // containing U+FFFD keeps its original bytes on disk.
+            const bool isNew = created.count(directory.path) != 0;
+            const auto requested = files.find(directory.path);
+            const auto named = [&](VoiceBankDirectorySource::File file) {
+                return isNew || (requested != files.end() && requested->second.count(file) != 0);
+            };
             const auto encoded = encodeDirectory(directory, i, samples, book.files);
-            bool changed = false;
             for (const auto &[file, result] : encoded) {
-                const auto base = book.baseline.find(file);
-                if (base != book.baseline.end() && base->second == digestOf(result)) {
+                if (!named(file)) {
                     continue;
                 }
                 if (!result.problems.isEmpty()) {
@@ -1402,42 +1338,27 @@ namespace hello::kit {
                                     ? record->second.name
                                     : fs::path(VoiceBankDirectorySource::fileName(file)));
                 writes.push_back({directory.path, file, path, result.bytes});
-                changed = true;
             }
 
-            // The encoding is recorded when it changed, and together with the files unless the
-            // configuration read already records it. Otherwise the next open would query the user
-            // again, and a configuration naming another encoding would decode the files
-            // incorrectly.
-            //
-            // The configuration belongs to HelloUtau and is read on opening only. The file on
-            // disk is neither read nor checked here, and is replaced whenever it is written.
-            //
-            // A record of misdecoded file names is written if it differs from the one read, and
-            // also in a directory without text files, whose configuration then names no encoding.
+            // The configuration records the encoding and the record of misdecoded file names,
+            // with the fields read on opening that this version does not recognize. It belongs to
+            // HelloUtau and is read on opening only, so the file on disk is neither read nor
+            // checked here, and is replaced. A directory without an encoding, a record and such
+            // fields has nothing to record.
             const QString name = canonicalOf(directory.charset);
-            const auto &fileNames = directory.fileNameEncoding;
-            const bool renamed = fileNames != recordOf(book.config);
-            const bool unrecorded = !book.config || canonicalOf(book.config->charset) != name;
-            const bool recording =
-                renamed || (!name.isEmpty() &&
-                            (book.remember || name != book.charset || (changed && unrecorded)));
-            const auto configRecord = book.files.find(VoiceBankDirectorySource::Config);
-            const auto configFound =
-                configRecord != book.files.end()
-                    ? std::optional<fs::path>(absolute / configRecord->second.name)
-                    : findFolded(absolute, VoiceBankConfig::fileName);
-            if ((!name.isEmpty() || fileNames || recordOf(book.config)) && recording) {
-                if (recording && !name.isEmpty()) {
-                    recorded.emplace_back(directory.path, name);
-                }
-                VoiceBankConfig config = book.config.value_or(VoiceBankConfig());
+            if (named(VoiceBankDirectorySource::Config) &&
+                (!name.isEmpty() || directory.fileNameEncoding || !book.unknownFields.isEmpty())) {
+                VoiceBankConfig config;
                 config.charset = name;
-                config.fileNameEncoding = fileNames;
-                const auto path = configFound.value_or(absolute / VoiceBankConfig::fileName);
+                config.fileNameEncoding = directory.fileNameEncoding;
+                config.unknownFields = book.unknownFields;
+                const auto configRecord = book.files.find(VoiceBankDirectorySource::Config);
+                const auto path = configRecord != book.files.end()
+                                      ? absolute / configRecord->second.name
+                                      : findFolded(absolute, VoiceBankConfig::fileName)
+                                            .value_or(absolute / VoiceBankConfig::fileName);
                 writes.push_back(
                     {directory.path, VoiceBankDirectorySource::Config, path, config.toJson()});
-                configured.emplace_back(directory.path, config);
             }
         }
 
@@ -1535,17 +1456,6 @@ namespace hello::kit {
             book.files[write.file] =
                 VoiceBankFileRecord{write.path.filename(), digestOf(write.bytes)};
             restamp(book.stamp, write.path);
-            if (write.file != VoiceBankDirectorySource::Config) {
-                book.baseline[write.file] = digestOf(write.bytes);
-            }
-        }
-        for (const auto &[path, name] : recorded) {
-            auto &book = m_books[path];
-            book.charset = name;
-            book.remember = false;
-        }
-        for (auto &[path, config] : configured) {
-            m_books[path].config = std::move(config);
         }
 
         // A directory saved without state now has files on disk, whose listing and audio files
@@ -1586,7 +1496,7 @@ namespace hello::kit {
         // before the first write.
         VoiceBankFileSystemState state;
         state.m_root = folder;
-        if (!state.save(bank, diagnostics)) {
+        if (!state.save(bank, {}, diagnostics)) {
             return std::nullopt;
         }
 
@@ -1632,32 +1542,15 @@ namespace hello::kit {
     }
 
     VoiceBankFileSystemState::Book
-        VoiceBankFileSystemState::bookOf(const VoiceBankDirectorySource &source,
-                                         const VoiceBankDirectory &decoded) {
+        VoiceBankFileSystemState::bookOf(const VoiceBankDirectorySource &source) {
         Book book;
         book.files = source.files;
-        book.config = source.config;
-
-        book.charset = canonicalOf(decoded.charset);
+        if (source.config) {
+            book.unknownFields = source.config->unknownFields;
+        }
         book.stamp = source.stamp;
         book.audio = source.audioFiles;
         return book;
-    }
-
-    void VoiceBankFileSystemState::takeBaseline(const VoiceBank &bank, int index, Book &book) {
-        // The current serialization of the directory, against which save() compares to skip
-        // unchanged files. Taken from the encoder rather than from the bytes on disk, so that a
-        // file this program would serialize differently, for example with LF line endings or in
-        // a different order, is not rewritten by a save that did not modify it.
-        book.baseline.clear();
-        const auto &directory = bank.m_directories.at(index);
-        if (directory.leftOut) {
-            return;
-        }
-        for (const auto &[file, result] :
-             encodeDirectory(directory, index, bank.m_samples, book.files)) {
-            book.baseline[file] = digestOf(result);
-        }
     }
 
 }

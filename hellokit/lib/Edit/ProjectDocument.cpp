@@ -260,14 +260,15 @@ namespace hello::kit {
             return false;
         }
 
-        // Saving writes only the configuration of each remembered directory, since nothing else
-        // changed since it was read.
+        // Saving writes only the configuration of each directory whose encoding was chosen, since
+        // nothing else changed since it was read.
         if (!recording.chosen.isEmpty()) {
+            VoiceBankFileSystemState::Files configurations;
             for (const auto &directory : std::as_const(recording.chosen)) {
-                opened->files.rememberCharset(directory);
+                configurations[directory].insert(VoiceBankDirectorySource::Config);
             }
             DiagnosticList saving;
-            if (!opened->files.save(opened->bank, saving)) {
+            if (!opened->files.save(opened->bank, configurations, saving)) {
                 warn(diagnostics, tr("The chosen encoding could not be recorded in \"%1\", so it "
                                      "will be asked again next time.")
                                       .arg(displayed(root)));

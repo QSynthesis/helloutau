@@ -20,6 +20,8 @@ static const QString kA = QString::fromUtf8("\xe3\x81\x82");
 
 namespace fs = std::filesystem;
 
+using Source = VoiceBankDirectorySource;
+
 namespace {
 
     /// Selects one fixed encoding for every query and counts the queries.
@@ -81,6 +83,14 @@ private:
 
     static const VoiceBankDirectory &directoryOf(const VoiceBank &bank, const VoiceSample &sample) {
         return bank.directories().at(sample.directory);
+    }
+
+    /// \a kinds of the directory at \a directory , the files that a save is told to write.
+    static VoiceBankFileSystemState::Files filesOf(const fs::path &directory,
+                                                   std::set<VoiceBankDirectorySource::File> kinds) {
+        return {
+            {directory, std::move(kinds)}
+        };
     }
 
 private Q_SLOTS:
@@ -367,12 +377,10 @@ private Q_SLOTS:
         write(QStringLiteral("oto.ini"), "a.wav=theirs,7,2,3,4,5\r\n");
         const auto found = files.checkDisk();
         QCOMPARE(found.changed, QList<fs::path>{fs::path()});
-        QVERIFY(files.isModified(bank, bank.directories().at(0).path));
         QCOMPARE(bank.samples().at(0).offset, 99.0);
 
         DiagnosticList diagnostics;
         files.reloadFromDisk(bank, found, &selector, diagnostics);
-        QVERIFY(!files.isModified(bank, bank.directories().at(0).path));
         QVERIFY(bank.find(60, QStringLiteral("theirs")));
     }
 
@@ -559,7 +567,7 @@ private Q_SLOTS:
         samples[0].offset = 7;
         bank.setSamples(samples);
         DiagnosticList diagnostics;
-        QVERIFY(files.save(bank, diagnostics));
+        QVERIFY(files.save(bank, filesOf({}, {Source::Oto, Source::Config}), diagnostics));
         QVERIFY(QFileInfo::exists(pathOf(QStringLiteral("hello-config.json"))));
         const auto found = files.checkDisk();
         QVERIFY(found.changed.isEmpty());

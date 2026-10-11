@@ -15,6 +15,8 @@ using namespace hello::kit;
 
 namespace fs = std::filesystem;
 
+using Source = VoiceBankDirectorySource;
+
 // The names of a Japanese voice bank extracted on a Chinese system: あ, い and う in Shift_JIS read
 // as GBK.
 static const QString kMisdecodedA = QString::fromUtf8("偁");
@@ -130,6 +132,14 @@ private:
             }
         }
         return nullptr;
+    }
+
+    /// \a kinds of the directory at \a directory , the files that a save is told to write.
+    static VoiceBankFileSystemState::Files filesOf(const fs::path &directory,
+                                                   std::set<VoiceBankDirectorySource::File> kinds) {
+        return {
+            {directory, std::move(kinds)}
+        };
     }
 
 private Q_SLOTS:
@@ -307,14 +317,11 @@ private Q_SLOTS:
         DiagnosticList diagnostics;
         auto opened = open(root(), diagnostics);
         QVERIFY(opened.has_value());
-        QVERIFY(!opened->files.isModified(opened->bank, {}));
 
         auto record = *recordOf(*opened, {});
         record.correct.push_back(QString::fromUtf8("新.wav"));
         setRecord(*opened, {}, record);
-        QVERIFY(opened->files.isModified(opened->bank, {}));
-        QVERIFY(opened->files.save(opened->bank, diagnostics));
-        QVERIFY(!opened->files.isModified(opened->bank, {}));
+        QVERIFY(opened->files.save(opened->bank, filesOf({}, {Source::Config}), diagnostics));
         const auto config = configAt(QString());
         QVERIFY(config.has_value());
         QCOMPARE(config->fileNameEncoding, std::optional(record));
@@ -327,11 +334,10 @@ private Q_SLOTS:
         auto opened = open(root(), diagnostics);
         QVERIFY(opened.has_value());
         setRecord(*opened, {}, std::nullopt);
-        QVERIFY(opened->files.save(opened->bank, diagnostics));
+        QVERIFY(opened->files.save(opened->bank, filesOf({}, {Source::Config}), diagnostics));
         const auto config = configAt(QString());
         QVERIFY(config.has_value());
         QVERIFY(!config->fileNameEncoding.has_value());
-        QVERIFY(!opened->files.isModified(opened->bank, {}));
     }
 
     // A directory of audio files alone has no encoding, and its configuration names none.
@@ -343,7 +349,8 @@ private Q_SLOTS:
         auto record = japaneseOnChinese();
         record.correct = QStringList{QStringLiteral("b.wav")};
         setRecord(*opened, pathOf(kMisdecodedU), record);
-        QVERIFY(opened->files.save(opened->bank, diagnostics));
+        QVERIFY(opened->files.save(opened->bank, filesOf(pathOf(kMisdecodedU), {Source::Config}),
+                                   diagnostics));
         const auto config = configAt(kMisdecodedU);
         QVERIFY(config.has_value());
         QCOMPARE(config->fileNameEncoding, std::optional(record));

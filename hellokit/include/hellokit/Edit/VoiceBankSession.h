@@ -3,8 +3,11 @@
 
 #include <filesystem>
 #include <memory>
+#include <map>
 #include <optional>
+#include <set>
 #include <utility>
+#include <vector>
 
 #include <QtCore/QJsonObject>
 #include <QtCore/QList>
@@ -111,6 +114,11 @@ namespace hello::kit {
         /// Saves the voice bank. The directories that are not in the tree are neither written nor
         /// removed. Without the root, every text file of the tree is written again.
         ///
+        /// The files written are those that the undo history determines, without comparing
+        /// contents: a file whose synchronization point is invalid, and a file that a step
+        /// between its synchronization point and the current step touched. See the section on
+        /// the files a save writes in docs/Editing.md.
+        ///
         /// \sa VoiceBankFileSystemState::save()
         bool save(DiagnosticList &diagnostics);
 
@@ -132,10 +140,22 @@ namespace hello::kit {
         bool saveAs(const std::filesystem::path &folder, SaveAsFiles files,
                     DiagnosticList &diagnostics);
 
-        /// \sa VoiceBankFileSystemState::rememberCharset()
+        /// Makes the next save() record the encoding of the directory at \a directory , even if
+        /// nothing else in it changed, by invalidating the synchronization point of its
+        /// configuration.
+        ///
+        /// Intended for an encoding the user selected when the voice bank was opened, which
+        /// opening does not record by itself. Without this call, the user is asked again every
+        /// time the voice bank is opened.
         void rememberCharset(const std::filesystem::path &directory);
 
-        /// \sa VoiceBankFileSystemState::hasUnrecordedCharsets()
+        /// Returns whether the next save() writes the configuration of a directory whose contents
+        /// are unchanged: a directory marked by rememberCharset() , or a directory read again by
+        /// reread() .
+        ///
+        /// Such a voice bank is unsaved even though nothing in it was edited. An editor that
+        /// holds the saved state marks it unsaved after opening. See the section on the saved
+        /// state in docs/Editing.md.
         bool hasUnrecordedCharsets() const;
 
         /// Checks the disk for changes. A directory on disk that the tree does not hold, because
@@ -210,8 +230,54 @@ namespace hello::kit {
         /// \a message : the directories at \a replaced are replaced, the directories missing
         /// from the tree are added, and the directories no longer editable or no longer in
         /// \a bank are removed. The other directories are unchanged.
+        ///
+        /// The directories replaced or added are then synchronized with the disk at the new
+        /// step, except their configurations if \a recordCharsets is true, because the user
+        /// chose their encodings.
         bool takeFrom(const VoiceBank &bank, const QList<std::filesystem::path> &replaced,
-                      const QString &message, DiagnosticList &diagnostics);
+                      const QString &message, bool recordCharsets, DiagnosticList &diagnostics);
+
+        /// \name The files that a save writes
+        ///
+        /// See the section on the files a save writes in docs/Editing.md.
+        /// @{
+
+        /// A file of the voice bank: its directory relative to the root, and the file in it.
+        using FileKey = std::pair<std::filesystem::path, VoiceBankDirectorySource::File>;
+
+        /// Records the files that the changes of the transaction committed as \a step touched.
+        void takeCommit(int step, const std::vector<edit::ChangePtr> &changes);
+
+        /// Adds the files that \a change touched to \a touched .
+        void addTouched(const edit::Change &change, std::set<FileKey> &touched) const;
+
+        /// Forgets the steps from \a first to \a last , which left the undo history, and
+        /// invalidates the synchronization points among them.
+        void discardSteps(int first, int last);
+
+        /// Returns the synchronization point of \a key .
+        int syncedStep(const FileKey &key) const;
+
+        /// Returns the files that the next save() writes.
+        VoiceBankFileSystemState::Files unsavedFiles() const;
+
+        /// The files that each step touched, by step.
+        std::map<int, std::set<FileKey>> m_touched;
+
+        /// The synchronization point of each file whose point differs from \a m_baseStep .
+        std::map<FileKey, int> m_synced;
+
+        /// The files whose synchronization point is invalid.
+        std::set<FileKey> m_unsynced;
+
+        /// The synchronization point of every file not in \a m_synced : the step at which the
+        /// session was created, or the step of the last saveAs().
+        int m_baseStep = 0;
+
+        /// The directories that the transaction in progress reads from disk, set by takeFrom().
+        std::set<std::filesystem::path> m_reading;
+
+        /// @}
 
         VoiceBankFileSystemState m_files;
         QList<VoiceBankDirectory> m_excluded;

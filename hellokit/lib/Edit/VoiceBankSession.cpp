@@ -1,6 +1,7 @@
 #include "VoiceBankSession.h"
 
 #include <algorithm>
+#include <utility>
 
 #include <hellokit/EditBase/private/ChangeLog_p.h>
 #include <hellokit/EditBase/private/EditSession_p.h>
@@ -35,6 +36,14 @@ namespace hello::kit {
         }
         edit::EditSessionPrivate::setRoot(*this, treeOf(opened.bank));
         registerVoiceBankValidators(*this);
+
+        m_baseStep = currentStep();
+        edit::EditSessionPrivate::setCommitHandler(
+            *this, [this](int step, const std::vector<edit::ChangePtr> &changes) {
+                takeCommit(step, changes);
+            });
+        connect(this, &edit::EditSession::stepsDiscarded, this,
+                [this](int first, int last) { discardSteps(first, last); });
     }
 
     VoiceBankSession::~VoiceBankSession() = default;
@@ -69,6 +78,25 @@ namespace hello::kit {
                 }
             }
             return -1;
+        }
+
+        // Returns the text files that the directory at directory may have.
+        std::vector<VoiceBankDirectorySource::File>
+            textFilesOf(const std::filesystem::path &directory) {
+            if (directory.empty()) {
+                return {VoiceBankDirectorySource::Oto, VoiceBankDirectorySource::PrefixMap,
+                        VoiceBankDirectorySource::Character, VoiceBankDirectorySource::Readme};
+            }
+            return {VoiceBankDirectorySource::Oto};
+        }
+
+        // Returns the files of the directory at directory that a save writes, the configuration
+        // included.
+        std::vector<VoiceBankDirectorySource::File>
+            filesOf(const std::filesystem::path &directory) {
+            auto files = textFilesOf(directory);
+            files.push_back(VoiceBankDirectorySource::Config);
+            return files;
         }
 
     }
@@ -141,8 +169,24 @@ namespace hello::kit {
     }
 
     bool VoiceBankSession::save(DiagnosticList &diagnostics) {
-        if (!m_files.save(snapshot(), diagnostics)) {
+        const auto files = unsavedFiles();
+        if (!m_files.save(snapshot(), files, diagnostics)) {
             return false;
+        }
+        const int step = currentStep();
+        if (m_rootMissing) {
+            // Without the root, every text file of the tree was written.
+            m_synced.clear();
+            m_unsynced.clear();
+            m_baseStep = step;
+        } else {
+            for (const auto &[directory, kinds] : files) {
+                for (const auto file : kinds) {
+                    const FileKey key{directory, file};
+                    m_unsynced.erase(key);
+                    m_synced[key] = step;
+                }
+            }
         }
         // The files on disk are those of the tree again.
         m_rootMissing = false;
@@ -166,15 +210,123 @@ namespace hello::kit {
         }
         m_rootMissing = false;
         m_rootUnreadable = false;
+        // Every file of the new folder holds the tree.
+        m_synced.clear();
+        m_unsynced.clear();
+        m_baseStep = currentStep();
         return true;
     }
 
     void VoiceBankSession::rememberCharset(const std::filesystem::path &directory) {
-        m_files.rememberCharset(directory);
+        m_unsynced.insert({directory, VoiceBankDirectorySource::Config});
     }
 
     bool VoiceBankSession::hasUnrecordedCharsets() const {
-        return m_files.hasUnrecordedCharsets();
+        return std::any_of(m_unsynced.begin(), m_unsynced.end(), [](const FileKey &key) {
+            return key.second == VoiceBankDirectorySource::Config;
+        });
+    }
+
+    void VoiceBankSession::takeCommit(int step, const std::vector<edit::ChangePtr> &changes) {
+        auto &touched = m_touched[step];
+        for (const auto &change : changes) {
+            addTouched(*change, touched);
+        }
+        // A directory read from disk replaces or adds a whole subtree. Its encoding is kept, or
+        // chosen by the user, which takeFrom() records as an invalid synchronization point.
+        for (const auto &directory : m_reading) {
+            for (const auto file : textFilesOf(directory)) {
+                touched.insert({directory, file});
+            }
+        }
+    }
+
+    void VoiceBankSession::addTouched(const edit::Change &change,
+                                      std::set<FileKey> &touched) const {
+        // A node that a later change of the same transaction removed is no longer in the tree,
+        // and that removal from its list touches the same file.
+        const ss::Node *node = edit::EditSessionPrivate::find(this, change.node());
+        const ss::Node *below = nullptr;
+        const auto value = change.as<edit::ValueChange>();
+        for (; node; below = node, node = node->parent()) {
+            if (node->type() == VoiceDirectoryType) {
+                const auto path = directoryPathOf(node);
+                if (below || !value || value->slot() == VoiceDirectorySlots::OtoEntries.index) {
+                    touched.insert({path, VoiceBankDirectorySource::Oto});
+                } else if (value->slot() == VoiceDirectorySlots::Charset.index) {
+                    for (const auto file : filesOf(path)) {
+                        touched.insert({path, file});
+                    }
+                } else if (value->slot() == VoiceDirectorySlots::FileNameEncoding.index) {
+                    touched.insert({path, VoiceBankDirectorySource::Config});
+                }
+                return;
+            }
+            if (node->type() == VoiceBankType) {
+                // The files of the root belong to the voice bank as a whole. The list of the
+                // directories changes by reading only, which takeCommit() covers.
+                const auto &root = static_cast<const VoiceBankNode &>(*node);
+                int slot = value && !below ? value->slot() : -1;
+                if (below && below == root.child(VoiceBankSlots::Character.index)) {
+                    slot = VoiceBankSlots::Character.index;
+                } else if (below && below == root.child(VoiceBankSlots::PrefixMap.index)) {
+                    slot = VoiceBankSlots::PrefixMap.index;
+                }
+                if (slot == VoiceBankSlots::Character.index) {
+                    touched.insert({{}, VoiceBankDirectorySource::Character});
+                } else if (slot == VoiceBankSlots::PrefixMap.index) {
+                    touched.insert({{}, VoiceBankDirectorySource::PrefixMap});
+                } else if (slot == VoiceBankSlots::Readme.index) {
+                    touched.insert({{}, VoiceBankDirectorySource::Readme});
+                }
+                return;
+            }
+        }
+    }
+
+    void VoiceBankSession::discardSteps(int first, int last) {
+        const auto within = [first, last](int step) { return step >= first && step <= last; };
+        for (const auto &[key, step] : m_synced) {
+            if (within(step)) {
+                m_unsynced.insert(key);
+            }
+        }
+        if (within(m_baseStep)) {
+            const auto &directories = directoriesOf(*this);
+            for (int i = 0; i < directories.size(); ++i) {
+                const auto path = directoryPathOf(directories.at(i));
+                for (const auto file : filesOf(path)) {
+                    if (m_synced.count({path, file}) == 0) {
+                        m_unsynced.insert({path, file});
+                    }
+                }
+            }
+        }
+        m_touched.erase(m_touched.lower_bound(first), m_touched.upper_bound(last));
+    }
+
+    int VoiceBankSession::syncedStep(const FileKey &key) const {
+        const auto found = m_synced.find(key);
+        return found != m_synced.end() ? found->second : m_baseStep;
+    }
+
+    VoiceBankFileSystemState::Files VoiceBankSession::unsavedFiles() const {
+        VoiceBankFileSystemState::Files files;
+        for (const auto &[directory, file] : m_unsynced) {
+            files[directory].insert(file);
+        }
+        // A step lies between the synchronization point and the current step if it was applied
+        // since the file was synchronized, or undone since then.
+        const int current = currentStep();
+        for (const auto &[step, keys] : m_touched) {
+            for (const auto &key : keys) {
+                const int synced = syncedStep(key);
+                if ((synced < step && step <= current) || (current < step && step <= synced)) {
+                    files[key.first].insert(key.second);
+                }
+            }
+        }
+        return files;
     }
 
     VoiceBankChanges VoiceBankSession::checkDisk(const QList<std::filesystem::path> &places) {
@@ -212,7 +364,7 @@ namespace hello::kit {
                                                       DiagnosticList &diagnostics) {
         auto bank = fullBank();
         const auto done = m_files.reloadFromDisk(bank, changes, selector, diagnostics);
-        takeFrom(bank, done.changed, tr("Reload from Disk"), diagnostics);
+        takeFrom(bank, done.changed, tr("Reload from Disk"), false, diagnostics);
         return done;
     }
 
@@ -220,7 +372,7 @@ namespace hello::kit {
                                                          DiagnosticList &diagnostics) {
         auto bank = fullBank();
         const auto done = m_files.reloadAllFromDisk(bank, selector, diagnostics);
-        takeFrom(bank, done.changed, tr("Reload from Disk"), diagnostics);
+        takeFrom(bank, done.changed, tr("Reload from Disk"), false, diagnostics);
         return done;
     }
 
@@ -248,13 +400,16 @@ namespace hello::kit {
         const auto message = charsets.size() == 1
                                  ? tr("Read Again in %1").arg(charsets.first().second)
                                  : tr("Read Again in Encodings");
-        return takeFrom(bank, replaced, message, diagnostics) && replaced.size() == charsets.size();
+        return takeFrom(bank, replaced, message, true, diagnostics) &&
+               replaced.size() == charsets.size();
     }
 
     bool VoiceBankSession::takeFrom(const VoiceBank &bank,
                                     const QList<std::filesystem::path> &replaced,
-                                    const QString &message, DiagnosticList &diagnostics) {
+                                    const QString &message, bool recordCharsets,
+                                    DiagnosticList &diagnostics) {
         auto transaction = this->transaction(message);
+        bool rootKept = false;
         edit::EditSessionPrivate::markAsRead(*this);
         const auto root = edit::EditSessionPrivate::findEditable<VoiceBankNode>(this, this->root(),
                                                                                 VoiceBankType);
@@ -279,6 +434,7 @@ namespace hello::kit {
                                         "before are kept, and saving writes them back.");
                 diagnostics.push_back(diagnostic);
                 m_rootUnreadable = true;
+                rootKept = true;
                 continue;
             }
             directories->remove(i, 1);
@@ -296,11 +452,13 @@ namespace hello::kit {
                 std::vector<std::unique_ptr<ss::Node>> nodes;
                 nodes.push_back(directoryTreeOf(bank, i));
                 directories->insert(directories->size(), std::move(nodes));
+                m_reading.insert(directory.path);
             } else if (replaced.contains(directory.path)) {
                 directories->remove(at, 1);
                 std::vector<std::unique_ptr<ss::Node>> nodes;
                 nodes.push_back(directoryTreeOf(bank, i));
                 directories->insert(at, std::move(nodes));
+                m_reading.insert(directory.path);
             }
             if (directory.path.empty() && replaced.contains(directory.path)) {
                 setRootFiles(*root, directory);
@@ -314,7 +472,32 @@ namespace hello::kit {
                 m_excluded.push_back(directory);
             }
         }
-        return transaction.commit(diagnostics);
+        const bool committed = transaction.commit(diagnostics);
+        const auto read = std::exchange(m_reading, {});
+        if (!committed) {
+            return false;
+        }
+
+        // The directories read hold what is on disk now, except a configuration that is to
+        // record an encoding the user chose, and a root kept because it no longer reads.
+        const int step = currentStep();
+        for (const auto &directory : read) {
+            for (const auto file : filesOf(directory)) {
+                const FileKey key{directory, file};
+                if (recordCharsets && file == VoiceBankDirectorySource::Config) {
+                    m_unsynced.insert(key);
+                } else {
+                    m_unsynced.erase(key);
+                    m_synced[key] = step;
+                }
+            }
+        }
+        if (rootKept) {
+            for (const auto file : textFilesOf({})) {
+                m_unsynced.insert({{}, file});
+            }
+        }
+        return true;
     }
 
 }

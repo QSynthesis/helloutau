@@ -15,6 +15,8 @@ using namespace hello::kit;
 
 namespace fs = std::filesystem;
 
+using Source = VoiceBankDirectorySource;
+
 // 葛平 in GBK, and あ in Shift_JIS.
 static const QByteArray kGbkGePing = QByteArray("\xb8\xf0\xc6\xbd", 4);
 static const QByteArray kShiftJisA = QByteArray("\x82\xa0", 2);
@@ -78,6 +80,14 @@ private:
         bank.setSamples(samples);
     }
 
+    /// \a kinds of the directory at \a directory , the files that a save is told to write.
+    static VoiceBankFileSystemState::Files filesOf(const fs::path &directory,
+                                                   std::set<VoiceBankDirectorySource::File> kinds) {
+        return {
+            {directory, std::move(kinds)}
+        };
+    }
+
 private Q_SLOTS:
     void init() {
         m_dir = std::make_unique<QTemporaryDir>();
@@ -88,8 +98,8 @@ private Q_SLOTS:
         m_dir.reset();
     }
 
-    // Opening and saving an unmodified voice bank is not an edit, and must not appear as one to
-    // the version control of the author or to UTAU.
+    // A save that names no file writes none, so that saving an unmodified voice bank does not
+    // appear as an edit to the version control of the author or to UTAU.
     void a_bank_nobody_changed_is_left_as_it_was() {
         const QByteArray oto = "a.wav=" + kGbkGePing +
                                ",41.0,87.688,97.316,8.938,4.457\r\n"
@@ -107,7 +117,7 @@ private Q_SLOTS:
         auto &files = opened->files;
 
         DiagnosticList diagnostics;
-        QVERIFY(files.save(bank, diagnostics));
+        QVERIFY(files.save(bank, {}, diagnostics));
         QCOMPARE(read(QStringLiteral("oto.ini")), oto);
         QCOMPARE(read(QStringLiteral("character.txt")), character);
         QCOMPARE(read(QStringLiteral("readme.txt")), kGbkGePing);
@@ -136,7 +146,7 @@ private Q_SLOTS:
         bank.setDirectory(0, directory);
 
         DiagnosticList diagnostics;
-        QVERIFY(files.save(bank, diagnostics));
+        QVERIFY(files.save(bank, filesOf({}, {Source::Character}), diagnostics));
         QCOMPARE(read(QStringLiteral("oto.ini")), oto);
         QCOMPARE(read(QStringLiteral("character.txt")), QByteArray("name=new\r\n"));
         QCOMPARE(bank.character().name, QStringLiteral("new"));
@@ -164,7 +174,7 @@ private Q_SLOTS:
         bank.setSamples(samples);
 
         DiagnosticList diagnostics;
-        QVERIFY(files.save(bank, diagnostics));
+        QVERIFY(files.save(bank, filesOf({}, {Source::Oto}), diagnostics));
         QCOMPARE(read(QStringLiteral("oto.ini")), QByteArray("01.wav=,,,,,\r\n"
                                                              "02.wav=,,,-300,,\r\n"));
     }
@@ -188,7 +198,7 @@ private Q_SLOTS:
         });
 
         DiagnosticList diagnostics;
-        QVERIFY(files.save(bank, diagnostics));
+        QVERIFY(files.save(bank, filesOf({}, {Source::Oto, Source::Config}), diagnostics));
         QCOMPARE(read(QStringLiteral("oto.ini")), "a.wav=" + kGbkGePing +
                                                       ",41.0,2,3,4,5\r\n"
                                                       "b.wav=" +
@@ -214,7 +224,7 @@ private Q_SLOTS:
              [](VoiceSample &sample) { sample.alias = kNotInShiftJis; });
 
         DiagnosticList diagnostics;
-        QVERIFY(!files.save(bank, diagnostics));
+        QVERIFY(!files.save(bank, filesOf({}, {Source::Oto, Source::Config}), diagnostics));
         QVERIFY(!diagnostics.isEmpty());
         QCOMPARE(read(QStringLiteral("oto.ini")), oto);
         QVERIFY(!exists(QStringLiteral("hello-config.json")));
@@ -236,7 +246,7 @@ private Q_SLOTS:
         write(QStringLiteral("oto.ini"), theirs);
 
         DiagnosticList diagnostics;
-        QVERIFY(!files.save(bank, diagnostics));
+        QVERIFY(!files.save(bank, filesOf({}, {Source::Oto}), diagnostics));
         QCOMPARE(read(QStringLiteral("oto.ini")), theirs);
     }
 
@@ -257,7 +267,7 @@ private Q_SLOTS:
         // The same bytes with another time are taken as modified.
         fs::last_write_time(oto, past + std::chrono::seconds(10));
         DiagnosticList diagnostics;
-        QVERIFY(!opened->files.save(opened->bank, diagnostics));
+        QVERIFY(!opened->files.save(opened->bank, filesOf({}, {Source::Oto}), diagnostics));
         QCOMPARE(read(QStringLiteral("oto.ini")), QByteArray("a.wav=a,1,2,3,4,5\r\n"));
     }
 
@@ -277,7 +287,7 @@ private Q_SLOTS:
         write(QStringLiteral("oto.ini"), "a.wav=a,9,2,3,4,5\r\n");
         fs::last_write_time(oto, past);
         DiagnosticList diagnostics;
-        QVERIFY(opened->files.save(opened->bank, diagnostics));
+        QVERIFY(opened->files.save(opened->bank, filesOf({}, {Source::Oto}), diagnostics));
         QCOMPARE(read(QStringLiteral("oto.ini")),
                  QByteArray("#Charset:UTF-8\r\na.wav=a,100,2,3,4,5\r\n"));
     }
@@ -298,7 +308,7 @@ private Q_SLOTS:
         write(QStringLiteral("oto.ini"), theirs);
         fs::last_write_time(oto, time);
         DiagnosticList diagnostics;
-        QVERIFY(!opened->files.save(opened->bank, diagnostics));
+        QVERIFY(!opened->files.save(opened->bank, filesOf({}, {Source::Oto}), diagnostics));
         QCOMPARE(read(QStringLiteral("oto.ini")), theirs);
     }
 
@@ -322,7 +332,7 @@ private Q_SLOTS:
         write(QStringLiteral("oto.ini"), theirs);
 
         DiagnosticList diagnostics;
-        QVERIFY(!files.save(bank, diagnostics));
+        QVERIFY(!files.save(bank, filesOf({}, {Source::Oto}), diagnostics));
         QCOMPARE(read(QStringLiteral("oto.ini")), theirs);
     }
 
@@ -339,15 +349,15 @@ private Q_SLOTS:
         auto &files = opened->files;
         QVERIFY(bank.directories().at(0).leftOut);
 
-        // If unmodified, the save succeeds and writes nothing.
-        QVERIFY(files.save(bank, diagnostics));
+        // Without a named file, the save succeeds and writes nothing.
+        QVERIFY(files.save(bank, {}, diagnostics));
         QCOMPARE(read(QStringLiteral("oto.ini")), oto);
 
         auto samples = bank.samples();
         samples[0].hasEntry = true;
         bank.setSamples(samples);
         diagnostics.clear();
-        QVERIFY(!files.save(bank, diagnostics));
+        QVERIFY(!files.save(bank, filesOf({}, {Source::Oto}), diagnostics));
         QCOMPARE(read(QStringLiteral("oto.ini")), oto);
     }
 
@@ -367,15 +377,15 @@ private Q_SLOTS:
         QVERIFY(!bank.directories().at(0).leftOut);
 
         DiagnosticList diagnostics;
-        QVERIFY(files.save(bank, diagnostics));
+        QVERIFY(files.save(bank, {}, diagnostics));
 
         edit(bank, QStringLiteral("b"), [](VoiceSample &sample) { sample.offset = 100; });
-        QVERIFY(!files.save(bank, diagnostics));
+        QVERIFY(!files.save(bank, filesOf({}, {Source::Oto}), diagnostics));
         QCOMPARE(read(QStringLiteral("oto.ini")), oto);
     }
 
-    // The configuration that recorded the encoding is read and kept, so a save neither mistakes
-    // it for one that could not be read nor rewrites it when the encoding is unchanged.
+    // A save that does not name the configuration does not write it, so a read-only
+    // configuration does not fail the save.
     void a_recorded_encoding_is_kept_as_it_was() {
         VoiceBankConfig config;
         config.charset = TextCodec(QStringLiteral("GBK")).name();
@@ -393,7 +403,8 @@ private Q_SLOTS:
         // Read-only, so that a save that wrote it would fail.
         QVERIFY(QFile::setPermissions(pathOf(QStringLiteral("hello-config.json")),
                                       QFileDevice::ReadOwner | QFileDevice::ReadUser));
-        const bool saved = opened->files.save(opened->bank, diagnostics);
+        const bool saved =
+            opened->files.save(opened->bank, filesOf({}, {Source::Oto}), diagnostics);
         QVERIFY(QFile::setPermissions(pathOf(QStringLiteral("hello-config.json")),
                                       QFileDevice::ReadOwner | QFileDevice::WriteOwner));
         QVERIFY(saved);
@@ -422,16 +433,15 @@ private Q_SLOTS:
         const QByteArray elsewhere =
             R"({"$format":"hello-voicebank","charset":"Shift_JIS","added":2})";
         write(QStringLiteral("hello-config.json"), elsewhere);
-        QVERIFY(files.save(bank, diagnostics));
+        QVERIFY(files.save(bank, {}, diagnostics));
         QCOMPARE(read(QStringLiteral("hello-config.json")), elsewhere);
 
         QVERIFY(QFile::remove(pathOf(QStringLiteral("hello-config.json"))));
-        QVERIFY(files.save(bank, diagnostics));
+        QVERIFY(files.save(bank, {}, diagnostics));
         QVERIFY(!exists(QStringLiteral("hello-config.json")));
 
         write(QStringLiteral("hello-config.json"), elsewhere);
-        files.rememberCharset({});
-        QVERIFY(files.save(bank, diagnostics));
+        QVERIFY(files.save(bank, filesOf({}, {Source::Config}), diagnostics));
         QCOMPARE(read(QStringLiteral("hello-config.json")), recorded);
         QCOMPARE(read(QStringLiteral("oto.ini")), "a.wav=" + kGbkGePing + ",1,2,3,4,5\r\n");
     }
@@ -447,11 +457,10 @@ private Q_SLOTS:
         const QByteArray elsewhere = R"({"$format":"hello-voicebank","charset":"Shift_JIS"})";
         write(QStringLiteral("Hello-Config.json"), elsewhere);
         DiagnosticList diagnostics;
-        QVERIFY(opened->files.save(opened->bank, diagnostics));
+        QVERIFY(opened->files.save(opened->bank, {}, diagnostics));
         QCOMPARE(read(QStringLiteral("Hello-Config.json")), elsewhere);
 
-        opened->files.rememberCharset({});
-        QVERIFY(opened->files.save(opened->bank, diagnostics));
+        QVERIFY(opened->files.save(opened->bank, filesOf({}, {Source::Config}), diagnostics));
         DiagnosticList ignored;
         const auto config = VoiceBankConfig::open(root() / "Hello-Config.json", ignored);
         QVERIFY(config.has_value());
@@ -460,7 +469,7 @@ private Q_SLOTS:
     }
 
     // A configuration that could not be read is taken as none, so the encoding is selected
-    // again, which an editor records by rememberCharset(), and the next save replaces it.
+    // again, which an editor records by naming the configuration, and the save replaces it.
     void a_configuration_that_did_not_read_is_replaced() {
         write(QStringLiteral("hello-config.json"), "not json");
         write(QStringLiteral("oto.ini"), "a.wav=" + kGbkGePing + ",1,2,3,4,5\r\n");
@@ -468,9 +477,8 @@ private Q_SLOTS:
 
         auto opened = open(root(), QStringLiteral("GBK"));
         QVERIFY(opened.has_value());
-        opened->files.rememberCharset({});
         DiagnosticList diagnostics;
-        QVERIFY(opened->files.save(opened->bank, diagnostics));
+        QVERIFY(opened->files.save(opened->bank, filesOf({}, {Source::Config}), diagnostics));
         DiagnosticList ignored;
         const auto config = VoiceBankConfig::open(root() / "hello-config.json", ignored);
         QVERIFY(config.has_value());
@@ -489,7 +497,8 @@ private Q_SLOTS:
         edit(opened->bank, QString::fromUtf8("\xe8\x91\x9b\xe5\xb9\xb3"),
              [](VoiceSample &sample) { sample.offset = 7; });
         DiagnosticList diagnostics;
-        QVERIFY(!opened->files.save(opened->bank, diagnostics));
+        QVERIFY(!opened->files.save(opened->bank, filesOf({}, {Source::Oto, Source::Config}),
+                                    diagnostics));
         QVERIFY(diagnostics.last().message.contains(QStringLiteral("hello-config.json")));
         QCOMPARE(read(QStringLiteral("oto.ini")), "a.wav=" + kGbkGePing + ",1,2,3,4,5\r\n");
 
@@ -503,7 +512,8 @@ private Q_SLOTS:
         QVERIFY(QFile::setPermissions(pathOf(QStringLiteral("hello-config.json")),
                                       QFileDevice::ReadOwner | QFileDevice::ReadUser));
         diagnostics.clear();
-        const bool saved = opened->files.save(opened->bank, diagnostics);
+        const bool saved = opened->files.save(
+            opened->bank, filesOf({}, {Source::Oto, Source::Config}), diagnostics);
         QVERIFY(QFile::setPermissions(pathOf(QStringLiteral("hello-config.json")),
                                       QFileDevice::ReadOwner | QFileDevice::WriteOwner));
         QVERIFY(!saved);
@@ -527,7 +537,7 @@ private Q_SLOTS:
         edit(later->bank, QStringLiteral("a"), [](VoiceSample &sample) { sample.offset = 7; });
 
         DiagnosticList diagnostics;
-        QVERIFY(!opened->files.save(later->bank, diagnostics));
+        QVERIFY(!opened->files.save(later->bank, filesOf({}, {Source::Oto}), diagnostics));
         QCOMPARE(diagnostics.size(), 1);
         QVERIFY(diagnostics.first().message.contains(QStringLiteral("sub")));
         QCOMPARE(read(QStringLiteral("oto.ini")), QByteArray("a.wav=a,1,2,3,4,5\r\n"));
@@ -551,14 +561,13 @@ private Q_SLOTS:
         files.reloadFromDisk(reloaded, files.checkDisk(), nullptr, diagnostics);
         QCOMPARE(reloaded.indexOf("sub"), -1);
 
-        QVERIFY(files.save(before, diagnostics));
+        QVERIFY(files.save(before, {}, diagnostics));
         QCOMPARE(read(QStringLiteral("sub/oto.ini")),
                  QByteArray("#Charset:UTF-8\r\nb.wav=b,1,2,3,4,5\r\n"));
         QVERIFY(exists(QStringLiteral("sub/hello-config.json")));
         QCOMPARE(read(QStringLiteral("oto.ini")), QByteArray("a.wav=a,1,2,3,4,5\r\n"));
         QVERIFY(files.checkDisk().isEmpty());
-        QVERIFY(!files.isModified(before, "sub"));
-        QVERIFY(files.save(before, diagnostics));
+        QVERIFY(files.save(before, filesOf("sub", {Source::Oto}), diagnostics));
     }
 
     // Without its root, the voice bank on disk is gone, and saving writes every text file of the
@@ -574,13 +583,13 @@ private Q_SLOTS:
         QVERIFY(QDir(m_dir->path()).removeRecursively());
         QVERIFY(files.checkDisk().rootNotFound);
         DiagnosticList diagnostics;
-        QVERIFY(files.save(opened->bank, diagnostics));
+        QVERIFY(files.save(opened->bank, {}, diagnostics));
         QCOMPARE(read(QStringLiteral("oto.ini")), QByteArray("a.wav=a,41.0,2,3,4,5\r\n"));
         QCOMPARE(read(QStringLiteral("character.txt")), QByteArray("name=n\r\n"));
         QCOMPARE(read(QStringLiteral("sub/oto.ini")), QByteArray("b.wav=b,1,2,3,4,5\r\n"));
         QVERIFY(exists(QStringLiteral("sub/hello-config.json")));
         QVERIFY(files.checkDisk().isEmpty());
-        QVERIFY(!files.isModified(opened->bank, {}));
+        QVERIFY(files.save(opened->bank, filesOf({}, {Source::Oto}), diagnostics));
     }
 
     // The state of the files read before the root was removed describes nothing on disk, so a
@@ -604,7 +613,7 @@ private Q_SLOTS:
 
         QVERIFY(QDir(m_dir->path()).removeRecursively());
         DiagnosticList diagnostics;
-        QVERIFY(files.save(rootOnly, diagnostics));
+        QVERIFY(files.save(rootOnly, {}, diagnostics));
         QVERIFY(!exists(QStringLiteral("sub")));
         QVERIFY(files.checkDisk().isEmpty());
     }
@@ -657,9 +666,8 @@ private Q_SLOTS:
         QCOMPARE(copy("left/oto.ini"), "z.wav=" + kGbkGePing + ",1,2,3,4,5\r\n");
         QVERIFY(copy("hello-config.json").contains("UTF-8"));
 
-        // Read from the new folder, which is unmodified, and without the directory left out.
+        // Read from the new folder, without the directory left out.
         QCOMPARE(saved->files.root(), folder);
-        QVERIFY(!saved->files.isModified(saved->bank, {}));
         QVERIFY(saved->bank.directories().at(saved->bank.indexOf("left")).leftOut);
         QVERIFY(saved->bank.find(60, QStringLiteral("a")));
         QCOMPARE(saved->bank.find(60, QStringLiteral("a"))->offset, 7.0);
@@ -741,13 +749,13 @@ private Q_SLOTS:
         write(QStringLiteral("sub"), "a file");
 
         diagnostics.clear();
-        QVERIFY(!files.save(before, diagnostics));
+        QVERIFY(!files.save(before, {}, diagnostics));
         QVERIFY(diagnostics.first().message.contains(QStringLiteral("is a file")));
         QCOMPARE(read(QStringLiteral("sub")), QByteArray("a file"));
     }
 
-    // The output of a save becomes the baseline for the next one. Otherwise the second save
-    // would mistake its own output for an external change.
+    // The state of a written file is taken, so that the second save does not mistake its own
+    // output for an external change.
     void a_bank_can_be_saved_again() {
         write(QStringLiteral("oto.ini"), "a.wav=a,1,2,3,4,5\r\n");
         write(QStringLiteral("a.wav"), "RIFF");
@@ -759,9 +767,9 @@ private Q_SLOTS:
 
         DiagnosticList diagnostics;
         edit(bank, QStringLiteral("a"), [](VoiceSample &sample) { sample.offset = 10; });
-        QVERIFY(files.save(bank, diagnostics));
+        QVERIFY(files.save(bank, filesOf({}, {Source::Oto}), diagnostics));
         edit(bank, QStringLiteral("a"), [](VoiceSample &sample) { sample.offset = 20; });
-        QVERIFY(files.save(bank, diagnostics));
+        QVERIFY(files.save(bank, filesOf({}, {Source::Oto}), diagnostics));
         QCOMPARE(read(QStringLiteral("oto.ini")),
                  QByteArray("#Charset:UTF-8\r\na.wav=a,20,2,3,4,5\r\n"));
     }
@@ -779,7 +787,7 @@ private Q_SLOTS:
         edit(bank, QStringLiteral("a"), [](VoiceSample &sample) { sample.offset = 10; });
 
         DiagnosticList diagnostics;
-        QVERIFY(files.save(bank, diagnostics));
+        QVERIFY(files.save(bank, filesOf({}, {Source::Oto}), diagnostics));
 
         const auto names = QDir(m_dir->path()).entryList({QStringLiteral("*.ini")}, QDir::Files);
         QCOMPARE(names, QStringList{QStringLiteral("OTO.INI")});
@@ -806,7 +814,7 @@ private Q_SLOTS:
         directory.character->name = QStringLiteral("b");
         bank.setDirectory(0, directory);
         DiagnosticList diagnostics;
-        QVERIFY(files.save(bank, diagnostics));
+        QVERIFY(files.save(bank, filesOf({}, {Source::Oto, Source::Character}), diagnostics));
         QVERIFY(!exists(QStringLiteral("oto.ini")));
         QCOMPARE(read(QStringLiteral("sub/oto.ini")), QByteArray());
     }
@@ -829,13 +837,13 @@ private Q_SLOTS:
         bank.setSamples(samples);
 
         DiagnosticList diagnostics;
-        QVERIFY(!files.save(bank, diagnostics));
+        QVERIFY(!files.save(bank, filesOf({}, {Source::Oto, Source::Config}), diagnostics));
         QVERIFY(!exists(QStringLiteral("oto.ini")));
 
         auto directory = bank.directories().at(0);
         directory.charset = QStringLiteral("UTF-8");
         bank.setDirectory(0, directory);
-        QVERIFY(files.save(bank, diagnostics));
+        QVERIFY(files.save(bank, filesOf({}, {Source::Oto, Source::Config}), diagnostics));
         // Setting UTF-8 declares it in the oto.ini, as converting to it does.
         QCOMPARE(read(QStringLiteral("oto.ini")),
                  QByteArray("#Charset:UTF-8\r\nka.wav=ka,5,0,0,0,0\r\n"));
@@ -859,7 +867,7 @@ private Q_SLOTS:
         auto &files = opened->files;
         edit(bank, QStringLiteral("b"), [](VoiceSample &sample) { sample.offset = 9; });
 
-        QVERIFY(files.save(bank, diagnostics));
+        QVERIFY(files.save(bank, filesOf("en", {Source::Oto, Source::Config}), diagnostics));
         QCOMPARE(read(QStringLiteral("jp/oto.ini")), jp);
         QVERIFY(!exists(QStringLiteral("jp/hello-config.json")));
         QCOMPARE(read(QStringLiteral("en/oto.ini")), QByteArray("b.wav=b,9,2,3,4,5\r\n"));

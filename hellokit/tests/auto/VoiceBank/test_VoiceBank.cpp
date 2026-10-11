@@ -372,7 +372,14 @@ private Q_SLOTS:
             }
         }
         bank.setSamples(samples);
-        QVERIFY(files.save(bank, diagnostics));
+        QVERIFY(files.save(
+            bank,
+            VoiceBankFileSystemState::Files{
+                {"inner",
+                 {VoiceBankDirectorySource::Oto, VoiceBankDirectorySource::PrefixMap,
+                  VoiceBankDirectorySource::Character, VoiceBankDirectorySource::Readme}}
+        },
+            diagnostics));
         QCOMPARE(read(QStringLiteral("inner/character.txt")), character);
         QCOMPARE(read(QStringLiteral("inner/prefix.map")), QByteArray("C4\t\t_B\n"));
         QCOMPARE(read(QStringLiteral("inner/readme.txt")), kGbkGePing);

@@ -4,10 +4,12 @@
 #include <filesystem>
 #include <map>
 #include <optional>
+#include <set>
 #include <vector>
 
 #include <QtCore/QByteArray>
 #include <QtCore/QCoreApplication>
+#include <QtCore/QJsonObject>
 #include <QtCore/QList>
 #include <QtCore/QString>
 #include <QtCore/QStringList>
@@ -34,6 +36,9 @@ namespace hello::kit {
     public:
         struct Opened;
 
+        /// Files of a voice bank by directory, which is relative to the root.
+        using Files = std::map<std::filesystem::path, std::set<VoiceBankDirectorySource::File>>;
+
         /// Reads and decodes \a root , querying \a selector for each directory whose encoding
         /// is not recorded.
         ///
@@ -55,10 +60,6 @@ namespace hello::kit {
         /// Returns the directories whose state is kept, the root first, in the order of their
         /// paths.
         QList<std::filesystem::path> directories() const;
-
-        /// Returns whether the directory at \a directory of \a bank has changes that save()
-        /// would write.
-        bool isModified(const VoiceBank &bank, const std::filesystem::path &directory) const;
 
         /// Returns the names of the audio files of the directory at \a directory as last read,
         /// with and without an entry, in the order in which they were listed, or an empty list
@@ -93,32 +94,20 @@ namespace hello::kit {
             undeterminedNames(const std::filesystem::path &directory,
                               const std::optional<VoiceBankConfig::FileNameEncoding> &record) const;
 
-        /// Makes the next save() record the encoding of the directory at \a directory , even if
-        /// nothing else in it changed.
+        /// Saves \a files of \a bank , each in the encoding of its directory, and nothing else.
         ///
-        /// Intended for an encoding the user selected when the voice bank was opened, which
-        /// open() does not record by itself. Without this call, the user is asked again every
-        /// time the voice bank is opened.
-        void rememberCharset(const std::filesystem::path &directory);
-
-        /// Returns whether the next save() records the encoding of a directory whose contents
-        /// are unchanged: one marked by rememberCharset(), or read again by reread().
-        ///
-        /// Such a voice bank is unsaved even though nothing in it was edited. An editor that
-        /// holds the saved state marks it unsaved after opening. See the section on the saved
-        /// state in docs/Editing.md.
-        bool hasUnrecordedCharsets() const;
-
-        /// Saves every file of \a bank that differs from the state in which it was read, each in
-        /// the encoding of its directory, and nothing else.
+        /// The state does not determine which files changed. The caller names them, for example
+        /// an editing session from its undo history, see the section on the files a save writes
+        /// in docs/Editing.md. A named file that \a bank does not have, such as an \c oto.ini
+        /// without entries that did not exist, is not created.
         ///
         /// All checks precede the first write, and a single failure leaves every file
         /// unchanged. The following are refused, each listed in \a diagnostics :
         ///
         /// - **Text that the encoding cannot represent.** It is never written as question marks.
         /// - **Text containing U+FFFD**, which stands for bytes that were invalid in the encoding
-        ///   when read. Writing it would lose them. An unchanged file is not written and is not
-        ///   refused.
+        ///   when read. Writing it would lose them. A file that is not named is not written and
+        ///   is not refused.
         /// - **A file that changed on disk since it was read**, because it contains changes made
         ///   elsewhere. The voice bank must be reopened. A file whose size or modification time
         ///   differs from the stamp is taken as changed, and only a racy file is compared by
@@ -130,14 +119,13 @@ namespace hello::kit {
         /// created if missing, unless its path is a file, and every file of it is written. A file
         /// already there was not read and is refused as a file that changed on disk.
         ///
-        /// For each directory in which a file is written, and for each directory whose encoding
-        /// or record of misdecoded file names differs from the one it was read with, the encoding
-        /// and the record are recorded beside it in \c hello-config.json , because saving is an
-        /// explicit request to write files there. The configuration belongs to HelloUtau, is read
-        /// on opening only and is exempt from the refusal of a file that changed on disk: the file
-        /// on disk is neither read nor checked, and is replaced whenever it is written. Only a
-        /// configuration that cannot be written at all, for a folder of its name or a file that
-        /// does not open for writing, is refused.
+        /// \c hello-config.json , named as VoiceBankDirectorySource::Config , records the encoding
+        /// and the record of misdecoded file names of the directory, with the fields read on
+        /// opening that this version does not recognize. The configuration belongs to HelloUtau,
+        /// is read on opening only and is exempt from the refusal of a file that changed on disk:
+        /// the file on disk is neither read nor checked, and is replaced whenever it is written.
+        /// Only a configuration that cannot be written at all, for a folder of its name or a file
+        /// that does not open for writing, is refused.
         ///
         /// Each file is written to a temporary file beside it and then renamed, so that a reader
         /// never observes a partially written file.
@@ -147,7 +135,7 @@ namespace hello::kit {
         ///          reported.
         ///
         /// \sa VoiceBankDirectory::leftOut
-        bool save(const VoiceBank &bank, DiagnosticList &diagnostics);
+        bool save(const VoiceBank &bank, const Files &files, DiagnosticList &diagnostics);
 
         /// Writes \a bank into \a folder as a new voice bank, and returns it as read from there.
         ///
@@ -179,8 +167,8 @@ namespace hello::kit {
         /// \warning Unsaved changes to the directory are discarded, because the directory is
         ///          read anew.
         ///
-        /// The encoding is recorded by the next save() , even if some bytes are invalid in it,
-        /// because the user chose it. The record of misdecoded file names of \a bank is kept.
+        /// The record of misdecoded file names of \a bank is kept. Recording the encoding is the
+        /// caller's decision, by naming the configuration of the directory to save().
         bool reread(VoiceBank &bank, const std::filesystem::path &directory, const QString &charset,
                     DiagnosticList &diagnostics);
 
@@ -195,8 +183,8 @@ namespace hello::kit {
         ///
         /// **A detected difference is reported again** by every check until reloadFromDisk()
         /// applies it, so that a check whose result was missed loses nothing. Applying it is the
-        /// user's decision: a directory that changed on disk while isModified() holds for it
-        /// exists in two versions, and only the user can choose between them.
+        /// user's decision: a directory that changed on disk while it has unsaved changes exists
+        /// in two versions, and only the user can choose between them.
         ///
         /// \c hello-config.json is not compared, because it is read on opening only.
         ///
@@ -261,20 +249,10 @@ namespace hello::kit {
         struct Book {
             /// The state of each file on disk when it was read or last written.
             std::map<VoiceBankDirectorySource::File, VoiceBankFileRecord> files;
-            /// The serialization of each file without changes. A file whose serialization still
-            /// equals this is not written.
-            std::map<VoiceBankDirectorySource::File, QByteArray> baseline;
-            /// The contents of \c hello-config.json when read, if present, whose fields not
-            /// recognized by this version every save writes back. The encodings are those of the
-            /// VoiceBank at each save instead. Its record of misdecoded file names is the record
-            /// read or last saved, and a different record in the VoiceBank is recorded by the
-            /// next save.
-            std::optional<VoiceBankConfig> config;
-            /// The canonical encoding the directory was read or last saved in. A different
-            /// encoding in the VoiceBank is recorded by the next save.
-            QString charset;
-            /// Whether the encoding is to be recorded regardless of other changes.
-            bool remember = false;
+            /// The fields of \c hello-config.json read on opening that this version does not
+            /// recognize, which every write of the configuration writes back. The encoding and
+            /// the record of misdecoded file names are those of the VoiceBank.
+            QJsonObject unknownFields;
             /// The directory state when last read, or when last checked without differences.
             VoiceBankDirectoryStamp stamp;
             /// The names on disk of the audio files when last read or refreshed, in the order in
@@ -298,18 +276,13 @@ namespace hello::kit {
         const Names &namesOf(const std::filesystem::path &directory,
                              const std::optional<VoiceBankConfig::FileNameEncoding> &record) const;
 
-        /// Returns the state of a directory as read from \a source and decoded into \a decoded .
-        static Book bookOf(const VoiceBankDirectorySource &source,
-                           const VoiceBankDirectory &decoded);
-
-        /// Records the current serialization of the directory at \a index of \a bank as the
-        /// baseline of \a book .
-        static void takeBaseline(const VoiceBank &bank, int index, Book &book);
+        /// Returns the state of a directory as read from \a source .
+        static Book bookOf(const VoiceBankDirectorySource &source);
 
         /// \name Changing the set of directories of a VoiceBank
         ///
-        /// None of these functions reindexes \a bank or takes a baseline, so that a reload
-        /// affecting several directories performs each once.
+        /// None of these functions reindexes \a bank , so that a reload affecting several
+        /// directories reindexes it once.
         /// @{
         void replaceDirectory(VoiceBank &bank, int index, const VoiceBankDirectorySource &source,
                               const std::optional<QString> &charset, DiagnosticList &diagnostics);
