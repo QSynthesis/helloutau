@@ -42,7 +42,8 @@ namespace hello::daw {
     ///      "files": {"ustExportCharset": ..., "recent": [...], "recentVoiceBanks": [...]},
     ///      "commandPalette": {"recent": [...]},
     ///      "pitchControl": {"portamento": {...}, "vibrato": {...}, "vibratoPreset": ...},
-    ///      "updates": {"mode": ..., "source": ..., "lastCheck": ..., "skippedVersion": ...}}
+    ///      "updates": {"mode": ..., "source": ..., "lastCheck": ..., "skippedVersion": ...,
+    ///                  "extractionThreads": ...}}
     class AppSettingsStore {
     public:
         /// Reads \a fileName, and normalizes the values of AppSettingsKeys.

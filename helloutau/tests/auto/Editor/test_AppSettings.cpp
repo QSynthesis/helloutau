@@ -59,6 +59,29 @@ private Q_SLOTS:
         QCOMPARE(AppSettings(file).rendering().threadCount(), 0);
     }
 
+    // The extraction thread count of updates persists. The default is not written.
+    void the_extraction_thread_count_persists() {
+        QTemporaryDir dir;
+        const auto file = dir.filePath(QStringLiteral("settings.json"));
+        QCOMPARE(AppSettings(file).updates().extractionThreadCount(),
+                 UpdateSettings::defaultExtractionThreadCount);
+        {
+            AppSettings settings(file);
+            settings.updates().setExtractionThreadCount(2);
+        }
+        QCOMPARE(AppSettings(file).updates().extractionThreadCount(), 2);
+        {
+            AppSettings settings(file);
+            settings.updates().setExtractionThreadCount(
+                UpdateSettings::defaultExtractionThreadCount);
+            QVERIFY(settings.value(QStringLiteral("updates/extractionThreads")).isUndefined());
+            settings.updates().setExtractionThreadCount(0);
+            QVERIFY(settings.value(QStringLiteral("updates/extractionThreads")).isUndefined());
+        }
+        QCOMPARE(AppSettings(file).updates().extractionThreadCount(),
+                 UpdateSettings::defaultExtractionThreadCount);
+    }
+
     // The settings of the updates persist. The defaults are not written.
     void update_settings_persist() {
         QTemporaryDir dir;

@@ -10,6 +10,7 @@
 #include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QPushButton>
+#include <QtWidgets/QSpinBox>
 #include <QtWidgets/QVBoxLayout>
 
 #include "AppSettings.h"
@@ -54,6 +55,14 @@ namespace hello::daw {
         m_source->setCurrentIndex(std::max(0, m_source->findData(storedSource())));
         form->addRow(tr("Update &source:"), m_source);
         form->addRow(note(tr("Automatic selects a source by the time zone of the system.")));
+        m_extractionThreads = new QSpinBox(widget);
+        m_extractionThreads->setObjectName(QStringLiteral("extractionThreads"));
+        m_extractionThreads->setRange(1, 64);
+        m_extractionThreads->setValue(m_settings.updates().extractionThreadCount());
+        form->addRow(tr("&Extraction threads:"), m_extractionThreads);
+        form->addRow(note(tr("The number of threads that extract the archive of an update of "
+                             "the portable version. The default is %1.")
+                              .arg(UpdateSettings::defaultExtractionThreadCount)));
         auto checkNow = new QPushButton(tr("Check &Now"), widget);
         m_lastCheck = note(QString());
         showLastCheck();
@@ -68,6 +77,7 @@ namespace hello::daw {
         connect(&m_checker, &UpdateChecker::finished, m_lastCheck, [this] { showLastCheck(); });
         connect(m_mode, &QComboBox::currentIndexChanged, this, &SettingPage::modifiedChanged);
         connect(m_source, &QComboBox::currentIndexChanged, this, &SettingPage::modifiedChanged);
+        connect(m_extractionThreads, &QSpinBox::valueChanged, this, &SettingPage::modifiedChanged);
         layout->addWidget(group);
         layout->addStretch();
         return widget;
@@ -78,13 +88,15 @@ namespace hello::daw {
             return false;
         }
         return m_mode->currentData().toInt() != m_settings.updates().mode() ||
-               m_source->currentData().toString() != storedSource();
+               m_source->currentData().toString() != storedSource() ||
+               m_extractionThreads->value() != m_settings.updates().extractionThreadCount();
     }
 
     bool UpdateSettingPage::apply(QString *error) {
         Q_UNUSED(error);
         m_settings.updates().setMode(UpdateSettings::Mode(m_mode->currentData().toInt()));
         m_settings.updates().setSource(m_source->currentData().toString());
+        m_settings.updates().setExtractionThreadCount(m_extractionThreads->value());
         Q_EMIT modifiedChanged();
         return true;
     }

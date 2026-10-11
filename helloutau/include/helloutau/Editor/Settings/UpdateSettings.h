@@ -50,6 +50,13 @@ namespace hello::daw {
         QString skippedVersion() const;
         void setSkippedVersion(const QString &version);
 
+        /// Number of threads that extract the archive of an update. The default is
+        /// \c defaultExtractionThreadCount, and a stored value below 1 reads as the default.
+        int extractionThreadCount() const;
+        void setExtractionThreadCount(int count);
+
+        static constexpr int defaultExtractionThreadCount = 4;
+
         /// The version whose installer was started when the application last quit, and the page
         /// of its release, by which the next start reports whether the installation succeeded.
         /// Both are empty if no installation is pending.

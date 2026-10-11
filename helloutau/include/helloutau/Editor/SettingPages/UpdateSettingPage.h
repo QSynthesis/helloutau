@@ -8,6 +8,7 @@
 #include <helloutau/Editor/HelloUtauEditorGlobal.h>
 
 class QComboBox;
+class QSpinBox;
 class QLabel;
 
 namespace hello::daw {
@@ -15,8 +16,9 @@ namespace hello::daw {
     class AppSettings;
     class UpdateChecker;
 
-    /// The check for newer releases, under System Settings as the updates of JetBrains IDEs.
-    /// The check of Check Now uses the host selected on the page, whether applied or not.
+    /// The check for newer releases and the extraction of an update, under System Settings as the
+    /// updates of JetBrains IDEs. The check of Check Now uses the host selected on the page,
+    /// whether applied or not.
     class HELLOUTAU_EDITOR_EXPORT UpdateSettingPage : public SettingPage {
         Q_OBJECT
     public:
@@ -43,6 +45,7 @@ namespace hello::daw {
         UpdateChecker &m_checker;
         QPointer<QComboBox> m_mode;
         QPointer<QComboBox> m_source;
+        QPointer<QSpinBox> m_extractionThreads;
         QPointer<QLabel> m_lastCheck;
     };
 

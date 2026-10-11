@@ -14,6 +14,7 @@ namespace hello::daw {
         constexpr char KeySource[] = "updates/source";
         constexpr char KeyLastCheck[] = "updates/lastCheck";
         constexpr char KeySkippedVersion[] = "updates/skippedVersion";
+        constexpr char KeyExtractionThreads[] = "updates/extractionThreads";
         constexpr char KeyPending[] = "updates/pending";
         constexpr char KeyPendingVersion[] = "updates/pending/version";
         constexpr char KeyPendingPage[] = "updates/pending/page";
@@ -71,6 +72,18 @@ namespace hello::daw {
     void UpdateSettings::setSkippedVersion(const QString &version) {
         m_store.setValue(KeySkippedVersion,
                          version.isEmpty() ? json::Value() : json::Value(version.toStdString()));
+    }
+
+    int UpdateSettings::extractionThreadCount() const {
+        const auto count = int(m_store.value(KeyExtractionThreads).toInt(0));
+        return count > 0 ? count : defaultExtractionThreadCount;
+    }
+
+    void UpdateSettings::setExtractionThreadCount(int count) {
+        // The default is not written, so that the file keeps no value that was never chosen.
+        m_store.setValue(KeyExtractionThreads, count > 0 && count != defaultExtractionThreadCount
+                                                   ? json::Value(int64_t(count))
+                                                   : json::Value());
     }
 
     QString UpdateSettings::pendingVersion() const {
