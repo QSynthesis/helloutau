@@ -226,6 +226,28 @@ private Q_SLOTS:
                       QStringLiteral("must be a string"));
     }
 
+    void a_file_name_encoding_is_set() {
+        QVERIFY(run(QStringLiteral(
+            "directory fileNameEncoding /directories/0 {\"original\": \"Shift_JIS\", "
+            "\"misdecodedAs\": \"GBK\", \"misdecoded\": [\"a.wav\"], \"correct\": []}")));
+        const auto directory = VoiceBankRef(m_session.get()).directories().at(0);
+        QVERIFY(directory.fileNameEncoding().has_value());
+        QCOMPARE(directory.fileNameEncoding()->misdecoded, QStringList{QStringLiteral("a.wav")});
+
+        QVERIFY(run(QStringLiteral("directory fileNameEncoding /directories/0 null")));
+        QVERIFY(!directory.fileNameEncoding().has_value());
+
+        verifyRefused(QStringLiteral("directory fileNameEncoding /directories/0 {\"original\": "
+                                     "\"Shift_JIS\"}"),
+                      QStringLiteral("is invalid"));
+        verifyRefused(QStringLiteral("directory fileNameEncoding /directories/0 {\"original\": "
+                                     "\"x\", \"misdecodedAs\": \"GBK\", \"misdecoded\": [], "
+                                     "\"correct\": []}"),
+                      QStringLiteral("is not available"));
+        verifyRefused(QStringLiteral("directory fileNameEncoding /directories/0"),
+                      QStringLiteral("Usage"));
+    }
+
     void an_unknown_command_is_refused() {
         verifyRefused(QStringLiteral("entry"), QStringLiteral("requires a verb"));
         verifyRefused(QStringLiteral("entry rename /directories/0/otoEntries/0 x"),
@@ -288,7 +310,8 @@ private Q_SLOTS:
                               QStringLiteral("entry insert"), QStringLiteral("entry include"),
                               QStringLiteral("entry remove"), QStringLiteral("prefix set"),
                               QStringLiteral("prefix remove"), QStringLiteral("character set"),
-                              QStringLiteral("readme set"), QStringLiteral("directory charset")}));
+                              QStringLiteral("readme set"), QStringLiteral("directory charset"),
+                              QStringLiteral("directory fileNameEncoding")}));
     }
 };
 

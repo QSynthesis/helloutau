@@ -1,7 +1,10 @@
 #ifndef HELLOKIT_EDIT_VOICEBANKFIELDS_P_H
 #define HELLOKIT_EDIT_VOICEBANKFIELDS_P_H
 
+#include <optional>
+
 #include <QtCore/QJsonObject>
+#include <QtCore/QJsonValue>
 
 #include <hellokit/VoiceBank/VoiceBank.h>
 
@@ -22,6 +25,12 @@ namespace hello::kit {
     /// Returns the record of the nodes of type \a nodeType, or \c nullptr if no record of a
     /// voice bank tree has this type.
     HELLOKIT_EDIT_EXPORT const edit::RecordInfo *voiceBankRecordOf(int nodeType);
+
+    /// Returns the record of misdecoded file names in \a json , in the form of
+    /// \c hello-config.json , or \c std::nullopt if \a json is not an object of exactly its four
+    /// fields with their types. The value of the field \c fileNameEncoding of a directory and the
+    /// argument of its command take this form.
+    std::optional<VoiceBankConfig::FileNameEncoding> fileNameEncodingOf(const QJsonValue &json);
 
 }
 

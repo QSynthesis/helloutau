@@ -230,6 +230,27 @@ namespace hello::kit {
             return VoiceBankEdits::convertCharset(*directory, *charset, diagnostics);
         }
 
+        bool directoryFileNameEncodingCommand(VoiceBankSession &session, const Arguments &arguments,
+                                              DiagnosticList &diagnostics) {
+            if (arguments.size() != 2) {
+                return usage(diagnostics, "directory fileNameEncoding <directory> <record JSON>");
+            }
+            const auto directory = directoryAt(session, arguments[0], diagnostics);
+            if (!directory) {
+                return false;
+            }
+            const auto json = edit::CommandSyntax::valueOf(arguments[1]);
+            if (json.isNull()) {
+                return VoiceBankEdits::setFileNameEncoding(*directory, std::nullopt, diagnostics);
+            }
+            const auto record = fileNameEncodingOf(json);
+            if (!record) {
+                return fail(diagnostics,
+                            VoiceBankCommands::tr("The record of file name encodings is invalid."));
+            }
+            return VoiceBankEdits::setFileNameEncoding(*directory, *record, diagnostics);
+        }
+
         using DomainCommand = bool (*)(VoiceBankSession &, const Arguments &, DiagnosticList &);
 
         // The domain commands, each with the function of VoiceBankEdits that it calls.
@@ -241,15 +262,17 @@ namespace hello::kit {
         };
 
         constexpr VoiceBankCommand domainCommands[] = {
-            {"entry",     "set",     entrySetCommand,         "setEntry"      },
-            {"entry",     "insert",  entryInsertCommand,      "insertEntries" },
-            {"entry",     "include", entryIncludeCommand,     "includeAudio"  },
-            {"entry",     "remove",  entryRemoveCommand,      "removeEntries" },
-            {"prefix",    "set",     prefixSetCommand,        "setPrefix"     },
-            {"prefix",    "remove",  prefixRemoveCommand,     "removePrefix"  },
-            {"character", "set",     characterSetCommand,     "setCharacter"  },
-            {"readme",    "set",     readmeSetCommand,        "setReadme"     },
-            {"directory", "charset", directoryCharsetCommand, "convertCharset"},
+            {"entry",     "set",              entrySetCommand,                  "setEntry"      },
+            {"entry",     "insert",           entryInsertCommand,               "insertEntries" },
+            {"entry",     "include",          entryIncludeCommand,              "includeAudio"  },
+            {"entry",     "remove",           entryRemoveCommand,               "removeEntries" },
+            {"prefix",    "set",              prefixSetCommand,                 "setPrefix"     },
+            {"prefix",    "remove",           prefixRemoveCommand,              "removePrefix"  },
+            {"character", "set",              characterSetCommand,              "setCharacter"  },
+            {"readme",    "set",              readmeSetCommand,                 "setReadme"     },
+            {"directory", "charset",          directoryCharsetCommand,          "convertCharset"},
+            {"directory", "fileNameEncoding", directoryFileNameEncodingCommand,
+             "setFileNameEncoding"                                                              },
         };
 
         QString nameOf(const VoiceBankCommand &command) {

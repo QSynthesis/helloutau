@@ -296,6 +296,36 @@ private Q_SLOTS:
                  (QStringList{QStringLiteral("hello-config.json"), QStringLiteral("oto.ini")}));
     }
 
+    // The names of the audio files follow the record at once, and the save writes the record
+    // into the configuration of its directory alone.
+    void a_file_name_encoding_names_the_files_and_writes_the_configuration_only() {
+        const auto misdecoded = QString::fromUtf8("偁.wav");
+        write(misdecoded, "RIFF");
+        DiagnosticList diagnostics;
+        m_session->reloadFromDisk(m_session->checkDisk(), nullptr, diagnostics);
+        QVERIFY(m_session->audioFiles({}).contains(misdecoded));
+
+        VoiceBankConfig::FileNameEncoding record;
+        record.original = QStringLiteral("Shift_JIS");
+        record.misdecodedAs = QStringLiteral("GBK");
+        record.misdecoded = QStringList{misdecoded};
+        QVERIFY(VoiceBankEdits::setFileNameEncoding(directories().at(indexOf({})), record,
+                                                    diagnostics));
+        QVERIFY(m_session->audioFiles({}).contains(QString::fromUtf8("あ.wav")));
+        QCOMPARE(m_session->audioPathOf({}, QString::fromUtf8("あ.wav")),
+                 fs::path(pathOf(misdecoded).toStdU16String()));
+
+        const auto before = times();
+        save();
+        QCOMPARE(writtenSince(before), QStringList{QStringLiteral("hello-config.json")});
+        DiagnosticList ignored;
+        const auto config = VoiceBankConfig::open(
+            fs::path(pathOf(QStringLiteral("hello-config.json")).toStdU16String()), ignored);
+        QVERIFY(config.has_value());
+        QVERIFY(config->fileNameEncoding.has_value());
+        QCOMPARE(config->fileNameEncoding->misdecoded, record.misdecoded);
+    }
+
     void a_remembered_encoding_writes_the_configuration_only() {
         m_session->rememberCharset("sub");
         QVERIFY(m_session->hasUnrecordedCharsets());

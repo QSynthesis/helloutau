@@ -269,6 +269,49 @@ private Q_SLOTS:
             QStringLiteral("is not available"));
     }
 
+    // The record takes the canonical names of its encodings, so that another spelling is no
+    // change, and removing it is a change of its own.
+    void a_file_name_encoding_is_set() {
+        const auto root = directory({});
+        QVERIFY(!root.fileNameEncoding().has_value());
+        VoiceBankConfig::FileNameEncoding record;
+        record.original = QStringLiteral("shift_jis");
+        record.misdecodedAs = QStringLiteral("gbk");
+        record.misdecoded = QStringList{QString::fromUtf8("偁.wav")};
+        DiagnosticList diagnostics;
+        QVERIFY(VoiceBankEdits::setFileNameEncoding(root, record, diagnostics));
+        QCOMPARE(m_session->undoMessage(), QStringLiteral("Set File Name Encoding"));
+        const auto set = root.fileNameEncoding();
+        QVERIFY(set.has_value());
+        QCOMPARE(set->original, TextCodec(QStringLiteral("Shift_JIS")).name());
+        QCOMPARE(set->misdecodedAs, TextCodec(QStringLiteral("GBK")).name());
+        QCOMPARE(set->misdecoded, record.misdecoded);
+
+        QVERIFY(VoiceBankEdits::setFileNameEncoding(root, record, diagnostics));
+        QCOMPARE(m_session->currentStep(), 1);
+
+        QVERIFY(VoiceBankEdits::setFileNameEncoding(root, std::nullopt, diagnostics));
+        QVERIFY(!root.fileNameEncoding().has_value());
+        QCOMPARE(m_session->currentStep(), 2);
+        m_session->undo();
+        QCOMPARE(root.fileNameEncoding(), set);
+        m_session->undo();
+
+        auto unavailable = record;
+        unavailable.misdecodedAs = QStringLiteral("no-such-encoding");
+        verifyRefused(
+            [&](DiagnosticList &diagnostics) {
+                return VoiceBankEdits::setFileNameEncoding(root, unavailable, diagnostics);
+            },
+            QStringLiteral("is not available"));
+        unavailable.misdecodedAs.clear();
+        verifyRefused(
+            [&](DiagnosticList &diagnostics) {
+                return VoiceBankEdits::setFileNameEncoding(root, unavailable, diagnostics);
+            },
+            QStringLiteral("is not available"));
+    }
+
     // A domain function called within a transaction joins it, so that composed functions form
     // one undo step.
     void domain_functions_compose_into_one_step() {

@@ -86,11 +86,18 @@ namespace hello::kit {
         std::filesystem::path path() const;
         QString charset() const;
 
+        /// \sa VoiceBankDirectory::fileNameEncoding
+        std::optional<VoiceBankConfig::FileNameEncoding> fileNameEncoding() const;
+
         OtoEntryListRef otoEntries() const;
 
     private:
         /// \sa VoiceBankEdits::convertCharset()
         void setCharset(const QString &charset) const;
+
+        /// \sa VoiceBankEdits::setFileNameEncoding()
+        void setFileNameEncoding(
+            const std::optional<VoiceBankConfig::FileNameEncoding> &fileNameEncoding) const;
 
         friend class VoiceBankEdits;
     };

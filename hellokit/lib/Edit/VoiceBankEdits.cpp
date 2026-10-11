@@ -181,4 +181,25 @@ namespace hello::kit {
         return transaction.commit(diagnostics);
     }
 
+    bool VoiceBankEdits::setFileNameEncoding(
+        const VoiceDirectoryRef &directory,
+        const std::optional<VoiceBankConfig::FileNameEncoding> &fileNameEncoding,
+        DiagnosticList &diagnostics) {
+        auto record = fileNameEncoding;
+        if (record) {
+            // The canonical names, so that another spelling of the same encodings is no change.
+            for (const auto name : {&record->original, &record->misdecodedAs}) {
+                const TextCodec codec(*name);
+                if (name->isEmpty() || !codec.isValid()) {
+                    return fail(diagnostics,
+                                tr("The encoding \"%1\" is not available.").arg(*name));
+                }
+                *name = codec.name();
+            }
+        }
+        auto transaction = directory.session()->transaction(tr("Set File Name Encoding"));
+        directory.setFileNameEncoding(record);
+        return transaction.commit(diagnostics);
+    }
+
 }

@@ -81,23 +81,11 @@ namespace hello::kit {
         }
 
         std::optional<QVariant> fileNameEncodingFromJson(const QJsonValue &json) {
-            const auto object = json.toObject();
-            const auto original = object.value(QStringLiteral("original"));
-            const auto misdecodedAs = object.value(QStringLiteral("misdecodedAs"));
-            const auto misdecoded = edit::ValueConversions::stringListFromJson(
-                object.value(QStringLiteral("misdecoded")));
-            const auto correct =
-                edit::ValueConversions::stringListFromJson(object.value(QStringLiteral("correct")));
-            if (!json.isObject() || object.size() != 4 || !original.isString() ||
-                !misdecodedAs.isString() || !misdecoded || !correct) {
+            const auto record = fileNameEncodingOf(json);
+            if (!record) {
                 return std::nullopt;
             }
-            FileNameEncoding record;
-            record.original = original.toString();
-            record.misdecodedAs = misdecodedAs.toString();
-            record.misdecoded = misdecoded->toStringList();
-            record.correct = correct->toStringList();
-            return edit::SlotValue<FileNameEncoding>::toVariant(record);
+            return edit::SlotValue<FileNameEncoding>::toVariant(*record);
         }
 
         constexpr edit::ValueFormat prefixFormat{"prefix", prefixToJson, prefixFromJson};
@@ -106,6 +94,26 @@ namespace hello::kit {
         constexpr edit::ValueFormat fileNameEncodingFormat{
             "file name encoding", fileNameEncodingToJson, fileNameEncodingFromJson};
 
+    }
+
+    std::optional<VoiceBankConfig::FileNameEncoding> fileNameEncodingOf(const QJsonValue &json) {
+        const auto object = json.toObject();
+        const auto original = object.value(QStringLiteral("original"));
+        const auto misdecodedAs = object.value(QStringLiteral("misdecodedAs"));
+        const auto misdecoded =
+            edit::ValueConversions::stringListFromJson(object.value(QStringLiteral("misdecoded")));
+        const auto correct =
+            edit::ValueConversions::stringListFromJson(object.value(QStringLiteral("correct")));
+        if (!json.isObject() || object.size() != 4 || !original.isString() ||
+            !misdecodedAs.isString() || !misdecoded || !correct) {
+            return std::nullopt;
+        }
+        VoiceBankConfig::FileNameEncoding record;
+        record.original = original.toString();
+        record.misdecodedAs = misdecodedAs.toString();
+        record.misdecoded = misdecoded->toStringList();
+        record.correct = correct->toStringList();
+        return record;
     }
 
     template <>
