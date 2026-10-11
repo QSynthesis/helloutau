@@ -121,7 +121,7 @@
 - 主题扩展（作者 2026-10-10 列为将来的工作）：写死的颜色移入样式表，工具栏勾选状态的配色，图标选中态的颜色随主题切换。
 - 音源窗口按重采样器查看频率表曲线的功能须可扩展（作者 2026-10-10 列为将来的工作）。现有的 FrequencyEditor 插件应作为扩展的提供方，在 frq、dio、mrq 之外再登记其他格式，例如 pmk。音源窗口现有的 mrq 曲线显示将来也迁移到 FrequencyEditor 插件（作者 2026-10-11 决定）。现状见 [`VoiceBankEditor.md`](VoiceBankEditor.md)「进度」与 [`Plugins.md`](Plugins.md) 的频率表格式扩展点。
 - 登记接口的通用写法（作者 2026-10-11 列为待讨论）：频率表格式、合成诊断器与交换格式各有一组相同结构的类，即 `stdc::DynamicRegistry` 的别名 `XxxRegistry`、以 `RegistryInstanceList` 持有实例并提供领域查询的 `Xxxs` 或 `XxxDrivers`、登记内置项的 `BuiltinXxxs`，后两者的样板代码重复。改 `FrequencyFormat` 接口时一并讨论一套通用的写法。
-- 音源文件名编码错解的处理：按错解读取（与 UTAU 相同，不改磁盘，`hello-config.json` 的 `fileNameEncoding`）与可选的转换（改磁盘上的名字，转换后 UTAU 在错解时的代码页下无法使用）两种都提供，设计见 `Editing.md`「文件名编码错解的处理」（作者 2026-10-11 决定）。已实现记录的读写（`VoiceBankConfig::FileNameEncoding`）与按记录读取（`VoiceBankFileSystemState` 的逻辑名称、`audioPathOf()`、`undeterminedNames()`、`logicalPathOf()`）。尚待实现：记录进入编辑层的文档，询问新增名字的对话框，音源窗口按逻辑名称显示文件夹，以及转换。实现后与本段的界面一并由作者查看。
+- 音源文件名编码错解的处理：按错解读取（与 UTAU 相同，不改磁盘，`hello-config.json` 的 `fileNameEncoding`）与可选的转换（改磁盘上的名字，转换后 UTAU 在错解时的代码页下无法使用）两种都提供，设计见 `Editing.md`「文件名编码错解的处理」（作者 2026-10-11 决定）。已实现记录的读写（`VoiceBankConfig::FileNameEncoding`），按记录读取（逻辑名称、`audioPathOf()`、`undeterminedNames()`、`logicalPathOf()`），以及记录作为文档内容（`VoiceBankDirectory::fileNameEncoding` 与目录节点的只读槽，保存时写入配置）。尚待实现：以命令修改记录（一个撤销步骤），询问新增名字的对话框，音源窗口按逻辑名称显示文件夹，以及转换。保存时判断是否写入记录，目前比较读取时的记录，是临时做法，待音源保存机制的重构（按撤销历史决定写入的文件）完成后改用新机制，重构完成后再继续本项（作者 2026-10-11 决定）。实现后与本段的界面一并由作者查看。
 - 自动更新待作者以真实的 release 验收完整流程，该 release 须比当前版本新，并带有安装包、zip 与 `SHA256SUMS`。窗口右下角显示消息与任务进度的浮动提示以后再做（作者 2026-10-11 决定）。
 - `.llsm` 版本不兼容的诊断器暂缓，需要先取得 moresampler 报错的原文。
 - 经典模式下整轨存在而部分音符失败时的诊断（优先级极低，作者 2026-10-11 认为现状已经足够）：现在只在没有写出整轨时诊断，办法与实测见 [`SynthDiagnostics.md`](SynthDiagnostics.md)「三种渲染器的记录」中经典模式的局限。
