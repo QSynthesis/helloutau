@@ -684,6 +684,10 @@ namespace hello::daw {
             kit::Diagnostic{kit::DiagnosticSeverity::Note,
                             tr("File: %1").arg(normalizedPathText(path)), std::nullopt};
         if (!document) {
+            // Without diagnostics, the user declined to choose an encoding, which is no error.
+            if (diagnostics.isEmpty()) {
+                return nullptr;
+            }
             diagnostics.prepend(pathDiagnostic);
             DiagnosticBox::report(from, title, diagnostics);
             return nullptr;

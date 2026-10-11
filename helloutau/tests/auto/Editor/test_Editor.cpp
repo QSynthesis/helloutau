@@ -564,6 +564,22 @@ private Q_SLOTS:
         QCOMPARE(window->document()->sourcePath(), second);
     }
 
+    // A UST whose encoding the user declines to choose is not opened, and no message follows,
+    // because declining is no error.
+    void declining_the_encoding_opens_nothing_and_reports_nothing() {
+        const auto e = editor();
+        const auto path = pathIn(m_dir, "undeclared.ust");
+        // The lyric is あ in Shift_JIS, and the file declares no encoding.
+        writeFile(path, "[#VERSION]\r\nUST Version1.2\r\n[#SETTING]\r\nTempo=120\r\n"
+                        "[#0000]\r\nLength=480\r\nLyric=\x82\xa0\r\nNoteNum=60\r\n"
+                        "[#TRACKEND]\r\n");
+        ProjectWindow *window = nullptr;
+        QCOMPARE(dialogsDuring([&] { window = e->openFile(path); }),
+                 QStringList{QStringLiteral("hello::daw::UstCharsetDialog")});
+        QCOMPARE(window, nullptr);
+        QVERIFY(e->windows().isEmpty());
+    }
+
     // A file dropped on a window opens as by Open and asks whether modified changes may be
     // discarded or saved.
     void a_dropped_file_opens_as_by_open() {
