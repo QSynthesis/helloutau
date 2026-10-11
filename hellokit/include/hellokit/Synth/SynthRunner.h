@@ -48,8 +48,8 @@ namespace hello::kit {
         int direct = 0;
         /// @}
 
-        /// The failed calls and the fragments that are not wave files, in track order, for the
-        /// diagnosis. Fragments are checked by their header only. See docs/SynthDiagnostics.md.
+        /// The calls whose failure was observed, in track order, for the diagnosis. A render
+        /// that succeeds examines no fragment. See docs/SynthDiagnostics.md.
         QList<SynthFailure> failures;
     };
 
@@ -151,16 +151,10 @@ namespace hello::kit {
         /// \return the number of removed fragments
         int forgetSuperseded(const SynthPlan &plan, DiagnosticList &diagnostics) const;
 
-        /// Returns the record of the resampler call of \a step for the diagnosis, with \a run if
-        /// known: SynthFailure::Resampler if the fragment does not exist, and
-        /// SynthFailure::Fragment if the fragment is not a RIFF/WAVE file and the wavtool is
-        /// another program than the resampler.
-        ///
-        /// Only the header of the fragment is read. A wavtool that is the same program as the
-        /// resampler may join an intermediate format of its own, as moresampler does.
-        ///
-        /// \return the record, or \c std::nullopt if the fragment is a wave file or may be read
-        ///         by the wavtool
+        /// Returns the record of the resampler call of \a step, with \a run if known, if the
+        /// fragment does not exist, or \c std::nullopt otherwise. The content of an existing
+        /// fragment is not examined, because a resampler may write an intermediate format that
+        /// its own wavtool joins.
         static std::optional<SynthFailure> resamplerFailure(const SynthStep &step,
                                                             const SynthTools &synthTools,
                                                             std::optional<SynthToolRun> run);

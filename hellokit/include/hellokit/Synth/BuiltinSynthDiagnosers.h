@@ -19,7 +19,7 @@ namespace hello::kit {
     ///   format or a crash.
     /// - \c timeout: a synth tool killed at the time limit.
     /// - \c longPath: a path longer than the 260 characters of Windows.
-    /// - \c output: the remaining failures, by the stage and the output file. Its priority is
+    /// - \c output: the remaining failures, by the stage and the examined file. Its priority is
     ///   the lowest, so that it explains only what no other diagnoser explains.
     class HELLOKIT_SYNTH_EXPORT BuiltinSynthDiagnosers {
     public:

@@ -24,7 +24,7 @@ namespace {
         failure.program = "C:/tools/resampler.exe";
         failure.arguments = arguments;
         failure.run = run;
-        failure.outputFile = "C:/cache/out.wav";
+        failure.file = "C:/cache/out.wav";
         return failure;
     }
 
@@ -128,9 +128,9 @@ private Q_SLOTS:
     // file that is not a wave file.
     void a_wave_file_that_cannot_be_read_is_told_apart() {
         auto notWave = failureOf(SynthFailure::Fragment, runOf(true));
-        notWave.outputHead = "This is a dummy file";
+        notWave.fileHead = "This is a dummy file";
         auto unreadable = failureOf(SynthFailure::Fragment, runOf(true));
-        unreadable.outputHead = QByteArray("RIFF\0\0\0\0WAVEfmt ", 16);
+        unreadable.fileHead = QByteArray("RIFF\0\0\0\0WAVEfmt ", 16);
         const auto diagnoses = diagnose({notWave, unreadable});
         QCOMPARE(diagnoses.size(), 2);
         QCOMPARE(diagnoses.at(0).failures, QList<int>{0});
@@ -138,9 +138,25 @@ private Q_SLOTS:
         QVERIFY(diagnoses.at(0).cause != diagnoses.at(1).cause);
     }
 
+    // A failed wavtool call of a note names the fragment if it is not a wave file.
+    void a_failed_wavtool_call_of_a_note_names_its_fragment() {
+        auto failure = failureOf(SynthFailure::Wavtool, runOf(true, -1));
+        failure.noteIndex = 3;
+        failure.fileSize = 180;
+        failure.fileHead = "This is a dummy file";
+        const auto diagnoses = diagnose({failure});
+        QCOMPARE(diagnoses.size(), 1);
+        QCOMPARE(diagnoses.at(0).failures, QList<int>{0});
+        QVERIFY(diagnoses.at(0).explanation.contains(QStringLiteral("-1")));
+        QVERIFY(diagnoses.at(0).explanation.contains(QStringLiteral("This is a dummy file")));
+
+        failure.fileHead = QByteArray("RIFF\0\0\0\0WAVEfmt ", 16);
+        QVERIFY(!diagnose({failure}).at(0).explanation.contains(QStringLiteral("RIFF")));
+    }
+
     void the_remaining_failures_are_grouped_by_kind() {
         auto notWave = failureOf(SynthFailure::Fragment, runOf(true));
-        notWave.outputHead = "This is a dummy file\x01";
+        notWave.fileHead = "This is a dummy file\x01";
         const auto diagnoses = diagnose({
             notWave,
             failureOf(SynthFailure::Resampler, runOf(true, 0)),

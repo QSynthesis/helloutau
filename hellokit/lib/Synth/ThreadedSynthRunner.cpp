@@ -246,9 +246,6 @@ namespace hello::kit {
             const auto &run = outcomes.at(i).run;
             if (fs::exists(step.cacheFile)) {
                 ++outcome.resampled;
-                if (auto failure = resamplerFailure(step, synthTools, run)) {
-                    outcome.failures.push_back(std::move(*failure));
-                }
                 continue;
             }
             ++outcome.failed;
@@ -268,16 +265,34 @@ namespace hello::kit {
             }
         }
 
-        const auto wavtoolFailure = [&](const QStringList &arguments,
+        // The record of a wavtool call: of the note of step, examining the file that the call
+        // reads, or of the track if step is null
+        const auto wavtoolFailure = [&](const SynthStep *step, const QStringList &arguments,
                                         std::optional<SynthToolRun> run) {
             SynthFailure failure;
             failure.stage = SynthFailure::Wavtool;
             failure.program = synthTools.wavtool;
             failure.arguments = arguments;
             failure.run = std::move(run);
-            failure.outputFile = output;
-            failure.readOutput();
+            if (step) {
+                failure.noteIndex = step->noteIndex;
+                failure.file = step->direct ? step->sample : step->cacheFile;
+            } else {
+                failure.file = output;
+            }
+            failure.readFile();
             return failure;
+        };
+        // The bytes that the wavtool has written, in the two files of the UTAU protocol or in
+        // the track that some wavtools write directly
+        const auto writtenSize = [&output, dataFile = data] {
+            std::uintmax_t size = 0;
+            for (const auto &path : {dataFile, output}) {
+                std::error_code sizeError;
+                const auto partSize = fs::file_size(path, sizeError);
+                size += sizeError ? 0 : partSize;
+            }
+            return size;
         };
         // The last wavtool call, for the diagnosis if the track is missing
         QStringList lastArguments;
@@ -293,6 +308,7 @@ namespace hello::kit {
                 return outcome;
             }
             if (!step.resamples() || fs::exists(step.cacheFile)) {
+                const auto before = writtenSize();
                 const auto run = synthTool->run(synthTools.wavtool, step.wavtoolArguments,
                                                 diagnostics, cancelled);
                 if (run.cancelled) {
@@ -302,8 +318,14 @@ namespace hello::kit {
                     return outcome;
                 }
                 if (!run.started) {
-                    outcome.failures.push_back(wavtoolFailure(step.wavtoolArguments, run));
+                    outcome.failures.push_back(wavtoolFailure(nullptr, step.wavtoolArguments, run));
                     return outcome;
+                }
+                // A failure of the note requires both signs, because a wavtool may report a
+                // nonzero exit code on success. The UTAU wavtool reports -1 and appends nothing
+                // for a fragment that is not a wave file.
+                if (run.exitCode != 0 && !run.timedOut && writtenSize() == before) {
+                    outcome.failures.push_back(wavtoolFailure(&step, step.wavtoolArguments, run));
                 }
                 lastArguments = step.wavtoolArguments;
                 lastRun = run;
@@ -325,7 +347,7 @@ namespace hello::kit {
             // Without a wavtool call the track is missing because every resampler call failed,
             // which the records of those calls explain.
             if (lastRun) {
-                outcome.failures.push_back(wavtoolFailure(lastArguments, lastRun));
+                outcome.failures.push_back(wavtoolFailure(nullptr, lastArguments, lastRun));
             }
             return outcome;
         }

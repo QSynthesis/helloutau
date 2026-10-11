@@ -356,7 +356,7 @@ private Q_SLOTS:
         QCOMPARE(failures.size(), 1);
         QCOMPARE(failures.front().stage, SynthFailure::Fragment);
         QCOMPARE(failures.front().noteIndex, std::optional<int>(2));
-        QCOMPARE(failures.front().outputHead, QByteArray("This is a dummy file"));
+        QCOMPARE(failures.front().fileHead, QByteArray("This is a dummy file"));
         QCOMPARE(failures.front().program, fs::path("moresampler.exe"));
     }
 

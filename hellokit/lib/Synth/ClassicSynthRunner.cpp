@@ -439,7 +439,7 @@ namespace hello::kit {
                                   : tr("The rendering script could not be run."));
             SynthFailure failure;
             failure.stage = SynthFailure::Wavtool;
-            failure.outputFile = plan.outputFile();
+            failure.file = plan.outputFile();
             if (run.started) {
                 failure.program = synthTools.wavtool;
                 failure.arguments = plan.steps().back().wavtoolArguments;

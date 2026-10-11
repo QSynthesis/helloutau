@@ -24,26 +24,26 @@ private Q_SLOTS:
         QTemporaryDir directory;
         QVERIFY(directory.isValid());
         SynthFailure failure;
-        failure.outputFile = directory.filePath(QStringLiteral("out.wav")).toStdU16String();
-        failure.readOutput();
-        QCOMPARE(failure.outputSize, -1);
-        QVERIFY(failure.outputHead.isEmpty());
+        failure.file = directory.filePath(QStringLiteral("out.wav")).toStdU16String();
+        failure.readFile();
+        QCOMPARE(failure.fileSize, -1);
+        QVERIFY(failure.fileHead.isEmpty());
 
         QFile file(directory.filePath(QStringLiteral("out.wav")));
         QVERIFY(file.open(QIODevice::WriteOnly));
         const QByteArray content(SynthFailure::headSize + 100, 'x');
         file.write(content);
         file.close();
-        failure.readOutput();
-        QCOMPARE(failure.outputSize, content.size());
-        QCOMPARE(failure.outputHead, content.first(SynthFailure::headSize));
+        failure.readFile();
+        QCOMPARE(failure.fileSize, content.size());
+        QCOMPARE(failure.fileHead, content.first(SynthFailure::headSize));
 
         QVERIFY(file.open(QIODevice::WriteOnly | QIODevice::Truncate));
         file.write("short");
         file.close();
-        failure.readOutput();
-        QCOMPARE(failure.outputSize, 5);
-        QCOMPARE(failure.outputHead, QByteArray("short"));
+        failure.readFile();
+        QCOMPARE(failure.fileSize, 5);
+        QCOMPARE(failure.fileHead, QByteArray("short"));
     }
 };
 

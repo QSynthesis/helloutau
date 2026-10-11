@@ -39,6 +39,8 @@ namespace {
         mutable QMutex lock;
         int resamplerCalls = 0;
         int wavtoolCalls = 0;
+        // The exit code that each wavtool call reports
+        int wavtoolExitCode = 0;
 
         int resampled() const {
             const QMutexLocker locked(&lock);
@@ -83,6 +85,10 @@ namespace {
             // Outside the lock, because a resampler writes a file, and the threads are intended
             // to do so concurrently.
             out.started = what && *what ? (*what)(arguments) : bool(what);
+            if (what == &m_wavtool) {
+                const QMutexLocker locked(&m_log->lock);
+                out.exitCode = m_log->wavtoolExitCode;
+            }
             return out;
         }
 
@@ -896,9 +902,9 @@ private Q_SLOTS:
         QVERIFY(std::filesystem::exists(sample));
     }
 
-    // The diagnosis receives the call of a note whose fragment is not a wave file, although the
-    // note counts as resampled and the track is written.
-    void a_fragment_that_is_not_a_wave_file_is_recorded() {
+    // A resampler may write an intermediate format that its own wavtool joins, so that a render
+    // that succeeds examines no fragment.
+    void a_render_that_succeeds_records_nothing() {
         const auto p = plan();
         QVERIFY(p.has_value());
         SynthToolLog log;
@@ -908,57 +914,43 @@ private Q_SLOTS:
         DiagnosticList diagnostics;
         const auto outcome = runner.render(*p, synthTools, nullptr, diagnostics);
         QVERIFY(outcome.rendered);
-        QCOMPARE(outcome.resampled, 1);
-        QCOMPARE(outcome.failures.size(), 1);
-        const auto &failure = outcome.failures.at(0);
-        QCOMPARE(failure.stage, SynthFailure::Fragment);
-        QCOMPARE(failure.noteIndex, p->steps().at(0).noteIndex);
-        QCOMPARE(failure.program, synthTools.resampler);
-        QCOMPARE(failure.arguments, p->steps().at(0).resamplerArguments);
-        QVERIFY(failure.run && failure.run->started);
-        QVERIFY(failure.outputHead.startsWith("a rendered piece"));
-    }
-
-    void a_wave_fragment_is_not_recorded() {
-        const auto p = plan();
-        QVERIFY(p.has_value());
-        SynthToolLog log;
-        const auto synthTools = somewhere();
-        const auto piece = p->steps().at(0).cacheFile;
-        StubbedRunner runner(
-            &log, synthTools,
-            [piece](const QStringList &) {
-                std::ofstream out(piece, std::ios::binary | std::ios::trunc);
-                out << std::string("RIFF\x24\0\0\0WAVEfmt ", 16);
-                return bool(out);
-            },
-            appends(p->outputFile()));
-        DiagnosticList diagnostics;
-        const auto outcome = runner.render(*p, synthTools, nullptr, diagnostics);
-        QVERIFY(outcome.rendered);
         QVERIFY(outcome.failures.isEmpty());
     }
 
-    // A wavtool that is the resampler may join a format of its own, as moresampler does.
-    void the_fragment_is_not_checked_if_the_wavtool_is_the_resampler() {
+    // The UTAU wavtool reports -1 and appends nothing for a fragment that it cannot read.
+    void a_wavtool_call_that_fails_without_appending_is_recorded() {
         const auto p = plan();
         QVERIFY(p.has_value());
         SynthToolLog log;
-        auto synthTools = somewhere();
-        synthTools.wavtool = synthTools.resampler;
-        const auto track = p->outputFile();
-        const auto renders = rendersTo(p->steps().at(0).cacheFile);
-        const auto joins = appends(track);
-        // One program in both roles, told apart by the first argument, which is the track for
-        // the wavtool
-        StubbedRunner runner(&log, synthTools,
-                             [=](const QStringList &arguments) {
-                                 return arguments.value(0) ==
-                                                QString::fromStdU16String(track.u16string())
-                                            ? joins(arguments)
-                                            : renders(arguments);
-                             },
-                             {});
+        log.wavtoolExitCode = -1;
+        const auto synthTools = somewhere();
+        StubbedRunner runner(&log, synthTools, rendersTo(p->steps().at(0).cacheFile),
+                             writesNothing());
+        DiagnosticList diagnostics;
+        const auto outcome = runner.render(*p, synthTools, nullptr, diagnostics);
+        QVERIFY(!outcome.rendered);
+        // The note, and the track that no call wrote
+        QCOMPARE(outcome.failures.size(), 2);
+        const auto &failure = outcome.failures.at(0);
+        QCOMPARE(failure.stage, SynthFailure::Wavtool);
+        QCOMPARE(failure.noteIndex, p->steps().at(0).noteIndex);
+        QCOMPARE(failure.program, synthTools.wavtool);
+        QCOMPARE(failure.arguments, p->steps().at(0).wavtoolArguments);
+        QCOMPARE(failure.file, p->steps().at(0).cacheFile);
+        QVERIFY(failure.fileHead.startsWith("a rendered piece"));
+        QVERIFY(failure.run && failure.run->exitCode == -1);
+        QCOMPARE(outcome.failures.at(1).noteIndex, std::nullopt);
+    }
+
+    // A wavtool may report a nonzero exit code on success, which the appended data refutes.
+    void a_wavtool_call_that_appends_is_not_recorded_whatever_it_reports() {
+        const auto p = plan();
+        QVERIFY(p.has_value());
+        SynthToolLog log;
+        log.wavtoolExitCode = 1;
+        const auto synthTools = somewhere();
+        StubbedRunner runner(&log, synthTools, rendersTo(p->steps().at(0).cacheFile),
+                             appends(p->outputFile()));
         DiagnosticList diagnostics;
         const auto outcome = runner.render(*p, synthTools, nullptr, diagnostics);
         QVERIFY(outcome.rendered);
@@ -977,7 +969,7 @@ private Q_SLOTS:
         QCOMPARE(outcome.failures.size(), 1);
         QCOMPARE(outcome.failures.at(0).stage, SynthFailure::Resampler);
         QVERIFY(outcome.failures.at(0).run && outcome.failures.at(0).run->started);
-        QCOMPARE(outcome.failures.at(0).outputSize, -1);
+        QCOMPARE(outcome.failures.at(0).file, p->steps().at(0).cacheFile);
     }
 
     void a_wavtool_that_does_not_start_is_recorded() {
@@ -990,9 +982,8 @@ private Q_SLOTS:
         DiagnosticList diagnostics;
         const auto outcome = runner.render(*p, synthTools, nullptr, diagnostics);
         QVERIFY(!outcome.rendered);
-        QCOMPARE(outcome.failures.size(), 2);
-        QCOMPARE(outcome.failures.at(0).stage, SynthFailure::Fragment);
-        const auto &failure = outcome.failures.at(1);
+        QCOMPARE(outcome.failures.size(), 1);
+        const auto &failure = outcome.failures.at(0);
         QCOMPARE(failure.stage, SynthFailure::Wavtool);
         QCOMPARE(failure.program, synthTools.wavtool);
         QVERIFY(failure.run && !failure.run->started);
@@ -1008,10 +999,11 @@ private Q_SLOTS:
         DiagnosticList diagnostics;
         const auto outcome = runner.render(*p, synthTools, nullptr, diagnostics);
         QVERIFY(!outcome.rendered);
-        QVERIFY(!outcome.failures.isEmpty());
+        // Only the track: a call that exits with 0 is not a failure of its note
+        QCOMPARE(outcome.failures.size(), 1);
         const auto &failure = outcome.failures.last();
         QCOMPARE(failure.stage, SynthFailure::Wavtool);
-        QCOMPARE(failure.outputFile, p->outputFile());
+        QCOMPARE(failure.file, p->outputFile());
         QVERIFY(failure.run && failure.run->started);
     }
 };

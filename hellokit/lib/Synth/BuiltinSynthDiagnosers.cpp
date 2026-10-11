@@ -320,27 +320,26 @@ namespace hello::kit {
             }
 
             QList<SynthDiagnosis> diagnose(const SynthDiagnosisContext &context) const override {
-                enum Kind { NotWave, UnreadableWave, NoFragment, ExitCode, NoTrack };
+                enum Kind { NotWave, UnreadableWave, WavtoolNote, NoTrack, ExitCode, NoFragment };
                 using Key = std::pair<int, fs::path>;
                 QList<SynthDiagnosis> result;
                 for (const auto &[key, failures] :
                      groups<Key>(context.failures, [](const SynthFailure &failure) {
-                         switch (failure.stage) {
-                             case SynthFailure::Fragment:
-                                 return std::optional<Key>(
-                                     Key{SynthFailure::isWave(failure.outputHead) ? UnreadableWave
-                                                                                  : NotWave,
-                                         failure.program});
-                             case SynthFailure::Wavtool:
-                                 return std::optional<Key>(Key{NoTrack, failure.program});
-                             case SynthFailure::Resampler:
-                                 break;
-                         }
-                         const bool exited = failure.run && failure.run->started &&
-                                             !failure.run->timedOut && !failure.run->cancelled;
-                         return std::optional<Key>(
-                             Key{exited && failure.run->exitCode != 0 ? ExitCode : NoFragment,
-                                 failure.program});
+                         const auto kind = [&] {
+                             switch (failure.stage) {
+                                 case SynthFailure::Fragment:
+                                     return SynthFailure::isWave(failure.fileHead) ? UnreadableWave
+                                                                                   : NotWave;
+                                 case SynthFailure::Wavtool:
+                                     return failure.noteIndex ? WavtoolNote : NoTrack;
+                                 case SynthFailure::Resampler:
+                                     break;
+                             }
+                             const bool exited = failure.run && failure.run->started &&
+                                                 !failure.run->timedOut && !failure.run->cancelled;
+                             return exited && failure.run->exitCode != 0 ? ExitCode : NoFragment;
+                         }();
+                         return std::optional<Key>(Key{kind, failure.program});
                      })) {
                     const auto &first = context.failures.at(failures.first());
                     const auto program = displayed(key.second);
@@ -348,15 +347,17 @@ namespace hello::kit {
                     switch (key.first) {
                         case NotWave:
                             result.push_back({
-                                Text::tr("The resampler %1 wrote files that are not wave files.")
+                                Text::tr("Realtime playback cannot read the fragments of the "
+                                         "resampler %1, which are not wave files.")
                                     .arg(program),
-                                Text::tr("These notes are silent, because a fragment that is not "
-                                         "a wave file cannot be joined. The file %1 begins with "
-                                         "\"%2\".")
-                                    .arg(displayed(first.outputFile),
-                                         printableStart(first.outputHead)),
+                                Text::tr("Realtime playback joins the fragments itself and reads "
+                                         "only wave files, so that these notes are silent. The "
+                                         "file %1 begins with \"%2\".")
+                                    .arg(displayed(first.file), printableStart(first.fileHead)),
                                 {Text::tr("Check the settings of the resampler for an option "
-                                          "that changes the format of its output.")},
+                                          "that changes the format of its output."),
+                                                                                            Text::tr("Play in a prerender mode, in which the wavtool joins "
+                                          "the fragments.")},
                                 failures,
                             });
                             break;
@@ -366,23 +367,49 @@ namespace hello::kit {
                                     .arg(program),
                                 Text::tr("These notes are silent. The file %1 is a wave file "
                                          "whose format or content cannot be read.")
-                                    .arg(displayed(first.outputFile)),
+                                    .arg(displayed(first.file)),
                                 {Text::tr("Check the settings of the resampler for its output "
                                           "format, such as the bit depth."),
-                                                                  Text::tr("Render the project again after clearing the cache, in "
+                                                            Text::tr("Render the project again after clearing the cache, in "
                                           "case the file is incomplete.")},
                                 failures,
                             });
                             break;
-                        case NoFragment:
-                            result.push_back({
-                                Text::tr("The resampler %1 wrote no fragment.").arg(program),
+                        case WavtoolNote: {
+                            auto explanation =
                                 output.isEmpty()
-                                    ? Text::tr("The resampler produced no output.")
-                                    : Text::tr("The output of the resampler is: %1").arg(output),
-                                {Text::tr("Check the samples of these notes in the voice bank "
-                                          "editor."),
-                                                                                             Text::tr("Try another resampler.")},
+                                    ? Text::tr("The wavtool reported the exit code %1 and "
+                                               "appended nothing to the track.")
+                                          .arg(first.run->exitCode)
+                                    : Text::tr("The wavtool reported the exit code %1 and "
+                                               "appended nothing to the track. Its output is: %2")
+                                          .arg(first.run->exitCode)
+                                          .arg(output);
+                            if (first.fileSize >= 0 && !SynthFailure::isWave(first.fileHead)) {
+                                explanation +=
+                                    QLatin1Char(' ') +
+                                    Text::tr("The fragment %1 is not a wave file. It "
+                                             "begins with \"%2\".")
+                                        .arg(displayed(first.file), printableStart(first.fileHead));
+                            }
+                            result.push_back({
+                                Text::tr("The wavtool %1 failed for these notes.").arg(program),
+                                explanation,
+                                {Text::tr("Check that the resampler writes wave files that this "
+                                          "wavtool reads, or use the wavtool that comes with the "
+                                          "resampler.")},
+                                failures,
+                            });
+                            break;
+                        }
+                        case NoTrack:
+                            result.push_back({
+                                Text::tr("The wavtool %1 wrote no track.").arg(program),
+                                output.isEmpty()
+                                    ? Text::tr("The wavtool produced no output.")
+                                    : Text::tr("The output of the wavtool is: %1").arg(output),
+                                {Text::tr("Check that the wavtool accepts the arguments of the "
+                                          "wavtool of UTAU.")},
                                 failures,
                             });
                             break;
@@ -400,14 +427,15 @@ namespace hello::kit {
                                 failures,
                             });
                             break;
-                        case NoTrack:
+                        case NoFragment:
                             result.push_back({
-                                Text::tr("The wavtool %1 wrote no track.").arg(program),
+                                Text::tr("The resampler %1 wrote no fragment.").arg(program),
                                 output.isEmpty()
-                                    ? Text::tr("The wavtool produced no output.")
-                                    : Text::tr("The output of the wavtool is: %1").arg(output),
-                                {Text::tr("Check that the wavtool accepts the arguments of the "
-                                          "wavtool of UTAU.")},
+                                    ? Text::tr("The resampler produced no output.")
+                                    : Text::tr("The output of the resampler is: %1").arg(output),
+                                {Text::tr("Check the samples of these notes in the voice bank "
+                                          "editor."),
+                                                                                             Text::tr("Try another resampler.")},
                                 failures,
                             });
                             break;

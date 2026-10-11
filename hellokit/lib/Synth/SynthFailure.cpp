@@ -1,23 +1,24 @@
 #include "SynthFailure.h"
 
+#include <algorithm>
 #include <fstream>
 #include <system_error>
 
 namespace hello::kit {
 
-    void SynthFailure::readOutput() {
-        outputHead.clear();
+    void SynthFailure::readFile() {
+        fileHead.clear();
         std::error_code ec;
-        const auto size = std::filesystem::file_size(outputFile, ec);
+        const auto size = std::filesystem::file_size(file, ec);
         if (ec) {
-            outputSize = -1;
+            fileSize = -1;
             return;
         }
-        outputSize = qint64(size);
-        std::ifstream in(outputFile, std::ios::binary);
-        outputHead.resize(qsizetype(std::min<std::uintmax_t>(size, headSize)));
-        in.read(outputHead.data(), std::streamsize(outputHead.size()));
-        outputHead.resize(qsizetype(in.gcount()));
+        fileSize = qint64(size);
+        std::ifstream in(file, std::ios::binary);
+        fileHead.resize(qsizetype(std::min<std::uintmax_t>(size, headSize)));
+        in.read(fileHead.data(), std::streamsize(fileHead.size()));
+        fileHead.resize(qsizetype(in.gcount()));
     }
 
     bool SynthFailure::isWave(QByteArrayView head) {

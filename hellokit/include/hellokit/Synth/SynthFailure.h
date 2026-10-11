@@ -13,18 +13,20 @@
 
 namespace hello::kit {
 
-    /// The record of a synth tool call that failed or wrote a file that is not a wave file, kept
-    /// for the diagnosis. See docs/SynthDiagnostics.md.
+    /// The record of a synth tool call whose failure was observed, kept for the diagnosis. A
+    /// render records only failures that it observes, and never judges the format of a
+    /// fragment by itself, because a resampler may write an intermediate format that its own
+    /// wavtool joins. See docs/SynthDiagnostics.md.
     struct HELLOKIT_SYNTH_EXPORT SynthFailure {
         enum Stage {
             /// The resampler wrote no fragment.
             Resampler,
 
-            /// The wavtool did not start or wrote no track.
+            /// The wavtool did not start, failed for the note without appending to the track,
+            /// or wrote no track.
             Wavtool,
 
-            /// The fragment exists but is not a RIFF/WAVE file, whether or not the track was
-            /// written.
+            /// WavtoolMixer cannot read the fragment, in realtime playback.
             Fragment,
         };
 
@@ -40,18 +42,20 @@ namespace hello::kit {
         /// of the classic runner
         std::optional<SynthToolRun> run;
 
-        std::filesystem::path outputFile;
+        /// The file that the diagnosis examines: the fragment of the note, or the track if the
+        /// failure concerns the whole track
+        std::filesystem::path file;
 
-        /// The size of outputFile, or -1 if the file does not exist
-        qint64 outputSize = -1;
+        /// The size of file, or -1 if the file does not exist
+        qint64 fileSize = -1;
 
-        /// The first \c headSize bytes of outputFile, empty if the file does not exist
-        QByteArray outputHead;
+        /// The first \c headSize bytes of file, empty if the file does not exist
+        QByteArray fileHead;
 
         static constexpr qsizetype headSize = 256;
 
-        /// Reads outputSize and outputHead from outputFile.
-        void readOutput();
+        /// Reads fileSize and fileHead from file.
+        void readFile();
 
         /// Returns whether \a head is the start of a RIFF/WAVE file.
         static bool isWave(QByteArrayView head);

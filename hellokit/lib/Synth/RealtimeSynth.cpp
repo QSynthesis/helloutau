@@ -174,10 +174,10 @@ namespace hello::kit {
                     failure.program = synthTools.resampler;
                     failure.arguments = step.resamplerArguments;
                     failure.run = resamplerRun;
-                    failure.outputFile = step.cacheFile;
-                    failure.readOutput();
+                    failure.file = step.cacheFile;
+                    failure.readFile();
                     failure.stage =
-                        failure.outputSize < 0 ? SynthFailure::Resampler : SynthFailure::Fragment;
+                        failure.fileSize < 0 ? SynthFailure::Resampler : SynthFailure::Fragment;
                 }
 
                 lock.lock();
