@@ -132,11 +132,10 @@ namespace {
         return document;
     }
 
-    // Puts the fragment of every note of \a document in the cache of \a playback, so that no
-    // resampler needs to run. The fragments are named for \a resampler, as a render with it
-    // names them.
-    bool writeFragments(Playback &playback, const kit::ProjectDocument &document,
-                        const fs::path &resampler) {
+    // Returns the fragment of every note of \a document in the cache of \a playback, named for
+    // \a resampler as a render with it names them, or an empty list if no plan is made.
+    QList<fs::path> fragmentsOf(Playback &playback, const kit::ProjectDocument &document,
+                                const fs::path &resampler) {
         kit::SynthPlan::Options options;
         options.cacheDirectory = *playback.cacheDirectoryFor(document);
         options.resampler = resampler;
@@ -144,12 +143,25 @@ namespace {
         kit::DiagnosticList diagnostics;
         const auto plan = kit::SynthPlan::make(document.session()->snapshot(),
                                                *document.voiceBank(), options, diagnostics);
-        if (!plan) {
+        QList<fs::path> fragments;
+        for (const auto &step : plan ? plan->steps() : QList<kit::SynthStep>()) {
+            fragments.push_back(step.cacheFile);
+        }
+        return fragments;
+    }
+
+    // Puts the fragment of every note of \a document in the cache of \a playback, so that no
+    // resampler needs to run. The fragments are named for \a resampler, as a render with it
+    // names them.
+    bool writeFragments(Playback &playback, const kit::ProjectDocument &document,
+                        const fs::path &resampler) {
+        const auto fragments = fragmentsOf(playback, document, resampler);
+        if (fragments.isEmpty()) {
             return false;
         }
-        fs::create_directories(options.cacheDirectory);
-        for (const auto &step : plan->steps()) {
-            writeBytes(step.cacheFile, silence());
+        fs::create_directories(*playback.cacheDirectoryFor(document));
+        for (const auto &fragment : fragments) {
+            writeBytes(fragment, silence());
         }
         return true;
     }
@@ -346,6 +358,47 @@ private Q_SLOTS:
         QTRY_COMPARE_WITH_TIMEOUT(rendered.size(), 1, 5000);
         QCOMPARE(diagnosed.size(), 1);
         QCOMPARE(diagnosed.first().first().value<QList<kit::SynthDiagnosis>>().size(), 1);
+    }
+
+    // The fragment of a failure that a diagnosis explained is shown as failed although it
+    // exists, until the next render, which may write a valid fragment under the same name.
+    void an_explained_fragment_is_failed_until_the_next_render() {
+        using S = kit::RealtimeSynth;
+        QTemporaryDir dir;
+        const auto document = singingDocument(dir);
+        QVERIFY(document);
+        kit::SynthDiagnosers diagnosers;
+        kit::BuiltinSynthDiagnosers builtins(diagnosers.registry());
+        Playback playback(nullptr, temporaryOf(dir), nullptr);
+        playback.setSynthDiagnosers(&diagnosers);
+        const auto synthTools = someSynthTools();
+        QVERIFY(writeFragments(playback, *document, synthTools.resampler));
+        playback.setSynthTools(synthTools);
+        playback.refreshNoteStates(*document);
+        QTRY_COMPARE(playback.noteStates(), (QList<S::NoteState>{S::Ready, S::Ready}));
+
+        // The failure of the wavtool for the second note, with its fragment
+        kit::SynthFailure failure;
+        failure.stage = kit::SynthFailure::Wavtool;
+        failure.noteIndex = 1;
+        failure.file = fragmentsOf(playback, *document, synthTools.resampler).value(1);
+        QVERIFY(!failure.file.empty());
+        const auto runner = std::make_shared<SilentRunner>();
+        runner->failures = {failure};
+        playback.setRunner(runner);
+        QSignalSpy rendered(&playback, &Playback::trackRendered);
+        const auto file = fs::path(dir.path().toStdU16String()) / "song.wav";
+        kit::DiagnosticList diagnostics;
+        QVERIFY(playback.renderTrack(*document, file, synthTools, diagnostics));
+        QTRY_COMPARE_WITH_TIMEOUT(rendered.size(), 1, 5000);
+        playback.refreshNoteStates(*document);
+        QTRY_COMPARE(playback.noteStates(), (QList<S::NoteState>{S::Ready, S::Failed}));
+
+        runner->failures.clear();
+        QVERIFY(playback.renderTrack(*document, file, synthTools, diagnostics));
+        QTRY_COMPARE_WITH_TIMEOUT(rendered.size(), 2, 5000);
+        playback.refreshNoteStates(*document);
+        QTRY_COMPARE(playback.noteStates(), (QList<S::NoteState>{S::Ready, S::Ready}));
     }
 
     void without_diagnosers_nothing_is_diagnosed() {

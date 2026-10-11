@@ -5,6 +5,7 @@
 #include <chrono>
 #include <cmath>
 #include <functional>
+#include <set>
 
 #include <QtCore/QCoreApplication>
 #include <QtCore/QDir>
@@ -252,6 +253,12 @@ namespace hello::daw {
         QList<kit::RealtimeSynth::NoteState> cacheStates;
         std::shared_ptr<std::atomic<bool>> scanCancel;
         int scanRequest = 0;
+
+        // The fragments of the failures that a diagnosis of the last prerender explained, which
+        // the scan reports as Failed although they exist. The cache file names do not depend on
+        // the configuration of a resampler, so that a later render can write a valid fragment
+        // under the same name, and every prerender therefore begins without them.
+        std::set<std::filesystem::path> failedFragments;
 
         // The inputs of the plan of the whole track of \a document for the realtime mode,
         // whose track file is never written
@@ -501,7 +508,8 @@ namespace hello::daw {
             const auto cancel = std::make_shared<std::atomic<bool>>(false);
             scanCancel = cancel;
             const int request = ++scanRequest;
-            detach([recipient = recipient, cancel, request, input = std::move(*input)] {
+            detach([recipient = recipient, cancel, request, input = std::move(*input),
+                    failed = failedFragments] {
                 using State = kit::RealtimeSynth::NoteState;
                 PlanObserver observer(*cancel, recipient, {});
                 kit::DiagnosticList diagnostics;
@@ -519,9 +527,10 @@ namespace hello::daw {
                         states[step.noteIndex] = State::Ready;
                     } else if (!step.silent) {
                         std::error_code error;
-                        states[step.noteIndex] = std::filesystem::exists(step.cacheFile, error)
-                                                     ? State::Ready
-                                                     : State::Waiting;
+                        states[step.noteIndex] = !std::filesystem::exists(step.cacheFile, error)
+                                                     ? State::Waiting
+                                                 : failed.count(step.cacheFile) > 0 ? State::Failed
+                                                                                    : State::Ready;
                     }
                 }
                 if (cancel->load()) {
@@ -597,6 +606,7 @@ namespace hello::daw {
         // Starts job on a worker thread, which reports to rendered() once the render ends.
         void start(const std::shared_ptr<Job> &started) {
             job = started;
+            failedFragments.clear();
             const auto worker = QThread::create([recipient = recipient, started] {
                 run(started, recipient);
                 deliver(recipient,
@@ -683,6 +693,14 @@ namespace hello::daw {
                 return;
             }
             const auto diagnoses = diagnose(finished->failures, finished->synthTools, false);
+            for (const auto &diagnosis : diagnoses) {
+                for (const int index : diagnosis.failures) {
+                    const auto &failure = finished->failures.at(index);
+                    if (failure.noteIndex && !failure.file.empty()) {
+                        failedFragments.insert(failure.file);
+                    }
+                }
+            }
             if (!finished->rendered) {
                 setState(Stopped);
                 Q_EMIT decl.failed(finished->diagnostics, diagnoses);
