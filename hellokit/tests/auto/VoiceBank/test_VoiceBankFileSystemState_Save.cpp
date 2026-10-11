@@ -339,10 +339,10 @@ private Q_SLOTS:
         QCOMPARE(read(QStringLiteral("hello-config.json")), recorded);
     }
 
-    // The configuration belongs to HelloUtau. One that another program modified or removed, or
-    // that could not be read, is written again by the next save, although nothing else changed,
-    // and without the refusal that protects the other files.
-    void a_configuration_changed_elsewhere_is_written_again() {
+    // The configuration is read on opening only. A save with nothing to record leaves a file
+    // that another program modified or removed as it is, and a save that records the encoding
+    // replaces it with the encoding of the contents and the fields read on opening.
+    void a_configuration_changed_elsewhere_is_ignored_until_written() {
         VoiceBankConfig config;
         config.charset = TextCodec(QStringLiteral("GBK")).name();
         config.unknownFields.insert(QStringLiteral("kept"), 1);
@@ -357,60 +357,38 @@ private Q_SLOTS:
         auto &bank = opened->bank;
         auto &files = opened->files;
 
-        write(QStringLiteral("hello-config.json"),
-              R"({"$format":"hello-voicebank","charset":"Shift_JIS","kept":1})");
+        const QByteArray elsewhere =
+            R"({"$format":"hello-voicebank","charset":"Shift_JIS","added":2})";
+        write(QStringLiteral("hello-config.json"), elsewhere);
         QVERIFY(files.save(bank, diagnostics));
-        QCOMPARE(read(QStringLiteral("hello-config.json")), recorded);
-
-        // A field added elsewhere is dropped as well.
-        write(QStringLiteral("hello-config.json"),
-              R"({"$format":"hello-voicebank","charset":"GBK","kept":1,"added":2})");
-        QVERIFY(files.save(bank, diagnostics));
-        QCOMPARE(read(QStringLiteral("hello-config.json")), recorded);
+        QCOMPARE(read(QStringLiteral("hello-config.json")), elsewhere);
 
         QVERIFY(QFile::remove(pathOf(QStringLiteral("hello-config.json"))));
+        QVERIFY(files.save(bank, diagnostics));
+        QVERIFY(!exists(QStringLiteral("hello-config.json")));
+
+        write(QStringLiteral("hello-config.json"), elsewhere);
+        files.rememberCharset({});
         QVERIFY(files.save(bank, diagnostics));
         QCOMPARE(read(QStringLiteral("hello-config.json")), recorded);
         QCOMPARE(read(QStringLiteral("oto.ini")), "a.wav=" + kGbkGePing + ",1,2,3,4,5\r\n");
     }
 
-    void the_record_of_the_file_names_is_written_again_as_read() {
-        VoiceBankConfig config;
-        config.charset = TextCodec(QStringLiteral("GBK")).name();
-        VoiceBankConfig::FileNameEncoding record;
-        record.original = QStringLiteral("Shift_JIS");
-        record.misdecodedAs = QStringLiteral("GBK");
-        record.misdecoded = QStringList{QString::fromUtf8("偁.wav")};
-        config.fileNameEncoding = record;
-        const QByteArray recorded = config.toJson();
-        write(QStringLiteral("hello-config.json"), recorded);
-        write(QStringLiteral("oto.ini"), "a.wav=" + kGbkGePing + ",1,2,3,4,5\r\n");
-        write(QStringLiteral("a.wav"), "RIFF");
-
-        DiagnosticList diagnostics;
-        auto opened = VoiceBankFileSystemState::open(root(), nullptr, diagnostics);
-        QVERIFY(opened.has_value());
-
-        record.misdecoded.clear();
-        record.correct = QStringList{QString::fromUtf8("偁.wav")};
-        auto changed = config;
-        changed.fileNameEncoding = record;
-        write(QStringLiteral("hello-config.json"), changed.toJson());
-        QVERIFY(opened->files.save(opened->bank, diagnostics));
-        QCOMPARE(read(QStringLiteral("hello-config.json")), recorded);
-    }
-
-    // A configuration that another program created after the voice bank was read would decode
-    // the directory in its encoding at the next open, so a save replaces it as well.
-    void a_configuration_created_elsewhere_is_replaced() {
+    // A configuration that another program created after the voice bank was read is replaced
+    // under its own name once the encoding is recorded.
+    void a_configuration_created_elsewhere_is_replaced_when_written() {
         write(QStringLiteral("oto.ini"), "a.wav=" + kGbkGePing + ",1,2,3,4,5\r\n");
         write(QStringLiteral("a.wav"), "RIFF");
         auto opened = open(root(), QStringLiteral("GBK"));
         QVERIFY(opened.has_value());
 
-        write(QStringLiteral("Hello-Config.json"),
-              R"({"$format":"hello-voicebank","charset":"Shift_JIS"})");
+        const QByteArray elsewhere = R"({"$format":"hello-voicebank","charset":"Shift_JIS"})";
+        write(QStringLiteral("Hello-Config.json"), elsewhere);
         DiagnosticList diagnostics;
+        QVERIFY(opened->files.save(opened->bank, diagnostics));
+        QCOMPARE(read(QStringLiteral("Hello-Config.json")), elsewhere);
+
+        opened->files.rememberCharset({});
         QVERIFY(opened->files.save(opened->bank, diagnostics));
         DiagnosticList ignored;
         const auto config = VoiceBankConfig::open(root() / "Hello-Config.json", ignored);
@@ -420,7 +398,7 @@ private Q_SLOTS:
     }
 
     // A configuration that could not be read is taken as none, so the encoding is selected
-    // again, and replaced by the next save.
+    // again, which an editor records by rememberCharset(), and the next save replaces it.
     void a_configuration_that_did_not_read_is_replaced() {
         write(QStringLiteral("hello-config.json"), "not json");
         write(QStringLiteral("oto.ini"), "a.wav=" + kGbkGePing + ",1,2,3,4,5\r\n");
@@ -428,6 +406,7 @@ private Q_SLOTS:
 
         auto opened = open(root(), QStringLiteral("GBK"));
         QVERIFY(opened.has_value());
+        opened->files.rememberCharset({});
         DiagnosticList diagnostics;
         QVERIFY(opened->files.save(opened->bank, diagnostics));
         DiagnosticList ignored;

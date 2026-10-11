@@ -131,13 +131,11 @@ namespace hello::kit {
         /// For each directory in which a file is written, and for each directory whose encoding
         /// or record of misdecoded file names differs from the one it was read with, the encoding
         /// and the record are recorded beside it in \c hello-config.json , because saving is an
-        /// explicit request to write files there.
-        /// The configuration belongs to HelloUtau and is exempt from the second refusal above:
-        /// in a directory that had one when read or has one now, it is written whenever the file
-        /// on disk does not hold the encoding and the fields read with it, whether another program
-        /// modified, removed or created it, or it could not be read. Only a configuration that
-        /// cannot be written at all, for a folder of its name or a file that does not open for
-        /// writing, is refused.
+        /// explicit request to write files there. The configuration belongs to HelloUtau, is read
+        /// on opening only and is exempt from the refusal of a file that changed on disk: the file
+        /// on disk is neither read nor checked, and is replaced whenever it is written. Only a
+        /// configuration that cannot be written at all, for a folder of its name or a file that
+        /// does not open for writing, is refused.
         ///
         /// Each file is written to a temporary file beside it and then renamed, so that a reader
         /// never observes a partially written file.
@@ -198,8 +196,7 @@ namespace hello::kit {
         /// user's decision: a directory that changed on disk while isModified() holds for it
         /// exists in two versions, and only the user can choose between them.
         ///
-        /// A change of \c hello-config.json is reported in VoiceBankChanges::config instead, by
-        /// every check until the next save() writes the configuration again. It is never read.
+        /// \c hello-config.json is not compared, because it is read on opening only.
         ///
         /// A place is a hint and not the only means of detecting a change. The overload without
         /// places examines the entire voice bank. A caller that passes only the reports of a

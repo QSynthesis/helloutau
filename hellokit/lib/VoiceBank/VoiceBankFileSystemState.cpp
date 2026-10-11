@@ -911,7 +911,6 @@ namespace hello::kit {
         std::vector<fs::path> rereads;
         std::vector<fs::path> audios;
         std::vector<fs::path> arrivals;
-        std::vector<fs::path> configs;
 
         const auto known = [this](const fs::path &path) { return m_books.count(path) != 0; };
         const auto removeUnder = [&](const fs::path &path) {
@@ -965,8 +964,7 @@ namespace hello::kit {
             // matching stamp is trusted except for racy text entries, which were written too
             // close to the snapshot and are compared by content.
             //
-            // The configuration is compared apart from the other text files. It belongs to
-            // HelloUtau, so a change to it is reported but never read.
+            // The configuration is not compared, because it is read on opening only.
             enum Kind { Text, Config, Audio };
             const auto kindOf = [&path](const VoiceBankDirectoryStamp::Entry &entry) {
                 const auto file =
@@ -983,37 +981,30 @@ namespace hello::kit {
                 return out;
             };
             bool changed = entriesOf(book.stamp, Text) != entriesOf(*now, Text);
-            bool configChanged = entriesOf(book.stamp, Config) != entriesOf(*now, Config);
             for (const auto &entry : book.stamp.entries) {
-                if (entry.directory || !book.stamp.isRacy(entry) || kindOf(entry) == Audio) {
-                    continue;
-                }
-                auto &differs = kindOf(entry) == Config ? configChanged : changed;
-                if (differs) {
+                if (changed || entry.directory || !book.stamp.isRacy(entry) ||
+                    kindOf(entry) != Text) {
                     continue;
                 }
                 const auto file =
                     VoiceBankDirectorySource::fileNamed(foldedName(entry.name), path.empty());
                 const auto record = book.files.find(*file);
                 const auto bytes = readWhole((path.empty() ? m_root : m_root / path) / entry.name);
-                differs = record == book.files.end() || !bytes ||
+                changed = record == book.files.end() || !bytes ||
                           digestOf(*bytes) != record->second.digest;
             }
             const bool audio = entriesOf(book.stamp, Audio) != entriesOf(*now, Audio);
 
-            if (configChanged) {
-                configs.push_back(path);
-            }
             if (changed) {
                 rereads.push_back(path);
             } else if (audio) {
                 audios.push_back(path);
-            } else if (!listed && !configChanged) {
+            } else if (!listed) {
                 // No difference was found. The new stamp is taken later, so that entries racy
                 // in the old stamp need not be read again at the next check. If a difference
                 // was found, the old stamp is retained, so that every subsequent check reports
-                // it again until it is reloaded, or for the configuration until a save writes
-                // it again. Otherwise a change reported once and missed would be lost.
+                // it again until it is reloaded. Otherwise a change reported once and missed
+                // would be lost.
                 book.stamp = *now;
             }
         }
@@ -1034,11 +1025,6 @@ namespace hello::kit {
         for (const auto &path : arrivals) {
             if (!changes.added.contains(path)) {
                 changes.added.push_back(path);
-            }
-        }
-        for (const auto &path : configs) {
-            if (removals.count(path) == 0) {
-                changes.config.push_back(path);
             }
         }
         return changes;
@@ -1419,32 +1405,29 @@ namespace hello::kit {
                 changed = true;
             }
 
-            // The encoding is recorded together with the files, and when it changed. Otherwise
-            // the next open would query the user again, and a configuration naming another
-            // encoding would decode the files incorrectly.
+            // The encoding is recorded when it changed, and together with the files unless the
+            // configuration read already records it. Otherwise the next open would query the user
+            // again, and a configuration naming another encoding would decode the files
+            // incorrectly.
             //
-            // The configuration belongs to HelloUtau. Once a directory has one, it is written
-            // whenever the file on disk does not hold what it should, whether another program
-            // modified or removed it or it could not be read when the directory was, and it is
-            // replaced without regard to such changes.
+            // The configuration belongs to HelloUtau and is read on opening only. The file on
+            // disk is neither read nor checked here, and is replaced whenever it is written.
             //
             // A record of misdecoded file names is written if it differs from the one read, and
             // also in a directory without text files, whose configuration then names no encoding.
             const QString name = canonicalOf(directory.charset);
             const auto &fileNames = directory.fileNameEncoding;
             const bool renamed = fileNames != recordOf(book.config);
+            const bool unrecorded = !book.config || canonicalOf(book.config->charset) != name;
             const bool recording =
-                changed || renamed || (!name.isEmpty() && (book.remember || name != book.charset));
-            //
-            // A configuration that another program created since is replaced as well, because
-            // the next open would otherwise decode the directory in the encoding it names.
+                renamed || (!name.isEmpty() &&
+                            (book.remember || name != book.charset || (changed && unrecorded)));
             const auto configRecord = book.files.find(VoiceBankDirectorySource::Config);
             const auto configFound =
                 configRecord != book.files.end()
                     ? std::optional<fs::path>(absolute / configRecord->second.name)
                     : findFolded(absolute, VoiceBankConfig::fileName);
-            if ((!name.isEmpty() || fileNames || recordOf(book.config)) &&
-                (recording || configFound)) {
+            if ((!name.isEmpty() || fileNames || recordOf(book.config)) && recording) {
                 if (recording && !name.isEmpty()) {
                     recorded.emplace_back(directory.path, name);
                 }
@@ -1452,14 +1435,8 @@ namespace hello::kit {
                 config.charset = name;
                 config.fileNameEncoding = fileNames;
                 const auto path = configFound.value_or(absolute / VoiceBankConfig::fileName);
-                DiagnosticList ignored;
-                const auto bytes = readWhole(path);
-                const auto current =
-                    bytes ? VoiceBankConfig::fromJson(*bytes, ignored) : std::nullopt;
-                if (!current || current->toJson() != config.toJson()) {
-                    writes.push_back(
-                        {directory.path, VoiceBankDirectorySource::Config, path, config.toJson()});
-                }
+                writes.push_back(
+                    {directory.path, VoiceBankDirectorySource::Config, path, config.toJson()});
                 configured.emplace_back(directory.path, config);
             }
         }

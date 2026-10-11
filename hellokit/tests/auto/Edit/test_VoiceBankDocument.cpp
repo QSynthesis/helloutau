@@ -144,15 +144,14 @@ private Q_SLOTS:
         QVERIFY(!document->isModified());
     }
 
-    // The configuration changed by another program is written again by the next save.
-    void a_changed_configuration_makes_the_voice_bank_modified() {
+    // The configuration is read on opening only, so a change by another program is not reported
+    // and leaves the voice bank saved.
+    void a_changed_configuration_leaves_the_voice_bank_saved() {
         const auto document = open();
         write(QStringLiteral("hello-config.json"),
               R"({"$format": "hello-voicebank", "charset": "UTF-8"})");
-        const auto changes = document->checkDisk();
-        QCOMPARE(changes.config.size(), 1);
-        QVERIFY(changes.changed.isEmpty());
-        QVERIFY(document->isModified());
+        QVERIFY(document->checkDisk().isEmpty());
+        QVERIFY(!document->isModified());
     }
 
     // The root removed on disk leaves the tree as the only copy.

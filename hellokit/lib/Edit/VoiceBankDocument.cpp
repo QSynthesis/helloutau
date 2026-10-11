@@ -40,8 +40,7 @@ namespace hello::kit {
         }
 
         VoiceBankChanges checked(VoiceBankChanges changes) {
-            if (!changes.changed.isEmpty() || !changes.removed.isEmpty() ||
-                !changes.config.isEmpty() || changes.rootNotFound) {
+            if (!changes.changed.isEmpty() || !changes.removed.isEmpty() || changes.rootNotFound) {
                 savedStep = -1;
             }
             updateModified();

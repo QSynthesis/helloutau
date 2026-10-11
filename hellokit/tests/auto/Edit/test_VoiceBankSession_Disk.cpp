@@ -165,14 +165,13 @@ private Q_SLOTS:
         QVERIFY(read(QStringLiteral("sub/hello-config.json")).contains("GBK"));
     }
 
-    // A configuration changed elsewhere is reported for the editor to mark the voice bank unsaved,
-    // and applying the check reads nothing and creates no undo step.
+    // A configuration changed elsewhere is not reported, and applying the check reads nothing
+    // and creates no undo step.
     void a_configuration_changed_elsewhere_changes_nothing_in_the_tree() {
         write(QStringLiteral("sub/hello-config.json"),
               R"({"$format":"hello-voicebank","charset":"GBK"})");
         const auto found = m_session->checkDisk();
-        QCOMPARE(found.config, QList<fs::path>{fs::path("sub")});
-        QVERIFY(found.changed.isEmpty());
+        QVERIFY(found.isEmpty());
         DiagnosticList diagnostics;
         m_session->reloadFromDisk(found, nullptr, diagnostics);
         QCOMPARE(m_session->currentStep(), 0);
