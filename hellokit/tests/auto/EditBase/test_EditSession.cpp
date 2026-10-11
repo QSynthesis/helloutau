@@ -319,6 +319,72 @@ private Q_SLOTS:
         QCOMPARE(events, QStringList{QStringLiteral("step 4")});
     }
 
+    // The handler receives the changes of each committed transaction once, after the step of the
+    // commit, and nothing for undo, redo, a rollback or a transaction without changes.
+    void a_commit_hands_its_changes_to_the_handler() {
+        TestSession session;
+        const auto items = session.items();
+        QList<std::pair<int, std::vector<ChangePtr>>> commits;
+        int stepWhenCalled = -1;
+        EditSessionPrivate::setCommitHandler(session,
+                                             [&](int step, const std::vector<ChangePtr> &changes) {
+                                                 commits.push_back({step, changes});
+                                                 stepWhenCalled = session.currentStep();
+                                             });
+        {
+            auto transaction = session.transaction(QStringLiteral("Edit"));
+            session.setTitle(QStringLiteral("x"));
+            session.removeItems(0, 1);
+            QVERIFY(transaction.commit());
+        }
+        QCOMPARE(commits.size(), 1);
+        QCOMPARE(commits.at(0).first, 1);
+        QCOMPARE(stepWhenCalled, 1);
+        QCOMPARE(int(commits.at(0).second.size()), 2);
+        QVERIFY(commits.at(0).second.at(0)->as<ValueChange>());
+        verifyList(commits.at(0).second.at(1), ListChange::Removed, items, 0, 1);
+
+        // A nested transaction belongs to the outermost one, and the changes of undo and redo
+        // before it are not among its changes.
+        session.undo();
+        session.redo();
+        QCOMPARE(commits.size(), 1);
+        {
+            auto outer = session.transaction(QStringLiteral("Outer"));
+            session.setTitle(QStringLiteral("z"));
+            {
+                auto inner = session.transaction(QStringLiteral("Inner"));
+                session.setTag(QStringLiteral("new"), 2);
+                QVERIFY(inner.commit());
+            }
+            QVERIFY(outer.commit());
+        }
+        QCOMPARE(commits.size(), 2);
+        QCOMPARE(commits.at(1).first, 2);
+        QCOMPARE(int(commits.at(1).second.size()), 2);
+        QVERIFY(commits.at(1).second.at(1)->as<EntryChange>());
+
+        {
+            auto transaction = session.transaction(QStringLiteral("Rolled back"));
+            session.setTitle(QStringLiteral("y"));
+        }
+        {
+            auto transaction = session.transaction(QStringLiteral("Nothing"));
+            session.setTitle(session.title());
+            QVERIFY(transaction.commit());
+        }
+        QCOMPARE(commits.size(), 2);
+
+        // The changes of the rollback are not among those of the next commit.
+        {
+            auto transaction = session.transaction(QStringLiteral("Last"));
+            session.setTitle(QStringLiteral("w"));
+            QVERIFY(transaction.commit());
+        }
+        QCOMPARE(commits.size(), 3);
+        QCOMPARE(int(commits.at(2).second.size()), 1);
+    }
+
     void a_transaction_without_changes_creates_no_undo_step() {
         TestSession session;
         auto transaction = session.transaction(QStringLiteral("Nothing"));

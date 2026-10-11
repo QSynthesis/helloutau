@@ -151,6 +151,10 @@ namespace hello::kit::edit {
             return;
         }
         if (const auto change = it->second(action, operation)) {
+            // Undo, redo and a rollback apply their actions outside a transaction.
+            if (depth > 0) {
+                transactionChanges.push_back(change);
+            }
             Q_EMIT decl.changed(change);
         }
     }
@@ -249,6 +253,10 @@ namespace hello::kit::edit {
         discarded = false;
         read = false;
         violationsBefore.clear();
+        const auto changes = std::exchange(transactionChanges, {});
+        if (committed && !changes.empty() && commitHandler) {
+            commitHandler(model.currentStep(), changes);
+        }
         return committed;
     }
 

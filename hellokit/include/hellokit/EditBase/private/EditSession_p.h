@@ -5,6 +5,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <vector>
 
 #include <QtCore/QJsonObject>
 
@@ -19,6 +20,11 @@ namespace hello::kit::edit {
     /// is reported at that moment.
     using ChangeTranslator =
         std::function<ChangePtr(const ss::Action &action, ss::Action::Operation operation)>;
+
+    /// Receives \a changes , the changes that a committed transaction made, in the order in which
+    /// they were made, and \a step , the step that the transaction became. The changes applied by
+    /// undo, by redo and by a rollback are not among them.
+    using CommitHandler = std::function<void(int step, const std::vector<ChangePtr> &changes)>;
 
     struct RecordInfo;
 
@@ -98,6 +104,12 @@ namespace hello::kit::edit {
 
         /// The validators by node type.
         std::map<int, Validator> validators;
+
+        /// \sa EditSessionPrivate::setCommitHandler()
+        CommitHandler commitHandler;
+
+        /// The changes made by the transaction in progress, for the commit handler.
+        std::vector<ChangePtr> transactionChanges;
 
         /// The violations of each record modified by the transaction in progress, in the state
         /// before its first modification. A record inserted by the transaction has none.
@@ -204,6 +216,13 @@ namespace hello::kit::edit {
         static inline void registerValidator(EditSession &session, int nodeType,
                                              Validator validator) {
             impl(session).validators[nodeType] = std::move(validator);
+        }
+
+        /// Sets the handler that receives the changes of each committed transaction, after
+        /// EditSession::stepChanged() of the commit. A transaction without changes creates no
+        /// step and calls no handler.
+        static inline void setCommitHandler(EditSession &session, CommitHandler handler) {
+            impl(session).commitHandler = std::move(handler);
         }
 
         /// Marks the transaction in progress as bringing in content read from a file, such as a
