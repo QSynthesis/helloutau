@@ -109,7 +109,7 @@ Windows 的安装包以 Inno Setup 7 生成，界面语言为英语、简体中�
 
 设置的「Updates」页位于 Appearance & Behavior 的 System Settings 之下，同 JetBrains IDE，提供以下设置：
 
-- 更新源：「自动」「GitHub」「Gitee」，默认为「自动」。「自动」按系统时区判断：`QTimeZone::systemTimeZone().territory()` 为 `QLocale::China` 时使用 Gitee，否则使用 GitHub。Asia/Shanghai 与 Asia/Urumqi 属于 `QLocale::China`，香港、澳门、台湾的时区各有自己的地区，因此只有中国大陆的时区选择 Gitee。Windows 的「China Standard Time」由 Qt 映射到 Asia/Shanghai。
+- 更新源：「自动」与更新配置中各源的名字，按配置的顺序列出，默认为「自动」。「自动」按系统时区所在的地区（`QTimeZone::systemTimeZone().territory()`）选择，规则见「更新配置」。以现在的配置，Asia/Shanghai 与 Asia/Urumqi 属于 `QLocale::China`，选择 Gitee。香港、澳门、台湾的时区各有自己的地区，选择 GitHub。Windows 的「China Standard Time」由 Qt 映射到 Asia/Shanghai。设置记录源的名字（`updates/source`），自动时不记录。记录的名字在配置中已不存在时，按自动处理。
 - 启动时检查更新，默认开启，每天至多检查一次。帮助菜单另有「Check for Updates...」，随时手动检查。
 - 跳过的版本：用户在提示中选择「跳过此版本」后，启动时不再提示该版本，手动检查仍然提示。
 
@@ -117,21 +117,35 @@ Windows 的安装包以 Inno Setup 7 生成，界面语言为英语、简体中�
 
 ### 更新配置
 
-仓库地址与附件、安装包的标识不写在代码中，而记录在 `share/helloutau/UpdateConfig.json`（作者 2026-10-11 决定，与 Qt 的翻译同样放在 `share` 下）。源文件为 `helloutau/share/helloutau/UpdateConfig.json`，构建时复制到构建目录的同一相对位置，安装时装到安装目录的同一位置，程序按 `bin` 的上级目录查找。
+更新源与附件、安装包的标识不写在代码中，而记录在 `share/helloutau/UpdateConfig.json`（作者 2026-10-11 决定，与 Qt 的翻译同样放在 `share` 下）。源文件为 `helloutau/share/helloutau/UpdateConfig.json`，构建时复制到构建目录的同一相对位置，安装时装到安装目录的同一位置，程序按 `bin` 的上级目录查找。
+
+代码中不出现任何托管平台的名字或域名，更新源是配置中的一个列表（作者 2026-10-11 决定）。以后增加其他托管平台时，只需在列表中加一项。
 
 | 键 | 含义 | 现值 |
 |---|---|---|
-| `gitHubRepository` | GitHub 上的仓库 | `QSynthesis/helloutau` |
-| `giteeRepository` | Gitee 上的仓库 | `functioner/helloutau` |
 | `assetPrefix` | 附件文件名的开头，见「发布物」 | `helloutau` |
 | `innoSetupAppId` | 安装包的 `AppId`，必须与 `setup.iss` 相同 | `org.openvpi.helloutau` |
+| `sources` | 更新源的列表，至少一项，顺序即设置页中的顺序 | GitHub、Gitee |
 
-文件缺失或缺少任一项时，启动时的检查只记入日志，手动检查报告原因。triplet 不在此文件中，因为它描述构建本身，由 CMake 写入 `helloutau/Config.h` 的 `HELLOUTAU_TRIPLET`。
+`sources` 的每一项：
+
+| 键 | 含义 |
+|---|---|
+| `name` | 设置页中显示并记入设置的名字，不翻译，不可重复 |
+| `latestRelease` | 最新 release 的接口地址，必须是 HTTPS，原样使用，不展开变量 |
+| `releasePage` | 可选。release 页面的模板，`${tag}` 替换为百分号编码后的 tag（`stdc::str::varexp`，作者 2026-10-11 建议）。只在接口的响应没有 `html_url` 时使用，例如 Gitee |
+| `territories` | 可选。ISO 3166 地区代码的列表（`QLocale::codeToTerritory`），未知的代码使整个文件无效 |
+
+「自动」选择 `territories` 包含系统时区所在地区的第一个源，都不包含时选择列表中的第一个源。
+
+接口的响应须为 GitHub 的 release 格式：`tag_name`、`name`、`body`、`draft`、`prerelease`、`html_url`（可缺），以及 `assets` 中各项的 `name` 与 `browser_download_url`。GitHub 与 Gitee 都采用这一格式，Gitea、Forgejo 等兼容 GitHub 接口的平台同样适用。GitLab 的格式不同，需要支持时再为源增加表示格式的键。请求只带 User-Agent（GitHub 拒绝没有 User-Agent 的请求），不带任何平台专用的请求头。
+
+文件缺失、缺少任一项或任一项无效时，启动时的检查只记入日志，手动检查报告原因。triplet 不在此文件中，因为它描述构建本身，由 CMake 写入 `helloutau/Config.h` 的 `HELLOUTAU_TRIPLET`。
 
 ### 检查与下载
 
-1. 以所选源的公开接口取得最新的 release：GitHub 为 `GET /repos/{owner}/{repo}/releases/latest`，Gitee 为 `GET /api/v5/repos/{owner}/{repo}/releases/latest`。公开仓库无须令牌。
-2. 去掉 tag 的 `v` 前缀作为版本号，与 `HELLO_VERSION` 逐段比较，不以 `v` 开头的 tag 不视为版本，较新且附件齐全（见「发布物」）时提示，显示 release 的说明。`v` 之后只接受数字与点，因为 `QVersionNumber::fromString()` 接受段首的空格与正号（实测 `v 0.1`、`v+0.1` 均被接受）。Gitee 的 release 没有页面地址，按 `https://gitee.com/<仓库>/releases/tag/<tag>` 构造，其附件列表中还有 Gitee 生成的源码压缩包，按文件名挑选时不受影响。草稿与预发布不视为 release。
+1. 以所选源的 `latestRelease` 取得最新的 release。公开仓库无须令牌。
+2. 去掉 tag 的 `v` 前缀作为版本号，与 `HELLO_VERSION` 逐段比较，不以 `v` 开头的 tag 不视为版本，较新且附件齐全（见「发布物」）时提示，显示 release 的说明。`v` 之后只接受数字与点，因为 `QVersionNumber::fromString()` 接受段首的空格与正号（实测 `v 0.1`、`v+0.1` 均被接受）。响应没有 `html_url` 时按源的 `releasePage` 构造页面地址。Gitee 的附件列表中还有 Gitee 生成的源码压缩包，按文件名挑选时不受影响。草稿与预发布不视为 release。
 3. 用户确认后下载附件与 `SHA256SUMS` 到临时目录管理器分配的目录，显示进度。只接受 HTTPS，拒绝重定向到 HTTP。
 4. 以 `SHA256SUMS` 校验附件，不符时删除并报告，不安装。
 
@@ -169,8 +183,8 @@ Windows 特有的注册表信息因此全部由安装包维护，程序自身不
 ## 模块划分
 
 - `HelloKitUpdate`（子库，`hellokit/Update/`，命名空间 `hello::kit`）：与具体程序无关的更新工具。程序名、仓库地址、triplet 与源的选择规则都由调用方传入。私有依赖 Qt Network，不依赖 QtWidgets。类型名带 `Software` 前缀，因为 `Release` 一类的名字过于宽泛（作者 2026-10-11 决定）。
-  - `SoftwareRelease`、`SoftwareReleaseAsset`：release 的内容与两种源的格式，tag 到版本号的转换。
-  - `SoftwareReleaseQuery`：以公开接口取得最新的 release，只接受 HTTPS（`NoLessSafeRedirectPolicy`），使用系统代理，并带有 GitHub 要求的 User-Agent。
+  - `SoftwareRelease`、`SoftwareReleaseAsset`：release 的内容、GitHub 格式的解析、页面模板的展开、tag 到版本号的转换。
+  - `SoftwareReleaseQuery`：按调用方给出的地址取得最新的 release，只接受 HTTPS（`NoLessSafeRedirectPolicy`），使用系统代理，并带有 User-Agent。
   - `Sha256Sums`：读取 `SHA256SUMS` 与计算文件的摘要。
   - `Windows/InnoSetup`：安装记录的查询，见「安装版与免安装版的区分」。
   - 以后加入：下载附件。
@@ -180,7 +194,7 @@ Windows 特有的注册表信息因此全部由安装包维护，程序自身不
   - 以 `ZIP_FL_ENC_RAW` 取得条目名的原始字节。音源的压缩包常以 Shift_JIS 或 GBK 写条目名而不标 UTF-8，按 `CLAUDE.md`「编码」，这些字节必须交给 `winacp` 解码，不能由解压库自行转换。
   - libzip 文档规定不同的 `zip_t` 对象互相独立，可在多个线程中并行使用而无须加锁。多线程解压时每个工作线程各自打开一次压缩包，分别解压不同的条目。
   - 不采用 bit7z：它在运行时需要随程序提供 7-Zip 的 `7z.dll`，条目名由 7-Zip 解码后以宽字符串给出，无法按本仓库的规则自行解码。
-- helloutau：`UpdateChecker`（读取更新配置、时区到更新源的规则、附件名、启动时与手动的检查），`UpdateDialog`（提示对话框），「Updates」设置页，以及以后的关闭窗口与退出的流程。启动时的检查由 Core 插件在打开首批窗口之后发起，只在有 `AppLoader` 时进行，因此测试不发出请求。
+- helloutau：`UpdateChecker`（读取更新配置、按名字或时区选择更新源、附件名、启动时与手动的检查），`UpdateDialog`（提示对话框），「Updates」设置页，以及以后的关闭窗口与退出的流程。启动时的检查由 Core 插件在打开首批窗口之后发起，只在有 `AppLoader` 时进行，因此测试不发出请求。
 
 ## 参考
 

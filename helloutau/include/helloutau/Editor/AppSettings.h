@@ -195,18 +195,11 @@ namespace hello::daw {
         QString ustExportCharset() const;
         void setUstExportCharset(const QString &charset);
 
-        /// The host from which the releases of the application are checked, see the automatic
-        /// update in docs/Distribution.md.
-        enum UpdateSource {
-            /// Gitee if the time zone of the system is in mainland China, and GitHub otherwise
-            AutomaticUpdateSource,
-            GitHubUpdateSource,
-            GiteeUpdateSource,
-        };
-
-        /// The host of the releases. The default is AutomaticUpdateSource.
-        UpdateSource updateSource() const;
-        void setUpdateSource(UpdateSource source);
+        /// The name of the source of the releases in the update configuration, or an empty string
+        /// for the automatic selection by the time zone, the default. See the automatic update
+        /// in docs/Distribution.md.
+        QString updateSource() const;
+        void setUpdateSource(const QString &source);
 
         /// Whether the releases are checked at start, at most once a day. The default is true.
         bool isStartupUpdateCheckEnabled() const;

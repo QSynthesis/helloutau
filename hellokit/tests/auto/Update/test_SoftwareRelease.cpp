@@ -82,9 +82,10 @@ private Q_SLOTS:
         }
     }
 
-    void a_github_release_has_its_page_and_https_assets() {
-        const auto release =
-            SoftwareRelease::fromJson(gitHubRelease(), SoftwareRelease::GitHub, "owner/app");
+    // The page template applies only to a release without html_url.
+    void a_release_with_html_url_has_that_page_and_https_assets() {
+        const auto release = SoftwareRelease::fromJson(
+            gitHubRelease(), QStringLiteral("https://example.com/${tag}"));
         QVERIFY(release);
         QCOMPARE(release->tag, QStringLiteral("v0.1.6.0"));
         QCOMPARE(release->version, QVersionNumber({0, 1, 6, 0}));
@@ -97,12 +98,13 @@ private Q_SLOTS:
         QVERIFY(!release->asset(QStringLiteral("insecure.zip")));
     }
 
-    void a_gitee_release_has_a_page_built_from_the_tag() {
-        const auto release =
-            SoftwareRelease::fromJson(giteeRelease(), SoftwareRelease::Gitee, "owner/app");
+    void a_release_without_html_url_has_the_page_of_the_template() {
+        const auto release = SoftwareRelease::fromJson(
+            giteeRelease(), QStringLiteral("https://gitee.com/owner/app/releases/tag/${tag}"));
         QVERIFY(release);
         QCOMPARE(release->page,
                  QUrl(QStringLiteral("https://gitee.com/owner/app/releases/tag/v0.1.6.0")));
+        QVERIFY(SoftwareRelease::fromJson(giteeRelease())->page.isEmpty());
         const auto sums = release->asset(QStringLiteral("SHA256SUMS"));
         QVERIFY(sums);
         QCOMPARE(sums->url.host(), QStringLiteral("gitee.com"));
@@ -120,9 +122,17 @@ private Q_SLOTS:
         QFETCH(QString, field);
         QFETCH(QJsonValue, value);
         auto object = gitHubRelease();
-        QVERIFY(SoftwareRelease::fromJson(object, SoftwareRelease::GitHub, "owner/app"));
+        QVERIFY(SoftwareRelease::fromJson(object));
         object.insert(field, value);
-        QVERIFY(!SoftwareRelease::fromJson(object, SoftwareRelease::GitHub, "owner/app"));
+        QVERIFY(!SoftwareRelease::fromJson(object));
+    }
+
+    // The tag is percent-encoded, and the other names expand to nothing.
+    void the_page_template_expands_the_tag() {
+        QCOMPARE(SoftwareRelease::pageOf(QStringLiteral("https://h/${tag}/${other}"),
+                                         QStringLiteral("v1#2")),
+                 QUrl(QStringLiteral("https://h/v1%232/")));
+        QVERIFY(SoftwareRelease::pageOf(QString(), QStringLiteral("v1")).isEmpty());
     }
 };
 

@@ -151,7 +151,7 @@ namespace hello::daw {
           m_checker(checker) {
         setTitle(tr("Updates"));
         setDescription(tr("The check for newer versions of the application."));
-        setKeywords({QStringLiteral("Updates"), QStringLiteral("GitHub"), QStringLiteral("Gitee")});
+        setKeywords({QStringLiteral("Updates"), QStringLiteral("Check for Updates")});
     }
 
     QWidget *UpdateSettingPage::createWidget() {
@@ -163,13 +163,16 @@ namespace hello::daw {
         m_startupCheck->setChecked(m_settings.isStartupUpdateCheckEnabled());
         form->addRow(m_startupCheck);
         m_source = new QComboBox(widget);
-        m_source->addItem(tr("Automatic"), AppSettings::AutomaticUpdateSource);
-        m_source->addItem(QStringLiteral("GitHub"), AppSettings::GitHubUpdateSource);
-        m_source->addItem(QStringLiteral("Gitee"), AppSettings::GiteeUpdateSource);
-        m_source->setCurrentIndex(std::max(0, m_source->findData(m_settings.updateSource())));
+        // The names of the sources are those of the update configuration, untranslated.
+        m_source->addItem(tr("Automatic"), QString());
+        if (const auto &configuration = m_checker.configuration()) {
+            for (const auto &source : configuration->sources) {
+                m_source->addItem(source.name, source.name);
+            }
+        }
+        m_source->setCurrentIndex(std::max(0, m_source->findData(storedSource())));
         form->addRow(tr("Update &source:"), m_source);
-        form->addRow(note(tr("Automatic uses Gitee if the time zone of the system is in mainland "
-                             "China, and GitHub otherwise.")));
+        form->addRow(note(tr("Automatic selects a source by the time zone of the system.")));
         auto checkNow = new QPushButton(tr("Check &Now"), widget);
         m_lastCheck = note(QString());
         showLastCheck();
@@ -178,8 +181,7 @@ namespace hello::daw {
         checkRow->addWidget(m_lastCheck, 1);
         form->addRow(checkRow);
         connect(checkNow, &QPushButton::clicked, this, [this, checkNow] {
-            m_checker.checkNow(checkNow->window(),
-                               AppSettings::UpdateSource(m_source->currentData().toInt()));
+            m_checker.checkNow(checkNow->window(), m_source->currentData().toString());
         });
         // The label is the context, because the page outlives its widget.
         connect(&m_checker, &UpdateChecker::finished, m_lastCheck, [this] { showLastCheck(); });
@@ -195,13 +197,13 @@ namespace hello::daw {
             return false;
         }
         return m_startupCheck->isChecked() != m_settings.isStartupUpdateCheckEnabled() ||
-               m_source->currentData().toInt() != m_settings.updateSource();
+               m_source->currentData().toString() != storedSource();
     }
 
     bool UpdateSettingPage::apply(QString *error) {
         Q_UNUSED(error);
         m_settings.setStartupUpdateCheckEnabled(m_startupCheck->isChecked());
-        m_settings.setUpdateSource(AppSettings::UpdateSource(m_source->currentData().toInt()));
+        m_settings.setUpdateSource(m_source->currentData().toString());
         Q_EMIT modifiedChanged();
         return true;
     }
@@ -212,6 +214,12 @@ namespace hello::daw {
 
     QComboBox *UpdateSettingPage::sourceBox() const {
         return m_source;
+    }
+
+    QString UpdateSettingPage::storedSource() const {
+        const auto source = m_settings.updateSource();
+        const auto &configuration = m_checker.configuration();
+        return configuration && configuration->hasSource(source) ? source : QString();
     }
 
     void UpdateSettingPage::showLastCheck() {

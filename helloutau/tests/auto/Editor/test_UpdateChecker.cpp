@@ -1,4 +1,7 @@
 #include <QtCore/QFile>
+#include <QtCore/QJsonArray>
+#include <QtCore/QJsonDocument>
+#include <QtCore/QJsonObject>
 #include <QtCore/QTemporaryDir>
 #include <QtTest/QTest>
 
@@ -18,8 +21,26 @@ namespace {
         return release;
     }
 
-    bool writeFile(const QString &fileName, const QByteArray &content) {
+    // Returns a configuration with two sources, A for any territory and B for mainland China
+    // with a page template.
+    QJsonObject validConfiguration() {
+        return QJsonObject{
+            {"assetPrefix",    "app"    },
+            {"innoSetupAppId", "org.app"},
+            {"sources",
+             QJsonArray{
+                 QJsonObject{{"name", "A"}, {"latestRelease", "https://a.example/latest"}},
+                 QJsonObject{{"name", "B"},
+                             {"latestRelease", "https://b.example/latest"},
+                             {"releasePage", "https://b.example/tag/${tag}"},
+                             {"territories", QJsonArray{"CN"}}},
+             }                          },
+        };
+    }
+
+    bool writeConfiguration(const QString &fileName, const QJsonObject &object) {
         QFile file(fileName);
+        const auto content = QJsonDocument(object).toJson();
         return file.open(QIODevice::WriteOnly) && file.write(content) == content.size();
     }
 
@@ -29,17 +50,23 @@ class test_UpdateChecker : public QObject {
     Q_OBJECT
 
 private Q_SLOTS:
-    void the_automatic_source_follows_the_time_zone() {
-        QCOMPARE(UpdateChecker::hostOf(AppSettings::AutomaticUpdateSource, QLocale::China),
-                 SoftwareRelease::Gitee);
-        QCOMPARE(UpdateChecker::hostOf(AppSettings::AutomaticUpdateSource, QLocale::Taiwan),
-                 SoftwareRelease::GitHub);
-        QCOMPARE(UpdateChecker::hostOf(AppSettings::AutomaticUpdateSource, QLocale::Japan),
-                 SoftwareRelease::GitHub);
-        QCOMPARE(UpdateChecker::hostOf(AppSettings::GitHubUpdateSource, QLocale::China),
-                 SoftwareRelease::GitHub);
-        QCOMPARE(UpdateChecker::hostOf(AppSettings::GiteeUpdateSource, QLocale::Japan),
-                 SoftwareRelease::Gitee);
+    // A named source is chosen by its name. Otherwise the first source for the territory is
+    // chosen, or else the first source.
+    void the_automatic_selection_follows_the_territories() {
+        QTemporaryDir dir;
+        const auto fileName = dir.filePath(QStringLiteral("UpdateConfig.json"));
+        QVERIFY(writeConfiguration(fileName, validConfiguration()));
+        QString error;
+        const auto configuration = UpdateChecker::Configuration::read(fileName, &error);
+        QVERIFY2(configuration, qPrintable(error));
+        QCOMPARE(configuration->sourceOf(QString(), QLocale::China).name, QStringLiteral("B"));
+        QCOMPARE(configuration->sourceOf(QString(), QLocale::Japan).name, QStringLiteral("A"));
+        QCOMPARE(configuration->sourceOf(QStringLiteral("A"), QLocale::China).name,
+                 QStringLiteral("A"));
+        QCOMPARE(configuration->sourceOf(QStringLiteral("Missing"), QLocale::China).name,
+                 QStringLiteral("B"));
+        QVERIFY(configuration->hasSource(QStringLiteral("B")));
+        QVERIFY(!configuration->hasSource(QStringLiteral("Missing")));
     }
 
     void asset_names_follow_the_release_assets() {
@@ -64,29 +91,73 @@ private Q_SLOTS:
         QVERIFY(!UpdateChecker::offers(releaseOf({0, 1, 7, 0}, {"SHA256SUMS"}), current, asset));
     }
 
-    void the_configuration_requires_every_value() {
+    void the_configuration_is_read() {
         QTemporaryDir dir;
-        QVERIFY(dir.isValid());
+        const auto fileName = dir.filePath(QStringLiteral("UpdateConfig.json"));
+        QVERIFY(writeConfiguration(fileName, validConfiguration()));
+        QString error;
+        const auto configuration = UpdateChecker::Configuration::read(fileName, &error);
+        QVERIFY2(configuration, qPrintable(error));
+        QCOMPARE(configuration->assetPrefix, QStringLiteral("app"));
+        QCOMPARE(configuration->innoSetupAppId, QStringLiteral("org.app"));
+        QCOMPARE(configuration->sources.size(), 2);
+        const auto &b = configuration->sources.at(1);
+        QCOMPARE(b.latestRelease, QUrl(QStringLiteral("https://b.example/latest")));
+        QCOMPARE(b.releasePage, QStringLiteral("https://b.example/tag/${tag}"));
+        QCOMPARE(b.territories, QList<QLocale::Territory>{QLocale::China});
+    }
+
+    void an_invalid_configuration_is_rejected_data() {
+        QTest::addColumn<QString>("key");
+        QTest::addColumn<QJsonValue>("value");
+        const auto source = [](const QJsonObject &changes) {
+            QJsonObject object{
+                {"name",          "C"                       },
+                {"latestRelease", "https://c.example/latest"}
+            };
+            for (auto it = changes.begin(); it != changes.end(); ++it) {
+                object.insert(it.key(), it.value());
+            }
+            return QJsonArray{object};
+        };
+        QTest::newRow("no prefix") << "assetPrefix" << QJsonValue();
+        QTest::newRow("no identifier") << "innoSetupAppId" << QJsonValue();
+        QTest::newRow("no source") << "sources" << QJsonValue(QJsonArray());
+        QTest::newRow("no name") << "sources"
+                                 << QJsonValue(source({
+                                        {"name", ""}
+        }));
+        QTest::newRow("same name")
+            << "sources" << QJsonValue(QJsonArray{source({}).first(), source({}).first()});
+        QTest::newRow("not https") << "sources"
+                                   << QJsonValue(source({
+                                          {"latestRelease", "http://c.example/latest"}
+        }));
+        QTest::newRow("unknown territory") << "sources"
+                                           << QJsonValue(source({
+                                                  {"territories", QJsonArray{"Mainland"}}
+        }));
+    }
+
+    void an_invalid_configuration_is_rejected() {
+        QFETCH(QString, key);
+        QFETCH(QJsonValue, value);
+        QTemporaryDir dir;
         const auto fileName = dir.filePath(QStringLiteral("UpdateConfig.json"));
         QString error;
         QVERIFY(!UpdateChecker::Configuration::read(fileName, &error));
         QVERIFY(!error.isEmpty());
 
-        QVERIFY(writeFile(fileName, "{\"gitHubRepository\": \"a/b\", "
-                                    "\"giteeRepository\": \"c/d\", \"assetPrefix\": \"app\"}"));
+        auto object = validConfiguration();
+        if (value.isUndefined()) {
+            object.remove(key);
+        } else {
+            object.insert(key, value);
+        }
+        QVERIFY(writeConfiguration(fileName, object));
         error.clear();
         QVERIFY(!UpdateChecker::Configuration::read(fileName, &error));
         QVERIFY(!error.isEmpty());
-
-        QVERIFY(writeFile(fileName, "{\"gitHubRepository\": \"a/b\", "
-                                    "\"giteeRepository\": \"c/d\", \"assetPrefix\": \"app\", "
-                                    "\"innoSetupAppId\": \"org.app\"}"));
-        const auto configuration = UpdateChecker::Configuration::read(fileName, &error);
-        QVERIFY(configuration);
-        QCOMPARE(configuration->gitHubRepository, QStringLiteral("a/b"));
-        QCOMPARE(configuration->giteeRepository, QStringLiteral("c/d"));
-        QCOMPARE(configuration->assetPrefix, QStringLiteral("app"));
-        QCOMPARE(configuration->innoSetupAppId, QStringLiteral("org.app"));
     }
 };
 

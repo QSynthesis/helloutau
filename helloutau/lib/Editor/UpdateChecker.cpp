@@ -1,5 +1,6 @@
 #include "UpdateChecker.h"
 
+#include <algorithm>
 #include <filesystem>
 
 #include <QtCore/QCoreApplication>
@@ -81,7 +82,7 @@ namespace hello::daw {
             return parent ? parent.data() : QApplication::activeWindow();
         }
 
-        void start(QWidget *from, AppSettings::UpdateSource source, bool isManual) {
+        void start(QWidget *from, const QString &sourceName, bool isManual) {
             query->abort();
             closeProgress();
             manual = isManual;
@@ -90,8 +91,12 @@ namespace hello::daw {
                 report(tr("The update configuration cannot be read: %1").arg(configurationError));
                 return;
             }
-            const auto host =
-                UpdateChecker::hostOf(source, QTimeZone::systemTimeZone().territory());
+            const auto &source =
+                configuration->sourceOf(sourceName, QTimeZone::systemTimeZone().territory());
+            if (!query->start(source.latestRelease, source.releasePage)) {
+                report(tr("Cannot check for updates: %1").arg(query->errorString()));
+                return;
+            }
             if (manual) {
                 progress = new QProgressDialog(tr("Checking for updates..."), tr("Cancel"), 0, 0,
                                                dialogParent());
@@ -106,9 +111,6 @@ namespace hello::daw {
                 });
                 progress->show();
             }
-            query->start(host, host == kit::SoftwareRelease::Gitee
-                                   ? configuration->giteeRepository
-                                   : configuration->gitHubRepository);
         }
 
         void closeProgress() {
@@ -190,16 +192,77 @@ namespace hello::daw {
             return std::nullopt;
         }
         Configuration configuration;
-        configuration.gitHubRepository = textOf(*object, "gitHubRepository");
-        configuration.giteeRepository = textOf(*object, "giteeRepository");
         configuration.assetPrefix = textOf(*object, "assetPrefix");
         configuration.innoSetupAppId = textOf(*object, "innoSetupAppId");
-        if (configuration.gitHubRepository.isEmpty() || configuration.giteeRepository.isEmpty() ||
-            configuration.assetPrefix.isEmpty() || configuration.innoSetupAppId.isEmpty()) {
-            *error = tr("The file %1 lacks a repository or an identifier.").arg(fileName);
+        if (configuration.assetPrefix.isEmpty() || configuration.innoSetupAppId.isEmpty()) {
+            *error = tr("The file %1 lacks the prefix of the assets or the identifier of the "
+                        "installer.")
+                         .arg(fileName);
+            return std::nullopt;
+        }
+        const auto sources = object->find("sources");
+        if (sources != object->end()) {
+            for (const auto &item : sources->second.toArray()) {
+                const auto &entry = item.toObject();
+                Source source;
+                source.name = textOf(entry, "name");
+                source.latestRelease = QUrl(textOf(entry, "latestRelease"));
+                source.releasePage = textOf(entry, "releasePage");
+                if (source.name.isEmpty() || configuration.hasSource(source.name)) {
+                    *error = tr("A source in the file %1 has no name, or the name of another "
+                                "source.")
+                                 .arg(fileName);
+                    return std::nullopt;
+                }
+                if (!source.latestRelease.isValid() ||
+                    source.latestRelease.scheme() != QLatin1String("https")) {
+                    *error = tr("The source %1 in the file %2 has no HTTPS address.")
+                                 .arg(source.name, fileName);
+                    return std::nullopt;
+                }
+                const auto territories = entry.find("territories");
+                if (territories != entry.end()) {
+                    for (const auto &code : territories->second.toArray()) {
+                        const auto text = QString::fromStdString(code.toString());
+                        const auto territory = QLocale::codeToTerritory(text);
+                        if (territory == QLocale::AnyTerritory) {
+                            *error = tr("The source %1 in the file %2 has the unknown territory "
+                                        "code \"%3\".")
+                                         .arg(source.name, fileName, text);
+                            return std::nullopt;
+                        }
+                        source.territories.push_back(territory);
+                    }
+                }
+                configuration.sources.push_back(std::move(source));
+            }
+        }
+        if (configuration.sources.isEmpty()) {
+            *error = tr("The file %1 lists no source.").arg(fileName);
             return std::nullopt;
         }
         return configuration;
+    }
+
+    const UpdateChecker::Configuration::Source &
+        UpdateChecker::Configuration::sourceOf(const QString &name,
+                                               QLocale::Territory territory) const {
+        for (const auto &source : sources) {
+            if (source.name == name) {
+                return source;
+            }
+        }
+        for (const auto &source : sources) {
+            if (source.territories.contains(territory)) {
+                return source;
+            }
+        }
+        return sources.first();
+    }
+
+    bool UpdateChecker::Configuration::hasSource(const QString &name) const {
+        return std::any_of(sources.begin(), sources.end(),
+                           [&name](const Source &source) { return source.name == name; });
     }
 
     UpdateChecker::UpdateChecker(AppSettings &settings, const QString &fileName, QObject *parent)
@@ -217,21 +280,6 @@ namespace hello::daw {
     UpdateChecker::~UpdateChecker() {
         stdc_impl_t;
         impl.closeProgress();
-    }
-
-    kit::SoftwareRelease::Host UpdateChecker::hostOf(AppSettings::UpdateSource source,
-                                                     QLocale::Territory territory) {
-        switch (source) {
-            case AppSettings::GitHubUpdateSource:
-                return kit::SoftwareRelease::GitHub;
-            case AppSettings::GiteeUpdateSource:
-                return kit::SoftwareRelease::Gitee;
-            case AppSettings::AutomaticUpdateSource:
-                break;
-        }
-        // The time zones of Hong Kong, Macao and Taiwan have territories of their own.
-        return territory == QLocale::China ? kit::SoftwareRelease::Gitee
-                                           : kit::SoftwareRelease::GitHub;
     }
 
     QString UpdateChecker::assetName(const QString &prefix, const QVersionNumber &version,
@@ -269,7 +317,7 @@ namespace hello::daw {
         impl.start(parent, impl.settings.updateSource(), false);
     }
 
-    void UpdateChecker::checkNow(QWidget *parent, AppSettings::UpdateSource source) {
+    void UpdateChecker::checkNow(QWidget *parent, const QString &source) {
         stdc_impl_t;
         impl.start(parent, source, true);
     }

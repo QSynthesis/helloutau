@@ -5,6 +5,8 @@
 #include <QtCore/QJsonArray>
 #include <QtCore/QJsonObject>
 
+#include <stdcorelib/str.h>
+
 namespace hello::kit {
 
     namespace {
@@ -15,11 +17,11 @@ namespace hello::kit {
 
     }
 
-    std::optional<SoftwareRelease> SoftwareRelease::fromJson(const QJsonObject &object, Host host,
-                                                             const QString &repository) {
-        // GitHub reports drafts only to the owners of the repository, and both hosts omit
-        // drafts and prereleases from the latest release. A release passed in from elsewhere is
-        // checked all the same.
+    std::optional<SoftwareRelease> SoftwareRelease::fromJson(const QJsonObject &object,
+                                                             const QString &pageTemplate) {
+        // GitHub reports drafts only to the owners of the repository, and the latest release of
+        // GitHub and Gitee excludes drafts and prereleases. Both fields are still checked for the
+        // releases of other hosts and interfaces.
         if (object.value(QLatin1String("draft")).toBool() ||
             object.value(QLatin1String("prerelease")).toBool()) {
             return std::nullopt;
@@ -33,14 +35,8 @@ namespace hello::kit {
         release.version = *version;
         release.title = object.value(QLatin1String("name")).toString();
         release.notes = object.value(QLatin1String("body")).toString();
-        if (host == GitHub) {
-            release.page = QUrl(object.value(QLatin1String("html_url")).toString());
-        } else {
-            // The release of Gitee has no address of its page.
-            release.page = QUrl(QStringLiteral("https://gitee.com/") + repository +
-                                QStringLiteral("/releases/tag/") +
-                                QString::fromLatin1(QUrl::toPercentEncoding(release.tag)));
-        }
+        const auto page = object.value(QLatin1String("html_url")).toString();
+        release.page = page.isEmpty() ? pageOf(pageTemplate, release.tag) : QUrl(page);
         for (const auto item : object.value(QLatin1String("assets")).toArray()) {
             const auto asset = item.toObject();
             SoftwareReleaseAsset entry;
@@ -53,6 +49,18 @@ namespace hello::kit {
             release.assets.push_back(std::move(entry));
         }
         return release;
+    }
+
+    QUrl SoftwareRelease::pageOf(const QString &pageTemplate, const QString &tag) {
+        if (pageTemplate.isEmpty()) {
+            return {};
+        }
+        const auto encodedTag = QUrl::toPercentEncoding(tag).toStdString();
+        const auto page = stdc::str::varexp(pageTemplate.toStdString(),
+                                            [&encodedTag](const std::string_view &name) {
+                                                return name == "tag" ? encodedTag : std::string();
+                                            });
+        return QUrl(QString::fromStdString(page));
     }
 
     std::optional<QVersionNumber> SoftwareRelease::versionOfTag(const QString &tag) {

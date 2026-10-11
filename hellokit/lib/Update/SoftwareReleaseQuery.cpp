@@ -38,33 +38,24 @@ namespace hello::kit {
         abort();
     }
 
-    QUrl SoftwareReleaseQuery::latestReleaseUrl(SoftwareRelease::Host host,
-                                                const QString &repository) {
-        if (host == SoftwareRelease::Gitee) {
-            return QUrl(QStringLiteral("https://gitee.com/api/v5/repos/") + repository +
-                        QStringLiteral("/releases/latest"));
-        }
-        return QUrl(QStringLiteral("https://api.github.com/repos/") + repository +
-                    QStringLiteral("/releases/latest"));
-    }
-
-    void SoftwareReleaseQuery::start(SoftwareRelease::Host host, const QString &repository) {
+    bool SoftwareReleaseQuery::start(const QUrl &url, const QString &pageTemplate) {
         abort();
-        m_host = host;
-        m_repository = repository;
+        m_pageTemplate = pageTemplate;
         m_release.reset();
         m_errorString.clear();
+        if (!url.isValid() || url.scheme() != QLatin1String("https")) {
+            m_errorString = tr("The address %1 is not an HTTPS address.").arg(url.toString());
+            return false;
+        }
 
-        QNetworkRequest request(latestReleaseUrl(host, repository));
+        QNetworkRequest request(url);
         // GitHub rejects a request without a user agent.
         request.setHeader(QNetworkRequest::UserAgentHeader,
                           QCoreApplication::applicationName() + QLatin1Char('/') +
                               QCoreApplication::applicationVersion());
-        if (host == SoftwareRelease::GitHub) {
-            request.setRawHeader("Accept", "application/vnd.github+json");
-        }
         m_reply = m_manager->get(request);
         connect(m_reply, &QNetworkReply::finished, this, &SoftwareReleaseQuery::readReply);
+        return true;
     }
 
     void SoftwareReleaseQuery::abort() {
@@ -107,7 +98,7 @@ namespace hello::kit {
             if (error.error != QJsonParseError::NoError || !document.isObject()) {
                 m_errorString = tr("The server returned an invalid response.");
             } else {
-                m_release = SoftwareRelease::fromJson(document.object(), m_host, m_repository);
+                m_release = SoftwareRelease::fromJson(document.object(), m_pageTemplate);
                 if (!m_release) {
                     m_errorString = tr("The latest release does not name a version.");
                 }

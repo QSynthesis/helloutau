@@ -55,6 +55,9 @@ namespace hello::daw {
         QWidget *createWidget() override;
 
     private:
+        // Returns the source of the settings, or an empty string for the automatic selection if
+        // the update configuration has no source of that name
+        QString storedSource() const;
         void showLastCheck();
 
         AppSettings &m_settings;

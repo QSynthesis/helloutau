@@ -2361,6 +2361,26 @@ Trust and use them for rendering?</source>
         <translation>检查更新</translation>
     </message>
     <message>
+        <source>The file %1 lacks the prefix of the assets or the identifier of the installer.</source>
+        <translation>文件 %1 缺少附件前缀或安装包标识。</translation>
+    </message>
+    <message>
+        <source>A source in the file %1 has no name, or the name of another source.</source>
+        <translation>文件 %1 中有更新源没有名称，或与其他更新源同名。</translation>
+    </message>
+    <message>
+        <source>The source %1 in the file %2 has no HTTPS address.</source>
+        <translation>文件 %2 中的更新源 %1 没有 HTTPS 地址。</translation>
+    </message>
+    <message>
+        <source>The source %1 in the file %2 has the unknown territory code &quot;%3&quot;.</source>
+        <translation>文件 %2 中的更新源 %1 含有未知的地区代码「%3」。</translation>
+    </message>
+    <message>
+        <source>The file %1 lists no source.</source>
+        <translation>文件 %1 未列出任何更新源。</translation>
+    </message>
+    <message>
         <source>Cannot check for updates: %1</source>
         <translation>无法检查更新：%1</translation>
     </message>
@@ -2371,10 +2391,6 @@ Trust and use them for rendering?</source>
     <message>
         <source>The file %1 does not exist.</source>
         <translation>文件 %1 不存在。</translation>
-    </message>
-    <message>
-        <source>The file %1 lacks a repository or an identifier.</source>
-        <translation>文件 %1 缺少仓库或标识。</translation>
     </message>
 </context>
 <context>
@@ -2423,8 +2439,8 @@ Trust and use them for rendering?</source>
         <translation>更新源(&amp;S)：</translation>
     </message>
     <message>
-        <source>Automatic uses Gitee if the time zone of the system is in mainland China, and GitHub otherwise.</source>
-        <translation>选择「自动」时，系统时区位于中国大陆则使用 Gitee，否则使用 GitHub。</translation>
+        <source>Automatic selects a source by the time zone of the system.</source>
+        <translation>选择「自动」时，按系统时区选择更新源。</translation>
     </message>
     <message>
         <source>Check &amp;Now</source>
@@ -3676,6 +3692,10 @@ Write them again without these chunks? The audio stays the same. The files are w
 </context>
 <context>
     <name>hello::kit::SoftwareReleaseQuery</name>
+    <message>
+        <source>The address %1 is not an HTTPS address.</source>
+        <translation>地址 %1 不是 HTTPS 地址。</translation>
+    </message>
     <message>
         <source>No release has been published.</source>
         <translation>尚未发布任何版本。</translation>

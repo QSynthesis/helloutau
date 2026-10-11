@@ -39,8 +39,6 @@ namespace hello::daw {
         constexpr char KeyPitchControlVibratoPreset[] = "pitchControl/vibratoPreset";
         constexpr char KeyUstExportCharset[] = "files/ustExportCharset";
         constexpr char KeyUpdateSource[] = "updates/source";
-        constexpr char GitHubValue[] = "github";
-        constexpr char GiteeValue[] = "gitee";
         constexpr char KeyUpdateCheckAtStartup[] = "updates/checkAtStartup";
         constexpr char KeyLastUpdateCheck[] = "updates/lastCheck";
         constexpr char KeySkippedUpdateVersion[] = "updates/skippedVersion";
@@ -435,24 +433,15 @@ namespace hello::daw {
         impl.setValue(KeyUstExportCharset, charset.toStdString());
     }
 
-    AppSettings::UpdateSource AppSettings::updateSource() const {
+    QString AppSettings::updateSource() const {
         stdc_impl_t;
-        const auto value = impl.value(KeyUpdateSource).toString();
-        if (value == GitHubValue) {
-            return GitHubUpdateSource;
-        }
-        return value == GiteeValue ? GiteeUpdateSource : AutomaticUpdateSource;
+        return textOf(impl.value(KeyUpdateSource).toString());
     }
 
-    void AppSettings::setUpdateSource(UpdateSource source) {
+    void AppSettings::setUpdateSource(const QString &source) {
         stdc_impl_t;
-        json::Value value;
-        if (source == GitHubUpdateSource) {
-            value = std::string(GitHubValue);
-        } else if (source == GiteeUpdateSource) {
-            value = std::string(GiteeValue);
-        }
-        impl.setValue(KeyUpdateSource, std::move(value));
+        impl.setValue(KeyUpdateSource,
+                      source.isEmpty() ? json::Value() : json::Value(source.toStdString()));
     }
 
     bool AppSettings::isStartupUpdateCheckEnabled() const {

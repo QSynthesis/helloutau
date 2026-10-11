@@ -66,22 +66,22 @@ private Q_SLOTS:
         const auto time = QDateTime(QDate(2026, 10, 11), QTime(12, 30), QTimeZone::UTC);
         {
             AppSettings settings(file);
-            QCOMPARE(settings.updateSource(), AppSettings::AutomaticUpdateSource);
+            QVERIFY(settings.updateSource().isEmpty());
             QVERIFY(settings.isStartupUpdateCheckEnabled());
             QVERIFY(!settings.lastUpdateCheck().isValid());
             QVERIFY(settings.skippedUpdateVersion().isEmpty());
-            settings.setUpdateSource(AppSettings::GiteeUpdateSource);
+            settings.setUpdateSource(QStringLiteral("Mirror"));
             settings.setStartupUpdateCheckEnabled(false);
             settings.setLastUpdateCheck(time);
             settings.setSkippedUpdateVersion(QStringLiteral("0.1.7.0"));
         }
         {
             AppSettings settings(file);
-            QCOMPARE(settings.updateSource(), AppSettings::GiteeUpdateSource);
+            QCOMPARE(settings.updateSource(), QStringLiteral("Mirror"));
             QVERIFY(!settings.isStartupUpdateCheckEnabled());
             QCOMPARE(settings.lastUpdateCheck(), time);
             QCOMPARE(settings.skippedUpdateVersion(), QStringLiteral("0.1.7.0"));
-            settings.setUpdateSource(AppSettings::AutomaticUpdateSource);
+            settings.setUpdateSource(QString());
             settings.setSkippedUpdateVersion(QString());
             QVERIFY(settings.value(QStringLiteral("updates/source")).isUndefined());
             QVERIFY(settings.value(QStringLiteral("updates/skippedVersion")).isUndefined());

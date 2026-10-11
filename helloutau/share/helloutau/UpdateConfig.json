@@ -1,6 +1,16 @@
 {
-    "gitHubRepository": "QSynthesis/helloutau",
-    "giteeRepository": "functioner/helloutau",
     "assetPrefix": "helloutau",
-    "innoSetupAppId": "org.openvpi.helloutau"
+    "innoSetupAppId": "org.openvpi.helloutau",
+    "sources": [
+        {
+            "name": "GitHub",
+            "latestRelease": "https://api.github.com/repos/QSynthesis/helloutau/releases/latest"
+        },
+        {
+            "name": "Gitee",
+            "latestRelease": "https://gitee.com/api/v5/repos/functioner/helloutau/releases/latest",
+            "releasePage": "https://gitee.com/functioner/helloutau/releases/tag/${tag}",
+            "territories": ["CN"]
+        }
+    ]
 }
