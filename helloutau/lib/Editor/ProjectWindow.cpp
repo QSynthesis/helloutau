@@ -320,6 +320,9 @@ namespace hello::daw {
                                 ? std::optional(roll->timeline()->tempoMap().tickOf(*at))
                                 : std::nullopt);
                     }
+                    if (state == Playback::Paused && playback->isPreviewPaused()) {
+                        reportPreviewFailures();
+                    }
                     if (state == Playback::Stopped) {
                         previewing = false;
                         reportPreviewFailures();
@@ -1179,8 +1182,8 @@ namespace hello::daw {
         }
 
         // The notes a preview could not render, which played as silence, in the status bar, and
-        // their probable causes in a box. Called once the preview stops, so that the box does
-        // not interrupt playback.
+        // their probable causes in a box. Called once the preview stops or pauses, so that the
+        // box does not interrupt playback.
         void reportPreviewFailures() {
             stdc_decl_t;
             const auto failed = playback->takePreviewDiagnostics();

@@ -3529,6 +3529,39 @@ private Q_SLOTS:
         QTRY_COMPARE(playback->state(), Playback::Playing);
         QCOMPARE(runner->started.load(), 3);
     }
+
+    // In the realtime mode, pausing reports the notes that could not be rendered, as stopping
+    // does. The resampler of the project is a text file, which does not start.
+    void a_paused_preview_reports_its_failures() {
+        if (AudioEngine::instance()->sampleRate() <= 0) {
+            QSKIP("This machine has no audio output device.");
+        }
+        QTemporaryDir dir;
+        const auto e = editor();
+        const auto restore = qScopeGuard([&e] {
+            e->settings().rendering().setWavtool({});
+            e->settings().rendering().setResampler({});
+            e->settings().rendering().setPlaybackMode(RenderingSettings::Prerender);
+        });
+        e->settings().rendering().setPlaybackMode(RenderingSettings::Realtime);
+        const auto window = e->openFile(singingProject(dir, "preview.usth", e->settings()));
+        QVERIFY(window);
+        const auto playback = window->findChild<Playback *>();
+        QVERIFY(playback);
+        // A box of a failed check is closed, so that the test does not block on it.
+        const auto stop =
+            qScopeGuard([this, playback] { dialogsDuring([&] { playback->stop(); }); });
+        const auto play = declaredActionOf(*e, window, QStringLiteral("helloutau.playback.play"));
+        QVERIFY(play);
+
+        play->trigger();
+        QTRY_COMPARE(playback->state(), Playback::Playing);
+        QTRY_COMPARE(playback->pendingNotes(), 0);
+        QCOMPARE(dialogsDuring([&] { play->trigger(); }), QStringList{QStringLiteral("Message")});
+        QCOMPARE(playback->state(), Playback::Paused);
+        // The failures were reported once.
+        QVERIFY(dialogsDuring([&] { playback->stop(); }).isEmpty());
+    }
 };
 
 int main(int argc, char *argv[]) {
