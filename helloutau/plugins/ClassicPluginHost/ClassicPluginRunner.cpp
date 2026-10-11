@@ -19,6 +19,8 @@
 #  include <QtCore/QProcess>
 #endif
 
+#include <hellokit/Support/TemporaryStorage.h>
+
 #include "ClassicPlugin.h"
 
 namespace hello::daw {
@@ -90,8 +92,8 @@ namespace hello::daw {
 #endif
 
         bool writeInput(QString *error) {
-            directory = std::make_unique<QTemporaryDir>(QDir::tempPath() +
-                                                        QStringLiteral("/HelloUtau-XXXXXX"));
+            directory = std::make_unique<QTemporaryDir>(
+                kit::TemporaryStorage::templatePath(QStringLiteral("plugin")));
             if (!directory->isValid()) {
                 *error = directory->errorString();
                 return false;

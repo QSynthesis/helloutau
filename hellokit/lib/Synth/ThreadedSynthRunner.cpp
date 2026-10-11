@@ -11,6 +11,8 @@
 #include <QtCore/QThread>
 #include <QtCore/QThreadPool>
 
+#include <hellokit/Support/TemporaryStorage.h>
+
 #include "SynthToolProcess.h"
 #include "ClassicSynthRunner.h"
 
@@ -84,10 +86,10 @@ namespace hello::kit {
 
         // The scripts are generated even if no directory is given, so that a plan that the
         // classic strategy refuses is refused here as well. They are written only into a given
-        // directory, for the synth tools that read them.
-        std::error_code temporaryError;
+        // directory, for the synth tools that read them. Without one, the paths in the scripts
+        // name the temporary storage, and no directory is created.
         const auto directory =
-            scriptDirectory.empty() ? fs::temp_directory_path(temporaryError) : scriptDirectory;
+            scriptDirectory.empty() ? TemporaryStorage::location() : scriptDirectory;
         const auto scripts =
             ClassicSynthRunner().scriptFiles(directory, plan, synthTools, diagnostics);
         if (!scripts) {

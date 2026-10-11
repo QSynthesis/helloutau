@@ -6,9 +6,10 @@
 
 「用户目录」已实现（`AppSettings::userDirectory()`），不迁移旧位置中的内容（作者 2026-10-11 决定）。以 `--settings` 指定设置目录时，用户目录即该设置目录，使该目录自成一体，测试同样以此与真实的文档目录隔开。
 
+「临时目录管理器」已实现（`kit::TemporaryStorage`）。工程窗口、试合成、`ClassicPluginRunner` 与 `ClassicSynthRunner` 的临时目录都由它分配。`ThreadedSynthRunner` 在未指定脚本目录时不写出脚本，只以总目录作为脚本中的路径，不创建目录。
+
 其余均未实现，现行代码与本文的出入如下：
 
-- 临时目录现由各处自行分配：工程窗口与试合成使用 `QTemporaryDir`，`ClassicPluginRunner` 使用系统临时目录下的 `HelloUtau-XXXXXX`，`ClassicSynthRunner` 与 `ThreadedSynthRunner` 在未指定脚本目录时使用系统临时目录下的 `hellokit-<毫秒数>`。本文改为由临时目录管理器统一分配。
 - 发布物的打包脚本不在仓库中（`.cache/claude/tools/package_windows.ps1`），也没有安装包。
 
 ## 发布物
@@ -54,11 +55,11 @@
 
 ### 临时目录管理器
 
-所有临时文件都位于一个总目录之下，即 `QDir::tempPath()` 下的 `OpenVPI/HelloUtau`。卸载器因此只需删除这一个目录。
+所有临时文件都位于一个总目录之下，即 `QDir::tempPath()` 下的 `OpenVPI/HelloUtau`。卸载器因此只需删除这一个目录。总目录由 helloutau 在启动时指定，kit 中不出现应用的名称。
 
-- 管理器是 `HelloKitSupport` 中的一个类，不依赖 QtWidgets，hellokit 的合成运行器与 helloutau 的各窗口共用。它提供两种用法：返回总目录，或在总目录下分配一个唯一的子目录。子目录以对象表示，对象析构时删除该子目录，用法同 `QTemporaryDir`。
+- 管理器是 `HelloKitSupport` 中的 `TemporaryStorage`，不依赖 QtWidgets，hellokit 的合成运行器与 helloutau 的各窗口共用。应用像创建 `QCoreApplication` 一样创建它的唯一实例，以总目录为构造参数，各处以 `instance()` 取得。helloutau 的实例由 `AppLoader` 持有，在插件与各窗口之后析构。没有实例时，例如测试与命令行工具，临时目录照旧位于系统临时目录。它不另行实现临时目录，只提供会话目录中的模板路径，调用方以该模板构造 `QTemporaryDir` 或 `QTemporaryFile`，唯一的名称与析构时的删除都由 Qt 完成。
 - 每个进程在总目录下有一个会话目录，进程的所有子目录都分配在其中。会话目录中放一个 `QLockFile`，进程运行期间持有。能取得其锁的会话目录属于已退出的进程，管理器据此区分正在运行的进程与已退出的进程。
-- 进程正常退出时删除自己的会话目录。程序启动时不删除其他会话目录，因为崩溃的进程留下的文件是以后实现崩溃恢复的依据。已退出进程的会话目录何时删除，由崩溃恢复的设计决定。
+- 实例析构时删除自己的会话目录，进程正常退出时即如此。程序启动时不删除其他会话目录，因为崩溃的进程留下的文件是以后实现崩溃恢复的依据。已退出进程的会话目录何时删除，由崩溃恢复的设计决定。
 - 系统可能自行清理临时目录，例如 Windows 的存储感知。崩溃恢复若需要可靠保留的数据，应另行写入应用数据目录，不能只依赖临时目录。
 - 现有的五处临时目录（见「实现状态」）全部改为向管理器申请。合成运行器的 `scriptDirectory` 仍可由调用方指定，未指定时向管理器申请，而不是使用 `std::filesystem::temp_directory_path()`。
 

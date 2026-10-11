@@ -8,8 +8,9 @@
 #include <vector>
 
 #include <QtCore/QCoreApplication>
-#include <QtCore/QDateTime>
+#include <QtCore/QTemporaryDir>
 
+#include <hellokit/Support/TemporaryStorage.h>
 #include <hellokit/Support/TextCodec.h>
 
 #include "SynthToolProcess.h"
@@ -299,10 +300,15 @@ namespace hello::kit {
 
         auto directory = scriptDirectory;
         if (directory.empty()) {
-            std::error_code error;
-            directory =
-                fs::temp_directory_path(error) /
-                ("hellokit-" + QString::number(QDateTime::currentMSecsSinceEpoch()).toStdString());
+            QTemporaryDir created(TemporaryStorage::templatePath(QStringLiteral("render")));
+            if (!created.isValid()) {
+                fail(diagnostics, tr("The folder \"%1\" could not be created.")
+                                      .arg(displayed(TemporaryStorage::location())));
+                return outcome;
+            }
+            // Removed below after a successful render, and with the session otherwise
+            created.setAutoRemove(false);
+            directory = fs::path(created.path().toStdU16String());
         }
 
         const auto files = scriptFiles(directory, plan, synthTools, diagnostics);

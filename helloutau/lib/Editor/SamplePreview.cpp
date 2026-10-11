@@ -14,6 +14,7 @@
 
 #include <hellokit/Document/Project.h>
 #include <hellokit/Synth/SynthPlan.h>
+#include <hellokit/Support/TemporaryStorage.h>
 
 #include <helloutau/Audio/AudioEngine.h>
 #include <helloutau/Audio/AudioOutput.h>
@@ -267,7 +268,8 @@ namespace hello::daw {
             return false;
         }
         if (!impl.directory) {
-            impl.directory = std::make_shared<QTemporaryDir>();
+            impl.directory = std::make_shared<QTemporaryDir>(
+                kit::TemporaryStorage::templatePath(QStringLiteral("preview")));
         }
         auto job = std::make_shared<Job>();
         job->sample = sample;

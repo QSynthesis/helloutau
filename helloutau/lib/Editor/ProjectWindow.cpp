@@ -59,6 +59,7 @@
 #include <hellokit/Synth/ClassicSynthRunner.h>
 #include <hellokit/Synth/SynthToolProcess.h>
 #include <hellokit/Synth/ThreadedSynthRunner.h>
+#include <hellokit/Support/TemporaryStorage.h>
 
 #include <helloutau/Theme/ThemeManager.h>
 #include <helloutau/Widgets/ActionIconToggle.h>
@@ -254,7 +255,8 @@ namespace hello::daw {
         // Replaces the temporary directory of the window and returns its path, or an empty path
         // if it cannot be created, in which case Playback refuses to render.
         std::filesystem::path newTemporaryDirectory() {
-            temporaryDirectory.emplace();
+            temporaryDirectory.emplace(
+                kit::TemporaryStorage::templatePath(QStringLiteral("project")));
             return temporaryPath();
         }
 

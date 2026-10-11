@@ -16,6 +16,7 @@
 #include <stdcorelib/system.h>
 
 #include <hellokit/Support/SettingsFile.h>
+#include <hellokit/Support/TemporaryStorage.h>
 
 #include "AppSettings.h"
 #include "Editor.h"
@@ -32,6 +33,8 @@ namespace hello::daw {
 
     class AppLoader::Impl {
     public:
+        // Declared first, so that it is destroyed last, after the plugins and their windows
+        std::unique_ptr<kit::TemporaryStorage> temporaryStorage;
         stdc::pluginsystem::PluginSystem system{AppLoader::pluginIid,
                                                 stdc::pluginsystem::PluginSystem::Bundle};
         QStringList pluginPaths;
@@ -69,6 +72,14 @@ namespace hello::daw {
         stdc_impl_t;
         assert(!currentAppLoader);
         currentAppLoader = this;
+
+        // Every temporary file of the application in one directory, which the uninstaller
+        // removes. See docs/Distribution.md.
+        impl.temporaryStorage = std::make_unique<kit::TemporaryStorage>(std::filesystem::path(
+            QDir::cleanPath(QDir::tempPath() + QLatin1Char('/') +
+                            QCoreApplication::organizationName() + QLatin1Char('/') +
+                            QCoreApplication::applicationName())
+                .toStdU16String()));
 
         impl.pluginPaths.push_back(builtinPluginPath());
         impl.settingsDirectory = AppSettings::defaultDirectory();
