@@ -139,7 +139,7 @@ resampler / wavtool 的命令行参数由 `utau::ResamplerArguments::arguments()
 - 初始化表达式为指针时写 `auto name = ...`，不写 `auto *name = ...`。析构函数不写 `override`，头文件中被继承的类不写 `final`。
 - 命名空间结束处不添加注释。
 - 可能不存在结果的函数返回 `std::optional<T>`，不要使用「bool 加输出参数」，也不要用某个特定值表示「不存在」。
-- **常量使用小驼峰**，与变量相同，不要写成 `DefaultLyric` 这种形式。大驼峰仅用于类型和枚举成员。
+- **常量使用大驼峰，与枚举成员相同**，同 Qt 的写法（`QTimeZone::MinUtcOffsetSecs`、`QLocale::DefaultTwoDigitBaseYear`），写作 `DefaultLyric`，不写作 `defaultLyric`（作者 2026-10-11 决定）。类的静态常量成员与源文件中的局部常量都适用。名字由标准库或外部接口规定的成员除外，例如特化 `std::numeric_limits` 时的 `digits`。
 - **契约性常量定义在 `hellokit/Document/DocumentConstants.h`**，不要在使用处就地定义。默认歌词、音域、每拍 tick 数等值，编辑器新建的音符与导入器产出的音符必须一致，定义在两处必然导致二者在不知不觉中产生差异。**UTAU 规定的默认值不在此处重复定义**，stdutau 的 `utaconst.h` 已有定义，应从那里获取。
 - 前缀：仓库级 CMake 变量使用 `HELLO_`，模块级 CMake 变量与函数使用 `HELLOKIT_` / `hellokit_`、`HELLOUTAU_` / `helloutau_`，子库导出宏形如 `HELLOKIT_DOCUMENT_EXPORT`，头文件保护按 include 路径命名（`HELLOKIT_DOCUMENT_PAYLOADCODEC_H`）。**模块级前缀必须显式指定**，因为 `qm_setup_build_repo_helpers()` 默认取 `PROJECT_NAME`，而子目录中的 `PROJECT_NAME` 已是 `HelloKitDocument`。
 - **带 `Q_OBJECT` 的头文件必须加入目标的 `SOURCES`**，因为 AUTOMOC 只处理 `SOURCES`。位于 `include/` 下的头文件不会被源文件的 glob 匹配，遗漏时链接会缺少四个 moc 符号。

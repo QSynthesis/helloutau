@@ -85,6 +85,7 @@ helloutau/tools/driver/main.cpp                  ← 目标 helloutau
 - 类名及其他类型名使用大驼峰命名。
 - 函数名、参数名、变量名和命名空间使用小驼峰命名。表示二元操作左右两侧的 `LHS` 与 `RHS` 是仅有的全大写变量名例外。
 - 枚举成员使用大驼峰命名。
+- 常量使用大驼峰命名，与枚举成员相同，同 Qt 的写法，例如 `QTimeZone::MinUtcOffsetSecs`。类的静态常量成员（`static constexpr`）与源文件中的局部常量（`constexpr`）都适用。名字由标准库或外部接口规定的成员除外，例如特化 `std::numeric_limits` 时的 `digits`。
 - 类的私有数据成员使用 `m_` 前缀。PImpl 中相互关联的实现指针与声明对象指针是例外，使用与 stdcorelib 一致的 `_impl` 与 `_decl`。公有数据成员不使用前缀。
 - getter 使用所读取的属性名，例如 `value()`。
 - setter 使用 `set` 加属性名，例如 `setValue()`。
