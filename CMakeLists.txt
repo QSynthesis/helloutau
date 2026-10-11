@@ -59,6 +59,9 @@ set(HELLO_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
+# Sets the variable HELLO_TRIPLET, the triplet of the build such as x64-windows-msvc
+include(DetectTriplet)
+
 # ----------------------------------
 # Find basic dependencies
 # ----------------------------------
