@@ -16,19 +16,20 @@ class QTabWidget;
 
 namespace hello::daw {
 
-    /// Asks the user in which encodings to read the folders of a voice bank that nothing on disk
-    /// determines, all of them at once.
+    /// A dialog in which the user chooses, at once, the encodings of the folders of a voice bank
+    /// whose encoding no file on disk determines.
     ///
     /// The candidates are those of \c TextCodec::ustCandidates(), since a voice bank and a UST
-    /// pose the same problem. The folders are listed, each with its encoding, checked to be read;
-    /// choosing an encoding sets it for the folders selected, all of them at first. The encoding
-    /// that reads all folders best is selected at first, see TextCodec::ranked(), and a folder
-    /// that it cannot read without invalid bytes takes the one that reads it best. Each text file
-    /// of the current folder is shown in its encoding on a tab of its own, whose title counts
-    /// the byte sequences invalid in it, and the candidates that the folder does not read in
-    /// are grey. A folder left unchecked, or all of them when the dialog is declined, is left
-    /// out, and its samples are then found by file name only. See the section on choosing the
-    /// encoding in docs/Editing.md.
+    /// pose the same problem. The folders are listed, each with its encoding and checked to be
+    /// read. Choosing an encoding sets it for the selected folders, initially all of them. The
+    /// encoding with the fewest invalid byte sequences in all folders is initially selected, see
+    /// TextCodec::ranked(). A folder with invalid byte sequences in that encoding instead
+    /// receives the encoding with the fewest invalid byte sequences in that folder. Each text file
+    /// of the current folder is shown in its encoding on a tab of its own, whose title states
+    /// the number of invalid byte sequences, and the candidates in which the folder has invalid
+    /// byte sequences are grey. An unchecked folder, or every folder if the dialog is declined,
+    /// is left out, and its samples are then found by file name only. See the section on choosing
+    /// the encoding in docs/Editing.md.
     ///
     /// \sa setCurrentCharsets() for reading the folders of an open voice bank again.
     class HELLOUTAU_EDITOR_EXPORT VoiceBankCharsetDialog : public QDialog,

@@ -345,8 +345,8 @@ namespace hello::daw {
         m_down->setEnabled(entry && at.row() + 1 < panel.model->rowCount(at.parent()));
     }
 
-    // Asks for an action, a menu or a group of the registry of the current tab in a list that the
-    // user filters by its text, and adds it in its declared form.
+    // Shows a list in which the user chooses an action, a menu or a group of the registry of the
+    // current tab, filtered by its text, and adds the chosen item in its declared form.
     void MenusSettingPage::askAction() {
         const auto actions = registry(currentKind());
         QDialog dialog(m_tabs->window());

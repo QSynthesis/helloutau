@@ -580,8 +580,8 @@ private Q_SLOTS:
         QVERIFY(e->windows().isEmpty());
     }
 
-    // A file dropped on a window opens as by Open and asks whether modified changes may be
-    // discarded or saved.
+    // A file dropped on a window opens as by Open, after a message box in which the user saves or
+    // discards the modified changes.
     void a_dropped_file_opens_as_by_open() {
         const auto e = editor();
         const auto first = savedProject(m_dir, "drop1.usth");
@@ -933,7 +933,7 @@ private Q_SLOTS:
             return item->text() == QStringLiteral("More &Projects...");
         }));
 
-        // Clearing asks first, and Cancel keeps both kinds.
+        // Clearing requires a confirmation, and Cancel keeps both kinds.
         const auto answer = [](bool clear) {
             handleNextDialog<QMessageBox>([clear](QMessageBox *box) {
                 for (const auto button : box->buttons()) {
@@ -1462,7 +1462,8 @@ private Q_SLOTS:
         QVERIFY(remove->isEnabled());
         QVERIFY(split->isEnabled());
 
-        // Splitting proposes half the note on the grid, and asks for the first part.
+        // Splitting shows a dialog for the length of the first part, initially half the note on
+        // the grid.
         int proposed = 0;
         handleNextDialog<QInputDialog>([&proposed](QInputDialog *dialog) {
             proposed = dialog->intValue();
@@ -1491,8 +1492,8 @@ private Q_SLOTS:
         QCOMPARE(roll->quantization(), 60);
     }
 
-    // The window gives its piano roll, where plugins find the selection, and tells when a new
-    // document replaced it.
+    // The window returns its piano roll, which holds the selection for plugins, and emits a
+    // signal when a new document has replaced it.
     void the_piano_roll_is_replaced_with_the_document() {
         const auto e = editor();
         const auto window = e->newWindow();
@@ -1831,7 +1832,8 @@ private Q_SLOTS:
         QCOMPARE(e->voiceBankWindows().size(), 1);
     }
 
-    // An edit makes the voice bank modified; saving writes it, and closing asks first.
+    // An edit makes the voice bank modified. Saving writes it, and closing shows a message box
+    // first.
     void the_voice_bank_window_saves_and_asks_before_closing() {
         QTemporaryDir dir;
         const auto bank = voiceBank(dir);
@@ -2467,9 +2469,9 @@ private Q_SLOTS:
     }
 
     // A voice bank that is opened and checked against the disk without an edit is not
-    // modified, so that closing it asks nothing. The files of UTAU end their lines with CRLF,
-    // which a text box shows as LF, and the other lines of character.txt may be one empty line,
-    // which a text box shows as none. Neither counts as an edit of the panel.
+    // modified, so that closing it shows no message box. The files of UTAU end their lines with
+    // CRLF, which a text box shows as LF, and the other lines of character.txt may be one empty
+    // line, which a text box shows as none. Neither counts as an edit of the panel.
     void an_unedited_voice_bank_is_not_modified_data() {
         QTest::addColumn<QByteArray>("character");
         QTest::newRow("lines") << QByteArray("name=Voice\r\nimage=icon.png\r\n\r\nvoice: a\r\n");

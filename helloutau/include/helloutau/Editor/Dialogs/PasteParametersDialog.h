@@ -9,8 +9,9 @@ class QCheckBox;
 
 namespace hello::daw {
 
-    /// Asks which parameters of the copied notes to paste onto the selected ones (as the Paste
-    /// Parameters dialog of OpenUtau does). OK is disabled while none is chosen.
+    /// A dialog in which the user chooses the parameters of the copied notes to paste onto the
+    /// selected notes, as in the Paste Parameters dialog of OpenUtau. OK is disabled while no
+    /// parameter is chosen.
     class HELLOUTAU_EDITOR_EXPORT PasteParametersDialog : public QDialog {
         Q_OBJECT
     public:

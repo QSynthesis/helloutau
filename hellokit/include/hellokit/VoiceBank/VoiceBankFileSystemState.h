@@ -80,8 +80,8 @@ namespace hello::kit {
         /// are unchanged: one marked by rememberCharset(), or read again by reread().
         ///
         /// Such a voice bank is unsaved even though nothing in it was edited. An editor that
-        /// holds the saved state asks after opening. See the section on the saved state in
-        /// docs/Editing.md.
+        /// holds the saved state marks it unsaved after opening. See the section on the saved
+        /// state in docs/Editing.md.
         bool hasUnrecordedCharsets() const;
 
         /// Saves every file of \a bank that differs from the state in which it was read, each in

@@ -447,9 +447,9 @@ namespace hello::daw {
         m_reset->setEnabled(command && shortcuts(*command) != defaultsOf(*command));
     }
 
-    // Asks for a shortcut of the current command in a dialog that lists the commands of the same
-    // kind of window that already have it, and adds it, after asking whether to remove it from
-    // them.
+    // Shows a dialog in which the user enters a shortcut for the current command, and adds it. The
+    // dialog lists the commands of the same kind of window that already have the shortcut, and
+    // the user confirms removing it from them first.
     void KeymapSettingPage::askShortcut() {
         const auto command = currentCommand();
         if (!command) {

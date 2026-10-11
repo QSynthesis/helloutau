@@ -68,7 +68,8 @@ namespace hello::daw {
         QList<bool> m_edited;
     };
 
-    /// Asks the tempo of a note: a value in BPM, or none to follow the tempo before it.
+    /// A dialog in which the user enters the tempo of a note: a value in BPM, or none to follow
+    /// the preceding tempo.
     class HELLOUTAU_EDITOR_EXPORT TempoDialog : public QDialog {
         Q_OBJECT
     public:

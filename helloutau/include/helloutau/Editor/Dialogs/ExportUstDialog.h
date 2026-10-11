@@ -12,7 +12,7 @@ class QLineEdit;
 
 namespace hello::daw {
 
-    /// Asks where to export a UST and in which encoding.
+    /// A dialog in which the user chooses the destination of an exported UST and its encoding.
     class HELLOUTAU_EDITOR_EXPORT ExportUstDialog : public QDialog {
         Q_OBJECT
     public:

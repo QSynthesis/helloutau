@@ -9,8 +9,8 @@ class QDoubleSpinBox;
 
 namespace hello::daw {
 
-    /// Asks the factors, in percent, by which to scale the heights of the pitch points and the
-    /// depth of the vibrato of the selected notes. Both start at 100%.
+    /// A dialog in which the user enters the factors, in percent, that scale the heights of the
+    /// pitch points and the depth of the vibrato of the selected notes. Both are initially 100%.
     class HELLOUTAU_EDITOR_EXPORT ScalePitchDialog : public QDialog {
         Q_OBJECT
     public:

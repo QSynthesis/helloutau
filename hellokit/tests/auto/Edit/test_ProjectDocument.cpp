@@ -320,8 +320,8 @@ private Q_SLOTS:
         QVERIFY(bytes.contains("VoiceDir=changed\r\n"));
     }
 
-    // The encoding chosen for a directory is recorded at once, so the next load asks nothing,
-    // and no other file of the voice bank is written.
+    // The encoding chosen for a directory is recorded at once, so the next load queries no
+    // selector, and no other file of the voice bank is written.
     void the_voice_bank_is_read_and_the_chosen_encoding_recorded() {
         QTemporaryDir dir;
         const auto utau = utauWithVoiceBank(dir);

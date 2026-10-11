@@ -19,7 +19,7 @@ namespace hello::kit {
     /// application calls launchAll().
     ///
     /// The instance also records whether an applied setting takes effect only after a restart,
-    /// such as the language, so that the application asks the user whether to restart now.
+    /// such as the language, so that the application offers the user a restart.
     class HELLOKIT_SUPPORT_EXPORT ExitLauncher {
     public:
         /// Creates the launcher. scheduleRestart() starts the program with \a restartArguments,

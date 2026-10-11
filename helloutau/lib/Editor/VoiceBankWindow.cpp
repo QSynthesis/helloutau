@@ -1322,8 +1322,9 @@ namespace hello::daw {
             return {};
         }
 
-        // Asks for an encoding of the folder of the context menu of the tree, or else the one
-        // chosen there, and converts the folder to it or reads the folder again in it.
+        // Shows a list in which the user chooses an encoding for the folder of the context menu of
+        // the tree, or else for the folder chosen in the tree, and converts the folder to the
+        // encoding or reads the folder again in it.
         void askCharset(bool reread) {
             stdc_decl_t;
             std::filesystem::path folder;
@@ -1428,7 +1429,7 @@ namespace hello::daw {
             }
         }
 
-        // The spectrogram of the audio shown, while the View menu asks for it
+        // The spectrogram of the audio shown, while the command of the View menu is checked
         void showSpectrum() {
             const auto audio = waveform->audio();
             const bool shown =
@@ -1803,8 +1804,8 @@ namespace hello::daw {
             actions.value(QStringLiteral("helloutau.edit.redo"))->setEnabled(session->canRedo());
         }
 
-        // Asks whether to save a modified voice bank before it is closed. Returns whether
-        // closing may proceed.
+        // Shows a message box in which the user saves or discards a modified voice bank before it
+        // is closed. Returns whether closing may proceed.
         bool maybeSave() {
             stdc_decl_t;
             info->commit();

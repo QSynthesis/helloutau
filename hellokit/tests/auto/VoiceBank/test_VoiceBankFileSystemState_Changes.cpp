@@ -250,8 +250,8 @@ private Q_SLOTS:
         QCOMPARE(found.audio, QList<fs::path>{fs::path()});
         write(QStringLiteral("oto.ini"), "a.wav=changed,1,2,3,4,5\r\n");
 
-        // Dated back, so that the stamp alone decides and no comparison by content hides a
-        // stamp taken wrongly.
+        // Dated back, so that the stamp alone determines the result and no comparison by content
+        // hides a stamp taken wrongly.
         QFile oto(pathOf(QStringLiteral("oto.ini")));
         QVERIFY(oto.open(QIODevice::ReadWrite));
         QVERIFY(oto.setFileTime(QDateTime::currentDateTime().addSecs(-3600),
@@ -348,7 +348,7 @@ private Q_SLOTS:
     }
 
     // Changed on disk and modified in memory: two versions, between which the user must
-    // choose. Nothing here decides on the user's behalf, and a reload represents choosing the
+    // choose. No version is chosen on the user's behalf, and a reload represents choosing the
     // version on disk.
     void a_change_on_disk_leaves_one_not_saved_alone_until_the_user_chooses() {
         write(QStringLiteral("oto.ini"), "a.wav=a,1,2,3,4,5\r\n");

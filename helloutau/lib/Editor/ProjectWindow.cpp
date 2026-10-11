@@ -741,11 +741,11 @@ namespace hello::daw {
         }
 
         // Returns the synth tools of the project, the wavtool and the resampler, if both exist and
-        // may run, in every playback mode: the realtime preview runs no wavtool, but Render
-        // Track does. Returns std::nullopt otherwise. If title is given, reports a synth tool that
-        // does not exist in a message box with that title and asks the user to trust the
-        // synth tools that are not trusted. Without a title, asks and reports nothing, as for the
-        // render in the background.
+        // may run, in every playback mode. The realtime preview runs no wavtool, but Render Track
+        // does. Returns std::nullopt otherwise. If title is given, reports a synth tool that does
+        // not exist in a message box with that title, and offers the user to trust the synth
+        // tools that are not trusted. Without a title, shows nothing, as for the render in the
+        // background.
         std::optional<kit::SynthTools> projectSynthTools(const QString &title = {}) {
             stdc_decl_t;
             auto &settings = editor->settings();
@@ -2365,8 +2365,8 @@ namespace hello::daw {
             editor->fillRecentMenu(recentMenu, &decl);
         }
 
-        // Asks whether to save a modified project before it is closed. Returns whether closing
-        // may proceed.
+        // Shows a message box in which the user saves or discards a modified project before it
+        // is closed. Returns whether closing may proceed.
         bool maybeSave() {
             stdc_decl_t;
             if (!document->isModified()) {

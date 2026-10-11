@@ -125,7 +125,7 @@ namespace hello::daw {
         /// not respond, the second press is delivered to press() as well.
         virtual bool doubleClick(const SceneHit &hit, QPointF position);
 
-        /// Asks the view to draw the layer again.
+        /// Schedules the view to draw the layer again.
         void update();
 
     private:

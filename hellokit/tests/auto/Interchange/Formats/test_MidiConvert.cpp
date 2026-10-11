@@ -117,7 +117,7 @@ private Q_SLOTS:
     }
 
     // The silence before the first note exists in the file, so it is translated rather than
-    // trimmed. The caller that inserts the notes decides whether to keep it.
+    // trimmed. The caller that inserts the notes determines whether it is kept.
     void silence_before_the_first_note_becomes_a_rest() {
         TempMidi file("lead");
         file.note(192, 288, 64);

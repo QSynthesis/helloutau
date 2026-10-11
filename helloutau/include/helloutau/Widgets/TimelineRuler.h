@@ -95,7 +95,7 @@ namespace hello::daw {
 
     Q_SIGNALS:
         /// The left button was pressed at \a tick, or moved there while held, with
-        /// \a modifiers: a request to move the playhead, which the owner of the ruler decides.
+        /// \a modifiers: a request to move the playhead, which the owner of the ruler handles.
         void positionPressed(double tick, Qt::KeyboardModifiers modifiers);
 
         /// Mark \a index of marks() was double-clicked on its text.

@@ -86,7 +86,7 @@ namespace hello::kit {
 
         /// Returns whether the voice bank on disk is incomplete: its root was found missing by
         /// checkDisk(), or no longer read when read again by reloadFromDisk(). The tree is then
-        /// the only intact copy, and an editor tells the user prominently. Saving writes it back,
+        /// the only intact copy, and an editor indicates this prominently. Saving writes it back,
         /// and saveAs() writes it elsewhere, either of which makes the voice bank complete again.
         /// See the section on an incomplete voice bank in docs/Editing.md.
         bool isIncomplete() const;

@@ -252,8 +252,8 @@ private Q_SLOTS:
         QVERIFY(at(81).red() > 200);
     }
 
-    // Zooming keeps the time under the pointer; a double click off the boundaries asks to
-    // play from there.
+    // Zooming keeps the time under the pointer. A double click off the boundaries requests
+    // playback from there.
     void the_view_zooms_about_the_pointer() {
         OtoWaveformView view;
         show(view);

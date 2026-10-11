@@ -45,10 +45,10 @@ namespace hello::daw {
         static bool isAllowed(const AppSettings &settings, const QString &value,
                               const std::filesystem::path &utau);
 
-        /// Asks the user in one message box whether to trust those of the synth tools \a values
+        /// Shows one message box in which the user trusts or declines the synth tools of \a values
         /// that exist and are not allowed, and records the trust if the user agrees. Returns
         /// whether every synth tool of \a values is allowed afterwards. Returns \c false without
-        /// asking if a synth tool does not exist.
+        /// the message box if a synth tool does not exist.
         static bool ask(QWidget *parent, AppSettings &settings, const QStringList &values,
                         const std::filesystem::path &utau);
 

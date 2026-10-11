@@ -12,12 +12,13 @@ class QPlainTextEdit;
 
 namespace hello::daw {
 
-    /// Asks the user in which encoding to read a UST that does not state it.
+    /// A dialog in which the user chooses the encoding of a UST that declares none.
     ///
     /// The candidates are those of \c TextCodec::ustCandidates(). The text of the file is
-    /// previewed in the selected encoding, so that the user can recognize the right one. The
-    /// encoding that reads it best is selected at first, see TextCodec::ranked(), and those that
-    /// cannot read it are grey.
+    /// previewed in the selected encoding, so that the user can recognize the correct encoding.
+    /// The encoding with the fewest invalid byte sequences is initially selected, see
+    /// TextCodec::ranked(), and the encodings in which the file has invalid byte sequences are
+    /// grey.
     class HELLOUTAU_EDITOR_EXPORT UstCharsetDialog : public QDialog,
                                                      public kit::UstCharsetSelector {
         Q_OBJECT

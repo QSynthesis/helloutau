@@ -660,8 +660,9 @@ private Q_SLOTS:
         QCOMPARE(lyricsOf(session), QStringLiteral("R R li"));
     }
 
-    // A double click on a tempo mark of the ruler asks for the tempo of its note, and so does
-    // Set Tempo Here in the menu of the ruler; Remove Tempo Mark clears the tempo of the note.
+    // A double click on a tempo mark of the ruler requests the tempo dialog for its note, and so
+    // does Set Tempo Here in the menu of the ruler. Remove Tempo Mark clears the tempo of the
+    // note.
     void the_ruler_asks_for_the_tempo_of_a_note() {
         kit::ProjectSession session(threeNotes());
         PianoRoll roll(&session);
@@ -756,8 +757,8 @@ private Q_SLOTS:
 
     // The label of la and the region V from li to lu, ended by $region_end of lu, are sections
     // of the ruler: the region outlined, the label filled. Clicking one selects its notes and
-    // highlights its border. A double click asks to edit it; loading the region selects its notes
-    // and scrolls to it with a tenth of the view before it.
+    // highlights its border. A double click requests editing it. Loading the region selects its
+    // notes and scrolls to it with a tenth of the view before it.
     void labels_and_regions_are_on_the_ruler() {
         kit::Project project;
         project.settings.tempo = 120;

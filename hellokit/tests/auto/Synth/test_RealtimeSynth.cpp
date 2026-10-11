@@ -324,7 +324,8 @@ private Q_SLOTS:
         QCOMPARE(rendered(), (QList<int>{0, 1, 2, 4, 2}));
     }
 
-    // Each note tells how far its fragment has come, and the rest that it has none.
+    // The state of each note records the progress of its fragment, and the state of a rest
+    // records that the rest has no fragment.
     void each_note_tells_how_far_it_is_rendered() {
         using S = RealtimeSynth;
         const auto plan = planOf(fiveNotes());

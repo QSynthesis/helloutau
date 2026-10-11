@@ -39,9 +39,9 @@ namespace hello::daw {
             return QDir::toNativeSeparators(QString::fromStdU16String(path.u16string()));
         }
 
-        // Asks the user to approve a program that has not run before or has changed since its
-        // last run, and returns whether the program is approved. Without a loader, which stores
-        // the answers, the user is asked each time.
+        // Shows a message box in which the user approves a program that has not run before or has
+        // changed since its last run, and returns whether the program is approved. Without a
+        // loader, which stores the approvals, the message box is shown each time.
         bool approve(QWidget *parent, const ClassicPlugin &plugin) {
             namespace json = stdc::json;
             using A = ClassicPluginApproval;

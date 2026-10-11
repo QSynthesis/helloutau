@@ -81,14 +81,14 @@ namespace hello::daw {
         /// and selects its row, clearing the search. Returns whether one was found.
         bool showEntryFor(int noteNum, const QString &lyric);
 
-        /// Compares the voice bank with the disk now, as the window does on its own when a file
+        /// Compares the voice bank with the disk now. The window also compares them when a file
         /// changes, when it is activated and every minute (Editor::watchesDisk()). See the disk
-        /// changes in docs/VoiceBankEditor.md:
-        /// - a changed text file or a removed folder asks whether to read it again, as one undo
-        ///   step; declined, the same change is listed in changeBar() instead, and asked about
-        ///   again only once the file changes again;
-        /// - an audio file added or removed is taken at once, as no undo step;
-        /// - a new folder, and a root that no longer exists, are listed in changeBar().
+        /// changes in docs/VoiceBankEditor.md.
+        /// - For a changed text file or a removed folder, a message box offers to read it again,
+        ///   as one undo step. If the user declines, the change is listed in changeBar() instead,
+        ///   and offered again only after the file changes again.
+        /// - An added or removed audio file is taken at once, as no undo step.
+        /// - A new folder, and a root that no longer exists, are listed in changeBar().
         void checkDisk();
 
         /// The bar above the table that lists the changes on disk not read, with the buttons
@@ -107,10 +107,11 @@ namespace hello::daw {
         /// edits it there from now on.
         bool saveAs();
 
-        /// Asks for an audio file of the folder of the current row, or of the folder chosen in
-        /// the tree, and inserts an entry for it with zero values, whose alias the table then
-        /// edits. The alias is empty, which counts as the stem of the file name, unless another
-        /// entry of the file has that name; then the stem with the first free number.
+        /// Shows a file dialog for an audio file of the folder of the current row, or of the
+        /// folder chosen in the tree, and inserts an entry for the file with zero values, whose
+        /// alias is then edited in the table. The alias is empty, which counts as the stem of the
+        /// file name, unless another entry of the file has that alias. In that case the alias is
+        /// the stem with the first free number.
         bool insertEntry();
 
         /// Inserts a copy of each selected entry beside it, its alias followed by the first
@@ -153,9 +154,9 @@ namespace hello::daw {
         /// \overload for the folders and encodings of \a charsets , without the dialog.
         bool rereadCharsets(const QList<std::pair<std::filesystem::path, QString>> &charsets);
 
-        /// Lists the audio files of the folders that carry metadata, see kit::WaveMetadata, and
-        /// asks whether to write them again without it. The files are written at once, which
-        /// no undo reverts.
+        /// Lists the audio files of the folders that contain metadata, see kit::WaveMetadata, in
+        /// a message box in which the user confirms writing them again without it. The files are
+        /// written at once, and no undo reverts the writing.
         ///
         /// \return the number of files written, or \c std::nullopt if the user declined or no
         ///         file carries metadata

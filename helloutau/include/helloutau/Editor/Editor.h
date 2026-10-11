@@ -202,9 +202,9 @@ namespace hello::daw {
         /// A project opens in \a from if \a from is an unused project window.
         void fillRecentMenu(QMenu *menu, QWidget *from);
 
-        /// Asks over \a from whether to forget every recent project and voice bank, as "Clear
-        /// Recently Opened..." of VS Code asks, and forgets them if the user confirms. Returns
-        /// whether they were forgotten.
+        /// Shows a confirmation over \a from, as "Clear Recently Opened..." of VS Code does, and
+        /// forgets every recent project and voice bank if the user confirms. Returns whether they
+        /// were forgotten.
         bool clearRecent(QWidget *from);
 
         /// The kind of recent items that showRecent() lists
@@ -226,8 +226,8 @@ namespace hello::daw {
         /// offers a restart if an applied setting requires one (offerRestart()).
         void showSettings(QWidget *from, const QString &page = {});
 
-        /// Asks the user over \a parent whether to restart now, if an applied setting takes
-        /// effect only after a restart (kit::ExitLauncher::isRestartRequired()). If the user
+        /// Offers the user a restart over \a parent, if an applied setting takes effect only
+        /// after a restart (kit::ExitLauncher::isRestartRequired()). If the user
         /// agrees, closes every window as quitting does (closeAll()), and if all close, schedules
         /// the restart (kit::ExitLauncher::scheduleRestart()) and quits the application. Without
         /// an instance of kit::ExitLauncher, no restart is offered.
