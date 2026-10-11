@@ -93,7 +93,7 @@ namespace hello::kit {
                     { Text::tr("A path contains characters that the code page of the system "
                                "cannot represent."),
                      Text::tr("A synth tool that reads its arguments in the code page of the "
-                               "system receives question marks in place of these characters and "
+                               "system receives these characters as substitute characters, and "
                                "therefore cannot open the file. The path is %1.")
                           .arg(example),
                      {Text::tr("Move the voice bank, the project or the cache folder to a path "

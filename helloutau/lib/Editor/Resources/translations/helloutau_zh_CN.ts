@@ -3148,8 +3148,8 @@ Write them again without these chunks? The audio stays the same. The files are w
         <translation>路径中含有系统代码页无法表示的字符。</translation>
     </message>
     <message>
-        <source>A synth tool that reads its arguments in the code page of the system receives question marks in place of these characters and therefore cannot open the file. The path is %1.</source>
-        <translation>以系统代码页读取参数的合成工具收到的参数中，这些字符会变成问号，因而无法打开文件。该路径为 %1。</translation>
+        <source>A synth tool that reads its arguments in the code page of the system receives these characters as substitute characters, and therefore cannot open the file. The path is %1.</source>
+        <translation>以系统代码页读取参数的合成工具收到的参数中，这些字符被替换为替代字符，因而无法打开文件。该路径为 %1。</translation>
     </message>
     <message>
         <source>Move the voice bank, the project or the cache folder to a path without these characters.</source>
