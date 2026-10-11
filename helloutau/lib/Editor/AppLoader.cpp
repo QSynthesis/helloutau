@@ -203,7 +203,7 @@ namespace hello::daw {
         return impl.pluginSettings;
     }
 
-    void AppLoader::changePluginSettings(
+    void AppLoader::updatePluginSettings(
         const std::function<void(stdc::pluginsystem::PluginSettings &settings)> &change) {
         stdc_impl_t;
         change(impl.pluginSettings);

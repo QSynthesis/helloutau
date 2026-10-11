@@ -70,7 +70,7 @@ namespace hello::daw {
                 return false;
             }
             if (loader) {
-                loader->changePluginSettings([&](stdc::pluginsystem::PluginSettings &settings) {
+                loader->updatePluginSettings([&](stdc::pluginsystem::PluginSettings &settings) {
                     kit::JsonInterop::insertAt(settings.userData(), A::userDataPath,
                                                json::Value(A::approved(records, plugin)));
                 });

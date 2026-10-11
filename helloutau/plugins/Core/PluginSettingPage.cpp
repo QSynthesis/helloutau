@@ -182,7 +182,7 @@ namespace hello::daw {
     // plugins.json records only the plugins that the user changed.
     bool PluginSettingPage::apply(QString *error) {
         Q_UNUSED(error);
-        m_loader.changePluginSettings([this](stdc::pluginsystem::PluginSettings &settings) {
+        m_loader.updatePluginSettings([this](stdc::pluginsystem::PluginSettings &settings) {
             for (int row = 0; row < int(m_plugins.size()); ++row) {
                 const auto spec = m_plugins[size_t(row)];
                 if (isCore(spec)) {

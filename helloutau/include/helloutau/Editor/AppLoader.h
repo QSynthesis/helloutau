@@ -122,10 +122,10 @@ namespace hello::daw {
         /// Returns the settings of the plugins.
         const stdc::pluginsystem::PluginSettings &pluginSettings() const;
 
-        /// Changes the settings of the plugins with \a change, and writes the file once the
+        /// Updates the settings of the plugins with \a change, and writes the file once the
         /// event loop runs, or at the destruction of the loader. The running plugins are
         /// unaffected, and a changed choice of the user takes effect at the next start.
-        void changePluginSettings(
+        void updatePluginSettings(
             const std::function<void(stdc::pluginsystem::PluginSettings &settings)> &change);
         /// @}
 

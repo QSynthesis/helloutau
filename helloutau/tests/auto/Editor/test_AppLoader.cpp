@@ -48,14 +48,14 @@ namespace {
 
     /// Replaces the value at \a path in the values of the plugins, as a plugin writes it.
     void setPluginValue(AppLoader &loader, std::string_view path, json::Value value) {
-        loader.changePluginSettings([&](stdc::pluginsystem::PluginSettings &settings) {
+        loader.updatePluginSettings([&](stdc::pluginsystem::PluginSettings &settings) {
             kit::JsonInterop::insertAt(settings.userData(), path, std::move(value));
         });
     }
 
     /// Records the choice of the user for the plugin \a id, as the Plugins page does.
     void setPluginEnabled(AppLoader &loader, const std::string &id, std::optional<bool> enabled) {
-        loader.changePluginSettings([&](stdc::pluginsystem::PluginSettings &settings) {
+        loader.updatePluginSettings([&](stdc::pluginsystem::PluginSettings &settings) {
             settings.setPluginEnabled(id, enabled);
         });
     }
