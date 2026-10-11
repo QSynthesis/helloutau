@@ -2367,62 +2367,12 @@ Trust and use them for rendering?</source>
         <translation>无法读取更新配置：%1</translation>
     </message>
     <message>
-        <source>Checking for updates...</source>
-        <translation>正在检查更新...</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>取消</translation>
-    </message>
-    <message>
         <source>Check for Updates</source>
         <translation>检查更新</translation>
     </message>
     <message>
-        <source>Downloading %1...</source>
-        <translation>正在下载 %1...</translation>
-    </message>
-    <message>
-        <source>Download Update</source>
-        <translation>下载更新</translation>
-    </message>
-    <message>
-        <source>Cannot download the update: %1</source>
-        <translation>无法下载更新：%1</translation>
-    </message>
-    <message>
-        <source>The update has been downloaded and verified:
-%1</source>
-        <translation>更新已下载并通过校验：
-%1</translation>
-    </message>
-    <message>
-        <source>Show in Folder</source>
-        <translation>在文件夹中显示</translation>
-    </message>
-    <message>
         <source>Install Update</source>
         <translation>安装更新</translation>
-    </message>
-    <message>
-        <source>%1 %2 has been downloaded and verified.</source>
-        <translation>%1 %2 已下载并通过校验。</translation>
-    </message>
-    <message>
-        <source>Install Now closes %1 and starts it again after the update. Install on Quit installs the update when %1 quits.</source>
-        <translation>「立即安装」会关闭 %1，并在更新后重新启动。「退出时安装」会在 %1 退出时安装更新。</translation>
-    </message>
-    <message>
-        <source>Install &amp;Now</source>
-        <translation>立即安装(&amp;N)</translation>
-    </message>
-    <message>
-        <source>Install on &amp;Quit</source>
-        <translation>退出时安装(&amp;Q)</translation>
-    </message>
-    <message>
-        <source>&amp;Later</source>
-        <translation>稍后(&amp;L)</translation>
     </message>
     <message>
         <source>The file %1 lacks the prefix of the assets or the identifier of the installer.</source>
@@ -2453,14 +2403,6 @@ Trust and use them for rendering?</source>
         <translation>打开下载页面</translation>
     </message>
     <message>
-        <source>Cannot check for updates: %1</source>
-        <translation>无法检查更新：%1</translation>
-    </message>
-    <message>
-        <source>%1 %2 is the latest version.</source>
-        <translation>%1 %2 已是最新版本。</translation>
-    </message>
-    <message>
         <source>The file %1 does not exist.</source>
         <translation>文件 %1 不存在。</translation>
     </message>
@@ -2468,24 +2410,8 @@ Trust and use them for rendering?</source>
 <context>
     <name>hello::daw::UpdateDialog</name>
     <message>
-        <source>Update Available</source>
-        <translation>有可用的更新</translation>
-    </message>
-    <message>
-        <source>%1 %2 is available. The current version is %3.</source>
-        <translation>%1 %2 已发布，当前版本为 %3。</translation>
-    </message>
-    <message>
-        <source>&amp;Download</source>
-        <translation>下载(&amp;D)</translation>
-    </message>
-    <message>
-        <source>&amp;Skip This Version</source>
-        <translation>跳过此版本(&amp;S)</translation>
-    </message>
-    <message>
-        <source>Remind Me &amp;Later</source>
-        <translation>稍后提醒(&amp;L)</translation>
+        <source>Updates</source>
+        <translation>更新</translation>
     </message>
 </context>
 <context>
@@ -2549,6 +2475,124 @@ Automatic: updates are checked at startup as well, and a new version is download
     <message>
         <source>never</source>
         <translation>从未检查</translation>
+    </message>
+</context>
+<context>
+    <name>hello::daw::UpdateTask</name>
+    <message>
+        <source>Cannot check for updates: %1</source>
+        <translation>无法检查更新：%1</translation>
+    </message>
+    <message>
+        <source>Cannot download the update: %1</source>
+        <translation>无法下载更新：%1</translation>
+    </message>
+    <message>
+        <source>Cannot extract the update: %1</source>
+        <translation>无法解压更新：%1</translation>
+    </message>
+    <message>
+        <source>The folder that contains %1 cannot be written, so that the update cannot be installed there. Download the new version from the page of the release.</source>
+        <translation>无法写入包含 %1 的文件夹，因此无法在此安装更新。请从发布页面下载新版本。</translation>
+    </message>
+</context>
+<context>
+    <name>hello::daw::UpdateTaskView</name>
+    <message>
+        <source>&amp;Download and Install</source>
+        <translation>下载并安装(&amp;D)</translation>
+    </message>
+    <message>
+        <source>&amp;Skip This Version</source>
+        <translation>跳过此版本(&amp;S)</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>取消</translation>
+    </message>
+    <message>
+        <source>Run in &amp;Background</source>
+        <translation>在后台运行(&amp;B)</translation>
+    </message>
+    <message>
+        <source>Install &amp;Now</source>
+        <translation>立即安装(&amp;N)</translation>
+    </message>
+    <message>
+        <source>Install on &amp;Quit</source>
+        <translation>退出时安装(&amp;Q)</translation>
+    </message>
+    <message>
+        <source>&amp;Discard Update</source>
+        <translation>舍弃更新(&amp;D)</translation>
+    </message>
+    <message>
+        <source>&amp;Retry</source>
+        <translation>重试(&amp;R)</translation>
+    </message>
+    <message>
+        <source>Check &amp;Again</source>
+        <translation>再次检查(&amp;A)</translation>
+    </message>
+    <message>
+        <source>Open Release &amp;Page</source>
+        <translation>打开发布页面(&amp;P)</translation>
+    </message>
+    <message>
+        <source>&amp;Close</source>
+        <translation>关闭(&amp;C)</translation>
+    </message>
+    <message>
+        <source>When %1 quits</source>
+        <translation>%1 退出时</translation>
+    </message>
+    <message>
+        <source>Cancel Installation</source>
+        <translation>取消安装</translation>
+    </message>
+    <message>
+        <source>Cancel Restart</source>
+        <translation>取消重启</translation>
+    </message>
+    <message>
+        <source>Updates have not been checked.</source>
+        <translation>尚未检查更新。</translation>
+    </message>
+    <message>
+        <source>Checking for updates...</source>
+        <translation>正在检查更新...</translation>
+    </message>
+    <message>
+        <source>%1 %2 is the latest version.</source>
+        <translation>%1 %2 已是最新版本。</translation>
+    </message>
+    <message>
+        <source>%1 %2 is available. The current version is %3.</source>
+        <translation>%1 %2 已发布，当前版本为 %3。</translation>
+    </message>
+    <message>
+        <source>Downloading and verifying %1 %2...</source>
+        <translation>正在下载并校验 %1 %2...</translation>
+    </message>
+    <message>
+        <source>Extracting %1 %2...</source>
+        <translation>正在解压 %1 %2...</translation>
+    </message>
+    <message>
+        <source>%1 %2 will be installed when %1 quits.</source>
+        <translation>%1 %2 将在 %1 退出时安装。</translation>
+    </message>
+    <message>
+        <source>%1 %2 is ready to be installed.</source>
+        <translation>%1 %2 已准备好安装。</translation>
+    </message>
+    <message>
+        <source>Install %1 %2</source>
+        <translation>安装 %1 %2</translation>
+    </message>
+    <message>
+        <source>Restart %1</source>
+        <translation>重启 %1</translation>
     </message>
 </context>
 <context>
