@@ -30,7 +30,7 @@ helloutau_add_library(${PROJECT_NAME} SHARED
     QT_AUTOGEN
     SOURCES ${_src} ${_hdr} ${_actions_src} ${_themes_qrc} ${_icons_qrc}
     LINKS HelloUtauWidgets HelloUtauTheme HelloUtauAudio HelloKitEdit HelloKitDocument
-          HelloKitVoiceBank HelloKitSynth stdcorelib::plugin
+          HelloKitVoiceBank HelloKitSynth HelloKitUpdate stdcorelib::plugin
     LINKS_PRIVATE stdcorelib::stdcorelib QActionKit::Widgets
     QT_LINKS Core Gui Widgets
     INCLUDE_PRIVATE ../../include/** **

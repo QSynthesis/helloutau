@@ -26,6 +26,7 @@
 #include "AppSettings.h"
 #include "EditorSettingPageIds.h"
 #include "ExportUstDialog.h"
+#include "UpdateChecker.h"
 
 #include <helloutau/Audio/AudioEngine.h>
 #include <helloutau/Audio/AudioOutput.h>
@@ -142,6 +143,84 @@ namespace hello::daw {
 
     QComboBox *SystemSettingsPage::languageBox() const {
         return m_language;
+    }
+
+    UpdateSettingPage::UpdateSettingPage(AppSettings &settings, UpdateChecker &checker,
+                                         QObject *parent)
+        : SettingPage(QLatin1String(EditorSettingPageIds::updates), parent), m_settings(settings),
+          m_checker(checker) {
+        setTitle(tr("Updates"));
+        setDescription(tr("The check for newer versions of the application."));
+        setKeywords({QStringLiteral("Updates"), QStringLiteral("GitHub"), QStringLiteral("Gitee")});
+    }
+
+    QWidget *UpdateSettingPage::createWidget() {
+        auto widget = new QWidget();
+        auto layout = new QVBoxLayout(widget);
+        auto group = new QGroupBox(tr("Updates"), widget);
+        auto form = new QFormLayout(group);
+        m_startupCheck = new QCheckBox(tr("&Check for updates at startup"), widget);
+        m_startupCheck->setChecked(m_settings.isStartupUpdateCheckEnabled());
+        form->addRow(m_startupCheck);
+        m_source = new QComboBox(widget);
+        m_source->addItem(tr("Automatic"), AppSettings::AutomaticUpdateSource);
+        m_source->addItem(QStringLiteral("GitHub"), AppSettings::GitHubUpdateSource);
+        m_source->addItem(QStringLiteral("Gitee"), AppSettings::GiteeUpdateSource);
+        m_source->setCurrentIndex(std::max(0, m_source->findData(m_settings.updateSource())));
+        form->addRow(tr("Update &source:"), m_source);
+        form->addRow(note(tr("Automatic uses Gitee if the time zone of the system is in mainland "
+                             "China, and GitHub otherwise.")));
+        auto checkNow = new QPushButton(tr("Check &Now"), widget);
+        m_lastCheck = note(QString());
+        showLastCheck();
+        auto checkRow = new QHBoxLayout();
+        checkRow->addWidget(checkNow);
+        checkRow->addWidget(m_lastCheck, 1);
+        form->addRow(checkRow);
+        connect(checkNow, &QPushButton::clicked, this, [this, checkNow] {
+            m_checker.checkNow(checkNow->window(),
+                               AppSettings::UpdateSource(m_source->currentData().toInt()));
+        });
+        // The label is the context, because the page outlives its widget.
+        connect(&m_checker, &UpdateChecker::finished, m_lastCheck, [this] { showLastCheck(); });
+        connect(m_startupCheck, &QCheckBox::toggled, this, &SettingPage::modifiedChanged);
+        connect(m_source, &QComboBox::currentIndexChanged, this, &SettingPage::modifiedChanged);
+        layout->addWidget(group);
+        layout->addStretch();
+        return widget;
+    }
+
+    bool UpdateSettingPage::isModified() const {
+        if (!m_startupCheck) {
+            return false;
+        }
+        return m_startupCheck->isChecked() != m_settings.isStartupUpdateCheckEnabled() ||
+               m_source->currentData().toInt() != m_settings.updateSource();
+    }
+
+    bool UpdateSettingPage::apply(QString *error) {
+        Q_UNUSED(error);
+        m_settings.setStartupUpdateCheckEnabled(m_startupCheck->isChecked());
+        m_settings.setUpdateSource(AppSettings::UpdateSource(m_source->currentData().toInt()));
+        Q_EMIT modifiedChanged();
+        return true;
+    }
+
+    QCheckBox *UpdateSettingPage::startupCheckBox() const {
+        return m_startupCheck;
+    }
+
+    QComboBox *UpdateSettingPage::sourceBox() const {
+        return m_source;
+    }
+
+    void UpdateSettingPage::showLastCheck() {
+        const auto last = m_settings.lastUpdateCheck();
+        m_lastCheck->setText(
+            tr("Current version: %1. Last checked: %2.")
+                .arg(QCoreApplication::applicationVersion(),
+                     last.isValid() ? QLocale().toString(last.toLocalTime(), QLocale::ShortFormat)
+                                    : tr("never")));
     }
 
     UtauSettingPage::UtauSettingPage(AppSettings &settings, QObject *parent)
@@ -516,13 +595,16 @@ namespace hello::daw {
         return m_threads;
     }
 
-    void addEditorSettingPages(SettingCatalog *catalog, AppSettings &settings) {
+    void addEditorSettingPages(SettingCatalog *catalog, AppSettings &settings,
+                               UpdateChecker &checker) {
         // Appearance & Behavior is a category, which the dialog shows as the links to its pages.
         auto appearance =
             new SettingPage(QLatin1String(EditorSettingPageIds::appearanceAndBehavior));
         appearance->setTitle(SettingPage::tr("Appearance & Behavior"));
         appearance->setKeywords({QStringLiteral("Appearance & Behavior")});
-        appearance->addPage(new SystemSettingsPage(settings));
+        const auto system = new SystemSettingsPage(settings);
+        system->addPage(new UpdateSettingPage(settings, checker));
+        appearance->addPage(system);
         catalog->addPage(appearance);
         catalog->addPage(new EditorSettingPage(settings));
         catalog->addPage(new UtauSettingPage(settings));

@@ -38,6 +38,12 @@ namespace hello::daw {
         constexpr char KeyPitchControlVibrato[] = "pitchControl/vibrato";
         constexpr char KeyPitchControlVibratoPreset[] = "pitchControl/vibratoPreset";
         constexpr char KeyUstExportCharset[] = "files/ustExportCharset";
+        constexpr char KeyUpdateSource[] = "updates/source";
+        constexpr char GitHubValue[] = "github";
+        constexpr char GiteeValue[] = "gitee";
+        constexpr char KeyUpdateCheckAtStartup[] = "updates/checkAtStartup";
+        constexpr char KeyLastUpdateCheck[] = "updates/lastCheck";
+        constexpr char KeySkippedUpdateVersion[] = "updates/skippedVersion";
         constexpr char KeyLanguage[] = "appearance/language";
         constexpr char KeyPitchVisible[] = "view/showPitch";
         constexpr char KeyRenderedPitchVisible[] = "view/showRenderedPitch";
@@ -427,6 +433,60 @@ namespace hello::daw {
     void AppSettings::setUstExportCharset(const QString &charset) {
         stdc_impl_t;
         impl.setValue(KeyUstExportCharset, charset.toStdString());
+    }
+
+    AppSettings::UpdateSource AppSettings::updateSource() const {
+        stdc_impl_t;
+        const auto value = impl.value(KeyUpdateSource).toString();
+        if (value == GitHubValue) {
+            return GitHubUpdateSource;
+        }
+        return value == GiteeValue ? GiteeUpdateSource : AutomaticUpdateSource;
+    }
+
+    void AppSettings::setUpdateSource(UpdateSource source) {
+        stdc_impl_t;
+        json::Value value;
+        if (source == GitHubUpdateSource) {
+            value = std::string(GitHubValue);
+        } else if (source == GiteeUpdateSource) {
+            value = std::string(GiteeValue);
+        }
+        impl.setValue(KeyUpdateSource, std::move(value));
+    }
+
+    bool AppSettings::isStartupUpdateCheckEnabled() const {
+        stdc_impl_t;
+        return impl.value(KeyUpdateCheckAtStartup).toBool(true);
+    }
+
+    void AppSettings::setStartupUpdateCheckEnabled(bool enabled) {
+        stdc_impl_t;
+        impl.setValue(KeyUpdateCheckAtStartup, enabled);
+    }
+
+    QDateTime AppSettings::lastUpdateCheck() const {
+        stdc_impl_t;
+        return QDateTime::fromString(textOf(impl.value(KeyLastUpdateCheck).toString()),
+                                     Qt::ISODate);
+    }
+
+    void AppSettings::setLastUpdateCheck(const QDateTime &time) {
+        stdc_impl_t;
+        impl.setValue(KeyLastUpdateCheck,
+                      time.isValid() ? json::Value(time.toUTC().toString(Qt::ISODate).toStdString())
+                                     : json::Value());
+    }
+
+    QString AppSettings::skippedUpdateVersion() const {
+        stdc_impl_t;
+        return textOf(impl.value(KeySkippedUpdateVersion).toString());
+    }
+
+    void AppSettings::setSkippedUpdateVersion(const QString &version) {
+        stdc_impl_t;
+        impl.setValue(KeySkippedUpdateVersion,
+                      version.isEmpty() ? json::Value() : json::Value(version.toStdString()));
     }
 
     QStringList AppSettings::recentCommands() const {

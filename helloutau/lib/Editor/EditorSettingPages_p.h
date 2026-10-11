@@ -15,6 +15,7 @@ class QLineEdit;
 namespace hello::daw {
 
     class AppSettings;
+    class UpdateChecker;
 
     /// The language of the interface, under Appearance & Behavior as the system settings of
     /// JetBrains IDEs. A changed language takes effect at the next start, so applying it marks a
@@ -35,6 +36,32 @@ namespace hello::daw {
     private:
         AppSettings &m_settings;
         QPointer<QComboBox> m_language;
+    };
+
+    /// The check for newer releases, under System Settings as the updates of JetBrains IDEs.
+    /// The check of Check Now uses the host selected on the page, whether applied or not.
+    class UpdateSettingPage : public SettingPage {
+        Q_OBJECT
+    public:
+        UpdateSettingPage(AppSettings &settings, UpdateChecker &checker, QObject *parent = nullptr);
+
+        bool isModified() const override;
+        bool apply(QString *error) override;
+
+        QCheckBox *startupCheckBox() const;
+        QComboBox *sourceBox() const;
+
+    protected:
+        QWidget *createWidget() override;
+
+    private:
+        void showLastCheck();
+
+        AppSettings &m_settings;
+        UpdateChecker &m_checker;
+        QPointer<QCheckBox> m_startupCheck;
+        QPointer<QComboBox> m_source;
+        QPointer<QLabel> m_lastCheck;
     };
 
     /// The UTAU folder, and how a relative voice bank path is resolved. The pages of UTAU
@@ -134,10 +161,11 @@ namespace hello::daw {
         QPointer<QComboBox> m_renderLogLimit;
     };
 
-    /// Adds the pages of the editor to \a catalog: Appearance & Behavior with System Settings in
-    /// it, Editor, and Rendering. A plugin places its pages among them by EditorSettingPageIds,
-    /// as Core places Keymap before Editor and Plugins before Rendering.
-    void addEditorSettingPages(SettingCatalog *catalog, AppSettings &settings);
+    /// Adds the pages of the editor to \a catalog: Appearance & Behavior with System Settings and
+    /// its Updates in it, Editor, and Rendering. A plugin places its pages among them by
+    /// EditorSettingPageIds, as Core places Keymap before Editor and Plugins before Rendering.
+    void addEditorSettingPages(SettingCatalog *catalog, AppSettings &settings,
+                               UpdateChecker &checker);
 
 }
 

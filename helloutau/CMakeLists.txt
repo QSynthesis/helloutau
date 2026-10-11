@@ -22,6 +22,19 @@ qm_add_definition(HELLOUTAU_APPLICATION_NAME "HelloUtau" STRING_LITERAL)
 qm_add_definition(HELLOUTAU_APPLICATION_VERSION ${PROJECT_VERSION} STRING_LITERAL)
 qm_add_definition(HELLOUTAU_ORGANIZATION_NAME "OpenVPI" STRING_LITERAL)
 
+# The triplet of the build, by which UpdateChecker selects the assets of a release
+qm_add_definition(HELLOUTAU_TRIPLET ${HELLO_TRIPLET} STRING_LITERAL)
+
+# The repositories of the releases and the identifiers of the assets and of the installer, which
+# UpdateChecker reads from share/helloutau beside the bin directory, in the build as in the
+# installation. See the automatic update in docs/Distribution.md.
+configure_file(share/helloutau/UpdateConfig.json
+    ${QMSETUP_BUILD_DIR}/share/helloutau/UpdateConfig.json COPYONLY
+)
+if(HELLO_INSTALL)
+    install(FILES share/helloutau/UpdateConfig.json DESTINATION ${CMAKE_INSTALL_DATADIR}/helloutau)
+endif()
+
 find_package(Qt6 REQUIRED COMPONENTS LinguistTools)
 
 add_subdirectory(lib)
@@ -43,7 +56,7 @@ qt_add_translations(
     TARGETS HelloUtauEditor
     SOURCE_TARGETS
         HelloKitDocument HelloKitEdit HelloKitEditBase HelloKitInterchange HelloKitSupport
-        HelloKitSynth HelloKitVoiceBank HelloUtauAudio HelloUtauEditor HelloUtauTheme
+        HelloKitSynth HelloKitUpdate HelloKitVoiceBank HelloUtauAudio HelloUtauEditor HelloUtauTheme
         HelloUtauWidgets
     TS_FILES ${_ts_files}
     RESOURCE_PREFIX /helloutau/translations

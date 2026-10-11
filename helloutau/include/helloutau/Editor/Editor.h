@@ -32,6 +32,7 @@ namespace hello::daw {
     class ProjectWindow;
     class SettingCatalog;
     class ThemeManager;
+    class UpdateChecker;
     class VoiceBankWindow;
 
     /// The editor of the application. It holds the settings, the actions shared by every window,
@@ -227,6 +228,18 @@ namespace hello::daw {
         /// \return Whether the application quits to start again. A user who declines, or who
         ///         cancels the closing of a window, restarts later by hand.
         bool offerRestart(QWidget *parent);
+
+        /// Returns the check for newer releases of the application.
+        UpdateChecker *updateChecker() const;
+
+        /// Checks for a newer release over \a from, from the update source of the settings, and
+        /// reports the result (Help > Check for Updates...).
+        void checkForUpdates(QWidget *from);
+
+        /// Checks for a newer release if the settings enable the check at start, and offers it
+        /// over the last opened project window. The core plugin calls this function once the
+        /// first windows are open. See UpdateChecker::checkAtStartup().
+        void checkForUpdatesAtStartup();
 
         /// Closes every window. Each window prompts the user to save its document first. Stops
         /// at the first window for which the user cancels, and returns whether every window was

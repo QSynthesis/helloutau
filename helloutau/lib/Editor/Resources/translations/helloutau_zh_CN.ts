@@ -166,6 +166,10 @@
         <translation>关于 HelloUtau</translation>
     </message>
     <message>
+        <source>Check for &amp;Updates...</source>
+        <translation>检查更新(&amp;U)...</translation>
+    </message>
+    <message>
         <source>About &amp;Qt</source>
         <translation>关于 Qt</translation>
     </message>
@@ -595,6 +599,13 @@
     <message>
         <source>The application cannot start: %1</source>
         <translation>应用程序无法启动：%1</translation>
+    </message>
+</context>
+<context>
+    <name>hello::daw::AppSettings</name>
+    <message>
+        <source>System Default</source>
+        <translation>跟随系统</translation>
     </message>
 </context>
 <context>
@@ -2332,10 +2343,100 @@ Trust and use them for rendering?</source>
     </message>
 </context>
 <context>
-    <name>hello::daw::AppSettings</name>
+    <name>hello::daw::UpdateChecker</name>
     <message>
-        <source>System Default</source>
-        <translation>跟随系统</translation>
+        <source>The update configuration cannot be read: %1</source>
+        <translation>无法读取更新配置：%1</translation>
+    </message>
+    <message>
+        <source>Checking for updates...</source>
+        <translation>正在检查更新...</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>取消</translation>
+    </message>
+    <message>
+        <source>Check for Updates</source>
+        <translation>检查更新</translation>
+    </message>
+    <message>
+        <source>Cannot check for updates: %1</source>
+        <translation>无法检查更新：%1</translation>
+    </message>
+    <message>
+        <source>%1 %2 is the latest version.</source>
+        <translation>%1 %2 已是最新版本。</translation>
+    </message>
+    <message>
+        <source>The file %1 does not exist.</source>
+        <translation>文件 %1 不存在。</translation>
+    </message>
+    <message>
+        <source>The file %1 lacks a repository or an identifier.</source>
+        <translation>文件 %1 缺少仓库或标识。</translation>
+    </message>
+</context>
+<context>
+    <name>hello::daw::UpdateDialog</name>
+    <message>
+        <source>Update Available</source>
+        <translation>有可用的更新</translation>
+    </message>
+    <message>
+        <source>%1 %2 is available. The current version is %3.</source>
+        <translation>%1 %2 已发布，当前版本为 %3。</translation>
+    </message>
+    <message>
+        <source>&amp;Download</source>
+        <translation>下载(&amp;D)</translation>
+    </message>
+    <message>
+        <source>&amp;Skip This Version</source>
+        <translation>跳过此版本(&amp;S)</translation>
+    </message>
+    <message>
+        <source>Remind Me &amp;Later</source>
+        <translation>稍后提醒(&amp;L)</translation>
+    </message>
+</context>
+<context>
+    <name>hello::daw::UpdateSettingPage</name>
+    <message>
+        <source>Updates</source>
+        <translation>更新</translation>
+    </message>
+    <message>
+        <source>The check for newer versions of the application.</source>
+        <translation>检查应用程序的新版本。</translation>
+    </message>
+    <message>
+        <source>&amp;Check for updates at startup</source>
+        <translation>启动时检查更新(&amp;C)</translation>
+    </message>
+    <message>
+        <source>Automatic</source>
+        <translation>自动</translation>
+    </message>
+    <message>
+        <source>Update &amp;source:</source>
+        <translation>更新源(&amp;S)：</translation>
+    </message>
+    <message>
+        <source>Automatic uses Gitee if the time zone of the system is in mainland China, and GitHub otherwise.</source>
+        <translation>选择「自动」时，系统时区位于中国大陆则使用 Gitee，否则使用 GitHub。</translation>
+    </message>
+    <message>
+        <source>Check &amp;Now</source>
+        <translation>立即检查(&amp;N)</translation>
+    </message>
+    <message>
+        <source>Current version: %1. Last checked: %2.</source>
+        <translation>当前版本：%1。上次检查：%2。</translation>
+    </message>
+    <message>
+        <source>never</source>
+        <translation>从未检查</translation>
     </message>
 </context>
 <context>
@@ -3571,6 +3672,21 @@ Write them again without these chunks? The audio stays the same. The files are w
     <message>
         <source>The file does not contain a JSON object.</source>
         <translation>文件中没有 JSON 对象。</translation>
+    </message>
+</context>
+<context>
+    <name>hello::kit::SoftwareReleaseQuery</name>
+    <message>
+        <source>No release has been published.</source>
+        <translation>尚未发布任何版本。</translation>
+    </message>
+    <message>
+        <source>The server returned an invalid response.</source>
+        <translation>服务器返回了无效的响应。</translation>
+    </message>
+    <message>
+        <source>The latest release does not name a version.</source>
+        <translation>最新发布的版本号无效。</translation>
     </message>
 </context>
 <context>

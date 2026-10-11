@@ -45,6 +45,7 @@
 #include "NoteViewModifiers.h"
 #include "ParameterViewModifiers.h"
 #include "ProjectWindow.h"
+#include "UpdateChecker.h"
 #include "UstCharsetDialog.h"
 #include "VoiceBankCharsetDialog.h"
 #include "VoiceBankWindow.h"
@@ -146,7 +147,9 @@ namespace hello::daw {
             themes = new ThemeManager(decl);
             themes->addSearchPath(QStringLiteral(":/helloutau/themes"));
             catalog = new SettingCatalog(decl);
-            addEditorSettingPages(catalog, *settings);
+            updateChecker =
+                new UpdateChecker(*settings, UpdateChecker::Configuration::defaultFileName(), decl);
+            addEditorSettingPages(catalog, *settings, *updateChecker);
             pages = std::make_unique<Pages>(
                 *pageRegistry, [this](Pages::Item &item) { return pageAdded(item); },
                 [this](Pages::Item &item) { pageRemoved(item); });
@@ -274,6 +277,7 @@ namespace hello::daw {
         QString actionLayoutsFile;
         ThemeManager *themes = nullptr;
         SettingCatalog *catalog = nullptr;
+        UpdateChecker *updateChecker = nullptr;
         Editor *editor = nullptr;
         // The instances are declared after their registries, so that they are destroyed first.
         std::unique_ptr<ActionContributionRegistry> contributionRegistry =
@@ -865,6 +869,22 @@ namespace hello::daw {
         kit::RestartScheduler::scheduleRestart();
         QCoreApplication::quit();
         return true;
+    }
+
+    UpdateChecker *Editor::updateChecker() const {
+        stdc_impl_t;
+        return impl.updateChecker;
+    }
+
+    void Editor::checkForUpdates(QWidget *from) {
+        stdc_impl_t;
+        impl.updateChecker->checkNow(from, settings().updateSource());
+    }
+
+    void Editor::checkForUpdatesAtStartup() {
+        stdc_impl_t;
+        const auto all = windows();
+        impl.updateChecker->checkAtStartup(all.isEmpty() ? nullptr : all.last());
     }
 
     bool Editor::closeAll() {

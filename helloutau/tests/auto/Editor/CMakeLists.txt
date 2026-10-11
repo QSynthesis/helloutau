@@ -7,6 +7,7 @@ add_auto_test(test_PianoRoll.cpp HelloUtauEditor)
 add_auto_test(test_Playback.cpp HelloUtauEditor)
 add_auto_test(test_SamplePreview.cpp HelloUtauEditor)
 add_auto_test(test_SynthToolTrust.cpp HelloUtauEditor)
+add_auto_test(test_UpdateChecker.cpp HelloUtauEditor)
 
 add_subdirectory(Dialogs)
 

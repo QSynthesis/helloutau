@@ -8,6 +8,7 @@
 #include <QtCore/QCoreApplication>
 #include <QtCore/QJsonValue>
 #include <QtCore/QByteArray>
+#include <QtCore/QDateTime>
 #include <QtCore/QList>
 #include <QtCore/QLocale>
 #include <QtCore/QString>
@@ -193,6 +194,32 @@ namespace hello::daw {
         /// Encoding initially selected when a UST is exported. The default is UTF-8.
         QString ustExportCharset() const;
         void setUstExportCharset(const QString &charset);
+
+        /// The host from which the releases of the application are checked, see the automatic
+        /// update in docs/Distribution.md.
+        enum UpdateSource {
+            /// Gitee if the time zone of the system is in mainland China, and GitHub otherwise
+            AutomaticUpdateSource,
+            GitHubUpdateSource,
+            GiteeUpdateSource,
+        };
+
+        /// The host of the releases. The default is AutomaticUpdateSource.
+        UpdateSource updateSource() const;
+        void setUpdateSource(UpdateSource source);
+
+        /// Whether the releases are checked at start, at most once a day. The default is true.
+        bool isStartupUpdateCheckEnabled() const;
+        void setStartupUpdateCheckEnabled(bool enabled);
+
+        /// The time of the last successful check of the releases, or an invalid time if none.
+        QDateTime lastUpdateCheck() const;
+        void setLastUpdateCheck(const QDateTime &time);
+
+        /// The version that the user chose to skip, which the check at start does not offer, or
+        /// an empty string if none.
+        QString skippedUpdateVersion() const;
+        void setSkippedUpdateVersion(const QString &version);
 
         /// Returns the commands last chosen in the command palette, most recent first. The list
         /// is shared by all windows.

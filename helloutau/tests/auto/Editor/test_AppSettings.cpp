@@ -59,6 +59,35 @@ private Q_SLOTS:
         QCOMPARE(AppSettings(file).renderThreadCount(), 0);
     }
 
+    // The settings of the updates persist. The defaults are not written.
+    void update_settings_persist() {
+        QTemporaryDir dir;
+        const auto file = dir.filePath(QStringLiteral("settings.json"));
+        const auto time = QDateTime(QDate(2026, 10, 11), QTime(12, 30), QTimeZone::UTC);
+        {
+            AppSettings settings(file);
+            QCOMPARE(settings.updateSource(), AppSettings::AutomaticUpdateSource);
+            QVERIFY(settings.isStartupUpdateCheckEnabled());
+            QVERIFY(!settings.lastUpdateCheck().isValid());
+            QVERIFY(settings.skippedUpdateVersion().isEmpty());
+            settings.setUpdateSource(AppSettings::GiteeUpdateSource);
+            settings.setStartupUpdateCheckEnabled(false);
+            settings.setLastUpdateCheck(time);
+            settings.setSkippedUpdateVersion(QStringLiteral("0.1.7.0"));
+        }
+        {
+            AppSettings settings(file);
+            QCOMPARE(settings.updateSource(), AppSettings::GiteeUpdateSource);
+            QVERIFY(!settings.isStartupUpdateCheckEnabled());
+            QCOMPARE(settings.lastUpdateCheck(), time);
+            QCOMPARE(settings.skippedUpdateVersion(), QStringLiteral("0.1.7.0"));
+            settings.setUpdateSource(AppSettings::AutomaticUpdateSource);
+            settings.setSkippedUpdateVersion(QString());
+            QVERIFY(settings.value(QStringLiteral("updates/source")).isUndefined());
+            QVERIFY(settings.value(QStringLiteral("updates/skippedVersion")).isUndefined());
+        }
+    }
+
     void quantization_persists() {
         QTemporaryDir dir;
         const auto file = dir.filePath(QStringLiteral("settings.json"));

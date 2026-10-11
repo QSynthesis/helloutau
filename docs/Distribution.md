@@ -1,6 +1,6 @@
 # 发布、安装、更新与卸载
 
-本文档规定 HelloUtau 的发布物、安装包、用户目录、临时目录、自动更新与卸载。作者 2026-10-11 提出要求，本文为方案，尚未实现。macOS 与 Linux 的打包以后另行补充，本文只规定与平台无关的部分和 Windows 的做法。
+本文档规定 HelloUtau 的发布物、安装包、用户目录、临时目录、自动更新与卸载。作者 2026-10-11 提出要求，本文为方案，已实现的部分见「实现状态」。macOS 与 Linux 的打包以后另行补充，本文只规定与平台无关的部分和 Windows 的做法。
 
 ## 实现状态
 
@@ -8,9 +8,12 @@
 
 「临时目录管理器」已实现（`kit::TemporaryStorage`）。工程窗口、试合成、`ClassicPluginRunner` 与 `ClassicSynthRunner` 的临时目录都由它分配。`ThreadedSynthRunner` 在未指定脚本目录时不写出脚本，只以总目录作为脚本中的路径，不创建目录。
 
+「自动更新」的检查部分已实现（第一期）：`HelloKitUpdate` 的 `SoftwareReleaseQuery` 取得最新的 release，helloutau 的 `UpdateChecker` 在启动时与「Check for Updates...」中检查，以 `UpdateDialog` 提示，「Updates」设置页位于 System Settings 之下。
+
 其余均未实现，现行代码与本文的出入如下：
 
 - 打包脚本与安装包的脚本位于 `dist/installer/windows/`（见「安装包」），尚未实现静默更新所需的 `/UPDATE` 参数与等待程序退出。
+- 提示中的「Download」只打开 release 的页面，由用户自行下载安装。下载、以 `SHA256SUMS` 校验（`kit::Sha256Sums` 已实现，尚无调用方）与安装（「安装版的更新」「免安装版的更新」）未实现。
 
 ## 发布物
 
@@ -104,22 +107,37 @@ Windows 的安装包以 Inno Setup 7 生成，界面语言为英语、简体中�
 
 ### 更新源
 
-设置的「Updates」页提供以下设置：
+设置的「Updates」页位于 Appearance & Behavior 的 System Settings 之下，同 JetBrains IDE，提供以下设置：
 
 - 更新源：「自动」「GitHub」「Gitee」，默认为「自动」。「自动」按系统时区判断：`QTimeZone::systemTimeZone().territory()` 为 `QLocale::China` 时使用 Gitee，否则使用 GitHub。Asia/Shanghai 与 Asia/Urumqi 属于 `QLocale::China`，香港、澳门、台湾的时区各有自己的地区，因此只有中国大陆的时区选择 Gitee。Windows 的「China Standard Time」由 Qt 映射到 Asia/Shanghai。
 - 启动时检查更新，默认开启，每天至多检查一次。帮助菜单另有「Check for Updates...」，随时手动检查。
 - 跳过的版本：用户在提示中选择「跳过此版本」后，启动时不再提示该版本，手动检查仍然提示。
 
+该页的「Check Now」按页上所选的源检查，无论该选择是否已应用。上次成功检查的时间与跳过的版本同样记入设置（`updates/lastCheck`、`updates/skippedVersion`）。
+
+### 更新配置
+
+仓库地址与附件、安装包的标识不写在代码中，而记录在 `share/helloutau/UpdateConfig.json`（作者 2026-10-11 决定，与 Qt 的翻译同样放在 `share` 下）。源文件为 `helloutau/share/helloutau/UpdateConfig.json`，构建时复制到构建目录的同一相对位置，安装时装到安装目录的同一位置，程序按 `bin` 的上级目录查找。
+
+| 键 | 含义 | 现值 |
+|---|---|---|
+| `gitHubRepository` | GitHub 上的仓库 | `QSynthesis/helloutau` |
+| `giteeRepository` | Gitee 上的仓库 | `functioner/helloutau` |
+| `assetPrefix` | 附件文件名的开头，见「发布物」 | `helloutau` |
+| `innoSetupAppId` | 安装包的 `AppId`，必须与 `setup.iss` 相同 | `org.openvpi.helloutau` |
+
+文件缺失或缺少任一项时，启动时的检查只记入日志，手动检查报告原因。triplet 不在此文件中，因为它描述构建本身，由 CMake 写入 `helloutau/Config.h` 的 `HELLOUTAU_TRIPLET`。
+
 ### 检查与下载
 
 1. 以所选源的公开接口取得最新的 release：GitHub 为 `GET /repos/{owner}/{repo}/releases/latest`，Gitee 为 `GET /api/v5/repos/{owner}/{repo}/releases/latest`。公开仓库无须令牌。
-2. 去掉 tag 的 `v` 前缀作为版本号，与 `HELLO_VERSION` 逐段比较，不以 `v` 开头的 tag 不视为版本，较新且附件齐全（见「发布物」）时提示，显示 release 的说明。
+2. 去掉 tag 的 `v` 前缀作为版本号，与 `HELLO_VERSION` 逐段比较，不以 `v` 开头的 tag 不视为版本，较新且附件齐全（见「发布物」）时提示，显示 release 的说明。`v` 之后只接受数字与点，因为 `QVersionNumber::fromString()` 接受段首的空格与正号（实测 `v 0.1`、`v+0.1` 均被接受）。Gitee 的 release 没有页面地址，按 `https://gitee.com/<仓库>/releases/tag/<tag>` 构造，其附件列表中还有 Gitee 生成的源码压缩包，按文件名挑选时不受影响。草稿与预发布不视为 release。
 3. 用户确认后下载附件与 `SHA256SUMS` 到临时目录管理器分配的目录，显示进度。只接受 HTTPS，拒绝重定向到 HTTP。
 4. 以 `SHA256SUMS` 校验附件，不符时删除并报告，不安装。
 
 ### 安装版与免安装版的区分
 
-若存在 `Software\Microsoft\Windows\CurrentVersion\Uninstall\<AppId>_is1`（先查 HKCU，再查 HKLM），且其 `InstallLocation` 与程序的安装目录相同，则为安装版，否则为免安装版。安装版下载安装包，免安装版下载 zip。
+若存在 `Software\Microsoft\Windows\CurrentVersion\Uninstall\<AppId>_is1`（先查 HKCU，再查 HKLM），且其 `InstallLocation` 与程序的安装目录相同，则为安装版，否则为免安装版。安装版下载安装包，免安装版下载 zip。判断由 `HelloKitUpdate` 的 `kit::InnoSetup`（`hellokit/Update/Windows/`，只在 Windows 上编译）完成，以 `std::filesystem::equivalent` 比较目录，因为记录的目录以分隔符结尾，大小写也可能不同。其他系统上一律视为免安装版。
 
 ### 安装版的更新
 
@@ -150,14 +168,19 @@ Windows 特有的注册表信息因此全部由安装包维护，程序自身不
 
 ## 模块划分
 
-- `HelloKitUpdate`（新子库，`hellokit/Update/`，命名空间 `hello::kit`）：与具体程序无关的更新工具。包括取得 release 信息（GitHub 与 Gitee 两种源）、比较四段版本号、按文件名模式与 triplet 挑选附件、下载并以 `SHA256SUMS` 校验。程序名、仓库地址、triplet 与源的选择规则都由调用方传入。依赖 Qt Network，不依赖 QtWidgets。
+- `HelloKitUpdate`（子库，`hellokit/Update/`，命名空间 `hello::kit`）：与具体程序无关的更新工具。程序名、仓库地址、triplet 与源的选择规则都由调用方传入。私有依赖 Qt Network，不依赖 QtWidgets。类型名带 `Software` 前缀，因为 `Release` 一类的名字过于宽泛（作者 2026-10-11 决定）。
+  - `SoftwareRelease`、`SoftwareReleaseAsset`：release 的内容与两种源的格式，tag 到版本号的转换。
+  - `SoftwareReleaseQuery`：以公开接口取得最新的 release，只接受 HTTPS（`NoLessSafeRedirectPolicy`），使用系统代理，并带有 GitHub 要求的 User-Agent。
+  - `Sha256Sums`：读取 `SHA256SUMS` 与计算文件的摘要。
+  - `Windows/InnoSetup`：安装记录的查询，见「安装版与免安装版的区分」。
+  - 以后加入：下载附件。
 - 更新程序（`hellokit/tools/updater`）：免安装版的文件替换，参数全部来自命令行，不含任何 HelloUtau 特有的内容。按 `CLAUDE.md`，`main.cpp` 只包含入口，逻辑位于库中以便测试。
 - 临时目录管理器：`HelloKitSupport`。
 - 解压 zip 使用 libzip（BSD 许可证，vcpkg 有端口，作者 2026-10-11 决定），供更新程序与将来安装音源、插件压缩包的代码共用：
   - 以 `ZIP_FL_ENC_RAW` 取得条目名的原始字节。音源的压缩包常以 Shift_JIS 或 GBK 写条目名而不标 UTF-8，按 `CLAUDE.md`「编码」，这些字节必须交给 `winacp` 解码，不能由解压库自行转换。
   - libzip 文档规定不同的 `zip_t` 对象互相独立，可在多个线程中并行使用而无须加锁。多线程解压时每个工作线程各自打开一次压缩包，分别解压不同的条目。
   - 不采用 bit7z：它在运行时需要随程序提供 7-Zip 的 `7z.dll`，条目名由 7-Zip 解码后以宽字符串给出，无法按本仓库的规则自行解码。
-- helloutau：「Updates」设置页、启动时与手动的检查、提示对话框、关闭窗口与退出的流程、安装版与免安装版的判断，以及时区到更新源的规则。
+- helloutau：`UpdateChecker`（读取更新配置、时区到更新源的规则、附件名、启动时与手动的检查），`UpdateDialog`（提示对话框），「Updates」设置页，以及以后的关闭窗口与退出的流程。启动时的检查由 Core 插件在打开首批窗口之后发起，只在有 `AppLoader` 时进行，因此测试不发出请求。
 
 ## 参考
 

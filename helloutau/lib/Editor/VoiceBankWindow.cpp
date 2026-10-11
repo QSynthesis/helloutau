@@ -384,6 +384,10 @@ namespace hello::daw {
                 stdc_decl_t;
                 editor->showSettings(&decl);
             });
+            addCommand(QStringLiteral("helloutau.help.checkForUpdates"), [this] {
+                stdc_decl_t;
+                editor->checkForUpdates(&decl);
+            });
             addCommand(QStringLiteral("helloutau.help.about"), [this] {
                 stdc_decl_t;
                 AboutDialog dialog(&decl);

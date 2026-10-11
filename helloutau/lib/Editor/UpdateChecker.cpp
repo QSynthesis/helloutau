@@ -1,0 +1,277 @@
+#include "UpdateChecker.h"
+
+#include <filesystem>
+
+#include <QtCore/QCoreApplication>
+#include <QtCore/QDir>
+#include <QtCore/QPointer>
+#include <QtCore/QTimeZone>
+#include <QtCore/QtDebug>
+#include <QtGui/QDesktopServices>
+#include <QtWidgets/QApplication>
+#include <QtWidgets/QMessageBox>
+#include <QtWidgets/QProgressDialog>
+
+#include <stdcorelib/pimpl.h>
+
+#include <hellokit/Support/SettingsFile.h>
+#include <hellokit/Update/SoftwareReleaseQuery.h>
+#ifdef Q_OS_WINDOWS
+#  include <hellokit/Update/Windows/InnoSetup.h>
+#endif
+
+#include <helloutau/Config.h>
+
+#include "UpdateDialog.h"
+
+namespace hello::daw {
+
+    namespace {
+
+        constexpr char sumsName[] = "SHA256SUMS";
+
+        // The minimum interval between two checks at start, in seconds
+        constexpr qint64 startupCheckInterval = 24 * 60 * 60;
+
+        QString textOf(const stdc::json::Object &object, const char *key) {
+            const auto it = object.find(key);
+            return it == object.end() ? QString() : QString::fromStdString(it->second.toString());
+        }
+
+        QVersionNumber currentVersion() {
+            return QVersionNumber::fromString(QCoreApplication::applicationVersion());
+        }
+
+        // Returns whether the program runs from the directory of an installation by the Windows
+        // installer. Such an installation is updated by the installer rather than by the archive.
+        bool isInstalled(const UpdateChecker::Configuration &configuration) {
+#ifdef Q_OS_WINDOWS
+            // The program is in the bin directory of the installation directory.
+            const auto directory =
+                QDir::cleanPath(QCoreApplication::applicationDirPath() + QStringLiteral("/.."));
+            return kit::InnoSetup::isInstalledIn(configuration.innoSetupAppId,
+                                                 std::filesystem::path(directory.toStdU16String()));
+#else
+            Q_UNUSED(configuration);
+            return false;
+#endif
+        }
+
+    }
+
+    class UpdateChecker::Impl {
+    public:
+        using Decl = UpdateChecker;
+
+        explicit Impl(AppSettings &settings) : settings(settings) {
+        }
+
+        UpdateChecker *decl = nullptr;
+        AppSettings &settings;
+        std::optional<Configuration> configuration;
+        QString configurationError;
+        kit::SoftwareReleaseQuery *query = nullptr;
+
+        // The state of the running check
+        bool manual = false;
+        QPointer<QWidget> parent;
+        QPointer<QProgressDialog> progress;
+
+        QWidget *dialogParent() const {
+            return parent ? parent.data() : QApplication::activeWindow();
+        }
+
+        void start(QWidget *from, AppSettings::UpdateSource source, bool isManual) {
+            query->abort();
+            closeProgress();
+            manual = isManual;
+            parent = from;
+            if (!configuration) {
+                report(tr("The update configuration cannot be read: %1").arg(configurationError));
+                return;
+            }
+            const auto host =
+                UpdateChecker::hostOf(source, QTimeZone::systemTimeZone().territory());
+            if (manual) {
+                progress = new QProgressDialog(tr("Checking for updates..."), tr("Cancel"), 0, 0,
+                                               dialogParent());
+                progress->setWindowTitle(tr("Check for Updates"));
+                progress->setWindowModality(Qt::WindowModal);
+                progress->setAttribute(Qt::WA_DeleteOnClose);
+                progress->setMinimumDuration(0);
+                QObject::connect(progress, &QProgressDialog::canceled, decl, [this] {
+                    query->abort();
+                    closeProgress();
+                    Q_EMIT decl->finished();
+                });
+                progress->show();
+            }
+            query->start(host, host == kit::SoftwareRelease::Gitee
+                                   ? configuration->giteeRepository
+                                   : configuration->gitHubRepository);
+        }
+
+        void closeProgress() {
+            if (progress) {
+                // Disconnected first, because closing the dialog emits canceled().
+                QObject::disconnect(progress, nullptr, decl, nullptr);
+                progress->close();
+            }
+        }
+
+        // Reports a failure to the user of a manual check, and to the log of a check at start
+        void report(const QString &message) {
+            if (manual) {
+                QMessageBox::warning(dialogParent(), tr("Check for Updates"), message);
+            } else {
+                qWarning().noquote() << "The check for updates failed:" << message;
+            }
+            Q_EMIT decl->finished();
+        }
+
+        void readResult() {
+            closeProgress();
+            const auto &release = query->release();
+            if (!release) {
+                report(tr("Cannot check for updates: %1").arg(query->errorString()));
+                return;
+            }
+            settings.setLastUpdateCheck(QDateTime::currentDateTimeUtc());
+            const auto current = currentVersion();
+            const auto asset = UpdateChecker::assetName(
+                configuration->assetPrefix, release->version, QStringLiteral(HELLOUTAU_TRIPLET),
+                isInstalled(*configuration));
+            const auto version = release->version.toString();
+            if (!UpdateChecker::offers(*release, current, asset)) {
+                if (manual) {
+                    QMessageBox::information(
+                        dialogParent(), tr("Check for Updates"),
+                        tr("%1 %2 is the latest version.")
+                            .arg(QApplication::applicationDisplayName(), current.toString()));
+                }
+                Q_EMIT decl->finished();
+                return;
+            }
+            if (!manual && version == settings.skippedUpdateVersion()) {
+                Q_EMIT decl->finished();
+                return;
+            }
+            // Copied before the event loop of the dialog, in which another check may replace the
+            // release of the query
+            const auto page = release->page;
+            UpdateDialog dialog(version, current.toString(), release->notes, dialogParent());
+            dialog.exec();
+            switch (dialog.choice()) {
+                case UpdateDialog::Download:
+                    QDesktopServices::openUrl(page);
+                    break;
+                case UpdateDialog::Skip:
+                    settings.setSkippedUpdateVersion(version);
+                    break;
+                case UpdateDialog::Later:
+                    break;
+            }
+            Q_EMIT decl->finished();
+        }
+    };
+
+    QString UpdateChecker::Configuration::defaultFileName() {
+        return QDir::cleanPath(QCoreApplication::applicationDirPath() +
+                               QStringLiteral("/../share/helloutau/UpdateConfig.json"));
+    }
+
+    std::optional<UpdateChecker::Configuration>
+        UpdateChecker::Configuration::read(const QString &fileName, QString *error) {
+        kit::DiagnosticList diagnostics;
+        const auto object = kit::SettingsFile::read(fileName, diagnostics);
+        if (!object) {
+            *error = diagnostics.isEmpty() ? tr("The file %1 does not exist.").arg(fileName)
+                                           : diagnostics.first().message;
+            return std::nullopt;
+        }
+        Configuration configuration;
+        configuration.gitHubRepository = textOf(*object, "gitHubRepository");
+        configuration.giteeRepository = textOf(*object, "giteeRepository");
+        configuration.assetPrefix = textOf(*object, "assetPrefix");
+        configuration.innoSetupAppId = textOf(*object, "innoSetupAppId");
+        if (configuration.gitHubRepository.isEmpty() || configuration.giteeRepository.isEmpty() ||
+            configuration.assetPrefix.isEmpty() || configuration.innoSetupAppId.isEmpty()) {
+            *error = tr("The file %1 lacks a repository or an identifier.").arg(fileName);
+            return std::nullopt;
+        }
+        return configuration;
+    }
+
+    UpdateChecker::UpdateChecker(AppSettings &settings, const QString &fileName, QObject *parent)
+        : QObject(parent), _impl(std::make_unique<Impl>(settings)) {
+        stdc_impl_t;
+        impl.decl = this;
+        impl.configuration = Configuration::read(fileName, &impl.configurationError);
+        impl.query = new kit::SoftwareReleaseQuery(this);
+        connect(impl.query, &kit::SoftwareReleaseQuery::finished, this, [this] {
+            stdc_impl_t;
+            impl.readResult();
+        });
+    }
+
+    UpdateChecker::~UpdateChecker() {
+        stdc_impl_t;
+        impl.closeProgress();
+    }
+
+    kit::SoftwareRelease::Host UpdateChecker::hostOf(AppSettings::UpdateSource source,
+                                                     QLocale::Territory territory) {
+        switch (source) {
+            case AppSettings::GitHubUpdateSource:
+                return kit::SoftwareRelease::GitHub;
+            case AppSettings::GiteeUpdateSource:
+                return kit::SoftwareRelease::Gitee;
+            case AppSettings::AutomaticUpdateSource:
+                break;
+        }
+        // The time zones of Hong Kong, Macao and Taiwan have territories of their own.
+        return territory == QLocale::China ? kit::SoftwareRelease::Gitee
+                                           : kit::SoftwareRelease::GitHub;
+    }
+
+    QString UpdateChecker::assetName(const QString &prefix, const QVersionNumber &version,
+                                     const QString &triplet, bool installer) {
+        return prefix + QLatin1Char('-') + version.toString() + QLatin1Char('-') + triplet +
+               (installer ? QStringLiteral("-setup.exe") : QStringLiteral(".zip"));
+    }
+
+    bool UpdateChecker::offers(const kit::SoftwareRelease &release, const QVersionNumber &current,
+                               const QString &asset) {
+        // Normalized, so that 0.1.6 and 0.1.6.0 are the same version
+        return QVersionNumber::compare(release.version.normalized(), current.normalized()) > 0 &&
+               release.asset(asset) && release.asset(QLatin1String(sumsName));
+    }
+
+    const std::optional<UpdateChecker::Configuration> &UpdateChecker::configuration() const {
+        stdc_impl_t;
+        return impl.configuration;
+    }
+
+    bool UpdateChecker::isRunning() const {
+        stdc_impl_t;
+        return impl.query->isRunning();
+    }
+
+    void UpdateChecker::checkAtStartup(QWidget *parent) {
+        stdc_impl_t;
+        if (!impl.settings.isStartupUpdateCheckEnabled() || impl.query->isRunning()) {
+            return;
+        }
+        const auto last = impl.settings.lastUpdateCheck();
+        if (last.isValid() && last.secsTo(QDateTime::currentDateTimeUtc()) < startupCheckInterval) {
+            return;
+        }
+        impl.start(parent, impl.settings.updateSource(), false);
+    }
+
+    void UpdateChecker::checkNow(QWidget *parent, AppSettings::UpdateSource source) {
+        stdc_impl_t;
+        impl.start(parent, source, true);
+    }
+
+}

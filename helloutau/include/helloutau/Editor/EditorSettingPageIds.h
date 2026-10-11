@@ -9,6 +9,7 @@ namespace hello::daw {
     struct EditorSettingPageIds {
         static constexpr char appearanceAndBehavior[] = "editor.AppearanceAndBehavior";
         static constexpr char systemSettings[] = "editor.SystemSettings";
+        static constexpr char updates[] = "editor.Updates";
         static constexpr char editor[] = "editor.Editor";
         static constexpr char utau[] = "editor.Utau";
         static constexpr char audio[] = "editor.Audio";

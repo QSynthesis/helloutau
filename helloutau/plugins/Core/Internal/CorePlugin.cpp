@@ -49,6 +49,11 @@ namespace hello::daw {
         if (m_editor->windows().isEmpty()) {
             m_editor->newWindow();
         }
+        // The check runs only with a loader, so that a test that loads this plugin sends no
+        // request.
+        if (AppLoader::instance()) {
+            m_editor->checkForUpdatesAtStartup();
+        }
     }
 
     // Destroys the editor and its windows while every library is still loaded. This instance is

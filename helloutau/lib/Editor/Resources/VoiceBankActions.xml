@@ -56,6 +56,8 @@
                 shortcuts="Ctrl+Shift+P;F1" />
         <action id="helloutau.playback.stop" text="&amp;Stop" category="Playback" shortcut="F7" />
         <action id="helloutau.tools.settings" text="&amp;Settings..." category="Tools" />
+        <action id="helloutau.help.checkForUpdates" text="Check for &amp;Updates..."
+                category="Help" />
         <action id="helloutau.help.about" text="About &amp;${APP_NAME}" category="Help" />
         <action id="helloutau.help.aboutQt" text="About &amp;Qt" category="Help" />
 
@@ -192,6 +194,8 @@
             </menu>
             <menu id="helloutau.voiceBank.help">
                 <action id="helloutau.view.commandPalette" />
+                <separator />
+                <action id="helloutau.help.checkForUpdates" />
                 <separator />
                 <action id="helloutau.help.about" />
                 <action id="helloutau.help.aboutQt" />
