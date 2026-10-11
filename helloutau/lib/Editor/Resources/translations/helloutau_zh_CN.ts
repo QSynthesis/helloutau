@@ -602,6 +602,13 @@
     </message>
 </context>
 <context>
+    <name>hello::daw::AppearanceAndBehaviorCategory</name>
+    <message>
+        <source>Appearance &amp; Behavior</source>
+        <translation>外观与行为</translation>
+    </message>
+</context>
+<context>
     <name>hello::daw::AppearanceSettings</name>
     <message>
         <source>System Default</source>
@@ -2128,10 +2135,6 @@
     <message>
         <source>Choose Program</source>
         <translation>选择程序</translation>
-    </message>
-    <message>
-        <source>Appearance &amp; Behavior</source>
-        <translation>外观与行为</translation>
     </message>
 </context>
 <context>

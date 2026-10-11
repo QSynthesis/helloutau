@@ -2,9 +2,9 @@
 
 #include <helloutau/Widgets/SettingPage.h>
 
+#include "AppearanceAndBehaviorCategory.h"
 #include "AudioSettingPage.h"
 #include "EditorSettingPage.h"
-#include "EditorSettingPageIds.h"
 #include "RenderingSettingPage.h"
 #include "SystemSettingsPage.h"
 #include "UpdateSettingPage.h"
@@ -14,11 +14,7 @@ namespace hello::daw {
 
     void addEditorSettingPages(SettingCatalog *catalog, AppSettings &settings,
                                UpdateChecker &checker) {
-        // Appearance & Behavior is a category, which the dialog shows as the links to its pages.
-        auto appearance =
-            new SettingPage(QLatin1String(EditorSettingPageIds::appearanceAndBehavior));
-        appearance->setTitle(SettingPage::tr("Appearance & Behavior"));
-        appearance->setKeywords({QStringLiteral("Appearance & Behavior")});
+        const auto appearance = new AppearanceAndBehaviorCategory();
         const auto system = new SystemSettingsPage(settings);
         system->addPage(new UpdateSettingPage(settings, checker));
         appearance->addPage(system);

@@ -115,8 +115,8 @@ namespace hello::daw {
         kit::FrequencyFormats &frequencyFormats() const;
 
         /// Returns the catalog of the pages of the settings dialog, including the pages of the
-        /// editor registered at start, whose ids are the pageId of the classes in SettingPages and
-        /// EditorSettingPageIds. See the settings dialog in docs/Widgets.md.
+        /// editor registered at start, whose ids are the pageId of the classes in SettingPages. See
+        /// the settings dialog in docs/Widgets.md.
         SettingCatalog *settingCatalog() const;
 
         /// Returns the registry of the action contributions that the windows of this editor

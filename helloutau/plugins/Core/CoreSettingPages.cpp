@@ -1,7 +1,7 @@
 #include "CoreSettingPages.h"
 
 #include <helloutau/Editor/Editor.h>
-#include <helloutau/Editor/EditorSettingPageIds.h>
+#include <helloutau/Editor/SettingPages/AppearanceAndBehaviorCategory.h>
 #include <helloutau/Editor/SettingPages/EditorSettingPage.h>
 #include <helloutau/Editor/SettingPages/RenderingSettingPage.h>
 #include <helloutau/Editor/SettingPages/SystemSettingsPage.h>
@@ -16,7 +16,7 @@ namespace hello::daw {
     void addCoreSettingPages(Editor *editor, AppLoader *loader) {
         const auto catalog = editor->settingCatalog();
         if (const auto appearance =
-                catalog->page(QLatin1String(EditorSettingPageIds::appearanceAndBehavior))) {
+                catalog->page(QLatin1String(AppearanceAndBehaviorCategory::pageId))) {
             appearance->addPage(new MenusSettingPage(editor),
                                 QLatin1String(SystemSettingsPage::pageId));
         }
