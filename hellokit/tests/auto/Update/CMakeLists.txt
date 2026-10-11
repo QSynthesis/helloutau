@@ -1,4 +1,5 @@
 add_auto_test(test_SoftwareRelease.cpp HelloKitUpdate)
+add_auto_test(test_SoftwareReleaseDownload.cpp HelloKitUpdate)
 add_auto_test(test_Sha256Sums.cpp HelloKitUpdate)
 
 if(WIN32)
