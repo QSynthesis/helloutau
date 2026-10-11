@@ -15,7 +15,7 @@ namespace hello::daw {
 
     /// The language of the interface, under Appearance & Behavior as the system settings of
     /// JetBrains IDEs. A changed language takes effect at the next start, so applying it marks a
-    /// restart as required (kit::RestartScheduler::requireRestart()).
+    /// restart as required (kit::ExitLauncher::requireRestart()).
     class HELLOUTAU_EDITOR_EXPORT SystemSettingsPage : public SettingPage {
         Q_OBJECT
     public:

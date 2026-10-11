@@ -143,9 +143,9 @@ namespace hello::daw {
         QStringList errors() const;
 
         /// Loads the plugins, shows the reason if the core plugin does not run, runs the event
-        /// loop, and shuts the plugins down. If a restart is scheduled, starts a new process of
-        /// the program with the same options and without the files
-        /// (kit::RestartScheduler::relaunchIfScheduled()).
+        /// loop, and shuts the plugins down. Then starts the programs scheduled in
+        /// kit::ExitLauncher, such as a new process of the program with the same options and
+        /// without the files for a restart.
         ///
         /// \return the exit code of the event loop, or 1 if the core plugin does not run
         int run();

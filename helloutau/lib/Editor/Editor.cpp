@@ -25,7 +25,7 @@
 #include <hellokit/Edit/ProjectDocument.h>
 #include <hellokit/Edit/VoiceBankDocument.h>
 #include <hellokit/Support/RegistryInstanceList.h>
-#include <hellokit/Support/RestartScheduler.h>
+#include <hellokit/Support/ExitLauncher.h>
 #include <hellokit/VoiceBank/FrequencyFormats.h>
 #include <hellokit/VoiceBank/VoiceBank.h>
 
@@ -854,10 +854,11 @@ namespace hello::daw {
     }
 
     bool Editor::offerRestart(QWidget *parent) {
-        if (!kit::RestartScheduler::isRestartRequired()) {
+        const auto launcher = kit::ExitLauncher::instance();
+        if (!launcher || !launcher->isRestartRequired()) {
             return false;
         }
-        kit::RestartScheduler::clearRestartRequired();
+        launcher->clearRestartRequired();
         const auto answer =
             QMessageBox::question(parent, QCoreApplication::applicationName(),
                                   tr("The changes take effect after %1 restarts. Restart now?")
@@ -866,7 +867,7 @@ namespace hello::daw {
         if (answer != QMessageBox::Yes || !closeAll()) {
             return false;
         }
-        kit::RestartScheduler::scheduleRestart();
+        launcher->scheduleRestart();
         QCoreApplication::quit();
         return true;
     }

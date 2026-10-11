@@ -16,7 +16,7 @@
 #include <stdcorelib/pluginsystem/pluginsystem.h>
 #include <stdcorelib/system.h>
 
-#include <hellokit/Support/RestartScheduler.h>
+#include <hellokit/Support/ExitLauncher.h>
 #include <hellokit/Support/SettingsFile.h>
 #include <hellokit/Support/TemporaryStorage.h>
 #include <hellokit/Support/TranslationLoader.h>
@@ -36,6 +36,7 @@ namespace hello::daw {
     public:
         // Declared first, so that they are destroyed last, after the plugins and their windows
         std::unique_ptr<kit::TemporaryStorage> temporaryStorage;
+        std::unique_ptr<kit::ExitLauncher> exitLauncher;
         std::unique_ptr<kit::TranslationLoader> translations;
         stdc::pluginsystem::PluginSystem system{AppLoader::pluginIid,
                                                 stdc::pluginsystem::PluginSystem::Bundle};
@@ -113,6 +114,9 @@ namespace hello::daw {
             }
             impl.files.push_back(arguments[i]);
         }
+        // A restart starts the program again with the options and without the files.
+        impl.exitLauncher = std::make_unique<kit::ExitLauncher>(impl.options);
+
         // A settings directory given by the option also holds the voice banks and the plugins of
         // the user, so that it is self-contained.
         const auto settingsFile = impl.settingsDirectory + QStringLiteral("/settings.json");
@@ -308,7 +312,7 @@ namespace hello::daw {
         }
         const int code = QApplication::exec();
         shutdown();
-        kit::RestartScheduler::relaunchIfScheduled(impl.options);
+        impl.exitLauncher->launchAll();
         return code;
     }
 

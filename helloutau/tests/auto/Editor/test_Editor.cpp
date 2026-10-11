@@ -60,7 +60,7 @@
 #include <hellokit/Synth/ClassicSynthRunner.h>
 #include <hellokit/Synth/SynthPlan.h>
 #include <hellokit/Synth/ThreadedSynthRunner.h>
-#include <hellokit/Support/RestartScheduler.h>
+#include <hellokit/Support/ExitLauncher.h>
 #include <hellokit/VoiceBank/BuiltinFrequencyFormats.h>
 #include <hellokit/VoiceBank/FrequencyFormats.h>
 
@@ -345,6 +345,8 @@ class test_Editor : public QObject {
 
 private:
     QTemporaryDir m_dir;
+    // The launcher of the application, in which a restart is scheduled
+    kit::ExitLauncher m_launcher;
     // The formats of frequency tables that the plugin FrequencyEditor registers, one object for
     // each editor that editor() created. An object that outlives its editor removes nothing.
     mutable std::vector<std::unique_ptr<kit::BuiltinFrequencyFormats>> m_formats;
@@ -1222,8 +1224,8 @@ private Q_SLOTS:
         e->showSettings(window, QStringLiteral("editor.SystemSettings"));
         QVERIFY(asked);
         QCOMPARE(e->settings().appearance().language(), QStringLiteral("zh_CN"));
-        QVERIFY(!kit::RestartScheduler::isRestartRequired());
-        QVERIFY(!kit::RestartScheduler::isRestartScheduled());
+        QVERIFY(!kit::ExitLauncher::instance()->isRestartRequired());
+        QVERIFY(!kit::ExitLauncher::instance()->isRestartScheduled());
         QVERIFY(window->isVisible());
         e->settings().appearance().setLanguage(QString());
     }
@@ -1232,13 +1234,14 @@ private Q_SLOTS:
     // windows and quits to start again.
     void an_accepted_restart_closes_the_windows() {
         const auto e = editor();
-        QVERIFY(!kit::RestartScheduler::isRestartRequired());
+        const auto launcher = kit::ExitLauncher::instance();
+        QVERIFY(!launcher->isRestartRequired());
         QVERIFY(!e->offerRestart(nullptr));
-        QVERIFY(!kit::RestartScheduler::isRestartScheduled());
+        QVERIFY(!launcher->isRestartScheduled());
 
         const auto window = e->newWindow();
         window->show();
-        kit::RestartScheduler::requireRestart();
+        launcher->requireRestart();
         bool asked = false;
         handleNextDialog<QMessageBox>([&asked](QMessageBox *box) {
             asked = true;
@@ -1246,12 +1249,11 @@ private Q_SLOTS:
         });
         QVERIFY(e->offerRestart(nullptr));
         QVERIFY(asked);
-        QVERIFY(!kit::RestartScheduler::isRestartRequired());
-        QVERIFY(kit::RestartScheduler::isRestartScheduled());
+        QVERIFY(!launcher->isRestartRequired());
+        QVERIFY(launcher->isRestartScheduled());
         QVERIFY(!window->isVisible());
-        // Clears the restart for the other tests. The test program started with -functions only
-        // lists its tests.
-        QVERIFY(kit::RestartScheduler::relaunchIfScheduled({QStringLiteral("-functions")}));
+        // Clears the restart for the other tests
+        launcher->removeLaunch(QLatin1String(kit::ExitLauncher::restartKey));
     }
 
     // The number of rendering threads is chosen from Automatic, the powers of two below the

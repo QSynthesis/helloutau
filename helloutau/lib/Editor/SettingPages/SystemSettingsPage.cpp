@@ -8,7 +8,7 @@
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QVBoxLayout>
 
-#include <hellokit/Support/RestartScheduler.h>
+#include <hellokit/Support/ExitLauncher.h>
 
 #include "AppSettings.h"
 #include "SettingPageWidgets_p.h"
@@ -54,7 +54,9 @@ namespace hello::daw {
         const auto language = m_language->currentData().toString();
         if (language != m_settings.appearance().language()) {
             m_settings.appearance().setLanguage(language);
-            kit::RestartScheduler::requireRestart();
+            if (const auto launcher = kit::ExitLauncher::instance()) {
+                launcher->requireRestart();
+            }
         }
         Q_EMIT modifiedChanged();
         return true;

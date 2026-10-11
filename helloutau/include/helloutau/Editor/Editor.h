@@ -221,9 +221,10 @@ namespace hello::daw {
         void showSettings(QWidget *from, const QString &page = {});
 
         /// Asks the user over \a parent whether to restart now, if an applied setting takes
-        /// effect only after a restart (kit::RestartScheduler::isRestartRequired()). If the user
+        /// effect only after a restart (kit::ExitLauncher::isRestartRequired()). If the user
         /// agrees, closes every window as quitting does (closeAll()), and if all close, schedules
-        /// the restart (kit::RestartScheduler::scheduleRestart()) and quits the application.
+        /// the restart (kit::ExitLauncher::scheduleRestart()) and quits the application. Without
+        /// an instance of kit::ExitLauncher, no restart is offered.
         ///
         /// \return Whether the application quits to start again. A user who declines, or who
         ///         cancels the closing of a window, restarts later by hand.
