@@ -152,6 +152,12 @@ private Q_SLOTS:
 
         failure.fileHead = QByteArray("RIFF\0\0\0\0WAVEfmt ", 16);
         QVERIFY(!diagnose({failure}).at(0).explanation.contains(QStringLiteral("RIFF")));
+
+        // A record without the result of the call, which a host may pass
+        failure.run = std::nullopt;
+        const auto withoutRun = diagnose({failure});
+        QCOMPARE(withoutRun.size(), 1);
+        QVERIFY(!withoutRun.at(0).explanation.isEmpty());
     }
 
     void the_remaining_failures_are_grouped_by_kind() {

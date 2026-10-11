@@ -377,7 +377,9 @@ namespace hello::kit {
                             break;
                         case WavtoolNote: {
                             auto explanation =
-                                output.isEmpty()
+                                !first.run
+                                    ? Text::tr("The wavtool appended nothing to the track.")
+                                : output.isEmpty()
                                     ? Text::tr("The wavtool reported the exit code %1 and "
                                                "appended nothing to the track.")
                                           .arg(first.run->exitCode)
