@@ -401,6 +401,46 @@ private Q_SLOTS:
         QTRY_COMPARE(playback.noteStates(), (QList<S::NoteState>{S::Ready, S::Ready}));
     }
 
+    // A render of other notes keeps the mark of a failed fragment.
+    void a_render_of_other_notes_keeps_the_mark() {
+        if (AudioEngine::instance()->sampleRate() <= 0) {
+            QSKIP("This machine has no audio output device.");
+        }
+        using S = kit::RealtimeSynth;
+        QTemporaryDir dir;
+        const auto document = singingDocument(dir);
+        QVERIFY(document);
+        kit::SynthDiagnosers diagnosers;
+        kit::BuiltinSynthDiagnosers builtins(diagnosers.registry());
+        Playback playback(nullptr, temporaryOf(dir), nullptr);
+        playback.setSynthDiagnosers(&diagnosers);
+        const auto synthTools = someSynthTools();
+        QVERIFY(writeFragments(playback, *document, synthTools.resampler));
+        playback.setSynthTools(synthTools);
+
+        kit::SynthFailure failure;
+        failure.stage = kit::SynthFailure::Wavtool;
+        failure.noteIndex = 1;
+        failure.file = fragmentsOf(playback, *document, synthTools.resampler).value(1);
+        const auto runner = std::make_shared<SilentRunner>();
+        runner->failures = {failure};
+        playback.setRunner(runner);
+        QSignalSpy rendered(&playback, &Playback::trackRendered);
+        const auto file = fs::path(dir.path().toStdU16String()) / "song.wav";
+        kit::DiagnosticList diagnostics;
+        QVERIFY(playback.renderTrack(*document, file, synthTools, diagnostics));
+        QTRY_COMPARE_WITH_TIMEOUT(rendered.size(), 1, 5000);
+
+        // The first note alone, rendered without failures
+        runner->failures.clear();
+        QVERIFY(playback.play(*document, std::make_pair(0, 0), synthTools, diagnostics));
+        QTRY_COMPARE_WITH_TIMEOUT(runner->ended.load(), 2, 5000);
+        QTRY_VERIFY(playback.state() != Playback::Rendering);
+        playback.stop();
+        playback.refreshNoteStates(*document);
+        QTRY_COMPARE(playback.noteStates(), (QList<S::NoteState>{S::Ready, S::Failed}));
+    }
+
     void without_diagnosers_nothing_is_diagnosed() {
         QTemporaryDir dir;
         const auto document = singingDocument(dir);

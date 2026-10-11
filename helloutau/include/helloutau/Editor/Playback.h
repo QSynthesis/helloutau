@@ -154,8 +154,8 @@ namespace hello::daw {
         /// How far each note of the first track is rendered, by its index: as the preview or
         /// prepare() has it, or else by the fragments in the render cache as the last
         /// refreshNoteStates() found them, Ready if the fragment is there and Waiting if not.
-        /// A fragment of a failure that a diagnosis of the last prerender explained is Failed
-        /// although it is there, until the next prerender begins. Empty without a voice bank.
+        /// A fragment of a failure that a diagnosis of a prerender explained is Failed although it
+        /// is there, until a later prerender renders that note. Empty without a voice bank.
         QList<kit::RealtimeSynth::NoteState> noteStates() const;
 
         /// Updates noteStates() for \a document and emits noteStatesChanged() once it is

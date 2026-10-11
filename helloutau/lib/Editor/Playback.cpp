@@ -254,10 +254,10 @@ namespace hello::daw {
         std::shared_ptr<std::atomic<bool>> scanCancel;
         int scanRequest = 0;
 
-        // The fragments of the failures that a diagnosis of the last prerender explained, which
-        // the scan reports as Failed although they exist. The cache file names do not depend on
-        // the configuration of a resampler, so that a later render can write a valid fragment
-        // under the same name, and every prerender therefore begins without them.
+        // The fragments of the failures that a diagnosis of a prerender explained, which the
+        // scan reports as Failed although they exist. The cache file names do not depend on the
+        // configuration of a resampler, so that a later render can write a valid fragment under
+        // the same name, and each prerender therefore replaces the marks of its own fragments.
         std::set<std::filesystem::path> failedFragments;
 
         // The inputs of the plan of the whole track of \a document for the realtime mode,
@@ -606,7 +606,6 @@ namespace hello::daw {
         // Starts job on a worker thread, which reports to rendered() once the render ends.
         void start(const std::shared_ptr<Job> &started) {
             job = started;
-            failedFragments.clear();
             const auto worker = QThread::create([recipient = recipient, started] {
                 run(started, recipient);
                 deliver(recipient,
@@ -693,6 +692,12 @@ namespace hello::daw {
                 return;
             }
             const auto diagnoses = diagnose(finished->failures, finished->synthTools, false);
+            // A render replaces the marks of its own fragments and keeps those of other notes.
+            if (finished->plan) {
+                for (const auto &step : finished->plan->steps()) {
+                    failedFragments.erase(step.cacheFile);
+                }
+            }
             for (const auto &diagnosis : diagnoses) {
                 for (const int index : diagnosis.failures) {
                     const auto &failure = finished->failures.at(index);
