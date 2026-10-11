@@ -3479,9 +3479,9 @@ private Q_SLOTS:
     }
 
     // In the prerender mode, playing again pauses, and once more goes on from there without a
-    // render, even after the selection has changed. An edit stops playback, and the next play
-    // renders again.
-    void a_prerender_pauses_and_goes_on_without_a_render() {
+    // render. After the selection has changed, playing renders the selected notes instead. An
+    // edit stops playback, and the next play renders again.
+    void a_prerender_pauses_and_goes_on_for_the_same_selection() {
         if (AudioEngine::instance()->sampleRate() <= 0) {
             QSKIP("This machine has no audio output device.");
         }
@@ -3507,21 +3507,27 @@ private Q_SLOTS:
         QTRY_COMPARE(playback->state(), Playback::Playing);
         play->trigger();
         QCOMPARE(playback->state(), Playback::Paused);
-        window->pianoRoll()->setSelectedIndices({0});
         play->trigger();
         QCOMPARE(playback->state(), Playback::Playing);
         QCOMPARE(runner->started.load(), 1);
 
+        play->trigger();
+        QCOMPARE(playback->state(), Playback::Paused);
+        window->pianoRoll()->setSelectedIndices({0});
+        play->trigger();
+        QTRY_COMPARE(playback->state(), Playback::Playing);
+        QCOMPARE(runner->started.load(), 2);
+
         const auto session = window->document()->session();
         {
             auto tx = session->transaction(QStringLiteral("lyric"));
-            kit::ProjectRef(session).tracks().at(0).notes().at(1).setLyric(QStringLiteral("i"));
+            kit::ProjectRef(session).tracks().at(0).notes().at(0).setLyric(QStringLiteral("i"));
             tx.commit();
         }
         QCOMPARE(playback->state(), Playback::Stopped);
         play->trigger();
         QTRY_COMPARE(playback->state(), Playback::Playing);
-        QCOMPARE(runner->started.load(), 2);
+        QCOMPARE(runner->started.load(), 3);
     }
 };
 

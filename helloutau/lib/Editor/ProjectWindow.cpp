@@ -822,10 +822,11 @@ namespace hello::daw {
             selectionDurationLabel->setText(seconds(selection));
         }
 
-        // Plays in the playback mode of the settings (docs/Widgets.md), pauses what plays,
-        // resumes what is paused, or cancels a render. At rest, renders the selected notes, from
-        // the first to the last, and plays them, or plays from the playhead as the track is
-        // rendered.
+        // Plays in the playback mode of the settings (docs/Widgets.md), pauses the playback,
+        // resumes the paused playback, or cancels a render. A paused prerender of notes other
+        // than the selected notes is stopped, and the selected notes are rendered instead. At
+        // rest, renders the selected notes, from the first to the last, and plays them, or plays
+        // from the playhead as the track is rendered.
         void togglePlayback() {
             stdc_decl_t;
             switch (playback->state()) {
@@ -836,6 +837,16 @@ namespace hello::daw {
                     playback->pause();
                     return;
                 case Playback::Paused:
+                    // A paused prerender goes on only for the same selection.
+                    if (!playback->isPreviewPaused()) {
+                        const auto selected = roll->selectedIndices();
+                        if (!selected.isEmpty() &&
+                            std::make_pair(selected.first(), selected.last()) != lastRange) {
+                            playback->stop();
+                            playRange(std::make_pair(selected.first(), selected.last()));
+                            return;
+                        }
+                    }
                     resumePlayback();
                     return;
                 default:
