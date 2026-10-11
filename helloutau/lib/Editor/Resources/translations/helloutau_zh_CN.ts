@@ -250,6 +250,10 @@
         <translation>以指定编码重新读取(&amp;E)...</translation>
     </message>
     <message>
+        <source>Read Folders Again in Enc&amp;odings...</source>
+        <translation>以各自的编码重新读取文件夹(&amp;O)...</translation>
+    </message>
+    <message>
         <source>Remove Audio &amp;Metadata...</source>
         <translation>移除音频元数据(&amp;M)...</translation>
     </message>
@@ -2757,8 +2761,24 @@ Lyrics:
         </translation>
     </message>
     <message>
+        <source>Read Folders Again in Encodings - %1</source>
+        <translation>以各自的编码重新读取文件夹 - %1</translation>
+    </message>
+    <message>
+        <source>Choose the encoding of each folder of the voice bank &quot;%1&quot;. A folder whose encoding is changed is read again from disk in the new encoding: its text changes, and its unsaved changes are discarded. Undo restores the folders. The encodings are recorded in the folders when the voice bank is saved.</source>
+        <translation>选择音源「%1」中各文件夹的编码。改变了编码的文件夹将按新编码从磁盘重新读取，其文本随之改变，未保存的修改将被舍弃。撤销可恢复这些文件夹。所选编码在保存音源时记录在各文件夹中。</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>取消</translation>
+    </message>
+    <message>
         <source>%1 (the voice bank)</source>
         <translation>%1（音源本身）</translation>
+    </message>
+    <message>
+        <source>(currently %1)</source>
+        <translation>（当前为 %1）</translation>
     </message>
     <message numerus="yes">
         <source>(%n invalid)</source>
@@ -3094,6 +3114,14 @@ Read them again? What you did not save in them is replaced, and Undo brings it b
     <message>
         <source>Do not save</source>
         <translation>不保存</translation>
+    </message>
+    <message>
+        <source>Read Folders Again in Encodings</source>
+        <translation>以各自的编码重新读取文件夹</translation>
+    </message>
+    <message>
+        <source>No folder of the voice bank can be read in another encoding. Each folder has either no text files or an oto.ini that declares UTF-8.</source>
+        <translation>音源中没有可按其他编码读取的文件夹。每个文件夹或者没有文本文件，或者其 oto.ini 声明了 UTF-8。</translation>
     </message>
     <message>
         <source>Insert Entry</source>
@@ -4472,6 +4500,10 @@ Write them again without these chunks? The audio stays the same. The files are w
     <message>
         <source>Read Again in %1</source>
         <translation>以 %1 重新读取</translation>
+    </message>
+    <message>
+        <source>Read Again in Encodings</source>
+        <translation>以各自的编码重新读取</translation>
     </message>
     <message>
         <source>The folder of the voice bank was not read again, because no encoding was selected for a text file in it, so the voice bank on disk is incomplete. The contents read before are kept, and saving writes them back.</source>
