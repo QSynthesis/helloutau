@@ -124,6 +124,17 @@
     </message>
 </context>
 <context>
+    <name>hello::daw::ClassicPluginRunner</name>
+    <message>
+        <source>A batch file cannot run with a path that contains &quot;%&quot;.</source>
+        <translation>路径包含「%」时无法运行批处理文件。</translation>
+    </message>
+    <message>
+        <source>The plugin &quot;%1&quot; could not be started: %2</source>
+        <translation>无法启动插件「%1」：%2</translation>
+    </message>
+</context>
+<context>
     <name>hello::daw::ClassicPluginSettingPage</name>
     <message>
         <source>Classic Plugins</source>
@@ -144,17 +155,6 @@
     <message>
         <source>Open</source>
         <translation>打开</translation>
-    </message>
-</context>
-<context>
-    <name>hello::daw::ClassicPluginRunner</name>
-    <message>
-        <source>A batch file cannot run with a path that contains &quot;%&quot;.</source>
-        <translation>路径包含「%」时无法运行批处理文件。</translation>
-    </message>
-    <message>
-        <source>The plugin &quot;%1&quot; could not be started: %2</source>
-        <translation>无法启动插件「%1」：%2</translation>
     </message>
 </context>
 </TS>

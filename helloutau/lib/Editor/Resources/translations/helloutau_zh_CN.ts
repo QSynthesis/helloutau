@@ -2516,6 +2516,14 @@ Automatic: updates are checked at startup as well, and a new version is download
         <translation>选择「自动」时，按系统时区选择更新源。</translation>
     </message>
     <message>
+        <source>&amp;Extraction threads:</source>
+        <translation>解压线程数(&amp;E)：</translation>
+    </message>
+    <message>
+        <source>The number of threads that extract the archive of an update of the portable version. The default is %1.</source>
+        <translation>解压免安装版更新压缩包所用的线程数。默认为 %1。</translation>
+    </message>
+    <message>
         <source>Check &amp;Now</source>
         <translation>立即检查(&amp;N)</translation>
     </message>
@@ -4303,6 +4311,61 @@ Write them again without these chunks? The audio stays the same. The files are w
     <message>
         <source>&quot;%1&quot; could not be written.</source>
         <translation>无法写入「%1」。</translation>
+    </message>
+</context>
+<context>
+    <name>hello::kit::ZipExtractor</name>
+    <message>
+        <source>The archive %1 cannot be opened: %2</source>
+        <translation>无法打开压缩包 %1：%2</translation>
+    </message>
+    <message>
+        <source>The archive %1 cannot be read: %2</source>
+        <translation>无法读取压缩包 %1：%2</translation>
+    </message>
+    <message>
+        <source>The archive holds more than %1 entries.</source>
+        <translation>压缩包中的条目超过 %1 个。</translation>
+    </message>
+    <message>
+        <source>The extraction was canceled.</source>
+        <translation>解压已取消。</translation>
+    </message>
+    <message>
+        <source>The entry %1 cannot be read: %2</source>
+        <translation>无法读取压缩包条目 %1：%2</translation>
+    </message>
+    <message>
+        <source>The name %1 of an entry cannot be decoded.</source>
+        <translation>无法解码压缩包条目的名称 %1。</translation>
+    </message>
+    <message>
+        <source>The entry %1 has an unsafe path.</source>
+        <translation>压缩包条目 %1 的路径不安全。</translation>
+    </message>
+    <message>
+        <source>The entry %1 is a symbolic link.</source>
+        <translation>压缩包条目 %1 是符号链接。</translation>
+    </message>
+    <message>
+        <source>The entry %1 is encrypted.</source>
+        <translation>压缩包条目 %1 已加密。</translation>
+    </message>
+    <message>
+        <source>The extracted files exceed %1 bytes.</source>
+        <translation>解压出的文件超过 %1 字节。</translation>
+    </message>
+    <message>
+        <source>The folder %1 cannot be accessed.</source>
+        <translation>无法访问文件夹 %1。</translation>
+    </message>
+    <message>
+        <source>The folder %1 cannot be created.</source>
+        <translation>无法创建文件夹 %1。</translation>
+    </message>
+    <message>
+        <source>The file %1 cannot be written.</source>
+        <translation>无法写入文件 %1。</translation>
     </message>
 </context>
 <context>
