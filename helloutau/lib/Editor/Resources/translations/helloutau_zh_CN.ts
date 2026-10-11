@@ -4323,6 +4323,10 @@ Write them again without these chunks? The audio stays the same. The files are w
         <source>This file is not a HelloUtau voice bank configuration.</source>
         <translation>此文件不是 HelloUtau 音源配置。</translation>
     </message>
+    <message>
+        <source>The record of the file name encoding is malformed, so the file names are used as they are.</source>
+        <translation>文件名编码的记录格式不正确，因此按原样使用文件名。</translation>
+    </message>
 </context>
 <context>
     <name>hello::kit::VoiceBankEdits</name>
