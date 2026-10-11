@@ -12,32 +12,28 @@
 #include <QtGui/QDesktopServices>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QMessageBox>
-#include <QtWidgets/QProgressDialog>
 #include <QtWidgets/QPushButton>
 
 #include <stdcorelib/pimpl.h>
 
-#include <hellokit/Support/ExitLauncher.h>
 #include <hellokit/Support/SettingsFile.h>
 #include <hellokit/Support/TemporaryStorage.h>
-#include <hellokit/Update/SoftwareReleaseDownload.h>
-#include <hellokit/Update/SoftwareReleaseQuery.h>
 #ifdef Q_OS_WINDOWS
 #  include <hellokit/Update/Windows/InnoSetup.h>
 #endif
 
 #include <helloutau/Config.h>
 
+#include "PortableUpdate.h"
 #include "UpdateDialog.h"
+#include "UpdateTask.h"
+#include "UpdateTaskView.h"
 
 namespace hello::daw {
 
     namespace {
 
         constexpr char sumsName[] = "SHA256SUMS";
-
-        // The key of the installation of an update in kit::ExitLauncher
-        constexpr char updateKey[] = "update";
 
         // The minimum interval between two checks at start, in seconds
         constexpr qint64 startupCheckInterval = 24 * 60 * 60;
@@ -79,258 +75,81 @@ namespace hello::daw {
         AppSettings &settings;
         std::optional<Configuration> configuration;
         QString configurationError;
-        kit::SoftwareReleaseQuery *query = nullptr;
-        kit::SoftwareReleaseDownload *download = nullptr;
+        UpdateTask *task = nullptr;
+        std::function<bool()> closeWindows;
 
-        // The state of the running check
-        bool manual = false;
+        // Whether the running task was started by the check at start, whose result is acted on
+        // without a request of the user
+        bool atStartup = false;
+        // Whether a check runs, for finished()
+        bool checking = false;
+        // The source of the last check, which Check Again uses
+        QString source;
         QPointer<QWidget> parent;
-        QPointer<QProgressDialog> progress;
-
-        // The state of the running download. An interactive download is reported to the user.
-        bool downloadInteractive = false;
-        QString downloadVersion;
-        QUrl downloadPage;
-        QPointer<QWidget> downloadParent;
-        QPointer<QProgressDialog> downloadProgress;
+        QPointer<UpdateDialog> dialog;
 
         QWidget *dialogParent() const {
             return parent ? parent.data() : QApplication::activeWindow();
         }
 
-        void start(QWidget *from, const QString &sourceName, bool isManual) {
-            query->abort();
-            closeProgress();
-            manual = isManual;
-            parent = from;
-            if (!configuration) {
-                report(tr("The update configuration cannot be read: %1").arg(configurationError));
-                return;
-            }
-            const auto &source =
-                configuration->sourceOf(sourceName, QTimeZone::systemTimeZone().territory());
-            if (!query->start(source.latestRelease, source.releasePage)) {
-                report(tr("Cannot check for updates: %1").arg(query->errorString()));
-                return;
-            }
-            if (manual) {
-                progress = new QProgressDialog(tr("Checking for updates..."), tr("Cancel"), 0, 0,
-                                               dialogParent());
-                progress->setWindowTitle(tr("Check for Updates"));
-                progress->setWindowModality(Qt::WindowModal);
-                progress->setAttribute(Qt::WA_DeleteOnClose);
-                progress->setMinimumDuration(0);
-                QObject::connect(progress, &QProgressDialog::canceled, decl, [this] {
-                    query->abort();
-                    closeProgress();
-                    Q_EMIT decl->finished();
-                });
-                progress->show();
-            }
+        void check() {
+            const auto &found =
+                configuration->sourceOf(source, QTimeZone::systemTimeZone().territory());
+            task->check(found.latestRelease, found.releasePage, currentVersion(),
+                        configuration->assetPrefix);
         }
 
-        void closeProgress() {
-            if (progress) {
-                // Disconnected first, because closing the dialog emits canceled().
-                QObject::disconnect(progress, nullptr, decl, nullptr);
-                progress->close();
-            }
-        }
-
-        // Reports a failure to the user of a manual check, and to the log of a check at start
-        void report(const QString &message) {
-            if (manual) {
-                QMessageBox::warning(dialogParent(), tr("Check for Updates"), message);
-            } else {
-                qWarning().noquote() << "The check for updates failed:" << message;
-            }
-            Q_EMIT decl->finished();
-        }
-
-        void readResult() {
-            closeProgress();
-            const auto &release = query->release();
-            if (!release) {
-                report(tr("Cannot check for updates: %1").arg(query->errorString()));
+        // Shows the dialog of the task, which is modal, unless it is open already
+        void showDialog() {
+            if (dialog) {
+                dialog->raise();
                 return;
             }
-            settings.updates().setLastCheck(QDateTime::currentDateTimeUtc());
-            const auto current = currentVersion();
-            const auto asset = UpdateChecker::assetName(
-                configuration->assetPrefix, release->version, QStringLiteral(HELLOUTAU_TRIPLET),
-                isInstalled(*configuration));
-            const auto version = release->version.toString();
-            if (!UpdateChecker::offers(*release, current, asset)) {
-                if (manual) {
-                    QMessageBox::information(
-                        dialogParent(), tr("Check for Updates"),
-                        tr("%1 %2 is the latest version.")
-                            .arg(QApplication::applicationDisplayName(), current.toString()));
-                }
-                Q_EMIT decl->finished();
-                return;
-            }
-            // Copied, because another check may replace the release of the query in the event
-            // loop of the dialog
-            const auto offered = *release;
-            if (!manual && settings.updates().mode() == UpdateSettings::Automatic) {
-                startDownload(offered, asset, false);
-                Q_EMIT decl->finished();
-                return;
-            }
-            if (!manual && version == settings.updates().skippedVersion()) {
-                Q_EMIT decl->finished();
-                return;
-            }
-            UpdateDialog dialog(version, current.toString(), offered.notes, dialogParent());
-            dialog.exec();
-            switch (dialog.choice()) {
-                case UpdateDialog::Download:
-                    startDownload(offered, asset, true);
-                    break;
-                case UpdateDialog::Skip:
-                    settings.updates().setSkippedVersion(version);
-                    break;
-                case UpdateDialog::Later:
-                    break;
-            }
-            Q_EMIT decl->finished();
-        }
-
-        void startDownload(const kit::SoftwareRelease &release, const QString &asset,
-                           bool interactive) {
-            closeDownloadProgress();
-            downloadInteractive = interactive;
-            downloadVersion = release.version.toString();
-            downloadPage = release.page;
-            downloadParent = dialogParent();
-            if (!download->start(release, asset, UpdateChecker::downloadDirectory())) {
-                reportDownload();
-                return;
-            }
-            if (!interactive) {
-                return;
-            }
-            downloadProgress = new QProgressDialog(tr("Downloading %1...").arg(asset), tr("Cancel"),
-                                                   0, 0, downloadParent);
-            downloadProgress->setWindowTitle(tr("Download Update"));
-            downloadProgress->setWindowModality(Qt::WindowModal);
-            downloadProgress->setAttribute(Qt::WA_DeleteOnClose);
-            downloadProgress->setMinimumDuration(0);
-            QObject::connect(downloadProgress, &QProgressDialog::canceled, decl, [this] {
-                download->abort();
-                closeDownloadProgress();
+            UpdateDialog box(task, settings, dialogParent());
+            box.view()->setCloseWindows(closeWindows);
+            box.view()->setCheck([this] {
+                atStartup = false;
+                check();
             });
-            downloadProgress->show();
-        }
-
-        void closeDownloadProgress() {
-            if (downloadProgress) {
-                // Disconnected first, because closing the dialog emits canceled().
-                QObject::disconnect(downloadProgress, nullptr, decl, nullptr);
-                downloadProgress->close();
-            }
-        }
-
-        void showDownloadProgress(qint64 received, qint64 total) {
-            if (!downloadProgress) {
-                return;
-            }
-            // The progress is in KiB, because the range of the dialog is an int.
-            downloadProgress->setMaximum(total > 0 ? int(total / 1024) : 0);
-            downloadProgress->setValue(int(received / 1024));
-        }
-
-        // Reports the result of the download to the user of an interactive download, and to the
-        // log otherwise
-        void reportDownload() {
-            closeDownloadProgress();
-            const auto filePath = download->filePath();
-            const bool installed = configuration && isInstalled(*configuration);
-            if (!downloadInteractive) {
-                if (filePath.isEmpty()) {
-                    qWarning().noquote()
-                        << "The download of the update failed:" << download->errorString();
-                } else if (installed) {
-                    scheduleInstallation(filePath, false);
-                } else {
-                    // TODO: Replace the files of the extracted application when it quits, see
-                    // the update of the extracted application in docs/Distribution.md.
-                    qInfo().noquote() << "The update is downloaded and verified:" << filePath;
-                }
-                return;
-            }
-            const auto parent = downloadParent.data();
-            if (filePath.isEmpty()) {
-                QMessageBox::warning(
-                    parent, tr("Download Update"),
-                    tr("Cannot download the update: %1").arg(download->errorString()));
-                return;
-            }
-            if (installed) {
-                offerInstallation(filePath, parent);
-                return;
-            }
-            // TODO: Offer the replacement of the files of the extracted application, see the
-            // update of the extracted application in docs/Distribution.md.
-            QMessageBox box(QMessageBox::Information, tr("Download Update"),
-                            tr("The update has been downloaded and verified:\n%1")
-                                .arg(QDir::toNativeSeparators(filePath)),
-                            QMessageBox::Close, parent);
-            const auto show = box.addButton(tr("Show in Folder"), QMessageBox::ActionRole);
+            dialog = &box;
             box.exec();
-            if (box.clickedButton() == show) {
-                QDesktopServices::openUrl(QUrl::fromLocalFile(QFileInfo(filePath).absolutePath()));
-            }
         }
 
-        // The installer runs once the event loop has ended, and the version is recorded for the
-        // next start when the checker is destroyed, after the windows are closed. An installer
-        // that starts the application again replaces a scheduled restart.
-        //
-        // \return whether the installation was scheduled, which requires an instance of
-        //         kit::ExitLauncher
-        bool scheduleInstallation(const QString &installer, bool relaunch) {
-            const auto launcher = kit::ExitLauncher::instance();
-            if (!launcher) {
-                return false;
+        // Acts on the task that the check at start began. In the mode Notified a release that
+        // the user has not skipped is offered in the dialog. In the mode Automatic the release
+        // is prepared and its installation scheduled at exit.
+        void followStartup(UpdateTask::State state) {
+            if (!atStartup) {
+                return;
             }
-            if (relaunch) {
-                launcher->removeLaunch(QLatin1String(kit::ExitLauncher::restartKey));
-            }
-            launcher->setLaunch(QLatin1String(updateKey), installer,
-                                UpdateChecker::installerArguments(relaunch));
-            pendingVersion = downloadVersion;
-            pendingPage = downloadPage;
-            return true;
-        }
-
-        void offerInstallation(const QString &installer, QWidget *parent) {
-            QMessageBox box(QMessageBox::Question, tr("Install Update"),
-                            tr("%1 %2 has been downloaded and verified.")
-                                .arg(QApplication::applicationDisplayName(), downloadVersion),
-                            QMessageBox::NoButton, parent);
-            box.setInformativeText(
-                tr("Install Now closes %1 and starts it again after the update. Install on Quit "
-                   "installs the update when %1 quits.")
-                    .arg(QApplication::applicationDisplayName()));
-            const auto now = box.addButton(tr("Install &Now"), QMessageBox::AcceptRole);
-            const auto onQuit = box.addButton(tr("Install on &Quit"), QMessageBox::ActionRole);
-            box.addButton(tr("&Later"), QMessageBox::RejectRole);
-            box.setDefaultButton(now);
-            box.exec();
-            if (box.clickedButton() == onQuit) {
-                scheduleInstallation(installer, false);
-            } else if (box.clickedButton() == now && (!closeWindows || closeWindows()) &&
-                       scheduleInstallation(installer, true)) {
-                QCoreApplication::quit();
+            switch (state) {
+                case UpdateTask::Available:
+                    if (settings.updates().mode() == UpdateSettings::Automatic) {
+                        task->prepare();
+                        return;
+                    }
+                    atStartup = false;
+                    if (task->release()->version.toString() !=
+                        settings.updates().skippedVersion()) {
+                        showDialog();
+                    }
+                    return;
+                case UpdateTask::Ready:
+                    atStartup = false;
+                    task->schedule(false);
+                    return;
+                case UpdateTask::Failed:
+                    atStartup = false;
+                    qWarning().noquote() << "The automatic update failed:" << task->errorString();
+                    return;
+                case UpdateTask::Idle:
+                case UpdateTask::UpToDate:
+                    atStartup = false;
+                    return;
+                default:
+                    return;
             }
         }
-
-        std::function<bool()> closeWindows;
-        // The version and the page of the scheduled installation
-        QString pendingVersion;
-        QUrl pendingPage;
     };
 
     QString UpdateChecker::Configuration::defaultFileName() {
@@ -426,20 +245,19 @@ namespace hello::daw {
         stdc_impl_t;
         impl.decl = this;
         impl.configuration = Configuration::read(fileName, &impl.configurationError);
-        impl.query = new kit::SoftwareReleaseQuery(this);
-        impl.download = new kit::SoftwareReleaseDownload(this);
-        connect(impl.download, &kit::SoftwareReleaseDownload::progressChanged, this,
-                [this](qint64 received, qint64 total) {
-                    stdc_impl_t;
-                    impl.showDownloadProgress(received, total);
-                });
-        connect(impl.download, &kit::SoftwareReleaseDownload::finished, this, [this] {
+        const auto kind = impl.configuration && isInstalled(*impl.configuration)
+                              ? UpdateTask::Installed
+                              : UpdateTask::Portable;
+        impl.task =
+            new UpdateTask(settings, kind, PortableUpdate::applicationInstallDirectory(), this);
+        connect(impl.task, &UpdateTask::stateChanged, this, [this](UpdateTask::State state) {
             stdc_impl_t;
-            impl.reportDownload();
-        });
-        connect(impl.query, &kit::SoftwareReleaseQuery::finished, this, [this] {
-            stdc_impl_t;
-            impl.readResult();
+            if (impl.checking && state != UpdateTask::Checking) {
+                impl.checking = false;
+                Q_EMIT finished();
+            }
+            impl.checking = state == UpdateTask::Checking;
+            impl.followStartup(state);
         });
     }
 
@@ -447,13 +265,10 @@ namespace hello::daw {
         stdc_impl_t;
         // Recorded only if the installation is still scheduled, as it is when the application
         // quits normally.
-        const auto launcher = kit::ExitLauncher::instance();
-        if (!impl.pendingVersion.isEmpty() && launcher &&
-            launcher->hasLaunch(QLatin1String(updateKey))) {
-            impl.settings.updates().setPendingInstallation(impl.pendingVersion, impl.pendingPage);
+        if (impl.task->isScheduled() && impl.task->release()) {
+            impl.settings.updates().setPendingInstallation(impl.task->release()->version.toString(),
+                                                           impl.task->release()->page);
         }
-        impl.closeProgress();
-        impl.closeDownloadProgress();
     }
 
     QString UpdateChecker::downloadDirectory() {
@@ -496,9 +311,14 @@ namespace hello::daw {
         }
         const auto page = impl.settings.updates().pendingPage();
         impl.settings.updates().clearPendingInstallation();
+        // Read before the removal of the download directory, which holds it
+        const auto log = PortableUpdate::readLog(UpdateTask::updaterLog());
         // Removed regardless of the result, so that no download remains in the temporary directory.
         // A failed update is downloaded again.
         QDir(downloadDirectory()).removeRecursively();
+        if (impl.task->kind() == UpdateTask::Portable) {
+            PortableUpdate(PortableUpdate::applicationInstallDirectory()).removeRemnants();
+        }
         const auto target = QVersionNumber::fromString(pending);
         if (QVersionNumber::compare(currentVersion().normalized(), target.normalized()) >= 0) {
             return;
@@ -507,6 +327,9 @@ namespace hello::daw {
                         tr("The update to %1 %2 was not installed.")
                             .arg(QApplication::applicationDisplayName(), pending),
                         QMessageBox::Close, parent);
+        if (!log.isEmpty()) {
+            box.setDetailedText(log);
+        }
         const auto open = box.addButton(tr("Open Download Page"), QMessageBox::ActionRole);
         box.exec();
         if (box.clickedButton() == open && page.isValid()) {
@@ -534,25 +357,49 @@ namespace hello::daw {
 
     bool UpdateChecker::isRunning() const {
         stdc_impl_t;
-        return impl.query->isRunning();
+        return impl.task->isRunning();
+    }
+
+    UpdateTask *UpdateChecker::task() const {
+        stdc_impl_t;
+        return impl.task;
     }
 
     void UpdateChecker::checkAtStartup(QWidget *parent) {
         stdc_impl_t;
-        if (impl.settings.updates().mode() == UpdateSettings::Manual || impl.query->isRunning() ||
-            impl.download->isRunning()) {
+        if (!impl.configuration || impl.settings.updates().mode() == UpdateSettings::Manual ||
+            impl.task->isRunning() || impl.task->state() != UpdateTask::Idle) {
             return;
         }
         const auto last = impl.settings.updates().lastCheck();
         if (last.isValid() && last.secsTo(QDateTime::currentDateTimeUtc()) < startupCheckInterval) {
             return;
         }
-        impl.start(parent, impl.settings.updates().source(), false);
+        impl.parent = parent;
+        impl.source = impl.settings.updates().source();
+        impl.atStartup = true;
+        impl.check();
     }
 
     void UpdateChecker::checkNow(QWidget *parent, const QString &source) {
         stdc_impl_t;
-        impl.start(parent, source, true);
+        impl.parent = parent;
+        if (!impl.configuration) {
+            QMessageBox::warning(
+                impl.dialogParent(), tr("Check for Updates"),
+                tr("The update configuration cannot be read: %1").arg(impl.configurationError));
+            return;
+        }
+        impl.source = source;
+        // A task that has a result to show is shown as it is. Otherwise the releases are
+        // checked again.
+        const auto state = impl.task->state();
+        if (state == UpdateTask::Idle || state == UpdateTask::UpToDate ||
+            (state == UpdateTask::Failed && !impl.task->release())) {
+            impl.atStartup = false;
+            impl.check();
+        }
+        impl.showDialog();
     }
 
 }

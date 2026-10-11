@@ -8,13 +8,13 @@
 
 「临时目录管理器」已实现（`kit::TemporaryStorage`）。工程窗口、试合成、`ClassicPluginRunner` 与 `ClassicSynthRunner` 的临时目录都由它分配。`ThreadedSynthRunner` 在未指定脚本目录时不写出脚本，只以总目录作为脚本中的路径，不创建目录。
 
-「自动更新」的检查与下载已实现：`HelloKitUpdate` 的 `SoftwareReleaseQuery` 取得最新的 release，`SoftwareReleaseDownload` 下载附件并以 `SHA256SUMS` 校验。helloutau 的 `UpdateChecker` 在启动时与「Check for Updates...」中检查，以 `UpdateDialog` 提示，「Updates」设置页位于 System Settings 之下，提供三档更新方式（`updates/mode`）。
+「自动更新」的检查与下载已实现：`HelloKitUpdate` 的 `SoftwareReleaseQuery` 取得最新的 release，`SoftwareReleaseDownload` 下载附件并以 `SHA256SUMS` 校验。helloutau 的 `UpdateChecker` 在启动时与「Check for Updates...」中检查，更新的全过程由后台的 `UpdateTask` 进行，以模态的 `UpdateDialog` 显示（见「更新对话框」），「Updates」设置页位于 System Settings 之下，提供三档更新方式（`updates/mode`）。
 
 「安装版的更新」已实现：`setup.iss` 的 `/UPDATE` 与 `/RELAUNCH`，程序持有的互斥量（`kit::InnoSetup::holdMutex()`），退出后启动安装包（`kit::ExitLauncher`），以及下次启动时报告结果。
 
 其余均未实现，现行代码与本文的出入如下：
 
-- 「免安装版的更新」只实现了解压（`kit::ZipExtractor`）与更新程序（`hello-updater`），主程序尚未接入。免安装版在提示中的「Download」下载并校验附件后，只报告文件的位置并可打开其文件夹，由用户自行替换。「自动更新」下载并校验后只记入日志。
+- 「免安装版的更新」已接入主程序，尚未在真实的 release 上运行过完整的流程。
 
 ## 发布物
 
@@ -154,6 +154,17 @@ Windows 的安装包以 Inno Setup 7 生成，界面语言为英语、简体中�
 3. 用户确认后（「自动更新」时不询问）下载 `SHA256SUMS` 与附件，手动下载时显示进度。只接受 HTTPS，拒绝重定向到 HTTP。附件下载到临时文件总目录下的 `updates`（`UpdateChecker::downloadDirectory()`），而不是会话目录，因为会话目录在程序退出时删除，早于退出时的安装。附件先写入同目录的临时文件（`QSaveFile`），完整后才改名，`updates` 中已有摘要相符的同名文件时不再下载。附件大小上限为 1 GiB，`SHA256SUMS` 为 1 MiB。
 4. 以 `SHA256SUMS` 校验附件，不符时删除并报告，不安装。
 
+### 更新对话框
+
+更新的全过程由一个任务（`UpdateTask`）进行，任务在后台运行，与窗口和对话框无关（作者 2026-10-11 决定）：
+
+- 只有一个更新对话框（`UpdateDialog`），是模态的，由「Check for Updates...」、设置页的「Check Now」与启动时发现新版本（「检查并提示」）打开。对话框中嵌入显示任务的控件（`UpdateTaskView`），按任务的阶段显示说明、更新说明、进度与该阶段的按钮。关闭对话框不影响任务，再次打开时显示任务当前的状态。任务没有可显示的结果时（尚未检查、已是最新、检查失败），打开对话框即重新检查。
+- 下载、校验与解压对用户是一步，进度显示在同一个进度条上，可以取消，也可以「Run in Background」关闭对话框而任务继续。取消即全部舍弃：中止下载并删除临时文件与已下载的附件，删除解压出的 `<安装目录>.new`。
+- 准备完成后提供「Install Now」「Install on Quit」与「Discard Update」。「Install Now」先关闭所有窗口（用户可在其中取消），再安排安装并退出。
+- 对话框下方列出程序退出时要启动的程序：已安排的安装与已安排的重启，每一项都可以撤销。
+- 「自动更新」不打开对话框，在后台检查、准备，准备完成后安排在退出时安装。用户可以随时打开对话框查看或撤销。
+- 以后加入窗口右下角的浮动提示（类似 JetBrains IDE 与 VS Code），显示消息与任务的进度，并从那里打开对话框。
+
 ### 安装版与免安装版的区分
 
 若存在 `Software\Microsoft\Windows\CurrentVersion\Uninstall\<AppId>_is1`（先查 HKCU，再查 HKLM），且其 `InstallLocation` 与程序的安装目录相同，则为安装版，否则为免安装版。安装版下载安装包，免安装版下载 zip。判断由 `HelloKitUpdate` 的 `kit::InnoSetup`（`hellokit/Update/Windows/`，只在 Windows 上编译）完成，以 `std::filesystem::equivalent` 比较目录，因为记录的目录以分隔符结尾，大小写也可能不同。其他系统上一律视为免安装版。
@@ -177,7 +188,7 @@ Windows 的安装包以 Inno Setup 7 生成，界面语言为英语、简体中�
 - 互斥量以安装包的 `AppId` 命名，即 `org.openvpi.helloutau`。`setup.iss` 以 `#define AppId` 定义它，程序取自更新配置的 `innoSetupAppId`，不另设名字。程序启动后以 `kit::InnoSetup::holdMutex()` 创建互斥量，句柄从不关闭，由系统在进程结束时释放，因此安装包等到互斥量消失时，程序的文件已不再被占用。安装包最多等待 60 秒。
 - `setup.iss` 同时以 `AppMutex` 指定该互斥量：用户手动运行安装包或卸载程序时，若程序仍在运行，Inno Setup 提示关闭程序，静默安装（`/SUPPRESSMSGBOXES` 默认选「取消」）则中止并返回 1，不会在文件被占用时出错。实测（2026-10-11，Inno Setup 7）`AppMutex` 的检查在 `InitializeSetup` 返回之后进行，因此带 `/UPDATE` 时先完成等待，更新不会遇到该提示。
 - 安装包的参数由 `UpdateChecker::installerArguments()` 给出。重新启动程序的 `[Run]` 条目带 `runasoriginaluser`，因此「为所有用户安装」时程序仍以用户身份而不是管理员身份启动。
-- 手动下载并校验完成后，安装版提示三项（作者 2026-10-11 决定）：「立即安装」即上述流程；「退出时安装」与「自动更新」相同；「稍后」不安装，下载的文件留在 `updates` 中，下次不重复下载。
+- 准备完成后，更新对话框提供「立即安装」即上述流程，「退出时安装」与「自动更新」相同，见「更新对话框」。
 - 安装包在事件循环结束后由 `kit::ExitLauncher` 启动。该实例由 `AppLoader` 持有，按键名安排退出后启动的程序，重启（`ExitLauncher::scheduleRestart()`）与安装包（键名 `update`）各占一项，同一键名再次安排时替换旧的一项。带 `/RELAUNCH` 的安装会移除已安排的重启，因为安装包本身会重新启动程序。
 - 程序在退出时记下要安装的版本与 release 页面（`updates/pending`）。下次启动时无论成败都删除 `updates` 目录中下载的文件，版本未达到该版本则提示安装失败，并可打开 release 页面。程序崩溃时不会记下，因为安装包也不会启动。
 
@@ -195,7 +206,7 @@ Windows 特有的注册表信息因此全部由安装包维护，程序自身不
    - 参数无效时，带 `--show-errors` 则在 Windows 上以消息框显示用法，否则写到标准错误，以免测试被消息框阻塞。
 5. 「立即安装」时更新程序启动新版本后退出，「退出时安装」与「自动更新」时不启动。
 6. 程序在退出时记下要安装的版本（`updates/pending`），下次启动时报告结果，同安装版。
-7. 下次启动时，无论更新成败，程序都删除 `updates` 目录（下载的附件、复制出的更新程序与日志）与残留的 `<安装目录>.new`、`<安装目录>.old`，不在临时目录与安装目录旁留下文件（作者 2026-10-11 决定）。用户更新后不再启动程序时，这些文件留在系统临时目录中，由系统清理。
+7. 下次启动时，无论更新成败，程序都删除 `updates` 目录（下载的附件、复制出的更新程序与日志）与残留的 `<安装目录>.new`、`<安装目录>.old`，不在临时目录与安装目录旁留下文件（作者 2026-10-11 决定）。删除之前读取更新程序的日志，更新失败时作为提示的详细信息显示。这一步只在记有待安装的版本时进行，因为另一个正在运行的实例可能正在解压 `<安装目录>.new`。用户更新后不再启动程序时，这些文件留在系统临时目录中，由系统清理。
 
 更新程序复制到安装目录之外运行，因为整个安装目录要被改名替换。VS Code 不复制更新程序：它的 Windows zip 版不支持自动更新，安装版的 `inno_updater.exe` 在安装目录内逐个移动文件，新的版本各占一个资源目录。逐个移动文件失去了整体替换与整体还原，因此本程序不采用（作者 2026-10-11 决定）。
 
@@ -217,7 +228,7 @@ Windows 特有的注册表信息因此全部由安装包维护，程序自身不
   - 以 `ZIP_FL_ENC_RAW` 取得条目名的原始字节。音源的压缩包常以 Shift_JIS 或 GBK 写条目名而不标 UTF-8，按 `CLAUDE.md`「编码」，这些字节必须交给 `winacp` 解码，不能由解压库自行转换。
   - libzip 文档规定不同的 `zip_t` 对象互相独立，可在多个线程中并行使用而无须加锁。多线程解压时每个工作线程各自打开一次压缩包，分别解压不同的条目。
   - 不采用 bit7z：它在运行时需要随程序提供 7-Zip 的 `7z.dll`，条目名由 7-Zip 解码后以宽字符串给出，无法按本仓库的规则自行解码。
-- helloutau：`UpdateChecker`（读取更新配置、按名字或时区选择更新源、附件名、启动时与手动的检查），`UpdateDialog`（提示对话框），「Updates」设置页，以及以后的关闭窗口与退出的流程。启动时的检查由 Core 插件在打开首批窗口之后发起，只在有 `AppLoader` 时进行，因此测试不发出请求。
+- helloutau：`UpdateChecker`（读取更新配置、按名字或时区选择更新源、附件名、启动时与手动的检查，持有任务并打开对话框），`UpdateTask`（检查、下载、校验、解压、安排安装的任务），`UpdateTaskView` 与 `UpdateDialog`（更新对话框），「Updates」设置页，以及以后的关闭窗口与退出的流程。启动时的检查由 Core 插件在打开首批窗口之后发起，只在有 `AppLoader` 时进行，因此测试不发出请求。
 
 ## 参考
 

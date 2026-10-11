@@ -15,6 +15,7 @@ add_auto_test(test_PortableUpdate.cpp HelloUtauEditor libzip::zip)
 add_dependencies(test_PortableUpdate hello-updater)
 add_auto_test(test_UpdateTask.cpp HelloUtauEditor libzip::zip)
 add_dependencies(test_UpdateTask hello-updater)
+add_auto_test(test_UpdateTaskView.cpp HelloUtauEditor)
 
 add_subdirectory(Dialogs)
 

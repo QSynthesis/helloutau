@@ -1,42 +1,38 @@
+#include <filesystem>
+
+#include <QtCore/QTemporaryDir>
 #include <QtTest/QTest>
 #include <QtWidgets/QPushButton>
-#include <QtWidgets/QTextBrowser>
 
+#include <hellokit/Support/TemporaryStorage.h>
+
+#include <helloutau/Editor/AppSettings.h>
 #include <helloutau/Editor/Dialogs/UpdateDialog.h>
+#include <helloutau/Editor/UpdateTask.h>
+#include <helloutau/Editor/UpdateTaskView.h>
 
+using namespace hello;
 using namespace hello::daw;
 
 class test_UpdateDialog : public QObject {
     Q_OBJECT
 
 private Q_SLOTS:
-    void the_notes_are_shown_as_markdown() {
-        UpdateDialog dialog(QStringLiteral("0.1.7.0"), QStringLiteral("0.1.6.0"),
-                            QStringLiteral("# Changes"));
-        QCOMPARE(dialog.notesBrowser()->toPlainText(), QStringLiteral("Changes"));
-        QCOMPARE(dialog.choice(), UpdateDialog::Later);
-    }
-
-    void each_button_records_its_choice_data() {
-        QTest::addColumn<QString>("button");
-        QTest::addColumn<int>("choice");
-        QTest::addColumn<int>("result");
-        QTest::newRow("download") << "download" << int(UpdateDialog::Download)
-                                  << int(QDialog::Accepted);
-        QTest::newRow("skip") << "skip" << int(UpdateDialog::Skip) << int(QDialog::Rejected);
-        QTest::newRow("later") << "later" << int(UpdateDialog::Later) << int(QDialog::Rejected);
-    }
-
-    void each_button_records_its_choice() {
-        QFETCH(QString, button);
-        QFETCH(int, choice);
-        QFETCH(int, result);
-        UpdateDialog dialog(QStringLiteral("0.1.7.0"), QStringLiteral("0.1.6.0"), QString());
-        const auto clicked = dialog.findChild<QPushButton *>(button);
-        QVERIFY(clicked);
-        clicked->click();
-        QCOMPARE(int(dialog.choice()), choice);
-        QCOMPARE(dialog.result(), result);
+    // The dialog closes when the user leaves its view, and the task runs on.
+    void leaving_the_view_closes_the_dialog() {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        kit::TemporaryStorage storage(
+            std::filesystem::path(dir.filePath(QStringLiteral("temp")).toStdU16String()));
+        AppSettings settings(dir.filePath(QStringLiteral("settings.json")));
+        UpdateTask task(settings, UpdateTask::Portable, dir.filePath(QStringLiteral("app")));
+        UpdateDialog dialog(&task, settings);
+        QVERIFY(dialog.view());
+        QVERIFY(!dialog.windowTitle().isEmpty());
+        dialog.show();
+        dialog.view()->findChild<QPushButton *>(QStringLiteral("close"))->click();
+        QCOMPARE(dialog.result(), int(QDialog::Accepted));
+        QVERIFY(!dialog.isVisible());
     }
 };
 

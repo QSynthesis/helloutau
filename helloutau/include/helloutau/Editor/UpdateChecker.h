@@ -20,9 +20,12 @@ class QWidget;
 
 namespace hello::daw {
 
-    /// The check for a newer release of the application, at start and on request, from one of
-    /// the sources of the update configuration. A newer release is offered to the user with a
-    /// link to its page. See the automatic update in docs/Distribution.md.
+    class UpdateTask;
+
+    /// The update of the application, at start and on request, from one of the sources of the
+    /// update configuration. The checker holds the UpdateTask of the application, which runs in
+    /// the background, and shows it in the modal update dialog. See the automatic update in
+    /// docs/Distribution.md.
     class HELLOUTAU_EDITOR_EXPORT UpdateChecker : public QObject {
         Q_OBJECT
     public:
@@ -110,6 +113,9 @@ namespace hello::daw {
         /// Returns whether a check is running.
         bool isRunning() const;
 
+        /// Returns the update task of the application, which the checker holds.
+        UpdateTask *task() const;
+
         /// Sets the function that closes every window as quitting does, asking the user to save,
         /// and returns whether every window was closed. Install Now calls it before the
         /// application quits for the installation.
@@ -128,15 +134,15 @@ namespace hello::daw {
         /// Checks the releases from the source of the settings, unless the update mode of the
         /// settings is UpdateSettings::Manual or the last check is less than a day old. In
         /// the mode UpdateSettings::Notified, a newer release that the user has not skipped
-        /// is offered over \a parent, or over the active window if \a parent no longer exists.
-        /// In the mode UpdateSettings::Automatic, a newer release is downloaded without a
-        /// question. A failure is only logged.
+        /// is offered in the update dialog over \a parent, or over the active window if
+        /// \a parent no longer exists. In the mode UpdateSettings::Automatic, a newer release
+        /// is prepared and its installation scheduled at exit without a question. A failure is
+        /// only logged.
         void checkAtStartup(QWidget *parent);
 
-        /// Checks the releases from the source named \a source, or from the automatic selection
-        /// if \a source is empty, with a progress dialog over \a parent, and reports the result
-        /// over \a parent, a skipped version included. A running check is aborted first. If the
-        /// user downloads the release, the download is shown with a progress dialog.
+        /// Shows the update dialog over \a parent. If the task has no result to show, the
+        /// releases are checked first from the source named \a source, or from the automatic
+        /// selection if \a source is empty. A skipped version is offered as well.
         void checkNow(QWidget *parent, const QString &source);
 
     Q_SIGNALS:
