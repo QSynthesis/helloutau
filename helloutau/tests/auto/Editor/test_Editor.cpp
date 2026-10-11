@@ -3562,6 +3562,38 @@ private Q_SLOTS:
         // The failures were reported once.
         QVERIFY(dialogsDuring([&] { playback->stop(); }).isEmpty());
     }
+
+    // Clearing the cache stops the preview and discards its failures without a report, because
+    // they concern the deleted fragments.
+    void clearing_the_cache_reports_no_failures() {
+        if (AudioEngine::instance()->sampleRate() <= 0) {
+            QSKIP("This machine has no audio output device.");
+        }
+        QTemporaryDir dir;
+        const auto e = editor();
+        const auto restore = qScopeGuard([&e] {
+            e->settings().rendering().setWavtool({});
+            e->settings().rendering().setResampler({});
+            e->settings().rendering().setPlaybackMode(RenderingSettings::Prerender);
+        });
+        e->settings().rendering().setPlaybackMode(RenderingSettings::Realtime);
+        const auto window = e->openFile(singingProject(dir, "cleared.usth", e->settings()));
+        QVERIFY(window);
+        const auto playback = window->findChild<Playback *>();
+        QVERIFY(playback);
+        const auto stop =
+            qScopeGuard([this, playback] { dialogsDuring([&] { playback->stop(); }); });
+        const auto play = declaredActionOf(*e, window, QStringLiteral("helloutau.playback.play"));
+        const auto clear =
+            declaredActionOf(*e, window, QStringLiteral("helloutau.tools.clearCache"));
+        QVERIFY(play && clear);
+
+        play->trigger();
+        QTRY_COMPARE(playback->state(), Playback::Playing);
+        QTRY_COMPARE(playback->pendingNotes(), 0);
+        QVERIFY(dialogsDuring([&] { clear->trigger(); }).isEmpty());
+        QCOMPARE(playback->state(), Playback::Stopped);
+    }
 };
 
 int main(int argc, char *argv[]) {

@@ -1133,6 +1133,12 @@ namespace hello::daw {
                                  "it."));
             return std::nullopt;
         }
+        // The failures concern the fragments that are about to be deleted, and are discarded
+        // before stopping, which would report them.
+        if (impl.synth) {
+            impl.synth->takeFailures();
+            impl.synth->takeDiagnostics();
+        }
         // The synth waits for the synth tool calls under way, which would write into the cache.
         stop();
         impl.stopPlanning();

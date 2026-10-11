@@ -222,7 +222,8 @@ namespace hello::daw {
 
         /// Stops playing, forgets the fragments held in memory, and deletes the files of the
         /// render cache of \a document: the files directly in the directory, which the synth tools
-        /// and the renders wrote, and not the folders in it.
+        /// and the renders wrote, and not the folders in it. The failures of the preview are
+        /// discarded first, so that stopping reports none of them.
         ///
         /// \return the number of files deleted, or \c std::nullopt if a render has not ended,
         ///         whose script would write into the cache meanwhile; the files that could not
