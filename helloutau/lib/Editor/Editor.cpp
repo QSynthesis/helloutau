@@ -25,6 +25,7 @@
 #include <hellokit/Edit/ProjectDocument.h>
 #include <hellokit/Edit/VoiceBankDocument.h>
 #include <hellokit/Support/RegistryInstanceList.h>
+#include <hellokit/Support/RestartScheduler.h>
 #include <hellokit/VoiceBank/FrequencyFormats.h>
 #include <hellokit/VoiceBank/VoiceBank.h>
 
@@ -44,7 +45,6 @@
 #include "NoteViewModifiers.h"
 #include "ParameterViewModifiers.h"
 #include "ProjectWindow.h"
-#include "Restarter.h"
 #include "UstCharsetDialog.h"
 #include "VoiceBankCharsetDialog.h"
 #include "VoiceBankWindow.h"
@@ -846,7 +846,25 @@ namespace hello::daw {
             }
         });
         dialog.exec();
-        Restarter::offer(from, this);
+        offerRestart(from);
+    }
+
+    bool Editor::offerRestart(QWidget *parent) {
+        if (!kit::RestartScheduler::isRestartRequired()) {
+            return false;
+        }
+        kit::RestartScheduler::clearRestartRequired();
+        const auto answer =
+            QMessageBox::question(parent, QCoreApplication::applicationName(),
+                                  tr("The changes take effect after %1 restarts. Restart now?")
+                                      .arg(QCoreApplication::applicationName()),
+                                  QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
+        if (answer != QMessageBox::Yes || !closeAll()) {
+            return false;
+        }
+        kit::RestartScheduler::scheduleRestart();
+        QCoreApplication::quit();
+        return true;
     }
 
     bool Editor::closeAll() {

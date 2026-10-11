@@ -60,6 +60,7 @@
 #include <hellokit/Synth/ClassicSynthRunner.h>
 #include <hellokit/Synth/SynthPlan.h>
 #include <hellokit/Synth/ThreadedSynthRunner.h>
+#include <hellokit/Support/RestartScheduler.h>
 #include <hellokit/VoiceBank/BuiltinFrequencyFormats.h>
 #include <hellokit/VoiceBank/FrequencyFormats.h>
 
@@ -79,7 +80,6 @@
 #include <helloutau/Editor/OtoWaveformView.h>
 #include <helloutau/Editor/Dialogs/ProjectPropertiesDialog.h>
 #include <helloutau/Editor/ProjectWindow.h>
-#include <helloutau/Editor/Restarter.h>
 #include <helloutau/Editor/PianoRoll.h>
 #include <helloutau/Editor/Dialogs/PasteParametersDialog.h>
 #include <helloutau/Editor/Dialogs/ScalePitchDialog.h>
@@ -1218,10 +1218,36 @@ private Q_SLOTS:
         e->showSettings(window, QStringLiteral("editor.SystemSettings"));
         QVERIFY(asked);
         QCOMPARE(e->settings().language(), QStringLiteral("zh_CN"));
-        QVERIFY(!Restarter::isNeeded());
-        QVERIFY(!Restarter::isRestarting());
+        QVERIFY(!kit::RestartScheduler::isRestartRequired());
+        QVERIFY(!kit::RestartScheduler::isRestartScheduled());
         QVERIFY(window->isVisible());
         e->settings().setLanguage(QString());
+    }
+
+    // Without a setting that needs it, no restart is offered. Accepted, the restart closes the
+    // windows and quits to start again.
+    void an_accepted_restart_closes_the_windows() {
+        const auto e = editor();
+        QVERIFY(!kit::RestartScheduler::isRestartRequired());
+        QVERIFY(!e->offerRestart(nullptr));
+        QVERIFY(!kit::RestartScheduler::isRestartScheduled());
+
+        const auto window = e->newWindow();
+        window->show();
+        kit::RestartScheduler::requireRestart();
+        bool asked = false;
+        handleNextDialog<QMessageBox>([&asked](QMessageBox *box) {
+            asked = true;
+            box->button(QMessageBox::Yes)->click();
+        });
+        QVERIFY(e->offerRestart(nullptr));
+        QVERIFY(asked);
+        QVERIFY(!kit::RestartScheduler::isRestartRequired());
+        QVERIFY(kit::RestartScheduler::isRestartScheduled());
+        QVERIFY(!window->isVisible());
+        // Clears the restart for the other tests. The test program started with -functions only
+        // lists its tests.
+        QVERIFY(kit::RestartScheduler::relaunchIfScheduled({QStringLiteral("-functions")}));
     }
 
     // The number of rendering threads is chosen from Automatic, the powers of two below the

@@ -696,6 +696,10 @@
 <context>
     <name>hello::daw::Editor</name>
     <message>
+        <source>The changes take effect after %1 restarts. Restart now?</source>
+        <translation>修改将在 %1 重启后生效。是否立即重启？</translation>
+    </message>
+    <message>
         <source>Open Recent</source>
         <translation>最近打开</translation>
     </message>
@@ -2052,13 +2056,6 @@
     <message>
         <source>Split by character</source>
         <translation>按字符拆分</translation>
-    </message>
-</context>
-<context>
-    <name>hello::daw::Restarter</name>
-    <message>
-        <source>The changes take effect after %1 restarts. Restart now?</source>
-        <translation>修改将在 %1 重启后生效。是否立即重启？</translation>
     </message>
 </context>
 <context>

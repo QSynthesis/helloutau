@@ -216,8 +216,17 @@ namespace hello::daw {
         /// Shows the settings over \a from, on the page \a page if given. Each time the settings
         /// are applied, applies them to every project window: rereads the voice banks if the
         /// UTAU folder changed, and plays in the selected playback mode. Once the dialog closes,
-        /// offers a restart if an applied setting requires one (Restarter::offer()).
+        /// offers a restart if an applied setting requires one (offerRestart()).
         void showSettings(QWidget *from, const QString &page = {});
+
+        /// Asks the user over \a parent whether to restart now, if an applied setting takes
+        /// effect only after a restart (kit::RestartScheduler::isRestartRequired()). If the user
+        /// agrees, closes every window as quitting does (closeAll()), and if all close, schedules
+        /// the restart (kit::RestartScheduler::scheduleRestart()) and quits the application.
+        ///
+        /// \return Whether the application quits to start again. A user who declines, or who
+        ///         cancels the closing of a window, restarts later by hand.
+        bool offerRestart(QWidget *parent);
 
         /// Closes every window. Each window prompts the user to save its document first. Stops
         /// at the first window for which the user cancels, and returns whether every window was

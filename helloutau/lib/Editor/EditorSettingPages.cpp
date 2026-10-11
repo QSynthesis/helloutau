@@ -21,10 +21,11 @@
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QVBoxLayout>
 
+#include <hellokit/Support/RestartScheduler.h>
+
 #include "AppSettings.h"
 #include "EditorSettingPageIds.h"
 #include "ExportUstDialog.h"
-#include "Restarter.h"
 
 #include <helloutau/Audio/AudioEngine.h>
 #include <helloutau/Audio/AudioOutput.h>
@@ -133,7 +134,7 @@ namespace hello::daw {
         const auto language = m_language->currentData().toString();
         if (language != m_settings.language()) {
             m_settings.setLanguage(language);
-            Restarter::markNeeded();
+            kit::RestartScheduler::requireRestart();
         }
         Q_EMIT modifiedChanged();
         return true;

@@ -3,6 +3,7 @@ add_auto_test(test_SettingsFile.cpp HelloKitSupport)
 add_auto_test(test_TextCodec.cpp HelloKitSupport)
 add_auto_test(test_TextSearch.cpp HelloKitSupport)
 add_auto_test(test_RegistryInstanceList.cpp HelloKitSupport)
+add_auto_test(test_RestartScheduler.cpp HelloKitSupport)
 add_auto_test(test_TemporaryStorage.cpp HelloKitSupport)
 add_auto_test(test_TranslationLoader.cpp HelloKitSupport)
 

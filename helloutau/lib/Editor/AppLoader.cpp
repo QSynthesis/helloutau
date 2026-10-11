@@ -16,13 +16,13 @@
 #include <stdcorelib/pluginsystem/pluginsystem.h>
 #include <stdcorelib/system.h>
 
+#include <hellokit/Support/RestartScheduler.h>
 #include <hellokit/Support/SettingsFile.h>
 #include <hellokit/Support/TemporaryStorage.h>
 #include <hellokit/Support/TranslationLoader.h>
 
 #include "AppSettings.h"
 #include "Editor.h"
-#include "Restarter.h"
 
 namespace hello::daw {
 
@@ -298,7 +298,7 @@ namespace hello::daw {
         }
         const int code = QApplication::exec();
         shutdown();
-        Restarter::startAgain(impl.options);
+        kit::RestartScheduler::relaunchIfScheduled(impl.options);
         return code;
     }
 
