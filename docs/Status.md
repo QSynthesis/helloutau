@@ -119,7 +119,7 @@
 - Audio 模块已改为单一 `QAudioSink` 与内部混音器。已补充 `AudioMixer` 的左右声道、并发声源和独立移除测试，Windows 耳机插拔与并发播放仍待手工验收。设置页的「Test」在下拉框所选的设备上播放（2026-10-09），在另一设备上测试后回到工程播放与钢琴键，同样待手工验收。
 - 写死的颜色（`EditorIcons.cpp` 的图标颜色、`ToolBarPalette.cpp` 的白色）与 Codex 留下的 4 条 TODO，作者 2026-10-09 决定之后再处理。
 - 主题扩展（作者 2026-10-10 列为将来的工作）：写死的颜色移入样式表，工具栏勾选状态的配色，图标选中态的颜色随主题切换。
-- 音源窗口按重采样器查看频率表曲线的功能须可扩展（作者 2026-10-10 列为将来的工作）。现有的 FrequencyEditor 插件应作为扩展的提供方，在 frq、dio、mrq 之外再登记其他格式，例如 pmk。现状见 [`VoiceBankEditor.md`](VoiceBankEditor.md)「进度」与 [`Plugins.md`](Plugins.md) 的频率表格式扩展点。
+- 音源窗口按重采样器查看频率表曲线的功能须可扩展（作者 2026-10-10 列为将来的工作）。现有的 FrequencyEditor 插件应作为扩展的提供方，在 frq、dio、mrq 之外再登记其他格式，例如 pmk。音源窗口现有的 mrq 曲线显示将来也迁移到 FrequencyEditor 插件（作者 2026-10-11 决定）。现状见 [`VoiceBankEditor.md`](VoiceBankEditor.md)「进度」与 [`Plugins.md`](Plugins.md) 的频率表格式扩展点。
 - 音源文件名编码错解的处理：按错解读取（与 UTAU 相同，不改磁盘，`hello-config.json` 的 `fileNameEncoding`）与可选的转换（改磁盘上的名字，转换后 UTAU 在错解时的代码页下无法使用）两种都提供，设计见 `Editing.md`「文件名编码错解的处理」（作者 2026-10-11 决定），待实现。实现后与本段的界面一并由作者查看。
 - 自动更新待作者以真实的 release 验收完整流程，该 release 须比当前版本新，并带有安装包、zip 与 `SHA256SUMS`。窗口右下角显示消息与任务进度的浮动提示以后再做（作者 2026-10-11 决定）。
 - `.llsm` 版本不兼容的诊断器暂缓，需要先取得 moresampler 报错的原文。
