@@ -175,6 +175,7 @@ Windows 的安装包以 Inno Setup 7 生成，界面语言为英语、简体中�
 实现上的约定：
 
 - 互斥量以安装包的 `AppId` 命名，即 `org.openvpi.helloutau`。`setup.iss` 以 `#define AppId` 定义它，程序取自更新配置的 `innoSetupAppId`，不另设名字。程序启动后以 `kit::InnoSetup::holdMutex()` 创建互斥量，句柄从不关闭，由系统在进程结束时释放，因此安装包等到互斥量消失时，程序的文件已不再被占用。安装包最多等待 60 秒。
+- `setup.iss` 同时以 `AppMutex` 指定该互斥量：用户手动运行安装包或卸载程序时，若程序仍在运行，Inno Setup 提示关闭程序，静默安装（`/SUPPRESSMSGBOXES` 默认选「取消」）则中止并返回 1，不会在文件被占用时出错。实测（2026-10-11，Inno Setup 7）`AppMutex` 的检查在 `InitializeSetup` 返回之后进行，因此带 `/UPDATE` 时先完成等待，更新不会遇到该提示。
 - 安装包的参数由 `UpdateChecker::installerArguments()` 给出。重新启动程序的 `[Run]` 条目带 `runasoriginaluser`，因此「为所有用户安装」时程序仍以用户身份而不是管理员身份启动。
 - 手动下载并校验完成后，安装版提示三项（作者 2026-10-11 决定）：「立即安装」即上述流程；「退出时安装」与「自动更新」相同；「稍后」不安装，下载的文件留在 `updates` 中，下次不重复下载。
 - 安装包在事件循环结束后由 `kit::ExitLauncher` 启动。该实例由 `AppLoader` 持有，按键名安排退出后启动的程序，重启（`ExitLauncher::scheduleRestart()`）与安装包（键名 `update`）各占一项，同一键名再次安排时替换旧的一项。带 `/RELAUNCH` 的安装会移除已安排的重启，因为安装包本身会重新启动程序。
