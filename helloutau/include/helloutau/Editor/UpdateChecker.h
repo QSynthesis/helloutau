@@ -82,6 +82,12 @@ namespace hello::daw {
                                QObject *parent = nullptr);
         ~UpdateChecker();
 
+        /// Returns the directory of the downloaded updates, \c updates in the root of
+        /// kit::TemporaryStorage, which outlives the session so that an update is installed after
+        /// the application quits. Without a storage, the directory is in the temporary
+        /// directory of the system.
+        static QString downloadDirectory();
+
         /// Returns the name of the asset with \a prefix for \a version and \a triplet: the
         /// installer if \a installer is true, and the archive otherwise.
         static QString assetName(const QString &prefix, const QVersionNumber &version,
@@ -98,15 +104,18 @@ namespace hello::daw {
         /// Returns whether a check is running.
         bool isRunning() const;
 
-        /// Checks the releases from the source of the settings, if the settings enable the check
-        /// at start and the last check is a day old or older. A newer release that the user has
-        /// not skipped is offered over \a parent, or over the active window if \a parent no
-        /// longer exists. A failure is only logged.
+        /// Checks the releases from the source of the settings, unless the update mode of the
+        /// settings is AppSettings::ManualUpdate or the last check is less than a day old. In
+        /// the mode AppSettings::NotifiedUpdate, a newer release that the user has not skipped
+        /// is offered over \a parent, or over the active window if \a parent no longer exists.
+        /// In the mode AppSettings::AutomaticUpdate, a newer release is downloaded without a
+        /// question. A failure is only logged.
         void checkAtStartup(QWidget *parent);
 
         /// Checks the releases from the source named \a source, or from the automatic selection
         /// if \a source is empty, with a progress dialog over \a parent, and reports the result
-        /// over \a parent, a skipped version included. A running check is aborted first.
+        /// over \a parent, a skipped version included. A running check is aborted first. If the
+        /// user downloads the release, the download is shown with a progress dialog.
         void checkNow(QWidget *parent, const QString &source);
 
     Q_SIGNALS:

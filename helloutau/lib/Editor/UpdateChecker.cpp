@@ -5,6 +5,7 @@
 
 #include <QtCore/QCoreApplication>
 #include <QtCore/QDir>
+#include <QtCore/QFileInfo>
 #include <QtCore/QPointer>
 #include <QtCore/QTimeZone>
 #include <QtCore/QtDebug>
@@ -12,10 +13,13 @@
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QMessageBox>
 #include <QtWidgets/QProgressDialog>
+#include <QtWidgets/QPushButton>
 
 #include <stdcorelib/pimpl.h>
 
 #include <hellokit/Support/SettingsFile.h>
+#include <hellokit/Support/TemporaryStorage.h>
+#include <hellokit/Update/SoftwareReleaseDownload.h>
 #include <hellokit/Update/SoftwareReleaseQuery.h>
 #ifdef Q_OS_WINDOWS
 #  include <hellokit/Update/Windows/InnoSetup.h>
@@ -72,11 +76,17 @@ namespace hello::daw {
         std::optional<Configuration> configuration;
         QString configurationError;
         kit::SoftwareReleaseQuery *query = nullptr;
+        kit::SoftwareReleaseDownload *download = nullptr;
 
         // The state of the running check
         bool manual = false;
         QPointer<QWidget> parent;
         QPointer<QProgressDialog> progress;
+
+        // The state of the running download. An interactive download is reported to the user.
+        bool downloadInteractive = false;
+        QPointer<QWidget> downloadParent;
+        QPointer<QProgressDialog> downloadProgress;
 
         QWidget *dialogParent() const {
             return parent ? parent.data() : QApplication::activeWindow();
@@ -154,18 +164,23 @@ namespace hello::daw {
                 Q_EMIT decl->finished();
                 return;
             }
+            // Copied, because another check may replace the release of the query in the event
+            // loop of the dialog
+            const auto offered = *release;
+            if (!manual && settings.updateMode() == AppSettings::AutomaticUpdate) {
+                startDownload(offered, asset, false);
+                Q_EMIT decl->finished();
+                return;
+            }
             if (!manual && version == settings.skippedUpdateVersion()) {
                 Q_EMIT decl->finished();
                 return;
             }
-            // Copied before the event loop of the dialog, in which another check may replace the
-            // release of the query
-            const auto page = release->page;
-            UpdateDialog dialog(version, current.toString(), release->notes, dialogParent());
+            UpdateDialog dialog(version, current.toString(), offered.notes, dialogParent());
             dialog.exec();
             switch (dialog.choice()) {
                 case UpdateDialog::Download:
-                    QDesktopServices::openUrl(page);
+                    startDownload(offered, asset, true);
                     break;
                 case UpdateDialog::Skip:
                     settings.setSkippedUpdateVersion(version);
@@ -174,6 +189,83 @@ namespace hello::daw {
                     break;
             }
             Q_EMIT decl->finished();
+        }
+
+        void startDownload(const kit::SoftwareRelease &release, const QString &asset,
+                           bool interactive) {
+            closeDownloadProgress();
+            downloadInteractive = interactive;
+            downloadParent = dialogParent();
+            if (!download->start(release, asset, UpdateChecker::downloadDirectory())) {
+                reportDownload();
+                return;
+            }
+            if (!interactive) {
+                return;
+            }
+            downloadProgress = new QProgressDialog(tr("Downloading %1...").arg(asset), tr("Cancel"),
+                                                   0, 0, downloadParent);
+            downloadProgress->setWindowTitle(tr("Download Update"));
+            downloadProgress->setWindowModality(Qt::WindowModal);
+            downloadProgress->setAttribute(Qt::WA_DeleteOnClose);
+            downloadProgress->setMinimumDuration(0);
+            QObject::connect(downloadProgress, &QProgressDialog::canceled, decl, [this] {
+                download->abort();
+                closeDownloadProgress();
+            });
+            downloadProgress->show();
+        }
+
+        void closeDownloadProgress() {
+            if (downloadProgress) {
+                // Disconnected first, because closing the dialog emits canceled().
+                QObject::disconnect(downloadProgress, nullptr, decl, nullptr);
+                downloadProgress->close();
+            }
+        }
+
+        void showDownloadProgress(qint64 received, qint64 total) {
+            if (!downloadProgress) {
+                return;
+            }
+            // The progress is in KiB, because the range of the dialog is an int.
+            downloadProgress->setMaximum(total > 0 ? int(total / 1024) : 0);
+            downloadProgress->setValue(int(received / 1024));
+        }
+
+        // Reports the result of the download to the user of an interactive download, and to the
+        // log otherwise
+        void reportDownload() {
+            closeDownloadProgress();
+            const auto filePath = download->filePath();
+            if (!downloadInteractive) {
+                // TODO: Install the verified update when the application quits, see the
+                // installation at exit in docs/Distribution.md.
+                if (filePath.isEmpty()) {
+                    qWarning().noquote()
+                        << "The download of the update failed:" << download->errorString();
+                } else {
+                    qInfo().noquote() << "The update is downloaded and verified:" << filePath;
+                }
+                return;
+            }
+            const auto parent = downloadParent.data();
+            if (filePath.isEmpty()) {
+                QMessageBox::warning(
+                    parent, tr("Download Update"),
+                    tr("Cannot download the update: %1").arg(download->errorString()));
+                return;
+            }
+            // TODO: Install the update instead, see the installation in docs/Distribution.md.
+            QMessageBox box(QMessageBox::Information, tr("Download Update"),
+                            tr("The update has been downloaded and verified:\n%1")
+                                .arg(QDir::toNativeSeparators(filePath)),
+                            QMessageBox::Close, parent);
+            const auto show = box.addButton(tr("Show in Folder"), QMessageBox::ActionRole);
+            box.exec();
+            if (box.clickedButton() == show) {
+                QDesktopServices::openUrl(QUrl::fromLocalFile(QFileInfo(filePath).absolutePath()));
+            }
         }
     };
 
@@ -271,6 +363,16 @@ namespace hello::daw {
         impl.decl = this;
         impl.configuration = Configuration::read(fileName, &impl.configurationError);
         impl.query = new kit::SoftwareReleaseQuery(this);
+        impl.download = new kit::SoftwareReleaseDownload(this);
+        connect(impl.download, &kit::SoftwareReleaseDownload::progressChanged, this,
+                [this](qint64 received, qint64 total) {
+                    stdc_impl_t;
+                    impl.showDownloadProgress(received, total);
+                });
+        connect(impl.download, &kit::SoftwareReleaseDownload::finished, this, [this] {
+            stdc_impl_t;
+            impl.reportDownload();
+        });
         connect(impl.query, &kit::SoftwareReleaseQuery::finished, this, [this] {
             stdc_impl_t;
             impl.readResult();
@@ -280,6 +382,15 @@ namespace hello::daw {
     UpdateChecker::~UpdateChecker() {
         stdc_impl_t;
         impl.closeProgress();
+        impl.closeDownloadProgress();
+    }
+
+    QString UpdateChecker::downloadDirectory() {
+        // The directory is in the root of the temporary storage rather than in the session
+        // directory, which is removed when the application quits, before the update is installed.
+        const auto storage = kit::TemporaryStorage::instance();
+        const auto base = storage ? storage->root() : kit::TemporaryStorage::location();
+        return QString::fromStdU16String((base / u"updates").u16string());
     }
 
     QString UpdateChecker::assetName(const QString &prefix, const QVersionNumber &version,
@@ -307,7 +418,8 @@ namespace hello::daw {
 
     void UpdateChecker::checkAtStartup(QWidget *parent) {
         stdc_impl_t;
-        if (!impl.settings.isStartupUpdateCheckEnabled() || impl.query->isRunning()) {
+        if (impl.settings.updateMode() == AppSettings::ManualUpdate || impl.query->isRunning() ||
+            impl.download->isRunning()) {
             return;
         }
         const auto last = impl.settings.lastUpdateCheck();

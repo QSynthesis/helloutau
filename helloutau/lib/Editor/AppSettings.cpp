@@ -39,7 +39,9 @@ namespace hello::daw {
         constexpr char KeyPitchControlVibratoPreset[] = "pitchControl/vibratoPreset";
         constexpr char KeyUstExportCharset[] = "files/ustExportCharset";
         constexpr char KeyUpdateSource[] = "updates/source";
-        constexpr char KeyUpdateCheckAtStartup[] = "updates/checkAtStartup";
+        constexpr char KeyUpdateMode[] = "updates/mode";
+        constexpr char ManualUpdateValue[] = "manual";
+        constexpr char AutomaticUpdateValue[] = "automatic";
         constexpr char KeyLastUpdateCheck[] = "updates/lastCheck";
         constexpr char KeySkippedUpdateVersion[] = "updates/skippedVersion";
         constexpr char KeyLanguage[] = "appearance/language";
@@ -444,14 +446,25 @@ namespace hello::daw {
                       source.isEmpty() ? json::Value() : json::Value(source.toStdString()));
     }
 
-    bool AppSettings::isStartupUpdateCheckEnabled() const {
+    AppSettings::UpdateMode AppSettings::updateMode() const {
         stdc_impl_t;
-        return impl.value(KeyUpdateCheckAtStartup).toBool(true);
+        const auto value = impl.value(KeyUpdateMode).toString();
+        if (value == ManualUpdateValue) {
+            return ManualUpdate;
+        }
+        return value == AutomaticUpdateValue ? AutomaticUpdate : NotifiedUpdate;
     }
 
-    void AppSettings::setStartupUpdateCheckEnabled(bool enabled) {
+    void AppSettings::setUpdateMode(UpdateMode mode) {
         stdc_impl_t;
-        impl.setValue(KeyUpdateCheckAtStartup, enabled);
+        // The default is not written.
+        json::Value value;
+        if (mode == ManualUpdate) {
+            value = std::string(ManualUpdateValue);
+        } else if (mode == AutomaticUpdate) {
+            value = std::string(AutomaticUpdateValue);
+        }
+        impl.setValue(KeyUpdateMode, std::move(value));
     }
 
     QDateTime AppSettings::lastUpdateCheck() const {

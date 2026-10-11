@@ -8,13 +8,12 @@
 
 「临时目录管理器」已实现（`kit::TemporaryStorage`）。工程窗口、试合成、`ClassicPluginRunner` 与 `ClassicSynthRunner` 的临时目录都由它分配。`ThreadedSynthRunner` 在未指定脚本目录时不写出脚本，只以总目录作为脚本中的路径，不创建目录。
 
-「自动更新」的检查部分已实现（第一期）：`HelloKitUpdate` 的 `SoftwareReleaseQuery` 取得最新的 release，helloutau 的 `UpdateChecker` 在启动时与「Check for Updates...」中检查，以 `UpdateDialog` 提示，「Updates」设置页位于 System Settings 之下。
+「自动更新」的检查与下载已实现：`HelloKitUpdate` 的 `SoftwareReleaseQuery` 取得最新的 release，`SoftwareReleaseDownload` 下载附件并以 `SHA256SUMS` 校验。helloutau 的 `UpdateChecker` 在启动时与「Check for Updates...」中检查，以 `UpdateDialog` 提示，「Updates」设置页位于 System Settings 之下，提供三档更新方式（`updates/mode`）。
 
 其余均未实现，现行代码与本文的出入如下：
 
 - 打包脚本与安装包的脚本位于 `dist/installer/windows/`（见「安装包」），尚未实现静默更新所需的 `/UPDATE` 参数与等待程序退出。
-- 更新方式现为「启动时检查更新」开关（`updates/checkAtStartup`），相当于「检查并提示」与「手动」两档。「自动更新」一档随下载与安装一同实现，届时设置改为 `updates/mode`。
-- 提示中的「Download」只打开 release 的页面，由用户自行下载安装。下载、以 `SHA256SUMS` 校验（`kit::Sha256Sums` 已实现，尚无调用方）与安装（「安装版的更新」「免安装版的更新」）未实现。
+- 安装（「安装版的更新」「免安装版的更新」）未实现。提示中的「Download」下载并校验附件后，只报告文件的位置并可打开其文件夹，由用户自行安装。「自动更新」下载并校验后只记入日志，退出时不安装。
 
 ## 发布物
 
@@ -151,7 +150,7 @@ Windows 的安装包以 Inno Setup 7 生成，界面语言为英语、简体中�
 
 1. 以所选源的 `latestRelease` 取得最新的 release。公开仓库无须令牌。
 2. 去掉 tag 的 `v` 前缀作为版本号，与 `HELLO_VERSION` 逐段比较，不以 `v` 开头的 tag 不视为版本，较新且附件齐全（见「发布物」）时提示，显示 release 的说明。`v` 之后只接受数字与点，因为 `QVersionNumber::fromString()` 接受段首的空格与正号（实测 `v 0.1`、`v+0.1` 均被接受）。响应没有 `html_url` 时按源的 `releasePage` 构造页面地址。Gitee 的附件列表中还有 Gitee 生成的源码压缩包，按文件名挑选时不受影响。草稿与预发布不视为 release。
-3. 用户确认后下载附件与 `SHA256SUMS` 到临时目录管理器分配的目录，显示进度。只接受 HTTPS，拒绝重定向到 HTTP。
+3. 用户确认后（「自动更新」时不询问）下载 `SHA256SUMS` 与附件，手动下载时显示进度。只接受 HTTPS，拒绝重定向到 HTTP。附件下载到临时文件总目录下的 `updates`（`UpdateChecker::downloadDirectory()`），而不是会话目录，因为会话目录在程序退出时删除，早于退出时的安装。附件先写入同目录的临时文件（`QSaveFile`），完整后才改名，`updates` 中已有摘要相符的同名文件时不再下载。附件大小上限为 1 GiB，`SHA256SUMS` 为 1 MiB。
 4. 以 `SHA256SUMS` 校验附件，不符时删除并报告，不安装。
 
 ### 安装版与免安装版的区分
@@ -194,7 +193,7 @@ Windows 特有的注册表信息因此全部由安装包维护，程序自身不
   - `SoftwareReleaseQuery`：按调用方给出的地址取得最新的 release，只接受 HTTPS（`NoLessSafeRedirectPolicy`），使用系统代理，并带有 User-Agent。
   - `Sha256Sums`：读取 `SHA256SUMS` 与计算文件的摘要。
   - `Windows/InnoSetup`：安装记录的查询，见「安装版与免安装版的区分」。
-  - 以后加入：下载附件。
+  - `SoftwareReleaseDownload`：下载附件并以 `SHA256SUMS` 校验，见「检查与下载」。只接受不含路径的文件名作为附件名。
 - 更新程序（`hellokit/tools/updater`）：免安装版的文件替换，参数全部来自命令行，不含任何 HelloUtau 特有的内容。按 `CLAUDE.md`，`main.cpp` 只包含入口，逻辑位于库中以便测试。
 - 临时目录管理器：`HelloKitSupport`。
 - 解压 zip 使用 libzip（BSD 许可证，vcpkg 有端口，作者 2026-10-11 决定），供更新程序与将来安装音源、插件压缩包的代码共用：

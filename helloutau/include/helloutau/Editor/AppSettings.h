@@ -201,9 +201,24 @@ namespace hello::daw {
         QString updateSource() const;
         void setUpdateSource(const QString &source);
 
-        /// Whether the releases are checked at start, at most once a day. The default is true.
-        bool isStartupUpdateCheckEnabled() const;
-        void setStartupUpdateCheckEnabled(bool enabled);
+        /// The handling of new releases at start. A check from the Help menu always reports a new
+        /// release to the user. See the automatic update in docs/Distribution.md.
+        enum UpdateMode {
+            /// Releases are checked only from the Help menu.
+            ManualUpdate,
+
+            /// Releases are checked at start, at most once a day, and a new release is offered
+            /// to the user.
+            NotifiedUpdate,
+
+            /// Releases are checked at start, at most once a day, and a new release is
+            /// downloaded in the background and installed when the application quits.
+            AutomaticUpdate,
+        };
+
+        /// The handling of new releases. The default is NotifiedUpdate.
+        UpdateMode updateMode() const;
+        void setUpdateMode(UpdateMode mode);
 
         /// The time of the last successful check of the releases, or an invalid time if none.
         QDateTime lastUpdateCheck() const;

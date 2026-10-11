@@ -159,9 +159,18 @@ namespace hello::daw {
         auto layout = new QVBoxLayout(widget);
         auto group = new QGroupBox(tr("Updates"), widget);
         auto form = new QFormLayout(group);
-        m_startupCheck = new QCheckBox(tr("&Check for updates at startup"), widget);
-        m_startupCheck->setChecked(m_settings.isStartupUpdateCheckEnabled());
-        form->addRow(m_startupCheck);
+        m_mode = new QComboBox(widget);
+        m_mode->addItem(tr("Manual"), AppSettings::ManualUpdate);
+        m_mode->addItem(tr("Check and notify"), AppSettings::NotifiedUpdate);
+        m_mode->addItem(tr("Automatic"), AppSettings::AutomaticUpdate);
+        m_mode->setCurrentIndex(std::max(0, m_mode->findData(m_settings.updateMode())));
+        form->addRow(tr("Update &mode:"), m_mode);
+        form->addRow(note(tr("Manual: updates are checked only from Help > Check for Updates.\n"
+                             "Check and notify: updates are checked at startup, at most once a "
+                             "day, and a new version is offered.\n"
+                             "Automatic: updates are checked at startup as well, and a new "
+                             "version is downloaded in the background and installed when the "
+                             "application quits.")));
         m_source = new QComboBox(widget);
         // The names of the sources are those of the update configuration, untranslated.
         m_source->addItem(tr("Automatic"), QString());
@@ -185,7 +194,7 @@ namespace hello::daw {
         });
         // The label is the context, because the page outlives its widget.
         connect(&m_checker, &UpdateChecker::finished, m_lastCheck, [this] { showLastCheck(); });
-        connect(m_startupCheck, &QCheckBox::toggled, this, &SettingPage::modifiedChanged);
+        connect(m_mode, &QComboBox::currentIndexChanged, this, &SettingPage::modifiedChanged);
         connect(m_source, &QComboBox::currentIndexChanged, this, &SettingPage::modifiedChanged);
         layout->addWidget(group);
         layout->addStretch();
@@ -193,23 +202,23 @@ namespace hello::daw {
     }
 
     bool UpdateSettingPage::isModified() const {
-        if (!m_startupCheck) {
+        if (!m_mode) {
             return false;
         }
-        return m_startupCheck->isChecked() != m_settings.isStartupUpdateCheckEnabled() ||
+        return m_mode->currentData().toInt() != m_settings.updateMode() ||
                m_source->currentData().toString() != storedSource();
     }
 
     bool UpdateSettingPage::apply(QString *error) {
         Q_UNUSED(error);
-        m_settings.setStartupUpdateCheckEnabled(m_startupCheck->isChecked());
+        m_settings.setUpdateMode(AppSettings::UpdateMode(m_mode->currentData().toInt()));
         m_settings.setUpdateSource(m_source->currentData().toString());
         Q_EMIT modifiedChanged();
         return true;
     }
 
-    QCheckBox *UpdateSettingPage::startupCheckBox() const {
-        return m_startupCheck;
+    QComboBox *UpdateSettingPage::modeBox() const {
+        return m_mode;
     }
 
     QComboBox *UpdateSettingPage::sourceBox() const {

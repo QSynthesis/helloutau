@@ -2361,6 +2361,28 @@ Trust and use them for rendering?</source>
         <translation>检查更新</translation>
     </message>
     <message>
+        <source>Downloading %1...</source>
+        <translation>正在下载 %1...</translation>
+    </message>
+    <message>
+        <source>Download Update</source>
+        <translation>下载更新</translation>
+    </message>
+    <message>
+        <source>Cannot download the update: %1</source>
+        <translation>无法下载更新：%1</translation>
+    </message>
+    <message>
+        <source>The update has been downloaded and verified:
+%1</source>
+        <translation>更新已下载并通过校验：
+%1</translation>
+    </message>
+    <message>
+        <source>Show in Folder</source>
+        <translation>在文件夹中显示</translation>
+    </message>
+    <message>
         <source>The file %1 lacks the prefix of the assets or the identifier of the installer.</source>
         <translation>文件 %1 缺少附件前缀或安装包标识。</translation>
     </message>
@@ -2427,12 +2449,28 @@ Trust and use them for rendering?</source>
         <translation>检查应用程序的新版本。</translation>
     </message>
     <message>
-        <source>&amp;Check for updates at startup</source>
-        <translation>启动时检查更新(&amp;C)</translation>
+        <source>Manual</source>
+        <translation>手动</translation>
+    </message>
+    <message>
+        <source>Check and notify</source>
+        <translation>检查并提示</translation>
     </message>
     <message>
         <source>Automatic</source>
         <translation>自动</translation>
+    </message>
+    <message>
+        <source>Update &amp;mode:</source>
+        <translation>更新方式(&amp;M)：</translation>
+    </message>
+    <message>
+        <source>Manual: updates are checked only from Help &gt; Check for Updates.
+Check and notify: updates are checked at startup, at most once a day, and a new version is offered.
+Automatic: updates are checked at startup as well, and a new version is downloaded in the background and installed when the application quits.</source>
+        <translation>手动：只从「帮助 &gt; 检查更新」检查。
+检查并提示：启动时检查，每天至多一次，有新版本时提示。
+自动：同样在启动时检查，新版本在后台下载，并在退出程序时安装。</translation>
     </message>
     <message>
         <source>Update &amp;source:</source>
@@ -3688,6 +3726,41 @@ Write them again without these chunks? The audio stays the same. The files are w
     <message>
         <source>The file does not contain a JSON object.</source>
         <translation>文件中没有 JSON 对象。</translation>
+    </message>
+</context>
+<context>
+    <name>hello::kit::SoftwareReleaseDownload</name>
+    <message>
+        <source>The name %1 is not a file name.</source>
+        <translation>%1 不是文件名。</translation>
+    </message>
+    <message>
+        <source>The release %1 lacks the file %2 or %3.</source>
+        <translation>版本 %1 缺少文件 %2 或 %3。</translation>
+    </message>
+    <message>
+        <source>The release %1 has a file without an HTTPS address.</source>
+        <translation>版本 %1 中有文件没有 HTTPS 地址。</translation>
+    </message>
+    <message>
+        <source>The file %1 is too large.</source>
+        <translation>文件 %1 过大。</translation>
+    </message>
+    <message>
+        <source>The file %1 lists no digest of %2.</source>
+        <translation>文件 %1 中没有 %2 的摘要。</translation>
+    </message>
+    <message>
+        <source>The folder of %1 cannot be created.</source>
+        <translation>无法创建 %1 所在的文件夹。</translation>
+    </message>
+    <message>
+        <source>The file %1 cannot be written: %2</source>
+        <translation>无法写入文件 %1：%2</translation>
+    </message>
+    <message>
+        <source>The downloaded file %1 does not match its SHA-256 digest.</source>
+        <translation>下载的文件 %1 与其 SHA-256 摘要不符。</translation>
     </message>
 </context>
 <context>

@@ -48,7 +48,7 @@ namespace hello::daw {
         bool isModified() const override;
         bool apply(QString *error) override;
 
-        QCheckBox *startupCheckBox() const;
+        QComboBox *modeBox() const;
         QComboBox *sourceBox() const;
 
     protected:
@@ -62,7 +62,7 @@ namespace hello::daw {
 
         AppSettings &m_settings;
         UpdateChecker &m_checker;
-        QPointer<QCheckBox> m_startupCheck;
+        QPointer<QComboBox> m_mode;
         QPointer<QComboBox> m_source;
         QPointer<QLabel> m_lastCheck;
     };

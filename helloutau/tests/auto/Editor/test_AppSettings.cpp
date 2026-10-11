@@ -67,18 +67,22 @@ private Q_SLOTS:
         {
             AppSettings settings(file);
             QVERIFY(settings.updateSource().isEmpty());
-            QVERIFY(settings.isStartupUpdateCheckEnabled());
+            QCOMPARE(settings.updateMode(), AppSettings::NotifiedUpdate);
             QVERIFY(!settings.lastUpdateCheck().isValid());
             QVERIFY(settings.skippedUpdateVersion().isEmpty());
             settings.setUpdateSource(QStringLiteral("Mirror"));
-            settings.setStartupUpdateCheckEnabled(false);
+            settings.setUpdateMode(AppSettings::AutomaticUpdate);
             settings.setLastUpdateCheck(time);
             settings.setSkippedUpdateVersion(QStringLiteral("0.1.7.0"));
         }
         {
             AppSettings settings(file);
             QCOMPARE(settings.updateSource(), QStringLiteral("Mirror"));
-            QVERIFY(!settings.isStartupUpdateCheckEnabled());
+            QCOMPARE(settings.updateMode(), AppSettings::AutomaticUpdate);
+            settings.setUpdateMode(AppSettings::ManualUpdate);
+            QCOMPARE(settings.updateMode(), AppSettings::ManualUpdate);
+            settings.setUpdateMode(AppSettings::NotifiedUpdate);
+            QVERIFY(settings.value(QStringLiteral("updates/mode")).isUndefined());
             QCOMPARE(settings.lastUpdateCheck(), time);
             QCOMPARE(settings.skippedUpdateVersion(), QStringLiteral("0.1.7.0"));
             settings.setUpdateSource(QString());

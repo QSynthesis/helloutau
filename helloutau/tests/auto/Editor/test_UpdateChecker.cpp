@@ -5,6 +5,8 @@
 #include <QtCore/QTemporaryDir>
 #include <QtTest/QTest>
 
+#include <hellokit/Support/TemporaryStorage.h>
+
 #include <helloutau/Editor/UpdateChecker.h>
 
 using namespace hello::daw;
@@ -67,6 +69,21 @@ private Q_SLOTS:
                  QStringLiteral("B"));
         QVERIFY(configuration->hasSource(QStringLiteral("B")));
         QVERIFY(!configuration->hasSource(QStringLiteral("Missing")));
+    }
+
+    // The downloads outlive the session directory, which is removed before an update is
+    // installed at exit.
+    void downloads_are_kept_outside_the_session() {
+        QTemporaryDir dir;
+        const std::filesystem::path root(dir.filePath(QStringLiteral("root")).toStdU16String());
+        {
+            hello::kit::TemporaryStorage storage(root);
+            QCOMPARE(UpdateChecker::downloadDirectory(),
+                     QString::fromStdU16String((root / u"updates").u16string()));
+        }
+        QCOMPARE(UpdateChecker::downloadDirectory(),
+                 QString::fromStdU16String(
+                     (hello::kit::TemporaryStorage::location() / u"updates").u16string()));
     }
 
     void asset_names_follow_the_release_assets() {
