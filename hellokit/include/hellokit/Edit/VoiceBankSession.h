@@ -65,6 +65,22 @@ namespace hello::kit {
             return m_files.audioFiles(directory);
         }
 
+        /// \sa VoiceBankFileSystemState::audioPathOf()
+        inline std::filesystem::path audioPathOf(const std::filesystem::path &directory,
+                                                 const QString &fileName) const {
+            return m_files.audioPathOf(directory, fileName);
+        }
+
+        /// \sa VoiceBankFileSystemState::undeterminedNames()
+        inline QStringList undeterminedNames(const std::filesystem::path &directory) const {
+            return m_files.undeterminedNames(directory);
+        }
+
+        /// \sa VoiceBankFileSystemState::logicalPathOf()
+        inline std::filesystem::path logicalPathOf(const std::filesystem::path &directory) const {
+            return m_files.logicalPathOf(directory);
+        }
+
         /// Returns the voice bank in its current state.
         VoiceBank snapshot() const;
 

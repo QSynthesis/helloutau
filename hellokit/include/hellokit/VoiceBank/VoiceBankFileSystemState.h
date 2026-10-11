@@ -66,7 +66,29 @@ namespace hello::kit {
         ///
         /// Intended for a holder of the contents that keeps the entries only, such as the tree of
         /// an editing session: the samples without an entry are the files that no entry names.
+        ///
+        /// The names are logical names: a name that the record of misdecoded file names of the
+        /// directory lists as misdecoded is restored. See the section on misdecoded file names in
+        /// docs/Editing.md.
+        ///
+        /// \sa audioPathOf()
         QStringList audioFiles(const std::filesystem::path &directory) const;
+
+        /// Returns the absolute path of the audio file with the logical name \a fileName in the
+        /// directory at \a directory , under its name on disk. A name of no audio file is joined
+        /// as it is.
+        std::filesystem::path audioPathOf(const std::filesystem::path &directory,
+                                          const QString &fileName) const;
+
+        /// Returns the names on disk of the audio files and the subdirectories of the directory at
+        /// \a directory that are not ASCII and that its record of misdecoded file names lists in
+        /// neither list, or an empty list if the directory has no record. These names are used as
+        /// they are until the user determines their state.
+        QStringList undeterminedNames(const std::filesystem::path &directory) const;
+
+        /// Returns \a directory , a path relative to the root, with each name restored by the
+        /// record of misdecoded file names of its parent directory, for display.
+        std::filesystem::path logicalPathOf(const std::filesystem::path &directory) const;
 
         /// Makes the next save() record the encoding of the directory at \a directory , even if
         /// nothing else in it changed.
@@ -229,7 +251,8 @@ namespace hello::kit {
             std::map<VoiceBankDirectorySource::File, QByteArray> baseline;
             /// The contents of \c hello-config.json when read, if present, whose fields not
             /// recognized by this version every save writes back. The encodings are those of the
-            /// VoiceBank at each save instead.
+            /// VoiceBank at each save instead. Its record of misdecoded file names is the one with
+            /// which the directory is read, and a reread keeps it.
             std::optional<VoiceBankConfig> config;
             /// The canonical encoding the directory was read or last saved in. A different
             /// encoding in the VoiceBank is recorded by the next save.
@@ -238,9 +261,14 @@ namespace hello::kit {
             bool remember = false;
             /// The directory state when last read, or when last checked without differences.
             VoiceBankDirectoryStamp stamp;
-            /// The names of the audio files when last read or refreshed.
+            /// The logical names of the audio files when last read or refreshed.
             /// \sa audioFiles()
             QStringList audioFiles;
+            /// The name on disk of each audio file whose logical name differs.
+            /// \sa audioPathOf()
+            std::map<QString, std::filesystem::path> diskNames;
+            /// \sa undeterminedNames()
+            QStringList undetermined;
         };
 
         /// Returns the state of a directory as read from \a source and decoded into \a decoded .

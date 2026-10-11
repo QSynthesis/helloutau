@@ -46,11 +46,6 @@ namespace hello::kit {
             return fs::path(text.toStdU16String()).make_preferred();
         }
 
-        // The name of an audio file as it is joined to its directory when reading.
-        fs::path pathOf(const QString &fileName) {
-            return fs::path(fileName.toStdU16String());
-        }
-
         VoiceOtoEntry entryOf(const VoiceSample &sample) {
             VoiceOtoEntry entry;
             entry.fileName = sample.fileName;
@@ -64,10 +59,10 @@ namespace hello::kit {
             return entry;
         }
 
-        // The sample of entry in the directory at index, whose absolute location is absolute.
-        VoiceSample sampleOf(const VoiceOtoEntry &entry, int index, const fs::path &absolute) {
+        // The sample of entry in the directory at index, whose audio file is at path.
+        VoiceSample sampleOf(const VoiceOtoEntry &entry, int index, const fs::path &path) {
             VoiceSample sample;
-            sample.path = absolute / pathOf(entry.fileName);
+            sample.path = path;
             sample.directory = index;
             sample.fileName = entry.fileName;
             sample.alias = entry.alias;
@@ -156,21 +151,20 @@ namespace hello::kit {
 
             // The entries in the order of the tree, then the audio files that no entry names,
             // in the order of the listing, as reading places them.
-            const auto absolute =
-                directory.path.empty() ? files.root() : files.root() / directory.path;
             const auto &entries = listOf(node.child(VoiceDirectorySlots::OtoEntries.index));
             QSet<QString> named;
             for (int j = 0; j < entries.size(); ++j) {
                 const auto entry = edit::fromTree<VoiceOtoEntry>(entries.at(j));
                 named.insert(entry.fileName);
-                samples.push_back(sampleOf(entry, i, absolute));
+                samples.push_back(
+                    sampleOf(entry, i, files.audioPathOf(directory.path, entry.fileName)));
             }
             for (const auto &name : files.audioFiles(directory.path)) {
                 if (named.contains(name)) {
                     continue;
                 }
                 VoiceSample sample;
-                sample.path = absolute / pathOf(name);
+                sample.path = files.audioPathOf(directory.path, name);
                 sample.directory = i;
                 sample.fileName = name;
                 samples.push_back(sample);

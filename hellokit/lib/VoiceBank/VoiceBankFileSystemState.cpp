@@ -205,12 +205,148 @@ namespace hello::kit {
             return QByteArray(bytes.data(), qsizetype(bytes.size()));
         }
 
-        /// The file names \a names as VoiceSample::fileName holds them.
-        QStringList namesOf(const std::vector<fs::path> &names) {
-            QStringList out;
-            out.reserve(qsizetype(names.size()));
-            for (const auto &name : names) {
-                out.push_back(QString::fromStdU16String(name.u16string()));
+        using FileNameRecord = std::optional<VoiceBankConfig::FileNameEncoding>;
+
+        bool isAscii(QStringView text) {
+            return std::all_of(text.begin(), text.end(),
+                               [](QChar c) { return c.unicode() < 0x80; });
+        }
+
+        FileNameRecord recordOf(const std::optional<VoiceBankConfig> &config) {
+            return config ? config->fileNameEncoding : std::nullopt;
+        }
+
+        /// The names of the two lists of a record of misdecoded file names, in Normalization
+        /// Form C, against which a name on disk in any normalization form is looked up.
+        class RecordedNames {
+        public:
+            explicit RecordedNames(const FileNameRecord &record) : m_record(record) {
+                if (!record) {
+                    return;
+                }
+                for (const auto &name : record->misdecoded) {
+                    m_misdecoded.insert(name.normalized(QString::NormalizationForm_C));
+                }
+                for (const auto &name : record->correct) {
+                    m_correct.insert(name.normalized(QString::NormalizationForm_C));
+                }
+            }
+
+            /// The state of \a name , a name on disk.
+            enum State {
+                AsIs,         ///< Used as it is
+                Misdecoded,   ///< Restored by the record
+                Undetermined, ///< Absent from both lists of the record
+            };
+
+            State stateOf(const QString &name) const {
+                if (!m_record || isAscii(name)) {
+                    return AsIs;
+                }
+                const auto normalized = name.normalized(QString::NormalizationForm_C);
+                if (m_misdecoded.contains(normalized)) {
+                    return Misdecoded;
+                }
+                return m_correct.contains(normalized) ? AsIs : Undetermined;
+            }
+
+            /// The name under which the voice bank uses \a name , a name on disk, or
+            /// \c std::nullopt if the record lists it as misdecoded but it does not restore.
+            std::optional<QString> logicalOf(const QString &name) const {
+                if (stateOf(name) != Misdecoded) {
+                    return name;
+                }
+                return m_record->restore(name);
+            }
+
+        private:
+            FileNameRecord m_record;
+            QSet<QString> m_misdecoded;
+            QSet<QString> m_correct;
+        };
+
+        /// Returns the name on disk of the audio file named \a fileName in \a diskNames , or
+        /// \a fileName itself if absent.
+        fs::path diskNameOf(const std::map<QString, fs::path> &diskNames, const QString &fileName) {
+            const auto found = diskNames.find(fileName);
+            return found != diskNames.end() ? found->second : fs::path(fileName.toStdU16String());
+        }
+
+        /// The audio files of one directory under the names that the voice bank uses.
+        struct AudioNames {
+            /// The logical names in listing order.
+            QStringList names;
+            /// The name on disk of each audio file whose logical name differs.
+            std::map<QString, fs::path> diskNames;
+            /// The names on disk of the audio files and the subdirectories whose state the record
+            /// does not determine. These are used as they are.
+            QStringList undetermined;
+        };
+
+        /// Takes \a audio as the audio files of \a book , a VoiceBankFileSystemState::Book .
+        template <class Book>
+        void takeAudio(Book &book, AudioNames audio) {
+            book.audioFiles = std::move(audio.names);
+            book.diskNames = std::move(audio.diskNames);
+            book.undetermined = std::move(audio.undetermined);
+        }
+
+        /// The audio files of \a source under the names that \a record determines. A name that
+        /// does not restore, and a restored name that equals another name of the directory, is
+        /// used as it is on disk and reported in \a diagnostics if not null.
+        AudioNames audioNamesOf(const VoiceBankDirectorySource &source,
+                                const FileNameRecord &record, DiagnosticList *diagnostics) {
+            const auto report = [&](const QString &message) {
+                if (diagnostics) {
+                    diagnostics->push_back({DiagnosticSeverity::Warning, message});
+                }
+            };
+            const RecordedNames recorded(record);
+            QStringList physicals;
+            AudioNames out;
+            for (const auto &name : source.audioFiles) {
+                const auto physical = QString::fromStdU16String(name.u16string());
+                const auto state = recorded.stateOf(physical);
+                auto logical = recorded.logicalOf(physical);
+                if (!logical) {
+                    report(VoiceBankFileSystemState::tr(
+                               "The file name \"%1\" does not restore in the encodings that its "
+                               "folder records, so the name is used as it is.")
+                               .arg(physical));
+                    logical = physical;
+                } else if (state == RecordedNames::Undetermined) {
+                    out.undetermined.push_back(physical);
+                }
+                physicals.push_back(physical);
+                out.names.push_back(*logical);
+            }
+            for (const auto &entry : source.stamp.entries) {
+                const auto physical = QString::fromStdU16String(entry.name.u16string());
+                if (entry.directory && recorded.stateOf(physical) == RecordedNames::Undetermined) {
+                    out.undetermined.push_back(physical);
+                }
+            }
+
+            // A restored name that equals another name would make one of the files unreachable.
+            QHash<QString, int> counts;
+            for (const auto &name : std::as_const(out.names)) {
+                ++counts[name];
+            }
+            for (qsizetype i = 0; i < out.names.size(); ++i) {
+                auto &logical = out.names[i];
+                const auto &physical = physicals.at(i);
+                if (logical == physical) {
+                    continue;
+                }
+                if (counts.value(logical) > 1) {
+                    report(VoiceBankFileSystemState::tr(
+                               "The file name \"%1\" restores to \"%2\", which another file of "
+                               "its folder has as well, so the name is used as it is.")
+                               .arg(physical, logical));
+                    logical = physical;
+                } else {
+                    out.diskNames[logical] = source.audioFiles[size_t(i)];
+                }
             }
             return out;
         }
@@ -265,11 +401,12 @@ namespace hello::kit {
         };
 
         /// Decodes \a directory of the voice bank at \a root in \a given , or leaves out all
-        /// text that requires decoding if \a given is \c std::nullopt .
+        /// text that requires decoding if \a given is \c std::nullopt . The audio files are
+        /// those of \a audio .
         DecodedDirectory decodeDirectory(const VoiceBankDirectorySource &directory,
                                          const fs::path &root, int directoryIndex,
                                          const std::optional<QString> &given,
-                                         DiagnosticList &diagnostics) {
+                                         const AudioNames &audio, DiagnosticList &diagnostics) {
             DecodedDirectory out;
             auto &decoded = out.directory;
             const auto absolute = directory.path.empty() ? root : root / directory.path;
@@ -329,7 +466,7 @@ namespace hello::kit {
                     // code page and identify a different file wherever the two encodings
                     // differ.
                     const auto fileName = text(file);
-                    const auto path = absolute / fs::path(fileName.toStdU16String());
+                    const auto path = absolute / diskNameOf(audio.diskNames, fileName);
                     claimed.insert(fileName);
                     for (const auto &entry : entries) {
                         VoiceSample sample;
@@ -384,14 +521,14 @@ namespace hello::kit {
                 report(text, VoiceBankDirectorySource::Readme);
             }
 
-            for (const auto &name : directory.audioFiles) {
-                if (claimed.contains(QString::fromStdU16String(name.u16string()))) {
+            for (const auto &fileName : audio.names) {
+                if (claimed.contains(fileName)) {
                     continue;
                 }
                 VoiceSample sample;
-                sample.path = absolute / name;
+                sample.path = absolute / diskNameOf(audio.diskNames, fileName);
                 sample.directory = directoryIndex;
-                sample.fileName = QString::fromStdU16String(name.u16string());
+                sample.fileName = fileName;
                 out.samples.push_back(sample);
             }
 
@@ -706,6 +843,36 @@ namespace hello::kit {
         return it == m_books.end() ? QStringList() : it->second.audioFiles;
     }
 
+    fs::path VoiceBankFileSystemState::audioPathOf(const fs::path &directory,
+                                                   const QString &fileName) const {
+        const auto absolute = directory.empty() ? m_root : m_root / directory;
+        const auto it = m_books.find(directory);
+        if (it == m_books.end()) {
+            return absolute / fs::path(fileName.toStdU16String());
+        }
+        return absolute / diskNameOf(it->second.diskNames, fileName);
+    }
+
+    QStringList VoiceBankFileSystemState::undeterminedNames(const fs::path &directory) const {
+        const auto it = m_books.find(directory);
+        return it == m_books.end() ? QStringList() : it->second.undetermined;
+    }
+
+    fs::path VoiceBankFileSystemState::logicalPathOf(const fs::path &directory) const {
+        fs::path logical;
+        fs::path parent;
+        for (const auto &component : directory) {
+            const auto it = m_books.find(parent);
+            const auto name = QString::fromStdU16String(component.u16string());
+            const auto restored =
+                RecordedNames(it != m_books.end() ? recordOf(it->second.config) : std::nullopt)
+                    .logicalOf(name);
+            logical /= fs::path(restored.value_or(name).toStdU16String());
+            parent /= component;
+        }
+        return logical;
+    }
+
     VoiceBankChanges VoiceBankFileSystemState::checkDisk() {
         return checkDisk(QList<fs::path>{m_root});
     }
@@ -1013,7 +1180,13 @@ namespace hello::kit {
                                                     const VoiceBankDirectorySource &source,
                                                     const std::optional<QString> &charset,
                                                     DiagnosticList &diagnostics) {
-        auto decoded = decodeDirectory(source, m_root, index, charset, diagnostics);
+        // A directory read before keeps the record of file names that it was read with, as it
+        // keeps its encoding, because a configuration modified elsewhere is not read again.
+        const auto previous = m_books.find(source.path);
+        const auto record =
+            recordOf(previous != m_books.end() ? previous->second.config : source.config);
+        auto audio = audioNamesOf(source, record, &diagnostics);
+        auto decoded = decodeDirectory(source, m_root, index, charset, audio, diagnostics);
 
         // Inserted at the former position of the directory's samples, so that the sample
         // order, and with it the precedence between duplicate aliases, is preserved.
@@ -1032,7 +1205,15 @@ namespace hello::kit {
         }
         bank.m_samples = std::move(samples);
         bank.m_directories[index] = decoded.directory;
-        m_books[source.path] = bookOf(source, decoded.directory);
+        auto book = bookOf(source, decoded.directory);
+        if (record || book.config) {
+            if (!book.config) {
+                book.config = VoiceBankConfig();
+            }
+            book.config->fileNameEncoding = record;
+        }
+        takeAudio(book, std::move(audio));
+        m_books[source.path] = std::move(book);
     }
 
     void VoiceBankFileSystemState::appendDirectory(VoiceBank &bank,
@@ -1040,10 +1221,13 @@ namespace hello::kit {
                                                    const std::optional<QString> &charset,
                                                    DiagnosticList &diagnostics) {
         const int index = int(bank.m_directories.size());
-        auto decoded = decodeDirectory(source, m_root, index, charset, diagnostics);
+        auto audio = audioNamesOf(source, recordOf(source.config), &diagnostics);
+        auto decoded = decodeDirectory(source, m_root, index, charset, audio, diagnostics);
         bank.m_samples += decoded.samples;
         bank.m_directories.push_back(decoded.directory);
-        m_books[source.path] = bookOf(source, decoded.directory);
+        auto book = bookOf(source, decoded.directory);
+        takeAudio(book, std::move(audio));
+        m_books[source.path] = std::move(book);
     }
 
     void VoiceBankFileSystemState::refreshAudio(VoiceBank &bank, int index,
@@ -1058,14 +1242,15 @@ namespace hello::kit {
                 claimed.insert(sample.fileName);
             }
         }
+        auto &book = m_books[source.path];
+        auto audio = audioNamesOf(source, recordOf(book.config), nullptr);
         QList<VoiceSample> bare;
-        for (const auto &name : source.audioFiles) {
-            const auto fileName = QString::fromStdU16String(name.u16string());
+        for (const auto &fileName : std::as_const(audio.names)) {
             if (claimed.contains(fileName)) {
                 continue;
             }
             VoiceSample sample;
-            sample.path = absolute / name;
+            sample.path = absolute / diskNameOf(audio.diskNames, fileName);
             sample.directory = index;
             sample.fileName = fileName;
             bare.push_back(sample);
@@ -1096,9 +1281,7 @@ namespace hello::kit {
             samples.insert(at + i, bare.at(i));
         }
         bank.m_samples = std::move(samples);
-
-        auto &book = m_books[source.path];
-        book.audioFiles = namesOf(source.audioFiles);
+        takeAudio(book, std::move(audio));
 
         // The new stamp is taken only if every text file is still as it was read. Otherwise a
         // text file changed since the check would be taken as read and never reported.
@@ -1388,7 +1571,8 @@ namespace hello::kit {
             DiagnosticList ignored;
             if (const auto source = VoiceBankSource::readDirectory(m_root, path, ignored)) {
                 found->second.stamp = source->stamp;
-                found->second.audioFiles = namesOf(source->audioFiles);
+                takeAudio(found->second,
+                          audioNamesOf(*source, recordOf(found->second.config), nullptr));
             }
         }
         return true;
@@ -1469,7 +1653,6 @@ namespace hello::kit {
 
         book.charset = canonicalOf(decoded.charset);
         book.stamp = source.stamp;
-        book.audioFiles = namesOf(source.audioFiles);
         return book;
     }
 

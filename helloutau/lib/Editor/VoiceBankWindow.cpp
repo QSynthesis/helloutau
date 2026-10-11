@@ -1373,8 +1373,8 @@ namespace hello::daw {
 
         // The audio file of row of the model
         std::filesystem::path audioPathOf(int row) const {
-            return document->rootPath() / model->directoryOf(row) /
-                   pathOf(model->entryOf(row).fileName);
+            return document->session()->audioPathOf(model->directoryOf(row),
+                                                    model->entryOf(row).fileName);
         }
 
         // The audio at path, read again once its size or time changes, or null if it does not
@@ -2186,7 +2186,7 @@ namespace hello::daw {
             for (int i = 0; i < directories.size(); ++i) {
                 const auto directory = directories.at(i).path();
                 for (const auto &name : impl.document->session()->audioFiles(directory)) {
-                    const auto path = impl.document->rootPath() / directory / pathOf(name);
+                    const auto path = impl.document->session()->audioPathOf(directory, name);
                     const auto report = kit::WaveMetadata::find(path, unreadable);
                     if (!report || report->isEmpty()) {
                         continue;

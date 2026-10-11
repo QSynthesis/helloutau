@@ -93,6 +93,40 @@ private Q_SLOTS:
         m_dir.reset();
     }
 
+    // The tree holds the logical names, and the snapshot takes the names on disk from the file
+    // system state. あ.wav and い.wav are on disk as 偁.wav and 偄.wav.
+    void the_snapshot_finds_the_audio_files_under_their_names_on_disk() {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const auto a = QString::fromUtf8("偁.wav");
+        const auto i = QString::fromUtf8("偄.wav");
+        VoiceBankConfig config;
+        config.charset = QStringLiteral("Shift_JIS");
+        VoiceBankConfig::FileNameEncoding record;
+        record.original = QStringLiteral("Shift_JIS");
+        record.misdecodedAs = QStringLiteral("GBK");
+        record.misdecoded = QStringList{a, i};
+        config.fileNameEncoding = record;
+        QVERIFY(writeSampleFile(dir.path(), QStringLiteral("hello-config.json"), config.toJson()));
+        QVERIFY(writeSampleFile(dir.path(), QStringLiteral("oto.ini"),
+                                QByteArray("\x82\xa0.wav=a,1,2,3,4,5\r\n")));
+        QVERIFY(writeSampleFile(dir.path(), a, "RIFF"));
+        QVERIFY(writeSampleFile(dir.path(), i, "RIFF"));
+
+        const fs::path root(dir.path().toStdU16String());
+        DiagnosticList diagnostics;
+        auto opened = VoiceBankFileSystemState::open(root, nullptr, diagnostics);
+        QVERIFY(opened);
+        const auto session = VoiceBankSession::create(std::move(*opened), diagnostics);
+        QVERIFY(session);
+        const auto bank = session->snapshot();
+        QCOMPARE(bank.samples().size(), 2);
+        QCOMPARE(bank.samples().at(0).fileName, QString::fromUtf8("あ.wav"));
+        QCOMPARE(bank.samples().at(0).path, root / a.toStdU16String());
+        QCOMPARE(bank.samples().at(1).fileName, QString::fromUtf8("い.wav"));
+        QCOMPARE(bank.samples().at(1).path, root / i.toStdU16String());
+    }
+
     // Acceptance criterion 6 of docs/Editing.md at the level of a session: after one entry is
     // edited and saved, the encoding is unchanged and every other entry is written as it was.
     void saving_writes_the_edit_and_nothing_else() {
