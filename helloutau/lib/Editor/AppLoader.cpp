@@ -6,6 +6,7 @@
 
 #include <QtCore/QDir>
 #include <QtCore/QFileInfo>
+#include <QtCore/QLibraryInfo>
 #include <QtCore/QPointer>
 #include <QtCore/QtDebug>
 #include <QtWidgets/QApplication>
@@ -17,11 +18,11 @@
 
 #include <hellokit/Support/SettingsFile.h>
 #include <hellokit/Support/TemporaryStorage.h>
+#include <hellokit/Support/TranslationLoader.h>
 
 #include "AppSettings.h"
 #include "Editor.h"
 #include "Restarter.h"
-#include "Translations.h"
 
 namespace hello::daw {
 
@@ -33,8 +34,9 @@ namespace hello::daw {
 
     class AppLoader::Impl {
     public:
-        // Declared first, so that it is destroyed last, after the plugins and their windows
+        // Declared first, so that they are destroyed last, after the plugins and their windows
         std::unique_ptr<kit::TemporaryStorage> temporaryStorage;
+        std::unique_ptr<kit::TranslationLoader> translations;
         stdc::pluginsystem::PluginSystem system{AppLoader::pluginIid,
                                                 stdc::pluginsystem::PluginSystem::Bundle};
         QStringList pluginPaths;
@@ -109,7 +111,19 @@ namespace hello::daw {
                 ? std::make_unique<AppSettings>(settingsFile, AppSettings::defaultUserDirectory())
                 : std::make_unique<AppSettings>(settingsFile);
         impl.readPluginSettings();
-        Translations::install(impl.settings->language());
+
+        impl.translations = std::make_unique<kit::TranslationLoader>(
+            AppSettings::localeOf(impl.settings->language()));
+        // The translation of Qt, so that the standard buttons and dialogs match the rest: that
+        // of the installation, see helloutau/CMakeLists.txt, or else that of Qt itself.
+        const auto packaged = QDir::cleanPath(QCoreApplication::applicationDirPath() +
+                                              QStringLiteral("/../share/Qt/translations"));
+        const auto system = QDir::cleanPath(QLibraryInfo::path(QLibraryInfo::TranslationsPath));
+        if (!impl.translations->load(QStringLiteral("qtbase"), packaged) && packaged != system) {
+            impl.translations->load(QStringLiteral("qtbase"), system);
+        }
+        impl.translations->load(QStringLiteral("helloutau"),
+                                QStringLiteral(":/helloutau/translations"));
     }
 
     AppLoader::~AppLoader() {

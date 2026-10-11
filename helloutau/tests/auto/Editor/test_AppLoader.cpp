@@ -11,6 +11,8 @@
 #include <QtWidgets/QApplication>
 
 #include <hellokit/Support/JsonInterop.h>
+#include <hellokit/Support/TemporaryStorage.h>
+#include <hellokit/Support/TranslationLoader.h>
 
 #include <helloutau/Editor/AppLoader.h>
 #include <helloutau/Editor/AppSettings.h>
@@ -114,6 +116,30 @@ class test_AppLoader : public QObject {
 private Q_SLOTS:
     void init() {
         qApp->setProperty("appLoaderEvents", QStringList());
+    }
+
+    // The loader installs the translations of the libraries in the language of the settings and
+    // creates the temporary storage. Both end with the loader.
+    void the_loader_installs_the_translations_of_the_settings() {
+        const auto newText = [] {
+            return QCoreApplication::translate("hello::daw::ActionText", "&New");
+        };
+        QTemporaryDir directory;
+        AppSettings(directory.filePath(QStringLiteral("settings.json")))
+            .setLanguage(QStringLiteral("zh_CN"));
+        {
+            const AppLoader loader({QStringLiteral("helloutau"),
+                                    QLatin1String(AppLoader::settingsOption), directory.path()});
+            const auto translations = kit::TranslationLoader::instance();
+            QVERIFY(translations);
+            QCOMPARE(translations->locale().language(), QLocale::Chinese);
+            QCOMPARE(newText(), QStringLiteral("新建(&N)"));
+            QVERIFY(kit::TemporaryStorage::instance());
+        }
+        QVERIFY(!kit::TranslationLoader::instance());
+        QVERIFY(!kit::TemporaryStorage::instance());
+        QCOMPARE(newText(), QStringLiteral("&New"));
+        QLocale::setDefault(QLocale(QLocale::English));
     }
 
     // --plugin-path adds the following directory, --settings specifies the settings directory,

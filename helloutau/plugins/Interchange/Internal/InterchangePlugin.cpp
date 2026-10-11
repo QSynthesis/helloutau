@@ -4,10 +4,10 @@
 
 #include <hellokit/Interchange/BuiltinInterchangeDrivers.h>
 #include <hellokit/Interchange/InterchangeDrivers.h>
+#include <hellokit/Support/TranslationLoader.h>
 
 #include <helloutau/Editor/AppLoader.h>
 #include <helloutau/Editor/Editor.h>
-#include <helloutau/Editor/Translations.h>
 
 #include <Interchange/InterchangeService.h>
 
@@ -27,8 +27,10 @@ namespace hello::daw {
     InterchangePlugin::~InterchangePlugin() = default;
 
     bool InterchangePlugin::initialize(std::string *errorMessage) {
-        Translations::load(QStringLiteral("Interchange"),
-                           QStringLiteral(":/helloutau/plugins/Interchange/translations"));
+        if (const auto translations = kit::TranslationLoader::instance()) {
+            translations->load(QStringLiteral("Interchange"),
+                               QStringLiteral(":/helloutau/plugins/Interchange/translations"));
+        }
         // The core plugin, on which this plugin depends, has created the editor.
         const auto loader = AppLoader::instance();
         const auto editor = loader ? loader->editor() : nullptr;
@@ -65,6 +67,10 @@ namespace hello::daw {
         m_midiEncoding = {};
         m_drivers.reset();
         m_service.reset();
+        // Removed before this library, which holds the translation, is unloaded
+        if (const auto translations = kit::TranslationLoader::instance()) {
+            translations->remove(QStringLiteral("Interchange"));
+        }
     }
 
 }

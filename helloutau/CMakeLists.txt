@@ -33,7 +33,7 @@ add_subdirectory(plugins)
 # its own (docs/Plugins.md). The update_translations target extracts the texts into the .ts
 # files, from the sources that AEC generates as well, so those are built first.
 #
-# The languages besides English, the same as Translations::languages().
+# The languages besides English, the same as AppSettings::languages().
 set(HELLOUTAU_LANGUAGES zh_CN)
 list(TRANSFORM HELLOUTAU_LANGUAGES
     REPLACE "^(.+)$" "lib/Editor/Resources/translations/helloutau_\\1.ts"
@@ -50,7 +50,7 @@ qt_add_translations(
 )
 
 # The translations of the standard buttons and dialogs of Qt in each language, which
-# Translations::install() loads from share/Qt/translations beside the bin directory.
+# AppLoader loads from share/Qt/translations beside the bin directory.
 if(HELLO_INSTALL)
     foreach(_language IN LISTS HELLOUTAU_LANGUAGES)
         install(FILES "${QT6_INSTALL_PREFIX}/${QT6_INSTALL_TRANSLATIONS}/qtbase_${_language}.qm"

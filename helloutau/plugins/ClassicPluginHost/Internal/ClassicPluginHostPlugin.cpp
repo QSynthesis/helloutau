@@ -2,10 +2,11 @@
 
 #include <QtCore/QtGlobal>
 
+#include <hellokit/Support/TranslationLoader.h>
+
 #include <helloutau/Editor/AppLoader.h>
 #include <helloutau/Editor/Editor.h>
 #include <helloutau/Editor/EditorSettingPageIds.h>
-#include <helloutau/Editor/Translations.h>
 
 #include "ClassicPluginContribution.h"
 #include "ClassicPluginSettingPage.h"
@@ -23,8 +24,11 @@ namespace hello::daw {
     ClassicPluginHostPlugin::~ClassicPluginHostPlugin() = default;
 
     bool ClassicPluginHostPlugin::initialize(std::string *errorMessage) {
-        Translations::load(QStringLiteral("ClassicPluginHost"),
-                           QStringLiteral(":/helloutau/plugins/ClassicPluginHost/translations"));
+        if (const auto translations = kit::TranslationLoader::instance()) {
+            translations->load(
+                QStringLiteral("ClassicPluginHost"),
+                QStringLiteral(":/helloutau/plugins/ClassicPluginHost/translations"));
+        }
         // The core plugin, on which this plugin depends, has created the editor.
         const auto loader = AppLoader::instance();
         const auto editor = loader ? loader->editor() : nullptr;
@@ -63,6 +67,10 @@ namespace hello::daw {
     void ClassicPluginHostPlugin::aboutToShutdown() {
         m_settingPage = {};
         m_registration = {};
+        // Removed before this library, which holds the translation, is unloaded
+        if (const auto translations = kit::TranslationLoader::instance()) {
+            translations->remove(QStringLiteral("ClassicPluginHost"));
+        }
     }
 
 }

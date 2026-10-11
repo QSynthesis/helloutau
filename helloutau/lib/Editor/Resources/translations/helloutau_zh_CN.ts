@@ -2335,7 +2335,7 @@ Trust and use them for rendering?</source>
     </message>
 </context>
 <context>
-    <name>hello::daw::Translations</name>
+    <name>hello::daw::AppSettings</name>
     <message>
         <source>System Default</source>
         <translation>跟随系统</translation>

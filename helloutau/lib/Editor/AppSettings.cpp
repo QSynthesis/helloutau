@@ -394,6 +394,18 @@ namespace hello::daw {
         impl.setValue(KeyLanguage, language.toStdString());
     }
 
+    QList<std::pair<QString, QString>> AppSettings::languages() {
+        return {
+            {QString(),               tr("System Default")      },
+            {QStringLiteral("en"),    QStringLiteral("English") },
+            {QStringLiteral("zh_CN"), QStringLiteral("简体中文")},
+        };
+    }
+
+    QLocale AppSettings::localeOf(const QString &language) {
+        return language.isEmpty() ? QLocale::system() : QLocale(language);
+    }
+
     QString AppSettings::ustExportCharset() const {
         stdc_impl_t;
         const auto charset = impl.value(KeyUstExportCharset).asString();

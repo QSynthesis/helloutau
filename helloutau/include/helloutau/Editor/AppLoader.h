@@ -44,7 +44,13 @@ namespace hello::daw {
         /// Creates a loader for the command-line \a arguments, whose first element is the
         /// program. Each \c --plugin-path adds the following directory to the plugin paths.
         /// \c --settings specifies the settings directory. The remaining arguments are files.
-        /// Installs the translations of the language in the settings (Translations::install()).
+        ///
+        /// The constructor prepares the application in this order:
+        /// 1. Creates the temporary storage of the application (kit::TemporaryStorage).
+        /// 2. Reads the settings of the application and of the plugins.
+        /// 3. Creates the translation loader (kit::TranslationLoader) in the language of the
+        ///    settings and installs the translations of Qt and of the libraries. The plugins add
+        ///    theirs when they initialize.
         explicit AppLoader(const QStringList &arguments);
 
         /// Shuts the plugins down if they are still loaded.

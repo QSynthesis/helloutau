@@ -25,7 +25,6 @@
 #include "EditorSettingPageIds.h"
 #include "ExportUstDialog.h"
 #include "Restarter.h"
-#include "Translations.h"
 
 #include <helloutau/Audio/AudioEngine.h>
 #include <helloutau/Audio/AudioOutput.h>
@@ -110,7 +109,7 @@ namespace hello::daw {
         auto interfaceForm = new QFormLayout(interfaceGroup);
         m_language = new QComboBox(widget);
         m_language->setObjectName(QStringLiteral("language"));
-        for (const auto &[language, name] : Translations::languages()) {
+        for (const auto &[language, name] : AppSettings::languages()) {
             m_language->addItem(name, language);
         }
         m_language->setCurrentIndex(std::max(0, m_language->findData(m_settings.language())));

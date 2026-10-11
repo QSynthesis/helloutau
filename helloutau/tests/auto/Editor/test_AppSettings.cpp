@@ -274,6 +274,18 @@ private Q_SLOTS:
     }
 
 
+    // The settings offer the system language, English and Simplified Chinese, the last two
+    // named in themselves.
+    void the_languages_are_offered_in_themselves() {
+        const auto languages = AppSettings::languages();
+        QCOMPARE(languages.size(), 3);
+        QVERIFY(languages[0].first.isEmpty());
+        QCOMPARE(languages[1], (std::pair{QStringLiteral("en"), QStringLiteral("English")}));
+        QCOMPARE(languages[2], (std::pair{QStringLiteral("zh_CN"), QStringLiteral("简体中文")}));
+        QCOMPARE(AppSettings::localeOf(QString()), QLocale::system());
+        QCOMPARE(AppSettings::localeOf(QStringLiteral("zh_CN")).language(), QLocale::Chinese);
+    }
+
     // The user directory is the directory of the settings file unless it is given, and holds the
     // voice folder of HelloUtau.
     void the_user_directory_holds_the_voice_folder() {

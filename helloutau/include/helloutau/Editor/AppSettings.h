@@ -3,10 +3,13 @@
 
 #include <filesystem>
 #include <memory>
+#include <utility>
 
+#include <QtCore/QCoreApplication>
 #include <QtCore/QJsonValue>
 #include <QtCore/QByteArray>
 #include <QtCore/QList>
+#include <QtCore/QLocale>
 #include <QtCore/QString>
 #include <QtCore/QStringList>
 
@@ -24,6 +27,7 @@ namespace hello::daw {
     /// so that the changes of one pass of the loop result in one write. sync() and the destructor
     /// also write the file. If two applications change the file, the last write prevails.
     class HELLOUTAU_EDITOR_EXPORT AppSettings {
+        Q_DECLARE_TR_FUNCTIONS(hello::daw::AppSettings)
     public:
         /// Constructs the settings of the current user, stored in defaultFileName(), with
         /// defaultUserDirectory() as the user directory.
@@ -173,9 +177,18 @@ namespace hello::daw {
         void setToolBarVisible(bool visible);
 
         /// The language of the interface, as a locale name such as \c zh_CN, or empty for that of
-        /// the system, the default. It takes effect at the next start, see Translations.
+        /// the system, the default. It takes effect at the next start, when AppLoader installs
+        /// the translations of the language.
         QString language() const;
         void setLanguage(const QString &language);
+
+        /// Returns the languages that the settings offer: the locale name that language()
+        /// records, and the name of the language in itself. The first has an empty locale name
+        /// and stands for the language of the system.
+        static QList<std::pair<QString, QString>> languages();
+
+        /// Returns the locale of \a language, that of the system if \a language is empty.
+        static QLocale localeOf(const QString &language);
 
         /// Encoding initially selected when a UST is exported. The default is UTF-8.
         QString ustExportCharset() const;

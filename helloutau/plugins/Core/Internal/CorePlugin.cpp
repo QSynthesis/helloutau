@@ -2,10 +2,11 @@
 
 #include <filesystem>
 
+#include <hellokit/Support/TranslationLoader.h>
+
 #include <helloutau/Editor/AppLoader.h>
 #include <helloutau/Editor/BuiltinActions.h>
 #include <helloutau/Editor/Editor.h>
-#include <helloutau/Editor/Translations.h>
 
 #include <Core/CoreSettingPages.h>
 
@@ -17,8 +18,10 @@ namespace hello::daw {
 
     bool CorePlugin::initialize(std::string *errorMessage) {
         Q_UNUSED(errorMessage);
-        Translations::load(QStringLiteral("Core"),
-                           QStringLiteral(":/helloutau/plugins/Core/translations"));
+        if (const auto translations = kit::TranslationLoader::instance()) {
+            translations->load(QStringLiteral("Core"),
+                               QStringLiteral(":/helloutau/plugins/Core/translations"));
+        }
         // The editor uses the settings of the loader, which outlive the editor, or the settings
         // of the user if no loader loaded this plugin.
         const auto loader = AppLoader::instance();
@@ -55,6 +58,10 @@ namespace hello::daw {
             loader->setEditor(nullptr);
         }
         m_editor.reset();
+        // Removed before this library, which holds the translation, is unloaded
+        if (const auto translations = kit::TranslationLoader::instance()) {
+            translations->remove(QStringLiteral("Core"));
+        }
     }
 
 }
