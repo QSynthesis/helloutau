@@ -10,10 +10,11 @@
 
 「自动更新」的检查与下载已实现：`HelloKitUpdate` 的 `SoftwareReleaseQuery` 取得最新的 release，`SoftwareReleaseDownload` 下载附件并以 `SHA256SUMS` 校验。helloutau 的 `UpdateChecker` 在启动时与「Check for Updates...」中检查，以 `UpdateDialog` 提示，「Updates」设置页位于 System Settings 之下，提供三档更新方式（`updates/mode`）。
 
+「安装版的更新」已实现：`setup.iss` 的 `/UPDATE` 与 `/RELAUNCH`，程序持有的互斥量（`kit::InnoSetup::holdMutex()`），退出后启动安装包（`kit::ExitLauncher`），以及下次启动时报告结果。
+
 其余均未实现，现行代码与本文的出入如下：
 
-- 打包脚本与安装包的脚本位于 `dist/installer/windows/`（见「安装包」），尚未实现静默更新所需的 `/UPDATE` 参数与等待程序退出。
-- 安装（「安装版的更新」「免安装版的更新」）未实现。提示中的「Download」下载并校验附件后，只报告文件的位置并可打开其文件夹，由用户自行安装。「自动更新」下载并校验后只记入日志，退出时不安装。
+- 「免安装版的更新」未实现。免安装版在提示中的「Download」下载并校验附件后，只报告文件的位置并可打开其文件夹，由用户自行替换。「自动更新」下载并校验后只记入日志。
 
 ## 发布物
 
@@ -170,6 +171,14 @@ Windows 的安装包以 Inno Setup 7 生成，界面语言为英语、简体中�
 7. 安装包的退出码不为 0 时（例如 2 为用户取消，5 为安装中取消或中止），下次启动的程序不会是新版本。程序在下次启动时比较版本，未更新时提示更新失败，并提供下载页链接。
 
 以上是用户在提示中选择更新时的流程。「自动更新」时，第 1 步即用户正常退出程序的流程，用户已在其中处理未保存的修改。第 2 步在程序退出前启动安装包，以 `/VERYSILENT` 代替 `/SILENT`，不带 `/RELAUNCH`，安装结束后不启动程序。用户在退出时取消关闭窗口则不安装，下载的安装包留待下次退出。需要 UAC 提升的安装（「为所有用户安装」）在退出时仍会弹出 UAC 提示，用户拒绝时下次启动提示更新失败。
+
+实现上的约定：
+
+- 互斥量以安装包的 `AppId` 命名，即 `org.openvpi.helloutau`。`setup.iss` 以 `#define AppId` 定义它，程序取自更新配置的 `innoSetupAppId`，不另设名字。程序启动后以 `kit::InnoSetup::holdMutex()` 创建互斥量，句柄从不关闭，由系统在进程结束时释放，因此安装包等到互斥量消失时，程序的文件已不再被占用。安装包最多等待 60 秒。
+- 安装包的参数由 `UpdateChecker::installerArguments()` 给出。重新启动程序的 `[Run]` 条目带 `runasoriginaluser`，因此「为所有用户安装」时程序仍以用户身份而不是管理员身份启动。
+- 手动下载并校验完成后，安装版提示三项（作者 2026-10-11 决定）：「立即安装」即上述流程；「退出时安装」与「自动更新」相同；「稍后」不安装，下载的文件留在 `updates` 中，下次不重复下载。
+- 安装包在事件循环结束后由 `kit::ExitLauncher` 启动。该实例由 `AppLoader` 持有，按键名安排退出后启动的程序，重启（`ExitLauncher::scheduleRestart()`）与安装包（键名 `update`）各占一项，同一键名再次安排时替换旧的一项。带 `/RELAUNCH` 的安装会移除已安排的重启，因为安装包本身会重新启动程序。
+- 程序在退出时记下要安装的版本与 release 页面（`updates/pending`）。下次启动时版本未达到该版本则提示安装失败，并可打开 release 页面，否则删除 `updates` 目录中下载的文件。程序崩溃时不会记下，因为安装包也不会启动。
 
 Windows 特有的注册表信息因此全部由安装包维护，程序自身不写注册表。
 

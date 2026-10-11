@@ -20,6 +20,9 @@
 #endif
 
 #define AppName "HelloUtau"
+; The identifier of the installation, which names the uninstall entry and the mutex that the
+; program holds while it runs. share/helloutau/UpdateConfig.json records the same value.
+#define AppId "org.openvpi.helloutau"
 #define AppPublisher "OpenVPI"
 #define AppURL "https://github.com/QSynthesis/helloutau"
 #define AppExeName "helloutau.exe"
@@ -29,7 +32,7 @@
 [Setup]
 ; Windows names the uninstall entry after the identifier, and an installer of the same identifier
 ; upgrades the installation, so the identifier never changes after the first release.
-AppId=org.openvpi.helloutau
+AppId={#AppId}
 AppName={#AppName}
 AppVersion={#AppVersion}
 AppPublisher={#AppPublisher}
@@ -91,6 +94,61 @@ Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExe}"; Tasks: desktopico
 
 [Run]
 Filename: "{app}\{#AppExe}"; Description: "{cm:LaunchProgram,{#StringChange(AppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
+; The program started again after an update that it started with /RELAUNCH, as the user who
+; started the update rather than as the administrator of an installation for all users
+Filename: "{app}\{#AppExe}"; Flags: nowait runasoriginaluser; Check: IsRelaunch
 
 #include "messages.iss"
 #include "uninstall.iss"
+
+[Code]
+// The program updates itself by starting this installer with the switches of
+// UpdateChecker::installerArguments(): /UPDATE, and /RELAUNCH if the program starts again after
+// the update. See the update of the installed application in docs/Distribution.md.
+
+const
+  // The longest wait for the program to end, in milliseconds
+  ExitTimeout = 60000;
+
+// Returns whether the command line has the switch Name, in any letter case.
+function HasSwitch(const Name: String): Boolean;
+var
+  I: Integer;
+begin
+  Result := False;
+  for I := 1 to ParamCount do
+    if CompareText(ParamStr(I), Name) = 0 then
+    begin
+      Result := True;
+      Exit;
+    end;
+end;
+
+function IsRelaunch(): Boolean;
+begin
+  Result := HasSwitch('/UPDATE') and HasSwitch('/RELAUNCH');
+end;
+
+// The program starts this installer before it ends, and holds its mutex until its process has
+// ended. The installer waits for the mutex to disappear, so that no file of the program is in use,
+// and fails if the program does not end in time.
+function InitializeSetup(): Boolean;
+var
+  Waited: Integer;
+begin
+  Result := True;
+  if not HasSwitch('/UPDATE') then
+    Exit;
+  Waited := 0;
+  while CheckForMutexes('{#AppId}') do
+  begin
+    if Waited >= ExitTimeout then
+    begin
+      Log('The program did not end in time.');
+      Result := False;
+      Exit;
+    end;
+    Sleep(250);
+    Waited := Waited + 250;
+  end;
+end;

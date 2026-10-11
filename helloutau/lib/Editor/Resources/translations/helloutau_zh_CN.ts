@@ -2386,6 +2386,30 @@ Trust and use them for rendering?</source>
         <translation>在文件夹中显示</translation>
     </message>
     <message>
+        <source>Install Update</source>
+        <translation>安装更新</translation>
+    </message>
+    <message>
+        <source>%1 %2 has been downloaded and verified.</source>
+        <translation>%1 %2 已下载并通过校验。</translation>
+    </message>
+    <message>
+        <source>Install Now closes %1 and starts it again after the update. Install on Quit installs the update when %1 quits.</source>
+        <translation>「立即安装」会关闭 %1，并在更新后重新启动。「退出时安装」会在 %1 退出时安装更新。</translation>
+    </message>
+    <message>
+        <source>Install &amp;Now</source>
+        <translation>立即安装(&amp;N)</translation>
+    </message>
+    <message>
+        <source>Install on &amp;Quit</source>
+        <translation>退出时安装(&amp;Q)</translation>
+    </message>
+    <message>
+        <source>&amp;Later</source>
+        <translation>稍后(&amp;L)</translation>
+    </message>
+    <message>
         <source>The file %1 lacks the prefix of the assets or the identifier of the installer.</source>
         <translation>文件 %1 缺少附件前缀或安装包标识。</translation>
     </message>
@@ -2404,6 +2428,14 @@ Trust and use them for rendering?</source>
     <message>
         <source>The file %1 lists no source.</source>
         <translation>文件 %1 未列出任何更新源。</translation>
+    </message>
+    <message>
+        <source>The update to %1 %2 was not installed.</source>
+        <translation>未能安装 %1 %2 的更新。</translation>
+    </message>
+    <message>
+        <source>Open Download Page</source>
+        <translation>打开下载页面</translation>
     </message>
     <message>
         <source>Cannot check for updates: %1</source>

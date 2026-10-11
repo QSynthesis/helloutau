@@ -312,6 +312,7 @@ namespace hello::daw {
         }
         const int code = QApplication::exec();
         shutdown();
+        // The restart and the installer of an update, which waits for this process to end
         impl.exitLauncher->launchAll();
         return code;
     }

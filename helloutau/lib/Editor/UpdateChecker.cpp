@@ -17,6 +17,7 @@
 
 #include <stdcorelib/pimpl.h>
 
+#include <hellokit/Support/ExitLauncher.h>
 #include <hellokit/Support/SettingsFile.h>
 #include <hellokit/Support/TemporaryStorage.h>
 #include <hellokit/Update/SoftwareReleaseDownload.h>
@@ -34,6 +35,9 @@ namespace hello::daw {
     namespace {
 
         constexpr char sumsName[] = "SHA256SUMS";
+
+        // The key of the installation of an update in kit::ExitLauncher
+        constexpr char updateKey[] = "update";
 
         // The minimum interval between two checks at start, in seconds
         constexpr qint64 startupCheckInterval = 24 * 60 * 60;
@@ -85,6 +89,8 @@ namespace hello::daw {
 
         // The state of the running download. An interactive download is reported to the user.
         bool downloadInteractive = false;
+        QString downloadVersion;
+        QUrl downloadPage;
         QPointer<QWidget> downloadParent;
         QPointer<QProgressDialog> downloadProgress;
 
@@ -195,6 +201,8 @@ namespace hello::daw {
                            bool interactive) {
             closeDownloadProgress();
             downloadInteractive = interactive;
+            downloadVersion = release.version.toString();
+            downloadPage = release.page;
             downloadParent = dialogParent();
             if (!download->start(release, asset, UpdateChecker::downloadDirectory())) {
                 reportDownload();
@@ -238,13 +246,16 @@ namespace hello::daw {
         void reportDownload() {
             closeDownloadProgress();
             const auto filePath = download->filePath();
+            const bool installed = configuration && isInstalled(*configuration);
             if (!downloadInteractive) {
-                // TODO: Install the verified update when the application quits, see the
-                // installation at exit in docs/Distribution.md.
                 if (filePath.isEmpty()) {
                     qWarning().noquote()
                         << "The download of the update failed:" << download->errorString();
+                } else if (installed) {
+                    scheduleInstallation(filePath, false);
                 } else {
+                    // TODO: Replace the files of the extracted application when it quits, see
+                    // the update of the extracted application in docs/Distribution.md.
                     qInfo().noquote() << "The update is downloaded and verified:" << filePath;
                 }
                 return;
@@ -256,7 +267,12 @@ namespace hello::daw {
                     tr("Cannot download the update: %1").arg(download->errorString()));
                 return;
             }
-            // TODO: Install the update instead, see the installation in docs/Distribution.md.
+            if (installed) {
+                offerInstallation(filePath, parent);
+                return;
+            }
+            // TODO: Offer the replacement of the files of the extracted application, see the
+            // update of the extracted application in docs/Distribution.md.
             QMessageBox box(QMessageBox::Information, tr("Download Update"),
                             tr("The update has been downloaded and verified:\n%1")
                                 .arg(QDir::toNativeSeparators(filePath)),
@@ -267,6 +283,54 @@ namespace hello::daw {
                 QDesktopServices::openUrl(QUrl::fromLocalFile(QFileInfo(filePath).absolutePath()));
             }
         }
+
+        // The installer runs once the event loop has ended, and the version is recorded for the
+        // next start when the checker is destroyed, after the windows are closed. An installer
+        // that starts the application again replaces a scheduled restart.
+        //
+        // \return whether the installation was scheduled, which requires an instance of
+        //         kit::ExitLauncher
+        bool scheduleInstallation(const QString &installer, bool relaunch) {
+            const auto launcher = kit::ExitLauncher::instance();
+            if (!launcher) {
+                return false;
+            }
+            if (relaunch) {
+                launcher->removeLaunch(QLatin1String(kit::ExitLauncher::restartKey));
+            }
+            launcher->setLaunch(QLatin1String(updateKey), installer,
+                                UpdateChecker::installerArguments(relaunch));
+            pendingVersion = downloadVersion;
+            pendingPage = downloadPage;
+            return true;
+        }
+
+        void offerInstallation(const QString &installer, QWidget *parent) {
+            QMessageBox box(QMessageBox::Question, tr("Install Update"),
+                            tr("%1 %2 has been downloaded and verified.")
+                                .arg(QApplication::applicationDisplayName(), downloadVersion),
+                            QMessageBox::NoButton, parent);
+            box.setInformativeText(
+                tr("Install Now closes %1 and starts it again after the update. Install on Quit "
+                   "installs the update when %1 quits.")
+                    .arg(QApplication::applicationDisplayName()));
+            const auto now = box.addButton(tr("Install &Now"), QMessageBox::AcceptRole);
+            const auto onQuit = box.addButton(tr("Install on &Quit"), QMessageBox::ActionRole);
+            box.addButton(tr("&Later"), QMessageBox::RejectRole);
+            box.setDefaultButton(now);
+            box.exec();
+            if (box.clickedButton() == onQuit) {
+                scheduleInstallation(installer, false);
+            } else if (box.clickedButton() == now && (!closeWindows || closeWindows()) &&
+                       scheduleInstallation(installer, true)) {
+                QCoreApplication::quit();
+            }
+        }
+
+        std::function<bool()> closeWindows;
+        // The version and the page of the scheduled installation
+        QString pendingVersion;
+        QUrl pendingPage;
     };
 
     QString UpdateChecker::Configuration::defaultFileName() {
@@ -381,6 +445,13 @@ namespace hello::daw {
 
     UpdateChecker::~UpdateChecker() {
         stdc_impl_t;
+        // Recorded only if the installation is still scheduled, as it is when the application
+        // quits normally.
+        const auto launcher = kit::ExitLauncher::instance();
+        if (!impl.pendingVersion.isEmpty() && launcher &&
+            launcher->hasLaunch(QLatin1String(updateKey))) {
+            impl.settings.updates().setPendingInstallation(impl.pendingVersion, impl.pendingPage);
+        }
         impl.closeProgress();
         impl.closeDownloadProgress();
     }
@@ -391,6 +462,54 @@ namespace hello::daw {
         const auto storage = kit::TemporaryStorage::instance();
         const auto base = storage ? storage->root() : kit::TemporaryStorage::location();
         return QString::fromStdU16String((base / u"updates").u16string());
+    }
+
+    QStringList UpdateChecker::installerArguments(bool relaunch) {
+        QStringList arguments{relaunch ? QStringLiteral("/SILENT") : QStringLiteral("/VERYSILENT"),
+                              QStringLiteral("/SUPPRESSMSGBOXES"), QStringLiteral("/NORESTART"),
+                              QStringLiteral("/NOCLOSEAPPLICATIONS"), QStringLiteral("/UPDATE")};
+        if (relaunch) {
+            arguments.push_back(QStringLiteral("/RELAUNCH"));
+        }
+        return arguments;
+    }
+
+    void UpdateChecker::setCloseWindows(const std::function<bool()> &closeWindows) {
+        stdc_impl_t;
+        impl.closeWindows = closeWindows;
+    }
+
+    void UpdateChecker::holdInstallerMutex() {
+#ifdef Q_OS_WINDOWS
+        stdc_impl_t;
+        if (impl.configuration) {
+            kit::InnoSetup::holdMutex(impl.configuration->innoSetupAppId);
+        }
+#endif
+    }
+
+    void UpdateChecker::reportLastInstallation(QWidget *parent) {
+        stdc_impl_t;
+        const auto pending = impl.settings.updates().pendingVersion();
+        if (pending.isEmpty()) {
+            return;
+        }
+        const auto page = impl.settings.updates().pendingPage();
+        impl.settings.updates().clearPendingInstallation();
+        const auto target = QVersionNumber::fromString(pending);
+        if (QVersionNumber::compare(currentVersion().normalized(), target.normalized()) >= 0) {
+            QDir(downloadDirectory()).removeRecursively();
+            return;
+        }
+        QMessageBox box(QMessageBox::Warning, tr("Install Update"),
+                        tr("The update to %1 %2 was not installed.")
+                            .arg(QApplication::applicationDisplayName(), pending),
+                        QMessageBox::Close, parent);
+        const auto open = box.addButton(tr("Open Download Page"), QMessageBox::ActionRole);
+        box.exec();
+        if (box.clickedButton() == open && page.isValid()) {
+            QDesktopServices::openUrl(page);
+        }
     }
 
     QString UpdateChecker::assetName(const QString &prefix, const QVersionNumber &version,

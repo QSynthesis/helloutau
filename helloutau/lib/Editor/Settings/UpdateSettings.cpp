@@ -14,6 +14,9 @@ namespace hello::daw {
         constexpr char KeySource[] = "updates/source";
         constexpr char KeyLastCheck[] = "updates/lastCheck";
         constexpr char KeySkippedVersion[] = "updates/skippedVersion";
+        constexpr char KeyPending[] = "updates/pending";
+        constexpr char KeyPendingVersion[] = "updates/pending/version";
+        constexpr char KeyPendingPage[] = "updates/pending/page";
 
     }
 
@@ -68,6 +71,23 @@ namespace hello::daw {
     void UpdateSettings::setSkippedVersion(const QString &version) {
         m_store.setValue(KeySkippedVersion,
                          version.isEmpty() ? json::Value() : json::Value(version.toStdString()));
+    }
+
+    QString UpdateSettings::pendingVersion() const {
+        return m_store.text(KeyPendingVersion);
+    }
+
+    QUrl UpdateSettings::pendingPage() const {
+        return QUrl(m_store.text(KeyPendingPage));
+    }
+
+    void UpdateSettings::setPendingInstallation(const QString &version, const QUrl &page) {
+        m_store.setValue(KeyPendingVersion, version.toStdString());
+        m_store.setValue(KeyPendingPage, page.toString().toStdString());
+    }
+
+    void UpdateSettings::clearPendingInstallation() {
+        m_store.setValue(KeyPending, json::Value());
     }
 
 }

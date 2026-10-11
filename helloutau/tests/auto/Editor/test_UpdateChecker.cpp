@@ -86,6 +86,19 @@ private Q_SLOTS:
                      (hello::kit::TemporaryStorage::location() / u"updates").u16string()));
     }
 
+    // An installer that starts the application again shows its progress, and an installer at
+    // exit shows nothing. Both wait for the application to end.
+    void the_installer_arguments_follow_the_relaunch() {
+        const auto relaunch = UpdateChecker::installerArguments(true);
+        QVERIFY(relaunch.contains(QStringLiteral("/SILENT")));
+        QVERIFY(relaunch.contains(QStringLiteral("/UPDATE")));
+        QVERIFY(relaunch.contains(QStringLiteral("/RELAUNCH")));
+        const auto atExit = UpdateChecker::installerArguments(false);
+        QVERIFY(atExit.contains(QStringLiteral("/VERYSILENT")));
+        QVERIFY(atExit.contains(QStringLiteral("/UPDATE")));
+        QVERIFY(!atExit.contains(QStringLiteral("/RELAUNCH")));
+    }
+
     void asset_names_follow_the_release_assets() {
         const QVersionNumber version({0, 1, 6, 0});
         QCOMPARE(UpdateChecker::assetName("app", version, "x64-windows-msvc", false),

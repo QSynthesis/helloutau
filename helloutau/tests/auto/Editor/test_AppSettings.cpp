@@ -89,6 +89,18 @@ private Q_SLOTS:
             settings.updates().setSkippedVersion(QString());
             QVERIFY(settings.value(QStringLiteral("updates/source")).isUndefined());
             QVERIFY(settings.value(QStringLiteral("updates/skippedVersion")).isUndefined());
+            QVERIFY(settings.updates().pendingVersion().isEmpty());
+            settings.updates().setPendingInstallation(
+                QStringLiteral("0.1.7.0"), QUrl(QStringLiteral("https://example.com/v0.1.7.0")));
+        }
+        {
+            AppSettings settings(file);
+            QCOMPARE(settings.updates().pendingVersion(), QStringLiteral("0.1.7.0"));
+            QCOMPARE(settings.updates().pendingPage(),
+                     QUrl(QStringLiteral("https://example.com/v0.1.7.0")));
+            settings.updates().clearPendingInstallation();
+            QVERIFY(settings.updates().pendingVersion().isEmpty());
+            QVERIFY(settings.value(QStringLiteral("updates/pending")).isUndefined());
         }
     }
 

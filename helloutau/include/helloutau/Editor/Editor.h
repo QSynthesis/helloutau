@@ -237,9 +237,10 @@ namespace hello::daw {
         /// reports the result (Help > Check for Updates...).
         void checkForUpdates(QWidget *from);
 
-        /// Checks for a newer release if the settings enable the check at start, and offers it
-        /// over the last opened project window. The core plugin calls this function once the
-        /// first windows are open. See UpdateChecker::checkAtStartup().
+        /// Holds the mutex for which the installer of an update waits, reports the result of the
+        /// installation started when the application last quit, and checks for a newer release
+        /// at start, each over the last opened project window. The core plugin calls this
+        /// function once the first windows are open. See UpdateChecker.
         void checkForUpdatesAtStartup();
 
         /// Closes every window. Each window prompts the user to save its document first. Stops

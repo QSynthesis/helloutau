@@ -149,6 +149,7 @@ namespace hello::daw {
             catalog = new SettingCatalog(decl);
             updateChecker =
                 new UpdateChecker(*settings, UpdateChecker::Configuration::defaultFileName(), decl);
+            updateChecker->setCloseWindows([decl] { return decl->closeAll(); });
             addEditorSettingPages(catalog, *settings, *updateChecker);
             pages = std::make_unique<Pages>(
                 *pageRegistry, [this](Pages::Item &item) { return pageAdded(item); },
@@ -885,7 +886,10 @@ namespace hello::daw {
     void Editor::checkForUpdatesAtStartup() {
         stdc_impl_t;
         const auto all = windows();
-        impl.updateChecker->checkAtStartup(all.isEmpty() ? nullptr : all.last());
+        const auto parent = all.isEmpty() ? nullptr : all.last();
+        impl.updateChecker->holdInstallerMutex();
+        impl.updateChecker->reportLastInstallation(parent);
+        impl.updateChecker->checkAtStartup(parent);
     }
 
     bool Editor::closeAll() {

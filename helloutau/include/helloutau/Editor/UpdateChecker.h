@@ -1,6 +1,7 @@
 #ifndef HELLOUTAU_EDITOR_UPDATECHECKER_H
 #define HELLOUTAU_EDITOR_UPDATECHECKER_H
 
+#include <functional>
 #include <memory>
 #include <optional>
 
@@ -93,6 +94,11 @@ namespace hello::daw {
         static QString assetName(const QString &prefix, const QVersionNumber &version,
                                  const QString &triplet, bool installer);
 
+        /// Returns the arguments of the installer of an update: \c /SILENT with \c /RELAUNCH if
+        /// \a relaunch is true, so that the installer shows its progress and starts the
+        /// application again, and \c /VERYSILENT otherwise. See dist/installer/windows/setup.iss.
+        static QStringList installerArguments(bool relaunch);
+
         /// Returns whether \a release is newer than \a current and has the asset named
         /// \a asset and the \c SHA256SUMS file.
         static bool offers(const kit::SoftwareRelease &release, const QVersionNumber &current,
@@ -103,6 +109,21 @@ namespace hello::daw {
 
         /// Returns whether a check is running.
         bool isRunning() const;
+
+        /// Sets the function that closes every window as quitting does, asking the user to save,
+        /// and returns whether every window was closed. Install Now calls it before the
+        /// application quits for the installation.
+        void setCloseWindows(const std::function<bool()> &closeWindows);
+
+        /// Holds the mutex for which the installer of an update waits, named after the \c AppId
+        /// of the installer, until the process ends. Only on Windows, and only if the update
+        /// configuration can be read.
+        void holdInstallerMutex();
+
+        /// Reports the result of the installation started when the application last quit, if
+        /// any: a failure over \a parent with the page of the release, and the removal of the
+        /// downloaded updates on success.
+        void reportLastInstallation(QWidget *parent);
 
         /// Checks the releases from the source of the settings, unless the update mode of the
         /// settings is UpdateSettings::Manual or the last check is less than a day old. In

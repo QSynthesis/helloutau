@@ -3,6 +3,7 @@
 
 #include <QtCore/QDateTime>
 #include <QtCore/QString>
+#include <QtCore/QUrl>
 
 #include <helloutau/Editor/HelloUtauEditorGlobal.h>
 
@@ -48,6 +49,14 @@ namespace hello::daw {
         /// an empty string if none.
         QString skippedVersion() const;
         void setSkippedVersion(const QString &version);
+
+        /// The version whose installer was started when the application last quit, and the page
+        /// of its release, by which the next start reports whether the installation succeeded.
+        /// Both are empty if no installation is pending.
+        QString pendingVersion() const;
+        QUrl pendingPage() const;
+        void setPendingInstallation(const QString &version, const QUrl &page);
+        void clearPendingInstallation();
 
     private:
         explicit UpdateSettings(AppSettingsStore &store);
