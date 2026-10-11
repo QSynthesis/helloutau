@@ -4,7 +4,7 @@
 # The architecture and the system follow the triplets of vcpkg. The ABI rather than the compiler
 # is named, because a build of clang for the MSVC ABI loads the plugins of a build of MSVC.
 #
-# Sets the variable HELLO_TRIPLET.
+# Sets the cache entry HELLO_TRIPLET, which -DHELLO_TRIPLET=<triplet> overrides.
 
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(AMD64|x86_64|x64)$")
     set(_hello_arch x64)
@@ -32,7 +32,8 @@ else()
     string(TOLOWER "${CMAKE_CXX_COMPILER_ID}" _hello_abi)
 endif()
 
-set(HELLO_TRIPLET "${_hello_arch}-${_hello_system}-${_hello_abi}")
+set(HELLO_TRIPLET "${_hello_arch}-${_hello_system}-${_hello_abi}" CACHE STRING
+    "The triplet of the build, which names the release assets")
 
 unset(_hello_arch)
 unset(_hello_system)

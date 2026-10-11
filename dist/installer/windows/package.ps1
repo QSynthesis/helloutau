@@ -51,7 +51,8 @@ function Invoke-Step([string]$name, [scriptblock]$step) {
     }
 }
 
-# Returns the value of the entry name in the file of NAME=value lines at path, or $null if absent.
+# Returns the value of the entry name in the file at path, whose lines are the name, separator
+# and the value, or $null if absent.
 function Get-Value([string]$path, [string]$name, [string]$separator) {
     foreach ($line in Get-Content -LiteralPath $path) {
         if ($line -match "^$([regex]::Escape($name))$separator(.*)$") {
@@ -61,19 +62,16 @@ function Get-Value([string]$path, [string]$name, [string]$separator) {
     return $null
 }
 
-# The version and the triplet that dist/CMakeLists.txt writes into the build directory
-$package = Join-Path $BuildDir "package.txt"
-if (-not (Test-Path -LiteralPath $package)) {
-    throw "$package was not found. Configure the build again."
-}
-$version = Get-Value $package "HELLO_VERSION" "="
-$triplet = Get-Value $package "HELLO_TRIPLET" "="
+# The version of the project and the triplet of cmake/DetectTriplet.cmake in the cache of the build
+$cache = Join-Path $BuildDir "CMakeCache.txt"
+$version = Get-Value $cache "CMAKE_PROJECT_VERSION" ":[A-Z]+="
+$triplet = Get-Value $cache "HELLO_TRIPLET" ":[A-Z]+="
 if (-not $version -or -not $triplet) {
-    throw "The version or the triplet is missing from $package."
+    throw "The version or the triplet is missing from $cache. Configure the build again."
 }
 if (-not $Qt) {
     # Qt6_DIR is <Qt>\lib\cmake\Qt6.
-    $qtDir = Get-Value (Join-Path $BuildDir "CMakeCache.txt") "Qt6_DIR" ":[A-Z]+="
+    $qtDir = Get-Value $cache "Qt6_DIR" ":[A-Z]+="
     if (-not $qtDir) {
         throw "Qt6_DIR was not found in the CMake cache. Give the directory of Qt with -Qt."
     }
