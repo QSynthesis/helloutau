@@ -2,6 +2,8 @@
 
 #include <system_error>
 
+#include <QtCore/qt_windows.h>
+
 #include <stdcorelib/platform/windows/registry.h>
 
 namespace fs = std::filesystem;
@@ -40,6 +42,10 @@ namespace hello::kit {
         // The recorded directory ends with a separator, and the letter case may differ.
         std::error_code error;
         return fs::equivalent(*location, directory, error);
+    }
+
+    bool InnoSetup::holdMutex(const QString &name) {
+        return CreateMutexW(nullptr, FALSE, reinterpret_cast<LPCWSTR>(name.utf16())) != nullptr;
     }
 
 }

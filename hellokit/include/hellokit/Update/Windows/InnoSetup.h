@@ -25,6 +25,13 @@ namespace hello::kit {
         /// Returns whether \a directory is the installation directory of \a appId, see
         /// installLocation().
         static bool isInstalledIn(const QString &appId, const std::filesystem::path &directory);
+
+        /// Creates the mutex named \a name, for which the installer of an update waits, and holds
+        /// it until the process ends. The handle is never closed, so that the mutex disappears
+        /// only when the process has ended and its files are no longer in use.
+        ///
+        /// \return whether the mutex was created, or opened if it exists
+        static bool holdMutex(const QString &name);
     };
 
 }

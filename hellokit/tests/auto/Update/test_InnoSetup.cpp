@@ -1,5 +1,6 @@
 #include <QtCore/QDir>
 #include <QtCore/QUuid>
+#include <QtCore/qt_windows.h>
 #include <QtTest/QTest>
 
 #include <hellokit/Update/Windows/InnoSetup.h>
@@ -15,6 +16,17 @@ private Q_SLOTS:
         const auto appId = QUuid::createUuid().toString(QUuid::WithoutBraces);
         QVERIFY(!InnoSetup::installLocation(appId));
         QVERIFY(!InnoSetup::isInstalledIn(appId, QDir::tempPath().toStdU16String()));
+    }
+
+    // The held mutex can be opened by another handle, as the installer opens it.
+    void a_held_mutex_exists() {
+        const auto name = QUuid::createUuid().toString(QUuid::WithoutBraces);
+        const auto wide = reinterpret_cast<LPCWSTR>(name.utf16());
+        QVERIFY(!OpenMutexW(SYNCHRONIZE, FALSE, wide));
+        QVERIFY(InnoSetup::holdMutex(name));
+        const auto handle = OpenMutexW(SYNCHRONIZE, FALSE, wide);
+        QVERIFY(handle);
+        CloseHandle(handle);
     }
 };
 
