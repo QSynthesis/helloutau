@@ -9,6 +9,7 @@
 | `SynthToolProcess` | 启动一次合成工具。参数以向量传递，**不提供接受完整命令行的重载** |
 | `SynthPlan` | 只计算不执行。将 `VoiceBank::find` 与 `utau::Synth::calc` 衔接，为每个音符生成两条已解析的参数向量 |
 | `SynthRunner` | 执行一份 `SynthPlan` |
+| `SynthFailure`、`SynthDiagnosers` | 渲染失败的现场与诊断，诊断器可由插件注册，见 [`SynthDiagnostics.md`](SynthDiagnostics.md) |
 
 将计算与执行分离的理由：真正值得测试的部分，即歌词解析到哪个样本、相邻音符之间的时值校正、每个合成工具实际接收的参数，因此无需磁盘上存在合成工具即可测试。
 
