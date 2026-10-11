@@ -1284,8 +1284,7 @@ namespace hello::kit {
                 const auto bytes = readWhole(path);
                 const auto current =
                     bytes ? VoiceBankConfig::fromJson(*bytes, ignored) : std::nullopt;
-                if (!current || current->charset != config.charset ||
-                    current->unknownFields != config.unknownFields) {
+                if (!current || current->toJson() != config.toJson()) {
                     writes.push_back(
                         {directory.path, VoiceBankDirectorySource::Config, path, config.toJson()});
                 }

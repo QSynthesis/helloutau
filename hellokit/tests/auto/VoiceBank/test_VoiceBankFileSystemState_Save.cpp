@@ -374,6 +374,32 @@ private Q_SLOTS:
         QCOMPARE(read(QStringLiteral("oto.ini")), "a.wav=" + kGbkGePing + ",1,2,3,4,5\r\n");
     }
 
+    void the_record_of_the_file_names_is_written_again_as_read() {
+        VoiceBankConfig config;
+        config.charset = TextCodec(QStringLiteral("GBK")).name();
+        VoiceBankConfig::FileNameEncoding record;
+        record.original = QStringLiteral("Shift_JIS");
+        record.misdecodedAs = QStringLiteral("GBK");
+        record.misdecoded = QStringList{QString::fromUtf8("偁.wav")};
+        config.fileNameEncoding = record;
+        const QByteArray recorded = config.toJson();
+        write(QStringLiteral("hello-config.json"), recorded);
+        write(QStringLiteral("oto.ini"), "a.wav=" + kGbkGePing + ",1,2,3,4,5\r\n");
+        write(QStringLiteral("a.wav"), "RIFF");
+
+        DiagnosticList diagnostics;
+        auto opened = VoiceBankFileSystemState::open(root(), nullptr, diagnostics);
+        QVERIFY(opened.has_value());
+
+        record.misdecoded.clear();
+        record.correct = QStringList{QString::fromUtf8("偁.wav")};
+        auto changed = config;
+        changed.fileNameEncoding = record;
+        write(QStringLiteral("hello-config.json"), changed.toJson());
+        QVERIFY(opened->files.save(opened->bank, diagnostics));
+        QCOMPARE(read(QStringLiteral("hello-config.json")), recorded);
+    }
+
     // A configuration that another program created after the voice bank was read would decode
     // the directory in its encoding at the next open, so a save replaces it as well.
     void a_configuration_created_elsewhere_is_replaced() {
