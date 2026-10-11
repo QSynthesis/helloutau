@@ -803,7 +803,7 @@ private Q_SLOTS:
         DiagnosticList diagnostics;
         const auto outcome = runner.render(*p, synthTools(), nullptr, diagnostics);
         QVERIFY(!outcome.rendered);
-        QCOMPARE(outcome.failures.size(), 3);
+        QCOMPARE(outcome.failures.size(), 4);
         for (int i = 0; i < 2; ++i) {
             const auto &failure = outcome.failures.at(i);
             QCOMPARE(failure.stage, SynthFailure::Resampler);
@@ -815,18 +815,28 @@ private Q_SLOTS:
         QCOMPARE(track.stage, SynthFailure::Wavtool);
         QCOMPARE(track.program, synthTools().wavtool);
         QVERIFY(!track.run);
+
+        // Without a track, the fragment that exists is recorded with its head, because the
+        // fragments that the wavtool rejected are unknown.
+        const auto &fragment = outcome.failures.at(3);
+        QCOMPARE(fragment.stage, SynthFailure::Unconfirmed);
+        QCOMPARE(fragment.noteIndex, p->steps().at(0).noteIndex);
+        QCOMPARE(fragment.file, p->steps().at(0).cacheFile);
+        QVERIFY(fragment.fileHead.startsWith("RIFF"));
     }
 
     // The script, not the wavtool, is the program that did not start.
+    // No fragment is recorded then, as no wavtool ran.
     void a_script_that_does_not_start_is_recorded_as_the_program() {
         const auto p = planOfNotes(1);
         QVERIFY(p.has_value());
+        fillCache(*p);
         ScriptRunner runner;
         runner.ending.started = false;
 
         DiagnosticList diagnostics;
         const auto outcome = runner.render(*p, synthTools(), nullptr, diagnostics);
-        QVERIFY(!outcome.failures.isEmpty());
+        QCOMPARE(outcome.failures.size(), 1);
         const auto &failure = outcome.failures.last();
         QCOMPARE(failure.stage, SynthFailure::Wavtool);
         QVERIFY(failure.program != synthTools().wavtool);

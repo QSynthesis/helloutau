@@ -28,6 +28,12 @@ namespace hello::kit {
 
             /// WavtoolMixer cannot read the fragment, in realtime playback.
             Fragment,
+
+            /// The wavtool wrote no track, and the fragment of the note exists. The classic runner
+            /// observes no individual wavtool call and records every existing fragment, because
+            /// the fragments that the wavtool rejected are unknown. Only a diagnoser that
+            /// recognizes the content of a fragment claims such a failure.
+            Unconfirmed,
         };
 
         Stage stage = Resampler;

@@ -32,7 +32,8 @@ namespace hello::kit {
         }
 
         bool lacksOutput(const SynthFailure &failure) {
-            return failure.stage != SynthFailure::Fragment;
+            return failure.stage == SynthFailure::Resampler ||
+                   failure.stage == SynthFailure::Wavtool;
         }
 
         // Collects the failures for which key returns a value into one group per value, in the
@@ -325,6 +326,10 @@ namespace hello::kit {
                 QList<SynthDiagnosis> result;
                 for (const auto &[key, failures] :
                      groups<Key>(context.failures, [](const SynthFailure &failure) {
+                         // Reported as the failure of the track, which is recorded separately
+                         if (failure.stage == SynthFailure::Unconfirmed) {
+                             return std::optional<Key>();
+                         }
                          const auto kind = [&] {
                              switch (failure.stage) {
                                  case SynthFailure::Fragment:
@@ -333,6 +338,7 @@ namespace hello::kit {
                                  case SynthFailure::Wavtool:
                                      return failure.noteIndex ? WavtoolNote : NoTrack;
                                  case SynthFailure::Resampler:
+                                 case SynthFailure::Unconfirmed:
                                      break;
                              }
                              const bool exited = failure.run && failure.run->started &&

@@ -89,6 +89,20 @@ private Q_SLOTS:
         QCOMPARE(diagnoses.first().remedies.size(), 2);
     }
 
+    // In the classic mode, every existing fragment is recorded if the wavtool wrote no track,
+    // and only the placeholders are claimed.
+    void a_placeholder_of_the_classic_mode_is_diagnosed() {
+        writeConfiguration("resampler-compatibility off\n");
+        auto wave = wavtoolFailure("RIFF");
+        wave.stage = kit::SynthFailure::Unconfirmed;
+        auto placeholder = wavtoolFailure(dummy());
+        placeholder.stage = kit::SynthFailure::Unconfirmed;
+        const auto diagnoses = MoresamplerDiagnoser().diagnose(contextOf({wave, placeholder}));
+        QCOMPARE(diagnoses.size(), 1);
+        QCOMPARE(diagnoses.first().failures, QList<int>{1});
+        QCOMPARE(diagnoses.first().remedies.size(), 3);
+    }
+
     // With the option on, or without the file, moresampler writes wave files, so that the
     // fragments remain from a render before the change. Measured with moresampler 0.8.4.
     void with_the_option_on_the_cache_is_to_be_cleared() {

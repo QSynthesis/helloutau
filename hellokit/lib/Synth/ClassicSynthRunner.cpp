@@ -449,6 +449,25 @@ namespace hello::kit {
                 failure.run = run;
             }
             outcome.failures.push_back(std::move(failure));
+            if (!run.started) {
+                return outcome;
+            }
+            // The fragments that the wavtool rejected are unknown, therefore every existing
+            // fragment is recorded. The fragments are read only after this failure.
+            for (const auto &step : plan.steps()) {
+                std::error_code existsError;
+                if (!step.resamples() || !fs::exists(step.cacheFile, existsError)) {
+                    continue;
+                }
+                SynthFailure fragment;
+                fragment.stage = SynthFailure::Unconfirmed;
+                fragment.noteIndex = step.noteIndex;
+                fragment.program = synthTools.resampler;
+                fragment.arguments = step.resamplerArguments;
+                fragment.file = step.cacheFile;
+                fragment.readFile();
+                outcome.failures.push_back(std::move(fragment));
+            }
             return outcome;
         }
 

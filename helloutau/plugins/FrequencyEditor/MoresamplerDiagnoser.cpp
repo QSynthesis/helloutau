@@ -34,9 +34,10 @@ namespace hello::daw {
         for (int i = 0; i < context.failures.size(); ++i) {
             const auto &failure = context.failures.at(i);
             // The fragment of a note, which the wavtool rejected or realtime playback could not
-            // read
+            // read, or which exists although the classic wavtool wrote no track
             const bool ofFragment =
                 failure.stage == kit::SynthFailure::Fragment ||
+                failure.stage == kit::SynthFailure::Unconfirmed ||
                 (failure.stage == kit::SynthFailure::Wavtool && failure.noteIndex.has_value());
             if (ofFragment && failure.fileHead.startsWith(placeholder)) {
                 failures.push_back(i);

@@ -161,6 +161,21 @@ private Q_SLOTS:
         QVERIFY(!withoutRun.at(0).explanation.isEmpty());
     }
 
+    // A fragment that exists although the classic wavtool wrote no track is left to a diagnoser
+    // that recognizes its content, even with a path longer than the limit of Windows.
+    void an_unconfirmed_fragment_is_left_to_other_diagnosers() {
+        const auto track = failureOf(SynthFailure::Wavtool, std::nullopt);
+        auto fragment =
+            failureOf(SynthFailure::Unconfirmed, std::nullopt,
+                      {QStringLiteral("C:/") + QString(300, u'a') + QStringLiteral(".wav"),
+                       QStringLiteral("o.wav")});
+        fragment.noteIndex = 0;
+        fragment.fileHead = "This is a dummy file";
+        const auto diagnoses = diagnose({track, fragment});
+        QCOMPARE(diagnoses.size(), 1);
+        QCOMPARE(diagnoses.at(0).failures, QList<int>{0});
+    }
+
     void the_remaining_failures_are_grouped_by_kind() {
         auto notWave = failureOf(SynthFailure::Fragment, runOf(true));
         notWave.fileHead = "This is a dummy file\x01";
