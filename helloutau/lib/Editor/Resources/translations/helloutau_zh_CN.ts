@@ -4289,6 +4289,10 @@ Write them again without these chunks? The audio stays the same. The files are w
         <translation>编码</translation>
     </message>
     <message>
+        <source>The record of file name encodings is invalid.</source>
+        <translation>文件名编码的记录不合法。</translation>
+    </message>
+    <message>
         <source>A command begins with its name.</source>
         <translation>命令须以命令名开头。</translation>
     </message>
@@ -4385,6 +4389,10 @@ Write them again without these chunks? The audio stays the same. The files are w
     <message>
         <source>Convert Encoding</source>
         <translation>转换编码</translation>
+    </message>
+    <message>
+        <source>Set File Name Encoding</source>
+        <translation>设置文件名编码</translation>
     </message>
 </context>
 <context>
