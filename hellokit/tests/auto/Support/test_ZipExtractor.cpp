@@ -1,4 +1,5 @@
 #include <filesystem>
+#include <future>
 #include <optional>
 #include <system_error>
 
@@ -418,6 +419,79 @@ private Q_SLOTS:
                               {5, 9}
         }));
         QVERIFY(!QFileInfo::exists(outPath("b.txt")));
+    }
+
+    void an_async_extraction_returns_the_result_of_extract() {
+        QVERIFY(writeArchive(archivePath(), {file("a.txt", "alpha"), file("../evil.txt")}));
+        ZipExtractor extractor;
+        QVERIFY(!extractor.extractAsync(pathOf(archivePath()), pathOf(outPath())).get());
+        QCOMPARE(extractor.error(), ZipExtractor::UnsafePath);
+
+        QVERIFY(writeArchive(archivePath(), {file("a.txt", "alpha")}));
+        QVERIFY(extractor.extractAsync(pathOf(archivePath()), pathOf(outPath())).get());
+        QCOMPARE(extractor.error(), ZipExtractor::NoError);
+        QCOMPARE(contentOf(outPath("a.txt")), QByteArray("alpha"));
+    }
+
+    void cancel_stops_an_async_extraction_while_writing() {
+        // Larger than one block, so that the extraction reads the file in several blocks
+        QVERIFY(writeArchive(archivePath(),
+                             {file("a.txt", QByteArray(1 << 20, 'a')), file("b.txt", "beta")}));
+        ZipExtractor extractor;
+        std::promise<void> started;
+        std::promise<void> canceled;
+        auto resumed = canceled.get_future();
+        int calls = 0;
+        extractor.setProgressHandler([&](qint64, qint64) {
+            if (++calls == 1) {
+                started.set_value();
+                resumed.wait();
+            }
+            return true;
+        });
+        auto result = extractor.extractAsync(pathOf(archivePath()), pathOf(outPath()));
+        QCOMPARE(started.get_future().wait_for(std::chrono::seconds(30)),
+                 std::future_status::ready);
+        extractor.cancel();
+        canceled.set_value();
+        QVERIFY(!result.get());
+        QCOMPARE(extractor.error(), ZipExtractor::Canceled);
+        QCOMPARE(calls, 1);
+        QVERIFY(!QFileInfo::exists(outPath("b.txt")));
+    }
+
+    void cancel_stops_an_async_extraction_while_checking() {
+        // U+3042 and U+3044 in Shift_JIS, stored without the UTF-8 flag
+        auto first = file("\x82\xA0.txt");
+        first.encoding = ZIP_FL_ENC_CP437;
+        auto second = file("\x82\xA2.txt");
+        second.encoding = ZIP_FL_ENC_CP437;
+        QVERIFY(writeArchive(archivePath(), {first, second}));
+        ZipExtractor extractor;
+        int calls = 0;
+        extractor.setNameDecoder([&](QByteArrayView) -> std::optional<QString> {
+            ++calls;
+            extractor.cancel();
+            return QStringLiteral("name.txt");
+        });
+        QVERIFY(!extractor.extractAsync(pathOf(archivePath()), pathOf(outPath())).get());
+        QCOMPARE(extractor.error(), ZipExtractor::Canceled);
+        QCOMPARE(calls, 1);
+        QVERIFY(!QFileInfo::exists(outPath()));
+
+        // Canceled during the check of the last entry
+        QVERIFY(writeArchive(archivePath(), {first}));
+        QVERIFY(!extractor.extractAsync(pathOf(archivePath()), pathOf(outPath())).get());
+        QCOMPARE(extractor.error(), ZipExtractor::Canceled);
+        QCOMPARE(calls, 2);
+        QVERIFY(!QFileInfo::exists(outPath()));
+    }
+
+    void cancel_before_extract_is_discarded() {
+        QVERIFY(writeArchive(archivePath(), {file("a.txt", "alpha")}));
+        ZipExtractor extractor;
+        extractor.cancel();
+        QVERIFY(extract(extractor));
     }
 
     void a_file_that_is_not_an_archive_fails_to_open() {

@@ -1,8 +1,10 @@
 #ifndef HELLOKIT_SUPPORT_ZIPEXTRACTOR_H
 #define HELLOKIT_SUPPORT_ZIPEXTRACTOR_H
 
+#include <atomic>
 #include <filesystem>
 #include <functional>
+#include <future>
 #include <optional>
 
 #include <QtCore/QByteArrayView>
@@ -97,6 +99,18 @@ namespace hello::kit {
         ///         and the caller removes them. error() and errorString() return the reason.
         bool extract(const std::filesystem::path &archive, const std::filesystem::path &directory);
 
+        /// Extracts \a archive into \a directory as extract() does, on a new thread, and returns
+        /// the result of extract() as a future. The extractor must outlive the extraction, and
+        /// is neither modified nor used for another extraction until the future is ready. As
+        /// with \c std::async, destroying the future waits for the extraction to finish.
+        std::future<bool> extractAsync(const std::filesystem::path &archive,
+                                       const std::filesystem::path &directory);
+
+        /// Requests that the running extraction stops. The extraction fails with \c Canceled at
+        /// the next entry that it checks or the next block that it writes. This function may be
+        /// called from any thread. A request before extract() or extractAsync() is discarded.
+        void cancel();
+
         /// Returns the reason why the last extraction failed, or \c NoError if it succeeded.
         Error error() const;
 
@@ -105,6 +119,7 @@ namespace hello::kit {
         QString errorString() const;
 
     private:
+        bool run(const std::filesystem::path &archive, const std::filesystem::path &directory);
         bool fail(Error error, const QString &message);
 
         NameDecoder m_nameDecoder;
@@ -113,6 +128,7 @@ namespace hello::kit {
         qint64 m_maximumSize = defaultMaximumSize;
         int m_threadCount = 1;
         bool m_topDirectoryStripped = false;
+        std::atomic<bool> m_canceled = false;
         Error m_error = NoError;
         QString m_errorString;
     };

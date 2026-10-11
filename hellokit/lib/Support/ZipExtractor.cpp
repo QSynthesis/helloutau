@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <atomic>
 #include <fstream>
+#include <future>
 #include <memory>
 #include <mutex>
 #include <system_error>
@@ -216,6 +217,24 @@ namespace hello::kit {
     }
 
     bool ZipExtractor::extract(const fs::path &archive, const fs::path &directory) {
+        m_canceled = false;
+        return run(archive, directory);
+    }
+
+    std::future<bool> ZipExtractor::extractAsync(const fs::path &archive,
+                                                 const fs::path &directory) {
+        // Cleared here rather than on the new thread, so that cancel() immediately after this
+        // call is not discarded.
+        m_canceled = false;
+        return std::async(std::launch::async,
+                          [this, archive, directory] { return run(archive, directory); });
+    }
+
+    void ZipExtractor::cancel() {
+        m_canceled = true;
+    }
+
+    bool ZipExtractor::run(const fs::path &archive, const fs::path &directory) {
         m_error = NoError;
         m_errorString.clear();
 
@@ -243,6 +262,9 @@ namespace hello::kit {
         entries.reserve(count);
         qint64 total = 0;
         for (zip_uint64_t i = 0; i < zip_uint64_t(count); ++i) {
+            if (m_canceled) {
+                return fail(Canceled, tr("The extraction was canceled."));
+            }
             const char *rawName = zip_get_name(zip.get(), i, ZIP_FL_ENC_RAW);
             if (!rawName) {
                 return fail(ReadError, tr("The entry %1 cannot be read: %2")
@@ -352,6 +374,10 @@ namespace hello::kit {
             targets.push_back(std::move(target));
         }
 
+        if (m_canceled) {
+            return fail(Canceled, tr("The extraction was canceled."));
+        }
+
         // Every entry has passed the checks. Nothing has been written before this point. The
         // directories are created first, so that the threads only create files.
         fs::create_directories(root, ec);
@@ -415,6 +441,9 @@ namespace hello::kit {
                 return stop(WriteError, tr("The file %1 cannot be written.").arg(pathText(target)));
             }
             while (!stopped) {
+                if (m_canceled) {
+                    return stop(Canceled, tr("The extraction was canceled."));
+                }
                 const auto n = zip_fread(file.get(), buffer.data(), buffer.size());
                 if (n < 0) {
                     return stop(
