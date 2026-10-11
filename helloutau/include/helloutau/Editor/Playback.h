@@ -10,12 +10,14 @@
 
 #include <hellokit/Support/Diagnostic.h>
 #include <hellokit/Synth/RealtimeSynth.h>
+#include <hellokit/Synth/SynthDiagnoser.h>
 #include <hellokit/Synth/SynthRunner.h>
 
 #include <helloutau/Editor/HelloUtauEditorGlobal.h>
 
 namespace hello::kit {
     class ProjectDocument;
+    class SynthDiagnosers;
 }
 
 namespace hello::daw {
@@ -173,6 +175,15 @@ namespace hello::daw {
         /// Returns the warnings of the notes the preview could not render since the last call.
         kit::DiagnosticList takePreviewDiagnostics();
 
+        /// Returns the probable causes of the failures of the preview since the last call, found
+        /// by the diagnosers of setSynthDiagnosers(), and forgets the failures. Independent of
+        /// takePreviewDiagnostics(). See docs/SynthDiagnostics.md.
+        QList<kit::SynthDiagnosis> takePreviewDiagnoses();
+
+        /// Sets the diagnosers that find the probable causes of failures, which outlive this
+        /// object, or null for no diagnosis.
+        void setSynthDiagnosers(const kit::SynthDiagnosers *diagnosers);
+
         /// Pauses what plays, keeping position(), and returns whether something played.
         bool pause();
 
@@ -238,8 +249,16 @@ namespace hello::daw {
         /// The render of renderTrack() wrote \a file.
         void trackRendered(const std::filesystem::path &file);
 
-        /// Rendering or playing failed, for the reasons in \a diagnostics.
-        void failed(const kit::DiagnosticList &diagnostics);
+        /// Rendering or playing failed, for the reasons in \a diagnostics, with the probable
+        /// causes that the diagnosers found in \a diagnoses.
+        void failed(const kit::DiagnosticList &diagnostics,
+                    const QList<kit::SynthDiagnosis> &diagnoses = {});
+
+        /// The track was rendered, but some synth tool calls in it failed, for the probable
+        /// causes in \a diagnoses.
+        // TODO: Merge with failed(), with a parameter that indicates whether the track was
+        // written, if the two signals prove unnecessary.
+        void diagnosed(const QList<kit::SynthDiagnosis> &diagnoses);
 
     private:
         class Impl;

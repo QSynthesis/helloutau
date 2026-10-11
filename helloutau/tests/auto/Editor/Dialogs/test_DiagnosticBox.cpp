@@ -62,6 +62,35 @@ private Q_SLOTS:
         QVERIFY(!reportShows({}));
         QVERIFY(reportShows({diagnosticOf(kit::DiagnosticSeverity::Note, "n")}));
     }
+
+    // The probable causes come first, with their remedies, and the diagnostics move to the
+    // details. The texts are escaped, because the causes name paths.
+    void the_probable_causes_precede_the_diagnostics() {
+        const kit::SynthDiagnosis diagnosis{
+            QStringLiteral("cause <a>"),
+            QStringLiteral("explanation"),
+            {QStringLiteral("first remedy"), QStringLiteral("second remedy")},
+            {0}
+        };
+        const DiagnosticBox box(QStringLiteral("Title"),
+                                {diagnosticOf(kit::DiagnosticSeverity::Note, "detail", 1)},
+                                {diagnosis});
+        QCOMPARE(box.textFormat(), Qt::RichText);
+        QVERIFY(box.text().contains(QStringLiteral("cause &lt;a&gt;")));
+        QVERIFY(box.text().contains(QStringLiteral("explanation")));
+        QVERIFY(box.text().indexOf(QStringLiteral("first remedy")) <
+                box.text().indexOf(QStringLiteral("second remedy")));
+        QCOMPARE(box.detailedText(), QStringLiteral("Note 2: detail"));
+        QCOMPARE(box.icon(), QMessageBox::Warning);
+    }
+
+    void without_causes_the_box_is_unchanged() {
+        const DiagnosticBox box(QStringLiteral("Title"),
+                                {diagnosticOf(kit::DiagnosticSeverity::Note, "n")}, {});
+        QCOMPARE(box.text(), QStringLiteral("n"));
+        QVERIFY(box.detailedText().isEmpty());
+        QCOMPARE(box.icon(), QMessageBox::Information);
+    }
 };
 
 QTEST_MAIN(test_DiagnosticBox)

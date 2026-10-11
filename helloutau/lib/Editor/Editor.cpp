@@ -26,6 +26,8 @@
 #include <hellokit/Edit/VoiceBankDocument.h>
 #include <hellokit/Support/RegistryInstanceList.h>
 #include <hellokit/Support/ExitLauncher.h>
+#include <hellokit/Synth/BuiltinSynthDiagnosers.h>
+#include <hellokit/Synth/SynthDiagnosers.h>
 #include <hellokit/VoiceBank/FrequencyFormats.h>
 #include <hellokit/VoiceBank/VoiceBank.h>
 
@@ -291,6 +293,11 @@ namespace hello::daw {
         QHash<const SettingPageRegistry::Entry *, QPointer<SettingPage>> registeredPages;
         std::unique_ptr<kit::FrequencyFormats> frequencyFormats =
             std::make_unique<kit::FrequencyFormats>();
+        std::unique_ptr<kit::SynthDiagnosers> synthDiagnosers =
+            std::make_unique<kit::SynthDiagnosers>();
+        // Declared after the diagnosers, so that the registrations end first
+        std::unique_ptr<kit::BuiltinSynthDiagnosers> builtinSynthDiagnosers =
+            std::make_unique<kit::BuiltinSynthDiagnosers>(synthDiagnosers->registry());
         bool watchesDisk = true;
         QList<QPointer<ProjectWindow>> windows;
         QList<QPointer<VoiceBankWindow>> voiceBankWindows;
@@ -502,6 +509,11 @@ namespace hello::daw {
     kit::FrequencyFormats &Editor::frequencyFormats() const {
         stdc_impl_t;
         return *impl.frequencyFormats;
+    }
+
+    kit::SynthDiagnosers &Editor::synthDiagnosers() const {
+        stdc_impl_t;
+        return *impl.synthDiagnosers;
     }
 
     QString Editor::projectDisplayName(const ProjectWindow *window) const {

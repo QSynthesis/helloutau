@@ -24,6 +24,7 @@ namespace QAK {
 
 namespace hello::kit {
     class FrequencyFormats;
+    class SynthDiagnosers;
 }
 
 namespace hello::daw {
@@ -113,6 +114,11 @@ namespace hello::daw {
         /// registered in its registry(), the built-in formats by the plugin FrequencyEditor. See
         /// docs/FrequencyTables.md.
         kit::FrequencyFormats &frequencyFormats() const;
+
+        /// Returns the diagnosers of render failures that the project windows run. The editor
+        /// registers the built-in diagnosers of HelloKitSynth, and plugins register others in its
+        /// registry(). See docs/SynthDiagnostics.md.
+        kit::SynthDiagnosers &synthDiagnosers() const;
 
         /// Returns the catalog of the pages of the settings dialog, including the pages of the
         /// editor registered at start, whose ids are the pageId of the classes in SettingPages. See

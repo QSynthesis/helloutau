@@ -55,6 +55,7 @@ stdcorelib.plugin 的交接记录（其仓库 `.cache/codex/2026-08-21-1722-stdc
   | 动作 | `ActionContributionRegistry`（HelloUtauWidgets） | 插件 ID | `Editor`，`Editor::actionContributions()` | `BuiltinActions`（Core 为其编辑器创建，是编辑器的子对象） |
   | 设置页 | `SettingPageRegistry`（HelloUtauWidgets），工厂返回 `SettingPagePlacement` | 页面 id | `Editor`，`Editor::settingPages()` | 无，编辑器与 Core 的页面直接加入目录 |
   | 频率表格式 | `kit::FrequencyFormatRegistry`（HelloKitVoiceBank） | 格式 ID | `kit::FrequencyFormats`，编辑器的为 `Editor::frequencyFormats()` | `BuiltinFrequencyFormats`（FrequencyEditor 持有） |
+  | 渲染失败的诊断器 | `kit::SynthDiagnoserRegistry`（HelloKitSynth） | 诊断器 ID | `kit::SynthDiagnosers`，编辑器的为 `Editor::synthDiagnosers()` | `BuiltinSynthDiagnosers`（编辑器持有），moresampler 的诊断器由 FrequencyEditor 登记，见 [`SynthDiagnostics.md`](SynthDiagnostics.md) |
   | 导入驱动、导出驱动 | `kit::InterchangeReaderRegistry`、`kit::InterchangeWriterRegistry`（HelloKitInterchange） | 驱动 ID | `kit::InterchangeDrivers`，Interchange 插件的为 `InterchangeService::drivers()` | `BuiltinInterchangeDrivers`（Interchange 持有） |
   | 导入向导的步骤页 | `InterchangeStepRegistry`（Interchange 插件），以 `std::map` 保存 | 驱动的 `customStepId()` | `InterchangeService::stepPages()` | Interchange 登记 MIDI 的编码页 |
 

@@ -40,14 +40,50 @@ namespace hello::daw {
         setText(lines.join(u'\n'));
     }
 
+    DiagnosticBox::DiagnosticBox(const QString &title, const kit::DiagnosticList &diagnostics,
+                                 const QList<kit::SynthDiagnosis> &diagnoses, QWidget *parent)
+        : DiagnosticBox(title, diagnostics, parent) {
+        if (diagnoses.isEmpty()) {
+            return;
+        }
+        // A probable cause is a problem, even if the diagnostics are mere notes.
+        if (icon() == QMessageBox::Information) {
+            setIcon(QMessageBox::Warning);
+        }
+        const auto lines = text();
+        QString html =
+            QStringLiteral("<p><b>%1</b></p>").arg(tr("Probable causes:").toHtmlEscaped());
+        for (const auto &diagnosis : diagnoses) {
+            html +=
+                QStringLiteral("<p><b>%1</b><br>%2</p>")
+                    .arg(diagnosis.cause.toHtmlEscaped(), diagnosis.explanation.toHtmlEscaped());
+            if (!diagnosis.remedies.isEmpty()) {
+                html += QStringLiteral("<ul>");
+                for (const auto &remedy : diagnosis.remedies) {
+                    html += QStringLiteral("<li>%1</li>").arg(remedy.toHtmlEscaped());
+                }
+                html += QStringLiteral("</ul>");
+            }
+        }
+        setTextFormat(Qt::RichText);
+        setText(html);
+        setDetailedText(lines);
+    }
+
     DiagnosticBox::~DiagnosticBox() = default;
 
     void DiagnosticBox::report(QWidget *parent, const QString &title,
                                const kit::DiagnosticList &diagnostics) {
-        if (diagnostics.isEmpty()) {
+        report(parent, title, diagnostics, {});
+    }
+
+    void DiagnosticBox::report(QWidget *parent, const QString &title,
+                               const kit::DiagnosticList &diagnostics,
+                               const QList<kit::SynthDiagnosis> &diagnoses) {
+        if (diagnostics.isEmpty() && diagnoses.isEmpty()) {
             return;
         }
-        DiagnosticBox box(title, diagnostics, parent);
+        DiagnosticBox box(title, diagnostics, diagnoses, parent);
         box.exec();
     }
 

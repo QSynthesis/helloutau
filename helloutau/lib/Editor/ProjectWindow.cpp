@@ -273,6 +273,7 @@ namespace hello::daw {
         void initPlayback() {
             stdc_decl_t;
             playback = new Playback(renderLog, newTemporaryDirectory(), &decl);
+            playback->setSynthDiagnosers(&editor->synthDiagnosers());
             renderLabel = new QLabel();
             renderProgress = new QProgressBar();
             renderProgress->setMaximumWidth(200);
@@ -340,9 +341,15 @@ namespace hello::daw {
                 renderProgress->setValue(done);
             });
             QObject::connect(playback, &Playback::failed, &decl,
-                             [this](const kit::DiagnosticList &diagnostics) {
+                             [this](const kit::DiagnosticList &diagnostics,
+                                    const QList<kit::SynthDiagnosis> &diagnoses) {
                                  stdc_decl_t;
-                                 DiagnosticBox::report(&decl, tr("Play"), diagnostics);
+                                 DiagnosticBox::report(&decl, tr("Play"), diagnostics, diagnoses);
+                             });
+            QObject::connect(playback, &Playback::diagnosed, &decl,
+                             [this](const QList<kit::SynthDiagnosis> &diagnoses) {
+                                 stdc_decl_t;
+                                 DiagnosticBox::report(&decl, tr("Play"), {}, diagnoses);
                              });
 
             playheadTimer.setInterval(PlayheadInterval);
@@ -1156,7 +1163,9 @@ namespace hello::daw {
             });
         }
 
-        // The notes a preview could not render, which played as silence, in the status bar
+        // The notes a preview could not render, which played as silence, in the status bar, and
+        // their probable causes in a box. Called once the preview stops, so that the box does
+        // not interrupt playback.
         void reportPreviewFailures() {
             stdc_decl_t;
             const auto failed = playback->takePreviewDiagnostics();
@@ -1166,6 +1175,7 @@ namespace hello::daw {
                                       int(failed.size())),
                     StatusMessageTimeout);
             }
+            DiagnosticBox::report(&decl, tr("Play"), {}, playback->takePreviewDiagnoses());
         }
 
         // The state of a preview in the status bar: the plan while it is made, the notes still

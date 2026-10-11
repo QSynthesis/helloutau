@@ -17,6 +17,7 @@
 #include <hellokit/Edit/ProjectDocument.h>
 #include <hellokit/Synth/ClassicSynthRunner.h>
 #include <hellokit/Synth/RealtimeSynth.h>
+#include <hellokit/Synth/SynthDiagnosers.h>
 #include <hellokit/Synth/SynthPlan.h>
 #include <hellokit/Synth/WaveAudio.h>
 #include <hellokit/Synth/WavtoolMixer.h>
@@ -75,6 +76,8 @@ namespace hello::daw {
             bool sameAsKept = false;
             bool rendered = false;
             kit::DiagnosticList diagnostics;
+            // The observed failures of the synth tool calls, for the diagnosis
+            QList<kit::SynthFailure> failures;
             std::shared_ptr<const std::vector<float>> samples;
             int channels = 0;
             double startTime = 0;
@@ -220,6 +223,8 @@ namespace hello::daw {
         // stream refers to the synthesis and goes first.
         std::unique_ptr<kit::RealtimeSynth> synth;
         kit::SynthTools previewSynthTools;
+        // The diagnosers of the failures, owned by the editor
+        const kit::SynthDiagnosers *diagnosers = nullptr;
         // The synth tools last given, whose resampler names the fragments of every plan, see
         // kit::SynthPlan::Options::resampler. A change of the synth tools therefore renders the
         // notes anew instead of reusing the fragments of the previous resampler.
@@ -569,6 +574,7 @@ namespace hello::daw {
             observer.progressed(0, 0);
             const auto outcome =
                 job->runner->render(plan, job->synthTools, &observer, job->diagnostics);
+            job->failures = outcome.failures;
             if (!outcome.rendered || outcome.cancelled || job->cancel.load()) {
                 return;
             }
@@ -647,6 +653,20 @@ namespace hello::daw {
             }
         }
 
+        // The probable causes of failures, or an empty list without failures or diagnosers
+        QList<kit::SynthDiagnosis> diagnose(QList<kit::SynthFailure> failures,
+                                            const kit::SynthTools &tools,
+                                            bool joinedInternally) const {
+            if (!diagnosers || failures.isEmpty()) {
+                return {};
+            }
+            kit::SynthDiagnosisContext context;
+            context.synthTools = tools;
+            context.joinedInternally = joinedInternally;
+            context.failures = std::move(failures);
+            return diagnosers->diagnose(context);
+        }
+
         // Plays the result of \a finished, unless it was cancelled or superseded meanwhile.
         void rendered(const std::shared_ptr<Job> &finished) {
             stdc_decl_t;
@@ -662,20 +682,25 @@ namespace hello::daw {
                 }
                 return;
             }
+            const auto diagnoses = diagnose(finished->failures, finished->synthTools, false);
             if (!finished->rendered) {
                 setState(Stopped);
-                Q_EMIT decl.failed(finished->diagnostics);
+                Q_EMIT decl.failed(finished->diagnostics, diagnoses);
                 return;
             }
             if (finished->fileOnly) {
                 setState(Stopped);
                 Q_EMIT decl.trackRendered(finished->plan->outputFile());
-                return;
+            } else {
+                kept = Rendered{finished->key,        finished->samples,
+                                finished->channels,   finished->startTime,
+                                finished->deviceRate, finished->plan->outputFile()};
+                playRendered(0);
             }
-            kept =
-                Rendered{finished->key,       finished->samples,    finished->channels,
-                         finished->startTime, finished->deviceRate, finished->plan->outputFile()};
-            playRendered(0);
+            // The track was written, but some notes failed in it.
+            if (!diagnoses.isEmpty()) {
+                Q_EMIT decl.diagnosed(diagnoses);
+            }
         }
 
         // Plays the kept render from frame first on.
@@ -989,6 +1014,19 @@ namespace hello::daw {
     kit::DiagnosticList Playback::takePreviewDiagnostics() {
         stdc_impl_t;
         return impl.synth ? impl.synth->takeDiagnostics() : kit::DiagnosticList();
+    }
+
+    QList<kit::SynthDiagnosis> Playback::takePreviewDiagnoses() {
+        stdc_impl_t;
+        if (!impl.synth) {
+            return {};
+        }
+        return impl.diagnose(impl.synth->takeFailures(), impl.previewSynthTools, true);
+    }
+
+    void Playback::setSynthDiagnosers(const kit::SynthDiagnosers *diagnosers) {
+        stdc_impl_t;
+        impl.diagnosers = diagnosers;
     }
 
     bool Playback::pause() {

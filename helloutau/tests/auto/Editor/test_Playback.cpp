@@ -11,6 +11,8 @@
 
 #include <hellokit/Edit/ProjectDocument.h>
 #include <hellokit/Edit/ProjectRefs.h>
+#include <hellokit/Synth/BuiltinSynthDiagnosers.h>
+#include <hellokit/Synth/SynthDiagnosers.h>
 #include <hellokit/Synth/SynthPlan.h>
 
 #include <helloutau/Audio/AudioEngine.h>
@@ -69,6 +71,9 @@ namespace {
         mutable std::atomic<bool> hold = false;
         // The frames of the track file
         quint32 frames = 4410;
+        // The failures that each render reports, and whether it then writes no track
+        QList<kit::SynthFailure> failures;
+        bool failsTrack = false;
 
         kit::SynthOutcome render(const kit::SynthPlan &plan, const kit::SynthTools &synthTools,
                                  kit::SynthObserver *observer,
@@ -91,8 +96,11 @@ namespace {
                 QThread::msleep(5);
             }
             observer->progressed(int(plan.steps().size()), int(plan.steps().size()));
-            writeBytes(plan.outputFile(), silence(frames));
-            outcome.rendered = true;
+            outcome.failures = failures;
+            if (!failsTrack) {
+                writeBytes(plan.outputFile(), silence(frames));
+                outcome.rendered = true;
+            }
             ++ended;
             return outcome;
         }
@@ -286,6 +294,76 @@ private Q_SLOTS:
         QCOMPARE(playback.state(), Playback::Stopped);
         QVERIFY(fs::is_regular_file(file));
         QVERIFY(playback.lastRenderFile().empty());
+    }
+
+    // The failures of a render that wrote no track reach failed() with their probable causes.
+    void the_failures_of_a_failed_render_are_diagnosed() {
+        QTemporaryDir dir;
+        const auto document = singingDocument(dir);
+        QVERIFY(document);
+        kit::SynthDiagnosers diagnosers;
+        kit::BuiltinSynthDiagnosers builtins(diagnosers.registry());
+        Playback playback(nullptr, temporaryOf(dir), nullptr);
+        playback.setSynthDiagnosers(&diagnosers);
+        const auto runner = std::make_shared<SilentRunner>();
+        runner->failures = {kit::SynthFailure{}};
+        runner->failsTrack = true;
+        playback.setRunner(runner);
+        QSignalSpy failures(&playback, &Playback::failed);
+        QSignalSpy diagnosed(&playback, &Playback::diagnosed);
+
+        const auto file = fs::path(dir.path().toStdU16String()) / "song.wav";
+        kit::DiagnosticList diagnostics;
+        QVERIFY(playback.renderTrack(*document, file, someSynthTools(), diagnostics));
+        QTRY_COMPARE_WITH_TIMEOUT(failures.size(), 1, 5000);
+        const auto diagnoses = failures.first().at(1).value<QList<kit::SynthDiagnosis>>();
+        QCOMPARE(diagnoses.size(), 1);
+        QCOMPARE(diagnoses.first().failures, QList<int>{0});
+        QCOMPARE(diagnosed.size(), 0);
+    }
+
+    // A track that was written in spite of failures is reported by diagnosed().
+    void the_failures_of_a_written_track_are_diagnosed() {
+        QTemporaryDir dir;
+        const auto document = singingDocument(dir);
+        QVERIFY(document);
+        kit::SynthDiagnosers diagnosers;
+        kit::BuiltinSynthDiagnosers builtins(diagnosers.registry());
+        Playback playback(nullptr, temporaryOf(dir), nullptr);
+        playback.setSynthDiagnosers(&diagnosers);
+        const auto runner = std::make_shared<SilentRunner>();
+        kit::SynthFailure failure;
+        failure.stage = kit::SynthFailure::Wavtool;
+        failure.noteIndex = 0;
+        runner->failures = {failure};
+        playback.setRunner(runner);
+        QSignalSpy rendered(&playback, &Playback::trackRendered);
+        QSignalSpy diagnosed(&playback, &Playback::diagnosed);
+
+        const auto file = fs::path(dir.path().toStdU16String()) / "song.wav";
+        kit::DiagnosticList diagnostics;
+        QVERIFY(playback.renderTrack(*document, file, someSynthTools(), diagnostics));
+        QTRY_COMPARE_WITH_TIMEOUT(rendered.size(), 1, 5000);
+        QCOMPARE(diagnosed.size(), 1);
+        QCOMPARE(diagnosed.first().first().value<QList<kit::SynthDiagnosis>>().size(), 1);
+    }
+
+    void without_diagnosers_nothing_is_diagnosed() {
+        QTemporaryDir dir;
+        const auto document = singingDocument(dir);
+        QVERIFY(document);
+        Playback playback(nullptr, temporaryOf(dir), nullptr);
+        const auto runner = std::make_shared<SilentRunner>();
+        runner->failures = {kit::SynthFailure{}};
+        playback.setRunner(runner);
+        QSignalSpy rendered(&playback, &Playback::trackRendered);
+        QSignalSpy diagnosed(&playback, &Playback::diagnosed);
+
+        const auto file = fs::path(dir.path().toStdU16String()) / "song.wav";
+        kit::DiagnosticList diagnostics;
+        QVERIFY(playback.renderTrack(*document, file, someSynthTools(), diagnostics));
+        QTRY_COMPARE_WITH_TIMEOUT(rendered.size(), 1, 5000);
+        QCOMPARE(diagnosed.size(), 0);
     }
 
     // While a render plays, the playhead moves with what the device plays, from where the track
