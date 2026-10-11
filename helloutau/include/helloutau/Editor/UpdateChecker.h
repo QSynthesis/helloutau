@@ -121,8 +121,8 @@ namespace hello::daw {
         void holdInstallerMutex();
 
         /// Reports the result of the installation started when the application last quit, if
-        /// any: a failure over \a parent with the page of the release, and the removal of the
-        /// downloaded updates on success.
+        /// any: a failure over \a parent with the page of the release. The downloaded updates
+        /// are removed regardless of the result.
         void reportLastInstallation(QWidget *parent);
 
         /// Checks the releases from the source of the settings, unless the update mode of the

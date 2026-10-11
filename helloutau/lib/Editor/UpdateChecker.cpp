@@ -496,9 +496,11 @@ namespace hello::daw {
         }
         const auto page = impl.settings.updates().pendingPage();
         impl.settings.updates().clearPendingInstallation();
+        // Removed regardless of the result, so that no download remains in the temporary directory.
+        // A failed update is downloaded again.
+        QDir(downloadDirectory()).removeRecursively();
         const auto target = QVersionNumber::fromString(pending);
         if (QVersionNumber::compare(currentVersion().normalized(), target.normalized()) >= 0) {
-            QDir(downloadDirectory()).removeRecursively();
             return;
         }
         QMessageBox box(QMessageBox::Warning, tr("Install Update"),
