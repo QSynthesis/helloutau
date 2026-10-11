@@ -6,23 +6,25 @@
 
 | 目标 | 状态 |
 |---|---|
-| `HelloKitSupport` | `Diagnostic`、`TextCodec`（编码名解析、转义与还原）、`FileSystemWatcher`（磁盘变化提示，由 `hello-fswatcher` 进程实现）、`TextSearch`（查找栏的匹配与替换规则） |
+| `HelloKitSupport` | `Diagnostic`、`TextCodec`（编码名解析、转义与还原）、`FileSystemWatcher`（磁盘变化提示，由 `hello-fswatcher` 进程实现）、`TextSearch`（查找栏的匹配与替换规则）、`ZipExtractor`（安全解压 zip，可多线程、可取消）、`TemporaryStorage`（临时目录管理器）、`ExitLauncher`（程序退出后启动的安装包与重启） |
+| `HelloKitUpdate` | 与具体程序无关的更新工具：`SoftwareRelease`（release 的解析）、`SoftwareReleaseQuery`（只接受 HTTPS 的查询）、`SoftwareReleaseDownload`（下载附件并以 `Sha256Sums` 校验）、`Windows/InnoSetup`（安装记录的查询），见 [`Distribution.md`](Distribution.md) |
 | `HelloKitDocument` | `PayloadCodec`、`Project` / `Track` / `Note` 模型、`.usth` 读写、`UstDocument` |
 | `HelloKitVoiceBank` | `VoiceBankConfig`、`VoiceBankSource`（原始扫描）、`VoiceBank`（解码后的内容与查询，纯值）、`VoiceBankFileSystemState`（磁盘状态：写回、与磁盘核对、重新读取）、`VoiceBankCheckScheduler`、`WaveMetadata`（wav 中 `fmt ` 与 `data` 以外的块的查找与去除）、频率表的只读格式层 `FrequencyFormat` / `FrequencyFormatRegistry` / `FrequencyFormats`（内置 frq、dio、mrq 由 `BuiltinFrequencyFormats` 登记到编辑器的注册表，FrequencyEditor 插件持有） |
-| `HelloKitSynth` | `SynthToolProcess`、`SynthPlan`（仅计算，含轨道文件在轨道中的起始时刻）、`WaveAudio`（读取 wav）、`Spectrogram`（显示用的频谱）、`WavtoolMixer`（进程内拼接）、`RealtimeSynth`（实时试听的调度与混合）、`PitchCurve`（音符的滑音与颤音曲线，与交给重采样器的曲线逐值相同）、`SampleTiming`（修正后的先行发声、重叠与 STP，与合成相同）、`SynthRunner` 及其实现 `ClassicSynthRunner`、`ThreadedSynthRunner` |
+| `HelloKitSynth` | `SynthToolProcess`、`SynthPlan`（仅计算，含轨道文件在轨道中的起始时刻）、`WaveAudio`（读取 wav）、`Spectrogram`（显示用的频谱）、`WavtoolMixer`（进程内拼接）、`RealtimeSynth`（实时试听的调度与混合）、`PitchCurve`（音符的滑音与颤音曲线，与交给重采样器的曲线逐值相同）、`SampleTiming`（修正后的先行发声、重叠与 STP，与合成相同）、`SynthRunner` 及其实现 `ClassicSynthRunner`、`ThreadedSynthRunner`、渲染失败的记录 `SynthFailure` 与诊断 `SynthDiagnoser` / `SynthDiagnoserRegistry` / `SynthDiagnosers`（内置的通用诊断器由 `BuiltinSynthDiagnosers` 登记），见 [`SynthDiagnostics.md`](SynthDiagnostics.md) |
 | `HelloKitInterchange` | 接口、驱动表 `InterchangeDrivers` 与其注册表 `InterchangeReaderRegistry` / `InterchangeWriterRegistry`、`Formats/MidiConvert`（导入与导出，由 `BuiltinInterchangeDrivers` 登记，Interchange 插件持有） |
 | `HelloKitEditBase` | 编辑层的通用部分，命名空间 `hello::kit::edit`：`EditSession`（事务、撤销、变更通知、提交时校验）、`NodeRef`、`Change`、槽位、命令语法，以及扩展接口（字段表、按路径的命令、变更日志） |
 | `HelloKitEdit` | 编辑层的文档部分。工程：`ProjectDocument`（打开、导入、保存、是否已修改）、`TrackTimeline`（音符的位置）、`ProjectSession`、句柄 `ProjectRefs`、领域函数 `ProjectEdits`、命令 `ProjectCommands`。音源：`VoiceBankSession`（含保存与从磁盘重新读取）、句柄 `VoiceBankRefs`、领域函数 `VoiceBankEdits`、命令 `VoiceBankCommands` |
 | `HelloUtauWidgets` | 通用的控件基础设施：命令面板 `CommandPalette` 与其模糊匹配 `CommandMatcher`；查找栏 `FindBar`；场景接口 `SceneView`、`SceneLayer`、`SceneGesture`，以及随其坐标轴的 `TimelineRuler` 与 `PianoKeyboard` |
 | `HelloUtauAudio` | 进程内唯一的设备流 `AudioEngine` 与混音器 `AudioMixer`，每个用途一个句柄 `AudioOutput`、`AudioSource` / `BufferSource` / `StreamSource`（流式，环形缓冲）、采样率转换 `SampleRateConversion`（r8brain-free-src）、播放位置 `DeviceClock`，见 [`Audio.md`](Audio.md) |
-| `HelloUtauEditor` | 窗口骨架：QActionKit 清单生成的菜单、工程的打开（UST 编码选择）、保存、另存为与导出 UST、撤销与重做、未保存标记、设置、命令面板（`Ctrl+Shift+P`）；工程在卷帘 `PianoRoll` 中显示与编辑（选区、拖动移调与重排、改长度、笔工具、插入、删除、拆分、歌词就地编辑、量化）；打开工程后读取其音源（按目录选择编码），卷帘标出找不到样本的音符；空格按设置中的播放方式播放（`Playback`）：预渲染以 `temp.bat` 在控制台中渲染选中的音符后播放，实时方式在后台渲染整轨、从播放头直接播放；状态栏显示进度，卷帘显示播放线；「Open Recent」列出最近打开的文件；「显示音高」绘制每个音符的滑音与颤音曲线，并在其上编辑 Mode2 控制点与颤音；Mode2 可在菜单中关闭，此时卷帘显示 Mode1 的曲线并以画笔工具手绘；卷帘下方的参数区编辑包络、力度、调制与速度；复制与粘贴音符、粘贴参数、恢复默认、缩放音高、包络交叉淡化。见 [`Widgets.md`](Widgets.md) 第 1–6 步与 [`Tuning.md`](Tuning.md) 第 1–7 步。音源窗口 `VoiceBankWindow`：条目表的编辑、波形区 `OtoWaveformView` 上拖动与按键设定五个值、试听与以重采样器试合成（`SamplePreview`）、清除音频元数据，见 [`VoiceBankEditor.md`](VoiceBankEditor.md) 第 1–4 步。插件的基础设施：加载器 `AppLoader`（载入原生插件、`--plugin-path` 与 `--settings`、插件列表与启用设置）、设置文件 `settings.json`（`AppSettings`）与 `plugins.json`（`PluginSettings` 格式），动作的登记 `ActionContribution` / `ActionContributionRegistry` / `BuiltinActions`，见 [`Plugins.md`](Plugins.md) |
+| `HelloUtauEditor` | 窗口骨架：QActionKit 清单生成的菜单、工程的打开（UST 编码选择）、保存、另存为与导出 UST、撤销与重做、未保存标记、设置、命令面板（`Ctrl+Shift+P`）；工程在卷帘 `PianoRoll` 中显示与编辑（选区、拖动移调与重排、改长度、笔工具、插入、删除、拆分、歌词就地编辑、量化）；打开工程后读取其音源（按目录选择编码），卷帘标出找不到样本的音符；空格按设置中的播放方式播放（`Playback`）：预渲染以 `temp.bat` 在控制台中渲染选中的音符后播放，实时方式在后台渲染整轨、从播放头直接播放；状态栏显示进度，卷帘显示播放线；「Open Recent」列出最近打开的文件；「显示音高」绘制每个音符的滑音与颤音曲线，并在其上编辑 Mode2 控制点与颤音；Mode2 可在菜单中关闭，此时卷帘显示 Mode1 的曲线并以画笔工具手绘；卷帘下方的参数区编辑包络、力度、调制与速度；复制与粘贴音符、粘贴参数、恢复默认、缩放音高、包络交叉淡化。见 [`Widgets.md`](Widgets.md) 第 1–6 步与 [`Tuning.md`](Tuning.md) 第 1–7 步。音源窗口 `VoiceBankWindow`：条目表的编辑、波形区 `OtoWaveformView` 上拖动与按键设定五个值、试听与以重采样器试合成（`SamplePreview`）、清除音频元数据，见 [`VoiceBankEditor.md`](VoiceBankEditor.md) 第 1–4 步。插件的基础设施：加载器 `AppLoader`（载入原生插件、`--plugin-path` 与 `--settings`、插件列表与启用设置）、设置文件 `settings.json`（`AppSettings`）与 `plugins.json`（`PluginSettings` 格式），动作的登记 `ActionContribution` / `ActionContributionRegistry` / `BuiltinActions`，见 [`Plugins.md`](Plugins.md)。自动更新：`UpdateChecker`（启动时与「Check for Updates...」中的检查）、后台任务 `UpdateTask`、模态的更新对话框 `UpdateDialog` / `UpdateTaskView`、免安装版的解压 `PortableUpdate` 与「Updates」设置页，见 [`Distribution.md`](Distribution.md)。渲染失败时 `DiagnosticBox` 列出 `Editor::synthDiagnosers()` 中的诊断器得出的可能原因 |
 | `helloutau` | 加载器程序：`main.cpp` 只构造 `AppLoader` 并运行 |
+| `hello-updater` | 免安装版更新的目录替换：等待程序退出，改名替换安装目录，失败时还原，再启动新版本。只依赖标准库与系统接口，静态链接运行库，在 Windows 上是 GUI 程序 |
 | Core 插件 | 创建 `Editor`，登记编辑器的动作清单（`BuiltinActions`），打开命令行中的文件；设置的「Plugins」页 |
 | ClassicPluginHost 插件 | 原版 UTAU 插件：发现、`plugin.txt` / `plugin.json`、临时文件的写出与结果的合并、进程的启动与取消、「工具 → Classic Plugins」菜单、首次运行的确认，见 [`ClassicPluginHost.md`](ClassicPluginHost.md)，待作者以社区插件验收 |
-| FrequencyEditor 插件 | 登记内置的频率表格式 frq、dio、mrq |
+| FrequencyEditor 插件 | 登记内置的频率表格式 frq、dio、mrq，以及 moresampler 的诊断器 `MoresamplerDiagnoser` |
 | Interchange 插件 | 登记 MIDI 驱动；「文件 → 导入…」与「文件 → 导出 → 其他格式…」的向导、插入逻辑 `ImportMerge`、MIDI 的编码页，见 [`ImportExport.md`](ImportExport.md)，待作者试用 |
 
-已验证的构建链：qmsetup 的 `hellokit_add_library` / `helloutau_add_library` / `helloutau_add_application`、原生插件的 `helloutau_add_native_plugin`、Qt 6.11 与 AUTOMOC、QActionKit 的清单编译器 AEC、stdcorelib 与 stdcorelib.plugin、stdutau、wolf-midi、QtTest 与 `add_auto_test`、ctest。
+已验证的构建链：qmsetup 的 `hellokit_add_library` / `helloutau_add_library` / `helloutau_add_application`、原生插件的 `helloutau_add_native_plugin`、Qt 6.11 与 AUTOMOC、QActionKit 的清单编译器 AEC、stdcorelib 与 stdcorelib.plugin、stdutau、wolf-midi、libzip、QtTest 与 `add_auto_test`、ctest。
 
 `HelloKitSupport` 包含 `Diagnostic` 和 `TextCodec`。编码相关的全部逻辑集中在 `TextCodec`：编码名的解析、无效字节的拒绝（音源另有替换为 U+FFFD 的解码）、不可表示字符的转义。`HelloKitDocument` 包含 `PayloadCodec`、`Project` / `Track` / `Note` 数据模型和 `.usth` 读写。**`.usth` 的读写属于 `Project`**，因为 `.usth` 不是众多格式之一，而是工程本身的序列化形式；其他格式均经由 Interchange 转换为 `Project`。`.ust` 由 `UstDocument` 表示，即一份**已读入但尚未解码**的 UST：`open()` 只解析一次，编码探测与 `toProject()` 均使用该次解析结果。`HelloKitInterchange` 的接口与注册表已完成（`InterchangeReader` / `InterchangeWriter` / `InterchangeSource` / `InterchangeSelector` / `AutomaticSelector` / `InterchangeDrivers`，内置驱动由 Interchange 插件登记到其 `InterchangeService`），第一个格式 `Formats/MidiConvert` 支持导入与导出，可在无界面环境下运行和测试。结构与约束见 [`Interchange.md`](Interchange.md)。界面由 Interchange 插件提供：导入与导出向导、轨道选择、插入位置与 MIDI 的编码页，见 [`ImportExport.md`](ImportExport.md)。
 
@@ -39,6 +41,8 @@
 **`wavtool.exe` 不直接写出 wav 文件。** 它向 `<out>.whd`（44 字节文件头）和 `<out>.dat`（PCM 数据）追加内容，二者拼接后才是 wav 文件；官方 UTAU 批处理文件末尾的 `copy /B` 即执行此拼接。渲染开始前必须清除这两个残留文件，否则第二次渲染的输出会追加在第一次之后。
 
 运行器的测试通过 `SynthRunner::makeSynthToolProcess()` 这一测试接缝注入替身合成工具，覆盖参数交付之后的行为，见 [`test_ThreadedSynthRunner.cpp`](../hellokit/tests/auto/Synth/test_ThreadedSynthRunner.cpp) 的文件头注释。
+
+**渲染失败时给出可能的原因。** 运行器只记录观察到的失败：重采样器没有写出分片，合成器未能启动、对某个音符退出码非零且没有追加数据，或没有写出音轨。成功的渲染不读取任何分片，因为重采样器可能写出只有配套合成器能读取的中间格式。诊断器按优先级读取全部失败，已解释的失败不再交给后面的诊断器，插件可以登记诊断器。内置的通用诊断器覆盖代码页、未能启动、NTSTATUS 退出码、超时与长路径。moresampler 0.8.4 已实测：`moreconfig.txt` 存在且 `resampler-compatibility off` 时，输出路径上是 180 字节的占位文字，UTAU 的 `wavtool.exe` 读取它时报告「not a wave file」并以 -1 退出，FrequencyEditor 插件的 `MoresamplerDiagnoser` 据此诊断。详见 [`SynthDiagnostics.md`](SynthDiagnostics.md)。
 
 `hellokit/tests/manual/ustrender/` 使用真实音源和真实合成工具进行渲染，`--plan` 只打印参数而不执行任何程序。合成工具路径必须显式指定，工程中的 `Tool1` / `Tool2` 一律不使用。
 
@@ -64,6 +68,7 @@
 - **substate**：`HelloKitEditBase` 与 `HelloKitEdit` 的节点树、事务与撤销历史（`stdware/substate`，含 `substate` 与 `qsubstate` 两个库），**仅作为私有依赖**，`ss::` 类型不出现在公开头文件中。与 stdutau 相同，不取自 vcpkg，也不作为子模块，自行构建安装后通过 `-Dsubstate_DIR=` 指定。默认构建为动态库。
 - **QActionKit**：菜单、工具栏与快捷键（`stdware/qactionkit` 的 `next` 分支）。与 stdutau 相同，不取自 vcpkg，也不作为子模块，自行构建安装后通过 `-DQActionKit_DIR=` 指定，本机安装在 `E:/GitHub/qactionkit/build/install`。只使用 Core 与 Widgets 两个模块，构建时可以传入 `-DQACTIONKIT_BUILD_QUICK=OFF` 省去 Quick 模块。`HelloUtauEditor` 与各插件的菜单、快捷键和命令面板均由它生成。
 - **r8brain-free-src 6.5**：`HelloUtauAudio` 的采样率转换，私有依赖。由 DiffScope 的 vcpkg 端口构建为静态库，本机取自 `E:/GitHub/diffscope-project/vcpkg`，通过 `-Dunofficial-r8brain-free-src_DIR=` 指定。
+- **libzip**：`kit::ZipExtractor` 的解压，`HelloKitSupport` 的私有依赖，取自 vcpkg，动态链接，通过 `-Dlibzip_DIR=` 指定。动态版的包配置不查找 zlib，因此在 Windows 上另需 `-DZLIB_DIR=`，以便把 zlib 的 DLL 复制到程序旁。
 - **qmsetup**：来自 `D:/GitHub/synthrt/vcpkg`。
 - **Qt 6.11.1**：`D:/Qt/6.11.1/msvc2022_64`。
 
@@ -116,6 +121,8 @@
 - 主题扩展（作者 2026-10-10 列为将来的工作）：写死的颜色移入样式表，工具栏勾选状态的配色，图标选中态的颜色随主题切换。
 - 音源窗口按重采样器查看频率表曲线的功能须可扩展（作者 2026-10-10 列为将来的工作）。现有的 FrequencyEditor 插件应作为扩展的提供方，在 frq、dio、mrq 之外再登记其他格式，例如 pmk。现状见 [`VoiceBankEditor.md`](VoiceBankEditor.md)「进度」与 [`Plugins.md`](Plugins.md) 的频率表格式扩展点。
 - 音源文件名编码错解的兼容（`hello-config.json` 的 `fileNameEncoding`）：方向按 `Editing.md`「文件名编码错解的兼容计划」，作者 2026-10-09 认可，待实现，实现时把格式写入 `note.md`。
+- 自动更新待作者以真实的 release 验收完整流程，该 release 须比当前版本新，并带有安装包、zip 与 `SHA256SUMS`。窗口右下角显示消息与任务进度的浮动提示以后再做（作者 2026-10-11 决定）。
+- `.llsm` 版本不兼容的诊断器暂缓，需要先取得 moresampler 报错的原文。
 - 音符属性对话框中 UTAU 的 Others 栏（手写 `$patch`、`$direct` 等条目）日后以官方插件提供，现在不做（作者 2026-10-09 决定）。
 - 库的翻译 `helloutau_<语言>.ts` 覆盖两个模块的全部子库，因嵌入 HelloUtauEditor 而暂放 `helloutau/lib/Editor/Resources/translations/`（作者 2026-10-10 决定）。它不属于 Editor 一个库，以后另行迁移。可参考的做法：Qt 框架的各模块翻译集中在 `qttranslations` 仓库的 `translations/`，Qt Creator 的翻译放在仓库根目录的 `share/qtcreator/translations/`，与安装布局一致。`Plugins.md` 已规定改为外部文件时库的译文放 `share/helloutau`。
 - 插件的安装目录（作者 2026-10-10 决定暂不改动）：现在本程序的插件在 `lib/plugins/helloutau`，Qt 的插件在 `lib/plugins/Qt`，布局取自 synthrt 的 `<lib>/plugins/<name>/<category>`，适合会装进公共前缀的库。Qt Creator 自 v1.3.0 起一直是应用名在前，即 `lib/qtcreator/plugins`（v2.8.0 另有分类子目录 `QtProject`），Qt 的插件在 Windows 上位于 windeployqt 默认的 `bin/plugins`。HelloUtau 是应用，改为 `lib/helloutau/plugins/<插件>` 并让 Qt 的插件回到 `bin/plugins` 更合理，涉及 `conf.cmake`、`AppLoader::addQtPluginPaths()`、`test_AppLoader`、`Plugins.md`、`Development.md` 与打包脚本。
