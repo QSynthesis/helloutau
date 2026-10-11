@@ -9,6 +9,7 @@
 #include <QtCore/QByteArrayView>
 #include <QtCore/QJsonObject>
 #include <QtCore/QString>
+#include <QtCore/QStringList>
 
 #include <hellokit/Support/Diagnostic.h>
 
@@ -39,6 +40,42 @@ namespace hello::kit {
         ///
         /// \sa VoiceBankDirectory::charset, VoiceBankDirectorySource::fileNamed()
         QString charset;
+
+        /// The encodings of the misdecoded file names in one directory, and the state of each
+        /// name. See the section on misdecoded file names in docs/Editing.md.
+        ///
+        /// A name is misdecoded if its bytes in \a original were interpreted in \a misdecodedAs
+        /// when the file was written to the file system, for example by an archive extractor.
+        /// The record governs the audio files and the subdirectories of its own directory only.
+        /// Every name of them that is not ASCII belongs to exactly one of the two lists, and a
+        /// name in neither list is a new name whose state the user determines.
+        struct HELLOKIT_VOICEBANK_EXPORT FileNameEncoding {
+            /// The encoding in which the names were created.
+            QString original;
+            /// The encoding in which the bytes of the names were interpreted.
+            QString misdecodedAs;
+            /// The names on disk that are misdecoded, which are restored when read.
+            QStringList misdecoded;
+            /// The names on disk that are correct, which are used as they are.
+            QStringList correct;
+
+            /// Returns the name that \a physical , a name on disk, had before it was misdecoded, in
+            /// Normalization Form C. A correct name often restores as well, therefore the result
+            /// is not evidence that \a physical is misdecoded.
+            ///
+            /// \return \c std::nullopt if \a physical is ASCII, an encoding is unavailable,
+            ///         \a physical is unrepresentable in \a misdecodedAs , the bytes are invalid in
+            ///         \a original , or the result equals \a physical or contains a path separator
+            ///         or a control character
+            std::optional<QString> restore(const QString &physical) const;
+        };
+
+        /// The record of misdecoded file names, or \c std::nullopt if the names of the directory
+        /// are used as they are.
+        ///
+        /// A malformed record is read as \c std::nullopt with a warning, and is kept in
+        /// \a unknownFields so that saving writes it back unchanged.
+        std::optional<FileNameEncoding> fileNameEncoding;
 
         /// Top-level fields not recognized by this version, preserved so that saving writes them
         /// back.

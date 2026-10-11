@@ -74,6 +74,19 @@ UST 自身的 `Charset` 只有两种取值：空，或 `UTF-8`。它表示的是
 
 **每个文件夹一份，而非每个音源一份。** 一个音源可以在各级子目录中包含多份 `oto.ini`，其编码可能各不相同，因此标记文件按目录存放，与其描述的文件位于同一目录。这样，音源的某个子目录被单独复制时，编码信息也随之保留。
 
+**文件名编码错解的记录**（作者 2026-10-11 决定）：目录中的文件名被错解时，`hello-config.json` 以 `fileNameEncoding` 记录两个编码与每个名字的状态。
+
+```json
+"fileNameEncoding": {
+  "original": "Shift_JIS",
+  "misdecodedAs": "GBK",
+  "misdecoded": ["_偁媧偁揻.wav"],
+  "correct": ["_あ長.wav"]
+}
+```
+
+`original` 是文件名创建时的编码，`misdecodedAs` 是名字的字节被错误解释时使用的编码。`misdecoded` 与 `correct` 分别列出该目录中错解的与本来就正确的物理名称，只包括音频文件与这一层的子文件夹，ASCII 名字不记录。记录存在时，每个非 ASCII 的这类名字都在两个列表之一。四个字段缺少任何一个或类型不符时，视为没有记录并给出警告，保存时原样写回。处理规则见 [`Editing.md`](Editing.md)「文件名编码错解的处理」。
+
 `plugin.json` 是插件的完整清单，不仅限于编码。对于支持 HelloUtau 的插件，它取代 `plugin.txt` 成为权威来源。
 
 ## HelloUtau 编码兼容策略

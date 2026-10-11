@@ -445,7 +445,7 @@ UTAU 对带 `%VOICE%` 前缀的音源路径与不带前缀的相对路径采用�
 }
 ```
 
-字段名称与最终格式实现时写入 `note.md`，语义必须保留：
+格式以 [`note.md`](note.md)「HelloUtau 标记文件」为准，由 `VoiceBankConfig::FileNameEncoding` 读写。各字段的语义：
 
 - `original` 是文件名创建时的原始字节编码。
 - `misdecodedAs` 是这些字节被错误解释并写入文件系统时使用的编码。
