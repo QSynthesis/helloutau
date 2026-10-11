@@ -20,6 +20,8 @@ namespace hello::daw {
     class HELLOUTAU_EDITOR_EXPORT UtauSettingPage : public SettingPage {
         Q_OBJECT
     public:
+        static constexpr char pageId[] = "editor.Utau";
+
         explicit UtauSettingPage(AppSettings &settings, QObject *parent = nullptr);
 
         bool isModified() const override;

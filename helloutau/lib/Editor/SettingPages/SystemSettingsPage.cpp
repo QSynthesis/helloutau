@@ -11,14 +11,12 @@
 #include <hellokit/Support/RestartScheduler.h>
 
 #include "AppSettings.h"
-#include "EditorSettingPageIds.h"
 #include "SettingPageWidgets_p.h"
 
 namespace hello::daw {
 
     SystemSettingsPage::SystemSettingsPage(AppSettings &settings, QObject *parent)
-        : SettingPage(QLatin1String(EditorSettingPageIds::systemSettings), parent),
-          m_settings(settings) {
+        : SettingPage(QLatin1String(pageId), parent), m_settings(settings) {
         setTitle(tr("System Settings"));
         setDescription(tr("The language of the interface."));
         setKeywords({QStringLiteral("System Settings"), QStringLiteral("Language")});

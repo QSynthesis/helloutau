@@ -19,6 +19,8 @@ namespace hello::daw {
     class HELLOUTAU_EDITOR_EXPORT SystemSettingsPage : public SettingPage {
         Q_OBJECT
     public:
+        static constexpr char pageId[] = "editor.SystemSettings";
+
         explicit SystemSettingsPage(AppSettings &settings, QObject *parent = nullptr);
 
         bool isModified() const override;

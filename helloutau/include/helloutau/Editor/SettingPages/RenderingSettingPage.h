@@ -21,6 +21,8 @@ namespace hello::daw {
     class HELLOUTAU_EDITOR_EXPORT RenderingSettingPage : public SettingPage {
         Q_OBJECT
     public:
+        static constexpr char pageId[] = "editor.Rendering";
+
         explicit RenderingSettingPage(AppSettings &settings, QObject *parent = nullptr);
 
         bool isModified() const override;

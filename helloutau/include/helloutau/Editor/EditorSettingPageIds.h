@@ -3,17 +3,11 @@
 
 namespace hello::daw {
 
-    /// The ids of the pages that the editor adds to its setting catalog, in the order of the
-    /// settings of JetBrains IDEs, by which a plugin places its pages among them. See the
-    /// settings dialog in docs/Widgets.md.
+    /// The ids of the pages that the editor adds to its setting catalog without a class of their
+    /// own, by which a plugin places its pages under them. The other pages have their id in
+    /// their class, such as UtauSettingPage::pageId. See the settings dialog in docs/Widgets.md.
     struct EditorSettingPageIds {
         static constexpr char appearanceAndBehavior[] = "editor.AppearanceAndBehavior";
-        static constexpr char systemSettings[] = "editor.SystemSettings";
-        static constexpr char updates[] = "editor.Updates";
-        static constexpr char editor[] = "editor.Editor";
-        static constexpr char utau[] = "editor.Utau";
-        static constexpr char audio[] = "editor.Audio";
-        static constexpr char rendering[] = "editor.Rendering";
     };
 
 }

@@ -15,13 +15,12 @@
 #include <helloutau/Audio/SineWaveSource.h>
 
 #include "AppSettings.h"
-#include "EditorSettingPageIds.h"
 #include "SettingPageWidgets_p.h"
 
 namespace hello::daw {
 
     AudioSettingPage::AudioSettingPage(AppSettings &settings, QObject *parent)
-        : SettingPage(QLatin1String(EditorSettingPageIds::audio), parent), m_settings(settings) {
+        : SettingPage(QLatin1String(pageId), parent), m_settings(settings) {
         setTitle(tr("Audio"));
         setDescription(tr("The output device used for playback."));
         setKeywords({QStringLiteral("Audio"), QStringLiteral("Output"), QStringLiteral("Device")});

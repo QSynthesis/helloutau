@@ -16,7 +16,6 @@
 #include <QtWidgets/QVBoxLayout>
 
 #include "AppSettings.h"
-#include "EditorSettingPageIds.h"
 #include "SettingPageWidgets_p.h"
 
 namespace hello::daw {
@@ -51,8 +50,7 @@ namespace hello::daw {
     }
 
     RenderingSettingPage::RenderingSettingPage(AppSettings &settings, QObject *parent)
-        : SettingPage(QLatin1String(EditorSettingPageIds::rendering), parent),
-          m_settings(settings) {
+        : SettingPage(QLatin1String(pageId), parent), m_settings(settings) {
         setTitle(tr("Audio Rendering"));
         setDescription(
             tr("The synth tools used for audio rendering, and how playback renders audio."));

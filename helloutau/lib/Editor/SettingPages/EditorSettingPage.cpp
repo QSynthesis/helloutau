@@ -4,13 +4,12 @@
 #include <QtWidgets/QFormLayout>
 
 #include "AppSettings.h"
-#include "EditorSettingPageIds.h"
 #include "ExportUstDialog.h"
 
 namespace hello::daw {
 
     EditorSettingPage::EditorSettingPage(AppSettings &settings, QObject *parent)
-        : SettingPage(QLatin1String(EditorSettingPageIds::editor), parent), m_settings(settings) {
+        : SettingPage(QLatin1String(pageId), parent), m_settings(settings) {
         setTitle(tr("Editor"));
         setDescription(tr("How projects are edited and exported."));
         setKeywords({QStringLiteral("Editor"), QStringLiteral("UST")});

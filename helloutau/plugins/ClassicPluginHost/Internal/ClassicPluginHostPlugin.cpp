@@ -6,7 +6,7 @@
 
 #include <helloutau/Editor/AppLoader.h>
 #include <helloutau/Editor/Editor.h>
-#include <helloutau/Editor/EditorSettingPageIds.h>
+#include <helloutau/Editor/SettingPages/UtauSettingPage.h>
 
 #include "ClassicPluginContribution.h"
 #include "ClassicPluginSettingPage.h"
@@ -53,7 +53,7 @@ namespace hello::daw {
             editor->settingPages(), ClassicPluginSettingPage::pageId, {}, [editor] {
                 return SettingPagePlacement{
                     std::make_unique<ClassicPluginSettingPage>(editor->settings()),
-                    QLatin1String(EditorSettingPageIds::utau), QString()};
+                    QLatin1String(UtauSettingPage::pageId), QString()};
             });
         if (!m_settingPage.entry()) {
             if (errorMessage) {

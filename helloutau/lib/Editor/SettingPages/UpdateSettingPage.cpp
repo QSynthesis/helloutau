@@ -13,7 +13,6 @@
 #include <QtWidgets/QVBoxLayout>
 
 #include "AppSettings.h"
-#include "EditorSettingPageIds.h"
 #include "SettingPageWidgets_p.h"
 #include "UpdateChecker.h"
 
@@ -21,8 +20,7 @@ namespace hello::daw {
 
     UpdateSettingPage::UpdateSettingPage(AppSettings &settings, UpdateChecker &checker,
                                          QObject *parent)
-        : SettingPage(QLatin1String(EditorSettingPageIds::updates), parent), m_settings(settings),
-          m_checker(checker) {
+        : SettingPage(QLatin1String(pageId), parent), m_settings(settings), m_checker(checker) {
         setTitle(tr("Updates"));
         setDescription(tr("The check for newer versions of the application."));
         setKeywords({QStringLiteral("Updates"), QStringLiteral("Check for Updates")});

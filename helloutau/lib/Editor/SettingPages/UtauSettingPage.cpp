@@ -9,13 +9,12 @@
 #include <QtWidgets/QVBoxLayout>
 
 #include "AppSettings.h"
-#include "EditorSettingPageIds.h"
 #include "SettingPageWidgets_p.h"
 
 namespace hello::daw {
 
     UtauSettingPage::UtauSettingPage(AppSettings &settings, QObject *parent)
-        : SettingPage(QLatin1String(EditorSettingPageIds::utau), parent), m_settings(settings) {
+        : SettingPage(QLatin1String(pageId), parent), m_settings(settings) {
         setTitle(QStringLiteral("UTAU"));
         setDescription(
             tr("Where UTAU is, and how a project finds its voice bank and synth tools."));
