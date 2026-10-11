@@ -344,12 +344,16 @@ namespace hello::daw {
                              [this](const kit::DiagnosticList &diagnostics,
                                     const QList<kit::SynthDiagnosis> &diagnoses) {
                                  stdc_decl_t;
-                                 DiagnosticBox::report(&decl, tr("Play"), diagnostics, diagnoses);
+                                 DiagnosticBox::report(
+                                     &decl, tr("Play"), tr("The notes could not be rendered."),
+                                     diagnostics, diagnoses, DiagnosticBox::OrderedList);
                              });
             QObject::connect(playback, &Playback::diagnosed, &decl,
                              [this](const QList<kit::SynthDiagnosis> &diagnoses) {
                                  stdc_decl_t;
-                                 DiagnosticBox::report(&decl, tr("Play"), {}, diagnoses);
+                                 DiagnosticBox::report(&decl, tr("Play"),
+                                                       tr("Some notes could not be rendered."), {},
+                                                       diagnoses, DiagnosticBox::OrderedList);
                              });
 
             playheadTimer.setInterval(PlayheadInterval);
@@ -1180,13 +1184,17 @@ namespace hello::daw {
         void reportPreviewFailures() {
             stdc_decl_t;
             const auto failed = playback->takePreviewDiagnostics();
+            const auto summary = ProjectWindow::tr(
+                "%n note(s) could not be rendered, and were silent.", nullptr, int(failed.size()));
             if (!failed.isEmpty()) {
-                decl.statusBar()->showMessage(
-                    ProjectWindow::tr("%n note(s) could not be rendered, and were silent.", nullptr,
-                                      int(failed.size())),
-                    StatusMessageTimeout);
+                decl.statusBar()->showMessage(summary, StatusMessageTimeout);
             }
-            DiagnosticBox::report(&decl, tr("Play"), {}, playback->takePreviewDiagnoses());
+            // The diagnostics of the notes go into the details, under the probable causes.
+            const auto diagnoses = playback->takePreviewDiagnoses();
+            if (!diagnoses.isEmpty()) {
+                DiagnosticBox::report(&decl, tr("Play"), summary, failed, diagnoses,
+                                      DiagnosticBox::OrderedList);
+            }
         }
 
         // The state of a preview in the status bar: the plan while it is made, the notes still

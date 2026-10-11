@@ -19,11 +19,20 @@ namespace hello::daw {
         DiagnosticBox(const QString &title, const kit::DiagnosticList &diagnostics,
                       QWidget *parent = nullptr);
 
-        /// Constructs the box with the probable causes of \a diagnoses, each with its
-        /// explanation and remedies, above the details, which hold \a diagnostics. Without
-        /// \a diagnoses the box is that of the other constructor. See docs/SynthDiagnostics.md.
-        DiagnosticBox(const QString &title, const kit::DiagnosticList &diagnostics,
-                      const QList<kit::SynthDiagnosis> &diagnoses, QWidget *parent = nullptr);
+        /// The list in which the probable causes are shown
+        enum ListStyle {
+            OrderedList,   ///< Numbered items
+            UnorderedList, ///< Bulleted items
+        };
+
+        /// Constructs the box with \a summary, a sentence that states the failure, followed by
+        /// the probable causes of \a diagnoses in a list of \a style, each with its explanation
+        /// and remedies, above the details, which hold \a diagnostics. Without \a diagnoses the
+        /// box is that of the other constructor. See docs/SynthDiagnostics.md.
+        DiagnosticBox(const QString &title, const QString &summary,
+                      const kit::DiagnosticList &diagnostics,
+                      const QList<kit::SynthDiagnosis> &diagnoses, ListStyle style = UnorderedList,
+                      QWidget *parent = nullptr);
 
         ~DiagnosticBox();
 
@@ -32,11 +41,13 @@ namespace hello::daw {
         static void report(QWidget *parent, const QString &title,
                            const kit::DiagnosticList &diagnostics);
 
-        /// Shows \a diagnostics with the probable causes of \a diagnoses, or nothing if both are
-        /// empty.
-        static void report(QWidget *parent, const QString &title,
+        /// Shows \a summary and the probable causes of \a diagnoses in a list of \a style with
+        /// \a diagnostics in the details, or only \a diagnostics without \a diagnoses, or nothing
+        /// if both are empty.
+        static void report(QWidget *parent, const QString &title, const QString &summary,
                            const kit::DiagnosticList &diagnostics,
-                           const QList<kit::SynthDiagnosis> &diagnoses);
+                           const QList<kit::SynthDiagnosis> &diagnoses,
+                           ListStyle style = UnorderedList);
     };
 
 }

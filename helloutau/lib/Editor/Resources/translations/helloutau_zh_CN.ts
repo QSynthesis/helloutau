@@ -1716,6 +1716,14 @@
         <translation>替换歌词</translation>
     </message>
     <message>
+        <source>The notes could not be rendered.</source>
+        <translation>无法渲染这些音符。</translation>
+    </message>
+    <message>
+        <source>Some notes could not be rendered.</source>
+        <translation>部分音符无法渲染。</translation>
+    </message>
+    <message>
         <source>Rename Region</source>
         <translation>重命名区间</translation>
     </message>

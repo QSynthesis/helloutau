@@ -40,8 +40,10 @@ namespace hello::daw {
         setText(lines.join(u'\n'));
     }
 
-    DiagnosticBox::DiagnosticBox(const QString &title, const kit::DiagnosticList &diagnostics,
-                                 const QList<kit::SynthDiagnosis> &diagnoses, QWidget *parent)
+    DiagnosticBox::DiagnosticBox(const QString &title, const QString &summary,
+                                 const kit::DiagnosticList &diagnostics,
+                                 const QList<kit::SynthDiagnosis> &diagnoses, ListStyle style,
+                                 QWidget *parent)
         : DiagnosticBox(title, diagnostics, parent) {
         if (diagnoses.isEmpty()) {
             return;
@@ -51,11 +53,16 @@ namespace hello::daw {
             setIcon(QMessageBox::Warning);
         }
         const auto lines = text();
-        QString html =
-            QStringLiteral("<p><b>%1</b></p>").arg(tr("Probable causes:").toHtmlEscaped());
+        QString html;
+        if (!summary.isEmpty()) {
+            html += QStringLiteral("<p>%1</p>").arg(summary.toHtmlEscaped());
+        }
+        const auto list = style == OrderedList ? QLatin1String("ol") : QLatin1String("ul");
+        html += QStringLiteral("<p><b>%1</b></p><%2>")
+                    .arg(tr("Probable causes:").toHtmlEscaped(), list);
         for (const auto &diagnosis : diagnoses) {
             html +=
-                QStringLiteral("<p><b>%1</b><br>%2</p>")
+                QStringLiteral("<li><b>%1</b><br>%2")
                     .arg(diagnosis.cause.toHtmlEscaped(), diagnosis.explanation.toHtmlEscaped());
             if (!diagnosis.remedies.isEmpty()) {
                 html += QStringLiteral("<ul>");
@@ -64,7 +71,9 @@ namespace hello::daw {
                 }
                 html += QStringLiteral("</ul>");
             }
+            html += QStringLiteral("</li>");
         }
+        html += QStringLiteral("</%1>").arg(list);
         setTextFormat(Qt::RichText);
         setText(html);
         setDetailedText(lines);
@@ -74,16 +83,16 @@ namespace hello::daw {
 
     void DiagnosticBox::report(QWidget *parent, const QString &title,
                                const kit::DiagnosticList &diagnostics) {
-        report(parent, title, diagnostics, {});
+        report(parent, title, {}, diagnostics, {});
     }
 
-    void DiagnosticBox::report(QWidget *parent, const QString &title,
+    void DiagnosticBox::report(QWidget *parent, const QString &title, const QString &summary,
                                const kit::DiagnosticList &diagnostics,
-                               const QList<kit::SynthDiagnosis> &diagnoses) {
+                               const QList<kit::SynthDiagnosis> &diagnoses, ListStyle style) {
         if (diagnostics.isEmpty() && diagnoses.isEmpty()) {
             return;
         }
-        DiagnosticBox box(title, diagnostics, diagnoses, parent);
+        DiagnosticBox box(title, summary, diagnostics, diagnoses, style, parent);
         box.exec();
     }
 

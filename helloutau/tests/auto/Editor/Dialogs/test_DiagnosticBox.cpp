@@ -63,8 +63,8 @@ private Q_SLOTS:
         QVERIFY(reportShows({diagnosticOf(kit::DiagnosticSeverity::Note, "n")}));
     }
 
-    // The probable causes come first, with their remedies, and the diagnostics move to the
-    // details. The texts are escaped, because the causes name paths.
+    // The summary and the probable causes come first, with their remedies, and the diagnostics
+    // move to the details. The texts are escaped, because the causes name paths.
     void the_probable_causes_precede_the_diagnostics() {
         const kit::SynthDiagnosis diagnosis{
             QStringLiteral("cause <a>"),
@@ -72,11 +72,18 @@ private Q_SLOTS:
             {QStringLiteral("first remedy"), QStringLiteral("second remedy")},
             {0}
         };
-        const DiagnosticBox box(QStringLiteral("Title"),
+        const DiagnosticBox box(QStringLiteral("Title"), QStringLiteral("summary <b>"),
                                 {diagnosticOf(kit::DiagnosticSeverity::Note, "detail", 1)},
                                 {diagnosis});
         QCOMPARE(box.textFormat(), Qt::RichText);
-        QVERIFY(box.text().contains(QStringLiteral("cause &lt;a&gt;")));
+        QVERIFY(box.text().startsWith(QStringLiteral("<p>summary &lt;b&gt;</p>")));
+        // The causes are the items of a bulleted list, or of a numbered list on request.
+        QVERIFY(box.text().contains(QStringLiteral("<ul><li><b>cause &lt;a&gt;</b>")));
+        const DiagnosticBox ordered(QStringLiteral("Title"), {}, {}, {diagnosis},
+                                    DiagnosticBox::OrderedList);
+        QVERIFY(ordered.text().startsWith(QStringLiteral("<p><b>")));
+        QVERIFY(ordered.text().contains(QStringLiteral("<ol><li><b>cause &lt;a&gt;</b>")));
+        QVERIFY(ordered.text().endsWith(QStringLiteral("</ol>")));
         QVERIFY(box.text().contains(QStringLiteral("explanation")));
         QVERIFY(box.text().indexOf(QStringLiteral("first remedy")) <
                 box.text().indexOf(QStringLiteral("second remedy")));
@@ -85,7 +92,7 @@ private Q_SLOTS:
     }
 
     void without_causes_the_box_is_unchanged() {
-        const DiagnosticBox box(QStringLiteral("Title"),
+        const DiagnosticBox box(QStringLiteral("Title"), QStringLiteral("summary"),
                                 {diagnosticOf(kit::DiagnosticSeverity::Note, "n")}, {});
         QCOMPARE(box.text(), QStringLiteral("n"));
         QVERIFY(box.detailedText().isEmpty());
