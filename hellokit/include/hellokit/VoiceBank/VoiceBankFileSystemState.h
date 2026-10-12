@@ -178,14 +178,15 @@ namespace hello::kit {
         ///
         /// All checks precede the first change, and a single failure leaves the disk unchanged.
         /// A name that does not exist, a new name that is no valid file name on Windows, a new
-        /// name that another file of the directory keeps or receives as well, and a rewritten
-        /// file that does not exist are refused, each listed in \a diagnostics . Names are
-        /// compared in Normalization Form C, and without case on Windows and macOS.
+        /// name that another file of the directory keeps or receives as well, and a rewrite of a
+        /// folder are refused, each listed in \a diagnostics . Names are compared in
+        /// Normalization Form C, and without case on Windows and macOS.
         ///
         /// The directories are changed from the deepest, so that the path of a directory remains
         /// valid until its own turn. The names of a directory pass through temporary names, so
-        /// that two files may exchange their names. If a change fails partway through, every
-        /// change made so far is undone in reverse order.
+        /// that two files may exchange their names, and its files are rewritten after its names
+        /// change, a missing file being created. If a change fails partway through, every change
+        /// made so far is undone in reverse order, and a created file is removed.
         ///
         /// \return whether every change was made
         static bool renameOnDisk(const std::filesystem::path &root,

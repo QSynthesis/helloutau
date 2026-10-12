@@ -4621,6 +4621,10 @@ Write them again without these chunks? The audio stays the same. The files are w
         <translation>文件夹「%1」不存在。</translation>
     </message>
     <message>
+        <source>&quot;%1&quot; is a folder, so it cannot be written.</source>
+        <translation>「%1」是文件夹，无法写入。</translation>
+    </message>
+    <message>
         <source>&quot;%1&quot; does not exist.</source>
         <translation>「%1」不存在。</translation>
     </message>

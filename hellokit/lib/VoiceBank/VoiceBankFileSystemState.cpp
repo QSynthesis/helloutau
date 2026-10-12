@@ -1605,10 +1605,23 @@ namespace hello::kit {
 
         // A change made on disk, which an undo reverses.
         struct Done {
+            enum Kind {
+                Renamed,   // from was renamed to to
+                Rewritten, // to was rewritten, and held contents before
+                Created,   // to was created
+            };
+
+            Kind kind;
             fs::path from;
             fs::path to;
-            // The contents before a rewrite of to, for a rewrite rather than a rename
-            std::optional<QByteArray> contents;
+            QByteArray contents;
+        };
+
+        // The changes of one directory as they are executed: its names, then its files.
+        struct Plan {
+            fs::path directory;
+            QList<VoiceBankFileSystemState::Rename> renames;
+            QList<FrequencyFormat::FileChange> rewrites;
         };
 
         bool writeBytes(const fs::path &path, const QByteArray &bytes) {
@@ -1646,8 +1659,9 @@ namespace hello::kit {
             }
         }
 
-        // The renames of each directory, of its names and of the files that follow them
-        std::vector<std::pair<fs::path, QList<Rename>>> renames;
+        // The renames of each directory, of its names and of the files that follow them, and its
+        // rewrites
+        std::vector<Plan> plans;
         bool valid = true;
         for (const auto &change : std::as_const(merged)) {
             const auto directory = root / change.directory;
@@ -1658,15 +1672,19 @@ namespace hello::kit {
                 valid = false;
                 continue;
             }
-            auto all = change.renames;
+            Plan plan{change.directory, change.renames, {}};
+            auto &all = plan.renames;
             for (const auto &file : change.files) {
                 if (file.kind == FrequencyFormat::FileChange::Rename) {
                     all.push_back({file.path, file.to});
-                } else if (!fs::is_regular_file(directory / file.path, error)) {
-                    fail(diagnostics, tr("\"%1\" does not exist.")
+                    continue;
+                }
+                if (fs::is_directory(directory / file.path, error)) {
+                    fail(diagnostics, tr("\"%1\" is a folder, so it cannot be written.")
                                           .arg(displayed(change.directory / file.path)));
                     valid = false;
                 }
+                plan.rewrites.push_back(file);
             }
 
             // The names of the directory after the renames, each of which must be unique
@@ -1695,7 +1713,7 @@ namespace hello::kit {
                     valid = false;
                 }
             }
-            renames.emplace_back(change.directory, all);
+            plans.push_back(std::move(plan));
         }
         if (!valid) {
             return false;
@@ -1706,34 +1724,42 @@ namespace hello::kit {
         const auto undo = [&] {
             for (auto it = done.rbegin(); it != done.rend(); ++it) {
                 std::error_code error;
-                if (it->contents) {
-                    if (!writeBytes(it->to, *it->contents)) {
-                        fail(diagnostics, tr("\"%1\" could not be restored.").arg(displayed(it->to)));
-                    }
-                    continue;
-                }
-                fs::rename(it->to, it->from, error);
-                if (error) {
-                    fail(diagnostics, tr("\"%1\" could not be renamed back to \"%2\".")
-                                          .arg(displayed(it->to), displayed(it->from)));
+                switch (it->kind) {
+                    case Done::Renamed:
+                        fs::rename(it->to, it->from, error);
+                        if (error) {
+                            fail(diagnostics, tr("\"%1\" could not be renamed back to \"%2\".")
+                                                  .arg(displayed(it->to), displayed(it->from)));
+                        }
+                        break;
+                    case Done::Rewritten:
+                        if (!writeBytes(it->to, it->contents)) {
+                            fail(diagnostics,
+                                 tr("\"%1\" could not be restored.").arg(displayed(it->to)));
+                        }
+                        break;
+                    case Done::Created:
+                        if (!fs::remove(it->to, error)) {
+                            fail(diagnostics,
+                                 tr("\"%1\" could not be restored.").arg(displayed(it->to)));
+                        }
+                        break;
                 }
             }
         };
 
-        // The deepest directories first, as their paths contain the names of the shallower
-        std::vector<size_t> order(renames.size());
-        for (size_t i = 0; i < order.size(); ++i) {
-            order[i] = i;
-        }
-        std::stable_sort(order.begin(), order.end(), [&renames](size_t a, size_t b) {
-            return std::distance(renames[a].first.begin(), renames[a].first.end()) >
-                   std::distance(renames[b].first.begin(), renames[b].first.end());
+        // The deepest directories first, as their paths contain the names of the shallower. The
+        // files of a directory are written after its names change and before its own name
+        // changes, so that a rewritten file such as desc.mrq names the new files.
+        std::stable_sort(plans.begin(), plans.end(), [](const Plan &a, const Plan &b) {
+            return std::distance(a.directory.begin(), a.directory.end()) >
+                   std::distance(b.directory.begin(), b.directory.end());
         });
         int temporary = 0;
-        for (const auto i : order) {
-            const auto directory = root / renames[i].first;
+        for (const auto &plan : plans) {
+            const auto directory = root / plan.directory;
             std::vector<fs::path> passing;
-            for (const auto &rename : std::as_const(renames[i].second)) {
+            for (const auto &rename : std::as_const(plan.renames)) {
                 fs::path through;
                 std::error_code error;
                 do {
@@ -1743,44 +1769,40 @@ namespace hello::kit {
                 if (error) {
                     fail(diagnostics, tr("\"%1\" could not be renamed, so every name was changed "
                                          "back.")
-                                          .arg(displayed(renames[i].first / rename.from)));
+                                          .arg(displayed(plan.directory / rename.from)));
                     undo();
                     return false;
                 }
-                done.push_back({directory / rename.from, through, std::nullopt});
+                done.push_back({Done::Renamed, directory / rename.from, through, {}});
                 passing.push_back(through);
             }
-            for (qsizetype k = 0; k < renames[i].second.size(); ++k) {
-                const auto &rename = renames[i].second.at(k);
+            for (qsizetype k = 0; k < plan.renames.size(); ++k) {
+                const auto &rename = plan.renames.at(k);
                 std::error_code error;
                 fs::rename(passing[size_t(k)], directory / rename.to, error);
                 if (error) {
                     fail(diagnostics, tr("\"%1\" could not be renamed, so every name was changed "
                                          "back.")
-                                          .arg(displayed(renames[i].first / rename.from)));
+                                          .arg(displayed(plan.directory / rename.from)));
                     undo();
                     return false;
                 }
-                done.push_back({passing[size_t(k)], directory / rename.to, std::nullopt});
+                done.push_back({Done::Renamed, passing[size_t(k)], directory / rename.to, {}});
             }
-        }
-
-        // The rewrites, after every rename, as a rewritten file such as desc.mrq names the files
-        for (const auto &change : std::as_const(merged)) {
-            for (const auto &file : change.files) {
-                if (file.kind != FrequencyFormat::FileChange::Rewrite) {
-                    continue;
-                }
-                const auto path = root / change.directory / file.path;
-                const auto before = readBytes(path);
+            for (const auto &file : plan.rewrites) {
+                const auto path = directory / file.path;
+                std::error_code error;
+                const bool existed = fs::exists(fs::symlink_status(path, error));
+                const auto before = existed ? readBytes(path) : std::optional(QByteArray());
                 if (!before || !writeBytes(path, file.contents)) {
                     fail(diagnostics, tr("\"%1\" could not be written, so every name was changed "
                                          "back.")
-                                          .arg(displayed(change.directory / file.path)));
+                                          .arg(displayed(plan.directory / file.path)));
                     undo();
                     return false;
                 }
-                done.push_back({path, path, before});
+                done.push_back(
+                    {existed ? Done::Rewritten : Done::Created, path, path, existed ? *before : QByteArray()});
             }
         }
         return true;

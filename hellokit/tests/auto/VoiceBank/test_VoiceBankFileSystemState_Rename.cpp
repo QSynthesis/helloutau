@@ -145,9 +145,23 @@ private Q_SLOTS:
         QTest::newRow("missing folder") << QList<NameChanges>{
             {"none", {{"a.wav", "b.wav"}}, {}}
         };
-        QTest::newRow("missing rewrite") << QList<NameChanges>{
-            {{}, {}, {FileChange::rewritten("desc.mrq", "x")}}
+        QTest::newRow("rewritten folder") << QList<NameChanges>{
+            {{}, {}, {FileChange::rewritten(pathOf(u"偆"), "x")}}
         };
+    }
+
+    // A file of a folder that its parent renames is written under the old path of the folder,
+    // before the parent renames it. A missing file is created.
+    void the_files_of_a_renamed_folder_are_written_before_its_rename() {
+        writeBank();
+        write(pathOf(u"偆/desc.mrq"), "old");
+        auto changes = conversion();
+        changes.last().files.push_back(FileChange::rewritten("desc.mrq", "new"));
+        changes.last().files.push_back(FileChange::rewritten("hello-config.json", "{}"));
+        DiagnosticList diagnostics;
+        QVERIFY(VoiceBankFileSystemState::renameOnDisk(root(), changes, diagnostics));
+        QCOMPARE(read(pathOf(u"う/desc.mrq")), QByteArray("new"));
+        QCOMPARE(read(pathOf(u"う/hello-config.json")), QByteArray("{}"));
     }
 
     // Two names that become one name are refused as well, which the list of the directory alone
@@ -166,7 +180,7 @@ private Q_SLOTS:
     }
 
     // A change that fails after the checks, here the rewrite of a read-only file, undoes
-    // every change made before it.
+    // every change made before it, and removes a file that it created.
     void a_failure_partway_through_changes_every_name_back() {
         writeBank();
         write("desc.mrq", "old");
@@ -174,6 +188,7 @@ private Q_SLOTS:
         QVERIFY(QFile::setPermissions(desc, QFile::ReadOwner));
         auto changes = conversion();
         changes.first().files.push_back(FileChange::rewritten("desc.mrq", "new"));
+        changes.last().files.push_back(FileChange::rewritten("hello-config.json", "{}"));
         DiagnosticList diagnostics;
         const bool renamed = VoiceBankFileSystemState::renameOnDisk(root(), changes, diagnostics);
         QFile::setPermissions(desc, QFile::ReadOwner | QFile::WriteOwner);
@@ -184,6 +199,7 @@ private Q_SLOTS:
         QCOMPARE(read(pathOf(u"偆/偄.wav")), QByteArray("i"));
         QCOMPARE(read(pathOf(u"偆/偄_wav.frq")), QByteArray("i.frq"));
         QCOMPARE(read("desc.mrq"), QByteArray("old"));
+        QVERIFY(!exists(pathOf(u"偆/hello-config.json")));
         QCOMPARE(QDir(m_dir->path()).entryList(QDir::NoDotAndDotDot | QDir::AllEntries).size(), 4);
     }
 };
