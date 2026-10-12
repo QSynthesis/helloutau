@@ -1576,4 +1576,214 @@ namespace hello::kit {
         return book;
     }
 
+    namespace {
+
+        // The key under which a name is unique in a directory: Normalization Form C, and without
+        // case on Windows and macOS, whose file systems ignore case by default.
+        QString nameKeyOf(const fs::path &name) {
+            auto key = QString::fromStdU16String(name.u16string())
+                           .normalized(QString::NormalizationForm_C);
+#if defined(Q_OS_WIN) || defined(Q_OS_MACOS)
+            key = key.toCaseFolded();
+#endif
+            return key;
+        }
+
+        // Whether name is one component that Windows accepts as the name of a file, so that the
+        // voice bank remains usable there.
+        bool isValidName(const fs::path &name) {
+            const auto text = QString::fromStdU16String(name.u16string());
+            if (text.isEmpty() || text == QLatin1String(".") || text == QLatin1String("..") ||
+                text.endsWith(QLatin1Char('.')) || text.endsWith(QLatin1Char(' '))) {
+                return false;
+            }
+            return std::none_of(text.begin(), text.end(), [](QChar c) {
+                return c.unicode() < 0x20 || c.unicode() == 0x7f ||
+                       QStringView(u"<>:\"/\\|?*").contains(c);
+            });
+        }
+
+        // A change made on disk, which an undo reverses.
+        struct Done {
+            fs::path from;
+            fs::path to;
+            // The contents before a rewrite of to, for a rewrite rather than a rename
+            std::optional<QByteArray> contents;
+        };
+
+        bool writeBytes(const fs::path &path, const QByteArray &bytes) {
+            QSaveFile file(QString::fromStdU16String(path.u16string()));
+            return file.open(QIODevice::WriteOnly) && file.write(bytes) == bytes.size() &&
+                   file.commit();
+        }
+
+        std::optional<QByteArray> readBytes(const fs::path &path) {
+            std::ifstream in(path, std::ios::binary);
+            if (!in) {
+                return std::nullopt;
+            }
+            const std::string bytes((std::istreambuf_iterator<char>(in)),
+                                    std::istreambuf_iterator<char>());
+            return QByteArray(bytes.data(), qsizetype(bytes.size()));
+        }
+
+    }
+
+    bool VoiceBankFileSystemState::renameOnDisk(const fs::path &root,
+                                                const QList<NameChanges> &changes,
+                                                DiagnosticList &diagnostics) {
+        // The changes of each directory merged, as they are checked and executed together
+        QList<NameChanges> merged;
+        for (const auto &change : changes) {
+            const auto it = std::find_if(merged.begin(), merged.end(), [&change](const auto &m) {
+                return m.directory == change.directory;
+            });
+            if (it == merged.end()) {
+                merged.push_back(change);
+            } else {
+                it->renames += change.renames;
+                it->files += change.files;
+            }
+        }
+
+        // The renames of each directory, of its names and of the files that follow them
+        std::vector<std::pair<fs::path, QList<Rename>>> renames;
+        bool valid = true;
+        for (const auto &change : std::as_const(merged)) {
+            const auto directory = root / change.directory;
+            std::error_code error;
+            if (!fs::is_directory(directory, error)) {
+                fail(diagnostics,
+                     tr("The folder \"%1\" does not exist.").arg(displayed(change.directory)));
+                valid = false;
+                continue;
+            }
+            auto all = change.renames;
+            for (const auto &file : change.files) {
+                if (file.kind == FrequencyFormat::FileChange::Rename) {
+                    all.push_back({file.path, file.to});
+                } else if (!fs::is_regular_file(directory / file.path, error)) {
+                    fail(diagnostics, tr("\"%1\" does not exist.")
+                                          .arg(displayed(change.directory / file.path)));
+                    valid = false;
+                }
+            }
+
+            // The names of the directory after the renames, each of which must be unique
+            std::map<QString, fs::path> names;
+            for (const auto &entry : fs::directory_iterator(directory, error)) {
+                names[nameKeyOf(entry.path().filename())] = entry.path().filename();
+            }
+            for (const auto &rename : std::as_const(all)) {
+                if (!fs::exists(fs::symlink_status(directory / rename.from, error))) {
+                    fail(diagnostics, tr("\"%1\" does not exist.")
+                                          .arg(displayed(change.directory / rename.from)));
+                    valid = false;
+                }
+                if (!isValidName(rename.to)) {
+                    fail(diagnostics,
+                         tr("\"%1\" is no valid file name.").arg(displayed(rename.to)));
+                    valid = false;
+                }
+                names.erase(nameKeyOf(rename.from));
+            }
+            for (const auto &rename : std::as_const(all)) {
+                if (!names.emplace(nameKeyOf(rename.to), rename.to).second) {
+                    fail(diagnostics, tr("\"%1\" would be the name of two files in the folder "
+                                         "\"%2\".")
+                                          .arg(displayed(rename.to), displayed(change.directory)));
+                    valid = false;
+                }
+            }
+            renames.emplace_back(change.directory, all);
+        }
+        if (!valid) {
+            return false;
+        }
+
+        // The undo of the changes made so far, in reverse order
+        std::vector<Done> done;
+        const auto undo = [&] {
+            for (auto it = done.rbegin(); it != done.rend(); ++it) {
+                std::error_code error;
+                if (it->contents) {
+                    if (!writeBytes(it->to, *it->contents)) {
+                        fail(diagnostics, tr("\"%1\" could not be restored.").arg(displayed(it->to)));
+                    }
+                    continue;
+                }
+                fs::rename(it->to, it->from, error);
+                if (error) {
+                    fail(diagnostics, tr("\"%1\" could not be renamed back to \"%2\".")
+                                          .arg(displayed(it->to), displayed(it->from)));
+                }
+            }
+        };
+
+        // The deepest directories first, as their paths contain the names of the shallower
+        std::vector<size_t> order(renames.size());
+        for (size_t i = 0; i < order.size(); ++i) {
+            order[i] = i;
+        }
+        std::stable_sort(order.begin(), order.end(), [&renames](size_t a, size_t b) {
+            return std::distance(renames[a].first.begin(), renames[a].first.end()) >
+                   std::distance(renames[b].first.begin(), renames[b].first.end());
+        });
+        int temporary = 0;
+        for (const auto i : order) {
+            const auto directory = root / renames[i].first;
+            std::vector<fs::path> passing;
+            for (const auto &rename : std::as_const(renames[i].second)) {
+                fs::path through;
+                std::error_code error;
+                do {
+                    through = directory / ("hello-rename-" + std::to_string(temporary++));
+                } while (fs::exists(fs::symlink_status(through, error)));
+                fs::rename(directory / rename.from, through, error);
+                if (error) {
+                    fail(diagnostics, tr("\"%1\" could not be renamed, so every name was changed "
+                                         "back.")
+                                          .arg(displayed(renames[i].first / rename.from)));
+                    undo();
+                    return false;
+                }
+                done.push_back({directory / rename.from, through, std::nullopt});
+                passing.push_back(through);
+            }
+            for (qsizetype k = 0; k < renames[i].second.size(); ++k) {
+                const auto &rename = renames[i].second.at(k);
+                std::error_code error;
+                fs::rename(passing[size_t(k)], directory / rename.to, error);
+                if (error) {
+                    fail(diagnostics, tr("\"%1\" could not be renamed, so every name was changed "
+                                         "back.")
+                                          .arg(displayed(renames[i].first / rename.from)));
+                    undo();
+                    return false;
+                }
+                done.push_back({passing[size_t(k)], directory / rename.to, std::nullopt});
+            }
+        }
+
+        // The rewrites, after every rename, as a rewritten file such as desc.mrq names the files
+        for (const auto &change : std::as_const(merged)) {
+            for (const auto &file : change.files) {
+                if (file.kind != FrequencyFormat::FileChange::Rewrite) {
+                    continue;
+                }
+                const auto path = root / change.directory / file.path;
+                const auto before = readBytes(path);
+                if (!before || !writeBytes(path, file.contents)) {
+                    fail(diagnostics, tr("\"%1\" could not be written, so every name was changed "
+                                         "back.")
+                                          .arg(displayed(change.directory / file.path)));
+                    undo();
+                    return false;
+                }
+                done.push_back({path, path, before});
+            }
+        }
+        return true;
+    }
+
 }

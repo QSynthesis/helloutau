@@ -4616,6 +4616,38 @@ Write them again without these chunks? The audio stays the same. The files are w
         <source>The original folder could not be read, so not every file is copied.</source>
         <translation>无法读取原文件夹，因此未复制全部文件。</translation>
     </message>
+    <message>
+        <source>The folder &quot;%1&quot; does not exist.</source>
+        <translation>文件夹「%1」不存在。</translation>
+    </message>
+    <message>
+        <source>&quot;%1&quot; does not exist.</source>
+        <translation>「%1」不存在。</translation>
+    </message>
+    <message>
+        <source>&quot;%1&quot; is no valid file name.</source>
+        <translation>「%1」不是有效的文件名。</translation>
+    </message>
+    <message>
+        <source>&quot;%1&quot; would be the name of two files in the folder &quot;%2&quot;.</source>
+        <translation>文件夹「%2」中将有两个文件同名为「%1」。</translation>
+    </message>
+    <message>
+        <source>&quot;%1&quot; could not be restored.</source>
+        <translation>无法恢复「%1」。</translation>
+    </message>
+    <message>
+        <source>&quot;%1&quot; could not be renamed back to &quot;%2&quot;.</source>
+        <translation>无法把「%1」改回「%2」。</translation>
+    </message>
+    <message>
+        <source>&quot;%1&quot; could not be renamed, so every name was changed back.</source>
+        <translation>无法为「%1」改名，所有名字已改回。</translation>
+    </message>
+    <message>
+        <source>&quot;%1&quot; could not be written, so every name was changed back.</source>
+        <translation>无法写入「%1」，所有名字已改回。</translation>
+    </message>
 </context>
 <context>
     <name>hello::kit::VoiceBankSession</name>

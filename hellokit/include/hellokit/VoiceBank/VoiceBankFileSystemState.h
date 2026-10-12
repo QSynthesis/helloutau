@@ -16,6 +16,7 @@
 
 #include <hellokit/Support/Diagnostic.h>
 
+#include <hellokit/VoiceBank/FrequencyFormat.h>
 #include <hellokit/VoiceBank/HelloKitVoiceBankGlobal.h>
 #include <hellokit/VoiceBank/VoiceBank.h>
 #include <hellokit/VoiceBank/VoiceBankConfiguration.h>
@@ -151,6 +152,44 @@ namespace hello::kit {
         static std::optional<Opened> saveAs(const VoiceBank &bank,
                                             const std::filesystem::path &folder,
                                             bool copyOtherFiles, DiagnosticList &diagnostics);
+
+        /// The rename of a file or a folder in its directory.
+        struct Rename {
+            /// The name on disk
+            std::filesystem::path from;
+            /// The new name
+            std::filesystem::path to;
+        };
+
+        /// The changes of the names on disk in one directory, which renameOnDisk() executes.
+        struct NameChanges {
+            /// The directory, relative to the root, under its path on disk before any change
+            std::filesystem::path directory;
+            /// The renames of the audio files and the subdirectories of the directory
+            QList<Rename> renames;
+            /// The changes of other files of the directory that follow the renames, such as
+            /// those of the frequency maps that FrequencyFormat::changesFollowing() returns
+            QList<FrequencyFormat::FileChange> files;
+        };
+
+        /// Executes \a changes in the voice bank at \a root , a conversion of misdecoded names
+        /// that the caller follows by reading the voice bank again. See the section on the
+        /// conversion of names in docs/Editing.md.
+        ///
+        /// All checks precede the first change, and a single failure leaves the disk unchanged.
+        /// A name that does not exist, a new name that is no valid file name on Windows, a new
+        /// name that another file of the directory keeps or receives as well, and a rewritten
+        /// file that does not exist are refused, each listed in \a diagnostics . Names are
+        /// compared in Normalization Form C, and without case on Windows and macOS.
+        ///
+        /// The directories are changed from the deepest, so that the path of a directory remains
+        /// valid until its own turn. The names of a directory pass through temporary names, so
+        /// that two files may exchange their names. If a change fails partway through, every
+        /// change made so far is undone in reverse order.
+        ///
+        /// \return whether every change was made
+        static bool renameOnDisk(const std::filesystem::path &root,
+                                 const QList<NameChanges> &changes, DiagnosticList &diagnostics);
 
         /// Rereads the directory at \a directory of \a bank from disk in \a charset .
         ///
