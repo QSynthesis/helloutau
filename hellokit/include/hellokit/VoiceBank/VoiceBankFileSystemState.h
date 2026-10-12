@@ -189,7 +189,7 @@ namespace hello::kit {
             /// The renames of the audio files and the subdirectories of the directory
             QList<Rename> renames;
             /// The changes of other files of the directory that follow the renames, such as
-            /// those of the frequency maps that FrequencyFormat::changesFollowing() returns
+            /// those of the frequency maps that FrequencyFormat::changesRenaming() returns
             QList<FrequencyFormat::FileChange> files;
         };
 

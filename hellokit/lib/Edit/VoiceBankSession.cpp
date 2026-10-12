@@ -288,7 +288,7 @@ namespace hello::kit {
                 }
                 for (const auto format : formats->formats()) {
                     DiagnosticList reasons;
-                    if (const auto files = format->changesFollowing(directory, audio, reasons)) {
+                    if (const auto files = format->changesRenaming(directory, audio, reasons)) {
                         change.files += *files;
                     } else if (format->mapsExist(directory, renamedAudio).contains(true)) {
                         diagnostics += reasons;

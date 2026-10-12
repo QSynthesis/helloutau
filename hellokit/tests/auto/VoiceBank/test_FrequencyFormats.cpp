@@ -275,7 +275,7 @@ private Q_SLOTS:
 
         DiagnosticList diagnostics;
         const auto frq =
-            formats.format(QStringLiteral("frq"))->changesFollowing(directory, renames, diagnostics);
+            formats.format(QStringLiteral("frq"))->changesRenaming(directory, renames, diagnostics);
         QVERIFY(frq);
         QCOMPARE(frq->size(), 1);
         QCOMPARE(frq->at(0).kind, FrequencyFormat::FileChange::Rename);
@@ -285,7 +285,7 @@ private Q_SLOTS:
         // The caches of world4utau beside the dio follow it.
         write(directory / fs::path(u"偁.star"), "star");
         const auto dio =
-            formats.format(QStringLiteral("dio"))->changesFollowing(directory, renames, diagnostics);
+            formats.format(QStringLiteral("dio"))->changesRenaming(directory, renames, diagnostics);
         QVERIFY(dio);
         QCOMPARE(dio->size(), 2);
         QCOMPARE(dio->at(0).path, fs::path(u"偁.dio"));
@@ -314,21 +314,23 @@ private Q_SLOTS:
         QVERIFY(fs::exists(directory / "a.wav"));
     }
 
-    // A format whose maps do not follow renames says so, which the caller reports. desc.mrq
-    // names its entries in an encoding that is yet to be measured.
+    // A format whose maps cannot be renamed returns the reason, which the caller reports. The
+    // encoding in which moresampler names the entries of desc.mrq is yet to be measured.
     void a_format_without_renames_reports_it() {
         FrequencyFormats formats;
         const BuiltinFrequencyFormats builtins(formats.registry());
+        const QList<FrequencyFormat::AudioRename> renames{
+            {"a.wav", "b.wav"}
+        };
         DiagnosticList diagnostics;
         QVERIFY(!formats.format(QStringLiteral("mrq"))
-                     ->changesFollowing(pathOf("r"), {{"a.wav", "b.wav"}}, diagnostics));
+                     ->changesRenaming(pathOf("r"), renames, diagnostics));
         QCOMPARE(diagnostics.size(), 1);
         QCOMPARE(diagnostics.at(0).severity, DiagnosticSeverity::Warning);
         QVERIFY(diagnostics.at(0).message.contains(QStringLiteral("mrq (moresampler)")));
 
         diagnostics.clear();
-        QVERIFY(!Fixed(QStringLiteral("x")).changesFollowing(pathOf("r"), {{"a.wav", "b.wav"}},
-                                                             diagnostics));
+        QVERIFY(!Fixed(QStringLiteral("x")).changesRenaming(pathOf("r"), renames, diagnostics));
         QCOMPARE(diagnostics.size(), 1);
     }
 
@@ -346,10 +348,12 @@ private Q_SLOTS:
         };
         QDir(m_dir.path()).mkdir(QStringLiteral("p"));
         write(pathOf("p") / "a.pmk", "pmk");
+        const QList<FrequencyFormat::AudioRename> renames{
+            {"a.wav", "b.wav"},
+            {"c.wav", "d.wav"},
+        };
         DiagnosticList diagnostics;
-        const auto changes =
-            Pmk().changesFollowing(pathOf("p"), {{"a.wav", "b.wav"}, {"c.wav", "d.wav"}},
-                                   diagnostics);
+        const auto changes = Pmk().changesRenaming(pathOf("p"), renames, diagnostics);
         QVERIFY(changes);
         QCOMPARE(changes->size(), 1);
         QCOMPARE(changes->at(0).path, fs::path("a.pmk"));

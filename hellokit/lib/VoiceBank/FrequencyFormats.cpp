@@ -44,9 +44,9 @@ namespace hello::kit {
     }
 
     std::optional<QList<FrequencyFormat::FileChange>>
-        FrequencyFormat::changesFollowing(const std::filesystem::path &directory,
-                                          const QList<AudioRename> &renames,
-                                          DiagnosticList &diagnostics) const {
+        FrequencyFormat::changesRenaming(const std::filesystem::path &directory,
+                                         const QList<AudioRename> &renames,
+                                         DiagnosticList &diagnostics) const {
         QList<FileChange> changes;
         for (const auto &rename : renames) {
             const auto from = sidecarNameOf(rename.from);
@@ -54,7 +54,7 @@ namespace hello::kit {
             if (!from || !to) {
                 diagnostics.push_back(
                     {DiagnosticSeverity::Warning,
-                     tr("The maps of the format %1 do not follow renamed audio files.")
+                     tr("The maps of the format %1 cannot be renamed with their audio files.")
                          .arg(name())});
                 return std::nullopt;
             }

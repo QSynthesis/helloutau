@@ -232,9 +232,9 @@ namespace hello::kit {
             // world4utau writes beside it as a.star and a.platinum (writeSTARParam() and
             // writePlatinumParam() in the source above).
             std::optional<QList<FileChange>>
-                changesFollowing(const std::filesystem::path &directory,
-                                 const QList<AudioRename> &renames,
-                                 DiagnosticList &diagnostics) const override {
+                changesRenaming(const std::filesystem::path &directory,
+                                const QList<AudioRename> &renames,
+                                DiagnosticList &diagnostics) const override {
                 Q_UNUSED(diagnostics);
                 QList<FileChange> changes;
                 for (const auto &rename : renames) {

@@ -97,7 +97,7 @@ namespace hello::kit {
         virtual std::optional<std::filesystem::path>
             sidecarNameOf(const std::filesystem::path &wav) const;
 
-        /// Returns the changes of the maps of this format that follow \a renames, all renames
+        /// Returns the changes that rename the maps of this format after \a renames, all renames
         /// of audio files in the directory \a directory at once, so that a file that holds the
         /// maps of several audio files changes once. An audio file without a map needs no
         /// change. The caller executes the changes together with the renames.
@@ -110,8 +110,8 @@ namespace hello::kit {
         ///         cannot be determined, which the default implementation returns if
         ///         sidecarNameOf() names no sidecar file
         virtual std::optional<QList<FileChange>>
-            changesFollowing(const std::filesystem::path &directory,
-                             const QList<AudioRename> &renames, DiagnosticList &diagnostics) const;
+            changesRenaming(const std::filesystem::path &directory,
+                            const QList<AudioRename> &renames, DiagnosticList &diagnostics) const;
 
         /// Returns the changes that remove the maps of this format of the audio files \a wavs,
         /// names in the directory \a directory, at once. An audio file without a map needs no

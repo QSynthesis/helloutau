@@ -3768,8 +3768,8 @@ Write them again without these chunks? The audio stays the same. The files are w
         <translation>「%1」不是该格式的频率表，或文件不完整。</translation>
     </message>
     <message>
-        <source>The maps of the format %1 do not follow renamed audio files.</source>
-        <translation>格式 %1 的表不随音频文件改名。</translation>
+        <source>The maps of the format %1 cannot be renamed with their audio files.</source>
+        <translation>格式 %1 的频率表无法随音频文件改名。</translation>
     </message>
     <message>
         <source>The maps of the format %1 cannot be removed.</source>
