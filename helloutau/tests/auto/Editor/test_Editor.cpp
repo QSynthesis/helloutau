@@ -2643,6 +2643,64 @@ private Q_SLOTS:
                  QStringList{QStringLiteral("hello::daw::VoiceBankCharsetDialog")});
     }
 
+    // A folder is shown under its logical name, which the record of its parent gives, in the tree
+    // and in the column of the folders, and follows a change of the record. 偆 is う in
+    // Shift_JIS read as GBK.
+    void a_folder_is_shown_under_its_logical_name() {
+        QTemporaryDir dir;
+        const auto bank = voiceBank(dir);
+        const auto misdecoded = fs::path(u"偆");
+        fs::create_directories(bank / misdecoded);
+        writeFile(bank / misdecoded / "oto.ini", "#Charset:UTF-8\r\nz.wav=z,1,2,3,4,5\r\n");
+        writeFile(bank / misdecoded / "z.wav", "");
+        writeFile(bank / "hello-config.json",
+                  R"({"$format":"hello-voicebank","charset":"UTF-8",
+                  "fileNameEncoding":{"original":"Shift_JIS","misdecodedAs":"GBK"}})");
+
+        const auto e = editor();
+        const auto window = e->openVoiceBank(bank);
+        QVERIFY(window);
+        const auto tree = window->directoryTree();
+        const auto subfolders = [tree] {
+            QStringList names;
+            const auto root = tree->topLevelItem(1);
+            for (int i = 0; root && i < root->childCount(); ++i) {
+                names.push_back(root->child(i)->text(0));
+            }
+            return names;
+        };
+        QCOMPARE(subfolders(), (QStringList{QStringLiteral("sub"), QString::fromUtf8("う")}));
+        const auto model = window->entryModel();
+        int row = 0;
+        while (row < model->rowCount() &&
+               model->index(row, VoiceBankEntryModel::FileColumn).data() !=
+                   QStringLiteral("z.wav")) {
+            ++row;
+        }
+        QVERIFY(row < model->rowCount());
+        QCOMPARE(model->index(row, VoiceBankEntryModel::DirectoryColumn).data().toString(),
+                 QString::fromUtf8("う"));
+
+        const auto session = window->document()->session();
+        QVERIFY(window->determineFileNames({
+            {fs::path(), kit::VoiceBankConfig::FileNameEncoding()}
+        }));
+        QCOMPARE(subfolders(), (QStringList{QStringLiteral("sub"), QString::fromUtf8("偆")}));
+        session->undo();
+        QCOMPARE(subfolders(), (QStringList{QStringLiteral("sub"), QString::fromUtf8("う")}));
+
+        // A message names a folder under its logical name as well. 偄 is い.
+        fs::create_directories(bank / fs::path(u"偄"));
+        writeFile(bank / fs::path(u"偄") / "oto.ini", "#Charset:UTF-8\r\nw.wav=w,1,2,3,4,5\r\n");
+        window->checkDisk();
+        QString bar;
+        for (const auto label : window->changeBar()->findChildren<QLabel *>()) {
+            bar += label->text();
+        }
+        QVERIFY(bar.contains(QString::fromUtf8("い")));
+        QVERIFY(!bar.contains(QString::fromUtf8("偄")));
+    }
+
     // The folders are read again in the encodings chosen in one dialog, the changed folders only,
     // as one undo step. A folder whose oto.ini declares UTF-8 is not listed.
     void the_folders_are_read_again_in_encodings() {

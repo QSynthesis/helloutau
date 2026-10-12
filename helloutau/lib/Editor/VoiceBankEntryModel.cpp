@@ -30,10 +30,6 @@ namespace hello::daw {
 #endif
         }
 
-        QString directoryText(const std::filesystem::path &path) {
-            return QString::fromStdU16String(path.generic_u16string());
-        }
-
         // The name under which an entry is matched, as the validation of the edit layer counts
         // it: the alias, or the stem of the file name without one
         QString matchedName(const kit::VoiceOtoEntry &entry) {
@@ -325,7 +321,8 @@ namespace hello::daw {
             case Qt::EditRole:
                 switch (index.column()) {
                     case DirectoryColumn:
-                        return directoryText(row.directory);
+                        return QString::fromStdU16String(
+                            impl.session->logicalPathOf(row.directory).generic_u16string());
                     case FileColumn:
                         return row.entry.fileName;
                     case AliasColumn:

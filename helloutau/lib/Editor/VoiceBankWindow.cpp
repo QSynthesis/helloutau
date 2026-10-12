@@ -213,9 +213,10 @@ namespace hello::daw {
         };
         std::map<std::filesystem::path, ReadAudio> readAudio;
 
-        // The folders the tree shows, to rebuild it only when they change
+        // The folders the tree shows and their logical paths, to rebuild it only when they change
         QList<std::filesystem::path> shownDirectories;
         QList<std::filesystem::path> shownExcluded;
+        QList<std::filesystem::path> shownLogical;
 
         static QString tr(const char *text) {
             return VoiceBankWindow::tr(text);
@@ -603,11 +604,12 @@ namespace hello::daw {
                              [this](QTreeWidgetItem *item) { showDirectoryOf(item); });
         }
 
-        // The name of folder directory of the voice bank in a message
+        // The name of folder directory of the voice bank in a message, its logical path
         QString folderName(const std::filesystem::path &directory) const {
             return directory.empty()
                        ? QString::fromStdU16String(document->rootPath().filename().u16string())
-                       : QDir::toNativeSeparators(QString::fromStdU16String(directory.u16string()));
+                       : QDir::toNativeSeparators(QString::fromStdU16String(
+                             document->session()->logicalPathOf(directory).u16string()));
         }
 
         QString folderNames(const QList<std::filesystem::path> &directories) const {
@@ -1725,7 +1727,9 @@ namespace hello::daw {
                     prefixMap.insert(noteNum, map.value(noteNum));
                 }
             }
-            synthesizedPitch = SamplePreview::noteNumFor(prefixMap, key.first, key.second);
+            // The prefix map names folders by their logical paths, as it is read in an encoding.
+            synthesizedPitch = SamplePreview::noteNumFor(
+                prefixMap, document->session()->logicalPathOf(key.first), key.second);
             if (pitchBox) {
                 pitchBox->setCurrentIndex(pitchBox->findData(synthesizedPitch));
             }
@@ -1753,12 +1757,18 @@ namespace hello::daw {
             for (const auto &directory : document->session()->excludedDirectories()) {
                 excluded.push_back(directory.path);
             }
+            // A folder is shown under its logical name, which a record of its parent changes.
+            QList<std::filesystem::path> logical;
+            for (const auto &path : directories + excluded) {
+                logical.push_back(document->session()->logicalPathOf(path));
+            }
             if (directories == shownDirectories && excluded == shownExcluded &&
-                tree->topLevelItemCount() > 0) {
+                logical == shownLogical && tree->topLevelItemCount() > 0) {
                 return;
             }
             shownDirectories = directories;
             shownExcluded = excluded;
+            shownLogical = logical;
 
             const auto chosen = model->directory();
             const QSignalBlocker blocker(tree);
@@ -1776,7 +1786,8 @@ namespace hello::daw {
                     const auto parentKey =
                         QString::fromStdU16String(path.parent_path().generic_u16string());
                     parent = items.value(parentKey);
-                    label = QString::fromStdU16String(path.filename().u16string());
+                    label = QString::fromStdU16String(
+                        document->session()->logicalPathOf(path).filename().u16string());
                 }
                 auto item = parent ? new QTreeWidgetItem(parent, {label})
                                    : new QTreeWidgetItem(tree, {label});
