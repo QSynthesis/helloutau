@@ -2057,7 +2057,7 @@ namespace hello::daw {
                 continue;
             }
             if (!source->config) {
-                source->config = kit::VoiceBankConfig();
+                source->config = kit::VoiceBankConfiguration();
             }
             source->config->fileNameEncoding = record;
             if (!kit::MisdecodedNameQuestion::of(*source, directory.charset())) {
@@ -2083,7 +2083,8 @@ namespace hello::daw {
         if (dialog.exec() != QDialog::Accepted) {
             return false;
         }
-        QList<std::pair<std::filesystem::path, kit::VoiceBankConfig::FileNameEncoding>> records;
+        QList<std::pair<std::filesystem::path, kit::VoiceBankConfiguration::FileNameEncoding>>
+            records;
         const auto answers = dialog.answers();
         for (qsizetype i = 0; i < answers.size(); ++i) {
             if (answers.at(i).fileNameEncoding) {
@@ -2094,7 +2095,7 @@ namespace hello::daw {
     }
 
     bool VoiceBankWindow::determineFileNames(
-        const QList<std::pair<std::filesystem::path, kit::VoiceBankConfig::FileNameEncoding>>
+        const QList<std::pair<std::filesystem::path, kit::VoiceBankConfiguration::FileNameEncoding>>
             &records) {
         stdc_impl_t;
         kit::DiagnosticList diagnostics;

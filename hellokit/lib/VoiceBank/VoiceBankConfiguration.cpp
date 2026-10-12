@@ -1,4 +1,4 @@
-#include "VoiceBankConfig.h"
+#include "VoiceBankConfiguration.h"
 
 #include <algorithm>
 #include <fstream>
@@ -70,8 +70,8 @@ namespace hello::kit {
 
     }
 
-    std::optional<VoiceBankConfig::FileNameEncoding>
-        VoiceBankConfig::FileNameEncoding::fromJson(const QJsonValue &json) {
+    std::optional<VoiceBankConfiguration::FileNameEncoding>
+        VoiceBankConfiguration::FileNameEncoding::fromJson(const QJsonValue &json) {
         if (!json.isObject()) {
             return std::nullopt;
         }
@@ -108,7 +108,7 @@ namespace hello::kit {
         return record;
     }
 
-    QJsonObject VoiceBankConfig::FileNameEncoding::toJson() const {
+    QJsonObject VoiceBankConfiguration::FileNameEncoding::toJson() const {
         QJsonObject object;
         if (isAsIs()) {
             return object;
@@ -127,7 +127,7 @@ namespace hello::kit {
     }
 
     std::optional<QString>
-        VoiceBankConfig::FileNameEncoding::restore(const QString &physical) const {
+        VoiceBankConfiguration::FileNameEncoding::restore(const QString &physical) const {
         const auto name = physical.normalized(QString::NormalizationForm_C);
         if (isAscii(name)) {
             return std::nullopt;
@@ -149,7 +149,7 @@ namespace hello::kit {
         return restored;
     }
 
-    QString VoiceBankConfig::FileNameEncoding::logicalNameOf(const QString &physical) const {
+    QString VoiceBankConfiguration::FileNameEncoding::logicalNameOf(const QString &physical) const {
         if (!files) {
             return restore(physical).value_or(physical);
         }
@@ -162,8 +162,9 @@ namespace hello::kit {
         return listed ? restore(physical).value_or(physical) : physical;
     }
 
-    std::optional<VoiceBankConfig> VoiceBankConfig::open(const std::filesystem::path &path,
-                                                         DiagnosticList &diagnostics) {
+    std::optional<VoiceBankConfiguration>
+        VoiceBankConfiguration::open(const std::filesystem::path &path,
+                                     DiagnosticList &diagnostics) {
         std::ifstream in(path, std::ios::binary);
         if (!in) {
             fail(diagnostics, tr("This file could not be opened."));
@@ -174,8 +175,8 @@ namespace hello::kit {
         return fromJson(QByteArrayView(bytes.data(), qsizetype(bytes.size())), diagnostics);
     }
 
-    bool VoiceBankConfig::save(const std::filesystem::path &path,
-                               DiagnosticList &diagnostics) const {
+    bool VoiceBankConfiguration::save(const std::filesystem::path &path,
+                                      DiagnosticList &diagnostics) const {
         const auto bytes = toJson();
 
         std::ofstream out(path, std::ios::binary | std::ios::trunc);
@@ -191,8 +192,8 @@ namespace hello::kit {
         return true;
     }
 
-    std::optional<VoiceBankConfig> VoiceBankConfig::fromJson(QByteArrayView json,
-                                                             DiagnosticList &diagnostics) {
+    std::optional<VoiceBankConfiguration>
+        VoiceBankConfiguration::fromJson(QByteArrayView json, DiagnosticList &diagnostics) {
         QJsonParseError error{};
         const auto document = QJsonDocument::fromJson(json.toByteArray(), &error);
         if (error.error != QJsonParseError::NoError) {
@@ -210,7 +211,7 @@ namespace hello::kit {
             return std::nullopt;
         }
 
-        VoiceBankConfig config;
+        VoiceBankConfiguration config;
         config.charset = root.value(QLatin1String(KeyCharset)).toString();
 
         root.remove(QLatin1String(KeyFormat));
@@ -232,7 +233,7 @@ namespace hello::kit {
         return config;
     }
 
-    QByteArray VoiceBankConfig::toJson() const {
+    QByteArray VoiceBankConfiguration::toJson() const {
         QJsonObject root = unknownFields;
         root.insert(QLatin1String(KeyFormat), QLatin1String(FormatName));
         root.insert(QLatin1String(KeyCharset), charset);

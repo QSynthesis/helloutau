@@ -169,12 +169,13 @@ namespace hello::kit {
         edit::NodeAccess::setValue(*this, VoiceDirectorySlots::Charset, charset);
     }
 
-    std::optional<VoiceBankConfig::FileNameEncoding> VoiceDirectoryRef::fileNameEncoding() const {
+    std::optional<VoiceBankConfiguration::FileNameEncoding>
+        VoiceDirectoryRef::fileNameEncoding() const {
         return edit::NodeAccess::value(*this, VoiceDirectorySlots::FileNameEncoding);
     }
 
     void VoiceDirectoryRef::setFileNameEncoding(
-        const std::optional<VoiceBankConfig::FileNameEncoding> &fileNameEncoding) const {
+        const std::optional<VoiceBankConfiguration::FileNameEncoding> &fileNameEncoding) const {
         edit::NodeAccess::setValue(*this, VoiceDirectorySlots::FileNameEncoding, fileNameEncoding);
     }
 

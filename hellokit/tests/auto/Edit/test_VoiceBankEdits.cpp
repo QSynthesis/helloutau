@@ -274,10 +274,11 @@ private Q_SLOTS:
     void a_file_name_encoding_is_set() {
         const auto root = directory({});
         QVERIFY(!root.fileNameEncoding().has_value());
-        VoiceBankConfig::FileNameEncoding record;
+        VoiceBankConfiguration::FileNameEncoding record;
         record.original = QStringLiteral("shift_jis");
         record.misdecodedAs = QStringLiteral("gbk");
-        record.files = VoiceBankConfig::FileNameEncoding::Files{{QString::fromUtf8("偁.wav")}, {}};
+        record.files =
+            VoiceBankConfiguration::FileNameEncoding::Files{{QString::fromUtf8("偁.wav")}, {}};
         DiagnosticList diagnostics;
         QVERIFY(VoiceBankEdits::setFileNameEncoding(root, record, diagnostics));
         QCOMPARE(m_session->undoMessage(), QStringLiteral("Set File Name Encoding"));
@@ -311,8 +312,8 @@ private Q_SLOTS:
             },
             QStringLiteral("is not available"));
 
-        VoiceBankConfig::FileNameEncoding asIs;
-        asIs.files = VoiceBankConfig::FileNameEncoding::Files();
+        VoiceBankConfiguration::FileNameEncoding asIs;
+        asIs.files = VoiceBankConfiguration::FileNameEncoding::Files();
         verifyRefused(
             [&](DiagnosticList &diagnostics) {
                 return VoiceBankEdits::setFileNameEncoding(root, asIs, diagnostics);
@@ -324,9 +325,10 @@ private Q_SLOTS:
     void a_record_without_encodings_is_set() {
         const auto root = directory({});
         DiagnosticList diagnostics;
-        QVERIFY(VoiceBankEdits::setFileNameEncoding(root, VoiceBankConfig::FileNameEncoding(),
-                                                    diagnostics));
-        QCOMPARE(root.fileNameEncoding(), std::optional(VoiceBankConfig::FileNameEncoding()));
+        QVERIFY(VoiceBankEdits::setFileNameEncoding(
+            root, VoiceBankConfiguration::FileNameEncoding(), diagnostics));
+        QCOMPARE(root.fileNameEncoding(),
+                 std::optional(VoiceBankConfiguration::FileNameEncoding()));
         QCOMPARE(m_session->currentStep(), 1);
         QVERIFY(VoiceBankEdits::setFileNameEncoding(root, std::nullopt, diagnostics));
         QVERIFY(!root.fileNameEncoding().has_value());

@@ -67,7 +67,7 @@ namespace hello::kit {
             return edit::SlotValue<OtoSpellings>::toVariant(spellings);
         }
 
-        using FileNameEncoding = VoiceBankConfig::FileNameEncoding;
+        using FileNameEncoding = VoiceBankConfiguration::FileNameEncoding;
 
         // The record as in hello-config.json, see docs/note.md.
         QJsonValue fileNameEncodingToJson(const QVariant &value) {
@@ -96,7 +96,7 @@ namespace hello::kit {
     }
 
     template <>
-    constexpr const edit::ValueFormat &edit::formatOf<VoiceBankConfig::FileNameEncoding>() {
+    constexpr const edit::ValueFormat &edit::formatOf<VoiceBankConfiguration::FileNameEncoding>() {
         return fileNameEncodingFormat;
     }
 

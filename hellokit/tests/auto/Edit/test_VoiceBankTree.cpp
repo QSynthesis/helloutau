@@ -201,10 +201,10 @@ private Q_SLOTS:
         auto opened = openRichBank();
         QVERIFY(opened.has_value());
         auto &bank = opened->bank;
-        VoiceBankConfig::FileNameEncoding record;
+        VoiceBankConfiguration::FileNameEncoding record;
         record.original = QStringLiteral("Shift_JIS");
         record.misdecodedAs = QStringLiteral("GBK");
-        record.files = VoiceBankConfig::FileNameEncoding::Files{
+        record.files = VoiceBankConfiguration::FileNameEncoding::Files{
             {QString::fromUtf8("偁.wav")},
             {QString::fromUtf8("が.wav"), QString::fromUtf8("新")}
         };
@@ -214,13 +214,13 @@ private Q_SLOTS:
         // The record without encodings is distinct from no record.
         const int sub = bank.indexOf("sub");
         auto second = bank.directories().at(sub);
-        second.fileNameEncoding = VoiceBankConfig::FileNameEncoding();
+        second.fileNameEncoding = VoiceBankConfiguration::FileNameEncoding();
         bank.setDirectory(sub, second);
 
         const auto back = voiceBankOf(treeOf(bank).get(), opened->files);
         QCOMPARE(back.directories().at(0).fileNameEncoding, std::optional(record));
         QCOMPARE(back.directories().at(back.indexOf("sub")).fileNameEncoding,
-                 std::optional(VoiceBankConfig::FileNameEncoding()));
+                 std::optional(VoiceBankConfiguration::FileNameEncoding()));
         QVERIFY(!back.directories()
                      .at(back.indexOf(fs::path("sub") / "inner"))
                      .fileNameEncoding.has_value());

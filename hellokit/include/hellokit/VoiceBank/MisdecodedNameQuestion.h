@@ -9,7 +9,7 @@
 #include <QtCore/QStringList>
 
 #include <hellokit/VoiceBank/HelloKitVoiceBankGlobal.h>
-#include <hellokit/VoiceBank/VoiceBankConfig.h>
+#include <hellokit/VoiceBank/VoiceBankConfiguration.h>
 #include <hellokit/VoiceBank/VoiceBankSource.h>
 
 namespace hello::kit {
@@ -125,7 +125,7 @@ namespace hello::kit {
         /// misdecoded and every other name of choices() as correct, together with the names of
         /// the record, and with every name that does not restore as correct. The record has no
         /// encodings if no name is misdecoded, and no lists if no correct name restores.
-        VoiceBankConfig::FileNameEncoding answer(const QStringList &misdecoded) const;
+        VoiceBankConfiguration::FileNameEncoding answer(const QStringList &misdecoded) const;
 
     private:
         MisdecodedNameQuestion() = default;
@@ -137,7 +137,7 @@ namespace hello::kit {
                      const QStringList &missing);
 
         std::filesystem::path m_directory;
-        VoiceBankConfig::FileNameEncoding m_record;
+        VoiceBankConfiguration::FileNameEncoding m_record;
         Basis m_basis = None;
         int m_found = 0;
         int m_missing = 0;

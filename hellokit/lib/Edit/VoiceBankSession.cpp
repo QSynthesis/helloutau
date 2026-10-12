@@ -101,7 +101,7 @@ namespace hello::kit {
 
     }
 
-    std::optional<VoiceBankConfig::FileNameEncoding>
+    std::optional<VoiceBankConfiguration::FileNameEncoding>
         VoiceBankSession::fileNameEncodingOf(const std::filesystem::path &directory) const {
         const auto &directories = directoriesOf(*this);
         const int index = indexIn(directories, directory);

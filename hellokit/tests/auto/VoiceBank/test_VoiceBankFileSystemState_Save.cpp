@@ -206,7 +206,7 @@ private Q_SLOTS:
 
         // Recorded, so that the next open decodes it as GBK without querying the user.
         DiagnosticList ignored;
-        const auto config = VoiceBankConfig::open(root() / "hello-config.json", ignored);
+        const auto config = VoiceBankConfiguration::open(root() / "hello-config.json", ignored);
         QVERIFY(config.has_value());
         QCOMPARE(config->charset, TextCodec(QStringLiteral("GBK")).name());
     }
@@ -387,7 +387,7 @@ private Q_SLOTS:
     // A save that does not name the configuration does not write it, so a read-only
     // configuration does not fail the save.
     void a_recorded_encoding_is_kept_as_it_was() {
-        VoiceBankConfig config;
+        VoiceBankConfiguration config;
         config.charset = TextCodec(QStringLiteral("GBK")).name();
         const QByteArray recorded = config.toJson();
         write(QStringLiteral("hello-config.json"), recorded);
@@ -416,7 +416,7 @@ private Q_SLOTS:
     // that another program modified or removed as it is, and a save that records the encoding
     // replaces it with the encoding of the contents and the fields read on opening.
     void a_configuration_changed_elsewhere_is_ignored_until_written() {
-        VoiceBankConfig config;
+        VoiceBankConfiguration config;
         config.charset = TextCodec(QStringLiteral("GBK")).name();
         config.unknownFields.insert(QStringLiteral("kept"), 1);
         const QByteArray recorded = config.toJson();
@@ -462,7 +462,7 @@ private Q_SLOTS:
 
         QVERIFY(opened->files.save(opened->bank, filesOf({}, {Source::Config}), diagnostics));
         DiagnosticList ignored;
-        const auto config = VoiceBankConfig::open(root() / "Hello-Config.json", ignored);
+        const auto config = VoiceBankConfiguration::open(root() / "Hello-Config.json", ignored);
         QVERIFY(config.has_value());
         QCOMPARE(config->charset, TextCodec(QStringLiteral("GBK")).name());
         QCOMPARE(read(QStringLiteral("oto.ini")), "a.wav=" + kGbkGePing + ",1,2,3,4,5\r\n");
@@ -480,7 +480,7 @@ private Q_SLOTS:
         DiagnosticList diagnostics;
         QVERIFY(opened->files.save(opened->bank, filesOf({}, {Source::Config}), diagnostics));
         DiagnosticList ignored;
-        const auto config = VoiceBankConfig::open(root() / "hello-config.json", ignored);
+        const auto config = VoiceBankConfiguration::open(root() / "hello-config.json", ignored);
         QVERIFY(config.has_value());
         QCOMPARE(config->charset, TextCodec(QStringLiteral("GBK")).name());
     }

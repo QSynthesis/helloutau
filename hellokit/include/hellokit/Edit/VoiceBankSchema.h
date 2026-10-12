@@ -86,7 +86,7 @@ namespace hello::kit {
         /// The record of file names, or empty if the user has not decided.
         ///
         /// \sa VoiceBankDirectory::fileNameEncoding
-        inline constexpr edit::Slot<std::optional<VoiceBankConfig::FileNameEncoding>>
+        inline constexpr edit::Slot<std::optional<VoiceBankConfiguration::FileNameEncoding>>
             FileNameEncoding{3, "fileNameEncoding"};
 
         inline constexpr int count = 4;
@@ -123,15 +123,16 @@ namespace hello::kit {
     /// no registration with the Qt meta-type system. The record without encodings is an empty
     /// map, which is a valid variant and therefore distinct from the absence of a record.
     template <>
-    struct edit::SlotValue<VoiceBankConfig::FileNameEncoding> {
-        static inline QVariant toVariant(const VoiceBankConfig::FileNameEncoding &record) {
+    struct edit::SlotValue<VoiceBankConfiguration::FileNameEncoding> {
+        static inline QVariant toVariant(const VoiceBankConfiguration::FileNameEncoding &record) {
             return record.toJson().toVariantMap();
         }
 
-        static inline VoiceBankConfig::FileNameEncoding fromVariant(const QVariant &variant) {
-            return VoiceBankConfig::FileNameEncoding::fromJson(
+        static inline VoiceBankConfiguration::FileNameEncoding
+            fromVariant(const QVariant &variant) {
+            return VoiceBankConfiguration::FileNameEncoding::fromJson(
                        QJsonObject::fromVariantMap(variant.toMap()))
-                .value_or(VoiceBankConfig::FileNameEncoding());
+                .value_or(VoiceBankConfiguration::FileNameEncoding());
         }
     };
 

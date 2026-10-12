@@ -373,7 +373,7 @@ private Q_SLOTS:
         QCOMPARE(sample->path, folder / fs::path(u"偁.wav"));
 
         DiagnosticList ignored;
-        const auto config = VoiceBankConfig::open(folder / "hello-config.json", ignored);
+        const auto config = VoiceBankConfiguration::open(folder / "hello-config.json", ignored);
         QVERIFY(config.has_value());
         QCOMPARE(config->charset, TextCodec(QStringLiteral("Shift_JIS")).name());
         QVERIFY(config->fileNameEncoding.has_value());

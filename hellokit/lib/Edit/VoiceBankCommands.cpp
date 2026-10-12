@@ -243,7 +243,7 @@ namespace hello::kit {
             if (json.isNull()) {
                 return VoiceBankEdits::setFileNameEncoding(*directory, std::nullopt, diagnostics);
             }
-            const auto record = VoiceBankConfig::FileNameEncoding::fromJson(json);
+            const auto record = VoiceBankConfiguration::FileNameEncoding::fromJson(json);
             if (!record) {
                 return fail(diagnostics,
                             VoiceBankCommands::tr("The record of file name encodings is invalid."));

@@ -2,18 +2,18 @@
 #include <QtCore/QTemporaryDir>
 #include <QtTest/QTest>
 
-#include <hellokit/VoiceBank/VoiceBankConfig.h>
+#include <hellokit/VoiceBank/VoiceBankConfiguration.h>
 
 using namespace hello::kit;
 
-class test_VoiceBankConfig : public QObject {
+class test_VoiceBankConfiguration : public QObject {
     Q_OBJECT
 
 private:
-    static std::optional<VoiceBankConfig> parse(const QByteArray &json,
-                                                DiagnosticList *sink = nullptr) {
+    static std::optional<VoiceBankConfiguration> parse(const QByteArray &json,
+                                                       DiagnosticList *sink = nullptr) {
         DiagnosticList diagnostics;
-        auto config = VoiceBankConfig::fromJson(json, diagnostics);
+        auto config = VoiceBankConfiguration::fromJson(json, diagnostics);
         if (sink) {
             *sink = diagnostics;
         }
@@ -21,8 +21,8 @@ private:
     }
 
     /// The record of a Japanese voice bank extracted on a Chinese system.
-    static VoiceBankConfig::FileNameEncoding japaneseOnChinese() {
-        VoiceBankConfig::FileNameEncoding record;
+    static VoiceBankConfiguration::FileNameEncoding japaneseOnChinese() {
+        VoiceBankConfiguration::FileNameEncoding record;
         record.original = QStringLiteral("Shift_JIS");
         record.misdecodedAs = QStringLiteral("GBK");
         return record;
@@ -73,23 +73,23 @@ private Q_SLOTS:
         QTemporaryDir dir;
         QVERIFY(dir.isValid());
         const auto path =
-            std::filesystem::path(dir.path().toStdU16String()) / VoiceBankConfig::fileName;
+            std::filesystem::path(dir.path().toStdU16String()) / VoiceBankConfiguration::fileName;
 
-        VoiceBankConfig config;
+        VoiceBankConfiguration config;
         config.charset = QStringLiteral("Shift_JIS");
 
         DiagnosticList diagnostics;
         QVERIFY(config.save(path, diagnostics));
         QVERIFY(!hasError(diagnostics));
 
-        const auto read = VoiceBankConfig::open(path, diagnostics);
+        const auto read = VoiceBankConfiguration::open(path, diagnostics);
         QVERIFY(read.has_value());
         QCOMPARE(read->charset, QStringLiteral("Shift_JIS"));
     }
 
     void a_missing_file_is_an_error_rather_than_an_empty_record() {
         DiagnosticList diagnostics;
-        const auto read = VoiceBankConfig::open("nowhere/hello-config.json", diagnostics);
+        const auto read = VoiceBankConfiguration::open("nowhere/hello-config.json", diagnostics);
         QVERIFY(!read.has_value());
         QVERIFY(hasError(diagnostics));
     }
@@ -118,7 +118,7 @@ private Q_SLOTS:
         const auto asIs =
             parse(R"({"$format":"hello-voicebank","charset":"GBK","fileNameEncoding":{}})");
         QVERIFY(asIs.has_value());
-        QCOMPARE(asIs->fileNameEncoding, VoiceBankConfig::FileNameEncoding());
+        QCOMPARE(asIs->fileNameEncoding, VoiceBankConfiguration::FileNameEncoding());
         QVERIFY(asIs->fileNameEncoding->isAsIs());
         QCOMPARE(parse(asIs->toJson())->fileNameEncoding, asIs->fileNameEncoding);
 
@@ -133,7 +133,7 @@ private Q_SLOTS:
     }
 
     void a_configuration_without_the_record_writes_none() {
-        VoiceBankConfig config;
+        VoiceBankConfiguration config;
         config.charset = QStringLiteral("GBK");
         const auto again = parse(config.toJson());
         QVERIFY(again.has_value());
@@ -201,13 +201,13 @@ private Q_SLOTS:
         QCOMPARE(record.logicalNameOf(correct), QString::fromUtf8("､ｬ.wav"));
         QCOMPARE(record.logicalNameOf(QString::fromUtf8("你.wav")), QString::fromUtf8("你.wav"));
 
-        record.files = VoiceBankConfig::FileNameEncoding::Files{{misdecoded}, {correct}};
+        record.files = VoiceBankConfiguration::FileNameEncoding::Files{{misdecoded}, {correct}};
         QCOMPARE(record.logicalNameOf(misdecoded), restored);
         QCOMPARE(record.logicalNameOf(correct), correct);
         QCOMPARE(record.logicalNameOf(misdecoded.normalized(QString::NormalizationForm_D)),
                  restored);
 
-        QCOMPARE(VoiceBankConfig::FileNameEncoding().logicalNameOf(misdecoded), misdecoded);
+        QCOMPARE(VoiceBankConfiguration::FileNameEncoding().logicalNameOf(misdecoded), misdecoded);
     }
 
     void a_misdecoded_name_is_restored() {
@@ -253,6 +253,6 @@ private Q_SLOTS:
     }
 };
 
-QTEST_APPLESS_MAIN(test_VoiceBankConfig)
+QTEST_APPLESS_MAIN(test_VoiceBankConfiguration)
 
-#include "test_VoiceBankConfig.moc"
+#include "test_VoiceBankConfiguration.moc"

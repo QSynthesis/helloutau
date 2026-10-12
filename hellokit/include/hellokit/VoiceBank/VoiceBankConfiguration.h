@@ -1,5 +1,5 @@
-#ifndef HELLOKIT_VOICEBANK_VOICEBANKCONFIG_H
-#define HELLOKIT_VOICEBANK_VOICEBANKCONFIG_H
+#ifndef HELLOKIT_VOICEBANK_VOICEBANKCONFIGURATION_H
+#define HELLOKIT_VOICEBANK_VOICEBANKCONFIGURATION_H
 
 #include <filesystem>
 #include <optional>
@@ -26,8 +26,8 @@ namespace hello::kit {
     /// when a subdirectory is copied separately.
     ///
     /// \sa docs/note.md
-    struct HELLOKIT_VOICEBANK_EXPORT VoiceBankConfig {
-        Q_DECLARE_TR_FUNCTIONS(hello::kit::VoiceBankConfig)
+    struct HELLOKIT_VOICEBANK_EXPORT VoiceBankConfiguration {
+        Q_DECLARE_TR_FUNCTIONS(hello::kit::VoiceBankConfiguration)
     public:
         /// The name of the file in a voice bank directory.
         static constexpr char fileName[] = "hello-config.json";
@@ -131,14 +131,14 @@ namespace hello::kit {
 
         /// \return the configuration, or \c std::nullopt if the file is missing or unreadable,
         ///         with the reason in \a diagnostics
-        static std::optional<VoiceBankConfig> open(const std::filesystem::path &path,
-                                                   DiagnosticList &diagnostics);
+        static std::optional<VoiceBankConfiguration> open(const std::filesystem::path &path,
+                                                          DiagnosticList &diagnostics);
 
         bool save(const std::filesystem::path &path, DiagnosticList &diagnostics) const;
 
         /// \overload
-        static std::optional<VoiceBankConfig> fromJson(QByteArrayView json,
-                                                       DiagnosticList &diagnostics);
+        static std::optional<VoiceBankConfiguration> fromJson(QByteArrayView json,
+                                                              DiagnosticList &diagnostics);
 
         /// \overload
         QByteArray toJson() const;
@@ -146,4 +146,4 @@ namespace hello::kit {
 
 }
 
-#endif // HELLOKIT_VOICEBANK_VOICEBANKCONFIG_H
+#endif // HELLOKIT_VOICEBANK_VOICEBANKCONFIGURATION_H

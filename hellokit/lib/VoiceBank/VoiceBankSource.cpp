@@ -131,7 +131,7 @@ namespace hello::kit {
 
                 if (*kind == VoiceBankDirectorySource::Config) {
                     DiagnosticList ignored;
-                    directory.config = VoiceBankConfig::fromJson(*bytes, ignored);
+                    directory.config = VoiceBankConfiguration::fromJson(*bytes, ignored);
                     if (!directory.config) {
                         complain(
                             diagnostics,
@@ -178,7 +178,7 @@ namespace hello::kit {
             case VoiceBankDirectorySource::Readme:
                 return "readme.txt";
             case VoiceBankDirectorySource::Config:
-                return VoiceBankConfig::fileName;
+                return VoiceBankConfiguration::fileName;
         }
         return "";
     }

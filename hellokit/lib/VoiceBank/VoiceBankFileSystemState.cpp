@@ -207,14 +207,14 @@ namespace hello::kit {
             return QByteArray(bytes.data(), qsizetype(bytes.size()));
         }
 
-        using FileNameRecord = std::optional<VoiceBankConfig::FileNameEncoding>;
+        using FileNameRecord = std::optional<VoiceBankConfiguration::FileNameEncoding>;
 
         bool isAscii(QStringView text) {
             return std::all_of(text.begin(), text.end(),
                                [](QChar c) { return c.unicode() < 0x80; });
         }
 
-        FileNameRecord recordOf(const std::optional<VoiceBankConfig> &config) {
+        FileNameRecord recordOf(const std::optional<VoiceBankConfiguration> &config) {
             return config ? config->fileNameEncoding : std::nullopt;
         }
 
@@ -659,7 +659,7 @@ namespace hello::kit {
         // The directories that nothing determines, and those with file names to determine,
         // asked about at once
         AnsweredSelector answered;
-        std::map<fs::path, VoiceBankConfig::FileNameEncoding> fileNames;
+        std::map<fs::path, VoiceBankConfiguration::FileNameEncoding> fileNames;
         if (selector) {
             QList<VoiceBankCharsetSelector::Question> questions;
             for (const auto &directory : source.directories()) {
@@ -1371,15 +1371,15 @@ namespace hello::kit {
             const QString name = canonicalOf(directory.charset);
             if (named(VoiceBankDirectorySource::Config) &&
                 (!name.isEmpty() || directory.fileNameEncoding || !book.unknownFields.isEmpty())) {
-                VoiceBankConfig config;
+                VoiceBankConfiguration config;
                 config.charset = name;
                 config.fileNameEncoding = directory.fileNameEncoding;
                 config.unknownFields = book.unknownFields;
                 const auto configRecord = book.files.find(VoiceBankDirectorySource::Config);
                 const auto path = configRecord != book.files.end()
                                       ? absolute / configRecord->second.name
-                                      : findFolded(absolute, VoiceBankConfig::fileName)
-                                            .value_or(absolute / VoiceBankConfig::fileName);
+                                      : findFolded(absolute, VoiceBankConfiguration::fileName)
+                                            .value_or(absolute / VoiceBankConfiguration::fileName);
                 writes.push_back(
                     {directory.path, VoiceBankDirectorySource::Config, path, config.toJson()});
             }

@@ -21,7 +21,7 @@
 #include <hellokit/Support/Diagnostic.h>
 
 #include <hellokit/VoiceBank/HelloKitVoiceBankGlobal.h>
-#include <hellokit/VoiceBank/VoiceBankConfig.h>
+#include <hellokit/VoiceBank/VoiceBankConfiguration.h>
 
 namespace hello::kit {
 
@@ -124,7 +124,7 @@ namespace hello::kit {
         std::filesystem::path path;
 
         /// The contents of \c hello-config.json in this directory, if present.
-        std::optional<VoiceBankConfig> config;
+        std::optional<VoiceBankConfiguration> config;
 
         /// \name UTAU files in this directory
         ///
@@ -245,7 +245,7 @@ namespace hello::kit {
             std::optional<QString> charset;
             /// The record of misdecoded file names that the user determined, or
             /// \c std::nullopt to use the names as the configuration records them.
-            std::optional<VoiceBankConfig::FileNameEncoding> fileNameEncoding;
+            std::optional<VoiceBankConfiguration::FileNameEncoding> fileNameEncoding;
         };
 
         /// Selects the encodings of the text files and determines the misdecoded file names of

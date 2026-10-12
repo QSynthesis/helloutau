@@ -109,7 +109,8 @@ namespace hello::kit {
             get(recordOf<VoiceDirectoryNode>(node, VoiceDirectoryType), VoiceDirectorySlots::Path));
     }
 
-    std::optional<VoiceBankConfig::FileNameEncoding> fileNameEncodingOf(const ss::Node *node) {
+    std::optional<VoiceBankConfiguration::FileNameEncoding>
+        fileNameEncodingOf(const ss::Node *node) {
         return get(recordOf<VoiceDirectoryNode>(node, VoiceDirectoryType),
                    VoiceDirectorySlots::FileNameEncoding);
     }

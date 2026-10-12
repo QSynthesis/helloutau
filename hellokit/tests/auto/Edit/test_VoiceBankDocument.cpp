@@ -147,7 +147,7 @@ private Q_SLOTS:
     // File names determined on opening are recorded by the next save, so the voice bank is
     // unsaved until then, although nothing was edited.
     void file_names_determined_on_opening_are_unsaved_until_saved() {
-        VoiceBankConfig config;
+        VoiceBankConfiguration config;
         config.charset = QStringLiteral("Shift_JIS");
         write(QStringLiteral("hello-config.json"), config.toJson());
         write(QStringLiteral("oto.ini"), "\x82\xa0.wav=a,1,2,3,4,5\r\n");
@@ -162,7 +162,7 @@ private Q_SLOTS:
         QVERIFY(document->save(diagnostics));
         QVERIFY(!document->isModified());
         DiagnosticList ignored;
-        const auto saved = VoiceBankConfig::open(root() / "hello-config.json", ignored);
+        const auto saved = VoiceBankConfiguration::open(root() / "hello-config.json", ignored);
         QVERIFY(saved.has_value());
         QVERIFY(saved->fileNameEncoding.has_value());
         QCOMPARE(saved->fileNameEncoding->logicalNameOf(QString::fromUtf8("偁.wav")),

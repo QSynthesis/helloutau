@@ -330,7 +330,7 @@ namespace hello::daw {
             const auto &names = m_fileNames[i];
             if (read && names.question) {
                 answer.fileNameEncoding = names.asTheyAre
-                                              ? kit::VoiceBankConfig::FileNameEncoding()
+                                              ? kit::VoiceBankConfiguration::FileNameEncoding()
                                               : names.question->answer(names.misdecoded);
             }
             result.push_back(answer);

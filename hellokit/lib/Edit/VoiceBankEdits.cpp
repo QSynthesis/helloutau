@@ -183,7 +183,7 @@ namespace hello::kit {
 
     bool VoiceBankEdits::setFileNameEncoding(
         const VoiceDirectoryRef &directory,
-        const std::optional<VoiceBankConfig::FileNameEncoding> &fileNameEncoding,
+        const std::optional<VoiceBankConfiguration::FileNameEncoding> &fileNameEncoding,
         DiagnosticList &diagnostics) {
         auto record = fileNameEncoding;
         if (record && record->isAsIs() && record->files) {
@@ -204,5 +204,4 @@ namespace hello::kit {
         directory.setFileNameEncoding(record);
         return transaction.commit(diagnostics);
     }
-
 }

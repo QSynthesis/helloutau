@@ -89,23 +89,24 @@ private:
         return TextCodec(QStringLiteral("Shift_JIS")).encode(text);
     }
 
-    static VoiceBankConfig::FileNameEncoding japaneseOnChinese() {
-        VoiceBankConfig::FileNameEncoding record;
+    static VoiceBankConfiguration::FileNameEncoding japaneseOnChinese() {
+        VoiceBankConfiguration::FileNameEncoding record;
         record.original = QStringLiteral("Shift_JIS");
         record.misdecodedAs = QStringLiteral("GBK");
         return record;
     }
 
     /// The record of japaneseOnChinese() with the lists \a misdecoded and \a correct .
-    static VoiceBankConfig::FileNameEncoding withFiles(const QStringList &misdecoded,
-                                                       const QStringList &correct) {
+    static VoiceBankConfiguration::FileNameEncoding withFiles(const QStringList &misdecoded,
+                                                              const QStringList &correct) {
         auto record = japaneseOnChinese();
-        record.files = VoiceBankConfig::FileNameEncoding::Files{misdecoded, correct};
+        record.files = VoiceBankConfiguration::FileNameEncoding::Files{misdecoded, correct};
         return record;
     }
 
-    void writeConfig(const QString &directory, const VoiceBankConfig::FileNameEncoding &record) {
-        VoiceBankConfig config;
+    void writeConfig(const QString &directory,
+                     const VoiceBankConfiguration::FileNameEncoding &record) {
+        VoiceBankConfiguration config;
         config.charset = QStringLiteral("Shift_JIS");
         config.fileNameEncoding = record;
         write(directory.isEmpty() ? QStringLiteral("hello-config.json")
@@ -135,7 +136,7 @@ private:
         return VoiceBankFileSystemState::open(root, &selector, diagnostics);
     }
 
-    static std::optional<VoiceBankConfig::FileNameEncoding>
+    static std::optional<VoiceBankConfiguration::FileNameEncoding>
         recordOf(const VoiceBankFileSystemState::Opened &opened, const fs::path &directory) {
         const int index = opened.bank.indexOf(directory);
         return index >= 0 ? opened.bank.directories().at(index).fileNameEncoding : std::nullopt;
@@ -158,7 +159,7 @@ private:
 
     /// Replaces the record of the directory at \a directory of \a opened with \a record .
     static void setRecord(VoiceBankFileSystemState::Opened &opened, const fs::path &directory,
-                          const std::optional<VoiceBankConfig::FileNameEncoding> &record) {
+                          const std::optional<VoiceBankConfiguration::FileNameEncoding> &record) {
         const int index = opened.bank.indexOf(directory);
         QVERIFY(index >= 0);
         auto changed = opened.bank.directories().at(index);
@@ -166,9 +167,10 @@ private:
         opened.bank.setDirectory(index, changed);
     }
 
-    std::optional<VoiceBankConfig> configAt(const QString &relative) const {
+    std::optional<VoiceBankConfiguration> configAt(const QString &relative) const {
         DiagnosticList ignored;
-        return VoiceBankConfig::open(root() / pathOf(relative) / "hello-config.json", ignored);
+        return VoiceBankConfiguration::open(root() / pathOf(relative) / "hello-config.json",
+                                            ignored);
     }
 
     static const VoiceSample *sampleNamed(const VoiceBank &bank, const QString &fileName) {
@@ -331,12 +333,12 @@ private Q_SLOTS:
 
     // The user decided that the names are correct, a new one as well.
     void a_record_without_encodings_restores_nothing() {
-        writeConfig(QString(), VoiceBankConfig::FileNameEncoding());
+        writeConfig(QString(), VoiceBankConfiguration::FileNameEncoding());
         write(kMisdecodedA + QStringLiteral(".wav"), "RIFF");
         DiagnosticList diagnostics;
         const auto opened = open(root(), diagnostics);
         QVERIFY(opened.has_value());
-        QCOMPARE(recordOf(*opened, {}), std::optional(VoiceBankConfig::FileNameEncoding()));
+        QCOMPARE(recordOf(*opened, {}), std::optional(VoiceBankConfiguration::FileNameEncoding()));
         QCOMPARE(audioFilesOf(*opened), QStringList{kMisdecodedA + QStringLiteral(".wav")});
         QVERIFY(undeterminedOf(*opened).isEmpty());
     }
@@ -437,7 +439,7 @@ private Q_SLOTS:
     /// of its own file. The encoding of the text files is recorded if \a recorded is true.
     void writeUnrecordedBank(bool recorded) {
         if (recorded) {
-            VoiceBankConfig config;
+            VoiceBankConfiguration config;
             config.charset = QStringLiteral("Shift_JIS");
             write(QStringLiteral("hello-config.json"), config.toJson());
             write(QStringLiteral("ascii/hello-config.json"), config.toJson());

@@ -128,7 +128,7 @@ namespace hello::kit {
         ///
         /// Changed through VoiceBank::setDirectory() , and recorded in \c hello-config.json by
         /// the next save if it differs from the record read.
-        std::optional<VoiceBankConfig::FileNameEncoding> fileNameEncoding;
+        std::optional<VoiceBankConfiguration::FileNameEncoding> fileNameEncoding;
 
         /// \name Files of the root only
         ///

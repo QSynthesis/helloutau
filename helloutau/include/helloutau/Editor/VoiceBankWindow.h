@@ -7,7 +7,7 @@
 
 #include <QtWidgets/QMainWindow>
 
-#include <hellokit/VoiceBank/VoiceBankConfig.h>
+#include <hellokit/VoiceBank/VoiceBankConfiguration.h>
 
 #include <helloutau/Editor/HelloUtauEditorGlobal.h>
 
@@ -169,8 +169,8 @@ namespace hello::daw {
 
         /// \overload for the folders and records of \a records , without the dialog.
         bool determineFileNames(
-            const QList<std::pair<std::filesystem::path, kit::VoiceBankConfig::FileNameEncoding>>
-                &records);
+            const QList<std::pair<std::filesystem::path,
+                                  kit::VoiceBankConfiguration::FileNameEncoding>> &records);
 
         /// Lists the audio files of the folders that contain metadata, see kit::WaveMetadata, in
         /// a message box in which the user confirms writing them again without it. The files are

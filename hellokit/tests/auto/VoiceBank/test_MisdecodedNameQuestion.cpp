@@ -48,17 +48,17 @@ private:
         write(QStringLiteral("oto.ini"), TextCodec(QStringLiteral("Shift_JIS")).encode(text));
     }
 
-    void writeRecord(const VoiceBankConfig::FileNameEncoding &record) {
-        VoiceBankConfig config;
+    void writeRecord(const VoiceBankConfiguration::FileNameEncoding &record) {
+        VoiceBankConfiguration config;
         config.charset = QStringLiteral("Shift_JIS");
         config.fileNameEncoding = record;
         write(QStringLiteral("hello-config.json"), config.toJson());
     }
 
     /// The record of Shift_JIS read as GBK, with lists if \a files .
-    static VoiceBankConfig::FileNameEncoding
-        japaneseOnChinese(std::optional<VoiceBankConfig::FileNameEncoding::Files> files = {}) {
-        VoiceBankConfig::FileNameEncoding record;
+    static VoiceBankConfiguration::FileNameEncoding japaneseOnChinese(
+        std::optional<VoiceBankConfiguration::FileNameEncoding::Files> files = {}) {
+        VoiceBankConfiguration::FileNameEncoding record;
         record.original = QStringLiteral("Shift_JIS");
         record.misdecodedAs = QStringLiteral("GBK");
         record.files = files;
@@ -66,8 +66,8 @@ private:
     }
 
     void writeRecord(const QStringList &misdecoded, const QStringList &correct) {
-        writeRecord(
-            japaneseOnChinese(VoiceBankConfig::FileNameEncoding::Files{misdecoded, correct}));
+        writeRecord(japaneseOnChinese(
+            VoiceBankConfiguration::FileNameEncoding::Files{misdecoded, correct}));
     }
 
     /// Returns whether the system encoding is GBK, which misdecodes the names in the tests
@@ -206,7 +206,7 @@ private Q_SLOTS:
         QCOMPARE(question->foundEntries(), 3);
         QCOMPARE(question->missingEntries(), 1);
         QVERIFY(!choiceNamed(*question, QString::fromUtf8("が.wav"))->misdecoded);
-        QCOMPARE(question->answer({}), VoiceBankConfig::FileNameEncoding());
+        QCOMPARE(question->answer({}), VoiceBankConfiguration::FileNameEncoding());
 
         // Fewer than 75 percent
         QVERIFY(QFile::remove(m_dir->filePath(QStringLiteral("c.wav"))));
@@ -319,7 +319,7 @@ private Q_SLOTS:
         write(kMisdecodedI + QStringLiteral(".wav"), "RIFF");
         writeRecord(japaneseOnChinese());
         QVERIFY(!MisdecodedNameQuestion::of(source(), QStringLiteral("Shift_JIS")).has_value());
-        writeRecord(VoiceBankConfig::FileNameEncoding());
+        writeRecord(VoiceBankConfiguration::FileNameEncoding());
         QVERIFY(!MisdecodedNameQuestion::of(source(), QStringLiteral("Shift_JIS")).has_value());
     }
 
@@ -366,7 +366,7 @@ private Q_SLOTS:
                  (QStringList{kMisdecodedI + QStringLiteral(".wav"), QString::fromUtf8("你.wav")}));
 
         // No name misdecoded, which the record without encodings records.
-        QCOMPARE(question->answer({}), VoiceBankConfig::FileNameEncoding());
+        QCOMPARE(question->answer({}), VoiceBankConfiguration::FileNameEncoding());
     }
 
     // The user may choose another pair, under which the names restore differently.

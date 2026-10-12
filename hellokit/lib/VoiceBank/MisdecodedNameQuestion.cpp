@@ -77,8 +77,8 @@ namespace hello::kit {
         }
 
         /// The number of \a missing that a name of \a audio restores to under \a record .
-        int matchesOf(const VoiceBankConfig::FileNameEncoding &record, const QStringList &audio,
-                      const QStringList &missing) {
+        int matchesOf(const VoiceBankConfiguration::FileNameEncoding &record,
+                      const QStringList &audio, const QStringList &missing) {
             QSet<QString> restored;
             for (const auto &name : audio) {
                 if (const auto logical = record.restore(name)) {
@@ -90,7 +90,6 @@ namespace hello::kit {
                     return restored.contains(name);
                 }));
         }
-
     }
 
     std::optional<MisdecodedNameQuestion>
@@ -114,14 +113,14 @@ namespace hello::kit {
             // equals, the pair that was written in the encoding of the text files comes first,
             // then the pair that misdecodes in the system encoding, because the files were most
             // likely extracted on this machine, then the order of the candidates.
-            const auto rank = [&](const VoiceBankConfig::FileNameEncoding &record) {
+            const auto rank = [&](const VoiceBankConfiguration::FileNameEncoding &record) {
                 return int(record.original != text.name()) * 2 + int(record.misdecodedAs != system);
             };
-            std::optional<VoiceBankConfig::FileNameEncoding> best;
+            std::optional<VoiceBankConfiguration::FileNameEncoding> best;
             int bestMatched = 0;
             for (const auto &original : candidates) {
                 for (const auto &misdecodedAs : candidates) {
-                    VoiceBankConfig::FileNameEncoding record;
+                    VoiceBankConfiguration::FileNameEncoding record;
                     record.original = TextCodec(original).name();
                     record.misdecodedAs = TextCodec(misdecodedAs).name();
                     if (record.original == record.misdecodedAs) {
@@ -242,17 +241,17 @@ namespace hello::kit {
             }));
     }
 
-    VoiceBankConfig::FileNameEncoding
+    VoiceBankConfiguration::FileNameEncoding
         MisdecodedNameQuestion::answer(const QStringList &misdecoded) const {
         auto record = m_record;
-        auto files = record.files.value_or(VoiceBankConfig::FileNameEncoding::Files());
+        auto files = record.files.value_or(VoiceBankConfiguration::FileNameEncoding::Files());
         for (const auto &choice : m_choices) {
             (misdecoded.contains(choice.name) ? files.misdecoded : files.correct)
                 .push_back(choice.name);
         }
         files.correct += m_unrestorable;
         if (files.misdecoded.isEmpty()) {
-            return VoiceBankConfig::FileNameEncoding();
+            return VoiceBankConfiguration::FileNameEncoding();
         }
         // A record without lists restores every name, which is right if no correct name restores.
         const bool restoresAll =
@@ -261,5 +260,4 @@ namespace hello::kit {
         record.files = restoresAll ? std::nullopt : std::optional(files);
         return record;
     }
-
 }

@@ -2587,12 +2587,12 @@ private Q_SLOTS:
     void the_file_names_to_determine_are_reported_and_determined() {
         QTemporaryDir dir;
         const auto bank = voiceBank(dir);
-        kit::VoiceBankConfig config;
+        kit::VoiceBankConfiguration config;
         config.charset = QStringLiteral("UTF-8");
-        kit::VoiceBankConfig::FileNameEncoding record;
+        kit::VoiceBankConfiguration::FileNameEncoding record;
         record.original = QStringLiteral("Shift_JIS");
         record.misdecodedAs = QStringLiteral("GBK");
-        record.files = kit::VoiceBankConfig::FileNameEncoding::Files();
+        record.files = kit::VoiceBankConfiguration::FileNameEncoding::Files();
         config.fileNameEncoding = record;
         const auto json = config.toJson();
         writeFile(bank / "hello-config.json", json.constData(), json.size());
@@ -2612,7 +2612,7 @@ private Q_SLOTS:
         QCOMPARE(window->fileNamesToDetermine(), 1);
         QVERIFY(!window->changeBar()->isHidden());
 
-        record.files = kit::VoiceBankConfig::FileNameEncoding::Files{{misdecoded}, {}};
+        record.files = kit::VoiceBankConfiguration::FileNameEncoding::Files{{misdecoded}, {}};
         const int step = session->currentStep();
         QVERIFY(window->determineFileNames({
             {fs::path(), record}
@@ -2683,7 +2683,7 @@ private Q_SLOTS:
 
         const auto session = window->document()->session();
         QVERIFY(window->determineFileNames({
-            {fs::path(), kit::VoiceBankConfig::FileNameEncoding()}
+            {fs::path(), kit::VoiceBankConfiguration::FileNameEncoding()}
         }));
         QCOMPARE(subfolders(), (QStringList{QStringLiteral("sub"), QString::fromUtf8("偆")}));
         session->undo();

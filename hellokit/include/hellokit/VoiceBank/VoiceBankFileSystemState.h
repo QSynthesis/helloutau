@@ -18,7 +18,7 @@
 
 #include <hellokit/VoiceBank/HelloKitVoiceBankGlobal.h>
 #include <hellokit/VoiceBank/VoiceBank.h>
-#include <hellokit/VoiceBank/VoiceBankConfig.h>
+#include <hellokit/VoiceBank/VoiceBankConfiguration.h>
 #include <hellokit/VoiceBank/VoiceBankSource.h>
 
 namespace hello::kit {
@@ -76,23 +76,23 @@ namespace hello::kit {
         /// \sa audioPathOf(), VoiceBankDirectory::fileNameEncoding
         QStringList
             audioFiles(const std::filesystem::path &directory,
-                       const std::optional<VoiceBankConfig::FileNameEncoding> &record) const;
+                       const std::optional<VoiceBankConfiguration::FileNameEncoding> &record) const;
 
         /// Returns the absolute path of the audio file with the logical name \a fileName under
         /// \a record in the directory at \a directory , under its name on disk. A name of no
         /// audio file is joined as it is.
         std::filesystem::path
             audioPathOf(const std::filesystem::path &directory,
-                        const std::optional<VoiceBankConfig::FileNameEncoding> &record,
+                        const std::optional<VoiceBankConfiguration::FileNameEncoding> &record,
                         const QString &fileName) const;
 
         /// Returns the names on disk of the audio files and the subdirectories of the directory at
         /// \a directory that are not ASCII and that \a record lists in neither list, or an empty
         /// list if \a record has no lists or is absent. These names are used as they are until
         /// the user determines their state.
-        QStringList
-            undeterminedNames(const std::filesystem::path &directory,
-                              const std::optional<VoiceBankConfig::FileNameEncoding> &record) const;
+        QStringList undeterminedNames(
+            const std::filesystem::path &directory,
+            const std::optional<VoiceBankConfiguration::FileNameEncoding> &record) const;
 
         /// Saves \a files of \a bank , each in the encoding of its directory, and nothing else.
         ///
@@ -236,7 +236,7 @@ namespace hello::kit {
         /// The audio files of one directory under the names that a record of misdecoded file
         /// names determines.
         struct Names {
-            std::optional<VoiceBankConfig::FileNameEncoding> record;
+            std::optional<VoiceBankConfiguration::FileNameEncoding> record;
             /// The logical names in listing order.
             QStringList audioFiles;
             /// The name on disk of each audio file whose logical name differs.
@@ -268,13 +268,14 @@ namespace hello::kit {
         /// \a diagnostics if not null.
         static Names namesOf(const std::vector<std::filesystem::path> &audio,
                              const VoiceBankDirectoryStamp &stamp,
-                             const std::optional<VoiceBankConfig::FileNameEncoding> &record,
+                             const std::optional<VoiceBankConfiguration::FileNameEncoding> &record,
                              DiagnosticList *diagnostics);
 
         /// Returns the names of the directory at \a directory under \a record , from the cache
         /// of its state if the record is the same.
-        const Names &namesOf(const std::filesystem::path &directory,
-                             const std::optional<VoiceBankConfig::FileNameEncoding> &record) const;
+        const Names &
+            namesOf(const std::filesystem::path &directory,
+                    const std::optional<VoiceBankConfiguration::FileNameEncoding> &record) const;
 
         /// Returns the state of a directory as read from \a source .
         static Book bookOf(const VoiceBankDirectorySource &source);
@@ -289,7 +290,7 @@ namespace hello::kit {
         /// Appends \a source to \a bank with the record of misdecoded file names \a record .
         void appendDirectory(VoiceBank &bank, const VoiceBankDirectorySource &source,
                              const std::optional<QString> &charset,
-                             const std::optional<VoiceBankConfig::FileNameEncoding> &record,
+                             const std::optional<VoiceBankConfiguration::FileNameEncoding> &record,
                              DiagnosticList &diagnostics);
         void removeDirectory(VoiceBank &bank, int index);
 

@@ -216,7 +216,7 @@ private Q_SLOTS:
         QCOMPARE(dialog.misdecodedNameQuestion(0)->basis(), kit::MisdecodedNameQuestion::Found);
         QVERIFY(dialog.namesAsTheyAre(0));
         QCOMPARE(dialog.answers().value(0).fileNameEncoding,
-                 std::optional(kit::VoiceBankConfig::FileNameEncoding()));
+                 std::optional(kit::VoiceBankConfiguration::FileNameEncoding()));
 
         dialog.setNamesAsTheyAre(0, false);
         dialog.setMisdecoded(0, QString::fromUtf8("が.wav"), true);
@@ -266,7 +266,7 @@ private Q_SLOTS:
         // Using the names as they are is a decision as well.
         dialog.setNamesAsTheyAre(0, true);
         QCOMPARE(dialog.answers().value(0).fileNameEncoding,
-                 std::optional(kit::VoiceBankConfig::FileNameEncoding()));
+                 std::optional(kit::VoiceBankConfiguration::FileNameEncoding()));
     }
 
     // A folder left out, and every folder of a declined dialog, records no file names.

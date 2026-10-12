@@ -87,7 +87,7 @@ namespace hello::kit {
         QString charset() const;
 
         /// \sa VoiceBankDirectory::fileNameEncoding
-        std::optional<VoiceBankConfig::FileNameEncoding> fileNameEncoding() const;
+        std::optional<VoiceBankConfiguration::FileNameEncoding> fileNameEncoding() const;
 
         OtoEntryListRef otoEntries() const;
 
@@ -97,7 +97,7 @@ namespace hello::kit {
 
         /// \sa VoiceBankEdits::setFileNameEncoding()
         void setFileNameEncoding(
-            const std::optional<VoiceBankConfig::FileNameEncoding> &fileNameEncoding) const;
+            const std::optional<VoiceBankConfiguration::FileNameEncoding> &fileNameEncoding) const;
 
         friend class VoiceBankEdits;
     };

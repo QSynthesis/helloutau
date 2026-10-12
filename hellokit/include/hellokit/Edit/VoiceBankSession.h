@@ -212,7 +212,7 @@ namespace hello::kit {
 
         /// Returns the record of misdecoded file names of the directory at \a directory in the
         /// tree or among the excluded directories.
-        std::optional<VoiceBankConfig::FileNameEncoding>
+        std::optional<VoiceBankConfiguration::FileNameEncoding>
             fileNameEncodingOf(const std::filesystem::path &directory) const;
 
         /// Returns the snapshot together with the excluded directories, which the file system state

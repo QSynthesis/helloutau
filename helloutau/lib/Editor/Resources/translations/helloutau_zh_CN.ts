@@ -4404,7 +4404,7 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
 </context>
 <context>
-    <name>hello::kit::VoiceBankConfig</name>
+    <name>hello::kit::VoiceBankConfiguration</name>
     <message>
         <source>This file could not be opened.</source>
         <translation>无法打开此文件。</translation>

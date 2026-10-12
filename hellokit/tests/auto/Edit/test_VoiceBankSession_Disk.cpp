@@ -143,13 +143,13 @@ private Q_SLOTS:
         QVERIFY(dir.isValid());
         const auto a = QString::fromUtf8("偁.wav");
         const auto i = QString::fromUtf8("偄.wav");
-        VoiceBankConfig config;
+        VoiceBankConfiguration config;
         config.charset = QStringLiteral("Shift_JIS");
-        VoiceBankConfig::FileNameEncoding record;
+        VoiceBankConfiguration::FileNameEncoding record;
         record.original = QStringLiteral("Shift_JIS");
         record.misdecodedAs = QStringLiteral("GBK");
         const auto u = QString::fromUtf8("偆");
-        record.files = VoiceBankConfig::FileNameEncoding::Files{
+        record.files = VoiceBankConfiguration::FileNameEncoding::Files{
             {a, i, u},
             {QString::fromUtf8("が.wav")}
         };
@@ -307,10 +307,10 @@ private Q_SLOTS:
         m_session->reloadFromDisk(m_session->checkDisk(), nullptr, diagnostics);
         QVERIFY(m_session->audioFiles({}).contains(misdecoded));
 
-        VoiceBankConfig::FileNameEncoding record;
+        VoiceBankConfiguration::FileNameEncoding record;
         record.original = QStringLiteral("Shift_JIS");
         record.misdecodedAs = QStringLiteral("GBK");
-        record.files = VoiceBankConfig::FileNameEncoding::Files{{misdecoded}, {}};
+        record.files = VoiceBankConfiguration::FileNameEncoding::Files{{misdecoded}, {}};
         QVERIFY(VoiceBankEdits::setFileNameEncoding(directories().at(indexOf({})), record,
                                                     diagnostics));
         QVERIFY(m_session->audioFiles({}).contains(QString::fromUtf8("あ.wav")));
@@ -321,7 +321,7 @@ private Q_SLOTS:
         save();
         QCOMPARE(writtenSince(before), QStringList{QStringLiteral("hello-config.json")});
         DiagnosticList ignored;
-        const auto config = VoiceBankConfig::open(
+        const auto config = VoiceBankConfiguration::open(
             fs::path(pathOf(QStringLiteral("hello-config.json")).toStdU16String()), ignored);
         QVERIFY(config.has_value());
         QVERIFY(config->fileNameEncoding.has_value());

@@ -66,7 +66,8 @@ namespace hello::kit {
     std::filesystem::path directoryPathOf(const ss::Node *node);
 
     /// Returns the record of misdecoded file names in \a node, a directory of a voice bank tree.
-    std::optional<VoiceBankConfig::FileNameEncoding> fileNameEncodingOf(const ss::Node *node);
+    std::optional<VoiceBankConfiguration::FileNameEncoding>
+        fileNameEncodingOf(const ss::Node *node);
 
     /// Returns the voice bank in \a tree, at the root of \a disk and with its audio files.
     HELLOKIT_EDIT_EXPORT VoiceBank voiceBankOf(const ss::Node *tree,

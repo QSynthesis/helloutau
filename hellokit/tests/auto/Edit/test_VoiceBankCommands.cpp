@@ -238,7 +238,8 @@ private Q_SLOTS:
                  QStringList{QStringLiteral("a.wav")});
 
         QVERIFY(run(QStringLiteral("directory fileNameEncoding /directories/0 {}")));
-        QCOMPARE(directory.fileNameEncoding(), std::optional(VoiceBankConfig::FileNameEncoding()));
+        QCOMPARE(directory.fileNameEncoding(),
+                 std::optional(VoiceBankConfiguration::FileNameEncoding()));
 
         QVERIFY(run(QStringLiteral("directory fileNameEncoding /directories/0 null")));
         QVERIFY(!directory.fileNameEncoding().has_value());

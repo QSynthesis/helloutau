@@ -67,7 +67,7 @@ private:
 
     std::optional<QString> recorded(const QString &relative = QString()) const {
         DiagnosticList ignored;
-        const auto config = VoiceBankConfig::open(
+        const auto config = VoiceBankConfiguration::open(
             root() / relative.toStdU16String() / "hello-config.json", ignored);
         if (!config) {
             return std::nullopt;

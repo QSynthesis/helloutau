@@ -99,7 +99,7 @@ namespace hello::kit {
         /// \sa VoiceBankDirectory::fileNameEncoding
         Q_INVOKABLE static bool setFileNameEncoding(
             const VoiceDirectoryRef &directory,
-            const std::optional<VoiceBankConfig::FileNameEncoding> &fileNameEncoding,
+            const std::optional<VoiceBankConfiguration::FileNameEncoding> &fileNameEncoding,
             DiagnosticList &diagnostics);
     };
 
