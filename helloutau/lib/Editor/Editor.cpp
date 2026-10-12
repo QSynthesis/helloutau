@@ -24,8 +24,8 @@
 
 #include <hellokit/Edit/ProjectDocument.h>
 #include <hellokit/Edit/VoiceBankDocument.h>
-#include <hellokit/Support/RegistryInstanceList.h>
 #include <hellokit/Support/ExitLauncher.h>
+#include <hellokit/Support/RegistryInstantiator.h>
 #include <hellokit/Synth/BuiltinSynthDiagnosers.h>
 #include <hellokit/Synth/SynthDiagnosers.h>
 #include <hellokit/VoiceBank/FrequencyFormats.h>
@@ -113,8 +113,8 @@ namespace hello::daw {
     class Editor::Impl {
     public:
         using Decl = Editor;
-        using Contributions = kit::RegistryInstanceList<ActionContributionRegistry>;
-        using Pages = kit::RegistryInstanceList<SettingPageRegistry>;
+        using Contributions = kit::RegistryInstantiator<ActionContributionRegistry>;
+        using Pages = kit::RegistryInstantiator<SettingPageRegistry>;
 
         // The settings of \a owned, or else \a settings, which another object owns
         Impl(std::unique_ptr<AppSettings> owned, AppSettings *settings)

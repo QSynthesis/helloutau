@@ -6,7 +6,7 @@
 #include <QtCore/QtGlobal>
 
 #include <hellokit/Synth/HelloKitSynthGlobal.h>
-#include <hellokit/Synth/SynthDiagnoserRegistry.h>
+#include <hellokit/Synth/SynthDiagnosers.h>
 
 namespace hello::kit {
 

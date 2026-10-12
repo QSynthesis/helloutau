@@ -8,11 +8,21 @@
 #include <QtCore/QObject>
 #include <QtCore/QString>
 
+#include <hellokit/Support/OrderedObjectRegistryKeeper.h>
+
 #include <hellokit/VoiceBank/FrequencyFormat.h>
-#include <hellokit/VoiceBank/FrequencyFormatRegistry.h>
 #include <hellokit/VoiceBank/HelloKitVoiceBankGlobal.h>
 
 namespace hello::kit {
+
+    /// The frequency table formats registered in a host, in the order of registration. See the
+    /// registration interfaces in docs/Plugins.md.
+    ///
+    /// FrequencyFormats creates and holds the registry and creates one instance of each format.
+    /// Built-in formats and plugin formats are registered alike, with an \c Add or \c AddFactory
+    /// object that a plugin creates in initialize() and destroys in aboutToShutdown(), before its
+    /// library is unloaded. The registry is used only on the application thread.
+    using FrequencyFormatRegistry = OrderedObjectRegistry<FrequencyFormat>;
 
     /// The frequency table formats of a host, such as an editor: one instance of each format
     /// registered in registry(). The content changes as formats are registered and

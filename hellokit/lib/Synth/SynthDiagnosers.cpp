@@ -2,11 +2,9 @@
 
 #include <algorithm>
 
-#include <QtCore/QtDebug>
-
 #include <stdcorelib/pimpl.h>
 
-#include <hellokit/Support/RegistryInstanceList.h>
+#include <hellokit/Support/OrderedObjectRegistryKeeper.h>
 
 namespace hello::kit {
 
@@ -18,26 +16,7 @@ namespace hello::kit {
 
     class SynthDiagnosers::Impl {
     public:
-        using Instances = RegistryInstanceList<SynthDiagnoserRegistry>;
-
-        Impl()
-            : instances(registry, [](Instances::Item &item) {
-                  if (!item.instance) {
-                      return false;
-                  }
-                  const auto name = QString::fromStdString(item.entry->name());
-                  if (item.instance->id() != name) {
-                      qWarning("The synth diagnoser \"%s\" is registered under the name \"%s\".",
-                               qUtf8Printable(item.instance->id()), qUtf8Printable(name));
-                      return false;
-                  }
-                  return true;
-              }) {
-        }
-
-        // The instances are declared after their registry, so that they are destroyed first.
-        mutable SynthDiagnoserRegistry registry;
-        Instances instances;
+        OrderedObjectRegistryKeeper<SynthDiagnoser> diagnosers{"synth diagnoser"};
     };
 
     SynthDiagnosers::SynthDiagnosers() : _impl(std::make_unique<Impl>()) {
@@ -47,15 +26,12 @@ namespace hello::kit {
 
     SynthDiagnoserRegistry &SynthDiagnosers::registry() const {
         stdc_impl_t;
-        return impl.registry;
+        return impl.diagnosers.registry();
     }
 
     QList<SynthDiagnoser *> SynthDiagnosers::diagnosers() const {
         stdc_impl_t;
-        QList<SynthDiagnoser *> result;
-        for (const auto &item : impl.instances.items()) {
-            result.push_back(item.instance.get());
-        }
+        auto result = impl.diagnosers.instances();
         std::stable_sort(result.begin(), result.end(), [](SynthDiagnoser *a, SynthDiagnoser *b) {
             return a->priority() > b->priority();
         });

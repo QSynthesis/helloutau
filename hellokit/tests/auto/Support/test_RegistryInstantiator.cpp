@@ -6,7 +6,7 @@
 
 #include <stdcorelib/adt/linked_map.h>
 
-#include <hellokit/Support/RegistryInstanceList.h>
+#include <hellokit/Support/RegistryInstantiator.h>
 
 using namespace hello::kit;
 
@@ -21,7 +21,7 @@ namespace {
 
     using WidgetRegistry =
         stdc::DynamicRegistry<Widget, stdc::dynamic_registry_traits<Widget>, stdc::linked_map>;
-    using Instances = RegistryInstanceList<WidgetRegistry>;
+    using Instances = RegistryInstantiator<WidgetRegistry>;
 
     WidgetRegistry::Factory factoryOf(int tag) {
         return [tag] { return std::make_unique<Widget>(tag); };
@@ -37,7 +37,7 @@ namespace {
 
 }
 
-class test_RegistryInstanceList : public QObject {
+class test_RegistryInstantiator : public QObject {
     Q_OBJECT
 
 private Q_SLOTS:
@@ -117,6 +117,6 @@ private Q_SLOTS:
     }
 };
 
-QTEST_APPLESS_MAIN(test_RegistryInstanceList)
+QTEST_APPLESS_MAIN(test_RegistryInstantiator)
 
-#include "test_RegistryInstanceList.moc"
+#include "test_RegistryInstantiator.moc"

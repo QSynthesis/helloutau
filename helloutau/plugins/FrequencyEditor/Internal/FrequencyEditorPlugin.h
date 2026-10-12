@@ -6,7 +6,7 @@
 
 #include <stdcorelib/pluginsystem/iplugin.h>
 
-#include <hellokit/Synth/SynthDiagnoserRegistry.h>
+#include <hellokit/Synth/SynthDiagnosers.h>
 
 namespace hello::kit {
     class BuiltinFrequencyFormats;

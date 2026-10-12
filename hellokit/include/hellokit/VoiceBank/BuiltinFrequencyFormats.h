@@ -5,7 +5,7 @@
 
 #include <QtCore/QtGlobal>
 
-#include <hellokit/VoiceBank/FrequencyFormatRegistry.h>
+#include <hellokit/VoiceBank/FrequencyFormats.h>
 #include <hellokit/VoiceBank/HelloKitVoiceBankGlobal.h>
 
 namespace hello::kit {

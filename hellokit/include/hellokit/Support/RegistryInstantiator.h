@@ -1,5 +1,5 @@
-#ifndef HELLOKIT_SUPPORT_REGISTRYINSTANCELIST_H
-#define HELLOKIT_SUPPORT_REGISTRYINSTANCELIST_H
+#ifndef HELLOKIT_SUPPORT_REGISTRYINSTANTIATOR_H
+#define HELLOKIT_SUPPORT_REGISTRYINSTANTIATOR_H
 
 #include <algorithm>
 #include <functional>
@@ -12,15 +12,16 @@
 
 namespace hello::kit {
 
-    /// The instances that a host creates from the entries of \a Registry, a
-    /// \c stdc::DynamicRegistry, one for each entry, in the order of the registry. An instance is
-    /// created when its entry is added and destroyed when its entry is removed. See the
-    /// registration interfaces in docs/Plugins.md.
+    /// Instantiates each entry of \a Registry, any \c stdc::DynamicRegistry, and holds the
+    /// instances in the order of the registry: an instance is created when its entry is added and
+    /// destroyed when its entry is removed. The host decides through the take and release
+    /// functions which instances it keeps. OrderedObjectRegistryKeeper applies fixed rules on top
+    /// of this class. See the registration interfaces in docs/Plugins.md.
     ///
-    /// The object follows the registry through a listener. It must be used on the thread on which
+    /// The object follows the registry as a listener. It must be used on the thread on which
     /// entries are registered, and the registry must outlive it.
     template <class Registry>
-    class RegistryInstanceList : private Registry::Listener {
+    class RegistryInstantiator : private Registry::Listener {
     public:
         using EntryPointer = typename Registry::EntryPointer;
         using Instance = typename Registry::result_type;
@@ -39,7 +40,7 @@ namespace hello::kit {
 
         /// Creates an instance for each entry of \a registry, and follows the changes of the
         /// registry. Without \a take, every item is kept.
-        explicit RegistryInstanceList(Registry &registry, Take take = {}, Release release = {})
+        explicit RegistryInstantiator(Registry &registry, Take take = {}, Release release = {})
             : m_registry(registry), m_take(std::move(take)), m_release(std::move(release)) {
             m_registry.add_listener(this);
             for (const auto &entry : m_registry.entries()) {
@@ -48,7 +49,7 @@ namespace hello::kit {
         }
 
         /// Destroys the instances without calling the release function.
-        ~RegistryInstanceList() override {
+        ~RegistryInstantiator() override {
             m_registry.remove_listener(this);
         }
 
@@ -84,9 +85,9 @@ namespace hello::kit {
         Release m_release;
         std::vector<Item> m_items;
 
-        Q_DISABLE_COPY(RegistryInstanceList)
+        Q_DISABLE_COPY(RegistryInstantiator)
     };
 
 }
 
-#endif // HELLOKIT_SUPPORT_REGISTRYINSTANCELIST_H
+#endif // HELLOKIT_SUPPORT_REGISTRYINSTANTIATOR_H

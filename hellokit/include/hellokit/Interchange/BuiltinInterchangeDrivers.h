@@ -4,7 +4,7 @@
 #include <QtCore/QtGlobal>
 
 #include <hellokit/Interchange/HelloKitInterchangeGlobal.h>
-#include <hellokit/Interchange/InterchangeConvertRegistry.h>
+#include <hellokit/Interchange/InterchangeDrivers.h>
 
 namespace hello::kit {
 

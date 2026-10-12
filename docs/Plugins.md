@@ -48,7 +48,7 @@ stdcorelib.plugin 的交接记录（其仓库 `.cache/codex/2026-08-21-1722-stdc
 
 ### 注册接口
 
-- 各扩展点的登记形状一致（作者 2026-09-30 要求统一，2026-10-08 决定统一到 `stdc::DynamicRegistry`）。宿主一侧是**注册表**，即以 `stdc::linked_map` 保存、保持登记顺序的 `stdc::DynamicRegistry` 的类型别名，由宿主创建并持有。贡献者一侧是**登记对象**，即该注册表的 `AddFactory`（登记一个可带捕获的工厂）或 `Add<V>`（登记默认构造的类型 `V`）。名称在一个注册表内唯一，重名的登记失败，此时 `entry()` 为空，随应用提供的插件据此使初始化失败。条目是工厂，宿主经 `kit::RegistryInstanceList` 监听注册表，为每个条目创建一个实例，条目移除时销毁该实例。
+- 各扩展点的登记形状一致（作者 2026-09-30 要求统一，2026-10-08 决定统一到 `stdc::DynamicRegistry`）。宿主一侧是**注册表**，即以 `stdc::linked_map` 保存、保持登记顺序的 `stdc::DynamicRegistry` 的类型别名，由宿主创建并持有。贡献者一侧是**登记对象**，即该注册表的 `AddFactory`（登记一个可带捕获的工厂）或 `Add<V>`（登记默认构造的类型 `V`）。名称在一个注册表内唯一，重名的登记失败，此时 `entry()` 为空，随应用提供的插件据此使初始化失败。条目是工厂，宿主经 `kit::RegistryInstantiator` 监听注册表，为每个条目创建一个实例，条目移除时销毁该实例。条目名称即实例 ID 的注册表是 `kit::OrderedObjectRegistry<T>` 的别名，宿主以 `kit::OrderedObjectRegistryKeeper<T>` 同时持有注册表与实例：它拒绝空实例与 ID 不同于条目名称的实例并给出警告，按登记顺序列出实例、按 ID 查找，实例增删时调用宿主给出的函数。宿主在其上提供领域查询，见 `FrequencyFormats`、`SynthDiagnosers`、`InterchangeDrivers`（作者 2026-10-12 同意）。
 
   | 扩展点 | 注册表 | 条目名称 | 宿主 | 内置的登记 |
   |---|---|---|---|---|
@@ -163,7 +163,7 @@ stdcorelib.plugin 的生命周期是同步的，不依赖事件循环。HelloUta
 7. **ClassicPluginHost 插件**（计划见 [`ClassicPluginHost.md`](ClassicPluginHost.md)）：随 HelloUtau 提供的原生插件，把 UTAU 插件作为命令加入「工具 → Classic Plugins」菜单，运行后把结果作为一个撤销步骤应用到选区。选区编辑的注册接口暂不建。验收同 Roadmap 第五阶段：若干社区常用的原版插件能够正常执行并写回结果。
 8. **其余扩展点**：编辑界面扩展、音源批量操作，随各自功能的实现加入。新的扩展点按「注册接口」的形状建立，注册表由提供该扩展点的宿主持有。
 9. ~~**stdcorelib.plugin 的 `loadOrder()`**~~：已实现（该仓库 `e1f7ad6`），测试覆盖依赖链与可选依赖、同层按发现顺序、停用与未选中与无效插件的排除、失败插件的保留、载入中的重入查询。「Plugins」页须列出停用的插件，而 `loadOrder()` 不含停用的插件，因此该页按发现顺序列出（`plugins()`），不使用 `loadOrder()`。
-10. ~~**登记统一到 `stdc::DynamicRegistry`**~~（作者 2026-10-08 决定）：动作、设置页、频率表格式、格式转换驱动与步骤页的进程级列表和 QObject 列表全部改为宿主持有的 `stdc::DynamicRegistry`，登记对象改为 `AddFactory` / `Add<V>`，宿主经 `kit::RegistryInstanceList` 实例化条目；Interchange 插件导出 `InterchangeService`。上面第 3、4、6 步中的 `ActionRegistration`、`FrequencyFormatRegistration`、`InterchangeRegistration` 与进程级列表均已删除。见「注册接口」。
+10. ~~**登记统一到 `stdc::DynamicRegistry`**~~（作者 2026-10-08 决定）：动作、设置页、频率表格式、格式转换驱动与步骤页的进程级列表和 QObject 列表全部改为宿主持有的 `stdc::DynamicRegistry`，登记对象改为 `AddFactory` / `Add<V>`，宿主经 `kit::RegistryInstantiator` 实例化条目；Interchange 插件导出 `InterchangeService`。上面第 3、4、6 步中的 `ActionRegistration`、`FrequencyFormatRegistration`、`InterchangeRegistration` 与进程级列表均已删除。见「注册接口」。
 
 ## 作者的决定（2026-09-30）
 

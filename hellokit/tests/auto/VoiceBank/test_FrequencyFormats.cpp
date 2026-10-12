@@ -8,7 +8,6 @@
 #include <QtTest/QTest>
 
 #include <hellokit/VoiceBank/BuiltinFrequencyFormats.h>
-#include <hellokit/VoiceBank/FrequencyFormatRegistry.h>
 #include <hellokit/VoiceBank/FrequencyFormats.h>
 
 using namespace hello::kit;

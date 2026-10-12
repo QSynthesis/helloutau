@@ -6,11 +6,21 @@
 #include <QtCore/QList>
 #include <QtCore/QtGlobal>
 
+#include <hellokit/Support/OrderedObjectRegistryKeeper.h>
+
 #include <hellokit/Synth/HelloKitSynthGlobal.h>
 #include <hellokit/Synth/SynthDiagnoser.h>
-#include <hellokit/Synth/SynthDiagnoserRegistry.h>
 
 namespace hello::kit {
+
+    /// The diagnosers of render failures registered in a host, in the order of registration. See
+    /// the registration interfaces in docs/Plugins.md.
+    ///
+    /// SynthDiagnosers creates and holds the registry and creates one instance of each
+    /// diagnoser. A plugin creates its \c Add or \c AddFactory objects in initialize() and
+    /// destroys them in aboutToShutdown(), before its library is unloaded. The registry is used
+    /// only on the application thread.
+    using SynthDiagnoserRegistry = OrderedObjectRegistry<SynthDiagnoser>;
 
     /// The diagnosers of render failures of a host, such as an editor: one instance of each
     /// diagnoser registered in registry(). See docs/SynthDiagnostics.md.
