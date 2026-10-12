@@ -26,14 +26,14 @@ qm_add_definition(HELLOUTAU_ORGANIZATION_NAME "OpenVPI" STRING_LITERAL)
 qm_add_definition(HELLOUTAU_TRIPLET ${HELLO_TRIPLET} STRING_LITERAL)
 
 # The repositories of the releases and the identifiers of the assets and of the installer, which
-# UpdateChecker reads from share/helloutau beside the bin directory, in the build as in the
-# installation. See the automatic update in docs/Distribution.md.
-configure_file(share/helloutau/UpdateManifest.json
-    ${QMSETUP_BUILD_DIR}/share/helloutau/UpdateManifest.json COPYONLY
+# UpdateChecker reads from share/helloutau/update beside the bin directory, in the build as in
+# the installation. See the automatic update in docs/Distribution.md.
+configure_file(share/helloutau/update/UpdateManifest.json
+    ${QMSETUP_BUILD_DIR}/share/helloutau/update/UpdateManifest.json COPYONLY
 )
 if(HELLO_INSTALL)
-    install(FILES share/helloutau/UpdateManifest.json
-        DESTINATION ${CMAKE_INSTALL_DATADIR}/helloutau)
+    install(FILES share/helloutau/update/UpdateManifest.json
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/helloutau/update)
 endif()
 
 find_package(Qt6 REQUIRED COMPONENTS LinguistTools)

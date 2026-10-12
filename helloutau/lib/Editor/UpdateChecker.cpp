@@ -154,7 +154,7 @@ namespace hello::daw {
 
     QString UpdateChecker::ManifestFile::defaultFileName() {
         return QDir::cleanPath(QCoreApplication::applicationDirPath() +
-                               QStringLiteral("/../share/helloutau/UpdateManifest.json"));
+                               QStringLiteral("/../share/helloutau/update/UpdateManifest.json"));
     }
 
     std::optional<UpdateChecker::ManifestFile>

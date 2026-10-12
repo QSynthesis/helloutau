@@ -30,8 +30,8 @@ namespace hello::daw {
         Q_OBJECT
     public:
         /// The sources of the releases and the identifiers of the assets and of the installer,
-        /// recorded in \c UpdateManifest.json in the \c share/helloutau directory beside the
-        /// directory of the program. No host is named in the code.
+        /// recorded in \c UpdateManifest.json in the \c share/helloutau/update directory beside
+        /// the directory of the program. No host is named in the code.
         struct HELLOUTAU_EDITOR_EXPORT ManifestFile {
             /// A host of the releases, which the settings select by its name.
             struct Source {

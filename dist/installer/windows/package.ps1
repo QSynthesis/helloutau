@@ -19,6 +19,7 @@ param(
 #     lib/helloutau/plugins/  the plugins of the application, where cmake --install puts them
 #     lib/Qt/plugins/         the plugins of Qt, which AppLoader::addQtPluginPaths() adds
 #     share/Qt/translations/  the translations of Qt, installed by helloutau/CMakeLists.txt
+#     share/helloutau/update/ UpdateManifest.json, installed by helloutau/CMakeLists.txt
 #
 # The build must be complete: this script does not build, because building requires the
 # environment of the compiler. Steps: cmake --install, copy the DLLs that the build copied beside
