@@ -144,6 +144,26 @@ namespace hello::kit {
         return logical;
     }
 
+    QList<MisdecodedNameConversion::Listing> VoiceBankSession::nameListings() const {
+        const auto bank = fullBank();
+        const auto &directories = bank.directories();
+        QList<MisdecodedNameConversion::Listing> listings;
+        for (const auto &directory : directories) {
+            auto listing = m_files.nameListingOf(directory.path);
+            listing.charset = directory.charset;
+            listing.record = directory.fileNameEncoding;
+            listings.push_back(listing);
+        }
+        for (const auto &sample : bank.samples()) {
+            if (sample.hasEntry && sample.directory >= 0 && sample.directory < listings.size()) {
+                listings[sample.directory].entries.push_back(sample.fileName);
+            }
+        }
+        std::sort(listings.begin(), listings.end(),
+                  [](const auto &a, const auto &b) { return a.directory < b.directory; });
+        return listings;
+    }
+
     QList<VoiceBankDirectory> VoiceBankSession::excludedDirectories() const {
         // An undo can restore a directory that a later reading excluded, which the tree then
         // holds again.

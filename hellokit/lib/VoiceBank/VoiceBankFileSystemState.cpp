@@ -757,6 +757,25 @@ namespace hello::kit {
         return namesOf(directory, record).undetermined;
     }
 
+    MisdecodedNameConversion::Listing
+        VoiceBankFileSystemState::nameListingOf(const fs::path &directory) const {
+        MisdecodedNameConversion::Listing listing;
+        listing.directory = directory;
+        const auto it = m_books.find(directory);
+        if (it == m_books.end()) {
+            return listing;
+        }
+        for (const auto &name : it->second.audio) {
+            listing.audioFiles.push_back(QString::fromStdU16String(name.u16string()));
+        }
+        for (const auto &entry : it->second.stamp.entries) {
+            if (entry.directory) {
+                listing.subdirectories.push_back(QString::fromStdU16String(entry.name.u16string()));
+            }
+        }
+        return listing;
+    }
+
     VoiceBankFileSystemState::Names VoiceBankFileSystemState::namesOf(
         const std::vector<fs::path> &audio, const VoiceBankDirectoryStamp &stamp,
         const FileNameRecord &record, DiagnosticList *diagnostics) {

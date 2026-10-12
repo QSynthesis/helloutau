@@ -1,4 +1,5 @@
 #include "MisdecodedNameQuestion.h"
+#include "MisdecodedNameQuestion_p.h"
 
 #include <algorithm>
 
@@ -6,20 +7,105 @@
 
 #include <hellokit/Support/TextCodec.h>
 
+namespace hello::kit::misdecodedNames {
+
+    bool isAscii(QStringView text) {
+        return std::all_of(text.begin(), text.end(), [](QChar c) { return c.unicode() < 0x80; });
+    }
+
+    QString normalized(const QString &name) {
+        return name.normalized(QString::NormalizationForm_C);
+    }
+
+    QStringList missingOf(const QStringList &entries, const QStringList &audio) {
+        QSet<QString> present;
+        for (const auto &name : audio) {
+            present.insert(normalized(name));
+        }
+        QStringList missing;
+        for (const auto &name : entries) {
+            if (!present.contains(normalized(name))) {
+                missing.push_back(normalized(name));
+            }
+        }
+        return missing;
+    }
+
+    namespace {
+
+        /// The number of \a missing that a name of \a audio restores to under \a record .
+        int matchesOf(const VoiceBankConfiguration::FileNameEncoding &record,
+                      const QStringList &audio, const QStringList &missing) {
+            QSet<QString> restored;
+            for (const auto &name : audio) {
+                if (const auto logical = record.restore(name)) {
+                    restored.insert(*logical);
+                }
+            }
+            return int(
+                std::count_if(missing.begin(), missing.end(), [&restored](const QString &name) {
+                    return restored.contains(name);
+                }));
+        }
+
+    }
+
+    Inference infer(const QStringList &audio, const QStringList &missing, const QString &charset) {
+        const auto text = TextCodec(charset);
+        const auto system = TextCodec(TextCodec::systemName()).name();
+        const auto candidates = TextCodec::ustCandidates();
+
+        // The pair under which the most missing entries find their audio files. Among equals,
+        // the pair that was written in the encoding of the text files comes first, then the pair
+        // that misdecodes in the system encoding, because the files were most likely extracted
+        // on this machine, then the order of the candidates.
+        const auto rank = [&](const VoiceBankConfiguration::FileNameEncoding &record) {
+            return int(record.original != text.name()) * 2 + int(record.misdecodedAs != system);
+        };
+        Inference best;
+        bool found = false;
+        for (const auto &original : candidates) {
+            for (const auto &misdecodedAs : candidates) {
+                VoiceBankConfiguration::FileNameEncoding record;
+                record.original = TextCodec(original).name();
+                record.misdecodedAs = TextCodec(misdecodedAs).name();
+                if (record.original == record.misdecodedAs) {
+                    continue;
+                }
+                const int matched = missing.isEmpty() ? 0 : matchesOf(record, audio, missing);
+                if (matched > best.matched ||
+                    (found && matched == best.matched && rank(record) < rank(best.record))) {
+                    best = {record, matched};
+                    found = true;
+                }
+            }
+        }
+        if (found) {
+            return best;
+        }
+
+        // The encoding of the text files, misdecoded in the system encoding
+        auto &record = best.record;
+        record.original = text.isValid() && !charset.isEmpty()
+                              ? text.name()
+                              : TextCodec(candidates.value(0)).name();
+        record.misdecodedAs = system;
+        for (qsizetype i = 0; record.misdecodedAs == record.original && i < candidates.size();
+             ++i) {
+            record.misdecodedAs = TextCodec(candidates.at(i)).name();
+        }
+        return best;
+    }
+
+}
+
 namespace hello::kit {
 
     namespace fs = std::filesystem;
 
+    using namespace misdecodedNames;
+
     namespace {
-
-        bool isAscii(QStringView text) {
-            return std::all_of(text.begin(), text.end(),
-                               [](QChar c) { return c.unicode() < 0x80; });
-        }
-
-        QString normalized(const QString &name) {
-            return name.normalized(QString::NormalizationForm_C);
-        }
 
         QString textOf(const fs::path &name) {
             return QString::fromStdU16String(name.u16string());
@@ -61,35 +147,6 @@ namespace hello::kit {
             return names;
         }
 
-        /// The names of \a entries whose audio file does not exist under its name on disk.
-        QStringList missingOf(const QStringList &entries, const QStringList &audio) {
-            QSet<QString> present;
-            for (const auto &name : audio) {
-                present.insert(normalized(name));
-            }
-            QStringList missing;
-            for (const auto &name : entries) {
-                if (!present.contains(name)) {
-                    missing.push_back(name);
-                }
-            }
-            return missing;
-        }
-
-        /// The number of \a missing that a name of \a audio restores to under \a record .
-        int matchesOf(const VoiceBankConfiguration::FileNameEncoding &record,
-                      const QStringList &audio, const QStringList &missing) {
-            QSet<QString> restored;
-            for (const auto &name : audio) {
-                if (const auto logical = record.restore(name)) {
-                    restored.insert(*logical);
-                }
-            }
-            return int(
-                std::count_if(missing.begin(), missing.end(), [&restored](const QString &name) {
-                    return restored.contains(name);
-                }));
-        }
     }
 
     std::optional<MisdecodedNameQuestion>
@@ -98,8 +155,6 @@ namespace hello::kit {
         const auto audio = audioNamesOf(source);
         const auto missing = missingOf(entries, audio);
         const auto text = TextCodec(charset);
-        const auto system = TextCodec(TextCodec::systemName()).name();
-        const auto candidates = TextCodec::ustCandidates();
 
         MisdecodedNameQuestion question;
         if (source.config && source.config->fileNameEncoding) {
@@ -109,46 +164,9 @@ namespace hello::kit {
             question.m_record = *source.config->fileNameEncoding;
             question.m_basis = Record;
         } else {
-            // The pair under which the most missing entries find their audio files. Among
-            // equals, the pair that was written in the encoding of the text files comes first,
-            // then the pair that misdecodes in the system encoding, because the files were most
-            // likely extracted on this machine, then the order of the candidates.
-            const auto rank = [&](const VoiceBankConfiguration::FileNameEncoding &record) {
-                return int(record.original != text.name()) * 2 + int(record.misdecodedAs != system);
-            };
-            std::optional<VoiceBankConfiguration::FileNameEncoding> best;
-            int bestMatched = 0;
-            for (const auto &original : candidates) {
-                for (const auto &misdecodedAs : candidates) {
-                    VoiceBankConfiguration::FileNameEncoding record;
-                    record.original = TextCodec(original).name();
-                    record.misdecodedAs = TextCodec(misdecodedAs).name();
-                    if (record.original == record.misdecodedAs) {
-                        continue;
-                    }
-                    const int matched = missing.isEmpty() ? 0 : matchesOf(record, audio, missing);
-                    if (matched > bestMatched ||
-                        (best && matched == bestMatched && rank(record) < rank(*best))) {
-                        best = record;
-                        bestMatched = matched;
-                    }
-                }
-            }
-            if (best) {
-                question.m_record = *best;
-                question.m_basis = Entries;
-            } else {
-                // The encoding of the text files, misdecoded in the system encoding
-                auto &record = question.m_record;
-                record.original = text.isValid() && !charset.isEmpty()
-                                      ? text.name()
-                                      : TextCodec(candidates.value(0)).name();
-                record.misdecodedAs = system;
-                for (qsizetype i = 0;
-                     record.misdecodedAs == record.original && i < candidates.size(); ++i) {
-                    record.misdecodedAs = TextCodec(candidates.at(i)).name();
-                }
-            }
+            const auto inference = infer(audio, missing, charset);
+            question.m_record = inference.record;
+            question.m_basis = inference.matched > 0 ? Entries : None;
         }
         question.collect(source, entries, missing);
         if (question.m_choices.isEmpty() || (!question.isRecorded() && question.m_unnamed == 0)) {

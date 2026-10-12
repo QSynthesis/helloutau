@@ -252,6 +252,33 @@ private Q_SLOTS:
         QVERIFY(undeterminedOf(*opened, pathOf(kMisdecodedU)).isEmpty());
     }
 
+    // The listing holds the names on disk, whatever the record restores, and nothing of a
+    // directory not read.
+    void the_listing_holds_the_names_on_disk() {
+        writeBank();
+        DiagnosticList diagnostics;
+        const auto opened = open(root(), diagnostics);
+        QVERIFY(opened.has_value());
+        const auto listing = opened->files.nameListingOf({});
+        QCOMPARE(listing.directory, fs::path());
+        auto audio = listing.audioFiles;
+        audio.sort();
+        QCOMPARE(audio,
+                 (QStringList{QStringLiteral("a.wav"), QString::fromUtf8("が.wav"),
+                              kMisdecodedA + QStringLiteral(".wav"),
+                              kMisdecodedI + QStringLiteral(".wav"), QString::fromUtf8("新.wav")}));
+        auto subdirectories = listing.subdirectories;
+        subdirectories.sort();
+        QCOMPARE(subdirectories, (QStringList{kMisdecodedU, QString::fromUtf8("未")}));
+        QVERIFY(listing.entries.isEmpty());
+        QVERIFY(!listing.record);
+
+        const auto none = opened->files.nameListingOf("none");
+        QCOMPARE(none.directory, fs::path("none"));
+        QVERIFY(none.audioFiles.isEmpty());
+        QVERIFY(none.subdirectories.isEmpty());
+    }
+
     // A name on disk is looked up in the lists in Normalization Form C, as on macOS a file
     // system may store が as か followed by a combining mark.
     void a_decomposed_name_is_found_in_the_lists() {

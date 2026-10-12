@@ -828,6 +828,38 @@ private Q_SLOTS:
         QCOMPARE(read(QString::fromUtf8("偁.wav")), QByteArray("RIFF"));
         QCOMPARE(read(QString::fromUtf8("あ.wav")), QByteArray("<missing>"));
     }
+
+    // Each directory is listed with its names on disk and the state of the tree, in the order
+    // of the paths. The excluded directory has no entries.
+    void the_names_of_every_directory_are_listed() {
+        openMisdecoded();
+        const auto record = japaneseOnChinese();
+        DiagnosticList diagnostics;
+        QVERIFY(VoiceBankEdits::setFileNameEncoding(directories().at(0), record, diagnostics));
+
+        const auto listings = m_session->nameListings();
+        QList<fs::path> paths;
+        for (const auto &listing : listings) {
+            paths.push_back(listing.directory);
+        }
+        QCOMPARE(paths,
+                 (QList<fs::path>{fs::path(), fs::path("left"), fs::path("sub"), fs::path(u"偆")}));
+        const auto &root = listings.at(0);
+        QCOMPARE(root.charset, QStringLiteral("GBK"));
+        QCOMPARE(root.record, std::optional(record));
+        QCOMPARE(root.entries, (QStringList{QStringLiteral("a.wav"), QStringLiteral("b.wav")}));
+        auto audio = root.audioFiles;
+        audio.sort();
+        QCOMPARE(audio, (QStringList{QStringLiteral("a.wav"), QString::fromUtf8("偁.wav"),
+                                     QString::fromUtf8("偄.wav")}));
+        auto subdirectories = root.subdirectories;
+        subdirectories.sort();
+        QCOMPARE(subdirectories, (QStringList{QStringLiteral("left"), QStringLiteral("sub"),
+                                              QString::fromUtf8("偆")}));
+        QVERIFY(listings.at(1).entries.isEmpty());
+        QCOMPARE(listings.at(2).entries, QStringList{QStringLiteral("x.wav")});
+        QCOMPARE(listings.at(3).audioFiles, QStringList{QStringLiteral("c.wav")});
+    }
 };
 
 QTEST_APPLESS_MAIN(test_VoiceBankSession_Disk)

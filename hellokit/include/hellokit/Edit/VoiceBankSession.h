@@ -15,6 +15,7 @@
 #include <hellokit/Support/Diagnostic.h>
 
 #include <hellokit/VoiceBank/FrequencyFormats.h>
+#include <hellokit/VoiceBank/MisdecodedNameConversion.h>
 #include <hellokit/VoiceBank/VoiceBank.h>
 #include <hellokit/VoiceBank/VoiceBankFileSystemState.h>
 
@@ -83,6 +84,13 @@ namespace hello::kit {
 
         /// \sa VoiceBank::logicalPathOf()
         std::filesystem::path logicalPathOf(const std::filesystem::path &directory) const;
+
+        /// Returns the listings of the directories of the tree and of the excluded directories,
+        /// in the order of their paths, for a conversion of their names. The listing of an
+        /// excluded directory has no entries, because its text was not read.
+        ///
+        /// \sa VoiceBankFileSystemState::nameListingOf()
+        QList<MisdecodedNameConversion::Listing> nameListings() const;
 
         /// @}
 

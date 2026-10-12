@@ -18,6 +18,7 @@
 
 #include <hellokit/VoiceBank/FrequencyFormat.h>
 #include <hellokit/VoiceBank/HelloKitVoiceBankGlobal.h>
+#include <hellokit/VoiceBank/MisdecodedNameConversion.h>
 #include <hellokit/VoiceBank/VoiceBank.h>
 #include <hellokit/VoiceBank/VoiceBankConfiguration.h>
 #include <hellokit/VoiceBank/VoiceBankSource.h>
@@ -94,6 +95,12 @@ namespace hello::kit {
         QStringList undeterminedNames(
             const std::filesystem::path &directory,
             const std::optional<VoiceBankConfiguration::FileNameEncoding> &record) const;
+
+        /// Returns the listing of the directory at \a directory with the names on disk of its
+        /// audio files and its subdirectories as last read, which the caller completes with the
+        /// state of the contents. The lists are empty if the directory has not been read.
+        MisdecodedNameConversion::Listing
+            nameListingOf(const std::filesystem::path &directory) const;
 
         /// Saves \a files of \a bank , each in the encoding of its directory, and nothing else.
         ///
