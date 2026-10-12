@@ -1,5 +1,6 @@
 #include "BuiltinFrequencyFormats.h"
 
+#include <algorithm>
 #include <cstring>
 
 #include <QtCore/QByteArray>
@@ -349,6 +350,41 @@ namespace hello::kit {
                     table.frames.push_back(frame);
                 }
                 return table;
+            }
+
+            // An entry is deleted as mrq_delete_entry() in mrq.c deletes it: its name is zeroed
+            // and its data stays in place. Every entry of an audio file is deleted, whatever the
+            // case of its name, since find() would take any of them.
+            std::optional<QList<FileChange>>
+                changesRemoving(const std::filesystem::path &directory,
+                                const QList<std::filesystem::path> &wavs,
+                                DiagnosticList &diagnostics) const override {
+                const auto path = directory / "desc.mrq";
+                std::error_code error;
+                if (!std::filesystem::is_regular_file(path, error)) {
+                    return QList<FileChange>();
+                }
+                auto bytes = contentsOf(path, diagnostics);
+                if (!bytes) {
+                    return std::nullopt;
+                }
+                QSet<QString> names;
+                for (const auto &wav : wavs) {
+                    names.insert(textOf(wav.filename()).toCaseFolded());
+                }
+                bool deleted = false;
+                for (const auto &[entry, data] : entriesOf(*bytes)) {
+                    if (!entry.isEmpty() && names.contains(entry.toCaseFolded())) {
+                        // The name precedes the int32 size of the data.
+                        const auto name = data - 4 - entry.size() * 2;
+                        std::fill(bytes->begin() + name, bytes->begin() + data - 4, '\0');
+                        deleted = true;
+                    }
+                }
+                if (!deleted) {
+                    return QList<FileChange>();
+                }
+                return QList<FileChange>{FileChange::rewritten("desc.mrq", *bytes)};
             }
 
         private:

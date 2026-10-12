@@ -372,7 +372,8 @@ private Q_SLOTS:
     }
 
     // The maps beside their audio files are removed, and an audio file without a map needs no
-    // change. The maps in desc.mrq cannot be removed yet, which is reported.
+    // change. A format that keeps no sidecar files and does not say how its maps are removed
+    // reports it.
     void the_maps_beside_the_audio_files_are_removed() {
         QDir(m_dir.path()).mkdir(QStringLiteral("d"));
         const auto directory = pathOf("d");
@@ -394,10 +395,48 @@ private Q_SLOTS:
         QVERIFY(!fs::exists(directory / "a_wav.frq"));
         QVERIFY(fs::exists(directory / "a.wav"));
 
-        QVERIFY(!FrequencyFormats::removeMaps(*formats.format(QStringLiteral("mrq")), directory,
-                                              {"a.wav"}, diagnostics));
+        QVERIFY(!FrequencyFormats::removeMaps(Fixed(QStringLiteral("x")), directory, {"a.wav"},
+                                              diagnostics));
         QCOMPARE(diagnostics.size(), 1);
         QCOMPARE(diagnostics.at(0).severity, DiagnosticSeverity::Warning);
+    }
+
+    // The entries of desc.mrq are deleted as the mrq library deletes them, their names zeroed in
+    // place, whatever the case of the names. The other entries stay readable. A folder without
+    // desc.mrq needs no change.
+    void the_entries_of_desc_mrq_are_removed() {
+        QDir(m_dir.path()).mkdir(QStringLiteral("m"));
+        const auto directory = pathOf("m");
+        QByteArray bytes("mrq ");
+        bytes += bytesOf<qint32>(2) + bytesOf<qint32>(3);
+        bytes += mrqEntry(QStringLiteral("x.wav"), {2.0f});
+        bytes += mrqEntry(QStringLiteral("A.WAV"), {0.0f, 440.0f});
+        bytes += mrqEntry(QStringLiteral("a.wav"), {1.0f});
+        write(directory / "desc.mrq", bytes);
+        FrequencyFormats formats;
+        const BuiltinFrequencyFormats builtins(formats.registry());
+        const auto mrq = formats.format(QStringLiteral("mrq"));
+
+        DiagnosticList diagnostics;
+        QVERIFY(FrequencyFormats::removeMaps(*mrq, directory, {"a.wav", "b.wav"}, diagnostics));
+        QVERIFY(diagnostics.isEmpty());
+        QByteArray deleted("mrq ");
+        deleted += bytesOf<qint32>(2) + bytesOf<qint32>(3);
+        deleted += mrqEntry(QStringLiteral("x.wav"), {2.0f});
+        deleted += mrqEntry(QString(5, QChar(0)), {0.0f, 440.0f});
+        deleted += mrqEntry(QString(5, QChar(0)), {1.0f});
+        QFile file(QString::fromStdU16String((directory / "desc.mrq").u16string()));
+        QVERIFY(file.open(QIODevice::ReadOnly));
+        QCOMPARE(file.readAll(), deleted);
+        file.close();
+        QCOMPARE(mrq->mapsExist(directory, {"x.wav", "a.wav"}), (QList<bool>{true, false}));
+        const auto table = mrq->read(directory / "x.wav", 0, diagnostics);
+        QVERIFY(table);
+        QCOMPARE(table->frames.at(0).frequency, 2.0);
+
+        const auto changes = mrq->changesRemoving(pathOf("none"), {"a.wav"}, diagnostics);
+        QVERIFY(changes);
+        QVERIFY(changes->isEmpty());
     }
 };
 
