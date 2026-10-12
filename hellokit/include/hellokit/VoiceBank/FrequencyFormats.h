@@ -64,6 +64,18 @@ namespace hello::kit {
                                const QList<std::filesystem::path> &wavs,
                                DiagnosticList &diagnostics);
 
+        /// Writes the maps \a writes of \a format of audio files in the directory \a directory,
+        /// as FrequencyFormat::changesWriting() returns the changes, and removes the analysis
+        /// caches of the audio files as well if \a invalidatingCaches is set, so that the
+        /// resampler derives the caches from the new maps. Failures are reported as removeMaps()
+        /// reports them.
+        /// No file is changed if a map cannot be written.
+        ///
+        /// \return whether every map was written and every cache removed
+        static bool writeMaps(const FrequencyFormat &format, const std::filesystem::path &directory,
+                              const QList<FrequencyFormat::MapWrite> &writes,
+                              bool invalidatingCaches, DiagnosticList &diagnostics);
+
         /// Removes the analysis caches of \a format of the audio files \a wavs, names in the
         /// directory \a directory, and keeps the maps, so that the resampler writes the caches
         /// again from the maps, as removeMaps() reports failures.

@@ -46,6 +46,14 @@ namespace hello::daw {
                             const QList<std::filesystem::path> &wavs,
                             kit::DiagnosticList &diagnostics) const override;
 
+        bool canWrite() const override;
+
+        /// Writes each entry as \c mrq_write_entry() of the mrq library writes it, and creates
+        /// \c desc.mrq if absent. A new entry has the sample rate of the audio file.
+        std::optional<QList<FileChange>>
+            changesWriting(const std::filesystem::path &directory, const QList<MapWrite> &writes,
+                           kit::DiagnosticList &diagnostics) const override;
+
     private:
         // Zeroes the name of each entry whose name, without case, is one of names, and returns
         // whether any name was zeroed
@@ -55,9 +63,9 @@ namespace hello::daw {
         // cut short
         static QList<std::pair<QString, qsizetype>> entriesOf(const QByteArray &bytes);
 
-        // The position of the data of the entry of wav, or none
-        static std::optional<qsizetype> find(const QByteArray &bytes,
-                                             const std::filesystem::path &wav);
+        // The name and the position of the data of the entry of wav, or none
+        static std::optional<std::pair<QString, qsizetype>> find(const QByteArray &bytes,
+                                                                 const std::filesystem::path &wav);
     };
 
 }

@@ -29,6 +29,14 @@ namespace hello::daw {
         /// STAR and PLATINUM, the spectral envelope and the aperiodicity beside the map as
         /// a.star and a.platinum
         QList<AnalysisCache> analysisCaches() const override;
+
+        bool canWrite() const override;
+
+        /// Requires the frames of world4utau, one every 5.80498866213152 milliseconds. The signal
+        /// length and the sample rate of a new map are those of the audio file.
+        std::optional<QList<FileChange>>
+            changesWriting(const std::filesystem::path &directory, const QList<MapWrite> &writes,
+                           kit::DiagnosticList &diagnostics) const override;
     };
 
 }

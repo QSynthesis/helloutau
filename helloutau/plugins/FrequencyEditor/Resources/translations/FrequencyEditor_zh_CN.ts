@@ -7,6 +7,10 @@
         <source>dio (world4utau)</source>
         <translation>dio (world4utau)</translation>
     </message>
+    <message>
+        <source>The format records a frame every %1 samples at %2 Hz, and the period of the frames is %3 samples.</source>
+        <translation>该格式在 %2 Hz 下每 %1 个样本记录一帧，而帧间隔为 %3 个样本。</translation>
+    </message>
 </context>
 <context>
     <name>hello::daw::MoresamplerDiagnoser</name>
@@ -56,6 +60,10 @@
     <message>
         <source>&quot;%1&quot; has no entry for &quot;%2&quot;.</source>
         <translation>「%1」中没有「%2」的条目。</translation>
+    </message>
+    <message>
+        <source>The sample rate of the audio file is unknown.</source>
+        <translation>音频文件的采样率未知。</translation>
     </message>
 </context>
 </TS>

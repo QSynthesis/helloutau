@@ -9,6 +9,7 @@ add_auto_test(test_VoiceBankFileSystemState_Changes.cpp HelloKitVoiceBank)
 add_auto_test(test_VoiceBankFileSystemState_FileNames.cpp HelloKitVoiceBank)
 add_auto_test(test_VoiceBankFileSystemState_Rename.cpp HelloKitVoiceBank)
 add_auto_test(test_WaveMetadata.cpp HelloKitVoiceBank)
+add_auto_test(test_FrequencyMap.cpp HelloKitVoiceBank)
 add_auto_test(test_FrequencyFormats.cpp HelloKitVoiceBank)
 add_auto_test(test_VoiceAliasRule.cpp HelloKitVoiceBank)
 

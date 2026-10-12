@@ -21,8 +21,8 @@ namespace hello::kit {
     /// resampler generates for an audio file. Built-in formats and plugin formats are both
     /// registered in a FrequencyFormatRegistry. See docs/FrequencyMaps.md.
     ///
-    /// The interface is read-only. It neither writes maps nor executes resamplers, and returns
-    /// the changes of files that the caller executes.
+    /// The interface neither changes files nor executes resamplers. It returns the changes of
+    /// files, which the caller executes.
     class HELLOKIT_VOICEBANK_EXPORT FrequencyFormat {
         Q_DECLARE_TR_FUNCTIONS(hello::kit::FrequencyFormat)
     public:
@@ -79,6 +79,18 @@ namespace hello::kit {
 
             /// Returns the name of the cache file of the audio file \a wav.
             std::filesystem::path fileNameOf(const std::filesystem::path &wav) const;
+        };
+
+        /// The new map of an audio file in its directory.
+        struct MapWrite {
+            /// The name of the audio file in the directory
+            std::filesystem::path wav;
+            FrequencyMap map;
+            /// The sample rate of the audio file
+            int sampleRate = 0;
+            /// Whether the frequencies were edited by hand rather than converted, which
+            /// \c desc.mrq records
+            bool editedByHand = true;
         };
 
         virtual ~FrequencyFormat();
@@ -155,6 +167,22 @@ namespace hello::kit {
                             const QList<std::filesystem::path> &wavs,
                             DiagnosticList &diagnostics) const;
 
+        /// Returns whether the format writes maps with changesWriting(). The default
+        /// implementation returns false.
+        virtual bool canWrite() const;
+
+        /// Returns the changes that write the maps \a writes of audio files in the directory
+        /// \a directory, at once, so that a file that holds the maps of several audio files
+        /// changes once. The parts of an existing map beyond FrequencyMap are kept. The analysis
+        /// caches are not removed.
+        ///
+        /// \return the changes, or \c std::nullopt with the reason in \a diagnostics if a map
+        ///         cannot be written, which the default implementation returns
+        /// \sa FrequencyFormats::writeMaps()
+        virtual std::optional<QList<FileChange>>
+            changesWriting(const std::filesystem::path &directory, const QList<MapWrite> &writes,
+                           DiagnosticList &diagnostics) const;
+
         /// Returns the changes that remove the existing cache files of analysisCaches() of the
         /// audio files \a wavs, names in the directory \a directory.
         QList<FileChange> changesInvalidating(const std::filesystem::path &directory,
@@ -184,6 +212,16 @@ namespace hello::kit {
         /// are sidecar files.
         QList<bool> sidecarsExist(const std::filesystem::path &directory,
                                   const QList<std::filesystem::path> &wavs) const;
+
+        /// Reports in \a diagnostics that the map of the audio file \a wav cannot be written for
+        /// \a reason, and returns \c std::nullopt.
+        static std::nullopt_t unwritable(const std::filesystem::path &wav, const QString &reason,
+                                         DiagnosticList &diagnostics);
+
+        /// Returns the hop of \a write as an integral number of samples, for a format that
+        /// records an integer, or \c std::nullopt with the reason in \a diagnostics.
+        static std::optional<qint32> integralHop(const MapWrite &write,
+                                                 DiagnosticList &diagnostics);
 
         /// @}
     };

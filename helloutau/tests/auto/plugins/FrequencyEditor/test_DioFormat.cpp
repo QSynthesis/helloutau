@@ -29,6 +29,23 @@ namespace {
         file.write(bytes);
     }
 
+    QByteArray contentsOf(const fs::path &path) {
+        QFile file(QString::fromStdU16String(path.u16string()));
+        return file.open(QIODevice::ReadOnly) ? file.readAll() : QByteArray();
+    }
+
+    // A silent WAVE file of 16-bit mono samples
+    QByteArray waveOf(qint32 rate, qint32 samples) {
+        const QByteArray data(samples * 2, '\0');
+        QByteArray bytes("RIFF");
+        bytes += bytesOf<qint32>(36 + qint32(data.size())) + "WAVEfmt " + bytesOf<qint32>(16) +
+                 bytesOf<qint16>(1) + bytesOf<qint16>(1) + bytesOf<qint32>(rate) +
+                 bytesOf<qint32>(rate * 2) + bytesOf<qint16>(2) + bytesOf<qint16>(16);
+        return bytes + "data" + bytesOf<qint32>(qint32(data.size())) + data;
+    }
+
+    constexpr double framePeriod = 5.80498866213152;
+
 }
 
 class test_DioFormat : public QObject {
@@ -113,6 +130,70 @@ private Q_SLOTS:
         QVERIFY(!fs::exists(directory / "a.star"));
         QVERIFY(!fs::exists(directory / "a.platinum"));
         QVERIFY(fs::exists(directory / "a.wav"));
+    }
+
+    // A dio read and written again is unchanged. A new dio takes the signal length and the sample
+    // rate of the audio file, and its caches are removed if requested. Frames of another period
+    // than that of world4utau are not written, and neither is a new dio without its audio file.
+    void a_dio_is_written() {
+        QDir(m_dir.path()).mkdir(QStringLiteral("x"));
+        const auto directory = pathOf("x");
+        const DioFormat dio;
+        QVERIFY(dio.canWrite());
+        QByteArray bytes("wrld-dio");
+        bytes += bytesOf<qint32>(1000) + bytesOf<qint32>(44100) + bytesOf<qint32>(3);
+        // The time of the last frame changes in the last bit if converted to milliseconds and
+        // back.
+        for (int i = 0; i < 3; ++i) {
+            bytes += bytesOf(framePeriod * (i + 103) * 0.001) + bytesOf(i * 100.5);
+        }
+        write(directory / "a.dio", bytes);
+        kit::DiagnosticList diagnostics;
+        const auto map = dio.read(directory / "a.wav", 44100, diagnostics);
+        QVERIFY(map);
+        QCOMPARE(map->hop, 256.0);
+        const auto same = dio.changesWriting(directory,
+                                             {
+                                                 {"a.wav", *map}
+        },
+                                             diagnostics);
+        QVERIFY(same);
+        QCOMPARE(same->size(), 1);
+        QCOMPARE(same->at(0).path, fs::path("a.dio"));
+        QCOMPARE(same->at(0).contents, bytes);
+
+        auto edited = *map;
+        edited.frames[1].frequency = 0;
+        edited.hop = 48000 * framePeriod / 1000;
+        write(directory / "b.wav", waveOf(48000, 4800));
+        write(directory / "b.star", "star");
+        QVERIFY(kit::FrequencyFormats::writeMaps(dio, directory,
+                                                 {
+                                                     {"b.wav", edited}
+        },
+                                                 true, diagnostics));
+        QByteArray created("wrld-dio");
+        created += bytesOf<qint32>(4800) + bytesOf<qint32>(48000) + bytesOf<qint32>(3);
+        for (const auto &frame : edited.frames) {
+            created += bytesOf(frame.time / 1000) + bytesOf(frame.frequency);
+        }
+        QCOMPARE(contentsOf(directory / "b.dio"), created);
+        QVERIFY(!fs::exists(directory / "b.star"));
+        QVERIFY(diagnostics.isEmpty());
+
+        edited.hop = 256;
+        QVERIFY(!dio.changesWriting(directory,
+                                    {
+                                        {"b.wav", edited}
+        },
+                                    diagnostics));
+        QCOMPARE(diagnostics.size(), 1);
+        QVERIFY(!dio.changesWriting(directory,
+                                    {
+                                        {"c.wav", *map}
+        },
+                                    diagnostics));
+        QVERIFY(diagnostics.size() > 1);
     }
 };
 

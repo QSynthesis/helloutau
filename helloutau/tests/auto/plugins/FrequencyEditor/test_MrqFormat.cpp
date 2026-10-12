@@ -1,5 +1,6 @@
 #include <filesystem>
 
+#include <QtCore/QDateTime>
 #include <QtCore/QDir>
 #include <QtCore/QFile>
 #include <QtCore/QTemporaryDir>
@@ -42,15 +43,32 @@ namespace {
     }
 
     // An entry of desc.mrq of version 2
-    QByteArray mrqEntry(const QString &name, const QList<float> &frequencies) {
-        QByteArray data = bytesOf<qint32>(qint32(frequencies.size())) + bytesOf<qint32>(44100) +
+    QByteArray mrqEntry(const QString &name, const QList<float> &frequencies, qint32 rate = 44100,
+                        qint32 timestamp = 0, qint32 flag = 1) {
+        QByteArray data = bytesOf<qint32>(qint32(frequencies.size())) + bytesOf<qint32>(rate) +
                           bytesOf<qint32>(256);
         for (const float f : frequencies) {
             data += bytesOf(f);
         }
-        data += bytesOf<qint32>(0) + bytesOf<qint32>(1);
+        data += bytesOf<qint32>(timestamp) + bytesOf<qint32>(flag);
         return bytesOf<qint32>(qint32(name.size())) + utf16(name) +
                bytesOf<qint32>(qint32(data.size())) + data;
+    }
+
+    // The timestamp of the last entry of contents
+    qint32 lastTimestamp(const QByteArray &contents) {
+        return qFromLittleEndian<qint32>(contents.constData() + contents.size() - 8);
+    }
+
+    kit::FrequencyMap mapOf(const QList<double> &frequencies) {
+        kit::FrequencyMap map;
+        map.hop = 256;
+        for (const double f : frequencies) {
+            kit::FrequencyMap::Frame frame;
+            frame.frequency = f;
+            map.frames.push_back(frame);
+        }
+        return map;
     }
 
 }
@@ -198,6 +216,112 @@ private Q_SLOTS:
         QVERIFY(!fs::exists(directory / "a.wav.llsm"));
         QVERIFY(hasMap(mrq, directory / "a.wav"));
         QVERIFY(diagnostics.isEmpty());
+    }
+
+    // An entry with room for the frames is overwritten in place with the time of writing and the
+    // flag of an edit by hand. A longer entry has its name zeroed and is appended.
+    void the_entries_of_desc_mrq_are_written() {
+        QDir(m_dir.path()).mkdir(QStringLiteral("w"));
+        const auto directory = pathOf("w");
+        QByteArray bytes("mrq ");
+        bytes += bytesOf<qint32>(2) + bytesOf<qint32>(2);
+        bytes += mrqEntry(QStringLiteral("x.wav"), {2.0f});
+        bytes += mrqEntry(QStringLiteral("a.wav"), {1.0f, 3.0f});
+        write(directory / "desc.mrq", bytes);
+        const MrqFormat mrq;
+        QVERIFY(mrq.canWrite());
+        kit::DiagnosticList diagnostics;
+        const auto map = mrq.read(directory / "a.wav", 44100, diagnostics);
+        QVERIFY(map);
+        QCOMPARE(map->hop, 256.0);
+
+        auto edited = *map;
+        edited.frames[0].frequency = 440;
+        const auto before = QDateTime::currentSecsSinceEpoch();
+        const auto changes = mrq.changesWriting(directory,
+                                                {
+                                                    {"a.wav", edited}
+        },
+                                                diagnostics);
+        QVERIFY(changes);
+        QCOMPARE(changes->size(), 1);
+        QCOMPARE(changes->at(0).path, fs::path("desc.mrq"));
+        const auto timestamp = lastTimestamp(changes->at(0).contents);
+        QVERIFY(timestamp >= before && timestamp <= QDateTime::currentSecsSinceEpoch());
+        QByteArray expected("mrq ");
+        expected += bytesOf<qint32>(2) + bytesOf<qint32>(2);
+        expected += mrqEntry(QStringLiteral("x.wav"), {2.0f});
+        expected += mrqEntry(QStringLiteral("a.wav"), {440.0f, 3.0f}, 44100, timestamp, 0);
+        QCOMPARE(changes->at(0).contents, expected);
+
+        const auto longer = mrq.changesWriting(directory,
+                                               {
+                                                   {"a.wav", mapOf({1, 2, 3}), 44100, false}
+        },
+                                               diagnostics);
+        QVERIFY(longer);
+        expected = "mrq ";
+        expected += bytesOf<qint32>(2) + bytesOf<qint32>(3);
+        expected += mrqEntry(QStringLiteral("x.wav"), {2.0f});
+        expected += mrqEntry(QString(5, QChar(0)), {1.0f, 3.0f});
+        expected += mrqEntry(QStringLiteral("a.wav"), {1.0f, 2.0f, 3.0f}, 44100,
+                             lastTimestamp(longer->at(0).contents), 1);
+        QCOMPARE(longer->at(0).contents, expected);
+        QVERIFY(diagnostics.isEmpty());
+    }
+
+    // An entry of version 1 has no room for the timestamp and is appended, and the file becomes
+    // version 2. A new desc.mrq takes the sample rate of the audio file, which must be known.
+    void desc_mrq_is_written_in_version_2() {
+        QDir(m_dir.path()).mkdir(QStringLiteral("v"));
+        const auto directory = pathOf("v");
+        QByteArray entry =
+            bytesOf<qint32>(1) + bytesOf<qint32>(44100) + bytesOf<qint32>(256) + bytesOf(1.0f);
+        QByteArray bytes("mrq ");
+        bytes += bytesOf<qint32>(1) + bytesOf<qint32>(1) + bytesOf<qint32>(5) +
+                 utf16(QStringLiteral("a.wav")) + bytesOf<qint32>(qint32(entry.size())) + entry;
+        write(directory / "desc.mrq", bytes);
+        const MrqFormat mrq;
+        kit::DiagnosticList diagnostics;
+        const auto changes = mrq.changesWriting(directory,
+                                                {
+                                                    {"a.wav", mapOf({1}), 0}
+        },
+                                                diagnostics);
+        QVERIFY(changes);
+        QByteArray expected("mrq ");
+        expected += bytesOf<qint32>(2) + bytesOf<qint32>(2) + bytesOf<qint32>(5) +
+                    QByteArray(10, '\0') + bytesOf<qint32>(qint32(entry.size())) + entry;
+        expected += mrqEntry(QStringLiteral("a.wav"), {1.0f}, 44100,
+                             lastTimestamp(changes->at(0).contents), 0);
+        QCOMPARE(changes->at(0).contents, expected);
+
+        const auto created = mrq.changesWriting(pathOf("none"),
+                                                {
+                                                    {"b.wav", mapOf({2}), 48000}
+        },
+                                                diagnostics);
+        QVERIFY(created);
+        expected = "mrq ";
+        expected += bytesOf<qint32>(2) + bytesOf<qint32>(1);
+        expected += mrqEntry(QStringLiteral("b.wav"), {2.0f}, 48000,
+                             lastTimestamp(created->at(0).contents), 0);
+        QCOMPARE(created->at(0).contents, expected);
+        QVERIFY(diagnostics.isEmpty());
+
+        QVERIFY(!mrq.changesWriting(pathOf("none"),
+                                    {
+                                        {"b.wav", mapOf({2}), 0}
+        },
+                                    diagnostics));
+        auto fractional = mapOf({2});
+        fractional.hop = 256.5;
+        QVERIFY(!mrq.changesWriting(directory,
+                                    {
+                                        {"a.wav", fractional}
+        },
+                                    diagnostics));
+        QCOMPARE(diagnostics.size(), 2);
     }
 };
 

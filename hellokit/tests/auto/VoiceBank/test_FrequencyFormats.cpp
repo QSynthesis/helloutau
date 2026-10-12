@@ -372,6 +372,140 @@ private Q_SLOTS:
         QCOMPARE(diagnostics.at(0).severity, DiagnosticSeverity::Warning);
     }
 
+    // A frq read and written again is unchanged, its reserved bytes included. A new frq has zeros
+    // there, and the average on the pitch scale if the map records none. A map without
+    // amplitudes or with a fractional hop is not written.
+    void a_frq_is_written() {
+        QDir(m_dir.path()).mkdir(QStringLiteral("w"));
+        const auto directory = pathOf("w");
+        FrequencyFormats formats;
+        const BuiltinFrequencyFormats builtins(formats.registry());
+        const auto frq = formats.format(QStringLiteral("frq"));
+        QVERIFY(frq->canWrite());
+        QByteArray bytes("FREQ0003");
+        bytes += bytesOf<qint32>(128) + bytesOf(220.5) + QByteArray(16, 'x') + bytesOf<qint32>(2);
+        bytes += bytesOf(220.0) + bytesOf(0.25) + bytesOf(0.0) + bytesOf(0.5);
+        write(directory / "a_wav.frq", bytes);
+        DiagnosticList diagnostics;
+        const auto map = frq->read(directory / "a.wav", 44100, diagnostics);
+        QVERIFY(map);
+        QCOMPARE(map->hop, 128.0);
+        const auto same = frq->changesWriting(directory,
+                                              {
+                                                  {"a.wav", *map}
+        },
+                                              diagnostics);
+        QVERIFY(same);
+        QCOMPARE(same->size(), 1);
+        QCOMPARE(same->at(0).kind, FrequencyFormat::FileChange::Rewrite);
+        QCOMPARE(same->at(0).path, fs::path("a_wav.frq"));
+        QCOMPARE(same->at(0).contents, bytes);
+
+        auto edited = *map;
+        edited.frames[1].frequency = 440;
+        edited.averageFrequency.reset();
+        QVERIFY(FrequencyFormats::writeMaps(*frq, directory,
+                                            {
+                                                {"b.wav", edited}
+        },
+                                            false, diagnostics));
+        QByteArray created("FREQ0003");
+        created += bytesOf<qint32>(128) + bytesOf(edited.pitchAverage()) + QByteArray(16, '\0') +
+                   bytesOf<qint32>(2);
+        created += bytesOf(220.0) + bytesOf(0.25) + bytesOf(440.0) + bytesOf(0.5);
+        QFile file(QString::fromStdU16String((directory / "b_wav.frq").u16string()));
+        QVERIFY(file.open(QIODevice::ReadOnly));
+        QCOMPARE(file.readAll(), created);
+        QVERIFY(diagnostics.isEmpty());
+
+        edited.hop = 127.5;
+        QVERIFY(!frq->changesWriting(directory,
+                                     {
+                                         {"b.wav", edited}
+        },
+                                     diagnostics));
+        edited.hop = 128;
+        edited.frames[0].amplitude.reset();
+        QVERIFY(!frq->changesWriting(directory,
+                                     {
+                                         {"b.wav", edited}
+        },
+                                     diagnostics));
+        QCOMPARE(diagnostics.size(), 2);
+    }
+
+    // The analysis caches are removed with the maps written only if requested. Nothing is
+    // changed if a map cannot be written, and a format without writing reports it.
+    void the_maps_are_written_with_or_without_their_caches() {
+        class Written : public Cached {
+        public:
+            bool canWrite() const override {
+                return true;
+            }
+
+            std::optional<QList<FileChange>>
+                changesWriting(const fs::path &, const QList<MapWrite> &writes,
+                               DiagnosticList &diagnostics) const override {
+                QList<FileChange> changes;
+                for (const auto &write : writes) {
+                    if (write.map.frames.empty()) {
+                        return unwritable(write.wav, QStringLiteral("empty"), diagnostics);
+                    }
+                    changes.push_back(FileChange::rewritten(*sidecarNameOf(write.wav), "map"));
+                }
+                return changes;
+            }
+        };
+        QDir(m_dir.path()).mkdir(QStringLiteral("m"));
+        const auto directory = pathOf("m");
+        write(directory / "a.env", "env");
+        write(directory / "a.wav.cache", "cache");
+        write(directory / "b.env", "env");
+        FrequencyMap map;
+        map.frames.resize(1);
+        const Written written;
+
+        DiagnosticList diagnostics;
+        QVERIFY(FrequencyFormats::writeMaps(written, directory,
+                                            {
+                                                {"a.wav", map}
+        },
+                                            false, diagnostics));
+        QVERIFY(fs::exists(directory / "a.map"));
+        QVERIFY(fs::exists(directory / "a.env"));
+        QVERIFY(fs::exists(directory / "a.wav.cache"));
+        QVERIFY(FrequencyFormats::writeMaps(written, directory,
+                                            {
+                                                {"a.wav", map},
+                                                {"b.wav", map}
+        },
+                                            true, diagnostics));
+        QVERIFY(fs::exists(directory / "b.map"));
+        QVERIFY(!fs::exists(directory / "a.env"));
+        QVERIFY(!fs::exists(directory / "a.wav.cache"));
+        QVERIFY(!fs::exists(directory / "b.env"));
+        QVERIFY(diagnostics.isEmpty());
+
+        write(directory / "c.env", "env");
+        QVERIFY(!FrequencyFormats::writeMaps(written, directory,
+                                             {
+                                                 {"c.wav", map},
+                                                 {"d.wav", {} }
+        },
+                                             true, diagnostics));
+        QVERIFY(!fs::exists(directory / "c.map"));
+        QVERIFY(fs::exists(directory / "c.env"));
+        QCOMPARE(diagnostics.size(), 1);
+
+        const Fixed fixed(QStringLiteral("x"));
+        QVERIFY(!fixed.canWrite());
+        QVERIFY(!FrequencyFormats::writeMaps(fixed, directory,
+                                             {
+                                                 {"a.wav", map}
+        },
+                                             false, diagnostics));
+        QCOMPARE(diagnostics.size(), 2);
+    }
 };
 
 QTEST_GUILESS_MAIN(test_FrequencyFormats)

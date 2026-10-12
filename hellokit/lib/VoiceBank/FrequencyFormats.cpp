@@ -1,5 +1,8 @@
 #include "FrequencyFormats.h"
 
+#include <cmath>
+#include <limits>
+
 #include <QtCore/QDir>
 #include <QtCore/QFile>
 #include <QtCore/QRegularExpression>
@@ -87,6 +90,43 @@ namespace hello::kit {
                             std::filesystem::is_regular_file(directory / *sidecar, error));
         }
         return found;
+    }
+
+    std::nullopt_t FrequencyFormat::unwritable(const std::filesystem::path &wav,
+                                               const QString &reason, DiagnosticList &diagnostics) {
+        diagnostics.push_back({DiagnosticSeverity::Error,
+                               tr("The frequency map of \"%1\" cannot be written. %2")
+                                   .arg(QString::fromStdU16String(wav.u16string()), reason)});
+        return std::nullopt;
+    }
+
+    std::optional<qint32> FrequencyFormat::integralHop(const MapWrite &write,
+                                                       DiagnosticList &diagnostics) {
+        const auto hop = write.map.hop;
+        if (hop >= 1 && hop <= std::numeric_limits<qint32>::max() && std::floor(hop) == hop) {
+            return qint32(hop);
+        }
+        return unwritable(
+            write.wav,
+            tr("The format records the period of the frames in whole samples, and the period is "
+               "%1 samples.")
+                .arg(hop),
+            diagnostics);
+    }
+
+    bool FrequencyFormat::canWrite() const {
+        return false;
+    }
+
+    std::optional<QList<FrequencyFormat::FileChange>>
+        FrequencyFormat::changesWriting(const std::filesystem::path &directory,
+                                        const QList<MapWrite> &writes,
+                                        DiagnosticList &diagnostics) const {
+        Q_UNUSED(directory);
+        Q_UNUSED(writes);
+        diagnostics.push_back({DiagnosticSeverity::Error,
+                               tr("The format %1 does not support writing maps.").arg(name())});
+        return std::nullopt;
     }
 
     QList<FrequencyFormat::FileChange>
@@ -227,6 +267,24 @@ namespace hello::kit {
                        diagnostics);
     }
 
+    bool FrequencyFormats::writeMaps(const FrequencyFormat &format,
+                                     const std::filesystem::path &directory,
+                                     const QList<FrequencyFormat::MapWrite> &writes,
+                                     bool invalidatingCaches, DiagnosticList &diagnostics) {
+        auto changes = format.changesWriting(directory, writes, diagnostics);
+        if (!changes) {
+            return false;
+        }
+        if (invalidatingCaches) {
+            QList<std::filesystem::path> wavs;
+            for (const auto &write : writes) {
+                wavs.push_back(write.wav);
+            }
+            *changes += format.changesInvalidating(directory, wavs);
+        }
+        return execute(directory, *changes, diagnostics);
+    }
+
     bool FrequencyFormats::invalidateCaches(const FrequencyFormat &format,
                                             const std::filesystem::path &directory,
                                             const QList<std::filesystem::path> &wavs,
@@ -272,4 +330,5 @@ namespace hello::kit {
         }
         return done;
     }
+
 }

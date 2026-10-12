@@ -2,6 +2,8 @@
 
 #include <algorithm>
 
+#include <QtCore/QDateTime>
+
 #include <hellokit/Support/BinaryStream.h>
 
 namespace hello::daw {
@@ -68,7 +70,7 @@ namespace hello::daw {
                  tr("\"%1\" has no entry for \"%2\".").arg(textOf(path), textOf(wav.filename()))});
             return std::nullopt;
         }
-        kit::BinaryStream stream(*bytes, *at);
+        kit::BinaryStream stream(*bytes, at->second);
         const auto count = stream.read<qint32>();
         const auto rate = stream.read<qint32>();
         const auto hop = stream.read<qint32>();
@@ -77,6 +79,7 @@ namespace hello::daw {
             return damaged(path, diagnostics);
         }
         kit::FrequencyMap table;
+        table.hop = *hop;
         table.frames.reserve(size_t(*count));
         for (qint32 i = 0; i < *count; ++i) {
             kit::FrequencyMap::Frame frame;
@@ -126,7 +129,7 @@ namespace hello::daw {
                 continue;
             }
             // The int32 size precedes the data. An entry cut short is not written again.
-            kit::BinaryStream entry(*bytes, *at - 4);
+            kit::BinaryStream entry(*bytes, at->second - 4);
             const auto size = entry.read<qint32>();
             const auto data = size ? entry.readBytes(*size) : std::nullopt;
             if (!data) {
@@ -179,6 +182,97 @@ namespace hello::daw {
         return QList<FileChange>{FileChange::rewritten("desc.mrq", *bytes)};
     }
 
+    bool MrqFormat::canWrite() const {
+        return true;
+    }
+
+    // As mrq_write_entry() in mrq.c writes an entry: an entry with room for the frames is
+    // overwritten in place and keeps its size, and another entry has its name zeroed and is
+    // appended. The version in the header becomes 2, the timestamp is the time of writing, and
+    // the flag is 0 for an entry edited by hand and 1 otherwise. An entry of version 1 has no
+    // room for the timestamp and is appended. The sample rate of an existing entry is kept.
+    std::optional<QList<kit::FrequencyFormat::FileChange>>
+        MrqFormat::changesWriting(const std::filesystem::path &directory,
+                                  const QList<MapWrite> &writes,
+                                  kit::DiagnosticList &diagnostics) const {
+        const auto path = directory / "desc.mrq";
+        QByteArray bytes("mrq ");
+        std::error_code error;
+        if (std::filesystem::is_regular_file(path, error)) {
+            const auto existing = contentsOf(path, diagnostics);
+            if (!existing) {
+                return std::nullopt;
+            }
+            if (!existing->startsWith("mrq ") || existing->size() < 12) {
+                damaged(path, diagnostics);
+                return std::nullopt;
+            }
+            bytes = *existing;
+        } else {
+            kit::BinaryStream header(&bytes, bytes.size());
+            header.write(qint32(2));
+            header.write(qint32(0));
+        }
+        const auto timestamp = qint32(QDateTime::currentSecsSinceEpoch());
+        for (const auto &write : writes) {
+            const auto hop = integralHop(write, diagnostics);
+            if (!hop) {
+                return std::nullopt;
+            }
+            const auto &frames = write.map.frames;
+            const auto needed = 20 + qsizetype(frames.size()) * 4;
+            std::optional<qsizetype> at;
+            std::optional<qint32> rate;
+            if (const auto entry = find(bytes, write.wav)) {
+                const auto &[name, data] = *entry;
+                kit::BinaryStream existing(bytes, data - 4);
+                const auto size = existing.read<qint32>();
+                existing.skip(4);
+                rate = existing.read<qint32>();
+                if (size && *size >= needed) {
+                    at = data;
+                } else {
+                    // The name precedes the int32 size of the data.
+                    std::fill(bytes.begin() + data - 4 - name.size() * 2, bytes.begin() + data - 4,
+                              '\0');
+                }
+            }
+            if (!rate || *rate <= 0) {
+                rate = write.sampleRate;
+            }
+            if (*rate <= 0) {
+                return unwritable(write.wav, tr("The sample rate of the audio file is unknown."),
+                                  diagnostics);
+            }
+            if (!at) {
+                kit::BinaryStream header(&bytes, 8);
+                const auto count = header.read<qint32>().value_or(0);
+                header.seek(8);
+                header.write(qint32(count + 1));
+                const auto name = textOf(write.wav.filename());
+                kit::BinaryStream entry(&bytes, bytes.size());
+                entry.write(qint32(name.size()));
+                for (const auto c : name) {
+                    entry.write(quint16(c.unicode()));
+                }
+                entry.write(qint32(needed));
+                at = entry.at();
+            }
+            kit::BinaryStream data(&bytes, *at);
+            data.write(qint32(frames.size()));
+            data.write(*rate);
+            data.write(*hop);
+            for (const auto &frame : frames) {
+                data.write(float(frame.frequency));
+            }
+            data.write(timestamp);
+            data.write(qint32(write.editedByHand ? 0 : 1));
+        }
+        kit::BinaryStream header(&bytes, 4);
+        header.write(qint32(2));
+        return QList<FileChange>{FileChange::rewritten("desc.mrq", bytes)};
+    }
+
     bool MrqFormat::zeroNames(QByteArray &bytes, const QSet<QString> &names) {
         bool zeroed = false;
         for (const auto &[entry, data] : entriesOf(bytes)) {
@@ -222,16 +316,16 @@ namespace hello::daw {
 
     // The name is compared as written first, and then without case, since the file system of
     // Windows finds the file either way.
-    std::optional<qsizetype> MrqFormat::find(const QByteArray &bytes,
-                                             const std::filesystem::path &wav) {
+    std::optional<std::pair<QString, qsizetype>> MrqFormat::find(const QByteArray &bytes,
+                                                                 const std::filesystem::path &wav) {
         const auto name = textOf(wav.filename());
-        std::optional<qsizetype> folded;
-        for (const auto &[entry, data] : entriesOf(bytes)) {
-            if (entry == name) {
-                return data;
+        std::optional<std::pair<QString, qsizetype>> folded;
+        for (const auto &entry : entriesOf(bytes)) {
+            if (entry.first == name) {
+                return entry;
             }
-            if (!folded && entry.compare(name, Qt::CaseInsensitive) == 0) {
-                folded = data;
+            if (!folded && entry.first.compare(name, Qt::CaseInsensitive) == 0) {
+                folded = entry;
             }
         }
         return folded;

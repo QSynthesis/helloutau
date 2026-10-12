@@ -3839,6 +3839,18 @@ Write them again without these chunks? The audio stays the same. The files are w
         <translation>「%1」不是该格式的频率表，或文件不完整。</translation>
     </message>
     <message>
+        <source>The frequency map of &quot;%1&quot; cannot be written. %2</source>
+        <translation>「%1」的频率表无法写出。%2</translation>
+    </message>
+    <message>
+        <source>The format records the period of the frames in whole samples, and the period is %1 samples.</source>
+        <translation>该格式以整数个样本记录帧间隔，而帧间隔为 %1 个样本。</translation>
+    </message>
+    <message>
+        <source>The format %1 does not support writing maps.</source>
+        <translation>格式 %1 不支持写出频率表。</translation>
+    </message>
+    <message>
         <source>The maps of the format %1 cannot be renamed with their audio files.</source>
         <translation>格式 %1 的频率表无法随音频文件改名。</translation>
     </message>
@@ -3882,6 +3894,10 @@ Write them again without these chunks? The audio stays the same. The files are w
     <message>
         <source>frq (resampler.exe)</source>
         <translation>frq (resampler.exe)</translation>
+    </message>
+    <message>
+        <source>The format records an amplitude for each frame, and the map lacks amplitudes.</source>
+        <translation>该格式为每帧记录振幅，而该频率表没有振幅。</translation>
     </message>
 </context>
 <context>
