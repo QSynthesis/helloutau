@@ -2583,6 +2583,67 @@ private Q_SLOTS:
         QVERIFY(text.find("image=icon.png") != std::string::npos);
     }
 
+    // A name that the record of its folder lists in neither list is reported in the bar, and
+    // determining it is one undo step. See the section on misdecoded file names in
+    // docs/Editing.md.
+    void the_file_names_to_determine_are_reported_and_determined() {
+        QTemporaryDir dir;
+        const auto bank = voiceBank(dir);
+        kit::VoiceBankConfig config;
+        config.charset = QStringLiteral("UTF-8");
+        kit::VoiceBankConfig::FileNameEncoding record;
+        record.original = QStringLiteral("Shift_JIS");
+        record.misdecodedAs = QStringLiteral("GBK");
+        config.fileNameEncoding = record;
+        const auto json = config.toJson();
+        writeFile(bank / "hello-config.json", json.constData(), json.size());
+
+        const auto e = editor();
+        const auto window = e->openVoiceBank(bank);
+        QVERIFY(window);
+        const auto session = window->document()->session();
+        QCOMPARE(window->fileNamesToDetermine(), 0);
+        QVERIFY(window->changeBar()->isHidden());
+
+        // 你 in GBK is an invalid byte sequence in Shift_JIS, so 你.wav cannot be misdecoded.
+        const auto misdecoded = QString::fromUtf8("偁.wav");
+        writeFile(bank / fs::path(misdecoded.toStdU16String()), "");
+        writeFile(bank / fs::path(u"你.wav"), "");
+        window->checkDisk();
+        QCOMPARE(window->fileNamesToDetermine(), 1);
+        QVERIFY(!window->changeBar()->isHidden());
+
+        record.misdecoded = QStringList{misdecoded};
+        const int step = session->currentStep();
+        QVERIFY(window->determineFileNames({
+            {fs::path(), record}
+        }));
+        QCOMPARE(session->currentStep(), step + 1);
+        QCOMPARE(window->fileNamesToDetermine(), 0);
+        QVERIFY(window->changeBar()->isHidden());
+        QVERIFY(session->audioFiles({}).contains(QString::fromUtf8("あ.wav")));
+
+        session->undo();
+        QCOMPARE(window->fileNamesToDetermine(), 1);
+        QVERIFY(!window->changeBar()->isHidden());
+
+        // The dialog proposes the name, as it restores and no entry names it.
+        bool asked = false;
+        handleNextDialog<VoiceBankCharsetDialog>([&asked](VoiceBankCharsetDialog *dialog) {
+            asked = dialog->misdecodedNames(0) == QStringList{QString::fromUtf8("偁.wav")};
+            dialog->accept();
+        });
+        QVERIFY(window->determineFileNames());
+        QVERIFY(asked);
+        QCOMPARE(window->fileNamesToDetermine(), 0);
+
+        // The record of the tree applies, not a configuration that another program wrote since.
+        session->undo();
+        writeFile(bank / "hello-config.json", R"({"$format":"hello-voicebank","charset":"UTF-8"})");
+        QCOMPARE(dialogsDuring([&] { window->determineFileNames(); }),
+                 QStringList{QStringLiteral("hello::daw::VoiceBankCharsetDialog")});
+    }
+
     // The folders are read again in the encodings chosen in one dialog, the changed folders only,
     // as one undo step. A folder whose oto.ini declares UTF-8 is not listed.
     void the_folders_are_read_again_in_encodings() {

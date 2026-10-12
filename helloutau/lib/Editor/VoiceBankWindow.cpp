@@ -174,6 +174,7 @@ namespace hello::daw {
         QLabel *barText = nullptr;
         QPushButton *readChanged = nullptr;
         QPushButton *readAdded = nullptr;
+        QPushButton *determineNames = nullptr;
 
         QTreeWidget *tree = nullptr;
         QTableView *table = nullptr;
@@ -477,11 +478,17 @@ namespace hello::daw {
             barText->setWordWrap(true);
             readChanged = new QPushButton(tr("&Read Again"));
             readAdded = new QPushButton(tr("Read &New Folders"));
+            determineNames = new QPushButton(tr("&Determine File Names..."));
             auto barLayout = new QHBoxLayout(bar);
             barLayout->addWidget(barText, 1);
             barLayout->addWidget(readChanged);
             barLayout->addWidget(readAdded);
+            barLayout->addWidget(determineNames);
             bar->hide();
+            QObject::connect(determineNames, &QPushButton::clicked, &decl, [this] {
+                stdc_decl_t;
+                decl.determineFileNames();
+            });
             QObject::connect(readChanged, &QPushButton::clicked, &decl, [this] {
                 kit::VoiceBankChanges changes;
                 changes.changed = pending.changed;
@@ -724,9 +731,16 @@ namespace hello::daw {
                 lines.push_back(tr("The folder of the voice bank no longer exists. Saving writes "
                                    "it again."));
             }
+            stdc_decl_t;
+            const int names = decl.fileNamesToDetermine();
+            if (names > 0) {
+                lines.push_back(
+                    VoiceBankWindow::tr("%n file name(s) are to be determined.", nullptr, names));
+            }
             barText->setText(lines.join(QLatin1Char('\n')));
             readChanged->setVisible(!changed.isEmpty());
             readAdded->setVisible(!pending.added.isEmpty());
+            determineNames->setVisible(names > 0);
             bar->setVisible(!lines.isEmpty());
         }
 
@@ -1836,6 +1850,8 @@ namespace hello::daw {
         impl.initWaveform();
         impl.refreshTree();
         impl.initScheduler();
+        // File names left to determine when the voice bank was opened
+        impl.updateBar();
 
         const auto session = impl.document->session();
         connect(session, &kit::VoiceBankSession::stepChanged, this, [this] {
@@ -1843,6 +1859,7 @@ namespace hello::daw {
             impl.updateUndoActions();
             impl.refreshTree();
             impl.updateTreeTips();
+            impl.updateBar();
         });
         connect(impl.document.get(), &kit::VoiceBankDocument::modifiedChanged, this, [this] {
             stdc_impl_t;
@@ -1990,6 +2007,100 @@ namespace hello::daw {
         DiagnosticBox::report(this, tr("Read Folders Again in Encodings"), diagnostics);
         impl.model->refresh();
         return read;
+    }
+
+    int VoiceBankWindow::fileNamesToDetermine() const {
+        stdc_impl_t;
+        const auto session = impl.document->session();
+        const auto list = kit::VoiceBankRef(session).directories();
+        int count = 0;
+        for (int i = 0; i < list.size(); ++i) {
+            const auto directory = list.at(i);
+            if (const auto record = directory.fileNameEncoding()) {
+                for (const auto &name : session->undeterminedNames(directory.path())) {
+                    count += record->restore(name).has_value();
+                }
+            }
+        }
+        return count;
+    }
+
+    bool VoiceBankWindow::determineFileNames() {
+        stdc_impl_t;
+        // The dialog lists the names on disk under the records of the tree, which saving writes,
+        // rather than under the configurations on disk.
+        const auto session = impl.document->session();
+        kit::DiagnosticList diagnostics;
+        std::vector<kit::VoiceBankDirectorySource> sources;
+        QStringList charsets;
+        const auto list = kit::VoiceBankRef(session).directories();
+        for (int i = 0; i < list.size(); ++i) {
+            const auto directory = list.at(i);
+            const auto record = directory.fileNameEncoding();
+            if (!record || session->undeterminedNames(directory.path()).isEmpty()) {
+                continue;
+            }
+            auto source = kit::VoiceBankSource::readDirectory(impl.document->rootPath(),
+                                                              directory.path(), diagnostics);
+            if (!source) {
+                continue;
+            }
+            if (!source->config) {
+                source->config = kit::VoiceBankConfig();
+            }
+            source->config->fileNameEncoding = record;
+            if (!kit::MisdecodedNameQuestion::of(*source, directory.charset())) {
+                continue;
+            }
+            sources.push_back(std::move(*source));
+            charsets.push_back(directory.charset());
+        }
+        DiagnosticBox::report(this, tr("Determine File Names"), diagnostics);
+        if (sources.empty()) {
+            QMessageBox::information(this, tr("Determine File Names"),
+                                     tr("No file name of the voice bank is to be determined."));
+            return false;
+        }
+
+        QList<kit::VoiceBankCharsetSelector::Question> questions;
+        for (std::size_t i = 0; i < sources.size(); ++i) {
+            questions.push_back({&sources[i], charsets.at(qsizetype(i))});
+        }
+        VoiceBankCharsetDialog dialog(this);
+        dialog.setRoot(impl.document->rootPath());
+        dialog.setQuestions(questions);
+        if (dialog.exec() != QDialog::Accepted) {
+            return false;
+        }
+        QList<std::pair<std::filesystem::path, kit::VoiceBankConfig::FileNameEncoding>> records;
+        const auto answers = dialog.answers();
+        for (qsizetype i = 0; i < answers.size(); ++i) {
+            if (answers.at(i).fileNameEncoding) {
+                records.push_back({sources[std::size_t(i)].path, *answers.at(i).fileNameEncoding});
+            }
+        }
+        return !records.isEmpty() && determineFileNames(records);
+    }
+
+    bool VoiceBankWindow::determineFileNames(
+        const QList<std::pair<std::filesystem::path, kit::VoiceBankConfig::FileNameEncoding>>
+            &records) {
+        stdc_impl_t;
+        kit::DiagnosticList diagnostics;
+        bool done = false;
+        {
+            auto transaction = impl.document->session()->transaction(tr("Determine File Names"));
+            bool set = true;
+            for (const auto &[path, record] : records) {
+                const auto directory = impl.directoryRef(path);
+                set = set && directory &&
+                      kit::VoiceBankEdits::setFileNameEncoding(*directory, record, diagnostics);
+            }
+            done = set && transaction.commit(diagnostics);
+        }
+        DiagnosticBox::report(this, tr("Determine File Names"), diagnostics);
+        impl.updateBar();
+        return done;
     }
 
     QList<int> VoiceBankWindow::selectedRows() const {

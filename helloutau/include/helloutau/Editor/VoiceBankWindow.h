@@ -7,6 +7,8 @@
 
 #include <QtWidgets/QMainWindow>
 
+#include <hellokit/VoiceBank/VoiceBankConfig.h>
+
 #include <helloutau/Editor/HelloUtauEditorGlobal.h>
 
 class QComboBox;
@@ -153,6 +155,22 @@ namespace hello::daw {
 
         /// \overload for the folders and encodings of \a charsets , without the dialog.
         bool rereadCharsets(const QList<std::pair<std::filesystem::path, QString>> &charsets);
+
+        /// Returns the number of names of the folders in the tree that their records of
+        /// misdecoded file names list in neither list and that restore, which the bar of the
+        /// window reports. See the section on misdecoded file names in docs/Editing.md.
+        int fileNamesToDetermine() const;
+
+        /// Opens VoiceBankCharsetDialog for the file names to determine under the records of the
+        /// tree, and sets the records answered, as one undo step. A message box replaces the
+        /// dialog if no name is to be determined. Returns false if no name is to be determined,
+        /// the dialog is declined or a record is not set.
+        bool determineFileNames();
+
+        /// \overload for the folders and records of \a records , without the dialog.
+        bool determineFileNames(
+            const QList<std::pair<std::filesystem::path, kit::VoiceBankConfig::FileNameEncoding>>
+                &records);
 
         /// Lists the audio files of the folders that contain metadata, see kit::WaveMetadata, in
         /// a message box in which the user confirms writing them again without it. The files are
