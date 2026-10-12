@@ -303,7 +303,7 @@ private Q_SLOTS:
         QCOMPARE(diagnostics.size(), 1);
     }
 
-    // A format of a plugin that names the table beside each audio file follows renames without
+    // A format of a plugin that names the sidecar file of each audio file follows renames without
     // more code.
     void a_format_that_names_its_tables_follows_renames() {
         class Pmk : public Fixed {
@@ -311,7 +311,7 @@ private Q_SLOTS:
             Pmk() : Fixed(QStringLiteral("pmk")) {
             }
 
-            std::optional<fs::path> tableNameOf(const fs::path &wav) const override {
+            std::optional<fs::path> sidecarNameOf(const fs::path &wav) const override {
                 return wav.filename().replace_extension(".pmk");
             }
         };

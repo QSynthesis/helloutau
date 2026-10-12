@@ -29,7 +29,7 @@ namespace hello::kit {
     }
 
     std::optional<std::filesystem::path>
-        FrequencyFormat::tableNameOf(const std::filesystem::path &wav) const {
+        FrequencyFormat::sidecarNameOf(const std::filesystem::path &wav) const {
         Q_UNUSED(wav);
         return std::nullopt;
     }
@@ -40,8 +40,8 @@ namespace hello::kit {
                                           DiagnosticList &diagnostics) const {
         QList<FileChange> changes;
         for (const auto &rename : renames) {
-            const auto from = tableNameOf(rename.from);
-            const auto to = tableNameOf(rename.to);
+            const auto from = sidecarNameOf(rename.from);
+            const auto to = sidecarNameOf(rename.to);
             if (!from || !to) {
                 diagnostics.push_back(
                     {DiagnosticSeverity::Warning,

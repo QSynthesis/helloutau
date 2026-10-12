@@ -82,23 +82,25 @@ namespace hello::kit {
         virtual std::optional<FrequencyTable> read(const std::filesystem::path &wav, int sampleRate,
                                                    DiagnosticList &diagnostics) const = 0;
 
-        /// Returns the name of the table of the audio file \a wav in the directory of \a wav, if
-        /// the format keeps one table beside each audio file, or \c std::nullopt, which the
-        /// default implementation returns, if it does not.
+        /// Returns the name of the sidecar file of the audio file \a wav, the file beside \a wav
+        /// that holds its table alone, if the format keeps one; otherwise \c std::nullopt, which
+        /// the default implementation returns. A file that holds the tables of several audio
+        /// files, such as \c desc.mrq, is no sidecar file.
         virtual std::optional<std::filesystem::path>
-            tableNameOf(const std::filesystem::path &wav) const;
+            sidecarNameOf(const std::filesystem::path &wav) const;
 
         /// Returns the changes of the tables of this format that follow \a renames, all renames
-        /// of audio files in the directory \a directory at once, so that a table that serves
-        /// several audio files changes once. An audio file without a table needs no change.
-        /// The caller executes the changes together with the renames.
+        /// of audio files in the directory \a directory at once, so that a file that holds the
+        /// tables of several audio files changes once. An audio file without a table needs no
+        /// change. The caller executes the changes together with the renames.
         ///
-        /// The default implementation renames each table that tableNameOf() names after the new
-        /// name of its audio file. A format whose tables are kept otherwise overrides it.
+        /// The default implementation renames each sidecar file that sidecarNameOf() names
+        /// after the new name of its audio file. A format whose tables are kept otherwise
+        /// overrides it.
         ///
         /// \return the changes, or \c std::nullopt with the reason in \a diagnostics if they
         ///         cannot be determined, which the default implementation returns if
-        ///         tableNameOf() names no table
+        ///         sidecarNameOf() names no sidecar file
         virtual std::optional<QList<FileChange>>
             changesFollowing(const std::filesystem::path &directory,
                              const QList<AudioRename> &renames, DiagnosticList &diagnostics) const;

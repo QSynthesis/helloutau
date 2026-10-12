@@ -137,7 +137,7 @@ namespace hello::kit {
             }
 
             std::optional<std::filesystem::path>
-                tableNameOf(const std::filesystem::path &wav) const override {
+                sidecarNameOf(const std::filesystem::path &wav) const override {
                 auto name = wav.stem().u16string();
                 auto extension = wav.extension().u16string();
                 for (auto &c : extension) {
@@ -150,7 +150,7 @@ namespace hello::kit {
 
         private:
             std::filesystem::path pathOf(const std::filesystem::path &wav) const {
-                return wav.parent_path() / *tableNameOf(wav);
+                return wav.parent_path() / *sidecarNameOf(wav);
             }
         };
 
@@ -209,13 +209,13 @@ namespace hello::kit {
             }
 
             std::optional<std::filesystem::path>
-                tableNameOf(const std::filesystem::path &wav) const override {
+                sidecarNameOf(const std::filesystem::path &wav) const override {
                 return wav.filename().replace_extension(".dio");
             }
 
         private:
             std::filesystem::path pathOf(const std::filesystem::path &wav) const {
-                return wav.parent_path() / *tableNameOf(wav);
+                return wav.parent_path() / *sidecarNameOf(wav);
             }
         };
 
