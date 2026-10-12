@@ -1715,6 +1715,12 @@ namespace hello::kit {
                     all.push_back({file.path, file.to});
                     continue;
                 }
+                if (file.kind == FrequencyFormat::FileChange::Remove) {
+                    fail(diagnostics, tr("\"%1\" cannot be removed together with renames.")
+                                          .arg(displayed(change.directory / file.path)));
+                    valid = false;
+                    continue;
+                }
                 if (fs::is_directory(directory / file.path, error)) {
                     fail(diagnostics, tr("\"%1\" is a folder, so it cannot be written.")
                                           .arg(displayed(change.directory / file.path)));

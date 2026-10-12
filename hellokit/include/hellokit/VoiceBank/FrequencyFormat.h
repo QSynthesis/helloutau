@@ -34,11 +34,12 @@ namespace hello::kit {
             std::filesystem::path to;
         };
 
-        /// A change of a file of a directory, which follows renames of its audio files.
+        /// A change of a file of a directory, which the caller executes.
         struct HELLOKIT_VOICEBANK_EXPORT FileChange {
             enum Kind {
                 Rename,  ///< The file is renamed to \a to
                 Rewrite, ///< The file is written with \a contents
+                Remove,  ///< The file is removed
             };
 
             Kind kind = Rename;
@@ -54,6 +55,9 @@ namespace hello::kit {
 
             /// Returns the rewrite of the file \a path with \a contents.
             static FileChange rewritten(std::filesystem::path path, QByteArray contents);
+
+            /// Returns the removal of the file \a path.
+            static FileChange removed(std::filesystem::path path);
         };
 
         virtual ~FrequencyFormat();
@@ -104,6 +108,21 @@ namespace hello::kit {
         virtual std::optional<QList<FileChange>>
             changesFollowing(const std::filesystem::path &directory,
                              const QList<AudioRename> &renames, DiagnosticList &diagnostics) const;
+
+        /// Returns the changes that remove the maps of this format of the audio files \a wavs,
+        /// names in the directory \a directory, at once. An audio file without a map needs no
+        /// change. Removing a map makes a resampler generate it again.
+        ///
+        /// The default implementation removes each sidecar file that sidecarNameOf() names. A
+        /// format whose maps are kept otherwise overrides it.
+        ///
+        /// \return the changes, or \c std::nullopt with the reason in \a diagnostics if they
+        ///         cannot be determined, which the default implementation returns if
+        ///         sidecarNameOf() names no sidecar file
+        virtual std::optional<QList<FileChange>>
+            changesRemoving(const std::filesystem::path &directory,
+                            const QList<std::filesystem::path> &wavs,
+                            DiagnosticList &diagnostics) const;
     };
 
 }

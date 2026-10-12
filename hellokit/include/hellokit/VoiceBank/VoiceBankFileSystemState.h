@@ -199,8 +199,8 @@ namespace hello::kit {
         ///
         /// All checks precede the first change, and a single failure leaves the disk unchanged.
         /// A name that does not exist, a new name that is no valid file name on Windows, a new
-        /// name that another file of the directory keeps or receives as well, and a rewrite of a
-        /// folder are refused, each listed in \a diagnostics . Names are compared in
+        /// name that another file of the directory keeps or receives as well, a rewrite of a
+        /// folder and a removal are refused, each listed in \a diagnostics . Names are compared in
         /// Normalization Form C, and without case on Windows and macOS.
         ///
         /// The directories are changed from the deepest, so that the path of a directory remains

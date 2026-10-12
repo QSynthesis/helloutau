@@ -1,6 +1,8 @@
 #include "FrequencyFormats.h"
 
+#include <QtCore/QDir>
 #include <QtCore/QRegularExpression>
+#include <QtCore/QSaveFile>
 
 #include <stdcorelib/pimpl.h>
 
@@ -28,6 +30,13 @@ namespace hello::kit {
         return change;
     }
 
+    FrequencyFormat::FileChange FrequencyFormat::FileChange::removed(std::filesystem::path path) {
+        FileChange change;
+        change.kind = Remove;
+        change.path = std::move(path);
+        return change;
+    }
+
     std::optional<std::filesystem::path>
         FrequencyFormat::sidecarNameOf(const std::filesystem::path &wav) const {
         Q_UNUSED(wav);
@@ -52,6 +61,27 @@ namespace hello::kit {
             std::error_code error;
             if (std::filesystem::is_regular_file(directory / *from, error)) {
                 changes.push_back(FileChange::renamed(*from, *to));
+            }
+        }
+        return changes;
+    }
+
+    std::optional<QList<FrequencyFormat::FileChange>>
+        FrequencyFormat::changesRemoving(const std::filesystem::path &directory,
+                                         const QList<std::filesystem::path> &wavs,
+                                         DiagnosticList &diagnostics) const {
+        QList<FileChange> changes;
+        for (const auto &wav : wavs) {
+            const auto sidecar = sidecarNameOf(wav);
+            if (!sidecar) {
+                diagnostics.push_back(
+                    {DiagnosticSeverity::Warning,
+                     tr("The maps of the format %1 cannot be removed.").arg(name())});
+                return std::nullopt;
+            }
+            std::error_code error;
+            if (std::filesystem::is_regular_file(directory / *sidecar, error)) {
+                changes.push_back(FileChange::removed(*sidecar));
             }
         }
         return changes;
@@ -105,4 +135,47 @@ namespace hello::kit {
         return format(QStringLiteral("frq"));
     }
 
+    bool FrequencyFormats::removeMaps(const FrequencyFormat &format,
+                                      const std::filesystem::path &directory,
+                                      const QList<std::filesystem::path> &wavs,
+                                      DiagnosticList &diagnostics) {
+        namespace fs = std::filesystem;
+        const auto changes = format.changesRemoving(directory, wavs, diagnostics);
+        if (!changes) {
+            return false;
+        }
+        const auto fail = [&diagnostics](const QString &message) {
+            diagnostics.push_back({DiagnosticSeverity::Error, message});
+            return false;
+        };
+        bool done = true;
+        for (const auto &change : *changes) {
+            const auto path = directory / change.path;
+            const auto text = QDir::toNativeSeparators(QString::fromStdU16String(path.u16string()));
+            std::error_code error;
+            switch (change.kind) {
+                case FrequencyFormat::FileChange::Remove:
+                    fs::remove(path, error);
+                    if (error) {
+                        done = fail(tr("\"%1\" cannot be removed.").arg(text));
+                    }
+                    break;
+                case FrequencyFormat::FileChange::Rename:
+                    fs::rename(path, directory / change.to, error);
+                    if (error) {
+                        done = fail(tr("\"%1\" cannot be renamed.").arg(text));
+                    }
+                    break;
+                case FrequencyFormat::FileChange::Rewrite: {
+                    QSaveFile file(text);
+                    if (!file.open(QIODevice::WriteOnly) ||
+                        file.write(change.contents) != change.contents.size() || !file.commit()) {
+                        done = fail(tr("\"%1\" cannot be written.").arg(text));
+                    }
+                    break;
+                }
+            }
+        }
+        return done;
+    }
 }

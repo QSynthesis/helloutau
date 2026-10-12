@@ -213,7 +213,52 @@ namespace hello::kit {
                 return wav.filename().replace_extension(".dio");
             }
 
+            // The caches of the spectral envelope and the aperiodicity follow the map, which
+            // world4utau writes beside it as a.star and a.platinum (writeSTARParam() and
+            // writePlatinumParam() in the source above).
+            std::optional<QList<FileChange>>
+                changesFollowing(const std::filesystem::path &directory,
+                                 const QList<AudioRename> &renames,
+                                 DiagnosticList &diagnostics) const override {
+                Q_UNUSED(diagnostics);
+                QList<FileChange> changes;
+                for (const auto &rename : renames) {
+                    for (const auto extension : extensions) {
+                        const auto from = rename.from.filename().replace_extension(extension);
+                        if (isFile(directory / from)) {
+                            changes.push_back(FileChange::renamed(
+                                from, rename.to.filename().replace_extension(extension)));
+                        }
+                    }
+                }
+                return changes;
+            }
+
+            std::optional<QList<FileChange>>
+                changesRemoving(const std::filesystem::path &directory,
+                                const QList<std::filesystem::path> &wavs,
+                                DiagnosticList &diagnostics) const override {
+                Q_UNUSED(diagnostics);
+                QList<FileChange> changes;
+                for (const auto &wav : wavs) {
+                    for (const auto extension : extensions) {
+                        const auto name = wav.filename().replace_extension(extension);
+                        if (isFile(directory / name)) {
+                            changes.push_back(FileChange::removed(name));
+                        }
+                    }
+                }
+                return changes;
+            }
+
         private:
+            static constexpr const char *extensions[] = {".dio", ".star", ".platinum"};
+
+            static bool isFile(const std::filesystem::path &path) {
+                std::error_code error;
+                return std::filesystem::is_regular_file(path, error);
+            }
+
             std::filesystem::path pathOf(const std::filesystem::path &wav) const {
                 return wav.parent_path() / *sidecarNameOf(wav);
             }

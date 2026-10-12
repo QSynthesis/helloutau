@@ -70,7 +70,9 @@ HelloUtau 的方案：
 
 ### 生成与检查
 
-- 生成：对每个 wav 以设置中的重采样器运行 `"<wav>" nul 100 100 GN 0 50`，丢弃输出，利用重采样器缺少频率表时自动生成的行为（qfrqeditor 的 `docs/20260928-resampler-invocation.md`「生成」）。多个 wav 并行，数目默认为处理器数，可取消。参数以向量交给 `SynthToolProcess`，不拼接命令行。
+- 生成：对每个 wav 以设置中的重采样器合成一个 50 毫秒的音符（C4，力度 100，无 flags），输出写到临时文件夹后丢弃，利用重采样器缺少频率表时自动生成的行为。frqeditor 运行的是 `"<wav>" nul 100 100 GN 0 50`（qfrqeditor 的 `docs/20260928-resampler-invocation.md`「生成」），HelloUtau 不照搬：参数一律由 `utau::ResamplerArguments::arguments()` 生成（CLAUDE.md「调用外部程序」），`nul` 也只在 Windows 上存在。多个 wav 并行，数目默认为处理器数，可取消。参数以向量交给 `SynthToolProcess`，不拼接命令行。
+  - 实现（2026-10-12）：`kit::FrequencyMapGenerator`（HelloKitSynth）在后台线程运行，报告进度，结束时列出没有生成频率表的 wav 及重采样器的输出。重新生成先删除已有的表，删除由格式驱动给出（`FrequencyFormat::changesRemoving()`，与改名同样是数据驱动），由 `FrequencyFormats::removeMaps()` 执行。默认实现删除附属文件，mrq 的条目在 `desc.mrq` 中，暂不能删除，因此 mrq 只能生成缺少的表。
+  - 音源窗口「工具」菜单：Generate Missing Frequency Maps（全部目录中没有表的 wav）、Regenerate Frequency Maps of Selection（选中条目的 wav）、Regenerate All Frequency Maps...（全部 wav，先确认）、Delete All Frequency Maps...（先确认）。格式为设置中的重采样器对应的格式（`formatForResampler()`），与波形上方「F0」框的选择无关，因为生成只能由该重采样器完成。
 - 检查与修正：qfrqeditor 以进程内的实现代替 `checkfrq.dll`，与原 DLL 逐帧比较约 486 万帧结果一致，可直接移入。
 - 试听：第 4 步的试合成已以设置中的重采样器合成一个音符，编辑频率表后再试合成即可听到效果，不另做 frqeditor 的试听。
 
@@ -91,7 +93,7 @@ qfrqeditor 的 `Core` 按本仓库规范重写后移入 hellokit 的新子库（
 | 存储位置 | 由 wav 的路径得到表的位置。多数格式一个 wav 一个文件（`a_wav.frq`、`a.dio`），mrq 是**每个目录一个数据库** `desc.mrq` 中的一个条目（qfrqeditor 的 `docs/20260928-mrq-database.md`），因此抽象须能表达「目录中的一个条目」，不能只是一个文件路径 |
 | 读 | 返回频率表的值，或带原因的诊断 |
 | 写 | 可以不支持（只读格式）；写时保留格式中本程序不理解的部分 |
-| 删除 | 连同附属的缓存，如 dio 的 `.star`、`.platinum`，mrq 的 `.llsm` |
+| 删除 | 连同附属的缓存，如 dio 的 `.star`、`.platinum`，mrq 的 `.llsm`。接口为 `FrequencyFormat::changesRemoving()`，与改名同样给出 `FileChange` 列表（删除），由 `FrequencyFormats::removeMaps()` 执行。默认实现删除 `sidecarNameOf()` 所指的附属文件。dio 覆盖改名与删除，`.star`、`.platinum` 随 `.dio` 一起改名或删除（world4utau 源码中的 `writeSTARParam()`、`writePlatinumParam()`）。mrq 的条目与 `.llsm` 暂不能删除，返回 `std::nullopt` 并说明（2026-10-12） |
 | 改名 | wav 改名时给出须执行的操作，驱动本身不改磁盘（作者 2026-10-11 决定，见 [`Editing.md`](Editing.md)「文件名编码错解的处理」）。一个 wav 一个文件的格式把表改名，mrq 改写 `desc.mrq` 中条目的名称，附属的缓存一起改名。一个目录中多个 wav 的改名一次给出，`desc.mrq` 因此只改写一次。调用方把这些操作纳入保存时的检查、执行与回滚。不支持改名的格式，由调用方报告其表没有随 wav 改名。`desc.mrq` 中条目名称的编码须先实测。接口为 `FrequencyFormat::changesFollowing()`，以目录中的 `AudioRename` 列表求出 `FileChange` 列表（改名或改写）。每个 wav 旁边一个附属文件（sidecar file）的格式只需实现 `sidecarNameOf()`，默认实现据此让附属文件随 wav 改名。不实现它的格式由默认实现返回 `std::nullopt` 并说明不随 wav 改名，frq 与 dio 已实现（2026-10-12），mrq 待实测 |
 | 生成方式 | 「运行对应的重采样器」（默认）或驱动自己的分析（如 vs4ufrq 经 `vslib.dll`，或将来内置的分析器） |
 
@@ -140,7 +142,7 @@ qfrqeditor 的 `Core` 按本仓库规范重写后移入 hellokit 的新子库（
 
 1. **格式层**（只读部分已完成）：`FrequencyMap`、`FrequencyFormat`、`FrequencyFormatRegistry`，内置 frq、dio、mrq 三种有公开资料的格式，从 qfrqeditor 重写并移入其测试（含与原版逐字节相同的转换样本）。
 2. **频谱视图**（已完成）：波形区的视图切换、频谱的计算与缓存、F0 曲线与格式选择框，只读。
-3. **生成**：以设置中的重采样器生成、生成缺少的、重新生成全部、删除，并行且可取消。
+3. **生成**（2026-10-12 完成，见上文「生成与检查」）：以设置中的重采样器生成、生成缺少的、重新生成全部、删除，并行且可取消。
 4. **编辑**：`FrequencyMapDocument`、曲线的手势、撤销、与音源一同保存、磁盘变化的核对。
 5. **检查与修正**：移入 checkfrq 的进程内实现与修正窗口。
 6. **转换与其余格式**：格式间转换；vs4ufrq（Windows，可选）；frc、pmk 按待定 6 的结论。

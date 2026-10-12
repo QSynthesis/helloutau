@@ -1,15 +1,18 @@
 #include "VoiceBankWindow.h"
 
 #include <algorithm>
+#include <atomic>
 #include <functional>
 #include <map>
 
 #include <QtCore/QDir>
+#include <QtCore/QEventLoop>
 #include <QtCore/QRegularExpression>
 #include <QtCore/QHash>
 #include <QtCore/QSet>
 #include <QtCore/QSignalBlocker>
 #include <QtCore/QSortFilterProxyModel>
+#include <QtCore/QThread>
 #include <QtCore/QTimer>
 #include <QtGui/QAction>
 #include <QtGui/QCloseEvent>
@@ -25,6 +28,7 @@
 #include <QtWidgets/QMenu>
 #include <QtWidgets/QMenuBar>
 #include <QtWidgets/QMessageBox>
+#include <QtWidgets/QProgressDialog>
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QSpinBox>
 #include <QtWidgets/QSplitter>
@@ -46,6 +50,7 @@
 #include <hellokit/Edit/VoiceBankEdits.h>
 #include <hellokit/Edit/VoiceBankRefs.h>
 #include <hellokit/Support/TextCodec.h>
+#include <hellokit/Synth/FrequencyMapGenerator.h>
 #include <hellokit/Synth/Spectrogram.h>
 #include <hellokit/Synth/WaveAudio.h>
 #include <hellokit/VoiceBank/FrequencyFormats.h>
@@ -203,6 +208,7 @@ namespace hello::daw {
         std::pair<std::filesystem::path, QString> frequencyShown;
         std::shared_ptr<const kit::Spectrogram> spectrum;
         std::shared_ptr<const kit::WaveAudio> spectrumOf;
+        kit::FrequencyMapGenerator generator;
         QTimer *playheadTimer = nullptr;
         // The folder and alias whose pitch the synthesized note has by default
         std::optional<std::pair<std::filesystem::path, QString>> pitchOf;
@@ -220,6 +226,10 @@ namespace hello::daw {
 
         static QString tr(const char *text) {
             return VoiceBankWindow::tr(text);
+        }
+
+        static QString tr(const char *text, const char *disambiguation, int n) {
+            return VoiceBankWindow::tr(text, disambiguation, n);
         }
 
         // The commands that set a value at the pointer, by the key 1 to 5 over the waveform
@@ -376,6 +386,22 @@ namespace hello::daw {
             addCommand(QStringLiteral("helloutau.voiceBank.convertEncodings"), [this] {
                 stdc_decl_t;
                 decl.convertEncodings();
+            });
+            addCommand(QStringLiteral("helloutau.voiceBank.generateMissingMaps"), [this] {
+                stdc_decl_t;
+                decl.generateFrequencyMaps(MissingFrequencyMaps);
+            });
+            addCommand(QStringLiteral("helloutau.voiceBank.regenerateSelectedMaps"), [this] {
+                stdc_decl_t;
+                decl.generateFrequencyMaps(SelectedFrequencyMaps);
+            });
+            addCommand(QStringLiteral("helloutau.voiceBank.regenerateAllMaps"), [this] {
+                stdc_decl_t;
+                decl.generateFrequencyMaps(AllFrequencyMaps);
+            });
+            addCommand(QStringLiteral("helloutau.voiceBank.removeAllMaps"), [this] {
+                stdc_decl_t;
+                decl.removeFrequencyMaps();
             });
             addCommand(QStringLiteral("helloutau.voiceBank.removeMetadata"), [this] {
                 stdc_decl_t;
@@ -1495,6 +1521,63 @@ namespace hello::daw {
                 std::max(0, frequencyBox->findData(currentFrequencyFormat())));
         }
 
+        // The audio files of the voice bank, those of the folders not read included, by folder
+        std::map<std::filesystem::path, QList<std::filesystem::path>> audioByFolder() const {
+            std::map<std::filesystem::path, QList<std::filesystem::path>> audio;
+            const auto root = document->rootPath();
+            for (const auto &listing : document->session()->nameListings()) {
+                auto &names = audio[root / listing.directory];
+                for (const auto &name : listing.audioFiles) {
+                    names.push_back(name.toStdU16String());
+                }
+            }
+            return audio;
+        }
+
+        // Generates the maps of wavs in a progress dialog that cancels the generation, and
+        // shows the map of the current row again. Returns whether every map was generated.
+        bool generate(const QString &title, const kit::FrequencyFormat &format,
+                      const std::filesystem::path &resampler,
+                      const QList<std::filesystem::path> &wavs) {
+            stdc_decl_t;
+            QProgressDialog progress(tr("Generating frequency maps with the resampler..."),
+                                     tr("Cancel"), 0, int(wavs.size()), &decl);
+            progress.setWindowTitle(title);
+            progress.setWindowModality(Qt::WindowModal);
+            progress.setMinimumDuration(0);
+            progress.setValue(0);
+            std::atomic<bool> cancelled = false;
+            QObject::connect(&progress, &QProgressDialog::canceled,
+                             [&cancelled] { cancelled = true; });
+
+            kit::DiagnosticList diagnostics;
+            int generated = 0;
+            QEventLoop loop;
+            const auto worker = QThread::create([&] {
+                generated = generator.generate(
+                    format, resampler, wavs, diagnostics,
+                    [&progress](int done) {
+                        // Dropped with the dialog if it is gone
+                        QMetaObject::invokeMethod(
+                            &progress, [&progress, done] { progress.setValue(done); },
+                            Qt::QueuedConnection);
+                    },
+                    [&cancelled] { return cancelled.load(); });
+            });
+            QObject::connect(worker, &QThread::finished, &loop, &QEventLoop::quit);
+            worker->start();
+            loop.exec();
+            worker->wait();
+            delete worker;
+            progress.reset();
+
+            frequencyShown = {};
+            showFrequency();
+            decl.statusBar()->showMessage(tr("%n frequency map(s) generated.", nullptr, generated));
+            DiagnosticBox::report(&decl, title, diagnostics);
+            return !cancelled.load() && diagnostics.isEmpty();
+        }
+
         // Shows the frequency map of the audio of the current row in the format in effect. The
         // box marks the formats without a map for the audio file.
         void showFrequency() {
@@ -2402,6 +2485,108 @@ namespace hello::daw {
             impl.model->refresh();
         }
         return committed;
+    }
+
+    bool VoiceBankWindow::generateFrequencyMaps(FrequencyMapScope scope) {
+        stdc_impl_t;
+        const auto title = scope == MissingFrequencyMaps ? tr("Generate Missing Frequency Maps")
+                                                         : tr("Regenerate Frequency Maps");
+        const auto resampler = pathOf(impl.editor->settings().rendering().resampler());
+        if (resampler.empty()) {
+            QMessageBox::information(this, title, tr("Set the resampler in the settings first."));
+            return false;
+        }
+        const auto format = impl.editor->frequencyFormats().formatForResampler(resampler);
+        if (!format) {
+            QMessageBox::information(this, title,
+                                     tr("No format of frequency maps is registered for the "
+                                        "resampler."));
+            return false;
+        }
+
+        std::map<std::filesystem::path, QList<std::filesystem::path>> audio;
+        if (scope == SelectedFrequencyMaps) {
+            for (const int row : impl.selectedRows()) {
+                const auto path = impl.audioPathOf(row);
+                auto &names = audio[path.parent_path()];
+                if (!names.contains(path.filename())) {
+                    names.push_back(path.filename());
+                }
+            }
+        } else {
+            audio = impl.audioByFolder();
+        }
+        QList<std::filesystem::path> wavs;
+        for (const auto &[folder, names] : audio) {
+            for (const auto &name : names) {
+                wavs.push_back(folder / name);
+            }
+        }
+        if (wavs.isEmpty()) {
+            QMessageBox::information(this, title,
+                                     scope == SelectedFrequencyMaps
+                                         ? tr("Select the entries whose audio files are to have "
+                                              "their frequency maps generated again.")
+                                         : tr("The voice bank has no audio files."));
+            return false;
+        }
+
+        if (scope != MissingFrequencyMaps) {
+            if (scope == AllFrequencyMaps &&
+                QMessageBox::question(
+                    this, title,
+                    tr("Generate the frequency maps of %n audio file(s) again? The maps of the "
+                       "format %1 are removed first.",
+                       nullptr, int(wavs.size()))
+                        .arg(format->name())) != QMessageBox::Yes) {
+                return false;
+            }
+            kit::DiagnosticList diagnostics;
+            bool removed = true;
+            for (const auto &[folder, names] : audio) {
+                removed = kit::FrequencyFormats::removeMaps(*format, folder, names, diagnostics) &&
+                          removed;
+            }
+            if (!removed) {
+                DiagnosticBox::report(this, title, diagnostics);
+                return false;
+            }
+        }
+        return impl.generate(title, *format, resampler, wavs);
+    }
+
+    bool VoiceBankWindow::removeFrequencyMaps() {
+        stdc_impl_t;
+        const auto title = tr("Delete All Frequency Maps");
+        const auto resampler = pathOf(impl.editor->settings().rendering().resampler());
+        const auto format = impl.editor->frequencyFormats().formatForResampler(resampler);
+        if (!format) {
+            QMessageBox::information(this, title,
+                                     tr("No format of frequency maps is registered for the "
+                                        "resampler."));
+            return false;
+        }
+        if (QMessageBox::question(this, title,
+                                  tr("Delete the frequency maps of the format %1 of every audio "
+                                     "file of the voice bank? The deletion cannot be undone.")
+                                      .arg(format->name())) != QMessageBox::Yes) {
+            return false;
+        }
+        kit::DiagnosticList diagnostics;
+        bool removed = true;
+        for (const auto &[folder, names] : impl.audioByFolder()) {
+            removed =
+                kit::FrequencyFormats::removeMaps(*format, folder, names, diagnostics) && removed;
+        }
+        impl.frequencyShown = {};
+        impl.showFrequency();
+        DiagnosticBox::report(this, title, diagnostics);
+        return removed;
+    }
+
+    kit::FrequencyMapGenerator &VoiceBankWindow::frequencyMapGenerator() {
+        stdc_impl_t;
+        return impl.generator;
     }
 
     std::optional<int> VoiceBankWindow::removeAudioMetadata() {

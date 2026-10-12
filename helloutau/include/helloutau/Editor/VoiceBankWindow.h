@@ -22,6 +22,7 @@ namespace QAK {
 }
 
 namespace hello::kit {
+    class FrequencyMapGenerator;
     class VoiceBankDocument;
 }
 
@@ -187,6 +188,29 @@ namespace hello::daw {
         /// window with a new window of the voice bank read again (Editor::reopenVoiceBank()). See
         /// the section on the conversion in docs/Editing.md.
         bool convertEncodings(const VoiceBankTranscodingDialog::Conversion &conversion);
+
+        /// The audio files whose frequency maps generateFrequencyMaps() generates.
+        enum FrequencyMapScope {
+            MissingFrequencyMaps,  ///< Every audio file without a map
+            SelectedFrequencyMaps, ///< The audio files of the selected rows, generated again
+            AllFrequencyMaps,      ///< Every audio file, generated again
+        };
+
+        /// Generates the frequency maps of the audio files of \a scope with the resampler of the
+        /// settings, in the format of that resampler, with a progress dialog that cancels the
+        /// generation. Generating a map again removes it first, which AllFrequencyMaps confirms
+        /// in a message box. The audio files of the folders not read are included. See the
+        /// generation in docs/FrequencyMaps.md.
+        ///
+        /// \return whether every map was generated
+        bool generateFrequencyMaps(FrequencyMapScope scope);
+
+        /// Removes the frequency maps of every audio file of the voice bank in the format of the
+        /// resampler of the settings, after a confirmation. No undo restores them.
+        bool removeFrequencyMaps();
+
+        /// The generator of generateFrequencyMaps(), whose process a test replaces.
+        kit::FrequencyMapGenerator &frequencyMapGenerator();
 
         /// Lists the audio files of the folders that contain metadata, see kit::WaveMetadata, in
         /// a message box in which the user confirms writing them again without it. The files are

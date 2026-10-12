@@ -148,6 +148,9 @@ private Q_SLOTS:
         QTest::newRow("rewritten folder") << QList<NameChanges>{
             {{}, {}, {FileChange::rewritten(pathOf(u"偆"), "x")}}
         };
+        QTest::newRow("removed file") << QList<NameChanges>{
+            {{}, {}, {FileChange::removed("e.txt")}}
+        };
     }
 
     // A file of a folder that its parent renames is written under the old path of the folder,

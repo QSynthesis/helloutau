@@ -53,6 +53,17 @@ namespace hello::kit {
         ///         if neither is registered
         FrequencyFormat *formatForResampler(const std::filesystem::path &resampler) const;
 
+        /// Removes the maps of \a format of the audio files \a wavs, names in the directory
+        /// \a directory, as FrequencyFormat::changesRemoving() returns the changes. A file that
+        /// cannot be changed is reported in \a diagnostics, and the other changes are made
+        /// regardless.
+        ///
+        /// \return whether every map was removed
+        static bool removeMaps(const FrequencyFormat &format,
+                               const std::filesystem::path &directory,
+                               const QList<std::filesystem::path> &wavs,
+                               DiagnosticList &diagnostics);
+
     Q_SIGNALS:
         /// Emitted after a format was registered or unregistered.
         void formatsChanged();

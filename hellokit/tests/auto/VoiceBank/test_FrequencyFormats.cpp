@@ -276,13 +276,36 @@ private Q_SLOTS:
         QCOMPARE(frq->at(0).path, fs::path("a_wav.frq"));
         QCOMPARE(frq->at(0).to, fs::path(u"あ_wav.frq"));
 
+        // The caches of world4utau beside the dio follow it.
+        write(directory / fs::path(u"偁.star"), "star");
         const auto dio =
             formats.format(QStringLiteral("dio"))->changesFollowing(directory, renames, diagnostics);
         QVERIFY(dio);
-        QCOMPARE(dio->size(), 1);
+        QCOMPARE(dio->size(), 2);
         QCOMPARE(dio->at(0).path, fs::path(u"偁.dio"));
         QCOMPARE(dio->at(0).to, fs::path("b.dio"));
+        QCOMPARE(dio->at(1).path, fs::path(u"偁.star"));
+        QCOMPARE(dio->at(1).to, fs::path("b.star"));
         QVERIFY(diagnostics.isEmpty());
+    }
+
+    // The dio is removed with the caches of world4utau beside it.
+    void a_dio_is_removed_with_its_caches() {
+        QDir(m_dir.path()).mkdir(QStringLiteral("w"));
+        const auto directory = pathOf("w");
+        for (const auto name : {"a.dio", "a.star", "a.platinum", "a.wav"}) {
+            write(directory / name, "x");
+        }
+        FrequencyFormats formats;
+        const BuiltinFrequencyFormats builtins(formats.registry());
+        DiagnosticList diagnostics;
+        QVERIFY(FrequencyFormats::removeMaps(*formats.format(QStringLiteral("dio")), directory,
+                                             {"a.wav", "b.wav"}, diagnostics));
+        QVERIFY(diagnostics.isEmpty());
+        QVERIFY(!fs::exists(directory / "a.dio"));
+        QVERIFY(!fs::exists(directory / "a.star"));
+        QVERIFY(!fs::exists(directory / "a.platinum"));
+        QVERIFY(fs::exists(directory / "a.wav"));
     }
 
     // A format whose maps do not follow renames says so, which the caller reports. desc.mrq
@@ -337,6 +360,38 @@ private Q_SLOTS:
         QCOMPARE(rewritten.kind, FrequencyFormat::FileChange::Rewrite);
         QCOMPARE(rewritten.path, fs::path("desc.mrq"));
         QCOMPARE(rewritten.contents, QByteArray("mrq "));
+        const auto removed = FrequencyFormat::FileChange::removed("a_wav.frq");
+        QCOMPARE(removed.kind, FrequencyFormat::FileChange::Remove);
+        QCOMPARE(removed.path, fs::path("a_wav.frq"));
+    }
+
+    // The maps beside their audio files are removed, and an audio file without a map needs no
+    // change. The maps in desc.mrq cannot be removed yet, which is reported.
+    void the_maps_beside_the_audio_files_are_removed() {
+        QDir(m_dir.path()).mkdir(QStringLiteral("d"));
+        const auto directory = pathOf("d");
+        write(directory / "a_wav.frq", "FREQ0003");
+        write(directory / "a.wav", "RIFF");
+        FrequencyFormats formats;
+        const BuiltinFrequencyFormats builtins(formats.registry());
+        const auto frq = formats.format(QStringLiteral("frq"));
+
+        DiagnosticList diagnostics;
+        const auto changes = frq->changesRemoving(directory, {"a.wav", "b.wav"}, diagnostics);
+        QVERIFY(changes);
+        QCOMPARE(changes->size(), 1);
+        QCOMPARE(changes->at(0).kind, FrequencyFormat::FileChange::Remove);
+        QCOMPARE(changes->at(0).path, fs::path("a_wav.frq"));
+
+        QVERIFY(FrequencyFormats::removeMaps(*frq, directory, {"a.wav", "b.wav"}, diagnostics));
+        QVERIFY(diagnostics.isEmpty());
+        QVERIFY(!fs::exists(directory / "a_wav.frq"));
+        QVERIFY(fs::exists(directory / "a.wav"));
+
+        QVERIFY(!FrequencyFormats::removeMaps(*formats.format(QStringLiteral("mrq")), directory,
+                                              {"a.wav"}, diagnostics));
+        QCOMPARE(diagnostics.size(), 1);
+        QCOMPARE(diagnostics.at(0).severity, DiagnosticSeverity::Warning);
     }
 };
 

@@ -1,4 +1,5 @@
 add_auto_test(test_SynthToolProcess.cpp HelloKitSynth)
+add_auto_test(test_FrequencyMapGenerator.cpp HelloKitSynth)
 add_auto_test(test_SynthPlan.cpp HelloKitSynth)
 add_auto_test(test_ThreadedSynthRunner.cpp HelloKitSynth)
 add_auto_test(test_ClassicSynthRunner.cpp HelloKitSynth)

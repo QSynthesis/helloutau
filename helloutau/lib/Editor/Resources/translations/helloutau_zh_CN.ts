@@ -262,6 +262,22 @@
         <translation>移除音频元数据(&amp;M)...</translation>
     </message>
     <message>
+        <source>&amp;Generate Missing Frequency Maps</source>
+        <translation>生成缺少的频率表(&amp;G)</translation>
+    </message>
+    <message>
+        <source>Regenerate Frequency Maps of S&amp;election</source>
+        <translation>重新生成所选条目的频率表(&amp;E)</translation>
+    </message>
+    <message>
+        <source>&amp;Regenerate All Frequency Maps...</source>
+        <translation>重新生成全部频率表(&amp;R)...</translation>
+    </message>
+    <message>
+        <source>&amp;Delete All Frequency Maps...</source>
+        <translation>删除全部频率表(&amp;D)...</translation>
+    </message>
+    <message>
         <source>Pitch</source>
         <translation>音高</translation>
     </message>
@@ -3265,6 +3281,20 @@ Read them again? What you did not save in them is replaced, and Undo brings it b
         <translation>无</translation>
     </message>
     <message>
+        <source>Generating frequency maps with the resampler...</source>
+        <translation>正在以重采样器生成频率表...</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>取消</translation>
+    </message>
+    <message numerus="yes">
+        <source>%n frequency map(s) generated.</source>
+        <translation>
+            <numerusform>已生成 %n 个频率表。</numerusform>
+        </translation>
+    </message>
+    <message>
         <source>%1 (none)</source>
         <translation>%1（无）</translation>
     </message>
@@ -3381,6 +3411,44 @@ Read them again? What you did not save in them is replaced, and Undo brings it b
     <message>
         <source>Remove Entries</source>
         <translation>移除条目</translation>
+    </message>
+    <message>
+        <source>Generate Missing Frequency Maps</source>
+        <translation>生成缺少的频率表</translation>
+    </message>
+    <message>
+        <source>Regenerate Frequency Maps</source>
+        <translation>重新生成频率表</translation>
+    </message>
+    <message>
+        <source>Set the resampler in the settings first.</source>
+        <translation>请先在设置中指定重采样器。</translation>
+    </message>
+    <message>
+        <source>No format of frequency maps is registered for the resampler.</source>
+        <translation>没有为该重采样器登记的频率表格式。</translation>
+    </message>
+    <message>
+        <source>Select the entries whose audio files are to have their frequency maps generated again.</source>
+        <translation>请选择要重新生成频率表的音频文件所在的条目。</translation>
+    </message>
+    <message>
+        <source>The voice bank has no audio files.</source>
+        <translation>音源中没有音频文件。</translation>
+    </message>
+    <message numerus="yes">
+        <source>Generate the frequency maps of %n audio file(s) again? The maps of the format %1 are removed first.</source>
+        <translation>
+            <numerusform>要重新生成 %n 个音频文件的频率表吗？将先删除格式 %1 的频率表。</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Delete All Frequency Maps</source>
+        <translation>删除全部频率表</translation>
+    </message>
+    <message>
+        <source>Delete the frequency maps of the format %1 of every audio file of the voice bank? The deletion cannot be undone.</source>
+        <translation>要删除音源中全部音频文件的格式 %1 的频率表吗？删除不可撤销。</translation>
     </message>
     <message numerus="yes">
         <source>%n bytes after the last chunk</source>
@@ -3690,6 +3758,40 @@ Write them again without these chunks? The audio stays the same. The files are w
     <message>
         <source>The maps of the format %1 do not follow renamed audio files.</source>
         <translation>格式 %1 的表不随音频文件改名。</translation>
+    </message>
+    <message>
+        <source>The maps of the format %1 cannot be removed.</source>
+        <translation>格式 %1 的频率表无法删除。</translation>
+    </message>
+</context>
+<context>
+    <name>hello::kit::FrequencyFormats</name>
+    <message>
+        <source>&quot;%1&quot; cannot be removed.</source>
+        <translation>无法删除「%1」。</translation>
+    </message>
+    <message>
+        <source>&quot;%1&quot; cannot be renamed.</source>
+        <translation>无法重命名「%1」。</translation>
+    </message>
+    <message>
+        <source>&quot;%1&quot; cannot be written.</source>
+        <translation>无法写入「%1」。</translation>
+    </message>
+</context>
+<context>
+    <name>hello::kit::FrequencyMapGenerator</name>
+    <message>
+        <source>A temporary folder for the resampler cannot be created.</source>
+        <translation>无法为重采样器创建临时文件夹。</translation>
+    </message>
+    <message>
+        <source>The resampler &quot;%1&quot; could not be started.</source>
+        <translation>无法启动重采样器「%1」。</translation>
+    </message>
+    <message>
+        <source>The resampler wrote no frequency map of &quot;%1&quot; (exit code %2).</source>
+        <translation>重采样器没有写出「%1」的频率表（退出码 %2）。</translation>
     </message>
 </context>
 <context>
@@ -4748,6 +4850,10 @@ Write them again without these chunks? The audio stays the same. The files are w
     <message>
         <source>The folder &quot;%1&quot; does not exist.</source>
         <translation>文件夹「%1」不存在。</translation>
+    </message>
+    <message>
+        <source>&quot;%1&quot; cannot be removed together with renames.</source>
+        <translation>「%1」无法与改名一同删除。</translation>
     </message>
     <message>
         <source>&quot;%1&quot; is a folder, so it cannot be written.</source>
