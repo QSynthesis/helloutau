@@ -4,36 +4,50 @@ English | [简体中文](docs/README.zh-CN.md)
 
 A cross-platform editor for UTAU projects and voice banks, for Windows, macOS and Linux.
 
-HelloUtau aims at functional parity with UTAU 0.4.19, while its interface, its handling of text encodings and its extension mechanism are designed anew.
+HelloUtau aims at functional parity with UTAU 0.4.19. Its interface, its handling of text encodings and its extension mechanism are designed anew.
 
-For the end-user workflow, see the [user guide](docs/UserGuide.md). To get started:
+## Installation
 
-1. Set the UTAU folder so that voice banks and plugins can be located.
-2. Set the default wavtool and resampler in Audio Rendering.
-3. Choose a playback mode and configure render logs as needed.
+Each release on [GitHub](https://github.com/QSynthesis/helloutau/releases) and [Gitee](https://gitee.com/functioner/helloutau/releases) provides two packages for 64-bit Windows 10 and later:
 
-## Status
+| Package | File |
+|---|---|
+| Installer | `helloutau-<version>-x64-windows-msvc-setup.exe` |
+| Portable package, extracted into any folder | `helloutau-<version>-x64-windows-msvc.zip` |
 
-The editor offers a comprehensive set of features for UTAU project editing, rendering, and voice-bank editing. Compatibility and usability continue to improve. Features include:
+`SHA256SUMS` lists the SHA-256 digest of each package. The packages contain every required library, including the C++ runtime. Neither package is signed, so that Windows SmartScreen displays a warning on the first start. On macOS and Linux, HelloUtau is built from source, as described in [Building](#building).
 
-- Projects: reading and writing of `.ust` and `.usth`, the native project format. A piano roll edits notes, lyrics, labels, regions, Mode1 and Mode2 pitch, pitch control, vibrato, envelopes and note parameters, with undo and redo, lyric find and replace, project tempo and time-signature views, quantization, and piano-like keyboard preview.
-- Playback and rendering: classic or multithreaded prerendering, realtime playback, whole-track WAV export, configurable render logs, and trust checks for project synth tools
-- Voice banks: a window that edits `oto.ini`, `prefix.map`, `character.txt` and `readme.txt` in the encoding of each directory, sets the values of an entry on its waveform, previews samples, displays the current voice-bank image above the piano keyboard, and detects changes on disk
-- Plugins: HelloUtau plugins and UTAU classic plugins, with command discovery through the command palette
-- Import and export: MIDI, UST, and USTH
-- Workspace: separate command settings for project and voice-bank windows, configurable project editor modifiers, recent projects and voice banks, and separate voice-bank encoding choices
+By default, the application checks for a new version at startup, at most once a day, and installs a new version only after confirmation. The Updates page of the settings selects the update source and the update mode: manual checks, checks with a notification, or automatic updates.
+
+## First setup
+
+The [user guide](docs/UserGuide.md), in Chinese, describes the use of the editor. The first setup consists of three steps:
+
+1. Set the UTAU folder, in which voice banks and plugins are located.
+2. Set the default wavtool and resampler on the Audio Rendering page of the settings.
+3. Choose a playback mode, and configure the render log if required.
+
+## Features
+
+- Projects: reading and writing of `.ust` and of `.usth`, the native project format. The piano roll edits notes, lyrics, labels, regions, Mode1 and Mode2 pitch, vibrato, envelopes and note parameters, with undo and redo, lyric search and replacement, the project tempo, the time signature, quantization and a piano preview of the keys.
+- Playback and rendering: classic or multithreaded prerendering, realtime playback, export of the whole track as WAV, render logs, a diagnosis of failed renders, and trust checks for the synth tools of a project.
+- Voice banks: a window that edits `oto.ini`, `prefix.map`, `character.txt` and `readme.txt` in the encoding of each folder, sets the values of an entry on its waveform, previews samples and detects changes on disk. File names decoded with the wrong code page are read as UTAU reads them, or converted, together with the text encodings.
+- Frequency maps: the frequency map curve on the waveform, in the format of the configured resampler by default, a spectrogram view, and the generation, regeneration and removal of the maps of a voice bank with the resampler. The formats frq, dio and mrq are supported, together with the analysis caches of their resamplers.
+- Plugins: HelloUtau plugins and UTAU classic plugins, and a command palette that lists the commands of the current window.
+- Import and export: MIDI, UST and USTH.
+- Workspace: separate shortcuts for project windows and voice bank windows, configurable modifier keys of the project editor, recent projects and voice banks, and updates from GitHub or Gitee.
 
 ## Compatibility
 
-HelloUtau supports UTAU projects, voice banks, resamplers, wavtools, and classic plugins. It aims to preserve project content and rendering behavior when exchanging projects with UTAU, while offering its own editing interface.
+HelloUtau reads and writes UTAU projects and voice banks, and runs UTAU resamplers, wavtools and classic plugins. Projects exchanged with UTAU keep their content, and the rendering follows the behavior of UTAU.
 
-- Synth Tool paths recorded in a project file are preserved.
-- The application checks that paths are valid and asks for trust before running project-specific tools.
-- Project tools pointing to the same files as the default tools are considered trusted.
+- The synth tool paths recorded in a project are preserved.
+- The synth tools of a project are executed only if their paths are valid and the user trusts them.
+- The synth tools of a project that are the default synth tools of the settings require no confirmation.
 
 ## User documentation
 
-The [user guide](docs/UserGuide.md) covers setup, UTAU compatibility, note and pitch editing, selection, playback, rendering logs, voice banks, plugins, shortcuts, and configurable editor modifiers.
+The [user guide](docs/UserGuide.md) covers the first setup, UTAU compatibility, note and pitch editing, selection, playback, render logs, voice banks, frequency maps, plugins, shortcuts and the modifier keys of the editor.
 
 ## Building
 
