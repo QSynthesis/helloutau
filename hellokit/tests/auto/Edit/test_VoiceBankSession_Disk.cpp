@@ -11,6 +11,8 @@
 #include <hellokit/Edit/VoiceBankEdits.h>
 #include <hellokit/Edit/VoiceBankRefs.h>
 #include <hellokit/Edit/VoiceBankSession.h>
+#include <hellokit/VoiceBank/BuiltinFrequencyFormats.h>
+#include <hellokit/VoiceBank/FrequencyFormats.h>
 
 #include "VoiceBankSamples.h"
 
@@ -698,6 +700,133 @@ private Q_SLOTS:
 
         m_session->undo();
         QCOMPARE(alias(), QString::fromUtf8("\xe8\x91\x9b"));
+    }
+
+private:
+    /// A Japanese voice bank extracted on a Chinese system in the fixture of open(): 偁.wav (あ)
+    /// with its frq and 偄.wav (い) in the root, and the folder 偆 (う).
+    void openMisdecoded() {
+        write(QString::fromUtf8("偁.wav"), "RIFF");
+        write(QString::fromUtf8("偁_wav.frq"), "FREQ0003");
+        write(QString::fromUtf8("偄.wav"), "RIFF");
+        write(QString::fromUtf8("偆/c.wav"), "RIFF");
+        open();
+    }
+
+    static VoiceBankConfiguration::FileNameEncoding japaneseOnChinese() {
+        VoiceBankConfiguration::FileNameEncoding record;
+        record.original = QStringLiteral("Shift_JIS");
+        record.misdecodedAs = QStringLiteral("GBK");
+        return record;
+    }
+
+    std::optional<VoiceBankConfiguration::FileNameEncoding> recordOnDisk() const {
+        DiagnosticList ignored;
+        const auto config = VoiceBankConfiguration::open(
+            fs::path(pathOf(QStringLiteral("hello-config.json")).toStdU16String()), ignored);
+        return config ? config->fileNameEncoding : std::nullopt;
+    }
+
+private Q_SLOTS:
+    // Every misdecoded name is renamed with its frq, and the record of the root has no
+    // misdecoded name left. The encoding of the root is kept.
+    void the_misdecoded_names_are_renamed_on_disk() {
+        openMisdecoded();
+        FrequencyFormats formats;
+        const BuiltinFrequencyFormats builtins(formats.registry());
+        DiagnosticList diagnostics;
+        QVERIFY(m_session->renameOnDisk(
+            {
+                {{},
+                 japaneseOnChinese(),
+                 {QString::fromUtf8("偁.wav"), QString::fromUtf8("偄.wav"),
+                  QString::fromUtf8("偆")}}
+        },
+            &formats, diagnostics));
+        QVERIFY(diagnostics.isEmpty());
+        QCOMPARE(read(QString::fromUtf8("あ.wav")), QByteArray("RIFF"));
+        QCOMPARE(read(QString::fromUtf8("あ_wav.frq")), QByteArray("FREQ0003"));
+        QCOMPARE(read(QString::fromUtf8("い.wav")), QByteArray("RIFF"));
+        QCOMPARE(read(QString::fromUtf8("う/c.wav")), QByteArray("RIFF"));
+        QCOMPARE(read(QString::fromUtf8("偁.wav")), QByteArray("<missing>"));
+        QCOMPARE(recordOnDisk(), std::optional(VoiceBankConfiguration::FileNameEncoding()));
+        DiagnosticList ignored;
+        const auto config = VoiceBankConfiguration::open(
+            fs::path(pathOf(QStringLiteral("hello-config.json")).toStdU16String()), ignored);
+        QCOMPARE(config->charset, QStringLiteral("GBK"));
+    }
+
+    // A misdecoded name left keeps the record with lists, the renamed name in the correct list.
+    void a_part_of_the_names_is_renamed() {
+        openMisdecoded();
+        DiagnosticList diagnostics;
+        QVERIFY(m_session->renameOnDisk(
+            {
+                {{}, japaneseOnChinese(), {QString::fromUtf8("偁.wav")}}
+        },
+            nullptr, diagnostics));
+        const auto record = recordOnDisk();
+        QVERIFY(record && record->files);
+        QCOMPARE(record->files->misdecoded,
+                 (QStringList{QString::fromUtf8("偄.wav"), QString::fromUtf8("偆")}));
+        QCOMPARE(record->files->correct, QStringList{QString::fromUtf8("あ.wav")});
+        QCOMPARE(read(QString::fromUtf8("偁_wav.frq")), QByteArray("FREQ0003"));
+    }
+
+    // The maps of a format that cannot follow the renames are left, which is reported once, and
+    // the names are renamed nevertheless. An audio file without a map of the format is not
+    // reported.
+    void a_format_without_renames_is_reported() {
+        class Unsupported : public FrequencyFormat {
+        public:
+            QString id() const override {
+                return QStringLiteral("u");
+            }
+            QString name() const override {
+                return QStringLiteral("u");
+            }
+            QStringList resamplerPatterns() const override {
+                return {};
+            }
+            bool exists(const fs::path &wav) const override {
+                return wav.filename() == fs::path(u"偁.wav");
+            }
+            std::optional<FrequencyMap> read(const fs::path &, int,
+                                             DiagnosticList &) const override {
+                return std::nullopt;
+            }
+        };
+        openMisdecoded();
+        FrequencyFormats formats;
+        const FrequencyFormatRegistry::Add<Unsupported> unsupported(formats.registry(), "u", {});
+        DiagnosticList diagnostics;
+        QVERIFY(m_session->renameOnDisk(
+            {
+                {{},
+                 japaneseOnChinese(),
+                 {QString::fromUtf8("偁.wav"), QString::fromUtf8("偄.wav")}}
+        },
+            &formats, diagnostics));
+        QCOMPARE(read(QString::fromUtf8("あ.wav")), QByteArray("RIFF"));
+        QCOMPARE(diagnostics.size(), 1);
+        QCOMPARE(diagnostics.at(0).severity, DiagnosticSeverity::Warning);
+    }
+
+    // 你 in GBK is an invalid byte sequence in Shift_JIS, so it has no restored name.
+    void a_name_that_does_not_restore_renames_nothing() {
+        write(QString::fromUtf8("你.wav"), "RIFF");
+        openMisdecoded();
+        DiagnosticList diagnostics;
+        QVERIFY(!m_session->renameOnDisk(
+            {
+                {{},
+                 japaneseOnChinese(),
+                 {QString::fromUtf8("偁.wav"), QString::fromUtf8("你.wav")}}
+        },
+            nullptr, diagnostics));
+        QVERIFY(hasError(diagnostics));
+        QCOMPARE(read(QString::fromUtf8("偁.wav")), QByteArray("RIFF"));
+        QCOMPARE(read(QString::fromUtf8("あ.wav")), QByteArray("<missing>"));
     }
 };
 

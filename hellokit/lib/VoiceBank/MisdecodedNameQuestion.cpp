@@ -250,14 +250,7 @@ namespace hello::kit {
                 .push_back(choice.name);
         }
         files.correct += m_unrestorable;
-        if (files.misdecoded.isEmpty()) {
-            return VoiceBankConfiguration::FileNameEncoding();
-        }
-        // A record without lists restores every name, which is right if no correct name restores.
-        const bool restoresAll =
-            std::none_of(files.correct.begin(), files.correct.end(),
-                         [&record](const QString &name) { return record.restore(name); });
-        record.files = restoresAll ? std::nullopt : std::optional(files);
-        return record;
+        return VoiceBankConfiguration::FileNameEncoding::normalized(
+            record.original, record.misdecodedAs, files.misdecoded, files.correct);
     }
 }

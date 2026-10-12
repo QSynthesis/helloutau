@@ -14,6 +14,7 @@
 
 #include <hellokit/Support/Diagnostic.h>
 
+#include <hellokit/VoiceBank/FrequencyFormats.h>
 #include <hellokit/VoiceBank/VoiceBank.h>
 #include <hellokit/VoiceBank/VoiceBankFileSystemState.h>
 
@@ -139,6 +140,33 @@ namespace hello::kit {
         /// \sa VoiceBankFileSystemState::saveAs()
         bool saveAs(const std::filesystem::path &folder, SaveAsFiles files,
                     DiagnosticList &diagnostics);
+
+        /// One directory of a conversion of misdecoded names into correct names on disk.
+        struct NameConversion {
+            /// The directory, relative to the root, under its path on disk
+            std::filesystem::path directory;
+            /// The record of the names of the directory as the user determined them, whose
+            /// encodings restore the renamed names
+            VoiceBankConfiguration::FileNameEncoding record;
+            /// The names on disk of the audio files and the subdirectories that are renamed to
+            /// their restored names
+            QStringList renamed;
+        };
+
+        /// Renames the names of \a conversions on disk to their restored names, together with
+        /// the frequency maps of \a formats that follow the renamed audio files, and writes the
+        /// record of each directory with the renamed names as correct. A name that the record of
+        /// its directory lists in neither list is recorded as correct as well. See the section on
+        /// the conversion of names in docs/Editing.md.
+        ///
+        /// A format that does not follow renamed audio files, which an audio file of the
+        /// conversion has a map of, is reported as a warning. The tree and the undo history no
+        /// longer hold the disk afterwards, and the caller reads the voice bank again.
+        ///
+        /// \return whether the conversion was made, as VoiceBankFileSystemState::renameOnDisk()
+        ///         makes it
+        bool renameOnDisk(const QList<NameConversion> &conversions, const FrequencyFormats *formats,
+                          DiagnosticList &diagnostics);
 
         /// Makes the next save() record the encoding of the directory at \a directory , even if
         /// nothing else in it changed, by invalidating the synchronization point of its

@@ -58,6 +58,14 @@ namespace hello::kit {
         bool saveAs(const std::filesystem::path &folder, VoiceBankSession::SaveAsFiles files,
                     DiagnosticList &diagnostics);
 
+        /// Saves the voice bank if it is modified, and then renames the names of \a conversions
+        /// on disk as VoiceBankSession::renameOnDisk() does. A failed save renames nothing. The
+        /// caller reads the voice bank again afterwards, for example by opening it anew, which
+        /// discards the undo history, see the section on the conversion of names in
+        /// docs/Editing.md.
+        bool renameOnDisk(const QList<VoiceBankSession::NameConversion> &conversions,
+                          const FrequencyFormats *formats, DiagnosticList &diagnostics);
+
         /// Checks the disk for changes, as VoiceBankSession::checkDisk() does. A change that the
         /// tree does not hold, of a text file, a directory, a configuration or the root, makes
         /// the document modified, since saving is needed to bring the disk back to the tree

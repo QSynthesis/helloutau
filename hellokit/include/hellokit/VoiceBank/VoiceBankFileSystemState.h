@@ -153,6 +153,20 @@ namespace hello::kit {
                                             const std::filesystem::path &folder,
                                             bool copyOtherFiles, DiagnosticList &diagnostics);
 
+        /// The configuration of a directory as save() writes it, and the name of its file.
+        struct ConfigurationFile {
+            /// The name of the file in the directory, as on disk if it exists
+            std::filesystem::path name;
+            /// The encoding and the record of the directory, with the fields read on opening that
+            /// this version does not recognize
+            VoiceBankConfiguration configuration;
+        };
+
+        /// Returns the configuration of the directory at \a directory of \a bank as save() writes
+        /// it.
+        ConfigurationFile configurationFileOf(const VoiceBank &bank,
+                                              const std::filesystem::path &directory) const;
+
         /// The rename of a file or a folder in its directory.
         struct Rename {
             /// The name on disk

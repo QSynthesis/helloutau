@@ -217,6 +217,90 @@ namespace hello::kit {
         return true;
     }
 
+    bool VoiceBankSession::renameOnDisk(const QList<NameConversion> &conversions,
+                                        const FrequencyFormats *formats,
+                                        DiagnosticList &diagnostics) {
+        namespace fs = std::filesystem;
+        using FileNameEncoding = VoiceBankConfiguration::FileNameEncoding;
+        const auto bank = snapshot();
+        const auto normalized = [](const QString &name) {
+            return name.normalized(QString::NormalizationForm_C);
+        };
+        const auto lists = [&normalized](const QStringList &list, const QString &name) {
+            return std::any_of(list.begin(), list.end(), [&](const QString &item) {
+                return normalized(item) == normalized(name);
+            });
+        };
+
+        QList<VoiceBankFileSystemState::NameChanges> changes;
+        bool valid = true;
+        for (const auto &conversion : conversions) {
+            const auto &record = conversion.record;
+            const auto directory = bank.root() / conversion.directory;
+            VoiceBankFileSystemState::NameChanges change{conversion.directory, {}, {}};
+            QList<FrequencyFormat::AudioRename> audio;
+            QStringList restoredNames;
+            for (const auto &name : conversion.renamed) {
+                const auto restored = record.restore(name);
+                if (!restored) {
+                    diagnostics.push_back(
+                        {DiagnosticSeverity::Error,
+                         tr("The name \"%1\" does not restore, so it cannot be renamed.").arg(name)});
+                    valid = false;
+                    continue;
+                }
+                const fs::path from(name.toStdU16String());
+                const fs::path to(restored->toStdU16String());
+                change.renames.push_back({from, to});
+                restoredNames.push_back(*restored);
+                std::error_code error;
+                if (!fs::is_directory(directory / from, error)) {
+                    audio.push_back({from, to});
+                }
+            }
+
+            // The frequency maps that follow the renamed audio files. A format that cannot follow
+            // them is reported only if one of them has a map of it.
+            if (formats && !audio.isEmpty()) {
+                for (const auto format : formats->formats()) {
+                    DiagnosticList reasons;
+                    if (const auto files = format->changesFollowing(directory, audio, reasons)) {
+                        change.files += *files;
+                    } else if (std::any_of(audio.begin(), audio.end(), [&](const auto &rename) {
+                                   return format->exists(directory / rename.from);
+                               })) {
+                        diagnostics += reasons;
+                    }
+                }
+            }
+
+            // The record with the renamed names as correct. Every name that is not ASCII is
+            // determined, a name in neither list as correct.
+            FileNameEncoding all = record;
+            all.files = FileNameEncoding::Files();
+            QStringList misdecoded;
+            QStringList correct = restoredNames;
+            for (const auto &name : m_files.undeterminedNames(conversion.directory, all)) {
+                if (lists(conversion.renamed, name)) {
+                    continue;
+                }
+                const bool isMisdecoded =
+                    record.files ? lists(record.files->misdecoded, name) : !record.isAsIs();
+                (isMisdecoded ? misdecoded : correct).push_back(name);
+            }
+            auto config = m_files.configurationFileOf(bank, conversion.directory);
+            config.configuration.fileNameEncoding = FileNameEncoding::normalized(
+                record.original, record.misdecodedAs, misdecoded, correct);
+            change.files.push_back(
+                FrequencyFormat::FileChange::rewritten(config.name, config.configuration.toJson()));
+            changes.push_back(change);
+        }
+        if (!valid) {
+            return false;
+        }
+        return VoiceBankFileSystemState::renameOnDisk(bank.root(), changes, diagnostics);
+    }
+
     void VoiceBankSession::rememberCharset(const std::filesystem::path &directory) {
         m_unsynced.insert({directory, VoiceBankDirectorySource::Config});
     }

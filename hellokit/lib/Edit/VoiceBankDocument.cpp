@@ -141,6 +141,16 @@ namespace hello::kit {
         return true;
     }
 
+    bool VoiceBankDocument::renameOnDisk(
+        const QList<VoiceBankSession::NameConversion> &conversions,
+        const FrequencyFormats *formats, DiagnosticList &diagnostics) {
+        stdc_impl_t;
+        if (isModified() && !save(diagnostics)) {
+            return false;
+        }
+        return impl.session->renameOnDisk(conversions, formats, diagnostics);
+    }
+
     VoiceBankChanges VoiceBankDocument::checkDisk(const QList<std::filesystem::path> &places) {
         stdc_impl_t;
         return impl.checked(impl.session->checkDisk(places));

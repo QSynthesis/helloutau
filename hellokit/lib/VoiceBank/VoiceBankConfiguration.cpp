@@ -149,6 +149,25 @@ namespace hello::kit {
         return restored;
     }
 
+    VoiceBankConfiguration::FileNameEncoding VoiceBankConfiguration::FileNameEncoding::normalized(
+        const QString &original, const QString &misdecodedAs, const QStringList &misdecoded,
+        const QStringList &correct) {
+        if (misdecoded.isEmpty()) {
+            return FileNameEncoding();
+        }
+        FileNameEncoding record;
+        record.original = original;
+        record.misdecodedAs = misdecodedAs;
+        // A record without lists restores every name, which is right if no correct name restores.
+        const bool restoresAll =
+            std::none_of(correct.begin(), correct.end(),
+                         [&record](const QString &name) { return record.restore(name); });
+        if (!restoresAll) {
+            record.files = Files{misdecoded, correct};
+        }
+        return record;
+    }
+
     QString VoiceBankConfiguration::FileNameEncoding::logicalNameOf(const QString &physical) const {
         if (!files) {
             return restore(physical).value_or(physical);

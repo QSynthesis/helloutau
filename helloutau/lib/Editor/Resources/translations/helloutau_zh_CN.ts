@@ -4660,6 +4660,10 @@ Write them again without these chunks? The audio stays the same. The files are w
         <translation>无法编辑此音源，因为其文件夹未指定编码。</translation>
     </message>
     <message>
+        <source>The name &quot;%1&quot; does not restore, so it cannot be renamed.</source>
+        <translation>名字「%1」无法还原，因此无法改名。</translation>
+    </message>
+    <message>
         <source>Reload from Disk</source>
         <translation>从磁盘重新读取</translation>
     </message>

@@ -1263,6 +1263,31 @@ namespace hello::kit {
         bank.m_directories.removeAt(index);
     }
 
+    VoiceBankFileSystemState::ConfigurationFile
+        VoiceBankFileSystemState::configurationFileOf(const VoiceBank &bank,
+                                                      const fs::path &directory) const {
+        ConfigurationFile file;
+        const int index = bank.indexOf(directory);
+        if (index >= 0) {
+            const auto &read = bank.directories().at(index);
+            file.configuration.charset = canonicalOf(read.charset);
+            file.configuration.fileNameEncoding = read.fileNameEncoding;
+        }
+        const auto book = m_books.find(directory);
+        if (book != m_books.end()) {
+            file.configuration.unknownFields = book->second.unknownFields;
+            const auto record = book->second.files.find(VoiceBankDirectorySource::Config);
+            if (record != book->second.files.end()) {
+                file.name = record->second.name;
+                return file;
+            }
+        }
+        file.name = findFolded(m_root / directory, VoiceBankConfiguration::fileName)
+                        .value_or(m_root / directory / VoiceBankConfiguration::fileName)
+                        .filename();
+        return file;
+    }
+
     bool VoiceBankFileSystemState::save(const VoiceBank &bank, const Files &files,
                                         DiagnosticList &diagnostics) {
         struct Write {
@@ -1368,20 +1393,12 @@ namespace hello::kit {
             // HelloUtau and is read on opening only, so the file on disk is neither read nor
             // checked here, and is replaced. A directory without an encoding, a record and such
             // fields has nothing to record.
-            const QString name = canonicalOf(directory.charset);
+            const auto config = configurationFileOf(bank, directory.path);
             if (named(VoiceBankDirectorySource::Config) &&
-                (!name.isEmpty() || directory.fileNameEncoding || !book.unknownFields.isEmpty())) {
-                VoiceBankConfiguration config;
-                config.charset = name;
-                config.fileNameEncoding = directory.fileNameEncoding;
-                config.unknownFields = book.unknownFields;
-                const auto configRecord = book.files.find(VoiceBankDirectorySource::Config);
-                const auto path = configRecord != book.files.end()
-                                      ? absolute / configRecord->second.name
-                                      : findFolded(absolute, VoiceBankConfiguration::fileName)
-                                            .value_or(absolute / VoiceBankConfiguration::fileName);
-                writes.push_back(
-                    {directory.path, VoiceBankDirectorySource::Config, path, config.toJson()});
+                (!config.configuration.charset.isEmpty() || directory.fileNameEncoding ||
+                 !book.unknownFields.isEmpty())) {
+                writes.push_back({directory.path, VoiceBankDirectorySource::Config,
+                                  absolute / config.name, config.configuration.toJson()});
             }
         }
 

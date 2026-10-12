@@ -84,6 +84,13 @@ namespace hello::kit {
                 return original.isEmpty() && misdecodedAs.isEmpty();
             }
 
+            /// Returns the record of the names \a misdecoded and \a correct under the encodings
+            /// \a original and \a misdecodedAs in the form that it is written in: without
+            /// encodings if no name is misdecoded, and without lists if no correct name restores.
+            static FileNameEncoding normalized(const QString &original, const QString &misdecodedAs,
+                                               const QStringList &misdecoded,
+                                               const QStringList &correct);
+
             /// Returns the record of \a json , the value of \c fileNameEncoding in
             /// hello-config.json, or \c std::nullopt if it is malformed: not an object, with an
             /// unknown field or a field of another type, with one encoding only, or with

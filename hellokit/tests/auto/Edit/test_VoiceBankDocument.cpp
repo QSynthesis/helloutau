@@ -209,6 +209,30 @@ private Q_SLOTS:
         QVERIFY(!VoiceBankDocument::open(root() / "missing", nullptr, diagnostics));
         QVERIFY(!diagnostics.isEmpty());
     }
+
+    // The edits not yet saved are saved before the names change on disk, so that the voice bank
+    // read again holds them.
+    void the_edits_are_saved_before_the_names_change() {
+        write(QString::fromUtf8("偁.wav"), "RIFF");
+        const auto document = open();
+        QVERIFY(document);
+        rename(*document, QStringLiteral("b"));
+        QVERIFY(document->isModified());
+        VoiceBankConfiguration::FileNameEncoding record;
+        record.original = QStringLiteral("Shift_JIS");
+        record.misdecodedAs = QStringLiteral("GBK");
+        DiagnosticList diagnostics;
+        QVERIFY(document->renameOnDisk(
+            {
+                {{}, record, {QString::fromUtf8("偁.wav")}}
+        },
+            nullptr, diagnostics));
+        QFile oto(pathOf(QStringLiteral("oto.ini")));
+        QVERIFY(oto.open(QIODevice::ReadOnly));
+        QVERIFY(oto.readAll().contains("a.wav=b,"));
+        QVERIFY(QFile::exists(pathOf(QString::fromUtf8("あ.wav"))));
+        QVERIFY(!QFile::exists(pathOf(QString::fromUtf8("偁.wav"))));
+    }
 };
 
 QTEST_GUILESS_MAIN(test_VoiceBankDocument)
