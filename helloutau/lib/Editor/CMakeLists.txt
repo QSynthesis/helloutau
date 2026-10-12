@@ -40,7 +40,7 @@ helloutau_add_library(${PROJECT_NAME} SHARED
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 
 # Where AppLoader finds the plugins that come with the application, relative to the directory of
-# the program: ../lib/plugins/helloutau, or ../Plugins in a macOS bundle. The build and the
+# the program: ../lib/helloutau/plugins, or ../Plugins in a macOS bundle. The build and the
 # installation lay them out alike.
 file(RELATIVE_PATH _builtin_plugins ${HELLOUTAU_BUILD_RUNTIME_DIR} ${HELLOUTAU_BUILD_PLUGINS_DIR})
 file(RELATIVE_PATH _installed_plugins

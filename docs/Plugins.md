@@ -75,7 +75,7 @@ stdcorelib.plugin 的交接记录（其仓库 `.cache/codex/2026-08-21-1722-stdc
 
 - **程序只是加载器。** `helloutau.exe` 的 `main` 设置应用名，构造 `hello::daw::AppLoader` 并调用 `run()`。
 - **`AppLoader`**（HelloUtauEditor）：持有 `PluginSystem`（目录布局）。命令行中的 `--plugin-path <目录>` 追加搜索目录，其余参数为文件，交给 Core 插件。`run()` 载入插件；Core 插件不存在、有错误或停用时报告原因并退出；否则运行事件循环，结束后关闭插件。其他插件的错误写入日志，并显示在设置的「Plugins」页。同一时刻只有一个加载器，插件经 `AppLoader::instance()` 取得它。
-- **Qt 的插件**（作者 2026-10-01 要求，不用 `qt.conf`）：安装后的布局为 `bin`（程序与各库）、`lib/plugins/helloutau`（本程序的插件）、`lib/plugins/Qt`（Qt 的插件）。程序入口在创建 `QApplication` 之前调用 `AppLoader::addQtPluginPaths()`，因为 Qt 在创建应用对象时载入平台插件。它以 stdcorelib 的 `application_directory()` 取得程序所在目录，把存在的 `bin/plugins`（用户自行复制 Qt 插件的位置）与 `lib/plugins/Qt` 依次加在 Qt 默认路径之前；Qt 6 保留创建应用对象之前加入的路径，并自行搜索程序所在目录，因此 Qt 插件目录直接散在 `bin` 中也能找到。Windows 的打包脚本为 `dist/installer/windows/package.ps1`（见 [`Distribution.md`](Distribution.md)「安装包」）：`cmake --install` 之后补上构建时复制到程序旁的依赖 DLL，以 windeployqt 的 `--plugindir` 部署 Qt，复制 VC 运行库的 DLL，并删除头文件、CMake 包与导入库。
+- **Qt 的插件**（作者 2026-10-01 要求，不用 `qt.conf`）：安装后的布局为 `bin`（程序与各库）、`lib/helloutau/plugins`（本程序的插件）、`lib/Qt/plugins`（Qt 的插件），后两者为应用的布局，即应用名在前（作者 2026-10-12 决定）。程序入口在创建 `QApplication` 之前调用 `AppLoader::addQtPluginPaths()`，因为 Qt 在创建应用对象时载入平台插件。它以 stdcorelib 的 `application_directory()` 取得程序所在目录，把存在的 `lib/Qt/plugins` 加在 Qt 默认路径之前，Qt 6 保留创建应用对象之前加入的路径。Qt 自身另外搜索 `bin/plugins` 与 `bin`：Qt6Core 的 DLL 位于 `bin` 且没有 `qt.conf` 时，Qt 6.11.1 的 `QLibraryInfo::PluginsPath` 为 `bin/plugins`（2026-10-12 以探针实测）。因此用户把 Qt 插件放在这两处也能找到。Windows 的打包脚本为 `dist/installer/windows/package.ps1`（见 [`Distribution.md`](Distribution.md)「安装包」）：`cmake --install` 之后补上构建时复制到程序旁的依赖 DLL，以 windeployqt 的 `--plugindir` 部署 Qt，复制 VC 运行库的 DLL，并删除头文件、CMake 包与导入库。
 - **Core 插件**（ID `org.helloutau.core`，目录 `Core`，目标 `CorePlugin`，插件类在 `Internal` 中）：`initialize()` 创建 `Editor`，向其登记编辑器的动作清单（`BuiltinActions`，见下文「编辑界面扩展：动作与命令」），并以 `AppLoader::setEditor()` 交给加载器供其他插件取用；`pluginsInitialized()` 打开命令行中的文件，没有则新建工程；`aboutToShutdown()` 销毁 `Editor` 及其窗口。`pluginsInitialized()` 按依赖的逆序调用，依赖 Core 的插件先于它完成，因此窗口打开时各插件都已登记完毕。
 
 ### 目录
@@ -86,7 +86,7 @@ stdcorelib.plugin 的交接记录（其仓库 `.cache/codex/2026-08-21-1722-stdc
 bin/
     helloutau.exe
     （各动态库）
-lib/plugins/helloutau/
+lib/helloutau/plugins/
     Core/
     ClassicPluginHost/
     FrequencyEditor/
@@ -96,7 +96,7 @@ lib/plugins/helloutau/
 macOS 的 bundle 中为 `HelloUtau.app/Contents/MacOS`（程序）与 `HelloUtau.app/Contents/Plugins/<插件>`。
 
 - 目录布局（stdcorelib.plugin 的 `Bundle`）：每个插件占搜索目录下的一个子目录，其中有插件的库与一个元数据 JSON：根字段 `name` 给出库的平台无关名（`name` 为 `vs4ufrq` 时可对应 `vs4ufrq.dll`、`libvs4ufrq.so`、`libvs4ufrq.dylib`），其余为 `id`、`displayName`、`description`、`version`、`dependencies` 与宿主字段。IID 仍以 `stdc_add_plugin_metadata()` 嵌在库中。插件的其他文件（翻译、图标、数据）放在同一子目录中。
-- 内置插件的搜索目录（`AppLoader::builtinPluginPath()`）为程序所在目录上一级的 `lib/plugins/helloutau`；macOS 打包为 bundle 时沿用 qmsetup 的布局，程序在 `Contents/MacOS`，插件在 `Contents/Plugins`。这一相对路径不写在 C++ 中，由 HelloUtauEditor 的 CMake 从 qmsetup 的运行目录与插件目录算出，并核对构建目录与安装目录一致。目前尚未打包为 bundle，测试程序也不在 bundle 中。用户安装插件的目录将来在「Plugins」页一并加入，都与 UTAU 插件的目录分开。
+- 内置插件的搜索目录（`AppLoader::builtinPluginPath()`）为程序所在目录上一级的 `lib/helloutau/plugins`；macOS 打包为 bundle 时沿用 qmsetup 的布局，程序在 `Contents/MacOS`，插件在 `Contents/Plugins`。这一相对路径不写在 C++ 中，由 HelloUtauEditor 的 CMake 从 qmsetup 的运行目录与插件目录算出，并核对构建目录与安装目录一致。目前尚未打包为 bundle，测试程序也不在 bundle 中。用户安装插件的目录将来在「Plugins」页一并加入，都与 UTAU 插件的目录分开。
 - 本仓库的插件以 `helloutau_add_native_plugin()`（`helloutau/plugins/CMakeLists.txt`）构建：输出到各自的子目录，嵌入 IID，并在构建时写出 `plugin.json`（`DEPENDENCIES` 写入必需依赖）。只供测试的插件以 `DIRECTORY` 构建到测试自己的目录，不安装。
 - **翻译**（作者 2026-10-01 定）：各库（两个模块的全部子库，含动作清单经 AEC 生成的文字）共用一份 `helloutau/lib/Editor/Resources/translations/helloutau_<语言>.ts`（暂放此处，见 [`Status.md`](Status.md)「待定事项」），嵌入 HelloUtauEditor 的资源 `:/helloutau/translations`；每个插件一份 `plugins/<插件>/Resources/translations/<插件>_<语言>.ts`，嵌入插件自身的资源 `:/helloutau/plugins/<插件>/translations`。`.ts` 纳入版本库，`qt_add_translations()` 在构建时生成 `.qm`；`update_translations` 目标以 lupdate 从源文件（含 AEC 生成的源文件，须先构建）更新 `.ts`。以后改为外部文件时，库的译文放 `share/helloutau`，插件的放各自目录。命名空间作用域中名为 `tr` 的辅助函数会让 lupdate 记错上下文，须改用 `QT_TRANSLATE_NOOP` 标记（见 `ThemeTypes.cpp`）。
 - **插件同时是库**（作者 2026-09-30 要求）：与子库一样导出目标并安装头文件，供其他插件在它之上构建。公开头文件与源文件同在 `helloutau/plugins/<插件目录>/`，插件目标以 `helloutau/plugins` 为公开的包含目录，以 `<插件目录>/<头文件>` 引用；安装到 `include/helloutau/plugins/<插件目录>/`，安装后的包含目录指向 `include/helloutau/plugins`。导出宏头文件为 `<目标名>Global.h`，有公开的类时才添加。
@@ -173,7 +173,7 @@ stdcorelib.plugin 的生命周期是同步的，不依赖事件循环。HelloUta
 4. 接受 HelloUtau 作为 stdcorelib.plugin 的首个真实使用者之一，其 API 可能随之调整。
 5. 目录布局的元数据文件名沿用 `plugin.json`。
 6. IID 为 `org.OpenVPI.HelloUtau.Plugin`，常量放在 HelloUtauEditor。
-7. 程序只是加载器（`AppLoader`，不用 `Loader` 这样的名称），原来程序入口的工作由 Core 插件负责；目录为 `bin` 与 `lib/plugins/helloutau/<插件>`；程序文件名为小写的 `helloutau`，Windows 资源中的名称显式为 `HelloUtau`。
+7. 程序只是加载器（`AppLoader`，不用 `Loader` 这样的名称），原来程序入口的工作由 Core 插件负责；目录为 `bin` 与 `lib/helloutau/plugins/<插件>`；程序文件名为小写的 `helloutau`，Windows 资源中的名称显式为 `HelloUtau`。
 8. 频率表插件名为 FrequencyEditor。多个格式匹配重采样器时选后载入的。
 9. 插件可以注册自己的动作（命令），属于编辑界面扩展。插件也是库：导出目标、安装头文件，插件中库一级的内容在 `tests/auto/plugins` 中测试，不测试菜单布局。
 10. 编辑器的清单由 Core 注册：现在按方案 1 加 3（清单拆成应用层与窗口层两份，都经 Core 登记，处理函数仍在窗口中），最终目标是方案 2（清单与处理函数都在 Core 中）。

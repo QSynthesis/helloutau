@@ -60,7 +60,7 @@ namespace hello::daw {
         static AppLoader *instance();
 
         /// Returns the directory of the bundled plugins, at the location relative to the program
-        /// where the build places them: <tt>lib/plugins/helloutau</tt> beside the directory of
+        /// where the build places them: <tt>lib/helloutau/plugins</tt> beside the directory of
         /// the program, or <tt>Contents/Plugins</tt> of a macOS bundle.
         static QString builtinPluginPath();
 
@@ -73,9 +73,8 @@ namespace hello::daw {
         static void addQtPluginPaths();
 
         /// Returns the directories of the Qt plugins for the program in \a programDirectory that
-        /// exist, the first to be searched first: \c plugins in the directory of the program,
-        /// where a user may copy the plugins of Qt, and <tt>lib/plugins/Qt</tt> beside the
-        /// plugins of the application, where the package puts them.
+        /// exist: <tt>lib/Qt/plugins</tt> beside the plugins of the application, where the
+        /// package puts them.
         static QStringList qtPluginPaths(const QString &programDirectory);
 
         /// Returns the plugin paths: builtinPluginPath() followed by the directories of the

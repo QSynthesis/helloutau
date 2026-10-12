@@ -38,7 +38,7 @@
 
 ### 安装目录
 
-安装目录的布局与现在的免安装版相同：`bin` 存放程序与各库，`lib/plugins/helloutau` 存放本程序的插件，`lib/plugins/Qt` 存放 Qt 的插件，`share/Qt/translations` 存放 Qt 的翻译（`Plugins.md`「Qt 的插件」）。安装目录中不写入任何运行时产生的文件，因此更新时可以整体替换。
+安装目录的布局与现在的免安装版相同：`bin` 存放程序与各库，`lib/helloutau/plugins` 存放本程序的插件，`lib/Qt/plugins` 存放 Qt 的插件，`share/Qt/translations` 存放 Qt 的翻译（`Plugins.md`「Qt 的插件」）。安装目录中不写入任何运行时产生的文件，因此更新时可以整体替换。
 
 ### 用户目录
 
@@ -54,7 +54,7 @@
 
 - 音源与插件放在文档目录而不是应用数据目录，同 Synthesizer V。这两类文件由用户自行复制、整理和备份，应用数据目录默认隐藏，不便于用户访问。
 - 音源目录名为 `Singers`，不使用 `voice`。
-- 文档目录下的第一层目录名采用首字母大写的单词（`Singers`、`ClassicPlugins`），面向用户。原生插件的目录沿用安装目录的小写写法（`plugins`，对应安装目录的 `lib/plugins`），因此以 `Extensions` 一层与第一层隔开（作者 2026-10-11 决定）。以后用户安装的其他扩展内容，例如主题与翻译，同样放在 `Extensions` 下，按安装目录的写法命名。
+- 文档目录下的第一层目录名采用首字母大写的单词（`Singers`、`ClassicPlugins`），面向用户。原生插件的目录沿用安装目录的小写写法（`plugins`，对应安装目录的 `lib/helloutau/plugins`），因此以 `Extensions` 一层与第一层隔开（作者 2026-10-11 决定）。以后用户安装的其他扩展内容，例如主题与翻译，同样放在 `Extensions` 下，按安装目录的写法命名。
 - 文档目录取 `QStandardPaths::DocumentsLocation`。用户把「文档」重定向到其他位置时，路径随之改变。
 
 ### 临时目录管理器

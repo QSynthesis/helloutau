@@ -15,11 +15,12 @@ set(HELLOUTAU_INSTALL_CONFIG_TEMPLATE
     "${CMAKE_CURRENT_LIST_DIR}/${HELLOUTAU_INSTALL_NAME}Config.cmake.in"
 )
 
-# Keep the plugin layout: <lib>/plugins/<name>. A macOS bundle keeps that of qmsetup,
-# Contents/Plugins beside Contents/MacOS of the program.
+# The plugin layout of an application: <lib>/<name>/plugins, with the plugins of Qt in
+# <lib>/Qt/plugins. A macOS bundle keeps that of qmsetup, Contents/Plugins beside Contents/MacOS
+# of the program.
 if(NOT(APPLE AND HELLOUTAU_MACOSX_BUNDLE_NAME))
-    set(HELLOUTAU_BUILD_PLUGINS_DIR ${QMSETUP_BUILD_DIR}/lib/plugins/helloutau)
-    set(HELLOUTAU_INSTALL_PLUGINS_DIR ${CMAKE_INSTALL_LIBDIR}/plugins/helloutau)
+    set(HELLOUTAU_BUILD_PLUGINS_DIR ${QMSETUP_BUILD_DIR}/lib/${HELLOUTAU_INSTALL_NAME}/plugins)
+    set(HELLOUTAU_INSTALL_PLUGINS_DIR ${CMAKE_INSTALL_LIBDIR}/${HELLOUTAU_INSTALL_NAME}/plugins)
 endif()
 
 # The interface ID of the native plugins, the same as hello::daw::AppLoader::pluginIid, which
@@ -69,11 +70,11 @@ endfunction()
 set(HELLOUTAU_POST_CONFIGURE_COMMANDS _helloutau_common_configure_target)
 
 # Emit build metadata for the About dialog.
-set(HELLOUTAU_BUILD_INFO_HEADER_PATH helloutau/BuildInfo.h)
+set(HELLOUTAU_BUILD_INFO_HEADER_PATH ${HELLOUTAU_INSTALL_NAME}/BuildInfo.h)
 set(HELLOUTAU_BUILD_INFO_HEADER_PREFIX HELLOUTAU)
 
 # Emit the definitions of qm_add_definition() in helloutau/CMakeLists.txt.
-set(HELLOUTAU_CONFIG_HEADER_PATH helloutau/Config.h)
+set(HELLOUTAU_CONFIG_HEADER_PATH ${HELLOUTAU_INSTALL_NAME}/Config.h)
 
 # ----------------------------------
 # Include Build Helpers

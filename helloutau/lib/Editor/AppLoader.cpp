@@ -170,20 +170,11 @@ namespace hello::daw {
     }
 
     QStringList AppLoader::qtPluginPaths(const QString &programDirectory) {
-        // lib/plugins/Qt is the sibling of lib/plugins/helloutau.
-        const QString candidates[] = {
-            QDir::cleanPath(programDirectory + QStringLiteral("/plugins")),
-            QDir::cleanPath(programDirectory + QLatin1Char('/') +
-                            QStringLiteral(HELLOUTAU_BUILTIN_PLUGINS_PATH) +
-                            QStringLiteral("/../Qt")),
-        };
-        QStringList paths;
-        for (const auto &path : candidates) {
-            if (QFileInfo(path).isDir()) {
-                paths.push_back(path);
-            }
-        }
-        return paths;
+        // lib/Qt/plugins is laid out as lib/helloutau/plugins.
+        const auto path = QDir::cleanPath(programDirectory + QLatin1Char('/') +
+                                          QStringLiteral(HELLOUTAU_BUILTIN_PLUGINS_PATH) +
+                                          QStringLiteral("/../../Qt/plugins"));
+        return QFileInfo(path).isDir() ? QStringList{path} : QStringList();
     }
 
     QStringList AppLoader::pluginPaths() const {

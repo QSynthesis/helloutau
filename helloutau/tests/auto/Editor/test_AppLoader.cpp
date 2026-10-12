@@ -174,45 +174,40 @@ private Q_SLOTS:
         // The tests run outside a macOS bundle and therefore use the layout without a bundle.
         QCOMPARE(AppLoader::builtinPluginPath(),
                  QDir::cleanPath(QCoreApplication::applicationDirPath() +
-                                 QStringLiteral("/../lib/plugins/helloutau")));
+                                 QStringLiteral("/../lib/helloutau/plugins")));
     }
 
-    // The plugins of Qt are searched in bin/plugins, where a user may copy them, before
-    // lib/plugins/Qt, where the package puts them. A directory that does not exist is left out.
+    // The plugins of Qt are searched in lib/Qt/plugins, where the package puts them. A directory
+    // that does not exist is left out.
     void the_qt_plugins_are_found_beside_the_program() {
         QTemporaryDir dir;
         const auto bin = dir.filePath(QStringLiteral("bin"));
-        const auto copied = dir.filePath(QStringLiteral("bin/plugins"));
-        const auto packaged = dir.filePath(QStringLiteral("lib/plugins/Qt"));
+        const auto packaged = dir.filePath(QStringLiteral("lib/Qt/plugins"));
         QVERIFY(QDir().mkpath(bin));
         QVERIFY(AppLoader::qtPluginPaths(bin).isEmpty());
         QVERIFY(QDir().mkpath(packaged));
         QCOMPARE(AppLoader::qtPluginPaths(bin), QStringList{packaged});
-        QVERIFY(QDir().mkpath(copied));
-        QCOMPARE(AppLoader::qtPluginPaths(bin), (QStringList{copied, packaged}));
     }
 
-    // The directories are added for the program that runs, ahead of the defaults of Qt and in
-    // the order of qtPluginPaths(). They are created beside the test for the time of the test,
-    // and the test is skipped if either exists already.
+    // The directory is added for the program that runs, ahead of the defaults of Qt. It is
+    // created beside the test for the time of the test, and the test is skipped if it exists
+    // already.
     void the_qt_plugin_paths_are_added_for_the_program() {
         const auto program = QCoreApplication::applicationDirPath();
-        const auto copied = program + QStringLiteral("/plugins");
-        const auto packaged = QDir::cleanPath(program + QStringLiteral("/../lib/plugins/Qt"));
-        if (QFileInfo::exists(copied) || QFileInfo::exists(packaged)) {
+        const auto packaged = QDir::cleanPath(program + QStringLiteral("/../lib/Qt/plugins"));
+        if (QFileInfo::exists(packaged)) {
             QSKIP("The directory of the test already holds the plugins of Qt.");
         }
-        QVERIFY(QDir().mkpath(copied));
         QVERIFY(QDir().mkpath(packaged));
-        const QStringList expected{QDir(copied).canonicalPath(), QDir(packaged).canonicalPath()};
+        const QStringList expected{QDir(packaged).canonicalPath()};
         const auto before = QCoreApplication::libraryPaths();
         AppLoader::addQtPluginPaths();
         const auto after = QCoreApplication::libraryPaths();
-        QDir(copied).removeRecursively();
         QDir(packaged).removeRecursively();
+        QDir(program + QStringLiteral("/../lib")).rmdir(QStringLiteral("Qt"));
         QCoreApplication::setLibraryPaths(before);
-        QCOMPARE(after.mid(0, 2), expected);
-        QCOMPARE(after.mid(2), before);
+        QCOMPARE(after.mid(0, 1), expected);
+        QCOMPARE(after.mid(1), before);
     }
 
     // The core plugin is initialized, notified after every plugin is initialized, and shut down
@@ -247,8 +242,7 @@ private Q_SLOTS:
         QTemporaryDir root;
         addPlugin(root.path(), QStringLiteral("Core"), QStringLiteral(TEST_APPLOADER_CORE),
                   QLatin1String(AppLoader::corePluginId));
-        addPlugin(root.path(), QStringLiteral("Other"),
-                  QStringLiteral(TEST_APPLOADER_FAILING_CORE),
+        addPlugin(root.path(), QStringLiteral("Other"), QStringLiteral(TEST_APPLOADER_FAILING_CORE),
                   QStringLiteral("org.helloutau.other"));
         AppLoader loader(arguments());
         loader.setPluginPaths({root.path()});

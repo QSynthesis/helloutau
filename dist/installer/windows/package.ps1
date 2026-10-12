@@ -16,8 +16,8 @@ param(
 #
 #     bin/                    helloutau.exe, the libraries of the application, of Qt and of the
 #                             other dependencies, and the C++ runtime
-#     lib/plugins/helloutau/  the plugins of the application, where cmake --install puts them
-#     lib/plugins/Qt/         the plugins of Qt, which AppLoader::addQtPluginPaths() adds
+#     lib/helloutau/plugins/  the plugins of the application, where cmake --install puts them
+#     lib/Qt/plugins/         the plugins of Qt, which AppLoader::addQtPluginPaths() adds
 #     share/Qt/translations/  the translations of Qt, installed by helloutau/CMakeLists.txt
 #
 # The build must be complete: this script does not build, because building requires the
@@ -89,7 +89,7 @@ New-Item -ItemType Directory -Force $OutputDir | Out-Null
 Invoke-Step "Install" { cmake --install $BuildDir --prefix $staging }
 
 $bin = Join-Path $staging "bin"
-$qtPlugins = Join-Path $staging "lib\plugins\Qt"
+$qtPlugins = Join-Path $staging "lib\Qt\plugins"
 
 Write-Output "== Copy the dependencies"
 foreach ($dll in Get-ChildItem -LiteralPath (Join-Path $BuildDir "out\bin") -Filter *.dll) {
@@ -101,10 +101,10 @@ foreach ($dll in Get-ChildItem -LiteralPath (Join-Path $BuildDir "out\bin") -Fil
 }
 
 # Qt for the program, every library and every plugin of the application, with the plugins of Qt
-# in lib/plugins/Qt. The C++ runtime is copied below instead of the installer of windeployqt.
+# in lib/Qt/plugins. The C++ runtime is copied below instead of the installer of windeployqt.
 $binaries = @(Join-Path $bin "helloutau.exe")
 $binaries += Get-ChildItem -LiteralPath $bin -Filter *.dll | ForEach-Object { $_.FullName }
-$binaries += Get-ChildItem -LiteralPath (Join-Path $staging "lib\plugins\helloutau") -Recurse `
+$binaries += Get-ChildItem -LiteralPath (Join-Path $staging "lib\helloutau\plugins") -Recurse `
     -Filter *.dll | ForEach-Object { $_.FullName }
 Invoke-Step "windeployqt" {
     & (Join-Path $Qt "bin\windeployqt.exe") --release --dir $bin --plugindir $qtPlugins `
