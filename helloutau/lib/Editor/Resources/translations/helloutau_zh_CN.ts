@@ -2735,12 +2735,48 @@ Lyrics:
         <translation>选择编码</translation>
     </message>
     <message>
+        <source>&amp;Use the names as they are</source>
+        <translation>按原样使用名字(&amp;U)</translation>
+    </message>
+    <message>
+        <source>Name on Disk</source>
+        <translation>磁盘上的名字</translation>
+    </message>
+    <message>
+        <source>Restored Name</source>
+        <translation>还原后的名字</translation>
+    </message>
+    <message>
+        <source>&amp;Written in:</source>
+        <translation>原本的编码(&amp;W)：</translation>
+    </message>
+    <message>
+        <source>&amp;Read as:</source>
+        <translation>被错解成的编码(&amp;R)：</translation>
+    </message>
+    <message>
         <source>&amp;Skip Folder</source>
         <translation>跳过文件夹(&amp;S)</translation>
     </message>
     <message>
         <source>Leave the folder out. Its samples are then found by file name only, and it is asked again next time.</source>
         <translation>不读取此文件夹。其中的样本仅按文件名查找，下次将再次询问。</translation>
+    </message>
+    <message>
+        <source>Determine File Names - %1</source>
+        <translation>确定文件名 - %1</translation>
+    </message>
+    <message>
+        <source>Some file names of the voice bank &quot;%1&quot; are to be determined. A misdecoded name was written in one encoding and read in another when the voice bank was extracted. Check the misdecoded names, which are then read restored, while the others are read as they are. The choices are recorded in the folders.</source>
+        <translation>音源「%1」中有一些文件名需要确定。错解的名字以一种编码写出，在解压音源时按另一种编码读取。请勾选错解的名字，它们将还原后读取，其余名字按原样读取。所作选择将记录在各文件夹中。</translation>
+    </message>
+    <message>
+        <source>&amp;Later</source>
+        <translation>以后再说(&amp;L)</translation>
+    </message>
+    <message>
+        <source>Use the names as they are this time, and ask again next time.</source>
+        <translation>本次按原样使用这些名字，下次再询问。</translation>
     </message>
     <message>
         <source>&amp;Skip All</source>
@@ -2769,6 +2805,10 @@ Lyrics:
         </translation>
     </message>
     <message>
+        <source>Some file names are to be determined as well, on the tab File Names of their folders.</source>
+        <translation>另有一些文件名需要确定，见各文件夹的「文件名」页。</translation>
+    </message>
+    <message>
         <source>Read Folders Again in Encodings - %1</source>
         <translation>以各自的编码重新读取文件夹 - %1</translation>
     </message>
@@ -2795,9 +2835,29 @@ Lyrics:
         </translation>
     </message>
     <message numerus="yes">
+        <source>(%n file name(s) to determine)</source>
+        <translation>
+            <numerusform>（%n 个文件名待确定）</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
         <source>%1 (%n invalid)</source>
         <translation>
             <numerusform>%1（%n 处无效）</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>File Names (%1)</source>
+        <translation>文件名（%1）</translation>
+    </message>
+    <message>
+        <source>These names are not yet in the record of the folder, which restores names written in %1 and read as %2.</source>
+        <translation>这些名字尚未记入该文件夹的记录。该记录还原以 %1 写出、按 %2 读取的名字。</translation>
+    </message>
+    <message numerus="yes">
+        <source>%n entry(s) of the oto.ini find no file. Restored as written in %1 and read as %2, %3 of them find their files.</source>
+        <translation>
+            <numerusform>oto.ini 中有 %n 个条目找不到文件。按以 %1 写出、被错解为 %2 还原后，其中 %3 个找到了文件。</numerusform>
         </translation>
     </message>
 </context>
@@ -2970,6 +3030,10 @@ Lyrics:
         <translation>读取新文件夹(&amp;N)</translation>
     </message>
     <message>
+        <source>&amp;Determine File Names...</source>
+        <translation>确定文件名(&amp;D)...</translation>
+    </message>
+    <message>
         <source>Voice Bank Info</source>
         <translation>音源信息</translation>
     </message>
@@ -3000,6 +3064,12 @@ Read them again? What you did not save in them is replaced, and Undo brings it b
     <message>
         <source>The folder of the voice bank no longer exists. Saving writes it again.</source>
         <translation>音源文件夹已不存在。保存时将重新写入。</translation>
+    </message>
+    <message numerus="yes">
+        <source>%n file name(s) are to be determined.</source>
+        <translation>
+            <numerusform>有 %n 个文件名需要确定。</numerusform>
+        </translation>
     </message>
     <message>
         <source>Rename Aliases</source>
@@ -3130,6 +3200,14 @@ Read them again? What you did not save in them is replaced, and Undo brings it b
     <message>
         <source>No folder of the voice bank can be read in another encoding. Each folder has either no text files or an oto.ini that declares UTF-8.</source>
         <translation>音源中没有可按其他编码读取的文件夹。每个文件夹或者没有文本文件，或者其 oto.ini 声明了 UTF-8。</translation>
+    </message>
+    <message>
+        <source>Determine File Names</source>
+        <translation>确定文件名</translation>
+    </message>
+    <message>
+        <source>No file name of the voice bank is to be determined.</source>
+        <translation>音源中没有需要确定的文件名。</translation>
     </message>
     <message>
         <source>Insert Entry</source>
