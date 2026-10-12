@@ -1,6 +1,10 @@
+#include <QtCore/QFile>
+#include <QtCore/QTemporaryDir>
 #include <QtCore/QTimer>
 #include <QtTest/QTest>
 #include <QtWidgets/QApplication>
+
+#include <hellokit/Support/TextCodec.h>
 
 #include <helloutau/Editor/Dialogs/VoiceBankCharsetDialog.h>
 
@@ -29,6 +33,30 @@ private:
         source.contents[kit::VoiceBankDirectorySource::Oto] =
             "a.wav=\xd6\xd0\xce\xc4\xd2\xf4\xd4\xb4,0,0,0,0,0\r\n";
         return source;
+    }
+
+    // 偁.wav and 偄.wav: あ.wav and い.wav in Shift_JIS read as GBK
+    const QString kA = QString::fromUtf8("偁.wav");
+    const QString kI = QString::fromUtf8("偄.wav");
+
+    // A folder in dir of a Japanese voice bank extracted on a Chinese system, with entries of
+    // あ.wav and い.wav in Shift_JIS whose files are named kA and kI, as read
+    kit::VoiceBankDirectorySource misdecodedFolder(const QTemporaryDir &dir) const {
+        const auto write = [&dir](const QString &name, const QByteArray &bytes) {
+            QFile file(dir.path() + QLatin1Char('/') + name);
+            if (file.open(QIODevice::WriteOnly)) {
+                file.write(bytes);
+            }
+        };
+        write(QStringLiteral("oto.ini"),
+              kit::TextCodec(QStringLiteral("Shift_JIS"))
+                  .encode(QString::fromUtf8("あ.wav=あ,1,2,3,4,5\r\nい.wav=い,1,2,3,4,5\r\n")));
+        write(kA, "RIFF");
+        write(kI, "RIFF");
+        kit::DiagnosticList diagnostics;
+        return kit::VoiceBankSource::readDirectory(
+                   std::filesystem::path(dir.path().toStdU16String()), {}, diagnostics)
+            .value_or(kit::VoiceBankDirectorySource());
     }
 
 private Q_SLOTS:
@@ -132,6 +160,97 @@ private Q_SLOTS:
         QTimer::singleShot(0, &dialog, &QDialog::reject);
         QCOMPARE(dialog.selectCharset(source, diagnostics), std::nullopt);
         QVERIFY(diagnostics.empty());
+    }
+
+    // A folder whose encoding is settled is asked about its file names only, and its encoding
+    // cannot be changed.
+    void a_settled_folder_is_asked_about_its_file_names_only() {
+        QTemporaryDir dir;
+        const auto source = misdecodedFolder(dir);
+        VoiceBankCharsetDialog dialog;
+        dialog.setRoot("bank");
+        dialog.setQuestions({
+            {&source, QStringLiteral("Shift_JIS")}
+        });
+        QCOMPARE(dialog.windowTitle(), QStringLiteral("Determine File Names - bank"));
+        QVERIFY(dialog.misdecodedNameQuestion(0).has_value());
+        QCOMPARE(dialog.misdecodedNames(0), (QStringList{kA, kI}));
+        QVERIFY(dialog.previewTitles().contains(QStringLiteral("File Names (2)")));
+        QVERIFY(dialog.folderText(0).contains(QStringLiteral("to determine)")));
+
+        dialog.setSelectedCharset(QStringLiteral("UTF-8"));
+        QCOMPARE(dialog.charsetOf(0), QStringLiteral("Shift_JIS"));
+
+        const auto answer = dialog.answers().value(0);
+        QCOMPARE(answer.charset, std::optional(QStringLiteral("Shift_JIS")));
+        QVERIFY(answer.fileNameEncoding.has_value());
+        QCOMPARE(answer.fileNameEncoding->misdecoded, (QStringList{kA, kI}));
+    }
+
+    // The question about the file names follows the encoding chosen for the folder, because the
+    // inference reads the entries in it.
+    void the_file_names_follow_the_encoding_of_the_folder() {
+        QTemporaryDir dir;
+        const auto source = misdecodedFolder(dir);
+        VoiceBankCharsetDialog dialog;
+        dialog.setQuestions({
+            {&source, std::nullopt}
+        });
+        dialog.setSelectedCharset(QStringLiteral("UTF-8"));
+        QVERIFY(!dialog.misdecodedNameQuestion(0).has_value());
+        QVERIFY(!dialog.previewTitles().contains(QStringLiteral("File Names (2)")));
+        dialog.setSelectedCharset(QStringLiteral("Shift_JIS"));
+        QVERIFY(dialog.misdecodedNameQuestion(0).has_value());
+        QCOMPARE(dialog.answers().value(0).charset, std::optional(QStringLiteral("Shift_JIS")));
+    }
+
+    void the_choices_make_the_record() {
+        QTemporaryDir dir;
+        const auto source = misdecodedFolder(dir);
+        VoiceBankCharsetDialog dialog;
+        dialog.setQuestions({
+            {&source, QStringLiteral("Shift_JIS")}
+        });
+        dialog.setMisdecoded(0, kI, false);
+        auto record = dialog.answers().value(0).fileNameEncoding;
+        QVERIFY(record.has_value());
+        QCOMPARE(record->misdecoded, QStringList{kA});
+        QCOMPARE(record->correct, QStringList{kI});
+
+        // Other encodings, under which the names restore otherwise
+        dialog.setFileNameEncodings(0, QStringLiteral("Big5"), QStringLiteral("GBK"));
+        QCOMPARE(dialog.misdecodedNameQuestion(0)->original(), QStringLiteral("Big5"));
+        record = dialog.answers().value(0).fileNameEncoding;
+        QVERIFY(record.has_value());
+        QCOMPARE(record->original, QStringLiteral("Big5"));
+
+        dialog.setNamesAsTheyAre(0, true);
+        QVERIFY(!dialog.answers().value(0).fileNameEncoding.has_value());
+    }
+
+    // A folder left out, and every folder of a declined dialog, records no file names.
+    void a_folder_not_read_records_no_file_names() {
+        QTemporaryDir dir;
+        const auto source = misdecodedFolder(dir);
+        VoiceBankCharsetDialog dialog;
+        dialog.setQuestions({
+            {&source, std::nullopt}
+        });
+        dialog.setSelectedCharset(QStringLiteral("Shift_JIS"));
+        dialog.setIncluded(0, false);
+        const auto answer = dialog.answers().value(0);
+        QVERIFY(!answer.charset.has_value());
+        QVERIFY(!answer.fileNameEncoding.has_value());
+
+        kit::DiagnosticList diagnostics;
+        QTimer::singleShot(0, &dialog, &QDialog::reject);
+        const auto declined = dialog.selectEncodings(
+            {
+                {&source, QStringLiteral("Shift_JIS")}
+        },
+            diagnostics);
+        QCOMPARE(declined.value(0).charset, std::optional(QStringLiteral("Shift_JIS")));
+        QVERIFY(!declined.value(0).fileNameEncoding.has_value());
     }
 };
 
