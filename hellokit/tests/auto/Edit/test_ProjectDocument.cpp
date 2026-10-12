@@ -11,6 +11,8 @@
 #include <hellokit/Edit/ProjectRefs.h>
 #include <hellokit/VoiceBank/VoiceBank.h>
 
+#include "VoiceBankSamples.h"
+
 using namespace hello::kit;
 namespace fs = std::filesystem;
 
@@ -349,6 +351,33 @@ private Q_SLOTS:
         QVERIFY(again.asked.isEmpty());
         QVERIFY(document->voiceBank()->find(60, QString::fromUtf8("あ")));
         QCOMPARE(spy.count(), 2);
+    }
+
+    // File names determined while the voice bank is loaded are recorded at once, as the encoding
+    // is, and the names of the files follow the record.
+    void the_determined_file_names_are_recorded_at_once() {
+        QTemporaryDir dir;
+        const auto utau = pathIn(dir, "utau");
+        const auto folder = utau / "voice" / "bank";
+        fs::create_directories(folder);
+        writeBytes(folder / "oto.ini", QByteArray("\x82\xa0.wav=a,0,0,0,0,0\r\n"));
+        writeBytes(folder / fs::path(u"偁.wav"), {});
+        const auto document = singingWith(dir, QStringLiteral("%VOICE%bank"));
+        QVERIFY(document);
+
+        AcceptingSelector selector(QStringLiteral("Shift_JIS"));
+        DiagnosticList diagnostics;
+        QVERIFY(document->loadVoiceBank(VoiceLocations::ofUtau(utau), &selector, diagnostics));
+        const auto sample = document->voiceBank()->find(60, QStringLiteral("a"));
+        QVERIFY(sample);
+        QCOMPARE(sample->path, folder / fs::path(u"偁.wav"));
+
+        DiagnosticList ignored;
+        const auto config = VoiceBankConfig::open(folder / "hello-config.json", ignored);
+        QVERIFY(config.has_value());
+        QCOMPARE(config->charset, TextCodec(QStringLiteral("Shift_JIS")).name());
+        QVERIFY(config->fileNameEncoding.has_value());
+        QCOMPARE(config->fileNameEncoding->misdecoded, QStringList{QString::fromUtf8("偁.wav")});
     }
 
     // A directory the user declined is left out, and nothing is recorded for it.

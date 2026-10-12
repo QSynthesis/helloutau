@@ -8,6 +8,7 @@
 #include <QtTest/QTest>
 
 #include <hellokit/Support/TextCodec.h>
+#include <hellokit/VoiceBank/MisdecodedNameQuestion.h>
 #include <hellokit/VoiceBank/VoiceBank.h>
 #include <hellokit/VoiceBank/VoiceBankFileSystemState.h>
 
@@ -22,6 +23,45 @@ using Source = VoiceBankDirectorySource;
 static const QString kMisdecodedA = QString::fromUtf8("偁");
 static const QString kMisdecodedI = QString::fromUtf8("偄");
 static const QString kMisdecodedU = QString::fromUtf8("偆");
+
+/// Selects one encoding for the text files of every directory, and answers each question about
+/// file names with the proposed choices, as a user who accepts the defaults of the dialog.
+class AcceptingSelector : public FixedCharsetSelector {
+public:
+    explicit AcceptingSelector(QString charset)
+        : FixedCharsetSelector(charset), m_charset(std::move(charset)) {
+    }
+
+    QList<Answer> selectEncodings(const QList<Question> &questions,
+                                  DiagnosticList &diagnostics) override {
+        Q_UNUSED(diagnostics)
+        QList<Answer> answers;
+        for (const auto &question : questions) {
+            // The directory of a question lives only as long as the opening.
+            asked.push_back({question.directory->path, question.charset});
+            Answer answer;
+            answer.charset = question.charset.value_or(m_charset);
+            if (const auto names =
+                    MisdecodedNameQuestion::of(*question.directory, *answer.charset)) {
+                QStringList misdecoded;
+                for (const auto &choice : names->choices()) {
+                    if (choice.misdecoded) {
+                        misdecoded.push_back(choice.name);
+                    }
+                }
+                answer.fileNameEncoding = names->answer(misdecoded);
+            }
+            answers.push_back(answer);
+        }
+        return answers;
+    }
+
+    /// The directory and the settled encoding of each question.
+    QList<std::pair<fs::path, std::optional<QString>>> asked;
+
+private:
+    QString m_charset;
+};
 
 class test_VoiceBankFileSystemState_FileNames : public QObject {
     Q_OBJECT
@@ -361,6 +401,79 @@ private Q_SLOTS:
         QVERIFY(again->bank.directories()
                     .at(again->bank.indexOf(pathOf(kMisdecodedU)))
                     .charset.isEmpty());
+    }
+
+    /// Writes a Japanese voice bank extracted on a Chinese system without a record: entries of
+    /// あ.wav and い.wav, on disk as 偁.wav and 偄.wav, and an ASCII subdirectory with an entry
+    /// of its own file. The encoding of the text files is recorded if \a recorded is true.
+    void writeUnrecordedBank(bool recorded) {
+        if (recorded) {
+            VoiceBankConfig config;
+            config.charset = QStringLiteral("Shift_JIS");
+            write(QStringLiteral("hello-config.json"), config.toJson());
+            write(QStringLiteral("ascii/hello-config.json"), config.toJson());
+        }
+        write(QStringLiteral("oto.ini"),
+              shiftJis(QString::fromUtf8("あ.wav=あ,1,2,3,4,5\r\nい.wav=い,1,2,3,4,5\r\n")));
+        write(kMisdecodedA + QStringLiteral(".wav"), "RIFF");
+        write(kMisdecodedI + QStringLiteral(".wav"), "RIFF");
+        write(QStringLiteral("ascii/oto.ini"), "b.wav=b,1,2,3,4,5\r\n");
+        write(QStringLiteral("ascii/b.wav"), "RIFF");
+    }
+
+    // The inference proposes a record for a directory whose encoding is settled, and the answer
+    // names the files at once. A directory with nothing to determine is not asked about.
+    void the_file_names_are_determined_on_opening() {
+        writeUnrecordedBank(true);
+        AcceptingSelector selector(QStringLiteral("UTF-8"));
+        DiagnosticList diagnostics;
+        const auto opened = VoiceBankFileSystemState::open(root(), &selector, diagnostics);
+        QVERIFY(opened.has_value());
+        QCOMPARE(selector.asked.size(), 1);
+        QCOMPARE(selector.asked.at(0).first, fs::path());
+        QCOMPARE(selector.asked.at(0).second, std::optional(QStringLiteral("Shift_JIS")));
+
+        const auto record = recordOf(*opened, {});
+        QVERIFY(record.has_value());
+        QCOMPARE(record->misdecodedAs, TextCodec(QStringLiteral("GBK")).name());
+        QCOMPARE(record->misdecoded.size(), 2);
+        QVERIFY(audioFilesOf(*opened).contains(QString::fromUtf8("い.wav")));
+        const auto sample = sampleNamed(opened->bank, QString::fromUtf8("あ.wav"));
+        QVERIFY(sample);
+        QVERIFY(sample->hasEntry);
+        QCOMPARE(sample->path, root() / pathOf(kMisdecodedA + QStringLiteral(".wav")));
+    }
+
+    // A directory whose encoding the user selects is asked about both at once.
+    void an_unsettled_directory_is_asked_about_its_encoding_and_its_names() {
+        writeUnrecordedBank(false);
+        AcceptingSelector selector(QStringLiteral("Shift_JIS"));
+        DiagnosticList diagnostics;
+        const auto opened = VoiceBankFileSystemState::open(root(), &selector, diagnostics);
+        QVERIFY(opened.has_value());
+        QCOMPARE(selector.asked.size(), 2);
+        QVERIFY(!selector.asked.at(0).second.has_value());
+        QCOMPARE(opened->bank.directories().at(0).charset,
+                 TextCodec(QStringLiteral("Shift_JIS")).name());
+        QVERIFY(recordOf(*opened, {}).has_value());
+        QVERIFY(!recordOf(*opened, "ascii").has_value());
+    }
+
+    // A selector that answers nothing about file names leaves the names as they are. The
+    // encoding it selects goes to the directory that it was selected for, although a directory
+    // with a settled encoding is asked about before it.
+    void without_an_answer_the_names_are_used_as_they_are() {
+        writeUnrecordedBank(true);
+        QVERIFY(QFile::remove(m_dir->path() + QStringLiteral("/ascii/hello-config.json")));
+        FixedCharsetSelector selector(QStringLiteral("UTF-8"));
+        DiagnosticList diagnostics;
+        const auto opened = VoiceBankFileSystemState::open(root(), &selector, diagnostics);
+        QVERIFY(opened.has_value());
+        QVERIFY(!recordOf(*opened, {}).has_value());
+        QVERIFY(audioFilesOf(*opened).contains(kMisdecodedA + QStringLiteral(".wav")));
+        const auto &ascii = opened->bank.directories().at(opened->bank.indexOf("ascii"));
+        QVERIFY(!ascii.leftOut);
+        QCOMPARE(ascii.charset, TextCodec(QStringLiteral("UTF-8")).name());
     }
 };
 

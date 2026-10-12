@@ -316,6 +316,27 @@ namespace hello::kit {
         return charsets;
     }
 
+    QList<VoiceBankCharsetSelector::Answer>
+        VoiceBankCharsetSelector::selectEncodings(const QList<Question> &questions,
+                                                  DiagnosticList &diagnostics) {
+        QList<const VoiceBankDirectorySource *> unsettled;
+        for (const auto &question : questions) {
+            if (!question.charset) {
+                unsettled.push_back(question.directory);
+            }
+        }
+        const auto charsets = unsettled.isEmpty() ? QList<std::optional<QString>>()
+                                                  : selectCharsets(unsettled, diagnostics);
+        QList<Answer> answers;
+        qsizetype next = 0;
+        for (const auto &question : questions) {
+            Answer answer;
+            answer.charset = question.charset ? question.charset : charsets.value(next++);
+            answers.push_back(answer);
+        }
+        return answers;
+    }
+
     std::optional<QString> FixedCharsetSelector::selectCharset(const VoiceBankDirectorySource &,
                                                                DiagnosticList &) {
         return m_charset;

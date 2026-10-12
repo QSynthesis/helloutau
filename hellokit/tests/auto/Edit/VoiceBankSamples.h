@@ -13,6 +13,7 @@
 #include <QtCore/QString>
 #include <QtTest/QTest>
 
+#include <hellokit/VoiceBank/MisdecodedNameQuestion.h>
 #include <hellokit/VoiceBank/VoiceBankFileSystemState.h>
 
 namespace hello::kit {
@@ -37,6 +38,43 @@ namespace hello::kit {
 
     private:
         std::map<std::filesystem::path, QString> m_charsets;
+    };
+
+    /// Selects one encoding for every directory whose encoding nothing determines, and answers
+    /// each question about file names with the proposed choices, as a user who accepts the
+    /// defaults of the dialog.
+    class AcceptingSelector : public VoiceBankCharsetSelector {
+    public:
+        explicit AcceptingSelector(QString charset) : m_charset(std::move(charset)) {
+        }
+
+        std::optional<QString> selectCharset(const VoiceBankDirectorySource &,
+                                             DiagnosticList &) override {
+            return m_charset;
+        }
+
+        QList<Answer> selectEncodings(const QList<Question> &questions, DiagnosticList &) override {
+            QList<Answer> answers;
+            for (const auto &question : questions) {
+                Answer answer;
+                answer.charset = question.charset.value_or(m_charset);
+                if (const auto names =
+                        MisdecodedNameQuestion::of(*question.directory, *answer.charset)) {
+                    QStringList misdecoded;
+                    for (const auto &choice : names->choices()) {
+                        if (choice.misdecoded) {
+                            misdecoded.push_back(choice.name);
+                        }
+                    }
+                    answer.fileNameEncoding = names->answer(misdecoded);
+                }
+                answers.push_back(answer);
+            }
+            return answers;
+        }
+
+    private:
+        QString m_charset;
     };
 
     inline bool writeSampleFile(const QString &root, const QString &relative,

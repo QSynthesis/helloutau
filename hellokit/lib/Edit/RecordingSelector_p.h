@@ -10,7 +10,7 @@
 namespace hello::kit {
 
     /// Passes each question on, and records the directories for which the user chose an
-    /// encoding, to be remembered for recording by the next save.
+    /// encoding or determined the misdecoded file names, whose configuration is to be written.
     class RecordingSelector : public VoiceBankCharsetSelector {
     public:
         explicit RecordingSelector(VoiceBankCharsetSelector *selector) : m_selector(selector) {
@@ -25,16 +25,16 @@ namespace hello::kit {
             return charset;
         }
 
-        QList<std::optional<QString>>
-            selectCharsets(const QList<const VoiceBankDirectorySource *> &directories,
-                           DiagnosticList &diagnostics) override {
-            auto charsets = m_selector->selectCharsets(directories, diagnostics);
-            for (qsizetype i = 0; i < directories.size() && i < charsets.size(); ++i) {
-                if (charsets[i]) {
-                    chosen.push_back(directories[i]->path);
+        QList<Answer> selectEncodings(const QList<Question> &questions,
+                                      DiagnosticList &diagnostics) override {
+            auto answers = m_selector->selectEncodings(questions, diagnostics);
+            for (qsizetype i = 0; i < questions.size() && i < answers.size(); ++i) {
+                const auto &answer = answers.at(i);
+                if ((!questions.at(i).charset && answer.charset) || answer.fileNameEncoding) {
+                    chosen.push_back(questions.at(i).directory->path);
                 }
             }
-            return charsets;
+            return answers;
         }
 
         QList<std::filesystem::path> chosen;

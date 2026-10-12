@@ -228,6 +228,40 @@ namespace hello::kit {
         virtual QList<std::optional<QString>>
             selectCharsets(const QList<const VoiceBankDirectorySource *> &directories,
                            DiagnosticList &diagnostics);
+
+        /// A directory about which the user is asked on opening a voice bank.
+        struct Question {
+            const VoiceBankDirectorySource *directory = nullptr;
+            /// The encoding of the text files that a declaration or the configuration
+            /// determines, empty for a directory without text files, or \c std::nullopt if the
+            /// user selects it.
+            std::optional<QString> charset;
+        };
+
+        /// The answer about one directory.
+        struct Answer {
+            /// The encoding of the text files that the user selected, or \c std::nullopt to
+            /// leave the directory out. Ignored for a question with an encoding.
+            std::optional<QString> charset;
+            /// The record of misdecoded file names that the user determined, or
+            /// \c std::nullopt to use the names as the configuration records them.
+            std::optional<VoiceBankConfig::FileNameEncoding> fileNameEncoding;
+        };
+
+        /// Selects the encodings of the text files and determines the misdecoded file names of
+        /// \a questions , so that a user is asked once about both. See the section on misdecoded
+        /// file names in docs/Editing.md.
+        ///
+        /// Queried on opening a voice bank, in the order of the voice bank, with every directory
+        /// that selectCharsets() would be queried for, and with every directory whose
+        /// MisdecodedNameQuestion under the encoding that determines it is not empty. The question
+        /// about the file names of a directory depends on the encoding of its text files, which
+        /// an implementation obtains from MisdecodedNameQuestion::of() for each encoding it offers.
+        ///
+        /// \return one answer per question in the same order. By default, the answers of
+        ///         selectCharsets() and no record of file names.
+        virtual QList<Answer> selectEncodings(const QList<Question> &questions,
+                                              DiagnosticList &diagnostics);
     };
 
     /// Selects the same encoding for every directory.

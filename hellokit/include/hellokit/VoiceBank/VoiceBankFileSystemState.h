@@ -286,8 +286,11 @@ namespace hello::kit {
         /// @{
         void replaceDirectory(VoiceBank &bank, int index, const VoiceBankDirectorySource &source,
                               const std::optional<QString> &charset, DiagnosticList &diagnostics);
+        /// Appends \a source to \a bank with the record of misdecoded file names \a record .
         void appendDirectory(VoiceBank &bank, const VoiceBankDirectorySource &source,
-                             const std::optional<QString> &charset, DiagnosticList &diagnostics);
+                             const std::optional<QString> &charset,
+                             const std::optional<VoiceBankConfig::FileNameEncoding> &record,
+                             DiagnosticList &diagnostics);
         void removeDirectory(VoiceBank &bank, int index);
 
         /// Replaces the samples without an entry of the directory at \a index of \a bank with

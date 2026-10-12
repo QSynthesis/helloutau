@@ -14,6 +14,8 @@
 
 #include <hellokit/Support/TextCodec.h>
 
+#include "MisdecodedNameQuestion.h"
+
 namespace hello::kit {
 
     namespace fs = std::filesystem;
@@ -648,25 +650,40 @@ namespace hello::kit {
         bank.m_root = source.root();
         files.m_root = source.root();
 
-        // The directories that nothing determines, asked about at once
+        // The directories that nothing determines, and those with file names to determine,
+        // asked about at once
         AnsweredSelector answered;
+        std::map<fs::path, VoiceBankConfig::FileNameEncoding> fileNames;
         if (selector) {
-            QList<const VoiceBankDirectorySource *> unsettled;
+            QList<VoiceBankCharsetSelector::Question> questions;
             for (const auto &directory : source.directories()) {
-                if (!directory.textFiles().empty() && !directory.settledCharset()) {
-                    unsettled.push_back(&directory);
+                const auto settled = directory.textFiles().empty()
+                                         ? std::optional<QString>(QString())
+                                         : directory.settledCharset();
+                if (!settled || MisdecodedNameQuestion::of(directory, *settled)) {
+                    questions.push_back({&directory, settled});
                 }
             }
-            if (!unsettled.isEmpty()) {
-                const auto charsets = selector->selectCharsets(unsettled, diagnostics);
-                for (qsizetype i = 0; i < unsettled.size(); ++i) {
-                    answered.answers[unsettled[i]->path] = charsets.value(i);
+            if (!questions.isEmpty()) {
+                const auto answers = selector->selectEncodings(questions, diagnostics);
+                for (qsizetype i = 0; i < questions.size(); ++i) {
+                    const auto &path = questions.at(i).directory->path;
+                    const auto answer = answers.value(i);
+                    if (!questions.at(i).charset) {
+                        answered.answers[path] = answer.charset;
+                    }
+                    if (answer.fileNameEncoding) {
+                        fileNames[path] = *answer.fileNameEncoding;
+                    }
                 }
             }
         }
         for (const auto &directory : source.directories()) {
+            const auto chosen = fileNames.find(directory.path);
             files.appendDirectory(
                 bank, directory, charsetFor(directory, selector ? &answered : nullptr, diagnostics),
+                chosen != fileNames.end() ? FileNameRecord(chosen->second)
+                                          : recordOf(directory.config),
                 diagnostics);
         }
 
@@ -1061,7 +1078,7 @@ namespace hello::kit {
                     continue;
                 }
                 appendDirectory(bank, source, charsetFor(source, selector, diagnostics),
-                                diagnostics);
+                                recordOf(source.config), diagnostics);
                 done.added.push_back(source.path);
             }
         }
@@ -1128,9 +1145,9 @@ namespace hello::kit {
     void VoiceBankFileSystemState::appendDirectory(VoiceBank &bank,
                                                    const VoiceBankDirectorySource &source,
                                                    const std::optional<QString> &charset,
+                                                   const FileNameRecord &record,
                                                    DiagnosticList &diagnostics) {
         const int index = int(bank.m_directories.size());
-        const auto record = recordOf(source.config);
         auto names = namesOf(source.audioFiles, source.stamp, record, &diagnostics);
         auto decoded = decodeDirectory(source, m_root, index, charset, names.audioFiles,
                                        names.diskNames, diagnostics);
