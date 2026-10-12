@@ -119,6 +119,11 @@
              dialog -->
         <action id="helloutau.voiceBank.rereadCharsets"
                 text="Read Folders Again in Enc&amp;odings..." category="Edit" />
+        <!-- The encodings of the whole voice bank in one dialog: the text files of each folder
+             saved in another encoding, and the misdecoded file names read as such or renamed on
+             disk -->
+        <action id="helloutau.voiceBank.convertEncodings" text="Convert Encodin&amp;gs..."
+                category="Edit" />
         <!-- The chunks of the audio files besides the format and the audio, written away after
              a confirmation -->
         <action id="helloutau.voiceBank.removeMetadata" text="Remove Audio &amp;Metadata..."
@@ -179,6 +184,7 @@
                 <action id="helloutau.voiceBank.convertCharset" />
                 <action id="helloutau.voiceBank.rereadCharset" />
                 <action id="helloutau.voiceBank.rereadCharsets" />
+                <action id="helloutau.voiceBank.convertEncodings" />
             </menu>
             <menu id="helloutau.voiceBank.view">
                 <action id="helloutau.voiceBank.showSpectrogram" />

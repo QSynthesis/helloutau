@@ -254,6 +254,10 @@
         <translation>以各自的编码重新读取文件夹(&amp;O)...</translation>
     </message>
     <message>
+        <source>Convert Encodin&amp;gs...</source>
+        <translation>转换音源编码(&amp;G)...</translation>
+    </message>
+    <message>
         <source>Remove Audio &amp;Metadata...</source>
         <translation>移除音频元数据(&amp;M)...</translation>
     </message>
@@ -3020,6 +3024,117 @@ Lyrics:
     </message>
 </context>
 <context>
+    <name>hello::daw::VoiceBankTranscodingDialog</name>
+    <message>
+        <source>Convert Encodings</source>
+        <translation>转换音源编码</translation>
+    </message>
+    <message>
+        <source>Text Files</source>
+        <translation>文本文件</translation>
+    </message>
+    <message>
+        <source>&amp;Save the text files in:</source>
+        <translation>以下列编码保存文本文件(&amp;S)：</translation>
+    </message>
+    <message>
+        <source>File Names</source>
+        <translation>文件名</translation>
+    </message>
+    <message>
+        <source>Name on Disk</source>
+        <translation>磁盘上的名字</translation>
+    </message>
+    <message>
+        <source>New Name</source>
+        <translation>新名字</translation>
+    </message>
+    <message>
+        <source>&amp;Written in:</source>
+        <translation>原本的编码(&amp;W)：</translation>
+    </message>
+    <message>
+        <source>&amp;Read as:</source>
+        <translation>被错解成的编码(&amp;R)：</translation>
+    </message>
+    <message>
+        <source>Keep the file names</source>
+        <translation>不转换文件名</translation>
+    </message>
+    <message>
+        <source>Read the checked names as misdecoded</source>
+        <translation>将勾选的名字按错解读取</translation>
+    </message>
+    <message>
+        <source>Rename the checked names on disk</source>
+        <translation>在磁盘上改正勾选的名字</translation>
+    </message>
+    <message>
+        <source>Renaming takes effect at once and cannot be undone. The voice bank is saved first, and its window opens again without the undo history. UTAU on a system in the encoding in which the names were read no longer finds the renamed files.</source>
+        <translation>改名立即执行，不可撤销。改名前先保存音源，改名后音源窗口重新打开，撤销历史随之清空。在名字被错解时所用编码的系统上，UTAU 将找不到改名后的文件。</translation>
+    </message>
+    <message>
+        <source>&amp;File names:</source>
+        <translation>文件名(&amp;F)：</translation>
+    </message>
+    <message>
+        <source>Convert the encodings of the voice bank &quot;%1&quot;. The text files of a folder are converted if checked: their text stays the same, and their bytes change. The checked file names of every folder are converted by the method below.</source>
+        <translation>转换音源「%1」的编码。勾选了文本文件的文件夹转换其文本文件，文本保持不变，字节改变。各文件夹中勾选的文件名按下方的做法转换。</translation>
+    </message>
+    <message>
+        <source>%1 (the voice bank)</source>
+        <translation>%1（音源本身）</translation>
+    </message>
+    <message>
+        <source>(not read)</source>
+        <translation>（未读取）</translation>
+    </message>
+    <message>
+        <source>(text from %1 to %2)</source>
+        <translation>（文本由 %1 转为 %2）</translation>
+    </message>
+    <message numerus="yes">
+        <source>(%1 of %n name(s) checked)</source>
+        <translation>
+            <numerusform>（已勾选 %1 个，共 %n 个名字）</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>The folder was not read, because no encoding was chosen for it.</source>
+        <translation>未为该文件夹选择编码，因此没有读取该文件夹。</translation>
+    </message>
+    <message>
+        <source>The text files are written in %1.</source>
+        <translation>文本文件以 %1 写出。</translation>
+    </message>
+    <message>
+        <source>The folder has no text files.</source>
+        <translation>该文件夹没有文本文件。</translation>
+    </message>
+    <message>
+        <source>Every name of the folder is ASCII.</source>
+        <translation>该文件夹的名字全部为 ASCII。</translation>
+    </message>
+    <message>
+        <source>No name of the folder restores in these encodings.</source>
+        <translation>按这两个编码，该文件夹没有可以还原的名字。</translation>
+    </message>
+    <message>
+        <source>The names are checked as the record of the folder determines.</source>
+        <translation>名字按该文件夹的记录勾选。</translation>
+    </message>
+    <message numerus="yes">
+        <source>%n name(s) do not restore in these encodings and are left as they are. A misdecoded name among them is renamed on disk by hand.</source>
+        <translation>
+            <numerusform>%n 个名字按这两个编码无法还原，保持原样。其中错解的名字需在磁盘上手动改名。</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>The names of a folder that was not read can be renamed, but not read as misdecoded.</source>
+        <translation>未读取的文件夹的名字可以改名，但不能按错解读取。</translation>
+    </message>
+</context>
+<context>
     <name>hello::daw::VoiceBankWindow</name>
     <message>
         <source>Open Voice Bank</source>
@@ -3224,6 +3339,20 @@ Read them again? What you did not save in them is replaced, and Undo brings it b
     <message>
         <source>No file name of the voice bank is to be determined.</source>
         <translation>音源中没有需要确定的文件名。</translation>
+    </message>
+    <message>
+        <source>Convert Encodings</source>
+        <translation>转换音源编码</translation>
+    </message>
+    <message>
+        <source>No folder of the voice bank has text files or a file name that is not ASCII.</source>
+        <translation>音源中没有含文本文件或非 ASCII 文件名的文件夹。</translation>
+    </message>
+    <message numerus="yes">
+        <source>Rename %n file(s) and folder(s) on disk? The voice bank is saved first. The renaming cannot be undone, and the window opens again without the undo history. UTAU on a system in the encoding in which the names were read no longer finds the renamed files.</source>
+        <translation>
+            <numerusform>要在磁盘上改名 %n 个文件和文件夹吗？改名前先保存音源。改名不可撤销，音源窗口将重新打开，撤销历史随之清空。在名字被错解时所用编码的系统上，UTAU 将找不到改名后的文件。</numerusform>
+        </translation>
     </message>
     <message>
         <source>Insert Entry</source>

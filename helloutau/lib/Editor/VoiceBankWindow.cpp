@@ -373,6 +373,10 @@ namespace hello::daw {
                 stdc_decl_t;
                 decl.rereadCharsets();
             });
+            addCommand(QStringLiteral("helloutau.voiceBank.convertEncodings"), [this] {
+                stdc_decl_t;
+                decl.convertEncodings();
+            });
             addCommand(QStringLiteral("helloutau.voiceBank.removeMetadata"), [this] {
                 stdc_decl_t;
                 decl.removeAudioMetadata();
@@ -2113,6 +2117,109 @@ namespace hello::daw {
         DiagnosticBox::report(this, tr("Determine File Names"), diagnostics);
         impl.updateBar();
         return done;
+    }
+
+    bool VoiceBankWindow::convertEncodings() {
+        stdc_impl_t;
+        const auto session = impl.document->session();
+        QList<VoiceBankTranscodingDialog::Folder> folders;
+        for (const auto &listing : session->nameListings()) {
+            const auto conversion = kit::MisdecodedNameConversion::of(listing);
+            const bool excluded = !impl.directoryRef(listing.directory).has_value();
+            const bool hasText = !excluded && !listing.charset.isEmpty();
+            // Every name that is not ASCII either restores or does not.
+            if (!hasText && conversion.choices().isEmpty() && conversion.unrestorable().isEmpty()) {
+                continue;
+            }
+            folders.push_back({listing, impl.folderName(listing.directory), excluded});
+        }
+        if (folders.isEmpty()) {
+            QMessageBox::information(this, tr("Convert Encodings"),
+                                     tr("No folder of the voice bank has text files or a file "
+                                        "name that is not ASCII."));
+            return false;
+        }
+
+        VoiceBankTranscodingDialog dialog(this);
+        dialog.setFolders(impl.document->rootPath(), folders);
+        if (dialog.exec() != QDialog::Accepted) {
+            return false;
+        }
+        const auto conversion = dialog.conversion();
+        int renamed = 0;
+        if (conversion.method == VoiceBankTranscodingDialog::Rename) {
+            for (const auto &[names, checked] : conversion.names) {
+                renamed += int(checked.size());
+            }
+        }
+        if (renamed > 0 &&
+            QMessageBox::warning(
+                this, tr("Convert Encodings"),
+                tr("Rename %n file(s) and folder(s) on disk? The voice bank is saved first. The "
+                   "renaming cannot be undone, and the window opens again without the undo "
+                   "history. UTAU on a system in the encoding in which the names were read no "
+                   "longer finds the renamed files.",
+                   nullptr, renamed),
+                QMessageBox::Yes | QMessageBox::No, QMessageBox::No) != QMessageBox::Yes) {
+            return false;
+        }
+        return convertEncodings(conversion);
+    }
+
+    bool VoiceBankWindow::convertEncodings(
+        const VoiceBankTranscodingDialog::Conversion &conversion) {
+        stdc_impl_t;
+        const auto title = tr("Convert Encodings");
+        const bool rename = conversion.method == VoiceBankTranscodingDialog::Rename;
+        kit::DiagnosticList diagnostics;
+
+        // The text files and the names read as misdecoded, as one undo step
+        if (!conversion.charsets.isEmpty() || (!rename && !conversion.names.isEmpty())) {
+            auto transaction = impl.document->session()->transaction(title);
+            bool set = true;
+            for (const auto &[path, charset] : conversion.charsets) {
+                const auto directory = impl.directoryRef(path);
+                set = set && directory &&
+                      kit::VoiceBankEdits::convertCharset(*directory, charset, diagnostics);
+            }
+            if (conversion.method == VoiceBankTranscodingDialog::ReadAsMisdecoded) {
+                for (const auto &[names, checked] : conversion.names) {
+                    const auto directory = impl.directoryRef(names.directory());
+                    set = set && directory &&
+                          kit::VoiceBankEdits::setFileNameEncoding(
+                              *directory, names.record(checked), diagnostics);
+                }
+            }
+            if (!set || !transaction.commit(diagnostics)) {
+                DiagnosticBox::report(this, title, diagnostics);
+                impl.model->refresh();
+                return false;
+            }
+            impl.model->refresh();
+            impl.updateBar();
+        }
+
+        QList<kit::VoiceBankSession::NameConversion> renames;
+        if (rename) {
+            for (const auto &[names, checked] : conversion.names) {
+                if (!checked.isEmpty()) {
+                    renames.push_back({names.directory(), names.keptRecord(), checked});
+                }
+            }
+        }
+        if (renames.isEmpty()) {
+            DiagnosticBox::report(this, title, diagnostics);
+            return true;
+        }
+        if (!impl.document->renameOnDisk(renames, &impl.editor->frequencyFormats(), diagnostics)) {
+            DiagnosticBox::report(this, title, diagnostics);
+            return false;
+        }
+        // The tree and the undo history no longer hold the disk.
+        const auto reopened = impl.editor->reopenVoiceBank(this);
+        DiagnosticBox::report(reopened ? static_cast<QWidget *>(reopened) : this, title,
+                              diagnostics);
+        return true;
     }
 
     QList<int> VoiceBankWindow::selectedRows() const {

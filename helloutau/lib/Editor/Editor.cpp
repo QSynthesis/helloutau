@@ -108,6 +108,22 @@ namespace hello::daw {
             window->move(x, y);
         }
 
+        // Makes the projects of projects that sing the voice bank of document take it as saved
+        // (docs/Editing.md).
+        void lendVoiceBank(const QList<ProjectWindow *> &projects,
+                           const kit::VoiceBankDocument *document) {
+            std::shared_ptr<const kit::VoiceBank> bank;
+            for (const auto project : projects) {
+                const auto sung = project->document()->voiceBank();
+                if (sung && isSameFile(sung->root(), document->rootPath())) {
+                    if (!bank) {
+                        bank =
+                            std::make_shared<const kit::VoiceBank>(document->session()->snapshot());
+                    }
+                    project->document()->setVoiceBank(bank);
+                }
+            }
+        }
     }
 
     class Editor::Impl {
@@ -758,26 +774,37 @@ namespace hello::daw {
         }
         auto window = new VoiceBankWindow(this, std::move(document));
         window->setAttribute(Qt::WA_DeleteOnClose);
-        // The projects that sing the voice bank take it as saved (docs/Editing.md).
         const auto saved = window->document();
-        QObject::connect(saved, &kit::VoiceBankDocument::saved, window, [this, saved] {
-            std::shared_ptr<const kit::VoiceBank> bank;
-            for (const auto project : windows()) {
-                const auto sung = project->document()->voiceBank();
-                if (sung && isSameFile(sung->root(), saved->rootPath())) {
-                    if (!bank) {
-                        bank = std::make_shared<const kit::VoiceBank>(saved->session()->snapshot());
-                    }
-                    project->document()->setVoiceBank(bank);
-                }
-            }
-        });
+        QObject::connect(saved, &kit::VoiceBankDocument::saved, window,
+                         [this, saved] { lendVoiceBank(windows(), saved); });
         impl.voiceBankWindows.removeAll(nullptr);
         impl.voiceBankWindows.push_back(window);
         placeNewWindow(window, previous);
         window->show();
         DiagnosticBox::report(window, title, diagnostics);
         return window;
+    }
+
+    VoiceBankWindow *Editor::reopenVoiceBank(VoiceBankWindow *window) {
+        stdc_impl_t;
+        const auto root = window->document()->rootPath();
+        const auto geometry = window->geometry();
+        const bool maximized = window->isMaximized();
+        if (!window->close()) {
+            return nullptr;
+        }
+        // The closed window is deleted later, and no longer shows the voice bank.
+        impl.voiceBankWindows.removeAll(window);
+        const auto reopened = openVoiceBank(root, window);
+        if (!reopened) {
+            return nullptr;
+        }
+        reopened->setGeometry(geometry);
+        if (maximized) {
+            reopened->showMaximized();
+        }
+        lendVoiceBank(windows(), reopened->document());
+        return reopened;
     }
 
     void Editor::fillRecentMenu(QMenu *menu, QWidget *from) {

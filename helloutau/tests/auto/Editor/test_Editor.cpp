@@ -2701,6 +2701,114 @@ private Q_SLOTS:
         QVERIFY(!bar.contains(QString::fromUtf8("偄")));
     }
 
+    // The text files and the names read as misdecoded are converted as one undo step. 偁 is あ
+    // in Shift_JIS read as GBK.
+    void the_encodings_are_converted_as_one_step() {
+        QTemporaryDir dir;
+        const auto bank = voiceBank(dir);
+        writeFile(bank / fs::path(u"偁.wav"), "");
+        const auto e = editor();
+        const auto window = e->openVoiceBank(bank);
+        QVERIFY(window);
+        const auto session = window->document()->session();
+        const auto names = kit::MisdecodedNameConversion::of(
+            session->nameListings().at(0), QStringLiteral("Shift_JIS"), QStringLiteral("GBK"));
+        const QStringList checked{QString::fromUtf8("偁.wav")};
+        VoiceBankTranscodingDialog::Conversion conversion;
+        conversion.charsets = {
+            {fs::path("sub"), QStringLiteral("GBK")}
+        };
+        conversion.method = VoiceBankTranscodingDialog::ReadAsMisdecoded;
+        conversion.names = {
+            {names, checked}
+        };
+        const int step = session->currentStep();
+        QVERIFY(window->convertEncodings(conversion));
+        QCOMPARE(session->currentStep(), step + 1);
+        QCOMPARE(session->undoMessage(), QStringLiteral("Convert Encodings"));
+        const auto directories = [session] { return kit::VoiceBankRef(session).directories(); };
+        QCOMPARE(directories().at(0).fileNameEncoding(), std::optional(names.record(checked)));
+        QCOMPARE(directories().at(1).charset(), QStringLiteral("GBK"));
+        QVERIFY(session->audioFiles({}).contains(QString::fromUtf8("あ.wav")));
+
+        session->undo();
+        QVERIFY(!directories().at(0).fileNameEncoding());
+        QCOMPARE(directories().at(1).charset(), QStringLiteral("UTF-8"));
+    }
+
+    // Renaming saves the unsaved edits, renames the names on disk and replaces the window with
+    // a window of the voice bank read again, without the undo history, which reaches the projects
+    // that sing the voice bank.
+    void renaming_opens_the_voice_bank_again() {
+        QTemporaryDir dir;
+        const auto utau = pathIn(dir, "utau");
+        fs::create_directories(utau / "voice");
+        const auto bank = voiceBank(dir, "utau/voice/bank");
+        // あ.wav, which the disk holds as 偁.wav, recorded as misdecoded so that opening asks
+        // nothing
+        writeFile(bank / "oto.ini", "#Charset:UTF-8\r\n\xe3\x81\x82.wav=zzz,1,2,3,4,5\r\n");
+        writeFile(bank / fs::path(u"偁.wav"), "");
+        writeFile(bank / "hello-config.json",
+                  R"({"$format":"hello-voicebank","charset":"UTF-8",
+                  "fileNameEncoding":{"original":"Shift_JIS","misdecodedAs":"GBK"}})");
+        const auto e = editor();
+        e->settings().utau().setDirectory(utau);
+        const auto restore = qScopeGuard([&e] { e->settings().utau().setDirectory({}); });
+        const auto window = e->newWindow();
+        const auto session = window->document()->session();
+        {
+            auto transaction = session->transaction(QStringLiteral("voice"));
+            kit::ProjectRef(session).tracks().at(0).setVoiceDir(QStringLiteral("%VOICE%bank"));
+            QVERIFY(transaction.commit());
+        }
+        QVERIFY(window->loadVoiceBank());
+        const auto sung = window->document()->voiceBank();
+        QVERIFY(sung);
+
+        const auto bankWindow = e->openVoiceBank(bank);
+        QVERIFY(bankWindow);
+        const auto bankSession = bankWindow->document()->session();
+        {
+            auto transaction = bankSession->transaction(QStringLiteral("rename"));
+            kit::VoiceBankRef(bankSession)
+                .directories()
+                .at(0)
+                .otoEntries()
+                .at(0)
+                .setAlias(QStringLiteral("yyy"));
+            QVERIFY(transaction.commit());
+        }
+        VoiceBankTranscodingDialog::Conversion conversion;
+        conversion.method = VoiceBankTranscodingDialog::Rename;
+        conversion.names = {
+            {kit::MisdecodedNameConversion::of(bankSession->nameListings().at(0),
+             QStringLiteral("Shift_JIS"), QStringLiteral("GBK")),
+             {QString::fromUtf8("偁.wav")}}
+        };
+        QVERIFY(bankWindow->convertEncodings(conversion));
+        QVERIFY(fs::exists(bank / fs::path(u"あ.wav")));
+        QVERIFY(!fs::exists(bank / fs::path(u"偁.wav")));
+
+        const auto windows = e->voiceBankWindows();
+        QCOMPARE(windows.size(), 1);
+        const auto reopened = windows.at(0);
+        QVERIFY(reopened != bankWindow);
+        QVERIFY(!reopened->document()->session()->canUndo());
+        QVERIFY(!reopened->document()->isModified());
+        QCOMPARE(kit::VoiceBankRef(reopened->document()->session())
+                     .directories()
+                     .at(0)
+                     .otoEntries()
+                     .at(0)
+                     .alias(),
+                 QStringLiteral("yyy"));
+
+        QVERIFY(window->document()->voiceBank() != sung);
+        const auto sample = window->document()->voiceBank()->find(60, QStringLiteral("yyy"));
+        QVERIFY(sample);
+        QVERIFY(fs::exists(sample->path));
+    }
+
     // The folders are read again in the encodings chosen in one dialog, the changed folders only,
     // as one undo step. A folder whose oto.ini declares UTF-8 is not listed.
     void the_folders_are_read_again_in_encodings() {

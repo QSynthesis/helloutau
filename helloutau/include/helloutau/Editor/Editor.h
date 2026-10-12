@@ -196,6 +196,15 @@ namespace hello::daw {
         /// opened
         VoiceBankWindow *openVoiceBank(const std::filesystem::path &root, QWidget *from = nullptr);
 
+        /// Closes \a window and opens its voice bank again in a new window in its place, the undo
+        /// history cleared. Intended after a change on disk that the window does not follow, such
+        /// as file names converted on disk. Closing asks to save unsaved changes. The projects
+        /// that sing the voice bank take the voice bank as read again.
+        ///
+        /// \return the new window, or \c nullptr if \a window was not closed or the voice bank
+        ///         was not opened
+        VoiceBankWindow *reopenVoiceBank(VoiceBankWindow *window);
+
         /// Fills \a menu, the "Open Recent" menu of a window: the ten latest projects, then the
         /// ten latest voice banks, and "Clear Recently Opened...", which calls clearRecent(). A
         /// section with ten items ends with a "More" item, which calls showRecent() for its kind.

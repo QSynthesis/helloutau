@@ -9,6 +9,7 @@
 
 #include <hellokit/VoiceBank/VoiceBankConfiguration.h>
 
+#include <helloutau/Editor/Dialogs/VoiceBankTranscodingDialog.h>
 #include <helloutau/Editor/HelloUtauEditorGlobal.h>
 
 class QComboBox;
@@ -171,6 +172,21 @@ namespace hello::daw {
         bool determineFileNames(
             const QList<std::pair<std::filesystem::path,
                                   kit::VoiceBankConfiguration::FileNameEncoding>> &records);
+
+        /// Opens VoiceBankTranscodingDialog for the folders of the voice bank, those of the tree
+        /// and those not read, and makes the conversion chosen. A renaming is first confirmed in
+        /// a message box. A message box replaces the dialog if no folder has text files or a name
+        /// that is not ASCII. Returns false if no folder remains, the dialog is cancelled, the
+        /// renaming is declined or the conversion fails.
+        bool convertEncodings();
+
+        /// \overload for \a conversion , without the dialog and the confirmation.
+        ///
+        /// The text files and the names read as misdecoded are converted as one undo step.
+        /// Renaming saves the voice bank, renames the names on disk at once and replaces the
+        /// window with a new window of the voice bank read again (Editor::reopenVoiceBank()). See
+        /// the section on the conversion in docs/Editing.md.
+        bool convertEncodings(const VoiceBankTranscodingDialog::Conversion &conversion);
 
         /// Lists the audio files of the folders that contain metadata, see kit::WaveMetadata, in
         /// a message box in which the user confirms writing them again without it. The files are
