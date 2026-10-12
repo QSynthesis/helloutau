@@ -10,7 +10,7 @@
 
 #include <hellokit/Synth/Spectrogram.h>
 #include <hellokit/Synth/WaveAudio.h>
-#include <hellokit/VoiceBank/FrequencyTable.h>
+#include <hellokit/VoiceBank/FrequencyMap.h>
 #include <hellokit/VoiceBank/VoiceBank.h>
 
 #include <helloutau/Editor/HelloUtauEditorGlobal.h>
@@ -107,8 +107,8 @@ namespace hello::daw {
         /// The time of the line that marks what plays, or none.
         void setPlayhead(std::optional<double> time);
 
-        /// \name The spectrum and the frequency table
-        /// See docs/FrequencyTables.md.
+        /// \name The spectrum and the frequency map
+        /// See docs/FrequencyMaps.md.
         /// @{
 
         /// The spectrogram drawn in place of the waveform, or null to draw the waveform. Its
@@ -116,14 +116,14 @@ namespace hello::daw {
         std::shared_ptr<const kit::Spectrogram> spectrogram() const;
         void setSpectrogram(std::shared_ptr<const kit::Spectrogram> spectrogram);
 
-        /// The frequency table whose curve is drawn over the audio, or none. The frames of a
+        /// The frequency map whose curve is drawn over the audio, or none. The frames of a
         /// frequency of 0 are gaps in the curve.
-        std::optional<kit::FrequencyTable> frequencyTable() const;
-        void setFrequencyTable(const std::optional<kit::FrequencyTable> &table);
+        std::optional<kit::FrequencyMap> frequencyMap() const;
+        void setFrequencyMap(const std::optional<kit::FrequencyMap> &table);
 
         /// The notes at the bottom and the top of the audio on the pitch axis, on which the
-        /// curve and the spectrogram are drawn: those of the voiced frames of the table an
-        /// octave apart below and above, within C1 to B7, or C2 to C6 without a table.
+        /// curve and the spectrogram are drawn: those of the voiced frames of the map an
+        /// octave apart below and above, within C1 to B7, or C2 to C6 without a map.
         std::pair<double, double> pitchRange() const;
 
         /// The y of the viewport of \a note on the pitch axis, where 60 is C4 and a fraction is
@@ -174,7 +174,7 @@ namespace hello::daw {
         QColor playheadColor() const;
         void setPlayheadColor(const QColor &color);
 
-        /// The curve of the frequency table
+        /// The curve of the frequency map
         QColor frequencyColor() const;
         void setFrequencyColor(const QColor &color);
 

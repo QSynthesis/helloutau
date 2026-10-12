@@ -195,20 +195,20 @@ private Q_SLOTS:
         QCOMPARE(edited.size(), 1);
     }
 
-    // The curve of a frequency table on the pitch axis, an octave of room below and above,
+    // The curve of a frequency map on the pitch axis, an octave of room below and above,
     // with a gap where the frames are unvoiced
     void the_frequency_curve_is_drawn() {
         OtoWaveformView view;
         show(view);
         view.setFrequencyColor(QColor(255, 0, 255));
         QCOMPARE(view.pitchRange(), (std::pair<double, double>(36, 84)));
-        kit::FrequencyTable table;
+        kit::FrequencyMap table;
         for (int time = 0; time <= 1000; time += 5) {
             table.frames.push_back({double(time), time >= 290 && time <= 310 ? 0.0 : 440.0, {}});
         }
-        view.setFrequencyTable(table);
+        view.setFrequencyMap(table);
         QCOMPARE(view.pitchRange(), (std::pair<double, double>(57, 81)));
-        QCOMPARE(view.frequencyTable()->frames.size(), table.frames.size());
+        QCOMPARE(view.frequencyMap()->frames.size(), table.frames.size());
 
         const auto drawnAt = [&view](double time, double note) {
             const auto image = view.viewport()->grab().toImage();
@@ -224,7 +224,7 @@ private Q_SLOTS:
         QVERIFY(drawnAt(600, 69));
         QVERIFY(!drawnAt(300, 69));
         QVERIFY(!drawnAt(600, 75));
-        view.setFrequencyTable(std::nullopt);
+        view.setFrequencyMap(std::nullopt);
         QVERIFY(!drawnAt(600, 69));
     }
 

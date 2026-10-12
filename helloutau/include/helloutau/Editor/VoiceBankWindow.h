@@ -57,7 +57,7 @@ namespace hello::daw {
         /// Filters the entries by file name and alias, as the text is typed.
         QLineEdit *searchBox() const;
 
-        /// The box of the format of the frequency table in the sample tool bar, or null while
+        /// The box of the format of the frequency map in the sample tool bar, or null while
         /// the tool bar has none. A rebuilt tool bar has a new box.
         QComboBox *frequencyFormatBox() const;
 

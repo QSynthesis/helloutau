@@ -347,11 +347,11 @@ private:
     QTemporaryDir m_dir;
     // The launcher of the application, in which a restart is scheduled
     kit::ExitLauncher m_launcher;
-    // The formats of frequency tables that the plugin FrequencyEditor registers, one object for
+    // The formats of frequency maps that the plugin FrequencyEditor registers, one object for
     // each editor that editor() created. An object that outlives its editor removes nothing.
     mutable std::vector<std::unique_ptr<kit::BuiltinFrequencyFormats>> m_formats;
 
-    // An editor with the menus, the commands and the frequency table formats that the core
+    // An editor with the menus, the commands and the frequency map formats that the core
     // plugin and the plugin FrequencyEditor register, whose voice bank windows do not follow the
     // disk on their own, which would ask at any moment; a test calls VoiceBankWindow::checkDisk()
     // instead.
@@ -2351,7 +2351,7 @@ private Q_SLOTS:
         QVERIFY(!model->index(2, 0).data(VoiceBankEntryModel::DuplicateAliasRole).toBool());
     }
 
-    // The frequency table of the current entry is drawn over its audio, in the format of the
+    // The frequency map of the current entry is drawn over its audio, in the format of the
     // resampler of the settings at first, another chosen in the box; the View menu shows the
     // spectrogram in place of the waveform.
     void the_frequency_table_of_the_entry_is_shown() {
@@ -2394,21 +2394,21 @@ private Q_SLOTS:
         const auto box = window->frequencyFormatBox();
         QVERIFY(box);
         QCOMPARE(box->currentData().toString(), QStringLiteral("mrq"));
-        QVERIFY(view->frequencyTable());
-        QCOMPARE(view->frequencyTable()->frames.at(50).frequency, 440.0);
-        QCOMPARE(view->frequencyTable()->frames.at(50).time, 500.0);
+        QVERIFY(view->frequencyMap());
+        QCOMPARE(view->frequencyMap()->frames.at(50).frequency, 440.0);
+        QCOMPARE(view->frequencyMap()->frames.at(50).time, 500.0);
         QCOMPARE(box->itemText(box->findData(QStringLiteral("dio"))),
                  QStringLiteral("dio (world4utau) (none)"));
 
         box->setCurrentIndex(box->findData(QStringLiteral("frq")));
-        QCOMPARE(view->frequencyTable()->frames.at(50).frequency, 220.0);
+        QCOMPARE(view->frequencyMap()->frames.at(50).frequency, 220.0);
         box->setCurrentIndex(box->findData(QString()));
-        QVERIFY(!view->frequencyTable());
+        QVERIFY(!view->frequencyMap());
         box->setCurrentIndex(box->findData(QStringLiteral("frq")));
 
         // c.wav has no table.
         window->setCurrentRow(2);
-        QVERIFY(!view->frequencyTable());
+        QVERIFY(!view->frequencyMap());
         QCOMPARE(box->itemText(box->findData(QStringLiteral("frq"))),
                  QStringLiteral("frq (resampler.exe) (none)"));
 
@@ -2450,7 +2450,7 @@ private Q_SLOTS:
             bool exists(const fs::path &) const override {
                 return false;
             }
-            std::optional<kit::FrequencyTable> read(const fs::path &, int,
+            std::optional<kit::FrequencyMap> read(const fs::path &, int,
                                                     kit::DiagnosticList &) const override {
                 return std::nullopt;
             }

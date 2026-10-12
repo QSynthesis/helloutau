@@ -45,7 +45,7 @@ namespace hello::kit {
             if (!from || !to) {
                 diagnostics.push_back(
                     {DiagnosticSeverity::Warning,
-                     tr("The tables of the format %1 do not follow renamed audio files.")
+                     tr("The maps of the format %1 do not follow renamed audio files.")
                          .arg(name())});
                 return std::nullopt;
             }
@@ -60,7 +60,7 @@ namespace hello::kit {
     class FrequencyFormats::Impl {
     public:
         explicit Impl(FrequencyFormats *decl)
-            : formats("frequency table format", [decl] { Q_EMIT decl->formatsChanged(); }) {
+            : formats("frequency map format", [decl] { Q_EMIT decl->formatsChanged(); }) {
         }
 
         OrderedObjectRegistryKeeper<FrequencyFormat> formats;

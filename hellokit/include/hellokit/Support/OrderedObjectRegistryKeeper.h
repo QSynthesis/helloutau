@@ -25,7 +25,7 @@ namespace hello::kit {
 
     /// An OrderedObjectRegistry of \a T together with one instance of each of its entries, in the
     /// order of registration, which a RegistryInstantiator creates. A host such as an editor holds
-    /// one object for each kind of registration, such as the frequency table formats, and builds
+    /// one object for each kind of registration, such as the frequency map formats, and builds
     /// its domain queries on instances().
     ///
     /// A null instance, and an instance whose ID differs from the name of its entry, is rejected
@@ -34,7 +34,7 @@ namespace hello::kit {
     class OrderedObjectRegistryKeeper {
     public:
         /// Creates the empty registry. \a kind names an instance in the warning, such as
-        /// <tt>frequency table format</tt>. \a changed is called after an instance was added
+        /// <tt>frequency map format</tt>. \a changed is called after an instance was added
         /// or removed.
         explicit OrderedObjectRegistryKeeper(const char *kind, std::function<void()> changed = {})
             : m_kind(kind), m_changed(std::move(changed)),

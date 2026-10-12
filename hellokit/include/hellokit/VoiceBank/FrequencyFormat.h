@@ -12,16 +12,16 @@
 
 #include <hellokit/Support/Diagnostic.h>
 
-#include <hellokit/VoiceBank/FrequencyTable.h>
+#include <hellokit/VoiceBank/FrequencyMap.h>
 #include <hellokit/VoiceBank/HelloKitVoiceBankGlobal.h>
 
 namespace hello::kit {
 
-    /// Driver of a frequency table format. A frequency table is the analysis file that a
+    /// Driver of a frequency map format. A frequency map is the analysis file that a
     /// resampler generates for an audio file. Built-in formats and plugin formats are both
-    /// registered in a FrequencyFormatRegistry. See docs/FrequencyTables.md.
+    /// registered in a FrequencyFormatRegistry. See docs/FrequencyMaps.md.
     ///
-    /// The interface is read-only. It neither writes tables nor executes resamplers, and returns
+    /// The interface is read-only. It neither writes maps nor executes resamplers, and returns
     /// the changes of files that the caller executes.
     class HELLOKIT_VOICEBANK_EXPORT FrequencyFormat {
         Q_DECLARE_TR_FUNCTIONS(hello::kit::FrequencyFormat)
@@ -72,30 +72,30 @@ namespace hello::kit {
         /// \sa FrequencyFormats::formatForResampler()
         virtual QStringList resamplerPatterns() const = 0;
 
-        /// Returns whether the audio file \a wav has a table of this format.
+        /// Returns whether the audio file \a wav has a map of this format.
         virtual bool exists(const std::filesystem::path &wav) const = 0;
 
-        /// Reads the table of the audio file \a wav with the sample rate \a sampleRate.
+        /// Reads the map of the audio file \a wav with the sample rate \a sampleRate.
         ///
-        /// \return the table, or \c std::nullopt with the reason in \a diagnostics if the table
+        /// \return the map, or \c std::nullopt with the reason in \a diagnostics if the map
         ///         is missing or invalid
-        virtual std::optional<FrequencyTable> read(const std::filesystem::path &wav, int sampleRate,
+        virtual std::optional<FrequencyMap> read(const std::filesystem::path &wav, int sampleRate,
                                                    DiagnosticList &diagnostics) const = 0;
 
         /// Returns the name of the sidecar file of the audio file \a wav, the file beside \a wav
-        /// that holds its table alone, if the format keeps one; otherwise \c std::nullopt, which
-        /// the default implementation returns. A file that holds the tables of several audio
+        /// that holds its map alone, if the format keeps one; otherwise \c std::nullopt, which
+        /// the default implementation returns. A file that holds the maps of several audio
         /// files, such as \c desc.mrq, is no sidecar file.
         virtual std::optional<std::filesystem::path>
             sidecarNameOf(const std::filesystem::path &wav) const;
 
-        /// Returns the changes of the tables of this format that follow \a renames, all renames
+        /// Returns the changes of the maps of this format that follow \a renames, all renames
         /// of audio files in the directory \a directory at once, so that a file that holds the
-        /// tables of several audio files changes once. An audio file without a table needs no
+        /// maps of several audio files changes once. An audio file without a map needs no
         /// change. The caller executes the changes together with the renames.
         ///
         /// The default implementation renames each sidecar file that sidecarNameOf() names
-        /// after the new name of its audio file. A format whose tables are kept otherwise
+        /// after the new name of its audio file. A format whose maps are kept otherwise
         /// overrides it.
         ///
         /// \return the changes, or \c std::nullopt with the reason in \a diagnostics if they

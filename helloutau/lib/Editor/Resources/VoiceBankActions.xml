@@ -125,7 +125,7 @@
                 category="Tools" />
 
         <!-- The boxes of the sample tool bar: the pitch and the length of the synthesized note,
-             and the format of the frequency table drawn -->
+             and the format of the frequency map drawn -->
         <action id="helloutau.voiceBank.pitch" text="Pitch" category="Preview" />
         <action id="helloutau.voiceBank.length" text="Length" category="Preview" />
         <action id="helloutau.voiceBank.frequencyFormat" text="F0" category="Preview" />

@@ -69,10 +69,10 @@ namespace hello::kit {
             qsizetype m_at;
         };
 
-        std::optional<FrequencyTable> damaged(const std::filesystem::path &path,
+        std::optional<FrequencyMap> damaged(const std::filesystem::path &path,
                                               DiagnosticList &diagnostics) {
             fail(diagnostics,
-                 FrequencyFormat::tr("\"%1\" is no frequency table of its format, or it is cut "
+                 FrequencyFormat::tr("\"%1\" is no frequency map of its format, or it is cut "
                                      "short.")
                      .arg(textOf(path)));
             return std::nullopt;
@@ -103,7 +103,7 @@ namespace hello::kit {
                 return std::filesystem::is_regular_file(pathOf(wav), error);
             }
 
-            std::optional<FrequencyTable> read(const std::filesystem::path &wav, int sampleRate,
+            std::optional<FrequencyMap> read(const std::filesystem::path &wav, int sampleRate,
                                                DiagnosticList &diagnostics) const override {
                 const auto path = pathOf(wav);
                 const auto bytes = contentsOf(path, diagnostics);
@@ -123,11 +123,11 @@ namespace hello::kit {
                 if (!count || *count < 0 || reader.left() < qsizetype(*count) * 16) {
                     return damaged(path, diagnostics);
                 }
-                FrequencyTable table;
+                FrequencyMap table;
                 table.averageFrequency = *average;
                 table.frames.reserve(size_t(*count));
                 for (qint32 i = 0; i < *count; ++i) {
-                    FrequencyTable::Frame frame;
+                    FrequencyMap::Frame frame;
                     frame.time = double(i) * *hop * 1000 / sampleRate;
                     frame.frequency = *reader.next<double>();
                     frame.amplitude = *reader.next<double>();
@@ -178,7 +178,7 @@ namespace hello::kit {
                 return std::filesystem::is_regular_file(pathOf(wav), error);
             }
 
-            std::optional<FrequencyTable> read(const std::filesystem::path &wav, int sampleRate,
+            std::optional<FrequencyMap> read(const std::filesystem::path &wav, int sampleRate,
                                                DiagnosticList &diagnostics) const override {
                 Q_UNUSED(sampleRate);
                 const auto path = pathOf(wav);
@@ -197,10 +197,10 @@ namespace hello::kit {
                     reader.left() < qsizetype(*count) * 16) {
                     return damaged(path, diagnostics);
                 }
-                FrequencyTable table;
+                FrequencyMap table;
                 table.frames.reserve(size_t(*count));
                 for (qint32 i = 0; i < *count; ++i) {
-                    FrequencyTable::Frame frame;
+                    FrequencyMap::Frame frame;
                     frame.time = *reader.next<double>() * 1000;
                     frame.frequency = *reader.next<double>();
                     table.frames.push_back(frame);
@@ -247,7 +247,7 @@ namespace hello::kit {
                 return bytes && find(*bytes, wav).has_value();
             }
 
-            std::optional<FrequencyTable> read(const std::filesystem::path &wav, int sampleRate,
+            std::optional<FrequencyMap> read(const std::filesystem::path &wav, int sampleRate,
                                                DiagnosticList &diagnostics) const override {
                 Q_UNUSED(sampleRate);
                 const auto path = wav.parent_path() / "desc.mrq";
@@ -269,10 +269,10 @@ namespace hello::kit {
                     reader.left() < qsizetype(*count) * 4) {
                     return damaged(path, diagnostics);
                 }
-                FrequencyTable table;
+                FrequencyMap table;
                 table.frames.reserve(size_t(*count));
                 for (qint32 i = 0; i < *count; ++i) {
-                    FrequencyTable::Frame frame;
+                    FrequencyMap::Frame frame;
                     frame.time = double(i) * *hop * 1000 / *rate;
                     frame.frequency = *reader.next<float>();
                     table.frames.push_back(frame);

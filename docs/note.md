@@ -197,7 +197,7 @@ HelloUtau 的插件只有一种：**原生插件**，即由 stdcorelib.plugin �
   - 登记的是格式驱动而非界面。需要自定义选择步骤界面时另行提供一个页面，接口结构见 [`Interchange.md`](Interchange.md)
 - 频率表格式（作者 2026-09-30 决定新增）：
   - 为 HelloUtau 增加一种频率表格式（重采样器为音频文件事先分析的基频），例如某个重采样器自己的分析文件
-  - 登记的是格式驱动而非界面，与内置的 frq、dio、mrq 经同一途径加入，格式接口见 [`FrequencyTables.md`](FrequencyTables.md)
+  - 登记的是格式驱动而非界面，与内置的 frq、dio、mrq 经同一途径加入，格式接口见 [`FrequencyMaps.md`](FrequencyMaps.md)
 
 HelloUtau 内置的功能与插件经同一途径登记，不分主次。
 

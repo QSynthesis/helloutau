@@ -14,8 +14,8 @@ namespace hello::kit {
 
 namespace hello::daw {
 
-    /// The plugin of frequency tables: registers the formats frq, dio and mrq, the diagnoser of
-    /// moresampler, and later the editor of the tables. See docs/FrequencyTables.md and
+    /// The plugin of frequency maps: registers the formats frq, dio and mrq, the diagnoser of
+    /// moresampler, and later the editor of the maps. See docs/FrequencyMaps.md and
     /// docs/SynthDiagnostics.md.
     class FrequencyEditorPlugin : public stdc::pluginsystem::IPlugin {
     public:

@@ -74,7 +74,7 @@ namespace hello::daw {
             envelopeColor, playheadColor, frequencyColor, spectrumColor;
 
         std::shared_ptr<const kit::Spectrogram> spectrogram;
-        std::optional<kit::FrequencyTable> table;
+        std::optional<kit::FrequencyMap> table;
         // The pitch axis, see OtoWaveformView::pitchRange()
         std::pair<double, double> range{36, 84};
 
@@ -422,12 +422,12 @@ namespace hello::daw {
         viewport()->update();
     }
 
-    std::optional<kit::FrequencyTable> OtoWaveformView::frequencyTable() const {
+    std::optional<kit::FrequencyMap> OtoWaveformView::frequencyMap() const {
         stdc_impl_t;
         return impl.table;
     }
 
-    void OtoWaveformView::setFrequencyTable(const std::optional<kit::FrequencyTable> &table) {
+    void OtoWaveformView::setFrequencyMap(const std::optional<kit::FrequencyMap> &table) {
         stdc_impl_t;
         impl.table = table;
         impl.updateRange();
@@ -611,7 +611,7 @@ namespace hello::daw {
                              maskColor());
         }
 
-        // The pitch axis, a line at each C, and the curve of the frequency table
+        // The pitch axis, a line at each C, and the curve of the frequency map
         if (impl.spectrogram || impl.table) {
             painter.setRenderHint(QPainter::Antialiasing, false);
             for (int note = int(std::ceil(impl.range.first / 12)) * 12; note < impl.range.second;

@@ -15,7 +15,7 @@
 
 namespace hello::kit {
 
-    /// The frequency table formats registered in a host, in the order of registration. See the
+    /// The frequency map formats registered in a host, in the order of registration. See the
     /// registration interfaces in docs/Plugins.md.
     ///
     /// FrequencyFormats creates and holds the registry and creates one instance of each format.
@@ -24,9 +24,9 @@ namespace hello::kit {
     /// library is unloaded. The registry is used only on the application thread.
     using FrequencyFormatRegistry = OrderedObjectRegistry<FrequencyFormat>;
 
-    /// The frequency table formats of a host, such as an editor: one instance of each format
+    /// The frequency map formats of a host, such as an editor: one instance of each format
     /// registered in registry(). The content changes as formats are registered and
-    /// unregistered. See docs/FrequencyTables.md.
+    /// unregistered. See docs/FrequencyMaps.md.
     ///
     /// The object is not a singleton. The owner creates it and passes it to its users, and each
     /// object emits formatsChanged().

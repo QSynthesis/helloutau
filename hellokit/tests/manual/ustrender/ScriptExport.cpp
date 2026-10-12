@@ -642,7 +642,7 @@ int compareManifests(const fs::path &first, const fs::path &second) {
 
 namespace {
 
-    // The files a synth tool derives from the samples of a voice bank: the frequency tables of
+    // The files a synth tool derives from the samples of a voice bank: the frequency maps of
     // the resamplers and the models and database of moresampler. Everything else is kept.
     bool isDerived(const fs::path &file) {
         auto name = QString::fromStdU16String(file.filename().u16string()).toLower();

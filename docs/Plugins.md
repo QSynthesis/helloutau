@@ -65,7 +65,7 @@ stdcorelib.plugin 的交接记录（其仓库 `.cache/codex/2026-08-21-1722-stdc
 - **生命周期**：注册表先于登记对象销毁时，`AddFactory` 的析构不做任何事，因此 `Editor` 可以先于插件的登记对象销毁。插件把登记对象作为自己的成员，在 `initialize()` 中创建，在 `aboutToShutdown()` 中销毁（赋一个空对象），因为工厂与实例都是插件库中的代码。不能等插件实例析构：实例是插件库中的静态对象，随库卸载才析构，那时 `Editor` 已销毁，且析构发生在卸载库的过程中。
 - **设置页登记的是创建页面的工厂而非页面**（作者 2026-10-08 同意）：页面属于某个 `Editor` 的设置目录，每个 `Editor` 须有自己的一份。`Editor` 随登记创建页面，随注销以 `SettingCatalog::removePage()` 删除；页面执行插件库中的代码，必须在插件库卸载之前删除。工厂返回的 `SettingPagePlacement` 含页面与其位置：`parent` 为空或找不到时页面放在顶层，`before` 同 `SettingCatalog::addPage()`。工厂没有参数，需要 `AppSettings` 的页面在工厂中捕获插件取得的编辑器。
 - **步骤页按次创建**：其他注册表的条目由宿主各实例化一次，步骤页则由导入向导在每次导入时从注册表创建一页，并由向导持有。
-- 内置的格式与驱动经同一途径登记，与插件不分主次。注册表保持登记顺序，因此同一扩展名由先登记的驱动处理，同一重采样器由后登记的格式处理（见 [`Interchange.md`](Interchange.md) 与 [`FrequencyTables.md`](FrequencyTables.md)）。
+- 内置的格式与驱动经同一途径登记，与插件不分主次。注册表保持登记顺序，因此同一扩展名由先登记的驱动处理，同一重采样器由后登记的格式处理（见 [`Interchange.md`](Interchange.md) 与 [`FrequencyMaps.md`](FrequencyMaps.md)）。
 - 宿主监听注册表的增删，因此插件在运行中才登记或注销也能反映到界面，例如音源窗口的「F0」下拉框。回调在登记所在的线程上执行，本仓库只在应用的线程上登记。
 - 登记对象在 `initialize()` 中创建（作者 2026-09-30 决定）：生命周期明确，可带运行时参数，例如 UTAU 插件支持插件按发现结果登记的各项。未采用的做法是以静态对象（`stdc::StaticRegistry`）在插件载入时自动登记：名称须是字面量，登记不加锁。
 
@@ -148,7 +148,7 @@ stdcorelib.plugin 的生命周期是同步的，不依赖事件循环。HelloUta
 ## 实施步骤
 
 1. ~~**依赖**~~：stdcorelib.plugin 与 stdcorelib 一样单独构建安装（动态库），`third-party/Dependencies.cmake` 以 `-Dstdcorelib-plugin_DIR=` 引入（2026-10-08 起可出现在公开头文件中），Windows 上其 DLL 复制到运行输出目录。README、CLAUDE.md 与 Status.md 已补充。
-2. ~~**note.md**~~：已按作者的决定改写插件一节（一种原生插件、五个扩展点、UTAU 插件由一个原生插件支持），CLAUDE.md、Roadmap.md、Status.md、Interchange.md、FrequencyTables.md 的相应说法一并更新。
+2. ~~**note.md**~~：已按作者的决定改写插件一节（一种原生插件、五个扩展点、UTAU 插件由一个原生插件支持），CLAUDE.md、Roadmap.md、Status.md、Interchange.md、FrequencyMaps.md 的相应说法一并更新。
 3. ~~**加载器与 Core 插件**~~：`AppLoader`、Core 插件、`helloutau_add_native_plugin()`，程序只剩加载器。`test_AppLoader` 以测试插件覆盖参数、Core 插件的必需与三种失败、生命周期，并载入真正的 Core 插件打开窗口。
    - ~~**插件作为库与动作的扩展**~~：插件导出目标、安装头文件；`ActionContribution` / `ActionRegistration`；编辑器的清单拆为两份，经 `BuiltinActions` 由 Core 登记；TestAction 测试插件。见「编辑界面扩展：动作与命令」。
 4. ~~**试点：频率表格式与 FrequencyEditor 插件**~~：

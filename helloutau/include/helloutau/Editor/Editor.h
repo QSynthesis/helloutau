@@ -110,9 +110,9 @@ namespace hello::daw {
         /// \c :/helloutau/themes.
         ThemeManager *themeManager() const;
 
-        /// Returns the frequency table formats that the voice bank windows read. The formats are
+        /// Returns the frequency map formats that the voice bank windows read. The formats are
         /// registered in its registry(), the built-in formats by the plugin FrequencyEditor. See
-        /// docs/FrequencyTables.md.
+        /// docs/FrequencyMaps.md.
         kit::FrequencyFormats &frequencyFormats() const;
 
         /// Returns the diagnosers of render failures that the project windows run. The editor

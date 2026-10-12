@@ -70,7 +70,7 @@ namespace {
             return false;
         }
 
-        std::optional<FrequencyTable> read(const fs::path &, int, DiagnosticList &) const override {
+        std::optional<FrequencyMap> read(const fs::path &, int, DiagnosticList &) const override {
             return std::nullopt;
         }
 
@@ -252,8 +252,8 @@ private Q_SLOTS:
         QCOMPARE(diagnostics.size(), 1);
     }
 
-    // A table beside its audio file is renamed after it, in one list for all renames of the
-    // directory. An audio file without a table needs no change.
+    // A map beside its audio file is renamed after it, in one list for all renames of the
+    // directory. An audio file without a map needs no change.
     void the_tables_beside_the_audio_files_follow_their_renames() {
         QDir(m_dir.path()).mkdir(QStringLiteral("r"));
         const auto directory = pathOf("r");
@@ -285,7 +285,7 @@ private Q_SLOTS:
         QVERIFY(diagnostics.isEmpty());
     }
 
-    // A format whose tables do not follow renames says so, which the caller reports. desc.mrq
+    // A format whose maps do not follow renames says so, which the caller reports. desc.mrq
     // names its entries in an encoding that is yet to be measured.
     void a_format_without_renames_reports_it() {
         FrequencyFormats formats;

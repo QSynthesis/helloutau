@@ -1,5 +1,5 @@
-#ifndef HELLOKIT_VOICEBANK_FREQUENCYTABLE_H
-#define HELLOKIT_VOICEBANK_FREQUENCYTABLE_H
+#ifndef HELLOKIT_VOICEBANK_FREQUENCYMAP_H
+#define HELLOKIT_VOICEBANK_FREQUENCYMAP_H
 
 #include <optional>
 #include <vector>
@@ -7,11 +7,11 @@
 namespace hello::kit {
 
     /// The fundamental frequency of an audio file as a resampler analyzed it, in the terms that
-    /// every format shares. See docs/FrequencyTables.md.
+    /// every format shares. See docs/FrequencyMaps.md.
     ///
     /// A value read from a file, for display: what a format records beyond these terms is not
     /// kept.
-    struct FrequencyTable {
+    struct FrequencyMap {
         struct Frame {
             /// Milliseconds from the start of the audio file.
             double time = 0;
@@ -36,4 +36,4 @@ namespace hello::kit {
 
 }
 
-#endif // HELLOKIT_VOICEBANK_FREQUENCYTABLE_H
+#endif // HELLOKIT_VOICEBANK_FREQUENCYMAP_H

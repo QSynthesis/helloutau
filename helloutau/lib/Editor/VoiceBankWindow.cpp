@@ -195,10 +195,10 @@ namespace hello::daw {
         QPointer<QComboBox> frequencyBox;
         int synthesizedPitch = 60;
         int synthesizedLength = 480;
-        // The id of the format of the frequency table chosen in its box, empty for none, or
+        // The id of the format of the frequency map chosen in its box, empty for none, or
         // std::nullopt until the user chooses one
         std::optional<QString> frequencyFormat;
-        // The audio file and the format of the frequency table shown, and the spectrogram of
+        // The audio file and the format of the frequency map shown, and the spectrogram of
         // the audio it was computed from
         std::pair<std::filesystem::path, QString> frequencyShown;
         std::shared_ptr<const kit::Spectrogram> spectrum;
@@ -1429,7 +1429,7 @@ namespace hello::daw {
                 waveform->setAudio(nullptr);
                 waveform->setEntry(std::nullopt);
                 waveform->setSpectrogram(nullptr);
-                waveform->setFrequencyTable(std::nullopt);
+                waveform->setFrequencyMap(std::nullopt);
                 frequencyShown = {};
                 return;
             }
@@ -1461,7 +1461,7 @@ namespace hello::daw {
             waveform->setSpectrogram(spectrum);
         }
 
-        // Returns the id of the format of the frequency table in effect, or an empty string for
+        // Returns the id of the format of the frequency map in effect, or an empty string for
         // none. The format chosen stays while it is registered. At first, and in place of a
         // format that is no longer registered, the format of the resampler of the settings is
         // in effect.
@@ -1491,8 +1491,8 @@ namespace hello::daw {
                 std::max(0, frequencyBox->findData(currentFrequencyFormat())));
         }
 
-        // Shows the frequency table of the audio of the current row in the format in effect. The
-        // box marks the formats without a table for the audio file.
+        // Shows the frequency map of the audio of the current row in the format in effect. The
+        // box marks the formats without a map for the audio file.
         void showFrequency() {
             stdc_decl_t;
             const int row = decl.currentRow();
@@ -1511,7 +1511,7 @@ namespace hello::daw {
             }
             frequencyShown = {path, id};
             const auto format = formats.format(id);
-            std::optional<kit::FrequencyTable> table;
+            std::optional<kit::FrequencyMap> table;
             if (format && audio && format->exists(path)) {
                 kit::DiagnosticList diagnostics;
                 table = format->read(path, audio->sampleRate, diagnostics);
@@ -1519,7 +1519,7 @@ namespace hello::daw {
                     decl.statusBar()->showMessage(diagnostics.value(0).message);
                 }
             }
-            waveform->setFrequencyTable(table);
+            waveform->setFrequencyMap(table);
         }
 
         void showPointer() {
@@ -1587,7 +1587,7 @@ namespace hello::daw {
 
         // Creates the tool bar above the waveform, which QActionKit fills from the layout of
         // helloutau.voiceBank.sampleToolBar: the buttons of the preview, the pitch and the length
-        // of the synthesized note, and the format of the frequency table. QActionKit creates the
+        // of the synthesized note, and the format of the frequency map. QActionKit creates the
         // boxes again whenever it rebuilds the tool bar, so the window keeps their values.
         void initSampleToolBar() {
             stdc_decl_t;
@@ -1622,8 +1622,8 @@ namespace hello::daw {
                     lengthBox = box;
                     return labelled(parent, tr("&Length:"), box);
                 });
-            // The frequency table drawn over the audio, that of the resampler of the settings at
-            // first (docs/FrequencyTables.md)
+            // The frequency map drawn over the audio, that of the resampler of the settings at
+            // first (docs/FrequencyMaps.md)
             context->addWidgetFactory(QStringLiteral("helloutau.voiceBank.frequencyFormat"),
                                       [this](QWidget *parent) -> QWidget * {
                                           auto box = new QComboBox();

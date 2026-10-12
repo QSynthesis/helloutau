@@ -26,7 +26,7 @@ namespace hello::kit {
     /// (https://learn.microsoft.com/en-us/windows/win32/xaudio2/resource-interchange-file-format--riff-).
     /// Removing the metadata leaves the RIFF header, the \c fmt chunk and the \c data chunk, in
     /// that order, with the sizes written anew. The samples are unchanged, and so is every
-    /// frequency table made from them.
+    /// frequency map made from them.
     class HELLOKIT_VOICEBANK_EXPORT WaveMetadata {
         Q_DECLARE_TR_FUNCTIONS(hello::kit::WaveMetadata)
     public:

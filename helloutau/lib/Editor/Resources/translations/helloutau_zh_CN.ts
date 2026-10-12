@@ -3555,11 +3555,11 @@ Write them again without these chunks? The audio stays the same. The files are w
         <translation>无法读取「%1」。</translation>
     </message>
     <message>
-        <source>&quot;%1&quot; is no frequency table of its format, or it is cut short.</source>
+        <source>&quot;%1&quot; is no frequency map of its format, or it is cut short.</source>
         <translation>「%1」不是该格式的频率表，或文件不完整。</translation>
     </message>
     <message>
-        <source>The tables of the format %1 do not follow renamed audio files.</source>
+        <source>The maps of the format %1 do not follow renamed audio files.</source>
         <translation>格式 %1 的表不随音频文件改名。</translation>
     </message>
 </context>

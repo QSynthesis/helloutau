@@ -1,5 +1,7 @@
 # 频谱、频率表与内置的频率表编辑
 
+频率表的英文术语是 frequency map，这是社区的通用说法（作者 2026-10-12 确认），代码中的类型为 `kit::FrequencyMap`，英文注释与界面文字同样使用这个说法。
+
 本文档是音源编辑器第 6 步「频谱与 F0」（[`VoiceBankEditor.md`](VoiceBankEditor.md)）以及路线图第六阶段「频率表」一项（[`Roadmap.md`](Roadmap.md)）的计划，写于 2026-09-30；只读的频率表与频谱已实现，见「进度」。**标为「待定」的各项须由作者决定后才开始实现**，汇总在末尾。作者提出的三个问题分别在「问题一」至「问题三」中讨论。
 
 参考实现是 qfrqeditor，即依据对 masao 的 frqeditor 1.26 的分析重新实现的独立程序，已完成并经作者认可，见 [`claude/frqeditor-reference.md`](claude/frqeditor-reference.md)。其仓库 `E:\Gitee-skyint\frqeditor-reverse` 的 `docs/` 记录了各项行为的依据，下文引用时写作「qfrqeditor 的 `docs/<文件>`」。
@@ -58,7 +60,7 @@ HelloUtau 的方案：
 
 频率表不宜进入 `VoiceBankSession` 的树：一个音源有几百个 wav，每个表有数千帧，而树中的每个值都进入撤销历史与变更日志。建议：
 
-- 频率表另作一种文档 `FrequencyTableDocument`：一个 wav 的一种格式的表，内存中的帧数组，有自己的撤销历史，按「修改过的帧区间」记录撤销步骤，不经过 substate。
+- 频率表另作一种文档 `FrequencyMapDocument`：一个 wav 的一种格式的表，内存中的帧数组，有自己的撤销历史，按「修改过的帧区间」记录撤销步骤，不经过 substate。
 - 音源窗口持有已打开（被编辑过）的表的文档。窗口的未保存标记与 Ctrl+S 同时覆盖音源与这些表：保存音源时写出修改过的表。撤销与重做按焦点所在的区域分开（条目表与波形区的五个值属于音源，频谱视图中的曲线属于当前表）。
 - 磁盘变化：`VoiceBankFileSystemState` 目前只记录 wav 与文本文件。频率表被其他程序（重采样器自动生成、frqeditor）改动时须能察觉，至少在打开或切换到该表时核对大小与时间。
 
@@ -93,7 +95,7 @@ qfrqeditor 的 `Core` 按本仓库规范重写后移入 hellokit 的新子库（
 | 改名 | wav 改名时给出须执行的操作，驱动本身不改磁盘（作者 2026-10-11 决定，见 [`Editing.md`](Editing.md)「文件名编码错解的处理」）。一个 wav 一个文件的格式把表改名，mrq 改写 `desc.mrq` 中条目的名称，附属的缓存一起改名。一个目录中多个 wav 的改名一次给出，`desc.mrq` 因此只改写一次。调用方把这些操作纳入保存时的检查、执行与回滚。不支持改名的格式，由调用方报告其表没有随 wav 改名。`desc.mrq` 中条目名称的编码须先实测。接口为 `FrequencyFormat::changesFollowing()`，以目录中的 `AudioRename` 列表求出 `FileChange` 列表（改名或改写）。每个 wav 旁边一个附属文件（sidecar file）的格式只需实现 `sidecarNameOf()`，默认实现据此让附属文件随 wav 改名。不实现它的格式由默认实现返回 `std::nullopt` 并说明不随 wav 改名，frq 与 dio 已实现（2026-10-12），mrq 待实测 |
 | 生成方式 | 「运行对应的重采样器」（默认）或驱动自己的分析（如 vs4ufrq 经 `vslib.dll`，或将来内置的分析器） |
 
-频率表的值（暂名 `FrequencyTable`）是各格式的公共部分：帧间隔（样本数，可以不是整数，如 220.5）、采样率、每帧的频率与可选的振幅、格式自己的「平均频率」。格式特有而公共部分不含的数据由驱动自己保存，保证读入后原样写出（与本仓库保存 UST、oto.ini 时「写回不改变未编辑的内容」的原则相同）。
+频率表的值（暂名 `FrequencyMap`）是各格式的公共部分：帧间隔（样本数，可以不是整数，如 220.5）、采样率、每帧的频率与可选的振幅、格式自己的「平均频率」。格式特有而公共部分不含的数据由驱动自己保存，保证读入后原样写出（与本仓库保存 UST、oto.ini 时「写回不改变未编辑的内容」的原则相同）。
 
 格式之间的转换即「以一种驱动读，以另一种驱动写」，公共部分不能表达的内容在转换时报告为诊断，不静默丢弃（`Interchange.md`「有损转换是常态」）。
 
@@ -121,7 +123,7 @@ qfrqeditor 的 `Core` 按本仓库规范重写后移入 hellokit 的新子库（
 **只读的频率表与频谱**（2026-09-30 完成）：
 
 - 格式层（`HelloKitVoiceBank`）：
-  - `kit::FrequencyTable`：各格式的公共部分，每帧的时间（毫秒）、频率（赫兹，0 为无声）与可选的振幅，以及可选的平均频率。
+  - `kit::FrequencyMap`：各格式的公共部分，每帧的时间（毫秒）、频率（赫兹，0 为无声）与可选的振幅，以及可选的平均频率。
   - `kit::FrequencyFormat`：格式驱动，目前只有标识、名称、重采样器文件名的通配符、`exists()` 与 `read()`；写、删除与生成到后面的步骤再加。
   - `kit::FrequencyFormats`：一个宿主（编辑器）的格式，为 `registry()`（`kit::FrequencyFormatRegistry`，即 `stdc::DynamicRegistry`）中的每个条目创建一个实例；内置格式与插件格式同一途径登记（`Add<V>` 或 `AddFactory`），条目名称即格式 ID，ID 重复的登记失败，实例的 `id()` 与名称不同时被拒绝；`formatForResampler()` 按重采样器的文件名（整名匹配、不分大小写）取匹配的格式，都不匹配时为 frq。不执行任何程序。原先先注册者优先、以 `kit::FrequencyFormatPlugin` 加入插件格式，插件机制改定后改为后登记者优先，见 [`Plugins.md`](Plugins.md) 实施步骤 4。
   - 内置三种有公开资料的格式，注释引用的都是公开资料：
@@ -136,10 +138,10 @@ qfrqeditor 的 `Core` 按本仓库规范重写后移入 hellokit 的新子库（
 
 ## 实施步骤（待定项决定之后）
 
-1. **格式层**（只读部分已完成）：`FrequencyTable`、`FrequencyFormat`、`FrequencyFormatRegistry`，内置 frq、dio、mrq 三种有公开资料的格式，从 qfrqeditor 重写并移入其测试（含与原版逐字节相同的转换样本）。
+1. **格式层**（只读部分已完成）：`FrequencyMap`、`FrequencyFormat`、`FrequencyFormatRegistry`，内置 frq、dio、mrq 三种有公开资料的格式，从 qfrqeditor 重写并移入其测试（含与原版逐字节相同的转换样本）。
 2. **频谱视图**（已完成）：波形区的视图切换、频谱的计算与缓存、F0 曲线与格式选择框，只读。
 3. **生成**：以设置中的重采样器生成、生成缺少的、重新生成全部、删除，并行且可取消。
-4. **编辑**：`FrequencyTableDocument`、曲线的手势、撤销、与音源一同保存、磁盘变化的核对。
+4. **编辑**：`FrequencyMapDocument`、曲线的手势、撤销、与音源一同保存、磁盘变化的核对。
 5. **检查与修正**：移入 checkfrq 的进程内实现与修正窗口。
 6. **转换与其余格式**：格式间转换；vs4ufrq（Windows，可选）；frc、pmk 按待定 6 的结论。
 7. **插件**：按待定 5 的结论开放格式的注册。
