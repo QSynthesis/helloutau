@@ -1,4 +1,5 @@
 add_auto_test(test_VoiceBankConfig.cpp HelloKitVoiceBank)
+add_auto_test(test_MisdecodedNameQuestion.cpp HelloKitVoiceBank)
 add_auto_test(test_VoiceBankSource.cpp HelloKitVoiceBank)
 add_auto_test(test_VoiceBank.cpp HelloKitVoiceBank)
 add_auto_test(test_VoiceBankFileSystemState_Save.cpp HelloKitVoiceBank)
