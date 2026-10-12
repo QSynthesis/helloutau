@@ -353,6 +353,8 @@ namespace hello::daw {
             names.question = kit::MisdecodedNameQuestion::of(directory, charset);
         }
         names.misdecoded = names.question ? proposedOf(*names.question) : QStringList();
+        names.asTheyAre =
+            names.question && names.question->basis() == kit::MisdecodedNameQuestion::Found;
     }
 
     void VoiceBankCharsetDialog::setCurrentCharsets(const QStringList &charsets) {
@@ -656,18 +658,44 @@ namespace hello::daw {
         m_previews->setTabText(m_previews->indexOf(m_names),
                                tr("File Names (%1)").arg(question.choices().size()));
 
-        if (question.isRecorded()) {
-            m_namesBasis->setText(
-                tr("These names are not yet in the record of the folder, which restores names "
-                   "written in %1 and read as %2.")
-                    .arg(question.original(), question.misdecodedAs()));
-        } else {
-            m_namesBasis->setText(
-                tr("%n entry(s) of the oto.ini find no file. Restored as written in %1 and read "
-                   "as %2, %3 of them find their files.",
-                   nullptr, question.missingEntries())
-                    .arg(question.original(), question.misdecodedAs())
-                    .arg(question.matchedEntries()));
+        const auto &charset = m_choices.value(current);
+        switch (question.basis()) {
+            case kit::MisdecodedNameQuestion::Record:
+                m_namesBasis->setText(
+                    tr("These names are not yet in the record of the folder, which restores names "
+                       "written in %1 and read as %2.")
+                        .arg(question.original(), question.misdecodedAs()));
+                break;
+            case kit::MisdecodedNameQuestion::Entries: {
+                auto text = tr("Read in %1, %n entry(s) of the oto.ini find no file. Restored as "
+                               "written in %2 and read as %3, %4 of them find their files.",
+                               nullptr, question.missingEntries())
+                                .arg(charset, question.original(), question.misdecodedAs())
+                                .arg(question.matchedEntries());
+                if (question.unlistedNames() > 0) {
+                    text += QLatin1Char(' ') +
+                            tr("%n other name(s) have no entry, so the entries do not indicate "
+                               "whether they are misdecoded.",
+                               nullptr, question.unlistedNames());
+                }
+                m_namesBasis->setText(text);
+                break;
+            }
+            case kit::MisdecodedNameQuestion::Found:
+                m_namesBasis->setText(
+                    tr("Read in %1, %2 of the %n entry(s) of the oto.ini find their files under "
+                       "their names, and every name below is a name in %1. The names are "
+                       "therefore proposed to be used as they are.",
+                       nullptr, question.foundEntries() + question.missingEntries())
+                        .arg(charset)
+                        .arg(question.foundEntries()));
+                break;
+            case kit::MisdecodedNameQuestion::None:
+                m_namesBasis->setText(
+                    tr("The entries of the oto.ini do not indicate the encodings of these names. "
+                       "Choose the encoding in which they were written and the encoding in which "
+                       "they were read, and check the misdecoded names."));
+                break;
         }
         {
             const QSignalBlocker original(m_original);

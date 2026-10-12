@@ -189,6 +189,42 @@ private Q_SLOTS:
         QVERIFY(!answer.fileNameEncoding->files.has_value());
     }
 
+    // The entries find their files, and が.wav is a name in Shift_JIS, so the names are used as
+    // they are at first, which records the record without encodings.
+    void the_names_are_used_as_they_are_if_the_question_proposes_so() {
+        if (kit::TextCodec(kit::TextCodec::systemName()).name() != QStringLiteral("GBK")) {
+            QSKIP("The preset encodings depend on the system encoding.");
+        }
+        QTemporaryDir dir;
+        const auto write = [&dir](const QString &name, const QByteArray &bytes) {
+            QFile file(dir.path() + QLatin1Char('/') + name);
+            QVERIFY(file.open(QIODevice::WriteOnly));
+            file.write(bytes);
+        };
+        write(QStringLiteral("oto.ini"), "a.wav=a,1,2,3,4,5\r\n");
+        write(QStringLiteral("a.wav"), "RIFF");
+        write(QString::fromUtf8("が.wav"), "RIFF");
+        kit::DiagnosticList diagnostics;
+        const auto source = kit::VoiceBankSource::readDirectory(
+            std::filesystem::path(dir.path().toStdU16String()), {}, diagnostics);
+        QVERIFY(source.has_value());
+
+        VoiceBankCharsetDialog dialog;
+        dialog.setQuestions({
+            {&*source, QStringLiteral("Shift_JIS")}
+        });
+        QCOMPARE(dialog.misdecodedNameQuestion(0)->basis(), kit::MisdecodedNameQuestion::Found);
+        QVERIFY(dialog.namesAsTheyAre(0));
+        QCOMPARE(dialog.answers().value(0).fileNameEncoding,
+                 std::optional(kit::VoiceBankConfig::FileNameEncoding()));
+
+        dialog.setNamesAsTheyAre(0, false);
+        dialog.setMisdecoded(0, QString::fromUtf8("が.wav"), true);
+        const auto record = dialog.answers().value(0).fileNameEncoding;
+        QVERIFY(record.has_value());
+        QVERIFY(!record->isAsIs());
+    }
+
     // The question about the file names follows the encoding chosen for the folder, because the
     // inference reads the entries in it.
     void the_file_names_follow_the_encoding_of_the_folder() {

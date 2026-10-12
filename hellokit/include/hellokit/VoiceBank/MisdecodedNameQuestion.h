@@ -20,10 +20,18 @@ namespace hello::kit {
     ///
     /// The question about a directory whose record has lists covers the names that the record
     /// lists in neither list. A directory whose record has no lists is not asked about. The
-    /// question about a directory without a record covers all of its names if the inference from
-    /// its \c oto.ini proposes a pair of encodings.
+    /// question about a directory without a record covers all of its names that are not ASCII if
+    /// a name that restores is not named by an entry of the \c oto.ini as it is.
     class HELLOKIT_VOICEBANK_EXPORT MisdecodedNameQuestion {
     public:
+        /// The basis of the encodings and of the proposed states.
+        enum Basis {
+            Record,  ///< The record of the directory
+            Entries, ///< The missing entries of the \c oto.ini that restored names match
+            Found,   ///< The entries found under their names, which propose the names as they are
+            None,    ///< No entry, the encodings preset to the encoding of the text files
+        };
+
         /// One name to determine.
         struct Choice {
             /// The name on disk.
@@ -38,18 +46,22 @@ namespace hello::kit {
 
         /// Returns the question about \a source , whose text files are in \a charset , or
         /// \c std::nullopt if nothing is to be asked: the record has no lists, no name to
-        /// determine restores, or no record exists and the inference proposes nothing. A name
-        /// that does not restore is used as it is until a question about another name records it.
+        /// determine restores, or without a record, every name that restores is named by an
+        /// entry as it is. A name that does not restore is used as it is until a question about
+        /// another name records it.
         ///
         /// The inference tries every pair of distinct encodings of TextCodec::ustCandidates() and
         /// takes the pair under which the most entries of the \c oto.ini whose audio file is
-        /// missing find it under a restored name. Among equals, the pair that misdecodes in the
-        /// system encoding comes first.
+        /// missing find it under a restored name. Among equals, the pair whose original encoding
+        /// is \a charset comes first, then the pair that misdecodes in the system encoding. If no
+        /// pair matches an entry, the pair is \a charset and the system encoding, and the names
+        /// are proposed as they are if at least 75 percent of the entries find their files under
+        /// their names and every name to determine is representable in \a charset .
         static std::optional<MisdecodedNameQuestion> of(const VoiceBankDirectorySource &source,
                                                         const QString &charset);
 
         /// Returns the question about \a source , a directory without a record, with the
-        /// encodings \a original and \a misdecodedAs that the user chose over the inferred ones.
+        /// encodings \a original and \a misdecodedAs that the user chose over the proposed ones.
         static MisdecodedNameQuestion of(const VoiceBankDirectorySource &source,
                                          const QString &charset, const QString &original,
                                          const QString &misdecodedAs);
@@ -69,13 +81,24 @@ namespace hello::kit {
             return m_record.misdecodedAs;
         }
 
-        /// Returns whether the directory has a record, whose encodings the question takes.
-        inline bool isRecorded() const {
-            return m_recorded;
+        /// The basis of the encodings and of the proposed states.
+        inline Basis basis() const {
+            return m_basis;
         }
 
-        /// The number of entries of the \c oto.ini whose audio file does not exist under its name
-        /// on disk.
+        /// Returns whether the directory has a record, whose encodings the question takes.
+        inline bool isRecorded() const {
+            return m_basis == Record;
+        }
+
+        /// The number of the distinct file names of the entries of the \c oto.ini whose audio
+        /// file exists under its name on disk.
+        inline int foundEntries() const {
+            return m_found;
+        }
+
+        /// The number of the distinct file names of the entries of the \c oto.ini whose audio
+        /// file does not exist under its name on disk.
         inline int missingEntries() const {
             return m_missing;
         }
@@ -84,6 +107,12 @@ namespace hello::kit {
         /// to the name of the entry.
         inline int matchedEntries() const {
             return m_matched;
+        }
+
+        /// The number of choices that no entry names, neither as they are nor restored, whose
+        /// state the entries therefore do not indicate.
+        inline int unlistedNames() const {
+            return m_unlisted;
         }
 
         /// The names to determine, in the order of the listing: the audio files, then the
@@ -109,10 +138,14 @@ namespace hello::kit {
 
         std::filesystem::path m_directory;
         VoiceBankConfig::FileNameEncoding m_record;
-        bool m_recorded = false;
+        Basis m_basis = None;
+        int m_found = 0;
         int m_missing = 0;
         int m_matched = 0;
+        int m_unlisted = 0;
         QList<Choice> m_choices;
+        /// The number of choices that no entry names as they are.
+        int m_unnamed = 0;
         /// The names to determine that do not restore, which an answer records as correct.
         QStringList m_unrestorable;
     };

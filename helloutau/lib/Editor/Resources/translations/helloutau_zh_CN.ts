@@ -2855,10 +2855,26 @@ Lyrics:
         <translation>这些名字尚未记入该文件夹的记录。该记录还原以 %1 写出、按 %2 读取的名字。</translation>
     </message>
     <message numerus="yes">
-        <source>%n entry(s) of the oto.ini find no file. Restored as written in %1 and read as %2, %3 of them find their files.</source>
+        <source>Read in %1, %n entry(s) of the oto.ini find no file. Restored as written in %2 and read as %3, %4 of them find their files.</source>
         <translation>
-            <numerusform>oto.ini 中有 %n 个条目找不到文件。按以 %1 写出、被错解为 %2 还原后，其中 %3 个找到了文件。</numerusform>
+            <numerusform>按 %1 读取的 oto.ini 中有 %n 个条目找不到文件。按以 %2 写出、被错解为 %3 还原后，其中 %4 个找到了文件。</numerusform>
         </translation>
+    </message>
+    <message numerus="yes">
+        <source>%n other name(s) have no entry, so the entries do not indicate whether they are misdecoded.</source>
+        <translation>
+            <numerusform>另有 %n 个名字没有对应的条目，无法据条目确定是否错解。</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>Read in %1, %2 of the %n entry(s) of the oto.ini find their files under their names, and every name below is a name in %1. The names are therefore proposed to be used as they are.</source>
+        <translation>
+            <numerusform>按 %1 读取的 oto.ini 的 %n 个条目中有 %2 个按原名找到了文件，下列名字也都能以 %1 表示，因此建议按原样使用这些名字。</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>The entries of the oto.ini do not indicate the encodings of these names. Choose the encoding in which they were written and the encoding in which they were read, and check the misdecoded names.</source>
+        <translation>这些名字无法据 oto.ini 的条目推测编码。请选择名字原本的编码与被错解成的编码，并勾选错解的名字。</translation>
     </message>
 </context>
 <context>

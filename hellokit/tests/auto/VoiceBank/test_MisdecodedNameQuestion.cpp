@@ -70,6 +70,12 @@ private:
             japaneseOnChinese(VoiceBankConfig::FileNameEncoding::Files{misdecoded, correct}));
     }
 
+    /// Returns whether the system encoding is GBK, which misdecodes the names in the tests
+    /// without an inference, whose encodings are preset to the system encoding.
+    static bool systemIsGbk() {
+        return TextCodec(TextCodec::systemName()).name() == TextCodec(QStringLiteral("GBK")).name();
+    }
+
     VoiceBankDirectorySource source() const {
         DiagnosticList diagnostics;
         const auto read = VoiceBankSource::readDirectory(root(), {}, diagnostics);
@@ -115,10 +121,13 @@ private Q_SLOTS:
         const auto question = MisdecodedNameQuestion::of(source(), QStringLiteral("Shift_JIS"));
         QVERIFY(question.has_value());
         QVERIFY(!question->isRecorded());
+        QCOMPARE(question->basis(), MisdecodedNameQuestion::Entries);
         QCOMPARE(question->original(), TextCodec(QStringLiteral("Shift_JIS")).name());
         QCOMPARE(question->misdecodedAs(), TextCodec(QStringLiteral("GBK")).name());
+        QCOMPARE(question->foundEntries(), 0);
         QCOMPARE(question->missingEntries(), 2);
         QCOMPARE(question->matchedEntries(), 2);
+        QCOMPARE(question->unlistedNames(), 0);
         // ASCII names are never asked about.
         QCOMPARE(namesOf(*question), (QStringList{kMisdecodedA + QStringLiteral(".wav"),
                                                   kMisdecodedI + QStringLiteral(".wav")}));
@@ -149,10 +158,21 @@ private Q_SLOTS:
         QVERIFY(!MisdecodedNameQuestion::of(source(), QStringLiteral("Shift_JIS")).has_value());
     }
 
-    void an_entry_that_no_name_restores_to_asks_nothing() {
+    // A name that no entry names is asked about without an inference, under the encoding of the
+    // text files misdecoded in the system encoding, and proposed as misdecoded.
+    void an_entry_that_no_name_restores_to_infers_nothing() {
+        if (!systemIsGbk()) {
+            QSKIP("The preset encodings depend on the system encoding.");
+        }
         writeOto({QString::fromUtf8("う.wav")});
         write(kMisdecodedA + QStringLiteral(".wav"), "RIFF");
-        QVERIFY(!MisdecodedNameQuestion::of(source(), QStringLiteral("Shift_JIS")).has_value());
+        const auto question = MisdecodedNameQuestion::of(source(), QStringLiteral("Shift_JIS"));
+        QVERIFY(question.has_value());
+        QCOMPARE(question->basis(), MisdecodedNameQuestion::None);
+        QCOMPARE(question->original(), TextCodec(QStringLiteral("Shift_JIS")).name());
+        QCOMPARE(question->misdecodedAs(), TextCodec(QStringLiteral("GBK")).name());
+        QCOMPARE(question->matchedEntries(), 0);
+        QVERIFY(choiceNamed(*question, kMisdecodedA + QStringLiteral(".wav"))->misdecoded);
     }
 
     // The entries are decoded in the encoding of the text files, which therefore determines the
@@ -160,8 +180,98 @@ private Q_SLOTS:
     void the_entries_are_read_in_the_encoding_of_the_text_files() {
         writeOto({QString::fromUtf8("あ.wav")});
         write(kMisdecodedA + QStringLiteral(".wav"), "RIFF");
-        QVERIFY(MisdecodedNameQuestion::of(source(), QStringLiteral("Shift_JIS")).has_value());
-        QVERIFY(!MisdecodedNameQuestion::of(source(), QStringLiteral("UTF-8")).has_value());
+        const auto japanese = MisdecodedNameQuestion::of(source(), QStringLiteral("Shift_JIS"));
+        QVERIFY(japanese.has_value());
+        QCOMPARE(japanese->basis(), MisdecodedNameQuestion::Entries);
+        const auto unicode = MisdecodedNameQuestion::of(source(), QStringLiteral("UTF-8"));
+        QVERIFY(!unicode || unicode->basis() != MisdecodedNameQuestion::Entries);
+    }
+
+    // Most directories have no misdecoded name. が.wav is a name in Shift_JIS, and 3 of the 4
+    // entries find their files.
+    void the_names_are_proposed_as_they_are_if_the_entries_find_their_files() {
+        if (!systemIsGbk()) {
+            QSKIP("The preset encodings depend on the system encoding.");
+        }
+        writeOto({QStringLiteral("a.wav"), QStringLiteral("b.wav"), QStringLiteral("c.wav"),
+                  QStringLiteral("d.wav")});
+        write(QStringLiteral("a.wav"), "RIFF");
+        write(QStringLiteral("b.wav"), "RIFF");
+        write(QStringLiteral("c.wav"), "RIFF");
+        write(QString::fromUtf8("が.wav"), "RIFF");
+
+        const auto question = MisdecodedNameQuestion::of(source(), QStringLiteral("Shift_JIS"));
+        QVERIFY(question.has_value());
+        QCOMPARE(question->basis(), MisdecodedNameQuestion::Found);
+        QCOMPARE(question->foundEntries(), 3);
+        QCOMPARE(question->missingEntries(), 1);
+        QVERIFY(!choiceNamed(*question, QString::fromUtf8("が.wav"))->misdecoded);
+        QCOMPARE(question->answer({}), VoiceBankConfig::FileNameEncoding());
+
+        // Fewer than 75 percent
+        QVERIFY(QFile::remove(m_dir->filePath(QStringLiteral("c.wav"))));
+        const auto fewer = MisdecodedNameQuestion::of(source(), QStringLiteral("Shift_JIS"));
+        QVERIFY(fewer.has_value());
+        QCOMPARE(fewer->basis(), MisdecodedNameQuestion::None);
+        QVERIFY(choiceNamed(*fewer, QString::fromUtf8("が.wav"))->misdecoded);
+    }
+
+    // 偁 is not a name in Shift_JIS, so the names are not proposed as they are.
+    void a_name_unrepresentable_in_the_encoding_of_the_text_files_is_not_proposed_as_it_is() {
+        if (!systemIsGbk()) {
+            QSKIP("The preset encodings depend on the system encoding.");
+        }
+        QVERIFY(!TextCodec(QStringLiteral("Shift_JIS")).canEncode(kMisdecodedA));
+        writeOto({QStringLiteral("a.wav")});
+        write(QStringLiteral("a.wav"), "RIFF");
+        write(kMisdecodedA + QStringLiteral(".wav"), "RIFF");
+
+        const auto question = MisdecodedNameQuestion::of(source(), QStringLiteral("Shift_JIS"));
+        QVERIFY(question.has_value());
+        QCOMPARE(question->basis(), MisdecodedNameQuestion::None);
+        QVERIFY(choiceNamed(*question, kMisdecodedA + QStringLiteral(".wav"))->misdecoded);
+    }
+
+    // Without an oto.ini, no entry finds its file.
+    void a_directory_without_entries_is_asked_about() {
+        if (!systemIsGbk()) {
+            QSKIP("The preset encodings depend on the system encoding.");
+        }
+        write(QString::fromUtf8("が.wav"), "RIFF");
+        const auto question = MisdecodedNameQuestion::of(source(), QStringLiteral("Shift_JIS"));
+        QVERIFY(question.has_value());
+        QCOMPARE(question->basis(), MisdecodedNameQuestion::None);
+        QCOMPARE(question->foundEntries() + question->missingEntries(), 0);
+    }
+
+    // Shift_JIS read as Big5 restores 觡.wav to 漾.wav, and Big5 read as GBK restores い.wav to
+    // 中.wav, one entry each. The pair written in the encoding of the text files comes first,
+    // although the other pair misdecodes in GBK, the system encoding of Chinese systems.
+    void a_pair_written_in_the_encoding_of_the_text_files_comes_first() {
+        writeOto({QString::fromUtf8("漾.wav"), QString::fromUtf8("中.wav")});
+        write(QString::fromUtf8("觡.wav"), "RIFF");
+        write(QString::fromUtf8("い.wav"), "RIFF");
+
+        const auto question = MisdecodedNameQuestion::of(source(), QStringLiteral("Shift_JIS"));
+        QVERIFY(question.has_value());
+        QCOMPARE(question->basis(), MisdecodedNameQuestion::Entries);
+        QCOMPARE(question->matchedEntries(), 1);
+        QCOMPARE(question->original(), TextCodec(QStringLiteral("Shift_JIS")).name());
+        QCOMPARE(question->misdecodedAs(), TextCodec(QStringLiteral("Big5")).name());
+    }
+
+    // 偄.wav restores, but to no entry.
+    void a_name_without_an_entry_is_counted() {
+        writeOto({QString::fromUtf8("あ.wav"), QString::fromUtf8("が.wav")});
+        write(kMisdecodedA + QStringLiteral(".wav"), "RIFF");
+        write(kMisdecodedI + QStringLiteral(".wav"), "RIFF");
+        write(QString::fromUtf8("が.wav"), "RIFF");
+
+        const auto question = MisdecodedNameQuestion::of(source(), QStringLiteral("Shift_JIS"));
+        QVERIFY(question.has_value());
+        QCOMPARE(question->basis(), MisdecodedNameQuestion::Entries);
+        QCOMPARE(question->foundEntries(), 1);
+        QCOMPARE(question->unlistedNames(), 1);
     }
 
     void a_subdirectory_is_asked_about() {
@@ -187,6 +297,7 @@ private Q_SLOTS:
         const auto question = MisdecodedNameQuestion::of(source(), QStringLiteral("Shift_JIS"));
         QVERIFY(question.has_value());
         QVERIFY(question->isRecorded());
+        QCOMPARE(question->basis(), MisdecodedNameQuestion::Record);
         QCOMPARE(namesOf(*question), QStringList{kMisdecodedI + QStringLiteral(".wav")});
 
         // Every name misdecoded, which the record without lists records.

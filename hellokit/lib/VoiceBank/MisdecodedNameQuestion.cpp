@@ -98,6 +98,9 @@ namespace hello::kit {
         const auto entries = entryNamesOf(source, charset);
         const auto audio = audioNamesOf(source);
         const auto missing = missingOf(entries, audio);
+        const auto text = TextCodec(charset);
+        const auto system = TextCodec(TextCodec::systemName()).name();
+        const auto candidates = TextCodec::ustCandidates();
 
         MisdecodedNameQuestion question;
         if (source.config && source.config->fileNameEncoding) {
@@ -105,16 +108,15 @@ namespace hello::kit {
                 return std::nullopt;
             }
             question.m_record = *source.config->fileNameEncoding;
-            question.m_recorded = true;
+            question.m_basis = Record;
         } else {
-            if (missing.isEmpty()) {
-                return std::nullopt;
-            }
             // The pair under which the most missing entries find their audio files. Among
-            // equals, the pair that misdecodes in the system encoding comes first, because the
-            // files were most likely extracted on this machine, then the order of the candidates.
-            const auto candidates = TextCodec::ustCandidates();
-            const auto system = TextCodec(TextCodec::systemName()).name();
+            // equals, the pair that was written in the encoding of the text files comes first,
+            // then the pair that misdecodes in the system encoding, because the files were most
+            // likely extracted on this machine, then the order of the candidates.
+            const auto rank = [&](const VoiceBankConfig::FileNameEncoding &record) {
+                return int(record.original != text.name()) * 2 + int(record.misdecodedAs != system);
+            };
             std::optional<VoiceBankConfig::FileNameEncoding> best;
             int bestMatched = 0;
             for (const auto &original : candidates) {
@@ -125,24 +127,53 @@ namespace hello::kit {
                     if (record.original == record.misdecodedAs) {
                         continue;
                     }
-                    const int matched = matchesOf(record, audio, missing);
-                    const bool better = matched > bestMatched || (best && matched == bestMatched &&
-                                                                  record.misdecodedAs == system &&
-                                                                  best->misdecodedAs != system);
-                    if (better) {
+                    const int matched = missing.isEmpty() ? 0 : matchesOf(record, audio, missing);
+                    if (matched > bestMatched ||
+                        (best && matched == bestMatched && rank(record) < rank(*best))) {
                         best = record;
                         bestMatched = matched;
                     }
                 }
             }
-            if (!best) {
-                return std::nullopt;
+            if (best) {
+                question.m_record = *best;
+                question.m_basis = Entries;
+            } else {
+                // The encoding of the text files, misdecoded in the system encoding
+                auto &record = question.m_record;
+                record.original = text.isValid() && !charset.isEmpty()
+                                      ? text.name()
+                                      : TextCodec(candidates.value(0)).name();
+                record.misdecodedAs = system;
+                for (qsizetype i = 0;
+                     record.misdecodedAs == record.original && i < candidates.size(); ++i) {
+                    record.misdecodedAs = TextCodec(candidates.at(i)).name();
+                }
             }
-            question.m_record = *best;
         }
         question.collect(source, entries, missing);
-        if (question.m_choices.isEmpty()) {
+        if (question.m_choices.isEmpty() || (!question.isRecorded() && question.m_unnamed == 0)) {
             return std::nullopt;
+        }
+
+        // Most directories have no misdecoded name: the entries find their files, and the names
+        // are names of the encoding of the text files.
+        if (question.m_basis == None) {
+            auto names = question.m_unrestorable;
+            for (const auto &choice : std::as_const(question.m_choices)) {
+                names.push_back(choice.name);
+            }
+            const bool found = !entries.isEmpty() && question.m_found * 4 >= entries.size() * 3;
+            const bool representable =
+                text.isValid() && !charset.isEmpty() &&
+                std::all_of(names.begin(), names.end(),
+                            [&text](const QString &name) { return text.canEncode(name); });
+            if (found && representable) {
+                question.m_basis = Found;
+                for (auto &choice : question.m_choices) {
+                    choice.misdecoded = false;
+                }
+            }
         }
         return question;
     }
@@ -156,6 +187,7 @@ namespace hello::kit {
         question.m_record.misdecodedAs = TextCodec(misdecodedAs).name();
         const auto entries = entryNamesOf(source, charset);
         question.collect(source, entries, missingOf(entries, audioNamesOf(source)));
+        question.m_basis = question.m_matched > 0 ? Entries : None;
         return question;
     }
 
@@ -174,6 +206,10 @@ namespace hello::kit {
         for (const auto &name : entries) {
             named.insert(name);
         }
+        QSet<QString> missingNames;
+        for (const auto &name : missing) {
+            missingNames.insert(name);
+        }
         QSet<QString> restored;
         const auto add = [&](const QString &name, bool directory) {
             if (isAscii(name) || listed.contains(normalized(name))) {
@@ -185,8 +221,11 @@ namespace hello::kit {
                 return;
             }
             // A name on disk that an entry names is in use as it is.
-            m_choices.push_back({name, *logical, !named.contains(normalized(name)), directory});
+            const bool isNamed = named.contains(normalized(name));
+            m_choices.push_back({name, *logical, !isNamed, directory});
             restored.insert(*logical);
+            m_unnamed += !isNamed;
+            m_unlisted += !isNamed && !missingNames.contains(*logical);
         };
         for (const auto &name : audioNamesOf(source)) {
             add(name, false);
@@ -196,6 +235,7 @@ namespace hello::kit {
         }
 
         m_missing = int(missing.size());
+        m_found = int(entries.size()) - m_missing;
         m_matched =
             int(std::count_if(missing.begin(), missing.end(), [&restored](const QString &name) {
                 return restored.contains(name);

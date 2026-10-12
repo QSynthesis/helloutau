@@ -126,7 +126,7 @@ namespace hello::daw {
         const std::optional<kit::MisdecodedNameQuestion> &misdecodedNameQuestion(int index) const;
 
         /// Chooses the encodings of the file names of folder \a index , a folder without a
-        /// record, over the inferred ones.
+        /// record, over the proposed ones.
         void setFileNameEncodings(int index, const QString &original, const QString &misdecodedAs);
 
         /// The names of folder \a index checked as misdecoded.
@@ -134,7 +134,8 @@ namespace hello::daw {
         void setMisdecoded(int index, const QString &name, bool misdecoded);
 
         /// Whether the names of folder \a index , a folder without a record, are used as they are,
-        /// which records the record without encodings.
+        /// which records the record without encodings. Initially whether the question proposes
+        /// the names as they are, see kit::MisdecodedNameQuestion::Found.
         bool namesAsTheyAre(int index) const;
         void setNamesAsTheyAre(int index, bool asTheyAre);
 
@@ -144,7 +145,7 @@ namespace hello::daw {
         /// The file names of one folder.
         struct FileNames {
             std::optional<kit::MisdecodedNameQuestion> question;
-            /// The encodings chosen by the user, empty for the inferred ones.
+            /// The encodings chosen by the user, empty for the proposed ones.
             QString original;
             QString misdecodedAs;
             QStringList misdecoded;
