@@ -788,8 +788,12 @@ private Q_SLOTS:
             QStringList resamplerPatterns() const override {
                 return {};
             }
-            bool exists(const fs::path &wav) const override {
-                return wav.filename() == fs::path(u"偁.wav");
+            QList<bool> mapsExist(const fs::path &, const QList<fs::path> &wavs) const override {
+                QList<bool> found;
+                for (const auto &wav : wavs) {
+                    found.push_back(wav.filename() == fs::path(u"偁.wav"));
+                }
+                return found;
             }
             std::optional<FrequencyMap> read(const fs::path &, int,
                                              DiagnosticList &) const override {

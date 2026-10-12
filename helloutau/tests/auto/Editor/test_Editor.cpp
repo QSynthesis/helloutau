@@ -2449,8 +2449,8 @@ private Q_SLOTS:
             QStringList resamplerPatterns() const override {
                 return {};
             }
-            bool exists(const fs::path &) const override {
-                return false;
+            QList<bool> mapsExist(const fs::path &, const QList<fs::path> &wavs) const override {
+                return QList<bool>(wavs.size(), false);
             }
             std::optional<kit::FrequencyMap> read(const fs::path &, int,
                                                     kit::DiagnosticList &) const override {
@@ -2845,8 +2845,19 @@ private Q_SLOTS:
             return std::string(std::istreambuf_iterator<char>(file), {});
         };
 
+        // The table shows the presence of the maps of the format of the box, which is that of
+        // the resampler at first.
+        const auto model = window->entryModel();
+        const auto mapOf = [model](const char *file, const char *alias = "") {
+            const int row = model->rowOf({}, QString::fromLatin1(file), QString::fromLatin1(alias));
+            return model->index(row, VoiceBankEntryModel::FrequencyMapColumn).data();
+        };
+        QVERIFY(!mapOf("c.wav").isValid());
+        QVERIFY(mapOf("a.wav", "a").isValid());
+
         QVERIFY(window->generateFrequencyMaps(VoiceBankWindow::MissingFrequencyMaps));
         QCOMPARE(standIn->calls.load(), 2);
+        QCOMPARE(mapOf("c.wav"), mapOf("a.wav", "a"));
         QCOMPARE(read(bank / "a_wav.frq"), std::string("old"));
         QVERIFY(fs::exists(bank / "c_wav.frq"));
         QVERIFY(fs::exists(bank / "sub" / "x_wav.frq"));
@@ -2867,6 +2878,13 @@ private Q_SLOTS:
         QCOMPARE(read(bank / "c_wav.frq"), std::string("FREQ0003"));
         QCOMPARE(read(bank / "sub" / "x_wav.frq"), std::string("old"));
 
+        // Without a format in the box, the column is empty.
+        const auto box = window->frequencyFormatBox();
+        QVERIFY(box);
+        box->setCurrentIndex(box->findData(QString()));
+        QVERIFY(!mapOf("a.wav", "a").isValid());
+
+        // The maps of the format of the resampler, whatever the box shows
         answerMessageBox(QMessageBox::Yes);
         QVERIFY(window->removeFrequencyMaps());
         QVERIFY(!fs::exists(bank / "a_wav.frq"));

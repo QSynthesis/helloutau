@@ -282,13 +282,15 @@ namespace hello::kit {
             // The frequency maps that follow the renamed audio files. A format that cannot follow
             // them is reported only if one of them has a map of it.
             if (formats && !audio.isEmpty()) {
+                QList<fs::path> renamedAudio;
+                for (const auto &rename : std::as_const(audio)) {
+                    renamedAudio.push_back(rename.from);
+                }
                 for (const auto format : formats->formats()) {
                     DiagnosticList reasons;
                     if (const auto files = format->changesFollowing(directory, audio, reasons)) {
                         change.files += *files;
-                    } else if (std::any_of(audio.begin(), audio.end(), [&](const auto &rename) {
-                                   return format->exists(directory / rename.from);
-                               })) {
+                    } else if (format->mapsExist(directory, renamedAudio).contains(true)) {
                         diagnostics += reasons;
                     }
                 }

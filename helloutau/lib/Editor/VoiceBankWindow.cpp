@@ -476,6 +476,7 @@ namespace hello::daw {
             tree->setColumnCount(1);
 
             model = new VoiceBankEntryModel(document->session(), &decl);
+            model->setFrequencyFormat(editor->frequencyFormats().format(currentFrequencyFormat()));
             proxy = new EntryFilter(&decl);
             proxy->setSourceModel(model);
             proxy->setSortRole(VoiceBankEntryModel::SortRole);
@@ -494,6 +495,8 @@ namespace hello::daw {
             table->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
             table->setMinimumWidth(0);
             table->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Expanding);
+            // Once the window is shown, so that the rows in view are measured
+            QTimer::singleShot(0, table, [this] { fitColumns(); });
 
             search = new QLineEdit();
             search->setPlaceholderText(tr("Search file names and aliases"));
@@ -708,9 +711,10 @@ namespace hello::daw {
                 audio.audio = changes.audio;
                 kit::DiagnosticList diagnostics;
                 document->reloadFromDisk(audio, nullptr, diagnostics);
-                // Not an edit of the tree, which the model follows by itself
-                model->refresh();
             }
+            // Not an edit of the tree, which the model follows by itself. The maps may have been
+            // written or removed by another program, such as a resampler that renders.
+            model->refreshFrequencyMaps();
 
             // A change of text not declined as it is now is asked about.
             QList<std::filesystem::path> ask;
@@ -1552,6 +1556,7 @@ namespace hello::daw {
 
             kit::DiagnosticList diagnostics;
             int generated = 0;
+            generator.threadCount = editor->settings().rendering().threadCount();
             QEventLoop loop;
             const auto worker = QThread::create([&] {
                 generated = generator.generate(
@@ -1571,6 +1576,7 @@ namespace hello::daw {
             delete worker;
             progress.reset();
 
+            model->refreshFrequencyMaps();
             frequencyShown = {};
             showFrequency();
             decl.statusBar()->showMessage(tr("%n frequency map(s) generated.", nullptr, generated));
@@ -1578,17 +1584,38 @@ namespace hello::daw {
             return !cancelled.load() && diagnostics.isEmpty();
         }
 
-        // Shows the frequency map of the audio of the current row in the format in effect. The
-        // box marks the formats without a map for the audio file.
+        // Fits each column to its header and its cells in view, a column of names up to a width
+        // beyond which the names are elided, so that the columns fit a window that is not
+        // maximized.
+        void fitColumns() {
+            table->resizeColumnsToContents();
+            const int widest = table->fontMetrics().horizontalAdvance(QLatin1Char('M')) * 20;
+            for (const int column :
+                 {VoiceBankEntryModel::DirectoryColumn, VoiceBankEntryModel::FileColumn,
+                  VoiceBankEntryModel::AliasColumn}) {
+                if (table->columnWidth(column) > widest) {
+                    table->setColumnWidth(column, widest);
+                }
+            }
+        }
+
+        static bool hasMap(const kit::FrequencyFormat &format, const std::filesystem::path &wav) {
+            return format.mapsExist(wav.parent_path(), {wav.filename()}).value(0);
+        }
+
+        // Shows the frequency map of the audio of the current row in the format in effect, of
+        // which the table shows the presence. The box marks the formats without a map for the
+        // audio file.
         void showFrequency() {
             stdc_decl_t;
             const int row = decl.currentRow();
             const auto path = row >= 0 ? audioPathOf(row) : std::filesystem::path();
             const auto id = currentFrequencyFormat();
             const auto &formats = editor->frequencyFormats();
+            model->setFrequencyFormat(formats.format(id));
             for (int i = 1; frequencyBox && i < frequencyBox->count(); ++i) {
                 const auto format = formats.format(frequencyBox->itemData(i).toString());
-                const bool present = !path.empty() && format && format->exists(path);
+                const bool present = !path.empty() && format && hasMap(*format, path);
                 frequencyBox->setItemText(i, present ? format->name()
                                                      : tr("%1 (none)").arg(format->name()));
             }
@@ -1599,7 +1626,7 @@ namespace hello::daw {
             frequencyShown = {path, id};
             const auto format = formats.format(id);
             std::optional<kit::FrequencyMap> table;
-            if (format && audio && format->exists(path)) {
+            if (format && audio && hasMap(*format, path)) {
                 kit::DiagnosticList diagnostics;
                 table = format->read(path, audio->sampleRate, diagnostics);
                 if (!table) {
@@ -2578,6 +2605,7 @@ namespace hello::daw {
             removed =
                 kit::FrequencyFormats::removeMaps(*format, folder, names, diagnostics) && removed;
         }
+        impl.model->refreshFrequencyMaps();
         impl.frequencyShown = {};
         impl.showFrequency();
         DiagnosticBox::report(this, title, diagnostics);

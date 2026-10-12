@@ -50,9 +50,10 @@ namespace hello::daw {
         PlaybackMode playbackMode() const;
         void setPlaybackMode(PlaybackMode mode);
 
-        /// Number of rendering threads of the ThreadedPrerender and Realtime modes, and of the
-        /// rendering of a whole track outside the Prerender mode. Zero, the default, stands for
-        /// one thread per hardware thread.
+        /// Number of rendering threads of the ThreadedPrerender and Realtime modes, of the
+        /// rendering of a whole track outside the Prerender mode, and of the generation of
+        /// frequency maps in a voice bank window. Zero, the default, stands for one thread per
+        /// hardware thread.
         int threadCount() const;
         void setThreadCount(int count);
 

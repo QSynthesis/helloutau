@@ -2072,6 +2072,10 @@
         <translation>渲染线程数(&amp;T)：</translation>
     </message>
     <message>
+        <source>The number of resamplers that run at once in threaded and realtime rendering, in rendering a whole track outside the classic mode, and in generating frequency maps in the voice bank window.</source>
+        <translation>同时运行的重采样器个数，用于多线程与实时渲染、经典模式以外的整轨渲染，以及音源窗口中生成频率表。</translation>
+    </message>
+    <message>
         <source>Keep the latest run only</source>
         <translation>仅保留最近一次运行</translation>
     </message>
@@ -2916,6 +2920,10 @@ Lyrics:
         <translation>加入音频文件</translation>
     </message>
     <message>
+        <source>The audio file has no frequency map of the format %1.</source>
+        <translation>该音频文件没有格式 %1 的频率表。</translation>
+    </message>
+    <message>
         <source>Another entry of this audio file has the same alias. UTAU uses only one of them, and an edit that adds such an alias is refused.</source>
         <translation>此音频文件的另一条目具有相同的别名。UTAU 只使用其中一个，因此添加此类别名的编辑将被拒绝。</translation>
     </message>
@@ -2958,6 +2966,10 @@ Lyrics:
     <message>
         <source>Overlap</source>
         <translation>重叠</translation>
+    </message>
+    <message>
+        <source>Frequency Map</source>
+        <translation>频率表</translation>
     </message>
     <message>
         <source>&quot;%1&quot; is not a number.</source>

@@ -27,9 +27,18 @@ namespace {
         QStringList resamplerPatterns() const override {
             return {};
         }
-        bool exists(const fs::path &wav) const override {
-            std::error_code error;
-            return fs::is_regular_file(wav.parent_path() / *sidecarNameOf(wav), error);
+        QList<bool> mapsExist(const fs::path &directory,
+                              const QList<fs::path> &wavs) const override {
+            QList<bool> found;
+            for (const auto &wav : wavs) {
+                std::error_code error;
+                found.push_back(fs::is_regular_file(directory / *sidecarNameOf(wav), error));
+            }
+            return found;
+        }
+
+        bool hasMap(const fs::path &wav) const {
+            return mapsExist(wav.parent_path(), {wav.filename()}).value(0);
         }
         std::optional<FrequencyMap> read(const fs::path &, int, DiagnosticList &) const override {
             return std::nullopt;
@@ -121,8 +130,8 @@ private Q_SLOTS:
                  2);
         QVERIFY(diagnostics.isEmpty());
         QCOMPARE(last.load(), 3);
-        QVERIFY(format.exists(wavs.at(0)));
-        QVERIFY(format.exists(wavs.at(2)));
+        QVERIFY(format.hasMap(wavs.at(0)));
+        QVERIFY(format.hasMap(wavs.at(2)));
         QCOMPARE(standIn->calls.size(), 2);
         for (const auto &arguments : std::as_const(standIn->calls)) {
             QVERIFY(arguments.at(0).endsWith(QStringLiteral(".wav")));

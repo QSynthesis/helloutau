@@ -13,6 +13,7 @@
 #include <helloutau/Editor/HelloUtauEditorGlobal.h>
 
 namespace hello::kit {
+    class FrequencyFormat;
     class VoiceBankSession;
 }
 
@@ -43,6 +44,7 @@ namespace hello::daw {
             CutoffColumn,
             PreUtteranceColumn,
             OverlapColumn,
+            FrequencyMapColumn, ///< Whether the audio file has a map of frequencyFormat()
             ColumnCount,
         };
 
@@ -75,6 +77,15 @@ namespace hello::daw {
 
         /// Rebuilds the rows now rather than once control returns to the event loop.
         void refresh();
+
+        /// The format whose maps FrequencyMapColumn shows, or null for none, in which case the
+        /// column is empty. The maps of a folder are queried at once when its rows are built,
+        /// and kept until refreshFrequencyMaps() or another format.
+        const kit::FrequencyFormat *frequencyFormat() const;
+        void setFrequencyFormat(const kit::FrequencyFormat *format);
+
+        /// Queries the maps again, after they changed on disk.
+        void refreshFrequencyMaps();
 
         /// The row of the entry of \a fileName with \a alias in the folder \a directory, or of the
         /// audio file \a fileName without an entry, whose alias is empty; -1 if none is shown.

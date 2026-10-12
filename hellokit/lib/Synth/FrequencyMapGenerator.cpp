@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <map>
 
 #include <QtCore/QDir>
 #include <QtCore/QMutex>
@@ -66,6 +67,26 @@ namespace hello::kit {
             }
             return stopped.load();
         };
+        const auto exists = [&format](const fs::path &wav) {
+            return format.mapsExist(wav.parent_path(), {wav.filename()}).value(0);
+        };
+
+        // The audio files that have maps, queried by folder
+        QList<bool> present(wavs.size());
+        std::map<fs::path, QList<qsizetype>> byFolder;
+        for (qsizetype i = 0; i < wavs.size(); ++i) {
+            byFolder[wavs.at(i).parent_path()].push_back(i);
+        }
+        for (const auto &[folder, indices] : byFolder) {
+            QList<fs::path> names;
+            for (const auto i : indices) {
+                names.push_back(wavs.at(i).filename());
+            }
+            const auto found = format.mapsExist(folder, names);
+            for (qsizetype k = 0; k < indices.size(); ++k) {
+                present[indices.at(k)] = found.value(k);
+            }
+        }
         {
             QThreadPool pool;
             pool.setMaxThreadCount(threadCount > 0 ? threadCount
@@ -73,7 +94,7 @@ namespace hello::kit {
             for (qsizetype i = 0; i < wavs.size(); ++i) {
                 pool.start([&, i] {
                     const auto &wav = wavs.at(i);
-                    if (!stop() && !format.exists(wav)) {
+                    if (!stop() && !present.at(i)) {
                         utau::ResamplerArguments arguments;
                         arguments.inFile = wav.u8string();
                         arguments.outFile =
@@ -91,7 +112,7 @@ namespace hello::kit {
                                                  tr("The resampler \"%1\" could not be started.")
                                                      .arg(displayed(resampler))});
                             }
-                        } else if (format.exists(wav)) {
+                        } else if (exists(wav)) {
                             ++generated;
                         } else if (!run.cancelled) {
                             auto message = tr("The resampler wrote no frequency map of \"%1\" "

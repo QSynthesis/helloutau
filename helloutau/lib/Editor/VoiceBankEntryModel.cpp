@@ -1,5 +1,7 @@
 #include "VoiceBankEntryModel.h"
 
+#include <map>
+
 #include <QtCore/QHash>
 #include <QtCore/QLocale>
 #include <QtCore/QSet>
@@ -15,6 +17,7 @@
 #include <hellokit/Edit/VoiceBankEdits.h>
 #include <hellokit/Edit/VoiceBankRefs.h>
 #include <hellokit/Edit/VoiceBankSession.h>
+#include <hellokit/VoiceBank/FrequencyFormat.h>
 
 namespace hello::daw {
 
@@ -72,6 +75,8 @@ namespace hello::daw {
             int entryIndex = -1;
             kit::VoiceOtoEntry entry;
             bool duplicate = false;
+            // Whether the audio file has a map, none without a format or an audio file
+            std::optional<bool> map;
         };
 
         Decl *_decl;
@@ -79,6 +84,32 @@ namespace hello::daw {
         std::optional<std::filesystem::path> directory;
         QList<Row> rows;
         bool refreshPending = false;
+        const kit::FrequencyFormat *format = nullptr;
+        // Whether each audio file of a folder has a map of format, by the key of its name
+        std::map<std::filesystem::path, QHash<QString, bool>> maps;
+
+        // The maps of the audio files of the folder at path, queried at once on first use
+        const QHash<QString, bool> &mapsOf(const std::filesystem::path &path,
+                                           const QStringList &files) {
+            auto found = maps.find(path);
+            if (found != maps.end()) {
+                return found->second;
+            }
+            auto &result = maps[path];
+            if (files.isEmpty()) {
+                return result;
+            }
+            const auto folder = session->audioPathOf(path, files.first()).parent_path();
+            QList<std::filesystem::path> names;
+            for (const auto &file : files) {
+                names.push_back(session->audioPathOf(path, file).filename());
+            }
+            const auto exist = format->mapsExist(folder, names);
+            for (qsizetype i = 0; i < files.size(); ++i) {
+                result.insert(fileKey(files.at(i)), exist.value(i));
+            }
+            return result;
+        }
 
         void build() {
             QList<Row> built;
@@ -123,6 +154,15 @@ namespace hello::daw {
                         row.directoryIndex = d;
                         row.entry.fileName = file;
                         built.push_back(row);
+                    }
+                }
+                if (format) {
+                    const auto &found = mapsOf(path, files);
+                    for (auto i = first; i < built.size(); ++i) {
+                        auto &row = built[i];
+                        if (row.kind != MissingAudioRow) {
+                            row.map = found.value(fileKey(row.entry.fileName));
+                        }
                     }
                 }
             }
@@ -233,6 +273,26 @@ namespace hello::daw {
         impl.build();
     }
 
+    const kit::FrequencyFormat *VoiceBankEntryModel::frequencyFormat() const {
+        stdc_impl_t;
+        return impl.format;
+    }
+
+    void VoiceBankEntryModel::setFrequencyFormat(const kit::FrequencyFormat *format) {
+        stdc_impl_t;
+        if (format == impl.format) {
+            return;
+        }
+        impl.format = format;
+        refreshFrequencyMaps();
+    }
+
+    void VoiceBankEntryModel::refreshFrequencyMaps() {
+        stdc_impl_t;
+        impl.maps.clear();
+        refresh();
+    }
+
     int VoiceBankEntryModel::rowOf(const std::filesystem::path &directory, const QString &fileName,
                                    const QString &alias) const {
         stdc_impl_t;
@@ -327,14 +387,23 @@ namespace hello::daw {
                         return row.entry.fileName;
                     case AliasColumn:
                         return row.entry.alias;
+                    case FrequencyMapColumn:
+                        // A check mark for a map, nothing for none
+                        if (row.map == true) {
+                            return QString(QChar(0x2713));
+                        }
+                        return {};
                     default:
                         return row.kind == UnlistedAudioRow
                                    ? QVariant()
                                    : Impl::valueText(row.entry, index.column());
                 }
             case Qt::TextAlignmentRole:
-                if (index.column() >= OffsetColumn) {
+                if (index.column() >= OffsetColumn && index.column() <= OverlapColumn) {
                     return QVariant::fromValue(Qt::AlignRight | Qt::AlignVCenter);
+                }
+                if (index.column() == FrequencyMapColumn) {
+                    return QVariant::fromValue(Qt::AlignCenter);
                 }
                 return {};
             case Qt::ForegroundRole:
@@ -354,6 +423,10 @@ namespace hello::daw {
                 }
                 return {};
             case Qt::ToolTipRole:
+                if (index.column() == FrequencyMapColumn && row.map == false) {
+                    return tr("The audio file has no frequency map of the format %1.")
+                        .arg(impl.format->name());
+                }
                 if (row.duplicate) {
                     return tr("Another entry of this audio file has the same alias. UTAU uses "
                               "only one of them, and an edit that adds such an alias is "
@@ -375,7 +448,7 @@ namespace hello::daw {
             case SortRole: {
                 const double values[] = {row.entry.offset, row.entry.consonant, row.entry.cutoff,
                                          row.entry.preUtterance, row.entry.voiceOverlap};
-                if (index.column() >= OffsetColumn) {
+                if (index.column() >= OffsetColumn && index.column() <= OverlapColumn) {
                     return values[index.column() - OffsetColumn];
                 }
                 return data(index, Qt::DisplayRole);
@@ -407,6 +480,8 @@ namespace hello::daw {
                 return tr("Pre-utterance");
             case OverlapColumn:
                 return tr("Overlap");
+            case FrequencyMapColumn:
+                return tr("Frequency Map");
             default:
                 return {};
         }
@@ -420,7 +495,8 @@ namespace hello::daw {
         }
         // The folder is where the file is, and an unlisted row is the file itself.
         const auto kind = impl.rows.at(index.row()).kind;
-        if (index.column() == DirectoryColumn || index.column() == FileColumn) {
+        if (index.column() == DirectoryColumn || index.column() == FileColumn ||
+            index.column() == FrequencyMapColumn) {
             return flags;
         }
         return flags | Qt::ItemIsEditable;

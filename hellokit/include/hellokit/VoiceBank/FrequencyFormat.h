@@ -76,8 +76,12 @@ namespace hello::kit {
         /// \sa FrequencyFormats::formatForResampler()
         virtual QStringList resamplerPatterns() const = 0;
 
-        /// Returns whether the audio file \a wav has a map of this format.
-        virtual bool exists(const std::filesystem::path &wav) const = 0;
+        /// Returns whether each audio file of \a wavs, names in the directory \a directory, has a
+        /// map of this format, in the order of \a wavs. The audio files of a directory are
+        /// queried at once, so that a format that keeps the maps of a directory in one file,
+        /// such as \c desc.mrq, reads the file once.
+        virtual QList<bool> mapsExist(const std::filesystem::path &directory,
+                                      const QList<std::filesystem::path> &wavs) const = 0;
 
         /// Reads the map of the audio file \a wav with the sample rate \a sampleRate.
         ///

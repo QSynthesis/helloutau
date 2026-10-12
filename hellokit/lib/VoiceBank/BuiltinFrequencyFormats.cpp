@@ -4,6 +4,7 @@
 
 #include <QtCore/QByteArray>
 #include <QtCore/QFile>
+#include <QtCore/QSet>
 #include <QtCore/QtEndian>
 
 #include "FrequencyFormat.h"
@@ -69,6 +70,19 @@ namespace hello::kit {
             qsizetype m_at;
         };
 
+        // Whether each audio file of wavs in directory has the sidecar file that format names
+        QList<bool> sidecarsExist(const FrequencyFormat &format,
+                                  const std::filesystem::path &directory,
+                                  const QList<std::filesystem::path> &wavs) {
+            QList<bool> found;
+            for (const auto &wav : wavs) {
+                std::error_code error;
+                found.push_back(std::filesystem::is_regular_file(
+                    directory / *format.sidecarNameOf(wav), error));
+            }
+            return found;
+        }
+
         std::optional<FrequencyMap> damaged(const std::filesystem::path &path,
                                               DiagnosticList &diagnostics) {
             fail(diagnostics,
@@ -98,9 +112,9 @@ namespace hello::kit {
                 return {QStringLiteral("resampler*.exe")};
             }
 
-            bool exists(const std::filesystem::path &wav) const override {
-                std::error_code error;
-                return std::filesystem::is_regular_file(pathOf(wav), error);
+            QList<bool> mapsExist(const std::filesystem::path &directory,
+                                  const QList<std::filesystem::path> &wavs) const override {
+                return sidecarsExist(*this, directory, wavs);
             }
 
             std::optional<FrequencyMap> read(const std::filesystem::path &wav, int sampleRate,
@@ -173,9 +187,9 @@ namespace hello::kit {
                 return {QStringLiteral("w4u*.exe"), QStringLiteral("world4utau*.exe")};
             }
 
-            bool exists(const std::filesystem::path &wav) const override {
-                std::error_code error;
-                return std::filesystem::is_regular_file(pathOf(wav), error);
+            QList<bool> mapsExist(const std::filesystem::path &directory,
+                                  const QList<std::filesystem::path> &wavs) const override {
+                return sidecarsExist(*this, directory, wavs);
             }
 
             std::optional<FrequencyMap> read(const std::filesystem::path &wav, int sampleRate,
@@ -286,10 +300,22 @@ namespace hello::kit {
                 return {QStringLiteral("moresampler*.exe")};
             }
 
-            bool exists(const std::filesystem::path &wav) const override {
+            // desc.mrq is read once, and each name is looked up as find() looks it up.
+            QList<bool> mapsExist(const std::filesystem::path &directory,
+                                  const QList<std::filesystem::path> &wavs) const override {
                 DiagnosticList ignored;
-                const auto bytes = contentsOf(wav.parent_path() / "desc.mrq", ignored);
-                return bytes && find(*bytes, wav).has_value();
+                const auto bytes = contentsOf(directory / "desc.mrq", ignored);
+                QSet<QString> names;
+                if (bytes) {
+                    for (const auto &entry : entriesOf(*bytes)) {
+                        names.insert(entry.first.toCaseFolded());
+                    }
+                }
+                QList<bool> found;
+                for (const auto &wav : wavs) {
+                    found.push_back(names.contains(textOf(wav.filename()).toCaseFolded()));
+                }
+                return found;
             }
 
             std::optional<FrequencyMap> read(const std::filesystem::path &wav, int sampleRate,
@@ -326,25 +352,19 @@ namespace hello::kit {
             }
 
         private:
-            // The position of the data of the entry of wav, or none. The name is compared as
-            // written first, and then without case, since the file system of Windows finds the
-            // file either way.
-            static std::optional<qsizetype> find(const QByteArray &bytes,
-                                                 const std::filesystem::path &wav) {
+            // The name and the position of the data of each entry, up to the first entry that is
+            // cut short
+            static QList<std::pair<QString, qsizetype>> entriesOf(const QByteArray &bytes) {
+                QList<std::pair<QString, qsizetype>> found;
                 if (!bytes.startsWith("mrq ")) {
-                    return std::nullopt;
+                    return found;
                 }
-                const auto name = textOf(wav.filename());
                 Reader reader(bytes, 8);
                 const auto entries = reader.next<qint32>();
-                if (!entries) {
-                    return std::nullopt;
-                }
-                std::optional<qsizetype> folded;
-                for (qint32 i = 0; i < *entries; ++i) {
+                for (qint32 i = 0; entries && i < *entries; ++i) {
                     const auto length = reader.next<qint32>();
                     if (!length || *length < 0 || reader.left() < qsizetype(*length) * 2) {
-                        return folded;
+                        break;
                     }
                     QString entry(*length, Qt::Uninitialized);
                     for (qint32 k = 0; k < *length; ++k) {
@@ -352,17 +372,29 @@ namespace hello::kit {
                     }
                     const auto size = reader.next<qint32>();
                     if (!size) {
-                        return folded;
+                        break;
                     }
-                    const auto data = reader.at();
+                    found.push_back({entry, reader.at()});
+                    if (!reader.skip(*size)) {
+                        break;
+                    }
+                }
+                return found;
+            }
+
+            // The position of the data of the entry of wav, or none. The name is compared as
+            // written first, and then without case, since the file system of Windows finds the
+            // file either way.
+            static std::optional<qsizetype> find(const QByteArray &bytes,
+                                                 const std::filesystem::path &wav) {
+                const auto name = textOf(wav.filename());
+                std::optional<qsizetype> folded;
+                for (const auto &[entry, data] : entriesOf(bytes)) {
                     if (entry == name) {
                         return data;
                     }
                     if (!folded && entry.compare(name, Qt::CaseInsensitive) == 0) {
                         folded = data;
-                    }
-                    if (!reader.skip(*size)) {
-                        return folded;
                     }
                 }
                 return folded;

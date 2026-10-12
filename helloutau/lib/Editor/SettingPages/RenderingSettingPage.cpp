@@ -110,11 +110,10 @@ namespace hello::daw {
             m_threads->setEditText(QString::number(current));
         }
         playbackForm->addRow(tr("Rendering &threads:"), m_threads);
-        const auto updateThreads = [this] {
-            m_threads->setEnabled(m_playbackMode->currentData().toInt() !=
-                                  RenderingSettings::Prerender);
-        };
-        updateThreads();
+        playbackForm->addRow(
+            note(tr("The number of resamplers that run at once in threaded and realtime "
+                    "rendering, in rendering a whole track outside the classic mode, and in "
+                    "generating frequency maps in the voice bank window.")));
 
         layout->addWidget(playbackGroup);
         auto logGroup = new QGroupBox(tr("Render Log"), widget);
@@ -152,7 +151,6 @@ namespace hello::daw {
 
         connect(m_resampler, &QLineEdit::textChanged, this, &SettingPage::modifiedChanged);
         connect(m_wavtool, &QLineEdit::textChanged, this, &SettingPage::modifiedChanged);
-        connect(m_playbackMode, &QComboBox::currentIndexChanged, this, updateThreads);
         connect(m_playbackMode, &QComboBox::currentIndexChanged, this,
                 &SettingPage::modifiedChanged);
         connect(m_threads, &QComboBox::currentTextChanged, this, &SettingPage::modifiedChanged);

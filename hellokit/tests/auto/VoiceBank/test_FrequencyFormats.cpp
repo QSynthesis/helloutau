@@ -36,6 +36,10 @@ namespace {
         file.write(bytes);
     }
 
+    static bool hasMap(const FrequencyFormat &format, const fs::path &wav) {
+        return format.mapsExist(wav.parent_path(), {wav.filename()}).value(0);
+    }
+
     // An entry of desc.mrq of version 2
     QByteArray mrqEntry(const QString &name, const QList<float> &frequencies) {
         QByteArray data = bytesOf<qint32>(qint32(frequencies.size())) + bytesOf<qint32>(44100) +
@@ -66,8 +70,8 @@ namespace {
             return m_patterns;
         }
 
-        bool exists(const fs::path &) const override {
-            return false;
+        QList<bool> mapsExist(const fs::path &, const QList<fs::path> &wavs) const override {
+            return QList<bool>(wavs.size(), false);
         }
 
         std::optional<FrequencyMap> read(const fs::path &, int, DiagnosticList &) const override {
@@ -175,7 +179,7 @@ private Q_SLOTS:
         const BuiltinFrequencyFormats builtins(formats.registry());
         const auto frq = formats.format(QStringLiteral("frq"));
         const auto wav = pathOf("a.wav");
-        QVERIFY(!frq->exists(wav));
+        QVERIFY(!hasMap(*frq, wav));
         DiagnosticList diagnostics;
         QVERIFY(!frq->read(wav, 44100, diagnostics));
         QCOMPARE(diagnostics.size(), 1);
@@ -186,7 +190,7 @@ private Q_SLOTS:
             bytes += bytesOf(f) + bytesOf(f / 10);
         }
         write(pathOf("a_wav.frq"), bytes);
-        QVERIFY(frq->exists(wav));
+        QVERIFY(hasMap(*frq, wav));
         diagnostics.clear();
         const auto table = frq->read(wav, 44100, diagnostics);
         QVERIFY(table);
@@ -215,7 +219,7 @@ private Q_SLOTS:
         bytes += bytesOf(0.0) + bytesOf(0.0) + bytesOf(0.005) + bytesOf(261.6);
         write(pathOf("b.dio"), bytes);
         const auto wav = pathOf("b.wav");
-        QVERIFY(dio->exists(wav));
+        QVERIFY(hasMap(*dio, wav));
         DiagnosticList diagnostics;
         const auto table = dio->read(wav, 44100, diagnostics);
         QVERIFY(table);
@@ -233,15 +237,17 @@ private Q_SLOTS:
         const BuiltinFrequencyFormats builtins(formats.registry());
         const auto mrq = formats.format(QStringLiteral("mrq"));
         const auto wav = pathOf("m") / fs::path(u"い.wav");
-        QVERIFY(!mrq->exists(wav));
+        QVERIFY(!hasMap(*mrq, wav));
         QByteArray bytes("mrq ");
         bytes += bytesOf<qint32>(2) + bytesOf<qint32>(3);
         bytes += mrqEntry(QString(5, QChar(0)), {1.0f});
         bytes += mrqEntry(QStringLiteral("x.wav"), {2.0f});
         bytes += mrqEntry(QStringLiteral("い.WAV"), {0.0f, 440.0f});
         write(pathOf("m") / "desc.mrq", bytes);
-        QVERIFY(mrq->exists(wav));
-        QVERIFY(!mrq->exists(pathOf("m") / "y.wav"));
+        QVERIFY(hasMap(*mrq, wav));
+        QVERIFY(!hasMap(*mrq, pathOf("m") / "y.wav"));
+        QCOMPARE(mrq->mapsExist(pathOf("m"), {"x.wav", "y.wav", fs::path(u"い.wav")}),
+                 (QList<bool>{true, false, true}));
         DiagnosticList diagnostics;
         const auto table = mrq->read(wav, 0, diagnostics);
         QVERIFY(table);

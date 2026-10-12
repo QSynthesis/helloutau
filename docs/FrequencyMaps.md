@@ -70,7 +70,7 @@ HelloUtau 的方案：
 
 ### 生成与检查
 
-- 生成：对每个 wav 以设置中的重采样器合成一个 50 毫秒的音符（C4，力度 100，无 flags），输出写到临时文件夹后丢弃，利用重采样器缺少频率表时自动生成的行为。frqeditor 运行的是 `"<wav>" nul 100 100 GN 0 50`（qfrqeditor 的 `docs/20260928-resampler-invocation.md`「生成」），HelloUtau 不照搬：参数一律由 `utau::ResamplerArguments::arguments()` 生成（CLAUDE.md「调用外部程序」），`nul` 也只在 Windows 上存在。多个 wav 并行，数目默认为处理器数，可取消。参数以向量交给 `SynthToolProcess`，不拼接命令行。
+- 生成：对每个 wav 以设置中的重采样器合成一个 50 毫秒的音符（C4，力度 100，无 flags），输出写到临时文件夹后丢弃，利用重采样器缺少频率表时自动生成的行为。frqeditor 运行的是 `"<wav>" nul 100 100 GN 0 50`（qfrqeditor 的 `docs/20260928-resampler-invocation.md`「生成」），HelloUtau 不照搬：参数一律由 `utau::ResamplerArguments::arguments()` 生成（CLAUDE.md「调用外部程序」），`nul` 也只在 Windows 上存在。多个 wav 并行，数目沿用设置中的渲染线程数（作者 2026-10-12 决定，默认为处理器数，设置页的说明写明此用途），可取消。参数以向量交给 `SynthToolProcess`，不拼接命令行。
   - 实现（2026-10-12）：`kit::FrequencyMapGenerator`（HelloKitSynth）在后台线程运行，报告进度，结束时列出没有生成频率表的 wav 及重采样器的输出。重新生成先删除已有的表，删除由格式驱动给出（`FrequencyFormat::changesRemoving()`，与改名同样是数据驱动），由 `FrequencyFormats::removeMaps()` 执行。默认实现删除附属文件，mrq 的条目在 `desc.mrq` 中，暂不能删除，因此 mrq 只能生成缺少的表。
   - 音源窗口「工具」菜单：Generate Missing Frequency Maps（全部目录中没有表的 wav）、Regenerate Frequency Maps of Selection（选中条目的 wav）、Regenerate All Frequency Maps...（全部 wav，先确认）、Delete All Frequency Maps...（先确认）。格式为设置中的重采样器对应的格式（`formatForResampler()`），与波形上方「F0」框的选择无关，因为生成只能由该重采样器完成。
 - 检查与修正：qfrqeditor 以进程内的实现代替 `checkfrq.dll`，与原 DLL 逐帧比较约 486 万帧结果一致，可直接移入。
@@ -126,7 +126,7 @@ qfrqeditor 的 `Core` 按本仓库规范重写后移入 hellokit 的新子库（
 
 - 格式层（`HelloKitVoiceBank`）：
   - `kit::FrequencyMap`：各格式的公共部分，每帧的时间（毫秒）、频率（赫兹，0 为无声）与可选的振幅，以及可选的平均频率。
-  - `kit::FrequencyFormat`：格式驱动，目前只有标识、名称、重采样器文件名的通配符、`exists()` 与 `read()`；写、删除与生成到后面的步骤再加。
+  - `kit::FrequencyFormat`：格式驱动，目前只有标识、名称、重采样器文件名的通配符、`mapsExist()` 与 `read()`；写、删除与生成到后面的步骤再加。`mapsExist()` 一次查询一个目录中的多个 wav（作者 2026-10-12 决定，取代逐个 wav 的 `exists()`），mrq 因此只读一次 `desc.mrq`。
   - `kit::FrequencyFormats`：一个宿主（编辑器）的格式，为 `registry()`（`kit::FrequencyFormatRegistry`，即 `stdc::DynamicRegistry`）中的每个条目创建一个实例；内置格式与插件格式同一途径登记（`Add<V>` 或 `AddFactory`），条目名称即格式 ID，ID 重复的登记失败，实例的 `id()` 与名称不同时被拒绝；`formatForResampler()` 按重采样器的文件名（整名匹配、不分大小写）取匹配的格式，都不匹配时为 frq。不执行任何程序。原先先注册者优先、以 `kit::FrequencyFormatPlugin` 加入插件格式，插件机制改定后改为后登记者优先，见 [`Plugins.md`](Plugins.md) 实施步骤 4。
   - 内置三种有公开资料的格式，注释引用的都是公开资料：
     - frq（`resampler*.exe`）：`a_wav.frq`，布局按 OpenUtau 0.1.565 的 `Frq.cs`；帧时间由帧间隔与 wav 的采样率算出。
