@@ -314,24 +314,99 @@ private Q_SLOTS:
         QVERIFY(fs::exists(directory / "a.wav"));
     }
 
-    // A format whose maps cannot be renamed returns the reason, which the caller reports. The
-    // encoding in which moresampler names the entries of desc.mrq is yet to be measured.
+    // A format whose maps cannot be renamed returns the reason, which the caller reports.
     void a_format_without_renames_reports_it() {
-        FrequencyFormats formats;
-        const BuiltinFrequencyFormats builtins(formats.registry());
         const QList<FrequencyFormat::AudioRename> renames{
             {"a.wav", "b.wav"}
         };
         DiagnosticList diagnostics;
-        QVERIFY(!formats.format(QStringLiteral("mrq"))
-                     ->changesRenaming(pathOf("r"), renames, diagnostics));
-        QCOMPARE(diagnostics.size(), 1);
-        QCOMPARE(diagnostics.at(0).severity, DiagnosticSeverity::Warning);
-        QVERIFY(diagnostics.at(0).message.contains(QStringLiteral("mrq (moresampler)")));
-
-        diagnostics.clear();
         QVERIFY(!Fixed(QStringLiteral("x")).changesRenaming(pathOf("r"), renames, diagnostics));
         QCOMPARE(diagnostics.size(), 1);
+        QCOMPARE(diagnostics.at(0).severity, DiagnosticSeverity::Warning);
+    }
+
+    // The caches are declared with the names of their files.
+    void the_analysis_caches_are_declared() {
+        FrequencyFormats formats;
+        const BuiltinFrequencyFormats builtins(formats.registry());
+        QVERIFY(formats.format(QStringLiteral("frq"))->analysisCaches().isEmpty());
+        const auto dio = formats.format(QStringLiteral("dio"))->analysisCaches();
+        QCOMPARE(dio.size(), 2);
+        QCOMPARE(dio.at(0).name, QStringLiteral("STAR"));
+        QCOMPARE(dio.at(0).fileNameOf(pathOf("a.wav")), fs::path("a.star"));
+        QCOMPARE(dio.at(1).fileNameOf("a.wav"), fs::path("a.platinum"));
+        const auto mrq = formats.format(QStringLiteral("mrq"))->analysisCaches();
+        QCOMPARE(mrq.size(), 1);
+        QCOMPARE(mrq.at(0).name, QStringLiteral("LLSM"));
+        QCOMPARE(mrq.at(0).fileNameOf(fs::path(u"あ.wav")), fs::path(u"あ.wav.llsm"));
+    }
+
+    // Removing the caches keeps the maps, and removing the maps removes their caches.
+    void the_caches_are_removed_with_or_without_the_maps() {
+        QDir(m_dir.path()).mkdir(QStringLiteral("c"));
+        const auto directory = pathOf("c");
+        QByteArray bytes("mrq ");
+        bytes += bytesOf<qint32>(2) + bytesOf<qint32>(1);
+        bytes += mrqEntry(QStringLiteral("a.wav"), {2.0f});
+        write(directory / "desc.mrq", bytes);
+        write(directory / "a.wav.llsm", "llsm");
+        FrequencyFormats formats;
+        const BuiltinFrequencyFormats builtins(formats.registry());
+        const auto mrq = formats.format(QStringLiteral("mrq"));
+
+        DiagnosticList diagnostics;
+        QVERIFY(FrequencyFormats::invalidateCaches(*mrq, directory, {"a.wav"}, diagnostics));
+        QVERIFY(!fs::exists(directory / "a.wav.llsm"));
+        QVERIFY(hasMap(*mrq, directory / "a.wav"));
+
+        write(directory / "a.wav.llsm", "llsm");
+        QVERIFY(FrequencyFormats::removeMaps(*mrq, directory, {"a.wav"}, diagnostics));
+        QVERIFY(!fs::exists(directory / "a.wav.llsm"));
+        QVERIFY(!hasMap(*mrq, directory / "a.wav"));
+        QVERIFY(diagnostics.isEmpty());
+    }
+
+    // The entries of renamed audio files are appended under the new names, whose old names and
+    // an entry under a new name are zeroed, and the LLSM files are renamed. Two audio files
+    // exchange their entries.
+    void the_entries_of_desc_mrq_follow_their_renames() {
+        QDir(m_dir.path()).mkdir(QStringLiteral("n"));
+        const auto directory = pathOf("n");
+        QByteArray bytes("mrq ");
+        bytes += bytesOf<qint32>(2) + bytesOf<qint32>(3);
+        bytes += mrqEntry(QStringLiteral("a.wav"), {1.0f});
+        bytes += mrqEntry(QStringLiteral("x.wav"), {2.0f});
+        bytes += mrqEntry(QStringLiteral("C.WAV"), {3.0f});
+        write(directory / "desc.mrq", bytes);
+        write(directory / "a.wav.llsm", "llsm");
+        FrequencyFormats formats;
+        const BuiltinFrequencyFormats builtins(formats.registry());
+        const auto mrq = formats.format(QStringLiteral("mrq"));
+        const QList<FrequencyFormat::AudioRename> renames{
+            {"a.wav", "x.wav"},
+            {"x.wav", "a.wav"},
+            {"b.wav", "c.wav"},
+        };
+
+        DiagnosticList diagnostics;
+        const auto changes = mrq->changesRenaming(directory, renames, diagnostics);
+        QVERIFY(changes);
+        QVERIFY(diagnostics.isEmpty());
+        QCOMPARE(changes->size(), 2);
+        QCOMPARE(changes->at(0).kind, FrequencyFormat::FileChange::Rename);
+        QCOMPARE(changes->at(0).path, fs::path("a.wav.llsm"));
+        QCOMPARE(changes->at(0).to, fs::path("x.wav.llsm"));
+        QCOMPARE(changes->at(1).kind, FrequencyFormat::FileChange::Rewrite);
+        QCOMPARE(changes->at(1).path, fs::path("desc.mrq"));
+
+        QByteArray expected("mrq ");
+        expected += bytesOf<qint32>(2) + bytesOf<qint32>(5);
+        expected += mrqEntry(QString(5, QChar(0)), {1.0f});
+        expected += mrqEntry(QString(5, QChar(0)), {2.0f});
+        expected += mrqEntry(QString(5, QChar(0)), {3.0f});
+        expected += mrqEntry(QStringLiteral("x.wav"), {1.0f});
+        expected += mrqEntry(QStringLiteral("a.wav"), {2.0f});
+        QCOMPARE(changes->at(1).contents, expected);
     }
 
     // A format of a plugin that names the sidecar file of each audio file follows renames without

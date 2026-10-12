@@ -35,6 +35,7 @@ namespace hello::daw {
     ///      "synthTools": {"resampler": ..., "wavtool": ...},
     ///      "renderLog": {"accumulated": ..., "limit": ...},
     ///      "playback": {"mode": ..., "threads": ...},
+    ///      "frequencyMaps": {"threads": ..., "regeneration": ...},
     ///      "audio": {"outputDevice": ...},
     ///      "appearance": {"language": ...},
     ///      "view": {"showPitch": ..., "showRenderedPitch": ..., "showEnvelopes": ...,
@@ -95,6 +96,7 @@ namespace hello::daw {
         std::unique_ptr<UtauSettings> utau;
         std::unique_ptr<VoiceBankSettings> voiceBanks;
         std::unique_ptr<RenderingSettings> rendering;
+        std::unique_ptr<FrequencyMapSettings> frequencyMaps;
         std::unique_ptr<AudioSettings> audio;
         std::unique_ptr<AppearanceSettings> appearance;
         std::unique_ptr<ViewSettings> view;

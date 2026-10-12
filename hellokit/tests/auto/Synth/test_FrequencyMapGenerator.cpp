@@ -141,6 +141,21 @@ private Q_SLOTS:
         }
     }
 
+    // With everyFile, an audio file with a map is rendered as well, for its caches.
+    void every_file_is_rendered_if_asked() {
+        const QList<fs::path> wavs{write("a.wav"), write("b.wav")};
+        write("b.map");
+        const SidecarFormat format;
+        FrequencyMapGenerator generator;
+        generator.everyFile = true;
+        const auto standIn = std::make_shared<StandIn>();
+        generator.process = standIn;
+        DiagnosticList diagnostics;
+        QCOMPARE(generator.generate(format, "resampler.exe", wavs, diagnostics), 2);
+        QCOMPARE(standIn->calls.size(), 2);
+        QVERIFY(diagnostics.isEmpty());
+    }
+
     // An audio file whose map the resampler does not write is reported with the output.
     void a_map_not_written_is_reported() {
         const QList<fs::path> wavs{write("silent.wav"), write("a.wav")};

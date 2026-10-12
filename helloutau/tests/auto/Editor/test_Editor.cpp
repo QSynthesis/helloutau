@@ -87,6 +87,7 @@
 #include <helloutau/Editor/Dialogs/ScalePitchDialog.h>
 #include <helloutau/Editor/Dialogs/PitchControlDialog.h>
 #include <helloutau/Editor/Dialogs/VoiceBankDecodingDialog.h>
+#include <helloutau/Editor/SettingPages/FrequencyMapSettingPage.h>
 #include <helloutau/Editor/VoiceBankEntryModel.h>
 #include <helloutau/Editor/VoiceBankInfoPanel.h>
 #include <helloutau/Editor/VoiceBankWindow.h>
@@ -1159,7 +1160,8 @@ private Q_SLOTS:
         }
         QCOMPARE(topLevel,
                  (QStringList{"editor.AppearanceAndBehavior", "editor.Editor", "editor.Utau",
-                              "editor.Audio", "test.top", "editor.Rendering", "test.orphan"}));
+                              "editor.Audio", "test.top", "editor.Rendering",
+                              "editor.FrequencyMaps", "test.orphan"}));
         const auto parent = catalog->page(QStringLiteral("editor.AppearanceAndBehavior"));
         QCOMPARE(parent->pages().first()->id(), QStringLiteral("test.child"));
         QVERIFY(!catalog->page(QStringLiteral("test.other")));
@@ -1180,8 +1182,9 @@ private Q_SLOTS:
             topLevel.push_back(page->id());
         }
         // Keymap and Menus and Toolbars are pages of the core plugin, see test_CoreSettingPages.
-        QCOMPARE(topLevel, (QStringList{"editor.AppearanceAndBehavior", "editor.Editor",
-                                        "editor.Utau", "editor.Audio", "editor.Rendering"}));
+        QCOMPARE(topLevel,
+                 (QStringList{"editor.AppearanceAndBehavior", "editor.Editor", "editor.Utau",
+                              "editor.Audio", "editor.Rendering", "editor.FrequencyMaps"}));
         const auto system = e->settingCatalog()->page(QStringLiteral("editor.SystemSettings"));
         QVERIFY(system);
         QCOMPARE(system->parentPage()->id(), QStringLiteral("editor.AppearanceAndBehavior"));
@@ -2878,7 +2881,8 @@ private Q_SLOTS:
         QCOMPARE(read(bank / "c_wav.frq"), std::string("FREQ0003"));
         QCOMPARE(read(bank / "sub" / "x_wav.frq"), std::string("old"));
 
-        // Without a format in the box, the column is empty.
+        // Without a format in the box, the column is empty, and the box does not choose the
+        // format of the generation.
         const auto box = window->frequencyFormatBox();
         QVERIFY(box);
         box->setCurrentIndex(box->findData(QString()));
@@ -2891,6 +2895,101 @@ private Q_SLOTS:
         QVERIFY(!fs::exists(bank / "c_wav.frq"));
         QVERIFY(!fs::exists(bank / "sub" / "x_wav.frq"));
         QVERIFY(fs::exists(bank / "a.wav"));
+    }
+
+    // Regenerating the caches only, as the settings specify, keeps the maps and renders every
+    // audio file, so that the resampler writes the caches again from the maps. Otherwise the
+    // maps are removed with their caches.
+    void the_caches_are_regenerated_from_the_maps() {
+        // world4utau, which writes a missing dio and a missing star of its input
+        class StandIn : public kit::SynthToolProcess {
+        public:
+            mutable std::atomic<int> calls = 0;
+
+            kit::SynthToolRun run(const fs::path &, const QStringList &arguments,
+                                  kit::DiagnosticList &,
+                                  const std::function<bool()> &) const override {
+                ++calls;
+                const fs::path wav(arguments.at(0).toStdU16String());
+                for (const auto extension : {".dio", ".star"}) {
+                    const auto path = wav.parent_path() / (fs::path(wav.stem()) += extension);
+                    if (!fs::exists(path)) {
+                        writeFile(path, extension + 1);
+                    }
+                }
+                kit::SynthToolRun out;
+                out.started = true;
+                return out;
+            }
+        };
+        QTemporaryDir dir;
+        const auto bank = voiceBank(dir);
+        writeFile(bank / "a.dio", "old");
+        writeFile(bank / "a.star", "old");
+        const auto e = editor();
+        e->settings().rendering().setResampler(QStringLiteral("C:/synthTools/w4u.exe"));
+        e->settings().frequencyMaps().setRegeneration(FrequencyMapSettings::CachesOnly);
+        e->settings().frequencyMaps().setThreadCount(3);
+        const auto restore = qScopeGuard([&e] {
+            e->settings().frequencyMaps().setRegeneration(FrequencyMapSettings::MapsAndCaches);
+            e->settings().frequencyMaps().setThreadCount(0);
+        });
+        const auto window = e->openVoiceBank(bank);
+        QVERIFY(window);
+        const auto standIn = std::make_shared<StandIn>();
+        window->frequencyMapGenerator().process = standIn;
+        const auto read = [](const fs::path &path) {
+            std::ifstream file(path, std::ios::binary);
+            return std::string(std::istreambuf_iterator<char>(file), {});
+        };
+
+        answerMessageBox(QMessageBox::Yes);
+        QVERIFY(window->generateFrequencyMaps(VoiceBankWindow::AllFrequencyMaps));
+        QCOMPARE(standIn->calls.load(), 3);
+        QCOMPARE(window->frequencyMapGenerator().threadCount, 3);
+        QCOMPARE(read(bank / "a.dio"), std::string("old"));
+        QCOMPARE(read(bank / "a.star"), std::string("star"));
+
+        writeFile(bank / "a.star", "old");
+        e->settings().frequencyMaps().setRegeneration(FrequencyMapSettings::MapsAndCaches);
+        answerMessageBox(QMessageBox::Yes);
+        QVERIFY(window->generateFrequencyMaps(VoiceBankWindow::AllFrequencyMaps));
+        QCOMPARE(read(bank / "a.dio"), std::string("dio"));
+        QCOMPARE(read(bank / "a.star"), std::string("star"));
+    }
+
+    // The page of the frequency maps sets the generation threads apart from the rendering
+    // threads and the regeneration, and lists the analysis caches of each registered format.
+    void the_frequency_map_page_lists_the_caches() {
+        const auto e = editor();
+        const auto page = qobject_cast<FrequencyMapSettingPage *>(
+            e->settingCatalog()->page(QLatin1String(FrequencyMapSettingPage::pageId)));
+        QVERIFY(page);
+        QVERIFY(page->widget());
+        const auto list = page->cacheList();
+        QString mrq;
+        for (int i = 0; i < list->topLevelItemCount(); ++i) {
+            const auto item = list->topLevelItem(i);
+            if (item->text(0).startsWith(QStringLiteral("mrq"))) {
+                mrq = item->text(1) + QLatin1Char('|') + item->text(2);
+            }
+        }
+        QCOMPARE(mrq, QStringLiteral("LLSM|a.wav.llsm"));
+
+        const auto restore = qScopeGuard([&e] {
+            e->settings().frequencyMaps().setThreadCount(0);
+            e->settings().frequencyMaps().setRegeneration(FrequencyMapSettings::MapsAndCaches);
+        });
+        QVERIFY(!page->isModified());
+        page->threadCountBox()->setEditText(QStringLiteral("3"));
+        page->regenerationBox()->setCurrentIndex(
+            page->regenerationBox()->findData(FrequencyMapSettings::CachesOnly));
+        QVERIFY(page->isModified());
+        QString error;
+        QVERIFY(page->apply(&error));
+        QCOMPARE(e->settings().frequencyMaps().threadCount(), 3);
+        QCOMPARE(e->settings().rendering().threadCount(), 0);
+        QCOMPARE(e->settings().frequencyMaps().regeneration(), FrequencyMapSettings::CachesOnly);
     }
 
     // The folders are read again in the encodings chosen in one dialog, the changed folders only,

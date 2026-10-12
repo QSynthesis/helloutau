@@ -70,8 +70,8 @@ HelloUtau 的方案：
 
 ### 生成与检查
 
-- 生成：对每个 wav 以设置中的重采样器合成一个 50 毫秒的音符（C4，力度 100，无 flags），输出写到临时文件夹后丢弃，利用重采样器缺少频率表时自动生成的行为。frqeditor 运行的是 `"<wav>" nul 100 100 GN 0 50`（qfrqeditor 的 `docs/20260928-resampler-invocation.md`「生成」），HelloUtau 不照搬：参数一律由 `utau::ResamplerArguments::arguments()` 生成（CLAUDE.md「调用外部程序」），`nul` 也只在 Windows 上存在。多个 wav 并行，数目沿用设置中的渲染线程数（作者 2026-10-12 决定，默认为处理器数，设置页的说明写明此用途），可取消。参数以向量交给 `SynthToolProcess`，不拼接命令行。
-  - 实现（2026-10-12）：`kit::FrequencyMapGenerator`（HelloKitSynth）在后台线程运行，报告进度，结束时列出没有生成频率表的 wav 及重采样器的输出。重新生成先删除已有的表，删除由格式驱动给出（`FrequencyFormat::changesRemoving()`，与改名同样是数据驱动），由 `FrequencyFormats::removeMaps()` 执行。默认实现删除附属文件。mrq 的条目在 `desc.mrq` 中，按 mrq 库的 `mrq_delete_entry()` 把条目名置 0 删除，数据留在原处。删除条目之后 moresampler 是否重新分析并追加条目、是否须同时删除 `.llsm` 缓存，待作者实测。
+- 生成：对每个 wav 以设置中的重采样器合成一个 50 毫秒的音符（C4，力度 100，无 flags），输出写到临时文件夹后丢弃，利用重采样器缺少频率表时自动生成的行为。frqeditor 运行的是 `"<wav>" nul 100 100 GN 0 50`（qfrqeditor 的 `docs/20260928-resampler-invocation.md`「生成」），HelloUtau 不照搬：参数一律由 `utau::ResamplerArguments::arguments()` 生成（CLAUDE.md「调用外部程序」），`nul` 也只在 Windows 上存在。多个 wav 并行，数目在设置的「频率表」页单独设置，默认为处理器数，可取消。生成线程数不沿用渲染线程数，因为经典模式的播放不用渲染线程（作者 2026-10-12 决定）。参数以向量交给 `SynthToolProcess`，不拼接命令行。
+  - 实现（2026-10-12）：`kit::FrequencyMapGenerator`（HelloKitSynth）在后台线程运行，报告进度，结束时列出没有生成频率表的 wav 及重采样器的输出。重新生成先删除已有的表，删除由格式驱动给出（`FrequencyFormat::changesRemoving()`，与改名同样是数据驱动），由 `FrequencyFormats::removeMaps()` 执行。默认实现删除附属文件。mrq 的条目在 `desc.mrq` 中，按 mrq 库的 `mrq_delete_entry()` 把条目名置 0 删除，数据留在原处。删除频率表时一律连同分析缓存（见下文「分析缓存」）。
   - 音源窗口「工具」菜单：Generate Missing Frequency Maps（全部目录中没有表的 wav）、Regenerate Frequency Maps of Selection（选中条目的 wav）、Regenerate All Frequency Maps...（全部 wav，先确认）、Delete All Frequency Maps...（先确认）。格式为设置中的重采样器对应的格式（`formatForResampler()`），与波形上方「F0」框的选择无关，因为生成只能由该重采样器完成。
 - 检查与修正：qfrqeditor 以进程内的实现代替 `checkfrq.dll`，与原 DLL 逐帧比较约 486 万帧结果一致，可直接移入。
 - 试听：第 4 步的试合成已以设置中的重采样器合成一个音符，编辑频率表后再试合成即可听到效果，不另做 frqeditor 的试听。
@@ -93,8 +93,9 @@ qfrqeditor 的 `Core` 按本仓库规范重写后移入 hellokit 的新子库（
 | 存储位置 | 由 wav 的路径得到表的位置。多数格式一个 wav 一个文件（`a_wav.frq`、`a.dio`），mrq 是**每个目录一个数据库** `desc.mrq` 中的一个条目（qfrqeditor 的 `docs/20260928-mrq-database.md`），因此抽象须能表达「目录中的一个条目」，不能只是一个文件路径 |
 | 读 | 返回频率表的值，或带原因的诊断 |
 | 写 | 可以不支持（只读格式）；写时保留格式中本程序不理解的部分 |
-| 删除 | 连同附属的缓存，如 dio 的 `.star`、`.platinum`，mrq 的 `.llsm`。接口为 `FrequencyFormat::changesRemoving()`，与改名同样给出 `FileChange` 列表（删除），由 `FrequencyFormats::removeMaps()` 执行。默认实现删除 `sidecarNameOf()` 所指的附属文件。dio 覆盖改名与删除，`.star`、`.platinum` 随 `.dio` 一起改名或删除（world4utau 源码中的 `writeSTARParam()`、`writePlatinumParam()`）。mrq 覆盖删除，按 mrq 库的 `mrq_delete_entry()` 把条目名置 0（数据留在原处，不整理文件），作为一次 `desc.mrq` 的改写，大小写不同的同名条目一并删除。`.llsm` 的命名没有公开资料，暂不删除（2026-10-12） |
-| 改名 | wav 改名时给出须执行的操作，驱动本身不改磁盘（作者 2026-10-11 决定，见 [`Editing.md`](Editing.md)「文件名编码错解的处理」）。一个 wav 一个文件的格式把表改名，mrq 改写 `desc.mrq` 中条目的名称，附属的缓存一起改名。一个目录中多个 wav 的改名一次给出，`desc.mrq` 因此只改写一次。调用方把这些操作纳入保存时的检查、执行与回滚。不支持改名的格式，由调用方报告其表没有随 wav 改名。`desc.mrq` 中条目名称的编码须先实测。接口为 `FrequencyFormat::changesRenaming()`，以目录中的 `AudioRename` 列表求出 `FileChange` 列表（改名或改写）。每个 wav 旁边一个附属文件（sidecar file）的格式只需实现 `sidecarNameOf()`，默认实现据此让附属文件随 wav 改名。不实现它的格式由默认实现返回 `std::nullopt` 并说明不随 wav 改名，frq 与 dio 已实现（2026-10-12），mrq 待实测 |
+| 删除 | 接口为 `FrequencyFormat::changesRemoving()`，只给出删除频率表本身的 `FileChange` 列表，默认实现删除 `sidecarNameOf()` 所指的附属文件。mrq 覆盖删除，按 mrq 库的 `mrq_delete_entry()` 把条目名置 0（数据留在原处，不整理文件），作为一次 `desc.mrq` 的改写，大小写不同的同名条目一并删除。`FrequencyFormats::removeMaps()` 执行它与 `changesInvalidating()`，即频率表连同分析缓存一起删除（2026-10-12） |
+| 分析缓存 | 格式以 `analysisCaches()` 声明重采样器的分析缓存（`AnalysisCache`：显示名称、命名方式与后缀），默认没有。dio 声明 STAR 与 PLATINUM（替换扩展名，world4utau 源码中的 `writeSTARParam()`、`writePlatinumParam()`），mrq 声明 LLSM（追加后缀，实测见下文）。默认实现据此让缓存随 wav 改名，`changesInvalidating()` 给出删除缓存的改动，`FrequencyFormats::invalidateCaches()` 执行，设置页据此列出各格式的缓存（作者 2026-10-12 决定，数据驱动，不与界面耦合） |
+| 改名 | wav 改名时给出须执行的操作，驱动本身不改磁盘（作者 2026-10-11 决定，见 [`Editing.md`](Editing.md)「文件名编码错解的处理」）。一个 wav 一个文件的格式把表改名，mrq 改写 `desc.mrq`（照 mrq 库的 `mrq_write_entry()` 在空间不足时的做法，把旧条目名置 0，在末尾追加同样数据、新名字的条目），分析缓存一起改名。一个目录中多个 wav 的改名一次给出，`desc.mrq` 因此只改写一次。调用方把这些操作纳入保存时的检查、执行与回滚。不支持改名的格式，由调用方报告其表没有随 wav 改名。`desc.mrq` 的条目名即 wav 文件名的 UTF-16（实测见下文）。接口为 `FrequencyFormat::changesRenaming()`，以目录中的 `AudioRename` 列表求出 `FileChange` 列表（改名或改写）。每个 wav 旁边一个附属文件（sidecar file）的格式只需实现 `sidecarNameOf()`，默认实现据此让附属文件随 wav 改名。不实现它的格式由默认实现返回 `std::nullopt` 并说明不随 wav 改名，frq 与 dio 已实现，mrq 覆盖实现（2026-10-12） |
 | 生成方式 | 「运行对应的重采样器」（默认）或驱动自己的分析（如 vs4ufrq 经 `vslib.dll`，或将来内置的分析器） |
 
 频率表的值（暂名 `FrequencyMap`）是各格式的公共部分：帧间隔（样本数，可以不是整数，如 220.5）、采样率、每帧的频率与可选的振幅、格式自己的「平均频率」。格式特有而公共部分不含的数据由驱动自己保存，保证读入后原样写出（与本仓库保存 UST、oto.ini 时「写回不改变未编辑的内容」的原则相同）。
@@ -113,6 +114,27 @@ qfrqeditor 的 `Core` 按本仓库规范重写后移入 hellokit 的新子库（
 
 - **vs4ufrq** 须经 Windows 上的 `vslib.dll`（1.52 及以上的 64 位版本，作者已定）。建议做成可选的驱动：找不到 `vslib.dll` 时不注册，其他平台上不可用。
 - **frc、pmk** 没有公开资料，而本仓库的注释只引用公开资料（`frqeditor-reference.md`「须另行解决的问题」）。**待定 6**：内置这两种格式时注释的来源怎么写；或者不内置，由插件提供（问题三的抽象正好使之可行）。
+
+## 分析缓存
+
+moresampler 等重采样器把从 wav 分析出的结果保存为缓存，其中含有基频，合成时读缓存而不读频率表。频率表改动之后，缓存须删除，合成才会按新的频率表进行。qfrqeditor 对此有两处设置：保存频率表时自动删除缓存，以及重新生成时「频率表与缓存都重新生成」或「只重新生成缓存」。HelloUtau 照此设计，缓存由格式声明（见上表「分析缓存」）。
+
+**实测**（2026-10-12，moresampler 0.8.4，临时文件夹中的副本，`auto-update-llsm-mrq on`，输入为生成的正弦波 wav）：
+
+| 操作 | 再次合成后 |
+|---|---|
+| 只把条目名置 0，保留 `.llsm` | `desc.mrq` 不变，条目不会重新生成 |
+| 条目名置 0，并删除 `.llsm` | 重新分析，在 `desc.mrq` 末尾追加新条目，并重建 `.llsm` |
+| 只删除 `.llsm`，保留条目 | 只重建 `.llsm`，`desc.mrq` 不变，即按已有条目的基频重建缓存 |
+
+这与 moresampler 的 readme（0.3.0）一致：创建 `.llsm` 之前才读 `desc.mrq`，缺少条目时补上。`.llsm` 的名字为 wav 的完整文件名加 `.llsm`（`a.wav.llsm`、`あ.wav.llsm`），条目名为 wav 文件名的 UTF-16（`あ.wav` 存为 U+3042）。本机代码页（GBK）无法表示的文件名（`한.wav`），moresampler 直接失败，与 UTAU 的限制相同。
+
+因此删除频率表时一律连同缓存，否则条目不会再生成。设置的「频率表」页（作者 2026-10-12 决定单独一页）：
+
+- 生成线程数：与渲染线程数同样的组合框，单独设置。
+- 重新生成时：「删除频率表及其分析缓存」（默认）或「只删除分析缓存，保留频率表」。后者删除缓存后对每个 wav 都运行重采样器（`FrequencyMapGenerator::everyFile`），由重采样器按频率表重建缓存。没有缓存的格式照常删除频率表。
+- 分析缓存：列出每个已登记格式的缓存与 `a.wav` 对应的文件名，插件登记的格式同样列出。
+- 保存频率表时自动删除缓存：待频率表编辑实现时加入。
 
 ## 频谱的计算
 

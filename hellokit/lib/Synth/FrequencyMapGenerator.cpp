@@ -94,7 +94,7 @@ namespace hello::kit {
             for (qsizetype i = 0; i < wavs.size(); ++i) {
                 pool.start([&, i] {
                     const auto &wav = wavs.at(i);
-                    if (!stop() && !present.at(i)) {
+                    if (!stop() && (everyFile || !present.at(i))) {
                         utau::ResamplerArguments arguments;
                         arguments.inFile = wav.u8string();
                         arguments.outFile =

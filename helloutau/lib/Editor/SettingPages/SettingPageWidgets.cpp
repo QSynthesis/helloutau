@@ -1,6 +1,13 @@
 #include "SettingPageWidgets_p.h"
 
+#include <algorithm>
+#include <limits>
+#include <thread>
+
+#include <QtCore/QCoreApplication>
 #include <QtCore/QDir>
+#include <QtGui/QIntValidator>
+#include <QtWidgets/QComboBox>
 #include <QtWidgets/QFileDialog>
 #include <QtWidgets/QFormLayout>
 #include <QtWidgets/QHBoxLayout>
@@ -44,4 +51,37 @@ namespace hello::daw {
         return label;
     }
 
+    QComboBox *createThreadCountBox(int current) {
+        const int hardware = int(std::max(1u, std::thread::hardware_concurrency()));
+        auto box = new QComboBox();
+        box->setEditable(true);
+        box->setInsertPolicy(QComboBox::NoInsert);
+        box->setValidator(new QIntValidator(1, std::numeric_limits<int>::max(), box));
+        box->addItem(QCoreApplication::translate("hello::daw::SettingPageWidgets", "Automatic (%1)")
+                         .arg(hardware),
+                     0);
+        for (int count = 1; count < hardware; count *= 2) {
+            box->addItem(QString::number(count), count);
+        }
+        box->addItem(QString::number(hardware), hardware);
+        if (const int index = box->findData(current); index >= 0) {
+            box->setCurrentIndex(index);
+        } else {
+            box->setEditText(QString::number(current));
+        }
+        return box;
+    }
+
+    std::optional<int> threadCountOf(const QComboBox *box) {
+        const auto text = box->currentText();
+        if (const int index = box->findText(text); index >= 0) {
+            return box->itemData(index).toInt();
+        }
+        bool number = false;
+        const int count = text.trimmed().toInt(&number);
+        if (!number || count < 1) {
+            return std::nullopt;
+        }
+        return count;
+    }
 }

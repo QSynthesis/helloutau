@@ -168,7 +168,7 @@ namespace hello::daw {
             updateChecker =
                 new UpdateChecker(*settings, UpdateChecker::ManifestFile::defaultFileName(), decl);
             updateChecker->setCloseWindows([decl] { return decl->closeAll(); });
-            addEditorSettingPages(catalog, *settings, *updateChecker);
+            addEditorSettingPages(catalog, *settings, *updateChecker, *frequencyFormats);
             pages = std::make_unique<Pages>(
                 *pageRegistry, [this](Pages::Item &item) { return pageAdded(item); },
                 [this](Pages::Item &item) { pageRemoved(item); });

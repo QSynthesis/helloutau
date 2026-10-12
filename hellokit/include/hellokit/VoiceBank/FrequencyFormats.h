@@ -54,21 +54,36 @@ namespace hello::kit {
         FrequencyFormat *formatForResampler(const std::filesystem::path &resampler) const;
 
         /// Removes the maps of \a format of the audio files \a wavs, names in the directory
-        /// \a directory, as FrequencyFormat::changesRemoving() returns the changes. A file that
-        /// cannot be changed is reported in \a diagnostics, and the other changes are made
-        /// regardless.
+        /// \a directory, with their analysis caches, as FrequencyFormat::changesRemoving() and
+        /// FrequencyFormat::changesInvalidating() return the changes. A file that cannot be
+        /// changed is reported in \a diagnostics, and the other changes are made regardless.
         ///
-        /// \return whether every map was removed
+        /// \return whether every map and every cache was removed
         static bool removeMaps(const FrequencyFormat &format,
                                const std::filesystem::path &directory,
                                const QList<std::filesystem::path> &wavs,
                                DiagnosticList &diagnostics);
+
+        /// Removes the analysis caches of \a format of the audio files \a wavs, names in the
+        /// directory \a directory, and keeps the maps, so that the resampler writes the caches
+        /// again from the maps, as removeMaps() reports failures.
+        ///
+        /// \return whether every cache was removed
+        static bool invalidateCaches(const FrequencyFormat &format,
+                                     const std::filesystem::path &directory,
+                                     const QList<std::filesystem::path> &wavs,
+                                     DiagnosticList &diagnostics);
 
     Q_SIGNALS:
         /// Emitted after a format was registered or unregistered.
         void formatsChanged();
 
     private:
+        // Makes changes in directory, each failure reported and the others made regardless.
+        static bool execute(const std::filesystem::path &directory,
+                            const QList<FrequencyFormat::FileChange> &changes,
+                            DiagnosticList &diagnostics);
+
         class Impl;
         std::unique_ptr<Impl> _impl;
 

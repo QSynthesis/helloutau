@@ -11,6 +11,7 @@
 #include <helloutau/Editor/Settings/AudioSettings.h>
 #include <helloutau/Editor/Settings/CommandPaletteSettings.h>
 #include <helloutau/Editor/Settings/FileSettings.h>
+#include <helloutau/Editor/Settings/FrequencyMapSettings.h>
 #include <helloutau/Editor/Settings/PitchControlSettings.h>
 #include <helloutau/Editor/Settings/RenderingSettings.h>
 #include <helloutau/Editor/Settings/UpdateSettings.h>
@@ -78,6 +79,8 @@ namespace hello::daw {
         const VoiceBankSettings &voiceBanks() const;
         RenderingSettings &rendering();
         const RenderingSettings &rendering() const;
+        FrequencyMapSettings &frequencyMaps();
+        const FrequencyMapSettings &frequencyMaps() const;
         AudioSettings &audio();
         const AudioSettings &audio() const;
         AppearanceSettings &appearance();

@@ -38,19 +38,24 @@ namespace hello::kit {
         /// The number of concurrent resampler calls, or zero for one per hardware thread.
         int threadCount = 0;
 
+        /// Whether an audio file that has a map is rendered as well, so that the resampler
+        /// writes its removed analysis caches again from the map. False by default.
+        bool everyFile = false;
+
         /// The process that runs the resampler, which a test replaces with a substitute.
         std::shared_ptr<SynthToolProcess> process;
 
-        /// Generates the map of \a format of each audio file of \a wavs that has none, by running
-        /// \a resampler, and returns on completion. An audio file that has no map afterwards is
-        /// reported in \a diagnostics with the output of the resampler.
+        /// Generates the map of \a format of each audio file of \a wavs that has none, or of every
+        /// audio file if everyFile is set, by running \a resampler, and returns on completion.
+        /// An audio file that has no map afterwards is reported in \a diagnostics with the output
+        /// of the resampler.
         ///
         /// \param progress called after each audio file with the number of audio files done, on
         ///        a thread of the generation, or empty
         /// \param cancelled queried on the threads of the generation while resamplers run, or
         ///        empty. Once it returns true, the running resamplers are killed and no further
         ///        audio file is started.
-        /// \return the number of maps generated
+        /// \return the number of audio files rendered that have a map afterwards
         int generate(const FrequencyFormat &format, const std::filesystem::path &resampler,
                      const QList<std::filesystem::path> &wavs, DiagnosticList &diagnostics,
                      const std::function<void(int)> &progress = {},

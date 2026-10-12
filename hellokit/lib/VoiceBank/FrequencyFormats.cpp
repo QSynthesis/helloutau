@@ -37,10 +37,57 @@ namespace hello::kit {
         return change;
     }
 
+    std::filesystem::path
+        FrequencyFormat::AnalysisCache::fileNameOf(const std::filesystem::path &wav) const {
+        auto name = wav.filename();
+        if (naming == AppendedSuffix) {
+            return name += suffix.toStdU16String();
+        }
+        return name.replace_extension(suffix.toStdU16String());
+    }
+
     std::optional<std::filesystem::path>
         FrequencyFormat::sidecarNameOf(const std::filesystem::path &wav) const {
         Q_UNUSED(wav);
         return std::nullopt;
+    }
+
+    QList<FrequencyFormat::AnalysisCache> FrequencyFormat::analysisCaches() const {
+        return {};
+    }
+
+    QList<FrequencyFormat::FileChange>
+        FrequencyFormat::changesInvalidating(const std::filesystem::path &directory,
+                                             const QList<std::filesystem::path> &wavs) const {
+        QList<FileChange> changes;
+        const auto caches = analysisCaches();
+        for (const auto &wav : wavs) {
+            for (const auto &cache : caches) {
+                const auto name = cache.fileNameOf(wav);
+                std::error_code error;
+                if (std::filesystem::is_regular_file(directory / name, error)) {
+                    changes.push_back(FileChange::removed(name));
+                }
+            }
+        }
+        return changes;
+    }
+
+    QList<FrequencyFormat::FileChange>
+        FrequencyFormat::cacheRenames(const std::filesystem::path &directory,
+                                      const QList<AudioRename> &renames) const {
+        QList<FileChange> changes;
+        const auto caches = analysisCaches();
+        for (const auto &rename : renames) {
+            for (const auto &cache : caches) {
+                const auto from = cache.fileNameOf(rename.from);
+                std::error_code error;
+                if (std::filesystem::is_regular_file(directory / from, error)) {
+                    changes.push_back(FileChange::renamed(from, cache.fileNameOf(rename.to)));
+                }
+            }
+        }
+        return changes;
     }
 
     std::optional<QList<FrequencyFormat::FileChange>>
@@ -63,7 +110,7 @@ namespace hello::kit {
                 changes.push_back(FileChange::renamed(*from, *to));
             }
         }
-        return changes;
+        return changes + cacheRenames(directory, renames);
     }
 
     std::optional<QList<FrequencyFormat::FileChange>>
@@ -139,17 +186,31 @@ namespace hello::kit {
                                       const std::filesystem::path &directory,
                                       const QList<std::filesystem::path> &wavs,
                                       DiagnosticList &diagnostics) {
-        namespace fs = std::filesystem;
         const auto changes = format.changesRemoving(directory, wavs, diagnostics);
         if (!changes) {
             return false;
         }
+        return execute(directory, *changes + format.changesInvalidating(directory, wavs),
+                       diagnostics);
+    }
+
+    bool FrequencyFormats::invalidateCaches(const FrequencyFormat &format,
+                                            const std::filesystem::path &directory,
+                                            const QList<std::filesystem::path> &wavs,
+                                            DiagnosticList &diagnostics) {
+        return execute(directory, format.changesInvalidating(directory, wavs), diagnostics);
+    }
+
+    bool FrequencyFormats::execute(const std::filesystem::path &directory,
+                                   const QList<FrequencyFormat::FileChange> &changes,
+                                   DiagnosticList &diagnostics) {
+        namespace fs = std::filesystem;
         const auto fail = [&diagnostics](const QString &message) {
             diagnostics.push_back({DiagnosticSeverity::Error, message});
             return false;
         };
         bool done = true;
-        for (const auto &change : *changes) {
+        for (const auto &change : changes) {
             const auto path = directory / change.path;
             const auto text = QDir::toNativeSeparators(QString::fromStdU16String(path.u16string()));
             std::error_code error;

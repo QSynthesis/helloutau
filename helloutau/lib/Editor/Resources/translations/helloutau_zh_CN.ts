@@ -916,6 +916,73 @@
     </message>
 </context>
 <context>
+    <name>hello::daw::FrequencyMapSettingPage</name>
+    <message>
+        <source>Frequency Maps</source>
+        <translation>频率表</translation>
+    </message>
+    <message>
+        <source>How the voice bank window generates frequency maps with the resampler, and the analysis caches that each resampler keeps.</source>
+        <translation>音源窗口以重采样器生成频率表的方式，以及各重采样器保留的分析缓存。</translation>
+    </message>
+    <message>
+        <source>Generation</source>
+        <translation>生成</translation>
+    </message>
+    <message>
+        <source>Generation &amp;threads:</source>
+        <translation>生成线程数(&amp;T)：</translation>
+    </message>
+    <message>
+        <source>The number of resamplers that generate frequency maps at once, apart from the rendering threads.</source>
+        <translation>同时生成频率表的重采样器个数，与渲染线程数分开设置。</translation>
+    </message>
+    <message>
+        <source>Remove the frequency maps and their analysis caches</source>
+        <translation>删除频率表及其分析缓存</translation>
+    </message>
+    <message>
+        <source>Remove only the analysis caches, and keep the frequency maps</source>
+        <translation>只删除分析缓存，保留频率表</translation>
+    </message>
+    <message>
+        <source>&amp;Regenerating:</source>
+        <translation>重新生成时(&amp;R)：</translation>
+    </message>
+    <message>
+        <source>An analysis cache holds the frequencies of an audio file, which the resampler reads in place of the frequency map. Removing only the caches makes the resampler write them again from the frequency maps, for example after the maps were edited elsewhere. Without caches, the maps are removed.</source>
+        <translation>分析缓存保存音频文件的频率，重采样器读取它而不读取频率表。只删除缓存时，重采样器按频率表重新写出缓存，例如频率表在别处编辑之后。没有缓存的格式删除频率表。</translation>
+    </message>
+    <message>
+        <source>Analysis Caches</source>
+        <translation>分析缓存</translation>
+    </message>
+    <message>
+        <source>Format</source>
+        <translation>格式</translation>
+    </message>
+    <message>
+        <source>Caches</source>
+        <translation>缓存</translation>
+    </message>
+    <message>
+        <source>Files of a.wav</source>
+        <translation>a.wav 的文件</translation>
+    </message>
+    <message>
+        <source>Removing or regenerating the frequency maps of a format removes these files beside the audio files.</source>
+        <translation>删除或重新生成某格式的频率表时，删除音频文件旁边的这些文件。</translation>
+    </message>
+    <message>
+        <source>None</source>
+        <translation>无</translation>
+    </message>
+    <message>
+        <source>The number of generation threads is a positive whole number, or Automatic.</source>
+        <translation>生成线程数须为正整数，或为「自动」。</translation>
+    </message>
+</context>
+<context>
     <name>hello::daw::NotePropertiesDialog</name>
     <message>
         <source>Note Properties</source>
@@ -2064,16 +2131,8 @@
         <translation>实时播放按工程合成器的规则拼接音符，但不会运行合成器进程。渲染整个音轨时，经典模式使用外部控制台，其他模式使用多个线程。</translation>
     </message>
     <message>
-        <source>Automatic (%1)</source>
-        <translation>自动（%1）</translation>
-    </message>
-    <message>
         <source>Rendering &amp;threads:</source>
         <translation>渲染线程数(&amp;T)：</translation>
-    </message>
-    <message>
-        <source>The number of resamplers that run at once in threaded and realtime rendering, in rendering a whole track outside the classic mode, and in generating frequency maps in the voice bank window.</source>
-        <translation>同时运行的重采样器个数，用于多线程与实时渲染、经典模式以外的整轨渲染，以及音源窗口中生成频率表。</translation>
     </message>
     <message>
         <source>Keep the latest run only</source>
@@ -2186,6 +2245,13 @@
     <message>
         <source>Choose Program</source>
         <translation>选择程序</translation>
+    </message>
+</context>
+<context>
+    <name>hello::daw::SettingPageWidgets</name>
+    <message>
+        <source>Automatic (%1)</source>
+        <translation>自动（%1）</translation>
     </message>
 </context>
 <context>
@@ -3301,6 +3367,12 @@ Read them again? What you did not save in them is replaced, and Undo brings it b
         <translation>取消</translation>
     </message>
     <message numerus="yes">
+        <source>The analysis caches of %n audio file(s) generated again.</source>
+        <translation>
+            <numerusform>已重新生成 %n 个音频文件的分析缓存。</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
         <source>%n frequency map(s) generated.</source>
         <translation>
             <numerusform>已生成 %n 个频率表。</numerusform>
@@ -3449,9 +3521,15 @@ Read them again? What you did not save in them is replaced, and Undo brings it b
         <translation>音源中没有音频文件。</translation>
     </message>
     <message numerus="yes">
-        <source>Generate the frequency maps of %n audio file(s) again? The maps of the format %1 are removed first.</source>
+        <source>Generate the analysis caches of %n audio file(s) again? The caches of the format %1 are removed first, and the frequency maps are kept.</source>
         <translation>
-            <numerusform>要重新生成 %n 个音频文件的频率表吗？将先删除格式 %1 的频率表。</numerusform>
+            <numerusform>要重新生成 %n 个音频文件的分析缓存吗？将先删除格式 %1 的缓存，保留频率表。</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>Generate the frequency maps of %n audio file(s) again? The maps of the format %1 and their analysis caches are removed first.</source>
+        <translation>
+            <numerusform>要重新生成 %n 个音频文件的频率表吗？将先删除格式 %1 的频率表及其分析缓存。</numerusform>
         </translation>
     </message>
     <message>

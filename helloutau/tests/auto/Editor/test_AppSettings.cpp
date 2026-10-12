@@ -59,6 +59,33 @@ private Q_SLOTS:
         QCOMPARE(AppSettings(file).rendering().threadCount(), 0);
     }
 
+    // The thread count and the regeneration of frequency maps persist, independent of the
+    // rendering threads. The defaults are not written.
+    void the_frequency_map_settings_persist() {
+        QTemporaryDir dir;
+        const auto file = dir.filePath(QStringLiteral("settings.json"));
+        {
+            const AppSettings settings(file);
+            QCOMPARE(settings.frequencyMaps().threadCount(), 0);
+            QCOMPARE(settings.frequencyMaps().regeneration(), FrequencyMapSettings::MapsAndCaches);
+        }
+        {
+            AppSettings settings(file);
+            settings.frequencyMaps().setThreadCount(2);
+            settings.frequencyMaps().setRegeneration(FrequencyMapSettings::CachesOnly);
+        }
+        {
+            AppSettings settings(file);
+            QCOMPARE(settings.frequencyMaps().threadCount(), 2);
+            QCOMPARE(settings.rendering().threadCount(), 0);
+            QCOMPARE(settings.frequencyMaps().regeneration(), FrequencyMapSettings::CachesOnly);
+            settings.frequencyMaps().setThreadCount(0);
+            settings.frequencyMaps().setRegeneration(FrequencyMapSettings::MapsAndCaches);
+            QVERIFY(settings.value(QStringLiteral("frequencyMaps/threads")).isUndefined());
+            QVERIFY(settings.value(QStringLiteral("frequencyMaps/regeneration")).isUndefined());
+        }
+    }
+
     // The extraction thread count of updates persists. The default is not written.
     void the_extraction_thread_count_persists() {
         QTemporaryDir dir;

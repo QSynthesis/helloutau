@@ -60,6 +60,27 @@ namespace hello::kit {
             static FileChange removed(std::filesystem::path path);
         };
 
+        /// A file that the resampler of a format derives from an audio file and reuses in later
+        /// renders, such as the LLSM file of moresampler. A cache holds the fundamental
+        /// frequency and becomes stale once the map changes. The resampler writes a missing cache
+        /// again from the map when it renders the audio file.
+        struct HELLOKIT_VOICEBANK_EXPORT AnalysisCache {
+            /// How the name of the cache file derives from the name of the audio file.
+            enum Naming {
+                AppendedSuffix,    ///< The suffix follows the whole name: a.wav.llsm
+                ReplacedExtension, ///< The suffix replaces the extension: a.star
+            };
+
+            /// The name for display, such as LLSM
+            QString name;
+            Naming naming = AppendedSuffix;
+            /// The suffix with its leading dot, such as .llsm
+            QString suffix;
+
+            /// Returns the name of the cache file of the audio file \a wav.
+            std::filesystem::path fileNameOf(const std::filesystem::path &wav) const;
+        };
+
         virtual ~FrequencyFormat();
 
         /// Returns a short identifier that is unique in a registry, such as \c frq.
@@ -97,14 +118,19 @@ namespace hello::kit {
         virtual std::optional<std::filesystem::path>
             sidecarNameOf(const std::filesystem::path &wav) const;
 
+        /// Returns the analysis caches of the resampler of this format. The default
+        /// implementation returns none.
+        virtual QList<AnalysisCache> analysisCaches() const;
+
         /// Returns the changes that rename the maps of this format after \a renames, all renames
         /// of audio files in the directory \a directory at once, so that a file that holds the
         /// maps of several audio files changes once. An audio file without a map needs no
         /// change. The caller executes the changes together with the renames.
         ///
         /// The default implementation renames each sidecar file that sidecarNameOf() names
-        /// after the new name of its audio file. A format whose maps are kept otherwise
-        /// overrides it.
+        /// and each cache file of analysisCaches() after the new name of its audio file. A
+        /// format whose maps are kept otherwise overrides it, and renames the cache files with
+        /// cacheRenames().
         ///
         /// \return the changes, or \c std::nullopt with the reason in \a diagnostics if they
         ///         cannot be determined, which the default implementation returns if
@@ -114,8 +140,8 @@ namespace hello::kit {
                             const QList<AudioRename> &renames, DiagnosticList &diagnostics) const;
 
         /// Returns the changes that remove the maps of this format of the audio files \a wavs,
-        /// names in the directory \a directory, at once. An audio file without a map needs no
-        /// change. Removing a map makes a resampler generate it again.
+        /// names in the directory \a directory, at once, without their analysis caches. An
+        /// audio file without a map needs no change.
         ///
         /// The default implementation removes each sidecar file that sidecarNameOf() names. A
         /// format whose maps are kept otherwise overrides it.
@@ -123,10 +149,22 @@ namespace hello::kit {
         /// \return the changes, or \c std::nullopt with the reason in \a diagnostics if they
         ///         cannot be determined, which the default implementation returns if
         ///         sidecarNameOf() names no sidecar file
+        /// \sa FrequencyFormats::removeMaps()
         virtual std::optional<QList<FileChange>>
             changesRemoving(const std::filesystem::path &directory,
                             const QList<std::filesystem::path> &wavs,
                             DiagnosticList &diagnostics) const;
+
+        /// Returns the changes that remove the existing cache files of analysisCaches() of the
+        /// audio files \a wavs, names in the directory \a directory.
+        QList<FileChange> changesInvalidating(const std::filesystem::path &directory,
+                                              const QList<std::filesystem::path> &wavs) const;
+
+    protected:
+        /// Returns the renames of the existing cache files of analysisCaches() after
+        /// \a renames in the directory \a directory.
+        QList<FileChange> cacheRenames(const std::filesystem::path &directory,
+                                       const QList<AudioRename> &renames) const;
     };
 
 }

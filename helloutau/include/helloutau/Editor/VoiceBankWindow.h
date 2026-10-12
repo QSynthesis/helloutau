@@ -198,9 +198,11 @@ namespace hello::daw {
 
         /// Generates the frequency maps of the audio files of \a scope with the resampler of the
         /// settings, in the format of that resampler, with a progress dialog that cancels the
-        /// generation. Generating a map again removes it first, which AllFrequencyMaps confirms
-        /// in a message box. The audio files of the folders not read are included. See the
-        /// generation in docs/FrequencyMaps.md.
+        /// generation, with the threads of FrequencyMapSettings::threadCount(). Generating a map
+        /// again removes it first with its analysis caches, or removes only the caches if
+        /// FrequencyMapSettings::regeneration() specifies so and the format has caches, which
+        /// AllFrequencyMaps confirms in a message box. The audio files of the folders not read
+        /// are included. See the generation in docs/FrequencyMaps.md.
         ///
         /// \return whether every map was generated
         bool generateFrequencyMaps(FrequencyMapScope scope);

@@ -228,52 +228,19 @@ namespace hello::kit {
                 return wav.filename().replace_extension(".dio");
             }
 
-            // The caches of the spectral envelope and the aperiodicity follow the map, which
-            // world4utau writes beside it as a.star and a.platinum (writeSTARParam() and
-            // writePlatinumParam() in the source above).
-            std::optional<QList<FileChange>>
-                changesRenaming(const std::filesystem::path &directory,
-                                const QList<AudioRename> &renames,
-                                DiagnosticList &diagnostics) const override {
-                Q_UNUSED(diagnostics);
-                QList<FileChange> changes;
-                for (const auto &rename : renames) {
-                    for (const auto extension : extensions) {
-                        const auto from = rename.from.filename().replace_extension(extension);
-                        if (isFile(directory / from)) {
-                            changes.push_back(FileChange::renamed(
-                                from, rename.to.filename().replace_extension(extension)));
-                        }
-                    }
-                }
-                return changes;
-            }
-
-            std::optional<QList<FileChange>>
-                changesRemoving(const std::filesystem::path &directory,
-                                const QList<std::filesystem::path> &wavs,
-                                DiagnosticList &diagnostics) const override {
-                Q_UNUSED(diagnostics);
-                QList<FileChange> changes;
-                for (const auto &wav : wavs) {
-                    for (const auto extension : extensions) {
-                        const auto name = wav.filename().replace_extension(extension);
-                        if (isFile(directory / name)) {
-                            changes.push_back(FileChange::removed(name));
-                        }
-                    }
-                }
-                return changes;
+            // The spectral envelope and the aperiodicity, which world4utau writes beside the map
+            // as a.star and a.platinum (writeSTARParam() and writePlatinumParam() in the source
+            // above)
+            QList<AnalysisCache> analysisCaches() const override {
+                return {
+                    {QStringLiteral("STAR"),     AnalysisCache::ReplacedExtension,
+                     QStringLiteral(".star")    },
+                    {QStringLiteral("PLATINUM"), AnalysisCache::ReplacedExtension,
+                     QStringLiteral(".platinum")},
+                };
             }
 
         private:
-            static constexpr const char *extensions[] = {".dio", ".star", ".platinum"};
-
-            static bool isFile(const std::filesystem::path &path) {
-                std::error_code error;
-                return std::filesystem::is_regular_file(path, error);
-            }
-
             std::filesystem::path pathOf(const std::filesystem::path &wav) const {
                 return wav.parent_path() / *sidecarNameOf(wav);
             }
@@ -352,6 +319,69 @@ namespace hello::kit {
                 return table;
             }
 
+            // The analysis of moresampler beside the audio file as a.wav.llsm, which moresampler
+            // derives from the entry and writes again if missing, measured with moresampler
+            // 0.8.4 on 2026-10-12 (docs/FrequencyMaps.md). Its readme states that desc.mrq is
+            // read before an LLSM file is created, so that a deleted entry is written again only
+            // if the LLSM file is missing as well.
+            QList<AnalysisCache> analysisCaches() const override {
+                return {
+                    {QStringLiteral("LLSM"), AnalysisCache::AppendedSuffix,
+                     QStringLiteral(".llsm")},
+                };
+            }
+
+            // The entry of each renamed audio file is written again under the new name, as
+            // mrq_write_entry() in mrq.c writes an entry that does not fit: the old name is zeroed
+            // and the entry is appended. moresampler names an entry after the audio file in
+            // UTF-16 (measured as above). An entry under the new name is deleted as well, so that
+            // the appended entry is the only one.
+            std::optional<QList<FileChange>>
+                changesRenaming(const std::filesystem::path &directory,
+                                const QList<AudioRename> &renames,
+                                DiagnosticList &diagnostics) const override {
+                auto changes = cacheRenames(directory, renames);
+                const auto path = directory / "desc.mrq";
+                std::error_code error;
+                if (!std::filesystem::is_regular_file(path, error)) {
+                    return changes;
+                }
+                auto bytes = contentsOf(path, diagnostics);
+                if (!bytes) {
+                    return std::nullopt;
+                }
+                // The data of every renamed entry is taken before any name is zeroed, so that two
+                // audio files may exchange their names.
+                QByteArray appended;
+                qint32 added = 0;
+                QSet<QString> zeroed;
+                for (const auto &rename : renames) {
+                    const auto at = find(*bytes, rename.from);
+                    zeroed.insert(textOf(rename.from.filename()).toCaseFolded());
+                    zeroed.insert(textOf(rename.to.filename()).toCaseFolded());
+                    if (!at) {
+                        continue;
+                    }
+                    const auto size = qFromLittleEndian<qint32>(bytes->constData() + *at - 4);
+                    const auto name = textOf(rename.to.filename());
+                    appended += littleEndian(qint32(name.size()));
+                    for (const auto c : name) {
+                        appended += littleEndian(quint16(c.unicode()));
+                    }
+                    appended += littleEndian(size) + bytes->mid(*at, size);
+                    ++added;
+                }
+                const bool deleted = zeroNames(*bytes, zeroed);
+                if (added == 0 && !deleted) {
+                    return changes;
+                }
+                const auto count = qFromLittleEndian<qint32>(bytes->constData() + 8);
+                qToLittleEndian(qint32(count + added), bytes->data() + 8);
+                bytes->append(appended);
+                changes.push_back(FileChange::rewritten("desc.mrq", *bytes));
+                return changes;
+            }
+
             // An entry is deleted as mrq_delete_entry() in mrq.c deletes it: its name is zeroed
             // and its data stays in place. Every entry of an audio file is deleted, whatever the
             // case of its name, since find() would take any of them.
@@ -372,22 +402,35 @@ namespace hello::kit {
                 for (const auto &wav : wavs) {
                     names.insert(textOf(wav.filename()).toCaseFolded());
                 }
-                bool deleted = false;
-                for (const auto &[entry, data] : entriesOf(*bytes)) {
-                    if (!entry.isEmpty() && names.contains(entry.toCaseFolded())) {
-                        // The name precedes the int32 size of the data.
-                        const auto name = data - 4 - entry.size() * 2;
-                        std::fill(bytes->begin() + name, bytes->begin() + data - 4, '\0');
-                        deleted = true;
-                    }
-                }
-                if (!deleted) {
+                if (!zeroNames(*bytes, names)) {
                     return QList<FileChange>();
                 }
                 return QList<FileChange>{FileChange::rewritten("desc.mrq", *bytes)};
             }
 
         private:
+            template <class T>
+            static QByteArray littleEndian(T value) {
+                QByteArray bytes(qsizetype(sizeof(T)), Qt::Uninitialized);
+                qToLittleEndian(value, bytes.data());
+                return bytes;
+            }
+
+            // Zeroes the name of each entry whose name, without case, is one of names, and
+            // returns whether any name was zeroed
+            static bool zeroNames(QByteArray &bytes, const QSet<QString> &names) {
+                bool zeroed = false;
+                for (const auto &[entry, data] : entriesOf(bytes)) {
+                    if (!entry.isEmpty() && names.contains(entry.toCaseFolded())) {
+                        // The name precedes the int32 size of the data.
+                        const auto name = data - 4 - entry.size() * 2;
+                        std::fill(bytes.begin() + name, bytes.begin() + data - 4, '\0');
+                        zeroed = true;
+                    }
+                }
+                return zeroed;
+            }
+
             // The name and the position of the data of each entry, up to the first entry that is
             // cut short
             static QList<std::pair<QString, qsizetype>> entriesOf(const QByteArray &bytes) {

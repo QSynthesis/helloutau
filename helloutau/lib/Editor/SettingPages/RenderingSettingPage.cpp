@@ -1,13 +1,9 @@
 #include "RenderingSettingPage.h"
 
-#include <algorithm>
 #include <cmath>
-#include <limits>
-#include <thread>
 
 #include <QtCore/QDir>
 #include <QtCore/QRegularExpression>
-#include <QtGui/QIntValidator>
 #include <QtWidgets/QComboBox>
 #include <QtWidgets/QFormLayout>
 #include <QtWidgets/QGroupBox>
@@ -90,30 +86,14 @@ namespace hello::daw {
                     "whole track uses an external console in the classic mode and "
                     "several threads otherwise.")));
 
-        // Zero stands for one thread per hardware thread. The list offers the powers of two below
-        // the number of hardware threads and that number, and any other count can be typed in.
-        const int hardware = int(std::max(1u, std::thread::hardware_concurrency()));
-        m_threads = new QComboBox();
+        m_threads = createThreadCountBox(m_settings.rendering().threadCount());
         m_threads->setObjectName(QStringLiteral("threads"));
-        m_threads->setEditable(true);
-        m_threads->setInsertPolicy(QComboBox::NoInsert);
-        m_threads->setValidator(new QIntValidator(1, std::numeric_limits<int>::max(), m_threads));
-        m_threads->addItem(tr("Automatic (%1)").arg(hardware), 0);
-        for (int count = 1; count < hardware; count *= 2) {
-            m_threads->addItem(QString::number(count), count);
-        }
-        m_threads->addItem(QString::number(hardware), hardware);
-        const int current = m_settings.rendering().threadCount();
-        if (const int index = m_threads->findData(current); index >= 0) {
-            m_threads->setCurrentIndex(index);
-        } else {
-            m_threads->setEditText(QString::number(current));
-        }
         playbackForm->addRow(tr("Rendering &threads:"), m_threads);
-        playbackForm->addRow(
-            note(tr("The number of resamplers that run at once in threaded and realtime "
-                    "rendering, in rendering a whole track outside the classic mode, and in "
-                    "generating frequency maps in the voice bank window.")));
+        const auto updateThreads = [this] {
+            m_threads->setEnabled(m_playbackMode->currentData().toInt() !=
+                                  RenderingSettings::Prerender);
+        };
+        updateThreads();
 
         layout->addWidget(playbackGroup);
         auto logGroup = new QGroupBox(tr("Render Log"), widget);
@@ -151,6 +131,7 @@ namespace hello::daw {
 
         connect(m_resampler, &QLineEdit::textChanged, this, &SettingPage::modifiedChanged);
         connect(m_wavtool, &QLineEdit::textChanged, this, &SettingPage::modifiedChanged);
+        connect(m_playbackMode, &QComboBox::currentIndexChanged, this, updateThreads);
         connect(m_playbackMode, &QComboBox::currentIndexChanged, this,
                 &SettingPage::modifiedChanged);
         connect(m_threads, &QComboBox::currentTextChanged, this, &SettingPage::modifiedChanged);
@@ -163,16 +144,7 @@ namespace hello::daw {
     }
 
     std::optional<int> RenderingSettingPage::threadCount() const {
-        const auto text = m_threads->currentText();
-        if (const int index = m_threads->findText(text); index >= 0) {
-            return m_threads->itemData(index).toInt();
-        }
-        bool number = false;
-        const int count = text.trimmed().toInt(&number);
-        if (!number || count < 1) {
-            return std::nullopt;
-        }
-        return count;
+        return threadCountOf(m_threads);
     }
 
     std::optional<int> RenderingSettingPage::renderLogLimit() const {

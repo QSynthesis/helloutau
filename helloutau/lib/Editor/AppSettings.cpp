@@ -128,6 +128,7 @@ namespace hello::daw {
         impl.utau.reset(new UtauSettings(impl.store));
         impl.voiceBanks.reset(new VoiceBankSettings(*this, impl.store));
         impl.rendering.reset(new RenderingSettings(impl.store));
+        impl.frequencyMaps.reset(new FrequencyMapSettings(impl.store));
         impl.audio.reset(new AudioSettings(impl.store));
         impl.appearance.reset(new AppearanceSettings(impl.store));
         impl.view.reset(new ViewSettings(impl.store));
@@ -196,6 +197,16 @@ namespace hello::daw {
     const RenderingSettings &AppSettings::rendering() const {
         stdc_impl_t;
         return *impl.rendering;
+    }
+
+    FrequencyMapSettings &AppSettings::frequencyMaps() {
+        stdc_impl_t;
+        return *impl.frequencyMaps;
+    }
+
+    const FrequencyMapSettings &AppSettings::frequencyMaps() const {
+        stdc_impl_t;
+        return *impl.frequencyMaps;
     }
 
     AudioSettings &AppSettings::audio() {

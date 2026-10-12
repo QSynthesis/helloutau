@@ -1538,11 +1538,12 @@ namespace hello::daw {
             return audio;
         }
 
-        // Generates the maps of wavs in a progress dialog that cancels the generation, and
-        // shows the map of the current row again. Returns whether every map was generated.
+        // Generates the maps of wavs in a progress dialog that cancels the generation, or the
+        // analysis caches of every audio file of wavs if cachesOnly, and shows the map of the
+        // current row again. Returns whether every map was generated.
         bool generate(const QString &title, const kit::FrequencyFormat &format,
                       const std::filesystem::path &resampler,
-                      const QList<std::filesystem::path> &wavs) {
+                      const QList<std::filesystem::path> &wavs, bool cachesOnly) {
             stdc_decl_t;
             QProgressDialog progress(tr("Generating frequency maps with the resampler..."),
                                      tr("Cancel"), 0, int(wavs.size()), &decl);
@@ -1556,7 +1557,8 @@ namespace hello::daw {
 
             kit::DiagnosticList diagnostics;
             int generated = 0;
-            generator.threadCount = editor->settings().rendering().threadCount();
+            generator.threadCount = editor->settings().frequencyMaps().threadCount();
+            generator.everyFile = cachesOnly;
             QEventLoop loop;
             const auto worker = QThread::create([&] {
                 generated = generator.generate(
@@ -1579,7 +1581,10 @@ namespace hello::daw {
             model->refreshFrequencyMaps();
             frequencyShown = {};
             showFrequency();
-            decl.statusBar()->showMessage(tr("%n frequency map(s) generated.", nullptr, generated));
+            decl.statusBar()->showMessage(
+                cachesOnly ? tr("The analysis caches of %n audio file(s) generated again.", nullptr,
+                                generated)
+                           : tr("%n frequency map(s) generated.", nullptr, generated));
             DiagnosticBox::report(&decl, title, diagnostics);
             return !cancelled.load() && diagnostics.isEmpty();
         }
@@ -2558,20 +2563,32 @@ namespace hello::daw {
             return false;
         }
 
+        // Regenerating the caches only keeps the maps, which a format without caches cannot.
+        const bool cachesOnly = scope != MissingFrequencyMaps &&
+                                !format->analysisCaches().isEmpty() &&
+                                impl.editor->settings().frequencyMaps().regeneration() ==
+                                    FrequencyMapSettings::CachesOnly;
         if (scope != MissingFrequencyMaps) {
+            const auto question =
+                cachesOnly ? tr("Generate the analysis caches of %n audio file(s) again? The "
+                                "caches of the format %1 are removed first, and the frequency "
+                                "maps are kept.",
+                                nullptr, int(wavs.size()))
+                           : tr("Generate the frequency maps of %n audio file(s) again? The maps "
+                                "of the format %1 and their analysis caches are removed first.",
+                                nullptr, int(wavs.size()));
             if (scope == AllFrequencyMaps &&
-                QMessageBox::question(
-                    this, title,
-                    tr("Generate the frequency maps of %n audio file(s) again? The maps of the "
-                       "format %1 are removed first.",
-                       nullptr, int(wavs.size()))
-                        .arg(format->name())) != QMessageBox::Yes) {
+                QMessageBox::question(this, title, question.arg(format->name())) !=
+                    QMessageBox::Yes) {
                 return false;
             }
             kit::DiagnosticList diagnostics;
             bool removed = true;
             for (const auto &[folder, names] : audio) {
-                removed = kit::FrequencyFormats::removeMaps(*format, folder, names, diagnostics) &&
+                removed = (cachesOnly ? kit::FrequencyFormats::invalidateCaches(*format, folder,
+                                                                                names, diagnostics)
+                                      : kit::FrequencyFormats::removeMaps(*format, folder, names,
+                                                                          diagnostics)) &&
                           removed;
             }
             if (!removed) {
@@ -2579,7 +2596,7 @@ namespace hello::daw {
                 return false;
             }
         }
-        return impl.generate(title, *format, resampler, wavs);
+        return impl.generate(title, *format, resampler, wavs, cachesOnly);
     }
 
     bool VoiceBankWindow::removeFrequencyMaps() {
