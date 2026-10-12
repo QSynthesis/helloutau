@@ -1,5 +1,5 @@
-#ifndef HELLOUTAU_EDITOR_DIALOGS_USTCHARSETDIALOG_H
-#define HELLOUTAU_EDITOR_DIALOGS_USTCHARSETDIALOG_H
+#ifndef HELLOUTAU_EDITOR_DIALOGS_USTDECODINGDIALOG_H
+#define HELLOUTAU_EDITOR_DIALOGS_USTDECODINGDIALOG_H
 
 #include <QtWidgets/QDialog>
 
@@ -19,12 +19,12 @@ namespace hello::daw {
     /// The encoding with the fewest invalid byte sequences is initially selected, see
     /// TextCodec::ranked(), and the encodings in which the file has invalid byte sequences are
     /// grey.
-    class HELLOUTAU_EDITOR_EXPORT UstCharsetDialog : public QDialog,
-                                                     public kit::UstCharsetSelector {
+    class HELLOUTAU_EDITOR_EXPORT UstDecodingDialog : public QDialog,
+                                                      public kit::UstCharsetSelector {
         Q_OBJECT
     public:
-        explicit UstCharsetDialog(QWidget *parent = nullptr);
-        ~UstCharsetDialog();
+        explicit UstDecodingDialog(QWidget *parent = nullptr);
+        ~UstDecodingDialog();
 
         /// Shows the dialog for \a ust and waits for the answer.
         std::optional<QString> selectCharset(const kit::UstDocument &ust,
@@ -56,4 +56,4 @@ namespace hello::daw {
 
 }
 
-#endif // HELLOUTAU_EDITOR_DIALOGS_USTCHARSETDIALOG_H
+#endif // HELLOUTAU_EDITOR_DIALOGS_USTDECODINGDIALOG_H

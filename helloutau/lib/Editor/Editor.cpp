@@ -48,8 +48,8 @@
 #include "ParameterViewModifiers.h"
 #include "ProjectWindow.h"
 #include "UpdateChecker.h"
-#include "UstCharsetDialog.h"
-#include "VoiceBankCharsetDialog.h"
+#include "UstDecodingDialog.h"
+#include "VoiceBankDecodingDialog.h"
 #include "VoiceBankWindow.h"
 
 namespace hello::daw {
@@ -692,7 +692,7 @@ namespace hello::daw {
             return nullptr;
         }
 
-        UstCharsetDialog selector(from);
+        UstDecodingDialog selector(from);
         kit::DiagnosticList diagnostics;
         auto document = kit::ProjectDocument::open(path, &selector, diagnostics);
         const auto title = tr("Open");
@@ -751,7 +751,7 @@ namespace hello::daw {
                 return window;
             }
         }
-        VoiceBankCharsetDialog selector(from);
+        VoiceBankDecodingDialog selector(from);
         selector.setRoot(root);
         kit::DiagnosticList diagnostics;
         auto document = kit::VoiceBankDocument::open(root, &selector, diagnostics);

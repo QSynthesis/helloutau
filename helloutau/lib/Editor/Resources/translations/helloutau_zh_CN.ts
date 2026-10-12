@@ -2612,7 +2612,7 @@ Automatic: updates are checked at startup as well, and a new version is download
     </message>
 </context>
 <context>
-    <name>hello::daw::UstCharsetDialog</name>
+    <name>hello::daw::UstDecodingDialog</name>
     <message>
         <source>Choose Encoding</source>
         <translation>选择编码</translation>
@@ -2733,7 +2733,7 @@ Lyrics:
     </message>
 </context>
 <context>
-    <name>hello::daw::VoiceBankCharsetDialog</name>
+    <name>hello::daw::VoiceBankDecodingDialog</name>
     <message>
         <source>Choose Encoding</source>
         <translation>选择编码</translation>

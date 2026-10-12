@@ -84,7 +84,7 @@
 #include <helloutau/Editor/Dialogs/PasteParametersDialog.h>
 #include <helloutau/Editor/Dialogs/ScalePitchDialog.h>
 #include <helloutau/Editor/Dialogs/PitchControlDialog.h>
-#include <helloutau/Editor/Dialogs/VoiceBankCharsetDialog.h>
+#include <helloutau/Editor/Dialogs/VoiceBankDecodingDialog.h>
 #include <helloutau/Editor/VoiceBankEntryModel.h>
 #include <helloutau/Editor/VoiceBankInfoPanel.h>
 #include <helloutau/Editor/VoiceBankWindow.h>
@@ -575,7 +575,7 @@ private Q_SLOTS:
                         "[#TRACKEND]\r\n");
         ProjectWindow *window = nullptr;
         QCOMPARE(dialogsDuring([&] { window = e->openFile(path); }),
-                 QStringList{QStringLiteral("hello::daw::UstCharsetDialog")});
+                 QStringList{QStringLiteral("hello::daw::UstDecodingDialog")});
         QCOMPARE(window, nullptr);
         QVERIFY(e->windows().isEmpty());
     }
@@ -1576,7 +1576,7 @@ private Q_SLOTS:
         const auto e = editor();
         e->settings().utau().setDirectory(utau);
         QStringList asked;
-        handleNextDialog<VoiceBankCharsetDialog>([&asked](VoiceBankCharsetDialog *dialog) {
+        handleNextDialog<VoiceBankDecodingDialog>([&asked](VoiceBankDecodingDialog *dialog) {
             asked.push_back(dialog->windowTitle());
             dialog->setSelectedCharset(QStringLiteral("Shift_JIS"));
             dialog->accept();
@@ -2628,7 +2628,7 @@ private Q_SLOTS:
 
         // The dialog proposes the name, as it restores and no entry names it.
         bool asked = false;
-        handleNextDialog<VoiceBankCharsetDialog>([&asked](VoiceBankCharsetDialog *dialog) {
+        handleNextDialog<VoiceBankDecodingDialog>([&asked](VoiceBankDecodingDialog *dialog) {
             asked = dialog->misdecodedNames(0) == QStringList{QString::fromUtf8("偁.wav")};
             dialog->accept();
         });
@@ -2640,7 +2640,7 @@ private Q_SLOTS:
         session->undo();
         writeFile(bank / "hello-config.json", R"({"$format":"hello-voicebank","charset":"UTF-8"})");
         QCOMPARE(dialogsDuring([&] { window->determineFileNames(); }),
-                 QStringList{QStringLiteral("hello::daw::VoiceBankCharsetDialog")});
+                 QStringList{QStringLiteral("hello::daw::VoiceBankDecodingDialog")});
     }
 
     // A folder is shown under its logical name, which the record of its parent gives, in the tree
@@ -2828,7 +2828,7 @@ private Q_SLOTS:
         const auto session = window->document()->session();
         const int step = session->currentStep();
 
-        handleNextDialog<VoiceBankCharsetDialog>([](VoiceBankCharsetDialog *dialog) {
+        handleNextDialog<VoiceBankDecodingDialog>([](VoiceBankDecodingDialog *dialog) {
             QCOMPARE(dialog->folderText(0), QStringLiteral("sub  -  UTF-8"));
             QVERIFY(dialog->folderText(1).isEmpty());
             dialog->accept();
@@ -2838,7 +2838,7 @@ private Q_SLOTS:
 
         // The folder is selected by name, so that a folder listed in error is not read again,
         // which would show a message box.
-        handleNextDialog<VoiceBankCharsetDialog>([](VoiceBankCharsetDialog *dialog) {
+        handleNextDialog<VoiceBankDecodingDialog>([](VoiceBankDecodingDialog *dialog) {
             for (int i = 0; !dialog->folderText(i).isEmpty(); ++i) {
                 if (dialog->folderText(i).startsWith(QStringLiteral("sub  -  "))) {
                     dialog->selectFolders({i});

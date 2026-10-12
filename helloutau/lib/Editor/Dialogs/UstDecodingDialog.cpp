@@ -1,4 +1,4 @@
-#include "UstCharsetDialog.h"
+#include "UstDecodingDialog.h"
 
 #include <algorithm>
 
@@ -13,7 +13,7 @@
 
 namespace hello::daw {
 
-    UstCharsetDialog::UstCharsetDialog(QWidget *parent) : QDialog(parent) {
+    UstDecodingDialog::UstDecodingDialog(QWidget *parent) : QDialog(parent) {
         setWindowTitle(tr("Choose Encoding"));
 
         m_charsets = new QListWidget();
@@ -38,14 +38,14 @@ namespace hello::daw {
         layout->addWidget(buttons);
 
         connect(m_charsets, &QListWidget::currentRowChanged, this,
-                &UstCharsetDialog::updatePreview);
+                &UstDecodingDialog::updatePreview);
         resize(640, 400);
     }
 
-    UstCharsetDialog::~UstCharsetDialog() = default;
+    UstDecodingDialog::~UstDecodingDialog() = default;
 
-    std::optional<QString> UstCharsetDialog::selectCharset(const kit::UstDocument &ust,
-                                                           const std::filesystem::path &path) {
+    std::optional<QString> UstDecodingDialog::selectCharset(const kit::UstDocument &ust,
+                                                            const std::filesystem::path &path) {
         setDocument(ust, path);
         const bool accepted = exec() == QDialog::Accepted;
         m_ust = nullptr;
@@ -55,7 +55,7 @@ namespace hello::daw {
         return selectedCharset();
     }
 
-    QString UstCharsetDialog::preview(const kit::UstDocument &ust, const QString &charset) {
+    QString UstDecodingDialog::preview(const kit::UstDocument &ust, const QString &charset) {
         const kit::TextCodec codec(charset);
         const auto text = [&](QByteArrayView bytes) {
             const auto decoded = codec.decode(bytes);
@@ -70,8 +70,8 @@ namespace hello::daw {
             .arg(text(ust.rawProjectName()), text(ust.rawVoiceDir()), lyrics.join(u' '));
     }
 
-    void UstCharsetDialog::setDocument(const kit::UstDocument &ust,
-                                       const std::filesystem::path &path) {
+    void UstDecodingDialog::setDocument(const kit::UstDocument &ust,
+                                        const std::filesystem::path &path) {
         m_ust = &ust;
         setWindowTitle(
             tr("Choose Encoding - %1").arg(QString::fromStdU16String(path.filename().u16string())));
@@ -96,28 +96,28 @@ namespace hello::daw {
         updatePreview();
     }
 
-    bool UstCharsetDialog::isGrey(const QString &charset) const {
+    bool UstDecodingDialog::isGrey(const QString &charset) const {
         const auto items = m_charsets->findItems(charset, Qt::MatchExactly);
         return !items.isEmpty() && items.first()->foreground().style() != Qt::NoBrush;
     }
 
-    QString UstCharsetDialog::selectedCharset() const {
+    QString UstDecodingDialog::selectedCharset() const {
         const auto item = m_charsets->currentItem();
         return item ? item->text() : QString();
     }
 
-    void UstCharsetDialog::setSelectedCharset(const QString &charset) {
+    void UstDecodingDialog::setSelectedCharset(const QString &charset) {
         const auto items = m_charsets->findItems(charset, Qt::MatchExactly);
         if (!items.isEmpty()) {
             m_charsets->setCurrentItem(items.first());
         }
     }
 
-    QString UstCharsetDialog::previewText() const {
+    QString UstDecodingDialog::previewText() const {
         return m_preview->toPlainText();
     }
 
-    void UstCharsetDialog::updatePreview() {
+    void UstDecodingDialog::updatePreview() {
         m_preview->setPlainText(m_ust ? preview(*m_ust, selectedCharset()) : QString());
     }
 

@@ -6,12 +6,12 @@
 
 #include <hellokit/Support/TextCodec.h>
 
-#include <helloutau/Editor/Dialogs/VoiceBankCharsetDialog.h>
+#include <helloutau/Editor/Dialogs/VoiceBankDecodingDialog.h>
 
 using namespace hello;
 using namespace hello::daw;
 
-class test_VoiceBankCharsetDialog : public QObject {
+class test_VoiceBankDecodingDialog : public QObject {
     Q_OBJECT
 
 private:
@@ -66,7 +66,7 @@ private Q_SLOTS:
     void the_folders_are_asked_about_at_once() {
         const auto jp = shiftJisFolder();
         const auto cn = gbkFolder();
-        VoiceBankCharsetDialog dialog;
+        VoiceBankDecodingDialog dialog;
         dialog.setRoot("bank");
         dialog.setDirectories({&jp, &cn});
         QCOMPARE(dialog.windowTitle(), QStringLiteral("Choose Encoding - bank"));
@@ -107,7 +107,7 @@ private Q_SLOTS:
     // encoding cannot read.
     void each_file_is_previewed_in_the_selected_encoding() {
         const auto source = shiftJisFolder();
-        VoiceBankCharsetDialog dialog;
+        VoiceBankDecodingDialog dialog;
         dialog.setRoot("bank");
         dialog.setDirectory(source);
         QCOMPARE(dialog.windowTitle(), QStringLiteral("Choose Encoding - jp"));
@@ -129,7 +129,7 @@ private Q_SLOTS:
     void reading_again_starts_with_the_current_encodings() {
         const auto jp = shiftJisFolder();
         const auto cn = gbkFolder();
-        VoiceBankCharsetDialog dialog;
+        VoiceBankDecodingDialog dialog;
         dialog.setRoot("bank");
         dialog.setDirectories({&jp, &cn});
         dialog.setCurrentCharsets({QStringLiteral("EUC-KR"), QStringLiteral("GBK")});
@@ -150,7 +150,7 @@ private Q_SLOTS:
 
     void the_answer_is_the_selected_encoding_or_none() {
         const auto source = shiftJisFolder();
-        VoiceBankCharsetDialog dialog;
+        VoiceBankDecodingDialog dialog;
         kit::DiagnosticList diagnostics;
 
         dialog.setSelectedCharset(QStringLiteral("Shift_JIS"));
@@ -167,7 +167,7 @@ private Q_SLOTS:
     void a_settled_folder_is_asked_about_its_file_names_only() {
         QTemporaryDir dir;
         const auto source = misdecodedFolder(dir);
-        VoiceBankCharsetDialog dialog;
+        VoiceBankDecodingDialog dialog;
         dialog.setRoot("bank");
         dialog.setQuestions({
             {&source, QStringLiteral("Shift_JIS")}
@@ -209,7 +209,7 @@ private Q_SLOTS:
             std::filesystem::path(dir.path().toStdU16String()), {}, diagnostics);
         QVERIFY(source.has_value());
 
-        VoiceBankCharsetDialog dialog;
+        VoiceBankDecodingDialog dialog;
         dialog.setQuestions({
             {&*source, QStringLiteral("Shift_JIS")}
         });
@@ -230,7 +230,7 @@ private Q_SLOTS:
     void the_file_names_follow_the_encoding_of_the_folder() {
         QTemporaryDir dir;
         const auto source = misdecodedFolder(dir);
-        VoiceBankCharsetDialog dialog;
+        VoiceBankDecodingDialog dialog;
         dialog.setQuestions({
             {&source, std::nullopt}
         });
@@ -245,7 +245,7 @@ private Q_SLOTS:
     void the_choices_make_the_record() {
         QTemporaryDir dir;
         const auto source = misdecodedFolder(dir);
-        VoiceBankCharsetDialog dialog;
+        VoiceBankDecodingDialog dialog;
         dialog.setQuestions({
             {&source, QStringLiteral("Shift_JIS")}
         });
@@ -273,7 +273,7 @@ private Q_SLOTS:
     void a_folder_not_read_records_no_file_names() {
         QTemporaryDir dir;
         const auto source = misdecodedFolder(dir);
-        VoiceBankCharsetDialog dialog;
+        VoiceBankDecodingDialog dialog;
         dialog.setQuestions({
             {&source, std::nullopt}
         });
@@ -299,8 +299,8 @@ int main(int argc, char *argv[]) {
     // Runs without a display
     qputenv("QT_QPA_PLATFORM", "offscreen");
     QApplication app(argc, argv);
-    test_VoiceBankCharsetDialog test;
+    test_VoiceBankDecodingDialog test;
     return QTest::qExec(&test, argc, argv);
 }
 
-#include "test_VoiceBankCharsetDialog.moc"
+#include "test_VoiceBankDecodingDialog.moc"

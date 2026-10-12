@@ -6,13 +6,13 @@
 #include <QtWidgets/QApplication>
 
 #include <helloutau/Editor/Dialogs/ExportUstDialog.h>
-#include <helloutau/Editor/Dialogs/UstCharsetDialog.h>
+#include <helloutau/Editor/Dialogs/UstDecodingDialog.h>
 
 using namespace hello;
 using namespace hello::daw;
 namespace fs = std::filesystem;
 
-class test_UstCharsetDialog : public QObject {
+class test_UstDecodingDialog : public QObject {
     Q_OBJECT
 
 private:
@@ -35,7 +35,7 @@ private Q_SLOTS:
         const auto ust = shiftJisUst(dir);
         QVERIFY(ust);
 
-        UstCharsetDialog dialog;
+        UstDecodingDialog dialog;
         dialog.setDocument(*ust, "song.ust");
         dialog.setSelectedCharset(QStringLiteral("Shift_JIS"));
         QCOMPARE(dialog.selectedCharset(), QStringLiteral("Shift_JIS"));
@@ -54,7 +54,7 @@ private Q_SLOTS:
         const auto ust = shiftJisUst(dir);
         QVERIFY(ust);
 
-        UstCharsetDialog dialog;
+        UstDecodingDialog dialog;
         dialog.setDocument(*ust, "song.ust");
         QCOMPARE(dialog.selectedCharset(), QStringLiteral("Shift_JIS"));
         QVERIFY(!dialog.isGrey(QStringLiteral("Shift_JIS")));
@@ -78,8 +78,8 @@ int main(int argc, char *argv[]) {
     // Runs without a display
     qputenv("QT_QPA_PLATFORM", "offscreen");
     QApplication app(argc, argv);
-    test_UstCharsetDialog test;
+    test_UstDecodingDialog test;
     return QTest::qExec(&test, argc, argv);
 }
 
-#include "test_UstCharsetDialog.moc"
+#include "test_UstDecodingDialog.moc"

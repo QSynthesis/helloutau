@@ -87,7 +87,7 @@
 #include "RegionDialog.h"
 #include "ScalePitchDialog.h"
 #include "PitchControlDialog.h"
-#include "VoiceBankCharsetDialog.h"
+#include "VoiceBankDecodingDialog.h"
 #include "VoiceBankWindow.h"
 
 namespace hello::daw {
@@ -2512,7 +2512,7 @@ namespace hello::daw {
         }
         const auto document = impl.document.get();
         impl.voiceBankRoot = impl.voiceRoot();
-        VoiceBankCharsetDialog selector(this);
+        VoiceBankDecodingDialog selector(this);
         selector.setRoot(impl.voiceBankRoot);
         kit::DiagnosticList diagnostics;
         const bool loaded = document->loadVoiceBank(

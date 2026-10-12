@@ -14,7 +14,7 @@
 | 方面 | 现状 |
 |---|---|
 | 数据与编辑层 | 已完成：`VoiceBankSession`（事务、撤销、检查磁盘、重新读取、重新解读、保存、另存为、`isIncomplete()`）、句柄 `VoiceBankRefs`、领域函数 `VoiceBankEdits`（修改、插入、删除条目，收录未收录的 wav，写入与删除 `prefix.map` 的一项，转换编码）与命令；`voicedit` 以命令编辑真实音源 |
-| 编码 | 打开工程时逐目录询问编码的 `VoiceBankCharsetDialog` 已有，可复用 |
+| 编码 | 打开工程时逐目录询问编码的 `VoiceBankDecodingDialog` 已有，可复用 |
 | 音频 | `WaveAudio` 读取 wav；`HelloUtauAudio` 的 `AudioOutput` 与 `BufferSource` 可播放一段采样 |
 | 合成 | `SynthPlan` / `SynthToolProcess` 可对单个条目调用重采样器，用于试听 |
 | 频率表 | 读写与生成的参考实现 qfrqeditor 已完成（[`claude/frqeditor-reference.md`](claude/frqeditor-reference.md)），尚未移入本仓库 |
@@ -50,7 +50,7 @@
   - 工程窗口的「编辑工程的音源」：打开该工程所用的音源，已开则激活（作者决定）；
   - 卷帘中从音符跳到它所用的条目：打开音源窗口并选中该条目（作者决定，第 8 步）；
   - 「Open Recent」（作者决定，同 VS Code）：一个菜单，先列最近的工程，分隔线后列最近的音源，各最多 10 个；某一类达到 10 个时，在该类末尾显示对应的「More...」，以命令面板列出该类的全部记录（各保留最多 50 个，可搜索），最后是「Clear Recent」。两种窗口的菜单相同，任一窗口都能打开两种文档。两个「Open Recent Project...」与「Open Recent Voice Bank...」命令只在命令面板中显示。
-- 未确定编码的目录，打开时以 `VoiceBankCharsetDialog` 逐目录询问，与打开工程时相同。
+- 未确定编码的目录，打开时以 `VoiceBankDecodingDialog` 逐目录询问，与打开工程时相同。
 - 保存（Ctrl+S）、另存为、关闭时询问保存、撤销与重做、标题栏的未保存标记，规则见 `Editing.md`「保存状态」「另存为」。
 - 保存后，使用该音源的已打开工程重建映射（`Editing.md`「音源保存后的处理」）。
 

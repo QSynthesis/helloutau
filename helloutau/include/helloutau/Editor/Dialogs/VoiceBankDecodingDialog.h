@@ -1,5 +1,5 @@
-#ifndef HELLOUTAU_EDITOR_DIALOGS_VOICEBANKCHARSETDIALOG_H
-#define HELLOUTAU_EDITOR_DIALOGS_VOICEBANKCHARSETDIALOG_H
+#ifndef HELLOUTAU_EDITOR_DIALOGS_VOICEBANKDECODINGDIALOG_H
+#define HELLOUTAU_EDITOR_DIALOGS_VOICEBANKDECODINGDIALOG_H
 
 #include <filesystem>
 #include <optional>
@@ -44,12 +44,12 @@ namespace hello::daw {
     /// names to determine. See the section on misdecoded file names in docs/Editing.md.
     ///
     /// \sa setCurrentCharsets() for reading the folders of an open voice bank again.
-    class HELLOUTAU_EDITOR_EXPORT VoiceBankCharsetDialog : public QDialog,
-                                                           public kit::VoiceBankCharsetSelector {
+    class HELLOUTAU_EDITOR_EXPORT VoiceBankDecodingDialog : public QDialog,
+                                                            public kit::VoiceBankCharsetSelector {
         Q_OBJECT
     public:
-        explicit VoiceBankCharsetDialog(QWidget *parent = nullptr);
-        ~VoiceBankCharsetDialog();
+        explicit VoiceBankDecodingDialog(QWidget *parent = nullptr);
+        ~VoiceBankDecodingDialog();
 
         /// Sets the voice bank whose folders are asked about, which the dialog names.
         void setRoot(const std::filesystem::path &root);
@@ -188,4 +188,4 @@ namespace hello::daw {
 
 }
 
-#endif // HELLOUTAU_EDITOR_DIALOGS_VOICEBANKCHARSETDIALOG_H
+#endif // HELLOUTAU_EDITOR_DIALOGS_VOICEBANKDECODINGDIALOG_H

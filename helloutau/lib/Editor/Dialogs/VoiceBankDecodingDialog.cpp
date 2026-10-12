@@ -1,4 +1,4 @@
-#include "VoiceBankCharsetDialog.h"
+#include "VoiceBankDecodingDialog.h"
 
 #include <QtCore/QDir>
 #include <QtCore/QSignalBlocker>
@@ -60,7 +60,7 @@ namespace hello::daw {
 
     }
 
-    VoiceBankCharsetDialog::VoiceBankCharsetDialog(QWidget *parent) : QDialog(parent) {
+    VoiceBankDecodingDialog::VoiceBankDecodingDialog(QWidget *parent) : QDialog(parent) {
         setWindowTitle(tr("Choose Encoding"));
 
         m_message = new QLabel();
@@ -143,19 +143,19 @@ namespace hello::daw {
         resize(760, 520);
     }
 
-    VoiceBankCharsetDialog::~VoiceBankCharsetDialog() = default;
+    VoiceBankDecodingDialog::~VoiceBankDecodingDialog() = default;
 
-    void VoiceBankCharsetDialog::setRoot(const std::filesystem::path &root) {
+    void VoiceBankDecodingDialog::setRoot(const std::filesystem::path &root) {
         m_root = root;
     }
 
     std::optional<QString>
-        VoiceBankCharsetDialog::selectCharset(const kit::VoiceBankDirectorySource &directory,
-                                              kit::DiagnosticList &diagnostics) {
+        VoiceBankDecodingDialog::selectCharset(const kit::VoiceBankDirectorySource &directory,
+                                               kit::DiagnosticList &diagnostics) {
         return selectCharsets({&directory}, diagnostics).value(0);
     }
 
-    QList<std::optional<QString>> VoiceBankCharsetDialog::selectCharsets(
+    QList<std::optional<QString>> VoiceBankDecodingDialog::selectCharsets(
         const QList<const kit::VoiceBankDirectorySource *> &directories,
         kit::DiagnosticList &diagnostics) {
         QList<Question> questions;
@@ -169,9 +169,9 @@ namespace hello::daw {
         return charsets;
     }
 
-    QList<VoiceBankCharsetDialog::Answer>
-        VoiceBankCharsetDialog::selectEncodings(const QList<Question> &questions,
-                                                kit::DiagnosticList &diagnostics) {
+    QList<VoiceBankDecodingDialog::Answer>
+        VoiceBankDecodingDialog::selectEncodings(const QList<Question> &questions,
+                                                 kit::DiagnosticList &diagnostics) {
         Q_UNUSED(diagnostics);
         setQuestions(questions);
         QList<Answer> result;
@@ -193,11 +193,11 @@ namespace hello::daw {
         return result;
     }
 
-    void VoiceBankCharsetDialog::setDirectory(const kit::VoiceBankDirectorySource &directory) {
+    void VoiceBankDecodingDialog::setDirectory(const kit::VoiceBankDirectorySource &directory) {
         setDirectories({&directory});
     }
 
-    void VoiceBankCharsetDialog::setDirectories(
+    void VoiceBankDecodingDialog::setDirectories(
         const QList<const kit::VoiceBankDirectorySource *> &directories) {
         QList<Question> questions;
         for (const auto directory : directories) {
@@ -206,7 +206,7 @@ namespace hello::daw {
         setQuestions(questions);
     }
 
-    void VoiceBankCharsetDialog::setQuestions(const QList<Question> &questions) {
+    void VoiceBankDecodingDialog::setQuestions(const QList<Question> &questions) {
         m_directories.clear();
         m_settled.clear();
         for (const auto &question : questions) {
@@ -258,7 +258,7 @@ namespace hello::daw {
         showCurrent();
     }
 
-    void VoiceBankCharsetDialog::updateMessage() {
+    void VoiceBankDecodingDialog::updateMessage() {
         const auto bank = QString::fromStdU16String(m_root.filename().u16string());
         int unsettled = 0;
         int named = 0;
@@ -319,7 +319,7 @@ namespace hello::daw {
         m_message->setText(text);
     }
 
-    QList<VoiceBankCharsetDialog::Answer> VoiceBankCharsetDialog::answers() const {
+    QList<VoiceBankDecodingDialog::Answer> VoiceBankDecodingDialog::answers() const {
         QList<Answer> result;
         for (int i = 0; i < m_directories.size(); ++i) {
             Answer answer;
@@ -338,7 +338,7 @@ namespace hello::daw {
         return result;
     }
 
-    void VoiceBankCharsetDialog::askFileNames(int index) {
+    void VoiceBankDecodingDialog::askFileNames(int index) {
         auto &names = m_fileNames[index];
         const auto &directory = *m_directories[index];
         const auto &charset = m_choices[index];
@@ -357,7 +357,7 @@ namespace hello::daw {
             names.question && names.question->basis() == kit::MisdecodedNameQuestion::Found;
     }
 
-    void VoiceBankCharsetDialog::setCurrentCharsets(const QStringList &charsets) {
+    void VoiceBankDecodingDialog::setCurrentCharsets(const QStringList &charsets) {
         m_current = charsets;
         for (int i = 0; i < m_choices.size() && i < charsets.size(); ++i) {
             m_choices[i] = charsets[i];
@@ -394,7 +394,7 @@ namespace hello::daw {
         showCurrent();
     }
 
-    QList<int> VoiceBankCharsetDialog::changedFolders() const {
+    QList<int> VoiceBankDecodingDialog::changedFolders() const {
         QList<int> changed;
         for (int i = 0; i < m_choices.size() && i < m_current.size(); ++i) {
             if (m_choices[i] != m_current[i]) {
@@ -404,12 +404,12 @@ namespace hello::daw {
         return changed;
     }
 
-    QString VoiceBankCharsetDialog::selectedCharset() const {
+    QString VoiceBankDecodingDialog::selectedCharset() const {
         const int current = currentFolder();
         return current >= 0 && current < m_choices.size() ? m_choices[current] : QString();
     }
 
-    void VoiceBankCharsetDialog::setSelectedCharset(const QString &charset) {
+    void VoiceBankDecodingDialog::setSelectedCharset(const QString &charset) {
         QList<int> rows;
         for (const auto item : m_folders->selectedItems()) {
             rows.push_back(m_folders->row(item));
@@ -429,15 +429,15 @@ namespace hello::daw {
         showCurrent();
     }
 
-    int VoiceBankCharsetDialog::currentFolder() const {
+    int VoiceBankDecodingDialog::currentFolder() const {
         return m_directories.isEmpty() ? -1 : std::max(0, m_folders->currentRow());
     }
 
-    void VoiceBankCharsetDialog::setCurrentFolder(int index) {
+    void VoiceBankDecodingDialog::setCurrentFolder(int index) {
         m_folders->setCurrentRow(index);
     }
 
-    void VoiceBankCharsetDialog::selectFolders(const QList<int> &indices) {
+    void VoiceBankDecodingDialog::selectFolders(const QList<int> &indices) {
         m_folders->clearSelection();
         for (const int index : indices) {
             if (const auto item = m_folders->item(index)) {
@@ -446,32 +446,32 @@ namespace hello::daw {
         }
     }
 
-    QString VoiceBankCharsetDialog::charsetOf(int index) const {
+    QString VoiceBankDecodingDialog::charsetOf(int index) const {
         return m_choices.value(index);
     }
 
-    bool VoiceBankCharsetDialog::isIncluded(int index) const {
+    bool VoiceBankDecodingDialog::isIncluded(int index) const {
         const auto item = m_folders->item(index);
         return item && item->checkState() == Qt::Checked;
     }
 
-    void VoiceBankCharsetDialog::setIncluded(int index, bool included) {
+    void VoiceBankDecodingDialog::setIncluded(int index, bool included) {
         if (const auto item = m_folders->item(index)) {
             item->setCheckState(included ? Qt::Checked : Qt::Unchecked);
         }
     }
 
-    QString VoiceBankCharsetDialog::folderText(int index) const {
+    QString VoiceBankDecodingDialog::folderText(int index) const {
         const auto item = m_folders->item(index);
         return item ? item->text() : QString();
     }
 
-    bool VoiceBankCharsetDialog::isGrey(const QString &charset) const {
+    bool VoiceBankDecodingDialog::isGrey(const QString &charset) const {
         const auto items = m_charsets->findItems(charset, Qt::MatchExactly);
         return !items.isEmpty() && items.first()->foreground().style() != Qt::NoBrush;
     }
 
-    QStringList VoiceBankCharsetDialog::previewTitles() const {
+    QStringList VoiceBankDecodingDialog::previewTitles() const {
         QStringList titles;
         for (int i = 0; i < m_previews->count(); ++i) {
             titles.push_back(m_previews->tabText(i));
@@ -479,19 +479,19 @@ namespace hello::daw {
         return titles;
     }
 
-    QString VoiceBankCharsetDialog::previewText(int index) const {
+    QString VoiceBankDecodingDialog::previewText(int index) const {
         const auto edit = qobject_cast<QPlainTextEdit *>(m_previews->widget(index));
         return edit ? edit->toPlainText() : QString();
     }
 
     const std::optional<kit::MisdecodedNameQuestion> &
-        VoiceBankCharsetDialog::misdecodedNameQuestion(int index) const {
+        VoiceBankDecodingDialog::misdecodedNameQuestion(int index) const {
         static const std::optional<kit::MisdecodedNameQuestion> none;
         return index >= 0 && index < m_fileNames.size() ? m_fileNames[index].question : none;
     }
 
-    void VoiceBankCharsetDialog::setFileNameEncodings(int index, const QString &original,
-                                                      const QString &misdecodedAs) {
+    void VoiceBankDecodingDialog::setFileNameEncodings(int index, const QString &original,
+                                                       const QString &misdecodedAs) {
         if (index < 0 || index >= m_fileNames.size()) {
             return;
         }
@@ -515,12 +515,12 @@ namespace hello::daw {
         }
     }
 
-    QStringList VoiceBankCharsetDialog::misdecodedNames(int index) const {
+    QStringList VoiceBankDecodingDialog::misdecodedNames(int index) const {
         return index >= 0 && index < m_fileNames.size() ? m_fileNames[index].misdecoded
                                                         : QStringList();
     }
 
-    void VoiceBankCharsetDialog::setMisdecoded(int index, const QString &name, bool misdecoded) {
+    void VoiceBankDecodingDialog::setMisdecoded(int index, const QString &name, bool misdecoded) {
         if (index < 0 || index >= m_fileNames.size()) {
             return;
         }
@@ -540,11 +540,11 @@ namespace hello::daw {
         }
     }
 
-    bool VoiceBankCharsetDialog::namesAsTheyAre(int index) const {
+    bool VoiceBankDecodingDialog::namesAsTheyAre(int index) const {
         return index >= 0 && index < m_fileNames.size() && m_fileNames[index].asTheyAre;
     }
 
-    void VoiceBankCharsetDialog::setNamesAsTheyAre(int index, bool asTheyAre) {
+    void VoiceBankDecodingDialog::setNamesAsTheyAre(int index, bool asTheyAre) {
         if (index < 0 || index >= m_fileNames.size()) {
             return;
         }
@@ -554,7 +554,7 @@ namespace hello::daw {
         }
     }
 
-    void VoiceBankCharsetDialog::updateFolders() {
+    void VoiceBankDecodingDialog::updateFolders() {
         const auto bank = QString::fromStdU16String(m_root.filename().u16string());
         const QSignalBlocker blocker(m_folders);
         for (int i = 0; i < m_directories.size() && i < m_folders->count(); ++i) {
@@ -577,7 +577,7 @@ namespace hello::daw {
         }
     }
 
-    void VoiceBankCharsetDialog::showCurrent() {
+    void VoiceBankDecodingDialog::showCurrent() {
         const int current = currentFolder();
         if (current < 0) {
             return;
@@ -615,7 +615,7 @@ namespace hello::daw {
         showFileNames();
     }
 
-    void VoiceBankCharsetDialog::updatePreview() {
+    void VoiceBankDecodingDialog::updatePreview() {
         const int current = currentFolder();
         if (current < 0) {
             return;
@@ -641,7 +641,7 @@ namespace hello::daw {
         }
     }
 
-    void VoiceBankCharsetDialog::showFileNames() {
+    void VoiceBankDecodingDialog::showFileNames() {
         const int current = currentFolder();
         const auto &names = m_fileNames.value(current);
         const int page = m_previews->indexOf(m_names);

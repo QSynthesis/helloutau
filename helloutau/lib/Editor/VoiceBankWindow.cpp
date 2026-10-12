@@ -67,7 +67,7 @@
 #include "FindSupport_p.h"
 #include "OtoWaveformView.h"
 #include "SamplePreview.h"
-#include "VoiceBankCharsetDialog.h"
+#include "VoiceBankDecodingDialog.h"
 #include "VoiceBankEntryModel.h"
 #include "VoiceBankInfoPanel.h"
 
@@ -653,7 +653,7 @@ namespace hello::daw {
         // Reads changes from the disk, one undo step unless only audio files changed.
         void read(const kit::VoiceBankChanges &changes) {
             stdc_decl_t;
-            VoiceBankCharsetDialog selector(&decl);
+            VoiceBankDecodingDialog selector(&decl);
             selector.setRoot(document->rootPath());
             kit::DiagnosticList diagnostics;
             document->reloadFromDisk(changes, &selector, diagnostics);
@@ -2000,7 +2000,7 @@ namespace hello::daw {
         for (const auto &source : sources) {
             pointers.push_back(&source);
         }
-        VoiceBankCharsetDialog dialog(this);
+        VoiceBankDecodingDialog dialog(this);
         dialog.setRoot(impl.document->rootPath());
         dialog.setDirectories(pointers);
         dialog.setCurrentCharsets(charsets);
@@ -2081,7 +2081,7 @@ namespace hello::daw {
         for (std::size_t i = 0; i < sources.size(); ++i) {
             questions.push_back({&sources[i], charsets.at(qsizetype(i))});
         }
-        VoiceBankCharsetDialog dialog(this);
+        VoiceBankDecodingDialog dialog(this);
         dialog.setRoot(impl.document->rootPath());
         dialog.setQuestions(questions);
         if (dialog.exec() != QDialog::Accepted) {
@@ -2534,7 +2534,7 @@ namespace hello::daw {
 
     bool VoiceBankWindow::reloadAll() {
         stdc_impl_t;
-        VoiceBankCharsetDialog selector(this);
+        VoiceBankDecodingDialog selector(this);
         selector.setRoot(impl.document->rootPath());
         kit::DiagnosticList diagnostics;
         impl.document->reloadAllFromDisk(&selector, diagnostics);

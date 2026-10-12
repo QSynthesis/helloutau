@@ -147,7 +147,7 @@ namespace hello::daw {
         /// and the text changes. A folder that was not read, for want of an encoding, is read.
         bool rereadCharset(const std::filesystem::path &directory, const QString &charset);
 
-        /// Opens VoiceBankCharsetDialog for the folders in the tree and reads each folder whose
+        /// Opens VoiceBankDecodingDialog for the folders in the tree and reads each folder whose
         /// encoding the user changes again in the new encoding, as one undo step. Folders without
         /// text files and folders whose \c oto.ini declares UTF-8 are not listed, and a message
         /// box replaces the dialog if no folder remains. Returns false if no folder remains, the
@@ -162,7 +162,7 @@ namespace hello::daw {
         /// window reports. See the section on misdecoded file names in docs/Editing.md.
         int fileNamesToDetermine() const;
 
-        /// Opens VoiceBankCharsetDialog for the file names to determine under the records of the
+        /// Opens VoiceBankDecodingDialog for the file names to determine under the records of the
         /// tree, and sets the records answered, as one undo step. A message box replaces the
         /// dialog if no name is to be determined. Returns false if no name is to be determined,
         /// the dialog is declined or a record is not set.

@@ -10,7 +10,7 @@
 ## UST 的处理
 
 - `.usth` 与 `.ust` 属于 `HelloKitDocument`，不是格式转换驱动，不登记到 `InterchangeDrivers`（Interchange.md「职责边界」）。
-- UST 的打开仍为「文件 → 打开」。该流程有专用的编码对话框（`UstCharsetDialog`），文档记录来源文件，保存时以同名的 `.usth` 为默认文件名。
+- UST 的打开仍为「文件 → 打开」。该流程有专用的编码对话框（`UstDecodingDialog`），文档记录来源文件，保存时以同名的 `.usth` 为默认文件名。
 - UST 的导出仍为 Editor 的「文件 → 导出 → UST…」。导出时写入本机设置中的合成工具，并按目标文件写入 `CacheDir`。二者取自应用设置，无法表示为驱动的选项。
 - Interchange 插件的导出命令插入同一「导出」子菜单，位于 UST 之后。停用 Interchange 插件只移除其他格式，不影响 UST。
 - 编辑器组件化（[`Plugins.md`](Plugins.md)「最终目标」）时，UST 的导出随其余内置命令移入 Core，不属于本文范围。
@@ -56,7 +56,7 @@
 
 ### MIDI 的编码页
 
-- 左侧为编码列表，右侧预览轨名、歌词与标记，切换编码时全部重新解码。候选为驱动在 `encoding` 选项中声明的值，无法解码文件文本的编码以禁用文字的颜色显示，同 `UstCharsetDialog`。
+- 左侧为编码列表，右侧预览轨名、歌词与标记，切换编码时全部重新解码。候选为驱动在 `encoding` 选项中声明的值，无法解码文件文本的编码以禁用文字的颜色显示，同 `UstDecodingDialog`。
 - 默认选中项：先尝试 UTF-8，出现非法字节序列时改用系统编码，二者都不适用时取 `TextCodec::ranked()` 的首位（Interchange.md「默认编码可以推测」）。
 - 编码列表与预览之下是驱动其余选项的生成表单（无歌词音符的默认歌词），自定义页负责驱动的全部选项。
 - 所选编码经 `ImportRequest::driverOptions["encoding"]` 传给驱动。
