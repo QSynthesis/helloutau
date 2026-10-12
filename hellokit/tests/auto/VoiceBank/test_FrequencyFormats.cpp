@@ -22,14 +22,6 @@ namespace {
         return bytes;
     }
 
-    QByteArray utf16(const QString &text) {
-        QByteArray bytes;
-        for (const auto c : text) {
-            bytes += bytesOf<quint16>(c.unicode());
-        }
-        return bytes;
-    }
-
     void write(const fs::path &path, const QByteArray &bytes) {
         QFile file(QString::fromStdU16String(path.u16string()));
         QVERIFY(file.open(QIODevice::WriteOnly));
@@ -38,18 +30,6 @@ namespace {
 
     static bool hasMap(const FrequencyFormat &format, const fs::path &wav) {
         return format.mapsExist(wav.parent_path(), {wav.filename()}).value(0);
-    }
-
-    // An entry of desc.mrq of version 2
-    QByteArray mrqEntry(const QString &name, const QList<float> &frequencies) {
-        QByteArray data = bytesOf<qint32>(qint32(frequencies.size())) + bytesOf<qint32>(44100) +
-                          bytesOf<qint32>(256);
-        for (const float f : frequencies) {
-            data += bytesOf(f);
-        }
-        data += bytesOf<qint32>(0) + bytesOf<qint32>(1);
-        return bytesOf<qint32>(qint32(name.size())) + utf16(name) +
-               bytesOf<qint32>(qint32(data.size())) + data;
     }
 
     class Fixed : public FrequencyFormat {
@@ -83,6 +63,29 @@ namespace {
         QStringList m_patterns;
     };
 
+    // A format whose map of a.wav is a.map, with the caches a.env and a.wav.cache
+    class Cached : public Fixed {
+    public:
+        Cached() : Fixed(QStringLiteral("cached")) {
+        }
+
+        QList<bool> mapsExist(const fs::path &directory,
+                              const QList<fs::path> &wavs) const override {
+            return sidecarsExist(directory, wavs);
+        }
+
+        std::optional<fs::path> sidecarNameOf(const fs::path &wav) const override {
+            return wav.filename().replace_extension(".map");
+        }
+
+        QList<AnalysisCache> analysisCaches() const override {
+            return {
+                {QStringLiteral("ENV"),   AnalysisCache::ReplacedExtension, QStringLiteral(".env")  },
+                {QStringLiteral("CACHE"), AnalysisCache::AppendedSuffix,    QStringLiteral(".cache")},
+            };
+        }
+    };
+
     FrequencyFormatRegistry::AddFactory registration(FrequencyFormats &formats, const char *id,
                                                      QStringList patterns = {}) {
         return FrequencyFormatRegistry::AddFactory(formats.registry(), id, {}, [id, patterns] {
@@ -111,12 +114,16 @@ private:
     }
 
 private Q_SLOTS:
-    // The format of a resampler depends on its file name only, with frq as the fallback.
+    // The format of a resampler depends on its file name only, matched whole and without case,
+    // with frq as the fallback.
     void a_format_is_chosen_by_the_resampler() {
         FrequencyFormats formats;
         QVERIFY(!formats.formatForResampler("resampler.exe"));
         const BuiltinFrequencyFormats builtins(formats.registry());
-        QCOMPARE(idsOf(formats), QStringList({"frq", "dio", "mrq"}));
+        const auto mrq = registration(formats, "mrq", {QStringLiteral("moresampler*.exe")});
+        const auto dio = registration(
+            formats, "dio", {QStringLiteral("w4u*.exe"), QStringLiteral("world4utau*.exe")});
+        QCOMPARE(idsOf(formats), QStringList({"frq", "mrq", "dio"}));
         const auto idOf = [&formats](const char *resampler) {
             const auto format = formats.formatForResampler(fs::path(resampler));
             return format ? format->id() : QString();
@@ -145,8 +152,8 @@ private Q_SLOTS:
         QCOMPARE(seen, QList<QStringList>({{"sc"}}));
 
         auto builtins = std::make_unique<BuiltinFrequencyFormats>(formats.registry());
-        QCOMPARE(changed.size(), 4);
-        QCOMPARE(idsOf(formats), QStringList({"sc", "frq", "dio", "mrq"}));
+        QCOMPARE(changed.size(), 2);
+        QCOMPARE(idsOf(formats), QStringList({"sc", "frq"}));
         QCOMPARE(formats.formatForResampler("straycat.exe")->id(), QStringLiteral("sc"));
 
         const auto frq = registration(formats, "frq");
@@ -155,11 +162,12 @@ private Q_SLOTS:
             return std::make_unique<Fixed>(QStringLiteral("other"));
         });
         QVERIFY(renamed.entry());
-        QCOMPARE(changed.size(), 4);
-        QCOMPARE(idsOf(formats), QStringList({"sc", "frq", "dio", "mrq"}));
+        QCOMPARE(changed.size(), 2);
+        QCOMPARE(idsOf(formats), QStringList({"sc", "frq"}));
         QCOMPARE(formats.format(QStringLiteral("frq"))->name(),
                  QStringLiteral("frq (resampler.exe)"));
 
+        auto mrq = registration(formats, "mrq", {QStringLiteral("moresampler*.exe")});
         auto more = registration(formats, "more", {QStringLiteral("moresampler*.exe")});
         QCOMPARE(formats.formatForResampler("moresampler.exe")->id(), QStringLiteral("more"));
         const FrequencyFormats other;
@@ -167,8 +175,9 @@ private Q_SLOTS:
 
         more = {};
         QCOMPARE(formats.formatForResampler("moresampler.exe")->id(), QStringLiteral("mrq"));
+        mrq = {};
         builtins.reset();
-        QCOMPARE(changed.size(), 9);
+        QCOMPARE(changed.size(), 7);
         QCOMPARE(seen.last(), QStringList({"sc"}));
         QVERIFY(!formats.formatForResampler("resampler.exe"));
     }
@@ -209,55 +218,6 @@ private Q_SLOTS:
         QCOMPARE(diagnostics.size(), 2);
     }
 
-    // b.dio: the time of each frame as written, in seconds
-    void a_dio_reads() {
-        FrequencyFormats formats;
-        const BuiltinFrequencyFormats builtins(formats.registry());
-        const auto dio = formats.format(QStringLiteral("dio"));
-        QByteArray bytes("wrld-dio");
-        bytes += bytesOf<qint32>(1000) + bytesOf<qint32>(44100) + bytesOf<qint32>(2);
-        bytes += bytesOf(0.0) + bytesOf(0.0) + bytesOf(0.005) + bytesOf(261.6);
-        write(pathOf("b.dio"), bytes);
-        const auto wav = pathOf("b.wav");
-        QVERIFY(hasMap(*dio, wav));
-        DiagnosticList diagnostics;
-        const auto table = dio->read(wav, 44100, diagnostics);
-        QVERIFY(table);
-        QCOMPARE(table->frames.size(), size_t(2));
-        QCOMPARE(table->frames[1].time, 5.0);
-        QCOMPARE(table->frames[1].frequency, 261.6);
-        QVERIFY(!table->frames[1].amplitude);
-        QVERIFY(!table->averageFrequency);
-    }
-
-    // An entry of desc.mrq, found by case-insensitive name after a deleted entry
-    void an_mrq_entry_reads() {
-        QDir(m_dir.path()).mkdir(QStringLiteral("m"));
-        FrequencyFormats formats;
-        const BuiltinFrequencyFormats builtins(formats.registry());
-        const auto mrq = formats.format(QStringLiteral("mrq"));
-        const auto wav = pathOf("m") / fs::path(u"い.wav");
-        QVERIFY(!hasMap(*mrq, wav));
-        QByteArray bytes("mrq ");
-        bytes += bytesOf<qint32>(2) + bytesOf<qint32>(3);
-        bytes += mrqEntry(QString(5, QChar(0)), {1.0f});
-        bytes += mrqEntry(QStringLiteral("x.wav"), {2.0f});
-        bytes += mrqEntry(QStringLiteral("い.WAV"), {0.0f, 440.0f});
-        write(pathOf("m") / "desc.mrq", bytes);
-        QVERIFY(hasMap(*mrq, wav));
-        QVERIFY(!hasMap(*mrq, pathOf("m") / "y.wav"));
-        QCOMPARE(mrq->mapsExist(pathOf("m"), {"x.wav", "y.wav", fs::path(u"い.wav")}),
-                 (QList<bool>{true, false, true}));
-        DiagnosticList diagnostics;
-        const auto table = mrq->read(wav, 0, diagnostics);
-        QVERIFY(table);
-        QCOMPARE(table->frames.size(), size_t(2));
-        QCOMPARE(table->frames[1].frequency, 440.0);
-        QCOMPARE(table->frames[1].time, 256 * 1000 / 44100.0);
-        QVERIFY(!mrq->read(pathOf("m") / "y.wav", 0, diagnostics));
-        QCOMPARE(diagnostics.size(), 1);
-    }
-
     // A map beside its audio file is renamed after it, in one list for all renames of the
     // directory. An audio file without a map needs no change.
     void the_tables_beside_the_audio_files_follow_their_renames() {
@@ -282,36 +242,20 @@ private Q_SLOTS:
         QCOMPARE(frq->at(0).path, fs::path("a_wav.frq"));
         QCOMPARE(frq->at(0).to, fs::path(u"あ_wav.frq"));
 
-        // The caches of world4utau beside the dio follow it.
-        write(directory / fs::path(u"偁.star"), "star");
-        const auto dio =
-            formats.format(QStringLiteral("dio"))->changesRenaming(directory, renames, diagnostics);
-        QVERIFY(dio);
-        QCOMPARE(dio->size(), 2);
-        QCOMPARE(dio->at(0).path, fs::path(u"偁.dio"));
-        QCOMPARE(dio->at(0).to, fs::path("b.dio"));
-        QCOMPARE(dio->at(1).path, fs::path(u"偁.star"));
-        QCOMPARE(dio->at(1).to, fs::path("b.star"));
+        // The caches beside a map follow it, after the map.
+        write(directory / fs::path(u"偁.map"), "map");
+        write(directory / fs::path(u"偁.env"), "env");
+        write(directory / fs::path(u"偁.wav.cache"), "cache");
+        const auto cached = Cached().changesRenaming(directory, renames, diagnostics);
+        QVERIFY(cached);
+        QCOMPARE(cached->size(), 3);
+        QCOMPARE(cached->at(0).path, fs::path(u"偁.map"));
+        QCOMPARE(cached->at(0).to, fs::path("b.map"));
+        QCOMPARE(cached->at(1).path, fs::path(u"偁.env"));
+        QCOMPARE(cached->at(1).to, fs::path("b.env"));
+        QCOMPARE(cached->at(2).path, fs::path(u"偁.wav.cache"));
+        QCOMPARE(cached->at(2).to, fs::path("b.wav.cache"));
         QVERIFY(diagnostics.isEmpty());
-    }
-
-    // The dio is removed with the caches of world4utau beside it.
-    void a_dio_is_removed_with_its_caches() {
-        QDir(m_dir.path()).mkdir(QStringLiteral("w"));
-        const auto directory = pathOf("w");
-        for (const auto name : {"a.dio", "a.star", "a.platinum", "a.wav"}) {
-            write(directory / name, "x");
-        }
-        FrequencyFormats formats;
-        const BuiltinFrequencyFormats builtins(formats.registry());
-        DiagnosticList diagnostics;
-        QVERIFY(FrequencyFormats::removeMaps(*formats.format(QStringLiteral("dio")), directory,
-                                             {"a.wav", "b.wav"}, diagnostics));
-        QVERIFY(diagnostics.isEmpty());
-        QVERIFY(!fs::exists(directory / "a.dio"));
-        QVERIFY(!fs::exists(directory / "a.star"));
-        QVERIFY(!fs::exists(directory / "a.platinum"));
-        QVERIFY(fs::exists(directory / "a.wav"));
     }
 
     // A format whose maps cannot be renamed returns the reason, which the caller reports.
@@ -325,88 +269,36 @@ private Q_SLOTS:
         QCOMPARE(diagnostics.at(0).severity, DiagnosticSeverity::Warning);
     }
 
-    // The caches are declared with the names of their files.
+    // The caches are declared with the names of their files. frq has none.
     void the_analysis_caches_are_declared() {
         FrequencyFormats formats;
         const BuiltinFrequencyFormats builtins(formats.registry());
         QVERIFY(formats.format(QStringLiteral("frq"))->analysisCaches().isEmpty());
-        const auto dio = formats.format(QStringLiteral("dio"))->analysisCaches();
-        QCOMPARE(dio.size(), 2);
-        QCOMPARE(dio.at(0).name, QStringLiteral("STAR"));
-        QCOMPARE(dio.at(0).fileNameOf(pathOf("a.wav")), fs::path("a.star"));
-        QCOMPARE(dio.at(1).fileNameOf("a.wav"), fs::path("a.platinum"));
-        const auto mrq = formats.format(QStringLiteral("mrq"))->analysisCaches();
-        QCOMPARE(mrq.size(), 1);
-        QCOMPARE(mrq.at(0).name, QStringLiteral("LLSM"));
-        QCOMPARE(mrq.at(0).fileNameOf(fs::path(u"あ.wav")), fs::path(u"あ.wav.llsm"));
+        const auto caches = Cached().analysisCaches();
+        QCOMPARE(caches.at(0).fileNameOf(pathOf("a.wav")), fs::path("a.env"));
+        QCOMPARE(caches.at(1).fileNameOf(fs::path(u"あ.wav")), fs::path(u"あ.wav.cache"));
     }
 
     // Removing the caches keeps the maps, and removing the maps removes their caches.
     void the_caches_are_removed_with_or_without_the_maps() {
         QDir(m_dir.path()).mkdir(QStringLiteral("c"));
         const auto directory = pathOf("c");
-        QByteArray bytes("mrq ");
-        bytes += bytesOf<qint32>(2) + bytesOf<qint32>(1);
-        bytes += mrqEntry(QStringLiteral("a.wav"), {2.0f});
-        write(directory / "desc.mrq", bytes);
-        write(directory / "a.wav.llsm", "llsm");
-        FrequencyFormats formats;
-        const BuiltinFrequencyFormats builtins(formats.registry());
-        const auto mrq = formats.format(QStringLiteral("mrq"));
+        write(directory / "a.map", "map");
+        write(directory / "a.env", "env");
+        write(directory / "a.wav.cache", "cache");
+        const Cached format;
 
         DiagnosticList diagnostics;
-        QVERIFY(FrequencyFormats::invalidateCaches(*mrq, directory, {"a.wav"}, diagnostics));
-        QVERIFY(!fs::exists(directory / "a.wav.llsm"));
-        QVERIFY(hasMap(*mrq, directory / "a.wav"));
+        QVERIFY(FrequencyFormats::invalidateCaches(format, directory, {"a.wav"}, diagnostics));
+        QVERIFY(!fs::exists(directory / "a.env"));
+        QVERIFY(!fs::exists(directory / "a.wav.cache"));
+        QVERIFY(hasMap(format, directory / "a.wav"));
 
-        write(directory / "a.wav.llsm", "llsm");
-        QVERIFY(FrequencyFormats::removeMaps(*mrq, directory, {"a.wav"}, diagnostics));
-        QVERIFY(!fs::exists(directory / "a.wav.llsm"));
-        QVERIFY(!hasMap(*mrq, directory / "a.wav"));
+        write(directory / "a.env", "env");
+        QVERIFY(FrequencyFormats::removeMaps(format, directory, {"a.wav"}, diagnostics));
+        QVERIFY(!fs::exists(directory / "a.env"));
+        QVERIFY(!hasMap(format, directory / "a.wav"));
         QVERIFY(diagnostics.isEmpty());
-    }
-
-    // The entries of renamed audio files are appended under the new names, whose old names and
-    // an entry under a new name are zeroed, and the LLSM files are renamed. Two audio files
-    // exchange their entries.
-    void the_entries_of_desc_mrq_follow_their_renames() {
-        QDir(m_dir.path()).mkdir(QStringLiteral("n"));
-        const auto directory = pathOf("n");
-        QByteArray bytes("mrq ");
-        bytes += bytesOf<qint32>(2) + bytesOf<qint32>(3);
-        bytes += mrqEntry(QStringLiteral("a.wav"), {1.0f});
-        bytes += mrqEntry(QStringLiteral("x.wav"), {2.0f});
-        bytes += mrqEntry(QStringLiteral("C.WAV"), {3.0f});
-        write(directory / "desc.mrq", bytes);
-        write(directory / "a.wav.llsm", "llsm");
-        FrequencyFormats formats;
-        const BuiltinFrequencyFormats builtins(formats.registry());
-        const auto mrq = formats.format(QStringLiteral("mrq"));
-        const QList<FrequencyFormat::AudioRename> renames{
-            {"a.wav", "x.wav"},
-            {"x.wav", "a.wav"},
-            {"b.wav", "c.wav"},
-        };
-
-        DiagnosticList diagnostics;
-        const auto changes = mrq->changesRenaming(directory, renames, diagnostics);
-        QVERIFY(changes);
-        QVERIFY(diagnostics.isEmpty());
-        QCOMPARE(changes->size(), 2);
-        QCOMPARE(changes->at(0).kind, FrequencyFormat::FileChange::Rename);
-        QCOMPARE(changes->at(0).path, fs::path("a.wav.llsm"));
-        QCOMPARE(changes->at(0).to, fs::path("x.wav.llsm"));
-        QCOMPARE(changes->at(1).kind, FrequencyFormat::FileChange::Rewrite);
-        QCOMPARE(changes->at(1).path, fs::path("desc.mrq"));
-
-        QByteArray expected("mrq ");
-        expected += bytesOf<qint32>(2) + bytesOf<qint32>(5);
-        expected += mrqEntry(QString(5, QChar(0)), {1.0f});
-        expected += mrqEntry(QString(5, QChar(0)), {2.0f});
-        expected += mrqEntry(QString(5, QChar(0)), {3.0f});
-        expected += mrqEntry(QStringLiteral("x.wav"), {1.0f});
-        expected += mrqEntry(QStringLiteral("a.wav"), {2.0f});
-        QCOMPARE(changes->at(1).contents, expected);
     }
 
     // A format of a plugin that names the sidecar file of each audio file follows renames without
@@ -480,43 +372,6 @@ private Q_SLOTS:
         QCOMPARE(diagnostics.at(0).severity, DiagnosticSeverity::Warning);
     }
 
-    // The entries of desc.mrq are deleted as the mrq library deletes them, their names zeroed in
-    // place, whatever the case of the names. The other entries stay readable. A folder without
-    // desc.mrq needs no change.
-    void the_entries_of_desc_mrq_are_removed() {
-        QDir(m_dir.path()).mkdir(QStringLiteral("m"));
-        const auto directory = pathOf("m");
-        QByteArray bytes("mrq ");
-        bytes += bytesOf<qint32>(2) + bytesOf<qint32>(3);
-        bytes += mrqEntry(QStringLiteral("x.wav"), {2.0f});
-        bytes += mrqEntry(QStringLiteral("A.WAV"), {0.0f, 440.0f});
-        bytes += mrqEntry(QStringLiteral("a.wav"), {1.0f});
-        write(directory / "desc.mrq", bytes);
-        FrequencyFormats formats;
-        const BuiltinFrequencyFormats builtins(formats.registry());
-        const auto mrq = formats.format(QStringLiteral("mrq"));
-
-        DiagnosticList diagnostics;
-        QVERIFY(FrequencyFormats::removeMaps(*mrq, directory, {"a.wav", "b.wav"}, diagnostics));
-        QVERIFY(diagnostics.isEmpty());
-        QByteArray deleted("mrq ");
-        deleted += bytesOf<qint32>(2) + bytesOf<qint32>(3);
-        deleted += mrqEntry(QStringLiteral("x.wav"), {2.0f});
-        deleted += mrqEntry(QString(5, QChar(0)), {0.0f, 440.0f});
-        deleted += mrqEntry(QString(5, QChar(0)), {1.0f});
-        QFile file(QString::fromStdU16String((directory / "desc.mrq").u16string()));
-        QVERIFY(file.open(QIODevice::ReadOnly));
-        QCOMPARE(file.readAll(), deleted);
-        file.close();
-        QCOMPARE(mrq->mapsExist(directory, {"x.wav", "a.wav"}), (QList<bool>{true, false}));
-        const auto table = mrq->read(directory / "x.wav", 0, diagnostics);
-        QVERIFY(table);
-        QCOMPARE(table->frames.at(0).frequency, 2.0);
-
-        const auto changes = mrq->changesRemoving(pathOf("none"), {"a.wav"}, diagnostics);
-        QVERIFY(changes);
-        QVERIFY(changes->isEmpty());
-    }
 };
 
 QTEST_GUILESS_MAIN(test_FrequencyFormats)

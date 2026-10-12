@@ -165,6 +165,27 @@ namespace hello::kit {
         /// \a renames in the directory \a directory.
         QList<FileChange> cacheRenames(const std::filesystem::path &directory,
                                        const QList<AudioRename> &renames) const;
+
+        /// \name Helpers of the formats
+        /// @{
+
+        /// Returns the contents of the file \a path, or \c std::nullopt with the reason in
+        /// \a diagnostics if it cannot be read.
+        static std::optional<QByteArray> contentsOf(const std::filesystem::path &path,
+                                                    DiagnosticList &diagnostics);
+
+        /// Reports \a path in \a diagnostics as no map of its format or a map cut short, and
+        /// returns \c std::nullopt.
+        static std::optional<FrequencyMap> damaged(const std::filesystem::path &path,
+                                                   DiagnosticList &diagnostics);
+
+        /// Returns whether each audio file of \a wavs, names in the directory \a directory, has
+        /// the sidecar file that sidecarNameOf() names, for mapsExist() of a format whose maps
+        /// are sidecar files.
+        QList<bool> sidecarsExist(const std::filesystem::path &directory,
+                                  const QList<std::filesystem::path> &wavs) const;
+
+        /// @}
     };
 
 }

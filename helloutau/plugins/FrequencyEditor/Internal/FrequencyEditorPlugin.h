@@ -1,22 +1,18 @@
 #ifndef HELLOUTAU_FREQUENCYEDITOR_INTERNAL_FREQUENCYEDITORPLUGIN_H
 #define HELLOUTAU_FREQUENCYEDITOR_INTERNAL_FREQUENCYEDITORPLUGIN_H
 
-#include <memory>
 #include <string>
 
 #include <stdcorelib/pluginsystem/iplugin.h>
 
 #include <hellokit/Synth/SynthDiagnosers.h>
-
-namespace hello::kit {
-    class BuiltinFrequencyFormats;
-}
+#include <hellokit/VoiceBank/FrequencyFormats.h>
 
 namespace hello::daw {
 
-    /// The plugin of frequency maps: registers the formats frq, dio and mrq, the diagnoser of
-    /// moresampler, and later the editor of the maps. See docs/FrequencyMaps.md and
-    /// docs/SynthDiagnostics.md.
+    /// The plugin of frequency maps: registers the formats dio and mrq, the diagnoser of
+    /// moresampler, and later the editor of the maps. The editor registers frq itself. See
+    /// docs/FrequencyMaps.md and docs/SynthDiagnostics.md.
     class FrequencyEditorPlugin : public stdc::pluginsystem::IPlugin {
     public:
         FrequencyEditorPlugin();
@@ -26,7 +22,8 @@ namespace hello::daw {
         void aboutToShutdown() override;
 
     private:
-        std::unique_ptr<kit::BuiltinFrequencyFormats> m_formats;
+        kit::FrequencyFormatRegistry::AddFactory m_dio;
+        kit::FrequencyFormatRegistry::AddFactory m_mrq;
         kit::SynthDiagnoserRegistry::AddFactory m_moresampler;
     };
 

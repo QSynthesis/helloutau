@@ -4,13 +4,14 @@
 
 #include <hellokit/Support/TranslationLoader.h>
 #include <hellokit/Synth/SynthDiagnosers.h>
-#include <hellokit/VoiceBank/BuiltinFrequencyFormats.h>
 #include <hellokit/VoiceBank/FrequencyFormats.h>
 
 #include <helloutau/Editor/AppLoader.h>
 #include <helloutau/Editor/Editor.h>
 
+#include <FrequencyEditor/DioFormat.h>
 #include <FrequencyEditor/MoresamplerDiagnoser.h>
+#include <FrequencyEditor/MrqFormat.h>
 
 namespace hello::daw {
 
@@ -32,8 +33,9 @@ namespace hello::daw {
             }
             return false;
         }
-        m_formats =
-            std::make_unique<kit::BuiltinFrequencyFormats>(editor->frequencyFormats().registry());
+        auto &formats = editor->frequencyFormats().registry();
+        m_dio = kit::FrequencyFormatRegistry::Add<DioFormat>(formats, DioFormat::formatId, {});
+        m_mrq = kit::FrequencyFormatRegistry::Add<MrqFormat>(formats, MrqFormat::formatId, {});
         m_moresampler = kit::SynthDiagnoserRegistry::Add<MoresamplerDiagnoser>(
             editor->synthDiagnosers().registry(), MoresamplerDiagnoser::diagnoserId, {});
         return true;
@@ -41,7 +43,8 @@ namespace hello::daw {
 
     void FrequencyEditorPlugin::aboutToShutdown() {
         m_moresampler = {};
-        m_formats.reset();
+        m_mrq = {};
+        m_dio = {};
         // Removed before this library, which holds the translation, is unloaded
         if (const auto translations = kit::TranslationLoader::instance()) {
             translations->remove(QStringLiteral("FrequencyEditor"));

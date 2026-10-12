@@ -63,7 +63,6 @@
 #include <hellokit/Synth/SynthToolProcess.h>
 #include <hellokit/Synth/ThreadedSynthRunner.h>
 #include <hellokit/Support/ExitLauncher.h>
-#include <hellokit/VoiceBank/BuiltinFrequencyFormats.h>
 #include <hellokit/VoiceBank/FrequencyFormats.h>
 
 #include <helloutau/Audio/AudioEngine.h>
@@ -94,6 +93,9 @@
 
 #include <helloutau/Testing/Editor/TestingEditor.h>
 #include <helloutau/Widgets/TimelineRuler.h>
+
+#include <FrequencyEditor/DioFormat.h>
+#include <FrequencyEditor/MrqFormat.h>
 
 using namespace hello;
 using namespace hello::daw;
@@ -350,21 +352,25 @@ private:
     QTemporaryDir m_dir;
     // The launcher of the application, in which a restart is scheduled
     kit::ExitLauncher m_launcher;
-    // The formats of frequency maps that the plugin FrequencyEditor registers, one object for
-    // each editor that editor() created. An object that outlives its editor removes nothing.
-    mutable std::vector<std::unique_ptr<kit::BuiltinFrequencyFormats>> m_formats;
+    // The registrations of the formats of frequency maps that the plugin FrequencyEditor
+    // registers, dio and mrq of each editor that editor() created. A registration that outlives
+    // its editor removes nothing.
+    mutable std::vector<kit::FrequencyFormatRegistry::AddFactory> m_formats;
 
     // An editor with the menus, the commands and the frequency map formats that the core
     // plugin and the plugin FrequencyEditor register, whose voice bank windows do not follow the
     // disk on their own, which would ask at any moment; a test calls VoiceBankWindow::checkDisk()
-    // instead.
+    // instead. The editor registers frq itself.
     std::unique_ptr<Editor> editor() const {
         auto e = std::make_unique<Editor>(
             std::make_unique<AppSettings>(m_dir.filePath(QStringLiteral("settings.json"))));
         e->setWatchesDisk(false);
         new BuiltinActions(e.get());
+        auto &formats = e->frequencyFormats().registry();
         m_formats.push_back(
-            std::make_unique<kit::BuiltinFrequencyFormats>(e->frequencyFormats().registry()));
+            kit::FrequencyFormatRegistry::Add<DioFormat>(formats, DioFormat::formatId, {}));
+        m_formats.push_back(
+            kit::FrequencyFormatRegistry::Add<MrqFormat>(formats, MrqFormat::formatId, {}));
         return e;
     }
 

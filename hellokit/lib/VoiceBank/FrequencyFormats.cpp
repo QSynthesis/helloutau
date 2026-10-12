@@ -1,6 +1,7 @@
 #include "FrequencyFormats.h"
 
 #include <QtCore/QDir>
+#include <QtCore/QFile>
 #include <QtCore/QRegularExpression>
 #include <QtCore/QSaveFile>
 
@@ -54,6 +55,38 @@ namespace hello::kit {
 
     QList<FrequencyFormat::AnalysisCache> FrequencyFormat::analysisCaches() const {
         return {};
+    }
+
+    std::optional<QByteArray> FrequencyFormat::contentsOf(const std::filesystem::path &path,
+                                                          DiagnosticList &diagnostics) {
+        const auto text = QString::fromStdU16String(path.u16string());
+        QFile file(text);
+        if (!file.open(QIODevice::ReadOnly)) {
+            diagnostics.push_back(
+                {DiagnosticSeverity::Error, tr("\"%1\" could not be read.").arg(text)});
+            return std::nullopt;
+        }
+        return file.readAll();
+    }
+
+    std::optional<FrequencyMap> FrequencyFormat::damaged(const std::filesystem::path &path,
+                                                         DiagnosticList &diagnostics) {
+        diagnostics.push_back({DiagnosticSeverity::Error,
+                               tr("\"%1\" is no frequency map of its format, or it is cut short.")
+                                   .arg(QString::fromStdU16String(path.u16string()))});
+        return std::nullopt;
+    }
+
+    QList<bool> FrequencyFormat::sidecarsExist(const std::filesystem::path &directory,
+                                               const QList<std::filesystem::path> &wavs) const {
+        QList<bool> found;
+        for (const auto &wav : wavs) {
+            const auto sidecar = sidecarNameOf(wav);
+            std::error_code error;
+            found.push_back(sidecar &&
+                            std::filesystem::is_regular_file(directory / *sidecar, error));
+        }
+        return found;
     }
 
     QList<FrequencyFormat::FileChange>

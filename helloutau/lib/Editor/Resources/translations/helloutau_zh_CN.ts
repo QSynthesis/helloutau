@@ -3829,13 +3829,6 @@ Write them again without these chunks? The audio stays the same. The files are w
     </message>
 </context>
 <context>
-    <name>hello::kit::Dio</name>
-    <message>
-        <source>dio (world4utau)</source>
-        <translation>dio (world4utau)</translation>
-    </message>
-</context>
-<context>
     <name>hello::kit::FrequencyFormat</name>
     <message>
         <source>&quot;%1&quot; could not be read.</source>
@@ -4020,17 +4013,6 @@ Write them again without these chunks? The audio stays the same. The files are w
     <message>
         <source>This file could not be written.</source>
         <translation>无法写入此文件。</translation>
-    </message>
-</context>
-<context>
-    <name>hello::kit::Mrq</name>
-    <message>
-        <source>mrq (moresampler)</source>
-        <translation>mrq (moresampler)</translation>
-    </message>
-    <message>
-        <source>&quot;%1&quot; has no entry for &quot;%2&quot;.</source>
-        <translation>「%1」中没有「%2」的条目。</translation>
     </message>
 </context>
 <context>

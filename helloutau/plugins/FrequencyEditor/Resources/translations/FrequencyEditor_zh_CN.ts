@@ -2,6 +2,13 @@
 <!DOCTYPE TS>
 <TS version="2.1" language="zh_CN">
 <context>
+    <name>hello::daw::DioFormat</name>
+    <message>
+        <source>dio (world4utau)</source>
+        <translation>dio (world4utau)</translation>
+    </message>
+</context>
+<context>
     <name>hello::daw::MoresamplerDiagnoser</name>
     <message>
         <source>Clear the render cache after the change, because the fragments already written remain placeholders.</source>
@@ -38,6 +45,17 @@
     <message>
         <source>Alternatively, set the wavtool to moresampler as well.</source>
         <translation>或者把合成器也设为 moresampler。</translation>
+    </message>
+</context>
+<context>
+    <name>hello::daw::MrqFormat</name>
+    <message>
+        <source>mrq (moresampler)</source>
+        <translation>mrq (moresampler)</translation>
+    </message>
+    <message>
+        <source>&quot;%1&quot; has no entry for &quot;%2&quot;.</source>
+        <translation>「%1」中没有「%2」的条目。</translation>
     </message>
 </context>
 </TS>

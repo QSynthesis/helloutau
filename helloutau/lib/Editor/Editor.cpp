@@ -28,6 +28,7 @@
 #include <hellokit/Support/RegistryInstantiator.h>
 #include <hellokit/Synth/BuiltinSynthDiagnosers.h>
 #include <hellokit/Synth/SynthDiagnosers.h>
+#include <hellokit/VoiceBank/BuiltinFrequencyFormats.h>
 #include <hellokit/VoiceBank/FrequencyFormats.h>
 #include <hellokit/VoiceBank/VoiceBank.h>
 
@@ -309,6 +310,10 @@ namespace hello::daw {
         QHash<const SettingPageRegistry::Entry *, QPointer<SettingPage>> registeredPages;
         std::unique_ptr<kit::FrequencyFormats> frequencyFormats =
             std::make_unique<kit::FrequencyFormats>();
+        // frq, the format of the resampler of UTAU, registered without any plugin. Declared after
+        // the formats, so that the registration ends first.
+        std::unique_ptr<kit::BuiltinFrequencyFormats> builtinFrequencyFormats =
+            std::make_unique<kit::BuiltinFrequencyFormats>(frequencyFormats->registry());
         std::unique_ptr<kit::SynthDiagnosers> synthDiagnosers =
             std::make_unique<kit::SynthDiagnosers>();
         // Declared after the diagnosers, so that the registrations end first

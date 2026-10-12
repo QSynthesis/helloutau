@@ -1,7 +1,12 @@
 add_auto_test(test_ActionLayoutsFile.cpp HelloUtauEditor QActionKit::Core)
 add_auto_test(test_AppSettings.cpp HelloUtauEditor)
 add_auto_test(test_KeymapFile.cpp HelloUtauEditor QActionKit::Core)
-add_auto_test(test_Editor.cpp HelloUtauTestingEditor)
+# The editor of the test registers the formats dio and mrq of the FrequencyEditor plugin, as the
+# plugin does, whose library is in its own directory of the plugins.
+add_auto_test(test_Editor.cpp HelloUtauTestingEditor FrequencyEditorPlugin)
+set_property(TEST test_Editor APPEND PROPERTY ENVIRONMENT_MODIFICATION
+    "PATH=path_list_prepend:$<SHELL_PATH:$<TARGET_FILE_DIR:FrequencyEditorPlugin>>"
+)
 add_auto_test(test_OtoWaveformView.cpp HelloUtauEditor)
 add_auto_test(test_PianoRoll.cpp HelloUtauEditor)
 add_auto_test(test_Playback.cpp HelloUtauEditor)
