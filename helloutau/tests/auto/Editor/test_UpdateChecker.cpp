@@ -23,7 +23,7 @@ namespace {
         return release;
     }
 
-    // Returns a configuration with two sources, A for any territory and B for mainland China
+    // Returns a manifest with two sources, A for any territory and B for mainland China
     // with a page template.
     QJsonObject validConfiguration() {
         return QJsonObject{
@@ -56,19 +56,19 @@ private Q_SLOTS:
     // chosen, or else the first source.
     void the_automatic_selection_follows_the_territories() {
         QTemporaryDir dir;
-        const auto fileName = dir.filePath(QStringLiteral("UpdateConfig.json"));
+        const auto fileName = dir.filePath(QStringLiteral("UpdateManifest.json"));
         QVERIFY(writeConfiguration(fileName, validConfiguration()));
         QString error;
-        const auto configuration = UpdateChecker::Configuration::read(fileName, &error);
-        QVERIFY2(configuration, qPrintable(error));
-        QCOMPARE(configuration->sourceOf(QString(), QLocale::China).name, QStringLiteral("B"));
-        QCOMPARE(configuration->sourceOf(QString(), QLocale::Japan).name, QStringLiteral("A"));
-        QCOMPARE(configuration->sourceOf(QStringLiteral("A"), QLocale::China).name,
+        const auto manifest = UpdateChecker::ManifestFile::read(fileName, &error);
+        QVERIFY2(manifest, qPrintable(error));
+        QCOMPARE(manifest->sourceOf(QString(), QLocale::China).name, QStringLiteral("B"));
+        QCOMPARE(manifest->sourceOf(QString(), QLocale::Japan).name, QStringLiteral("A"));
+        QCOMPARE(manifest->sourceOf(QStringLiteral("A"), QLocale::China).name,
                  QStringLiteral("A"));
-        QCOMPARE(configuration->sourceOf(QStringLiteral("Missing"), QLocale::China).name,
+        QCOMPARE(manifest->sourceOf(QStringLiteral("Missing"), QLocale::China).name,
                  QStringLiteral("B"));
-        QVERIFY(configuration->hasSource(QStringLiteral("B")));
-        QVERIFY(!configuration->hasSource(QStringLiteral("Missing")));
+        QVERIFY(manifest->hasSource(QStringLiteral("B")));
+        QVERIFY(!manifest->hasSource(QStringLiteral("Missing")));
     }
 
     // The downloads outlive the session directory, which is removed before an update is
@@ -123,15 +123,15 @@ private Q_SLOTS:
 
     void the_configuration_is_read() {
         QTemporaryDir dir;
-        const auto fileName = dir.filePath(QStringLiteral("UpdateConfig.json"));
+        const auto fileName = dir.filePath(QStringLiteral("UpdateManifest.json"));
         QVERIFY(writeConfiguration(fileName, validConfiguration()));
         QString error;
-        const auto configuration = UpdateChecker::Configuration::read(fileName, &error);
-        QVERIFY2(configuration, qPrintable(error));
-        QCOMPARE(configuration->assetPrefix, QStringLiteral("app"));
-        QCOMPARE(configuration->innoSetupAppId, QStringLiteral("org.app"));
-        QCOMPARE(configuration->sources.size(), 2);
-        const auto &b = configuration->sources.at(1);
+        const auto manifest = UpdateChecker::ManifestFile::read(fileName, &error);
+        QVERIFY2(manifest, qPrintable(error));
+        QCOMPARE(manifest->assetPrefix, QStringLiteral("app"));
+        QCOMPARE(manifest->innoSetupAppId, QStringLiteral("org.app"));
+        QCOMPARE(manifest->sources.size(), 2);
+        const auto &b = manifest->sources.at(1);
         QCOMPARE(b.latestRelease, QUrl(QStringLiteral("https://b.example/latest")));
         QCOMPARE(b.releasePage, QStringLiteral("https://b.example/tag/${tag}"));
         QCOMPARE(b.territories, QList<QLocale::Territory>{QLocale::China});
@@ -173,9 +173,9 @@ private Q_SLOTS:
         QFETCH(QString, key);
         QFETCH(QJsonValue, value);
         QTemporaryDir dir;
-        const auto fileName = dir.filePath(QStringLiteral("UpdateConfig.json"));
+        const auto fileName = dir.filePath(QStringLiteral("UpdateManifest.json"));
         QString error;
-        QVERIFY(!UpdateChecker::Configuration::read(fileName, &error));
+        QVERIFY(!UpdateChecker::ManifestFile::read(fileName, &error));
         QVERIFY(!error.isEmpty());
 
         auto object = validConfiguration();
@@ -186,7 +186,7 @@ private Q_SLOTS:
         }
         QVERIFY(writeConfiguration(fileName, object));
         error.clear();
-        QVERIFY(!UpdateChecker::Configuration::read(fileName, &error));
+        QVERIFY(!UpdateChecker::ManifestFile::read(fileName, &error));
         QVERIFY(!error.isEmpty());
     }
 };

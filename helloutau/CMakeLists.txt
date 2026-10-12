@@ -28,11 +28,12 @@ qm_add_definition(HELLOUTAU_TRIPLET ${HELLO_TRIPLET} STRING_LITERAL)
 # The repositories of the releases and the identifiers of the assets and of the installer, which
 # UpdateChecker reads from share/helloutau beside the bin directory, in the build as in the
 # installation. See the automatic update in docs/Distribution.md.
-configure_file(share/helloutau/UpdateConfig.json
-    ${QMSETUP_BUILD_DIR}/share/helloutau/UpdateConfig.json COPYONLY
+configure_file(share/helloutau/UpdateManifest.json
+    ${QMSETUP_BUILD_DIR}/share/helloutau/UpdateManifest.json COPYONLY
 )
 if(HELLO_INSTALL)
-    install(FILES share/helloutau/UpdateConfig.json DESTINATION ${CMAKE_INSTALL_DATADIR}/helloutau)
+    install(FILES share/helloutau/UpdateManifest.json
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/helloutau)
 endif()
 
 find_package(Qt6 REQUIRED COMPONENTS LinguistTools)

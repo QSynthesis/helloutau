@@ -23,16 +23,16 @@ namespace hello::daw {
     class UpdateTask;
 
     /// The update of the application, at start and on request, from one of the sources of the
-    /// update configuration. The checker holds the UpdateTask of the application, which runs in
+    /// update manifest. The checker holds the UpdateTask of the application, which runs in
     /// the background, and shows it in the modal update dialog. See the automatic update in
     /// docs/Distribution.md.
     class HELLOUTAU_EDITOR_EXPORT UpdateChecker : public QObject {
         Q_OBJECT
     public:
         /// The sources of the releases and the identifiers of the assets and of the installer,
-        /// recorded in \c UpdateConfig.json in the \c share/helloutau directory beside the
+        /// recorded in \c UpdateManifest.json in the \c share/helloutau directory beside the
         /// directory of the program. No host is named in the code.
-        struct HELLOUTAU_EDITOR_EXPORT Configuration {
+        struct HELLOUTAU_EDITOR_EXPORT ManifestFile {
             /// A host of the releases, which the settings select by its name.
             struct Source {
                 QString name;
@@ -68,21 +68,21 @@ namespace hello::daw {
             /// Returns whether a source is named \a name.
             bool hasSource(const QString &name) const;
 
-            /// Returns the path of \c UpdateConfig.json beside the program.
+            /// Returns the path of \c UpdateManifest.json beside the program.
             static QString defaultFileName();
 
-            /// Reads the configuration in \a fileName.
+            /// Reads the manifest in \a fileName.
             ///
-            /// \return the configuration, or \c std::nullopt with the reason in \a error if the
+            /// \return the manifest, or \c std::nullopt with the reason in \a error if the
             ///         file cannot be read, a value is missing, a source has no unique name or no
             ///         HTTPS address, or a territory code is unknown
-            static std::optional<Configuration> read(const QString &fileName, QString *error);
+            static std::optional<ManifestFile> read(const QString &fileName, QString *error);
         };
 
-        /// Constructs a checker with the configuration in \a fileName and \a settings, which
+        /// Constructs a checker with the manifest in \a fileName and \a settings, which
         /// outlive the checker.
         explicit UpdateChecker(AppSettings &settings,
-                               const QString &fileName = Configuration::defaultFileName(),
+                               const QString &fileName = ManifestFile::defaultFileName(),
                                QObject *parent = nullptr);
         ~UpdateChecker();
 
@@ -107,8 +107,8 @@ namespace hello::daw {
         static bool offers(const kit::SoftwareRelease &release, const QVersionNumber &current,
                            const QString &asset);
 
-        /// Returns the configuration, or \c std::nullopt if it cannot be read.
-        const std::optional<Configuration> &configuration() const;
+        /// Returns the manifest, or \c std::nullopt if it cannot be read.
+        const std::optional<ManifestFile> &manifest() const;
 
         /// Returns whether a check is running.
         bool isRunning() const;
@@ -123,7 +123,7 @@ namespace hello::daw {
 
         /// Holds the mutex for which the installer of an update waits, named after the \c AppId
         /// of the installer, until the process ends. Only on Windows, and only if the update
-        /// configuration can be read.
+        /// manifest can be read.
         void holdInstallerMutex();
 
         /// Reports the result of the installation started when the application last quit, if

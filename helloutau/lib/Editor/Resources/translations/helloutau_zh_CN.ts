@@ -2375,10 +2375,6 @@ Trust and use them for rendering?</source>
 <context>
     <name>hello::daw::UpdateChecker</name>
     <message>
-        <source>The update configuration cannot be read: %1</source>
-        <translation>无法读取更新配置：%1</translation>
-    </message>
-    <message>
         <source>Check for Updates</source>
         <translation>检查更新</translation>
     </message>
@@ -2413,6 +2409,10 @@ Trust and use them for rendering?</source>
     <message>
         <source>Open Download Page</source>
         <translation>打开下载页面</translation>
+    </message>
+    <message>
+        <source>The update manifest cannot be read: %1</source>
+        <translation>无法读取更新清单：%1</translation>
     </message>
     <message>
         <source>The file %1 does not exist.</source>

@@ -21,7 +21,7 @@
 
 #define AppName "HelloUtau"
 ; The identifier of the installation, which names the uninstall entry and the mutex that the
-; program holds while it runs. share/helloutau/UpdateConfig.json records the same value.
+; program holds while it runs. share/helloutau/UpdateManifest.json records the same value.
 #define AppId "org.openvpi.helloutau"
 #define AppPublisher "OpenVPI"
 #define AppURL "https://github.com/QSynthesis/helloutau"

@@ -45,10 +45,10 @@ namespace hello::daw {
                              "version is downloaded in the background and installed when the "
                              "application quits.")));
         m_source = new QComboBox(widget);
-        // The names of the sources are those of the update configuration, untranslated.
+        // The names of the sources are those of the update manifest, untranslated.
         m_source->addItem(tr("Automatic"), QString());
-        if (const auto &configuration = m_checker.configuration()) {
-            for (const auto &source : configuration->sources) {
+        if (const auto &manifest = m_checker.manifest()) {
+            for (const auto &source : manifest->sources) {
                 m_source->addItem(source.name, source.name);
             }
         }
@@ -111,8 +111,8 @@ namespace hello::daw {
 
     QString UpdateSettingPage::storedSource() const {
         const auto source = m_settings.updates().source();
-        const auto &configuration = m_checker.configuration();
-        return configuration && configuration->hasSource(source) ? source : QString();
+        const auto &manifest = m_checker.manifest();
+        return manifest && manifest->hasSource(source) ? source : QString();
     }
 
     void UpdateSettingPage::showLastCheck() {

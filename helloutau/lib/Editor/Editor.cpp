@@ -150,7 +150,7 @@ namespace hello::daw {
             themes->addSearchPath(QStringLiteral(":/helloutau/themes"));
             catalog = new SettingCatalog(decl);
             updateChecker =
-                new UpdateChecker(*settings, UpdateChecker::Configuration::defaultFileName(), decl);
+                new UpdateChecker(*settings, UpdateChecker::ManifestFile::defaultFileName(), decl);
             updateChecker->setCloseWindows([decl] { return decl->closeAll(); });
             addEditorSettingPages(catalog, *settings, *updateChecker);
             pages = std::make_unique<Pages>(

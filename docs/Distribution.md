@@ -122,7 +122,7 @@ Windows 的安装包以 Inno Setup 7 生成，界面语言为英语、简体中�
 
 ### 更新配置
 
-更新源与附件、安装包的标识不写在代码中，而记录在 `share/helloutau/UpdateConfig.json`（作者 2026-10-11 决定，与 Qt 的翻译同样放在 `share` 下）。源文件为 `helloutau/share/helloutau/UpdateConfig.json`，构建时复制到构建目录的同一相对位置，安装时装到安装目录的同一位置，程序按 `bin` 的上级目录查找。
+更新源与附件、安装包的标识不写在代码中，而记录在 `share/helloutau/UpdateManifest.json`（作者 2026-10-11 决定，与 Qt 的翻译同样放在 `share` 下）。源文件为 `helloutau/share/helloutau/UpdateManifest.json`，构建时复制到构建目录的同一相对位置，安装时装到安装目录的同一位置，程序按 `bin` 的上级目录查找。
 
 代码中不出现任何托管平台的名字或域名，更新源是配置中的一个列表（作者 2026-10-11 决定）。以后增加其他托管平台时，只需在列表中加一项。
 

@@ -49,15 +49,15 @@ namespace hello::daw {
 
         // Returns whether the program runs from the directory of an installation by the Windows
         // installer. Such an installation is updated by the installer rather than by the archive.
-        bool isInstalled(const UpdateChecker::Configuration &configuration) {
+        bool isInstalled(const UpdateChecker::ManifestFile &manifest) {
 #ifdef Q_OS_WINDOWS
             // The program is in the bin directory of the installation directory.
             const auto directory =
                 QDir::cleanPath(QCoreApplication::applicationDirPath() + QStringLiteral("/.."));
-            return kit::InnoSetup::isInstalledIn(configuration.innoSetupAppId,
+            return kit::InnoSetup::isInstalledIn(manifest.innoSetupAppId,
                                                  std::filesystem::path(directory.toStdU16String()));
 #else
-            Q_UNUSED(configuration);
+            Q_UNUSED(manifest);
             return false;
 #endif
         }
@@ -73,8 +73,8 @@ namespace hello::daw {
 
         UpdateChecker *decl = nullptr;
         AppSettings &settings;
-        std::optional<Configuration> configuration;
-        QString configurationError;
+        std::optional<ManifestFile> manifest;
+        QString manifestError;
         UpdateTask *task = nullptr;
         std::function<bool()> closeWindows;
 
@@ -94,9 +94,9 @@ namespace hello::daw {
 
         void check() {
             const auto &found =
-                configuration->sourceOf(source, QTimeZone::systemTimeZone().territory());
+                manifest->sourceOf(source, QTimeZone::systemTimeZone().territory());
             task->check(found.latestRelease, found.releasePage, currentVersion(),
-                        configuration->assetPrefix);
+                        manifest->assetPrefix);
         }
 
         // Shows the dialog of the task, which is modal, unless it is open already
@@ -152,13 +152,13 @@ namespace hello::daw {
         }
     };
 
-    QString UpdateChecker::Configuration::defaultFileName() {
+    QString UpdateChecker::ManifestFile::defaultFileName() {
         return QDir::cleanPath(QCoreApplication::applicationDirPath() +
-                               QStringLiteral("/../share/helloutau/UpdateConfig.json"));
+                               QStringLiteral("/../share/helloutau/UpdateManifest.json"));
     }
 
-    std::optional<UpdateChecker::Configuration>
-        UpdateChecker::Configuration::read(const QString &fileName, QString *error) {
+    std::optional<UpdateChecker::ManifestFile>
+        UpdateChecker::ManifestFile::read(const QString &fileName, QString *error) {
         kit::DiagnosticList diagnostics;
         const auto object = kit::SettingsFile::read(fileName, diagnostics);
         if (!object) {
@@ -166,10 +166,10 @@ namespace hello::daw {
                                            : diagnostics.first().message;
             return std::nullopt;
         }
-        Configuration configuration;
-        configuration.assetPrefix = textOf(*object, "assetPrefix");
-        configuration.innoSetupAppId = textOf(*object, "innoSetupAppId");
-        if (configuration.assetPrefix.isEmpty() || configuration.innoSetupAppId.isEmpty()) {
+        ManifestFile manifest;
+        manifest.assetPrefix = textOf(*object, "assetPrefix");
+        manifest.innoSetupAppId = textOf(*object, "innoSetupAppId");
+        if (manifest.assetPrefix.isEmpty() || manifest.innoSetupAppId.isEmpty()) {
             *error = tr("The file %1 lacks the prefix of the assets or the identifier of the "
                         "installer.")
                          .arg(fileName);
@@ -183,7 +183,7 @@ namespace hello::daw {
                 source.name = textOf(entry, "name");
                 source.latestRelease = QUrl(textOf(entry, "latestRelease"));
                 source.releasePage = textOf(entry, "releasePage");
-                if (source.name.isEmpty() || configuration.hasSource(source.name)) {
+                if (source.name.isEmpty() || manifest.hasSource(source.name)) {
                     *error = tr("A source in the file %1 has no name, or the name of another "
                                 "source.")
                                  .arg(fileName);
@@ -209,18 +209,18 @@ namespace hello::daw {
                         source.territories.push_back(territory);
                     }
                 }
-                configuration.sources.push_back(std::move(source));
+                manifest.sources.push_back(std::move(source));
             }
         }
-        if (configuration.sources.isEmpty()) {
+        if (manifest.sources.isEmpty()) {
             *error = tr("The file %1 lists no source.").arg(fileName);
             return std::nullopt;
         }
-        return configuration;
+        return manifest;
     }
 
-    const UpdateChecker::Configuration::Source &
-        UpdateChecker::Configuration::sourceOf(const QString &name,
+    const UpdateChecker::ManifestFile::Source &
+        UpdateChecker::ManifestFile::sourceOf(const QString &name,
                                                QLocale::Territory territory) const {
         for (const auto &source : sources) {
             if (source.name == name) {
@@ -235,7 +235,7 @@ namespace hello::daw {
         return sources.first();
     }
 
-    bool UpdateChecker::Configuration::hasSource(const QString &name) const {
+    bool UpdateChecker::ManifestFile::hasSource(const QString &name) const {
         return std::any_of(sources.begin(), sources.end(),
                            [&name](const Source &source) { return source.name == name; });
     }
@@ -244,8 +244,8 @@ namespace hello::daw {
         : QObject(parent), _impl(std::make_unique<Impl>(settings)) {
         stdc_impl_t;
         impl.decl = this;
-        impl.configuration = Configuration::read(fileName, &impl.configurationError);
-        const auto kind = impl.configuration && isInstalled(*impl.configuration)
+        impl.manifest = ManifestFile::read(fileName, &impl.manifestError);
+        const auto kind = impl.manifest && isInstalled(*impl.manifest)
                               ? UpdateTask::Installed
                               : UpdateTask::Portable;
         impl.task =
@@ -297,8 +297,8 @@ namespace hello::daw {
     void UpdateChecker::holdInstallerMutex() {
 #ifdef Q_OS_WINDOWS
         stdc_impl_t;
-        if (impl.configuration) {
-            kit::InnoSetup::holdMutex(impl.configuration->innoSetupAppId);
+        if (impl.manifest) {
+            kit::InnoSetup::holdMutex(impl.manifest->innoSetupAppId);
         }
 #endif
     }
@@ -350,9 +350,9 @@ namespace hello::daw {
                release.asset(asset) && release.asset(QLatin1String(sumsName));
     }
 
-    const std::optional<UpdateChecker::Configuration> &UpdateChecker::configuration() const {
+    const std::optional<UpdateChecker::ManifestFile> &UpdateChecker::manifest() const {
         stdc_impl_t;
-        return impl.configuration;
+        return impl.manifest;
     }
 
     bool UpdateChecker::isRunning() const {
@@ -367,7 +367,7 @@ namespace hello::daw {
 
     void UpdateChecker::checkAtStartup(QWidget *parent) {
         stdc_impl_t;
-        if (!impl.configuration || impl.settings.updates().mode() == UpdateSettings::Manual ||
+        if (!impl.manifest || impl.settings.updates().mode() == UpdateSettings::Manual ||
             impl.task->isRunning() || impl.task->state() != UpdateTask::Idle) {
             return;
         }
@@ -384,10 +384,10 @@ namespace hello::daw {
     void UpdateChecker::checkNow(QWidget *parent, const QString &source) {
         stdc_impl_t;
         impl.parent = parent;
-        if (!impl.configuration) {
+        if (!impl.manifest) {
             QMessageBox::warning(
                 impl.dialogParent(), tr("Check for Updates"),
-                tr("The update configuration cannot be read: %1").arg(impl.configurationError));
+                tr("The update manifest cannot be read: %1").arg(impl.manifestError));
             return;
         }
         impl.source = source;
