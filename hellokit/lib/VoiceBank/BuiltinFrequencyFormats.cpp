@@ -136,8 +136,8 @@ namespace hello::kit {
                 return table;
             }
 
-        private:
-            static std::filesystem::path pathOf(const std::filesystem::path &wav) {
+            std::optional<std::filesystem::path>
+                tableNameOf(const std::filesystem::path &wav) const override {
                 auto name = wav.stem().u16string();
                 auto extension = wav.extension().u16string();
                 for (auto &c : extension) {
@@ -145,7 +145,12 @@ namespace hello::kit {
                         c = u'_';
                     }
                 }
-                return wav.parent_path() / (name + extension + u".frq");
+                return std::filesystem::path(name + extension + u".frq");
+            }
+
+        private:
+            std::filesystem::path pathOf(const std::filesystem::path &wav) const {
+                return wav.parent_path() / *tableNameOf(wav);
             }
         };
 
@@ -203,10 +208,14 @@ namespace hello::kit {
                 return table;
             }
 
+            std::optional<std::filesystem::path>
+                tableNameOf(const std::filesystem::path &wav) const override {
+                return wav.filename().replace_extension(".dio");
+            }
+
         private:
-            static std::filesystem::path pathOf(const std::filesystem::path &wav) {
-                auto path = wav;
-                return path.replace_extension(".dio");
+            std::filesystem::path pathOf(const std::filesystem::path &wav) const {
+                return wav.parent_path() / *tableNameOf(wav);
             }
         };
 

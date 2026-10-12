@@ -10,6 +10,53 @@ namespace hello::kit {
 
     FrequencyFormat::~FrequencyFormat() = default;
 
+    FrequencyFormat::FileChange FrequencyFormat::FileChange::renamed(std::filesystem::path from,
+                                                                     std::filesystem::path to) {
+        FileChange change;
+        change.kind = Rename;
+        change.path = std::move(from);
+        change.to = std::move(to);
+        return change;
+    }
+
+    FrequencyFormat::FileChange FrequencyFormat::FileChange::rewritten(std::filesystem::path path,
+                                                                       QByteArray contents) {
+        FileChange change;
+        change.kind = Rewrite;
+        change.path = std::move(path);
+        change.contents = std::move(contents);
+        return change;
+    }
+
+    std::optional<std::filesystem::path>
+        FrequencyFormat::tableNameOf(const std::filesystem::path &wav) const {
+        Q_UNUSED(wav);
+        return std::nullopt;
+    }
+
+    std::optional<QList<FrequencyFormat::FileChange>>
+        FrequencyFormat::changesFollowing(const std::filesystem::path &directory,
+                                          const QList<AudioRename> &renames,
+                                          DiagnosticList &diagnostics) const {
+        QList<FileChange> changes;
+        for (const auto &rename : renames) {
+            const auto from = tableNameOf(rename.from);
+            const auto to = tableNameOf(rename.to);
+            if (!from || !to) {
+                diagnostics.push_back(
+                    {DiagnosticSeverity::Warning,
+                     tr("The tables of the format %1 do not follow renamed audio files.")
+                         .arg(name())});
+                return std::nullopt;
+            }
+            std::error_code error;
+            if (std::filesystem::is_regular_file(directory / *from, error)) {
+                changes.push_back(FileChange::renamed(*from, *to));
+            }
+        }
+        return changes;
+    }
+
     class FrequencyFormats::Impl {
     public:
         explicit Impl(FrequencyFormats *decl)

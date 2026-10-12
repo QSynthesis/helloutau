@@ -251,6 +251,93 @@ private Q_SLOTS:
         QVERIFY(!mrq->read(pathOf("m") / "y.wav", 0, diagnostics));
         QCOMPARE(diagnostics.size(), 1);
     }
+
+    // A table beside its audio file is renamed after it, in one list for all renames of the
+    // directory. An audio file without a table needs no change.
+    void the_tables_beside_the_audio_files_follow_their_renames() {
+        QDir(m_dir.path()).mkdir(QStringLiteral("r"));
+        const auto directory = pathOf("r");
+        write(directory / "a_wav.frq", "FREQ0003");
+        write(directory / fs::path(u"偁.dio"), "wrld-dio");
+        FrequencyFormats formats;
+        const BuiltinFrequencyFormats builtins(formats.registry());
+        const QList<FrequencyFormat::AudioRename> renames{
+            {"a.wav",            fs::path(u"あ.wav")},
+            {fs::path(u"偁.wav"), "b.wav"            },
+            {"c.wav",            "d.wav"            },
+        };
+
+        DiagnosticList diagnostics;
+        const auto frq =
+            formats.format(QStringLiteral("frq"))->changesFollowing(directory, renames, diagnostics);
+        QVERIFY(frq);
+        QCOMPARE(frq->size(), 1);
+        QCOMPARE(frq->at(0).kind, FrequencyFormat::FileChange::Rename);
+        QCOMPARE(frq->at(0).path, fs::path("a_wav.frq"));
+        QCOMPARE(frq->at(0).to, fs::path(u"あ_wav.frq"));
+
+        const auto dio =
+            formats.format(QStringLiteral("dio"))->changesFollowing(directory, renames, diagnostics);
+        QVERIFY(dio);
+        QCOMPARE(dio->size(), 1);
+        QCOMPARE(dio->at(0).path, fs::path(u"偁.dio"));
+        QCOMPARE(dio->at(0).to, fs::path("b.dio"));
+        QVERIFY(diagnostics.isEmpty());
+    }
+
+    // A format whose tables do not follow renames says so, which the caller reports. desc.mrq
+    // names its entries in an encoding that is yet to be measured.
+    void a_format_without_renames_reports_it() {
+        FrequencyFormats formats;
+        const BuiltinFrequencyFormats builtins(formats.registry());
+        DiagnosticList diagnostics;
+        QVERIFY(!formats.format(QStringLiteral("mrq"))
+                     ->changesFollowing(pathOf("r"), {{"a.wav", "b.wav"}}, diagnostics));
+        QCOMPARE(diagnostics.size(), 1);
+        QCOMPARE(diagnostics.at(0).severity, DiagnosticSeverity::Warning);
+        QVERIFY(diagnostics.at(0).message.contains(QStringLiteral("mrq (moresampler)")));
+
+        diagnostics.clear();
+        QVERIFY(!Fixed(QStringLiteral("x")).changesFollowing(pathOf("r"), {{"a.wav", "b.wav"}},
+                                                             diagnostics));
+        QCOMPARE(diagnostics.size(), 1);
+    }
+
+    // A format of a plugin that names the table beside each audio file follows renames without
+    // more code.
+    void a_format_that_names_its_tables_follows_renames() {
+        class Pmk : public Fixed {
+        public:
+            Pmk() : Fixed(QStringLiteral("pmk")) {
+            }
+
+            std::optional<fs::path> tableNameOf(const fs::path &wav) const override {
+                return wav.filename().replace_extension(".pmk");
+            }
+        };
+        QDir(m_dir.path()).mkdir(QStringLiteral("p"));
+        write(pathOf("p") / "a.pmk", "pmk");
+        DiagnosticList diagnostics;
+        const auto changes =
+            Pmk().changesFollowing(pathOf("p"), {{"a.wav", "b.wav"}, {"c.wav", "d.wav"}},
+                                   diagnostics);
+        QVERIFY(changes);
+        QCOMPARE(changes->size(), 1);
+        QCOMPARE(changes->at(0).path, fs::path("a.pmk"));
+        QCOMPARE(changes->at(0).to, fs::path("b.pmk"));
+        QVERIFY(diagnostics.isEmpty());
+    }
+
+    void the_changes_are_made_by_their_kinds() {
+        const auto renamed = FrequencyFormat::FileChange::renamed("a_wav.frq", "b_wav.frq");
+        QCOMPARE(renamed.kind, FrequencyFormat::FileChange::Rename);
+        QCOMPARE(renamed.path, fs::path("a_wav.frq"));
+        QCOMPARE(renamed.to, fs::path("b_wav.frq"));
+        const auto rewritten = FrequencyFormat::FileChange::rewritten("desc.mrq", "mrq ");
+        QCOMPARE(rewritten.kind, FrequencyFormat::FileChange::Rewrite);
+        QCOMPARE(rewritten.path, fs::path("desc.mrq"));
+        QCOMPARE(rewritten.contents, QByteArray("mrq "));
+    }
 };
 
 QTEST_GUILESS_MAIN(test_FrequencyFormats)
