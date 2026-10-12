@@ -6,12 +6,12 @@
 #include <QtWidgets/QComboBox>
 #include <QtWidgets/QDialogButtonBox>
 #include <QtWidgets/QFormLayout>
-#include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QHeaderView>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QListWidget>
 #include <QtWidgets/QPlainTextEdit>
 #include <QtWidgets/QPushButton>
+#include <QtWidgets/QSplitter>
 #include <QtWidgets/QTabWidget>
 #include <QtWidgets/QTreeWidget>
 #include <QtWidgets/QVBoxLayout>
@@ -105,16 +105,20 @@ namespace hello::daw {
         connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
         connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
 
-        auto choices = new QVBoxLayout();
-        choices->addWidget(m_folders, 1);
-        choices->addWidget(m_charsets, 1);
-        auto content = new QHBoxLayout();
-        content->addLayout(choices, 1);
-        content->addWidget(m_previews, 3);
+        auto choices = new QSplitter(Qt::Vertical);
+        choices->setChildrenCollapsible(false);
+        choices->addWidget(m_folders);
+        choices->addWidget(m_charsets);
+        auto content = new QSplitter();
+        content->setChildrenCollapsible(false);
+        content->addWidget(choices);
+        content->addWidget(m_previews);
+        content->setStretchFactor(0, 1);
+        content->setStretchFactor(1, 3);
 
         auto layout = new QVBoxLayout(this);
         layout->addWidget(m_message);
-        layout->addLayout(content);
+        layout->addWidget(content, 1);
         layout->addWidget(buttons);
 
         connect(m_folders, &QListWidget::currentRowChanged, this, [this] { showCurrent(); });
