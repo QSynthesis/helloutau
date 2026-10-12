@@ -165,7 +165,8 @@ private Q_SLOTS:
         const auto saved = VoiceBankConfig::open(root() / "hello-config.json", ignored);
         QVERIFY(saved.has_value());
         QVERIFY(saved->fileNameEncoding.has_value());
-        QCOMPARE(saved->fileNameEncoding->misdecoded, QStringList{QString::fromUtf8("偁.wav")});
+        QCOMPARE(saved->fileNameEncoding->logicalNameOf(QString::fromUtf8("偁.wav")),
+                 QString::fromUtf8("あ.wav"));
     }
 
     // The configuration is read on opening only, so a change by another program is not reported

@@ -86,14 +86,15 @@ namespace hello::kit {
         Q_INVOKABLE static bool convertCharset(const VoiceDirectoryRef &directory,
                                                const QString &charset, DiagnosticList &diagnostics);
 
-        /// Makes \a fileNameEncoding the record of misdecoded file names of \a directory , or
-        /// removes the record if it is \c std::nullopt . The audio files and the subdirectories of
+        /// Makes \a fileNameEncoding the record of file names of \a directory , or removes the
+        /// record if it is \c std::nullopt . The audio files and the subdirectories of
         /// \a directory are named by it from then on, and the next save writes it into the
         /// configuration of the directory. See the section on misdecoded file names in
         /// docs/Editing.md.
         ///
-        /// Both encodings of the record must be available. If the record is unchanged, nothing
-        /// changes and no undo step is created.
+        /// Both encodings of a record with encodings must be available, and a record without
+        /// encodings has no lists. If the record is unchanged, nothing changes and no undo step
+        /// is created.
         ///
         /// \sa VoiceBankDirectory::fileNameEncoding
         Q_INVOKABLE static bool setFileNameEncoding(

@@ -18,9 +18,10 @@ namespace hello::kit {
     /// an encoding dialog on opening. See the section on misdecoded file names in
     /// docs/Editing.md.
     ///
-    /// The question about a directory with a record of misdecoded file names covers the names
-    /// that the record lists in neither list. The question about a directory without a record
-    /// covers all of its names if the inference from its \c oto.ini proposes a pair of encodings.
+    /// The question about a directory whose record has lists covers the names that the record
+    /// lists in neither list. A directory whose record has no lists is not asked about. The
+    /// question about a directory without a record covers all of its names if the inference from
+    /// its \c oto.ini proposes a pair of encodings.
     class HELLOKIT_VOICEBANK_EXPORT MisdecodedNameQuestion {
     public:
         /// One name to determine.
@@ -36,9 +37,9 @@ namespace hello::kit {
         };
 
         /// Returns the question about \a source , whose text files are in \a charset , or
-        /// \c std::nullopt if nothing is to be asked: no name to determine restores, or no record
-        /// exists and the inference proposes nothing. A name that does not restore is used as it
-        /// is until a question about another name records it.
+        /// \c std::nullopt if nothing is to be asked: the record has no lists, no name to
+        /// determine restores, or no record exists and the inference proposes nothing. A name
+        /// that does not restore is used as it is until a question about another name records it.
         ///
         /// The inference tries every pair of distinct encodings of TextCodec::ustCandidates() and
         /// takes the pair under which the most entries of the \c oto.ini whose audio file is
@@ -93,7 +94,8 @@ namespace hello::kit {
 
         /// Returns the record of the directory with the names \a misdecoded determined as
         /// misdecoded and every other name of choices() as correct, together with the names of
-        /// the record, and with every name that does not restore as correct.
+        /// the record, and with every name that does not restore as correct. The record has no
+        /// encodings if no name is misdecoded, and no lists if no correct name restores.
         VoiceBankConfig::FileNameEncoding answer(const QStringList &misdecoded) const;
 
     private:

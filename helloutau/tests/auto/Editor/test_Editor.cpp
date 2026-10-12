@@ -750,8 +750,7 @@ private Q_SLOTS:
         QCOMPARE(session->currentStep(), step + 1);
         QCOMPARE(roll->selectedIndices(), QList<int>{3});
 
-        QTest::keyClick(bar->replaceField(), Qt::Key_Return,
-                        Qt::ControlModifier | Qt::AltModifier);
+        QTest::keyClick(bar->replaceField(), Qt::Key_Return, Qt::ControlModifier | Qt::AltModifier);
         QCOMPARE(lyricsOf(window), (QStringList{"ko", "a", "so", "ko", "R"}));
         QCOMPARE(session->currentStep(), step + 2);
         QCOMPARE(roll->selectedIndices(), (QList<int>{0, 3}));
@@ -879,9 +878,8 @@ private Q_SLOTS:
         auto commands = palette->commands();
         QCOMPARE(commands.size(), 12);
         QCOMPARE(commands[0].id,
-                 QStringLiteral("project:") +
-                     QDir::toNativeSeparators(
-                         QString::fromStdU16String(pathIn(m_dir, "f11.usth").u16string())));
+                 QStringLiteral("project:") + QDir::toNativeSeparators(QString::fromStdU16String(
+                                                  pathIn(m_dir, "f11.usth").u16string())));
         QCOMPARE(commands[0].label, QStringLiteral("f11.usth"));
         QCOMPARE(commands[0].description, QDir::toNativeSeparators(m_dir.path()));
         // The latest first, also while the user types
@@ -1889,8 +1887,8 @@ private Q_SLOTS:
         QCOMPARE(model->rowCount(), 3);
         QVERIFY(!(model->flags(model->index(0, VoiceBankEntryModel::DirectoryColumn)) &
                   Qt::ItemIsEditable));
-        QVERIFY(!(model->flags(model->index(0, VoiceBankEntryModel::FileColumn)) &
-                  Qt::ItemIsEditable));
+        QVERIFY(
+            !(model->flags(model->index(0, VoiceBankEntryModel::FileColumn)) & Qt::ItemIsEditable));
         QVERIFY(
             !(model->flags(model->index(2, VoiceBankEntryModel::FileColumn)) & Qt::ItemIsEditable));
 
@@ -2594,6 +2592,7 @@ private Q_SLOTS:
         kit::VoiceBankConfig::FileNameEncoding record;
         record.original = QStringLiteral("Shift_JIS");
         record.misdecodedAs = QStringLiteral("GBK");
+        record.files = kit::VoiceBankConfig::FileNameEncoding::Files();
         config.fileNameEncoding = record;
         const auto json = config.toJson();
         writeFile(bank / "hello-config.json", json.constData(), json.size());
@@ -2613,7 +2612,7 @@ private Q_SLOTS:
         QCOMPARE(window->fileNamesToDetermine(), 1);
         QVERIFY(!window->changeBar()->isHidden());
 
-        record.misdecoded = QStringList{misdecoded};
+        record.files = kit::VoiceBankConfig::FileNameEncoding::Files{{misdecoded}, {}};
         const int step = session->currentStep();
         QVERIFY(window->determineFileNames({
             {fs::path(), record}

@@ -4469,6 +4469,10 @@ Write them again without these chunks? The audio stays the same. The files are w
         <translation>转换编码</translation>
     </message>
     <message>
+        <source>A record of file names without encodings has no lists.</source>
+        <translation>没有编码的文件名记录不能含有列表。</translation>
+    </message>
+    <message>
         <source>Set File Name Encoding</source>
         <translation>设置文件名编码</translation>
     </message>

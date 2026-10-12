@@ -149,8 +149,10 @@ private Q_SLOTS:
         record.original = QStringLiteral("Shift_JIS");
         record.misdecodedAs = QStringLiteral("GBK");
         const auto u = QString::fromUtf8("偆");
-        record.misdecoded = QStringList{a, i, u};
-        record.correct = QStringList{QString::fromUtf8("が.wav")};
+        record.files = VoiceBankConfig::FileNameEncoding::Files{
+            {a, i, u},
+            {QString::fromUtf8("が.wav")}
+        };
         config.fileNameEncoding = record;
         QVERIFY(writeSampleFile(dir.path(), QStringLiteral("hello-config.json"), config.toJson()));
         QVERIFY(writeSampleFile(dir.path(), QStringLiteral("oto.ini"),
@@ -308,7 +310,7 @@ private Q_SLOTS:
         VoiceBankConfig::FileNameEncoding record;
         record.original = QStringLiteral("Shift_JIS");
         record.misdecodedAs = QStringLiteral("GBK");
-        record.misdecoded = QStringList{misdecoded};
+        record.files = VoiceBankConfig::FileNameEncoding::Files{{misdecoded}, {}};
         QVERIFY(VoiceBankEdits::setFileNameEncoding(directories().at(indexOf({})), record,
                                                     diagnostics));
         QVERIFY(m_session->audioFiles({}).contains(QString::fromUtf8("あ.wav")));
@@ -323,7 +325,7 @@ private Q_SLOTS:
             fs::path(pathOf(QStringLiteral("hello-config.json")).toStdU16String()), ignored);
         QVERIFY(config.has_value());
         QVERIFY(config->fileNameEncoding.has_value());
-        QCOMPARE(config->fileNameEncoding->misdecoded, record.misdecoded);
+        QCOMPARE(config->fileNameEncoding, std::optional(record));
     }
 
     void a_remembered_encoding_writes_the_configuration_only() {

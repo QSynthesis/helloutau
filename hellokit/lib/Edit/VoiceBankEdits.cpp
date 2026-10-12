@@ -186,7 +186,10 @@ namespace hello::kit {
         const std::optional<VoiceBankConfig::FileNameEncoding> &fileNameEncoding,
         DiagnosticList &diagnostics) {
         auto record = fileNameEncoding;
-        if (record) {
+        if (record && record->isAsIs() && record->files) {
+            return fail(diagnostics, tr("A record of file names without encodings has no lists."));
+        }
+        if (record && !record->isAsIs()) {
             // The canonical names, so that another spelling of the same encodings is no change.
             for (const auto name : {&record->original, &record->misdecodedAs}) {
                 const TextCodec codec(*name);

@@ -133,7 +133,8 @@ namespace hello::daw {
         QStringList misdecodedNames(int index) const;
         void setMisdecoded(int index, const QString &name, bool misdecoded);
 
-        /// Whether the names of folder \a index , a folder without a record, are used as they are.
+        /// Whether the names of folder \a index , a folder without a record, are used as they are,
+        /// which records the record without encodings.
         bool namesAsTheyAre(int index) const;
         void setNamesAsTheyAre(int index, bool asTheyAre);
 

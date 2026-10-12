@@ -97,7 +97,7 @@ private Q_SLOTS:
     void the_record_of_the_file_names_is_read_and_written() {
         const auto config = parse(R"({"$format":"hello-voicebank","charset":"Shift_JIS",
             "fileNameEncoding":{"original":"Shift_JIS","misdecodedAs":"GBK",
-            "misdecoded":["_偁媧偁揻.wav"],"correct":["_あ長.wav"]}})");
+            "files":{"misdecoded":["_偁媧偁揻.wav"],"correct":["_あ長.wav"]}}})");
         QVERIFY(config.has_value());
         QVERIFY(config->fileNameEncoding.has_value());
         QVERIFY(config->unknownFields.isEmpty());
@@ -108,8 +108,28 @@ private Q_SLOTS:
         const auto &record = *again->fileNameEncoding;
         QCOMPARE(record.original, QStringLiteral("Shift_JIS"));
         QCOMPARE(record.misdecodedAs, QStringLiteral("GBK"));
-        QCOMPARE(record.misdecoded, QStringList{QString::fromUtf8("_偁媧偁揻.wav")});
-        QCOMPARE(record.correct, QStringList{QString::fromUtf8("_あ長.wav")});
+        QVERIFY(record.files.has_value());
+        QCOMPARE(record.files->misdecoded, QStringList{QString::fromUtf8("_偁媧偁揻.wav")});
+        QCOMPARE(record.files->correct, QStringList{QString::fromUtf8("_あ長.wav")});
+    }
+
+    // The two forms without lists record a decision as well, and are distinct from no record.
+    void the_records_without_lists_are_read_and_written() {
+        const auto asIs =
+            parse(R"({"$format":"hello-voicebank","charset":"GBK","fileNameEncoding":{}})");
+        QVERIFY(asIs.has_value());
+        QCOMPARE(asIs->fileNameEncoding, VoiceBankConfig::FileNameEncoding());
+        QVERIFY(asIs->fileNameEncoding->isAsIs());
+        QCOMPARE(parse(asIs->toJson())->fileNameEncoding, asIs->fileNameEncoding);
+
+        const auto restored = parse(R"({"$format":"hello-voicebank","charset":"GBK",
+            "fileNameEncoding":{"original":"Shift_JIS","misdecodedAs":"GBK"}})");
+        QVERIFY(restored.has_value());
+        QCOMPARE(restored->fileNameEncoding, japaneseOnChinese());
+        QVERIFY(!restored->fileNameEncoding->isAsIs());
+        QCOMPARE(parse(restored->toJson())->fileNameEncoding, japaneseOnChinese());
+        QCOMPARE(japaneseOnChinese().toJson().keys(),
+                 (QStringList{QStringLiteral("misdecodedAs"), QStringLiteral("original")}));
     }
 
     void a_configuration_without_the_record_writes_none() {
@@ -125,7 +145,7 @@ private Q_SLOTS:
     void a_malformed_record_is_reported_and_written_back() {
         DiagnosticList diagnostics;
         const auto config = parse(R"({"$format":"hello-voicebank","charset":"GBK",
-            "fileNameEncoding":{"original":"Shift_JIS","misdecoded":[],"correct":[]}})",
+            "fileNameEncoding":{"original":"Shift_JIS"}})",
                                   &diagnostics);
         QVERIFY(config.has_value());
         QVERIFY(!config->fileNameEncoding.has_value());
@@ -138,15 +158,56 @@ private Q_SLOTS:
         QCOMPARE(kept.value(QStringLiteral("original")).toString(), QStringLiteral("Shift_JIS"));
     }
 
-    void a_list_that_is_not_of_strings_is_malformed() {
+    void a_malformed_record_is_not_read() {
+        QFETCH(QByteArray, record);
         DiagnosticList diagnostics;
         const auto config = parse(R"({"$format":"hello-voicebank","charset":"GBK",
-            "fileNameEncoding":{"original":"Shift_JIS","misdecodedAs":"GBK",
-            "misdecoded":[1],"correct":[]}})",
+            "fileNameEncoding":)" + record +
+                                      "}",
                                   &diagnostics);
         QVERIFY(config.has_value());
         QVERIFY(!config->fileNameEncoding.has_value());
         QVERIFY(!diagnostics.isEmpty());
+    }
+
+    void a_malformed_record_is_not_read_data() {
+        QTest::addColumn<QByteArray>("record");
+        QTest::newRow("not an object") << QByteArray(R"("Shift_JIS")");
+        QTest::newRow("one encoding") << QByteArray(R"({"misdecodedAs":"GBK"})");
+        QTest::newRow("empty encoding") << QByteArray(R"({"original":"","misdecodedAs":"GBK"})");
+        QTest::newRow("unknown field") << QByteArray(R"({"original":"Shift_JIS",
+            "misdecodedAs":"GBK","misdecoded":[]})");
+        QTest::newRow("lists without encodings")
+            << QByteArray(R"({"files":{"misdecoded":[],"correct":[]}})");
+        QTest::newRow("one list") << QByteArray(R"({"original":"Shift_JIS","misdecodedAs":"GBK",
+            "files":{"misdecoded":[]}})");
+        QTest::newRow("unknown list") << QByteArray(R"({"original":"Shift_JIS",
+            "misdecodedAs":"GBK","files":{"misdecoded":[],"correct":[],"other":[]}})");
+        QTest::newRow("not strings") << QByteArray(R"({"original":"Shift_JIS",
+            "misdecodedAs":"GBK","files":{"misdecoded":[1],"correct":[]}})");
+        QTest::newRow("files not an object")
+            << QByteArray(R"({"original":"Shift_JIS","misdecodedAs":"GBK","files":[]})");
+    }
+
+    // The record without lists restores every name, the record with lists the misdecoded ones,
+    // and the record without encodings none.
+    void the_logical_name_follows_the_form_of_the_record() {
+        const auto misdecoded = QString::fromUtf8("_偁媧偁揻.wav");
+        const auto correct = QString::fromUtf8("が.wav");
+        const auto restored = QString::fromUtf8("_あ吸あ吐.wav");
+
+        auto record = japaneseOnChinese();
+        QCOMPARE(record.logicalNameOf(misdecoded), restored);
+        QCOMPARE(record.logicalNameOf(correct), QString::fromUtf8("､ｬ.wav"));
+        QCOMPARE(record.logicalNameOf(QString::fromUtf8("你.wav")), QString::fromUtf8("你.wav"));
+
+        record.files = VoiceBankConfig::FileNameEncoding::Files{{misdecoded}, {correct}};
+        QCOMPARE(record.logicalNameOf(misdecoded), restored);
+        QCOMPARE(record.logicalNameOf(correct), correct);
+        QCOMPARE(record.logicalNameOf(misdecoded.normalized(QString::NormalizationForm_D)),
+                 restored);
+
+        QCOMPARE(VoiceBankConfig::FileNameEncoding().logicalNameOf(misdecoded), misdecoded);
     }
 
     void a_misdecoded_name_is_restored() {

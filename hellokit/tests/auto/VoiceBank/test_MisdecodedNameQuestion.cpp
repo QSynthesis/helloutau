@@ -48,16 +48,26 @@ private:
         write(QStringLiteral("oto.ini"), TextCodec(QStringLiteral("Shift_JIS")).encode(text));
     }
 
-    void writeRecord(const QStringList &misdecoded, const QStringList &correct) {
+    void writeRecord(const VoiceBankConfig::FileNameEncoding &record) {
         VoiceBankConfig config;
         config.charset = QStringLiteral("Shift_JIS");
+        config.fileNameEncoding = record;
+        write(QStringLiteral("hello-config.json"), config.toJson());
+    }
+
+    /// The record of Shift_JIS read as GBK, with lists if \a files .
+    static VoiceBankConfig::FileNameEncoding
+        japaneseOnChinese(std::optional<VoiceBankConfig::FileNameEncoding::Files> files = {}) {
         VoiceBankConfig::FileNameEncoding record;
         record.original = QStringLiteral("Shift_JIS");
         record.misdecodedAs = QStringLiteral("GBK");
-        record.misdecoded = misdecoded;
-        record.correct = correct;
-        config.fileNameEncoding = record;
-        write(QStringLiteral("hello-config.json"), config.toJson());
+        record.files = files;
+        return record;
+    }
+
+    void writeRecord(const QStringList &misdecoded, const QStringList &correct) {
+        writeRecord(
+            japaneseOnChinese(VoiceBankConfig::FileNameEncoding::Files{misdecoded, correct}));
     }
 
     VoiceBankDirectorySource source() const {
@@ -179,9 +189,8 @@ private Q_SLOTS:
         QVERIFY(question->isRecorded());
         QCOMPARE(namesOf(*question), QStringList{kMisdecodedI + QStringLiteral(".wav")});
 
-        const auto record = question->answer({kMisdecodedI + QStringLiteral(".wav")});
-        QCOMPARE(record.misdecoded, (QStringList{kMisdecodedA + QStringLiteral(".wav"),
-                                                 kMisdecodedI + QStringLiteral(".wav")}));
+        // Every name misdecoded, which the record without lists records.
+        QCOMPARE(question->answer({kMisdecodedI + QStringLiteral(".wav")}), japaneseOnChinese());
     }
 
     void a_record_of_every_name_asks_nothing() {
@@ -189,6 +198,17 @@ private Q_SLOTS:
         writeOto({QString::fromUtf8("あ.wav")});
         write(kMisdecodedA + QStringLiteral(".wav"), "RIFF");
         write(QString::fromUtf8("が.wav"), "RIFF");
+        QVERIFY(!MisdecodedNameQuestion::of(source(), QStringLiteral("Shift_JIS")).has_value());
+    }
+
+    // The user has decided, and new names follow the decision.
+    void a_record_without_lists_asks_nothing() {
+        writeOto({QString::fromUtf8("あ.wav")});
+        write(kMisdecodedA + QStringLiteral(".wav"), "RIFF");
+        write(kMisdecodedI + QStringLiteral(".wav"), "RIFF");
+        writeRecord(japaneseOnChinese());
+        QVERIFY(!MisdecodedNameQuestion::of(source(), QStringLiteral("Shift_JIS")).has_value());
+        writeRecord(VoiceBankConfig::FileNameEncoding());
         QVERIFY(!MisdecodedNameQuestion::of(source(), QStringLiteral("Shift_JIS")).has_value());
     }
 
@@ -207,9 +227,13 @@ private Q_SLOTS:
         QVERIFY(question.has_value());
         QCOMPARE(namesOf(*question), QStringList{kMisdecodedI + QStringLiteral(".wav")});
         const auto record = question->answer({});
-        QCOMPARE(record.correct,
+        QVERIFY(record.files.has_value());
+        QCOMPARE(record.files->correct,
                  (QStringList{kMisdecodedI + QStringLiteral(".wav"), QString::fromUtf8("你.wav")}));
-        QCOMPARE(record.misdecoded, QStringList{kMisdecodedA + QStringLiteral(".wav")});
+        QCOMPARE(record.files->misdecoded, QStringList{kMisdecodedA + QStringLiteral(".wav")});
+
+        // A correct name that does not restore leaves the record without lists.
+        QCOMPARE(question->answer({kMisdecodedI + QStringLiteral(".wav")}), japaneseOnChinese());
     }
 
     // Every name that is not ASCII, and no ASCII name.
@@ -225,9 +249,13 @@ private Q_SLOTS:
         const auto record = question->answer({kMisdecodedA + QStringLiteral(".wav")});
         QCOMPARE(record.original, question->original());
         QCOMPARE(record.misdecodedAs, question->misdecodedAs());
-        QCOMPARE(record.misdecoded, QStringList{kMisdecodedA + QStringLiteral(".wav")});
-        QCOMPARE(record.correct,
+        QVERIFY(record.files.has_value());
+        QCOMPARE(record.files->misdecoded, QStringList{kMisdecodedA + QStringLiteral(".wav")});
+        QCOMPARE(record.files->correct,
                  (QStringList{kMisdecodedI + QStringLiteral(".wav"), QString::fromUtf8("你.wav")}));
+
+        // No name misdecoded, which the record without encodings records.
+        QCOMPARE(question->answer({}), VoiceBankConfig::FileNameEncoding());
     }
 
     // The user may choose another pair, under which the names restore differently.

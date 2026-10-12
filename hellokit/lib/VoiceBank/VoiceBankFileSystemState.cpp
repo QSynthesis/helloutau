@@ -218,18 +218,18 @@ namespace hello::kit {
             return config ? config->fileNameEncoding : std::nullopt;
         }
 
-        /// The names of the two lists of a record of misdecoded file names, in Normalization
-        /// Form C, against which a name on disk in any normalization form is looked up.
+        /// The names of the two lists of a record of file names, in Normalization Form C, against
+        /// which a name on disk in any normalization form is looked up.
         class RecordedNames {
         public:
             explicit RecordedNames(const FileNameRecord &record) : m_record(record) {
-                if (!record) {
+                if (!record || !record->files) {
                     return;
                 }
-                for (const auto &name : record->misdecoded) {
+                for (const auto &name : record->files->misdecoded) {
                     m_misdecoded.insert(name.normalized(QString::NormalizationForm_C));
                 }
-                for (const auto &name : record->correct) {
+                for (const auto &name : record->files->correct) {
                     m_correct.insert(name.normalized(QString::NormalizationForm_C));
                 }
             }
@@ -245,6 +245,9 @@ namespace hello::kit {
                 if (!m_record || isAscii(name)) {
                     return AsIs;
                 }
+                if (!m_record->files) {
+                    return Misdecoded;
+                }
                 const auto normalized = name.normalized(QString::NormalizationForm_C);
                 if (m_misdecoded.contains(normalized)) {
                     return Misdecoded;
@@ -253,12 +256,15 @@ namespace hello::kit {
             }
 
             /// The name under which the voice bank uses \a name , a name on disk, or
-            /// \c std::nullopt if the record lists it as misdecoded but it does not restore.
+            /// \c std::nullopt if the record lists it as misdecoded but it does not restore. A
+            /// record without lists uses a name that does not restore as it is, which includes
+            /// every name of a record without encodings.
             std::optional<QString> logicalOf(const QString &name) const {
                 if (stateOf(name) != Misdecoded) {
                     return name;
                 }
-                return m_record->restore(name);
+                const auto restored = m_record->restore(name);
+                return restored || m_record->files ? restored : std::optional(name);
             }
 
         private:

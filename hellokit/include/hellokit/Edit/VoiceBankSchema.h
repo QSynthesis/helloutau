@@ -5,6 +5,7 @@
 #include <string>
 
 #include <QtCore/QByteArray>
+#include <QtCore/QJsonObject>
 #include <QtCore/QString>
 #include <QtCore/QStringList>
 #include <QtCore/QVariantList>
@@ -82,7 +83,7 @@ namespace hello::kit {
         /// state distinguishes the two, and a missing file is created only for an entry.
         inline constexpr edit::ChildSlot OtoEntries{2, "otoEntries"};
 
-        /// The record of misdecoded file names, or empty if the names are used as they are.
+        /// The record of file names, or empty if the user has not decided.
         ///
         /// \sa VoiceBankDirectory::fileNameEncoding
         inline constexpr edit::Slot<std::optional<VoiceBankConfig::FileNameEncoding>>
@@ -118,27 +119,19 @@ namespace hello::kit {
 
     }
 
-    /// Stores a record of misdecoded file names as a map of its four fields, which requires no
-    /// registration with the Qt meta-type system.
+    /// Stores a record of file names as the map of its form in hello-config.json, which requires
+    /// no registration with the Qt meta-type system. The record without encodings is an empty
+    /// map, which is a valid variant and therefore distinct from the absence of a record.
     template <>
     struct edit::SlotValue<VoiceBankConfig::FileNameEncoding> {
         static inline QVariant toVariant(const VoiceBankConfig::FileNameEncoding &record) {
-            return QVariantMap{
-                {QStringLiteral("original"),     record.original    },
-                {QStringLiteral("misdecodedAs"), record.misdecodedAs},
-                {QStringLiteral("misdecoded"),   record.misdecoded  },
-                {QStringLiteral("correct"),      record.correct     },
-            };
+            return record.toJson().toVariantMap();
         }
 
         static inline VoiceBankConfig::FileNameEncoding fromVariant(const QVariant &variant) {
-            const auto map = variant.toMap();
-            VoiceBankConfig::FileNameEncoding record;
-            record.original = map.value(QStringLiteral("original")).toString();
-            record.misdecodedAs = map.value(QStringLiteral("misdecodedAs")).toString();
-            record.misdecoded = map.value(QStringLiteral("misdecoded")).toStringList();
-            record.correct = map.value(QStringLiteral("correct")).toStringList();
-            return record;
+            return VoiceBankConfig::FileNameEncoding::fromJson(
+                       QJsonObject::fromVariantMap(variant.toMap()))
+                .value_or(VoiceBankConfig::FileNameEncoding());
         }
     };
 

@@ -19,6 +19,7 @@ namespace hello::kit {
         constexpr char KeyFileNameEncoding[] = "fileNameEncoding";
         constexpr char KeyOriginal[] = "original";
         constexpr char KeyMisdecodedAs[] = "misdecodedAs";
+        constexpr char KeyFiles[] = "files";
         constexpr char KeyMisdecoded[] = "misdecoded";
         constexpr char KeyCorrect[] = "correct";
 
@@ -57,40 +58,72 @@ namespace hello::kit {
             return strings;
         }
 
-        /// The record of \a value , or \c std::nullopt if it is malformed: not an object, without
-        /// either encoding, or with a list that is not an array of strings.
-        std::optional<VoiceBankConfig::FileNameEncoding>
-            fileNameEncodingOf(const QJsonValue &value) {
-            if (!value.isObject()) {
-                return std::nullopt;
-            }
-            const auto object = value.toObject();
-            VoiceBankConfig::FileNameEncoding record;
-            record.original = object.value(QLatin1String(KeyOriginal)).toString();
-            record.misdecodedAs = object.value(QLatin1String(KeyMisdecodedAs)).toString();
-            if (record.original.isEmpty() || record.misdecodedAs.isEmpty()) {
-                return std::nullopt;
-            }
-            const auto misdecoded = stringsOf(object.value(QLatin1String(KeyMisdecoded)));
-            const auto correct = stringsOf(object.value(QLatin1String(KeyCorrect)));
-            if (!misdecoded || !correct) {
-                return std::nullopt;
-            }
-            record.misdecoded = *misdecoded;
-            record.correct = *correct;
+        /// Returns whether every key of \a object is among \a keys .
+        bool hasOnly(const QJsonObject &object, std::initializer_list<const char *> keys) {
+            const auto objectKeys = object.keys();
+            return std::all_of(objectKeys.begin(), objectKeys.end(), [&keys](const QString &key) {
+                return std::any_of(keys.begin(), keys.end(), [&key](const char *known) {
+                    return key == QLatin1String(known);
+                });
+            });
+        }
+
+    }
+
+    std::optional<VoiceBankConfig::FileNameEncoding>
+        VoiceBankConfig::FileNameEncoding::fromJson(const QJsonValue &json) {
+        if (!json.isObject()) {
+            return std::nullopt;
+        }
+        const auto object = json.toObject();
+        if (!hasOnly(object, {KeyOriginal, KeyMisdecodedAs, KeyFiles})) {
+            return std::nullopt;
+        }
+        const auto original = object.value(QLatin1String(KeyOriginal));
+        const auto misdecodedAs = object.value(QLatin1String(KeyMisdecodedAs));
+        FileNameEncoding record;
+        if (original.isUndefined() && misdecodedAs.isUndefined()) {
+            return object.contains(QLatin1String(KeyFiles)) ? std::nullopt : std::optional(record);
+        }
+        if (!original.isString() || !misdecodedAs.isString() || original.toString().isEmpty() ||
+            misdecodedAs.toString().isEmpty()) {
+            return std::nullopt;
+        }
+        record.original = original.toString();
+        record.misdecodedAs = misdecodedAs.toString();
+        if (!object.contains(QLatin1String(KeyFiles))) {
             return record;
         }
+        const auto files = object.value(QLatin1String(KeyFiles)).toObject();
+        if (!object.value(QLatin1String(KeyFiles)).isObject() ||
+            !hasOnly(files, {KeyMisdecoded, KeyCorrect})) {
+            return std::nullopt;
+        }
+        const auto misdecoded = stringsOf(files.value(QLatin1String(KeyMisdecoded)));
+        const auto correct = stringsOf(files.value(QLatin1String(KeyCorrect)));
+        if (!misdecoded || !correct) {
+            return std::nullopt;
+        }
+        record.files = Files{*misdecoded, *correct};
+        return record;
+    }
 
-        QJsonObject jsonOf(const VoiceBankConfig::FileNameEncoding &record) {
-            QJsonObject object;
-            object.insert(QLatin1String(KeyOriginal), record.original);
-            object.insert(QLatin1String(KeyMisdecodedAs), record.misdecodedAs);
-            object.insert(QLatin1String(KeyMisdecoded),
-                          QJsonArray::fromStringList(record.misdecoded));
-            object.insert(QLatin1String(KeyCorrect), QJsonArray::fromStringList(record.correct));
+    QJsonObject VoiceBankConfig::FileNameEncoding::toJson() const {
+        QJsonObject object;
+        if (isAsIs()) {
             return object;
         }
-
+        object.insert(QLatin1String(KeyOriginal), original);
+        object.insert(QLatin1String(KeyMisdecodedAs), misdecodedAs);
+        if (files) {
+            object.insert(
+                QLatin1String(KeyFiles),
+                QJsonObject{
+                    {QLatin1String(KeyMisdecoded), QJsonArray::fromStringList(files->misdecoded)},
+                    {QLatin1String(KeyCorrect),    QJsonArray::fromStringList(files->correct)   },
+            });
+        }
+        return object;
     }
 
     std::optional<QString>
@@ -117,7 +150,11 @@ namespace hello::kit {
     }
 
     QString VoiceBankConfig::FileNameEncoding::logicalNameOf(const QString &physical) const {
+        if (!files) {
+            return restore(physical).value_or(physical);
+        }
         const auto name = physical.normalized(QString::NormalizationForm_C);
+        const auto &misdecoded = files->misdecoded;
         const bool listed =
             std::any_of(misdecoded.begin(), misdecoded.end(), [&name](const QString &item) {
                 return item.normalized(QString::NormalizationForm_C) == name;
@@ -183,7 +220,7 @@ namespace hello::kit {
         // rather than removing it.
         if (root.contains(QLatin1String(KeyFileNameEncoding))) {
             config.fileNameEncoding =
-                fileNameEncodingOf(root.value(QLatin1String(KeyFileNameEncoding)));
+                FileNameEncoding::fromJson(root.value(QLatin1String(KeyFileNameEncoding)));
             if (config.fileNameEncoding) {
                 root.remove(QLatin1String(KeyFileNameEncoding));
             } else {
@@ -200,7 +237,7 @@ namespace hello::kit {
         root.insert(QLatin1String(KeyFormat), QLatin1String(FormatName));
         root.insert(QLatin1String(KeyCharset), charset);
         if (fileNameEncoding) {
-            root.insert(QLatin1String(KeyFileNameEncoding), jsonOf(*fileNameEncoding));
+            root.insert(QLatin1String(KeyFileNameEncoding), fileNameEncoding->toJson());
         }
         return QJsonDocument(root).toJson(QJsonDocument::Indented);
     }

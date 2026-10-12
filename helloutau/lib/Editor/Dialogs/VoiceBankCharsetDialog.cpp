@@ -328,8 +328,10 @@ namespace hello::daw {
                              : read       ? std::optional(m_choices[i])
                                           : std::nullopt;
             const auto &names = m_fileNames[i];
-            if (read && names.question && !names.asTheyAre) {
-                answer.fileNameEncoding = names.question->answer(names.misdecoded);
+            if (read && names.question) {
+                answer.fileNameEncoding = names.asTheyAre
+                                              ? kit::VoiceBankConfig::FileNameEncoding()
+                                              : names.question->answer(names.misdecoded);
             }
             result.push_back(answer);
         }

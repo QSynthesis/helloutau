@@ -122,9 +122,9 @@ namespace hello::kit {
         ///          saving would overwrite them with empty content.
         bool leftOut = false;
 
-        /// The record of the misdecoded names of the audio files and the subdirectories of the
-        /// directory, or \c std::nullopt if the names are used as they are. See the section on
-        /// misdecoded file names in docs/Editing.md.
+        /// The record of the names of the audio files and the subdirectories of the directory, or
+        /// \c std::nullopt if the user has not decided, in which case the names are used as they
+        /// are. See the section on misdecoded file names in docs/Editing.md.
         ///
         /// Changed through VoiceBank::setDirectory() , and recorded in \c hello-config.json by
         /// the next save if it differs from the record read.

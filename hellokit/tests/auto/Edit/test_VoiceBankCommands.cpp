@@ -229,10 +229,16 @@ private Q_SLOTS:
     void a_file_name_encoding_is_set() {
         QVERIFY(run(QStringLiteral(
             "directory fileNameEncoding /directories/0 {\"original\": \"Shift_JIS\", "
-            "\"misdecodedAs\": \"GBK\", \"misdecoded\": [\"a.wav\"], \"correct\": []}")));
+            "\"misdecodedAs\": \"GBK\", \"files\": {\"misdecoded\": [\"a.wav\"], "
+            "\"correct\": []}}")));
         const auto directory = VoiceBankRef(m_session.get()).directories().at(0);
         QVERIFY(directory.fileNameEncoding().has_value());
-        QCOMPARE(directory.fileNameEncoding()->misdecoded, QStringList{QStringLiteral("a.wav")});
+        QVERIFY(directory.fileNameEncoding()->files.has_value());
+        QCOMPARE(directory.fileNameEncoding()->files->misdecoded,
+                 QStringList{QStringLiteral("a.wav")});
+
+        QVERIFY(run(QStringLiteral("directory fileNameEncoding /directories/0 {}")));
+        QCOMPARE(directory.fileNameEncoding(), std::optional(VoiceBankConfig::FileNameEncoding()));
 
         QVERIFY(run(QStringLiteral("directory fileNameEncoding /directories/0 null")));
         QVERIFY(!directory.fileNameEncoding().has_value());
@@ -241,8 +247,7 @@ private Q_SLOTS:
                                      "\"Shift_JIS\"}"),
                       QStringLiteral("is invalid"));
         verifyRefused(QStringLiteral("directory fileNameEncoding /directories/0 {\"original\": "
-                                     "\"x\", \"misdecodedAs\": \"GBK\", \"misdecoded\": [], "
-                                     "\"correct\": []}"),
+                                     "\"x\", \"misdecodedAs\": \"GBK\"}"),
                       QStringLiteral("is not available"));
         verifyRefused(QStringLiteral("directory fileNameEncoding /directories/0"),
                       QStringLiteral("Usage"));

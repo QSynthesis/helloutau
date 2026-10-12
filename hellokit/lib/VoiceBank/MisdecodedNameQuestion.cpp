@@ -101,6 +101,9 @@ namespace hello::kit {
 
         MisdecodedNameQuestion question;
         if (source.config && source.config->fileNameEncoding) {
+            if (!source.config->fileNameEncoding->files) {
+                return std::nullopt;
+            }
             question.m_record = *source.config->fileNameEncoding;
             question.m_recorded = true;
         } else {
@@ -162,8 +165,8 @@ namespace hello::kit {
 
         // The question about a directory with a record covers the names in neither list only.
         QSet<QString> listed;
-        if (m_recorded) {
-            for (const auto &name : m_record.misdecoded + m_record.correct) {
+        if (m_record.files) {
+            for (const auto &name : m_record.files->misdecoded + m_record.files->correct) {
                 listed.insert(normalized(name));
             }
         }
@@ -202,11 +205,20 @@ namespace hello::kit {
     VoiceBankConfig::FileNameEncoding
         MisdecodedNameQuestion::answer(const QStringList &misdecoded) const {
         auto record = m_record;
+        auto files = record.files.value_or(VoiceBankConfig::FileNameEncoding::Files());
         for (const auto &choice : m_choices) {
-            (misdecoded.contains(choice.name) ? record.misdecoded : record.correct)
+            (misdecoded.contains(choice.name) ? files.misdecoded : files.correct)
                 .push_back(choice.name);
         }
-        record.correct += m_unrestorable;
+        files.correct += m_unrestorable;
+        if (files.misdecoded.isEmpty()) {
+            return VoiceBankConfig::FileNameEncoding();
+        }
+        // A record without lists restores every name, which is right if no correct name restores.
+        const bool restoresAll =
+            std::none_of(files.correct.begin(), files.correct.end(),
+                         [&record](const QString &name) { return record.restore(name); });
+        record.files = restoresAll ? std::nullopt : std::optional(files);
         return record;
     }
 

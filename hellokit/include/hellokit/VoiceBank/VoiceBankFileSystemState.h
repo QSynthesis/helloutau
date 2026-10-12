@@ -69,8 +69,8 @@ namespace hello::kit {
         /// Intended for a holder of the contents that keeps the entries only, such as the tree of
         /// an editing session: the samples without an entry are the files that no entry names.
         ///
-        /// The names are logical names under \a record , the record of misdecoded file names of
-        /// the directory in the contents: a name that \a record lists as misdecoded is restored.
+        /// The names are logical names under \a record , the record of file names of the directory
+        /// in the contents: a name that \a record determines as misdecoded is restored.
         /// See the section on misdecoded file names in docs/Editing.md.
         ///
         /// \sa audioPathOf(), VoiceBankDirectory::fileNameEncoding
@@ -88,8 +88,8 @@ namespace hello::kit {
 
         /// Returns the names on disk of the audio files and the subdirectories of the directory at
         /// \a directory that are not ASCII and that \a record lists in neither list, or an empty
-        /// list without \a record . These names are used as they are until the user determines
-        /// their state.
+        /// list if \a record has no lists or is absent. These names are used as they are until
+        /// the user determines their state.
         QStringList
             undeterminedNames(const std::filesystem::path &directory,
                               const std::optional<VoiceBankConfig::FileNameEncoding> &record) const;

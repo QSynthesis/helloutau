@@ -377,7 +377,8 @@ private Q_SLOTS:
         QVERIFY(config.has_value());
         QCOMPARE(config->charset, TextCodec(QStringLiteral("Shift_JIS")).name());
         QVERIFY(config->fileNameEncoding.has_value());
-        QCOMPARE(config->fileNameEncoding->misdecoded, QStringList{QString::fromUtf8("偁.wav")});
+        QCOMPARE(config->fileNameEncoding->logicalNameOf(QString::fromUtf8("偁.wav")),
+                 QString::fromUtf8("あ.wav"));
     }
 
     // A directory the user declined is left out, and nothing is recorded for it.

@@ -96,6 +96,14 @@ private:
         return record;
     }
 
+    /// The record of japaneseOnChinese() with the lists \a misdecoded and \a correct .
+    static VoiceBankConfig::FileNameEncoding withFiles(const QStringList &misdecoded,
+                                                       const QStringList &correct) {
+        auto record = japaneseOnChinese();
+        record.files = VoiceBankConfig::FileNameEncoding::Files{misdecoded, correct};
+        return record;
+    }
+
     void writeConfig(const QString &directory, const VoiceBankConfig::FileNameEncoding &record) {
         VoiceBankConfig config;
         config.charset = QStringLiteral("Shift_JIS");
@@ -109,11 +117,9 @@ private:
     /// an entry on disk as 偄.wav, a correct が.wav, an unlisted 新.wav, an ASCII a.wav, the
     /// subdirectory う on disk as 偆, and an unlisted subdirectory 未.
     void writeBank() {
-        auto record = japaneseOnChinese();
-        record.misdecoded = QStringList{kMisdecodedA + QStringLiteral(".wav"),
-                                        kMisdecodedI + QStringLiteral(".wav"), kMisdecodedU};
-        record.correct = QStringList{QString::fromUtf8("が.wav")};
-        writeConfig(QString(), record);
+        writeConfig(QString(), withFiles({kMisdecodedA + QStringLiteral(".wav"),
+                                          kMisdecodedI + QStringLiteral(".wav"), kMisdecodedU},
+                                         {QString::fromUtf8("が.wav")}));
         write(QStringLiteral("oto.ini"), shiftJis(QString::fromUtf8("あ.wav=あ,1,2,3,4,5\r\n")));
         for (const auto &name :
              {kMisdecodedA + QStringLiteral(".wav"), kMisdecodedI + QStringLiteral(".wav"),
@@ -247,9 +253,7 @@ private Q_SLOTS:
     // A name on disk is looked up in the lists in Normalization Form C, as on macOS a file
     // system may store が as か followed by a combining mark.
     void a_decomposed_name_is_found_in_the_lists() {
-        auto record = japaneseOnChinese();
-        record.correct = QStringList{QString::fromUtf8("が.wav")};
-        writeConfig(QString(), record);
+        writeConfig(QString(), withFiles({}, {QString::fromUtf8("が.wav")}));
         write(QString::fromUtf8("が.wav").normalized(QString::NormalizationForm_D), "RIFF");
         DiagnosticList diagnostics;
         const auto opened = open(root(), diagnostics);
@@ -279,10 +283,8 @@ private Q_SLOTS:
     }
 
     void a_restored_name_that_another_file_has_is_used_as_it_is() {
-        auto record = japaneseOnChinese();
-        record.misdecoded = QStringList{kMisdecodedA + QStringLiteral(".wav")};
-        record.correct = QStringList{QString::fromUtf8("あ.wav")};
-        writeConfig(QString(), record);
+        writeConfig(QString(), withFiles({kMisdecodedA + QStringLiteral(".wav")},
+                                         {QString::fromUtf8("あ.wav")}));
         write(kMisdecodedA + QStringLiteral(".wav"), "RIFF");
         write(QString::fromUtf8("あ.wav"), "RIFF");
         DiagnosticList diagnostics;
@@ -299,9 +301,7 @@ private Q_SLOTS:
 
     // 你 in GBK is an invalid byte sequence in Shift_JIS.
     void a_listed_name_that_does_not_restore_is_used_as_it_is() {
-        auto record = japaneseOnChinese();
-        record.misdecoded = QStringList{QString::fromUtf8("你.wav")};
-        writeConfig(QString(), record);
+        writeConfig(QString(), withFiles({QString::fromUtf8("你.wav")}, {}));
         write(QString::fromUtf8("你.wav"), "RIFF");
         DiagnosticList diagnostics;
         const auto opened = open(root(), diagnostics);
@@ -309,6 +309,36 @@ private Q_SLOTS:
         QCOMPARE(audioFilesOf(*opened), QStringList{QString::fromUtf8("你.wav")});
         QVERIFY(!diagnostics.isEmpty());
         QVERIFY(!hasError(diagnostics));
+    }
+
+    // A record without lists restores every name, a new one as well, and has no undetermined
+    // name. A name that does not restore cannot be misdecoded, and is used as it is silently.
+    void a_record_without_lists_restores_every_name() {
+        writeConfig(QString(), japaneseOnChinese());
+        write(kMisdecodedA + QStringLiteral(".wav"), "RIFF");
+        write(kMisdecodedI + QStringLiteral(".wav"), "RIFF");
+        write(QString::fromUtf8("你.wav"), "RIFF");
+        DiagnosticList diagnostics;
+        const auto opened = open(root(), diagnostics);
+        QVERIFY(opened.has_value());
+        auto files = audioFilesOf(*opened);
+        files.sort();
+        QCOMPARE(files, (QStringList{QString::fromUtf8("あ.wav"), QString::fromUtf8("い.wav"),
+                                     QString::fromUtf8("你.wav")}));
+        QVERIFY(undeterminedOf(*opened).isEmpty());
+        QVERIFY(diagnostics.isEmpty());
+    }
+
+    // The user decided that the names are correct, a new one as well.
+    void a_record_without_encodings_restores_nothing() {
+        writeConfig(QString(), VoiceBankConfig::FileNameEncoding());
+        write(kMisdecodedA + QStringLiteral(".wav"), "RIFF");
+        DiagnosticList diagnostics;
+        const auto opened = open(root(), diagnostics);
+        QVERIFY(opened.has_value());
+        QCOMPARE(recordOf(*opened, {}), std::optional(VoiceBankConfig::FileNameEncoding()));
+        QCOMPARE(audioFilesOf(*opened), QStringList{kMisdecodedA + QStringLiteral(".wav")});
+        QVERIFY(undeterminedOf(*opened).isEmpty());
     }
 
     // The record is part of the contents, which a reread keeps as it keeps the encoding.
@@ -359,7 +389,7 @@ private Q_SLOTS:
         QVERIFY(opened.has_value());
 
         auto record = *recordOf(*opened, {});
-        record.correct.push_back(QString::fromUtf8("新.wav"));
+        record.files->correct.push_back(QString::fromUtf8("新.wav"));
         setRecord(*opened, {}, record);
         QVERIFY(opened->files.save(opened->bank, filesOf({}, {Source::Config}), diagnostics));
         const auto config = configAt(QString());
@@ -386,8 +416,7 @@ private Q_SLOTS:
         DiagnosticList diagnostics;
         auto opened = open(root(), diagnostics);
         QVERIFY(opened.has_value());
-        auto record = japaneseOnChinese();
-        record.correct = QStringList{QStringLiteral("b.wav")};
+        const auto record = withFiles({}, {QStringLiteral("b.wav")});
         setRecord(*opened, pathOf(kMisdecodedU), record);
         QVERIFY(opened->files.save(opened->bank, filesOf(pathOf(kMisdecodedU), {Source::Config}),
                                    diagnostics));
@@ -436,7 +465,8 @@ private Q_SLOTS:
         const auto record = recordOf(*opened, {});
         QVERIFY(record.has_value());
         QCOMPARE(record->misdecodedAs, TextCodec(QStringLiteral("GBK")).name());
-        QCOMPARE(record->misdecoded.size(), 2);
+        // Both names are misdecoded, which the record without lists records.
+        QVERIFY(!record->files.has_value());
         QVERIFY(audioFilesOf(*opened).contains(QString::fromUtf8("い.wav")));
         const auto sample = sampleNamed(opened->bank, QString::fromUtf8("あ.wav"));
         QVERIFY(sample);

@@ -277,7 +277,7 @@ private Q_SLOTS:
         VoiceBankConfig::FileNameEncoding record;
         record.original = QStringLiteral("shift_jis");
         record.misdecodedAs = QStringLiteral("gbk");
-        record.misdecoded = QStringList{QString::fromUtf8("偁.wav")};
+        record.files = VoiceBankConfig::FileNameEncoding::Files{{QString::fromUtf8("偁.wav")}, {}};
         DiagnosticList diagnostics;
         QVERIFY(VoiceBankEdits::setFileNameEncoding(root, record, diagnostics));
         QCOMPARE(m_session->undoMessage(), QStringLiteral("Set File Name Encoding"));
@@ -285,7 +285,7 @@ private Q_SLOTS:
         QVERIFY(set.has_value());
         QCOMPARE(set->original, TextCodec(QStringLiteral("Shift_JIS")).name());
         QCOMPARE(set->misdecodedAs, TextCodec(QStringLiteral("GBK")).name());
-        QCOMPARE(set->misdecoded, record.misdecoded);
+        QCOMPARE(set->files, record.files);
 
         QVERIFY(VoiceBankEdits::setFileNameEncoding(root, record, diagnostics));
         QCOMPARE(m_session->currentStep(), 1);
@@ -310,6 +310,27 @@ private Q_SLOTS:
                 return VoiceBankEdits::setFileNameEncoding(root, unavailable, diagnostics);
             },
             QStringLiteral("is not available"));
+
+        VoiceBankConfig::FileNameEncoding asIs;
+        asIs.files = VoiceBankConfig::FileNameEncoding::Files();
+        verifyRefused(
+            [&](DiagnosticList &diagnostics) {
+                return VoiceBankEdits::setFileNameEncoding(root, asIs, diagnostics);
+            },
+            QStringLiteral("has no lists"));
+    }
+
+    // The record without encodings is a decision, distinct from no record.
+    void a_record_without_encodings_is_set() {
+        const auto root = directory({});
+        DiagnosticList diagnostics;
+        QVERIFY(VoiceBankEdits::setFileNameEncoding(root, VoiceBankConfig::FileNameEncoding(),
+                                                    diagnostics));
+        QCOMPARE(root.fileNameEncoding(), std::optional(VoiceBankConfig::FileNameEncoding()));
+        QCOMPARE(m_session->currentStep(), 1);
+        QVERIFY(VoiceBankEdits::setFileNameEncoding(root, std::nullopt, diagnostics));
+        QVERIFY(!root.fileNameEncoding().has_value());
+        QCOMPARE(m_session->currentStep(), 2);
     }
 
     // A domain function called within a transaction joins it, so that composed functions form

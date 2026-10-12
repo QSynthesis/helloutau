@@ -184,7 +184,9 @@ private Q_SLOTS:
         const auto answer = dialog.answers().value(0);
         QCOMPARE(answer.charset, std::optional(QStringLiteral("Shift_JIS")));
         QVERIFY(answer.fileNameEncoding.has_value());
-        QCOMPARE(answer.fileNameEncoding->misdecoded, (QStringList{kA, kI}));
+        // Both names misdecoded, which the record without lists records.
+        QCOMPARE(answer.fileNameEncoding->misdecodedAs, QStringLiteral("GBK"));
+        QVERIFY(!answer.fileNameEncoding->files.has_value());
     }
 
     // The question about the file names follows the encoding chosen for the folder, because the
@@ -214,8 +216,9 @@ private Q_SLOTS:
         dialog.setMisdecoded(0, kI, false);
         auto record = dialog.answers().value(0).fileNameEncoding;
         QVERIFY(record.has_value());
-        QCOMPARE(record->misdecoded, QStringList{kA});
-        QCOMPARE(record->correct, QStringList{kI});
+        QVERIFY(record->files.has_value());
+        QCOMPARE(record->files->misdecoded, QStringList{kA});
+        QCOMPARE(record->files->correct, QStringList{kI});
 
         // Other encodings, under which the names restore otherwise
         dialog.setFileNameEncodings(0, QStringLiteral("Big5"), QStringLiteral("GBK"));
@@ -224,8 +227,10 @@ private Q_SLOTS:
         QVERIFY(record.has_value());
         QCOMPARE(record->original, QStringLiteral("Big5"));
 
+        // Using the names as they are is a decision as well.
         dialog.setNamesAsTheyAre(0, true);
-        QVERIFY(!dialog.answers().value(0).fileNameEncoding.has_value());
+        QCOMPARE(dialog.answers().value(0).fileNameEncoding,
+                 std::optional(kit::VoiceBankConfig::FileNameEncoding()));
     }
 
     // A folder left out, and every folder of a declined dialog, records no file names.

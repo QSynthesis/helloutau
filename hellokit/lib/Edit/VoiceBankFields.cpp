@@ -71,17 +71,11 @@ namespace hello::kit {
 
         // The record as in hello-config.json, see docs/note.md.
         QJsonValue fileNameEncodingToJson(const QVariant &value) {
-            const auto record = edit::SlotValue<FileNameEncoding>::fromVariant(value);
-            return QJsonObject{
-                {QStringLiteral("original"),     record.original                              },
-                {QStringLiteral("misdecodedAs"), record.misdecodedAs                          },
-                {QStringLiteral("misdecoded"),   QJsonArray::fromStringList(record.misdecoded)},
-                {QStringLiteral("correct"),      QJsonArray::fromStringList(record.correct)   },
-            };
+            return edit::SlotValue<FileNameEncoding>::fromVariant(value).toJson();
         }
 
         std::optional<QVariant> fileNameEncodingFromJson(const QJsonValue &json) {
-            const auto record = fileNameEncodingOf(json);
+            const auto record = FileNameEncoding::fromJson(json);
             if (!record) {
                 return std::nullopt;
             }
@@ -94,26 +88,6 @@ namespace hello::kit {
         constexpr edit::ValueFormat fileNameEncodingFormat{
             "file name encoding", fileNameEncodingToJson, fileNameEncodingFromJson};
 
-    }
-
-    std::optional<VoiceBankConfig::FileNameEncoding> fileNameEncodingOf(const QJsonValue &json) {
-        const auto object = json.toObject();
-        const auto original = object.value(QStringLiteral("original"));
-        const auto misdecodedAs = object.value(QStringLiteral("misdecodedAs"));
-        const auto misdecoded =
-            edit::ValueConversions::stringListFromJson(object.value(QStringLiteral("misdecoded")));
-        const auto correct =
-            edit::ValueConversions::stringListFromJson(object.value(QStringLiteral("correct")));
-        if (!json.isObject() || object.size() != 4 || !original.isString() ||
-            !misdecodedAs.isString() || !misdecoded || !correct) {
-            return std::nullopt;
-        }
-        VoiceBankConfig::FileNameEncoding record;
-        record.original = original.toString();
-        record.misdecodedAs = misdecodedAs.toString();
-        record.misdecoded = misdecoded->toStringList();
-        record.correct = correct->toStringList();
-        return record;
     }
 
     template <>
