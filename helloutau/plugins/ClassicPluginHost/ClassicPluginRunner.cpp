@@ -72,7 +72,7 @@ namespace hello::daw {
         ClassicPluginRunner *q;
 
         bool showsConsole = true;
-        std::unique_ptr<QTemporaryDir> directory;
+        std::optional<QTemporaryDir> directory;
         QString file;
         QByteArray input;
         QByteArray result;
@@ -92,8 +92,7 @@ namespace hello::daw {
 #endif
 
         bool writeInput(QString *error) {
-            directory = std::make_unique<QTemporaryDir>(
-                kit::TemporaryStorage::templatePath(QStringLiteral("plugin")));
+            directory.emplace(kit::TemporaryStorage::templatePath(QStringLiteral("plugin")));
             if (!directory->isValid()) {
                 *error = directory->errorString();
                 return false;

@@ -1,14 +1,14 @@
 #ifndef HELLOUTAU_CORE_INTERNAL_COREPLUGIN_H
 #define HELLOUTAU_CORE_INTERNAL_COREPLUGIN_H
 
-#include <memory>
+#include <optional>
 #include <string>
 
 #include <stdcorelib/pluginsystem/iplugin.h>
 
-namespace hello::daw {
+#include <helloutau/Editor/Editor.h>
 
-    class Editor;
+namespace hello::daw {
 
     /// The core plugin, which the application requires in order to start. The plugin creates the
     /// editor, registers the action extensions of the editor with it, and records it in the
@@ -25,7 +25,7 @@ namespace hello::daw {
         void aboutToShutdown() override;
 
     private:
-        std::unique_ptr<Editor> m_editor;
+        std::optional<Editor> m_editor;
     };
 
 }

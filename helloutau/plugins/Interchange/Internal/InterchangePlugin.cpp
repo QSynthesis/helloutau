@@ -40,17 +40,15 @@ namespace hello::daw {
             }
             return false;
         }
-        m_service = std::make_unique<InterchangeService>();
+        m_service.emplace();
         const auto &drivers = m_service->drivers();
-        m_drivers = std::make_unique<kit::BuiltinInterchangeDrivers>(drivers.readerRegistry(),
-                                                                     drivers.writerRegistry());
+        m_drivers.emplace(drivers.readerRegistry(), drivers.writerRegistry());
         m_midiEncoding = InterchangeStepRegistry::AddFactory(
             m_service->stepPages(), MidiEncodingPage::stepId, {},
             [] { return std::make_unique<MidiEncodingPage>(); });
         m_actions = ActionContributionRegistry::AddFactory(
-            editor->actionContributions(), pluginId, {}, [service = m_service.get()] {
-                return std::make_unique<InterchangeContribution>(service);
-            });
+            editor->actionContributions(), pluginId, {},
+            [service = &*m_service] { return std::make_unique<InterchangeContribution>(service); });
         if (!m_actions.entry()) {
             if (errorMessage) {
                 *errorMessage = "The actions of the plugin are already registered.";

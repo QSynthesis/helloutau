@@ -25,15 +25,18 @@ namespace hello::daw {
         // The editor uses the settings of the loader, which outlive the editor, or the settings
         // of the user if no loader loaded this plugin.
         const auto loader = AppLoader::instance();
-        m_editor =
-            loader ? std::make_unique<Editor>(loader->settings()) : std::make_unique<Editor>();
+        if (loader) {
+            m_editor.emplace(loader->settings());
+        } else {
+            m_editor.emplace();
+        }
         // A child of the editor, destroyed with it
-        new BuiltinActions(m_editor.get());
+        new BuiltinActions(&*m_editor);
         // The Plugins page exists only with a loader. The other plugins, which depend on this
         // plugin and initialize after it, obtain the editor from the loader.
-        addCoreSettingPages(m_editor.get(), loader);
+        addCoreSettingPages(&*m_editor, loader);
         if (loader) {
-            loader->setEditor(m_editor.get());
+            loader->setEditor(&*m_editor);
         }
         return true;
     }

@@ -1,22 +1,19 @@
 #ifndef HELLOUTAU_INTERCHANGE_INTERNAL_INTERCHANGEPLUGIN_H
 #define HELLOUTAU_INTERCHANGE_INTERNAL_INTERCHANGEPLUGIN_H
 
-#include <memory>
+#include <optional>
 #include <string>
 
 #include <stdcorelib/pluginsystem/iplugin.h>
 
+#include <hellokit/Interchange/BuiltinInterchangeDrivers.h>
+
 #include <helloutau/Widgets/ActionContributionRegistry.h>
 
+#include <Interchange/InterchangeService.h>
 #include <Interchange/InterchangeStepRegistry.h>
 
-namespace hello::kit {
-    class BuiltinInterchangeDrivers;
-}
-
 namespace hello::daw {
-
-    class InterchangeService;
 
     /// The format conversion plugin. Creates the InterchangeService, registers the MIDI drivers
     /// and the MIDI encoding page in it, and adds the commands Import and Export > Other Formats
@@ -31,8 +28,8 @@ namespace hello::daw {
         void aboutToShutdown() override;
 
     private:
-        std::unique_ptr<InterchangeService> m_service;
-        std::unique_ptr<kit::BuiltinInterchangeDrivers> m_drivers;
+        std::optional<InterchangeService> m_service;
+        std::optional<kit::BuiltinInterchangeDrivers> m_drivers;
         InterchangeStepRegistry::AddFactory m_midiEncoding;
         ActionContributionRegistry::AddFactory m_actions;
     };
