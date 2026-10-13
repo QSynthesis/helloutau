@@ -30,6 +30,10 @@ namespace hello::daw {
         std::optional<kit::FrequencyMap> read(const std::filesystem::path &wav, int sampleRate,
                                               kit::DiagnosticList &diagnostics) const override;
 
+        /// \c desc.mrq for every audio file
+        std::optional<std::filesystem::path>
+            mapFileNameOf(const std::filesystem::path &wav) const override;
+
         /// LLSM, the analysis of moresampler beside the audio file as a.wav.llsm
         QList<AnalysisCache> analysisCaches() const override;
 

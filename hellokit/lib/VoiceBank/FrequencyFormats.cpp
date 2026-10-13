@@ -56,6 +56,11 @@ namespace hello::kit {
         return std::nullopt;
     }
 
+    std::optional<std::filesystem::path>
+        FrequencyFormat::mapFileNameOf(const std::filesystem::path &wav) const {
+        return sidecarNameOf(wav);
+    }
+
     QList<FrequencyFormat::AnalysisCache> FrequencyFormat::analysisCaches() const {
         return {};
     }

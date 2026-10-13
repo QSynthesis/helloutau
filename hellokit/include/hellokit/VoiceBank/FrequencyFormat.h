@@ -130,6 +130,13 @@ namespace hello::kit {
         virtual std::optional<std::filesystem::path>
             sidecarNameOf(const std::filesystem::path &wav) const;
 
+        /// Returns the name of the file in the folder of the audio file \a wav that holds its
+        /// map, for display. The default implementation returns the name of the sidecar file. A
+        /// format that keeps the maps of a folder in one file, such as \c desc.mrq, returns that
+        /// file. Returns \c std::nullopt if the format keeps the map elsewhere.
+        virtual std::optional<std::filesystem::path>
+            mapFileNameOf(const std::filesystem::path &wav) const;
+
         /// Returns the analysis caches of the resampler of this format. The default
         /// implementation returns none.
         virtual QList<AnalysisCache> analysisCaches() const;

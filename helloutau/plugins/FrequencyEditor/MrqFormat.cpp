@@ -90,6 +90,12 @@ namespace hello::daw {
         return table;
     }
 
+    std::optional<std::filesystem::path>
+        MrqFormat::mapFileNameOf(const std::filesystem::path &wav) const {
+        Q_UNUSED(wav);
+        return std::filesystem::path("desc.mrq");
+    }
+
     // moresampler derives the LLSM file from the entry and writes it again if missing, measured
     // as above. Its readme states that desc.mrq is read before an LLSM file is created, so that a
     // deleted entry is written again only if the LLSM file is missing as well.

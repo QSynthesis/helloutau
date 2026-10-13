@@ -30,6 +30,7 @@
 #include <QtWidgets/QDoubleSpinBox>
 #include <QtWidgets/QFileDialog>
 #include <QtWidgets/QGraphicsDropShadowEffect>
+#include <QtWidgets/QHeaderView>
 #include <QtWidgets/QInputDialog>
 #include <QtWidgets/QLineEdit>
 #include <QtWidgets/QListWidget>
@@ -2421,7 +2422,7 @@ private Q_SLOTS:
         window->setCurrentRow(2);
         QVERIFY(!view->frequencyMap());
         QCOMPARE(box->itemText(box->findData(QStringLiteral("frq"))),
-                 QStringLiteral("frq (resampler.exe) (none)"));
+                 QStringLiteral("frq (resampler) (none)"));
 
         const auto spectrogram =
             declaredActionOf(*e, window, QStringLiteral("helloutau.voiceBank.showSpectrogram"));
@@ -2965,7 +2966,8 @@ private Q_SLOTS:
     }
 
     // The page of the frequency maps sets the generation threads apart from the rendering
-    // threads and the regeneration, and lists the analysis caches of each registered format.
+    // threads and the regeneration, and lists the map file and the analysis caches of each
+    // registered format, in columns that the user resizes.
     void the_frequency_map_page_lists_the_caches() {
         const auto e = editor();
         const auto page = qobject_cast<FrequencyMapSettingPage *>(
@@ -2973,14 +2975,15 @@ private Q_SLOTS:
         QVERIFY(page);
         QVERIFY(page->widget());
         const auto list = page->cacheList();
-        QString mrq;
+        QStringList rows;
         for (int i = 0; i < list->topLevelItemCount(); ++i) {
             const auto item = list->topLevelItem(i);
-            if (item->text(0).startsWith(QStringLiteral("mrq"))) {
-                mrq = item->text(1) + QLatin1Char('|') + item->text(2);
-            }
+            rows.push_back(item->text(1) + QLatin1Char('|') + item->text(2) + QLatin1Char('|') +
+                           item->text(3));
         }
-        QCOMPARE(mrq, QStringLiteral("LLSM|a.wav.llsm"));
+        QVERIFY(rows.contains(QStringLiteral("desc.mrq|LLSM|a.wav.llsm")));
+        QVERIFY(rows.contains(QStringLiteral("a.dio|STAR, PLATINUM|a.star, a.platinum")));
+        QCOMPARE(list->header()->sectionResizeMode(0), QHeaderView::Interactive);
 
         const auto restore = qScopeGuard([&e] {
             e->settings().frequencyMaps().setThreadCount(0);

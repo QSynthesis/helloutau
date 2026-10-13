@@ -56,8 +56,8 @@ namespace hello::daw {
         auto cachesLayout = new QVBoxLayout(cachesGroup);
         m_caches = new QTreeWidget();
         m_caches->setRootIsDecorated(false);
-        m_caches->setHeaderLabels({tr("Format"), tr("Caches"), tr("Files of a.wav")});
-        m_caches->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
+        m_caches->setHeaderLabels(
+            {tr("Format"), tr("Map of a.wav"), tr("Caches"), tr("Cache Files of a.wav")});
         cachesLayout->addWidget(m_caches);
         cachesLayout->addWidget(note(tr("Removing or regenerating the frequency maps of a format "
                                         "removes these files beside the audio files.")));
@@ -83,10 +83,16 @@ namespace hello::daw {
                 names.push_back(cache.name);
                 files.push_back(QString::fromStdU16String(cache.fileNameOf(wav).u16string()));
             }
+            const auto map = format->mapFileNameOf(wav);
             auto item = new QTreeWidgetItem(m_caches);
             item->setText(0, format->name());
-            item->setText(1, names.isEmpty() ? tr("None") : names.join(QStringLiteral(", ")));
-            item->setText(2, files.join(QStringLiteral(", ")));
+            item->setText(1, map ? QString::fromStdU16String(map->u16string()) : QString());
+            item->setText(2, names.isEmpty() ? tr("None") : names.join(QStringLiteral(", ")));
+            item->setText(3, files.join(QStringLiteral(", ")));
+        }
+        // The widths fit the contents once, and the user resizes the columns afterwards.
+        for (int column = 0; column < m_caches->columnCount(); ++column) {
+            m_caches->resizeColumnToContents(column);
         }
     }
 

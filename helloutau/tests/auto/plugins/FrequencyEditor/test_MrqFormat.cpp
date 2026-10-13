@@ -89,6 +89,7 @@ private Q_SLOTS:
         const MrqFormat mrq;
         QCOMPARE(mrq.id(), QStringLiteral("mrq"));
         QCOMPARE(mrq.resamplerPatterns(), QStringList{QStringLiteral("moresampler*.exe")});
+        QCOMPARE(mrq.mapFileNameOf(fs::path(u"あ.wav")), std::optional<fs::path>("desc.mrq"));
         const auto caches = mrq.analysisCaches();
         QCOMPARE(caches.size(), 1);
         QCOMPARE(caches.at(0).name, QStringLiteral("LLSM"));

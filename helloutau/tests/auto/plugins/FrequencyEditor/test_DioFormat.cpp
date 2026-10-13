@@ -65,6 +65,7 @@ private Q_SLOTS:
         QCOMPARE(dio.id(), QStringLiteral("dio"));
         QCOMPARE(dio.resamplerPatterns(),
                  (QStringList{QStringLiteral("w4u*.exe"), QStringLiteral("world4utau*.exe")}));
+        QCOMPARE(dio.mapFileNameOf("a.wav"), std::optional<fs::path>("a.dio"));
         const auto caches = dio.analysisCaches();
         QCOMPARE(caches.size(), 2);
         QCOMPARE(caches.at(0).name, QStringLiteral("STAR"));

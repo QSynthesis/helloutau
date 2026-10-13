@@ -966,8 +966,12 @@
         <translation>缓存</translation>
     </message>
     <message>
-        <source>Files of a.wav</source>
-        <translation>a.wav 的文件</translation>
+        <source>Map of a.wav</source>
+        <translation>a.wav 的频率表</translation>
+    </message>
+    <message>
+        <source>Cache Files of a.wav</source>
+        <translation>a.wav 的缓存文件</translation>
     </message>
     <message>
         <source>Removing or regenerating the frequency maps of a format removes these files beside the audio files.</source>
@@ -3892,8 +3896,8 @@ Write them again without these chunks? The audio stays the same. The files are w
 <context>
     <name>hello::kit::Frq</name>
     <message>
-        <source>frq (resampler.exe)</source>
-        <translation>frq (resampler.exe)</translation>
+        <source>frq (resampler)</source>
+        <translation>frq (resampler)</translation>
     </message>
     <message>
         <source>The format records an amplitude for each frame, and the map lacks amplitudes.</source>

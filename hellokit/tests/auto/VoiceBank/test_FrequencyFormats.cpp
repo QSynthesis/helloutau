@@ -164,8 +164,7 @@ private Q_SLOTS:
         QVERIFY(renamed.entry());
         QCOMPARE(changed.size(), 2);
         QCOMPARE(idsOf(formats), QStringList({"sc", "frq"}));
-        QCOMPARE(formats.format(QStringLiteral("frq"))->name(),
-                 QStringLiteral("frq (resampler.exe)"));
+        QCOMPARE(formats.format(QStringLiteral("frq"))->name(), QStringLiteral("frq (resampler)"));
 
         auto mrq = registration(formats, "mrq", {QStringLiteral("moresampler*.exe")});
         auto more = registration(formats, "more", {QStringLiteral("moresampler*.exe")});
@@ -189,6 +188,7 @@ private Q_SLOTS:
         const auto frq = formats.format(QStringLiteral("frq"));
         const auto wav = pathOf("a.wav");
         QVERIFY(!hasMap(*frq, wav));
+        QCOMPARE(frq->mapFileNameOf(wav), std::optional<fs::path>("a_wav.frq"));
         DiagnosticList diagnostics;
         QVERIFY(!frq->read(wav, 44100, diagnostics));
         QCOMPARE(diagnostics.size(), 1);

@@ -24,7 +24,7 @@ namespace hello::kit {
             }
 
             QString name() const override {
-                return tr("frq (resampler.exe)");
+                return tr("frq (resampler)");
             }
 
             QStringList resamplerPatterns() const override {
