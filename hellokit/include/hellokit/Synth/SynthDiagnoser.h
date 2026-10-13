@@ -28,6 +28,18 @@ namespace hello::kit {
 
     /// The data available to a diagnosis: the failures of one render and its configuration.
     struct SynthDiagnosisContext {
+        /// The operation whose synth tool calls failed. The causes that apply and the wording of
+        /// the diagnoses depend on it.
+        enum Operation {
+            Render,                 ///< The render of the notes of a project
+            FrequencyMapGeneration, ///< The generation of frequency maps by the resampler
+        };
+
+        Operation operation = Render;
+
+        /// The display name of the format of the frequency maps, in FrequencyMapGeneration
+        QString frequencyFormat;
+
         /// The synth tools of the local settings, which the render ran
         SynthTools synthTools;
 

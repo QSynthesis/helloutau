@@ -48,8 +48,8 @@ namespace {
         }
     };
 
-    // A resampler that writes the map of its input unless the name of the input contains
-    // "silent", and records the arguments of each call
+    // A resampler that writes the map of its input unless the name of the input contains "silent"
+    // or "fails", the latter with the exit code 1, and records the arguments of each call
     class StandIn : public SynthToolProcess {
     public:
         bool starts = true;
@@ -72,7 +72,9 @@ namespace {
                 return out;
             }
             const fs::path wav(arguments.at(0).toStdU16String());
-            if (!arguments.at(0).contains(QStringLiteral("silent"))) {
+            if (arguments.at(0).contains(QStringLiteral("fails"))) {
+                out.exitCode = 1;
+            } else if (!arguments.at(0).contains(QStringLiteral("silent"))) {
                 std::ofstream(wav.parent_path() / (fs::path(wav.stem()) += ".map")) << "map";
             }
             std::ofstream(fs::path(arguments.at(1).toStdU16String())) << "RIFF";
@@ -120,14 +122,14 @@ private Q_SLOTS:
         generator.process = standIn;
         std::atomic<int> last = 0;
         DiagnosticList diagnostics;
-        QCOMPARE(generator.generate(format, "resampler.exe", wavs, diagnostics,
-                                    [&last](int done) {
-                                        int seen = last.load();
-                                        while (done > seen &&
-                                               !last.compare_exchange_weak(seen, done)) {
-                                        }
-                                    }),
-                 2);
+        const auto outcome =
+            generator.generate(format, "resampler.exe", wavs, diagnostics, [&last](int done) {
+                int seen = last.load();
+                while (done > seen && !last.compare_exchange_weak(seen, done)) {
+                }
+            });
+        QCOMPARE(outcome.generated, 2);
+        QVERIFY(outcome.failures.isEmpty());
         QVERIFY(diagnostics.isEmpty());
         QCOMPARE(last.load(), 3);
         QVERIFY(format.hasMap(wavs.at(0)));
@@ -151,23 +153,38 @@ private Q_SLOTS:
         const auto standIn = std::make_shared<StandIn>();
         generator.process = standIn;
         DiagnosticList diagnostics;
-        QCOMPARE(generator.generate(format, "resampler.exe", wavs, diagnostics), 2);
+        QCOMPARE(generator.generate(format, "resampler.exe", wavs, diagnostics).generated, 2);
         QCOMPARE(standIn->calls.size(), 2);
         QVERIFY(diagnostics.isEmpty());
     }
 
-    // An audio file whose map the resampler does not write is reported with the output.
+    // An audio file whose map the resampler does not write is reported, and its call is recorded
+    // for the diagnosis with the output, which the diagnostic does not include. A call that ends
+    // with an exit code other than 0 failed in the resampler, and a call that ends normally
+    // failed to write the map.
     void a_map_not_written_is_reported() {
-        const QList<fs::path> wavs{write("silent.wav"), write("a.wav")};
+        const QList<fs::path> wavs{write("silent.wav"), write("a.wav"), write("fails.wav")};
         const SidecarFormat format;
         FrequencyMapGenerator generator;
+        generator.threadCount = 1;
         generator.process = std::make_shared<StandIn>();
         DiagnosticList diagnostics;
-        QCOMPARE(generator.generate(format, "resampler.exe", wavs, diagnostics), 1);
-        QCOMPARE(diagnostics.size(), 1);
+        const auto outcome = generator.generate(format, "resampler.exe", wavs, diagnostics);
+        QCOMPARE(outcome.generated, 1);
+        QCOMPARE(diagnostics.size(), 2);
         QCOMPARE(diagnostics.at(0).severity, DiagnosticSeverity::Warning);
         QVERIFY(diagnostics.at(0).message.contains(QStringLiteral("silent.wav")));
-        QVERIFY(diagnostics.at(0).message.contains(QStringLiteral("rendered")));
+        QVERIFY(!diagnostics.at(0).message.contains(QStringLiteral("rendered")));
+
+        QCOMPARE(outcome.failures.size(), 2);
+        const auto &silent = outcome.failures.at(0);
+        QCOMPARE(silent.stage, SynthFailure::FrequencyMap);
+        QCOMPARE(silent.program, fs::path("resampler.exe"));
+        QVERIFY(silent.arguments.at(0).endsWith(QStringLiteral("silent.wav")));
+        QCOMPARE(silent.run->output, QStringLiteral("rendered"));
+        QCOMPARE(silent.fileHead, QByteArray("RIFF"));
+        QCOMPARE(outcome.failures.at(1).stage, SynthFailure::Resampler);
+        QCOMPARE(outcome.failures.at(1).run->exitCode, 1);
     }
 
     // A resampler that does not start is reported once, and no further audio file is started.
@@ -180,10 +197,13 @@ private Q_SLOTS:
         standIn->starts = false;
         generator.process = standIn;
         DiagnosticList diagnostics;
-        QCOMPARE(generator.generate(format, "resampler.exe", wavs, diagnostics), 0);
+        const auto outcome = generator.generate(format, "resampler.exe", wavs, diagnostics);
+        QCOMPARE(outcome.generated, 0);
         QCOMPARE(diagnostics.size(), 1);
         QCOMPARE(diagnostics.at(0).severity, DiagnosticSeverity::Error);
         QCOMPARE(standIn->calls.size(), 1);
+        QCOMPARE(outcome.failures.size(), 1);
+        QVERIFY(!outcome.failures.at(0).run->started);
     }
 
     // Once cancelled, no further audio file is started.
@@ -196,9 +216,11 @@ private Q_SLOTS:
         generator.process = standIn;
         std::atomic<int> done = 0;
         DiagnosticList diagnostics;
-        QCOMPARE(generator.generate(
-                     format, "resampler.exe", wavs, diagnostics,
-                     [&done](int count) { done = count; }, [&done] { return done.load() >= 1; }),
+        QCOMPARE(generator
+                     .generate(
+                         format, "resampler.exe", wavs, diagnostics,
+                         [&done](int count) { done = count; }, [&done] { return done.load() >= 1; })
+                     .generated,
                  1);
         QVERIFY(diagnostics.isEmpty());
         QCOMPARE(standIn->calls.size(), 1);

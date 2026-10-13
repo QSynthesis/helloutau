@@ -195,6 +195,42 @@ private Q_SLOTS:
         QCOMPARE(diagnoses.at(2).failures, (QList<int>{2, 5}));
         QCOMPARE(diagnoses.at(3).failures, QList<int>{3});
     }
+
+    // In the generation of frequency maps, a resampler that ended normally without a map is
+    // diagnosed with the format, and the remedies concern the audio files and the voice bank
+    // instead of the notes and the project.
+    void the_generation_of_frequency_maps_is_diagnosed() {
+        SynthDiagnosisContext context;
+        context.operation = SynthDiagnosisContext::FrequencyMapGeneration;
+        context.frequencyFormat = QStringLiteral("mrq (moresampler)");
+        context.failures = {failureOf(SynthFailure::FrequencyMap, runOf(true, 0)),
+                            failureOf(SynthFailure::Resampler, runOf(true, 2)),
+                            failureOf(SynthFailure::FrequencyMap, runOf(true, 0)),
+                            failureOf(SynthFailure::Resampler, runOf(true, 0, true))};
+        const auto diagnoses = m_diagnosers.diagnose(context);
+        const auto audioFiles = QStringLiteral("Check these audio files in the voice bank editor.");
+        QCOMPARE(diagnoses.size(), 3);
+        QCOMPARE(diagnoses.at(0).failures, QList<int>{3});
+        QVERIFY(diagnoses.at(0).explanation.contains(QStringLiteral("audio file")));
+        QCOMPARE(diagnoses.at(1).failures, (QList<int>{0, 2}));
+        QVERIFY(diagnoses.at(1).cause.contains(QStringLiteral("mrq (moresampler)")));
+        QVERIFY(diagnoses.at(1).remedies.contains(audioFiles));
+        QCOMPARE(diagnoses.at(2).failures, QList<int>{1});
+        QCOMPARE(diagnoses.at(2).remedies.value(0), audioFiles);
+
+        // The same failure of a render concerns the notes.
+        const auto render = diagnose({failureOf(SynthFailure::Resampler, runOf(true, 2))});
+        QVERIFY(render.value(0).remedies.value(0).contains(QStringLiteral("notes")));
+
+#ifdef Q_OS_WINDOWS
+        context.failures = {
+            failureOf(SynthFailure::FrequencyMap, runOf(true, 0),
+                      {QStringLiteral("C:/") + QString(300, u'a') + QStringLiteral(".wav"),
+                       QStringLiteral("o.wav")})};
+        QCOMPARE(m_diagnosers.diagnose(context).value(0).remedies,
+                 QStringList{QStringLiteral("Move the voice bank to a shorter path.")});
+#endif
+    }
 };
 
 QTEST_APPLESS_MAIN(test_BuiltinSynthDiagnosers)

@@ -52,6 +52,7 @@
 #include <hellokit/Support/TextCodec.h>
 #include <hellokit/Synth/FrequencyMapGenerator.h>
 #include <hellokit/Synth/Spectrogram.h>
+#include <hellokit/Synth/SynthDiagnosers.h>
 #include <hellokit/Synth/WaveAudio.h>
 #include <hellokit/VoiceBank/FrequencyFormats.h>
 #include <hellokit/VoiceBank/VoiceAliasRule.h>
@@ -1556,12 +1557,12 @@ namespace hello::daw {
                              [&cancelled] { cancelled = true; });
 
             kit::DiagnosticList diagnostics;
-            int generated = 0;
+            kit::FrequencyMapGenerator::Outcome outcome;
             generator.threadCount = editor->settings().frequencyMaps().threadCount();
             generator.everyFile = cachesOnly;
             QEventLoop loop;
             const auto worker = QThread::create([&] {
-                generated = generator.generate(
+                outcome = generator.generate(
                     format, resampler, wavs, diagnostics,
                     [&progress](int done) {
                         // Dropped with the dialog if it is gone
@@ -1583,10 +1584,38 @@ namespace hello::daw {
             showFrequency();
             decl.statusBar()->showMessage(
                 cachesOnly ? tr("The analysis caches of %n audio file(s) generated again.", nullptr,
-                                generated)
-                           : tr("%n frequency map(s) generated.", nullptr, generated));
-            DiagnosticBox::report(&decl, title, diagnostics);
+                                outcome.generated)
+                           : tr("%n frequency map(s) generated.", nullptr, outcome.generated));
+            reportGeneration(title, format, resampler, diagnostics, outcome.failures);
             return !cancelled.load() && diagnostics.isEmpty();
+        }
+
+        // Shows the probable causes of the failed resampler calls of a generation above the
+        // audio files without maps, which the details list one per line, as the project window
+        // reports a render.
+        void reportGeneration(const QString &title, const kit::FrequencyFormat &format,
+                              const std::filesystem::path &resampler,
+                              const kit::DiagnosticList &diagnostics,
+                              const QList<kit::SynthFailure> &failures) {
+            stdc_decl_t;
+            QList<kit::SynthDiagnosis> diagnoses;
+            if (!failures.isEmpty()) {
+                kit::SynthDiagnosisContext context;
+                context.operation = kit::SynthDiagnosisContext::FrequencyMapGeneration;
+                context.frequencyFormat = format.name();
+                context.synthTools.resampler = resampler;
+                context.failures = failures;
+                diagnoses = editor->synthDiagnosers().diagnose(context);
+            }
+            const auto missing = std::count_if(
+                diagnostics.cbegin(), diagnostics.cend(), [](const kit::Diagnostic &diagnostic) {
+                    return diagnostic.severity == kit::DiagnosticSeverity::Warning;
+                });
+            const auto summary =
+                missing > 0 ? tr("%n audio file(s) have no frequency map.", nullptr, int(missing))
+                            : tr("The frequency maps could not be generated.");
+            DiagnosticBox::report(&decl, title, summary, diagnostics, diagnoses,
+                                  DiagnosticBox::OrderedList);
         }
 
         // Fits each column to its header and its cells in view, a column of names up to a width

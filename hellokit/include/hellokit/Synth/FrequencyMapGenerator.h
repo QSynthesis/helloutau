@@ -13,6 +13,7 @@
 #include <hellokit/VoiceBank/FrequencyFormat.h>
 
 #include <hellokit/Synth/HelloKitSynthGlobal.h>
+#include <hellokit/Synth/SynthFailure.h>
 
 namespace hello::kit {
 
@@ -42,24 +43,34 @@ namespace hello::kit {
         /// writes its removed analysis caches again from the map. False by default.
         bool everyFile = false;
 
-        /// The process that runs the resampler, which a test replaces with a substitute.
+        /// The process that runs the resampler, which writes the output of the resampler into its
+        /// output log. A test replaces it with a substitute.
         std::shared_ptr<SynthToolProcess> process;
+
+        /// The result of generate().
+        struct Outcome {
+            /// The number of audio files rendered that have a map afterwards
+            int generated = 0;
+
+            /// The resampler calls after which an audio file has no map, for a diagnosis with
+            /// the operation SynthDiagnosisContext::FrequencyMapGeneration
+            QList<SynthFailure> failures;
+        };
 
         /// Generates the map of \a format of each audio file of \a wavs that has none, or of every
         /// audio file if everyFile is set, by running \a resampler, and returns on completion.
-        /// An audio file that has no map afterwards is reported in \a diagnostics with the output
-        /// of the resampler.
+        /// An audio file that has no map afterwards is reported in \a diagnostics, and its
+        /// resampler call in the failures of the outcome.
         ///
         /// \param progress called after each audio file with the number of audio files done, on
         ///        a thread of the generation, or empty
         /// \param cancelled queried on the threads of the generation while resamplers run, or
         ///        empty. Once it returns true, the running resamplers are killed and no further
         ///        audio file is started.
-        /// \return the number of audio files rendered that have a map afterwards
-        int generate(const FrequencyFormat &format, const std::filesystem::path &resampler,
-                     const QList<std::filesystem::path> &wavs, DiagnosticList &diagnostics,
-                     const std::function<void(int)> &progress = {},
-                     const std::function<bool()> &cancelled = {}) const;
+        Outcome generate(const FrequencyFormat &format, const std::filesystem::path &resampler,
+                         const QList<std::filesystem::path> &wavs, DiagnosticList &diagnostics,
+                         const std::function<void(int)> &progress = {},
+                         const std::function<bool()> &cancelled = {}) const;
     };
 
 }

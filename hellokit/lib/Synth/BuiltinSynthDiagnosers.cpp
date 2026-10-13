@@ -33,7 +33,33 @@ namespace hello::kit {
 
         bool lacksOutput(const SynthFailure &failure) {
             return failure.stage == SynthFailure::Resampler ||
-                   failure.stage == SynthFailure::Wavtool;
+                   failure.stage == SynthFailure::Wavtool ||
+                   failure.stage == SynthFailure::FrequencyMap;
+        }
+
+        bool generatesMaps(const SynthDiagnosisContext &context) {
+            return context.operation == SynthDiagnosisContext::FrequencyMapGeneration;
+        }
+
+        // The remedy of a resampler that fails for some inputs: the notes of a render, or the
+        // audio files of the generation of frequency maps
+        QString checkInputs(const SynthDiagnosisContext &context) {
+            return generatesMaps(context)
+                       ? Text::tr("Check these audio files in the voice bank editor.")
+                       : Text::tr("Check the samples of these notes in the voice bank editor.");
+        }
+
+        // The folders that a path of the failed calls lies in, which the user moves
+        QString moveFolders(const SynthDiagnosisContext &context, bool shorter) {
+            if (generatesMaps(context)) {
+                return shorter ? Text::tr("Move the voice bank to a shorter path.")
+                               : Text::tr("Move the voice bank to a path without these "
+                                          "characters.");
+            }
+            return shorter ? Text::tr("Move the voice bank, the project or the cache folder to a "
+                                      "shorter path.")
+                           : Text::tr("Move the voice bank, the project or the cache folder to a "
+                                      "path without these characters.");
         }
 
         // Collects the failures for which key returns a value into one group per value, in the
@@ -97,8 +123,7 @@ namespace hello::kit {
                                "system receives these characters as substitute characters, and "
                                "therefore cannot open the file. The path is %1.")
                           .arg(example),
-                     {Text::tr("Move the voice bank, the project or the cache folder to a path "
-                                "without these characters."),
+                     {moveFolders(context, false),
                        Text::tr("Change the language for non-Unicode programs of Windows to the "
                                 "language of the path.")},
                      failures, }
@@ -203,8 +228,7 @@ namespace hello::kit {
                             Text::tr("Windows ended the synth tool with the status 0xC0000005, "
                                      "STATUS_ACCESS_VIOLATION. The synth tool cannot process "
                                      "this input, or it is defective."),
-                            {Text::tr("Check the samples of these notes in the voice bank "
-                                      "editor."),
+                            {checkInputs(context),
                                Text::tr("Use another release of the synth tool.")},
                             failures,
                         });
@@ -239,8 +263,13 @@ namespace hello::kit {
                     result.push_back({
                         Text::tr("The synth tool %1 did not finish within the time limit.")
                             .arg(displayed(program)),
-                        Text::tr("The synth tool was stopped. It may be waiting for input or "
-                                 "showing a window, or require a long time for a long note."),
+                        generatesMaps(context)
+                            ? Text::tr("The synth tool was stopped. It may be waiting for input "
+                                       "or showing a window, or require a long time for a long "
+                                       "audio file.")
+                            : Text::tr("The synth tool was stopped. It may be waiting for input "
+                                       "or showing a window, or require a long time for a long "
+                                       "note."),
                         {Text::tr("Run the synth tool once from a console, and check whether it "
                                   "waits for input or shows a message.")},
                         failures,
@@ -289,8 +318,7 @@ namespace hello::kit {
                      Text::tr("A synth tool without support for long paths cannot open it. The "
                                "path is %1.")
                           .arg(example),
-                     {Text::tr("Move the voice bank, the project or the cache folder to a "
-                                "shorter path.")},
+                     {moveFolders(context, true)},
                      failures, }
                 };
 #else
@@ -321,7 +349,15 @@ namespace hello::kit {
             }
 
             QList<SynthDiagnosis> diagnose(const SynthDiagnosisContext &context) const override {
-                enum Kind { NotWave, UnreadableWave, WavtoolNote, NoTrack, ExitCode, NoFragment };
+                enum Kind {
+                    NotWave,
+                    UnreadableWave,
+                    WavtoolNote,
+                    NoTrack,
+                    ExitCode,
+                    NoFragment,
+                    NoMap,
+                };
                 using Key = std::pair<int, fs::path>;
                 QList<SynthDiagnosis> result;
                 for (const auto &[key, failures] :
@@ -337,6 +373,8 @@ namespace hello::kit {
                                                                                    : NotWave;
                                  case SynthFailure::Wavtool:
                                      return failure.noteIndex ? WavtoolNote : NoTrack;
+                                 case SynthFailure::FrequencyMap:
+                                     return NoMap;
                                  case SynthFailure::Resampler:
                                  case SynthFailure::Unconfirmed:
                                      break;
@@ -350,9 +388,9 @@ namespace hello::kit {
                     const auto &first = context.failures.at(failures.first());
                     const auto program = displayed(key.second);
                     const auto output = first.run ? first.run->output.trimmed() : QString();
-                    // The remedies of a resampler that wrote no fragment
+                    // The remedies of a resampler that failed for these inputs
                     const QStringList resamplerRemedies{
-                        Text::tr("Check the samples of these notes in the voice bank editor."),
+                        checkInputs(context),
                         Text::tr("Use another resampler."),
                     };
                     switch (key.first) {
@@ -444,6 +482,25 @@ namespace hello::kit {
                                     ? Text::tr("The resampler produced no output.")
                                     : Text::tr("The output of the resampler is: %1").arg(output),
                                 resamplerRemedies,
+                                failures,
+                            });
+                            break;
+                        // The format of a resampler follows its file name, so that a renamed
+                        // resampler, or one that writes no maps when it renders, is the usual
+                        // cause.
+                        case NoMap:
+                            result.push_back({
+                                Text::tr("The resampler %1 wrote no frequency maps of the format "
+                                         "%2.")
+                                    .arg(program, context.frequencyFormat),
+                                Text::tr("The resampler ended normally for these audio files. "
+                                         "The format is chosen by the file name of the resampler, "
+                                         "and the resampler may write the maps of another format, "
+                                         "or no maps."),
+                                {Text::tr("Check that the resampler writes frequency maps of the "
+                                          "format %1.")
+                                     .arg(context.frequencyFormat),
+                                   checkInputs(context)},
                                 failures,
                             });
                             break;

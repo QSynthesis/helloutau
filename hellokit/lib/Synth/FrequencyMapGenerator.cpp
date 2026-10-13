@@ -41,18 +41,20 @@ namespace hello::kit {
 
     FrequencyMapGenerator::~FrequencyMapGenerator() = default;
 
-    int FrequencyMapGenerator::generate(const FrequencyFormat &format, const fs::path &resampler,
+    FrequencyMapGenerator::Outcome
+        FrequencyMapGenerator::generate(const FrequencyFormat &format, const fs::path &resampler,
                                         const QList<fs::path> &wavs, DiagnosticList &diagnostics,
                                         const std::function<void(int)> &progress,
                                         const std::function<bool()> &cancelled) const {
         const auto synthTool = process ? process : std::make_shared<SynthToolProcess>();
+        Outcome outcome;
         // The rendered notes, which only make the resampler write the maps, removed with the
         // folder at the end
         QTemporaryDir output(TemporaryStorage::templatePath(QStringLiteral("frequency")));
         if (!output.isValid()) {
             diagnostics.push_back({DiagnosticSeverity::Error,
                                    tr("A temporary folder for the resampler cannot be created.")});
-            return 0;
+            return outcome;
         }
         const fs::path outputDirectory(output.path().toStdU16String());
 
@@ -97,13 +99,23 @@ namespace hello::kit {
                     if (!stop() && (everyFile || !present.at(i))) {
                         utau::ResamplerArguments arguments;
                         arguments.inFile = wav.u8string();
-                        arguments.outFile =
-                            (outputDirectory / (std::to_string(i) + ".wav")).u8string();
+                        const auto rendered = outputDirectory / (std::to_string(i) + ".wav");
+                        arguments.outFile = rendered.u8string();
                         arguments.toneName = "C4";
                         arguments.realLength = 50;
                         DiagnosticList found;
-                        const auto run =
-                            synthTool->run(resampler, listOf(arguments.arguments()), found, stop);
+                        std::optional<SynthFailure> failure;
+                        const auto argumentList = listOf(arguments.arguments());
+                        const auto run = synthTool->run(resampler, argumentList, found, stop);
+                        const auto failed = [&](SynthFailure::Stage stage) {
+                            failure.emplace();
+                            failure->stage = stage;
+                            failure->program = resampler;
+                            failure->arguments = argumentList;
+                            failure->run = run;
+                            failure->file = rendered;
+                            failure->readFile();
+                        };
                         if (!run.started) {
                             // Every other call would fail alike.
                             stopped = true;
@@ -111,22 +123,26 @@ namespace hello::kit {
                                 found.push_back({DiagnosticSeverity::Error,
                                                  tr("The resampler \"%1\" could not be started.")
                                                      .arg(displayed(resampler))});
+                                failed(SynthFailure::Resampler);
                             }
                         } else if (exists(wav)) {
                             ++generated;
                         } else if (!run.cancelled) {
-                            auto message = tr("The resampler wrote no frequency map of \"%1\" "
-                                              "(exit code %2).")
-                                               .arg(displayed(wav))
-                                               .arg(run.exitCode);
-                            if (!run.output.trimmed().isEmpty()) {
-                                message += QLatin1Char('\n') + run.output.trimmed();
-                            }
-                            found.push_back({DiagnosticSeverity::Warning, message});
+                            // The output of the resampler is in its output log.
+                            found.push_back({DiagnosticSeverity::Warning,
+                                             tr("The resampler wrote no frequency map of \"%1\" "
+                                                "(exit code %2).")
+                                                 .arg(displayed(wav))
+                                                 .arg(run.exitCode)});
+                            const bool exited = !run.timedOut && run.exitCode == 0;
+                            failed(exited ? SynthFailure::FrequencyMap : SynthFailure::Resampler);
                         }
-                        if (!found.isEmpty()) {
+                        if (!found.isEmpty() || failure) {
                             const QMutexLocker locker(&mutex);
                             diagnostics += found;
+                            if (failure) {
+                                outcome.failures.push_back(std::move(*failure));
+                            }
                         }
                     }
                     const int count = ++done;
@@ -137,7 +153,8 @@ namespace hello::kit {
             }
             pool.waitForDone();
         }
-        return generated.load();
+        outcome.generated = generated.load();
+        return outcome;
     }
 
 }

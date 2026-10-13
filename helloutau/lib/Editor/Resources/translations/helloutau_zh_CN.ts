@@ -3378,6 +3378,16 @@ Read them again? What you did not save in them is replaced, and Undo brings it b
             <numerusform>已生成 %n 个频率表。</numerusform>
         </translation>
     </message>
+    <message numerus="yes">
+        <source>%n audio file(s) have no frequency map.</source>
+        <translation>
+            <numerusform>%n 个音频文件没有频率表。</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>The frequency maps could not be generated.</source>
+        <translation>无法生成频率表。</translation>
+    </message>
     <message>
         <source>%1 (none)</source>
         <translation>%1（无）</translation>
@@ -3701,6 +3711,22 @@ Write them again without these chunks? The audio stays the same. The files are w
         <translation>把音源、工程或缓存文件夹移到较短的路径。</translation>
     </message>
     <message>
+        <source>Check these audio files in the voice bank editor.</source>
+        <translation>在音源编辑器中检查这些音频文件。</translation>
+    </message>
+    <message>
+        <source>Move the voice bank to a shorter path.</source>
+        <translation>把音源移到较短的路径。</translation>
+    </message>
+    <message>
+        <source>Move the voice bank to a path without these characters.</source>
+        <translation>把音源移到不含这些字符的路径。</translation>
+    </message>
+    <message>
+        <source>The synth tool was stopped. It may be waiting for input or showing a window, or require a long time for a long audio file.</source>
+        <translation>该合成工具已被终止。该合成工具可能正在等待输入或显示窗口，也可能处理长音频文件所需的时间较长。</translation>
+    </message>
+    <message>
         <source>Realtime playback cannot read the fragments of the resampler %1, which are not wave files.</source>
         <translation>实时播放无法读取重采样器 %1 的分片，这些分片不是 wav 文件。</translation>
     </message>
@@ -3783,6 +3809,18 @@ Write them again without these chunks? The audio stays the same. The files are w
     <message>
         <source>The output of the resampler is: %1</source>
         <translation>重采样器的输出为：%1</translation>
+    </message>
+    <message>
+        <source>The resampler %1 wrote no frequency maps of the format %2.</source>
+        <translation>重采样器 %1 没有写出格式 %2 的频率表。</translation>
+    </message>
+    <message>
+        <source>The resampler ended normally for these audio files. The format is chosen by the file name of the resampler, and the resampler may write the maps of another format, or no maps.</source>
+        <translation>重采样器处理这些音频文件时正常结束。格式按重采样器的文件名选定，而该重采样器可能写出其他格式的频率表，或不写出频率表。</translation>
+    </message>
+    <message>
+        <source>Check that the resampler writes frequency maps of the format %1.</source>
+        <translation>确认该重采样器写出格式 %1 的频率表。</translation>
     </message>
     <message>
         <source>Use another resampler.</source>

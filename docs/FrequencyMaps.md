@@ -71,7 +71,7 @@ HelloUtau 的方案：
 ### 生成与检查
 
 - 生成：对每个 wav 以设置中的重采样器合成一个 50 毫秒的音符（C4，力度 100，无 flags），输出写到临时文件夹后丢弃，利用重采样器缺少频率表时自动生成的行为。frqeditor 运行的是 `"<wav>" nul 100 100 GN 0 50`（qfrqeditor 的 `docs/20260928-resampler-invocation.md`「生成」），HelloUtau 不照搬：参数一律由 `utau::ResamplerArguments::arguments()` 生成（CLAUDE.md「调用外部程序」），`nul` 也只在 Windows 上存在。多个 wav 并行，数目在设置的「频率表」页单独设置，默认为处理器数，可取消。生成线程数不沿用渲染线程数，因为经典模式的播放不用渲染线程（作者 2026-10-12 决定）。参数以向量交给 `SynthToolProcess`，不拼接命令行。
-  - 实现（2026-10-12）：`kit::FrequencyMapGenerator`（HelloKitSynth）在后台线程运行，报告进度，结束时列出没有生成频率表的 wav 及重采样器的输出。重新生成先删除已有的表，删除由格式驱动给出（`FrequencyFormat::changesRemoving()`，与改名同样是数据驱动），由 `FrequencyFormats::removeMaps()` 执行。默认实现删除附属文件。mrq 的条目在 `desc.mrq` 中，按 mrq 库的 `mrq_delete_entry()` 把条目名置 0 删除，数据留在原处。删除频率表时一律连同分析缓存（见下文「分析缓存」）。
+  - 实现（2026-10-12）：`kit::FrequencyMapGenerator`（HelloKitSynth）在后台线程运行，报告进度，结束时给出没有生成频率表的 wav 与失败的重采样器调用，由诊断器分析可能的原因（运行模式 `FrequencyMapGeneration`，见 [`SynthDiagnostics.md`](SynthDiagnostics.md)「诊断器」），音源窗口以概括、原因列表与详细信息中的逐个文件显示，不再在消息框中列出每个文件的重采样器输出（2026-10-13，原先的消息框在大量文件失败时过长）。重新生成先删除已有的表，删除由格式驱动给出（`FrequencyFormat::changesRemoving()`，与改名同样是数据驱动），由 `FrequencyFormats::removeMaps()` 执行。默认实现删除附属文件。mrq 的条目在 `desc.mrq` 中，按 mrq 库的 `mrq_delete_entry()` 把条目名置 0 删除，数据留在原处。删除频率表时一律连同分析缓存（见下文「分析缓存」）。
   - 音源窗口「工具」菜单：Generate Missing Frequency Maps（全部目录中没有表的 wav）、Regenerate Frequency Maps of Selection（选中条目的 wav）、Regenerate All Frequency Maps...（全部 wav，先确认）、Delete All Frequency Maps...（先确认）。格式为设置中的重采样器对应的格式（`formatForResampler()`），与波形上方「F0」框的选择无关，因为生成只能由该重采样器完成。
 - 检查与修正：qfrqeditor 以进程内的实现代替 `checkfrq.dll`，与原 DLL 逐帧比较约 486 万帧结果一致，可直接移入。
 - 试听：第 4 步的试合成已以设置中的重采样器合成一个音符，编辑频率表后再试合成即可听到效果，不另做 frqeditor 的试听。

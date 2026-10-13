@@ -34,6 +34,10 @@ namespace hello::kit {
             /// the fragments that the wavtool rejected are unknown. Only a diagnoser that
             /// recognizes the content of a fragment claims such a failure.
             Unconfirmed,
+
+            /// The resampler ended with the exit code 0 and wrote no frequency map of the audio
+            /// file, in the generation of frequency maps.
+            FrequencyMap,
         };
 
         Stage stage = Resampler;
