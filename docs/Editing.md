@@ -199,8 +199,8 @@ note.userData().remove(QStringLiteral("$Custom"));
 | `renameRegion` | 把一个区间（`Region`：名称、首音符、末音符，由 `Track::regions()` 或 `NoteListRef::regions()` 解析）改名：在首音符的 `regions` 与末音符的 `regionEnds` 中原位替换，未结束的区间只改首音符；两端其他区间的名称保留。区间不存在、新名称为空或含 `|`、新名称已是同一端点上另一区间的名称时拒绝（作者 2026-10-08 决定，审查清单 P0-8） |
 | `removeRegion` | 删除一个区间：从首音符的 `regions` 与末音符的 `regionEnds` 中只删去它的名称，同一端点上其他区间的名称保留；区间不存在时拒绝 |
 | `setMode2` | 打开或关闭工程的 Mode2，即合成用控制点与颤音还是用 Mode1 值；另一种数据保留。用于 [`Tuning.md`](Tuning.md) 第 5 步 |
-| `combineNotes` | 把一段连续的音符合并到第一个音符（同 UTAU 的「音符合并」）：长度为它们之和，其他属性取第一个音符的，一个撤销步骤「Combine Notes」。少于两个音符时拒绝；第一个之后的音符设了速度时拒绝，因为合并会丢掉这个速度，其后所有音符的时刻都会改变（作者 2026-09-29 要求） |
-| `setNoteProperties` | 改音符的属性（`NotePropertyChanges`）：歌词、长度、速度、力度、调制、辅音速度、先行发声、重叠、STP、flags，只改给出的字段，对每个音符相同，一个撤销步骤「Change Note Properties」；能留给默认值的字段设为空即清除。用于音符属性对话框与速度（作者 2026-09-29 要求） |
+| `combineNotes` | 把一段连续的音符合并到第一个音符（同 UTAU 的「音符合并」）：长度为它们之和，其他属性取第一个音符的，一个撤销步骤「Combine Notes」。少于两个音符时拒绝；第一个之后的音符设了曲速时拒绝，因为合并会丢掉这个曲速，其后所有音符的时刻都会改变（作者 2026-09-29 要求） |
+| `setNoteProperties` | 改音符的属性（`NotePropertyChanges`）：歌词、长度、曲速、力度、调制、辅音速度、先行发声、重叠、STP、flags，只改给出的字段，对每个音符相同，一个撤销步骤「Change Note Properties」；能留给默认值的字段设为空即清除。用于音符属性对话框与曲速（作者 2026-09-29 要求） |
 | `setProperties` | 改工程的属性（`ProjectPropertyChanges`）：名称、速度、flags、输出文件、第一条音轨的音源目录、两个合成工具、Mode2，只改给出的字段，一个撤销步骤「Change Project Properties」；没有任何变化时不产生步骤。两个合成工具只记录，不执行。用于工程属性对话框（作者 2026-09-29 要求） |
 
 卷帘的「Remove Label」是界面操作，不新增领域函数：对选中的音符分别调用 `setLabel` 清空标签，在外层合并为一个事务，因此占一个撤销步骤。「Remove Region」调用 `removeRegion` 删除第一个选中音符所在的区间。

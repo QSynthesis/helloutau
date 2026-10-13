@@ -334,4 +334,4 @@ MIDI 的和弦与重叠音符进入 UST 时必须简化，因为 **UST 无法表
 
 ## 插件分类
 
-格式转换是原生插件的一个**扩展点**，[`docs/note.md`](note.md) 列为「格式转换」：插件在初始化时经 `InterchangeService` 登记格式驱动（见上文「注册表」）。格式转换不使用 `InterchangePlugin` 接口，驱动经 `InterchangeService` 登记（[`Plugins.md`](Plugins.md) 实施步骤 6）。
+格式转换是原生插件的一个**扩展点**，[`docs/note.md`](note.md) 列为「格式转换」：插件在初始化时经 `InterchangeService` 登记格式驱动（见上文「注册表」），本仓库不为格式转换另设插件接口（[`Plugins.md`](Plugins.md) 实施步骤 6）。

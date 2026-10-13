@@ -216,7 +216,7 @@ UST 音符上所有在本格式中没有对应字段的条目，以键名到值�
 
 ### `Charset` 的表达能力限制
 
-UST 中的 `Charset` 只有两种取值：空，或 `UTF-8`。它只表示该文件是否标记了 `Charset=UTF-8`，不表示具体的编码名称。因此 UTAU 读取一份 Shift_JIS 的 UST 与一份 GBK 的 UST 时结果相同，均为「未写 `Charset`」。
+UST 中的 `Charset` 只有两种取值：空，或 `UTF-8`。它只表示该文件是否标记了 `Charset=UTF-8`，不表示具体的编码名称。因此一份 Shift_JIS 的 UST 与一份 GBK 的 UST 在 UTAU 中无法区分，均为「未写 `Charset`」，都按本机的 ANSI 代码页读取。
 
 **这就是控制音符必须记录编码的原因。** 载荷是 base64url 编码的纯 ASCII，可以在确定整个文件的解码方式之前按字节扫描得到，恰好补足 `Charset` 无法表达的信息。
 
