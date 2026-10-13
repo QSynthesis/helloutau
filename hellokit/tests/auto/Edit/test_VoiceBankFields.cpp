@@ -153,7 +153,7 @@ private Q_SLOTS:
         QVERIFY(!spellingsFormat().fromJson(QJsonArray{1, 2, 3, 4, 5}));
     }
 
-    // The value of a mapping entry is not read back, so the format itself refuses what it would
+    // The value of a mapping entry is not read back, so the format rejects a value that it would
     // ignore. Five numbers have five spellings.
     void a_malformed_whole_value_is_refused() {
         QVERIFY(!prefixFormat().fromJson(QJsonObject{

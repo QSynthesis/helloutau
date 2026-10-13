@@ -80,7 +80,7 @@ private:
         bank.setSamples(samples);
     }
 
-    /// \a kinds of the directory at \a directory , the files that a save is told to write.
+    /// \a kinds of the directory at \a directory , the files that a save writes.
     static VoiceBankFileSystemState::Files filesOf(const fs::path &directory,
                                                    std::set<VoiceBankDirectorySource::File> kinds) {
         return {
@@ -250,9 +250,9 @@ private Q_SLOTS:
         QCOMPARE(read(QStringLiteral("oto.ini")), theirs);
     }
 
-    // The checks follow git: the size and the modification time decide, and the content only
-    // if the time is too close to the stamp to tell a later write apart. A file written an hour
-    // before it is read is not racy.
+    // The checks follow git: they compare the size and the modification time, and the content
+    // only if the time is too close to the stamp to tell a later write apart. A file written an
+    // hour before it is read is not racy.
     void a_file_with_other_attributes_is_refused_without_reading_it() {
         write(QStringLiteral("oto.ini"), "a.wav=a,1,2,3,4,5\r\n");
         write(QStringLiteral("a.wav"), "RIFF");

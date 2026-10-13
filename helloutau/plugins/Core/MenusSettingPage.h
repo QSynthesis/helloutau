@@ -54,7 +54,8 @@ namespace hello::daw {
         void setCurrentKind(Editor::WindowKind kind);
 
         /// Adds \a entry after the current entry, or as the last entry of the current menu or
-        /// tool bar. Returns whether the entry is added, which the manifests may refuse.
+        /// tool bar. Returns whether the entry is added. The manifests determine whether the
+        /// entry is permitted.
         bool addEntry(const QAK::ActionLayoutEntry &entry);
 
         /// Removes the current entry, which is not a menu bar or a tool bar.

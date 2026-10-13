@@ -140,7 +140,8 @@ private Q_SLOTS:
         QCOMPARE(m_session->currentStep(), 0);
     }
 
-    // Every setter reaches the voice bank that is saved, and undo restores what was read.
+    // Every setter reaches the voice bank that is saved, and undo restores the content read from
+    // the file.
     void every_setter_writes_its_field() {
         {
             auto transaction = m_session->transaction(QStringLiteral("Everything"));

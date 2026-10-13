@@ -32,8 +32,8 @@ private:
     }
 
     // A voice bank with samples for a, ka, ki and ko, whose pre-utterances and overlaps differ,
-    // so that the curves start and end at different points; that of ko ends past the start of
-    // the next note, its overlap exceeding its pre-utterance.
+    // so that the curves start and end at different points. The curve of ko ends past the
+    // start of the next note, its overlap exceeding its pre-utterance.
     std::optional<VoiceBank> bank() {
         write(QStringLiteral("bank/oto.ini"), "a.wav=a,10,20,30,40,5\n"
                                               "ka.wav=ka,11,21,31,85,20\n"
@@ -297,7 +297,7 @@ private Q_SLOTS:
         QVERIFY(curve.ownVibratoAt(380) != 0);
     }
 
-    // A note of 480 ticks with Mode1 values; the probe of docs/Synth.md used such notes.
+    // A note of 480 ticks with Mode1 values. The probe of docs/Synth.md used such notes.
     static Note bent(const QList<double> &values, double start) {
         auto n = note(QStringLiteral("a"), 60);
         PitchBend bend;

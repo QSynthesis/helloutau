@@ -45,5 +45,5 @@ set(HELLOKIT_POST_CONFIGURE_COMMANDS _hellokit_common_configure_target)
 qm_import(private/BuildSystem)
 
 # Named for the module rather than for PROJECT_NAME, which each sub-library sets to its own target
-# name, HelloKitUst and the rest.
+# name.
 qm_setup_build_repo_helpers(hellokit)

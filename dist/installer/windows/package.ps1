@@ -24,7 +24,7 @@ param(
 # The build must be complete: this script does not build, because building requires the
 # environment of the compiler. Steps: cmake --install, copy the DLLs that the build copied beside
 # the program but cmake --install does not install (stdcorelib, stdutau, substate, QActionKit,
-# wolf-midi and the like), deploy Qt with windeployqt, remove what only developers need, copy the
+# wolf-midi and the like), deploy Qt with windeployqt, remove the development files, copy the
 # C++ runtime, archive, and compile the installer with Inno Setup 7.
 #
 #     powershell -File dist\installer\windows\package.ps1 [-BuildDir <dir>] [-OutputDir <dir>]

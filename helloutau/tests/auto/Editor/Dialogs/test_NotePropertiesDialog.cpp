@@ -17,8 +17,8 @@ class test_NotePropertiesDialog : public QObject {
     Q_OBJECT
 
 private Q_SLOTS:
-    // The dialog shows what the notes share, "(various)" where they differ, and gives only the
-    // fields edited: an emptied number back to the default, one that does not read left out.
+    // The dialog shows the values the notes share, "(various)" where they differ, and gives only
+    // the fields edited: an emptied number back to the default, one that does not read left out.
     void the_note_properties_dialog_gives_what_was_edited() {
         kit::Note a;
         a.lyric = QStringLiteral("a");

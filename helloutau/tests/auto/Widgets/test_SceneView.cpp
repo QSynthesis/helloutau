@@ -14,7 +14,7 @@ using namespace hello::daw;
 
 namespace {
 
-    // Records what a gesture receives, in order.
+    // Records the events a gesture receives, in order.
     QStringList g_log;
 
     class RecordingGesture : public SceneGesture {
@@ -270,7 +270,7 @@ private Q_SLOTS:
         QVERIFY(g_log.isEmpty());
     }
 
-    // A layer that responds to a double click receives it instead of a press; otherwise the
+    // A layer that responds to a double click receives it instead of a press. Otherwise the
     // second click is a press as the first was.
     void a_double_click_goes_to_the_layer_hit() {
         const auto view = shownView();

@@ -187,7 +187,7 @@ namespace {
     // The script of a layout for one shell. The calls are written one by one rather than
     // through temp_helper.bat, so that each is followed by its exit code and its copies. The
     // order of the calls, their arguments, the reuse of an existing fragment and the joining
-    // of the files are those of UTAU; the fragment is set as UTAU sets it, since moresampler
+    // of the files are those of UTAU. The fragment is set as UTAU sets it, since moresampler
     // reads it from temp.bat.
     class ScriptWriter {
     public:
@@ -692,7 +692,7 @@ int copyVoice(const fs::path &from, const fs::path &to) {
             return 1;
         }
         // With its modification time, which moresampler compares with its analysis files and
-        // which the cache names include; copy_file keeps it on Windows only.
+        // which the cache names include. copy_file keeps it on Windows only.
         fs::last_write_time(target, fs::last_write_time(it->path(), code), code);
         if (code) {
             error(QStringLiteral("%1 could not be dated.").arg(textOf(target)));

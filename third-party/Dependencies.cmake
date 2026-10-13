@@ -1,4 +1,4 @@
-# The external packages this repository builds against, each pointed at by its own `<name>_DIR`.
+# The external packages this repository builds against, each pointed at by its own <name>_DIR.
 #
 #     -Dstdcorelib_DIR=<prefix>/lib/cmake/stdcorelib
 #     -Dstdcorelib-plugin_DIR=<prefix>/lib/cmake/stdcorelib-plugin

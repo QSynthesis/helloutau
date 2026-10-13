@@ -459,8 +459,8 @@ private Q_SLOTS:
         QCOMPARE(diagnosed.size(), 0);
     }
 
-    // While a render plays, the playhead moves with what the device plays, from where the track
-    // file starts.
+    // While a render plays, the playhead moves with the device output, from where the track file
+    // starts.
     void the_playhead_follows_a_render_as_it_plays() {
         if (AudioEngine::instance()->sampleRate() <= 0) {
             QSKIP("This machine has no audio output device.");
@@ -481,7 +481,7 @@ private Q_SLOTS:
         QTest::qWait(400);
         const auto later = playback.position();
         QVERIFY(later);
-        // Within what a device may hold back, and a timer may be late
+        // Within the latency of the device, and a timer may be late
         const double moved = *later - *first;
         QVERIFY2(moved > 250 && moved < 600, qPrintable(QString::number(moved)));
         playback.stop();
@@ -526,7 +526,7 @@ private Q_SLOTS:
         QTRY_COMPARE_WITH_TIMEOUT(playback.state(), Playback::Playing, 5000);
         playback.stop();
 
-        // So does a sample recorded again, which names its fragment anew.
+        // The same holds for a sample recorded again, whose fragment is therefore named anew.
         writeBytes(fs::path(dir.path().toStdU16String()) / "bank" / "a.wav", "RIFF");
         QVERIFY(document->loadVoiceBank({}, nullptr, diagnostics));
         QVERIFY(playback.play(*document, std::make_pair(1, 1), someSynthTools(), diagnostics));
@@ -674,8 +674,8 @@ private Q_SLOTS:
         QCOMPARE(runner->started.load(), 0);
     }
 
-    // Clearing the cache deletes its files, not its folders, and the fragments in memory; not
-    // while a render goes on, which writes into it.
+    // Clearing the cache deletes its files, not its folders, and also the fragments in memory.
+    // Clearing does not run while a render goes on, which writes into the cache.
     void the_cache_is_cleared_of_its_files() {
         using S = kit::RealtimeSynth;
         QTemporaryDir dir;
@@ -747,7 +747,7 @@ private Q_SLOTS:
     }
 
     // The track is rendered in the background, here from the cache, without playing, and
-    // release() forgets it.
+    // release() discards it.
     void the_track_is_rendered_in_the_background() {
         QTemporaryDir dir;
         const auto document = singingDocument(dir);
@@ -864,7 +864,8 @@ private Q_SLOTS:
         QCOMPARE(runner->ended.load(), 1);
     }
 
-    // A new temporary directory forgets the kept render, which the next play() renders again.
+    // Setting the temporary directory discards the kept render, which the next play() renders
+    // again.
     void a_new_temporary_directory_forgets_the_kept_render() {
         if (AudioEngine::instance()->sampleRate() <= 0) {
             QSKIP("This machine has no audio output device.");

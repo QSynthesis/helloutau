@@ -69,7 +69,7 @@ namespace {
         return QByteArray(all.data(), qsizetype(all.size()));
     }
 
-    // A UST as UTAU writes it, which states no encoding; the lyric is あ in Shift_JIS
+    // A UST as UTAU writes it, which declares no encoding. The lyric is あ in Shift_JIS.
     QByteArray unstatedUst() {
         return QByteArray("[#VERSION]\r\nUST Version1.2\r\n[#SETTING]\r\nTempo=120.00\r\n"
                           "Tracks=1\r\nVoiceDir=%VOICE%uta\r\nCacheDir=old.cache\r\n"
@@ -89,12 +89,12 @@ namespace {
         return project;
     }
 
-    // The oto.ini of a voice bank as UTAU users write it, which states no encoding; the alias is
-    // あ in Shift_JIS
+    // The oto.ini of a voice bank as UTAU users write it, which declares no encoding. The alias
+    // is あ in Shift_JIS.
     const QByteArray unstatedOto("a.wav=\x82\xa0,0,0,0,0,0\r\n");
 
-    // A UTAU folder under \a dir with a voice bank "bank" in its voice folder, holding
-    // unstatedOto; returns the UTAU folder.
+    // A UTAU folder under \a dir with a voice bank "bank" in its voice folder. The folder holds
+    // unstatedOto. Returns the UTAU folder.
     fs::path utauWithVoiceBank(const QTemporaryDir &dir) {
         const auto utau = pathIn(dir, "utau");
         const auto bank = utau / "voice" / "bank";
@@ -153,7 +153,8 @@ private Q_SLOTS:
         QVERIFY(!document.session()->canUndo());
     }
 
-    // Modified means a step other than the saved one, so undoing back to it clears the state.
+    // The modified state indicates a step other than the saved one. Undoing back to that step
+    // clears the state.
     void the_modified_state_follows_the_step_of_the_session() {
         ProjectDocument document;
         QSignalSpy spy(&document, &ProjectDocument::modifiedChanged);

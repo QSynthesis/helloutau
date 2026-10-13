@@ -34,7 +34,7 @@ namespace {
         return file.open(QIODevice::ReadOnly) ? file.readAll() : QByteArray();
     }
 
-    // A silent WAVE file of 16-bit mono samples
+    // Returns a silent WAVE file of 16-bit mono samples
     QByteArray waveOf(qint32 rate, qint32 samples) {
         const QByteArray data(samples * 2, '\0');
         QByteArray bytes("RIFF");
@@ -133,9 +133,10 @@ private Q_SLOTS:
         QVERIFY(fs::exists(directory / "a.wav"));
     }
 
-    // A dio read and written again is unchanged. A new dio takes the signal length and the sample
-    // rate of the audio file, and its caches are removed if requested. Frames of another period
-    // than that of world4utau are not written, and neither is a new dio without its audio file.
+    // A dio read and written again is unchanged. The signal length and the sample rate of a new
+    // dio map are those of the audio file, and its caches are removed if requested. Frames of a
+    // period other than that of world4utau are not written, and neither is a new dio without its
+    // audio file.
     void a_dio_is_written() {
         QDir(m_dir.path()).mkdir(QStringLiteral("x"));
         const auto directory = pathOf("x");

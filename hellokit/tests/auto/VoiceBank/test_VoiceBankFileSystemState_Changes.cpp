@@ -85,7 +85,7 @@ private:
         return bank.directories().at(sample.directory);
     }
 
-    /// \a kinds of the directory at \a directory , the files that a save is told to write.
+    /// \a kinds of the directory at \a directory , the files that a save writes.
     static VoiceBankFileSystemState::Files filesOf(const fs::path &directory,
                                                    std::set<VoiceBankDirectorySource::File> kinds) {
         return {

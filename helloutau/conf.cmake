@@ -82,5 +82,5 @@ set(HELLOUTAU_CONFIG_HEADER_PATH ${HELLOUTAU_INSTALL_NAME}/Config.h)
 qm_import(private/BuildSystem)
 
 # Named for the module rather than for PROJECT_NAME, which each sub-library sets to its own target
-# name, HelloUtauEditor and the rest.
+# name.
 qm_setup_build_repo_helpers(helloutau)

@@ -28,7 +28,7 @@ private:
     }
 
     // Verifies that line is refused with an error and leaves the project and the history
-    // unchanged. The first message must contain reason, which distinguishes checks that refuse
+    // unchanged. The first message must contain reason, which distinguishes checks that reject
     // the same command with different messages.
     static void verifyRefused(ProjectSession &session, const QString &line,
                               const QString &reason = QString()) {
@@ -122,7 +122,7 @@ private Q_SLOTS:
     }
 
     // A whole value is read as from a file, which ignores unknown members and reads a member of
-    // another type as zero. A command refuses both.
+    // another type as zero. A command rejects both.
     void a_whole_value_is_read_strictly() {
         ProjectSession session(richProject());
         QVERIFY(run(session, QStringLiteral("set /tracks/0/notes/1/vibrato {\"period\": 180}")));
@@ -385,7 +385,7 @@ private Q_SLOTS:
 
     void note_bend_draws_mode1_values() {
         ProjectSession session(richProject());
-        // The values start 20 ms before the note, about 20 ticks at its tempo; the second note,
+        // The values start 20 ms before the note, about 20 ticks at its tempo. The second note,
         // a rest, has an empty curve.
         auto expected = *noteAt(session, 0).pitchBend;
         QVERIFY(run(session, QStringLiteral("note bend /tracks/0/notes 0 -20 [7, 8]")));

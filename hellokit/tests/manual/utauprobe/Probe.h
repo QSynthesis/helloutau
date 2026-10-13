@@ -66,15 +66,16 @@ namespace utauprobe {
 
     /// The pitch curve questions the argument probe could not resolve, because there every note
     /// was adjacent to another note with its own curve. Here every note is surrounded by rests.
-    /// The questions: the threshold below which UTAU omits a vibrato, what the omission rule
-    /// removes and what it retains, what carries over into the next note, how far the tail of a
-    /// note is bent by the following note, and when UTAU sends no curve at all.
+    /// The questions: the threshold below which UTAU omits a vibrato, the parts of the curve that
+    /// the omission rule removes and the parts that it retains, what carries over into the next
+    /// note, how far the tail of a note is bent by the following note, and when UTAU sends no
+    /// curve at all.
     Probe vibratoProbe();
 
     /// The values beyond the ranges the editor offers (step 7 in docs/Tuning.md): velocity
     /// below 0 and above 200, intensity below 0 and above 200, modulation beyond -200 and 200.
-    /// Which value UTAU passes for each, or whether it falls back to the default, as it does for
-    /// Velocity=250 (docs/Synth.md).
+    /// The probe determines the value that UTAU passes for each, and whether UTAU falls back to
+    /// the default, as it does for Velocity=250 (docs/Synth.md).
     Probe boundsProbe();
 
     /// The pitch of Mode1 (step 5 in docs/Tuning.md): how UTAU forms the curve from PBStart and

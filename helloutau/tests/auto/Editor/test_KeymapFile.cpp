@@ -156,7 +156,7 @@ private Q_SLOTS:
                  std::optional<Qt::KeyboardModifiers>(Qt::MetaModifier));
     }
 
-    // Unknown roles are ignored with a warning, and bindings that conflict give way to the
+    // Unknown roles are ignored with a warning, and bindings that conflict fall back to the
     // defaults of their scheme with a warning.
     void modifiers_that_do_not_apply_are_ignored() {
         writeText(fileName(), versioned("{\"shortcuts\": [], \"modifiers\": {\"drag\": "

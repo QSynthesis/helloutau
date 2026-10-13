@@ -50,7 +50,7 @@ jobs:
           api="https://gitee.com/api/v5/repos/${GITEE_REPOSITORY}"
           response_file=$(mktemp)
 
-          # Resolving gitee.com from the runner times out now and then, so every request may be
+          # The resolution of gitee.com from the runner may time out, so every request may be
           # repeated. Prints the HTTP status, or 000 if the request did not complete. A request
           # takes at most two minutes unless its arguments raise the limit.
           request() {

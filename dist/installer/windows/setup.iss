@@ -33,9 +33,9 @@
 ; Windows names the uninstall entry after the identifier, and an installer of the same identifier
 ; upgrades the installation, so the identifier never changes after the first release.
 AppId={#AppId}
-; The installer and the uninstaller ask the user to close the program if its mutex exists, and a
+; The installer and the uninstaller require the program to be closed if its mutex exists, and a
 ; silent installation stops. Setup checks the mutex after InitializeSetup, which waits for the
-; program to end in an update, so that the update never meets the question.
+; program to end in an update, so that no question appears in an update.
 AppMutex={#AppId}
 AppName={#AppName}
 AppVersion={#AppVersion}

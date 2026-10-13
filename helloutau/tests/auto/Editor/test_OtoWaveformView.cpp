@@ -128,7 +128,7 @@ private Q_SLOTS:
         QCOMPARE(OtoWaveformView::moved(value, Value::PreUtterance, 40, 1000).preUtterance, 29.9);
     }
 
-    // A drag changes the view and is emitted once released; Escape abandons it.
+    // A drag changes the view and is emitted once released. Escape abandons it.
     void a_drag_moves_a_value_and_escape_abandons_it() {
         OtoWaveformView view;
         show(view);

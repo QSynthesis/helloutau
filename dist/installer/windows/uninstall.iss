@@ -34,7 +34,8 @@ begin
         Exit;
     // OpenVPI\HelloUtau in the documents folder is never removed. It holds the voice banks and
     // the plugins of the user, which the user usually obtained elsewhere and arranged by hand,
-    // and which cannot be restored. diffscope removes its documents folder, HelloUtau does not.
+    // and which cannot be restored. diffscope removes its documents folder, whereas HelloUtau
+    // does not.
     RemoveAppDirectory(ExpandConstant('{userappdata}'));
     RemoveAppDirectory(ExpandConstant('{localappdata}'));
     // The temporary files of the application are in one directory, see TemporaryStorage.

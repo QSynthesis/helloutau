@@ -10,9 +10,9 @@ class test_DeviceClock : public QObject {
     Q_OBJECT
 
 private Q_SLOTS:
-    // The device plays as time passes from its first pull, what it pulled earlier: the position
-    // after the pull that holds the frame played, as far into it as the frame is, and still
-    // across a pull of silence.
+    // The clock reports the position of the frame the device plays, from its first pull on. The
+    // position is that after the pull that holds the frame played, and is kept across a pull of
+    // silence.
     void the_clock_finds_what_the_device_plays() {
         using namespace std::chrono_literals;
         // A frame a millisecond

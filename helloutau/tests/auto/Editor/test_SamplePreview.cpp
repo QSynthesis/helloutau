@@ -101,8 +101,8 @@ class test_SamplePreview : public QObject {
     Q_OBJECT
 
 private Q_SLOTS:
-    // Of the keys whose affixes enclose the alias, or whose prefix is the folder, the middle
-    // one; C4 otherwise.
+    // The pitch is that of the middle key whose affixes enclose the alias, or whose prefix is the
+    // folder. The pitch is C4 if no such key exists.
     void the_pitch_is_that_of_the_folder_in_the_prefix_map() {
         QMap<int, kit::VoicePrefix> map;
         for (int key = 48; key < 84; ++key) {
@@ -128,7 +128,7 @@ private Q_SLOTS:
     }
 
     // The note is the sample under a lyric of its own, so that even the alias R, a rest as a
-    // lyric, is sung; the resampler gets the pitch asked for.
+    // lyric, is sung. The resampler receives the requested pitch.
     void a_note_is_synthesized_by_the_resampler_alone() {
         QTemporaryDir dir;
         const auto sample = sampleIn(dir);

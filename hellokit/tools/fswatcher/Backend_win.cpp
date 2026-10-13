@@ -97,7 +97,8 @@ namespace fswatcher {
                    (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
         }
 
-        /// The canonical file system path of \a path , or \c std::nullopt if it does not exist.
+        /// Returns the canonical file system path of \a path , or \c std::nullopt if it does
+        /// not exist.
         std::optional<std::wstring> resolve(const std::wstring &path) {
             const HANDLE handle = CreateFileW(path.c_str(), 0, shareAll, nullptr, OPEN_EXISTING,
                                               FILE_FLAG_BACKUP_SEMANTICS, nullptr);
@@ -191,7 +192,8 @@ namespace fswatcher {
             CloseHandle(drive.stop);
         }
 
-        /// \a resolved with its root prefix restored to the form in which the root was given.
+        /// Returns \a resolved with its root prefix restored to the form in which the root was
+        /// given.
         static std::string given(const Root &root, std::wstring_view resolved) {
             auto rest = resolved.substr(root.resolved.size());
             std::string out = root.given;

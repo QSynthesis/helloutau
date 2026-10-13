@@ -343,7 +343,7 @@ private Q_SLOTS:
     }
 
     // The maps beside their audio files are removed, and an audio file without a map needs no
-    // change. A format that keeps no sidecar files and does not say how its maps are removed
+    // change. A format that keeps no sidecar files and does not specify how its maps are removed
     // reports it.
     void the_maps_beside_the_audio_files_are_removed() {
         QDir(m_dir.path()).mkdir(QStringLiteral("d"));

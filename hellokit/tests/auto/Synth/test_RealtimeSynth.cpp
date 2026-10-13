@@ -50,7 +50,7 @@ namespace {
         return wave;
     }
 
-    // What the stand-in resamplers did, shared by all of them
+    // Records of the stand-in resamplers, shared by all of them
     struct Record {
         std::mutex mutex;
         QList<int> rendered;           // note numbers in the order rendered
@@ -234,7 +234,7 @@ private Q_SLOTS:
     }
 
     // The notes from the position on come first, nearest first, then those before it, nearest
-    // first; the rest is not rendered.
+    // first. The rest is not rendered.
     void notes_are_rendered_from_the_playback_position() {
         const auto plan = planOf(fiveNotes());
         QVERIFY(plan);
@@ -282,7 +282,7 @@ private Q_SLOTS:
         QCOMPARE(rt->startTime(), plan->startTime());
     }
 
-    // A note changed by an edit is rendered again; the others keep their fragments, in memory
+    // A note changed by an edit is rendered again. The others keep their fragments, in memory
     // and in the cache directory.
     void only_changed_notes_are_rendered_again() {
         const auto rt = synth(2);
@@ -299,14 +299,15 @@ private Q_SLOTS:
         QCOMPARE(rendered().size(), 5);
         QCOMPARE(rendered().last(), 2);
 
-        // Another instance reads what is in the cache instead of rendering it.
+        // Another instance reads the cached content instead of rendering it.
         const auto again = synth();
         again->setPlan(*second);
         QVERIFY(again->waitReady(0, again->length(), std::chrono::seconds(10)));
         QCOMPARE(rendered().size(), 5);
     }
 
-    // The fragments kept in memory survive a new plan, even if the cache directory is emptied.
+    // The fragments kept in memory remain valid in a new plan, even if the cache directory is
+    // emptied.
     void fragments_in_memory_survive_a_new_plan() {
         const auto rt = synth();
         const auto first = planOf(fiveNotes());

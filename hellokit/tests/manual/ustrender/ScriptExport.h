@@ -31,13 +31,13 @@ struct ScriptExport {
     QString voiceAs;
 
     /// The directory of the scripts, which is also the working directory of the synth tools, where
-    /// moresampler looks for temp.bat. As the script refers to it.
+    /// moresampler looks for temp.bat, in the spelling that the script uses.
     QString scriptDirectory;
 
     /// Where the files are written, if not scriptDirectory itself.
     std::filesystem::path emitDirectory;
 
-    /// Where each step leaves copies of what it wrote, or empty for no copies.
+    /// The directory for the copies of the files that each step wrote, empty if no copies are kept.
     QString snapshotDirectory;
 
     /// The programs, each as the arguments that precede those of a call: the path of the exe,
@@ -45,8 +45,8 @@ struct ScriptExport {
     QStringList resamplerCommand;
     QStringList wavtoolCommand;
 
-    /// Whether the last sung note passes LAST_NOTE to the wavtool, the other way moresampler
-    /// learns that the track ends.
+    /// Whether the last sung note passes LAST_NOTE to the wavtool, by which moresampler detects
+    /// the end of the track.
     bool lastNote = false;
 
     /// Writes the script, the manifest and, for Linux, the temp.bat that moresampler reads

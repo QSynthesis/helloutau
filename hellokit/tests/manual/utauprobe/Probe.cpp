@@ -601,7 +601,7 @@ namespace utauprobe {
                   QStringLiteral("ramp, PBStart %1").arg(QLatin1String(start)),
                   bend(QLatin1String(start), ramp));
         }
-        // What follows the end of the values, and what the values beyond the note do
+        // The values after the end of the list, and the values that pass the end of the note
         alone(QStringLiteral("extent"), QStringLiteral("10 values of 100, then none"),
               bend(QStringLiteral("0"), values(10, [](int) { return QStringLiteral("100"); })));
         alone(QStringLiteral("extent"), QStringLiteral("150 values of 100, beyond the note"),

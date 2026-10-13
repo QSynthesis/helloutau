@@ -106,8 +106,8 @@ private Q_SLOTS:
         m_dir.reset();
     }
 
-    // Assembled as a voice bank editor would assemble it, and the voice bank is what is
-    // verified: every change on disk must reach it, regardless of the intermediate steps.
+    // Assembled as a voice bank editor would assemble it, and the voice bank is the verified
+    // object: every change on disk must reach it, regardless of the intermediate steps.
     void a_sample_added_on_disk_reaches_the_bank() {
         const auto followed = followBank();
         QVERIFY(followed->bank.has_value());

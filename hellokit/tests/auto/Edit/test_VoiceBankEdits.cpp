@@ -78,7 +78,7 @@ private Q_SLOTS:
         m_dir.reset();
     }
 
-    // The character and the readme each change in one step; without character.txt, setting
+    // The character and the readme each change in one step. Without character.txt, setting
     // the character creates it.
     void the_character_and_the_readme_are_set() {
         const auto bank = VoiceBankRef(m_session.get());

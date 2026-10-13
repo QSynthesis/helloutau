@@ -61,7 +61,7 @@ private:
 
 private Q_SLOTS:
     // The folders are asked about at once. The encoding that reads them all best is selected
-    // for each, but for a folder that it cannot read, which takes its own; an encoding chosen
+    // for each, but a folder that the encoding cannot read takes its own. An encoding chosen
     // applies to the folders selected, and an unchecked folder is left out.
     void the_folders_are_asked_about_at_once() {
         const auto jp = shiftJisFolder();
@@ -103,8 +103,8 @@ private Q_SLOTS:
                  (QList<std::optional<QString>>{std::nullopt, std::nullopt}));
     }
 
-    // Each text file has a tab, under the name it has on disk, and counts what the selected
-    // encoding cannot read.
+    // Each text file has a tab, under the name it has on disk, and counts the characters the
+    // selected encoding cannot decode.
     void each_file_is_previewed_in_the_selected_encoding() {
         const auto source = shiftJisFolder();
         VoiceBankDecodingDialog dialog;

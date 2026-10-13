@@ -19,7 +19,7 @@ namespace {
         }
     }
 
-    // A WAVE file with the given format and data; \a extensible writes WAVEFORMATEXTENSIBLE with
+    // A WAVE file with the given format and data. \a extensible writes WAVEFORMATEXTENSIBLE with
     // \a tag as its subformat. \a claimed overrides the size written for the data chunk.
     QByteArray wave(quint16 tag, int channels, int rate, int bits, const QByteArray &data,
                     bool extensible = false, qint64 claimed = -1) {

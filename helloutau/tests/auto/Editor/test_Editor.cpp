@@ -377,7 +377,7 @@ private:
 
     // An editor with the menus, the commands and the frequency map formats that the core
     // plugin and the plugin FrequencyEditor register, whose voice bank windows do not follow the
-    // disk on their own, which would ask at any moment; a test calls VoiceBankWindow::checkDisk()
+    // disk independently, which would ask at any moment. A test calls VoiceBankWindow::checkDisk()
     // instead. The editor registers frq itself.
     std::unique_ptr<Editor> editor() const {
         auto e = std::make_unique<Editor>(
@@ -471,7 +471,7 @@ private Q_SLOTS:
         QVERIFY(!window->isWindowModified());
     }
 
-    // Opening replaces the current project; a second window is opened explicitly with New.
+    // Opening replaces the current project. A second window is opened explicitly with New.
     void a_file_opens_in_the_current_window() {
         const auto e = editor();
         const auto first = e->newWindow();
@@ -681,7 +681,7 @@ private Q_SLOTS:
     // The commands on the selection are enabled by it, and the tool and the quantization stay
     // with the window when it shows another project.
     // The pitch-control command opens the dialog with that of the first selected note, or the
-    // default, and gives what it accepts to every selected note.
+    // default, and applies the accepted values to every selected note.
     void the_vibrato_of_the_selected_notes_is_edited() {
         const auto e = editor();
         const auto window = e->openFile(savedProject(m_dir, "v.usth"));
@@ -867,11 +867,11 @@ private Q_SLOTS:
         QVERIFY(!ok->isEnabled());
     }
 
-    // An opened file heads Open Recent, from which it opens again; a file gone is reported and
-    // forgotten.
+    // An opened file heads Open Recent, from which it opens again. A file that is gone is
+    // reported and removed from the list.
     // "Open Recent" as in VS Code: the latest ten projects, then the latest ten voice banks,
     // the first ten numbered. A section with ten items ends with a "More" item, which lists
-    // every item of its kind in a palette. "Clear Recent" forgets both kinds.
+    // every item of its kind in a palette. "Clear Recent" removes both kinds.
     void open_recent_lists_projects_then_voice_banks() {
         const auto e = editor();
         e->settings().files().clearRecentFiles();
@@ -925,7 +925,7 @@ private Q_SLOTS:
         QCOMPARE(commands[0].label, QStringLiteral("bank1"));
         QVERIFY(commands[1].id.startsWith(QStringLiteral("voicebank:")));
 
-        // The button of an item forgets it, and the palette stays open.
+        // The button of an item removes it, and the palette stays open.
         const auto list = palette->findChild<QListWidget *>();
         QVERIFY(list);
         const auto button = CommandPalette::removeButtonRect(list->visualItemRect(list->item(1)),
@@ -1021,7 +1021,7 @@ private Q_SLOTS:
         QCOMPARE(e->settings().files().recentFiles(), (QList<std::filesystem::path>{second}));
     }
 
-    // Why an edit in the piano roll was refused appears in the status bar.
+    // The reason for a refused edit in the piano roll appears in the status bar.
     void a_refused_edit_is_reported_in_the_status_bar() {
         const auto e = editor();
         const auto window = e->newWindow();
@@ -1198,7 +1198,7 @@ private Q_SLOTS:
     }
 
     // The settings are pages of the catalog of the editor, in the order of the settings of
-    // JetBrains IDEs, and what their dialog applies reaches every project window at once.
+    // JetBrains IDEs. The settings that their dialog applies reach every project window at once.
     void the_settings_apply_to_every_window() {
         const auto e = editor();
         QStringList topLevel;
@@ -1231,8 +1231,8 @@ private Q_SLOTS:
     }
 
     // The language is chosen on System Settings from the system default, English and Simplified
-    // Chinese. A changed language is applied for the next start, and once the dialog closes a
-    // restart is offered; declined, nothing restarts.
+    // Chinese. A changed language is applied for the next start, and a restart is offered once
+    // the dialog closes. If the restart is declined, nothing restarts.
     void the_language_is_chosen_for_the_next_start() {
         const auto e = editor();
         e->settings().appearance().setLanguage(QString());
@@ -1536,8 +1536,7 @@ private Q_SLOTS:
     }
 
     // Mode2 is checked as the project has it, and turned over as an undo step. The pitch tool is
-    // enabled while Mode2 is off and the pitch shown, and otherwise gives way to the select
-    // tool.
+    // enabled while Mode2 is off and the pitch shown. Otherwise the select tool is used.
     void mode2_follows_the_project() {
         const auto e = editor();
         const auto window = e->newWindow();
@@ -1632,7 +1631,7 @@ private Q_SLOTS:
 private:
     // A voice bank in UTF-8, declared, so that nothing is asked: in the root a.wav with an
     // entry, b.wav an entry without an alias and without its file, and c.wav a file without an
-    // entry; in sub, x.wav with the aliases x and y.
+    // entry. In sub, x.wav with the aliases x and y.
     static fs::path voiceBank(const QTemporaryDir &dir, const char *name = "bank") {
         const auto bank = pathIn(dir, name);
         fs::create_directories(bank / "sub");
@@ -1717,9 +1716,9 @@ private:
 private Q_SLOTS:
     // A voice bank opens in a window of its own, its folders in a tree and the entries of the
     // folder chosen there in a table, with the files without an entry among them.
-    // A changed oto.ini is asked about and read as one undo step; declined, it is listed in the
-    // bar and not asked about again until it changes again. A new folder waits in the bar, and a
-    // new audio file is taken at once.
+    // A changed oto.ini is asked about and read as one undo step. If the read is declined, the
+    // file is listed in the bar and not asked about again until it changes again. A new folder
+    // waits in the bar, and a new audio file is taken at once.
     void the_voice_bank_window_follows_the_disk() {
         QTemporaryDir dir;
         const auto bank = voiceBank(dir);
@@ -1770,7 +1769,7 @@ private Q_SLOTS:
         window->checkDisk();
         QVERIFY(asked);
 
-        // The bar reads what it lists.
+        // The bar re-reads the folders it lists.
         QPushButton *readAgain = nullptr;
         for (const auto button : window->changeBar()->findChildren<QPushButton *>()) {
             if (button->text() == QStringLiteral("&Read Again")) {
@@ -1782,7 +1781,7 @@ private Q_SLOTS:
         QCOMPARE(entryCount(window), 4);
         QVERIFY(window->changeBar()->isHidden());
 
-        // A new audio file is taken as no step; a new folder waits in the bar.
+        // A new audio file is taken as no step. A new folder waits in the bar.
         const int step = session->currentStep();
         writeFile(bank / "d.wav", "");
         fs::create_directories(bank / "new");
@@ -1899,8 +1898,8 @@ private Q_SLOTS:
         QVERIFY(e->voiceBankWindows().isEmpty());
     }
 
-    // Every editable cell of an entry edits it as one undo step; an unlisted file is included by
-    // editing its alias. A value that is not a number, and an alias that another entry of the
+    // Every editable cell of an entry edits it as one undo step. An unlisted file is included
+    // by editing its alias. A value that is not a number, and an alias that another entry of the
     // file has, are refused with a message.
     void the_entry_table_edits_the_entries() {
         QTemporaryDir dir;
@@ -1950,7 +1949,7 @@ private Q_SLOTS:
         QTest::keyClick(table, Qt::Key_7, Qt::KeypadModifier);
         QCOMPARE(playTriggered.size(), 4);
 
-        // The alias and a value, each one step; the edited row stays current.
+        // The alias and a value are each one undo step. The edited row stays current.
         window->setCurrentRow(0);
         const int step = session->currentStep();
         QVERIFY(model->setData(model->index(0, VoiceBankEntryModel::AliasColumn),
@@ -2217,7 +2216,7 @@ private Q_SLOTS:
         QCOMPARE(session->currentStep(), step + 2);
         QCOMPARE(model->entryOf(1).alias, QStringLiteral("z"));
 
-        // An empty alias is refused, as the renaming of aliases refuses it, although the stem a
+        // An empty alias is refused, as the renaming of aliases rejects it, although the stem a
         // of a.wav is free.
         tree->setCurrentItem(tree->topLevelItem(1));
         bar->setText(QStringLiteral("x_a"));
@@ -2229,7 +2228,7 @@ private Q_SLOTS:
         QCOMPARE(model->entryOf(0).alias, QStringLiteral("x_a"));
     }
 
-    // The waveform shows the current entry; a drag and the keys 1 to 5 over it edit the entry,
+    // The waveform shows the current entry. A drag and the keys 1 to 5 over it edit the entry,
     // each as one undo step, and an unlisted file is included by them.
     void the_waveform_edits_the_current_entry() {
         QTemporaryDir dir;
@@ -2381,8 +2380,8 @@ private Q_SLOTS:
     }
 
     // The frequency map of the current entry is drawn over its audio, in the format of the
-    // resampler of the settings at first, another chosen in the box; the View menu shows the
-    // spectrogram in place of the waveform.
+    // resampler of the settings at first. Another format can be chosen in the box. The View menu
+    // shows the spectrogram in place of the waveform.
     void the_frequency_table_of_the_entry_is_shown() {
         QTemporaryDir dir;
         const auto bank = voiceBank(dir);
@@ -2454,7 +2453,7 @@ private Q_SLOTS:
     }
 
     // The box of formats follows the registrations: the format chosen stays while it is
-    // registered, and gives way to that of the resampler when it goes.
+    // registered, and the format of the resampler applies when it goes.
     void the_frequency_box_follows_the_registrations() {
         QTemporaryDir dir;
         const auto e = editor();
@@ -2532,7 +2531,7 @@ private Q_SLOTS:
     }
 
     // The information pane edits character.txt, readme.txt and prefix.map, each edit one step,
-    // creating the files the voice bank lacks; the tree converts the encoding of a folder.
+    // and creates the files the voice bank lacks. The tree converts the encoding of a folder.
     void the_voice_bank_info_is_edited() {
         QTemporaryDir dir;
         const auto bank = voiceBank(dir);
@@ -3203,7 +3202,7 @@ private Q_SLOTS:
     }
 
     // Saved in its window, a voice bank reaches the projects that sing it, without an edit of
-    // them; unsaved edits do not.
+    // them. Unsaved edits do not reach those projects.
     void a_saved_voice_bank_reaches_its_projects() {
         QTemporaryDir dir;
         const auto utau = pathIn(dir, "utau");
@@ -3292,7 +3291,7 @@ private Q_SLOTS:
         QVERIFY(isSame(bankWindow->document()->rootPath(), bank));
 
         // From a note to the entry it uses: x in sub, c without an entry in the root, y the
-        // second entry of x.wav; none for zzz, and none for a rest.
+        // second entry of x.wav. No entry exists for zzz or for a rest.
         {
             const auto session = window->document()->session();
             QList<kit::Note> notes;
@@ -3410,8 +3409,8 @@ private Q_SLOTS:
         e->settings().rendering().setResampler({});
     }
 
-    // Playing in either mode and Render Track report missing project synth tools, and ask about
-    // untrusted ones. Nothing is rendered unless both exist and are trusted.
+    // Playing in either mode and Render Track report missing project synth tools, and request
+    // trust for untrusted tools. Nothing is rendered unless both exist and are trusted.
     void rendering_requires_existing_and_trusted_synth_tools() {
         const auto e = editor();
         const auto window = e->openFile(savedProject(m_dir, "untrusted.usth"));
@@ -3707,9 +3706,9 @@ private Q_SLOTS:
         QCOMPARE(shownPortamento->length, 100);
     }
 
-    // Two files dropped on a modified window ask once whether the changes may be discarded. If
-    // cancelled, neither opens. If discarded, the first opens in the window and the second in a
-    // new window. A first file that does not open leaves the second to open.
+    // A drop of two files on a modified window shows one question whether the changes may be
+    // discarded. If canceled, neither opens. If discarded, the first opens in the window and
+    // the second in a new window. A first file that does not open leaves the second to open.
     void dropped_files_ask_once_and_open_in_order() {
         const auto e = editor();
         const auto first = savedProject(m_dir, "dropped1.usth");

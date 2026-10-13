@@ -53,7 +53,7 @@ private Q_SLOTS:
         QVERIFY(spectrogram.peak() >= spectrogram.magnitude(middle, bin));
         QVERIFY(spectrogram.magnitude(middle, bin + 20) < 0.01);
 
-        // The channels are mixed; beyond the frames and bins the magnitude is 0.
+        // The channels are mixed. Beyond the frames and bins the magnitude is 0.
         const auto stereo = Spectrogram::of(sine(1000, 0.5, 2));
         QVERIFY(std::abs(stereo.frequencyOf(loudestBin(stereo, middle)) - 1000) < 44100.0 / 2048);
         QCOMPARE(stereo.magnitude(-1, 10), 0.0f);

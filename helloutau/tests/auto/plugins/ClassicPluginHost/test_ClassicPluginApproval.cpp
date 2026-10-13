@@ -14,7 +14,7 @@ namespace json = stdc::json;
 
 namespace {
 
-    // A plugin whose program is bin/name.exe in the folder name of dir, with content
+    // Returns a plugin whose program is bin/name.exe in the folder name of dir, with content
     ClassicPlugin pluginIn(const QTemporaryDir &dir, const char *name, const char *content) {
         ClassicPlugin plugin;
         plugin.name = QString::fromLatin1(name);

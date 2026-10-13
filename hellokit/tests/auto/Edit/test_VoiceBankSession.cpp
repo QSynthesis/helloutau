@@ -67,8 +67,8 @@ private Q_SLOTS:
         m_dir.reset();
     }
 
-    // The snapshot is what saving and synthesis receive, including the samples without an entry,
-    // which the tree does not hold.
+    // The snapshot holds the voice bank that saving and synthesis receive, including the samples
+    // without an entry, which the tree does not hold.
     void the_snapshot_is_the_voice_bank_read() {
         QCOMPARE(m_session->rootPath(), m_bank->root());
         verifyEqual(m_session->snapshot(), *m_bank);

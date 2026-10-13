@@ -42,7 +42,7 @@ namespace {
         return format.mapsExist(wav.parent_path(), {wav.filename()}).value(0);
     }
 
-    // An entry of desc.mrq of version 2
+    // Returns an entry of desc.mrq of version 2
     QByteArray mrqEntry(const QString &name, const QList<float> &frequencies, qint32 rate = 44100,
                         qint32 timestamp = 0, qint32 flag = 1) {
         QByteArray data = bytesOf<qint32>(qint32(frequencies.size())) + bytesOf<qint32>(rate) +
@@ -55,7 +55,7 @@ namespace {
                bytesOf<qint32>(qint32(data.size())) + data;
     }
 
-    // The timestamp of the last entry of contents
+    // Returns the timestamp of the last entry of contents
     qint32 lastTimestamp(const QByteArray &contents) {
         return qFromLittleEndian<qint32>(contents.constData() + contents.size() - 8);
     }
@@ -272,7 +272,7 @@ private Q_SLOTS:
     }
 
     // An entry of version 1 has no room for the timestamp and is appended, and the file becomes
-    // version 2. A new desc.mrq takes the sample rate of the audio file, which must be known.
+    // version 2. A new entry has the sample rate of the audio file, which must be known.
     void desc_mrq_is_written_in_version_2() {
         QDir(m_dir.path()).mkdir(QStringLiteral("v"));
         const auto directory = pathOf("v");

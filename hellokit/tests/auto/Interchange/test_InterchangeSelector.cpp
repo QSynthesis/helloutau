@@ -68,8 +68,8 @@ class test_InterchangeSelector : public QObject {
     Q_OBJECT
 
 private Q_SLOTS:
-    // The command line and the tests have no user to ask, so the selector must decide without
-    // one. The decision follows the defaults declared by the driver.
+    // No user makes the choice on the command line or in the tests, so the selection follows the
+    // defaults declared by the driver.
     void it_takes_the_declared_defaults() {
         SchemaOnlyReader reader;
         AutomaticSelector selector;

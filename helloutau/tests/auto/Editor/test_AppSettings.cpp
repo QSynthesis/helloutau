@@ -399,8 +399,8 @@ private Q_SLOTS:
     }
 
     // The voice folder of HelloUtau comes first, then the voice directory of UTAU if the UTAU
-    // folder exists. A relative VoiceDir is resolved against the UTAU folder only if it exists
-    // and the setting says so, and against the directory of the program otherwise.
+    // folder exists. A relative VoiceDir is resolved against the UTAU folder only if the folder
+    // exists and the setting enables it, and against the directory of the program otherwise.
     void the_voice_locations_follow_the_utau_folder() {
         QTemporaryDir dir;
         AppSettings settings(dir.filePath(QStringLiteral("settings.json")));

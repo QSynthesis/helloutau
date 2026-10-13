@@ -825,7 +825,7 @@ private Q_SLOTS:
         QCOMPARE(fragments, 2);
     }
 
-    // A plan that the classic runner refuses for its scripts is refused here as well, before any
+    // A plan whose scripts the classic runner cannot write is rejected here as well, before any
     // synth tool runs or any file is written.
     void a_plan_the_scripts_cannot_carry_is_refused_as_in_the_classic_runner() {
         const TextCodec codec;

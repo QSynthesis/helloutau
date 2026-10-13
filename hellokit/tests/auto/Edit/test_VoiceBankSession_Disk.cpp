@@ -242,7 +242,7 @@ private Q_SLOTS:
                  QByteArray("a.wav=a,41.0,2,3,4,5\r\nb.wav=b,1,2,3,4,5\r\n"));
     }
 
-    // A reload makes the directory hold what is on disk, and undoing it writes the former
+    // A reload makes the directory hold the content on disk, and undoing it writes the former
     // contents back.
     void undoing_a_reload_writes_the_directory_back() {
         write(QStringLiteral("sub/oto.ini"), "x.wav=theirs,1,2,3,4,5\r\n");
@@ -533,8 +533,8 @@ private Q_SLOTS:
     }
 
     // A root without text that gains a text file whose encoding nobody selects is not read
-    // again. The tree keeps what was read before, and the voice bank on disk is incomplete until
-    // the root is read in an encoding.
+    // again. The tree keeps the content read before, and the voice bank on disk is incomplete
+    // until the root is read in an encoding.
     void a_root_not_read_again_makes_the_voice_bank_incomplete() {
         QTemporaryDir dir;
         QVERIFY(writeSampleFile(dir.path(), QStringLiteral("a.wav"), "RIFF"));

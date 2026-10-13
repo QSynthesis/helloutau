@@ -108,7 +108,7 @@ private Q_SLOTS:
         note.intensity = 80;
         note.velocity = 0; // zero, which must remain a value rather than become absent
         note.flags = QStringLiteral("g-5");
-        // Five anchors, so that the middle anchor survives the round trip in its position.
+        // Five anchors, so that the middle anchor remains at its position after the round trip.
         note.envelope = Envelope::fromTimeOrder({
             {0,  0  },
             {5,  100},
@@ -193,8 +193,8 @@ private Q_SLOTS:
         QCOMPARE(vibrato->intensity, 42.0);
     }
 
-    // Measured in UTAU: saving writes CacheDir from the file name, whatever the project says.
-    // See docs/claude/utau-voicedir-cachedir.md.
+    // Measured in UTAU: saving writes CacheDir from the file name, regardless of the path recorded
+    // in the project. See docs/claude/utau-voicedir-cachedir.md.
     void the_cache_dir_is_written_from_the_file_name_when_the_file_is_given() {
         TempUst file("cachedir");
         auto project = oneNote();
@@ -264,8 +264,8 @@ private Q_SLOTS:
         }
     }
 
-    // The payload records what the Charset line cannot declare, so it must survive being
-    // written in an encoding other than UTF-8 and remain locatable.
+    // The payload records the encoding that the Charset line cannot declare, so the payload must
+    // remain locatable after being written in an encoding other than UTF-8.
     void the_encoding_is_recorded_and_read_back() {
         TempUst file("charset");
         const auto project = oneNote(u("あ"));

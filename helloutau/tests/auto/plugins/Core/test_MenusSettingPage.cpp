@@ -176,7 +176,7 @@ private Q_SLOTS:
     }
 
     // Reapplying an adjacent File menu reorder must remain safe when the settings page is opened
-    // again. This is the sequence that previously crashed in the settings dialog.
+    // again.
     void adjacent_file_actions_can_be_reordered_twice() {
         QTemporaryDir dir;
         const auto settingsFile = dir.filePath(QStringLiteral("settings.json"));

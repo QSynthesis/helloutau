@@ -15,8 +15,8 @@ project(helloutau
 option(HELLO_BUILD_TESTS "Build test cases" OFF)
 option(HELLO_BUILD_APPLICATION "Build the editor application" ON)
 option(HELLO_INSTALL "Install the project" ON)
-# Installs what building on the libraries and plugins needs besides the programs: the import and
-# static libraries, the headers, the CMake packages, and the debug symbols (PDB on Windows).
+# Installs the development files besides the programs: the import and static libraries, the
+# headers, the CMake packages, and the debug symbols (PDB on Windows).
 option(HELLO_DEVEL "Install the files for development" OFF)
 # Installs the helper libraries of the tests, which the tests of projects that build on HelloUtau
 # link, as LLVM_INSTALL_GTEST of LLVM. Their headers are installed with HELLO_DEVEL. An
@@ -40,9 +40,8 @@ elseif(MINGW)
     set(CMAKE_STATIC_LIBRARY_PREFIX "")
     set(CMAKE_SHARED_LIBRARY_PREFIX "")
 elseif(NOT WIN32)
-    # Windows has no position-independent code option, and CMake considers clang targeting
-    # Windows to be neither MSVC nor MINGW, so this condition must test the platform rather than
-    # the compiler.
+    # Windows has no position-independent code option, and CMake sets MSVC and MINGW to false for
+    # clang targeting Windows, so this condition must test the platform rather than the compiler.
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
 endif()
 

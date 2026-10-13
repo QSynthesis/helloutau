@@ -125,8 +125,9 @@ def check_directories(exe):
     program = None
     try:
         parent = os.path.join(base, "voice")
-        # A percent sign, and one followed by text resembling an escape sequence, because the
-        # protocol escapes percent signs and missing escaping would corrupt such names.
+        # The name contains a percent sign, and a percent sign followed by text resembling an
+        # escape sequence, because the protocol escapes percent signs and missing escaping would
+        # corrupt such names.
         root = os.path.join(parent, "bank %25 100%")
         other = os.path.join(base, "other bank")
         for directory in ("a/b", "removed-soon", "renamed-soon", "leaving"):
@@ -152,7 +153,7 @@ def check_directories(exe):
             print("FAIL answer:", answer)
             return 1
         # FSEvents also reports events from shortly before the stream started, which is a
-        # superfluous hint rather than a failure. The checks consider only later messages.
+        # superfluous hint rather than a failure. The checks examine only later messages.
         program.gather(quiet=1.5)
 
         failures = 0

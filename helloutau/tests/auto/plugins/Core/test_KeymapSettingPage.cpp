@@ -140,7 +140,7 @@ private Q_SLOTS:
     }
 
     // Each window kind has its own tab and an Other group for commands in no menu. A command of
-    // both kinds, Undo, has shortcuts in each apart from the other, a shortcut conflicts within
+    // both kinds, Undo, has shortcuts in each apart from the other. A shortcut conflicts within
     // one kind alone, and keymap.json has a section for each kind.
     void each_kind_of_window_has_its_own_keymap() {
         using Command = KeymapSettingPage::Command;

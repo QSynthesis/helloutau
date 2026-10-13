@@ -10,7 +10,7 @@ using namespace hello::daw;
 
 namespace {
 
-    // A gesture that records what it receives.
+    // A gesture that records the events it receives.
     class RecordingGesture : public SceneGesture {
     public:
         explicit RecordingGesture(QStringList &log, bool autoScroll = false)

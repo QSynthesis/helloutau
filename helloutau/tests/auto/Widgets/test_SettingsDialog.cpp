@@ -16,7 +16,7 @@ using namespace hello::daw;
 
 namespace {
 
-    // A page that edits one text, applied to value, and refuses an empty one
+    // A page that edits a text, applied to value, and rejects an empty text
     class TextPage : public SettingPage {
     public:
         TextPage(const QString &id, const QString &title, const QString &label)
@@ -157,7 +157,7 @@ private Q_SLOTS:
     }
 
     // The search finds pages by title, description, keywords and the text of their controls,
-    // keeps their parents, marks the controls that match, and says when nothing does.
+    // keeps their parents, marks the controls that match, and reports when no page matches.
     void the_search_finds_settings_within_pages() {
         Pages pages;
         SettingsDialog dialog(&pages.catalog);
@@ -196,8 +196,8 @@ private Q_SLOTS:
         QVERIFY(dialog.messageLabel()->isHidden());
     }
 
-    // Apply is enabled while a page is modified, which is bold; it applies the modified pages,
-    // and a page that refuses is shown with its reason and keeps OK from closing.
+    // Apply is enabled while a page is modified, which is bold. Apply applies the modified pages.
+    // A page that fails to apply shows its reason and keeps OK from closing.
     void modified_pages_are_applied() {
         Pages pages;
         SettingsDialog dialog(&pages.catalog);
@@ -230,7 +230,7 @@ private Q_SLOTS:
         QVERIFY(!pages.output->hasWidget());
     }
 
-    // Cancel releases the pages, and their edits with them; the next dialog reads the values
+    // Cancel releases the pages, and their edits with them. The next dialog reads the values
     // anew.
     void cancel_discards_the_edits() {
         Pages pages;

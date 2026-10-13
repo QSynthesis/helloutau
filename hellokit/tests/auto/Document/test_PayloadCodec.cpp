@@ -62,7 +62,7 @@ private Q_SLOTS:
     }
 
     void decoding_rejects_input_that_cannot_be_written_back() {
-        // Padding does not survive UTAU, so accepting it would admit input that could never be
+        // UTAU does not retain padding, so accepting it would admit input that could never be
         // written back. Qt decodes all three of these without error.
         QVERIFY(!PayloadCodec::decode("Zg==").has_value());
         QVERIFY(!PayloadCodec::decode("Zm8=").has_value());

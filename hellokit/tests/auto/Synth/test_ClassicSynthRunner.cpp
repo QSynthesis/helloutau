@@ -500,7 +500,7 @@ private Q_SLOTS:
                 QCOMPARE(arguments(line), 1 + 1 + 8);
                 ++checked;
             }
-            // The rest, which takes a different code path through the writer, the one that
+            // The remaining line takes the other code path through the writer, the path that
             // produced the unquoted path.
             if (line.startsWith(QLatin1String("@\"%tool%\""))) {
                 QCOMPARE(arguments(line), 1 + int(plan->steps().at(1).wavtoolArguments.size()));
@@ -898,7 +898,7 @@ private Q_SLOTS:
         QVERIFY(text->contains(inside));
     }
 
-    // A quote in the flags is removed by stdutau, so that it does not refuse the script.
+    // A quote in the flags is removed by stdutau, so that the script stays valid.
     void a_quote_in_the_flags_does_not_refuse_the_script() {
         const auto plan = planFor(QStringLiteral("a"), QStringLiteral("g\"5"));
         QVERIFY(plan.has_value());

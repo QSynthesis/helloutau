@@ -4,7 +4,8 @@
 #include <helloutau/Editor/AppLoader.h>
 
 int main(int argc, char *argv[]) {
-    // Before the application object, which loads the platform plugin of Qt
+    // The Qt plugin paths are added before the application object, which loads the platform plugin
+    // of Qt.
     hello::daw::AppLoader::addQtPluginPaths();
 
     QApplication app(argc, argv);

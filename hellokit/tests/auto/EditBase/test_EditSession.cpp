@@ -286,7 +286,7 @@ private Q_SLOTS:
     }
 
     // A commit after undo reports the steps it discards before its own step, which takes the
-    // number of the first of them; a redo and a commit without changes discard nothing.
+    // number of the first of them. A redo and a commit without changes discard nothing.
     void a_commit_reports_the_steps_it_discards_before_its_step() {
         TestSession session;
         QStringList events;

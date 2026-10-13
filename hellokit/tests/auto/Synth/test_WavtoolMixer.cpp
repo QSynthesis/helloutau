@@ -66,7 +66,7 @@ private Q_SLOTS:
         QCOMPARE(parsed->p5, std::optional<double>(20));
         QCOMPARE(parsed->v5, std::optional<double>(80));
 
-        // A rest has no envelope; a negative correction shortens the call.
+        // A rest has no envelope. A negative correction shortens the call.
         const auto rest = call(QStringLiteral("0 480@120-41 0 0"));
         QVERIFY(!rest.hasEnvelope);
         QCOMPARE(rest.length, 459.0);

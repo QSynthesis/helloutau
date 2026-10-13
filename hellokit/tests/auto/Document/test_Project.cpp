@@ -323,7 +323,7 @@ private Q_SLOTS:
     }
 
     // Measured in UTAU: the cache is named after the project file, and saving writes that name
-    // whatever the file said before.
+    // regardless of the path recorded in the project.
     void the_cache_dir_follows_the_file_name() {
         const auto dir = fs::temp_directory_path();
         QCOMPARE(Project::cacheDirTextOf(dir / u"song.ust"), QStringLiteral("song.cache"));

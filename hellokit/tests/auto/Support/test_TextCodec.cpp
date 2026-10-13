@@ -176,7 +176,7 @@ private Q_SLOTS:
     }
 
     // Each invalid sequence becomes one replacement character, and decoding resumes after it,
-    // so that the valid text around it survives.
+    // so that the valid text around it is retained.
     void replacing_keeps_the_valid_text_and_counts_the_invalid_sequences() {
         qsizetype invalid = -1;
         const QByteArray japanese = shiftJis().encode(QString::fromUtf8("あ")) +

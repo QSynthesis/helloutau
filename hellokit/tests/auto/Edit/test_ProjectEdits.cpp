@@ -290,7 +290,7 @@ private Q_SLOTS:
         QCOMPARE(lyricsOf(session), QStringLiteral("d e a b c"));
     }
 
-    // The points that stay keep their nodes; the list grows and shrinks at its end; the order
+    // The points that stay keep their nodes. The list grows and shrinks at its end. The order
     // of the points is a constraint.
     void the_points_of_a_note_are_replaced_in_one_step() {
         const auto project = fiveNotes();
@@ -440,7 +440,7 @@ private Q_SLOTS:
         QCOMPARE(session.snapshot().toJson(), project.toJson());
     }
 
-    // Each value is set on the notes given, or removed, in one step; the others stay.
+    // Each value is set on the notes given, or removed, in one step. The others stay.
     void a_parameter_is_set_on_several_notes_and_removed() {
         const auto project = richProject();
         ProjectSession session(project);
@@ -492,7 +492,7 @@ private Q_SLOTS:
         QCOMPARE(note.velocity, std::optional<double>(1000));
     }
 
-    // Two notes at 125 BPM, where a tick is a millisecond; the first bends up to 60 cents at
+    // Two notes at 125 BPM, where a tick is a millisecond. The first bends up to 60 cents at
     // its end.
     static Project bentNotes() {
         Project project;
@@ -537,7 +537,7 @@ private Q_SLOTS:
         QCOMPARE(session.snapshot().toJson(), project.toJson());
     }
 
-    // Drawn values replace those at their places and extend them either way; the gaps take the
+    // Drawn values replace those at their places and extend them either way. The gaps take the
     // curve as it was: before the note that of the previous note, after the values the last one
     // for an interval, then 0.
     void mode1_values_are_drawn_over_and_extended() {
@@ -574,7 +574,7 @@ private Q_SLOTS:
     }
 
     // A label is set on a note and removed by an empty text. A region names its first note with
-    // $region and its last with $region_end, one step each; beyond the notes it is refused.
+    // $region and its last with $region_end, one step each. Beyond the notes the edit is rejected.
     void labels_and_regions_are_named() {
         const auto project = richProject();
         ProjectSession session(project);
@@ -636,7 +636,7 @@ private Q_SLOTS:
         QCOMPARE(session.snapshot().tracks[0].notes[0].regions, QStringList{"A"});
     }
 
-    // Mode1 values replace those of a note whole and are removed by an empty value; equal
+    // Mode1 values replace those of a note whole and are removed by an empty value. Equal
     // values make no step.
     void mode1_values_are_replaced_and_removed() {
         auto project = bentNotes();
@@ -664,8 +664,8 @@ private Q_SLOTS:
         QCOMPARE(session.snapshot().toJson(), project.toJson());
     }
 
-    // The properties set change on every note in one step, a cleared one goes back to the
-    // default, and the others stay; none that differs makes no step.
+    // The properties set change on every note in one step. A cleared property goes back to the
+    // default, and the others stay. None that differs makes no step.
     void the_note_properties_change_in_one_step() {
         const auto project = richProject();
         ProjectSession session(project);
@@ -712,8 +712,8 @@ private Q_SLOTS:
         QCOMPARE(session.snapshot().toJson(), project.toJson());
     }
 
-    // Combined notes become the first of them, as long as all of them; not fewer than two, nor
-    // past a note that sets a tempo.
+    // Combined notes become the first of them, which takes the length of all of them. The range
+    // must hold at least two notes and must not pass a note that sets a tempo.
     void notes_are_combined_into_the_first() {
         Project project;
         Track track;
@@ -799,7 +799,7 @@ private Q_SLOTS:
         QCOMPARE(session.snapshot().toJson(), project.toJson());
     }
 
-    // The properties set change in one step, the others stay; none that differs makes no step.
+    // The properties set change in one step and the others stay. None that differs makes no step.
     void the_properties_change_in_one_step() {
         const auto project = richProject();
         ProjectSession session(project);

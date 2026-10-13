@@ -3,8 +3,8 @@
 ///
 /// Its purpose is integration testing, which the unit tests cannot provide. \c UstDocument,
 /// \c Project and \c MidiReader are each tested separately with synthetic inputs, which does
-/// not show whether a real UTAU project survives a round trip through all of them. The first
-/// roadmap stage is measured by this program, and \c --check performs the measurement.
+/// not show whether a real UTAU project is unchanged by a round trip through all of them. The
+/// first roadmap stage is measured by this program, and \c --check performs the measurement.
 ///
 /// \code
 ///   ustconv song.ust song.usth
@@ -277,7 +277,7 @@ namespace {
 
         int failures = 0;
 
-        // The encoding must survive as well as the notes. A file without a recorded encoding
+        // The encoding must be retained as well as the notes. A file without a recorded encoding
         // would require guessing on the next read.
         const auto recorded = after->settledCharset();
         if (recorded != charset) {

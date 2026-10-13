@@ -183,7 +183,7 @@ private Q_SLOTS:
         verifyRefused(QStringLiteral("prefix remove"), QStringLiteral("Usage"));
     }
 
-    // The character is set as a whole, field by field where the voice bank has one; an
+    // The character is set as a whole, field by field for the fields that the voice bank has. An
     // unchanged character is no step.
     void the_character_and_the_readme_are_set() {
         QVERIFY(run(QStringLiteral("character set {\"name\": \"N\", \"author\": \"A\", "

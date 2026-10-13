@@ -25,8 +25,8 @@ private:
         file.write(content);
     }
 
-    // The record of a note whose fragment the wavtool rejected, with head as the start of the
-    // fragment
+    // Returns the record of a note whose fragment the wavtool rejected, with the fragment
+    // starting at head
     static kit::SynthFailure wavtoolFailure(const QByteArray &head) {
         kit::SynthFailure failure;
         failure.stage = kit::SynthFailure::Wavtool;
@@ -45,7 +45,7 @@ private:
         return context;
     }
 
-    // The text that moresampler 0.8.4 writes with resampler-compatibility off, measured
+    // Returns the text that moresampler 0.8.4 writes with resampler-compatibility off, measured
     static QByteArray dummy() {
         return "This is a dummy file created just to fool UTAU's cache mechanism and you really "
                "shouldn't expect to see anything here.";
@@ -121,7 +121,7 @@ private Q_SLOTS:
         QVERIFY(diagnoses.first().explanation.contains(QStringLiteral("moreconfig.txt")));
     }
 
-    // The record of the track examines the track, which is not a fragment.
+    // The failure of a whole track is not diagnosed, because it is not a fragment.
     void a_failure_of_the_track_is_not_diagnosed() {
         auto failure = wavtoolFailure(dummy());
         failure.noteIndex = std::nullopt;

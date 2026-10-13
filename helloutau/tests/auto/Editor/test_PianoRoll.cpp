@@ -212,7 +212,7 @@ private Q_SLOTS:
         QCOMPARE(roll.view()->timeAxis().left, 0.0);
     }
 
-    // A sung note is looked up as synthesis looks it up; a rest is never missing a sample.
+    // A sung note is looked up as synthesis looks it up. A rest is never missing a sample.
     void a_note_without_a_sample_is_marked() {
         kit::ProjectSession session(threeNotes());
         PianoRoll roll(&session);
@@ -281,7 +281,8 @@ private Q_SLOTS:
     }
 
     // A drag with the right button selects the notes of the span of time it covers, whatever
-    // their keys, rests too; from a note as well, and with Ctrl in addition to the selection.
+    // their keys. A rest has no key, and a drag that starts on a note counts as well, with Ctrl
+    // in addition to the selection.
     void a_right_drag_selects_a_span_of_time() {
         kit::ProjectSession session(threeNotes());
         PianoRoll roll(&session);
@@ -347,7 +348,7 @@ private Q_SLOTS:
         QVERIFY(!session.canUndo());
         QCOMPARE(roll.selectedIndices(), QList<int>{0});
 
-        // A drag extends a selection with gaps to the run it spans; Escape restores it.
+        // A drag extends a selection with gaps to the run it spans. Escape restores it.
         click(roll, 1680, 64, Qt::ControlModifier);
         QTest::mousePress(viewport, Qt::LeftButton, {}, pointOf(roll, 240, 60));
         QTest::mouseMove(viewport, pointOf(roll, 240, 63));
@@ -414,8 +415,8 @@ private Q_SLOTS:
     // The pen draws a note after the last one, and fills the gap before it with a rest.
 private:
     // A drag of the pen on the background of threeNotes (la 0-480, a rest 480-1440 that sets
-    // the tempo 60, li 1440-1920) from tick from to tick to in the row of key 70, or at key; the
-    // lyrics and lengths after it, the drawn note being selected, in one step
+    // the tempo 60, li 1440-1920) from tick from to tick to in the row of key 70, or without a
+    // key. The lyrics and lengths after it, the drawn note being selected, in one step
     struct Drawn {
         QString lyrics;
         QList<int> lengths;
@@ -445,7 +446,8 @@ private:
 
 private Q_SLOTS:
     // The pen draws from the end of the previous note, before the note at the pointer, which
-    // moves later; after the last note, from its end. A note that sets a tempo passes it on.
+    // moves later. After the last note, the pen draws from its end. A note that sets a tempo
+    // passes it on.
     void the_pen_draws_from_the_end_of_the_previous_note() {
         auto drawn = penDrag(2400, 2880, {}, 62);
         QCOMPARE(drawn.lyrics, QStringLiteral("la R li la"));
@@ -466,8 +468,8 @@ private Q_SLOTS:
         QCOMPARE(drawn.selected, QList<int>{1});
     }
 
-    // With Shift, a rest fills the gap up to the pointer; within a rest, the note takes the place
-    // of part of it, and the notes after it move only as far as the note passes its end.
+    // With Shift, a rest fills the gap up to the pointer. Within a rest, the note replaces part
+    // of it, and the notes after it move only as far as the note passes their end.
     void the_pen_with_shift_draws_at_the_pointer() {
         auto drawn = penDrag(2400, 2880, Qt::ShiftModifier, 62);
         QCOMPARE(drawn.lyrics, QStringLiteral("la R li R la"));
@@ -480,7 +482,7 @@ private Q_SLOTS:
         QCOMPARE(drawn.lengths, (QList<int>{480, 960, 240, 120, 480}));
         QCOMPARE(drawn.selected, QList<int>{3});
 
-        // Within the rest, which keeps what lies before and after the note
+        // Within the rest, the note keeps a rest before and after it
         drawn = penDrag(720, 960, Qt::ShiftModifier);
         QCOMPARE(drawn.lyrics, QStringLiteral("la R la R li"));
         QCOMPARE(drawn.lengths, (QList<int>{480, 240, 240, 480, 480}));
@@ -561,7 +563,8 @@ private Q_SLOTS:
     }
 
     // The playhead at rest moves where the ruler is pressed or dragged, snapped to the
-    // quantization unless Alt is held, and is reported; drawn where playback is not.
+    // quantization unless Alt is held, and is reported. The playhead at rest is also drawn
+    // where playback is not.
     void the_ruler_moves_the_playhead_at_rest() {
         kit::ProjectSession session(threeNotes());
         PianoRoll roll(&session);
@@ -629,7 +632,7 @@ private Q_SLOTS:
     }
 
     // A rest goes before the first selected note, and the notes from the first selected to the
-    // last merge into the first; each is selected after.
+    // last merge into the first. Each is selected after.
     void a_rest_is_inserted_and_notes_combined() {
         kit::ProjectSession session(threeNotes());
         PianoRoll roll(&session);
@@ -714,8 +717,8 @@ private Q_SLOTS:
     }
 
     // The render state of each note lies along the bottom of the ruler under the time of the
-    // note, neighbors of one state in one span; silent notes and those beyond the list have
-    // none. The spans follow the notes.
+    // note, and adjacent notes of one state form one span. Silent notes and those beyond the
+    // list have none. The spans follow the notes.
     void the_render_states_lie_under_the_notes() {
         using R = PianoRoll;
         kit::ProjectSession session(threeNotes());
@@ -902,7 +905,7 @@ private Q_SLOTS:
     }
 
     // The portamento runs through the rows, and the vibrato apart around the middle of the
-    // row; both only while the pitch is shown.
+    // row. Both are drawn only while the pitch is shown.
     void the_pitch_is_drawn_while_shown() {
         kit::Note la;
         la.lyric = QStringLiteral("la");
@@ -935,7 +938,8 @@ private Q_SLOTS:
 
         const QList<kit::Note> notes = {la, li};
         const kit::PitchCurve secondCurve(notes, 1, 120);
-        // From 100 ms before li to 100 ms after it, li bends up from la; at its start halfway.
+        // From 100 ms before li to 100 ms after it, li bends up from la. At the start of li the
+        // bend is halfway.
         // After its last point, nothing is drawn.
         const double bend = secondCurve.portamentoAt(0);
         QVERIFY(bend < -100 && bend > -300);
@@ -1125,7 +1129,7 @@ private Q_SLOTS:
     }
 
     // With envelopes shown, the envelope of la stands above its bar from where its pre-utterance
-    // of 100 ms starts, a volume of 100 one row high; hidden by default.
+    // of 100 ms starts, a volume of 100 one row high. The envelope is hidden by default.
     void the_envelopes_are_shown_above_the_notes() {
         kit::Note rest;
         rest.lyric = QStringLiteral("R");
@@ -1158,7 +1162,7 @@ private Q_SLOTS:
         show(roll);
         QVERIFY(!roll.areEnvelopesVisible());
 
-        // la starts at 500 ms; 420 ms is within its pre-utterance, at 0.96 ticks a millisecond
+        // la starts at 500 ms. 420 ms is within its pre-utterance, at 0.96 ticks a millisecond
         const auto drawnAt = [&roll](double milliseconds, int key = 62) {
             const auto image = roll.view()->viewport()->grab().toImage();
             const QPointF at(roll.view()->timeAxis().toX(milliseconds * 0.96),
@@ -1361,7 +1365,7 @@ private Q_SLOTS:
         QTest::mouseRelease(viewport, button, {}, to);
     }
 
-    // With Mode2 off, the points are hidden; the pitch tool draws the Mode1 values of the notes
+    // With Mode2 off, the points are hidden. The pitch tool draws the Mode1 values of the notes
     // along a stroke, a note without values starting them at its first reading, and a stroke
     // with the right button returns them to 0, each in one step.
     void mode1_values_are_drawn_and_erased() {
@@ -1429,7 +1433,7 @@ private Q_SLOTS:
     // the stroke, take the curve of the first note as it was before the stroke, which there
     // still leans towards its last drawn value.
     void a_stroke_fills_from_the_curve_as_it_was() {
-        // At 125 bpm a tick is a millisecond. la has values of 0 over its length; li reads
+        // At 125 bpm a tick is a millisecond. la has values of 0 over its length. li reads
         // its curve from 100 ms before it, and has one value 2 ms after its start.
         kit::Note la;
         la.lyric = QStringLiteral("la");
@@ -1469,7 +1473,7 @@ private Q_SLOTS:
         }
         QCOMPARE(notes[0].pitchBend->values, laValues);
         // Before li, its curve is that of la, 200 cents lower. At 422 ticks la was 0 before the
-        // stroke, so -200 for li; afterwards it is 60, on its way from 100.
+        // stroke, so li takes -200. Further along the curve li takes 60, on its way from 100.
         QList<double> liValues(4, -100);
         liValues.append(QList<double>(12, -200));
         liValues.append(0);
@@ -1477,14 +1481,14 @@ private Q_SLOTS:
         QCOMPARE(session.currentStep(), 1);
     }
 
-    // A point moves in time and height in one step; the first point after a sung note and the
-    // last one move only in time, and a point passes its neighbors into its place in time.
+    // A point moves in time and height in one step. The first point after a sung note and the
+    // last point move only in time, and a point passes its neighbors into its place in time.
     void a_point_is_dragged_past_its_neighbours() {
         kit::ProjectSession session(bentNotes());
         PianoRoll roll(&session);
         showExactly(roll);
 
-        // 48 ticks later is 50 ms; a row up is 100 cents.
+        // 48 ticks later is 50 ms. A row up is 100 cents.
         dragPoint(roll, pointOfLi(roll, 0, 100), pointOfLi(roll, 50, 200));
         auto points = pointsOfLi(session);
         QCOMPARE(points[1].x, 50.0);
@@ -1615,8 +1619,8 @@ private Q_SLOTS:
         }));
     }
 
-    // Shift snaps the time to another point of the note, Ctrl the height to 50 cents; Escape
-    // leaves the points as they were.
+    // Shift snaps the time to another point of the note, and Ctrl snaps the height to 50 cents.
+    // Escape leaves the points as they were.
     void a_point_snaps_with_modifiers() {
         kit::ProjectSession session(bentNotes());
         PianoRoll roll(&session);
@@ -1639,8 +1643,8 @@ private Q_SLOTS:
         QCOMPARE(session.currentStep(), step);
     }
 
-    // A double click on a point removes it, while its note keeps two; beyond that the refusal is
-    // reported.
+    // A double click on a point removes it while its note has more than two. With two, the
+    // removal is refused and the refusal is reported.
     void a_double_click_removes_a_point() {
         kit::ProjectSession session(bentNotes());
         PianoRoll roll(&session);
@@ -1660,8 +1664,8 @@ private Q_SLOTS:
         QCOMPARE(refused.size(), 1);
     }
 
-    // A double click on the portamento inserts a point there; Delete removes the selected
-    // points, keeping two.
+    // A double click on the portamento inserts a point there. Delete removes the selected
+    // points and keeps two.
     void points_are_inserted_and_deleted() {
         kit::ProjectSession session(bentNotes());
         PianoRoll roll(&session);
@@ -1708,7 +1712,7 @@ private Q_SLOTS:
     }
 
     // With the pitch shown, a rectangle selects the points in it if there are any, and the
-    // notes otherwise; Ctrl adds to the selection.
+    // notes otherwise. Ctrl adds to the selection.
     void a_rectangle_selects_points_before_notes() {
         kit::ProjectSession session(bentNotes());
         PianoRoll roll(&session);
@@ -1742,8 +1746,8 @@ private Q_SLOTS:
         QCOMPARE(roll.selectedIndices(), QList<int>{0});
     }
 
-    // The default two points go to the selected notes without points; once all have points,
-    // the command removes them.
+    // The default two points go to the selected notes without points. If every selected note
+    // has points, the command removes them.
     void portamento_is_added_and_removed() {
         kit::ProjectSession session(bentNotes());
         PianoRoll roll(&session);
@@ -1766,8 +1770,8 @@ private Q_SLOTS:
         QCOMPARE(session.undoMessage(), PianoRoll::tr("Remove Portamento"));
     }
 
-    // The default vibrato goes to the selected sung notes without one; once all have one, the
-    // command removes them. Rests are left alone.
+    // The default vibrato goes to the selected sung notes without one. If every selected sung
+    // note has a vibrato, the command removes them. Rests are left alone.
     void vibrato_is_added_and_removed() {
         kit::ProjectSession session(threeNotes());
         PianoRoll roll(&session);
@@ -1790,7 +1794,7 @@ private Q_SLOTS:
     }
 
     // Each handle of the vibrato changes one value, rounded as UTAU shows it. With a pixel to a
-    // millisecond, the default vibrato of la spans 325 ms from 175 px to 500 px; its trapezoid
+    // millisecond, the default vibrato of la spans 325 ms from 175 px to 500 px. Its trapezoid
     // stands on y 300 and is 35 / 50 rows high, its fades end at 240 px and begin at 435 px, and
     // its period box spans 175 px to 355 px below it, down to y 312.
     void the_handles_of_a_vibrato_change_its_values() {
@@ -1860,8 +1864,8 @@ private Q_SLOTS:
         return session.snapshot().tracks[0].notes[1].envelope.value_or(kit::Envelope());
     }
 
-    // An anchor moves in time between its neighbors, the others staying where they are, and in
-    // volume; the right button sets its volume to 100%.
+    // An anchor moves in time between its neighbors, and in volume, the other anchors staying
+    // where they are. The right button sets the volume of the anchor to 100%.
     void an_envelope_is_edited_in_the_parameter_area() {
         const auto edited = [this](const std::function<void(PianoRoll &)> &edit) {
             kit::ProjectSession session(envelopedNote());
@@ -1884,7 +1888,7 @@ private Q_SLOTS:
             QTest::mouseRelease(viewport, Qt::LeftButton, {}, to);
         };
 
-        // The end of the attack, 20 ms later and 20% louder; p1 and p3 stay.
+        // The end of the attack, 20 ms later and 20% louder. p1 and p3 stay.
         auto anchors = edited([&](PianoRoll &roll) {
             drag(roll, envelopePoint(roll, 455, 100), envelopePoint(roll, 475, 120));
         });
@@ -1962,8 +1966,8 @@ private Q_SLOTS:
     }
 
     // A double click on the envelope between the attack and the release inserts the middle
-    // anchor, and one on an anchor removes it. Of four, the end of the attack at 5 ms gives way
-    // to one halfway between the start and the start of the release at 140 ms.
+    // anchor, and one on an anchor removes it. Of four, the end of the attack at 5 ms is replaced
+    // by one halfway between the start and the start of the release at 140 ms.
     void the_middle_anchor_is_inserted_and_removed() {
         kit::ProjectSession session(envelopedNote());
         PianoRoll roll(&session);
@@ -2091,8 +2095,8 @@ private Q_SLOTS:
         return project;
     }
 
-    // The parameters chosen of one copied note go to every selected note, of several to the
-    // selected notes in order; rests take none.
+    // The parameters chosen of one copied note go to every selected note, and those of several
+    // go to the selected notes in order. Rests take none.
     void parameters_are_copied_and_pasted() {
         kit::ProjectSession session(parameterSource());
         PianoRoll roll(&session);
@@ -2221,7 +2225,7 @@ private Q_SLOTS:
     }
 
     // A drag of the handle of a note sets the value of the lane shown on it, or on every
-    // selected note if it is selected; the right button removes the value.
+    // selected sung note if the dragged note is selected. The right button removes the value.
     void values_are_edited_in_the_parameter_area() {
         kit::ProjectSession session(parameterSource());
         PianoRoll roll(&session);
@@ -2265,7 +2269,7 @@ private Q_SLOTS:
         laneButton(roll, QStringLiteral("Vel"))->click();
         QCOMPARE(roll.lane(), PianoRoll::VelocityLane);
         roll.setSelectedIndices({});
-        // Above 100 each key is a value; below it, down to -100, each key is two (QSynthesis).
+        // Above 100 each key is a value. Below 100, down to -100, each key is two (QSynthesis).
         // valuePoint() takes the key here.
         drag(valuePoint(roll, 0, 100), valuePoint(roll, 0, 150));
         QVERIFY(qAbs(*notes()[0].velocity - 150) <= 2);
@@ -2424,7 +2428,7 @@ private Q_SLOTS:
     }
 
     // The distance from the portamento within which a double click inserts a point is a
-    // property that a style sheet sets; beyond it the double click edits the lyric.
+    // property that a style sheet sets. Beyond it the double click edits the lyric.
     void the_distance_to_the_portamento_is_a_property() {
         kit::ProjectSession session(bentNotes());
         PianoRoll roll(&session);
@@ -2475,7 +2479,7 @@ private Q_SLOTS:
         QCOMPARE(pointsOfLi(session).size(), 2);
     }
 
-    // Tab commits the lyric and edits the next note; Escape leaves the lyric as it was.
+    // Tab commits the lyric and edits the next note. Escape leaves the lyric as it was.
     void a_lyric_is_edited_in_place() {
         kit::ProjectSession session(threeNotes());
         PianoRoll roll(&session);

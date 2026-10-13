@@ -209,7 +209,7 @@ private Q_SLOTS:
         QCOMPARE(diagnostics.first().message, message);
     }
 
-    // Every portamento point counts from the start of the note and may precede it; only the
+    // Every portamento point counts from the start of the note and may precede it. Only the
     // order of the points is a constraint.
     void a_portamento_point_may_precede_the_note() {
         ProjectSession session(richProject());
