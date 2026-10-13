@@ -5,6 +5,7 @@
 #include <chrono>
 #include <cmath>
 #include <functional>
+#include <optional>
 #include <set>
 
 #include <QtCore/QCoreApplication>
@@ -222,7 +223,7 @@ namespace hello::daw {
         // The preview: the synthesis, kept between previews for the fragments it holds, the
         // stream it feeds, and the sample of the track file at which the stream began. The
         // stream refers to the synthesis and goes first.
-        std::unique_ptr<kit::RealtimeSynth> synth;
+        std::optional<kit::RealtimeSynth> synth;
         kit::SynthTools previewSynthTools;
         // The diagnosers of the failures, owned by the editor
         const kit::SynthDiagnosers *diagnosers = nullptr;
@@ -338,9 +339,11 @@ namespace hello::daw {
             if (!synth || previewSynthTools.resampler != synthTools.resampler ||
                 synthThreads != threadCount) {
                 endPreview();
-                synth = std::make_unique<kit::RealtimeSynth>(
-                    synthTools, threadCount,
-                    [log = outputLog] { return std::make_unique<kit::SynthToolProcess>(log); });
+                // emplace() destroys the previous synth, which kills its synth tool calls, before
+                // the new synth is made.
+                synth.emplace(synthTools, threadCount, [log = outputLog] {
+                    return std::make_unique<kit::SynthToolProcess>(log);
+                });
                 previewSynthTools = synthTools;
                 synthThreads = threadCount;
             }
@@ -432,7 +435,7 @@ namespace hello::daw {
             // On the thread of the stream: waits briefly for the notes of the next block, and
             // otherwise gives nothing, so that the device plays silence while they are rendered.
             const auto at = std::make_shared<std::atomic<qint64>>(start);
-            auto generator = [synth = synth.get(), at](float *out, qsizetype frames) -> qsizetype {
+            auto generator = [synth = &*synth, at](float *out, qsizetype frames) -> qsizetype {
                 const qint64 from = at->load();
                 const qint64 count = std::min<qint64>(frames, synth->length() - from);
                 if (count <= 0) {
