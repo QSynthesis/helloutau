@@ -97,7 +97,7 @@ namespace hello::kit {
         /// Returns the scripts generated from \a plan and \a synth tools for the selected shell,
         /// without writing or executing anything.
         ///
-        /// Used by the tests, and for showing the user the exact script to be executed.
+        /// Used by the tests, and for showing the user the exact scripts to be executed.
         ///
         /// \return the contents of the selected script and helper files, or \c std::nullopt if a
         ///         value cannot be written safely, with the reason in \a diagnostics

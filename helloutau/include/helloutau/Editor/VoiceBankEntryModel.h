@@ -118,8 +118,8 @@ namespace hello::daw {
         Qt::ItemFlags flags(const QModelIndex &index) const override;
 
         /// Edits the entry of the row of \a index, see setEntry(). A value is read as a number
-        /// in the C locale, as \c oto.ini writes it. Emits editRejected() if the edit layer
-        /// rejects the change.
+        /// in the C locale, as \c oto.ini writes it. Emits editRejected() if the value is not a
+        /// number or the edit layer rejects the change.
         bool setData(const QModelIndex &index, const QVariant &value,
                      int role = Qt::EditRole) override;
 
