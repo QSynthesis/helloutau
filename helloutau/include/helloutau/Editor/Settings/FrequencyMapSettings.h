@@ -32,6 +32,21 @@ namespace hello::daw {
         Regeneration regeneration() const;
         void setRegeneration(Regeneration regeneration);
 
+        /// Whether the runs held in the log of the generation and its size limit are those of the
+        /// render log, the default, rather than isLogAccumulated() and logLimit().
+        bool followsRenderLog() const;
+        void setFollowsRenderLog(bool follows);
+
+        /// Whether the log of the generation holds every run rather than the latest, unless
+        /// followsRenderLog(). Every run by default.
+        bool isLogAccumulated() const;
+        void setLogAccumulated(bool accumulated);
+
+        /// The size limit of the log of the generation in bytes, unless followsRenderLog(). The
+        /// default is 1 MiB.
+        int logLimit() const;
+        void setLogLimit(int bytes);
+
     private:
         explicit FrequencyMapSettings(AppSettingsStore &store);
 

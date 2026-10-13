@@ -1,11 +1,13 @@
 #include "SettingPageWidgets_p.h"
 
 #include <algorithm>
+#include <cmath>
 #include <limits>
 #include <thread>
 
 #include <QtCore/QCoreApplication>
 #include <QtCore/QDir>
+#include <QtCore/QRegularExpression>
 #include <QtGui/QIntValidator>
 #include <QtWidgets/QComboBox>
 #include <QtWidgets/QFileDialog>
@@ -84,4 +86,67 @@ namespace hello::daw {
         }
         return count;
     }
+
+    QComboBox *createLogModeBox(bool accumulated) {
+        auto box = new QComboBox();
+        box->addItem(QCoreApplication::translate("hello::daw::SettingPageWidgets",
+                                                 "Keep the latest run only"),
+                     false);
+        box->addItem(
+            QCoreApplication::translate("hello::daw::SettingPageWidgets", "Accumulate runs"), true);
+        box->setCurrentIndex(box->findData(accumulated));
+        return box;
+    }
+
+    QComboBox *createLogLimitBox(int bytes) {
+        auto box = new QComboBox();
+        box->setEditable(true);
+        box->setInsertPolicy(QComboBox::InsertAtBottom);
+        const QList<QPair<QString, int>> limits{
+            {QStringLiteral("256 KiB"), 256 * 1024      },
+            {QStringLiteral("1 MiB"),   1024 * 1024     },
+            {QStringLiteral("4 MiB"),   4 * 1024 * 1024 },
+            {QStringLiteral("16 MiB"),  16 * 1024 * 1024}
+        };
+        for (const auto &[label, size] : limits) {
+            box->addItem(label, size);
+        }
+        if (const int index = box->findData(bytes); index >= 0) {
+            box->setCurrentIndex(index);
+        } else {
+            box->setEditText(QString::number(bytes));
+        }
+        return box;
+    }
+
+    std::optional<int> logLimitOf(const QComboBox *box) {
+        const auto text = box->currentText();
+        if (const int index = box->findText(text, Qt::MatchExactly);
+            index >= 0 && box->itemData(index).isValid()) {
+            return box->itemData(index).toInt();
+        }
+        static const QRegularExpression pattern(
+            QStringLiteral(R"(^\s*(\d+(?:\.\d+)?)\s*(B|KiB|MiB|GiB)?\s*$)"),
+            QRegularExpression::CaseInsensitiveOption);
+        const auto match = pattern.match(text);
+        if (!match.hasMatch()) {
+            return std::nullopt;
+        }
+        bool ok = false;
+        const double number = match.captured(1).toDouble(&ok);
+        if (!ok) {
+            return std::nullopt;
+        }
+        const auto suffix = match.captured(2).toLower();
+        const double multiplier = suffix == QLatin1String("kib")   ? 1024.0
+                                  : suffix == QLatin1String("mib") ? 1024.0 * 1024
+                                  : suffix == QLatin1String("gib") ? 1024.0 * 1024 * 1024
+                                                                   : 1.0;
+        const double size = number * multiplier;
+        if (size < 1024 || size > 1024.0 * 1024 * 1024 || size != std::floor(size)) {
+            return std::nullopt;
+        }
+        return int(size);
+    }
+
 }

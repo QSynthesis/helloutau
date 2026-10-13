@@ -278,6 +278,10 @@
         <translation>删除全部频率表(&amp;D)...</translation>
     </message>
     <message>
+        <source>View Frequency Map &amp;Log...</source>
+        <translation>查看频率表日志(&amp;L)...</translation>
+    </message>
+    <message>
         <source>Pitch</source>
         <translation>音高</translation>
     </message>
@@ -954,6 +958,26 @@
         <translation>分析缓存保存音频文件的频率，重采样器读取它而不读取频率表。只删除缓存时，重采样器按频率表重新写出缓存，例如频率表在别处编辑之后。没有缓存的格式删除频率表。</translation>
     </message>
     <message>
+        <source>Generation Log</source>
+        <translation>生成日志</translation>
+    </message>
+    <message>
+        <source>&amp;Use the settings of the render log</source>
+        <translation>沿用渲染日志的设置(&amp;U)</translation>
+    </message>
+    <message>
+        <source>Generation &amp;log:</source>
+        <translation>生成日志(&amp;L)：</translation>
+    </message>
+    <message>
+        <source>Generation log si&amp;ze:</source>
+        <translation>生成日志大小(&amp;Z)：</translation>
+    </message>
+    <message>
+        <source>The output of the resampler during a generation, shown by Tools &gt; View Frequency Map Log in the voice bank window. The render log is set on the page Audio Rendering.</source>
+        <translation>生成频率表时重采样器的输出，在音源窗口中以「工具 &gt; 查看频率表日志」查看。渲染日志在「音频渲染」页中设置。</translation>
+    </message>
+    <message>
         <source>Analysis Caches</source>
         <translation>分析缓存</translation>
     </message>
@@ -964,6 +988,10 @@
     <message>
         <source>The file names are those of the audio file a.wav. Removing or regenerating the frequency maps of a format removes these files beside the audio files.</source>
         <translation>文件名以音频文件 a.wav 为例。删除或重新生成某格式的频率表时，删除音频文件旁边的这些文件。</translation>
+    </message>
+    <message>
+        <source>The generation log size must be between 1024 bytes and 1 GiB.</source>
+        <translation>生成日志大小必须在 1024 字节至 1 GiB 之间。</translation>
     </message>
     <message>
         <source>Format</source>
@@ -1193,6 +1221,13 @@
     <message>
         <source>No audio</source>
         <translation>无音频</translation>
+    </message>
+</context>
+<context>
+    <name>hello::daw::OutputLogDialog</name>
+    <message>
+        <source>Clear</source>
+        <translation>清除</translation>
     </message>
 </context>
 <context>
@@ -1833,10 +1868,6 @@
         </translation>
     </message>
     <message>
-        <source>Clear</source>
-        <translation>清除</translation>
-    </message>
-    <message>
         <source>Preparing notes (%1/%2)</source>
         <translation>正在准备音符（%1/%2）</translation>
     </message>
@@ -2135,14 +2166,6 @@
         <translation>渲染线程数(&amp;T)：</translation>
     </message>
     <message>
-        <source>Keep the latest run only</source>
-        <translation>仅保留最近一次运行</translation>
-    </message>
-    <message>
-        <source>Accumulate runs</source>
-        <translation>累计运行记录</translation>
-    </message>
-    <message>
         <source>Render &amp;log:</source>
         <translation>渲染日志：</translation>
     </message>
@@ -2252,6 +2275,14 @@
     <message>
         <source>Automatic (%1)</source>
         <translation>自动（%1）</translation>
+    </message>
+    <message>
+        <source>Keep the latest run only</source>
+        <translation>仅保留最近一次运行</translation>
+    </message>
+    <message>
+        <source>Accumulate runs</source>
+        <translation>累计运行记录</translation>
     </message>
 </context>
 <context>
@@ -3233,6 +3264,10 @@ Lyrics:
     <message>
         <source>Open Voice Bank</source>
         <translation>打开音源</translation>
+    </message>
+    <message>
+        <source>Frequency Map Log</source>
+        <translation>频率表日志</translation>
     </message>
     <message>
         <source>Open</source>

@@ -33,7 +33,6 @@
 #include <QtWidgets/QProgressBar>
 #include <QtWidgets/QProgressDialog>
 #include <QtWidgets/QPushButton>
-#include <QtWidgets/QPlainTextEdit>
 #include <QtWidgets/QDialogButtonBox>
 #include <QtWidgets/QFormLayout>
 #include <QtWidgets/QScrollBar>
@@ -81,6 +80,7 @@
 #include "FindSupport_p.h"
 #include "PianoRoll.h"
 #include "NotePropertiesDialog.h"
+#include "OutputLogDialog.h"
 #include "ProjectPropertiesDialog.h"
 #include "Playback.h"
 #include "PasteParametersDialog.h"
@@ -696,25 +696,7 @@ namespace hello::daw {
 
         void showRenderLog() {
             stdc_decl_t;
-            QDialog dialog(&decl);
-            dialog.setWindowTitle(tr("Render Log"));
-            dialog.resize(720, 480);
-            auto layout = new QVBoxLayout(&dialog);
-            auto text = new QPlainTextEdit(&dialog);
-            text->setReadOnly(true);
-            text->setLineWrapMode(QPlainTextEdit::NoWrap);
-            text->setPlainText(renderLog->text());
-            text->moveCursor(QTextCursor::End);
-            text->verticalScrollBar()->setValue(text->verticalScrollBar()->maximum());
-            layout->addWidget(text);
-            auto buttons = new QDialogButtonBox(QDialogButtonBox::Close, &dialog);
-            auto clear = buttons->addButton(tr("Clear"), QDialogButtonBox::DestructiveRole);
-            QObject::connect(clear, &QPushButton::clicked, &dialog, [this, text] {
-                renderLog->clear();
-                text->clear();
-            });
-            QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
-            layout->addWidget(buttons);
+            OutputLogDialog dialog(renderLog, tr("Render Log"), &decl);
             dialog.exec();
         }
 

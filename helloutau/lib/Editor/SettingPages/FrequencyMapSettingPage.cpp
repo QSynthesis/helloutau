@@ -1,5 +1,6 @@
 #include "FrequencyMapSettingPage.h"
 
+#include <QtWidgets/QCheckBox>
 #include <QtWidgets/QComboBox>
 #include <QtWidgets/QFormLayout>
 #include <QtWidgets/QGroupBox>
@@ -52,6 +53,27 @@ namespace hello::daw {
                     "maps were edited elsewhere. Without caches, the maps are removed.")));
         layout->addWidget(generationGroup);
 
+        auto logGroup = new QGroupBox(tr("Generation Log"), widget);
+        auto logForm = new QFormLayout(logGroup);
+        const auto &maps = m_settings.frequencyMaps();
+        m_followRenderLog = new QCheckBox(tr("&Use the settings of the render log"));
+        m_followRenderLog->setChecked(maps.followsRenderLog());
+        logForm->addRow(m_followRenderLog);
+        m_logMode = createLogModeBox(maps.isLogAccumulated());
+        logForm->addRow(tr("Generation &log:"), m_logMode);
+        m_logLimit = createLogLimitBox(maps.logLimit());
+        logForm->addRow(tr("Generation log si&ze:"), m_logLimit);
+        logForm->addRow(note(tr("The output of the resampler during a generation, shown by Tools "
+                                "> View Frequency Map Log in the voice bank window. The render "
+                                "log is set on the page Audio Rendering.")));
+        const auto updateLog = [this] {
+            const bool own = !m_followRenderLog->isChecked();
+            m_logMode->setEnabled(own);
+            m_logLimit->setEnabled(own);
+        };
+        updateLog();
+        layout->addWidget(logGroup);
+
         auto cachesGroup = new QGroupBox(tr("Analysis Caches"), widget);
         auto cachesLayout = new QVBoxLayout(cachesGroup);
         m_caches = new QTreeWidget();
@@ -71,6 +93,11 @@ namespace hello::daw {
         connect(m_threads, &QComboBox::currentTextChanged, this, &SettingPage::modifiedChanged);
         connect(m_regeneration, &QComboBox::currentIndexChanged, this,
                 &SettingPage::modifiedChanged);
+        connect(m_followRenderLog, &QCheckBox::toggled, this, updateLog);
+        connect(m_followRenderLog, &QCheckBox::toggled, this, &SettingPage::modifiedChanged);
+        connect(m_logMode, &QComboBox::currentIndexChanged, this, &SettingPage::modifiedChanged);
+        connect(m_logLimit, &QComboBox::editTextChanged, this, &SettingPage::modifiedChanged);
+        connect(m_logLimit, &QComboBox::currentTextChanged, this, &SettingPage::modifiedChanged);
         return widget;
     }
 
@@ -98,11 +125,15 @@ namespace hello::daw {
     }
 
     bool FrequencyMapSettingPage::isModified() const {
-        if (!m_threads || !m_regeneration) {
+        if (!m_threads || !m_regeneration || !m_followRenderLog) {
             return false;
         }
-        return threadCountOf(m_threads) != m_settings.frequencyMaps().threadCount() ||
-               m_regeneration->currentData().toInt() != m_settings.frequencyMaps().regeneration();
+        const auto &maps = m_settings.frequencyMaps();
+        return threadCountOf(m_threads) != maps.threadCount() ||
+               m_regeneration->currentData().toInt() != maps.regeneration() ||
+               m_followRenderLog->isChecked() != maps.followsRenderLog() ||
+               m_logMode->currentData().toBool() != maps.isLogAccumulated() ||
+               logLimitOf(m_logLimit) != maps.logLimit();
     }
 
     bool FrequencyMapSettingPage::apply(QString *error) {
@@ -114,9 +145,20 @@ namespace hello::daw {
             }
             return false;
         }
-        m_settings.frequencyMaps().setThreadCount(*threads);
-        m_settings.frequencyMaps().setRegeneration(
+        const auto logLimit = logLimitOf(m_logLimit);
+        if (!logLimit) {
+            if (error) {
+                *error = tr("The generation log size must be between 1024 bytes and 1 GiB.");
+            }
+            return false;
+        }
+        auto &maps = m_settings.frequencyMaps();
+        maps.setThreadCount(*threads);
+        maps.setRegeneration(
             FrequencyMapSettings::Regeneration(m_regeneration->currentData().toInt()));
+        maps.setFollowsRenderLog(m_followRenderLog->isChecked());
+        maps.setLogAccumulated(m_logMode->currentData().toBool());
+        maps.setLogLimit(*logLimit);
         Q_EMIT modifiedChanged();
         return true;
     }
@@ -127,6 +169,18 @@ namespace hello::daw {
 
     QComboBox *FrequencyMapSettingPage::regenerationBox() const {
         return m_regeneration;
+    }
+
+    QCheckBox *FrequencyMapSettingPage::followRenderLogBox() const {
+        return m_followRenderLog;
+    }
+
+    QComboBox *FrequencyMapSettingPage::logModeBox() const {
+        return m_logMode;
+    }
+
+    QComboBox *FrequencyMapSettingPage::logLimitBox() const {
+        return m_logLimit;
     }
 
     QTreeWidget *FrequencyMapSettingPage::cacheList() const {

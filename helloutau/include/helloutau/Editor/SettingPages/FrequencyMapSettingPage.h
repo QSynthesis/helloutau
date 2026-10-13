@@ -7,6 +7,7 @@
 
 #include <helloutau/Editor/HelloUtauEditorGlobal.h>
 
+class QCheckBox;
 class QComboBox;
 class QTreeWidget;
 
@@ -19,8 +20,9 @@ namespace hello::daw {
     class AppSettings;
 
     /// The generation of frequency maps in a voice bank window: the number of threads, what
-    /// generating the maps again removes first, and the analysis caches of each registered
-    /// format, as the format declares them. See the generation in docs/FrequencyMaps.md.
+    /// generating the maps again removes first, the log of the output of the resampler, and the
+    /// analysis caches of each registered format, as the format declares them. See the
+    /// generation in docs/FrequencyMaps.md.
     class HELLOUTAU_EDITOR_EXPORT FrequencyMapSettingPage : public SettingPage {
         Q_OBJECT
     public:
@@ -35,7 +37,13 @@ namespace hello::daw {
         QComboBox *threadCountBox() const;
         QComboBox *regenerationBox() const;
 
-        /// The analysis caches of the formats, one row per format.
+        /// The box that makes the log of the generation follow the render log, and the boxes
+        /// of its own runs and size, which are disabled while it is checked.
+        QCheckBox *followRenderLogBox() const;
+        QComboBox *logModeBox() const;
+        QComboBox *logLimitBox() const;
+
+        /// The analysis caches of the formats, one row per cache.
         QTreeWidget *cacheList() const;
 
     protected:
@@ -48,6 +56,9 @@ namespace hello::daw {
         const kit::FrequencyFormats &m_formats;
         QPointer<QComboBox> m_threads;
         QPointer<QComboBox> m_regeneration;
+        QPointer<QCheckBox> m_followRenderLog;
+        QPointer<QComboBox> m_logMode;
+        QPointer<QComboBox> m_logLimit;
         QPointer<QTreeWidget> m_caches;
     };
 

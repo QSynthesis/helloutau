@@ -138,6 +138,9 @@
                 text="&amp;Regenerate All Frequency Maps..." category="Tools" />
         <action id="helloutau.voiceBank.removeAllMaps" text="&amp;Delete All Frequency Maps..."
                 category="Tools" />
+        <!-- The output of the resampler during the generations of the window -->
+        <action id="helloutau.voiceBank.viewFrequencyMapLog" text="View Frequency Map &amp;Log..."
+                category="Tools" />
 
         <!-- The boxes of the sample tool bar: the pitch and the length of the synthesized note,
              and the format of the frequency map drawn -->
@@ -213,6 +216,7 @@
                 <action id="helloutau.voiceBank.regenerateSelectedMaps" />
                 <action id="helloutau.voiceBank.regenerateAllMaps" />
                 <action id="helloutau.voiceBank.removeAllMaps" />
+                <action id="helloutau.voiceBank.viewFrequencyMapLog" />
                 <separator />
                 <action id="helloutau.voiceBank.removeMetadata" />
                 <separator />

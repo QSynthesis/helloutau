@@ -53,6 +53,7 @@
 #include <hellokit/Synth/FrequencyMapGenerator.h>
 #include <hellokit/Synth/Spectrogram.h>
 #include <hellokit/Synth/SynthDiagnosers.h>
+#include <hellokit/Synth/SynthToolProcess.h>
 #include <hellokit/Synth/WaveAudio.h>
 #include <hellokit/VoiceBank/FrequencyFormats.h>
 #include <hellokit/VoiceBank/VoiceAliasRule.h>
@@ -72,6 +73,7 @@
 #include "Editor.h"
 #include "FindSupport_p.h"
 #include "OtoWaveformView.h"
+#include "OutputLogDialog.h"
 #include "SamplePreview.h"
 #include "VoiceBankDecodingDialog.h"
 #include "VoiceBankEntryModel.h"
@@ -209,6 +211,10 @@ namespace hello::daw {
         std::pair<std::filesystem::path, QString> frequencyShown;
         std::shared_ptr<const kit::Spectrogram> spectrum;
         std::shared_ptr<const kit::WaveAudio> spectrumOf;
+        // The output of the resampler during the generations of frequency maps, which the
+        // process of the generator writes
+        std::shared_ptr<kit::SynthToolOutputLog> generationLog =
+            std::make_shared<kit::SynthToolOutputLog>();
         kit::FrequencyMapGenerator generator;
         QTimer *playheadTimer = nullptr;
         // The folder and alias whose pitch the synthesized note has by default
@@ -403,6 +409,11 @@ namespace hello::daw {
             addCommand(QStringLiteral("helloutau.voiceBank.removeAllMaps"), [this] {
                 stdc_decl_t;
                 decl.removeFrequencyMaps();
+            });
+            addCommand(QStringLiteral("helloutau.voiceBank.viewFrequencyMapLog"), [this] {
+                stdc_decl_t;
+                OutputLogDialog dialog(generationLog, tr("Frequency Map Log"), &decl);
+                dialog.exec();
             });
             addCommand(QStringLiteral("helloutau.voiceBank.removeMetadata"), [this] {
                 stdc_decl_t;
@@ -1560,6 +1571,7 @@ namespace hello::daw {
             kit::FrequencyMapGenerator::Outcome outcome;
             generator.threadCount = editor->settings().frequencyMaps().threadCount();
             generator.everyFile = cachesOnly;
+            applyLogSettings();
             QEventLoop loop;
             const auto worker = QThread::create([&] {
                 outcome = generator.generate(
@@ -1588,6 +1600,20 @@ namespace hello::daw {
                            : tr("%n frequency map(s) generated.", nullptr, outcome.generated));
             reportGeneration(title, format, resampler, diagnostics, outcome.failures);
             return !cancelled.load() && diagnostics.isEmpty();
+        }
+
+        // Sets the runs held in the log and its size limit, those of the render log unless the
+        // settings of the frequency maps specify their own. Applied as a generation starts, so
+        // that the first output of the run empties a log of the latest run only.
+        void applyLogSettings() {
+            const auto &maps = editor->settings().frequencyMaps();
+            const auto &rendering = editor->settings().rendering();
+            const bool follows = maps.followsRenderLog();
+            const bool accumulated =
+                follows ? rendering.isLogAccumulated() : maps.isLogAccumulated();
+            generationLog->setMode(accumulated ? kit::SynthToolOutputLog::Accumulated
+                                               : kit::SynthToolOutputLog::Latest);
+            generationLog->setLimit(follows ? rendering.logLimit() : maps.logLimit());
         }
 
         // Shows the probable causes of the failed resampler calls of a generation above the
@@ -2002,6 +2028,7 @@ namespace hello::daw {
         : _impl(std::make_unique<Impl>(this, editor)) {
         stdc_impl_t;
         impl.document = std::move(document);
+        impl.generator.process = std::make_shared<kit::SynthToolProcess>(impl.generationLog);
         impl.initActions();
         impl.initWidgets();
         impl.initTableEditing();
@@ -2661,6 +2688,11 @@ namespace hello::daw {
     kit::FrequencyMapGenerator &VoiceBankWindow::frequencyMapGenerator() {
         stdc_impl_t;
         return impl.generator;
+    }
+
+    std::shared_ptr<kit::SynthToolOutputLog> VoiceBankWindow::frequencyMapLog() const {
+        stdc_impl_t;
+        return impl.generationLog;
     }
 
     std::optional<int> VoiceBankWindow::removeAudioMetadata() {

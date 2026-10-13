@@ -1,9 +1,6 @@
 #include "RenderingSettingPage.h"
 
-#include <cmath>
-
 #include <QtCore/QDir>
-#include <QtCore/QRegularExpression>
 #include <QtWidgets/QComboBox>
 #include <QtWidgets/QFormLayout>
 #include <QtWidgets/QGroupBox>
@@ -15,35 +12,6 @@
 #include "SettingPageWidgets_p.h"
 
 namespace hello::daw {
-
-    namespace {
-
-        std::optional<int> renderLogBytes(const QString &text) {
-            static const QRegularExpression pattern(
-                QStringLiteral(R"(^\s*(\d+(?:\.\d+)?)\s*(B|KiB|MiB|GiB)?\s*$)"),
-                QRegularExpression::CaseInsensitiveOption);
-            const auto match = pattern.match(text);
-            if (!match.hasMatch()) {
-                return std::nullopt;
-            }
-            bool ok = false;
-            const double number = match.captured(1).toDouble(&ok);
-            if (!ok) {
-                return std::nullopt;
-            }
-            const auto suffix = match.captured(2).toLower();
-            const double multiplier = suffix == QLatin1String("kib")   ? 1024.0
-                                      : suffix == QLatin1String("mib") ? 1024.0 * 1024
-                                      : suffix == QLatin1String("gib") ? 1024.0 * 1024 * 1024
-                                                                       : 1.0;
-            const double bytes = number * multiplier;
-            if (bytes < 1024 || bytes > 1024.0 * 1024 * 1024 || bytes != std::floor(bytes)) {
-                return std::nullopt;
-            }
-            return int(bytes);
-        }
-
-    }
 
     RenderingSettingPage::RenderingSettingPage(AppSettings &settings, QObject *parent)
         : SettingPage(QLatin1String(pageId), parent), m_settings(settings) {
@@ -98,31 +66,9 @@ namespace hello::daw {
         layout->addWidget(playbackGroup);
         auto logGroup = new QGroupBox(tr("Render Log"), widget);
         auto logForm = new QFormLayout(logGroup);
-        m_renderLogMode = new QComboBox();
-        m_renderLogMode->addItem(tr("Keep the latest run only"), false);
-        m_renderLogMode->addItem(tr("Accumulate runs"), true);
-        m_renderLogMode->setCurrentIndex(
-            m_renderLogMode->findData(m_settings.rendering().isLogAccumulated()));
+        m_renderLogMode = createLogModeBox(m_settings.rendering().isLogAccumulated());
         logForm->addRow(tr("Render &log:"), m_renderLogMode);
-
-        m_renderLogLimit = new QComboBox();
-        m_renderLogLimit->setEditable(true);
-        m_renderLogLimit->setInsertPolicy(QComboBox::InsertAtBottom);
-        const QList<QPair<QString, int>> limits{
-            {QStringLiteral("256 KiB"), 256 * 1024      },
-            {QStringLiteral("1 MiB"),   1024 * 1024     },
-            {QStringLiteral("4 MiB"),   4 * 1024 * 1024 },
-            {QStringLiteral("16 MiB"),  16 * 1024 * 1024}
-        };
-        for (const auto &[label, bytes] : limits) {
-            m_renderLogLimit->addItem(label, bytes);
-        }
-        const int logLimit = m_settings.rendering().logLimit();
-        if (const int index = m_renderLogLimit->findData(logLimit); index >= 0) {
-            m_renderLogLimit->setCurrentIndex(index);
-        } else {
-            m_renderLogLimit->setEditText(QString::number(logLimit));
-        }
+        m_renderLogLimit = createLogLimitBox(m_settings.rendering().logLimit());
         logForm->addRow(tr("Render log &size:"), m_renderLogLimit);
         logForm->addRow(note(tr("Captured output is shared by realtime and threaded rendering. "
                                 "Enter a number with B, KiB, MiB or GiB, or choose a preset.")));
@@ -148,12 +94,7 @@ namespace hello::daw {
     }
 
     std::optional<int> RenderingSettingPage::renderLogLimit() const {
-        const int index =
-            m_renderLogLimit->findText(m_renderLogLimit->currentText(), Qt::MatchExactly);
-        if (index >= 0 && m_renderLogLimit->itemData(index).isValid()) {
-            return m_renderLogLimit->itemData(index).toInt();
-        }
-        return renderLogBytes(m_renderLogLimit->currentText());
+        return logLimitOf(m_renderLogLimit);
     }
 
     bool RenderingSettingPage::isModified() const {

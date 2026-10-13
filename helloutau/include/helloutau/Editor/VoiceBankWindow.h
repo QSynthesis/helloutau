@@ -23,6 +23,7 @@ namespace QAK {
 
 namespace hello::kit {
     class FrequencyMapGenerator;
+    class SynthToolOutputLog;
     class VoiceBankDocument;
 }
 
@@ -213,6 +214,10 @@ namespace hello::daw {
 
         /// The generator of generateFrequencyMaps(), whose process a test replaces.
         kit::FrequencyMapGenerator &frequencyMapGenerator();
+
+        /// The log of the output of the resampler during the generations, which the process of
+        /// the generator writes. A generation sets its runs and size from the settings.
+        std::shared_ptr<kit::SynthToolOutputLog> frequencyMapLog() const;
 
         /// Lists the audio files of the folders that contain metadata, see kit::WaveMetadata, in
         /// a message box in which the user confirms writing them again without it. The files are

@@ -13,6 +13,9 @@ namespace hello::daw {
         constexpr char KeyThreads[] = "frequencyMaps/threads";
         constexpr char KeyRegeneration[] = "frequencyMaps/regeneration";
         constexpr char CachesOnlyValue[] = "cachesOnly";
+        constexpr char KeyFollowsRenderLog[] = "frequencyMaps/log/followsRenderLog";
+        constexpr char KeyLogAccumulated[] = "frequencyMaps/log/accumulated";
+        constexpr char KeyLogLimit[] = "frequencyMaps/log/limit";
 
     }
 
@@ -39,6 +42,30 @@ namespace hello::daw {
         m_store.setValue(KeyRegeneration, regeneration == CachesOnly
                                               ? json::Value(std::string(CachesOnlyValue))
                                               : json::Value());
+    }
+
+    bool FrequencyMapSettings::followsRenderLog() const {
+        return m_store.value(KeyFollowsRenderLog).toBool(true);
+    }
+
+    void FrequencyMapSettings::setFollowsRenderLog(bool follows) {
+        m_store.setValue(KeyFollowsRenderLog, follows ? json::Value() : json::Value(false));
+    }
+
+    bool FrequencyMapSettings::isLogAccumulated() const {
+        return m_store.value(KeyLogAccumulated).toBool(true);
+    }
+
+    void FrequencyMapSettings::setLogAccumulated(bool accumulated) {
+        m_store.setValue(KeyLogAccumulated, accumulated);
+    }
+
+    int FrequencyMapSettings::logLimit() const {
+        return std::max(1024, int(m_store.value(KeyLogLimit).toInt(1024 * 1024)));
+    }
+
+    void FrequencyMapSettings::setLogLimit(int bytes) {
+        m_store.setValue(KeyLogLimit, int64_t(std::max(1024, bytes)));
     }
 
 }
