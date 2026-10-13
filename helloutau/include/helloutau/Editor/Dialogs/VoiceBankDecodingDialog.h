@@ -110,7 +110,9 @@ namespace hello::daw {
 
         /// Returns whether candidate \a charset is gray, reading the current folder with invalid
         /// bytes.
-        bool isGrey(const QString &charset) const;
+        ///
+        /// TODO: as in UstDecodingDialog::isGray(), consider isDecodable() instead.
+        bool isGray(const QString &charset) const;
 
         /// The titles of the tabs: a tab per text file, and a tab for the file names if the
         /// current folder has file names to determine.

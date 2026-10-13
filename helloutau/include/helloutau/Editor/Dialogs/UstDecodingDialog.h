@@ -44,7 +44,10 @@ namespace hello::daw {
         QString previewText() const;
 
         /// Returns whether candidate \a charset is gray, unable to read the text of the file.
-        bool isGrey(const QString &charset) const;
+        ///
+        /// TODO: the name describes the appearance rather than the reason. Consider renaming it to
+        /// something like isDecodable(), which states what a caller asks.
+        bool isGray(const QString &charset) const;
 
     private:
         const kit::UstDocument *m_ust = nullptr;

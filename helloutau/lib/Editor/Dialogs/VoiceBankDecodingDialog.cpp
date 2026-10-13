@@ -467,7 +467,7 @@ namespace hello::daw {
         return item ? item->text() : QString();
     }
 
-    bool VoiceBankDecodingDialog::isGrey(const QString &charset) const {
+    bool VoiceBankDecodingDialog::isGray(const QString &charset) const {
         const auto items = m_charsets->findItems(charset, Qt::MatchExactly);
         return !items.isEmpty() && items.first()->foreground().style() != Qt::NoBrush;
     }

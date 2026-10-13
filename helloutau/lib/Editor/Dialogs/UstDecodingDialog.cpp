@@ -96,7 +96,7 @@ namespace hello::daw {
         updatePreview();
     }
 
-    bool UstDecodingDialog::isGrey(const QString &charset) const {
+    bool UstDecodingDialog::isGray(const QString &charset) const {
         const auto items = m_charsets->findItems(charset, Qt::MatchExactly);
         return !items.isEmpty() && items.first()->foreground().style() != Qt::NoBrush;
     }

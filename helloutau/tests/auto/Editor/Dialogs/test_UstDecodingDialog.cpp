@@ -57,9 +57,9 @@ private Q_SLOTS:
         UstDecodingDialog dialog;
         dialog.setDocument(*ust, "song.ust");
         QCOMPARE(dialog.selectedCharset(), QStringLiteral("Shift_JIS"));
-        QVERIFY(!dialog.isGrey(QStringLiteral("Shift_JIS")));
-        QVERIFY(dialog.isGrey(QStringLiteral("GBK")));
-        QVERIFY(dialog.isGrey(QStringLiteral("UTF-8")));
+        QVERIFY(!dialog.isGray(QStringLiteral("Shift_JIS")));
+        QVERIFY(dialog.isGray(QStringLiteral("GBK")));
+        QVERIFY(dialog.isGray(QStringLiteral("UTF-8")));
     }
 
     void the_export_encodings_start_with_utf8() {

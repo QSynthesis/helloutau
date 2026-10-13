@@ -73,8 +73,8 @@ private Q_SLOTS:
         QCOMPARE(dialog.charsetOf(0), QStringLiteral("Shift_JIS"));
         QCOMPARE(dialog.charsetOf(1), QStringLiteral("GBK"));
         QCOMPARE(dialog.currentFolder(), 0);
-        QVERIFY(dialog.isGrey(QStringLiteral("GBK")));
-        QVERIFY(!dialog.isGrey(QStringLiteral("Shift_JIS")));
+        QVERIFY(dialog.isGray(QStringLiteral("GBK")));
+        QVERIFY(!dialog.isGray(QStringLiteral("Shift_JIS")));
 
         // For every folder selected, all at first
         dialog.setSelectedCharset(QStringLiteral("UTF-8"));
@@ -138,7 +138,7 @@ private Q_SLOTS:
         QCOMPARE(dialog.charsetOf(1), QStringLiteral("GBK"));
         QVERIFY(dialog.changedFolders().isEmpty());
         // An encoding outside the candidates is listed for the folder read in it.
-        QVERIFY(dialog.isGrey(QStringLiteral("EUC-KR")));
+        QVERIFY(dialog.isGray(QStringLiteral("EUC-KR")));
 
         dialog.selectFolders({0});
         dialog.setCurrentFolder(0);
