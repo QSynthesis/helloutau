@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <iterator>
 #include <memory>
+#include <optional>
 #include <set>
 #include <utility>
 
@@ -169,14 +170,14 @@ namespace hello::daw {
             updateChecker =
                 new UpdateChecker(*settings, UpdateChecker::ManifestFile::defaultFileName(), decl);
             updateChecker->setCloseWindows([decl] { return decl->closeAll(); });
-            addEditorSettingPages(catalog, *settings, *updateChecker, *frequencyFormats);
-            pages = std::make_unique<Pages>(
-                *pageRegistry, [this](Pages::Item &item) { return pageAdded(item); },
+            addEditorSettingPages(catalog, *settings, *updateChecker, frequencyFormats);
+            pages.emplace(
+                pageRegistry, [this](Pages::Item &item) { return pageAdded(item); },
                 [this](Pages::Item &item) { pageRemoved(item); });
             // The registry of the contributions is empty at this point. The extensions of the
             // editor itself are a contribution too, see BuiltinActions.
-            contributions = std::make_unique<Contributions>(
-                *contributionRegistry,
+            contributions.emplace(
+                contributionRegistry,
                 [this](Contributions::Item &item) {
                     if (!item.instance) {
                         return false;
@@ -300,25 +301,22 @@ namespace hello::daw {
         UpdateChecker *updateChecker = nullptr;
         Editor *editor = nullptr;
         // The instances are declared after their registries, so that they are destroyed first.
-        std::unique_ptr<ActionContributionRegistry> contributionRegistry =
-            std::make_unique<ActionContributionRegistry>();
-        std::unique_ptr<Contributions> contributions;
-        std::unique_ptr<SettingPageRegistry> pageRegistry = std::make_unique<SettingPageRegistry>();
-        std::unique_ptr<Pages> pages;
+        // The registries, the formats and the diagnosers are mutable, because the const
+        // accessors of Editor hand them out for registration.
+        mutable ActionContributionRegistry contributionRegistry;
+        std::optional<Contributions> contributions;
+        mutable SettingPageRegistry pageRegistry;
+        std::optional<Pages> pages;
         // The page of each entry in the catalog. A page deleted with its parent page is null
         // here.
         QHash<const SettingPageRegistry::Entry *, QPointer<SettingPage>> registeredPages;
-        std::unique_ptr<kit::FrequencyFormats> frequencyFormats =
-            std::make_unique<kit::FrequencyFormats>();
+        mutable kit::FrequencyFormats frequencyFormats;
         // frq, the format of the resampler of UTAU, registered without any plugin. Declared after
         // the formats, so that the registration ends first.
-        std::unique_ptr<kit::BuiltinFrequencyFormats> builtinFrequencyFormats =
-            std::make_unique<kit::BuiltinFrequencyFormats>(frequencyFormats->registry());
-        std::unique_ptr<kit::SynthDiagnosers> synthDiagnosers =
-            std::make_unique<kit::SynthDiagnosers>();
+        kit::BuiltinFrequencyFormats builtinFrequencyFormats{frequencyFormats.registry()};
+        mutable kit::SynthDiagnosers synthDiagnosers;
         // Declared after the diagnosers, so that the registrations end first
-        std::unique_ptr<kit::BuiltinSynthDiagnosers> builtinSynthDiagnosers =
-            std::make_unique<kit::BuiltinSynthDiagnosers>(synthDiagnosers->registry());
+        kit::BuiltinSynthDiagnosers builtinSynthDiagnosers{synthDiagnosers.registry()};
         bool watchesDisk = true;
         QList<QPointer<ProjectWindow>> windows;
         QList<QPointer<VoiceBankWindow>> voiceBankWindows;
@@ -529,12 +527,12 @@ namespace hello::daw {
 
     kit::FrequencyFormats &Editor::frequencyFormats() const {
         stdc_impl_t;
-        return *impl.frequencyFormats;
+        return impl.frequencyFormats;
     }
 
     kit::SynthDiagnosers &Editor::synthDiagnosers() const {
         stdc_impl_t;
-        return *impl.synthDiagnosers;
+        return impl.synthDiagnosers;
     }
 
     QString Editor::projectDisplayName(const ProjectWindow *window) const {
@@ -583,7 +581,7 @@ namespace hello::daw {
 
     ActionContributionRegistry &Editor::actionContributions() const {
         stdc_impl_t;
-        return *impl.contributionRegistry;
+        return impl.contributionRegistry;
     }
 
     void Editor::addContributedActions(QWidget *window, QAK::WidgetActionContext *context) const {
@@ -595,7 +593,7 @@ namespace hello::daw {
 
     SettingPageRegistry &Editor::settingPages() const {
         stdc_impl_t;
-        return *impl.pageRegistry;
+        return impl.pageRegistry;
     }
 
     bool Editor::saveKeymap(QString *error) const {
