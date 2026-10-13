@@ -1,3 +1,7 @@
+#include <atomic>
+#include <thread>
+#include <vector>
+
 #include <QtCore/QCoreApplication>
 #include <QtCore/QDir>
 #include <QtCore/QLibraryInfo>
@@ -61,6 +65,28 @@ private Q_SLOTS:
         }
         QVERIFY(!TranslationLoader::instance());
         QCOMPARE(okText(), QStringLiteral("&OK"));
+    }
+
+    // Threads that translate at the same time all receive the translation, as the warnings of
+    // the synth tools are translated on the worker threads of a render.
+    void the_translations_are_found_on_concurrent_threads() {
+        TranslationLoader loader(QLocale(QStringLiteral("zh_CN")));
+        QVERIFY(loader.load(QStringLiteral("qtbase"), qtTranslations()));
+        std::atomic<int> untranslated = 0;
+        std::vector<std::thread> threads;
+        for (int t = 0; t < 16; ++t) {
+            threads.emplace_back([&untranslated] {
+                for (int i = 0; i < 1000; ++i) {
+                    if (okText() != QStringLiteral("确定(&O)")) {
+                        ++untranslated;
+                    }
+                }
+            });
+        }
+        for (auto &thread : threads) {
+            thread.join();
+        }
+        QCOMPARE(untranslated.load(), 0);
     }
 };
 

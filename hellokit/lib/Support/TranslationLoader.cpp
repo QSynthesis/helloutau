@@ -4,6 +4,8 @@
 #include <cassert>
 
 #include <QtCore/QCoreApplication>
+#include <QtCore/QMutex>
+#include <QtCore/QMutexLocker>
 #include <QtCore/QTranslator>
 
 namespace hello::kit {
@@ -11,6 +13,32 @@ namespace hello::kit {
     namespace {
 
         TranslationLoader *s_instance = nullptr;
+
+        // The installed translator, which passes every lookup to the loaded translator one
+        // thread at a time. QTranslator::translate() returns a null string if its lock is taken,
+        // to avoid a deadlock during load(), and the lock is also taken while another thread
+        // translates (qtranslator.cpp of Qt 6.11.1,
+        // https://github.com/qt/qtbase/blob/v6.11.1/src/corelib/kernel/qtranslator.cpp). Texts
+        // translated on worker threads, such as the warnings of the synth tools, would otherwise
+        // remain in English at random. The loaded translator is complete before it is installed,
+        // so that no lookup reaches it during load().
+        class SerializedTranslator : public QTranslator {
+        public:
+            QTranslator loaded;
+
+            QString translate(const char *context, const char *sourceText,
+                              const char *disambiguation, int n) const override {
+                const QMutexLocker locker(&m_mutex);
+                return loaded.translate(context, sourceText, disambiguation, n);
+            }
+
+            bool isEmpty() const override {
+                return loaded.isEmpty();
+            }
+
+        private:
+            mutable QMutex m_mutex;
+        };
 
     }
 
@@ -37,8 +65,8 @@ namespace hello::kit {
         if (m_locale.language() == QLocale::English) {
             return false;
         }
-        auto translator = std::make_unique<QTranslator>();
-        if (!translator->load(m_locale, name, QStringLiteral("_"), directory) ||
+        auto translator = std::make_unique<SerializedTranslator>();
+        if (!translator->loaded.load(m_locale, name, QStringLiteral("_"), directory) ||
             !QCoreApplication::installTranslator(translator.get())) {
             return false;
         }
