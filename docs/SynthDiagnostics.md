@@ -80,7 +80,7 @@ moresampler 的诊断器由 FrequencyEditor 插件注册（作者 2026-10-11 决
 
 **moresampler 0.8.4 旁边没有 `moreconfig.txt`**（2026-10-11，`.cache/claude/tools/work/moresampler_noconfig_probe.py`）。moresampler 输出「load_config: configuration file not found.」，写出的是 RIFF/WAVE，旁边同样写出 `.llsm.tmp`。因此写出占位文字的条件是 `moreconfig.txt` 存在且 `resampler-compatibility off`。
 
-**moresampler 0.8.4 按 `argv[0]` 查找 `moreconfig.txt`**（2026-10-11，`.cache/claude/tools/work/moresampler_argv0_probe.py`）。同一份 `off` 的程序目录，执行的文件相同，工作目录在程序目录之外：`argv[0]` 为完整路径时写出占位文字，只有文件名时输出「load_config: configuration file not found.」并写出 RIFF/WAVE。`SynthToolProcess` 曾只传文件名，因此多线程与实时模式下 moresampler 忽略 `moreconfig.txt` 的全部设置，而经典模式的 `temp.bat` 传完整路径，三种模式的结果因此不同（`three_modes_probe.py`，作者的工程，562 个音符）。现在 `argv[0]` 为完整路径，与 UTAU 相同，三种模式写出的都是占位文字。
+**moresampler 0.8.4 按 `argv[0]` 查找 `moreconfig.txt`**（2026-10-11，`.cache/claude/tools/work/moresampler_argv0_probe.py`）。同一份 `off` 的程序目录，执行的文件相同，工作目录在程序目录之外：`argv[0]` 为完整路径时写出占位文字，只有文件名时输出「load_config: configuration file not found.」并写出 RIFF/WAVE。`argv[0]` 须为完整路径，与 UTAU 相同：只传文件名时，moresampler 在多线程与实时模式下忽略 `moreconfig.txt` 的全部设置，而经典模式的 `temp.bat` 传完整路径，三种模式的结果因此不同（`three_modes_probe.py`，作者的工程，562 个音符）。传完整路径时三种模式写出的都是占位文字。
 
 **moresampler 0.8.4 作为合成器拼接其他重采样器写出的 wav**（2026-10-11，`.cache/claude/tools/work/moresampler_wavtool_probe.py`）。以 UTAU 的参数格式拼接一个没有 `.llsm.tmp` 的 wav 分片：退出码 0，输出「data index appended」。末尾带 `LAST_NOTE` 时写出 RIFF/WAVE 的音轨，样本峰值 17013，与分片的 17014 一致，说明分片被正常拼接。
 

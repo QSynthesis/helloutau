@@ -1,6 +1,6 @@
 # UTAU 对 VoiceDir 与 CacheDir 的处理
 
-本文档记录实测得到的 UTAU 行为：`VoiceDir` 怎样解析为音源目录、保存时怎样写回，`CacheDir` 怎样确定，以及传给插件的临时文件中这两项的写法。结论来自 2026-09-28 在 Windows 上对 `utau.exe`（文件版本 0.04.0018）的实测，探针与操作步骤位于 `.cache/utau-probe/voicedir/`，可重复执行。
+本文档记录实测得到的 UTAU 行为：`VoiceDir` 到音源目录的解析与保存时的写回、`CacheDir` 的确定方式，以及传给插件的临时文件中这两项的写法。结论来自 2026-09-28 在 Windows 上对 `utau.exe`（文件版本 0.04.0018）的实测，探针与操作步骤位于 `.cache/utau-probe/voicedir/`，可重复执行。
 
 所有结论均为实测结果，而非推断。修改本文档前必须重新运行探针。
 
@@ -41,7 +41,7 @@ CacheDir=<UST 所在目录>\<名称>.cache
 Mode2=True
 ```
 
-- **`VoiceDir` 与 `CacheDir` 是解析后的绝对路径**，`%VOICE%` 与相对路径都已展开。插件因此无须知道 UTAU 的安装位置。
+- **`VoiceDir` 与 `CacheDir` 是解析后的绝对路径**，`%VOICE%` 与相对路径都已展开，插件因此不依赖 UTAU 的安装位置。
 - 另有 `Project=`，是工程文件的绝对路径。
 - 版本行写作 `UST Version 1.20`，工程文件中为 `UST Version1.2`。
 - 没有 `Tracks`、`ProjectName`、`OutFile`、`Tool1`、`Tool2`。

@@ -12,9 +12,9 @@
 |---|---|
 | `.usth`、`.ust` | `HelloKitDocument` |
 | MIDI 导入与导出、VSQ / VSQX 导入、SynthV `.svp` 导入 | `HelloKitInterchange` |
-
-OpenUTAU 的 `.ustx` 不内置驱动（作者 2026-10-01 决定），需要时以 LibreSVIP 转换为 UST，见 [`Roadmap.md`](Roadmap.md) 第六阶段。本文中以 `.ustx` 为例的段落只用于说明接口的设计。
 | `presamp`、`frq` | `HelloKitVoiceBank` |
+
+OpenUTAU 的 `.ustx` 不内置驱动，不在本模块的范围内（作者 2026-10-01 决定）。需要时以 LibreSVIP 转换为 UST，见 [`Roadmap.md`](Roadmap.md) 第六阶段。本文中以 `.ustx` 为例的段落只用于说明接口的设计。
 
 `presamp` 和 `frq` 在 Roadmap 中与 MIDI 列于同一行，那是按「兼容周边」分类，而非按模块分类。这两者描述的是音源而非工程。
 
@@ -22,26 +22,26 @@ OpenUTAU 的 `.ustx` 不内置驱动（作者 2026-10-01 决定），需要时�
 
 ## 三条硬性约束
 
-### 一、忠实翻译，不做取舍
+### 一、忠实翻译与取舍的归属
 
 **Interchange 只翻译文件中已有的内容，不判断用户是否需要。** 取舍属于应用层的导入流程，不属于本模块。
 
 两个具体结果：
 
 - **tempo 原样翻译。** 首个 tempo 存入 `settings.tempo`，中途的 tempo 存入对应音符的 `note.tempo`。应用层若不需要，由其自行清除。
-- **前导休止符照常补充。** 第一个音符之前的静默在源文件中真实存在，翻译应当将其保留。插入现有工程时是否裁掉由应用层决定，因为只有应用层知道插入位置。
+- **前导休止符照常补充。** 第一个音符之前的静默在源文件中真实存在，翻译应当将其保留。插入现有工程时是否裁掉由应用层决定，因为插入位置只由应用层提供。
 
-这一约束不是风格偏好。它决定了哪些内容**不应**出现在 `ImportRequest` 中：任何形如「是否保留 X」的选项都表明取舍被放在了错误的层。
+这一约束不是风格偏好。它规定了哪些内容**不应**出现在 `ImportRequest` 中：任何形如「是否保留 X」的选项都表明取舍被放在了错误的层。
 
-### 二、有损转换是常态，因此诊断必须是返回值的一部分
+### 二、有损转换与诊断返回值
 
-MIDI 除歌词外不包含任何 UTAU 参数，VSQ 的参数与 UTAU 并非一一对应，源文件中的多声部进入 UST 时必须简化。**转换丢失数据是必然的，并非缺陷，但静默丢失是缺陷。**
+MIDI 除歌词外不包含任何 UTAU 参数，VSQ 的参数与 UTAU 并非一一对应。源文件中的多声部在进入 UST 时必须简化。**转换丢失数据是必然的，并非缺陷，但静默丢失是缺陷。**
 
 因此每次转换都产出一份诊断列表，能够定位到具体音符，由应用层展示。仅写入日志不足以向用户说明。
 
 `Diagnostic` 类型**不属于本模块**。音源扫描、合成、工程读取都需要报告同类信息，因此它应当是 `HelloKitSupport` 中的公共类型，Interchange 只是它的第一个使用者。
 
-### 三、`hellokit` 不链接 QtWidgets
+### 三、`hellokit` 不链接 QtWidgets 的约束
 
 接口中不得出现对话框。需要用户决定的事项通过 `InterchangeSelector` 回调传出，由链接 QtWidgets 的一侧实现。
 
@@ -57,7 +57,7 @@ struct InterchangeEntry {
     std::optional<int> lowestNote;    // 音域，供界面显示
     std::optional<int> highestNote;
 
-    // 编码尚未确定，因此此处为未解码的字节。见下文。
+    // 编码尚未确定，因此此处为原始字节。见下文。
     QByteArray rawName;
     QList<QByteArray> rawLyrics;
 };
@@ -72,7 +72,7 @@ struct InterchangeSource {
 
 `inspect()` 是公开的，因为「只查看文件内容」是一项独立需求（文件对话框预览），不应被迫执行完整的导入流程。
 
-### 未解码字节的理由
+### 原始字节的理由
 
 `rawName` 和 `rawLyrics` 的类型是 `QByteArray` 而非 `QString`，这是**有意为之，且是本模块中唯一的例外**。
 
@@ -175,13 +175,13 @@ struct ImportLimits {
 
 一次调用完成全部询问，不拆分为「选择轨道」「选择编码」两个回调，否则界面上会连续弹出两个对话框。驱动通过 `reader` 参数提供 `optionSchema()`。
 
-**可选条目数由调用方指定，而非驱动。** 驱动只知道文件中有多少条目，不知道导入目标能容纳多少：工程目前为单轨，因此 `maxEntries` 为 1；将来开放多轨时修改的是调用方，驱动无需任何改动。界面在**已选满后再次选择**时，应当替换最早选中的条目，而不是拒绝用户的点击。
+**可选条目数由调用方指定，而非驱动。** 驱动只声明文件中的条目数，导入目标的容量不在其接口中：工程目前为单轨，因此 `maxEntries` 为 1；将来开放多轨时修改的是调用方，驱动无需任何改动。界面在**已选满后再次选择**时，应当替换最早选中的条目，而不是拒绝用户的点击。
 
-**`nullptr` 不得导致阻塞或崩溃。** kit 内置 `AutomaticSelector`：按 `optionSchema()` 取每一项的默认值，选中全部条目，并且**每代替用户做一次决定就记录一条 `Note` 级诊断**。命令行工具、测试以及将来的批量转换都使用它，传入 `nullptr` 即使用它。这样测试永远不会停在一个得不到回应的对话框上。
+**`nullptr` 不得导致阻塞或崩溃。** kit 内置 `AutomaticSelector`：按 `optionSchema()` 取每一项的默认值，选中全部条目，并且**每采用一个默认值就记录一条 `Note` 级诊断**。命令行工具、测试以及将来的批量转换都使用它，传入 `nullptr` 即使用它。这样测试永远不会停在一个得不到回应的对话框上。
 
 ### 取消与失败的区分
 
-用户关闭对话框与文件损坏是两回事，不能都表现为「返回空」：取消时不应弹出错误提示，出错时应当弹出。
+用户关闭对话框与文件损坏是两种不同的情况，不能都表现为「返回空」：取消时不应弹出错误提示，出错时应当弹出。
 
 **`selectImport` 返回空同样有两种含义，由诊断区分**：记录了 `Error` 表示用户根本无法被询问（例如文件中没有任何可选条目），属于失败；未记录 `Error` 表示用户拒绝，不属于失败。这一约定是必需的：若二者混淆，`AutomaticSelector` 报告的「文件中没有可导入的内容」会被 `read()` 当作用户取消，导致一个无法读取的文件不产生任何提示。
 
@@ -198,7 +198,7 @@ struct ImportResult {
 `InterchangeDrivers` 是一个宿主的驱动表，**内置格式与插件使用同一注册途径**，不区分主次。文件对话框的过滤器、按扩展名查找驱动、「导入为…」菜单均由该表生成。
 
 - 驱动登记在 `InterchangeDrivers` 持有的两个注册表中（形状见 [`Plugins.md`](Plugins.md)「注册接口」）：导入驱动登记到 `readerRegistry()`（`InterchangeReaderRegistry`），导出驱动登记到 `writerRegistry()`（`InterchangeWriterRegistry`），二者都是 `stdc::DynamicRegistry`，定义于 `InterchangeDrivers.h`。条目名称即驱动 ID，同时支持两个方向的驱动以同一 ID 在两个注册表中各登记一次。登记对象存在期间，驱动出现在该 `InterchangeDrivers` 中，析构即移除。
-- `InterchangeDrivers` 是 `QObject`，为每个条目创建一个驱动实例，按登记顺序；登记与注销时发出 `driversChanged()`。不再有 `addReader()` / `addWriter()`。
+- `InterchangeDrivers` 是 `QObject`，为每个条目创建一个驱动实例，按登记顺序；登记与注销时发出 `driversChanged()`。驱动的登记与注销只经这两个注册表进行，不提供 `addReader()` / `addWriter()` 等额外途径。
 - 同一 ID 的第二次登记失败，实例的 `id()` 与条目名称不同时被拒绝；同一扩展名由先登记的驱动处理。两条规则都使插件不能接管内置格式。
 - 内置驱动（MIDI 的读与写）由 `BuiltinInterchangeDrivers` 登记，Interchange 插件（ID `org.helloutau.interchange`，目录 `Interchange`，依赖 Core，作者 2026-09-30 定）为其 `InterchangeService` 的驱动表持有它。需要这些驱动的测试构造自己的 `InterchangeDrivers` 与 `BuiltinInterchangeDrivers`。
 - 驱动表的使用方是 Interchange 插件的导入与导出向导，见 [`ImportExport.md`](ImportExport.md)。提供格式的插件依赖 Interchange，经 `InterchangeService::instance()->drivers()` 登记。
@@ -220,7 +220,7 @@ struct ImportResult {
 | `InterchangeReader::customStepId()` | `HelloKitInterchange` | 声明需要自定义界面页，并给出 ID |
 | `InterchangeStepPage` 的实现 | Interchange 插件，或依赖它的插件 | 界面页本身 |
 
-界面页的基类与其注册表在 Interchange 插件的公开头文件中（`helloutau/plugins/Interchange/`，见 [`ImportExport.md`](ImportExport.md)），原定的 HelloUtauEditor 与 Widgets 中不设这些类型：
+界面页的基类与其注册表在 Interchange 插件的公开头文件中（`helloutau/plugins/Interchange/`，见 [`ImportExport.md`](ImportExport.md)），不设在 HelloUtauEditor 与 Widgets 中：
 
 ```cpp
 class INTERCHANGEPLUGIN_EXPORT InterchangeStepPage : public QWidget {
@@ -254,7 +254,7 @@ using InterchangeStepRegistry = stdc::DynamicRegistry<InterchangeStepPage>;
 
 ### 默认编码可以推测，最终编码不可以
 
-编码页打开时的默认选中项允许通过启发式规则确定：**先尝试 UTF-8，若解码出现非法字符则退回系统编码**。系统编码不在驱动声明的候选中或同样无法解码时，取 `TextCodec::ranked()` 排在首位的候选（`SourcePreview::defaultEncoding()`）。
+编码页打开时的默认选中项允许通过启发式规则确定：**先尝试 UTF-8，若出现无效字节序列则退回系统编码**。系统编码不在驱动声明的候选中或同样无法解码时，取 `TextCodec::ranked()` 排在首位的候选（`SourcePreview::defaultEncoding()`）。
 
 这与 [`CLAUDE.md`](../CLAUDE.md) 中「不要猜测编码，也不要以检测代替记录」并不冲突，因为推测的是**默认选中项**，而非最终结果。用户仍会对照预览确认或更改，确认后该编码即被记录。禁止的是将检测结果直接作为答案、不经用户确认就继续执行。
 
@@ -277,7 +277,7 @@ using InterchangeStepRegistry = stdc::DynamicRegistry<InterchangeStepPage>;
 | 替换当前选区 |
 | 新建工程 |
 
-**这一选择不经由 `InterchangeSelector`。** 该接口存在的理由是「驱动需要用户的回答才能继续」，编码和轨道选择属于此类，插入位置则不属于：驱动自始至终不使用这一答案。让它进入该接口，等于让 kit 知晓「当前选区」这种纯编辑器状态。
+**这一选择不经由 `InterchangeSelector`。** 该接口存在的理由是「驱动需要用户的回答才能继续」，编码和轨道选择属于此类，插入位置则不属于：驱动自始至终不使用这一答案。让它进入该接口，等于把「当前选区」这种纯编辑器状态引入 kit。
 
 约束如下：
 
@@ -334,4 +334,4 @@ MIDI 的和弦与重叠音符进入 UST 时必须简化，因为 **UST 无法表
 
 ## 插件分类
 
-格式转换是原生插件的一个**扩展点**，[`docs/note.md`](note.md) 列为「格式转换」：插件在初始化时经 `InterchangeService` 登记格式驱动（见上文「注册表」）。原来的 `InterchangePlugin` 接口已删除（[`Plugins.md`](Plugins.md) 实施步骤 6）。
+格式转换是原生插件的一个**扩展点**，[`docs/note.md`](note.md) 列为「格式转换」：插件在初始化时经 `InterchangeService` 登记格式驱动（见上文「注册表」）。格式转换不使用 `InterchangePlugin` 接口，驱动经 `InterchangeService` 登记（[`Plugins.md`](Plugins.md) 实施步骤 6）。

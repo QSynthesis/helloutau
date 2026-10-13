@@ -31,4 +31,4 @@
 
 ## 须另行解决的问题
 
-- **pmk 没有公开资料。** TIPS（ScientistB）没有公开源码，格式的依据只有 masao 提供的非公开示例。本仓库的代码注释只引用公开资料，实现 pmk 时注释的来源如何写须由作者决定。frc 同样没有任何公开资料。详见 qfrqeditor 仓库的 `docs/20260928-public-sources.md`。
+- **pmk 没有公开资料。** TIPS（ScientistB）没有公开源码，格式的依据只有 masao 提供的非公开示例。本仓库的代码注释只引用公开资料，实现 pmk 时注释的来源写法须由作者决定。frc 同样没有任何公开资料。详见 qfrqeditor 仓库的 `docs/20260928-public-sources.md`。

@@ -32,7 +32,7 @@
   - `ImportMerge`：应用层的插入逻辑（Interchange.md「应用层的导入流程」），无界面。以 `ProjectRef` / `NoteRef` 的公开接口在一个事务中修改工程，与 ClassicPluginHost 应用结果的方式相同。库中不需要新增接口。
   - `PresetSelector`：返回向导预先收集的请求的选择器，见下文「向导与选择器」。
   - `SourcePreview`：以指定编码解码探查结果中的文本，供编码页预览，并给出默认选中的编码。
-- `InterchangeStepPage` 与 `InterchangeStepRegistry` 原定放在 HelloUtauEditor 或 Widgets（Interchange.md「自定义选择步骤」），改为放在插件的公开头文件中，登记形状同 Plugins.md「注册接口」：`InterchangeStepRegistry::AddFactory(service.stepPages(), id, 描述, 工厂)`。提供新格式的插件依赖 Interchange 插件并以此登记自定义页。MIDI 的编码页由 Interchange 插件登记。
+- `InterchangeStepPage` 与 `InterchangeStepRegistry` 放在插件的公开头文件中（Interchange.md「自定义选择步骤」），登记形状同 Plugins.md「注册接口」：`InterchangeStepRegistry::AddFactory(service.stepPages(), id, 描述, 工厂)`。提供新格式的插件依赖 Interchange 插件并以此登记自定义页。MIDI 的编码页由 Interchange 插件登记。
 
 ### 向导与选择器
 
@@ -57,7 +57,7 @@
 ### MIDI 的编码页
 
 - 左侧为编码列表，右侧预览轨名、歌词与标记，切换编码时全部重新解码。候选为驱动在 `encoding` 选项中声明的值，无法解码文件文本的编码以禁用文字的颜色显示，同 `UstDecodingDialog`。
-- 默认选中项：先尝试 UTF-8，出现非法字节序列时改用系统编码，二者都不适用时取 `TextCodec::ranked()` 的首位（Interchange.md「默认编码可以推测」）。
+- 默认选中项：先尝试 UTF-8，出现无效字节序列时改用系统编码，二者都不适用时取 `TextCodec::ranked()` 的首位（Interchange.md「默认编码可以推测」）。
 - 编码列表与预览之下是驱动其余选项的生成表单（无歌词音符的默认歌词），自定义页负责驱动的全部选项。
 - 所选编码经 `ImportRequest::driverOptions["encoding"]` 传给驱动。
 

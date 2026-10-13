@@ -141,7 +141,7 @@ PImpl 采用 stdcorelib 的写法（`<stdcorelib/pimpl.h>`）。只在实现中�
 | `HELLO_INSTALL_TESTING` | OFF | 构建并安装测试的辅助库，供下游项目的测试链接，对应 LLVM 的 `LLVM_INSTALL_GTEST` |
 
 - `HELLO_DEVEL` 关闭时只安装运行所需的文件：程序、动态库、插件及其 `plugin.json`。两个模块把它传给 qmsetup 的 `<模块>_DEVEL`（导入库、头文件、CMake 包）与 `<模块>_INSTALL_PDB`（调试符号）；插件的公开头文件同样只在 `HELLOUTAU_DEVEL` 下安装。
-- 调试符号：qmsetup 原先只以 CMake 的 `MSVC` 判断是否安装 PDB。GNU 前端的 clang 面向 MSVC ABI 时（`CMAKE_CXX_SIMULATE_ID` 为 `MSVC`，链接器为 lld-link，生成 PDB）不算 `MSVC`，会被当作 ELF 处理：装出以 `objcopy` 抽取的 `.debug` 而不是 `.pdb`，并对装出的程序与动态库执行 `strip`。qmsetup 已改为同时认模拟的 `MSVC`（2026-09-30），所用的 qmsetup 更新之前，这种工具链下仍是旧的行为。
+- 调试符号：qmsetup 以 CMake 的 `MSVC` 与模拟的 `MSVC`（`CMAKE_CXX_SIMULATE_ID` 为 `MSVC`，链接器为 lld-link，生成 PDB）共同判断是否安装 PDB。GNU 前端的 clang 面向 MSVC ABI 时不算 `MSVC`，因此仅认 `MSVC` 的版本会把它当作 ELF 处理：装出以 `objcopy` 抽取的 `.debug` 而不是 `.pdb`，并对装出的程序与动态库执行 `strip`。所用的 qmsetup 在 2026-09-30 的更新之前，这种工具链下仍是这一行为。
 
 ## Qt
 
@@ -230,7 +230,7 @@ bool save(DiagnosticList &diagnostics);
 
 ## 返回值
 
-可能不存在结果的函数一律返回 `std::optional<T>`，不要使用「bool 加输出参数」，也不要用某个特定值表示「不存在」。stdutau 已按此规则修改过一轮，本仓库从一开始即遵循此规则。
+可能不存在结果的函数一律返回 `std::optional<T>`，不要使用「bool 加输出参数」，也不要用某个特定值表示「不存在」。stdutau 与本仓库都遵循这一规则。
 
 ## 头文件引用
 

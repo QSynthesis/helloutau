@@ -24,7 +24,7 @@
 | 界面 | 插件列表、详情、错误视图（`.ui`） | 无 |
 | 稳定性 | 代码停在 Qt Creator 3.6 | 三个平台与多种编译器的测试齐全；**公开 API 在首个真实扩展点迁移前仍是候选** |
 
-stdcorelib.plugin 的交接记录（其仓库 `.cache/codex/2026-08-21-1722-stdcorelib-plugin-handoff.md`）明确不沿用 ExtensionSystem 的对象池（无类型的全局服务定位器）、Aggregation、`OptionsParser` 与界面。
+stdcorelib.plugin 的交接记录（其仓库 `.cache/codex/2026-08-21-1722-stdcorelib-plugin-handoff.md`）中规定不沿用 ExtensionSystem 的对象池（无类型的全局服务定位器）、Aggregation、`OptionsParser` 与界面。
 
 **结论：采用 stdcorelib.plugin。** 它与「只提供注册接口」的设想一致，许可证与分层都与本仓库相容，符合 CLAUDE.md「基础设施优先使用 stdcorelib」。代价是 API 可能随迁移反馈调整，HelloUtau 将是它的首个真实使用者之一；与 stdutau、substate 相同，发现不足时直接修改该库。
 

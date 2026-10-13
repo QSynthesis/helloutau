@@ -4,7 +4,7 @@ English | [简体中文](docs/README.zh-CN.md)
 
 A cross-platform editor for UTAU projects and voice banks, for Windows, macOS and Linux.
 
-HelloUtau aims at functional parity with UTAU 0.4.19. Its interface, its handling of text encodings and its extension mechanism are designed anew.
+The goal of HelloUtau is functional parity with UTAU 0.4.19. Its interface, its handling of text encodings and its extension mechanism are designed anew.
 
 ## Installation
 
@@ -15,7 +15,7 @@ Each release on [GitHub](https://github.com/QSynthesis/helloutau/releases) and [
 | Installer | `helloutau-<version>-x64-windows-msvc-setup.exe` |
 | Portable package, extracted into any folder | `helloutau-<version>-x64-windows-msvc.zip` |
 
-`SHA256SUMS` lists the SHA-256 digest of each package. The packages contain every required library, including the C++ runtime. Neither package is signed, so that Windows SmartScreen displays a warning on the first start. On macOS and Linux, HelloUtau is built from source, as described in [Building](#building).
+`SHA256SUMS` lists the SHA-256 digest of each package. The packages contain every required library, including the C++ runtime. Neither package is signed, so Windows SmartScreen displays a warning on the first start. On macOS and Linux, HelloUtau is built from source, as described in [Building](#building).
 
 By default, the application checks for a new version at startup, at most once a day, and installs a new version only after confirmation. The Updates page of the settings selects the update source and the update mode: manual checks, checks with a notification, or automatic updates.
 
@@ -31,7 +31,7 @@ The [user guide](docs/UserGuide.md), in Chinese, describes the use of the editor
 
 - Projects: reading and writing of `.ust` and of `.usth`, the native project format. The piano roll edits notes, lyrics, labels, regions, Mode1 and Mode2 pitch, vibrato, envelopes and note parameters, with undo and redo, lyric search and replacement, the project tempo, the time signature, quantization and a piano preview of the keys.
 - Playback and rendering: classic or multithreaded prerendering, realtime playback, export of the whole track as WAV, render logs, a diagnosis of failed renders, and trust checks for the synth tools of a project.
-- Voice banks: a window that edits `oto.ini`, `prefix.map`, `character.txt` and `readme.txt` in the encoding of each folder, sets the values of an entry on its waveform, previews samples and detects changes on disk. File names decoded with the wrong code page are read as UTAU reads them, or converted, together with the text encodings.
+- Voice banks: a window that edits `oto.ini`, `prefix.map`, `character.txt` and `readme.txt` in the encoding of each folder, sets the values of an entry on its waveform, previews samples and detects changes on disk. Misdecoded file names are read as UTAU reads them, or converted together with the text encodings.
 - Frequency maps: the frequency map curve on the waveform, in the format of the configured resampler by default, a spectrogram view, and the generation, regeneration and removal of the maps of a voice bank with the resampler. The formats frq, dio and mrq are supported, together with the analysis caches of their resamplers.
 - Plugins: HelloUtau plugins and UTAU classic plugins, and a command palette that lists the commands of the current window.
 - Import and export: MIDI, UST and USTH.

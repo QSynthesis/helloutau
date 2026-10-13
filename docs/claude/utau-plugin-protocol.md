@@ -1,6 +1,6 @@
 # UTAU 插件协议的实测
 
-本文档记录实测得到的 UTAU 对原版插件的行为：写给插件的临时文件的内容、位置与名称，以及 UTAU 怎样应用插件的结果。结论来自 2026-09-30 在 Windows（中文系统，ANSI 代码页 936）上对 `utau.exe`（文件版本 0.04.0018）的实测，探针与操作步骤位于 `.cache/utau-probe/plugin/`（`README.md`），可重复执行。计划见 [`../ClassicPluginHost.md`](../ClassicPluginHost.md)。
+本文档记录实测得到的 UTAU 对原版插件的行为：写给插件的临时文件的内容、位置与名称，以及 UTAU 对插件结果的应用。结论来自 2026-09-30 在 Windows（中文系统，ANSI 代码页 936）上对 `utau.exe`（文件版本 0.04.0018）的实测，探针与操作步骤位于 `.cache/utau-probe/plugin/`（`README.md`），可重复执行。计划见 [`../ClassicPluginHost.md`](../ClassicPluginHost.md)。
 
 探针工程 `probe.ust` 有七个音符 **R a i R u e o**（轨道位置 0 至 6），带音高、包络、颤音、flags、velocity、`Label` 与用户条目 `$probe`。
 
@@ -21,7 +21,7 @@
 
 | 结果 | 保存后的工程 | 结论 |
 |---|---|---|
-| `[#0004] Lyric=X`、`[#0003]`、`[#0002] Lyric=Z`（编号写反） | i 变为 X，u 变为 Z，R 不变 | **按出现顺序应用，不看编号**；只写段落头的音符不变 |
+| `[#0004] Lyric=X`、`[#0003]`、`[#0002] Lyric=Z`（编号写反） | i 变为 X，u 变为 Z，R 不变 | **按出现顺序应用，与编号无关**；只写段落头的音符不变 |
 | `[#PREV] Lyric=P` | a 变为 P，其音高保留 | `[#PREV]` 的修改被应用，省略的条目不变 |
 | `[#INSERT] Lyric=N`，写在第一个编号段落之前 | 在 i 之前插入 N，`Length=480`、`NoteNum=62`，没有别的条目 | 插入的长度与音高取自后一个音符（i），与规格一致 |
 | `[#0002]`（段落头） | i 不变，包络与颤音保留 | 同上 |
@@ -39,5 +39,5 @@
 
 - 临时文件按上述写法生成：轨道位置编号，完整的 `[#PREV]` / `[#NEXT]`，`UST Version 1.20`，绝对路径，CRLF，`PreUtterance=` 空值，`@` 条目在末尾。`notes` 存在时传入全部音符，不写 `[#PREV]` / `[#NEXT]`。
 - 结果按出现顺序应用，`[#PREV]` / `[#NEXT]` 的修改应用，逐条合并（省略不变、空值恢复默认），`[#INSERT]` 的默认值取自后一个音符，空文件为取消。与 [`../ClassicPluginHost.md`](../ClassicPluginHost.md) 的设计一致。
-- stdutau 的 `PluginFileReader`（现并入 `PluginInput`）注释称临时文件「总从 0 编号」，与实测不符；`PluginFileWriter`（现并入 `PluginResult`）的 `prependNotesBeforePrev` / `appendNotesAfterNext` 称插到选区外，实测只插在选区的起点与终点。两处已在 stdutau `ae46c5c` 改正。
+- stdutau 的 `PluginFileReader`（现并入 `PluginInput`）注释记为临时文件「总从 0 编号」，与实测不符；`PluginFileWriter`（现并入 `PluginResult`）的 `prependNotesBeforePrev` / `appendNotesAfterNext` 注明插到选区外，实测只插在选区的起点与终点。两处已在 stdutau `ae46c5c` 改正。
 - 临时文件的编码是本地编码，与 note.md 对没有 `plugin.json` 的插件的规定一致；声明接收 UTF-8 的插件改用 UTF-8。

@@ -22,7 +22,7 @@
 
 各格式公开资料的情况（qfrqeditor 的 `docs/20260928-public-sources.md`）：frq、dio、mrq 有公开的格式资料；vs4ufrq 的文件由闭源的 `vslib.dll` 读写，只有 Windows 版；frc 与 pmk 没有任何公开资料。
 
-## 问题一：「用哪个重采样器的」
+## 问题一：频率表格式与重采样器的对应
 
 ### 频谱与重采样器无关
 
@@ -36,16 +36,16 @@
 
 HelloUtau 的方案：
 
-1. **默认按设置中的重采样器判定格式**，规则同 frqeditor。设置中另有一张「重采样器文件名 → 格式」的对照表，内置上面的六条，用户可以增改（例如改名后的 moresampler），插件注册的格式带着自己的规则加入（见问题三）。
+1. **默认按设置中的重采样器判定格式**，规则同 frqeditor。设置中另有一张「重采样器文件名 → 格式」的对照表，内置上面的六条，用户可以增改（例如改名后的 moresampler），插件登记的格式同时给出自己的文件名规则（见问题三）。
 2. **波形区旁有一个格式选择框**，列出该 wav 在磁盘上已有的各种频率表，默认选中第 1 条判定的格式；没有该格式的表时，选择框显示「无」，并提供「生成」。
 3. 频谱与曲线的帧对齐按所显示格式的帧间隔（frq 为 256 个样本，vs4ufrq 为 220.5），与 frqeditor 相同。
 4. **只按文件名识别格式，不执行任何程序。** 生成频率表时才运行重采样器，且只运行设置中的重采样器，不运行工程的 `Tool2`（CLAUDE.md「安全底线」）。
 
 作者 2026-09-30 决定：采用上面的方案，默认按重采样器判定，可切换。
 
-## 问题二：内置的频率表编辑怎么做
+## 问题二：内置频率表编辑的界面位置与数据归属
 
-### 放在哪里
+### 界面位置
 
 **建议并入音源窗口，不另开 frqeditor 那样的独立窗口。** frqeditor 的主界面是「原音列表 + 编辑区」，音源窗口已有条目表与波形区，两者对应：
 
@@ -84,7 +84,7 @@ qfrqeditor 的 `Core` 按本仓库规范重写后移入 hellokit 的新子库（
 
 ### 抽象
 
-格式驱动（暂名 `FrequencyFormat`）描述一种格式，内置格式与插件注册的格式经同一个注册表（暂名 `FrequencyFormatRegistry`）加入，不分主次，做法同 `InterchangeRegistry`（[`Interchange.md`](Interchange.md)「注册表」）。驱动提供：
+格式驱动（暂名 `FrequencyFormat`）描述一种格式，内置格式与插件登记的格式经同一个注册表（暂名 `FrequencyFormatRegistry`）加入，不分主次，做法同 `InterchangeRegistry`（[`Interchange.md`](Interchange.md)「注册表」）。驱动提供：
 
 | 成员 | 内容 |
 |---|---|
@@ -108,7 +108,7 @@ qfrqeditor 的 `Core` 按本仓库规范重写后移入 hellokit 的新子库（
 |---|---|---|---|
 | frq | 须为整数的样本数 | 16 个保留字节 | 保留字节为 0，没有平均频率时以 `FrequencyMap::pitchAverage()` 计算。每帧须有振幅，没有振幅的表不写出 |
 | dio | 须等于 world4utau 的帧周期 `FRAMEPERIOD`（5.80498866213152 毫秒）在该采样率下的样本数，因为 world4utau 合成时按这个周期取帧 | 信号长度与采样率，读入后未改的帧时间按原有的字节写出 | 信号长度与采样率取自 wav |
-| mrq | 须为整数的样本数 | 其他条目，条目原有的采样率 | 照 mrq 库的 `mrq_write_entry()`：放得下就地覆盖、大小不变，放不下把旧名字置 0 后在末尾追加。文件头的版本改为 2，时间戳为写出的时刻，标志按 `MapWrite::editedByHand` 写 0（手工修改）或 1。新条目的采样率取自 wav，没有 `desc.mrq` 时新建 |
+| mrq | 须为整数的样本数 | 其他条目，条目原有的采样率 | 照 mrq 库的 `mrq_write_entry()`：空间足够时就地覆盖且大小不变，空间不足时把旧条目名置 0 并在末尾追加。文件头的版本改为 2，时间戳为写出的时刻，标志按 `MapWrite::editedByHand` 写 0（手工修改）或 1。新条目的采样率取自 wav，没有 `desc.mrq` 时新建 |
 
 dio 的采样率不按 qfrqeditor 由帧间隔反推（`hop × 44100 / 256` 取整），因为采样率不是 44100 时帧间隔不是整数，取整后写出的采样率与 world4utau 写出的不同。mrq 的采样率同样不照 qfrqeditor 固定为 44100。
 
@@ -121,7 +121,7 @@ dio 的采样率不按 qfrqeditor 由帧间隔反推（`hop × 44100 / 256` 取�
 
 ### 插件
 
-作者 2026-09-30 决定：**新增第六种插件「频率表格式插件」**（`kit::FrequencyFormatPlugin`），已写入 [`note.md`](note.md)。未采用的做法是归入音源库插件或格式转换插件：频率表格式与它们的接口完全不同，塞进去会使接口含混。与格式转换插件相同，目前只有接口，应用尚无载入插件的机制。
+作者 2026-09-30 决定：**新增第六种插件「频率表格式插件」**（`kit::FrequencyFormatPlugin`），已写入 [`note.md`](note.md)。未采用的做法是归入音源库插件或格式转换插件：频率表格式与它们的接口完全不同，归入它们会使接口含混。与格式转换插件相同，目前只有接口，应用尚无载入插件的机制。
 
 之后作者决定插件只有一种原生插件（[`Plugins.md`](Plugins.md)），频率表格式随之改为它的一个扩展点，`FrequencyFormatPlugin` 已删除，由登记对象 `FrequencyFormatRegistration` 取代；多个格式匹配重采样器时后登记者优先，见 [`Plugins.md`](Plugins.md) 实施步骤 4。
 
@@ -174,7 +174,7 @@ moresampler 等重采样器把从 wav 分析出的结果保存为缓存，其中
 - 格式层（`HelloKitVoiceBank`）：
   - `kit::FrequencyMap`：各格式的公共部分，每帧的时间（毫秒）、频率（赫兹，0 为无声）与可选的振幅，以及可选的平均频率。
   - `kit::FrequencyFormat`：格式驱动，目前只有标识、名称、重采样器文件名的通配符、`mapsExist()` 与 `read()`；写、删除与生成到后面的步骤再加。`mapsExist()` 一次查询一个目录中的多个 wav（作者 2026-10-12 决定，取代逐个 wav 的 `exists()`），mrq 因此只读一次 `desc.mrq`。
-  - `kit::FrequencyFormats`：一个宿主（编辑器）的格式，为 `registry()`（`kit::FrequencyFormatRegistry`，即 `stdc::DynamicRegistry`）中的每个条目创建一个实例；内置格式与插件格式同一途径登记（`Add<V>` 或 `AddFactory`），条目名称即格式 ID，ID 重复的登记失败，实例的 `id()` 与名称不同时被拒绝；`formatForResampler()` 按重采样器的文件名（整名匹配、不分大小写）取匹配的格式，都不匹配时为 frq。不执行任何程序。原先先注册者优先、以 `kit::FrequencyFormatPlugin` 加入插件格式，插件机制改定后改为后登记者优先，见 [`Plugins.md`](Plugins.md) 实施步骤 4。
+  - `kit::FrequencyFormats`：一个宿主（编辑器）的格式，为 `registry()`（`kit::FrequencyFormatRegistry`，即 `stdc::DynamicRegistry`）中的每个条目创建一个实例；内置格式与插件格式同一途径登记（`Add<V>` 或 `AddFactory`），条目名称即格式 ID，ID 重复的登记失败，实例的 `id()` 与名称不同时被拒绝；`formatForResampler()` 按重采样器的文件名（整名匹配、不分大小写）取匹配的格式，都不匹配时为 frq。不执行任何程序。多个格式匹配重采样器时以后登记者优先，见 [`Plugins.md`](Plugins.md) 实施步骤 4。
   - 内置三种有公开资料的格式，注释引用的都是公开资料：
     - frq（`resampler*.exe`）：`a_wav.frq`，布局按 OpenUtau 0.1.565 的 `Frq.cs`；帧时间由帧间隔与 wav 的采样率算出。
     - dio（`w4u*.exe`、`world4utau*.exe`）：`a.dio`，布局按 world4utau 的源码；每帧自带时间。

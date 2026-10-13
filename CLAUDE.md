@@ -76,7 +76,7 @@ stdutau 在本项目开发过程中会被大幅修改并补充测试，应将其
 - **stdutau 的改动单独提交到 stdutau 仓库。** 本仓库目前不记录其版本，因此修改后必须重新构建并安装，否则本仓库使用的仍是旧版本。
 - stdutau 的提交信息规范与本仓库相同，只写一行。
 - stdutau 不依赖 Qt，也不得使其依赖 Qt。其接口使用 `std::string` 和 `std::filesystem::path`。
-- stdutau 不做任何编码转换，读写的是原始字节。这是正确的设计，不要「顺便修正」。
+- stdutau 不做任何编码转换，读写的是原始字节，这是正确的设计，不要为统一处理而在其中添加编码转换。
 
 ## 编码
 
@@ -84,7 +84,7 @@ stdutau 在本项目开发过程中会被大幅修改并补充测试，应将其
 
 - 编码策略由 `docs/note.md` 定义。`.usth` 恒为 UTF-8；`.ust` 的编码记录在控制音符的载荷中，**UST 的 `Charset` 只能表达「是否为 UTF-8」，无法表达具体编码**；导出编码是可配置的应用设置；音源以 `hello-config.json` 为准，插件以 `plugin.json` 为准。**不要猜测编码，也不要以「检测」代替「记录」。**
 - `hello-config.json` **每个文件夹一份**，与其描述的 `oto.ini` 位于同一层，而非整个音源一份。
-- 转换发生在文件读写层，进入内存模型后只有 UTF-8。界面层不应知道磁盘上是 Shift_JIS 还是 GBK。
+- 转换发生在文件读写层，进入内存模型后只有 UTF-8。界面层只处理 UTF-8，磁盘上的 Shift_JIS 与 GBK 的转换由文件读写层完成，不进入界面层。
 - 目标编码无法表示的字符以转义序列表示，见 `docs/note.md`。转义与还原必须是同一段代码的两个方向，实现为一对函数，并配有一组往返测试。
 - 路径使用 `std::filesystem::path`，不要经由 `std::string` 中转。在 Windows 上它使用 `wchar_t`，转换为窄字符串会丢失信息。
 
@@ -107,9 +107,9 @@ resampler / wavtool 的命令行参数由 `utau::ResamplerArguments::arguments()
 在官方 UTAU 中打开一份经过构造的 `.ust` 可执行任意操作系统命令（CVE-2024-28886，CWE-78）。**官方和 JVN 均未公布具体字段和路径，不要在文档或注释中编造。** 下面第一条给出的是有依据的推断，而非查证的结论。
 
 - **绝不将参数拼接为一条命令行字符串。** 官方 UTAU 渲染时默认写出并执行批处理文件（v0.4.12 的更新日志中有「wav生成時にバッチを使用しない」这一开关，说明默认使用批处理），而写入批处理的文件名、别名、flags 只要包含 `&` 或换行符即可追加命令。这是 CWE-78 最可能的机制。
-- **「经由 shell 执行」与「拼接命令行」是两回事，不可混淆。** 非 exe 插件是必须支持的功能，通过 `stdc::Popen::shell(true)` 执行：它保持参数向量的语义，对每个元素进行 `^` 转义并加引号，再包装为 `cmd /d /v:off /s /c`，比 Python 的 `shell=True` 严格得多。禁止的是自行拼接字符串，而非这个开关。
+- **「经由 shell 执行」与「拼接命令行」是两种不同的机制，不可混淆。** 非 exe 插件是必须支持的功能，通过 `stdc::Popen::shell(true)` 执行：它保持参数向量的语义，对每个元素进行 `^` 转义并加引号，再包装为 `cmd /d /v:off /s /c`，比 Python 的 `shell=True` 严格得多。禁止的是自行拼接字符串，而非这个开关。
 - **`plugin.txt` 的 `shell=use` 对应 `ShellExecuteEx`，而非命令处理器。** [官方规格](https://w.atwiki.jp/utaou/pages/64.html)原文为「通常はCreateProcessでプラグインが起動されますが、shell=useを指定した場合はShellExecuteExで起動されます。これにより、exeファイル以外を実行することができます(jar、html、htaなど)」。即实际运行的是系统为该扩展名注册的处理程序，`plugin.txt` 中并未指定该程序；`.bat` 恰好由 `cmd.exe` 处理，不要将这一巧合当作定义。**HelloUtau 在 Windows 上照 UTAU 沿用 `ShellExecuteEx`**（作者 2026-09-30 决定，见 [`docs/ClassicPluginHost.md`](docs/ClassicPluginHost.md)），不按扩展名自行分派；处理程序不返回进程句柄时，由用户在插件完成后手动确认。
-- **工程中的合成工具路径须经信任才执行。** `Tool1`、`Tool2` 是写在工程中的路径，直接执行等于让工程决定运行哪个程序。渲染一律使用工程的 `Tool1`、`Tool2`，二者必须是本地设置中的合成工具，或经用户在明确的提示中选择信任，否则不渲染，也不改用本地设置中的合成工具（作者 2026-10-06 决定，见 `docs/note.md`）。这是「执行任意程序」，与上一条的「注入任意命令」不同，两者都必须防范。
+- **工程中的合成工具路径须经信任才执行。** `Tool1`、`Tool2` 是写在工程中的路径，直接执行即以工程中记录的程序为执行对象。渲染一律使用工程的 `Tool1`、`Tool2`，二者必须是本地设置中的合成工具，或经用户在明确的提示中选择信任，否则不渲染，也不改用本地设置中的合成工具（作者 2026-10-06 决定，见 `docs/note.md`）。这是「执行任意程序」，与上一条的「注入任意命令」不同，两者都必须防范。
 - **音符上的 `$patch` 不是合成工具。** 它是相对于 ust 所在文件夹的 wav 文件名，UTAU 不经重采样器、直接交给 wavtool 拼接，文件不存在时按休止符处理（[插件规格](https://w.atwiki.jp/utaou/pages/64.html)，2026-10-06 实测一致）。HelloUtau 照 UTAU 渲染（作者 2026-10-09 决定，见 `docs/Synth.md`「`$patch` 与 `$direct`」）：以工程文件所在的文件夹为基准，`..\` 照常采用，不限定在工程目录之内，因为这个文件只被读取，不被执行。绝对路径与 UTAU 一样按文件不存在处理，因此不会读取网络路径。
 - **但必须原样保存。** 逐工程配置合成工具是 UTAU 的正常用法，不保存等于删除用户的设置，那是以安全为借口破坏数据。**需要防范的是未经询问即执行，而非保存。** 这一规则同样适用于 `$patch` 和 `userData`。
 - `.ust` 中的所有路径在使用前解析为绝对路径并进行检查，相对路径不得超出工程目录。`$patch` 是唯一的例外，见上。
@@ -128,7 +128,7 @@ resampler / wavtool 的命令行参数由 `utau::ResamplerArguments::arguments()
 
 目录、命名、格式、注释和头文件引用参照 synthrt 的 [`docs/Development.md`](D:/GitHub/synthrt/docs/Development.md)。要点复述如下，冲突时以该文档为准。
 
-本仓库自己的规范是 [`docs/Development.md`](docs/Development.md)，**它才是权威**，以下仅为摘要。
+本仓库自己的规范是 [`docs/Development.md`](docs/Development.md)，两份文档冲突时以本仓库的规范为准，以下仅为摘要。
 
 - 共两个模块，每个模块是**一组库**：`hellokit`（命名空间 `hello::kit`，Qt Core，产出 `HelloKitDocument` 等）和 `helloutau`（命名空间 `hello::daw`，Qt Widgets，产出 `HelloUtauEditor` 等以及 `HelloUtau` 可执行文件）。**`hellokit` 不链接 QtWidgets**，核心逻辑不依赖 GUI 才便于测试。
 - **应用同样由库和薄驱动组成**，参照 lldb 的 `liblldb` + `tools/driver`。`tools/driver/main.cpp` 只包含入口，其余逻辑位于库中，因为可执行文件无法链接进测试程序，而库可以。
@@ -182,7 +182,7 @@ Markdown：
 - **`tests/auto` 按模块分目录，与 `include/hellokit` 结构相同**：`tests/auto/Document/` 对应 `include/hellokit/Document/`。每个目录有自己的 `CMakeLists.txt`。
 - **程序的测试位于 `tests/auto/tools/`，与 `tools/` 结构相同**：`hellokit/tests/auto/tools/fswatcher/` 对应 `hellokit/tools/fswatcher/`，每个程序一个目录。helloutau 将来有自己的测试时也按此划分。
 - **以独立进程运行、通过管道通信的程序，其协议测试可以使用 Python**，由 ctest 调用（启用测试时需要 `Python3`，在 Windows 上使用 `Python3_EXECUTABLE` 避开应用商店的占位 `python`）。测试对象是管道中传递的文本，用脚本编写比用 QtTest 启动进程并手动解析输出更直接。这是 QtTest 规则的例外而非替代：库及其调用层仍使用 QtTest。
-- **一个 `test_XXX.cpp` 对应一个 `XXX.h`**，名称一一对应。这样只看目录列表即可知道哪些头文件尚无测试。一个测试文件覆盖三个头文件（如原来的 `test_Interchange.cpp`）时，就无法从目录列表看出这一点。
+- **一个 `test_XXX.cpp` 对应一个 `XXX.h`**，名称一一对应。这样只看目录列表即可知道哪些头文件尚无测试。一个测试文件覆盖三个头文件时，就无法从目录列表看出这一点。
 - **不要重复链接传递依赖。** `HelloKitDocument` 公开链接了 `HelloKitSupport`，测试只需链接 `HelloKitDocument`。
 - **确认测试通过之前，先确认构建的退出码为 0。** 构建失败时 ctest 运行的是上一次构建的旧程序，会给出虚假的通过结果。
 - **批量修改后核对「修改了几处」，而不只是「能否编译」。** `grep -o <pattern> | wc -l` 统计的是实际出现次数，`grep -c` 统计的是行数。
@@ -195,7 +195,7 @@ Markdown：
 
 - **提交信息不带任何 AI 署名**，不写 `Co-Authored-By`，不写 `Generated with`。
 - **只写一行**，使用英文、首字母大写的祈使句和美式拼写，不写正文。设计理由写在代码注释和 `docs/` 中，不要在提交信息中长篇叙述。
-- **一个提交只做一件事。** 同一个文件包含两批改动时，用 `git show HEAD:<path>` 取出旧内容，只叠加其中一批改动后提交，再恢复完整版本，不要为图省事暂存整个文件。
+- **一个提交只做一件事。** 同一个文件包含两批改动时，用 `git show HEAD:<path>` 取出旧内容，只叠加其中一批改动后提交，再恢复完整版本，不要为了省去拆分步骤而暂存整个文件。
 - 每个提交自身必须能够构建并通过测试，拆分出的中间状态同样如此。
 - **未经授权不要 commit，更不要 push。** 修改完成后保留工作区，待作者同意后再提交。
 
@@ -226,13 +226,13 @@ Markdown：
 ## 已知问题
 
 - **`sed -i` 会将 CRLF 转换为 LF**，而仓库中的行尾是混合的。修改前用 `grep -qU $'\r'` 判断，CRLF 文件改用编辑工具修改。
-- **增量构建时，往已有目标中新增或移入带 `Q_OBJECT` 的头文件后，AUTOMOC 可能不为它生成代码**：CMake 已重新配置、`AutogenInfo.json` 已列出该头文件，但 autogen 的缓存认为无须重新扫描，链接时缺少 `staticMetaObject` 等符号。删除该目标的 `<目标名>_autogen` 目录与 `CMakeFiles/<目标名>_autogen.dir/ParseCache.txt` 后重新构建即可，从空目录构建不受影响。
+- **增量构建时，往已有目标中新增或移入带 `Q_OBJECT` 的头文件后，AUTOMOC 可能不为它生成代码**：CMake 已重新配置、`AutogenInfo.json` 已列出该头文件，但 autogen 的缓存未触发对该头文件的重新扫描，链接时缺少 `staticMetaObject` 等符号。删除该目标的 `<目标名>_autogen` 目录与 `CMakeFiles/<目标名>_autogen.dir/ParseCache.txt` 后重新构建即可，从空目录构建不受影响。
 - **`sed` 的替换表达式必须带行号地址**，否则会进行全局替换，且后续表达式会匹配前面已修改的文本，导致层层嵌套。
 - **绝不使用 bash heredoc 编写脚本**，也不要经由 shell 传递含反斜杠的 C++ 文本或含日文的字符串，因为 shell 会去掉一层反斜杠。应先写入文件再执行。
-- **官方 UTAU 的站点使用 Shift_JIS**，用 `curl` 下载后须显式按 `cp932` 解码，不要让工具猜测。
+- **官方 UTAU 的站点使用 Shift_JIS**，用 `curl` 下载后须显式按 `cp932` 解码，不要让工具猜测编码。
 - **Qt 6 没有 `QTextCodec`**（已移至 Qt5Compat），替代品是 `QStringConverter` / `QStringEncoder` / `QStringDecoder`。**但 `QStringConverter::encodingForName()` 只识别内置的 `Encoding` 枚举**，即 UTF 系列、Latin-1 和 System；`Shift_JIS`、`GBK`、`Big5`、`EUC-KR` 等编码来自 ICU，只能将名称直接传给 `QStringDecoder(name)` / `QStringEncoder(name)` 构造。先将名称转换为枚举会使这些编码全部显示为「不支持」，且不报错。本仓库统一使用 `hello::kit::TextCodec`。
 - **`QStringConverter::System` 的 `name()` 返回 `"Locale"`**，这是占位字符串，无法记录到控制音符中。获取具体名称须自行按 `GetACP()` 映射，`TextCodec::systemName()` 即实现此功能。
-- **UST 只可能使用两种编码**：写有 `Charset=UTF-8` 的 UTF-8，以及未写任何声明的「写出文件的机器的 ANSI 代码页」。因此需要用户回答的从来不是「两百种编码中的哪一种」，而是「文件在哪个地区写出」，实际上即日本（Shift_JIS）、中国大陆（GBK）、台湾（Big5）。候选列表见 `TextCodec::ustCandidates()`，**不要将 `availableNames()` 的两百多项直接展示给用户**。
+- **UST 只可能使用两种编码**：写有 `Charset=UTF-8` 的 UTF-8，以及未写任何声明的「写出文件的机器的 ANSI 代码页」。因此用户需要回答的问题不是「两百种编码中的哪一种」，而是「文件在哪个地区写出」，实际上即日本（Shift_JIS）、中国大陆（GBK）、台湾（Big5）。候选列表见 `TextCodec::ustCandidates()`，**不要将 `availableNames()` 的两百多项直接展示给用户**。
 - **判断一个字符能否被目标编码表示，不能只看 `hasError()`。** 无法表示时 Qt 写入一个问号且不报错，必须编码后再解码并比较。`TextCodec::canEncode()` 即采用这种方法。
 - **`中` 是常用的日文汉字，Shift_JIS 中包含该字。** 需要 Shift_JIS 无法表示的字时，须使用简体专用字，例如 `你`、`简`、`们`。编写编码相关的测试时不要以 `中` 作为反例。
 - 在 Windows 上包含 `<windows.h>`：链接了 Qt 的目标使用 `<QtCore/qt_windows.h>`，未链接 Qt 的目标使用 `stdcorelib/platform/windows/stdc_windows.h`。二者都会先定义 `NOMINMAX`。**不要为了一个 `GetACP()` 而额外链接一个库。**
