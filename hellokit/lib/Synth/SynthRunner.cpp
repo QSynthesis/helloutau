@@ -71,7 +71,7 @@ namespace hello::kit {
         return failure;
     }
 
-    int SynthRunner::forgetSuperseded(const SynthPlan &plan, DiagnosticList &diagnostics) const {
+    int SynthRunner::removeSuperseded(const SynthPlan &plan, DiagnosticList &diagnostics) const {
         Q_UNUSED(diagnostics)
 
         std::set<int> rendering;

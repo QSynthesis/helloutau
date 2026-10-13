@@ -149,7 +149,7 @@ namespace hello::kit {
         ///       render.
         ///
         /// \return the number of removed fragments
-        int forgetSuperseded(const SynthPlan &plan, DiagnosticList &diagnostics) const;
+        int removeSuperseded(const SynthPlan &plan, DiagnosticList &diagnostics) const;
 
         /// Returns the record of the resampler call of \a step, with \a run if known, if the
         /// fragment does not exist, or \c std::nullopt otherwise. The content of an existing

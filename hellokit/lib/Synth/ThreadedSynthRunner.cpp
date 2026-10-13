@@ -112,7 +112,7 @@ namespace hello::kit {
             return outcome;
         }
 
-        forgetSuperseded(plan, diagnostics);
+        removeSuperseded(plan, diagnostics);
 
         // Determined before any synth tool runs, because the resampler creates these files.
         QList<bool> alreadyThere(int(plan.steps().size()), false);

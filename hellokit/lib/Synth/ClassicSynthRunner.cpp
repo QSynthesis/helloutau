@@ -319,7 +319,7 @@ namespace hello::kit {
         std::error_code error;
         fs::create_directories(directory, error);
         fs::create_directories(plan.cacheDirectory(), error);
-        forgetSuperseded(plan, diagnostics);
+        removeSuperseded(plan, diagnostics);
 
         // The fragments the script will find already present. The script reports no skip, so this
         // is the only place where reuse can be counted.
