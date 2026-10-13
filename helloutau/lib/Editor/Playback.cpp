@@ -765,6 +765,7 @@ namespace hello::daw {
             stdc_impl_t;
             impl.endPreview();
             if (impl.state == Playing) {
+                Q_EMIT playedToEnd();
                 impl.setState(Stopped);
             }
         });
@@ -1047,6 +1048,14 @@ namespace hello::daw {
         return impl.diagnose(impl.synth->takeFailures(), impl.previewSynthTools, true);
     }
 
+    void Playback::discardPreviewFailures() {
+        stdc_impl_t;
+        if (impl.synth) {
+            impl.synth->takeFailures();
+            impl.synth->takeDiagnostics();
+        }
+    }
+
     void Playback::setSynthDiagnosers(const kit::SynthDiagnosers *diagnosers) {
         stdc_impl_t;
         impl.diagnosers = diagnosers;
@@ -1134,11 +1143,8 @@ namespace hello::daw {
             return std::nullopt;
         }
         // The failures concern the fragments that are about to be deleted, and are discarded
-        // before stopping, which would report them.
-        if (impl.synth) {
-            impl.synth->takeFailures();
-            impl.synth->takeDiagnostics();
-        }
+        // even if no preview plays.
+        discardPreviewFailures();
         // The synth waits for the synth tool calls under way, which would write into the cache.
         stop();
         impl.stopPlanning();

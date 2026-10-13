@@ -177,9 +177,14 @@ namespace hello::daw {
         kit::DiagnosticList takePreviewDiagnostics();
 
         /// Returns the probable causes of the failures of the preview since the last call, found
-        /// by the diagnosers of setSynthDiagnosers(), and forgets the failures. Independent of
+        /// by the diagnosers of setSynthDiagnosers(), and discards the failures. Independent of
         /// takePreviewDiagnostics(). See docs/SynthDiagnostics.md.
         QList<kit::SynthDiagnosis> takePreviewDiagnoses();
+
+        /// Discards the warnings and the failures of the preview that takePreviewDiagnostics()
+        /// and takePreviewDiagnoses() return, without a diagnosis, for a preview that ends
+        /// without a report.
+        void discardPreviewFailures();
 
         /// Sets the diagnosers that find the probable causes of failures, which outlive this
         /// object, or null for no diagnosis.
@@ -222,8 +227,8 @@ namespace hello::daw {
 
         /// Stops playing, forgets the fragments held in memory, and deletes the files of the
         /// render cache of \a document: the files directly in the directory, which the synth tools
-        /// and the renders wrote, and not the folders in it. The failures of the preview are
-        /// discarded first, so that stopping reports none of them.
+        /// and the renders wrote, and not the folders in it. The failures of the preview, which
+        /// concern the deleted fragments, are discarded.
         ///
         /// \return the number of files deleted, or \c std::nullopt if a render has not ended,
         ///         whose script would write into the cache meanwhile; the files that could not
@@ -233,6 +238,11 @@ namespace hello::daw {
 
     Q_SIGNALS:
         void stateChanged(State state);
+
+        /// Emitted once the preview or the render being played reaches its end, before
+        /// stateChanged() reports \c Stopped. The signal distinguishes the end from a call of
+        /// stop().
+        void playedToEnd();
 
         /// \a done of \a total steps of the render in progress are complete. Emitted with zero
         /// and zero once the plan is made and the runner starts, before the steps are known.

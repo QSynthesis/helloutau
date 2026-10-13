@@ -3986,6 +3986,60 @@ private Q_SLOTS:
         QVERIFY(dialogsDuring([&] { playback->stop(); }).isEmpty());
     }
 
+    // The failures of a preview are reported only if the user ends the preview, as by a stop or a
+    // replay. The failures of a preview that a change of the settings stops are discarded.
+    void only_the_user_ends_a_preview_with_a_report() {
+        if (AudioEngine::instance()->sampleRate() <= 0) {
+            QSKIP("This machine has no audio output device.");
+        }
+        QTemporaryDir dir;
+        const auto e = editor();
+        const auto restore = qScopeGuard([&e] {
+            e->settings().rendering().setWavtool({});
+            e->settings().rendering().setResampler({});
+            e->settings().rendering().setPlaybackMode(RenderingSettings::Prerender);
+        });
+        e->settings().rendering().setPlaybackMode(RenderingSettings::Realtime);
+        const auto window = e->openFile(singingProject(dir, "stopped.usth", e->settings()));
+        QVERIFY(window);
+        const auto playback = window->findChild<Playback *>();
+        QVERIFY(playback);
+        const auto stop =
+            qScopeGuard([this, playback] { dialogsDuring([&] { playback->stop(); }); });
+        const auto play = declaredActionOf(*e, window, QStringLiteral("helloutau.playback.play"));
+        QVERIFY(play);
+
+        play->trigger();
+        QTRY_COMPARE(playback->state(), Playback::Playing);
+        QTRY_COMPARE(playback->pendingNotes(), 0);
+        e->settings().rendering().setPlaybackMode(RenderingSettings::Prerender);
+        QCOMPARE(dialogsDuring([&] { window->applySettings(); }), QStringList());
+        QCOMPARE(playback->state(), Playback::Stopped);
+        QVERIFY(playback->takePreviewDiagnostics().isEmpty());
+
+        // Each command ends the preview of a project of its own, because a note that failed is
+        // not rendered again.
+        e->settings().rendering().setPlaybackMode(RenderingSettings::Realtime);
+        for (const auto command : {"helloutau.playback.stop", "helloutau.playback.replay"}) {
+            // The project is named stop.usth or replay.usth after the command.
+            const auto name = QByteArray(command + 19) + ".usth";
+            const auto other = e->openFile(singingProject(dir, name.constData(), e->settings()));
+            QVERIFY(other);
+            const auto otherPlayback = other->findChild<Playback *>();
+            const auto otherPlay =
+                declaredActionOf(*e, other, QStringLiteral("helloutau.playback.play"));
+            const auto action = declaredActionOf(*e, other, QLatin1String(command));
+            QVERIFY(otherPlayback && otherPlay && action);
+            const auto stopOther = qScopeGuard(
+                [this, otherPlayback] { dialogsDuring([&] { otherPlayback->stop(); }); });
+            otherPlay->trigger();
+            QTRY_COMPARE(otherPlayback->state(), Playback::Playing);
+            QTRY_COMPARE(otherPlayback->pendingNotes(), 0);
+            QCOMPARE(dialogsDuring([&] { action->trigger(); }),
+                     QStringList{QStringLiteral("Message")});
+        }
+    }
+
     // Clearing the cache stops the preview and discards its failures without a report, because
     // they concern the deleted fragments.
     void clearing_the_cache_reports_no_failures() {

@@ -47,7 +47,12 @@ namespace hello::daw {
         impl.engine = AudioEngine::instance();
         impl.poll.setInterval(pollInterval);
         impl.drain.setSingleShot(true);
-        connect(&impl.drain, &QTimer::timeout, this, &AudioOutput::stop);
+        connect(&impl.drain, &QTimer::timeout, this, [this] {
+            stdc_impl_t;
+            if (impl.release()) {
+                Q_EMIT finished();
+            }
+        });
         connect(&impl.poll, &QTimer::timeout, this, [this] {
             stdc_impl_t;
             if (impl.id && impl.engine && impl.engine->isFinished(*impl.id)) {
@@ -91,9 +96,7 @@ namespace hello::daw {
 
     void AudioOutput::stop() {
         stdc_impl_t;
-        if (impl.release()) {
-            Q_EMIT finished();
-        }
+        impl.release();
     }
 
     bool AudioOutput::isPlaying() const {

@@ -235,6 +235,9 @@ namespace hello::daw {
         QTimer renderStateTimer;
         // Whether the playback is a preview, and whether it restarts from the playhead soon
         bool previewing = false;
+        // Whether the user pauses or stops the preview, or the preview reaches its end, in which
+        // case its failures are reported. See endPreviewReport().
+        bool previewReportWanted = false;
         // The voice bank root used by the last load attempt. A project undo can restore the
         // recorded path without changing the loaded voice bank, so the two paths are tracked
         // separately.
@@ -293,6 +296,8 @@ namespace hello::daw {
             decl.statusBar()->addPermanentWidget(beatDurationLabel);
             decl.statusBar()->addPermanentWidget(selectionDurationLabel);
             QObject::connect(renderCancel, &QPushButton::clicked, playback, &Playback::stop);
+            QObject::connect(playback, &Playback::playedToEnd, &decl,
+                             [this] { previewReportWanted = true; });
 
             QObject::connect(
                 playback, &Playback::stateChanged, &decl, [this](Playback::State state) {
@@ -321,11 +326,11 @@ namespace hello::daw {
                                 : std::nullopt);
                     }
                     if (state == Playback::Paused && playback->isPreviewPaused()) {
-                        reportPreviewFailures();
+                        endPreviewReport();
                     }
                     if (state == Playback::Stopped) {
                         previewing = false;
-                        reportPreviewFailures();
+                        endPreviewReport();
                         // Later, since a preview stops before it restarts, and
                         // a window stops as it closes.
                         QMetaObject::invokeMethod(
@@ -841,7 +846,7 @@ namespace hello::daw {
                     playback->stop();
                     return;
                 case Playback::Playing:
-                    playback->pause();
+                    byUser([this] { playback->pause(); });
                     return;
                 case Playback::Paused:
                     // A paused prerender goes on only for the same selection.
@@ -1103,7 +1108,7 @@ namespace hello::daw {
         // Plays the last playback again from its start: from the playhead at rest in the
         // realtime mode, the notes last rendered in the prerender mode.
         void replay() {
-            playback->stop();
+            byUser([this] { playback->stop(); });
             if (realtime()) {
                 startPreview();
             } else if (lastRange) {
@@ -1171,14 +1176,37 @@ namespace hello::daw {
                 restartPending = false;
                 if (playback->state() == Playback::Paused) {
                     // Resumed from the playhead instead of where playback was
-                    playback->stop();
+                    byUser([this] { playback->stop(); });
                     updateBackground();
                 } else if (previewing) {
+                    // The preview ends as a replay ends it, and its failures are reported.
+                    byUser([this] { playback->stop(); });
                     startPreview();
                 } else if (playback->state() == Playback::Stopped) {
                     updateBackground();
                 }
             });
+        }
+
+        // Runs action, a pause or a stop requested by the user, and reports the failures of the
+        // preview that it ends.
+        void byUser(const std::function<void()> &action) {
+            previewReportWanted = true;
+            action();
+            previewReportWanted = false;
+        }
+
+        // Reports the failures of a preview that the user ended by a pause, a stop, a replay or a
+        // move of the playhead, or that played to its end, and discards them otherwise. A stop
+        // by an edit or a setting therefore reports nothing, whichever function stops the
+        // playback.
+        void endPreviewReport() {
+            if (previewReportWanted) {
+                reportPreviewFailures();
+            } else {
+                playback->discardPreviewFailures();
+            }
+            previewReportWanted = false;
         }
 
         // The notes a preview could not render, which played as silence, in the status bar, and
@@ -1751,7 +1779,8 @@ namespace hello::daw {
             const auto play =
                 addCommand(QStringLiteral("helloutau.playback.play"), [this] { togglePlayback(); });
             playIconToggle = new ActionIconToggle(play);
-            addCommand(QStringLiteral("helloutau.playback.stop"), [this] { playback->stop(); });
+            addCommand(QStringLiteral("helloutau.playback.stop"),
+                       [this] { byUser([this] { playback->stop(); }); });
             addCommand(QStringLiteral("helloutau.playback.replay"), [this] { replay(); });
             addCommand(QStringLiteral("helloutau.playback.saveLastPlayed"),
                        [this] { saveLastPlayed(); });

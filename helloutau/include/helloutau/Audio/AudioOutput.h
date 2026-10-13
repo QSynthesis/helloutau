@@ -37,7 +37,7 @@ namespace hello::daw {
         bool start(std::shared_ptr<AudioSource> source, const QByteArray &id, int sampleRate,
                    QString *error = nullptr);
 
-        /// Stops playing. Emits finished() if something played.
+        /// Stops playing, without finished().
         void stop();
 
         bool isPlaying() const;
@@ -47,7 +47,8 @@ namespace hello::daw {
         std::optional<double> heardPosition() const;
 
     Q_SIGNALS:
-        /// Playing ended, at the end of the source or on stop().
+        /// Emitted once the device has played the source to its end. Neither stop() nor the
+        /// replacement of the source by start() emits it.
         void finished();
         /// Reports device loss or an output error after stopping this source, without
         /// finished(). \a heardPosition is heardPosition() at the moment of the loss, so that the
