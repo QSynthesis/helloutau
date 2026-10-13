@@ -5,6 +5,7 @@
 
 #include <QtCore/QStringList>
 
+#include <hellokit/Document/CombinedPitch.h>
 #include <hellokit/Document/DocumentConstants.h>
 #include <hellokit/Document/TempoMap.h>
 
@@ -512,6 +513,7 @@ namespace hello::kit {
                                          .arg(index + count));
         }
         int length = 0;
+        QList<Note> combined;
         for (int i = index; i < index + count; ++i) {
             const auto note = notes.at(i);
             if (i > index && note.tempo()) {
@@ -521,9 +523,27 @@ namespace hello::kit {
                             i);
             }
             length += note.length();
+            combined.push_back(note.toNote());
         }
+        // The tempo in effect for the notes, which none after the first changes
+        TempoMap tempos(ProjectRef(notes.session()).settings().tempo());
+        for (int i = 0; i <= index; ++i) {
+            const auto note = notes.at(i);
+            tempos.append(note.length(), note.tempo());
+        }
+        const auto pitch = CombinedPitch::of(combined, tempos.tempo(index));
+
         auto transaction = notes.session()->transaction(tr("Combine Notes"));
-        notes.at(index).setLength(length);
+        const auto target = notes.at(index);
+        target.setLength(length);
+        if (pitch.portamento != combined.first().portamento) {
+            const auto points = target.portamento();
+            points.remove(0, points.size());
+            points.insert(0, pitch.portamento);
+        }
+        if (pitch.pitchBend != combined.first().pitchBend) {
+            target.setPitchBend(pitch.pitchBend);
+        }
         notes.remove(index + 1, count - 1);
         return transaction.commit(diagnostics);
     }

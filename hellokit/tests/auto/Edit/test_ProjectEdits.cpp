@@ -1,5 +1,6 @@
 #include <QtTest/QTest>
 
+#include <hellokit/Document/CombinedPitch.h>
 #include <hellokit/Document/DocumentConstants.h>
 #include <hellokit/Edit/ProjectEdits.h>
 #include <hellokit/Edit/ProjectRefs.h>
@@ -750,6 +751,48 @@ private Q_SLOTS:
             diagnostics.last().message,
             ProjectEdits::tr("The track has %1 notes, not notes %2 to %3.").arg(2).arg(2).arg(3));
         QVERIFY(!diagnostics.last().noteIndex);
+        QCOMPARE(session.currentStep(), 1);
+
+        session.undo();
+        QCOMPARE(session.snapshot().toJson(), project.toJson());
+    }
+
+    // After the combination, in one step, the note has the Mode1 and Mode2 curves of the notes
+    // with their pitches, at the tempo in effect, and its own vibrato.
+    void the_curves_of_combined_notes_are_combined() {
+        Project project;
+        project.settings.tempo = 120;
+        Track track;
+        for (const int noteNum : {60, 62}) {
+            Note note;
+            note.lyric = QStringLiteral("a");
+            note.length = 480;
+            note.noteNum = noteNum;
+            PortamentoPoint start;
+            start.x = -25;
+            PortamentoPoint end;
+            end.x = 25;
+            note.portamento = {start, end};
+            note.pitchBend = PitchBend{0.0, {10}};
+            track.notes.push_back(note);
+        }
+        Vibrato vibrato;
+        vibrato.length = 50;
+        track.notes[0].vibrato = vibrato;
+        project.tracks.push_back(track);
+        ProjectSession session(project);
+        const auto notes = ProjectRef(&session).tracks().at(0).notes();
+
+        DiagnosticList diagnostics;
+        QVERIFY(ProjectEdits::combineNotes(notes, 0, 2, diagnostics));
+        const auto expected = CombinedPitch::of(track.notes, 120);
+        const auto combined = session.snapshot().tracks[0].notes;
+        QCOMPARE(combined.size(), 1);
+        QCOMPARE(combined[0].portamento, expected.portamento);
+        QCOMPARE(combined[0].portamento.last().y, 200.0);
+        QVERIFY(combined[0].pitchBend == expected.pitchBend);
+        QCOMPARE(combined[0].pitchBend->values.value(96), 210.0);
+        QVERIFY(combined[0].vibrato == track.notes[0].vibrato);
         QCOMPARE(session.currentStep(), 1);
 
         session.undo();

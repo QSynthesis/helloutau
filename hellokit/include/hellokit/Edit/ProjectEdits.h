@@ -224,10 +224,11 @@ namespace hello::kit {
                                                   const NotePropertyChanges &changes,
                                                   DiagnosticList &diagnostics);
 
-        /// Combines \a count notes of \a notes from \a index into the first of them, as UTAU
-        /// combines notes: its length becomes the sum of theirs, and it keeps its other
-        /// properties. Refused for fewer than two notes, and where a note after the first sets
-        /// a tempo, which would change the time of every note after them.
+        /// Combines \a count notes of \a notes from \a index into the first of them: its length
+        /// becomes the sum of theirs, its Mode1 and Mode2 curves those of CombinedPitch, and it
+        /// keeps its other properties, its vibrato among them. Fails for fewer than two notes,
+        /// and if a note after the first sets a tempo, which would change the time of every note
+        /// after them.
         Q_INVOKABLE static bool combineNotes(const NoteListRef &notes, int index, int count,
                                              DiagnosticList &diagnostics);
     };

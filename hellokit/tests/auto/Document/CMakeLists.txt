@@ -1,3 +1,4 @@
+add_auto_test(test_CombinedPitch.cpp HelloKitDocument)
 add_auto_test(test_Envelope.cpp HelloKitDocument)
 add_auto_test(test_Note.cpp HelloKitDocument)
 add_auto_test(test_PayloadCodec.cpp HelloKitDocument)
