@@ -26,4 +26,5 @@ namespace hello::daw {
         catalog->addPage(new RenderingSettingPage(settings));
         catalog->addPage(new FrequencyMapSettingPage(settings, formats));
     }
+
 }

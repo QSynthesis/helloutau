@@ -17,6 +17,7 @@ namespace hello::daw {
     /// before Editor and Plugins before Rendering.
     void addEditorSettingPages(SettingCatalog *catalog, AppSettings &settings,
                                UpdateChecker &checker, const kit::FrequencyFormats &formats);
+
 }
 
 #endif // HELLOUTAU_EDITOR_SETTINGPAGES_EDITORSETTINGPAGES_P_H

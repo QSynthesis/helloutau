@@ -126,6 +126,7 @@ namespace hello::daw {
                 }
             }
         }
+
     }
 
     class Editor::Impl {
