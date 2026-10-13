@@ -62,7 +62,9 @@ namespace hello::daw {
 
         /// Returns whether the view scrolls while the pointer is near an edge: across near the
         /// left and right edges, up and down near the top and bottom edges.
-        virtual bool wantsAutoScroll() const { return false; }
+        virtual bool wantsAutoScroll() const {
+            return false;
+        }
     };
 
     /// A press that becomes a click or a drag. A move farther than

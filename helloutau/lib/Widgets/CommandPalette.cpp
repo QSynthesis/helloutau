@@ -420,8 +420,9 @@ namespace hello::daw {
                 if (m_removable && watched == m_list->viewport()) {
                     const auto local = m_list->viewport()->mapFromGlobal(position);
                     const auto item = m_list->itemAt(local);
-                    if (item && removeButtonRect(m_list->visualItemRect(item), m_list->fontMetrics())
-                                    .contains(local)) {
+                    if (item &&
+                        removeButtonRect(m_list->visualItemRect(item), m_list->fontMetrics())
+                            .contains(local)) {
                         remove(item->data(IdRole).toString());
                         return true;
                     }

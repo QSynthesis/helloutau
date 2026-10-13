@@ -173,8 +173,7 @@ namespace hello::daw {
         const int mode = m_activation.operation;
         const double tick = m_state->view->timeAxis().toTick(position.x());
         qint64 length =
-            m_state->snapped(tick, m_activation.isOn(NoteViewModifiers::DisableNoteSnap)) -
-            m_start;
+            m_state->snapped(tick, m_activation.isOn(NoteViewModifiers::DisableNoteSnap)) - m_start;
         const int minimum = m_state->quantization > 0 ? m_state->quantization : 1;
         if (mode != NoteViewModifiers::PlainLength) {
             length = std::max<qint64>(minimum, length);

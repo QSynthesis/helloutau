@@ -106,9 +106,9 @@ namespace hello::daw {
         m_outputFileInvalid = addInvalidMark(m_outputFile, warningIcon);
         m_outputFileInvalid->setToolTip(tr("The output file is not a valid file name."));
 
-        // The items of the box are the voiceDir values themselves, so that a relative path and a %VOICE% value
-        // of the same name are distinct. The folders in the voice folders are listed by the
-        // value that UTAU writes for them. A folder hidden by a folder of the same name in a
+        // The items of the box are the voiceDir values themselves, so that a relative path and a
+        // %VOICE% value of the same name are distinct. The folders in the voice folders are listed
+        // by the value that UTAU writes for them. A folder hidden by a folder of the same name in a
         // voice folder of higher priority is therefore listed by its absolute path. The
         // completer matches any part of an item, so that a voice bank is found by its name.
         m_voiceDir = new QComboBox();

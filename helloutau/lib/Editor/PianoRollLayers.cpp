@@ -742,8 +742,8 @@ namespace hello::daw {
             const int part = hit.part;
             return std::make_unique<PressGesture>(
                 position,
-                [state, index, part, position](
-                    Qt::KeyboardModifiers modifiers) -> std::unique_ptr<SceneGesture> {
+                [state, index, part,
+                 position](Qt::KeyboardModifiers modifiers) -> std::unique_ptr<SceneGesture> {
                     const auto activation =
                         state->activate(NoteViewModifiers::VibratoDragScene, modifiers);
                     if (!activation) {
@@ -772,7 +772,8 @@ namespace hello::daw {
             return nullptr;
         }
         const auto state = m_state;
-        // If the modifiers of the press select the point with a click, the point is selected at once.
+        // If the modifiers of the press select the point with a click, the point is selected at
+        // once.
         const auto click = state->activate(NoteViewModifiers::PointClickScene, modifiers);
         if (click && click->operation == NoteViewModifiers::SelectPoint &&
             !state->selectedPoints.contains(id)) {
@@ -781,8 +782,8 @@ namespace hello::daw {
         const int point = hit.index;
         return std::make_unique<PressGesture>(
             position,
-            [state, index, point, id, position](
-                Qt::KeyboardModifiers modifiers) -> std::unique_ptr<SceneGesture> {
+            [state, index, point, id,
+             position](Qt::KeyboardModifiers modifiers) -> std::unique_ptr<SceneGesture> {
                 const auto activation =
                     state->activate(NoteViewModifiers::PointDragScene, modifiers);
                 if (!activation) {
@@ -835,8 +836,8 @@ namespace hello::daw {
             state->selectPoints({});
             return std::make_unique<PressGesture>(
                 position,
-                [state, position](Qt::KeyboardModifiers modifiers)
-                    -> std::unique_ptr<SceneGesture> {
+                [state,
+                 position](Qt::KeyboardModifiers modifiers) -> std::unique_ptr<SceneGesture> {
                     const auto activation =
                         state->activate(NoteViewModifiers::DrawDragScene, modifiers);
                     if (!activation) {
@@ -908,11 +909,11 @@ namespace hello::daw {
         }
         return std::make_unique<PressGesture>(
             position,
-            [state, index, end, wasSelected, position](
-                Qt::KeyboardModifiers modifiers) -> std::unique_ptr<SceneGesture> {
-                const auto activation = state->activate(
-                    end ? NoteViewModifiers::NoteEndDragScene : NoteViewModifiers::NoteDragScene,
-                    modifiers);
+            [state, index, end, wasSelected,
+             position](Qt::KeyboardModifiers modifiers) -> std::unique_ptr<SceneGesture> {
+                const auto activation = state->activate(end ? NoteViewModifiers::NoteEndDragScene
+                                                            : NoteViewModifiers::NoteDragScene,
+                                                        modifiers);
                 if (!activation) {
                     return nullptr;
                 }

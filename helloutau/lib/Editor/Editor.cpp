@@ -94,15 +94,16 @@ namespace hello::daw {
                 return;
             }
             constexpr int CascadeStep = 32;
-            const auto wanted = previous->frameGeometry().topLeft() + QPoint(CascadeStep, CascadeStep);
+            const auto wanted =
+                previous->frameGeometry().topLeft() + QPoint(CascadeStep, CascadeStep);
             const auto screen = QGuiApplication::screenAt(wanted);
             if (!screen) {
                 window->move(wanted);
                 return;
             }
             const auto available = screen->availableGeometry();
-            const int right = std::max(available.left(),
-                                       available.right() - window->frameGeometry().width() + 1);
+            const int right =
+                std::max(available.left(), available.right() - window->frameGeometry().width() + 1);
             const int bottom = std::max(available.top(),
                                         available.bottom() - window->frameGeometry().height() + 1);
             const int x = std::clamp(wanted.x(), available.left(), right);
@@ -413,7 +414,8 @@ namespace hello::daw {
             palette->popup();
         }
 
-        ProjectWindow *createWindow(Editor *editor, std::unique_ptr<kit::ProjectDocument> document) {
+        ProjectWindow *createWindow(Editor *editor,
+                                    std::unique_ptr<kit::ProjectDocument> document) {
             ProjectWindow *previous = nullptr;
             for (auto it = windows.crbegin(); it != windows.crend(); ++it) {
                 if (*it) {
@@ -463,8 +465,7 @@ namespace hello::daw {
                     untitledNumberOf.insert(target, number);
                 }
                 const auto number = untitledNumberOf.value(target);
-                return number == 1 ? Editor::tr("Untitled")
-                                   : Editor::tr("Untitled-%1").arg(number);
+                return number == 1 ? Editor::tr("Untitled") : Editor::tr("Untitled-%1").arg(number);
             }
             if (const auto it = untitledNumberOf.find(target); it != untitledNumberOf.end()) {
                 untitledNumbers.erase(it.value());
@@ -473,8 +474,8 @@ namespace hello::daw {
             }
 
             const auto normalized = normalizedPathText(source);
-            const auto parts = QDir::fromNativeSeparators(normalized).split(
-                QLatin1Char('/'), Qt::SkipEmptyParts);
+            const auto parts =
+                QDir::fromNativeSeparators(normalized).split(QLatin1Char('/'), Qt::SkipEmptyParts);
             const auto fileName = parts.isEmpty() ? normalized : parts.last();
             QList<const ProjectWindow *> duplicates;
             for (const auto project : std::as_const(windows)) {
@@ -554,8 +555,7 @@ namespace hello::daw {
         return impl.modifierBindings[kind];
     }
 
-    ModifierBindings Editor::modifierBindings(WindowKind kind,
-                                              const ModifierScheme &scheme) const {
+    ModifierBindings Editor::modifierBindings(WindowKind kind, const ModifierScheme &scheme) const {
         stdc_impl_t;
         for (const auto &bindings : impl.modifierBindings[kind]) {
             if (&bindings.scheme() == &scheme) {

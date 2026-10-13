@@ -265,7 +265,8 @@ namespace hello::kit {
                 if (!restored) {
                     diagnostics.push_back(
                         {DiagnosticSeverity::Error,
-                         tr("The name \"%1\" does not restore, so it cannot be renamed.").arg(name)});
+                         tr("The name \"%1\" does not restore, so it cannot be renamed.")
+                             .arg(name)});
                     valid = false;
                     continue;
                 }

@@ -149,8 +149,7 @@ namespace hello::daw {
         // The file a document is saved or exported as by default: its own file, or else the file
         // it came from, with \a extension, or else a new file in the documents directory.
         std::filesystem::path proposedPath(const kit::ProjectDocument &document,
-                                           const char16_t *extension,
-                                           const QString &fallback) {
+                                           const char16_t *extension, const QString &fallback) {
             auto path = document.sourcePath();
             if (path.empty()) {
                 path = pathOf(QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation));
@@ -532,10 +531,9 @@ namespace hello::daw {
             if (current) {
                 dialog.setCurrentRegion(*current);
             }
-            QObject::connect(&dialog, &RegionDialog::goToRequested, &decl,
-                             [this](const kit::Region &region) {
-                                 roll->loadRegion(region.first, region.last);
-                             });
+            QObject::connect(
+                &dialog, &RegionDialog::goToRequested, &decl,
+                [this](const kit::Region &region) { roll->loadRegion(region.first, region.last); });
             QObject::connect(&dialog, &RegionDialog::removeRequested, &decl,
                              [this, &dialog](const kit::Region &region) {
                                  const auto notes =
@@ -1030,7 +1028,7 @@ namespace hello::daw {
             const auto folder = audioFolder();
             const auto text = kit::ProjectRef(document->session()).settings().outputFile();
             auto output = kit::Project::isValidOutputFile(text) ? kit::Project::pathOf(text)
-                                                                 : std::filesystem::path();
+                                                                : std::filesystem::path();
             if (output.empty()) {
                 output = source.empty() ? audioPathOf(projectAudioBaseName())
                                         : source.filename().replace_extension(u".wav");
@@ -1050,9 +1048,7 @@ namespace hello::daw {
 
         QString projectAudioBaseName() const {
             const auto name = kit::ProjectRef(document->session()).settings().name().trimmed();
-            return name.isEmpty()
-                       ? editor->projectDisplayName(_decl)
-                       : name;
+            return name.isEmpty() ? editor->projectDisplayName(_decl) : name;
         }
 
         QString projectFileBaseName() const {
@@ -1313,35 +1309,34 @@ namespace hello::daw {
                     box->setFixedHeight(height);
                     box->setValue(document ? kit::ProjectRef(document->session()).settings().tempo()
                                            : 120);
-                    QObject::connect(
-                        box, &QDoubleSpinBox::valueChanged, box, [this](double tempo) {
-                            if (!document) {
-                                return;
-                            }
-                            kit::ProjectPropertyChanges changes;
-                            changes.tempo = tempo;
-                            kit::DiagnosticList diagnostics;
-                            kit::ProjectEdits::setProperties(kit::ProjectRef(document->session()),
-                                                             changes, diagnostics);
-                            DiagnosticBox::report(_decl, tr("Project Tempo"), diagnostics);
-                        });
+                    QObject::connect(box, &QDoubleSpinBox::valueChanged, box, [this](double tempo) {
+                        if (!document) {
+                            return;
+                        }
+                        kit::ProjectPropertyChanges changes;
+                        changes.tempo = tempo;
+                        kit::DiagnosticList diagnostics;
+                        kit::ProjectEdits::setProperties(kit::ProjectRef(document->session()),
+                                                         changes, diagnostics);
+                        DiagnosticBox::report(_decl, tr("Project Tempo"), diagnostics);
+                    });
                     tempoBoxes.push_back(box);
                     return box;
                 });
-            context->addWidgetFactory(
-                QStringLiteral("helloutau.view.timeSignatureWidget"), [this](QWidget *parent) {
-                    auto button = new QToolButton(parent);
-                    button->setObjectName(QStringLiteral("timeSignature"));
-                    button->setToolButtonStyle(Qt::ToolButtonTextOnly);
-                    button->setAutoRaise(true);
-                    button->setToolTip(tr("Time Signature"));
-                    QObject::connect(button, &QToolButton::clicked, button,
-                                     [this] { editTimeSignature(); });
-                    timeSignatureButtons.removeAll(nullptr);
-                    timeSignatureButtons.push_back(button);
-                    showTimeSignature();
-                    return button;
-                });
+            context->addWidgetFactory(QStringLiteral("helloutau.view.timeSignatureWidget"),
+                                      [this](QWidget *parent) {
+                                          auto button = new QToolButton(parent);
+                                          button->setObjectName(QStringLiteral("timeSignature"));
+                                          button->setToolButtonStyle(Qt::ToolButtonTextOnly);
+                                          button->setAutoRaise(true);
+                                          button->setToolTip(tr("Time Signature"));
+                                          QObject::connect(button, &QToolButton::clicked, button,
+                                                           [this] { editTimeSignature(); });
+                                          timeSignatureButtons.removeAll(nullptr);
+                                          timeSignatureButtons.push_back(button);
+                                          showTimeSignature();
+                                          return button;
+                                      });
         }
 
         // The time signature of the project, 4/4 without a project
@@ -1383,8 +1378,8 @@ namespace hello::daw {
             auto form = new QFormLayout(&dialog);
             form->addRow(tr("Beats per bar:"), numerator);
             form->addRow(tr("Beat unit:"), denominator);
-            auto buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel,
-                                                &dialog);
+            auto buttons =
+                new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
             form->addRow(buttons);
             QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
             QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
@@ -1576,16 +1571,12 @@ namespace hello::daw {
             addCommand(QStringLiteral("helloutau.select.selectAll"), [this] { roll->selectAll(); });
             addCommand(QStringLiteral("helloutau.view.goToStart"), [this] { goToStart(); });
             addCommand(QStringLiteral("helloutau.view.goToEnd"), [this] { goToEnd(); });
-            addCommand(QStringLiteral("helloutau.view.goToFirstNote"),
-                       [this] { goToFirstNote(); });
-            addCommand(QStringLiteral("helloutau.view.goToLastNote"),
-                       [this] { goToLastNote(); });
-            addCommand(QStringLiteral("helloutau.view.zoomInTime"),
-                       [this] { zoomTime(1.25); });
+            addCommand(QStringLiteral("helloutau.view.goToFirstNote"), [this] { goToFirstNote(); });
+            addCommand(QStringLiteral("helloutau.view.goToLastNote"), [this] { goToLastNote(); });
+            addCommand(QStringLiteral("helloutau.view.zoomInTime"), [this] { zoomTime(1.25); });
             addCommand(QStringLiteral("helloutau.view.zoomOutTime"),
                        [this] { zoomTime(1.0 / 1.25); });
-            addCommand(QStringLiteral("helloutau.view.zoomInKeys"),
-                       [this] { zoomKeys(1.25); });
+            addCommand(QStringLiteral("helloutau.view.zoomInKeys"), [this] { zoomKeys(1.25); });
             addCommand(QStringLiteral("helloutau.view.zoomOutKeys"),
                        [this] { zoomKeys(1.0 / 1.25); });
             addCommand(QStringLiteral("helloutau.edit.find"), [this] {

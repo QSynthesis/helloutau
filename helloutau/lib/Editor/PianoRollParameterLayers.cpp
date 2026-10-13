@@ -280,13 +280,12 @@ namespace hello::daw {
         if (button != Qt::LeftButton) {
             return nullptr;
         }
-        return parameterPress(
-            m_state, position,
-            [state = m_state, index, anchor = hit.index,
-             position](const ModifierBindings::Activation &activation) {
-                return std::make_unique<EnvelopeGesture>(state, index, anchor, position,
-                                                         activation);
-            });
+        return parameterPress(m_state, position,
+                              [state = m_state, index, anchor = hit.index,
+                               position](const ModifierBindings::Activation &activation) {
+                                  return std::make_unique<EnvelopeGesture>(state, index, anchor,
+                                                                           position, activation);
+                              });
     }
 
     void PianoRollState::ValueLayer::paint(QPainter &painter, const QRect &exposed) {

@@ -1945,10 +1945,10 @@ private Q_SLOTS:
     void an_invalid_envelope_is_not_editable() {
         auto project = envelopedNote();
         project.tracks[0].notes[1].envelope = kit::Envelope::fromTimeOrder({
-            {0,  0  },
+            {0,   0  },
             {-10, 100},
-            {35, 100},
-            {0,  0  }
+            {35,  100},
+            {0,   0  }
         });
         kit::ProjectSession session(project);
         PianoRoll roll(&session);

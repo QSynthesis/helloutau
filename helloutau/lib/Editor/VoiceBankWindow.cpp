@@ -320,8 +320,7 @@ namespace hello::daw {
                 updateFindResult();
             });
             addCommand(QStringLiteral("helloutau.edit.findNext"), [this] { findAgain(true); });
-            addCommand(QStringLiteral("helloutau.edit.findPrevious"),
-                       [this] { findAgain(false); });
+            addCommand(QStringLiteral("helloutau.edit.findPrevious"), [this] { findAgain(false); });
             addCommand(QStringLiteral("helloutau.view.commandPalette"), [this] {
                 palette->setCommands(
                     commandEntriesOf(editor->actionRegistry(Editor::VoiceBankWindowKind), context));
@@ -1160,8 +1159,8 @@ namespace hello::daw {
                     if (!change.problem.isEmpty()) {
                         kit::Diagnostic diagnostic;
                         diagnostic.severity = kit::DiagnosticSeverity::Error;
-                        diagnostic.message = tr("\"%1\" to \"%2\": %3")
-                                                 .arg(change.from, change.to, change.problem);
+                        diagnostic.message =
+                            tr("\"%1\" to \"%2\": %3").arg(change.from, change.to, change.problem);
                         problems.push_back(diagnostic);
                     }
                 }
@@ -1769,8 +1768,7 @@ namespace hello::daw {
             sampleToolBar = new QToolBar();
             sampleToolBar->setObjectName(QStringLiteral("sampleToolBar"));
             followToolBarPalette(sampleToolBar);
-            context->addToolBar(QStringLiteral("helloutau.voiceBank.sampleToolBar"),
-                                sampleToolBar);
+            context->addToolBar(QStringLiteral("helloutau.voiceBank.sampleToolBar"), sampleToolBar);
             context->addWidgetFactory(
                 QStringLiteral("helloutau.voiceBank.pitch"), [this](QWidget *parent) -> QWidget * {
                     auto box = new QComboBox();
@@ -1799,20 +1797,19 @@ namespace hello::daw {
                 });
             // The frequency map drawn over the audio, that of the resampler of the settings at
             // first (docs/FrequencyMaps.md)
-            context->addWidgetFactory(QStringLiteral("helloutau.voiceBank.frequencyFormat"),
-                                      [this](QWidget *parent) -> QWidget * {
-                                          auto box = new QComboBox();
-                                          box->setObjectName(QStringLiteral("frequencyFormat"));
-                                          frequencyBox = box;
-                                          fillFrequencyBox();
-                                          QObject::connect(
-                                              box, &QComboBox::currentIndexChanged, box,
-                                              [this, box] {
-                                                  frequencyFormat = box->currentData().toString();
-                                                  showFrequency();
-                                              });
-                                          return labelled(parent, tr("&F0:"), box);
-                                      });
+            context->addWidgetFactory(
+                QStringLiteral("helloutau.voiceBank.frequencyFormat"),
+                [this](QWidget *parent) -> QWidget * {
+                    auto box = new QComboBox();
+                    box->setObjectName(QStringLiteral("frequencyFormat"));
+                    frequencyBox = box;
+                    fillFrequencyBox();
+                    QObject::connect(box, &QComboBox::currentIndexChanged, box, [this, box] {
+                        frequencyFormat = box->currentData().toString();
+                        showFrequency();
+                    });
+                    return labelled(parent, tr("&F0:"), box);
+                });
             QObject::connect(&editor->frequencyFormats(), &kit::FrequencyFormats::formatsChanged,
                              &decl, [this] {
                                  frequencyFormat = currentFrequencyFormat();

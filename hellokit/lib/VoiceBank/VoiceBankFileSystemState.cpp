@@ -1843,8 +1843,8 @@ namespace hello::kit {
                     undo();
                     return false;
                 }
-                done.push_back(
-                    {existed ? Done::Rewritten : Done::Created, path, path, existed ? *before : QByteArray()});
+                done.push_back({existed ? Done::Rewritten : Done::Created, path, path,
+                                existed ? *before : QByteArray()});
             }
         }
         return true;
