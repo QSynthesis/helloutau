@@ -324,7 +324,7 @@ namespace hello::kit {
         return VoiceBankFileSystemState::renameOnDisk(bank.root(), changes, diagnostics);
     }
 
-    void VoiceBankSession::rememberCharset(const std::filesystem::path &directory) {
+    void VoiceBankSession::recordCharsetOnSave(const std::filesystem::path &directory) {
         m_unsynced.insert({directory, VoiceBankDirectorySource::Config});
     }
 

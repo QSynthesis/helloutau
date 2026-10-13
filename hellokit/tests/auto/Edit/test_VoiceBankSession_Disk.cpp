@@ -331,7 +331,7 @@ private Q_SLOTS:
     }
 
     void a_remembered_encoding_writes_the_configuration_only() {
-        m_session->rememberCharset("sub");
+        m_session->recordCharsetOnSave("sub");
         QVERIFY(m_session->hasUnrecordedCharsets());
         const auto before = times();
         save();

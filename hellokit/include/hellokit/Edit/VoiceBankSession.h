@@ -183,10 +183,10 @@ namespace hello::kit {
         /// Intended for an encoding the user selected when the voice bank was opened, which
         /// opening does not record by itself. Without this call, the user is asked again every
         /// time the voice bank is opened.
-        void rememberCharset(const std::filesystem::path &directory);
+        void recordCharsetOnSave(const std::filesystem::path &directory);
 
         /// Returns whether the next save() writes the configuration of a directory whose contents
-        /// are unchanged: a directory marked by rememberCharset() , or a directory read again by
+        /// are unchanged: a directory marked by recordCharsetOnSave() , or a directory read again by
         /// reread() .
         ///
         /// Such a voice bank is unsaved even though nothing in it was edited. An editor that

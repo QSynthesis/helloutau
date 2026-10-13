@@ -83,7 +83,7 @@ namespace hello::kit {
             return nullptr;
         }
         for (const auto &directory : std::as_const(recording.chosen)) {
-            session->rememberCharset(directory);
+            session->recordCharsetOnSave(directory);
         }
         return std::unique_ptr<VoiceBankDocument>(
             new VoiceBankDocument(std::move(session), parent));
