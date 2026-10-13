@@ -28,10 +28,23 @@ namespace hello::kit {
             diagnostics.push_back({DiagnosticSeverity::Error, message, std::nullopt});
         }
 
-        // The project with the last Mode2 point of every note at the pitch of the note, as the
-        // editor writes points (see step 2 in docs/Tuning.md). The editor of UTAU moves that point
-        // only horizontally and keeps any height it was given, which is not meant to be kept.
-        // Done before the session exists, so the document is not modified by it.
+        // Reports an output file that is not a valid file name (see Project::isValidOutputFile()).
+        void checkOutputFile(const Project &project, DiagnosticList &diagnostics) {
+            const auto &file = project.settings.outputFile;
+            if (!Project::isValidOutputFile(file)) {
+                diagnostics.push_back(
+                    {DiagnosticSeverity::Warning,
+                     ProjectDocument::tr("The output file \"%1\" of the project is not a valid "
+                                         "file name. It is kept in the project and not used.")
+                         .arg(file),
+                     std::nullopt});
+            }
+        }
+
+        // Returns the project with the last Mode2 point of every note at the pitch of the note,
+        // as the editor writes points (see step 2 in docs/Tuning.md). The editor of UTAU moves
+        // that point only horizontally, so a height other than 0 is unintended. The call precedes
+        // the session, so the document is not modified by it.
         Project endingAtPitch(Project project) {
             for (auto &track : project.tracks) {
                 for (auto &note : track.notes) {
@@ -122,6 +135,7 @@ namespace hello::kit {
             if (!project) {
                 return nullptr;
             }
+            checkOutputFile(*project, diagnostics);
             return std::unique_ptr<ProjectDocument>(
                 new ProjectDocument(endingAtPitch(*project), path, true, parent));
         }
@@ -146,6 +160,7 @@ namespace hello::kit {
             if (!project) {
                 return nullptr;
             }
+            checkOutputFile(*project, diagnostics);
             return std::unique_ptr<ProjectDocument>(
                 new ProjectDocument(endingAtPitch(*project), path, false, parent));
         }

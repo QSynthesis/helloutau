@@ -239,14 +239,20 @@ namespace hello::kit {
         /// file specifies.
         static std::filesystem::path cacheDirectoryOf(const std::filesystem::path &file);
 
-        /// Returns the path \a text with the separators that a saved project uses, whatever the
-        /// platform: slashes in an absolute Unix path, and backslashes, as UTAU writes them, in
-        /// any other path. Nothing else changes, so that \c .. and \c %VOICE% keep their meaning.
+        /// Returns the path \a text with the separators of a saved project on every platform:
+        /// slashes in an absolute Unix path, and backslashes, as written by UTAU, in any other
+        /// path. No other character changes, so that the meaning of \c .. and \c %VOICE% is kept.
         static QString savedPathText(const QString &text);
 
         /// Returns the path that the path text \a text of a project specifies, with backslashes
         /// read as separators on every platform, because UTAU writes them.
         static std::filesystem::path pathOf(const QString &text);
+
+        /// Returns whether the output file \a text is empty or a path whose names are all valid
+        /// file names on Windows. The rule applies on every platform because a project is also
+        /// opened in UTAU. A drive, \c . and \c .. are valid. An invalid output file is saved
+        /// unchanged and treated as absent.
+        static bool isValidOutputFile(QStringView text);
 
         /// \overload
         static std::optional<Project> fromJson(QByteArrayView json, DiagnosticList &diagnostics);

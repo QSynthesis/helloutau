@@ -73,6 +73,7 @@ namespace hello::daw {
         void updateVoiceDirResolved();
         void browseVoiceDir();
         bool checkPaths();
+        bool checkOutputFile();
         void updateTrust();
         void trustSynthTools();
         void acceptIfValid();
@@ -82,6 +83,7 @@ namespace hello::daw {
         QLineEdit *m_name;
         QLineEdit *m_flags;
         QLineEdit *m_outputFile;
+        QAction *m_outputFileInvalid;
         QComboBox *m_voiceDir;
         QAction *m_voiceDirInvalid;
         QLabel *m_voiceDirResolved;

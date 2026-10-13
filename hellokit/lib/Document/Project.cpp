@@ -391,4 +391,53 @@ namespace hello::kit {
         return std::filesystem::path(slashed.toStdU16String());
     }
 
+    // Each name is checked against the naming conventions of Windows: no reserved character, no
+    // control character, no device name with or without an extension, and no trailing period or
+    // space (https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file, "Naming
+    // Conventions"). A drive-relative path such as C:out.wav is valid.
+    bool Project::isValidOutputFile(QStringView text) {
+        static const QStringList devices{
+            QStringLiteral("CON"),  QStringLiteral("PRN"),  QStringLiteral("AUX"),
+            QStringLiteral("NUL"),  QStringLiteral("COM1"), QStringLiteral("COM2"),
+            QStringLiteral("COM3"), QStringLiteral("COM4"), QStringLiteral("COM5"),
+            QStringLiteral("COM6"), QStringLiteral("COM7"), QStringLiteral("COM8"),
+            QStringLiteral("COM9"), QStringLiteral("LPT1"), QStringLiteral("LPT2"),
+            QStringLiteral("LPT3"), QStringLiteral("LPT4"), QStringLiteral("LPT5"),
+            QStringLiteral("LPT6"), QStringLiteral("LPT7"), QStringLiteral("LPT8"),
+            QStringLiteral("LPT9"),
+        };
+        const auto validName = [](QStringView name) {
+            if (name.isEmpty() || name == u"." || name == u"..") {
+                return true;
+            }
+            for (const auto c : name) {
+                if (c.unicode() < 0x20 || QStringView(u"<>:\"|?*").contains(c)) {
+                    return false;
+                }
+            }
+            if (name.endsWith(u'.') || name.endsWith(u' ')) {
+                return false;
+            }
+            const auto base = name.left(name.indexOf(u'.')).trimmed();
+            return std::none_of(devices.cbegin(), devices.cend(), [base](const QString &device) {
+                return base.compare(device, Qt::CaseInsensitive) == 0;
+            });
+        };
+        // A leading drive letter and its colon are skipped.
+        qsizetype from = 0;
+        if (text.size() >= 2 && text[1] == u':' && text[0].unicode() < 0x80 && text[0].isLetter()) {
+            from = 2;
+        }
+        qsizetype start = from;
+        for (qsizetype i = from; i <= text.size(); ++i) {
+            if (i == text.size() || text[i] == u'/' || text[i] == u'\\') {
+                if (!validName(text.mid(start, i - start))) {
+                    return false;
+                }
+                start = i + 1;
+            }
+        }
+        return true;
+    }
+
 }

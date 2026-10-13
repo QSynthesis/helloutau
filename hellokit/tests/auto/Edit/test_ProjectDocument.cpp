@@ -211,6 +211,43 @@ private Q_SLOTS:
         QVERIFY(document->isModified());
     }
 
+    // An output file that is not a valid file name is reported on opening a .usth or a .ust, and
+    // saved unchanged.
+    void an_invalid_output_file_is_reported_and_kept() {
+        QTemporaryDir dir;
+        const auto path = pathIn(dir, "song.usth");
+        auto project = oneNote();
+        project.settings.outputFile = QStringLiteral("a|b.wav");
+        DiagnosticList diagnostics;
+        QVERIFY(project.save(path, diagnostics));
+
+        const auto document = ProjectDocument::open(path, nullptr, diagnostics);
+        QVERIFY(document);
+        QCOMPARE(diagnostics.size(), 1);
+        QCOMPARE(diagnostics.at(0).severity, DiagnosticSeverity::Warning);
+        QVERIFY(diagnostics.at(0).message.contains(QStringLiteral("a|b.wav")));
+        QCOMPARE(document->session()->snapshot().settings.outputFile, QStringLiteral("a|b.wav"));
+        QVERIFY(!document->isModified());
+
+        rename(*document, QStringLiteral("changed"));
+        QVERIFY(document->save(diagnostics));
+        const auto saved = Project::open(path, diagnostics);
+        QVERIFY(saved);
+        QCOMPARE(saved->settings.outputFile, QStringLiteral("a|b.wav"));
+
+        const auto ust = pathIn(dir, "song.ust");
+        writeBytes(ust, QByteArray("[#VERSION]\r\nUST Version1.2\r\nCharset=UTF-8\r\n[#SETTING]\r\n"
+                                   "Tempo=120.00\r\nTracks=1\r\nOutFile=a|b.wav\r\n[#TRACKEND]\r\n"));
+        DiagnosticList ustDiagnostics;
+        const auto imported = ProjectDocument::open(ust, nullptr, ustDiagnostics);
+        QVERIFY(imported);
+        QVERIFY(std::any_of(ustDiagnostics.cbegin(), ustDiagnostics.cend(), [](const auto &d) {
+            return d.severity == DiagnosticSeverity::Warning &&
+                   d.message.contains(QStringLiteral("a|b.wav"));
+        }));
+        QCOMPARE(imported->session()->snapshot().settings.outputFile, QStringLiteral("a|b.wav"));
+    }
+
     // The last point of every note is at the pitch of the note once opened, as the editor writes
     // points, and opening does not modify the document.
     void the_last_point_ends_at_the_pitch_of_the_note_when_opened() {

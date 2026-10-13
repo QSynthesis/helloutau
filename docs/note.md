@@ -65,6 +65,8 @@ UST 自身的 `Charset` 只有两种取值：空，或 `UTF-8`。它表示的是
 
 **路径的分隔符是原样保存的唯一例外**（作者 2026-10-06 决定）。`VoiceDir`、`OutFile`、`CacheDir`、`Tool1`、`Tool2` 保存时，以 `/` 开头的 Unix 绝对路径一律写 `/`，其余路径（带盘符的路径、相对路径、`%VOICE%` 路径）一律写 `\`，与 UTAU 的写法一致，因此同一工程在任何平台上保存的结果相同。除分隔符外不做任何规范化，`..` 原样保留，因为 `%VOICE%` 是文本前缀而非目录，规范化会改变路径的含义。读取时，`\` 在所有平台上都作为分隔符（`Project::pathOf()`）。
 
+**输出文件名按 Windows 的命名规则检查，在所有平台上一致**（作者 2026-10-13 决定，`Project::isValidOutputFile()`），因为工程也会在 UTAU 中打开。路径中的每一级名称不得含 `<>:"|?*` 与控制字符，不得为设备名（`CON`、`PRN`、`AUX`、`NUL`、`COM1`–`COM9`、`LPT1`–`LPT9`，有无扩展名均同），不得以句点或空格结尾。盘符、`.`、`..` 与空值有效。规则出自 [Naming Files, Paths, and Namespaces](https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file)「Naming Conventions」。`&`、`%` 等 shell 元字符是合法的文件名字符，不拦截：输出文件名不经 shell，经典方式写入脚本的值加引号，含引号或换行的值整份拒绝。打开工程时，无效的输出文件名给出警告，原样保存，但不使用，导出整轨时按没有输出文件处理。
+
 ## HelloUtau 标记文件
 
 音源文件夹：`hello-config.json`

@@ -1719,6 +1719,10 @@
         <translation>工程使用设置中的合成器。</translation>
     </message>
     <message>
+        <source>The output file is not a valid file name.</source>
+        <translation>输出文件不是有效的文件名。</translation>
+    </message>
+    <message>
         <source>Resolves to %1</source>
         <translation>指向 %1</translation>
     </message>
@@ -4338,6 +4342,10 @@ Write them again without these chunks? The audio stays the same. The files are w
 </context>
 <context>
     <name>hello::kit::ProjectDocument</name>
+    <message>
+        <source>The output file &quot;%1&quot; of the project is not a valid file name. It is kept in the project and not used.</source>
+        <translation>工程的输出文件「%1」不是有效的文件名。该值保留在工程中，但不使用。</translation>
+    </message>
     <message>
         <source>This file does not state its encoding.</source>
         <translation>此文件未声明其编码。</translation>

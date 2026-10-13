@@ -468,6 +468,40 @@ private Q_SLOTS:
         QCOMPARE(dialog.result(), int(QDialog::Accepted));
     }
 
+    // An output file loaded with the project is accepted unchanged even if it is not a valid
+    // file name. A changed output file must be valid, and the invalid mark of the field is
+    // visible otherwise.
+    void a_changed_output_file_must_be_a_valid_file_name() {
+        QTemporaryDir dir;
+        AppSettings settings(dir.filePath(QStringLiteral("settings.json")));
+        utauWithSynthToolsIn(dir, settings);
+        kit::Project project;
+        project.tracks.push_back({});
+        project.tracks[0].voiceDir = QStringLiteral("%VOICE%bank");
+        project.settings.wavtool = QStringLiteral("tools\\wavtool.exe");
+        project.settings.resampler = QStringLiteral("resampler.exe");
+        project.settings.outputFile = QStringLiteral("con.wav");
+        {
+            ProjectPropertiesDialog dialog(project, settings);
+            dialog.nameEdit()->setText(QStringLiteral("other"));
+            QVERIFY(!warnsOnOk(dialog));
+            QCOMPARE(dialog.result(), int(QDialog::Accepted));
+            QVERIFY(!dialog.changes().outputFile);
+        }
+
+        ProjectPropertiesDialog dialog(project, settings);
+        const auto mark = dialog.outputFileEdit()->actions().value(0);
+        QVERIFY(mark);
+        dialog.outputFileEdit()->setText(QStringLiteral("a?b.wav"));
+        QVERIFY(warnsOnOk(dialog));
+        QCOMPARE(dialog.result(), int(QDialog::Rejected));
+        QVERIFY(mark->isVisible());
+        dialog.outputFileEdit()->setText(QStringLiteral("a & b.wav"));
+        QVERIFY(!warnsOnOk(dialog));
+        QCOMPARE(dialog.result(), int(QDialog::Accepted));
+        QVERIFY(!mark->isVisible());
+    }
+
     // The items are the values that UTAU writes for the folders of the voice folders. A folder
     // hidden by a folder of the same name in a voice folder of higher priority is an absolute
     // path.

@@ -1021,14 +1021,15 @@ namespace hello::daw {
             }
         }
 
-        // The output file of the project, resolved against the folder of the project file, or
-        // against the music folder of the user for a project without a file. A project without
-        // an output file proposes its name with the extension .wav.
+        // Returns the output file of the project, resolved against the folder of the project
+        // file, or against the music folder of the user if the project has no file. Without a
+        // valid output file, the name of the project with the extension .wav is proposed.
         std::filesystem::path defaultTrackFile() const {
             const auto source = document->sourcePath();
             const auto folder = audioFolder();
-            auto output =
-                kit::Project::pathOf(kit::ProjectRef(document->session()).settings().outputFile());
+            const auto text = kit::ProjectRef(document->session()).settings().outputFile();
+            auto output = kit::Project::isValidOutputFile(text) ? kit::Project::pathOf(text)
+                                                                 : std::filesystem::path();
             if (output.empty()) {
                 output = source.empty() ? audioPathOf(projectAudioBaseName())
                                         : source.filename().replace_extension(u".wav");

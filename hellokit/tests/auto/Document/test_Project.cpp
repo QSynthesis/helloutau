@@ -407,7 +407,23 @@ private Q_SLOTS:
                  textOf(utau / u"voice" / u"other"));
     }
 
-    // UTAU writes backslashes, which std::filesystem reads as separators only on Windows.
+    // An output file is valid if every name of its path is a valid file name on Windows, on
+    // every platform. Shell metacharacters such as & are valid in file names.
+    void an_output_file_is_checked_by_the_naming_conventions_of_windows() {
+        for (const auto valid :
+             {u"", u"out.wav", u"C:\\songs\\out.wav", u"C:out.wav", u"..\\out.wav",
+              u"sub/out.wav", u"a & b.wav", u"console.wav", u"100% (1).wav"}) {
+            QVERIFY2(Project::isValidOutputFile(valid), qPrintable(QString::fromUtf16(valid)));
+        }
+        for (const auto invalid :
+             {u"a|b.wav", u"a?b.wav", u"a*.wav", u"a\"b.wav", u"a<b.wav", u"a>b.wav", u"ab:c.wav",
+              u"sub\\a:b.wav", u"con.wav", u"CON", u"sub\\com1.txt", u"lpt9", u"nul .wav", u"out.wav.",
+              u"out.wav ", u"dir.\\out.wav", u"line\nbreak.wav", u"C:\\a\tb.wav"}) {
+            QVERIFY2(!Project::isValidOutputFile(invalid), qPrintable(QString::fromUtf16(invalid)));
+        }
+    }
+
+    // Backslashes, as written by UTAU, are separators of std::filesystem only on Windows.
     void a_path_text_reads_backslashes_on_every_platform() {
         const auto tool = Project::pathOf(QStringLiteral("tools\\resampler.exe"));
         QCOMPARE(std::distance(tool.begin(), tool.end()), 2);

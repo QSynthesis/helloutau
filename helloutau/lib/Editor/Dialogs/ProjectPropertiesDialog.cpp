@@ -101,8 +101,10 @@ namespace hello::daw {
         m_name = new QLineEdit(values.name);
         m_flags = new QLineEdit(values.flags);
         m_outputFile = new QLineEdit(QDir::toNativeSeparators(values.outputFile));
+        m_outputFileInvalid = addInvalidMark(m_outputFile, warningIcon);
+        m_outputFileInvalid->setToolTip(tr("The output file is not a valid file name."));
 
-        // The box holds the voiceDir value itself, so that a relative path and a %VOICE% value
+        // The items of the box are the voiceDir values themselves, so that a relative path and a %VOICE% value
         // of the same name are distinct. The folders in the voice folders are listed by the
         // value that UTAU writes for them. A folder hidden by a folder of the same name in a
         // voice folder of higher priority is therefore listed by its absolute path. The
@@ -374,13 +376,31 @@ namespace hello::daw {
 
     void ProjectPropertiesDialog::acceptIfValid() {
         // Without changes, the dialog is accepted even if a path is invalid, and the project is
-        // not modified. Any change requires all paths to be valid.
-        if (changes().isEmpty() || checkPaths()) {
+        // not modified. Any change requires all paths to be valid, and a changed output file to
+        // be a valid file name.
+        if (changes().isEmpty()) {
+            accept();
+            return;
+        }
+        const bool paths = checkPaths();
+        const bool outputFile = checkOutputFile();
+        if (paths && outputFile) {
             accept();
             return;
         }
         QMessageBox::warning(this, tr("Invalid Project Path"),
-                             tr("The voice folder, wavtool, and resampler must be valid."));
+                             paths ? tr("The output file is not a valid file name.")
+                                   : tr("The voice folder, wavtool, and resampler must be valid."));
+    }
+
+    // An output file loaded with the project is accepted unchanged even if it is not a valid file
+    // name. Only a changed output file must be valid.
+    bool ProjectPropertiesDialog::checkOutputFile() {
+        const auto text = QDir::fromNativeSeparators(m_outputFile->text());
+        const bool valid = text == QDir::fromNativeSeparators(m_project.settings.outputFile) ||
+                           kit::Project::isValidOutputFile(text);
+        m_outputFileInvalid->setVisible(!valid);
+        return valid;
     }
 
     kit::ProjectPropertyChanges ProjectPropertiesDialog::changes() const {

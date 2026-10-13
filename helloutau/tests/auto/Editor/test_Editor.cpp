@@ -3885,8 +3885,10 @@ private Q_SLOTS:
         QVERIFY(!page->isModified());
     }
 
-    // Render Track proposes the output file of the project, written with backslashes as UTAU
-    // writes it, relative to the folder of the project file.
+    // For Render Track, the output file of the project is proposed, written with backslashes as
+    // UTAU writes it, relative to the folder of the project file. An output file that is not a
+    // valid file name is reported on opening and ignored, and the name of the project file with
+    // the extension .wav is proposed instead.
     void render_track_proposes_the_output_file_of_the_project() {
         const auto e = editor();
         const auto wavtool = pathIn(m_dir, "output-wavtool.exe");
@@ -3900,38 +3902,56 @@ private Q_SLOTS:
             e->settings().rendering().setWavtool({});
             e->settings().rendering().setResampler({});
         });
-        kit::Project project;
         // The file dialog shows the proposal only in a folder that exists.
         fs::create_directories(pathIn(m_dir, "out"));
-        project.settings.outputFile = QStringLiteral("out\\song.wav");
-        project.settings.wavtool = e->settings().rendering().wavtool();
-        project.settings.resampler = e->settings().rendering().resampler();
-        project.tracks.push_back({});
-        const auto path = pathIn(m_dir, "output-file.usth");
-        kit::DiagnosticList diagnostics;
-        QVERIFY(project.save(path, diagnostics));
-        const auto window = e->openFile(path);
-        QVERIFY(window);
-        const auto renderTrack =
-            declaredActionOf(*e, window, QStringLiteral("helloutau.playback.renderTrack"));
-        QVERIFY(renderTrack);
-
-        QString proposal;
-        QTimer timer;
-        timer.setInterval(10);
-        QObject::connect(&timer, &QTimer::timeout, [&proposal] {
-            const auto widget = QApplication::activeModalWidget();
-            if (const auto dialog = qobject_cast<QFileDialog *>(widget)) {
-                const auto files = dialog->selectedFiles();
-                proposal = files.isEmpty() ? QString() : files.constFirst();
-                dialog->reject();
-            } else if (const auto box = qobject_cast<QMessageBox *>(widget)) {
-                box->reject();
+        // Returns the proposal for the project saved as \a name with the output file \a text,
+        // and the dialogs shown on opening.
+        const auto proposalOf = [this, &e](const char *name, const QString &text) {
+            std::pair<fs::path, QStringList> result;
+            kit::Project project;
+            project.settings.outputFile = text;
+            project.settings.wavtool = e->settings().rendering().wavtool();
+            project.settings.resampler = e->settings().rendering().resampler();
+            project.tracks.push_back({});
+            const auto path = pathIn(m_dir, name);
+            kit::DiagnosticList diagnostics;
+            if (!project.save(path, diagnostics)) {
+                return result;
             }
-        });
-        timer.start();
-        renderTrack->trigger();
-        QCOMPARE(fs::path(proposal.toStdU16String()), pathIn(m_dir, "out") / "song.wav");
+            ProjectWindow *window = nullptr;
+            result.second = dialogsDuring([&] { window = e->openFile(path); });
+            const auto renderTrack = window ? declaredActionOf(*e, window,
+                                                               QStringLiteral(
+                                                                   "helloutau.playback.renderTrack"))
+                                            : nullptr;
+            if (!renderTrack) {
+                return result;
+            }
+            QString proposal;
+            QTimer timer;
+            timer.setInterval(10);
+            QObject::connect(&timer, &QTimer::timeout, [&proposal] {
+                const auto widget = QApplication::activeModalWidget();
+                if (const auto dialog = qobject_cast<QFileDialog *>(widget)) {
+                    const auto files = dialog->selectedFiles();
+                    proposal = files.isEmpty() ? QString() : files.constFirst();
+                    dialog->reject();
+                } else if (const auto box = qobject_cast<QMessageBox *>(widget)) {
+                    box->reject();
+                }
+            });
+            timer.start();
+            renderTrack->trigger();
+            result.first = fs::path(proposal.toStdU16String());
+            return result;
+        };
+
+        const auto valid = proposalOf("output-file.usth", QStringLiteral("out\\song.wav"));
+        QCOMPARE(valid.first, pathIn(m_dir, "out") / "song.wav");
+        QVERIFY(valid.second.isEmpty());
+        const auto invalid = proposalOf("invalid-output.usth", QStringLiteral("out\\a|b.wav"));
+        QCOMPARE(invalid.first, pathIn(m_dir, "invalid-output.wav"));
+        QCOMPARE(invalid.second.size(), 1);
     }
 
     // An image outside the voice bank folder is not loaded, although the file exists, and the
