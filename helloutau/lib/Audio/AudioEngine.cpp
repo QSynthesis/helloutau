@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <optional>
 #include <vector>
 
 #include <QtCore/QCoreApplication>
@@ -85,9 +86,9 @@ namespace hello::daw {
         // The device ID with which the stream was opened, empty for the default device. A
         // change of the devices closes the stream only if this ID now denotes another device.
         QByteArray openedId;
-        std::unique_ptr<AudioMixer> mixer;
+        std::optional<AudioMixer> mixer;
 #ifdef HELLOUTAU_AUDIO_PULL_DEVICE
-        std::unique_ptr<MixerDevice> device;
+        std::optional<MixerDevice> device;
 #endif
         std::unique_ptr<QAudioSink> sink;
         QMediaDevices devices;
@@ -240,7 +241,7 @@ namespace hello::daw {
             return fail(tr("The audio output device does not support floating-point samples."));
         }
         if (!impl.sink) {
-            impl.mixer = std::make_unique<AudioMixer>(rate, format.channelCount());
+            impl.mixer.emplace(rate, format.channelCount());
             impl.sink = std::make_unique<QAudioSink>(selected, format);
             impl.opened = selected;
             impl.openedId = id;
@@ -257,10 +258,10 @@ namespace hello::daw {
                     }
                 },
                 Qt::QueuedConnection);
-            auto mixer = impl.mixer.get();
+            auto mixer = &*impl.mixer;
 #ifdef HELLOUTAU_AUDIO_PULL_DEVICE
-            impl.device = std::make_unique<MixerDevice>(*mixer, format.channelCount());
-            impl.sink->start(impl.device.get());
+            impl.device.emplace(*mixer, format.channelCount());
+            impl.sink->start(&*impl.device);
 #else
             impl.sink->start(
                 [mixer](QSpan<float> samples) { mixer->render(samples.data(), samples.size()); });
