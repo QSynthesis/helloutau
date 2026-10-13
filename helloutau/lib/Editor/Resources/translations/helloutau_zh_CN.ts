@@ -4941,8 +4941,8 @@ Write them again without these chunks? The audio stays the same. The files are w
         <translation>编码「%1」不可用。</translation>
     </message>
     <message>
-        <source>&quot;%1&quot; in &quot;%2&quot; contains U+FFFD, which stands for bytes that could not be read, and writing it would lose them.</source>
-        <translation>「%2」中的「%1」含有 U+FFFD，它代表无法读取的字节，写入会丢失这些字节。</translation>
+        <source>&quot;%1&quot; in &quot;%2&quot; contains U+FFFD, which stands for an invalid byte sequence, and writing it would lose it.</source>
+        <translation>「%2」中的「%1」含有 U+FFFD，它代表一段无效字节序列，写入会丢失这段字节。</translation>
     </message>
     <message>
         <source>&quot;%1&quot; in &quot;%2&quot; cannot be written in %3.</source>
@@ -4953,8 +4953,8 @@ Write them again without these chunks? The audio stays the same. The files are w
         <translation>保存不会删除「%1」。</translation>
     </message>
     <message>
-        <source>Part of &quot;%1&quot; is U+FFFD, which stands for bytes that could not be read, and writing it would lose them.</source>
-        <translation>「%1」中含有 U+FFFD，它代表无法读取的字节，写入会丢失这些字节。</translation>
+        <source>Part of &quot;%1&quot; is U+FFFD, which stands for an invalid byte sequence, and writing it would lose it.</source>
+        <translation>「%1」中含有 U+FFFD，它代表一段无效字节序列，写入会丢失这段字节。</translation>
     </message>
     <message>
         <source>Part of &quot;%1&quot; cannot be represented in %2.</source>

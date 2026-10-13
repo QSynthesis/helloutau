@@ -526,8 +526,8 @@ namespace hello::kit {
                     encoded.problems.push_back(
                         VoiceBankFileSystemState::tr(
                             "\"%1\" in \"%2\" contains U+FFFD, which stands "
-                            "for bytes that could not be read, and writing it "
-                            "would lose them.")
+                            "for an invalid byte sequence, and writing it "
+                            "would lose it.")
                             .arg(text, where(file)));
                 } else if (!codec.canEncode(text)) {
                     encoded.problems.push_back(
@@ -617,9 +617,8 @@ namespace hello::kit {
                     if (directory.readme.contains(QChar::ReplacementCharacter)) {
                         encoded.problems.push_back(
                             VoiceBankFileSystemState::tr(
-                                "Part of \"%1\" is U+FFFD, which stands for "
-                                "bytes that could not be read, and writing it "
-                                "would lose them.")
+                                "Part of \"%1\" is U+FFFD, which stands for an "
+                                "invalid byte sequence, and writing it would lose it.")
                                 .arg(where(VoiceBankDirectorySource::Readme)));
                     } else if (!codec->canEncode(directory.readme)) {
                         encoded.problems.push_back(
