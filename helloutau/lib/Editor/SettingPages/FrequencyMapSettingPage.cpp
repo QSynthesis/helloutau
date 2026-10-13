@@ -57,10 +57,11 @@ namespace hello::daw {
         m_caches = new QTreeWidget();
         m_caches->setRootIsDecorated(false);
         m_caches->setHeaderLabels(
-            {tr("Format"), tr("Map of a.wav"), tr("Caches"), tr("Cache Files of a.wav")});
+            {tr("Format"), tr("Frequency Map"), tr("Cache"), tr("Cache File")});
         cachesLayout->addWidget(m_caches);
-        cachesLayout->addWidget(note(tr("Removing or regenerating the frequency maps of a format "
-                                        "removes these files beside the audio files.")));
+        cachesLayout->addWidget(
+            note(tr("The file names are those of the audio file a.wav. Removing or regenerating "
+                    "the frequency maps of a format removes these files beside the audio files.")));
         layout->addWidget(cachesGroup);
         layout->addStretch();
         fillCaches();
@@ -76,19 +77,19 @@ namespace hello::daw {
     void FrequencyMapSettingPage::fillCaches() {
         m_caches->clear();
         const std::filesystem::path wav(u"a.wav");
+        // One row for each cache. The format and its map file are written in its first row only.
         for (const auto format : m_formats.formats()) {
-            QStringList names;
-            QStringList files;
-            for (const auto &cache : format->analysisCaches()) {
-                names.push_back(cache.name);
-                files.push_back(QString::fromStdU16String(cache.fileNameOf(wav).u16string()));
-            }
             const auto map = format->mapFileNameOf(wav);
-            auto item = new QTreeWidgetItem(m_caches);
-            item->setText(0, format->name());
-            item->setText(1, map ? QString::fromStdU16String(map->u16string()) : QString());
-            item->setText(2, names.isEmpty() ? tr("None") : names.join(QStringLiteral(", ")));
-            item->setText(3, files.join(QStringLiteral(", ")));
+            auto first = new QTreeWidgetItem(m_caches);
+            first->setText(0, format->name());
+            first->setText(1, map ? QString::fromStdU16String(map->u16string()) : QString());
+            const auto caches = format->analysisCaches();
+            for (qsizetype i = 0; i < caches.size(); ++i) {
+                const auto item = i == 0 ? first : new QTreeWidgetItem(m_caches);
+                item->setText(2, caches.at(i).name);
+                item->setText(3,
+                              QString::fromStdU16String(caches.at(i).fileNameOf(wav).u16string()));
+            }
         }
         // The widths fit the contents once, and the user resizes the columns afterwards.
         for (int column = 0; column < m_caches->columnCount(); ++column) {

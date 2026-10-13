@@ -2975,6 +2975,7 @@ private Q_SLOTS:
         QVERIFY(page);
         QVERIFY(page->widget());
         const auto list = page->cacheList();
+        // One row for each cache, the format and its map file in the first row only
         QStringList rows;
         for (int i = 0; i < list->topLevelItemCount(); ++i) {
             const auto item = list->topLevelItem(i);
@@ -2982,7 +2983,11 @@ private Q_SLOTS:
                            item->text(3));
         }
         QVERIFY(rows.contains(QStringLiteral("desc.mrq|LLSM|a.wav.llsm")));
-        QVERIFY(rows.contains(QStringLiteral("a.dio|STAR, PLATINUM|a.star, a.platinum")));
+        QVERIFY(rows.contains(QStringLiteral("a_wav.frq||")));
+        const auto dio = rows.indexOf(QStringLiteral("a.dio|STAR|a.star"));
+        QVERIFY(dio >= 0);
+        QCOMPARE(rows.value(dio + 1), QStringLiteral("|PLATINUM|a.platinum"));
+        QVERIFY(list->topLevelItem(int(dio + 1))->text(0).isEmpty());
         QCOMPARE(list->header()->sectionResizeMode(0), QHeaderView::Interactive);
 
         const auto restore = qScopeGuard([&e] {

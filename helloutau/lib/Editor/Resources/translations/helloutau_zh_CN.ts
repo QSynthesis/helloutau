@@ -958,28 +958,24 @@
         <translation>分析缓存</translation>
     </message>
     <message>
+        <source>Cache File</source>
+        <translation>缓存文件</translation>
+    </message>
+    <message>
+        <source>The file names are those of the audio file a.wav. Removing or regenerating the frequency maps of a format removes these files beside the audio files.</source>
+        <translation>文件名以音频文件 a.wav 为例。删除或重新生成某格式的频率表时，删除音频文件旁边的这些文件。</translation>
+    </message>
+    <message>
         <source>Format</source>
         <translation>格式</translation>
     </message>
     <message>
-        <source>Caches</source>
+        <source>Frequency Map</source>
+        <translation>频率表</translation>
+    </message>
+    <message>
+        <source>Cache</source>
         <translation>缓存</translation>
-    </message>
-    <message>
-        <source>Map of a.wav</source>
-        <translation>a.wav 的频率表</translation>
-    </message>
-    <message>
-        <source>Cache Files of a.wav</source>
-        <translation>a.wav 的缓存文件</translation>
-    </message>
-    <message>
-        <source>Removing or regenerating the frequency maps of a format removes these files beside the audio files.</source>
-        <translation>删除或重新生成某格式的频率表时，删除音频文件旁边的这些文件。</translation>
-    </message>
-    <message>
-        <source>None</source>
-        <translation>无</translation>
     </message>
     <message>
         <source>The number of generation threads is a positive whole number, or Automatic.</source>
