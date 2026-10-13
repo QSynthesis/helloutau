@@ -22,7 +22,7 @@ namespace {
         explicit RecordingGesture(bool autoScroll = false) : m_autoScroll(autoScroll) {
         }
 
-        bool wantsAutoScroll() const override {
+        bool autoScroll() const override {
             return m_autoScroll;
         }
 

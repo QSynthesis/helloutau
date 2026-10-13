@@ -29,7 +29,7 @@ namespace {
             m_log.push_back(QStringLiteral("cancel"));
         }
 
-        bool wantsAutoScroll() const override {
+        bool autoScroll() const override {
             return m_autoScroll;
         }
 
@@ -88,7 +88,7 @@ private Q_SLOTS:
     // the gesture of the drag receives that move, the later moves and the release.
     void a_move_past_the_start_distance_starts_the_drag() {
         PressGesture press(QPointF(0, 0), drag(true), click());
-        QVERIFY(!press.wantsAutoScroll());
+        QVERIFY(!press.autoScroll());
         press.move(QPointF(far(), 0), Qt::ControlModifier);
         press.move(QPointF(40, 0), Qt::ShiftModifier);
         press.release(QPointF(50, 0), Qt::NoModifier);
@@ -96,7 +96,7 @@ private Q_SLOTS:
                                      QStringLiteral("move %1 %2").arg(far()).arg(ctrl),
                                      QStringLiteral("move 40 %1").arg(shift),
                                      QStringLiteral("release 50 0")}));
-        QVERIFY(press.wantsAutoScroll());
+        QVERIFY(press.autoScroll());
     }
 
     void a_drag_without_a_gesture_does_nothing() {

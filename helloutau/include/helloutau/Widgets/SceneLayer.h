@@ -62,7 +62,7 @@ namespace hello::daw {
 
         /// Returns whether the view scrolls while the pointer is near an edge: across near the
         /// left and right edges, up and down near the top and bottom edges.
-        virtual bool wantsAutoScroll() const {
+        virtual bool autoScroll() const {
             return false;
         }
     };
@@ -85,7 +85,7 @@ namespace hello::daw {
         void move(QPointF position, Qt::KeyboardModifiers modifiers) override;
         void release(QPointF position, Qt::KeyboardModifiers modifiers) override;
         void cancel() override;
-        bool wantsAutoScroll() const override;
+        bool autoScroll() const override;
 
     private:
         QPointF m_origin;

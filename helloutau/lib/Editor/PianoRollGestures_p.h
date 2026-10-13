@@ -115,7 +115,7 @@ namespace hello::daw {
 
         void cancel() override;
 
-        bool wantsAutoScroll() const override {
+        bool autoScroll() const override {
             return true;
         }
 
@@ -142,7 +142,7 @@ namespace hello::daw {
 
         void cancel() override;
 
-        bool wantsAutoScroll() const override {
+        bool autoScroll() const override {
             return true;
         }
 

@@ -54,8 +54,8 @@ namespace hello::daw {
         }
     }
 
-    bool PressGesture::wantsAutoScroll() const {
-        return m_gesture && m_gesture->wantsAutoScroll();
+    bool PressGesture::autoScroll() const {
+        return m_gesture && m_gesture->autoScroll();
     }
 
     SceneLayer::~SceneLayer() = default;
