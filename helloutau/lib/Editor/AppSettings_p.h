@@ -2,7 +2,6 @@
 #define HELLOUTAU_EDITOR_APPSETTINGS_P_H
 
 #include <filesystem>
-#include <memory>
 #include <string_view>
 
 #include <QtCore/QString>
@@ -87,23 +86,29 @@ namespace hello::daw {
 
     class AppSettings::Impl {
     public:
-        explicit Impl(const QString &fileName) : store(fileName) {
+        // The constructors of the groups are private to AppSettings, whose nested class this is.
+        // The groups only store the settings, which are not used before they are constructed.
+        Impl(const QString &fileName, const AppSettings &settings)
+            : store(fileName), utau(store), voiceBanks(settings, store), rendering(store),
+              frequencyMaps(store), audio(store), appearance(store), view(store),
+              pitchControl(store), files(store), commandPalette(store), updates(store) {
         }
 
         AppSettingsStore store;
         std::filesystem::path userDirectory;
 
-        std::unique_ptr<UtauSettings> utau;
-        std::unique_ptr<VoiceBankSettings> voiceBanks;
-        std::unique_ptr<RenderingSettings> rendering;
-        std::unique_ptr<FrequencyMapSettings> frequencyMaps;
-        std::unique_ptr<AudioSettings> audio;
-        std::unique_ptr<AppearanceSettings> appearance;
-        std::unique_ptr<ViewSettings> view;
-        std::unique_ptr<PitchControlSettings> pitchControl;
-        std::unique_ptr<FileSettings> files;
-        std::unique_ptr<CommandPaletteSettings> commandPalette;
-        std::unique_ptr<UpdateSettings> updates;
+        // Declared after the store, so that they are destroyed before it
+        UtauSettings utau;
+        VoiceBankSettings voiceBanks;
+        RenderingSettings rendering;
+        FrequencyMapSettings frequencyMaps;
+        AudioSettings audio;
+        AppearanceSettings appearance;
+        ViewSettings view;
+        PitchControlSettings pitchControl;
+        FileSettings files;
+        CommandPaletteSettings commandPalette;
+        UpdateSettings updates;
     };
 
 }

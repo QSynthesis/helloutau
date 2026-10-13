@@ -121,21 +121,9 @@ namespace hello::daw {
     }
 
     AppSettings::AppSettings(const QString &fileName, const QString &userDirectory)
-        : _impl(std::make_unique<Impl>(fileName)) {
+        : _impl(std::make_unique<Impl>(fileName, *this)) {
         stdc_impl_t;
         impl.userDirectory = std::filesystem::path(userDirectory.toStdU16String());
-        // The constructors of the groups are private, and only this class constructs them.
-        impl.utau.reset(new UtauSettings(impl.store));
-        impl.voiceBanks.reset(new VoiceBankSettings(*this, impl.store));
-        impl.rendering.reset(new RenderingSettings(impl.store));
-        impl.frequencyMaps.reset(new FrequencyMapSettings(impl.store));
-        impl.audio.reset(new AudioSettings(impl.store));
-        impl.appearance.reset(new AppearanceSettings(impl.store));
-        impl.view.reset(new ViewSettings(impl.store));
-        impl.pitchControl.reset(new PitchControlSettings(impl.store));
-        impl.files.reset(new FileSettings(impl.store));
-        impl.commandPalette.reset(new CommandPaletteSettings(impl.store));
-        impl.updates.reset(new UpdateSettings(impl.store));
     }
 
     AppSettings::~AppSettings() = default;
@@ -171,112 +159,112 @@ namespace hello::daw {
 
     UtauSettings &AppSettings::utau() {
         stdc_impl_t;
-        return *impl.utau;
+        return impl.utau;
     }
 
     const UtauSettings &AppSettings::utau() const {
         stdc_impl_t;
-        return *impl.utau;
+        return impl.utau;
     }
 
     VoiceBankSettings &AppSettings::voiceBanks() {
         stdc_impl_t;
-        return *impl.voiceBanks;
+        return impl.voiceBanks;
     }
 
     const VoiceBankSettings &AppSettings::voiceBanks() const {
         stdc_impl_t;
-        return *impl.voiceBanks;
+        return impl.voiceBanks;
     }
 
     RenderingSettings &AppSettings::rendering() {
         stdc_impl_t;
-        return *impl.rendering;
+        return impl.rendering;
     }
 
     const RenderingSettings &AppSettings::rendering() const {
         stdc_impl_t;
-        return *impl.rendering;
+        return impl.rendering;
     }
 
     FrequencyMapSettings &AppSettings::frequencyMaps() {
         stdc_impl_t;
-        return *impl.frequencyMaps;
+        return impl.frequencyMaps;
     }
 
     const FrequencyMapSettings &AppSettings::frequencyMaps() const {
         stdc_impl_t;
-        return *impl.frequencyMaps;
+        return impl.frequencyMaps;
     }
 
     AudioSettings &AppSettings::audio() {
         stdc_impl_t;
-        return *impl.audio;
+        return impl.audio;
     }
 
     const AudioSettings &AppSettings::audio() const {
         stdc_impl_t;
-        return *impl.audio;
+        return impl.audio;
     }
 
     AppearanceSettings &AppSettings::appearance() {
         stdc_impl_t;
-        return *impl.appearance;
+        return impl.appearance;
     }
 
     const AppearanceSettings &AppSettings::appearance() const {
         stdc_impl_t;
-        return *impl.appearance;
+        return impl.appearance;
     }
 
     ViewSettings &AppSettings::view() {
         stdc_impl_t;
-        return *impl.view;
+        return impl.view;
     }
 
     const ViewSettings &AppSettings::view() const {
         stdc_impl_t;
-        return *impl.view;
+        return impl.view;
     }
 
     PitchControlSettings &AppSettings::pitchControl() {
         stdc_impl_t;
-        return *impl.pitchControl;
+        return impl.pitchControl;
     }
 
     const PitchControlSettings &AppSettings::pitchControl() const {
         stdc_impl_t;
-        return *impl.pitchControl;
+        return impl.pitchControl;
     }
 
     FileSettings &AppSettings::files() {
         stdc_impl_t;
-        return *impl.files;
+        return impl.files;
     }
 
     const FileSettings &AppSettings::files() const {
         stdc_impl_t;
-        return *impl.files;
+        return impl.files;
     }
 
     CommandPaletteSettings &AppSettings::commandPalette() {
         stdc_impl_t;
-        return *impl.commandPalette;
+        return impl.commandPalette;
     }
 
     const CommandPaletteSettings &AppSettings::commandPalette() const {
         stdc_impl_t;
-        return *impl.commandPalette;
+        return impl.commandPalette;
     }
 
     UpdateSettings &AppSettings::updates() {
         stdc_impl_t;
-        return *impl.updates;
+        return impl.updates;
     }
 
     const UpdateSettings &AppSettings::updates() const {
         stdc_impl_t;
-        return *impl.updates;
+        return impl.updates;
     }
 
     QJsonValue AppSettings::value(const QString &key) const {
