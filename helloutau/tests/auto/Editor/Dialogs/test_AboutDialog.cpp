@@ -2,6 +2,7 @@
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QLabel>
 
+#include <helloutau/Config.h>
 #include <helloutau/Editor/Dialogs/AboutDialog.h>
 
 using namespace hello::daw;
@@ -10,7 +11,8 @@ class test_AboutDialog : public QObject {
     Q_OBJECT
 
 private Q_SLOTS:
-    // The title names the application, and the text holds its version and that of Qt.
+    // The title names the application, and the text holds its version, that of Qt and the
+    // triplet of the build, which an update matches.
     void the_dialog_shows_the_name_and_the_versions() {
         QApplication::setApplicationDisplayName(QStringLiteral("HelloTest"));
         QApplication::setApplicationVersion(QStringLiteral("9.8.7"));
@@ -21,6 +23,8 @@ private Q_SLOTS:
         QVERIFY(label->text().contains(QStringLiteral("HelloTest")));
         QVERIFY(label->text().contains(QStringLiteral("9.8.7")));
         QVERIFY(label->text().contains(QStringLiteral(QT_VERSION_STR)));
+        QVERIFY(label->text().contains(QStringLiteral("Target platform: ") +
+                                       QStringLiteral(HELLOUTAU_TRIPLET)));
     }
 };
 
