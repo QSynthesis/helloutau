@@ -825,7 +825,7 @@
         <translation>编辑器</translation>
     </message>
     <message>
-        <source>How projects are edited and exported.</source>
+        <source>The editing and export of projects.</source>
         <translation>工程的编辑与导出方式。</translation>
     </message>
     <message>
@@ -926,7 +926,7 @@
         <translation>频率表</translation>
     </message>
     <message>
-        <source>How the voice bank window generates frequency maps with the resampler, and the analysis caches that each resampler keeps.</source>
+        <source>The generation of frequency maps with the resampler in the voice bank window, and the analysis caches that each resampler keeps.</source>
         <translation>音源窗口以重采样器生成频率表的方式，以及各重采样器保留的分析缓存。</translation>
     </message>
     <message>
@@ -1073,7 +1073,7 @@
         <translation>Flags(&amp;F)：</translation>
     </message>
     <message>
-        <source>Only the fields you edit change, on every selected note. An emptied number returns the note to the default.</source>
+        <source>Only the fields that are edited change, on every selected note. An emptied number returns the note to the default.</source>
         <translation>所有选中的音符仅修改被编辑的字段。清空数值将使音符恢复为默认值。</translation>
     </message>
 </context>
@@ -2118,7 +2118,7 @@
         <translation>音频渲染</translation>
     </message>
     <message>
-        <source>The synth tools used for audio rendering, and how playback renders audio.</source>
+        <source>The synth tools used for audio rendering, and the way playback renders audio.</source>
         <translation>用于音频渲染的合成工具，以及播放时的音频渲染方式。</translation>
     </message>
     <message>
@@ -2348,7 +2348,7 @@ Trust and use them for rendering?</source>
         <translation>语言(&amp;L)：</translation>
     </message>
     <message>
-        <source>Takes effect after a restart.</source>
+        <source>The change takes effect after a restart.</source>
         <translation>重启后生效。</translation>
     </message>
 </context>
@@ -2590,7 +2590,7 @@ Automatic: updates are checked at startup as well, and a new version is download
         <translation>更新源(&amp;S)：</translation>
     </message>
     <message>
-        <source>Automatic selects a source by the time zone of the system.</source>
+        <source>Automatic: the source is selected by the time zone of the system.</source>
         <translation>选择「自动」时，按系统时区选择更新源。</translation>
     </message>
     <message>
@@ -2766,8 +2766,8 @@ Lyrics:
 <context>
     <name>hello::daw::UtauSettingPage</name>
     <message>
-        <source>Where UTAU is, and how a project finds its voice bank and synth tools.</source>
-        <translation>UTAU 的位置，以及工程如何找到其音源与合成工具。</translation>
+        <source>The location of the UTAU folder and the resolution of voice bank and synth tool paths.</source>
+        <translation>UTAU 文件夹的位置，以及工程解析音源与合成工具的方式。</translation>
     </message>
     <message>
         <source>Folder</source>
@@ -2884,7 +2884,7 @@ Lyrics:
         <translation>跳过文件夹(&amp;S)</translation>
     </message>
     <message>
-        <source>Leave the folder out. Its samples are then found by file name only, and it is asked again next time.</source>
+        <source>Leave the folder out. Its samples are then found by file name only, and the user is asked about it again next time.</source>
         <translation>不读取此文件夹。其中的样本仅按文件名查找，下次将再次询问。</translation>
     </message>
     <message>
@@ -2900,7 +2900,7 @@ Lyrics:
         <translation>以后再说(&amp;L)</translation>
     </message>
     <message>
-        <source>Use the names as they are this time, and ask again next time.</source>
+        <source>Use the names as they are this time. The user is asked again next time.</source>
         <translation>本次按原样使用这些名字，下次再询问。</translation>
     </message>
     <message>
@@ -2908,7 +2908,7 @@ Lyrics:
         <translation>全部跳过(&amp;S)</translation>
     </message>
     <message>
-        <source>Leave every folder out. Their samples are then found by file name only, and they are asked again next time.</source>
+        <source>Leave every folder out. Their samples are then found by file name only, and the user is asked about them again next time.</source>
         <translation>不读取所有文件夹。其中的样本仅按文件名查找，下次将再次询问。</translation>
     </message>
     <message>
@@ -3025,7 +3025,7 @@ Lyrics:
         <translation>该音频文件没有格式 %1 的频率表。</translation>
     </message>
     <message>
-        <source>Another entry of this audio file has the same alias. UTAU uses only one of them, and an edit that adds such an alias is refused.</source>
+        <source>Another entry of this audio file has the same alias. UTAU uses only one of them, and an edit that adds such an alias is rejected.</source>
         <translation>此音频文件的另一条目具有相同的别名。UTAU 只使用其中一个，因此添加此类别名的编辑将被拒绝。</translation>
     </message>
     <message>
@@ -3312,7 +3312,7 @@ Lyrics:
     <message>
         <source>These folders of the voice bank were changed by another program: %1.
 
-Read them again? What you did not save in them is replaced, and Undo brings it back.</source>
+Read them again? Unsaved changes in them are replaced, and Undo restores them.</source>
         <translation>音源的以下文件夹已被其他程序修改：%1。
 
 是否重新读取？其中未保存的修改将被替换，可通过撤销恢复。</translation>
