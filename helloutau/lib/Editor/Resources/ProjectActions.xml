@@ -35,7 +35,7 @@
                 category="File" catalog="helloutau.file" />
         <action id="helloutau.file.openRecentVoiceBank" text="Open Recent &amp;Voice Bank..."
                 category="File" catalog="helloutau.file" />
-        <!-- Forgets every recent project and voice bank after a confirmation, as "Clear
+        <!-- Clears the list of recent projects and voice banks after a confirmation, as "Clear
              Recently Opened..." of VS Code. The command is in no menu, and Open Recent has an
              item of its own. -->
         <action id="helloutau.file.clearRecent" text="&amp;Clear Recently Opened..."
@@ -169,7 +169,7 @@
         <action id="helloutau.view.commandPalette" text="&amp;Command Palette..." category="Help"
                 shortcuts="Ctrl+Shift+P;F1" />
 
-        <!-- Plays, pauses what plays, or goes on from where it was paused -->
+        <!-- Plays or pauses the playback, and resumes it after a pause -->
         <action id="helloutau.playback.play" text="&amp;Play or Pause" category="Playback"
                 shortcuts="Space;F5" />
         <action id="helloutau.playback.stop" text="&amp;Stop" category="Playback" shortcut="F7" />
@@ -207,7 +207,7 @@
         <menu id="helloutau.playback" text="&amp;Playback" />
         <menu id="helloutau.tools" text="&amp;Tools" />
         <menu id="helloutau.help" text="&amp;Help" />
-        <!-- Formats other than .usth, UST first; MIDI and the rest will join it -->
+        <!-- Formats other than .usth, UST first. MIDI and the rest will join it -->
         <menu id="helloutau.file.export" text="&amp;Export" />
         <menu id="helloutau.edit.transpose" text="&amp;Transpose" />
         <menu id="helloutau.edit.envelope" text="E&amp;nvelope" />

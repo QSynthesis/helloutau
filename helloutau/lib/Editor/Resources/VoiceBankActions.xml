@@ -80,7 +80,7 @@
         <action id="helloutau.voiceBank.includeAudio" text="Include Audio &amp;Files"
                 category="Edit" />
         <!-- A value of the current entry at the time under the pointer, while the pointer is over
-             the waveform; the keys are those of OpenUtau -->
+             the waveform. The keys are those of OpenUtau -->
         <action id="helloutau.voiceBank.setOffset" text="&amp;Offset" category="Set at Pointer"
                 shortcut="1" />
         <action id="helloutau.voiceBank.setOverlap" text="O&amp;verlap" category="Set at Pointer"
@@ -96,7 +96,7 @@
                 shortcut="Space" />
         <action id="helloutau.voiceBank.playSpan" text="Play from &amp;Offset to Cutoff"
                 category="Playback" shortcut="Shift+Space" />
-        <!-- From the time under the pointer, while the pointer is over the waveform; a double
+        <!-- From the time under the pointer, while the pointer is over the waveform. A double
              click there does the same -->
         <action id="helloutau.voiceBank.playFromPointer" text="Play from Poi&amp;nter"
                 category="Playback" shortcut="P" />

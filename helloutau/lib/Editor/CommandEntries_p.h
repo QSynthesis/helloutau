@@ -11,9 +11,9 @@
 
 namespace hello::daw {
 
-    /// The commands of a window as the command palette offers them: every action of \a context
-    /// that is a command and is enabled now, as VS Code shows no disabled command, labelled with
-    /// its category as "File: Save".
+    /// Returns the commands of a window as the command palette offers them: every action of
+    /// \a context that is a command and is enabled now, as VS Code shows no disabled command,
+    /// labeled with its category as <tt>File: Save</tt>.
     inline QList<CommandEntry> commandEntriesOf(const QAK::ActionRegistry *registry,
                                                 const QAK::WidgetActionContext *context) {
         QList<CommandEntry> entries;
