@@ -43,10 +43,8 @@ namespace hello::daw {
 
         QString previewText() const;
 
-        /// Returns whether candidate \a charset is gray, unable to read the text of the file.
-        ///
-        /// TODO: the name describes the appearance rather than the reason. Consider renaming it to
-        /// something like isDecodable(), which states what a caller asks.
+        /// Returns whether candidate \a charset is gray, which indicates invalid byte sequences in
+        /// the text of the file decoded in \a charset.
         bool isGray(const QString &charset) const;
 
     private:

@@ -186,8 +186,8 @@ namespace hello::kit {
         void recordCharsetOnSave(const std::filesystem::path &directory);
 
         /// Returns whether the next save() writes the configuration of a directory whose contents
-        /// are unchanged: a directory marked by recordCharsetOnSave() , or a directory read again by
-        /// reread() .
+        /// are unchanged: a directory marked by recordCharsetOnSave(), or a directory read again by
+        /// reread().
         ///
         /// Such a voice bank is unsaved even though nothing in it was edited. An editor that
         /// holds the saved state marks it unsaved after opening. See the section on the saved

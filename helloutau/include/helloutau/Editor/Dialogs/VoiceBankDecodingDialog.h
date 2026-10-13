@@ -108,10 +108,8 @@ namespace hello::daw {
         /// The line of folder \a index in the list.
         QString folderText(int index) const;
 
-        /// Returns whether candidate \a charset is gray, reading the current folder with invalid
-        /// bytes.
-        ///
-        /// TODO: as in UstDecodingDialog::isGray(), consider isDecodable() instead.
+        /// Returns whether candidate \a charset is gray, which indicates invalid byte sequences in
+        /// the current folder decoded in \a charset.
         bool isGray(const QString &charset) const;
 
         /// The titles of the tabs: a tab per text file, and a tab for the file names if the

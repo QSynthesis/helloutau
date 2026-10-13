@@ -330,7 +330,7 @@ private Q_SLOTS:
         QCOMPARE(config->fileNameEncoding, std::optional(record));
     }
 
-    void a_remembered_encoding_writes_the_configuration_only() {
+    void an_encoding_recorded_on_save_writes_the_configuration_only() {
         m_session->recordCharsetOnSave("sub");
         QVERIFY(m_session->hasUnrecordedCharsets());
         const auto before = times();

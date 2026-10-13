@@ -53,7 +53,7 @@ namespace hello::daw {
         m_autoScrollTimer.setInterval(16);
         connect(&m_autoScrollTimer, &QTimer::timeout, this, &SceneView::autoScroll);
         const auto updateGesture = [this] {
-            if (m_gesture && m_gesture->autoScroll()) {
+            if (m_gesture && m_gesture->hasAutoScroll()) {
                 m_gesture->move(m_pointerPosition, m_pointerModifiers);
             }
         };
@@ -253,7 +253,7 @@ namespace hello::daw {
             m_gesture = m_layers[size_t(hit->layer)]->press(*hit, position, event->button(),
                                                             event->modifiers());
         }
-        if (m_gesture && m_gesture->autoScroll()) {
+        if (m_gesture && m_gesture->hasAutoScroll()) {
             m_autoScrollTimer.start();
         }
         if (m_gesture) {
@@ -275,7 +275,7 @@ namespace hello::daw {
         if (m_gesture) {
             m_gesture->move(event->position(), event->modifiers());
             // A press may become a drag that scrolls at the edges only after it moves.
-            if (m_gesture && m_gesture->autoScroll() && !m_autoScrollTimer.isActive()) {
+            if (m_gesture && m_gesture->hasAutoScroll() && !m_autoScrollTimer.isActive()) {
                 m_autoScrollTimer.start();
             }
         } else {
@@ -403,7 +403,7 @@ namespace hello::daw {
     }
 
     void SceneView::autoScroll() {
-        if (!m_gesture || !m_gesture->autoScroll()) {
+        if (!m_gesture || !m_gesture->hasAutoScroll()) {
             m_autoScrollTimer.stop();
             return;
         }
