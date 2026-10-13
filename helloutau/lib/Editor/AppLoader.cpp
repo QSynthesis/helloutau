@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <filesystem>
+#include <optional>
 #include <vector>
 
 #include <QtCore/QDir>
@@ -35,9 +36,9 @@ namespace hello::daw {
     class AppLoader::Impl {
     public:
         // Declared first, so that they are destroyed last, after the plugins and their windows
-        std::unique_ptr<kit::TemporaryStorage> temporaryStorage;
-        std::unique_ptr<kit::ExitLauncher> exitLauncher;
-        std::unique_ptr<kit::TranslationLoader> translations;
+        std::optional<kit::TemporaryStorage> temporaryStorage;
+        std::optional<kit::ExitLauncher> exitLauncher;
+        std::optional<kit::TranslationLoader> translations;
         stdc::pluginsystem::PluginSystem system{AppLoader::pluginIid,
                                                 stdc::pluginsystem::PluginSystem::Bundle};
         QStringList pluginPaths;
@@ -45,11 +46,12 @@ namespace hello::daw {
         // The options of the command line without the files, which a restart passes again
         QStringList options;
         QString settingsDirectory;
-        std::unique_ptr<AppSettings> settings;
+        // Mutable, because settings() hands out the settings for changes from a const loader
+        mutable std::optional<AppSettings> settings;
         stdc::pluginsystem::PluginSettings pluginSettings;
         // Declared after the settings of the plugins, so that it is destroyed first and writes
         // the pending changes
-        std::unique_ptr<kit::SettingsFile> pluginFile;
+        std::optional<kit::SettingsFile> pluginFile;
         bool loaded = false;
         QPointer<Editor> editor;
 
@@ -57,8 +59,7 @@ namespace hello::daw {
         // its metadata until the next change replaces the settings.
         void readPluginSettings() {
             const auto fileName = settingsDirectory + QStringLiteral("/plugins.json");
-            pluginFile = std::make_unique<kit::SettingsFile>(
-                fileName, [this] { return pluginSettings.toJson(); });
+            pluginFile.emplace(fileName, [this] { return pluginSettings.toJson(); });
             kit::DiagnosticList diagnostics;
             auto object = kit::SettingsFile::read(fileName, diagnostics);
             // TODO: Show the diagnostics in a list of the errors of the application, which does
@@ -88,7 +89,7 @@ namespace hello::daw {
 
         // Every temporary file of the application in one directory, which the uninstaller
         // removes. See docs/Distribution.md.
-        impl.temporaryStorage = std::make_unique<kit::TemporaryStorage>(std::filesystem::path(
+        impl.temporaryStorage.emplace(std::filesystem::path(
             QDir::cleanPath(QDir::tempPath() + QLatin1Char('/') +
                             QCoreApplication::organizationName() + QLatin1Char('/') +
                             QCoreApplication::applicationName())
@@ -115,18 +116,19 @@ namespace hello::daw {
             impl.files.push_back(arguments[i]);
         }
         // A restart starts the program again with the options and without the files.
-        impl.exitLauncher = std::make_unique<kit::ExitLauncher>(impl.options);
+        impl.exitLauncher.emplace(impl.options);
 
         // A settings directory given by the option also holds the voice banks and the plugins of
         // the user, so that it is self-contained.
         const auto settingsFile = impl.settingsDirectory + QStringLiteral("/settings.json");
-        impl.settings =
-            impl.settingsDirectory == AppSettings::defaultDirectory()
-                ? std::make_unique<AppSettings>(settingsFile, AppSettings::defaultUserDirectory())
-                : std::make_unique<AppSettings>(settingsFile);
+        if (impl.settingsDirectory == AppSettings::defaultDirectory()) {
+            impl.settings.emplace(settingsFile, AppSettings::defaultUserDirectory());
+        } else {
+            impl.settings.emplace(settingsFile);
+        }
         impl.readPluginSettings();
 
-        impl.translations = std::make_unique<kit::TranslationLoader>(
+        impl.translations.emplace(
             AppearanceSettings::localeOf(impl.settings->appearance().language()));
         // The translation of Qt, so that the standard buttons and dialogs match the rest: that
         // of the installation, see helloutau/CMakeLists.txt, or else that of Qt itself.
