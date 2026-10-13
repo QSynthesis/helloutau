@@ -75,7 +75,7 @@ namespace hello::daw {
         const auto rate = stream.read<qint32>();
         const auto hop = stream.read<qint32>();
         if (!count || !rate || !hop || *count < 0 || *rate <= 0 || *hop <= 0 ||
-            stream.left() < qsizetype(*count) * 4) {
+            stream.bytesAvailable() < qsizetype(*count) * 4) {
             return damaged(path, diagnostics);
         }
         kit::FrequencyMap table;
@@ -262,7 +262,7 @@ namespace hello::daw {
                     entry.write(quint16(c.unicode()));
                 }
                 entry.write(qint32(needed));
-                at = entry.at();
+                at = entry.pos();
             }
             kit::BinaryStream data(&bytes, *at);
             data.write(qint32(frames.size()));
@@ -301,7 +301,7 @@ namespace hello::daw {
         const auto entries = stream.read<qint32>();
         for (qint32 i = 0; entries && i < *entries; ++i) {
             const auto length = stream.read<qint32>();
-            if (!length || *length < 0 || stream.left() < qsizetype(*length) * 2) {
+            if (!length || *length < 0 || stream.bytesAvailable() < qsizetype(*length) * 2) {
                 break;
             }
             QString entry(*length, Qt::Uninitialized);
@@ -312,7 +312,7 @@ namespace hello::daw {
             if (!size) {
                 break;
             }
-            found.push_back({entry, stream.at()});
+            found.push_back({entry, stream.pos()});
             if (!stream.skip(*size)) {
                 break;
             }

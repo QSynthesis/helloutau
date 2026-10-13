@@ -13,8 +13,8 @@ private Q_SLOTS:
         const QByteArray bytes("\x01\x02\x03\x04", 4);
         BinaryStream little(bytes);
         QCOMPARE(little.read<quint16>(), std::optional<quint16>(0x0201));
-        QCOMPARE(little.at(), 2);
-        QCOMPARE(little.left(), 2);
+        QCOMPARE(little.pos(), 2);
+        QCOMPARE(little.bytesAvailable(), 2);
         BinaryStream big(bytes, 0, BinaryStream::BigEndian);
         QCOMPARE(big.read<quint32>(), std::optional<quint32>(0x01020304));
 
@@ -34,7 +34,7 @@ private Q_SLOTS:
         const QByteArray bytes("\x01\x02\x03", 3);
         BinaryStream stream(bytes, 1);
         QVERIFY(!stream.read<quint32>());
-        QCOMPARE(stream.at(), 1);
+        QCOMPARE(stream.pos(), 1);
         QVERIFY(!stream.readBytes(3));
         QCOMPARE(stream.readBytes(2), std::optional<QByteArray>("\x02\x03"));
         QVERIFY(!stream.read<quint8>());
@@ -54,7 +54,7 @@ private Q_SLOTS:
         QVERIFY(stream.seek(5));
         stream.writeBytes("ZZZ");
         QCOMPARE(bytes, QByteArray("abXYeZZZ"));
-        QCOMPARE(stream.at(), 8);
+        QCOMPARE(stream.pos(), 8);
     }
 };
 

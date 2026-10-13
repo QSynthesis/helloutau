@@ -42,12 +42,12 @@ namespace hello::kit {
             BigEndian,    ///< The most significant byte first
         };
 
-        /// Reads \a bytes from the position \a at. A stream of this constructor cannot write.
-        explicit BinaryStream(const QByteArray &bytes, qsizetype at = 0,
+        /// Reads \a bytes from the position \a pos. A stream of this constructor cannot write.
+        explicit BinaryStream(const QByteArray &bytes, qsizetype pos = 0,
                               ByteOrder order = LittleEndian);
 
-        /// Reads and writes \a bytes from the position \a at.
-        explicit BinaryStream(QByteArray *bytes, qsizetype at = 0, ByteOrder order = LittleEndian);
+        /// Reads and writes \a bytes from the position \a pos.
+        explicit BinaryStream(QByteArray *bytes, qsizetype pos = 0, ByteOrder order = LittleEndian);
 
         ByteOrder byteOrder() const {
             return m_order;
@@ -58,18 +58,18 @@ namespace hello::kit {
             return m_target != nullptr;
         }
 
-        /// The position of the next value.
-        qsizetype at() const {
-            return m_at;
+        /// Returns the position of the next value.
+        qsizetype pos() const {
+            return m_pos;
         }
 
-        /// Moves to the position \a at, and returns whether the bytes hold it. A position equal
+        /// Moves to the position \a pos, and returns whether the bytes hold it. A position equal
         /// to the size is the end, where a write appends.
-        bool seek(qsizetype at);
+        bool seek(qsizetype pos);
 
-        /// The number of bytes after the position.
-        qsizetype left() const {
-            return m_bytes->size() - m_at;
+        /// Returns the number of bytes after the position.
+        qsizetype bytesAvailable() const {
+            return m_bytes->size() - m_pos;
         }
 
         /// Skips \a count bytes, and returns whether the bytes hold them.
@@ -80,11 +80,11 @@ namespace hello::kit {
         template <class T>
         std::optional<T> read() {
             static_assert(std::is_arithmetic_v<T>, "BinaryStream reads numbers only");
-            if (left() < qsizetype(sizeof(T))) {
+            if (bytesAvailable() < qsizetype(sizeof(T))) {
                 return std::nullopt;
             }
-            const auto data = m_bytes->constData() + m_at;
-            m_at += qsizetype(sizeof(T));
+            const auto data = m_bytes->constData() + m_pos;
+            m_pos += qsizetype(sizeof(T));
             return m_order == LittleEndian ? qFromLittleEndian<T>(data) : qFromBigEndian<T>(data);
         }
 
@@ -116,7 +116,7 @@ namespace hello::kit {
     private:
         const QByteArray *m_bytes;
         QByteArray *m_target;
-        qsizetype m_at;
+        qsizetype m_pos;
         ByteOrder m_order;
     };
 

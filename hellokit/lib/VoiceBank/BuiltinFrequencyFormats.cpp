@@ -53,7 +53,7 @@ namespace hello::kit {
                     return damaged(path, diagnostics);
                 }
                 const auto count = stream.read<qint32>();
-                if (!count || *count < 0 || stream.left() < qsizetype(*count) * 16) {
+                if (!count || *count < 0 || stream.bytesAvailable() < qsizetype(*count) * 16) {
                     return damaged(path, diagnostics);
                 }
                 FrequencyMap table;

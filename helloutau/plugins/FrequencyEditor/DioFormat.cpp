@@ -59,7 +59,7 @@ namespace hello::daw {
         const auto rate = stream.read<qint32>();
         const auto count = stream.read<qint32>();
         if (!signalLength || !rate || !count || *count < 0 ||
-            stream.left() < qsizetype(*count) * 16) {
+            stream.bytesAvailable() < qsizetype(*count) * 16) {
             return damaged(path, diagnostics);
         }
         kit::FrequencyMap table;
@@ -116,7 +116,7 @@ namespace hello::daw {
                     signalLength = stream.read<qint32>();
                     rate = stream.read<qint32>();
                     const auto count = stream.read<qint32>().value_or(0);
-                    for (qint32 i = 0; i < count && stream.left() >= 16; ++i) {
+                    for (qint32 i = 0; i < count && stream.bytesAvailable() >= 16; ++i) {
                         seconds.push_back(*stream.read<double>());
                         stream.skip(8);
                     }
