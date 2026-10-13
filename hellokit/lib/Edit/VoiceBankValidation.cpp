@@ -24,8 +24,8 @@ namespace hello::kit {
             return edit::SlotValue<T>::fromVariant(node.variant(slot.index));
         }
 
-        // The file name without its extension, under which UTAU matches an entry without an
-        // alias, as VoiceBank::find() does.
+        // Returns the stem of \a fileName, under which UTAU matches an entry without an alias,
+        // as VoiceBank::find() does.
         QString stemOf(const QString &fileName) {
             return QString::fromStdU16String(
                 std::filesystem::path(fileName.toStdU16String()).stem().u16string());

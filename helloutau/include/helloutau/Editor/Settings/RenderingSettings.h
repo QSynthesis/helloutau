@@ -23,7 +23,8 @@ namespace hello::daw {
         QString wavtool() const;
         void setWavtool(const QString &path);
 
-        /// Whether the render log keeps all captured synth tool output, or only the latest run.
+        /// Returns whether the render log keeps all captured synth tool output, or only the latest
+        /// run.
         bool isLogAccumulated() const;
         void setLogAccumulated(bool accumulated);
 

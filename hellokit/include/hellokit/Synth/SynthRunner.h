@@ -78,8 +78,8 @@ namespace hello::kit {
     /// Executes a plan.
     ///
     /// The three implementations are not implementation details of one another. The choice
-    /// among them is a compatibility setting made by the user, and they differ in how and in
-    /// what environment the synth tools are started, not in their output.
+    /// among them is a compatibility setting made by the user, and they differ in how the synth
+    /// tools are started and in the environment in which they are started, not in their output.
     ///
     /// - \c ClassicSynthRunner writes the UTAU \c temp.bat and runs it in a visible console.
     ///   Some resamplers require the script to exist and read its contents.

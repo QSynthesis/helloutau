@@ -73,7 +73,7 @@ namespace hello::kit {
 
         /// Converts \a project into a UST, including the control note, without writing it.
         ///
-        /// All encoding takes place here, which is why \a options is a parameter of this
+        /// All encoding takes place here, therefore \a options is a parameter of this
         /// function and not of save().
         static std::optional<UstDocument> fromProject(const Project &project,
                                                       const ExportOptions &options,

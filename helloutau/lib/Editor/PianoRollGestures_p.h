@@ -270,7 +270,7 @@ namespace hello::daw {
         bool m_erases;
         // The path of the pointer, in ticks and keys
         QList<QPointF> m_path;
-        // What is written, by note index: the tick of the first value, and the values
+        // The values written, by note index: the tick of the first value, and the values
         QHash<int, std::pair<double, QList<double>>> m_drawn;
 
         void add(QPointF position);

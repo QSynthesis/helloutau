@@ -40,7 +40,7 @@ namespace hello::kit {
                 VoicePrefix{prefix.toString(), suffix.toString()});
         }
 
-        // The spellings as an array of five strings, with null for a number that was not read.
+        // Returns the five spellings as an array, with null for a number that was not read.
         QJsonValue spellingsToJson(const QVariant &value) {
             QJsonArray array;
             for (const auto &spelling : edit::SlotValue<OtoSpellings>::fromVariant(value)) {
@@ -69,7 +69,7 @@ namespace hello::kit {
 
         using FileNameEncoding = VoiceBankConfiguration::FileNameEncoding;
 
-        // The record as in hello-config.json, see docs/note.md.
+        // Returns the record as in hello-config.json, see docs/note.md.
         QJsonValue fileNameEncodingToJson(const QVariant &value) {
             return edit::SlotValue<FileNameEncoding>::fromVariant(value).toJson();
         }

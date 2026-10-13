@@ -32,13 +32,13 @@ namespace hello::kit {
             return QString::fromStdU16String(path.u16string());
         }
 
-        /// The lowercase form of a file name, for comparison with the known names, which are
-        /// all ASCII.
+        /// Returns the lowercase form of a file name, for comparison with the known names, which
+        /// are all ASCII.
         ///
-        /// Converted through UTF-8 rather than path::string() , which on Windows uses the system
-        /// code page and throws for a name that the code page cannot represent. Only ASCII
-        /// letters are folded, so that no byte of a multibyte character is altered regardless
-        /// of the locale.
+        /// The name is converted through UTF-8 rather than path::string() , which on Windows uses
+        /// the system code page and throws for a name that the code page cannot represent. Only
+        /// ASCII letters are folded, so that no byte of a multibyte character is altered
+        /// regardless of the locale.
         std::string folded(const fs::path &name) {
             const auto u8 = name.u8string();
             std::string s(u8.begin(), u8.end());
@@ -59,8 +59,8 @@ namespace hello::kit {
             return suffix == ".wav" || suffix == ".flac" || suffix == ".ogg";
         }
 
-        /// The entire file, or \c std::nullopt if it cannot be read, which differs from an empty
-        /// file.
+        /// Reads the entire file, or returns \c std::nullopt if it cannot be read, which differs
+        /// from an empty file.
         std::optional<QByteArray> readWhole(const fs::path &path) {
             std::ifstream in(path, std::ios::binary);
             if (!in) {
@@ -215,7 +215,8 @@ namespace hello::kit {
         }
 
         VoiceBankDirectoryStamp stamp;
-        // Taken before the listing, so that any write during the listing counts as racy.
+        // The stamp is taken before the listing, so that any write during the listing counts as
+        // racy.
         stamp.takenAt = fs::file_time_type::clock::now();
 
         for (const auto &item : fs::directory_iterator(

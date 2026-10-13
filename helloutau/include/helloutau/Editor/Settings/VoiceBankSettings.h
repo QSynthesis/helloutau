@@ -22,9 +22,9 @@ namespace hello::daw {
         /// and it is not created by this class.
         std::filesystem::path folder() const;
 
-        /// Whether a relative \c VoiceDir is resolved against UtauSettings::directory(), as UTAU
-        /// resolves it, rather than against the directory of HelloUtau. The setting applies only
-        /// if the UTAU directory exists. The default is true.
+        /// Returns whether a relative \c VoiceDir is resolved against UtauSettings::directory(),
+        /// as UTAU resolves it, rather than against the directory of HelloUtau. The setting
+        /// applies only if the UTAU directory exists. The default is true.
         bool isRelativeToUtau() const;
         void setRelativeToUtau(bool relative);
 

@@ -59,7 +59,7 @@ namespace hello::daw {
         QPlainTextEdit *readmeEdit() const;
 
         /// The keys of \c prefix.map from C1 to B7, each a row of the note, the prefix and the
-        /// suffix. A key that the file lacks has empty cells; editing one adds the key, and
+        /// suffix. A key that the file lacks has empty cells. Editing a cell adds the key, and
         /// creates the file if the voice bank has none. The context menu of a row removes its
         /// key.
         QTableWidget *prefixTable() const;
@@ -68,7 +68,7 @@ namespace hello::daw {
         bool removePrefix(int noteNum);
 
     Q_SIGNALS:
-        /// An edit was refused, for the reasons in \a diagnostics.
+        /// An edit was rejected, for the reasons in \a diagnostics.
         void editRejected(const kit::DiagnosticList &diagnostics);
 
     private:

@@ -33,7 +33,7 @@ namespace hello::daw {
     /// Cancelling it kills the script with the synth tools it started, see
     /// kit::SynthToolProcess::runScript(), or lets the running synth tool calls end. The track file
     /// is then read, converted to the sample rate of the output device, and played. position() maps
-    /// what is heard to the track, see kit::SynthPlan::startTime().
+    /// the playback position to the track, see kit::SynthPlan::startTime().
     ///
     /// Every plan is made on a worker thread from a snapshot of the document, because a plan of
     /// a track of many notes takes long enough to stall the window: that of a render before it
@@ -64,14 +64,14 @@ namespace hello::daw {
                  std::filesystem::path temporaryDirectory, QObject *parent);
         ~Playback() override;
 
-        /// Replaces the runner and forgets the kept render. The default is a
+        /// Replaces the runner and discards the kept render. The default is a
         /// kit::ClassicSynthRunner without a script directory. The owner configures the script
         /// directory of the runner, normally the temporary directory, before passing it.
         void setRunner(std::shared_ptr<const kit::SynthRunner> runner);
         std::shared_ptr<const kit::SynthRunner> runner() const;
 
         /// Sets the directory owned by the project window for renders, scripts, and logs, and
-        /// forgets the kept render and clears the log, which belong to the previous directory.
+        /// discards the kept render and clears the log, which belong to the previous directory.
         /// Playback never creates or removes this directory.
         ///
         /// \note No render, plan, scan or preview may be under way, because each of them writes
@@ -86,7 +86,7 @@ namespace hello::daw {
         State state() const;
 
         /// Starts rendering notes \a range of the first track of \a document, or all of them, and
-        /// plays the result once it is rendered. Stops what played or rendered before.
+        /// plays the result once it is rendered. Stops the previous playback or render.
         ///
         /// The last render is kept: while every synth tool call of the notes would be the same, it
         /// plays again at once, without the synth tools.
@@ -100,10 +100,10 @@ namespace hello::daw {
 
         /// Starts rendering the whole track of \a document into \a file with the runner of
         /// setRunner(), and emits trackRendered() once the file is written. Nothing is played,
-        /// and the kept render of play() stays as it is. Stops what played or rendered before.
+        /// and the kept render of play() stays as it is. Stops the previous playback or render.
         /// The state is Rendering until the render ends, and stop() cancels it.
         ///
-        /// \return whether rendering started; the reason is in \a diagnostics otherwise
+        /// \return whether rendering started. The reason is in \a diagnostics otherwise
         bool renderTrack(const kit::ProjectDocument &document, const std::filesystem::path &file,
                          const kit::SynthTools &synthTools, kit::DiagnosticList &diagnostics);
 
@@ -136,11 +136,11 @@ namespace hello::daw {
         bool prepare(const kit::ProjectDocument &document, std::optional<double> fromTime,
                      const kit::SynthTools &synthTools, kit::DiagnosticList &diagnostics);
 
-        /// Stops the preview and the rendering in the background, and forgets the fragments
+        /// Stops the preview and the rendering in the background, and discards the fragments
         /// held in memory: the prerender mode.
         void release();
 
-        /// Whether the preview waits for a note to be rendered.
+        /// Returns whether the preview waits for a note to be rendered.
         bool isBuffering() const;
 
         /// The notes of the preview or of prepare() still to render.
@@ -151,8 +151,8 @@ namespace hello::daw {
         /// notes are counted.
         std::optional<std::pair<int, int>> planProgress() const;
 
-        /// How far each note of the first track is rendered, by its index: as the preview or
-        /// prepare() has it, or else by the fragments in the render cache as the last
+        /// Returns the render state of each note of the first track, by its index: as the preview
+        /// or prepare() has it, or else by the fragments in the render cache as the last
         /// refreshNoteStates() found them, Ready if the fragment is there and Waiting if not.
         /// A fragment of a failure that a diagnosis of a prerender explained is Failed although it
         /// is there, until a later prerender renders that note. Empty without a voice bank.
@@ -190,14 +190,14 @@ namespace hello::daw {
         /// object, or null for no diagnosis.
         void setSynthDiagnosers(const kit::SynthDiagnosers *diagnosers);
 
-        /// Pauses what plays, keeping position(), and returns whether something played.
+        /// Pauses the playback, keeping position(), and returns whether something played.
         bool pause();
 
         /// Plays a paused render on from where it was paused, and returns whether it did. A
         /// paused preview is not resumed here: the caller previews from position().
         bool resume();
 
-        /// Whether a preview is paused.
+        /// Returns whether a preview is paused.
         bool isPreviewPaused() const;
 
         /// Cancels rendering, or stops playing or being paused.
@@ -225,13 +225,13 @@ namespace hello::daw {
         std::optional<std::filesystem::path>
             cacheDirectoryFor(const kit::ProjectDocument &document);
 
-        /// Stops playing, forgets the fragments held in memory, and deletes the files of the
+        /// Stops playing, discards the fragments held in memory, and deletes the files of the
         /// render cache of \a document: the files directly in the directory, which the synth tools
         /// and the renders wrote, and not the folders in it. The failures of the preview, which
         /// concern the deleted fragments, are discarded.
         ///
         /// \return the number of files deleted, or \c std::nullopt if a render has not ended,
-        ///         whose script would write into the cache meanwhile; the files that could not
+        ///         whose script would write into the cache meanwhile. The files that could not
         ///         be deleted are in \a diagnostics
         std::optional<int> clearCache(const kit::ProjectDocument &document,
                                       kit::DiagnosticList &diagnostics);

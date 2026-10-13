@@ -171,7 +171,7 @@ namespace hello::daw {
         kit::TextSearch highlightedSearch;
         QMenu *recentMenu = nullptr;
 
-        // Follows the disk while the window is open; see checkDisk().
+        // Follows the disk while the window is open. See checkDisk().
         kit::VoiceBankCheckScheduler *scheduler = nullptr;
         bool checking = false;
         // The changes of text files declined, with the stamp of the files at that time
@@ -708,7 +708,7 @@ namespace hello::daw {
             check({});
         }
 
-        // Handles what the disk holds that the voice bank does not, in places or everywhere.
+        // Handles the difference between the disk and the voice bank, in places or everywhere.
         void check(const QList<std::filesystem::path> &places) {
             stdc_decl_t;
             if (checking) {
@@ -742,8 +742,8 @@ namespace hello::daw {
                 const auto answer = QMessageBox::question(
                     &decl, tr("Changed on Disk"),
                     tr("These folders of the voice bank were changed by another program: %1.\n\n"
-                       "Read them again? What you did not save in them is replaced, and Undo "
-                       "brings it back.")
+                       "Read them again? Unsaved changes in them are replaced, and Undo restores "
+                       "them.")
                         .arg(folderNames(ask)),
                     QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
                 if (answer == QMessageBox::Yes) {
@@ -1522,7 +1522,8 @@ namespace hello::daw {
             return format ? format->id() : QString();
         }
 
-        // Fills the box of the format with the formats registered, as they come and go.
+        // Fills the box of the format with the registered formats, as formats are registered and
+        // removed.
         void fillFrequencyBox() {
             if (!frequencyBox) {
                 return;

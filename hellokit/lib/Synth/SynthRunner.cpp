@@ -97,7 +97,7 @@ namespace hello::kit {
             }
             const auto note = noteOf(file);
             if (!note || !rendering.count(*note)) {
-                continue; // somebody else's, or a note this render is not touching
+                continue; // the cache file of another note, or of a note this render does not touch
             }
             if (fs::remove(file, error)) {
                 ++removed;

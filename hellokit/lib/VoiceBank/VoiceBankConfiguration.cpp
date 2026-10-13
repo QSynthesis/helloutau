@@ -43,7 +43,7 @@ namespace hello::kit {
                    c != QLatin1Char('\\');
         }
 
-        /// The strings of \a value , or \c std::nullopt if it is not an array of strings.
+        /// Returns the strings of \a value , or \c std::nullopt if it is not an array of strings.
         std::optional<QStringList> stringsOf(const QJsonValue &value) {
             if (!value.isArray()) {
                 return std::nullopt;

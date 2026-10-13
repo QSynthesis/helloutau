@@ -48,7 +48,7 @@ private Q_SLOTS:
     }
 
     // The encoding that reads the file best is selected at first, and those that cannot read
-    // it are grey.
+    // it are gray.
     void the_encoding_that_reads_best_is_selected_first() {
         QTemporaryDir dir;
         const auto ust = shiftJisUst(dir);

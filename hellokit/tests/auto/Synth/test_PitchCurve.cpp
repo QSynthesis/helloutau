@@ -183,7 +183,7 @@ private Q_SLOTS:
     }
 
     // The Mode1 values of toMode1() give the curve of Mode2 value by value, the contributions of
-    // the neighbours included, after every note is converted.
+    // the neighbors included, after every note is converted.
     void the_curve_of_mode2_converts_to_mode1() {
         const auto voices = bank();
         QVERIFY(voices);
@@ -266,7 +266,7 @@ private Q_SLOTS:
         QVERIFY(curve.portamentoAt(480 - 48) > 100);
     }
 
-    // The own curve of a note leaves out the neighbours and spans the points of the note that
+    // The own curve of a note leaves out the neighbors and spans the points of the note that
     // lie before its start or after its end, 576 and 672 ticks at 120 bpm.
     void the_own_curve_leaves_out_the_neighbours() {
         auto first = note(QStringLiteral("a"), 60);

@@ -121,7 +121,7 @@ namespace hello::daw {
             bool operator==(const Conflict &other) const;
         };
 
-        /// Modifiers that split in more than one way into the modifiers that start an operation
+        /// Modifiers split in more than one way into the modifiers that start an operation
         /// of a scene and the modifiers of its toggles, while no operation starts with exactly
         /// these modifiers. activate() selects nothing for them. An ambiguity leaves the bindings
         /// valid.

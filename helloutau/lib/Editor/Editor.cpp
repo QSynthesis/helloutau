@@ -334,7 +334,8 @@ namespace hello::daw {
             return untitledNumbers.empty() ? 1 : *untitledNumbers.rbegin() + 1;
         }
 
-        // Opens a recent project, or voice bank if bank, over from, or forgets it if it is gone
+        // Opens a recent project, or a voice bank if bank, over from, or removes it from the
+        // recent list if it is gone
         void openRecent(Editor *editor, const std::filesystem::path &path, bool bank,
                         QWidget *from) {
             std::error_code error;
@@ -725,7 +726,7 @@ namespace hello::daw {
         }
         impl.settings->files().addRecentFile(path);
         // Shown after the window, so that the user sees which project they concern, and before
-        // the voice bank is read, which may ask more.
+        // the voice bank is read, which may report further diagnostics.
         if (!diagnostics.isEmpty()) {
             diagnostics.prepend(pathDiagnostic);
         }

@@ -85,9 +85,9 @@ namespace hello::daw {
             double startTime = 0;
         };
 
-        // What a render depends on: every argument of every synth tool call, among them the names
-        // of the fragments, which stand for the state of the samples, the synth tools, and the rate
-        // it is played at. A render of the same key sounds the same.
+        // The inputs a render depends on: every argument of every synth tool call, among them the
+        // names of the fragments, which stand for the state of the samples, the synth tools, and
+        // the rate it is played at. A render of the same key sounds the same.
         QString keyOf(const kit::SynthPlan &plan, const kit::SynthTools &synthTools,
                       int deviceRate) {
             QStringList parts{QString::fromStdU16String(synthTools.resampler.u16string()),
@@ -411,7 +411,7 @@ namespace hello::daw {
             synth->setPlan(*plan);
             qint64 start = 0;
             if (plannedFrom) {
-                // The sample of the track file at that time; the file starts at startTime().
+                // The sample of the track file at that time. The file starts at startTime().
                 const auto fromTime = *plannedFrom;
                 start = fromTime
                             ? std::clamp<qint64>(std::llround((*fromTime - synth->startTime()) *
@@ -1132,8 +1132,8 @@ namespace hello::daw {
         if (impl.state != Playing) {
             return std::nullopt;
         }
-        // What the device plays, which it pulled some time before, from the start until it
-        // has pulled
+        // The position of the sound the device plays, which it pulled some time before, from the
+        // start until it has pulled
         return impl.positionAt(impl.output->heardPosition().value_or(0));
     }
 

@@ -22,10 +22,10 @@ namespace hello::daw {
         /// The text entered, as typed
         QString lyrics() const;
 
-        /// Whether the lyrics repeat until every selected note has one
+        /// Returns whether the lyrics repeat until every selected note has a lyric
         bool repeat() const;
 
-        /// Whether each character other than a space is a lyric, rather than each word
+        /// Returns whether each character other than a space is a lyric, rather than each word
         bool splitCharacters() const;
 
         /// Shows \a lyrics selected, so that typing replaces them.

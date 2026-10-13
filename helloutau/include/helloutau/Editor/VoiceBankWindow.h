@@ -97,7 +97,7 @@ namespace hello::daw {
         void checkDisk();
 
         /// The bar above the table that lists the changes on disk not read, with the buttons
-        /// that read them; hidden without any.
+        /// that read them. The bar is hidden if there are none.
         QWidget *changeBar() const;
 
         /// Reads every folder again, whatever the stamps of its files, as one undo step.

@@ -77,7 +77,7 @@ namespace hello::daw {
             tr("Choose Encoding - %1").arg(QString::fromStdU16String(path.filename().u16string())));
 
         // The text of the file, by which the encoding that reads it best is selected, and those
-        // that cannot read it are grey
+        // that cannot read it are gray
         QList<QByteArray> texts{ust.rawProjectName().toByteArray(),
                                 ust.rawVoiceDir().toByteArray()};
         for (const auto lyric : ust.rawLyrics()) {

@@ -138,8 +138,8 @@ namespace {
         StandIn::Behaviour m_wavtool;
     };
 
-    /// A substitute synth tool whose behaviour receives the cancellation query and returns the
-    /// whole result, for the cases of a cancelled or timed-out call. The behaviour runs on the
+    /// A substitute synth tool whose behavior receives the cancellation query and returns the
+    /// whole result, for the cases of a cancelled or timed-out call. The behavior runs on the
     /// threads of the runner.
     class PollingStandIn : public SynthToolProcess {
     public:

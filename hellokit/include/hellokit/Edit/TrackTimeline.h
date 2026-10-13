@@ -20,7 +20,7 @@ namespace hello::kit {
     class ProjectSession;
 
     /// The notes of a track of a session with their positions, for views that draw the track
-    /// and find what lies at a position, such as a piano roll.
+    /// and find the item at a position, such as a piano roll.
     ///
     /// The positions are derived data: every note starts where the one before it ends. They are
     /// computed from the tree of the session when first needed after a change, not on each
@@ -29,7 +29,7 @@ namespace hello::kit {
     class HELLOKIT_EDIT_EXPORT TrackTimeline : public QObject {
         Q_OBJECT
     public:
-        /// What a view needs of one note.
+        /// Data of one note needed by a view.
         struct Note {
             edit::NodeId id = 0;
             qint64 start = 0;

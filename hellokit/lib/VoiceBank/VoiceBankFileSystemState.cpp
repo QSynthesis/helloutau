@@ -42,15 +42,15 @@ namespace hello::kit {
             return QCryptographicHash::hash(bytes, QCryptographicHash::Sha1);
         }
 
-        /// The canonical name of \a charset , or empty if it is empty or unavailable. An empty
-        /// name is not resolved, because TextCodec would take it as the system encoding, which is
-        /// UTF-8 on most systems other than Windows and would equal a new UTF-8.
+        /// Returns the canonical name of \a charset . An empty name is not resolved, because
+        /// TextCodec would take it as the system encoding, which is UTF-8 on most systems other
+        /// than Windows and would equal a new UTF-8.
         QString canonicalOf(const QString &charset) {
             return charset.isEmpty() ? QString() : TextCodec(charset).name();
         }
 
-        /// The canonical name of \a name for reading \a directory , or \c std::nullopt with a
-        /// warning if the encoding is not available.
+        /// Returns the canonical name of \a name for reading \a directory . A warning is reported
+        /// and \c std::nullopt returned if the encoding is not available.
         std::optional<QString> availableCharset(const VoiceBankDirectorySource &directory,
                                                 const QString &name, DiagnosticList &diagnostics) {
             const TextCodec codec(name);
@@ -64,12 +64,12 @@ namespace hello::kit {
             return codec.name();
         }
 
-        /// The canonical encoding for reading one directory, or \c std::nullopt if it has no
-        /// text files or is left out.
+        /// Returns the canonical encoding for reading one directory, or \c std::nullopt if it has
+        /// no text files or is left out.
         ///
         /// The encoding that a declaration or the configuration determines is taken, and
-        /// \a selector is queried only without one. Without a selector, the directory is left out
-        /// with a warning.
+        /// \a selector is queried only without a determined encoding. Without a selector, the
+        /// directory is left out with a warning.
         ///
         /// \note Escape sequences are neither decoded nor written. Unrepresentable characters
         ///       are rejected on save instead of escaped. Decoding escape sequences in a voice
@@ -158,9 +158,9 @@ namespace hello::kit {
             return true;
         }
 
-        /// The encoding for rereading a previously read directory. The order of precedence is the
-        /// declaration of the \c oto.ini , then the encoding the directory was read in, then the
-        /// encoding in its configuration, and only then the selector.
+        /// Returns the encoding for rereading a previously read directory. The order of
+        /// precedence is the declaration of the \c oto.ini , then the encoding the directory was
+        /// read in, then the encoding in its configuration, and only then the selector.
         ///
         /// The configuration on disk is not read again for a directory whose encoding is known,
         /// because it belongs to HelloUtau and a change made to it by another program is not
@@ -280,7 +280,7 @@ namespace hello::kit {
             return found != diskNames.end() ? found->second : fs::path(fileName.toStdU16String());
         }
 
-        /// The name \a name in UTF-8 with its ASCII letters in lowercase, for comparison with the
+        /// Returns \a name in UTF-8 with its ASCII letters in lowercase, for comparison with the
         /// names of VoiceBankDirectorySource::File .
         std::string foldedName(const fs::path &name) {
             const auto u8 = name.u8string();
@@ -293,7 +293,7 @@ namespace hello::kit {
             return folded;
         }
 
-        /// The file in \a directory whose name matches \a lowerCase case-insensitively, if any.
+        /// Returns the file in \a directory whose name matches \a lowerCase case-insensitively.
         std::optional<fs::path> findFolded(const fs::path &directory, const char *lowerCase) {
             std::error_code error;
             for (const auto &entry : fs::directory_iterator(directory, error)) {
@@ -356,7 +356,7 @@ namespace hello::kit {
             }
 
             // The oto.ini may declare UTF-8, which determines the encoding of the directory and
-            // takes precedence over the one that the configuration records.
+            // takes precedence over the encoding that the configuration records.
             if (directory.otoDeclaresUtf8() && directory.config) {
                 const auto &recorded = directory.config->charset;
                 if (!recorded.isEmpty() && !TextCodec(recorded).isUtf8()) {
@@ -1071,7 +1071,7 @@ namespace hello::kit {
 
         // Directories in which only audio files changed, while the indices are still valid.
         // Nothing is discarded, so these are applied regardless of unsaved changes. A directory
-        // that is gone by now is left alone, and the next check reports its removal.
+        // that no longer exists is not examined, and the next check reports its removal.
         for (const auto &path : changes.audio) {
             const int i = bank.indexOf(path);
             if (i < 0 || removals.count(i) != 0 || done.changed.contains(path)) {
@@ -1211,7 +1211,7 @@ namespace hello::kit {
             bare.push_back(sample);
         }
 
-        // Placed after the entries of the directory, where decoding places them.
+        // The samples are placed after the entries of the directory, where decoding places them.
         QList<VoiceSample> samples;
         int at = -1;
         for (const auto &sample : std::as_const(bank.m_samples)) {
@@ -1248,8 +1248,8 @@ namespace hello::kit {
         }
         if (same) {
             // The subdirectories keep their entries of the old stamp: this reads the audio
-            // files only, so a subdirectory that appeared or went since must still be reported
-            // by the next check, as the stamp is what finds it.
+            // files only, so a subdirectory that appeared or was removed since must still be
+            // reported by the next check, because the stamp determines the subdirectories.
             using Entry = VoiceBankDirectoryStamp::Entry;
             auto stamp = source.stamp;
             stamp.entries.erase(std::remove_if(stamp.entries.begin(), stamp.entries.end(),
@@ -1331,7 +1331,7 @@ namespace hello::kit {
             return false;
         }
 
-        // A directory without state was not read from disk, for example one that a reload
+        // A directory without state was not read from disk, for example a directory that a reload
         // removed and an undo restored. It is saved as a new directory, created if missing, with
         // an empty state: every file is written, and a file already there is not replaced,
         // because it was not read.
@@ -1430,8 +1430,8 @@ namespace hello::kit {
             const auto absolute = write.directory.empty() ? m_root : m_root / write.directory;
 
             // The configuration is replaced regardless of changes made elsewhere. It fails only
-            // where it cannot be written at all: a folder of its name, or a file that does not
-            // open for writing. Opening for appending changes nothing.
+            // if it cannot be written at all: a folder of its name, or a file that does not open
+            // for writing. Opening for appending changes nothing.
             if (write.file == VoiceBankDirectorySource::Config) {
                 std::error_code error;
                 bool writable = true;
@@ -1499,8 +1499,8 @@ namespace hello::kit {
                     return false;
                 }
             }
-            // Written to a temporary file beside the target and renamed over it, so that no
-            // reader observes a partially written file.
+            // The file is written to a temporary file beside the target and renamed over it, so
+            // that no reader observes a partially written file.
             QSaveFile file(QString::fromStdU16String(write.path.u16string()));
             if (!file.open(QIODevice::WriteOnly) || file.write(write.bytes) != write.bytes.size() ||
                 !file.commit()) {
@@ -1625,8 +1625,8 @@ namespace hello::kit {
             return key;
         }
 
-        // Whether name is one component that Windows accepts as the name of a file, so that the
-        // voice bank remains usable there.
+        // Returns whether \a name is a single component that Windows accepts as a file name, so
+        // that the voice bank remains usable there.
         bool isValidName(const fs::path &name) {
             const auto text = QString::fromStdU16String(name.u16string());
             if (text.isEmpty() || text == QLatin1String(".") || text == QLatin1String("..") ||

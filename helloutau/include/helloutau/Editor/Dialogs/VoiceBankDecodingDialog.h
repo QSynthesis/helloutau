@@ -33,7 +33,7 @@ namespace hello::daw {
     /// receives the encoding with the fewest invalid byte sequences in that folder. Each text file
     /// of the current folder is shown in its encoding on a tab of its own, whose title states
     /// the number of invalid byte sequences, and the candidates in which the folder has invalid
-    /// byte sequences are grey. An unchecked folder, or every folder if the dialog is declined,
+    /// byte sequences are gray. An unchecked folder, or every folder if the dialog is declined,
     /// is left out, and its samples are then found by file name only. See the section on choosing
     /// the encoding in docs/Editing.md.
     ///
@@ -108,7 +108,8 @@ namespace hello::daw {
         /// The line of folder \a index in the list.
         QString folderText(int index) const;
 
-        /// Whether candidate \a charset is grey, reading the current folder with invalid bytes.
+        /// Returns whether candidate \a charset is gray, reading the current folder with invalid
+        /// bytes.
         bool isGrey(const QString &charset) const;
 
         /// The titles of the tabs: a tab per text file, and a tab for the file names if the
@@ -133,9 +134,9 @@ namespace hello::daw {
         QStringList misdecodedNames(int index) const;
         void setMisdecoded(int index, const QString &name, bool misdecoded);
 
-        /// Whether the names of folder \a index , a folder without a record, are used as they are,
-        /// which records the record without encodings. Initially whether the question proposes
-        /// the names as they are, see kit::MisdecodedNameQuestion::Found.
+        /// Returns whether the names of folder \a index, a folder without a record, are used as
+        /// they are, which records the record without encodings. Initially whether the question
+        /// proposes the names as they are, see kit::MisdecodedNameQuestion::Found.
         bool namesAsTheyAre(int index) const;
         void setNamesAsTheyAre(int index, bool asTheyAre);
 

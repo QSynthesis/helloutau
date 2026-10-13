@@ -22,7 +22,7 @@ namespace hello::daw {
             return QString::number(value, 'g', 12);
         }
 
-        // The value that every note has, or none if they differ
+        // Returns the value that every note has, or std::nullopt if they differ
         template <class Value>
         std::optional<Value> shared(const QList<kit::Note> &notes,
                                     const std::function<Value(const kit::Note &)> &of) {
@@ -114,7 +114,8 @@ namespace hello::daw {
             add(label, edit);
         };
 
-        // The defaults of one property, one for each note, or none unless every note has one
+        // Returns the default of one property for every note, or an empty list unless every note
+        // has a default
         const auto defaultsOf =
             [&](const std::function<std::optional<double>(const Defaults &)> &of) {
                 QList<double> values;
@@ -167,8 +168,8 @@ namespace hello::daw {
                  [](const kit::Note &note) { return note.startPoint; });
         text(tr("&Flags:"), [](const kit::Note &note) { return note.flags; });
 
-        auto note = new QLabel(tr("Only the fields you edit change, on every selected note. An "
-                                  "emptied number returns the note to the default."));
+        auto note = new QLabel(tr("Only the fields that are edited change, on every selected note. "
+                                  "An emptied number returns the note to the default."));
         note->setWordWrap(true);
 
         auto buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
@@ -189,7 +190,8 @@ namespace hello::daw {
         const auto edited = [this](Field field) { return m_edited[field]; };
         const auto textOf = [this](Field field) { return m_fields[field]->text(); };
 
-        // Empty for the default, or a number; left out if it does not read as one
+        // Sets change to empty for the default, or to a number. Leaves it unchanged if the text
+        // does not read as a number
         const auto optional = [&](Field field, std::optional<std::optional<double>> &change) {
             if (!edited(field)) {
                 return;

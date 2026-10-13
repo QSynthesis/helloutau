@@ -14,8 +14,8 @@ namespace hello::kit {
 
     /// Instantiates each entry of \a Registry, any \c stdc::DynamicRegistry, and holds the
     /// instances in the order of the registry: an instance is created when its entry is added and
-    /// destroyed when its entry is removed. The host decides through the take and release
-    /// functions which instances it keeps. OrderedObjectRegistryKeeper applies fixed rules on top
+    /// destroyed when its entry is removed. The take and release functions determine which
+    /// instances the host keeps. OrderedObjectRegistryKeeper applies fixed rules on top
     /// of this class. See the registration interfaces in docs/Plugins.md.
     ///
     /// The object follows the registry as a listener. It must be used on the thread on which

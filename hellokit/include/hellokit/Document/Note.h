@@ -30,7 +30,7 @@ namespace hello::kit {
     /// synthesizing rests on export and discarding the entries of existing rests.
     ///
     /// An empty \c std::optional field was not specified in the file. This differs from a field
-    /// specified as zero, and the distinction must survive a round trip.
+    /// specified as zero, and the distinction must be preserved by a round trip.
     struct HELLOKIT_DOCUMENT_EXPORT Note {
         Q_DECLARE_TR_FUNCTIONS(hello::kit::Note)
     public:
@@ -76,7 +76,7 @@ namespace hello::kit {
 
         /// Returns the region names of \a value, a \c $region or \c $region_end of the UST:
         /// the parts between \c | that are not empty. An illegal value, such as one with an
-        /// empty part, therefore does not survive a conversion unchanged.
+        /// empty part, therefore is not preserved unchanged by a conversion.
         static QStringList regionNamesFromUst(const QString &value);
 
         /// Returns \a names joined with \c | for \c $region or \c $region_end of the UST.

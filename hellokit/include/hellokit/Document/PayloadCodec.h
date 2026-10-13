@@ -33,7 +33,7 @@ namespace hello::kit {
         ///
         /// Stricter than \c QByteArray::fromBase64Encoding() in two respects, each of which would
         /// otherwise accept input that could never be written back. Padding is rejected rather
-        /// than tolerated, because an equals sign does not survive UTAU. A length that leaves six
+        /// than tolerated, because UTAU does not preserve an equals sign. A length that leaves six
         /// trailing bits is rejected rather than silently truncated, because six bits cannot
         /// originate from a whole byte.
         static std::optional<QByteArray> decode(QByteArrayView text);

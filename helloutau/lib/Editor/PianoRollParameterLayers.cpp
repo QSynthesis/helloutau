@@ -200,8 +200,8 @@ namespace hello::daw {
         delta = std::clamp(delta, (k > 0 ? times[k - 1] : 0) - times[k],
                            (k < last ? times[k + 1] : m_length) - times[k]);
 
-        // Each p counts from a neighbour, so a move changes two of them at most; the others
-        // keep their values exactly.
+        // Each p counts from a neighbor, so a move changes two of them at most. The others keep
+        // their values exactly.
         auto anchors = m_original.anchorsInTimeOrder();
         if (k < last - 1) {
             // p1, p2 and p5 count forward
@@ -256,7 +256,7 @@ namespace hello::daw {
         m_state->parameters->viewport()->update();
     }
 
-    // A press on an anchor drags it; the right button sets its volume to 100%.
+    // A press on an anchor drags it. The right button sets its volume to 100%.
     std::unique_ptr<SceneGesture>
         PianoRollState::EnvelopeLayer::press(const SceneHit &hit, QPointF position,
                                              Qt::MouseButton button,
@@ -431,7 +431,7 @@ namespace hello::daw {
         return std::nullopt;
     }
 
-    // A press on a handle drags it; the right button removes the value, which leaves the default
+    // A press on a handle drags it. The right button removes the value, which leaves the default
     // of UTAU. Either applies to the selected notes if the note is selected.
     std::unique_ptr<SceneGesture>
         PianoRollState::ValueLayer::press(const SceneHit &hit, QPointF position,

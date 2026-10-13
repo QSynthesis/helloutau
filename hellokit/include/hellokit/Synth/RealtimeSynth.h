@@ -46,7 +46,7 @@ namespace hello::kit {
         ~RealtimeSynth();
 
         /// Replaces the plan, which must cover the whole track. Only its resampler arguments,
-        /// cache files and wavtool arguments are used; its track file is never written.
+        /// cache files and wavtool arguments are used. Its track file is never written.
         void setPlan(const SynthPlan &plan);
 
         /// Sets the playback position, in samples of the track file, from which the notes are
@@ -96,11 +96,11 @@ namespace hello::kit {
         /// does not include are Silent.
         QList<NoteState> noteStates() const;
 
-        /// Returns the warnings of the notes that failed since the last call, and forgets them.
+        /// Returns the warnings of the notes that failed since the last call, and clears them.
         DiagnosticList takeDiagnostics();
 
         /// Returns the records of the notes that failed since the last call, for the diagnosis,
-        /// and forgets them. A fragment that WavtoolMixer cannot read is recorded regardless of
+        /// and clears them. A fragment that WavtoolMixer cannot read is recorded regardless of
         /// the wavtool. See docs/SynthDiagnostics.md.
         QList<SynthFailure> takeFailures();
 

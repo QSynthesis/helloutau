@@ -158,7 +158,7 @@ namespace hello::kit {
 
         // Each reading lies up to a thousandth of a millisecond after its value and therefore
         // interpolates towards the next value. On a steep curve that moves the rounded reading,
-        // so each value is chosen from the last back, among the target and its neighbours, such
+        // so each value is chosen from the last back, among the target and its neighbors, such
         // that its reading rounds to the target.
         const auto ticks = readingTicks(timing);
         const auto targets = values(timing);
@@ -197,8 +197,9 @@ namespace hello::kit {
     PitchCurve::Impact PitchCurve::impactOf(const Part &part, double tick, Whose whose) const {
         Impact impact;
 
-        // The segment that contains the tick; before the first point its height, after the
-        // last point nothing
+        // The segment that contains the tick. Interpolation applies differently outside the
+        // points: before the first point the height of the first point applies, and after the
+        // last point the impact is zero.
         const auto &points = part.points;
         if (points.size() >= 2) {
             if (tick < ticksOf(points.first().x)) {
@@ -242,7 +243,7 @@ namespace hello::kit {
         if (x > 0 && x < span) {
             y += vibrato.offset / 100.0 * vibrato.amplitude;
             // Fading in and out exclude each other, and a short vibrato reaching into a
-            // neighbour does not fade; see find_impact() in stdutau synth.cpp.
+            // neighbor does not fade; see find_impact() in stdutau synth.cpp.
             double ratio = 1;
             if (!longEnough) {
                 ratio = 1;

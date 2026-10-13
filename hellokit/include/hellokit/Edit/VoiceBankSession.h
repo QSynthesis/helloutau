@@ -287,7 +287,7 @@ namespace hello::kit {
         /// Adds the files that \a change touched to \a touched .
         void addTouched(const edit::Change &change, std::set<FileKey> &touched) const;
 
-        /// Forgets the steps from \a first to \a last , which left the undo history, and
+        /// Discards the steps from \a first to \a last , which left the undo history, and
         /// invalidates the synchronization points among them.
         void discardSteps(int first, int last);
 

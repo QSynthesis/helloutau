@@ -71,7 +71,8 @@ namespace hello::daw {
         int scope() const;
         void setScope(int scope);
 
-        /// Whether the current scope can be replaced. The replace row is disabled otherwise.
+        /// Returns whether the current scope can be replaced. The replace row is disabled
+        /// otherwise.
         bool isReplaceEnabled() const;
         void setReplaceEnabled(bool enabled);
 

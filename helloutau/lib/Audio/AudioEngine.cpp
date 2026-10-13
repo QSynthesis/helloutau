@@ -64,11 +64,11 @@ namespace hello::daw {
             }
 
         private:
-            // Allocated once, because readData() runs on the audio thread
             static constexpr qint64 maximumFrames = 4096;
 
             AudioMixer &m_mixer;
             int m_channels;
+            // The buffer is allocated once, because readData() runs on the audio thread
             std::vector<float> m_buffer;
             // The bytes rendered by the last call, and those of them not yet read
             qint64 m_rendered = 0;

@@ -523,8 +523,8 @@ namespace hello::kit {
             this, root->child(VoiceBankSlots::Directories.index)->id(), ss::Node::Vector);
 
         // The directories gone from the voice bank or no longer editable, from the last. The
-        // root stays, as a session requires it: if it no longer reads, the tree keeps what was
-        // read before, which saving writes over the files.
+        // root stays, as a session requires it: if it no longer reads, the tree keeps the
+        // contents read before, which saving writes over the files.
         for (int i = directories->size() - 1; i >= 0; --i) {
             const auto path = directoryPathOf(directories->at(i));
             const auto index = bank.indexOf(path);
@@ -584,7 +584,7 @@ namespace hello::kit {
             return false;
         }
 
-        // The directories read hold what is on disk now, except a configuration that is to
+        // The directories read hold the contents on disk now, except a configuration that is to
         // record an encoding the user chose, and a root kept because it no longer reads.
         const int step = currentStep();
         for (const auto &directory : read) {

@@ -32,7 +32,7 @@ namespace hello::daw {
         constexpr double maximumScale = 40;
 
         double rounded(double value) {
-            // + 0.0 turns a negative zero into zero, which writes without a sign.
+            // + 0.0 turns a negative zero into zero, so that it is written without a sign.
             return std::round(value * 1000) / 1000 + 0.0;
         }
 
@@ -479,7 +479,7 @@ namespace hello::daw {
         const double consonantEnd = positionOf(entry, Consonant, duration);
         const double cutoffEnd = positionOf(entry, Cutoff, duration);
         auto result = entry;
-        // Writes the cutoff that ends at end, in the sign it had; zero is written negative.
+        // Writes the cutoff that ends at end, in the sign it had. Zero is written negative.
         const auto setCutoffEnd = [&](double end) {
             if (entry.cutoff > 0) {
                 result.cutoff = rounded(duration - end);
@@ -602,7 +602,7 @@ namespace hello::daw {
                              QPointF(std::min<double>(end, area.width()), middle));
         }
 
-        // What the offset and the cutoff leave out
+        // The region outside the offset and the cutoff
         if (values) {
             painter.fillRect(
                 QRectF(QPointF(xOf(0), wave.top()), QPointF(at(Offset), wave.bottom())),

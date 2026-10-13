@@ -23,8 +23,8 @@ namespace hello::kit {
 
         auto source = inspect(path, result.diagnostics);
         if (!source) {
-            // inspect() is expected to have reported the reason. Otherwise the caller would
-            // receive an empty result indistinguishable from a cancellation.
+            // inspect() must have reported the reason. Otherwise the caller would receive an
+            // empty result indistinguishable from a cancellation.
             if (!hasError(result.diagnostics)) {
                 result.diagnostics.push_back({
                     DiagnosticSeverity::Error,
@@ -40,9 +40,9 @@ namespace hello::kit {
                            .selectImport(*this, *source, limits, result.diagnostics);
         if (!request) {
             // No request was returned, for one of two reasons that the return type cannot
-            // distinguish. An error recorded by the selector means that the user could not be
-            // asked, which is a failure. No recorded error means that the user declined, which is
-            // not.
+            // distinguish. An error recorded by the selector indicates that the user could not be
+            // asked, which is a failure. No recorded error indicates that the user declined, which
+            // is not a failure.
             result.cancelled = !hasError(result.diagnostics.mid(mark));
             return result;
         }

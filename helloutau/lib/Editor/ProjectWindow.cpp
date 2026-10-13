@@ -94,17 +94,18 @@ namespace hello::daw {
 
     namespace {
 
-        // How often the playhead follows playback, in milliseconds
+        // The interval in milliseconds at which the playhead follows playback
         constexpr int PlayheadInterval = 30;
 
-        // How long a message stays in the status bar, in milliseconds
+        // The time in milliseconds for which a message stays in the status bar
         constexpr int StatusMessageTimeout = 8000;
 
         // A preview restarts from a moved playhead this many milliseconds later, once for the
-        // moves of a drag within them; so does the rendering in the background.
+        // moves of a drag within them. The rendering in the background restarts the same way.
         constexpr int PreviewRestartDelay = 50;
 
-        // How often the status bar counts the notes rendered in the background, in milliseconds
+        // The interval in milliseconds at which the status bar counts the notes rendered in the
+        // background
         constexpr int RenderStatusInterval = 250;
 
         // The render states on the ruler follow a change this many milliseconds later, once for
@@ -211,7 +212,7 @@ namespace hello::daw {
         kit::TimeSignature rollTimeSignature;
         QMenu *recentMenu = nullptr;
         QMenu *regionMenu = nullptr;
-        // What Paste Parameters pasted last
+        // The parameters that Paste Parameters pasted last
         PianoRoll::Parameters pastedParameters = PianoRoll::AllParameters;
 
         Playback *playback = nullptr;
@@ -256,7 +257,7 @@ namespace hello::daw {
         QStringList backgroundSynthTools;
 
         // Replaces the temporary directory of the window and returns its path, or an empty path
-        // if it cannot be created, in which case Playback refuses to render.
+        // if it cannot be created, in which case Playback does not render.
         std::filesystem::path newTemporaryDirectory() {
             temporaryDirectory.emplace(
                 kit::TemporaryStorage::templatePath(QStringLiteral("project")));
@@ -423,7 +424,7 @@ namespace hello::daw {
             DiagnosticBox::report(&decl, tr("Tempo"), diagnostics);
         }
 
-        // The label of note index, entered by the user; an empty text removes it
+        // The label of note index, entered by the user. An empty text removes it
         void editLabel(int index) {
             stdc_decl_t;
             const auto notes = kit::ProjectRef(document->session()).tracks().at(0).notes();
@@ -679,7 +680,7 @@ namespace hello::daw {
             return firstCanonical == secondCanonical;
         }
 
-        // Deletes the render cache of the project; the realtime mode renders it anew.
+        // Deletes the render cache of the project. The realtime mode renders it anew.
         void clearCache() {
             stdc_decl_t;
             kit::DiagnosticList diagnostics;
@@ -1120,8 +1121,9 @@ namespace hello::daw {
         }
 
         // In the realtime mode, renders the track in the background, from the playhead first;
-        // in the prerender mode, nothing, and the playhead shows only where playback is. What
-        // prevents rendering, such as a missing voice bank, is reported once the user plays.
+        // in the prerender mode, nothing, and the playhead shows only where playback is. Any
+        // condition that prevents rendering, such as a missing voice bank, is reported once the
+        // user plays.
         void updateBackground() {
             updateRunner();
             roll->setCursorEnabled(realtime());
@@ -1678,7 +1680,7 @@ namespace hello::daw {
                 });
             }
 
-            // Checked as the project has it; a click turns it over as an edit.
+            // Checked as the project has it. A click turns it over as an edit.
             const auto mode2 = addCommand(QStringLiteral("helloutau.edit.mode2"), [this] {
                 const bool on = actions.value(QStringLiteral("helloutau.edit.mode2"))->isChecked();
                 edit(tr("Mode2"), [this, on](kit::DiagnosticList &diagnostics) {
@@ -2353,10 +2355,10 @@ namespace hello::daw {
             }
         }
 
-        // The files last opened, numbered, the latest first, and a command that forgets them.
-        // A file that is gone is reported and forgotten when chosen.
+        // The files last opened, numbered, the latest first, and a command that clears them.
+        // A file that is gone is reported and removed from the list when chosen.
         // Opens the voice bank of the project in its window, as the UTAU folder of the settings
-        // resolves it, or returns null after telling the user why not.
+        // resolves it, or returns null after reporting the reason to the user.
         VoiceBankWindow *editVoiceBank() {
             stdc_decl_t;
             const auto track = document->session()->snapshot().tracks.value(0);
@@ -2429,8 +2431,8 @@ namespace hello::daw {
         impl.document = std::move(document);
         impl.bindDocument();
         editor->themeManager()->install(this, {QStringLiteral("ProjectWindow")});
-        // Files dropped on the window open, see dropEvent(). QMainWindow accepts drops already,
-        // for its dock widgets, which the window does not rely on.
+        // A file dropped on the window is opened, see dropEvent(). QMainWindow accepts drops
+        // already, for its dock widgets, which the window does not rely on.
         setAcceptDrops(true);
         resize(1200, 800);
     }
@@ -2504,7 +2506,7 @@ namespace hello::daw {
         if (!impl.editor->settings().rendering().isLogAccumulated()) {
             impl.renderLog->clear();
         }
-        // What plays in the other mode stops.
+        // Playback in the other mode stops.
         const auto state = impl.playback->state();
         if (impl.realtime() ? state == Playback::Rendering : impl.previewing) {
             impl.playback->stop();

@@ -11,7 +11,7 @@ namespace hello::kit {
     /// The magnitude spectrum of audio over time, for display. See docs/FrequencyMaps.md.
     ///
     /// A frame is a Hamming window of windowSize samples centered every hopSize samples, the
-    /// channels mixed, the audio taken as silent beyond its ends; its spectrum has
+    /// channels mixed, the audio taken as silent beyond its ends. Its spectrum has
     /// windowSize / 2 + 1 bins from 0 to half the sample rate. The sizes are those of the
     /// spectrum of frqeditor, which users of frequency maps know.
     class HELLOKIT_SYNTH_EXPORT Spectrogram {

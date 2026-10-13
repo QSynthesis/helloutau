@@ -33,14 +33,15 @@ namespace hello::daw {
             return QDir::toNativeSeparators(QString::fromStdU16String(path.u16string()));
         }
 
-        // The rich text of a label that shows text in color, in bold if bold is true
+        // Returns the rich text of a label that shows text in color, in bold if \a bold is true
         QString colored(const QString &text, const QColor &color, bool bold) {
             return QStringLiteral("<span style=\"color:%1;%2\">%3</span>")
                 .arg(color.name(), bold ? QStringLiteral(" font-weight:bold;") : QString(),
                      text.toHtmlEscaped());
         }
 
-        // A field with a button beside it that opens a file dialog for the value
+        // Returns the layout of a field with a button beside it that opens a file dialog for the
+        // value
         QHBoxLayout *withBrowse(QWidget *field, QWidget *parent, std::function<void()> browse) {
             auto button = new QPushButton(ProjectPropertiesDialog::tr("Browse..."));
             QObject::connect(button, &QPushButton::clicked, parent, std::move(browse));
@@ -50,7 +51,8 @@ namespace hello::daw {
             return layout;
         }
 
-        // A warning icon at the end of edit, shown while the path in edit is invalid
+        // Returns the action that shows a warning icon at the end of \a edit while its path is
+        // invalid
         QAction *addInvalidMark(QLineEdit *edit, const QIcon &icon) {
             const auto action = edit->addAction(icon, QLineEdit::TrailingPosition);
             action->setToolTip(ProjectPropertiesDialog::tr("The path is invalid."));
@@ -432,7 +434,7 @@ namespace hello::daw {
             return changes;
         }
         // The normalized values use the separators of a saved project, so that the project
-        // holds what the file will contain.
+        // holds the text that the file will contain.
         const auto normalized = [](const QString &value, const QString &was) {
             const auto saved = kit::Project::savedPathText(value);
             return saved != was ? std::optional(saved) : std::nullopt;

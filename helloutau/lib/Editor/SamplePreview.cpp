@@ -50,8 +50,8 @@ namespace hello::daw {
             std::vector<float> samples;
         };
 
-        // The preview that a job reports to, null once the preview is gone; read and written
-        // on the main thread only
+        // The preview that a job reports to, null once the preview is gone. The fields are read
+        // and written on the main thread only
         struct Recipient {
             SamplePreview *preview = nullptr;
         };
@@ -209,7 +209,7 @@ namespace hello::daw {
     SamplePreview::~SamplePreview() {
         stdc_impl_t;
         impl.output->stop();
-        // The worker keeps what it uses, the directory among it, and reports to no one.
+        // The worker keeps the resources it uses, the directory among them, and reports to no one.
         impl.recipient->preview = nullptr;
     }
 

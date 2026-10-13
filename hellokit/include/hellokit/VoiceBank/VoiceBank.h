@@ -95,7 +95,7 @@ namespace hello::kit {
     /// same data.
     ///
     /// Bytes that are invalid in the encoding are read as U+FFFD, and the rest of the file is
-    /// loaded as usual. VoiceBankFileSystemState::save() refuses to write a changed file whose text
+    /// loaded as usual. VoiceBankFileSystemState::save() rejects a changed file whose text
     /// contains U+FFFD, because the original bytes would be lost.
     struct VoiceBankDirectory {
         /// The location relative to the voice bank root. Empty for the root itself.
@@ -236,9 +236,9 @@ namespace hello::kit {
     /// The lists fall into two kinds, which an editor presents differently. A changed text file
     /// and a removed directory concern the edited contents and require the user's decision, so
     /// \a changed and \a removed call for a prominent prompt. A changed set of audio files and a
-    /// new directory add or remove only what the user has not edited, so \a audio and \a added
-    /// call for an unobtrusive notice. A change of \c hello-config.json is not reported, because
-    /// the file is read on opening only.
+    /// new directory add or remove only the entries that the user has not edited, so \a audio and
+    /// \a added call for an unobtrusive notice. A change of \c hello-config.json is not reported,
+    /// because the file is read on opening only.
     ///
     /// \sa docs/Editing.md
     struct VoiceBankChanges {
@@ -353,7 +353,7 @@ namespace hello::kit {
         /// looked up unchanged.
         ///
         /// Matching by file name is UTAU behavior, not an invention of this library: UTAU also
-        /// treats a sample name as an alias, which is why voice bank authors prefix names with
+        /// treats a sample name as an alias. Voice bank authors therefore prefix names with
         /// \c _ to exclude them.
         ///
         /// \note Which sample is used for an alias that several audio files register is

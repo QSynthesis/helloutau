@@ -33,7 +33,7 @@ namespace hello::kit::misdecodedNames {
 
     namespace {
 
-        /// The number of \a missing that a name of \a audio restores to under \a record .
+        /// Returns the number of \a missing that a name of \a audio restores to under \a record .
         int matchesOf(const VoiceBankConfiguration::FileNameEncoding &record,
                       const QStringList &audio, const QStringList &missing) {
             QSet<QString> restored;
@@ -111,7 +111,7 @@ namespace hello::kit {
             return QString::fromStdU16String(name.u16string());
         }
 
-        /// The names of the audio files of \a source , in the order of the listing.
+        /// Returns the names of the audio files of \a source , in the order of the listing.
         QStringList audioNamesOf(const VoiceBankDirectorySource &source) {
             QStringList names;
             for (const auto &name : source.audioFiles) {
@@ -120,7 +120,7 @@ namespace hello::kit {
             return names;
         }
 
-        /// The names of the subdirectories of \a source , in the order of its stamp.
+        /// Returns the names of the subdirectories of \a source , in the order of its stamp.
         QStringList directoryNamesOf(const VoiceBankDirectorySource &source) {
             QStringList names;
             for (const auto &entry : source.stamp.entries) {
@@ -131,8 +131,8 @@ namespace hello::kit {
             return names;
         }
 
-        /// The file names of the entries of the oto.ini of \a source decoded in \a charset , in
-        /// Normalization Form C.
+        /// Returns the file names of the entries of the oto.ini of \a source decoded in
+        /// \a charset , in Normalization Form C.
         QStringList entryNamesOf(const VoiceBankDirectorySource &source, const QString &charset) {
             QStringList names;
             if (!source.oto) {

@@ -20,7 +20,8 @@ namespace hello::daw {
     /// shows as the links to its child pages.
     ///
     /// The widget only edits: the page reports whether it differs from the settings with
-    /// isModified() and modifiedChanged(), and commits it with apply(), which may refuse.
+    /// isModified() and modifiedChanged(), and commits it with apply(), which may reject the
+    /// change.
     class HELLOUTAU_WIDGETS_EXPORT SettingPage : public QObject {
         Q_OBJECT
     public:
@@ -54,13 +55,13 @@ namespace hello::daw {
         /// The widget, created on the first call, or null for a category.
         QWidget *widget();
 
-        /// Whether the widget exists, which apply() and isModified() concern.
+        /// Returns whether the widget exists, which apply() and isModified() concern.
         bool hasWidget() const;
 
         /// Deletes the widget, and with it the edits not applied.
         void release();
 
-        /// Whether the widget differs from the settings. False by default, and for a page
+        /// Returns whether the widget differs from the settings. False by default, and for a page
         /// without a widget.
         virtual bool isModified() const;
 

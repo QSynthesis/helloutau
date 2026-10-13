@@ -155,9 +155,10 @@ namespace hello::daw {
         /// \return whether the file is written, with the reason in \a error otherwise
         bool saveActionLayouts(QString *error) const;
 
-        /// Whether a voice bank window opened after the change monitors the disk automatically:
-        /// when a file changes, when the window is activated, and every minute. The default is
-        /// true. Tests disable the monitoring and call VoiceBankWindow::checkDisk() instead.
+        /// Returns whether a voice bank window opened after the change monitors the disk
+        /// automatically: when a file changes, when the window is activated, and every minute.
+        /// The default is true. Tests disable the monitoring and call
+        /// VoiceBankWindow::checkDisk() instead.
         bool watchesDisk() const;
         void setWatchesDisk(bool watches);
 
@@ -198,7 +199,7 @@ namespace hello::daw {
 
         /// Closes \a window and opens its voice bank again in a new window in its place, the undo
         /// history cleared. Intended after a change on disk that the window does not follow, such
-        /// as file names converted on disk. Closing asks to save unsaved changes. The projects
+        /// as file names converted on disk. The user is asked to save unsaved changes. The projects
         /// that sing the voice bank take the voice bank as read again.
         ///
         /// \return the new window, or \c nullptr if \a window was not closed or the voice bank
@@ -212,8 +213,8 @@ namespace hello::daw {
         void fillRecentMenu(QMenu *menu, QWidget *from);
 
         /// Shows a confirmation over \a from, as "Clear Recently Opened..." of VS Code does, and
-        /// forgets every recent project and voice bank if the user confirms. Returns whether they
-        /// were forgotten.
+        /// clears every recent project and voice bank if the user confirms. Returns whether they
+        /// were cleared.
         bool clearRecent(QWidget *from);
 
         /// The kind of recent items that showRecent() lists
@@ -241,7 +242,7 @@ namespace hello::daw {
         /// the restart (kit::ExitLauncher::scheduleRestart()) and quits the application. Without
         /// an instance of kit::ExitLauncher, no restart is offered.
         ///
-        /// \return Whether the application quits to start again. A user who declines, or who
+        /// \return whether the application quits to start again. A user who declines, or who
         ///         cancels the closing of a window, restarts later by hand.
         bool offerRestart(QWidget *parent);
 

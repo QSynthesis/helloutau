@@ -82,7 +82,7 @@ namespace hello::kit {
         /// Each sample sums the contributions of the segments that cover it, in the order of the
         /// calls, and is limited to 16 bits after each addition, as each call of wavtool.exe
         /// limits it. A contribution is the fragment sample times the gain of the envelope there,
-        /// truncated toward zero; past the end of a fragment it is zero.
+        /// truncated toward zero. Past the end of a fragment it is zero.
         static void mix(const QList<Segment> &segments, const FragmentGetter &fragment,
                         qint64 first, qint64 count, qint16 *out);
 

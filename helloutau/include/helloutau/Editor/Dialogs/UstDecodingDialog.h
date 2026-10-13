@@ -18,7 +18,7 @@ namespace hello::daw {
     /// previewed in the selected encoding, so that the user can recognize the correct encoding.
     /// The encoding with the fewest invalid byte sequences is initially selected, see
     /// TextCodec::ranked(), and the encodings in which the file has invalid byte sequences are
-    /// grey.
+    /// gray.
     class HELLOUTAU_EDITOR_EXPORT UstDecodingDialog : public QDialog,
                                                       public kit::UstCharsetSelector {
         Q_OBJECT
@@ -43,7 +43,7 @@ namespace hello::daw {
 
         QString previewText() const;
 
-        /// Whether candidate \a charset is grey, unable to read the text of the file.
+        /// Returns whether candidate \a charset is gray, unable to read the text of the file.
         bool isGrey(const QString &charset) const;
 
     private:

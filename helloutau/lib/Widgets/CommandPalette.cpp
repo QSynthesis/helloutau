@@ -190,7 +190,7 @@ namespace hello::daw {
     }
 
     CommandPalette::CommandPalette(QWidget *window) : QFrame(window) {
-        // Before a style sheet reaches the shadow property
+        // The conversions are registered before a style sheet reaches the shadow property
         ThemeTypes::registerConversions();
         setFrameShape(QFrame::StyledPanel);
         setAutoFillBackground(true);
@@ -522,7 +522,7 @@ namespace hello::daw {
             }
             item->setData(DescriptionPositionsRole, descriptionPositions);
             if (entry.checkable) {
-                // What running the command does, as in QSynthesis Revenge
+                // The effect of running the command, as in QSynthesis Revenge
                 item->setData(StateRole, entry.checked ? tr("(Off)") : tr("(On)"));
             }
             item->setData(RecentRole, i == 0 && recentCount > 0);

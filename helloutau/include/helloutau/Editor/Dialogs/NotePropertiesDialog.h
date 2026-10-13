@@ -23,8 +23,8 @@ namespace hello::daw {
     ///
     /// A field shows the value the notes share, or stays empty with "(various)" where they
     /// differ, and "(default)" where they leave it to the default. Only the fields edited
-    /// change, on every note; emptied, a field that a note may leave to the default returns it
-    /// to the default. See the note properties in docs/Widgets.md.
+    /// change, on every note. If emptied, a field that a note may leave to the default returns
+    /// it to the default. See the note properties in docs/Widgets.md.
     class HELLOUTAU_EDITOR_EXPORT NotePropertiesDialog : public QDialog {
         Q_OBJECT
     public:

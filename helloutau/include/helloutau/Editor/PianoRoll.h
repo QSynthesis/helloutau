@@ -37,16 +37,16 @@ namespace hello::daw {
     /// their lyrics, a ruler above and a keyboard beside, where the notes are selected and edited.
     ///
     /// The piano roll reads the tree of the session through a \c TrackTimeline and keeps no
-    /// copy of the notes: a change only marks it for drawing again. A drag changes only what is
-    /// drawn, and writes the tree in one transaction when it ends; Escape abandons it. See the
+    /// copy of the notes: a change only marks it for drawing again. A drag changes only the
+    /// drawing, and writes the tree in one transaction when it ends. Escape abandons it. See the
     /// section on the piano roll and step 4 in docs/Widgets.md.
     ///
     /// The selection is a set of note identifiers, so it follows the notes through edits, undo
     /// and redo.
     ///
-    /// The colors are properties that a style sheet can set; unset, they derive from the palette.
-    /// So are the distances within which the pitch responds to the pointer, pointGrip() and
-    /// curveGrip().
+    /// The colors are properties that a style sheet can set. Unset, they derive from the
+    /// palette. The same applies to the distances within which the pitch responds to the
+    /// pointer, pointGrip() and curveGrip().
     class HELLOUTAU_EDITOR_EXPORT PianoRoll : public QWidget {
         Q_OBJECT
         Q_PROPERTY(QColor noteColor READ noteColor WRITE setNoteColor)
@@ -86,7 +86,7 @@ namespace hello::daw {
             NoteEnd,
             /// Anywhere not on a note.
             Background,
-            /// A Mode2 point, while the pitch is shown; SceneHit::index is its index in the
+            /// A Mode2 point, while the pitch is shown. SceneHit::index is its index in the
             /// note.
             PitchPoint,
             /// The handles of a vibrato, while the pitch is shown: the start of its trapezoid,
@@ -98,7 +98,7 @@ namespace hello::daw {
             VibratoDepth,
             VibratoPeriod,
             VibratoPhase,
-            /// An anchor of an envelope in the parameter area; SceneHit::index is its index in
+            /// An anchor of an envelope in the parameter area. SceneHit::index is its index in
             /// time order.
             EnvelopePoint,
             /// The handle of the value of a note in the parameter area, while it shows the
@@ -106,7 +106,7 @@ namespace hello::daw {
             ParameterHandle,
         };
 
-        /// What the parameter area shows and edits.
+        /// The value that the parameter area shows and edits.
         enum Lane {
             EnvelopeLane,
             IntensityLane,
@@ -115,7 +115,7 @@ namespace hello::daw {
             VelocityLane,
         };
 
-        /// What a press on the background does with the left button. With the right button,
+        /// The effect of a press on the background with the left button. With the right button,
         /// every tool but PitchTool drawing selects the notes in the span of time of a drag,
         /// whatever their keys, and with Ctrl adds them to the selection, as a drag selects in
         /// UTAU.
@@ -123,13 +123,12 @@ namespace hello::daw {
             /// Selects the notes in a rectangle.
             SelectTool,
             /// Draws a note on the background: before the note at the pointer, or after the last
-            /// note, from where the note before it ends; with Shift, from the pointer after a
-            /// rest, or within a rest in its place. A press on a note selects and moves it, as
-            /// with SelectTool.
+            /// note, from where the note before it ends. With Shift, the note starts at the
+            /// pointer, after a rest or inside a rest that it splits. A press on a note selects
+            /// and moves it, as with SelectTool.
             PenTool,
             /// Draws the Mode1 pitch, anywhere in the roll, while the pitch is shown and the
-            /// project turns Mode2 off; otherwise it acts as SelectTool. See
-            /// isPitchVisible().
+            /// project turns Mode2 off. Otherwise it acts as SelectTool. See isPitchVisible().
             PitchTool,
         };
 
@@ -147,8 +146,8 @@ namespace hello::daw {
         /// of each note (step 7).
         SceneView *parameterView() const;
 
-        /// What the parameter area shows, chosen with the buttons beside it. The envelopes at
-        /// first.
+        /// The lane that the parameter area shows, chosen with the buttons beside it. The
+        /// envelopes at first.
         Lane lane() const;
         void setLane(Lane lane);
         TimelineRuler *ruler() const;
@@ -277,7 +276,7 @@ namespace hello::daw {
             /// The attack from p1 at the start to p2 at the end of the overlap, the release
             /// from p3 at the overlap of the next note to p4 at the end, the volumes kept
             CrossfadeP2P3,
-            /// p1 at the end of the overlap with the volume of p2, and p2 5 ms after it; p4 at
+            /// p1 at the end of the overlap with the volume of p2, and p2 5 ms after it. p4 at
             /// the overlap of the next note with the volume of p3, and p3 5 ms before it
             CrossfadeP1P4,
         };
@@ -285,7 +284,7 @@ namespace hello::daw {
         /// Fades the envelope of each selected sung note in over its overlap with the previous
         /// note, if that is sung and the overlap after its correction positive, and out over
         /// the overlap of the next note likewise. An envelope so changed loses its middle
-        /// anchor; a note without an envelope starts from the default of UTAU.
+        /// anchor. A note without an envelope starts from the default of UTAU.
         bool crossfadeEnvelopes(Crossfade crossfade, kit::DiagnosticList &diagnostics);
 
         /// The parameters of a note that are copied, pasted and reset together.
@@ -320,7 +319,7 @@ namespace hello::daw {
 
         /// Replaces the Mode1 values of the selected sung notes, in one step, with the curve of
         /// Mode2 that the resampler receives over the sample of each note, from its
-        /// pre-utterance to the overlap of the next note, the contributions of the neighbours
+        /// pre-utterance to the overlap of the next note, the contributions of the neighbors
         /// included. The Mode2 points and vibratos are kept.
         ///
         /// \sa kit::PitchCurve::toMode1()
@@ -346,8 +345,8 @@ namespace hello::daw {
         /// \name Editing a lyric in place
         /// @{
 
-        /// Shows an editor over note \a index with its lyric. Return commits it; Tab and
-        /// Shift+Tab commit it and edit the next and the previous note; Escape abandons it.
+        /// Shows an editor over note \a index with its lyric. Return commits it. Tab and
+        /// Shift+Tab commit it and edit the next and the previous note. Escape abandons it.
         /// Losing the focus or scrolling commits it.
         void editLyric(int index);
 
@@ -368,8 +367,8 @@ namespace hello::daw {
         double cursorPosition() const;
         void setCursorPosition(double tick);
 
-        /// Whether the playhead at rest is drawn and moved on the ruler, as in the realtime
-        /// playback mode; true at first. Without it, as in the prerender mode, only
+        /// Returns whether the playhead at rest is drawn and moved on the ruler, as in the
+        /// realtime playback mode. True at first. Without it, as in the prerender mode, only
         /// playheadPosition() is drawn, and the ruler moves nothing.
         bool isCursorEnabled() const;
         void setCursorEnabled(bool enabled);
@@ -380,7 +379,7 @@ namespace hello::daw {
         kit::TextSearch lyricSearch() const;
         void setLyricSearch(const kit::TextSearch &search);
 
-        /// How far a note is rendered.
+        /// The extent to which a note is rendered.
         enum RenderState {
             /// A rest, or a note that sounds nothing, for which nothing is drawn
             RenderSilent,
@@ -396,15 +395,15 @@ namespace hello::daw {
         QList<RenderState> renderStates() const;
         void setRenderStates(const QList<RenderState> &states);
 
-        /// Whether the pitch of each note is drawn: the portamento of its own points in
+        /// Returns whether the pitch of each note is drawn: the portamento of its own points in
         /// pitchColor(), from its first point to its last, and apart from it its vibrato around
         /// the middle of its row in vibratoColor() (kit::PitchCurve::ownPortamentoAt()). A note
         /// without points has no portamento drawn. See step 1 in docs/Tuning.md.
         ///
         /// While it is, the Mode2 points are drawn on the portamento and edited there (step 2 in
         /// docs/Tuning.md): a point is dragged, with those selected with it, Shift snapping it to
-        /// the time of another point of its note and Ctrl its height to 50 cents; a double click
-        /// on the portamento inserts a point; the context menu of a point changes its shape or
+        /// the time of another point of its note and Ctrl its height to 50 cents. A double click
+        /// on the portamento inserts a point. The context menu of a point changes its shape or
         /// removes it. The first point after a sung note starts at the pitch of that note and
         /// only moves in time, as does the last point.
         ///
@@ -418,24 +417,24 @@ namespace hello::daw {
         bool isPitchVisible() const;
         void setPitchVisible(bool visible);
 
-        /// Whether the pitch that the resampler receives for each sung note is drawn as a dashed
-        /// line in renderedPitchColor(), over the readings of its sample from its pre-utterance
-        /// to the overlap of the next note: in Mode2 the sum of the portamento and the vibrato
-        /// of the note and its neighbours, otherwise the Mode1 curve. Independent of
+        /// Returns whether the pitch that the resampler receives for each sung note is drawn as
+        /// a dashed line in renderedPitchColor(), over the readings of its sample from its
+        /// pre-utterance to the overlap of the next note: in Mode2 the sum of the portamento and
+        /// the vibrato of the note and its neighbors, otherwise the Mode1 curve. Independent of
         /// isPitchVisible(). Off by default.
         bool isRenderedPitchVisible() const;
         void setRenderedPitchVisible(bool visible);
 
-        /// Whether the envelope of each sung note is drawn above its bar, as UTAU draws it: over
-        /// the fragment of its sample, which starts the pre-utterance before the note, a volume
-        /// of 100 one row high, with its intensity at the start. Off by default; the parameter
-        /// area edits the envelopes either way.
+        /// Returns whether the envelope of each sung note is drawn above its bar, as UTAU draws
+        /// it: over the fragment of its sample, which starts the pre-utterance before the note, a
+        /// volume of 100 one row high, with its intensity at the start. Off by default. The
+        /// parameter area edits the envelopes either way.
         bool areEnvelopesVisible() const;
         void setEnvelopesVisible(bool visible);
 
-        /// Whether the parameters of each sung note are drawn below its bar, as UTAU shows them:
-        /// the modulation as "mod 100" one row below the note, and the flags as written two rows
-        /// below. Off by default.
+        /// Returns whether the parameters of each sung note are drawn below its bar, as UTAU
+        /// shows them: the modulation as "mod 100" one row below the note, and the flags as
+        /// written two rows below. Off by default.
         bool areParametersVisible() const;
         void setParametersVisible(bool visible);
 
@@ -493,7 +492,7 @@ namespace hello::daw {
         void setParameterColor(const QColor &color);
         QColor playheadColor() const;
         void setPlayheadColor(const QColor &color);
-        /// The colors of the render states: by default grey, amber, green and red.
+        /// The colors of the render states: by default gray, amber, green and red.
         QColor renderWaitingColor() const;
         void setRenderWaitingColor(const QColor &color);
         QColor renderRunningColor() const;
@@ -521,8 +520,8 @@ namespace hello::daw {
         /// The quantization changed to \a ticks.
         void quantizationChanged(int ticks);
 
-        /// An edit made in the roll itself, by a gesture, a lyric or a context menu, was refused
-        /// and left the project as it was; \a message states why. The functions of the roll
+        /// An edit made in the roll itself, by a gesture, a lyric or a context menu, was rejected
+        /// and left the project as it was. \a message states why. The functions of the roll
         /// report in their diagnostics instead.
         void editRefused(const QString &message);
 

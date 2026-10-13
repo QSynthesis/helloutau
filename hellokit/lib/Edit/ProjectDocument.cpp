@@ -114,8 +114,8 @@ namespace hello::kit {
             stdc_impl_t;
             impl.updateModified();
         });
-        // A new step may take the number of the saved one; the document then differs from it
-        // whatever the step.
+        // A new step may take the number of the saved step. The document then differs from the
+        // saved step whatever the step.
         connect(&impl.session, &ProjectSession::stepsDiscarded, this, [this](int first, int last) {
             stdc_impl_t;
             if (impl.savedStep >= first && impl.savedStep <= last) {

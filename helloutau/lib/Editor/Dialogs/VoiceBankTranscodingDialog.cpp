@@ -25,7 +25,7 @@ namespace hello::daw {
             return QDir::toNativeSeparators(QString::fromStdU16String(path.u16string()));
         }
 
-        // The candidates, with charset first if it is none of them
+        // Returns the candidates, with \a charset first if it is not among them
         QStringList candidatesWith(const QString &charset) {
             auto candidates = kit::TextCodec::ustCandidates();
             if (!charset.isEmpty() && !candidates.contains(charset)) {

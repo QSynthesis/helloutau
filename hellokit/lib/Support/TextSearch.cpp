@@ -10,7 +10,7 @@ namespace hello::kit {
             return;
         }
         // Unicode properties give \w and \b the word characters of every script, which whole
-        // words require for kana and hanzi.
+        // words require for kana and ideographs.
         QRegularExpression::PatternOptions flags = QRegularExpression::UseUnicodePropertiesOption;
         if (!(options & CaseSensitive)) {
             flags |= QRegularExpression::CaseInsensitiveOption;

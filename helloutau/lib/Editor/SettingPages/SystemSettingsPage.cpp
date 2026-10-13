@@ -35,7 +35,7 @@ namespace hello::daw {
         m_language->setCurrentIndex(
             std::max(0, m_language->findData(m_settings.appearance().language())));
         interfaceForm->addRow(tr("&Language:"), m_language);
-        interfaceForm->addRow(note(tr("Takes effect after a restart.")));
+        interfaceForm->addRow(note(tr("The change takes effect after a restart.")));
         connect(m_language, &QComboBox::currentIndexChanged, this, &SettingPage::modifiedChanged);
         layout->addWidget(interfaceGroup);
         layout->addStretch();

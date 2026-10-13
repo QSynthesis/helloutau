@@ -54,7 +54,7 @@ namespace hello::daw {
         }
         m_source->setCurrentIndex(std::max(0, m_source->findData(storedSource())));
         form->addRow(tr("Update &source:"), m_source);
-        form->addRow(note(tr("Automatic selects a source by the time zone of the system.")));
+        form->addRow(note(tr("Automatic: the source is selected by the time zone of the system.")));
         m_extractionThreads = new QSpinBox(widget);
         m_extractionThreads->setObjectName(QStringLiteral("extractionThreads"));
         m_extractionThreads->setRange(1, 64);

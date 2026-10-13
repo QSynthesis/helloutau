@@ -113,9 +113,9 @@ namespace hello::kit {
         /// unchanged. The following are refused, each listed in \a diagnostics :
         ///
         /// - **Text that the encoding cannot represent.** It is never written as question marks.
-        /// - **Text containing U+FFFD**, which stands for bytes that were invalid in the encoding
-        ///   when read. Writing it would lose them. A file that is not named is not written and
-        ///   is not refused.
+        /// - **Text containing U+FFFD**, which stands for an invalid byte sequence read in that
+        ///   encoding. Writing the text would lose the original bytes. A file that is not named is
+        ///   not written and is not refused.
         /// - **A file that changed on disk since it was read**, because it contains changes made
         ///   elsewhere. The voice bank must be reopened. A file whose size or modification time
         ///   differs from the stamp is taken as changed, and only a racy file is compared by

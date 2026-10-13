@@ -194,7 +194,7 @@ namespace hello::daw {
             });
         }
 
-        // The value of column of an entry as its file writes it while the spelling still reads
+        // The value of column of an entry as the file records it while the spelling still reads
         // as the value, as saving keeps it, or else in the shortest form
         static QString valueText(const kit::VoiceOtoEntry &entry, int column) {
             const int field = column - OffsetColumn;
@@ -430,7 +430,7 @@ namespace hello::daw {
                 if (row.duplicate) {
                     return tr("Another entry of this audio file has the same alias. UTAU uses "
                               "only one of them, and an edit that adds such an alias is "
-                              "refused.");
+                              "rejected.");
                 }
                 switch (row.kind) {
                     case MissingAudioRow:

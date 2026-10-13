@@ -37,7 +37,7 @@ namespace hello::kit {
             QObject::connect(&watcher, &FileSystemWatcher::unwatchable, decl, fallBack);
             QObject::connect(&watcher, &FileSystemWatcher::rootNotFound, decl, fallBack);
 
-            // Confirmed by the watcher, unless it has already reported a failure.
+            // The watcher confirms readiness unless it has already reported a failure.
             QObject::connect(&watcher, &FileSystemWatcher::ready, decl,
                              [this] { following = !root.isEmpty() && !poll.isActive(); });
 

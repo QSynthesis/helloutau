@@ -73,7 +73,7 @@ namespace hello::kit {
                 } else {
                     layout.report.chunks.push_back(id);
                 }
-                // A chunk that claims more than the file holds ends the file.
+                // A chunk whose declared size exceeds the remaining bytes ends the read.
                 position = std::min(size, span.start + declared + (declared & 1));
             }
             layout.report.trailingBytes = size - position;

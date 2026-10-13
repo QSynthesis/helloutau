@@ -95,7 +95,7 @@ namespace hello::daw {
 
     /// The pitch that the resampler receives for each sung note, as a dashed line over the readings
     /// of its sample, from its pre-utterance to the overlap of the next note: in Mode2 the sum of
-    /// the portamento and the vibrato of the note and its neighbours, otherwise the Mode1 curve
+    /// the portamento and the vibrato of the note and its neighbors, otherwise the Mode1 curve
     class PianoRollState::RenderedPitchLayer : public SceneLayer {
     public:
         explicit RenderedPitchLayer(PianoRollState *state) : m_state(state) {
@@ -145,7 +145,7 @@ namespace hello::daw {
         void showMenu(int index, int j, QPointF position);
     };
 
-    /// What is drawn over everything: the selection rectangle and the playhead
+    /// The layer drawn over everything: the selection rectangle and the playhead
     class PianoRollState::OverlayLayer : public SceneLayer {
     public:
         explicit OverlayLayer(PianoRollState *state) : m_state(state) {

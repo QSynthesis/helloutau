@@ -1478,7 +1478,7 @@ private Q_SLOTS:
     }
 
     // A point moves in time and height in one step; the first point after a sung note and the
-    // last one move only in time, and a point passes its neighbours into its place in time.
+    // last one move only in time, and a point passes its neighbors into its place in time.
     void a_point_is_dragged_past_its_neighbours() {
         kit::ProjectSession session(bentNotes());
         PianoRoll roll(&session);
@@ -1860,7 +1860,7 @@ private Q_SLOTS:
         return session.snapshot().tracks[0].notes[1].envelope.value_or(kit::Envelope());
     }
 
-    // An anchor moves in time between its neighbours, the others staying where they are, and in
+    // An anchor moves in time between its neighbors, the others staying where they are, and in
     // volume; the right button sets its volume to 100%.
     void an_envelope_is_edited_in_the_parameter_area() {
         const auto edited = [this](const std::function<void(PianoRoll &)> &edit) {
@@ -2019,7 +2019,7 @@ private Q_SLOTS:
         return project;
     }
 
-    // Each envelope fades over the overlaps with sung neighbours and loses its middle anchor;
+    // Each envelope fades over the overlaps with sung neighbors and loses its middle anchor;
     // the first note has no overlap before it.
     void envelopes_are_crossfaded_over_the_overlaps() {
         const auto crossfaded = [this](PianoRoll::Crossfade crossfade) {

@@ -134,7 +134,7 @@ namespace hello::kit {
                                           int destination, DiagnosticList &diagnostics);
 
         /// Replaces the Mode2 points of \a note with \a points. Only the points that differ are
-        /// written, so that the others keep their identity; points beyond the new ones are
+        /// written, so that the others keep their identity. Points beyond the new ones are
         /// removed, and new ones appended. The points must keep their order: from the second
         /// on, none precedes the one before it.
         Q_INVOKABLE static bool setPortamento(const NoteRef &note,

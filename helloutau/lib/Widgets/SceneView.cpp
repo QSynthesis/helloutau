@@ -288,7 +288,8 @@ namespace hello::daw {
         if (m_gesture) {
             m_autoScrollTimer.stop();
             m_grab.reset();
-            // Released before release() runs, which may change what the view shows.
+            // The grab is released before release() runs, which may change the content of the
+            // view.
             auto gesture = std::move(m_gesture);
             gesture->release(event->position(), event->modifiers());
         }

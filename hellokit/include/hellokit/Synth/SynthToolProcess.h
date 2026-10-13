@@ -101,7 +101,7 @@ namespace hello::kit {
     /// \warning \a program is always the synth tool configured by the host, never one specified by
     ///          the project. A UST stores synth tool paths in \c Tool1 and \c Tool2 , and executing
     ///          them without confirmation lets the file choose which program runs. Storing them
-    ///          is permitted. Executing them is not.
+    ///          is permitted. Executing them is not permitted.
     ///
     /// See CLAUDE.md for both rules and the reason they are separate rules.
     class HELLOKIT_SYNTH_EXPORT SynthToolProcess {

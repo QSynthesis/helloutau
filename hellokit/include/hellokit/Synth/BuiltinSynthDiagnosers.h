@@ -20,7 +20,7 @@ namespace hello::kit {
     /// - \c timeout: a synth tool killed at the time limit.
     /// - \c longPath: a path longer than the 260 characters of Windows.
     /// - \c output: the remaining failures, by the stage and the examined file. Its priority is
-    ///   the lowest, so that it explains only what no other diagnoser explains.
+    ///   the lowest, so that it explains only the failures that no other diagnoser explains.
     class HELLOKIT_SYNTH_EXPORT BuiltinSynthDiagnosers {
     public:
         explicit BuiltinSynthDiagnosers(SynthDiagnoserRegistry &registry);

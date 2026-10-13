@@ -19,8 +19,8 @@ namespace hello::daw {
 
     /// The background of the parameter area with a line at the value of UTAU, and on the lane of
     /// the envelopes the envelope of each sung note, over the fragment of its sample: a filled
-    /// outline from the start of the fragment through its anchors to its end. On that lane it
-    /// answers every position, so that a double click reaches it anywhere.
+    /// outline from the start of the fragment through its anchors to its end. On that lane every
+    /// position is reported as a hit, so that a double click reaches it anywhere.
     class PianoRollState::EnvelopeLayer : public SceneLayer {
     public:
         explicit EnvelopeLayer(PianoRollState *state) : m_state(state) {
@@ -35,7 +35,7 @@ namespace hello::daw {
                                             Qt::KeyboardModifiers modifiers) override;
 
         /// On an anchor a double click removes it, the others staying where they are
-        /// (kit::Envelope::withoutAnchor()); on the envelope between the end of the attack and
+        /// (kit::Envelope::withoutAnchor()). On the envelope between the end of the attack and
         /// the start of the release it inserts the middle anchor there.
         bool doubleClick(const SceneHit &hit, QPointF position) override;
 
@@ -53,7 +53,7 @@ namespace hello::daw {
         QPolygonF outlineOf(int index) const;
     };
 
-    /// A drag of an anchor of an envelope: in time between its neighbours, the others staying
+    /// A drag of an anchor of an envelope: in time between its neighbors, the others staying
     /// where they are, unless the toggle LockTime of ParameterViewModifiers is on, and in volume
     /// from 0 to EnvelopeRange, or with the toggle SnapValue the nearest quarter of it. Times are
     /// kept to a tenth of a millisecond, volumes to a percent. The p of the anchor, its time and

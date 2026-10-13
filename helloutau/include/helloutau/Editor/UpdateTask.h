@@ -95,9 +95,9 @@ namespace hello::daw {
         /// downloaded and verified, as prepare() does after its download.
         void prepareFrom(const QString &file);
 
-        /// Cancels the running step and removes what it wrote: the partial or verified download
-        /// and the extracted directory. The state returns to Available, or to Idle without an
-        /// offer.
+        /// Cancels the running step and removes the files and directories it wrote: the partial or
+        /// verified download and the extracted directory. The state returns to Available, or to
+        /// Idle without an offer.
         void cancel();
 
         /// Returns whether a step is running.

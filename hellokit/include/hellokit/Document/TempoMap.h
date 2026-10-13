@@ -28,8 +28,8 @@ namespace hello::kit {
         /// The map of the first track of \a project, starting at the tempo of its settings.
         static TempoMap of(const Project &project);
 
-        /// Adds the next note, \a length ticks long. \a tempo applies from this note onward;
-        /// without it, the note keeps the tempo of the preceding note.
+        /// Adds the next note, \a length ticks long. \a tempo applies from this note onward.
+        /// Without it, the note keeps the tempo of the preceding note.
         ///
         /// A tempo that is not positive is ignored, as if absent, because no duration can be
         /// computed from it. A negative length is counted as zero.

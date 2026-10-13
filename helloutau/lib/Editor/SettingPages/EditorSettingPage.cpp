@@ -11,7 +11,7 @@ namespace hello::daw {
     EditorSettingPage::EditorSettingPage(AppSettings &settings, QObject *parent)
         : SettingPage(QLatin1String(pageId), parent), m_settings(settings) {
         setTitle(tr("Editor"));
-        setDescription(tr("How projects are edited and exported."));
+        setDescription(tr("The editing and export of projects."));
         setKeywords({QStringLiteral("Editor"), QStringLiteral("UST")});
     }
 

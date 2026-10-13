@@ -55,7 +55,7 @@ namespace hello::kit {
             return static_cast<const ss::MappingNode &>(*node);
         }
 
-        // The mapping of a Note::userData, with a QString value in each entry.
+        // Returns the mapping of a Note::userData, with a QString value in each entry.
         std::unique_ptr<ss::Node> userDataTree(const QMap<QString, QString> &userData) {
             auto node = std::make_unique<ss::MappingNode>();
             for (auto it = userData.cbegin(); it != userData.cend(); ++it) {
@@ -73,7 +73,7 @@ namespace hello::kit {
             return userData;
         }
 
-        // The mapping of a Project::unknownFields, with a QJsonValue in each entry.
+        // Returns the mapping of a Project::unknownFields, with a QJsonValue in each entry.
         std::unique_ptr<ss::Node> unknownFieldsTree(const QJsonObject &fields) {
             auto node = std::make_unique<ss::MappingNode>();
             for (auto it = fields.constBegin(); it != fields.constEnd(); ++it) {

@@ -57,7 +57,7 @@ private Q_SLOTS:
     }
 
     // Of a fragment of 175 ms, anchors at 0, 5, 130 and 165 ms. Without one of them the others
-    // stay, and of four the removed one is replaced halfway between its neighbours, the ends of
+    // stay, and of four the removed one is replaced halfway between its neighbors, the ends of
     // the fragment at 0 included.
     void an_anchor_is_removed_and_the_others_stay() {
         const auto anchorsOf = [](const QList<EnvelopeAnchor> &timeOrder, int index) {

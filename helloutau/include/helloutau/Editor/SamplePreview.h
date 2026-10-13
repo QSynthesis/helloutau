@@ -17,7 +17,7 @@
 
 namespace hello::daw {
 
-    /// Plays what the voice bank window lets the user hear of an oto entry: its audio file or a
+    /// Plays the audible part of an oto entry in the voice bank window: its audio file or a
     /// span of it, and a note that the resampler synthesizes from the entry. See the preview in
     /// docs/VoiceBankEditor.md.
     ///
@@ -52,14 +52,14 @@ namespace hello::daw {
                   std::optional<double> to, kit::DiagnosticList &diagnostics);
 
         /// Synthesizes a note of \a sample at \a noteNum, \a length ticks long, with
-        /// \a resampler, and plays it once synthesized. Stops what played before.
+        /// \a resampler, and plays it once synthesized. Stops the previous playback.
         ///
-        /// \return whether synthesizing started; the reason is in \a diagnostics otherwise, and
+        /// \return whether synthesizing started. The reason is in \a diagnostics otherwise, and
         ///         the reason of a failure after the start in failed()
         bool synthesize(const kit::VoiceSample &sample, int noteNum, int length,
                         const std::filesystem::path &resampler, kit::DiagnosticList &diagnostics);
 
-        /// Stops playing, and forgets a note being synthesized.
+        /// Stops playing and discards a note being synthesized.
         void stop();
 
         /// The time of the audio file heard, while play() plays it.
@@ -70,7 +70,7 @@ namespace hello::daw {
 
         /// Returns the note at which the voice bank sings an entry of the folder \a directory
         /// with \a alias, by \a prefixMap: of the keys whose prefix is the folder, or whose
-        /// prefix and suffix enclose the alias, the middle one; C4 if none.
+        /// prefix and suffix enclose the alias, the middle key. C4 if there is none.
         static int noteNumFor(const QMap<int, kit::VoicePrefix> &prefixMap,
                               const std::filesystem::path &directory, const QString &alias);
 

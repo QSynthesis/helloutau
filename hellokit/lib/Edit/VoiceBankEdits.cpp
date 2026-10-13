@@ -19,8 +19,8 @@ namespace hello::kit {
             return false;
         }
 
-        // The file name as saving compares it: the bytes in the encoding of the directory. A
-        // directory without an encoding has no text yet, and UTF-8 stands in for it.
+        // Returns the file name as saving compares it: the bytes in the encoding of the
+        // directory. A directory without an encoding has no text yet, and UTF-8 stands in for it.
         QByteArray orderOf(const QString &fileName, const VoiceDirectoryRef &directory) {
             const auto name = directory.charset();
             if (!name.isEmpty()) {

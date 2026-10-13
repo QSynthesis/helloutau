@@ -16,28 +16,28 @@ namespace hello::daw {
         int quantization() const;
         void setQuantization(int ticks);
 
-        /// Whether the piano roll shows the pitch curves (View > Show Pitch). The default is
-        /// true.
+        /// Returns whether the piano roll shows the pitch curves (View > Show Pitch). The default
+        /// is true.
         bool isPitchVisible() const;
         void setPitchVisible(bool visible);
 
-        /// Whether the piano roll shows the pitch that the resampler receives (View > Show
-        /// Rendered Pitch). The default is true.
+        /// Returns whether the piano roll shows the pitch that the resampler receives (View >
+        /// Show Rendered Pitch). The default is true.
         bool isRenderedPitchVisible() const;
         void setRenderedPitchVisible(bool visible);
 
-        /// Whether the piano roll shows the envelopes (View > Show Envelopes). The default is
-        /// true.
+        /// Returns whether the piano roll shows the envelopes (View > Show Envelopes). The
+        /// default is true.
         bool areEnvelopesVisible() const;
         void setEnvelopesVisible(bool visible);
 
-        /// Whether the piano roll shows the modulation and the flags of the notes (View > Show
-        /// Parameters). The default is false.
+        /// Returns whether the piano roll shows the modulation and the flags of the notes (View >
+        /// Show Parameters). The default is false.
         bool areParametersVisible() const;
         void setParametersVisible(bool visible);
 
-        /// Whether the project window shows its tool bar (View > Show Toolbar). The default is
-        /// true.
+        /// Returns whether the project window shows its tool bar (View > Show Toolbar). The
+        /// default is true.
         bool isToolBarVisible() const;
         void setToolBarVisible(bool visible);
 

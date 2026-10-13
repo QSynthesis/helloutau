@@ -131,10 +131,10 @@ namespace hello::kit {
         static QStringList ustCandidates();
 
         /// Orders \a candidates by how well \a texts read in each, the best first, the order
-        /// given kept among equals: for the encoding that a dialog selects before the user
-        /// confirms one, never in place of the user.
+        /// given kept among equals. The order serves the default selection of a dialog, never
+        /// the user's choice.
         ///
-        /// Each candidate decodes the bytes, and the characters score by what they are in text
+        /// Each candidate decodes the bytes, and the characters score by their category in text
         /// and in misread text. Kana, ideographs, Hangul and full-width punctuation count for
         /// it; invalid bytes, control characters, the private use area, half-width katakana and
         /// Latin-1 letters count against it; each non-ASCII character of valid UTF-8 counts

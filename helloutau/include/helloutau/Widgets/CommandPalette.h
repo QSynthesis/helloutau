@@ -18,17 +18,17 @@ namespace hello::daw {
     /// A list of commands filtered by typing, shown over the top of a window, as the command
     /// palette of VS Code.
     ///
-    /// The palette only shows the commands it is given and reports the one the user chooses;
-    /// collecting the commands, running the chosen one and remembering which were used recently
-    /// are up to the window. Each command is shown with its label, the untranslated label on a
-    /// second line if it differs, and its shortcut as key caps.
+    /// The palette only shows the commands it is given and reports the command that the user
+    /// chooses. Collecting the commands, running the chosen command and tracking which commands
+    /// were used recently are up to the window. Each command is shown with its label, the
+    /// untranslated label on a second line if it differs, and its shortcut as key caps.
     ///
     /// The palette closes when a command is chosen, on Escape, on a click outside it, when a
     /// shortcut is triggered and when the focus leaves it. It follows the size of its window.
     ///
-    /// The colors are properties that a style sheet can set; unset, they derive from the palette
+    /// The colors are properties that a style sheet can set. Unset, they derive from the palette
     /// of the widget. The shadow around the palette belongs to the style sheet as well, written
-    /// <tt>qproperty-shadow: qshadow(#40000000, 16px, 0 4px)</tt>; without it there is none.
+    /// <tt>qproperty-shadow: qshadow(#40000000, 16px, 0 4px)</tt>. Without it there is none.
     class HELLOUTAU_WIDGETS_EXPORT CommandPalette : public QFrame {
         Q_OBJECT
         Q_PROPERTY(QColor matchColor READ matchColor WRITE setMatchColor)
@@ -60,9 +60,9 @@ namespace hello::daw {
         CommandMatcher::Order order() const;
         void setOrder(CommandMatcher::Order order);
 
-        /// Whether the selected command and the command under the pointer show a button that
-        /// removes the command from the list, as the recent files of VS Code do. A click on the
-        /// button emits commandRemoved() and keeps the palette open. False at first.
+        /// Returns whether the selected command and the command under the pointer show a button
+        /// that removes the command from the list, as the recent files of VS Code do. A click on
+        /// the button emits commandRemoved() and keeps the palette open. False at first.
         bool isRemovable() const;
         void setRemovable(bool removable);
 

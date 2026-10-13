@@ -81,8 +81,8 @@ namespace hello::daw {
         static constexpr double CurveStep = 2;
 
         /// A Mode2 point is drawn with this radius, and by default hit within this distance, in
-        /// pixels; by default a double click inserts one within this distance of the portamento.
-        /// See PianoRoll::pointGrip() and PianoRoll::curveGrip().
+        /// pixels. By default a double click inserts a point within this distance of the
+        /// portamento. See PianoRoll::pointGrip() and PianoRoll::curveGrip().
         static constexpr double PointRadius = 3.5;
         static constexpr double DefaultPointGrip = 6;
         static constexpr double DefaultCurveGrip = 5;
@@ -200,13 +200,13 @@ namespace hello::daw {
         QSet<kit::edit::NodeId> selection;
         /// The selected Mode2 points, by the identifiers of their nodes
         QSet<kit::edit::NodeId> selectedPoints;
-        /// What a gesture shows instead of the points of some notes, by note index
+        /// The points that a gesture shows in place of those of some notes, by note index
         QHash<int, QList<kit::PortamentoPoint>> pointPreview;
-        /// What a gesture shows instead of the vibrato of a note, by note index
+        /// The vibrato that a gesture shows in place of that of a note, by note index
         QHash<int, kit::Vibrato> vibratoPreview;
-        /// What a gesture shows instead of the envelope of a note, by note index
+        /// The envelope that a gesture shows in place of that of a note, by note index
         QHash<int, kit::Envelope> envelopePreview;
-        /// What a gesture shows instead of the Mode1 values of a note, by note index
+        /// The Mode1 values that a gesture shows in place of those of a note, by note index
         QHash<int, kit::PitchBend> bendPreview;
 
         /// The parameter area, what it shows, and the buttons that choose it
@@ -218,7 +218,7 @@ namespace hello::daw {
         QColor intensityBackgroundColor;
         QColor intensityBorderColor;
         QColor parameterColor;
-        /// What a gesture shows instead of the value of some notes, by note index
+        /// The value that a gesture shows in place of that of some notes, by note index
         QHash<int, double> valuePreview;
 
         /// The text that a drag in the parameter area shows beside the dragged handle
@@ -234,8 +234,8 @@ namespace hello::daw {
         /// The note from which Shift extends the selection
         kit::edit::NodeId anchor = 0;
 
-        /// What a gesture shows instead of the timeline: every note if placements is not empty,
-        /// a note being drawn, and a selection rectangle, in view coordinates.
+        /// The content that a gesture shows in place of the timeline: every note if placements is
+        /// not empty, a note being drawn, and a selection rectangle, in view coordinates.
         QList<Placement> placements;
         std::optional<Placement> drawn;
         std::optional<QRectF> band;
@@ -301,17 +301,18 @@ namespace hello::daw {
 
         kit::NoteListRef notes() const;
 
-        /// Whether the project turns Mode2 off, so that the pitch is that of the Mode1 values
+        /// Returns whether the project turns Mode2 off, so that the pitch is that of the Mode1
+        /// values
         bool mode1() const;
 
-        /// Whether the Mode2 points and the vibratos are drawn and edited
+        /// Returns whether the Mode2 points and the vibratos are drawn and edited
         bool pointsShown() const;
 
-        /// Whether the Mode1 pitch is drawn and edited
+        /// Returns whether the Mode1 pitch is drawn and edited
         bool bendShown() const;
 
-        /// Whether a press with button draws the Mode1 pitch, which the pitch tool does with
-        /// either button; the right button selects a span of time with the other tools
+        /// Returns whether a press with \a button draws the Mode1 pitch, which the pitch tool
+        /// does with either button. The right button selects a span of time with the other tools
         bool drawsBend(Qt::MouseButton button) const;
 
         /// Returns a press at position whose drag strokes the Mode1 pitch (BendGesture), as the
@@ -335,7 +336,7 @@ namespace hello::daw {
         /// the refresh() that rebuilds the sections.
         bool isCurrent(const SectionNotes &notes) const;
 
-        /// Selects the notes ids; selecting a note clears the selected points.
+        /// Selects the note ids. Selecting a note clears the selected points.
         void setSelection(const QSet<kit::edit::NodeId> &ids);
         void updateRulerSelection();
 
@@ -352,19 +353,19 @@ namespace hello::daw {
         /// it began on, so that no other note stands out while it lasts.
         void hover(std::optional<QPointF> position);
 
-        /// Selects the points ids; selecting a point clears the selected notes.
+        /// Selects the point ids. Selecting a point clears the selected notes.
         void selectPoints(const QSet<kit::edit::NodeId> &ids);
 
         double ticksOf(double milliseconds, int index) const;
 
         double millisecondsOf(double ticks, int index) const;
 
-        /// Whether the first point of note index starts at the pitch of the previous note, as
-        /// the resampler curve has it (kit::PitchCurve)
+        /// Returns whether the first point of note index starts at the pitch of the previous
+        /// note, as the resampler curve has it (kit::PitchCurve)
         bool startsAtPrevious(int index) const;
 
-        /// Whether the height of point j of the count points of note index stays as it is: the
-        /// first where it starts at the previous note, and the last
+        /// Returns whether the height of point j of the count points of note index stays as it
+        /// is: the first where it starts at the previous note, and the last
         bool heightFixed(int index, int j, int count) const;
 
         /// The points of note index, as a gesture shows them if it does
@@ -441,8 +442,8 @@ namespace hello::daw {
         /// fragment.
         QPolygonF envelopeOutlineOf(int index);
 
-        /// Whether every envelope anchor lies in the fragment and follows the preceding anchor.
-        /// Invalid envelopes can be loaded from UST files written by third-party plugins.
+        /// Returns whether every envelope anchor lies in the fragment and follows the preceding
+        /// anchor. Invalid envelopes can be loaded from UST files written by third-party plugins.
         static bool isValidEnvelope(const kit::Envelope &envelope, double length);
 
         /// Where the parameter area draws the volume at milliseconds into the fragment of note
@@ -481,7 +482,7 @@ namespace hello::daw {
         /// The selected points, by note index and the indices of the points in the note
         QHash<int, QSet<int>> selectedPointIndices() const;
 
-        /// Removes the points of notes, by note index; each note keeps its first and last point
+        /// Removes the points of notes, by note index. Each note keeps its first and last point
         /// where fewer than two would remain.
         bool removePoints(const QHash<int, QSet<int>> &removed, kit::DiagnosticList &diagnostics);
 
@@ -518,8 +519,8 @@ namespace hello::daw {
 
         void clearPreview();
 
-        /// Updates what depends on the notes as a whole, once control returns to the event
-        /// loop, so that a transaction of many changes updates it once.
+        /// Updates the state that depends on the notes as a whole, once control returns to the
+        /// event loop, so that a transaction of many changes updates it once.
         void scheduleRefresh();
 
         void refresh();

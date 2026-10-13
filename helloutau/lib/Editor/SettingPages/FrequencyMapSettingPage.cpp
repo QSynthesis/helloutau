@@ -21,8 +21,8 @@ namespace hello::daw {
                                                      QObject *parent)
         : SettingPage(QLatin1String(pageId), parent), m_settings(settings), m_formats(formats) {
         setTitle(tr("Frequency Maps"));
-        setDescription(tr("How the voice bank window generates frequency maps with the resampler, "
-                          "and the analysis caches that each resampler keeps."));
+        setDescription(tr("The generation of frequency maps with the resampler in the voice bank "
+                          "window, and the analysis caches that each resampler keeps."));
         setKeywords({QStringLiteral("frequency map"), QStringLiteral("frq"), QStringLiteral("llsm"),
                      QStringLiteral("cache")});
     }

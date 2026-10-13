@@ -85,8 +85,8 @@ namespace hello::kit {
         /// Returns the envelope without the anchor at \a index in time order, over a fragment of
         /// \a length milliseconds, with the other anchors at the same times and volumes. Of five
         /// anchors the other four remain. Of four, the anchor is replaced by one halfway between
-        /// its neighbours in time and volume, the start and the end of the fragment at a volume
-        /// of 0 counting as neighbours, so that the outline stays the line through the others.
+        /// its neighbors in time and volume, the start and the end of the fragment at a volume
+        /// of 0 counting as neighbors, so that the outline stays the line through the others.
         /// The distances between the anchors are rounded to a thousandth of a millisecond, the
         /// new volume to a percent.
         ///

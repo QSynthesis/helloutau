@@ -33,7 +33,7 @@ namespace hello::kit {
     ///
     /// Both shells use the UTAU layout: a header of assignments, one block per note that
     /// sets the values of the note and calls the helper, and a footer that joins the two
-    /// fragments written by the wavtool. Only the syntax differs, which is why this is a
+    /// fragments written by the wavtool. Only the syntax differs. This is therefore a
     /// table rather than two copies of the generator.
     class ShellSyntax {
     public:

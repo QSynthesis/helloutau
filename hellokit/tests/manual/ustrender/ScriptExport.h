@@ -59,7 +59,7 @@ struct ScriptExport {
 int compareManifests(const std::filesystem::path &first, const std::filesystem::path &second);
 
 /// Copies a voice bank without the files that synth tools derive from its samples, so that an
-/// synth tool analyses every sample again. Returns the exit code of the program.
+/// synth tool analyzes every sample again. Returns the exit code of the program.
 int copyVoice(const std::filesystem::path &from, const std::filesystem::path &to);
 
 #endif // USTRENDER_SCRIPTEXPORT_H

@@ -321,8 +321,8 @@ namespace hello::kit {
         fs::create_directories(plan.cacheDirectory(), error);
         forgetSuperseded(plan, diagnostics);
 
-        // The fragments the script will find already present. The script does not report what
-        // it skips, so this is the only place where reuse can be counted.
+        // The fragments the script will find already present. The script reports no skip, so this
+        // is the only place where reuse can be counted.
         QList<bool> alreadyThere(int(plan.steps().size()), false);
         if (reuseCache) {
             for (int i = 0; i < int(plan.steps().size()); ++i) {

@@ -27,9 +27,9 @@ namespace hello::daw {
     /// description and the page on the right, and OK, Cancel and Apply. See the settings dialog
     /// in docs/Widgets.md.
     ///
-    /// Apply is enabled while a page is modified, and the modified pages are bold in the tree;
-    /// Apply and OK apply them, and a page that refuses keeps the dialog open on it. Closing
-    /// releases every page, and with them the edits not applied.
+    /// Apply is enabled while a page is modified, and the modified pages are bold in the tree.
+    /// Apply and OK apply them, and a page that rejects the settings keeps the dialog open on
+    /// it. Closing releases every page, and with them the edits not applied.
     ///
     /// The search matches the title, the description and the keywords of a page, and the text
     /// of its controls: labels, buttons and group boxes. The tree keeps the pages that match and
@@ -46,7 +46,7 @@ namespace hello::daw {
         SettingPage *currentPage() const;
 
         /// Applies every modified page, in the order of the tree, and returns whether all
-        /// could; the first that refuses is shown with its reason.
+        /// could. The first page that rejects the settings is shown with its reason.
         bool apply();
 
         void accept() override;

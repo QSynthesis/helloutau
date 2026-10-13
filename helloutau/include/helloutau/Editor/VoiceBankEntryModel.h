@@ -48,7 +48,7 @@ namespace hello::daw {
             ColumnCount,
         };
 
-        /// What a row shows, in RowKindRole.
+        /// The kind of a row, in RowKindRole.
         enum RowKind {
             /// An oto entry whose audio file exists
             EntryRow,
@@ -88,7 +88,8 @@ namespace hello::daw {
         void refreshFrequencyMaps();
 
         /// The row of the entry of \a fileName with \a alias in the folder \a directory, or of the
-        /// audio file \a fileName without an entry, whose alias is empty; -1 if none is shown.
+        /// audio file \a fileName without an entry, whose alias is empty. Returns -1 if none is
+        /// shown.
         int rowOf(const std::filesystem::path &directory, const QString &fileName,
                   const QString &alias) const;
 
@@ -117,12 +118,13 @@ namespace hello::daw {
         Qt::ItemFlags flags(const QModelIndex &index) const override;
 
         /// Edits the entry of the row of \a index, see setEntry(). A value is read as a number
-        /// in the C locale, as \c oto.ini writes it. Emits editRejected() if the edit is refused.
+        /// in the C locale, as \c oto.ini writes it. Emits editRejected() if the edit layer
+        /// rejects the change.
         bool setData(const QModelIndex &index, const QVariant &value,
                      int role = Qt::EditRole) override;
 
     Q_SIGNALS:
-        /// An edit of a cell was refused, for the reasons in \a diagnostics.
+        /// An edit of a cell was rejected, for the reasons in \a diagnostics.
         void editRejected(const kit::DiagnosticList &diagnostics);
 
     private:

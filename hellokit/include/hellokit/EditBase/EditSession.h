@@ -150,7 +150,7 @@ namespace hello::kit::edit {
 
         /// The steps from \a first to \a last left the undo history, because a commit discarded
         /// the transactions that redo() could apply. Emitted before stepChanged() of that
-        /// commit, whose transaction takes the number \a first, so that a document forgets a
+        /// commit, whose transaction takes the number \a first, so that a document discards the
         /// saved step among them before it compares the new step with it.
         void stepsDiscarded(int first, int last);
 

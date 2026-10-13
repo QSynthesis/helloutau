@@ -9,8 +9,8 @@
 
 namespace hello::kit {
 
-    /// Passes each question on, and records the directories for which the user chose an
-    /// encoding or determined the misdecoded file names, whose configuration is to be written.
+    /// Forwards each question to the wrapped selector, and records the directories whose
+    /// configuration is to be written.
     class RecordingSelector : public VoiceBankCharsetSelector {
     public:
         explicit RecordingSelector(VoiceBankCharsetSelector *selector) : m_selector(selector) {

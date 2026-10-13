@@ -20,7 +20,7 @@ namespace hello::kit {
         constexpr char greeting[] = "hello-fswatcher 1";
 
         /// The maximum number of consecutive unexpected exits before monitoring is abandoned.
-        /// The count resets when the program confirms its roots.
+        /// The count resets when the program reports its roots as accepted.
         constexpr int maxDeaths = 3;
 
         constexpr int restartDelay = 500;
@@ -260,8 +260,9 @@ namespace hello::kit {
         }
 
         void arm() {
-            // A fixed interval from the first message rather than one restarted by each message,
-            // because under a continuous stream of messages a restarting timer would never fire.
+            // The timer runs for a fixed interval from the first message rather than restarting
+            // on each message, because under a continuous stream of messages a restarting timer
+            // would never fire.
             if (!timer.isActive()) {
                 timer.start(delay);
             }

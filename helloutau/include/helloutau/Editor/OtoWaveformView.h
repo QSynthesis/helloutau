@@ -23,13 +23,13 @@ namespace hello::daw {
     /// Before the offset and after the cutoff the audio is masked, and the consonant is a region
     /// of another color. The pre-utterance and the overlap are lines, and the envelope that the
     /// overlap and the cutoff determine is drawn over the audio. Each of the five boundaries is
-    /// dragged by the pointer within grip() pixels of it; a drag changes only the view and emits
-    /// entryEdited() once released, and Escape abandons it. See moved() for the rules of a move.
+    /// dragged by the pointer within grip() pixels of it. A drag changes only the view and emits
+    /// entryEdited() once released. Escape abandons it. See moved() for the rules of a move.
     ///
     /// Times are in milliseconds from the start of the audio file. The wheel scrolls, and the
     /// wheel with Ctrl zooms about the pointer.
     ///
-    /// The colors are properties that a style sheet can set; unset, they have fixed defaults
+    /// The colors are properties that a style sheet can set. Unset, they have fixed defaults
     /// that read on light and dark palettes alike.
     class HELLOUTAU_EDITOR_EXPORT OtoWaveformView : public QAbstractScrollArea {
         Q_OBJECT
@@ -104,7 +104,7 @@ namespace hello::daw {
         /// emits entryEdited() if the entry changes. Returns whether it changed.
         bool setValueAt(Value value, double time);
 
-        /// The time of the line that marks what plays, or none.
+        /// The time of the playback line, or none.
         void setPlayhead(std::optional<double> time);
 
         /// \name The spectrum and the frequency map
@@ -146,9 +146,9 @@ namespace hello::daw {
         /// - The end of the consonant stays after the offset, and pushes the cutoff along.
         /// - The cutoff stays after the end of the consonant.
         /// - A negative cutoff stays negative and a positive one positive, as the author decided
-        ///   after QSynthesis. A cutoff of zero reaches the end of the file; it stays zero unless
-        ///   moved, and then becomes negative, as for a new entry. A negative cutoff is at least
-        ///   one millisecond long, since zero would reach the end of the file.
+        ///   after QSynthesis. A cutoff of zero reaches the end of the file. It stays zero until
+        ///   moved, and then becomes negative, as for a new entry. A negative cutoff is at
+        ///   least one millisecond long, since zero would reach the end of the file.
         /// Every value written is rounded to a thousandth of a millisecond, so that a sum keeps
         /// the digits of its terms.
         static kit::VoiceOtoEntry moved(const kit::VoiceOtoEntry &entry, Value value, double time,

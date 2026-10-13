@@ -34,8 +34,7 @@ namespace hello::daw {
         };
 
         /// A stretch of the time axis from \a first to \a last ticks, drawn in \a color as a
-        /// strip along the bottom edge of the ruler, such as how far the notes there are
-        /// rendered.
+        /// strip along the bottom edge of the ruler, such as the render state of the notes there.
         struct Span {
             double first = 0;
             double last = 0;
@@ -107,7 +106,7 @@ namespace hello::daw {
         /// Section \a index was clicked.
         void sectionClicked(int index);
 
-        /// The context menu was asked for at \a tick, to be shown at \a globalPosition.
+        /// The user requested the context menu at \a tick, to be shown at \a globalPosition.
         void menuRequested(double tick, const QPoint &globalPosition);
 
     protected:
@@ -131,7 +130,7 @@ namespace hello::daw {
         QColor m_markColor;
         int m_hoveredSection = -1;
 
-        // Where the ruler starts in the time axis of the view, as it is painted
+        // The start of the ruler in the time axis of the view, as it is painted
         double offset() const;
 
         // The height of each label and region row. The bar numbers and marks share the rest in

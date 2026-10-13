@@ -26,7 +26,7 @@ namespace hello::daw {
             return QDir::toNativeSeparators(QString::fromStdU16String(path.u16string()));
         }
 
-        // The bytes of every text file of directory
+        // Returns the bytes of every text file of \a directory
         QList<QByteArray> textsOf(const kit::VoiceBankDirectorySource &directory) {
             QList<QByteArray> texts;
             for (const auto &[file, bytes] : directory.contents) {
@@ -35,7 +35,7 @@ namespace hello::daw {
             return texts;
         }
 
-        // The byte sequences of texts that charset cannot read
+        // Returns the number of invalid byte sequences in \a texts for \a charset
         qsizetype invalidIn(const QList<QByteArray> &texts, const QString &charset) {
             const kit::TextCodec codec(charset);
             qsizetype total = 0;
@@ -47,7 +47,7 @@ namespace hello::daw {
             return total;
         }
 
-        // The names of question that it proposes as misdecoded
+        // Returns the names of the choices of \a question that are marked as misdecoded
         QStringList proposedOf(const kit::MisdecodedNameQuestion &question) {
             QStringList names;
             for (const auto &choice : question.choices()) {
@@ -101,7 +101,7 @@ namespace hello::daw {
         auto buttons = new QDialogButtonBox(QDialogButtonBox::Ok);
         m_skip = buttons->addButton(tr("&Skip Folder"), QDialogButtonBox::RejectRole);
         m_skip->setToolTip(tr("Leave the folder out. Its samples are then found by file name "
-                              "only, and it is asked again next time."));
+                              "only, and the user is asked about it again next time."));
         connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
         connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
 
@@ -279,16 +279,17 @@ namespace hello::daw {
                    "the others are read as they are. The choices are recorded in the folders.")
                     .arg(textOf(m_root)));
             m_skip->setText(tr("&Later"));
-            m_skip->setToolTip(tr("Use the names as they are this time, and ask again next "
-                                  "time."));
+            m_skip->setToolTip(tr("Use the names as they are this time. The user is asked again "
+                                  "next time."));
             return;
         }
 
         m_skip->setText(single ? tr("&Skip Folder") : tr("&Skip All"));
         m_skip->setToolTip(single ? tr("Leave the folder out. Its samples are then found by file "
-                                       "name only, and it is asked again next time.")
+                                       "name only, and the user is asked about it again next time.")
                                   : tr("Leave every folder out. Their samples are then found by "
-                                       "file name only, and they are asked again next time."));
+                                       "file name only, and the user is asked about them again "
+                                       "next time."));
         QString text;
         if (single) {
             const auto &path = m_directories.first()->path;

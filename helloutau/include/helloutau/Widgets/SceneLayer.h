@@ -16,9 +16,9 @@ namespace hello::daw {
 
     class SceneView;
 
-    /// What a position of a scene view shows, as the layer that drew it reports it.
+    /// The element that a position of a scene view shows, as the layer that drew it reports it.
     ///
-    /// Elements are not objects: a layer identifies what it drew by values, typically the
+    /// Elements are not objects: a layer identifies the drawn element by values, typically the
     /// identifier of a node of a document and a part of it, and finds the element again from
     /// them. \c node is therefore an opaque number to the view.
     struct SceneHit {
@@ -41,11 +41,11 @@ namespace hello::daw {
         }
     };
 
-    /// One interaction from a press of a mouse button to its release, created by a layer for
-    /// what was pressed.
+    /// One interaction from a press of a mouse button to its release, created by a layer for the
+    /// element that was pressed.
     ///
     /// While the interaction lasts it keeps its own preview state, which its layer draws instead
-    /// of the document. Only release() changes the document, in one step; cancel() leaves the
+    /// of the document. Only release() changes the document, in one step. cancel() leaves the
     /// document as it was. See the section on the piano roll in docs/Widgets.md.
     class HELLOUTAU_WIDGETS_EXPORT SceneGesture {
     public:
@@ -60,8 +60,8 @@ namespace hello::daw {
         /// The interaction was abandoned, on Escape or when the view lost the pointer.
         virtual void cancel() = 0;
 
-        /// Whether the view scrolls while the pointer is near an edge: across near the left and
-        /// right edges, up and down near the top and bottom edges.
+        /// Returns whether the view scrolls while the pointer is near an edge: across near the
+        /// left and right edges, up and down near the top and bottom edges.
         virtual bool wantsAutoScroll() const { return false; }
     };
 
@@ -95,10 +95,10 @@ namespace hello::daw {
     };
 
     /// One layer of a scene view, which draws the part of the scene that is visible and reports
-    /// what it drew at a position.
+    /// the element drawn at a position.
     ///
-    /// The layers of a view are drawn in the order they were added, and asked for hits in the
-    /// reverse order, so that what is drawn on top is hit first.
+    /// The layers of a view are drawn in the order they were added, and queried for hits in the
+    /// reverse order, so that the element drawn on top is hit first.
     class HELLOUTAU_WIDGETS_EXPORT SceneLayer {
     public:
         virtual ~SceneLayer();
@@ -109,17 +109,18 @@ namespace hello::daw {
         /// Draws the layer. \a exposed is the part of the view to draw, in view coordinates.
         virtual void paint(QPainter &painter, const QRect &exposed) = 0;
 
-        /// Returns what the layer drew at \a position, in view coordinates, or \c std::nullopt
-        /// if nothing that responds to the pointer.
+        /// Returns the element that the layer drew at \a position, in view coordinates, or
+        /// \c std::nullopt if there is no element that responds to the pointer.
         virtual std::optional<SceneHit> hitTest(QPointF position) const;
 
-        /// Starts an interaction with what \a hit reports, or returns \c nullptr if a press on it
-        /// does nothing.
+        /// Starts an interaction with the element that \a hit reports, or returns \c nullptr if a
+        /// press on it does nothing.
         virtual std::unique_ptr<SceneGesture> press(const SceneHit &hit, QPointF position,
                                                     Qt::MouseButton button,
                                                     Qt::KeyboardModifiers modifiers);
 
-        /// Responds to a double click on what \a hit reports, and returns whether it did.
+        /// Responds to a double click on the element that \a hit reports, and returns whether it
+        /// did.
         ///
         /// The press of the first click has already been delivered to press(). If the layer does
         /// not respond, the second press is delivered to press() as well.

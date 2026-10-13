@@ -21,24 +21,24 @@ namespace hello::daw {
         int threadCount() const;
         void setThreadCount(int count);
 
-        /// What generating the maps again removes first.
+        /// The parts that generating the maps again removes first.
         enum Regeneration {
             MapsAndCaches, ///< The maps and their analysis caches, the default
             CachesOnly,    ///< The analysis caches only, which the resampler writes from the maps
         };
 
-        /// What generating the maps again removes first. A format without analysis caches
-        /// removes its maps regardless.
+        /// The parts that generating the maps again removes first. A format without analysis
+        /// caches removes its maps regardless.
         Regeneration regeneration() const;
         void setRegeneration(Regeneration regeneration);
 
-        /// Whether the runs held in the log of the generation and its size limit are those of the
-        /// render log, the default, rather than isLogAccumulated() and logLimit().
+        /// Returns whether the runs held in the log of the generation and its size limit are
+        /// those of the render log, the default, rather than isLogAccumulated() and logLimit().
         bool followsRenderLog() const;
         void setFollowsRenderLog(bool follows);
 
-        /// Whether the log of the generation holds every run rather than the latest, unless
-        /// followsRenderLog(). Every run by default.
+        /// Returns whether the log of the generation holds every run rather than the latest,
+        /// unless followsRenderLog(). Every run by default.
         bool isLogAccumulated() const;
         void setLogAccumulated(bool accumulated);
 

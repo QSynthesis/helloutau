@@ -11,7 +11,7 @@
 namespace hello::kit {
 
     enum class DiagnosticSeverity {
-        /// The operation made a decision or omitted something, and the result still matches the
+        /// The operation applied a default or omitted something, and the result still matches the
         /// request. Choices made on behalf of the user are reported at this level.
         Note,
 

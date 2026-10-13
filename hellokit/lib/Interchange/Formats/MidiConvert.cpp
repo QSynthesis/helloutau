@@ -40,9 +40,8 @@ namespace hello::kit {
 
         /// Pairs note-on with note-off events by voice and pitch rather than by position.
         ///
-        /// The earlier implementation paired them by position, which fails for any file with
-        /// overlapping notes, because the note-off events then arrive in a different order than
-        /// the note-on events.
+        /// Pairing by position fails for any file with overlapping notes, because the note-off
+        /// events then arrive in a different order than the note-on events.
         std::vector<RawNote> collectNotes(const std::vector<Midi::MidiEvent *> &events,
                                           int trackEnd, DiagnosticList &diagnostics) {
             std::vector<RawNote> notes;
@@ -101,7 +100,7 @@ namespace hello::kit {
                 if (a.start != b.start) {
                     return a.start < b.start;
                 }
-                return a.pitch > b.pitch; // the top of a chord is the one that survives
+                return a.pitch > b.pitch; // the highest note of a chord is kept
             });
             return notes;
         }
@@ -331,8 +330,7 @@ namespace hello::kit {
 
             if (note.start < cursor) {
                 // The previous note is still sounding when this one starts. Shortening the
-                // previous note preserves both, whereas the earlier implementation discarded this
-                // one.
+                // previous note preserves both notes.
                 auto &previous = track.notes.last();
                 const int overlap = cursor - note.start;
                 if (previous.length - overlap <= 0) {
@@ -389,8 +387,8 @@ namespace hello::kit {
                     .arg(clamped));
         }
 
-        // A lyric event belongs to the note sounding at its time. Matching by exact tick, as
-        // the earlier implementation did, loses every lyric a sequencer placed one tick early.
+        // A lyric event belongs to the note sounding at its time. Matching by exact tick loses
+        // every lyric a sequencer placed one tick early.
         int position = 0;
         std::map<int, int> noteAtTick; // start tick to index, sounding notes only
         for (int i = 0; i < track.notes.size(); ++i) {
@@ -410,7 +408,7 @@ namespace hello::kit {
             --it;
             auto &note = track.notes[it->second];
             if (lyric.tick >= it->first + note.length) {
-                ++unplaced; // it landed in a rest
+                ++unplaced; // the tick of the lyric lies within a rest
                 continue;
             }
             note.lyric = decode(lyric.text);

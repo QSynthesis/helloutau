@@ -36,12 +36,14 @@ namespace hello::kit {
             return static_cast<const ss::VectorNode &>(*node);
         }
 
-        // The path of a directory in the tree, with slashes as separators on every system.
+        // Returns the path of a directory in the tree, with slashes as separators on every
+        // system.
         QString pathText(const fs::path &path) {
             return QString::fromStdU16String(path.generic_u16string());
         }
 
-        // The path of a directory with the separators of the system, as reading produces it.
+        // Returns the path of a directory with the separators of the system, as reading produces
+        // it.
         fs::path pathFromText(const QString &text) {
             return fs::path(text.toStdU16String()).make_preferred();
         }
@@ -59,7 +61,8 @@ namespace hello::kit {
             return entry;
         }
 
-        // The sample of entry in the directory at index, whose audio file is at path.
+        // Returns the sample of \a entry in the directory at \a index, whose audio file is at
+        // \a path.
         VoiceSample sampleOf(const VoiceOtoEntry &entry, int index, const fs::path &path) {
             VoiceSample sample;
             sample.path = path;

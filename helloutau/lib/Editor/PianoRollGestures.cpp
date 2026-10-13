@@ -493,7 +493,7 @@ namespace hello::daw {
                 const auto &note = timeline->note(i);
                 Placement placement{i, note.start, note.length, note.key};
                 if (i == m_index && m_splits) {
-                    // What remains of the rest: before the note, or else after it
+                    // The remainder of the rest: before the note, or else after it
                     const qint64 before = m_start - m_from;
                     const qint64 after = at.length - before - m_length;
                     if (before > 0) {
@@ -546,8 +546,8 @@ namespace hello::daw {
             cents = std::round((pressed.y + cents) / PitchSnap) * PitchSnap - pressed.y;
         }
 
-        // The points of each note in time order again, the moving ones passing the others;
-        // where a moving point ends up is kept for selecting it afterwards.
+        // The points of each note in time order again, the moving ones passing the others. The
+        // index a moving point takes after the sort is kept for selecting it afterwards.
         m_state->pointPreview.clear();
         m_moved.clear();
         for (auto it = m_moving.begin(); it != m_moving.end(); ++it) {
@@ -663,8 +663,8 @@ namespace hello::daw {
                                                  VibratoCentsPerRow));
                 break;
             case PianoRoll::VibratoPeriod: {
-                // The right edge of the box follows the pointer; the box starts at the
-                // phase, a share of the period itself.
+                // The right edge of the box follows the pointer. The box starts at the phase, a
+                // share of the period itself.
                 const double share = 1 + m_original.phase / 100;
                 vibrato.period = std::max(1.0, std::round(m_state->millisecondsOf(
                                                    (share * period + ticks) / share, m_index)));

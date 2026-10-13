@@ -28,7 +28,7 @@ namespace hello::kit {
     /// resampler may have written partially cannot be identified exactly. The last fragment
     /// that the run created or rewrote is removed instead.
     ///
-    /// The layout follows UTAU: a header of \c @set assignments, one block per note that sets
+    /// The layout follows UTAU: a header of \c \@set assignments, one block per note that sets
     /// the values of the note and calls \c temp_helper.bat , and a footer that joins the two
     /// fragments written by the wavtool into the track file. The **values** are computed by
     /// \c SynthPlan and placed exactly where the synth tools read them.
@@ -97,7 +97,7 @@ namespace hello::kit {
         /// Returns the scripts generated from \a plan and \a synth tools for the selected shell,
         /// without writing or executing anything.
         ///
-        /// Used by the tests, and for showing a user exactly what will be executed.
+        /// Used by the tests, and for showing the user the exact script to be executed.
         ///
         /// \return the contents of the selected script and helper files, or \c std::nullopt if a
         ///         value cannot be written safely, with the reason in \a diagnostics

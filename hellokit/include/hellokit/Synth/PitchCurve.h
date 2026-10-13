@@ -14,7 +14,7 @@ namespace hello::kit {
 
     /// The pitch curve of a note as UTAU passes it to the resampler, in cents relative to the
     /// note, in two parts: the portamento of the Mode2 points and the vibrato. Both include the
-    /// contributions of the neighbouring notes: the previous note before the start of this one,
+    /// contributions of the neighboring notes: the previous note before the start of this one,
     /// and the next note from its first point on. The contribution of this note alone is given
     /// by ownPortamentoAt() and ownVibratoAt().
     ///
@@ -25,10 +25,10 @@ namespace hello::kit {
     /// - The first point of a note after a note that is not a rest starts at the pitch of that
     ///   note, whatever its \c PBS gives, and a note without points bends from it at once.
     /// - Each point is converted to ticks with the tempo of this note, also those of the
-    ///   neighbours.
+    ///   neighbors.
     /// - The portamento is truncated to whole cents, the sum rounded.
     /// - A vibrato of 50 milliseconds or less is omitted on its own note but drawn, without
-    ///   fading, where it reaches into a neighbour.
+    ///   fading, where it reaches into a neighbor.
     ///
     /// Mode1 values (Note::pitchBend) are not part of this curve, as in stdutau. The curve of
     /// Mode1, which UTAU uses instead of this one when the project turns Mode2 off, is given by
@@ -45,7 +45,7 @@ namespace hello::kit {
         double vibratoAt(double tick) const;
 
         /// The portamento of the points of this note alone at \a tick, counted from the start
-        /// of the note, without the contributions of the neighbours. The value is the height
+        /// of the note, without the contributions of the neighbors. The value is the height
         /// of the first point before that point, and zero after the last point.
         ///
         /// The piano roll draws this part for each note, so that the curves of adjacent notes
@@ -66,7 +66,7 @@ namespace hello::kit {
         std::pair<double, double> pointSpan() const;
 
         /// The timing of the samples of the note and the next one, in milliseconds, as
-        /// reconciled with their neighbours (SynthStep::preUtterance and the like).
+        /// reconciled with their neighbors (SynthStep::preUtterance and the like).
         struct Timing {
             double preUtterance = 0;
             double startPoint = 0;
@@ -92,7 +92,7 @@ namespace hello::kit {
         /// sample of the note from its pre-utterance to the overlap of the next note: \c PBStart
         /// at the first reading, rounded down to a thousandth of a millisecond as UTAU writes
         /// it, and one whole value for each reading. The curve of Mode1 of the note then equals
-        /// the curve of Mode2 under \a timing, the contributions of the neighbours included.
+        /// the curve of Mode2 under \a timing, the contributions of the neighbors included.
         PitchBend toMode1(const Timing &timing) const;
 
         /// The ticks, counted from the start of the note, at which values() and mode1Values()

@@ -88,7 +88,7 @@ namespace hello::kit {
         QList<SynthFailure> failures;
         std::vector<std::thread> workers;
 
-        // Whether step \a index sounds and still needs its fragment
+        // Returns whether step \a index sounds and still needs its fragment.
         bool needs(int index) const {
             const auto fragment = fragmentOf[size_t(index)];
             return fragment && (fragment->state == Waiting || fragment->state == Running);
@@ -256,7 +256,7 @@ namespace hello::kit {
             impl.startTime = plan.startTime();
             impl.diagnostics.append(unreadable);
 
-            // Fragments no longer in the plan are forgotten, unless a worker renders one now.
+            // Fragments no longer in the plan are removed, unless a worker renders one now.
             std::map<fs::path, Impl::Fragment> kept;
             for (const auto &step : std::as_const(impl.steps)) {
                 if (step.silent) {
@@ -345,8 +345,8 @@ namespace hello::kit {
                 }
             }
         }
-        // Mixed outside the lock, which the workers need meanwhile; the fragments are shared
-        // and outlive a new plan.
+        // Mixed outside the lock, which the workers need meanwhile. The fragments are shared and
+        // outlive a new plan.
         WavtoolMixer::mix(
             segments, [&samples](int index) { return samples[size_t(index)].get(); }, first, count,
             out);

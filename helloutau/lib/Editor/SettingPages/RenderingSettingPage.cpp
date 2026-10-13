@@ -17,7 +17,7 @@ namespace hello::daw {
         : SettingPage(QLatin1String(pageId), parent), m_settings(settings) {
         setTitle(tr("Audio Rendering"));
         setDescription(
-            tr("The synth tools used for audio rendering, and how playback renders audio."));
+            tr("The synth tools used for audio rendering, and the way playback renders audio."));
         setKeywords({QStringLiteral("Audio Rendering"), QStringLiteral("resampler"),
                      QStringLiteral("wavtool"), QStringLiteral("playback")});
     }

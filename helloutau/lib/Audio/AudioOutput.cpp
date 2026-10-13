@@ -12,7 +12,7 @@ namespace hello::daw {
 
     namespace {
 
-        // How often the end of a source is looked for, in milliseconds
+        // The interval in milliseconds at which the end of a source is checked
         constexpr int pollInterval = 20;
 
     }

@@ -17,7 +17,8 @@ namespace hello::daw {
         : SettingPage(QLatin1String(pageId), parent), m_settings(settings) {
         setTitle(QStringLiteral("UTAU"));
         setDescription(
-            tr("Where UTAU is, and how a project finds its voice bank and synth tools."));
+            tr("The location of the UTAU folder and the resolution of voice bank and synth tool "
+               "paths."));
         setKeywords({QStringLiteral("UTAU"), QStringLiteral("voice"), QStringLiteral("tools")});
     }
 
@@ -61,7 +62,8 @@ namespace hello::daw {
     }
 
     void UtauSettingPage::showVoiceFolders() {
-        // As VoiceBankSettings::locations() lists them for the UTAU folder being edited
+        // The folders are listed in the order that VoiceBankSettings::locations() returns them
+        // for the UTAU folder being edited
         QStringList lines{tr("The voice folders that %VOICE% denotes, in decreasing priority:")};
         lines.push_back(QDir::toNativeSeparators(
             QString::fromStdU16String(m_settings.voiceBanks().folder().u16string())));

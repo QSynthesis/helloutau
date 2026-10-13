@@ -41,7 +41,7 @@ namespace hello::kit {
         /// writes \c PBStart. Otherwise it keeps its start, \a tick is rounded to the nearest of
         /// its positions, and its values extend before or after as far as \a values do. The
         /// values between those drawn and those it had take the curve as it was, rounded, so
-        /// that what is not drawn sounds as before.
+        /// that the parts not drawn sound as before.
         static PitchBend drawn(const std::optional<PitchBend> &bend, const PreviousBend &previous,
                                double tempo, double tick, const QList<double> &values);
 

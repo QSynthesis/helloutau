@@ -50,8 +50,8 @@ namespace hello::kit {
         /// entry as it is. A name that does not restore is used as it is until a question about
         /// another name records it.
         ///
-        /// The inference tries every pair of distinct encodings of TextCodec::ustCandidates() and
-        /// takes the pair under which the most entries of the \c oto.ini whose audio file is
+        /// The inference examines every pair of distinct encodings of TextCodec::ustCandidates()
+        /// and takes the pair under which the most entries of the \c oto.ini whose audio file is
         /// missing find it under a restored name. Among equals, the pair whose original encoding
         /// is \a charset comes first, then the pair that misdecodes in the system encoding. If no
         /// pair matches an entry, the pair is \a charset and the system encoding, and the names

@@ -21,8 +21,8 @@ namespace hello::daw {
     /// A view of a scene laid out in ticks across and keys up and down, such as a piano roll,
     /// drawn by layers and scrolled and zoomed by the axes.
     ///
-    /// The view keeps no objects for what it shows: each layer draws the visible part from its
-    /// own data on every paint, and reports hits at a position by values. The view dispatches
+    /// The view keeps no objects for the scene it draws: each layer draws the visible part from
+    /// its own data on every paint, and reports hits at a position by values. The view dispatches
     /// the pointer: hovering shows the cursor of the topmost hit, a press lets the layer of the
     /// hit start a gesture, which then receives the moves and the release, and Escape cancels
     /// it. See the section on the piano roll in docs/Widgets.md.
@@ -87,7 +87,7 @@ namespace hello::daw {
         /// The hit under the pointer, if any.
         std::optional<SceneHit> hoveredHit() const;
 
-        /// Whether a gesture is in progress.
+        /// Returns whether a gesture is in progress.
         bool hasGesture() const;
 
     Q_SIGNALS:

@@ -19,9 +19,9 @@ namespace hello::daw {
 
     class AppSettings;
 
-    /// The generation of frequency maps in a voice bank window: the number of threads, what
-    /// generating the maps again removes first, the log of the output of the resampler, and the
-    /// analysis caches of each registered format, as the format declares them. See the
+    /// The generation of frequency maps in a voice bank window: the number of threads, the parts
+    /// removed first when the maps are generated again, the log of the output of the resampler,
+    /// and the analysis caches of each registered format, as the format declares them. See the
     /// generation in docs/FrequencyMaps.md.
     class HELLOUTAU_EDITOR_EXPORT FrequencyMapSettingPage : public SettingPage {
         Q_OBJECT

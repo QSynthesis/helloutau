@@ -26,7 +26,7 @@ namespace hello::daw {
         QKeySequence shortcut;
 
         /// Whether the command switches something on and off, and whether it is on now. The
-        /// palette shows what running the command does, "(On)" or "(Off)", after the label.
+        /// palette shows the effect of running the command, "(On)" or "(Off)", after the label.
         bool checkable = false;
         bool checked = false;
 

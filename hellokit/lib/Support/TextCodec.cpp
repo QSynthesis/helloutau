@@ -31,7 +31,7 @@ namespace hello::kit {
         constexpr CodePage codePages[] = {
             {932,   "Shift_JIS",    "shift_jis shift-jis sjis ms_kanji cp932 windows-932"},
             // GB2312 is a separate code page, but it is universally mapped to 936, because GBK is
-            // a superset of GB2312 and reading one as the other loses nothing.
+            // a superset of GB2312 and reading the former as the latter loses nothing.
             {936,   "GBK",          "gbk gb2312 euc-cn cp936 windows-936"                },
             {950,   "Big5",         "big5 big-5 cp950 windows-950"                       },
             {949,   "EUC-KR",       "euc-kr ks_c_5601-1987 cp949 windows-949"            },
@@ -150,7 +150,8 @@ namespace hello::kit {
             }
 
             case Path::AnsiCodePage: {
-                // All or nothing, because invalid bytes indicate an incorrect encoding choice.
+                // The conversion is atomic, because an invalid byte sequence indicates an
+                // incorrect encoding choice.
                 const auto text =
                     winacp::decode(winacp::CodePage(m_codePage),
                                    std::string_view(bytes.data(), size_t(bytes.size())));

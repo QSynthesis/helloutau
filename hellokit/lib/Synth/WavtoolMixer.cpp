@@ -101,7 +101,7 @@ namespace hello::kit {
                 segment.start = 0;
             } else if (call.overlap >= 0) {
                 // An overlap longer than the track would read before its start, which
-                // wavtool.exe does without a rule; the segment starts at 0 instead.
+                // wavtool.exe does without a rule. The segment starts at 0 instead.
                 segment.start = std::max<qint64>(0, end - samplesOf(call.overlap));
             } else {
                 // A negative overlap leaves a gap one sample shorter than its length.
@@ -114,8 +114,8 @@ namespace hello::kit {
             segment.silent = !call.hasEnvelope;
             if (call.hasEnvelope) {
                 // Each point is placed in milliseconds on the fragment, after the offset, and
-                // rounded there, as the length is; the last two back from the exact length
-                // rather than from the rounded one.
+                // rounded there, as the length is. The last two are measured back from the exact
+                // length rather than from the rounded one.
                 const auto at = [&call, &segment](double milliseconds) {
                     return samplesOf(call.startPoint + milliseconds) - segment.skip;
                 };

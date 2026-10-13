@@ -14,10 +14,10 @@ namespace hello::kit {
     /// The timing of the sample of a note as the synthesis uses it, in milliseconds.
     ///
     /// The pre-utterance and the overlap are those of the oto entry, or of the note where it
-    /// gives them, scaled by the velocity; where the previous note is too short for them, both
-    /// shrink in proportion, and the start point grows by what the pre-utterance lost. The rules
-    /// are those of stdutau (\c correctedTiming() in \c synth.cpp), and a test compares the
-    /// values with the timing in SynthStep.
+    /// gives them, scaled by the velocity. Where the previous note is too short for them, both
+    /// shrink in proportion, and the start point grows by the amount that the pre-utterance lost.
+    /// The rules are those of stdutau (\c correctedTiming() in \c synth.cpp), and a test
+    /// compares the values with the timing in SynthStep.
     ///
     /// The fragment of a note therefore starts its pre-utterance before the note, and the
     /// wavtool appends its duration plus its pre-utterance less the pre-utterance of the next

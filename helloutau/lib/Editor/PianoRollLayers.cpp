@@ -394,7 +394,7 @@ namespace hello::daw {
         painter.setBrush(Qt::NoBrush);
         const double step = std::max(1.0, CurveStep / time.pixelsPerTick);
         // Each note draws the curve of its own points alone, which crosses the curves of its
-        // neighbours if its points lie among theirs. The portamento runs from the first point
+        // neighbors if its points lie among theirs. The portamento runs from the first point
         // to the last point only, and the vibrato within the note. A note without points has
         // no portamento drawn, as in UTAU, but its vibrato.
         for (int i = std::max(0, begin - 1); i < last; ++i) {

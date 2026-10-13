@@ -55,7 +55,7 @@ namespace hello::kit {
 
         /// The timing of the sample in milliseconds, as reconciled with the previous note: the
         /// pre-utterance and the overlap shortened where the previous note is too short for
-        /// them, and the start point moved by what the pre-utterance lost.
+        /// them, and the start point moved by the amount that the pre-utterance lost.
         double preUtterance = 0;
         double voiceOverlap = 0;
         double startPoint = 0;
