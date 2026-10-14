@@ -61,6 +61,19 @@ namespace hello::kit {
         static std::optional<QByteArray> stripped(QByteArrayView bytes,
                                                   DiagnosticList &diagnostics);
 
+        /// Returns the WAVE file of \a bytes with the contents of its \c fmt chunk replaced by
+        /// \a format and those of its \c data chunk by \a data, either chunk unchanged if
+        /// \c std::nullopt. The \c fmt chunk comes first. The other chunks follow in their order,
+        /// the chunks of metadata only if \a keepingMetadata is set. Bytes after the last chunk are
+        /// removed, and a \c data chunk that claims more bytes than the file holds keeps the bytes
+        /// the file holds.
+        ///
+        /// \return the bytes, or \c std::nullopt as for find()
+        static std::optional<QByteArray> rebuilt(QByteArrayView bytes,
+                                                 std::optional<QByteArrayView> format,
+                                                 std::optional<QByteArrayView> data,
+                                                 bool keepingMetadata, DiagnosticList &diagnostics);
+
         /// Writes the WAVE file at \a file again without its metadata. The file is replaced only
         /// once the new file is completely written.
         ///

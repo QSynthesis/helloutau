@@ -36,10 +36,17 @@ namespace hello::kit {
             qint64 size = 0;
         };
 
+        struct Chunk {
+            QByteArray id;
+            Span span;
+        };
+
         struct Layout {
             WaveMetadata::Report report;
             Span format;
             Span data;
+            // Every chunk in the order of the file, the first fmt and data chunks included
+            QList<Chunk> chunks;
         };
 
         // Reads length bytes at offset, fewer at the end of the file
@@ -73,6 +80,7 @@ namespace hello::kit {
                 } else {
                     layout.report.chunks.push_back(id);
                 }
+                layout.chunks.push_back({id, span});
                 // A chunk whose declared size exceeds the remaining bytes ends the read.
                 position = std::min(size, span.start + declared + (declared & 1));
             }
@@ -129,21 +137,40 @@ namespace hello::kit {
 
     std::optional<QByteArray> WaveMetadata::stripped(QByteArrayView bytes,
                                                      DiagnosticList &diagnostics) {
+        return rebuilt(bytes, std::nullopt, std::nullopt, false, diagnostics);
+    }
+
+    std::optional<QByteArray> WaveMetadata::rebuilt(QByteArrayView bytes,
+                                                    std::optional<QByteArrayView> format,
+                                                    std::optional<QByteArrayView> data,
+                                                    bool keepingMetadata,
+                                                    DiagnosticList &diagnostics) {
         const auto layout = walk(readerOf(bytes), bytes.size(), diagnostics);
         if (!layout) {
             return std::nullopt;
         }
-        const auto chunk = [&bytes](QByteArray &out, const char *id, const Span &span) {
-            out.append(id, 4);
-            put32(out, quint32(span.size));
-            out.append(bytes.sliced(span.start, span.size));
-            if (span.size & 1) {
+        const auto append = [](QByteArray &out, const QByteArray &id, QByteArrayView contents) {
+            out.append(id);
+            put32(out, quint32(contents.size()));
+            out.append(contents);
+            if (contents.size() & 1) {
                 out.push_back('\0');
             }
         };
         QByteArray body("WAVE");
-        chunk(body, "fmt ", layout->format);
-        chunk(body, "data", layout->data);
+        append(body, "fmt ",
+               format.value_or(bytes.sliced(layout->format.start, layout->format.size)));
+        for (const auto &chunk : layout->chunks) {
+            const auto original = bytes.sliced(chunk.span.start, chunk.span.size);
+            if (chunk.span.start == layout->format.start) {
+                continue;
+            }
+            if (chunk.span.start == layout->data.start) {
+                append(body, chunk.id, data.value_or(original));
+            } else if (keepingMetadata) {
+                append(body, chunk.id, original);
+            }
+        }
         QByteArray out("RIFF");
         put32(out, quint32(body.size()));
         out.append(body);

@@ -75,6 +75,27 @@ private Q_SLOTS:
                  riff(chunk("fmt ", format) + chunk("data", audio)));
     }
 
+    // The format and the audio are replaced, and the metadata keeps its order if kept. Bytes
+    // after the last chunk go regardless.
+    void the_format_and_the_audio_are_replaced() {
+        DiagnosticList diagnostics;
+        const auto tagged = riff(chunk("JUNK", "ab") + chunk("data", audio) +
+                                 chunk("fmt ", format) + chunk("LIST", "INFO")) +
+                            "xyz";
+        const QByteArray stereo = QByteArray::fromHex("01000200e8030000a00f000004001000");
+        QCOMPARE(*WaveMetadata::rebuilt(tagged, stereo, QByteArrayView("\x05\x06\x07", 3), true,
+                                        diagnostics),
+                 riff(chunk("fmt ", stereo) + chunk("JUNK", "ab") + chunk("data", "\x05\x06\x07") +
+                      chunk("LIST", "INFO")));
+        QCOMPARE(*WaveMetadata::rebuilt(tagged, std::nullopt, std::nullopt, true, diagnostics),
+                 riff(chunk("fmt ", format) + chunk("JUNK", "ab") + chunk("data", audio) +
+                      chunk("LIST", "INFO")));
+        QCOMPARE(*WaveMetadata::rebuilt(tagged, std::nullopt, QByteArrayView("\x05\x06", 2), false,
+                                        diagnostics),
+                 riff(chunk("fmt ", format) + chunk("data", "\x05\x06")));
+        QVERIFY(diagnostics.isEmpty());
+    }
+
     // Bytes too few for a chunk, an odd size padded, and a size beyond the end of the file
     void the_sizes_follow_the_file() {
         DiagnosticList diagnostics;

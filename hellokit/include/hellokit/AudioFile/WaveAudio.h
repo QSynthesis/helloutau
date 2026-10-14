@@ -5,6 +5,7 @@
 #include <optional>
 #include <vector>
 
+#include <QtCore/QByteArray>
 #include <QtCore/QByteArrayView>
 #include <QtCore/QCoreApplication>
 
@@ -29,6 +30,19 @@ namespace hello::kit {
         int sampleRate = 0;
         int channels = 0;
 
+        /// The bits of a sample in the file: 8, 16, 24 or 32 for integers, 32 or 64 for floating
+        /// point. formatChunk() and dataChunk() write the samples in this format.
+        int bitsPerSample = 16;
+
+        /// Whether the samples of the file are floating point rather than integers.
+        bool floatingPoint = false;
+
+        /// Whether the format of the file read is \c WAVE_FORMAT_EXTENSIBLE.
+        bool extensible = false;
+
+        /// Whether the data chunk of the file read claims more bytes than the file holds.
+        bool truncated = false;
+
         /// The samples, interleaved by channel, each between -1 and 1.
         std::vector<float> samples;
 
@@ -48,6 +62,15 @@ namespace hello::kit {
         /// rounded to whole frames, and no delay. Both rates must be positive.
         static std::vector<float> resampled(const std::vector<float> &samples, int channels,
                                             int sourceRate, int targetRate);
+
+        /// Returns the contents of the \c fmt chunk of the audio, a \c WAVE_FORMAT_PCM or
+        /// \c WAVE_FORMAT_IEEE_FLOAT header without extension.
+        QByteArray formatChunk() const;
+
+        /// Returns the contents of the \c data chunk of the audio in the sample format of
+        /// bitsPerSample and floatingPoint. Integer samples are rounded to the nearest value and
+        /// limited to the range of the format.
+        QByteArray dataChunk() const;
 
         /// Reads the WAVE file at \a path.
         ///

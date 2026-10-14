@@ -76,6 +76,24 @@ namespace hello::kit {
             }
         }
 
+        void put16(QByteArray &bytes, quint16 value) {
+            bytes.push_back(char(value & 0xff));
+            bytes.push_back(char(value >> 8));
+        }
+
+        void put32(QByteArray &bytes, quint32 value) {
+            for (int i = 0; i < 4; ++i) {
+                bytes.push_back(char((value >> (8 * i)) & 0xff));
+            }
+        }
+
+        // Returns the sample scaled to the integers of bits, rounded and limited to their range
+        qint64 integerOf(float sample, int bits) {
+            const double scale = double(qint64(1) << (bits - 1));
+            return std::clamp(qint64(std::llround(double(sample) * scale)), -qint64(scale),
+                              qint64(scale) - 1);
+        }
+
     }
 
     double WaveAudio::duration() const {
@@ -116,6 +134,49 @@ namespace hello::kit {
         return result;
     }
 
+    QByteArray WaveAudio::formatChunk() const {
+        const int sampleBytes = bitsPerSample / 8;
+        QByteArray bytes;
+        put16(bytes, floatingPoint ? FormatFloat : FormatPcm);
+        put16(bytes, quint16(channels));
+        put32(bytes, quint32(sampleRate));
+        put32(bytes, quint32(sampleRate * channels * sampleBytes));
+        put16(bytes, quint16(channels * sampleBytes));
+        put16(bytes, quint16(bitsPerSample));
+        // WAVEFORMATEX requires the size of the extension for every format but PCM.
+        if (floatingPoint) {
+            put16(bytes, 0);
+        }
+        return bytes;
+    }
+
+    QByteArray WaveAudio::dataChunk() const {
+        QByteArray bytes;
+        bytes.reserve(qsizetype(samples.size()) * (bitsPerSample / 8));
+        for (const float sample : samples) {
+            if (floatingPoint && bitsPerSample == 64) {
+                const double value = sample;
+                quint64 raw;
+                std::memcpy(&raw, &value, sizeof raw);
+                put32(bytes, quint32(raw));
+                put32(bytes, quint32(raw >> 32));
+            } else if (floatingPoint) {
+                quint32 raw;
+                std::memcpy(&raw, &sample, sizeof raw);
+                put32(bytes, raw);
+            } else if (bitsPerSample == 8) {
+                // Unsigned, centered on 128
+                bytes.push_back(char(integerOf(sample, 8) + 128));
+            } else {
+                const auto value = quint64(integerOf(sample, bitsPerSample));
+                for (int i = 0; i < bitsPerSample / 8; ++i) {
+                    bytes.push_back(char((value >> (8 * i)) & 0xff));
+                }
+            }
+        }
+        return bytes;
+    }
+
     std::optional<WaveAudio> WaveAudio::read(const std::filesystem::path &path,
                                              DiagnosticList &diagnostics) {
         std::ifstream in(path, std::ios::binary);
@@ -142,6 +203,7 @@ namespace hello::kit {
         // is not trusted, since the file itself bounds the chunks.
         std::optional<QByteArrayView> format;
         std::optional<QByteArrayView> audio;
+        bool truncated = false;
         qsizetype position = 12;
         while (position + 8 <= size && !(format && audio)) {
             const auto id = data + position;
@@ -154,6 +216,7 @@ namespace hello::kit {
                 if (available < chunkSize) {
                     warn(diagnostics, tr("The audio file ends before its audio data does, and is "
                                          "read up to its end."));
+                    truncated = true;
                 }
                 audio = bytes.sliced(start, available);
             }
@@ -174,8 +237,9 @@ namespace hello::kit {
         const auto sampleRate = u32At(fmt + 4);
         const int blockAlign = u16At(fmt + 12);
         const int bits = u16At(fmt + 14);
+        const bool extensible = tag == FormatExtensible;
         // The subformat GUID begins with the format tag it stands for.
-        if (tag == FormatExtensible && format->size() >= 26) {
+        if (extensible && format->size() >= 26) {
             tag = u16At(fmt + 24);
         }
 
@@ -199,6 +263,10 @@ namespace hello::kit {
         WaveAudio result;
         result.sampleRate = int(sampleRate);
         result.channels = channels;
+        result.bitsPerSample = bits;
+        result.floatingPoint = tag == FormatFloat;
+        result.extensible = extensible;
+        result.truncated = truncated;
         const qsizetype frames = audio->size() / blockAlign;
         result.samples.resize(size_t(frames * channels));
         const auto source = audio->data();

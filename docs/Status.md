@@ -7,7 +7,7 @@
 | 目标 | 状态 |
 |---|---|
 | `HelloKitSupport` | `Diagnostic`、`TextCodec`（编码名解析、转义与还原）、`FileSystemWatcher`（磁盘变化提示，由 `hello-fswatcher` 进程实现）、`TextSearch`（查找栏的匹配与替换规则）、`ZipExtractor`（安全解压 zip，可多线程、可取消）、`TemporaryStorage`（临时目录管理器）、`ExitLauncher`（程序退出后启动的安装包与重启） |
-| `HelloKitAudioFile` | `WaveAudio`（读写 wav，整段采样率转换使用 r8brain-free-src）、`WaveMetadata`（wav 中 `fmt ` 与 `data` 以外的块的查找与重建） |
+| `HelloKitAudioFile` | `WaveAudio`（读写 wav，整段采样率转换使用 r8brain-free-src）、`WaveMetadata`（wav 中 `fmt ` 与 `data` 以外的块的查找与重建）、`AudioFileProcessor`（音源音频文件的批量处理：采样率、声道、位深、元数据、文件头、直流偏移与峰值） |
 | `HelloKitUpdate` | 与具体程序无关的更新工具：`SoftwareRelease`（release 的解析）、`SoftwareReleaseQuery`（只接受 HTTPS 的查询）、`SoftwareReleaseDownload`（下载附件并以 `Sha256Sums` 校验）、`Windows/InnoSetup`（安装记录的查询），见 [`Distribution.md`](Distribution.md) |
 | `HelloKitDocument` | `PayloadCodec`、`Project` / `Track` / `Note` 模型、`.usth` 读写、`UstDocument` |
 | `HelloKitVoiceBank` | `VoiceBankConfiguration`、`VoiceBankSource`（原始扫描）、`VoiceBank`（解码后的内容与查询，纯值）、`VoiceBankFileSystemState`（磁盘状态：写回、与磁盘核对、重新读取）、`VoiceBankCheckScheduler`、频率表的格式层 `FrequencyMap` / `FrequencyFormat`（读、删除、随 wav 改名、写出、检查与修复） / `FrequencyFormatRegistry` / `FrequencyFormats`（frq 由 `BuiltinFrequencyFormats` 登记、由编辑器持有，dio 与 mrq 为 FrequencyEditor 插件的 `DioFormat`、`MrqFormat`）、格式间的转换 `FrequencyMapConverter` |
