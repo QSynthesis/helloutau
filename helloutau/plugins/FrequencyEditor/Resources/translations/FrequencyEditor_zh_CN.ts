@@ -8,6 +8,10 @@
         <translation>dio (world4utau)</translation>
     </message>
     <message>
+        <source>The file is no frequency map of the format, or it is cut short.</source>
+        <translation>此文件不是该格式的频率表，或文件不完整。</translation>
+    </message>
+    <message>
         <source>The format records a frame every %1 samples at %2 Hz, and the period of the frames is %3 samples.</source>
         <translation>该格式在 %2 Hz 下每 %1 个样本记录一帧，而帧间隔为 %3 个样本。</translation>
     </message>

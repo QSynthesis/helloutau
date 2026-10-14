@@ -549,12 +549,15 @@ private Q_SLOTS:
         bytes += bytesOf(220.0) + bytesOf(22.0);
         write(directory / "a_wav.frq", bytes);
         write(directory / "b_wav.frq", bytes.left(bytes.size() - 1));
+        // Complete apart from the header
+        write(directory / "d_wav.frq", QByteArray("FREQ0002") + bytes.mid(8));
         FrequencyFormats formats;
         const BuiltinFrequencyFormats builtins(formats.registry());
         const auto damages = formats.format(QStringLiteral("frq"))
-                                 ->checkMapFiles(directory, {"a.wav", "b.wav", "c.wav"});
-        QCOMPARE(damages.size(), 1);
+                                 ->checkMapFiles(directory, {"a.wav", "b.wav", "c.wav", "d.wav"});
+        QCOMPARE(damages.size(), 2);
         QCOMPARE(damages.at(0).path, fs::path("b_wav.frq"));
+        QCOMPARE(damages.at(1).path, fs::path("d_wav.frq"));
         QVERIFY(!damages.at(0).repairable);
         QVERIFY(!damages.at(0).description.isEmpty());
     }

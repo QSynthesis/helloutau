@@ -51,17 +51,12 @@ namespace hello::daw {
         if (!bytes) {
             return std::nullopt;
         }
-        if (!bytes->startsWith("wrld-dio")) {
+        if (!isComplete(*bytes)) {
             return damaged(path, diagnostics);
         }
-        kit::BinaryStream stream(*bytes, 8);
-        const auto signalLength = stream.read<qint32>();
+        kit::BinaryStream stream(*bytes, 12);
         const auto rate = stream.read<qint32>();
         const auto count = stream.read<qint32>();
-        if (!signalLength || !rate || !count || *count < 0 ||
-            stream.bytesAvailable() < qsizetype(*count) * 16) {
-            return damaged(path, diagnostics);
-        }
         kit::FrequencyMap table;
         table.hop = hopOf(*rate);
         table.frames.reserve(size_t(*count));
@@ -86,6 +81,27 @@ namespace hello::daw {
             {QStringLiteral("PLATINUM"), AnalysisCache::ReplacedExtension,
              QStringLiteral(".platinum")                                                          },
         };
+    }
+
+    QList<kit::FrequencyFormat::MapFileDamage>
+        DioFormat::checkMapFiles(const std::filesystem::path &directory,
+                                 const QList<std::filesystem::path> &wavs) const {
+        QList<MapFileDamage> damages;
+        for (const auto &wav : wavs) {
+            const auto name = *sidecarNameOf(wav);
+            std::error_code error;
+            if (!std::filesystem::is_regular_file(directory / name, error)) {
+                continue;
+            }
+            kit::DiagnosticList ignored;
+            const auto bytes = contentsOf(directory / name, ignored);
+            if (!bytes || !isComplete(*bytes)) {
+                damages.push_back(
+                    {name, tr("The file is no frequency map of the format, or it is cut short."),
+                     false});
+            }
+        }
+        return damages;
     }
 
     bool DioFormat::canWrite() const {
@@ -156,6 +172,18 @@ namespace hello::daw {
             changes.push_back(FileChange::rewritten(name, bytes));
         }
         return changes;
+    }
+
+    bool DioFormat::isComplete(const QByteArray &bytes) {
+        if (!bytes.startsWith("wrld-dio")) {
+            return false;
+        }
+        kit::BinaryStream stream(bytes, 8);
+        const auto signalLength = stream.read<qint32>();
+        const auto rate = stream.read<qint32>();
+        const auto count = stream.read<qint32>();
+        return signalLength && rate && count && *count >= 0 &&
+               stream.bytesAvailable() >= qsizetype(*count) * 16;
     }
 
 }

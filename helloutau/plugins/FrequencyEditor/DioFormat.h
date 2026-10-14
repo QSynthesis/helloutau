@@ -30,6 +30,10 @@ namespace hello::daw {
         /// a.star and a.platinum
         QList<AnalysisCache> analysisCaches() const override;
 
+        /// Reports each map that read() rejects, which is not repairable.
+        QList<MapFileDamage> checkMapFiles(const std::filesystem::path &directory,
+                                           const QList<std::filesystem::path> &wavs) const override;
+
         bool canWrite() const override;
 
         /// Requires the frames of world4utau, one every 5.80498866213152 milliseconds. The signal
@@ -37,6 +41,10 @@ namespace hello::daw {
         std::optional<QList<FileChange>>
             changesWriting(const std::filesystem::path &directory, const QList<MapWrite> &writes,
                            kit::DiagnosticList &diagnostics) const override;
+
+    private:
+        // Returns whether bytes is a complete map: the header and every frame that it counts
+        static bool isComplete(const QByteArray &bytes);
     };
 
 }

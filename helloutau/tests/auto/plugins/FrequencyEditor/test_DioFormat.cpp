@@ -197,6 +197,29 @@ private Q_SLOTS:
                                     diagnostics));
         QVERIFY(diagnostics.size() > 1);
     }
+
+    // A dio that read() rejects is damaged and not repairable. A complete dio and an audio file
+    // without a dio are not reported.
+    void a_damaged_dio_is_reported() {
+        QDir(m_dir.path()).mkdir(QStringLiteral("d"));
+        const auto directory = pathOf("d");
+        QByteArray bytes("wrld-dio");
+        bytes += bytesOf<qint32>(1000) + bytesOf<qint32>(44100) + bytesOf<qint32>(1);
+        bytes += bytesOf(0.0) + bytesOf(261.6);
+        write(directory / "a.dio", bytes);
+        write(directory / "b.dio", bytes.chopped(1));
+        write(directory / "c.dio", "wrld-di");
+        // Complete apart from the header
+        write(directory / "f.dio", QByteArray("wrld-frq") + bytes.mid(8));
+        const auto damages =
+            DioFormat().checkMapFiles(directory, {"a.wav", "b.wav", "c.wav", "e.wav", "f.wav"});
+        QCOMPARE(damages.size(), 3);
+        QCOMPARE(damages.at(0).path, fs::path("b.dio"));
+        QCOMPARE(damages.at(1).path, fs::path("c.dio"));
+        QCOMPARE(damages.at(2).path, fs::path("f.dio"));
+        QVERIFY(!damages.at(0).repairable);
+        QVERIFY(!damages.at(0).description.isEmpty());
+    }
 };
 
 QTEST_GUILESS_MAIN(test_DioFormat)
