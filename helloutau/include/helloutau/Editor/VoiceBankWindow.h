@@ -189,23 +189,23 @@ namespace hello::daw {
         /// the section on the conversion in docs/Editing.md.
         bool convertEncodings(const VoiceBankTranscodingDialog::Conversion &conversion);
 
-        /// The audio files whose frequency maps generateFrequencyMaps() generates.
-        enum FrequencyMapScope {
-            MissingFrequencyMaps,  ///< Every audio file without a map
-            SelectedFrequencyMaps, ///< The audio files of the selected rows, generated again
-            AllFrequencyMaps,      ///< Every audio file, generated again
-        };
+        /// Opens GenerateFrequencyMapsDialog for the audio files of the voice bank, those of the
+        /// folders not read included, and generates the frequency maps of the checked files as
+        /// the overload does. Returns false if the voice bank has no audio files, the dialog is
+        /// cancelled or a map is not generated.
+        bool generateFrequencyMaps();
 
-        /// Generates the frequency maps of the audio files of \a scope with the resampler of the
-        /// settings, in the format of that resampler, with a progress dialog that cancels the
-        /// generation, with the threads of FrequencyMapSettings::threadCount(). Generating a map
-        /// again removes it first with its analysis caches, or removes only the caches if
-        /// FrequencyMapSettings::regeneration() specifies so and the format has caches, which
-        /// AllFrequencyMaps confirms in a message box. The audio files of the folders not read
-        /// are included. See the generation in docs/FrequencyMaps.md.
+        /// \overload for the audio files \a wavs , absolute paths, without the dialog.
+        ///
+        /// Generates the frequency maps with the resampler of the settings, in the format of that
+        /// resampler, with a progress dialog that cancels the generation, with the threads of
+        /// FrequencyMapSettings::threadCount(). The map of a file that has one is first removed
+        /// with its analysis caches, or only the caches are removed if
+        /// FrequencyMapSettings::regeneration() specifies so and the format has caches. See the
+        /// generation in docs/FrequencyMaps.md.
         ///
         /// \return whether every map was generated
-        bool generateFrequencyMaps(FrequencyMapScope scope);
+        bool generateFrequencyMaps(const QList<std::filesystem::path> &wavs);
 
         /// Removes the frequency maps of every audio file of the voice bank in the format of the
         /// resampler of the settings, after a confirmation. No undo restores them.

@@ -183,7 +183,7 @@
 
 作者 2026-09-30 报告：UTAU 会把 wav 中的元数据误当作声音的长度，建议提供删除 wav 全部元数据的功能。**此现象未经本仓库实测**。作者 2026-10-14 要求把这一功能扩展为对所有或所选音频文件的批量重写，包括采样率、声道与元数据，在一个对话框中完成。社区资料推荐音源使用 44100 Hz、16 位、单声道的 wav（[UTAU音源制作wiki](https://w.atwiki.jp/vbmaker/pages/47.html)，其他格式「エンジンによっては音が出なかったり、おかしな音程で再生されたり」），官方资料（官网、安装包的 readme）没有规定采样率，因此其他采样率在 UTAU 中是没有定义的行为，能否使用取决于合成工具。
 
-- 音源窗口「工具 → Process Audio Files of Selection...」与「工具 → Process All Audio Files...」，范围的划分与生成频率表相同。对话框为 `ProcessAudioFilesDialog`，处理为 `kit::AudioFileProcessor`，wav 的读写与采样率转换为 `kit::WaveAudio`，RIFF 的块为 `kit::WaveMetadata`，三者都在 `HelloKitAudioFile`。
+- 音源窗口「工具 → Process Audio Files of Selection...」与「工具 → Process All Audio Files...」，范围分为所选条目的音频文件与全部音频文件。对话框为 `ProcessAudioFilesDialog`，处理为 `kit::AudioFileProcessor`，wav 的读写与采样率转换为 `kit::WaveAudio`，RIFF 的块为 `kit::WaveMetadata`，三者都在 `HelloKitAudioFile`。
 - **处理项**（括号内为默认值）：转换采样率（44100 Hz）、合为单声道（各声道平均，也可只取左声道或右声道，用于只有一个声道有声音的录音）、写成 16 位整数（是）、舍入时加 TPDF 抖动（是）、去除元数据（是）、写成普通的文件头（是，`WAVE_FORMAT_EXTENSIBLE` 改为 `WAVE_FORMAT_PCM` 或 `WAVE_FORMAT_IEEE_FLOAT`）、去除直流偏移（否）、按峰值调整音量（否，默认 -1 dBFS，作者 2026-10-14 定为默认关闭）。数据块声称的长度超过文件时总是修正。
 - **不提供移动时间轴的处理**（剪切、去掉首尾静音、淡入淡出等），因为原音设定以毫秒记录位置。采样率转换由 r8brain-free-src 的 `oneshot()` 去除滤波器的延迟，转换前后时间对齐。
 - **处理的顺序**：合并声道、去除直流偏移、转换采样率、调整峰值，最后写成 16 位或原有的样本格式。样本不变时（只去元数据、改文件头、修正长度）不经解码，样本的字节原样保留。重写的文件头总是普通的文件头。

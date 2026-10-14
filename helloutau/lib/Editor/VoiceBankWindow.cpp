@@ -76,6 +76,7 @@
 #include "DiagnosticBox.h"
 #include "Editor.h"
 #include "FindSupport_p.h"
+#include "GenerateFrequencyMapsDialog.h"
 #include "OtoWaveformView.h"
 #include "OutputLogDialog.h"
 #include "ProcessAudioFilesDialog.h"
@@ -415,17 +416,9 @@ namespace hello::daw {
                 stdc_decl_t;
                 decl.convertEncodings();
             });
-            addCommand(QStringLiteral("helloutau.voiceBank.generateMissingMaps"), [this] {
+            addCommand(QStringLiteral("helloutau.voiceBank.generateMaps"), [this] {
                 stdc_decl_t;
-                decl.generateFrequencyMaps(MissingFrequencyMaps);
-            });
-            addCommand(QStringLiteral("helloutau.voiceBank.regenerateSelectedMaps"), [this] {
-                stdc_decl_t;
-                decl.generateFrequencyMaps(SelectedFrequencyMaps);
-            });
-            addCommand(QStringLiteral("helloutau.voiceBank.regenerateAllMaps"), [this] {
-                stdc_decl_t;
-                decl.generateFrequencyMaps(AllFrequencyMaps);
+                decl.generateFrequencyMaps();
             });
             addCommand(QStringLiteral("helloutau.voiceBank.removeAllMaps"), [this] {
                 stdc_decl_t;
@@ -1609,9 +1602,38 @@ namespace hello::daw {
             return audio;
         }
 
+        // Returns the resampler of the settings and the format of its frequency maps, or shows
+        // a message box with title and returns std::nullopt if either is absent
+        std::optional<std::pair<std::filesystem::path, kit::FrequencyFormat *>>
+            generationTools(const QString &title) {
+            stdc_decl_t;
+            const auto resampler = pathOf(editor->settings().rendering().resampler());
+            if (resampler.empty()) {
+                QMessageBox::information(&decl, title,
+                                         tr("Set the resampler in the settings first."));
+                return std::nullopt;
+            }
+            const auto format = editor->frequencyFormats().formatForResampler(resampler);
+            if (!format) {
+                QMessageBox::information(&decl, title,
+                                         tr("No format of frequency maps is registered for the "
+                                            "resampler."));
+                return std::nullopt;
+            }
+            return std::pair(resampler, format);
+        }
+
+        // Returns whether only the analysis caches of an existing map are removed and generated
+        // again, which requires a format with caches
+        bool regeneratesCachesOnly(const kit::FrequencyFormat &format) const {
+            return !format.analysisCaches().isEmpty() &&
+                   editor->settings().frequencyMaps().regeneration() ==
+                       FrequencyMapSettings::CachesOnly;
+        }
+
         enum Generation {
             MapsOnly,      // The missing maps
-            CachesOnly,    // The analysis caches of every audio file
+            CachesOnly,    // The analysis caches of every audio file, and the missing maps
             MapsAndCaches, // The missing maps and caches of every audio file, after a repair
         };
 
@@ -1661,8 +1683,9 @@ namespace hello::daw {
             showFrequency();
             const auto done =
                 generation == CachesOnly
-                    ? tr("The analysis caches of %n audio file(s) were generated again.", nullptr,
-                         outcome.generated)
+                    ? tr("The analysis caches or the frequency maps of %n audio file(s) were "
+                         "generated.",
+                         nullptr, outcome.generated)
                 : generation == MapsAndCaches
                     ? tr("The frequency maps and analysis caches of %n audio file(s) were "
                          "generated again.",
@@ -2644,72 +2667,94 @@ namespace hello::daw {
         return committed;
     }
 
-    bool VoiceBankWindow::generateFrequencyMaps(FrequencyMapScope scope) {
+    bool VoiceBankWindow::generateFrequencyMaps() {
         stdc_impl_t;
-        const auto title = scope == MissingFrequencyMaps ? tr("Generate Missing Frequency Maps")
-                                                         : tr("Regenerate Frequency Maps");
-        const auto resampler = pathOf(impl.editor->settings().rendering().resampler());
-        if (resampler.empty()) {
-            QMessageBox::information(this, title, tr("Set the resampler in the settings first."));
+        const auto title = tr("Generate Frequency Maps");
+        const auto tools = impl.generationTools(title);
+        if (!tools) {
             return false;
         }
-        const auto format = impl.editor->frequencyFormats().formatForResampler(resampler);
-        if (!format) {
-            QMessageBox::information(this, title,
-                                     tr("No format of frequency maps is registered for the "
-                                        "resampler."));
-            return false;
-        }
+        const auto format = tools->second;
 
-        const auto audio =
-            scope == SelectedFrequencyMaps ? impl.selectedAudioByFolder() : impl.audioByFolder();
-        QList<std::filesystem::path> wavs;
-        for (const auto &[folder, names] : audio) {
+        // The selection is compared by whole paths, because the folder of the root in
+        // audioByFolder() ends with a separator and the folder of a selected file does not.
+        QList<std::filesystem::path> selected;
+        for (const auto &[folder, names] : impl.selectedAudioByFolder()) {
             for (const auto &name : names) {
-                wavs.push_back(folder / name);
+                selected.push_back((folder / name).lexically_normal());
             }
         }
-        if (wavs.isEmpty()) {
-            QMessageBox::information(this, title,
-                                     scope == SelectedFrequencyMaps
-                                         ? tr("Select the entries whose audio files are to have "
-                                              "their frequency maps generated again.")
-                                         : tr("The voice bank has no audio files."));
+        const auto caches = format->analysisCaches();
+        QStringList cacheNames;
+        for (const auto &cache : caches) {
+            cacheNames.push_back(cache.name);
+        }
+        QList<GenerateFrequencyMapsDialog::File> files;
+        for (const auto &[folder, names] : impl.audioByFolder()) {
+            const auto present = format->mapsExist(folder, names);
+            for (qsizetype i = 0; i < names.size(); ++i) {
+                GenerateFrequencyMapsDialog::File file;
+                file.path = (folder / names.at(i)).lexically_normal();
+                file.hasMap = present.value(i);
+                for (const auto &cache : caches) {
+                    std::error_code error;
+                    file.caches.push_back(std::filesystem::is_regular_file(
+                        folder / cache.fileNameOf(names.at(i)), error));
+                }
+                file.selected = selected.contains(file.path);
+                files.push_back(std::move(file));
+            }
+        }
+        if (files.isEmpty()) {
+            QMessageBox::information(this, title, tr("The voice bank has no audio files."));
             return false;
         }
+        GenerateFrequencyMapsDialog dialog(std::move(files), impl.document->rootPath(),
+                                           format->name(), cacheNames,
+                                           impl.regeneratesCachesOnly(*format), this);
+        if (dialog.exec() != QDialog::Accepted) {
+            return false;
+        }
+        return generateFrequencyMaps(dialog.checkedFiles());
+    }
 
-        // Regenerating the caches only keeps the maps, which a format without caches cannot.
-        const bool cachesOnly = scope != MissingFrequencyMaps &&
-                                !format->analysisCaches().isEmpty() &&
-                                impl.editor->settings().frequencyMaps().regeneration() ==
-                                    FrequencyMapSettings::CachesOnly;
-        if (scope != MissingFrequencyMaps) {
-            const auto question =
-                cachesOnly ? tr("Generate the analysis caches of %n audio file(s) again? The "
-                                "caches of the format %1 are removed first, and the frequency "
-                                "maps are kept.",
-                                nullptr, int(wavs.size()))
-                           : tr("Generate the frequency maps of %n audio file(s) again? The maps "
-                                "of the format %1 and their analysis caches are removed first.",
-                                nullptr, int(wavs.size()));
-            if (scope == AllFrequencyMaps &&
-                QMessageBox::question(this, title, question.arg(format->name())) !=
-                    QMessageBox::Yes) {
-                return false;
+    bool VoiceBankWindow::generateFrequencyMaps(const QList<std::filesystem::path> &wavs) {
+        stdc_impl_t;
+        const auto title = tr("Generate Frequency Maps");
+        const auto tools = impl.generationTools(title);
+        if (!tools) {
+            return false;
+        }
+        const auto &[resampler, format] = *tools;
+
+        std::map<std::filesystem::path, QList<std::filesystem::path>> byFolder;
+        for (const auto &wav : wavs) {
+            byFolder[wav.parent_path()].push_back(wav.filename());
+        }
+        // The files that have a map, by folder
+        std::map<std::filesystem::path, QList<std::filesystem::path>> present;
+        for (const auto &[folder, names] : byFolder) {
+            const auto exist = format->mapsExist(folder, names);
+            for (qsizetype i = 0; i < names.size(); ++i) {
+                if (exist.value(i)) {
+                    present[folder].push_back(names.at(i));
+                }
             }
-            kit::DiagnosticList diagnostics;
-            bool removed = true;
-            for (const auto &[folder, names] : audio) {
-                removed = (cachesOnly ? kit::FrequencyFormats::invalidateCaches(*format, folder,
-                                                                                names, diagnostics)
-                                      : kit::FrequencyFormats::removeMaps(*format, folder, names,
-                                                                          diagnostics)) &&
-                          removed;
-            }
-            if (!removed) {
-                DiagnosticBox::report(this, title, diagnostics);
-                return false;
-            }
+        }
+
+        const bool cachesOnly = !present.empty() && impl.regeneratesCachesOnly(*format);
+        kit::DiagnosticList diagnostics;
+        bool removed = true;
+        for (const auto &[folder, names] : present) {
+            removed =
+                (cachesOnly
+                     ? kit::FrequencyFormats::invalidateCaches(*format, folder, names, diagnostics)
+                     : kit::FrequencyFormats::removeMaps(*format, folder, names, diagnostics)) &&
+                removed;
+        }
+        if (!removed) {
+            DiagnosticBox::report(this, title, diagnostics);
+            return false;
         }
         return impl.generate(title, *format, resampler, wavs,
                              cachesOnly ? Impl::CachesOnly : Impl::MapsOnly);
@@ -2718,18 +2763,11 @@ namespace hello::daw {
     bool VoiceBankWindow::repairFrequencyMaps() {
         stdc_impl_t;
         const auto title = tr("Repair Frequency Maps");
-        const auto resampler = pathOf(impl.editor->settings().rendering().resampler());
-        if (resampler.empty()) {
-            QMessageBox::information(this, title, tr("Set the resampler in the settings first."));
+        const auto tools = impl.generationTools(title);
+        if (!tools) {
             return false;
         }
-        const auto format = impl.editor->frequencyFormats().formatForResampler(resampler);
-        if (!format) {
-            QMessageBox::information(this, title,
-                                     tr("No format of frequency maps is registered for the "
-                                        "resampler."));
-            return false;
-        }
+        const auto &[resampler, format] = *tools;
         RepairFrequencyMapsDialog::Files files;
         for (const auto &[folder, names] : impl.audioByFolder()) {
             auto found = kit::FrequencyFormats::mapFilesOf(*format, folder, names);

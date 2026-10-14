@@ -166,6 +166,10 @@
         <translation>处理全部音频文件(&amp;A)...</translation>
     </message>
     <message>
+        <source>&amp;Generate Frequency Maps...</source>
+        <translation>生成频率表(&amp;G)...</translation>
+    </message>
+    <message>
         <source>&amp;Help</source>
         <translation>帮助(&amp;H)</translation>
     </message>
@@ -264,18 +268,6 @@
     <message>
         <source>Convert Encodin&amp;gs...</source>
         <translation>转换音源编码(&amp;G)...</translation>
-    </message>
-    <message>
-        <source>&amp;Generate Missing Frequency Maps</source>
-        <translation>生成缺少的频率表(&amp;G)</translation>
-    </message>
-    <message>
-        <source>Regenerate Frequency Maps of S&amp;election</source>
-        <translation>重新生成所选条目的频率表(&amp;E)</translation>
-    </message>
-    <message>
-        <source>&amp;Regenerate All Frequency Maps...</source>
-        <translation>重新生成全部频率表(&amp;R)...</translation>
     </message>
     <message>
         <source>&amp;Delete All Frequency Maps...</source>
@@ -1052,6 +1044,59 @@
     <message>
         <source>The number of generation threads is a positive whole number, or Automatic.</source>
         <translation>生成线程数须为正整数，或为「自动」。</translation>
+    </message>
+</context>
+<context>
+    <name>hello::daw::GenerateFrequencyMapsDialog</name>
+    <message>
+        <source>Generate Frequency Maps</source>
+        <translation>生成频率表</translation>
+    </message>
+    <message>
+        <source>The resampler of the settings generates the maps in the format %1.</source>
+        <translation>由设置中的重采样器生成格式为 %1 的频率表。</translation>
+    </message>
+    <message>
+        <source>File</source>
+        <translation>文件</translation>
+    </message>
+    <message>
+        <source>Frequency Map</source>
+        <translation>频率表</translation>
+    </message>
+    <message>
+        <source>Present</source>
+        <translation>已有</translation>
+    </message>
+    <message>
+        <source>Missing</source>
+        <translation>缺失</translation>
+    </message>
+    <message>
+        <source>Check &amp;Missing</source>
+        <translation>勾选缺失的(&amp;M)</translation>
+    </message>
+    <message numerus="yes">
+        <source>%n missing frequency map(s) will be generated.</source>
+        <translation>
+            <numerusform>将生成 %n 个缺失的频率表。</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>The analysis caches of %n audio file(s) will be generated again from their maps.</source>
+        <translation>
+            <numerusform>将根据频率表重新生成 %n 个音频文件的分析缓存。</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%n frequency map(s) will be removed with their analysis caches and generated again.</source>
+        <translation>
+            <numerusform>将删除 %n 个频率表及其分析缓存，然后重新生成。</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>No file is checked.</source>
+        <translation>没有勾选任何文件。</translation>
     </message>
 </context>
 <context>
@@ -3668,10 +3713,14 @@ Read them again? Unsaved changes in them are replaced, and Undo restores them.</
         <translation>取消</translation>
     </message>
     <message numerus="yes">
-        <source>The analysis caches of %n audio file(s) were generated again.</source>
+        <source>The analysis caches or the frequency maps of %n audio file(s) were generated.</source>
         <translation>
-            <numerusform>已重新生成 %n 个音频文件的分析缓存。</numerusform>
+            <numerusform>已生成 %n 个音频文件的分析缓存或频率表。</numerusform>
         </translation>
+    </message>
+    <message>
+        <source>Generate Frequency Maps</source>
+        <translation>生成频率表</translation>
     </message>
     <message numerus="yes">
         <source>The frequency maps and analysis caches of %n audio file(s) were generated again.</source>
@@ -3814,14 +3863,6 @@ Read them again? Unsaved changes in them are replaced, and Undo restores them.</
         <translation>移除条目</translation>
     </message>
     <message>
-        <source>Generate Missing Frequency Maps</source>
-        <translation>生成缺少的频率表</translation>
-    </message>
-    <message>
-        <source>Regenerate Frequency Maps</source>
-        <translation>重新生成频率表</translation>
-    </message>
-    <message>
         <source>Set the resampler in the settings first.</source>
         <translation>请先在设置中指定重采样器。</translation>
     </message>
@@ -3830,24 +3871,8 @@ Read them again? Unsaved changes in them are replaced, and Undo restores them.</
         <translation>没有为该重采样器登记的频率表格式。</translation>
     </message>
     <message>
-        <source>Select the entries whose audio files are to have their frequency maps generated again.</source>
-        <translation>请选择要重新生成频率表的音频文件所在的条目。</translation>
-    </message>
-    <message>
         <source>The voice bank has no audio files.</source>
         <translation>音源中没有音频文件。</translation>
-    </message>
-    <message numerus="yes">
-        <source>Generate the analysis caches of %n audio file(s) again? The caches of the format %1 are removed first, and the frequency maps are kept.</source>
-        <translation>
-            <numerusform>要重新生成 %n 个音频文件的分析缓存吗？将先删除格式 %1 的缓存，保留频率表。</numerusform>
-        </translation>
-    </message>
-    <message numerus="yes">
-        <source>Generate the frequency maps of %n audio file(s) again? The maps of the format %1 and their analysis caches are removed first.</source>
-        <translation>
-            <numerusform>要重新生成 %n 个音频文件的频率表吗？将先删除格式 %1 的频率表及其分析缓存。</numerusform>
-        </translation>
     </message>
     <message>
         <source>Repair Frequency Maps</source>
