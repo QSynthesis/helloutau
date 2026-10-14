@@ -718,6 +718,13 @@
     </message>
 </context>
 <context>
+    <name>hello::daw::CheckAllBox</name>
+    <message>
+        <source>All</source>
+        <translation>全选</translation>
+    </message>
+</context>
+<context>
     <name>hello::daw::CommandPalette</name>
     <message>
         <source>recently used</source>

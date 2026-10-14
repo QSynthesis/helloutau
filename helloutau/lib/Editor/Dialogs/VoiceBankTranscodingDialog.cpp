@@ -17,6 +17,8 @@
 
 #include <hellokit/Support/TextCodec.h>
 
+#include <helloutau/Widgets/CheckAllBox.h>
+
 namespace hello::daw {
 
     namespace {
@@ -75,6 +77,7 @@ namespace hello::daw {
         auto names = new QVBoxLayout(m_names);
         names->addLayout(encodings);
         names->addWidget(m_namesNote);
+        names->addWidget(new CheckAllBox(m_nameList));
         names->addWidget(m_nameList, 1);
 
         auto current = new QWidget();

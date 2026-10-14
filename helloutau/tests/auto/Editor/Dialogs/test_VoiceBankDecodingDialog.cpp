@@ -1,3 +1,5 @@
+#include <algorithm>
+
 #include <QtCore/QFile>
 #include <QtCore/QTemporaryDir>
 #include <QtCore/QTimer>
@@ -7,6 +9,7 @@
 #include <hellokit/Support/TextCodec.h>
 
 #include <helloutau/Editor/Dialogs/VoiceBankDecodingDialog.h>
+#include <helloutau/Widgets/CheckAllBox.h>
 
 using namespace hello;
 using namespace hello::daw;
@@ -101,6 +104,33 @@ private Q_SLOTS:
         QTimer::singleShot(0, &dialog, &QDialog::reject);
         QCOMPARE(dialog.selectCharsets({&jp, &cn}, diagnostics),
                  (QList<std::optional<QString>>{std::nullopt, std::nullopt}));
+    }
+
+    // The folders and the names each have a box that checks or unchecks the whole list. The box
+    // of the folders includes or leaves out every folder.
+    void the_folders_are_included_at_once() {
+        const auto jp = shiftJisFolder();
+        const auto cn = gbkFolder();
+        VoiceBankDecodingDialog dialog;
+        dialog.setRoot("bank");
+        dialog.setDirectories({&jp, &cn});
+        const auto boxes = dialog.findChildren<CheckAllBox *>();
+        QCOMPARE(boxes.size(), 2);
+        // The names list is empty, and its box disabled.
+        const auto folders = std::find_if(boxes.cbegin(), boxes.cend(), [](const CheckAllBox *b) {
+            return b->isEnabled();
+        });
+        QVERIFY(folders != boxes.cend());
+        QCOMPARE((*folders)->checkState(), Qt::Checked);
+
+        (*folders)->click();
+        QVERIFY(!dialog.isIncluded(0));
+        QVERIFY(!dialog.isIncluded(1));
+        dialog.setIncluded(1, true);
+        QCOMPARE((*folders)->checkState(), Qt::PartiallyChecked);
+        (*folders)->click();
+        QVERIFY(dialog.isIncluded(0));
+        QVERIFY(dialog.isIncluded(1));
     }
 
     // Each text file has a tab, under the name it has on disk, and counts the characters the

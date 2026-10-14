@@ -4,6 +4,7 @@
 #include <hellokit/Support/TextCodec.h>
 
 #include <helloutau/Editor/Dialogs/VoiceBankTranscodingDialog.h>
+#include <helloutau/Widgets/CheckAllBox.h>
 
 using namespace hello;
 using namespace hello::daw;
@@ -35,8 +36,10 @@ private:
 
 private Q_SLOTS:
     // Each folder is checked as its conversion proposes, and nothing is converted until chosen.
+    // The names of a folder have a box that checks or unchecks all of them.
     void the_folders_are_checked_as_proposed() {
         VoiceBankTranscodingDialog dialog;
+        QCOMPARE(dialog.findChildren<CheckAllBox *>().size(), 1);
         dialog.setFolders("bank", folders());
         QCOMPARE(dialog.folderCount(), 2);
         QVERIFY(dialog.folderText(1).contains(QStringLiteral("left")));

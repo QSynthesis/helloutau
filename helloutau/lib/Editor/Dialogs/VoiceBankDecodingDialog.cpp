@@ -18,6 +18,8 @@
 
 #include <hellokit/Support/TextCodec.h>
 
+#include <helloutau/Widgets/CheckAllBox.h>
+
 namespace hello::daw {
 
     namespace {
@@ -95,6 +97,7 @@ namespace hello::daw {
         names->addWidget(m_namesBasis);
         names->addLayout(encodings);
         names->addWidget(m_asTheyAre);
+        names->addWidget(new CheckAllBox(m_nameList));
         names->addWidget(m_nameList, 1);
         m_names->hide();
 
@@ -105,9 +108,14 @@ namespace hello::daw {
         connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
         connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
 
+        auto folders = new QWidget();
+        auto foldersLayout = new QVBoxLayout(folders);
+        foldersLayout->setContentsMargins({});
+        foldersLayout->addWidget(new CheckAllBox(m_folders));
+        foldersLayout->addWidget(m_folders, 1);
         auto choices = new QSplitter(Qt::Vertical);
         choices->setChildrenCollapsible(false);
-        choices->addWidget(m_folders);
+        choices->addWidget(folders);
         choices->addWidget(m_charsets);
         auto content = new QSplitter();
         content->setChildrenCollapsible(false);

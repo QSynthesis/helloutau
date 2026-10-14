@@ -8,6 +8,8 @@
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QVBoxLayout>
 
+#include <helloutau/Widgets/CheckAllBox.h>
+
 namespace hello::daw {
 
     namespace fs = std::filesystem;
@@ -94,6 +96,7 @@ namespace hello::daw {
             auto layout = new QVBoxLayout();
             layout->addWidget(title);
             layout->addWidget(action);
+            layout->addWidget(new CheckAllBox(list));
             layout->addWidget(list, 1);
             columns->addLayout(layout, 1);
         }
@@ -146,10 +149,18 @@ namespace hello::daw {
     }
 
     void RepairFrequencyMapsDialog::updateSummary() {
+        // Counted without copying the files, since checking all items of a long list calls this
+        // once for each item.
         int repaired = 0;
         int removed = 0;
-        for (const auto &[folder, files] : checkedFiles()) {
-            for (const auto &file : files) {
+        for (qsizetype column = 0; column < m_lists.size(); ++column) {
+            const auto list = m_lists.at(column);
+            for (int row = 0; row < list->count(); ++row) {
+                if (list->item(row)->checkState() != Qt::Checked) {
+                    continue;
+                }
+                const auto &[folder, index] = m_items.at(column).at(row);
+                const auto &file = m_files.at(folder).at(index);
                 ++(file.damage && file.damage->repairable ? repaired : removed);
             }
         }
