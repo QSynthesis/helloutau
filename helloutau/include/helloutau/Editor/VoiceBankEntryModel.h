@@ -45,7 +45,10 @@ namespace hello::daw {
             PreUtteranceColumn,
             OverlapColumn,
             FrequencyMapColumn, ///< Whether the audio file has a map of frequencyFormat()
-            ColumnCount,
+            /// The first column of the analysis caches of frequencyFormat(), one column for each
+            /// cache in the order of FrequencyFormat::analysisCaches(), each showing whether the
+            /// audio file has the cache file
+            CacheColumn,
         };
 
         /// The kind of a row, in RowKindRole.
@@ -78,13 +81,15 @@ namespace hello::daw {
         /// Rebuilds the rows now rather than once control returns to the event loop.
         void refresh();
 
-        /// The format whose maps FrequencyMapColumn shows, or null for none, in which case the
-        /// column is empty. The maps of a folder are queried at once when its rows are built,
-        /// and kept until refreshFrequencyMaps() or another format.
+        /// The format whose maps FrequencyMapColumn shows and whose analysis caches the columns
+        /// from CacheColumn show, or null for none, in which case FrequencyMapColumn is empty and
+        /// the table has no cache columns. The maps and caches of a folder are queried at once
+        /// when its rows are built, and kept until refreshFrequencyMaps() or another format.
+        /// Another format with another number of caches inserts or removes cache columns.
         const kit::FrequencyFormat *frequencyFormat() const;
         void setFrequencyFormat(const kit::FrequencyFormat *format);
 
-        /// Queries the maps again, after they changed on disk.
+        /// Queries the maps and the caches again, after they changed on disk.
         void refreshFrequencyMaps();
 
         /// The row of the entry of \a fileName with \a alias in the folder \a directory, or of the

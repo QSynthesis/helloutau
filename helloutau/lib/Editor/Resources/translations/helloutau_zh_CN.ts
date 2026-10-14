@@ -3084,6 +3084,10 @@ Lyrics:
         <translation>加入音频文件</translation>
     </message>
     <message>
+        <source>The audio file has no analysis cache %1 of the format %2.</source>
+        <translation>该音频文件没有格式 %2 的分析缓存 %1。</translation>
+    </message>
+    <message>
         <source>The audio file has no frequency map of the format %1.</source>
         <translation>该音频文件没有格式 %1 的频率表。</translation>
     </message>

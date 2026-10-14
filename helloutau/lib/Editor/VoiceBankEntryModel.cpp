@@ -77,6 +77,14 @@ namespace hello::daw {
             bool duplicate = false;
             // Whether the audio file has a map, none without a format or an audio file
             std::optional<bool> map;
+            // Whether the audio file has each cache of caches, empty without an audio file
+            QList<bool> caches;
+        };
+
+        // Whether an audio file has a map of format, and each cache of caches
+        struct Analysis {
+            bool map = false;
+            QList<bool> caches;
         };
 
         Decl *_decl;
@@ -85,17 +93,19 @@ namespace hello::daw {
         QList<Row> rows;
         bool refreshPending = false;
         const kit::FrequencyFormat *format = nullptr;
-        // Whether each audio file of a folder has a map of format, by the key of its name
-        std::map<std::filesystem::path, QHash<QString, bool>> maps;
+        // The analysis caches of format, one column each
+        QList<kit::FrequencyFormat::AnalysisCache> caches;
+        // The analysis of each audio file of a folder, by the key of its name
+        std::map<std::filesystem::path, QHash<QString, Analysis>> analyses;
 
-        // The maps of the audio files of the folder at path, queried at once on first use
-        const QHash<QString, bool> &mapsOf(const std::filesystem::path &path,
-                                           const QStringList &files) {
-            auto found = maps.find(path);
-            if (found != maps.end()) {
+        // The analyses of the audio files of the folder at path, queried at once on first use
+        const QHash<QString, Analysis> &analysesOf(const std::filesystem::path &path,
+                                                   const QStringList &files) {
+            auto found = analyses.find(path);
+            if (found != analyses.end()) {
                 return found->second;
             }
-            auto &result = maps[path];
+            auto &result = analyses[path];
             if (files.isEmpty()) {
                 return result;
             }
@@ -106,7 +116,14 @@ namespace hello::daw {
             }
             const auto exist = format->mapsExist(folder, names);
             for (qsizetype i = 0; i < files.size(); ++i) {
-                result.insert(fileKey(files.at(i)), exist.value(i));
+                Analysis analysis;
+                analysis.map = exist.value(i);
+                for (const auto &cache : std::as_const(caches)) {
+                    std::error_code error;
+                    analysis.caches.push_back(std::filesystem::is_regular_file(
+                        folder / cache.fileNameOf(names.at(i)), error));
+                }
+                result.insert(fileKey(files.at(i)), analysis);
             }
             return result;
         }
@@ -157,11 +174,13 @@ namespace hello::daw {
                     }
                 }
                 if (format) {
-                    const auto &found = mapsOf(path, files);
+                    const auto &found = analysesOf(path, files);
                     for (auto i = first; i < built.size(); ++i) {
                         auto &row = built[i];
                         if (row.kind != MissingAudioRow) {
-                            row.map = found.value(fileKey(row.entry.fileName));
+                            const auto analysis = found.value(fileKey(row.entry.fileName));
+                            row.map = analysis.map;
+                            row.caches = analysis.caches;
                         }
                     }
                 }
@@ -171,8 +190,8 @@ namespace hello::daw {
             // through an edit of a cell or a value.
             if (built.size() == rows.size() && !rows.isEmpty()) {
                 rows = std::move(built);
-                Q_EMIT decl.dataChanged(decl.index(0, 0),
-                                        decl.index(int(rows.size()) - 1, ColumnCount - 1));
+                Q_EMIT decl.dataChanged(decl.index(0, 0), decl.index(int(rows.size()) - 1,
+                                                                     decl.columnCount() - 1));
                 return;
             }
             decl.beginResetModel();
@@ -283,13 +302,35 @@ namespace hello::daw {
         if (format == impl.format) {
             return;
         }
+        // The cache columns are inserted or removed rather than the model reset, which keeps the
+        // selection of a view.
+        const auto caches = format ? format->analysisCaches() : QList<kit::FrequencyFormat::AnalysisCache>();
+        const auto before = int(impl.caches.size());
+        const auto after = int(caches.size());
+        if (after < before) {
+            beginRemoveColumns({}, CacheColumn + after, CacheColumn + before - 1);
+        } else if (after > before) {
+            beginInsertColumns({}, CacheColumn + before, CacheColumn + after - 1);
+        }
         impl.format = format;
+        impl.caches = caches;
+        for (auto &row : impl.rows) {
+            row.caches.clear();
+        }
+        if (after < before) {
+            endRemoveColumns();
+        } else if (after > before) {
+            endInsertColumns();
+        }
+        if (after > 0) {
+            Q_EMIT headerDataChanged(Qt::Horizontal, CacheColumn, CacheColumn + after - 1);
+        }
         refreshFrequencyMaps();
     }
 
     void VoiceBankEntryModel::refreshFrequencyMaps() {
         stdc_impl_t;
-        impl.maps.clear();
+        impl.analyses.clear();
         refresh();
     }
 
@@ -367,7 +408,8 @@ namespace hello::daw {
     }
 
     int VoiceBankEntryModel::columnCount(const QModelIndex &parent) const {
-        return parent.isValid() ? 0 : ColumnCount;
+        stdc_impl_t;
+        return parent.isValid() ? 0 : CacheColumn + int(impl.caches.size());
     }
 
     QVariant VoiceBankEntryModel::data(const QModelIndex &index, int role) const {
@@ -376,6 +418,29 @@ namespace hello::daw {
             return {};
         }
         const auto &row = impl.rows.at(index.row());
+        const int cache = index.column() - CacheColumn;
+        if (cache >= 0) {
+            switch (role) {
+                case Qt::DisplayRole:
+                case Qt::EditRole:
+                case SortRole:
+                    // A check mark for a cache file, nothing for none
+                    if (row.caches.value(cache)) {
+                        return QString(QChar(0x2713));
+                    }
+                    return {};
+                case Qt::TextAlignmentRole:
+                    return QVariant::fromValue(Qt::AlignCenter);
+                case Qt::ToolTipRole:
+                    if (cache < row.caches.size() && !row.caches.at(cache)) {
+                        return tr("The audio file has no analysis cache %1 of the format %2.")
+                            .arg(impl.caches.value(cache).name, impl.format->name());
+                    }
+                    break;
+                default:
+                    break;
+            }
+        }
         switch (role) {
             case Qt::DisplayRole:
             case Qt::EditRole:
@@ -460,8 +525,12 @@ namespace hello::daw {
 
     QVariant VoiceBankEntryModel::headerData(int section, Qt::Orientation orientation,
                                              int role) const {
+        stdc_impl_t;
         if (orientation != Qt::Horizontal || role != Qt::DisplayRole) {
             return QAbstractTableModel::headerData(section, orientation, role);
+        }
+        if (section >= CacheColumn) {
+            return impl.caches.value(section - CacheColumn).name;
         }
         switch (section) {
             case DirectoryColumn:
@@ -493,10 +562,11 @@ namespace hello::daw {
         if (!index.isValid() || index.row() >= impl.rows.size()) {
             return flags;
         }
-        // The folder is where the file is, and an unlisted row is the file itself.
+        // The folder is where the file is, and an unlisted row is the file itself. The map and
+        // the caches cannot be edited.
         const auto kind = impl.rows.at(index.row()).kind;
         if (index.column() == DirectoryColumn || index.column() == FileColumn ||
-            index.column() == FrequencyMapColumn) {
+            index.column() >= FrequencyMapColumn) {
             return flags;
         }
         return flags | Qt::ItemIsEditable;

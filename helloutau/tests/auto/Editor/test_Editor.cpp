@@ -8,6 +8,7 @@
 #include <thread>
 
 #include <QtCore/QElapsedTimer>
+#include <QtCore/QItemSelectionModel>
 #include <QtCore/QMimeData>
 #include <QtCore/QScopeGuard>
 #include <QtCore/QStandardPaths>
@@ -2880,6 +2881,53 @@ private Q_SLOTS:
         QVERIFY(message.contains(QStringLiteral("frq (resampler)")));
         QVERIFY(message.contains(QStringLiteral("c.wav")));
         QVERIFY(!message.contains(QStringLiteral("long resampler output")));
+    }
+
+    // After the column of the maps, the table has a column for each analysis cache of the format
+    // of the box, which shows whether the audio file has the cache file. Another format with
+    // another number of caches changes the columns.
+    void the_analysis_caches_have_their_columns() {
+        QTemporaryDir dir;
+        const auto bank = voiceBank(dir);
+        writeFile(bank / "a.wav.llsm", "llsm");
+        writeFile(bank / "c.star", "star");
+        const auto e = editor();
+        const auto window = e->openVoiceBank(bank);
+        QVERIFY(window);
+        const auto model = window->entryModel();
+        const auto box = window->frequencyFormatBox();
+        QVERIFY(box);
+        const auto cell = [model](const char *file, const char *alias, int column) {
+            const int row = model->rowOf({}, QString::fromLatin1(file), QString::fromLatin1(alias));
+            return model->index(row, column).data();
+        };
+        const auto header = [model](int column) {
+            return model->headerData(column, Qt::Horizontal).toString();
+        };
+        constexpr int first = VoiceBankEntryModel::CacheColumn;
+
+        QVERIFY(box->findData(QStringLiteral("mrq")) >= 0);
+        box->setCurrentIndex(box->findData(QStringLiteral("mrq")));
+        QCOMPARE(model->columnCount(), first + 1);
+        QCOMPARE(header(first), QStringLiteral("LLSM"));
+        QVERIFY(cell("a.wav", "a", first).isValid());
+        QVERIFY(!cell("c.wav", "", first).isValid());
+
+        // The columns change without a reset of the model, which would clear a selection.
+        QItemSelectionModel selection(model);
+        const auto selected = model->index(model->rowOf({}, QStringLiteral("c.wav"), {}), 0);
+        selection.select(selected, QItemSelectionModel::Select | QItemSelectionModel::Rows);
+        box->setCurrentIndex(box->findData(QStringLiteral("dio")));
+        QVERIFY(selection.isSelected(selected));
+        QCOMPARE(model->columnCount(), first + 2);
+        QCOMPARE(header(first), QStringLiteral("STAR"));
+        QCOMPARE(header(first + 1), QStringLiteral("PLATINUM"));
+        QVERIFY(cell("c.wav", "", first).isValid());
+        QVERIFY(!cell("a.wav", "a", first).isValid());
+        QVERIFY(!cell("c.wav", "", first + 1).isValid());
+
+        box->setCurrentIndex(box->findData(QStringLiteral("frq")));
+        QCOMPARE(model->columnCount(), first);
     }
 
     // The repair lists the frq files of the voice bank with the damaged file checked, removes the

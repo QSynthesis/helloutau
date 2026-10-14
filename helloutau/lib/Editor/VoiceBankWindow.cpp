@@ -500,6 +500,13 @@ namespace hello::daw {
 
             table = new QTableView();
             table->setModel(proxy);
+            // The width of an inserted cache column is fitted to its name.
+            QObject::connect(proxy, &QAbstractItemModel::columnsInserted, table,
+                             [this](const QModelIndex &, int first, int last) {
+                                 for (int column = first; column <= last; ++column) {
+                                     table->resizeColumnToContents(column);
+                                 }
+                             });
             table->setSortingEnabled(true);
             table->sortByColumn(-1, Qt::AscendingOrder);
             table->setSelectionBehavior(QAbstractItemView::SelectRows);
