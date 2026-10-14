@@ -5,6 +5,7 @@
 #include <vector>
 
 #include <QtCore/QThread>
+#include <QtCore/QtMath>
 #include <QtTest/QTest>
 
 #include <hellokit/AudioFile/WaveAudio.h>
@@ -19,10 +20,9 @@ class test_StreamSource : public QObject {
 private Q_SLOTS:
     // Streamed through the ring, the tone arrives as the conversion of the whole would give it.
     void a_stream_arrives_converted() {
-        constexpr double pi = 3.14159265358979323846;
         std::vector<float> tone(44100);
         for (size_t i = 0; i < tone.size(); ++i) {
-            tone[i] = float(0.5 * std::sin(2 * pi * 440 * double(i) / 44100));
+            tone[i] = float(0.5 * std::sin(2 * M_PI * 440 * double(i) / 44100));
         }
         size_t next = 0;
         StreamSource source(

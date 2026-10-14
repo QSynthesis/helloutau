@@ -5,11 +5,11 @@
 #include <complex>
 #include <utility>
 
+#include <QtCore/QtMath>
+
 namespace hello::kit {
 
     namespace {
-
-        constexpr double pi = 3.14159265358979323846;
 
         // Transforms data in place, e^(-2 pi i k n / N), by the iterative radix-2 algorithm of
         // Cooley and Tukey. The size is a power of two.
@@ -26,7 +26,7 @@ namespace hello::kit {
                 }
             }
             for (size_t length = 2; length <= size; length <<= 1) {
-                const double angle = -2 * pi / double(length);
+                const double angle = -2 * M_PI / double(length);
                 const std::complex<double> unit(std::cos(angle), std::sin(angle));
                 for (size_t start = 0; start < size; start += length) {
                     std::complex<double> twiddle(1, 0);
@@ -67,7 +67,7 @@ namespace hello::kit {
         std::vector<double> window(windowSize);
         double sum = 0;
         for (int n = 0; n < windowSize; ++n) {
-            window[size_t(n)] = 0.54 - 0.46 * std::cos(2 * pi * n / windowSize);
+            window[size_t(n)] = 0.54 - 0.46 * std::cos(2 * M_PI * n / windowSize);
             sum += window[size_t(n)];
         }
         const double scale = 2 / sum;

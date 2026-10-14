@@ -1,5 +1,6 @@
 #include <cmath>
 
+#include <QtCore/QtMath>
 #include <QtTest/QSignalSpy>
 #include <QtTest/QTest>
 #include <QtWidgets/QApplication>
@@ -264,7 +265,7 @@ private Q_SLOTS:
         audio->sampleRate = 8000;
         audio->channels = 1;
         for (int i = 0; i < 8000; ++i) {
-            audio->samples.push_back(float(0.5 * std::sin(2 * 3.14159265358979 * 440 * i / 8000)));
+            audio->samples.push_back(float(0.5 * std::sin(2 * M_PI * 440 * i / 8000)));
         }
         OtoWaveformView view;
         view.resize(1040, 300);

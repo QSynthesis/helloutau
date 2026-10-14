@@ -2,6 +2,8 @@
 
 #include <cmath>
 
+#include <QtCore/QtMath>
+
 #include "JsonFields_p.h"
 
 namespace hello::kit {
@@ -55,7 +57,6 @@ namespace hello::kit {
                 return right.y;
             }
             // The shapes of PitchCurve, from 0 at the left point to 1 at the right point
-            constexpr double pi = 3.14159265358979323846;
             const double t = (x - left.x) / (right.x - left.x);
             const double y1 = left.y;
             const double y2 = right.y;
@@ -63,13 +64,13 @@ namespace hello::kit {
                 case Linear:
                     return y1 + (y2 - y1) * t;
                 case J:
-                    return y2 + (y1 - y2) * std::cos(pi / 2 * t);
+                    return y2 + (y1 - y2) * std::cos(M_PI / 2 * t);
                 case R:
-                    return y1 + (y2 - y1) * std::sin(pi / 2 * t);
+                    return y1 + (y2 - y1) * std::sin(M_PI / 2 * t);
                 case S:
                     break;
             }
-            return (y1 + y2) / 2 + (y1 - y2) / 2 * std::cos(pi * t);
+            return (y1 + y2) / 2 + (y1 - y2) / 2 * std::cos(M_PI * t);
         }
         return points.last().y;
     }

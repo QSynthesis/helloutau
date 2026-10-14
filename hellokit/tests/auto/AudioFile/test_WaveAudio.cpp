@@ -3,6 +3,7 @@
 #include <cstring>
 #include <vector>
 
+#include <QtCore/QtMath>
 #include <QtTest/QTest>
 
 #include <hellokit/AudioFile/WaveAudio.h>
@@ -206,13 +207,12 @@ private Q_SLOTS:
 
     // A tone keeps its pitch, its duration and its time across a change of the sample rate.
     void resampling_keeps_pitch_and_duration() {
-        constexpr double pi = 3.14159265358979323846;
         constexpr int from = 44100;
         constexpr int to = 48000;
         constexpr double frequency = 440;
         std::vector<float> tone(from);
         for (size_t i = 0; i < tone.size(); ++i) {
-            tone[i] = float(0.5 * std::sin(2 * pi * frequency * double(i) / from));
+            tone[i] = float(0.5 * std::sin(2 * M_PI * frequency * double(i) / from));
         }
 
         const auto converted = WaveAudio::resampled(tone, 1, from, to);
@@ -220,7 +220,7 @@ private Q_SLOTS:
         // Away from the edges, where the filter has no neighbors, the result is the same tone.
         double error = 0;
         for (int i = to / 4; i < to * 3 / 4; ++i) {
-            const double expected = 0.5 * std::sin(2 * pi * frequency * i / to);
+            const double expected = 0.5 * std::sin(2 * M_PI * frequency * i / to);
             error = std::max(error, std::abs(converted[size_t(i)] - expected));
         }
         QVERIFY2(error < 1e-3, qPrintable(QString::number(error)));

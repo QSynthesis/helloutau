@@ -1,5 +1,6 @@
 #include <cmath>
 
+#include <QtCore/QtMath>
 #include <QtTest/QTest>
 
 #include <hellokit/Synth/Spectrogram.h>
@@ -14,8 +15,7 @@ namespace {
         audio.sampleRate = 44100;
         audio.channels = channels;
         for (int i = 0; i < 44100; ++i) {
-            const auto value =
-                float(amplitude * std::sin(2 * 3.14159265358979 * frequency * i / 44100));
+            const auto value = float(amplitude * std::sin(2 * M_PI * frequency * i / 44100));
             for (int c = 0; c < channels; ++c) {
                 audio.samples.push_back(value);
             }
