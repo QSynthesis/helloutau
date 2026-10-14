@@ -181,7 +181,8 @@ namespace hello::daw {
         void updatePreview();
         void updateMessage();
 
-        // Asks the question of folder index again under its encoding, with the default choices.
+        // Builds the question of the file names of folder index again under its encoding, with
+        // the default choices.
         void askFileNames(int index);
         // Shows the file names of the current folder on their page.
         void showFileNames();

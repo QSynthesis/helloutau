@@ -2926,8 +2926,8 @@ private Q_SLOTS:
         const auto utau = pathIn(dir, "utau");
         fs::create_directories(utau / "voice");
         const auto bank = voiceBank(dir, "utau/voice/bank");
-        // あ.wav, which the disk holds as 偁.wav, recorded as misdecoded so that opening asks
-        // nothing
+        // あ.wav, which the disk holds as 偁.wav, recorded as misdecoded so that no question
+        // appears on opening
         writeFile(bank / "oto.ini", "#Charset:UTF-8\r\n\xe3\x81\x82.wav=zzz,1,2,3,4,5\r\n");
         writeFile(bank / fs::path(u"偁.wav"), "");
         writeFile(bank / "hello-config.json",

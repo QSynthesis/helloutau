@@ -710,7 +710,7 @@
     </message>
     <message>
         <source>The test plays a short sine wave on the selected device.</source>
-        <translation>测试将在当前已应用的设备上播放一段短正弦波。更换设备后，请先点击“应用”。</translation>
+        <translation>测试将在当前已应用的设备上播放一段短正弦波。更换设备后，请先点击「应用」。</translation>
     </message>
     <message>
         <source>There is no audio output device.</source>
@@ -4892,11 +4892,11 @@ Read them again? Unsaved changes in them are replaced, and Undo restores them.</
     </message>
     <message>
         <source>The track has no region &quot;%1&quot; from note %2 to note %3.</source>
-        <translation>音轨中没有从音符 %2 到音符 %3 的区间“%1”。</translation>
+        <translation>音轨中没有从音符 %2 到音符 %3 的区间「%1」。</translation>
     </message>
     <message>
         <source>Another region named &quot;%1&quot; starts or ends at the same note.</source>
-        <translation>另一个名为“%1”的区间在同一音符开始或结束。</translation>
+        <translation>另一个名为「%1」的区间在同一音符开始或结束。</translation>
     </message>
     <message>
         <source>Rename Region</source>
