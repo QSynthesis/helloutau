@@ -262,8 +262,8 @@
         <translation>试听程序</translation>
     </message>
     <message>
-        <source>Plugins such as PitTrace play their notes through the program playinplugin.exe in their folder. The preview program of HelloUtau replaces it, so that the notes are rendered and played in HelloUtau. The original program is kept, and still runs if UTAU runs the plugin.</source>
-        <translation>PitTrace 等插件通过其文件夹中的程序 playinplugin.exe 试听音符。HelloUtau 的试听程序替换该程序，使音符在 HelloUtau 中渲染与播放。原有的程序予以保留，由 UTAU 运行插件时仍使用它。</translation>
+        <source>Some plugins play their notes through the program playinplugin.exe in their folder. The preview program of HelloUtau replaces it, so that the notes are rendered and played in HelloUtau. The original program is kept, and still runs if UTAU runs the plugin.</source>
+        <translation>某些插件通过其文件夹中的程序 playinplugin.exe 试听音符。HelloUtau 的试听程序替换该程序，使音符在 HelloUtau 中渲染与播放。原有的程序予以保留，由 UTAU 运行插件时仍使用它。</translation>
     </message>
     <message>
         <source>Open</source>
@@ -314,20 +314,42 @@
         <translation>要从所有插件中移除 HelloUtau 的试听程序，并还原各插件原有的程序吗？</translation>
     </message>
     <message>
+        <source>Not installed, recommended</source>
+        <translation>未安装，推荐安装</translation>
+    </message>
+    <message>
         <source>Not installed</source>
         <translation>未安装</translation>
+    </message>
+    <message>
+        <source>The folder of the plugin has a playinplugin.exe, which the plugin starts for a preview.</source>
+        <translation>该插件的文件夹中有 playinplugin.exe，插件以它试听。</translation>
     </message>
     <message>
         <source>Installed</source>
         <translation>已安装</translation>
     </message>
     <message>
-        <source>Installed, older version</source>
-        <translation>已安装，版本较旧</translation>
-    </message>
-    <message>
         <source>Install</source>
         <translation>安装</translation>
+    </message>
+    <message numerus="yes">
+        <source>%n plugin(s) below come with a playinplugin.exe, which they start for a preview, and are recommended. Install All installs the preview program in exactly these plugins, or updates its older version.</source>
+        <translation>
+            <numerusform>下列插件中有 %n 个自带 playinplugin.exe 并以它试听，推荐安装。「一键安装」只在这些插件中安装试听程序，或更新其旧版本。</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>No plugin is recommended. A plugin that comes with a playinplugin.exe, which it starts for a preview, is recommended.</source>
+        <translation>没有推荐安装的插件。自带 playinplugin.exe 并以它试听的插件才推荐安装。</translation>
+    </message>
+    <message>
+        <source>Installed, older version, update recommended</source>
+        <translation>已安装，版本较旧，推荐更新</translation>
+    </message>
+    <message>
+        <source>Installed, older version</source>
+        <translation>已安装，版本较旧</translation>
     </message>
     <message>
         <source>Install the preview program of HelloUtau in the folder of the plugin?</source>

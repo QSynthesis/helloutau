@@ -116,7 +116,11 @@ playinplugin.exe <输入文件> [/m:<修改文件>] [/o:<输出文件>] [/noplay
 - 没有 `plugin.json` 的插件，安装前把 `plugin.txt` 转写为 `plugin.json`（`name`、`execute`、`shell`、`notes`、`ustversion`，不写 `charset`，临时文件因此仍为本地编码），因为有 `plugin.json` 时不再读取 `plugin.txt`（[`note.md`](note.md)「插件」）。`plugin.txt` 的编码由用户在与打开 UST 时相同形式的对话框中选择：候选编码、无效字节序列的灰显与预选，以及按所选编码解码的全文（作者 2026-10-14 要求）。
 - 记录写入 `plugin.json` 的 `ClassicPluginHost` 键（note.md「插件」）。移除时按记录还原：转写来的 `plugin.json` 删除，原有的 `plugin.json` 只删除该键。安装中途失败时撤回已做的步骤。
 - 插件文件夹中的程序与当前的 `hello-plugin-play.exe` 内容不同时显示为旧版本，可以更新。
-- 「一键安装」安装于文件夹中原有 `playinplugin.exe` 的插件，这些插件以它试听，并更新旧版本。需要转写的插件逐个询问编码，取消则跳过该插件。「一键卸载」确认一次后移除全部（作者 2026-10-14 要求）。其他插件只能逐个安装，以免为不试听的插件转写 `plugin.json`。
+- 「一键安装」只处理推荐的插件（`ClassicPluginPreviewInstallation::isRecommended()`），即本来就带 `playinplugin.exe`、以它试听的插件（作者 2026-10-15 要求）：
+  - 未安装且文件夹中有 `playinplugin.exe` 的，安装；
+  - 已安装旧版本且安装时保留了原有程序的，更新。
+  - 需要转写的插件逐个询问编码，取消则跳过该插件。
+- 插件列表上方注明推荐的插件个数，以及「一键安装」只处理这些插件。推荐的插件的状态以粗体标为「推荐安装」或「推荐更新」。「一键卸载」确认一次后移除全部（作者 2026-10-14 要求）。其他插件只能逐个安装，以免为不试听的插件转写 `plugin.json`。
 
 ## 实施步骤
 

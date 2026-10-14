@@ -146,6 +146,20 @@ namespace hello::daw {
         return sameContent(fileIn(folder, programName), textOf(program)) ? Installed : Outdated;
     }
 
+    bool ClassicPluginPreviewInstallation::isRecommended(const std::filesystem::path &folder,
+                                                         const std::filesystem::path &program) {
+        switch (stateOf(folder, program)) {
+            case Absent:
+                return QFile::exists(fileIn(folder, programName));
+            case Outdated:
+                // The installation kept a program of the plugin.
+                return !recordOf(folder)->value(originalKey).toString().isEmpty();
+            case Installed:
+                break;
+        }
+        return false;
+    }
+
     bool ClassicPluginPreviewInstallation::transcribes(const std::filesystem::path &folder) {
         return !QFile::exists(manifestOf(folder));
     }

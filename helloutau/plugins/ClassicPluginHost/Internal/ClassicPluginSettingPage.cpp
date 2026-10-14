@@ -68,8 +68,8 @@ namespace hello::daw {
         auto previews = new QGroupBox(tr("Preview program"), widget);
         auto previewsLayout = new QVBoxLayout(previews);
         auto previewNote = new QLabel(
-            tr("Plugins such as PitTrace play their notes through the program playinplugin.exe in "
-               "their folder. The preview program of HelloUtau replaces it, so that the notes are "
+            tr("Some plugins play their notes through the program playinplugin.exe in their "
+               "folder. The preview program of HelloUtau replaces it, so that the notes are "
                "rendered and played in HelloUtau. The original program is kept, and still runs "
                "if UTAU runs the plugin."),
             previews);
@@ -225,20 +225,16 @@ namespace hello::daw {
             return;
         }
 
-        // The plugins of the buttons for all plugins. Install All installs in the plugins whose
-        // folder has a playinplugin.exe of their own, which they evidently start for a preview,
-        // and updates the older versions. Remove All removes every installation.
+        // The plugins of the buttons for all plugins. Install All installs or updates in the
+        // recommended plugins (Installation::isRecommended()), and Remove All removes every
+        // installation.
         QList<ClassicPlugin> installable;
         QList<ClassicPlugin> outdated;
         QList<ClassicPlugin> installed;
         for (const auto &plugin : plugins) {
             const auto state = Installation::stateOf(plugin.folder, program);
-            const auto own = textOf(plugin.folder / Installation::programName.toStdU16String());
-            if (state == Installation::Absent && QFile::exists(own)) {
-                installable.push_back(plugin);
-            }
-            if (state == Installation::Outdated) {
-                outdated.push_back(plugin);
+            if (Installation::isRecommended(plugin.folder, program)) {
+                (state == Installation::Outdated ? outdated : installable).push_back(plugin);
             }
             if (state != Installation::Absent) {
                 installed.push_back(plugin);
@@ -258,6 +254,18 @@ namespace hello::daw {
         allLayout->addWidget(removeAll);
         allLayout->addStretch();
         m_previews->layout()->addWidget(all);
+        const auto recommended = int(installable.size() + outdated.size());
+        auto recommendation = new QLabel(
+            recommended > 0
+                ? tr("%n plugin(s) below come with a playinplugin.exe, which they start for a "
+                     "preview, and are recommended. Install All installs the preview program in "
+                     "exactly these plugins, or updates its older version.",
+                     nullptr, recommended)
+                : tr("No plugin is recommended. A plugin that comes with a playinplugin.exe, "
+                     "which it starts for a preview, is recommended."),
+            m_previews);
+        recommendation->setWordWrap(true);
+        m_previews->layout()->addWidget(recommendation);
 
         // Adds the failures of plugin to failures, each with the name of the plugin.
         const auto collect = [](kit::DiagnosticList &failures, const ClassicPlugin &plugin,
@@ -322,17 +330,29 @@ namespace hello::daw {
             auto name = new QLabel(plugin.name, row);
             name->setToolTip(textOf(plugin.folder));
             const auto state = Installation::stateOf(plugin.folder, program);
+            const bool recommended = Installation::isRecommended(plugin.folder, program);
             auto status = new QLabel(row);
             switch (state) {
                 case Installation::Absent:
-                    status->setText(tr("Not installed"));
+                    status->setText(recommended ? tr("Not installed, recommended")
+                                                : tr("Not installed"));
+                    if (recommended) {
+                        status->setToolTip(tr("The folder of the plugin has a playinplugin.exe, "
+                                              "which the plugin starts for a preview."));
+                    }
                     break;
                 case Installation::Installed:
                     status->setText(tr("Installed"));
                     break;
                 case Installation::Outdated:
-                    status->setText(tr("Installed, older version"));
+                    status->setText(recommended ? tr("Installed, older version, update recommended")
+                                                : tr("Installed, older version"));
                     break;
+            }
+            if (recommended) {
+                auto font = status->font();
+                font.setBold(true);
+                status->setFont(font);
             }
             rowLayout->addWidget(name, 1);
             rowLayout->addWidget(status);

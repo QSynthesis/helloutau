@@ -166,6 +166,33 @@ private Q_SLOTS:
         QCOMPARE(read(folder / "playinplugin-original.exe"), QByteArray("the original"));
     }
 
+    // Only a plugin that comes with a playinplugin.exe is recommended: the installation in its
+    // folder, and the update of its outdated installation. A plugin without the program is not
+    // recommended, even with an outdated installation, and neither is a current installation.
+    void the_plugins_with_playinplugin_are_recommended() {
+        QTemporaryDir dir;
+        const auto folder = pitTrace(dir);
+        const auto playPath = program(dir);
+        QVERIFY(Installation::isRecommended(folder, playPath));
+
+        const auto other = pathOf(dir.path()) / "other";
+        fs::create_directories(other);
+        write(other / "plugin.txt", "name=other\r\nexecute=other.exe\r\n");
+        QVERIFY(!Installation::isRecommended(other, playPath));
+
+        kit::DiagnosticList diagnostics;
+        QVERIFY(Installation::install(folder, playPath, QStringLiteral("Shift_JIS"), diagnostics));
+        QVERIFY(Installation::install(other, playPath, QStringLiteral("Shift_JIS"), diagnostics));
+        QVERIFY(!Installation::isRecommended(folder, playPath));
+
+        // The program at the same path, of a newer version
+        const auto newer = program(dir, "plugin-play 2");
+        QCOMPARE(Installation::stateOf(folder, newer), Installation::Outdated);
+        QVERIFY(Installation::isRecommended(folder, newer));
+        QCOMPARE(Installation::stateOf(other, newer), Installation::Outdated);
+        QVERIFY(!Installation::isRecommended(other, newer));
+    }
+
     // An installation that cannot keep the original, or that exists, changes nothing.
     void a_refused_installation_changes_nothing() {
         QTemporaryDir dir;
