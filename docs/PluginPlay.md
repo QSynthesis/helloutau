@@ -78,7 +78,7 @@ playinplugin.exe <输入文件> [/m:<修改文件>] [/o:<输出文件>] [/noplay
 ## 宿主的处理
 
 1. **核对**：以 `utau::PluginInput` 按插件的编码读取输入文件，其音符数与选区起点须与本次运行写出的临时文件一致，否则回复 `failed` 并显示错误窗口。PitTrace 的输入文件是临时文件的原样副本，因此一致。
-2. **叠加修改**：给出 `modify` 时以 `utau::PluginResult` 读取，在本次运行的工程快照的副本上叠加到选区，规则与正式应用插件结果相同（`ClassicPluginExchange::apply()`，按段落顺序，省略的条目不变，空值恢复默认）。文件不存在时按没有修改处理，与原版一致。叠加的结果不写回输入文件。
+2. **叠加修改**：给出 `modify` 时由 `ClassicPluginExchange::preview()` 叠加到本次运行的工程快照的副本。它以快照建立一个临时的 `kit::ProjectSession`，调用正式应用插件结果的同一个 `apply()`（按段落顺序，省略的条目不变，空值恢复默认），返回修改后的工程与移动后的选区，文档不受影响。文件不存在或不含音符段落时按没有修改处理，与原版一致。叠加的结果不写回输入文件。
 3. **合成工具**：使用工程的 `Tool1`、`Tool2`。`SynthToolTrust::isAllowed()` 不成立时显示错误窗口，说明须先在正式渲染或工程属性中信任这些合成工具，回复 `failed`，不询问，不渲染。
 4. **渲染**：采用预渲染，即 `Playback::play()` 的方式，渲染完成后再播放，不采用实时模式。运行器（批处理或多线程）与宿主的渲染设置相同。渲染副本中选区对应的音符（插入与删除使选区的长度改变时，范围随之改变），整轨插件渲染整个音轨。全局 Flags 等一切设置与正式渲染相同。
 5. **播放**：`play` 为真时在试听对话框中播放。`play` 为假时不弹出对话框，只渲染，出错时显示错误窗口。
@@ -104,7 +104,6 @@ playinplugin.exe <输入文件> [/m:<修改文件>] [/o:<输出文件>] [/noplay
 ## 待实施时确定的接口
 
 - `Playback::play()` 只接受 `kit::ProjectDocument`，而以 `Project` 值构造 `ProjectDocument` 的构造函数是私有的。须增加以 `Project` 值渲染的入口，二者择一，在实施第 3 步确定。
-- 叠加修改须能作用于 `Project` 值。现有的 `ClassicPluginExchange::apply()` 作用于编辑会话中的 `NoteListRef`，须把合并逻辑拆出，正式应用与试听共用。
 - ClassicPluginHost 须链接 Qt Network（`QLocalServer`）。
 - 试听的渲染缓存是否沿用工程的渲染缓存，使未修改的音符不再重新合成，在实施第 3 步确定。
 
@@ -116,7 +115,7 @@ playinplugin.exe <输入文件> [/m:<修改文件>] [/o:<输出文件>] [/noplay
 
 ## 实施步骤
 
-1. **合并逻辑**：把 `ClassicPluginExchange::apply()` 的合并拆成作用于 `Project` 值的函数，`apply()` 改为调用它。QtTest。
+1. ~~**叠加修改**~~：`ClassicPluginExchange::preview()`，以临时会话复用 `apply()`，无须拆出合并逻辑。QtTest。
 2. **`hello-plugin-play`**：命令行解析、按作业查找宿主、管道客户端、运行原版与没有原版时的消息框，CMake 照 `hello-updater`。测试在 `tests/auto/tools/plugin-play` 中用 Python 运行程序：测试进程把程序放入自己创建的作业，以 CPython 的 `_winapi` 创建命名管道充当宿主，检查请求的内容、不在作业中时运行原版、原版的参数与退出码。
 3. **管道服务器与渲染**：`ClassicPluginRunner` 在插件启动后提供插件进程的进程号，管道服务器以它命名，解析与核对请求、叠加修改并回复。库一级的部分以 QtTest 测试，用 `QLocalSocket` 模拟 plugin-play。
 4. **试听对话框**：渲染进度、播放与取消，以及合成工具不可信时的错误窗口。由作者试用。

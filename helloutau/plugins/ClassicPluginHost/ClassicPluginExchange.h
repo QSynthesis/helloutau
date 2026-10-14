@@ -2,17 +2,18 @@
 #define HELLOUTAU_CLASSICPLUGINHOST_CLASSICPLUGINEXCHANGE_H
 
 #include <filesystem>
+#include <optional>
 
 #include <QtCore/QByteArray>
 #include <QtCore/QByteArrayView>
 #include <QtCore/QCoreApplication>
 
+#include <hellokit/Document/Project.h>
 #include <hellokit/Support/Diagnostic.h>
 
 #include <ClassicPluginHost/ClassicPluginHostPluginGlobal.h>
 
 namespace hello::kit {
-    struct Project;
     class NoteListRef;
     class VoiceBank;
 }
@@ -63,6 +64,27 @@ namespace hello::daw {
         /// from the following note. A section beyond the selection is ignored with a warning.
         static Outcome apply(const ClassicPlugin &plugin, const kit::NoteListRef &notes, int first,
                              int count, QByteArrayView result, kit::DiagnosticList &diagnostics);
+
+        /// A project with the result of a plugin applied, for a preview without changes to the
+        /// document. See docs/PluginPlay.md.
+        struct Preview {
+            kit::Project project;
+
+            /// The selection in \a project , shifted by insertions and deletions
+            int first = 0;
+            int count = 0;
+        };
+
+        /// Returns \a project with \a result applied to its \a count notes from index \a first ,
+        /// as apply() applies it to a document. The project is unchanged if \a result contains no
+        /// note section.
+        ///
+        /// \return the project and its selection, or \c std::nullopt if the modifications fail,
+        ///         with the reason in \a diagnostics
+        static std::optional<Preview> preview(const ClassicPlugin &plugin,
+                                              const kit::Project &project, int first, int count,
+                                              QByteArrayView result,
+                                              kit::DiagnosticList &diagnostics);
     };
 
 }

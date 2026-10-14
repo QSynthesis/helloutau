@@ -367,6 +367,29 @@ private Q_SLOTS:
         QCOMPARE(result[2].regions, (QStringList{QStringLiteral("A"), QStringLiteral("B")}));
         QCOMPARE(result[3].regionEnds, (QStringList{QStringLiteral("A"), QStringLiteral("B")}));
     }
+
+    // The result of a preview is applied as by apply(), to a copy of the project. An insertion
+    // lengthens the selection. The copy is unchanged if the result has no note section.
+    void a_preview_applies_the_result_to_a_copy() {
+        const auto project = probe();
+        const auto plugin = pluginOf(QStringLiteral("UTF-8"));
+        kit::DiagnosticList diagnostics;
+        const auto preview = ClassicPluginExchange::preview(
+            plugin, project, 2, 3,
+            "[#INSERT]\r\nLyric=N\r\n[#0002]\r\nLyric=X\r\n[#0003]\r\n[#0004]\r\n", diagnostics);
+        QVERIFY(preview);
+        QVERIFY(diagnostics.isEmpty());
+        QCOMPARE(lyricsOf(preview->project), QStringList({"R", "a", "N", "X", "R", "u", "e", "o"}));
+        QCOMPARE(preview->first, 2);
+        QCOMPARE(preview->count, 4);
+        QCOMPARE(lyricsOf(project), QStringList({"R", "a", "i", "R", "u", "e", "o"}));
+
+        const auto unchanged =
+            ClassicPluginExchange::preview(plugin, project, 2, 3, "", diagnostics);
+        QVERIFY(unchanged);
+        QCOMPARE(lyricsOf(unchanged->project), lyricsOf(project));
+        QCOMPARE(unchanged->count, 3);
+    }
 };
 
 QTEST_GUILESS_MAIN(test_ClassicPluginExchange)

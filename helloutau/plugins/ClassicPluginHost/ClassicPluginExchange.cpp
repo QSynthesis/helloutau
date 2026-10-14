@@ -13,6 +13,7 @@
 #include <hellokit/Document/TempoMap.h>
 #include <hellokit/Document/UstDocument.h>
 #include <hellokit/Edit/ProjectRefs.h>
+#include <hellokit/Edit/ProjectSession.h>
 #include <hellokit/Support/TextCodec.h>
 #include <hellokit/Synth/SampleTiming.h>
 #include <hellokit/VoiceBank/VoiceBank.h>
@@ -350,6 +351,29 @@ namespace hello::daw {
             }
         }
         return transaction.commit(diagnostics) ? Applied : Failed;
+    }
+
+    std::optional<ClassicPluginExchange::Preview>
+        ClassicPluginExchange::preview(const ClassicPlugin &plugin, const kit::Project &project,
+                                       int first, int count, QByteArrayView result,
+                                       kit::DiagnosticList &diagnostics) {
+        if (plugin.wholeTrack) {
+            first = 0;
+            count = int(project.tracks.first().notes.size());
+        }
+        // The result is applied by the code of apply(), in a session of its own.
+        kit::ProjectSession session(project);
+        const auto notes = kit::ProjectRef(&session).tracks().at(0).notes();
+        const int before = notes.size();
+        if (apply(plugin, notes, first, count, result, diagnostics) == Failed) {
+            return std::nullopt;
+        }
+        Preview out;
+        out.project = session.snapshot();
+        out.first = first;
+        // Insertions and deletions occur only within the selection.
+        out.count = count + int(out.project.tracks.first().notes.size()) - before;
+        return out;
     }
 
 }
