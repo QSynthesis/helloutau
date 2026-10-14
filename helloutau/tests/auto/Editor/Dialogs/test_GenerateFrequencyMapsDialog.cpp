@@ -73,7 +73,9 @@ private Q_SLOTS:
         QCOMPARE(tree->headerItem()->text(3), QStringLiteral("PLATINUM"));
         const auto a = tree->topLevelItem(0);
         const auto b = tree->topLevelItem(1);
-        QVERIFY(a->text(1) != b->text(1));
+        // A mark for a file present, nothing for a file missing
+        QVERIFY(!a->text(1).isEmpty());
+        QVERIFY(b->text(1).isEmpty());
         QCOMPARE(a->text(2), a->text(1));
         QCOMPARE(b->text(2), b->text(1));
         // A cache beyond the presence given is missing.

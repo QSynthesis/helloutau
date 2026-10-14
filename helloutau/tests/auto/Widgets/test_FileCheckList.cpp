@@ -1,5 +1,6 @@
 #include <QtTest/QSignalSpy>
 #include <QtTest/QTest>
+#include <QtWidgets/QHeaderView>
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QTreeWidget>
 
@@ -79,6 +80,28 @@ private Q_SLOTS:
         list.checkAllBox()->click();
         QCOMPARE(list.checkedRows(), (QList<int>{0, 1, 2}));
         QVERIFY(!changed.isEmpty());
+    }
+
+    // The columns are resized with the mouse. The first show fits them to their contents, and a
+    // later show keeps the widths that the user set.
+    void the_columns_are_resized_by_the_user() {
+        FileCheckList list(
+            {QStringLiteral("File"), QStringLiteral("State"), QStringLiteral("Note")});
+        const auto name = QStringLiteral("a-file-with-a-long-name.wav");
+        list.addRow({name, QStringLiteral("present"), QString()});
+        const auto header = list.tree()->header();
+        for (int column = 0; column < 3; ++column) {
+            QCOMPARE(header->sectionResizeMode(column), QHeaderView::Interactive);
+        }
+        header->resizeSection(0, 10);
+        list.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&list));
+        QVERIFY(header->sectionSize(0) > list.tree()->fontMetrics().horizontalAdvance(name));
+
+        header->resizeSection(0, 300);
+        list.hide();
+        list.show();
+        QCOMPARE(header->sectionSize(0), 300);
     }
 };
 

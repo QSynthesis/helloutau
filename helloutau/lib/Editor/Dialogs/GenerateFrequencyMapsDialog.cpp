@@ -4,6 +4,7 @@
 #include <QtWidgets/QDialogButtonBox>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QPushButton>
+#include <QtWidgets/QTreeWidget>
 #include <QtWidgets/QVBoxLayout>
 
 #include <helloutau/Widgets/FileCheckList.h>
@@ -31,7 +32,11 @@ namespace hello::daw {
                            .arg(formatName));
         format->setWordWrap(true);
 
-        const auto presence = [](bool present) { return present ? tr("Present") : tr("Missing"); };
+        // A check mark for a file present, nothing for a file missing, as in the table of the
+        // window
+        const auto presence = [](bool present) {
+            return present ? QString(QChar(0x2713)) : QString();
+        };
 
         // The rows are in the order of the files, and the columns of the caches follow the
         // column of the map.
@@ -45,7 +50,10 @@ namespace hello::daw {
             for (qsizetype i = 0; i < cacheNames.size(); ++i) {
                 texts.push_back(presence(file.caches.value(i)));
             }
-            m_list->addRow(texts);
+            const auto item = m_list->tree()->topLevelItem(m_list->addRow(texts));
+            for (int column = 1; column < texts.size(); ++column) {
+                item->setTextAlignment(column, Qt::AlignCenter);
+            }
             anySelected = anySelected || file.selected;
         }
         const auto missing = [this](int row) { return !m_files.at(row).hasMap; };

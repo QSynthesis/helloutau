@@ -15,6 +15,8 @@ namespace hello::daw {
         m_tree->setRootIsDecorated(false);
         m_tree->setHeaderLabels(headers);
         m_tree->setSelectionMode(QAbstractItemView::NoSelection);
+        m_tree->header()->setSectionResizeMode(QHeaderView::Interactive);
+        m_tree->header()->setStretchLastSection(true);
         m_checkAll = new CheckAllBox(m_tree, 0, this);
         m_buttons = new QWidget(this);
         auto buttons = new QHBoxLayout(m_buttons);
@@ -48,9 +50,6 @@ namespace hello::daw {
         item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
         item->setCheckState(0, Qt::Unchecked);
         m_tree->addTopLevelItem(item);
-        for (int column = 0; column < m_tree->columnCount() - 1; ++column) {
-            m_tree->header()->setSectionResizeMode(column, QHeaderView::ResizeToContents);
-        }
         return m_tree->topLevelItemCount() - 1;
     }
 
@@ -104,6 +103,19 @@ namespace hello::daw {
 
     CheckAllBox *FileCheckList::checkAllBox() const {
         return m_checkAll;
+    }
+
+    void FileCheckList::showEvent(QShowEvent *event) {
+        QWidget::showEvent(event);
+        if (m_fitted) {
+            return;
+        }
+        // ResizeToContents would fit the columns as well, but it prevents resizing with the
+        // mouse.
+        m_fitted = true;
+        for (int column = 0; column < m_tree->columnCount() - 1; ++column) {
+            m_tree->resizeColumnToContents(column);
+        }
     }
 
 }

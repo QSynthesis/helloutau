@@ -22,6 +22,9 @@ namespace hello::daw {
     /// check exactly the rows of a condition, such as the files without a frequency map.
     ///
     /// The rows are identified by their indices in the order of addRow(). Every row is checkable.
+    /// The user resizes the columns with the mouse. The columns except the last are fitted to
+    /// their contents when the list is first shown, and the remaining width is given to the last
+    /// column.
     class HELLOUTAU_WIDGETS_EXPORT FileCheckList : public QWidget {
         Q_OBJECT
     public:
@@ -58,12 +61,18 @@ namespace hello::daw {
         /// Emitted when the check state of a row changes, once for a change of checkWhere().
         void checkedChanged();
 
+    protected:
+        void showEvent(QShowEvent *event) override;
+
     private:
         QTreeWidget *m_tree;
         CheckAllBox *m_checkAll;
         QWidget *m_buttons;
         // Set while checkWhere() changes the rows, so that checkedChanged() is emitted once
         bool m_applying = false;
+        // Set once the columns fit their contents, so that a later show keeps the widths that
+        // the user set
+        bool m_fitted = false;
     };
 
 }

@@ -1065,14 +1065,6 @@
         <translation>频率表</translation>
     </message>
     <message>
-        <source>Present</source>
-        <translation>已有</translation>
-    </message>
-    <message>
-        <source>Missing</source>
-        <translation>缺失</translation>
-    </message>
-    <message>
         <source>Check &amp;Missing</source>
         <translation>勾选缺失的(&amp;M)</translation>
     </message>
