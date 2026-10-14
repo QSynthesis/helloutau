@@ -2,10 +2,10 @@
 
 #include <QtCore/QDir>
 #include <QtWidgets/QDialogButtonBox>
-#include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QListWidget>
 #include <QtWidgets/QPushButton>
+#include <QtWidgets/QSplitter>
 #include <QtWidgets/QVBoxLayout>
 
 #include <helloutau/Widgets/CheckAllBox.h>
@@ -39,7 +39,9 @@ namespace hello::daw {
         intro->setWordWrap(true);
 
         const auto caches = format.analysisCaches();
-        auto columns = new QHBoxLayout();
+        // The user resizes the columns by the handles between them.
+        auto columns = new QSplitter(Qt::Horizontal);
+        columns->setChildrenCollapsible(false);
         for (int column = 0; column <= caches.size(); ++column) {
             const bool maps = column == 0;
             auto title = new QLabel(maps ? tr("Frequency Maps") : caches.at(column - 1).name);
@@ -93,12 +95,15 @@ namespace hello::daw {
             m_lists.push_back(list);
             m_items.push_back(items);
 
-            auto layout = new QVBoxLayout();
+            auto pane = new QWidget();
+            auto layout = new QVBoxLayout(pane);
+            layout->setContentsMargins(0, 0, 0, 0);
             layout->addWidget(title);
             layout->addWidget(action);
             layout->addWidget(new CheckAllBox(list));
             layout->addWidget(list, 1);
-            columns->addLayout(layout, 1);
+            columns->addWidget(pane);
+            columns->setStretchFactor(column, 1);
         }
 
         m_summary = new QLabel();
@@ -110,7 +115,7 @@ namespace hello::daw {
 
         auto layout = new QVBoxLayout(this);
         layout->addWidget(intro);
-        layout->addLayout(columns, 1);
+        layout->addWidget(columns, 1);
         layout->addWidget(m_summary);
         layout->addWidget(buttons);
         updateSummary();

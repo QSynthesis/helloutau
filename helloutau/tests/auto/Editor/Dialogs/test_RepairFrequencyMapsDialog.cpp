@@ -4,6 +4,7 @@
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QListWidget>
 #include <QtWidgets/QPushButton>
+#include <QtWidgets/QSplitter>
 
 #include <helloutau/Editor/Dialogs/RepairFrequencyMapsDialog.h>
 #include <helloutau/Widgets/CheckAllBox.h>
@@ -132,9 +133,8 @@ private Q_SLOTS:
         const auto boxes = dialog.findChildren<CheckAllBox *>();
         QCOMPARE(boxes.size(), dialog.columnCount());
         const auto caches = dialog.list(1);
-        const auto box = std::find_if(boxes.cbegin(), boxes.cend(), [](const CheckAllBox *b) {
-            return b->isEnabled();
-        });
+        const auto box = std::find_if(boxes.cbegin(), boxes.cend(),
+                                      [](const CheckAllBox *b) { return b->isEnabled(); });
         QVERIFY(box != boxes.cend());
         QVERIFY(!dialog.repairButton()->isEnabled());
 
@@ -147,6 +147,24 @@ private Q_SLOTS:
         (*box)->click();
         QVERIFY(dialog.checkedFiles().empty());
         QVERIFY(!dialog.repairButton()->isEnabled());
+    }
+
+    // The columns are the panes of a splitter, which the user resizes and cannot collapse.
+    void the_columns_are_in_a_splitter() {
+        const fs::path root("C:/bank");
+        RepairFrequencyMapsDialog::Files files;
+        files[root] = {
+            {"a.wav.cache", 0, {"a.wav"}, std::nullopt},
+        };
+        const Format format;
+        RepairFrequencyMapsDialog dialog(format, root, files);
+        const auto splitter = dialog.findChild<QSplitter *>();
+        QVERIFY(splitter);
+        QCOMPARE(splitter->count(), dialog.columnCount());
+        QVERIFY(!splitter->childrenCollapsible());
+        for (int column = 0; column < dialog.columnCount(); ++column) {
+            QVERIFY(splitter->widget(column)->isAncestorOf(dialog.list(column)));
+        }
     }
 };
 
