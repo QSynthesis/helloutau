@@ -62,7 +62,7 @@ namespace hello::kit {
         const ProjectSession *session() const;
 
         /// The \c .usth the document is saved to, or an empty path if it has none: a new
-        /// document, or one imported from a UST.
+        /// document, or a document imported from a UST.
         std::filesystem::path filePath() const;
 
         /// The file the document was opened from, a \c .usth or a \c .ust, or else filePath().
@@ -111,8 +111,8 @@ namespace hello::kit {
                            DiagnosticList &diagnostics);
 
         /// Makes \a bank voiceBank() without reading the disk: the snapshot of the voice bank as
-        /// an editor saved it. Neither an edit of the project nor a change of its saved state,
-        /// see the section on a saved voice bank in docs/Editing.md.
+        /// an editor saved it. This is neither an edit of the project nor a change of its saved
+        /// state, see the section on a saved voice bank in docs/Editing.md.
         void setVoiceBank(std::shared_ptr<const VoiceBank> bank);
 
     Q_SIGNALS:

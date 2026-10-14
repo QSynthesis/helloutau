@@ -141,8 +141,8 @@ namespace hello::kit {
         }
 
         switch (m_path) {
-            // Stateless, so that a sequence cut off at the end is an error rather than state kept
-            // for a next call that never comes.
+            // The decoder is stateless, so that a sequence cut off at the end is an error rather
+            // than state kept for a call that never comes.
             case Path::Builtin: {
                 QStringDecoder decoder(m_builtin, QStringConverter::Flag::Stateless);
                 QString text = decoder.decode(bytes);

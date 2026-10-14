@@ -212,7 +212,7 @@ namespace hello::kit {
         ///
         /// \return the encoding, or \c std::nullopt to leave the directory out of the voice bank
         /// \note \c std::nullopt with an \c Error in \a diagnostics indicates that the user
-        ///       could not be asked. \c std::nullopt without one indicates that the user
+        ///       could not be asked. \c std::nullopt without an \c Error indicates that the user
         ///       declined. The caller has no other means of distinguishing the two.
         virtual std::optional<QString> selectCharset(const VoiceBankDirectorySource &directory,
                                                      DiagnosticList &diagnostics) = 0;

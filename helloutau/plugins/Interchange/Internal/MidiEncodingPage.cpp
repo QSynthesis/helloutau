@@ -62,12 +62,12 @@ namespace hello::daw {
         }
 
         const auto texts = SourcePreview::textsOf(source);
-        const auto grey = palette().brush(QPalette::Disabled, QPalette::Text);
+        const auto gray = palette().brush(QPalette::Disabled, QPalette::Text);
         m_encodings->clear();
         for (const auto &candidate : std::as_const(candidates)) {
             auto item = new QListWidgetItem(candidate, m_encodings);
             if (!SourcePreview::decodes(texts, candidate)) {
-                item->setForeground(grey);
+                item->setForeground(gray);
             }
         }
         const auto items = m_encodings->findItems(SourcePreview::defaultEncoding(texts, candidates),

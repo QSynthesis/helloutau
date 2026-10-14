@@ -1505,8 +1505,8 @@ private Q_SLOTS:
         QCOMPARE(points[0].x, -30.0);
         QCOMPARE(points[0].y, 0.0);
 
-        // The last point passes the second, at 50 ms, keeping its height, and stays selected;
-        // the second, now last, ends at the pitch of the note.
+        // The last point passes the second, at 50 ms, keeping its height, and stays selected.
+        // The second, now last, ends at the pitch of the note.
         dragPoint(roll, pointOfLi(roll, 60, 0), pointOfLi(roll, 0, 100));
         points = pointsOfLi(session);
         QCOMPARE(points[1].x, 0.0);
@@ -2023,8 +2023,8 @@ private Q_SLOTS:
         return project;
     }
 
-    // Each envelope fades over the overlaps with sung neighbors and loses its middle anchor;
-    // the first note has no overlap before it.
+    // Each envelope fades over the overlaps with sung neighbors and loses its middle anchor.
+    // The first note has no overlap before it.
     void envelopes_are_crossfaded_over_the_overlaps() {
         const auto crossfaded = [this](PianoRoll::Crossfade crossfade) {
             kit::ProjectSession session(overlappingNotes());
@@ -2532,7 +2532,7 @@ private Q_SLOTS:
     }
 
     // A region nested in another is drawn above it and is hit where it lies. The outer region is
-    // hit only where the inner one does not cover it.
+    // hit only where the inner region does not cover it.
     void a_nested_region_is_hit_above_the_outer_region() {
         kit::Project project;
         project.settings.tempo = 120;

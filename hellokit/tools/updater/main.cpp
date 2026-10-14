@@ -24,13 +24,14 @@
 extern char **environ;
 #endif
 
-// hello-updater: replaces the installation directory of a portable application with a new one.
+// hello-updater: replaces the installation directory of a portable application with the directory
+// of the new version.
 //
 // The application extracts the new version into a directory beside the installation directory,
 // copies this program out of the installation directory, starts it and quits. This program waits
-// for the application to exit, renames the installation directory aside, renames the new
-// directory into its place, and removes the old one. If a step fails, the installation directory
-// is restored. Both renames are on one volume, so that each replaces a whole directory at once.
+// for the application to exit, renames the installation directory aside, renames the new directory
+// into its place, and removes the old directory. If a step fails, the installation directory is
+// restored. Both renames are on one volume, so that each replaces a whole directory at once.
 //
 // The program depends only on the standard library and the system, and links the C++ runtime
 // statically, because the copy runs where no library of the application is available. It has no
@@ -57,11 +58,11 @@ namespace {
         WaitTimeout = 2,
         // The installation directory is unchanged.
         ReplacementFailed = 3,
-        // The installation directory is missing, and the old one remains beside it.
+        // The installation directory is missing, and the old directory remains beside it.
         RestorationFailed = 4,
     };
 
-    // Without column alignment and with unbroken paragraphs, because a message box on Windows
+    // The text has no column alignment and unbroken paragraphs, because a message box on Windows
     // shows the text in a proportional font and wraps the lines.
     constexpr char usage[] =
         "Usage: hello-updater --target <dir> --source <dir> [options]\n"
@@ -322,7 +323,8 @@ namespace {
         bool help = false;
         const auto parsed = parse(arguments, &help);
         if (!parsed) {
-            // Searched without the parser, which has rejected the arguments
+            // The arguments are searched without the parser, because the parser has rejected
+            // them.
             const auto showErrors = std::find(arguments.begin(), arguments.end(),
                                               NATIVE("--show-errors")) != arguments.end();
             showUsage(help, showErrors);

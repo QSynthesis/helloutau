@@ -61,8 +61,8 @@ namespace hello::kit {
         /// name, with the name of the command that calls it.
         ///
         /// Each domain function is Q_INVOKABLE, so that the meta-object of ProjectEdits lists
-        /// them, and a test compares that list with this one. A domain function without a
-        /// command, or a command of a function that no longer exists, fails the test.
+        /// them, and a test compares that list with the domain function registry. A domain function
+        /// without a command, or a command of a function that no longer exists, fails the test.
         ///
         /// See the section on commands in docs/Editing.md.
         static QMap<QString, QString> domainFunctions();

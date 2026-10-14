@@ -209,7 +209,7 @@ namespace hello::daw {
         /// The Mode1 values that a gesture shows in place of those of a note, by note index
         QHash<int, kit::PitchBend> bendPreview;
 
-        /// The parameter area, what it shows, and the buttons that choose it
+        /// The parameter area, the lane it shows, and the buttons that choose the lane
         SceneView *parameters = nullptr;
         PianoRoll::Lane lane = PianoRoll::EnvelopeLane;
         QButtonGroup *laneButtons = nullptr;
@@ -340,7 +340,7 @@ namespace hello::daw {
         void setSelection(const QSet<kit::edit::NodeId> &ids);
         void updateRulerSelection();
 
-        /// The note whose points are drawn plainly, the others' faintly: the one whose
+        /// The note whose points are drawn plainly, the others' faintly: the note whose
         /// portamento or point is under the pointer, or -1
         int hovered = -1;
 
@@ -365,7 +365,7 @@ namespace hello::daw {
         bool startsAtPrevious(int index) const;
 
         /// Returns whether the height of point j of the count points of note index stays as it
-        /// is: the first where it starts at the previous note, and the last
+        /// is: the first if it starts at the previous note, and the last
         bool heightFixed(int index, int j, int count) const;
 
         /// The points of note index, as a gesture shows them if it does
@@ -378,7 +378,7 @@ namespace hello::daw {
         /// Shows every value of the lane in the height of the parameter area
         void fitParameters();
 
-        /// The keys that a lane spans, and the value it draws a line at: that of UTAU where a
+        /// The keys that a lane spans, and the value it draws a line at: the value of UTAU if a
         /// note gives none
         struct LaneRange {
             double minimum;
@@ -487,7 +487,7 @@ namespace hello::daw {
         bool removePoints(const QHash<int, QSet<int>> &removed, kit::DiagnosticList &diagnostics);
 
         /// The note whose portamento lies within curveGrip of position, and the tick there from
-        /// the start of the note. The note is the one at that time, or the next one from its first
+        /// the start of the note. It is the note at that time, or the next note from its first
         /// point on.
         std::optional<std::pair<int, double>> portamentoNear(QPointF position) const;
 
@@ -510,8 +510,8 @@ namespace hello::daw {
 
         QRectF rectOf(qint64 start, int length, int key) const;
 
-        /// The notes in the order of indices, each where the one before ends, with lengths and
-        /// keys changed as given
+        /// The notes in the order of indices, each starting where the preceding note ends, with
+        /// lengths and keys changed as given
         QList<Placement> layOut(const QList<int> &order, const QHash<int, int> &lengths = {},
                                 const QSet<int> &transposed = {}, int semitones = 0) const;
 

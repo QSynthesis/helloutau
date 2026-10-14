@@ -46,8 +46,8 @@ namespace hello::kit::edit {
         /// A transaction begun while another is in progress is nested in it, for example in a
         /// function called by another function that has begun a transaction. The outermost
         /// transaction forms the undo step, with its message. A nested transaction that ends
-        /// without commit() discards the outermost one: its modifications remain applied until
-        /// the outermost transaction ends, which then rolls back.
+        /// without commit() discards the outermost transaction: its modifications remain applied
+        /// until that transaction ends, which then rolls back.
         class HELLOKIT_EDITBASE_EXPORT Transaction {
         public:
             Transaction(Transaction &&RHS) noexcept;

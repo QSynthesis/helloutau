@@ -68,8 +68,8 @@ namespace hello::daw {
     void PianoRollState::showRulerMenu(double tick, const QPoint &globalPosition) {
         auto &decl = *widget;
         const int count = timeline->noteCount();
-        // The note at the position, or none after the last note, where the commands of a note
-        // are disabled rather than applied to another note
+        // The note at the position, or none if the position is past the last note. In that case
+        // the commands of a note are disabled rather than applied to another note
         const int at = timeline->noteAt(tick);
         const int index = at >= 0 && at < count ? at : -1;
         if (index >= 0) {
@@ -862,11 +862,12 @@ namespace hello::daw {
                                                             Qt::MouseButton button) {
         finishEditing(true);
         const bool erases = button == Qt::RightButton;
-        // Without a click function the stroke starts with the first move, and a release without a move strokes one place.
+        // Without a click function the stroke starts with the first move, and a release without a
+        // move strokes one place.
         return std::make_unique<PressGesture>(
             position,
-            [this, position, erases](Qt::KeyboardModifiers modifiers)
-                -> std::unique_ptr<SceneGesture> {
+            [this, position,
+             erases](Qt::KeyboardModifiers modifiers) -> std::unique_ptr<SceneGesture> {
                 const auto activation = activate(erases ? NoteViewModifiers::PitchEraseScene
                                                         : NoteViewModifiers::PitchDrawScene,
                                                  modifiers);
@@ -888,14 +889,14 @@ namespace hello::daw {
     }
 
     std::unique_ptr<SceneGesture> PianoRollState::spanPress(QPointF position) {
-        const auto drag = [this, position](Qt::KeyboardModifiers modifiers)
-            -> std::unique_ptr<SceneGesture> {
+        const auto drag =
+            [this, position](Qt::KeyboardModifiers modifiers) -> std::unique_ptr<SceneGesture> {
             const auto activation = activate(NoteViewModifiers::SpanScene, modifiers);
             if (!activation) {
                 return nullptr;
             }
-            return std::make_unique<SpanGesture>(
-                this, position, NoteViewModifiers::Role(activation->operation));
+            return std::make_unique<SpanGesture>(this, position,
+                                                 NoteViewModifiers::Role(activation->operation));
         };
         // A click selects the span of no width at the press, the notes at that time.
         const auto click = [this, position](Qt::KeyboardModifiers modifiers) {

@@ -189,7 +189,7 @@ namespace hello::kit {
 
         constexpr edit::RecordInfo rootRecord{"project", ProjectType, projectFields};
 
-        // Returns whether the fields of record are its count slots in order.
+        // Returns whether the fields of record are the count slots in order.
         constexpr bool listsSlotsInOrder(const edit::RecordInfo &record, int count) {
             if (record.fields.size() != count) {
                 return false;

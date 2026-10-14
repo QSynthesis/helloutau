@@ -73,7 +73,7 @@ namespace hello::daw {
         double parts[4] = {0, 0, 0, 255};
         for (size_t i = 0; i < count; ++i) {
             const auto &argument = value.arguments[i];
-            // The hue is in degrees. The other components range up to 255.
+            // The hue is in degrees. The other components have values from 0 to 255.
             const auto part =
                 i == 3 ? alpha(argument.value)
                        : component(argument.value, model != u"rgb" && i == 0 ? 359 : 255);

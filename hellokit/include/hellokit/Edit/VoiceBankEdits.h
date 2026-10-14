@@ -79,8 +79,8 @@ namespace hello::kit {
         /// is unchanged and the bytes change. See the section on encodings in docs/Editing.md.
         ///
         /// The \c oto.ini is written with a declaration of UTF-8 if \a charset is UTF-8, and
-        /// without one otherwise. If the files are already written in \a charset , nothing
-        /// changes and no undo step is created.
+        /// without a declaration otherwise. If the files are already written in \a charset ,
+        /// nothing changes and no undo step is created.
         ///
         /// \sa VoiceBankDirectory::charset
         Q_INVOKABLE static bool convertCharset(const VoiceDirectoryRef &directory,

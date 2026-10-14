@@ -22,8 +22,8 @@ namespace hello::kit {
         }
 
         // An absent member is read as empty. A member of another type or an unknown member makes
-        // the whole value one of another type, because the entry of a mapping is set without
-        // reading the value back.
+        // the whole value another type, because the entry of a mapping is set without reading the
+        // value back.
         std::optional<QVariant> prefixFromJson(const QJsonValue &json) {
             if (!json.isObject()) {
                 return std::nullopt;
@@ -223,7 +223,7 @@ namespace hello::kit {
 
         constexpr edit::RecordInfo rootRecord{"voiceBank", VoiceBankType, voiceBankFields};
 
-        // Returns whether the fields of record are its count slots in order.
+        // Returns whether the fields of record are the count slots in order.
         constexpr bool listsSlotsInOrder(const edit::RecordInfo &record, int count) {
             if (record.fields.size() != count) {
                 return false;

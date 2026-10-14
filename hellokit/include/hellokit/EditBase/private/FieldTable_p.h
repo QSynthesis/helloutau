@@ -267,11 +267,12 @@ namespace hello::kit::edit {
         FieldList fields;
 
         /// Returns the tree of the record written as \a json, or \c nullptr with the reason in
-        /// \a diagnostics. Null if no record of this type is created from JSON.
+        /// \a diagnostics. The pointer is null if no record of this type is created from JSON.
         std::unique_ptr<ss::Node> (*treeFromJson)(const QJsonObject &json,
                                                   DiagnosticList &diagnostics) = nullptr;
 
-        /// Returns the JSON of the record in \a tree. Null if \c treeFromJson is null.
+        /// Returns the JSON of the record in \a tree. The pointer is null if \c treeFromJson is
+        /// null.
         QJsonObject (*treeToJson)(const ss::Node *tree) = nullptr;
 
         /// Returns the field named \a name, or \c nullptr if the record has no such field or the

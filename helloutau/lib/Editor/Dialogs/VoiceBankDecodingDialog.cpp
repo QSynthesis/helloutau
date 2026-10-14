@@ -585,12 +585,12 @@ namespace hello::daw {
         }
         const auto directory = m_directories[current];
         const auto texts = textsOf(*directory);
-        const auto grey = palette().brush(QPalette::Disabled, QPalette::Text);
+        const auto gray = palette().brush(QPalette::Disabled, QPalette::Text);
         const QSignalBlocker blocker(m_charsets);
         m_charsets->setEnabled(!m_settled.value(current));
         for (int i = 0; i < m_charsets->count(); ++i) {
             auto item = m_charsets->item(i);
-            item->setForeground(invalidIn(texts, item->text()) > 0 ? grey : QBrush());
+            item->setForeground(invalidIn(texts, item->text()) > 0 ? gray : QBrush());
             if (item->text() == m_choices[current]) {
                 m_charsets->setCurrentItem(item, QItemSelectionModel::ClearAndSelect);
             }

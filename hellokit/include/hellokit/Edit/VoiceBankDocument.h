@@ -20,15 +20,15 @@ namespace hello::kit {
     /// last saved, by the rules of the section on the saved state in docs/Editing.md.
     ///
     /// The saved state is a step of the session: the document is modified at any other step,
-    /// or at every step once the saved one is lost. It is lost when a commit discards it, when
+    /// or at every step once the saved step is lost. It is lost when a commit discards it, when
     /// the encodings chosen on opening are still to be recorded, and when the disk is found
     /// changed outside the tree.
     class HELLOKIT_EDIT_EXPORT VoiceBankDocument : public QObject {
         Q_OBJECT
     public:
         /// Opens the voice bank in \a root, querying \a selector for each directory whose
-        /// encoding is not recorded. The chosen encodings are remembered, to be recorded by the
-        /// next save, and the document is modified until then.
+        /// encoding is not recorded. The chosen encodings are recorded by the next save, and the
+        /// document is modified until then.
         ///
         /// \return the document, or null if the voice bank could not be read, with the reason in
         ///         \a diagnostics
@@ -88,7 +88,7 @@ namespace hello::kit {
     Q_SIGNALS:
         void modifiedChanged(bool modified);
 
-        /// rootPath() changed, by saveAs().
+        /// Emitted when rootPath() changes, on saveAs().
         void rootPathChanged();
 
         /// The voice bank was written into rootPath(), by save() or saveAs(). The projects that

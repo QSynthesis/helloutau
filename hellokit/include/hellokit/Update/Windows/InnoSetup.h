@@ -11,7 +11,7 @@
 namespace hello::kit {
 
     /// The installation records of Inno Setup, by which an installed application is
-    /// distinguished from an extracted one. Available only on Windows.
+    /// distinguished from an extracted application. Available only on Windows.
     class HELLOKIT_UPDATE_EXPORT InnoSetup {
     public:
         /// Returns the installation directory that the installer with the \c AppId \a appId

@@ -8,7 +8,7 @@
 /// **WAV files are deliberately not compared.** The same resampler processing the same sample
 /// with a pitch difference of one cent produces entirely different sample values after a few
 /// cycles while sounding identical, so a sample-by-sample comparison would report a severe
-/// difference where none is audible. The comparison requires agreement of the arguments passed
+/// difference if none is audible. The comparison requires agreement of the arguments passed
 /// to each synth tool and of the pitch curve shape in cents.
 ///
 /// Obtaining the UTAU side: render the project in UTAU and, **before closing UTAU**, copy

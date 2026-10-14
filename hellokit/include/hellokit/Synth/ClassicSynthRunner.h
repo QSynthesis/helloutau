@@ -17,7 +17,7 @@ namespace hello::kit {
     ///
     /// The compatibility fallback. Some resamplers require the script to exist, and at least one
     /// reads its contents: moresampler inspects \c temp.bat to determine whether the current
-    /// call is the last one. For such resamplers the script is an input rather than merely a
+    /// call is the last call. For such resamplers the script is an input rather than merely a
     /// means of starting a program, so no runner that omits it can substitute.
     ///
     /// The console remains visible, as in UTAU. The output of a batch plugin is intended to

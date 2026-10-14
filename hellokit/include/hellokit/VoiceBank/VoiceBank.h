@@ -107,8 +107,8 @@ namespace hello::kit {
         /// UTF-8 if the \c oto.ini declares it, whatever the configuration records, because a
         /// program that honors the declaration reads the file in UTF-8 regardless of any record
         /// of this library. An \c oto.ini written in UTF-8 carries the declaration on its first
-        /// line, and one written in any other encoding carries none. An unmodified file is not
-        /// rewritten for this alone.
+        /// line, and an \c oto.ini written in any other encoding carries none. An unmodified
+        /// file is not rewritten for this alone.
         ///
         /// \sa VoiceBankDirectorySource::otoDeclaresUtf8()
         QString charset;
@@ -357,8 +357,8 @@ namespace hello::kit {
         /// \c _ to exclude them.
         ///
         /// \note Which sample is used for an alias that several audio files register is
-        ///       undefined. This implementation returns the first one read, but no caller may
-        ///       rely on it, and no constraint forbids such an alias.
+        ///       undefined. This implementation returns the first sample read, but no caller
+        ///       may rely on it, and no constraint forbids such an alias.
         ///
         /// \warning The result points into this object and must not outlive it.
         const VoiceSample *find(int noteNum, const QString &lyric) const;
@@ -392,7 +392,7 @@ namespace hello::kit {
         QHash<QString, int> m_byAlias;
         QHash<QString, int> m_byStem;
 
-        // The prefix map of the root, which is the one applied to lyrics.
+        // The prefix map of the root, which is applied to lyrics.
         QMap<int, VoicePrefix> m_prefixMap;
     };
 

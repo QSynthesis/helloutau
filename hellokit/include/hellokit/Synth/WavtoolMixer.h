@@ -59,7 +59,7 @@ namespace hello::kit {
             qint64 start = 0;
             /// The number of samples it writes.
             qint64 length = 0;
-            /// The samples of the fragment skipped before the first one written.
+            /// The samples of the fragment skipped before the first sample written.
             qint64 skip = 0;
             /// Whether the call contributes silence, as a rest does.
             bool silent = false;
@@ -87,7 +87,7 @@ namespace hello::kit {
                         qint64 first, qint64 count, qint16 *out);
 
         /// The gain of \a segment at sample \a position within it: linear between the points,
-        /// where of several points at one position the last applies.
+        /// and if several points share a position, the last applies.
         static double gainAt(const Segment &segment, qint64 position);
     };
 

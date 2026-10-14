@@ -734,7 +734,7 @@ private Q_SLOTS:
         QCOMPARE(diagnostics.first().severity, DiagnosticSeverity::Warning);
     }
 
-    // A directory is not created where a file of its name is.
+    // A directory is not created if a file of its name exists.
     void a_directory_is_not_created_over_a_file() {
         write(QStringLiteral("sub/oto.ini"), "b.wav=b,1,2,3,4,5\r\n");
         auto opened = open(root(), QStringLiteral("UTF-8"));
@@ -774,7 +774,7 @@ private Q_SLOTS:
                  QByteArray("#Charset:UTF-8\r\na.wav=a,20,2,3,4,5\r\n"));
     }
 
-    // On a case-sensitive file system, oto.ini would be a second file beside the one UTAU
+    // On a case-sensitive file system, oto.ini would be a second file beside the OTO.INI UTAU
     // reads.
     void a_file_is_written_back_under_the_name_it_was_found_by() {
         write(QStringLiteral("OTO.INI"), "a.wav=a,1,2,3,4,5\r\n");

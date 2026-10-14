@@ -371,7 +371,7 @@ private Q_SLOTS:
         QCOMPARE(readings.mid(1, 3), (QList<int>{190, 0, 0}));
     }
 
-    // The previous note counts relative to this one: its values move by the difference of the
+    // The previous note counts relative to this note: its values move by the difference of the
     // pitches, as far as they reach with the interval after them, and beyond that the curve is
     // 0. UTAU passed these readings for li after la in the tuning comparison of step 5 in
     // docs/Tuning.md, the first 85 ticks before li.

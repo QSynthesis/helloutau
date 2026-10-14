@@ -38,7 +38,7 @@ namespace hello::daw {
     /// Fuzzy matching and ranking of commands by the text typed into the command palette.
     ///
     /// A query matches a text if its characters appear in the text in the same order, ignoring
-    /// case, not necessarily next to each other. Among the ways they can appear, the best one is
+    /// case, not necessarily next to each other. Among the ways they can appear, the best way is
     /// scored: characters that follow each other and characters at the start of a word score
     /// higher, so that "sa" ranks "File: Save" above "Settings: Language".
     class HELLOUTAU_WIDGETS_EXPORT CommandMatcher {

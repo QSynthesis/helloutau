@@ -246,7 +246,7 @@
 - 「编辑 → Note Properties...」（Ctrl+E，同 UTAU 的「选区属性」）一次编辑选中音符的歌词、长度、曲速、力度、调制、辅音速度、先行发声、重叠、STP 与 flags。各栏显示选中音符共同的值，不同时留空并显示「(various)」，都未设时显示「(default)」；只有编辑过的栏才改动，对每个选中音符相同；清空一个数值栏即恢复默认。
 - 以上都经 `ProjectEdits::setNoteProperties()`，各为一个撤销步骤。
 
-**快捷键对照 UTAU**（作者 2026-09-29 要求）：以 UTAU 菜单资源（`res/000.menu.txt`）中的快捷键为准。与我们已有的冲突时保留我们的（作者决定）：Ctrl+W 仍为关闭（UTAU 为「全选不含首尾休止符」），Ctrl+N 仍为新建（UTAU 为下一个音符，Ctrl+B 为上一个音符）。已对齐的有：Ctrl+R 插入休止符（在第一个选中音符之前，或最后一个音符之后，长度为量化单位，同 QSynthesis-Old）、Ctrl+U 音符合并（从第一个选中音符到最后一个，见 `ProjectEdits::combineNotes()`）、F5 播放（与空格相同）、Shift+F5 重播、F7 停止、X 显示音高、Z 显示参数（作者 2026-10-01 指出 UTAU 中显示音高曲线为 X，显示参数为 Z，并去掉了原先的 F4）、Ctrl+E 音符属性、Ctrl+G 编辑音源、Shift+Del 删除（Del 保留），以及 Ctrl+S、Ctrl+Z、Ctrl+C、Ctrl+V、Ctrl+A。`test_Editor` 检验这些键，并检验一个窗口中没有两个命令共用一个键。
+**快捷键对照 UTAU**（作者 2026-09-29 要求）：以 UTAU 菜单资源（`res/000.menu.txt`）中的快捷键为准。与本仓库已有的冲突时保留本仓库的（作者决定）：Ctrl+W 仍为关闭（UTAU 为「全选不含首尾休止符」），Ctrl+N 仍为新建（UTAU 为下一个音符，Ctrl+B 为上一个音符）。已对齐的有：Ctrl+R 插入休止符（在第一个选中音符之前，或最后一个音符之后，长度为量化单位，同 QSynthesis-Old）、Ctrl+U 音符合并（从第一个选中音符到最后一个，见 `ProjectEdits::combineNotes()`）、F5 播放（与空格相同）、Shift+F5 重播、F7 停止、X 显示音高、Z 显示参数（作者 2026-10-01 指出 UTAU 中显示音高曲线为 X，显示参数为 Z，并去掉了原先的 F4）、Ctrl+E 音符属性、Ctrl+G 编辑音源、Shift+Del 删除（Del 保留），以及 Ctrl+S、Ctrl+Z、Ctrl+C、Ctrl+V、Ctrl+A。`test_Editor` 检验这些键，并检验一个窗口中没有两个命令共用一个键。
 
 **音符合并**（作者 2026-10-13 要求，参考作者的 UTAU-Note-Combiner 插件）：合并后的音符的 Mode1 与 Mode2 音高线，在显示上与合并前各音符的音高线同形（`kit::CombinedPitch`，由 `ProjectEdits::combineNotes()` 写入）。两种音高线都合并，与工程当前的模式无关。颤音保留第一个音符的，其余属性同 UTAU 沿用第一个音符的。合并范围内有曲速变化时拒绝合并，因此整段的毫秒与 tick 可以直接换算。
 

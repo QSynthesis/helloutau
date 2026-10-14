@@ -454,7 +454,7 @@ private Q_SLOTS:
     }
 
     // UTAU treats an empty alias as the file name, and the sample is found that way. Filling it
-    // in would write the file name where the author left the field empty.
+    // in would write the file name if the author left the field empty.
     void an_empty_alias_stays_empty() {
         write(QStringLiteral("oto.ini"), "ka.wav=,1,2,3,4,5\n");
         write(QStringLiteral("ka.wav"), "RIFF");

@@ -20,7 +20,7 @@ namespace hello::kit {
             /// Hertz, or 0 for a frame that the format marks unvoiced.
             double frequency = 0;
 
-            /// The amplitude of the frame, if the format records one.
+            /// The amplitude of the frame, if the format records an amplitude.
             std::optional<double> amplitude;
 
             inline bool operator==(const Frame &RHS) const {
@@ -35,7 +35,7 @@ namespace hello::kit {
         /// In the order of time.
         std::vector<Frame> frames;
 
-        /// The average frequency in hertz, if the format records one.
+        /// The average frequency in hertz, if the format records an average frequency.
         std::optional<double> averageFrequency;
 
         /// Returns the average frequency of the frames above 55 Hz on the pitch scale, in

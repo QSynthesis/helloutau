@@ -36,7 +36,7 @@ namespace hello::kit {
             /// their order.
             QList<QByteArray> chunks;
 
-            /// The number of bytes after the last chunk, too few to form one.
+            /// The number of bytes after the last chunk, too few to form a chunk.
             qint64 trailingBytes = 0;
 
             inline bool isEmpty() const {
@@ -62,7 +62,7 @@ namespace hello::kit {
                                                   DiagnosticList &diagnostics);
 
         /// Writes the WAVE file at \a file again without its metadata. The file is replaced only
-        /// once the new one is completely written.
+        /// once the new file is completely written.
         ///
         /// \return whether the file was written, with the reason in \a diagnostics otherwise
         static bool strip(const std::filesystem::path &file, DiagnosticList &diagnostics);

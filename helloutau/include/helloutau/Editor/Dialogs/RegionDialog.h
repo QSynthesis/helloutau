@@ -28,7 +28,7 @@ namespace hello::daw {
 
         /// Sets the listed regions. The current region remains current if it is among them.
         /// Otherwise the region in the same row becomes current, or the last region if the list
-        /// has become shorter. After a removal the region that followed the removed one is
+        /// has become shorter. After a removal the region that followed the removed region is
         /// therefore current.
         void setRegions(const QList<kit::Region> &regions);
 

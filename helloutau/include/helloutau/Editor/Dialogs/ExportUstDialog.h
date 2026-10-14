@@ -17,7 +17,7 @@ namespace hello::daw {
         Q_OBJECT
     public:
         /// \param path the file initially proposed
-        /// \param charset the encoding initially selected, the one of AppSettings
+        /// \param charset the encoding initially selected, that of AppSettings
         ExportUstDialog(const std::filesystem::path &path, const QString &charset,
                         QWidget *parent = nullptr);
         ~ExportUstDialog();

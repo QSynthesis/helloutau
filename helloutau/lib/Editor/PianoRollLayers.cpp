@@ -324,7 +324,7 @@ namespace hello::daw {
             return;
         }
 
-        // The curve of a note reads the two notes before it and the one after.
+        // The curve of a note reads the two notes before it and the note after it.
         const int first = std::max(0, begin - 2);
         const auto notes = m_state->previewedNotes(first, std::min(count, end + 1));
         const auto &timings = m_state->sampleTimings();
@@ -455,8 +455,8 @@ namespace hello::daw {
         }
 
         // The points, also those of the next note, which may lie before it. Those of the note
-        // whose portamento is under the pointer are plain: filled where they only move in
-        // time, and in the selection color where selected. The others are small rings in
+        // whose portamento is under the pointer are plain: filled if they only move in
+        // time, and in the selection color if selected. The others are small rings in
         // faintPointColor, selected ones in the selection color, through which the
         // portamento shows.
         for (int i = begin; i < last; ++i) {
@@ -557,7 +557,7 @@ namespace hello::daw {
         if (!m_state->pointsShown() || !m_state->placements.isEmpty()) {
             return std::nullopt;
         }
-        // The notes around the position, and the next one, whose points may lie before it
+        // The notes around the position, and the note after them, whose points may lie before it
         const auto timeline = m_state->timeline;
         const auto &time = view()->timeAxis();
         const double grip = m_state->pointGrip / time.pixelsPerTick;

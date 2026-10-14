@@ -118,8 +118,8 @@ private Q_SLOTS:
         QVERIFY(QFile::exists(pathOf(QStringLiteral("hello-config.json"))));
     }
 
-    // A text file changed on disk leaves the voice bank modified, also after it is read again;
-    // a change of the audio files alone does not.
+    // A text file changed on disk leaves the voice bank modified, also after it is read again.
+    // A change of the audio files alone does not leave it modified.
     void a_change_on_disk_makes_the_voice_bank_modified() {
         const auto document = open();
         write(QStringLiteral("b.wav"), "RIFF");

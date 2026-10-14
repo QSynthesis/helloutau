@@ -21,8 +21,8 @@ namespace hello::daw {
     /// lyric, the length, the tempo, the intensity, the modulation, the consonant velocity, the
     /// pre-utterance, the overlap, the start point and the flags.
     ///
-    /// A field shows the value the notes share, or stays empty with "(various)" where they
-    /// differ, and "(default)" where they leave it to the default. Only the fields edited
+    /// A field shows the value the notes share, or stays empty with "(various)" if they
+    /// differ, and "(default)" if they leave it to the default. Only the fields edited
     /// change, on every note. If emptied, a field that a note may leave to the default returns
     /// it to the default. See the note properties in docs/Widgets.md.
     class HELLOUTAU_EDITOR_EXPORT NotePropertiesDialog : public QDialog {
@@ -57,8 +57,8 @@ namespace hello::daw {
                                       QWidget *parent = nullptr);
         ~NotePropertiesDialog();
 
-        /// The fields edited, for ProjectEdits::setNoteProperties(). A number that does not read
-        /// as one, or a length that is not positive, is left out.
+        /// The fields edited, for ProjectEdits::setNoteProperties(). A number that does not parse,
+        /// or a length that is not positive, is left out.
         kit::NotePropertyChanges changes() const;
 
         QLineEdit *field(Field field) const;

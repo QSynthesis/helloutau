@@ -141,15 +141,14 @@ namespace hello::kit {
                                               const QList<PortamentoPoint> &points,
                                               DiagnosticList &diagnostics);
 
-        /// Sets the vibrato of each of \a notes to \a vibrato, or removes it where \a vibrato is
+        /// Sets the vibrato of each of \a notes to \a vibrato, or removes it if \a vibrato is
         /// empty. The notes must belong to one session.
         Q_INVOKABLE static bool setVibrato(const QList<NoteRef> &notes,
                                            const std::optional<Vibrato> &vibrato,
                                            DiagnosticList &diagnostics);
 
-        /// Sets the envelope of each of \a notes to \a envelope, or removes it where
-        /// \a envelope is empty, which leaves the default of UTAU. The notes must belong to one
-        /// session.
+        /// Sets the envelope of each of \a notes to \a envelope, or removes it if \a envelope is
+        /// empty, which leaves the default of UTAU. The notes must belong to one session.
         Q_INVOKABLE static bool setEnvelope(const QList<NoteRef> &notes,
                                             const std::optional<Envelope> &envelope,
                                             DiagnosticList &diagnostics);
@@ -160,7 +159,7 @@ namespace hello::kit {
         Q_INVOKABLE static bool scalePitch(const QList<NoteRef> &notes, double portamento,
                                            double vibrato, DiagnosticList &diagnostics);
 
-        /// Sets \a parameter of each of \a notes to \a value, or removes it where \a value is
+        /// Sets \a parameter of each of \a notes to \a value, or removes it if \a value is
         /// empty, which leaves the default of UTAU. The value is written even if it equals the
         /// default. The notes must belong to one session.
         Q_INVOKABLE static bool setParameter(const QList<NoteRef> &notes, NoteParameter parameter,
@@ -189,7 +188,8 @@ namespace hello::kit {
         /// Names a new region of the \a count notes of \a notes from \a index: Note::regions of
         /// the first and Note::regionEnds of the last receive \a name. The names of the other
         /// regions at these notes are kept. Refused for an empty name, a name that contains
-        /// \c |, which separates names in the UST, and an empty range or one beyond the notes.
+        /// \c |, which separates names in the UST, and an empty range or a range beyond the
+        /// notes.
         Q_INVOKABLE static bool nameRegion(const NoteListRef &notes, int index, int count,
                                            const QString &name, DiagnosticList &diagnostics);
 

@@ -75,7 +75,7 @@ private Q_SLOTS:
         QVERIFY(!SynthToolTrust::isAllowed(*m_settings, missing, m_utau));
         QVERIFY(!SynthToolTrust::isAllowed(*m_settings, QString(), m_utau));
 
-        // Also if the settings name the same missing file
+        // The same applies if the settings name the same missing file.
         m_settings->rendering().setResampler(missing);
         QVERIFY(!SynthToolTrust::isAllowed(*m_settings, missing, m_utau));
     }

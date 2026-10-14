@@ -21,8 +21,8 @@ namespace hello::kit {
             return -1;
         }
 
-        // Returns the type of the segment of points in which x lies, the type of the first point
-        // before it and of the last point after it.
+        // Returns the type of the segment that contains x. Before the first point and after the
+        // last, it returns the type of that point.
         PortamentoPoint::Type typeAt(const QList<PortamentoPoint> &points, double x) {
             for (const auto &point : points) {
                 if (x <= point.x) {

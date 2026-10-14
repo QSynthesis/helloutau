@@ -772,7 +772,7 @@ namespace hello::daw {
             high = std::max(high, point.x());
         }
 
-        // The notes along the path, and the next one, which reads its curve before it
+        // The notes along the path, and the note after them, which reads its curve before it
         const auto timeline = m_state->timeline;
         const int count = timeline->noteCount();
         auto [begin, end] = timeline->notesBetween(low, high);

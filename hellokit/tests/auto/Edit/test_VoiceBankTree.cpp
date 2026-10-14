@@ -59,8 +59,8 @@ private Q_SLOTS:
         m_dir.reset();
     }
 
-    // The voice bank that a session assembles from its tree for each save equals the one read,
-    // without the directories that cannot be saved.
+    // The voice bank that a session assembles from its tree for each save equals the voice bank
+    // read, without the directories that cannot be saved.
     void a_voice_bank_survives_its_tree() {
         auto opened = openRichBank();
         QVERIFY(opened.has_value());

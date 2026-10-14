@@ -22,7 +22,7 @@ namespace hello::kit {
         ///
         /// Retained so that a round trip through \c .ust preserves it. The UTAU interface
         /// exposes no field for it, and it cannot be stored in \c Note::userData , because each
-        /// value there is written as a separate entry, whereas this one is part of \c VBR.
+        /// value there is written as a separate entry, whereas the intensity is part of \c VBR.
         double intensity = 0;
 
         inline bool operator==(const Vibrato &RHS) const {

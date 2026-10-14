@@ -14,7 +14,7 @@ namespace hello::kit {
 
     /// The pitch curve of a note as UTAU passes it to the resampler, in cents relative to the
     /// note, in two parts: the portamento of the Mode2 points and the vibrato. Both include the
-    /// contributions of the neighboring notes: the previous note before the start of this one,
+    /// contributions of the neighboring notes: the previous note before the start of this note,
     /// and the next note from its first point on. The contribution of this note alone is given
     /// by ownPortamentoAt() and ownVibratoAt().
     ///
@@ -31,7 +31,7 @@ namespace hello::kit {
     ///   fading, where it reaches into a neighbor.
     ///
     /// Mode1 values (Note::pitchBend) are not part of this curve, as in stdutau. The curve of
-    /// Mode1, which UTAU uses instead of this one when the project turns Mode2 off, is given by
+    /// Mode1, which UTAU uses instead of this curve when the project turns Mode2 off, is given by
     /// mode1At() and mode1Values().
     class HELLOKIT_SYNTH_EXPORT PitchCurve {
     public:
@@ -65,7 +65,7 @@ namespace hello::kit {
         /// range only.
         std::pair<double, double> pointSpan() const;
 
-        /// The timing of the samples of the note and the next one, in milliseconds, as
+        /// The timing of the samples of the note and the next note, in milliseconds, as
         /// reconciled with their neighbors (SynthStep::preUtterance and the like).
         struct Timing {
             double preUtterance = 0;
@@ -117,7 +117,7 @@ namespace hello::kit {
         struct Impact {
             double portamento = 0;
             double vibrato = 0;
-            // The next note counted relative to this one
+            // The next note counted relative to this note
             double shift = 0;
         };
 
@@ -131,7 +131,7 @@ namespace hello::kit {
         std::optional<Part> m_next;
         double m_tempo;
 
-        // The Mode1 values of the previous note and this one
+        // The Mode1 values of the previous note and this note
         PreviousBend m_previousBend;
         std::optional<PitchBend> m_bend;
 

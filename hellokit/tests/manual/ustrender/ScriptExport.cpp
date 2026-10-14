@@ -109,8 +109,8 @@ namespace {
             concatenation.outputs = {output};
             add(concatenation);
 
-            // What remains once everything has run: the track and the database of moresampler
-            // in each directory of the samples
+            // The track and the database of moresampler in each directory of the samples remain
+            // after the run
             if (!snapshotDirectory.isEmpty()) {
                 finalCopies.push_back(
                     {output, join(snapshotDirectory, QStringLiteral("final_") + nameOf(output))});

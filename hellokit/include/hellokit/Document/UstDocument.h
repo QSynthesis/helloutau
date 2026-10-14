@@ -116,7 +116,7 @@ namespace hello::kit {
         /// Decodes the data read by open() in \a charset.
         ///
         /// The control note is removed. Otherwise the next file written would contain a second
-        /// one, and repeated round trips would accumulate leading control notes.
+        /// control note, and repeated round trips would accumulate leading control notes.
         std::optional<Project> toProject(const QString &charset, DiagnosticList &diagnostics) const;
 
         /// \name Notes

@@ -26,8 +26,8 @@ namespace hello::kit {
     /// produced by importers.
     ///
     /// \note stdutau defines its own \c DEFAULT_LYRIC , which serves a different purpose. That
-    ///       constant describes UST behavior. This one is a HelloUtau decision, and the two may
-    ///       differ.
+    ///       constant describes UST behavior. This constant is a HelloUtau decision, and the two
+    ///       may differ.
     inline constexpr char defaultLyric[] = "la";
 
     /// The lyric written for a rest. UTAU also reads \c r and an empty lyric as rests, which

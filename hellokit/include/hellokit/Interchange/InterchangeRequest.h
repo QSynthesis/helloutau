@@ -67,7 +67,8 @@ namespace hello::kit {
     ///
     /// Both a user who closed the selector and a file that could not be read leave \c project
     /// empty, and the two require opposite handling by the caller. A cancellation is not an
-    /// error and must not produce a message box. A read failure is an error and must.
+    /// error and must not produce a message box. A read failure is an error and must produce a
+    /// message box.
     struct ImportResult {
         std::optional<Project> project;
         bool cancelled = false;

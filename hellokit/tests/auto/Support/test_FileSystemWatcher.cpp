@@ -236,7 +236,7 @@ private Q_SLOTS:
         QVERIFY(reported(collect(spy), at(QStringLiteral("a/b"))));
     }
 
-    // Where file events are unavailable, the request is ignored, so that the program is not
+    // If file events are unavailable, the request is ignored, so that the program is not
     // started with an option it rejects and monitoring continues.
     void file_events_are_ignored_where_unavailable() {
         if (FileSystemWatcher::fileEventsAvailable()) {

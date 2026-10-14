@@ -9,7 +9,7 @@ namespace hello::kit {
 
     namespace {
 
-        // The format tags of WAVEFORMATEX, and the one that defers to a subformat
+        // The format tags of WAVEFORMATEX, and the tag that defers to a subformat
         constexpr quint16 FormatPcm = 0x0001;
         constexpr quint16 FormatFloat = 0x0003;
         constexpr quint16 FormatExtensible = 0xFFFE;

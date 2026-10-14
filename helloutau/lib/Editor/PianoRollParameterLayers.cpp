@@ -15,7 +15,7 @@ namespace hello::daw {
     namespace {
 
         // Returns a left press in the parameter area at position. Its drag runs the gesture that
-        // make returns for the operation of the DragScene of ParameterViewModifiers, and its
+        // \a make returns for the operation of the DragScene of ParameterViewModifiers, and its
         // click does nothing.
         template <class Make>
         std::unique_ptr<SceneGesture> parameterPress(PianoRollState *state, QPointF position,

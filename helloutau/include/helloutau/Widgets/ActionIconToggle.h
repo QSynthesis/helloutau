@@ -14,7 +14,7 @@ namespace hello::daw {
     /// action checkable, since a menu draws a check mark beside a checked action. See
     /// ThemeIcon::checkedLook().
     ///
-    /// An icon assigned to the action later, as QActionKit assigns one after an update of the
+    /// An icon assigned to the action later, as QActionKit assigns an icon after an update of the
     /// icons or layouts, replaces the untoggled icon, and its checked files are shown while
     /// toggled.
     class HELLOUTAU_WIDGETS_EXPORT ActionIconToggle : public QObject {

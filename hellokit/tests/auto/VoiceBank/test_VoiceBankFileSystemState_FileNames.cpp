@@ -340,7 +340,7 @@ private Q_SLOTS:
         QVERIFY(!hasError(diagnostics));
     }
 
-    // A record without lists restores every name, a new one as well, and has no undetermined
+    // A record without lists restores every name, a new name as well, and has no undetermined
     // name. A name that does not restore cannot be misdecoded, and is used as it is silently.
     void a_record_without_lists_restores_every_name() {
         writeConfig(QString(), japaneseOnChinese());
@@ -358,7 +358,7 @@ private Q_SLOTS:
         QVERIFY(diagnostics.isEmpty());
     }
 
-    // The user decided that the names are correct, a new one as well.
+    // The user decided that the names are correct, a new name as well.
     void a_record_without_encodings_restores_nothing() {
         writeConfig(QString(), VoiceBankConfiguration::FileNameEncoding());
         write(kMisdecodedA + QStringLiteral(".wav"), "RIFF");

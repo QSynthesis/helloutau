@@ -28,8 +28,8 @@ namespace hello::kit {
     /// vector. The resampler calls are mutually independent and run on several threads. To
     /// generate a map again, the caller first removes it with FrequencyFormats::removeMaps().
     ///
-    /// \warning The resampler is always the synth tool of the settings of the host, never one
-    ///          that a project specifies. See SynthToolProcess.
+    /// \warning The resampler is always the synth tool of the settings of the host, never a
+    ///          synth tool that a project specifies. See SynthToolProcess.
     class HELLOKIT_SYNTH_EXPORT FrequencyMapGenerator {
         Q_DECLARE_TR_FUNCTIONS(hello::kit::FrequencyMapGenerator)
     public:

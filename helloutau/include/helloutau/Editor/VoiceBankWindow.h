@@ -46,7 +46,7 @@ namespace hello::daw {
         kit::VoiceBankDocument *document() const;
 
         /// The actions of the window by the ids of the action extensions, those of plugins
-        /// included; see ActionContribution.
+        /// included, see ActionContribution.
         QAK::WidgetActionContext *actionContext() const;
 
         /// The folders: the item of all of them, then the root with its subfolders. Choosing
@@ -83,7 +83,7 @@ namespace hello::daw {
 
         /// Shows the entry that sings \a lyric at \a noteNum, found as the synthesis finds it
         /// (kit::VoiceBank::find()) in the voice bank as edited: chooses its folder in the tree
-        /// and selects its row, clearing the search. Returns whether one was found.
+        /// and selects its row, clearing the search. Returns whether an entry was found.
         bool showEntryFor(int noteNum, const QString &lyric);
 
         /// Compares the voice bank with the disk now. The window also compares them when a file

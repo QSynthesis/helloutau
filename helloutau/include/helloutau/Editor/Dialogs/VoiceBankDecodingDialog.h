@@ -127,7 +127,7 @@ namespace hello::daw {
         const std::optional<kit::MisdecodedNameQuestion> &misdecodedNameQuestion(int index) const;
 
         /// Chooses the encodings of the file names of folder \a index , a folder without a
-        /// record, over the proposed ones.
+        /// record, over the proposed encodings.
         void setFileNameEncodings(int index, const QString &original, const QString &misdecodedAs);
 
         /// The names of folder \a index checked as misdecoded.
@@ -146,7 +146,7 @@ namespace hello::daw {
         /// The file names of one folder.
         struct FileNames {
             std::optional<kit::MisdecodedNameQuestion> question;
-            /// The encodings chosen by the user, empty for the proposed ones.
+            /// The encodings chosen by the user, empty for the proposed encodings.
             QString original;
             QString misdecodedAs;
             QStringList misdecoded;

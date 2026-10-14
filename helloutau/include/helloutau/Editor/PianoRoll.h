@@ -251,7 +251,7 @@ namespace hello::daw {
         /// @{
 
         /// Removes the selected notes, or the selected points. Each note keeps two points at
-        /// least: where fewer would remain, its first and last points stay.
+        /// least: if fewer would remain, its first and last points stay.
         bool removeSelected(kit::DiagnosticList &diagnostics);
         bool transposeSelected(int semitones, kit::DiagnosticList &diagnostics);
 

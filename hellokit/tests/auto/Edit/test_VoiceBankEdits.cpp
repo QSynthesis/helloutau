@@ -213,7 +213,7 @@ private Q_SLOTS:
         }
     }
 
-    // A prefix is written into the existing prefix.map, or into a new one if there is none.
+    // A prefix is written into the existing prefix.map, or into a new prefix.map if there is none.
     void a_prefix_is_set_and_removed() {
         DiagnosticList diagnostics;
         QVERIFY(VoiceBankEdits::setPrefix(bank(), 61, VoicePrefix{QStringLiteral("x"), {}},

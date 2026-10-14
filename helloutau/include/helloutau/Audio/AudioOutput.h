@@ -52,7 +52,7 @@ namespace hello::daw {
         void finished();
         /// Reports device loss or an output error after stopping this source, without
         /// finished(). \a heardPosition is heardPosition() at the moment of the loss, so that the
-        /// receiver can go on from there.
+        /// receiver can resume from that position.
         void failed(const QString &reason, std::optional<double> heardPosition);
 
     private:

@@ -13,8 +13,8 @@ namespace hello::kit {
     /// The positions of the notes of a track in ticks and in milliseconds.
     ///
     /// A note has no stored position: it starts where the preceding note ends, and its tempo
-    /// applies from that note until the next note that sets one, see \c Note::tempo . This class
-    /// derives both from the lengths and tempos, and converts between ticks and milliseconds
+    /// applies from that note until the next note that sets a tempo, see \c Note::tempo . This
+    /// class derives both from the lengths and tempos, and converts between ticks and milliseconds
     /// within the track. A quarter note is \c ticksPerQuarter ticks.
     ///
     /// Built from values rather than from a \c Project , so that an editor can build it from its

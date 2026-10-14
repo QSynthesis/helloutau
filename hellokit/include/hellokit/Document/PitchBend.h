@@ -34,7 +34,7 @@ namespace hello::kit {
                               double tick, double tempo);
 
         /// \a bend with \a values drawn over it, the first at \a tick from the start of the note
-        /// and the others every five ticks after it, at \a tempo; \a previous is that of
+        /// and the others every five ticks after it, at \a tempo. \a previous is that of
         /// curveAt().
         ///
         /// Without values, \a bend starts at \a tick, to a thousandth of a millisecond as UTAU
@@ -60,7 +60,7 @@ namespace hello::kit {
         static PitchBend fromJson(const QJsonObject &object);
     };
 
-    /// What the Mode1 curve of a note takes from the note before it (PitchBend::curveAt()).
+    /// The Mode1 values that a note takes from the note before it (PitchBend::curveAt()).
     struct HELLOKIT_DOCUMENT_EXPORT PreviousBend {
         std::optional<PitchBend> bend; ///< its Mode1 values
         int length = 0;                ///< its length in ticks
@@ -68,7 +68,7 @@ namespace hello::kit {
         /// point (PitchCurve)
         double offset = 0;
 
-        /// That of \a previous for \a note.
+        /// Returns the values that \a previous holds for \a note.
         static PreviousBend of(const Note &previous, const Note &note);
     };
 

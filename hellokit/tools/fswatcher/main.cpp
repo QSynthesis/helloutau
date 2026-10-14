@@ -9,9 +9,9 @@
 
 // hello-fswatcher: reports directories under a set of roots that may have changed.
 //
-// Started by hello::kit::FileSystemWatcher, which communicates with it over standard input and
-// output as specified in Protocol.h. The roots are received only on standard input, never from
-// the command line, the environment or a file. The only arguments are options.
+// It is started by hello::kit::FileSystemWatcher, which communicates with it over standard input
+// and output as specified in Protocol.h. The roots are received only on standard input, never
+// from the command line, the environment or a file. The only arguments are options.
 
 namespace {
 
@@ -88,7 +88,8 @@ Example (Linux; lines marked > are input, lines marked < are output)
 }
 
 int main(int argc, char **argv) {
-    // Checked before anything is written to standard output, which is reserved for the protocol.
+    // The arguments are checked before anything is written to standard output, which is reserved
+    // for the protocol.
     bool fileEvents = false;
     for (int i = 1; i < argc; ++i) {
         const std::string_view argument = argv[i];

@@ -699,14 +699,14 @@ namespace hello::daw {
             dialog.exec();
         }
 
-        // How far each note is rendered, on the ruler: as the background renders them, or by
-        // the fragments in the cache (the render states in docs/Widgets.md)
         // The status of a plan made in the background, which counts notes as UTAU does while
         // it renders
         static QString preparingText(int done, int total) {
             return ProjectWindow::tr("Preparing notes (%1/%2)").arg(done).arg(total);
         }
 
+        // How far each note is rendered, on the ruler: as the background renders them, or by
+        // the fragments in the cache (the render states in docs/Widgets.md)
         void updateRenderStates() {
             QList<PianoRoll::RenderState> states;
             soundingNotes = 0;
@@ -1282,7 +1282,8 @@ namespace hello::daw {
                 quantizationBoxes.removeAll(nullptr);
                 quantizationBoxes.push_back(box);
                 // The user may reorder toolbar items, so the tempo widget can be created before
-                // this one. Keep both controls at the same height regardless of that order.
+                // the quantization box. Keep both controls at the same height regardless of that
+                // order.
                 const auto height = box->sizeHint().height();
                 for (const auto &tempo : std::as_const(tempoBoxes)) {
                     if (tempo) {
@@ -1346,8 +1347,8 @@ namespace hello::daw {
         }
 
         // Shows the time signature of the project in the tool bars and the piano roll. The piano
-        // roll is updated only if the time signature differs from the one it shows, because the
-        // update refreshes the whole scene.
+        // roll is updated only if the time signature differs from that shown in the roll,
+        // because the update refreshes the whole scene.
         void showTimeSignature() {
             const auto shown = timeSignature();
             timeSignatureButtons.removeAll(nullptr);
@@ -2346,8 +2347,6 @@ namespace hello::daw {
             }
         }
 
-        // The files last opened, numbered, the latest first, and a command that clears them.
-        // A file that is gone is reported and removed from the list when chosen.
         // Opens the voice bank of the project in its window, as the UTAU folder of the settings
         // resolves it, or returns null after reporting the reason to the user.
         VoiceBankWindow *editVoiceBank() {
@@ -2387,6 +2386,8 @@ namespace hello::daw {
             }
         }
 
+        // The files last opened, numbered, the latest first, and a command that clears them.
+        // A file that is gone is reported and removed from the list when chosen.
         void fillRecentMenu() {
             stdc_decl_t;
             editor->fillRecentMenu(recentMenu, &decl);

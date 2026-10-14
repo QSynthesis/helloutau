@@ -175,8 +175,8 @@ namespace hello::daw {
                     if (!impl.cursorEnabled) {
                         return;
                     }
-                    const bool disabled = impl.noteModifiers.isHeld(
-                        NoteViewModifiers::DisableNoteSnap, modifiers);
+                    const bool disabled =
+                        impl.noteModifiers.isHeld(NoteViewModifiers::DisableNoteSnap, modifiers);
                     const double at = std::max<double>(0, double(impl.snapped(tick, disabled)));
                     const bool moved = at != impl.cursor;
                     setCursorPosition(at);
@@ -443,19 +443,18 @@ namespace hello::daw {
             }
         }
         auto icon = image.isNull() ? style()->standardIcon(QStyle::SP_FileIcon) : QIcon(image);
-        const bool leftOut = impl.voiceBank && std::any_of(
-                                               impl.voiceBank->directories().cbegin(),
-                                               impl.voiceBank->directories().cend(),
-                                               [](const auto &directory) { return directory.leftOut; });
+        const bool leftOut =
+            impl.voiceBank && std::any_of(impl.voiceBank->directories().cbegin(),
+                                          impl.voiceBank->directories().cend(),
+                                          [](const auto &directory) { return directory.leftOut; });
         if (leftOut) {
             const auto size = impl.voiceBankButton->iconSize();
             auto pixmap = icon.pixmap(size);
             QPainter painter(&pixmap);
             const auto warningSize = QSize(size.width() / 2, size.height() / 2);
-            painter.drawPixmap(size.width() - warningSize.width(),
-                               size.height() - warningSize.height(),
-                               style()->standardIcon(QStyle::SP_MessageBoxWarning).pixmap(
-                                   warningSize));
+            painter.drawPixmap(
+                size.width() - warningSize.width(), size.height() - warningSize.height(),
+                style()->standardIcon(QStyle::SP_MessageBoxWarning).pixmap(warningSize));
             icon = QIcon(pixmap);
         }
         impl.voiceBankButton->setIcon(icon);

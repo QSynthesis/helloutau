@@ -41,7 +41,7 @@ namespace hello::daw {
         explicit SettingsDialog(SettingCatalog *catalog, QWidget *parent = nullptr);
         ~SettingsDialog() override;
 
-        /// Shows the page of \a id, and returns whether there is one.
+        /// Shows the page of \a id, and returns whether the page exists.
         bool selectPage(const QString &id);
         SettingPage *currentPage() const;
 

@@ -243,7 +243,7 @@ namespace hello::daw {
         /// an instance of kit::ExitLauncher, no restart is offered.
         ///
         /// \return whether the application quits to start again. A user who declines, or who
-        ///         cancels the closing of a window, restarts later by hand.
+        ///         cancels the closing of a window, restarts later manually.
         bool offerRestart(QWidget *parent);
 
         /// Returns the check for newer releases of the application.

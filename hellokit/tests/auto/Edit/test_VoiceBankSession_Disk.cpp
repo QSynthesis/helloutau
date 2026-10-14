@@ -566,7 +566,7 @@ private Q_SLOTS:
                  QString::fromUtf8("\xe8\x91\x9b\xe5\xb9\xb3"));
     }
 
-    // Where the root cannot be written again, the voice bank is saved elsewhere and edited there
+    // If the root cannot be written again, the voice bank is saved elsewhere and edited there
     // from now on. Every other file is copied by default, including the directories that are not
     // in the tree, which remain excluded.
     void saving_as_moves_the_session_to_the_new_folder() {

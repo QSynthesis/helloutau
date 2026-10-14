@@ -91,7 +91,7 @@
                 category="Set at Pointer" shortcut="4" />
         <action id="helloutau.voiceBank.setCutoff" text="C&amp;utoff" category="Set at Pointer"
                 shortcut="5" />
-        <!-- The audio file of the current entry, or a stop of what plays -->
+        <!-- The audio file of the current entry, or a stop of the playback -->
         <action id="helloutau.voiceBank.playAudio" text="&amp;Play Audio File" category="Playback"
                 shortcut="Space" />
         <action id="helloutau.voiceBank.playSpan" text="Play from &amp;Offset to Cutoff"

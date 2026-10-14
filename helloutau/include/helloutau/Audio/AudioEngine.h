@@ -24,7 +24,7 @@ namespace hello::daw {
     /// no source plays.
     ///
     /// The stream is closed when the last source stops, so that a source is normally the first
-    /// one of its stream, as DeviceClock requires. The next source opens the stream again.
+    /// source of its stream, as DeviceClock requires. The next source opens the stream again.
     class HELLOUTAU_AUDIO_EXPORT AudioEngine : public QObject {
         Q_OBJECT
     public:

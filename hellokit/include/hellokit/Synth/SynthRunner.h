@@ -32,7 +32,8 @@ namespace hello::kit {
         /// Whether the track file was written.
         bool rendered = false;
 
-        /// Whether the render stopped on request. Not a failure, and not to be reported as one.
+        /// Whether the render stopped on request. Not a failure, and not to be reported as a
+        /// failure.
         bool cancelled = false;
 
         /// \name Note counts by outcome

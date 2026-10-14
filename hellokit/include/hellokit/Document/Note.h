@@ -57,7 +57,7 @@ namespace hello::kit {
 
         QString label;
 
-        /// \c $direct of UTAU. With any value but an empty one, the wavtool appends the sample
+        /// \c $direct of UTAU. With any value but an empty string, the wavtool appends the sample
         /// of the voice bank itself, without the resampler. See docs/Synth.md.
         QString direct;
 

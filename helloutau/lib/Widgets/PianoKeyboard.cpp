@@ -100,7 +100,7 @@ namespace hello::daw {
                 painter.fillRect(QRectF(0, top, width() * BlackKeyLength, bottom - top),
                                  blackKeyColor());
             }
-            // White keys are separated where no black key lies between them, below C and F.
+            // White keys are separated if no black key lies between them, below C and F.
             const int degree = (key % 12 + 12) % 12;
             if (degree == 0 || degree == 5) {
                 painter.setPen(lineColor());

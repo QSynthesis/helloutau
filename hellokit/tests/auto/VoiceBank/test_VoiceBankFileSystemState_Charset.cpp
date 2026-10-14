@@ -216,7 +216,7 @@ private Q_SLOTS:
         QVERIFY(diagnostics.isEmpty());
     }
 
-    // The declaration determines the encoding of the entire directory, over the one that the
+    // The declaration determines the encoding of the entire directory, over the encoding that the
     // configuration records, and the disagreement is reported. A file in another encoding reads
     // with U+FFFD in place of its invalid bytes.
     void the_declaration_determines_the_encoding_of_the_directory() {
@@ -646,8 +646,8 @@ private Q_SLOTS:
         QVERIFY(diagnostics.isEmpty());
     }
 
-    // A directory left out has no known encoding, so when it is read again it takes the one that
-    // its configuration records by then, without a selector.
+    // A directory left out has no known encoding, so when it is read again it takes the encoding
+    // that its configuration records by then, without a selector.
     void a_directory_left_out_takes_a_recorded_encoding_when_read_again() {
         write(QStringLiteral("oto.ini"), "a.wav=" + kShiftJisA + ",1,2,3,4,5\r\n");
 

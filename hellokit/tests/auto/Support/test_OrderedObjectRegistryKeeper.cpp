@@ -54,7 +54,7 @@ private Q_SLOTS:
     }
 
     // An instance whose ID differs from the name of its entry would be found under another name
-    // than the one it was registered under. A null instance cannot be used.
+    // than the name it was registered under. A null instance cannot be used.
     void an_instance_under_another_name_and_a_null_instance_are_rejected() {
         OrderedObjectRegistryKeeper<Widget> widgets("widget");
         QTest::ignoreMessage(QtWarningMsg,

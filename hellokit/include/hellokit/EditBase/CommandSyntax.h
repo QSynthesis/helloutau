@@ -51,7 +51,8 @@ namespace hello::kit::edit {
     ///   next whitespace and contains no double quote.
     /// - A string, which is a JSON string, with the escapes of JSON.
     /// - A verbatim string, which begins with <tt>\@"</tt> and ends at the next double quote
-    ///   that is not doubled. It contains no escapes, and two double quotes denote one.
+    ///   that is not doubled. It contains no escapes, and two double quotes denote a single
+    ///   double quote.
     /// - A structure, which is a JSON object or array and may contain whitespace.
     ///
     /// The quoting and escaping of strings and structures are those of JSON, therefore a value of

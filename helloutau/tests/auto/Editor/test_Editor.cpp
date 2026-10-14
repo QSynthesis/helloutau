@@ -792,7 +792,8 @@ private Q_SLOTS:
         QVERIFY(!roll->lyricSearch().isValid());
     }
 
-    // Copy enables Paste Parameters, whose dialog chooses what to paste onto the selection.
+    // Copy enables Paste Parameters, whose dialog chooses the parameters to paste onto the
+    // selection.
     void parameters_are_pasted_through_the_menu() {
         const auto e = editor();
         const auto window = e->openFile(savedProject(m_dir, "p.usth"));
@@ -1352,8 +1353,8 @@ private Q_SLOTS:
         e->settings().rendering().setThreadCount(0);
     }
 
-    // The shortcuts of UTAU (its menu resource) where they do not clash with ours, and no key
-    // for two commands of a window.
+    // The shortcuts of UTAU (its menu resource) if they do not clash with the shortcuts of the
+    // editor, and no key for two commands of a window.
     void the_shortcuts_follow_utau() {
         const auto e = editor();
         const auto window = e->newWindow();
@@ -2001,7 +2002,8 @@ private Q_SLOTS:
                             "c.wav=cc,0,0,0,0,0\r\n"));
     }
 
-    // Insert, Duplicate, Include and Delete each make one undo step and select what they made.
+    // Insert, Duplicate, Include and Delete each make one undo step and select the entries they
+    // made.
     void the_entry_table_inserts_duplicates_includes_and_removes() {
         QTemporaryDir dir;
         const auto bank = voiceBank(dir);
@@ -2479,7 +2481,7 @@ private Q_SLOTS:
                 return QList<bool>(wavs.size(), false);
             }
             std::optional<kit::FrequencyMap> read(const fs::path &, int,
-                                                    kit::DiagnosticList &) const override {
+                                                  kit::DiagnosticList &) const override {
                 return std::nullopt;
             }
         };
@@ -3919,10 +3921,10 @@ private Q_SLOTS:
             }
             ProjectWindow *window = nullptr;
             result.second = dialogsDuring([&] { window = e->openFile(path); });
-            const auto renderTrack = window ? declaredActionOf(*e, window,
-                                                               QStringLiteral(
-                                                                   "helloutau.playback.renderTrack"))
-                                            : nullptr;
+            const auto renderTrack =
+                window
+                    ? declaredActionOf(*e, window, QStringLiteral("helloutau.playback.renderTrack"))
+                    : nullptr;
             if (!renderTrack) {
                 return result;
             }

@@ -21,8 +21,8 @@ namespace hello::kit::misdecodedNames {
     struct Inference {
         /// The record with the encodings and without lists
         VoiceBankConfiguration::FileNameEncoding record;
-        /// The number of \a missing entries that a restored name matches, zero if no pair matches
-        /// an entry and the pair is preset
+        /// The number of \a missing entries that a restored name matches, zero if no entry is
+        /// matched, in which case the pair is a preset
         int matched = 0;
     };
 

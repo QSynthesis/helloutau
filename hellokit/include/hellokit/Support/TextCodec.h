@@ -97,8 +97,8 @@ namespace hello::kit {
         ///
         /// \warning **Escaping doubles every backslash, even if nothing else is
         ///          escaped.** Otherwise an escape sequence present in the text could not be
-        ///          distinguished from one inserted by escaping, and a lyric containing
-        ///          <tt>\\u0041</tt> would be read back as \c A.
+        ///          distinguished from an escape sequence inserted by escaping, and a lyric
+        ///          containing <tt>\\u0041</tt> would be read back as \c A.
         ///
         /// \warning **Applies only to files written by HelloUtau in an encoding other than
         ///          UTF-8.** A UST from UTAU or another editor does not use this scheme, and

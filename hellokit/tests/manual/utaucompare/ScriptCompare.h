@@ -36,7 +36,7 @@ namespace utaucompare {
         /// Every compared pitch value, counted by its deviation in cents. The worst note shows
         /// the maximum deviation, and this histogram shows how typical it is.
         std::vector<std::int64_t> readings;
-        /// Arguments that differ in text but not in value, where UTAU rounded a measurement on
+        /// Arguments that differ in text but not in value, if UTAU rounded a measurement on
         /// output. Counted rather than listed, because they do not affect the render, but a
         /// report that omitted them would conceal how its result was obtained.
         int spelling = 0;

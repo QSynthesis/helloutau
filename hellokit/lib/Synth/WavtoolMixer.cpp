@@ -145,7 +145,7 @@ namespace hello::kit {
         if (points.isEmpty()) {
             return 0;
         }
-        // From the last point at or before the position toward the next one, so that of several
+        // From the last point at or before the position toward the next point, so that of several
         // points at one position the last applies there: an envelope whose first two points are
         // both at 0 has the volume of the second from the first sample on.
         int from = -1;

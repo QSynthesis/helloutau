@@ -303,7 +303,7 @@ private Q_SLOTS:
     // Measured in UTAU: a relative path is relative to the directory of utau.exe, not to the
     // project file or the voice directory. See docs/claude/utau-voicedir-cachedir.md.
     void a_voice_dir_resolves_as_utau_resolves_it() {
-        // A voice folder that does not exist is skipped, so this one must exist.
+        // A voice folder that does not exist is skipped, so this voice folder must exist.
         QTemporaryDir dir;
         const auto utau = fs::path(dir.path().toStdU16String()) / u"utau";
         fs::create_directories(utau / u"voice");
@@ -411,14 +411,14 @@ private Q_SLOTS:
     // every platform. Shell metacharacters such as & are valid in file names.
     void an_output_file_is_checked_by_the_naming_conventions_of_windows() {
         for (const auto valid :
-             {u"", u"out.wav", u"C:\\songs\\out.wav", u"C:out.wav", u"..\\out.wav",
-              u"sub/out.wav", u"a & b.wav", u"console.wav", u"100% (1).wav"}) {
+             {u"", u"out.wav", u"C:\\songs\\out.wav", u"C:out.wav", u"..\\out.wav", u"sub/out.wav",
+              u"a & b.wav", u"console.wav", u"100% (1).wav"}) {
             QVERIFY2(Project::isValidOutputFile(valid), qPrintable(QString::fromUtf16(valid)));
         }
         for (const auto invalid :
              {u"a|b.wav", u"a?b.wav", u"a*.wav", u"a\"b.wav", u"a<b.wav", u"a>b.wav", u"ab:c.wav",
-              u"sub\\a:b.wav", u"con.wav", u"CON", u"sub\\com1.txt", u"lpt9", u"nul .wav", u"out.wav.",
-              u"out.wav ", u"dir.\\out.wav", u"line\nbreak.wav", u"C:\\a\tb.wav"}) {
+              u"sub\\a:b.wav", u"con.wav", u"CON", u"sub\\com1.txt", u"lpt9", u"nul .wav",
+              u"out.wav.", u"out.wav ", u"dir.\\out.wav", u"line\nbreak.wav", u"C:\\a\tb.wav"}) {
             QVERIFY2(!Project::isValidOutputFile(invalid), qPrintable(QString::fromUtf16(invalid)));
         }
     }

@@ -74,7 +74,9 @@ namespace hello::kit::edit {
         /// The number of nested transactions in progress, 0 if none.
         int depth = 0;
 
-        /// Whether a nested transaction ended without commit, which discards the outermost one.
+        /// Whether a nested transaction ended without commit, which discards the outermost
+        /// transaction.
+
         bool discarded = false;
 
         /// Whether the transaction in progress brings in content read from a file, which is not

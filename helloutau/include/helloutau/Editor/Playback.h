@@ -52,7 +52,7 @@ namespace hello::daw {
             Stopped,
             Rendering,
             Playing,
-            /// Stopped where it was, to go on from there with resume(), or with a preview from
+            /// Stopped where it was, to continue from there with resume(), or with a preview from
             /// position() for a paused preview
             Paused,
         };
@@ -113,8 +113,8 @@ namespace hello::daw {
         ///
         /// Notes are resampled around the playback position and concatenated in the process, see
         /// kit::RealtimeSynth, whose fragments are kept for the next preview. When a note is not
-        /// yet rendered, playback waits: isBuffering() holds and position() stands still. An edit
-        /// takes effect through updatePlan().
+        /// yet rendered, playback waits: isBuffering() returns true and position() does not
+        /// advance. An edit takes effect through updatePlan().
         ///
         /// \a synth tools must name both synth tools, although the preview runs no wavtool, so that
         /// every playback mode requires the synth tools that Render Track requires.

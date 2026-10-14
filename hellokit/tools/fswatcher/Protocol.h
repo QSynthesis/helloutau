@@ -9,9 +9,8 @@
 /// output. The usage text in main.cpp repeats it and must be kept in sync.
 ///
 /// Each message is one line of UTF-8 text. In paths, \c % , line feed and carriage return are
-/// encoded as \c %25 , \c %0A and \c %0D , because a file name may contain a line break where
-/// the system permits one, which a line-based protocol would otherwise read as the end of the
-/// message.
+/// encoded as \c %25 , \c %0A and \c %0D , because some systems permit a line break in a file
+/// name, which a line-based protocol would otherwise read as the end of the message.
 ///
 /// **Input**, from the client:
 ///

@@ -13,7 +13,7 @@ namespace hello::kit {
 
     /// The timing of the sample of a note as the synthesis uses it, in milliseconds.
     ///
-    /// The pre-utterance and the overlap are those of the oto entry, or of the note where it
+    /// The pre-utterance and the overlap are those of the oto entry, or of the note if it
     /// gives them, scaled by the velocity. Where the previous note is too short for them, both
     /// shrink in proportion, and the start point grows by the amount that the pre-utterance lost.
     /// The rules are those of stdutau (\c correctedTiming() in \c synth.cpp), and a test
@@ -28,7 +28,7 @@ namespace hello::kit {
         double startPoint = 0;
 
         /// The timings of \a notes, whose tempos \a tempos gives, with the oto entries of
-        /// \a bank; without a bank, or for a lyric it has no sample for, the entry is empty.
+        /// \a bank. Without a bank, or for a lyric it has no sample for, the entry is empty.
         static QList<SampleTiming> of(const QList<Note> &notes, const TempoMap &tempos,
                                       const VoiceBank *bank);
     };

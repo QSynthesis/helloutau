@@ -16,7 +16,7 @@ namespace hello::kit {
     /// break terminates the line, and no escape for either works inside that form. A POSIX
     /// shell could represent both, but the result is the same on both shells: a project
     /// that renders on one system must render on the other, and a platform-dependent limit
-    /// is worse than a uniform one.
+    /// is worse than a uniform limit.
     ///
     /// Rejection is the correct result in either case. Writing a corrupted value would be
     /// worse than reporting that it cannot be written.
@@ -100,7 +100,7 @@ namespace hello::kit {
         /// One assignment in the form UTAU writes, set name=value without quotes, for a
         /// value that a synth tool reads from the script text.
         ///
-        /// moresampler reads temp.bat to determine whether the current call is the last one
+        /// moresampler reads temp.bat to determine whether the current call is the last call
         /// (the Wavtool page cited in docs/Synth.md), so the fragment is written as UTAU
         /// writes it. Outside quotes cmd parses operators, so each of them is escaped with a
         /// caret, which makes the next character literal, and every percent sign is doubled.

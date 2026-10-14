@@ -20,8 +20,8 @@ namespace hello::kit {
         // translates (qtranslator.cpp of Qt 6.11.1,
         // https://github.com/qt/qtbase/blob/v6.11.1/src/corelib/kernel/qtranslator.cpp). Texts
         // translated on worker threads, such as the warnings of the synth tools, would otherwise
-        // remain in English at random. The loaded translator is complete before it is installed,
-        // so that no lookup reaches it during load().
+        // remain in English intermittently. The loaded translator is complete before it is
+        // installed, so that no lookup reaches it during load().
         class SerializedTranslator : public QTranslator {
         public:
             QTranslator loaded;

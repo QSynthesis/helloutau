@@ -83,14 +83,14 @@ namespace hello::daw {
         for (const auto lyric : ust.rawLyrics()) {
             texts.push_back(lyric.toByteArray());
         }
-        const auto grey = palette().brush(QPalette::Disabled, QPalette::Text);
+        const auto gray = palette().brush(QPalette::Disabled, QPalette::Text);
         for (int i = 0; i < m_charsets->count(); ++i) {
             const auto item = m_charsets->item(i);
             const kit::TextCodec codec(item->text());
             const bool readable = std::all_of(texts.cbegin(), texts.cend(), [&](const auto &t) {
                 return codec.decode(t).has_value();
             });
-            item->setForeground(readable ? QBrush() : grey);
+            item->setForeground(readable ? QBrush() : gray);
         }
         setSelectedCharset(kit::TextCodec::ranked(texts, kit::TextCodec::ustCandidates()).value(0));
         updatePreview();

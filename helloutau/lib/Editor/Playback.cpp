@@ -772,9 +772,9 @@ namespace hello::daw {
                 impl.setState(Stopped);
             }
         });
-        // The loss of the device pauses playback where the device stopped, without finished(),
-        // so that playing again goes on from there on the device now selected. Playback is
-        // paused by the time the loss is reported.
+        // The loss of the device pauses playback at the position at which the device stopped,
+        // without finished(), so that playing again goes on from there on the device now selected.
+        // Playback is paused by the time the loss is reported.
         connect(impl.output, &AudioOutput::failed, this,
                 [this](const QString &reason, std::optional<double> heard) {
                     stdc_impl_t;
@@ -1132,8 +1132,8 @@ namespace hello::daw {
         if (impl.state != Playing) {
             return std::nullopt;
         }
-        // The position of the sound the device plays, which it pulled some time before, from the
-        // start until it has pulled
+        // The position of the sound the device plays, which it pulled some time before, counted
+        // from the start of the track up to the point it has pulled
         return impl.positionAt(impl.output->heardPosition().value_or(0));
     }
 

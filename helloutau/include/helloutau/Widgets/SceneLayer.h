@@ -92,7 +92,7 @@ namespace hello::daw {
         DragFunction m_drag;
         ClickFunction m_click;
         bool m_started = false;
-        // The gesture of the drag, if the drag started and the drag function returned one
+        // The gesture of the drag, if the drag started and the drag function returned a gesture
         std::unique_ptr<SceneGesture> m_gesture;
     };
 

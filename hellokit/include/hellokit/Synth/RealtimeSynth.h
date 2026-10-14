@@ -26,9 +26,9 @@ namespace hello::kit {
     /// cache directory is read instead of rendered. A note the resampler fails to render is
     /// silent, with a warning, so that playback does not wait for it forever.
     ///
-    /// After an edit the new plan replaces the old one. Fragments are identified by their cache
+    /// After an edit the new plan replaces the old plan. Fragments are identified by their cache
     /// file, whose name stands for every input of the note, so a note that did not change keeps
-    /// its fragment and a changed one is rendered anew without further analysis.
+    /// its fragment and a changed note is rendered anew without further analysis.
     ///
     /// Every function may be called from any thread. Destruction kills the running synth tool
     /// calls, removes the fragments that they may have written partially, and waits for the
@@ -40,7 +40,7 @@ namespace hello::kit {
 
         /// \param threadCount the number of worker threads, or zero for one per hardware thread
         /// \param synthToolFactory creates the object that starts the resampler, which tests
-        ///        replace; by default an SynthToolProcess
+        ///        replace. By default a SynthToolProcess
         explicit RealtimeSynth(SynthTools synthTools, int threadCount = 0,
                                SynthToolFactory synthToolFactory = {});
         ~RealtimeSynth();
@@ -78,7 +78,7 @@ namespace hello::kit {
         /// The number of notes still to render.
         int pendingCount() const;
 
-        /// How far the fragment of a note has come.
+        /// The progress of the fragment of a note.
         enum NoteState {
             /// A rest, or a note that sounds nothing, which has no fragment
             Silent,

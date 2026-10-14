@@ -65,7 +65,7 @@ namespace hello::kit {
         /// frequency and becomes stale once the map changes. The resampler writes a missing cache
         /// again from the map when it renders the audio file.
         struct HELLOKIT_VOICEBANK_EXPORT AnalysisCache {
-            /// How the name of the cache file derives from the name of the audio file.
+            /// The derivation of the cache file name from the audio file name.
             enum Naming {
                 AppendedSuffix,    ///< The suffix follows the whole name: a.wav.llsm
                 ReplacedExtension, ///< The suffix replaces the extension: a.star
@@ -121,7 +121,7 @@ namespace hello::kit {
         /// \return the map, or \c std::nullopt with the reason in \a diagnostics if the map
         ///         is missing or invalid
         virtual std::optional<FrequencyMap> read(const std::filesystem::path &wav, int sampleRate,
-                                                   DiagnosticList &diagnostics) const = 0;
+                                                 DiagnosticList &diagnostics) const = 0;
 
         /// Returns the name of the sidecar file of the audio file \a wav, the file beside \a wav
         /// that holds its map alone, if the format keeps one; otherwise \c std::nullopt, which

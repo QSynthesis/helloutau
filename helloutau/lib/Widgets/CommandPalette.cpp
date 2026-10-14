@@ -281,8 +281,8 @@ namespace hello::daw {
             const auto combination = shortcut[i];
             const auto whole = QKeySequence(combination).toString(QKeySequence::NativeText);
             const auto key = QKeySequence(combination.key()).toString(QKeySequence::NativeText);
-            // The modifiers precede the key, joined by "+" where the platform writes them so,
-            // and as one symbol each on macOS.
+            // The modifiers precede the key, joined by "+" if the platform writes them with a plus
+            // sign, and as one symbol each on macOS.
             const auto modifiers = whole.left(whole.size() - key.size());
             if (modifiers.contains(u'+')) {
                 for (const auto &part : modifiers.split(u'+', Qt::SkipEmptyParts)) {

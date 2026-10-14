@@ -70,9 +70,9 @@ namespace hello::kit {
 
         /// The exit code of the synth tool, meaningful only if it started.
         ///
-        /// \note Synth Tools are inconsistent in this respect. Some report nothing and some report
-        ///       success regardless, so a caller that must know whether a render occurred checks
-        ///       whether the output file appeared.
+        /// \note Synth tools are inconsistent in this respect. Some report nothing and some
+        ///       report success regardless, so a caller that must know whether a render occurred
+        ///       checks whether the output file appeared.
         int exitCode = 0;
 
         /// Whether the synth tool was killed because it exceeded the time limit.
@@ -98,10 +98,10 @@ namespace hello::kit {
     /// mechanism of CVE-2024-28886, and the reason there is deliberately no overload that takes
     /// a complete command line.
     ///
-    /// \warning \a program is always the synth tool configured by the host, never one specified by
-    ///          the project. A UST stores synth tool paths in \c Tool1 and \c Tool2 , and executing
-    ///          them without confirmation lets the file choose which program runs. Storing them
-    ///          is permitted. Executing them is not permitted.
+    /// \warning \a program is always the synth tool configured by the host, never a synth tool
+    ///          specified by the project. A UST stores synth tool paths in \c Tool1 and \c Tool2 ,
+    ///          and executing them without confirmation lets the file choose which program runs.
+    ///          Storing them is permitted. Executing them is not permitted.
     ///
     /// See CLAUDE.md for both rules and the reason they are separate rules.
     class HELLOKIT_SYNTH_EXPORT SynthToolProcess {

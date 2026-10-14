@@ -354,8 +354,8 @@ private Q_SLOTS:
         QVERIFY(hasError(diagnostics));
     }
 
-    // Mode2 is on where the setting is present, as UTAU writes it, and off without it or where it
-    // is False, which UTAU reads as off (docs/Synth.md).
+    // Mode2 is on if the setting is present, as UTAU writes it, and off if it is absent or False,
+    // which UTAU reads as off (docs/Synth.md).
     void mode2_is_off_without_the_setting_or_where_it_is_false() {
         for (const auto &[line, on] : std::initializer_list<std::pair<QByteArray, bool>>{
                  {"Mode2=True\r\n",  true },

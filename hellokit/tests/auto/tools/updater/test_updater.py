@@ -1,4 +1,5 @@
-"""Test of hello-updater, which replaces an installation directory with a new one.
+"""Test of hello-updater, which replaces an installation directory with the directory of the
+new version.
 
     python3 test_updater.py <path to hello-updater>
 

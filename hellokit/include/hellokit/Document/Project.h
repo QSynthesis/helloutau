@@ -41,7 +41,7 @@ namespace hello::kit {
         bool operator!=(const VoiceLocations &other) const;
     };
 
-    /// A named stretch of the notes of a track, as UTAU names one: from the note whose
+    /// A named stretch of the notes of a track, as UTAU names a region: from the note whose
     /// Note::regions holds the name to the first note from there whose Note::regionEnds holds
     /// it, or to the last note of the track if no note does.
     struct HELLOKIT_DOCUMENT_EXPORT Region {
@@ -174,8 +174,8 @@ namespace hello::kit {
         ///
         /// \warning Untrusted, like \c Note::patch. Stored verbatim, because per-project synth tool
         ///          configuration is common UTAU practice and discarding it would delete user
-        ///          settings. What is forbidden is executing them without confirmation, not
-        ///          storing them. See the security section of CLAUDE.md.
+        ///          settings. Executing them without confirmation is forbidden, not storing them.
+        ///          See the security section of CLAUDE.md.
         QString wavtool;
         QString resampler;
 
@@ -190,7 +190,7 @@ namespace hello::kit {
     /// An in-memory project, the common representation of \c .usth, \c .ust and every imported
     /// format.
     ///
-    /// Reading and writing \c .usth belongs to this class rather than to a separate one,
+    /// Reading and writing \c .usth belongs to this class rather than to a separate class,
     /// because \c .usth is not one format among several but the native serialization of a
     /// project. Every other format is converted through \c HelloKitInterchange into this class.
     ///
@@ -213,7 +213,7 @@ namespace hello::kit {
         /// Top-level fields of the \c .usth file not recognized by this version, preserved so
         /// that saving writes them back.
         ///
-        /// Otherwise an older build opening a project saved by a newer one would discard
+        /// Otherwise an older build opening a project saved by a newer build would discard
         /// unrecognized data, and the user would find it missing after saving. Empty for a
         /// project from any other source.
         QJsonObject unknownFields;

@@ -23,7 +23,7 @@ namespace hello::daw {
     /// the release: on Windows, the context menu event of the right button follows its release.
     ///
     /// \note A grab ends a grab of another widget. A caller that replaces a grab destroys the
-    ///       previous one before creating the next, because the destruction of the previous one
+    ///       previous grab before creating the next, because the destruction of the previous grab
     ///       would otherwise release the next.
     class HELLOUTAU_WIDGETS_EXPORT MouseGrabGuard {
     public:

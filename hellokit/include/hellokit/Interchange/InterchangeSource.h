@@ -25,7 +25,7 @@ namespace hello::kit {
         /// Deliberately bytes rather than strings, the only such case in this module. The
         /// encoding of this text is one of the settings the user is about to choose, and the
         /// selector displays the text decoded with the current selection so that the user can
-        /// identify the correct one. Decoding in inspect() would presuppose the answer.
+        /// identify the correct encoding. Decoding in inspect() would presuppose the answer.
         ///
         /// \warning No component after the selector may retain these. The result of read() is
         ///          UTF-8 throughout.

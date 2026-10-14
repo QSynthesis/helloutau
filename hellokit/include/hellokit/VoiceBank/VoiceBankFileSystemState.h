@@ -31,8 +31,8 @@ namespace hello::kit {
     /// Kept apart from VoiceBank , which holds the contents only, so that the contents can be
     /// held elsewhere, such as in the tree of an editing session, and materialized into a
     /// VoiceBank for each save. The two are paired by directory path, not by position: a
-    /// directory of the VoiceBank without state here was not read and is saved as a new one, and
-    /// state here without a directory of the VoiceBank is skipped.
+    /// directory of the VoiceBank without state here was not read and is saved as a new
+    /// directory, and state here without a directory of the VoiceBank is skipped.
     class HELLOKIT_VOICEBANK_EXPORT VoiceBankFileSystemState {
         Q_DECLARE_TR_FUNCTIONS(hello::kit::VoiceBankFileSystemState)
     public:
@@ -122,8 +122,8 @@ namespace hello::kit {
         ///   content, as git compares the working tree with its index.
         /// - **A directory whose files were not read.**
         ///
-        /// A directory of \a bank without state here, for example one that a reload removed
-        /// and an undo in an editing session restored, is saved as a new directory: it is
+        /// A directory of \a bank without state here, for example a directory that a reload
+        /// removed and an undo in an editing session restored, is saved as a new directory: it is
         /// created if missing, unless its path is a file, and every file of it is written. A file
         /// already there was not read and is refused as a file that changed on disk.
         ///
@@ -266,15 +266,15 @@ namespace hello::kit {
         /// **Unsaved changes in a reread directory are discarded**, because the user requested
         /// the version on disk. A change of the audio files alone discards nothing. Each directory
         /// is examined again during the reload, because the disk may have changed since the check.
-        /// A directory removed in the meantime is not read, and one restored in the meantime is not
-        /// dropped.
+        /// A directory removed in the meantime is not read, and a directory restored in the
+        /// meantime is not dropped.
         ///
         /// A previously read directory keeps its encoding without querying the selector again,
         /// and its record of misdecoded file names, whatever its configuration now records. Only
-        /// a directory whose encoding is not known takes the one its configuration records.
+        /// a directory whose encoding is not known takes the encoding its configuration records.
         ///
-        /// \param selector queried only for a new directory, or for one that previously needed
-        ///        no encoding and now does
+        /// \param selector queried only for a new directory, or for a directory that previously
+        ///        needed no encoding and now does
         /// \return the changes applied
         VoiceBankChanges reloadFromDisk(VoiceBank &bank, const VoiceBankChanges &changes,
                                         VoiceBankCharsetSelector *selector,

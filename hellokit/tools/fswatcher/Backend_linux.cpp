@@ -137,8 +137,8 @@ namespace fswatcher {
             return root.given + resolved.substr(root.resolved.size());
         }
 
-        /// Watches \a path for \a root , without its subdirectories. Returns false if the watch
-        /// limit is reached, which causes the root to be abandoned. Any other failure omits one
+        /// Watches \a path , without its subdirectories. Returns false if the watch limit is
+        /// reached, which causes the root to be abandoned. Any other failure omits one
         /// directory, which remains visible in the listing of its parent.
         bool watchOne(const std::string &path, bool above) {
             const int wd = inotify_add_watch(fd, path.c_str(), above ? aboveMask : treeMask);

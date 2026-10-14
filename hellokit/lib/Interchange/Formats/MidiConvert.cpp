@@ -329,7 +329,7 @@ namespace hello::kit {
             }
 
             if (note.start < cursor) {
-                // The previous note is still sounding when this one starts. Shortening the
+                // The previous note is still sounding when this note starts. Shortening the
                 // previous note preserves both notes.
                 auto &previous = track.notes.last();
                 const int overlap = cursor - note.start;

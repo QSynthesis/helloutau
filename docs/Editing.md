@@ -711,7 +711,7 @@ oto 的五个时间参数不设范围：`cutoff` 为负表示从偏移量起算�
 
 节点树、事务与撤销历史由 substate 实现。节点的所有权、动作、事务与存储合成工具的设计见 substate 仓库的 `docs/Design.md`。
 
-**substate 是 `HelloKitEditBase` 与 `HelloKitEdit` 的私有依赖，`ss::` 类型不出现在任何公开头文件中**，只出现在 `HelloKitEditBase` 的扩展接口（`private/` 下的头文件）中。 编辑层以 `NodeId` 引用节点，以本文档所述的类型化槽位和领域函数修改树，并将 substate 的变更通知转换为自己的信号，不使用 qsubstate 的 Qt 信号适配器。substate 的接口变动因此只影响编辑层的实现，「音符是什么、函数的含义是什么」这些困难且有价值的内容不随之变动。这与 `SynthRunner::makeSynthToolProcess()` 采用的是同一种隔离手法。
+**substate 是 `HelloKitEditBase` 与 `HelloKitEdit` 的私有依赖，`ss::` 类型不出现在任何公开头文件中**，只出现在 `HelloKitEditBase` 的扩展接口（`private/` 下的头文件）中。编辑层以 `NodeId` 引用节点，以本文档所述的类型化槽位和领域函数修改树，并将 substate 的变更通知转换为自己的信号，不使用 qsubstate 的 Qt 信号适配器。substate 的接口变动因此只影响编辑层的实现，编辑层的语义，即音符与领域函数的含义，不随之变动。这与 `SynthRunner::makeSynthToolProcess()` 采用的是同一种隔离手法。
 
 ### 通用层与文档层
 

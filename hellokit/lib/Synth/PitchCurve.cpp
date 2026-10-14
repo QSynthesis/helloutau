@@ -126,7 +126,7 @@ namespace hello::kit {
 
     QList<int> PitchCurve::values(const Timing &timing) const {
         // In the order of stdutau: each note's portamento and vibrato first, then the note,
-        // the previous one and the next one, so that the sums agree to the last bit
+        // the previous note and the next note, so that the sums agree to the last bit.
         const auto sumOf = [](const Impact &impact) {
             return impact.portamento + impact.vibrato + impact.shift;
         };
@@ -283,7 +283,7 @@ namespace hello::kit {
         if (points.size() > 1 && reading) {
             impact = impactOf(*m_next, tick - m_current.length, Neighbour);
         }
-        // Relative to this note rather than to the next one
+        // Relative to this note rather than to the next note.
         impact.shift = -(m_next->points.first().y * 10);
         return impact;
     }

@@ -210,8 +210,8 @@ namespace hello::kit {
         /// step, which takes the files as read without checking the constraints. Undoing it
         /// restores the tree and not the file system state, so the restored contents are saved over
         /// the files, and a restored directory is created again. A directory that now does not read
-        /// or decode leaves the tree for excludedDirectories(), and one that now does enters it.
-        /// A change of the audio files alone creates no undo step.
+        /// or decode leaves the tree for excludedDirectories(), and a directory that now does
+        /// enters it. A change of the audio files alone creates no undo step.
         ///
         /// \return the changes applied
         /// \sa VoiceBankFileSystemState::reloadFromDisk()

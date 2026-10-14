@@ -54,8 +54,8 @@ namespace hello::kit {
         QStringList wavtoolArguments;
 
         /// The timing of the sample in milliseconds, as reconciled with the previous note: the
-        /// pre-utterance and the overlap shortened where the previous note is too short for
-        /// them, and the start point moved by the amount that the pre-utterance lost.
+        /// pre-utterance and the overlap shortened if the previous note is too short for them,
+        /// and the start point moved by the amount that the pre-utterance lost.
         double preUtterance = 0;
         double voiceOverlap = 0;
         double startPoint = 0;
@@ -139,7 +139,7 @@ namespace hello::kit {
         /// begins: the start of the first note rendered, less its pre-utterance as reconciled
         /// with its neighbors. The wavtool places the sample of a note that far before the note,
         /// and extends the file by each note with the difference of the pre-utterances of the
-        /// note and the next one, so this offset holds for every note of the file.
+        /// note and the next note, so this offset holds for every note of the file.
         ///
         /// A player maps a position in the file to the track by adding it.
         inline double startTime() const {
