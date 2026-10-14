@@ -1,6 +1,6 @@
 # plugin-play：原版插件的试听
 
-本文档是 plugin-play 的设计，写于 2026-10-14，尚未实现。plugin-play 是 playinplugin 的兼容程序，供 PitTrace 等原版插件在 HelloUtau 中试听。原版的行为见 [`claude/playinplugin.md`](claude/playinplugin.md)，原版插件的支持见 [`ClassicPluginHost.md`](ClassicPluginHost.md)。
+本文档是 plugin-play 的设计，写于 2026-10-14，已实现，作者已以 PitTrace 验收（2026-10-14）。plugin-play 是 playinplugin 的兼容程序，供 PitTrace 等原版插件在 HelloUtau 中试听。原版的行为见 [`claude/playinplugin.md`](claude/playinplugin.md)，原版插件的支持见 [`ClassicPluginHost.md`](ClassicPluginHost.md)。
 
 ## 动机
 
@@ -22,7 +22,7 @@ plugin-play 以同样的命令行接受调用，把请求交给运行该插件�
 - `/noplay` 时不弹出试听对话框。
 - 不清空输入文件，与原版不同。
 - 先只支持 Windows。
-- 部署须由用户在设置页确认，届时把 `plugin.txt` 转写为 `plugin.json` 并请用户确认编码，替换的记录写入 `plugin.json`。部署推后实现。
+- 部署须由用户在设置页确认，届时把 `plugin.txt` 转写为 `plugin.json` 并请用户确认编码，替换的记录写入 `plugin.json`。
 - 没有宿主时运行原版（`playinplugin-original.exe`），没有原版才报错。
 - 渲染采用预渲染：渲染选区后播放，不采用实时模式。
 - 试听对话框存在期间 plugin-play 的进程保持运行，因为插件可能以此判断试听是否结束。
@@ -109,20 +109,23 @@ playinplugin.exe <输入文件> [/m:<修改文件>] [/o:<输出文件>] [/noplay
 - ClassicPluginHost 须链接 Qt Network（`QLocalServer`）。
 - 渲染缓存：试听不使用工程的渲染缓存。每次插件运行在项目窗口的临时目录中另建一个临时目录作为试听的缓存，插件运行结束时删除（作者 2026-10-14 决定）。同一次插件运行中的多次试听共用这个目录，未改动的音符因此不再重新合成。工程的缓存以音符位置命名片段并清理被取代的片段，插件的插入与删除会改变其后音符的位置，共用缓存会误删工程的片段。`Playback` 因此提供 `temporaryDirectory()`，`play()` 的重载接受缓存目录。
 
-## 部署（推后）
+## 部署
 
-- 插件设置页为每个插件提供「安装试听程序」与「移除试听程序」，须用户确认。
-- 安装时插件文件夹若已有 `playinplugin.exe`，改名为 `playinplugin-original.exe` 保留。
-- 没有 `plugin.json` 的插件，先把 `plugin.txt` 转写为 `plugin.json`（含 `ustversion`），并请用户确认 `plugin.txt` 的编码，因为有 `plugin.json` 时不再读取 `plugin.txt`（[`note.md`](note.md)「插件」）。替换的记录写入 `plugin.json` 中 ClassicPluginHost 的扩展字段，移除时按记录还原。`plugin.json` 的 `ustversion` 与扩展字段须先写入 `note.md`。
+- 设置的「Classic Plugins」页有「试听程序」一组，列出发现的插件，每行有安装、更新与移除，均须用户确认。文件的操作由 `ClassicPluginPreviewInstallation` 完成。
+- 程序为 `HelloUtau.exe` 旁的 `hello-plugin-play.exe`（安装规则与 `hello-updater` 相同，位于 `bin`），复制为插件文件夹中的 `playinplugin.exe`。原有的 `playinplugin.exe` 改名为 `playinplugin-original.exe` 保留，没有宿主时由 plugin-play 运行。
+- 没有 `plugin.json` 的插件，安装前把 `plugin.txt` 转写为 `plugin.json`（`name`、`execute`、`shell`、`notes`、`ustversion`，不写 `charset`，临时文件因此仍为本地编码），因为有 `plugin.json` 时不再读取 `plugin.txt`（[`note.md`](note.md)「插件」）。`plugin.txt` 的编码由用户在与打开 UST 时相同形式的对话框中选择：候选编码、无效字节序列的灰显与预选，以及按所选编码解码的全文（作者 2026-10-14 要求）。
+- 记录写入 `plugin.json` 的 `ClassicPluginHost` 键（note.md「插件」）。移除时按记录还原：转写来的 `plugin.json` 删除，原有的 `plugin.json` 只删除该键。安装中途失败时撤回已做的步骤。
+- 插件文件夹中的程序与当前的 `hello-plugin-play.exe` 内容不同时显示为旧版本，可以更新。
+- 「一键安装」安装于文件夹中原有 `playinplugin.exe` 的插件，这些插件以它试听，并更新旧版本。需要转写的插件逐个询问编码，取消则跳过该插件。「一键卸载」确认一次后移除全部（作者 2026-10-14 要求）。其他插件只能逐个安装，以免为不试听的插件转写 `plugin.json`。
 
 ## 实施步骤
 
 1. ~~**叠加修改**~~：`ClassicPluginExchange::preview()`，以临时会话复用 `apply()`，无须拆出合并逻辑。QtTest。
 2. ~~**`hello-plugin-play`**~~：`hellokit/tools/plugin-play`，命令行解析、按作业查找宿主、管道客户端、运行原版与没有原版时的消息框，CMake 照 `hello-updater`，只在 Windows 上构建。测试 `hellokit/tests/auto/tools/plugin-play` 用 Python 运行程序：测试进程创建作业，在其中启动充当插件的进程，以 CPython 的 `_winapi` 创建以该进程命名的管道充当宿主，检查请求的内容、等待回复、管道关闭后退出，以及作业中没有宿主时以原样的参数运行原版（`plugin-play-original-stub` 充当原版）并返回其退出码。
 3. ~~**管道服务器与渲染入口**~~：`Playback` 的重载与 `ProjectWindow::playback()`。`ClassicPluginRunner::processId()` 提供插件进程的进程号，`ClassicPluginPreviewServer` 以它命名管道，每个连接读取一行请求，核对输入文件的音符数与选区起点，以 `ClassicPluginExchange::preview()` 叠加修改后发出 `requested()`，由接收方渲染并调用 `reply()`，连接在回复前关闭时发出 `abandoned()`。QtTest 以 `QLocalSocket` 模拟 plugin-play。
-4. **试听对话框**：`Internal/ClassicPluginPreview`，在插件运行期间（`ClassicPluginRun.cpp` 的等待对话框之内）建立管道服务器与试听缓存，插件结束、应用结果之前停止渲染并删除缓存。合成工具不存在或不可信时显示错误窗口。`/noplay` 以 `Playback::renderTrack()` 的重载只渲染。其余请求显示试听对话框，渲染完成后自动播放，`/o:` 的文件为渲染结果的副本。已实现，待作者试用。
-5. **部署**：见上节，推后。
-6. **验收**：作者以 PitTrace 试听。
+4. ~~**试听对话框**~~：`Internal/ClassicPluginPreview`，在插件运行期间（`ClassicPluginRun.cpp` 的等待对话框之内）建立管道服务器与试听缓存，插件结束、应用结果之前停止渲染并删除缓存。合成工具不存在或不可信时显示错误窗口。`/noplay` 以 `Playback::renderTrack()` 的重载只渲染。其余请求显示试听对话框，渲染完成后自动播放，`/o:` 的文件为渲染结果的副本。作者已试用。
+5. ~~**部署**~~：见上节。`plugin.json` 的 `ustversion` 与 `ClassicPluginHost` 键，安装类 `ClassicPluginPreviewInstallation`（QtTest），设置页（作者已试用）。
+6. ~~**验收**~~：作者以 PitTrace 试听，2026-10-14 通过。
 
 ## 不做的事
 

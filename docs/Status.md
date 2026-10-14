@@ -21,7 +21,7 @@
 | `helloutau` | 加载器程序：`main.cpp` 只构造 `AppLoader` 并运行 |
 | `hello-updater` | 免安装版更新的目录替换：等待程序退出，改名替换安装目录，失败时还原，再启动新版本。只依赖标准库与系统接口，静态链接运行库，在 Windows 上是 GUI 程序 |
 | Core 插件 | 创建 `Editor`，登记编辑器的动作清单（`BuiltinActions`），打开命令行中的文件；设置的「Plugins」页 |
-| ClassicPluginHost 插件 | 原版 UTAU 插件：发现、`plugin.txt` / `plugin.json`、临时文件的写出与结果的合并、进程的启动与取消、「工具 → Classic Plugins」菜单、首次运行的确认，见 [`ClassicPluginHost.md`](ClassicPluginHost.md)，待作者以社区插件验收 |
+| ClassicPluginHost 插件 | 原版 UTAU 插件：发现、`plugin.txt` / `plugin.json`、按 `ustversion` 写出临时文件与合并结果、进程的启动与取消、「工具 → Classic Plugins」菜单、首次运行的确认，见 [`ClassicPluginHost.md`](ClassicPluginHost.md)，待作者以社区插件验收。插件的试听（playinplugin 的兼容程序 `hello-plugin-play`）：管道服务器、试听对话框、设置页的安装与移除，见 [`PluginPlay.md`](PluginPlay.md)，作者已以 PitTrace 验收 |
 | FrequencyEditor 插件 | 登记内置的频率表格式 frq、dio、mrq，以及 moresampler 的诊断器 `MoresamplerDiagnoser` |
 | Interchange 插件 | 登记 MIDI 驱动；「文件 → 导入…」与「文件 → 导出 → 其他格式…」的向导、插入逻辑 `ImportMerge`、MIDI 的编码页，见 [`ImportExport.md`](ImportExport.md)，待作者试用 |
 
@@ -97,7 +97,7 @@
 
 **第四阶段「调音」的验收比较已完成**（2026-09-29）：Mode2 与 Mode1 各一个工程交给 UTAU 合成，参数全部相同，见 [`Tuning.md`](Tuning.md) 与 [`Synth.md`](Synth.md)「调音结果的比较」。
 
-**第五阶段「插件」进行中**：原生插件的载入、设置与「Plugins」设置页，频率表格式与格式转换驱动的登记，ClassicPluginHost 均已实现，验收（社区常用的原版插件）待作者进行。选区编辑与音源批量操作的扩展点尚未建立，见 [`Plugins.md`](Plugins.md)。
+**第五阶段「插件」进行中**：原生插件的载入、设置与「Plugins」设置页，频率表格式与格式转换驱动的登记，ClassicPluginHost 及原版插件的试听（[`PluginPlay.md`](PluginPlay.md)）均已实现，验收（社区常用的原版插件）待作者进行。选区编辑与音源批量操作的扩展点尚未建立，见 [`Plugins.md`](Plugins.md)。
 
 ## 扩展点位置
 

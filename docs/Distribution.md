@@ -222,6 +222,7 @@ Windows 特有的注册表信息因此全部由安装包维护，程序自身不
   - `SoftwareReleaseDownload`：下载附件并以 `SHA256SUMS` 校验，见「检查与下载」。只接受不含路径的文件名作为附件名。
 - `kit::ZipExtractor`（`HelloKitSupport`，私有依赖 libzip）：安全解压 zip，检查的规则见 `hellokit/Support/ZipExtractor.h`。由主程序使用，将来安装音源、插件压缩包时同样使用。放在 `HelloKitSupport` 中而不另设子库（作者 2026-10-11 决定）。不带 UTF-8 标志的非 ASCII 条目名由调用方提供的解码函数解码，未提供时拒绝整个压缩包。
 - 更新程序 `hello-updater`（`hellokit/tools/updater`）：免安装版的目录替换，参数全部来自命令行，不含任何 HelloUtau 特有的内容。它不拆出库，因为它只能依赖标准库与系统接口，库会成为它的依赖。测试在 `tests/auto/tools/updater` 中实际运行它，检查替换与回滚的结果。
+- 试听程序 `hello-plugin-play`（`hellokit/tools/plugin-play`，仅 Windows）：原版插件所用 playinplugin.exe 的兼容程序，与 `hello-updater` 一样只依赖标准库与系统接口，安装在 `bin` 中，由设置页复制到插件文件夹，见 [`PluginPlay.md`](PluginPlay.md)。
 - `PortableUpdate`（helloutau，`HelloUtauEditor`）：免安装版更新中与界面无关的部分。在后台线程把 zip 解压到 `<安装目录>.new` 并检查程序存在，失败或取消时删除 `.new`。生成 `hello-updater` 的参数并把它复制到 `updates`。下次启动时读取更新程序的日志，删除残留的 `.new` 与 `.old`。
 - 临时目录管理器：`HelloKitSupport`。
 - 解压 zip 使用 libzip（BSD 许可证，vcpkg 有端口，作者 2026-10-11 决定），动态链接，与其他 vcpkg 依赖相同。不采用 Qt 的 `QZipReader`：它是私有接口，不带 UTF-8 标志的条目名按本机代码页解码而取不到原始字节，`extractAll()` 也不检查路径。
