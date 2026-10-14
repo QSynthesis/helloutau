@@ -140,7 +140,9 @@
              that resampler for the audio files that the user checks -->
         <action id="helloutau.voiceBank.generateMaps" text="&amp;Generate Frequency Maps..."
                 category="Tools" />
-        <action id="helloutau.voiceBank.removeAllMaps" text="&amp;Delete All Frequency Maps..."
+        <!-- The frequency maps and their analysis caches of the audio files that the user
+             checks, in the same format -->
+        <action id="helloutau.voiceBank.removeMaps" text="&amp;Delete Frequency Maps..."
                 category="Tools" />
         <!-- The damaged frequency maps and analysis caches, repaired in place or generated
              again -->
@@ -228,7 +230,7 @@
             </menu>
             <menu id="helloutau.voiceBank.tools">
                 <action id="helloutau.voiceBank.generateMaps" />
-                <action id="helloutau.voiceBank.removeAllMaps" />
+                <action id="helloutau.voiceBank.removeMaps" />
                 <action id="helloutau.voiceBank.repairMaps" />
                 <action id="helloutau.voiceBank.convertMaps" />
                 <action id="helloutau.voiceBank.viewFrequencyMapLog" />

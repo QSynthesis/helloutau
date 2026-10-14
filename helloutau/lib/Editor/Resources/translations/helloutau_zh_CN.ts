@@ -170,6 +170,10 @@
         <translation>生成频率表(&amp;G)...</translation>
     </message>
     <message>
+        <source>&amp;Delete Frequency Maps...</source>
+        <translation>删除频率表(&amp;D)...</translation>
+    </message>
+    <message>
         <source>&amp;Convert Frequency Maps...</source>
         <translation>转换频率表(&amp;C)...</translation>
     </message>
@@ -276,10 +280,6 @@
     <message>
         <source>Convert Encodin&amp;gs...</source>
         <translation>转换音源编码(&amp;G)...</translation>
-    </message>
-    <message>
-        <source>&amp;Delete All Frequency Maps...</source>
-        <translation>删除全部频率表(&amp;D)...</translation>
     </message>
     <message>
         <source>Re&amp;pair Frequency Maps...</source>
@@ -2364,6 +2364,43 @@
     </message>
 </context>
 <context>
+    <name>hello::daw::RemoveFrequencyMapsDialog</name>
+    <message>
+        <source>Delete Frequency Maps</source>
+        <translation>删除频率表</translation>
+    </message>
+    <message>
+        <source>The frequency maps of the format %1 and their analysis caches are deleted for the checked audio files.</source>
+        <translation>删除勾选的音频文件的格式 %1 的频率表及其分析缓存。</translation>
+    </message>
+    <message>
+        <source>File</source>
+        <translation>文件</translation>
+    </message>
+    <message>
+        <source>Frequency Map</source>
+        <translation>频率表</translation>
+    </message>
+    <message>
+        <source>Check Files with &amp;Maps</source>
+        <translation>勾选有频率表的项(&amp;M)</translation>
+    </message>
+    <message>
+        <source>&amp;Delete</source>
+        <translation>删除(&amp;D)</translation>
+    </message>
+    <message numerus="yes">
+        <source>The frequency maps and the analysis caches of %n audio file(s) will be deleted. The deletion cannot be undone.</source>
+        <translation>
+            <numerusform>将删除 %n 个音频文件的频率表与分析缓存。删除不能撤销。</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>No file is checked.</source>
+        <translation>没有勾选任何文件。</translation>
+    </message>
+</context>
+<context>
     <name>hello::daw::RenderingSettingPage</name>
     <message>
         <source>Audio Rendering</source>
@@ -3730,6 +3767,10 @@ Read them again? Unsaved changes in them are replaced, and Undo restores them.</
         <source>Generate Frequency Maps</source>
         <translation>生成频率表</translation>
     </message>
+    <message>
+        <source>Delete Frequency Maps</source>
+        <translation>删除频率表</translation>
+    </message>
     <message numerus="yes">
         <source>The frequency maps and analysis caches of %n audio file(s) were generated again.</source>
         <translation>
@@ -3909,14 +3950,6 @@ Read them again? Unsaved changes in them are replaced, and Undo restores them.</
         <translation>
             <numerusform>其中 %n 个已按 %1 格式的帧间隔重新取帧。</numerusform>
         </translation>
-    </message>
-    <message>
-        <source>Delete All Frequency Maps</source>
-        <translation>删除全部频率表</translation>
-    </message>
-    <message>
-        <source>Delete the frequency maps of the format %1 of every audio file of the voice bank? The deletion cannot be undone.</source>
-        <translation>要删除音源中全部音频文件的格式 %1 的频率表吗？删除不可撤销。</translation>
     </message>
     <message>
         <source>Process Audio Files</source>

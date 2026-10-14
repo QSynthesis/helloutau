@@ -80,6 +80,7 @@
 #include "OtoWaveformView.h"
 #include "OutputLogDialog.h"
 #include "ProcessAudioFilesDialog.h"
+#include "RemoveFrequencyMapsDialog.h"
 #include "RepairFrequencyMapsDialog.h"
 #include "SamplePreview.h"
 #include "VoiceBankDecodingDialog.h"
@@ -92,6 +93,15 @@ namespace hello::daw {
 
         QString textOf(const std::filesystem::path &path) {
             return QString::fromStdU16String(path.u16string());
+        }
+
+        // Returns the names of the analysis caches of format, such as LLSM.
+        QStringList cacheNamesOf(const kit::FrequencyFormat &format) {
+            QStringList names;
+            for (const auto &cache : format.analysisCaches()) {
+                names.push_back(cache.name);
+            }
+            return names;
         }
 
         // Returns folder if nothing exists there, otherwise the first of folder (1), folder (2)
@@ -424,7 +434,7 @@ namespace hello::daw {
                 stdc_decl_t;
                 decl.generateFrequencyMaps();
             });
-            addCommand(QStringLiteral("helloutau.voiceBank.removeAllMaps"), [this] {
+            addCommand(QStringLiteral("helloutau.voiceBank.removeMaps"), [this] {
                 stdc_decl_t;
                 decl.removeFrequencyMaps();
             });
@@ -1615,6 +1625,32 @@ namespace hello::daw {
             return paths;
         }
 
+        // Returns the audio files of the voice bank, those of the folders not read included,
+        // each with whether it has a map of format, whether it has each analysis cache of
+        // format, and whether it is selected, as the File of a dialog of the maps holds them
+        template <class File>
+        QList<File> mapListingOf(const kit::FrequencyFormat &format) const {
+            const auto selected = selectedAudioPaths();
+            const auto caches = format.analysisCaches();
+            QList<File> files;
+            for (const auto &[folder, names] : audioByFolder()) {
+                const auto present = format.mapsExist(folder, names);
+                for (qsizetype i = 0; i < names.size(); ++i) {
+                    File file;
+                    file.path = (folder / names.at(i)).lexically_normal();
+                    file.hasMap = present.value(i);
+                    for (const auto &cache : caches) {
+                        std::error_code error;
+                        file.caches.push_back(std::filesystem::is_regular_file(
+                            folder / cache.fileNameOf(names.at(i)), error));
+                    }
+                    file.selected = selected.contains(file.path);
+                    files.push_back(std::move(file));
+                }
+            }
+            return files;
+        }
+
         // Returns the resampler of the settings and the format of its frequency maps, or shows
         // a message box with title and returns std::nullopt if either is absent
         std::optional<std::pair<std::filesystem::path, kit::FrequencyFormat *>>
@@ -2689,34 +2725,13 @@ namespace hello::daw {
         }
         const auto format = tools->second;
 
-        const auto selected = impl.selectedAudioPaths();
-        const auto caches = format->analysisCaches();
-        QStringList cacheNames;
-        for (const auto &cache : caches) {
-            cacheNames.push_back(cache.name);
-        }
-        QList<GenerateFrequencyMapsDialog::File> files;
-        for (const auto &[folder, names] : impl.audioByFolder()) {
-            const auto present = format->mapsExist(folder, names);
-            for (qsizetype i = 0; i < names.size(); ++i) {
-                GenerateFrequencyMapsDialog::File file;
-                file.path = (folder / names.at(i)).lexically_normal();
-                file.hasMap = present.value(i);
-                for (const auto &cache : caches) {
-                    std::error_code error;
-                    file.caches.push_back(std::filesystem::is_regular_file(
-                        folder / cache.fileNameOf(names.at(i)), error));
-                }
-                file.selected = selected.contains(file.path);
-                files.push_back(std::move(file));
-            }
-        }
+        auto files = impl.mapListingOf<GenerateFrequencyMapsDialog::File>(*format);
         if (files.isEmpty()) {
             QMessageBox::information(this, title, tr("The voice bank has no audio files."));
             return false;
         }
         GenerateFrequencyMapsDialog dialog(std::move(files), impl.document->rootPath(),
-                                           format->name(), cacheNames,
+                                           format->name(), cacheNamesOf(*format),
                                            impl.regeneratesCachesOnly(*format), this);
         if (dialog.exec() != QDialog::Accepted) {
             return false;
@@ -2900,7 +2915,7 @@ namespace hello::daw {
 
     bool VoiceBankWindow::removeFrequencyMaps() {
         stdc_impl_t;
-        const auto title = tr("Delete All Frequency Maps");
+        const auto title = tr("Delete Frequency Maps");
         const auto resampler = pathOf(impl.editor->settings().rendering().resampler());
         const auto format = impl.editor->frequencyFormats().formatForResampler(resampler);
         if (!format) {
@@ -2909,15 +2924,37 @@ namespace hello::daw {
                                         "resampler."));
             return false;
         }
-        if (QMessageBox::question(this, title,
-                                  tr("Delete the frequency maps of the format %1 of every audio "
-                                     "file of the voice bank? The deletion cannot be undone.")
-                                      .arg(format->name())) != QMessageBox::Yes) {
+        auto files = impl.mapListingOf<RemoveFrequencyMapsDialog::File>(*format);
+        if (files.isEmpty()) {
+            QMessageBox::information(this, title, tr("The voice bank has no audio files."));
             return false;
+        }
+        RemoveFrequencyMapsDialog dialog(std::move(files), impl.document->rootPath(),
+                                         format->name(), cacheNamesOf(*format), this);
+        if (dialog.exec() != QDialog::Accepted) {
+            return false;
+        }
+        return removeFrequencyMaps(dialog.checkedFiles());
+    }
+
+    bool VoiceBankWindow::removeFrequencyMaps(const QList<std::filesystem::path> &wavs) {
+        stdc_impl_t;
+        const auto title = tr("Delete Frequency Maps");
+        const auto resampler = pathOf(impl.editor->settings().rendering().resampler());
+        const auto format = impl.editor->frequencyFormats().formatForResampler(resampler);
+        if (!format) {
+            QMessageBox::information(this, title,
+                                     tr("No format of frequency maps is registered for the "
+                                        "resampler."));
+            return false;
+        }
+        std::map<std::filesystem::path, QList<std::filesystem::path>> byFolder;
+        for (const auto &wav : wavs) {
+            byFolder[wav.parent_path()].push_back(wav.filename());
         }
         kit::DiagnosticList diagnostics;
         bool removed = true;
-        for (const auto &[folder, names] : impl.audioByFolder()) {
+        for (const auto &[folder, names] : byFolder) {
             removed =
                 kit::FrequencyFormats::removeMaps(*format, folder, names, diagnostics) && removed;
         }

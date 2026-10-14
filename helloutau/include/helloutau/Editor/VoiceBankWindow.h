@@ -208,9 +208,19 @@ namespace hello::daw {
         /// \return whether every map was generated
         bool generateFrequencyMaps(const QList<std::filesystem::path> &wavs);
 
-        /// Removes the frequency maps of every audio file of the voice bank in the format of the
-        /// resampler of the settings, after a confirmation. No undo restores them.
+        /// Opens RemoveFrequencyMapsDialog for the audio files of the voice bank, those of the
+        /// folders not read included, and removes the frequency maps of the checked files as the
+        /// overload does. Returns false if the voice bank has no audio files, the dialog is
+        /// cancelled or a map is not removed.
         bool removeFrequencyMaps();
+
+        /// \overload for the audio files \a wavs , absolute paths, without the dialog.
+        ///
+        /// Removes the maps in the format of the resampler of the settings with their analysis
+        /// caches. No undo restores them.
+        ///
+        /// \return whether every map and every cache was removed
+        bool removeFrequencyMaps(const QList<std::filesystem::path> &wavs);
 
         /// Repairs the files of the frequency maps and the analysis caches that the user checks
         /// in a RepairFrequencyMapsDialog, in the format of the settings resampler. A file that

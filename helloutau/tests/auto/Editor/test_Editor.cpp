@@ -71,6 +71,7 @@
 #include <helloutau/Editor/Dialogs/ConvertFrequencyMapsDialog.h>
 #include <helloutau/Editor/Dialogs/GenerateFrequencyMapsDialog.h>
 #include <helloutau/Editor/Dialogs/ProcessAudioFilesDialog.h>
+#include <helloutau/Editor/Dialogs/RemoveFrequencyMapsDialog.h>
 #include <helloutau/Editor/Dialogs/RegionDialog.h>
 #include <helloutau/Editor/Dialogs/RepairFrequencyMapsDialog.h>
 #include <helloutau/Editor/Playback.h>
@@ -3247,9 +3248,15 @@ private Q_SLOTS:
         box->setCurrentIndex(box->findData(QString()));
         QVERIFY(!mapOf("a.wav", "a").isValid());
 
-        // The maps of the format of the resampler, whatever the box shows
-        answerMessageBox(QMessageBox::Yes);
+        // The maps of the format of the resampler, whatever the box shows. The dialog checks
+        // the selected file, and every file is then checked.
+        handleNextDialog<RemoveFrequencyMapsDialog>([&checked](RemoveFrequencyMapsDialog *dialog) {
+            checked = dialog->checkedFiles();
+            dialog->fileList()->checkWhere([](int) { return true; });
+            dialog->deleteButton()->click();
+        });
         QVERIFY(window->removeFrequencyMaps());
+        QCOMPARE(checked, QList<fs::path>{bank / "c.wav"});
         QVERIFY(!fs::exists(bank / "a_wav.frq"));
         QVERIFY(!fs::exists(bank / "c_wav.frq"));
         QVERIFY(!fs::exists(bank / "sub" / "x_wav.frq"));
