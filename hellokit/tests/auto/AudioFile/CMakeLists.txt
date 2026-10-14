@@ -1,3 +1,4 @@
 add_auto_test(test_WaveAudio.cpp HelloKitAudioFile)
 add_auto_test(test_WaveMetadata.cpp HelloKitAudioFile)
 add_auto_test(test_AudioFileProcessor.cpp HelloKitAudioFile)
+add_auto_test(test_Spectrogram.cpp HelloKitAudioFile)

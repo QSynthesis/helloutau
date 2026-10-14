@@ -49,13 +49,13 @@
 #include <QAKWidgets/widgetactioncontext.h>
 
 #include <hellokit/AudioFile/AudioFileProcessor.h>
+#include <hellokit/AudioFile/Spectrogram.h>
 #include <hellokit/AudioFile/WaveAudio.h>
 #include <hellokit/Edit/VoiceBankDocument.h>
 #include <hellokit/Edit/VoiceBankEdits.h>
 #include <hellokit/Edit/VoiceBankRefs.h>
 #include <hellokit/Support/TextCodec.h>
 #include <hellokit/Synth/FrequencyMapGenerator.h>
-#include <hellokit/Synth/Spectrogram.h>
 #include <hellokit/Synth/SynthDiagnosers.h>
 #include <hellokit/Synth/SynthToolProcess.h>
 #include <hellokit/VoiceBank/FrequencyFormats.h>

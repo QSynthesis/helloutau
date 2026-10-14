@@ -208,7 +208,7 @@ moresampler 等重采样器把从 wav 分析出的结果保存为缓存，其中
     - frq（`resampler*.exe`）：`a_wav.frq`，布局按 OpenUtau 0.1.565 的 `Frq.cs`；帧时间由帧间隔与 wav 的采样率算出。
     - dio（`w4u*.exe`、`world4utau*.exe`）：`a.dio`，布局按 world4utau 的源码；每帧自带时间。
     - mrq（`moresampler*.exe`）：目录中 `desc.mrq` 里以 wav 文件名为名的条目，布局按 Sleepwalking/mrq；按名称先精确、再不分大小写查找，被删除的条目（名称清零）自然不匹配。
-- 频谱（`HelloKitSynth`）：`kit::Spectrogram`，参数见上。
+- 频谱（`HelloKitAudioFile`）：`kit::Spectrogram`，参数见上。
 - 界面（音源窗口的波形区 `OtoWaveformView`）：
   - F0 曲线直接画在波形上，无声帧为断开处；纵轴按半音等距，范围是表中有声帧的最低与最高音各外扩一个八度（限于 C1 至 B7，没有表时为 C2 至 C6），每个 C 画一条虚线并在右侧标出音名。
   - 「视图 → Show Spectrogram」：以频谱代替波形，纵轴与曲线共用，五个值的区域与线照常画出、照常拖动。颜色是样式表可设的属性 `frequencyColor`、`spectrumColor`，频谱按峰值以下 60 分贝的范围由背景色渐变到 `spectrumColor`。

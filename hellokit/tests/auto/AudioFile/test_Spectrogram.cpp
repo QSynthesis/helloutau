@@ -3,7 +3,7 @@
 #include <QtCore/QtMath>
 #include <QtTest/QTest>
 
-#include <hellokit/Synth/Spectrogram.h>
+#include <hellokit/AudioFile/Spectrogram.h>
 
 using namespace hello::kit;
 

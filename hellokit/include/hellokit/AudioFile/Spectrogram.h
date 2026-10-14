@@ -1,11 +1,10 @@
-#ifndef HELLOKIT_SYNTH_SPECTROGRAM_H
-#define HELLOKIT_SYNTH_SPECTROGRAM_H
+#ifndef HELLOKIT_AUDIOFILE_SPECTROGRAM_H
+#define HELLOKIT_AUDIOFILE_SPECTROGRAM_H
 
 #include <vector>
 
+#include <hellokit/AudioFile/HelloKitAudioFileGlobal.h>
 #include <hellokit/AudioFile/WaveAudio.h>
-
-#include <hellokit/Synth/HelloKitSynthGlobal.h>
 
 namespace hello::kit {
 
@@ -15,7 +14,7 @@ namespace hello::kit {
     /// channels mixed, the audio taken as silent beyond its ends. Its spectrum has
     /// windowSize / 2 + 1 bins from 0 to half the sample rate. The sizes are those of the
     /// spectrum of frqeditor, which users of frequency maps know.
-    class HELLOKIT_SYNTH_EXPORT Spectrogram {
+    class HELLOKIT_AUDIOFILE_EXPORT Spectrogram {
     public:
         static constexpr int windowSize = 2048;
         static constexpr int hopSize = 512;
@@ -54,4 +53,4 @@ namespace hello::kit {
 
 }
 
-#endif // HELLOKIT_SYNTH_SPECTROGRAM_H
+#endif // HELLOKIT_AUDIOFILE_SPECTROGRAM_H
