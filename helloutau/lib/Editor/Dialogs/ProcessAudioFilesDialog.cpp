@@ -117,6 +117,7 @@ namespace hello::daw {
             m_list->addRow(
                 {QDir::toNativeSeparators(textOf(relative.empty() ? file.path : relative)),
                  formatOf(file.inspection), QString()});
+            m_anySelected = m_anySelected || file.selected;
         }
         m_checkFiles = m_list->addCheckButton(tr("Check Files to &Process"), [this](int row) {
             return bool(m_files.at(row).inspection.changes(options()));
@@ -191,6 +192,9 @@ namespace hello::daw {
         connect(m_buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
 
         setOptions({});
+        if (m_anySelected) {
+            m_list->checkWhere([this](int row) { return m_files.at(row).selected; });
+        }
     }
 
     ProcessAudioFilesDialog::~ProcessAudioFilesDialog() = default;
@@ -293,9 +297,11 @@ namespace hello::daw {
             m_list->setText(row, changeColumn,
                             changesOf(m_files.at(row).inspection.changes(current)));
         }
-        m_list->checkWhere([this, &current](int row) {
-            return bool(m_files.at(row).inspection.changes(current));
-        });
+        if (!m_anySelected) {
+            m_list->checkWhere([this, &current](int row) {
+                return bool(m_files.at(row).inspection.changes(current));
+            });
+        }
         m_applying = false;
         updateSummary();
     }

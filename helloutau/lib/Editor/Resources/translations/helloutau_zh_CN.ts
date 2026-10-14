@@ -158,14 +158,6 @@
         <translation>设置(&amp;S)...</translation>
     </message>
     <message>
-        <source>Pr&amp;ocess Audio Files of Selection...</source>
-        <translation>处理所选条目的音频文件(&amp;O)...</translation>
-    </message>
-    <message>
-        <source>Process &amp;All Audio Files...</source>
-        <translation>处理全部音频文件(&amp;A)...</translation>
-    </message>
-    <message>
         <source>&amp;Generate Frequency Maps...</source>
         <translation>生成频率表(&amp;G)...</translation>
     </message>
@@ -280,6 +272,10 @@
     <message>
         <source>Convert Encodin&amp;gs...</source>
         <translation>转换音源编码(&amp;G)...</translation>
+    </message>
+    <message>
+        <source>Pr&amp;ocess Audio Files...</source>
+        <translation>处理音频文件(&amp;O)...</translation>
     </message>
     <message>
         <source>Re&amp;pair Frequency Maps...</source>
@@ -3954,10 +3950,6 @@ Read them again? Unsaved changes in them are replaced, and Undo restores them.</
     <message>
         <source>Process Audio Files</source>
         <translation>处理音频文件</translation>
-    </message>
-    <message>
-        <source>Select the entries whose audio files are to be processed.</source>
-        <translation>请选择要处理的音频文件所在的条目。</translation>
     </message>
     <message>
         <source>Processing audio files...</source>

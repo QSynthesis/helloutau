@@ -27,9 +27,10 @@ namespace hello::daw {
 
     /// A dialog in which the user chooses the processing of audio files and the files to
     /// process, see kit::AudioFileProcessor. The files are listed on the left, and the options
-    /// on the right, beyond a splitter. The files that the options change are checked, again
-    /// whenever an option changes. A tri-state box checks or unchecks every file, and a button
-    /// checks exactly the files that the options change.
+    /// on the right, beyond a splitter. The selected files are checked initially. If none is
+    /// selected, the files that the options change are checked, again whenever an option changes.
+    /// A tri-state box checks or unchecks every file, and a button checks exactly the files that
+    /// the options change.
     ///
     /// The dialog also offers the removal of the frequency maps and the analysis caches of the
     /// processed files, checked initially, and a backup of the original files into a folder,
@@ -42,6 +43,8 @@ namespace hello::daw {
             /// The absolute path
             std::filesystem::path path;
             kit::AudioFileProcessor::Inspection inspection;
+            /// Whether the file is selected in the window
+            bool selected = false;
         };
 
         /// Creates the dialog for \a files of the voice bank at \a root, whose paths are shown
@@ -75,6 +78,7 @@ namespace hello::daw {
     private:
         QList<File> m_files;
         std::filesystem::path m_root;
+        bool m_anySelected = false;
 
         QCheckBox *m_resampling;
         QComboBox *m_sampleRate;
@@ -97,7 +101,8 @@ namespace hello::daw {
         QDialogButtonBox *m_buttons;
         bool m_applying = false;
 
-        // Checks the files that the options change and describes their changes
+        // Describes the changes of the files, and checks the files that the options change if no
+        // file is selected
         void refreshFiles();
 
         // Shows the number of checked files and enables the OK button if any is checked and the

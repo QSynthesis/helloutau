@@ -455,13 +455,9 @@ namespace hello::daw {
                 OutputLogDialog dialog(generationLog, tr("Frequency Map Log"), &decl);
                 dialog.exec();
             });
-            addCommand(QStringLiteral("helloutau.voiceBank.processSelectedAudio"), [this] {
+            addCommand(QStringLiteral("helloutau.voiceBank.processAudio"), [this] {
                 stdc_decl_t;
-                decl.processAudioFiles(SelectedAudio);
-            });
-            addCommand(QStringLiteral("helloutau.voiceBank.processAllAudio"), [this] {
-                stdc_decl_t;
-                decl.processAudioFiles(AllAudio);
+                decl.processAudioFiles();
             });
             addCommand(QStringLiteral("helloutau.voiceBank.synthesize"), [this] { synthesize(); });
             addCommand(QStringLiteral("helloutau.playback.stop"), [this] { preview->stop(); });
@@ -2979,19 +2975,18 @@ namespace hello::daw {
         return impl.generationLog;
     }
 
-    bool VoiceBankWindow::processAudioFiles(AudioScope scope) {
+    bool VoiceBankWindow::processAudioFiles() {
         stdc_impl_t;
         const auto title = tr("Process Audio Files");
-        const auto audio =
-            scope == SelectedAudio ? impl.selectedAudioByFolder() : impl.audioByFolder();
+        const auto selected = impl.selectedAudioPaths();
         QList<ProcessAudioFilesDialog::File> files;
         kit::DiagnosticList diagnostics;
         QApplication::setOverrideCursor(Qt::WaitCursor);
-        for (const auto &[folder, names] : audio) {
+        for (const auto &[folder, names] : impl.audioByFolder()) {
             for (const auto &name : names) {
-                const auto path = folder / name;
+                const auto path = (folder / name).lexically_normal();
                 if (const auto inspection = kit::AudioFileProcessor::inspect(path, diagnostics)) {
-                    files.push_back({path, *inspection});
+                    files.push_back({path, *inspection, selected.contains(path)});
                 }
             }
         }
@@ -3000,11 +2995,7 @@ namespace hello::daw {
             if (!diagnostics.isEmpty()) {
                 DiagnosticBox::report(this, title, diagnostics);
             } else {
-                QMessageBox::information(this, title,
-                                         scope == SelectedAudio
-                                             ? tr("Select the entries whose audio files are to "
-                                                  "be processed.")
-                                             : tr("The voice bank has no audio files."));
+                QMessageBox::information(this, title, tr("The voice bank has no audio files."));
             }
             return false;
         }

@@ -42,8 +42,8 @@ class test_ProcessAudioFilesDialog : public QObject {
     Q_OBJECT
 
 private Q_SLOTS:
-    // The files that the options change are checked, again whenever an option changes. A box
-    // checks or unchecks every file.
+    // Without a selection, the files that the options change are checked, again whenever an
+    // option changes. A box checks or unchecks every file.
     void the_files_that_change_are_checked() {
         ProcessAudioFilesDialog dialog(
             {fileOf("a.wav", 44100, 1), fileOf("b.wav", 48000, 1), fileOf("c.wav", 44100, 2)},
@@ -59,6 +59,22 @@ private Q_SLOTS:
         dialog.setOptions(options);
         QCOMPARE(checkedOf(list), QStringList{"b.wav"});
         QVERIFY(!dialog.options().mono);
+    }
+
+    // With a selection, the selected files are checked, and stay checked when an option
+    // changes.
+    void the_selected_files_are_checked() {
+        auto files =
+            QList{fileOf("a.wav", 44100, 1), fileOf("b.wav", 48000, 1), fileOf("c.wav", 44100, 2)};
+        files[0].selected = true;
+        ProcessAudioFilesDialog dialog(files, "C:/bank", "C:/backup");
+        QCOMPARE(checkedOf(dialog.fileList()), QStringList{"a.wav"});
+        auto options = dialog.options();
+        options.mono.reset();
+        dialog.setOptions(options);
+        QCOMPARE(checkedOf(dialog.fileList()), QStringList{"a.wav"});
+        dialog.checkFilesButton()->click();
+        QCOMPARE(checkedOf(dialog.fileList()), QStringList{"b.wav"});
     }
 
     // A button checks exactly the files that the options change, after the user has checked

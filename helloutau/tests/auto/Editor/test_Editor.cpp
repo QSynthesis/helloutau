@@ -2426,7 +2426,8 @@ private Q_SLOTS:
                 edit->setText(QString::fromStdU16String(chosen.u16string()));
                 dialog->accept();
             });
-        QVERIFY(window->processAudioFiles(VoiceBankWindow::AllAudio));
+        window->entryTable()->clearSelection();
+        QVERIFY(window->processAudioFiles());
         // Only the metadata of x.wav differs from 1000 Hz, mono and 16 bits.
         QCOMPARE(checked, QStringList{QStringLiteral("sub/x.wav")});
         QCOMPARE(fs::file_size(bank / "sub" / "x.wav"), std::uintmax_t(44 + 200));
@@ -2435,6 +2436,16 @@ private Q_SLOTS:
         QVERIFY(!fs::exists(backup / "a.wav"));
         QVERIFY(fs::is_empty(chosen));
         QVERIFY(!fs::exists(bank / "sub" / "x_wav.frq"));
+
+        // With a selection, the dialog checks the selected files only.
+        window->setCurrentRow(window->entryModel()->rowOf({}, QStringLiteral("c.wav"), {}));
+        QList<fs::path> selected;
+        handleNextDialog<ProcessAudioFilesDialog>([&selected](ProcessAudioFilesDialog *dialog) {
+            selected = dialog->checkedFiles();
+            dialog->reject();
+        });
+        QVERIFY(!window->processAudioFiles());
+        QCOMPARE(selected, QList<fs::path>{bank / "c.wav"});
     }
 
     // An alias that another entry of the same file has, as read, is marked.

@@ -230,12 +230,6 @@ namespace hello::daw {
         /// \return whether every checked file was repaired or generated again
         bool repairFrequencyMaps();
 
-        /// The audio files on which processAudioFiles() acts.
-        enum AudioScope {
-            SelectedAudio, ///< The audio files of the selected rows
-            AllAudio,      ///< Every audio file
-        };
-
         /// Opens ConvertFrequencyMapsDialog for the audio files of the voice bank, those of the
         /// folders not read included, with the format in effect as the initial source format,
         /// and converts the maps of the checked files between the formats chosen, as the
@@ -261,16 +255,16 @@ namespace hello::daw {
         /// the generator writes. A generation sets its runs and size from the settings.
         std::shared_ptr<kit::SynthToolOutputLog> frequencyMapLog() const;
 
-        /// Processes the audio files of \a scope with kit::AudioFileProcessor, as the user
-        /// chooses the processing and the files in a ProcessAudioFilesDialog. Each original file
-        /// is first copied to the backup folder of the dialog under its path relative to the
-        /// voice bank, and a file whose copy fails is not processed. The frequency maps and the
+        /// Processes audio files of the voice bank with kit::AudioFileProcessor, as the user
+        /// chooses the processing and the files in a ProcessAudioFilesDialog, which lists the
+        /// readable audio files, those of the folders not read included. Each original file is
+        /// first copied to the backup folder of the dialog under its path relative to the voice
+        /// bank, and a file whose copy fails is not processed. The frequency maps and the
         /// analysis caches of the processed files are then removed in every format if the
-        /// dialog specifies so. The audio files of the folders not read are included. No undo
-        /// restores the files.
+        /// dialog specifies so. No undo restores the files.
         ///
         /// \return whether every checked file was processed
-        bool processAudioFiles(AudioScope scope);
+        bool processAudioFiles();
         /// @}
 
     protected:

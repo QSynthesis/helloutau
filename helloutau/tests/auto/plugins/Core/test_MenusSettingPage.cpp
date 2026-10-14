@@ -232,7 +232,7 @@ private Q_SLOTS:
         const auto tools =
             childWithId(model, mainMenu, QStringLiteral("helloutau.voiceBank.tools"));
         QVERIFY(tools.isValid());
-        const auto processAll = QStringLiteral("helloutau.voiceBank.processAllAudio");
+        const auto processAll = QStringLiteral("helloutau.voiceBank.processAudio");
         QVERIFY(isDeclared(*e, Editor::VoiceBankWindowKind, processAll));
         const auto entry = childWithId(model, tools, processAll);
         QVERIFY(entry.isValid());
