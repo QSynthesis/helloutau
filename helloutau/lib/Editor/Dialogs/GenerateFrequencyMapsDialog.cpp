@@ -4,7 +4,6 @@
 #include <QtWidgets/QDialogButtonBox>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QPushButton>
-#include <QtWidgets/QTreeWidget>
 #include <QtWidgets/QVBoxLayout>
 
 #include <helloutau/Widgets/FileCheckList.h>
@@ -41,6 +40,9 @@ namespace hello::daw {
         // The rows are in the order of the files, and the columns of the caches follow the
         // column of the map.
         m_list = new FileCheckList(QStringList{tr("File"), tr("Frequency Map")} + cacheNames);
+        for (int column = 1; column < 2 + cacheNames.size(); ++column) {
+            m_list->setColumnAlignment(column, Qt::AlignCenter);
+        }
         bool anySelected = false;
         for (const auto &file : std::as_const(m_files)) {
             const auto relative = file.path.lexically_relative(root);
@@ -50,10 +52,7 @@ namespace hello::daw {
             for (qsizetype i = 0; i < cacheNames.size(); ++i) {
                 texts.push_back(presence(file.caches.value(i)));
             }
-            const auto item = m_list->tree()->topLevelItem(m_list->addRow(texts));
-            for (int column = 1; column < texts.size(); ++column) {
-                item->setTextAlignment(column, Qt::AlignCenter);
-            }
+            m_list->addRow(texts);
             anySelected = anySelected || file.selected;
         }
         const auto missing = [this](int row) { return !m_files.at(row).hasMap; };

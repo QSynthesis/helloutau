@@ -82,8 +82,22 @@ private Q_SLOTS:
         QVERIFY(!changed.isEmpty());
     }
 
-    // The columns are resized with the mouse. The first show fits them to their contents, and a
-    // later show keeps the widths that the user set.
+    // A column alignment applies to the header and to the cells, those of later rows included.
+    void a_column_is_aligned() {
+        FileCheckList list({QStringLiteral("File"), QStringLiteral("State")});
+        list.addRow({QStringLiteral("a.wav"), QStringLiteral("present")});
+        list.setColumnAlignment(1, Qt::AlignCenter);
+        list.addRow({QStringLiteral("i.wav"), QStringLiteral("missing")});
+        const auto tree = list.tree();
+        QCOMPARE(tree->headerItem()->textAlignment(1), int(Qt::AlignCenter));
+        QCOMPARE(tree->topLevelItem(0)->textAlignment(1), int(Qt::AlignCenter));
+        QCOMPARE(tree->topLevelItem(1)->textAlignment(1), int(Qt::AlignCenter));
+        QVERIFY(tree->topLevelItem(1)->textAlignment(0) != int(Qt::AlignCenter));
+    }
+
+    // The columns are resized with the mouse. The first show fits every column to its contents
+    // without stretching the last to the width of the list, and a later show keeps the widths
+    // that the user set.
     void the_columns_are_resized_by_the_user() {
         FileCheckList list(
             {QStringLiteral("File"), QStringLiteral("State"), QStringLiteral("Note")});
@@ -94,9 +108,12 @@ private Q_SLOTS:
             QCOMPARE(header->sectionResizeMode(column), QHeaderView::Interactive);
         }
         header->resizeSection(0, 10);
+        list.resize(1200, 300);
         list.show();
         QVERIFY(QTest::qWaitForWindowExposed(&list));
         QVERIFY(header->sectionSize(0) > list.tree()->fontMetrics().horizontalAdvance(name));
+        QVERIFY(!header->stretchLastSection());
+        QVERIFY(header->length() < list.tree()->viewport()->width());
 
         header->resizeSection(0, 300);
         list.hide();

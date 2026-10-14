@@ -71,6 +71,11 @@ private Q_SLOTS:
         QCOMPARE(tree->columnCount(), 4);
         QCOMPARE(tree->headerItem()->text(2), QStringLiteral("STAR"));
         QCOMPARE(tree->headerItem()->text(3), QStringLiteral("PLATINUM"));
+        // The columns of the marks are centered, their headers included.
+        for (int column = 1; column < 4; ++column) {
+            QCOMPARE(tree->headerItem()->textAlignment(column), int(Qt::AlignCenter));
+            QCOMPARE(tree->topLevelItem(0)->textAlignment(column), int(Qt::AlignCenter));
+        }
         const auto a = tree->topLevelItem(0);
         const auto b = tree->topLevelItem(1);
         // A mark for a file present, nothing for a file missing

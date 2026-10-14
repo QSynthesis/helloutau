@@ -74,7 +74,7 @@ HelloUtau 的方案：
   - 实现（2026-10-12）：`kit::FrequencyMapGenerator`（HelloKitSynth）在后台线程运行，报告进度，结束时给出没有生成频率表的 wav 与失败的重采样器调用，由诊断器分析可能的原因（运行模式 `FrequencyMapGeneration`，见 [`SynthDiagnostics.md`](SynthDiagnostics.md)「诊断器」），音源窗口以概括、原因列表与详细信息中的逐个文件显示，不再在消息框中列出每个文件的重采样器输出（2026-10-13，原先的消息框在大量文件失败时过长）。重新生成先删除已有的表，删除由格式驱动给出（`FrequencyFormat::changesRemoving()`，与改名同样是数据驱动），由 `FrequencyFormats::removeMaps()` 执行。默认实现删除附属文件。mrq 的条目在 `desc.mrq` 中，按 mrq 库的 `mrq_delete_entry()` 把条目名置 0 删除，数据留在原处。文件中不再有名字不为 0 的完整条目时，`desc.mrq` 一并删除（作者 2026-10-14 决定），moresampler 下次生成时新建。删除频率表时一律连同分析缓存（见下文「分析缓存」）。
   - 音源窗口「工具」菜单：Generate Frequency Maps... 与 Delete All Frequency Maps...（先确认）。格式为设置中的重采样器对应的格式（`formatForResampler()`），与波形上方「F0」框的选择无关，因为生成只能由该重采样器完成。
   - Generate Frequency Maps... 由原先的三项（生成缺少的、重新生成选中条目的、重新生成全部）合并而成（作者 2026-10-14 决定），对话框为 `GenerateFrequencyMapsDialog`：
-    - 列出全部目录的 wav，频率表一列（`FrequencyFormat::mapsExist()`）。其后格式的每种分析缓存各一列，列名与个数取自 `FrequencyFormat::analysisCaches()`，不在对话框中写定，例如 mrq 为 LLSM 一列，dio 为 STAR、PLATINUM 两列。与条目表格相同，文件存在时显示 ✓，不存在时为空（作者 2026-10-14 要求）。列宽可以用鼠标调整，首次显示时按内容确定（`FileCheckList`）。
+    - 列出全部目录的 wav，频率表一列（`FrequencyFormat::mapsExist()`）。其后格式的每种分析缓存各一列，列名与个数取自 `FrequencyFormat::analysisCaches()`，不在对话框中写定，例如 mrq 为 LLSM 一列，dio 为 STAR、PLATINUM 两列。与条目表格相同，文件存在时显示 ✓，不存在时为空（作者 2026-10-14 要求）。列宽可以用鼠标调整，首次显示时各列按内容确定，不拉伸到列表的宽度。状态列的表头与单元格居中（`FileCheckList`）。
     - 有选区时预先勾选选中条目的 wav，否则勾选没有表的 wav。
     - 「Check Missing」按钮只勾选没有表的 wav，另有三状态的全选框。
     - 勾选的 wav 中已有表的按「重新生成时」的设置删除后重新生成，没有表的直接生成，二者在同一次运行中完成。对话框本身即为确认，不再弹出确认框。

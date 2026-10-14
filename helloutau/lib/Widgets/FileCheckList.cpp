@@ -16,7 +16,7 @@ namespace hello::daw {
         m_tree->setHeaderLabels(headers);
         m_tree->setSelectionMode(QAbstractItemView::NoSelection);
         m_tree->header()->setSectionResizeMode(QHeaderView::Interactive);
-        m_tree->header()->setStretchLastSection(true);
+        m_tree->header()->setStretchLastSection(false);
         m_checkAll = new CheckAllBox(m_tree, 0, this);
         m_buttons = new QWidget(this);
         auto buttons = new QHBoxLayout(m_buttons);
@@ -49,8 +49,19 @@ namespace hello::daw {
         auto item = new QTreeWidgetItem(texts);
         item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
         item->setCheckState(0, Qt::Unchecked);
+        for (auto it = m_alignments.cbegin(); it != m_alignments.cend(); ++it) {
+            item->setTextAlignment(it.key(), it.value());
+        }
         m_tree->addTopLevelItem(item);
         return m_tree->topLevelItemCount() - 1;
+    }
+
+    void FileCheckList::setColumnAlignment(int column, Qt::Alignment alignment) {
+        m_alignments.insert(column, alignment);
+        m_tree->headerItem()->setTextAlignment(column, alignment);
+        for (int row = 0; row < rowCount(); ++row) {
+            m_tree->topLevelItem(row)->setTextAlignment(column, alignment);
+        }
     }
 
     int FileCheckList::rowCount() const {
@@ -113,7 +124,7 @@ namespace hello::daw {
         // ResizeToContents would fit the columns as well, but it prevents resizing with the
         // mouse.
         m_fitted = true;
-        for (int column = 0; column < m_tree->columnCount() - 1; ++column) {
+        for (int column = 0; column < m_tree->columnCount(); ++column) {
             m_tree->resizeColumnToContents(column);
         }
     }

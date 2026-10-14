@@ -3,6 +3,7 @@
 
 #include <functional>
 
+#include <QtCore/QHash>
 #include <QtCore/QList>
 #include <QtCore/QStringList>
 #include <QtWidgets/QWidget>
@@ -22,9 +23,8 @@ namespace hello::daw {
     /// check exactly the rows of a condition, such as the files without a frequency map.
     ///
     /// The rows are identified by their indices in the order of addRow(). Every row is checkable.
-    /// The user resizes the columns with the mouse. The columns except the last are fitted to
-    /// their contents when the list is first shown, and the remaining width is given to the last
-    /// column.
+    /// The user resizes the columns with the mouse. The columns are fitted to their contents when
+    /// the list is first shown, and no column is stretched to the width of the list.
     class HELLOUTAU_WIDGETS_EXPORT FileCheckList : public QWidget {
         Q_OBJECT
     public:
@@ -39,6 +39,10 @@ namespace hello::daw {
         int rowCount() const;
 
         void setText(int row, int column, const QString &text);
+
+        /// Aligns the header and the cells of \a column by \a alignment , those of the rows
+        /// added later included.
+        void setColumnAlignment(int column, Qt::Alignment alignment);
 
         bool isChecked(int row) const;
         void setChecked(int row, bool checked);
@@ -68,6 +72,8 @@ namespace hello::daw {
         QTreeWidget *m_tree;
         CheckAllBox *m_checkAll;
         QWidget *m_buttons;
+        // The alignments of setColumnAlignment() by column, for the rows added later
+        QHash<int, Qt::Alignment> m_alignments;
         // Set while checkWhere() changes the rows, so that checkedChanged() is emitted once
         bool m_applying = false;
         // Set once the columns fit their contents, so that a later show keeps the widths that
