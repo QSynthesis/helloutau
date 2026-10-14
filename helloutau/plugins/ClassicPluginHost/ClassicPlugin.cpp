@@ -100,6 +100,7 @@ namespace hello::daw {
             plugin.name = manifest.value(QLatin1String("name")).toString().trimmed();
             execute = manifest.value(QLatin1String("execute")).toString().trimmed();
             plugin.shell = manifest.value(QLatin1String("shell")).toBool();
+            plugin.ustVersion = manifest.value(QLatin1String("ustversion")).toString().trimmed();
 
             const auto notes =
                 manifest.value(QLatin1String("notes")).toString(QStringLiteral("selection"));

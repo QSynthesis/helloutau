@@ -72,7 +72,7 @@
 - `[#PREV]`/`[#NEXT]` 的修改**应用**（规格原文），与选区的修改同在一个撤销步骤中。
 - 合并按条目：省略的条目不变；空值（如 `Intensity=`）按规格恢复默认。
 - 文件内容未变，或所有段落都省略，视为取消，不产生撤销步骤。
-- `ustversion` 为 1.00 或 1.10 时按该格式写出，其他值与省略时按 1.20 写出，与实测一致（[`claude/utau-plugin-protocol.md`](claude/utau-plugin-protocol.md)「条目格式」）。`plugin.json` 没有对应的键，有它时按 1.20 写出。`notes` 只要出现即传入全部音符（规格「指定した場合」，同 stdutau）。
+- `ustversion` 为 1.00 或 1.10 时按该格式写出，其他值与省略时按 1.20 写出，与实测一致（[`claude/utau-plugin-protocol.md`](claude/utau-plugin-protocol.md)「条目格式」）。`plugin.json` 的 `ustversion` 同此（note.md「插件」）。`notes` 只要出现即传入全部音符（规格「指定した場合」，同 stdutau）。
 - 临时文件每次运行唯一，位于临时目录管理器分配的子目录（`Distribution.md`「临时目录管理器」），读回后删除；名称同 UTAU 为 `tmpXXXX.tmp`。
 - `execute` 是不可信路径：拒绝绝对路径、`..` 与解析后落在插件文件夹以外的路径；临时文件路径只作为参数数组的一项传入，不拼接命令行（CLAUDE.md）。工作目录为插件文件夹。
 - 启动：Windows 上以 `CreateProcess` 挂起启动、放入作业对象后再恢复，插件启动的进程都在作业中，「取消」以 `TerminateJobObject` 结束整棵进程树；`shell=use` 以 `ShellExecuteEx`，其进程同样放入作业。控制台窗口可见，同 UTAU。批处理（`.bat`、`.cmd`）以 `cmd.exe /d /s /c ""程序" "文件""` 启动：直接交给 `CreateProcess` 时 Windows 以 `cmd /c` 执行整行，会去除首尾引号而破坏路径；路径含 `%` 时拒绝运行，因为引号内 cmd 仍会展开变量。其他平台以 `QProcess` 在独立的进程组中启动，「取消」结束整个进程组。

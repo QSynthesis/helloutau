@@ -28,13 +28,13 @@ namespace hello::daw {
         ///
         /// \code
         ///   {"name": "...", "execute": "plugin.exe", "shell": false, "notes": "selection",
-        ///    "charset": "UTF-8"}
+        ///    "charset": "UTF-8", "ustversion": "1.20"}
         /// \endcode
         ///
         /// \c notes is \c selection or \c all , and defaults to \c selection . \c charset
         /// specifies the encoding of the temporary file and defaults to localCharset(). Other
-        /// plugins provide the \c plugin.txt of UTAU in localCharset(). See the plugin section
-        /// of docs/note.md.
+        /// keys are ignored. Other plugins provide the \c plugin.txt of UTAU in localCharset().
+        /// See the plugin section of docs/note.md.
         ///
         /// A plugin whose program cannot run is still returned, with the reason in
         /// \c unavailableReason , so that a menu can show it as disabled.
@@ -80,9 +80,9 @@ namespace hello::daw {
         /// The encoding of the temporary file and of the result.
         QString charset;
 
-        /// The entry format of the temporary file that \c plugin.txt requests (\c ustversion ),
-        /// see utau::PluginInput::version. Empty if \c plugin.txt omits it or the plugin has a
-        /// \c plugin.json , in which case the format 1.20 applies, as in UTAU.
+        /// The entry format of the temporary file that \c plugin.txt or \c plugin.json requests
+        /// (\c ustversion ), see utau::PluginInput::version. Empty if the file omits it, in which
+        /// case the format 1.20 applies, as in UTAU.
         QString ustVersion;
 
         /// The reason that the plugin cannot run, or an empty string if the plugin is available.

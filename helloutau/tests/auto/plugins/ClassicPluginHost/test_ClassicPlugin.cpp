@@ -42,24 +42,27 @@ class test_ClassicPlugin : public QObject {
     }
 
 private Q_SLOTS:
-    // A plugin.json in UTF-8 replaces plugin.txt entirely. The plugin.txt is not read, and the
-    // encoding of the temporary file is the charset of the plugin.json.
+    // A plugin.json in UTF-8 replaces plugin.txt entirely. The plugin.txt is not read, the
+    // encoding of the temporary file is the charset of the plugin.json, and the keys of the
+    // host are no error.
     void plugin_json_replaces_plugin_txt() {
         const auto folder =
             plugin("json", "name=Old\r\nexecute=old.bat\r\nnotes=all\r\nustversion=1.00\r\n",
                    {"old.bat", "new.bat"}, "manifests");
         manifest(folder, R"({"name": "新しい", "execute": "new.bat", "shell": true, )"
-                         R"("notes": "selection", "charset": "UTF-8"})");
+                         R"("notes": "selection", "charset": "UTF-8", "ustversion": "1.10", )"
+                         R"("ClassicPluginHost": {"playinplugin": {"original": null}}})");
         kit::DiagnosticList diagnostics;
         const auto read = ClassicPlugin::read(folder, diagnostics);
         QVERIFY(read);
         QVERIFY(read->isAvailable());
+        QVERIFY(diagnostics.isEmpty());
         QCOMPARE(read->name, QStringLiteral("新しい"));
         QVERIFY(fs::equivalent(read->program, folder / "new.bat"));
         QVERIFY(read->shell);
         QVERIFY(!read->wholeTrack);
         QCOMPARE(read->charset, QStringLiteral("UTF-8"));
-        QVERIFY(read->ustVersion.isEmpty());
+        QCOMPARE(read->ustVersion, QStringLiteral("1.10"));
     }
 
     // The defaults of plugin.json: the folder name, the program started directly, the
@@ -76,6 +79,7 @@ private Q_SLOTS:
         QVERIFY(!read->shell);
         QVERIFY(!read->wholeTrack);
         QCOMPARE(read->charset, ClassicPlugin::localCharset());
+        QVERIFY(read->ustVersion.isEmpty());
 
         manifest(folder, R"({"execute": "a.bat", "notes": "all"})");
         QVERIFY(ClassicPlugin::read(folder, diagnostics)->wholeTrack);

@@ -131,12 +131,24 @@ UST 自身的 `Charset` 只有两种取值：空，或 `UTF-8`。它只表示该
 有 `plugin.json` 时以它为准，不再读 `plugin.txt`（作者 2026-09-30 定）。它是 UTF-8 的 JSON：
 
 ```json
-{"name": "插件名", "execute": "plugin.exe", "shell": false, "notes": "selection", "charset": "UTF-8"}
+{"name": "插件名", "execute": "plugin.exe", "shell": false, "notes": "selection", "charset": "UTF-8",
+ "ustversion": "1.20"}
 ```
 
-`name` 省略时取文件夹名；`shell` 为 `true` 时同 `plugin.txt` 的 `shell=use`；`notes` 为 `selection`（默认）或 `all`；`charset` 为传给插件的临时文件的编码，省略时与 UTAU 相同，即上述本地编码。
+- `name`：省略时取文件夹名。
+- `shell`：为 `true` 时同 `plugin.txt` 的 `shell=use`。
+- `notes`：`selection`（默认）或 `all`。
+- `charset`：传给插件的临时文件的编码，省略时与 UTAU 相同，即上述本地编码。
+- `ustversion`：临时文件的条目格式，同 `plugin.txt` 的 `ustversion`，取值 `1.00`、`1.10` 或 `1.20`，省略时为 `1.20`（作者 2026-10-14 定）。
+- 其他键原样保留，宿主读写 `plugin.json` 时不删除它们（作者 2026-10-14 定）。`ClassicPluginHost` 键归宿主使用，记录试听程序的替换，见 [`PluginPlay.md`](PluginPlay.md)「部署」：
 
-**传给插件的临时文件**（作者 2026-09-30 定）：`plugin.json` 的 `charset` 声明 `UTF-8` 时，临时文件写成 UTF-8，插件的结果也按 UTF-8 读回；否则与 UTAU 兼容，按上述本地编码写出与读回，无法表示的字符按下文转义。UTAU 实际使用本地编码（系统 ANSI 代码页，见 [`claude/utau-plugin-protocol.md`](claude/utau-plugin-protocol.md)）；插件规格写作 Shift_JIS，只因规格作者使用日文系统。
+  ```json
+  "ClassicPluginHost": {"playinplugin": {"original": "playinplugin-original.exe", "transcribed": true}}
+  ```
+
+  `original` 为原有的 `playinplugin.exe` 改名后的文件名，原来没有该文件时为 `null`。`transcribed` 表示这份 `plugin.json` 是否在安装试听程序时由 `plugin.txt` 转写而来。
+
+**传给插件的临时文件**（作者 2026-09-30 定）：`plugin.json` 的 `charset` 声明 `UTF-8` 时，临时文件写成 UTF-8，插件的结果也按 UTF-8 读回。否则与 UTAU 兼容，按上述本地编码写出与读回，无法表示的字符按下文转义。UTAU 实际使用本地编码（系统 ANSI 代码页，见 [`claude/utau-plugin-protocol.md`](claude/utau-plugin-protocol.md)）。插件规格写作 Shift_JIS，只因规格作者使用日文系统。
 
 ### 转义
 
