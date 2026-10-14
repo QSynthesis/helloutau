@@ -56,7 +56,7 @@
 除协议外全部实现在 ClassicPluginHost 插件中，HelloUtau 的库中不为它新开模块（作者 2026-09-30 定）。「选区编辑」的通用扩展点待出现第二个使用者时再从插件中提炼。
 
 1. **协议（stdutau `pluginfile.h`，`2004f8e`）**：一个文件一个类，插件与宿主共用（作者定），都在原始字节上工作。
-   - `PluginInput`，传给插件的临时文件：插件读，宿主写。写出 `[#VERSION]`（`UST Version 1.20`）、`[#SETTING]`（Project、选区起点的 Tempo、绝对 VoiceDir 与 CacheDir、Mode2）、`[#PREV]`、以轨道位置编号的音符（带只读的 `@` 条目）、`[#NEXT]`，CRLF。
+   - `PluginInput`，传给插件的临时文件：插件读，宿主写。写出 `[#VERSION]`（`UST Version 1.20`）、`[#SETTING]`（Project、第一个段落所在的 Tempo（有 `[#PREV]` 时为它所在的曲速）、绝对 VoiceDir 与 CacheDir、Mode2）、`[#PREV]`、以轨道位置编号的音符（带只读的 `@` 条目）、`[#NEXT]`，CRLF。
    - `PluginResult`，插件写回的结果：插件写，宿主读。数据是按出现顺序的段落列表（编号、`[#INSERT]`、`[#DELETE]`、`[#PREV]`/`[#NEXT]`），每段记录**出现过的条目**（`keys`）与其值（`note`），空值的条目保持空白，供宿主在原音符上逐条合并；没有音符段落即取消（`isCancelled()`）。`PluginResult(input)` 为全部不变的结果，`Section::assign()` 设置一个音符。
 2. **ClassicPluginHost 插件**：
    - 名称（作者 2026-09-30 定）：目录与工程 `ClassicPluginHost`，插件类 `ClassicPluginHostPlugin`（`Internal`，不导出），ID `org.helloutau.classicpluginhost`，显示名 Classic Plugin Host。

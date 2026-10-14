@@ -227,15 +227,21 @@ namespace hello::daw {
             return note;
         };
 
+        const bool hasPrevious = !plugin.wholeTrack && first > 0;
         utau::PluginInput file;
         file.settings.project = text.encodeReadOnly(textOf(paths.project));
-        file.settings.tempo = notes.isEmpty() ? project.settings.tempo
-                                              : tempos.tempo(qMin(first, int(notes.size()) - 1));
+        // The tempo of the first section of the file, [#PREV] if present, as UTAU writes it
+        // (docs/claude/utau-plugin-protocol.md). A section without its own Tempo entry takes
+        // this tempo, as the previous note of a selection that starts with a change of tempo.
+        const int firstWritten = hasPrevious ? first - 1 : first;
+        file.settings.tempo = notes.isEmpty()
+                                  ? project.settings.tempo
+                                  : tempos.tempo(qMin(firstWritten, int(notes.size()) - 1));
         file.settings.voiceDir = text.encodeReadOnly(textOf(paths.voiceDirectory));
         file.settings.cacheDir = text.encodeReadOnly(textOf(paths.cacheDirectory));
         file.settings.isMode2 = project.settings.mode2;
         file.startIndex = first;
-        if (!plugin.wholeTrack && first > 0) {
+        if (hasPrevious) {
             file.prevNote = noteAt(first - 1);
         }
         for (int i = first; i < first + count; ++i) {

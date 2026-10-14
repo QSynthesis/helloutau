@@ -124,6 +124,30 @@ private Q_SLOTS:
         QCOMPARE(file.nextNote->lyric, std::string("e"));
     }
 
+    // The tempo of the settings is that of the first section, [#PREV] if present, as UTAU writes
+    // it: a previous note without a Tempo entry is read at that tempo.
+    void the_tempo_is_that_of_the_first_section() {
+        auto project = probe();
+        project.settings.tempo = 60;
+        auto &notes = project.tracks.first().notes;
+        notes[2].tempo = 120;
+        auto file = read(ClassicPluginExchange::input(pluginOf(QStringLiteral("UTF-8")), project, 2,
+                                                      1, {}, nullptr));
+        QCOMPARE(file.settings.tempo, 60.0);
+        QVERIFY(file.prevNote);
+        QVERIFY(!file.prevNote->tempo);
+        QCOMPARE(file.notes[0].tempo, std::optional<double>(120));
+
+        // Without a previous note, the first selected note
+        file = read(ClassicPluginExchange::input(pluginOf(QStringLiteral("UTF-8")), project, 0, 3,
+                                                 {}, nullptr));
+        QVERIFY(!file.prevNote);
+        QCOMPARE(file.settings.tempo, 60.0);
+        file = read(ClassicPluginExchange::input(pluginOf(QStringLiteral("UTF-8")), project, 3, 1,
+                                                 {}, nullptr));
+        QCOMPARE(file.settings.tempo, 120.0);
+    }
+
     // A plugin that receives the whole track receives every note and no adjacent note.
     void the_whole_track_has_no_notes_around_it() {
         auto plugin = pluginOf(QStringLiteral("UTF-8"));

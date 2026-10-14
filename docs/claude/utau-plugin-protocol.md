@@ -56,9 +56,21 @@
 - **交给 wavtool 的值按前一个音符自己的曲速计算**，六组都吻合。
 - **前一个音符是休止符时，临时文件中的值同样经过修正**（G4、G6），PlayInPlugin 旧记录中「前一个音符是休止符时修正值不进入插件」在本次实测中不成立。
 - 选区不影响这些值：只选中 G2 的 `qu` 时，其值与全选时相同。
-- 只选中 G2 的 `qu` 时，`[#SETTING]` 的 `Tempo` 为 60，即 `[#PREV]`（曲速 60 的 `a`）的曲速，全选时为第一个音符的 120。即 `Tempo` 是临时文件中第一个段落所在的曲速，而非选区第一个音符的曲速。
+- 只选中 G2 的 `qu` 时，`[#SETTING]` 的 `Tempo` 为 60，即 `[#PREV]`（曲速 60 的 `a`）的曲速，全选时为第一个音符的 120。
 
 HelloUtau 的合成计划（`ustrender --plan`）在六组中与 wavtool 收到的值完全相同。
+
+### `[#SETTING]` 的曲速
+
+上面 `[#PREV]` 自带 `Tempo=60`，不能区分「第一个段落所在的曲速」与「第一个段落的 `Tempo` 条目，没有时为工程的曲速」。同日补做第二轮（`probe-tempo.ust`）：工程的曲速为 60，第 2 个音符改为 120，第 7 个音符改为 90，其余音符没有 `Tempo`。
+
+| 选中 | `[#SETTING]` 的 `Tempo` | `[#PREV]` |
+|---|---|---|
+| 第 5 个音符 | 120 | 第 4 个音符，没有 `Tempo`，所在的曲速是第 2 个音符设的 120 |
+| 第 7 个音符（`Tempo=90`） | 120 | 第 6 个音符，同上 |
+| 第 1 个音符 | 60 | 无，`[#NEXT]` 带 `Tempo=120` |
+
+**`Tempo` 是临时文件中第一个段落实际所在的曲速**：有 `[#PREV]` 时为它所在的曲速，没有时为选区第一个音符所在的曲速。之前改过的曲速沿用至此，因此插件由 `[#SETTING]` 与各段落的 `Tempo` 条目即可得知每个音符的曲速。选区以曲速变化开始时，写的是 `[#PREV]` 所在的曲速，不是选区第一个音符的曲速。
 
 ## 对 HelloUtau 的影响
 
@@ -67,4 +79,4 @@ HelloUtau 的合成计划（`ustrender --plan`）在六组中与 wavtool 收到�
 - stdutau 的 `PluginFileReader`（现并入 `PluginInput`）注释记为临时文件「总从 0 编号」，与实测不符；`PluginFileWriter`（现并入 `PluginResult`）的 `prependNotesBeforePrev` / `appendNotesAfterNext` 注明插到选区外，实测只插在选区的起点与终点。两处已在 stdutau `ae46c5c` 改正。
 - 临时文件的编码是本地编码，与 note.md 对没有 `plugin.json` 的插件的规定一致。声明接收 UTF-8 的插件改用 UTF-8。
 - `ClassicPluginExchange::input()` 以 `SampleTiming` 写出 `@preuttr`、`@overlap`、`@stpoint`，即交给合成工具的值。前后曲速不同时，它与 UTAU 写给插件的值不同（上表 G2、G3、G5、G6）。作者 2026-10-14 决定不照搬 UTAU 的算法，因为它是错误的。
-- `[#SETTING]` 的 `Tempo` 取选区第一个音符的曲速（`ClassicPluginExchange.cpp`），有 `[#PREV]` 且其曲速不同时与 UTAU 不同。
+- `[#SETTING]` 的 `Tempo` 原先取选区第一个音符的曲速，有 `[#PREV]` 且其曲速不同时，插件会把没有 `Tempo` 条目的 `[#PREV]` 按错误的曲速计算。2026-10-14 改为与 UTAU 相同，取第一个段落所在的曲速（`ClassicPluginExchange::input()`）。
