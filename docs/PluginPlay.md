@@ -116,7 +116,7 @@ playinplugin.exe <输入文件> [/m:<修改文件>] [/o:<输出文件>] [/noplay
 ## 实施步骤
 
 1. ~~**叠加修改**~~：`ClassicPluginExchange::preview()`，以临时会话复用 `apply()`，无须拆出合并逻辑。QtTest。
-2. **`hello-plugin-play`**：命令行解析、按作业查找宿主、管道客户端、运行原版与没有原版时的消息框，CMake 照 `hello-updater`。测试在 `tests/auto/tools/plugin-play` 中用 Python 运行程序：测试进程把程序放入自己创建的作业，以 CPython 的 `_winapi` 创建命名管道充当宿主，检查请求的内容、不在作业中时运行原版、原版的参数与退出码。
+2. ~~**`hello-plugin-play`**~~：`hellokit/tools/plugin-play`，命令行解析、按作业查找宿主、管道客户端、运行原版与没有原版时的消息框，CMake 照 `hello-updater`，只在 Windows 上构建。测试 `hellokit/tests/auto/tools/plugin-play` 用 Python 运行程序：测试进程创建作业，在其中启动充当插件的进程，以 CPython 的 `_winapi` 创建以该进程命名的管道充当宿主，检查请求的内容、等待回复、管道关闭后退出，以及作业中没有宿主时以原样的参数运行原版（`plugin-play-original-stub` 充当原版）并返回其退出码。
 3. **管道服务器与渲染**：`ClassicPluginRunner` 在插件启动后提供插件进程的进程号，管道服务器以它命名，解析与核对请求、叠加修改并回复。库一级的部分以 QtTest 测试，用 `QLocalSocket` 模拟 plugin-play。
 4. **试听对话框**：渲染进度、播放与取消，以及合成工具不可信时的错误窗口。由作者试用。
 5. **部署**：见上节，推后。
