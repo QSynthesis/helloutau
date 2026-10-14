@@ -4,14 +4,13 @@
 #include <cmath>
 #include <limits>
 
+#include <QtCore/QtMath>
+
 #include <stdutau/utautils.h>
 
 namespace hello::kit {
 
     namespace {
-
-        // The value of pi in stdutau, kept so that the values agree to the cent
-        constexpr double Pi = 3.1415926;
 
         // The shortest vibrato in milliseconds that UTAU draws on its own note; see
         // SHORTEST_VIBRATO in stdutau synth.cpp for the measurements.
@@ -33,13 +32,13 @@ namespace hello::kit {
                 case PortamentoPoint::Linear:
                     return int((y2 - y1) / (x2 - x1) * (x - x1) + y1);
                 case PortamentoPoint::J:
-                    return int((y1 - y2) * std::cos(Pi / 2 / (x2 - x1) * (x - x1)) + y2);
+                    return int((y1 - y2) * std::cos(M_PI / 2 / (x2 - x1) * (x - x1)) + y2);
                 case PortamentoPoint::R:
-                    return int((y2 - y1) * std::cos(Pi / 2 / (x2 - x1) * (x - x2)) + y1);
+                    return int((y2 - y1) * std::cos(M_PI / 2 / (x2 - x1) * (x - x2)) + y1);
                 case PortamentoPoint::S:
                     break;
             }
-            return int((y1 - y2) / 2 * std::cos(Pi * (x - x1) / (x2 - x1)) + (y1 + y2) / 2);
+            return int((y1 - y2) / 2 * std::cos(M_PI * (x - x1) / (x2 - x1)) + (y1 + y2) / 2);
         }
 
     }
@@ -233,8 +232,8 @@ namespace hello::kit {
         const double period = ticksOf(vibrato.period);
         const double span = proportion * length;
         const double start = (1 - proportion) * length;
-        const double frequency = 1 / period * 2 * Pi;
-        const double phase = vibrato.phase / 100.0 * 2 * Pi;
+        const double frequency = 1 / period * 2 * M_PI;
+        const double phase = vibrato.phase / 100.0 * 2 * M_PI;
         const double fadeIn = vibrato.attack / 100.0 * span;
         const double fadeOut = (1 - vibrato.release / 100.0) * span;
 
