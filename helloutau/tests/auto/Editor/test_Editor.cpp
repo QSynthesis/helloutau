@@ -3037,16 +3037,24 @@ private Q_SLOTS:
             }
             QFAIL("format not offered");
         };
-        handleNextDialog<ConvertFrequencyMapsDialog>([&choose](ConvertFrequencyMapsDialog *dialog) {
-            choose(
-                dialog->sourceBox(), [dialog] { return dialog->sourceFormat(); },
-                QStringLiteral("frq"));
-            choose(
-                dialog->targetBox(), [dialog] { return dialog->targetFormat(); },
-                QStringLiteral("dio"));
-            dialog->accept();
-        });
-        QVERIFY(window->convertFrequencyMaps(VoiceBankWindow::AllAudio));
+        // Without a selection, the dialog checks the audio files with a map of the source
+        // format. Every file is then checked, so that the files without one are skipped.
+        QList<fs::path> checked;
+        window->entryTable()->clearSelection();
+        handleNextDialog<ConvertFrequencyMapsDialog>(
+            [&choose, &checked](ConvertFrequencyMapsDialog *dialog) {
+                choose(
+                    dialog->sourceBox(), [dialog] { return dialog->sourceFormat(); },
+                    QStringLiteral("frq"));
+                choose(
+                    dialog->targetBox(), [dialog] { return dialog->targetFormat(); },
+                    QStringLiteral("dio"));
+                checked = dialog->checkedFiles();
+                dialog->fileList()->checkWhere([](int) { return true; });
+                dialog->accept();
+            });
+        QVERIFY(window->convertFrequencyMaps());
+        QCOMPARE(checked, QList<fs::path>{bank / "a.wav"});
         QVERIFY(fs::exists(bank / "a.dio"));
         QVERIFY(!fs::exists(bank / "c.dio"));
         QVERIFY(!fs::exists(bank / "sub" / "x.dio"));

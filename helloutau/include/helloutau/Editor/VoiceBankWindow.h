@@ -21,6 +21,7 @@ namespace QAK {
 }
 
 namespace hello::kit {
+    class FrequencyFormat;
     class FrequencyMapGenerator;
     class SynthToolOutputLog;
     class VoiceBankDocument;
@@ -219,20 +220,29 @@ namespace hello::daw {
         /// \return whether every checked file was repaired or generated again
         bool repairFrequencyMaps();
 
-        /// The audio files on which convertFrequencyMaps() and processAudioFiles() act.
+        /// The audio files on which processAudioFiles() acts.
         enum AudioScope {
             SelectedAudio, ///< The audio files of the selected rows
             AllAudio,      ///< Every audio file
         };
 
-        /// Converts the frequency maps of the audio files of \a scope from the format to the
-        /// format that the user chooses in a ConvertFrequencyMapsDialog, with
-        /// kit::FrequencyMapConverter, which replaces the maps of the target format and removes
-        /// their analysis caches. The source format is initially the format in effect. The audio
-        /// files of the folders not read are included. No undo restores the replaced maps.
+        /// Opens ConvertFrequencyMapsDialog for the audio files of the voice bank, those of the
+        /// folders not read included, with the format in effect as the initial source format,
+        /// and converts the maps of the checked files between the formats chosen, as the
+        /// overload does. Returns false if the voice bank has no audio files, the dialog is
+        /// cancelled or a map is not converted.
+        bool convertFrequencyMaps();
+
+        /// \overload for the audio files \a wavs , absolute paths, from the format \a from to
+        /// the format \a to , without the dialog.
         ///
-        /// \return whether every map was converted
-        bool convertFrequencyMaps(AudioScope scope);
+        /// Converts the maps with kit::FrequencyMapConverter, which replaces the maps of the
+        /// target format and removes their analysis caches. An audio file without a map of the
+        /// source format is skipped. No undo restores the replaced maps.
+        ///
+        /// \return whether every map was converted, false if no audio file has a map of \a from
+        bool convertFrequencyMaps(const QList<std::filesystem::path> &wavs,
+                                  const kit::FrequencyFormat &from, const kit::FrequencyFormat &to);
 
         /// The generator of generateFrequencyMaps(), whose process a test replaces.
         kit::FrequencyMapGenerator &frequencyMapGenerator();

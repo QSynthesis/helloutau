@@ -141,11 +141,9 @@
              again -->
         <action id="helloutau.voiceBank.repairMaps" text="Re&amp;pair Frequency Maps..."
                 category="Tools" />
-        <!-- The frequency maps read in one format and written in another, which replace the
-             maps of that format -->
-        <action id="helloutau.voiceBank.convertSelectedMaps"
-                text="Convert Frequency Maps of Selec&amp;tion..." category="Tools" />
-        <action id="helloutau.voiceBank.convertAllMaps" text="&amp;Convert All Frequency Maps..."
+        <!-- The frequency maps of the audio files that the user checks, read in one format and
+             written in another, which replace the maps of that format -->
+        <action id="helloutau.voiceBank.convertMaps" text="&amp;Convert Frequency Maps..."
                 category="Tools" />
         <!-- The output of the resampler during the generations of the window -->
         <action id="helloutau.voiceBank.viewFrequencyMapLog" text="View Frequency Map &amp;Log..."
@@ -224,8 +222,7 @@
                 <action id="helloutau.voiceBank.generateMaps" />
                 <action id="helloutau.voiceBank.removeAllMaps" />
                 <action id="helloutau.voiceBank.repairMaps" />
-                <action id="helloutau.voiceBank.convertSelectedMaps" />
-                <action id="helloutau.voiceBank.convertAllMaps" />
+                <action id="helloutau.voiceBank.convertMaps" />
                 <action id="helloutau.voiceBank.viewFrequencyMapLog" />
                 <separator />
                 <action id="helloutau.voiceBank.processSelectedAudio" />

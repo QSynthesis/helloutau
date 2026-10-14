@@ -170,6 +170,10 @@
         <translation>生成频率表(&amp;G)...</translation>
     </message>
     <message>
+        <source>&amp;Convert Frequency Maps...</source>
+        <translation>转换频率表(&amp;C)...</translation>
+    </message>
+    <message>
         <source>&amp;Help</source>
         <translation>帮助(&amp;H)</translation>
     </message>
@@ -276,14 +280,6 @@
     <message>
         <source>Re&amp;pair Frequency Maps...</source>
         <translation>修复频率表(&amp;P)...</translation>
-    </message>
-    <message>
-        <source>Convert Frequency Maps of Selec&amp;tion...</source>
-        <translation>转换所选条目的频率表(&amp;T)...</translation>
-    </message>
-    <message>
-        <source>&amp;Convert All Frequency Maps...</source>
-        <translation>转换全部频率表(&amp;C)...</translation>
     </message>
     <message>
         <source>View Frequency Map &amp;Log...</source>
@@ -753,11 +749,17 @@
         <source>Convert Frequency Maps</source>
         <translation>转换频率表</translation>
     </message>
-    <message numerus="yes">
-        <source>The frequency maps of %n audio file(s) are converted. An audio file without a map of the source format is skipped. The maps of the target format are replaced, and their analysis caches are removed.</source>
-        <translation>
-            <numerusform>将转换 %n 个音频文件的频率表。没有源格式频率表的音频文件将被跳过。目标格式已有的频率表将被替换，其分析缓存将被删除。</numerusform>
-        </translation>
+    <message>
+        <source>File</source>
+        <translation>文件</translation>
+    </message>
+    <message>
+        <source>Check Files with Source &amp;Maps</source>
+        <translation>勾选有源格式频率表的项(&amp;M)</translation>
+    </message>
+    <message>
+        <source>An audio file without a map of the source format is skipped. The maps of the target format are replaced, and their analysis caches are removed.</source>
+        <translation>没有源格式频率表的音频文件将被跳过。目标格式已有的频率表将被替换，其分析缓存将被删除。</translation>
     </message>
     <message>
         <source>&amp;From:</source>
@@ -766,6 +768,16 @@
     <message>
         <source>&amp;To:</source>
         <translation>目标格式(&amp;T)：</translation>
+    </message>
+    <message numerus="yes">
+        <source>The frequency maps of %n audio file(s) will be converted.</source>
+        <translation>
+            <numerusform>将转换 %n 个音频文件的频率表。</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>No file is checked.</source>
+        <translation>没有勾选任何文件。</translation>
     </message>
 </context>
 <context>
@@ -3877,10 +3889,6 @@ Read them again? Unsaved changes in them are replaced, and Undo restores them.</
     <message>
         <source>Convert Frequency Maps</source>
         <translation>转换频率表</translation>
-    </message>
-    <message>
-        <source>Select the entries whose audio files are to have their frequency maps converted.</source>
-        <translation>请选择要转换频率表的音频文件所在的条目。</translation>
     </message>
     <message>
         <source>No audio file has a frequency map of the format %1.</source>

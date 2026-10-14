@@ -428,13 +428,9 @@ namespace hello::daw {
                 stdc_decl_t;
                 decl.repairFrequencyMaps();
             });
-            addCommand(QStringLiteral("helloutau.voiceBank.convertSelectedMaps"), [this] {
+            addCommand(QStringLiteral("helloutau.voiceBank.convertMaps"), [this] {
                 stdc_decl_t;
-                decl.convertFrequencyMaps(SelectedAudio);
-            });
-            addCommand(QStringLiteral("helloutau.voiceBank.convertAllMaps"), [this] {
-                stdc_decl_t;
-                decl.convertFrequencyMaps(AllAudio);
+                decl.convertFrequencyMaps();
             });
             addCommand(QStringLiteral("helloutau.voiceBank.viewFrequencyMapLog"), [this] {
                 stdc_decl_t;
@@ -1602,6 +1598,19 @@ namespace hello::daw {
             return audio;
         }
 
+        // Returns the paths of the audio files of the selected rows, normal as the paths that a
+        // dialog lists. The paths are compared whole, because the folder of the root in
+        // audioByFolder() ends with a separator and the folder of a selected file does not.
+        QList<std::filesystem::path> selectedAudioPaths() const {
+            QList<std::filesystem::path> paths;
+            for (const auto &[folder, names] : selectedAudioByFolder()) {
+                for (const auto &name : names) {
+                    paths.push_back((folder / name).lexically_normal());
+                }
+            }
+            return paths;
+        }
+
         // Returns the resampler of the settings and the format of its frequency maps, or shows
         // a message box with title and returns std::nullopt if either is absent
         std::optional<std::pair<std::filesystem::path, kit::FrequencyFormat *>>
@@ -2676,14 +2685,7 @@ namespace hello::daw {
         }
         const auto format = tools->second;
 
-        // The selection is compared by whole paths, because the folder of the root in
-        // audioByFolder() ends with a separator and the folder of a selected file does not.
-        QList<std::filesystem::path> selected;
-        for (const auto &[folder, names] : impl.selectedAudioByFolder()) {
-            for (const auto &name : names) {
-                selected.push_back((folder / name).lexically_normal());
-            }
-        }
+        const auto selected = impl.selectedAudioPaths();
         const auto caches = format->analysisCaches();
         QStringList cacheNames;
         for (const auto &cache : caches) {
@@ -2809,43 +2811,63 @@ namespace hello::daw {
                diagnostics.isEmpty();
     }
 
-    bool VoiceBankWindow::convertFrequencyMaps(AudioScope scope) {
+    bool VoiceBankWindow::convertFrequencyMaps() {
         stdc_impl_t;
         const auto title = tr("Convert Frequency Maps");
-        const auto audio =
-            scope == SelectedAudio ? impl.selectedAudioByFolder() : impl.audioByFolder();
-        int count = 0;
-        for (const auto &[folder, names] : audio) {
-            count += int(names.size());
+        const auto &formats = impl.editor->frequencyFormats();
+        const auto all = formats.formats();
+        const auto selected = impl.selectedAudioPaths();
+        QList<ConvertFrequencyMapsDialog::File> files;
+        for (const auto &[folder, names] : impl.audioByFolder()) {
+            QList<QList<bool>> present;
+            for (const auto format : all) {
+                present.push_back(format->mapsExist(folder, names));
+            }
+            for (qsizetype i = 0; i < names.size(); ++i) {
+                ConvertFrequencyMapsDialog::File file;
+                file.path = (folder / names.at(i)).lexically_normal();
+                for (const auto &maps : std::as_const(present)) {
+                    file.maps.push_back(maps.value(i));
+                }
+                file.selected = selected.contains(file.path);
+                files.push_back(std::move(file));
+            }
         }
-        if (count == 0) {
-            QMessageBox::information(this, title,
-                                     scope == SelectedAudio
-                                         ? tr("Select the entries whose audio files are to have "
-                                              "their frequency maps converted.")
-                                         : tr("The voice bank has no audio files."));
+        if (files.isEmpty()) {
+            QMessageBox::information(this, title, tr("The voice bank has no audio files."));
             return false;
         }
 
-        const auto &formats = impl.editor->frequencyFormats();
         auto source = formats.format(impl.currentFrequencyFormat());
         if (!source) {
             source =
                 formats.formatForResampler(pathOf(impl.editor->settings().rendering().resampler()));
         }
-        ConvertFrequencyMapsDialog dialog(formats.formats(), source, count, this);
+        ConvertFrequencyMapsDialog dialog(std::move(files), impl.document->rootPath(), all, source,
+                                          this);
         if (dialog.exec() != QDialog::Accepted) {
             return false;
         }
-        const auto from = dialog.sourceFormat();
-        const auto to = dialog.targetFormat();
+        return convertFrequencyMaps(dialog.checkedFiles(), *dialog.sourceFormat(),
+                                    *dialog.targetFormat());
+    }
+
+    bool VoiceBankWindow::convertFrequencyMaps(const QList<std::filesystem::path> &wavs,
+                                               const kit::FrequencyFormat &from,
+                                               const kit::FrequencyFormat &to) {
+        stdc_impl_t;
+        const auto title = tr("Convert Frequency Maps");
+        std::map<std::filesystem::path, QList<std::filesystem::path>> byFolder;
+        for (const auto &wav : wavs) {
+            byFolder[wav.parent_path()].push_back(wav.filename());
+        }
 
         kit::DiagnosticList diagnostics;
         kit::FrequencyMapConverter::Outcome outcome;
         QApplication::setOverrideCursor(Qt::WaitCursor);
-        for (const auto &[folder, names] : audio) {
+        for (const auto &[folder, names] : byFolder) {
             const auto done =
-                kit::FrequencyMapConverter::convert(*from, *to, folder, names, diagnostics);
+                kit::FrequencyMapConverter::convert(from, to, folder, names, diagnostics);
             outcome.converted += done.converted;
             outcome.resampled += done.resampled;
         }
@@ -2857,7 +2879,7 @@ namespace hello::daw {
         if (outcome.converted == 0 && diagnostics.isEmpty()) {
             QMessageBox::information(
                 this, title,
-                tr("No audio file has a frequency map of the format %1.").arg(from->name()));
+                tr("No audio file has a frequency map of the format %1.").arg(from.name()));
             return false;
         }
         auto message = tr("%n frequency map(s) were converted.", nullptr, outcome.converted);
@@ -2865,7 +2887,7 @@ namespace hello::daw {
             message +=
                 QLatin1Char(' ') + tr("%n of them were resampled to the hop of the format %1.",
                                       nullptr, outcome.resampled)
-                                       .arg(to->name());
+                                       .arg(to.name());
         }
         statusBar()->showMessage(message);
         DiagnosticBox::report(this, title, diagnostics);
