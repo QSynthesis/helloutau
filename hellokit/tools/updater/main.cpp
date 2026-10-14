@@ -24,6 +24,8 @@
 extern char **environ;
 #endif
 
+#include <hellokit/Config.h>
+
 // hello-updater: replaces the installation directory of a portable application with the directory
 // of the new version.
 //
@@ -38,7 +40,8 @@ extern char **environ;
 // console on Windows. Its messages go to the log file, which the application reads at its next
 // start. A failed restoration leaves no application to start, and is therefore also shown in a
 // message box on Windows if --show-errors is given, as is the usage for invalid arguments. The
-// usage for --help appears in a message box on Windows regardless.
+// texts of --help and --version are written to the standard output, on Windows only if it is
+// redirected to a file or a pipe, and appear in a message box otherwise.
 
 namespace fs = std::filesystem;
 
@@ -89,10 +92,18 @@ namespace {
         "invalid.\n"
         "--help\n"
         "    Shows this text and exits.\n"
+        "--version\n"
+        "    Shows the version and exits.\n"
         "\n"
         "Exit status: 0 on success, 1 for invalid arguments, 2 if the process did not exit in "
         "time, 3 if the replacement failed and the old directory was restored, 4 if the "
         "restoration also failed.\n";
+
+    constexpr char version[] = "hello-updater " HELLOKIT_VERSION "\n";
+
+    // The text that the arguments request instead of an update: none, the usage for --help, or
+    // the version for --version
+    enum class Information { None, Help, Version };
 
     // A rename fails while another process holds a file in the directory open, which an
     // antivirus scanner or a file manager does for a moment.
@@ -148,13 +159,19 @@ namespace {
         return result;
     }
 
-    // Returns the options, or std::nullopt if the arguments are invalid.
-    std::optional<Options> parse(const std::vector<NativeString> &arguments, bool *help) {
+    // Returns the options, or std::nullopt if the arguments are invalid or request a text, which
+    // is then set in information.
+    std::optional<Options> parse(const std::vector<NativeString> &arguments,
+                                 Information *information) {
         Options options;
         for (size_t i = 0; i < arguments.size(); ++i) {
             const auto &name = arguments[i];
             if (name == NATIVE("--help")) {
-                *help = true;
+                *information = Information::Help;
+                return std::nullopt;
+            }
+            if (name == NATIVE("--version")) {
+                *information = Information::Version;
                 return std::nullopt;
             }
             if (name == NATIVE("--show-errors")) {
@@ -297,38 +314,69 @@ namespace {
 #endif
     }
 
-    // Shows the usage for --help, or for invalid arguments if help is false. Windows has no
-    // console for this program, and the usage appears in a message box there. Invalid arguments
-    // appear in a message box only with --show-errors, and on the standard error otherwise, so
-    // that a caller that waits for the exit is not blocked.
-    void showUsage(bool help, bool showErrors) {
 #ifdef _WIN32
-        if (help || showErrors) {
-            // The usage is ASCII.
-            const std::wstring message(usage, usage + sizeof(usage) - 1);
-            MessageBoxW(nullptr, message.c_str(), L"hello-updater",
-                        MB_OK | (help ? MB_ICONINFORMATION : MB_ICONERROR));
+    // Returns whether the standard output is redirected to a file or a pipe. Windows has no
+    // console for this program otherwise.
+    bool outputRedirected() {
+        const auto output = GetStdHandle(STD_OUTPUT_HANDLE);
+        if (!output || output == INVALID_HANDLE_VALUE) {
+            return false;
+        }
+        const auto type = GetFileType(output);
+        return type == FILE_TYPE_DISK || type == FILE_TYPE_PIPE;
+    }
+
+    void showMessage(const char *text, UINT icon) {
+        // The texts are ASCII.
+        const std::string bytes(text);
+        const std::wstring message(bytes.begin(), bytes.end());
+        MessageBoxW(nullptr, message.c_str(), L"hello-updater", MB_OK | icon);
+    }
+#endif
+
+    // Shows the text that information requests, on the standard output if it is redirected, and
+    // in a message box on Windows otherwise.
+    void showInformation(Information information) {
+        const auto text = information == Information::Help ? usage : version;
+#ifdef _WIN32
+        if (!outputRedirected()) {
+            showMessage(text, MB_ICONINFORMATION);
+            return;
+        }
+#endif
+        std::fputs(text, stdout);
+        std::fflush(stdout);
+    }
+
+    // Shows the usage for invalid arguments: in a message box on Windows only with
+    // --show-errors, and on the standard error otherwise, so that a caller that waits for the
+    // exit is not blocked.
+    void showUsageError(bool showErrors) {
+#ifdef _WIN32
+        if (showErrors) {
+            showMessage(usage, MB_ICONERROR);
             return;
         }
 #else
-        if (help) {
-            std::fputs(usage, stdout);
-            return;
-        }
+        static_cast<void>(showErrors);
 #endif
         std::fputs(usage, stderr);
     }
 
     int run(const std::vector<NativeString> &arguments) {
-        bool help = false;
-        const auto parsed = parse(arguments, &help);
+        auto information = Information::None;
+        const auto parsed = parse(arguments, &information);
         if (!parsed) {
+            if (information != Information::None) {
+                showInformation(information);
+                return Success;
+            }
             // The arguments are searched without the parser, because the parser has rejected
             // them.
             const auto showErrors = std::find(arguments.begin(), arguments.end(),
                                               NATIVE("--show-errors")) != arguments.end();
-            showUsage(help, showErrors);
-            return help ? Success : UsageError;
+            showUsageError(showErrors);
+            return UsageError;
         }
         const auto &options = *parsed;
         Log log(options.log);

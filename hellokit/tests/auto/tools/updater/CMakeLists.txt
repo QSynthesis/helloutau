@@ -5,6 +5,6 @@ find_package(Python3 REQUIRED COMPONENTS Interpreter)
 
 add_test(NAME test_updater
     COMMAND Python3::Interpreter ${CMAKE_CURRENT_SOURCE_DIR}/test_updater.py
-        $<TARGET_FILE:hello-updater>
+        $<TARGET_FILE:hello-updater> ${HELLO_VERSION}
 )
 set_tests_properties(test_updater PROPERTIES TIMEOUT 180)

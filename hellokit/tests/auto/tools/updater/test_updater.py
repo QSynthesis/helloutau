@@ -1,7 +1,7 @@
 """Test of hello-updater, which replaces an installation directory with the directory of the
 new version.
 
-    python3 test_updater.py <path to hello-updater>
+    python3 test_updater.py <path to hello-updater> <version>
 
 Runs the program on directories in a temporary directory and checks the directories, the exit
 status and the log afterwards. The names of the directories contain non-ASCII characters, so that
@@ -15,6 +15,7 @@ import tempfile
 import time
 
 UPDATER = os.path.abspath(sys.argv[1])
+VERSION = sys.argv[2]
 WINDOWS = sys.platform == "win32"
 
 # The longest time a run may take. The rename of a directory in use is retried for 10 seconds
@@ -135,6 +136,19 @@ def test_a_missing_source_changes_nothing():
         check(installation.version() == "1", "missing source: the old version")
     finally:
         installation.remove()
+
+
+def test_the_help_and_the_version_are_shown():
+    # The standard output is a pipe, to which the program writes instead of a message box on
+    # Windows.
+    result = subprocess.run([UPDATER, "--help"], stdout=subprocess.PIPE, timeout=RUN_LIMIT)
+    check(result.returncode == 0, "help: exit status %d" % result.returncode)
+    check(result.stdout.startswith(b"Usage: hello-updater --target"),
+          "help: output %r" % result.stdout[:40])
+    result = subprocess.run([UPDATER, "--version"], stdout=subprocess.PIPE, timeout=RUN_LIMIT)
+    check(result.returncode == 0, "version: exit status %d" % result.returncode)
+    check(result.stdout.replace(b"\r\n", b"\n") == ("hello-updater %s\n" % VERSION).encode("ascii"),
+          "version: output %r" % result.stdout)
 
 
 def test_invalid_arguments_are_rejected():
