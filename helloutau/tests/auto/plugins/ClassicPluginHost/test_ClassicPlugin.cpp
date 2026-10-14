@@ -42,9 +42,9 @@ class test_ClassicPlugin : public QObject {
     }
 
 private Q_SLOTS:
-    // A plugin.json in UTF-8 replaces plugin.txt entirely. The plugin.txt is not read, the
-    // encoding of the temporary file is the charset of the plugin.json, and the keys of the
-    // host are no error.
+    // A plugin.json in UTF-8 replaces plugin.txt entirely. The plugin.txt is not read, and the
+    // encoding of the temporary file is the charset of the plugin.json. The keys of the host
+    // cause no error.
     void plugin_json_replaces_plugin_txt() {
         const auto folder =
             plugin("json", "name=Old\r\nexecute=old.bat\r\nnotes=all\r\nustversion=1.00\r\n",

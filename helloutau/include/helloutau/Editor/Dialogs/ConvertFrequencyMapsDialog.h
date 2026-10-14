@@ -29,7 +29,7 @@ namespace hello::daw {
     /// splitter. The target formats are the formats that write maps.
     ///
     /// The selected files are checked initially. If none is selected, the files with a map of the
-    /// source format are checked, again whenever the source format changes. A tri-state box checks
+    /// source format are checked again whenever the source format changes. A tri-state box checks
     /// or unchecks every file, and a button checks exactly the files with a map of the source
     /// format. The OK button is enabled if a file is checked and the two formats differ. The
     /// dialog changes no file.
@@ -66,11 +66,11 @@ namespace hello::daw {
         QList<std::filesystem::path> checkedFiles() const;
 
         FileCheckList *fileList() const;
-        /// The button that checks exactly the files with a map of the source format
+        /// Returns the button that checks exactly the files with a map of the source format
         QPushButton *checkMapsButton() const;
         QComboBox *sourceBox() const;
         QComboBox *targetBox() const;
-        /// The splitter between the files and the formats
+        /// Returns the splitter between the files and the formats
         QSplitter *splitter() const;
         QDialogButtonBox *buttonBox() const;
 

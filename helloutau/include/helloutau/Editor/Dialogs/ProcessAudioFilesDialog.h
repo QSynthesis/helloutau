@@ -28,7 +28,7 @@ namespace hello::daw {
     /// A dialog in which the user chooses the processing of audio files and the files to
     /// process, see kit::AudioFileProcessor. The files are listed on the left, and the options
     /// on the right, beyond a splitter. The selected files are checked initially. If none is
-    /// selected, the files that the options change are checked, again whenever an option changes.
+    /// selected, the files that the options change are checked again whenever an option changes.
     /// A tri-state box checks or unchecks every file, and a button checks exactly the files that
     /// the options change.
     ///
@@ -68,9 +68,9 @@ namespace hello::daw {
         std::optional<std::filesystem::path> backupFolder() const;
 
         QTreeWidget *fileList() const;
-        /// The button that checks exactly the files that the options change
+        /// Returns the button that checks exactly the files that the options change
         QPushButton *checkFilesButton() const;
-        /// The splitter between the files and the options
+        /// Returns the splitter between the files and the options
         QSplitter *splitter() const;
         QLineEdit *backupFolderEdit() const;
         QDialogButtonBox *buttonBox() const;

@@ -47,14 +47,14 @@ playinplugin.exe <输入文件> [/m:<修改文件>] [/o:<输出文件>] [/noplay
 
 - 第一个参数是输入文件。其余参数中，`/m:`、`/o:` 以前缀识别，四个开关须完全一致，区分大小写。未知的参数被忽略。
 - 相对路径按工作目录解析为绝对路径后再交给宿主。
-- 退出码恒为 0，与原版的实测一致。没有管道时例外，见「没有宿主时」。
+- 退出码恒为 0，与原版的实测一致。没有管道时例外，见「没有宿主时的行为」。
 
 ## 管道
 
 - **作业对象**：宿主把每次运行的插件进程放入一个作业对象（`ClassicPluginRunner`，供「取消」结束整棵进程树）。`CreateProcess` 以挂起状态启动插件，加入作业后再恢复，插件此后启动的进程都自动属于这一作业。作业没有 `JOB_OBJECT_LIMIT_BREAKAWAY_OK`，插件以 `CREATE_BREAKAWAY_FROM_JOB` 创建的进程因此无法脱离作业。作业只包含本次运行的进程，通常是插件与 plugin-play 两个。
 - **管道名**：宿主在插件启动后创建一个 `QLocalServer`，名称为 `helloutau-plugin-play-<插件进程的进程号>`，选项为 `QLocalServer::UserAccessOption`。
 - **查找宿主**：plugin-play 以 `QueryInformationJobObject(nullptr, JobObjectBasicProcessIdList, ...)` 取得自身所在作业的进程号（句柄为空即调用进程所在的作业），对其中自身以外的进程号连接 `\\.\pipe\helloutau-plugin-play-<进程号>`，存在的管道即本次运行的宿主。这一方式不依赖插件传递环境变量或参数，中间进程退出也不影响作业的归属，并且只查找本次运行的进程，不涉及其他 HelloUtau 实例。
-- **找不到宿主的情形**：plugin-play 不在作业中（`IsProcessInJob` 不成立），或作业中没有对应的管道。例如由官方 UTAU 运行插件，或 `shell=use` 的插件交给已在运行的程序处理、宿主无法取得进程句柄时。处理见「没有宿主时」。
+- **找不到宿主的情形**：plugin-play 不在作业中（`IsProcessInJob` 不成立），或作业中没有对应的管道。例如由官方 UTAU 运行插件，或 `shell=use` 的插件交给已在运行的程序处理、宿主无法取得进程句柄时。处理见「没有宿主时的行为」。
 - **消息**：每条消息是一行 UTF-8 的 JSON，以 LF 结尾。plugin-play 用 `WideCharToMultiByte` 转换路径并手工拼写 JSON，宿主用 `QJsonDocument` 解析。
 - **请求**：
 
@@ -69,7 +69,7 @@ playinplugin.exe <输入文件> [/m:<修改文件>] [/o:<输出文件>] [/noplay
 - **前台窗口**：Windows 只允许前台进程设置前台窗口。plugin-play 由前台的插件启动，连上管道后以 `GetNamedPipeServerProcessId` 取得宿主的进程号并调用 `AllowSetForegroundWindow`，宿主因此能把试听对话框与错误窗口提到最前，而不只在任务栏闪烁。宿主收到请求时记下当时的前台窗口（通常是插件的窗口），这些窗口关闭后把前台还给它（作者 2026-10-14 同意）。
 - 管道服务器只在插件运行期间存在，插件结束或被取消时关闭。同一时间只处理一个请求，前一个请求未回复时，后到的请求立即得到 `failed`。
 
-## 没有宿主时
+## 没有宿主时的行为
 
 找不到宿主时（见「管道」），plugin-play 按以下顺序处理：
 

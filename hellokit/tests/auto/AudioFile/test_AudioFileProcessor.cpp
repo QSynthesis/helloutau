@@ -82,7 +82,7 @@ class test_AudioFileProcessor : public QObject {
 
 private Q_SLOTS:
     // Each property of the file that differs from the options is a change, and the default
-    // options require none of a plain 16-bit mono file at 44100 Hz.
+    // options require no change of a plain 16-bit mono file at 44100 Hz.
     void the_changes_follow_the_options() {
         DiagnosticList diagnostics;
         const auto plain = audioOf(44100, 1, 16, false, constant(100, 0.25f));
@@ -176,7 +176,7 @@ private Q_SLOTS:
         QCOMPARE(*Processor::processed(file, {}, diagnostics), fileOf(audio));
     }
 
-    // The metadata is kept unless its removal is set, also if the samples change.
+    // The metadata is kept unless its removal is set, even if the samples change.
     void the_metadata_is_kept_unless_removed() {
         const auto stereo = audioOf(44100, 2, 16, false, {0.5f, 0.0f, 0.5f, 0.0f});
         Processor::Options options;
@@ -279,7 +279,7 @@ private Q_SLOTS:
     }
 
     // Files are read on several threads, with the results and the reasons in the order of the
-    // files, and the progress counts every file. A cancellation reads no further file.
+    // files, and the progress counts every file. After a cancellation no further file is read.
     void files_are_inspected_on_threads() {
         QTemporaryDir dir;
         const fs::path root(dir.path().toStdU16String());

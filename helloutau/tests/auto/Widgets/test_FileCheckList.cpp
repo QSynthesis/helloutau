@@ -25,7 +25,7 @@ class test_FileCheckList : public QObject {
 
 private Q_SLOTS:
     // A list with some rows checked is destroyed without an assertion. The tree, destroyed
-    // first, once unchecked the box for all during the destruction, when Qt asserted a parent.
+    // first, formerly unchecked the box for all during the destruction, when Qt asserted a parent.
     void a_partly_checked_list_is_destroyed() {
         auto list = new FileCheckList({QStringLiteral("File"), QStringLiteral("State")});
         fill(*list);

@@ -69,14 +69,14 @@ namespace {
         return path;
     }
 
-    // Writes the temporary file of the notes from index from, as PitTrace copies it for
+    // Writes the temporary file of the notes from index \a from , as PitTrace copies it for
     // playinplugin.
     QString inputOf(const QTemporaryDir &dir, int from, int notes) {
         return write(dir, QStringLiteral("Base.ust"),
                      ClassicPluginExchange::input(plugin(), project(), from, notes, {}, nullptr));
     }
 
-    // Sends request on the pipe of this process, as hello-plugin-play does.
+    // Sends a request on the pipe of this process, as hello-plugin-play does.
     std::unique_ptr<QLocalSocket> send(const QByteArray &line) {
         auto socket = std::make_unique<QLocalSocket>();
         socket->connectToServer(
@@ -191,7 +191,7 @@ private Q_SLOTS:
                  QStringLiteral("cancelled"));
     }
 
-    // An input file of other notes than those passed to the plugin, and a line that is no
+    // An input file of notes other than those passed to the plugin, and a line that is not a
     // request, are rejected with the reply failed.
     void a_request_that_does_not_match_is_rejected() {
         QTemporaryDir dir;
@@ -217,7 +217,7 @@ private Q_SLOTS:
         QVERIFY(server.rejection);
     }
 
-    // One request is handled at a time. Another request meanwhile fails at once.
+    // One request is handled at a time. A second request meanwhile fails at once.
     void a_second_request_fails_while_one_awaits_its_reply() {
         QTemporaryDir dir;
         Server server;

@@ -114,11 +114,11 @@ namespace hello::daw {
 
     namespace {
 
-        // Asks for the encoding of the plugin.txt in folder, which is transcribed into a
-        // plugin.json, in the form of the dialog in which the user chooses the encoding of a UST
-        // (UstDecodingDialog): the candidates, gray if the file has invalid byte sequences in
-        // them, and the file decoded in the one selected. Returns std::nullopt if the user
-        // cancels.
+        // Shows a dialog in which the user chooses the encoding of the plugin.txt in folder,
+        // which is transcribed into a plugin.json, in the form of the dialog in which the user
+        // chooses the encoding of a UST (UstDecodingDialog): the candidates, gray if the file has
+        // invalid byte sequences in them, and the file decoded in the one selected. Returns
+        // std::nullopt if the user cancels.
         std::optional<QString> askCharset(QWidget *parent, const std::filesystem::path &folder) {
             QList<QByteArray> lines;
             QFile file(textOf(folder / u"plugin.txt"));
@@ -225,9 +225,9 @@ namespace hello::daw {
             return;
         }
 
-        // The plugins of the buttons for all plugins. Install All installs or updates in the
-        // recommended plugins (Installation::isRecommended()), and Remove All removes every
-        // installation.
+        // The plugins of the buttons for all plugins. Install All installs or updates the preview
+        // program in the recommended plugins (Installation::isRecommended()), and Remove All
+        // removes every installation.
         QList<ClassicPlugin> installable;
         QList<ClassicPlugin> outdated;
         QList<ClassicPlugin> installed;

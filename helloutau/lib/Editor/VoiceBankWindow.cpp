@@ -1612,9 +1612,9 @@ namespace hello::daw {
             return audio;
         }
 
-        // Returns the paths of the audio files of the selected rows, normal as the paths that a
-        // dialog lists. The paths are compared whole, because the folder of the root in
-        // audioByFolder() ends with a separator and the folder of a selected file does not.
+        // Returns the paths of the audio files of the selected rows, in normal form, as are the
+        // paths that a dialog lists. The paths are compared whole, because the folder of the root
+        // in audioByFolder() ends with a separator and the folder of a selected file does not.
         QList<std::filesystem::path> selectedAudioPaths() const {
             QList<std::filesystem::path> paths;
             for (const auto &[folder, names] : selectedAudioByFolder()) {
@@ -3006,8 +3006,8 @@ namespace hello::daw {
             const int threads = impl.editor->settings().tasks().threadCount();
             QEventLoop loop;
             QThread *worker = nullptr;
-            // Started once the event loop runs, so that a cancellation that comes first, such as
-            // a click on the dialog just shown, reads no file.
+            // Started once the event loop runs, so that no file is read if a cancellation comes
+            // first, such as a click on the dialog just shown.
             QTimer::singleShot(0, &loop, [&] {
                 worker = QThread::create([&] {
                     inspections = kit::AudioFileProcessor::inspectFiles(

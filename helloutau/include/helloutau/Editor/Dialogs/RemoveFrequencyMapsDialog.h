@@ -52,9 +52,9 @@ namespace hello::daw {
         QList<std::filesystem::path> checkedFiles() const;
 
         FileCheckList *fileList() const;
-        /// The button that checks exactly the files with a map
+        /// Returns the button that checks exactly the files with a map
         QPushButton *checkMapsButton() const;
-        /// The button that accepts the dialog
+        /// Returns the button that accepts the dialog
         QPushButton *deleteButton() const;
 
     private:

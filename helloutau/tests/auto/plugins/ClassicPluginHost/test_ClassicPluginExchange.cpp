@@ -150,7 +150,7 @@ private Q_SLOTS:
         QVERIFY(!file.prevNote->tempo);
         QCOMPARE(file.notes[0].tempo, std::optional<double>(120));
 
-        // Without a previous note, the first selected note
+        // Without a previous note, the tempo is that of the first selected note
         file = read(ClassicPluginExchange::input(pluginOf(QStringLiteral("UTF-8")), project, 0, 3,
                                                  {}, nullptr));
         QVERIFY(!file.prevNote);

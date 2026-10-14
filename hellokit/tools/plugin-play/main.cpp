@@ -10,8 +10,8 @@
 #endif
 #include <windows.h>
 
-// hello-plugin-play: the preview program for classic plugins, which a plugin such as PitTrace
-// starts under the name playinplugin.exe. See docs/PluginPlay.md.
+// hello-plugin-play: the preview program for classic plugins. A plugin such as PitTrace starts it
+// under the name playinplugin.exe. See docs/PluginPlay.md.
 //
 // The command line is that of the original playinplugin, as measured in
 // docs/claude/playinplugin.md. The request goes through a named pipe to the HelloUtau instance
@@ -162,7 +162,7 @@ namespace {
         }
         for (DWORD capacity = 64; capacity <= 65536; capacity *= 4) {
             // The structure ends with an array of one element. The buffer has room for capacity
-            // elements more.
+            // more elements.
             std::vector<ULONG_PTR> buffer(
                 sizeof(JOBOBJECT_BASIC_PROCESS_ID_LIST) / sizeof(ULONG_PTR) + capacity);
             const auto list = reinterpret_cast<JOBOBJECT_BASIC_PROCESS_ID_LIST *>(buffer.data());

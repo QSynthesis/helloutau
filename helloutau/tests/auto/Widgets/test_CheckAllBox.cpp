@@ -49,7 +49,7 @@ private Q_SLOTS:
 
     // A click checks every checkable item, from a partially checked box as well, and a click on
     // a checked box unchecks every checkable item. The view reports each changed item, and an
-    // item that is not checkable is left alone.
+    // item that is not checkable is not changed.
     void a_click_checks_or_unchecks_every_item() {
         QListWidget list;
         checkableItem(list, Qt::Checked);

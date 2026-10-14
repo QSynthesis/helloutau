@@ -225,7 +225,7 @@ private Q_SLOTS:
         }
         QVERIFY2(error < 1e-3, qPrintable(QString::number(error)));
 
-        // The same rate, or nothing, passes through.
+        // The samples pass through unchanged at the same rate, and an empty input stays empty.
         QCOMPARE(WaveAudio::resampled(tone, 1, from, from), tone);
         QVERIFY(WaveAudio::resampled({}, 1, from, to).empty());
     }

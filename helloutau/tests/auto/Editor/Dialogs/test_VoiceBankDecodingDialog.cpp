@@ -107,7 +107,7 @@ private Q_SLOTS:
     }
 
     // The folders and the names each have a box that checks or unchecks the whole list. The box
-    // of the folders includes or leaves out every folder.
+    // of the folders includes or excludes every folder.
     void the_folders_are_included_at_once() {
         const auto jp = shiftJisFolder();
         const auto cn = gbkFolder();

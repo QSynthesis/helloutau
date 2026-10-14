@@ -13,8 +13,8 @@ namespace fs = std::filesystem;
 
 namespace {
 
-    // A format with the hop of its resampler, whose map of every audio file whose name begins
-    // with "a" is the map of the format
+    // A format with the hop of its resampler, which reports the map of the format for every
+    // audio file whose name begins with "a"
     class Fixed : public FrequencyFormat {
     public:
         double hop = 256;
@@ -80,7 +80,7 @@ namespace {
         }
     }
 
-    // Writes a mono 16-bit WAVE file of count samples of the value sample at rate
+    // Writes a mono 16-bit WAVE file at rate, with count samples of the value sample
     void writeWave(const fs::path &path, int rate, int count, qint16 sample) {
         QByteArray data;
         for (int i = 0; i < count; ++i) {

@@ -47,7 +47,7 @@ playinplugin.exe <输入文件> [/m:<修改文件>] [/o:<输出文件>] [/noplay
 ## 渲染
 
 - 生成的文件都位于输入文件所在的文件夹，与工作目录无关。渲染经 `temp.bat` 与 `temp_helper.bat` 调用 resampler 与 wavtool，两个批处理文件的结构与 UTAU 渲染时写出的相同。
-- 曲速取自输入文件的 `Tempo`，音源取自输入文件的 `VoiceDir`。先行声音、重叠等由程序按音源的 `oto.ini` 计算，不采用输入文件的 `@preuttr` 等只读条目：`/m:` 改动歌词后，批处理中的值随新的原音设定变化，而写回的 `@preuttr` 仍是旧值。
+- 曲速取自输入文件的 `Tempo`，音源取自输入文件的 `VoiceDir`。先行发声、重叠等由程序按音源的 `oto.ini` 计算，不采用输入文件的 `@preuttr` 等只读条目：`/m:` 改动歌词后，批处理中的值随新的原音设定变化，而写回的 `@preuttr` 仍是旧值。
 - **合成工具取自工程文件的 `Tool1`、`Tool2`**，相对路径相对于 UTAU 的文件夹解析。工程文件的路径由输入文件的 `CacheDir` 把扩展名 `.cache` 换成 `.ust` 得到，`Project=` 不被采用：`Project=` 与 `CacheDir` 指向不同的工程时，采用的是 `CacheDir` 对应的工程。没有 `CacheDir` 或工程文件不存在时，合成工具取自 UTAU 文件夹中 `setting.ini` 的 `Tool1Path`、`Tool2Path`。工程文件只被读取，不被修改。
 - 工程的全局 Flags 不被采用（工程写有 `Flags=g+7` 时批处理中各音符的 flag 均为空），音符自身的 `Flags` 被采用。
 - 以 PitTrace 交出的 106 个音符的完整文件实测，渲染出 40 秒的单声道 44.1 kHz 16 位音频。

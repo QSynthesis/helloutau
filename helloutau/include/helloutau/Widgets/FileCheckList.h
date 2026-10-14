@@ -19,8 +19,9 @@ namespace hello::daw {
 
     /// The list of files of a dialog that acts on the files that the user checks, such as the
     /// audio files of a voice bank to process: a list of rows with the file in the first column
-    /// and further columns of the dialog, a CheckAllBox above it, and buttons beside the box that
-    /// check exactly the rows of a condition, such as the files without a frequency map.
+    /// and further columns of the dialog, a CheckAllBox above it, and buttons beside the box. The
+    /// buttons check exactly the rows for which a condition returns true, such as the files
+    /// without a frequency map.
     ///
     /// The rows are identified by their indices in the order of addRow(). Every row is checkable.
     /// The user resizes the columns with the mouse. The columns are fitted to their contents when
@@ -28,7 +29,7 @@ namespace hello::daw {
     class HELLOUTAU_WIDGETS_EXPORT FileCheckList : public QWidget {
         Q_OBJECT
     public:
-        /// Creates the list with the column \a headers , the first of which is the file.
+        /// Creates the list with the columns \a headers , the first of which is the file.
         explicit FileCheckList(const QStringList &headers, QWidget *parent = nullptr);
         ~FileCheckList();
 
@@ -54,8 +55,8 @@ namespace hello::daw {
         /// Returns the indices of the checked rows in ascending order.
         QList<int> checkedRows() const;
 
-        /// Adds a button with \a text beside the box for all rows that checks exactly the rows
-        /// for which \a condition returns true, as checkWhere() does.
+        /// Adds a button with \a text beside the box for all rows. The button checks exactly the
+        /// rows for which \a condition returns true, as checkWhere() does.
         QPushButton *addCheckButton(const QString &text, std::function<bool(int row)> condition);
 
         QTreeWidget *tree() const;

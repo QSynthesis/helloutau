@@ -55,7 +55,7 @@ namespace hello::daw {
         QList<std::filesystem::path> checkedFiles() const;
 
         FileCheckList *fileList() const;
-        /// The button that checks exactly the files without a map
+        /// Returns the button that checks exactly the files without a map
         QPushButton *checkMissingButton() const;
         QDialogButtonBox *buttonBox() const;
 

@@ -20,7 +20,7 @@ using Installation = ClassicPluginPreviewInstallation;
 
 namespace {
 
-    // テスト in Shift_JIS, the name of a Japanese plugin
+    // The name of a Japanese plugin, テスト, in Shift_JIS
     const QByteArray japaneseName("\x83\x65\x83\x58\x83\x67");
 
     fs::path pathOf(const QString &text) {
@@ -80,7 +80,7 @@ class test_ClassicPluginPreviewInstallation : public QObject {
     Q_OBJECT
 
 private Q_SLOTS:
-    // A plugin with only a plugin.txt receives a plugin.json transcribed from it, the original
+    // A plugin with only a plugin.txt receives a plugin.json transcribed from it. The original
     // program is kept, and the plugin reads as before.
     void an_installation_transcribes_plugin_txt_and_keeps_the_original() {
         QTemporaryDir dir;

@@ -203,7 +203,7 @@ namespace hello::daw {
             return false;
         }
 
-        // The plugin.json to write, read or transcribed before any file changes
+        // The plugin.json to write is read or transcribed before any file changes
         const bool transcribed = transcribes(folder);
         auto manifest = transcribed ? transcription(folder, charset) : readManifest(folder);
         if (!manifest) {
@@ -223,7 +223,7 @@ namespace hello::daw {
             fail(diagnostics, tr("The file \"%1\" cannot be renamed.").arg(target));
             return false;
         }
-        // Undoes the steps so far, so that the folder is as it was after a failure
+        // Undoes the steps so far, so that after a failure the folder is as it was
         const auto undo = [&] {
             QFile::remove(target);
             if (keepsOriginal) {

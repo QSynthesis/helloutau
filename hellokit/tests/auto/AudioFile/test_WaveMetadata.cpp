@@ -71,7 +71,7 @@ private Q_SLOTS:
     }
 
     // The format and the audio are replaced, and the metadata keeps its order if kept. Bytes
-    // after the last chunk go regardless.
+    // after the last chunk are always dropped.
     void the_format_and_the_audio_are_replaced() {
         DiagnosticList diagnostics;
         const auto tagged = riff(chunk("JUNK", "ab") + chunk("data", audio) +

@@ -48,7 +48,7 @@ namespace hello::kit {
         /// of this map is interpolated linearly in time, and the frequency of a frame next to an
         /// unvoiced frame is that of the nearer frame, so that no frequency arises between a
         /// voiced and an unvoiced frame. The amplitudes are interpolated if every frame has one. A
-        /// frame before the first or after the last frame has the values of that frame. The
+        /// frame before the first or after the last frame has the values of the nearest frame. The
         /// average frequency is kept.
         FrequencyMap resampled(double hop, int sampleRate, std::size_t count) const;
     };

@@ -1246,8 +1246,8 @@ private Q_SLOTS:
     }
 
     // The language is chosen on System Settings from the system default, English and Simplified
-    // The system settings set the threads of the general tasks, apart from the threads of the
-    // rendering and of the frequency maps. A count that is not a number is refused.
+    // The threads of the general tasks are set on the System Settings page, apart from those of
+    // the rendering and the frequency maps. A count that is not a number is refused.
     void the_task_threads_are_set_on_the_system_page() {
         const auto e = editor();
         const auto restore = qScopeGuard([&e] { e->settings().tasks().setThreadCount(0); });
@@ -2416,9 +2416,9 @@ private Q_SLOTS:
         QVERIFY(!stop->isEnabled());
     }
 
-    // The dialog lists the readable audio files with the files that the options change checked.
+    // The dialog lists the readable audio files, with the files that the options change checked.
     // The checked files are backed up under their paths in the voice bank, processed, and their
-    // frequency maps removed. The backup goes beside a folder of the chosen name that exists.
+    // frequency maps removed. The backup is placed beside an existing folder of the chosen name.
     void the_audio_files_are_processed() {
         QTemporaryDir dir;
         const auto bank = voiceBank(dir);
@@ -2494,7 +2494,7 @@ private Q_SLOTS:
             QVERIFY(cancel);
             cancel->click();
         });
-        // Closes every other dialog, so that a regression fails instead of blocking
+        // The timer closes every other dialog, so that a regression fails instead of blocking
         QStringList dialogs;
         QTimer closer;
         closer.setInterval(10);
@@ -3151,7 +3151,8 @@ private Q_SLOTS:
             QFAIL("format not offered");
         };
         // Without a selection, the dialog checks the audio files with a map of the source
-        // format. Every file is then checked, so that the files without one are skipped.
+        // format. Every file is then checked, so that the files without a map of the source
+        // format are skipped.
         QList<fs::path> checked;
         window->entryTable()->clearSelection();
         handleNextDialog<ConvertFrequencyMapsDialog>(

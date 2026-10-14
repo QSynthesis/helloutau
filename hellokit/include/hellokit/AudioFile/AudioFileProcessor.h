@@ -111,8 +111,8 @@ namespace hello::kit {
                                                  DiagnosticList &diagnostics);
 
         /// Returns the properties of each WAVE file of \a files, read on \a threadCount threads
-        /// at once, or on one thread per hardware thread if \a threadCount is zero. Returns on
-        /// completion.
+        /// at once, or on one thread per hardware thread if \a threadCount is zero, and returns
+        /// on completion.
         ///
         /// \param progress called on a reading thread with the number of files read so far, or
         ///        empty
