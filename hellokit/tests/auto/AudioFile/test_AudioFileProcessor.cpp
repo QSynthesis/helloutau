@@ -1,5 +1,8 @@
+#include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <filesystem>
+#include <string>
 
 #include <QtCore/QFile>
 #include <QtCore/QTemporaryDir>
@@ -273,6 +276,53 @@ private Q_SLOTS:
 
         QVERIFY(!Processor::process(root / "absent.wav", {}, diagnostics));
         QCOMPARE(diagnostics.size(), 1);
+    }
+
+    // Files are read on several threads, with the results and the reasons in the order of the
+    // files, and the progress counts every file. A cancellation reads no further file.
+    void files_are_inspected_on_threads() {
+        QTemporaryDir dir;
+        const fs::path root(dir.path().toStdU16String());
+        QList<fs::path> files;
+        for (int i = 0; i < 6; ++i) {
+            const auto file = root / ("f" + std::to_string(i) + ".wav");
+            files.push_back(file);
+            if (i == 2 || i == 4) {
+                continue;
+            }
+            QFile out(QString::fromStdU16String(file.u16string()));
+            QVERIFY(out.open(QIODevice::WriteOnly));
+            out.write(fileOf(audioOf(32000 + i, 1, 16, false, constant(10, 0.25f))));
+        }
+
+        DiagnosticList diagnostics;
+        std::atomic<int> calls = 0;
+        std::atomic<int> highest = 0;
+        const auto inspections = Processor::inspectFiles(files, 3, diagnostics, [&](int done) {
+            ++calls;
+            int seen = highest.load();
+            while (done > seen && !highest.compare_exchange_weak(seen, done)) {
+            }
+        });
+        QCOMPARE(inspections.size(), 6);
+        for (int i = 0; i < 6; ++i) {
+            QCOMPARE(inspections.at(i).has_value(), i != 2 && i != 4);
+            if (inspections.at(i)) {
+                QCOMPARE(inspections.at(i)->sampleRate, 32000 + i);
+            }
+        }
+        QCOMPARE(diagnostics.size(), 2);
+        QVERIFY(diagnostics.at(0).message.contains(QStringLiteral("f2.wav")));
+        QVERIFY(diagnostics.at(1).message.contains(QStringLiteral("f4.wav")));
+        QCOMPARE(calls.load(), 6);
+        QCOMPARE(highest.load(), 6);
+
+        DiagnosticList none;
+        const auto cancelled = Processor::inspectFiles(files, 0, none, {}, [] { return true; });
+        QCOMPARE(cancelled.size(), 6);
+        QVERIFY(std::none_of(cancelled.cbegin(), cancelled.cend(),
+                             [](const auto &inspection) { return inspection.has_value(); }));
+        QVERIFY(none.isEmpty());
     }
 };
 

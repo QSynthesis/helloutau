@@ -2,12 +2,14 @@
 #define HELLOKIT_AUDIOFILE_AUDIOFILEPROCESSOR_H
 
 #include <filesystem>
+#include <functional>
 #include <optional>
 
 #include <QtCore/QByteArray>
 #include <QtCore/QByteArrayView>
 #include <QtCore/QCoreApplication>
 #include <QtCore/QFlags>
+#include <QtCore/QList>
 
 #include <hellokit/Support/Diagnostic.h>
 
@@ -107,6 +109,22 @@ namespace hello::kit {
         /// \overload for the file at \a file.
         static std::optional<Inspection> inspect(const std::filesystem::path &file,
                                                  DiagnosticList &diagnostics);
+
+        /// Returns the properties of each WAVE file of \a files, read on \a threadCount threads
+        /// at once, or on one thread per hardware thread if \a threadCount is zero. Returns on
+        /// completion.
+        ///
+        /// \param progress called on a reading thread with the number of files read so far, or
+        ///        empty
+        /// \param cancelled queried on the reading threads before each file, or empty. Once it
+        ///        returns true, no further file is read.
+        /// \return the properties in the order of \a files, \c std::nullopt for a file that
+        ///         cannot be read or is not read after a cancellation. The reasons are appended
+        ///         to \a diagnostics in the order of \a files.
+        static QList<std::optional<Inspection>>
+            inspectFiles(const QList<std::filesystem::path> &files, int threadCount,
+                         DiagnosticList &diagnostics, const std::function<void(int)> &progress = {},
+                         const std::function<bool()> &cancelled = {});
 
         /// Returns the WAVE file of \a bytes processed by \a options. The samples are processed
         /// in the order of the channel mix, the removal of the DC offset, the sample rate

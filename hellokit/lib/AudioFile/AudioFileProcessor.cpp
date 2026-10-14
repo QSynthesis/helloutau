@@ -1,6 +1,7 @@
 #include "AudioFileProcessor.h"
 
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <random>
 #include <vector>
@@ -8,6 +9,8 @@
 #include <QtCore/QFile>
 #include <QtCore/QSaveFile>
 #include <QtCore/QString>
+#include <QtCore/QThread>
+#include <QtCore/QThreadPool>
 
 #include "WaveAudio.h"
 
@@ -168,6 +171,38 @@ namespace hello::kit {
             diagnostics.push_back(diagnostic);
         }
         return inspection;
+    }
+
+    // Each file has its own slot of the results and of the diagnostics, so that the threads share
+    // no list and the diagnostics keep the order of the files.
+    QList<std::optional<AudioFileProcessor::Inspection>> AudioFileProcessor::inspectFiles(
+        const QList<std::filesystem::path> &files, int threadCount, DiagnosticList &diagnostics,
+        const std::function<void(int)> &progress, const std::function<bool()> &cancelled) {
+        QList<std::optional<Inspection>> inspections(files.size());
+        std::vector<DiagnosticList> found(files.size());
+        std::atomic<int> done = 0;
+        {
+            QThreadPool pool;
+            pool.setMaxThreadCount(threadCount > 0 ? threadCount
+                                                   : std::max(1, QThread::idealThreadCount()));
+            for (qsizetype i = 0; i < files.size(); ++i) {
+                pool.start([&, i] {
+                    if (cancelled && cancelled()) {
+                        return;
+                    }
+                    inspections[i] = inspect(files.at(i), found[i]);
+                    const int count = ++done;
+                    if (progress) {
+                        progress(count);
+                    }
+                });
+            }
+            pool.waitForDone();
+        }
+        for (const auto &list : found) {
+            diagnostics += list;
+        }
+        return inspections;
     }
 
     // The dither is TPDF of one step of the target format, the sum of two uniform variables,
