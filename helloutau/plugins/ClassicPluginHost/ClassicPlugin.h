@@ -80,6 +80,11 @@ namespace hello::daw {
         /// The encoding of the temporary file and of the result.
         QString charset;
 
+        /// The entry format of the temporary file that \c plugin.txt requests (\c ustversion ),
+        /// see utau::PluginInput::version. Empty if \c plugin.txt omits it or the plugin has a
+        /// \c plugin.json , in which case the format 1.20 applies, as in UTAU.
+        QString ustVersion;
+
         /// The reason that the plugin cannot run, or an empty string if the plugin is available.
         QString unavailableReason;
     };

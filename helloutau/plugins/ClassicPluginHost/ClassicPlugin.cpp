@@ -132,6 +132,7 @@ namespace hello::daw {
             execute = decode(txt.execute).trimmed();
             plugin.shell = txt.shell == utau::VALUE_PLUGIN_SHELL_USE;
             plugin.wholeTrack = txt.notes.has_value();
+            plugin.ustVersion = decode(txt.ustVersion).trimmed();
         } else {
             return std::nullopt;
         }

@@ -54,7 +54,7 @@ playinplugin.exe <输入文件> [/m:<修改文件>] [/o:<输出文件>] [/noplay
 
 ## `ustversion=1.00` 的临时文件
 
-PitTrace 的 `plugin.txt` 写有 `ustversion=1.00`，`Base.ust` 因此是 UTAU 按 1.00 写出的临时文件的实例，此前没有样本（[`../ClassicPluginHost.md`](../ClassicPluginHost.md) 实施步骤中记为未做）：
+PitTrace 的 `plugin.txt` 写有 `ustversion=1.00`，`Base.ust` 因此是 UTAU 按 1.00 写出的临时文件的实例。各格式的对照见 [`utau-plugin-protocol.md`](utau-plugin-protocol.md)「条目格式」。
 
 - 开头没有 `[#VERSION]`，`[#SETTING]` 依次为 `UstVersion=1.00`、`Project`、`Tempo`、`VoiceDir`、`CacheDir`、`Mode2`，路径为绝对路径，本地编码。
 - 音符的条目与 1.20 相同的有 `Length`、`Lyric`、`NoteNum`、`PreUtterance=`（空值）、`Intensity`、`Envelope`、`PBW`、`PBS`、`PBY`、`VBR`、`Velocity`、`VoiceOverlap`。调制写作 `Moduration`（不是 `Modulation`）。

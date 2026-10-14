@@ -15,7 +15,21 @@
 - **音符的条目**：依次为 `Length`、`Lyric`、`NoteNum`、`PreUtterance=`（空值，总是写出），然后是音符有的 `Velocity`、`Intensity`、`Modulation`、`PBS`/`PBW`/`PBY`、`Envelope`、`VBR`、`Flags`、`Label`、用户条目，最后是只读的 `@preuttr`、`@overlap`、`@stpoint`，以及非休止符的 `@filename`。
   - `@alias` 只在实际使用的别名与歌词不同时写出（a 经音源映射为另一别名时写出，i、u、e、o 没有）。
   - 休止符只有 `@preuttr=0`、`@overlap=0`、`@stpoint=0`，没有 `@filename`。
-  - 没有出现 `@cache`。
+  - 没有出现 `@cache`。PitTrace 的 1.00 样本（工程渲染过，见 [`playinplugin.md`](playinplugin.md)）中有 `@cache`，下一节的探针（工程未渲染）中没有，出现的条件未经实测。
+
+## 条目格式（`ustversion`）
+
+2026-10-14 实测：四个插件只复制临时文件，`plugin.txt` 分别写 `ustversion=1.00`、`1.10`、`1.20` 与不写，作者在同一工程（`.cache/utau-probe/ustversion/1-ustversion.ust`，R a i R u e o，带 Mode1 与 Mode2 音高、带值的 `PreUtterance`、音符内的 `Tempo`、Flags、Label 与用户条目）中对同一选区 i R u 与全选各运行一次。
+
+| | 1.00 | 1.10 | 1.20 |
+|---|---|---|---|
+| `[#VERSION]` | 无 | 无 | `UST Version 1.20` |
+| `[#SETTING]` 的第一项 | `UstVersion=1.00` | `UstVersion=1.10` | `Project` |
+| 调制 | `Moduration` | `Moduration` | `Modulation` |
+| Mode1 的音高数组 | `Piches` | `Pitches` | `PitchBend` |
+
+- 其余条目、条目的顺序、`[#PREV]` / `[#NEXT]` 与只读条目三种格式相同。条目的顺序固定，与工程中的顺序无关。
+- 不写 `ustversion` 时与 1.20 逐字节相同。
 
 ## 结果的应用
 

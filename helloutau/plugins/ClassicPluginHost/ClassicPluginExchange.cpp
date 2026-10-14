@@ -229,6 +229,7 @@ namespace hello::daw {
 
         const bool hasPrevious = !plugin.wholeTrack && first > 0;
         utau::PluginInput file;
+        file.version.version = plugin.ustVersion.toStdString();
         file.settings.project = text.encodeReadOnly(textOf(paths.project));
         // The tempo of the first section of the file, [#PREV] if present, as UTAU writes it
         // (docs/claude/utau-plugin-protocol.md). A section without its own Tempo entry takes

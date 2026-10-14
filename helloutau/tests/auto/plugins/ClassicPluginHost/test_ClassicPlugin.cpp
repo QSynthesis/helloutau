@@ -45,8 +45,9 @@ private Q_SLOTS:
     // A plugin.json in UTF-8 replaces plugin.txt entirely. The plugin.txt is not read, and the
     // encoding of the temporary file is the charset of the plugin.json.
     void plugin_json_replaces_plugin_txt() {
-        const auto folder = plugin("json", "name=Old\r\nexecute=old.bat\r\nnotes=all\r\n",
-                                   {"old.bat", "new.bat"}, "manifests");
+        const auto folder =
+            plugin("json", "name=Old\r\nexecute=old.bat\r\nnotes=all\r\nustversion=1.00\r\n",
+                   {"old.bat", "new.bat"}, "manifests");
         manifest(folder, R"({"name": "新しい", "execute": "new.bat", "shell": true, )"
                          R"("notes": "selection", "charset": "UTF-8"})");
         kit::DiagnosticList diagnostics;
@@ -58,6 +59,7 @@ private Q_SLOTS:
         QVERIFY(read->shell);
         QVERIFY(!read->wholeTrack);
         QCOMPARE(read->charset, QStringLiteral("UTF-8"));
+        QVERIFY(read->ustVersion.isEmpty());
     }
 
     // The defaults of plugin.json: the folder name, the program started directly, the
@@ -106,7 +108,8 @@ private Q_SLOTS:
     // The folders of a directory are read in the order of their names, each from its
     // plugin.txt. A folder without a plugin.txt is not a plugin.
     void plugins_are_found_by_folder() {
-        plugin("b", "name=Beta\r\nexecute=b.bat\r\nshell=use\r\nnotes=all\r\n", {"b.bat"});
+        plugin("b", "name=Beta\r\nexecute=b.bat\r\nshell=use\r\nnotes=all\r\nustversion=1.00\r\n",
+               {"b.bat"});
         plugin("a", "name=Alpha\r\nexecute=a.bat\r\n", {"a.bat"});
         fs::create_directories(root() / "plugins" / "c");
         plugin("d", "execute=d.bat\r\n", {"d.bat"});
@@ -123,10 +126,12 @@ private Q_SLOTS:
         QVERIFY(!plugins[0].wholeTrack);
         QVERIFY(fs::equivalent(plugins[0].program, root() / "plugins" / "a" / "a.bat"));
         QCOMPARE(plugins[0].charset, ClassicPlugin::localCharset());
+        QVERIFY(plugins[0].ustVersion.isEmpty());
 
         QCOMPARE(plugins[1].name, QStringLiteral("Beta"));
         QVERIFY(plugins[1].shell);
         QVERIFY(plugins[1].wholeTrack);
+        QCOMPARE(plugins[1].ustVersion, QStringLiteral("1.00"));
 
         // Without a name, the folder name is used.
         QCOMPARE(plugins[2].name, QStringLiteral("d"));

@@ -72,7 +72,7 @@
 - `[#PREV]`/`[#NEXT]` 的修改**应用**（规格原文），与选区的修改同在一个撤销步骤中。
 - 合并按条目：省略的条目不变；空值（如 `Intensity=`）按规格恢复默认。
 - 文件内容未变，或所有段落都省略，视为取消，不产生撤销步骤。
-- `ustversion` 省略时按 1.20 写出，与实测一致。`notes` 只要出现即传入全部音符（规格「指定した場合」，同 stdutau）。
+- `ustversion` 为 1.00 或 1.10 时按该格式写出，其他值与省略时按 1.20 写出，与实测一致（[`claude/utau-plugin-protocol.md`](claude/utau-plugin-protocol.md)「条目格式」）。`plugin.json` 没有对应的键，有它时按 1.20 写出。`notes` 只要出现即传入全部音符（规格「指定した場合」，同 stdutau）。
 - 临时文件每次运行唯一，位于临时目录管理器分配的子目录（`Distribution.md`「临时目录管理器」），读回后删除；名称同 UTAU 为 `tmpXXXX.tmp`。
 - `execute` 是不可信路径：拒绝绝对路径、`..` 与解析后落在插件文件夹以外的路径；临时文件路径只作为参数数组的一项传入，不拼接命令行（CLAUDE.md）。工作目录为插件文件夹。
 - 启动：Windows 上以 `CreateProcess` 挂起启动、放入作业对象后再恢复，插件启动的进程都在作业中，「取消」以 `TerminateJobObject` 结束整棵进程树；`shell=use` 以 `ShellExecuteEx`，其进程同样放入作业。控制台窗口可见，同 UTAU。批处理（`.bat`、`.cmd`）以 `cmd.exe /d /s /c ""程序" "文件""` 启动：直接交给 `CreateProcess` 时 Windows 以 `cmd /c` 执行整行，会去除首尾引号而破坏路径；路径含 `%` 时拒绝运行，因为引号内 cmd 仍会展开变量。其他平台以 `QProcess` 在独立的进程组中启动，「取消」结束整个进程组。
@@ -90,7 +90,7 @@
 3. ~~**HelloUtauEditor**~~：已完成（`f6faf4b`）。`ProjectWindow::pianoRoll()` 公开卷帘，选区由它的 `selectedIndices()` 取得、`selectionChanged()` 跟踪；卷帘随文档替换，替换后发出 `ProjectWindow::documentChanged()`。
 4. ~~**ClassicPluginHost**~~：发现、`plugin.txt` 与编码、写出与合并（`fab6818`）；进程的启动与取消（`ad8da63`）、菜单、模态对话框、首次确认（`f045b9e`）。库一级的部分在 `tests/auto/plugins/ClassicPluginHost` 中测试：合并以探针 R1–R3 的结果对照 UTAU 另存的工程；运行以批处理、`shell=use` 与测试程序自身充当的 `.exe` 插件端到端运行，包括取消时结束插件启动的后台进程。菜单与对话框由作者试用。
    - `plugin.json`（作者定的格式，见 note.md「插件」）：已实现。
-   - 未做：`ustversion` 1.00 与 1.10 的条目名（现在一律按 1.20 写出，其格式未经实测）。
+   - ~~`ustversion` 1.00 与 1.10~~：已实现，格式经实测（stdutau `a18f443`）。
 5. **验收**：作者以社区常用的原版插件试用。
 
 ## 作者的决定（2026-09-30）

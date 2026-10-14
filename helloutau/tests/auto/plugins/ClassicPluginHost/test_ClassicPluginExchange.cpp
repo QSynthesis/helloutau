@@ -124,6 +124,18 @@ private Q_SLOTS:
         QCOMPARE(file.nextNote->lyric, std::string("e"));
     }
 
+    // A plugin that requests the format 1.00 in its plugin.txt, as PitTrace does, receives the
+    // version among the settings and modulation as Moduration (docs/claude/playinplugin.md).
+    void the_input_is_written_in_the_format_of_the_plugin() {
+        auto plugin = pluginOf(QStringLiteral("UTF-8"));
+        plugin.ustVersion = QStringLiteral("1.00");
+        const auto bytes = ClassicPluginExchange::input(plugin, probe(), 2, 3, {}, nullptr);
+        QVERIFY(bytes.startsWith("[#SETTING]\r\nUstVersion=1.00\r\n"));
+        QVERIFY(bytes.contains("\r\nModuration=0\r\n"));
+        QVERIFY(!bytes.contains("Modulation"));
+        QCOMPARE(read(bytes).notes.size(), size_t(3));
+    }
+
     // The tempo of the settings is that of the first section, [#PREV] if present, as UTAU writes
     // it: a previous note without a Tempo entry is read at that tempo.
     void the_tempo_is_that_of_the_first_section() {
