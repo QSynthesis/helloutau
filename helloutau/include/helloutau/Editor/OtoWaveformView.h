@@ -131,6 +131,11 @@ namespace hello::daw {
         double yOfNote(double note) const;
         /// @}
 
+        /// Returns the y of the viewport of the sample value \a sample, from -1 to 1, in the lane
+        /// of the channel \a channel. The waveform of each channel is drawn in a lane of its own,
+        /// the lanes of equal height and the first channel at the top.
+        double yOfSample(int channel, double sample) const;
+
         /// The distance in pixels within which the pointer takes a boundary. 5 by default.
         double grip() const;
         void setGrip(double grip);

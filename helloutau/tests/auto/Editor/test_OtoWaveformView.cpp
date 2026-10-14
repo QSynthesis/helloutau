@@ -228,6 +228,36 @@ private Q_SLOTS:
         QVERIFY(!drawnAt(600, 69));
     }
 
+    // Each channel is drawn in a lane of its own, the first at the top: the first channel above
+    // the zero line of its lane and the second below that of its lane. The samples alternate
+    // with 0 at 8000 Hz, so that each column spans from 0 to the peak.
+    void each_channel_has_a_lane() {
+        auto audio = std::make_shared<kit::WaveAudio>();
+        audio->sampleRate = 8000;
+        audio->channels = 2;
+        for (int i = 0; i < 8000; ++i) {
+            audio->samples.push_back(i % 2 == 0 ? 0.5f : 0.0f);
+            audio->samples.push_back(i % 2 == 0 ? -0.5f : 0.0f);
+        }
+        OtoWaveformView view;
+        view.resize(1040, 300);
+        view.show();
+        view.setWaveColor(QColor(0, 255, 0));
+        view.setAudio(audio);
+        QVERIFY(view.yOfSample(0, -1) < view.yOfSample(1, 1));
+
+        const auto image = view.viewport()->grab().toImage();
+        const auto drawn = [&](int channel, double sample) {
+            const auto pixel =
+                image.pixelColor(QPoint(int(view.xOf(500)), int(view.yOfSample(channel, sample))));
+            return pixel.green() > 200 && pixel.red() < 100;
+        };
+        QVERIFY(drawn(0, 0.25));
+        QVERIFY(!drawn(0, -0.25));
+        QVERIFY(drawn(1, -0.25));
+        QVERIFY(!drawn(1, 0.25));
+    }
+
     // The spectrogram in place of the waveform: a sine is bright at its pitch.
     void the_spectrogram_shows_the_pitch() {
         auto audio = std::make_shared<kit::WaveAudio>();

@@ -51,8 +51,6 @@ namespace hello::daw {
 
         Decl *_decl;
         std::shared_ptr<const kit::WaveAudio> audio;
-        // The audio of all channels mixed, one sample per frame
-        std::vector<float> mono;
         std::optional<kit::VoiceOtoEntry> entry;
 
         double scale = 1;
@@ -167,17 +165,23 @@ namespace hello::daw {
             return cached.image;
         }
 
-        // The smallest and largest sample under each pixel column, for the view they were
-        // taken in
+        // The smallest and largest sample of each channel under each pixel column, for the view
+        // they were taken in
         struct Peaks {
             double scale = 0;
             double viewStart = 0;
             int width = 0;
-            std::vector<std::pair<float, float>> columns;
+            // By channel, then by column
+            std::vector<std::vector<std::pair<float, float>>> columns;
         } peaks;
 
         double duration() const {
             return audio ? audio->duration() : 0;
+        }
+
+        // The number of lanes of the waveform, one per channel and one without audio
+        int laneCount() const {
+            return audio ? std::max(1, audio->channels) : 1;
         }
 
         double minimumScale() const {
@@ -237,19 +241,23 @@ namespace hello::daw {
             }
         }
 
-        const std::vector<std::pair<float, float>> &columns() {
+        const std::vector<std::vector<std::pair<float, float>>> &columns() {
             stdc_decl_t;
             const int width = decl.viewport()->width();
             if (peaks.scale == scale && peaks.viewStart == viewStart && peaks.width == width) {
                 return peaks.columns;
             }
             peaks = {scale, viewStart, width, {}};
-            if (!audio || mono.empty()) {
+            if (!audio || audio->channels <= 0 || audio->frameCount() == 0) {
                 return peaks.columns;
             }
+            const int channels = audio->channels;
             const double perMs = audio->sampleRate / 1000.0;
-            const auto count = qint64(mono.size());
-            peaks.columns.resize(size_t(std::max(0, width)), {0.0f, 0.0f});
+            const auto count = qint64(audio->frameCount());
+            peaks.columns.assign(size_t(channels), std::vector<std::pair<float, float>>(
+                                                       size_t(std::max(0, width)), {0.0f, 0.0f}));
+            std::vector<float> low(static_cast<size_t>(channels));
+            std::vector<float> high(static_cast<size_t>(channels));
             for (int x = 0; x < width; ++x) {
                 const auto first = qint64(std::floor(decl.timeAt(x) * perMs));
                 const auto last =
@@ -257,14 +265,19 @@ namespace hello::daw {
                 if (first >= count || last <= 0) {
                     continue;
                 }
-                float low = 1;
-                float high = -1;
+                std::fill(low.begin(), low.end(), 1.0f);
+                std::fill(high.begin(), high.end(), -1.0f);
                 for (auto i = std::max<qint64>(0, first); i < std::min(last, count); ++i) {
-                    low = std::min(low, mono[size_t(i)]);
-                    high = std::max(high, mono[size_t(i)]);
+                    for (int c = 0; c < channels; ++c) {
+                        const float sample = audio->samples[size_t(i * channels + c)];
+                        low[size_t(c)] = std::min(low[size_t(c)], sample);
+                        high[size_t(c)] = std::max(high[size_t(c)], sample);
+                    }
                 }
-                if (low <= high) {
-                    peaks.columns[size_t(x)] = {low, high};
+                for (int c = 0; c < channels; ++c) {
+                    if (low[size_t(c)] <= high[size_t(c)]) {
+                        peaks.columns[size_t(c)][size_t(x)] = {low[size_t(c)], high[size_t(c)]};
+                    }
                 }
             }
             return peaks.columns;
@@ -301,19 +314,6 @@ namespace hello::daw {
     void OtoWaveformView::setAudio(std::shared_ptr<const kit::WaveAudio> audio) {
         stdc_impl_t;
         impl.audio = std::move(audio);
-        impl.mono.clear();
-        if (impl.audio && impl.audio->channels > 0) {
-            const int channels = impl.audio->channels;
-            const auto frames = impl.audio->frameCount();
-            impl.mono.resize(size_t(frames));
-            for (qsizetype i = 0; i < frames; ++i) {
-                float sum = 0;
-                for (int c = 0; c < channels; ++c) {
-                    sum += impl.audio->samples[size_t(i * channels + c)];
-                }
-                impl.mono[size_t(i)] = sum / float(channels);
-            }
-        }
         impl.peaks = {};
         impl.dragging.reset();
         fit();
@@ -446,6 +446,14 @@ namespace hello::daw {
         return axisHeight + (high - note) / (high - low) * height;
     }
 
+    double OtoWaveformView::yOfSample(int channel, double sample) const {
+        stdc_impl_t;
+        const double lane =
+            std::max(1, viewport()->height() - axisHeight) / double(impl.laneCount());
+        const double middle = axisHeight + (channel + 0.5) * lane;
+        return middle - sample * std::max(0.0, lane / 2 - 2);
+    }
+
     double OtoWaveformView::grip() const {
         stdc_impl_t;
         return impl.grip;
@@ -544,8 +552,6 @@ namespace hello::daw {
         const auto area = viewport()->rect();
         painter.fillRect(area, palette().color(QPalette::Base));
         const QRectF wave(0, axisHeight, area.width(), std::max(1, area.height() - axisHeight));
-        const double middle = wave.center().y();
-        const double half = wave.height() / 2 - 2;
 
         // The time axis
         const auto text = palette().color(QPalette::Text);
@@ -588,18 +594,29 @@ namespace hello::daw {
                 consonantColor());
         }
 
-        // The waveform, one column of peaks per pixel
+        // The waveform of each channel in its lane, one column of peaks per pixel, with a line
+        // between the lanes
         if (!impl.spectrogram) {
-            painter.setPen(QPen(waveColor(), 1));
             const auto &columns = impl.columns();
-            for (int x = 0; x < int(columns.size()) && x < end; ++x) {
-                const auto [low, high] = columns[size_t(x)];
-                painter.drawLine(QPointF(x + 0.5, middle - high * half),
-                                 QPointF(x + 0.5, middle - low * half));
+            const double right = std::min<double>(end, area.width());
+            for (int c = 0; c < int(columns.size()); ++c) {
+                const auto &lane = columns[size_t(c)];
+                painter.setPen(QPen(waveColor(), 1));
+                for (int x = 0; x < int(lane.size()) && x < end; ++x) {
+                    const auto [low, high] = lane[size_t(x)];
+                    painter.drawLine(QPointF(x + 0.5, yOfSample(c, high)),
+                                     QPointF(x + 0.5, yOfSample(c, low)));
+                }
+                painter.setPen(palette().color(QPalette::Mid));
+                const double zero = yOfSample(c, 0);
+                painter.drawLine(QPointF(0, zero), QPointF(right, zero));
             }
-            painter.setPen(palette().color(QPalette::Mid));
-            painter.drawLine(QPointF(0, middle),
-                             QPointF(std::min<double>(end, area.width()), middle));
+            painter.setPen(palette().color(QPalette::Midlight));
+            const double lane = wave.height() / impl.laneCount();
+            for (int c = 1; c < impl.laneCount(); ++c) {
+                const double y = std::round(wave.top() + c * lane) + 0.5;
+                painter.drawLine(QPointF(0, y), QPointF(area.width(), y));
+            }
         }
 
         // The region outside the offset and the cutoff
