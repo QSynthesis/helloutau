@@ -80,6 +80,12 @@ helloutau/tools/driver/main.cpp                  ← 目标 helloutau
 
 子库目录采用大驼峰命名，与去掉族前缀后的目标名一致：`lib/Document/` 对应 `HelloKitDocument`，`lib/Editor/` 对应 `HelloUtauEditor`。
 
+子库内可以按主题再分一层子目录，仍属同一子库，`include/`、`lib/` 与 `tests/auto/` 三处的子目录一一对应，例如 `Editor/Dialogs/`。子目录名须给出准入规则，说明什么能放进来，不用只表示话题的名称，以免成为杂物堆：
+
+| 子目录 | 准入规则 |
+|---|---|
+| `Document/Operation/` | 编辑命令的计算规则及其设置：由文档值算出新的文档值，不依赖编辑会话，例如音符合并的 `CombinedPitch` 与音调控制对话框的 `PortamentoSettings`。依赖会话的部分放在 `Edit` 中（作者 2026-10-14 决定） |
+
 ## C++ 命名
 
 - 类名及其他类型名使用大驼峰命名。

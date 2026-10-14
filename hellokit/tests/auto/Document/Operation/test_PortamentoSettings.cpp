@@ -3,7 +3,7 @@
 #include <QtCore/QJsonObject>
 #include <QtTest/QTest>
 
-#include <hellokit/Document/PortamentoSettings.h>
+#include <hellokit/Document/Operation/PortamentoSettings.h>
 
 using namespace hello::kit;
 

@@ -1,11 +1,11 @@
-add_auto_test(test_CombinedPitch.cpp HelloKitDocument)
 add_auto_test(test_Envelope.cpp HelloKitDocument)
 add_auto_test(test_Note.cpp HelloKitDocument)
 add_auto_test(test_PayloadCodec.cpp HelloKitDocument)
 add_auto_test(test_PitchBend.cpp HelloKitDocument)
 add_auto_test(test_PortamentoPoint.cpp HelloKitDocument)
-add_auto_test(test_PortamentoSettings.cpp HelloKitDocument)
 add_auto_test(test_Project.cpp HelloKitDocument)
 add_auto_test(test_TempoMap.cpp HelloKitDocument)
 add_auto_test(test_UstDocument.cpp HelloKitDocument)
 add_auto_test(test_Vibrato.cpp HelloKitDocument)
+
+add_subdirectory(Operation)

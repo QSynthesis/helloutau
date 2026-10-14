@@ -5,8 +5,8 @@
 
 #include <QtCore/QStringList>
 
-#include <hellokit/Document/CombinedPitch.h>
 #include <hellokit/Document/DocumentConstants.h>
+#include <hellokit/Document/Operation/CombinedPitch.h>
 #include <hellokit/Document/TempoMap.h>
 
 namespace hello::kit {

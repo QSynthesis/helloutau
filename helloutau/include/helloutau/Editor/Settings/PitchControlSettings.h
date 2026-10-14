@@ -1,7 +1,7 @@
 #ifndef HELLOUTAU_EDITOR_SETTINGS_PITCHCONTROLSETTINGS_H
 #define HELLOUTAU_EDITOR_SETTINGS_PITCHCONTROLSETTINGS_H
 
-#include <hellokit/Document/PortamentoSettings.h>
+#include <hellokit/Document/Operation/PortamentoSettings.h>
 #include <hellokit/Document/Project.h>
 
 #include <helloutau/Editor/HelloUtauEditorGlobal.h>

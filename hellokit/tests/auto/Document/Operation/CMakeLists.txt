@@ -1,0 +1,2 @@
+add_auto_test(test_CombinedPitch.cpp HelloKitDocument)
+add_auto_test(test_PortamentoSettings.cpp HelloKitDocument)

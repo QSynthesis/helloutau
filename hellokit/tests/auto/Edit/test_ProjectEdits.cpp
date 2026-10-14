@@ -1,6 +1,6 @@
 #include <QtTest/QTest>
 
-#include <hellokit/Document/CombinedPitch.h>
+#include <hellokit/Document/Operation/CombinedPitch.h>
 #include <hellokit/Document/DocumentConstants.h>
 #include <hellokit/Edit/ProjectEdits.h>
 #include <hellokit/Edit/ProjectRefs.h>

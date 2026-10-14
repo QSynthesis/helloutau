@@ -7,7 +7,7 @@
 #include <QtWidgets/QDialog>
 
 #include <hellokit/Document/Note.h>
-#include <hellokit/Document/PortamentoSettings.h>
+#include <hellokit/Document/Operation/PortamentoSettings.h>
 
 #include <helloutau/Editor/HelloUtauEditorGlobal.h>
 
