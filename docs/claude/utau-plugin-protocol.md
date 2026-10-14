@@ -35,9 +35,36 @@
 
 运行时 UTAU 没有弹出提示。前三次应用均可撤销（作者先另存、再撤销、再做下一步：R2、R3 的临时文件中 `Project` 分别为上一步另存的文件，而音符是撤销后的原样）。
 
+## 长度修正与曲速
+
+2026-10-14 实测，同一台机器与 `utau.exe`，探针与操作步骤位于 `.cache/utau-probe/length/`（`README.md`、`make_files.py`、`compare.py`），结果文件在其 `results/` 中。动机是作者以前的资料（[Length-Correction](https://sinestriker.github.io/documents/QPitchEditor/book/Developers/UTAU-Backend/Length-Correction.html)）所述：UTAU 写给插件的修正值按当前音符的曲速计算前一个音符的长度，交给合成工具的修正值则按前一个音符自己的曲速计算。
+
+探针工程使用葛平音源，每组的当前音符都是 `qu`（先行发声 186.884，重叠 −5.999，两者之差 192.883 ms），各组只改变前一个音符。对照的是临时文件中 `qu` 的 `@preuttr`，与同一次合成的 `temp.bat` 交给 wavtool 的先行发声（长度参数 `480@120+…` 中的值）：
+
+| 组 | 前一个音符 | 按其自己的曲速的长度 | 按当前音符的曲速的长度 | `@preuttr` | wavtool |
+|---|---|---|---|---|---|
+| G1 | `a` 240 tick，120 BPM | 250 ms | 250 ms | 121.112 | 121.112 |
+| G2 | `a` 240 tick，60 BPM | 500 ms | 250 ms | 121.112 | 186.884 |
+| G3 | `a` 240 tick，240 BPM | 125 ms | 250 ms | 121.112 | 60.556 |
+| G4 | 休止符 120 tick，120 BPM | 125 ms | 125 ms | 121.112 | 121.112 |
+| G5 | 休止符 240 tick，240 BPM | 125 ms | 250 ms | 186.884 | 121.112 |
+| G6 | 休止符 120 tick，60 BPM | 250 ms | 125 ms | 121.112 | 186.884 |
+
+修正的上限是前一个音符长度的一半，前一个音符是休止符时为其全部长度。先行发声与重叠之差超过上限时，两者按同一比例缩小，STP 加上先行发声缩小的量。按此计算：
+
+- **临时文件中的值按当前音符的曲速计算前一个音符的长度。** 六组的 `@preuttr`、`@overlap`、`@stpoint` 都与这一算法吻合。G2 与 G6 本不应修正而被修正，G3 修正不足，G5 应修正而未修正。
+- **交给 wavtool 的值按前一个音符自己的曲速计算**，六组都吻合。
+- **前一个音符是休止符时，临时文件中的值同样经过修正**（G4、G6），PlayInPlugin 旧记录中「前一个音符是休止符时修正值不进入插件」在本次实测中不成立。
+- 选区不影响这些值：只选中 G2 的 `qu` 时，其值与全选时相同。
+- 只选中 G2 的 `qu` 时，`[#SETTING]` 的 `Tempo` 为 60，即 `[#PREV]`（曲速 60 的 `a`）的曲速，全选时为第一个音符的 120。即 `Tempo` 是临时文件中第一个段落所在的曲速，而非选区第一个音符的曲速。
+
+HelloUtau 的合成计划（`ustrender --plan`）在六组中与 wavtool 收到的值完全相同。
+
 ## 对 HelloUtau 的影响
 
 - 临时文件按上述写法生成：轨道位置编号，完整的 `[#PREV]` / `[#NEXT]`，`UST Version 1.20`，绝对路径，CRLF，`PreUtterance=` 空值，`@` 条目在末尾。`notes` 存在时传入全部音符，不写 `[#PREV]` / `[#NEXT]`。
 - 结果按出现顺序应用，`[#PREV]` / `[#NEXT]` 的修改应用，逐条合并（省略不变、空值恢复默认），`[#INSERT]` 的默认值取自后一个音符，空文件为取消。与 [`../ClassicPluginHost.md`](../ClassicPluginHost.md) 的设计一致。
 - stdutau 的 `PluginFileReader`（现并入 `PluginInput`）注释记为临时文件「总从 0 编号」，与实测不符；`PluginFileWriter`（现并入 `PluginResult`）的 `prependNotesBeforePrev` / `appendNotesAfterNext` 注明插到选区外，实测只插在选区的起点与终点。两处已在 stdutau `ae46c5c` 改正。
-- 临时文件的编码是本地编码，与 note.md 对没有 `plugin.json` 的插件的规定一致；声明接收 UTF-8 的插件改用 UTF-8。
+- 临时文件的编码是本地编码，与 note.md 对没有 `plugin.json` 的插件的规定一致。声明接收 UTF-8 的插件改用 UTF-8。
+- `ClassicPluginExchange::input()` 以 `SampleTiming` 写出 `@preuttr`、`@overlap`、`@stpoint`，即交给合成工具的值。前后曲速不同时，它与 UTAU 写给插件的值不同（上表 G2、G3、G5、G6）。作者 2026-10-14 决定不照搬 UTAU 的算法，因为它是错误的。
+- `[#SETTING]` 的 `Tempo` 取选区第一个音符的曲速（`ClassicPluginExchange.cpp`），有 `[#PREV]` 且其曲速不同时与 UTAU 不同。
