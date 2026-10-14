@@ -86,7 +86,8 @@ private Q_SLOTS:
         QCOMPARE(dialog.targetFormat(), &c);
     }
 
-    // The conversion requires a checked file and two different formats.
+    // The conversion requires a checked file with a map of the source format, and two different
+    // formats.
     void the_formats_must_differ() {
         Format a(QStringLiteral("a"), true);
         Format b(QStringLiteral("b"), true);
@@ -100,6 +101,12 @@ private Q_SLOTS:
         dialog.targetBox()->setCurrentIndex(0);
         dialog.fileList()->checkWhere([](int) { return false; });
         QVERIFY(!ok->isEnabled());
+
+        // A checked file without a map of the source format is skipped, and converts nothing.
+        dialog.fileList()->checkWhere([](int row) { return row == 2; });
+        QVERIFY(!ok->isEnabled());
+        dialog.fileList()->setChecked(1, true);
+        QVERIFY(ok->isEnabled());
     }
 
     // Without a writable format there is no target format.

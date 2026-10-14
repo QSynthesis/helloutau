@@ -180,15 +180,32 @@ namespace hello::daw {
     }
 
     void ConvertFrequencyMapsDialog::updateSummary() {
-        const auto count = int(m_list->checkedRows().size());
-        m_summary->setText(
-            count > 0
-                ? tr("The frequency maps of %n audio file(s) will be converted.", nullptr, count)
-                : tr("No file is checked."));
+        // The files without a map of the source format are skipped by the conversion, and are
+        // counted apart.
+        int converted = 0;
+        int skipped = 0;
+        for (const int row : m_list->checkedRows()) {
+            ++(hasSourceMap(row) ? converted : skipped);
+        }
+        QStringList parts;
+        if (converted > 0) {
+            parts.push_back(tr("The frequency maps of %n audio file(s) will be converted.", nullptr,
+                               converted));
+        }
+        if (skipped > 0) {
+            parts.push_back(tr("%n checked audio file(s) have no map of the source format and are "
+                               "skipped.",
+                               nullptr, skipped));
+        }
+        if (converted > 0) {
+            parts.push_back(tr("The conversion cannot be undone."));
+        }
+        m_summary->setText(parts.isEmpty() ? tr("No file is checked.")
+                                           : parts.join(QLatin1Char(' ')));
         const auto source = sourceFormat();
         const auto target = targetFormat();
         m_buttons->button(QDialogButtonBox::Ok)
-            ->setEnabled(count > 0 && source && target && source != target);
+            ->setEnabled(converted > 0 && source && target && source != target);
     }
 
 }

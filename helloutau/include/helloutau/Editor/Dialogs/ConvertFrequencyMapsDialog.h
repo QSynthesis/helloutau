@@ -31,8 +31,8 @@ namespace hello::daw {
     /// The selected files are checked initially. If none is selected, the files with a map of the
     /// source format are checked initially, and again whenever the source format changes. A
     /// tri-state box checks or unchecks every file, and a button checks exactly the files with a
-    /// map of the source format. The OK button is enabled if a file is checked and the two formats
-    /// differ. The dialog changes no file.
+    /// map of the source format. The OK button is enabled if a checked file has a map of the
+    /// source format and the two formats differ. The dialog changes no file.
     class HELLOUTAU_EDITOR_EXPORT ConvertFrequencyMapsDialog : public QDialog {
         Q_OBJECT
     public:
@@ -91,8 +91,8 @@ namespace hello::daw {
         // Returns whether the file of row has a map of the source format
         bool hasSourceMap(int row) const;
 
-        // Describes the conversion of the checked files and enables the OK button if a file is
-        // checked and the two formats differ
+        // Describes the conversion of the checked files and enables the OK button if a checked
+        // file has a map of the source format and the two formats differ
         void updateSummary();
     };
 

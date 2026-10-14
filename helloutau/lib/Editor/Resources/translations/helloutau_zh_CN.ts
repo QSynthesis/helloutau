@@ -775,6 +775,16 @@
             <numerusform>将转换 %n 个音频文件的频率表。</numerusform>
         </translation>
     </message>
+    <message numerus="yes">
+        <source>%n checked audio file(s) have no map of the source format and are skipped.</source>
+        <translation>
+            <numerusform>勾选的音频文件中有 %n 个没有源格式的频率表，将被跳过。</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>The conversion cannot be undone.</source>
+        <translation>转换不能撤销。</translation>
+    </message>
     <message>
         <source>No file is checked.</source>
         <translation>没有勾选任何文件。</translation>
