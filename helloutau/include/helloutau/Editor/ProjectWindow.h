@@ -23,6 +23,7 @@ namespace hello::daw {
 
     class Editor;
     class PianoRoll;
+    class Playback;
 
     /// Window that edits a project. Instances are created by Editor.
     class HELLOUTAU_EDITOR_EXPORT ProjectWindow : public QMainWindow {
@@ -46,6 +47,11 @@ namespace hello::daw {
         /// Returns the piano roll of the project, which holds the selection. The piano roll is
         /// replaced together with the document, see documentChanged().
         PianoRoll *pianoRoll() const;
+
+        /// Returns the playback of the window, with the runner of the settings and the temporary
+        /// directory of the window. A caller that plays through it, such as the preview of a
+        /// classic plugin, shares the progress in the status bar and the reports of failures.
+        Playback *playback() const;
 
         /// Returns the box of the quantization in the tool bar, or null while the tool bar has
         /// none. A rebuilt tool bar has a new box.

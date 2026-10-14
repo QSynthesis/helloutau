@@ -16,6 +16,7 @@
 #include <helloutau/Editor/HelloUtauEditorGlobal.h>
 
 namespace hello::kit {
+    struct Project;
     class ProjectDocument;
     class SynthDiagnosers;
 }
@@ -79,6 +80,9 @@ namespace hello::daw {
         ///       The function asserts the condition.
         void setTemporaryDirectory(std::filesystem::path temporaryDirectory);
 
+        /// Returns the directory of setTemporaryDirectory(), or an empty path if none is set.
+        std::filesystem::path temporaryDirectory() const;
+
         /// Sets the number of threads of the realtime synthesis, zero for one per hardware
         /// thread, the default. A change takes effect with the next preview or prepare().
         void setThreadCount(int count);
@@ -97,6 +101,15 @@ namespace hello::daw {
         ///         a range without notes, are reported by failed().
         bool play(const kit::ProjectDocument &document, std::optional<std::pair<int, int>> range,
                   const kit::SynthTools &synthTools, kit::DiagnosticList &diagnostics);
+
+        /// \overload for \a project , a variant of the project of \a document that is not in the
+        /// document, such as the result of a classic plugin for a preview (docs/PluginPlay.md).
+        /// The voice bank and the project folder are those of \a document . The fragments are
+        /// written into \a cacheDirectory , and the render cache of the document is not touched.
+        bool play(const kit::Project &project, const kit::ProjectDocument &document,
+                  const std::filesystem::path &cacheDirectory,
+                  std::optional<std::pair<int, int>> range, const kit::SynthTools &synthTools,
+                  kit::DiagnosticList &diagnostics);
 
         /// Starts rendering the whole track of \a document into \a file with the runner of
         /// setRunner(), and emits trackRendered() once the file is written. Nothing is played,

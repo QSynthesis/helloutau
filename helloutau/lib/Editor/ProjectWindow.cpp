@@ -2463,6 +2463,11 @@ namespace hello::daw {
         return impl.roll;
     }
 
+    Playback *ProjectWindow::playback() const {
+        stdc_impl_t;
+        return impl.playback;
+    }
+
     QComboBox *ProjectWindow::quantizationBox() const {
         stdc_impl_t;
         // The box created last, by the latest rebuild of the tool bar

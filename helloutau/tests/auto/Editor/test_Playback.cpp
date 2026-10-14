@@ -195,8 +195,10 @@ private Q_SLOTS:
         kit::ProjectDocument unsaved;
         QCOMPARE(playback.cacheDirectoryFor(unsaved),
                  std::optional<fs::path>(temporaryOf(dir) / "cache"));
+        QCOMPARE(playback.temporaryDirectory(), temporaryOf(dir));
         Playback without;
         QVERIFY(!without.cacheDirectoryFor(unsaved));
+        QVERIFY(without.temporaryDirectory().empty());
 
         const auto document = singingDocument(dir);
         QVERIFY(document);
@@ -281,6 +283,34 @@ private Q_SLOTS:
         QCOMPARE(runner->stepCounts, QList<int>{1});
         QCOMPARE(runner->caches, QList<fs::path>{*playback.cacheDirectoryFor(*document)});
         QVERIFY(fs::is_regular_file(temporaryOf(dir) / "temp.wav"));
+    }
+
+    // A project that is not in the document, as the result of a classic plugin for a preview, is
+    // rendered with the voice bank of the document into the cache of the caller's choice. The
+    // cache of the document is not created.
+    void a_variant_of_the_project_is_rendered_into_its_own_cache() {
+        if (AudioEngine::instance()->sampleRate() <= 0) {
+            QSKIP("This machine has no audio output device.");
+        }
+        QTemporaryDir dir;
+        const auto document = singingDocument(dir);
+        QVERIFY(document);
+        Playback playback(nullptr, temporaryOf(dir), nullptr);
+        const auto runner = std::make_shared<SilentRunner>();
+        playback.setRunner(runner);
+        QSignalSpy states(&playback, &Playback::stateChanged);
+
+        auto project = document->session()->snapshot();
+        auto &notes = project.tracks.first().notes;
+        notes.push_back(notes.first());
+        const auto cache = temporaryOf(dir) / "plugin";
+        kit::DiagnosticList diagnostics;
+        QVERIFY(playback.play(project, *document, cache, std::make_pair(0, 2), someSynthTools(),
+                              diagnostics));
+        QTRY_COMPARE_WITH_TIMEOUT(states.size(), 3, 5000);
+        QCOMPARE(runner->stepCounts, QList<int>{3});
+        QCOMPARE(runner->caches, QList<fs::path>{cache});
+        QVERIFY(!fs::exists(*playback.cacheDirectoryFor(*document)));
     }
 
     // The whole track is rendered into a file of the caller's choice, without playing it and
