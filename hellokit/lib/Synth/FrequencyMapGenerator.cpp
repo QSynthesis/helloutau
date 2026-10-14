@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <atomic>
 #include <map>
+#include <numeric>
 
 #include <QtCore/QDir>
 #include <QtCore/QMutex>
@@ -35,6 +36,21 @@ namespace hello::kit {
             return list;
         }
 
+        // Returns the failure of a resampler call, with the rendered file read while it still
+        // exists in the temporary folder.
+        SynthFailure failureOf(SynthFailure::Stage stage, const fs::path &resampler,
+                               const QStringList &arguments, const SynthToolRun &run,
+                               const fs::path &rendered) {
+            SynthFailure failure;
+            failure.stage = stage;
+            failure.program = resampler;
+            failure.arguments = arguments;
+            failure.run = run;
+            failure.file = rendered;
+            failure.readFile();
+            return failure;
+        }
+
     }
 
     FrequencyMapGenerator::FrequencyMapGenerator() = default;
@@ -60,7 +76,6 @@ namespace hello::kit {
 
         QMutex mutex;
         std::atomic<int> done = 0;
-        std::atomic<int> generated = 0;
         std::atomic<bool> stopped = false;
         std::atomic<bool> unstarted = false;
         const auto stop = [&] {
@@ -69,26 +84,39 @@ namespace hello::kit {
             }
             return stopped.load();
         };
-        const auto exists = [&format](const fs::path &wav) {
-            return format.mapsExist(wav.parent_path(), {wav.filename()}).value(0);
-        };
-
-        // The audio files that have maps, queried by folder
-        QList<bool> present(wavs.size());
-        std::map<fs::path, QList<qsizetype>> byFolder;
-        for (qsizetype i = 0; i < wavs.size(); ++i) {
-            byFolder[wavs.at(i).parent_path()].push_back(i);
-        }
-        for (const auto &[folder, indices] : byFolder) {
-            QList<fs::path> names;
+        // Returns whether each audio file of indices has a map, queried by folder.
+        const auto mapsOf = [&format, &wavs](const QList<qsizetype> &indices) {
+            std::map<fs::path, QList<qsizetype>> byFolder;
             for (const auto i : indices) {
-                names.push_back(wavs.at(i).filename());
+                byFolder[wavs.at(i).parent_path()].push_back(i);
             }
-            const auto found = format.mapsExist(folder, names);
-            for (qsizetype k = 0; k < indices.size(); ++k) {
-                present[indices.at(k)] = found.value(k);
+            std::map<qsizetype, bool> present;
+            for (const auto &[folder, members] : byFolder) {
+                QList<fs::path> names;
+                for (const auto i : members) {
+                    names.push_back(wavs.at(i).filename());
+                }
+                const auto found = format.mapsExist(folder, names);
+                for (qsizetype k = 0; k < members.size(); ++k) {
+                    present[members.at(k)] = found.value(k);
+                }
             }
-        }
+            return present;
+        };
+        QList<qsizetype> all(wavs.size());
+        std::iota(all.begin(), all.end(), 0);
+        const auto present = mapsOf(all);
+
+        // Each call of the resampler that ran is checked once every call has finished, because
+        // moresampler locks desc.mrq while it writes an entry and a read of the file during the
+        // lock fails, measured with moresampler 0.8.4 on 2026-10-14 (docs/FrequencyMaps.md).
+        struct Call {
+            qsizetype index = 0;
+            QStringList arguments;
+            fs::path rendered;
+            SynthToolRun run;
+        };
+        QList<Call> calls;
         {
             QThreadPool pool;
             pool.setMaxThreadCount(threadCount > 0 ? threadCount
@@ -99,50 +127,34 @@ namespace hello::kit {
                     if (!stop() && (everyFile || !present.at(i))) {
                         utau::ResamplerArguments arguments;
                         arguments.inFile = wav.u8string();
-                        const auto rendered = outputDirectory / (std::to_string(i) + ".wav");
-                        arguments.outFile = rendered.u8string();
+                        Call call;
+                        call.index = i;
+                        call.rendered = outputDirectory / (std::to_string(i) + ".wav");
+                        arguments.outFile = call.rendered.u8string();
                         arguments.toneName = "C4";
                         arguments.realLength = 50;
+                        call.arguments = listOf(arguments.arguments());
                         DiagnosticList found;
+                        call.run = synthTool->run(resampler, call.arguments, found, stop);
                         std::optional<SynthFailure> failure;
-                        const auto argumentList = listOf(arguments.arguments());
-                        const auto run = synthTool->run(resampler, argumentList, found, stop);
-                        const auto failed = [&](SynthFailure::Stage stage) {
-                            failure.emplace();
-                            failure->stage = stage;
-                            failure->program = resampler;
-                            failure->arguments = argumentList;
-                            failure->run = run;
-                            failure->file = rendered;
-                            failure->readFile();
-                        };
-                        if (!run.started) {
+                        if (!call.run.started) {
                             // Every other call would fail alike.
                             stopped = true;
                             if (!unstarted.exchange(true)) {
                                 found.push_back({DiagnosticSeverity::Error,
                                                  tr("The resampler \"%1\" could not be started.")
                                                      .arg(displayed(resampler))});
-                                failed(SynthFailure::Resampler);
+                                failure = failureOf(SynthFailure::Resampler, resampler,
+                                                    call.arguments, call.run, call.rendered);
                             }
-                        } else if (exists(wav)) {
-                            ++generated;
-                        } else if (!run.cancelled) {
-                            // The output of the resampler is in its output log.
-                            found.push_back({DiagnosticSeverity::Warning,
-                                             tr("The resampler wrote no frequency map of \"%1\" "
-                                                "(exit code %2).")
-                                                 .arg(displayed(wav))
-                                                 .arg(run.exitCode)});
-                            const bool exited = !run.timedOut && run.exitCode == 0;
-                            failed(exited ? SynthFailure::FrequencyMap : SynthFailure::Resampler);
                         }
-                        if (!found.isEmpty() || failure) {
-                            const QMutexLocker locker(&mutex);
-                            diagnostics += found;
-                            if (failure) {
-                                outcome.failures.push_back(std::move(*failure));
-                            }
+                        const QMutexLocker locker(&mutex);
+                        diagnostics += found;
+                        if (failure) {
+                            outcome.failures.push_back(std::move(*failure));
+                        }
+                        if (call.run.started && !call.run.cancelled) {
+                            calls.push_back(std::move(call));
                         }
                     }
                     const int count = ++done;
@@ -153,7 +165,30 @@ namespace hello::kit {
             }
             pool.waitForDone();
         }
-        outcome.generated = generated.load();
+
+        std::sort(calls.begin(), calls.end(),
+                  [](const Call &a, const Call &b) { return a.index < b.index; });
+        QList<qsizetype> ran;
+        for (const auto &call : std::as_const(calls)) {
+            ran.push_back(call.index);
+        }
+        const auto written = mapsOf(ran);
+        for (const auto &call : std::as_const(calls)) {
+            if (written.at(call.index)) {
+                ++outcome.generated;
+                continue;
+            }
+            // The output of the resampler is in its output log.
+            diagnostics.push_back({DiagnosticSeverity::Warning,
+                                   tr("The resampler wrote no frequency map of \"%1\" "
+                                      "(exit code %2).")
+                                       .arg(displayed(wavs.at(call.index)))
+                                       .arg(call.run.exitCode)});
+            const bool exited = !call.run.timedOut && call.run.exitCode == 0;
+            outcome.failures.push_back(
+                failureOf(exited ? SynthFailure::FrequencyMap : SynthFailure::Resampler, resampler,
+                          call.arguments, call.run, call.rendered));
+        }
         return outcome;
     }
 

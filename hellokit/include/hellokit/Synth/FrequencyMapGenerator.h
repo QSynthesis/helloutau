@@ -59,8 +59,9 @@ namespace hello::kit {
 
         /// Generates the map of \a format of each audio file of \a wavs that has none, or of every
         /// audio file if everyFile is set, by running \a resampler, and returns on completion.
-        /// An audio file that has no map afterwards is reported in \a diagnostics, and its
-        /// resampler call in the failures of the outcome.
+        /// The maps are checked once every resampler call has finished. An audio file that has
+        /// no map afterwards is reported in \a diagnostics, and its resampler call in the
+        /// failures of the outcome, in the order of \a wavs.
         ///
         /// \param progress called after each audio file with the number of audio files done, on
         ///        a thread of the generation, or empty

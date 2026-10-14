@@ -83,6 +83,27 @@ namespace {
         }
     };
 
+    // A format whose maps cannot be read until the stand-in has received total calls, as
+    // desc.mrq cannot be read while another moresampler locks it to write an entry
+    class LockedFormat : public SidecarFormat {
+    public:
+        LockedFormat(const StandIn &standIn, int total) : m_standIn(standIn), m_total(total) {
+        }
+
+        QList<bool> mapsExist(const fs::path &directory,
+                              const QList<fs::path> &wavs) const override {
+            const QMutexLocker locker(&m_standIn.mutex);
+            if (m_standIn.calls.size() < m_total) {
+                return QList<bool>(wavs.size(), false);
+            }
+            return SidecarFormat::mapsExist(directory, wavs);
+        }
+
+    private:
+        const StandIn &m_standIn;
+        const int m_total;
+    };
+
 }
 
 class test_FrequencyMapGenerator : public QObject {
@@ -185,6 +206,22 @@ private Q_SLOTS:
         QCOMPARE(silent.fileHead, QByteArray("RIFF"));
         QCOMPARE(outcome.failures.at(1).stage, SynthFailure::Resampler);
         QCOMPARE(outcome.failures.at(1).run->exitCode, 1);
+    }
+
+    // The maps are checked once every resampler call has finished, so that a map file that cannot
+    // be read while a later call writes it is not reported as missing.
+    void the_maps_are_checked_after_every_call() {
+        const QList<fs::path> wavs{write("a.wav"), write("b.wav")};
+        const auto standIn = std::make_shared<StandIn>();
+        const LockedFormat format(*standIn, 2);
+        FrequencyMapGenerator generator;
+        generator.threadCount = 1;
+        generator.process = standIn;
+        DiagnosticList diagnostics;
+        const auto outcome = generator.generate(format, "resampler.exe", wavs, diagnostics);
+        QCOMPARE(outcome.generated, 2);
+        QVERIFY(outcome.failures.isEmpty());
+        QVERIFY(diagnostics.isEmpty());
     }
 
     // A resampler that does not start is reported once, and no further audio file is started.
